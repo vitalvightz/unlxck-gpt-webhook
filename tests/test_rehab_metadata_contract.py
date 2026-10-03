@@ -37,8 +37,14 @@ def legacy_policy_scope(monkeypatch):
 def restorable_bank():
     """Yield the live bank, restoring the original records afterwards."""
     original = copy.deepcopy(get_rehab_bank())
-    yield get_rehab_bank()
-    rehab_protocols._REHAB_BANK_CACHE = original
+    rehab_protocols._REHAB_DRILLS_BY_ID_CACHE = None
+    try:
+        yield get_rehab_bank()
+    finally:
+        rehab_protocols._REHAB_BANK_CACHE = original
+        # The identity index holds the same mutable drill objects. Restoring only
+        # the bank leaves hostile metadata visible to later completion tests.
+        rehab_protocols._REHAB_DRILLS_BY_ID_CACHE = None
 
 
 def _protocol(injury: str, phase: str, **kwargs) -> str:
@@ -262,17 +268,23 @@ def test_classify_drill_function_still_defaults_to_control():
     assert classify_drill_function("Heel Walks") == "control"
 
 
-def test_stored_function_metadata_matches_the_keyword_match_where_migrated():
-    """Migration derived `function` from the classifier; it invented nothing."""
+def test_stored_function_matches_explicit_review_or_legacy_keyword_migration():
+    """Explicit reviewed metadata is authoritative; legacy values match seeding."""
     # The autouse legacy scope disables activation, so read the actual policy data.
     import json
     from fightcamp.config import DATA_DIR
     pilot_ids = {p["drill_id"] for policy in json.loads((DATA_DIR / "rehab_pathways.json").read_text(encoding="utf-8"))["profiles"]
                   for p in policy["prescriptions"]}
+    reviewed_functions = {r["drill_id"]: r["proposed"]["function"]
+                          for r in json.loads((DATA_DIR / "rehab_metadata_review.json").read_text(encoding="utf-8"))
+                          if r["review_state"] == "reviewed"}
     for entry in get_rehab_bank():
         if is_surface_injury_type(entry.get("type")):
             continue
         for drill in entry.get("drills", []):
+            if drill.get("id") in reviewed_functions:
+                assert drill["function"] == reviewed_functions[drill["id"]]
+                continue
             if drill.get("id") in pilot_ids:
                 # Pilot function metadata is documented explicitly, not inferred from names.
                 continue

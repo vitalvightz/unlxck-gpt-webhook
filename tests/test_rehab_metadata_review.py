@@ -397,14 +397,19 @@ def test_coverage_report_is_honest_about_the_partially_migrated_bank():
         for drill in entry.get("drills", [])
         if "rehab_stage" in drill and drill.get("load") is not None
     )
-    assert report["field_levels"]["load"].get("known", 0) == migrated_load
+    unknown_load = sum(d.get("load") == "unknown" for g in bank for d in g.get("drills", []))
+    assert report["field_levels"]["load"].get("known", 0) == migrated_load - unknown_load
+    assert report["field_levels"]["load"].get("unknown", 0) == unknown_load
     assert report["field_levels"]["load"].get("null", 0) == report["totals"]["msk_drills"] - migrated_load
     assert report["fully_known_mechanical_demand"] <= migrated_load
     assert report["stale_reviews"] == 0
-    # Only the eight fixed strain variants and two existing chest routines were reviewed.
+    # Review counts follow the curated repairs, including the existing bank entries.
+    reviewed_count = sum(r["review_state"] == REVIEW_STATE_REVIEWED
+                         for r in json.loads(LEDGER_PATH.read_text(encoding="utf-8")))
+    assert reviewed_count >= 40
     assert report["review_states"] == {
-        REVIEW_STATE_NEEDS_REVIEW: report["totals"]["msk_drills"] - 10,
-        REVIEW_STATE_REVIEWED: 10,
+        REVIEW_STATE_NEEDS_REVIEW: report["totals"]["msk_drills"] - reviewed_count,
+        REVIEW_STATE_REVIEWED: reviewed_count,
     }
 
 

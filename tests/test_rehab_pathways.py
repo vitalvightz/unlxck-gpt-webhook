@@ -46,7 +46,8 @@ def test_shipped_profiles_name_their_family():
     assert {p.policy_id: p.pathway_family for p in load_clinical_policies()} == {
         "chest_strain": "muscle_strain", "ankle_sprain": "ligament_sprain_or_instability",
         "hamstring_strain": "muscle_strain", "calf_strain": "muscle_strain",
-        "groin_strain": "muscle_strain", "quads_strain": "muscle_strain"}
+        "groin_strain": "muscle_strain", "quads_strain": "muscle_strain",
+        "biceps_strain": "muscle_strain", "triceps_strain": "muscle_strain", "shoulder_strain": "muscle_strain"}
 
 
 @pytest.mark.parametrize("raw,match", [

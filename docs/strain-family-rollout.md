@@ -1,383 +1,71 @@
-# Muscle strain production coverage rollout
+# Strain family rollout
 
-Based on Main `b2a9b14c` (includes #2709 family/profile architecture and #2712 vocabulary guardrail).
-The complete pre-edit inventory is in [strain-family-pre-rollout-audit.json](strain-family-pre-rollout-audit.json).
-Re-run `python tools/audit_strain_family.py` to inspect the current bank; do not overwrite the pre-edit snapshot.
+Seven new active muscle-strain profiles: hamstring, calf, groin, quads, biceps,
+triceps and shoulder. Existing chest strain and ankle sprain prescriptions retain
+their reviewed policy hashes. All nine profiles use the existing resolver.
 
-## Meaning of the review labels
+## Bank repair
 
-This is an inventory of the whole strain family and a clinical-content review of a
-small selected baseline set. It is not a clinical rejection of the rest of the bank.
-All 1,545 original drills remain unchanged. Only eight fixed routines were added.
+All 28 original strain entries in those seven regions plus chest are now reviewed.
+Their camp-phase progression text has been replaced with fixed exercise instructions,
+explicit equipment and mechanical demand. Original IDs remain; original names,
+notes and source hashes are retained in ledger source_history. Current hashes match
+the edited content. Unknown external load stays unknown.
 
-- Reviewed for live baseline: the eight new fixed routines and two existing chest routines.
-- Fixed variant needed: a selected parent combines baseline movement with camp progression;
-  its fixed derivative is reviewed without approving every later variant at once.
-- Not reviewed in this rollout: no clinical accept/reject judgment was made about that drill.
-  It remains available in the bank with its existing needs_review ledger state.
-- Duplicate copy: an extra identity for identical content is not used in a new profile;
-  this does not reject the exercise itself or delete either copy.
-- Stage-specific exclusion: source guidance rules out early massage from the acute baseline;
-  later-phase use has not been reviewed here.
+Hamstring bridge, double-leg calf raise and side-lying hip adduction now use their
+original bank IDs directly in RESTORE prescriptions. The three duplicate variants
+introduced in this unmerged branch were removed. Four pre-existing calf duplicates
+remain with the same four debt allowances; only their stage/name keys changed.
 
-Loaded, eccentric, power and sport-specific exercises may be appropriate at later rehab
-stages. Keeping advanced stages closed does not make those movements inherently unsafe.
-Missing a reviewed prescription or captured transition input is an activation limitation,
-not evidence that an exercise is poor quality. Do not treat needs_review as rejected.
+Eleven additional fixed routines supply CALM support and the missing early movements.
+The bank contains 1,556 drills and the ledger contains 41 reviewed strain records.
+Twenty-five original region groups are inventoried in strain-family-pre-rollout-audit.json.
+Other regions were not clinically rejected; they have no active regional prescription.
 
-## Whole-family audit before edits
+## Active prescriptions
 
-25 canonical regions; 92 drills across 45 strain groups. All 92 ledger records initially
-said `needs_review`, including the two already sourced, live chest routines. This is a
-metadata-ledger provenance gap, not proof that chest lacked clinical prescriptions.
-Chest was the only live strain profile. Ankle sprain belongs to another family.
-
-Canonical labels use the existing location registry: hamstrings -> hamstring,
-bicep -> biceps, glutes -> glute, lower_back -> lower back. No taxonomy was added.
-
-| Canonical region | Drills before | Metadata ledger before | Live profile before | Production disposition |
-| --- | ---: | --- | --- | --- |
-| biceps | 4 | 4 needs_review | none | Not activated: this review did not establish acute strain-specific sources for the selected bank content; exercises remain unreviewed |
-| calf | 8 | 8 needs_review | none | Activate fixed double-leg raise baseline |
-| chest | 4 | 4 needs_review | chest_strain | Keep existing sourced routines; reconcile ledger |
-| core | 2 | 2 needs_review | none | Not activated: regional set not clinically reviewed in this rollout |
-| elbow | 2 | 2 needs_review | none | Not activated: regional set not clinically reviewed in this rollout |
-| eye | 4 | 4 needs_review | none | Not activated: separate specialist or regional evidence review needed |
-| fingers | 4 | 4 needs_review | none | Not activated: regional set not clinically reviewed in this rollout |
-| foot | 2 | 2 needs_review | none | Not activated: regional set not clinically reviewed in this rollout |
-| forearm | 2 | 2 needs_review | none | Not activated: regional set not clinically reviewed in this rollout |
-| glute | 4 | 4 needs_review | none | Not activated: regional set not clinically reviewed in this rollout |
-| groin | 2 | 2 needs_review | none | Activate fixed side-lying adduction baseline |
-| hamstring | 2 | 2 needs_review | none | Activate fixed bridge baseline |
-| hand | 4 | 4 needs_review | none | Not activated: regional set not clinically reviewed in this rollout |
-| jaw | 2 | 2 needs_review | none | Not activated: separate specialist or regional evidence review needed |
-| knee | 8 | 8 needs_review | none | Not activated: regional set not clinically reviewed in this rollout |
-| lower back | 4 | 4 needs_review | none | Not activated: regional set not clinically reviewed in this rollout |
-| neck | 4 | 4 needs_review | none | Not activated: regional set not clinically reviewed in this rollout |
-| obliques | 6 | 6 needs_review | none | Not activated: regional set not clinically reviewed in this rollout |
-| quads | 2 | 2 needs_review | none | Activate supported knee movement from regional unspecified pool |
-| shoulder | 4 | 4 needs_review | none | Not activated: this review did not establish acute strain-specific sources for the selected bank content; exercises remain unreviewed |
-| toe | 2 | 2 needs_review | none | Not activated: regional set not clinically reviewed in this rollout |
-| triceps | 4 | 4 needs_review | none | Not activated: this review did not establish acute strain-specific sources for the selected bank content; exercises remain unreviewed |
-| unspecified | 2 | 2 needs_review | none | Not activated: separate specialist or regional evidence review needed |
-| upper back | 4 | 4 needs_review | none | Not activated: regional set not clinically reviewed in this rollout |
-| wrist | 6 | 6 needs_review | none | Not activated: regional set not clinically reviewed in this rollout |
-
-### Duplicates and demand flags
-
-Calf has four exact duplicate pairs; knee has four exact duplicate pairs. The JSON
-snapshot names every identity in each pair. Near duplicates: glute bridge iso holds /
-glute bridge with isometric hold; lower-back glute bridge walkout / walkouts;
-calf wall push / tip-toe wall press; oblique seated / wall medicine-ball tosses.
-Cross-region template similarities also include wrist curls in forearm/wrist, elbow-flexion holds in biceps/elbow, finger extension in hand/fingers, and wall presses in chest/shoulder/triceps. These are review candidates, not assertions of interchangeable clinical demand; canonical region boundaries are retained.
-
-The existing detector flagged 9 strain records for VARIABLE_DEMAND_PROGRESSION and
-SPEED_PROGRESSION_IN_NOTES, and none for POSSIBLE_DRILL_SPLIT. The snapshot records
-the exact flags. Its separate mixed_camp_demand field records arrows even where the
-heuristic misses a progression; absence of a flag does not mean fixed or safe demand.
-Selected parent movements retain their original identities, notes, source hashes,
-review states and flags. Duplicate copies are not added to a live prescription merely for existing; this is identity selection, not rejection of the exercise.
-
-## Activated profiles and reviewed prescriptions
-
-Four new profiles use muscle_strain. All explicitly own region, strain type,
-reviewed prescriptions, restrictions, evidence and live stages. Contact limit is
-none; their anatomical regions and existing restriction aliases are blocked from conflicting training. Quadriceps includes quads, quad and knee from the location registry. No new bundle
-is needed for a single baseline movement. The existing ankle bundle is preserved.
-
-| Profile | CALM identity | RESTORE identity | Movement lineage | Live stages |
-| --- | --- | --- | --- | --- |
-| hamstring_strain | hamstring_strain_recovery_support | hamstring_strain_reviewed_restore | hamstrings_strain_isometric_hamstring_bridge | CALM, RESTORE |
-| calf_strain | calf_strain_recovery_support | calf_strain_reviewed_restore | calf_strain_double_leg_calf_raises | CALM, RESTORE |
-| groin_strain | groin_strain_recovery_support | groin_strain_reviewed_restore | groin_strain_side_lying_hip_adduction | CALM, RESTORE |
-| quads_strain | quads_strain_recovery_support | quads_strain_reviewed_restore | quads_unspecified_sliding_leg_extensions_towel_under_foot | CALM, RESTORE |
-
-Chest_strain keeps chest_strain_recovery_support and chest_strain_comfortable_movement,
-CALM/RESTORE and its original bank and policy hashes. Only those two existing ledger
-records are marked reviewed with the classifications already supported by their sources.
-
-There are ten genuinely reviewed ledger records: eight new fixed variants plus those
-two chest records. None of the variable-demand parent records is marked reviewed.
-The four new recovery-support routines fill the missing protective stage; the four
-RESTORE variants constrain existing bank movements rather than inventing regions.
-Quadriceps reuses quads_unspecified_sliding_leg_extensions_towel_under_foot because
-the strain group itself only offers wall sits and foam rolling. Regional unspecified
-pools are already permitted by the existing architecture.
-
-The fixed variants state stage, function, equipment, impact, load, velocity, target
-regions/tissues, laterality, contraction, general-rehab specificity and no contact.
-Bridge and calf raise are conservatively classified moderate bodyweight demand,
-not low simply because they are baseline work. Their double-leg performance is
-region-wide (not_applicable), not a unilateral strength test. Adduction and knee
-movement need an identified side; their named-side RESTORE movements are not prescribed with an unknown side. The existing selector conservatively falls back to attributable CALM recovery guidance.
-CALM retains unknown contraction: protective guidance is not a contraction exercise.
-
-All prescriptions are self-paced with no fabricated numerical dose, pain ceiling,
-clinical recovery threshold or return-to-sport criterion. Low/moderate eligibility
-retains the product safety ceiling; it is not a diagnosis of clinical injury grade.
-Default scheduled_sessions / minimum_gap_days=1 is product allocation cadence, not
-an evidence claim about a clinical exercise frequency. Instructions retain source
-prerequisites such as pain-free movement. A RESTORE report alone is not clearance
-to ignore those prerequisites.
-
-## Evidence reviewed and limits
-
-- **All profiles: protective stage:** [https://www.nhs.uk/conditions/sprains-and-strains/](https://www.nhs.uk/conditions/sprains-and-strains/). General acute strain protection, comfortable movement, early massage/heat avoidance and escalation advice. No regional loading or sport clearance inferred.
-- **Hamstring:** [https://pmc.ncbi.nlm.nih.gov/articles/PMC2867336/](https://pmc.ncbi.nlm.nih.gov/articles/PMC2867336/). Heiderscheit et al., JOSPT 2010. Phase I includes a supine bent-knee bridge and avoids excessive lengthening. A fixed double-leg bridge is the baseline interpretation; the published example dose is intentionally not generalized.
-- **Calf:** [https://www.hey.nhs.uk/patient-leaflet/soft-tissue-injury-calf-strain/](https://www.hey.nhs.uk/patient-leaflet/soft-tissue-injury-calf-strain/). Hull University Teaching Hospitals leaflet, updated June 2025. Supported double-leg heel raising follows settled pain, no crutch need and pain-free toe standing. Keep level ground and both feet; do not import the single-leg progression.
-- **Groin/adductor:** [https://pmc.ncbi.nlm.nih.gov/articles/PMC10569248/](https://pmc.ncbi.nlm.nih.gov/articles/PMC10569248/). Thorborg, Journal of Athletic Training 2023. Side-lying limb-weight exercises and slow initial contractions support a constrained unresisted variant. Symptom/irritability monitoring remains required; no Copenhagen, cable or fatigue progression is imported.
-- **Quadriceps:** [https://pmc.ncbi.nlm.nih.gov/articles/PMC2941577/](https://pmc.ncbi.nlm.nih.gov/articles/PMC2941577/). Kary, Current Reviews in Musculoskeletal Medicine 2010. Active rehabilitation includes range of motion as recovery allows. Supported towel sliding is the implementation interpretation of active pain-free knee movement, not a named protocol tested in that paper. The acute 120-degree flexion instruction in the paper is for contusions and is not imported into this strain profile.
-
-Biceps and triceps search results largely concerned tendinopathy, distal repairs or
-post-dislocation exercise, so they do not justify acute muscle-strain prescriptions.
-Shoulder bank content genuinely names deltoid strain, but no sufficiently specific
-staged protocol was established here. Quadriceps wall sits are deferred rather than
-using generic isometric evidence to approve their unspecified effort/angle/instability.
-
-## Advanced stages remain closed
-
-| Profile | What prevents LOAD | What prevents DYNAMIC / RETURN |
+| Region | CALM | RESTORE |
 | --- | --- | --- |
-| hamstring_strain | No reviewed LOAD content; published walking/jogging/submaximal strength checks are not captured by the product | No reviewed advanced drills, evaluable strength/speed criteria or sport checks |
-| calf_strain | No reviewed LOAD content or evaluable source-backed functional transition | No evaluated strength/range/brisk-walking or graded sport evidence |
-| groin_strain | No reviewed LOAD content; irritability, strength and clinical readiness measurements are not captured | No reviewed sport/strength-test criteria evaluable by this engine |
-| quads_strain | No reviewed LOAD content; pain-free strength/range readiness cannot be evaluated | No reviewed advanced content, strength comparison or return-to-sport checks |
-| chest_strain | Existing missing clinical criteria and reviewed LOAD content | Existing missing advanced content and captured clinical checks |
-
-The family safety baseline and progression engine remain unchanged. The existing centralized urgent phrase vocabulary also gains major tear, major muscle tear, complete tear and full thickness tear: safety tests found that a stored strain label could otherwise bypass the medical gate for these serious reports. No injury type is added. No transition
-overrides are invented; no transition is promotable. Elapsed time, camp phase,
-clearance or favorable whole-athlete readiness never activate advanced stages.
-
-## Unknown-side attribution and migration
-
-Yes, a migration is required. Apply
-`supabase/migrations/20261002234842_pathway_profile_unknown_side.sql` before the
-application rollout. It replaces only record_rehab_exposure with the existing body
-plus a generic frozen-policy match. No table, RLS or environment changes are needed.
-Existing service_role-only execution remains; public/anon/authenticated receive no
-new permission. supabase/schema.sql mirrors the same definition.
-
-The Python allowlist is replaced by nonempty frozen policy provenance, preserving
-exact injury/episode/region identity and baseline stage restrictions. SQL additionally
-requires a done/modified owner completion with the exact revision, injury, episode,
-drill, policy id, matching baseline stage and not_applicable laterality. A future
-profile needs no SQL list edit. Ordinary unknown-side legacy work remains refused.
-Unknown-side observations retain feedback but remain excluded from positive capacity
-evidence by read_exact_events / side_matches. Named-side exercises still require side.
-
-The same existing location registry now reconciles clinical bank aliases with profile
-regions (hamstrings versus hamstring). No broader tissue or neighbouring-region fallback
-is introduced. New reviewed target_regions explicitly include the canonical spelling.
-
-## Exact increase in coverage
-
-Live strain region/type combinations: 1 -> 5 (+4, +400%). All live injury profiles:
-2 -> 6 (+4, +200%). Strain profile/stage combinations: 2 -> 10 (+8).
-Bank strain drills: 92 -> 100 (+8 fixed routines); regions remain 25. All bank drills:
-1545 -> 1553. Advanced live coverage increase: zero. This is code/catalog activation;
-production deployment and the prerequisite database migration are not applied here.
-
-## Per-identity review scope and selection inventory
-
-All identities below remain needs_review and outside the live prescription whitelist,
-except the two sourced chest routines. Non-selection is a rollout scope decision, not a clinical rejection, a new ledger
-state or a claim that every legacy drill was clinically reviewed.
-
-### biceps
-
-- `bicep_strain_isometric_bicep_curl_hold_mid_range` (Isometric Bicep Curl Hold (Mid-Range)): Not reviewed or selected for this baseline rollout. No clinical rejection is implied; any future activation needs a stage-specific review of its stated demand. Ledger flags: none; mixed camp demand: True.
-- `bicep_strain_band_resisted_eccentric_curl` (Band-Resisted Eccentric Curl): Not reviewed or selected for this baseline rollout. No clinical rejection is implied; any future activation needs a stage-specific review of its stated demand. Ledger flags: none; mixed camp demand: True.
-- `bicep_strain_cable_curl_with_fat_grip` (Cable Curl with Fat Grip): Not reviewed or selected for this baseline rollout. No clinical rejection is implied; any future activation needs a stage-specific review of its stated demand. Ledger flags: none; mixed camp demand: True.
-- `bicep_strain_supinated_isometric_elbow_hold` (Supinated Isometric Elbow Hold): Not reviewed or selected for this baseline rollout. No clinical rejection is implied; any future activation needs a stage-specific review of its stated demand. Ledger flags: none; mixed camp demand: True.
-
-### calf
-
-- `calf_strain_double_leg_calf_raises` (Double-Leg Calf Raises): Fixed derivative reviewed for RESTORE; the original camp progression remains unreviewed as a combined prescription and is retained unchanged. Ledger flags: none; mixed camp demand: True.
-- `calf_strain_isometric_wall_push_hold` (Isometric Wall Push Hold): Not reviewed or selected for this baseline rollout. No clinical rejection is implied; any future activation needs a stage-specific review of its stated demand. Ledger flags: VARIABLE_DEMAND_PROGRESSION, SPEED_PROGRESSION_IN_NOTES; mixed camp demand: True.
-- `calf_strain_isometric_tip_toe_wall_press` (Isometric Tip-Toe Wall Press): Not reviewed or selected for this baseline rollout. No clinical rejection is implied; any future activation needs a stage-specific review of its stated demand. Ledger flags: none; mixed camp demand: True.
-- `calf_strain_active_band_calf_pumps` (Active Band Calf Pumps): Not reviewed or selected for this baseline rollout. No clinical rejection is implied; any future activation needs a stage-specific review of its stated demand. Ledger flags: none; mixed camp demand: True.
-- `calf_strain_double_leg_calf_raises_2` (Double-Leg Calf Raises): Duplicate copy: not selected as an additional live identity. Both copies remain in the bank; the exercise itself is not rejected. Ledger flags: none; mixed camp demand: True.
-- `calf_strain_isometric_wall_push_hold_2` (Isometric Wall Push Hold): Duplicate copy: not selected as an additional live identity. Both copies remain in the bank; the exercise itself is not rejected. Ledger flags: VARIABLE_DEMAND_PROGRESSION, SPEED_PROGRESSION_IN_NOTES; mixed camp demand: True.
-- `calf_strain_isometric_tip_toe_wall_press_2` (Isometric Tip-Toe Wall Press): Duplicate copy: not selected as an additional live identity. Both copies remain in the bank; the exercise itself is not rejected. Ledger flags: none; mixed camp demand: True.
-- `calf_strain_active_band_calf_pumps_2` (Active Band Calf Pumps): Duplicate copy: not selected as an additional live identity. Both copies remain in the bank; the exercise itself is not rejected. Ledger flags: none; mixed camp demand: True.
-
-### chest
-
-- `chest_strain_isometric_wall_push_chest_height` (Isometric Wall Push (Chest Height)): Not reviewed or selected for this baseline rollout. No clinical rejection is implied; any future activation needs a stage-specific review of its stated demand. Ledger flags: none; mixed camp demand: True.
-- `chest_strain_resistance_band_chest_fly` (Resistance Band Chest Fly): Not reviewed or selected for this baseline rollout. No clinical rejection is implied; any future activation needs a stage-specific review of its stated demand. Ledger flags: none; mixed camp demand: True.
-- `chest_strain_recovery_support` (Chest strain recovery support): Reviewed existing sourced baseline; unchanged prescription and hashes. Ledger flags: none; mixed camp demand: False.
-- `chest_strain_comfortable_movement` (Comfortable chest-region movement): Reviewed existing sourced baseline; unchanged prescription and hashes. Ledger flags: none; mixed camp demand: False.
-
-### core
-
-- `core_strain_dead_bug_with_band_resistance` (Dead Bug with Band Resistance): Not reviewed or selected for this baseline rollout. No clinical rejection is implied; any future activation needs a stage-specific review of its stated demand. Ledger flags: VARIABLE_DEMAND_PROGRESSION, SPEED_PROGRESSION_IN_NOTES; mixed camp demand: True.
-- `core_strain_forearm_plank_eccentric_reaches` (Forearm Plank – Eccentric Reaches): Not reviewed or selected for this baseline rollout. No clinical rejection is implied; any future activation needs a stage-specific review of its stated demand. Ledger flags: none; mixed camp demand: True.
-
-### elbow
-
-- `elbow_strain_isometric_elbow_flexion_hold_90` (Isometric Elbow Flexion Hold (90°)): Not reviewed or selected for this baseline rollout. No clinical rejection is implied; any future activation needs a stage-specific review of its stated demand. Ledger flags: none; mixed camp demand: True.
-- `elbow_strain_pronation_supination_with_light_dumbbell` (Pronation/Supination with Light Dumbbell): Not reviewed or selected for this baseline rollout. No clinical rejection is implied; any future activation needs a stage-specific review of its stated demand. Ledger flags: none; mixed camp demand: True.
-
-### eye
-
-- `eye_strain_near_far_focal_shifts` (Near-Far Focal Shifts): Not reviewed for activation here: separate specialist or regional evidence assessment needed. No exercise-level clinical rejection is made. Ledger flags: none; mixed camp demand: True.
-- `eye_strain_pencil_push_ups` (Pencil Push-Ups): Not reviewed for activation here: separate specialist or regional evidence assessment needed. No exercise-level clinical rejection is made. Ledger flags: none; mixed camp demand: True.
-- `eye_strain_fitlight_reflex_matrix` (FitLight Reflex Matrix): Not reviewed for activation here: separate specialist or regional evidence assessment needed. No exercise-level clinical rejection is made. Ledger flags: none; mixed camp demand: True.
-- `eye_strain_multi_task_gaze_balance` (Multi-Task Gaze + Balance): Not reviewed for activation here: separate specialist or regional evidence assessment needed. No exercise-level clinical rejection is made. Ledger flags: none; mixed camp demand: True.
-
-### fingers
-
-- `fingers_strain_rubber_band_finger_extensions` (Rubber Band Finger Extensions): Not reviewed or selected for this baseline rollout. No clinical rejection is implied; any future activation needs a stage-specific review of its stated demand. Ledger flags: none; mixed camp demand: True.
-- `fingers_strain_isometric_finger_pinch_plate_or_towel` (Isometric Finger Pinch (Plate or Towel)): Not reviewed or selected for this baseline rollout. No clinical rejection is implied; any future activation needs a stage-specific review of its stated demand. Ledger flags: none; mixed camp demand: True.
-- `fingers_strain_digit_specific_flexion_holds_putty_or_band` (Digit-Specific Flexion Holds (Putty or Band)): Not reviewed or selected for this baseline rollout. No clinical rejection is implied; any future activation needs a stage-specific review of its stated demand. Ledger flags: none; mixed camp demand: True.
-- `fingers_strain_elastic_finger_push_press` (Elastic Finger Push-Press): Not reviewed or selected for this baseline rollout. No clinical rejection is implied; any future activation needs a stage-specific review of its stated demand. Ledger flags: none; mixed camp demand: True.
-
-### foot
-
-- `foot_strain_resisted_toe_pulls_with_band` (Resisted Toe Pulls with Band): Not reviewed or selected for this baseline rollout. No clinical rejection is implied; any future activation needs a stage-specific review of its stated demand. Ledger flags: none; mixed camp demand: True.
-- `foot_strain_mid_foot_isometric_holds_band_loop` (Mid-Foot Isometric Holds (Band Loop)): Not reviewed or selected for this baseline rollout. No clinical rejection is implied; any future activation needs a stage-specific review of its stated demand. Ledger flags: none; mixed camp demand: True.
-
-### forearm
-
-- `forearm_strain_wrist_curls_slow_tempo` (Wrist Curls (Slow Tempo)): Not reviewed or selected for this baseline rollout. No clinical rejection is implied; any future activation needs a stage-specific review of its stated demand. Ledger flags: none; mixed camp demand: True.
-- `forearm_strain_finger_extension_band_flicks` (Finger Extension Band Flicks): Not reviewed or selected for this baseline rollout. No clinical rejection is implied; any future activation needs a stage-specific review of its stated demand. Ledger flags: none; mixed camp demand: True.
-
-### glute
-
-- `glutes_strain_glute_bridge_iso_holds` (Glute Bridge Iso Holds): Not reviewed or selected for this baseline rollout. No clinical rejection is implied; any future activation needs a stage-specific review of its stated demand. Ledger flags: none; mixed camp demand: True.
-- `glutes_strain_massage_gun_glute_max_line` (Massage Gun – Glute Max Line): Not selected for the acute active baseline: sources advise against early massage. Later-phase use was not clinically reviewed here. Ledger flags: none; mixed camp demand: True.
-- `glutes_strain_glute_bridge_with_isometric_hold` (Glute Bridge with Isometric Hold): Not reviewed or selected for this baseline rollout. No clinical rejection is implied; any future activation needs a stage-specific review of its stated demand. Ledger flags: VARIABLE_DEMAND_PROGRESSION, SPEED_PROGRESSION_IN_NOTES; mixed camp demand: True.
-- `glutes_strain_quadruped_kickbacks_band_optional` (Quadruped Kickbacks (Band Optional)): Not reviewed or selected for this baseline rollout. No clinical rejection is implied; any future activation needs a stage-specific review of its stated demand. Ledger flags: none; mixed camp demand: True.
-
-### groin
-
-- `groin_strain_side_lying_hip_adduction` (Side-Lying Hip Adduction): Fixed derivative reviewed for RESTORE; the original camp progression remains unreviewed as a combined prescription and is retained unchanged. Ledger flags: VARIABLE_DEMAND_PROGRESSION, SPEED_PROGRESSION_IN_NOTES; mixed camp demand: True.
-- `groin_strain_standing_cable_adduction` (Standing Cable Adduction): Not reviewed or selected for this baseline rollout. No clinical rejection is implied; any future activation needs a stage-specific review of its stated demand. Ledger flags: none; mixed camp demand: True.
-
-### hamstring
-
-- `hamstrings_strain_isometric_hamstring_bridge` (Isometric Hamstring Bridge): Fixed derivative reviewed for RESTORE; the original camp progression remains unreviewed as a combined prescription and is retained unchanged. Ledger flags: none; mixed camp demand: True.
-- `hamstrings_strain_massage_gun_biceps_femoris_sweep` (Massage Gun – Biceps Femoris Sweep): Not selected for the acute active baseline: sources advise against early massage. Later-phase use was not clinically reviewed here. Ledger flags: none; mixed camp demand: True.
-
-### hand
-
-- `hand_strain_wrist_flexor_isometric_press_palm_down` (Wrist Flexor Isometric Press (Palm Down)): Not reviewed or selected for this baseline rollout. No clinical rejection is implied; any future activation needs a stage-specific review of its stated demand. Ledger flags: none; mixed camp demand: True.
-- `hand_strain_finger_walks_on_wall` (Finger Walks on Wall): Not reviewed or selected for this baseline rollout. No clinical rejection is implied; any future activation needs a stage-specific review of its stated demand. Ledger flags: none; mixed camp demand: True.
-- `hand_strain_loaded_palm_extensions_rubber_band` (Loaded Palm Extensions (Rubber Band)): Not reviewed or selected for this baseline rollout. No clinical rejection is implied; any future activation needs a stage-specific review of its stated demand. Ledger flags: none; mixed camp demand: True.
-- `hand_strain_isometric_grip_on_towel` (Isometric Grip on Towel): Not reviewed or selected for this baseline rollout. No clinical rejection is implied; any future activation needs a stage-specific review of its stated demand. Ledger flags: VARIABLE_DEMAND_PROGRESSION, SPEED_PROGRESSION_IN_NOTES; mixed camp demand: True.
-
-### jaw
-
-- `jaw_strain_isometric_jaw_clench_mouthguard_in` (Isometric Jaw Clench (Mouthguard In)): Not reviewed for activation here: separate specialist or regional evidence assessment needed. No exercise-level clinical rejection is made. Ledger flags: none; mixed camp demand: True.
-- `jaw_strain_lateral_jaw_pushes_finger_resistance` (Lateral Jaw Pushes (Finger Resistance)): Not reviewed for activation here: separate specialist or regional evidence assessment needed. No exercise-level clinical rejection is made. Ledger flags: VARIABLE_DEMAND_PROGRESSION, SPEED_PROGRESSION_IN_NOTES; mixed camp demand: True.
-
-### knee
-
-- `knee_strain_wall_sit_short_arc` (Wall Sit (Short Arc)): Not reviewed or selected for this baseline rollout. No clinical rejection is implied; any future activation needs a stage-specific review of its stated demand. Ledger flags: none; mixed camp demand: True.
-- `knee_strain_mini_band_lateral_walks` (Mini-Band Lateral Walks): Not reviewed or selected for this baseline rollout. No clinical rejection is implied; any future activation needs a stage-specific review of its stated demand. Ledger flags: none; mixed camp demand: True.
-- `knee_strain_lateral_step_downs` (Lateral Step-Downs): Not reviewed or selected for this baseline rollout. No clinical rejection is implied; any future activation needs a stage-specific review of its stated demand. Ledger flags: none; mixed camp demand: True.
-- `knee_strain_band_assisted_lateral_lunges` (Band-Assisted Lateral Lunges): Not reviewed or selected for this baseline rollout. No clinical rejection is implied; any future activation needs a stage-specific review of its stated demand. Ledger flags: none; mixed camp demand: True.
-- `knee_strain_wall_sit_short_arc_2` (Wall Sit (Short Arc)): Duplicate copy: not selected as an additional live identity. Both copies remain in the bank; the exercise itself is not rejected. Ledger flags: none; mixed camp demand: True.
-- `knee_strain_mini_band_lateral_walks_2` (Mini-Band Lateral Walks): Duplicate copy: not selected as an additional live identity. Both copies remain in the bank; the exercise itself is not rejected. Ledger flags: none; mixed camp demand: True.
-- `knee_strain_lateral_step_downs_2` (Lateral Step-Downs): Duplicate copy: not selected as an additional live identity. Both copies remain in the bank; the exercise itself is not rejected. Ledger flags: none; mixed camp demand: True.
-- `knee_strain_band_assisted_lateral_lunges_2` (Band-Assisted Lateral Lunges): Duplicate copy: not selected as an additional live identity. Both copies remain in the bank; the exercise itself is not rejected. Ledger flags: none; mixed camp demand: True.
-
-### lower back
-
-- `lower_back_strain_glute_bridge_walkout` (Glute Bridge Walkout): Not reviewed or selected for this baseline rollout. No clinical rejection is implied; any future activation needs a stage-specific review of its stated demand. Ledger flags: none; mixed camp demand: True.
-- `lower_back_strain_quadruped_rock_backs` (Quadruped Rock Backs): Not reviewed or selected for this baseline rollout. No clinical rejection is implied; any future activation needs a stage-specific review of its stated demand. Ledger flags: none; mixed camp demand: True.
-- `lower_back_strain_glute_bridge_walkouts` (Glute Bridge Walkouts): Not reviewed or selected for this baseline rollout. No clinical rejection is implied; any future activation needs a stage-specific review of its stated demand. Ledger flags: none; mixed camp demand: True.
-- `lower_back_strain_bird_dog_with_reach` (Bird Dog with Reach): Not reviewed or selected for this baseline rollout. No clinical rejection is implied; any future activation needs a stage-specific review of its stated demand. Ledger flags: none; mixed camp demand: True.
-
-### neck
-
-- `neck_strain_isometric_neck_flexion_wall` (Isometric Neck Flexion (Wall)): Not reviewed or selected for this baseline rollout. No clinical rejection is implied; any future activation needs a stage-specific review of its stated demand. Ledger flags: VARIABLE_DEMAND_PROGRESSION, SPEED_PROGRESSION_IN_NOTES; mixed camp demand: True.
-- `neck_strain_neck_retraction_with_band` (Neck Retraction with Band): Not reviewed or selected for this baseline rollout. No clinical rejection is implied; any future activation needs a stage-specific review of its stated demand. Ledger flags: none; mixed camp demand: True.
-- `neck_strain_supine_band_resisted_neck_flexion` (Supine Band-Resisted Neck Flexion): Not reviewed or selected for this baseline rollout. No clinical rejection is implied; any future activation needs a stage-specific review of its stated demand. Ledger flags: none; mixed camp demand: True.
-- `neck_strain_neck_clock_isometrics` (Neck Clock Isometrics): Not reviewed or selected for this baseline rollout. No clinical rejection is implied; any future activation needs a stage-specific review of its stated demand. Ledger flags: none; mixed camp demand: True.
-
-### obliques
-
-- `obliques_strain_side_plank_with_band_row` (Side Plank with Band Row): Not reviewed or selected for this baseline rollout. No clinical rejection is implied; any future activation needs a stage-specific review of its stated demand. Ledger flags: none; mixed camp demand: True.
-- `obliques_strain_rotational_med_ball_toss_seated` (Rotational Med Ball Toss (Seated)): Not reviewed or selected for this baseline rollout. No clinical rejection is implied; any future activation needs a stage-specific review of its stated demand. Ledger flags: none; mixed camp demand: True.
-- `obliques_strain_side_plank_with_reach_under` (Side Plank with Reach Under): Not reviewed or selected for this baseline rollout. No clinical rejection is implied; any future activation needs a stage-specific review of its stated demand. Ledger flags: none; mixed camp demand: True.
-- `obliques_strain_dead_bug_with_banded_chop` (Dead Bug with Banded Chop): Not reviewed or selected for this baseline rollout. No clinical rejection is implied; any future activation needs a stage-specific review of its stated demand. Ledger flags: none; mixed camp demand: True.
-- `obliques_strain_half_kneeling_cable_chop` (Half-Kneeling Cable Chop): Not reviewed or selected for this baseline rollout. No clinical rejection is implied; any future activation needs a stage-specific review of its stated demand. Ledger flags: none; mixed camp demand: True.
-- `obliques_strain_rotational_med_ball_toss_wall` (Rotational Med Ball Toss (Wall)): Not reviewed or selected for this baseline rollout. No clinical rejection is implied; any future activation needs a stage-specific review of its stated demand. Ledger flags: none; mixed camp demand: True.
-
-### quads
-
-- `quads_strain_isometric_wall_sit_mid_range` (Isometric Wall Sit (Mid-Range)): Not reviewed or selected for this baseline rollout. No clinical rejection is implied; any future activation needs a stage-specific review of its stated demand. Ledger flags: none; mixed camp demand: True.
-- `quads_strain_foam_roller_quad_sweep` (Foam Roller – Quad Sweep): Not selected for the acute active baseline: sources advise against early massage. Later-phase use was not clinically reviewed here. Ledger flags: none; mixed camp demand: True.
-
-### shoulder
-
-- `shoulder_strain_wall_slides_with_foam_roller` (Wall Slides with Foam Roller): Not selected for the acute active baseline: sources advise against early massage. Later-phase use was not clinically reviewed here. Ledger flags: none; mixed camp demand: True.
-- `shoulder_strain_landmine_shoulder_press` (Landmine Shoulder Press): Not reviewed or selected for this baseline rollout. No clinical rejection is implied; any future activation needs a stage-specific review of its stated demand. Ledger flags: none; mixed camp demand: True.
-- `shoulder_strain_isometric_wall_press_90_abduction` (Isometric Wall Press (90° Abduction)): Not reviewed or selected for this baseline rollout. No clinical rejection is implied; any future activation needs a stage-specific review of its stated demand. Ledger flags: none; mixed camp demand: False.
-- `shoulder_strain_banded_y_raise` (Banded Y-Raise): Not reviewed or selected for this baseline rollout. No clinical rejection is implied; any future activation needs a stage-specific review of its stated demand. Ledger flags: none; mixed camp demand: False.
-
-### toe
-
-- `toe_strain_toe_towel_slides_loaded_variant` (Toe Towel Slides (Loaded Variant)): Not reviewed or selected for this baseline rollout. No clinical rejection is implied; any future activation needs a stage-specific review of its stated demand. Ledger flags: none; mixed camp demand: True.
-- `toe_strain_manual_toe_flexor_resistance_band` (Manual Toe Flexor Resistance (Band)): Not reviewed or selected for this baseline rollout. No clinical rejection is implied; any future activation needs a stage-specific review of its stated demand. Ledger flags: none; mixed camp demand: True.
-
-### triceps
-
-- `triceps_strain_isometric_wall_triceps_press` (Isometric Wall Triceps Press): Not reviewed or selected for this baseline rollout. No clinical rejection is implied; any future activation needs a stage-specific review of its stated demand. Ledger flags: none; mixed camp demand: True.
-- `triceps_strain_overhead_band_triceps_extensions` (Overhead Band Triceps Extensions): Not reviewed or selected for this baseline rollout. No clinical rejection is implied; any future activation needs a stage-specific review of its stated demand. Ledger flags: none; mixed camp demand: True.
-- `triceps_strain_push_up_to_tabletop_flow` (Push-Up to Tabletop Flow): Not reviewed or selected for this baseline rollout. No clinical rejection is implied; any future activation needs a stage-specific review of its stated demand. Ledger flags: none; mixed camp demand: True.
-- `triceps_strain_kettlebell_crush_press_light` (Kettlebell Crush Press (Light)): Not reviewed or selected for this baseline rollout. No clinical rejection is implied; any future activation needs a stage-specific review of its stated demand. Ledger flags: none; mixed camp demand: True.
-
-### unspecified
-
-- `unspecified_strain_general_isometric_holds_5_position_circuit` (General Isometric Holds (5-position circuit)): Not reviewed for activation here: separate specialist or regional evidence assessment needed. No exercise-level clinical rejection is made. Ledger flags: none; mixed camp demand: False.
-- `unspecified_strain_foam_rolling_tempo_eccentrics` (Foam Rolling + Tempo Eccentrics): Not selected for the acute active baseline: sources advise against early massage. Later-phase use was not clinically reviewed here. Ledger flags: none; mixed camp demand: False.
-
-### upper back
-
-- `upper_back_strain_prone_swimmers` (Prone Swimmers): Not reviewed or selected for this baseline rollout. No clinical rejection is implied; any future activation needs a stage-specific review of its stated demand. Ledger flags: none; mixed camp demand: True.
-- `upper_back_strain_scapular_push_ups` (Scapular Push-Ups): Not reviewed or selected for this baseline rollout. No clinical rejection is implied; any future activation needs a stage-specific review of its stated demand. Ledger flags: none; mixed camp demand: True.
-- `upper_back_strain_suspended_row_trx_or_rings` (Suspended Row (TRX or Rings)): Not reviewed or selected for this baseline rollout. No clinical rejection is implied; any future activation needs a stage-specific review of its stated demand. Ledger flags: VARIABLE_DEMAND_PROGRESSION, SPEED_PROGRESSION_IN_NOTES; mixed camp demand: True.
-- `upper_back_strain_resistance_band_reverse_flys` (Resistance Band Reverse Flys): Not reviewed or selected for this baseline rollout. No clinical rejection is implied; any future activation needs a stage-specific review of its stated demand. Ledger flags: none; mixed camp demand: True.
-
-### wrist
-
-- `wrist_strain_wrist_curl_light_dumbbell` (Wrist Curl (Light Dumbbell)): Not reviewed or selected for this baseline rollout. No clinical rejection is implied; any future activation needs a stage-specific review of its stated demand. Ledger flags: none; mixed camp demand: True.
-- `wrist_strain_reverse_wrist_curl` (Reverse Wrist Curl): Not reviewed or selected for this baseline rollout. No clinical rejection is implied; any future activation needs a stage-specific review of its stated demand. Ledger flags: none; mixed camp demand: True.
-- `wrist_strain_cable_reverse_curl_eccentric` (Cable Reverse Curl (Eccentric)): Not reviewed or selected for this baseline rollout. No clinical rejection is implied; any future activation needs a stage-specific review of its stated demand. Ledger flags: none; mixed camp demand: True.
-- `wrist_strain_wrist_flexion_bear_hug_iso` (Wrist Flexion Bear Hug Iso): Not reviewed or selected for this baseline rollout. No clinical rejection is implied; any future activation needs a stage-specific review of its stated demand. Ledger flags: none; mixed camp demand: True.
-- `wrist_strain_wrist_roller_light_plate` (Wrist Roller (Light Plate)): Not reviewed or selected for this baseline rollout. No clinical rejection is implied; any future activation needs a stage-specific review of its stated demand. Ledger flags: none; mixed camp demand: True.
-- `wrist_strain_farmer_s_hold_with_wrist_control` (Farmer’s Hold with Wrist Control): Not reviewed or selected for this baseline rollout. No clinical rejection is implied; any future activation needs a stage-specific review of its stated demand. Ledger flags: none; mixed camp demand: True.
-
-Quadriceps movement parent outside the strain inventory:
-`quads_unspecified_sliding_leg_extensions_towel_under_foot` stays needs_review with
-its original hash; only the slow, supported fixed strain derivative is reviewed.
-
-## Verification
-
-Run the family coverage suite together with rehab pathways/equivalence, bundles,
-completion, exposure, metadata, selector, progression, scheduling and Today safety
-suites. Run clinical/bank/ledger validators, the metadata applicator --check and the
-injury vocabulary audit. `tools/test_rehab_migration.mjs` exercises the migration in
-isolated PGlite PostgreSQL, including a future policy id absent from the catalog,
-owner and provenance mismatch rejections, frozen snapshots and idempotent feedback.
-It does not verify multi-connection advisory-lock races or production deployment.
-
-Validation performed in this workspace:
-
-- Clinical/profile, metadata-ledger and bank validators: passed; no errors, warnings or stale reviews. Bank information messages remain historical migration debt.
-- Metadata applicator --check: no pending changes or stale reviews.
-- Injury vocabulary audit: passed; 33 canonical types and 7 families remain unchanged.
-- Family, stage and vocabulary test run: 263 passed.
-- Rehab/progression/selector/scheduling/completion/generation/Today regression run: 728 passed, 15 PostgreSQL concurrency tests skipped because REHAB_TEST_DATABASE_URL is unset.
-- Family/journey/multi-injury/clearance/Today safety/readiness/restraint run: 338 passed.
-- Pathway composition/equivalence, bundles, metadata and exposure assertions also passed in the broader review run; the old zero-reviewed ledger assertion was updated and its complete suite subsequently passed.
-- Isolated PostgreSQL migration harness: 17 acceptance checks passed, including generic future-profile attribution and negative owner/policy/stage/revision/drill cases. Actual multi-connection database race behavior remains unverified here.
-- Changed Python modules compile, Ruff passes, git diff --check passes, and the curated seed is byte-idempotent.
-- No frontend changes; no frontend build was required. No production migration, deployment or clinical sign-off is claimed.
-
-- Final urgent-taxonomy/triage and structured-triage regression run: 204 passed.
-- Ideal advanced evidence was explicitly tested against all six shipped profiles: 6 passed; none progresses beyond RESTORE.
-
-- Final content comparison against Main confirms all 1,545 original bank drills are unchanged. Two explicit unknown-side RESTORE fallback checks pass for groin and quads.
+| Hamstring | Protective guidance | Bent-knee double-leg bridge |
+| Calf | Protective guidance | Supported double-leg heel raise |
+| Groin | Protective guidance | Unresisted side-lying adduction |
+| Quads | Protective guidance | Supported knee movement |
+| Biceps | Protective guidance | Supported elbow movement |
+| Triceps | Protective guidance | Supported elbow movement |
+| Shoulder | Protective guidance | Supported pendulum |
+| Chest | Existing guidance | Existing comfortable movement |
+
+Baseline work has no invented numerical dose. CALM/RESTORE eligibility is the
+existing low/moderate product safety gate, not a diagnosis grade. Calf raises retain
+the source's prerequisites: settled pain, no crutches and pain-free toe standing.
+Unknown-side RESTORE uses CALM fallback for movements needing a known affected side.
+
+Reviewed resisted bank exercises are classified LOAD and retained for later use.
+Their mechanical review does not establish efficacy, dose or clearance for a specific
+equipment variant. LOAD/DYNAMIC/RETURN remain closed until the app can evaluate
+sourced clinical transitions. Massage/rolling is excluded from acute prescriptions.
+
+## Sources
+
+- General protection and comfortable movement: https://www.nhs.uk/conditions/sprains-and-strains/
+- Hamstring staged rehabilitation: https://pmc.ncbi.nlm.nih.gov/articles/PMC2867336/
+- Calf strain advice: https://www.hey.nhs.uk/patient-leaflet/soft-tissue-injury-calf-strain/
+- Adductor rehabilitation: https://pmc.ncbi.nlm.nih.gov/articles/PMC10569248/
+- Quadriceps strain: https://pmc.ncbi.nlm.nih.gov/articles/PMC2941577/
+- Upper-arm early elbow movement: https://www.nbt.nhs.uk/our-services/a-z-services/emergency-department/ed-miu-patient-information/elbow-injuries
+- Shoulder soft-tissue movement: https://www.leedsth.nhs.uk/patients/resources/early-advice-and-exercises-for-soft-tissue-injuries-of-the-shoulder/
+
+Upper-arm guidance supports gentle elbow movement for uncomplicated muscle strains;
+it is not a biceps/triceps tendon-rupture or surgical-repair protocol. Shoulder advice
+supports early pendulum movement, not clearance for loaded pressing or contact sport.
+
+## Rollout and checks
+
+Apply supabase/migrations/20261002234842_pathway_profile_unknown_side.sql before
+activating new profiles in production. It generalizes existing completion attribution
+using exact frozen profile ownership; unknown-side feedback cannot provide positive
+advanced-stage capacity evidence. No production migration has been applied here.
+
+Reproduce content with python tools/seed_strain_family.py. Validate with the bank,
+clinical and metadata validators, then run the strain, pathway, completion, selector,
+scheduling, readiness and injury-safety tests. The seed is byte-idempotent.
