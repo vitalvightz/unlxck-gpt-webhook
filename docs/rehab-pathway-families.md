@@ -126,11 +126,11 @@ A requirement shared by every profile in a family belongs in that family's `tran
 
 ## Current state and what still blocks higher stages
 
-- `chest_strain` and `ankle_sprain` retain their previous reviewed content, live stages, bundles and content hashes. `tests/fixtures/rehab_clinical_policies_v2_legacy.json` freezes that file, and `tests/test_rehab_pathway_equivalence.py` proves identical decisions, schedules, reconciled snapshots, Today views and generation output. The strain coverage rollout adds CALM/RESTORE profiles for hamstring, calf, groin and quads; see `strain-family-rollout.md`.
+- `chest_strain` and `ankle_sprain` retain their previous reviewed prescriptions, live stages, bundles and policy hashes. `tests/fixtures/rehab_clinical_policies_v2_legacy.json` freezes that file, and `tests/test_rehab_pathway_equivalence.py` proves identical decisions, schedules, reconciled snapshots, Today views and generation output. The strain rollout adds CALM/RESTORE profiles for hamstring, calf, groin, quads, biceps, triceps and shoulder, and repairs all 28 original strain exercises in these regions plus chest. See `strain-family-rollout.md`.
 - No profile declares a clinical criterion, so no transition is promotable. LOAD, DYNAMIC and RETURN are closed for every user.
 - Missing for real progression:
   - Sourced clinical criteria per family/profile.
-  - Reviewed LOAD/DYNAMIC/RETURN drills.
+  - Prescription-level approval of LOAD/DYNAMIC/RETURN drills; a mechanical bank review alone does not activate them.
   - Captured functional inputs (`pain_free_walking`, `low_speed_running_tolerance`, `pain_free_submaximal_isometric` are declared, none captured).
   - Defined source-backed doses where a criterion needs completed dose.
   - A sourced rule for when an older negative response is resolved.

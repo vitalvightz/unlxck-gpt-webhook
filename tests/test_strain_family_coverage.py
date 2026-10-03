@@ -16,7 +16,11 @@ from fightcamp.rehab_protocols import get_rehab_bank
 from tools.rehab_metadata_review_lib import source_hash
 
 ROOT = Path(__file__).resolve().parents[1]
-REGIONS = ["hamstring", "calf", "groin", "quads"]
+REGIONS = ["hamstring", "calf", "groin", "quads", "biceps", "triceps", "shoulder"]
+RESTORE_IDS = {
+    "hamstring": "hamstrings_strain_isometric_hamstring_bridge",
+    "calf": "calf_strain_double_leg_calf_raises", "groin": "groin_strain_side_lying_hip_adduction",
+}
 DAY = "2026-10-03"
 PLAN = str(uuid4())
 
@@ -44,7 +48,8 @@ def test_correct_region_strain_resolves_reviewed_stage_and_real_completion(regio
     assert decision["outcome"] == "prescribed_rehab"
     assert decision["policy_id"] == region + "_strain" and decision["stage"] == stage
     current = decision["prescription"]
-    assert current["drill_id"] == region + "_strain_" + ("recovery_support" if stage == "calm" else "reviewed_restore")
+    assert current["drill_id"] == (region + "_strain_recovery_support" if stage == "calm"
+                                   else RESTORE_IDS.get(region, region + "_strain_reviewed_restore"))
     assert current["bank_hash"] == content_hash(current["drill"])
     assert current["dose"] == {} and current["minimum_gap_days"] == 1
     frozen = reconcile_session_prescription(None, decisions=[decision], plan_id=PLAN, training_day=DAY)
@@ -62,7 +67,7 @@ def test_correct_region_strain_resolves_reviewed_stage_and_real_completion(regio
 
 
 @pytest.mark.parametrize("region", REGIONS)
-def test_all_live_identities_have_current_reviewed_ledger_and_legacy_hashes_are_preserved(region):
+def test_live_identities_have_current_review_and_authorised_edits_keep_source_history(region):
     ledger = {r["drill_id"]: r for r in json.loads((ROOT / "data/rehab_metadata_review.json").read_text())}
     bank = get_rehab_bank()
     policy = next(p for p in load_clinical_policies() if p.region == region)
@@ -74,8 +79,11 @@ def test_all_live_identities_have_current_reviewed_ledger_and_legacy_hashes_are_
             injury_type=record["injury_type"], name=record["name"], notes=record["notes"])
     before = json.loads((ROOT / "docs/strain-family-pre-rollout-audit.json").read_text(encoding="utf-8-sig"))
     for original in before[region]["drills"]:
-        assert ledger[original["drill_id"]]["source_hash"] == original["source_hash"]
-        assert ledger[original["drill_id"]]["review_state"] == "needs_review"
+        record = ledger[original["drill_id"]]
+        assert record["review_state"] == "reviewed"
+        assert original["source_hash"] in {record["source_hash"],
+            *(r["source_hash"] for r in record.get("source_history", []))}
+        assert "GPP:" not in record["notes"] and "SPP:" not in record["notes"]
 
 
 @pytest.mark.parametrize("region", REGIONS)
@@ -144,12 +152,12 @@ def test_unknown_side_baseline_guidance_is_recordable_but_not_capacity_evidence(
     assert not resolve_rehab_completion([legacy], [row], completion=completion).eligible
 
 
-@pytest.mark.parametrize("region", ["biceps", "triceps", "shoulder", "neck", "eye", "jaw", "toe"])
+@pytest.mark.parametrize("region", ["neck", "eye", "jaw", "toe"])
 def test_unreviewed_regions_stay_unsupported(region):
     assert resolve(injury(region))["outcome"] == "unsupported_prescription"
 
 
-@pytest.mark.parametrize("region", ["groin", "quads"])
+@pytest.mark.parametrize("region", ["groin", "quads", "biceps", "triceps", "shoulder"])
 def test_unknown_side_restore_uses_only_attributable_calm_fallback(region):
     decision = resolve(injury(region, "restore", side="unknown"))
     assert decision["prescription"]["drill_id"] == f"{region}_strain_recovery_support"

@@ -323,8 +323,8 @@
           ]
         },
         {
-          "drill_id": "hamstring_strain_reviewed_restore",
-          "bank_hash": "6ca3dea607c5d7d424ec2017be0a318f9b5bad5a81a39298133226b738277914",
+          "drill_id": "hamstrings_strain_isometric_hamstring_bridge",
+          "bank_hash": "333adbd04e5bc412fe80e309383d8dc0ca685bcc598b041ccd61a07114633552",
           "stage": "restore",
           "instructions": "When comfortable movement is possible, lie on your back with both knees bent and feet supported close to your hips. Gently lift into a double-leg bridge and hold briefly at a comfortable height, then lower. Keep the work pain-free and self-paced. Do not walk the feet out, straighten the knees, add resistance or work to fatigue.",
           "dose": null,
@@ -360,7 +360,7 @@
       "transition_overrides": {},
       "status": "active",
       "activation": "live",
-      "content_hash": "a1c0b87df43fe179944f4dce4376101b6594df2c21cc3c343a2d73014788de92"
+      "content_hash": "b77a350ef36978b9e148c1e58ecda355f13cb607ef3a722d6a3b627bb2cec95b"
     },
     {
       "policy_id": "calf_strain",
@@ -397,8 +397,8 @@
           ]
         },
         {
-          "drill_id": "calf_strain_reviewed_restore",
-          "bank_hash": "4d6bf93735c2754917bd416b8b1b28eaa42c59eb521bb5b5b8e0363a17859b6e",
+          "drill_id": "calf_strain_double_leg_calf_raises",
+          "bank_hash": "d1f59b2aa6acc579cee3c60afbd1fa40591406c51b915d532990b2db66bb31aa",
           "stage": "restore",
           "instructions": "Begin only once pain has settled, you no longer need crutches and you can stand on your toes without pain. Hold a stable chair, share your weight equally over both feet and gently rise onto your toes, then lower slowly. Work at your own pace and stop if painful. Keep both feet on level ground; do not add weight, single-leg work, a step or fatigue progressions.",
           "dose": null,
@@ -433,7 +433,7 @@
       "transition_overrides": {},
       "status": "active",
       "activation": "live",
-      "content_hash": "e304ad21484d443c6e41b707a88c47940f66dfaf787bacd30ce2863153172fad"
+      "content_hash": "6cd45672bd20b2182b8531d969f022ecc9cfe3b39d59fd12d664fcf50eb5a71a"
     },
     {
       "policy_id": "groin_strain",
@@ -470,8 +470,8 @@
           ]
         },
         {
-          "drill_id": "groin_strain_reviewed_restore",
-          "bank_hash": "ae6466e819124fd0033330630e31519b402c9f6d860b840aff20eb777381a572",
+          "drill_id": "groin_strain_side_lying_hip_adduction",
+          "bank_hash": "593b5d407717e50fd58f687dac3f72412927e25afabc87795aaf39aad42b620a",
           "stage": "restore",
           "instructions": "Once symptoms have settled enough for comfortable movement, lie on the affected side with the upper leg supported out of the way. Slowly lift and lower the lower leg through a small comfortable range. Keep the work pain-free and self-paced. Stop if groin pain increases during or after the work. Do not add ankle weights, cables, fast repetitions or fatigue work.",
           "dose": null,
@@ -506,7 +506,7 @@
       "transition_overrides": {},
       "status": "active",
       "activation": "live",
-      "content_hash": "fb11794415ecb2b4a5b191469a2d52e6fe89860dc700f872aa6be4477a1a53b8"
+      "content_hash": "675ee38ef63600efb128b52661e9aaf268ad50a0406d9723c8a2153b8d652216"
     },
     {
       "policy_id": "quads_strain",
@@ -582,6 +582,228 @@
       "status": "active",
       "activation": "live",
       "content_hash": "afead377947a2879a2d0e8edc6f14e8bfc53c787173f05c71c53e00a9c8369c5"
+    },
+    {
+      "policy_id": "biceps_strain",
+      "version": 1,
+      "pathway_family": "muscle_strain",
+      "region": "biceps",
+      "injury_type": "strain",
+      "evidence_sources": [
+        "https://www.nhs.uk/conditions/sprains-and-strains/",
+        "https://www.nbt.nhs.uk/our-services/a-z-services/emergency-department/ed-miu-patient-information/elbow-injuries"
+      ],
+      "prescriptions": [
+        {
+          "drill_id": "biceps_strain_recovery_support",
+          "bank_hash": "726ec546301ad4362d66147c178c41680bcd68c639438767e3e6ef4bca0b3283",
+          "stage": "calm",
+          "instructions": "Protect the strained area and avoid activity that aggravates it. During the first 2 to 3 days, rest from exercise that loads it. Use comfortable everyday movement without forcing a stretch. Avoid massage and heat in the early period. Seek assessment for severe or worsening pain, swelling or inability to use the area.",
+          "dose": null,
+          "camp_doses": {},
+          "readiness_doses": {},
+          "allowed_severities": [
+            "low",
+            "moderate"
+          ],
+          "stop_when": [
+            "Stop if movement is painful or symptoms worsen during or after the work.",
+            "Seek assessment for severe or worsening pain, swelling or inability to use the area."
+          ],
+          "frequency": "scheduled_sessions",
+          "minimum_gap_days": 1,
+          "priority": 0,
+          "sources": [
+            "https://www.nhs.uk/conditions/sprains-and-strains/"
+          ]
+        },
+        {
+          "drill_id": "biceps_strain_reviewed_restore",
+          "bank_hash": "6b16aa14ab4188cedbd1831433419f2926020fc68bba027aa77136daacd576fa",
+          "stage": "restore",
+          "instructions": "Once pain begins to settle, support the affected elbow with your other hand. Slowly bend and straighten the elbow within a comfortable pain-free range. Do not force straightening, carry weights or add curl resistance. Stop if pain or swelling increases. This is gentle movement for an uncomplicated muscle strain, not a tendon tear or repair protocol.",
+          "dose": null,
+          "camp_doses": {},
+          "readiness_doses": {},
+          "allowed_severities": [
+            "low",
+            "moderate"
+          ],
+          "stop_when": [
+            "Stop if movement is painful or symptoms worsen during or after the work.",
+            "Seek assessment for severe or worsening pain, swelling or inability to use the area."
+          ],
+          "frequency": "scheduled_sessions",
+          "minimum_gap_days": 1,
+          "priority": 0,
+          "sources": [
+            "https://www.nhs.uk/conditions/sprains-and-strains/",
+            "https://www.nbt.nhs.uk/our-services/a-z-services/emergency-department/ed-miu-patient-information/elbow-injuries"
+          ]
+        }
+      ],
+      "blocked_regions": [
+        "bicep",
+        "biceps",
+        "elbow",
+        "shoulder"
+      ],
+      "blocked_tags": [],
+      "contact_limit": "none",
+      "live_stages": [
+        "calm",
+        "restore"
+      ],
+      "transition_overrides": {},
+      "status": "active",
+      "activation": "live",
+      "content_hash": "2d95244933247f93a8c1f6e52dfb394d5fc0c61760b451cb13ba3e695716a816"
+    },
+    {
+      "policy_id": "triceps_strain",
+      "version": 1,
+      "pathway_family": "muscle_strain",
+      "region": "triceps",
+      "injury_type": "strain",
+      "evidence_sources": [
+        "https://www.nhs.uk/conditions/sprains-and-strains/",
+        "https://www.nbt.nhs.uk/our-services/a-z-services/emergency-department/ed-miu-patient-information/elbow-injuries"
+      ],
+      "prescriptions": [
+        {
+          "drill_id": "triceps_strain_recovery_support",
+          "bank_hash": "4990982ceddafe59a186522bca11904d2e01ae4710f1c0ec97be384c253da3d4",
+          "stage": "calm",
+          "instructions": "Protect the strained area and avoid activity that aggravates it. During the first 2 to 3 days, rest from exercise that loads it. Use comfortable everyday movement without forcing a stretch. Avoid massage and heat in the early period. Seek assessment for severe or worsening pain, swelling or inability to use the area.",
+          "dose": null,
+          "camp_doses": {},
+          "readiness_doses": {},
+          "allowed_severities": [
+            "low",
+            "moderate"
+          ],
+          "stop_when": [
+            "Stop if movement is painful or symptoms worsen during or after the work.",
+            "Seek assessment for severe or worsening pain, swelling or inability to use the area."
+          ],
+          "frequency": "scheduled_sessions",
+          "minimum_gap_days": 1,
+          "priority": 0,
+          "sources": [
+            "https://www.nhs.uk/conditions/sprains-and-strains/"
+          ]
+        },
+        {
+          "drill_id": "triceps_strain_reviewed_restore",
+          "bank_hash": "20cf21b1f6e1791ec93c73ff3b6cadfbaa098369f9478109582107f26b8db0e4",
+          "stage": "restore",
+          "instructions": "Once pain begins to settle, support the affected elbow with your other hand. Slowly bend and straighten the elbow within a comfortable pain-free range. Do not force the elbow straight, push against a wall or add resistance. Stop if pain or swelling increases. This is gentle movement for an uncomplicated muscle strain, not a tendon tear or repair protocol.",
+          "dose": null,
+          "camp_doses": {},
+          "readiness_doses": {},
+          "allowed_severities": [
+            "low",
+            "moderate"
+          ],
+          "stop_when": [
+            "Stop if movement is painful or symptoms worsen during or after the work.",
+            "Seek assessment for severe or worsening pain, swelling or inability to use the area."
+          ],
+          "frequency": "scheduled_sessions",
+          "minimum_gap_days": 1,
+          "priority": 0,
+          "sources": [
+            "https://www.nhs.uk/conditions/sprains-and-strains/",
+            "https://www.nbt.nhs.uk/our-services/a-z-services/emergency-department/ed-miu-patient-information/elbow-injuries"
+          ]
+        }
+      ],
+      "blocked_regions": [
+        "triceps"
+      ],
+      "blocked_tags": [],
+      "contact_limit": "none",
+      "live_stages": [
+        "calm",
+        "restore"
+      ],
+      "transition_overrides": {},
+      "status": "active",
+      "activation": "live",
+      "content_hash": "8230d77e0639c20c46c4ec49bb41c3218a8840ed6b87bd54f895876cb573ef13"
+    },
+    {
+      "policy_id": "shoulder_strain",
+      "version": 1,
+      "pathway_family": "muscle_strain",
+      "region": "shoulder",
+      "injury_type": "strain",
+      "evidence_sources": [
+        "https://www.nhs.uk/conditions/sprains-and-strains/",
+        "https://www.leedsth.nhs.uk/patients/resources/early-advice-and-exercises-for-soft-tissue-injuries-of-the-shoulder/"
+      ],
+      "prescriptions": [
+        {
+          "drill_id": "shoulder_strain_recovery_support",
+          "bank_hash": "7bf71c4c363e12f83efee0304a1224febcb2af0dceb7e7eb1f75e75b02ebf903",
+          "stage": "calm",
+          "instructions": "Protect the strained area and avoid activity that aggravates it. During the first 2 to 3 days, rest from exercise that loads it. Use comfortable everyday movement without forcing a stretch. Avoid massage and heat in the early period. Seek assessment for severe or worsening pain, swelling or inability to use the area.",
+          "dose": null,
+          "camp_doses": {},
+          "readiness_doses": {},
+          "allowed_severities": [
+            "low",
+            "moderate"
+          ],
+          "stop_when": [
+            "Stop if movement is painful or symptoms worsen during or after the work.",
+            "Seek assessment for severe or worsening pain, swelling or inability to use the area."
+          ],
+          "frequency": "scheduled_sessions",
+          "minimum_gap_days": 1,
+          "priority": 0,
+          "sources": [
+            "https://www.nhs.uk/conditions/sprains-and-strains/"
+          ]
+        },
+        {
+          "drill_id": "shoulder_strain_reviewed_restore",
+          "bank_hash": "6d414bed3fcd0cfdb8647a50699b02f0632552aee2944374de2e52a877d9114e",
+          "stage": "restore",
+          "instructions": "Lean forward with your uninjured hand on a stable support and let the affected arm hang relaxed. Gently allow small, comfortable forward-and-back and side-to-side swings. Keep the movement pain-free. Do not add weights, force the range or perform presses. Stop if symptoms worsen. Follow any individual movement restrictions given by your treating clinician.",
+          "dose": null,
+          "camp_doses": {},
+          "readiness_doses": {},
+          "allowed_severities": [
+            "low",
+            "moderate"
+          ],
+          "stop_when": [
+            "Stop if movement is painful or symptoms worsen during or after the work.",
+            "Seek assessment for severe or worsening pain, swelling or inability to use the area."
+          ],
+          "frequency": "scheduled_sessions",
+          "minimum_gap_days": 1,
+          "priority": 0,
+          "sources": [
+            "https://www.nhs.uk/conditions/sprains-and-strains/",
+            "https://www.leedsth.nhs.uk/patients/resources/early-advice-and-exercises-for-soft-tissue-injuries-of-the-shoulder/"
+          ]
+        }
+      ],
+      "blocked_regions": [
+        "shoulder"
+      ],
+      "blocked_tags": [],
+      "contact_limit": "none",
+      "live_stages": [
+        "calm",
+        "restore"
+      ],
+      "transition_overrides": {},
+      "status": "active",
+      "activation": "live",
+      "content_hash": "825aedd333419899de0b448e584e0ad638dd3361ac8e4887b3d9a10c62c6394e"
     }
   ]
 }

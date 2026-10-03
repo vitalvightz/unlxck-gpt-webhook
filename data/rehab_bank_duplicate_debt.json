@@ -32,28 +32,28 @@
     {
       "location": "calf",
       "type": "strain",
-      "rehab_stage": null,
+      "rehab_stage": "load",
       "name": "Active Band Calf Pumps",
       "grandfathered_copies": 1
     },
     {
       "location": "calf",
       "type": "strain",
-      "rehab_stage": null,
-      "name": "Double-Leg Calf Raises",
+      "rehab_stage": "restore",
+      "name": "Supported double-leg calf raise",
       "grandfathered_copies": 1
     },
     {
       "location": "calf",
       "type": "strain",
-      "rehab_stage": null,
+      "rehab_stage": "load",
       "name": "Isometric Tip-Toe Wall Press",
       "grandfathered_copies": 1
     },
     {
       "location": "calf",
       "type": "strain",
-      "rehab_stage": null,
+      "rehab_stage": "load",
       "name": "Isometric Wall Push Hold",
       "grandfathered_copies": 1
     },

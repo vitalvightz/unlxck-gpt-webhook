@@ -170,7 +170,7 @@ def test_frozen_snapshots_from_the_previous_file_are_not_held(policy_id, region,
 UNPROFILED = [
     ("ankle", "instability"), ("ankle", "swelling"), ("ankle", "pain"), ("ankle", "tightness"), ("chest", "sprain"),
     ("chest", "contusion"), ("elbow", "tendonitis"), ("shoulder", "impingement"), ("elbow", "hyperextension"),
-    ("biceps", "strain"), ("triceps", "strain"), ("wrist", "sprain"), ("lower_back", "stiffness"), ("knee", "soreness"),
+    ("biceps", "tendonitis"), ("triceps", "tendonitis"), ("wrist", "sprain"), ("lower_back", "stiffness"), ("knee", "soreness"),
 ]
 
 
@@ -188,7 +188,8 @@ def test_only_profiles_are_policies_and_families_carry_no_content():
     catalog = json.loads(PATHWAYS_PATH.read_text(encoding="utf-8"))
     assert {(p.region, p.injury_type) for p in load_clinical_policies()} == {
         ("chest", "strain"), ("ankle", "sprain"), ("hamstring", "strain"),
-        ("calf", "strain"), ("groin", "strain"), ("quads", "strain")}
+        ("calf", "strain"), ("groin", "strain"), ("quads", "strain"),
+        ("biceps", "strain"), ("triceps", "strain"), ("shoulder", "strain")}
     for family in catalog["families"]:
         assert set(family) <= {"family_id", "description", "injury_types", "transitions"}
     # Instability shares a family with sprain but never inherits the ankle sprain profile.

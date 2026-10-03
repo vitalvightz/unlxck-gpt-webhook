@@ -1556,64 +1556,85 @@
   },
   {
     "drill_id": "calf_strain_double_leg_calf_raises",
-    "source_hash": "a9da70dd8ac4ad4d3b5f6063b8f655c11dd1a4998301967d5aee267a80751b1e",
+    "source_hash": "fea32d7d9e3eff6b176ad4945706be29f971bdcd9b3bc377def852d67410bd62",
     "location": "calf",
     "injury_type": "strain",
-    "name": "Double-Leg Calf Raises",
-    "notes": "GPP: Rebuild full range control → SPP: Progress to single-leg tempo loading",
-    "movement_archetype": "balance_control",
+    "name": "Supported double-leg calf raise",
+    "notes": "Begin only once pain has settled, you no longer need crutches and you can stand on your toes without pain. Hold a stable chair, share your weight equally over both feet and gently rise onto your toes, then lower slowly. Work at your own pace and stop if painful. Keep both feet on level ground; do not add weight, single-leg work, a step or fatigue progressions.",
+    "movement_archetype": "isometric",
     "proposed": {
-      "rehab_stage": null,
-      "function": "tendon_loading",
-      "equipment": null,
+      "rehab_stage": "restore",
+      "function": "activation",
+      "equipment": [
+        "chair"
+      ],
       "impact": "none",
-      "load": null,
+      "load": "moderate",
       "velocity": "low",
       "target_regions": [
         "calf"
       ],
-      "laterality_applicability": "bilateral_only",
-      "target_tissues": null,
-      "contraction_type": null,
+      "laterality_applicability": "not_applicable",
+      "target_tissues": [
+        "gastrocnemius and soleus muscles"
+      ],
+      "contraction_type": "mixed",
       "sport_specificity": "general_rehab",
       "contact_level": "none",
-      "evidence_notes": null
+      "evidence_notes": "Sources: https://www.nhs.uk/conditions/sprains-and-strains/, https://www.hey.nhs.uk/patient-leaflet/soft-tissue-injury-calf-strain/. Reviewed fixed baseline; no numerical dose or automatic advanced-stage clearance."
     },
-    "flags": [],
-    "review_state": "needs_review",
-    "review_version": 1
+    "flags": [
+      "LOAD_PROGRESSION_IN_NOTES"
+    ],
+    "review_state": "reviewed",
+    "review_version": 1,
+    "source_history": [
+      {
+        "source_hash": "a9da70dd8ac4ad4d3b5f6063b8f655c11dd1a4998301967d5aee267a80751b1e",
+        "name": "Double-Leg Calf Raises",
+        "notes": "GPP: Rebuild full range control → SPP: Progress to single-leg tempo loading"
+      }
+    ]
   },
   {
     "drill_id": "calf_strain_isometric_wall_push_hold",
-    "source_hash": "833d3f28c32aa9b84d76cba2f984db02e63437180f9c766a41ab54786538b126",
+    "source_hash": "1cc97c7012d6a55b01b83a43f9215346c59871e7658cdeeef9fb30886a27c636",
     "location": "calf",
     "injury_type": "strain",
     "name": "Isometric Wall Push Hold",
-    "notes": "GPP: Tension without movement → SPP: Add band resistance or hold under fatigue",
+    "notes": "Keep both feet on level ground. Lean into a stable wall and gently press through the forefeet without moving the ankles. Hold only while comfortable, then relax. No band, single-leg variant or fatigue work. Stop if pain or symptoms worsen during or after the work.",
     "movement_archetype": "banded_resistance",
     "proposed": {
-      "rehab_stage": null,
-      "function": "isometric_analgesia",
-      "equipment": null,
-      "impact": null,
-      "load": null,
-      "velocity": null,
+      "rehab_stage": "load",
+      "function": "activation",
+      "equipment": [
+        "wall"
+      ],
+      "impact": "none",
+      "load": "moderate",
+      "velocity": "low",
       "target_regions": [
         "calf"
       ],
-      "laterality_applicability": null,
-      "target_tissues": null,
-      "contraction_type": null,
+      "laterality_applicability": "not_applicable",
+      "target_tissues": [
+        "gastrocnemius and soleus muscles"
+      ],
+      "contraction_type": "isometric",
       "sport_specificity": "general_rehab",
       "contact_level": "none",
-      "evidence_notes": null
+      "evidence_notes": "Manual review of fixed exercise mechanics. General injury guidance: https://www.hey.nhs.uk/patient-leaflet/soft-tissue-injury-calf-strain/. This source does not establish a dose or efficacy for this exact equipment variant. Not an active prescription; LOAD requires separately sourced and evaluable pathway transitions. Unknown load remains unknown when external weight or manual pressure is not specified."
     },
-    "flags": [
-      "VARIABLE_DEMAND_PROGRESSION",
-      "SPEED_PROGRESSION_IN_NOTES"
-    ],
-    "review_state": "needs_review",
-    "review_version": 1
+    "flags": [],
+    "review_state": "reviewed",
+    "review_version": 1,
+    "source_history": [
+      {
+        "source_hash": "833d3f28c32aa9b84d76cba2f984db02e63437180f9c766a41ab54786538b126",
+        "name": "Isometric Wall Push Hold",
+        "notes": "GPP: Tension without movement → SPP: Add band resistance or hold under fatigue"
+      }
+    ]
   },
   {
     "drill_id": "calf_strain_recovery_support",
@@ -1643,41 +1664,6 @@
       "evidence_notes": "Sources: https://www.nhs.uk/conditions/sprains-and-strains/. Fixed baseline variant; no numeric dose. Low/moderate eligibility is the existing product safety gate, not a diagnosed clinical grade. Scheduling is product allocation cadence, not a clinical dose."
     },
     "flags": [],
-    "review_state": "reviewed",
-    "review_version": 1
-  },
-  {
-    "drill_id": "calf_strain_reviewed_restore",
-    "source_hash": "33f3bdf616cd9115b2c88e0e521d43a2a575365a0a8f5b3e21a2b249892027a6",
-    "location": "calf",
-    "injury_type": "strain",
-    "name": "Supported double-leg calf raise",
-    "notes": "Begin only once pain has settled, you no longer need crutches and you can stand on your toes without pain. Hold a stable chair, share your weight equally over both feet and gently rise onto your toes, then lower slowly. Work at your own pace and stop if painful. Keep both feet on level ground; do not add weight, single-leg work, a step or fatigue progressions.",
-    "movement_archetype": "bodyweight_strength",
-    "proposed": {
-      "rehab_stage": "restore",
-      "function": "activation",
-      "equipment": [
-        "chair"
-      ],
-      "impact": "none",
-      "load": "moderate",
-      "velocity": "low",
-      "target_regions": [
-        "calf"
-      ],
-      "laterality_applicability": "not_applicable",
-      "target_tissues": [
-        "gastrocnemius and soleus muscles"
-      ],
-      "contraction_type": "mixed",
-      "sport_specificity": "general_rehab",
-      "contact_level": "none",
-      "evidence_notes": "Sources: https://www.nhs.uk/conditions/sprains-and-strains/, https://www.hey.nhs.uk/patient-leaflet/soft-tissue-injury-calf-strain/. Fixed baseline variant; no numeric dose. Movement derived from calf_strain_double_leg_calf_raises; original source hash a9da70dd8ac4ad4d3b5f6063b8f655c11dd1a4998301967d5aee267a80751b1e. Low/moderate eligibility is the existing product safety gate, not a diagnosed clinical grade. Scheduling is product allocation cadence, not a clinical dose."
-    },
-    "flags": [
-      "LOAD_PROGRESSION_IN_NOTES"
-    ],
     "review_state": "reviewed",
     "review_version": 1
   },
@@ -1745,61 +1731,83 @@
   },
   {
     "drill_id": "calf_strain_isometric_tip_toe_wall_press",
-    "source_hash": "85f0290a28aad4dda85863edeb0fd134aa732831221bfbde6ce766c1c8d4ecc1",
+    "source_hash": "8d43c387f9aa048988f602d6928430b9c6ea4307d878aa76a06a9843f7b9e7a2",
     "location": "calf",
     "injury_type": "strain",
     "name": "Isometric Tip-Toe Wall Press",
-    "notes": "SPP: Improve endurance under tension → TAPER: Maintain contraction without volume",
-    "movement_archetype": "isometric",
+    "notes": "Use a stable wall for support. Rise onto both forefeet on level ground and hold a comfortable heel height, then lower. No external load, single-leg variant or fatigue work. Stop if pain or symptoms worsen during or after the work.",
+    "movement_archetype": "external_load_strength",
     "proposed": {
-      "rehab_stage": null,
-      "function": "isometric_analgesia",
-      "equipment": null,
+      "rehab_stage": "load",
+      "function": "activation",
+      "equipment": [
+        "wall"
+      ],
       "impact": "none",
-      "load": null,
+      "load": "moderate",
       "velocity": "low",
       "target_regions": [
         "calf"
       ],
-      "laterality_applicability": null,
-      "target_tissues": null,
+      "laterality_applicability": "not_applicable",
+      "target_tissues": [
+        "gastrocnemius and soleus muscles"
+      ],
       "contraction_type": "isometric",
       "sport_specificity": "general_rehab",
       "contact_level": "none",
-      "evidence_notes": null
+      "evidence_notes": "Manual review of fixed exercise mechanics. General injury guidance: https://www.hey.nhs.uk/patient-leaflet/soft-tissue-injury-calf-strain/. This source does not establish a dose or efficacy for this exact equipment variant. Not an active prescription; LOAD requires separately sourced and evaluable pathway transitions. Unknown load remains unknown when external weight or manual pressure is not specified."
     },
     "flags": [],
-    "review_state": "needs_review",
-    "review_version": 1
+    "review_state": "reviewed",
+    "review_version": 1,
+    "source_history": [
+      {
+        "source_hash": "85f0290a28aad4dda85863edeb0fd134aa732831221bfbde6ce766c1c8d4ecc1",
+        "name": "Isometric Tip-Toe Wall Press",
+        "notes": "SPP: Improve endurance under tension → TAPER: Maintain contraction without volume"
+      }
+    ]
   },
   {
     "drill_id": "calf_strain_active_band_calf_pumps",
-    "source_hash": "80aca7d106f1feebde233b172085c8a5af08369a93c7d30907b9ece8c933f3aa",
+    "source_hash": "076f0b9f76b89258c63f72eea8c9d7be8cbeef7e8b7a8e901c3f2eeefc5e2137",
     "location": "calf",
     "injury_type": "strain",
     "name": "Active Band Calf Pumps",
-    "notes": "SPP: Stimulate blood flow cycles → TAPER: Low-fatigue use in cooldown",
-    "movement_archetype": "locomotion",
+    "notes": "Sit with the leg supported and a resistance band around the forefoot. Slowly point and release the foot within a comfortable range against a fixed light band. No increase in band tension or speed within this drill. Stop if pain or symptoms worsen during or after the work.",
+    "movement_archetype": "banded_resistance",
     "proposed": {
-      "rehab_stage": null,
-      "function": "tendon_loading",
-      "equipment": null,
-      "impact": null,
-      "load": null,
-      "velocity": null,
+      "rehab_stage": "load",
+      "function": "activation",
+      "equipment": [
+        "resistance_band"
+      ],
+      "impact": "none",
+      "load": "low",
+      "velocity": "low",
       "target_regions": [
         "calf"
       ],
-      "laterality_applicability": null,
-      "target_tissues": null,
-      "contraction_type": null,
-      "sport_specificity": null,
-      "contact_level": null,
-      "evidence_notes": null
+      "laterality_applicability": "side_specific",
+      "target_tissues": [
+        "gastrocnemius and soleus muscles"
+      ],
+      "contraction_type": "mixed",
+      "sport_specificity": "general_rehab",
+      "contact_level": "none",
+      "evidence_notes": "Manual review of fixed exercise mechanics. General injury guidance: https://www.hey.nhs.uk/patient-leaflet/soft-tissue-injury-calf-strain/. This source does not establish a dose or efficacy for this exact equipment variant. Not an active prescription; LOAD requires separately sourced and evaluable pathway transitions. Unknown load remains unknown when external weight or manual pressure is not specified."
     },
     "flags": [],
-    "review_state": "needs_review",
-    "review_version": 1
+    "review_state": "reviewed",
+    "review_version": 1,
+    "source_history": [
+      {
+        "source_hash": "80aca7d106f1feebde233b172085c8a5af08369a93c7d30907b9ece8c933f3aa",
+        "name": "Active Band Calf Pumps",
+        "notes": "SPP: Stimulate blood flow cycles → TAPER: Low-fatigue use in cooldown"
+      }
+    ]
   },
   {
     "drill_id": "achilles_tendonitis_eccentric_calf_drops_on_step",
@@ -3087,64 +3095,85 @@
   },
   {
     "drill_id": "calf_strain_double_leg_calf_raises_2",
-    "source_hash": "a8d595e289d121d242c0d58e84069b555babe5733717048791a283d5122f40bf",
+    "source_hash": "d9cceeeb67eb0fcacd87d7e1b3117e458d878364c58e1cff2157db003d9a5d19",
     "location": "calf",
     "injury_type": "strain",
-    "name": "Double-Leg Calf Raises",
-    "notes": "GPP: Rebuild full range control → SPP: Progress to single-leg tempo loading",
-    "movement_archetype": "balance_control",
+    "name": "Supported double-leg calf raise",
+    "notes": "Begin only once pain has settled, you no longer need crutches and you can stand on your toes without pain. Hold a stable chair, share your weight equally over both feet and gently rise onto your toes, then lower slowly. Work at your own pace and stop if painful. Keep both feet on level ground; do not add weight, single-leg work, a step or fatigue progressions.",
+    "movement_archetype": "isometric",
     "proposed": {
-      "rehab_stage": null,
-      "function": "tendon_loading",
-      "equipment": null,
+      "rehab_stage": "restore",
+      "function": "activation",
+      "equipment": [
+        "chair"
+      ],
       "impact": "none",
-      "load": null,
+      "load": "moderate",
       "velocity": "low",
       "target_regions": [
         "calf"
       ],
-      "laterality_applicability": "bilateral_only",
-      "target_tissues": null,
-      "contraction_type": null,
+      "laterality_applicability": "not_applicable",
+      "target_tissues": [
+        "gastrocnemius and soleus muscles"
+      ],
+      "contraction_type": "mixed",
       "sport_specificity": "general_rehab",
       "contact_level": "none",
-      "evidence_notes": null
+      "evidence_notes": "Sources: https://www.nhs.uk/conditions/sprains-and-strains/, https://www.hey.nhs.uk/patient-leaflet/soft-tissue-injury-calf-strain/. Reviewed fixed baseline; no numerical dose or automatic advanced-stage clearance."
     },
-    "flags": [],
-    "review_state": "needs_review",
-    "review_version": 1
+    "flags": [
+      "LOAD_PROGRESSION_IN_NOTES"
+    ],
+    "review_state": "reviewed",
+    "review_version": 1,
+    "source_history": [
+      {
+        "source_hash": "a8d595e289d121d242c0d58e84069b555babe5733717048791a283d5122f40bf",
+        "name": "Double-Leg Calf Raises",
+        "notes": "GPP: Rebuild full range control → SPP: Progress to single-leg tempo loading"
+      }
+    ]
   },
   {
     "drill_id": "calf_strain_isometric_wall_push_hold_2",
-    "source_hash": "c67e5c1220cab195b5af4173ed74f1dff64fb24ff3feedb1e6e1971ee03dbb3f",
+    "source_hash": "e039cd83ba4b4f563a7f345db6e0326ad7b22b48af7e03708edb1a7321988aba",
     "location": "calf",
     "injury_type": "strain",
     "name": "Isometric Wall Push Hold",
-    "notes": "GPP: Tension without movement → SPP: Add band resistance or hold under fatigue",
+    "notes": "Keep both feet on level ground. Lean into a stable wall and gently press through the forefeet without moving the ankles. Hold only while comfortable, then relax. No band, single-leg variant or fatigue work. Stop if pain or symptoms worsen during or after the work.",
     "movement_archetype": "banded_resistance",
     "proposed": {
-      "rehab_stage": null,
-      "function": "isometric_analgesia",
-      "equipment": null,
-      "impact": null,
-      "load": null,
-      "velocity": null,
+      "rehab_stage": "load",
+      "function": "activation",
+      "equipment": [
+        "wall"
+      ],
+      "impact": "none",
+      "load": "moderate",
+      "velocity": "low",
       "target_regions": [
         "calf"
       ],
-      "laterality_applicability": null,
-      "target_tissues": null,
-      "contraction_type": null,
+      "laterality_applicability": "not_applicable",
+      "target_tissues": [
+        "gastrocnemius and soleus muscles"
+      ],
+      "contraction_type": "isometric",
       "sport_specificity": "general_rehab",
       "contact_level": "none",
-      "evidence_notes": null
+      "evidence_notes": "Manual review of fixed exercise mechanics. General injury guidance: https://www.hey.nhs.uk/patient-leaflet/soft-tissue-injury-calf-strain/. This source does not establish a dose or efficacy for this exact equipment variant. Not an active prescription; LOAD requires separately sourced and evaluable pathway transitions. Unknown load remains unknown when external weight or manual pressure is not specified."
     },
-    "flags": [
-      "VARIABLE_DEMAND_PROGRESSION",
-      "SPEED_PROGRESSION_IN_NOTES"
-    ],
-    "review_state": "needs_review",
-    "review_version": 1
+    "flags": [],
+    "review_state": "reviewed",
+    "review_version": 1,
+    "source_history": [
+      {
+        "source_hash": "c67e5c1220cab195b5af4173ed74f1dff64fb24ff3feedb1e6e1971ee03dbb3f",
+        "name": "Isometric Wall Push Hold",
+        "notes": "GPP: Tension without movement → SPP: Add band resistance or hold under fatigue"
+      }
+    ]
   },
   {
     "drill_id": "calf_tightness_wall_calf_stretch_bent_knee_2",
@@ -3210,61 +3239,83 @@
   },
   {
     "drill_id": "calf_strain_isometric_tip_toe_wall_press_2",
-    "source_hash": "a86fe95adede4a31e9c962a854b05c55a6f60675a804154d2da6fce715f07afb",
+    "source_hash": "7fe95409cfeea2061c33cfbceaf765e822411a4bce2b430c81b8c270b8fdb09e",
     "location": "calf",
     "injury_type": "strain",
     "name": "Isometric Tip-Toe Wall Press",
-    "notes": "SPP: Improve endurance under tension → TAPER: Maintain contraction without volume",
-    "movement_archetype": "isometric",
+    "notes": "Use a stable wall for support. Rise onto both forefeet on level ground and hold a comfortable heel height, then lower. No external load, single-leg variant or fatigue work. Stop if pain or symptoms worsen during or after the work.",
+    "movement_archetype": "external_load_strength",
     "proposed": {
-      "rehab_stage": null,
-      "function": "isometric_analgesia",
-      "equipment": null,
+      "rehab_stage": "load",
+      "function": "activation",
+      "equipment": [
+        "wall"
+      ],
       "impact": "none",
-      "load": null,
+      "load": "moderate",
       "velocity": "low",
       "target_regions": [
         "calf"
       ],
-      "laterality_applicability": null,
-      "target_tissues": null,
+      "laterality_applicability": "not_applicable",
+      "target_tissues": [
+        "gastrocnemius and soleus muscles"
+      ],
       "contraction_type": "isometric",
       "sport_specificity": "general_rehab",
       "contact_level": "none",
-      "evidence_notes": null
+      "evidence_notes": "Manual review of fixed exercise mechanics. General injury guidance: https://www.hey.nhs.uk/patient-leaflet/soft-tissue-injury-calf-strain/. This source does not establish a dose or efficacy for this exact equipment variant. Not an active prescription; LOAD requires separately sourced and evaluable pathway transitions. Unknown load remains unknown when external weight or manual pressure is not specified."
     },
     "flags": [],
-    "review_state": "needs_review",
-    "review_version": 1
+    "review_state": "reviewed",
+    "review_version": 1,
+    "source_history": [
+      {
+        "source_hash": "a86fe95adede4a31e9c962a854b05c55a6f60675a804154d2da6fce715f07afb",
+        "name": "Isometric Tip-Toe Wall Press",
+        "notes": "SPP: Improve endurance under tension → TAPER: Maintain contraction without volume"
+      }
+    ]
   },
   {
     "drill_id": "calf_strain_active_band_calf_pumps_2",
-    "source_hash": "9f588c148189762adff08b79ae9e10b86f22cc66ee5a015a29c2908b9b5b7b3a",
+    "source_hash": "61eb0f25458ccb06e5cfdb1175497a19fcefed57779c76f6940c5823c56e14cb",
     "location": "calf",
     "injury_type": "strain",
     "name": "Active Band Calf Pumps",
-    "notes": "SPP: Stimulate blood flow cycles → TAPER: Low-fatigue use in cooldown",
-    "movement_archetype": "locomotion",
+    "notes": "Sit with the leg supported and a resistance band around the forefoot. Slowly point and release the foot within a comfortable range against a fixed light band. No increase in band tension or speed within this drill. Stop if pain or symptoms worsen during or after the work.",
+    "movement_archetype": "banded_resistance",
     "proposed": {
-      "rehab_stage": null,
-      "function": "tendon_loading",
-      "equipment": null,
-      "impact": null,
-      "load": null,
-      "velocity": null,
+      "rehab_stage": "load",
+      "function": "activation",
+      "equipment": [
+        "resistance_band"
+      ],
+      "impact": "none",
+      "load": "low",
+      "velocity": "low",
       "target_regions": [
         "calf"
       ],
-      "laterality_applicability": null,
-      "target_tissues": null,
-      "contraction_type": null,
-      "sport_specificity": null,
-      "contact_level": null,
-      "evidence_notes": null
+      "laterality_applicability": "side_specific",
+      "target_tissues": [
+        "gastrocnemius and soleus muscles"
+      ],
+      "contraction_type": "mixed",
+      "sport_specificity": "general_rehab",
+      "contact_level": "none",
+      "evidence_notes": "Manual review of fixed exercise mechanics. General injury guidance: https://www.hey.nhs.uk/patient-leaflet/soft-tissue-injury-calf-strain/. This source does not establish a dose or efficacy for this exact equipment variant. Not an active prescription; LOAD requires separately sourced and evaluable pathway transitions. Unknown load remains unknown when external weight or manual pressure is not specified."
     },
     "flags": [],
-    "review_state": "needs_review",
-    "review_version": 1
+    "review_state": "reviewed",
+    "review_version": 1,
+    "source_history": [
+      {
+        "source_hash": "9f588c148189762adff08b79ae9e10b86f22cc66ee5a015a29c2908b9b5b7b3a",
+        "name": "Active Band Calf Pumps",
+        "notes": "SPP: Stimulate blood flow cycles → TAPER: Low-fatigue use in cooldown"
+      }
+    ]
   },
   {
     "drill_id": "achilles_tendonitis_eccentric_calf_drops_on_step_2",
@@ -4316,61 +4367,83 @@
   },
   {
     "drill_id": "quads_strain_isometric_wall_sit_mid_range",
-    "source_hash": "240bd163470c343d54bcfbde03b28c966831d66c12734938027132d384be629a",
+    "source_hash": "c7ff4c08ffb1b55fa4874a2978487b70a21205a6496c3b1f386b00e2ac39f8a0",
     "location": "quads",
     "injury_type": "strain",
     "name": "Isometric Wall Sit (Mid-Range)",
-    "notes": "GPP: Safe tension under no movement → SPP: Add reps or instability (ball squeeze)",
+    "notes": "With your back supported against a stable wall and both feet planted, lower only into a comfortable partial squat and hold, then stand. Keep the knee angle and bodyweight demand fixed. No deeper squat, ball squeeze, added load or fatigue work. Stop if pain or symptoms worsen during or after the work.",
     "movement_archetype": "isometric",
     "proposed": {
-      "rehab_stage": null,
-      "function": "isometric_analgesia",
-      "equipment": null,
+      "rehab_stage": "load",
+      "function": "activation",
+      "equipment": [
+        "wall"
+      ],
       "impact": "none",
-      "load": null,
+      "load": "moderate",
       "velocity": "low",
       "target_regions": [
         "quads"
       ],
-      "laterality_applicability": null,
-      "target_tissues": null,
+      "laterality_applicability": "not_applicable",
+      "target_tissues": [
+        "quadriceps muscles"
+      ],
       "contraction_type": "isometric",
       "sport_specificity": "general_rehab",
       "contact_level": "none",
-      "evidence_notes": null
+      "evidence_notes": "Manual review of fixed exercise mechanics. General injury guidance: https://pmc.ncbi.nlm.nih.gov/articles/PMC2941577/. This source does not establish a dose or efficacy for this exact equipment variant. Not an active prescription; LOAD requires separately sourced and evaluable pathway transitions. Unknown load remains unknown when external weight or manual pressure is not specified."
     },
     "flags": [],
-    "review_state": "needs_review",
-    "review_version": 1
+    "review_state": "reviewed",
+    "review_version": 1,
+    "source_history": [
+      {
+        "source_hash": "240bd163470c343d54bcfbde03b28c966831d66c12734938027132d384be629a",
+        "name": "Isometric Wall Sit (Mid-Range)",
+        "notes": "GPP: Safe tension under no movement → SPP: Add reps or instability (ball squeeze)"
+      }
+    ]
   },
   {
     "drill_id": "quads_strain_foam_roller_quad_sweep",
-    "source_hash": "a2bf5516cbe0e503c3e01ff945da7906848df69c9cb938e7ca9f335f4e80fd6c",
+    "source_hash": "10804056e8166046d5a41916f41339d003871a655afbb10c609e6f992084adce",
     "location": "quads",
     "injury_type": "strain",
     "name": "Foam Roller – Quad Sweep",
-    "notes": "GPP: Prep for active rehab → SPP: Post-load flush",
+    "notes": "After the acute period, only if your treating clinician has advised self-massage, gently roll comfortable quadriceps tissue. Avoid bruised or painful tissue and stop for pain. Do not roll an acute strain or treat rolling as readiness for loading. Stop if pain or symptoms worsen during or after the work.",
     "movement_archetype": "manual_recovery",
     "proposed": {
-      "rehab_stage": null,
+      "rehab_stage": "load",
       "function": "recovery_downregulation",
-      "equipment": null,
+      "equipment": [
+        "foam_roller"
+      ],
       "impact": "none",
-      "load": null,
+      "load": "unknown",
       "velocity": "low",
       "target_regions": [
         "quads"
       ],
-      "laterality_applicability": null,
-      "target_tissues": null,
-      "contraction_type": null,
+      "laterality_applicability": "side_specific",
+      "target_tissues": [
+        "quadriceps muscles"
+      ],
+      "contraction_type": "unknown",
       "sport_specificity": "general_rehab",
       "contact_level": "none",
-      "evidence_notes": null
+      "evidence_notes": "Manual review of fixed exercise mechanics. General injury guidance: https://pmc.ncbi.nlm.nih.gov/articles/PMC2941577/. This source does not establish a dose or efficacy for this exact equipment variant. Not an active prescription; LOAD requires separately sourced and evaluable pathway transitions. Unknown load remains unknown when external weight or manual pressure is not specified."
     },
     "flags": [],
-    "review_state": "needs_review",
-    "review_version": 1
+    "review_state": "reviewed",
+    "review_version": 1,
+    "source_history": [
+      {
+        "source_hash": "a2bf5516cbe0e503c3e01ff945da7906848df69c9cb938e7ca9f335f4e80fd6c",
+        "name": "Foam Roller – Quad Sweep",
+        "notes": "GPP: Prep for active rehab → SPP: Post-load flush"
+      }
+    ]
   },
   {
     "drill_id": "quads_strain_recovery_support",
@@ -4616,61 +4689,84 @@
   },
   {
     "drill_id": "hamstrings_strain_isometric_hamstring_bridge",
-    "source_hash": "5c16f4e4486477e1bdc63e46037d295ef03193f227f34e20d756bf40b6543974",
+    "source_hash": "570964e2f4fc056dab169155ff8daa6cb953f7397b6317e9d0f963256089fc4a",
     "location": "hamstrings",
     "injury_type": "strain",
-    "name": "Isometric Hamstring Bridge",
-    "notes": "GPP: Mid-range contraction → SPP: Add reps or eccentric control",
-    "movement_archetype": "eccentric_loading",
+    "name": "Bent-knee double-leg hamstring bridge",
+    "notes": "When comfortable movement is possible, lie on your back with both knees bent and feet supported close to your hips. Gently lift into a double-leg bridge and hold briefly at a comfortable height, then lower. Keep the work pain-free and self-paced. Do not walk the feet out, straighten the knees, add resistance or work to fatigue.",
+    "movement_archetype": "locomotion",
     "proposed": {
-      "rehab_stage": null,
-      "function": "isometric_analgesia",
-      "equipment": null,
-      "impact": null,
-      "load": null,
-      "velocity": null,
+      "rehab_stage": "restore",
+      "function": "activation",
+      "equipment": [],
+      "impact": "none",
+      "load": "moderate",
+      "velocity": "low",
       "target_regions": [
-        "hamstrings"
+        "hamstrings",
+        "hamstring"
       ],
-      "laterality_applicability": null,
-      "target_tissues": null,
-      "contraction_type": "eccentric",
+      "laterality_applicability": "not_applicable",
+      "target_tissues": [
+        "hamstring muscles"
+      ],
+      "contraction_type": "isometric",
       "sport_specificity": "general_rehab",
       "contact_level": "none",
-      "evidence_notes": null
+      "evidence_notes": "Sources: https://www.nhs.uk/conditions/sprains-and-strains/, https://pmc.ncbi.nlm.nih.gov/articles/PMC2867336/. Reviewed fixed baseline; no numerical dose or automatic advanced-stage clearance."
     },
-    "flags": [],
-    "review_state": "needs_review",
-    "review_version": 1
+    "flags": [
+      "LOAD_PROGRESSION_IN_NOTES"
+    ],
+    "review_state": "reviewed",
+    "review_version": 1,
+    "source_history": [
+      {
+        "source_hash": "5c16f4e4486477e1bdc63e46037d295ef03193f227f34e20d756bf40b6543974",
+        "name": "Isometric Hamstring Bridge",
+        "notes": "GPP: Mid-range contraction → SPP: Add reps or eccentric control"
+      }
+    ]
   },
   {
     "drill_id": "hamstrings_strain_massage_gun_biceps_femoris_sweep",
-    "source_hash": "50f2a164f8123c4fe5f62122bdbaf536d6b64224810ed018c5cfeb5576810fc0",
+    "source_hash": "6843913f0952184abebc3a653bb9c8d6cd30aa2e6d38c735db0b1bd7a5ab039c",
     "location": "hamstrings",
     "injury_type": "strain",
     "name": "Massage Gun – Biceps Femoris Sweep",
-    "notes": "GPP: Reduce tension → SPP: Use after sprint or kick days",
+    "notes": "After the acute period, only if your treating clinician has advised self-massage, use gentle superficial pressure over comfortable hamstring tissue. Avoid the injured or bruised area. Stop for pain. Do not use a massage gun on an acute strain or treat massage as clearance to run or kick. Stop if pain or symptoms worsen during or after the work.",
     "movement_archetype": "locomotion",
     "proposed": {
-      "rehab_stage": null,
-      "function": null,
-      "equipment": null,
-      "impact": null,
-      "load": null,
-      "velocity": null,
+      "rehab_stage": "load",
+      "function": "recovery_downregulation",
+      "equipment": [
+        "massage_gun"
+      ],
+      "impact": "none",
+      "load": "unknown",
+      "velocity": "low",
       "target_regions": [
         "hamstrings"
       ],
-      "laterality_applicability": null,
-      "target_tissues": null,
-      "contraction_type": null,
-      "sport_specificity": null,
-      "contact_level": null,
-      "evidence_notes": null
+      "laterality_applicability": "side_specific",
+      "target_tissues": [
+        "hamstring muscles"
+      ],
+      "contraction_type": "unknown",
+      "sport_specificity": "general_rehab",
+      "contact_level": "none",
+      "evidence_notes": "Manual review of fixed exercise mechanics. General injury guidance: https://pmc.ncbi.nlm.nih.gov/articles/PMC2867336/. This source does not establish a dose or efficacy for this exact equipment variant. Not an active prescription; LOAD requires separately sourced and evaluable pathway transitions. Unknown load remains unknown when external weight or manual pressure is not specified."
     },
     "flags": [],
-    "review_state": "needs_review",
-    "review_version": 1
+    "review_state": "reviewed",
+    "review_version": 1,
+    "source_history": [
+      {
+        "source_hash": "50f2a164f8123c4fe5f62122bdbaf536d6b64224810ed018c5cfeb5576810fc0",
+        "name": "Massage Gun – Biceps Femoris Sweep",
+        "notes": "GPP: Reduce tension → SPP: Use after sprint or kick days"
+      }
+    ]
   },
   {
     "drill_id": "hamstring_strain_recovery_support",
@@ -4701,40 +4797,6 @@
       "evidence_notes": "Sources: https://www.nhs.uk/conditions/sprains-and-strains/. Fixed baseline variant; no numeric dose. Low/moderate eligibility is the existing product safety gate, not a diagnosed clinical grade. Scheduling is product allocation cadence, not a clinical dose."
     },
     "flags": [],
-    "review_state": "reviewed",
-    "review_version": 1
-  },
-  {
-    "drill_id": "hamstring_strain_reviewed_restore",
-    "source_hash": "ddb872acf69f3b445274190d97e417be76855f2173f617ccbe75319d9de04794",
-    "location": "hamstrings",
-    "injury_type": "strain",
-    "name": "Bent-knee double-leg hamstring bridge",
-    "notes": "When comfortable movement is possible, lie on your back with both knees bent and feet supported close to your hips. Gently lift into a double-leg bridge and hold briefly at a comfortable height, then lower. Keep the work pain-free and self-paced. Do not walk the feet out, straighten the knees, add resistance or work to fatigue.",
-    "movement_archetype": "isometric",
-    "proposed": {
-      "rehab_stage": "restore",
-      "function": "activation",
-      "equipment": [],
-      "impact": "none",
-      "load": "moderate",
-      "velocity": "low",
-      "target_regions": [
-        "hamstrings",
-        "hamstring"
-      ],
-      "laterality_applicability": "not_applicable",
-      "target_tissues": [
-        "hamstring muscles"
-      ],
-      "contraction_type": "isometric",
-      "sport_specificity": "general_rehab",
-      "contact_level": "none",
-      "evidence_notes": "Sources: https://www.nhs.uk/conditions/sprains-and-strains/, https://pmc.ncbi.nlm.nih.gov/articles/PMC2867336/. Fixed baseline variant; no numeric dose. Movement derived from hamstrings_strain_isometric_hamstring_bridge; original source hash 5c16f4e4486477e1bdc63e46037d295ef03193f227f34e20d756bf40b6543974. Low/moderate eligibility is the existing product safety gate, not a diagnosed clinical grade. Scheduling is product allocation cadence, not a clinical dose."
-    },
-    "flags": [
-      "LOAD_PROGRESSION_IN_NOTES"
-    ],
     "review_state": "reviewed",
     "review_version": 1
   },
@@ -4972,64 +5034,81 @@
   },
   {
     "drill_id": "groin_strain_side_lying_hip_adduction",
-    "source_hash": "8a469661f9a67b9a4fb11f44d87b5a04a860d89bd35a02612f79f1ad38a8bb9e",
+    "source_hash": "665f077dcd95356334923db7c3f949ad417f69f1c4bbaf51e7bd1afa36c8cc82",
     "location": "groin",
     "injury_type": "strain",
-    "name": "Side-Lying Hip Adduction",
-    "notes": "GPP: Restore baseline groin activation → SPP: Increase reps under fatigue",
-    "movement_archetype": "activation",
+    "name": "Unresisted side-lying hip adduction",
+    "notes": "Once symptoms have settled enough for comfortable movement, lie on the affected side with the upper leg supported out of the way. Slowly lift and lower the lower leg through a small comfortable range. Keep the work pain-free and self-paced. Stop if groin pain increases during or after the work. Do not add ankle weights, cables, fast repetitions or fatigue work.",
+    "movement_archetype": "external_load_strength",
     "proposed": {
-      "rehab_stage": null,
+      "rehab_stage": "restore",
       "function": "activation",
-      "equipment": null,
+      "equipment": [],
       "impact": "none",
-      "load": null,
+      "load": "low",
       "velocity": "low",
       "target_regions": [
         "groin"
       ],
-      "laterality_applicability": null,
-      "target_tissues": null,
-      "contraction_type": null,
+      "laterality_applicability": "side_specific",
+      "target_tissues": [
+        "hip adductor muscles"
+      ],
+      "contraction_type": "mixed",
       "sport_specificity": "general_rehab",
       "contact_level": "none",
-      "evidence_notes": null
+      "evidence_notes": "Sources: https://www.nhs.uk/conditions/sprains-and-strains/, https://pmc.ncbi.nlm.nih.gov/articles/PMC10569248/. Reviewed fixed baseline; no numerical dose or automatic advanced-stage clearance."
     },
-    "flags": [
-      "VARIABLE_DEMAND_PROGRESSION",
-      "SPEED_PROGRESSION_IN_NOTES"
-    ],
-    "review_state": "needs_review",
-    "review_version": 1
+    "flags": [],
+    "review_state": "reviewed",
+    "review_version": 1,
+    "source_history": [
+      {
+        "source_hash": "8a469661f9a67b9a4fb11f44d87b5a04a860d89bd35a02612f79f1ad38a8bb9e",
+        "name": "Side-Lying Hip Adduction",
+        "notes": "GPP: Restore baseline groin activation → SPP: Increase reps under fatigue"
+      }
+    ]
   },
   {
     "drill_id": "groin_strain_standing_cable_adduction",
-    "source_hash": "9ff79a39ba24837f1cb795e85aa173363953e9dd8a72c1ebba6c6ca28648270a",
+    "source_hash": "cae9369c747316f1e65113b40848e638941ff57122098e903a801c99bb566266",
     "location": "groin",
     "injury_type": "strain",
     "name": "Standing Cable Adduction",
-    "notes": "GPP: Controlled linear tension → SPP: Add tempo or resistance",
-    "movement_archetype": "external_load_strength",
+    "notes": "Hold stable support and move the affected leg slowly inward against a fixed light cable resistance through a comfortable range. Keep the trunk still. No speed, resistance increase or fatigue progression within this drill. Stop if pain or symptoms worsen during or after the work.",
+    "movement_archetype": "locomotion",
     "proposed": {
-      "rehab_stage": null,
-      "function": "control",
-      "equipment": null,
-      "impact": null,
-      "load": null,
-      "velocity": null,
+      "rehab_stage": "load",
+      "function": "activation",
+      "equipment": [
+        "cable_machine"
+      ],
+      "impact": "none",
+      "load": "low",
+      "velocity": "low",
       "target_regions": [
         "groin"
       ],
-      "laterality_applicability": null,
-      "target_tissues": null,
-      "contraction_type": null,
+      "laterality_applicability": "side_specific",
+      "target_tissues": [
+        "hip adductor muscles"
+      ],
+      "contraction_type": "mixed",
       "sport_specificity": "general_rehab",
       "contact_level": "none",
-      "evidence_notes": null
+      "evidence_notes": "Manual review of fixed exercise mechanics. General injury guidance: https://pmc.ncbi.nlm.nih.gov/articles/PMC10569248/. This source does not establish a dose or efficacy for this exact equipment variant. Not an active prescription; LOAD requires separately sourced and evaluable pathway transitions. Unknown load remains unknown when external weight or manual pressure is not specified."
     },
     "flags": [],
-    "review_state": "needs_review",
-    "review_version": 1
+    "review_state": "reviewed",
+    "review_version": 1,
+    "source_history": [
+      {
+        "source_hash": "9ff79a39ba24837f1cb795e85aa173363953e9dd8a72c1ebba6c6ca28648270a",
+        "name": "Standing Cable Adduction",
+        "notes": "GPP: Controlled linear tension → SPP: Add tempo or resistance"
+      }
+    ]
   },
   {
     "drill_id": "groin_strain_recovery_support",
@@ -5057,37 +5136,6 @@
       "sport_specificity": "general_rehab",
       "contact_level": "none",
       "evidence_notes": "Sources: https://www.nhs.uk/conditions/sprains-and-strains/. Fixed baseline variant; no numeric dose. Low/moderate eligibility is the existing product safety gate, not a diagnosed clinical grade. Scheduling is product allocation cadence, not a clinical dose."
-    },
-    "flags": [],
-    "review_state": "reviewed",
-    "review_version": 1
-  },
-  {
-    "drill_id": "groin_strain_reviewed_restore",
-    "source_hash": "a2eb036800fb8822954f44a131ef7e7babd8dc6ab135c02b1ee20638fe29a1d4",
-    "location": "groin",
-    "injury_type": "strain",
-    "name": "Unresisted side-lying hip adduction",
-    "notes": "Once symptoms have settled enough for comfortable movement, lie on the affected side with the upper leg supported out of the way. Slowly lift and lower the lower leg through a small comfortable range. Keep the work pain-free and self-paced. Stop if groin pain increases during or after the work. Do not add ankle weights, cables, fast repetitions or fatigue work.",
-    "movement_archetype": "bodyweight_strength",
-    "proposed": {
-      "rehab_stage": "restore",
-      "function": "activation",
-      "equipment": [],
-      "impact": "none",
-      "load": "low",
-      "velocity": "low",
-      "target_regions": [
-        "groin"
-      ],
-      "laterality_applicability": "side_specific",
-      "target_tissues": [
-        "hip adductor muscles"
-      ],
-      "contraction_type": "mixed",
-      "sport_specificity": "general_rehab",
-      "contact_level": "none",
-      "evidence_notes": "Sources: https://www.nhs.uk/conditions/sprains-and-strains/, https://pmc.ncbi.nlm.nih.gov/articles/PMC10569248/. Fixed baseline variant; no numeric dose. Movement derived from groin_strain_side_lying_hip_adduction; original source hash 8a469661f9a67b9a4fb11f44d87b5a04a860d89bd35a02612f79f1ad38a8bb9e. Low/moderate eligibility is the existing product safety gate, not a diagnosed clinical grade. Scheduling is product allocation cadence, not a clinical dose."
     },
     "flags": [],
     "review_state": "reviewed",
@@ -10533,61 +10581,83 @@
   },
   {
     "drill_id": "chest_strain_isometric_wall_push_chest_height",
-    "source_hash": "64f57cc4992d58cc6e44e4973bd7d4919e0a1845b3f1f1deceb0ee7198a3d5d2",
+    "source_hash": "ee2131071c786cab191d88656907c75b54f143870768a52526375198d006c172",
     "location": "chest",
     "injury_type": "strain",
     "name": "Isometric Wall Push (Chest Height)",
-    "notes": "GPP: Safely reactivate pectorals → SPP: Increase force duration under tension",
+    "notes": "Place both hands against a stable wall at chest height and gently press without moving the shoulders. Release between comfortable holds. Do not increase force, extend the hold to fatigue or add resisted movement within this drill. Stop if pain or symptoms worsen during or after the work.",
     "movement_archetype": "isometric",
     "proposed": {
-      "rehab_stage": null,
-      "function": "isometric_analgesia",
-      "equipment": null,
+      "rehab_stage": "load",
+      "function": "activation",
+      "equipment": [
+        "wall"
+      ],
       "impact": "none",
-      "load": null,
+      "load": "low",
       "velocity": "low",
       "target_regions": [
         "chest"
       ],
-      "laterality_applicability": null,
-      "target_tissues": null,
+      "laterality_applicability": "not_applicable",
+      "target_tissues": [
+        "pectoral muscles"
+      ],
       "contraction_type": "isometric",
       "sport_specificity": "general_rehab",
       "contact_level": "none",
-      "evidence_notes": null
+      "evidence_notes": "Manual review of fixed exercise mechanics. General injury guidance: https://www.nhs.uk/conditions/sprains-and-strains/. This source does not establish a dose or efficacy for this exact equipment variant. Not an active prescription; LOAD requires separately sourced and evaluable pathway transitions. Unknown load remains unknown when external weight or manual pressure is not specified."
     },
     "flags": [],
-    "review_state": "needs_review",
-    "review_version": 1
+    "review_state": "reviewed",
+    "review_version": 1,
+    "source_history": [
+      {
+        "source_hash": "64f57cc4992d58cc6e44e4973bd7d4919e0a1845b3f1f1deceb0ee7198a3d5d2",
+        "name": "Isometric Wall Push (Chest Height)",
+        "notes": "GPP: Safely reactivate pectorals → SPP: Increase force duration under tension"
+      }
+    ]
   },
   {
     "drill_id": "chest_strain_resistance_band_chest_fly",
-    "source_hash": "7c570e7ccf27d97faaa3492b90b7010d31d2bbd6cc675164406cdbf272f5d1d8",
+    "source_hash": "6d7581e2562843cdd0a96e798262a3a9666c7abb1a87d4b39af5d5af5cac4e2a",
     "location": "chest",
     "injury_type": "strain",
     "name": "Resistance Band Chest Fly",
-    "notes": "GPP: Control range of motion → SPP: Add eccentric tempo",
-    "movement_archetype": "eccentric_loading",
+    "notes": "With a securely anchored light resistance band, slowly bring the arms together in front of the chest through a comfortable range, then return under control. Keep resistance and speed fixed. Avoid a forced chest stretch, increased tension or fatigue work. Stop if pain or symptoms worsen during or after the work.",
+    "movement_archetype": "banded_resistance",
     "proposed": {
-      "rehab_stage": null,
-      "function": "tendon_loading",
-      "equipment": null,
-      "impact": null,
-      "load": null,
-      "velocity": null,
+      "rehab_stage": "load",
+      "function": "activation",
+      "equipment": [
+        "resistance_band"
+      ],
+      "impact": "none",
+      "load": "low",
+      "velocity": "low",
       "target_regions": [
         "chest"
       ],
-      "laterality_applicability": null,
-      "target_tissues": null,
-      "contraction_type": "eccentric",
+      "laterality_applicability": "not_applicable",
+      "target_tissues": [
+        "pectoral muscles"
+      ],
+      "contraction_type": "mixed",
       "sport_specificity": "general_rehab",
       "contact_level": "none",
-      "evidence_notes": null
+      "evidence_notes": "Manual review of fixed exercise mechanics. General injury guidance: https://www.nhs.uk/conditions/sprains-and-strains/. This source does not establish a dose or efficacy for this exact equipment variant. Not an active prescription; LOAD requires separately sourced and evaluable pathway transitions. Unknown load remains unknown when external weight or manual pressure is not specified."
     },
     "flags": [],
-    "review_state": "needs_review",
-    "review_version": 1
+    "review_state": "reviewed",
+    "review_version": 1,
+    "source_history": [
+      {
+        "source_hash": "7c570e7ccf27d97faaa3492b90b7010d31d2bbd6cc675164406cdbf272f5d1d8",
+        "name": "Resistance Band Chest Fly",
+        "notes": "GPP: Control range of motion → SPP: Add eccentric tempo"
+      }
+    ]
   },
   {
     "drill_id": "chest_strain_recovery_support",
@@ -11349,60 +11419,148 @@
   },
   {
     "drill_id": "shoulder_strain_wall_slides_with_foam_roller",
-    "source_hash": "e6d25110f9b46cc5cb6dd1c64a26a3c6ad9685c04fcf30baeac7f6df11ce2e79",
+    "source_hash": "27ac71149cb051219977d590e17cd292ac2fb969bd33b489e805bf3ada043a2e",
     "location": "shoulder",
     "injury_type": "strain",
     "name": "Wall Slides with Foam Roller",
-    "notes": "GPP: Rebuild scapular rhythm (anterior deltoid) → SPP: Increase range with light resistance",
-    "movement_archetype": "manual_recovery",
+    "notes": "Place the forearms on a foam roller against a wall. Slowly slide only through a comfortable range and return under control. Use no additional band or weight; do not force overhead range. Stop if pain or symptoms worsen during or after the work.",
+    "movement_archetype": "banded_resistance",
     "proposed": {
-      "rehab_stage": null,
-      "function": "control",
-      "equipment": null,
+      "rehab_stage": "load",
+      "function": "activation",
+      "equipment": [
+        "wall",
+        "foam_roller"
+      ],
       "impact": "none",
-      "load": null,
+      "load": "low",
       "velocity": "low",
       "target_regions": [
         "shoulder"
       ],
-      "laterality_applicability": null,
-      "target_tissues": null,
-      "contraction_type": null,
+      "laterality_applicability": "side_specific",
+      "target_tissues": [
+        "shoulder muscles"
+      ],
+      "contraction_type": "mixed",
       "sport_specificity": "general_rehab",
       "contact_level": "none",
-      "evidence_notes": null
+      "evidence_notes": "Manual review of fixed exercise mechanics. General injury guidance: https://www.leedsth.nhs.uk/patients/resources/early-advice-and-exercises-for-soft-tissue-injuries-of-the-shoulder/. This source does not establish a dose or efficacy for this exact equipment variant. Not an active prescription; LOAD requires separately sourced and evaluable pathway transitions. Unknown load remains unknown when external weight or manual pressure is not specified."
     },
     "flags": [],
-    "review_state": "needs_review",
-    "review_version": 1
+    "review_state": "reviewed",
+    "review_version": 1,
+    "source_history": [
+      {
+        "source_hash": "e6d25110f9b46cc5cb6dd1c64a26a3c6ad9685c04fcf30baeac7f6df11ce2e79",
+        "name": "Wall Slides with Foam Roller",
+        "notes": "GPP: Rebuild scapular rhythm (anterior deltoid) → SPP: Increase range with light resistance"
+      }
+    ]
   },
   {
     "drill_id": "shoulder_strain_landmine_shoulder_press",
-    "source_hash": "8e12327157e4ddba7cec59da3a4dccb7314996e2b270f2698dc9e49345d7a3c0",
+    "source_hash": "86fb33daea188dbc03ccf989caf583acc880f10080e6d94df26786fe614996e7",
     "location": "shoulder",
     "injury_type": "strain",
     "name": "Landmine Shoulder Press",
-    "notes": "GPP: Safe press angle for anterior strain → SPP: Add tempo or pause at top",
-    "movement_archetype": "unknown",
+    "notes": "With a securely anchored landmine bar and an individually selected fixed load, slowly press through a comfortable range and lower under control. No load, tempo or range progression within this drill. This is resisted loading, not an early movement exercise. Stop if pain or symptoms worsen during or after the work.",
+    "movement_archetype": "balance_control",
     "proposed": {
-      "rehab_stage": null,
-      "function": null,
-      "equipment": null,
-      "impact": null,
-      "load": null,
-      "velocity": null,
+      "rehab_stage": "load",
+      "function": "activation",
+      "equipment": [
+        "landmine",
+        "barbell"
+      ],
+      "impact": "none",
+      "load": "unknown",
+      "velocity": "low",
       "target_regions": [
         "shoulder"
       ],
-      "laterality_applicability": null,
-      "target_tissues": null,
-      "contraction_type": null,
-      "sport_specificity": null,
-      "contact_level": null,
-      "evidence_notes": null
+      "laterality_applicability": "side_specific",
+      "target_tissues": [
+        "shoulder muscles"
+      ],
+      "contraction_type": "mixed",
+      "sport_specificity": "general_rehab",
+      "contact_level": "none",
+      "evidence_notes": "Manual review of fixed exercise mechanics. General injury guidance: https://www.leedsth.nhs.uk/patients/resources/early-advice-and-exercises-for-soft-tissue-injuries-of-the-shoulder/. This source does not establish a dose or efficacy for this exact equipment variant. Not an active prescription; LOAD requires separately sourced and evaluable pathway transitions. Unknown load remains unknown when external weight or manual pressure is not specified."
     },
     "flags": [],
-    "review_state": "needs_review",
+    "review_state": "reviewed",
+    "review_version": 1,
+    "source_history": [
+      {
+        "source_hash": "8e12327157e4ddba7cec59da3a4dccb7314996e2b270f2698dc9e49345d7a3c0",
+        "name": "Landmine Shoulder Press",
+        "notes": "GPP: Safe press angle for anterior strain → SPP: Add tempo or pause at top"
+      }
+    ]
+  },
+  {
+    "drill_id": "shoulder_strain_recovery_support",
+    "source_hash": "5e828e212c424148231a415eae51eefc9d6069362de3a191d234285215c82fc4",
+    "location": "shoulder",
+    "injury_type": "strain",
+    "name": "Shoulder strain recovery support",
+    "notes": "Protect the strained area and avoid activity that aggravates it. During the first 2 to 3 days, rest from exercise that loads it. Use comfortable everyday movement without forcing a stretch. Avoid massage and heat in the early period. Seek assessment for severe or worsening pain, swelling or inability to use the area.",
+    "movement_archetype": "manual_recovery",
+    "proposed": {
+      "rehab_stage": "calm",
+      "function": "recovery_downregulation",
+      "equipment": [],
+      "impact": "none",
+      "load": "minimal",
+      "velocity": "low",
+      "target_regions": [
+        "shoulder"
+      ],
+      "laterality_applicability": "not_applicable",
+      "target_tissues": [
+        "shoulder muscles"
+      ],
+      "contraction_type": "unknown",
+      "sport_specificity": "general_rehab",
+      "contact_level": "none",
+      "evidence_notes": "Sources: https://www.nhs.uk/conditions/sprains-and-strains/. Fixed baseline variant; no numeric dose. Low/moderate eligibility is the existing product safety gate, not a diagnosed clinical grade. Scheduling is product allocation cadence, not a clinical dose."
+    },
+    "flags": [],
+    "review_state": "reviewed",
+    "review_version": 1
+  },
+  {
+    "drill_id": "shoulder_strain_reviewed_restore",
+    "source_hash": "7d5a65406d78a303427094e43ceed5167151ee4fa66cbd840bb124f4d95fb548",
+    "location": "shoulder",
+    "injury_type": "strain",
+    "name": "Supported shoulder pendulum",
+    "notes": "Lean forward with your uninjured hand on a stable support and let the affected arm hang relaxed. Gently allow small, comfortable forward-and-back and side-to-side swings. Keep the movement pain-free. Do not add weights, force the range or perform presses. Stop if symptoms worsen. Follow any individual movement restrictions given by your treating clinician.",
+    "movement_archetype": "mobility_rom",
+    "proposed": {
+      "rehab_stage": "restore",
+      "function": "mobility",
+      "equipment": [],
+      "impact": "none",
+      "load": "minimal",
+      "velocity": "low",
+      "target_regions": [
+        "shoulder"
+      ],
+      "laterality_applicability": "side_specific",
+      "target_tissues": [
+        "shoulder muscles"
+      ],
+      "contraction_type": "mixed",
+      "sport_specificity": "general_rehab",
+      "contact_level": "none",
+      "evidence_notes": "Sources: https://www.nhs.uk/conditions/sprains-and-strains/, https://www.leedsth.nhs.uk/patients/resources/early-advice-and-exercises-for-soft-tissue-injuries-of-the-shoulder/. Fixed baseline variant; no numeric dose. Movement derived from shoulder_strain_wall_slides_with_foam_roller; original source hash e6d25110f9b46cc5cb6dd1c64a26a3c6ad9685c04fcf30baeac7f6df11ce2e79. Low/moderate eligibility is the existing product safety gate, not a diagnosed clinical grade. Scheduling is product allocation cadence, not a clinical dose."
+    },
+    "flags": [
+      "LOAD_PROGRESSION_IN_NOTES"
+    ],
+    "review_state": "reviewed",
     "review_version": 1
   },
   {
@@ -12197,61 +12355,85 @@
   },
   {
     "drill_id": "shoulder_strain_isometric_wall_press_90_abduction",
-    "source_hash": "07111695d3a5466c559399e607eb22a22c57b7c095ce37bf86ac1c75800fa475",
+    "source_hash": "ae83b0945436bf04e4df2c8073c6b026ada35d32b20618a1938c3e152099095c",
     "location": "shoulder",
     "injury_type": "strain",
     "name": "Isometric Wall Press (90° Abduction)",
-    "notes": "GPP: Reinforce static mid-range control (lateral deltoid)",
+    "notes": "With the arm at shoulder height only if that position is comfortable, gently press against a stable wall without movement, then relax. Keep pressure fixed. Do not force the position or add resistance. Stop if pain or symptoms worsen during or after the work.",
     "movement_archetype": "isometric",
     "proposed": {
-      "rehab_stage": null,
-      "function": "isometric_analgesia",
-      "equipment": null,
+      "rehab_stage": "load",
+      "function": "activation",
+      "equipment": [
+        "wall"
+      ],
       "impact": "none",
-      "load": null,
+      "load": "low",
       "velocity": "low",
       "target_regions": [
         "shoulder"
       ],
-      "laterality_applicability": null,
-      "target_tissues": null,
+      "laterality_applicability": "side_specific",
+      "target_tissues": [
+        "shoulder muscles"
+      ],
       "contraction_type": "isometric",
       "sport_specificity": "general_rehab",
       "contact_level": "none",
-      "evidence_notes": null
+      "evidence_notes": "Manual review of fixed exercise mechanics. General injury guidance: https://www.leedsth.nhs.uk/patients/resources/early-advice-and-exercises-for-soft-tissue-injuries-of-the-shoulder/. This source does not establish a dose or efficacy for this exact equipment variant. Not an active prescription; LOAD requires separately sourced and evaluable pathway transitions. Unknown load remains unknown when external weight or manual pressure is not specified."
     },
-    "flags": [],
-    "review_state": "needs_review",
-    "review_version": 1
+    "flags": [
+      "LOAD_PROGRESSION_IN_NOTES"
+    ],
+    "review_state": "reviewed",
+    "review_version": 1,
+    "source_history": [
+      {
+        "source_hash": "07111695d3a5466c559399e607eb22a22c57b7c095ce37bf86ac1c75800fa475",
+        "name": "Isometric Wall Press (90° Abduction)",
+        "notes": "GPP: Reinforce static mid-range control (lateral deltoid)"
+      }
+    ]
   },
   {
     "drill_id": "shoulder_strain_banded_y_raise",
-    "source_hash": "4f074cf1499963c851d440995000d8eb9b591465377a3f5d64cc0f1ba8910e6c",
+    "source_hash": "b33927039b1b4f12c69bb8889efe0459b8d331b30cd63543971192b9f759a62c",
     "location": "shoulder",
     "injury_type": "strain",
     "name": "Banded Y-Raise",
-    "notes": "SPP: Target overhead tissue resilience (posterior & lateral)",
+    "notes": "Using a fixed light resistance band, slowly raise the arms into a comfortable Y position and lower under control. Do not force overhead range, increase band tension or work to fatigue. Stop if pain or symptoms worsen during or after the work.",
     "movement_archetype": "banded_resistance",
     "proposed": {
-      "rehab_stage": null,
+      "rehab_stage": "load",
       "function": "activation",
-      "equipment": null,
-      "impact": null,
-      "load": null,
-      "velocity": null,
+      "equipment": [
+        "resistance_band"
+      ],
+      "impact": "none",
+      "load": "low",
+      "velocity": "low",
       "target_regions": [
         "shoulder"
       ],
-      "laterality_applicability": null,
-      "target_tissues": null,
-      "contraction_type": null,
+      "laterality_applicability": "side_specific",
+      "target_tissues": [
+        "shoulder muscles"
+      ],
+      "contraction_type": "mixed",
       "sport_specificity": "general_rehab",
       "contact_level": "none",
-      "evidence_notes": null
+      "evidence_notes": "Manual review of fixed exercise mechanics. General injury guidance: https://www.leedsth.nhs.uk/patients/resources/early-advice-and-exercises-for-soft-tissue-injuries-of-the-shoulder/. This source does not establish a dose or efficacy for this exact equipment variant. Not an active prescription; LOAD requires separately sourced and evaluable pathway transitions. Unknown load remains unknown when external weight or manual pressure is not specified."
     },
     "flags": [],
-    "review_state": "needs_review",
-    "review_version": 1
+    "review_state": "reviewed",
+    "review_version": 1,
+    "source_history": [
+      {
+        "source_hash": "4f074cf1499963c851d440995000d8eb9b591465377a3f5d64cc0f1ba8910e6c",
+        "name": "Banded Y-Raise",
+        "notes": "SPP: Target overhead tissue resilience (posterior & lateral)"
+      }
+    ]
   },
   {
     "drill_id": "shoulder_tightness_sleeper_stretch_on_wall",
@@ -12835,60 +13017,144 @@
   },
   {
     "drill_id": "bicep_strain_isometric_bicep_curl_hold_mid_range",
-    "source_hash": "c1d033af37c97132d4e9bc399f390056417a1cb230df5bd64f848f5b2cf3d4b1",
+    "source_hash": "ca074d324669e3a6b33905e33fc3a793962cef0a9aae4c02847ca464c5b9b349",
     "location": "bicep",
     "injury_type": "strain",
     "name": "Isometric Bicep Curl Hold (Mid-Range)",
-    "notes": "GPP: Reinforce tendon tension at shortened length → SPP: Transition into dynamic curl variations",
+    "notes": "Support the upper arm and hold the elbow in comfortable mid-flexion against gentle resistance from the other hand, then relax. Keep pressure fixed. No weights, dynamic curls or fatigue progression within this drill. Stop if pain or symptoms worsen during or after the work.",
     "movement_archetype": "isometric",
     "proposed": {
-      "rehab_stage": null,
-      "function": "isometric_analgesia",
-      "equipment": null,
+      "rehab_stage": "load",
+      "function": "activation",
+      "equipment": [],
       "impact": "none",
-      "load": null,
+      "load": "low",
       "velocity": "low",
       "target_regions": [
         "bicep"
       ],
-      "laterality_applicability": null,
-      "target_tissues": null,
+      "laterality_applicability": "side_specific",
+      "target_tissues": [
+        "biceps muscle"
+      ],
       "contraction_type": "isometric",
       "sport_specificity": "general_rehab",
       "contact_level": "none",
-      "evidence_notes": null
+      "evidence_notes": "Manual review of fixed exercise mechanics. General injury guidance: https://www.nbt.nhs.uk/our-services/a-z-services/emergency-department/ed-miu-patient-information/elbow-injuries. This source does not establish a dose or efficacy for this exact equipment variant. Not an active prescription; LOAD requires separately sourced and evaluable pathway transitions. Unknown load remains unknown when external weight or manual pressure is not specified."
     },
     "flags": [],
-    "review_state": "needs_review",
-    "review_version": 1
+    "review_state": "reviewed",
+    "review_version": 1,
+    "source_history": [
+      {
+        "source_hash": "c1d033af37c97132d4e9bc399f390056417a1cb230df5bd64f848f5b2cf3d4b1",
+        "name": "Isometric Bicep Curl Hold (Mid-Range)",
+        "notes": "GPP: Reinforce tendon tension at shortened length → SPP: Transition into dynamic curl variations"
+      }
+    ]
   },
   {
     "drill_id": "bicep_strain_band_resisted_eccentric_curl",
-    "source_hash": "4e02ac257b914fbebb91a2a270a221fbe9ff683fcf732cb3708dd0e444a8d46d",
+    "source_hash": "7d2e05674076888a6b92707920e5c48be4c42911e41ff7e7ac6569ace62f6a4e",
     "location": "bicep",
     "injury_type": "strain",
     "name": "Band-Resisted Eccentric Curl",
-    "notes": "GPP: Control elongation under low load → SPP: Add reps or tempo drag",
+    "notes": "With the upper arm supported and a fixed light band, use the other hand to help bend the elbow, then slowly lower against the band through a comfortable range. Keep band tension fixed. No extra repetitions to fatigue or speed work. Stop if pain or symptoms worsen during or after the work.",
     "movement_archetype": "eccentric_loading",
     "proposed": {
-      "rehab_stage": null,
-      "function": "tendon_loading",
-      "equipment": null,
-      "impact": null,
-      "load": null,
-      "velocity": null,
+      "rehab_stage": "load",
+      "function": "activation",
+      "equipment": [
+        "resistance_band"
+      ],
+      "impact": "none",
+      "load": "low",
+      "velocity": "low",
       "target_regions": [
         "bicep"
       ],
-      "laterality_applicability": null,
-      "target_tissues": null,
+      "laterality_applicability": "side_specific",
+      "target_tissues": [
+        "biceps muscle"
+      ],
       "contraction_type": "eccentric",
       "sport_specificity": "general_rehab",
       "contact_level": "none",
-      "evidence_notes": null
+      "evidence_notes": "Manual review of fixed exercise mechanics. General injury guidance: https://www.nbt.nhs.uk/our-services/a-z-services/emergency-department/ed-miu-patient-information/elbow-injuries. This source does not establish a dose or efficacy for this exact equipment variant. Not an active prescription; LOAD requires separately sourced and evaluable pathway transitions. Unknown load remains unknown when external weight or manual pressure is not specified."
     },
     "flags": [],
-    "review_state": "needs_review",
+    "review_state": "reviewed",
+    "review_version": 1,
+    "source_history": [
+      {
+        "source_hash": "4e02ac257b914fbebb91a2a270a221fbe9ff683fcf732cb3708dd0e444a8d46d",
+        "name": "Band-Resisted Eccentric Curl",
+        "notes": "GPP: Control elongation under low load → SPP: Add reps or tempo drag"
+      }
+    ]
+  },
+  {
+    "drill_id": "biceps_strain_recovery_support",
+    "source_hash": "4e4086f86c7c5ac33d84df8754c1cd86f75ab4f98164925acc26c3ec0c1e0a7f",
+    "location": "bicep",
+    "injury_type": "strain",
+    "name": "Biceps strain recovery support",
+    "notes": "Protect the strained area and avoid activity that aggravates it. During the first 2 to 3 days, rest from exercise that loads it. Use comfortable everyday movement without forcing a stretch. Avoid massage and heat in the early period. Seek assessment for severe or worsening pain, swelling or inability to use the area.",
+    "movement_archetype": "manual_recovery",
+    "proposed": {
+      "rehab_stage": "calm",
+      "function": "recovery_downregulation",
+      "equipment": [],
+      "impact": "none",
+      "load": "minimal",
+      "velocity": "low",
+      "target_regions": [
+        "bicep",
+        "biceps"
+      ],
+      "laterality_applicability": "not_applicable",
+      "target_tissues": [
+        "biceps muscle"
+      ],
+      "contraction_type": "unknown",
+      "sport_specificity": "general_rehab",
+      "contact_level": "none",
+      "evidence_notes": "Sources: https://www.nhs.uk/conditions/sprains-and-strains/. Fixed baseline variant; no numeric dose. Low/moderate eligibility is the existing product safety gate, not a diagnosed clinical grade. Scheduling is product allocation cadence, not a clinical dose."
+    },
+    "flags": [],
+    "review_state": "reviewed",
+    "review_version": 1
+  },
+  {
+    "drill_id": "biceps_strain_reviewed_restore",
+    "source_hash": "d115978e315ba875448dccb40e373b6fa971bac89140c03c4af25de16b6e7e3e",
+    "location": "bicep",
+    "injury_type": "strain",
+    "name": "Supported elbow bend and straighten for biceps strain",
+    "notes": "Once pain begins to settle, support the affected elbow with your other hand. Slowly bend and straighten the elbow within a comfortable pain-free range. Do not force straightening, carry weights or add curl resistance. Stop if pain or swelling increases. This is gentle movement for an uncomplicated muscle strain, not a tendon tear or repair protocol.",
+    "movement_archetype": "mobility_rom",
+    "proposed": {
+      "rehab_stage": "restore",
+      "function": "mobility",
+      "equipment": [],
+      "impact": "none",
+      "load": "minimal",
+      "velocity": "low",
+      "target_regions": [
+        "bicep",
+        "biceps"
+      ],
+      "laterality_applicability": "side_specific",
+      "target_tissues": [
+        "biceps muscle"
+      ],
+      "contraction_type": "mixed",
+      "sport_specificity": "general_rehab",
+      "contact_level": "none",
+      "evidence_notes": "Sources: https://www.nhs.uk/conditions/sprains-and-strains/, https://www.nbt.nhs.uk/our-services/a-z-services/emergency-department/ed-miu-patient-information/elbow-injuries. Fixed baseline variant; no numeric dose. Movement derived from bicep_strain_isometric_bicep_curl_hold_mid_range; original source hash c1d033af37c97132d4e9bc399f390056417a1cb230df5bd64f848f5b2cf3d4b1. Low/moderate eligibility is the existing product safety gate, not a diagnosed clinical grade. Scheduling is product allocation cadence, not a clinical dose."
+    },
+    "flags": [],
+    "review_state": "reviewed",
     "review_version": 1
   },
   {
@@ -13647,118 +13913,229 @@
   },
   {
     "drill_id": "bicep_strain_cable_curl_with_fat_grip",
-    "source_hash": "f9e0f167105a6b840dd3a8406d8ab855c1b37b3b213153b36771b9c837c3c753",
+    "source_hash": "5723438bab601e397f9dd9f9a476da0d2642a604a834f6aeef3cf0e20b88344a",
     "location": "bicep",
     "injury_type": "strain",
     "name": "Cable Curl with Fat Grip",
-    "notes": "SPP: Load eccentric under control → TAPER: Drop volume but keep tension sharp",
-    "movement_archetype": "eccentric_loading",
+    "notes": "With a fixed cable load and thick grip attachment, slowly bend and straighten the elbow through a comfortable range. Keep the upper arm still. Do not increase resistance, accelerate the movement or work to fatigue. Demand depends on the individually selected cable load. Stop if pain or symptoms worsen during or after the work.",
+    "movement_archetype": "external_load_strength",
     "proposed": {
-      "rehab_stage": null,
-      "function": "tendon_loading",
-      "equipment": null,
-      "impact": null,
-      "load": null,
-      "velocity": null,
+      "rehab_stage": "load",
+      "function": "activation",
+      "equipment": [
+        "cable_machine",
+        "fat_grip"
+      ],
+      "impact": "none",
+      "load": "unknown",
+      "velocity": "low",
       "target_regions": [
         "bicep"
       ],
-      "laterality_applicability": null,
-      "target_tissues": null,
-      "contraction_type": "eccentric",
+      "laterality_applicability": "side_specific",
+      "target_tissues": [
+        "biceps muscle"
+      ],
+      "contraction_type": "mixed",
       "sport_specificity": "general_rehab",
       "contact_level": "none",
-      "evidence_notes": null
+      "evidence_notes": "Manual review of fixed exercise mechanics. General injury guidance: https://www.nbt.nhs.uk/our-services/a-z-services/emergency-department/ed-miu-patient-information/elbow-injuries. This source does not establish a dose or efficacy for this exact equipment variant. Not an active prescription; LOAD requires separately sourced and evaluable pathway transitions. Unknown load remains unknown when external weight or manual pressure is not specified."
     },
-    "flags": [],
-    "review_state": "needs_review",
-    "review_version": 1
+    "flags": [
+      "VARIABLE_DEMAND_PROGRESSION",
+      "LOAD_PROGRESSION_IN_NOTES",
+      "SPEED_PROGRESSION_IN_NOTES"
+    ],
+    "review_state": "reviewed",
+    "review_version": 1,
+    "source_history": [
+      {
+        "source_hash": "f9e0f167105a6b840dd3a8406d8ab855c1b37b3b213153b36771b9c837c3c753",
+        "name": "Cable Curl with Fat Grip",
+        "notes": "SPP: Load eccentric under control → TAPER: Drop volume but keep tension sharp"
+      }
+    ]
   },
   {
     "drill_id": "bicep_strain_supinated_isometric_elbow_hold",
-    "source_hash": "d0bbceca557fb628312a8f502d22716aca241f8023f2b59ef686d63f0c519e40",
+    "source_hash": "2d4cbfa467f9bd8543ea9dae130a06537bf5a336f4542469ffae05fbfeb805c8",
     "location": "bicep",
     "injury_type": "strain",
     "name": "Supinated Isometric Elbow Hold",
-    "notes": "SPP: Hold mid-flexion tension → TAPER: Maintain capacity without fatigue",
+    "notes": "Keep the upper arm supported, palm facing up and elbow in comfortable mid-flexion. Resist gently with the other hand without movement, then relax. Keep pressure fixed; no added load or fatigue work. Stop if pain or symptoms worsen during or after the work.",
     "movement_archetype": "isometric",
     "proposed": {
-      "rehab_stage": null,
-      "function": "isometric_analgesia",
-      "equipment": null,
+      "rehab_stage": "load",
+      "function": "activation",
+      "equipment": [],
       "impact": "none",
-      "load": null,
+      "load": "low",
       "velocity": "low",
       "target_regions": [
         "bicep"
       ],
-      "laterality_applicability": null,
-      "target_tissues": null,
+      "laterality_applicability": "side_specific",
+      "target_tissues": [
+        "biceps muscle"
+      ],
       "contraction_type": "isometric",
       "sport_specificity": "general_rehab",
       "contact_level": "none",
-      "evidence_notes": null
+      "evidence_notes": "Manual review of fixed exercise mechanics. General injury guidance: https://www.nbt.nhs.uk/our-services/a-z-services/emergency-department/ed-miu-patient-information/elbow-injuries. This source does not establish a dose or efficacy for this exact equipment variant. Not an active prescription; LOAD requires separately sourced and evaluable pathway transitions. Unknown load remains unknown when external weight or manual pressure is not specified."
     },
     "flags": [],
-    "review_state": "needs_review",
-    "review_version": 1
+    "review_state": "reviewed",
+    "review_version": 1,
+    "source_history": [
+      {
+        "source_hash": "d0bbceca557fb628312a8f502d22716aca241f8023f2b59ef686d63f0c519e40",
+        "name": "Supinated Isometric Elbow Hold",
+        "notes": "SPP: Hold mid-flexion tension → TAPER: Maintain capacity without fatigue"
+      }
+    ]
   },
   {
     "drill_id": "triceps_strain_isometric_wall_triceps_press",
-    "source_hash": "9a912a1f4eca86ed2411f26b0ed2c07682b2dfc5c474782835bc8915c328ad67",
+    "source_hash": "559794275d4fe2af6df3ae7e98836a8cc54aea0a0d895f1849906f34810e5d03",
     "location": "triceps",
     "injury_type": "strain",
     "name": "Isometric Wall Triceps Press",
-    "notes": "GPP: Rebuild base triceps tension → SPP: Increase time under tension to restore punch extension",
+    "notes": "With the elbow comfortably bent and hand against a stable wall, gently try to straighten the elbow without movement, then relax. Keep pressure fixed. No longer fatigue holds or punching progression within this drill. Stop if pain or symptoms worsen during or after the work.",
     "movement_archetype": "isometric",
     "proposed": {
-      "rehab_stage": null,
-      "function": "isometric_analgesia",
-      "equipment": null,
+      "rehab_stage": "load",
+      "function": "activation",
+      "equipment": [
+        "wall"
+      ],
       "impact": "none",
-      "load": null,
+      "load": "low",
       "velocity": "low",
       "target_regions": [
         "triceps"
       ],
-      "laterality_applicability": null,
-      "target_tissues": null,
+      "laterality_applicability": "side_specific",
+      "target_tissues": [
+        "triceps muscle"
+      ],
       "contraction_type": "isometric",
       "sport_specificity": "general_rehab",
       "contact_level": "none",
-      "evidence_notes": null
+      "evidence_notes": "Manual review of fixed exercise mechanics. General injury guidance: https://www.nbt.nhs.uk/our-services/a-z-services/emergency-department/ed-miu-patient-information/elbow-injuries. This source does not establish a dose or efficacy for this exact equipment variant. Not an active prescription; LOAD requires separately sourced and evaluable pathway transitions. Unknown load remains unknown when external weight or manual pressure is not specified."
     },
     "flags": [],
-    "review_state": "needs_review",
-    "review_version": 1
+    "review_state": "reviewed",
+    "review_version": 1,
+    "source_history": [
+      {
+        "source_hash": "9a912a1f4eca86ed2411f26b0ed2c07682b2dfc5c474782835bc8915c328ad67",
+        "name": "Isometric Wall Triceps Press",
+        "notes": "GPP: Rebuild base triceps tension → SPP: Increase time under tension to restore punch extension"
+      }
+    ]
   },
   {
     "drill_id": "triceps_strain_overhead_band_triceps_extensions",
-    "source_hash": "ba0a536a772751e7d307d5c323a8787df4e0437fd4cd841b174af9de49d98dd5",
+    "source_hash": "1dda19f9474c479ebfb25f9aee805ceb3a5c0b02b2fee592b6fdabd6e93a1d80",
     "location": "triceps",
     "injury_type": "strain",
     "name": "Overhead Band Triceps Extensions",
-    "notes": "GPP: Light end-range loading → SPP: Progress to controlled eccentric",
-    "movement_archetype": "eccentric_loading",
+    "notes": "Only if the overhead position is comfortable, slowly straighten and bend the elbow against a fixed light resistance band. Do not force end range, increase band resistance or work to fatigue. This is resisted loading, not early movement. Stop if pain or symptoms worsen during or after the work.",
+    "movement_archetype": "banded_resistance",
     "proposed": {
-      "rehab_stage": null,
-      "function": "tendon_loading",
-      "equipment": null,
-      "impact": null,
-      "load": null,
-      "velocity": null,
+      "rehab_stage": "load",
+      "function": "activation",
+      "equipment": [
+        "resistance_band"
+      ],
+      "impact": "none",
+      "load": "low",
+      "velocity": "low",
       "target_regions": [
         "triceps"
       ],
-      "laterality_applicability": null,
-      "target_tissues": null,
-      "contraction_type": "eccentric",
+      "laterality_applicability": "side_specific",
+      "target_tissues": [
+        "triceps muscle"
+      ],
+      "contraction_type": "mixed",
       "sport_specificity": "general_rehab",
       "contact_level": "none",
-      "evidence_notes": null
+      "evidence_notes": "Manual review of fixed exercise mechanics. General injury guidance: https://www.nbt.nhs.uk/our-services/a-z-services/emergency-department/ed-miu-patient-information/elbow-injuries. This source does not establish a dose or efficacy for this exact equipment variant. Not an active prescription; LOAD requires separately sourced and evaluable pathway transitions. Unknown load remains unknown when external weight or manual pressure is not specified."
     },
     "flags": [],
-    "review_state": "needs_review",
+    "review_state": "reviewed",
+    "review_version": 1,
+    "source_history": [
+      {
+        "source_hash": "ba0a536a772751e7d307d5c323a8787df4e0437fd4cd841b174af9de49d98dd5",
+        "name": "Overhead Band Triceps Extensions",
+        "notes": "GPP: Light end-range loading → SPP: Progress to controlled eccentric"
+      }
+    ]
+  },
+  {
+    "drill_id": "triceps_strain_recovery_support",
+    "source_hash": "d09fa1d9bad19ec97301fdf0e3701f0db76bed2c174bfb69981b865f76c988de",
+    "location": "triceps",
+    "injury_type": "strain",
+    "name": "Triceps strain recovery support",
+    "notes": "Protect the strained area and avoid activity that aggravates it. During the first 2 to 3 days, rest from exercise that loads it. Use comfortable everyday movement without forcing a stretch. Avoid massage and heat in the early period. Seek assessment for severe or worsening pain, swelling or inability to use the area.",
+    "movement_archetype": "manual_recovery",
+    "proposed": {
+      "rehab_stage": "calm",
+      "function": "recovery_downregulation",
+      "equipment": [],
+      "impact": "none",
+      "load": "minimal",
+      "velocity": "low",
+      "target_regions": [
+        "triceps"
+      ],
+      "laterality_applicability": "not_applicable",
+      "target_tissues": [
+        "triceps muscle"
+      ],
+      "contraction_type": "unknown",
+      "sport_specificity": "general_rehab",
+      "contact_level": "none",
+      "evidence_notes": "Sources: https://www.nhs.uk/conditions/sprains-and-strains/. Fixed baseline variant; no numeric dose. Low/moderate eligibility is the existing product safety gate, not a diagnosed clinical grade. Scheduling is product allocation cadence, not a clinical dose."
+    },
+    "flags": [],
+    "review_state": "reviewed",
+    "review_version": 1
+  },
+  {
+    "drill_id": "triceps_strain_reviewed_restore",
+    "source_hash": "bbf88b11477e05425296f566c2fef630e7255034a12c48d64369e99560006ba5",
+    "location": "triceps",
+    "injury_type": "strain",
+    "name": "Supported elbow bend and straighten for triceps strain",
+    "notes": "Once pain begins to settle, support the affected elbow with your other hand. Slowly bend and straighten the elbow within a comfortable pain-free range. Do not force the elbow straight, push against a wall or add resistance. Stop if pain or swelling increases. This is gentle movement for an uncomplicated muscle strain, not a tendon tear or repair protocol.",
+    "movement_archetype": "mobility_rom",
+    "proposed": {
+      "rehab_stage": "restore",
+      "function": "mobility",
+      "equipment": [],
+      "impact": "none",
+      "load": "minimal",
+      "velocity": "low",
+      "target_regions": [
+        "triceps"
+      ],
+      "laterality_applicability": "side_specific",
+      "target_tissues": [
+        "triceps muscle"
+      ],
+      "contraction_type": "mixed",
+      "sport_specificity": "general_rehab",
+      "contact_level": "none",
+      "evidence_notes": "Sources: https://www.nhs.uk/conditions/sprains-and-strains/, https://www.nbt.nhs.uk/our-services/a-z-services/emergency-department/ed-miu-patient-information/elbow-injuries. Fixed baseline variant; no numeric dose. Movement derived from triceps_strain_isometric_wall_triceps_press; original source hash 9a912a1f4eca86ed2411f26b0ed2c07682b2dfc5c474782835bc8915c328ad67. Low/moderate eligibility is the existing product safety gate, not a diagnosed clinical grade. Scheduling is product allocation cadence, not a clinical dose."
+    },
+    "flags": [
+      "LOAD_PROGRESSION_IN_NOTES"
+    ],
+    "review_state": "reviewed",
     "review_version": 1
   },
   {
@@ -14459,61 +14836,83 @@
   },
   {
     "drill_id": "triceps_strain_push_up_to_tabletop_flow",
-    "source_hash": "16ec370fd5d5793f8d925a93c4f6720a49140f695e7dd9d2f86fd8fc508d605c",
+    "source_hash": "0c470686109e035aaff32ea10b9ddcd42c4432398734ceaf2996ccd9a671f2ec",
     "location": "triceps",
     "injury_type": "strain",
-    "name": "Push-Up to Tabletop Flow",
-    "notes": "SPP: Blend flexion-extension under rhythm → TAPER: Reduce to tension resets",
-    "movement_archetype": "mobility_rom",
+    "name": "Supported incline push-up",
+    "notes": "Place both hands on a stable raised table and perform a slow supported incline push-up through a comfortable elbow range, then return. Keep the support height fixed. Do not transition to floor work, a reverse tabletop or speed work. Stop if pain or symptoms worsen during or after the work.",
+    "movement_archetype": "unknown",
     "proposed": {
-      "rehab_stage": null,
-      "function": "recovery_downregulation",
-      "equipment": null,
+      "rehab_stage": "load",
+      "function": "activation",
+      "equipment": [
+        "table"
+      ],
       "impact": "none",
-      "load": null,
+      "load": "moderate",
       "velocity": "low",
       "target_regions": [
         "triceps"
       ],
-      "laterality_applicability": null,
-      "target_tissues": null,
-      "contraction_type": null,
+      "laterality_applicability": "not_applicable",
+      "target_tissues": [
+        "triceps muscle"
+      ],
+      "contraction_type": "mixed",
       "sport_specificity": "general_rehab",
       "contact_level": "none",
-      "evidence_notes": null
+      "evidence_notes": "Manual review of fixed exercise mechanics. General injury guidance: https://www.nbt.nhs.uk/our-services/a-z-services/emergency-department/ed-miu-patient-information/elbow-injuries. This source does not establish a dose or efficacy for this exact equipment variant. Not an active prescription; LOAD requires separately sourced and evaluable pathway transitions. Unknown load remains unknown when external weight or manual pressure is not specified."
     },
     "flags": [],
-    "review_state": "needs_review",
-    "review_version": 1
+    "review_state": "reviewed",
+    "review_version": 1,
+    "source_history": [
+      {
+        "source_hash": "16ec370fd5d5793f8d925a93c4f6720a49140f695e7dd9d2f86fd8fc508d605c",
+        "name": "Push-Up to Tabletop Flow",
+        "notes": "SPP: Blend flexion-extension under rhythm → TAPER: Reduce to tension resets"
+      }
+    ]
   },
   {
     "drill_id": "triceps_strain_kettlebell_crush_press_light",
-    "source_hash": "adab21999b2088ea9742d9fb4d89d6e6ef7dfd9d83ad535f246987486d23343c",
+    "source_hash": "9d9efaacdd5d115088b921a34c878b37d2a8fe5ee44a03bed17202efc06ef504",
     "location": "triceps",
     "injury_type": "strain",
     "name": "Kettlebell Crush Press (Light)",
-    "notes": "SPP: Load medial head under control → TAPER: Maintain groove",
+    "notes": "Lie supported on your back and hold a fixed individually selected kettlebell with both hands. Slowly press and lower through a comfortable range while maintaining a gentle inward grip. No load increase or fatigue work; demand depends on the selected weight. Stop if pain or symptoms worsen during or after the work.",
     "movement_archetype": "external_load_strength",
     "proposed": {
-      "rehab_stage": null,
-      "function": null,
-      "equipment": null,
-      "impact": null,
-      "load": null,
-      "velocity": null,
+      "rehab_stage": "load",
+      "function": "activation",
+      "equipment": [
+        "kettlebell"
+      ],
+      "impact": "none",
+      "load": "unknown",
+      "velocity": "low",
       "target_regions": [
         "triceps"
       ],
-      "laterality_applicability": null,
-      "target_tissues": null,
-      "contraction_type": null,
+      "laterality_applicability": "not_applicable",
+      "target_tissues": [
+        "triceps muscle"
+      ],
+      "contraction_type": "mixed",
       "sport_specificity": "general_rehab",
       "contact_level": "none",
-      "evidence_notes": null
+      "evidence_notes": "Manual review of fixed exercise mechanics. General injury guidance: https://www.nbt.nhs.uk/our-services/a-z-services/emergency-department/ed-miu-patient-information/elbow-injuries. This source does not establish a dose or efficacy for this exact equipment variant. Not an active prescription; LOAD requires separately sourced and evaluable pathway transitions. Unknown load remains unknown when external weight or manual pressure is not specified."
     },
     "flags": [],
-    "review_state": "needs_review",
-    "review_version": 1
+    "review_state": "reviewed",
+    "review_version": 1,
+    "source_history": [
+      {
+        "source_hash": "adab21999b2088ea9742d9fb4d89d6e6ef7dfd9d83ad535f246987486d23343c",
+        "name": "Kettlebell Crush Press (Light)",
+        "notes": "SPP: Load medial head under control → TAPER: Maintain groove"
+      }
+    ]
   },
   {
     "drill_id": "triceps_tightness_overhead_rope_stretch",
