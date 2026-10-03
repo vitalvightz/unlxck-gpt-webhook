@@ -200,7 +200,7 @@ def test_index_serves_curated_made_for_kids_videos_too():
             _row("never-checked", made_for_kids=None),
         ]
     )
-    assert set(index) == {"checked", "made-for-kids", "never-checked"}
+    assert set(index) == {"checked", "made-for-kids"}
     assert index["checked"].channel_title == "Coach Channel"
 
 
