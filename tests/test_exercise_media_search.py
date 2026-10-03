@@ -656,7 +656,7 @@ def test_dataforseo_rate_limit_is_classified_as_quota_stop():
         list(searcher.search(_row(), set()))
 
 
-@pytest.mark.parametrize("status_code", [40203, 40210])
+@pytest.mark.parametrize("status_code", [40200, 40203, 40210])
 def test_dataforseo_account_limits_stop_batch_without_marking_rows_error(tmp_path, status_code):
     src = tmp_path / "media.csv"
     _write_csv(

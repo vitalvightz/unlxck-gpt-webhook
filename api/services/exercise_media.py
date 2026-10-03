@@ -231,6 +231,14 @@ class VideoCheck:
     made_for_kids: bool | None = None
 
 
+def is_youtube_provider_failure(check: VideoCheck) -> bool:
+    """Whether an unknown result came from the Data API, not the video itself."""
+    reason = (check.reason or "").lower()
+    return check.status == "unknown" and (
+        reason.startswith("transport:") or reason.startswith("data api")
+    )
+
+
 def youtube_api_key() -> str | None:
     return (os.getenv(YOUTUBE_API_KEY_ENV) or "").strip() or None
 
@@ -357,7 +365,7 @@ def run_media_verification_sweep(
     (INDEX_TTL_SECONDS); this usually runs in the worker, whose cache is not
     the one serving plans.
     """
-    counts = {"ok": 0, "unavailable": 0, "unknown": 0}
+    counts = {"ok": 0, "unavailable": 0, "unknown": 0, "provider_stopped": 0}
     key = api_key or youtube_api_key()
     if not key:
         logger.warning("exercise media verification skipped: %s is not set", YOUTUBE_API_KEY_ENV)
@@ -376,6 +384,18 @@ def run_media_verification_sweep(
                 api_key=key,
                 client=http,
             )
+            provider_failures = [
+                result for result in results.values()
+                if is_youtube_provider_failure(result)
+            ]
+            if provider_failures:
+                counts["unknown"] += len(provider_failures)
+                counts["provider_stopped"] = 1
+                logger.warning(
+                    "exercise media verification stopped: YouTube Data API unavailable (%s)",
+                    provider_failures[0].reason or "unknown provider failure",
+                )
+                break
             for row in batch:
                 _record_check(row, results, store.update_exercise_media_status, counts)
     finally:
