@@ -71,7 +71,7 @@ def mark_reviewed(group, drill, prior):
 
 def mechanics(drill, region, tissue, *, stage, equipment, load, contraction):
     drill.update(rehab_stage=stage, function="recovery_downregulation" if stage == "calm" else "mobility" if stage == "restore" else "control",
-                 equipment=equipment, load=load, impact="none", velocity="low", target_regions=[region],
+                 equipment=equipment, load=load, impact="none", velocity="low", target_regions=["bicep" if region == "biceps" else region],
                  target_tissues=[tissue], laterality_applicability="not_applicable" if stage == "calm" else "side_specific",
                  contraction_type=contraction, sport_specificity="general_rehab", contact_level="none",
                  dose=None, pain_ceiling=None, allowed_severities=None, progress_when=None, regress_when=None, stop_when=None)
@@ -117,6 +117,11 @@ def main():
                 drill["function"] = "tendon_loading"
             drill["evidence_notes"] = "Sources: " + ", ".join(sources) + ". Protected regional baseline, not a subtype diagnosis or complete tendon-loading protocol. No numeric dose or pain threshold inferred. Pain-free range is a conservative product constraint, not a universal assertion that pain during tendon exercise is unsafe. Existing low/moderate eligibility and scheduling cadence remain product rules."
             target_group = indexed[identity][0] if identity in indexed else group
+            # Camp-phase availability is orthogonal to rehab-stage eligibility.
+            # These wrist baselines are available in every camp phase; their
+            # reviewed profile, not a legacy SPP-only group label, gates access.
+            if region == "wrist":
+                target_group["phase_progression"] = "GPP → SPP → TAPER"
             for existing_group in bank:
                 existing_group["drills"] = [d for d in existing_group["drills"] if d["id"] != identity]
             target_group["drills"].append(drill)

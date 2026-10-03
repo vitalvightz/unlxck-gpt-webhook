@@ -13862,7 +13862,7 @@
         "regress_when": null,
         "stop_when": null,
         "target_regions": [
-          "biceps"
+          "bicep"
         ],
         "laterality_applicability": "side_specific",
         "target_tissues": [
@@ -13916,7 +13916,7 @@
         "regress_when": null,
         "stop_when": null,
         "target_regions": [
-          "biceps"
+          "bicep"
         ],
         "laterality_applicability": "not_applicable",
         "target_tissues": [
@@ -13944,7 +13944,7 @@
         "regress_when": null,
         "stop_when": null,
         "target_regions": [
-          "biceps"
+          "bicep"
         ],
         "laterality_applicability": "side_specific",
         "target_tissues": [
@@ -18323,7 +18323,7 @@
   {
     "location": "wrist",
     "type": "tendonitis",
-    "phase_progression": "SPP → TAPER",
+    "phase_progression": "GPP → SPP → TAPER",
     "drills": [
       {
         "id": "wrist_tendonitis_light_thumb_opposition_drill",

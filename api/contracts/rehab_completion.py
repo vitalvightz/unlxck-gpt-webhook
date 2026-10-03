@@ -327,7 +327,8 @@ def _matching_injuries(
     regions: Sequence[str], injuries: Sequence[Mapping[str, Any]]
 ) -> list[Mapping[str, Any]]:
     """Open musculoskeletal injuries whose recorded region the drill targets."""
-    region_set = {region for region in regions if region}
+    from fightcamp.injury_location_registry import canonicalize_location_from_registry
+    region_set = {canonicalize_location_from_registry(region) for region in regions if region}
     matches: list[Mapping[str, Any]] = []
     for injury in injuries:
         if not isinstance(injury, Mapping) or not _is_active_injury(injury):
@@ -335,7 +336,7 @@ def _matching_injuries(
         if _is_surface_injury(injury):
             continue
         body_region = _lower(injury.get("body_region"))
-        if body_region and body_region in region_set:
+        if body_region and canonicalize_location_from_registry(body_region) in region_set:
             matches.append(injury)
     return matches
 

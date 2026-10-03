@@ -150,3 +150,29 @@ source history, original identity preservation, vocabulary and byte-idempotent
 bank/ledger/profile seeding. Broader rehab tests cover multi-injury precedence,
 readiness, ownership, delayed responses, allocation ceilings and existing
 ankle/chest behavior. No production database mutation is required.
+
+## Review clarifications
+
+`phase_progression` describes camp-phase inventory availability, independently
+of `rehab_stage`; it never grants recovery-stage access. Wrist tendonitis groups
+containing the reviewed CALM/RESTORE baselines now list GPP, SPP and TAPER,
+because those baselines are not restricted to late camp phases. Untouched
+phase-keyed drills retain their own legacy notes and remain dormant.
+
+Biceps tendon drills retain the bank's `bicep` target spelling. Clinical
+selection now passes the existing registry aliases to both selector calls,
+matching the existing bank lookup convention while preserving the canonical
+`biceps_tendonitis` profile and untouched sibling hashes. Completion matching
+canonicalizes the same existing aliases before applying episode/side ownership.
+
+Achilles seated heel raises retain `function: tendon_loading`: plantar flexion
+loads the tendon even without added weight. The existing NHS Achilles source
+describes seated heel raises in its loading programme for both insertional and
+mid-portion presentations. Runtime consumers were checked: the selector uses
+function for ranking only after stage eligibility; injury policy derives
+`is_loading`, which gives RESTORE the existing readiness, delayed-response and
+same-region training holds; the legacy renderer still classifies text, and
+`resolve_drill_function` has no runtime callers. Function does not activate a
+stage. Explicit tests exercise Achilles `pull_back` holds, mobility baselines'
+different scheduling behavior, and injected advanced stages returning to CALM.
+LOAD, DYNAMIC and RETURN remain closed.

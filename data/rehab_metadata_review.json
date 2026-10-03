@@ -14086,7 +14086,7 @@
       "load": "unknown",
       "velocity": "low",
       "target_regions": [
-        "biceps"
+        "bicep"
       ],
       "laterality_applicability": "side_specific",
       "target_tissues": [
@@ -14153,7 +14153,7 @@
       "load": "minimal",
       "velocity": "low",
       "target_regions": [
-        "biceps"
+        "bicep"
       ],
       "laterality_applicability": "not_applicable",
       "target_tissues": [
@@ -14184,7 +14184,7 @@
       "load": "minimal",
       "velocity": "low",
       "target_regions": [
-        "biceps"
+        "bicep"
       ],
       "laterality_applicability": "side_specific",
       "target_tissues": [

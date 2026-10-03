@@ -98,13 +98,54 @@ def test_cross_region_or_type_and_unreviewed_content_fail_closed(region, kind):
 
 
 @pytest.mark.parametrize("region,kind", PAIRS)
-def test_worsening_returns_to_protection_and_readiness_holds_loaded_restore(region, kind):
+def test_worsening_returns_to_protection(region, kind):
     decision = resolve(injury(region, kind, "restore", latest_reported_status="worse"))
     assert decision["stage"] == "calm" and decision["prescription"]["drill"]["rehab_stage"] == "calm"
-    row = injury(region, kind, "restore")
+
+
+@pytest.mark.parametrize("region", REGIONS)
+def test_restore_pull_back_uses_real_loading_hold_semantics(region):
+    row = injury(region, "tendonitis", "restore")
     decision = resolve(row)
-    if decision["prescription"]["is_loading"]:
-        assert schedule_rehab(row, decision, training_day=DAY, readiness_decision="pull_back")["state"] == "held"
+    assert decision["prescription"]["is_loading"] is (region == "achilles")
+    scheduled = schedule_rehab(row, decision, training_day=DAY, readiness_decision="pull_back")
+    assert scheduled["state"] == ("held" if region == "achilles" else "due")
+    if region == "achilles":
+        assert scheduled["reason"] == "Loading rehab is held by today's reduced-training guidance."
+
+
+def test_achilles_tendon_loading_function_cannot_bypass_live_stage_gates():
+    row = injury("achilles", "tendonitis", "restore")
+    decision = resolve(row)
+    assert decision["stage"] == "restore"
+    assert decision["prescription"]["drill_id"] == "achilles_tendonitis_reviewed_restore"
+    assert decision["prescription"]["drill"]["function"] == "tendon_loading"
+    assert decision["prescription"]["drill"]["rehab_stage"] == "restore"
+    assert schedule_rehab(row, decision, training_day=DAY)["state"] == "due"
+    policy = next(p for p in load_clinical_policies() if p.policy_id == "achilles_tendonitis")
+    assert policy.live_stages == ["calm", "restore"]
+    assert not any(t.promotable for t in policy.transitions)
+    for stage in ("load", "dynamic", "return"):
+        injected = resolve({**row, "rehab_stage": stage})
+        assert injected["stage"] == "calm"
+        assert injected["prescription"]["drill_id"] == "achilles_tendonitis_recovery_support"
+        assert not injected["prescription"]["is_loading"]
+
+
+def test_wrist_baseline_groups_cover_all_camp_phases_and_bicep_alias_resolves():
+    from fightcamp.injury_location_registry import canonicalize_location_from_registry
+    from fightcamp.rehab_schema import split_phase_progression
+    for group in get_rehab_bank():
+        if group["location"] == "wrist" and group["type"] == "tendonitis" and any(
+                d["rehab_stage"] in {"calm", "restore"} for d in group["drills"]):
+            assert split_phase_progression(group["phase_progression"]) == ["GPP", "SPP", "TAPER"]
+        if group["location"] == "bicep" and group["type"] == "tendonitis":
+            assert all(d["target_regions"] == ["bicep"] for d in group["drills"])
+    for region in ("bicep", "biceps"):
+        for stage in ("calm", "restore"):
+            row = injury(region, "tendonitis", stage,
+                         canonical_location=canonicalize_location_from_registry(region))
+            assert resolve(row)["policy_id"] == "biceps_tendonitis"
 
 
 @pytest.mark.parametrize("region,kind", PAIRS)
