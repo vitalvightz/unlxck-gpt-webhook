@@ -69,7 +69,7 @@ def test_region_and_exact_type_resolve_a_reviewed_prescription_and_real_completi
 
 @pytest.mark.parametrize("region,kind", PAIRS)
 def test_reviewed_hashes_match_and_original_sources_survive_authorised_repairs(region, kind):
-    ledger = {r["drill_id"]: r for r in json.loads((ROOT / "data/rehab_metadata_review.json").read_text())}
+    ledger = {r["drill_id"]: r for r in json.loads((ROOT / "data/rehab_metadata_review.json").read_text(encoding="utf-8"))}
     policy = next(p for p in load_clinical_policies() if (p.region, p.injury_type) == (region, kind))
     assert validate_clinical_bank((policy,), get_rehab_bank()) == []
     for p in policy.prescriptions:
@@ -77,7 +77,7 @@ def test_reviewed_hashes_match_and_original_sources_survive_authorised_repairs(r
         assert record["review_state"] == "reviewed"
         assert record["source_hash"] == source_hash(drill_id=record["drill_id"], location=record["location"],
             injury_type=record["injury_type"], name=record["name"], notes=record["notes"])
-    before = json.loads((ROOT / "docs/tendon-family-bank-audit.json").read_text())
+    before = json.loads((ROOT / "docs/tendon-family-bank-audit.json").read_text(encoding="utf-8"))
     for original in (r for r in before if r["region"] == region and r["drill_id"] in REPAIRED):
         record = ledger[original["drill_id"]]
         assert record["review_state"] == "reviewed"
@@ -168,15 +168,19 @@ def test_unrelated_pain_does_not_become_tendonitis(region):
 
 
 def test_inventory_repaired_id_history_and_non_tendon_content_preservation():
-    audit = json.loads((ROOT / "docs/tendon-family-bank-audit.json").read_text())
+    audit = json.loads((ROOT / "docs/tendon-family-bank-audit.json").read_text(encoding="utf-8"))
     assert len(audit) == 60 and len({r["region"] for r in audit}) == 20
+    for original in audit:
+        assert original["source_hash"] == source_hash(drill_id=original["drill_id"],
+            location=original["bank_location"], injury_type="tendonitis",
+            name=original["name"], notes=original["notes"])
     assert all(r["review_state"] == "needs_review" and r["rehab_stage"] is None for r in audit)
-    hashes = json.loads((ROOT / "tests/fixtures/rehab_bank_before_tendon_hashes.json").read_text())
+    hashes = json.loads((ROOT / "tests/fixtures/rehab_bank_before_tendon_hashes.json").read_text(encoding="utf-8"))
     bank = {d["id"]: d for g in get_rehab_bank() for d in g["drills"]}
     assert hashes.keys() <= bank.keys()
     assert {identity for identity in hashes if content_hash(bank[identity]) != hashes[identity]} == REPAIRED
     assert len(bank.keys() - hashes.keys()) == 15
-    ledger = {r["drill_id"]: r for r in json.loads((ROOT / "data/rehab_metadata_review.json").read_text())}
+    ledger = {r["drill_id"]: r for r in json.loads((ROOT / "data/rehab_metadata_review.json").read_text(encoding="utf-8"))}
     active = {p.drill_id for policy in load_clinical_policies() for p in policy.prescriptions}
     assert {r["drill_id"] for r in audit} & active == {"wrist_tendonitis_pronation_supination_twists"}
     for record in audit:
@@ -190,7 +194,7 @@ def test_inventory_repaired_id_history_and_non_tendon_content_preservation():
 
 
 def test_dormant_reviewed_load_work_is_not_a_prescription():
-    ledger = json.loads((ROOT / "data/rehab_metadata_review.json").read_text())
+    ledger = json.loads((ROOT / "data/rehab_metadata_review.json").read_text(encoding="utf-8"))
     load_ids = {r["drill_id"] for r in ledger if r["injury_type"] == "tendonitis"
                 and r["review_state"] == "reviewed" and r["proposed"]["rehab_stage"] == "load"}
     assert len(load_ids) == 6
@@ -225,8 +229,8 @@ def test_positive_reports_and_complete_history_cannot_replace_missing_clinical_i
 
 def test_all_previous_profiles_and_their_decisions_schedules_and_snapshots_are_unchanged(tmp_path):
     from api.contracts.injury_policy import reconcile_session_prescription
-    raw = json.loads((ROOT / "data/rehab_pathways.json").read_text())
-    previous = json.loads((ROOT / "tests/fixtures/rehab_profiles_before_tendon.json").read_text())
+    raw = json.loads((ROOT / "data/rehab_pathways.json").read_text(encoding="utf-8"))
+    previous = json.loads((ROOT / "tests/fixtures/rehab_profiles_before_tendon.json").read_text(encoding="utf-8"))
     assert [p for p in raw["profiles"] if p["injury_type"] != "tendonitis"] == previous
     assert len(previous) == 18
     raw["profiles"] = previous
