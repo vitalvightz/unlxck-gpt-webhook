@@ -963,13 +963,12 @@
       "region": "toe",
       "injury_type": "sprain",
       "evidence_sources": [
-        "https://www.nhs.uk/conditions/sprains-and-strains/",
         "https://www.nhs.uk/conditions/sprains-and-strains/"
       ],
       "prescriptions": [
         {
           "drill_id": "toe_sprain_recovery_support",
-          "bank_hash": "c9030e0ccdc6d9a7538447453435b109d7632d39e81cd8955d582399cb0836cc",
+          "bank_hash": "dbbcbf581f9cc72656d953fed4f21f850f4ebd7cbff4a5940c72eff4645f9acd",
           "stage": "calm",
           "instructions": "Protect the injured joint and avoid exercise or activity that aggravates it. During the first few days of a new sprain, rest from loading it and avoid massage or forced stretching. Follow any clinician-directed support or movement restrictions. Seek assessment for severe or worsening pain, deformity, inability to use the joint or loss of sensation.",
           "dose": null,
@@ -987,13 +986,12 @@
           "minimum_gap_days": 1,
           "priority": 0,
           "sources": [
-            "https://www.nhs.uk/conditions/sprains-and-strains/",
             "https://www.nhs.uk/conditions/sprains-and-strains/"
           ]
         },
         {
           "drill_id": "toe_sprain_reviewed_restore",
-          "bank_hash": "897d11e95372fb59b80001c32e9b9762595c6ea684914eb3abff13063be199f6",
+          "bank_hash": "a5f40b55f9801daddb1340b333d4ca7146fca180838a31e1de23f56663551c4c",
           "stage": "restore",
           "instructions": "When pain no longer stops comfortable movement, sit with the foot supported and gently bend and straighten the affected toe within a small pain-free range. Do not pull the toe into a stretch, push off through it, hop or add resistance. Follow any clinician-directed protection; a deformed toe or inability to move it needs assessment. Stop if pain, slipping or symptoms worsen during or after the work.",
           "dose": null,
@@ -1011,7 +1009,6 @@
           "minimum_gap_days": 1,
           "priority": 0,
           "sources": [
-            "https://www.nhs.uk/conditions/sprains-and-strains/",
             "https://www.nhs.uk/conditions/sprains-and-strains/"
           ]
         }
@@ -1028,7 +1025,7 @@
       "transition_overrides": {},
       "status": "active",
       "activation": "live",
-      "content_hash": "ab1bda90c41414e8490cdb522cb36567612df65bba48ca24c244801ba74db4ff"
+      "content_hash": "fa30519e58c278b67f6fbc373e7de2df4df63dae59903a8f4090f5afc9eae093"
     },
     {
       "policy_id": "wrist_sprain",
