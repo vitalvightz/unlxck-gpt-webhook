@@ -42,7 +42,7 @@ def test_shipped_policies_match_the_pre_migration_file_exactly():
 
 
 # 3. No shipped profile can reach LOAD, DYNAMIC or RETURN, even with ideal evidence.
-@pytest.mark.parametrize("policy_id", ["chest_strain", "ankle_sprain"])
+@pytest.mark.parametrize("policy_id", [p.policy_id for p in load_clinical_policies()])
 def test_shipped_profiles_cannot_enter_a_higher_stage(policy_id):
     shipped = next(p for p in load_clinical_policies() if p.policy_id == policy_id)
     assert shipped.live_stages == ["calm", "restore"] and not any(t.promotable for t in shipped.transitions)
@@ -170,7 +170,7 @@ def test_frozen_snapshots_from_the_previous_file_are_not_held(policy_id, region,
 UNPROFILED = [
     ("ankle", "instability"), ("ankle", "swelling"), ("ankle", "pain"), ("ankle", "tightness"), ("chest", "sprain"),
     ("chest", "contusion"), ("elbow", "tendonitis"), ("shoulder", "impingement"), ("elbow", "hyperextension"),
-    ("hamstring", "strain"), ("calf", "strain"), ("wrist", "sprain"), ("lower_back", "stiffness"), ("knee", "soreness"),
+    ("biceps", "strain"), ("triceps", "strain"), ("wrist", "sprain"), ("lower_back", "stiffness"), ("knee", "soreness"),
 ]
 
 
@@ -186,7 +186,9 @@ def test_family_membership_alone_never_activates_a_region_and_type(region, kind)
 
 def test_only_profiles_are_policies_and_families_carry_no_content():
     catalog = json.loads(PATHWAYS_PATH.read_text(encoding="utf-8"))
-    assert {(p.region, p.injury_type) for p in load_clinical_policies()} == {("chest", "strain"), ("ankle", "sprain")}
+    assert {(p.region, p.injury_type) for p in load_clinical_policies()} == {
+        ("chest", "strain"), ("ankle", "sprain"), ("hamstring", "strain"),
+        ("calf", "strain"), ("groin", "strain"), ("quads", "strain")}
     for family in catalog["families"]:
         assert set(family) <= {"family_id", "description", "injury_types", "transitions"}
     # Instability shares a family with sprain but never inherits the ankle sprain profile.

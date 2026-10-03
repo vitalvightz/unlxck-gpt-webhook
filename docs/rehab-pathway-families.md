@@ -17,7 +17,7 @@ Families are keyed by injury type (the taxonomy in `fightcamp/injury_taxonomy.py
 
 | Family | Injury types | Bank drills | Why this boundary |
 | --- | --- | --- | --- |
-| `muscle_strain` | strain | 92 | Contractile-tissue tear: protect, pain-free range, progressive load, then speed/sport. |
+| `muscle_strain` | strain | 100 | Contractile-tissue tear: protect, pain-free range, progressive load, then speed/sport. |
 | `ligament_sprain_or_instability` | sprain, instability | 117 | Passive restraint injury or its chronic sequel: protected range, control/balance, load, reactive demands. |
 | `tendon_rehab` | tendonitis | 60 | Load-management model (isometric → heavy slow → energy storage); distinct from strain healing. |
 | `joint_irritation_or_impingement` | impingement | 48 | Symptom-provoking joint position: settle, restore range/control, load through tolerated range. |
@@ -35,7 +35,7 @@ Outside the families:
 
 A family is a routing and shared-structure choice, not a diagnosis or support claim. Belonging to a family activates nothing:
 
-- A live policy exists only for an explicit `(region, injury_type)` profile. Every other combination resolves to `unsupported_prescription` with legacy behaviour unchanged. That includes ankle instability (same family as ankle sprain), chest sprain, any contusion, tendonitis, impingement, hyperextension or symptom report, and hamstring or calf strain.
+- A live policy exists only for an explicit `(region, injury_type)` profile. Every other combination resolves to `unsupported_prescription` with legacy behaviour unchanged. That includes ankle instability (same family as ankle sprain), chest sprain, any contusion, tendonitis, impingement, hyperextension or symptom report, and biceps or triceps strain. Hamstring, calf, groin and quads strain now have explicit baseline profiles; see `strain-family-rollout.md`.
 - `nonspecific_msk_symptoms` does not make pain, swelling or stiffness reports rehab-eligible. A reviewed profile would have to exist for that region and type.
 - Families carry no drills, stages, restrictions or criteria of their own beyond requirements a source supports for the whole family. There are none today.
 
@@ -126,7 +126,7 @@ A requirement shared by every profile in a family belongs in that family's `tran
 
 ## Current state and what still blocks higher stages
 
-- `chest_strain` (muscle_strain) and `ankle_sprain` (ligament_sprain_or_instability) are the only profiles. Their reviewed content, live stages, bundles and content hashes are byte-identical to the previous policy file. `tests/fixtures/rehab_clinical_policies_v2_legacy.json` freezes that file, and `tests/test_rehab_pathway_equivalence.py` proves identical decisions, schedules, reconciled snapshots, Today views and generation output.
+- `chest_strain` and `ankle_sprain` retain their previous reviewed content, live stages, bundles and content hashes. `tests/fixtures/rehab_clinical_policies_v2_legacy.json` freezes that file, and `tests/test_rehab_pathway_equivalence.py` proves identical decisions, schedules, reconciled snapshots, Today views and generation output. The strain coverage rollout adds CALM/RESTORE profiles for hamstring, calf, groin and quads; see `strain-family-rollout.md`.
 - No profile declares a clinical criterion, so no transition is promotable. LOAD, DYNAMIC and RETURN are closed for every user.
 - Missing for real progression:
   - Sourced clinical criteria per family/profile.
@@ -134,4 +134,4 @@ A requirement shared by every profile in a family belongs in that family's `tran
   - Captured functional inputs (`pain_free_walking`, `low_speed_running_tolerance`, `pain_free_submaximal_isometric` are declared, none captured).
   - Defined source-backed doses where a criterion needs completed dose.
   - A sourced rule for when an older negative response is resolved.
-- Unknown-side, region-wide attribution of rehab completions is still hard-coded to the two pilot policy ids. This applies in `api/contracts/rehab_exposure.py`, `api/contracts/rehab_completion.py` and the exposure RPC in `supabase/migrations/20260930173118_injury_episode_prescription_history.sql`. Extending it to other profiles needs a database function change (a migration), which this architectural change deliberately does not make.
+- The strain coverage rollout generalizes unknown-side baseline guidance attribution using exact frozen profile provenance. Apply `supabase/migrations/20261002234842_pathway_profile_unknown_side.sql` before activating its new profiles. Unknown-side feedback never qualifies positive advanced-stage capacity evidence. See `strain-family-rollout.md` for the full inventory and rollout boundaries.

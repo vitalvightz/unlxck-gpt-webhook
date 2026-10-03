@@ -1,0 +1,1235 @@
+{
+  "biceps": {
+    "count": 4,
+    "review_states": {
+      "needs_review": 4
+    },
+    "live_profiles": [],
+    "exact_duplicates": [],
+    "drills": [
+      {
+        "drill_id": "bicep_strain_isometric_bicep_curl_hold_mid_range",
+        "bank_location": "bicep",
+        "name": "Isometric Bicep Curl Hold (Mid-Range)",
+        "notes": "GPP: Reinforce tendon tension at shortened length \u2192 SPP: Transition into dynamic curl variations",
+        "source_hash": "c1d033af37c97132d4e9bc399f390056417a1cb230df5bd64f848f5b2cf3d4b1",
+        "review_state": "needs_review",
+        "flags": [],
+        "mixed_camp_demand": true
+      },
+      {
+        "drill_id": "bicep_strain_band_resisted_eccentric_curl",
+        "bank_location": "bicep",
+        "name": "Band-Resisted Eccentric Curl",
+        "notes": "GPP: Control elongation under low load \u2192 SPP: Add reps or tempo drag",
+        "source_hash": "4e02ac257b914fbebb91a2a270a221fbe9ff683fcf732cb3708dd0e444a8d46d",
+        "review_state": "needs_review",
+        "flags": [],
+        "mixed_camp_demand": true
+      },
+      {
+        "drill_id": "bicep_strain_cable_curl_with_fat_grip",
+        "bank_location": "bicep",
+        "name": "Cable Curl with Fat Grip",
+        "notes": "SPP: Load eccentric under control \u2192 TAPER: Drop volume but keep tension sharp",
+        "source_hash": "f9e0f167105a6b840dd3a8406d8ab855c1b37b3b213153b36771b9c837c3c753",
+        "review_state": "needs_review",
+        "flags": [],
+        "mixed_camp_demand": true
+      },
+      {
+        "drill_id": "bicep_strain_supinated_isometric_elbow_hold",
+        "bank_location": "bicep",
+        "name": "Supinated Isometric Elbow Hold",
+        "notes": "SPP: Hold mid-flexion tension \u2192 TAPER: Maintain capacity without fatigue",
+        "source_hash": "d0bbceca557fb628312a8f502d22716aca241f8023f2b59ef686d63f0c519e40",
+        "review_state": "needs_review",
+        "flags": [],
+        "mixed_camp_demand": true
+      }
+    ]
+  },
+  "calf": {
+    "count": 8,
+    "review_states": {
+      "needs_review": 8
+    },
+    "live_profiles": [],
+    "exact_duplicates": [
+      [
+        "calf_strain_double_leg_calf_raises",
+        "calf_strain_double_leg_calf_raises_2"
+      ],
+      [
+        "calf_strain_isometric_wall_push_hold",
+        "calf_strain_isometric_wall_push_hold_2"
+      ],
+      [
+        "calf_strain_isometric_tip_toe_wall_press",
+        "calf_strain_isometric_tip_toe_wall_press_2"
+      ],
+      [
+        "calf_strain_active_band_calf_pumps",
+        "calf_strain_active_band_calf_pumps_2"
+      ]
+    ],
+    "drills": [
+      {
+        "drill_id": "calf_strain_double_leg_calf_raises",
+        "bank_location": "calf",
+        "name": "Double-Leg Calf Raises",
+        "notes": "GPP: Rebuild full range control \u2192 SPP: Progress to single-leg tempo loading",
+        "source_hash": "a9da70dd8ac4ad4d3b5f6063b8f655c11dd1a4998301967d5aee267a80751b1e",
+        "review_state": "needs_review",
+        "flags": [],
+        "mixed_camp_demand": true
+      },
+      {
+        "drill_id": "calf_strain_isometric_wall_push_hold",
+        "bank_location": "calf",
+        "name": "Isometric Wall Push Hold",
+        "notes": "GPP: Tension without movement \u2192 SPP: Add band resistance or hold under fatigue",
+        "source_hash": "833d3f28c32aa9b84d76cba2f984db02e63437180f9c766a41ab54786538b126",
+        "review_state": "needs_review",
+        "flags": [
+          "VARIABLE_DEMAND_PROGRESSION",
+          "SPEED_PROGRESSION_IN_NOTES"
+        ],
+        "mixed_camp_demand": true
+      },
+      {
+        "drill_id": "calf_strain_isometric_tip_toe_wall_press",
+        "bank_location": "calf",
+        "name": "Isometric Tip-Toe Wall Press",
+        "notes": "SPP: Improve endurance under tension \u2192 TAPER: Maintain contraction without volume",
+        "source_hash": "85f0290a28aad4dda85863edeb0fd134aa732831221bfbde6ce766c1c8d4ecc1",
+        "review_state": "needs_review",
+        "flags": [],
+        "mixed_camp_demand": true
+      },
+      {
+        "drill_id": "calf_strain_active_band_calf_pumps",
+        "bank_location": "calf",
+        "name": "Active Band Calf Pumps",
+        "notes": "SPP: Stimulate blood flow cycles \u2192 TAPER: Low-fatigue use in cooldown",
+        "source_hash": "80aca7d106f1feebde233b172085c8a5af08369a93c7d30907b9ece8c933f3aa",
+        "review_state": "needs_review",
+        "flags": [],
+        "mixed_camp_demand": true
+      },
+      {
+        "drill_id": "calf_strain_double_leg_calf_raises_2",
+        "bank_location": "calf",
+        "name": "Double-Leg Calf Raises",
+        "notes": "GPP: Rebuild full range control \u2192 SPP: Progress to single-leg tempo loading",
+        "source_hash": "a8d595e289d121d242c0d58e84069b555babe5733717048791a283d5122f40bf",
+        "review_state": "needs_review",
+        "flags": [],
+        "mixed_camp_demand": true
+      },
+      {
+        "drill_id": "calf_strain_isometric_wall_push_hold_2",
+        "bank_location": "calf",
+        "name": "Isometric Wall Push Hold",
+        "notes": "GPP: Tension without movement \u2192 SPP: Add band resistance or hold under fatigue",
+        "source_hash": "c67e5c1220cab195b5af4173ed74f1dff64fb24ff3feedb1e6e1971ee03dbb3f",
+        "review_state": "needs_review",
+        "flags": [
+          "VARIABLE_DEMAND_PROGRESSION",
+          "SPEED_PROGRESSION_IN_NOTES"
+        ],
+        "mixed_camp_demand": true
+      },
+      {
+        "drill_id": "calf_strain_isometric_tip_toe_wall_press_2",
+        "bank_location": "calf",
+        "name": "Isometric Tip-Toe Wall Press",
+        "notes": "SPP: Improve endurance under tension \u2192 TAPER: Maintain contraction without volume",
+        "source_hash": "a86fe95adede4a31e9c962a854b05c55a6f60675a804154d2da6fce715f07afb",
+        "review_state": "needs_review",
+        "flags": [],
+        "mixed_camp_demand": true
+      },
+      {
+        "drill_id": "calf_strain_active_band_calf_pumps_2",
+        "bank_location": "calf",
+        "name": "Active Band Calf Pumps",
+        "notes": "SPP: Stimulate blood flow cycles \u2192 TAPER: Low-fatigue use in cooldown",
+        "source_hash": "9f588c148189762adff08b79ae9e10b86f22cc66ee5a015a29c2908b9b5b7b3a",
+        "review_state": "needs_review",
+        "flags": [],
+        "mixed_camp_demand": true
+      }
+    ]
+  },
+  "chest": {
+    "count": 4,
+    "review_states": {
+      "needs_review": 4
+    },
+    "live_profiles": [
+      "chest_strain"
+    ],
+    "exact_duplicates": [],
+    "drills": [
+      {
+        "drill_id": "chest_strain_isometric_wall_push_chest_height",
+        "bank_location": "chest",
+        "name": "Isometric Wall Push (Chest Height)",
+        "notes": "GPP: Safely reactivate pectorals \u2192 SPP: Increase force duration under tension",
+        "source_hash": "64f57cc4992d58cc6e44e4973bd7d4919e0a1845b3f1f1deceb0ee7198a3d5d2",
+        "review_state": "needs_review",
+        "flags": [],
+        "mixed_camp_demand": true
+      },
+      {
+        "drill_id": "chest_strain_resistance_band_chest_fly",
+        "bank_location": "chest",
+        "name": "Resistance Band Chest Fly",
+        "notes": "GPP: Control range of motion \u2192 SPP: Add eccentric tempo",
+        "source_hash": "7c570e7ccf27d97faaa3492b90b7010d31d2bbd6cc675164406cdbf272f5d1d8",
+        "review_state": "needs_review",
+        "flags": [],
+        "mixed_camp_demand": true
+      },
+      {
+        "drill_id": "chest_strain_recovery_support",
+        "bank_location": "chest",
+        "name": "Chest strain recovery support",
+        "notes": "Protect the strained area and avoid movements that aggravate it. During the first 2 to 3 days, rest from exercise that loads it. Use comfortable everyday movement; do not force a stretch or add resisted chest work.",
+        "source_hash": "856223e5038955693aa9ae904ed3044df6635c8294fbf6eccb31f56aae84c93f",
+        "review_state": "needs_review",
+        "flags": [],
+        "mixed_camp_demand": false
+      },
+      {
+        "drill_id": "chest_strain_comfortable_movement",
+        "bank_location": "chest",
+        "name": "Comfortable chest-region movement",
+        "notes": "When pain no longer stops movement, gently move your shoulder and arm through a comfortable range. Go at your own pace and stop before pain prevents movement. Avoid forced chest stretches, resisted chest flies and surgical-repair routines.",
+        "source_hash": "73d83ba63a1476e4c44804a4abcf4eddf9e2c30a7b4a6ec5f97584905b6891a0",
+        "review_state": "needs_review",
+        "flags": [],
+        "mixed_camp_demand": false
+      }
+    ]
+  },
+  "core": {
+    "count": 2,
+    "review_states": {
+      "needs_review": 2
+    },
+    "live_profiles": [],
+    "exact_duplicates": [],
+    "drills": [
+      {
+        "drill_id": "core_strain_dead_bug_with_band_resistance",
+        "bank_location": "core",
+        "name": "Dead Bug with Band Resistance",
+        "notes": "GPP: Reinforce bracing under low tension \u2192 SPP: Add speed or overhead band angle",
+        "source_hash": "cfb4fd3ca507f70fd9f9c9ec8964e0f1a6530489ac7abd3f22db205effd85744",
+        "review_state": "needs_review",
+        "flags": [
+          "VARIABLE_DEMAND_PROGRESSION",
+          "SPEED_PROGRESSION_IN_NOTES"
+        ],
+        "mixed_camp_demand": true
+      },
+      {
+        "drill_id": "core_strain_forearm_plank_eccentric_reaches",
+        "bank_location": "core",
+        "name": "Forearm Plank \u2013 Eccentric Reaches",
+        "notes": "GPP: Build tension under control \u2192 SPP: Increase time under tension or add movement",
+        "source_hash": "2972257ee6b15c4ecb97e7091bc88eeb575bce5da3e9bd5232cb4f4c790adaca",
+        "review_state": "needs_review",
+        "flags": [],
+        "mixed_camp_demand": true
+      }
+    ]
+  },
+  "elbow": {
+    "count": 2,
+    "review_states": {
+      "needs_review": 2
+    },
+    "live_profiles": [],
+    "exact_duplicates": [],
+    "drills": [
+      {
+        "drill_id": "elbow_strain_isometric_elbow_flexion_hold_90",
+        "bank_location": "elbow",
+        "name": "Isometric Elbow Flexion Hold (90\u00b0)",
+        "notes": "GPP: Restore safe contractile tension \u2192 SPP: Add banded resistance or hold under load",
+        "source_hash": "2143dc7f1e9d53d266fd241616bda1ad9b345b77d8aa8688b387a2724614bcfe",
+        "review_state": "needs_review",
+        "flags": [],
+        "mixed_camp_demand": true
+      },
+      {
+        "drill_id": "elbow_strain_pronation_supination_with_light_dumbbell",
+        "bank_location": "elbow",
+        "name": "Pronation/Supination with Light Dumbbell",
+        "notes": "GPP: Restore rotational control \u2192 SPP: Integrate into speed under resistance",
+        "source_hash": "be327026585378a4db389c94905b2e423af4f7ad2fb82f8c581bd6e42430f918",
+        "review_state": "needs_review",
+        "flags": [],
+        "mixed_camp_demand": true
+      }
+    ]
+  },
+  "eye": {
+    "count": 4,
+    "review_states": {
+      "needs_review": 4
+    },
+    "live_profiles": [],
+    "exact_duplicates": [],
+    "drills": [
+      {
+        "drill_id": "eye_strain_near_far_focal_shifts",
+        "bank_location": "eye",
+        "name": "Near-Far Focal Shifts",
+        "notes": "GPP: Reset accommodative strain \u2192 SPP: Integrate rapid gaze transitions during movement",
+        "source_hash": "c6bb0dfecce0304c011460eb979fecc776fa9c394fc50b8c426020229319a11c",
+        "review_state": "needs_review",
+        "flags": [],
+        "mixed_camp_demand": true
+      },
+      {
+        "drill_id": "eye_strain_pencil_push_ups",
+        "bank_location": "eye",
+        "name": "Pencil Push-Ups",
+        "notes": "GPP: Reinforce convergence \u2192 SPP: Add dynamic movement to sharpen reflex",
+        "source_hash": "b0d8b57d82445d64d351cc5f7144fbb8b38edd3efb4335c81f2756fdb8c9fa4e",
+        "review_state": "needs_review",
+        "flags": [],
+        "mixed_camp_demand": true
+      },
+      {
+        "drill_id": "eye_strain_fitlight_reflex_matrix",
+        "bank_location": "eye",
+        "name": "FitLight Reflex Matrix",
+        "notes": "SPP: Develop rapid gaze-fix-react sequencing \u2192 TAPER: Use short bursts to spike CNS sharpness",
+        "source_hash": "eb6e3186dac3887ad242863c566fe9d0c2f9d372eb20908e0b3c14dfed72837d",
+        "review_state": "needs_review",
+        "flags": [],
+        "mixed_camp_demand": true
+      },
+      {
+        "drill_id": "eye_strain_multi_task_gaze_balance",
+        "bank_location": "eye",
+        "name": "Multi-Task Gaze + Balance",
+        "notes": "SPP: Combine unstable surface with gaze shifting \u2192 TAPER: Downscale duration, maintain complexity",
+        "source_hash": "f8ed2b62f280f4f0efb50d88a38f767eb987782bb82081ef2d3a97f08ac69040",
+        "review_state": "needs_review",
+        "flags": [],
+        "mixed_camp_demand": true
+      }
+    ]
+  },
+  "fingers": {
+    "count": 4,
+    "review_states": {
+      "needs_review": 4
+    },
+    "live_profiles": [],
+    "exact_duplicates": [],
+    "drills": [
+      {
+        "drill_id": "fingers_strain_rubber_band_finger_extensions",
+        "bank_location": "fingers",
+        "name": "Rubber Band Finger Extensions",
+        "notes": "GPP: Strengthen extensors to rebalance tension \u2192 SPP: Increase reps for contractile capacity",
+        "source_hash": "532adc855c8415d035b5c6de0f1311c1692bc19c578259dfebe9e43c57cd6aa7",
+        "review_state": "needs_review",
+        "flags": [],
+        "mixed_camp_demand": true
+      },
+      {
+        "drill_id": "fingers_strain_isometric_finger_pinch_plate_or_towel",
+        "bank_location": "fingers",
+        "name": "Isometric Finger Pinch (Plate or Towel)",
+        "notes": "GPP: Load grip safely \u2192 SPP: Add hold duration for endurance",
+        "source_hash": "a8d1e050b34aa3e7bcee67633fb3070221270448b4ef1c92379f036ca3f20888",
+        "review_state": "needs_review",
+        "flags": [],
+        "mixed_camp_demand": true
+      },
+      {
+        "drill_id": "fingers_strain_digit_specific_flexion_holds_putty_or_band",
+        "bank_location": "fingers",
+        "name": "Digit-Specific Flexion Holds (Putty or Band)",
+        "notes": "GPP: Isolate healing finger \u2192 SPP: Add duration and compound grip",
+        "source_hash": "9738de53a9929fc6e0dbdc12093ffdfcf235d86fafdb02672abcaf431b3be76e",
+        "review_state": "needs_review",
+        "flags": [],
+        "mixed_camp_demand": true
+      },
+      {
+        "drill_id": "fingers_strain_elastic_finger_push_press",
+        "bank_location": "fingers",
+        "name": "Elastic Finger Push-Press",
+        "notes": "GPP: Controlled activation \u2192 SPP: Increase push velocity",
+        "source_hash": "5d157ab409a77fe46dedb05bb3476239ba925d48b0f1a38cff2c96ab6d090aa0",
+        "review_state": "needs_review",
+        "flags": [],
+        "mixed_camp_demand": true
+      }
+    ]
+  },
+  "foot": {
+    "count": 2,
+    "review_states": {
+      "needs_review": 2
+    },
+    "live_profiles": [],
+    "exact_duplicates": [],
+    "drills": [
+      {
+        "drill_id": "foot_strain_resisted_toe_pulls_with_band",
+        "bank_location": "foot",
+        "name": "Resisted Toe Pulls with Band",
+        "notes": "GPP: Load toe flexors \u2192 SPP: Tie into sprint or strike mechanics",
+        "source_hash": "c0044f6d33a34512132e67ef447f960d6d3a655dd96f32da65b29876c56b2182",
+        "review_state": "needs_review",
+        "flags": [],
+        "mixed_camp_demand": true
+      },
+      {
+        "drill_id": "foot_strain_mid_foot_isometric_holds_band_loop",
+        "bank_location": "foot",
+        "name": "Mid-Foot Isometric Holds (Band Loop)",
+        "notes": "GPP: Tension through arch \u2192 SPP: Progress to timed holds or anti-rotation",
+        "source_hash": "66a458257b10d2c73d287dc23a57fefbba89ddfe264693ea5e06dfeb1d3ab23a",
+        "review_state": "needs_review",
+        "flags": [],
+        "mixed_camp_demand": true
+      }
+    ]
+  },
+  "forearm": {
+    "count": 2,
+    "review_states": {
+      "needs_review": 2
+    },
+    "live_profiles": [],
+    "exact_duplicates": [],
+    "drills": [
+      {
+        "drill_id": "forearm_strain_wrist_curls_slow_tempo",
+        "bank_location": "forearm",
+        "name": "Wrist Curls (Slow Tempo)",
+        "notes": "GPP: Restore concentric strength \u2192 SPP: Add eccentric tempo for durability",
+        "source_hash": "89d2895b815fd57595e86b7844e6c5b79572b50b827b87a29297e96fff894ed5",
+        "review_state": "needs_review",
+        "flags": [],
+        "mixed_camp_demand": true
+      },
+      {
+        "drill_id": "forearm_strain_finger_extension_band_flicks",
+        "bank_location": "forearm",
+        "name": "Finger Extension Band Flicks",
+        "notes": "GPP: Target extensors gently \u2192 SPP: Integrate into grip reset",
+        "source_hash": "179c8033246c5307faa7a1d8b398048cb21c4f548d08962fca59038879859c15",
+        "review_state": "needs_review",
+        "flags": [],
+        "mixed_camp_demand": true
+      }
+    ]
+  },
+  "glute": {
+    "count": 4,
+    "review_states": {
+      "needs_review": 4
+    },
+    "live_profiles": [],
+    "exact_duplicates": [],
+    "drills": [
+      {
+        "drill_id": "glutes_strain_glute_bridge_iso_holds",
+        "bank_location": "glutes",
+        "name": "Glute Bridge Iso Holds",
+        "notes": "GPP: Tension without lengthening \u2192 SPP: Add reps or bands for fatigue tolerance",
+        "source_hash": "d6510c472653fedf7945a2531055a3cfa253521bce6e3a67d6d79221ccd47d42",
+        "review_state": "needs_review",
+        "flags": [],
+        "mixed_camp_demand": true
+      },
+      {
+        "drill_id": "glutes_strain_massage_gun_glute_max_line",
+        "bank_location": "glutes",
+        "name": "Massage Gun \u2013 Glute Max Line",
+        "notes": "GPP: Flush tight area \u2192 SPP: Use post-lift or sprint session",
+        "source_hash": "0d7183eafb84c8d08c25fc771f7e13be9cf5e214f0f0190f257ac7d48505bbd7",
+        "review_state": "needs_review",
+        "flags": [],
+        "mixed_camp_demand": true
+      },
+      {
+        "drill_id": "glutes_strain_glute_bridge_with_isometric_hold",
+        "bank_location": "glutes",
+        "name": "Glute Bridge with Isometric Hold",
+        "notes": "GPP: Restore basic hip extension \u2192 SPP: Add reps or hold under fatigue",
+        "source_hash": "26ae381536f12051a98be37329f963a6102f10a05b5d78b30426c2e2584019d7",
+        "review_state": "needs_review",
+        "flags": [
+          "VARIABLE_DEMAND_PROGRESSION",
+          "SPEED_PROGRESSION_IN_NOTES"
+        ],
+        "mixed_camp_demand": true
+      },
+      {
+        "drill_id": "glutes_strain_quadruped_kickbacks_band_optional",
+        "bank_location": "glutes",
+        "name": "Quadruped Kickbacks (Band Optional)",
+        "notes": "GPP: Reload single-leg pattern \u2192 SPP: Increase range or tension",
+        "source_hash": "ab14bbd3d3a9bda4a8aaab688a8a9c569e7aefc6dac214556521464101715247",
+        "review_state": "needs_review",
+        "flags": [],
+        "mixed_camp_demand": true
+      }
+    ]
+  },
+  "groin": {
+    "count": 2,
+    "review_states": {
+      "needs_review": 2
+    },
+    "live_profiles": [],
+    "exact_duplicates": [],
+    "drills": [
+      {
+        "drill_id": "groin_strain_side_lying_hip_adduction",
+        "bank_location": "groin",
+        "name": "Side-Lying Hip Adduction",
+        "notes": "GPP: Restore baseline groin activation \u2192 SPP: Increase reps under fatigue",
+        "source_hash": "8a469661f9a67b9a4fb11f44d87b5a04a860d89bd35a02612f79f1ad38a8bb9e",
+        "review_state": "needs_review",
+        "flags": [
+          "VARIABLE_DEMAND_PROGRESSION",
+          "SPEED_PROGRESSION_IN_NOTES"
+        ],
+        "mixed_camp_demand": true
+      },
+      {
+        "drill_id": "groin_strain_standing_cable_adduction",
+        "bank_location": "groin",
+        "name": "Standing Cable Adduction",
+        "notes": "GPP: Controlled linear tension \u2192 SPP: Add tempo or resistance",
+        "source_hash": "9ff79a39ba24837f1cb795e85aa173363953e9dd8a72c1ebba6c6ca28648270a",
+        "review_state": "needs_review",
+        "flags": [],
+        "mixed_camp_demand": true
+      }
+    ]
+  },
+  "hamstring": {
+    "count": 2,
+    "review_states": {
+      "needs_review": 2
+    },
+    "live_profiles": [],
+    "exact_duplicates": [],
+    "drills": [
+      {
+        "drill_id": "hamstrings_strain_isometric_hamstring_bridge",
+        "bank_location": "hamstrings",
+        "name": "Isometric Hamstring Bridge",
+        "notes": "GPP: Mid-range contraction \u2192 SPP: Add reps or eccentric control",
+        "source_hash": "5c16f4e4486477e1bdc63e46037d295ef03193f227f34e20d756bf40b6543974",
+        "review_state": "needs_review",
+        "flags": [],
+        "mixed_camp_demand": true
+      },
+      {
+        "drill_id": "hamstrings_strain_massage_gun_biceps_femoris_sweep",
+        "bank_location": "hamstrings",
+        "name": "Massage Gun \u2013 Biceps Femoris Sweep",
+        "notes": "GPP: Reduce tension \u2192 SPP: Use after sprint or kick days",
+        "source_hash": "50f2a164f8123c4fe5f62122bdbaf536d6b64224810ed018c5cfeb5576810fc0",
+        "review_state": "needs_review",
+        "flags": [],
+        "mixed_camp_demand": true
+      }
+    ]
+  },
+  "hand": {
+    "count": 4,
+    "review_states": {
+      "needs_review": 4
+    },
+    "live_profiles": [],
+    "exact_duplicates": [],
+    "drills": [
+      {
+        "drill_id": "hand_strain_wrist_flexor_isometric_press_palm_down",
+        "bank_location": "hand",
+        "name": "Wrist Flexor Isometric Press (Palm Down)",
+        "notes": "GPP: Controlled low-level force \u2192 SPP: Add tension through loaded stretch",
+        "source_hash": "ee9228bcddc7717e828c21a28543524a142a10790b305bf12d7ac0a6b443a092",
+        "review_state": "needs_review",
+        "flags": [],
+        "mixed_camp_demand": true
+      },
+      {
+        "drill_id": "hand_strain_finger_walks_on_wall",
+        "bank_location": "hand",
+        "name": "Finger Walks on Wall",
+        "notes": "GPP: Rebuild motor control \u2192 SPP: Increase ROM and vertical reach",
+        "source_hash": "cf22bab89490766a65b166f7f77cd1c3edbe01c9ac23fa7439314f0714d4a065",
+        "review_state": "needs_review",
+        "flags": [],
+        "mixed_camp_demand": true
+      },
+      {
+        "drill_id": "hand_strain_loaded_palm_extensions_rubber_band",
+        "bank_location": "hand",
+        "name": "Loaded Palm Extensions (Rubber Band)",
+        "notes": "GPP: Rebuild extensors safely \u2192 TAPER: Maintain high-rep tolerance",
+        "source_hash": "2ef6c8ca54d095e4e76614d1af94ce8df25551b4614ba17d0c550f8a71ee4fd8",
+        "review_state": "needs_review",
+        "flags": [],
+        "mixed_camp_demand": true
+      },
+      {
+        "drill_id": "hand_strain_isometric_grip_on_towel",
+        "bank_location": "hand",
+        "name": "Isometric Grip on Towel",
+        "notes": "GPP: Low-level tissue loading \u2192 TAPER: Sustain force capacity under fatigue",
+        "source_hash": "50dca3a085808c6309511c16d6bbde96faa268dd13f5b9979c4c6aa4684e9fb7",
+        "review_state": "needs_review",
+        "flags": [
+          "VARIABLE_DEMAND_PROGRESSION",
+          "SPEED_PROGRESSION_IN_NOTES"
+        ],
+        "mixed_camp_demand": true
+      }
+    ]
+  },
+  "jaw": {
+    "count": 2,
+    "review_states": {
+      "needs_review": 2
+    },
+    "live_profiles": [],
+    "exact_duplicates": [],
+    "drills": [
+      {
+        "drill_id": "jaw_strain_isometric_jaw_clench_mouthguard_in",
+        "bank_location": "jaw",
+        "name": "Isometric Jaw Clench (Mouthguard In)",
+        "notes": "GPP: Restore isometric bite control \u2192 SPP: Simulate pressure during clinch/guard scenarios",
+        "source_hash": "5408d7149e83654fa94ff6de6dda34426242f087d744416f2691892c9b3fa166",
+        "review_state": "needs_review",
+        "flags": [],
+        "mixed_camp_demand": true
+      },
+      {
+        "drill_id": "jaw_strain_lateral_jaw_pushes_finger_resistance",
+        "bank_location": "jaw",
+        "name": "Lateral Jaw Pushes (Finger Resistance)",
+        "notes": "GPP: Reinforce lateral jaw control \u2192 SPP: Add tempo for resilience under fatigue",
+        "source_hash": "7aa4f48769ba74951e0390d7ab2b5e2d942ec80f9e54678dffc1c6ba3d28af1d",
+        "review_state": "needs_review",
+        "flags": [
+          "VARIABLE_DEMAND_PROGRESSION",
+          "SPEED_PROGRESSION_IN_NOTES"
+        ],
+        "mixed_camp_demand": true
+      }
+    ]
+  },
+  "knee": {
+    "count": 8,
+    "review_states": {
+      "needs_review": 8
+    },
+    "live_profiles": [],
+    "exact_duplicates": [
+      [
+        "knee_strain_wall_sit_short_arc",
+        "knee_strain_wall_sit_short_arc_2"
+      ],
+      [
+        "knee_strain_mini_band_lateral_walks",
+        "knee_strain_mini_band_lateral_walks_2"
+      ],
+      [
+        "knee_strain_lateral_step_downs",
+        "knee_strain_lateral_step_downs_2"
+      ],
+      [
+        "knee_strain_band_assisted_lateral_lunges",
+        "knee_strain_band_assisted_lateral_lunges_2"
+      ]
+    ],
+    "drills": [
+      {
+        "drill_id": "knee_strain_wall_sit_short_arc",
+        "bank_location": "knee",
+        "name": "Wall Sit (Short Arc)",
+        "notes": "GPP: Low flexion quad load \u2192 SPP: Increase depth or add ball squeeze",
+        "source_hash": "1fb25fd3778406733f6d1327d9a9874b9b9def4c8fc9c59986b678d9af323070",
+        "review_state": "needs_review",
+        "flags": [],
+        "mixed_camp_demand": true
+      },
+      {
+        "drill_id": "knee_strain_mini_band_lateral_walks",
+        "bank_location": "knee",
+        "name": "Mini-Band Lateral Walks",
+        "notes": "GPP: Stabilize tracking \u2192 SPP: Progress to dynamic tempo sets",
+        "source_hash": "dd3b6009337d4361b2bf0b72bca0573a4427aa0d2f24f6e42d7935fa9383c67e",
+        "review_state": "needs_review",
+        "flags": [],
+        "mixed_camp_demand": true
+      },
+      {
+        "drill_id": "knee_strain_lateral_step_downs",
+        "bank_location": "knee",
+        "name": "Lateral Step-Downs",
+        "notes": "GPP: Train valgus control \u2192 SPP: Add range or load with dumbbell",
+        "source_hash": "132568aace996682483b1de2437adab753961d7afd2280578a25d4603803d0ba",
+        "review_state": "needs_review",
+        "flags": [],
+        "mixed_camp_demand": true
+      },
+      {
+        "drill_id": "knee_strain_band_assisted_lateral_lunges",
+        "bank_location": "knee",
+        "name": "Band-Assisted Lateral Lunges",
+        "notes": "GPP: Keep range safe \u2192 SPP: Remove band or increase tempo",
+        "source_hash": "e84cd45f7a61609e2c46af6a1d4e66cd7a8588f9c4eabf5e8fa94084657ec2ca",
+        "review_state": "needs_review",
+        "flags": [],
+        "mixed_camp_demand": true
+      },
+      {
+        "drill_id": "knee_strain_wall_sit_short_arc_2",
+        "bank_location": "knee",
+        "name": "Wall Sit (Short Arc)",
+        "notes": "GPP: Low flexion quad load \u2192 SPP: Increase depth or add ball squeeze",
+        "source_hash": "5a3bbbe7b21a82e367e7f934ef45eaf5b1690788ec09a57f8c12a6ab3a2f954a",
+        "review_state": "needs_review",
+        "flags": [],
+        "mixed_camp_demand": true
+      },
+      {
+        "drill_id": "knee_strain_mini_band_lateral_walks_2",
+        "bank_location": "knee",
+        "name": "Mini-Band Lateral Walks",
+        "notes": "GPP: Stabilize tracking \u2192 SPP: Progress to dynamic tempo sets",
+        "source_hash": "a3a9b99b28022ec6790d3cd10647c840b24f706076d65f8e9d43f48f71a34b49",
+        "review_state": "needs_review",
+        "flags": [],
+        "mixed_camp_demand": true
+      },
+      {
+        "drill_id": "knee_strain_lateral_step_downs_2",
+        "bank_location": "knee",
+        "name": "Lateral Step-Downs",
+        "notes": "GPP: Train valgus control \u2192 SPP: Add range or load with dumbbell",
+        "source_hash": "4ca84440a07fe5b7f80c33fafa3e22afc7b3f7dcc65e313e13aa3c08ccf6f25a",
+        "review_state": "needs_review",
+        "flags": [],
+        "mixed_camp_demand": true
+      },
+      {
+        "drill_id": "knee_strain_band_assisted_lateral_lunges_2",
+        "bank_location": "knee",
+        "name": "Band-Assisted Lateral Lunges",
+        "notes": "GPP: Keep range safe \u2192 SPP: Remove band or increase tempo",
+        "source_hash": "fae119ef042b4ea5b78f4fe99c4cf9a5a11955037fa56cbe4a894e93774837cf",
+        "review_state": "needs_review",
+        "flags": [],
+        "mixed_camp_demand": true
+      }
+    ]
+  },
+  "lower back": {
+    "count": 4,
+    "review_states": {
+      "needs_review": 4
+    },
+    "live_profiles": [],
+    "exact_duplicates": [],
+    "drills": [
+      {
+        "drill_id": "lower_back_strain_glute_bridge_walkout",
+        "bank_location": "lower_back",
+        "name": "Glute Bridge Walkout",
+        "notes": "GPP: Train trunk support via glutes \u2192 SPP: Add tempo for endurance",
+        "source_hash": "b23324f469d025043c51255b5a931aa42117453f1e16e03d9b8441070eca18b7",
+        "review_state": "needs_review",
+        "flags": [],
+        "mixed_camp_demand": true
+      },
+      {
+        "drill_id": "lower_back_strain_quadruped_rock_backs",
+        "bank_location": "lower_back",
+        "name": "Quadruped Rock Backs",
+        "notes": "GPP: Explore safe range \u2192 SPP: Add band tension or pause",
+        "source_hash": "81c8eda4a4300f55cf62f744b5debcb242c33637708a3d41496c0ee1789a7847",
+        "review_state": "needs_review",
+        "flags": [],
+        "mixed_camp_demand": true
+      },
+      {
+        "drill_id": "lower_back_strain_glute_bridge_walkouts",
+        "bank_location": "lower_back",
+        "name": "Glute Bridge Walkouts",
+        "notes": "GPP: Restore posterior chain rhythm \u2192 SPP: Add tempo or resistance band",
+        "source_hash": "22d300cbb511f482d1815484a79bf82cf06e60aa3623054dcf37626ef3b9cc41",
+        "review_state": "needs_review",
+        "flags": [],
+        "mixed_camp_demand": true
+      },
+      {
+        "drill_id": "lower_back_strain_bird_dog_with_reach",
+        "bank_location": "lower_back",
+        "name": "Bird Dog with Reach",
+        "notes": "GPP: Train trunk-limb sync \u2192 SPP: Introduce slow reps or banded drag",
+        "source_hash": "3b6fcc31c9cd4187c79bfc4387eeff8d1ffa2ab9c6bded2f3c67129a79990c64",
+        "review_state": "needs_review",
+        "flags": [],
+        "mixed_camp_demand": true
+      }
+    ]
+  },
+  "neck": {
+    "count": 4,
+    "review_states": {
+      "needs_review": 4
+    },
+    "live_profiles": [],
+    "exact_duplicates": [],
+    "drills": [
+      {
+        "drill_id": "neck_strain_isometric_neck_flexion_wall",
+        "bank_location": "neck",
+        "name": "Isometric Neck Flexion (Wall)",
+        "notes": "GPP: Build static front-line control \u2192 SPP: Increase duration or reps under fatigue",
+        "source_hash": "3542fe232ce11d1bd171938bb8c4e2de375c1be09f5991387d8e1ec0fc8aa2d1",
+        "review_state": "needs_review",
+        "flags": [
+          "VARIABLE_DEMAND_PROGRESSION",
+          "SPEED_PROGRESSION_IN_NOTES"
+        ],
+        "mixed_camp_demand": true
+      },
+      {
+        "drill_id": "neck_strain_neck_retraction_with_band",
+        "bank_location": "neck",
+        "name": "Neck Retraction with Band",
+        "notes": "GPP: Re-educate deep neck stabilizers \u2192 SPP: Layer resistance for endurance",
+        "source_hash": "a756284b1e2038b6e3e0b781e2047ce65ac7b15405d41871a412b1a214e43366",
+        "review_state": "needs_review",
+        "flags": [],
+        "mixed_camp_demand": true
+      },
+      {
+        "drill_id": "neck_strain_supine_band_resisted_neck_flexion",
+        "bank_location": "neck",
+        "name": "Supine Band-Resisted Neck Flexion",
+        "notes": "SPP: Strengthen anterior chain with load \u2192 TAPER: Reduce tension to maintain activation",
+        "source_hash": "f546f5934bad1f44e97cc9d596c20966c375d5cbaf040d9559d04b11c2cc8ee3",
+        "review_state": "needs_review",
+        "flags": [],
+        "mixed_camp_demand": true
+      },
+      {
+        "drill_id": "neck_strain_neck_clock_isometrics",
+        "bank_location": "neck",
+        "name": "Neck Clock Isometrics",
+        "notes": "SPP: Hit multiple vectors under control \u2192 TAPER: Shorten sets for freshness",
+        "source_hash": "bc3623dd2b8135bb365fa484372e6317224dc646c47b804642a4eca1ae698c1c",
+        "review_state": "needs_review",
+        "flags": [],
+        "mixed_camp_demand": true
+      }
+    ]
+  },
+  "obliques": {
+    "count": 6,
+    "review_states": {
+      "needs_review": 6
+    },
+    "live_profiles": [],
+    "exact_duplicates": [],
+    "drills": [
+      {
+        "drill_id": "obliques_strain_side_plank_with_band_row",
+        "bank_location": "obliques",
+        "name": "Side Plank with Band Row",
+        "notes": "GPP: Light tension control \u2192 SPP: Add rotation and longer holds",
+        "source_hash": "ffd0fa8b8f31219764c15f4d1a0567e0f9b2cb670e08ecc417d49a0b22fb155f",
+        "review_state": "needs_review",
+        "flags": [],
+        "mixed_camp_demand": true
+      },
+      {
+        "drill_id": "obliques_strain_rotational_med_ball_toss_seated",
+        "bank_location": "obliques",
+        "name": "Rotational Med Ball Toss (Seated)",
+        "notes": "GPP: Start low-impact \u2192 SPP: Progress to standing power variation",
+        "source_hash": "4cd9f0aae45e419ec49ab47af067497b2ee36064dca6a9c775b6b57268fd5961",
+        "review_state": "needs_review",
+        "flags": [],
+        "mixed_camp_demand": true
+      },
+      {
+        "drill_id": "obliques_strain_side_plank_with_reach_under",
+        "bank_location": "obliques",
+        "name": "Side Plank with Reach Under",
+        "notes": "GPP: Rebuild trunk rotation \u2192 SPP: Add tempo or load",
+        "source_hash": "de0b97b0428a628944606e1d73f719ab880c4365dba6926bbf41dd616882985a",
+        "review_state": "needs_review",
+        "flags": [],
+        "mixed_camp_demand": true
+      },
+      {
+        "drill_id": "obliques_strain_dead_bug_with_banded_chop",
+        "bank_location": "obliques",
+        "name": "Dead Bug with Banded Chop",
+        "notes": "GPP: Train oblique tension \u2192 SPP: Add anti-rotation complexity",
+        "source_hash": "365fbe6c8ea50d4b4312187d2607a3178ad28a12fd8b6fdecd6bcd3294f2254a",
+        "review_state": "needs_review",
+        "flags": [],
+        "mixed_camp_demand": true
+      },
+      {
+        "drill_id": "obliques_strain_half_kneeling_cable_chop",
+        "bank_location": "obliques",
+        "name": "Half-Kneeling Cable Chop",
+        "notes": "SPP: Controlled explosive rotation \u2192 TAPER: Lighter resistance for speed",
+        "source_hash": "9b7a996ca99728d57d3c5c9d0cfbbb49b100cfe218a8dd1d98de5eddfb7b3495",
+        "review_state": "needs_review",
+        "flags": [],
+        "mixed_camp_demand": true
+      },
+      {
+        "drill_id": "obliques_strain_rotational_med_ball_toss_wall",
+        "bank_location": "obliques",
+        "name": "Rotational Med Ball Toss (Wall)",
+        "notes": "SPP: Dynamic force output \u2192 TAPER: Focus on sharpness, low fatigue",
+        "source_hash": "c5f96d906e79a4a0b073dee4ca8fff37cd75da7d4b164f115847849c85180d46",
+        "review_state": "needs_review",
+        "flags": [],
+        "mixed_camp_demand": true
+      }
+    ]
+  },
+  "quads": {
+    "count": 2,
+    "review_states": {
+      "needs_review": 2
+    },
+    "live_profiles": [],
+    "exact_duplicates": [],
+    "drills": [
+      {
+        "drill_id": "quads_strain_isometric_wall_sit_mid_range",
+        "bank_location": "quads",
+        "name": "Isometric Wall Sit (Mid-Range)",
+        "notes": "GPP: Safe tension under no movement \u2192 SPP: Add reps or instability (ball squeeze)",
+        "source_hash": "240bd163470c343d54bcfbde03b28c966831d66c12734938027132d384be629a",
+        "review_state": "needs_review",
+        "flags": [],
+        "mixed_camp_demand": true
+      },
+      {
+        "drill_id": "quads_strain_foam_roller_quad_sweep",
+        "bank_location": "quads",
+        "name": "Foam Roller \u2013 Quad Sweep",
+        "notes": "GPP: Prep for active rehab \u2192 SPP: Post-load flush",
+        "source_hash": "a2bf5516cbe0e503c3e01ff945da7906848df69c9cb938e7ca9f335f4e80fd6c",
+        "review_state": "needs_review",
+        "flags": [],
+        "mixed_camp_demand": true
+      }
+    ]
+  },
+  "shoulder": {
+    "count": 4,
+    "review_states": {
+      "needs_review": 4
+    },
+    "live_profiles": [],
+    "exact_duplicates": [],
+    "drills": [
+      {
+        "drill_id": "shoulder_strain_wall_slides_with_foam_roller",
+        "bank_location": "shoulder",
+        "name": "Wall Slides with Foam Roller",
+        "notes": "GPP: Rebuild scapular rhythm (anterior deltoid) \u2192 SPP: Increase range with light resistance",
+        "source_hash": "e6d25110f9b46cc5cb6dd1c64a26a3c6ad9685c04fcf30baeac7f6df11ce2e79",
+        "review_state": "needs_review",
+        "flags": [],
+        "mixed_camp_demand": true
+      },
+      {
+        "drill_id": "shoulder_strain_landmine_shoulder_press",
+        "bank_location": "shoulder",
+        "name": "Landmine Shoulder Press",
+        "notes": "GPP: Safe press angle for anterior strain \u2192 SPP: Add tempo or pause at top",
+        "source_hash": "8e12327157e4ddba7cec59da3a4dccb7314996e2b270f2698dc9e49345d7a3c0",
+        "review_state": "needs_review",
+        "flags": [],
+        "mixed_camp_demand": true
+      },
+      {
+        "drill_id": "shoulder_strain_isometric_wall_press_90_abduction",
+        "bank_location": "shoulder",
+        "name": "Isometric Wall Press (90\u00b0 Abduction)",
+        "notes": "GPP: Reinforce static mid-range control (lateral deltoid)",
+        "source_hash": "07111695d3a5466c559399e607eb22a22c57b7c095ce37bf86ac1c75800fa475",
+        "review_state": "needs_review",
+        "flags": [],
+        "mixed_camp_demand": false
+      },
+      {
+        "drill_id": "shoulder_strain_banded_y_raise",
+        "bank_location": "shoulder",
+        "name": "Banded Y-Raise",
+        "notes": "SPP: Target overhead tissue resilience (posterior & lateral)",
+        "source_hash": "4f074cf1499963c851d440995000d8eb9b591465377a3f5d64cc0f1ba8910e6c",
+        "review_state": "needs_review",
+        "flags": [],
+        "mixed_camp_demand": false
+      }
+    ]
+  },
+  "toe": {
+    "count": 2,
+    "review_states": {
+      "needs_review": 2
+    },
+    "live_profiles": [],
+    "exact_duplicates": [],
+    "drills": [
+      {
+        "drill_id": "toe_strain_toe_towel_slides_loaded_variant",
+        "bank_location": "toe",
+        "name": "Toe Towel Slides (Loaded Variant)",
+        "notes": "GPP: Restore flexor glide \u2192 SPP: Increase tempo or pause",
+        "source_hash": "5723f6466ec8e93653c14dcf7229c1e0e7d525e22b6d728a685791b6daaa2158",
+        "review_state": "needs_review",
+        "flags": [],
+        "mixed_camp_demand": true
+      },
+      {
+        "drill_id": "toe_strain_manual_toe_flexor_resistance_band",
+        "bank_location": "toe",
+        "name": "Manual Toe Flexor Resistance (Band)",
+        "notes": "GPP: Build isolated tension \u2192 SPP: Add continuous reps",
+        "source_hash": "b7e7bda79d47b9f726b3891c2209f1e3e37c5384a8c7c4d2052cbdce4b9e97b9",
+        "review_state": "needs_review",
+        "flags": [],
+        "mixed_camp_demand": true
+      }
+    ]
+  },
+  "triceps": {
+    "count": 4,
+    "review_states": {
+      "needs_review": 4
+    },
+    "live_profiles": [],
+    "exact_duplicates": [],
+    "drills": [
+      {
+        "drill_id": "triceps_strain_isometric_wall_triceps_press",
+        "bank_location": "triceps",
+        "name": "Isometric Wall Triceps Press",
+        "notes": "GPP: Rebuild base triceps tension \u2192 SPP: Increase time under tension to restore punch extension",
+        "source_hash": "9a912a1f4eca86ed2411f26b0ed2c07682b2dfc5c474782835bc8915c328ad67",
+        "review_state": "needs_review",
+        "flags": [],
+        "mixed_camp_demand": true
+      },
+      {
+        "drill_id": "triceps_strain_overhead_band_triceps_extensions",
+        "bank_location": "triceps",
+        "name": "Overhead Band Triceps Extensions",
+        "notes": "GPP: Light end-range loading \u2192 SPP: Progress to controlled eccentric",
+        "source_hash": "ba0a536a772751e7d307d5c323a8787df4e0437fd4cd841b174af9de49d98dd5",
+        "review_state": "needs_review",
+        "flags": [],
+        "mixed_camp_demand": true
+      },
+      {
+        "drill_id": "triceps_strain_push_up_to_tabletop_flow",
+        "bank_location": "triceps",
+        "name": "Push-Up to Tabletop Flow",
+        "notes": "SPP: Blend flexion-extension under rhythm \u2192 TAPER: Reduce to tension resets",
+        "source_hash": "16ec370fd5d5793f8d925a93c4f6720a49140f695e7dd9d2f86fd8fc508d605c",
+        "review_state": "needs_review",
+        "flags": [],
+        "mixed_camp_demand": true
+      },
+      {
+        "drill_id": "triceps_strain_kettlebell_crush_press_light",
+        "bank_location": "triceps",
+        "name": "Kettlebell Crush Press (Light)",
+        "notes": "SPP: Load medial head under control \u2192 TAPER: Maintain groove",
+        "source_hash": "adab21999b2088ea9742d9fb4d89d6e6ef7dfd9d83ad535f246987486d23343c",
+        "review_state": "needs_review",
+        "flags": [],
+        "mixed_camp_demand": true
+      }
+    ]
+  },
+  "unspecified": {
+    "count": 2,
+    "review_states": {
+      "needs_review": 2
+    },
+    "live_profiles": [],
+    "exact_duplicates": [],
+    "drills": [
+      {
+        "drill_id": "unspecified_strain_general_isometric_holds_5_position_circuit",
+        "bank_location": "unspecified",
+        "name": "General Isometric Holds (5-position circuit)",
+        "notes": "Engage large muscle groups without load; avoid pain. Hold 15\u201330s x 3 rounds.",
+        "source_hash": "7535ebc74123b8c8a992477edc07772f7ce2016b7e9b9e3c16e42700e62f90a6",
+        "review_state": "needs_review",
+        "flags": [],
+        "mixed_camp_demand": false
+      },
+      {
+        "drill_id": "unspecified_strain_foam_rolling_tempo_eccentrics",
+        "bank_location": "unspecified",
+        "name": "Foam Rolling + Tempo Eccentrics",
+        "notes": "Roll full body + slow eccentrics to recondition tissue under control.",
+        "source_hash": "1faf86c016c8e14da893f338155b6edc7bce74160dd7e0a1df8ea9fb4c5a058c",
+        "review_state": "needs_review",
+        "flags": [],
+        "mixed_camp_demand": false
+      }
+    ]
+  },
+  "upper back": {
+    "count": 4,
+    "review_states": {
+      "needs_review": 4
+    },
+    "live_profiles": [],
+    "exact_duplicates": [],
+    "drills": [
+      {
+        "drill_id": "upper_back_strain_prone_swimmers",
+        "bank_location": "upper back",
+        "name": "Prone Swimmers",
+        "notes": "GPP: Activate scapular rotation \u2192 SPP: Add tempo or resistance",
+        "source_hash": "d2190afed87b7ddac99c9b0fd197c51e1103572a5dc495c5795f20159fc1ff38",
+        "review_state": "needs_review",
+        "flags": [],
+        "mixed_camp_demand": true
+      },
+      {
+        "drill_id": "upper_back_strain_scapular_push_ups",
+        "bank_location": "upper back",
+        "name": "Scapular Push-Ups",
+        "notes": "GPP: Restore control \u2192 SPP: Integrate tempo or unstable surface",
+        "source_hash": "eafe13d239ff391795009fd7b1fb3f8704614d33420580f777c3761b7a271355",
+        "review_state": "needs_review",
+        "flags": [],
+        "mixed_camp_demand": true
+      },
+      {
+        "drill_id": "upper_back_strain_suspended_row_trx_or_rings",
+        "bank_location": "upper back",
+        "name": "Suspended Row (TRX or Rings)",
+        "notes": "SPP: Train controlled pulling under fatigue \u2192 TAPER: Reduce angle for flush volume",
+        "source_hash": "075b74ca5db871495ea0a5db52fdda066df5ebdd070d2abf855ee8fb1fc02d37",
+        "review_state": "needs_review",
+        "flags": [
+          "VARIABLE_DEMAND_PROGRESSION",
+          "SPEED_PROGRESSION_IN_NOTES"
+        ],
+        "mixed_camp_demand": true
+      },
+      {
+        "drill_id": "upper_back_strain_resistance_band_reverse_flys",
+        "bank_location": "upper back",
+        "name": "Resistance Band Reverse Flys",
+        "notes": "SPP: Focus scapular control \u2192 TAPER: Light pump sets",
+        "source_hash": "4742a5f7de4fd6f8aab24b7daed33a2458b3c0f15e8debd4bd1587f7df1a279a",
+        "review_state": "needs_review",
+        "flags": [],
+        "mixed_camp_demand": true
+      }
+    ]
+  },
+  "wrist": {
+    "count": 6,
+    "review_states": {
+      "needs_review": 6
+    },
+    "live_profiles": [],
+    "exact_duplicates": [],
+    "drills": [
+      {
+        "drill_id": "wrist_strain_wrist_curl_light_dumbbell",
+        "bank_location": "wrist",
+        "name": "Wrist Curl (Light Dumbbell)",
+        "notes": "GPP: Rebuild flexor strength \u2192 SPP: Add eccentric load to increase durability",
+        "source_hash": "698343dcd3864dc37c64894b58efe8387a5f19214851ea098f266745d6e74ec3",
+        "review_state": "needs_review",
+        "flags": [],
+        "mixed_camp_demand": true
+      },
+      {
+        "drill_id": "wrist_strain_reverse_wrist_curl",
+        "bank_location": "wrist",
+        "name": "Reverse Wrist Curl",
+        "notes": "GPP: Activate extensors \u2192 SPP: Add control under impact posture",
+        "source_hash": "2735f62128a05198b37d04f507ee00c8e9330fa7c5ac3c93ca6f478675d2f469",
+        "review_state": "needs_review",
+        "flags": [],
+        "mixed_camp_demand": true
+      },
+      {
+        "drill_id": "wrist_strain_cable_reverse_curl_eccentric",
+        "bank_location": "wrist",
+        "name": "Cable Reverse Curl (Eccentric)",
+        "notes": "SPP: Train controlled load \u2192 TAPER: Maintain quality reps",
+        "source_hash": "7aa3fd520a7e598dbadfab6bb3ad9ea168c6b5bd1fcb860549bd15ea6198ee2f",
+        "review_state": "needs_review",
+        "flags": [],
+        "mixed_camp_demand": true
+      },
+      {
+        "drill_id": "wrist_strain_wrist_flexion_bear_hug_iso",
+        "bank_location": "wrist",
+        "name": "Wrist Flexion Bear Hug Iso",
+        "notes": "SPP: Engage pistoning reflex \u2192 TAPER: Retain control under tension",
+        "source_hash": "501ff1b0ee063842a0a7ac543ba24bf80d76a7fd32beee4cf2885f9642184135",
+        "review_state": "needs_review",
+        "flags": [],
+        "mixed_camp_demand": true
+      },
+      {
+        "drill_id": "wrist_strain_wrist_roller_light_plate",
+        "bank_location": "wrist",
+        "name": "Wrist Roller (Light Plate)",
+        "notes": "SPP: Restore controlled flexion/extension \u2192 TAPER: Use low load for coordination retention",
+        "source_hash": "602f6fcb1f33665a9581ca8bd2d057c2531591faee5e7f2b33af90130198a349",
+        "review_state": "needs_review",
+        "flags": [],
+        "mixed_camp_demand": true
+      },
+      {
+        "drill_id": "wrist_strain_farmer_s_hold_with_wrist_control",
+        "bank_location": "wrist",
+        "name": "Farmer\u2019s Hold with Wrist Control",
+        "notes": "SPP: Build isometric grip \u2192 TAPER: Maintain under time constraints",
+        "source_hash": "11a73c82d0ef99e886f585fbdb406b2bc2c55ed1c62e5ba918460978c06ec395",
+        "review_state": "needs_review",
+        "flags": [],
+        "mixed_camp_demand": true
+      }
+    ]
+  }
+}

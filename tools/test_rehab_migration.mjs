@@ -26,6 +26,9 @@ await db.exec(`create role anon; create role authenticated; create role service_
 const migration = readFileSync("supabase/migrations/20260930173118_injury_episode_prescription_history.sql", "utf8");
 await db.exec(readFileSync("supabase/migrations/20260820170000_add_rehab_response_group_identity.sql", "utf8"));
 await db.exec(migration);
+const profileMigration = readFileSync("supabase/migrations/20261002234842_pathway_profile_unknown_side.sql", "utf8");
+await db.exec(profileMigration);
+await db.exec(profileMigration); // CREATE OR REPLACE preserves the existing grants and observations.
 const athlete = "00000000-0000-4000-8000-000000000001";
 const other = "00000000-0000-4000-8000-000000000002";
 const plan = "00000000-0000-4000-8000-000000000003";
@@ -60,6 +63,7 @@ async function start(snap, status="started") {
 await test("pending migration can be reapplied without losing history", async () => {
   const before = (await db.query("select count(*)::int n from injury_episode_events")).rows[0].n;
   await db.exec(migration);
+  await db.exec(profileMigration);
   assert.equal((await db.query("select count(*)::int n from injury_episode_events")).rows[0].n,before);
 });
 const first = await snapshot("2026-09-30", "training-first");
@@ -158,5 +162,37 @@ await test("a full rehab allocation does not prohibit training with no rehab", a
   normal.allocation_limit = 1;
   await start(normal);
 });
+for (const [index, region] of ["hamstring", "calf", "groin", "quads", "future_region"].entries()) {
+  await test(`${region}: frozen profile guidance accepts unknown side with exact provenance`, async () => {
+    const id = `00000000-0000-4000-8000-${String(100 + index * 4).padStart(12, "0")}`;
+    const ep = `00000000-0000-4000-8000-${String(101 + index * 4).padStart(12, "0")}`;
+    const eventId = `00000000-0000-4000-8000-${String(102 + index * 4).padStart(12, "0")}`;
+    const groupId = `00000000-0000-4000-8000-${String(103 + index * 4).padStart(12, "0")}`;
+    await db.query("insert into injury_flags(id,athlete_id,description,body_region,side,episode_id) values($1,$2,$3,$4,'unknown',$5)",
+      [id, athlete, `${region} strain`, region, ep]);
+    const snap = await snapshot(`2026-11-0${index + 1}`, `${region}-guidance`);
+    snap.injury_context = (await db.query("select * from injury_flags where athlete_id=$1 and status in ('open','monitoring')", [athlete])).rows
+      .map(flag => ({id:flag.id, episode_id:flag.episode_id, updated_at:flag.updated_at.toISOString()}));
+    const policy = `${region}_strain`, drill = `${policy}_recovery_support`;
+    snap.session.blocks = [{block_type:"rehab", policy_id:policy, injury_id:id, injury_episode_id:ep,
+      rehab_drill_id:drill, minimum_gap_days:1, drill_snapshot:{rehab_stage:"calm",laterality_applicability:"not_applicable"}}];
+    await start(snap, "done");
+    const report = {...exposure,exposure_id:eventId,response_group_id:groupId,injury_id:id,injury_episode_id:ep,
+      drill_id:drill,body_region:region,side:"unknown",demand:{target_regions:[region],load:"minimal",impact:"none",velocity:"low"},
+      provenance:{...exposure.provenance,prescription_revision:snap.revision,policy_id:policy,rehab_stage:"calm"}};
+    await db.query("select record_rehab_exposure($1,$2::jsonb)", [athlete, JSON.stringify(report)]);
+    await db.query("select record_rehab_exposure($1,$2::jsonb)", [athlete, JSON.stringify(report)]);
+    assert.equal((await db.query("select count(*)::int n from rehab_exposures where id=$1",[eventId])).rows[0].n, 1);
+    for (const invalid of [
+      {...report,drill_id:"legacy_work"}, {...report,body_region:"chest"},
+      {...report,provenance:{...report.provenance,policy_id:"other_profile"}},
+      {...report,provenance:{...report.provenance,rehab_stage:"load"}},
+      {...report,provenance:{...report.provenance,prescription_revision:"b".repeat(64)}},
+    ]) {
+      await rejects(() => db.query("select record_rehab_exposure($1,$2::jsonb)", [athlete,JSON.stringify(invalid)]),"exposure does not match");
+    }
+    await rejects(() => db.query("select record_rehab_exposure($1,$2::jsonb)", [other,JSON.stringify(report)]),"injury not found");
+  });
+}
 console.log(`${passed} database acceptance checks passed (single PostgreSQL connection; advisory locking inspected separately).`);
 await db.close();

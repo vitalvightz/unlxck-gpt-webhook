@@ -401,7 +401,11 @@ def test_coverage_report_is_honest_about_the_partially_migrated_bank():
     assert report["field_levels"]["load"].get("null", 0) == report["totals"]["msk_drills"] - migrated_load
     assert report["fully_known_mechanical_demand"] <= migrated_load
     assert report["stale_reviews"] == 0
-    assert report["review_states"] == {REVIEW_STATE_NEEDS_REVIEW: report["totals"]["msk_drills"]}
+    # Only the eight fixed strain variants and two existing chest routines were reviewed.
+    assert report["review_states"] == {
+        REVIEW_STATE_NEEDS_REVIEW: report["totals"]["msk_drills"] - 10,
+        REVIEW_STATE_REVIEWED: 10,
+    }
 
 
 # --------------------------------------------------------------------------- #

@@ -64,18 +64,22 @@ def decide(reviewed, **kwargs):
 
 def test_shipped_policies_are_sourced_active_and_self_paced():
     policies = load_clinical_policies()
-    assert {p.region for p in policies} == {"chest", "ankle"}
+    assert {p.region for p in policies} == {"chest", "ankle", "hamstring", "calf", "groin", "quads"}
     assert all(p.activation == "live" and p.status == "active" for p in policies)
     assert all(p.dose is None and p.sources for policy in policies for p in policy.prescriptions)
     from fightcamp.rehab_protocols import get_rehab_bank
     from fightcamp.rehab_schema import CONTRACT_FIELDS, PAIN_CEILING_UNRESTRICTED
     bank = {d["id"]: d for group in get_rehab_bank() for d in group["drills"]}
     for policy in policies:
-        assert policy.version == {"chest_strain": 3, "ankle_sprain": 4}[policy.policy_id]
+        assert policy.version == {"chest_strain": 3, "ankle_sprain": 4}.get(policy.policy_id, 1)
         for prescription in policy.prescriptions:
             drill = bank[prescription.drill_id]
-            assert drill["pain_ceiling"] == PAIN_CEILING_UNRESTRICTED
-            assert all(drill.get(field) is not None for field in CONTRACT_FIELDS)
+            if policy.policy_id in {"chest_strain", "ankle_sprain"}:
+                assert drill["pain_ceiling"] == PAIN_CEILING_UNRESTRICTED
+                assert all(drill.get(field) is not None for field in CONTRACT_FIELDS)
+            else:
+                # New baselines make no claim about numerical pain ceilings or dose.
+                assert drill["pain_ceiling"] is None and drill["dose"] is None
     with pytest.raises(ValidationError):
         ClinicalPolicy.model_validate({**policies[0].model_dump(), "content_hash": "a" * 64})
 

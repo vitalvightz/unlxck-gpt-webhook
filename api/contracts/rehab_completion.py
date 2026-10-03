@@ -247,10 +247,10 @@ def _resolve_side(injury: Mapping[str, Any], drill: Mapping[str, Any]) -> str | 
     ``bilateral_only`` cannot evidence one side of a side-specific injury.
     """
     injury_side = _lower(injury.get("side"))
-    # A frozen, episode-addressed pilot routine may be region-wide guidance.
+    # A frozen, episode-addressed profile routine may be region-wide guidance.
     # Preserve unknown laterality instead of losing the injury's response or
     # manufacturing a side. This cannot qualify advanced recovery stages.
-    if (drill.get("prescription_policy_id") in {"chest_strain", "ankle_sprain"}
+    if (str(drill.get("prescription_policy_id") or "").strip()
             and drill.get("prescribed_injury_id") == str(injury.get("id"))
             and drill.get("prescribed_injury_episode_id") == str(injury.get("episode_id"))
             and drill.get("laterality_applicability") == "not_applicable"

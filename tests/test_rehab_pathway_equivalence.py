@@ -34,7 +34,7 @@ def legacy():
 
 
 def composed():
-    return load_clinical_policies()
+    return tuple(p for p in load_clinical_policies() if p.policy_id in REGIONS)
 
 
 def strip(decision):
