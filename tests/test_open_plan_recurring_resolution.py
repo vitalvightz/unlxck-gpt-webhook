@@ -134,6 +134,56 @@ def _open_structured_plan():
     }
 
 
+_MINDSET = {"intent": "Train with intent", "focus_cue": "Clean reps", "reset_cue": "Breathe"}
+
+
+def _valid_open_structured_plan():
+    """The same weekday template, complete enough to pass schema validation.
+
+    Saved cards that fail validation are rebuilt from the planner instead, so a
+    test about projecting the stored cards needs a schema-valid card.
+    """
+    from test_structured_plan_models import _valid_plan
+
+    template = _valid_plan()
+    plan = {
+        **{key: value for key, value in template.items() if key != "weeks"},
+        **_open_structured_plan(),
+    }
+    plan["event_context"] = {**template.get("event_context", {}), "fight_date": None}
+    template_week = template["weeks"][0]
+    for week in plan["weeks"]:
+        week.update({
+            "phase_label": "GPP",
+            "week_goal": "Build",
+            "start_date": "",
+            "end_date": "",
+            "load_focus": template_week["load_focus"],
+            "progression": template_week["progression"],
+        })
+        week["days"] = [dict(day) for day in week["days"]]
+        for day in week["days"]:
+            day["day_type"] = "moderate" if day["sessions"] else "high"
+            day["countdown_label"] = ""
+            day["phase_label"] = "GPP"
+            day["today_card"] = {
+                **day["today_card"],
+                "readiness_status": "train_as_planned",
+                "mindset_anchor": dict(_MINDSET),
+            }
+            day["sessions"] = [
+                {
+                    **session,
+                    "session_type": "strength_power",
+                    "objective": session["title"],
+                    "mindset_anchor": dict(_MINDSET),
+                    "blocks": [{**block, "block_type": "strength"} for block in session["blocks"]],
+                }
+                for session in day["sessions"]
+            ]
+    return plan
+
+
 def test_open_plan_projects_weekdays_and_dates_from_the_block_anchor():
     plan_row = {
         "id": PLAN_ID,
@@ -227,7 +277,7 @@ def test_open_plan_created_late_in_the_week_starts_the_following_monday():
 
 
 def test_open_plan_before_start_surfaces_monday_as_next_not_future_saturday_as_today():
-    structured_plan = _open_structured_plan()
+    structured_plan = _valid_open_structured_plan()
     future_saturday = structured_plan["weeks"][0]["days"][-1]
     future_saturday["today_card"]["headline"] = "Fight-Pace Conditioning and Neural Primer"
     future_saturday["sessions"][0]["title"] = "Fight-Pace Conditioning and Neural Primer"
@@ -420,7 +470,7 @@ def test_today_and_plan_detail_use_the_same_projected_open_plan_sessions():
         "created_at": "2026-07-12T09:00:00+00:00",
         "fight_date": None,
         "planning_brief": _open_plan_brief(),
-        "structured_plan": _open_structured_plan(),
+        "structured_plan": _valid_open_structured_plan(),
     }
 
     today_entry = _structured_today_session_entry(plan_row, "2026-07-13")
@@ -431,8 +481,10 @@ def test_today_and_plan_detail_use_the_same_projected_open_plan_sessions():
     assert today_entry["title"] == "Support strength"
     assert next_entry is not None
     assert next_entry["calendar_date"] == "2026-07-13"
-    assert "session_id" not in next_entry
-    assert "session_id" not in today_entry
+    # Schema-valid cards carry a stable server-assigned session id; Today and
+    # the next-session card must point at the same projected session.
+    assert today_entry["session_id"]
+    assert next_entry["session_id"] == today_entry["session_id"]
 
 
 def test_undated_legacy_schedule_still_clamps_to_its_final_week():
