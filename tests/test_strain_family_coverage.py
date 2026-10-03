@@ -149,6 +149,14 @@ def test_unreviewed_regions_stay_unsupported(region):
     assert resolve(injury(region))["outcome"] == "unsupported_prescription"
 
 
+@pytest.mark.parametrize("region", ["groin", "quads"])
+def test_unknown_side_restore_uses_only_attributable_calm_fallback(region):
+    decision = resolve(injury(region, "restore", side="unknown"))
+    assert decision["prescription"]["drill_id"] == f"{region}_strain_recovery_support"
+    assert decision["prescription"]["drill"]["laterality_applicability"] == "not_applicable"
+    assert decision["prescription"]["drill"]["rehab_stage"] == "calm"
+
+
 def test_quadriceps_restrictions_cover_existing_mechanical_region_spellings():
     row = injury("quads")
     decision = resolve(row)

@@ -88,7 +88,7 @@ regions/tissues, laterality, contraction, general-rehab specificity and no conta
 Bridge and calf raise are conservatively classified moderate bodyweight demand,
 not low simply because they are baseline work. Their double-leg performance is
 region-wide (not_applicable), not a unilateral strength test. Adduction and knee
-movement need an identified side; unknown-side RESTORE for these stays unsupported.
+movement need an identified side; their named-side RESTORE movements are not prescribed with an unknown side. The existing selector conservatively falls back to attributable CALM recovery guidance.
 CALM retains unknown contraction: protective guidance is not a contraction exercise.
 
 All prescriptions are self-paced with no fabricated numerical dose, pain ceiling,
@@ -358,3 +358,5 @@ Validation performed in this workspace:
 
 - Final urgent-taxonomy/triage and structured-triage regression run: 204 passed.
 - Ideal advanced evidence was explicitly tested against all six shipped profiles: 6 passed; none progresses beyond RESTORE.
+
+- Final content comparison against Main confirms all 1,545 original bank drills are unchanged. Two explicit unknown-side RESTORE fallback checks pass for groin and quads.
