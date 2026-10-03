@@ -33,6 +33,7 @@ from .state_machine import is_athlete_displayable_plan_status
 from .structured_plan_calendar_spine import reconcile_calendar_spine
 from .structured_plan_faithfulness import (
     PRESCRIPTION,
+    _day_header_dday,
     check_structured_faithfulness,
     prune_unfaithful_content,
     strip_locked_sessions_for_conversion,
@@ -2086,6 +2087,126 @@ def _as_list(value: Any) -> list[Any]:
     return [value]
 
 
+_SOURCE_BULLET_RE = re.compile(r"^[-*•]\s+(?P<title>.+?)(?::|\s[—–-]\s|$)")
+_SOURCE_WHY_RE = re.compile(r"^\s*why\s*:\s*(?P<why>.+)$", re.I)
+_HEADER_TITLE_RE = re.compile(r"[—–]\s*(?P<title>[^—–]+?)\s*$")
+_COUNTDOWN_NUMBER_RE = re.compile(r"D-\s*(\d+)", re.I)
+# Server-owned sessions (Tactical Watch, deterministic support) are placed by
+# the planner, never by the converter, and are never regrouped.
+_SERVER_OWNED_SESSION_PREFIXES = ("locked-", "deterministic-")
+
+
+def _name_tokens(value: Any) -> set[str]:
+    return set(re.findall(r"[a-z0-9]+", strip_dose_suffix(_coerce_str(value)).casefold()))
+
+
+def _source_session_groups(raw_markdown: str) -> dict[int, list[dict[str, Any]]]:
+    """Per D-day, each source session: its header title, Why line and bullet titles."""
+    groups: dict[int, list[dict[str, Any]]] = {}
+    current: dict[str, Any] | None = None
+    for line in str(raw_markdown or "").splitlines():
+        day = _day_header_dday(line)
+        if day is not None:
+            title_match = _HEADER_TITLE_RE.search(line)
+            current = {
+                "title": title_match.group("title").strip() if title_match else "",
+                "why": "",
+                "bullets": [],
+            }
+            groups.setdefault(day, []).append(current)
+            continue
+        if current is None:
+            continue
+        bullet = _SOURCE_BULLET_RE.match(line)
+        if bullet:
+            current["bullets"].append(_name_tokens(bullet.group("title")))
+            continue
+        why = _SOURCE_WHY_RE.match(line)
+        if why and not current["why"]:
+            current["why"] = why.group("why").strip()
+    return groups
+
+
+def _owning_source_group(session: dict[str, Any], groups: list[dict[str, Any]]) -> int | None:
+    """Index of the one source session holding every block of ``session``."""
+    blocks = [block for block in _as_list(session.get("blocks")) if isinstance(block, dict)]
+    if not blocks:
+        return None
+    owners: set[int] = set()
+    for block in blocks:
+        tokens = _name_tokens(block.get("display_name"))
+        if not tokens:
+            return None
+        matches = {
+            index
+            for index, group in enumerate(groups)
+            if any(tokens <= bullet or bullet <= tokens for bullet in group["bullets"] if bullet)
+        }
+        if len(matches) != 1:
+            return None
+        owners |= matches
+    return owners.pop() if len(owners) == 1 else None
+
+
+def regroup_split_sessions(plan: Any, raw_markdown: str) -> Any:
+    """Merge sessions the converter split out of ONE source session.
+
+    The plan text lists a session as a day header with its exercises bulleted
+    beneath it. The converter sometimes emits each bullet as its own session
+    (a strength day becomes four one-exercise cards, each with its own title
+    and Why). This puts them back: every converter session whose blocks all sit
+    under the same source header is folded into the first of them, which takes
+    the header's title and Why line. Anything that cannot be matched to exactly
+    one header is left as it is.
+    """
+    groups_by_day = _source_session_groups(raw_markdown)
+    if not isinstance(plan, dict) or not groups_by_day:
+        return plan
+    plan = copy.deepcopy(plan)
+    for week in _as_list(plan.get("weeks")):
+        for day in _as_list(week.get("days") if isinstance(week, dict) else None):
+            if not isinstance(day, dict):
+                continue
+            match = _COUNTDOWN_NUMBER_RE.search(_coerce_str(day.get("countdown_label")))
+            groups = groups_by_day.get(int(match.group(1))) if match else None
+            sessions = day.get("sessions")
+            if not groups or not isinstance(sessions, list) or len(sessions) < 2:
+                continue
+            merged: list[Any] = []
+            first_by_group: dict[int, dict[str, Any]] = {}
+            for session in sessions:
+                session_id = _coerce_str(session.get("session_id") if isinstance(session, dict) else "")
+                owner = (
+                    None
+                    if not isinstance(session, dict) or session_id.startswith(_SERVER_OWNED_SESSION_PREFIXES)
+                    else _owning_source_group(session, groups)
+                )
+                if owner is None:
+                    merged.append(session)
+                    continue
+                first = first_by_group.get(owner)
+                if first is None:
+                    first_by_group[owner] = session
+                    merged.append(session)
+                    continue
+                first["blocks"] = _as_list(first.get("blocks")) + _as_list(session.get("blocks"))
+                if _coerce_str(first.get("session_type")) != _coerce_str(session.get("session_type")):
+                    first["session_type"] = "mixed"
+                first["_regrouped_from"] = owner
+            if len(merged) == len(sessions):
+                continue
+            for owner, first in first_by_group.items():
+                if first.pop("_regrouped_from", None) is None:
+                    continue
+                group = groups[owner]
+                if group["title"]:
+                    first["title"] = group["title"]
+                if group["why"]:
+                    first["objective"] = group["why"]
+            day["sessions"] = merged
+    return plan
+
+
 def _strip_and_normalize(data: Any) -> Any:
     """Strip banned biometric keys then conservatively normalize. Never raises."""
     stripped, _removed = strip_biometric_fields(data)
@@ -2809,6 +2930,7 @@ def build_structured_plan_outcome(
         # Every card that can be published passes through here, after the
         # locked merge and any salvage pruning, so its day membership is final:
         # order each day's sessions and each session's blocks for execution.
+        plan_dict = regroup_split_sessions(plan_dict, raw_markdown)
         plan_dict = sequence_structured_plan(plan_dict, planning_brief)
         blocking, advisory = split_findings(audit_structured_plan(plan_dict, computed_support))
         warnings = list(dict.fromkeys([*(faithfulness_warnings or []), *advisory]))

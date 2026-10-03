@@ -498,6 +498,21 @@ def test_empty_camp_start_day_is_kept_from_days_until_fight():
     assert out["weeks"][0]["countdown_start"] == "D-21"
 
 
+def test_generation_day_plan_does_not_open_on_the_day_before_generation():
+    # include_generation_day anchors days_until_fight one day early (22 for an
+    # athlete 21 days out) so the generation day itself is plannable. The camp
+    # starts on D-21 (today), never on an empty, already-past D-22.
+    mega = [_session_day(d) for d in [21, 17, 14, 10, 7, 3, 0]]
+    brief = {
+        "weekly_role_map": _role_map(days_until_fight=22),
+        "fight_date": FIGHT_DATE,
+        "athlete_snapshot": {"days_until_fight": 22, "include_generation_day": True},
+    }
+    out = reconcile_calendar_spine(_plan([_week(mega, index=1, phase="TAPER")]), brief)
+    assert _all_ddays(out)[0] == 21
+    _assert_continuous_to_fight(out, 21)
+
+
 def test_extent_ignores_absurd_days_until_fight():
     # A garbled days_until_fight far beyond the (short, 21-day) spine must not
     # balloon the calendar — the role-map spine bounds the extent.

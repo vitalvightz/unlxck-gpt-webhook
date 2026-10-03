@@ -256,6 +256,9 @@ class TestShape:
             "open_injuries",
             "week_summary",
             "quick_actions",
+            "live_prescription",
+            "effective_clinician_clearance",
+            "delayed_rehab_prompts",
         }
         assert set(dumped["today"]) == {
             "training_day",

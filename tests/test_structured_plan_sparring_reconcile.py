@@ -182,10 +182,10 @@ def test_open_plan_preserves_declared_technical_day_alongside_app_work():
     wednesday = plan["weeks"][0]["days"][1]
     friday = plan["weeks"][0]["days"][2]
     assert wednesday["sessions"] == strength
-    assert wednesday["today_card"]["coach_led_contact"] == "Technical-only combat"
+    assert wednesday["today_card"]["coach_led_contact"] == "Light Combat / Technical"
     assert friday["today_card"]["headline"] == "Hard sparring"
     assert friday["day_type"] == "high"
-    assert any("Wed" in note and "Technical-only combat" in note for note in notes)
+    assert any("Wed" in note and "Light Combat / Technical" in note for note in notes)
 
 
 def test_open_plan_preserves_declared_technical_day_in_every_emitted_week():
@@ -206,7 +206,7 @@ def test_open_plan_preserves_declared_technical_day_in_every_emitted_week():
 
     for week in plan["weeks"]:
         by_weekday = {day["weekday"]: day for day in week["days"]}
-        assert by_weekday["Wed"]["today_card"]["headline"] == "Technical-only combat"
+        assert by_weekday["Wed"]["today_card"]["headline"] == "Light Combat / Technical"
         assert by_weekday["Fri"]["today_card"]["headline"] == "Hard sparring"
 
 

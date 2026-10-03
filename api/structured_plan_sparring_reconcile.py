@@ -339,7 +339,14 @@ def _open_plan_contact_days(planning_brief: dict[str, Any]) -> list[_ContactDay]
                     d_day=None,
                     weekday=weekday,
                     load=load,
-                    headline=_HEADLINE_BY_LOAD[load],
+                    # Open-plan technical days are the declared support-work
+                    # days: the athlete's own light-combat session, never
+                    # hard sparring the planner converted.
+                    headline=(
+                        CANONICAL_LIGHT_COMBAT_LABEL
+                        if load == "technical"
+                        else _HEADLINE_BY_LOAD[load]
+                    ),
                     day_type=_DAY_TYPE_BY_LOAD[load],
                     phase="GPP",
                     week_index=week_index,
