@@ -102,8 +102,11 @@ def _media_from_row(row: Mapping[str, Any]) -> ExerciseMedia | None:
     video_id = str(row.get("video_id") or "")
     if not _VIDEO_ID_RE.match(video_id):
         return None
-    # Keep YouTube's Made for Kids classification as metadata, but do not
-    # suppress a curator-approved exercise demo solely because that flag is true.
+    # Keep YouTube's Made for Kids classification as metadata. Curator-approved
+    # videos may serve whether it is true or false, but an unreported status is
+    # still excluded as a safety/backstop against stale legacy rows.
+    if not isinstance(row.get("made_for_kids"), bool):
+        return None
     try:
         start_s = max(0, int(row.get("start_s") or 0))
         end_raw = row.get("end_s")
