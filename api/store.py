@@ -5193,7 +5193,7 @@ class SupabaseAppStore(CompactGenerationReads):
     def _exercise_media_page(self, *, columns: str, served_only: bool, offset: int) -> Any:
         query = self.client.table("exercise_media").select(columns)
         if served_only:
-            query = query.eq("status", "ok").eq("made_for_kids", False)
+            query = query.eq("status", "ok")
         # Stable order: pages don't overlap, and when two rows claim the same
         # alias the same row wins on every load.
         return (
@@ -5219,7 +5219,7 @@ class SupabaseAppStore(CompactGenerationReads):
             offset += self._EXERCISE_MEDIA_PAGE_SIZE
 
     def list_exercise_media(self) -> list[dict[str, Any]]:
-        """Every video cleared to serve: checked ok and checked not made for kids."""
+        """Every curator-approved video currently checked as available to serve."""
         return self._list_exercise_media_rows(
             columns=self._EXERCISE_MEDIA_SERVED_COLUMNS,
             served_only=True,
