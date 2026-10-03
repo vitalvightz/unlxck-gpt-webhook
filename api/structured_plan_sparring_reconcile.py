@@ -40,7 +40,10 @@ from typing import Any
 from fightcamp.weekly_schedule_view import extract_weekly_schedule
 from fightcamp.sparring_dose_planner import hard_sparring_cutoff, contact_safety_reasons
 from fightcamp.declared_combat_ownership import is_declared_light_combat_role
-from fightcamp.combat_render_authority import resolve_declared_contact_load
+from fightcamp.combat_render_authority import (
+    CANONICAL_LIGHT_COMBAT_LABEL,
+    resolve_declared_contact_load,
+)
 
 # effective_load values from the deterministic schedule that mean coach-owned
 # contact work the athlete must see as its own card.
@@ -140,6 +143,21 @@ def _already_coach_led(headline: str) -> bool:
         _TECHNICAL_RE.search(headline)
         or _SPARRING_RE.search(headline)
         or _COACH_LED_RE.search(headline)
+    )
+
+
+# Mirrors isDeclaredLightCombatTitle in web/lib/plan-labels.ts.
+_LIGHT_COMBAT_TITLE_RE = re.compile(r"\blight\s+(?:technical\s+)?combat\b", re.I)
+
+
+def _session_already_shows_light_combat(day: dict[str, Any], contact: "_ContactDay") -> bool:
+    if contact.headline != CANONICAL_LIGHT_COMBAT_LABEL:
+        return False
+    sessions = day.get("sessions")
+    return isinstance(sessions, list) and any(
+        isinstance(session, dict)
+        and _LIGHT_COMBAT_TITLE_RE.search(str(session.get("title") or ""))
+        for session in sessions
     )
 
 
@@ -411,7 +429,17 @@ def _deterministic_contact_days(planning_brief: dict[str, Any]) -> list[_Contact
                     d_day=d_day,
                     weekday=None,
                     load=load,
-                    headline=_headline_for_load(load, d_day),
+                    # A declared light-combat day is the athlete's own technical
+                    # session, not a hard-sparring day the planner converted, so
+                    # it keeps its own label. The technical-only wording and the
+                    # taper ladder tell the athlete their sparring was reduced,
+                    # and the web renders that as a second "Technical Combat"
+                    # card next to the light-combat one.
+                    headline=(
+                        CANONICAL_LIGHT_COMBAT_LABEL
+                        if is_declared_light_combat
+                        else _headline_for_load(load, d_day)
+                    ),
                     day_type=_DAY_TYPE_BY_LOAD[load],
                     phase=role_phase,
                     week_index=week_index + 1,
@@ -725,6 +753,10 @@ def _reconcile(structured_plan: Any, planning_brief: Any) -> list[str]:
                         f"{identity} ({contact.headline!r})"
                     )
                 if str(card.get("coach_led_contact") or "").strip():
+                    continue
+                if _session_already_shows_light_combat(day, contact):
+                    # The converter already gave the declared slot its own card;
+                    # a contact block on top would show the same session twice.
                     continue
                 card["coach_led_contact"] = contact.headline
                 notes.append(

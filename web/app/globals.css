@@ -10771,7 +10771,9 @@ html[data-theme="light"] .today-segment-multi.today-segment-active::before {
   .plan-detail-actions {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    align-items: stretch;
+    /* The open Manage menu sits in flow here; stretching would grow its
+       neighbour ("All plans") to the full height of the menu. */
+    align-items: start;
   }
 
   .plan-detail-actions > .cta {

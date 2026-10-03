@@ -694,3 +694,47 @@ def test_support_work_day_keeps_existing_app_session_without_contact_note():
     assert day["sessions"] == real_session
     assert len(plan["weeks"][0]["days"]) == 1
     assert notes == []
+
+
+def _light_combat_role_brief(*, d_day: int = 26) -> dict:
+    return {
+        "weekly_role_map": {
+            "weeks": [
+                {
+                    "phase": "SPP",
+                    "calendar_days": _week_calendar(7, 25),
+                    "session_roles": [
+                        {
+                            "role_key": "light_combat_day",
+                            "coach_owned": True,
+                            "countdown_offset": d_day,
+                        }
+                    ],
+                }
+            ]
+        }
+    }
+
+
+def test_declared_light_combat_contact_keeps_its_own_label_not_converted_sparring():
+    # D-26 and D-5: neither may read as a hard-sparring day the planner reduced
+    # (the web renders that as a second "Technical Combat" card).
+    for d_day in (26, 5):
+        tactical = [{"title": "Tactical Focus", "blocks": [{"display_name": "Range Map"}]}]
+        plan = _structured_plan([_day(f"D-{d_day}", headline="Light Combat / Technical", sessions=tactical)])
+        reconcile_coach_led_sparring_days(plan, _light_combat_role_brief(d_day=d_day))
+
+        card = plan["weeks"][0]["days"][0]["today_card"]
+        assert card["coach_led_contact"] == "Light Combat / Technical"
+
+
+def test_declared_light_combat_session_is_not_repeated_as_a_contact_block():
+    sessions = [
+        {"title": "Easy Assault Bike", "blocks": [{"display_name": "Easy Assault Bike"}]},
+        {"title": "Light Combat / Technical", "blocks": []},
+    ]
+    plan = _structured_plan([_day("D-26", headline="Aerobic support", sessions=sessions)])
+    reconcile_coach_led_sparring_days(plan, _light_combat_role_brief())
+
+    card = plan["weeks"][0]["days"][0]["today_card"]
+    assert "coach_led_contact" not in card

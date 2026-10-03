@@ -95,3 +95,19 @@ def test_string_tempo_never_rejects_the_card(tempo, expected, cue):
     assert block["tempo"] == expected
     assert (cue in block.get("coaching_cues", [])) if cue else True
     SessionBlock.model_validate(block)
+
+
+def test_dose_in_display_name_moves_out_when_the_block_carries_it():
+    block = _normalize_block(
+        {
+            "block_type": "conditioning",
+            "display_name": "Assault Bike - 25 min",
+            "duration": {"value": 25, "unit": "minutes"},
+        }
+    )
+    assert block["display_name"] == "Assault Bike"
+
+
+def test_dose_in_display_name_stays_when_it_is_the_only_prescription():
+    block = _normalize_block({"block_type": "conditioning", "display_name": "Assault Bike - 25 min"})
+    assert block["display_name"] == "Assault Bike - 25 min"

@@ -117,3 +117,70 @@ test("hard sparring context keeps its coaching cues inside the contact card", ()
   assert.match(html, /class="sp-coaching"/);
   assert.match(html, /Control contact and protect energy for the week/);
 });
+
+test("a declared light-combat day shows one Technical Combat block, not two", () => {
+  // Saved plans stamped the converted-sparring wording on a light-combat day
+  // whose headline also reads light combat: both blocks used to render.
+  const day = {
+    date: "2026-10-10",
+    countdown_label: "D-26",
+    day_type: "rest",
+    planning_day_role_keys: ["light_combat_day", "tactical_watch"],
+    today_card: {
+      headline: "Light Combat / Technical",
+      readiness_status: "train_as_planned",
+      coach_led_contact: "Technical-only combat",
+    },
+    sessions: [
+      { session_id: "locked-d-26-tactical-watch", session_type: "skill", title: "Tactical Focus", blocks: [] },
+    ],
+  } as unknown as StructuredDay;
+
+  const html = renderToStaticMarkup(<DaySessionContext day={day} />);
+
+  assert.equal(html.split("Technical Combat").length - 1, 1);
+  assert.equal(html.includes("Pads, drills, movement or other lower-intensity combat work."), true);
+  // Not presented as hard sparring the planner reduced.
+  assert.equal(html.includes("Low load"), false);
+  assert.equal(html.includes("Technical only, no hard sparring"), false);
+});
+
+test("a light-combat session card is not repeated as a contact block", () => {
+  const day = {
+    date: "2026-10-03",
+    countdown_label: "D-33",
+    day_type: "low",
+    planning_day_role_keys: ["aerobic_base_day", "light_combat_day"],
+    today_card: {
+      headline: "Aerobic support",
+      readiness_status: "train_as_planned",
+      coach_led_contact: "Light Combat / Technical",
+    },
+    sessions: [
+      { session_type: "skill", title: "Light Combat / Technical", blocks: [] },
+    ],
+  } as unknown as StructuredDay;
+
+  const html = renderToStaticMarkup(<DaySessionContext day={day} />);
+
+  assert.equal(html.includes("Technical Combat"), false);
+});
+
+test("a converted hard-sparring day still reads as reduced technical work", () => {
+  const day = {
+    date: "2026-10-28",
+    countdown_label: "D-8",
+    day_type: "rest",
+    planning_day_role_keys: ["hard_sparring_day", "tactical_watch"],
+    today_card: {
+      headline: "Technical-only combat",
+      readiness_status: "train_as_planned",
+      coach_led_contact: "Technical-only combat",
+    },
+    sessions: [{ session_type: "skill", title: "Tactical Focus", blocks: [] }],
+  } as unknown as StructuredDay;
+
+  const html = renderToStaticMarkup(<DaySessionContext day={day} />);
+
+  assert.equal(html.includes("Low load"), true);
+});

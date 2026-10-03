@@ -1798,7 +1798,11 @@ export function classifySessionlessDay(
   const dayType = cleanText(day?.day_type)?.toLowerCase() ?? null;
 
   if (headline) {
-    const kind = coachLedKindFromHeadline(headline);
+    const headlineKind = coachLedKindFromHeadline(headline);
+    // A declared light-combat day is never converted sparring, whatever wording
+    // an older plan stamped on it (see getCoachLedContactView).
+    const kind =
+      headlineKind === "technical" && isDeclaredLightCombatOnlyDay(day) ? "light_combat" : headlineKind;
     // A rest/recovery day_type whose headline does not clearly identify
     // coach-led combat / sparring / technical work stays a rest day (e.g.
     // day_type "rest" + "Full rest and mobility"), rather than a generic
@@ -1834,6 +1838,11 @@ export function classifySessionlessDay(
   return { kind: "rest", title: "Rest day", tag: null, coachLed: false, converted: false };
 }
 
+function isDeclaredLightCombatOnlyDay(day: StructuredDay | null | undefined): boolean {
+  const roles = Array.isArray(day?.planning_day_role_keys) ? day.planning_day_role_keys : [];
+  return roles.includes("light_combat_day") && !roles.includes("hard_sparring_day");
+}
+
 export type CoachLedContactView = {
   kind: SessionlessDayKind;
   title: string;
@@ -1856,6 +1865,13 @@ export function getCoachLedContactView(
   const headline = cleanText(day?.today_card?.coach_led_contact);
   if (!headline) {
     return null;
+  }
+  // Plans saved before the reconcile fix stamped a declared light-combat day
+  // with the converted-sparring wording ("Technical-only combat", or the taper
+  // ladder). The day's role keys are deterministic: a light-combat day that
+  // was never a hard-sparring day is the athlete's own technical session.
+  if (isDeclaredLightCombatOnlyDay(day)) {
+    return { kind: "light_combat", title: headline, tag: SESSIONLESS_DAY_TAGS.light_combat, converted: false };
   }
   const kind = coachLedKindFromHeadline(headline);
   const title =
