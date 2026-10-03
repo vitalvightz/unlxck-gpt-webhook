@@ -102,11 +102,8 @@ def _media_from_row(row: Mapping[str, Any]) -> ExerciseMedia | None:
     video_id = str(row.get("video_id") or "")
     if not _VIDEO_ID_RE.match(video_id):
         return None
-    # YouTube's developer policies require checking each video's Made for Kids
-    # status. Only a video positively checked as not made for kids is served;
-    # the store query filters on this too, this is the backstop.
-    if row.get("made_for_kids") is not False:
-        return None
+    # Keep YouTube's Made for Kids classification as metadata, but do not
+    # suppress a curator-approved exercise demo solely because that flag is true.
     try:
         start_s = max(0, int(row.get("start_s") or 0))
         end_raw = row.get("end_s")
@@ -259,11 +256,10 @@ def _classify_video(item: Mapping[str, Any]) -> VideoCheck:
         return VideoCheck(status="unavailable", reason="private", **found)
     if status.get("embeddable") is False:
         return VideoCheck(status="unavailable", reason="embedding disabled", **found)
-    if made_for_kids is True:
-        # Not served: a made-for-kids video brings YouTube's child-directed
-        # rules into the app, and no exercise demo needs one.
-        return VideoCheck(status="unavailable", reason="made for kids", **found)
-    if made_for_kids is not False or status.get("embeddable") is not True:
+    # A curator may deliberately approve an embeddable Made for Kids demo.
+    # We still require YouTube to explicitly report the classification so the
+    # stored metadata remains accurate.
+    if not isinstance(made_for_kids, bool) or status.get("embeddable") is not True:
         return VideoCheck(status="unknown", reason="status not reported", **found)
     return VideoCheck(status="ok", **found)
 
