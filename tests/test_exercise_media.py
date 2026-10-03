@@ -364,7 +364,39 @@ def test_verification_sweep_rechecks_unavailable_rows_and_skips_unknown():
     }
     assert updates["kids"]["made_for_kids"] is True
     assert updates["recovered"]["channel_title"] == "Strength Channel"
-    assert counts == {"ok": 2, "unavailable": 2, "unknown": 1}
+    assert counts == {"ok": 2, "unavailable": 2, "unknown": 1, "provider_stopped": 0}
+
+
+@pytest.mark.parametrize("status_code", [401, 403, 429, 500])
+def test_verification_sweep_stops_on_youtube_provider_failure_without_updates(status_code):
+    rows = [
+        {"exercise_key": f"k{i}", "video_id": f"{i:011d}", "status": "ok"}
+        for i in range(120)
+    ]
+    requests: list[httpx.Request] = []
+    updates: list[str] = []
+
+    class Store:
+        def list_exercise_media_for_verification(self):
+            return rows
+
+        def update_exercise_media_status(self, key, **fields):
+            updates.append(key)
+
+    counts = media.run_media_verification_sweep(
+        Store(),
+        api_key=API_KEY,
+        client=_data_api({}, status_code=status_code, requests=requests),
+    )
+
+    assert len(requests) == 1
+    assert updates == []
+    assert counts == {
+        "ok": 0,
+        "unavailable": 0,
+        "unknown": 50,
+        "provider_stopped": 1,
+    }
 
 
 def test_verification_sweep_stops_between_batches_when_asked():
@@ -472,7 +504,12 @@ def test_verification_sweep_needs_an_api_key(monkeypatch):
         def list_exercise_media_for_verification(self):
             raise AssertionError("must not run without a key")
 
-    assert media.run_media_verification_sweep(Store()) == {"ok": 0, "unavailable": 0, "unknown": 0}
+    assert media.run_media_verification_sweep(Store()) == {
+        "ok": 0,
+        "unavailable": 0,
+        "unknown": 0,
+        "provider_stopped": 0,
+    }
 
 
 # -- curation tool -----------------------------------------------------------
@@ -603,6 +640,68 @@ def test_import_rejects_names_another_row_already_owns(tmp_path, monkeypatch, ca
     assert "line 3: rejected - rdl already belongs to romanian-deadlift-rdl" in out
     assert "line 6: rejected - sled-push-light already belongs to sled-push" in out
     assert [row["exercise_key"] for row in upserts] == ["romanian-deadlift-rdl", "sled-push"]
+
+
+def test_import_aborts_without_writes_on_youtube_provider_failure(tmp_path, monkeypatch, capsys):
+    monkeypatch.setenv(media.YOUTUBE_API_KEY_ENV, API_KEY)
+    checks = {
+        "AAAAAAAAAAA": media.VideoCheck(
+            status="ok",
+            made_for_kids=False,
+            title="Pallof",
+            channel_title="C",
+        ),
+        "BBBBBBBBBBB": media.VideoCheck(
+            status="unknown",
+            reason="data api 403",
+        ),
+    }
+    monkeypatch.setattr(
+        media_tool,
+        "check_youtube_videos",
+        lambda ids, **_: {i: checks[i] for i in ids},
+    )
+    upserts: list[dict] = []
+
+    class Store:
+        def list_exercise_media_for_verification(self):
+            return []
+
+        def upsert_exercise_media(self, row):
+            upserts.append(row)
+
+    monkeypatch.setattr(media_tool, "_build_store", lambda: Store())
+    path = _write_import_csv(
+        tmp_path,
+        [
+            {"exercise_key": "pallof-press", "youtube_url": "AAAAAAAAAAA"},
+            {"exercise_key": "box-jump", "youtube_url": "BBBBBBBBBBB"},
+        ],
+    )
+
+    assert media_tool.main(["import", str(path)]) == 2
+    assert upserts == []
+    err = capsys.readouterr().err
+    assert "YouTube Data API unavailable during import (data api 403)" in err
+    assert "No rows were written" in err
+
+
+def test_verify_returns_operational_error_when_youtube_provider_stops(monkeypatch, capsys):
+    monkeypatch.setenv(media.YOUTUBE_API_KEY_ENV, API_KEY)
+    monkeypatch.setattr(media_tool, "_build_store", lambda: object())
+    monkeypatch.setattr(
+        media_tool,
+        "run_media_verification_sweep",
+        lambda *_args, **_kwargs: {
+            "ok": 0,
+            "unavailable": 0,
+            "unknown": 50,
+            "provider_stopped": 1,
+        },
+    )
+
+    assert media_tool.main(["verify"]) == 2
+    assert "provider_stopped=1" in capsys.readouterr().out
 
 
 def test_import_rejects_made_for_kids_videos(tmp_path, monkeypatch, capsys):
