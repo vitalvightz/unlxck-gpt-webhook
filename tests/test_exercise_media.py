@@ -192,7 +192,7 @@ def test_variants_do_not_inherit_a_base_exercises_video():
     assert "Box Jump (Max Height)" not in resolved
 
 
-def test_index_serves_only_videos_checked_as_not_made_for_kids():
+def test_index_serves_curated_made_for_kids_videos_too():
     index = media.build_media_index(
         [
             _row("checked", made_for_kids=False, channel_title="Coach Channel"),
@@ -200,7 +200,7 @@ def test_index_serves_only_videos_checked_as_not_made_for_kids():
             _row("never-checked", made_for_kids=None),
         ]
     )
-    assert set(index) == {"checked"}
+    assert set(index) == {"checked", "made-for-kids"}
     assert index["checked"].channel_title == "Coach Channel"
 
 
@@ -359,12 +359,12 @@ def test_verification_sweep_rechecks_unavailable_rows_and_skips_unknown():
     assert {key: fields["status"] for key, fields in updates.items()} == {
         "good": "ok",
         "gone": "unavailable",
-        "kids": "unavailable",
+        "kids": "ok",
         "recovered": "ok",
     }
     assert updates["kids"]["made_for_kids"] is True
     assert updates["recovered"]["channel_title"] == "Strength Channel"
-    assert counts == {"ok": 2, "unavailable": 2, "unknown": 1, "provider_stopped": 0}
+    assert counts == {"ok": 3, "unavailable": 1, "unknown": 1, "provider_stopped": 0}
 
 
 @pytest.mark.parametrize("status_code", [401, 403, 429, 500])
@@ -704,11 +704,11 @@ def test_verify_returns_operational_error_when_youtube_provider_stops(monkeypatc
     assert "provider_stopped=1" in capsys.readouterr().out
 
 
-def test_import_rejects_made_for_kids_videos(tmp_path, monkeypatch, capsys):
+def test_import_accepts_made_for_kids_videos(tmp_path, monkeypatch, capsys):
     monkeypatch.setenv(media.YOUTUBE_API_KEY_ENV, API_KEY)
     checks = {
         "AAAAAAAAAAA": media.VideoCheck(status="ok", made_for_kids=False, title="Pallof", channel_title="C"),
-        "BBBBBBBBBBB": media.VideoCheck(status="unavailable", reason="made for kids", made_for_kids=True),
+        "BBBBBBBBBBB": media.VideoCheck(status="ok", made_for_kids=True, title="Box Jump", channel_title="C"),
     }
     monkeypatch.setattr(media_tool, "check_youtube_videos", lambda ids, **_: {i: checks[i] for i in ids})
     path = _write_import_csv(
@@ -719,11 +719,11 @@ def test_import_rejects_made_for_kids_videos(tmp_path, monkeypatch, capsys):
         ],
     )
 
-    assert media_tool.main(["import", str(path), "--dry-run"]) == 1
+    assert media_tool.main(["import", str(path), "--dry-run"]) == 0
 
     out = capsys.readouterr().out
     assert "pallof-press -> AAAAAAAAAAA" in out
-    assert "box-jump rejected - made for kids" in out
+    assert "box-jump -> BBBBBBBBBBB" in out
 
 
 # -- plan read ---------------------------------------------------------------
