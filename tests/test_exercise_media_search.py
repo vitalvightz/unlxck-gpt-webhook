@@ -234,6 +234,11 @@ def test_quota_interruption_resumes_mid_row_without_rewatching_or_resetting_cap(
     assert (row["start_s"], row["end_s"], row["notes"]) == ("10", "20", "keep curator input")
 
 
+def _video_uri(call):
+    # The shared reviewer stub records the full Gemini request payload.
+    return next(part["uri"] for part in call["input"] if part["type"] == "video")
+
+
 def test_redo_weak_retries_legacy_dataforseo_timeout_rows_in_same_pass(tmp_path):
     src = tmp_path / "media.csv"
     _write_csv(src, [
@@ -266,7 +271,7 @@ def test_redo_weak_retries_legacy_dataforseo_timeout_rows_in_same_pass(tmp_path)
 
     assert counts["reviewed"] == 1
     assert counts["skipped"] == 1
-    assert calls == [URL_B]
+    assert [_video_uri(call) for call in calls] == [URL_B]
     rows = _read_csv(src)
     assert rows[0]["ai_verdict"] == "match"
     assert rows[0]["ai_redo_weak_pass"] == "1"
@@ -302,7 +307,7 @@ def test_redo_weak_resumes_forward_after_interruption(tmp_path):
     )
     assert counts["reviewed"] == 1
     assert counts["skipped"] == 1
-    assert second_calls == [URL_C]
+    assert [_video_uri(call) for call in second_calls] == [URL_C]
     resumed = _read_csv(src)
     assert resumed[0]["ai_redo_weak_pass"] == "1"
     assert resumed[1]["ai_redo_weak_pass"] == "1"
