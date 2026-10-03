@@ -78,6 +78,7 @@ from api.services.exercise_media import (  # noqa: E402
     YOUTUBE_API_KEY_ENV,
     YOUTUBE_API_TIMEOUT_SECONDS,
     check_youtube_videos,
+    is_youtube_provider_failure,
     normalize_exercise_key,
     parse_youtube_video_id,
     run_media_verification_sweep,
@@ -434,6 +435,18 @@ def _cmd_import(args: argparse.Namespace) -> int:
             api_key=api_key,
             client=http,
         )
+    provider_failures = [
+        check for check in checks.values()
+        if is_youtube_provider_failure(check)
+    ]
+    if provider_failures:
+        reason = provider_failures[0].reason or "unknown provider failure"
+        print(
+            f"error: YouTube Data API unavailable during import ({reason}). "
+            "No rows were written; retry the same command when the API is available.",
+            file=sys.stderr,
+        )
+        return 2
     for line_no, payload in parsed:
         check = checks[payload["video_id"]]
         if check.status != "ok":
@@ -466,8 +479,13 @@ def _cmd_import(args: argparse.Namespace) -> int:
 
 def _cmd_verify(_: argparse.Namespace) -> int:
     counts = run_media_verification_sweep(_build_store(), api_key=_require_api_key())
-    print(f"ok={counts.get('ok', 0)} unavailable={counts.get('unavailable', 0)} unknown={counts.get('unknown', 0)}")
-    return 0
+    print(
+        f"ok={counts.get('ok', 0)} "
+        f"unavailable={counts.get('unavailable', 0)} "
+        f"unknown={counts.get('unknown', 0)} "
+        f"provider_stopped={counts.get('provider_stopped', 0)}"
+    )
+    return 2 if counts.get("provider_stopped") else 0
 
 
 def _positive_int(value: str) -> int:
