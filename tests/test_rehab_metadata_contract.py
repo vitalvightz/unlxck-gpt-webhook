@@ -165,8 +165,13 @@ def test_legacy_selection_still_returns_drills(phase):
     assert "Consult with a healthcare professional" not in text
 
 
-def test_phase_progression_still_selects_phase_specific_notes():
+def test_phase_progression_still_selects_phase_specific_notes(restorable_bank):
     """A GPP→SPP drill renders its GPP half in GPP and its SPP half in SPP."""
+    # Explicit legacy fixture: reviewed originals now have fixed instructions.
+    for entry in restorable_bank:
+        if entry["location"] == "ankle" and entry["type"] == "sprain":
+            for drill in entry["drills"]:
+                drill["notes"] = "GPP: Rebuild proprioception → SPP: Controlled sport movement → TAPER: Maintain comfortable range"
     gpp = _protocol("ankle sprain", "GPP", parsed_entries=_structured("ankle", "sprain"))
     spp = _protocol("ankle sprain", "SPP", parsed_entries=_structured("ankle", "sprain"))
 

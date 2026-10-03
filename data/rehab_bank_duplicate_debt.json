@@ -74,15 +74,15 @@
     {
       "location": "knee",
       "type": "instability",
-      "rehab_stage": null,
+      "rehab_stage": "load",
       "name": "Mini-Band Lateral Walks",
       "grandfathered_copies": 1
     },
     {
       "location": "knee",
       "type": "instability",
-      "rehab_stage": null,
-      "name": "Reactive Knee Bounces (Foam Pad)",
+      "rehab_stage": "load",
+      "name": "Controlled knee bends on foam pad",
       "grandfathered_copies": 1
     },
     {

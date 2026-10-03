@@ -62,11 +62,7 @@ def _bank_drill(location: str = "ankle", injury_type: str = "sprain") -> dict:
 
 
 def _reviewed_drill(**overrides) -> dict:
-    """The same drill as if its demand had been clinically reviewed.
-
-    Used to exercise the eligible path. It does NOT reflect the shipped bank —
-    see ``test_no_shipped_drill_can_currently_be_logged``.
-    """
+    """Pin a known demand independently of the bank's current review state."""
     drill = {
         **_bank_drill(),
         "load": "low",
@@ -133,13 +129,14 @@ def test_a_drill_without_target_regions_is_not_rehab_work():
 
 
 # ---------------------------------------------------------------------------
-# The shipped bank cannot yet produce evidence, and says so
+# Missing demand remains recordable without becoming capacity evidence
 # ---------------------------------------------------------------------------
 
 
-def test_a_shipped_bank_drill_can_be_logged_with_unknown_demand():
+def test_a_bank_drill_with_missing_demand_can_be_logged():
     """An unreviewed demand must not cost us the observation."""
-    candidate = resolve_rehab_exposure_candidate(_bank_drill(), [_injury()], completion=DONE)
+    candidate = resolve_rehab_exposure_candidate(
+        _reviewed_drill(load=None, impact=None, velocity=None), [_injury()], completion=DONE)
     assert candidate.eligible is True
     assert candidate.demand.load == "unknown"
     assert candidate.demand.impact == "unknown"
@@ -148,7 +145,8 @@ def test_a_shipped_bank_drill_can_be_logged_with_unknown_demand():
 
 def test_unknown_demand_is_flagged_as_non_qualifying_evidence():
     """Recordable, but never positive evidence of capacity."""
-    candidate = resolve_rehab_exposure_candidate(_bank_drill(), [_injury()], completion=DONE)
+    candidate = resolve_rehab_exposure_candidate(
+        _reviewed_drill(load=None, impact=None, velocity=None), [_injury()], completion=DONE)
     event = build_rehab_exposure_event(
         candidate,
         athlete_id=ATHLETE,
