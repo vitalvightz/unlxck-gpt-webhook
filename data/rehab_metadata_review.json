@@ -334,7 +334,7 @@
       "contraction_type": "unknown",
       "sport_specificity": "general_rehab",
       "contact_level": "none",
-      "evidence_notes": "Sources: https://www.nhs.uk/conditions/sprains-and-strains/, https://www.nhs.uk/conditions/sprains-and-strains/. Fixed protective baseline only; no numeric dose or return clearance. Low/moderate eligibility and session allocation cadence are existing product safety/scheduling rules, not a clinical diagnosis or exercise dose."
+      "evidence_notes": "Sources: https://www.nhs.uk/conditions/sprains-and-strains/. Fixed protective baseline only; no numeric dose or return clearance. Low/moderate eligibility and session allocation cadence are existing product safety/scheduling rules, not a clinical diagnosis or exercise dose."
     },
     "flags": [],
     "review_state": "reviewed",
@@ -365,7 +365,7 @@
       "contraction_type": "mixed",
       "sport_specificity": "general_rehab",
       "contact_level": "none",
-      "evidence_notes": "Sources: https://www.nhs.uk/conditions/sprains-and-strains/, https://www.nhs.uk/conditions/sprains-and-strains/. Fixed protective baseline only; no numeric dose or return clearance. Low/moderate eligibility and session allocation cadence are existing product safety/scheduling rules, not a clinical diagnosis or exercise dose."
+      "evidence_notes": "Sources: https://www.nhs.uk/conditions/sprains-and-strains/. Fixed protective baseline only; no numeric dose or return clearance. Low/moderate eligibility and session allocation cadence are existing product safety/scheduling rules, not a clinical diagnosis or exercise dose."
     },
     "flags": [
       "VARIABLE_DEMAND_PROGRESSION",

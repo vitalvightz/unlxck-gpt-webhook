@@ -153,6 +153,7 @@ def main():
         reviewed[identity] = mark_reviewed(group, drill, prior)
     profiles = []
     for region, kind, sources, name, instructions, load, contraction, function, equipment in PROFILES:
+        profile_sources = list(dict.fromkeys([NHS, *sources]))
         group = next(g for g in bank if canonicalize_location_from_registry(g["location"]) == region and g["type"] == kind)
         template = deepcopy(group["drills"][0])
         prescriptions = []
@@ -171,20 +172,20 @@ def main():
                          contraction_type="unknown" if stage == "calm" else contraction,
                          sport_specificity="general_rehab", contact_level="none",
                          dose=None, pain_ceiling=None, allowed_severities=None, progress_when=None, regress_when=None, stop_when=None,
-                         evidence_notes="Sources: " + ", ".join([NHS, *sources])
+                         evidence_notes="Sources: " + ", ".join(profile_sources)
                          + ". Fixed protective baseline only; no numeric dose or return clearance. Low/moderate eligibility and session allocation cadence are existing product safety/scheduling rules, not a clinical diagnosis or exercise dose.")
             group["drills"] = [d for d in group["drills"] if d["id"] != identity] + [drill]
             reviewed[identity] = mark_reviewed(group, drill, reviewed.get(identity), archetype="manual_recovery" if stage == "calm" else "balance_control" if function == "control" else "mobility_rom")
             prescriptions.append(dict(drill_id=identity, bank_hash=content_hash(drill), stage=stage,
                                       instructions=text, dose=None, allowed_severities=["low", "moderate"],
                                       stop_when=["Stop for pain, giving way, slipping or worsening symptoms.", "Seek assessment for deformity, inability to use the joint or loss of sensation."],
-                                      sources=[NHS, *sources]))
+                                      sources=profile_sources))
         registry = LOCATION_REGISTRY.get(region, {})
         restrictions = list(dict.fromkeys([region, registry.get("exclusion_region", region), *registry.get("secondary_exclusion_regions", [])]))
         if region == "ankle":
             restrictions = next(p for p in raw["profiles"] if p["policy_id"] == "ankle_sprain")["blocked_regions"]
         profile = dict(policy_id=f"{region}_{kind}", version=1, pathway_family="ligament_sprain_or_instability",
-                       region=region, injury_type=kind, evidence_sources=[NHS, *sources], prescriptions=prescriptions,
+                       region=region, injury_type=kind, evidence_sources=profile_sources, prescriptions=prescriptions,
                        blocked_regions=restrictions, blocked_tags=[], contact_limit="none", live_stages=["calm", "restore"], transition_overrides={})
         draft = compose_policy(catalog, profile)
         profile.update(status="active", activation="live", content_hash=policy_review_hash(draft), prescriptions=[p.model_dump() for p in draft.prescriptions])
