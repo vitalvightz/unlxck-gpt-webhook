@@ -5,6 +5,7 @@ from copy import deepcopy
 from typing import Any, Mapping, Sequence
 
 from fightcamp.injury_formatting import parse_injury_entry
+from fightcamp.injury_location_registry import get_rehab_location_candidates
 from fightcamp.rehab_clinical import ClinicalPolicy, content_hash, validate_clinical_bank
 from fightcamp.rehab_schema import normalize_severity_bucket
 from fightcamp.rehab_schema import canonical_rehab_locations
@@ -92,7 +93,11 @@ def resolve_injury_policy(
     if injury.get("latest_reported_status") == "improving" and setback and improvement and improvement > setback:
         selection_exposures = [e for e in exposures if (_instant(e.get("response_recorded_at") or e.get("created_at")
                               or (e.get("event_json") or e).get("occurred_at")) or improvement) >= improvement]
-    eligible, _ = filter_rehab_candidates(injury={**injury, "body_region": region, "injury_type": kind, "severity": severity},
+    # Use the existing bank/location aliases just as the bank lookup does.
+    # Canonical biceps must still match reviewed bank metadata spelled bicep.
+    selection_injury = {**injury, "body_region": region, "injury_type": kind, "severity": severity,
+                        "body_region_aliases": get_rehab_location_candidates(region)}
+    eligible, _ = filter_rehab_candidates(injury=selection_injury,
         rehab_stage=str(stage), candidates=candidates, available_equipment=equipment,
         exposures=selection_exposures, activated_stages=policy.live_stages)
     bundle_ids = policy.stage_bundles.get(str(stage))
@@ -107,7 +112,7 @@ def resolve_injury_policy(
         priority = max(prescriptions[d["id"]].priority for d in eligible)
         candidates = [d for d in eligible if prescriptions[d["id"]].priority == priority]
     selected = select_rehab_candidate(
-        injury={**injury, "body_region": region, "injury_type": kind, "severity": severity}, rehab_stage=str(stage),
+        injury=selection_injury, rehab_stage=str(stage),
         candidates=candidates, available_equipment=equipment, exposures=selection_exposures,
         activated_stages=policy.live_stages,
     )
