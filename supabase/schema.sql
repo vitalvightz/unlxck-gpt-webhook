@@ -2682,7 +2682,10 @@ begin
         and s.prescription_snapshot->>'revision' = p_event#>>'{provenance,prescription_revision}'
         and b->>'injury_id' = p_event->>'injury_id' and b->>'injury_episode_id' = p_event->>'injury_episode_id'
         and b->>'rehab_drill_id' = p_event->>'drill_id'
-        and b->>'policy_id' in ('chest_strain','ankle_sprain')
+        and b->>'block_type' = 'rehab'
+        and nullif(btrim(b->>'policy_id'), '') is not null
+        and b->>'policy_id' = p_event#>>'{provenance,policy_id}'
+        and b->'drill_snapshot'->>'rehab_stage' = p_event#>>'{provenance,rehab_stage}'
         and b->'drill_snapshot'->>'rehab_stage' in ('calm','restore')
         and b->'drill_snapshot'->>'laterality_applicability' = 'not_applicable');
   if coalesce(v_side, '') not in ('left','right','bilateral','unknown')

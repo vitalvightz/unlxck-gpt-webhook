@@ -105,6 +105,11 @@ URGENT_PHRASE_TOKENS = {
 
     "muscle rupture",
     "complete muscle tear",
+    # Serious free-text reports must outrank a stored generic strain label.
+    "major tear",
+    "major muscle tear",
+    "complete tear",
+    "full thickness tear",
 
     "shoulder dislocation",
     "patellar dislocation",

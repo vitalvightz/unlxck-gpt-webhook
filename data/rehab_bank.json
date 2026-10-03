@@ -1638,6 +1638,64 @@
         "sport_specificity": "unknown",
         "contact_level": "unknown",
         "evidence_notes": "Target region inherited from the canonical rehab-bank group; other classifications remain unreviewed."
+      },
+      {
+        "id": "calf_strain_recovery_support",
+        "name": "Calf strain recovery support",
+        "notes": "Protect the strained area and avoid activity that aggravates it. During the first 2 to 3 days, rest from exercise that loads it. Use comfortable everyday movement without forcing a stretch. Avoid massage and heat in the early period. Seek assessment for severe or worsening pain, swelling or inability to use the area.",
+        "rehab_stage": "calm",
+        "function": "recovery_downregulation",
+        "equipment": [],
+        "dose": null,
+        "impact": "none",
+        "load": "minimal",
+        "velocity": "low",
+        "pain_ceiling": null,
+        "allowed_severities": null,
+        "progress_when": null,
+        "regress_when": null,
+        "stop_when": null,
+        "target_regions": [
+          "calf"
+        ],
+        "laterality_applicability": "not_applicable",
+        "target_tissues": [
+          "gastrocnemius and soleus muscles"
+        ],
+        "contraction_type": "unknown",
+        "sport_specificity": "general_rehab",
+        "contact_level": "none",
+        "evidence_notes": "Sources: https://www.nhs.uk/conditions/sprains-and-strains/. Fixed baseline variant; no numeric dose. Low/moderate eligibility is the existing product safety gate, not a diagnosed clinical grade. Scheduling is product allocation cadence, not a clinical dose."
+      },
+      {
+        "id": "calf_strain_reviewed_restore",
+        "name": "Supported double-leg calf raise",
+        "notes": "Begin only once pain has settled, you no longer need crutches and you can stand on your toes without pain. Hold a stable chair, share your weight equally over both feet and gently rise onto your toes, then lower slowly. Work at your own pace and stop if painful. Keep both feet on level ground; do not add weight, single-leg work, a step or fatigue progressions.",
+        "rehab_stage": "restore",
+        "function": "activation",
+        "equipment": [
+          "chair"
+        ],
+        "dose": null,
+        "impact": "none",
+        "load": "moderate",
+        "velocity": "low",
+        "pain_ceiling": null,
+        "allowed_severities": null,
+        "progress_when": null,
+        "regress_when": null,
+        "stop_when": null,
+        "target_regions": [
+          "calf"
+        ],
+        "laterality_applicability": "not_applicable",
+        "target_tissues": [
+          "gastrocnemius and soleus muscles"
+        ],
+        "contraction_type": "mixed",
+        "sport_specificity": "general_rehab",
+        "contact_level": "none",
+        "evidence_notes": "Sources: https://www.nhs.uk/conditions/sprains-and-strains/, https://www.hey.nhs.uk/patient-leaflet/soft-tissue-injury-calf-strain/. Fixed baseline variant; no numeric dose. Movement derived from calf_strain_double_leg_calf_raises; original source hash a9da70dd8ac4ad4d3b5f6063b8f655c11dd1a4998301967d5aee267a80751b1e. Low/moderate eligibility is the existing product safety gate, not a diagnosed clinical grade. Scheduling is product allocation cadence, not a clinical dose."
       }
     ]
   },
@@ -4352,6 +4410,64 @@
         "sport_specificity": "unknown",
         "contact_level": "unknown",
         "evidence_notes": "Target region inherited from the canonical rehab-bank group; other classifications remain unreviewed."
+      },
+      {
+        "id": "quads_strain_recovery_support",
+        "name": "Quads strain recovery support",
+        "notes": "Protect the strained area and avoid activity that aggravates it. During the first 2 to 3 days, rest from exercise that loads it. Use comfortable everyday movement without forcing a stretch. Avoid massage and heat in the early period. Seek assessment for severe or worsening pain, swelling or inability to use the area.",
+        "rehab_stage": "calm",
+        "function": "recovery_downregulation",
+        "equipment": [],
+        "dose": null,
+        "impact": "none",
+        "load": "minimal",
+        "velocity": "low",
+        "pain_ceiling": null,
+        "allowed_severities": null,
+        "progress_when": null,
+        "regress_when": null,
+        "stop_when": null,
+        "target_regions": [
+          "quads"
+        ],
+        "laterality_applicability": "not_applicable",
+        "target_tissues": [
+          "quadriceps muscles"
+        ],
+        "contraction_type": "unknown",
+        "sport_specificity": "general_rehab",
+        "contact_level": "none",
+        "evidence_notes": "Sources: https://www.nhs.uk/conditions/sprains-and-strains/. Fixed baseline variant; no numeric dose. Low/moderate eligibility is the existing product safety gate, not a diagnosed clinical grade. Scheduling is product allocation cadence, not a clinical dose."
+      },
+      {
+        "id": "quads_strain_reviewed_restore",
+        "name": "Supported knee movement with towel",
+        "notes": "When pain no longer prevents comfortable movement, sit with your foot supported on a towel on a smooth floor. Gently slide the foot to bend and straighten the affected knee within a pain-free range. Keep the movement slow and self-paced. Do not force knee flexion, add resistance or increase speed. Stop if movement becomes painful or symptoms worsen.",
+        "rehab_stage": "restore",
+        "function": "mobility",
+        "equipment": [
+          "towel"
+        ],
+        "dose": null,
+        "impact": "none",
+        "load": "minimal",
+        "velocity": "low",
+        "pain_ceiling": null,
+        "allowed_severities": null,
+        "progress_when": null,
+        "regress_when": null,
+        "stop_when": null,
+        "target_regions": [
+          "quads"
+        ],
+        "laterality_applicability": "side_specific",
+        "target_tissues": [
+          "quadriceps muscles"
+        ],
+        "contraction_type": "mixed",
+        "sport_specificity": "general_rehab",
+        "contact_level": "none",
+        "evidence_notes": "Sources: https://www.nhs.uk/conditions/sprains-and-strains/, https://pmc.ncbi.nlm.nih.gov/articles/PMC2941577/. Fixed baseline variant; no numeric dose. Movement derived from quads_unspecified_sliding_leg_extensions_towel_under_foot; original source hash eb39e353d8e5d72a9118020aaf1994f1c773f972ef127a464ff43031f80607f6. Low/moderate eligibility is the existing product safety gate, not a diagnosed clinical grade. Scheduling is product allocation cadence, not a clinical dose."
       }
     ]
   },
@@ -4588,6 +4704,64 @@
         "sport_specificity": "unknown",
         "contact_level": "unknown",
         "evidence_notes": "Target region inherited from the canonical rehab-bank group; other classifications remain unreviewed."
+      },
+      {
+        "id": "hamstring_strain_recovery_support",
+        "name": "Hamstring strain recovery support",
+        "notes": "Protect the strained area and avoid activity that aggravates it. During the first 2 to 3 days, rest from exercise that loads it. Use comfortable everyday movement without forcing a stretch. Avoid massage and heat in the early period. Seek assessment for severe or worsening pain, swelling or inability to use the area.",
+        "rehab_stage": "calm",
+        "function": "recovery_downregulation",
+        "equipment": [],
+        "dose": null,
+        "impact": "none",
+        "load": "minimal",
+        "velocity": "low",
+        "pain_ceiling": null,
+        "allowed_severities": null,
+        "progress_when": null,
+        "regress_when": null,
+        "stop_when": null,
+        "target_regions": [
+          "hamstrings",
+          "hamstring"
+        ],
+        "laterality_applicability": "not_applicable",
+        "target_tissues": [
+          "hamstring muscles"
+        ],
+        "contraction_type": "unknown",
+        "sport_specificity": "general_rehab",
+        "contact_level": "none",
+        "evidence_notes": "Sources: https://www.nhs.uk/conditions/sprains-and-strains/. Fixed baseline variant; no numeric dose. Low/moderate eligibility is the existing product safety gate, not a diagnosed clinical grade. Scheduling is product allocation cadence, not a clinical dose."
+      },
+      {
+        "id": "hamstring_strain_reviewed_restore",
+        "name": "Bent-knee double-leg hamstring bridge",
+        "notes": "When comfortable movement is possible, lie on your back with both knees bent and feet supported close to your hips. Gently lift into a double-leg bridge and hold briefly at a comfortable height, then lower. Keep the work pain-free and self-paced. Do not walk the feet out, straighten the knees, add resistance or work to fatigue.",
+        "rehab_stage": "restore",
+        "function": "activation",
+        "equipment": [],
+        "dose": null,
+        "impact": "none",
+        "load": "moderate",
+        "velocity": "low",
+        "pain_ceiling": null,
+        "allowed_severities": null,
+        "progress_when": null,
+        "regress_when": null,
+        "stop_when": null,
+        "target_regions": [
+          "hamstrings",
+          "hamstring"
+        ],
+        "laterality_applicability": "not_applicable",
+        "target_tissues": [
+          "hamstring muscles"
+        ],
+        "contraction_type": "isometric",
+        "sport_specificity": "general_rehab",
+        "contact_level": "none",
+        "evidence_notes": "Sources: https://www.nhs.uk/conditions/sprains-and-strains/, https://pmc.ncbi.nlm.nih.gov/articles/PMC2867336/. Fixed baseline variant; no numeric dose. Movement derived from hamstrings_strain_isometric_hamstring_bridge; original source hash 5c16f4e4486477e1bdc63e46037d295ef03193f227f34e20d756bf40b6543974. Low/moderate eligibility is the existing product safety gate, not a diagnosed clinical grade. Scheduling is product allocation cadence, not a clinical dose."
       }
     ]
   },
@@ -4883,6 +5057,62 @@
         "sport_specificity": "unknown",
         "contact_level": "unknown",
         "evidence_notes": "Target region inherited from the canonical rehab-bank group; other classifications remain unreviewed."
+      },
+      {
+        "id": "groin_strain_recovery_support",
+        "name": "Groin strain recovery support",
+        "notes": "Protect the strained area and avoid activity that aggravates it. During the first 2 to 3 days, rest from exercise that loads it. Use comfortable everyday movement without forcing a stretch. Avoid massage and heat in the early period. Seek assessment for severe or worsening pain, swelling or inability to use the area.",
+        "rehab_stage": "calm",
+        "function": "recovery_downregulation",
+        "equipment": [],
+        "dose": null,
+        "impact": "none",
+        "load": "minimal",
+        "velocity": "low",
+        "pain_ceiling": null,
+        "allowed_severities": null,
+        "progress_when": null,
+        "regress_when": null,
+        "stop_when": null,
+        "target_regions": [
+          "groin"
+        ],
+        "laterality_applicability": "not_applicable",
+        "target_tissues": [
+          "hip adductor muscles"
+        ],
+        "contraction_type": "unknown",
+        "sport_specificity": "general_rehab",
+        "contact_level": "none",
+        "evidence_notes": "Sources: https://www.nhs.uk/conditions/sprains-and-strains/. Fixed baseline variant; no numeric dose. Low/moderate eligibility is the existing product safety gate, not a diagnosed clinical grade. Scheduling is product allocation cadence, not a clinical dose."
+      },
+      {
+        "id": "groin_strain_reviewed_restore",
+        "name": "Unresisted side-lying hip adduction",
+        "notes": "Once symptoms have settled enough for comfortable movement, lie on the affected side with the upper leg supported out of the way. Slowly lift and lower the lower leg through a small comfortable range. Keep the work pain-free and self-paced. Stop if groin pain increases during or after the work. Do not add ankle weights, cables, fast repetitions or fatigue work.",
+        "rehab_stage": "restore",
+        "function": "activation",
+        "equipment": [],
+        "dose": null,
+        "impact": "none",
+        "load": "low",
+        "velocity": "low",
+        "pain_ceiling": null,
+        "allowed_severities": null,
+        "progress_when": null,
+        "regress_when": null,
+        "stop_when": null,
+        "target_regions": [
+          "groin"
+        ],
+        "laterality_applicability": "side_specific",
+        "target_tissues": [
+          "hip adductor muscles"
+        ],
+        "contraction_type": "mixed",
+        "sport_specificity": "general_rehab",
+        "contact_level": "none",
+        "evidence_notes": "Sources: https://www.nhs.uk/conditions/sprains-and-strains/, https://pmc.ncbi.nlm.nih.gov/articles/PMC10569248/. Fixed baseline variant; no numeric dose. Movement derived from groin_strain_side_lying_hip_adduction; original source hash 8a469661f9a67b9a4fb11f44d87b5a04a860d89bd35a02612f79f1ad38a8bb9e. Low/moderate eligibility is the existing product safety gate, not a diagnosed clinical grade. Scheduling is product allocation cadence, not a clinical dose."
       }
     ]
   },

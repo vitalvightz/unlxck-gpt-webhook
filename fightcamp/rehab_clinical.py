@@ -203,6 +203,7 @@ def validate_pathway_catalog(catalog: PathwayCatalog) -> list[str]:
 
 
 def validate_clinical_bank(policies: tuple[ClinicalPolicy, ...], bank: list[dict]) -> list[str]:
+    from .injury_location_registry import canonicalize_location_from_registry
     indexed: dict[str, list[tuple[dict, dict]]] = {}
     for group in bank:
         for drill in group.get("drills", []):
@@ -219,7 +220,8 @@ def validate_clinical_bank(policies: tuple[ClinicalPolicy, ...], bank: list[dict
             group, drill = matches[0]
             if content_hash(drill) != prescription.bank_hash:
                 errors.append(f"{policy.policy_id}: stale bank review: {prescription.drill_id}")
-            if group.get("location") != policy.region or group.get("type") not in {policy.injury_type, "unspecified"}:
+            if (canonicalize_location_from_registry(group.get("location")) != canonicalize_location_from_registry(policy.region)
+                    or group.get("type") not in {policy.injury_type, "unspecified"}):
                 errors.append(f"{policy.policy_id}: incompatible drill region or injury type")
             if policy.status == "active":
                 for field in ("load", "impact", "velocity", "equipment", "function", "target_tissues"):

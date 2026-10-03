@@ -287,6 +287,301 @@
         ]
       },
       "transition_overrides": {}
+    },
+    {
+      "policy_id": "hamstring_strain",
+      "version": 1,
+      "pathway_family": "muscle_strain",
+      "region": "hamstring",
+      "injury_type": "strain",
+      "evidence_sources": [
+        "https://www.nhs.uk/conditions/sprains-and-strains/",
+        "https://pmc.ncbi.nlm.nih.gov/articles/PMC2867336/"
+      ],
+      "prescriptions": [
+        {
+          "drill_id": "hamstring_strain_recovery_support",
+          "bank_hash": "63ea792dd6349c146d7cba0afee3978bf5e2da1fadb2af2938c4fb6d366bcf04",
+          "stage": "calm",
+          "instructions": "Protect the strained area and avoid activity that aggravates it. During the first 2 to 3 days, rest from exercise that loads it. Use comfortable everyday movement without forcing a stretch. Avoid massage and heat in the early period. Seek assessment for severe or worsening pain, swelling or inability to use the area.",
+          "dose": null,
+          "camp_doses": {},
+          "readiness_doses": {},
+          "allowed_severities": [
+            "low",
+            "moderate"
+          ],
+          "stop_when": [
+            "Stop if movement is painful or symptoms worsen during or after the work.",
+            "Seek assessment for severe or worsening pain, swelling or inability to use the area."
+          ],
+          "frequency": "scheduled_sessions",
+          "minimum_gap_days": 1,
+          "priority": 0,
+          "sources": [
+            "https://www.nhs.uk/conditions/sprains-and-strains/"
+          ]
+        },
+        {
+          "drill_id": "hamstring_strain_reviewed_restore",
+          "bank_hash": "6ca3dea607c5d7d424ec2017be0a318f9b5bad5a81a39298133226b738277914",
+          "stage": "restore",
+          "instructions": "When comfortable movement is possible, lie on your back with both knees bent and feet supported close to your hips. Gently lift into a double-leg bridge and hold briefly at a comfortable height, then lower. Keep the work pain-free and self-paced. Do not walk the feet out, straighten the knees, add resistance or work to fatigue.",
+          "dose": null,
+          "camp_doses": {},
+          "readiness_doses": {},
+          "allowed_severities": [
+            "low",
+            "moderate"
+          ],
+          "stop_when": [
+            "Stop if movement is painful or symptoms worsen during or after the work.",
+            "Seek assessment for severe or worsening pain, swelling or inability to use the area."
+          ],
+          "frequency": "scheduled_sessions",
+          "minimum_gap_days": 1,
+          "priority": 0,
+          "sources": [
+            "https://www.nhs.uk/conditions/sprains-and-strains/",
+            "https://pmc.ncbi.nlm.nih.gov/articles/PMC2867336/"
+          ]
+        }
+      ],
+      "blocked_regions": [
+        "hamstrings",
+        "hamstring"
+      ],
+      "blocked_tags": [],
+      "contact_limit": "none",
+      "live_stages": [
+        "calm",
+        "restore"
+      ],
+      "transition_overrides": {},
+      "status": "active",
+      "activation": "live",
+      "content_hash": "a1c0b87df43fe179944f4dce4376101b6594df2c21cc3c343a2d73014788de92"
+    },
+    {
+      "policy_id": "calf_strain",
+      "version": 1,
+      "pathway_family": "muscle_strain",
+      "region": "calf",
+      "injury_type": "strain",
+      "evidence_sources": [
+        "https://www.nhs.uk/conditions/sprains-and-strains/",
+        "https://www.hey.nhs.uk/patient-leaflet/soft-tissue-injury-calf-strain/"
+      ],
+      "prescriptions": [
+        {
+          "drill_id": "calf_strain_recovery_support",
+          "bank_hash": "07857a81e393d014b6ed9381cec847500ed5daa4f0a6ce34a45c0eb5e25e253d",
+          "stage": "calm",
+          "instructions": "Protect the strained area and avoid activity that aggravates it. During the first 2 to 3 days, rest from exercise that loads it. Use comfortable everyday movement without forcing a stretch. Avoid massage and heat in the early period. Seek assessment for severe or worsening pain, swelling or inability to use the area.",
+          "dose": null,
+          "camp_doses": {},
+          "readiness_doses": {},
+          "allowed_severities": [
+            "low",
+            "moderate"
+          ],
+          "stop_when": [
+            "Stop if movement is painful or symptoms worsen during or after the work.",
+            "Seek assessment for severe or worsening pain, swelling or inability to use the area."
+          ],
+          "frequency": "scheduled_sessions",
+          "minimum_gap_days": 1,
+          "priority": 0,
+          "sources": [
+            "https://www.nhs.uk/conditions/sprains-and-strains/"
+          ]
+        },
+        {
+          "drill_id": "calf_strain_reviewed_restore",
+          "bank_hash": "4d6bf93735c2754917bd416b8b1b28eaa42c59eb521bb5b5b8e0363a17859b6e",
+          "stage": "restore",
+          "instructions": "Begin only once pain has settled, you no longer need crutches and you can stand on your toes without pain. Hold a stable chair, share your weight equally over both feet and gently rise onto your toes, then lower slowly. Work at your own pace and stop if painful. Keep both feet on level ground; do not add weight, single-leg work, a step or fatigue progressions.",
+          "dose": null,
+          "camp_doses": {},
+          "readiness_doses": {},
+          "allowed_severities": [
+            "low",
+            "moderate"
+          ],
+          "stop_when": [
+            "Stop if movement is painful or symptoms worsen during or after the work.",
+            "Seek assessment for severe or worsening pain, swelling or inability to use the area."
+          ],
+          "frequency": "scheduled_sessions",
+          "minimum_gap_days": 1,
+          "priority": 0,
+          "sources": [
+            "https://www.nhs.uk/conditions/sprains-and-strains/",
+            "https://www.hey.nhs.uk/patient-leaflet/soft-tissue-injury-calf-strain/"
+          ]
+        }
+      ],
+      "blocked_regions": [
+        "calf"
+      ],
+      "blocked_tags": [],
+      "contact_limit": "none",
+      "live_stages": [
+        "calm",
+        "restore"
+      ],
+      "transition_overrides": {},
+      "status": "active",
+      "activation": "live",
+      "content_hash": "e304ad21484d443c6e41b707a88c47940f66dfaf787bacd30ce2863153172fad"
+    },
+    {
+      "policy_id": "groin_strain",
+      "version": 1,
+      "pathway_family": "muscle_strain",
+      "region": "groin",
+      "injury_type": "strain",
+      "evidence_sources": [
+        "https://www.nhs.uk/conditions/sprains-and-strains/",
+        "https://pmc.ncbi.nlm.nih.gov/articles/PMC10569248/"
+      ],
+      "prescriptions": [
+        {
+          "drill_id": "groin_strain_recovery_support",
+          "bank_hash": "2b296ae92fbe315b31e598f2f12660b49bc85eefccfeeb239deb45c61710c047",
+          "stage": "calm",
+          "instructions": "Protect the strained area and avoid activity that aggravates it. During the first 2 to 3 days, rest from exercise that loads it. Use comfortable everyday movement without forcing a stretch. Avoid massage and heat in the early period. Seek assessment for severe or worsening pain, swelling or inability to use the area.",
+          "dose": null,
+          "camp_doses": {},
+          "readiness_doses": {},
+          "allowed_severities": [
+            "low",
+            "moderate"
+          ],
+          "stop_when": [
+            "Stop if movement is painful or symptoms worsen during or after the work.",
+            "Seek assessment for severe or worsening pain, swelling or inability to use the area."
+          ],
+          "frequency": "scheduled_sessions",
+          "minimum_gap_days": 1,
+          "priority": 0,
+          "sources": [
+            "https://www.nhs.uk/conditions/sprains-and-strains/"
+          ]
+        },
+        {
+          "drill_id": "groin_strain_reviewed_restore",
+          "bank_hash": "ae6466e819124fd0033330630e31519b402c9f6d860b840aff20eb777381a572",
+          "stage": "restore",
+          "instructions": "Once symptoms have settled enough for comfortable movement, lie on the affected side with the upper leg supported out of the way. Slowly lift and lower the lower leg through a small comfortable range. Keep the work pain-free and self-paced. Stop if groin pain increases during or after the work. Do not add ankle weights, cables, fast repetitions or fatigue work.",
+          "dose": null,
+          "camp_doses": {},
+          "readiness_doses": {},
+          "allowed_severities": [
+            "low",
+            "moderate"
+          ],
+          "stop_when": [
+            "Stop if movement is painful or symptoms worsen during or after the work.",
+            "Seek assessment for severe or worsening pain, swelling or inability to use the area."
+          ],
+          "frequency": "scheduled_sessions",
+          "minimum_gap_days": 1,
+          "priority": 0,
+          "sources": [
+            "https://www.nhs.uk/conditions/sprains-and-strains/",
+            "https://pmc.ncbi.nlm.nih.gov/articles/PMC10569248/"
+          ]
+        }
+      ],
+      "blocked_regions": [
+        "groin"
+      ],
+      "blocked_tags": [],
+      "contact_limit": "none",
+      "live_stages": [
+        "calm",
+        "restore"
+      ],
+      "transition_overrides": {},
+      "status": "active",
+      "activation": "live",
+      "content_hash": "fb11794415ecb2b4a5b191469a2d52e6fe89860dc700f872aa6be4477a1a53b8"
+    },
+    {
+      "policy_id": "quads_strain",
+      "version": 1,
+      "pathway_family": "muscle_strain",
+      "region": "quads",
+      "injury_type": "strain",
+      "evidence_sources": [
+        "https://www.nhs.uk/conditions/sprains-and-strains/",
+        "https://pmc.ncbi.nlm.nih.gov/articles/PMC2941577/"
+      ],
+      "prescriptions": [
+        {
+          "drill_id": "quads_strain_recovery_support",
+          "bank_hash": "097b14e3c6b3456bff52f845e9f413b32acb170d910dc97ab66e28be110367e0",
+          "stage": "calm",
+          "instructions": "Protect the strained area and avoid activity that aggravates it. During the first 2 to 3 days, rest from exercise that loads it. Use comfortable everyday movement without forcing a stretch. Avoid massage and heat in the early period. Seek assessment for severe or worsening pain, swelling or inability to use the area.",
+          "dose": null,
+          "camp_doses": {},
+          "readiness_doses": {},
+          "allowed_severities": [
+            "low",
+            "moderate"
+          ],
+          "stop_when": [
+            "Stop if movement is painful or symptoms worsen during or after the work.",
+            "Seek assessment for severe or worsening pain, swelling or inability to use the area."
+          ],
+          "frequency": "scheduled_sessions",
+          "minimum_gap_days": 1,
+          "priority": 0,
+          "sources": [
+            "https://www.nhs.uk/conditions/sprains-and-strains/"
+          ]
+        },
+        {
+          "drill_id": "quads_strain_reviewed_restore",
+          "bank_hash": "0057db2cf17908c95e8faec649abed79e7923f732c8d061d148f0920c3f97769",
+          "stage": "restore",
+          "instructions": "When pain no longer prevents comfortable movement, sit with your foot supported on a towel on a smooth floor. Gently slide the foot to bend and straighten the affected knee within a pain-free range. Keep the movement slow and self-paced. Do not force knee flexion, add resistance or increase speed. Stop if movement becomes painful or symptoms worsen.",
+          "dose": null,
+          "camp_doses": {},
+          "readiness_doses": {},
+          "allowed_severities": [
+            "low",
+            "moderate"
+          ],
+          "stop_when": [
+            "Stop if movement is painful or symptoms worsen during or after the work.",
+            "Seek assessment for severe or worsening pain, swelling or inability to use the area."
+          ],
+          "frequency": "scheduled_sessions",
+          "minimum_gap_days": 1,
+          "priority": 0,
+          "sources": [
+            "https://www.nhs.uk/conditions/sprains-and-strains/",
+            "https://pmc.ncbi.nlm.nih.gov/articles/PMC2941577/"
+          ]
+        }
+      ],
+      "blocked_regions": [
+        "quads",
+        "quad",
+        "knee"
+      ],
+      "blocked_tags": [],
+      "contact_limit": "none",
+      "live_stages": [
+        "calm",
+        "restore"
+      ],
+      "transition_overrides": {},
+      "status": "active",
+      "activation": "live",
+      "content_hash": "afead377947a2879a2d0e8edc6f14e8bfc53c787173f05c71c53e00a9c8369c5"
     }
   ]
 }
