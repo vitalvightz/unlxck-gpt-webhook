@@ -28,9 +28,11 @@ from api.datetimes import parse_calendar_date as _parse_date
 WEEKDAYS = ("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
 # Detects an athlete-owned hard-sparring / contact day from its card text. Matches
 # the coach-neutral labels ("Hard sparring", "Technical-only combat", "controlled
-# hard contact") and the legacy "coach-led" wording so stored plans still resolve.
+# hard contact", "Light Combat / Technical") and the legacy "coach-led" wording so
+# stored plans still resolve.
 _COACH_LED_RE = re.compile(
-    r"\b(coach|spar(?:r(?:ing|ed)|s)?|boxing|pads?|mitts?|technical[-\s]+only|controlled\s+hard\s+contact)\b",
+    r"\b(coach|spar(?:r(?:ing|ed)|s)?|boxing|pads?|mitts?|technical[-\s]+only|controlled\s+hard\s+contact"
+    r"|light\s+(?:technical\s+)?combat)\b",
     re.I,
 )
 

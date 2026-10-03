@@ -61,6 +61,9 @@ class Store:
     def list_session_completions(self, athlete_id, *, limit=30):
         return []
 
+    def list_session_completions_from_day(self, athlete_id, training_day, *, limit=200):
+        return []
+
     def list_injury_flags(self, athlete_id, *, statuses=("open", "monitoring"), limit=20):
         return []
 

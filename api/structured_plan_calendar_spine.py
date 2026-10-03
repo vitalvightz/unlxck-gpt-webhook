@@ -137,21 +137,25 @@ def _resolve_days_until_fight(planning_brief: dict[str, Any]) -> int | None:
     is the authoritative camp start regardless of whether that day carries a
     session.
     """
+    athletes = [
+        source
+        for source in (planning_brief.get("athlete_snapshot"), planning_brief.get("athlete_model"))
+        if isinstance(source, dict)
+    ]
+    # A plan that includes its generation day anchors days_until_fight on the
+    # day before generation, so the raw value is one past the real distance and
+    # would open the calendar on an empty day that is already over.
+    shift = 1 if any(athlete.get("include_generation_day") is True for athlete in athletes) else 0
     for source in (
         planning_brief.get("days_until_fight"),
-        (planning_brief.get("athlete_snapshot") or {}).get("days_until_fight")
-        if isinstance(planning_brief.get("athlete_snapshot"), dict)
-        else None,
-        (planning_brief.get("athlete_model") or {}).get("days_until_fight")
-        if isinstance(planning_brief.get("athlete_model"), dict)
-        else None,
+        *(athlete.get("days_until_fight") for athlete in athletes),
     ):
         try:
             value = int(source)
         except (TypeError, ValueError):
             continue
-        if value >= 0:
-            return value
+        if value - shift >= 0:
+            return value - shift
     return None
 
 

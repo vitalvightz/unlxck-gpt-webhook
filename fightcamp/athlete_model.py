@@ -217,6 +217,10 @@ def _build_athlete_model(
         "camp_length_weeks": camp_length_weeks,
         "phase_weeks": dict(training_context.phase_weeks or {}),
         "days_until_fight": training_context.days_until_fight,
+        # days_until_fight counts from the day BEFORE generation when this is set
+        # (see PlanInput), so consumers wanting the athlete's real distance to
+        # the fight subtract one.
+        "include_generation_day": bool(getattr(training_context, "include_generation_day", False)),
         "fight_date": getattr(training_context, "next_fight_date", "") or "",
         "next_fight_date": getattr(training_context, "next_fight_date", "") or "",
         "fatigue": training_context.fatigue,
