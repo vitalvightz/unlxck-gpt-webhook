@@ -1,3 +1,5 @@
+import traceback
+
 from tests.support import _build_client
 
 ATHLETE = {"Authorization": "Bearer athlete-token"}
@@ -21,14 +23,16 @@ def test_week_plan_lookup_failure_does_not_break_saved_completion():
     original_get_plan = store.get_plan_for_athlete
     calls = 0
 
-    def fail_second_plan_lookup(plan_id, athlete_id):
+    def fail_week_evaluation_plan_lookup(plan_id, athlete_id):
         nonlocal calls
         calls += 1
-        if calls == 2:
+        # Only the week-progress evaluation's read fails; the completion write,
+        # Today rebuild and XP eligibility reads before it succeed.
+        if any(frame.name == "try_award_completed_week_for_completion" for frame in traceback.extract_stack()):
             raise RuntimeError("week evaluation plan read failed")
         return original_get_plan(plan_id, athlete_id)
 
-    store.get_plan_for_athlete = fail_second_plan_lookup
+    store.get_plan_for_athlete = fail_week_evaluation_plan_lookup
 
     response = client.post(
         "/api/today/session-completion",
@@ -42,5 +46,5 @@ def test_week_plan_lookup_failure_does_not_break_saved_completion():
 
     assert response.status_code == 201
     assert response.json()["completion_status"] == "started"
-    assert calls == 2
+    assert calls >= 2
     assert len(store.session_completions["athlete-1"]) == 1
