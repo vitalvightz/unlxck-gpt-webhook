@@ -563,6 +563,46 @@ def test_dataforseo_retries_transient_http_failures_before_success(monkeypatch):
     assert sleeps == [discovery.DATAFORSEO_RETRY_BACKOFF_SECONDS] * 2
 
 
+def test_dataforseo_retries_empty_live_task_before_success(monkeypatch):
+    calls, sleeps = [], []
+    monkeypatch.setattr(discovery.time, "sleep", sleeps.append)
+    empty = httpx.Response(
+        200,
+        json={"status_code": 20000, "tasks_count": 0, "tasks_error": 0, "tasks": []},
+    )
+    searcher = _dataforseo_searcher(
+        [empty, empty, ["BBBBBBBBBBB"]],
+        calls,
+    )
+
+    assert next(iter(searcher.search(_row(), set()))) == URL_B
+    assert len(calls) == 3
+    assert sleeps == [discovery.DATAFORSEO_EMPTY_RESULT_BACKOFF_SECONDS] * 2
+
+
+def test_dataforseo_empty_live_task_exhaustion_rewinds_query(monkeypatch):
+    calls, sleeps = [], []
+    monkeypatch.setattr(discovery.time, "sleep", sleeps.append)
+    empty = httpx.Response(
+        200,
+        json={"status_code": 20000, "tasks_count": 0, "tasks_error": 0, "tasks": []},
+    )
+    searcher = _dataforseo_searcher(
+        [empty] * (discovery.DATAFORSEO_EMPTY_RESULT_RETRIES + 1),
+        calls,
+    )
+    progress = discovery.SearchProgress()
+
+    with pytest.raises(discovery.CandidateSearchError, match="no task result"):
+        list(searcher.search(_row(), set(), progress))
+
+    assert len(calls) == discovery.DATAFORSEO_EMPTY_RESULT_RETRIES + 1
+    assert progress.queries_used == 0
+    assert sleeps == [
+        discovery.DATAFORSEO_EMPTY_RESULT_BACKOFF_SECONDS
+    ] * discovery.DATAFORSEO_EMPTY_RESULT_RETRIES
+
+
 def test_dataforseo_transport_exhaustion_is_provider_error_and_rewinds_query():
     calls = []
     searcher = _dataforseo_searcher(
