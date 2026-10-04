@@ -18,6 +18,8 @@ DATAFORSEO_TIMEOUT_SECONDS = 30.0
 DATAFORSEO_TIMEOUT_RETRIES = 2
 DATAFORSEO_RETRY_BACKOFF_SECONDS = 1.0
 DATAFORSEO_TRANSIENT_HTTP_STATUS_CODES = {408, 425, 500, 502, 503, 504}
+DATAFORSEO_EMPTY_RESULT_RETRIES = 3
+DATAFORSEO_EMPTY_RESULT_BACKOFF_SECONDS = 2.0
 MAX_SEARCH_QUERIES = 3
 
 SEARCH_PROVIDER_ENV = "EXERCISE_MEDIA_SEARCH_PROVIDER"
@@ -358,7 +360,33 @@ class DataForSEOCandidateSearch:
                 body = response.json()
                 error = _dataforseo_status_error(body)
                 if error is not None:
-                    raise error
+                    # A freshly activated account can occasionally return a
+                    # successful top-level response with no task payload from
+                    # the Live endpoint. Treat that as transient and retry the
+                    # same query a few times before stopping the batch.
+                    if str(error) == "DataForSEO search returned no task result":
+                        for empty_attempt in range(DATAFORSEO_EMPTY_RESULT_RETRIES):
+                            time.sleep(DATAFORSEO_EMPTY_RESULT_BACKOFF_SECONDS)
+                            response = self._client.post(
+                                DATAFORSEO_SEARCH_URL,
+                                auth=(self.login, self.password),
+                                json=[
+                                    {
+                                        "keyword": query,
+                                        "location_code": self.location_code,
+                                        "language_code": self.language_code,
+                                        "device": "desktop",
+                                    }
+                                ],
+                            )
+                            if response.status_code != 200:
+                                break
+                            body = response.json()
+                            error = _dataforseo_status_error(body)
+                            if error is None:
+                                break
+                    if error is not None:
+                        raise error
             except CandidateSearchQuotaExceeded as exc:
                 _rewind_query(progress, checkpoint)
                 self._failure = (CandidateSearchQuotaExceeded, str(exc))
