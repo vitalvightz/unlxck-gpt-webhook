@@ -126,13 +126,17 @@ def test_prompt_carries_exercise_cue_and_injection_guard():
 # -- API calls -----------------------------------------------------------------
 
 
-def test_review_sends_youtube_url_and_schema():
+def test_review_sends_agentic_youtube_url_and_schema():
     calls: list = []
     result = _reviewer({URL_A: _answer()}, calls).review(URL_A, _row())
     assert result.verdict == "match"
     payload = calls[0]
-    assert {"type": "video", "uri": URL_A} in payload["input"]
+    assert {"type": "video", "uri": URL_A, "processing": "agentic"} in payload["input"]
     assert payload["response_format"]["mime_type"] == "application/json"
+
+
+def test_default_review_model_is_flash_lite():
+    assert review.DEFAULT_MODEL == "gemini-3.5-flash-lite"
 
 
 def test_review_retries_without_schema_on_400():
