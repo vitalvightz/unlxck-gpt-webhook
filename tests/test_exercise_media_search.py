@@ -104,13 +104,24 @@ def _ytdlp_searcher(responses, calls=None, sleeps=None):
                 return response
             entries = []
             for item in response:
-                entries.append(item if isinstance(item, dict) else {"id": item})
+                entries.append(
+                    item if isinstance(item, dict) else {"id": item, "duration": 60}
+                )
             return {"entries": entries}
 
     return discovery.YtDlpCandidateSearch(
         ydl_factory=FakeYDL,
         sleep=(sleeps.append if sleeps is not None else (lambda _: None)),
     )
+
+
+def test_ytdlp_rejects_long_and_unknown_duration_candidates():
+    searcher = _ytdlp_searcher([[
+        {"id": "AAAAAAAAAAA", "duration": 60},
+        {"id": "BBBBBBBBBBB", "duration": discovery.YTDLP_MAX_DURATION_SECONDS + 1},
+        {"id": "CCCCCCCCCCC"},
+    ]])
+    assert list(searcher.search(_row(), set())) == [URL_A]
 
 
 def test_queries_use_exercise_metadata_without_private_cues():
