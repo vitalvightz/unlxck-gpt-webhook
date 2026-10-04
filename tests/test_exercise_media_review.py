@@ -717,6 +717,37 @@ def test_resume_with_separate_out_file_skips_saved_verdicts(tmp_path):
     assert _read_csv(src)[0].get("ai_verdict") is None  # input untouched
 
 
+def test_cli_resume_uses_existing_output_as_authoritative_checkpoint(tmp_path, monkeypatch, capsys):
+    from tools import exercise_media as tool
+
+    src = tmp_path / "media.csv"
+    out = tmp_path / "media.reviewed.csv"
+    _write_csv(src, [_row(exercise_key="sandbag-get-up-complex", suggested_url=URL_A)])
+    _write_csv(out, [
+        _row(
+            exercise_key="sandbag-get-up-complex",
+            suggested_url=URL_A,
+            ai_verdict="match",
+            ai_confidence="1.00",
+            ai_orientation="landscape",
+            ai_start_s="22",
+            ai_end_s="44",
+            needs_manual_video="false",
+            ai_review_progress="",
+        )
+    ])
+
+    calls = []
+    monkeypatch.setattr(review, "build_reviewer", lambda model=None: _reviewer({}, calls))
+
+    assert tool.main([
+        "review", str(src), "--out", str(out), "--no-search", "--delay", "0"
+    ]) == 0
+    assert calls == []
+    assert _read_csv(out)[0]["ai_verdict"] == "match"
+    assert f"resume checkpoint: {out}" in capsys.readouterr().out
+
+
 def test_candidates_export_without_suggestions_is_rejected_clearly(tmp_path):
     from tools.exercise_media import CSV_COLUMNS
 
