@@ -43,7 +43,7 @@ from tools.exercise_media_search import (
 
 INTERACTIONS_URL = "https://generativelanguage.googleapis.com/v1beta/interactions"
 API_REVISION = "2026-05-20"
-DEFAULT_MODEL = "gemini-3.5-flash"
+DEFAULT_MODEL = "gemini-3.5-flash-lite"
 REQUEST_TIMEOUT_SECONDS = 300.0
 RATE_LIMIT_RETRIES = 3
 RATE_LIMIT_BACKOFF_SECONDS = 5.0
@@ -504,7 +504,7 @@ class GeminiVideoReviewer:
         payload: dict[str, Any] = {
             "model": self.model,
             "input": [
-                {"type": "video", "uri": url},
+                {"type": "video", "uri": url, "processing": "agentic"},
                 {"type": "text", "text": prompt},
             ],
             "response_format": {
