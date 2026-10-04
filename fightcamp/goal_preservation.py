@@ -6,6 +6,7 @@ can discharge this contract; neither role names nor LLM prose are evidence.
 """
 from __future__ import annotations
 
+from .exercise_identity import normalize_exercise_key
 from .weight_cut import cut_justifies_goal_deferral
 
 from copy import deepcopy
@@ -544,6 +545,7 @@ def _sync_microdose_membership(role: dict, microdose: dict) -> None:
         "effective_prescription": prescription,
         "dose_authority": "weekly_priority_exposure_floor",
         "goal": microdose.get("goal"),
+        "exercise_key": normalize_exercise_key(name) or None,
     }]
     role["effective_strength_prescriptions"] = _without_microdose(
         role.get("effective_strength_prescriptions")

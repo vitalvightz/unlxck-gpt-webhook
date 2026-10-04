@@ -16,7 +16,9 @@ from api.exercise_identity import reconcile_exercise_keys
 from api.services import exercise_media as media
 from api.structured_plan_generation import bank_conditioning_to_block, bank_strength_to_block
 from api.structured_plan_models import StructuredTrainingPlan
+from fightcamp.exercise_identity import stamp_exercise_key
 from fightcamp.gap_fill_inserts import _build_insert_role
+from fightcamp.session_composition import assignment_from_slot
 from test_structured_plan_models import _valid_plan
 
 SHADOW_VIDEO = "SHADOWxxxx1"
@@ -71,8 +73,36 @@ def _resolve(plan: dict) -> dict:
     return media.resolve_plan_exercise_media(StructuredTrainingPlan.model_validate(plan), _index())
 
 
+def _brief(*roles: dict, d_day: int = 9, **extra) -> dict:
+    """A camp brief: fight date plus one planning week covering ``d_day``."""
+    return {
+        "fight_date": "2026-12-01",
+        "weekly_role_map": {
+            "weeks": [{
+                "phase": "GPP",
+                "week_index": 1,
+                "calendar_days": [{"d_day": d_day}],
+                "session_roles": list(roles),
+            }]
+        },
+        **extra,
+    }
+
+
 def _brief_with_insert(role: dict) -> dict:
-    return {"weekly_role_map": {"weeks": [{"session_roles": [role]}]}}
+    return _brief(role, d_day=role["countdown_offset"])
+
+
+def _strength_role(*names: str, d_day: int = 9) -> dict:
+    return {
+        "role_key": "primary_strength",
+        "athlete_facing_label": "Power Strength",
+        "countdown_offset": d_day,
+        "countdown_label": f"D-{d_day}",
+        "selected_exercise_assignments": [
+            stamp_exercise_key({"name": name, "slot_group": "strength_slots"}) for name in names
+        ],
+    }
 
 
 def _boxing_role(role_key: str, *, fatigue: str = "high") -> dict:
@@ -290,3 +320,129 @@ def test_legacy_plan_without_brief_is_left_unchanged():
 
     assert reconcile_exercise_keys(plan, None) is plan
     assert _resolve(plan)["Romanian Deadlift (RDL)"].video_id == "RDLxxxxxxx1"
+
+
+# -- planner assignments are the identity authority --------------------------
+
+
+def test_assignment_is_stamped_at_selection():
+    assignment = assignment_from_slot(
+        "GPP", "strength_slots", {"slot_id": "s1", "selected": {"name": "Medicine Ball Rotational Slam"}}
+    )
+
+    assert assignment["exercise_key"] == "medicine-ball-rotational-slam"
+
+
+def test_retitled_session_and_renamed_blocks_take_keys_from_planner_membership():
+    role = _strength_role("Medicine Ball Rotational Slam", "Trap Bar Deadlift")
+    plan = _plan(
+        [
+            {"display_name": "4 x 5 explosive throws", "block_type": "plyometric_power"},
+            {"display_name": "Heavy pulls", "block_type": "strength"},
+        ],
+        title="Power Strength",
+        countdown="D-9",
+    )
+
+    blocks = _blocks(reconcile_exercise_keys(plan, _brief(role)))
+
+    assert [b["exercise_key"] for b in blocks] == ["medicine-ball-rotational-slam", "trap-bar-deadlift"]
+    assert [b["display_name"] for b in blocks] == ["4 x 5 explosive throws", "Heavy pulls"]
+
+
+def test_named_member_is_claimed_first_and_order_fills_the_rest():
+    role = _strength_role("Medicine Ball Rotational Slam", "Trap Bar Deadlift")
+    plan = _plan(
+        [
+            {"display_name": "Trap Bar Deadlift", "block_type": "strength"},
+            {"display_name": "Explosive throws", "block_type": "plyometric_power"},
+        ],
+        title="Power Strength",
+        countdown="D-9",
+    )
+
+    blocks = _blocks(reconcile_exercise_keys(plan, _brief(role)))
+
+    assert [b["exercise_key"] for b in blocks] == ["trap-bar-deadlift", "medicine-ball-rotational-slam"]
+
+
+def test_converter_added_warmup_is_set_aside_from_planner_order():
+    role = _strength_role("Medicine Ball Rotational Slam")
+    plan = _plan(
+        [
+            {"display_name": "Dynamic warm-up", "block_type": "preparation"},
+            {"display_name": "4 x 5 explosive throws", "block_type": "plyometric_power"},
+        ],
+        title="Power Strength",
+        countdown="D-9",
+    )
+
+    blocks = _blocks(reconcile_exercise_keys(plan, _brief(role)))
+
+    assert [b.get("exercise_key") for b in blocks] == [None, "medicine-ball-rotational-slam"]
+
+
+def test_membership_count_mismatch_stamps_nothing_rather_than_guess():
+    role = _strength_role("Medicine Ball Rotational Slam", "Trap Bar Deadlift")
+    plan = _plan(
+        [
+            {"display_name": "Explosive throws", "block_type": "plyometric_power"},
+            {"display_name": "Heavy pulls", "block_type": "strength"},
+            {"display_name": "Carries", "block_type": "strength"},
+        ],
+        title="Power Strength",
+        countdown="D-9",
+    )
+
+    assert reconcile_exercise_keys(plan, _brief(role)) is plan
+
+
+def test_membership_identity_needs_the_roles_own_day():
+    role = _strength_role("Medicine Ball Rotational Slam")
+    plan = _plan(
+        [{"display_name": "4 x 5 explosive throws", "block_type": "plyometric_power"}],
+        title="Power Strength",
+        countdown="D-12",
+    )
+
+    assert reconcile_exercise_keys(plan, _brief(role)) is plan
+
+
+def test_legacy_assignments_without_stamp_derive_key_from_bank_name():
+    role = _strength_role("Medicine Ball Rotational Slam")
+    for assignment in role["selected_exercise_assignments"]:
+        assignment.pop("exercise_key")
+    plan = _plan(
+        [{"display_name": "4 x 5 explosive throws", "block_type": "plyometric_power"}],
+        title="Power Strength",
+        countdown="D-9",
+    )
+
+    blocks = _blocks(reconcile_exercise_keys(plan, _brief(role)))
+
+    assert blocks[0]["exercise_key"] == "medicine-ball-rotational-slam"
+
+
+def test_labelled_microdose_block_resolves_to_its_assignment():
+    role = _strength_role("Pallof Press")
+    plan = _plan(
+        [
+            {"display_name": "Core microdose - Pallof Press", "block_type": "accessory"},
+            {"display_name": "Breathe", "block_type": "mindset"},
+        ],
+        title="Something else",
+        countdown="D-9",
+    )
+
+    blocks = _blocks(reconcile_exercise_keys(plan, _brief(role)))
+
+    assert [b.get("exercise_key") for b in blocks] == ["pallof-press", None]
+
+
+def test_manifest_carries_planner_keys_in_membership_order():
+    from fightcamp.stage2_payload import _attach_manifest_exercise_keys
+
+    entry: dict = {}
+    _attach_manifest_exercise_keys(entry, _strength_role("Medicine Ball Rotational Slam", "Pallof Press")["selected_exercise_assignments"])
+
+    assert entry["exercise_keys"] == ["medicine-ball-rotational-slam", "pallof-press"]

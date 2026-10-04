@@ -36,6 +36,7 @@ from typing import Any
 from fightcamp.role_labels import athlete_facing_label_for
 from fightcamp.session_sequencing import sequence_structured_plan
 
+from .exercise_identity import block_exercise_key_for_name
 from .structured_plan_calendar_spine import (
     ROLES_OWNED_ELSEWHERE,
     reconcile_calendar_spine,
