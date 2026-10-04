@@ -164,15 +164,46 @@ def test_operational_gemini_http_failures_are_batch_stop_errors(response, messag
         _reviewer({URL_A: response}).review(URL_A, _row())
 
 
-def test_gemini_transport_failure_is_batch_stop_error():
+def test_gemini_transport_retries_before_batch_stop(monkeypatch):
+    calls, waits = [], []
+    monkeypatch.setattr(review.time, "sleep", waits.append)
+
     def handler(request):
+        calls.append(request)
         raise httpx.ReadTimeout("timeout", request=request)
 
     reviewer = review.GeminiVideoReviewer(
         "k", client=httpx.Client(transport=httpx.MockTransport(handler))
     )
-    with pytest.raises(review.GeminiProviderUnavailable, match="transport unavailable"):
+    with pytest.raises(review.GeminiProviderUnavailable, match="after 3 attempts"):
         reviewer.review(URL_A, _row())
+
+    assert len(calls) == review.GEMINI_TRANSPORT_RETRIES + 1
+    assert waits == [
+        review.GEMINI_TRANSPORT_BACKOFF_SECONDS,
+        review.GEMINI_TRANSPORT_BACKOFF_SECONDS * 2,
+    ]
+
+
+def test_gemini_transport_retry_can_recover(monkeypatch):
+    calls, waits = [], []
+    monkeypatch.setattr(review.time, "sleep", waits.append)
+
+    def handler(request):
+        calls.append(request)
+        if len(calls) < 3:
+            raise httpx.ReadTimeout("timeout", request=request)
+        return httpx.Response(200, json={"output_text": json.dumps(_answer())})
+
+    reviewer = review.GeminiVideoReviewer(
+        "k", client=httpx.Client(transport=httpx.MockTransport(handler))
+    )
+    assert reviewer.review(URL_A, _row()).verdict == "match"
+    assert len(calls) == 3
+    assert waits == [
+        review.GEMINI_TRANSPORT_BACKOFF_SECONDS,
+        review.GEMINI_TRANSPORT_BACKOFF_SECONDS * 2,
+    ]
 
 
 def test_quota_error_is_distinct():
@@ -543,6 +574,60 @@ def test_reviewed_csv_still_imports_only_approved_rows(tmp_path):
 
 
 # -- review findings -------------------------------------------------------------
+
+
+def test_separate_out_checkpoint_overrides_stale_source_ai_state(tmp_path):
+    src = tmp_path / "media.csv"
+    out = tmp_path / "media.reviewed.csv"
+
+    stale_progress = json.dumps({
+        "best": None,
+        "tried": [URL_A],
+        "errors": [f"{URL_A}: stale failure"],
+        "reviewed_video_ids": [],
+        "search_progress": {"queries_used": 0, "pending": []},
+    })
+    _write_csv(src, [
+        _row(
+            exercise_key="a",
+            suggested_url=URL_A,
+            ai_verdict="error",
+            ai_shows="stale source error",
+            ai_review_progress=stale_progress,
+        ),
+        _row(exercise_key="b", suggested_url=URL_B),
+    ])
+    _write_csv(out, [
+        _row(
+            exercise_key="a",
+            suggested_url=URL_C,
+            ai_verdict="match",
+            ai_confidence="0.95",
+            ai_orientation="landscape",
+            ai_start_s="42",
+            ai_end_s="54",
+            ai_review_progress="",
+            needs_manual_video="false",
+        ),
+        _row(exercise_key="b", suggested_url=URL_B),
+    ])
+
+    calls = []
+    counts = review.run_review(
+        str(src),
+        str(out),
+        reviewer=_reviewer({URL_B: _answer(verdict="partial")}, calls),
+        delay_s=0,
+        sleep=lambda _: None,
+        log=lambda _: None,
+    )
+
+    assert counts["skipped"] == 1
+    assert len(calls) == 1
+    rows = _read_csv(out)
+    assert rows[0]["ai_verdict"] == "match"
+    assert rows[0]["suggested_url"] == URL_C
+    assert rows[0]["ai_review_progress"] == ""
 
 
 def test_resume_with_separate_out_file_skips_saved_verdicts(tmp_path):
