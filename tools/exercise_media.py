@@ -498,7 +498,10 @@ def _positive_int(value: str) -> int:
     return number
 
 
-COST_SAFE_MAX_CANDIDATES = 3\n\n\ndef _cmd_review(args: argparse.Namespace) -> int:
+COST_SAFE_MAX_CANDIDATES = 3
+
+
+def _cmd_review(args: argparse.Namespace) -> int:
     from tools.exercise_media_review import ReviewInputError, build_reviewer, run_review
     from tools.exercise_media_search import CandidateSearchError, build_candidate_search
 
