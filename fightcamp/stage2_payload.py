@@ -15,6 +15,7 @@ import sys
 from copy import deepcopy
 from typing import Any
 
+from .exercise_identity import stamp_exercise_key
 from . import stage2_planning_brief as stage2_planning_brief_module
 from .stage2_finalizer_packet import build_stage2_finalizer_packet
 from .stage2_llm_boundary import build_stage2_llm_planning_brief
@@ -1104,6 +1105,7 @@ def _build_late_fight_allowed_exercises_by_day(
                 "slot_group": slot_group,
                 "phase": phase,
             }
+            stamp_exercise_key(assignment)
             # Carry the selected bank dose forward for conditioning tail work so
             # Stage 2 renders it directly, mirroring normal conditioning.  Loaded
             # strength tail doses stay owned by the scheduled-day resolver
@@ -2993,6 +2995,7 @@ def _closed_membership_render_manifest(
                 "exercise_lines": lines,
                 "unresolved": unresolved,
             })
+            _attach_manifest_exercise_keys(entry, assignments)
             _attach_manifest_label_and_microdose(entry, role)
             manifest.append(entry)
             continue
@@ -3051,6 +3054,7 @@ def _closed_membership_render_manifest(
                 "exercise_lines": lines,
                 "unresolved": unresolved,
             })
+            _attach_manifest_exercise_keys(entry, assignments)
             _attach_manifest_label_and_microdose(entry, role)
             manifest.append(entry)
             continue
@@ -3088,6 +3092,21 @@ def _manifest_rich_role(
         if isinstance(found, dict):
             return found
     return None
+
+
+def _attach_manifest_exercise_keys(entry: dict, assignments: list) -> None:
+    """Planner-owned identity, one per member in membership order.
+
+    The server re-stamps it onto the rendered blocks after conversion; the model
+    is never trusted to carry it.
+    """
+    keys = [
+        str(assignment.get("exercise_key") or "")
+        for assignment in assignments
+        if isinstance(assignment, dict)
+    ]
+    if any(keys):
+        entry["exercise_keys"] = keys
 
 
 def _attach_manifest_label_and_microdose(entry: dict, role: dict) -> None:
