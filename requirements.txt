@@ -15,5 +15,6 @@ structlog==25.5.0
 python-dateutil==2.9.0.post0
 Pillow==12.3.0
 python-multipart==0.0.32
+yt-dlp==2026.8.19
 # Web push notifications (VAPID-signed) for plan-ready + morning check-in nudges.
 pywebpush==2.0.3
