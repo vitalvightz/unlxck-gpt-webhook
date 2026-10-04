@@ -449,25 +449,23 @@ def test_query_budget_and_fetched_candidate_survive_repeated_quota_stops(tmp_pat
     assert row["ai_review_progress"] == "" and row["needs_manual_video"] == "true"
 
 
-def test_cli_discovers_by_default_with_key_and_can_disable(tmp_path, monkeypatch):
+def test_cli_discovers_by_default_with_ytdlp_and_can_disable(tmp_path, monkeypatch):
     src = tmp_path / "media.csv"
-    monkeypatch.setenv("YOUTUBE_DATA_API_KEY", "youtube-test-key")
     monkeypatch.setattr(review, "build_reviewer", lambda model: _reviewer({URL_A: _answer(verdict="partial"), URL_B: _answer()}))
     created = []
 
-    def build_searcher(key):
-        assert key == "youtube-test-key"
-        created.append(key)
+    def build_searcher():
+        created.append("ytdlp")
         return _searcher([["BBBBBBBBBBB"]])
 
-    monkeypatch.setattr(discovery, "YouTubeCandidateSearch", build_searcher)
+    monkeypatch.setattr(discovery, "YtDlpCandidateSearch", build_searcher)
     _write_csv(src, [_row()])
     assert tool.main(["review", str(src), "--delay", "0"]) == 0
     assert _read_csv(src)[0]["needs_manual_video"] == "false"
     _write_csv(src, [_row()])
     assert tool.main(["review", str(src), "--delay", "0", "--no-search"]) == 0
     assert _read_csv(src)[0]["needs_manual_video"] == "true"
-    assert len(created) == 1
+    assert created == ["ytdlp"]
 
 
 def test_more_than_five_candidates_is_rejected(tmp_path):
