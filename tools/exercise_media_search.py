@@ -20,6 +20,10 @@ DATAFORSEO_RETRY_BACKOFF_SECONDS = 1.0
 DATAFORSEO_TRANSIENT_HTTP_STATUS_CODES = {408, 425, 500, 502, 503, 504}
 DATAFORSEO_EMPTY_RESULT_RETRIES = 3
 DATAFORSEO_EMPTY_RESULT_BACKOFF_SECONDS = 2.0
+YTDLP_SEARCH_SIZE = 5
+YTDLP_TIMEOUT_SECONDS = 30
+YTDLP_RETRIES = 2
+YTDLP_RETRY_BACKOFF_SECONDS = 2.0
 MAX_SEARCH_QUERIES = 3
 
 SEARCH_PROVIDER_ENV = "EXERCISE_MEDIA_SEARCH_PROVIDER"
@@ -414,6 +418,145 @@ class DataForSEOCandidateSearch:
 
 
 
+
+def _ytdlp_video_ids(info: object) -> list[str]:
+    if not isinstance(info, dict):
+        return []
+    entries = info.get("entries")
+    if not isinstance(entries, list):
+        return []
+
+    ids: list[str] = []
+    for entry in entries:
+        if not isinstance(entry, dict):
+            continue
+        if entry.get("live_status") in {"is_live", "is_upcoming"}:
+            continue
+        video_id = entry.get("id")
+        if not isinstance(video_id, str) or not re.fullmatch(r"[A-Za-z0-9_-]{11}", video_id):
+            video_id = parse_youtube_video_id(str(entry.get("url") or ""))
+        if isinstance(video_id, str) and re.fullmatch(r"[A-Za-z0-9_-]{11}", video_id):
+            ids.append(video_id)
+    return list(dict.fromkeys(ids))
+
+
+class YtDlpCandidateSearch:
+    label = "yt-dlp YouTube search"
+
+    def __init__(self, *, ydl_factory=None, sleep: Callable[[float], None] | None = None) -> None:
+        if ydl_factory is None:
+            try:
+                from yt_dlp import YoutubeDL
+            except ImportError as exc:  # pragma: no cover - dependency wiring
+                raise CandidateSearchError(
+                    "yt-dlp discovery requested but yt-dlp is not installed"
+                ) from exc
+            ydl_factory = YoutubeDL
+        self._ydl_factory = ydl_factory
+        self._sleep = sleep or time.sleep
+        self._failure: tuple[type[CandidateSearchError], str] | None = None
+
+    def close(self) -> None:
+        return None
+
+    def _fetch(self, query: str) -> object:
+        options = {
+            "quiet": True,
+            "no_warnings": True,
+            "skip_download": True,
+            "extract_flat": "in_playlist",
+            "socket_timeout": YTDLP_TIMEOUT_SECONDS,
+            "playlistend": YTDLP_SEARCH_SIZE,
+        }
+        with self._ydl_factory(options) as ydl:
+            return ydl.extract_info(
+                f"ytsearch{YTDLP_SEARCH_SIZE}:{query}",
+                download=False,
+            )
+
+    def search(
+        self,
+        row: dict[str, str],
+        exclude: set[str],
+        progress: SearchProgress | None = None,
+        checkpoint: Callable[[], None] | None = None,
+    ) -> Iterable[str]:
+        """Search YouTube directly with yt-dlp, preserving review checkpoints."""
+        if self._failure:
+            error_type, message = self._failure
+            raise error_type(message)
+
+        seen = {parse_youtube_video_id(url) or url for url in exclude}
+        progress = progress or SearchProgress()
+        queries = search_queries(row)
+
+        while True:
+            while progress.pending:
+                url = progress.pending[0]
+                video_id = parse_youtube_video_id(url)
+                if video_id and video_id not in seen:
+                    yield url
+                    seen.add(video_id)
+                progress.pending.pop(0)
+
+            if progress.queries_used >= len(queries):
+                break
+
+            query = queries[progress.queries_used]
+            progress.queries_used += 1
+            if checkpoint:
+                checkpoint()
+
+            try:
+                info: object | None = None
+                for attempt in range(YTDLP_RETRIES + 1):
+                    try:
+                        info = self._fetch(query)
+                        break
+                    except Exception as exc:  # yt-dlp wraps provider/network failures
+                        message = str(exc).lower()
+                        if any(
+                            token in message
+                            for token in (
+                                "http error 429",
+                                "too many requests",
+                                "sign in to confirm you're not a bot",
+                                "sign in to confirm you’re not a bot",
+                            )
+                        ):
+                            raise CandidateSearchQuotaExceeded(
+                                "yt-dlp/YouTube search rate-limited or bot-challenged"
+                            ) from exc
+                        if attempt < YTDLP_RETRIES:
+                            self._sleep(YTDLP_RETRY_BACKOFF_SECONDS)
+                            continue
+                        raise CandidateSearchError(
+                            f"yt-dlp search unavailable after {YTDLP_RETRIES + 1} attempts "
+                            f"({type(exc).__name__})"
+                        ) from exc
+
+                if not isinstance(info, dict):
+                    raise CandidateSearchError("yt-dlp search returned an unexpected response")
+            except CandidateSearchQuotaExceeded as exc:
+                _rewind_query(progress, checkpoint)
+                self._failure = (CandidateSearchQuotaExceeded, str(exc))
+                raise
+            except CandidateSearchError as exc:
+                _rewind_query(progress, checkpoint)
+                self._failure = (CandidateSearchError, str(exc))
+                raise
+
+            for video_id in _ytdlp_video_ids(info):
+                if video_id in seen:
+                    continue
+                url = f"https://www.youtube.com/watch?v={video_id}"
+                if url not in progress.pending:
+                    progress.pending.append(url)
+            if checkpoint:
+                checkpoint()
+
+
+
 def _location_code_from_env() -> int:
     raw = os.getenv(DATAFORSEO_LOCATION_CODE_ENV, "2840").strip() or "2840"
     try:
@@ -431,13 +574,13 @@ def build_candidate_search(
 ) -> CandidateSearcher | None:
     """Build exactly one discovery provider.
 
-    In auto mode DataForSEO wins whenever both of its credentials are present.
-    The YouTube search API is used only when DataForSEO is not configured.
+    Auto mode uses yt-dlp so exercise discovery does not depend on a paid SERP
+    account. DataForSEO and the YouTube Data API remain explicit fallbacks.
     """
     selected = (provider or os.getenv(SEARCH_PROVIDER_ENV, "auto")).strip().lower()
-    if selected not in {"auto", "dataforseo", "youtube"}:
+    if selected not in {"auto", "dataforseo", "youtube", "ytdlp"}:
         raise CandidateSearchError(
-            f"{SEARCH_PROVIDER_ENV} must be auto, dataforseo or youtube"
+            f"{SEARCH_PROVIDER_ENV} must be auto, ytdlp, dataforseo or youtube"
         )
 
     login = os.getenv(DATAFORSEO_LOGIN_ENV, "").strip()
@@ -457,6 +600,9 @@ def build_candidate_search(
             language_code=language,
         )
 
+    if selected == "ytdlp" or selected == "auto":
+        return YtDlpCandidateSearch()
+
     if selected == "dataforseo":
         return dataforseo_searcher()
 
@@ -467,13 +613,4 @@ def build_candidate_search(
             )
         return YouTubeCandidateSearch(youtube_api_key)
 
-    if bool(login) != bool(password):
-        raise CandidateSearchError(
-            f"DataForSEO auto-discovery is partially configured: "
-            f"{DATAFORSEO_LOGIN_ENV} and {DATAFORSEO_PASSWORD_ENV} must both be set"
-        )
-    if login and password:
-        return dataforseo_searcher()
-    if youtube_api_key:
-        return YouTubeCandidateSearch(youtube_api_key)
     return None

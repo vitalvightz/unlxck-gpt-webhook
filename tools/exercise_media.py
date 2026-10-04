@@ -515,8 +515,7 @@ def _cmd_review(args: argparse.Namespace) -> int:
             return 2
         if searcher is None:
             print(
-                "candidate discovery disabled: set DATAFORSEO_LOGIN/DATAFORSEO_PASSWORD "
-                f"or {YOUTUBE_API_KEY_ENV}."
+                "candidate discovery disabled: install yt-dlp or choose an explicit configured provider."
             )
         else:
             print(f"candidate discovery: {searcher.label}")
@@ -585,10 +584,10 @@ def main(argv: list[str] | None = None) -> int:
     review.add_argument("--no-search", action="store_true", help="use supplied URLs only, without candidate discovery")
     review.add_argument(
         "--search-provider",
-        choices=("auto", "dataforseo", "youtube"),
+        choices=("auto", "ytdlp", "dataforseo", "youtube"),
         help=(
             "candidate discovery backend (default: $EXERCISE_MEDIA_SEARCH_PROVIDER or auto; "
-            "auto uses DataForSEO when configured, otherwise YouTube)"
+            "auto uses yt-dlp direct YouTube search)"
         ),
     )
     review.add_argument(
