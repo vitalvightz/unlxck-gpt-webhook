@@ -48,6 +48,8 @@ REQUEST_TIMEOUT_SECONDS = 300.0
 RATE_LIMIT_RETRIES = 3
 RATE_LIMIT_BACKOFF_SECONDS = 5.0
 MAX_RATE_LIMIT_WAIT_SECONDS = 60.0
+GEMINI_TRANSPORT_RETRIES = 2
+GEMINI_TRANSPORT_BACKOFF_SECONDS = 2.0
 MAX_CANDIDATES = 5
 
 # Loop segment bounds: long enough for two clean reps, short enough to loop.
@@ -473,20 +475,29 @@ class GeminiVideoReviewer:
         self._client.close()
 
     def _post(self, payload: dict[str, Any]) -> httpx.Response:
-        try:
-            return self._client.post(
-                INTERACTIONS_URL,
-                headers={
-                    "x-goog-api-key": self.api_key,
-                    "Api-Revision": API_REVISION,
-                    "Content-Type": "application/json",
-                },
-                json=payload,
-            )
-        except httpx.HTTPError as exc:
-            raise GeminiProviderUnavailable(
-                f"Gemini transport unavailable: {type(exc).__name__}"
-            ) from exc
+        last_exc: httpx.TransportError | None = None
+        for attempt in range(GEMINI_TRANSPORT_RETRIES + 1):
+            try:
+                return self._client.post(
+                    INTERACTIONS_URL,
+                    headers={
+                        "x-goog-api-key": self.api_key,
+                        "Api-Revision": API_REVISION,
+                        "Content-Type": "application/json",
+                    },
+                    json=payload,
+                )
+            except httpx.TransportError as exc:
+                last_exc = exc
+                if attempt < GEMINI_TRANSPORT_RETRIES:
+                    time.sleep(GEMINI_TRANSPORT_BACKOFF_SECONDS * (2 ** attempt))
+                    continue
+                break
+        assert last_exc is not None
+        raise GeminiProviderUnavailable(
+            f"Gemini transport unavailable after {GEMINI_TRANSPORT_RETRIES + 1} attempts: "
+            f"{type(last_exc).__name__}"
+        ) from last_exc
 
     def review(self, url: str, row: dict[str, str]) -> VideoReview:
         prompt = build_prompt(row)
@@ -778,18 +789,36 @@ def _read_csv(path: str | Path) -> tuple[list[str], list[dict[str, str]]]:
 
 
 def _merge_previous_run(rows: list[dict[str, str]], previous: list[dict[str, str]], *, redo_weak: bool = False) -> int:
-    """Carry verdicts from an earlier run's --out file into the input rows."""
-    by_key = {r.get("exercise_key"): r for r in previous if (r.get("ai_verdict") or r.get("ai_review_progress") or "").strip()}
+    """Carry the output CSV's latest review state into the source rows.
+
+    When --out points at a separate file, that file is the checkpoint of record.
+    Source CSVs can contain stale AI fields from an older run; those must not
+    override a newer completed verdict or in-progress checkpoint in --out.
+    """
+    by_key = {
+        r.get("exercise_key"): r
+        for r in previous
+        if (r.get("ai_verdict") or r.get("ai_review_progress") or "").strip()
+    }
     merged = 0
     for row in rows:
         prior = by_key.get(row.get("exercise_key"))
-        if prior is None or row.get("ai_review_progress"):
+        if prior is None:
             continue
-        if row.get("ai_verdict") and not prior.get("ai_review_progress") and not (redo_weak and not _row_is_strong(row)):
-            continue
-        for column in _RESUME_COLUMNS:
+
+        # AI-owned state and the selected suggestion always come from the
+        # checkpoint file. This prevents stale source-side errors/progress from
+        # causing already-completed rows to be reviewed again.
+        for column in (*AI_COLUMNS, "suggested_url", "suggested_title", "review_note"):
             if column in prior:
                 row[column] = prior[column]
+
+        # Preserve explicit curator loop values from the source, but carry the
+        # checkpoint values when the source has none.
+        for column in ("start_s", "end_s"):
+            if not (row.get(column) or "").strip() and column in prior:
+                row[column] = prior[column]
+
         merged += 1
     return merged
 
