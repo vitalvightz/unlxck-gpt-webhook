@@ -498,7 +498,7 @@ def _positive_int(value: str) -> int:
     return number
 
 
-def _cmd_review(args: argparse.Namespace) -> int:
+COST_SAFE_MAX_CANDIDATES = 3\n\n\ndef _cmd_review(args: argparse.Namespace) -> int:
     from tools.exercise_media_review import ReviewInputError, build_reviewer, run_review
     from tools.exercise_media_search import CandidateSearchError, build_candidate_search
 
@@ -521,6 +521,13 @@ def _cmd_review(args: argparse.Namespace) -> int:
             print(f"candidate discovery: {searcher.label}")
 
     reviewer = build_reviewer(args.model)
+    effective_max_candidates = min(args.max_candidates, COST_SAFE_MAX_CANDIDATES)
+    if args.max_candidates > COST_SAFE_MAX_CANDIDATES:
+        print(
+            f"cost guard: capping --max-candidates {args.max_candidates} "
+            f"to {COST_SAFE_MAX_CANDIDATES}"
+        )
+    print(f"Gemini reviewer: {reviewer.model} (agentic video)")
     try:
         counts = run_review(
             args.csv,
@@ -529,7 +536,7 @@ def _cmd_review(args: argparse.Namespace) -> int:
             limit=args.limit,
             redo=args.redo,
             redo_weak=args.redo_weak,
-            max_candidates=args.max_candidates,
+            max_candidates=effective_max_candidates,
             delay_s=args.delay,
             search=searcher.search if searcher else None,
         )
@@ -594,11 +601,11 @@ def main(argv: list[str] | None = None) -> int:
         "--max-candidates",
         type=_positive_int,
         choices=range(1, 6),
-        default=4,
-        help="maximum Gemini-reviewed videos per exercise, including discovered candidates (default: 4, cap: 5)",
+        default=3,
+        help="requested Gemini-reviewed videos per exercise; cost guard enforces a maximum of 3 (default: 3)",
     )
     review.add_argument("--delay", type=float, default=4.0, help="seconds between Gemini calls")
-    review.add_argument("--model", help="Gemini model (default: $GEMINI_MODEL or gemini-3.5-flash)")
+    review.add_argument("--model", help="Gemini model (default: $GEMINI_MODEL or gemini-3.5-flash-lite)")
     review.set_defaults(func=_cmd_review)
 
     verify = sub.add_parser("verify", help="re-check every stored video now")
