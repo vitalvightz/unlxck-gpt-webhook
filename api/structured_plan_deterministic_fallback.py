@@ -33,6 +33,7 @@ import re
 from dataclasses import dataclass, field
 from typing import Any
 
+from fightcamp.exercise_identity import canonical_exercise_key
 from fightcamp.role_labels import athlete_facing_label_for
 from fightcamp.session_sequencing import sequence_structured_plan
 
@@ -482,7 +483,7 @@ def _microdose_block(role: dict[str, Any], d_day: int, role_key: str) -> dict[st
         # The label travels in the display name so the athlete can see this is a
         # small priority touch rather than the session's main work.
         "display_name": f"{label} - {name}",
-        "exercise_key": block_exercise_key_for_name(name),
+        "exercise_key": canonical_exercise_key(name),
         "order_index": 0,
         "coaching_cues": [prescription] if prescription else [],
         "regression_options": [],
@@ -526,7 +527,7 @@ def _blocks(
             "block_type": block_type,
             "display_name": name,
             # The assignment name is the canonical bank exercise.
-            "exercise_key": block_exercise_key_for_name(name),
+            "exercise_key": canonical_exercise_key(name),
             "order_index": index,
             "regression_options": [],
             "substitutions": [],
