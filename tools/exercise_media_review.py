@@ -762,12 +762,22 @@ def apply_outcome(row: dict[str, str], outcome: RowOutcome, *, model: str) -> di
 
 
 def _write_rows(path: Path, fieldnames: list[str], rows: Iterable[dict[str, str]]) -> None:
-    tmp = path.with_suffix(path.suffix + ".tmp")
-    with open(tmp, "w", newline="", encoding="utf-8") as handle:
-        writer = csv.DictWriter(handle, fieldnames=fieldnames, extrasaction="ignore")
-        writer.writeheader()
-        writer.writerows(rows)
-    os.replace(tmp, path)
+    # Use a per-process/per-write temp path. A fixed `.tmp` name can be
+    # stolen by another review process between close() and os.replace().
+    tmp = path.with_name(
+        f".{path.name}.{os.getpid()}.{time.time_ns()}.tmp"
+    )
+    try:
+        with open(tmp, "w", newline="", encoding="utf-8") as handle:
+            writer = csv.DictWriter(handle, fieldnames=fieldnames, extrasaction="ignore")
+            writer.writeheader()
+            writer.writerows(rows)
+        os.replace(tmp, path)
+    finally:
+        try:
+            tmp.unlink()
+        except FileNotFoundError:
+            pass
 
 
 REQUIRED_INPUT_COLUMNS = ("exercise_key", "suggested_url")
@@ -931,7 +941,11 @@ def run_review(
                 ):
                     counts["skipped"] += 1
                     continue
-            elif done != "error" and not in_progress:
+            elif done != "error":
+                # In a normal resume, any completed non-error verdict is final.
+                # A stale ai_review_progress value must not cause it to be sent
+                # back to Gemini. --redo / --redo-weak are the explicit paths
+                # for revisiting completed rows.
                 counts["skipped"] += 1
                 continue
         if limit is not None and counts["reviewed"] + counts["errors"] >= limit:
