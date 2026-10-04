@@ -18,6 +18,7 @@ import re
 from collections.abc import Callable
 from typing import Any
 
+from .exercise_identity import canonical_exercise_key
 from .normalization import normalize_fatigue_level
 from .planner_context import get_planner_athlete_model
 from .late_fight_phase_eligibility import scheduled_phase_for_role
@@ -106,6 +107,7 @@ def assignment_from_slot(phase: str, slot_group: str, slot: dict[str, Any]) -> d
     assignment = {
         "slot_id": slot.get("slot_id"),
         "name": name,
+        "exercise_key": canonical_exercise_key(name),
         "source_phase": phase,
         "slot_group": slot_group,
         "source_session_index": slot.get("session_index"),
