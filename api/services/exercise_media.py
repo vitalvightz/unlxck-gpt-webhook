@@ -19,7 +19,6 @@ import os
 import re
 import threading
 import time
-import unicodedata
 from dataclasses import dataclass
 from typing import Any, Callable, Iterable, Mapping
 from urllib.parse import parse_qs, urlparse
@@ -27,6 +26,7 @@ from urllib.parse import parse_qs, urlparse
 import httpx
 
 from api.models import ExerciseMedia
+from fightcamp.exercise_identity import normalize_exercise_key
 
 logger = logging.getLogger(__name__)
 
@@ -40,7 +40,6 @@ YOUTUBE_API_TIMEOUT_SECONDS = 8.0
 _VIDEOS_PER_REQUEST = 50
 
 _VIDEO_ID_RE = re.compile(r"^[A-Za-z0-9_-]{11}$")
-_NON_ALNUM_RE = re.compile(r"[^a-z0-9]+")
 # A dose the converter appended to the exercise name after a spaced dash:
 # "Assault Bike - 25 min", "Turkish Get-Up – 3 reps per side". The tail must
 # start with a number, so a hyphenated name ("Get-Up") or a worded qualifier
@@ -58,25 +57,6 @@ def strip_dose_suffix(name: str | None) -> str:
     stripped = _DOSE_SUFFIX_RE.sub("", text).rstrip()
     # Keep the name whole when no exercise words would be left ("5 - 10 min").
     return stripped if re.search(r"[A-Za-z]", stripped) else text
-
-
-def normalize_exercise_key(name: str | None) -> str:
-    """Slug an exercise name without dropping any word of it.
-
-    Only case, punctuation, accents and "&" are folded, so spelling drift still
-    lands on one row ("Hollow-Body Hold" and "Hollow Body Hold"). Qualifiers are
-    kept: "Box Jump (Max Height)" and "Box Jump (Stick Landing)" are different
-    exercises and must never share a video. Two names that really are the same
-    movement are joined by an explicit alias on the media row, not by the slug.
-
-    "Romanian Deadlift (RDL)" -> "romanian-deadlift-rdl"
-    "Clean & Press" -> "clean-and-press"
-    """
-    if not name:
-        return ""
-    text = unicodedata.normalize("NFKD", str(name).lower()).encode("ascii", "ignore").decode("ascii")
-    text = text.replace("&", " and ")
-    return _NON_ALNUM_RE.sub("-", text).strip("-")
 
 
 def parse_youtube_video_id(value: str | None) -> str | None:

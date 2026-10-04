@@ -18,6 +18,7 @@ import re
 from collections.abc import Callable
 from typing import Any
 
+from .exercise_identity import stamp_exercise_key
 from .normalization import normalize_fatigue_level
 from .planner_context import get_planner_athlete_model
 from .late_fight_phase_eligibility import scheduled_phase_for_role
@@ -110,6 +111,9 @@ def assignment_from_slot(phase: str, slot_group: str, slot: dict[str, Any]) -> d
         "slot_group": slot_group,
         "source_session_index": slot.get("session_index"),
     }
+    # Identity is decided here, with the selection, before any model renders
+    # the plan: Stage 2 may reword the block, never change what it is.
+    stamp_exercise_key(assignment)
     for key in ("support_only", "meaningful_stress", "fulfillment_authority"):
         if key in selected:
             assignment[key] = selected[key]
@@ -2015,6 +2019,7 @@ def compose_normal_conditioning_assignments(
                     "meaningful_stress": option.get("meaningful_stress") is True,
                     "fulfillment_authority": option.get("fulfillment_authority") is True,
                 }
+                stamp_exercise_key(assignment)
                 # Carry the canonical structured dose alongside the rendered
                 # text. The assignment is what persists; the candidate pool it
                 # was resolved from is compacted, so a downstream reader that
@@ -2478,7 +2483,9 @@ def attach_late_fight_assignments(
         label = str(role.get("scheduled_countdown_label") or role.get("countdown_label") or "").strip()
         selected = assignments_by_day.get(label, [])
         role["selected_exercise_assignments"] = [
-            {**assignment, "source_phase": assignment.get("source_phase") or assignment.get("phase")}
+            stamp_exercise_key(
+                {**assignment, "source_phase": assignment.get("source_phase") or assignment.get("phase")}
+            )
             for assignment in selected
             if assignment.get("role_key") == role.get("role_key")
         ]

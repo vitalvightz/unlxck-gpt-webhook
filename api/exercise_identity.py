@@ -1,39 +1,54 @@
-"""Stamp stable exercise identity (``SessionBlock.exercise_key``) onto plan blocks.
+"""Stamp planner-owned exercise identity (``SessionBlock.exercise_key``) onto blocks.
 
-``display_name`` is athlete-facing copy. The markdown→JSON conversion is free to
-write it as a prescription ("3 x 2 min easy rounds") or a paraphrase
-("Skipping flush (30/30)"), so it cannot identify the movement a demo video
-belongs to. This module resolves identity once, from the plan's own planner
-data, the same way ``reconcile_rehab_drill_ids`` resolves rehab identity:
+The planner decides identity; the model decides wording. Every
+``selected_exercise_assignments`` entry carries the ``exercise_key`` of its
+canonical bank exercise from the moment it is selected
+(``fightcamp.exercise_identity``). Stage 2 then renders each session however it
+likes ("4 x 5 explosive throws"), and this module stamps the planner's key back
+onto the block that renders each assignment, using the plan's own locked
+membership rather than rediscovering identity from copy:
 
-* bank-backed exercises: a block whose name is one of the plan's own candidate
-  pool exercises takes that bank exercise's normalized name as its key. The
-  match is exact after normalization, so qualified variants ("Box Jump (Max
-  Height)" vs "Box Jump (Stick Landing)") never collapse onto one key;
-* gap-fill support inserts: a session on the insert's own countdown day whose
-  title names the insert takes the insert's deterministic identity
-  (``fightcamp.support_insert_identity.support_insert_exercise_key``), whatever its
-  block happens to be called.
+1. **Session -> role.** Each converted session is tied to the planner role it
+   renders by the shared session-identity matcher (deterministic session id,
+   then the role's athlete-facing label), on the role's own countdown day (or
+   weekday, for open plans).
+2. **Block -> assignment.** Within that session a block naming an assignment
+   takes its key; the remaining blocks take the remaining assignments in planner
+   order when the counts agree exactly (warm-up/cool-down blocks the converter
+   added are set aside first). A count mismatch stamps nothing rather than guess.
+3. **Support inserts.** A gap-fill insert prescribes one known movement
+   (``support_insert_exercise_key``); its session's dose-copy blocks take it.
+4. **Legacy fallbacks.** A block named exactly like a candidate-pool option, or
+   a key a deterministic builder stamped from the block's own name, is kept.
 
-The model is never a source of a key. A key the server did not derive is
-cleared unless it is just the block's own normalized name (what a deterministic
-bank adapter stamps). Non-physical blocks (mindset, nutrition, coach-led
-sparring) never carry a key, so they never receive a video.
+The model is never a source of a key: anything not derived here is cleared.
+Non-physical blocks (mindset, nutrition, coach-led sparring) never carry one.
 """
 
 from __future__ import annotations
 
 import copy
 import re
-from typing import Any, Iterable, Mapping
+from typing import Any, Callable, Iterable, Mapping
 
-from fightcamp.support_insert_identity import support_insert_exercise_key
+from fightcamp.exercise_identity import support_insert_exercise_key
+from fightcamp.fight_date_utils import parse_fight_date
+from fightcamp.structured_session_identity import match_sessions_to_roles
 
 from .services.exercise_media import (
     NON_PHYSICAL_BLOCK_TYPES,
     normalize_exercise_key,
     strip_dose_suffix,
 )
+from .structured_plan_calendar_spine import (
+    _authoritative_ownership_maps,
+    _effective_dday,
+    _resolve_fight_date,
+)
+
+# Blocks a converter commonly adds around the planner's membership; set aside
+# when matching the remaining blocks to assignments by planner order.
+_FRAMING_BLOCK_TYPES = frozenset({"preparation", "mobility_activation", "cooldown_recovery"})
 
 # Words that describe how an insert is dosed or framed rather than which
 # movement it is; a session title is matched to an insert on the rest.
@@ -44,6 +59,9 @@ _FRAMING_WORDS = frozenset({
     "x",
 })
 _WORD_RE = re.compile(r"[a-z]+")
+_NAME_PART_SPLIT_RE = re.compile(r"\s+[-–—:]\s+|:\s+")
+
+_Member = tuple[str, str]  # (normalized assignment name, exercise key)
 
 
 def _as_list(value: Any) -> list[Any]:
@@ -51,13 +69,59 @@ def _as_list(value: Any) -> list[Any]:
 
 
 def block_exercise_key_for_name(name: Any) -> str | None:
-    """The identity a deterministic adapter stamps for a bank exercise name."""
+    """The identity a deterministic builder stamps for a bank exercise name."""
     key = normalize_exercise_key(strip_dose_suffix(str(name or "")))
     return key or None
 
 
-def _bank_keys(planning_brief: Mapping[str, Any]) -> set[str]:
-    """Normalized names of every bank exercise this plan's planner offered or assigned."""
+def _is_physical(block: Mapping[str, Any]) -> bool:
+    return str(block.get("block_type") or "").strip() not in NON_PHYSICAL_BLOCK_TYPES
+
+
+def _name_forms(name: Any) -> set[str]:
+    """Slugs a block name can identify an assignment by.
+
+    The whole name (dose suffix dropped) and each side of a labelled name
+    ("Strength microdose - Pallof Press", "Finisher: Sled Push"). Always exact
+    after normalization, so "Box Jump (Stick Landing)" never reads as "Box Jump".
+    """
+    text = strip_dose_suffix(str(name or ""))
+    forms = {normalize_exercise_key(text)}
+    forms.update(normalize_exercise_key(part) for part in _NAME_PART_SPLIT_RE.split(text))
+    return {form for form in forms if form}
+
+
+def _role_members(role: Mapping[str, Any]) -> list[_Member]:
+    """The role's assignments in planner order, each with its planner key.
+
+    The key is the one stamped at selection. A plan generated before keys were
+    stamped derives it from the assignment's canonical bank name, which is the
+    same deterministic rule, so stored plans resolve too.
+    """
+    members: list[_Member] = []
+    for assignment in _as_list(role.get("selected_exercise_assignments")):
+        if not isinstance(assignment, Mapping):
+            continue
+        name_key = normalize_exercise_key(assignment.get("name"))
+        key = normalize_exercise_key(assignment.get("exercise_key")) or name_key
+        if key:
+            members.append((name_key, key))
+    return members
+
+
+def _iter_roles(value: Any) -> Iterable[Mapping[str, Any]]:
+    if isinstance(value, Mapping):
+        if value.get("role_key"):
+            yield value
+        for child in value.values():
+            yield from _iter_roles(child)
+    elif isinstance(value, list):
+        for child in value:
+            yield from _iter_roles(child)
+
+
+def _pool_keys(planning_brief: Mapping[str, Any]) -> set[str]:
+    """Normalized names of every strength/conditioning option offered to this plan."""
     pools = planning_brief.get("candidate_pools")
     keys: set[str] = set()
     if not isinstance(pools, Mapping):
@@ -74,96 +138,142 @@ def _bank_keys(planning_brief: Mapping[str, Any]) -> set[str]:
                         key = normalize_exercise_key(option.get("name"))
                         if key:
                             keys.add(key)
-    for role in _iter_roles(planning_brief.get("weekly_role_map")):
-        for assignment in _as_list(role.get("selected_exercise_assignments")):
-            if isinstance(assignment, Mapping) and (key := normalize_exercise_key(assignment.get("name"))):
-                keys.add(key)
-        microdose = role.get("priority_microdose")
-        if isinstance(microdose, Mapping) and (key := normalize_exercise_key(microdose.get("name"))):
-            keys.add(key)
     return keys
 
 
-def _countdown(value: Any) -> str | None:
-    match = re.search(r"D-\s*(\d+)", str(value or ""), re.IGNORECASE)
-    return f"D-{int(match.group(1))}" if match else None
+def _day_roles_lookup(
+    planning_brief: Mapping[str, Any],
+) -> Callable[[Mapping[str, Any]], tuple[list[dict[str, Any]], int]]:
+    """day -> (the planner roles scheduled on it, its D-day or -1)."""
+    role_map = planning_brief.get("weekly_role_map")
+    if not isinstance(role_map, Mapping):
+        return lambda day: ([], -1)
+    fight_date = parse_fight_date(_resolve_fight_date(dict(planning_brief)))
+    if fight_date is not None:
+        roles_by_dday = _authoritative_ownership_maps(dict(role_map))[3]
+
+        def by_countdown(day: Mapping[str, Any]) -> tuple[list[dict[str, Any]], int]:
+            d_day = _effective_dday(dict(day), fight_date)
+            return (roles_by_dday.get(d_day, []), d_day) if d_day is not None else ([], -1)
+
+        return by_countdown
+
+    # Open/renewable plans: a role's day is its weekday.
+    roles_by_weekday: dict[str, list[dict[str, Any]]] = {}
+    for role in _iter_roles(role_map):
+        weekday = str(role.get("scheduled_day_hint") or role.get("real_weekday") or "").strip().lower()[:3]
+        if weekday:
+            roles_by_weekday.setdefault(weekday, []).append(dict(role))
+
+    def by_weekday(day: Mapping[str, Any]) -> tuple[list[dict[str, Any]], int]:
+        return roles_by_weekday.get(str(day.get("weekday") or "").strip().lower()[:3], []), -1
+
+    return by_weekday
 
 
 def _identity_words(text: Any) -> set[str]:
     words = set(_WORD_RE.findall(str(text or "").lower()))
     # "skip"/"skipping", "shadow"/"shadowboxing": compare on stems.
-    stems = {word[:5] for word in words - _FRAMING_WORDS if len(word) >= 4}
-    return stems
+    return {word[:5] for word in words - _FRAMING_WORDS if len(word) >= 4}
 
 
-def _iter_roles(value: Any) -> Iterable[Mapping[str, Any]]:
-    if isinstance(value, Mapping):
-        if value.get("role_key"):
-            yield value
-        for child in value.values():
-            yield from _iter_roles(child)
-    elif isinstance(value, list):
-        for child in value:
-            yield from _iter_roles(child)
-
-
-def _support_inserts_by_day(planning_brief: Mapping[str, Any]) -> dict[str, list[tuple[str, set[str], str]]]:
-    """countdown label -> [(normalized label, identity stems, exercise key)]."""
-    by_day: dict[str, list[tuple[str, set[str], str]]] = {}
-    for role in _iter_roles(planning_brief.get("weekly_role_map")):
-        label = role.get("athlete_facing_label")
-        key = support_insert_exercise_key(role.get("role_key"), label)
-        if not key:
-            continue
-        day = None
-        for field in ("scheduled_countdown_label", "countdown_label", "countdown_display_label"):
-            day = _countdown(role.get(field))
-            if day:
-                break
-        if not day:
-            continue
-        entry = (normalize_exercise_key(label), _identity_words(label), key)
-        if entry not in by_day.setdefault(day, []):
-            by_day[day].append(entry)
-    return by_day
+def _support_insert(role: Mapping[str, Any]) -> tuple[set[str], str] | None:
+    label = role.get("athlete_facing_label")
+    key = support_insert_exercise_key(role.get("role_key"), label)
+    return (_identity_words(label), key) if key else None
 
 
 def _insert_for_session(
     session: Mapping[str, Any],
-    inserts: list[tuple[str, set[str], str]],
+    role: Mapping[str, Any] | None,
+    day_roles: list[dict[str, Any]],
 ) -> tuple[set[str], str] | None:
     """(stems, key) of the one support insert this session renders, else None."""
-    title = session.get("title")
-    exact = {
-        (frozenset(stems), key) for label, stems, key in inserts
-        if label and label == normalize_exercise_key(title)
+    if role is not None:
+        return _support_insert(role)
+    # A retitled insert ("Skipping flush (short)" for "Light Skipping Flush")
+    # that the label matcher could not claim: its movement word still names it.
+    title_stems = _identity_words(session.get("title"))
+    named = {
+        (frozenset(stems), key)
+        for stems, key in filter(None, (_support_insert(r) for r in day_roles))
+        if stems and stems <= title_stems
     }
-    if len(exact) != 1:
-        title_stems = _identity_words(title)
-        exact = {
-            (frozenset(stems), key) for _, stems, key in inserts
-            if stems and stems <= title_stems
-        }
-    if len(exact) != 1:
+    if len(named) != 1:
         return None
-    stems, key = next(iter(exact))
+    stems, key = next(iter(named))
     return set(stems), key
 
 
-def _is_physical(block: Mapping[str, Any]) -> bool:
-    return str(block.get("block_type") or "").strip() not in NON_PHYSICAL_BLOCK_TYPES
+def _stamp_session(
+    session: Mapping[str, Any],
+    role: Mapping[str, Any] | None,
+    day_roles: list[dict[str, Any]],
+    day_members: list[_Member],
+    pool_keys: set[str],
+) -> list[tuple[dict[str, Any], str | None]]:
+    blocks = [block for block in _as_list(session.get("blocks")) if isinstance(block, dict)]
+    resolved: list[str | None] = [None] * len(blocks)
+    physical = [index for index, block in enumerate(blocks) if _is_physical(block)]
+
+    # 1. A block naming one of its role's assignments, else one of the day's.
+    members = _role_members(role) if role is not None else []
+    open_members = list(members)
+    for index in physical:
+        forms = _name_forms(blocks[index].get("display_name"))
+        hit = next((m for m in open_members if m[0] in forms), None)
+        if hit is not None:
+            open_members.remove(hit)
+            resolved[index] = hit[1]
+            continue
+        day_hits = {key for name_key, key in day_members if name_key in forms}
+        if len(day_hits) == 1:
+            resolved[index] = next(iter(day_hits))
+
+    # 2. The rest of the role's membership, by planner order, when exact.
+    if open_members:
+        unresolved = [index for index in physical if resolved[index] is None]
+        if len(unresolved) != len(open_members):
+            unresolved = [
+                index for index in unresolved
+                if str(blocks[index].get("block_type") or "") not in _FRAMING_BLOCK_TYPES
+            ]
+        if len(unresolved) == len(open_members):
+            for index, (_, key) in zip(unresolved, open_members):
+                resolved[index] = key
+
+    # 3. A support insert: one movement dosed in rounds. A lone block is that
+    # movement however it is worded; beside other blocks, only a block that is
+    # pure dose copy or names the movement takes the identity.
+    insert = _insert_for_session(session, role, day_roles) if not members else None
+    if insert is not None:
+        stems, key = insert
+        open_blocks = [index for index in physical if resolved[index] is None]
+        for index in open_blocks:
+            if len(open_blocks) == 1 or _identity_words(blocks[index].get("display_name")) <= stems:
+                resolved[index] = key
+
+    # 4. Legacy: an exact candidate-pool name, or a deterministic builder's stamp.
+    for index in physical:
+        if resolved[index] is not None:
+            continue
+        own = block_exercise_key_for_name(blocks[index].get("display_name"))
+        existing = normalize_exercise_key(blocks[index].get("exercise_key"))
+        if own and (own in pool_keys or existing == own):
+            resolved[index] = own
+    return list(zip(blocks, resolved))
 
 
 def reconcile_exercise_keys(structured_plan: Any, planning_brief: Any) -> Any:
-    """Stamp ``exercise_key`` on every physical block whose identity is known.
+    """Stamp the planner's ``exercise_key`` on every block whose identity is known.
 
     Returns the input object unchanged when nothing changes, else a deep copy.
     """
     if not isinstance(structured_plan, dict):
         return structured_plan
     brief = planning_brief if isinstance(planning_brief, Mapping) else {}
-    bank_keys = _bank_keys(brief)
-    inserts_by_day = _support_inserts_by_day(brief)
+    pool_keys = _pool_keys(brief)
+    day_roles_for = _day_roles_lookup(brief)
 
     repaired = copy.deepcopy(structured_plan)
     changed = False
@@ -173,47 +283,19 @@ def reconcile_exercise_keys(structured_plan: Any, planning_brief: Any) -> Any:
         for day in _as_list(week.get("days")):
             if not isinstance(day, dict):
                 continue
-            inserts = inserts_by_day.get(_countdown(day.get("countdown_label")) or "", [])
-            for session in _as_list(day.get("sessions")):
+            sessions = _as_list(day.get("sessions"))
+            day_roles, d_day = day_roles_for(day)
+            session_roles = match_sessions_to_roles(sessions, day_roles, d_day) if day_roles else {}
+            day_members = [member for role in day_roles for member in _role_members(role)]
+            for index, session in enumerate(sessions):
                 if not isinstance(session, dict):
                     continue
-                blocks = [block for block in _as_list(session.get("blocks")) if isinstance(block, dict)]
-                insert = _insert_for_session(session, inserts) if inserts else None
-                resolved_by_block = [_resolve_block_key(block, bank_keys) for block in blocks]
-                if insert is not None:
-                    insert_stems, insert_key = insert
-                    open_blocks = [
-                        index for index, block in enumerate(blocks)
-                        if resolved_by_block[index] is None and _is_physical(block)
-                    ]
-                    for index in open_blocks:
-                        # The insert session is one movement dosed in rounds, so
-                        # a lone block is that movement however it is worded.
-                        # Beside other blocks, only a block that is pure dose
-                        # copy or names the movement itself takes the identity.
-                        if len(open_blocks) == 1 or _identity_words(
-                            blocks[index].get("display_name")
-                        ) <= insert_stems:
-                            resolved_by_block[index] = insert_key
-                for block, resolved in zip(blocks, resolved_by_block):
-                    if block.get("exercise_key") != resolved:
-                        if resolved is None and "exercise_key" not in block:
-                            continue
-                        block["exercise_key"] = resolved
-                        changed = True
+                stamped = _stamp_session(
+                    session, session_roles.get(index), day_roles, day_members, pool_keys
+                )
+                for block, key in stamped:
+                    if block.get("exercise_key") == key or (key is None and "exercise_key" not in block):
+                        continue
+                    block["exercise_key"] = key
+                    changed = True
     return repaired if changed else structured_plan
-
-
-def _resolve_block_key(block: Mapping[str, Any], bank_keys: set[str]) -> str | None:
-    if not _is_physical(block):
-        return None
-    own = block_exercise_key_for_name(block.get("display_name"))
-    if own and own in bank_keys:
-        return own
-    existing = normalize_exercise_key(block.get("exercise_key"))
-    # Keep a key a deterministic builder stamped only when it names one of this
-    # plan's own planner exercises or the block's own name; anything else was
-    # not derived from planner data and is dropped.
-    if existing and (existing in bank_keys or existing == own):
-        return existing
-    return None
