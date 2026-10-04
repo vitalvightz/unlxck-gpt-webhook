@@ -50,6 +50,7 @@ from .stage2_payload_late_fight import (  # noqa: F401  (re-exported for tests/b
     ensure_declared_coach_combat_spine,
     is_low_cost_coexistable_filler,
 )
+from .exercise_identity import canonical_exercise_key, stamp_selected_exercise_assignment_keys
 from .gap_fill_inserts import apply_gap_fill_inserts
 from .physical_occupancy_fill import complete_late_fight_sequence_occupancy
 from .conditioning import athlete_facing_system_label, technical_footwork_prescription_fields
@@ -1098,6 +1099,7 @@ def _build_late_fight_allowed_exercises_by_day(
             style_taper_usage.record(option)
             assignment = {
                 "name": name,
+                "exercise_key": canonical_exercise_key(name),
                 "role_key": role.get("role_key"),
                 "scheduled_countdown_label": day_label,
                 "slot_id": slot.get("slot_id"),
@@ -1429,6 +1431,7 @@ def _build_planning_brief(
             days_until_fight=days_until_fight,
         )
 
+        stamp_selected_exercise_assignment_keys(weekly_role_map)
         return {
             "schema_version": "planning_brief.v1",
             "generator_mode": "deterministic_late_fight_planner_plus_ai_finalizer",
@@ -1554,6 +1557,7 @@ def _build_planning_brief(
         recompose_conditioning_callback=_recompose_conditioning,
     )
     weekly_role_map = stamp_weekly_role_map_labels(weekly_role_map)
+    stamp_selected_exercise_assignment_keys(weekly_role_map)
     return {
         "schema_version": "planning_brief.v1",
         "generator_mode": "deterministic_planner_plus_ai_finalizer",
