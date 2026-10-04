@@ -78,6 +78,41 @@ def _dataforseo_searcher(responses, calls=None):
     )
 
 
+def _ytdlp_searcher(responses, calls=None, sleeps=None):
+    class FakeYDL:
+        def __init__(self, options):
+            assert options["quiet"] is True
+            assert options["skip_download"] is True
+            assert options["extract_flat"] == "in_playlist"
+            assert options["playlistend"] == discovery.YTDLP_SEARCH_SIZE
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb):
+            return False
+
+        def extract_info(self, target, download=False):
+            assert target.startswith(f"ytsearch{discovery.YTDLP_SEARCH_SIZE}:")
+            assert download is False
+            if calls is not None:
+                calls.append(target.split(":", 1)[1])
+            response = responses.pop(0)
+            if isinstance(response, Exception):
+                raise response
+            if isinstance(response, dict):
+                return response
+            entries = []
+            for item in response:
+                entries.append(item if isinstance(item, dict) else {"id": item})
+            return {"entries": entries}
+
+    return discovery.YtDlpCandidateSearch(
+        ydl_factory=FakeYDL,
+        sleep=(sleeps.append if sleeps is not None else (lambda _: None)),
+    )
+
+
 def test_queries_use_exercise_metadata_without_private_cues():
     row = _row(example_name="Tempo Shadowboxing", sport="boxing", aliases="controlled-shadowboxing", plan_cue="private athlete injury", notes="private")
     queries = discovery.search_queries(row)
@@ -518,6 +553,54 @@ def test_dataforseo_discovers_youtube_videos_and_skips_shorts_and_live():
     assert calls == ["Trap Bar Deadlift exercise demonstration"]
 
 
+def test_ytdlp_discovers_videos_skips_live_and_deduplicates():
+    calls = []
+    searcher = _ytdlp_searcher(
+        [
+            [
+                {"id": "AAAAAAAAAAA", "live_status": "is_live"},
+                {"id": "BBBBBBBBBBB"},
+                {"id": "BBBBBBBBBBB"},
+            ],
+            [],
+            [],
+        ],
+        calls,
+    )
+
+    assert list(searcher.search(_row(), set())) == [URL_B]
+    assert len(calls) == discovery.MAX_SEARCH_QUERIES
+
+
+def test_ytdlp_retries_transient_failures_before_success():
+    calls, sleeps = [], []
+    searcher = _ytdlp_searcher(
+        [
+            RuntimeError("temporary one"),
+            RuntimeError("temporary two"),
+            ["BBBBBBBBBBB"],
+        ],
+        calls,
+        sleeps,
+    )
+
+    assert next(iter(searcher.search(_row(), set()))) == URL_B
+    assert len(calls) == discovery.YTDLP_RETRIES + 1
+    assert sleeps == [discovery.YTDLP_RETRY_BACKOFF_SECONDS] * 2
+
+
+def test_ytdlp_rate_limit_rewinds_query_and_stops_batch():
+    calls = []
+    searcher = _ytdlp_searcher([RuntimeError("HTTP Error 429: Too Many Requests")], calls)
+    progress = discovery.SearchProgress()
+
+    with pytest.raises(discovery.CandidateSearchQuotaExceeded):
+        list(searcher.search(_row(), set(), progress))
+
+    assert progress.queries_used == 0
+    assert len(calls) == 1
+
+
 def test_search_clients_use_provider_specific_timeouts():
     youtube = discovery.YouTubeCandidateSearch("youtube-test-key")
     dataforseo = discovery.DataForSEOCandidateSearch("login", "password")
@@ -640,38 +723,27 @@ def test_dataforseo_http_failure_is_provider_error_and_rewinds_query():
     assert progress.queries_used == 0
 
 
-def test_auto_provider_uses_dataforseo_without_youtube_fallback(monkeypatch):
+def test_auto_provider_uses_ytdlp_even_when_paid_providers_are_configured(monkeypatch):
     monkeypatch.setenv("DATAFORSEO_LOGIN", "login")
     monkeypatch.setenv("DATAFORSEO_PASSWORD", "password")
     monkeypatch.delenv("EXERCISE_MEDIA_SEARCH_PROVIDER", raising=False)
 
     searcher = discovery.build_candidate_search(youtube_api_key="youtube-test-key")
     try:
-        assert isinstance(searcher, discovery.DataForSEOCandidateSearch)
-        assert searcher.label == "DataForSEO YouTube SERP"
+        assert isinstance(searcher, discovery.YtDlpCandidateSearch)
+        assert searcher.label == "yt-dlp YouTube search"
     finally:
         searcher.close()
 
 
-@pytest.mark.parametrize(
-    ("login", "password"),
-    [("login", ""), ("", "password")],
-)
-def test_auto_provider_rejects_partial_dataforseo_configuration(monkeypatch, login, password):
-    monkeypatch.setenv("DATAFORSEO_LOGIN", login)
-    monkeypatch.setenv("DATAFORSEO_PASSWORD", password)
-    monkeypatch.delenv("EXERCISE_MEDIA_SEARCH_PROVIDER", raising=False)
+def test_explicit_youtube_provider_still_supported(monkeypatch):
+    monkeypatch.setenv("DATAFORSEO_LOGIN", "login")
+    monkeypatch.setenv("DATAFORSEO_PASSWORD", "password")
 
-    with pytest.raises(discovery.CandidateSearchError, match="partially configured"):
-        discovery.build_candidate_search(youtube_api_key="youtube-test-key")
-
-
-def test_auto_provider_uses_youtube_only_when_dataforseo_missing(monkeypatch):
-    monkeypatch.delenv("DATAFORSEO_LOGIN", raising=False)
-    monkeypatch.delenv("DATAFORSEO_PASSWORD", raising=False)
-    monkeypatch.delenv("EXERCISE_MEDIA_SEARCH_PROVIDER", raising=False)
-
-    searcher = discovery.build_candidate_search(youtube_api_key="youtube-test-key")
+    searcher = discovery.build_candidate_search(
+        provider="youtube",
+        youtube_api_key="youtube-test-key",
+    )
     try:
         assert isinstance(searcher, discovery.YouTubeCandidateSearch)
     finally:
