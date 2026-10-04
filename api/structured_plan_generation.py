@@ -41,6 +41,7 @@ from .structured_plan_faithfulness import (
 from .structured_plan_locked_merge import merge_planner_owned_structured_content
 from .minor_safety import MINOR_WEIGHT_CUT_NOTE
 from .services.exercise_media import strip_dose_suffix
+from .exercise_identity import block_exercise_key_for_name, reconcile_exercise_keys
 from .structured_plan_safety import (
     athlete_safe_support,
     audit_structured_plan,
@@ -2527,6 +2528,7 @@ def bank_strength_to_block(entry: dict[str, Any]) -> dict[str, Any]:
         "block_id": _slug(name, "block"),
         "block_type": _enum(entry.get("method"), _BLOCK_TYPE_VALUES, "strength", _BLOCK_TYPE_ALIASES),
         "display_name": name,
+        "exercise_key": block_exercise_key_for_name(name),
     }
     category = _coerce_str(entry.get("category"))
     if category:
@@ -2555,6 +2557,7 @@ def bank_conditioning_to_block(entry: dict[str, Any]) -> dict[str, Any]:
         "block_id": _slug(name, "conditioning"),
         "block_type": "conditioning",
         "display_name": name,
+        "exercise_key": block_exercise_key_for_name(name),
     }
     if entry.get("work_sec") is not None:
         block["work"] = entry.get("work_sec")
@@ -2980,8 +2983,11 @@ def build_structured_plan_outcome(
 
     first_candidate: list[tuple[StructuredPlanStatus, dict[str, Any], str | None]] = []
     cleaned = _strip_and_normalize(
-        reconcile_rehab_drill_ids(
-            reconcile_late_fight_week_context(raw_data, planning_brief),
+        reconcile_exercise_keys(
+            reconcile_rehab_drill_ids(
+                reconcile_late_fight_week_context(raw_data, planning_brief),
+                planning_brief,
+            ),
             planning_brief,
         )
     )

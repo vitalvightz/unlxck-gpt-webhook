@@ -385,6 +385,8 @@ export type StructuredBlock = {
   block_id?: string | null;
   block_type?: string | null;
   display_name?: string | null;
+  /** Canonical exercise identity (server-stamped); demo videos resolve on it. Absent on legacy plans. */
+  exercise_key?: string | null;
   category?: string | null;
   order_index?: number | null;
   duration?: MeasuredValue | null;

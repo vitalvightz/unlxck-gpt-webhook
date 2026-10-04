@@ -125,6 +125,38 @@ test("the current Plan day shows compact exercise rows before a demo is opened",
   assert.doesNotMatch(html, /class="ex-demo"/);
 });
 
+test("a block's demo resolves on its exercise_key, not its display copy", () => {
+  const plan = {
+    weeks: [{
+      week_index: 1,
+      days: [{
+        date: "2026-09-29",
+        weekday: "Tue",
+        sessions: [{
+          session_id: "shadow-flow",
+          title: "Shadowboxing Aerobic Flow",
+          blocks: [
+            { block_id: "flow", block_type: "conditioning", display_name: "3 x 2 min easy rounds", exercise_key: "tempo-shadowboxing" },
+            { block_id: "other", block_type: "conditioning", display_name: "Easy jog", exercise_key: "easy-jog" },
+          ],
+        }],
+      }],
+    }],
+  } as StructuredPlan;
+  const media = { provider: "youtube", video_id: "hQgFixeXdZo", start_s: 0, end_s: null, source: "curated" } as const;
+  const html = renderToStaticMarkup(
+    <StructuredPlanRenderer
+      plan={plan}
+      today={new Date(2026, 8, 29)}
+      // A legacy display_name entry must not leak onto a keyed block.
+      exerciseMedia={{ "exercise:tempo-shadowboxing": media, "Easy jog": media }}
+    />,
+  );
+
+  assert.match(html, /3 x 2 min easy rounds/);
+  assert.equal(html.match(/class="ex-row-thumb"/g)?.length, 1);
+});
+
 test("open-plan weekday fallback labels today with the live date, not the stale date", () => {
   const plan = {
     schema_version: "text-adapter.v1",

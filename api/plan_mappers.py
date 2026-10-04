@@ -44,6 +44,7 @@ from .structured_card_lifecycle import (
     STRUCTURED_CARD_BUILD_STALE_AFTER,
     parse_structured_card_attempt_started_at,
 )
+from .exercise_identity import reconcile_exercise_keys
 from .structured_plan_models import StructuredTrainingPlan, safe_parse_structured_plan
 from .structured_plan_calendar_spine import reconcile_calendar_spine
 from .structured_plan_generation import (
@@ -623,9 +624,12 @@ def _map_plan_detail(
         if locked_result.ok and locked_result.plan is not None:
             structured_plan = locked_result.plan
             structured_payload = locked_payload
-    reconciled_payload = reconcile_rehab_drill_ids(
-        reconcile_late_fight_week_context(
-            structured_payload,
+    reconciled_payload = reconcile_exercise_keys(
+        reconcile_rehab_drill_ids(
+            reconcile_late_fight_week_context(
+                structured_payload,
+                planning_brief,
+            ),
             planning_brief,
         ),
         planning_brief,

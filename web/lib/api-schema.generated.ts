@@ -1426,6 +1426,7 @@ export type SessionBlock = {
   substitutions: string[];
   red_flags: RedFlagRule[];
   rehab_drill_id: string | null;
+  exercise_key: string | null;
 };
 
 export type SessionCompletionHistoryResponse = {

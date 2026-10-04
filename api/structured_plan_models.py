@@ -310,6 +310,14 @@ class SessionBlock(BaseModel):
     # does not appear there is cleared, and a cleared id means the completion
     # gate refuses the drill rather than guessing which injury it was for.
     rehab_drill_id: str | None = None
+    # Stable identity of the physical exercise this block prescribes, as a
+    # normalized slug in the exercise-media taxonomy ("tempo-shadowboxing").
+    # display_name is presentation copy that Stage 2 may rewrite into a dose
+    # ("3 x 2 min easy rounds"); this field is what demo videos resolve on.
+    # Server-owned: stamped from planner/bank data by reconcile_exercise_keys,
+    # never taken from the model. None on legacy plans and on blocks with no
+    # deterministic identity, which fall back to display_name matching.
+    exercise_key: str | None = None
 
 
 class Completion(BaseModel):

@@ -19,6 +19,7 @@ from .conditioning import (
     technical_footwork_prescription_fields,
 )
 from .sports import normalize_sport, planning_format
+from .support_insert_identity import support_insert_exercise_key
 from .late_selector_windows import classify_late_selector_window
 from .restriction_filtering import evaluate_restriction_impact
 from .stage2_render_guards import _all_active_injuries_surface_only
@@ -1367,6 +1368,9 @@ def _build_insert_role(
             "meaningful_stress": False,
         },
     }
+    exercise_key = support_insert_exercise_key(role_key, label)
+    if exercise_key:
+        role["exercise_key"] = exercise_key
     if role_key == "tactical_watch":
         used_watch_keys = (
             usage_ledger.setdefault("used_tactical_watch_keys", set())
