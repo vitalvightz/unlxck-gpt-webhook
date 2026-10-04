@@ -524,6 +524,57 @@ def _read_csv(path):
         return list(csv.DictReader(handle))
 
 
+def test_write_rows_does_not_use_shared_fixed_tmp_path(tmp_path):
+    out = tmp_path / "reviewed.csv"
+    legacy_tmp = out.with_suffix(out.suffix + ".tmp")
+    legacy_tmp.write_text("other process owns this", encoding="utf-8")
+
+    review._write_rows(out, ["exercise_key"], [{"exercise_key": "a"}])
+
+    assert _read_csv(out) == [{"exercise_key": "a"}]
+    assert legacy_tmp.read_text(encoding="utf-8") == "other process owns this"
+
+
+def test_normal_resume_skips_completed_verdict_even_with_stale_progress(tmp_path):
+    src = tmp_path / "media.csv"
+    progress = json.dumps({
+        "best": None,
+        "tried": [URL_A],
+        "errors": [],
+        "reviewed_video_ids": ["AAAAAAAAAAA"],
+        "search_progress": {"queries_used": 1, "pending": []},
+    })
+    _write_csv(src, [
+        _row(
+            exercise_key="done",
+            suggested_url=URL_A,
+            ai_verdict="match",
+            ai_confidence="0.95",
+            ai_orientation="landscape",
+            ai_start_s="42",
+            ai_end_s="54",
+            ai_review_progress=progress,
+        ),
+        _row(exercise_key="next", suggested_url=URL_B),
+    ])
+
+    calls = []
+    counts = review.run_review(
+        str(src),
+        str(src),
+        reviewer=_reviewer({URL_B: _answer()}, calls),
+        delay_s=0,
+        sleep=lambda _: None,
+        log=lambda _: None,
+    )
+
+    assert counts["skipped"] == 1
+    assert len(calls) == 1
+    rows = _read_csv(src)
+    assert rows[0]["ai_verdict"] == "match"
+    assert rows[1]["ai_verdict"] == "match"
+
+
 def test_run_review_saves_progress_on_quota_and_resumes(tmp_path):
     src = tmp_path / "in.csv"
     out = tmp_path / "out.csv"
