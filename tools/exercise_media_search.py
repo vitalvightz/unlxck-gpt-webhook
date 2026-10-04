@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 import os
 import re
 import time
@@ -21,6 +22,7 @@ DATAFORSEO_TRANSIENT_HTTP_STATUS_CODES = {408, 425, 500, 502, 503, 504}
 DATAFORSEO_EMPTY_RESULT_RETRIES = 3
 DATAFORSEO_EMPTY_RESULT_BACKOFF_SECONDS = 2.0
 YTDLP_SEARCH_SIZE = 5
+YTDLP_MAX_DURATION_SECONDS = 180
 YTDLP_TIMEOUT_SECONDS = 30
 YTDLP_RETRIES = 2
 YTDLP_RETRY_BACKOFF_SECONDS = 2.0
@@ -431,6 +433,15 @@ def _ytdlp_video_ids(info: object) -> list[str]:
         if not isinstance(entry, dict):
             continue
         if entry.get("live_status") in {"is_live", "is_upcoming"}:
+            continue
+        # Cost guard: Gemini video review should never ingest long or
+        # duration-unknown search results. yt-dlp search metadata normally
+        # includes duration; unknown duration fails closed to manual review.
+        try:
+            duration_s = float(entry.get("duration"))
+        except (TypeError, ValueError):
+            continue
+        if not math.isfinite(duration_s) or duration_s <= 0 or duration_s > YTDLP_MAX_DURATION_SECONDS:
             continue
         video_id = entry.get("id")
         if not isinstance(video_id, str) or not re.fullmatch(r"[A-Za-z0-9_-]{11}", video_id):
