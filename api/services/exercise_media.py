@@ -191,34 +191,61 @@ def reset_media_index_cache() -> None:
         _index = None
 
 
-def _iter_block_names(structured_plan: Any) -> Iterable[str]:
+# Blocks that are never a physical exercise and so never carry a demo video.
+NON_PHYSICAL_BLOCK_TYPES = frozenset({"mindset", "nutrition", "sparring"})
+# Response-map key for a block resolved through its canonical identity. The
+# prefix keeps it apart from the legacy display_name keys, so two blocks that
+# share copy ("3 x 2 min easy rounds") but not identity never share a video.
+EXERCISE_KEY_MEDIA_PREFIX = "exercise:"
+
+
+def _iter_blocks(structured_plan: Any) -> Iterable[Any]:
     for week in getattr(structured_plan, "weeks", None) or []:
         for day in getattr(week, "days", None) or []:
             for session in getattr(day, "sessions", None) or []:
                 for block in getattr(session, "blocks", None) or []:
-                    name = getattr(block, "display_name", None)
-                    if isinstance(name, str) and name.strip():
-                        yield name
+                    if getattr(block, "block_type", None) in NON_PHYSICAL_BLOCK_TYPES:
+                        continue
+                    yield block
+
+
+def _media_for_display_name(name: str, index: Mapping[str, ExerciseMedia]) -> ExerciseMedia | None:
+    media = index.get(normalize_exercise_key(name))
+    if media is None:
+        # Plans saved before display names were cleaned can still carry the
+        # dose in the name; the exercise is the part before it.
+        base = strip_dose_suffix(name)
+        if base != name:
+            media = index.get(normalize_exercise_key(base))
+    return media
 
 
 def resolve_plan_exercise_media(
     structured_plan: Any,
     index: Mapping[str, ExerciseMedia],
 ) -> dict[str, ExerciseMedia]:
-    """Media for every block in the plan that has a video, keyed by display_name."""
+    """Media for every physical block in the plan that has a video.
+
+    A block with a canonical ``exercise_key`` resolves on that identity only
+    (its primary row, else an explicit alias of another row) and is keyed
+    ``"exercise:<key>"``: its display_name is presentation copy and is never
+    consulted. A block without one (every plan stored before identity existed)
+    falls back to legacy display_name matching and is keyed by display_name.
+    """
     if structured_plan is None or not index:
         return {}
     resolved: dict[str, ExerciseMedia] = {}
-    for name in _iter_block_names(structured_plan):
-        if name in resolved:
+    for block in _iter_blocks(structured_plan):
+        exercise_key = normalize_exercise_key(getattr(block, "exercise_key", None))
+        if exercise_key:
+            map_key = f"{EXERCISE_KEY_MEDIA_PREFIX}{exercise_key}"
+            if map_key not in resolved and (media := index.get(exercise_key)) is not None:
+                resolved[map_key] = media
             continue
-        media = index.get(normalize_exercise_key(name))
-        if media is None:
-            # Plans saved before display names were cleaned can still carry the
-            # dose in the name; the exercise is the part before it.
-            base = strip_dose_suffix(name)
-            if base != name:
-                media = index.get(normalize_exercise_key(base))
+        name = getattr(block, "display_name", None)
+        if not isinstance(name, str) or not name.strip() or name in resolved:
+            continue
+        media = _media_for_display_name(name, index)
         if media is not None:
             resolved[name] = media
     return resolved

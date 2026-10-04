@@ -41,10 +41,22 @@ export function ExerciseMediaProvider({
   return <ExerciseMediaContext.Provider value={media ?? null}>{children}</ExerciseMediaContext.Provider>;
 }
 
-export function useExerciseMedia(displayName: string | null | undefined): ExerciseMedia | null {
+/** Response-map prefix for blocks resolved on canonical identity (server: EXERCISE_KEY_MEDIA_PREFIX). */
+export const EXERCISE_KEY_MEDIA_PREFIX = "exercise:";
+
+/**
+ * The block's demo. A block with a canonical `exercise_key` resolves on that
+ * identity only, so rewording its display name never loses or swaps its video;
+ * a legacy block without one falls back to its display name.
+ */
+export function useExerciseMedia(
+  displayName: string | null | undefined,
+  exerciseKey?: string | null,
+): ExerciseMedia | null {
   const map = useContext(ExerciseMediaContext);
-  if (!map || !displayName) return null;
-  const media = map[displayName];
+  if (!map) return null;
+  const key = exerciseKey?.trim();
+  const media = key ? map[`${EXERCISE_KEY_MEDIA_PREFIX}${key}`] : displayName ? map[displayName] : undefined;
   return media && typeof media.video_id === "string" && media.video_id ? media : null;
 }
 

@@ -572,7 +572,7 @@ export function ExerciseRow({
   const { title, compactStopRule } = prescription;
   const blockType = cleanText(block.block_type);
   const tagLabel = blockType ? blockTagLabel(block, rehabLabelPolicy) : null;
-  const media = useExerciseMedia(block.display_name);
+  const media = useExerciseMedia(block.display_name, block.exercise_key);
   const summary = exerciseRowSummary(block, prescription);
   const showRationale = useContext(ExerciseRationaleContext);
   const builds = showRationale ? athleteFacingRationale(block.purpose) : null;
