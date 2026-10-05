@@ -150,3 +150,22 @@ test("terminal states show no tip and start no rotation", (t) => {
     screen.unmount();
   }
 });
+
+test("server render reserves the tip box but leaves the shuffled pick to the client", () => {
+  const html = renderToStaticMarkup(<PublicGenerationScreen phase="running" />);
+  assert.match(html, /public-build-tip-stack/);
+  assert.ok(!html.includes("public-build-tip-text-active"));
+});
+
+test("a refreshed but equivalent intake keeps the current tip", (t) => {
+  const timers = installFakeIntervals();
+  t.after(timers.restore);
+  const screen = mountScreen({ ...running, intake: INJURY_INTAKE });
+  act(() => timers.fire(5_000));
+  const before = screen.activeTips();
+  for (let i = 0; i < 10; i += 1) {
+    screen.rerender({ ...running, intake: { ...INJURY_INTAKE } });
+    assert.deepEqual(screen.activeTips(), before);
+  }
+  screen.unmount();
+});
