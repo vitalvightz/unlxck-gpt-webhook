@@ -1,0 +1,742 @@
+{
+  "base_commit": "7f47255e6b4f3a975cec128f0af93424846e9256",
+  "candidates": {
+    "achilles_tendonitis_eccentric_calf_drops_on_step": {
+      "disposition": "A",
+      "planning_stage": "load",
+      "reason": "Fixed floor-level lowering is a plausible exact-type anchor; establish tendon site and exclude incompatible pathology. The historical step ID remains; current mechanics prohibit step/deep lowering."
+    },
+    "ankle_instability_foam_pad_jump_stick": {
+      "disposition": "B",
+      "planning_stage": "dynamic",
+      "reason": "Jump landing belongs to DYNAMIC. Unknown impact and foam landing suitability require assessed demand/equipment review before a dynamic gate; no LOAD role."
+    },
+    "ankle_instability_lateral_hop_stick_drill": {
+      "disposition": "B",
+      "planning_stage": "dynamic",
+      "reason": "Fixed lateral hopping is DYNAMIC; impact/dose and instability-specific landing capacity remain unassessed, not LOAD merely because landing is controlled."
+    },
+    "ankle_sprain_banded_ankle_circles": {
+      "disposition": "A",
+      "planning_stage": "load",
+      "reason": "Fixed resisted circumduction is a plausible exact-type loading adjunct after lateral-ligament injury, permitted direction and symptom/ROM assessment; not evidence of healing."
+    },
+    "ankle_sprain_single_leg_balance_on_foam_pad": {
+      "disposition": "A",
+      "planning_stage": "load",
+      "reason": "Fixed supported single-leg balance is a plausible controlled weight-bearing adjunct. Assess stable-surface control first; it is not progressive resistance alone or sport clearance."
+    },
+    "bicep_strain_band_resisted_eccentric_curl": {
+      "disposition": "A",
+      "planning_stage": "load",
+      "reason": "Supported assisted lift and fixed band lowering are plausible local strain loading; assess tissue/site independently of tendonitis criteria."
+    },
+    "bicep_strain_cable_curl_with_fat_grip": {
+      "disposition": "E",
+      "planning_stage": "load",
+      "reason": "Fixed cable curling is usable, but thick grip adds equipment/complexity without established strain-specific advantage. Unknown resistance; prefer the simple band anchor."
+    },
+    "bicep_strain_isometric_bicep_curl_hold_mid_range": {
+      "disposition": "A",
+      "planning_stage": "load",
+      "reason": "One supported mid-range self-resisted elbow-flexion hold is mechanically fixed and plausible strain loading; force and clinical gate remain unmeasured."
+    },
+    "bicep_strain_supinated_isometric_elbow_hold": {
+      "disposition": "D",
+      "overlaps": "bicep_strain_isometric_bicep_curl_hold_mid_range",
+      "planning_stage": "load",
+      "reason": "Supported mid-flexion self-resisted hold materially overlaps the mid-range curl hold. Select one documented forearm-position variant for a small future set; preserve both inventory identities."
+    },
+    "bicep_tendonitis_incline_db_curl_eccentric_focus": {
+      "disposition": "C",
+      "planning_stage": "load",
+      "reason": "Current upright curl avoids historical incline stretch, but generic biceps tendonitis lacks proximal/distal tendon ownership. Unknown resistance and subtype indication block generic use."
+    },
+    "calf_strain_active_band_calf_pumps": {
+      "disposition": "E",
+      "planning_stage": "load",
+      "reason": "Fixed seated low-band plantarflexion is foundation work, insufficient alone for loaded calf capacity. Preserve the #2741 canonical keeper unchanged."
+    },
+    "calf_strain_isometric_tip_toe_wall_press": {
+      "disposition": "E",
+      "planning_stage": "load",
+      "reason": "Fixed bilateral heel-height hold is foundation loading, not unilateral capacity. Stronger graded/unilateral variety is missing; preserve archive keeper."
+    },
+    "calf_strain_isometric_wall_push_hold": {
+      "disposition": "E",
+      "planning_stage": "load",
+      "reason": "Fixed bilateral forefoot wall press provides foundation loading but does not establish unilateral calf capacity or useful graded resistance variety. Preserve archive keeper."
+    },
+    "chest_strain_isometric_wall_push_chest_height": {
+      "disposition": "E",
+      "planning_stage": "load",
+      "reason": "Gentle fixed wall press is plausible foundational pectoral loading but low added value; anatomical strain and regional transition evidence remain missing."
+    },
+    "chest_strain_resistance_band_chest_fly": {
+      "disposition": "C",
+      "planning_stage": "load",
+      "reason": "Fixed light fly is bounded, but unspecified pectoral site/severity makes lengthened loading ownership uncertain. Generic chest strain does not establish tissue integrity."
+    },
+    "elbow_sprain_overhead_band_triceps_extension": {
+      "disposition": "C",
+      "planning_stage": "load",
+      "reason": "Controlled extension is usable, but generic sprain lacks injured-ligament ownership and overhead-position suitability; needs exact injury assessment."
+    },
+    "elbow_sprain_wrist_wall_slides_elbow_straight": {
+      "disposition": "F",
+      "planning_stage": "restore",
+      "reason": "Current notes describe light comfortable supported movement without advanced resisted demand. Drop from advanced planning only; do not mutate stored stage or activate."
+    },
+    "elbow_tendonitis_eccentric_reverse_wrist_curls": {
+      "disposition": "A",
+      "planning_stage": "load",
+      "reason": "Supported extensor lowering fits assessed subacute/chronic lateral elbow tendinopathy, not medial/posterior tendon ownership. Unknown chosen dumbbell load is an individual prescription gap, not metadata to guess."
+    },
+    "fingers_sprain_finger_band_expansions": {
+      "disposition": "A",
+      "planning_stage": "load",
+      "reason": "Fixed low-band abduction is plausible controlled loading after injured-digit/joint assessment. It does not prove ligament stability or define a universal gate."
+    },
+    "fingers_sprain_finger_taps_on_hard_surface": {
+      "disposition": "F",
+      "planning_stage": "restore",
+      "reason": "Slow light supported taps are movement/coordination, not demonstrated advanced impact loading. DYNAMIC/moderate-velocity metadata conflicts with current slow notes; omit from planning rather than approve/restage."
+    },
+    "fingers_sprain_mini_band_finger_spread_hold": {
+      "disposition": "D",
+      "overlaps": "fingers_sprain_finger_band_expansions",
+      "planning_stage": "load",
+      "reason": "Low-band abduction hold materially overlaps finger expansions for a small first set, but contraction differs. Not an exact duplicate; retain both mechanics/identities."
+    },
+    "fingers_sprain_tape_assisted_plyo_taps": {
+      "disposition": "C",
+      "planning_stage": "dynamic",
+      "reason": "Quick taped taps are DYNAMIC with unknown impact/load. Tape cannot establish injury-specific indication, joint stability or readiness."
+    },
+    "forearm_tendonitis_eccentric_wrist_extensions": {
+      "disposition": "C",
+      "planning_stage": "load",
+      "reason": "Fixed extensor lowering lacks specific tendon-site ownership. Lateral-elbow evidence cannot be assigned automatically to generic forearm tendonitis."
+    },
+    "groin_strain_standing_cable_adduction": {
+      "disposition": "A",
+      "planning_stage": "load",
+      "reason": "Fixed slow adduction is plausible for assessed acute adductor strain, not every groin cause. Establish injured tissue and symptom/function tolerance; define cable resistance/dose."
+    },
+    "hand_sprain_band_resisted_finger_abduction": {
+      "disposition": "C",
+      "planning_stage": "load",
+      "reason": "Fixed finger abduction lacks relevance to an unspecified hand ligament. Region matching alone is insufficient; do not borrow finger-sprain criteria."
+    },
+    "hand_sprain_finger_band_extensions": {
+      "disposition": "C",
+      "planning_stage": "load",
+      "reason": "Fixed finger opening is usable, but hand joint/ligament ownership is unspecified. No defensible generic hand-sprain gate follows from mechanics."
+    },
+    "hand_sprain_hook_grip_plate_pinches": {
+      "disposition": "E",
+      "planning_stage": "load",
+      "reason": "Fixed plate grip adds equipment and unknown resistance without established first-wave advantage over supported soft-ball grip; joint/site still needs assessment."
+    },
+    "hand_sprain_palm_squeeze_with_soft_ball": {
+      "disposition": "A",
+      "planning_stage": "load",
+      "reason": "Supported gentle soft-ball grip is a simple exact-type loading possibility conditional on joint/tissue assessment. Grip response does not prove ligament healing."
+    },
+    "knee_instability_mini_band_lateral_walks": {
+      "disposition": "C",
+      "planning_stage": "load",
+      "reason": "Fixed lateral steps may support hip/knee control but unspecified instability spans different pathology. Do not infer ACL clearance; preserve archive keeper/history."
+    },
+    "knee_instability_reactive_knee_bounces_foam_pad": {
+      "disposition": "B",
+      "planning_stage": "load",
+      "reason": "Notes describe slow bilateral supported bends, not reactive bounces. Misleading name and instability diagnosis need review. #2741 keeper cannot be silently edited; separate provenance-aware follow-up."
+    },
+    "quads_strain_isometric_wall_sit_mid_range": {
+      "disposition": "E",
+      "planning_stage": "load",
+      "reason": "Fixed partial-squat bodyweight hold is foundation loading. One hold lacks through-range/graded resistance variety and quad-specific gate evidence for first rollout."
+    },
+    "shoulder_instability_banded_overhead_carries": {
+      "disposition": "C",
+      "planning_stage": "load",
+      "reason": "Bounded overhead carry still lacks instability subtype/direction and permitted-range assessment. Unknown resistance/apprehension are not resolved by general shoulder-pain guidance."
+    },
+    "shoulder_instability_kb_bottom_up_carry": {
+      "disposition": "E",
+      "planning_stage": "load",
+      "reason": "Near-side fixed carry avoids overhead work but adds specialised grip/balance demand and unknown weight; lower priority than simple assessed shoulder loading."
+    },
+    "shoulder_instability_quadruped_weight_shifts_arm_reaches": {
+      "disposition": "B",
+      "planning_stage": "load",
+      "reason": "Current notes keep both hands down and prohibit reaches, unlike the name. Clarify descriptive label and wrist/shoulder demand and instability subtype before gate review."
+    },
+    "shoulder_instability_wall_walks_isometric": {
+      "disposition": "B",
+      "planning_stage": "load",
+      "reason": "Current notes specify a fixed wall hold and prohibit climbing, unlike the name. Needs descriptive label and instability-specific indication; rotator-cuff criteria cannot substitute."
+    },
+    "shoulder_sprain_90_90_external_rotation_holds": {
+      "disposition": "C",
+      "planning_stage": "load",
+      "reason": "Fixed shoulder-height external-rotation hold may stress different injured structures. Generic sprain lacks ligament/site and tolerated-position assessment."
+    },
+    "shoulder_sprain_isometric_banded_row": {
+      "disposition": "A",
+      "planning_stage": "load",
+      "reason": "Fixed arm-by-side row hold is a conservative controlled loading anchor after sprain site/stability assessment; mechanics do not supply clinical transition evidence."
+    },
+    "shoulder_sprain_overhead_scapular_pull_aparts": {
+      "disposition": "C",
+      "planning_stage": "load",
+      "reason": "Bounded overhead band separation lacks established position/ligament relevance for generic shoulder sprain; indication needs exact assessment."
+    },
+    "shoulder_sprain_wall_supported_external_rotation": {
+      "disposition": "A",
+      "planning_stage": "load",
+      "reason": "One gentle arm-by-side wall isometric is fixed exact-type inventory; joint/site and tolerated resistance still need clinical assessment."
+    },
+    "shoulder_strain_banded_y_raise": {
+      "disposition": "A",
+      "planning_stage": "load",
+      "reason": "Fixed comfortable low-band elevation is plausible after muscle-strain site assessment; completion/overhead comfort cannot establish readiness."
+    },
+    "shoulder_strain_isometric_wall_press_90_abduction": {
+      "disposition": "C",
+      "planning_stage": "load",
+      "reason": "Fixed shoulder-height isometric requires an assessed position/tissue. Generic strain does not specify which muscle or tear severity should be loaded."
+    },
+    "shoulder_strain_landmine_shoulder_press": {
+      "disposition": "E",
+      "planning_stage": "load",
+      "reason": "Controlled fixed landmine pressing is LOAD, but unknown weight, equipment and compound demand complicate first rollout; simpler local anchor has better value."
+    },
+    "shoulder_strain_wall_slides_with_foam_roller": {
+      "disposition": "F",
+      "planning_stage": "restore",
+      "reason": "No-band/no-weight comfortable wall slide is early movement/control without established advanced resistance demand. Drop from planning; retain identity/stored metadata pending separate review."
+    },
+    "shoulder_tendonitis_banded_scaption_holds": {
+      "disposition": "A",
+      "planning_stage": "load",
+      "reason": "Fixed below-shoulder scaption is plausible for assessed rotator-cuff tendinopathy. It does not isolate a tendon; establish elevation/resistance tolerance and compatible diagnosis before gate review."
+    },
+    "toe_sprain_double_leg_pogo_jumps": {
+      "disposition": "C",
+      "planning_stage": "dynamic",
+      "reason": "Repeated impact pogos are DYNAMIC, never LOAD. Unknown impact and generic toe sprain do not establish plantar-plate/MTP versus other joint suitability."
+    },
+    "toe_sprain_toe_off_isometric_presses": {
+      "disposition": "A",
+      "planning_stage": "load",
+      "reason": "Fixed gentle supported forefoot press is plausible if injured joint and permitted motion are assessed. One anchor is not a full LOAD set."
+    },
+    "triceps_strain_isometric_wall_triceps_press": {
+      "disposition": "A",
+      "planning_stage": "load",
+      "reason": "Fixed gentle elbow-extension wall isometric is plausible exact-type strain loading; assess site, tissue integrity and function independently."
+    },
+    "triceps_strain_kettlebell_crush_press_light": {
+      "disposition": "E",
+      "planning_stage": "load",
+      "reason": "Supported bilateral pressing is LOAD but adds chest/grip demand and unknown weight; lower value than simple local elbow loading for first rollout."
+    },
+    "triceps_strain_overhead_band_triceps_extensions": {
+      "disposition": "A",
+      "planning_stage": "load",
+      "reason": "Fixed low-band elbow extension is plausible conditional on overhead comfort and injured tissue; no fatigue/speed escalation encoded."
+    },
+    "triceps_strain_push_up_to_tabletop_flow": {
+      "disposition": "B",
+      "planning_stage": "load",
+      "reason": "Current task is one raised-table incline push-up and excludes reverse tabletop flow. Correct misleading descriptive name before gate review; do not restore the compound historical task."
+    },
+    "wrist_sprain_band_assisted_wrist_flexion_hold": {
+      "disposition": "A",
+      "planning_stage": "load",
+      "reason": "Fixed supported wrist-flexion hold is plausible after injured-joint/ligament assessment. Position tolerance does not prove stability or healing."
+    },
+    "wrist_sprain_band_stabilization_circles": {
+      "disposition": "A",
+      "planning_stage": "load",
+      "reason": "Fixed slow small resisted circumduction offers controlled variety conditional on exact injury and permitted direction/range; no escalation encoded."
+    },
+    "wrist_sprain_isometric_wall_wrist_press": {
+      "disposition": "D",
+      "overlaps": "wrist_sprain_isometric_wrist_holds_various_angles",
+      "planning_stage": "load",
+      "reason": "Gentle fixed wall hold overlaps supported neutral self-resisted hold in a small shortlist. Direction/support differ, so no identity consolidation or content deletion."
+    },
+    "wrist_sprain_isometric_wrist_holds_various_angles": {
+      "disposition": "B",
+      "planning_stage": "load",
+      "reason": "Current notes permit neutral only, unlike various-angles name. Clarify descriptive label/resistance direction in separate review; do not invent angular variants here."
+    },
+    "wrist_sprain_plank_to_palm_rockbacks": {
+      "disposition": "B",
+      "planning_stage": "load",
+      "reason": "Current task is knee-supported shifting, not full plank. Clarify descriptive label and permitted wrist-extension/loading after injury assessment; preserve fixed mechanics."
+    },
+    "wrist_sprain_wrist_stability_drill_with_dynamometer": {
+      "disposition": "B",
+      "planning_stage": "load",
+      "reason": "Notes describe grip loading and deny clearance inference. Stability name and fixed-resistance dynamometer wording confuse measurement with loading equipment; define assessed device/task before gate review."
+    },
+    "wrist_tendonitis_eccentric_wrist_flexion_with_dumbbell": {
+      "disposition": "C",
+      "planning_stage": "load",
+      "reason": "Supported flexor lowering does not fit every wrist tendonitis, especially thumb-side tenosynovitis. Current sources do not establish flexor-specific gate evidence; tendon/site and weight remain unresolved."
+    }
+  },
+  "capture_assessment": {
+    "already_captured": "Athlete/injury/episode/side ownership, policy/bank provenance, completion state and amounts when explicitly quantified, categorical during/next-day response, stopped-work signals and injury status/history/setbacks. See rehab_completion.py, rehab_exposure.py, rehab_evidence.py and rehab_progression.py.",
+    "clinical_boundary": "Every first-wave target needs reviewed exact-variant prescription/dose/indication, sourced entry criterion and setback policy. Clinician diagnosis/function assessment may be required; clearance flags are not quantitative readiness. No policy/schema/evaluator change here.",
+    "history_can_supply": "Exact-episode reviewed exposures, stated amounts, response groups and setbacks when complete/attributable; existing safety/data-sufficiency observations, not capacity measures.",
+    "history_cannot_supply": "Diagnosis subtype, numeric pain from categorical response, ROM, grip strength, heel-rise quality, stability or unperformed-task tolerance. Counts cannot establish healing/clearance.",
+    "not_currently_captured": "No functional checkpoint is registered/read. No assessed subtype, observed ROM, strength, quality or regional clinical milestone enters the advanced evaluator. Numeric model fields do not demonstrate numeric symptom capture by the response flow.",
+    "small_product_addition": "After clinical specification: timestamped injury/episode-specific assessment and function/symptom check-in recording assessor and actual result, plus real checkpoint reader/unknown handling. Design proposal, not new names or thresholds."
+  },
+  "evidence_sources": {
+    "achilles": {
+      "access_note": "Primary full-text web extraction inspected; PMC access checks for groin/calf were bypassed by reading the original publisher full text.",
+      "evidence_type": "Multidisciplinary guideline, 2021",
+      "inspected_sections": "Diagnosis/treatment: individual progressive calf strengthening and flat-surface insertional advice",
+      "limitation": "No universal app LOAD threshold or superior eccentric variant established.",
+      "title": "Dutch multidisciplinary guideline on Achilles tendinopathy",
+      "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC8479731/"
+    },
+    "achilles2024": {
+      "access_note": "Primary guideline PDF retrieved from APTA Orthopedics; recommendation text inspected directly, not a secondary summary.",
+      "evidence_type": "Clinical practice guideline",
+      "inspected_sections": "Scope and tendon-loading recommendations; directly retrieved and extracted PDF page 2 (CPG2)",
+      "limitation": "Midportion guidance cannot establish insertional or rupture eligibility.",
+      "title": "Midportion Achilles tendinopathy revision 2024",
+      "url": "https://www.orthopt.org/uploads/content_files/files/Achilles_Pain_revision_2024.pdf"
+    },
+    "ankle": {
+      "access_note": "Primary guideline PDF retrieved from APTA Orthopedics; recommendation text inspected directly, not a secondary summary.",
+      "evidence_type": "Clinical practice guideline",
+      "inspected_sections": "Structured therapeutic exercise recommendations and impairment/function assessment; directly retrieved and extracted PDF page 3 (CPG3)",
+      "limitation": "No automatic foam-pad/circumduction approval or app LOAD threshold.",
+      "title": "Lateral ankle ligament sprains revision 2021",
+      "url": "https://www.orthopt.org/uploads/content_files/files/jospt.2021.0302.pdf"
+    },
+    "calf": {
+      "access_note": "Primary full-text web extraction inspected; PMC access checks for groin/calf were bypassed by reading the original publisher full text.",
+      "evidence_type": "Qualitative study of 20 expert clinicians, 2022",
+      "inspected_sections": "Foundation function, single-leg quality and loaded strengthening",
+      "limitation": "Expert practice, not a validated universal cutoff; do not borrow Achilles/return-to-running criteria.",
+      "title": "Assessment and management of calf muscle strain injuries",
+      "url": "https://link.springer.com/article/10.1186/s40798-021-00364-0"
+    },
+    "elbow": {
+      "access_note": "Primary guideline PDF retrieved from APTA Orthopedics; recommendation text inspected directly, not a secondary summary.",
+      "evidence_type": "Clinical practice guideline",
+      "inspected_sections": "CPG2: resisted wrist extensors, ROM, pain-free/maximal grip and PRTEE/DASH; directly retrieved and extracted PDF page 2 (CPG2)",
+      "limitation": "Subacute/chronic lateral indication only; not arbitrary forearm, medial/posterior elbow or a universal stage cutoff.",
+      "title": "Lateral elbow pain and muscle function impairments 2022",
+      "url": "https://www.orthopt.org/uploads/content_files/files/lucado_et_al_2022_lateral_elbow_pain_and_muscle_function_impairments.pdf"
+    },
+    "groin": {
+      "access_note": "Primary full-text web extraction inspected; PMC access checks for groin/calf were bypassed by reading the original publisher full text.",
+      "evidence_type": "Prospective supervised cohort, 2020, 81 male athletes",
+      "inspected_sections": "Exercise/symptom monitoring and clinically pain-free/controlled sport-training milestones",
+      "limitation": "Acute-adductor cohort; sport-return milestones are not LOAD entry rules or evidence for all groin strains.",
+      "title": "Criteria-based rehabilitation of acute adductor injuries in male athletes",
+      "url": "https://journals.sagepub.com/doi/10.1177/2325967119897247"
+    },
+    "shoulder": {
+      "access_note": "Primary PDF retrieved and extracted; source recommendations also inspected in publisher search extraction.",
+      "evidence_type": "Clinical practice guideline",
+      "inspected_sections": "Recommendations 1, 25 and 35-36: assessment, active exercise, load tolerance/function; directly retrieved APTA Rotator_Cuff_CPG.pdf page 3 (printed 237), alongside publisher extraction",
+      "limitation": "No proof of high-load superiority, this scaption variant or all shoulder tendon/instability indications.",
+      "pdf_url": "https://www.orthopt.org/uploads/content_files/files/Rotator_Cuff_CPG.pdf",
+      "title": "Rotator cuff tendinopathy diagnosis and rehabilitation 2025",
+      "url": "https://doi.org/10.2519/jospt.2025.13182"
+    }
+  },
+  "first_wave": [
+    {
+      "policy_id": "achilles_tendonitis",
+      "reason": "Direct tendon guidance and conservative anchor; first define site, function, symptoms and reviewed dose/gate."
+    },
+    {
+      "policy_id": "elbow_tendonitis",
+      "reason": "Assessed lateral subtype only; supported lowering and grip/function assessment support a bounded next target."
+    },
+    {
+      "policy_id": "ankle_sprain",
+      "reason": "Conditional lateral-ligament target; establish weight-bearing/ROM/control capture and useful prescription."
+    },
+    {
+      "policy_id": "shoulder_tendonitis",
+      "reason": "Conditional cuff-compatible target after diagnosis/elevation/resistance assessment; one anchor still needs programme/dose review."
+    },
+    {
+      "policy_id": "groin_strain",
+      "reason": "Conditional assessed acute-adductor target; supervised evidence is relevant but trusted assessment and entry criterion come first."
+    }
+  ],
+  "profiles": {
+    "achilles_tendonitis": {
+      "capture_route": "Existing exact-episode history supplies work/amounts when reported, response groups and setbacks. Add clinician-scoped site/range/resistance assessment plus heel-rise function and numeric symptom check-in. Completion cannot derive capacity; define what requires clinician confirmation.",
+      "evaluable_without_major_redesign": "Likely bounded assessment/check-in extension plus actual checkpoint reader and reviewed requirements. Clinical specification still missing.",
+      "evidence_review": "The Dutch guideline supports individual progressive calf strengthening and initially flat-surface insertional work. The 2024 CPG is midportion-specific. Floor-level lowering is plausible; neither establishes an app gate or eccentric superiority.",
+      "missing_inputs": "Assessed tendon site (midportion/insertional) and rupture/incompatible-pathology exclusion; actual loading-related pain rather than a categorical proxy; observed heel-rise function/quality and selected range/resistance tolerance. No universal entry cutoff asserted.",
+      "priority": 1,
+      "ranking_reason": "Strong direct tendon evidence and conservative fixed mechanics make the best next gate-review target; tendon-site assessment is still mandatory.",
+      "region_specific_evidence_beyond_restore": "Applicable only to assessed subtype; see source review",
+      "safety_ambiguity": "Generic tendonitis does not identify site or rupture. Deep step lowering stays prohibited; preserve historical ID and conservative execution.",
+      "source_ids": [
+        "achilles",
+        "achilles2024"
+      ],
+      "tier": 1,
+      "transition_review": "Source-guided symptoms/fatigue and individual function require clinical translation into a bounded gate/dose. No time or repetition threshold imported.",
+      "variety": "One clean floor-level anchor; limited variety."
+    },
+    "ankle_instability": {
+      "capture_route": "New assessed function check-in and clinical ownership review required; exposure history supplies completion and categorical responses only.",
+      "evaluable_without_major_redesign": "Not demonstrated; clinical assessment specification must precede a UI estimate.",
+      "evidence_review": "No exact-profile advanced transition established in this pass.",
+      "missing_inputs": "Exact injured tissue/joint/site, tolerated range and local function/strength response are not captured as evaluated inputs.",
+      "priority": 23,
+      "ranking_reason": "Current set is DYNAMIC only; selective LOAD needs different content and instability-specific assessment.",
+      "region_specific_evidence_beyond_restore": "Not established for the exact profile by this review",
+      "safety_ambiguity": "Current set is DYNAMIC only; selective LOAD needs different content and instability-specific assessment.",
+      "source_ids": [],
+      "tier": 4,
+      "transition_review": "Remain closed; sourced requirements, capture readers and reviewed exact-variant dose/prescription are missing.",
+      "variety": "Two impact tasks; zero controlled LOAD anchors."
+    },
+    "ankle_sprain": {
+      "capture_route": "Completion cannot measure gait, ROM or control. Add weight-bearing/function check-in and clinician/physio ROM/control and injury-scope assessment; clinical thresholds need separate review.",
+      "evaluable_without_major_redesign": "Likely bounded assessment/check-in extension after clinical criterion choice; observed control cannot be inferred from exposure.",
+      "evidence_review": "The lateral-ankle CPG supports an individual structured programme including ROM, neuromuscular and balance work. Fixed motion/balance are plausible adjuncts, not universal foam-pad entry criteria.",
+      "missing_inputs": "Assessed lateral ligament injury and stability/severity; actual weight-bearing pain/tolerance, dorsiflexion/ROM and observed stable-surface single-leg control; permitted direction/task tolerance before foam use.",
+      "priority": 3,
+      "ranking_reason": "Principal additional prerequisite is assessed lateral-ligament injury with weight-bearing/ROM/control entry assessment; guidelines do not define this app gate.",
+      "region_specific_evidence_beyond_restore": "Applicable only to assessed subtype; see source review",
+      "safety_ambiguity": "Syndesmotic injury, fracture concerns or persistent giving-way need assessment. Instability-profile hops remain separate DYNAMIC inventory.",
+      "source_ids": [
+        "ankle"
+      ],
+      "tier": 2,
+      "transition_review": "Severity/impairment-based exercise guidance gives no universal app cutoff. Clinician-reviewed ROM/control and symptom-tolerance criterion remains missing.",
+      "variety": "Two controlled adjuncts, resisted motion and balance; incomplete graded strength variety."
+    },
+    "biceps_strain": {
+      "capture_route": "New assessed function check-in and clinical ownership review required; exposure history supplies completion and categorical responses only.",
+      "evaluable_without_major_redesign": "Not demonstrated; clinical assessment specification must precede a UI estimate.",
+      "evidence_review": "No exact-profile advanced transition established in this pass.",
+      "missing_inputs": "Exact injured tissue/joint/site, tolerated range and local function/strength response are not captured as evaluated inputs.",
+      "priority": 7,
+      "ranking_reason": "Tissue/site assessment, local strain transition evidence and strength/function inputs remain substantial gaps.",
+      "region_specific_evidence_beyond_restore": "Not established for the exact profile by this review",
+      "safety_ambiguity": "Tissue/site assessment, local strain transition evidence and strength/function inputs remain substantial gaps.",
+      "source_ids": [],
+      "tier": 3,
+      "transition_review": "Remain closed; sourced requirements, capture readers and reviewed exact-variant dose/prescription are missing.",
+      "variety": "One eccentric/one isometric anchor; overlap and equipment complexity."
+    },
+    "biceps_tendonitis": {
+      "capture_route": "New assessed function check-in and clinical ownership review required; exposure history supplies completion and categorical responses only.",
+      "evaluable_without_major_redesign": "Not demonstrated; clinical assessment specification must precede a UI estimate.",
+      "evidence_review": "No exact-profile advanced transition established in this pass.",
+      "missing_inputs": "Exact injured tissue/joint/site, tolerated range and local function/strength response are not captured as evaluated inputs.",
+      "priority": 20,
+      "ranking_reason": "Tendon-site ambiguity and limited applicable evidence do not justify a first-wave recommendation.",
+      "region_specific_evidence_beyond_restore": "Not established for the exact profile by this review",
+      "safety_ambiguity": "Tendon-site ambiguity and limited applicable evidence do not justify a first-wave recommendation.",
+      "source_ids": [],
+      "tier": 4,
+      "transition_review": "Remain closed; sourced requirements, capture readers and reviewed exact-variant dose/prescription are missing.",
+      "variety": "One curl with unclear proximal/distal ownership."
+    },
+    "calf_strain": {
+      "capture_route": "New assessed function check-in and clinical ownership review required; exposure history supplies completion and categorical responses only.",
+      "evaluable_without_major_redesign": "Not demonstrated; clinical assessment specification must precede a UI estimate.",
+      "evidence_review": "Expert clinicians used single-leg calf capacity/quality before loaded strengthening. This set is foundation work; qualitative practice does not establish a validated numerical gate.",
+      "missing_inputs": "Exact injured tissue/joint/site, tolerated range and local function/strength response are not captured as evaluated inputs.",
+      "priority": 6,
+      "ranking_reason": "Calf-specific evidence supports strengthening, but these candidates add little to existing foundation and cannot establish unilateral capacity.",
+      "region_specific_evidence_beyond_restore": "Not established for the exact profile by this review",
+      "safety_ambiguity": "Calf-specific evidence supports strengthening, but these candidates add little to existing foundation and cannot establish unilateral capacity.",
+      "source_ids": [
+        "calf"
+      ],
+      "tier": 3,
+      "transition_review": "Remain closed; sourced requirements, capture readers and reviewed exact-variant dose/prescription are missing.",
+      "variety": "Three foundation variants; no higher unilateral/graded resistance anchor."
+    },
+    "chest_strain": {
+      "capture_route": "New assessed function check-in and clinical ownership review required; exposure history supplies completion and categorical responses only.",
+      "evaluable_without_major_redesign": "Not demonstrated; clinical assessment specification must precede a UI estimate.",
+      "evidence_review": "No exact-profile advanced transition established in this pass.",
+      "missing_inputs": "Exact injured tissue/joint/site, tolerated range and local function/strength response are not captured as evaluated inputs.",
+      "priority": 18,
+      "ranking_reason": "Pectoral site/integrity and chest differential assessment unresolved; do not prioritise this set.",
+      "region_specific_evidence_beyond_restore": "Not established for the exact profile by this review",
+      "safety_ambiguity": "Pectoral site/integrity and chest differential assessment unresolved; do not prioritise this set.",
+      "source_ids": [],
+      "tier": 4,
+      "transition_review": "Remain closed; sourced requirements, capture readers and reviewed exact-variant dose/prescription are missing.",
+      "variety": "Early wall hold plus uncertain lengthened loading."
+    },
+    "elbow_sprain": {
+      "capture_route": "New assessed function check-in and clinical ownership review required; exposure history supplies completion and categorical responses only.",
+      "evaluable_without_major_redesign": "Not demonstrated; clinical assessment specification must precede a UI estimate.",
+      "evidence_review": "No exact-profile advanced transition established in this pass.",
+      "missing_inputs": "Exact injured tissue/joint/site, tolerated range and local function/strength response are not captured as evaluated inputs.",
+      "priority": 19,
+      "ranking_reason": "Ligament scope and overhead safety have weak local gate evidence and little useful LOAD variety.",
+      "region_specific_evidence_beyond_restore": "Not established for the exact profile by this review",
+      "safety_ambiguity": "Ligament scope and overhead safety have weak local gate evidence and little useful LOAD variety.",
+      "source_ids": [],
+      "tier": 4,
+      "transition_review": "Remain closed; sourced requirements, capture readers and reviewed exact-variant dose/prescription are missing.",
+      "variety": "Uncertain overhead task plus early movement."
+    },
+    "elbow_tendonitis": {
+      "capture_route": "Reuse categorical response/setback history only as support. Require site/clinical assessment and ROM/function check-in; grip strength needs appropriate measurement or clinician record, not soft-ball completion.",
+      "evaluable_without_major_redesign": "Bounded assessor/check-in extension is plausible; grip-measurement access is a constraint. Reader and reviewed transition still required.",
+      "evidence_review": "The CPG supports resisted wrist-extensor exercise for subacute/chronic lateral tendinopathy and ROM, grip and function measurement. Supported extensor lowering fits that subtype, not generic elbow tendonitis.",
+      "missing_inputs": "Confirmed lateral extensor-origin condition and subacute/chronic applicability; elbow/wrist ROM, local irritability and measured/assessed grip/function; selected resistance/range and response. No grip-symmetry or pain threshold invented.",
+      "priority": 2,
+      "ranking_reason": "Strong lateral-subtype guideline fit after confirmation; simple equipment and grip/function assessment support bounded next work.",
+      "region_specific_evidence_beyond_restore": "Applicable only to assessed subtype; see source review",
+      "safety_ambiguity": "Do not apply to medial/posterior pain or incompatible/neural pathology. Dumbbell demand correctly stays unknown until assessed.",
+      "source_ids": [
+        "elbow"
+      ],
+      "tier": 1,
+      "transition_review": "Phased loading is defensible but the CPG does not define this app ladder. Get a reviewed dose/gate and clinician-selected measurements; stay closed.",
+      "variety": "One clean supported extensor anchor; limited variety."
+    },
+    "fingers_sprain": {
+      "capture_route": "New assessed function check-in and clinical ownership review required; exposure history supplies completion and categorical responses only.",
+      "evaluable_without_major_redesign": "Not demonstrated; clinical assessment specification must precede a UI estimate.",
+      "evidence_review": "No exact-profile advanced transition established in this pass.",
+      "missing_inputs": "Exact injured tissue/joint/site, tolerated range and local function/strength response are not captured as evaluated inputs.",
+      "priority": 11,
+      "ranking_reason": "Digit/joint-specific stability/ROM and lesion assessment missing; taped quick taps lack generic advanced indication.",
+      "region_specific_evidence_beyond_restore": "Not established for the exact profile by this review",
+      "safety_ambiguity": "Digit/joint-specific stability/ROM and lesion assessment missing; taped quick taps lack generic advanced indication.",
+      "source_ids": [],
+      "tier": 3,
+      "transition_review": "Remain closed; sourced requirements, capture readers and reviewed exact-variant dose/prescription are missing.",
+      "variety": "One controlled band anchor, one overlap and two questionable impact tasks."
+    },
+    "forearm_tendonitis": {
+      "capture_route": "New assessed function check-in and clinical ownership review required; exposure history supplies completion and categorical responses only.",
+      "evaluable_without_major_redesign": "Not demonstrated; clinical assessment specification must precede a UI estimate.",
+      "evidence_review": "No exact-profile advanced transition established in this pass.",
+      "missing_inputs": "Exact injured tissue/joint/site, tolerated range and local function/strength response are not captured as evaluated inputs.",
+      "priority": 13,
+      "ranking_reason": "Lateral-elbow evidence cannot establish generic forearm tendon diagnosis.",
+      "region_specific_evidence_beyond_restore": "Not established for the exact profile by this review",
+      "safety_ambiguity": "Lateral-elbow evidence cannot establish generic forearm tendon diagnosis.",
+      "source_ids": [],
+      "tier": 3,
+      "transition_review": "Remain closed; sourced requirements, capture readers and reviewed exact-variant dose/prescription are missing.",
+      "variety": "One extensor task with uncertain clinical ownership."
+    },
+    "groin_strain": {
+      "capture_route": "History cannot establish pain-free maximal strength or stretch tolerance. Require clinician/physio injury/adductor assessment then local symptom/task check-in; avoid unsupervised maximal diagnostic self-tests.",
+      "evaluable_without_major_redesign": "Bounded within assessed adductor subtype only. Without trusted assessment workflow it is a material gap, not a self-report shortcut.",
+      "evidence_review": "A supervised acute-adductor cohort used progressive exercise and symptom-guided loading. Controlled adduction fits that indication; clinically pain-free/sport-training milestones are later rehab outcomes, not LOAD entry rules.",
+      "missing_inputs": "Confirmed acute adductor injury versus other groin causes, assessed site/severity and compatible pathology; actual resisted-adduction symptoms, assessed adductor strength/function and stretch/range; documented resistance/dose.",
+      "priority": 5,
+      "ranking_reason": "Principal prerequisite is confirming acute adductor strain and assessed strength/stretch tolerance; supervised condition-specific evidence gives useful sport relevance.",
+      "region_specific_evidence_beyond_restore": "Applicable only to assessed subtype; see source review",
+      "safety_ambiguity": "Supervised male-athlete cohort cannot cover all groin causes/combat athletes. One light cable drill is not the full protocol.",
+      "source_ids": [
+        "groin"
+      ],
+      "tier": 2,
+      "transition_review": "Clinically define initial loading eligibility; do not import sprinting, Copenhagen counts or sport-return milestones as LOAD criteria.",
+      "variety": "One fixed adduction anchor; incomplete programme variety."
+    },
+    "hand_sprain": {
+      "capture_route": "New assessed function check-in and clinical ownership review required; exposure history supplies completion and categorical responses only.",
+      "evaluable_without_major_redesign": "Not demonstrated; clinical assessment specification must precede a UI estimate.",
+      "evidence_review": "No exact-profile advanced transition established in this pass.",
+      "missing_inputs": "Exact injured tissue/joint/site, tolerated range and local function/strength response are not captured as evaluated inputs.",
+      "priority": 17,
+      "ranking_reason": "Joint/ligament label too broad; grip completion cannot prove stability.",
+      "region_specific_evidence_beyond_restore": "Not established for the exact profile by this review",
+      "safety_ambiguity": "Joint/ligament label too broad; grip completion cannot prove stability.",
+      "source_ids": [],
+      "tier": 3,
+      "transition_review": "Remain closed; sourced requirements, capture readers and reviewed exact-variant dose/prescription are missing.",
+      "variety": "One simple grip anchor; finger tasks have weak hand-ligament ownership."
+    },
+    "knee_instability": {
+      "capture_route": "New assessed function check-in and clinical ownership review required; exposure history supplies completion and categorical responses only.",
+      "evaluable_without_major_redesign": "Not demonstrated; clinical assessment specification must precede a UI estimate.",
+      "evidence_review": "No exact-profile advanced transition established in this pass.",
+      "missing_inputs": "Exact injured tissue/joint/site, tolerated range and local function/strength response are not captured as evaluated inputs.",
+      "priority": 22,
+      "ranking_reason": "Underlying pathology and knee-specific gate evidence missing; archive keeper content cannot change incidentally.",
+      "region_specific_evidence_beyond_restore": "Not established for the exact profile by this review",
+      "safety_ambiguity": "Underlying pathology and knee-specific gate evidence missing; archive keeper content cannot change incidentally.",
+      "source_ids": [],
+      "tier": 4,
+      "transition_review": "Remain closed; sourced requirements, capture readers and reviewed exact-variant dose/prescription are missing.",
+      "variety": "Indirect hip/control task and misnamed foam task."
+    },
+    "quads_strain": {
+      "capture_route": "New assessed function check-in and clinical ownership review required; exposure history supplies completion and categorical responses only.",
+      "evaluable_without_major_redesign": "Not demonstrated; clinical assessment specification must precede a UI estimate.",
+      "evidence_review": "No exact-profile advanced transition established in this pass.",
+      "missing_inputs": "Exact injured tissue/joint/site, tolerated range and local function/strength response are not captured as evaluated inputs.",
+      "priority": 16,
+      "ranking_reason": "Useful foundation but too thin with insufficient quad-specific gate evidence for first rollout.",
+      "region_specific_evidence_beyond_restore": "Not established for the exact profile by this review",
+      "safety_ambiguity": "Useful foundation but too thin with insufficient quad-specific gate evidence for first rollout.",
+      "source_ids": [],
+      "tier": 3,
+      "transition_review": "Remain closed; sourced requirements, capture readers and reviewed exact-variant dose/prescription are missing.",
+      "variety": "One bodyweight hold; thin resistance/movement variety."
+    },
+    "shoulder_instability": {
+      "capture_route": "New assessed function check-in and clinical ownership review required; exposure history supplies completion and categorical responses only.",
+      "evaluable_without_major_redesign": "Not demonstrated; clinical assessment specification must precede a UI estimate.",
+      "evidence_review": "No exact-profile advanced transition established in this pass.",
+      "missing_inputs": "Exact injured tissue/joint/site, tolerated range and local function/strength response are not captured as evaluated inputs.",
+      "priority": 21,
+      "ranking_reason": "Instability direction/recurrence/apprehension need specialist assessment; cuff guidance cannot substitute.",
+      "region_specific_evidence_beyond_restore": "Not established for the exact profile by this review",
+      "safety_ambiguity": "Instability direction/recurrence/apprehension need specialist assessment; cuff guidance cannot substitute.",
+      "source_ids": [],
+      "tier": 4,
+      "transition_review": "Remain closed; sourced requirements, capture readers and reviewed exact-variant dose/prescription are missing.",
+      "variety": "Two label defects and specialised carry variants."
+    },
+    "shoulder_sprain": {
+      "capture_route": "New assessed function check-in and clinical ownership review required; exposure history supplies completion and categorical responses only.",
+      "evaluable_without_major_redesign": "Not demonstrated; clinical assessment specification must precede a UI estimate.",
+      "evidence_review": "No exact-profile advanced transition established in this pass.",
+      "missing_inputs": "Exact injured tissue/joint/site, tolerated range and local function/strength response are not captured as evaluated inputs.",
+      "priority": 10,
+      "ranking_reason": "Injured ligament and permitted positions are unspecified; generic shoulder-pain/instability criteria cannot substitute.",
+      "region_specific_evidence_beyond_restore": "Not established for the exact profile by this review",
+      "safety_ambiguity": "Injured ligament and permitted positions are unspecified; generic shoulder-pain/instability criteria cannot substitute.",
+      "source_ids": [],
+      "tier": 3,
+      "transition_review": "Remain closed; sourced requirements, capture readers and reviewed exact-variant dose/prescription are missing.",
+      "variety": "Two near-side anchors; overhead variants have weak ownership."
+    },
+    "shoulder_strain": {
+      "capture_route": "New assessed function check-in and clinical ownership review required; exposure history supplies completion and categorical responses only.",
+      "evaluable_without_major_redesign": "Not demonstrated; clinical assessment specification must precede a UI estimate.",
+      "evidence_review": "No exact-profile advanced transition established in this pass.",
+      "missing_inputs": "Exact injured tissue/joint/site, tolerated range and local function/strength response are not captured as evaluated inputs.",
+      "priority": 15,
+      "ranking_reason": "Strain site/severity, local gate evidence and function cannot be inferred from rotator-cuff guidance.",
+      "region_specific_evidence_beyond_restore": "Not established for the exact profile by this review",
+      "safety_ambiguity": "Strain site/severity, local gate evidence and function cannot be inferred from rotator-cuff guidance.",
+      "source_ids": [],
+      "tier": 3,
+      "transition_review": "Remain closed; sourced requirements, capture readers and reviewed exact-variant dose/prescription are missing.",
+      "variety": "One band anchor plus position ambiguity, complex load and early movement."
+    },
+    "shoulder_tendonitis": {
+      "capture_route": "Existing categorical observations cannot provide ROM/strength. Add regional function/symptom check-in and clinician diagnosis/resistance assessment; completion is not a surrogate.",
+      "evaluable_without_major_redesign": "Bounded elevation/function check-in and clinical assessment seem feasible, but checkpoint capture/evaluation remains unimplemented.",
+      "evidence_review": "The 2025 cuff CPG supports active motor-control/resistance programmes and ROM, strength/function and load-tolerance assessment. Below-shoulder scaption is plausible after assessment, not proof of variant superiority or every tendon indication.",
+      "missing_inputs": "Clinician-assessed cuff-compatible diagnosis and incompatible-pathology exclusion; actual elevation ROM/function, irritability and assessed resistance tolerance; individual band and dose selection.",
+      "priority": 4,
+      "ranking_reason": "Principal prerequisite is rotator-cuff-compatible diagnosis and elevation/resistance assessment; generic tendon label cannot establish it.",
+      "region_specific_evidence_beyond_restore": "Applicable only to assessed subtype; see source review",
+      "safety_ambiguity": "Scaption does not isolate one tendon. Cuff guidance cannot become instability clearance; unknown resistance stays unknown.",
+      "source_ids": [
+        "shoulder"
+      ],
+      "tier": 2,
+      "transition_review": "Load tolerance is meaningful but no universal app threshold or higher-load superiority established. Clinically specify bounded entry criterion/dose; keep closed.",
+      "variety": "One fixed scaption anchor; incomplete programme variety."
+    },
+    "toe_sprain": {
+      "capture_route": "New assessed function check-in and clinical ownership review required; exposure history supplies completion and categorical responses only.",
+      "evaluable_without_major_redesign": "Not demonstrated; clinical assessment specification must precede a UI estimate.",
+      "evidence_review": "No exact-profile advanced transition established in this pass.",
+      "missing_inputs": "Exact injured tissue/joint/site, tolerated range and local function/strength response are not captured as evaluated inputs.",
+      "priority": 12,
+      "ranking_reason": "Joint/plantar-plate ownership needs assessment; pogo availability cannot make this a first LOAD target.",
+      "region_specific_evidence_beyond_restore": "Not established for the exact profile by this review",
+      "safety_ambiguity": "Joint/plantar-plate ownership needs assessment; pogo availability cannot make this a first LOAD target.",
+      "source_ids": [],
+      "tier": 3,
+      "transition_review": "Remain closed; sourced requirements, capture readers and reviewed exact-variant dose/prescription are missing.",
+      "variety": "One controlled forefoot anchor plus impact task."
+    },
+    "triceps_strain": {
+      "capture_route": "New assessed function check-in and clinical ownership review required; exposure history supplies completion and categorical responses only.",
+      "evaluable_without_major_redesign": "Not demonstrated; clinical assessment specification must precede a UI estimate.",
+      "evidence_review": "No exact-profile advanced transition established in this pass.",
+      "missing_inputs": "Exact injured tissue/joint/site, tolerated range and local function/strength response are not captured as evaluated inputs.",
+      "priority": 8,
+      "ranking_reason": "Strain site/integrity, overhead tolerance and local clinical gate evidence unresolved.",
+      "region_specific_evidence_beyond_restore": "Not established for the exact profile by this review",
+      "safety_ambiguity": "Strain site/integrity, overhead tolerance and local clinical gate evidence unresolved.",
+      "source_ids": [],
+      "tier": 3,
+      "transition_review": "Remain closed; sourced requirements, capture readers and reviewed exact-variant dose/prescription are missing.",
+      "variety": "Two local anchors plus compound/renaming debt."
+    },
+    "wrist_sprain": {
+      "capture_route": "New assessed function check-in and clinical ownership review required; exposure history supplies completion and categorical responses only.",
+      "evaluable_without_major_redesign": "Not demonstrated; clinical assessment specification must precede a UI estimate.",
+      "evidence_review": "No exact-profile advanced transition established in this pass.",
+      "missing_inputs": "Exact injured tissue/joint/site, tolerated range and local function/strength response are not captured as evaluated inputs.",
+      "priority": 9,
+      "ranking_reason": "Candidate count does not resolve ligament/site ownership, extension tolerance or a sourced gate.",
+      "region_specific_evidence_beyond_restore": "Not established for the exact profile by this review",
+      "safety_ambiguity": "Candidate count does not resolve ligament/site ownership, extension tolerance or a sourced gate.",
+      "source_ids": [],
+      "tier": 3,
+      "transition_review": "Remain closed; sourced requirements, capture readers and reviewed exact-variant dose/prescription are missing.",
+      "variety": "Six IDs overstate variety; three label/device defects and one overlap."
+    },
+    "wrist_tendonitis": {
+      "capture_route": "New assessed function check-in and clinical ownership review required; exposure history supplies completion and categorical responses only.",
+      "evaluable_without_major_redesign": "Not demonstrated; clinical assessment specification must precede a UI estimate.",
+      "evidence_review": "No exact-profile advanced transition established in this pass.",
+      "missing_inputs": "Exact injured tissue/joint/site, tolerated range and local function/strength response are not captured as evaluated inputs.",
+      "priority": 14,
+      "ranking_reason": "Flexor-specific evidence absent; thumb-side tenosynovitis guidance cannot justify flexor loading.",
+      "region_specific_evidence_beyond_restore": "Not established for the exact profile by this review",
+      "safety_ambiguity": "Flexor-specific evidence absent; thumb-side tenosynovitis guidance cannot justify flexor loading.",
+      "source_ids": [],
+      "tier": 3,
+      "transition_review": "Remain closed; sourced requirements, capture readers and reviewed exact-variant dose/prescription are missing.",
+      "variety": "One flexor task with uncertain tendon ownership."
+    }
+  },
+  "protected_input_sha256": {
+    "api/contracts/rehab_progression.py": "60a75bd48ec9cbdf5475392aad551e599c20c54039e14ce52205a132a79c75f6",
+    "api/services/rehab_completion_service.py": "c273d339a7d2a42b5a71bdae9d19ba09fa853cd823e30452aba4ec88aba2fc1f",
+    "data/rehab_archive/exact_duplicates.json": "67299acd7b7cdb573d8624226c193964444ff6537c3e25c1a3261ced81274b21",
+    "data/rehab_bank.json": "13b47b8a2da99b16899dee3ba6fc51450834a90effe08e32bc153f990f3f6b2e",
+    "data/rehab_bank_duplicate_debt.json": "8f967faffe7f2ddd4dc7f9e0d64c83a00fa1502deb0af17c3a06c07ac34b7f69",
+    "data/rehab_metadata_review.json": "e5fd9144d8739290d70f3993710b72cc818e42b4e2b23cc568accf10655f48e7",
+    "data/rehab_pathways.json": "8df1afbf3e92997da63e7c6ec5b160e164dd414d3d1bce5cdaa0b8bb8b107e31",
+    "data/safety/surface_wound_review.json": "937b36bfe20187ee02966c6572017ddcdb9ef6f7ba2315b5b52d2d777b1c9136",
+    "fightcamp/rehab_duplicate_archive.py": "379bb393eb66a28542fc8029235f3e371c65980dd71d750d73bcc214c47a8ca3",
+    "fightcamp/surface_wound_safety.py": "19720abe0522a8d69566d7eb791b77eddff5827b3c98abbfc9adfcb36beb79dd"
+  },
+  "reviewed_at": "2026-10-05",
+  "schema_version": 1,
+  "validation_results": [
+    "667 passed: test_rehab_advanced_candidate_review.py, test_rehab_bank_rationalisation.py, test_rehab_exact_duplicate_cleanup.py, test_rehab_bank_schema.py, test_rehab_metadata_review_validation.py, test_surface_wound_safety.py and test_surface_injury_rehab.py (pytest -q).",
+    "485 passed: test_today_service.py, test_today_safety_matrix.py, test_multi_injury_today.py, test_clinician_clearance_today.py, test_rehab_completion_capture.py, test_api_rehab_completion_flow.py and test_rehab_prescription_bundles.py (pytest -q; 14 existing deprecation warnings).",
+    "717 passed: test_reviewed_rehab_progression.py, test_rehab_pathway_safety_invariants.py, test_rehab_pathway_equivalence.py and test_rehab_exposure_contract.py (pytest -q).",
+    "Dedicated review module rerun after final report refinements: 148 passed. The three larger batches cover 1,869 cases; the dedicated rerun repeats cases in the first batch.",
+    "Rehab bank validator: zero errors/warnings, 1,911 existing migration information items. Metadata review validator: valid. Clinical validator: 64 active profiles, zero promotable transitions.",
+    "Injury vocabulary audit, tag authority gate, schema/tag migration --check, exact-duplicate consolidation --check and rationalisation --check passed.",
+    "Ruff across api/fightcamp/tests/tools, review-module import, protected Main fingerprints, deterministic review --check and git diff checks passed. Regenerated rationalisation outputs match Main exactly."
+  ]
+}
