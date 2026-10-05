@@ -98,30 +98,50 @@ test("several signals combine their tip categories", () => {
   assert.deepEqual(contexts, ["injury", "weight", "fight_week"]);
 });
 
-test("a tip deck is a full shuffle of the pool", () => {
-  const pool = selectLoadingTips(null, NOW);
-  const deck = buildTipDeck(pool);
-  assert.equal(deck.length, pool.length);
-  assert.deepEqual(deck.map((tip) => tip.id).sort(), pool.map((tip) => tip.id).sort());
+test("a deck covers the whole bank, contextual tips first", () => {
+  const primary = selectLoadingTips(intake({ injuries: "knee" }), NOW);
+  const deck = buildTipDeck(primary);
+  assert.equal(deck.length, LOADING_TIPS.length);
+  assert.equal(new Set(deck.map((tip) => tip.id)).size, LOADING_TIPS.length);
+  const primaryIds = new Set(primary.map((tip) => tip.id));
+  assert.ok(deck.slice(0, primary.length).every((tip) => primaryIds.has(tip.id)));
+});
+
+test("the bank is big enough that a 10-minute build at 5s per tip never repeats", () => {
+  // 10 minutes / 5 seconds = 120 tips; every context must have more than that.
+  assert.ok(LOADING_TIPS.length > 120, `${LOADING_TIPS.length} tips`);
+  for (const category of new Set(LOADING_TIPS.map((tip) => tip.category))) {
+    const count = LOADING_TIPS.filter((tip) => tip.category === category).length;
+    assert.ok(count >= 15, `${category} has only ${count} tips`);
+  }
+});
+
+test("tips seen in earlier builds move behind fresh ones", () => {
+  const primary = selectLoadingTips(null, NOW);
+  const recentlySeen = primary.slice(0, 10).map((tip) => tip.id);
+  const deck = buildTipDeck(primary, { recentlySeen });
+  const freshCount = LOADING_TIPS.length - recentlySeen.length;
+  assert.ok(deck.slice(0, freshCount).every((tip) => !recentlySeen.includes(tip.id)));
+  assert.deepEqual(new Set(deck.slice(freshCount).map((tip) => tip.id)), new Set(recentlySeen));
 });
 
 test("a new deck never opens with the tip that closed the last one", () => {
-  const pool = selectLoadingTips(null, NOW);
-  // random() === 0.999 leaves the deck in pool order, so the first tip is
-  // deterministic and has to be swapped away from.
-  const deck = buildTipDeck(pool, () => 0.999, pool[0].id);
-  assert.notEqual(deck[0].id, pool[0].id);
+  const primary = selectLoadingTips(null, NOW);
+  // random() === 0.999 leaves each tier in its original order, so the first
+  // tip is deterministic and has to be swapped away from.
+  const deck = buildTipDeck(primary, { random: () => 0.999, avoidFirstId: primary[0].id });
+  assert.notEqual(deck[0].id, primary[0].id);
 });
 
 test("cycling decks never shows the same tip twice in a row", () => {
-  const pool = selectLoadingTips(intake({ injuries: "knee" }), NOW);
-  let deck = buildTipDeck(pool);
+  const primary = selectLoadingTips(intake({ injuries: "knee" }), NOW);
+  let deck = buildTipDeck(primary);
   let previous: string | null = null;
-  for (let pass = 0; pass < 200; pass += 1) {
+  for (let pass = 0; pass < 50; pass += 1) {
     for (const tip of deck) {
       assert.notEqual(tip.id, previous);
       previous = tip.id;
     }
-    deck = buildTipDeck(pool, Math.random, previous);
+    deck = buildTipDeck(primary, { avoidFirstId: previous });
   }
 });

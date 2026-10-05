@@ -58,6 +58,7 @@ function installFakeIntervals() {
 }
 
 function mountScreen(props: ComponentProps<typeof PublicGenerationScreen>) {
+  window.localStorage.clear();
   const container = document.createElement("div");
   document.body.appendChild(container);
   const root = createRoot(container);
@@ -87,20 +88,48 @@ const INJURY_INTAKE = {
 
 const running = { phase: "running" as const, startedAtMs: Date.now(), milestones: [] };
 
-test("one tip shows immediately and rotates every 5s without repeating back to back", (t) => {
+test("one tip shows immediately and a 10-minute build never repeats a tip", (t) => {
   const timers = installFakeIntervals();
   t.after(timers.restore);
   const screen = mountScreen(running);
-  let previous = screen.activeTips();
-  assert.equal(previous.length, 1);
+  const shown = [...screen.activeTips()];
+  assert.equal(shown.length, 1);
+  // 10 minutes at one tip per 5 seconds.
   for (let step = 0; step < 120; step += 1) {
     act(() => timers.fire(5_000));
     const current = screen.activeTips();
     assert.equal(current.length, 1);
-    assert.notEqual(current[0], previous[0]);
-    previous = current;
+    shown.push(current[0]);
   }
+  assert.equal(new Set(shown).size, shown.length);
   screen.unmount();
+});
+
+test("the next build opens on tips this athlete has not seen yet", (t) => {
+  const timers = installFakeIntervals();
+  t.after(timers.restore);
+  const first = mountScreen(running);
+  const seen = [...first.activeTips()];
+  for (let step = 0; step < 20; step += 1) {
+    act(() => timers.fire(5_000));
+    seen.push(first.activeTips()[0]);
+  }
+  first.unmount();
+  const stored = window.localStorage.getItem("unlxck:loading-tips-seen");
+  // Mount again without clearing storage, as a returning athlete would.
+  const container = document.createElement("div");
+  document.body.appendChild(container);
+  const root = createRoot(container);
+  window.localStorage.setItem("unlxck:loading-tips-seen", stored ?? "[]");
+  act(() => root.render(<PublicGenerationScreen {...running} />));
+  const reopened: string[] = [];
+  for (let step = 0; step < 20; step += 1) {
+    reopened.push(container.querySelector(".public-build-tip-text-active")?.textContent ?? "");
+    act(() => timers.fire(5_000));
+  }
+  act(() => root.unmount());
+  container.remove();
+  assert.ok(reopened.every((tip) => !seen.includes(tip)));
 });
 
 test("tips follow the intake: an injured athlete gets recovery and safety tips", (t) => {
