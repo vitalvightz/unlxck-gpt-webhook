@@ -5,7 +5,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Syne:wght@500;700;800&family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
 <style>
-/* Layout: one long night. Sticky nav → hero with "next night" pass → two tickets → formats → FAQ → list signup.
+/* Layout: one long night. Sticky nav → hero with "next night" pass → two tickets → formats → info (address, age) → list signup.
    Colour is deliberately neutral (greyscale) until the brand palette is chosen; swap the tokens below. */
 :root {
   --bg: #f4f4f3;
@@ -112,14 +112,6 @@ p { margin: 0; }
 
 @media (max-width: 860px) { .hero-grid { grid-template-columns: 1fr; } }
 
-/* Marquee */
-.marquee { border-block: 1px solid var(--line); overflow: hidden; padding-block: 0.9rem; }
-.marquee-track { display: flex; width: max-content; animation: slide 40s linear infinite; }
-.marquee-track span { font: 700 clamp(1.1rem, 2.4vw, 1.6rem)/1 var(--display); text-transform: uppercase; padding-right: 2.5rem; white-space: nowrap; }
-.marquee-track span::after { content: "✶"; padding-left: 2.5rem; font-weight: 400; color: var(--muted); }
-@keyframes slide { to { transform: translateX(-50%); } }
-.marquee:hover .marquee-track { animation-play-state: paused; }
-
 /* ---------- Sections ---------- */
 section.block { padding-block: clamp(4rem, 9vw, 7rem); }
 .section-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: end; gap: 1.5rem; margin-bottom: 2.5rem; }
@@ -184,24 +176,18 @@ section.block { padding-block: clamp(4rem, 9vw, 7rem); }
   .format + .format { border-top: 1px solid var(--line); }
 }
 
-/* ---------- FAQ ---------- */
-.faq-grid { display: grid; grid-template-columns: 1fr 1.6fr; gap: clamp(2rem, 5vw, 5rem); }
-@media (max-width: 860px) { .faq-grid { grid-template-columns: 1fr; } }
-details { border-bottom: 1px solid var(--line); }
-details:first-of-type { border-top: 1px solid var(--fg); }
-summary {
-  list-style: none; cursor: pointer; padding: 1.35rem 0; display: flex; justify-content: space-between; gap: 1rem;
-  font: 600 1.1rem/1.35 var(--body);
+/* ---------- Info ---------- */
+.info { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); margin: 0; border-top: 1px solid var(--fg); }
+.info > div { padding: 1.75rem 2rem 0 0; display: grid; gap: 0.6rem; min-width: 0; }
+.info > div + div { border-left: 1px solid var(--line); padding-left: 2rem; }
+.info dd { margin: 0; font: 700 clamp(1.3rem, 2.6vw, 1.9rem)/1.2 var(--display); }
+@media (max-width: 640px) {
+  .info { grid-template-columns: 1fr; }
+  .info > div + div { border-left: 0; padding-left: 0; border-top: 1px solid var(--line); margin-top: 1.75rem; }
 }
-summary::-webkit-details-marker { display: none; }
-summary::after { content: "+"; font: 400 1.5rem/1 var(--mono); transition: transform .2s ease; }
-details[open] summary::after { transform: rotate(45deg); }
-details p { padding-bottom: 1.4rem; color: var(--muted); max-width: 60ch; }
 
 /* ---------- Signup + footer ---------- */
-.signup { display: grid; grid-template-columns: 1.2fr 1fr; gap: 2rem; align-items: end; }
-@media (max-width: 860px) { .signup { grid-template-columns: 1fr; } }
-.signup h2 { font-size: clamp(2.4rem, 7vw, 5.5rem); text-transform: uppercase; }
+.signup { max-width: 560px; }
 .signup form { display: grid; gap: 0.75rem; }
 .field { display: flex; gap: 0.5rem; flex-wrap: wrap; }
 .field input {
@@ -258,7 +244,7 @@ footer a:hover { color: var(--fg); }
     <ul id="menu">
       <li><a href="#tickets">Tickets</a></li>
       <li><a href="#formats">Formats</a></li>
-      <li><a href="#faq">FAQ</a></li>
+      <li><a href="#info">Info</a></li>
     </ul>
     <a class="btn solid cta-desktop" href="#tickets">Get tickets</a>
     <button class="btn menu-btn" id="menuBtn" aria-expanded="false" aria-controls="menu">Menu</button>
@@ -275,7 +261,6 @@ footer a:hover { color: var(--fg); }
         <p class="lede">We turn clubs and bars into nights people talk about the next morning. Good sound, a tight door and a crowd that came to dance.</p>
         <div class="actions">
           <a class="btn solid" href="#tickets">Get tickets</a>
-          <a class="btn" href="#formats">How our nights work</a>
         </div>
       </div>
 
@@ -286,7 +271,7 @@ footer a:hover { color: var(--fg); }
         </div>
         <div>
           <h3 id="nextName">Opening Night</h3>
-          <p class="meta" id="nextMeta">Sat 17 Oct · Doors 22:00 · Venue TBC</p>
+          <p class="meta" id="nextMeta">Sat 17 Oct · Doors 22:00 · Shoreditch 45, London</p>
         </div>
         <div class="countdown" id="countdown" aria-live="off">
           <div><b data-u="d">00</b><span>Days</span></div>
@@ -298,13 +283,6 @@ footer a:hover { color: var(--fg); }
       </aside>
     </div>
   </section>
-
-  <div class="marquee" aria-hidden="true">
-    <div class="marquee-track">
-      <span>Club nights</span><span>Bar takeovers</span><span>Late licence</span><span>Guest DJs</span><span>Perfect Art</span>
-      <span>Club nights</span><span>Bar takeovers</span><span>Late licence</span><span>Guest DJs</span><span>Perfect Art</span>
-    </div>
-  </div>
 
   <!-- TICKETS (2 placeholders) -->
   <section class="block tickets-bg" id="tickets">
@@ -405,42 +383,19 @@ footer a:hover { color: var(--fg); }
     </div>
   </section>
 
-  <!-- FAQ -->
-  <section class="block" id="faq">
-    <div class="wrap faq-grid">
-      <div>
-        <span class="label">Before you come</span>
-        <h2 style="margin-top:.9rem">Good to know</h2>
-      </div>
-      <div>
-        <details open>
-          <summary>What's the age limit?</summary>
-          <p>All our nights are 18+. Bring a valid photo ID, even if you look older. No ID, no entry.</p>
-        </details>
-        <details>
-          <summary>Is there a dress code?</summary>
-          <p>Dress to go out. Some venues set their own rules, which we'll list on the night's ticket page.</p>
-        </details>
-        <details>
-          <summary>Can I get a refund?</summary>
-          <p>Tickets are non-refundable, but you can transfer yours to a friend up to 24 hours before doors.</p>
-        </details>
-        <details>
-          <summary>What time should I arrive?</summary>
-          <p>Come early for the shortest queue. Last entry is usually an hour before close.</p>
-        </details>
-        <details>
-          <summary>Do you do private hire or venue partnerships?</summary>
-          <p>Yes. Get in touch through the contact details at the bottom of the page.</p>
-        </details>
-      </div>
+  <!-- INFO -->
+  <section class="block" id="info">
+    <div class="wrap">
+      <dl class="info">
+        <div><dt class="label">Where</dt><dd>Shoreditch 45, London</dd></div>
+        <div><dt class="label">Age limit</dt><dd>18+ only. Bring a valid photo ID.</dd></div>
+      </dl>
     </div>
   </section>
 
   <!-- SIGNUP -->
   <section class="block" style="padding-top:0">
     <div class="wrap signup">
-      <h2>Hear about<br>it first</h2>
       <form id="signup" novalidate>
         <label class="label" for="email">Early access to tickets, straight to your inbox</label>
         <div class="field">
@@ -458,7 +413,7 @@ footer a:hover { color: var(--fg); }
     <span>© <span id="yr">2026</span> Perfect Art Events</span>
     <nav aria-label="Footer">
       <a href="#tickets">Tickets</a>
-      <a href="#faq">FAQ</a>
+      <span>Shoreditch 45, London</span>
       <span>Instagram: @perfectart (placeholder)</span>
       <span>hello@perfectart.example</span>
     </nav>
@@ -500,7 +455,7 @@ footer a:hover { color: var(--fg); }
       links.forEach(l => l.classList.toggle("active", l.getAttribute("href") === "#" + e.target.id));
     });
   }, { rootMargin: "-45% 0px -50% 0px" });
-  ["tickets", "formats", "faq"].forEach(id => io.observe(document.getElementById(id)));
+  ["tickets", "formats", "info"].forEach(id => io.observe(document.getElementById(id)));
 
   // Hide mobile ticket bar while the tickets section is on screen
   const bar = $("#mobileBar");
