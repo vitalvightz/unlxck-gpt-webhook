@@ -19,6 +19,7 @@ from .rehab_schema import (
     split_phase_progression,
 )
 from .rehab_selector import select_rehab_candidate
+from .surface_wound_safety import SURFACE_WOUND_CARE_NOTE, SURFACE_CONTACT_BOUNDARY, approved_surface_drill, is_surface_inventory_id
 from .restriction_parsing import ParsedRestriction
 # Refactored: Import centralized DATA_DIR from config
 from .config import DATA_DIR
@@ -80,7 +81,8 @@ def rehab_drill_by_id(drill_id: str | None) -> dict | None:
                 if not identifier:
                     continue
                 # Second claim on an id makes it ambiguous; mark it unusable.
-                index[identifier] = None if identifier in index else drill
+                allowed = not _is_surface_type(entry.get("type")) or approved_surface_drill(drill)
+                index[identifier] = None if identifier in index or not allowed else drill
         _REHAB_DRILLS_BY_ID_CACHE = index
     return _REHAB_DRILLS_BY_ID_CACHE.get(str(drill_id or "").strip())
 
@@ -441,12 +443,6 @@ BFR_SAFETY_GATE = (
 # eccentrics, tendon/balance work) does nothing for skin healing and can
 # reopen the wound or invite infection, so we never assign rehab drills to
 # them. The correct prescription is wound care, surfaced as a single note.
-SURFACE_WOUND_CARE_NOTE = (
-    "Skin/surface injury, so no loading rehab is needed. Keep it clean and covered, "
-    "avoid friction or contact that could reopen it, and monitor for infection "
-    "(spreading redness, heat, swelling, pus, or fever). Return to full contact "
-    "once the wound has closed."
-)
 
 
 def _is_surface_type(injury_type: str | None) -> bool:
@@ -482,6 +478,8 @@ def _collect_surface_drills(
     seen: set[str] = set()
     for entry in matches:
         for drill in entry.get("drills", []):
+            if not approved_surface_drill(drill):
+                continue
             name = drill.get("name")
             if not name or name in seen:
                 continue
@@ -493,8 +491,8 @@ def _collect_surface_drills(
                 if not text:
                     continue
             seen.add(name)
-            drills.append((name, text))
-    return drills
+            drills.append((name, text + SURFACE_CONTACT_BOUNDARY))
+    return drills or [("Wound care", SURFACE_WOUND_CARE_NOTE)]
 
 # ---------------------------------------------------------------------------
 # Surgical Rehab Integration – function classification and formatting
@@ -819,16 +817,19 @@ def _rehab_bank_matches(itype: str | None, loc_candidates, current_phase: str) -
 
 def _phase_drill_line(drill: dict, current_phase: str) -> tuple[str, str] | None:
     """This drill's ``(name, notes_for_phase)`` if it renders in the phase."""
+    if is_surface_inventory_id(str(drill.get("id") or "")) and not approved_surface_drill(drill):
+        return None
     name = drill.get("name")
     if not name:
         return None
     notes = drill.get("notes", "")
+    boundary = SURFACE_CONTACT_BOUNDARY if is_surface_inventory_id(str(drill.get("id") or "")) else ""
     parsed = _split_notes_by_phase(notes)
     if not parsed:
-        return (name, notes)
+        return (name, notes + boundary)
     for phase_label, text in parsed:
         if phase_label == current_phase.upper():
-            return (name, text)
+            return (name, text + boundary)
     return None
 
 
@@ -837,6 +838,8 @@ def _all_phase_drills(matches: list[dict], current_phase: str) -> list[tuple[str
     drills: list[tuple[str, str]] = []
     for match in matches:
         for drill in match.get("drills", []):
+            if _is_surface_type(match.get("type")) and not approved_surface_drill(drill):
+                continue
             line = _phase_drill_line(drill, current_phase)
             if line is not None:
                 drills.append(line)

@@ -219,6 +219,11 @@ def session_rehab_items(
         drill_id = _clean(block.get("rehab_drill_id"))
         if not drill_id:
             continue
+        from fightcamp.surface_wound_safety import is_surface_inventory_id
+        # Wound care is advisory, never loading/exposure evidence, including
+        # frozen snapshots carrying metadata from before the safety review.
+        if is_surface_inventory_id(drill_id):
+            continue
         drill = block.get("drill_snapshot") if prescription is not None else None
         if drill is None:
             # Older accepted blocks have an ID but no frozen drill metadata.
