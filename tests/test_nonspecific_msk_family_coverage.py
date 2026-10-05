@@ -302,11 +302,13 @@ def test_previous_48_profiles_and_all_other_bank_hashes_preserved(tmp_path):
                 assert schedule_rehab(row, old, training_day=DAY) == schedule_rehab(row, new, training_day=DAY)
                 assert reconcile_session_prescription(None, decisions=[old], plan_id=PLAN, training_day=DAY) == reconcile_session_prescription(None, decisions=[new], plan_id=PLAN, training_day=DAY)
     hashes = read("tests/fixtures/rehab_bank_before_nonspecific_hashes.json")
-    bank = {d["id"]:d for g in get_rehab_bank() for d in g["drills"]}
+    from tests.rehab_inventory_history import inventory_with_history
+    historical_bank, historical_ledger = inventory_with_history()
+    bank = {d["id"]:d for g in historical_bank for d in g["drills"]}
     assert len(hashes) == 1614 and hashes.keys() <= bank.keys()
     assert {identity for identity in hashes if content_hash(bank[identity]) != hashes[identity]} == REPAIRED
     assert bank.keys() - hashes.keys() == {f"{p}_recovery_support" for p in EXPECTED}
-    ledger = {r["drill_id"]:r for r in read("data/rehab_metadata_review.json")}
+    ledger = {r["drill_id"]:r for r in historical_ledger}
     for row in read("docs/nonspecific-msk-bank-audit.json"):
         current = ledger[row["drill_id"]]
         if row["drill_id"] in REPAIRED:

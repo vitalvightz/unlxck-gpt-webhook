@@ -234,11 +234,16 @@ def test_anything_the_bank_does_not_contain_resolves_to_nothing(value):
 
 def test_every_shipped_drill_id_resolves_to_itself():
     """The lookup is the completion path's only route back to the bank."""
+    from fightcamp.injury_registry import SURFACE_TISSUE_TYPES
+    from fightcamp.surface_wound_safety import approved_surface_drill
     resolved = 0
     for entry in get_rehab_bank():
         for drill in entry.get("drills") or []:
             drill_id = drill.get("id")
             if not drill_id:
+                continue
+            if entry['type'] in SURFACE_TISSUE_TYPES and not approved_surface_drill(drill):
+                assert rehab_drill_by_id(drill_id) is None
                 continue
             assert rehab_drill_by_id(drill_id) is not None, drill_id
             resolved += 1

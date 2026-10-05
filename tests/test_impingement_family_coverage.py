@@ -162,13 +162,15 @@ def test_original_audit_hashes_ids_and_review_history_preserved():
     for row in audit:
         assert row["source_hash"] == source_hash(drill_id=row["drill_id"], location=row["bank_location"], injury_type="impingement", name=row["name"], notes=row["notes"])
     hashes = read("tests/fixtures/rehab_bank_before_impingement_hashes.json")
-    bank = {d["id"]: d for g in get_rehab_bank() for d in g["drills"]}
+    from tests.rehab_inventory_history import inventory_with_history
+    historical_bank, historical_ledger = inventory_with_history()
+    bank = {d["id"]: d for g in historical_bank for d in g["drills"]}
     assert hashes.keys() <= bank.keys()
     family_ids = {row["drill_id"] for row in audit}
     assert {identity for identity in family_ids if content_hash(bank[identity]) != hashes[identity]} == REPAIRED
     current_family = {d["id"] for g in get_rehab_bank() if g["type"] == "impingement" for d in g["drills"]}
     assert len(current_family - hashes.keys()) == 6
-    ledger = {r["drill_id"]: r for r in read("data/rehab_metadata_review.json")}
+    ledger = {r["drill_id"]: r for r in historical_ledger}
     active = {p.drill_id for policy in load_clinical_policies() if policy.injury_type == "impingement" for p in policy.prescriptions}
     assert len(active) == 9
     for row in audit:

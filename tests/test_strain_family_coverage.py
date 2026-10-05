@@ -68,7 +68,9 @@ def test_correct_region_strain_resolves_reviewed_stage_and_real_completion(regio
 
 @pytest.mark.parametrize("region", REGIONS)
 def test_live_identities_have_current_review_and_authorised_edits_keep_source_history(region):
-    ledger = {r["drill_id"]: r for r in json.loads((ROOT / "data/rehab_metadata_review.json").read_text())}
+    from tests.rehab_inventory_history import inventory_with_history
+    _, historical_ledger = inventory_with_history()
+    ledger = {r["drill_id"]: r for r in historical_ledger}
     bank = get_rehab_bank()
     policy = next(p for p in load_clinical_policies() if p.region == region)
     assert validate_clinical_bank((policy,), bank) == []

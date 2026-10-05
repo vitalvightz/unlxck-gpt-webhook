@@ -228,6 +228,9 @@ def session_rehab_items(
         if drill is None:
             # Older accepted blocks have an ID but no frozen drill metadata.
             drill = rehab_drill_by_id(drill_id)
+            if drill is None:
+                from fightcamp.rehab_duplicate_archive import archived_rehab_drill_by_id
+                drill = archived_rehab_drill_by_id(drill_id)
         if not isinstance(drill, Mapping):
             continue
         if _clean(drill.get("id")) != drill_id:

@@ -564,7 +564,7 @@ def test_shipped_ledger_declares_exactly_the_duplicates_the_bank_still_has():
 
     assert "duplicate_drill_combination" not in codes
     assert "resolved_duplicate_debt" not in codes
-    assert "grandfathered_duplicate" in codes
+    assert "grandfathered_duplicate" not in codes
 
 
 def test_shipped_ledger_only_declares_duplicates_never_new_drills():
@@ -577,7 +577,7 @@ def test_shipped_ledger_only_declares_duplicates_never_new_drills():
     from fightcamp.config import DATA_DIR
 
     ledger = json.loads((DATA_DIR / "rehab_bank_duplicate_debt.json").read_text(encoding="utf-8"))
-    assert ledger["duplicates"]
+    assert ledger["duplicates"] == []
     for row in ledger["duplicates"]:
         assert (row["location"], row["type"], row["name"]) in bank_names
         assert row["grandfathered_copies"] >= 1
