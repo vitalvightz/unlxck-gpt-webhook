@@ -28,9 +28,9 @@ Workflow:
 
     # Optional, between 1 and 3: let Gemini watch each suggested video, confirm
     # it shows the exercise and pre-fill start_s / end_s. Needs GEMINI_API_KEY.
-    # Candidate discovery uses DataForSEO when DATAFORSEO_LOGIN/PASSWORD are
-    # set. The YouTube search API is used only when DataForSEO is not configured
-    # (or when explicitly selected). Otherwise input needs suggested_url (plus optional candidate_urls,
+    # Candidate discovery defaults to yt-dlp. DataForSEO and the YouTube API
+    # are available through --search-provider when configured.
+    # With --no-search, input needs suggested_url (plus optional candidate_urls,
     # '|'-separated, and plan_cue). Saves after every video and row; re-running
     # the same command, with or
     # without --out, resumes. Exits 1 if any row failed or a provider/quota
@@ -38,9 +38,13 @@ Workflow:
     # youtube_url.
     python tools/exercise_media.py review media.csv --out media.reviewed.csv
 
+    # Check saved progress without API keys, discovery or Gemini charges.
+    python tools/exercise_media.py review-status media.reviewed.csv
+    # Edit/approve rows in the reviewed CSV; it is authoritative on resume.
+
     # With a configured search provider, weak results trigger bounded candidate searches.
     # Revisit weak/partial rows while keeping strong reviewed matches:
-    python tools/exercise_media.py review media.csv --redo-weak --max-candidates 5
+    python tools/exercise_media.py review media.csv --redo-weak --max-candidates 3
     # --no-search uses supplied URLs only. Unresolved rows get needs_manual_video=true.
     # A strong result also needs a usable loop. --redo-weak skips video IDs
     # recorded in ai_reviewed_video_ids and judges only new candidates.
@@ -501,6 +505,21 @@ def _positive_int(value: str) -> int:
 COST_SAFE_MAX_CANDIDATES = 3
 
 
+def _cmd_review_status(args: argparse.Namespace) -> int:
+    from tools.exercise_media_review import inspect_checkpoint
+
+    state = inspect_checkpoint(args.csv)
+    if args.json:
+        print(json.dumps(state, indent=2))
+    else:
+        print(f"checkpoint: {state['checkpoint']}")
+        print(f"review code: {state['review_code']}")
+        print(f"checkpoint state: {state['completed']} completed, {state['errors']} errors, {state['pending']} pending (no verdict)")
+        print(f"{state['strong']} strong matches; {state['completed'] - state['strong']} weak completed results; all videos require human approval")
+        print(f"next eligible exercise: {state['next_exercise_key'] or 'none; normal resume is complete'}")
+    return 0
+
+
 def _cmd_review(args: argparse.Namespace) -> int:
     from tools.exercise_media_review import ReviewInputError, build_reviewer, run_review
     from tools.exercise_media_search import CandidateSearchError, build_candidate_search
@@ -568,6 +587,11 @@ def _cmd_review(args: argparse.Namespace) -> int:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     sub = parser.add_subparsers(dest="command", required=True)
+
+    status = sub.add_parser("review-status", help="inspect a reviewed CSV without API calls or CSV changes")
+    status.add_argument("csv", help="the reviewed checkpoint CSV")
+    status.add_argument("--json", action="store_true", help="print machine-readable checkpoint state")
+    status.set_defaults(func=_cmd_review_status)
 
     candidates = sub.add_parser("candidates", help="export top exercises without a video")
     candidates.add_argument("--limit", type=int, default=100)
