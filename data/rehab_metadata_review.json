@@ -232,6 +232,39 @@
     "review_version": 1
   },
   {
+    "drill_id": "toe_hyperextension_recovery_support",
+    "source_hash": "d4efd8bb91424bcc3670c644b1c67a31b2b2bbee4a3832aff598e8df0cc2698d",
+    "location": "toe",
+    "injury_type": "hyperextension",
+    "name": "Toe hyperextension protection guidance",
+    "notes": "Protect the affected toe from being bent backwards again. Pause provoking push-off, tiptoe work, running and jumping. Rest the foot in a comfortable supported position. Follow any individually prescribed footwear, walking support or weight-bearing restriction without changing it. The affected toe, joint stability and injury grade need assessment before toe curls, stretching or loaded forefoot work; this guidance does not diagnose turf toe. Stop automatic rehab and seek assessment for giving way, locking, suspected instability, deformity, major swelling or loss of joint use. Seek urgent help for altered sensation, a cold or blue limb, or symptoms suggesting a fracture, dislocation or tear. Follow clinician restrictions. If symptoms worsen, stop the provoking activity and seek assessment rather than testing the joint.",
+    "movement_archetype": "manual_recovery",
+    "proposed": {
+      "rehab_stage": "calm",
+      "function": "recovery_downregulation",
+      "equipment": [],
+      "impact": "none",
+      "load": "minimal",
+      "velocity": "low",
+      "target_regions": [
+        "toe"
+      ],
+      "laterality_applicability": "not_applicable",
+      "target_tissues": [
+        "toe joint region"
+      ],
+      "contraction_type": "unknown",
+      "sport_specificity": "general_rehab",
+      "contact_level": "none",
+      "evidence_notes": "Sources: https://www.orthoinfo.org/diseases--conditions/turf-toe/, https://www.nhs.uk/conditions/sprains-and-strains/. Protective advice only, not an injured-joint exercise, diagnosis, healing claim or clearance. No dose, pain ceiling, severity grading, support duration, ROM target or progression threshold inferred. Product low/moderate eligibility and scheduled cadence are retained. Structural stability and individual protection status are not captured, so RESTORE and advanced stages remain closed."
+    },
+    "flags": [
+      "IMPACT_PROGRESSION_IN_NOTES"
+    ],
+    "review_state": "reviewed",
+    "review_version": 1
+  },
+  {
     "drill_id": "toe_sprain_double_leg_pogo_jumps",
     "source_hash": "39e44d8f708856b5ab0e7bbeb0da1d3c3cd4bb6112a7d66de99a4aada63e5936",
     "location": "toe",
@@ -12993,6 +13026,37 @@
     "review_version": 1
   },
   {
+    "drill_id": "shoulder_hyperextension_recovery_support",
+    "source_hash": "493b6256f95dab74a56f9b548c8af8d0af36d8c8170d1dcbf52ad226bd5486b5",
+    "location": "shoulder",
+    "injury_type": "hyperextension",
+    "name": "Shoulder hyperextension protection guidance",
+    "notes": "Protect the shoulder from repeat backward overstretching. Pause provoking reaching behind the body, bottom-range pressing, heavy lifting and contact work. Support the arm comfortably at rest and follow any individually prescribed sling or movement restriction without changing it. Do not test shoulder stability, force range or introduce band presses. Movement rehabilitation needs the assessed injury and individual restrictions; this guidance does not establish that the joint is stable. Stop automatic rehab and seek assessment for giving way, locking, suspected instability, deformity, major swelling or loss of joint use. Seek urgent help for altered sensation, a cold or blue limb, or symptoms suggesting a fracture, dislocation or tear. Follow clinician restrictions. If symptoms worsen, stop the provoking activity and seek assessment rather than testing the joint.",
+    "movement_archetype": "manual_recovery",
+    "proposed": {
+      "rehab_stage": "calm",
+      "function": "recovery_downregulation",
+      "equipment": [],
+      "impact": "none",
+      "load": "minimal",
+      "velocity": "low",
+      "target_regions": [
+        "shoulder"
+      ],
+      "laterality_applicability": "not_applicable",
+      "target_tissues": [
+        "shoulder joint region"
+      ],
+      "contraction_type": "unknown",
+      "sport_specificity": "general_rehab",
+      "contact_level": "none",
+      "evidence_notes": "Sources: https://www.gatesheadhealth.nhs.uk/resources/shoulder-injury/, https://www.nhs.uk/conditions/sprains-and-strains/. Protective advice only, not an injured-joint exercise, diagnosis, healing claim or clearance. No dose, pain ceiling, severity grading, support duration, ROM target or progression threshold inferred. Product low/moderate eligibility and scheduled cadence are retained. Structural stability and individual protection status are not captured, so RESTORE and advanced stages remain closed."
+    },
+    "flags": [],
+    "review_state": "reviewed",
+    "review_version": 1
+  },
+  {
     "drill_id": "shoulder_unspecified_ytw_raise_sequence_light_dbs",
     "source_hash": "cffa9fc5e696dc782cc0166aa6dfb109b366b1e6fd6a2342f6c9eb6b1e5a126a",
     "location": "shoulder",
@@ -17669,6 +17733,37 @@
     "review_version": 1
   },
   {
+    "drill_id": "elbow_hyperextension_recovery_support",
+    "source_hash": "2c8b9feb38370a896c795ad0bb280c8d0b37590c87c6fd54b82448c998efe02c",
+    "location": "elbow",
+    "injury_type": "hyperextension",
+    "name": "Elbow hyperextension protection guidance",
+    "notes": "Protect the elbow from repeat over-straightening. Pause pressing, throwing, forceful lockout and resisted elbow work. Support the arm comfortably at rest and follow any individually prescribed sling or movement restriction. Do not test stability, push into full extension or begin wall presses. The hospital movement advice assumes an assessed soft-tissue injury without broken bones; an app hyperextension label does not establish that assessment. Stop automatic rehab and seek assessment for giving way, locking, suspected instability, deformity, major swelling or loss of joint use. Seek urgent help for altered sensation, a cold or blue limb, or symptoms suggesting a fracture, dislocation or tear. Follow clinician restrictions. If symptoms worsen, stop the provoking activity and seek assessment rather than testing the joint.",
+    "movement_archetype": "manual_recovery",
+    "proposed": {
+      "rehab_stage": "calm",
+      "function": "recovery_downregulation",
+      "equipment": [],
+      "impact": "none",
+      "load": "minimal",
+      "velocity": "low",
+      "target_regions": [
+        "elbow"
+      ],
+      "laterality_applicability": "not_applicable",
+      "target_tissues": [
+        "elbow joint region"
+      ],
+      "contraction_type": "unknown",
+      "sport_specificity": "general_rehab",
+      "contact_level": "none",
+      "evidence_notes": "Sources: https://ruh.nhs.uk/patients/patient_information/ORT047_Advice_after_a_soft_tissue_injury_of_the_elbow.pdf, https://www.nhs.uk/conditions/sprains-and-strains/. Protective advice only, not an injured-joint exercise, diagnosis, healing claim or clearance. No dose, pain ceiling, severity grading, support duration, ROM target or progression threshold inferred. Product low/moderate eligibility and scheduled cadence are retained. Structural stability and individual protection status are not captured, so RESTORE and advanced stages remain closed."
+    },
+    "flags": [],
+    "review_state": "reviewed",
+    "review_version": 1
+  },
+  {
     "drill_id": "elbow_contusion_gentle_elbow_slides_on_wall",
     "source_hash": "07abc6b21f10df9f4e4f94396f1d118f824a599da565ff980458f7a9aa04a1ed",
     "location": "elbow",
@@ -18514,6 +18609,37 @@
     },
     "flags": [],
     "review_state": "needs_review",
+    "review_version": 1
+  },
+  {
+    "drill_id": "wrist_hyperextension_recovery_support",
+    "source_hash": "afb85cd03e99eb15ead6c08a61a8e41883f6e76a57f8f26439ce48310aeafcb7",
+    "location": "wrist",
+    "injury_type": "hyperextension",
+    "name": "Wrist hyperextension protection guidance",
+    "notes": "Protect the wrist from being bent backwards again and from weight through the palm or knuckles. Pause pushing, loaded wrist extension and heavy grip work. Rest the forearm and hand comfortably supported. Follow any individually prescribed splint and movement restriction; do not remove or taper protection because symptoms improve. Assessment of the injured wrist and its stability is needed before stretching, push-ups or resistance work. Stop automatic rehab and seek assessment for giving way, locking, suspected instability, deformity, major swelling or loss of joint use. Seek urgent help for altered sensation, a cold or blue limb, or symptoms suggesting a fracture, dislocation or tear. Follow clinician restrictions. If symptoms worsen, stop the provoking activity and seek assessment rather than testing the joint.",
+    "movement_archetype": "manual_recovery",
+    "proposed": {
+      "rehab_stage": "calm",
+      "function": "recovery_downregulation",
+      "equipment": [],
+      "impact": "none",
+      "load": "minimal",
+      "velocity": "low",
+      "target_regions": [
+        "wrist"
+      ],
+      "laterality_applicability": "not_applicable",
+      "target_tissues": [
+        "wrist joint region"
+      ],
+      "contraction_type": "unknown",
+      "sport_specificity": "general_rehab",
+      "contact_level": "none",
+      "evidence_notes": "Sources: https://www.hey.nhs.uk/patient-leaflet/soft-tissue-injury-wrist-hand/, https://www.nhs.uk/conditions/sprains-and-strains/. Protective advice only, not an injured-joint exercise, diagnosis, healing claim or clearance. No dose, pain ceiling, severity grading, support duration, ROM target or progression threshold inferred. Product low/moderate eligibility and scheduled cadence are retained. Structural stability and individual protection status are not captured, so RESTORE and advanced stages remain closed."
+    },
+    "flags": [],
+    "review_state": "reviewed",
     "review_version": 1
   },
   {
@@ -20616,6 +20742,37 @@
     "review_version": 1
   },
   {
+    "drill_id": "hand_hyperextension_recovery_support",
+    "source_hash": "0f40dcd532c62d7345ce298c89dc5215f77be6d358899766691e112dfd7a3ade",
+    "location": "hand",
+    "injury_type": "hyperextension",
+    "name": "Hand hyperextension protection guidance",
+    "notes": "Protect the injured hand from repeated backward bending, forceful gripping and contact impacts. Support the hand comfortably at rest and avoid using it to bear body weight. Follow any individually prescribed hand protection and movement restrictions. The exact injured joint and safe movement range need assessment; do not pull fingers backwards, perform backhand wall crawls or follow a generic wrist or finger exercise protocol. Stop automatic rehab and seek assessment for giving way, locking, suspected instability, deformity, major swelling or loss of joint use. Seek urgent help for altered sensation, a cold or blue limb, or symptoms suggesting a fracture, dislocation or tear. Follow clinician restrictions. If symptoms worsen, stop the provoking activity and seek assessment rather than testing the joint.",
+    "movement_archetype": "manual_recovery",
+    "proposed": {
+      "rehab_stage": "calm",
+      "function": "recovery_downregulation",
+      "equipment": [],
+      "impact": "none",
+      "load": "minimal",
+      "velocity": "low",
+      "target_regions": [
+        "hand"
+      ],
+      "laterality_applicability": "not_applicable",
+      "target_tissues": [
+        "hand joint region"
+      ],
+      "contraction_type": "unknown",
+      "sport_specificity": "general_rehab",
+      "contact_level": "none",
+      "evidence_notes": "Sources: https://www.hey.nhs.uk/patient-leaflet/soft-tissue-injury-wrist-hand/, https://www.nhs.uk/conditions/sprains-and-strains/. Protective advice only, not an injured-joint exercise, diagnosis, healing claim or clearance. No dose, pain ceiling, severity grading, support duration, ROM target or progression threshold inferred. Product low/moderate eligibility and scheduled cadence are retained. Structural stability and individual protection status are not captured, so RESTORE and advanced stages remain closed."
+    },
+    "flags": [],
+    "review_state": "reviewed",
+    "review_version": 1
+  },
+  {
     "drill_id": "hand_sprain_band_resisted_finger_abduction",
     "source_hash": "95787052a9097c67e2cd7a65998970da5631419757fb1da9cc91a570502cc10e",
     "location": "hand",
@@ -21950,6 +22107,37 @@
     },
     "flags": [],
     "review_state": "needs_review",
+    "review_version": 1
+  },
+  {
+    "drill_id": "fingers_hyperextension_recovery_support",
+    "source_hash": "c521976fd3f2dc7c8e770244c9daa75b89ea9a8ebf1254ee232b04b5b5a6ca3a",
+    "location": "fingers",
+    "injury_type": "hyperextension",
+    "name": "Fingers hyperextension protection guidance",
+    "notes": "Protect the injured finger from being pulled or bent backwards. Avoid gripping against resistance, catching impacts and contact work. Rest the hand comfortably supported. Follow any hand-therapist splint or strapping instructions exactly; do not change the finger position, undo the splint for app exercises or decide when to stop wearing it. Finger exercises need the assessed injury and individual protection plan; no automatic stretching or finger holds are prescribed. Stop automatic rehab and seek assessment for giving way, locking, suspected instability, deformity, major swelling or loss of joint use. Seek urgent help for altered sensation, a cold or blue limb, or symptoms suggesting a fracture, dislocation or tear. Follow clinician restrictions. If symptoms worsen, stop the provoking activity and seek assessment rather than testing the joint.",
+    "movement_archetype": "manual_recovery",
+    "proposed": {
+      "rehab_stage": "calm",
+      "function": "recovery_downregulation",
+      "equipment": [],
+      "impact": "none",
+      "load": "minimal",
+      "velocity": "low",
+      "target_regions": [
+        "fingers"
+      ],
+      "laterality_applicability": "not_applicable",
+      "target_tissues": [
+        "finger joint region"
+      ],
+      "contraction_type": "unknown",
+      "sport_specificity": "general_rehab",
+      "contact_level": "none",
+      "evidence_notes": "Sources: https://www.guysandstthomas.nhs.uk/health-information/volar-plate-injuries-finger, https://www.nhs.uk/conditions/sprains-and-strains/. Protective advice only, not an injured-joint exercise, diagnosis, healing claim or clearance. No dose, pain ceiling, severity grading, support duration, ROM target or progression threshold inferred. Product low/moderate eligibility and scheduled cadence are retained. Structural stability and individual protection status are not captured, so RESTORE and advanced stages remain closed."
+    },
+    "flags": [],
+    "review_state": "reviewed",
     "review_version": 1
   },
   {

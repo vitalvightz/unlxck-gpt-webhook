@@ -382,6 +382,21 @@ def _is_urgent_injury(injury: Mapping[str, Any]) -> bool:
     text = text.replace("_", " ").replace("-", " ")
     if not text.strip():
         return False
+    # A generic hyperextension label does not establish structural stability.
+    # Route reported mechanical/vascular/function loss through the existing
+    # medical gate before a regional protection profile can be selected.
+    # Scope this additional screen to hyperextension; other families retain
+    # their existing eligibility and canonical urgent vocabulary.
+    if re.search(r"\bhyperextension\b", text) and any(re.search(pattern, text) for pattern in (
+        r"\b(?:giv(?:ing|es)\s+(?:way|out)|buckling|locking|locks|locked\s+joint)\b",
+        r"\b(?:unstable\s+joint|joint\s+(?:(?:is|feels)\s+)?unstable|(?:suspected|obvious|recurrent)\s+(?:joint\s+)?instability)\b",
+        r"\b(?:vascular\s+(?:symptoms|injury)|poor\s+circulation|cold\s+and\s+blue|cold\s+to\s+touch|blue\s+or\s+grey|deformity|deformed)\b",
+        r"\b(?:cold|blue|grey)\s+(?:hand|foot|finger|toe|limb)\b",
+        r"\b(?:major|severe|significant|large\s+amount\s+of)\s+(?:swelling|bruising)\b",
+        r"\b(?:unable\s+to|cannot|can['’]t|inability\s+to)\s+(?:bear\s+weight|put\s+(?:any\s+)?weight|walk|use\s+(?:the\s+|my\s+)?(?:joint|hand|wrist|elbow|shoulder|arm|finger|toe|foot|knee|leg|it))\b",
+        r"\b(?:significant\s+(?:functional\s+loss|loss\s+of\s+function)|neurological\s+(?:change|symptoms)|head\s+trauma)\b",
+    )):
+        return True
     return any(pattern.search(text) for pattern in _urgent_token_patterns())
 
 
