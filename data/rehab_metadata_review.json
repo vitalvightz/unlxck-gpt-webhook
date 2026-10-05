@@ -898,6 +898,68 @@
     "review_version": 1
   },
   {
+    "drill_id": "ankle_impingement_recovery_support",
+    "source_hash": "d6c10035ecb07fa1d07927b6f18c4d96705eb7f8eac5548e28deda908c66a078",
+    "location": "ankle",
+    "injury_type": "impingement",
+    "name": "Ankle impingement protection guidance",
+    "notes": "Reduce provoking impact, hill running, deep loaded ankle bending and forceful tiptoe work. Pace ordinary walking and use individually advised supportive footwear. The app does not distinguish front from back ankle impingement, so do not force either end of ankle range or use band traction to clear a pinch. Stop if symptoms worsen during or after the movement. Seek assessment for catching, locking, loss of function, altered sensation, a hot swollen joint or fever.",
+    "movement_archetype": "manual_recovery",
+    "proposed": {
+      "rehab_stage": "calm",
+      "function": "recovery_downregulation",
+      "equipment": [],
+      "impact": "none",
+      "load": "minimal",
+      "velocity": "low",
+      "target_regions": [
+        "ankle"
+      ],
+      "laterality_applicability": "not_applicable",
+      "target_tissues": [
+        "ankle joint region"
+      ],
+      "contraction_type": "unknown",
+      "sport_specificity": "general_rehab",
+      "contact_level": "none",
+      "evidence_notes": "Sources: https://msk-bexley.nhs.uk/conditions/foot-and-ankle-pain/anterior-front-ankle-impingement, https://msk-bexley.nhs.uk/conditions/foot-and-ankle-pain/posterior-back-ankle-impingement. Protected regional baseline only; not a diagnosis or return-to-sport protocol. No numeric dose, clinical severity rule or universal pain threshold inferred. Comfortable/non-provoking movement is a conservative baseline constraint. Existing low/moderate eligibility and cadence are product rules. Individual restrictions remain authoritative."
+    },
+    "flags": [],
+    "review_state": "reviewed",
+    "review_version": 1
+  },
+  {
+    "drill_id": "ankle_impingement_reviewed_restore",
+    "source_hash": "3e1293b42ded290edc75b2516680e93a122bc7db3b4fc34ed78104d9759d1079",
+    "location": "ankle",
+    "injury_type": "impingement",
+    "name": "Supported comfortable ankle movement",
+    "notes": "Sit with the affected lower leg supported and the foot free to move. Slowly move the ankle a small amount upwards and downwards around a comfortable middle range. Do not force pointing the toes, deep upward bending, a loaded knee-over-toe lunge or a stretch into a pinch. Keep the movement unweighted and controlled; follow any clinician-directed movement restriction. Stop if symptoms worsen during or after the movement. Seek assessment for catching, locking, loss of function, altered sensation, a hot swollen joint or fever.",
+    "movement_archetype": "mobility_rom",
+    "proposed": {
+      "rehab_stage": "restore",
+      "function": "mobility",
+      "equipment": [],
+      "impact": "none",
+      "load": "minimal",
+      "velocity": "low",
+      "target_regions": [
+        "ankle"
+      ],
+      "laterality_applicability": "side_specific",
+      "target_tissues": [
+        "ankle joint region"
+      ],
+      "contraction_type": "mixed",
+      "sport_specificity": "general_rehab",
+      "contact_level": "none",
+      "evidence_notes": "Sources: https://msk-bexley.nhs.uk/conditions/foot-and-ankle-pain/anterior-front-ankle-impingement, https://msk-bexley.nhs.uk/conditions/foot-and-ankle-pain/posterior-back-ankle-impingement. Protected regional baseline only; not a diagnosis or return-to-sport protocol. No numeric dose, clinical severity rule or universal pain threshold inferred. Comfortable/non-provoking movement is a conservative baseline constraint. Existing low/moderate eligibility and cadence are product rules. Individual restrictions remain authoritative."
+    },
+    "flags": [],
+    "review_state": "reviewed",
+    "review_version": 1
+  },
+  {
     "drill_id": "ankle_tightness_loaded_dorsiflexion_rocks_barbell_front_foot",
     "source_hash": "ff7c752a859c437468c64326d8519dfd1ee8abaf16842c7ac78e151eb7ce1d02",
     "location": "ankle",
@@ -4202,33 +4264,73 @@
     "review_version": 1
   },
   {
-    "drill_id": "hip_impingement_90_90_hip_switches",
-    "source_hash": "f9283340ebdff4fed87b7ce3e74667deb650b0d844d0c60cb285d8cab71f0a9a",
+    "drill_id": "hip_impingement_recovery_support",
+    "source_hash": "ab4d803bd8fc9ff13099af577966b825dadecc150e14b73a76327799044cc140",
     "location": "hip",
     "injury_type": "impingement",
-    "name": "90/90 Hip Switches",
-    "notes": "GPP: Rebuild rotation range → SPP: Add tempo or band to integrate control",
-    "movement_archetype": "banded_resistance",
+    "name": "Hip impingement protection guidance",
+    "notes": "Reduce provoking deep squats, twisting, crossing the leg into an uncomfortable position and high-impact activity. Pace everyday activities and avoid prolonged positions that reproduce the pinch. Follow individually advised weight-bearing and movement restrictions; do not use band traction to force range. Stop if symptoms worsen during or after the movement. Seek assessment for catching, locking, loss of function, altered sensation, a hot swollen joint or fever.",
+    "movement_archetype": "manual_recovery",
     "proposed": {
-      "rehab_stage": null,
-      "function": "mobility",
-      "equipment": null,
-      "impact": null,
-      "load": null,
-      "velocity": null,
+      "rehab_stage": "calm",
+      "function": "recovery_downregulation",
+      "equipment": [],
+      "impact": "none",
+      "load": "minimal",
+      "velocity": "low",
       "target_regions": [
         "hip"
       ],
-      "laterality_applicability": null,
-      "target_tissues": null,
-      "contraction_type": null,
+      "laterality_applicability": "not_applicable",
+      "target_tissues": [
+        "hip joint region"
+      ],
+      "contraction_type": "unknown",
       "sport_specificity": "general_rehab",
       "contact_level": "none",
-      "evidence_notes": null
+      "evidence_notes": "Sources: https://leedscommunityhealthcare.nhs.uk/our-services-a-z/musculoskeletal-msk/hip-problems/known-diagnosed-hip-problems/hip-femoroacetabular-impingement-fai/, https://pmc.ncbi.nlm.nih.gov/articles/PMC8349584/. Protected regional baseline only; not a diagnosis or return-to-sport protocol. No numeric dose, clinical severity rule or universal pain threshold inferred. Comfortable/non-provoking movement is a conservative baseline constraint. Existing low/moderate eligibility and cadence are product rules. Individual restrictions remain authoritative. Pain-free hip ROM is supported by the non-operative ISHA consensus."
     },
     "flags": [],
-    "review_state": "needs_review",
+    "review_state": "reviewed",
     "review_version": 1
+  },
+  {
+    "drill_id": "hip_impingement_90_90_hip_switches",
+    "source_hash": "70f06902b2316e3878deb9ba12ba41b7757d36b8fa62ada9a0daf8a19714b555",
+    "location": "hip",
+    "injury_type": "impingement",
+    "name": "Supported small-range hip rotation",
+    "notes": "Lie on your back with the affected knee comfortably bent and the foot resting on the surface. Slowly let the knee move a small amount outwards, then return to the starting position within a pain-free range. Keep the pelvis supported. Do not cross the knee inward, pull it towards the chest, force a deep rotation position or add a band. This replaces the extreme seated hip-switch positions with protected rotation. Stop if symptoms worsen during or after the movement. Seek assessment for catching, locking, loss of function, altered sensation, a hot swollen joint or fever.",
+    "movement_archetype": "mobility_rom",
+    "proposed": {
+      "rehab_stage": "restore",
+      "function": "mobility",
+      "equipment": [],
+      "impact": "none",
+      "load": "minimal",
+      "velocity": "low",
+      "target_regions": [
+        "hip"
+      ],
+      "laterality_applicability": "side_specific",
+      "target_tissues": [
+        "hip joint region"
+      ],
+      "contraction_type": "mixed",
+      "sport_specificity": "general_rehab",
+      "contact_level": "none",
+      "evidence_notes": "Sources: https://leedscommunityhealthcare.nhs.uk/our-services-a-z/musculoskeletal-msk/hip-problems/known-diagnosed-hip-problems/hip-femoroacetabular-impingement-fai/, https://pmc.ncbi.nlm.nih.gov/articles/PMC8349584/. Protected regional baseline only; not a diagnosis or return-to-sport protocol. No numeric dose, clinical severity rule or universal pain threshold inferred. Comfortable/non-provoking movement is a conservative baseline constraint. Existing low/moderate eligibility and cadence are product rules. Individual restrictions remain authoritative. Pain-free hip ROM is supported by the non-operative ISHA consensus."
+    },
+    "flags": [],
+    "review_state": "reviewed",
+    "review_version": 1,
+    "source_history": [
+      {
+        "source_hash": "f9283340ebdff4fed87b7ce3e74667deb650b0d844d0c60cb285d8cab71f0a9a",
+        "name": "90/90 Hip Switches",
+        "notes": "GPP: Rebuild rotation range → SPP: Add tempo or band to integrate control"
+      }
+    ]
   },
   {
     "drill_id": "hip_instability_banded_monster_walks",
@@ -12132,35 +12234,6 @@
     "review_version": 1
   },
   {
-    "drill_id": "shoulder_impingement_scapular_wall_slides_with_chin_tuck",
-    "source_hash": "6f583377d301bac004507970461230209412a80f3a1e177ada2001e2a7ee54fd",
-    "location": "shoulder",
-    "injury_type": "impingement",
-    "name": "Scapular Wall Slides with Chin Tuck",
-    "notes": "GPP: Reset scapular position → SPP: Maintain position under slow tempo → TAPER: Precision control",
-    "movement_archetype": "balance_control",
-    "proposed": {
-      "rehab_stage": null,
-      "function": "control",
-      "equipment": null,
-      "impact": "none",
-      "load": null,
-      "velocity": "low",
-      "target_regions": [
-        "shoulder"
-      ],
-      "laterality_applicability": null,
-      "target_tissues": null,
-      "contraction_type": null,
-      "sport_specificity": "general_rehab",
-      "contact_level": "none",
-      "evidence_notes": null
-    },
-    "flags": [],
-    "review_state": "needs_review",
-    "review_version": 1
-  },
-  {
     "drill_id": "shoulder_impingement_prone_w_to_y_lifts",
     "source_hash": "3892f6797a8b5e763d4e19189135e2787f58016d05f4355dda38c7b8e0afd1ff",
     "location": "shoulder",
@@ -12188,6 +12261,80 @@
     "flags": [],
     "review_state": "needs_review",
     "review_version": 1
+  },
+  {
+    "drill_id": "shoulder_impingement_recovery_support",
+    "source_hash": "a86679aa926336b7093a8fa7880ded9965b7730e2c3c320ef4c622561bff3f5c",
+    "location": "shoulder",
+    "injury_type": "impingement",
+    "name": "Shoulder impingement protection guidance",
+    "notes": "Reduce provoking overhead reaching, heavy pressing and movement behind the body. Keep ordinary comfortable activity rather than immobilizing the shoulder routinely. Support the arm comfortably when resting. Follow individual movement restrictions. Stop if symptoms worsen during or after the movement. Seek assessment for catching, locking, loss of function, altered sensation, a hot swollen joint or fever.",
+    "movement_archetype": "manual_recovery",
+    "proposed": {
+      "rehab_stage": "calm",
+      "function": "recovery_downregulation",
+      "equipment": [],
+      "impact": "none",
+      "load": "minimal",
+      "velocity": "low",
+      "target_regions": [
+        "shoulder"
+      ],
+      "laterality_applicability": "not_applicable",
+      "target_tissues": [
+        "shoulder joint and rotator cuff region"
+      ],
+      "contraction_type": "unknown",
+      "sport_specificity": "general_rehab",
+      "contact_level": "none",
+      "evidence_notes": "Sources: https://www.rjah.nhs.uk/our-services/therapy/supported-self-care/rotator-cuff-related-shoulder-pain/. Protected regional baseline only; not a diagnosis or return-to-sport protocol. No numeric dose, clinical severity rule or universal pain threshold inferred. Comfortable/non-provoking movement is a conservative baseline constraint. Existing low/moderate eligibility and cadence are product rules. Individual restrictions remain authoritative."
+    },
+    "flags": [],
+    "review_state": "reviewed",
+    "review_version": 1
+  },
+  {
+    "drill_id": "shoulder_impingement_scapular_wall_slides_with_chin_tuck",
+    "source_hash": "e373cd2a9010208b53b15142bca5fa38bb95aaf60ee21041ebdb71d2bfaa0bcd",
+    "location": "shoulder",
+    "injury_type": "impingement",
+    "name": "Supported comfortable shoulder wall slide",
+    "notes": "Stand facing a smooth wall with a cloth under the affected hand. Gently slide the hand upwards only through a comfortable range no higher than shoulder level, then return. Do not lean body weight heavily into the arm, force a painful arc, add resistance or lift overhead. Keep the neck comfortable; no forced chin tuck or posture correction is required. Stop if symptoms worsen during or after the movement. Seek assessment for catching, locking, loss of function, altered sensation, a hot swollen joint or fever.",
+    "movement_archetype": "mobility_rom",
+    "proposed": {
+      "rehab_stage": "restore",
+      "function": "mobility",
+      "equipment": [
+        "wall",
+        "cloth"
+      ],
+      "impact": "none",
+      "load": "low",
+      "velocity": "low",
+      "target_regions": [
+        "shoulder"
+      ],
+      "laterality_applicability": "side_specific",
+      "target_tissues": [
+        "shoulder joint and rotator cuff region"
+      ],
+      "contraction_type": "mixed",
+      "sport_specificity": "general_rehab",
+      "contact_level": "none",
+      "evidence_notes": "Sources: https://www.rjah.nhs.uk/our-services/therapy/supported-self-care/rotator-cuff-related-shoulder-pain/. Protected regional baseline only; not a diagnosis or return-to-sport protocol. No numeric dose, clinical severity rule or universal pain threshold inferred. Comfortable/non-provoking movement is a conservative baseline constraint. Existing low/moderate eligibility and cadence are product rules. Individual restrictions remain authoritative."
+    },
+    "flags": [
+      "LOAD_PROGRESSION_IN_NOTES"
+    ],
+    "review_state": "reviewed",
+    "review_version": 1,
+    "source_history": [
+      {
+        "source_hash": "6f583377d301bac004507970461230209412a80f3a1e177ada2001e2a7ee54fd",
+        "name": "Scapular Wall Slides with Chin Tuck",
+        "notes": "GPP: Reset scapular position → SPP: Maintain position under slow tempo → TAPER: Precision control"
+      }
+    ]
   },
   {
     "drill_id": "shoulder_soreness_massage_gun_posterior_head",
@@ -17190,35 +17337,6 @@
     "review_version": 1
   },
   {
-    "drill_id": "elbow_impingement_elbow_cars",
-    "source_hash": "0bf616e544d1b006bb8c62de2a91f8cd6c67c775e6c3493ecbd9d625e0973b0a",
-    "location": "elbow",
-    "injury_type": "impingement",
-    "name": "Elbow CARs",
-    "notes": "GPP: Restore end-range control → SPP: Integrate with loaded control",
-    "movement_archetype": "balance_control",
-    "proposed": {
-      "rehab_stage": null,
-      "function": "recovery_downregulation",
-      "equipment": null,
-      "impact": "none",
-      "load": null,
-      "velocity": "low",
-      "target_regions": [
-        "elbow"
-      ],
-      "laterality_applicability": null,
-      "target_tissues": null,
-      "contraction_type": null,
-      "sport_specificity": "general_rehab",
-      "contact_level": "none",
-      "evidence_notes": null
-    },
-    "flags": [],
-    "review_state": "needs_review",
-    "review_version": 1
-  },
-  {
     "drill_id": "elbow_impingement_banded_elbow_distraction",
     "source_hash": "bfa2a84c7bf868c4d065bc983e92201378bb7b827fbdbb243fbe9f3d45b59633",
     "location": "elbow",
@@ -17246,6 +17364,77 @@
     "flags": [],
     "review_state": "needs_review",
     "review_version": 1
+  },
+  {
+    "drill_id": "elbow_impingement_recovery_support",
+    "source_hash": "b77ab1a5c97a432ae321f395577e9e4df4ec4db8faff2619c80898f42ab12d2f",
+    "location": "elbow",
+    "injury_type": "impingement",
+    "name": "Elbow impingement protection guidance",
+    "notes": "Reduce provoking forceful elbow straightening, repetitive throwing, heavy triceps work and pressing. Rest from activities that reproduce the pinch and follow individual restrictions. Persistent catching, locking or a mechanical block needs assessment rather than repeated attempts to force movement. Stop if symptoms worsen during or after the movement. Seek assessment for catching, locking, loss of function, altered sensation, a hot swollen joint or fever.",
+    "movement_archetype": "manual_recovery",
+    "proposed": {
+      "rehab_stage": "calm",
+      "function": "recovery_downregulation",
+      "equipment": [],
+      "impact": "none",
+      "load": "minimal",
+      "velocity": "low",
+      "target_regions": [
+        "elbow"
+      ],
+      "laterality_applicability": "not_applicable",
+      "target_tissues": [
+        "elbow joint region"
+      ],
+      "contraction_type": "unknown",
+      "sport_specificity": "general_rehab",
+      "contact_level": "none",
+      "evidence_notes": "Sources: https://med.uth.edu/ortho/posterior-impingement-of-the-elbow/. Protected regional baseline only; not a diagnosis or return-to-sport protocol. No numeric dose, clinical severity rule or universal pain threshold inferred. Comfortable/non-provoking movement is a conservative baseline constraint. Existing low/moderate eligibility and cadence are product rules. Individual restrictions remain authoritative."
+    },
+    "flags": [],
+    "review_state": "reviewed",
+    "review_version": 1
+  },
+  {
+    "drill_id": "elbow_impingement_elbow_cars",
+    "source_hash": "6d78cbff1efa15bdad3c9a20b7267f23074b5b79a21b9c4261f4a255e67f0e74",
+    "location": "elbow",
+    "injury_type": "impingement",
+    "name": "Supported comfortable elbow movement",
+    "notes": "Sit with the affected upper arm by your side and the forearm comfortably supported. With the hand empty, slowly bend and straighten the elbow through a small comfortable range. Stop short of a pinch and do not force full straightening, rotate against resistance, perform a large end-range CAR or add weight. Stop and seek assessment for catching, locking or a blocked movement. Stop if symptoms worsen during or after the movement. Seek assessment for catching, locking, loss of function, altered sensation, a hot swollen joint or fever.",
+    "movement_archetype": "mobility_rom",
+    "proposed": {
+      "rehab_stage": "restore",
+      "function": "mobility",
+      "equipment": [],
+      "impact": "none",
+      "load": "minimal",
+      "velocity": "low",
+      "target_regions": [
+        "elbow"
+      ],
+      "laterality_applicability": "side_specific",
+      "target_tissues": [
+        "elbow joint region"
+      ],
+      "contraction_type": "mixed",
+      "sport_specificity": "general_rehab",
+      "contact_level": "none",
+      "evidence_notes": "Sources: https://med.uth.edu/ortho/posterior-impingement-of-the-elbow/. Protected regional baseline only; not a diagnosis or return-to-sport protocol. No numeric dose, clinical severity rule or universal pain threshold inferred. Comfortable/non-provoking movement is a conservative baseline constraint. Existing low/moderate eligibility and cadence are product rules. Individual restrictions remain authoritative."
+    },
+    "flags": [
+      "LOAD_PROGRESSION_IN_NOTES"
+    ],
+    "review_state": "reviewed",
+    "review_version": 1,
+    "source_history": [
+      {
+        "source_hash": "0bf616e544d1b006bb8c62de2a91f8cd6c67c775e6c3493ecbd9d625e0973b0a",
+        "name": "Elbow CARs",
+        "notes": "GPP: Restore end-range control → SPP: Integrate with loaded control"
+      }
+    ]
   },
   {
     "drill_id": "elbow_instability_closed_chain_rock_backs_elbow_under_shoulder",
@@ -18000,6 +18189,37 @@
     },
     "flags": [],
     "review_state": "needs_review",
+    "review_version": 1
+  },
+  {
+    "drill_id": "wrist_impingement_recovery_support",
+    "source_hash": "fd459ca6681f5991f57e0f311ee568cc30853d3b8e5522d0268565b90fb77499",
+    "location": "wrist",
+    "injury_type": "impingement",
+    "name": "Wrist impingement protection guidance",
+    "notes": "Reduce provoking grip, pushing through the hand, loaded wrist extension and repetitive wrist compression. Rest the wrist in a comfortable supported position and follow clinician-directed splint or immobilization advice without changing it. Do not perform band distraction, push-ups, resisted side-to-side holds or force range to clear a pinch. The subtype and safe release from protection are not captured, so automatic wrist movement and loading remain unavailable. Stop if symptoms worsen during or after the movement. Seek assessment for catching, locking, loss of function, altered sensation, a hot swollen joint or fever.",
+    "movement_archetype": "manual_recovery",
+    "proposed": {
+      "rehab_stage": "calm",
+      "function": "recovery_downregulation",
+      "equipment": [],
+      "impact": "none",
+      "load": "minimal",
+      "velocity": "low",
+      "target_regions": [
+        "wrist"
+      ],
+      "laterality_applicability": "not_applicable",
+      "target_tissues": [
+        "wrist joint region"
+      ],
+      "contraction_type": "unknown",
+      "sport_specificity": "general_rehab",
+      "contact_level": "none",
+      "evidence_notes": "Sources: https://pmc.ncbi.nlm.nih.gov/articles/PMC9036339/. Protected regional baseline only; not a diagnosis or return-to-sport protocol. No numeric dose, clinical severity rule or universal pain threshold inferred. Comfortable/non-provoking movement is a conservative baseline constraint. Existing low/moderate eligibility and cadence are product rules. Individual restrictions remain authoritative."
+    },
+    "flags": [],
+    "review_state": "reviewed",
     "review_version": 1
   },
   {

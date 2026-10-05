@@ -1,0 +1,1609 @@
+[
+  {
+    "region": "ankle",
+    "bank_location": "ankle",
+    "group_phase_progression": "GPP → SPP",
+    "drill_id": "ankle_impingement_banded_ankle_distraction",
+    "name": "Banded Ankle Distraction",
+    "notes": "GPP: Create space in front joint → SPP: Use pre-lift to clear pinch",
+    "bank_content_hash": "aaf84545241ffb6a21149dda92319aa9c3d40787d73b39f65dcd099e2ac40372",
+    "source_hash": "3b49eaffd97cbe4f8fde5f9bfebb44d02b5203635582527fa9e3efccf35fe216",
+    "review_state": "needs_review",
+    "metadata": {
+      "rehab_stage": null,
+      "function": "activation",
+      "equipment": null,
+      "load": null,
+      "impact": null,
+      "velocity": null,
+      "target_regions": [
+        "ankle"
+      ],
+      "target_tissues": null,
+      "laterality_applicability": "unknown",
+      "contraction_type": "unknown",
+      "sport_specificity": "unknown",
+      "contact_level": "unknown"
+    },
+    "mixed_camp_instructions": true,
+    "variable_instruction_cues": [],
+    "equipment_cues": [
+      "Banded"
+    ],
+    "active_profile": false
+  },
+  {
+    "region": "ankle",
+    "bank_location": "ankle",
+    "group_phase_progression": "GPP → SPP",
+    "drill_id": "ankle_impingement_loaded_knee_over_toe_lunge",
+    "name": "Loaded Knee-Over-Toe Lunge",
+    "notes": "GPP: Control dorsiflexion → SPP: Increase ROM through full range",
+    "bank_content_hash": "3a9e4ef9a5ce3cd08c6f0f2a48fce222d884d4541732a66cccbb82c51eb14731",
+    "source_hash": "6299d1a4caf2bd81882678eb9a81d5ef32d8e2139cee0f72c68c4470b1f56d36",
+    "review_state": "needs_review",
+    "metadata": {
+      "rehab_stage": null,
+      "function": "mobility",
+      "equipment": null,
+      "load": null,
+      "impact": null,
+      "velocity": null,
+      "target_regions": [
+        "ankle"
+      ],
+      "target_tissues": null,
+      "laterality_applicability": "unknown",
+      "contraction_type": "unknown",
+      "sport_specificity": "unknown",
+      "contact_level": "unknown"
+    },
+    "mixed_camp_instructions": true,
+    "variable_instruction_cues": [
+      "Increase"
+    ],
+    "equipment_cues": [],
+    "active_profile": false
+  },
+  {
+    "region": "hip",
+    "bank_location": "hip",
+    "group_phase_progression": "GPP → SPP",
+    "drill_id": "hip_impingement_banded_hip_distraction_lateral",
+    "name": "Banded Hip Distraction (Lateral)",
+    "notes": "GPP: Create space in joint capsule → SPP: Use pre-lift or striking to clear impingement",
+    "bank_content_hash": "1ed2dddd6e719d11a144199d6b434a8573a37409e49b0c720ff68f97afa4060d",
+    "source_hash": "97ab59527727bb3972736f27b75093eab60027b121a8bcb55061ed42e80a9bba",
+    "review_state": "needs_review",
+    "metadata": {
+      "rehab_stage": null,
+      "function": "activation",
+      "equipment": null,
+      "load": null,
+      "impact": null,
+      "velocity": null,
+      "target_regions": [
+        "hip"
+      ],
+      "target_tissues": null,
+      "laterality_applicability": "unknown",
+      "contraction_type": "unknown",
+      "sport_specificity": "unknown",
+      "contact_level": "unknown"
+    },
+    "mixed_camp_instructions": true,
+    "variable_instruction_cues": [],
+    "equipment_cues": [
+      "Banded"
+    ],
+    "active_profile": false
+  },
+  {
+    "region": "hip",
+    "bank_location": "hip",
+    "group_phase_progression": "GPP → SPP",
+    "drill_id": "hip_impingement_90_90_hip_switches",
+    "name": "90/90 Hip Switches",
+    "notes": "GPP: Rebuild rotation range → SPP: Add tempo or band to integrate control",
+    "bank_content_hash": "a7f537ddc3fbe8835143e0ee6d81e10ccded89106d2ee45ae43590bdf72ec0da",
+    "source_hash": "f9283340ebdff4fed87b7ce3e74667deb650b0d844d0c60cb285d8cab71f0a9a",
+    "review_state": "needs_review",
+    "metadata": {
+      "rehab_stage": null,
+      "function": "mobility",
+      "equipment": null,
+      "load": null,
+      "impact": null,
+      "velocity": null,
+      "target_regions": [
+        "hip"
+      ],
+      "target_tissues": null,
+      "laterality_applicability": "unknown",
+      "contraction_type": "unknown",
+      "sport_specificity": "unknown",
+      "contact_level": "unknown"
+    },
+    "mixed_camp_instructions": true,
+    "variable_instruction_cues": [
+      "Add",
+      "tempo"
+    ],
+    "equipment_cues": [
+      "band"
+    ],
+    "active_profile": false
+  },
+  {
+    "region": "groin",
+    "bank_location": "groin",
+    "group_phase_progression": "GPP → SPP",
+    "drill_id": "groin_impingement_quadruped_rock_back_with_adduction_bias",
+    "name": "Quadruped Rock Back with Adduction Bias",
+    "notes": "GPP: Open joint angle pain-free → SPP: Advance to active mobility",
+    "bank_content_hash": "98919e6bd48486053cc681073cb6ef23d6dfde57fd99af3e881f5562b91f418b",
+    "source_hash": "e46d254624f1ed113ecfe885f91d59bc8c4ee7990715dc8cd0001b6c03b419fa",
+    "review_state": "needs_review",
+    "metadata": {
+      "rehab_stage": null,
+      "function": "mobility",
+      "equipment": null,
+      "load": null,
+      "impact": null,
+      "velocity": null,
+      "target_regions": [
+        "groin"
+      ],
+      "target_tissues": null,
+      "laterality_applicability": "unknown",
+      "contraction_type": "unknown",
+      "sport_specificity": "unknown",
+      "contact_level": "unknown"
+    },
+    "mixed_camp_instructions": true,
+    "variable_instruction_cues": [
+      "Advance"
+    ],
+    "equipment_cues": [],
+    "active_profile": false
+  },
+  {
+    "region": "groin",
+    "bank_location": "groin",
+    "group_phase_progression": "GPP → SPP",
+    "drill_id": "groin_impingement_standing_hip_cars_adduction_focus",
+    "name": "Standing Hip CARs (Adduction Focus)",
+    "notes": "GPP: Restore capsule range → SPP: Control under slight fatigue",
+    "bank_content_hash": "be3f569f86e6e95ae1f284f777fab95d449dabd427c6322cf602b57f84f0711f",
+    "source_hash": "e704a88394c1fbd9e913f1360587a4ecd7b1bb298fcede059fba755b68eb60e1",
+    "review_state": "needs_review",
+    "metadata": {
+      "rehab_stage": null,
+      "function": "recovery_downregulation",
+      "equipment": null,
+      "load": null,
+      "impact": null,
+      "velocity": null,
+      "target_regions": [
+        "groin"
+      ],
+      "target_tissues": null,
+      "laterality_applicability": "unknown",
+      "contraction_type": "unknown",
+      "sport_specificity": "unknown",
+      "contact_level": "unknown"
+    },
+    "mixed_camp_instructions": true,
+    "variable_instruction_cues": [
+      "fatigue"
+    ],
+    "equipment_cues": [],
+    "active_profile": false
+  },
+  {
+    "region": "glute",
+    "bank_location": "glutes",
+    "group_phase_progression": "GPP → SPP",
+    "drill_id": "glutes_impingement_hip_cars_glute_focus",
+    "name": "Hip CARs (Glute Focus)",
+    "notes": "GPP: Restore joint clearance and capsule control → SPP: Apply under minor load",
+    "bank_content_hash": "6bdcaf29927dbecc19497f05cf5ebefd04a6bc607f655daa8c954f2781360d67",
+    "source_hash": "35eb4628e13fa32c53bce7e102a43075331429a1cc7c5381393059be2475833b",
+    "review_state": "needs_review",
+    "metadata": {
+      "rehab_stage": null,
+      "function": "recovery_downregulation",
+      "equipment": null,
+      "load": null,
+      "impact": null,
+      "velocity": null,
+      "target_regions": [
+        "glutes"
+      ],
+      "target_tissues": null,
+      "laterality_applicability": "unknown",
+      "contraction_type": "unknown",
+      "sport_specificity": "unknown",
+      "contact_level": "unknown"
+    },
+    "mixed_camp_instructions": true,
+    "variable_instruction_cues": [
+      "load"
+    ],
+    "equipment_cues": [],
+    "active_profile": false
+  },
+  {
+    "region": "glute",
+    "bank_location": "glutes",
+    "group_phase_progression": "GPP → SPP",
+    "drill_id": "glutes_impingement_wall_supported_standing_external_rotations",
+    "name": "Wall-Supported Standing External Rotations",
+    "notes": "GPP: Improve glide in end range → SPP: Add band tension to increase challenge",
+    "bank_content_hash": "0252b90ad479a551995712dfdce4ca2aa90575a4c6f64ba6bda818bcbb4d670a",
+    "source_hash": "349f6c4b5e1634dc85fc90de24bb0ea36c56ac2f3a402cf6449a64893fc0b575",
+    "review_state": "needs_review",
+    "metadata": {
+      "rehab_stage": null,
+      "function": null,
+      "equipment": null,
+      "load": null,
+      "impact": null,
+      "velocity": null,
+      "target_regions": [
+        "glutes"
+      ],
+      "target_tissues": null,
+      "laterality_applicability": "unknown",
+      "contraction_type": "unknown",
+      "sport_specificity": "unknown",
+      "contact_level": "unknown"
+    },
+    "mixed_camp_instructions": true,
+    "variable_instruction_cues": [
+      "Add",
+      "increase"
+    ],
+    "equipment_cues": [
+      "band"
+    ],
+    "active_profile": false
+  },
+  {
+    "region": "obliques",
+    "bank_location": "obliques",
+    "group_phase_progression": "GPP → SPP",
+    "drill_id": "obliques_impingement_trunk_cars_controlled_articular_rotations",
+    "name": "Trunk CARs (Controlled Articular Rotations)",
+    "notes": "GPP: Reestablish capsule mobility → SPP: Control under tension",
+    "bank_content_hash": "ad0e137a67eb5a74fc2af22172729b7e0c14fcf5d7d0dcec2169a1fc4b7b828c",
+    "source_hash": "62fdce4206edde4790a60738ba4a662268c8537296441123345a79782543f18a",
+    "review_state": "needs_review",
+    "metadata": {
+      "rehab_stage": null,
+      "function": "control",
+      "equipment": null,
+      "load": null,
+      "impact": null,
+      "velocity": null,
+      "target_regions": [
+        "obliques"
+      ],
+      "target_tissues": null,
+      "laterality_applicability": "unknown",
+      "contraction_type": "unknown",
+      "sport_specificity": "unknown",
+      "contact_level": "unknown"
+    },
+    "mixed_camp_instructions": true,
+    "variable_instruction_cues": [],
+    "equipment_cues": [],
+    "active_profile": false
+  },
+  {
+    "region": "obliques",
+    "bank_location": "obliques",
+    "group_phase_progression": "GPP → SPP",
+    "drill_id": "obliques_impingement_seated_banded_rotation",
+    "name": "Seated Banded Rotation",
+    "notes": "GPP: Reintroduce end-range tension → SPP: Add banded velocity",
+    "bank_content_hash": "618f64951683085fbce6e54cf7e303f293bf46abe5bd1edf391a79b8a2035b28",
+    "source_hash": "e051696beaf24aaf79fa8e584c6d70d19a8612fd55e0c1a9f64abf90d9af313a",
+    "review_state": "needs_review",
+    "metadata": {
+      "rehab_stage": null,
+      "function": "activation",
+      "equipment": null,
+      "load": null,
+      "impact": null,
+      "velocity": null,
+      "target_regions": [
+        "obliques"
+      ],
+      "target_tissues": null,
+      "laterality_applicability": "unknown",
+      "contraction_type": "unknown",
+      "sport_specificity": "unknown",
+      "contact_level": "unknown"
+    },
+    "mixed_camp_instructions": true,
+    "variable_instruction_cues": [
+      "Add"
+    ],
+    "equipment_cues": [
+      "Banded",
+      "banded"
+    ],
+    "active_profile": false
+  },
+  {
+    "region": "lower back",
+    "bank_location": "lower_back",
+    "group_phase_progression": "GPP → SPP",
+    "drill_id": "lower_back_impingement_dead_bug_hold_with_heel_tap",
+    "name": "Dead Bug Hold with Heel Tap",
+    "notes": "GPP: Reconnect core-to-spine control → SPP: Add band for anti-extension stress",
+    "bank_content_hash": "bcbc999a6e9b9a98edab4e83eb5e9a1f7ed2af7c7e7922a63fea6a36681c642b",
+    "source_hash": "638e454763bae2daa1b77c17feb11a5d97b6122282a430cce5b4c5d7b400756f",
+    "review_state": "needs_review",
+    "metadata": {
+      "rehab_stage": null,
+      "function": "control",
+      "equipment": null,
+      "load": null,
+      "impact": null,
+      "velocity": null,
+      "target_regions": [
+        "lower_back"
+      ],
+      "target_tissues": null,
+      "laterality_applicability": "unknown",
+      "contraction_type": "unknown",
+      "sport_specificity": "unknown",
+      "contact_level": "unknown"
+    },
+    "mixed_camp_instructions": true,
+    "variable_instruction_cues": [
+      "Add"
+    ],
+    "equipment_cues": [
+      "band"
+    ],
+    "active_profile": false
+  },
+  {
+    "region": "lower back",
+    "bank_location": "lower_back",
+    "group_phase_progression": "GPP → SPP",
+    "drill_id": "lower_back_impingement_quadruped_rock_back_with_reach",
+    "name": "Quadruped Rock Back with Reach",
+    "notes": "GPP: Mobilize hips without lumbar load → SPP: Integrate deep core brace",
+    "bank_content_hash": "899c324414fde5729e1f8eca79838f563ec5a89dc1c312c742f37b4bdca9c7ea",
+    "source_hash": "39932d736f852c5f9408d913095053711481d6eb4aca534d4e879dbdd28bd58f",
+    "review_state": "needs_review",
+    "metadata": {
+      "rehab_stage": null,
+      "function": null,
+      "equipment": null,
+      "load": null,
+      "impact": null,
+      "velocity": null,
+      "target_regions": [
+        "lower_back"
+      ],
+      "target_tissues": null,
+      "laterality_applicability": "unknown",
+      "contraction_type": "unknown",
+      "sport_specificity": "unknown",
+      "contact_level": "unknown"
+    },
+    "mixed_camp_instructions": true,
+    "variable_instruction_cues": [
+      "load"
+    ],
+    "equipment_cues": [],
+    "active_profile": false
+  },
+  {
+    "region": "upper back",
+    "bank_location": "upper back",
+    "group_phase_progression": "GPP → SPP",
+    "drill_id": "upper_back_impingement_wall_slides_with_band_overhead",
+    "name": "Wall Slides with Band Overhead",
+    "notes": "GPP: Open shoulder blade pathway → SPP: Integrate vertical motion with control",
+    "bank_content_hash": "fb99f517216c056c89a6c5eb79956860b6217790b0969c5e34124b608220744e",
+    "source_hash": "4160871d857f89b4a059e69aec53ec5a98efa4e629cce7d0770c26aa906c68f5",
+    "review_state": "needs_review",
+    "metadata": {
+      "rehab_stage": null,
+      "function": "control",
+      "equipment": null,
+      "load": null,
+      "impact": null,
+      "velocity": null,
+      "target_regions": [
+        "upper back"
+      ],
+      "target_tissues": null,
+      "laterality_applicability": "unknown",
+      "contraction_type": "unknown",
+      "sport_specificity": "unknown",
+      "contact_level": "unknown"
+    },
+    "mixed_camp_instructions": true,
+    "variable_instruction_cues": [],
+    "equipment_cues": [
+      "Band"
+    ],
+    "active_profile": false
+  },
+  {
+    "region": "upper back",
+    "bank_location": "upper back",
+    "group_phase_progression": "GPP → SPP",
+    "drill_id": "upper_back_impingement_thoracic_rotation_on_all_fours",
+    "name": "Thoracic Rotation on All Fours",
+    "notes": "GPP: Unlock thoracic joints → SPP: Add resistance band for challenge",
+    "bank_content_hash": "a943de421f14eaac7e5fe3a2799b21e70dfdc847396a1b16196daa0d71932d81",
+    "source_hash": "0b702babcffdb77bee6969b6db2e6b09c8f6dac701cdf62bc136c301b0f8edbe",
+    "review_state": "needs_review",
+    "metadata": {
+      "rehab_stage": null,
+      "function": "mobility",
+      "equipment": null,
+      "load": null,
+      "impact": null,
+      "velocity": null,
+      "target_regions": [
+        "upper back"
+      ],
+      "target_tissues": null,
+      "laterality_applicability": "unknown",
+      "contraction_type": "unknown",
+      "sport_specificity": "unknown",
+      "contact_level": "unknown"
+    },
+    "mixed_camp_instructions": true,
+    "variable_instruction_cues": [
+      "Add",
+      "resistance"
+    ],
+    "equipment_cues": [
+      "band"
+    ],
+    "active_profile": false
+  },
+  {
+    "region": "chest",
+    "bank_location": "chest",
+    "group_phase_progression": "GPP → SPP",
+    "drill_id": "chest_impingement_scapular_retraction_wall_slide",
+    "name": "Scapular Retraction Wall Slide",
+    "notes": "GPP: Restore shoulder-blade mechanics → SPP: Add band tension under control",
+    "bank_content_hash": "4d421ee6066125aa7c4e4bd4d1b72421629890c6ddc892014c385e9eb40b3255",
+    "source_hash": "240319d2cdbf91779673117447dd24ebea29d89d1b28167825434c70c4275a6b",
+    "review_state": "needs_review",
+    "metadata": {
+      "rehab_stage": null,
+      "function": "control",
+      "equipment": null,
+      "load": null,
+      "impact": null,
+      "velocity": null,
+      "target_regions": [
+        "chest"
+      ],
+      "target_tissues": null,
+      "laterality_applicability": "unknown",
+      "contraction_type": "unknown",
+      "sport_specificity": "unknown",
+      "contact_level": "unknown"
+    },
+    "mixed_camp_instructions": true,
+    "variable_instruction_cues": [
+      "Add"
+    ],
+    "equipment_cues": [
+      "band"
+    ],
+    "active_profile": false
+  },
+  {
+    "region": "chest",
+    "bank_location": "chest",
+    "group_phase_progression": "GPP → SPP",
+    "drill_id": "chest_impingement_single_arm_cable_press_from_split_stance",
+    "name": "Single-Arm Cable Press from Split Stance",
+    "notes": "GPP: Build control in safe range → SPP: Reinforce force path through chest",
+    "bank_content_hash": "95a32ee1c6d91895f90a219313f50a98beb69c2c8d4f0cc18c0b0c5ed43b53f1",
+    "source_hash": "7a64d107cb18987e4d711f400dacaed37d914aefd7fd2e007427dbb6a690dae0",
+    "review_state": "needs_review",
+    "metadata": {
+      "rehab_stage": null,
+      "function": "mobility",
+      "equipment": null,
+      "load": null,
+      "impact": null,
+      "velocity": null,
+      "target_regions": [
+        "chest"
+      ],
+      "target_tissues": null,
+      "laterality_applicability": "unknown",
+      "contraction_type": "unknown",
+      "sport_specificity": "unknown",
+      "contact_level": "unknown"
+    },
+    "mixed_camp_instructions": true,
+    "variable_instruction_cues": [],
+    "equipment_cues": [
+      "Cable"
+    ],
+    "active_profile": false
+  },
+  {
+    "region": "shoulder",
+    "bank_location": "shoulder",
+    "group_phase_progression": "GPP → SPP → TAPER",
+    "drill_id": "shoulder_impingement_scapular_wall_slides_with_chin_tuck",
+    "name": "Scapular Wall Slides with Chin Tuck",
+    "notes": "GPP: Reset scapular position → SPP: Maintain position under slow tempo → TAPER: Precision control",
+    "bank_content_hash": "34b4be05b3facfd1a072187c7c6b712d71d4a61f5470ce09b3e5c2d597ff06b3",
+    "source_hash": "6f583377d301bac004507970461230209412a80f3a1e177ada2001e2a7ee54fd",
+    "review_state": "needs_review",
+    "metadata": {
+      "rehab_stage": null,
+      "function": "control",
+      "equipment": null,
+      "load": null,
+      "impact": null,
+      "velocity": null,
+      "target_regions": [
+        "shoulder"
+      ],
+      "target_tissues": null,
+      "laterality_applicability": "unknown",
+      "contraction_type": "unknown",
+      "sport_specificity": "unknown",
+      "contact_level": "unknown"
+    },
+    "mixed_camp_instructions": true,
+    "variable_instruction_cues": [
+      "tempo"
+    ],
+    "equipment_cues": [],
+    "active_profile": false
+  },
+  {
+    "region": "shoulder",
+    "bank_location": "shoulder",
+    "group_phase_progression": "GPP → SPP → TAPER",
+    "drill_id": "shoulder_impingement_prone_w_to_y_lifts",
+    "name": "Prone W to Y Lifts",
+    "notes": "GPP: Recruit mid/lower trap → SPP: Integrate posterior chain → TAPER: Stabilize without fatigue",
+    "bank_content_hash": "ad44d1f712493994e765085a5b1f1486bada85417ce2c3b9f23dad991962135e",
+    "source_hash": "3892f6797a8b5e763d4e19189135e2787f58016d05f4355dda38c7b8e0afd1ff",
+    "review_state": "needs_review",
+    "metadata": {
+      "rehab_stage": null,
+      "function": null,
+      "equipment": null,
+      "load": null,
+      "impact": null,
+      "velocity": null,
+      "target_regions": [
+        "shoulder"
+      ],
+      "target_tissues": null,
+      "laterality_applicability": "unknown",
+      "contraction_type": "unknown",
+      "sport_specificity": "unknown",
+      "contact_level": "unknown"
+    },
+    "mixed_camp_instructions": true,
+    "variable_instruction_cues": [
+      "fatigue"
+    ],
+    "equipment_cues": [],
+    "active_profile": false
+  },
+  {
+    "region": "shoulder",
+    "bank_location": "shoulder",
+    "group_phase_progression": "GPP → SPP",
+    "drill_id": "shoulder_impingement_wall_facing_shoulder_cars",
+    "name": "Wall-Facing Shoulder CARs",
+    "notes": "GPP: Restore shoulder capsule control (anterior line)",
+    "bank_content_hash": "c49d60dc315c08c46d99e93a3dde990fa550beb8de6b4cb07898ed0f9b26121a",
+    "source_hash": "469f750e41c8a89f1534d8a20a315658e976a0ad997b7342523423fb969b22de",
+    "review_state": "needs_review",
+    "metadata": {
+      "rehab_stage": null,
+      "function": "recovery_downregulation",
+      "equipment": null,
+      "load": null,
+      "impact": null,
+      "velocity": null,
+      "target_regions": [
+        "shoulder"
+      ],
+      "target_tissues": null,
+      "laterality_applicability": "unknown",
+      "contraction_type": "unknown",
+      "sport_specificity": "unknown",
+      "contact_level": "unknown"
+    },
+    "mixed_camp_instructions": false,
+    "variable_instruction_cues": [],
+    "equipment_cues": [],
+    "active_profile": false
+  },
+  {
+    "region": "shoulder",
+    "bank_location": "shoulder",
+    "group_phase_progression": "GPP → SPP",
+    "drill_id": "shoulder_impingement_bottoms_up_kettlebell_hold_elbow_bent",
+    "name": "Bottoms-Up Kettlebell Hold (Elbow Bent)",
+    "notes": "SPP: Stabilize shoulder through controlled load (posterior chain)",
+    "bank_content_hash": "3573163dccaa4cdc75cb98cfca82c1d4e39d76a5495c40a00375d438b8d9841c",
+    "source_hash": "ab73dd858e81c7289359690654f639a7e9865970f7c98d30edb723c6ccf59199",
+    "review_state": "needs_review",
+    "metadata": {
+      "rehab_stage": null,
+      "function": "control",
+      "equipment": null,
+      "load": null,
+      "impact": null,
+      "velocity": null,
+      "target_regions": [
+        "shoulder"
+      ],
+      "target_tissues": null,
+      "laterality_applicability": "unknown",
+      "contraction_type": "unknown",
+      "sport_specificity": "unknown",
+      "contact_level": "unknown"
+    },
+    "mixed_camp_instructions": false,
+    "variable_instruction_cues": [
+      "load"
+    ],
+    "equipment_cues": [
+      "Kettlebell"
+    ],
+    "active_profile": false
+  },
+  {
+    "region": "biceps",
+    "bank_location": "bicep",
+    "group_phase_progression": "GPP → SPP",
+    "drill_id": "bicep_impingement_wall_slides_with_band_pull_apart",
+    "name": "Wall Slides with Band Pull-Apart",
+    "notes": "GPP: Reinforce scapular mechanics → SPP: Load bicep safely in clean range",
+    "bank_content_hash": "3b8f36fcb208a3f1aa2fc1f4100fbcc3ed7f284f1b96decab3b3fa61bc3a8ac8",
+    "source_hash": "4b8d0e24e62c194fb24ca7c9b3a2144b03b96568f858127f7f582cf485d9a4eb",
+    "review_state": "needs_review",
+    "metadata": {
+      "rehab_stage": null,
+      "function": "control",
+      "equipment": null,
+      "load": null,
+      "impact": null,
+      "velocity": null,
+      "target_regions": [
+        "bicep"
+      ],
+      "target_tissues": null,
+      "laterality_applicability": "unknown",
+      "contraction_type": "unknown",
+      "sport_specificity": "unknown",
+      "contact_level": "unknown"
+    },
+    "mixed_camp_instructions": true,
+    "variable_instruction_cues": [
+      "Load"
+    ],
+    "equipment_cues": [
+      "Band"
+    ],
+    "active_profile": false
+  },
+  {
+    "region": "biceps",
+    "bank_location": "bicep",
+    "group_phase_progression": "GPP → SPP",
+    "drill_id": "bicep_impingement_bottom_up_kettlebell_curl",
+    "name": "Bottom-Up Kettlebell Curl",
+    "notes": "GPP: Enforce joint control through wrist/elbow → SPP: Add tempo for eccentric integrity",
+    "bank_content_hash": "a17da9675eab2d8049383fb70987ebc172a3ed7afe1305ff6add36dee90da244",
+    "source_hash": "8e9109ed4dea76f1cdf92d26e1efce769d474102f62fb490ac5af7cd23366ca7",
+    "review_state": "needs_review",
+    "metadata": {
+      "rehab_stage": null,
+      "function": "tendon_loading",
+      "equipment": null,
+      "load": null,
+      "impact": null,
+      "velocity": null,
+      "target_regions": [
+        "bicep"
+      ],
+      "target_tissues": null,
+      "laterality_applicability": "unknown",
+      "contraction_type": "unknown",
+      "sport_specificity": "unknown",
+      "contact_level": "unknown"
+    },
+    "mixed_camp_instructions": true,
+    "variable_instruction_cues": [
+      "Add",
+      "tempo"
+    ],
+    "equipment_cues": [
+      "Kettlebell"
+    ],
+    "active_profile": false
+  },
+  {
+    "region": "triceps",
+    "bank_location": "triceps",
+    "group_phase_progression": "GPP → SPP",
+    "drill_id": "triceps_impingement_banded_shoulder_flexion_slide",
+    "name": "Banded Shoulder Flexion Slide",
+    "notes": "GPP: Re-establish triceps clearance through flexion → SPP: Add tension to replicate extension path",
+    "bank_content_hash": "efec53092756a3e9b7e87c81811c2b568ddd5c404fde0f6d2e34b7b5c8adc7fa",
+    "source_hash": "7d7180e32e65bb81c170a34d7d09c1e0be09fdeebc17348e907ba5eeea488b99",
+    "review_state": "needs_review",
+    "metadata": {
+      "rehab_stage": null,
+      "function": "activation",
+      "equipment": null,
+      "load": null,
+      "impact": null,
+      "velocity": null,
+      "target_regions": [
+        "triceps"
+      ],
+      "target_tissues": null,
+      "laterality_applicability": "unknown",
+      "contraction_type": "unknown",
+      "sport_specificity": "unknown",
+      "contact_level": "unknown"
+    },
+    "mixed_camp_instructions": true,
+    "variable_instruction_cues": [
+      "Add"
+    ],
+    "equipment_cues": [
+      "Banded"
+    ],
+    "active_profile": false
+  },
+  {
+    "region": "triceps",
+    "bank_location": "triceps",
+    "group_phase_progression": "GPP → SPP",
+    "drill_id": "triceps_impingement_wall_clock_mobility_straight_arm",
+    "name": "Wall Clock Mobility (Straight Arm)",
+    "notes": "GPP: Mobilize long head at overhead range → SPP: Anchor scapular control",
+    "bank_content_hash": "0e6ad7d97a13811600f8698ba5ae6b46767af43928eef37ef08eca4aa2ca1faf",
+    "source_hash": "089b8b8ffd822ddcef231eb627daf0e2c38ac4d32b89fdd99c2ffe0da77ee3b3",
+    "review_state": "needs_review",
+    "metadata": {
+      "rehab_stage": null,
+      "function": "mobility",
+      "equipment": null,
+      "load": null,
+      "impact": null,
+      "velocity": null,
+      "target_regions": [
+        "triceps"
+      ],
+      "target_tissues": null,
+      "laterality_applicability": "unknown",
+      "contraction_type": "unknown",
+      "sport_specificity": "unknown",
+      "contact_level": "unknown"
+    },
+    "mixed_camp_instructions": true,
+    "variable_instruction_cues": [],
+    "equipment_cues": [],
+    "active_profile": false
+  },
+  {
+    "region": "forearm",
+    "bank_location": "forearm",
+    "group_phase_progression": "GPP → SPP",
+    "drill_id": "forearm_impingement_band_assisted_wrist_traction",
+    "name": "Band-Assisted Wrist Traction",
+    "notes": "GPP: Restore joint space and glide → SPP: Maintain with light activation",
+    "bank_content_hash": "351459541cd32674402c7b623b85db59b9cadb9164e0e7bce256311884b416a0",
+    "source_hash": "9873841751532cde9b4a8f69cb37f57c7839850547d2ac239ca8c4ea3ef5e284",
+    "review_state": "needs_review",
+    "metadata": {
+      "rehab_stage": null,
+      "function": "activation",
+      "equipment": null,
+      "load": null,
+      "impact": null,
+      "velocity": null,
+      "target_regions": [
+        "forearm"
+      ],
+      "target_tissues": null,
+      "laterality_applicability": "unknown",
+      "contraction_type": "unknown",
+      "sport_specificity": "unknown",
+      "contact_level": "unknown"
+    },
+    "mixed_camp_instructions": true,
+    "variable_instruction_cues": [],
+    "equipment_cues": [
+      "Band"
+    ],
+    "active_profile": false
+  },
+  {
+    "region": "forearm",
+    "bank_location": "forearm",
+    "group_phase_progression": "GPP → SPP",
+    "drill_id": "forearm_impingement_isometric_wrist_holds_end_range_flex_ext",
+    "name": "Isometric Wrist Holds (End-Range Flex/Ext)",
+    "notes": "GPP: Control end-range tension → SPP: Use angles under light load",
+    "bank_content_hash": "f6c855d70cd36a4a649bfbaaaedffb57507aaa205a30df29719a29b1915f62b0",
+    "source_hash": "0df1392d26258b2681abd72a4725d1445fbae46494f9d96f5c648f50fd31fe6c",
+    "review_state": "needs_review",
+    "metadata": {
+      "rehab_stage": null,
+      "function": "isometric_analgesia",
+      "equipment": null,
+      "load": null,
+      "impact": null,
+      "velocity": null,
+      "target_regions": [
+        "forearm"
+      ],
+      "target_tissues": null,
+      "laterality_applicability": "unknown",
+      "contraction_type": "unknown",
+      "sport_specificity": "unknown",
+      "contact_level": "unknown"
+    },
+    "mixed_camp_instructions": true,
+    "variable_instruction_cues": [
+      "load"
+    ],
+    "equipment_cues": [],
+    "active_profile": false
+  },
+  {
+    "region": "elbow",
+    "bank_location": "elbow",
+    "group_phase_progression": "GPP → SPP",
+    "drill_id": "elbow_impingement_elbow_cars",
+    "name": "Elbow CARs",
+    "notes": "GPP: Restore end-range control → SPP: Integrate with loaded control",
+    "bank_content_hash": "5c2b6cf061cf3f8fa02796d6c6d03e37a49da56bc2b2075faf267fb72e24c9ce",
+    "source_hash": "0bf616e544d1b006bb8c62de2a91f8cd6c67c775e6c3493ecbd9d625e0973b0a",
+    "review_state": "needs_review",
+    "metadata": {
+      "rehab_stage": null,
+      "function": "recovery_downregulation",
+      "equipment": null,
+      "load": null,
+      "impact": null,
+      "velocity": null,
+      "target_regions": [
+        "elbow"
+      ],
+      "target_tissues": null,
+      "laterality_applicability": "unknown",
+      "contraction_type": "unknown",
+      "sport_specificity": "unknown",
+      "contact_level": "unknown"
+    },
+    "mixed_camp_instructions": true,
+    "variable_instruction_cues": [],
+    "equipment_cues": [],
+    "active_profile": false
+  },
+  {
+    "region": "elbow",
+    "bank_location": "elbow",
+    "group_phase_progression": "GPP → SPP",
+    "drill_id": "elbow_impingement_banded_elbow_distraction",
+    "name": "Banded Elbow Distraction",
+    "notes": "GPP: Open joint space → SPP: Maintain mobility under banded control",
+    "bank_content_hash": "16d7ee7e4174c18f33d21df50be2ae5963021590f90e77a1415801d6a4f2b3b3",
+    "source_hash": "bfa2a84c7bf868c4d065bc983e92201378bb7b827fbdbb243fbe9f3d45b59633",
+    "review_state": "needs_review",
+    "metadata": {
+      "rehab_stage": null,
+      "function": "activation",
+      "equipment": null,
+      "load": null,
+      "impact": null,
+      "velocity": null,
+      "target_regions": [
+        "elbow"
+      ],
+      "target_tissues": null,
+      "laterality_applicability": "unknown",
+      "contraction_type": "unknown",
+      "sport_specificity": "unknown",
+      "contact_level": "unknown"
+    },
+    "mixed_camp_instructions": true,
+    "variable_instruction_cues": [],
+    "equipment_cues": [
+      "Banded",
+      "banded"
+    ],
+    "active_profile": false
+  },
+  {
+    "region": "wrist",
+    "bank_location": "wrist",
+    "group_phase_progression": "GPP → SPP",
+    "drill_id": "wrist_impingement_radial_ulnar_deviation_isos",
+    "name": "Radial/Ulnar Deviation Isos",
+    "notes": "GPP: Restore joint space → SPP: Load under function",
+    "bank_content_hash": "a2f6833fed07b1bf6748c8a40a990ac62f014fd02efd0354c8a50a38d15a2611",
+    "source_hash": "de9e7bb2126d74f7888c3647e1645798b2fd704253141c7bc63596df23174fb6",
+    "review_state": "needs_review",
+    "metadata": {
+      "rehab_stage": null,
+      "function": "recovery_downregulation",
+      "equipment": null,
+      "load": null,
+      "impact": null,
+      "velocity": null,
+      "target_regions": [
+        "wrist"
+      ],
+      "target_tissues": null,
+      "laterality_applicability": "unknown",
+      "contraction_type": "unknown",
+      "sport_specificity": "unknown",
+      "contact_level": "unknown"
+    },
+    "mixed_camp_instructions": true,
+    "variable_instruction_cues": [
+      "Load"
+    ],
+    "equipment_cues": [],
+    "active_profile": false
+  },
+  {
+    "region": "wrist",
+    "bank_location": "wrist",
+    "group_phase_progression": "GPP → SPP",
+    "drill_id": "wrist_impingement_wrist_distraction_with_band",
+    "name": "Wrist Distraction with Band",
+    "notes": "GPP: Unload joint → SPP: Maintain glide under compression",
+    "bank_content_hash": "98146dd5af6803d705aa0cab4a868c89ad180b272be67662be1fdd0643d8c0c6",
+    "source_hash": "f594c329d12440ad9cc10d93ed5243080622c21018e9937c84100e9ad1bef24d",
+    "review_state": "needs_review",
+    "metadata": {
+      "rehab_stage": null,
+      "function": "mobility",
+      "equipment": null,
+      "load": null,
+      "impact": null,
+      "velocity": null,
+      "target_regions": [
+        "wrist"
+      ],
+      "target_tissues": null,
+      "laterality_applicability": "unknown",
+      "contraction_type": "unknown",
+      "sport_specificity": "unknown",
+      "contact_level": "unknown"
+    },
+    "mixed_camp_instructions": true,
+    "variable_instruction_cues": [],
+    "equipment_cues": [
+      "Band"
+    ],
+    "active_profile": false
+  },
+  {
+    "region": "wrist",
+    "bank_location": "wrist",
+    "group_phase_progression": "GPP → SPP",
+    "drill_id": "wrist_impingement_wrist_distraction_with_band_2",
+    "name": "Wrist Distraction with Band",
+    "notes": "GPP: Open joint space → SPP: Load into new range",
+    "bank_content_hash": "dcfad0e808e92ab4c94e38f51fe55bd1cbec5ba61ae97810b3c893b608641c41",
+    "source_hash": "c77690ca870eac94152eaef7cc3c3824720bf2b398ea07aaa69e02fe125903e3",
+    "review_state": "needs_review",
+    "metadata": {
+      "rehab_stage": null,
+      "function": "mobility",
+      "equipment": null,
+      "load": null,
+      "impact": null,
+      "velocity": null,
+      "target_regions": [
+        "wrist"
+      ],
+      "target_tissues": null,
+      "laterality_applicability": "unknown",
+      "contraction_type": "unknown",
+      "sport_specificity": "unknown",
+      "contact_level": "unknown"
+    },
+    "mixed_camp_instructions": true,
+    "variable_instruction_cues": [
+      "Load"
+    ],
+    "equipment_cues": [
+      "Band"
+    ],
+    "active_profile": false
+  },
+  {
+    "region": "wrist",
+    "bank_location": "wrist",
+    "group_phase_progression": "GPP → SPP",
+    "drill_id": "wrist_impingement_push_up_on_parallettes",
+    "name": "Push-Up on Parallettes",
+    "notes": "GPP: Reduce wrist angle stress → SPP: Introduce compression tolerance",
+    "bank_content_hash": "989b4182e811391857dbb0357621dd43ab873a2bcc588d0c80e3457cb396fd0f",
+    "source_hash": "a95e62695b551b7700ddd1a8442c65b019a3baeb53947e2cb454413aa33831ee",
+    "review_state": "needs_review",
+    "metadata": {
+      "rehab_stage": null,
+      "function": "recovery_downregulation",
+      "equipment": null,
+      "load": null,
+      "impact": null,
+      "velocity": null,
+      "target_regions": [
+        "wrist"
+      ],
+      "target_tissues": null,
+      "laterality_applicability": "unknown",
+      "contraction_type": "unknown",
+      "sport_specificity": "unknown",
+      "contact_level": "unknown"
+    },
+    "mixed_camp_instructions": true,
+    "variable_instruction_cues": [],
+    "equipment_cues": [
+      "Parallettes"
+    ],
+    "active_profile": false
+  },
+  {
+    "region": "hand",
+    "bank_location": "hand",
+    "group_phase_progression": "GPP → SPP",
+    "drill_id": "hand_impingement_joint_glide_mobilization_finger_pull",
+    "name": "Joint Glide Mobilization (Finger Pull)",
+    "notes": "GPP: Restore passive range → SPP: Add active ROM",
+    "bank_content_hash": "9d94923a6137a4c2aeb43eadc4e0f3701b2087f6c13689a61a658b9d6cbcc1a5",
+    "source_hash": "3f72e741fc2e4859747255b702ac6e4edb060b3f764a1fa1f0ed340e1edb283e",
+    "review_state": "needs_review",
+    "metadata": {
+      "rehab_stage": null,
+      "function": "mobility",
+      "equipment": null,
+      "load": null,
+      "impact": null,
+      "velocity": null,
+      "target_regions": [
+        "hand"
+      ],
+      "target_tissues": null,
+      "laterality_applicability": "unknown",
+      "contraction_type": "unknown",
+      "sport_specificity": "unknown",
+      "contact_level": "unknown"
+    },
+    "mixed_camp_instructions": true,
+    "variable_instruction_cues": [
+      "Add"
+    ],
+    "equipment_cues": [],
+    "active_profile": false
+  },
+  {
+    "region": "hand",
+    "bank_location": "hand",
+    "group_phase_progression": "GPP → SPP",
+    "drill_id": "hand_impingement_grip_reset_with_banded_distraction",
+    "name": "Grip Reset with Banded Distraction",
+    "notes": "GPP: Reduce capsular block → SPP: Layer in isometric activation",
+    "bank_content_hash": "3e35b5263c47e04e8fecd44a06d4bcdbfc8417ee63bb06e094742de13ee65253",
+    "source_hash": "e3977cb48007cf42347cf7743c5c68f7b9ca368ce3ad8568a7be0e1aa764e3b5",
+    "review_state": "needs_review",
+    "metadata": {
+      "rehab_stage": null,
+      "function": "isometric_analgesia",
+      "equipment": null,
+      "load": null,
+      "impact": null,
+      "velocity": null,
+      "target_regions": [
+        "hand"
+      ],
+      "target_tissues": null,
+      "laterality_applicability": "unknown",
+      "contraction_type": "unknown",
+      "sport_specificity": "unknown",
+      "contact_level": "unknown"
+    },
+    "mixed_camp_instructions": true,
+    "variable_instruction_cues": [],
+    "equipment_cues": [
+      "Banded"
+    ],
+    "active_profile": false
+  },
+  {
+    "region": "hand",
+    "bank_location": "hand",
+    "group_phase_progression": "GPP → SPP",
+    "drill_id": "hand_impingement_band_pull_finger_decompression",
+    "name": "Band-Pull Finger Decompression",
+    "notes": "GPP: Reduce capsule compression → SPP: Integrate active extension",
+    "bank_content_hash": "2565438bffe2505aa19f41fbe1c492bda09bba0691dfe30202a09bbea281d111",
+    "source_hash": "3098375721cdb980c8cabd5f52eb939688a994631ad6bd94f30908817e5bebad",
+    "review_state": "needs_review",
+    "metadata": {
+      "rehab_stage": null,
+      "function": "recovery_downregulation",
+      "equipment": null,
+      "load": null,
+      "impact": null,
+      "velocity": null,
+      "target_regions": [
+        "hand"
+      ],
+      "target_tissues": null,
+      "laterality_applicability": "unknown",
+      "contraction_type": "unknown",
+      "sport_specificity": "unknown",
+      "contact_level": "unknown"
+    },
+    "mixed_camp_instructions": true,
+    "variable_instruction_cues": [],
+    "equipment_cues": [
+      "Band"
+    ],
+    "active_profile": false
+  },
+  {
+    "region": "hand",
+    "bank_location": "hand",
+    "group_phase_progression": "GPP → SPP",
+    "drill_id": "hand_impingement_manual_metacarpal_glide_therapist_or_self",
+    "name": "Manual Metacarpal Glide (Therapist or Self)",
+    "notes": "GPP: Target precise joint blockages → SPP: Reinforce with neuromuscular control",
+    "bank_content_hash": "c80a76c0e5943523e9917d338109583c7f043c568f1083f5d208eec5fc6d9446",
+    "source_hash": "909ab63aae1d15532b50cd4a91c5d188967ed609f1abd8e73ab35002befc3ef4",
+    "review_state": "needs_review",
+    "metadata": {
+      "rehab_stage": null,
+      "function": "mobility",
+      "equipment": null,
+      "load": null,
+      "impact": null,
+      "velocity": null,
+      "target_regions": [
+        "hand"
+      ],
+      "target_tissues": null,
+      "laterality_applicability": "unknown",
+      "contraction_type": "unknown",
+      "sport_specificity": "unknown",
+      "contact_level": "unknown"
+    },
+    "mixed_camp_instructions": true,
+    "variable_instruction_cues": [
+      "Therapist",
+      "Self"
+    ],
+    "equipment_cues": [],
+    "active_profile": false
+  },
+  {
+    "region": "fingers",
+    "bank_location": "fingers",
+    "group_phase_progression": "GPP → SPP",
+    "drill_id": "fingers_impingement_banded_finger_traction",
+    "name": "Banded Finger Traction",
+    "notes": "GPP: Reduce joint compression symptoms → SPP: Add slow ROM reintegration",
+    "bank_content_hash": "400d32442001e0e86dc529edb123ccabeeebe086151ecbbe87bee99b73708fa9",
+    "source_hash": "69a619319c8048b07d97c2d0e8a03afd7bdd195939a8c4ff413444ce89796350",
+    "review_state": "needs_review",
+    "metadata": {
+      "rehab_stage": null,
+      "function": "activation",
+      "equipment": null,
+      "load": null,
+      "impact": null,
+      "velocity": null,
+      "target_regions": [
+        "fingers"
+      ],
+      "target_tissues": null,
+      "laterality_applicability": "unknown",
+      "contraction_type": "unknown",
+      "sport_specificity": "unknown",
+      "contact_level": "unknown"
+    },
+    "mixed_camp_instructions": true,
+    "variable_instruction_cues": [
+      "Add"
+    ],
+    "equipment_cues": [
+      "Banded"
+    ],
+    "active_profile": false
+  },
+  {
+    "region": "fingers",
+    "bank_location": "fingers",
+    "group_phase_progression": "GPP → SPP",
+    "drill_id": "fingers_impingement_tendon_glides_straight_hook_fist",
+    "name": "Tendon Glides (Straight–Hook–Fist)",
+    "notes": "GPP: Sequence finger movement → SPP: Speed up reps with precision",
+    "bank_content_hash": "9a9f995d8b3873d38361ae2b5d25a329667a22cfbad549580ab3cb785b185861",
+    "source_hash": "d4a80551bf2d09a7c965fed0aaea5fb687f3554232e96b8da15f36717fb6a5cd",
+    "review_state": "needs_review",
+    "metadata": {
+      "rehab_stage": null,
+      "function": null,
+      "equipment": null,
+      "load": null,
+      "impact": null,
+      "velocity": null,
+      "target_regions": [
+        "fingers"
+      ],
+      "target_tissues": null,
+      "laterality_applicability": "unknown",
+      "contraction_type": "unknown",
+      "sport_specificity": "unknown",
+      "contact_level": "unknown"
+    },
+    "mixed_camp_instructions": true,
+    "variable_instruction_cues": [
+      "Speed"
+    ],
+    "equipment_cues": [],
+    "active_profile": false
+  },
+  {
+    "region": "neck",
+    "bank_location": "neck",
+    "group_phase_progression": "GPP → SPP",
+    "drill_id": "neck_impingement_neck_glide_with_chin_tucks",
+    "name": "Neck Glide with Chin Tucks",
+    "notes": "GPP: Clear anterior compression → SPP: Reinforce posture under load",
+    "bank_content_hash": "c256e00ee10cc809c1f185537f0fc075b9f04eaf6e1f927c04b23bcaa7958ecb",
+    "source_hash": "df652562411e34fefc1ce277ee5c91113e91055fbe97cc3fd09ee5e9150817da",
+    "review_state": "needs_review",
+    "metadata": {
+      "rehab_stage": null,
+      "function": "recovery_downregulation",
+      "equipment": null,
+      "load": null,
+      "impact": null,
+      "velocity": null,
+      "target_regions": [
+        "neck"
+      ],
+      "target_tissues": null,
+      "laterality_applicability": "unknown",
+      "contraction_type": "unknown",
+      "sport_specificity": "unknown",
+      "contact_level": "unknown"
+    },
+    "mixed_camp_instructions": true,
+    "variable_instruction_cues": [
+      "load"
+    ],
+    "equipment_cues": [],
+    "active_profile": false
+  },
+  {
+    "region": "neck",
+    "bank_location": "neck",
+    "group_phase_progression": "GPP → SPP",
+    "drill_id": "neck_impingement_quadruped_neck_extension",
+    "name": "Quadruped Neck Extension",
+    "notes": "GPP: Explore range with body support → SPP: Add time under tension",
+    "bank_content_hash": "fb1ed82d27b5eb2c5a45fb5003e27d1e9a77d9296230abac498f5bbb2f611644",
+    "source_hash": "dd3ba94cb3ae9f511baad2256c61f9a6fb0c8cf757c86a6a8c433124513cdc31",
+    "review_state": "needs_review",
+    "metadata": {
+      "rehab_stage": null,
+      "function": null,
+      "equipment": null,
+      "load": null,
+      "impact": null,
+      "velocity": null,
+      "target_regions": [
+        "neck"
+      ],
+      "target_tissues": null,
+      "laterality_applicability": "unknown",
+      "contraction_type": "unknown",
+      "sport_specificity": "unknown",
+      "contact_level": "unknown"
+    },
+    "mixed_camp_instructions": true,
+    "variable_instruction_cues": [
+      "Add"
+    ],
+    "equipment_cues": [],
+    "active_profile": false
+  },
+  {
+    "region": "neck",
+    "bank_location": "neck",
+    "group_phase_progression": "SPP → TAPER",
+    "drill_id": "neck_impingement_wall_slide_chin_glide",
+    "name": "Wall Slide Chin Glide",
+    "notes": "SPP: Restore alignment mid-load → TAPER: Maintain neck posture pre-fight",
+    "bank_content_hash": "d31437847773f6e3232e67a6dd162f6535bf02ef673b6c91536cb4f6d2c1bbf4",
+    "source_hash": "7af75d8e5495bc64519c6f66e64df2e8e5322c781ebfbeb6d0988b4c8154b393",
+    "review_state": "needs_review",
+    "metadata": {
+      "rehab_stage": null,
+      "function": "control",
+      "equipment": null,
+      "load": null,
+      "impact": null,
+      "velocity": null,
+      "target_regions": [
+        "neck"
+      ],
+      "target_tissues": null,
+      "laterality_applicability": "unknown",
+      "contraction_type": "unknown",
+      "sport_specificity": "unknown",
+      "contact_level": "unknown"
+    },
+    "mixed_camp_instructions": true,
+    "variable_instruction_cues": [
+      "load"
+    ],
+    "equipment_cues": [],
+    "active_profile": false
+  },
+  {
+    "region": "neck",
+    "bank_location": "neck",
+    "group_phase_progression": "SPP → TAPER",
+    "drill_id": "neck_impingement_theraband_diagonal_pulls",
+    "name": "TheraBand Diagonal Pulls",
+    "notes": "SPP: Controlled joint motion in arc → TAPER: Flush motion without overactivation",
+    "bank_content_hash": "d3b0485d981f11b79c7f4316342929c904c9d43753f5b8abd9a6fb2002cafe01",
+    "source_hash": "d4b7c581315e89151456a9bfc732bf3d05fd18af693db857ce9da367fc5e7a88",
+    "review_state": "needs_review",
+    "metadata": {
+      "rehab_stage": null,
+      "function": "activation",
+      "equipment": null,
+      "load": null,
+      "impact": null,
+      "velocity": null,
+      "target_regions": [
+        "neck"
+      ],
+      "target_tissues": null,
+      "laterality_applicability": "unknown",
+      "contraction_type": "unknown",
+      "sport_specificity": "unknown",
+      "contact_level": "unknown"
+    },
+    "mixed_camp_instructions": true,
+    "variable_instruction_cues": [],
+    "equipment_cues": [
+      "TheraBand"
+    ],
+    "active_profile": false
+  },
+  {
+    "region": "jaw",
+    "bank_location": "jaw",
+    "group_phase_progression": "GPP → SPP",
+    "drill_id": "jaw_impingement_jaw_glide_with_tongue_stabilization",
+    "name": "Jaw Glide with Tongue Stabilization",
+    "notes": "GPP: Unlock joint restriction via tongue-brain coordination → SPP: Reinforce movement path under light resistance",
+    "bank_content_hash": "14bd955aff9d025b35d6a718fc895da33157fbacd39ce2deb5beed28c562e6d9",
+    "source_hash": "4d4b448079c7e38262acd5dc58e11c4351b12ed9d45543f5a531447de243c482",
+    "review_state": "needs_review",
+    "metadata": {
+      "rehab_stage": null,
+      "function": "control",
+      "equipment": null,
+      "load": null,
+      "impact": null,
+      "velocity": null,
+      "target_regions": [
+        "jaw"
+      ],
+      "target_tissues": null,
+      "laterality_applicability": "unknown",
+      "contraction_type": "unknown",
+      "sport_specificity": "unknown",
+      "contact_level": "unknown"
+    },
+    "mixed_camp_instructions": true,
+    "variable_instruction_cues": [
+      "resistance"
+    ],
+    "equipment_cues": [],
+    "active_profile": false
+  },
+  {
+    "region": "jaw",
+    "bank_location": "jaw",
+    "group_phase_progression": "GPP → SPP",
+    "drill_id": "jaw_impingement_isometric_front_bite_stick_or_towel_hold",
+    "name": "Isometric Front Bite (Stick or Towel Hold)",
+    "notes": "GPP: Train anterior bite engagement → SPP: Sustain isometric endurance for clinch defense",
+    "bank_content_hash": "b2f536278db34aa67e6017844a358b05fd667b817d215b256dc152feca685b99",
+    "source_hash": "e0272aec9a58b967f58d80bc5be0da1f6b39658dd67f8e7e52d7bce74b76fe47",
+    "review_state": "needs_review",
+    "metadata": {
+      "rehab_stage": null,
+      "function": "isometric_analgesia",
+      "equipment": null,
+      "load": null,
+      "impact": null,
+      "velocity": null,
+      "target_regions": [
+        "jaw"
+      ],
+      "target_tissues": null,
+      "laterality_applicability": "unknown",
+      "contraction_type": "unknown",
+      "sport_specificity": "unknown",
+      "contact_level": "unknown"
+    },
+    "mixed_camp_instructions": true,
+    "variable_instruction_cues": [],
+    "equipment_cues": [
+      "Stick",
+      "Towel"
+    ],
+    "active_profile": false
+  },
+  {
+    "region": "face",
+    "bank_location": "face",
+    "group_phase_progression": "GPP → SPP",
+    "drill_id": "face_impingement_neuro_fascial_release_zygomatic_pull",
+    "name": "Neuro-Fascial Release – Zygomatic Pull",
+    "notes": "GPP: Restore glide of facial fascia → SPP: Integrate with neck and jaw control",
+    "bank_content_hash": "c34fadd067abf2ed99954d384b9b4e59b5083d6db1854c128e2f5b5b3514008c",
+    "source_hash": "a3fa7ea8bc436a59ddca36ac0732896c2be8d5443fc5944d628acbfb8a574154",
+    "review_state": "needs_review",
+    "metadata": {
+      "rehab_stage": null,
+      "function": "recovery_downregulation",
+      "equipment": null,
+      "load": null,
+      "impact": null,
+      "velocity": null,
+      "target_regions": [
+        "face"
+      ],
+      "target_tissues": null,
+      "laterality_applicability": "unknown",
+      "contraction_type": "unknown",
+      "sport_specificity": "unknown",
+      "contact_level": "unknown"
+    },
+    "mixed_camp_instructions": true,
+    "variable_instruction_cues": [],
+    "equipment_cues": [],
+    "active_profile": false
+  },
+  {
+    "region": "face",
+    "bank_location": "face",
+    "group_phase_progression": "GPP → SPP",
+    "drill_id": "face_impingement_ball_glide_under_zygomatic_arch",
+    "name": "Ball Glide Under Zygomatic Arch",
+    "notes": "GPP: Mobilize trapped fascial pathways → SPP: Relieve contact-triggered restrictions",
+    "bank_content_hash": "ce1de4b9372dde0eb436a2dcf91f3e91e23e2aaa171faa952ed066e1bffb7a96",
+    "source_hash": "00ee96df5cd22267cb498c937675abcbdcbdd723320069c1e9b2edd5c3b1f04b",
+    "review_state": "needs_review",
+    "metadata": {
+      "rehab_stage": null,
+      "function": null,
+      "equipment": null,
+      "load": null,
+      "impact": null,
+      "velocity": null,
+      "target_regions": [
+        "face"
+      ],
+      "target_tissues": null,
+      "laterality_applicability": "unknown",
+      "contraction_type": "unknown",
+      "sport_specificity": "unknown",
+      "contact_level": "unknown"
+    },
+    "mixed_camp_instructions": true,
+    "variable_instruction_cues": [],
+    "equipment_cues": [
+      "Ball"
+    ],
+    "active_profile": false
+  },
+  {
+    "region": "unspecified",
+    "bank_location": "unspecified",
+    "group_phase_progression": "GPP → SPP",
+    "drill_id": "unspecified_impingement_controlled_joint_cars_controlled_articular_rotations",
+    "name": "Controlled Joint CARs (Controlled Articular Rotations)",
+    "notes": "Move through safe ranges under tension. Avoid painful arcs, build capsule space.",
+    "bank_content_hash": "ffb6cd7030fc604a50e8d5e5706d75c18cdbddb9b0aacdf18a873435cc6cbfb1",
+    "source_hash": "da74f15c699f463abc190440f6b5a682244514de5100dc3c624d34ee00ea0249",
+    "review_state": "needs_review",
+    "metadata": {
+      "rehab_stage": null,
+      "function": "control",
+      "equipment": null,
+      "load": null,
+      "impact": null,
+      "velocity": null,
+      "target_regions": [
+        "unspecified"
+      ],
+      "target_tissues": null,
+      "laterality_applicability": "unknown",
+      "contraction_type": "unknown",
+      "sport_specificity": "unknown",
+      "contact_level": "unknown"
+    },
+    "mixed_camp_instructions": false,
+    "variable_instruction_cues": [],
+    "equipment_cues": [],
+    "active_profile": false
+  },
+  {
+    "region": "unspecified",
+    "bank_location": "unspecified",
+    "group_phase_progression": "GPP → SPP",
+    "drill_id": "unspecified_impingement_banded_joint_distraction_light_tension",
+    "name": "Banded Joint Distraction (Light Tension)",
+    "notes": "Use light band tension to open joint space while moving through low-load range of motion.",
+    "bank_content_hash": "784d2ac2166fbb55240545959d229b9bf508a857f8bbe1dced37746bf2050519",
+    "source_hash": "107be00596e979e623b05b72808ec7f39818c65490d7d17532d91e4c1e7b5a97",
+    "review_state": "needs_review",
+    "metadata": {
+      "rehab_stage": null,
+      "function": "activation",
+      "equipment": null,
+      "load": null,
+      "impact": null,
+      "velocity": null,
+      "target_regions": [
+        "unspecified"
+      ],
+      "target_tissues": null,
+      "laterality_applicability": "unknown",
+      "contraction_type": "unknown",
+      "sport_specificity": "unknown",
+      "contact_level": "unknown"
+    },
+    "mixed_camp_instructions": false,
+    "variable_instruction_cues": [
+      "load"
+    ],
+    "equipment_cues": [
+      "Banded",
+      "band"
+    ],
+    "active_profile": false
+  }
+]

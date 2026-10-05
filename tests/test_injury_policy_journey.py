@@ -65,7 +65,7 @@ def decide(reviewed, **kwargs):
 def test_shipped_policies_are_sourced_active_and_self_paced():
     policies = load_clinical_policies()
     assert {p.region for p in policies} == {"chest", "ankle", "hamstring", "calf", "groin", "quads", "biceps", "triceps", "shoulder",
-                                          "knee", "toe", "wrist", "elbow", "hand", "fingers", "achilles", "forearm"}
+                                          "knee", "toe", "wrist", "elbow", "hand", "fingers", "achilles", "forearm", "hip"}
     assert all(p.activation == "live" and p.status == "active" for p in policies)
     assert all(p.dose is None and p.sources for policy in policies for p in policy.prescriptions)
     from fightcamp.rehab_protocols import get_rehab_bank

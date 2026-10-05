@@ -137,8 +137,10 @@ def main():
         draft = compose_policy(catalog, profile)
         profile.update(status="active", activation="live", content_hash=policy_review_hash(draft), prescriptions=[p.model_dump() for p in draft.prescriptions])
         profiles.append(profile)
-    ids = {p["policy_id"] for p in profiles}
-    raw["profiles"] = [p for p in raw["profiles"] if p["policy_id"] not in ids] + profiles
+    # Replace existing profiles in place so later family rollouts do not make
+    # rerunning this seed reorder the catalog or churn otherwise identical bytes.
+    replacements = {p["policy_id"]: p for p in profiles}
+    raw["profiles"] = [replacements.pop(p["policy_id"], p) for p in raw["profiles"]] + list(replacements.values())
     debt = read("rehab_bank_duplicate_debt.json")
     # The reviewed floor-level variant no longer duplicates the untouched step
     # variant; retire that exact allowance without approving/removing its copy.

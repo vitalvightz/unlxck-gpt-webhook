@@ -130,6 +130,7 @@ A requirement shared by every profile in a family belongs in that family's `tran
 - No profile declares a clinical criterion, so no transition is promotable. LOAD, DYNAMIC and RETURN are closed for every user.
 - Sprain/instability adds nine regional profiles: ankle, knee and shoulder instability, plus toe, wrist, elbow, shoulder, hand and finger sprains. The existing ankle sprain anchor and all strain profiles retain their policy hashes. The whole 117-drill pre-rollout inventory is in `sprain-family-bank-audit.json`; rollout details are in `sprain-family-rollout.md`.
 - Tendonitis adds Achilles, shoulder, biceps, forearm, elbow, wrist, hand and fingers CALM/RESTORE profiles. Six reviewed resistance drills remain dormant inventory. Every previous profile and original bank identity is preserved. No functional checkpoint is currently captured, so no tendon LOAD/DYNAMIC/RETURN transition is activated; see `tendon-family-rollout.md` for regional sources and missing inputs.
+- Impingement adds shoulder, hip, ankle and elbow CALM/RESTORE profiles and wrist CALM protection only. All 26 previous profiles retain their hashes and behavior. Generic symptoms, tendonitis and instability remain separate. LOAD/DYNAMIC/RETURN remain closed; see `impingement-family-rollout.md` for the complete inventory, regional evidence and missing inputs.
 - Missing for real progression:
   - Sourced clinical criteria per family/profile.
   - Prescription-level approval of LOAD/DYNAMIC/RETURN drills; a mechanical bank review alone does not activate them.

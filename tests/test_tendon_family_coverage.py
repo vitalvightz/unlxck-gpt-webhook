@@ -208,7 +208,7 @@ def test_unrelated_pain_does_not_become_tendonitis(region):
     assert resolve(injury(region, "pain"))["prescription"] is None
 
 
-def test_inventory_repaired_id_history_and_non_tendon_content_preservation():
+def test_inventory_repaired_id_history_and_tendon_content_preservation():
     audit = json.loads((ROOT / "docs/tendon-family-bank-audit.json").read_text(encoding="utf-8"))
     assert len(audit) == 60 and len({r["region"] for r in audit}) == 20
     for original in audit:
@@ -219,8 +219,11 @@ def test_inventory_repaired_id_history_and_non_tendon_content_preservation():
     hashes = json.loads((ROOT / "tests/fixtures/rehab_bank_before_tendon_hashes.json").read_text(encoding="utf-8"))
     bank = {d["id"]: d for g in get_rehab_bank() for d in g["drills"]}
     assert hashes.keys() <= bank.keys()
-    assert {identity for identity in hashes if content_hash(bank[identity]) != hashes[identity]} == REPAIRED
-    assert len(bank.keys() - hashes.keys()) == 15
+    # Later family rollouts preserve their own pre-rollout fixtures. Keep the
+    # tendon assertions exact without freezing unrelated inventory forever.
+    tendon_ids = {d["id"] for g in get_rehab_bank() if g["type"] == "tendonitis" for d in g["drills"]}
+    assert {identity for identity in hashes if identity in tendon_ids and content_hash(bank[identity]) != hashes[identity]} == REPAIRED
+    assert len(tendon_ids - hashes.keys()) == 15
     ledger = {r["drill_id"]: r for r in json.loads((ROOT / "data/rehab_metadata_review.json").read_text(encoding="utf-8"))}
     active = {p.drill_id for policy in load_clinical_policies() for p in policy.prescriptions}
     assert {r["drill_id"] for r in audit} & active == {"wrist_tendonitis_pronation_supination_twists"}
@@ -272,7 +275,8 @@ def test_all_previous_profiles_and_their_decisions_schedules_and_snapshots_are_u
     from api.contracts.injury_policy import reconcile_session_prescription
     raw = json.loads((ROOT / "data/rehab_pathways.json").read_text(encoding="utf-8"))
     previous = json.loads((ROOT / "tests/fixtures/rehab_profiles_before_tendon.json").read_text(encoding="utf-8"))
-    assert [p for p in raw["profiles"] if p["injury_type"] != "tendonitis"] == previous
+    previous_ids = {p["policy_id"] for p in previous}
+    assert [p for p in raw["profiles"] if p["policy_id"] in previous_ids] == previous
     assert len(previous) == 18
     raw["profiles"] = previous
     frozen_path = tmp_path / "before.json"
