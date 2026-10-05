@@ -2079,6 +2079,334 @@
       "status": "active",
       "activation": "live",
       "content_hash": "cbcc30f9c5a99cb0c91420361f33361821ecde474ac41b5d00619aec57011fb5"
+    },
+    {
+      "policy_id": "shoulder_impingement",
+      "version": 1,
+      "region": "shoulder",
+      "injury_type": "impingement",
+      "pathway_family": "joint_irritation_or_impingement",
+      "evidence_sources": [
+        "https://www.rjah.nhs.uk/our-services/therapy/supported-self-care/rotator-cuff-related-shoulder-pain/"
+      ],
+      "prescriptions": [
+        {
+          "drill_id": "shoulder_impingement_recovery_support",
+          "bank_hash": "8ad8bdd1fe643199a2ebc70e615f9362fbc6d12ff37656dcab4347d59f2fc0ff",
+          "stage": "calm",
+          "instructions": "Reduce provoking overhead reaching, heavy pressing and movement behind the body. Keep ordinary comfortable activity rather than immobilizing the shoulder routinely. Support the arm comfortably when resting. Follow individual movement restrictions. Stop if symptoms worsen during or after the movement. Seek assessment for catching, locking, loss of function, altered sensation, a hot swollen joint or fever.",
+          "dose": null,
+          "camp_doses": {},
+          "readiness_doses": {},
+          "allowed_severities": [
+            "low",
+            "moderate"
+          ],
+          "stop_when": [
+            "Stop if symptoms worsen during or after the movement. Seek assessment for catching, locking, loss of function, altered sensation, a hot swollen joint or fever."
+          ],
+          "frequency": "scheduled_sessions",
+          "minimum_gap_days": 1,
+          "priority": 0,
+          "sources": [
+            "https://www.rjah.nhs.uk/our-services/therapy/supported-self-care/rotator-cuff-related-shoulder-pain/"
+          ]
+        },
+        {
+          "drill_id": "shoulder_impingement_scapular_wall_slides_with_chin_tuck",
+          "bank_hash": "36a77231d4f1420a35d12cf9aede8aa14ab303dac656d80b19d3b36bec4c6614",
+          "stage": "restore",
+          "instructions": "Stand facing a smooth wall with a cloth under the affected hand. Gently slide the hand upwards only through a comfortable range no higher than shoulder level, then return. Do not lean body weight heavily into the arm, force a painful arc, add resistance or lift overhead. Keep the neck comfortable; no forced chin tuck or posture correction is required. Stop if symptoms worsen during or after the movement. Seek assessment for catching, locking, loss of function, altered sensation, a hot swollen joint or fever.",
+          "dose": null,
+          "camp_doses": {},
+          "readiness_doses": {},
+          "allowed_severities": [
+            "low",
+            "moderate"
+          ],
+          "stop_when": [
+            "Stop if symptoms worsen during or after the movement. Seek assessment for catching, locking, loss of function, altered sensation, a hot swollen joint or fever."
+          ],
+          "frequency": "scheduled_sessions",
+          "minimum_gap_days": 1,
+          "priority": 0,
+          "sources": [
+            "https://www.rjah.nhs.uk/our-services/therapy/supported-self-care/rotator-cuff-related-shoulder-pain/"
+          ]
+        }
+      ],
+      "blocked_regions": [
+        "shoulder"
+      ],
+      "blocked_tags": [],
+      "contact_limit": "none",
+      "live_stages": [
+        "calm",
+        "restore"
+      ],
+      "transition_overrides": {},
+      "status": "active",
+      "activation": "live",
+      "content_hash": "a6b2e29243aafd400be33dade62033e88ada2d8af28e1fa029e72ec7247b8f08"
+    },
+    {
+      "policy_id": "hip_impingement",
+      "version": 1,
+      "region": "hip",
+      "injury_type": "impingement",
+      "pathway_family": "joint_irritation_or_impingement",
+      "evidence_sources": [
+        "https://leedscommunityhealthcare.nhs.uk/our-services-a-z/musculoskeletal-msk/hip-problems/known-diagnosed-hip-problems/hip-femoroacetabular-impingement-fai/",
+        "https://pmc.ncbi.nlm.nih.gov/articles/PMC8349584/"
+      ],
+      "prescriptions": [
+        {
+          "drill_id": "hip_impingement_recovery_support",
+          "bank_hash": "c9a85192172810df25398bfd8d955d11c9ad625e9741cd600ec08f4db187d22e",
+          "stage": "calm",
+          "instructions": "Reduce provoking deep squats, twisting, crossing the leg into an uncomfortable position and high-impact activity. Pace everyday activities and avoid prolonged positions that reproduce the pinch. Follow individually advised weight-bearing and movement restrictions; do not use band traction to force range. Stop if symptoms worsen during or after the movement. Seek assessment for catching, locking, loss of function, altered sensation, a hot swollen joint or fever.",
+          "dose": null,
+          "camp_doses": {},
+          "readiness_doses": {},
+          "allowed_severities": [
+            "low",
+            "moderate"
+          ],
+          "stop_when": [
+            "Stop if symptoms worsen during or after the movement. Seek assessment for catching, locking, loss of function, altered sensation, a hot swollen joint or fever."
+          ],
+          "frequency": "scheduled_sessions",
+          "minimum_gap_days": 1,
+          "priority": 0,
+          "sources": [
+            "https://leedscommunityhealthcare.nhs.uk/our-services-a-z/musculoskeletal-msk/hip-problems/known-diagnosed-hip-problems/hip-femoroacetabular-impingement-fai/",
+            "https://pmc.ncbi.nlm.nih.gov/articles/PMC8349584/"
+          ]
+        },
+        {
+          "drill_id": "hip_impingement_90_90_hip_switches",
+          "bank_hash": "d8e501dece419442648695e329156c87ff1342f7eca8cf221a32daf3525bd13e",
+          "stage": "restore",
+          "instructions": "Lie on your back with the affected knee comfortably bent and the foot resting on the surface. Slowly let the knee move a small amount outwards, then return to the starting position within a pain-free range. Keep the pelvis supported. Do not cross the knee inward, pull it towards the chest, force a deep rotation position or add a band. This replaces the extreme seated hip-switch positions with protected rotation. Stop if symptoms worsen during or after the movement. Seek assessment for catching, locking, loss of function, altered sensation, a hot swollen joint or fever.",
+          "dose": null,
+          "camp_doses": {},
+          "readiness_doses": {},
+          "allowed_severities": [
+            "low",
+            "moderate"
+          ],
+          "stop_when": [
+            "Stop if symptoms worsen during or after the movement. Seek assessment for catching, locking, loss of function, altered sensation, a hot swollen joint or fever."
+          ],
+          "frequency": "scheduled_sessions",
+          "minimum_gap_days": 1,
+          "priority": 0,
+          "sources": [
+            "https://leedscommunityhealthcare.nhs.uk/our-services-a-z/musculoskeletal-msk/hip-problems/known-diagnosed-hip-problems/hip-femoroacetabular-impingement-fai/",
+            "https://pmc.ncbi.nlm.nih.gov/articles/PMC8349584/"
+          ]
+        }
+      ],
+      "blocked_regions": [
+        "hip"
+      ],
+      "blocked_tags": [],
+      "contact_limit": "none",
+      "live_stages": [
+        "calm",
+        "restore"
+      ],
+      "transition_overrides": {},
+      "status": "active",
+      "activation": "live",
+      "content_hash": "3142f5f8a3b5ba778f750ec17ea34ef9d0ce5f9fbdb2f74950ce81fbaea83fbc"
+    },
+    {
+      "policy_id": "ankle_impingement",
+      "version": 1,
+      "region": "ankle",
+      "injury_type": "impingement",
+      "pathway_family": "joint_irritation_or_impingement",
+      "evidence_sources": [
+        "https://msk-bexley.nhs.uk/conditions/foot-and-ankle-pain/anterior-front-ankle-impingement",
+        "https://msk-bexley.nhs.uk/conditions/foot-and-ankle-pain/posterior-back-ankle-impingement"
+      ],
+      "prescriptions": [
+        {
+          "drill_id": "ankle_impingement_recovery_support",
+          "bank_hash": "963b852beed005da73ce65fa115dfd0dc0ba77fbee93c212c3f023ab00db3bd3",
+          "stage": "calm",
+          "instructions": "Reduce provoking impact, hill running, deep loaded ankle bending and forceful tiptoe work. Pace ordinary walking and use individually advised supportive footwear. The app does not distinguish front from back ankle impingement, so do not force either end of ankle range or use band traction to clear a pinch. Stop if symptoms worsen during or after the movement. Seek assessment for catching, locking, loss of function, altered sensation, a hot swollen joint or fever.",
+          "dose": null,
+          "camp_doses": {},
+          "readiness_doses": {},
+          "allowed_severities": [
+            "low",
+            "moderate"
+          ],
+          "stop_when": [
+            "Stop if symptoms worsen during or after the movement. Seek assessment for catching, locking, loss of function, altered sensation, a hot swollen joint or fever."
+          ],
+          "frequency": "scheduled_sessions",
+          "minimum_gap_days": 1,
+          "priority": 0,
+          "sources": [
+            "https://msk-bexley.nhs.uk/conditions/foot-and-ankle-pain/anterior-front-ankle-impingement",
+            "https://msk-bexley.nhs.uk/conditions/foot-and-ankle-pain/posterior-back-ankle-impingement"
+          ]
+        },
+        {
+          "drill_id": "ankle_impingement_reviewed_restore",
+          "bank_hash": "9478b4854e1a030b6474e77f25a2d3c72b11ac7037523b028903de799138a20b",
+          "stage": "restore",
+          "instructions": "Sit with the affected lower leg supported and the foot free to move. Slowly move the ankle a small amount upwards and downwards around a comfortable middle range. Do not force pointing the toes, deep upward bending, a loaded knee-over-toe lunge or a stretch into a pinch. Keep the movement unweighted and controlled; follow any clinician-directed movement restriction. Stop if symptoms worsen during or after the movement. Seek assessment for catching, locking, loss of function, altered sensation, a hot swollen joint or fever.",
+          "dose": null,
+          "camp_doses": {},
+          "readiness_doses": {},
+          "allowed_severities": [
+            "low",
+            "moderate"
+          ],
+          "stop_when": [
+            "Stop if symptoms worsen during or after the movement. Seek assessment for catching, locking, loss of function, altered sensation, a hot swollen joint or fever."
+          ],
+          "frequency": "scheduled_sessions",
+          "minimum_gap_days": 1,
+          "priority": 0,
+          "sources": [
+            "https://msk-bexley.nhs.uk/conditions/foot-and-ankle-pain/anterior-front-ankle-impingement",
+            "https://msk-bexley.nhs.uk/conditions/foot-and-ankle-pain/posterior-back-ankle-impingement"
+          ]
+        }
+      ],
+      "blocked_regions": [
+        "ankle"
+      ],
+      "blocked_tags": [],
+      "contact_limit": "none",
+      "live_stages": [
+        "calm",
+        "restore"
+      ],
+      "transition_overrides": {},
+      "status": "active",
+      "activation": "live",
+      "content_hash": "88aa613a9c11d0ab579b901d4e2b893372f91ccc59a026bedf34ea61c03b3515"
+    },
+    {
+      "policy_id": "elbow_impingement",
+      "version": 1,
+      "region": "elbow",
+      "injury_type": "impingement",
+      "pathway_family": "joint_irritation_or_impingement",
+      "evidence_sources": [
+        "https://med.uth.edu/ortho/posterior-impingement-of-the-elbow/"
+      ],
+      "prescriptions": [
+        {
+          "drill_id": "elbow_impingement_recovery_support",
+          "bank_hash": "94b7f7691cf9a9d03bddad22666b10d5c4cc7b527b9ec6d3e17c6c19f17254e5",
+          "stage": "calm",
+          "instructions": "Reduce provoking forceful elbow straightening, repetitive throwing, heavy triceps work and pressing. Rest from activities that reproduce the pinch and follow individual restrictions. Persistent catching, locking or a mechanical block needs assessment rather than repeated attempts to force movement. Stop if symptoms worsen during or after the movement. Seek assessment for catching, locking, loss of function, altered sensation, a hot swollen joint or fever.",
+          "dose": null,
+          "camp_doses": {},
+          "readiness_doses": {},
+          "allowed_severities": [
+            "low",
+            "moderate"
+          ],
+          "stop_when": [
+            "Stop if symptoms worsen during or after the movement. Seek assessment for catching, locking, loss of function, altered sensation, a hot swollen joint or fever."
+          ],
+          "frequency": "scheduled_sessions",
+          "minimum_gap_days": 1,
+          "priority": 0,
+          "sources": [
+            "https://med.uth.edu/ortho/posterior-impingement-of-the-elbow/"
+          ]
+        },
+        {
+          "drill_id": "elbow_impingement_elbow_cars",
+          "bank_hash": "a32d3fbaeac20481e30462c98edd757bd80101d3682592f75dff9371ed4f2c5f",
+          "stage": "restore",
+          "instructions": "Sit with the affected upper arm by your side and the forearm comfortably supported. With the hand empty, slowly bend and straighten the elbow through a small comfortable range. Stop short of a pinch and do not force full straightening, rotate against resistance, perform a large end-range CAR or add weight. Stop and seek assessment for catching, locking or a blocked movement. Stop if symptoms worsen during or after the movement. Seek assessment for catching, locking, loss of function, altered sensation, a hot swollen joint or fever.",
+          "dose": null,
+          "camp_doses": {},
+          "readiness_doses": {},
+          "allowed_severities": [
+            "low",
+            "moderate"
+          ],
+          "stop_when": [
+            "Stop if symptoms worsen during or after the movement. Seek assessment for catching, locking, loss of function, altered sensation, a hot swollen joint or fever."
+          ],
+          "frequency": "scheduled_sessions",
+          "minimum_gap_days": 1,
+          "priority": 0,
+          "sources": [
+            "https://med.uth.edu/ortho/posterior-impingement-of-the-elbow/"
+          ]
+        }
+      ],
+      "blocked_regions": [
+        "elbow"
+      ],
+      "blocked_tags": [],
+      "contact_limit": "none",
+      "live_stages": [
+        "calm",
+        "restore"
+      ],
+      "transition_overrides": {},
+      "status": "active",
+      "activation": "live",
+      "content_hash": "dc8d16c6678a8fec9857f450cdc89cba101d9d13b2eecd38dd9b58426193dd94"
+    },
+    {
+      "policy_id": "wrist_impingement",
+      "version": 1,
+      "region": "wrist",
+      "injury_type": "impingement",
+      "pathway_family": "joint_irritation_or_impingement",
+      "evidence_sources": [
+        "https://pmc.ncbi.nlm.nih.gov/articles/PMC9036339/"
+      ],
+      "prescriptions": [
+        {
+          "drill_id": "wrist_impingement_recovery_support",
+          "bank_hash": "ec657e4f326d68de0640ace5c07d994126d8677573468d7c90d86ee48a717ee9",
+          "stage": "calm",
+          "instructions": "Reduce provoking grip, pushing through the hand, loaded wrist extension and repetitive wrist compression. Rest the wrist in a comfortable supported position and follow clinician-directed splint or immobilization advice without changing it. Do not perform band distraction, push-ups, resisted side-to-side holds or force range to clear a pinch. The subtype and safe release from protection are not captured, so automatic wrist movement and loading remain unavailable. Stop if symptoms worsen during or after the movement. Seek assessment for catching, locking, loss of function, altered sensation, a hot swollen joint or fever.",
+          "dose": null,
+          "camp_doses": {},
+          "readiness_doses": {},
+          "allowed_severities": [
+            "low",
+            "moderate"
+          ],
+          "stop_when": [
+            "Stop if symptoms worsen during or after the movement. Seek assessment for catching, locking, loss of function, altered sensation, a hot swollen joint or fever."
+          ],
+          "frequency": "scheduled_sessions",
+          "minimum_gap_days": 1,
+          "priority": 0,
+          "sources": [
+            "https://pmc.ncbi.nlm.nih.gov/articles/PMC9036339/"
+          ]
+        }
+      ],
+      "blocked_regions": [
+        "wrist"
+      ],
+      "blocked_tags": [],
+      "contact_limit": "none",
+      "live_stages": [
+        "calm"
+      ],
+      "transition_overrides": {},
+      "status": "active",
+      "activation": "live",
+      "content_hash": "ff83fb55365d3ce897e62f0c7714050fb7663119e3cc9e196dec16f1f8ea0171"
     }
   ]
 }

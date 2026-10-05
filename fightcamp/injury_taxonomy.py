@@ -110,6 +110,8 @@ URGENT_PHRASE_TOKENS = {
     "major muscle tear",
     "complete tear",
     "full thickness tear",
+    "full thickness rotator cuff tear",
+    "major structural tear",
 
     "shoulder dislocation",
     "patellar dislocation",

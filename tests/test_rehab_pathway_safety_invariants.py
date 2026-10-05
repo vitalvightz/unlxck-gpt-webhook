@@ -45,18 +45,25 @@ def test_shipped_policies_match_the_pre_migration_file_exactly():
 @pytest.mark.parametrize("policy_id", [p.policy_id for p in load_clinical_policies()])
 def test_shipped_profiles_cannot_enter_a_higher_stage(policy_id):
     shipped = next(p for p in load_clinical_policies() if p.policy_id == policy_id)
-    assert shipped.live_stages == ["calm", "restore"] and not any(t.promotable for t in shipped.transitions)
+    expected_stage = "calm" if policy_id == "wrist_impingement" else "restore"
+    assert shipped.live_stages == (["calm"] if expected_stage == "calm" else ["calm", "restore"])
+    assert not any(t.promotable for t in shipped.transitions)
     region, kind = shipped.region, shipped.injury_type
     row = injury(body_region=region, canonical_location=region, injury_type=kind, description=f"{region} {kind}")
-    drill_id = next(p.drill_id for p in shipped.prescriptions if p.stage == "restore")
+    if expected_stage == "calm":
+        row["rehab_stage"] = "calm"
+    drill_id = next(p.drill_id for p in shipped.prescriptions if p.stage == expected_stage)
     drill = next(d for g in get_rehab_bank() for d in g["drills"] if d["id"] == drill_id)
     ideal = [event(n, drill=drill, policy_id=policy_id, completion="quantified") for n in range(1, 6)]
     for raw in ideal:
         raw["event_json"]["body_region"] = region
         raw["event_json"]["demand"]["target_regions"] = [region]
     decision = resolve_injury_policy(row, policies=(shipped,), bank=get_rehab_bank(), exposures=ideal)
-    assert decision["stage"] == "restore"
-    assert decision["progression"]["next_transition"]["reason_codes"] == ["no_clinical_criteria_declared"]
+    assert decision["stage"] == expected_stage
+    if expected_stage == "calm":
+        assert "next_transition" not in decision["progression"]
+    else:
+        assert decision["progression"]["next_transition"]["reason_codes"] == ["no_clinical_criteria_declared"]
 
 
 # 4. Shared safety/data rules alone never promote, in any family.
@@ -169,7 +176,7 @@ def test_frozen_snapshots_from_the_previous_file_are_not_held(policy_id, region,
 # Families route; profiles activate.
 UNPROFILED = [
     ("ankle", "hyperextension"), ("ankle", "swelling"), ("ankle", "pain"), ("ankle", "tightness"), ("chest", "sprain"),
-    ("chest", "contusion"), ("chest", "tendonitis"), ("shoulder", "impingement"), ("elbow", "hyperextension"),
+    ("chest", "contusion"), ("chest", "tendonitis"), ("neck", "impingement"), ("elbow", "hyperextension"),
     ("groin", "tendonitis"), ("triceps", "tendonitis"), ("wrist", "instability"), ("lower_back", "stiffness"), ("knee", "soreness"),
 ]
 
@@ -192,7 +199,8 @@ def test_only_profiles_are_policies_and_families_carry_no_content():
         ("biceps", "strain"), ("triceps", "strain"), ("shoulder", "strain"),
         ("ankle", "instability"), ("knee", "instability"), ("toe", "sprain"), ("wrist", "sprain"),
         ("elbow", "sprain"), ("shoulder", "sprain"), ("shoulder", "instability"), ("hand", "sprain"), ("fingers", "sprain"),
-        *((region, "tendonitis") for region in ["achilles", "shoulder", "biceps", "forearm", "elbow", "wrist", "hand", "fingers"])}
+        *((region, "tendonitis") for region in ["achilles", "shoulder", "biceps", "forearm", "elbow", "wrist", "hand", "fingers"]),
+        *((region, "impingement") for region in ["shoulder", "hip", "ankle", "elbow", "wrist"])}
     for family in catalog["families"]:
         assert set(family) <= {"family_id", "description", "injury_types", "transitions"}
     # Instability coverage requires its own regional profile and reviewed identities.

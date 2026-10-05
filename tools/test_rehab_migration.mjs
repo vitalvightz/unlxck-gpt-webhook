@@ -164,6 +164,7 @@ await test("a full rehab allocation does not prohibit training with no rehab", a
 });
 const guidanceProfiles = ["hamstring", "calf", "groin", "quads", "future_region"].map(region => [region, "strain"]);
 guidanceProfiles.push(["wrist", "sprain"], ["ankle", "instability"], ["achilles", "tendonitis"], ["wrist", "tendonitis"]);
+guidanceProfiles.push(...["shoulder", "hip", "ankle", "elbow", "wrist"].map(region => [region, "impingement"]));
 for (const [index, [region, kind]] of guidanceProfiles.entries()) {
   await test(`${region}_${kind}: frozen profile guidance accepts unknown side with exact provenance`, async () => {
     const id = `00000000-0000-4000-8000-${String(100 + index * 4).padStart(12, "0")}`;
@@ -172,7 +173,7 @@ for (const [index, [region, kind]] of guidanceProfiles.entries()) {
     const groupId = `00000000-0000-4000-8000-${String(103 + index * 4).padStart(12, "0")}`;
     await db.query("insert into injury_flags(id,athlete_id,description,body_region,side,episode_id) values($1,$2,$3,$4,'unknown',$5)",
       [id, athlete, `${region} ${kind}`, region, ep]);
-    const snap = await snapshot(`2026-11-0${index + 1}`, `${region}-guidance`);
+    const snap = await snapshot(`2026-11-${String(index + 1).padStart(2, "0")}`, `${region}-${kind}-guidance`);
     snap.injury_context = (await db.query("select * from injury_flags where athlete_id=$1 and status in ('open','monitoring')", [athlete])).rows
       .map(flag => ({id:flag.id, episode_id:flag.episode_id, updated_at:flag.updated_at.toISOString()}));
     const policy = `${region}_${kind}`, drill = `${policy}_recovery_support`;

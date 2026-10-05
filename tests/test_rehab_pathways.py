@@ -39,7 +39,7 @@ def test_families_and_safety_baseline_invent_no_clinical_criteria():
     for policy in load_clinical_policies():
         assert [t.key for t in policy.transitions] == ["restore->load", "load->dynamic", "dynamic->return"]
         assert not any(t.promotable for t in policy.transitions)
-        assert policy.live_stages == ["calm", "restore"]
+        assert policy.live_stages == (["calm"] if policy.policy_id == "wrist_impingement" else ["calm", "restore"])
 
 
 def test_shipped_profiles_name_their_family():
@@ -52,7 +52,9 @@ def test_shipped_profiles_name_their_family():
             "ankle_instability", "knee_instability", "toe_sprain", "wrist_sprain", "elbow_sprain",
             "shoulder_sprain", "shoulder_instability", "hand_sprain", "fingers_sprain"]},
         **{f"{region}_tendonitis": "tendon_rehab" for region in [
-            "achilles", "shoulder", "biceps", "forearm", "elbow", "wrist", "hand", "fingers"]}}
+            "achilles", "shoulder", "biceps", "forearm", "elbow", "wrist", "hand", "fingers"]},
+        **{f"{region}_impingement": "joint_irritation_or_impingement" for region in [
+            "shoulder", "hip", "ankle", "elbow", "wrist"]}}
 
 
 @pytest.mark.parametrize("raw,match", [
