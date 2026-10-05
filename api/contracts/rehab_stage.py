@@ -397,6 +397,19 @@ def _is_urgent_injury(injury: Mapping[str, Any]) -> bool:
         r"\b(?:significant\s+(?:functional\s+loss|loss\s+of\s+function)|neurological\s+(?:change|symptoms)|head\s+trauma)\b",
     )):
         return True
+    # Bruising alone does not establish that an impact spared deeper tissue.
+    # Do not mistake normal blue bruise colour for vascular compromise: this
+    # screen uses reported circulation/cold-limb symptoms, not colour alone.
+    if re.search(r"\bcontusion\b", text) and any(re.search(pattern, text) for pattern in (
+        r"\b(?:compartment\s+syndrome|vascular\s+(?:compromise|symptoms|injury)|poor\s+(?:blood\s+flow|circulation)|absent\s+pulse)\b",
+        r"\b(?:expanding|enlarging|growing|large)\s+(?:haematoma|hematoma)\b|\b(?:haematoma|hematoma)\b.{0,30}\b(?:expanding|enlarging|growing)\b",
+        r"\b(?:major|severe|significant|excessive|worsening|rapidly\s+increasing)\s+(?:swelling|loss\s+of\s+function|functional\s+loss)\b",
+        r"\b(?:deep\s+laceration|open\s+wound|neurological\s+(?:symptoms|change)|head\s+trauma)\b",
+        r"\b(?:cold|numb|pale)\s+(?:limb|hand|foot|finger|toe|arm|leg)\b|\b(?:limb|hand|foot|finger|toe|arm|leg)\s+(?:is\s+)?cold\b",
+        r"\b(?:unable\s+to|cannot|can['’]t|inability\s+to)\s+(?:bear\s+weight|put\s+(?:any\s+)?weight|walk|use\s+(?:the\s+|my\s+)?(?:limb|joint|hand|wrist|elbow|shoulder|arm|finger|toe|foot|knee|leg|it))\b",
+        r"\b(?:abdomen|abdominal|chest|core|obliques)\b.*\b(?:systemic\s+symptoms|dizziness|dizzy|fainting|faint|vomiting|breathless|coughing\s+blood)\b",
+    )):
+        return True
     return any(pattern.search(text) for pattern in _urgent_token_patterns())
 
 
