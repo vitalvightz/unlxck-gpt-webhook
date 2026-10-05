@@ -62,3 +62,9 @@
 :global(html[data-theme="light"]) .theme :global(.public-build-reassurance strong) {
   color: var(--text-primary);
 }
+
+:global(html[data-theme="light"]) .theme :global(.public-build-tip) {
+  border-color: var(--border-default);
+  border-left-color: var(--brand-red);
+  background: var(--brand-red-soft);
+}

@@ -247,6 +247,7 @@ export default function GeneratePage() {
           milestones={controller.milestones}
           jobId={controller.currentJobId}
           readyToOpen={controller.readyToOpen}
+          intake={payload}
           failureKind={controller.failureKind}
           onRetry={() => {
             void controller.retryGeneration();
