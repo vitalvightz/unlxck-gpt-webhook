@@ -3357,6 +3357,826 @@
       "status": "active",
       "activation": "live",
       "content_hash": "b5a37e79d8155ab744640a8942ce80a891dfd3c6659608808b7e87c5d3b8acc2"
+    },
+    {
+      "policy_id": "shoulder_pain",
+      "version": 1,
+      "region": "shoulder",
+      "injury_type": "pain",
+      "pathway_family": "nonspecific_msk_symptoms",
+      "evidence_sources": [
+        "https://www.nhs.uk/symptoms/shoulder-pain/"
+      ],
+      "prescriptions": [
+        {
+          "drill_id": "shoulder_pain_recovery_support",
+          "bank_hash": "e43a7fdc18e1c1ad8733fee256f1f491aa1997a16107c42351d46e4c764e16fc",
+          "stage": "calm",
+          "instructions": "Reduce provoking shoulder activity and heavy gym work. Keep ordinary gentle movement as symptoms allow; support the arm comfortably when resting. Follow clinician restrictions. Stop if activity makes symptoms worse or causes new symptoms. Seek assessment for persistent or worsening symptoms or reduced everyday function. Get urgent help for major trauma, deformity, inability to use or bear weight, marked or increasing swelling, a hot/red joint, fever or feeling unwell, locking/giving way, altered sensation, progressive weakness or circulation changes. This guidance does not identify the cause, establish healing or provide contact clearance.",
+          "dose": null,
+          "camp_doses": {},
+          "readiness_doses": {},
+          "allowed_severities": [
+            "low",
+            "moderate"
+          ],
+          "stop_when": [
+            "Follow clinician restrictions. Stop if activity makes symptoms worse or causes new symptoms. Seek assessment for persistent or worsening symptoms or reduced everyday function. Get urgent help for major trauma, deformity, inability to use or bear weight, marked or increasing swelling, a hot/red joint, fever or feeling unwell, locking/giving way, altered sensation, progressive weakness or circulation changes. This guidance does not identify the cause, establish healing or provide contact clearance."
+          ],
+          "frequency": "scheduled_sessions",
+          "minimum_gap_days": 1,
+          "priority": 0,
+          "sources": [
+            "https://www.nhs.uk/symptoms/shoulder-pain/"
+          ]
+        }
+      ],
+      "blocked_regions": [
+        "shoulder"
+      ],
+      "blocked_tags": [],
+      "contact_limit": "none",
+      "live_stages": [
+        "calm"
+      ],
+      "transition_overrides": {},
+      "status": "active",
+      "activation": "live",
+      "content_hash": "6b9d69333ffee2fbfbfe0c9eb3c7af979d11cbb11c0db855d2c73b41ecf6d288"
+    },
+    {
+      "policy_id": "elbow_pain",
+      "version": 1,
+      "region": "elbow",
+      "injury_type": "pain",
+      "pathway_family": "nonspecific_msk_symptoms",
+      "evidence_sources": [
+        "https://www.nhs.uk/symptoms/elbow-and-arm-pain/",
+        "https://www.nhs.uk/symptoms/joint-pain/"
+      ],
+      "prescriptions": [
+        {
+          "drill_id": "elbow_pain_recovery_support",
+          "bank_hash": "bdbe43c7625a7a85277e87ccf3975e7ec187d53b5a859c8a1b1fb4cc56a3e347",
+          "stage": "calm",
+          "instructions": "Reduce clearly provoking elbow activity and avoid forceful self-testing. Keep comfortable ordinary movement; seek assessment for ongoing pain or reduced function. Follow clinician restrictions. Stop if activity makes symptoms worse or causes new symptoms. Seek assessment for persistent or worsening symptoms or reduced everyday function. Get urgent help for major trauma, deformity, inability to use or bear weight, marked or increasing swelling, a hot/red joint, fever or feeling unwell, locking/giving way, altered sensation, progressive weakness or circulation changes. This guidance does not identify the cause, establish healing or provide contact clearance.",
+          "dose": null,
+          "camp_doses": {},
+          "readiness_doses": {},
+          "allowed_severities": [
+            "low",
+            "moderate"
+          ],
+          "stop_when": [
+            "Follow clinician restrictions. Stop if activity makes symptoms worse or causes new symptoms. Seek assessment for persistent or worsening symptoms or reduced everyday function. Get urgent help for major trauma, deformity, inability to use or bear weight, marked or increasing swelling, a hot/red joint, fever or feeling unwell, locking/giving way, altered sensation, progressive weakness or circulation changes. This guidance does not identify the cause, establish healing or provide contact clearance."
+          ],
+          "frequency": "scheduled_sessions",
+          "minimum_gap_days": 1,
+          "priority": 0,
+          "sources": [
+            "https://www.nhs.uk/symptoms/elbow-and-arm-pain/",
+            "https://www.nhs.uk/symptoms/joint-pain/"
+          ]
+        }
+      ],
+      "blocked_regions": [
+        "elbow"
+      ],
+      "blocked_tags": [],
+      "contact_limit": "none",
+      "live_stages": [
+        "calm"
+      ],
+      "transition_overrides": {},
+      "status": "active",
+      "activation": "live",
+      "content_hash": "f9b3de457fe5c947ac0d1f65189f9f38b05a6db2ab6e0f3205eaa92e6efc887f"
+    },
+    {
+      "policy_id": "wrist_pain",
+      "version": 1,
+      "region": "wrist",
+      "injury_type": "pain",
+      "pathway_family": "nonspecific_msk_symptoms",
+      "evidence_sources": [
+        "https://www.nhs.uk/symptoms/hand-pain/wrist-pain/"
+      ],
+      "prescriptions": [
+        {
+          "drill_id": "wrist_pain_recovery_support",
+          "bank_hash": "261a8f2164b0cf9e79e577dada9dad5dc6f7d4c0ed8324369d52dc47f4f90216",
+          "stage": "calm",
+          "instructions": "Reduce provoking wrist tasks, heavy lifting and tight gripping. Rest comfortably between activities while retaining gentle ordinary movement as tolerated. Follow clinician restrictions. Stop if activity makes symptoms worse or causes new symptoms. Seek assessment for persistent or worsening symptoms or reduced everyday function. Get urgent help for major trauma, deformity, inability to use or bear weight, marked or increasing swelling, a hot/red joint, fever or feeling unwell, locking/giving way, altered sensation, progressive weakness or circulation changes. This guidance does not identify the cause, establish healing or provide contact clearance.",
+          "dose": null,
+          "camp_doses": {},
+          "readiness_doses": {},
+          "allowed_severities": [
+            "low",
+            "moderate"
+          ],
+          "stop_when": [
+            "Follow clinician restrictions. Stop if activity makes symptoms worse or causes new symptoms. Seek assessment for persistent or worsening symptoms or reduced everyday function. Get urgent help for major trauma, deformity, inability to use or bear weight, marked or increasing swelling, a hot/red joint, fever or feeling unwell, locking/giving way, altered sensation, progressive weakness or circulation changes. This guidance does not identify the cause, establish healing or provide contact clearance."
+          ],
+          "frequency": "scheduled_sessions",
+          "minimum_gap_days": 1,
+          "priority": 0,
+          "sources": [
+            "https://www.nhs.uk/symptoms/hand-pain/wrist-pain/"
+          ]
+        }
+      ],
+      "blocked_regions": [
+        "wrist"
+      ],
+      "blocked_tags": [],
+      "contact_limit": "none",
+      "live_stages": [
+        "calm"
+      ],
+      "transition_overrides": {},
+      "status": "active",
+      "activation": "live",
+      "content_hash": "7448e0ad955d14164ea068fadf359f4da28f168ee7b66de9cf8966901593dcaa"
+    },
+    {
+      "policy_id": "hand_pain",
+      "version": 1,
+      "region": "hand",
+      "injury_type": "pain",
+      "pathway_family": "nonspecific_msk_symptoms",
+      "evidence_sources": [
+        "https://www.nhs.uk/symptoms/hand-pain/pain-in-the-palm-of-the-hand/"
+      ],
+      "prescriptions": [
+        {
+          "drill_id": "hand_pain_recovery_support",
+          "bank_hash": "a1ab0a1910dac65f2b1d299787171627fa1de87c22d2a26a9b0cf1ff97091633",
+          "stage": "calm",
+          "instructions": "Reduce provoking hand tasks, heavy carrying and tight gripping. Rest the hand comfortably and keep ordinary gentle movement as symptoms allow. Follow clinician restrictions. Stop if activity makes symptoms worse or causes new symptoms. Seek assessment for persistent or worsening symptoms or reduced everyday function. Get urgent help for major trauma, deformity, inability to use or bear weight, marked or increasing swelling, a hot/red joint, fever or feeling unwell, locking/giving way, altered sensation, progressive weakness or circulation changes. This guidance does not identify the cause, establish healing or provide contact clearance.",
+          "dose": null,
+          "camp_doses": {},
+          "readiness_doses": {},
+          "allowed_severities": [
+            "low",
+            "moderate"
+          ],
+          "stop_when": [
+            "Follow clinician restrictions. Stop if activity makes symptoms worse or causes new symptoms. Seek assessment for persistent or worsening symptoms or reduced everyday function. Get urgent help for major trauma, deformity, inability to use or bear weight, marked or increasing swelling, a hot/red joint, fever or feeling unwell, locking/giving way, altered sensation, progressive weakness or circulation changes. This guidance does not identify the cause, establish healing or provide contact clearance."
+          ],
+          "frequency": "scheduled_sessions",
+          "minimum_gap_days": 1,
+          "priority": 0,
+          "sources": [
+            "https://www.nhs.uk/symptoms/hand-pain/pain-in-the-palm-of-the-hand/"
+          ]
+        }
+      ],
+      "blocked_regions": [
+        "hand"
+      ],
+      "blocked_tags": [],
+      "contact_limit": "none",
+      "live_stages": [
+        "calm"
+      ],
+      "transition_overrides": {},
+      "status": "active",
+      "activation": "live",
+      "content_hash": "dd4d54329f7ee9a9d345c0ec67ed099a54da3557179b8b786d379bc788fc0b10"
+    },
+    {
+      "policy_id": "fingers_pain",
+      "version": 1,
+      "region": "fingers",
+      "injury_type": "pain",
+      "pathway_family": "nonspecific_msk_symptoms",
+      "evidence_sources": [
+        "https://www.nhs.uk/symptoms/hand-pain/finger-pain/"
+      ],
+      "prescriptions": [
+        {
+          "drill_id": "fingers_pain_recovery_support",
+          "bank_hash": "2dd0f183c2c6e9be4d4b4b82d9c3fc8d27c4ba5b83401b35220f798bbf4a639b",
+          "stage": "calm",
+          "instructions": "Reduce provoking finger tasks and heavy gripping. Avoid forcing movement or testing grip strength; follow individual support advice without prescribing taping here. Follow clinician restrictions. Stop if activity makes symptoms worse or causes new symptoms. Seek assessment for persistent or worsening symptoms or reduced everyday function. Get urgent help for major trauma, deformity, inability to use or bear weight, marked or increasing swelling, a hot/red joint, fever or feeling unwell, locking/giving way, altered sensation, progressive weakness or circulation changes. This guidance does not identify the cause, establish healing or provide contact clearance.",
+          "dose": null,
+          "camp_doses": {},
+          "readiness_doses": {},
+          "allowed_severities": [
+            "low",
+            "moderate"
+          ],
+          "stop_when": [
+            "Follow clinician restrictions. Stop if activity makes symptoms worse or causes new symptoms. Seek assessment for persistent or worsening symptoms or reduced everyday function. Get urgent help for major trauma, deformity, inability to use or bear weight, marked or increasing swelling, a hot/red joint, fever or feeling unwell, locking/giving way, altered sensation, progressive weakness or circulation changes. This guidance does not identify the cause, establish healing or provide contact clearance."
+          ],
+          "frequency": "scheduled_sessions",
+          "minimum_gap_days": 1,
+          "priority": 0,
+          "sources": [
+            "https://www.nhs.uk/symptoms/hand-pain/finger-pain/"
+          ]
+        }
+      ],
+      "blocked_regions": [
+        "fingers"
+      ],
+      "blocked_tags": [],
+      "contact_limit": "none",
+      "live_stages": [
+        "calm"
+      ],
+      "transition_overrides": {},
+      "status": "active",
+      "activation": "live",
+      "content_hash": "2811cc60ecba4e302ebd35accf3cfaf4698734fead576902229f73e311cf18a3"
+    },
+    {
+      "policy_id": "knee_pain",
+      "version": 1,
+      "region": "knee",
+      "injury_type": "pain",
+      "pathway_family": "nonspecific_msk_symptoms",
+      "evidence_sources": [
+        "https://www.nhs.uk/symptoms/knee-pain/"
+      ],
+      "prescriptions": [
+        {
+          "drill_id": "knee_pain_recovery_support",
+          "bank_hash": "aafc3f41971872c368e27f624dceb4dd10a84db29a184d193656bc540bb99987",
+          "stage": "calm",
+          "instructions": "Reduce provoking knee weight-bearing and prolonged standing. Avoid loaded self-tests; seek assessment for locking, giving way or difficulty using the leg. Follow clinician restrictions. Stop if activity makes symptoms worse or causes new symptoms. Seek assessment for persistent or worsening symptoms or reduced everyday function. Get urgent help for major trauma, deformity, inability to use or bear weight, marked or increasing swelling, a hot/red joint, fever or feeling unwell, locking/giving way, altered sensation, progressive weakness or circulation changes. This guidance does not identify the cause, establish healing or provide contact clearance.",
+          "dose": null,
+          "camp_doses": {},
+          "readiness_doses": {},
+          "allowed_severities": [
+            "low",
+            "moderate"
+          ],
+          "stop_when": [
+            "Follow clinician restrictions. Stop if activity makes symptoms worse or causes new symptoms. Seek assessment for persistent or worsening symptoms or reduced everyday function. Get urgent help for major trauma, deformity, inability to use or bear weight, marked or increasing swelling, a hot/red joint, fever or feeling unwell, locking/giving way, altered sensation, progressive weakness or circulation changes. This guidance does not identify the cause, establish healing or provide contact clearance."
+          ],
+          "frequency": "scheduled_sessions",
+          "minimum_gap_days": 1,
+          "priority": 0,
+          "sources": [
+            "https://www.nhs.uk/symptoms/knee-pain/"
+          ]
+        }
+      ],
+      "blocked_regions": [
+        "knee"
+      ],
+      "blocked_tags": [],
+      "contact_limit": "none",
+      "live_stages": [
+        "calm"
+      ],
+      "transition_overrides": {},
+      "status": "active",
+      "activation": "live",
+      "content_hash": "4331e59eda81ff09fcfd3519475eb471a1787680472d0d3ca0ac68c76d393d9b"
+    },
+    {
+      "policy_id": "hip_pain",
+      "version": 1,
+      "region": "hip",
+      "injury_type": "pain",
+      "pathway_family": "nonspecific_msk_symptoms",
+      "evidence_sources": [
+        "https://www.nhs.uk/symptoms/hip-pain/"
+      ],
+      "prescriptions": [
+        {
+          "drill_id": "hip_pain_recovery_support",
+          "bank_hash": "4005c7776961d6fbcc7c7b0f82de33a2da00e02d50fb0b82ca5b9bba81a081ef",
+          "stage": "calm",
+          "instructions": "Reduce provoking hip activity and heavy carrying. Keep comfortable ordinary movement without overdoing it; avoid forcing end-range stretches. Follow clinician restrictions. Stop if activity makes symptoms worse or causes new symptoms. Seek assessment for persistent or worsening symptoms or reduced everyday function. Get urgent help for major trauma, deformity, inability to use or bear weight, marked or increasing swelling, a hot/red joint, fever or feeling unwell, locking/giving way, altered sensation, progressive weakness or circulation changes. This guidance does not identify the cause, establish healing or provide contact clearance.",
+          "dose": null,
+          "camp_doses": {},
+          "readiness_doses": {},
+          "allowed_severities": [
+            "low",
+            "moderate"
+          ],
+          "stop_when": [
+            "Follow clinician restrictions. Stop if activity makes symptoms worse or causes new symptoms. Seek assessment for persistent or worsening symptoms or reduced everyday function. Get urgent help for major trauma, deformity, inability to use or bear weight, marked or increasing swelling, a hot/red joint, fever or feeling unwell, locking/giving way, altered sensation, progressive weakness or circulation changes. This guidance does not identify the cause, establish healing or provide contact clearance."
+          ],
+          "frequency": "scheduled_sessions",
+          "minimum_gap_days": 1,
+          "priority": 0,
+          "sources": [
+            "https://www.nhs.uk/symptoms/hip-pain/"
+          ]
+        }
+      ],
+      "blocked_regions": [
+        "hip"
+      ],
+      "blocked_tags": [],
+      "contact_limit": "none",
+      "live_stages": [
+        "calm"
+      ],
+      "transition_overrides": {},
+      "status": "active",
+      "activation": "live",
+      "content_hash": "bbf5e30693b986f66840403cb7d9e2a3a4cd379dea0f0258595595da97f6713b"
+    },
+    {
+      "policy_id": "lower_back_pain",
+      "version": 1,
+      "region": "lower back",
+      "injury_type": "pain",
+      "pathway_family": "nonspecific_msk_symptoms",
+      "evidence_sources": [
+        "https://www.nhs.uk/conditions/back-pain/",
+        "https://www.csp.org.uk/conditions/back-pain/video-exercises-back-pain"
+      ],
+      "prescriptions": [
+        {
+          "drill_id": "lower_back_pain_recovery_support",
+          "bank_hash": "228b6d31e0b47242535d07b6f10636241694702f072ae39cb3cc42266aad00c6",
+          "stage": "calm",
+          "instructions": "Keep comfortable daily activity and change position as needed. Reduce provoking tasks without prolonged bed rest; no cause of the back pain is inferred. Follow clinician restrictions. Stop if activity makes symptoms worse or causes new symptoms. Seek assessment for persistent or worsening symptoms or reduced everyday function. Get urgent help for major trauma, deformity, inability to use or bear weight, marked or increasing swelling, a hot/red joint, fever or feeling unwell, locking/giving way, altered sensation, progressive weakness or circulation changes. This guidance does not identify the cause, establish healing or provide contact clearance.",
+          "dose": null,
+          "camp_doses": {},
+          "readiness_doses": {},
+          "allowed_severities": [
+            "low",
+            "moderate"
+          ],
+          "stop_when": [
+            "Follow clinician restrictions. Stop if activity makes symptoms worse or causes new symptoms. Seek assessment for persistent or worsening symptoms or reduced everyday function. Get urgent help for major trauma, deformity, inability to use or bear weight, marked or increasing swelling, a hot/red joint, fever or feeling unwell, locking/giving way, altered sensation, progressive weakness or circulation changes. This guidance does not identify the cause, establish healing or provide contact clearance."
+          ],
+          "frequency": "scheduled_sessions",
+          "minimum_gap_days": 1,
+          "priority": 0,
+          "sources": [
+            "https://www.nhs.uk/conditions/back-pain/",
+            "https://www.csp.org.uk/conditions/back-pain/video-exercises-back-pain"
+          ]
+        },
+        {
+          "drill_id": "lower_back_pain_supine_pelvic_tilts",
+          "bank_hash": "929c790d5c1a6daba8810c466af8dcb04417c7b8c76ae62b7a57a6b16e305e7c",
+          "stage": "restore",
+          "instructions": "Lie on your back with knees bent and feet resting on the floor. Gently tilt the pelvis to flatten the lower back slightly, then return slowly to neutral. Keep movement small and comfortable, breathe normally, and do not force an arch or hold tension. Follow clinician restrictions. Stop if activity makes symptoms worse or causes new symptoms. Seek assessment for persistent or worsening symptoms or reduced everyday function. Get urgent help for major trauma, deformity, inability to use or bear weight, marked or increasing swelling, a hot/red joint, fever or feeling unwell, locking/giving way, altered sensation, progressive weakness or circulation changes. This guidance does not identify the cause, establish healing or provide contact clearance.",
+          "dose": null,
+          "camp_doses": {},
+          "readiness_doses": {},
+          "allowed_severities": [
+            "low",
+            "moderate"
+          ],
+          "stop_when": [
+            "Follow clinician restrictions. Stop if activity makes symptoms worse or causes new symptoms. Seek assessment for persistent or worsening symptoms or reduced everyday function. Get urgent help for major trauma, deformity, inability to use or bear weight, marked or increasing swelling, a hot/red joint, fever or feeling unwell, locking/giving way, altered sensation, progressive weakness or circulation changes. This guidance does not identify the cause, establish healing or provide contact clearance."
+          ],
+          "frequency": "scheduled_sessions",
+          "minimum_gap_days": 1,
+          "priority": 0,
+          "sources": [
+            "https://www.nhs.uk/conditions/back-pain/",
+            "https://www.csp.org.uk/conditions/back-pain/video-exercises-back-pain"
+          ]
+        }
+      ],
+      "blocked_regions": [
+        "lower back"
+      ],
+      "blocked_tags": [],
+      "contact_limit": "none",
+      "live_stages": [
+        "calm",
+        "restore"
+      ],
+      "transition_overrides": {},
+      "status": "active",
+      "activation": "live",
+      "content_hash": "16af4c0988832fe81c911d06449227a538012f5dd57e500c3eecfd9e1b0634af"
+    },
+    {
+      "policy_id": "neck_stiffness",
+      "version": 1,
+      "region": "neck",
+      "injury_type": "stiffness",
+      "pathway_family": "nonspecific_msk_symptoms",
+      "evidence_sources": [
+        "https://www.nhs.uk/symptoms/neck-pain-and-stiff-neck/",
+        "https://www.nhs.uk/live-well/exercise/flexibility-exercises/"
+      ],
+      "prescriptions": [
+        {
+          "drill_id": "neck_stiffness_recovery_support",
+          "bank_hash": "eafc1a49e63fcc3d8600b7e0dafea1c1f044e713726fefac5e91881fd2cca7b6",
+          "stage": "calm",
+          "instructions": "Change position rather than holding the neck still for long periods. Keep gentle ordinary movement; do not force range or remove prescribed protection. Follow clinician restrictions. Stop if activity makes symptoms worse or causes new symptoms. Seek assessment for persistent or worsening symptoms or reduced everyday function. Get urgent help for major trauma, deformity, inability to use or bear weight, marked or increasing swelling, a hot/red joint, fever or feeling unwell, locking/giving way, altered sensation, progressive weakness or circulation changes. This guidance does not identify the cause, establish healing or provide contact clearance.",
+          "dose": null,
+          "camp_doses": {},
+          "readiness_doses": {},
+          "allowed_severities": [
+            "low",
+            "moderate"
+          ],
+          "stop_when": [
+            "Follow clinician restrictions. Stop if activity makes symptoms worse or causes new symptoms. Seek assessment for persistent or worsening symptoms or reduced everyday function. Get urgent help for major trauma, deformity, inability to use or bear weight, marked or increasing swelling, a hot/red joint, fever or feeling unwell, locking/giving way, altered sensation, progressive weakness or circulation changes. This guidance does not identify the cause, establish healing or provide contact clearance."
+          ],
+          "frequency": "scheduled_sessions",
+          "minimum_gap_days": 1,
+          "priority": 0,
+          "sources": [
+            "https://www.nhs.uk/symptoms/neck-pain-and-stiff-neck/",
+            "https://www.nhs.uk/live-well/exercise/flexibility-exercises/"
+          ]
+        },
+        {
+          "drill_id": "neck_stiffness_neck_cars_controlled_articular_rotations",
+          "bank_hash": "d686fe8d5c410d2432df26d8f3356304836a6126633682a5271f10e846306712",
+          "stage": "restore",
+          "instructions": "Sit upright with shoulders relaxed. Slowly turn the head a small comfortable amount to one side, then return to the middle. Use unassisted movement only; no neck circles, forced range, resistance, traction or sustained stretch. Follow clinician restrictions. Stop if activity makes symptoms worse or causes new symptoms. Seek assessment for persistent or worsening symptoms or reduced everyday function. Get urgent help for major trauma, deformity, inability to use or bear weight, marked or increasing swelling, a hot/red joint, fever or feeling unwell, locking/giving way, altered sensation, progressive weakness or circulation changes. This guidance does not identify the cause, establish healing or provide contact clearance.",
+          "dose": null,
+          "camp_doses": {},
+          "readiness_doses": {},
+          "allowed_severities": [
+            "low",
+            "moderate"
+          ],
+          "stop_when": [
+            "Follow clinician restrictions. Stop if activity makes symptoms worse or causes new symptoms. Seek assessment for persistent or worsening symptoms or reduced everyday function. Get urgent help for major trauma, deformity, inability to use or bear weight, marked or increasing swelling, a hot/red joint, fever or feeling unwell, locking/giving way, altered sensation, progressive weakness or circulation changes. This guidance does not identify the cause, establish healing or provide contact clearance."
+          ],
+          "frequency": "scheduled_sessions",
+          "minimum_gap_days": 1,
+          "priority": 0,
+          "sources": [
+            "https://www.nhs.uk/symptoms/neck-pain-and-stiff-neck/",
+            "https://www.nhs.uk/live-well/exercise/flexibility-exercises/"
+          ]
+        }
+      ],
+      "blocked_regions": [
+        "neck"
+      ],
+      "blocked_tags": [],
+      "contact_limit": "none",
+      "live_stages": [
+        "calm",
+        "restore"
+      ],
+      "transition_overrides": {},
+      "status": "active",
+      "activation": "live",
+      "content_hash": "7d0bf7809aad763e215d6e4f183d0b2a0113c85b3c2ab078c1c9699cdb50c786"
+    },
+    {
+      "policy_id": "elbow_stiffness",
+      "version": 1,
+      "region": "elbow",
+      "injury_type": "stiffness",
+      "pathway_family": "nonspecific_msk_symptoms",
+      "evidence_sources": [
+        "https://www.nhs.uk/symptoms/elbow-and-arm-pain/",
+        "https://www.nhs.uk/symptoms/joint-pain/"
+      ],
+      "prescriptions": [
+        {
+          "drill_id": "elbow_stiffness_recovery_support",
+          "bank_hash": "dc748e2141f7f6990704152f4ed4b2e7bb162f04c22cac7bc4f03312f2cca7ef",
+          "stage": "calm",
+          "instructions": "Keep comfortable ordinary elbow movement without forceful end-range work. Stiffness alone does not establish a movement restriction or its cause. Follow clinician restrictions. Stop if activity makes symptoms worse or causes new symptoms. Seek assessment for persistent or worsening symptoms or reduced everyday function. Get urgent help for major trauma, deformity, inability to use or bear weight, marked or increasing swelling, a hot/red joint, fever or feeling unwell, locking/giving way, altered sensation, progressive weakness or circulation changes. This guidance does not identify the cause, establish healing or provide contact clearance.",
+          "dose": null,
+          "camp_doses": {},
+          "readiness_doses": {},
+          "allowed_severities": [
+            "low",
+            "moderate"
+          ],
+          "stop_when": [
+            "Follow clinician restrictions. Stop if activity makes symptoms worse or causes new symptoms. Seek assessment for persistent or worsening symptoms or reduced everyday function. Get urgent help for major trauma, deformity, inability to use or bear weight, marked or increasing swelling, a hot/red joint, fever or feeling unwell, locking/giving way, altered sensation, progressive weakness or circulation changes. This guidance does not identify the cause, establish healing or provide contact clearance."
+          ],
+          "frequency": "scheduled_sessions",
+          "minimum_gap_days": 1,
+          "priority": 0,
+          "sources": [
+            "https://www.nhs.uk/symptoms/elbow-and-arm-pain/",
+            "https://www.nhs.uk/symptoms/joint-pain/"
+          ]
+        }
+      ],
+      "blocked_regions": [
+        "elbow"
+      ],
+      "blocked_tags": [],
+      "contact_limit": "none",
+      "live_stages": [
+        "calm"
+      ],
+      "transition_overrides": {},
+      "status": "active",
+      "activation": "live",
+      "content_hash": "e7037644bde03db68098743b16978960f30ac2f9e5f8c27eda938af1899b7713"
+    },
+    {
+      "policy_id": "wrist_stiffness",
+      "version": 1,
+      "region": "wrist",
+      "injury_type": "stiffness",
+      "pathway_family": "nonspecific_msk_symptoms",
+      "evidence_sources": [
+        "https://www.nhs.uk/symptoms/hand-pain/wrist-pain/",
+        "https://www.uhsussex.nhs.uk/resources/elbow-and-wrist-exercises/"
+      ],
+      "prescriptions": [
+        {
+          "drill_id": "wrist_stiffness_recovery_support",
+          "bank_hash": "b14031888a73e7fc8e520d80d95dce631726d221ff2998aab096634ecd2af55a",
+          "stage": "calm",
+          "instructions": "Keep gentle ordinary wrist movement and reduce clearly provoking tasks. Do not add resistance or force range merely because the wrist feels stiff. Follow clinician restrictions. Stop if activity makes symptoms worse or causes new symptoms. Seek assessment for persistent or worsening symptoms or reduced everyday function. Get urgent help for major trauma, deformity, inability to use or bear weight, marked or increasing swelling, a hot/red joint, fever or feeling unwell, locking/giving way, altered sensation, progressive weakness or circulation changes. This guidance does not identify the cause, establish healing or provide contact clearance.",
+          "dose": null,
+          "camp_doses": {},
+          "readiness_doses": {},
+          "allowed_severities": [
+            "low",
+            "moderate"
+          ],
+          "stop_when": [
+            "Follow clinician restrictions. Stop if activity makes symptoms worse or causes new symptoms. Seek assessment for persistent or worsening symptoms or reduced everyday function. Get urgent help for major trauma, deformity, inability to use or bear weight, marked or increasing swelling, a hot/red joint, fever or feeling unwell, locking/giving way, altered sensation, progressive weakness or circulation changes. This guidance does not identify the cause, establish healing or provide contact clearance."
+          ],
+          "frequency": "scheduled_sessions",
+          "minimum_gap_days": 1,
+          "priority": 0,
+          "sources": [
+            "https://www.nhs.uk/symptoms/hand-pain/wrist-pain/",
+            "https://www.uhsussex.nhs.uk/resources/elbow-and-wrist-exercises/"
+          ]
+        },
+        {
+          "drill_id": "wrist_stiffness_stick_roll_wrist_flex_ext",
+          "bank_hash": "fdaf8e8965b3ee809668b79abeeafb0fc22202d2fb3c8f96e555da65df864c46",
+          "stage": "restore",
+          "instructions": "Support the forearm on a table with the empty relaxed hand free beyond the edge. Gently move the wrist a small comfortable amount upwards and downwards. No stick, grip, weight, resistance, forced stretch or pressure through the hand. Follow clinician restrictions. Stop if activity makes symptoms worse or causes new symptoms. Seek assessment for persistent or worsening symptoms or reduced everyday function. Get urgent help for major trauma, deformity, inability to use or bear weight, marked or increasing swelling, a hot/red joint, fever or feeling unwell, locking/giving way, altered sensation, progressive weakness or circulation changes. This guidance does not identify the cause, establish healing or provide contact clearance.",
+          "dose": null,
+          "camp_doses": {},
+          "readiness_doses": {},
+          "allowed_severities": [
+            "low",
+            "moderate"
+          ],
+          "stop_when": [
+            "Follow clinician restrictions. Stop if activity makes symptoms worse or causes new symptoms. Seek assessment for persistent or worsening symptoms or reduced everyday function. Get urgent help for major trauma, deformity, inability to use or bear weight, marked or increasing swelling, a hot/red joint, fever or feeling unwell, locking/giving way, altered sensation, progressive weakness or circulation changes. This guidance does not identify the cause, establish healing or provide contact clearance."
+          ],
+          "frequency": "scheduled_sessions",
+          "minimum_gap_days": 1,
+          "priority": 0,
+          "sources": [
+            "https://www.nhs.uk/symptoms/hand-pain/wrist-pain/",
+            "https://www.uhsussex.nhs.uk/resources/elbow-and-wrist-exercises/"
+          ]
+        }
+      ],
+      "blocked_regions": [
+        "wrist"
+      ],
+      "blocked_tags": [],
+      "contact_limit": "none",
+      "live_stages": [
+        "calm",
+        "restore"
+      ],
+      "transition_overrides": {},
+      "status": "active",
+      "activation": "live",
+      "content_hash": "886875568b2826d36895f9084268527a4fefbe4b42c6cc87b9fb5439f8612c8f"
+    },
+    {
+      "policy_id": "lower_back_stiffness",
+      "version": 1,
+      "region": "lower back",
+      "injury_type": "stiffness",
+      "pathway_family": "nonspecific_msk_symptoms",
+      "evidence_sources": [
+        "https://www.nhs.uk/conditions/back-pain/",
+        "https://www.nhs.uk/symptoms/joint-pain/"
+      ],
+      "prescriptions": [
+        {
+          "drill_id": "lower_back_stiffness_recovery_support",
+          "bank_hash": "386842b795c960382da2db5cc1d5c8daee612e4fdf7aa434c7a8f32f2378cfd8",
+          "stage": "calm",
+          "instructions": "Change positions and keep comfortable ordinary activity. Avoid prolonged bed rest and forced range; no diagnosis or measured mobility deficit is inferred. Follow clinician restrictions. Stop if activity makes symptoms worse or causes new symptoms. Seek assessment for persistent or worsening symptoms or reduced everyday function. Get urgent help for major trauma, deformity, inability to use or bear weight, marked or increasing swelling, a hot/red joint, fever or feeling unwell, locking/giving way, altered sensation, progressive weakness or circulation changes. This guidance does not identify the cause, establish healing or provide contact clearance.",
+          "dose": null,
+          "camp_doses": {},
+          "readiness_doses": {},
+          "allowed_severities": [
+            "low",
+            "moderate"
+          ],
+          "stop_when": [
+            "Follow clinician restrictions. Stop if activity makes symptoms worse or causes new symptoms. Seek assessment for persistent or worsening symptoms or reduced everyday function. Get urgent help for major trauma, deformity, inability to use or bear weight, marked or increasing swelling, a hot/red joint, fever or feeling unwell, locking/giving way, altered sensation, progressive weakness or circulation changes. This guidance does not identify the cause, establish healing or provide contact clearance."
+          ],
+          "frequency": "scheduled_sessions",
+          "minimum_gap_days": 1,
+          "priority": 0,
+          "sources": [
+            "https://www.nhs.uk/conditions/back-pain/",
+            "https://www.nhs.uk/symptoms/joint-pain/"
+          ]
+        }
+      ],
+      "blocked_regions": [
+        "lower back"
+      ],
+      "blocked_tags": [],
+      "contact_limit": "none",
+      "live_stages": [
+        "calm"
+      ],
+      "transition_overrides": {},
+      "status": "active",
+      "activation": "live",
+      "content_hash": "9e55073c4461f815568fb2f6d94bb704cb4e008341af77c79320dee079e0dcdf"
+    },
+    {
+      "policy_id": "neck_tightness",
+      "version": 1,
+      "region": "neck",
+      "injury_type": "tightness",
+      "pathway_family": "nonspecific_msk_symptoms",
+      "evidence_sources": [
+        "https://www.nhs.uk/symptoms/neck-pain-and-stiff-neck/"
+      ],
+      "prescriptions": [
+        {
+          "drill_id": "neck_tightness_recovery_support",
+          "bank_hash": "a30bfeecb603f2c5410a085d98da94b514100f1ad3e36621b29481a5563b78be",
+          "stage": "calm",
+          "instructions": "Change positions and keep gentle ordinary neck movement. Tightness does not prove shortened tissue; avoid forceful stretching, traction or pressure on the neck. Follow clinician restrictions. Stop if activity makes symptoms worse or causes new symptoms. Seek assessment for persistent or worsening symptoms or reduced everyday function. Get urgent help for major trauma, deformity, inability to use or bear weight, marked or increasing swelling, a hot/red joint, fever or feeling unwell, locking/giving way, altered sensation, progressive weakness or circulation changes. This guidance does not identify the cause, establish healing or provide contact clearance.",
+          "dose": null,
+          "camp_doses": {},
+          "readiness_doses": {},
+          "allowed_severities": [
+            "low",
+            "moderate"
+          ],
+          "stop_when": [
+            "Follow clinician restrictions. Stop if activity makes symptoms worse or causes new symptoms. Seek assessment for persistent or worsening symptoms or reduced everyday function. Get urgent help for major trauma, deformity, inability to use or bear weight, marked or increasing swelling, a hot/red joint, fever or feeling unwell, locking/giving way, altered sensation, progressive weakness or circulation changes. This guidance does not identify the cause, establish healing or provide contact clearance."
+          ],
+          "frequency": "scheduled_sessions",
+          "minimum_gap_days": 1,
+          "priority": 0,
+          "sources": [
+            "https://www.nhs.uk/symptoms/neck-pain-and-stiff-neck/"
+          ]
+        }
+      ],
+      "blocked_regions": [
+        "neck"
+      ],
+      "blocked_tags": [],
+      "contact_limit": "none",
+      "live_stages": [
+        "calm"
+      ],
+      "transition_overrides": {},
+      "status": "active",
+      "activation": "live",
+      "content_hash": "8cd904bffef5d1e8b1561d7e63ba453e96a60482148802b742f48b717d1b6e3b"
+    },
+    {
+      "policy_id": "shoulder_tightness",
+      "version": 1,
+      "region": "shoulder",
+      "injury_type": "tightness",
+      "pathway_family": "nonspecific_msk_symptoms",
+      "evidence_sources": [
+        "https://www.nhs.uk/symptoms/shoulder-pain/"
+      ],
+      "prescriptions": [
+        {
+          "drill_id": "shoulder_tightness_recovery_support",
+          "bank_hash": "adff1d607378414317a8a2fb35a604336ce766ea742f9c81c747a3a3a328935f",
+          "stage": "calm",
+          "instructions": "Reduce clearly provoking shoulder tasks while retaining gentle ordinary movement. Tightness does not prove tissue shortening; avoid forced stretches or heavy self-tests. Follow clinician restrictions. Stop if activity makes symptoms worse or causes new symptoms. Seek assessment for persistent or worsening symptoms or reduced everyday function. Get urgent help for major trauma, deformity, inability to use or bear weight, marked or increasing swelling, a hot/red joint, fever or feeling unwell, locking/giving way, altered sensation, progressive weakness or circulation changes. This guidance does not identify the cause, establish healing or provide contact clearance.",
+          "dose": null,
+          "camp_doses": {},
+          "readiness_doses": {},
+          "allowed_severities": [
+            "low",
+            "moderate"
+          ],
+          "stop_when": [
+            "Follow clinician restrictions. Stop if activity makes symptoms worse or causes new symptoms. Seek assessment for persistent or worsening symptoms or reduced everyday function. Get urgent help for major trauma, deformity, inability to use or bear weight, marked or increasing swelling, a hot/red joint, fever or feeling unwell, locking/giving way, altered sensation, progressive weakness or circulation changes. This guidance does not identify the cause, establish healing or provide contact clearance."
+          ],
+          "frequency": "scheduled_sessions",
+          "minimum_gap_days": 1,
+          "priority": 0,
+          "sources": [
+            "https://www.nhs.uk/symptoms/shoulder-pain/"
+          ]
+        }
+      ],
+      "blocked_regions": [
+        "shoulder"
+      ],
+      "blocked_tags": [],
+      "contact_limit": "none",
+      "live_stages": [
+        "calm"
+      ],
+      "transition_overrides": {},
+      "status": "active",
+      "activation": "live",
+      "content_hash": "f8a052df44de9293561161afcb3009a4cf3a5f129a996071f77064775c6b626f"
+    },
+    {
+      "policy_id": "neck_soreness",
+      "version": 1,
+      "region": "neck",
+      "injury_type": "soreness",
+      "pathway_family": "nonspecific_msk_symptoms",
+      "evidence_sources": [
+        "https://www.nhs.uk/symptoms/neck-pain-and-stiff-neck/"
+      ],
+      "prescriptions": [
+        {
+          "drill_id": "neck_soreness_recovery_support",
+          "bank_hash": "9dec71792d9f7027b5b9c13cb5ea259cc638a58056db56cec8d01e9e339fd147",
+          "stage": "calm",
+          "instructions": "Adjust provoking activity and avoid staying in one position for long periods. Soreness does not establish DOMS; do not use forceful neck self-testing. Follow clinician restrictions. Stop if activity makes symptoms worse or causes new symptoms. Seek assessment for persistent or worsening symptoms or reduced everyday function. Get urgent help for major trauma, deformity, inability to use or bear weight, marked or increasing swelling, a hot/red joint, fever or feeling unwell, locking/giving way, altered sensation, progressive weakness or circulation changes. This guidance does not identify the cause, establish healing or provide contact clearance.",
+          "dose": null,
+          "camp_doses": {},
+          "readiness_doses": {},
+          "allowed_severities": [
+            "low",
+            "moderate"
+          ],
+          "stop_when": [
+            "Follow clinician restrictions. Stop if activity makes symptoms worse or causes new symptoms. Seek assessment for persistent or worsening symptoms or reduced everyday function. Get urgent help for major trauma, deformity, inability to use or bear weight, marked or increasing swelling, a hot/red joint, fever or feeling unwell, locking/giving way, altered sensation, progressive weakness or circulation changes. This guidance does not identify the cause, establish healing or provide contact clearance."
+          ],
+          "frequency": "scheduled_sessions",
+          "minimum_gap_days": 1,
+          "priority": 0,
+          "sources": [
+            "https://www.nhs.uk/symptoms/neck-pain-and-stiff-neck/"
+          ]
+        }
+      ],
+      "blocked_regions": [
+        "neck"
+      ],
+      "blocked_tags": [],
+      "contact_limit": "none",
+      "live_stages": [
+        "calm"
+      ],
+      "transition_overrides": {},
+      "status": "active",
+      "activation": "live",
+      "content_hash": "c291c0e628959410761b9ac7ea4b942efd596768fdf497a0c0b893f9b0c44910"
+    },
+    {
+      "policy_id": "shoulder_soreness",
+      "version": 1,
+      "region": "shoulder",
+      "injury_type": "soreness",
+      "pathway_family": "nonspecific_msk_symptoms",
+      "evidence_sources": [
+        "https://www.nhs.uk/symptoms/shoulder-pain/"
+      ],
+      "prescriptions": [
+        {
+          "drill_id": "shoulder_soreness_recovery_support",
+          "bank_hash": "a64d48e81fcfa242e44ef1132c9bb8df58a769bfe630bbbcd593ddaf6c444249",
+          "stage": "calm",
+          "instructions": "Reduce clearly provoking shoulder activity and heavy gym work. Keep gentle ordinary movement as tolerated. Soreness does not establish DOMS or a specific injury. Follow clinician restrictions. Stop if activity makes symptoms worse or causes new symptoms. Seek assessment for persistent or worsening symptoms or reduced everyday function. Get urgent help for major trauma, deformity, inability to use or bear weight, marked or increasing swelling, a hot/red joint, fever or feeling unwell, locking/giving way, altered sensation, progressive weakness or circulation changes. This guidance does not identify the cause, establish healing or provide contact clearance.",
+          "dose": null,
+          "camp_doses": {},
+          "readiness_doses": {},
+          "allowed_severities": [
+            "low",
+            "moderate"
+          ],
+          "stop_when": [
+            "Follow clinician restrictions. Stop if activity makes symptoms worse or causes new symptoms. Seek assessment for persistent or worsening symptoms or reduced everyday function. Get urgent help for major trauma, deformity, inability to use or bear weight, marked or increasing swelling, a hot/red joint, fever or feeling unwell, locking/giving way, altered sensation, progressive weakness or circulation changes. This guidance does not identify the cause, establish healing or provide contact clearance."
+          ],
+          "frequency": "scheduled_sessions",
+          "minimum_gap_days": 1,
+          "priority": 0,
+          "sources": [
+            "https://www.nhs.uk/symptoms/shoulder-pain/"
+          ]
+        }
+      ],
+      "blocked_regions": [
+        "shoulder"
+      ],
+      "blocked_tags": [],
+      "contact_limit": "none",
+      "live_stages": [
+        "calm"
+      ],
+      "transition_overrides": {},
+      "status": "active",
+      "activation": "live",
+      "content_hash": "76728114b78764c5b477a36e7e9fef3bacfe6df6bf97186e994a1ff8af82262c"
     }
   ]
 }
