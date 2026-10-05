@@ -1,0 +1,3857 @@
+{
+  "clusters": [
+    {
+      "canonical_identity_candidates_to_keep": [
+        "achilles_pain_banded_heel_push_with_hold"
+      ],
+      "canonical_region": "achilles",
+      "canonical_regions": [
+        "achilles"
+      ],
+      "classification": "exact_duplicate",
+      "cluster_id": "duplicate_69dc8805c0af33ce",
+      "confidence": "high",
+      "drill_ids": [
+        "achilles_pain_banded_heel_push_with_hold",
+        "achilles_pain_banded_heel_push_with_hold_2"
+      ],
+      "ids_for_later_deprecation_review": [
+        "achilles_pain_banded_heel_push_with_hold_2"
+      ],
+      "injury_types": [
+        "pain"
+      ],
+      "preserve_source_history": true,
+      "profile_reference_migration_required": false,
+      "profile_reference_review_required": false,
+      "rationale": "Exact same region/type/content excluding ID.",
+      "recommended_next_action": "Review unsuffixed preferred identity; archive all provenance and migrate references only in a separate controlled PR.",
+      "signals": [
+        "normalized_instructions_without_camp_labels",
+        "normalized_name",
+        "same_region_type_and_content_except_id",
+        "same_region_type_core_name_equipment_variants"
+      ]
+    },
+    {
+      "canonical_identity_candidates_to_keep": [
+        "achilles_pain_isometric_holds_in_tip_toe"
+      ],
+      "canonical_region": "achilles",
+      "canonical_regions": [
+        "achilles"
+      ],
+      "classification": "exact_duplicate",
+      "cluster_id": "duplicate_5d57adc881b0718e",
+      "confidence": "high",
+      "drill_ids": [
+        "achilles_pain_isometric_holds_in_tip_toe",
+        "achilles_pain_isometric_holds_in_tip_toe_2"
+      ],
+      "ids_for_later_deprecation_review": [
+        "achilles_pain_isometric_holds_in_tip_toe_2"
+      ],
+      "injury_types": [
+        "pain"
+      ],
+      "preserve_source_history": true,
+      "profile_reference_migration_required": false,
+      "profile_reference_review_required": false,
+      "rationale": "Exact same region/type/content excluding ID.",
+      "recommended_next_action": "Review unsuffixed preferred identity; archive all provenance and migrate references only in a separate controlled PR.",
+      "signals": [
+        "normalized_instructions_without_camp_labels",
+        "normalized_name",
+        "same_region_type_and_content_except_id",
+        "same_region_type_core_name_equipment_variants"
+      ]
+    },
+    {
+      "canonical_identity_candidates_to_keep": [
+        "achilles_tendonitis_massage_gun_achilles_line"
+      ],
+      "canonical_region": "achilles",
+      "canonical_regions": [
+        "achilles"
+      ],
+      "classification": "exact_duplicate",
+      "cluster_id": "duplicate_de322a2461a4cbf3",
+      "confidence": "high",
+      "drill_ids": [
+        "achilles_tendonitis_massage_gun_achilles_line",
+        "achilles_tendonitis_massage_gun_achilles_line_2"
+      ],
+      "ids_for_later_deprecation_review": [
+        "achilles_tendonitis_massage_gun_achilles_line_2"
+      ],
+      "injury_types": [
+        "tendonitis"
+      ],
+      "preserve_source_history": true,
+      "profile_reference_migration_required": false,
+      "profile_reference_review_required": false,
+      "rationale": "Exact same region/type/content excluding ID.",
+      "recommended_next_action": "Review unsuffixed preferred identity; archive all provenance and migrate references only in a separate controlled PR.",
+      "signals": [
+        "normalized_instructions_without_camp_labels",
+        "normalized_name",
+        "same_region_type_and_content_except_id",
+        "same_region_type_core_name_equipment_variants"
+      ]
+    },
+    {
+      "canonical_identity_candidates_to_keep": [
+        "achilles_unspecified_double_leg_eccentric_heel_raises_3s_lower"
+      ],
+      "canonical_region": "achilles",
+      "canonical_regions": [
+        "achilles"
+      ],
+      "classification": "near_duplicate",
+      "cluster_id": "duplicate_b917d11e315c5cd7",
+      "confidence": "requires_variant_review",
+      "drill_ids": [
+        "achilles_unspecified_double_leg_eccentric_heel_raises_3s_lower",
+        "achilles_unspecified_single_leg_heel_raise_with_tibial_rotation"
+      ],
+      "ids_for_later_deprecation_review": [],
+      "injury_types": [
+        "unspecified"
+      ],
+      "preserve_source_history": true,
+      "profile_reference_migration_required": false,
+      "profile_reference_review_required": false,
+      "rationale": "Same movement signal; compare range, equipment, laterality, demand and indication before merging. Different symptom/diagnosis labels retain separate profile ownership.",
+      "recommended_next_action": "Manual comparison only; preserve all identities and exact type/region boundaries. Shared mechanics alone is not clinical interchangeability.",
+      "signals": [
+        "curated_movement_family"
+      ]
+    },
+    {
+      "canonical_identity_candidates_to_keep": [
+        "achilles_unspecified_night_splint_assisted_calf_stretch"
+      ],
+      "canonical_region": null,
+      "canonical_regions": [
+        "achilles",
+        "calf"
+      ],
+      "classification": "intentionally_distinct",
+      "cluster_id": "duplicate_6ac283b2c82d4826",
+      "confidence": "high",
+      "drill_ids": [
+        "achilles_unspecified_night_splint_assisted_calf_stretch",
+        "calf_unspecified_night_splint_assisted_calf_stretch"
+      ],
+      "ids_for_later_deprecation_review": [],
+      "injury_types": [
+        "unspecified"
+      ],
+      "preserve_source_history": true,
+      "profile_reference_migration_required": false,
+      "profile_reference_review_required": false,
+      "rationale": "Same movement signal; compare range, equipment, laterality, demand and indication before merging. Different symptom/diagnosis labels retain separate profile ownership.",
+      "recommended_next_action": "Manual comparison only; preserve all identities and exact type/region boundaries. Shared mechanics alone is not clinical interchangeability.",
+      "signals": [
+        "same_name_across_distinct_regions"
+      ]
+    },
+    {
+      "canonical_identity_candidates_to_keep": [
+        "ankle_sprain_single_leg_balance_on_foam_pad"
+      ],
+      "canonical_region": null,
+      "canonical_regions": [
+        "achilles",
+        "ankle",
+        "foot"
+      ],
+      "classification": "intentionally_distinct",
+      "cluster_id": "duplicate_b478188d94c6a0d7",
+      "confidence": "high",
+      "drill_ids": [
+        "achilles_unspecified_single_leg_balance_on_foam_pad",
+        "ankle_sprain_single_leg_balance_on_foam_pad",
+        "foot_unspecified_single_leg_balance_on_foam_pad"
+      ],
+      "ids_for_later_deprecation_review": [],
+      "injury_types": [
+        "sprain",
+        "unspecified"
+      ],
+      "preserve_source_history": true,
+      "profile_reference_migration_required": false,
+      "profile_reference_review_required": false,
+      "rationale": "Same movement signal; compare range, equipment, laterality, demand and indication before merging. Different symptom/diagnosis labels retain separate profile ownership.",
+      "recommended_next_action": "Manual comparison only; preserve all identities and exact type/region boundaries. Shared mechanics alone is not clinical interchangeability.",
+      "signals": [
+        "same_name_across_distinct_regions"
+      ]
+    },
+    {
+      "canonical_identity_candidates_to_keep": [
+        "ankle_blister_footwear_sock_strategy"
+      ],
+      "canonical_region": null,
+      "canonical_regions": [
+        "ankle",
+        "foot",
+        "heel",
+        "toe"
+      ],
+      "classification": "intentionally_distinct",
+      "cluster_id": "duplicate_e847e4f61e464504",
+      "confidence": "high",
+      "drill_ids": [
+        "ankle_blister_footwear_sock_strategy",
+        "foot_blister_footwear_sock_strategy",
+        "heel_blister_footwear_sock_strategy",
+        "toe_blister_footwear_sock_strategy"
+      ],
+      "ids_for_later_deprecation_review": [],
+      "injury_types": [
+        "blister"
+      ],
+      "preserve_source_history": true,
+      "profile_reference_migration_required": false,
+      "profile_reference_review_required": false,
+      "rationale": "Same movement signal; compare range, equipment, laterality, demand and indication before merging. Different symptom/diagnosis labels retain separate profile ownership.",
+      "recommended_next_action": "Manual comparison only; preserve all identities and exact type/region boundaries. Shared mechanics alone is not clinical interchangeability.",
+      "signals": [
+        "same_name_across_distinct_regions"
+      ]
+    },
+    {
+      "canonical_identity_candidates_to_keep": [
+        "ankle_blister_protect_the_intact_blister"
+      ],
+      "canonical_region": null,
+      "canonical_regions": [
+        "ankle",
+        "foot",
+        "hand",
+        "unspecified"
+      ],
+      "classification": "intentionally_distinct",
+      "cluster_id": "duplicate_5bc7789cae517ac0",
+      "confidence": "high",
+      "drill_ids": [
+        "ankle_blister_protect_the_intact_blister",
+        "foot_blister_protect_the_intact_blister",
+        "hand_blister_protect_the_intact_blister",
+        "unspecified_blister_protect_the_intact_blister"
+      ],
+      "ids_for_later_deprecation_review": [],
+      "injury_types": [
+        "blister"
+      ],
+      "preserve_source_history": true,
+      "profile_reference_migration_required": false,
+      "profile_reference_review_required": false,
+      "rationale": "Same movement signal; compare range, equipment, laterality, demand and indication before merging. Different symptom/diagnosis labels retain separate profile ownership.",
+      "recommended_next_action": "Manual comparison only; preserve all identities and exact type/region boundaries. Shared mechanics alone is not clinical interchangeability.",
+      "signals": [
+        "same_name_across_distinct_regions"
+      ]
+    },
+    {
+      "canonical_identity_candidates_to_keep": [
+        "ankle_unspecified_ankle_cars_controlled_articular_rotations"
+      ],
+      "canonical_region": null,
+      "canonical_regions": [
+        "ankle",
+        "shin"
+      ],
+      "classification": "intentionally_distinct",
+      "cluster_id": "duplicate_565e250039e9b18a",
+      "confidence": "high",
+      "drill_ids": [
+        "ankle_unspecified_ankle_cars_controlled_articular_rotations",
+        "shin_unspecified_ankle_cars_controlled_articular_rotations"
+      ],
+      "ids_for_later_deprecation_review": [],
+      "injury_types": [
+        "unspecified"
+      ],
+      "preserve_source_history": true,
+      "profile_reference_migration_required": false,
+      "profile_reference_review_required": false,
+      "rationale": "Same movement signal; compare range, equipment, laterality, demand and indication before merging. Different symptom/diagnosis labels retain separate profile ownership.",
+      "recommended_next_action": "Manual comparison only; preserve all identities and exact type/region boundaries. Shared mechanics alone is not clinical interchangeability.",
+      "signals": [
+        "same_name_across_distinct_regions"
+      ]
+    },
+    {
+      "canonical_identity_candidates_to_keep": [
+        "ankle_unspecified_dynamic_calf_stretch_with_tibial_rotation"
+      ],
+      "canonical_region": null,
+      "canonical_regions": [
+        "ankle",
+        "calf"
+      ],
+      "classification": "intentionally_distinct",
+      "cluster_id": "duplicate_631e4af63217fbf6",
+      "confidence": "high",
+      "drill_ids": [
+        "ankle_unspecified_dynamic_calf_stretch_with_tibial_rotation",
+        "calf_unspecified_dynamic_calf_stretch_with_tibial_rotation"
+      ],
+      "ids_for_later_deprecation_review": [],
+      "injury_types": [
+        "unspecified"
+      ],
+      "preserve_source_history": true,
+      "profile_reference_migration_required": false,
+      "profile_reference_review_required": false,
+      "rationale": "Same movement signal; compare range, equipment, laterality, demand and indication before merging. Different symptom/diagnosis labels retain separate profile ownership.",
+      "recommended_next_action": "Manual comparison only; preserve all identities and exact type/region boundaries. Shared mechanics alone is not clinical interchangeability.",
+      "signals": [
+        "same_name_across_distinct_regions"
+      ]
+    },
+    {
+      "canonical_identity_candidates_to_keep": [
+        "ankle_unspecified_marble_pickups_with_toes"
+      ],
+      "canonical_region": null,
+      "canonical_regions": [
+        "ankle",
+        "calf",
+        "toe"
+      ],
+      "classification": "intentionally_distinct",
+      "cluster_id": "duplicate_2231b59604873684",
+      "confidence": "high",
+      "drill_ids": [
+        "ankle_unspecified_marble_pickups_with_toes",
+        "calf_unspecified_marble_pickups_with_toes",
+        "toe_unspecified_marble_pickups_with_toes"
+      ],
+      "ids_for_later_deprecation_review": [],
+      "injury_types": [
+        "unspecified"
+      ],
+      "preserve_source_history": true,
+      "profile_reference_migration_required": false,
+      "profile_reference_review_required": false,
+      "rationale": "Same movement signal; compare range, equipment, laterality, demand and indication before merging. Different symptom/diagnosis labels retain separate profile ownership.",
+      "recommended_next_action": "Manual comparison only; preserve all identities and exact type/region boundaries. Shared mechanics alone is not clinical interchangeability.",
+      "signals": [
+        "same_name_across_distinct_regions"
+      ]
+    },
+    {
+      "canonical_identity_candidates_to_keep": [
+        "ankle_unspecified_single_leg_balance_with_eyes_closed"
+      ],
+      "canonical_region": null,
+      "canonical_regions": [
+        "ankle",
+        "calf",
+        "knee"
+      ],
+      "classification": "intentionally_distinct",
+      "cluster_id": "duplicate_0c0be45b98e63b79",
+      "confidence": "high",
+      "drill_ids": [
+        "ankle_unspecified_single_leg_balance_with_eyes_closed",
+        "calf_unspecified_single_leg_balance_with_eyes_closed",
+        "knee_unspecified_single_leg_balance_with_eyes_closed"
+      ],
+      "ids_for_later_deprecation_review": [],
+      "injury_types": [
+        "unspecified"
+      ],
+      "preserve_source_history": true,
+      "profile_reference_migration_required": false,
+      "profile_reference_review_required": false,
+      "rationale": "Same movement signal; compare range, equipment, laterality, demand and indication before merging. Different symptom/diagnosis labels retain separate profile ownership.",
+      "recommended_next_action": "Manual comparison only; preserve all identities and exact type/region boundaries. Shared mechanics alone is not clinical interchangeability.",
+      "signals": [
+        "same_name_across_distinct_regions"
+      ]
+    },
+    {
+      "canonical_identity_candidates_to_keep": [
+        "bicep_unspecified_ice_cup_tendon_glides_acute_flare_ups"
+      ],
+      "canonical_region": "biceps",
+      "canonical_regions": [
+        "biceps"
+      ],
+      "classification": "near_duplicate",
+      "cluster_id": "duplicate_100a7642dde06afa",
+      "confidence": "requires_variant_review",
+      "drill_ids": [
+        "bicep_unspecified_ice_cup_tendon_glides_acute_flare_ups",
+        "bicep_unspecified_massage_gun_distal_bicep_tendon_glide"
+      ],
+      "ids_for_later_deprecation_review": [],
+      "injury_types": [
+        "unspecified"
+      ],
+      "preserve_source_history": true,
+      "profile_reference_migration_required": false,
+      "profile_reference_review_required": false,
+      "rationale": "Same movement signal; compare range, equipment, laterality, demand and indication before merging. Different symptom/diagnosis labels retain separate profile ownership.",
+      "recommended_next_action": "Manual comparison only; preserve all identities and exact type/region boundaries. Shared mechanics alone is not clinical interchangeability.",
+      "signals": [
+        "curated_movement_family"
+      ]
+    },
+    {
+      "canonical_identity_candidates_to_keep": [
+        "biceps_tendonitis_reviewed_restore",
+        "elbow_contusion_gentle_elbow_slides_on_wall",
+        "elbow_tendonitis_reviewed_restore"
+      ],
+      "canonical_region": null,
+      "canonical_regions": [
+        "biceps",
+        "elbow"
+      ],
+      "classification": "intentionally_distinct",
+      "cluster_id": "duplicate_d3b3e56b8162e14a",
+      "confidence": "high",
+      "drill_ids": [
+        "biceps_tendonitis_reviewed_restore",
+        "elbow_contusion_gentle_elbow_slides_on_wall",
+        "elbow_tendonitis_reviewed_restore"
+      ],
+      "ids_for_later_deprecation_review": [],
+      "injury_types": [
+        "contusion",
+        "tendonitis"
+      ],
+      "preserve_source_history": true,
+      "profile_reference_migration_required": false,
+      "profile_reference_review_required": true,
+      "rationale": "Same movement signal; compare range, equipment, laterality, demand and indication before merging. Different symptom/diagnosis labels retain separate profile ownership.",
+      "recommended_next_action": "Manual comparison only; preserve all identities and exact type/region boundaries. Shared mechanics alone is not clinical interchangeability.",
+      "signals": [
+        "same_name_across_distinct_regions"
+      ]
+    },
+    {
+      "canonical_identity_candidates_to_keep": [
+        "calf_strain_active_band_calf_pumps"
+      ],
+      "canonical_region": "calf",
+      "canonical_regions": [
+        "calf"
+      ],
+      "classification": "exact_duplicate",
+      "cluster_id": "duplicate_b47d704ec1f0c1ad",
+      "confidence": "high",
+      "drill_ids": [
+        "calf_strain_active_band_calf_pumps",
+        "calf_strain_active_band_calf_pumps_2"
+      ],
+      "ids_for_later_deprecation_review": [
+        "calf_strain_active_band_calf_pumps_2"
+      ],
+      "injury_types": [
+        "strain"
+      ],
+      "preserve_source_history": true,
+      "profile_reference_migration_required": false,
+      "profile_reference_review_required": false,
+      "rationale": "Exact same region/type/content excluding ID.",
+      "recommended_next_action": "Review unsuffixed preferred identity; archive all provenance and migrate references only in a separate controlled PR.",
+      "signals": [
+        "normalized_instructions_without_camp_labels",
+        "normalized_name",
+        "same_region_type_and_content_except_id",
+        "same_region_type_core_name_equipment_variants"
+      ]
+    },
+    {
+      "canonical_identity_candidates_to_keep": [
+        "calf_strain_double_leg_calf_raises"
+      ],
+      "canonical_region": "calf",
+      "canonical_regions": [
+        "calf"
+      ],
+      "classification": "exact_duplicate",
+      "cluster_id": "duplicate_4d0a04cfbe13d329",
+      "confidence": "high",
+      "drill_ids": [
+        "calf_strain_double_leg_calf_raises",
+        "calf_strain_double_leg_calf_raises_2"
+      ],
+      "ids_for_later_deprecation_review": [
+        "calf_strain_double_leg_calf_raises_2"
+      ],
+      "injury_types": [
+        "strain"
+      ],
+      "preserve_source_history": true,
+      "profile_reference_migration_required": false,
+      "profile_reference_review_required": true,
+      "rationale": "Exact same region/type/content excluding ID.",
+      "recommended_next_action": "Review unsuffixed preferred identity; archive all provenance and migrate references only in a separate controlled PR.",
+      "signals": [
+        "normalized_instructions_without_camp_labels",
+        "normalized_name",
+        "same_region_type_and_content_except_id",
+        "same_region_type_core_name_equipment_variants"
+      ]
+    },
+    {
+      "canonical_identity_candidates_to_keep": [
+        "calf_strain_double_leg_calf_raises"
+      ],
+      "canonical_region": "calf",
+      "canonical_regions": [
+        "calf"
+      ],
+      "classification": "near_duplicate",
+      "cluster_id": "duplicate_78486e9061dda4a5",
+      "confidence": "requires_variant_review",
+      "drill_ids": [
+        "calf_strain_double_leg_calf_raises",
+        "calf_strain_double_leg_calf_raises_2",
+        "calf_unspecified_bent_knee_calf_raise_soleus_focus",
+        "calf_unspecified_depth_drop_to_calf_raise_6_inch_box",
+        "calf_unspecified_double_leg_eccentric_calf_raise_4s_lower",
+        "calf_unspecified_eccentric_calf_raise_with_rotation",
+        "calf_unspecified_low_load_bfr_calf_raises_20_1rm",
+        "calf_unspecified_single_leg_calf_raise_off_step_full_rom"
+      ],
+      "ids_for_later_deprecation_review": [],
+      "injury_types": [
+        "strain",
+        "unspecified"
+      ],
+      "preserve_source_history": true,
+      "profile_reference_migration_required": false,
+      "profile_reference_review_required": true,
+      "rationale": "Same movement signal; compare range, equipment, laterality, demand and indication before merging. Different symptom/diagnosis labels retain separate profile ownership.",
+      "recommended_next_action": "Manual comparison only; preserve all identities and exact type/region boundaries. Shared mechanics alone is not clinical interchangeability.",
+      "signals": [
+        "curated_movement_family"
+      ]
+    },
+    {
+      "canonical_identity_candidates_to_keep": [
+        "calf_strain_isometric_tip_toe_wall_press"
+      ],
+      "canonical_region": "calf",
+      "canonical_regions": [
+        "calf"
+      ],
+      "classification": "exact_duplicate",
+      "cluster_id": "duplicate_57d140f4515e8a4a",
+      "confidence": "high",
+      "drill_ids": [
+        "calf_strain_isometric_tip_toe_wall_press",
+        "calf_strain_isometric_tip_toe_wall_press_2"
+      ],
+      "ids_for_later_deprecation_review": [
+        "calf_strain_isometric_tip_toe_wall_press_2"
+      ],
+      "injury_types": [
+        "strain"
+      ],
+      "preserve_source_history": true,
+      "profile_reference_migration_required": false,
+      "profile_reference_review_required": false,
+      "rationale": "Exact same region/type/content excluding ID.",
+      "recommended_next_action": "Review unsuffixed preferred identity; archive all provenance and migrate references only in a separate controlled PR.",
+      "signals": [
+        "normalized_instructions_without_camp_labels",
+        "normalized_name",
+        "same_region_type_and_content_except_id",
+        "same_region_type_core_name_equipment_variants"
+      ]
+    },
+    {
+      "canonical_identity_candidates_to_keep": [
+        "calf_strain_isometric_wall_push_hold"
+      ],
+      "canonical_region": "calf",
+      "canonical_regions": [
+        "calf"
+      ],
+      "classification": "exact_duplicate",
+      "cluster_id": "duplicate_ce7cc1e5bc8a58bc",
+      "confidence": "high",
+      "drill_ids": [
+        "calf_strain_isometric_wall_push_hold",
+        "calf_strain_isometric_wall_push_hold_2"
+      ],
+      "ids_for_later_deprecation_review": [
+        "calf_strain_isometric_wall_push_hold_2"
+      ],
+      "injury_types": [
+        "strain"
+      ],
+      "preserve_source_history": true,
+      "profile_reference_migration_required": false,
+      "profile_reference_review_required": false,
+      "rationale": "Exact same region/type/content excluding ID.",
+      "recommended_next_action": "Review unsuffixed preferred identity; archive all provenance and migrate references only in a separate controlled PR.",
+      "signals": [
+        "normalized_instructions_without_camp_labels",
+        "normalized_name",
+        "same_region_type_and_content_except_id",
+        "same_region_type_core_name_equipment_variants"
+      ]
+    },
+    {
+      "canonical_identity_candidates_to_keep": [
+        "calf_tightness_massage_gun_sweep_soleus_line"
+      ],
+      "canonical_region": "calf",
+      "canonical_regions": [
+        "calf"
+      ],
+      "classification": "exact_duplicate",
+      "cluster_id": "duplicate_11690aa92810c05f",
+      "confidence": "high",
+      "drill_ids": [
+        "calf_tightness_massage_gun_sweep_soleus_line",
+        "calf_tightness_massage_gun_sweep_soleus_line_2"
+      ],
+      "ids_for_later_deprecation_review": [
+        "calf_tightness_massage_gun_sweep_soleus_line_2"
+      ],
+      "injury_types": [
+        "tightness"
+      ],
+      "preserve_source_history": true,
+      "profile_reference_migration_required": false,
+      "profile_reference_review_required": false,
+      "rationale": "Exact same region/type/content excluding ID.",
+      "recommended_next_action": "Review unsuffixed preferred identity; archive all provenance and migrate references only in a separate controlled PR.",
+      "signals": [
+        "normalized_instructions_without_camp_labels",
+        "normalized_name",
+        "same_region_type_and_content_except_id",
+        "same_region_type_core_name_equipment_variants"
+      ]
+    },
+    {
+      "canonical_identity_candidates_to_keep": [
+        "calf_tightness_wall_calf_stretch_bent_knee"
+      ],
+      "canonical_region": "calf",
+      "canonical_regions": [
+        "calf"
+      ],
+      "classification": "exact_duplicate",
+      "cluster_id": "duplicate_59bdfa29ad35866a",
+      "confidence": "high",
+      "drill_ids": [
+        "calf_tightness_wall_calf_stretch_bent_knee",
+        "calf_tightness_wall_calf_stretch_bent_knee_2"
+      ],
+      "ids_for_later_deprecation_review": [
+        "calf_tightness_wall_calf_stretch_bent_knee_2"
+      ],
+      "injury_types": [
+        "tightness"
+      ],
+      "preserve_source_history": true,
+      "profile_reference_migration_required": false,
+      "profile_reference_review_required": false,
+      "rationale": "Exact same region/type/content excluding ID.",
+      "recommended_next_action": "Review unsuffixed preferred identity; archive all provenance and migrate references only in a separate controlled PR.",
+      "signals": [
+        "normalized_instructions_without_camp_labels",
+        "normalized_name",
+        "same_region_type_and_content_except_id",
+        "same_region_type_core_name_equipment_variants"
+      ]
+    },
+    {
+      "canonical_identity_candidates_to_keep": [
+        "chest_abrasion_friction_offloading"
+      ],
+      "canonical_region": null,
+      "canonical_regions": [
+        "chest",
+        "foot",
+        "forearm",
+        "hand",
+        "hip",
+        "neck",
+        "shoulder",
+        "upper back"
+      ],
+      "classification": "intentionally_distinct",
+      "cluster_id": "duplicate_a881ff03738f4aa5",
+      "confidence": "high",
+      "drill_ids": [
+        "chest_abrasion_friction_offloading",
+        "foot_graze_friction_offloading",
+        "forearm_abrasion_friction_offloading",
+        "forearm_graze_friction_offloading",
+        "hand_abrasion_friction_offloading",
+        "hand_graze_friction_offloading",
+        "hip_abrasion_friction_offloading",
+        "hip_graze_friction_offloading",
+        "neck_abrasion_friction_offloading",
+        "shoulder_abrasion_friction_offloading",
+        "upper_back_abrasion_friction_offloading"
+      ],
+      "ids_for_later_deprecation_review": [],
+      "injury_types": [
+        "abrasion",
+        "graze"
+      ],
+      "preserve_source_history": true,
+      "profile_reference_migration_required": false,
+      "profile_reference_review_required": false,
+      "rationale": "Same movement signal; compare range, equipment, laterality, demand and indication before merging. Different symptom/diagnosis labels retain separate profile ownership.",
+      "recommended_next_action": "Manual comparison only; preserve all identities and exact type/region boundaries. Shared mechanics alone is not clinical interchangeability.",
+      "signals": [
+        "same_name_across_distinct_regions"
+      ]
+    },
+    {
+      "canonical_identity_candidates_to_keep": [
+        "chest_abrasion_skin_barrier_ointment"
+      ],
+      "canonical_region": null,
+      "canonical_regions": [
+        "chest",
+        "elbow",
+        "face",
+        "foot",
+        "hand",
+        "hip",
+        "knee",
+        "neck",
+        "shin",
+        "unspecified"
+      ],
+      "classification": "intentionally_distinct",
+      "cluster_id": "duplicate_3dc4b34b13849cc7",
+      "confidence": "high",
+      "drill_ids": [
+        "chest_abrasion_skin_barrier_ointment",
+        "elbow_graze_skin_barrier_ointment",
+        "face_graze_skin_barrier_ointment",
+        "foot_graze_skin_barrier_ointment",
+        "hand_graze_skin_barrier_ointment",
+        "hip_abrasion_skin_barrier_ointment",
+        "knee_graze_skin_barrier_ointment",
+        "neck_graze_skin_barrier_ointment",
+        "shin_graze_skin_barrier_ointment",
+        "unspecified_graze_skin_barrier_ointment"
+      ],
+      "ids_for_later_deprecation_review": [],
+      "injury_types": [
+        "abrasion",
+        "graze"
+      ],
+      "preserve_source_history": true,
+      "profile_reference_migration_required": false,
+      "profile_reference_review_required": false,
+      "rationale": "Same movement signal; compare range, equipment, laterality, demand and indication before merging. Different symptom/diagnosis labels retain separate profile ownership.",
+      "recommended_next_action": "Manual comparison only; preserve all identities and exact type/region boundaries. Shared mechanics alone is not clinical interchangeability.",
+      "signals": [
+        "same_name_across_distinct_regions"
+      ]
+    },
+    {
+      "canonical_identity_candidates_to_keep": [
+        "core_instability_side_plank_with_reach_under"
+      ],
+      "canonical_region": null,
+      "canonical_regions": [
+        "core",
+        "obliques"
+      ],
+      "classification": "intentionally_distinct",
+      "cluster_id": "duplicate_068577735627ebf8",
+      "confidence": "high",
+      "drill_ids": [
+        "core_instability_side_plank_with_reach_under",
+        "obliques_strain_side_plank_with_reach_under"
+      ],
+      "ids_for_later_deprecation_review": [],
+      "injury_types": [
+        "instability",
+        "strain"
+      ],
+      "preserve_source_history": true,
+      "profile_reference_migration_required": false,
+      "profile_reference_review_required": false,
+      "rationale": "Same movement signal; compare range, equipment, laterality, demand and indication before merging. Different symptom/diagnosis labels retain separate profile ownership.",
+      "recommended_next_action": "Manual comparison only; preserve all identities and exact type/region boundaries. Shared mechanics alone is not clinical interchangeability.",
+      "signals": [
+        "same_name_across_distinct_regions"
+      ]
+    },
+    {
+      "canonical_identity_candidates_to_keep": [
+        "core_unspecified_wall_dead_bug_iso_hold"
+      ],
+      "canonical_region": null,
+      "canonical_regions": [
+        "core",
+        "lower back"
+      ],
+      "classification": "intentionally_distinct",
+      "cluster_id": "duplicate_349254fc8b751407",
+      "confidence": "high",
+      "drill_ids": [
+        "core_unspecified_wall_dead_bug_iso_hold",
+        "lower_back_pain_wall_dead_bug_iso_hold"
+      ],
+      "ids_for_later_deprecation_review": [],
+      "injury_types": [
+        "pain",
+        "unspecified"
+      ],
+      "preserve_source_history": true,
+      "profile_reference_migration_required": false,
+      "profile_reference_review_required": false,
+      "rationale": "Same movement signal; compare range, equipment, laterality, demand and indication before merging. Different symptom/diagnosis labels retain separate profile ownership.",
+      "recommended_next_action": "Manual comparison only; preserve all identities and exact type/region boundaries. Shared mechanics alone is not clinical interchangeability.",
+      "signals": [
+        "same_name_across_distinct_regions"
+      ]
+    },
+    {
+      "canonical_identity_candidates_to_keep": [
+        "elbow_abrasion_debride_clean_thoroughly"
+      ],
+      "canonical_region": null,
+      "canonical_regions": [
+        "elbow",
+        "face",
+        "neck",
+        "shin",
+        "unspecified"
+      ],
+      "classification": "intentionally_distinct",
+      "cluster_id": "duplicate_7c476ffacf7584c7",
+      "confidence": "high",
+      "drill_ids": [
+        "elbow_abrasion_debride_clean_thoroughly",
+        "face_abrasion_debride_clean_thoroughly",
+        "neck_abrasion_debride_clean_thoroughly",
+        "neck_graze_debride_clean_thoroughly",
+        "shin_abrasion_debride_clean_thoroughly",
+        "unspecified_abrasion_debride_clean_thoroughly",
+        "unspecified_graze_debride_clean_thoroughly"
+      ],
+      "ids_for_later_deprecation_review": [],
+      "injury_types": [
+        "abrasion",
+        "graze"
+      ],
+      "preserve_source_history": true,
+      "profile_reference_migration_required": false,
+      "profile_reference_review_required": false,
+      "rationale": "Same movement signal; compare range, equipment, laterality, demand and indication before merging. Different symptom/diagnosis labels retain separate profile ownership.",
+      "recommended_next_action": "Manual comparison only; preserve all identities and exact type/region boundaries. Shared mechanics alone is not clinical interchangeability.",
+      "signals": [
+        "same_name_across_distinct_regions"
+      ]
+    },
+    {
+      "canonical_identity_candidates_to_keep": [
+        "elbow_abrasion_joint_pad_protection"
+      ],
+      "canonical_region": "elbow",
+      "canonical_regions": [
+        "elbow"
+      ],
+      "classification": "uncertain",
+      "cluster_id": "duplicate_3d31fe92f141fac0",
+      "confidence": "same_name_different_instructions_or_unverified_mechanics",
+      "drill_ids": [
+        "elbow_abrasion_joint_pad_protection",
+        "elbow_graze_joint_pad_protection"
+      ],
+      "ids_for_later_deprecation_review": [],
+      "injury_types": [
+        "abrasion",
+        "graze"
+      ],
+      "preserve_source_history": true,
+      "profile_reference_migration_required": false,
+      "profile_reference_review_required": false,
+      "rationale": "Same movement signal; compare range, equipment, laterality, demand and indication before merging. Different symptom/diagnosis labels retain separate profile ownership.",
+      "recommended_next_action": "Manual comparison only; preserve all identities and exact type/region boundaries. Shared mechanics alone is not clinical interchangeability.",
+      "signals": [
+        "normalized_instructions_without_camp_labels",
+        "normalized_name"
+      ]
+    },
+    {
+      "canonical_identity_candidates_to_keep": [
+        "elbow_abrasion_joint_pad_protection"
+      ],
+      "canonical_region": null,
+      "canonical_regions": [
+        "elbow",
+        "knee"
+      ],
+      "classification": "intentionally_distinct",
+      "cluster_id": "duplicate_4fc85b0ff25fe7b9",
+      "confidence": "high",
+      "drill_ids": [
+        "elbow_abrasion_joint_pad_protection",
+        "elbow_graze_joint_pad_protection",
+        "knee_abrasion_joint_pad_protection",
+        "knee_graze_joint_pad_protection"
+      ],
+      "ids_for_later_deprecation_review": [],
+      "injury_types": [
+        "abrasion",
+        "graze"
+      ],
+      "preserve_source_history": true,
+      "profile_reference_migration_required": false,
+      "profile_reference_review_required": false,
+      "rationale": "Same movement signal; compare range, equipment, laterality, demand and indication before merging. Different symptom/diagnosis labels retain separate profile ownership.",
+      "recommended_next_action": "Manual comparison only; preserve all identities and exact type/region boundaries. Shared mechanics alone is not clinical interchangeability.",
+      "signals": [
+        "same_name_across_distinct_regions"
+      ]
+    },
+    {
+      "canonical_identity_candidates_to_keep": [
+        "elbow_contusion_gentle_elbow_slides_on_wall",
+        "elbow_tendonitis_reviewed_restore"
+      ],
+      "canonical_region": "elbow",
+      "canonical_regions": [
+        "elbow"
+      ],
+      "classification": "intentionally_distinct",
+      "cluster_id": "duplicate_764145eeac013315",
+      "confidence": "high",
+      "drill_ids": [
+        "elbow_contusion_gentle_elbow_slides_on_wall",
+        "elbow_tendonitis_reviewed_restore"
+      ],
+      "ids_for_later_deprecation_review": [],
+      "injury_types": [
+        "contusion",
+        "tendonitis"
+      ],
+      "preserve_source_history": true,
+      "profile_reference_migration_required": false,
+      "profile_reference_review_required": true,
+      "rationale": "Same movement signal; compare range, equipment, laterality, demand and indication before merging. Different symptom/diagnosis labels retain separate profile ownership.",
+      "recommended_next_action": "Manual comparison only; preserve all identities and exact type/region boundaries. Shared mechanics alone is not clinical interchangeability.",
+      "signals": [
+        "normalized_name"
+      ]
+    },
+    {
+      "canonical_identity_candidates_to_keep": [
+        "elbow_cut_daily_infection_check"
+      ],
+      "canonical_region": null,
+      "canonical_regions": [
+        "elbow",
+        "foot",
+        "hand",
+        "knee",
+        "shin",
+        "unspecified"
+      ],
+      "classification": "intentionally_distinct",
+      "cluster_id": "duplicate_eeaed205afb31248",
+      "confidence": "high",
+      "drill_ids": [
+        "elbow_cut_daily_infection_check",
+        "foot_cut_daily_infection_check",
+        "hand_abrasion_daily_infection_check",
+        "hand_cut_daily_infection_check",
+        "knee_laceration_daily_infection_check",
+        "shin_cut_daily_infection_check",
+        "unspecified_laceration_daily_infection_check"
+      ],
+      "ids_for_later_deprecation_review": [],
+      "injury_types": [
+        "abrasion",
+        "cut",
+        "laceration"
+      ],
+      "preserve_source_history": true,
+      "profile_reference_migration_required": false,
+      "profile_reference_review_required": false,
+      "rationale": "Same movement signal; compare range, equipment, laterality, demand and indication before merging. Different symptom/diagnosis labels retain separate profile ownership.",
+      "recommended_next_action": "Manual comparison only; preserve all identities and exact type/region boundaries. Shared mechanics alone is not clinical interchangeability.",
+      "signals": [
+        "same_name_across_distinct_regions"
+      ]
+    },
+    {
+      "canonical_identity_candidates_to_keep": [
+        "elbow_cut_no_reopen_protection"
+      ],
+      "canonical_region": "elbow",
+      "canonical_regions": [
+        "elbow"
+      ],
+      "classification": "uncertain",
+      "cluster_id": "duplicate_32f0f99477d8a9fe",
+      "confidence": "same_name_different_instructions_or_unverified_mechanics",
+      "drill_ids": [
+        "elbow_cut_no_reopen_protection",
+        "elbow_laceration_no_reopen_protection"
+      ],
+      "ids_for_later_deprecation_review": [],
+      "injury_types": [
+        "cut",
+        "laceration"
+      ],
+      "preserve_source_history": true,
+      "profile_reference_migration_required": false,
+      "profile_reference_review_required": false,
+      "rationale": "Same movement signal; compare range, equipment, laterality, demand and indication before merging. Different symptom/diagnosis labels retain separate profile ownership.",
+      "recommended_next_action": "Manual comparison only; preserve all identities and exact type/region boundaries. Shared mechanics alone is not clinical interchangeability.",
+      "signals": [
+        "normalized_instructions_without_camp_labels",
+        "normalized_name"
+      ]
+    },
+    {
+      "canonical_identity_candidates_to_keep": [
+        "elbow_cut_no_reopen_protection"
+      ],
+      "canonical_region": null,
+      "canonical_regions": [
+        "elbow",
+        "eye",
+        "forearm",
+        "jaw",
+        "knee",
+        "neck",
+        "unspecified"
+      ],
+      "classification": "intentionally_distinct",
+      "cluster_id": "duplicate_5124d5e38e3ada58",
+      "confidence": "high",
+      "drill_ids": [
+        "elbow_cut_no_reopen_protection",
+        "elbow_laceration_no_reopen_protection",
+        "eye_cut_no_reopen_protection",
+        "forearm_cut_no_reopen_protection",
+        "forearm_laceration_no_reopen_protection",
+        "jaw_laceration_no_reopen_protection",
+        "knee_cut_no_reopen_protection",
+        "knee_laceration_no_reopen_protection",
+        "neck_cut_no_reopen_protection",
+        "neck_laceration_no_reopen_protection",
+        "unspecified_cut_no_reopen_protection"
+      ],
+      "ids_for_later_deprecation_review": [],
+      "injury_types": [
+        "cut",
+        "laceration"
+      ],
+      "preserve_source_history": true,
+      "profile_reference_migration_required": false,
+      "profile_reference_review_required": false,
+      "rationale": "Same movement signal; compare range, equipment, laterality, demand and indication before merging. Different symptom/diagnosis labels retain separate profile ownership.",
+      "recommended_next_action": "Manual comparison only; preserve all identities and exact type/region boundaries. Shared mechanics alone is not clinical interchangeability.",
+      "signals": [
+        "same_name_across_distinct_regions"
+      ]
+    },
+    {
+      "canonical_identity_candidates_to_keep": [
+        "elbow_laceration_scar_mobility_once_closed"
+      ],
+      "canonical_region": null,
+      "canonical_regions": [
+        "elbow",
+        "knee"
+      ],
+      "classification": "intentionally_distinct",
+      "cluster_id": "duplicate_e493fd58ba2aeffa",
+      "confidence": "high",
+      "drill_ids": [
+        "elbow_laceration_scar_mobility_once_closed",
+        "knee_cut_scar_mobility_once_closed"
+      ],
+      "ids_for_later_deprecation_review": [],
+      "injury_types": [
+        "cut",
+        "laceration"
+      ],
+      "preserve_source_history": true,
+      "profile_reference_migration_required": false,
+      "profile_reference_review_required": false,
+      "rationale": "Same movement signal; compare range, equipment, laterality, demand and indication before merging. Different symptom/diagnosis labels retain separate profile ownership.",
+      "recommended_next_action": "Manual comparison only; preserve all identities and exact type/region boundaries. Shared mechanics alone is not clinical interchangeability.",
+      "signals": [
+        "same_name_across_distinct_regions"
+      ]
+    },
+    {
+      "canonical_identity_candidates_to_keep": [
+        "elbow_tendonitis_eccentric_reverse_wrist_curls"
+      ],
+      "canonical_region": null,
+      "canonical_regions": [
+        "elbow",
+        "forearm"
+      ],
+      "classification": "intentionally_distinct",
+      "cluster_id": "duplicate_3a0cd1507e40b856",
+      "confidence": "high",
+      "drill_ids": [
+        "elbow_tendonitis_eccentric_reverse_wrist_curls",
+        "forearm_tendonitis_eccentric_wrist_extensions"
+      ],
+      "ids_for_later_deprecation_review": [],
+      "injury_types": [
+        "tendonitis"
+      ],
+      "preserve_source_history": true,
+      "profile_reference_migration_required": false,
+      "profile_reference_review_required": false,
+      "rationale": "Same movement signal; compare range, equipment, laterality, demand and indication before merging. Different symptom/diagnosis labels retain separate profile ownership.",
+      "recommended_next_action": "Manual comparison only; preserve all identities and exact type/region boundaries. Shared mechanics alone is not clinical interchangeability.",
+      "signals": [
+        "same_name_across_distinct_regions"
+      ]
+    },
+    {
+      "canonical_identity_candidates_to_keep": [
+        "elbow_unspecified_eccentric_wrist_curls_3s_lowering"
+      ],
+      "canonical_region": null,
+      "canonical_regions": [
+        "elbow",
+        "forearm",
+        "wrist"
+      ],
+      "classification": "intentionally_distinct",
+      "cluster_id": "duplicate_bce883ab7f909742",
+      "confidence": "high",
+      "drill_ids": [
+        "elbow_unspecified_eccentric_wrist_curls_3s_lowering",
+        "forearm_unspecified_eccentric_wrist_curls_3s_lowering",
+        "wrist_unspecified_eccentric_wrist_curls_3s_lowering"
+      ],
+      "ids_for_later_deprecation_review": [],
+      "injury_types": [
+        "unspecified"
+      ],
+      "preserve_source_history": true,
+      "profile_reference_migration_required": false,
+      "profile_reference_review_required": false,
+      "rationale": "Same movement signal; compare range, equipment, laterality, demand and indication before merging. Different symptom/diagnosis labels retain separate profile ownership.",
+      "recommended_next_action": "Manual comparison only; preserve all identities and exact type/region boundaries. Shared mechanics alone is not clinical interchangeability.",
+      "signals": [
+        "same_name_across_distinct_regions"
+      ]
+    },
+    {
+      "canonical_identity_candidates_to_keep": [
+        "elbow_unspecified_reverse_tyler_twist_flexbar"
+      ],
+      "canonical_region": null,
+      "canonical_regions": [
+        "elbow",
+        "forearm",
+        "wrist"
+      ],
+      "classification": "intentionally_distinct",
+      "cluster_id": "duplicate_3da2ba96df683bff",
+      "confidence": "high",
+      "drill_ids": [
+        "elbow_unspecified_reverse_tyler_twist_flexbar",
+        "forearm_unspecified_reverse_tyler_twist_flexbar",
+        "wrist_unspecified_reverse_tyler_twist_flexbar"
+      ],
+      "ids_for_later_deprecation_review": [],
+      "injury_types": [
+        "unspecified"
+      ],
+      "preserve_source_history": true,
+      "profile_reference_migration_required": false,
+      "profile_reference_review_required": false,
+      "rationale": "Same movement signal; compare range, equipment, laterality, demand and indication before merging. Different symptom/diagnosis labels retain separate profile ownership.",
+      "recommended_next_action": "Manual comparison only; preserve all identities and exact type/region boundaries. Shared mechanics alone is not clinical interchangeability.",
+      "signals": [
+        "same_name_across_distinct_regions"
+      ]
+    },
+    {
+      "canonical_identity_candidates_to_keep": [
+        "elbow_unspecified_rice_bucket_finger_extensions"
+      ],
+      "canonical_region": null,
+      "canonical_regions": [
+        "elbow",
+        "hand",
+        "wrist"
+      ],
+      "classification": "intentionally_distinct",
+      "cluster_id": "duplicate_53a4eb10861cd7e3",
+      "confidence": "high",
+      "drill_ids": [
+        "elbow_unspecified_rice_bucket_finger_extensions",
+        "hand_unspecified_rice_bucket_finger_extensions",
+        "wrist_unspecified_rice_bucket_finger_extensions"
+      ],
+      "ids_for_later_deprecation_review": [],
+      "injury_types": [
+        "unspecified"
+      ],
+      "preserve_source_history": true,
+      "profile_reference_migration_required": false,
+      "profile_reference_review_required": false,
+      "rationale": "Same movement signal; compare range, equipment, laterality, demand and indication before merging. Different symptom/diagnosis labels retain separate profile ownership.",
+      "recommended_next_action": "Manual comparison only; preserve all identities and exact type/region boundaries. Shared mechanics alone is not clinical interchangeability.",
+      "signals": [
+        "same_name_across_distinct_regions"
+      ]
+    },
+    {
+      "canonical_identity_candidates_to_keep": [
+        "elbow_unspecified_very_light_flexbar_oscillations"
+      ],
+      "canonical_region": null,
+      "canonical_regions": [
+        "elbow",
+        "forearm"
+      ],
+      "classification": "intentionally_distinct",
+      "cluster_id": "duplicate_8fb58ad41ac77bc8",
+      "confidence": "high",
+      "drill_ids": [
+        "elbow_unspecified_very_light_flexbar_oscillations",
+        "forearm_unspecified_very_light_flexbar_oscillations"
+      ],
+      "ids_for_later_deprecation_review": [],
+      "injury_types": [
+        "unspecified"
+      ],
+      "preserve_source_history": true,
+      "profile_reference_migration_required": false,
+      "profile_reference_review_required": false,
+      "rationale": "Same movement signal; compare range, equipment, laterality, demand and indication before merging. Different symptom/diagnosis labels retain separate profile ownership.",
+      "recommended_next_action": "Manual comparison only; preserve all identities and exact type/region boundaries. Shared mechanics alone is not clinical interchangeability.",
+      "signals": [
+        "same_name_across_distinct_regions"
+      ]
+    },
+    {
+      "canonical_identity_candidates_to_keep": [
+        "eye_cut_brow_orbital_cut_care"
+      ],
+      "canonical_region": "eye",
+      "canonical_regions": [
+        "eye"
+      ],
+      "classification": "uncertain",
+      "cluster_id": "duplicate_5d9226f1ef4b5aa8",
+      "confidence": "same_name_different_instructions_or_unverified_mechanics",
+      "drill_ids": [
+        "eye_cut_brow_orbital_cut_care",
+        "eye_laceration_brow_orbital_cut_care"
+      ],
+      "ids_for_later_deprecation_review": [],
+      "injury_types": [
+        "cut",
+        "laceration"
+      ],
+      "preserve_source_history": true,
+      "profile_reference_migration_required": false,
+      "profile_reference_review_required": false,
+      "rationale": "Same movement signal; compare range, equipment, laterality, demand and indication before merging. Different symptom/diagnosis labels retain separate profile ownership.",
+      "recommended_next_action": "Manual comparison only; preserve all identities and exact type/region boundaries. Shared mechanics alone is not clinical interchangeability.",
+      "signals": [
+        "normalized_instructions_without_camp_labels",
+        "normalized_name"
+      ]
+    },
+    {
+      "canonical_identity_candidates_to_keep": [
+        "eye_laceration_clean_approximate_edges"
+      ],
+      "canonical_region": null,
+      "canonical_regions": [
+        "eye",
+        "face",
+        "forearm",
+        "hand",
+        "neck",
+        "shin",
+        "unspecified"
+      ],
+      "classification": "intentionally_distinct",
+      "cluster_id": "duplicate_68c2b11da4fc224d",
+      "confidence": "high",
+      "drill_ids": [
+        "eye_laceration_clean_approximate_edges",
+        "face_cut_clean_approximate_edges",
+        "face_laceration_clean_approximate_edges",
+        "forearm_laceration_clean_approximate_edges",
+        "hand_laceration_clean_approximate_edges",
+        "neck_cut_clean_approximate_edges",
+        "neck_laceration_clean_approximate_edges",
+        "shin_laceration_clean_approximate_edges",
+        "unspecified_cut_clean_approximate_edges",
+        "unspecified_laceration_clean_approximate_edges"
+      ],
+      "ids_for_later_deprecation_review": [],
+      "injury_types": [
+        "cut",
+        "laceration"
+      ],
+      "preserve_source_history": true,
+      "profile_reference_migration_required": false,
+      "profile_reference_review_required": false,
+      "rationale": "Same movement signal; compare range, equipment, laterality, demand and indication before merging. Different symptom/diagnosis labels retain separate profile ownership.",
+      "recommended_next_action": "Manual comparison only; preserve all identities and exact type/region boundaries. Shared mechanics alone is not clinical interchangeability.",
+      "signals": [
+        "same_name_across_distinct_regions"
+      ]
+    },
+    {
+      "canonical_identity_candidates_to_keep": [
+        "face_abrasion_facial_wound_protection"
+      ],
+      "canonical_region": "face",
+      "canonical_regions": [
+        "face"
+      ],
+      "classification": "uncertain",
+      "cluster_id": "duplicate_c5268a9f11b57b65",
+      "confidence": "same_name_different_instructions_or_unverified_mechanics",
+      "drill_ids": [
+        "face_abrasion_facial_wound_protection",
+        "face_cut_facial_wound_protection",
+        "face_graze_facial_wound_protection",
+        "face_laceration_facial_wound_protection"
+      ],
+      "ids_for_later_deprecation_review": [],
+      "injury_types": [
+        "abrasion",
+        "cut",
+        "graze",
+        "laceration"
+      ],
+      "preserve_source_history": true,
+      "profile_reference_migration_required": false,
+      "profile_reference_review_required": false,
+      "rationale": "Same movement signal; compare range, equipment, laterality, demand and indication before merging. Different symptom/diagnosis labels retain separate profile ownership.",
+      "recommended_next_action": "Manual comparison only; preserve all identities and exact type/region boundaries. Shared mechanics alone is not clinical interchangeability.",
+      "signals": [
+        "normalized_instructions_without_camp_labels",
+        "normalized_name"
+      ]
+    },
+    {
+      "canonical_identity_candidates_to_keep": [
+        "face_abrasion_facial_wound_protection"
+      ],
+      "canonical_region": null,
+      "canonical_regions": [
+        "face",
+        "jaw"
+      ],
+      "classification": "intentionally_distinct",
+      "cluster_id": "duplicate_ee5d1227481d91ae",
+      "confidence": "high",
+      "drill_ids": [
+        "face_abrasion_facial_wound_protection",
+        "face_cut_facial_wound_protection",
+        "face_graze_facial_wound_protection",
+        "face_laceration_facial_wound_protection",
+        "jaw_cut_facial_wound_protection",
+        "jaw_laceration_facial_wound_protection"
+      ],
+      "ids_for_later_deprecation_review": [],
+      "injury_types": [
+        "abrasion",
+        "cut",
+        "graze",
+        "laceration"
+      ],
+      "preserve_source_history": true,
+      "profile_reference_migration_required": false,
+      "profile_reference_review_required": false,
+      "rationale": "Same movement signal; compare range, equipment, laterality, demand and indication before merging. Different symptom/diagnosis labels retain separate profile ownership.",
+      "recommended_next_action": "Manual comparison only; preserve all identities and exact type/region boundaries. Shared mechanics alone is not clinical interchangeability.",
+      "signals": [
+        "same_name_across_distinct_regions"
+      ]
+    },
+    {
+      "canonical_identity_candidates_to_keep": [
+        "face_cut_clean_approximate_edges"
+      ],
+      "canonical_region": "face",
+      "canonical_regions": [
+        "face"
+      ],
+      "classification": "uncertain",
+      "cluster_id": "duplicate_bec0d9f9175d897d",
+      "confidence": "same_name_different_instructions_or_unverified_mechanics",
+      "drill_ids": [
+        "face_cut_clean_approximate_edges",
+        "face_laceration_clean_approximate_edges"
+      ],
+      "ids_for_later_deprecation_review": [],
+      "injury_types": [
+        "cut",
+        "laceration"
+      ],
+      "preserve_source_history": true,
+      "profile_reference_migration_required": false,
+      "profile_reference_review_required": false,
+      "rationale": "Same movement signal; compare range, equipment, laterality, demand and indication before merging. Different symptom/diagnosis labels retain separate profile ownership.",
+      "recommended_next_action": "Manual comparison only; preserve all identities and exact type/region boundaries. Shared mechanics alone is not clinical interchangeability.",
+      "signals": [
+        "normalized_instructions_without_camp_labels",
+        "normalized_name"
+      ]
+    },
+    {
+      "canonical_identity_candidates_to_keep": [
+        "face_unspecified_tongue_to_palate_isometric_holds"
+      ],
+      "canonical_region": null,
+      "canonical_regions": [
+        "face",
+        "jaw"
+      ],
+      "classification": "intentionally_distinct",
+      "cluster_id": "duplicate_a6ffc000e719a968",
+      "confidence": "high",
+      "drill_ids": [
+        "face_unspecified_tongue_to_palate_isometric_holds",
+        "jaw_unspecified_tongue_to_palate_isometric_holds"
+      ],
+      "ids_for_later_deprecation_review": [],
+      "injury_types": [
+        "unspecified"
+      ],
+      "preserve_source_history": true,
+      "profile_reference_migration_required": false,
+      "profile_reference_review_required": false,
+      "rationale": "Same movement signal; compare range, equipment, laterality, demand and indication before merging. Different symptom/diagnosis labels retain separate profile ownership.",
+      "recommended_next_action": "Manual comparison only; preserve all identities and exact type/region boundaries. Shared mechanics alone is not clinical interchangeability.",
+      "signals": [
+        "same_name_across_distinct_regions"
+      ]
+    },
+    {
+      "canonical_identity_candidates_to_keep": [
+        "fingers_blister_grip_friction_strategy"
+      ],
+      "canonical_region": null,
+      "canonical_regions": [
+        "fingers",
+        "hand"
+      ],
+      "classification": "intentionally_distinct",
+      "cluster_id": "duplicate_da38dc50a54c662d",
+      "confidence": "high",
+      "drill_ids": [
+        "fingers_blister_grip_friction_strategy",
+        "hand_blister_grip_friction_strategy"
+      ],
+      "ids_for_later_deprecation_review": [],
+      "injury_types": [
+        "blister"
+      ],
+      "preserve_source_history": true,
+      "profile_reference_migration_required": false,
+      "profile_reference_review_required": false,
+      "rationale": "Same movement signal; compare range, equipment, laterality, demand and indication before merging. Different symptom/diagnosis labels retain separate profile ownership.",
+      "recommended_next_action": "Manual comparison only; preserve all identities and exact type/region boundaries. Shared mechanics alone is not clinical interchangeability.",
+      "signals": [
+        "same_name_across_distinct_regions"
+      ]
+    },
+    {
+      "canonical_identity_candidates_to_keep": [
+        "fingers_cut_knuckle_cut_wrapping"
+      ],
+      "canonical_region": null,
+      "canonical_regions": [
+        "fingers",
+        "hand"
+      ],
+      "classification": "intentionally_distinct",
+      "cluster_id": "duplicate_1176d6aa2b2c51b1",
+      "confidence": "high",
+      "drill_ids": [
+        "fingers_cut_knuckle_cut_wrapping",
+        "hand_cut_knuckle_cut_wrapping",
+        "hand_laceration_knuckle_cut_wrapping"
+      ],
+      "ids_for_later_deprecation_review": [],
+      "injury_types": [
+        "cut",
+        "laceration"
+      ],
+      "preserve_source_history": true,
+      "profile_reference_migration_required": false,
+      "profile_reference_review_required": false,
+      "rationale": "Same movement signal; compare range, equipment, laterality, demand and indication before merging. Different symptom/diagnosis labels retain separate profile ownership.",
+      "recommended_next_action": "Manual comparison only; preserve all identities and exact type/region boundaries. Shared mechanics alone is not clinical interchangeability.",
+      "signals": [
+        "same_name_across_distinct_regions"
+      ]
+    },
+    {
+      "canonical_identity_candidates_to_keep": [
+        "fingers_cut_waterproof_occlusive_dressing"
+      ],
+      "canonical_region": null,
+      "canonical_regions": [
+        "fingers",
+        "foot",
+        "forearm",
+        "jaw",
+        "shin"
+      ],
+      "classification": "intentionally_distinct",
+      "cluster_id": "duplicate_4be4a71de2fd8465",
+      "confidence": "high",
+      "drill_ids": [
+        "fingers_cut_waterproof_occlusive_dressing",
+        "foot_cut_waterproof_occlusive_dressing",
+        "forearm_cut_waterproof_occlusive_dressing",
+        "jaw_cut_waterproof_occlusive_dressing",
+        "shin_cut_waterproof_occlusive_dressing",
+        "shin_laceration_waterproof_occlusive_dressing"
+      ],
+      "ids_for_later_deprecation_review": [],
+      "injury_types": [
+        "cut",
+        "laceration"
+      ],
+      "preserve_source_history": true,
+      "profile_reference_migration_required": false,
+      "profile_reference_review_required": false,
+      "rationale": "Same movement signal; compare range, equipment, laterality, demand and indication before merging. Different symptom/diagnosis labels retain separate profile ownership.",
+      "recommended_next_action": "Manual comparison only; preserve all identities and exact type/region boundaries. Shared mechanics alone is not clinical interchangeability.",
+      "signals": [
+        "same_name_across_distinct_regions"
+      ]
+    },
+    {
+      "canonical_identity_candidates_to_keep": [
+        "fingers_strain_rubber_band_finger_extensions"
+      ],
+      "canonical_region": null,
+      "canonical_regions": [
+        "fingers",
+        "forearm"
+      ],
+      "classification": "intentionally_distinct",
+      "cluster_id": "duplicate_6124a45629c4672d",
+      "confidence": "high",
+      "drill_ids": [
+        "fingers_strain_rubber_band_finger_extensions",
+        "forearm_unspecified_rubber_band_finger_extensions"
+      ],
+      "ids_for_later_deprecation_review": [],
+      "injury_types": [
+        "strain",
+        "unspecified"
+      ],
+      "preserve_source_history": true,
+      "profile_reference_migration_required": false,
+      "profile_reference_review_required": false,
+      "rationale": "Same movement signal; compare range, equipment, laterality, demand and indication before merging. Different symptom/diagnosis labels retain separate profile ownership.",
+      "recommended_next_action": "Manual comparison only; preserve all identities and exact type/region boundaries. Shared mechanics alone is not clinical interchangeability.",
+      "signals": [
+        "same_name_across_distinct_regions"
+      ]
+    },
+    {
+      "canonical_identity_candidates_to_keep": [
+        "foot_pain_toe_spreads_with_band"
+      ],
+      "canonical_region": "foot",
+      "canonical_regions": [
+        "foot"
+      ],
+      "classification": "near_duplicate",
+      "cluster_id": "duplicate_e6fd9f5db909d487",
+      "confidence": "requires_variant_review",
+      "drill_ids": [
+        "foot_pain_toe_spreads_with_band",
+        "foot_tightness_toe_spreading_with_resistance_band",
+        "foot_unspecified_toe_spreader_holds_with_rubber_band"
+      ],
+      "ids_for_later_deprecation_review": [],
+      "injury_types": [
+        "pain",
+        "tightness",
+        "unspecified"
+      ],
+      "preserve_source_history": true,
+      "profile_reference_migration_required": false,
+      "profile_reference_review_required": false,
+      "rationale": "Same movement signal; compare range, equipment, laterality, demand and indication before merging. Different symptom/diagnosis labels retain separate profile ownership.",
+      "recommended_next_action": "Manual comparison only; preserve all identities and exact type/region boundaries. Shared mechanics alone is not clinical interchangeability.",
+      "signals": [
+        "curated_movement_family"
+      ]
+    },
+    {
+      "canonical_identity_candidates_to_keep": [
+        "forearm_abrasion_friction_offloading"
+      ],
+      "canonical_region": "forearm",
+      "canonical_regions": [
+        "forearm"
+      ],
+      "classification": "uncertain",
+      "cluster_id": "duplicate_24d683476818efdd",
+      "confidence": "same_name_different_instructions_or_unverified_mechanics",
+      "drill_ids": [
+        "forearm_abrasion_friction_offloading",
+        "forearm_graze_friction_offloading"
+      ],
+      "ids_for_later_deprecation_review": [],
+      "injury_types": [
+        "abrasion",
+        "graze"
+      ],
+      "preserve_source_history": true,
+      "profile_reference_migration_required": false,
+      "profile_reference_review_required": false,
+      "rationale": "Same movement signal; compare range, equipment, laterality, demand and indication before merging. Different symptom/diagnosis labels retain separate profile ownership.",
+      "recommended_next_action": "Manual comparison only; preserve all identities and exact type/region boundaries. Shared mechanics alone is not clinical interchangeability.",
+      "signals": [
+        "normalized_instructions_without_camp_labels",
+        "normalized_name"
+      ]
+    },
+    {
+      "canonical_identity_candidates_to_keep": [
+        "forearm_abrasion_moist_healing_dressing"
+      ],
+      "canonical_region": "forearm",
+      "canonical_regions": [
+        "forearm"
+      ],
+      "classification": "uncertain",
+      "cluster_id": "duplicate_ba70bc6db56409df",
+      "confidence": "same_name_different_instructions_or_unverified_mechanics",
+      "drill_ids": [
+        "forearm_abrasion_moist_healing_dressing",
+        "forearm_graze_moist_healing_dressing"
+      ],
+      "ids_for_later_deprecation_review": [],
+      "injury_types": [
+        "abrasion",
+        "graze"
+      ],
+      "preserve_source_history": true,
+      "profile_reference_migration_required": false,
+      "profile_reference_review_required": false,
+      "rationale": "Same movement signal; compare range, equipment, laterality, demand and indication before merging. Different symptom/diagnosis labels retain separate profile ownership.",
+      "recommended_next_action": "Manual comparison only; preserve all identities and exact type/region boundaries. Shared mechanics alone is not clinical interchangeability.",
+      "signals": [
+        "normalized_instructions_without_camp_labels",
+        "normalized_name"
+      ]
+    },
+    {
+      "canonical_identity_candidates_to_keep": [
+        "forearm_abrasion_moist_healing_dressing"
+      ],
+      "canonical_region": null,
+      "canonical_regions": [
+        "forearm",
+        "hip",
+        "knee",
+        "shoulder",
+        "unspecified",
+        "upper back"
+      ],
+      "classification": "intentionally_distinct",
+      "cluster_id": "duplicate_c55c1e077f6e9d84",
+      "confidence": "high",
+      "drill_ids": [
+        "forearm_abrasion_moist_healing_dressing",
+        "forearm_graze_moist_healing_dressing",
+        "hip_graze_moist_healing_dressing",
+        "knee_abrasion_moist_healing_dressing",
+        "shoulder_abrasion_moist_healing_dressing",
+        "unspecified_abrasion_moist_healing_dressing",
+        "upper_back_abrasion_moist_healing_dressing"
+      ],
+      "ids_for_later_deprecation_review": [],
+      "injury_types": [
+        "abrasion",
+        "graze"
+      ],
+      "preserve_source_history": true,
+      "profile_reference_migration_required": false,
+      "profile_reference_review_required": false,
+      "rationale": "Same movement signal; compare range, equipment, laterality, demand and indication before merging. Different symptom/diagnosis labels retain separate profile ownership.",
+      "recommended_next_action": "Manual comparison only; preserve all identities and exact type/region boundaries. Shared mechanics alone is not clinical interchangeability.",
+      "signals": [
+        "same_name_across_distinct_regions"
+      ]
+    },
+    {
+      "canonical_identity_candidates_to_keep": [
+        "forearm_cut_no_reopen_protection"
+      ],
+      "canonical_region": "forearm",
+      "canonical_regions": [
+        "forearm"
+      ],
+      "classification": "uncertain",
+      "cluster_id": "duplicate_7b84f484eb0547fc",
+      "confidence": "same_name_different_instructions_or_unverified_mechanics",
+      "drill_ids": [
+        "forearm_cut_no_reopen_protection",
+        "forearm_laceration_no_reopen_protection"
+      ],
+      "ids_for_later_deprecation_review": [],
+      "injury_types": [
+        "cut",
+        "laceration"
+      ],
+      "preserve_source_history": true,
+      "profile_reference_migration_required": false,
+      "profile_reference_review_required": false,
+      "rationale": "Same movement signal; compare range, equipment, laterality, demand and indication before merging. Different symptom/diagnosis labels retain separate profile ownership.",
+      "recommended_next_action": "Manual comparison only; preserve all identities and exact type/region boundaries. Shared mechanics alone is not clinical interchangeability.",
+      "signals": [
+        "normalized_instructions_without_camp_labels",
+        "normalized_name"
+      ]
+    },
+    {
+      "canonical_identity_candidates_to_keep": [
+        "forearm_swelling_elevated_wrist_pumps"
+      ],
+      "canonical_region": null,
+      "canonical_regions": [
+        "forearm",
+        "wrist"
+      ],
+      "classification": "intentionally_distinct",
+      "cluster_id": "duplicate_f335a24fca4f5a75",
+      "confidence": "high",
+      "drill_ids": [
+        "forearm_swelling_elevated_wrist_pumps",
+        "wrist_swelling_elevated_wrist_pumps"
+      ],
+      "ids_for_later_deprecation_review": [],
+      "injury_types": [
+        "swelling"
+      ],
+      "preserve_source_history": true,
+      "profile_reference_migration_required": false,
+      "profile_reference_review_required": false,
+      "rationale": "Same movement signal; compare range, equipment, laterality, demand and indication before merging. Different symptom/diagnosis labels retain separate profile ownership.",
+      "recommended_next_action": "Manual comparison only; preserve all identities and exact type/region boundaries. Shared mechanics alone is not clinical interchangeability.",
+      "signals": [
+        "same_name_across_distinct_regions"
+      ]
+    },
+    {
+      "canonical_identity_candidates_to_keep": [
+        "forearm_tendonitis_reviewed_restore",
+        "wrist_contusion_wrist_flexion_extension_passes",
+        "wrist_stiffness_stick_roll_wrist_flex_ext"
+      ],
+      "canonical_region": null,
+      "canonical_regions": [
+        "forearm",
+        "wrist"
+      ],
+      "classification": "intentionally_distinct",
+      "cluster_id": "duplicate_cf676f383cb0367f",
+      "confidence": "high",
+      "drill_ids": [
+        "forearm_tendonitis_reviewed_restore",
+        "wrist_contusion_wrist_flexion_extension_passes",
+        "wrist_stiffness_stick_roll_wrist_flex_ext"
+      ],
+      "ids_for_later_deprecation_review": [],
+      "injury_types": [
+        "contusion",
+        "stiffness",
+        "tendonitis"
+      ],
+      "preserve_source_history": true,
+      "profile_reference_migration_required": false,
+      "profile_reference_review_required": true,
+      "rationale": "Same movement signal; compare range, equipment, laterality, demand and indication before merging. Different symptom/diagnosis labels retain separate profile ownership.",
+      "recommended_next_action": "Manual comparison only; preserve all identities and exact type/region boundaries. Shared mechanics alone is not clinical interchangeability.",
+      "signals": [
+        "same_name_across_distinct_regions"
+      ]
+    },
+    {
+      "canonical_identity_candidates_to_keep": [
+        "forearm_unspecified_paraffin_wax_therapy"
+      ],
+      "canonical_region": null,
+      "canonical_regions": [
+        "forearm",
+        "hand",
+        "wrist"
+      ],
+      "classification": "intentionally_distinct",
+      "cluster_id": "duplicate_975ead1459efa9fa",
+      "confidence": "high",
+      "drill_ids": [
+        "forearm_unspecified_paraffin_wax_therapy",
+        "hand_unspecified_paraffin_wax_therapy",
+        "wrist_unspecified_paraffin_wax_therapy"
+      ],
+      "ids_for_later_deprecation_review": [],
+      "injury_types": [
+        "unspecified"
+      ],
+      "preserve_source_history": true,
+      "profile_reference_migration_required": false,
+      "profile_reference_review_required": false,
+      "rationale": "Same movement signal; compare range, equipment, laterality, demand and indication before merging. Different symptom/diagnosis labels retain separate profile ownership.",
+      "recommended_next_action": "Manual comparison only; preserve all identities and exact type/region boundaries. Shared mechanics alone is not clinical interchangeability.",
+      "signals": [
+        "same_name_across_distinct_regions"
+      ]
+    },
+    {
+      "canonical_identity_candidates_to_keep": [
+        "glutes_stiffness_elevated_pigeon_stretch"
+      ],
+      "canonical_region": "glute",
+      "canonical_regions": [
+        "glute"
+      ],
+      "classification": "near_duplicate",
+      "cluster_id": "duplicate_9cbb83538a9a8b48",
+      "confidence": "requires_variant_review",
+      "drill_ids": [
+        "glutes_stiffness_elevated_pigeon_stretch",
+        "glutes_tightness_pigeon_pose_glute_stretch"
+      ],
+      "ids_for_later_deprecation_review": [],
+      "injury_types": [
+        "stiffness",
+        "tightness"
+      ],
+      "preserve_source_history": true,
+      "profile_reference_migration_required": false,
+      "profile_reference_review_required": false,
+      "rationale": "Same movement signal; compare range, equipment, laterality, demand and indication before merging. Different symptom/diagnosis labels retain separate profile ownership.",
+      "recommended_next_action": "Manual comparison only; preserve all identities and exact type/region boundaries. Shared mechanics alone is not clinical interchangeability.",
+      "signals": [
+        "curated_movement_family"
+      ]
+    },
+    {
+      "canonical_identity_candidates_to_keep": [
+        "glutes_unspecified_single_leg_sit_to_stand_eccentric_focus"
+      ],
+      "canonical_region": null,
+      "canonical_regions": [
+        "glute",
+        "quads"
+      ],
+      "classification": "intentionally_distinct",
+      "cluster_id": "duplicate_49ea90aad08ca617",
+      "confidence": "high",
+      "drill_ids": [
+        "glutes_unspecified_single_leg_sit_to_stand_eccentric_focus",
+        "quads_unspecified_single_leg_sit_to_stand_eccentric_focus"
+      ],
+      "ids_for_later_deprecation_review": [],
+      "injury_types": [
+        "unspecified"
+      ],
+      "preserve_source_history": true,
+      "profile_reference_migration_required": false,
+      "profile_reference_review_required": false,
+      "rationale": "Same movement signal; compare range, equipment, laterality, demand and indication before merging. Different symptom/diagnosis labels retain separate profile ownership.",
+      "recommended_next_action": "Manual comparison only; preserve all identities and exact type/region boundaries. Shared mechanics alone is not clinical interchangeability.",
+      "signals": [
+        "same_name_across_distinct_regions"
+      ]
+    },
+    {
+      "canonical_identity_candidates_to_keep": [
+        "hamstring_unspecified_sliding_leg_curls_towel_on_floor"
+      ],
+      "canonical_region": "hamstring",
+      "canonical_regions": [
+        "hamstring"
+      ],
+      "classification": "near_duplicate",
+      "cluster_id": "duplicate_3e58ae69e888118f",
+      "confidence": "requires_variant_review",
+      "drill_ids": [
+        "hamstring_unspecified_sliding_leg_curls_towel_on_floor",
+        "hamstrings_unspecified_slider_hamstring_curls"
+      ],
+      "ids_for_later_deprecation_review": [],
+      "injury_types": [
+        "unspecified"
+      ],
+      "preserve_source_history": true,
+      "profile_reference_migration_required": false,
+      "profile_reference_review_required": false,
+      "rationale": "Same movement signal; compare range, equipment, laterality, demand and indication before merging. Different symptom/diagnosis labels retain separate profile ownership.",
+      "recommended_next_action": "Manual comparison only; preserve all identities and exact type/region boundaries. Shared mechanics alone is not clinical interchangeability.",
+      "signals": [
+        "curated_movement_family"
+      ]
+    },
+    {
+      "canonical_identity_candidates_to_keep": [
+        "hand_abrasion_daily_infection_check"
+      ],
+      "canonical_region": "hand",
+      "canonical_regions": [
+        "hand"
+      ],
+      "classification": "uncertain",
+      "cluster_id": "duplicate_cfd08704d192b75f",
+      "confidence": "same_name_different_instructions_or_unverified_mechanics",
+      "drill_ids": [
+        "hand_abrasion_daily_infection_check",
+        "hand_cut_daily_infection_check"
+      ],
+      "ids_for_later_deprecation_review": [],
+      "injury_types": [
+        "abrasion",
+        "cut"
+      ],
+      "preserve_source_history": true,
+      "profile_reference_migration_required": false,
+      "profile_reference_review_required": false,
+      "rationale": "Same movement signal; compare range, equipment, laterality, demand and indication before merging. Different symptom/diagnosis labels retain separate profile ownership.",
+      "recommended_next_action": "Manual comparison only; preserve all identities and exact type/region boundaries. Shared mechanics alone is not clinical interchangeability.",
+      "signals": [
+        "normalized_instructions_without_camp_labels",
+        "normalized_name"
+      ]
+    },
+    {
+      "canonical_identity_candidates_to_keep": [
+        "hand_abrasion_friction_offloading"
+      ],
+      "canonical_region": "hand",
+      "canonical_regions": [
+        "hand"
+      ],
+      "classification": "uncertain",
+      "cluster_id": "duplicate_a36bb075d3e0df15",
+      "confidence": "same_name_different_instructions_or_unverified_mechanics",
+      "drill_ids": [
+        "hand_abrasion_friction_offloading",
+        "hand_graze_friction_offloading"
+      ],
+      "ids_for_later_deprecation_review": [],
+      "injury_types": [
+        "abrasion",
+        "graze"
+      ],
+      "preserve_source_history": true,
+      "profile_reference_migration_required": false,
+      "profile_reference_review_required": false,
+      "rationale": "Same movement signal; compare range, equipment, laterality, demand and indication before merging. Different symptom/diagnosis labels retain separate profile ownership.",
+      "recommended_next_action": "Manual comparison only; preserve all identities and exact type/region boundaries. Shared mechanics alone is not clinical interchangeability.",
+      "signals": [
+        "normalized_instructions_without_camp_labels",
+        "normalized_name"
+      ]
+    },
+    {
+      "canonical_identity_candidates_to_keep": [
+        "hand_cut_knuckle_cut_wrapping"
+      ],
+      "canonical_region": "hand",
+      "canonical_regions": [
+        "hand"
+      ],
+      "classification": "uncertain",
+      "cluster_id": "duplicate_3a9a9f2168ea51b1",
+      "confidence": "same_name_different_instructions_or_unverified_mechanics",
+      "drill_ids": [
+        "hand_cut_knuckle_cut_wrapping",
+        "hand_laceration_knuckle_cut_wrapping"
+      ],
+      "ids_for_later_deprecation_review": [],
+      "injury_types": [
+        "cut",
+        "laceration"
+      ],
+      "preserve_source_history": true,
+      "profile_reference_migration_required": false,
+      "profile_reference_review_required": false,
+      "rationale": "Same movement signal; compare range, equipment, laterality, demand and indication before merging. Different symptom/diagnosis labels retain separate profile ownership.",
+      "recommended_next_action": "Manual comparison only; preserve all identities and exact type/region boundaries. Shared mechanics alone is not clinical interchangeability.",
+      "signals": [
+        "normalized_instructions_without_camp_labels",
+        "normalized_name"
+      ]
+    },
+    {
+      "canonical_identity_candidates_to_keep": [
+        "hand_tendonitis_reviewed_restore"
+      ],
+      "canonical_region": "hand",
+      "canonical_regions": [
+        "hand"
+      ],
+      "classification": "near_duplicate",
+      "cluster_id": "duplicate_154613764e03b5da",
+      "confidence": "requires_variant_review",
+      "drill_ids": [
+        "hand_stiffness_tendon_gliding_series_hook_straight_fist",
+        "hand_tendonitis_reviewed_restore",
+        "hand_unspecified_tendon_gliding_series"
+      ],
+      "ids_for_later_deprecation_review": [],
+      "injury_types": [
+        "stiffness",
+        "tendonitis",
+        "unspecified"
+      ],
+      "preserve_source_history": true,
+      "profile_reference_migration_required": false,
+      "profile_reference_review_required": true,
+      "rationale": "Same movement signal; compare range, equipment, laterality, demand and indication before merging. Different symptom/diagnosis labels retain separate profile ownership.",
+      "recommended_next_action": "Manual comparison only; preserve all identities and exact type/region boundaries. Shared mechanics alone is not clinical interchangeability.",
+      "signals": [
+        "curated_movement_family"
+      ]
+    },
+    {
+      "canonical_identity_candidates_to_keep": [
+        "hand_unspecified_knuckle_push_up_holds"
+      ],
+      "canonical_region": null,
+      "canonical_regions": [
+        "hand",
+        "wrist"
+      ],
+      "classification": "intentionally_distinct",
+      "cluster_id": "duplicate_0666680b8a3a1647",
+      "confidence": "high",
+      "drill_ids": [
+        "hand_unspecified_knuckle_push_up_holds",
+        "wrist_unspecified_knuckle_push_up_holds"
+      ],
+      "ids_for_later_deprecation_review": [],
+      "injury_types": [
+        "unspecified"
+      ],
+      "preserve_source_history": true,
+      "profile_reference_migration_required": false,
+      "profile_reference_review_required": false,
+      "rationale": "Same movement signal; compare range, equipment, laterality, demand and indication before merging. Different symptom/diagnosis labels retain separate profile ownership.",
+      "recommended_next_action": "Manual comparison only; preserve all identities and exact type/region boundaries. Shared mechanics alone is not clinical interchangeability.",
+      "signals": [
+        "same_name_across_distinct_regions"
+      ]
+    },
+    {
+      "canonical_identity_candidates_to_keep": [
+        "hand_unspecified_median_nerve_flossing"
+      ],
+      "canonical_region": null,
+      "canonical_regions": [
+        "hand",
+        "wrist"
+      ],
+      "classification": "intentionally_distinct",
+      "cluster_id": "duplicate_c8e070a124faed2a",
+      "confidence": "high",
+      "drill_ids": [
+        "hand_unspecified_median_nerve_flossing",
+        "wrist_unspecified_median_nerve_flossing"
+      ],
+      "ids_for_later_deprecation_review": [],
+      "injury_types": [
+        "unspecified"
+      ],
+      "preserve_source_history": true,
+      "profile_reference_migration_required": false,
+      "profile_reference_review_required": false,
+      "rationale": "Same movement signal; compare range, equipment, laterality, demand and indication before merging. Different symptom/diagnosis labels retain separate profile ownership.",
+      "recommended_next_action": "Manual comparison only; preserve all identities and exact type/region boundaries. Shared mechanics alone is not clinical interchangeability.",
+      "signals": [
+        "same_name_across_distinct_regions"
+      ]
+    },
+    {
+      "canonical_identity_candidates_to_keep": [
+        "hand_unspecified_ulnar_nerve_tensioners"
+      ],
+      "canonical_region": null,
+      "canonical_regions": [
+        "hand",
+        "wrist"
+      ],
+      "classification": "intentionally_distinct",
+      "cluster_id": "duplicate_0590f99186770e17",
+      "confidence": "high",
+      "drill_ids": [
+        "hand_unspecified_ulnar_nerve_tensioners",
+        "wrist_unspecified_ulnar_nerve_tensioners"
+      ],
+      "ids_for_later_deprecation_review": [],
+      "injury_types": [
+        "unspecified"
+      ],
+      "preserve_source_history": true,
+      "profile_reference_migration_required": false,
+      "profile_reference_review_required": false,
+      "rationale": "Same movement signal; compare range, equipment, laterality, demand and indication before merging. Different symptom/diagnosis labels retain separate profile ownership.",
+      "recommended_next_action": "Manual comparison only; preserve all identities and exact type/region boundaries. Shared mechanics alone is not clinical interchangeability.",
+      "signals": [
+        "same_name_across_distinct_regions"
+      ]
+    },
+    {
+      "canonical_identity_candidates_to_keep": [
+        "heel_tendonitis_toe_elevated_calf_raises"
+      ],
+      "canonical_region": "heel",
+      "canonical_regions": [
+        "heel"
+      ],
+      "classification": "near_duplicate",
+      "cluster_id": "duplicate_4f68e5bb0e02ed89",
+      "confidence": "requires_variant_review",
+      "drill_ids": [
+        "heel_tendonitis_toe_elevated_calf_raises",
+        "heel_unspecified_eccentric_heel_raises_3s_lowering"
+      ],
+      "ids_for_later_deprecation_review": [],
+      "injury_types": [
+        "tendonitis",
+        "unspecified"
+      ],
+      "preserve_source_history": true,
+      "profile_reference_migration_required": false,
+      "profile_reference_review_required": false,
+      "rationale": "Same movement signal; compare range, equipment, laterality, demand and indication before merging. Different symptom/diagnosis labels retain separate profile ownership.",
+      "recommended_next_action": "Manual comparison only; preserve all identities and exact type/region boundaries. Shared mechanics alone is not clinical interchangeability.",
+      "signals": [
+        "curated_movement_family"
+      ]
+    },
+    {
+      "canonical_identity_candidates_to_keep": [
+        "heel_unspecified_night_splint_neutral_position"
+      ],
+      "canonical_region": null,
+      "canonical_regions": [
+        "heel",
+        "shin"
+      ],
+      "classification": "intentionally_distinct",
+      "cluster_id": "duplicate_af4926faf5f4803f",
+      "confidence": "high",
+      "drill_ids": [
+        "heel_unspecified_night_splint_neutral_position",
+        "shin_unspecified_night_splint_neutral_position"
+      ],
+      "ids_for_later_deprecation_review": [],
+      "injury_types": [
+        "unspecified"
+      ],
+      "preserve_source_history": true,
+      "profile_reference_migration_required": false,
+      "profile_reference_review_required": false,
+      "rationale": "Same movement signal; compare range, equipment, laterality, demand and indication before merging. Different symptom/diagnosis labels retain separate profile ownership.",
+      "recommended_next_action": "Manual comparison only; preserve all identities and exact type/region boundaries. Shared mechanics alone is not clinical interchangeability.",
+      "signals": [
+        "same_name_across_distinct_regions"
+      ]
+    },
+    {
+      "canonical_identity_candidates_to_keep": [
+        "hip_abrasion_friction_offloading"
+      ],
+      "canonical_region": "hip",
+      "canonical_regions": [
+        "hip"
+      ],
+      "classification": "uncertain",
+      "cluster_id": "duplicate_703d20685fb97a23",
+      "confidence": "same_name_different_instructions_or_unverified_mechanics",
+      "drill_ids": [
+        "hip_abrasion_friction_offloading",
+        "hip_graze_friction_offloading"
+      ],
+      "ids_for_later_deprecation_review": [],
+      "injury_types": [
+        "abrasion",
+        "graze"
+      ],
+      "preserve_source_history": true,
+      "profile_reference_migration_required": false,
+      "profile_reference_review_required": false,
+      "rationale": "Same movement signal; compare range, equipment, laterality, demand and indication before merging. Different symptom/diagnosis labels retain separate profile ownership.",
+      "recommended_next_action": "Manual comparison only; preserve all identities and exact type/region boundaries. Shared mechanics alone is not clinical interchangeability.",
+      "signals": [
+        "normalized_instructions_without_camp_labels",
+        "normalized_name"
+      ]
+    },
+    {
+      "canonical_identity_candidates_to_keep": [
+        "jaw_cut_facial_wound_protection"
+      ],
+      "canonical_region": "jaw",
+      "canonical_regions": [
+        "jaw"
+      ],
+      "classification": "uncertain",
+      "cluster_id": "duplicate_b26108b352b9879e",
+      "confidence": "same_name_different_instructions_or_unverified_mechanics",
+      "drill_ids": [
+        "jaw_cut_facial_wound_protection",
+        "jaw_laceration_facial_wound_protection"
+      ],
+      "ids_for_later_deprecation_review": [],
+      "injury_types": [
+        "cut",
+        "laceration"
+      ],
+      "preserve_source_history": true,
+      "profile_reference_migration_required": false,
+      "profile_reference_review_required": false,
+      "rationale": "Same movement signal; compare range, equipment, laterality, demand and indication before merging. Different symptom/diagnosis labels retain separate profile ownership.",
+      "recommended_next_action": "Manual comparison only; preserve all identities and exact type/region boundaries. Shared mechanics alone is not clinical interchangeability.",
+      "signals": [
+        "normalized_instructions_without_camp_labels",
+        "normalized_name"
+      ]
+    },
+    {
+      "canonical_identity_candidates_to_keep": [
+        "knee_abrasion_joint_pad_protection"
+      ],
+      "canonical_region": "knee",
+      "canonical_regions": [
+        "knee"
+      ],
+      "classification": "uncertain",
+      "cluster_id": "duplicate_b472fc2dc9e9f5a5",
+      "confidence": "same_name_different_instructions_or_unverified_mechanics",
+      "drill_ids": [
+        "knee_abrasion_joint_pad_protection",
+        "knee_graze_joint_pad_protection"
+      ],
+      "ids_for_later_deprecation_review": [],
+      "injury_types": [
+        "abrasion",
+        "graze"
+      ],
+      "preserve_source_history": true,
+      "profile_reference_migration_required": false,
+      "profile_reference_review_required": false,
+      "rationale": "Same movement signal; compare range, equipment, laterality, demand and indication before merging. Different symptom/diagnosis labels retain separate profile ownership.",
+      "recommended_next_action": "Manual comparison only; preserve all identities and exact type/region boundaries. Shared mechanics alone is not clinical interchangeability.",
+      "signals": [
+        "normalized_instructions_without_camp_labels",
+        "normalized_name"
+      ]
+    },
+    {
+      "canonical_identity_candidates_to_keep": [
+        "knee_cut_no_reopen_protection"
+      ],
+      "canonical_region": "knee",
+      "canonical_regions": [
+        "knee"
+      ],
+      "classification": "uncertain",
+      "cluster_id": "duplicate_e11800c1a4b4c5cb",
+      "confidence": "same_name_different_instructions_or_unverified_mechanics",
+      "drill_ids": [
+        "knee_cut_no_reopen_protection",
+        "knee_laceration_no_reopen_protection"
+      ],
+      "ids_for_later_deprecation_review": [],
+      "injury_types": [
+        "cut",
+        "laceration"
+      ],
+      "preserve_source_history": true,
+      "profile_reference_migration_required": false,
+      "profile_reference_review_required": false,
+      "rationale": "Same movement signal; compare range, equipment, laterality, demand and indication before merging. Different symptom/diagnosis labels retain separate profile ownership.",
+      "recommended_next_action": "Manual comparison only; preserve all identities and exact type/region boundaries. Shared mechanics alone is not clinical interchangeability.",
+      "signals": [
+        "normalized_instructions_without_camp_labels",
+        "normalized_name"
+      ]
+    },
+    {
+      "canonical_identity_candidates_to_keep": [
+        "knee_instability_mini_band_lateral_walks"
+      ],
+      "canonical_region": "knee",
+      "canonical_regions": [
+        "knee"
+      ],
+      "classification": "exact_duplicate",
+      "cluster_id": "duplicate_7a20ff44ced41502",
+      "confidence": "high",
+      "drill_ids": [
+        "knee_instability_mini_band_lateral_walks",
+        "knee_instability_mini_band_lateral_walks_2"
+      ],
+      "ids_for_later_deprecation_review": [
+        "knee_instability_mini_band_lateral_walks_2"
+      ],
+      "injury_types": [
+        "instability"
+      ],
+      "preserve_source_history": true,
+      "profile_reference_migration_required": false,
+      "profile_reference_review_required": false,
+      "rationale": "Exact same region/type/content excluding ID.",
+      "recommended_next_action": "Review unsuffixed preferred identity; archive all provenance and migrate references only in a separate controlled PR.",
+      "signals": [
+        "normalized_instructions_without_camp_labels",
+        "same_region_type_and_content_except_id",
+        "same_region_type_core_name_equipment_variants"
+      ]
+    },
+    {
+      "canonical_identity_candidates_to_keep": [
+        "knee_instability_mini_band_lateral_walks"
+      ],
+      "canonical_region": "knee",
+      "canonical_regions": [
+        "knee"
+      ],
+      "classification": "near_duplicate",
+      "cluster_id": "duplicate_9ad597a46d9390e5",
+      "confidence": "requires_variant_review",
+      "drill_ids": [
+        "knee_instability_mini_band_lateral_walks",
+        "knee_instability_mini_band_lateral_walks_2",
+        "knee_strain_mini_band_lateral_walks",
+        "knee_strain_mini_band_lateral_walks_2"
+      ],
+      "ids_for_later_deprecation_review": [],
+      "injury_types": [
+        "instability",
+        "strain"
+      ],
+      "preserve_source_history": true,
+      "profile_reference_migration_required": false,
+      "profile_reference_review_required": false,
+      "rationale": "Same movement signal; compare range, equipment, laterality, demand and indication before merging. Different symptom/diagnosis labels retain separate profile ownership.",
+      "recommended_next_action": "Manual comparison only; preserve all identities and exact type/region boundaries. Shared mechanics alone is not clinical interchangeability.",
+      "signals": [
+        "normalized_name"
+      ]
+    },
+    {
+      "canonical_identity_candidates_to_keep": [
+        "knee_instability_reactive_knee_bounces_foam_pad"
+      ],
+      "canonical_region": "knee",
+      "canonical_regions": [
+        "knee"
+      ],
+      "classification": "exact_duplicate",
+      "cluster_id": "duplicate_7777e0f2610c5085",
+      "confidence": "high",
+      "drill_ids": [
+        "knee_instability_reactive_knee_bounces_foam_pad",
+        "knee_instability_reactive_knee_bounces_foam_pad_2"
+      ],
+      "ids_for_later_deprecation_review": [
+        "knee_instability_reactive_knee_bounces_foam_pad_2"
+      ],
+      "injury_types": [
+        "instability"
+      ],
+      "preserve_source_history": true,
+      "profile_reference_migration_required": false,
+      "profile_reference_review_required": false,
+      "rationale": "Exact same region/type/content excluding ID.",
+      "recommended_next_action": "Review unsuffixed preferred identity; archive all provenance and migrate references only in a separate controlled PR.",
+      "signals": [
+        "normalized_instructions_without_camp_labels",
+        "normalized_name",
+        "same_region_type_and_content_except_id",
+        "same_region_type_core_name_equipment_variants"
+      ]
+    },
+    {
+      "canonical_identity_candidates_to_keep": [
+        "knee_pain_massage_gun_quad_sweep_to_patella"
+      ],
+      "canonical_region": "knee",
+      "canonical_regions": [
+        "knee"
+      ],
+      "classification": "exact_duplicate",
+      "cluster_id": "duplicate_fe28f121e227b440",
+      "confidence": "high",
+      "drill_ids": [
+        "knee_pain_massage_gun_quad_sweep_to_patella",
+        "knee_pain_massage_gun_quad_sweep_to_patella_2"
+      ],
+      "ids_for_later_deprecation_review": [
+        "knee_pain_massage_gun_quad_sweep_to_patella_2"
+      ],
+      "injury_types": [
+        "pain"
+      ],
+      "preserve_source_history": true,
+      "profile_reference_migration_required": false,
+      "profile_reference_review_required": false,
+      "rationale": "Exact same region/type/content excluding ID.",
+      "recommended_next_action": "Review unsuffixed preferred identity; archive all provenance and migrate references only in a separate controlled PR.",
+      "signals": [
+        "normalized_instructions_without_camp_labels",
+        "normalized_name",
+        "same_region_type_and_content_except_id",
+        "same_region_type_core_name_equipment_variants"
+      ]
+    },
+    {
+      "canonical_identity_candidates_to_keep": [
+        "knee_pain_terminal_knee_extensions_tkes"
+      ],
+      "canonical_region": "knee",
+      "canonical_regions": [
+        "knee"
+      ],
+      "classification": "exact_duplicate",
+      "cluster_id": "duplicate_13d790b72cca1ffd",
+      "confidence": "high",
+      "drill_ids": [
+        "knee_pain_terminal_knee_extensions_tkes",
+        "knee_pain_terminal_knee_extensions_tkes_2"
+      ],
+      "ids_for_later_deprecation_review": [
+        "knee_pain_terminal_knee_extensions_tkes_2"
+      ],
+      "injury_types": [
+        "pain"
+      ],
+      "preserve_source_history": true,
+      "profile_reference_migration_required": false,
+      "profile_reference_review_required": false,
+      "rationale": "Exact same region/type/content excluding ID.",
+      "recommended_next_action": "Review unsuffixed preferred identity; archive all provenance and migrate references only in a separate controlled PR.",
+      "signals": [
+        "normalized_instructions_without_camp_labels",
+        "normalized_name",
+        "same_region_type_and_content_except_id",
+        "same_region_type_core_name_equipment_variants"
+      ]
+    },
+    {
+      "canonical_identity_candidates_to_keep": [
+        "knee_pain_terminal_knee_extensions_tkes"
+      ],
+      "canonical_region": "knee",
+      "canonical_regions": [
+        "knee"
+      ],
+      "classification": "near_duplicate",
+      "cluster_id": "duplicate_68b2aecdc1139258",
+      "confidence": "requires_variant_review",
+      "drill_ids": [
+        "knee_pain_terminal_knee_extensions_tkes",
+        "knee_pain_terminal_knee_extensions_tkes_2",
+        "knee_unspecified_single_leg_mini_band_terminal_knee_extension"
+      ],
+      "ids_for_later_deprecation_review": [],
+      "injury_types": [
+        "pain",
+        "unspecified"
+      ],
+      "preserve_source_history": true,
+      "profile_reference_migration_required": false,
+      "profile_reference_review_required": false,
+      "rationale": "Same movement signal; compare range, equipment, laterality, demand and indication before merging. Different symptom/diagnosis labels retain separate profile ownership.",
+      "recommended_next_action": "Manual comparison only; preserve all identities and exact type/region boundaries. Shared mechanics alone is not clinical interchangeability.",
+      "signals": [
+        "curated_movement_family"
+      ]
+    },
+    {
+      "canonical_identity_candidates_to_keep": [
+        "knee_strain_band_assisted_lateral_lunges"
+      ],
+      "canonical_region": "knee",
+      "canonical_regions": [
+        "knee"
+      ],
+      "classification": "exact_duplicate",
+      "cluster_id": "duplicate_29dd4d0247f2f221",
+      "confidence": "high",
+      "drill_ids": [
+        "knee_strain_band_assisted_lateral_lunges",
+        "knee_strain_band_assisted_lateral_lunges_2"
+      ],
+      "ids_for_later_deprecation_review": [
+        "knee_strain_band_assisted_lateral_lunges_2"
+      ],
+      "injury_types": [
+        "strain"
+      ],
+      "preserve_source_history": true,
+      "profile_reference_migration_required": false,
+      "profile_reference_review_required": false,
+      "rationale": "Exact same region/type/content excluding ID.",
+      "recommended_next_action": "Review unsuffixed preferred identity; archive all provenance and migrate references only in a separate controlled PR.",
+      "signals": [
+        "normalized_instructions_without_camp_labels",
+        "normalized_name",
+        "same_region_type_and_content_except_id",
+        "same_region_type_core_name_equipment_variants"
+      ]
+    },
+    {
+      "canonical_identity_candidates_to_keep": [
+        "knee_strain_lateral_step_downs"
+      ],
+      "canonical_region": "knee",
+      "canonical_regions": [
+        "knee"
+      ],
+      "classification": "exact_duplicate",
+      "cluster_id": "duplicate_bb33c7f1fbe85ffb",
+      "confidence": "high",
+      "drill_ids": [
+        "knee_strain_lateral_step_downs",
+        "knee_strain_lateral_step_downs_2"
+      ],
+      "ids_for_later_deprecation_review": [
+        "knee_strain_lateral_step_downs_2"
+      ],
+      "injury_types": [
+        "strain"
+      ],
+      "preserve_source_history": true,
+      "profile_reference_migration_required": false,
+      "profile_reference_review_required": false,
+      "rationale": "Exact same region/type/content excluding ID.",
+      "recommended_next_action": "Review unsuffixed preferred identity; archive all provenance and migrate references only in a separate controlled PR.",
+      "signals": [
+        "normalized_instructions_without_camp_labels",
+        "normalized_name",
+        "same_region_type_and_content_except_id",
+        "same_region_type_core_name_equipment_variants"
+      ]
+    },
+    {
+      "canonical_identity_candidates_to_keep": [
+        "knee_strain_mini_band_lateral_walks"
+      ],
+      "canonical_region": "knee",
+      "canonical_regions": [
+        "knee"
+      ],
+      "classification": "exact_duplicate",
+      "cluster_id": "duplicate_47b7b5d2c35493ff",
+      "confidence": "high",
+      "drill_ids": [
+        "knee_strain_mini_band_lateral_walks",
+        "knee_strain_mini_band_lateral_walks_2"
+      ],
+      "ids_for_later_deprecation_review": [
+        "knee_strain_mini_band_lateral_walks_2"
+      ],
+      "injury_types": [
+        "strain"
+      ],
+      "preserve_source_history": true,
+      "profile_reference_migration_required": false,
+      "profile_reference_review_required": false,
+      "rationale": "Exact same region/type/content excluding ID.",
+      "recommended_next_action": "Review unsuffixed preferred identity; archive all provenance and migrate references only in a separate controlled PR.",
+      "signals": [
+        "normalized_instructions_without_camp_labels",
+        "same_region_type_and_content_except_id",
+        "same_region_type_core_name_equipment_variants"
+      ]
+    },
+    {
+      "canonical_identity_candidates_to_keep": [
+        "knee_strain_wall_sit_short_arc"
+      ],
+      "canonical_region": "knee",
+      "canonical_regions": [
+        "knee"
+      ],
+      "classification": "exact_duplicate",
+      "cluster_id": "duplicate_871d5e51c1d5c72b",
+      "confidence": "high",
+      "drill_ids": [
+        "knee_strain_wall_sit_short_arc",
+        "knee_strain_wall_sit_short_arc_2"
+      ],
+      "ids_for_later_deprecation_review": [
+        "knee_strain_wall_sit_short_arc_2"
+      ],
+      "injury_types": [
+        "strain"
+      ],
+      "preserve_source_history": true,
+      "profile_reference_migration_required": false,
+      "profile_reference_review_required": false,
+      "rationale": "Exact same region/type/content excluding ID.",
+      "recommended_next_action": "Review unsuffixed preferred identity; archive all provenance and migrate references only in a separate controlled PR.",
+      "signals": [
+        "normalized_instructions_without_camp_labels",
+        "normalized_name",
+        "same_region_type_and_content_except_id",
+        "same_region_type_core_name_equipment_variants"
+      ]
+    },
+    {
+      "canonical_identity_candidates_to_keep": [
+        "knee_tightness_massage_gun_rectus_line"
+      ],
+      "canonical_region": "knee",
+      "canonical_regions": [
+        "knee"
+      ],
+      "classification": "exact_duplicate",
+      "cluster_id": "duplicate_32507f23a48b3bca",
+      "confidence": "high",
+      "drill_ids": [
+        "knee_tightness_massage_gun_rectus_line",
+        "knee_tightness_massage_gun_rectus_line_2"
+      ],
+      "ids_for_later_deprecation_review": [
+        "knee_tightness_massage_gun_rectus_line_2"
+      ],
+      "injury_types": [
+        "tightness"
+      ],
+      "preserve_source_history": true,
+      "profile_reference_migration_required": false,
+      "profile_reference_review_required": false,
+      "rationale": "Exact same region/type/content excluding ID.",
+      "recommended_next_action": "Review unsuffixed preferred identity; archive all provenance and migrate references only in a separate controlled PR.",
+      "signals": [
+        "normalized_instructions_without_camp_labels",
+        "normalized_name",
+        "same_region_type_and_content_except_id",
+        "same_region_type_core_name_equipment_variants"
+      ]
+    },
+    {
+      "canonical_identity_candidates_to_keep": [
+        "knee_tightness_quad_hip_flexor_stretch"
+      ],
+      "canonical_region": "knee",
+      "canonical_regions": [
+        "knee"
+      ],
+      "classification": "exact_duplicate",
+      "cluster_id": "duplicate_b0f804de7c5036d4",
+      "confidence": "high",
+      "drill_ids": [
+        "knee_tightness_quad_hip_flexor_stretch",
+        "knee_tightness_quad_hip_flexor_stretch_2"
+      ],
+      "ids_for_later_deprecation_review": [
+        "knee_tightness_quad_hip_flexor_stretch_2"
+      ],
+      "injury_types": [
+        "tightness"
+      ],
+      "preserve_source_history": true,
+      "profile_reference_migration_required": false,
+      "profile_reference_review_required": false,
+      "rationale": "Exact same region/type/content excluding ID.",
+      "recommended_next_action": "Review unsuffixed preferred identity; archive all provenance and migrate references only in a separate controlled PR.",
+      "signals": [
+        "normalized_instructions_without_camp_labels",
+        "normalized_name",
+        "same_region_type_and_content_except_id",
+        "same_region_type_core_name_equipment_variants"
+      ]
+    },
+    {
+      "canonical_identity_candidates_to_keep": [
+        "knee_unspecified_isometric_spanish_squat_30_flexion"
+      ],
+      "canonical_region": "knee",
+      "canonical_regions": [
+        "knee"
+      ],
+      "classification": "near_duplicate",
+      "cluster_id": "duplicate_457819e4b604fe4a",
+      "confidence": "requires_variant_review",
+      "drill_ids": [
+        "knee_unspecified_isometric_spanish_squat_30_flexion",
+        "knee_unspecified_single_leg_spanish_squat_isometric"
+      ],
+      "ids_for_later_deprecation_review": [],
+      "injury_types": [
+        "unspecified"
+      ],
+      "preserve_source_history": true,
+      "profile_reference_migration_required": false,
+      "profile_reference_review_required": false,
+      "rationale": "Same movement signal; compare range, equipment, laterality, demand and indication before merging. Different symptom/diagnosis labels retain separate profile ownership.",
+      "recommended_next_action": "Manual comparison only; preserve all identities and exact type/region boundaries. Shared mechanics alone is not clinical interchangeability.",
+      "signals": [
+        "curated_movement_family"
+      ]
+    },
+    {
+      "canonical_identity_candidates_to_keep": [
+        "lower_back_instability_side_plank_march"
+      ],
+      "canonical_region": null,
+      "canonical_regions": [
+        "lower back",
+        "obliques"
+      ],
+      "classification": "intentionally_distinct",
+      "cluster_id": "duplicate_455f98559a4bad29",
+      "confidence": "high",
+      "drill_ids": [
+        "lower_back_instability_side_plank_march",
+        "obliques_tightness_side_plank_march"
+      ],
+      "ids_for_later_deprecation_review": [],
+      "injury_types": [
+        "instability",
+        "tightness"
+      ],
+      "preserve_source_history": true,
+      "profile_reference_migration_required": false,
+      "profile_reference_review_required": false,
+      "rationale": "Same movement signal; compare range, equipment, laterality, demand and indication before merging. Different symptom/diagnosis labels retain separate profile ownership.",
+      "recommended_next_action": "Manual comparison only; preserve all identities and exact type/region boundaries. Shared mechanics alone is not clinical interchangeability.",
+      "signals": [
+        "same_name_across_distinct_regions"
+      ]
+    },
+    {
+      "canonical_identity_candidates_to_keep": [
+        "lower_back_pain_supine_90_90_breathing"
+      ],
+      "canonical_region": "lower back",
+      "canonical_regions": [
+        "lower back"
+      ],
+      "classification": "uncertain",
+      "cluster_id": "duplicate_3b6dc3e71e9af706",
+      "confidence": "same_name_different_instructions_or_unverified_mechanics",
+      "drill_ids": [
+        "lower_back_pain_supine_90_90_breathing",
+        "lower_back_pain_supine_90_90_breathing_2"
+      ],
+      "ids_for_later_deprecation_review": [],
+      "injury_types": [
+        "pain"
+      ],
+      "preserve_source_history": true,
+      "profile_reference_migration_required": false,
+      "profile_reference_review_required": false,
+      "rationale": "Same movement signal; compare range, equipment, laterality, demand and indication before merging. Different symptom/diagnosis labels retain separate profile ownership.",
+      "recommended_next_action": "Manual comparison only; preserve all identities and exact type/region boundaries. Shared mechanics alone is not clinical interchangeability.",
+      "signals": [
+        "normalized_name",
+        "same_region_type_core_name_equipment_variants"
+      ]
+    },
+    {
+      "canonical_identity_candidates_to_keep": [
+        "lower_back_pain_supine_90_90_breathing"
+      ],
+      "canonical_region": "lower back",
+      "canonical_regions": [
+        "lower back"
+      ],
+      "classification": "near_duplicate",
+      "cluster_id": "duplicate_a9712999c24eaf05",
+      "confidence": "requires_variant_review",
+      "drill_ids": [
+        "lower_back_pain_supine_90_90_breathing",
+        "lower_back_pain_supine_90_90_breathing_2",
+        "lower_back_soreness_90_90_hip_lift_breathing",
+        "lower_back_swelling_90_90_breathing_with_feet_elevated"
+      ],
+      "ids_for_later_deprecation_review": [],
+      "injury_types": [
+        "pain",
+        "soreness",
+        "swelling"
+      ],
+      "preserve_source_history": true,
+      "profile_reference_migration_required": false,
+      "profile_reference_review_required": false,
+      "rationale": "Same movement signal; compare range, equipment, laterality, demand and indication before merging. Different symptom/diagnosis labels retain separate profile ownership.",
+      "recommended_next_action": "Manual comparison only; preserve all identities and exact type/region boundaries. Shared mechanics alone is not clinical interchangeability.",
+      "signals": [
+        "curated_movement_family"
+      ]
+    },
+    {
+      "canonical_identity_candidates_to_keep": [
+        "lower_back_pain_wall_dead_bug_iso_hold"
+      ],
+      "canonical_region": "lower back",
+      "canonical_regions": [
+        "lower back"
+      ],
+      "classification": "near_duplicate",
+      "cluster_id": "duplicate_fb1ea0b84803147b",
+      "confidence": "requires_variant_review",
+      "drill_ids": [
+        "lower_back_pain_wall_dead_bug_iso_hold",
+        "lower_back_pain_wall_dead_bug_with_iso_hold"
+      ],
+      "ids_for_later_deprecation_review": [],
+      "injury_types": [
+        "pain"
+      ],
+      "preserve_source_history": true,
+      "profile_reference_migration_required": false,
+      "profile_reference_review_required": false,
+      "rationale": "Same movement signal; compare range, equipment, laterality, demand and indication before merging. Different symptom/diagnosis labels retain separate profile ownership.",
+      "recommended_next_action": "Manual comparison only; preserve all identities and exact type/region boundaries. Shared mechanics alone is not clinical interchangeability.",
+      "signals": [
+        "curated_movement_family",
+        "same_region_type_core_name_equipment_variants"
+      ]
+    },
+    {
+      "canonical_identity_candidates_to_keep": [
+        "lower_back_tendonitis_reverse_hyperextensions_banded"
+      ],
+      "canonical_region": "lower back",
+      "canonical_regions": [
+        "lower back"
+      ],
+      "classification": "near_duplicate",
+      "cluster_id": "duplicate_056c2cbdfd198fb4",
+      "confidence": "requires_variant_review",
+      "drill_ids": [
+        "lower_back_tendonitis_reverse_hyperextensions_banded",
+        "lower_back_tendonitis_reverse_hypers_bodyweight_or_band",
+        "lower_back_unspecified_reverse_hyperextension_isometric_hold"
+      ],
+      "ids_for_later_deprecation_review": [],
+      "injury_types": [
+        "tendonitis",
+        "unspecified"
+      ],
+      "preserve_source_history": true,
+      "profile_reference_migration_required": false,
+      "profile_reference_review_required": false,
+      "rationale": "Same movement signal; compare range, equipment, laterality, demand and indication before merging. Different symptom/diagnosis labels retain separate profile ownership.",
+      "recommended_next_action": "Manual comparison only; preserve all identities and exact type/region boundaries. Shared mechanics alone is not clinical interchangeability.",
+      "signals": [
+        "curated_movement_family"
+      ]
+    },
+    {
+      "canonical_identity_candidates_to_keep": [
+        "lower_back_tightness_child_s_pose_with_side_reach"
+      ],
+      "canonical_region": "lower back",
+      "canonical_regions": [
+        "lower back"
+      ],
+      "classification": "uncertain",
+      "cluster_id": "duplicate_d49884ca5c8c3624",
+      "confidence": "same_name_different_instructions_or_unverified_mechanics",
+      "drill_ids": [
+        "lower_back_tightness_child_s_pose_with_side_reach",
+        "lower_back_tightness_child_s_pose_with_side_reach_2"
+      ],
+      "ids_for_later_deprecation_review": [],
+      "injury_types": [
+        "tightness"
+      ],
+      "preserve_source_history": true,
+      "profile_reference_migration_required": false,
+      "profile_reference_review_required": false,
+      "rationale": "Same movement signal; compare range, equipment, laterality, demand and indication before merging. Different symptom/diagnosis labels retain separate profile ownership.",
+      "recommended_next_action": "Manual comparison only; preserve all identities and exact type/region boundaries. Shared mechanics alone is not clinical interchangeability.",
+      "signals": [
+        "normalized_name",
+        "same_region_type_core_name_equipment_variants"
+      ]
+    },
+    {
+      "canonical_identity_candidates_to_keep": [
+        "lower_back_tightness_massage_gun_lumbar_sweep"
+      ],
+      "canonical_region": "lower back",
+      "canonical_regions": [
+        "lower back"
+      ],
+      "classification": "uncertain",
+      "cluster_id": "duplicate_0ae655f56ce86361",
+      "confidence": "same_name_different_instructions_or_unverified_mechanics",
+      "drill_ids": [
+        "lower_back_tightness_massage_gun_lumbar_sweep",
+        "lower_back_tightness_massage_gun_lumbar_sweep_2"
+      ],
+      "ids_for_later_deprecation_review": [],
+      "injury_types": [
+        "tightness"
+      ],
+      "preserve_source_history": true,
+      "profile_reference_migration_required": false,
+      "profile_reference_review_required": false,
+      "rationale": "Same movement signal; compare range, equipment, laterality, demand and indication before merging. Different symptom/diagnosis labels retain separate profile ownership.",
+      "recommended_next_action": "Manual comparison only; preserve all identities and exact type/region boundaries. Shared mechanics alone is not clinical interchangeability.",
+      "signals": [
+        "normalized_name",
+        "same_region_type_core_name_equipment_variants"
+      ]
+    },
+    {
+      "canonical_identity_candidates_to_keep": [
+        "neck_abrasion_debride_clean_thoroughly"
+      ],
+      "canonical_region": "neck",
+      "canonical_regions": [
+        "neck"
+      ],
+      "classification": "uncertain",
+      "cluster_id": "duplicate_cff57f9e4bb31702",
+      "confidence": "same_name_different_instructions_or_unverified_mechanics",
+      "drill_ids": [
+        "neck_abrasion_debride_clean_thoroughly",
+        "neck_graze_debride_clean_thoroughly"
+      ],
+      "ids_for_later_deprecation_review": [],
+      "injury_types": [
+        "abrasion",
+        "graze"
+      ],
+      "preserve_source_history": true,
+      "profile_reference_migration_required": false,
+      "profile_reference_review_required": false,
+      "rationale": "Same movement signal; compare range, equipment, laterality, demand and indication before merging. Different symptom/diagnosis labels retain separate profile ownership.",
+      "recommended_next_action": "Manual comparison only; preserve all identities and exact type/region boundaries. Shared mechanics alone is not clinical interchangeability.",
+      "signals": [
+        "normalized_instructions_without_camp_labels",
+        "normalized_name"
+      ]
+    },
+    {
+      "canonical_identity_candidates_to_keep": [
+        "neck_cut_clean_approximate_edges"
+      ],
+      "canonical_region": "neck",
+      "canonical_regions": [
+        "neck"
+      ],
+      "classification": "uncertain",
+      "cluster_id": "duplicate_e58958f0f02b7fab",
+      "confidence": "same_name_different_instructions_or_unverified_mechanics",
+      "drill_ids": [
+        "neck_cut_clean_approximate_edges",
+        "neck_laceration_clean_approximate_edges"
+      ],
+      "ids_for_later_deprecation_review": [],
+      "injury_types": [
+        "cut",
+        "laceration"
+      ],
+      "preserve_source_history": true,
+      "profile_reference_migration_required": false,
+      "profile_reference_review_required": false,
+      "rationale": "Same movement signal; compare range, equipment, laterality, demand and indication before merging. Different symptom/diagnosis labels retain separate profile ownership.",
+      "recommended_next_action": "Manual comparison only; preserve all identities and exact type/region boundaries. Shared mechanics alone is not clinical interchangeability.",
+      "signals": [
+        "normalized_instructions_without_camp_labels",
+        "normalized_name"
+      ]
+    },
+    {
+      "canonical_identity_candidates_to_keep": [
+        "neck_cut_no_reopen_protection"
+      ],
+      "canonical_region": "neck",
+      "canonical_regions": [
+        "neck"
+      ],
+      "classification": "uncertain",
+      "cluster_id": "duplicate_a347a21c79869319",
+      "confidence": "same_name_different_instructions_or_unverified_mechanics",
+      "drill_ids": [
+        "neck_cut_no_reopen_protection",
+        "neck_laceration_no_reopen_protection"
+      ],
+      "ids_for_later_deprecation_review": [],
+      "injury_types": [
+        "cut",
+        "laceration"
+      ],
+      "preserve_source_history": true,
+      "profile_reference_migration_required": false,
+      "profile_reference_review_required": false,
+      "rationale": "Same movement signal; compare range, equipment, laterality, demand and indication before merging. Different symptom/diagnosis labels retain separate profile ownership.",
+      "recommended_next_action": "Manual comparison only; preserve all identities and exact type/region boundaries. Shared mechanics alone is not clinical interchangeability.",
+      "signals": [
+        "normalized_instructions_without_camp_labels",
+        "normalized_name"
+      ]
+    },
+    {
+      "canonical_identity_candidates_to_keep": [
+        "neck_pain_wall_supported_neck_isometrics"
+      ],
+      "canonical_region": "neck",
+      "canonical_regions": [
+        "neck"
+      ],
+      "classification": "near_duplicate",
+      "cluster_id": "duplicate_cc93e29f377d371d",
+      "confidence": "requires_variant_review",
+      "drill_ids": [
+        "neck_pain_wall_supported_neck_isometrics",
+        "neck_sprain_banded_neck_isometrics_4_way",
+        "neck_strain_neck_clock_isometrics",
+        "neck_unspecified_side_lying_neck_isometrics_hand_resistance"
+      ],
+      "ids_for_later_deprecation_review": [],
+      "injury_types": [
+        "pain",
+        "sprain",
+        "strain",
+        "unspecified"
+      ],
+      "preserve_source_history": true,
+      "profile_reference_migration_required": false,
+      "profile_reference_review_required": false,
+      "rationale": "Same movement signal; compare range, equipment, laterality, demand and indication before merging. Different symptom/diagnosis labels retain separate profile ownership.",
+      "recommended_next_action": "Manual comparison only; preserve all identities and exact type/region boundaries. Shared mechanics alone is not clinical interchangeability.",
+      "signals": [
+        "curated_movement_family"
+      ]
+    },
+    {
+      "canonical_identity_candidates_to_keep": [
+        "obliques_swelling_90_90_breathing_with_lateral_expansion"
+      ],
+      "canonical_region": "obliques",
+      "canonical_regions": [
+        "obliques"
+      ],
+      "classification": "near_duplicate",
+      "cluster_id": "duplicate_925e3f406d8590b2",
+      "confidence": "requires_variant_review",
+      "drill_ids": [
+        "obliques_swelling_90_90_breathing_with_lateral_expansion",
+        "obliques_unspecified_supine_diaphragmatic_breathing_with_rib_expansion"
+      ],
+      "ids_for_later_deprecation_review": [],
+      "injury_types": [
+        "swelling",
+        "unspecified"
+      ],
+      "preserve_source_history": true,
+      "profile_reference_migration_required": false,
+      "profile_reference_review_required": false,
+      "rationale": "Same movement signal; compare range, equipment, laterality, demand and indication before merging. Different symptom/diagnosis labels retain separate profile ownership.",
+      "recommended_next_action": "Manual comparison only; preserve all identities and exact type/region boundaries. Shared mechanics alone is not clinical interchangeability.",
+      "signals": [
+        "curated_movement_family"
+      ]
+    },
+    {
+      "canonical_identity_candidates_to_keep": [
+        "quads_pain_mini_band_tkes_terminal_knee_extensions"
+      ],
+      "canonical_region": "quads",
+      "canonical_regions": [
+        "quads"
+      ],
+      "classification": "near_duplicate",
+      "cluster_id": "duplicate_2bab2601cd5a3bf9",
+      "confidence": "requires_variant_review",
+      "drill_ids": [
+        "quads_pain_mini_band_tkes_terminal_knee_extensions",
+        "quads_unspecified_terminal_knee_extensions_band_resisted",
+        "quads_unspecified_tke_terminal_knee_extension_walks"
+      ],
+      "ids_for_later_deprecation_review": [],
+      "injury_types": [
+        "pain",
+        "unspecified"
+      ],
+      "preserve_source_history": true,
+      "profile_reference_migration_required": false,
+      "profile_reference_review_required": false,
+      "rationale": "Same movement signal; compare range, equipment, laterality, demand and indication before merging. Different symptom/diagnosis labels retain separate profile ownership.",
+      "recommended_next_action": "Manual comparison only; preserve all identities and exact type/region boundaries. Shared mechanics alone is not clinical interchangeability.",
+      "signals": [
+        "curated_movement_family"
+      ]
+    },
+    {
+      "canonical_identity_candidates_to_keep": [
+        "shin_abrasion_shin_sleeve_protection"
+      ],
+      "canonical_region": "shin",
+      "canonical_regions": [
+        "shin"
+      ],
+      "classification": "uncertain",
+      "cluster_id": "duplicate_b1b12d319da776d5",
+      "confidence": "same_name_different_instructions_or_unverified_mechanics",
+      "drill_ids": [
+        "shin_abrasion_shin_sleeve_protection",
+        "shin_blister_shin_sleeve_protection",
+        "shin_graze_shin_sleeve_protection"
+      ],
+      "ids_for_later_deprecation_review": [],
+      "injury_types": [
+        "abrasion",
+        "blister",
+        "graze"
+      ],
+      "preserve_source_history": true,
+      "profile_reference_migration_required": false,
+      "profile_reference_review_required": false,
+      "rationale": "Same movement signal; compare range, equipment, laterality, demand and indication before merging. Different symptom/diagnosis labels retain separate profile ownership.",
+      "recommended_next_action": "Manual comparison only; preserve all identities and exact type/region boundaries. Shared mechanics alone is not clinical interchangeability.",
+      "signals": [
+        "normalized_instructions_without_camp_labels",
+        "normalized_name"
+      ]
+    },
+    {
+      "canonical_identity_candidates_to_keep": [
+        "shin_blister_fix_the_friction_source"
+      ],
+      "canonical_region": null,
+      "canonical_regions": [
+        "shin",
+        "unspecified"
+      ],
+      "classification": "intentionally_distinct",
+      "cluster_id": "duplicate_8cf785473665a373",
+      "confidence": "high",
+      "drill_ids": [
+        "shin_blister_fix_the_friction_source",
+        "unspecified_blister_fix_the_friction_source"
+      ],
+      "ids_for_later_deprecation_review": [],
+      "injury_types": [
+        "blister"
+      ],
+      "preserve_source_history": true,
+      "profile_reference_migration_required": false,
+      "profile_reference_review_required": false,
+      "rationale": "Same movement signal; compare range, equipment, laterality, demand and indication before merging. Different symptom/diagnosis labels retain separate profile ownership.",
+      "recommended_next_action": "Manual comparison only; preserve all identities and exact type/region boundaries. Shared mechanics alone is not clinical interchangeability.",
+      "signals": [
+        "same_name_across_distinct_regions"
+      ]
+    },
+    {
+      "canonical_identity_candidates_to_keep": [
+        "shin_contusion_foam_roller_circles_mid_shin"
+      ],
+      "canonical_region": "shin",
+      "canonical_regions": [
+        "shin"
+      ],
+      "classification": "exact_duplicate",
+      "cluster_id": "duplicate_6e3990096568ce6a",
+      "confidence": "high",
+      "drill_ids": [
+        "shin_contusion_foam_roller_circles_mid_shin",
+        "shin_contusion_foam_roller_circles_mid_shin_2"
+      ],
+      "ids_for_later_deprecation_review": [
+        "shin_contusion_foam_roller_circles_mid_shin_2"
+      ],
+      "injury_types": [
+        "contusion"
+      ],
+      "preserve_source_history": true,
+      "profile_reference_migration_required": false,
+      "profile_reference_review_required": false,
+      "rationale": "Exact same region/type/content excluding ID.",
+      "recommended_next_action": "Review unsuffixed preferred identity; archive all provenance and migrate references only in a separate controlled PR.",
+      "signals": [
+        "normalized_instructions_without_camp_labels",
+        "normalized_name",
+        "same_region_type_and_content_except_id",
+        "same_region_type_core_name_equipment_variants"
+      ]
+    },
+    {
+      "canonical_identity_candidates_to_keep": [
+        "shin_contusion_light_shin_percussion"
+      ],
+      "canonical_region": "shin",
+      "canonical_regions": [
+        "shin"
+      ],
+      "classification": "exact_duplicate",
+      "cluster_id": "duplicate_19be594376540015",
+      "confidence": "high",
+      "drill_ids": [
+        "shin_contusion_light_shin_percussion",
+        "shin_contusion_light_shin_percussion_2"
+      ],
+      "ids_for_later_deprecation_review": [
+        "shin_contusion_light_shin_percussion_2"
+      ],
+      "injury_types": [
+        "contusion"
+      ],
+      "preserve_source_history": true,
+      "profile_reference_migration_required": false,
+      "profile_reference_review_required": false,
+      "rationale": "Exact same region/type/content excluding ID.",
+      "recommended_next_action": "Review unsuffixed preferred identity; archive all provenance and migrate references only in a separate controlled PR.",
+      "signals": [
+        "normalized_instructions_without_camp_labels",
+        "normalized_name",
+        "same_region_type_and_content_except_id"
+      ]
+    },
+    {
+      "canonical_identity_candidates_to_keep": [
+        "shin_contusion_tap_drill_with_soft_stick"
+      ],
+      "canonical_region": "shin",
+      "canonical_regions": [
+        "shin"
+      ],
+      "classification": "exact_duplicate",
+      "cluster_id": "duplicate_f7313a792029267d",
+      "confidence": "high",
+      "drill_ids": [
+        "shin_contusion_tap_drill_with_soft_stick",
+        "shin_contusion_tap_drill_with_soft_stick_2"
+      ],
+      "ids_for_later_deprecation_review": [
+        "shin_contusion_tap_drill_with_soft_stick_2"
+      ],
+      "injury_types": [
+        "contusion"
+      ],
+      "preserve_source_history": true,
+      "profile_reference_migration_required": false,
+      "profile_reference_review_required": false,
+      "rationale": "Exact same region/type/content excluding ID.",
+      "recommended_next_action": "Review unsuffixed preferred identity; archive all provenance and migrate references only in a separate controlled PR.",
+      "signals": [
+        "normalized_instructions_without_camp_labels",
+        "normalized_name",
+        "same_region_type_and_content_except_id",
+        "same_region_type_core_name_equipment_variants"
+      ]
+    },
+    {
+      "canonical_identity_candidates_to_keep": [
+        "shin_contusion_wall_shin_slides"
+      ],
+      "canonical_region": "shin",
+      "canonical_regions": [
+        "shin"
+      ],
+      "classification": "exact_duplicate",
+      "cluster_id": "duplicate_d6050aef0b34fa3a",
+      "confidence": "high",
+      "drill_ids": [
+        "shin_contusion_wall_shin_slides",
+        "shin_contusion_wall_shin_slides_2"
+      ],
+      "ids_for_later_deprecation_review": [
+        "shin_contusion_wall_shin_slides_2"
+      ],
+      "injury_types": [
+        "contusion"
+      ],
+      "preserve_source_history": true,
+      "profile_reference_migration_required": false,
+      "profile_reference_review_required": false,
+      "rationale": "Exact same region/type/content excluding ID.",
+      "recommended_next_action": "Review unsuffixed preferred identity; archive all provenance and migrate references only in a separate controlled PR.",
+      "signals": [
+        "normalized_instructions_without_camp_labels",
+        "normalized_name",
+        "same_region_type_and_content_except_id",
+        "same_region_type_core_name_equipment_variants"
+      ]
+    },
+    {
+      "canonical_identity_candidates_to_keep": [
+        "shin_cut_waterproof_occlusive_dressing"
+      ],
+      "canonical_region": "shin",
+      "canonical_regions": [
+        "shin"
+      ],
+      "classification": "uncertain",
+      "cluster_id": "duplicate_36840cd36c1e5213",
+      "confidence": "same_name_different_instructions_or_unverified_mechanics",
+      "drill_ids": [
+        "shin_cut_waterproof_occlusive_dressing",
+        "shin_laceration_waterproof_occlusive_dressing"
+      ],
+      "ids_for_later_deprecation_review": [],
+      "injury_types": [
+        "cut",
+        "laceration"
+      ],
+      "preserve_source_history": true,
+      "profile_reference_migration_required": false,
+      "profile_reference_review_required": false,
+      "rationale": "Same movement signal; compare range, equipment, laterality, demand and indication before merging. Different symptom/diagnosis labels retain separate profile ownership.",
+      "recommended_next_action": "Manual comparison only; preserve all identities and exact type/region boundaries. Shared mechanics alone is not clinical interchangeability.",
+      "signals": [
+        "normalized_instructions_without_camp_labels",
+        "normalized_name"
+      ]
+    },
+    {
+      "canonical_identity_candidates_to_keep": [
+        "shin_pain_heel_walks"
+      ],
+      "canonical_region": "shin",
+      "canonical_regions": [
+        "shin"
+      ],
+      "classification": "exact_duplicate",
+      "cluster_id": "duplicate_3ff5dcad88f27636",
+      "confidence": "high",
+      "drill_ids": [
+        "shin_pain_heel_walks",
+        "shin_pain_heel_walks_2"
+      ],
+      "ids_for_later_deprecation_review": [
+        "shin_pain_heel_walks_2"
+      ],
+      "injury_types": [
+        "pain"
+      ],
+      "preserve_source_history": true,
+      "profile_reference_migration_required": false,
+      "profile_reference_review_required": false,
+      "rationale": "Exact same region/type/content excluding ID.",
+      "recommended_next_action": "Review unsuffixed preferred identity; archive all provenance and migrate references only in a separate controlled PR.",
+      "signals": [
+        "normalized_instructions_without_camp_labels",
+        "normalized_name",
+        "same_region_type_and_content_except_id"
+      ]
+    },
+    {
+      "canonical_identity_candidates_to_keep": [
+        "shin_pain_isometric_toe_lift_holds"
+      ],
+      "canonical_region": "shin",
+      "canonical_regions": [
+        "shin"
+      ],
+      "classification": "exact_duplicate",
+      "cluster_id": "duplicate_e706a3abcbb6f640",
+      "confidence": "high",
+      "drill_ids": [
+        "shin_pain_isometric_toe_lift_holds",
+        "shin_pain_isometric_toe_lift_holds_2"
+      ],
+      "ids_for_later_deprecation_review": [
+        "shin_pain_isometric_toe_lift_holds_2"
+      ],
+      "injury_types": [
+        "pain"
+      ],
+      "preserve_source_history": true,
+      "profile_reference_migration_required": false,
+      "profile_reference_review_required": false,
+      "rationale": "Exact same region/type/content excluding ID.",
+      "recommended_next_action": "Review unsuffixed preferred identity; archive all provenance and migrate references only in a separate controlled PR.",
+      "signals": [
+        "normalized_instructions_without_camp_labels",
+        "normalized_name",
+        "same_region_type_and_content_except_id",
+        "same_region_type_core_name_equipment_variants"
+      ]
+    },
+    {
+      "canonical_identity_candidates_to_keep": [
+        "shin_tendonitis_massage_gun_sweep_tibialis_line"
+      ],
+      "canonical_region": "shin",
+      "canonical_regions": [
+        "shin"
+      ],
+      "classification": "exact_duplicate",
+      "cluster_id": "duplicate_9f3bc128ca9bbd6e",
+      "confidence": "high",
+      "drill_ids": [
+        "shin_tendonitis_massage_gun_sweep_tibialis_line",
+        "shin_tendonitis_massage_gun_sweep_tibialis_line_2"
+      ],
+      "ids_for_later_deprecation_review": [
+        "shin_tendonitis_massage_gun_sweep_tibialis_line_2"
+      ],
+      "injury_types": [
+        "tendonitis"
+      ],
+      "preserve_source_history": true,
+      "profile_reference_migration_required": false,
+      "profile_reference_review_required": false,
+      "rationale": "Exact same region/type/content excluding ID.",
+      "recommended_next_action": "Review unsuffixed preferred identity; archive all provenance and migrate references only in a separate controlled PR.",
+      "signals": [
+        "normalized_instructions_without_camp_labels",
+        "normalized_name",
+        "same_region_type_and_content_except_id",
+        "same_region_type_core_name_equipment_variants"
+      ]
+    },
+    {
+      "canonical_identity_candidates_to_keep": [
+        "shin_tendonitis_wall_toe_raises"
+      ],
+      "canonical_region": "shin",
+      "canonical_regions": [
+        "shin"
+      ],
+      "classification": "exact_duplicate",
+      "cluster_id": "duplicate_5cb08ff30235a4e9",
+      "confidence": "high",
+      "drill_ids": [
+        "shin_tendonitis_wall_toe_raises",
+        "shin_tendonitis_wall_toe_raises_2"
+      ],
+      "ids_for_later_deprecation_review": [
+        "shin_tendonitis_wall_toe_raises_2"
+      ],
+      "injury_types": [
+        "tendonitis"
+      ],
+      "preserve_source_history": true,
+      "profile_reference_migration_required": false,
+      "profile_reference_review_required": false,
+      "rationale": "Exact same region/type/content excluding ID.",
+      "recommended_next_action": "Review unsuffixed preferred identity; archive all provenance and migrate references only in a separate controlled PR.",
+      "signals": [
+        "normalized_instructions_without_camp_labels",
+        "normalized_name",
+        "same_region_type_and_content_except_id",
+        "same_region_type_core_name_equipment_variants"
+      ]
+    },
+    {
+      "canonical_identity_candidates_to_keep": [
+        "shin_tightness_lacrosse_ball_glide_tibialis"
+      ],
+      "canonical_region": "shin",
+      "canonical_regions": [
+        "shin"
+      ],
+      "classification": "exact_duplicate",
+      "cluster_id": "duplicate_1aae07215c8ee438",
+      "confidence": "high",
+      "drill_ids": [
+        "shin_tightness_lacrosse_ball_glide_tibialis",
+        "shin_tightness_lacrosse_ball_glide_tibialis_2"
+      ],
+      "ids_for_later_deprecation_review": [
+        "shin_tightness_lacrosse_ball_glide_tibialis_2"
+      ],
+      "injury_types": [
+        "tightness"
+      ],
+      "preserve_source_history": true,
+      "profile_reference_migration_required": false,
+      "profile_reference_review_required": false,
+      "rationale": "Exact same region/type/content excluding ID.",
+      "recommended_next_action": "Review unsuffixed preferred identity; archive all provenance and migrate references only in a separate controlled PR.",
+      "signals": [
+        "normalized_instructions_without_camp_labels",
+        "normalized_name",
+        "same_region_type_and_content_except_id",
+        "same_region_type_core_name_equipment_variants"
+      ]
+    },
+    {
+      "canonical_identity_candidates_to_keep": [
+        "shin_tightness_seated_anterior_shin_stretch"
+      ],
+      "canonical_region": "shin",
+      "canonical_regions": [
+        "shin"
+      ],
+      "classification": "exact_duplicate",
+      "cluster_id": "duplicate_d3feb528c1449a0e",
+      "confidence": "high",
+      "drill_ids": [
+        "shin_tightness_seated_anterior_shin_stretch",
+        "shin_tightness_seated_anterior_shin_stretch_2"
+      ],
+      "ids_for_later_deprecation_review": [
+        "shin_tightness_seated_anterior_shin_stretch_2"
+      ],
+      "injury_types": [
+        "tightness"
+      ],
+      "preserve_source_history": true,
+      "profile_reference_migration_required": false,
+      "profile_reference_review_required": false,
+      "rationale": "Exact same region/type/content excluding ID.",
+      "recommended_next_action": "Review unsuffixed preferred identity; archive all provenance and migrate references only in a separate controlled PR.",
+      "signals": [
+        "normalized_instructions_without_camp_labels",
+        "normalized_name",
+        "same_region_type_and_content_except_id",
+        "same_region_type_core_name_equipment_variants"
+      ]
+    },
+    {
+      "canonical_identity_candidates_to_keep": [
+        "shoulder_contusion_gentle_band_pull_aparts"
+      ],
+      "canonical_region": "shoulder",
+      "canonical_regions": [
+        "shoulder"
+      ],
+      "classification": "near_duplicate",
+      "cluster_id": "duplicate_e26f775839f256ec",
+      "confidence": "requires_variant_review",
+      "drill_ids": [
+        "shoulder_contusion_gentle_band_pull_aparts",
+        "shoulder_hyperextension_resistance_band_reverse_fly"
+      ],
+      "ids_for_later_deprecation_review": [],
+      "injury_types": [
+        "contusion",
+        "hyperextension"
+      ],
+      "preserve_source_history": true,
+      "profile_reference_migration_required": false,
+      "profile_reference_review_required": false,
+      "rationale": "Same movement signal; compare range, equipment, laterality, demand and indication before merging. Different symptom/diagnosis labels retain separate profile ownership.",
+      "recommended_next_action": "Manual comparison only; preserve all identities and exact type/region boundaries. Shared mechanics alone is not clinical interchangeability.",
+      "signals": [
+        "curated_movement_family"
+      ]
+    },
+    {
+      "canonical_identity_candidates_to_keep": [
+        "shoulder_sprain_reviewed_restore",
+        "shoulder_strain_reviewed_restore"
+      ],
+      "canonical_region": "shoulder",
+      "canonical_regions": [
+        "shoulder"
+      ],
+      "classification": "intentionally_distinct",
+      "cluster_id": "duplicate_af8667ba4b527a3a",
+      "confidence": "high",
+      "drill_ids": [
+        "shoulder_sprain_reviewed_restore",
+        "shoulder_strain_reviewed_restore"
+      ],
+      "ids_for_later_deprecation_review": [],
+      "injury_types": [
+        "sprain",
+        "strain"
+      ],
+      "preserve_source_history": true,
+      "profile_reference_migration_required": false,
+      "profile_reference_review_required": true,
+      "rationale": "Same movement signal; compare range, equipment, laterality, demand and indication before merging. Different symptom/diagnosis labels retain separate profile ownership.",
+      "recommended_next_action": "Manual comparison only; preserve all identities and exact type/region boundaries. Shared mechanics alone is not clinical interchangeability.",
+      "signals": [
+        "normalized_name"
+      ]
+    },
+    {
+      "canonical_identity_candidates_to_keep": [
+        "shoulder_stiffness_pvc_pass_throughs"
+      ],
+      "canonical_region": "shoulder",
+      "canonical_regions": [
+        "shoulder"
+      ],
+      "classification": "near_duplicate",
+      "cluster_id": "duplicate_021c96a986ccec22",
+      "confidence": "requires_variant_review",
+      "drill_ids": [
+        "shoulder_stiffness_pvc_pass_throughs",
+        "shoulder_stiffness_pvc_shoulder_pass_throughs"
+      ],
+      "ids_for_later_deprecation_review": [],
+      "injury_types": [
+        "stiffness"
+      ],
+      "preserve_source_history": true,
+      "profile_reference_migration_required": false,
+      "profile_reference_review_required": false,
+      "rationale": "Same movement signal; compare range, equipment, laterality, demand and indication before merging. Different symptom/diagnosis labels retain separate profile ownership.",
+      "recommended_next_action": "Manual comparison only; preserve all identities and exact type/region boundaries. Shared mechanics alone is not clinical interchangeability.",
+      "signals": [
+        "curated_movement_family"
+      ]
+    },
+    {
+      "canonical_identity_candidates_to_keep": [
+        "toe_hyperextension_towel_scrunches_toe_curls"
+      ],
+      "canonical_region": "toe",
+      "canonical_regions": [
+        "toe"
+      ],
+      "classification": "near_duplicate",
+      "cluster_id": "duplicate_bd3809351fd4eca9",
+      "confidence": "requires_variant_review",
+      "drill_ids": [
+        "toe_hyperextension_towel_scrunches_toe_curls",
+        "toe_unspecified_towel_scrunches_isometric_hold"
+      ],
+      "ids_for_later_deprecation_review": [],
+      "injury_types": [
+        "hyperextension",
+        "unspecified"
+      ],
+      "preserve_source_history": true,
+      "profile_reference_migration_required": false,
+      "profile_reference_review_required": false,
+      "rationale": "Same movement signal; compare range, equipment, laterality, demand and indication before merging. Different symptom/diagnosis labels retain separate profile ownership.",
+      "recommended_next_action": "Manual comparison only; preserve all identities and exact type/region boundaries. Shared mechanics alone is not clinical interchangeability.",
+      "signals": [
+        "curated_movement_family"
+      ]
+    },
+    {
+      "canonical_identity_candidates_to_keep": [
+        "unspecified_abrasion_debride_clean_thoroughly"
+      ],
+      "canonical_region": "unspecified",
+      "canonical_regions": [
+        "unspecified"
+      ],
+      "classification": "uncertain",
+      "cluster_id": "duplicate_dcfc081ea92f4304",
+      "confidence": "same_name_different_instructions_or_unverified_mechanics",
+      "drill_ids": [
+        "unspecified_abrasion_debride_clean_thoroughly",
+        "unspecified_graze_debride_clean_thoroughly"
+      ],
+      "ids_for_later_deprecation_review": [],
+      "injury_types": [
+        "abrasion",
+        "graze"
+      ],
+      "preserve_source_history": true,
+      "profile_reference_migration_required": false,
+      "profile_reference_review_required": false,
+      "rationale": "Same movement signal; compare range, equipment, laterality, demand and indication before merging. Different symptom/diagnosis labels retain separate profile ownership.",
+      "recommended_next_action": "Manual comparison only; preserve all identities and exact type/region boundaries. Shared mechanics alone is not clinical interchangeability.",
+      "signals": [
+        "normalized_instructions_without_camp_labels",
+        "normalized_name"
+      ]
+    },
+    {
+      "canonical_identity_candidates_to_keep": [
+        "unspecified_cut_clean_approximate_edges"
+      ],
+      "canonical_region": "unspecified",
+      "canonical_regions": [
+        "unspecified"
+      ],
+      "classification": "uncertain",
+      "cluster_id": "duplicate_ce552af634afdd50",
+      "confidence": "same_name_different_instructions_or_unverified_mechanics",
+      "drill_ids": [
+        "unspecified_cut_clean_approximate_edges",
+        "unspecified_laceration_clean_approximate_edges"
+      ],
+      "ids_for_later_deprecation_review": [],
+      "injury_types": [
+        "cut",
+        "laceration"
+      ],
+      "preserve_source_history": true,
+      "profile_reference_migration_required": false,
+      "profile_reference_review_required": false,
+      "rationale": "Same movement signal; compare range, equipment, laterality, demand and indication before merging. Different symptom/diagnosis labels retain separate profile ownership.",
+      "recommended_next_action": "Manual comparison only; preserve all identities and exact type/region boundaries. Shared mechanics alone is not clinical interchangeability.",
+      "signals": [
+        "normalized_instructions_without_camp_labels",
+        "normalized_name"
+      ]
+    },
+    {
+      "canonical_identity_candidates_to_keep": [
+        "upper_back_soreness_band_pull_aparts_high_rep"
+      ],
+      "canonical_region": "upper back",
+      "canonical_regions": [
+        "upper back"
+      ],
+      "classification": "near_duplicate",
+      "cluster_id": "duplicate_c6ba8fb302d55eac",
+      "confidence": "requires_variant_review",
+      "drill_ids": [
+        "upper_back_soreness_band_pull_aparts_high_rep",
+        "upper_back_strain_resistance_band_reverse_flys",
+        "upper_back_tendonitis_eccentric_band_pull_aparts",
+        "upper_back_unspecified_standing_resistance_band_pull_aparts"
+      ],
+      "ids_for_later_deprecation_review": [],
+      "injury_types": [
+        "soreness",
+        "strain",
+        "tendonitis",
+        "unspecified"
+      ],
+      "preserve_source_history": true,
+      "profile_reference_migration_required": false,
+      "profile_reference_review_required": false,
+      "rationale": "Same movement signal; compare range, equipment, laterality, demand and indication before merging. Different symptom/diagnosis labels retain separate profile ownership.",
+      "recommended_next_action": "Manual comparison only; preserve all identities and exact type/region boundaries. Shared mechanics alone is not clinical interchangeability.",
+      "signals": [
+        "curated_movement_family"
+      ]
+    },
+    {
+      "canonical_identity_candidates_to_keep": [
+        "wrist_contusion_wrist_flexion_extension_passes",
+        "wrist_stiffness_stick_roll_wrist_flex_ext"
+      ],
+      "canonical_region": "wrist",
+      "canonical_regions": [
+        "wrist"
+      ],
+      "classification": "intentionally_distinct",
+      "cluster_id": "duplicate_e20e2a643b70319d",
+      "confidence": "high",
+      "drill_ids": [
+        "wrist_contusion_wrist_flexion_extension_passes",
+        "wrist_stiffness_stick_roll_wrist_flex_ext"
+      ],
+      "ids_for_later_deprecation_review": [],
+      "injury_types": [
+        "contusion",
+        "stiffness"
+      ],
+      "preserve_source_history": true,
+      "profile_reference_migration_required": false,
+      "profile_reference_review_required": true,
+      "rationale": "Same movement signal; compare range, equipment, laterality, demand and indication before merging. Different symptom/diagnosis labels retain separate profile ownership.",
+      "recommended_next_action": "Manual comparison only; preserve all identities and exact type/region boundaries. Shared mechanics alone is not clinical interchangeability.",
+      "signals": [
+        "normalized_name"
+      ]
+    },
+    {
+      "canonical_identity_candidates_to_keep": [
+        "wrist_impingement_wrist_distraction_with_band"
+      ],
+      "canonical_region": "wrist",
+      "canonical_regions": [
+        "wrist"
+      ],
+      "classification": "uncertain",
+      "cluster_id": "duplicate_1cacc56313988624",
+      "confidence": "same_name_different_instructions_or_unverified_mechanics",
+      "drill_ids": [
+        "wrist_impingement_wrist_distraction_with_band",
+        "wrist_impingement_wrist_distraction_with_band_2"
+      ],
+      "ids_for_later_deprecation_review": [],
+      "injury_types": [
+        "impingement"
+      ],
+      "preserve_source_history": true,
+      "profile_reference_migration_required": false,
+      "profile_reference_review_required": false,
+      "rationale": "Same movement signal; compare range, equipment, laterality, demand and indication before merging. Different symptom/diagnosis labels retain separate profile ownership.",
+      "recommended_next_action": "Manual comparison only; preserve all identities and exact type/region boundaries. Shared mechanics alone is not clinical interchangeability.",
+      "signals": [
+        "normalized_name"
+      ]
+    },
+    {
+      "canonical_identity_candidates_to_keep": [
+        "wrist_stiffness_wrist_cars"
+      ],
+      "canonical_region": "wrist",
+      "canonical_regions": [
+        "wrist"
+      ],
+      "classification": "near_duplicate",
+      "cluster_id": "duplicate_d5ede07db21ca709",
+      "confidence": "requires_variant_review",
+      "drill_ids": [
+        "wrist_stiffness_wrist_cars",
+        "wrist_stiffness_wrist_cars_controlled_articular_rotations",
+        "wrist_unspecified_wrist_cars_controlled_articular_rotations"
+      ],
+      "ids_for_later_deprecation_review": [],
+      "injury_types": [
+        "stiffness",
+        "unspecified"
+      ],
+      "preserve_source_history": true,
+      "profile_reference_migration_required": false,
+      "profile_reference_review_required": false,
+      "rationale": "Same movement signal; compare range, equipment, laterality, demand and indication before merging. Different symptom/diagnosis labels retain separate profile ownership.",
+      "recommended_next_action": "Manual comparison only; preserve all identities and exact type/region boundaries. Shared mechanics alone is not clinical interchangeability.",
+      "signals": [
+        "curated_movement_family"
+      ]
+    },
+    {
+      "canonical_identity_candidates_to_keep": [
+        "wrist_stiffness_wrist_cars_controlled_articular_rotations"
+      ],
+      "canonical_region": "wrist",
+      "canonical_regions": [
+        "wrist"
+      ],
+      "classification": "uncertain",
+      "cluster_id": "duplicate_6cdb073a441e9c61",
+      "confidence": "same_name_different_instructions_or_unverified_mechanics",
+      "drill_ids": [
+        "wrist_stiffness_wrist_cars_controlled_articular_rotations",
+        "wrist_unspecified_wrist_cars_controlled_articular_rotations"
+      ],
+      "ids_for_later_deprecation_review": [],
+      "injury_types": [
+        "stiffness",
+        "unspecified"
+      ],
+      "preserve_source_history": true,
+      "profile_reference_migration_required": false,
+      "profile_reference_review_required": false,
+      "rationale": "Same movement signal; compare range, equipment, laterality, demand and indication before merging. Different symptom/diagnosis labels retain separate profile ownership.",
+      "recommended_next_action": "Manual comparison only; preserve all identities and exact type/region boundaries. Shared mechanics alone is not clinical interchangeability.",
+      "signals": [
+        "normalized_name"
+      ]
+    }
+  ],
+  "method": "Overlapping evidence clusters, not disjoint merge groups; a drill can appear in multiple signals. Only content-identical same-region/type surplus receives primary DUPLICATE_OR_MERGE. Exact IDs valid; aliases use existing location registry.",
+  "schema_version": 1
+}
