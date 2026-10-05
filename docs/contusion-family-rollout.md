@@ -144,6 +144,7 @@ All 37 prior raw profiles and policy hashes are identical. Regression tests comp
 - Metadata validation, ledger generation check and metadata application check: pass, **zero pending changes or stale entries**.
 - Vocabulary audit: pass, **33 canonical types, 12 normal MSK rehab types, seven families**.
 - Repository Python Ruff, changed-file compilation/import collection and `pip check`: pass.
+- Runtime requirements dependency audit: **no known vulnerabilities found**. `en-core-web-sm` 3.8.0 cannot be audited because it is not on PyPI.
 - Byte-idempotent seeding and source/history/hash preservation: covered in passing tests.
 - Latest Main fetched and confirmed to match the branch base before committing.
 
