@@ -809,6 +809,11 @@ def _write_rows(
         for prior in previous:
             key = prior.get("exercise_key", "")
             current = by_key.get(key)
+            for col in ("youtube_url", "start_s", "end_s"):
+                if prior.get(col) and (
+                    current is None or current.get(col) != prior[col] or col not in fieldnames
+                ):
+                    raise ReviewInputError(f"checkpoint regression for {key}: curator {col} would change")
             if (prior.get("ai_verdict") or "").strip() not in {"", "error"}:
                 if key not in (replace_keys or set()):
                     protected = (*AI_COLUMNS, "suggested_url", "suggested_title")
@@ -925,6 +930,30 @@ def _read_csv(path: str | Path) -> tuple[list[str], list[dict[str, str]]]:
         return list(reader.fieldnames or []), list(reader)
 
 
+def checkpoint_state(rows: list[dict[str, str]]) -> dict[str, Any]:
+    verdicts = [(row.get("ai_verdict") or "").strip() for row in rows]
+    completed = sum(verdict not in {"", "error"} for verdict in verdicts)
+    errors = verdicts.count("error")
+    return {
+        "total": len(rows),
+        "completed": completed,
+        "errors": errors,
+        "pending": len(rows) - completed - errors,
+        "strong": sum(_row_is_strong(row) for row in rows),
+        "next_exercise_key": next((row["exercise_key"] for row, verdict in zip(rows, verdicts)
+                                    if verdict in {"", "error"}), None),
+    }
+
+
+def inspect_checkpoint(path: str | Path) -> dict[str, Any]:
+    """Inspect saved state without provider setup or CSV mutations."""
+    with checkpoint_lock(path):
+        _, rows = _read_csv(path)
+        _rows_by_key(rows)
+        return {"checkpoint": str(Path(path).resolve()), "review_code": review_code_marker(),
+                **checkpoint_state(rows)}
+
+
 def _merge_previous_run(rows: list[dict[str, str]], previous: list[dict[str, str]], *, redo_weak: bool = False) -> int:
     """Carry the output CSV's latest review state into the source rows.
 
@@ -944,14 +973,9 @@ def _merge_previous_run(rows: list[dict[str, str]], previous: list[dict[str, str
         # causing already-completed rows to be reviewed again.
         for column in AI_COLUMNS:
             row[column] = prior.get(column) or ""
-        for column in ("suggested_url", "suggested_title", "review_note"):
+        for column in ("suggested_url", "suggested_title", "review_note", "youtube_url",
+                       "start_s", "end_s", "aliases", "notes", "source"):
             if column in prior:
-                row[column] = prior[column]
-
-        # Preserve explicit curator loop values from the source, but carry the
-        # checkpoint values when the source has none.
-        for column in ("start_s", "end_s"):
-            if not (row.get(column) or "").strip() and column in prior:
                 row[column] = prior[column]
 
         merged += 1
@@ -1054,10 +1078,8 @@ def run_review(
         if column not in fieldnames:
             fieldnames.append(column)
     log(f"review code: {review_code_marker()}")
-    verdicts = [(row.get("ai_verdict") or "").strip() for row in rows]
-    completed = sum(verdict not in {"", "error"} for verdict in verdicts)
-    errors = verdicts.count("error")
-    log(f"checkpoint state: {completed} completed, {errors} errors, {len(rows) - completed - errors} pending (no verdict)")
+    state = checkpoint_state(rows)
+    log(f"checkpoint state: {state['completed']} completed, {state['errors']} errors, {state['pending']} pending (no verdict)")
     replace_keys: set[str] = set()
 
     def save() -> None:

@@ -1119,3 +1119,61 @@ def test_ambiguous_checkpoint_keys_fail_before_gemini(tmp_path, keys):
     assert calls == []
     with review.checkpoint_lock(src):
         pass
+
+
+@pytest.mark.parametrize("approved", ["", URL_C])
+def test_resume_preserves_checkpoint_curator_decisions(tmp_path, approved):
+    src, out = tmp_path / "input.csv", tmp_path / "reviewed.csv"
+    _write_csv(src, [_row(ai_verdict="match", youtube_url=URL_A, start_s="42", end_s="54",
+                          aliases="old", notes="old", source="old")])
+    prior = _row(ai_verdict="partial", youtube_url=approved, start_s="10", end_s="20",
+                 aliases="curated-alias", notes="human decision", source="curated")
+    _write_csv(out, [prior])
+    calls = []
+    review.run_review(str(src), str(out), reviewer=_reviewer({}, calls), log=lambda _: None)
+    saved = _read_csv(out)[0]
+    assert calls == []
+    for field in ("youtube_url", "start_s", "end_s", "aliases", "notes", "source"):
+        assert saved[field] == prior[field]
+
+
+@pytest.mark.parametrize("field", ["youtube_url", "start_s", "end_s"])
+def test_checkpoint_guard_protects_curator_values_even_during_redo(tmp_path, field):
+    out = tmp_path / "reviewed.csv"
+    row = _row(ai_verdict="partial", youtube_url=URL_C, start_s="10", end_s="20")
+    _write_csv(out, [row])
+    with pytest.raises(review.ReviewInputError, match="curator"):
+        review._write_rows(out, list(row), [{**row, field: ""}], replace_keys={row["exercise_key"]})
+
+
+def test_review_status_requires_no_providers_and_does_not_modify_csv(tmp_path, monkeypatch, capsys):
+    from tools import exercise_media as tool
+    from tools import exercise_media_search as discovery
+
+    def unexpected(*args, **kwargs):
+        pytest.fail("status must not initialize a provider")
+
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+    monkeypatch.setattr(review, "build_reviewer", unexpected)
+    monkeypatch.setattr(discovery, "build_candidate_search", unexpected)
+    out = tmp_path / "reviewed.csv"
+    _write_csv(out, [_row(exercise_key="done", ai_verdict="no_match"),
+                     _row(exercise_key="retry", ai_verdict="error"),
+                     _row(exercise_key="untouched")])
+    before = out.read_bytes()
+    assert tool.main(["review-status", str(out), "--json"]) == 0
+    state = json.loads(capsys.readouterr().out)
+    assert (state["total"], state["completed"], state["errors"], state["pending"]) == (3, 1, 1, 1)
+    assert state["next_exercise_key"] == "retry"
+    assert out.read_bytes() == before
+    assert tool.main(["review-status", str(out)]) == 0
+    assert "1 completed, 1 errors, 1 pending" in capsys.readouterr().out
+
+
+def test_review_status_rejects_invalid_checkpoint(tmp_path, capsys):
+    from tools import exercise_media as tool
+
+    out = tmp_path / "reviewed.csv"
+    _write_csv(out, [_row(), _row()])
+    assert tool.main(["review-status", str(out)]) == 2
+    assert "unique, nonblank" in capsys.readouterr().err
