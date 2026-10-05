@@ -10,6 +10,8 @@ export type LoadingTipCategory =
   | "supplements"
   | "fight_week"
   | "injury_safety"
+  | "brain_health"
+  | "micronutrients"
   | "combat_performance";
 
 export type LoadingTip = {
@@ -27,6 +29,12 @@ export type LoadingTip = {
 //   position on nutrition and athletic performance (2016).
 // - IOC consensus statements: REDs (2023) and concussion in sport (Amsterdam
 //   2022, published 2023).
+// - Brain health: Professional Fighters Brain Health Study (Bernick),
+//   Association of Ringside Physicians sparring recommendations, Oliver 2016
+//   (DHA and neurofilament light in American football).
+// - Micronutrients: Paulsen 2014 (vitamin C/E and training adaptation), iron
+//   absorption enhancers and inhibitors, ISSN/ACSM guidance for plant-based
+//   athletes (B12, iodine, zinc).
 // - Combat-sport weight making: Reale, Slater & Burke (GSSI SSE #183; AIS
 //   Making Weight guidelines).
 // - Single studies: Mah 2011 (sleep extension), Drake 2013 (caffeine and
@@ -123,15 +131,32 @@ export const LOADING_TIPS: readonly LoadingTip[] = [
   { id: "nutrition-plant-protein", category: "nutrition", text: "Plant-based? Combine beans, lentils, tofu and grains, and aim slightly higher on total daily protein." },
   { id: "nutrition-periodise-carbs", category: "nutrition", text: "Carbohydrate needs change day to day. Eat more around hard or double sessions and less on easy or rest days." },
   { id: "nutrition-pre-training-fibre-fat", category: "nutrition", text: "Keep high-fibre and high-fat foods lighter just before training. They digest slowly and can upset your stomach." },
-  { id: "nutrition-iron", category: "nutrition", text: "Low iron stores can cause fatigue even without anaemia. If you feel drained for weeks, ask a doctor about blood tests." },
-  { id: "nutrition-vitamin-d", category: "nutrition", text: "Vitamin D is often low in winter, especially for indoor athletes. A blood test shows whether you need more." },
   { id: "nutrition-colour", category: "nutrition", text: "Eat a range of coloured fruit and vegetables daily. Variety covers the micronutrients that support immunity and recovery." },
   { id: "nutrition-snacks-ready", category: "nutrition", text: "Keep training-friendly snacks on hand, such as yoghurt, fruit, rice cakes or milk, so recovery never depends on luck." },
-  { id: "nutrition-bones", category: "nutrition", text: "Calcium and vitamin D support bone health, which matters most for athletes who train heavily or manage their weight." },
   { id: "nutrition-early-sessions", category: "nutrition", text: "Training early? Even a small carbohydrate snack like a banana or toast beats starting a hard session completely empty." },
   { id: "nutrition-batch-cook", category: "nutrition", text: "Batch-cook protein and carbohydrates twice a week. Ready meals make it far easier to hit targets in busy camp weeks." },
   { id: "nutrition-weight-trend-fuel", category: "nutrition", text: "Your weight trend shows whether intake matches training. Steady, unplanned loss during camp often means you are under-fuelling." },
   { id: "nutrition-sugar-timing", category: "nutrition", text: "Sugary drinks and snacks have a place during and after long, hard sessions, when quick fuel genuinely helps." },
+
+  { id: "nutrition-iron", category: "micronutrients", text: "Low iron stores can cause fatigue even without anaemia. If you feel drained for weeks, ask a doctor about blood tests." },
+  { id: "nutrition-vitamin-d", category: "micronutrients", text: "Vitamin D is often low in winter, especially for indoor athletes. A blood test shows whether you need more." },
+  { id: "nutrition-bones", category: "micronutrients", text: "Calcium and vitamin D support bone health, which matters most for athletes who train heavily or manage their weight." },
+  { id: "supplements-vitamin-d-test", category: "micronutrients", text: "Vitamin D supplements mainly help when your levels are low. A blood test beats guessing." },
+  { id: "supplements-iron-test", category: "micronutrients", text: "Do not take iron supplements without a blood test first. Too much iron can be harmful." },
+  { id: "micro-food-first", category: "micronutrients", text: "Food first: a varied diet covers most vitamins and minerals. Save supplements for gaps confirmed by a diet review or blood test." },
+  { id: "micro-antioxidant-megadoses", category: "micronutrients", text: "Skip high-dose vitamin C and E supplements in heavy training. In one trial they blunted muscle adaptations to endurance work." },
+  { id: "micro-iron-vitamin-c", category: "micronutrients", text: "Pair plant iron sources like beans, spinach or fortified cereal with vitamin C foods, such as peppers or citrus, to absorb more." },
+  { id: "micro-tea-coffee-timing", category: "micronutrients", text: "Have tea and coffee between meals rather than with them. Their compounds can sharply reduce iron absorption from food." },
+  { id: "micro-heme-iron", category: "micronutrients", text: "Red meat, fish and poultry provide iron your body absorbs far more easily than the iron in plant foods." },
+  { id: "micro-b12", category: "micronutrients", text: "Vegan or mostly plant-based? Vitamin B12 comes almost only from animal foods, so use fortified foods or a supplement." },
+  { id: "micro-iodine", category: "micronutrients", text: "Plant-based athletes can run low on iodine, found mainly in dairy, seafood and eggs. Iodised salt or a supplement can help." },
+  { id: "micro-zinc", category: "micronutrients", text: "Zinc supports immunity and tissue repair. Meat, shellfish, dairy, nuts and seeds are good sources; plant-based eaters may need more." },
+  { id: "micro-magnesium", category: "micronutrients", text: "Magnesium comes from nuts, seeds, whole grains and leafy greens. Most athletes eating a varied diet get enough." },
+  { id: "micro-sunlight", category: "micronutrients", text: "Your skin makes vitamin D from sunlight in spring and summer. In darker months, many people need a supplement." },
+  { id: "micro-multivitamin", category: "micronutrients", text: "A basic multivitamin can be a reasonable safety net during heavy dieting, but it never replaces real food." },
+  { id: "micro-more-not-better", category: "micronutrients", text: "More is not better with vitamins. High doses of fat-soluble vitamins like A and D can build up and cause harm." },
+  { id: "micro-calcium-foods", category: "micronutrients", text: "Get calcium-rich foods daily, such as milk, yoghurt, cheese, fortified plant milks or calcium-set tofu." },
+  { id: "micro-dieting", category: "micronutrients", text: "Dieting hard shrinks food volume, and vitamins and minerals drop with it. Choose nutrient-dense foods while cutting." },
 
   { id: "weight-gradual", category: "weight_management", text: "Do most of your weight loss gradually through camp, so fight week only needs small, controlled changes." },
   { id: "weight-trend", category: "weight_management", text: "Weigh in at the same time each morning and track the weekly average. Single readings swing with water and food." },
@@ -163,8 +188,6 @@ export const LOADING_TIPS: readonly LoadingTip[] = [
   { id: "supplements-check-first", category: "supplements", text: "Check with a doctor or pharmacist before starting supplements, especially if you take any regular medication." },
   { id: "supplements-bicarbonate", category: "supplements", text: "Sodium bicarbonate around 0.3 g per kilogram may help repeated hard efforts, but stomach upset is common. Test it in training." },
   { id: "supplements-nitrate", category: "supplements", text: "Beetroot juice giving about 300–600 mg of nitrate, two to three hours before exercise, may help some endurance-type efforts." },
-  { id: "supplements-vitamin-d-test", category: "supplements", text: "Vitamin D supplements mainly help when your levels are low. A blood test beats guessing." },
-  { id: "supplements-iron-test", category: "supplements", text: "Do not take iron supplements without a blood test first. Too much iron can be harmful." },
   { id: "supplements-protein-powder", category: "supplements", text: "Protein powder is just convenient food. It helps when meals are hard to arrange, but it is not essential." },
   { id: "supplements-caffeine-trial", category: "supplements", text: "Caffeine responses vary by person and habit. Trial your dose in training before relying on it on fight night." },
   { id: "supplements-pre-workouts", category: "supplements", text: "Pre-workout blends often hide big caffeine doses and untested ingredients. Read labels closely and prefer batch-tested products." },
@@ -196,9 +219,7 @@ export const LOADING_TIPS: readonly LoadingTip[] = [
   { id: "injury-stop-signal", category: "injury_safety", text: "Pain that is sharp, worsening or changes how you move is a signal to stop and get it checked." },
   { id: "injury-work-around", category: "injury_safety", text: "Work around an injury, not through it. Train what you safely can while the affected area is protected." },
   { id: "injury-professional-first", category: "injury_safety", text: "Follow guidance from your doctor or physio first. Your training plan should fit around their advice." },
-  { id: "injury-concussion-steps", category: "injury_safety", text: "After a suspected concussion, return through graded steps of at least 24 hours each, with medical clearance before any contact." },
   { id: "injury-report-early", category: "injury_safety", text: "Tell your coach about new pain, dizziness or unusual headaches straight away. Early reporting keeps small issues small." },
-  { id: "injury-neck-strength", category: "injury_safety", text: "Train your neck. In one study, each extra pound of neck strength was linked to about 5% lower concussion odds." },
   { id: "injury-sleep-link", category: "injury_safety", text: "Young athletes sleeping under eight hours were about 1.7 times more likely to get injured in one study." },
   { id: "injury-gradual-return", category: "injury_safety", text: "Ease back into contact gradually after an injury, and stop the session if symptoms return." },
   { id: "injury-skin-check", category: "injury_safety", text: "Check your skin daily and stay off the mats with any unexplained rash or sore. Skin infections spread fast in grappling." },
@@ -206,13 +227,32 @@ export const LOADING_TIPS: readonly LoadingTip[] = [
   { id: "injury-mouthguard", category: "injury_safety", text: "Wear a well-fitted mouthguard in every contact round. Custom or boil-and-bite guards fit far better than loose stock ones." },
   { id: "injury-headgear", category: "injury_safety", text: "Headgear reduces cuts and bruising in sparring, but it does not make hard head contact safe. Control the intensity." },
   { id: "injury-hand-care", category: "injury_safety", text: "Wrap hands properly and replace worn gloves. Good hand protection limits knuckle and wrist strain across a long camp." },
-  { id: "injury-concussion-signs", category: "injury_safety", text: "Headache, fogginess, nausea or light sensitivity after a hit can signal concussion. Stop and get assessed that day." },
-  { id: "injury-concussion-same-day", category: "injury_safety", text: "Never return to sparring on the same day as a suspected concussion, even if you quickly feel better." },
   { id: "injury-tap-early", category: "injury_safety", text: "Tap early in drilling and rolling. Joints and tendons give little warning before a submission injury." },
   { id: "injury-fatigue-form", category: "injury_safety", text: "Many injuries happen when you are tired or cold. Warm up fully and stop drilling sharp techniques once form breaks down." },
   { id: "injury-heat-danger", category: "injury_safety", text: "Dizziness, confusion or feeling hot but no longer sweating are danger signs. Stop, cool down and get help immediately." },
   { id: "injury-sparring-partners", category: "injury_safety", text: "Choose sparring partners who match your intent. Controlled partners let you work hard without unnecessary damage." },
   { id: "injury-return-from-break", category: "injury_safety", text: "Coming back from time off? Rebuild training load over several weeks instead of jumping straight back to old volumes." },
+
+  { id: "injury-concussion-steps", category: "brain_health", text: "After a suspected concussion, return through graded steps of at least 24 hours each, with medical clearance before any contact." },
+  { id: "injury-neck-strength", category: "brain_health", text: "Train your neck. In one study, each extra pound of neck strength was linked to about 5% lower concussion odds." },
+  { id: "injury-concussion-signs", category: "brain_health", text: "Headache, fogginess, nausea or light sensitivity after a hit can signal concussion. Stop and get assessed that day." },
+  { id: "injury-concussion-same-day", category: "brain_health", text: "Never return to sparring on the same day as a suspected concussion, even if you quickly feel better." },
+  { id: "brain-training-impacts", category: "brain_health", text: "Most head impacts happen in training, not fights. Keep hard head-contact sparring limited and purposeful across a camp." },
+  { id: "brain-heavier-gloves", category: "brain_health", text: "Ringside physicians advise heavier sparring gloves and fewer head shots in training to cut cumulative impact forces." },
+  { id: "brain-career-exposure", category: "brain_health", text: "In a large study of pro fighters, more fights per year was linked to slower processing speed after about nine years competing." },
+  { id: "brain-baseline-screen", category: "brain_health", text: "Get a baseline concussion screen while healthy. Comparing against your own normal makes later assessments far more useful." },
+  { id: "brain-report-changes", category: "brain_health", text: "Tell a doctor about lasting changes in memory, mood, sleep or balance. Early checks beat toughing it out." },
+  { id: "brain-no-symptoms-sparring", category: "brain_health", text: "Never spar with an ongoing headache, fogginess or blurred vision. A brain that is still recovering is more vulnerable." },
+  { id: "brain-cut-cognition", category: "brain_health", text: "Dehydration and harsh weight cuts can dull reaction time and concentration. Your brain needs fluid and fuel too." },
+  { id: "brain-sleep-skills", category: "brain_health", text: "Sleep is when your brain locks in new skills. Good sleep after technical sessions helps techniques stick." },
+  { id: "brain-alcohol-after-knock", category: "brain_health", text: "Avoid alcohol after any head knock. It can mask worsening symptoms and makes warning signs harder to spot." },
+  { id: "brain-dha-research", category: "brain_health", text: "Early research in American football found DHA from fish oil reduced a blood marker of head-impact damage. Evidence is still limited." },
+  { id: "brain-oily-fish", category: "brain_health", text: "Eat oily fish like salmon or sardines about twice a week. Omega-3 fats are a major building block of brain tissue." },
+  { id: "brain-red-flags", category: "brain_health", text: "Worsening headache, repeated vomiting, seizures, slurred speech or growing confusion after a hit need emergency care immediately." },
+  { id: "brain-relative-rest", category: "brain_health", text: "After a concussion, current guidance favours a day or two of relative rest, then gradually building light activity, not total isolation." },
+  { id: "brain-light-contact-drills", category: "brain_health", text: "Build head movement with light contact and controlled partners. You can sharpen defence without absorbing hard shots." },
+  { id: "brain-coach-recognition", category: "brain_health", text: "Coaches trained to recognise concussion catch problems early. Make sure someone in your gym knows the signs." },
+  { id: "brain-mental-health", category: "brain_health", text: "Brain health includes mental health. Low mood, anxiety or anger that lingers deserves the same attention as a physical injury." },
 
   { id: "combat-breathing", category: "combat_performance", text: "Breathing control under pressure starts in training. Practise relaxed exhales during hard rounds and between exchanges." },
   { id: "combat-basics", category: "combat_performance", text: "Footwork and defence win rounds too. Sharp, repeatable basics often decide close fights." },
@@ -239,8 +279,8 @@ export const LOADING_TIPS: readonly LoadingTip[] = [
 export type LoadingTipContext = "injury" | "weight" | "fight_week";
 
 const CONTEXT_CATEGORIES: Record<LoadingTipContext, LoadingTipCategory[]> = {
-  injury: ["injury_safety", "recovery", "sleep"],
-  weight: ["weight_management", "nutrition", "hydration"],
+  injury: ["injury_safety", "brain_health", "recovery", "sleep"],
+  weight: ["weight_management", "nutrition", "micronutrients", "hydration"],
   fight_week: ["fight_week", "recovery", "hydration"],
 };
 
@@ -251,6 +291,8 @@ const GENERAL_CATEGORIES: LoadingTipCategory[] = [
   "sleep",
   "hydration",
   "nutrition",
+  "micronutrients",
+  "brain_health",
   "supplements",
 ];
 

@@ -36,6 +36,7 @@ test("tip bank has at least 30 unique tips across every category", () => {
   const expected: LoadingTipCategory[] = [
     "training", "recovery", "sleep", "hydration", "nutrition",
     "weight_management", "supplements", "fight_week", "injury_safety", "combat_performance",
+    "brain_health", "micronutrients",
   ];
   assert.deepEqual([...categoriesOf([...LOADING_TIPS])].sort(), [...expected].sort());
 });
@@ -52,6 +53,8 @@ test("no intake or an unremarkable intake falls back to general combat-performan
   for (const source of [null, intake()]) {
     const categories = categoriesOf(selectLoadingTips(source, NOW));
     assert.ok(categories.has("combat_performance"));
+    assert.ok(categories.has("brain_health"));
+    assert.ok(categories.has("micronutrients"));
     assert.ok(!categories.has("injury_safety"));
     assert.ok(!categories.has("weight_management"));
     assert.ok(!categories.has("fight_week"));
@@ -62,7 +65,7 @@ test("an active injury selects recovery and safety tips", () => {
   assert.deepEqual(resolveLoadingTipContexts(intake({ injuries: "left shoulder strain" }), NOW), ["injury"]);
   assert.deepEqual(resolveLoadingTipContexts(intake({ guided_injuries: [{ area: "knee" }] }), NOW), ["injury"]);
   const categories = categoriesOf(selectLoadingTips(intake({ injuries: "left shoulder strain" }), NOW));
-  assert.deepEqual([...categories].sort(), ["injury_safety", "recovery", "sleep"]);
+  assert.deepEqual([...categories].sort(), ["brain_health", "injury_safety", "recovery", "sleep"]);
 });
 
 test("'none' style injury answers do not count as an injury", () => {
@@ -77,7 +80,7 @@ test("a weight-cut goal selects nutrition, hydration and weight-management tips"
   const camp = { current_weight_kg: 74, target_weight_kg: 70 } as PlanRequest["shared_camp_context"];
   assert.deepEqual(resolveLoadingTipContexts(intake({ shared_camp_context: camp }), NOW), ["weight"]);
   const categories = categoriesOf(selectLoadingTips(intake({ key_goals: ["weight_cut"] }), NOW));
-  assert.deepEqual([...categories].sort(), ["hydration", "nutrition", "weight_management"]);
+  assert.deepEqual([...categories].sort(), ["hydration", "micronutrients", "nutrition", "weight_management"]);
 });
 
 test("a fight within two weeks selects taper and fight-week tips", () => {
