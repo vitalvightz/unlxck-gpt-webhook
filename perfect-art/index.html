@@ -5,7 +5,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Syne:wght@500;700;800&family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
 <style>
-/* Layout: one long night. Sticky nav → hero with "next night" pass → line-up list → two tickets → formats → FAQ → list signup.
+/* Layout: one long night. Sticky nav → hero with "next night" pass → two tickets → formats → FAQ → list signup.
    Colour is deliberately neutral (greyscale) until the brand palette is chosen; swap the tokens below. */
 :root {
   --bg: #f4f4f3;
@@ -126,41 +126,10 @@ section.block { padding-block: clamp(4rem, 9vw, 7rem); }
 .section-head .label { display: block; margin-bottom: 0.9rem; }
 .section-head p.sub { max-width: 42ch; color: var(--muted); }
 
-/* Events list */
-.filters { display: flex; flex-wrap: wrap; gap: 0.5rem; }
-.chip {
-  font: 500 0.85rem/1 var(--body); padding: 0.65rem 1rem; border-radius: 999px; cursor: pointer;
-  border: 1px solid var(--line); background: transparent; color: var(--fg);
-}
-.chip[aria-pressed="true"] { background: var(--fg); color: var(--bg); border-color: var(--fg); }
-.events { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--fg); }
-.event {
-  display: grid; grid-template-columns: 7.5rem 1fr auto auto; gap: 1.5rem; align-items: center;
-  padding-block: 1.4rem; border-bottom: 1px solid var(--line);
-  transition: padding .2s ease;
-}
-.event:hover { padding-inline: 0.75rem; }
-.event .date { font: 500 0.85rem/1.3 var(--mono); text-transform: uppercase; letter-spacing: 0.06em; }
-.event .date b { display: block; font: 700 2rem/1 var(--display); letter-spacing: -0.02em; }
-.event .info { min-width: 0; }
-.event h3 { font-size: clamp(1.25rem, 2.4vw, 1.75rem); font-weight: 700; }
-.event .where { color: var(--muted); margin-top: 0.35rem; }
 .tag {
   font: 500 0.7rem/1 var(--mono); text-transform: uppercase; letter-spacing: 0.1em;
   padding: 0.45rem 0.65rem; border: 1px solid var(--line); border-radius: 999px; white-space: nowrap;
 }
-.status { font: 500 0.78rem/1 var(--mono); text-transform: uppercase; letter-spacing: 0.08em; white-space: nowrap; }
-.status.low::before { content: "● "; }
-.status.out { color: var(--muted); text-decoration: line-through; }
-.event .btn { min-height: 42px; }
-@media (max-width: 720px) {
-  .event { grid-template-columns: 4.5rem 1fr; row-gap: 0.9rem; }
-  .event .date b { font-size: 1.6rem; }
-  .event .tail { grid-column: 2; display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap; }
-  .event:hover { padding-inline: 0; }
-}
-@media (min-width: 721px) { .event .tail { display: contents; } }
-.note { margin-top: 1rem; font-size: 0.85rem; color: var(--muted); }
 
 /* ---------- Tickets ---------- */
 .tickets-bg { background: var(--surface); border-block: 1px solid var(--line); }
@@ -287,7 +256,6 @@ footer a:hover { color: var(--fg); }
   <div class="wrap">
     <a class="wordmark" href="#top">Perfect<span> Art</span></a>
     <ul id="menu">
-      <li><a href="#nights">Nights</a></li>
       <li><a href="#tickets">Tickets</a></li>
       <li><a href="#formats">Formats</a></li>
       <li><a href="#faq">FAQ</a></li>
@@ -307,7 +275,7 @@ footer a:hover { color: var(--fg); }
         <p class="lede">We turn clubs and bars into nights people talk about the next morning. Good sound, a tight door and a crowd that came to dance.</p>
         <div class="actions">
           <a class="btn solid" href="#tickets">Get tickets</a>
-          <a class="btn" href="#nights">See all nights</a>
+          <a class="btn" href="#formats">How our nights work</a>
         </div>
       </div>
 
@@ -337,47 +305,6 @@ footer a:hover { color: var(--fg); }
       <span>Club nights</span><span>Bar takeovers</span><span>Late licence</span><span>Guest DJs</span><span>Perfect Art</span>
     </div>
   </div>
-
-  <!-- NIGHTS -->
-  <section class="block" id="nights">
-    <div class="wrap">
-      <div class="section-head">
-        <div>
-          <span class="label">Upcoming</span>
-          <h2>The nights</h2>
-        </div>
-        <div class="filters" role="group" aria-label="Filter nights">
-          <button class="chip" aria-pressed="true" data-filter="all">All</button>
-          <button class="chip" aria-pressed="false" data-filter="club">Club</button>
-          <button class="chip" aria-pressed="false" data-filter="bar">Bar</button>
-        </div>
-      </div>
-
-      <ul class="events" id="events">
-        <li class="event" data-type="club">
-          <div class="date">Sat<b>17</b>Oct</div>
-          <div class="info"><h3>Opening Night</h3><p class="where">Venue TBC · 22:00 – 04:00</p></div>
-          <div class="tail"><span class="tag">Club</span><span class="status low">Selling fast</span><a class="btn" href="#tickets">Tickets</a></div>
-        </li>
-        <li class="event" data-type="bar">
-          <div class="date">Fri<b>23</b>Oct</div>
-          <div class="info"><h3>Friday Takeover</h3><p class="where">Bar TBC · 20:00 – 02:00</p></div>
-          <div class="tail"><span class="tag">Bar</span><span class="status">On sale</span><a class="btn" href="#tickets">Tickets</a></div>
-        </li>
-        <li class="event" data-type="club">
-          <div class="date">Sat<b>31</b>Oct</div>
-          <div class="info"><h3>Halloween Special</h3><p class="where">Venue TBC · 22:00 – 05:00</p></div>
-          <div class="tail"><span class="tag">Club</span><span class="status">On sale</span><a class="btn" href="#tickets">Tickets</a></div>
-        </li>
-        <li class="event" data-type="bar">
-          <div class="date">Fri<b>06</b>Nov</div>
-          <div class="info"><h3>Friday Takeover</h3><p class="where">Bar TBC · 20:00 – 02:00</p></div>
-          <div class="tail"><span class="tag">Bar</span><span class="status out">Sold out</span><button class="btn" disabled>Sold out</button></div>
-        </li>
-      </ul>
-      <p class="note">Sample dates and venues. Replace with your real line-up.</p>
-    </div>
-  </section>
 
   <!-- TICKETS (2 placeholders) -->
   <section class="block tickets-bg" id="tickets">
@@ -530,7 +457,6 @@ footer a:hover { color: var(--fg); }
   <div class="wrap">
     <span>© <span id="yr">2026</span> Perfect Art Events</span>
     <nav aria-label="Footer">
-      <a href="#nights">Nights</a>
       <a href="#tickets">Tickets</a>
       <a href="#faq">FAQ</a>
       <span>Instagram: @perfectart (placeholder)</span>
@@ -574,7 +500,7 @@ footer a:hover { color: var(--fg); }
       links.forEach(l => l.classList.toggle("active", l.getAttribute("href") === "#" + e.target.id));
     });
   }, { rootMargin: "-45% 0px -50% 0px" });
-  ["nights", "tickets", "formats", "faq"].forEach(id => io.observe(document.getElementById(id)));
+  ["tickets", "formats", "faq"].forEach(id => io.observe(document.getElementById(id)));
 
   // Hide mobile ticket bar while the tickets section is on screen
   const bar = $("#mobileBar");
@@ -595,13 +521,6 @@ footer a:hover { color: var(--fg); }
     cells.d.textContent = pad(d); cells.h.textContent = pad(h); cells.m.textContent = pad(m); cells.s.textContent = pad(s);
   };
   tick(); setInterval(tick, 1000);
-
-  // Event filters
-  $$(".chip").forEach(chip => chip.addEventListener("click", () => {
-    $$(".chip").forEach(c => c.setAttribute("aria-pressed", c === chip));
-    const f = chip.dataset.filter;
-    $$("#events .event").forEach(ev => ev.hidden = f !== "all" && ev.dataset.type !== f);
-  }));
 
   // Ticket quantity steppers + reserve buttons
   $$(".ticket").forEach(t => {
