@@ -169,9 +169,13 @@ def test_existing_ankle_bundle_and_new_wrist_prescription_are_two_allocations():
 
 
 @pytest.mark.parametrize("region", ["knee", "wrist", "shoulder"])
-def test_new_profile_does_not_remove_identity_from_another_types_legacy_options(region):
-    options = rehab_drill_options_for_phase("pain", region, "GPP", limit=6)
-    assert options and all(option["drill"]["id"] for option in options)
-    assert all(option["type"] in {"pain", "unspecified"} for option in options)
+def test_profiles_preserve_other_inventory_and_require_episode_selection(region):
+    before = json.loads((ROOT / "tests/fixtures/rehab_bank_before_nonspecific_hashes.json").read_text())
+    originals = {identity for identity in before if identity.startswith(f"{region}_pain_")}
+    current = {d["id"] for g in get_rehab_bank() if g["type"] == "pain" and g["location"] == region for d in g["drills"]}
+    assert originals and originals <= current
+    # Pain now has its own reviewed profile; neither active type can bypass
+    # current episode/stage selection through the legacy bank-only lookup.
+    assert rehab_drill_options_for_phase("pain", region, "GPP", limit=6) == []
     kind = "instability" if region == "knee" else "sprain"
     assert rehab_drill_options_for_phase(kind, region, "GPP", limit=6) == []

@@ -380,6 +380,36 @@ def _is_urgent_injury(injury: Mapping[str, Any]) -> bool:
         for field in ("body_area", "description", "injury_type", "rehab_type")
     )
     text = text.replace("_", " ").replace("-", " ")
+    # Only nonspecific symptom episodes receive this additional screen. A pain
+    # word in a diagnosed strain/sprain description does not change that family.
+    symptom_type = _lower(injury.get("injury_type") or injury.get("rehab_type"))
+    if not symptom_type:
+        from fightcamp.injury_formatting import parse_injury_entry
+        parsed = parse_injury_entry(" ".join(str(injury.get(k) or "") for k in ("body_area", "description"))) or {}
+        symptom_type = _lower(parsed.get("injury_type"))
+    if symptom_type == "swelling":
+        from fightcamp.injury_location_registry import canonicalize_location_from_registry
+        region = canonicalize_location_from_registry(str(injury.get("canonical_location") or injury.get("body_region") or ""))
+        if region in {"calf", "ankle", "foot", "heel", "shin", "knee", "quads", "hamstring", "glute"} and _lower(injury.get("side")) in {"left", "right"}:
+            # The product has no established cause for a one-sided swelling
+            # episode. Do not silently presume benign oedema or a sprain.
+            return True
+    if symptom_type in {"pain", "soreness", "tightness", "stiffness", "swelling"} and any(
+        re.search(pattern, text) for pattern in (
+            r"\b(?:major\s+trauma|deformity|misshapen|after\s+(?:a\s+)?(?:fall|trauma|accident)|direct\s+blow|open\s+wound)\b",
+            r"\b(?:unable\s+to|cannot|can['’]t|inability\s+to)\s+(?:bear\s+weight|put\s+(?:any\s+)?weight|walk|use\s+(?:the\s+|my\s+)?(?:limb|joint|arm|leg|hand|foot|wrist|elbow|shoulder|knee|finger|toe|it))\b",
+            r"\b(?:rapidly\s+(?:increasing|worsening)|large|major|severe|excessive|unexplained|increasing)\s+swelling\b",
+            r"\b(?:swelling|swollen)\b.*\b(?:unexplained|rapidly\s+increasing|no\s+(?:obvious|known)\s+cause)\b",
+            r"\b(?:fever|feverish|shivery|systemic\s+(?:illness|symptoms)|generally\s+unwell|high\s+temperature)\b",
+            r"\b(?:hot|red)\s+(?:swollen\s+)?(?:joint|knee|wrist|elbow|shoulder|hip|ankle|hand)\b|\b(?:joint|knee|wrist|elbow|shoulder|hip|ankle|hand)\s+(?:is\s+)?(?:swollen\s+and\s+)?(?:hot|red)\b",
+            r"\b(?:neurological\s+symptoms|progressive\s+weakness|altered\s+sensation|vascular\s+compromise|poor\s+circulation|absent\s+pulse)\b",
+            r"\b(?:cold|pale)\s+(?:limb|arm|leg|hand|foot)\b|\b(?:limb|arm|leg|hand|foot)\s+(?:is\s+)?(?:cold|pale)\b",
+            r"\b(?:severe|very\s+bad)\s+(?:unexplained\s+)?pain\b|\b(?:locking|locked|mechanical\s+block|recurrent\s+giving\s+way|gives\s+way)\b",
+            r"\b(?:chest|abdominal|abdomen|core)\b.*\b(?:trauma|breathless(?:ness)?|coughing\s+(?:up\s+)?blood|fainting)\b",
+            r"\b(?:calf|leg)\b.*\b(?:swelling|swollen)\b.*\b(?:unilateral|one\s+(?:side|leg)|breathless(?:ness)?|chest\s+pain|unexplained)\b",
+        )
+    ):
+        return True
     if not text.strip():
         return False
     # A generic hyperextension label does not establish structural stability.

@@ -2257,7 +2257,7 @@
   {
     "location": "knee",
     "type": "pain",
-    "phase_progression": "GPP → SPP",
+    "phase_progression": "GPP → SPP → TAPER",
     "drills": [
       {
         "id": "knee_pain_terminal_knee_extensions_tkes",
@@ -2310,6 +2310,34 @@
         "sport_specificity": "unknown",
         "contact_level": "unknown",
         "evidence_notes": "Target region inherited from the canonical rehab-bank group; other classifications remain unreviewed."
+      },
+      {
+        "id": "knee_pain_recovery_support",
+        "name": "Knee pain activity guidance",
+        "notes": "Reduce provoking knee weight-bearing and prolonged standing. Avoid loaded self-tests; seek assessment for locking, giving way or difficulty using the leg. Follow clinician restrictions. Stop if activity makes symptoms worse or causes new symptoms. Seek assessment for persistent or worsening symptoms or reduced everyday function. Get urgent help for major trauma, deformity, inability to use or bear weight, marked or increasing swelling, a hot/red joint, fever or feeling unwell, locking/giving way, altered sensation, progressive weakness or circulation changes. This guidance does not identify the cause, establish healing or provide contact clearance.",
+        "rehab_stage": "calm",
+        "function": "recovery_downregulation",
+        "equipment": [],
+        "dose": null,
+        "impact": "none",
+        "load": "minimal",
+        "velocity": "low",
+        "pain_ceiling": null,
+        "allowed_severities": null,
+        "progress_when": null,
+        "regress_when": null,
+        "stop_when": null,
+        "target_regions": [
+          "knee"
+        ],
+        "laterality_applicability": "not_applicable",
+        "target_tissues": [
+          "knee region; symptom cause unspecified"
+        ],
+        "contraction_type": "unknown",
+        "sport_specificity": "general_rehab",
+        "contact_level": "none",
+        "evidence_notes": "Sources: https://www.nhs.uk/symptoms/knee-pain/. Exact nonspecific symptom baseline. No diagnosis, tissue mechanism, DOMS, numeric dose, pain ceiling, progression or swelling threshold inferred. Comfortable/non-provoking is a conservative baseline restriction, not a universal pain rule. Product low/moderate eligibility and cadence are retained. Sussex supports movement mechanics only; no injury-specific healing/loading protocol imported."
       }
     ]
   },
@@ -3813,7 +3841,7 @@
   {
     "location": "knee",
     "type": "pain",
-    "phase_progression": "GPP → SPP",
+    "phase_progression": "GPP → SPP → TAPER",
     "drills": [
       {
         "id": "knee_pain_terminal_knee_extensions_tkes_2",
@@ -4324,7 +4352,7 @@
   {
     "location": "hip",
     "type": "pain",
-    "phase_progression": "GPP → SPP",
+    "phase_progression": "GPP → SPP → TAPER",
     "drills": [
       {
         "id": "hip_pain_standing_hip_cars",
@@ -4377,6 +4405,34 @@
         "sport_specificity": "unknown",
         "contact_level": "unknown",
         "evidence_notes": "Target region inherited from the canonical rehab-bank group; other classifications remain unreviewed."
+      },
+      {
+        "id": "hip_pain_recovery_support",
+        "name": "Hip pain activity guidance",
+        "notes": "Reduce provoking hip activity and heavy carrying. Keep comfortable ordinary movement without overdoing it; avoid forcing end-range stretches. Follow clinician restrictions. Stop if activity makes symptoms worse or causes new symptoms. Seek assessment for persistent or worsening symptoms or reduced everyday function. Get urgent help for major trauma, deformity, inability to use or bear weight, marked or increasing swelling, a hot/red joint, fever or feeling unwell, locking/giving way, altered sensation, progressive weakness or circulation changes. This guidance does not identify the cause, establish healing or provide contact clearance.",
+        "rehab_stage": "calm",
+        "function": "recovery_downregulation",
+        "equipment": [],
+        "dose": null,
+        "impact": "none",
+        "load": "minimal",
+        "velocity": "low",
+        "pain_ceiling": null,
+        "allowed_severities": null,
+        "progress_when": null,
+        "regress_when": null,
+        "stop_when": null,
+        "target_regions": [
+          "hip"
+        ],
+        "laterality_applicability": "not_applicable",
+        "target_tissues": [
+          "hip region; symptom cause unspecified"
+        ],
+        "contraction_type": "unknown",
+        "sport_specificity": "general_rehab",
+        "contact_level": "none",
+        "evidence_notes": "Sources: https://www.nhs.uk/symptoms/hip-pain/. Exact nonspecific symptom baseline. No diagnosis, tissue mechanism, DOMS, numeric dose, pain ceiling, progression or swelling threshold inferred. Comfortable/non-provoking is a conservative baseline restriction, not a universal pain rule. Product low/moderate eligibility and cadence are retained. Sussex supports movement mechanics only; no injury-specific healing/loading protocol imported."
       }
     ]
   },
@@ -7910,7 +7966,7 @@
   {
     "location": "lower_back",
     "type": "pain",
-    "phase_progression": "GPP → SPP",
+    "phase_progression": "GPP → SPP → TAPER",
     "drills": [
       {
         "id": "lower_back_pain_supine_90_90_breathing",
@@ -7963,6 +8019,34 @@
         "sport_specificity": "unknown",
         "contact_level": "unknown",
         "evidence_notes": "Target region inherited from the canonical rehab-bank group; other classifications remain unreviewed."
+      },
+      {
+        "id": "lower_back_pain_recovery_support",
+        "name": "Lower Back pain activity guidance",
+        "notes": "Keep comfortable daily activity and change position as needed. Reduce provoking tasks without prolonged bed rest; no cause of the back pain is inferred. Follow clinician restrictions. Stop if activity makes symptoms worse or causes new symptoms. Seek assessment for persistent or worsening symptoms or reduced everyday function. Get urgent help for major trauma, deformity, inability to use or bear weight, marked or increasing swelling, a hot/red joint, fever or feeling unwell, locking/giving way, altered sensation, progressive weakness or circulation changes. This guidance does not identify the cause, establish healing or provide contact clearance.",
+        "rehab_stage": "calm",
+        "function": "recovery_downregulation",
+        "equipment": [],
+        "dose": null,
+        "impact": "none",
+        "load": "minimal",
+        "velocity": "low",
+        "pain_ceiling": null,
+        "allowed_severities": null,
+        "progress_when": null,
+        "regress_when": null,
+        "stop_when": null,
+        "target_regions": [
+          "lower_back"
+        ],
+        "laterality_applicability": "not_applicable",
+        "target_tissues": [
+          "lower back region; symptom cause unspecified"
+        ],
+        "contraction_type": "unknown",
+        "sport_specificity": "general_rehab",
+        "contact_level": "none",
+        "evidence_notes": "Sources: https://www.nhs.uk/conditions/back-pain/, https://www.csp.org.uk/conditions/back-pain/video-exercises-back-pain. Exact nonspecific symptom baseline. No diagnosis, tissue mechanism, DOMS, numeric dose, pain ceiling, progression or swelling threshold inferred. Comfortable/non-provoking is a conservative baseline restriction, not a universal pain rule. Product low/moderate eligibility and cadence are retained. Sussex supports movement mechanics only; no injury-specific healing/loading protocol imported."
       }
     ]
   },
@@ -8028,34 +8112,8 @@
   {
     "location": "lower_back",
     "type": "pain",
-    "phase_progression": "GPP",
+    "phase_progression": "GPP → SPP → TAPER",
     "drills": [
-      {
-        "id": "lower_back_pain_supine_pelvic_tilts",
-        "name": "Supine Pelvic Tilts",
-        "notes": "GPP: Reintroduce control with no load",
-        "rehab_stage": null,
-        "function": null,
-        "equipment": null,
-        "dose": null,
-        "impact": null,
-        "load": null,
-        "velocity": null,
-        "pain_ceiling": null,
-        "allowed_severities": null,
-        "progress_when": null,
-        "regress_when": null,
-        "stop_when": null,
-        "target_regions": [
-          "lower_back"
-        ],
-        "laterality_applicability": "unknown",
-        "target_tissues": null,
-        "contraction_type": "unknown",
-        "sport_specificity": "unknown",
-        "contact_level": "unknown",
-        "evidence_notes": "Target region inherited from the canonical rehab-bank group; other classifications remain unreviewed."
-      },
       {
         "id": "lower_back_pain_bird_dog_hold_only",
         "name": "Bird Dog (Hold Only)",
@@ -8081,13 +8139,43 @@
         "sport_specificity": "unknown",
         "contact_level": "unknown",
         "evidence_notes": "Target region inherited from the canonical rehab-bank group; other classifications remain unreviewed."
+      },
+      {
+        "id": "lower_back_pain_supine_pelvic_tilts",
+        "name": "Comfortable supine pelvic tilt",
+        "notes": "Lie on your back with knees bent and feet resting on the floor. Gently tilt the pelvis to flatten the lower back slightly, then return slowly to neutral. Keep movement small and comfortable, breathe normally, and do not force an arch or hold tension. Follow clinician restrictions. Stop if activity makes symptoms worse or causes new symptoms. Seek assessment for persistent or worsening symptoms or reduced everyday function. Get urgent help for major trauma, deformity, inability to use or bear weight, marked or increasing swelling, a hot/red joint, fever or feeling unwell, locking/giving way, altered sensation, progressive weakness or circulation changes. This guidance does not identify the cause, establish healing or provide contact clearance.",
+        "rehab_stage": "restore",
+        "function": "mobility",
+        "equipment": [
+          "mat"
+        ],
+        "dose": null,
+        "impact": "none",
+        "load": "minimal",
+        "velocity": "low",
+        "pain_ceiling": null,
+        "allowed_severities": null,
+        "progress_when": null,
+        "regress_when": null,
+        "stop_when": null,
+        "target_regions": [
+          "lower_back"
+        ],
+        "laterality_applicability": "side_specific",
+        "target_tissues": [
+          "lower back region; symptom cause unspecified"
+        ],
+        "contraction_type": "mixed",
+        "sport_specificity": "general_rehab",
+        "contact_level": "none",
+        "evidence_notes": "Sources: https://www.nhs.uk/conditions/back-pain/, https://www.csp.org.uk/conditions/back-pain/video-exercises-back-pain. Exact nonspecific symptom baseline. No diagnosis, tissue mechanism, DOMS, numeric dose, pain ceiling, progression or swelling threshold inferred. Comfortable/non-provoking is a conservative baseline restriction, not a universal pain rule. Product low/moderate eligibility and cadence are retained. Sussex supports movement mechanics only; no injury-specific healing/loading protocol imported."
       }
     ]
   },
   {
     "location": "lower_back",
     "type": "stiffness",
-    "phase_progression": "SPP → TAPER",
+    "phase_progression": "GPP → SPP → TAPER",
     "drills": [
       {
         "id": "lower_back_stiffness_glute_wall_press_iso",
@@ -8140,6 +8228,34 @@
         "sport_specificity": "unknown",
         "contact_level": "unknown",
         "evidence_notes": "Target region inherited from the canonical rehab-bank group; other classifications remain unreviewed."
+      },
+      {
+        "id": "lower_back_stiffness_recovery_support",
+        "name": "Lower Back stiffness activity guidance",
+        "notes": "Change positions and keep comfortable ordinary activity. Avoid prolonged bed rest and forced range; no diagnosis or measured mobility deficit is inferred. Follow clinician restrictions. Stop if activity makes symptoms worse or causes new symptoms. Seek assessment for persistent or worsening symptoms or reduced everyday function. Get urgent help for major trauma, deformity, inability to use or bear weight, marked or increasing swelling, a hot/red joint, fever or feeling unwell, locking/giving way, altered sensation, progressive weakness or circulation changes. This guidance does not identify the cause, establish healing or provide contact clearance.",
+        "rehab_stage": "calm",
+        "function": "recovery_downregulation",
+        "equipment": [],
+        "dose": null,
+        "impact": "none",
+        "load": "minimal",
+        "velocity": "low",
+        "pain_ceiling": null,
+        "allowed_severities": null,
+        "progress_when": null,
+        "regress_when": null,
+        "stop_when": null,
+        "target_regions": [
+          "lower_back"
+        ],
+        "laterality_applicability": "not_applicable",
+        "target_tissues": [
+          "lower back region; symptom cause unspecified"
+        ],
+        "contraction_type": "unknown",
+        "sport_specificity": "general_rehab",
+        "contact_level": "none",
+        "evidence_notes": "Sources: https://www.nhs.uk/conditions/back-pain/, https://www.nhs.uk/symptoms/joint-pain/. Exact nonspecific symptom baseline. No diagnosis, tissue mechanism, DOMS, numeric dose, pain ceiling, progression or swelling threshold inferred. Comfortable/non-provoking is a conservative baseline restriction, not a universal pain rule. Product low/moderate eligibility and cadence are retained. Sussex supports movement mechanics only; no injury-specific healing/loading protocol imported."
       }
     ]
   },
@@ -9326,7 +9442,7 @@
   {
     "location": "lower_back",
     "type": "pain",
-    "phase_progression": "GPP → SPP",
+    "phase_progression": "GPP → SPP → TAPER",
     "drills": [
       {
         "id": "lower_back_pain_supine_90_90_breathing_2",
@@ -9444,7 +9560,7 @@
   {
     "location": "lower_back",
     "type": "stiffness",
-    "phase_progression": "GPP → SPP",
+    "phase_progression": "GPP → SPP → TAPER",
     "drills": [
       {
         "id": "lower_back_stiffness_cat_cow_with_deep_breathing",
@@ -12009,7 +12125,7 @@
   {
     "location": "shoulder",
     "type": "tightness",
-    "phase_progression": "GPP → TAPER",
+    "phase_progression": "GPP → SPP → TAPER",
     "drills": [
       {
         "id": "shoulder_tightness_sleeper_stretch",
@@ -12062,13 +12178,41 @@
         "sport_specificity": "unknown",
         "contact_level": "unknown",
         "evidence_notes": "Target region inherited from the canonical rehab-bank group; other classifications remain unreviewed."
+      },
+      {
+        "id": "shoulder_tightness_recovery_support",
+        "name": "Shoulder tightness activity guidance",
+        "notes": "Reduce clearly provoking shoulder tasks while retaining gentle ordinary movement. Tightness does not prove tissue shortening; avoid forced stretches or heavy self-tests. Follow clinician restrictions. Stop if activity makes symptoms worse or causes new symptoms. Seek assessment for persistent or worsening symptoms or reduced everyday function. Get urgent help for major trauma, deformity, inability to use or bear weight, marked or increasing swelling, a hot/red joint, fever or feeling unwell, locking/giving way, altered sensation, progressive weakness or circulation changes. This guidance does not identify the cause, establish healing or provide contact clearance.",
+        "rehab_stage": "calm",
+        "function": "recovery_downregulation",
+        "equipment": [],
+        "dose": null,
+        "impact": "none",
+        "load": "minimal",
+        "velocity": "low",
+        "pain_ceiling": null,
+        "allowed_severities": null,
+        "progress_when": null,
+        "regress_when": null,
+        "stop_when": null,
+        "target_regions": [
+          "shoulder"
+        ],
+        "laterality_applicability": "not_applicable",
+        "target_tissues": [
+          "shoulder region; symptom cause unspecified"
+        ],
+        "contraction_type": "unknown",
+        "sport_specificity": "general_rehab",
+        "contact_level": "none",
+        "evidence_notes": "Sources: https://www.nhs.uk/symptoms/shoulder-pain/. Exact nonspecific symptom baseline. No diagnosis, tissue mechanism, DOMS, numeric dose, pain ceiling, progression or swelling threshold inferred. Comfortable/non-provoking is a conservative baseline restriction, not a universal pain rule. Product low/moderate eligibility and cadence are retained. Sussex supports movement mechanics only; no injury-specific healing/loading protocol imported."
       }
     ]
   },
   {
     "location": "shoulder",
     "type": "pain",
-    "phase_progression": "SPP → TAPER",
+    "phase_progression": "GPP → SPP → TAPER",
     "drills": [
       {
         "id": "shoulder_pain_isometric_wall_push_shoulder_level",
@@ -12121,6 +12265,34 @@
         "sport_specificity": "unknown",
         "contact_level": "unknown",
         "evidence_notes": "Target region inherited from the canonical rehab-bank group; other classifications remain unreviewed."
+      },
+      {
+        "id": "shoulder_pain_recovery_support",
+        "name": "Shoulder pain activity guidance",
+        "notes": "Reduce provoking shoulder activity and heavy gym work. Keep ordinary gentle movement as symptoms allow; support the arm comfortably when resting. Follow clinician restrictions. Stop if activity makes symptoms worse or causes new symptoms. Seek assessment for persistent or worsening symptoms or reduced everyday function. Get urgent help for major trauma, deformity, inability to use or bear weight, marked or increasing swelling, a hot/red joint, fever or feeling unwell, locking/giving way, altered sensation, progressive weakness or circulation changes. This guidance does not identify the cause, establish healing or provide contact clearance.",
+        "rehab_stage": "calm",
+        "function": "recovery_downregulation",
+        "equipment": [],
+        "dose": null,
+        "impact": "none",
+        "load": "minimal",
+        "velocity": "low",
+        "pain_ceiling": null,
+        "allowed_severities": null,
+        "progress_when": null,
+        "regress_when": null,
+        "stop_when": null,
+        "target_regions": [
+          "shoulder"
+        ],
+        "laterality_applicability": "not_applicable",
+        "target_tissues": [
+          "shoulder region; symptom cause unspecified"
+        ],
+        "contraction_type": "unknown",
+        "sport_specificity": "general_rehab",
+        "contact_level": "none",
+        "evidence_notes": "Sources: https://www.nhs.uk/symptoms/shoulder-pain/. Exact nonspecific symptom baseline. No diagnosis, tissue mechanism, DOMS, numeric dose, pain ceiling, progression or swelling threshold inferred. Comfortable/non-provoking is a conservative baseline restriction, not a universal pain rule. Product low/moderate eligibility and cadence are retained. Sussex supports movement mechanics only; no injury-specific healing/loading protocol imported."
       }
     ]
   },
@@ -12278,7 +12450,7 @@
   {
     "location": "shoulder",
     "type": "soreness",
-    "phase_progression": "TAPER",
+    "phase_progression": "GPP → SPP → TAPER",
     "drills": [
       {
         "id": "shoulder_soreness_massage_gun_posterior_head",
@@ -12331,6 +12503,34 @@
         "sport_specificity": "unknown",
         "contact_level": "unknown",
         "evidence_notes": "Target region inherited from the canonical rehab-bank group; other classifications remain unreviewed."
+      },
+      {
+        "id": "shoulder_soreness_recovery_support",
+        "name": "Shoulder soreness activity guidance",
+        "notes": "Reduce clearly provoking shoulder activity and heavy gym work. Keep gentle ordinary movement as tolerated. Soreness does not establish DOMS or a specific injury. Follow clinician restrictions. Stop if activity makes symptoms worse or causes new symptoms. Seek assessment for persistent or worsening symptoms or reduced everyday function. Get urgent help for major trauma, deformity, inability to use or bear weight, marked or increasing swelling, a hot/red joint, fever or feeling unwell, locking/giving way, altered sensation, progressive weakness or circulation changes. This guidance does not identify the cause, establish healing or provide contact clearance.",
+        "rehab_stage": "calm",
+        "function": "recovery_downregulation",
+        "equipment": [],
+        "dose": null,
+        "impact": "none",
+        "load": "minimal",
+        "velocity": "low",
+        "pain_ceiling": null,
+        "allowed_severities": null,
+        "progress_when": null,
+        "regress_when": null,
+        "stop_when": null,
+        "target_regions": [
+          "shoulder"
+        ],
+        "laterality_applicability": "not_applicable",
+        "target_tissues": [
+          "shoulder region; symptom cause unspecified"
+        ],
+        "contraction_type": "unknown",
+        "sport_specificity": "general_rehab",
+        "contact_level": "none",
+        "evidence_notes": "Sources: https://www.nhs.uk/symptoms/shoulder-pain/. Exact nonspecific symptom baseline. No diagnosis, tissue mechanism, DOMS, numeric dose, pain ceiling, progression or swelling threshold inferred. Comfortable/non-provoking is a conservative baseline restriction, not a universal pain rule. Product low/moderate eligibility and cadence are retained. Sussex supports movement mechanics only; no injury-specific healing/loading protocol imported."
       }
     ]
   },
@@ -13171,7 +13371,7 @@
   {
     "location": "shoulder",
     "type": "tightness",
-    "phase_progression": "GPP → TAPER",
+    "phase_progression": "GPP → SPP → TAPER",
     "drills": [
       {
         "id": "shoulder_tightness_sleeper_stretch_on_wall",
@@ -13230,7 +13430,7 @@
   {
     "location": "shoulder",
     "type": "pain",
-    "phase_progression": "SPP → TAPER",
+    "phase_progression": "GPP → SPP → TAPER",
     "drills": [
       {
         "id": "shoulder_pain_wall_angels_floor_version_if_needed",
@@ -13655,7 +13855,7 @@
   {
     "location": "shoulder",
     "type": "soreness",
-    "phase_progression": "TAPER",
+    "phase_progression": "GPP → SPP → TAPER",
     "drills": [
       {
         "id": "shoulder_soreness_lateral_raise_isometric_at_45",
@@ -17019,7 +17219,7 @@
   {
     "location": "elbow",
     "type": "pain",
-    "phase_progression": "SPP → TAPER",
+    "phase_progression": "GPP → SPP → TAPER",
     "drills": [
       {
         "id": "elbow_pain_neutral_grip_db_curls_isometric",
@@ -17072,6 +17272,34 @@
         "sport_specificity": "unknown",
         "contact_level": "unknown",
         "evidence_notes": "Target region inherited from the canonical rehab-bank group; other classifications remain unreviewed."
+      },
+      {
+        "id": "elbow_pain_recovery_support",
+        "name": "Elbow pain activity guidance",
+        "notes": "Reduce clearly provoking elbow activity and avoid forceful self-testing. Keep comfortable ordinary movement; seek assessment for ongoing pain or reduced function. Follow clinician restrictions. Stop if activity makes symptoms worse or causes new symptoms. Seek assessment for persistent or worsening symptoms or reduced everyday function. Get urgent help for major trauma, deformity, inability to use or bear weight, marked or increasing swelling, a hot/red joint, fever or feeling unwell, locking/giving way, altered sensation, progressive weakness or circulation changes. This guidance does not identify the cause, establish healing or provide contact clearance.",
+        "rehab_stage": "calm",
+        "function": "recovery_downregulation",
+        "equipment": [],
+        "dose": null,
+        "impact": "none",
+        "load": "minimal",
+        "velocity": "low",
+        "pain_ceiling": null,
+        "allowed_severities": null,
+        "progress_when": null,
+        "regress_when": null,
+        "stop_when": null,
+        "target_regions": [
+          "elbow"
+        ],
+        "laterality_applicability": "not_applicable",
+        "target_tissues": [
+          "elbow region; symptom cause unspecified"
+        ],
+        "contraction_type": "unknown",
+        "sport_specificity": "general_rehab",
+        "contact_level": "none",
+        "evidence_notes": "Sources: https://www.nhs.uk/symptoms/elbow-and-arm-pain/, https://www.nhs.uk/symptoms/joint-pain/. Exact nonspecific symptom baseline. No diagnosis, tissue mechanism, DOMS, numeric dose, pain ceiling, progression or swelling threshold inferred. Comfortable/non-provoking is a conservative baseline restriction, not a universal pain rule. Product low/moderate eligibility and cadence are retained. Sussex supports movement mechanics only; no injury-specific healing/loading protocol imported."
       }
     ]
   },
@@ -17464,7 +17692,7 @@
   {
     "location": "elbow",
     "type": "stiffness",
-    "phase_progression": "GPP → SPP",
+    "phase_progression": "GPP → SPP → TAPER",
     "drills": [
       {
         "id": "elbow_stiffness_active_elbow_flexion_extension_with_dowel",
@@ -17517,6 +17745,34 @@
         "sport_specificity": "unknown",
         "contact_level": "unknown",
         "evidence_notes": "Target region inherited from the canonical rehab-bank group; other classifications remain unreviewed."
+      },
+      {
+        "id": "elbow_stiffness_recovery_support",
+        "name": "Elbow stiffness activity guidance",
+        "notes": "Keep comfortable ordinary elbow movement without forceful end-range work. Stiffness alone does not establish a movement restriction or its cause. Follow clinician restrictions. Stop if activity makes symptoms worse or causes new symptoms. Seek assessment for persistent or worsening symptoms or reduced everyday function. Get urgent help for major trauma, deformity, inability to use or bear weight, marked or increasing swelling, a hot/red joint, fever or feeling unwell, locking/giving way, altered sensation, progressive weakness or circulation changes. This guidance does not identify the cause, establish healing or provide contact clearance.",
+        "rehab_stage": "calm",
+        "function": "recovery_downregulation",
+        "equipment": [],
+        "dose": null,
+        "impact": "none",
+        "load": "minimal",
+        "velocity": "low",
+        "pain_ceiling": null,
+        "allowed_severities": null,
+        "progress_when": null,
+        "regress_when": null,
+        "stop_when": null,
+        "target_regions": [
+          "elbow"
+        ],
+        "laterality_applicability": "not_applicable",
+        "target_tissues": [
+          "elbow region; symptom cause unspecified"
+        ],
+        "contraction_type": "unknown",
+        "sport_specificity": "general_rehab",
+        "contact_level": "none",
+        "evidence_notes": "Sources: https://www.nhs.uk/symptoms/elbow-and-arm-pain/, https://www.nhs.uk/symptoms/joint-pain/. Exact nonspecific symptom baseline. No diagnosis, tissue mechanism, DOMS, numeric dose, pain ceiling, progression or swelling threshold inferred. Comfortable/non-provoking is a conservative baseline restriction, not a universal pain rule. Product low/moderate eligibility and cadence are retained. Sussex supports movement mechanics only; no injury-specific healing/loading protocol imported."
       }
     ]
   },
@@ -18352,7 +18608,7 @@
   {
     "location": "wrist",
     "type": "stiffness",
-    "phase_progression": "GPP → SPP",
+    "phase_progression": "GPP → SPP → TAPER",
     "drills": [
       {
         "id": "wrist_stiffness_wrist_cars",
@@ -18381,16 +18637,16 @@
         "evidence_notes": "Target region inherited from the canonical rehab-bank group; other classifications remain unreviewed."
       },
       {
-        "id": "wrist_stiffness_stick_roll_wrist_flex_ext",
-        "name": "Stick Roll Wrist Flex/Ext",
-        "notes": "GPP: Mobilize fascial line → SPP: Train control under load",
-        "rehab_stage": null,
-        "function": null,
-        "equipment": null,
+        "id": "wrist_stiffness_recovery_support",
+        "name": "Wrist stiffness activity guidance",
+        "notes": "Keep gentle ordinary wrist movement and reduce clearly provoking tasks. Do not add resistance or force range merely because the wrist feels stiff. Follow clinician restrictions. Stop if activity makes symptoms worse or causes new symptoms. Seek assessment for persistent or worsening symptoms or reduced everyday function. Get urgent help for major trauma, deformity, inability to use or bear weight, marked or increasing swelling, a hot/red joint, fever or feeling unwell, locking/giving way, altered sensation, progressive weakness or circulation changes. This guidance does not identify the cause, establish healing or provide contact clearance.",
+        "rehab_stage": "calm",
+        "function": "recovery_downregulation",
+        "equipment": [],
         "dose": null,
-        "impact": null,
-        "load": null,
-        "velocity": null,
+        "impact": "none",
+        "load": "minimal",
+        "velocity": "low",
         "pain_ceiling": null,
         "allowed_severities": null,
         "progress_when": null,
@@ -18399,12 +18655,44 @@
         "target_regions": [
           "wrist"
         ],
-        "laterality_applicability": "unknown",
-        "target_tissues": null,
+        "laterality_applicability": "not_applicable",
+        "target_tissues": [
+          "wrist region; symptom cause unspecified"
+        ],
         "contraction_type": "unknown",
-        "sport_specificity": "unknown",
-        "contact_level": "unknown",
-        "evidence_notes": "Target region inherited from the canonical rehab-bank group; other classifications remain unreviewed."
+        "sport_specificity": "general_rehab",
+        "contact_level": "none",
+        "evidence_notes": "Sources: https://www.nhs.uk/symptoms/hand-pain/wrist-pain/, https://www.uhsussex.nhs.uk/resources/elbow-and-wrist-exercises/. Exact nonspecific symptom baseline. No diagnosis, tissue mechanism, DOMS, numeric dose, pain ceiling, progression or swelling threshold inferred. Comfortable/non-provoking is a conservative baseline restriction, not a universal pain rule. Product low/moderate eligibility and cadence are retained. Sussex supports movement mechanics only; no injury-specific healing/loading protocol imported."
+      },
+      {
+        "id": "wrist_stiffness_stick_roll_wrist_flex_ext",
+        "name": "Supported unloaded wrist movement",
+        "notes": "Support the forearm on a table with the empty relaxed hand free beyond the edge. Gently move the wrist a small comfortable amount upwards and downwards. No stick, grip, weight, resistance, forced stretch or pressure through the hand. Follow clinician restrictions. Stop if activity makes symptoms worse or causes new symptoms. Seek assessment for persistent or worsening symptoms or reduced everyday function. Get urgent help for major trauma, deformity, inability to use or bear weight, marked or increasing swelling, a hot/red joint, fever or feeling unwell, locking/giving way, altered sensation, progressive weakness or circulation changes. This guidance does not identify the cause, establish healing or provide contact clearance.",
+        "rehab_stage": "restore",
+        "function": "mobility",
+        "equipment": [
+          "table"
+        ],
+        "dose": null,
+        "impact": "none",
+        "load": "minimal",
+        "velocity": "low",
+        "pain_ceiling": null,
+        "allowed_severities": null,
+        "progress_when": null,
+        "regress_when": null,
+        "stop_when": null,
+        "target_regions": [
+          "wrist"
+        ],
+        "laterality_applicability": "side_specific",
+        "target_tissues": [
+          "wrist region; symptom cause unspecified"
+        ],
+        "contraction_type": "mixed",
+        "sport_specificity": "general_rehab",
+        "contact_level": "none",
+        "evidence_notes": "Sources: https://www.nhs.uk/symptoms/hand-pain/wrist-pain/, https://www.uhsussex.nhs.uk/resources/elbow-and-wrist-exercises/. Exact nonspecific symptom baseline. No diagnosis, tissue mechanism, DOMS, numeric dose, pain ceiling, progression or swelling threshold inferred. Comfortable/non-provoking is a conservative baseline restriction, not a universal pain rule. Product low/moderate eligibility and cadence are retained. Sussex supports movement mechanics only; no injury-specific healing/loading protocol imported."
       }
     ]
   },
@@ -18689,7 +18977,7 @@
   {
     "location": "wrist",
     "type": "pain",
-    "phase_progression": "SPP → TAPER",
+    "phase_progression": "GPP → SPP → TAPER",
     "drills": [
       {
         "id": "wrist_pain_isometric_dumbbell_wrist_hold_neutral",
@@ -18742,6 +19030,34 @@
         "sport_specificity": "unknown",
         "contact_level": "unknown",
         "evidence_notes": "Target region inherited from the canonical rehab-bank group; other classifications remain unreviewed."
+      },
+      {
+        "id": "wrist_pain_recovery_support",
+        "name": "Wrist pain activity guidance",
+        "notes": "Reduce provoking wrist tasks, heavy lifting and tight gripping. Rest comfortably between activities while retaining gentle ordinary movement as tolerated. Follow clinician restrictions. Stop if activity makes symptoms worse or causes new symptoms. Seek assessment for persistent or worsening symptoms or reduced everyday function. Get urgent help for major trauma, deformity, inability to use or bear weight, marked or increasing swelling, a hot/red joint, fever or feeling unwell, locking/giving way, altered sensation, progressive weakness or circulation changes. This guidance does not identify the cause, establish healing or provide contact clearance.",
+        "rehab_stage": "calm",
+        "function": "recovery_downregulation",
+        "equipment": [],
+        "dose": null,
+        "impact": "none",
+        "load": "minimal",
+        "velocity": "low",
+        "pain_ceiling": null,
+        "allowed_severities": null,
+        "progress_when": null,
+        "regress_when": null,
+        "stop_when": null,
+        "target_regions": [
+          "wrist"
+        ],
+        "laterality_applicability": "not_applicable",
+        "target_tissues": [
+          "wrist region; symptom cause unspecified"
+        ],
+        "contraction_type": "unknown",
+        "sport_specificity": "general_rehab",
+        "contact_level": "none",
+        "evidence_notes": "Sources: https://www.nhs.uk/symptoms/hand-pain/wrist-pain/. Exact nonspecific symptom baseline. No diagnosis, tissue mechanism, DOMS, numeric dose, pain ceiling, progression or swelling threshold inferred. Comfortable/non-provoking is a conservative baseline restriction, not a universal pain rule. Product low/moderate eligibility and cadence are retained. Sussex supports movement mechanics only; no injury-specific healing/loading protocol imported."
       }
     ]
   },
@@ -19053,7 +19369,7 @@
   {
     "location": "wrist",
     "type": "stiffness",
-    "phase_progression": "SPP → TAPER",
+    "phase_progression": "GPP → SPP → TAPER",
     "drills": [
       {
         "id": "wrist_stiffness_theraband_wrist_abduction_adduction",
@@ -19412,7 +19728,7 @@
   {
     "location": "wrist",
     "type": "pain",
-    "phase_progression": "SPP → TAPER",
+    "phase_progression": "GPP → SPP → TAPER",
     "drills": [
       {
         "id": "wrist_pain_pronation_supination_with_band",
@@ -19471,7 +19787,7 @@
   {
     "location": "wrist",
     "type": "stiffness",
-    "phase_progression": "GPP → SPP",
+    "phase_progression": "GPP → SPP → TAPER",
     "drills": [
       {
         "id": "wrist_stiffness_wrist_cars_controlled_articular_rotations",
@@ -20477,7 +20793,7 @@
   {
     "location": "hand",
     "type": "pain",
-    "phase_progression": "SPP → TAPER",
+    "phase_progression": "GPP → SPP → TAPER",
     "drills": [
       {
         "id": "hand_pain_hand_iso_hold_around_grip_trainer",
@@ -20530,6 +20846,34 @@
         "sport_specificity": "unknown",
         "contact_level": "unknown",
         "evidence_notes": "Target region inherited from the canonical rehab-bank group; other classifications remain unreviewed."
+      },
+      {
+        "id": "hand_pain_recovery_support",
+        "name": "Hand pain activity guidance",
+        "notes": "Reduce provoking hand tasks, heavy carrying and tight gripping. Rest the hand comfortably and keep ordinary gentle movement as symptoms allow. Follow clinician restrictions. Stop if activity makes symptoms worse or causes new symptoms. Seek assessment for persistent or worsening symptoms or reduced everyday function. Get urgent help for major trauma, deformity, inability to use or bear weight, marked or increasing swelling, a hot/red joint, fever or feeling unwell, locking/giving way, altered sensation, progressive weakness or circulation changes. This guidance does not identify the cause, establish healing or provide contact clearance.",
+        "rehab_stage": "calm",
+        "function": "recovery_downregulation",
+        "equipment": [],
+        "dose": null,
+        "impact": "none",
+        "load": "minimal",
+        "velocity": "low",
+        "pain_ceiling": null,
+        "allowed_severities": null,
+        "progress_when": null,
+        "regress_when": null,
+        "stop_when": null,
+        "target_regions": [
+          "hand"
+        ],
+        "laterality_applicability": "not_applicable",
+        "target_tissues": [
+          "hand region; symptom cause unspecified"
+        ],
+        "contraction_type": "unknown",
+        "sport_specificity": "general_rehab",
+        "contact_level": "none",
+        "evidence_notes": "Sources: https://www.nhs.uk/symptoms/hand-pain/pain-in-the-palm-of-the-hand/. Exact nonspecific symptom baseline. No diagnosis, tissue mechanism, DOMS, numeric dose, pain ceiling, progression or swelling threshold inferred. Comfortable/non-provoking is a conservative baseline restriction, not a universal pain rule. Product low/moderate eligibility and cadence are retained. Sussex supports movement mechanics only; no injury-specific healing/loading protocol imported."
       }
     ]
   },
@@ -20985,7 +21329,7 @@
   {
     "location": "hand",
     "type": "pain",
-    "phase_progression": "GPP → SPP",
+    "phase_progression": "GPP → SPP → TAPER",
     "drills": [
       {
         "id": "hand_pain_friction_ball_circles_palm_fingers",
@@ -21521,7 +21865,7 @@
   {
     "location": "fingers",
     "type": "pain",
-    "phase_progression": "SPP → TAPER",
+    "phase_progression": "GPP → SPP → TAPER",
     "drills": [
       {
         "id": "fingers_pain_finger_isometrics_against_resistance_band",
@@ -21574,6 +21918,34 @@
         "sport_specificity": "unknown",
         "contact_level": "unknown",
         "evidence_notes": "Target region inherited from the canonical rehab-bank group; other classifications remain unreviewed."
+      },
+      {
+        "id": "fingers_pain_recovery_support",
+        "name": "Fingers pain activity guidance",
+        "notes": "Reduce provoking finger tasks and heavy gripping. Avoid forcing movement or testing grip strength; follow individual support advice without prescribing taping here. Follow clinician restrictions. Stop if activity makes symptoms worse or causes new symptoms. Seek assessment for persistent or worsening symptoms or reduced everyday function. Get urgent help for major trauma, deformity, inability to use or bear weight, marked or increasing swelling, a hot/red joint, fever or feeling unwell, locking/giving way, altered sensation, progressive weakness or circulation changes. This guidance does not identify the cause, establish healing or provide contact clearance.",
+        "rehab_stage": "calm",
+        "function": "recovery_downregulation",
+        "equipment": [],
+        "dose": null,
+        "impact": "none",
+        "load": "minimal",
+        "velocity": "low",
+        "pain_ceiling": null,
+        "allowed_severities": null,
+        "progress_when": null,
+        "regress_when": null,
+        "stop_when": null,
+        "target_regions": [
+          "fingers"
+        ],
+        "laterality_applicability": "not_applicable",
+        "target_tissues": [
+          "fingers region; symptom cause unspecified"
+        ],
+        "contraction_type": "unknown",
+        "sport_specificity": "general_rehab",
+        "contact_level": "none",
+        "evidence_notes": "Sources: https://www.nhs.uk/symptoms/hand-pain/finger-pain/. Exact nonspecific symptom baseline. No diagnosis, tissue mechanism, DOMS, numeric dose, pain ceiling, progression or swelling threshold inferred. Comfortable/non-provoking is a conservative baseline restriction, not a universal pain rule. Product low/moderate eligibility and cadence are retained. Sussex supports movement mechanics only; no injury-specific healing/loading protocol imported."
       }
     ]
   },
@@ -22378,7 +22750,7 @@
   {
     "location": "neck",
     "type": "tightness",
-    "phase_progression": "GPP → TAPER",
+    "phase_progression": "GPP → SPP → TAPER",
     "drills": [
       {
         "id": "neck_tightness_seated_neck_circles_slow_tempo",
@@ -22431,25 +22803,18 @@
         "sport_specificity": "unknown",
         "contact_level": "unknown",
         "evidence_notes": "Target region inherited from the canonical rehab-bank group; other classifications remain unreviewed."
-      }
-    ]
-  },
-  {
-    "location": "neck",
-    "type": "stiffness",
-    "phase_progression": "GPP → SPP",
-    "drills": [
+      },
       {
-        "id": "neck_stiffness_neck_cars_controlled_articular_rotations",
-        "name": "Neck CARs (Controlled Articular Rotations)",
-        "notes": "GPP: Expand multi-directional range → SPP: Integrate slow resistance patterns",
-        "rehab_stage": null,
-        "function": "control",
-        "equipment": null,
+        "id": "neck_tightness_recovery_support",
+        "name": "Neck tightness activity guidance",
+        "notes": "Change positions and keep gentle ordinary neck movement. Tightness does not prove shortened tissue; avoid forceful stretching, traction or pressure on the neck. Follow clinician restrictions. Stop if activity makes symptoms worse or causes new symptoms. Seek assessment for persistent or worsening symptoms or reduced everyday function. Get urgent help for major trauma, deformity, inability to use or bear weight, marked or increasing swelling, a hot/red joint, fever or feeling unwell, locking/giving way, altered sensation, progressive weakness or circulation changes. This guidance does not identify the cause, establish healing or provide contact clearance.",
+        "rehab_stage": "calm",
+        "function": "recovery_downregulation",
+        "equipment": [],
         "dose": null,
-        "impact": null,
-        "load": null,
-        "velocity": null,
+        "impact": "none",
+        "load": "minimal",
+        "velocity": "low",
         "pain_ceiling": null,
         "allowed_severities": null,
         "progress_when": null,
@@ -22458,13 +22823,22 @@
         "target_regions": [
           "neck"
         ],
-        "laterality_applicability": "unknown",
-        "target_tissues": null,
+        "laterality_applicability": "not_applicable",
+        "target_tissues": [
+          "neck region; symptom cause unspecified"
+        ],
         "contraction_type": "unknown",
-        "sport_specificity": "unknown",
-        "contact_level": "unknown",
-        "evidence_notes": "Target region inherited from the canonical rehab-bank group; other classifications remain unreviewed."
-      },
+        "sport_specificity": "general_rehab",
+        "contact_level": "none",
+        "evidence_notes": "Sources: https://www.nhs.uk/symptoms/neck-pain-and-stiff-neck/. Exact nonspecific symptom baseline. No diagnosis, tissue mechanism, DOMS, numeric dose, pain ceiling, progression or swelling threshold inferred. Comfortable/non-provoking is a conservative baseline restriction, not a universal pain rule. Product low/moderate eligibility and cadence are retained. Sussex supports movement mechanics only; no injury-specific healing/loading protocol imported."
+      }
+    ]
+  },
+  {
+    "location": "neck",
+    "type": "stiffness",
+    "phase_progression": "GPP → SPP → TAPER",
+    "drills": [
       {
         "id": "neck_stiffness_partner_assisted_neck_mobility",
         "name": "Partner-Assisted Neck Mobility",
@@ -22490,6 +22864,62 @@
         "sport_specificity": "unknown",
         "contact_level": "unknown",
         "evidence_notes": "Target region inherited from the canonical rehab-bank group; other classifications remain unreviewed."
+      },
+      {
+        "id": "neck_stiffness_recovery_support",
+        "name": "Neck stiffness activity guidance",
+        "notes": "Change position rather than holding the neck still for long periods. Keep gentle ordinary movement; do not force range or remove prescribed protection. Follow clinician restrictions. Stop if activity makes symptoms worse or causes new symptoms. Seek assessment for persistent or worsening symptoms or reduced everyday function. Get urgent help for major trauma, deformity, inability to use or bear weight, marked or increasing swelling, a hot/red joint, fever or feeling unwell, locking/giving way, altered sensation, progressive weakness or circulation changes. This guidance does not identify the cause, establish healing or provide contact clearance.",
+        "rehab_stage": "calm",
+        "function": "recovery_downregulation",
+        "equipment": [],
+        "dose": null,
+        "impact": "none",
+        "load": "minimal",
+        "velocity": "low",
+        "pain_ceiling": null,
+        "allowed_severities": null,
+        "progress_when": null,
+        "regress_when": null,
+        "stop_when": null,
+        "target_regions": [
+          "neck"
+        ],
+        "laterality_applicability": "not_applicable",
+        "target_tissues": [
+          "neck region; symptom cause unspecified"
+        ],
+        "contraction_type": "unknown",
+        "sport_specificity": "general_rehab",
+        "contact_level": "none",
+        "evidence_notes": "Sources: https://www.nhs.uk/symptoms/neck-pain-and-stiff-neck/, https://www.nhs.uk/live-well/exercise/flexibility-exercises/. Exact nonspecific symptom baseline. No diagnosis, tissue mechanism, DOMS, numeric dose, pain ceiling, progression or swelling threshold inferred. Comfortable/non-provoking is a conservative baseline restriction, not a universal pain rule. Product low/moderate eligibility and cadence are retained. Sussex supports movement mechanics only; no injury-specific healing/loading protocol imported."
+      },
+      {
+        "id": "neck_stiffness_neck_cars_controlled_articular_rotations",
+        "name": "Comfortable seated neck rotation",
+        "notes": "Sit upright with shoulders relaxed. Slowly turn the head a small comfortable amount to one side, then return to the middle. Use unassisted movement only; no neck circles, forced range, resistance, traction or sustained stretch. Follow clinician restrictions. Stop if activity makes symptoms worse or causes new symptoms. Seek assessment for persistent or worsening symptoms or reduced everyday function. Get urgent help for major trauma, deformity, inability to use or bear weight, marked or increasing swelling, a hot/red joint, fever or feeling unwell, locking/giving way, altered sensation, progressive weakness or circulation changes. This guidance does not identify the cause, establish healing or provide contact clearance.",
+        "rehab_stage": "restore",
+        "function": "mobility",
+        "equipment": [],
+        "dose": null,
+        "impact": "none",
+        "load": "minimal",
+        "velocity": "low",
+        "pain_ceiling": null,
+        "allowed_severities": null,
+        "progress_when": null,
+        "regress_when": null,
+        "stop_when": null,
+        "target_regions": [
+          "neck"
+        ],
+        "laterality_applicability": "side_specific",
+        "target_tissues": [
+          "neck region; symptom cause unspecified"
+        ],
+        "contraction_type": "mixed",
+        "sport_specificity": "general_rehab",
+        "contact_level": "none",
+        "evidence_notes": "Sources: https://www.nhs.uk/symptoms/neck-pain-and-stiff-neck/, https://www.nhs.uk/live-well/exercise/flexibility-exercises/. Exact nonspecific symptom baseline. No diagnosis, tissue mechanism, DOMS, numeric dose, pain ceiling, progression or swelling threshold inferred. Comfortable/non-provoking is a conservative baseline restriction, not a universal pain rule. Product low/moderate eligibility and cadence are retained. Sussex supports movement mechanics only; no injury-specific healing/loading protocol imported."
       }
     ]
   },
@@ -22555,7 +22985,7 @@
   {
     "location": "neck",
     "type": "soreness",
-    "phase_progression": "TAPER",
+    "phase_progression": "GPP → SPP → TAPER",
     "drills": [
       {
         "id": "neck_soreness_self_massage_traps_cervical",
@@ -22608,6 +23038,34 @@
         "sport_specificity": "unknown",
         "contact_level": "unknown",
         "evidence_notes": "Target region inherited from the canonical rehab-bank group; other classifications remain unreviewed."
+      },
+      {
+        "id": "neck_soreness_recovery_support",
+        "name": "Neck soreness activity guidance",
+        "notes": "Adjust provoking activity and avoid staying in one position for long periods. Soreness does not establish DOMS; do not use forceful neck self-testing. Follow clinician restrictions. Stop if activity makes symptoms worse or causes new symptoms. Seek assessment for persistent or worsening symptoms or reduced everyday function. Get urgent help for major trauma, deformity, inability to use or bear weight, marked or increasing swelling, a hot/red joint, fever or feeling unwell, locking/giving way, altered sensation, progressive weakness or circulation changes. This guidance does not identify the cause, establish healing or provide contact clearance.",
+        "rehab_stage": "calm",
+        "function": "recovery_downregulation",
+        "equipment": [],
+        "dose": null,
+        "impact": "none",
+        "load": "minimal",
+        "velocity": "low",
+        "pain_ceiling": null,
+        "allowed_severities": null,
+        "progress_when": null,
+        "regress_when": null,
+        "stop_when": null,
+        "target_regions": [
+          "neck"
+        ],
+        "laterality_applicability": "not_applicable",
+        "target_tissues": [
+          "neck region; symptom cause unspecified"
+        ],
+        "contraction_type": "unknown",
+        "sport_specificity": "general_rehab",
+        "contact_level": "none",
+        "evidence_notes": "Sources: https://www.nhs.uk/symptoms/neck-pain-and-stiff-neck/. Exact nonspecific symptom baseline. No diagnosis, tissue mechanism, DOMS, numeric dose, pain ceiling, progression or swelling threshold inferred. Comfortable/non-provoking is a conservative baseline restriction, not a universal pain rule. Product low/moderate eligibility and cadence are retained. Sussex supports movement mechanics only; no injury-specific healing/loading protocol imported."
       }
     ]
   },
@@ -23145,7 +23603,7 @@
   {
     "location": "neck",
     "type": "stiffness",
-    "phase_progression": "TAPER",
+    "phase_progression": "GPP → SPP → TAPER",
     "drills": [
       {
         "id": "neck_stiffness_gentle_neck_side_tilts_passive_stretch",
@@ -23263,7 +23721,7 @@
   {
     "location": "neck",
     "type": "soreness",
-    "phase_progression": "GPP → TAPER",
+    "phase_progression": "GPP → SPP → TAPER",
     "drills": [
       {
         "id": "neck_soreness_neck_towel_oscillation_drill",

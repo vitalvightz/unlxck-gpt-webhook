@@ -167,6 +167,7 @@ guidanceProfiles.push(["wrist", "sprain"], ["ankle", "instability"], ["achilles"
 guidanceProfiles.push(...["shoulder", "hip", "ankle", "elbow", "wrist"].map(region => [region, "impingement"]));
 guidanceProfiles.push(...["toe", "fingers", "elbow", "wrist", "hand", "shoulder"].map(region => [region, "hyperextension"]));
 guidanceProfiles.push(...["heel", "shin", "quads", "biceps", "triceps", "forearm", "shoulder", "elbow", "wrist", "hand", "fingers"].map(region => [region, "contusion"]));
+guidanceProfiles.push(...[["shoulder", "pain"], ["elbow", "pain"], ["wrist", "pain"], ["hand", "pain"], ["fingers", "pain"], ["knee", "pain"], ["hip", "pain"], ["lower_back", "pain"], ["neck", "stiffness"], ["elbow", "stiffness"], ["wrist", "stiffness"], ["lower_back", "stiffness"], ["neck", "tightness"], ["shoulder", "tightness"], ["neck", "soreness"], ["shoulder", "soreness"]]);
 for (const [index, [region, kind]] of guidanceProfiles.entries()) {
   await test(`${region}_${kind}: frozen profile guidance accepts unknown side with exact provenance`, async () => {
     const id = `00000000-0000-4000-8000-${String(100 + index * 4).padStart(12, "0")}`;

@@ -40,7 +40,8 @@ def test_families_and_safety_baseline_invent_no_clinical_criteria():
         assert [t.key for t in policy.transitions] == ["restore->load", "load->dynamic", "dynamic->return"]
         assert not any(t.promotable for t in policy.transitions)
         calm_only = (policy.policy_id == "wrist_impingement" or policy.injury_type == "hyperextension"
-                     or policy.policy_id in {f"{r}_contusion" for r in ["heel", "shin", "quads", "biceps", "triceps", "forearm"]})
+                     or policy.policy_id in {f"{r}_contusion" for r in ["heel", "shin", "quads", "biceps", "triceps", "forearm"]}
+                     or policy.policy_id in {'lower_back_stiffness', 'shoulder_pain', 'shoulder_tightness', 'neck_tightness', 'elbow_pain', 'wrist_pain', 'neck_soreness', 'hip_pain', 'shoulder_soreness', 'elbow_stiffness', 'knee_pain', 'hand_pain', 'fingers_pain'})
         assert policy.live_stages == (["calm"] if calm_only else ["calm", "restore"])
 
 
@@ -60,7 +61,8 @@ def test_shipped_profiles_name_their_family():
         **{f"{region}_hyperextension": "hyperextension_or_joint_trauma" for region in [
             "toe", "fingers", "elbow", "wrist", "hand", "shoulder"]},
         **{f"{region}_contusion": "contusion" for region in [
-            "heel", "shin", "quads", "biceps", "triceps", "forearm", "shoulder", "elbow", "wrist", "hand", "fingers"]}}
+            "heel", "shin", "quads", "biceps", "triceps", "forearm", "shoulder", "elbow", "wrist", "hand", "fingers"]},
+        **{p: "nonspecific_msk_symptoms" for p in ['shoulder_pain', 'elbow_pain', 'wrist_pain', 'hand_pain', 'fingers_pain', 'knee_pain', 'hip_pain', 'lower_back_pain', 'neck_stiffness', 'elbow_stiffness', 'wrist_stiffness', 'lower_back_stiffness', 'neck_tightness', 'shoulder_tightness', 'neck_soreness', 'shoulder_soreness']}}
 
 
 @pytest.mark.parametrize("raw,match", [

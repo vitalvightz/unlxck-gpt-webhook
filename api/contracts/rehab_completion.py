@@ -378,9 +378,11 @@ def resolve_rehab_exposure_candidate(
     regions = _drill_regions(drill)
     matches = _matching_injuries(regions, injuries)
     if drill.get("prescribed_injury_id"):
+        from .rehab_exposure import nonspecific_policy_type_matches
         matches = [injury for injury in matches
                    if str(injury.get("id")) == drill["prescribed_injury_id"]
-                   and str(injury.get("episode_id")) == drill.get("prescribed_injury_episode_id")]
+                   and str(injury.get("episode_id")) == drill.get("prescribed_injury_episode_id")
+                   and nonspecific_policy_type_matches(drill.get("prescription_policy_id"), injury)]
     candidate_ids = tuple(_clean(injury.get("id")) for injury in matches if _clean(injury.get("id")))
 
     if not matches:

@@ -205,7 +205,13 @@ def test_tendon_specific_structural_and_high_severity_gates(region, changes):
 
 @pytest.mark.parametrize("region", REGIONS)
 def test_unrelated_pain_does_not_become_tendonitis(region):
-    assert resolve(injury(region, "pain"))["prescription"] is None
+    decision = resolve(injury(region, "pain"))
+    assert decision["injury_type"] == "pain"
+    if decision["prescription"] is not None:
+        assert decision["policy_id"] == f"{region}_pain"
+        policy = next(p for p in load_clinical_policies() if p.policy_id == decision["policy_id"])
+        assert policy.pathway_family == "nonspecific_msk_symptoms"
+        assert decision["prescription"]["drill_id"] in {p.drill_id for p in policy.prescriptions}
 
 
 def test_inventory_repaired_id_history_and_tendon_content_preservation():

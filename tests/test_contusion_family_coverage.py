@@ -174,8 +174,10 @@ def test_original_audit_hashes_ids_and_review_history_preserved():
     hashes = read("tests/fixtures/rehab_bank_before_contusion_hashes.json")
     bank = {d["id"]: d for g in get_rehab_bank() for d in g["drills"]}
     assert hashes.keys() <= bank.keys()
-    assert {identity for identity in hashes if content_hash(bank[identity]) != hashes[identity]} == REPAIRED
-    assert bank.keys() - hashes.keys() == ({f"{r}_contusion_recovery_support" for r in REGIONS}
+    family_ids = {row["drill_id"] for row in audit}
+    assert {identity for identity in family_ids if content_hash(bank[identity]) != hashes[identity]} == REPAIRED
+    current_family = {d["id"] for g in get_rehab_bank() if g["type"] == "contusion" for d in g["drills"]}
+    assert current_family - hashes.keys() == ({f"{r}_contusion_recovery_support" for r in REGIONS}
         | {"hand_contusion_reviewed_restore", "fingers_contusion_reviewed_restore"})
     ledger = {r["drill_id"]: r for r in read("data/rehab_metadata_review.json")}
     active = {p.drill_id for policy in load_clinical_policies() if policy.injury_type == "contusion" for p in policy.prescriptions}

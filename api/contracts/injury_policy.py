@@ -2,9 +2,12 @@
 from __future__ import annotations
 
 from copy import deepcopy
+import re
 from typing import Any, Mapping, Sequence
 
 from fightcamp.injury_formatting import parse_injury_entry
+from fightcamp.injury_negation import remove_negated_phrases
+from fightcamp.injury_taxonomy import INJURY_TAXONOMY
 from fightcamp.injury_location_registry import get_rehab_location_candidates
 from fightcamp.rehab_clinical import ClinicalPolicy, content_hash, validate_clinical_bank
 from fightcamp.rehab_schema import normalize_severity_bucket
@@ -50,6 +53,25 @@ def resolve_injury_policy(
     if not region or not kind or kind == "unspecified":
         result.update(outcome="missing_information", summary="Add the injury area and type so your rehab can be matched.", reason_codes=["missing_injury_identity"])
         return result
+    if kind in {"pain", "soreness", "tightness", "stiffness", "swelling"}:
+        # A conflicting episode identity must be corrected, not diagnosed or
+        # downgraded into a less specific automatic prescription. Medical gates
+        # above remain authoritative; ordinary specific-family routing is intact.
+        specific = {key for key, rule in INJURY_TAXONOMY.items()
+                    if rule["category"] not in {"symptom", "surface", "unknown"}}
+        described = remove_negated_phrases(" ".join(str(injury.get(k) or "") for k in ("body_area", "description")))
+        described = described.lower().replace("_", " ").replace("-", " ")
+        conflict = (injury.get("rehab_type") in specific or parsed.get("injury_type") in specific
+                    or any(re.search(rf"\b{re.escape(key.replace('_', ' '))}\b", described) for key in specific))
+        if conflict:
+            matched = next((p for p in policies if p.region == region and p.injury_type == kind
+                            and p.activation == "live" and p.status == "active"), None)
+            result.update(outcome="medical_review", reason_codes=["specific_injury_identity_conflict"],
+                          summary="Confirm the specific injury for this episode before using symptom guidance.",
+                          restrictions={"blocked_regions": [region], "blocked_tags": [], "contact_limit": "none"})
+            if matched:
+                result.update(activation="live", policy_id=matched.policy_id, policy_version=matched.version)
+            return result
     policy = next((p for p in policies if p.region == region and p.injury_type == kind), None)
     if policy is None:
         return result

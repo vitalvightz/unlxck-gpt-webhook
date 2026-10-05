@@ -46,7 +46,8 @@ def test_shipped_policies_match_the_pre_migration_file_exactly():
 def test_shipped_profiles_cannot_enter_a_higher_stage(policy_id):
     shipped = next(p for p in load_clinical_policies() if p.policy_id == policy_id)
     calm_only = (policy_id == "wrist_impingement" or shipped.injury_type == "hyperextension"
-                 or policy_id in {f"{r}_contusion" for r in ["heel", "shin", "quads", "biceps", "triceps", "forearm"]})
+                 or policy_id in {f"{r}_contusion" for r in ["heel", "shin", "quads", "biceps", "triceps", "forearm"]}
+                     or policy_id in {'lower_back_stiffness', 'shoulder_pain', 'shoulder_tightness', 'neck_tightness', 'elbow_pain', 'wrist_pain', 'neck_soreness', 'hip_pain', 'shoulder_soreness', 'elbow_stiffness', 'knee_pain', 'hand_pain', 'fingers_pain'})
     expected_stage = "calm" if calm_only else "restore"
     assert shipped.live_stages == (["calm"] if expected_stage == "calm" else ["calm", "restore"])
     assert not any(t.promotable for t in shipped.transitions)
@@ -189,8 +190,13 @@ def test_family_membership_alone_never_activates_a_region_and_type(region, kind)
                body_area=region, description=f"{region} {kind}", side="left", injury_type=kind, severity="mild",
                status="monitoring", latest_reported_status="improving", rehab_stage="restore")
     decision = resolve_injury_policy(row, policies=load_clinical_policies(), bank=get_rehab_bank())
-    assert decision["outcome"] == "unsupported_prescription" and decision["prescription"] is None
-    assert decision["activation"] == "shadow" and decision["reason_codes"] == ["unsupported_injury_policy"]
+    expected = "medical_review" if (region, kind) == ("ankle", "swelling") else "unsupported_prescription"
+    assert decision["outcome"] == expected and decision["prescription"] is None
+    assert decision["activation"] == "shadow"
+    if expected == "medical_review":
+        assert "urgent_injury_type" in decision["reason_codes"]
+    else:
+        assert decision["reason_codes"] == ["unsupported_injury_policy"]
 
 
 def test_only_profiles_are_policies_and_families_carry_no_content():
@@ -204,7 +210,8 @@ def test_only_profiles_are_policies_and_families_carry_no_content():
         *((region, "tendonitis") for region in ["achilles", "shoulder", "biceps", "forearm", "elbow", "wrist", "hand", "fingers"]),
         *((region, "impingement") for region in ["shoulder", "hip", "ankle", "elbow", "wrist"]),
         *((region, "hyperextension") for region in ["toe", "fingers", "elbow", "wrist", "hand", "shoulder"]),
-        *((region, "contusion") for region in ["heel", "shin", "quads", "biceps", "triceps", "forearm", "shoulder", "elbow", "wrist", "hand", "fingers"])}
+        *((region, "contusion") for region in ["heel", "shin", "quads", "biceps", "triceps", "forearm", "shoulder", "elbow", "wrist", "hand", "fingers"]),
+        *[('shoulder', 'pain'), ('elbow', 'pain'), ('wrist', 'pain'), ('hand', 'pain'), ('fingers', 'pain'), ('knee', 'pain'), ('hip', 'pain'), ('lower back', 'pain'), ('neck', 'stiffness'), ('elbow', 'stiffness'), ('wrist', 'stiffness'), ('lower back', 'stiffness'), ('neck', 'tightness'), ('shoulder', 'tightness'), ('neck', 'soreness'), ('shoulder', 'soreness')]}
     for family in catalog["families"]:
         assert set(family) <= {"family_id", "description", "injury_types", "transitions"}
     # Instability coverage requires its own regional profile and reviewed identities.

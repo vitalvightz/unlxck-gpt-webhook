@@ -29,6 +29,24 @@ from fightcamp.rehab_schema import canonical_rehab_locations
 from fightcamp.injury_body_region import injury_body_region_context
 from fightcamp.injury_formatting import extract_laterality
 
+
+def nonspecific_policy_type_matches(policy_id: str | None, injury: Mapping[str, object]) -> bool:
+    """Symptom profile evidence stays with its exact canonical label.
+
+    Older specific-family attribution is unchanged. Stored type is authoritative;
+    description parsing is only the existing fallback for rows without a type.
+    """
+    expected = str(policy_id or "").rsplit("_", 1)[-1]
+    if expected not in {"pain", "soreness", "tightness", "stiffness", "swelling"}:
+        return True
+    kind = str(injury.get("injury_type") or injury.get("rehab_type") or "")
+    if not kind:
+        from fightcamp.injury_formatting import parse_injury_entry
+        parsed = parse_injury_entry(" ".join(str(injury.get(k) or "") for k in ("body_area", "description"))) or {}
+        kind = str(parsed.get("injury_type") or "")
+    return kind == expected
+
+
 ExposureSide = Literal["left", "right", "bilateral", "unknown"]
 #: ``"unknown"`` is a valid, recordable demand level. An exposure whose demand
 #: carries one is a real observation and is stored as such — but it is NOT
@@ -206,6 +224,8 @@ class RehabExposureEvent(BaseModel):
 
     def is_attributable_to(self, injury: Mapping[str, object]) -> bool:
         """Match identity only; this never interprets the response as tolerated."""
+        if not nonspecific_policy_type_matches(self.provenance.policy_id, injury):
+            return False
         if str(injury.get("id") or "") != str(self.injury_id):
             return False
         if str(injury.get("episode_id") or "") != str(self.injury_episode_id):

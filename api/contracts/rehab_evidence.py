@@ -12,7 +12,7 @@ from typing import Any, Mapping, Sequence
 
 from pydantic import ValidationError
 
-from .rehab_exposure import RehabExposureEvent
+from .rehab_exposure import RehabExposureEvent, nonspecific_policy_type_matches
 
 IGNORED_INVALID_EVENT = "ignored_invalid_event"
 IGNORED_ATHLETE_MISMATCH = "ignored_athlete_mismatch"
@@ -20,6 +20,7 @@ IGNORED_INJURY_MISMATCH = "ignored_injury_mismatch"
 IGNORED_EPISODE_MISMATCH = "ignored_episode_mismatch"
 IGNORED_REGION_MISMATCH = "ignored_region_mismatch"
 IGNORED_SIDE_MISMATCH = "ignored_side_mismatch"
+IGNORED_TYPE_MISMATCH = "ignored_type_mismatch"
 IGNORED_DUPLICATE_EXPOSURE = "ignored_duplicate_exposure"
 
 FAIL_STOPPED_DUE_TO_SYMPTOMS = "fail_stopped_due_to_symptoms"
@@ -85,6 +86,8 @@ def read_exact_events(*, athlete_id: str, injury: Mapping[str, Any],
             ignored[IGNORED_EPISODE_MISMATCH] += 1
         elif event.body_region != body_region:
             ignored[IGNORED_REGION_MISMATCH] += 1
+        elif not nonspecific_policy_type_matches(event.provenance.policy_id, injury):
+            ignored[IGNORED_TYPE_MISMATCH] += 1
         elif not side_matches(injury_side, event.side):
             ignored[IGNORED_SIDE_MISMATCH] += 1
         else:
