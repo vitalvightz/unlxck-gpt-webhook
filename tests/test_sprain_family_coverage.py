@@ -65,7 +65,9 @@ def test_region_and_exact_type_resolve_a_reviewed_prescription_and_real_completi
 
 @pytest.mark.parametrize("region,kind", PAIRS)
 def test_reviewed_hashes_match_and_original_sources_survive_authorised_repairs(region, kind):
-    ledger = {r["drill_id"]: r for r in json.loads((ROOT / "data/rehab_metadata_review.json").read_text())}
+    from tests.rehab_inventory_history import inventory_with_history
+    _, historical_ledger = inventory_with_history()
+    ledger = {r["drill_id"]: r for r in historical_ledger}
     policy = next(p for p in load_clinical_policies() if (p.region, p.injury_type) == (region, kind))
     assert validate_clinical_bank((policy,), get_rehab_bank()) == []
     for p in policy.prescriptions:
@@ -153,7 +155,9 @@ def test_missing_or_uncertain_diagnoses_do_not_inherit_another_profile(region, k
 def test_whole_family_audit_and_preserved_existing_profile_hashes():
     audit = json.loads((ROOT / "docs/sprain-family-bank-audit.json").read_text())
     assert len(audit) == 117 and len({r["bank_location"] for r in audit}) == 25
-    bank_ids = {d["id"] for g in get_rehab_bank() for d in g["drills"]}
+    from tests.rehab_inventory_history import inventory_with_history
+    historical_bank, _ = inventory_with_history()
+    bank_ids = {d["id"] for g in historical_bank for d in g["drills"]}
     assert {r["drill_id"] for r in audit} <= bank_ids
     hashes = json.loads((ROOT / "tests/fixtures/rehab_profiles_before_sprain.json").read_text())
     current = {p.policy_id: p.content_hash for p in load_clinical_policies()}
@@ -173,7 +177,11 @@ def test_profiles_preserve_other_inventory_and_require_episode_selection(region)
     before = json.loads((ROOT / "tests/fixtures/rehab_bank_before_nonspecific_hashes.json").read_text())
     originals = {identity for identity in before if identity.startswith(f"{region}_pain_")}
     current = {d["id"] for g in get_rehab_bank() if g["type"] == "pain" and g["location"] == region for d in g["drills"]}
-    assert originals and originals <= current
+    from tests.rehab_inventory_history import inventory_with_history
+    historical_bank, _ = inventory_with_history()
+    preserved = {d['id'] for g in historical_bank if g['type'] == 'pain' and g['location'] == region for d in g['drills']}
+    assert originals and originals <= preserved
+    assert current <= preserved
     # Pain now has its own reviewed profile; neither active type can bypass
     # current episode/stage selection through the legacy bank-only lookup.
     assert rehab_drill_options_for_phase("pain", region, "GPP", limit=6) == []

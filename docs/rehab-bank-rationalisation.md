@@ -2,9 +2,9 @@
 
 ## Executive summary
 
-Current inputs contain **769 groups / 1630 drills**, **64 active profiles**, and **103 unique live MSK identities** (6.32% of the whole bank).
+Current inputs contain **755 groups / 1601 drills**, **64 active profiles**, and **103 unique live MSK identities** (6.43% of the whole bank).
 
-This is an audit/classification PR. Bank, ledger, all profile hashes, stage activation and runtime code are untouched. Each drill has exactly one primary bucket. Secondary flags overlap; duplicate clusters overlap and must not be summed as distinct drills.
+This report is generated read-only: the audit itself never rewrites bank content, review history, profile hashes or stage activation. It describes current selectable inventory; retired exact identities and their complete provenance are preserved separately in data/rehab_archive/exact_duplicates.json when consolidation has been applied. Each retained drill has exactly one primary bucket. Secondary flags overlap; duplicate clusters overlap and must not be summed as distinct drills.
 
 Classification is evidence-backed inventory triage, not a clinical approval of dormant content. Name-based future-stage screening proposes a mechanical hypothesis only. Missing metadata remains missing; no dose, pain ceiling or checkpoint is invented.
 
@@ -14,11 +14,11 @@ Classification is evidence-backed inventory triage, not a clinical approval of d
 | ADVANCED_CANDIDATE | 57 |
 | KEEP_DORMANT | 208 |
 | REPAIR | 1149 |
-| DUPLICATE_OR_MERGE | 27 |
+| DUPLICATE_OR_MERGE | 0 |
 | MISPLACED | 17 |
-| DEPRECATE | 69 |
+| DEPRECATE | 67 |
 
-Reviewed: **168 / 1630 (10.31%)**; MSK-only reviewed percentage: **11.01%**. Dormant potentially useful: **86.75%** (ADVANCED_CANDIDATE + KEEP_DORMANT + REPAIR). Likely eventually removable: **5.89%** (DEPRECATE + exact duplicate surplus); MISPLACED means relocation review, not removal.
+Reviewed: **162 / 1601 (10.12%)**; MSK-only reviewed percentage: **10.82%**. Dormant potentially useful: **88.32%** (ADVANCED_CANDIDATE + KEEP_DORMANT + REPAIR). Likely eventually removable: **4.18%** (DEPRECATE + exact duplicate surplus); MISPLACED means relocation review, not removal.
 
 ## Production footprint
 
@@ -48,31 +48,31 @@ Reachability means the profile/baseline can select a stage in principle; it is n
 | --- | ---: |
 | abrasion | 24 |
 | blister | 16 |
-| contusion | 73 |
+| contusion | 69 |
 | cut | 24 |
 | graze | 20 |
 | hyperextension | 48 |
 | impingement | 54 |
-| instability | 74 |
+| instability | 72 |
 | laceration | 20 |
-| pain | 94 |
+| pain | 88 |
 | soreness | 78 |
 | sprain | 61 |
 | stiffness | 72 |
-| strain | 103 |
+| strain | 95 |
 | swelling | 44 |
-| tendonitis | 75 |
-| tightness | 86 |
+| tendonitis | 72 |
+| tightness | 80 |
 | unspecified | 664 |
 
 ### Canonical region
 
 | Canonical region | Drills |
 | --- | ---: |
-| achilles | 30 |
+| achilles | 27 |
 | ankle | 49 |
 | biceps | 65 |
-| calf | 43 |
+| calf | 37 |
 | chest | 30 |
 | core | 46 |
 | elbow | 63 |
@@ -88,12 +88,12 @@ Reachability means the profile/baseline can select a stage in principle; it is n
 | heel | 19 |
 | hip | 36 |
 | jaw | 44 |
-| knee | 51 |
+| knee | 41 |
 | lower back | 70 |
 | neck | 65 |
 | obliques | 54 |
 | quads | 33 |
-| shin | 51 |
+| shin | 41 |
 | shoulder | 101 |
 | toe | 37 |
 | triceps | 53 |
@@ -105,23 +105,23 @@ Reachability means the profile/baseline can select a stage in principle; it is n
 
 | Pathway family | Drills |
 | --- | ---: |
-| contusion | 73 |
+| contusion | 69 |
 | hyperextension_or_joint_trauma | 48 |
 | joint_irritation_or_impingement | 54 |
-| ligament_sprain_or_instability | 135 |
-| muscle_strain | 103 |
-| nonspecific_msk_symptoms | 374 |
+| ligament_sprain_or_instability | 133 |
+| muscle_strain | 95 |
+| nonspecific_msk_symptoms | 362 |
 | surface_wound_care | 104 |
-| tendon_rehab | 75 |
+| tendon_rehab | 72 |
 | unspecified_fallback | 664 |
 
 ### Review state
 
 | Review state | Drills |
 | --- | ---: |
-| needs_review | 1358 |
+| needs_review | 1335 |
 | outside_msk_review_ledger | 104 |
-| reviewed | 168 |
+| reviewed | 162 |
 
 Aliases are resolved by the existing registry: bicep → biceps, hamstrings → hamstring, glutes → glute, lower_back → lower back, upper_back → upper back. The report retains the original group location/index; no bank vocabulary is rewritten.
 
@@ -131,24 +131,24 @@ Aliases are resolved by the existing registry: bicep → biceps, hamstrings → 
 
 | Identity | LIVE | ADVANCED_CANDIDATE | KEEP_DORMANT | REPAIR | DUPLICATE_OR_MERGE | MISPLACED | DEPRECATE |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| contusion | 16 | 0 | 5 | 33 | 2 | 0 | 17 |
+| contusion | 16 | 0 | 5 | 33 | 0 | 0 | 15 |
 | hyperextension_or_joint_trauma | 6 | 0 | 2 | 40 | 0 | 0 | 0 |
 | joint_irritation_or_impingement | 9 | 0 | 3 | 41 | 0 | 0 | 1 |
-| ligament_sprain_or_instability | 21 | 32 | 5 | 70 | 2 | 0 | 5 |
-| muscle_strain | 16 | 19 | 4 | 52 | 8 | 0 | 4 |
-| nonspecific_msk_symptoms | 19 | 0 | 31 | 299 | 12 | 1 | 12 |
+| ligament_sprain_or_instability | 21 | 32 | 5 | 70 | 0 | 0 | 5 |
+| muscle_strain | 16 | 19 | 4 | 52 | 0 | 0 | 4 |
+| nonspecific_msk_symptoms | 19 | 0 | 31 | 299 | 0 | 1 | 12 |
 | surface_wound_care | 0 | 0 | 103 | 0 | 0 | 0 | 1 |
-| tendon_rehab | 16 | 6 | 2 | 47 | 3 | 0 | 1 |
+| tendon_rehab | 16 | 6 | 2 | 47 | 0 | 0 | 1 |
 | unspecified_fallback | 0 | 0 | 53 | 567 | 0 | 16 | 28 |
 
 ### Region classification
 
 | Identity | LIVE | ADVANCED_CANDIDATE | KEEP_DORMANT | REPAIR | DUPLICATE_OR_MERGE | MISPLACED | DEPRECATE |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| achilles | 2 | 1 | 0 | 24 | 3 | 0 | 0 |
+| achilles | 2 | 1 | 0 | 24 | 0 | 0 | 0 |
 | ankle | 7 | 4 | 3 | 35 | 0 | 0 | 0 |
 | biceps | 5 | 5 | 1 | 53 | 0 | 0 | 1 |
-| calf | 2 | 3 | 1 | 31 | 6 | 0 | 0 |
+| calf | 2 | 3 | 1 | 31 | 0 | 0 | 0 |
 | chest | 2 | 2 | 2 | 23 | 0 | 0 | 1 |
 | core | 0 | 0 | 0 | 41 | 0 | 4 | 1 |
 | elbow | 11 | 3 | 11 | 37 | 0 | 0 | 1 |
@@ -164,12 +164,12 @@ Aliases are resolved by the existing registry: bicep → biceps, hamstrings → 
 | heel | 1 | 0 | 1 | 16 | 0 | 0 | 1 |
 | hip | 3 | 0 | 4 | 29 | 0 | 0 | 0 |
 | jaw | 0 | 0 | 42 | 0 | 0 | 0 | 2 |
-| knee | 3 | 2 | 9 | 27 | 10 | 0 | 0 |
+| knee | 3 | 2 | 9 | 27 | 0 | 0 | 0 |
 | lower back | 3 | 0 | 0 | 63 | 0 | 2 | 2 |
 | neck | 4 | 0 | 9 | 51 | 0 | 0 | 1 |
 | obliques | 0 | 0 | 0 | 53 | 0 | 1 | 0 |
 | quads | 3 | 1 | 2 | 26 | 0 | 0 | 1 |
-| shin | 1 | 0 | 12 | 26 | 8 | 0 | 4 |
+| shin | 1 | 0 | 12 | 26 | 0 | 0 | 2 |
 | shoulder | 16 | 13 | 2 | 68 | 0 | 1 | 1 |
 | toe | 3 | 2 | 2 | 30 | 0 | 0 | 0 |
 | triceps | 3 | 4 | 5 | 41 | 0 | 0 | 0 |
@@ -183,21 +183,21 @@ Aliases are resolved by the existing registry: bicep → biceps, hamstrings → 
 | --- | ---: |
 | calm | 64 |
 | dynamic | 5 |
-| load | 59 |
-| missing | 1460 |
-| restore | 42 |
+| load | 54 |
+| missing | 1437 |
+| restore | 41 |
 
 ### function
 
 | Value | Drills |
 | --- | ---: |
-| activation | 161 |
-| control | 188 |
-| isometric_analgesia | 185 |
-| missing | 538 |
-| mobility | 238 |
+| activation | 155 |
+| control | 186 |
+| isometric_analgesia | 182 |
+| missing | 525 |
+| mobility | 234 |
 | recovery_downregulation | 191 |
-| tendon_loading | 129 |
+| tendon_loading | 128 |
 
 ### equipment
 
@@ -207,47 +207,47 @@ Aliases are resolved by the existing registry: bicep → biceps, hamstrings → 
 | barbell+landmine | 1 |
 | cable_machine | 1 |
 | cable_machine+fat_grip | 1 |
-| chair | 2 |
+| chair | 1 |
 | cloth+wall | 1 |
 | dumbbell | 1 |
 | dumbbell+table | 3 |
 | dynamometer | 1 |
 | foam_pad | 1 |
-| foam_pad+stable_support | 3 |
+| foam_pad+stable_support | 2 |
 | foam_roller | 1 |
 | foam_roller+wall | 1 |
 | kettlebell | 2 |
 | massage_gun | 1 |
 | mat | 1 |
-| mini_band | 3 |
-| missing | 1460 |
+| mini_band | 2 |
+| missing | 1437 |
 | none_required | 102 |
 | plate | 1 |
-| resistance_band | 17 |
+| resistance_band | 16 |
 | soft_ball | 1 |
 | stable_support | 4 |
 | table | 6 |
 | table+tape | 1 |
 | towel | 1 |
 | towel+wall | 1 |
-| wall | 11 |
+| wall | 9 |
 
 ### load
 
 | Value | Drills |
 | --- | ---: |
-| low | 40 |
+| low | 38 |
 | minimal | 95 |
-| missing | 1460 |
-| moderate | 19 |
+| missing | 1437 |
+| moderate | 15 |
 | unknown | 16 |
 
 ### impact
 
 | Value | Drills |
 | --- | ---: |
-| missing | 1460 |
-| none | 165 |
+| missing | 1437 |
+| none | 159 |
 | unknown | 5 |
 
 ### velocity
@@ -255,8 +255,8 @@ Aliases are resolved by the existing registry: bicep → biceps, hamstrings → 
 | Value | Drills |
 | --- | ---: |
 | high | 2 |
-| low | 165 |
-| missing | 1460 |
+| low | 159 |
+| missing | 1437 |
 | moderate | 3 |
 
 ### laterality_applicability
@@ -265,46 +265,46 @@ Aliases are resolved by the existing registry: bicep → biceps, hamstrings → 
 | --- | ---: |
 | bilateral_only | 1 |
 | missing | 104 |
-| not_applicable | 77 |
-| side_specific | 92 |
-| unknown | 1356 |
+| not_applicable | 74 |
+| side_specific | 89 |
+| unknown | 1333 |
 
 ### contraction_type
 
 | Value | Drills |
 | --- | ---: |
 | eccentric | 5 |
-| isometric | 28 |
+| isometric | 26 |
 | missing | 104 |
-| mixed | 71 |
-| unknown | 1422 |
+| mixed | 67 |
+| unknown | 1399 |
 
 ### sport_specificity
 
 | Value | Drills |
 | --- | ---: |
 | combat_sport | 2 |
-| general_rehab | 168 |
+| general_rehab | 162 |
 | missing | 104 |
-| unknown | 1356 |
+| unknown | 1333 |
 
 ### contact_level
 
 | Value | Drills |
 | --- | ---: |
 | missing | 104 |
-| none | 170 |
-| unknown | 1356 |
+| none | 164 |
+| unknown | 1333 |
 
 ### target_regions
 
 | Value | Drills |
 | --- | ---: |
-| achilles | 30 |
+| achilles | 27 |
 | ankle | 47 |
 | bicep | 63 |
 | bicep+biceps | 2 |
-| calf | 43 |
+| calf | 37 |
 | chest | 28 |
 | core | 46 |
 | elbow | 55 |
@@ -323,13 +323,13 @@ Aliases are resolved by the existing registry: bicep → biceps, hamstrings → 
 | heel | 17 |
 | hip | 32 |
 | jaw | 40 |
-| knee | 43 |
+| knee | 33 |
 | lower_back | 70 |
 | missing | 104 |
 | neck | 57 |
 | obliques | 54 |
 | quads | 33 |
-| shin | 41 |
+| shin | 31 |
 | shoulder | 99 |
 | toe | 35 |
 | triceps | 53 |
@@ -364,7 +364,7 @@ Aliases are resolved by the existing registry: bicep → biceps, hamstrings → 
 | forearm extensor tendons | 1 |
 | forearm flexor and extensor tendons | 2 |
 | forearm muscle region | 1 |
-| gastrocnemius and soleus muscles | 9 |
+| gastrocnemius and soleus muscles | 5 |
 | hamstring muscles | 3 |
 | hand flexor tendons | 2 |
 | hand joint region | 1 |
@@ -375,10 +375,10 @@ Aliases are resolved by the existing registry: bicep → biceps, hamstrings → 
 | hip adductor muscles | 3 |
 | hip joint region | 2 |
 | hip region; symptom cause unspecified | 1 |
-| knee joint supporting soft tissues | 6 |
+| knee joint supporting soft tissues | 4 |
 | knee region; symptom cause unspecified | 1 |
 | lower back region; symptom cause unspecified | 3 |
-| missing | 1460 |
+| missing | 1437 |
 | neck region; symptom cause unspecified | 4 |
 | pectoral muscles | 2 |
 | quadriceps muscle region | 1 |
@@ -408,10 +408,10 @@ Surface loading fields are intentionally absent. Empty equipment lists mean no e
 
 ## Biggest debt areas
 
-- **122 duplicate/near-duplicate/uncertain clusters**, involving **281 unique drills**; kinds: `{"exact_duplicate": 29, "intentionally_distinct": 44, "near_duplicate": 22, "uncertain": 27}`.
-- **1433** drills contain camp-phase instructions; **1195** contain arrows or hidden progression signals.
-- **118** have mechanism-language or naming flags; kinds: `{"clinically_unsafe_implication": 23, "harmless_naming_debt": 15, "none": 1512, "unsupported_mechanism_language": 80}`.
-- **65** have general-training/performance signals. Only explicit indication-free tasks receive primary MISPLACED; a compound lift or mobility exercise is not automatically non-rehab.
+- **93 duplicate/near-duplicate/uncertain clusters**, involving **227 unique drills**; kinds: `{"intentionally_distinct": 44, "near_duplicate": 22, "uncertain": 27}`.
+- **1410** drills contain camp-phase instructions; **1172** contain arrows or hidden progression signals.
+- **117** have mechanism-language or naming flags; kinds: `{"clinically_unsafe_implication": 23, "harmless_naming_debt": 15, "none": 1484, "unsupported_mechanism_language": 79}`.
+- **64** have general-training/performance signals. Only explicit indication-free tasks receive primary MISPLACED; a compound lift or mobility exercise is not automatically non-rehab.
 
 ### Hidden progression breakdowns
 
@@ -419,29 +419,29 @@ Surface loading fields are intentionally absent. Empty equipment lists mean no e
 | --- | ---: |
 | abrasion | 24 |
 | blister | 16 |
-| contusion | 44 |
+| contusion | 40 |
 | cut | 24 |
 | graze | 20 |
 | hyperextension | 36 |
 | impingement | 41 |
 | instability | 56 |
 | laceration | 20 |
-| pain | 80 |
+| pain | 74 |
 | soreness | 16 |
 | sprain | 20 |
 | stiffness | 58 |
-| strain | 60 |
+| strain | 56 |
 | swelling | 16 |
-| tendonitis | 48 |
-| tightness | 80 |
+| tendonitis | 45 |
+| tightness | 74 |
 | unspecified | 536 |
 
 | canonical_region | Flagged drills |
 | --- | ---: |
-| achilles | 23 |
+| achilles | 20 |
 | ankle | 32 |
 | biceps | 43 |
-| calf | 28 |
+| calf | 26 |
 | chest | 22 |
 | core | 35 |
 | elbow | 41 |
@@ -457,12 +457,12 @@ Surface loading fields are intentionally absent. Empty equipment lists mean no e
 | heel | 16 |
 | hip | 29 |
 | jaw | 37 |
-| knee | 40 |
+| knee | 32 |
 | lower back | 54 |
 | neck | 53 |
 | obliques | 46 |
 | quads | 22 |
-| shin | 48 |
+| shin | 38 |
 | shoulder | 45 |
 | toe | 30 |
 | triceps | 40 |
@@ -472,13 +472,12 @@ Surface loading fields are intentionally absent. Empty equipment lists mean no e
 
 | review_state | Flagged drills |
 | --- | ---: |
-| needs_review | 1091 |
+| needs_review | 1068 |
 | outside_msk_review_ledger | 104 |
 
 | classification | Flagged drills |
 | --- | ---: |
-| DEPRECATE | 57 |
-| DUPLICATE_OR_MERGE | 21 |
+| DEPRECATE | 55 |
 | KEEP_DORMANT | 190 |
 | MISPLACED | 14 |
 | REPAIR | 913 |
@@ -492,7 +491,7 @@ Surface loading fields are intentionally absent. Empty equipment lists mean no e
 
 | Candidate stage | All dormant screening candidates | Fixed reviewed candidates |
 | --- | ---: | ---: |
-| LOAD | 514 | 52 |
+| LOAD | 501 | 52 |
 | DYNAMIC | 36 | 5 |
 | RETURN | 3 | 0 |
 
@@ -509,7 +508,7 @@ Fixed reviewed candidates are mechanically defined movements; their exact region
 | biceps_contusion | calm | none | 0 | 19 |
 | biceps_strain | calm, restore | bicep_strain_band_resisted_eccentric_curl, bicep_strain_cable_curl_with_fat_grip, bicep_strain_isometric_bicep_curl_hold_mid_range, bicep_strain_supinated_isometric_elbow_hold | 0 | 19 |
 | biceps_tendonitis | calm, restore | bicep_tendonitis_incline_db_curl_eccentric_focus | 1 | 19 |
-| calf_strain | calm, restore | calf_strain_active_band_calf_pumps, calf_strain_isometric_tip_toe_wall_press, calf_strain_isometric_wall_push_hold | 4 | 18 |
+| calf_strain | calm, restore | calf_strain_active_band_calf_pumps, calf_strain_isometric_tip_toe_wall_press, calf_strain_isometric_wall_push_hold | 0 | 18 |
 | chest_strain | calm, restore | chest_strain_isometric_wall_push_chest_height, chest_strain_resistance_band_chest_fly | 0 | 2 |
 | elbow_contusion | calm, restore | none | 0 | 10 |
 | elbow_hyperextension | calm | none | 2 | 10 |
@@ -535,7 +534,7 @@ Fixed reviewed candidates are mechanically defined movements; their exact region
 | heel_contusion | calm | none | 0 | 2 |
 | hip_impingement | calm, restore | none | 0 | 5 |
 | hip_pain | calm | none | 0 | 5 |
-| knee_instability | calm, restore | knee_instability_mini_band_lateral_walks, knee_instability_reactive_knee_bounces_foam_pad | 2 | 16 |
+| knee_instability | calm, restore | knee_instability_mini_band_lateral_walks, knee_instability_reactive_knee_bounces_foam_pad | 0 | 16 |
 | knee_pain | calm | none | 0 | 16 |
 | lower_back_pain | calm, restore | none | 2 | 8 |
 | lower_back_stiffness | calm | none | 3 | 8 |
@@ -638,9 +637,7 @@ These are candidates for a separate review, not deletion instructions. Every ID 
 - `neck_stiffness_trap_bar_hang_neck_relaxation`: Unsupervised invasive, forceful, treatment-product or speculative mechanism identity; not a defensible automatic rehab movement.
 - `quads_contusion_light_quad_percussion_massage_gun`: Direct massage/percussion of a bruise lacks injury timing/severity clearance; this identity is unsuitable for automatic use as written.
 - `shin_contusion_foam_roller_circles_mid_shin`: Direct massage/percussion of a bruise lacks injury timing/severity clearance; this identity is unsuitable for automatic use as written.
-- `shin_contusion_foam_roller_circles_mid_shin_2`: Direct massage/percussion of a bruise lacks injury timing/severity clearance; this identity is unsuitable for automatic use as written.
 - `shin_contusion_light_shin_percussion`: Direct massage/percussion of a bruise lacks injury timing/severity clearance; this identity is unsuitable for automatic use as written.
-- `shin_contusion_light_shin_percussion_2`: Direct massage/percussion of a bruise lacks injury timing/severity clearance; this identity is unsuitable for automatic use as written.
 - `shoulder_contusion_soft_tissue_roll_with_lacrosse_ball`: Direct massage/percussion of a bruise lacks injury timing/severity clearance; this identity is unsuitable for automatic use as written.
 - `unspecified_contusion_soft_tissue_flushing_foam_roller_or_ball`: Direct massage/percussion of a bruise lacks injury timing/severity clearance; this identity is unsuitable for automatic use as written.
 - `unspecified_tendonitis_slow_tempo_eccentrics_on_major_lifts`: No single reproducible movement identity or demand is specified; retain provenance while reviewing deprecation.
@@ -673,7 +670,7 @@ These are candidates for a separate review, not deletion instructions. Every ID 
 
 ## Recommended cleanup order
 
-**P0:** inspect live flags without hash changes here; bounded self-paced ankle wording is not a hidden LOAD gate. Separately verify surface/helper exposure of unsupervised needle guidance and retire or clinician-scope it with consumer tests. Any newly discovered critical runtime bug gets a separate PR.
+**P0:** inspect live flags without hash changes here; bounded self-paced ankle wording is not a hidden LOAD gate. Preserve the surface/helper identity-and-content approval boundary from #2740: unsafe needle inventory is archival, not automatic athlete guidance. Any newly discovered critical runtime bug gets a separate PR.
 
 **P1:** consolidate exact same-pair surplus IDs first, preserving review/source history and migrating any references explicitly. Review DEPRECATE items (eye-as-MSK, neural tensioners, invasive/speculative/forceful identities and percussion on bruises). Review MISPLACED fallback performance/conditioning tasks. Never merge cross-label clinical prescriptions merely because mechanics match.
 
@@ -701,4 +698,4 @@ Sources were read directly for this audit. They support safety/classification bo
 
 Run `python tools/audit_rehab_bank_rationalisation.py` to regenerate docs only, or add `--check` to compare committed output. `--output-dir` supports an isolated output directory. No network, external API or runtime dependency is added. Stable ID sorting and content hashes make repeated output byte-identical. Debt never makes the command fail; genuine integrity errors do.
 
-The baseline fixture freezes the three production input files, all original IDs and all profile hashes. Tests verify complete classification, live review/reference provenance, exact source/content hashes, valid clusters, advanced dormancy, deterministic/non-mutating output, validator/vocabulary success and seed idempotence. Existing safety, Today, frozen completion, exposure, unknown-side and multi-injury tests remain applicable because runtime and production inputs are unchanged.
+The original baseline fixture freezes pre-consolidation input hashes, all original IDs and all profile hashes. Tests reconstruct the original bank and review ledger from retained inventory plus the exact-duplicate archive, without replacing that baseline. Tests verify complete classification, live review/reference provenance, exact source/content hashes, valid clusters, advanced dormancy, deterministic/non-mutating output, validator/vocabulary success and seed idempotence. Safety, Today, frozen completion, exposure, unknown-side and multi-injury tests verify that historical lookup preserves original identities while current selection excludes retired duplicates.

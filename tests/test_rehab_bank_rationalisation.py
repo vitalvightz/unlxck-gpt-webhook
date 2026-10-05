@@ -10,6 +10,7 @@ from tools.audit_rehab_bank_rationalisation import (
     CLASSIFICATIONS, ROOT, affirmative_progression, build_audit, input_digest, json_text, main,
 )
 from tools.rehab_metadata_review_lib import source_hash
+from tools.consolidate_rehab_exact_duplicates import reconstruct_original, digest, validate_archive
 
 
 def read(name):
@@ -82,11 +83,17 @@ def test_every_active_prescription_resolves_and_stage_counts_are_unique(inputs, 
 
 def test_production_bank_source_history_and_all_64_profiles_unchanged():
     baseline = read("tests/fixtures/rehab_bank_rationalisation_baseline.json")
-    for name, digest in baseline["input_sha256"].items():
-        assert input_digest(ROOT / "data" / name) == digest
     bank = read("data/rehab_bank.json")
-    assert sorted(d["id"] for g in bank for d in g["drills"]) == baseline["bank_drill_ids"]
+    ledger = read("data/rehab_metadata_review.json")
+    archive = read("data/rehab_archive/exact_duplicates.json")
+    original_bank, original_ledger = reconstruct_original(bank, ledger, archive)
+    # Retained + archived content must recover the immutable original baseline.
+    assert digest(original_bank) == baseline["input_sha256"]["rehab_bank.json"]
+    assert digest(original_ledger) == baseline["input_sha256"]["rehab_metadata_review.json"]
+    assert input_digest(ROOT / "data/rehab_pathways.json") == baseline["input_sha256"]["rehab_pathways.json"]
+    assert sorted(d["id"] for g in original_bank for d in g["drills"]) == baseline["bank_drill_ids"]
     raw = read("data/rehab_pathways.json")
+    assert validate_archive(bank, ledger, raw, archive) == []
     assert len(raw["profiles"]) == len(baseline["profile_hashes"]) == 64
     assert {p["policy_id"]: p["content_hash"] for p in raw["profiles"]} == baseline["profile_hashes"]
     assert {p["policy_id"]: hashlib.sha256(json.dumps(p, sort_keys=True, separators=(",", ":")).encode()).hexdigest() for p in raw["profiles"]} == baseline["profile_raw_sha256"]
@@ -170,11 +177,13 @@ def test_exact_alias_duplicates_cross_type_and_near_duplicates_keep_boundaries(a
     clusters = audit[1]["clusters"]
     assert rows["bicep_strain_band_resisted_eccentric_curl"]["canonical_region"] == "biceps"
     assert rows["hamstrings_strain_isometric_hamstring_bridge"]["canonical_region"] == "hamstring"
-    cluster = next(c for c in clusters if set(c["drill_ids"]) == {"calf_strain_double_leg_calf_raises", "calf_strain_double_leg_calf_raises_2"})
+    archive = read("data/rehab_archive/exact_duplicates.json")
+    cluster = next(r['original_cluster'] for r in archive['records'] if r['retired_id'] == 'calf_strain_double_leg_calf_raises_2')
     assert cluster["classification"] == "exact_duplicate"
     assert cluster["canonical_identity_candidates_to_keep"] == ["calf_strain_double_leg_calf_raises"]
     assert rows["calf_strain_double_leg_calf_raises"]["classification"] == "LIVE"
-    assert rows["calf_strain_double_leg_calf_raises_2"]["classification"] == "DUPLICATE_OR_MERGE"
+    assert "calf_strain_double_leg_calf_raises_2" not in rows
+    assert not any(c['classification'] == 'exact_duplicate' for c in clusters)
     for c in clusters:
         if len(c["injury_types"]) > 1 or len(c["canonical_regions"]) > 1:
             assert c["ids_for_later_deprecation_review"] == []

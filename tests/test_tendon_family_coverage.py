@@ -223,14 +223,16 @@ def test_inventory_repaired_id_history_and_tendon_content_preservation():
             name=original["name"], notes=original["notes"])
     assert all(r["review_state"] == "needs_review" and r["rehab_stage"] is None for r in audit)
     hashes = json.loads((ROOT / "tests/fixtures/rehab_bank_before_tendon_hashes.json").read_text(encoding="utf-8"))
-    bank = {d["id"]: d for g in get_rehab_bank() for d in g["drills"]}
+    from tests.rehab_inventory_history import inventory_with_history
+    historical_bank, historical_ledger = inventory_with_history()
+    bank = {d["id"]: d for g in historical_bank for d in g["drills"]}
     assert hashes.keys() <= bank.keys()
     # Later family rollouts preserve their own pre-rollout fixtures. Keep the
     # tendon assertions exact without freezing unrelated inventory forever.
-    tendon_ids = {d["id"] for g in get_rehab_bank() if g["type"] == "tendonitis" for d in g["drills"]}
+    tendon_ids = {d["id"] for g in historical_bank if g["type"] == "tendonitis" for d in g["drills"]}
     assert {identity for identity in hashes if identity in tendon_ids and content_hash(bank[identity]) != hashes[identity]} == REPAIRED
     assert len(tendon_ids - hashes.keys()) == 15
-    ledger = {r["drill_id"]: r for r in json.loads((ROOT / "data/rehab_metadata_review.json").read_text(encoding="utf-8"))}
+    ledger = {r["drill_id"]: r for r in historical_ledger}
     active = {p.drill_id for policy in load_clinical_policies() for p in policy.prescriptions}
     assert {r["drill_id"] for r in audit} & active == {"wrist_tendonitis_pronation_supination_twists"}
     for record in audit:
