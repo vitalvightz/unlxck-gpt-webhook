@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 
 import { describeGenerationFailure, GENERATION_FAILURE_ACTION_LABELS } from "@/lib/generation-failure";
 import type { GenerationFailureKind } from "@/lib/generation-failure";
@@ -27,6 +27,7 @@ type Props = {
 
 const PROGRESS_STORAGE_PREFIX = "unlxck:public-generation-progress:";
 const TIP_ROTATION_MS = 5_000;
+const subscribeToNothing = () => () => {};
 
 function readSavedProgress(jobId: string | null): number {
   if (!jobId || typeof window === "undefined") return 0;
@@ -50,15 +51,21 @@ export function PublicGenerationScreen({ phase, error = null, failureKind = null
 
   // Tips come from the intake already on this page; no extra requests.
   const tipPool = useMemo(() => selectLoadingTips(intake), [intake]);
-  const [tips, setTips] = useState<{ pool: LoadingTip[]; deck: LoadingTip[]; position: number }>(() => ({
+  // Keyed by content, so a refreshed but equivalent intake keeps the deck.
+  const tipPoolKey = tipPool.map((tip) => tip.id).join("|");
+  const [tips, setTips] = useState<{ poolKey: string; pool: LoadingTip[]; deck: LoadingTip[]; position: number }>(() => ({
+    poolKey: tipPoolKey,
     pool: tipPool,
     deck: buildTipDeck(tipPool),
     position: 0,
   }));
-  if (tips.pool !== tipPool) {
-    setTips({ pool: tipPool, deck: buildTipDeck(tipPool), position: 0 });
+  if (tips.poolKey !== tipPoolKey) {
+    setTips({ poolKey: tipPoolKey, pool: tipPool, deck: buildTipDeck(tipPool), position: 0 });
   }
-  const activeTip = tips.deck[tips.position] ?? null;
+  // The deck is shuffled per client, so a server-rendered pass marks no tip
+  // active; otherwise hydration would keep the server's pick alongside ours.
+  const isClient = useSyncExternalStore(subscribeToNothing, () => true, () => false);
+  const activeTip = isClient ? tips.deck[tips.position] ?? null : null;
   // Tips rotate only while the camp is still being built; a finished or
   // stopped build keeps whichever tip is showing.
   const isBuilding = !terminal && phase !== "finalizing" && !readyToOpen;
@@ -114,14 +121,14 @@ export function PublicGenerationScreen({ phase, error = null, failureKind = null
         <ol className="public-build-milestones">
           {PUBLIC_CAMP_MILESTONES.map((item, index) => { const state = index < activeIndex || (readyToOpen && index <= activeIndex) ? "complete" : index === activeIndex ? "active" : "future"; return <li key={item.code} className={`public-build-milestone public-build-milestone-${state}`}><span>{state === "complete" ? "✓" : ""}</span><div><strong>{item.title}</strong><small>{item.detail}</small></div></li>; })}
         </ol>
-        {activeTip && !terminal ? (
+        {tipPool.length > 0 && !terminal ? (
           <aside className="public-build-tip" aria-label="Unlxck tip">
             <p className="public-build-tip-label">Unlxck tip</p>
             {/* Every tip in the pool shares one grid cell, so the box is always
                 as tall as the longest tip and never jumps when they rotate. */}
             <div className="public-build-tip-stack">
               {tipPool.map((tip) => (
-                <p key={tip.id} className={`public-build-tip-text${tip.id === activeTip.id ? " public-build-tip-text-active" : ""}`} aria-hidden={tip.id === activeTip.id ? undefined : true}>
+                <p key={tip.id} className={`public-build-tip-text${tip.id === activeTip?.id ? " public-build-tip-text-active" : ""}`} aria-hidden={tip.id === activeTip?.id ? undefined : true}>
                   {tip.text}
                 </p>
               ))}
