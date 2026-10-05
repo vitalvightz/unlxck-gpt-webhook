@@ -12,6 +12,14 @@ copying the URL into ``youtube_url``; the importer ignores every row where
 that is blank. Gemini is reliable on "is this a trap bar deadlift" and much
 less so on subtle form or on whether a generic drill matches our version.
 
+Compose bakes source into /app; pulling Main does not update an existing
+image. For a one-off review, rebuild and mount the checkpoint directory:
+  docker compose run --rm --no-deps --build -v "$PWD/exercise_media:/work" api \
+    python tools/exercise_media.py review /work/input.csv --out /work/reviewed.csv
+Compare the startup source-sha256 marker with review_code_marker() on the host.
+All reviewers must share that directory, including the retained .lock sidecar.
+Kernel locks release on exit (including crashes); never delete an active sidecar.
+
 API: Gemini Interactions endpoint, which accepts public YouTube URLs directly
 (https://ai.google.dev/gemini-api/docs/video-understanding). Public videos
 only (not unlisted); the free tier allows 8 hours of YouTube video a day.
@@ -20,15 +28,18 @@ only (not unlisted); the free tier allows 8 hours of YouTube video a day.
 from __future__ import annotations
 
 import csv
+import hashlib
 import json
 import math
 import os
 import re
 import sys
 import time
+from contextlib import contextmanager
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
+from functools import wraps
 from pathlib import Path
 from typing import Any, Callable, Iterable
 
@@ -478,7 +489,7 @@ class GeminiVideoReviewer:
         last_exc: httpx.TransportError | None = None
         for attempt in range(GEMINI_TRANSPORT_RETRIES + 1):
             try:
-                return self._client.post(
+                response = self._client.post(
                     INTERACTIONS_URL,
                     headers={
                         "x-goog-api-key": self.api_key,
@@ -487,12 +498,19 @@ class GeminiVideoReviewer:
                     },
                     json=payload,
                 )
+                if response.status_code not in {500, 502, 503, 504}:
+                    return response
+                if attempt == GEMINI_TRANSPORT_RETRIES:
+                    return response  # review() raises the batch-stop error
+                reason = f"HTTP {response.status_code}"
             except httpx.TransportError as exc:
                 last_exc = exc
-                if attempt < GEMINI_TRANSPORT_RETRIES:
-                    time.sleep(GEMINI_TRANSPORT_BACKOFF_SECONDS * (2 ** attempt))
-                    continue
-                break
+                if attempt == GEMINI_TRANSPORT_RETRIES:
+                    break
+                reason = type(exc).__name__
+            wait_s = GEMINI_TRANSPORT_BACKOFF_SECONDS * (2 ** attempt)
+            print(f"Gemini {reason}: retry {attempt + 1}/{GEMINI_TRANSPORT_RETRIES} in {wait_s:g}s")
+            time.sleep(wait_s)
         assert last_exc is not None
         raise GeminiProviderUnavailable(
             f"Gemini transport unavailable after {GEMINI_TRANSPORT_RETRIES + 1} attempts: "
@@ -653,6 +671,11 @@ def review_row(
 
     def candidates() -> Iterable[str]:
         excluded = set(outcome.reviewed_video_ids) | {parse_youtube_video_id(url) or url for url in outcome.tried}
+        # Replay saved in-flight candidates even if discovery is now disabled.
+        for url in list(outcome.search_progress.pending):
+            yield url
+            if url in outcome.search_progress.pending:
+                outcome.search_progress.pending.remove(url)
         yield from candidate_urls(row, max_candidates, exclude=excluded)
         if search is not None:
             excluded.update(outcome.reviewed_video_ids)
@@ -672,6 +695,13 @@ def review_row(
         seen.add(identity)
         if outcome.tried:
             sleep(delay_s)
+        # Discovery may already have advanced its pending queue. Save this URL
+        # explicitly before a provider call so a stop cannot consume it.
+        added_pending = url not in outcome.search_progress.pending
+        if added_pending:
+            outcome.search_progress.pending.insert(0, url)
+        if checkpoint:
+            checkpoint(outcome)
         try:
             # Retry this URL within its one candidate attempt. An unresolved
             # limit propagates to run_review rather than rejecting the video.
@@ -688,6 +718,8 @@ def review_row(
         except (GeminiQuotaExceeded, GeminiProviderUnavailable):
             raise
         except GeminiError as exc:
+            if added_pending:
+                outcome.search_progress.pending.remove(url)
             outcome.tried.append(url)
             outcome.errors.append(f"{url}: {exc}")
             if checkpoint:
@@ -695,6 +727,8 @@ def review_row(
             if len(outcome.tried) >= max_candidates:
                 break
             continue
+        if added_pending:
+            outcome.search_progress.pending.remove(url)
         outcome.tried.append(url)
         video_id = parse_youtube_video_id(url)
         if video_id and video_id not in outcome.reviewed_video_ids:
@@ -761,7 +795,37 @@ def apply_outcome(row: dict[str, str], outcome: RowOutcome, *, model: str) -> di
     return updated
 
 
-def _write_rows(path: Path, fieldnames: list[str], rows: Iterable[dict[str, str]]) -> None:
+def _write_rows(
+    path: Path, fieldnames: list[str], rows: Iterable[dict[str, str]], *,
+    replace_keys: set[str] | None = None,
+) -> None:
+    rows = list(rows)
+    # Atomic replacement alone permits last-writer-wins corruption. Compare
+    # against the on-disk state as well, failing closed on stale snapshots.
+    if path.exists():
+        _, previous = _read_csv(path)
+        _rows_by_key(previous)
+        by_key = _rows_by_key(rows)
+        for prior in previous:
+            key = prior.get("exercise_key", "")
+            current = by_key.get(key)
+            if (prior.get("ai_verdict") or "").strip() not in {"", "error"}:
+                if key not in (replace_keys or set()):
+                    protected = (*AI_COLUMNS, "suggested_url", "suggested_title")
+                    if current is None or any(
+                        (prior.get(col) or "") != (current.get(col) or "")
+                        or (prior.get(col) and col not in fieldnames)
+                        for col in protected
+                        if col not in {"ai_review_progress", "ai_reviewed_video_ids"}
+                    ):
+                        raise ReviewInputError(f"checkpoint regression for {key}: completed review would change; refusing to overwrite {path}")
+            if prior.get("ai_reviewed_video_ids") and (
+                current is None or "ai_reviewed_video_ids" not in fieldnames
+                or not set(filter(None, prior["ai_reviewed_video_ids"].split("|"))).issubset(
+                    (current.get("ai_reviewed_video_ids") or "").split("|")
+                )
+            ):
+                raise ReviewInputError(f"checkpoint regression for {key}: reviewed video IDs would be lost")
     # Use a per-process/per-write temp path. A fixed `.tmp` name can be
     # stolen by another review process between close() and os.replace().
     tmp = path.with_name(
@@ -772,6 +836,8 @@ def _write_rows(path: Path, fieldnames: list[str], rows: Iterable[dict[str, str]
             writer = csv.DictWriter(handle, fieldnames=fieldnames, extrasaction="ignore")
             writer.writeheader()
             writer.writerows(rows)
+            handle.flush()
+            os.fsync(handle.fileno())
         os.replace(tmp, path)
     finally:
         try:
@@ -792,6 +858,67 @@ class ReviewInputError(ValueError):
     pass
 
 
+def review_code_marker() -> str:
+    """Fingerprint actual source, including image-baked code without .git."""
+    digest = hashlib.sha256()
+    for name in ("exercise_media.py", "exercise_media_review.py", "exercise_media_search.py"):
+        digest.update(Path(__file__).with_name(name).read_bytes())
+    return f"checkpoint-v2 source-sha256:{digest.hexdigest()[:16]}"
+
+
+@contextmanager
+def checkpoint_lock(path: str | Path):
+    # Never unlink the sidecar: unlinking a locked inode lets a third process
+    # create a different inode and coexist. Kernel locks release on exit/crash;
+    # a leftover sidecar is harmless and must not be deleted based on PID age.
+    lock_path = Path(str(Path(path).resolve()) + ".lock")
+    with open(lock_path, "a+b") as handle:
+        if os.name == "nt":
+            import msvcrt
+            handle.seek(0, os.SEEK_END)
+            if handle.tell() == 0:
+                handle.write(b"\0")
+                handle.flush()
+            handle.seek(0)
+            try:
+                msvcrt.locking(handle.fileno(), msvcrt.LK_NBLCK, 1)
+            except OSError as exc:
+                raise ReviewInputError(f"checkpoint is owned by another reviewer: {path}") from exc
+            try:
+                yield
+            finally:
+                handle.seek(0)
+                msvcrt.locking(handle.fileno(), msvcrt.LK_UNLCK, 1)
+        else:
+            import fcntl
+            try:
+                fcntl.flock(handle, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            except BlockingIOError as exc:
+                raise ReviewInputError(f"checkpoint is owned by another reviewer: {path}") from exc
+            try:
+                yield
+            finally:
+                fcntl.flock(handle, fcntl.LOCK_UN)
+
+
+def _locked_review(func):
+    @wraps(func)
+    def locked(in_path, out_path, **kwargs):
+        with checkpoint_lock(out_path):
+            return func(in_path, out_path, **kwargs)
+    return locked
+
+
+def _rows_by_key(rows: list[dict[str, str]]) -> dict[str, dict[str, str]]:
+    by_key = {}
+    for row in rows:
+        key = row.get("exercise_key") or ""
+        if not key.strip() or key in by_key:
+            raise ReviewInputError(f"checkpoint requires unique, nonblank exercise_key: {key!r}")
+        by_key[key] = row
+    return by_key
+
+
 def _read_csv(path: str | Path) -> tuple[list[str], list[dict[str, str]]]:
     with open(path, newline="", encoding="utf-8") as handle:
         reader = csv.DictReader(handle)
@@ -805,11 +932,7 @@ def _merge_previous_run(rows: list[dict[str, str]], previous: list[dict[str, str
     Source CSVs can contain stale AI fields from an older run; those must not
     override a newer completed verdict or in-progress checkpoint in --out.
     """
-    by_key = {
-        r.get("exercise_key"): r
-        for r in previous
-        if (r.get("ai_verdict") or r.get("ai_review_progress") or "").strip()
-    }
+    by_key = _rows_by_key(previous)
     merged = 0
     for row in rows:
         prior = by_key.get(row.get("exercise_key"))
@@ -819,7 +942,9 @@ def _merge_previous_run(rows: list[dict[str, str]], previous: list[dict[str, str
         # AI-owned state and the selected suggestion always come from the
         # checkpoint file. This prevents stale source-side errors/progress from
         # causing already-completed rows to be reviewed again.
-        for column in (*AI_COLUMNS, "suggested_url", "suggested_title", "review_note"):
+        for column in AI_COLUMNS:
+            row[column] = prior.get(column) or ""
+        for column in ("suggested_url", "suggested_title", "review_note"):
             if column in prior:
                 row[column] = prior[column]
 
@@ -877,6 +1002,7 @@ def _select_redo_weak_pass(rows: list[dict[str, str]]) -> tuple[int, bool]:
     return latest + 1 if latest else 1, False
 
 
+@_locked_review
 def run_review(
     in_path: str,
     out_path: str,
@@ -903,6 +1029,18 @@ def run_review(
     if not 1 <= max_candidates <= MAX_CANDIDATES:
         raise ReviewInputError(f"max_candidates must be between 1 and {MAX_CANDIDATES}")
     fieldnames, rows = _read_csv(in_path)
+    _rows_by_key(rows)
+    out = Path(out_path).resolve()
+    if out.exists() and out != Path(in_path).resolve():
+        previous_fields, previous = _read_csv(out)
+        merged = _merge_previous_run(rows, previous, redo_weak=redo_weak)
+        source_keys = _rows_by_key(rows)
+        rows.extend(prior for prior in previous if prior["exercise_key"] not in source_keys)
+        fieldnames = list(dict.fromkeys([*fieldnames, *previous_fields]))
+        if merged:
+            reviewed = sum(bool((r.get("ai_verdict") or "").strip()) for r in previous)
+            log(f"resuming: {reviewed} rows already reviewed in {out}")
+        log(f"resume checkpoint: {out}")
     required = ("exercise_key",) if search is not None else REQUIRED_INPUT_COLUMNS
     missing = [column for column in required if column not in fieldnames]
     if missing:
@@ -915,12 +1053,16 @@ def run_review(
     for column in (*_WRITTEN_INPUT_COLUMNS, *AI_COLUMNS):
         if column not in fieldnames:
             fieldnames.append(column)
-    out = Path(out_path)
-    if out.exists() and out.resolve() != Path(in_path).resolve():
-        _, previous = _read_csv(out)
-        merged = _merge_previous_run(rows, previous, redo_weak=redo_weak)
-        if merged:
-            log(f"resuming: {merged} rows already reviewed in {out}")
+    log(f"review code: {review_code_marker()}")
+    verdicts = [(row.get("ai_verdict") or "").strip() for row in rows]
+    completed = sum(verdict not in {"", "error"} for verdict in verdicts)
+    errors = verdicts.count("error")
+    log(f"checkpoint state: {completed} completed, {errors} errors, {len(rows) - completed - errors} pending (no verdict)")
+    replace_keys: set[str] = set()
+
+    def save() -> None:
+        _write_rows(out, fieldnames, rows, replace_keys=replace_keys)
+
     counts = {"reviewed": 0, "skipped": 0, "errors": 0}
     redo_weak_pass = 0
     if redo_weak and not redo:
@@ -929,8 +1071,6 @@ def run_review(
         log(f"redo-weak pass {redo_weak_pass}: {action}")
     calls = 0
     for index, row in enumerate(rows):
-        if not candidate_urls(row, max_candidates) and (search is None or not (row.get("example_name") or row.get("exercise_key") or "").strip()):
-            continue
         done = (row.get("ai_verdict") or "").strip()
         in_progress = bool((row.get("ai_review_progress") or "").strip())
         if done and not redo:
@@ -948,18 +1088,26 @@ def run_review(
                 # for revisiting completed rows.
                 counts["skipped"] += 1
                 continue
+        if (
+            not candidate_urls(row, max_candidates)
+            and not _resume_outcome(row).search_progress.pending
+            and (search is None or not (row.get("example_name") or row.get("exercise_key") or "").strip())
+        ):
+            continue
         if limit is not None and counts["reviewed"] + counts["errors"] >= limit:
             break
         if calls:
             sleep(delay_s)
         key = row.get("exercise_key") or f"row {index + 2}"
+        if redo or (redo_weak and done):
+            replace_keys.add(key)
 
         def checkpoint(outcome: RowOutcome) -> None:
             # Keep curator input intact while saving every completed video.
             # An interrupted row resumes its best result and cumulative budget.
             rows[index]["ai_review_progress"] = json.dumps(asdict(outcome))
             rows[index]["ai_reviewed_video_ids"] = "|".join(dict.fromkeys([*_reviewed_ids(row), *outcome.reviewed_video_ids]))
-            _write_rows(out, fieldnames, rows)
+            save()
 
         review_input = row
         if redo:
@@ -968,12 +1116,12 @@ def run_review(
         try:
             outcome = review_row(reviewer, review_input, max_candidates=max_candidates, delay_s=delay_s, sleep=sleep, log=log, search=search, checkpoint=checkpoint)
         except GeminiQuotaExceeded as exc:
-            _write_rows(out, fieldnames, rows)
+            save()
             log(f"{key}: {exc}. Progress saved to {out}; run the same command again later to resume. {exc.log_fields()}")
             counts["quota_stopped"] = 1
             return counts
         except GeminiProviderUnavailable as exc:
-            _write_rows(out, fieldnames, rows)
+            save()
             log(
                 f"{key}: {exc}. Progress saved to {out}; "
                 "run the same command again when Gemini is available."
@@ -981,7 +1129,7 @@ def run_review(
             counts["gemini_stopped"] = 1
             return counts
         except CandidateSearchQuotaExceeded as exc:
-            _write_rows(out, fieldnames, rows)
+            save()
             log(
                 f"{key}: {exc}. Progress saved to {out}; "
                 "run the same command again when candidate search is available."
@@ -991,7 +1139,7 @@ def run_review(
             counts["search_stopped"] = 1
             return counts
         except CandidateSearchError as exc:
-            _write_rows(out, fieldnames, rows)
+            save()
             log(
                 f"{key}: candidate search unavailable: {exc}. Progress saved to {out}; "
                 "run the same command again when candidate search is available."
@@ -1009,8 +1157,8 @@ def run_review(
         )
         manual = " needs_manual_video" if rows[index]["needs_manual_video"] == "true" else ""
         log(f"{key}: {verdict} ({rows[index].get('ai_confidence') or '-'}){segment}{manual}")
-        _write_rows(out, fieldnames, rows)
-    _write_rows(out, fieldnames, rows)
+        save()
+    save()
     return counts
 
 

@@ -120,7 +120,7 @@ def test_ytdlp_rejects_long_and_unknown_duration_candidates():
         {"id": "AAAAAAAAAAA", "duration": 60},
         {"id": "BBBBBBBBBBB", "duration": discovery.YTDLP_MAX_DURATION_SECONDS + 1},
         {"id": "CCCCCCCCCCC"},
-    ]])
+    ], [], []])
     assert list(searcher.search(_row(), set())) == [URL_A]
 
 
@@ -567,9 +567,9 @@ def test_ytdlp_discovers_videos_skips_live_and_deduplicates():
     searcher = _ytdlp_searcher(
         [
             [
-                {"id": "AAAAAAAAAAA", "live_status": "is_live"},
-                {"id": "BBBBBBBBBBB"},
-                {"id": "BBBBBBBBBBB"},
+                {"id": "AAAAAAAAAAA", "live_status": "is_live", "duration": 60},
+                {"id": "BBBBBBBBBBB", "duration": 60},
+                {"id": "BBBBBBBBBBB", "duration": 60},
             ],
             [],
             [],

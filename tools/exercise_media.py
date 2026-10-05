@@ -506,13 +506,7 @@ def _cmd_review(args: argparse.Namespace) -> int:
     from tools.exercise_media_search import CandidateSearchError, build_candidate_search
 
     out = args.out or args.csv
-    # When a separate reviewed CSV already exists, it is the authoritative
-    # checkpoint. Resume directly from it instead of rebuilding state from the
-    # original bank CSV on every invocation. This guarantees completed verdicts
-    # are read exactly as last written and therefore skipped on the next run.
-    review_input = out if args.out and Path(out).exists() else args.csv
-    if review_input == out and args.out and Path(out).exists():
-        print(f"resume checkpoint: {out}")
+    # The engine selects and merges checkpoint state while holding its lock.
     searcher = None
     if not args.no_search:
         try:
@@ -540,7 +534,7 @@ def _cmd_review(args: argparse.Namespace) -> int:
     print(f"Gemini reviewer: {reviewer.model} (agentic video)")
     try:
         counts = run_review(
-            review_input,
+            args.csv,
             out,
             reviewer=reviewer,
             limit=args.limit,

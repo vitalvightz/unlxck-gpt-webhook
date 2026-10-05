@@ -2,6 +2,9 @@ from __future__ import annotations
 
 import csv
 import json
+import subprocess
+import sys
+from pathlib import Path
 
 import httpx
 import pytest
@@ -16,6 +19,7 @@ URL_C = "https://www.youtube.com/watch?v=CCCCCCCCCCC"
 @pytest.fixture(autouse=True)
 def _disable_live_youtube_discovery(monkeypatch):
     monkeypatch.delenv("YOUTUBE_DATA_API_KEY", raising=False)
+    monkeypatch.setattr(review.time, "sleep", lambda _: None)
 
 
 def _answer(**overrides):
@@ -771,7 +775,7 @@ def test_cli_exit_code_reflects_failures(tmp_path, monkeypatch, answers, expecte
     src = tmp_path / "media.csv"
     _write_csv(src, [_row()])
     monkeypatch.setattr(review, "build_reviewer", lambda model=None: _reviewer(answers))
-    assert tool.main(["review", str(src), "--delay", "0"]) == expected_exit
+    assert tool.main(["review", str(src), "--delay", "0", "--no-search"]) == expected_exit
 
 
 def test_cli_missing_columns_exits_with_usage_error(tmp_path, monkeypatch, capsys):
@@ -780,7 +784,7 @@ def test_cli_missing_columns_exits_with_usage_error(tmp_path, monkeypatch, capsy
     src = tmp_path / "media.csv"
     _write_csv(src, [{"exercise_key": "sled-push", "youtube_url": ""}])
     monkeypatch.setattr(review, "build_reviewer", lambda model=None: _reviewer({}))
-    assert tool.main(["review", str(src)]) == 2
+    assert tool.main(["review", str(src), "--no-search"]) == 2
     assert "suggested_url" in capsys.readouterr().err
 
 
@@ -930,3 +934,188 @@ def test_downgrade_note_keeps_every_reason_and_the_full_comparison():
     assert "adds: agility ladder" in result.form_vs_cue
     assert "drill structure not confirmed" in result.form_vs_cue
     assert result.form_vs_cue.endswith(long_comparison)
+
+
+@pytest.mark.parametrize("verdict", ["match", "partial", "no_match"])
+@pytest.mark.parametrize("mutation", ["blank", "error", "missing", "confidence", "ids", "columns"])
+def test_stale_writer_cannot_regress_checkpoint(tmp_path, verdict, mutation):
+    out = tmp_path / "reviewed.csv"
+    stale = _row(ai_verdict=verdict, ai_confidence="0.9", ai_reviewed_video_ids="AAAAAAAAAAA")
+    _write_csv(out, [stale])
+    original = out.read_bytes()
+    older = dict(stale)
+    fields = list(stale)
+    if mutation in {"blank", "error"}:
+        older["ai_verdict"] = "" if mutation == "blank" else "error"
+    elif mutation == "confidence":
+        older["ai_confidence"] = ""
+    elif mutation == "ids":
+        older["ai_reviewed_video_ids"] = ""
+    elif mutation == "columns":
+        fields.remove("ai_verdict")
+    with pytest.raises(review.ReviewInputError, match="checkpoint regression"):
+        review._write_rows(out, fields, [] if mutation == "missing" else [older])
+    assert out.read_bytes() == original
+
+
+def test_progress_can_update_without_replacing_completed_review(tmp_path):
+    out = tmp_path / "reviewed.csv"
+    row = _row(ai_verdict="partial", ai_reviewed_video_ids="AAAAAAAAAAA", ai_review_progress="")
+    _write_csv(out, [row])
+    updated = {**row, "ai_review_progress": "saved progress", "ai_reviewed_video_ids": "AAAAAAAAAAA|BBBBBBBBBBB"}
+    review._write_rows(out, list(updated), [updated])
+    assert _read_csv(out) == [updated]
+
+
+@pytest.mark.parametrize("crash", [False, True])
+def test_checkpoint_lock_excludes_other_process_and_recovers(tmp_path, crash):
+    out = tmp_path / "reviewed.csv"
+    script = """
+import sys
+from tools.exercise_media_review import checkpoint_lock
+with checkpoint_lock(sys.argv[1]):
+    print('locked', flush=True)
+    sys.stdin.read()
+"""
+    owner = subprocess.Popen([sys.executable, "-c", script, str(out)], stdin=subprocess.PIPE,
+                             stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    try:
+        assert owner.stdout.readline().strip() == "locked"
+        with pytest.raises(review.ReviewInputError, match="another reviewer"):
+            review.run_review(str(out), str(out), reviewer=_reviewer({}))
+        if crash:
+            owner.kill()
+        owner.communicate(timeout=20)
+        # The retained sidecar is stale, but its kernel lock has been released.
+        assert Path(str(out.resolve()) + ".lock").exists()
+        with review.checkpoint_lock(out):
+            pass
+    finally:
+        if owner.poll() is None:
+            owner.kill()
+            owner.communicate(timeout=20)
+
+
+@pytest.mark.parametrize("status", [500, 502, 503, 504])
+def test_transient_http_retries_same_candidate_then_recovers(status, monkeypatch, capsys):
+    calls, waits = [], []
+    monkeypatch.setattr(review.time, "sleep", waits.append)
+    reviewer = _reviewer({URL_A: [httpx.Response(status), httpx.Response(status), _answer()]}, calls)
+    result = review.review_row(reviewer, _row(), max_candidates=1, delay_s=0)
+    assert len(calls) == 3
+    assert result.tried == [URL_A]
+    assert result.errors == []
+    assert waits == [2, 4]
+    output = capsys.readouterr().out
+    assert "retry 1/2 in 2s" in output and "retry 2/2 in 4s" in output
+
+
+@pytest.mark.parametrize("status", [401, 402, 403, 404, 429])
+def test_nontransient_http_is_not_server_retried(status):
+    calls = []
+    with pytest.raises(review.GeminiError):
+        _reviewer({URL_A: httpx.Response(status)}, calls).review(URL_A, _row())
+    assert len(calls) == 1
+
+
+def test_same_cli_after_503_stop_preserves_52_completed_rows(tmp_path):
+    src, out = tmp_path / "input.csv", tmp_path / "reviewed.csv"
+    calls_path = tmp_path / "calls.json"
+    _write_csv(src, [_row(exercise_key=f"exercise-{i}", suggested_url=f"https://www.youtube.com/watch?v={i:011d}")
+                     for i in range(100)])
+    script = """
+import json, sys, httpx
+from tools import exercise_media as tool, exercise_media_review as review
+review.time.sleep = lambda _: None
+phase, src, out, calls_path = sys.argv[1:]
+calls = []
+def handler(request):
+    payload = json.loads(request.content)
+    url = payload['input'][0]['uri']
+    index = int(url.split('=')[-1])
+    calls.append(index)
+    if phase == 'first' and index in {52, 53, 54}:
+        return httpx.Response(404)
+    if phase == 'first' and index == 55:
+        return httpx.Response(503)
+    verdict = ['match', 'no_match', 'partial'][index % 3] if index < 52 else 'match'
+    answer = dict(verdict=verdict, confidence=.95, what_is_shown='demo', structure_matches=True,
+                  added_elements=[], form_vs_cue='consistent', orientation='landscape',
+                  segment_start=42, segment_end=54)
+    return httpx.Response(200, json={'output_text': json.dumps(answer)})
+review.build_reviewer = lambda model=None: review.GeminiVideoReviewer('test', client=httpx.Client(transport=httpx.MockTransport(handler)))
+code = tool.main(['review', src, '--out', out, '--max-candidates', '3', '--no-search', '--delay', '0'])
+with open(calls_path, 'w') as handle:
+    json.dump(calls, handle)
+sys.exit(code)
+"""
+    def invoke(phase):
+        return subprocess.run([sys.executable, "-c", script, phase, str(src), str(out), str(calls_path)],
+                              capture_output=True, text=True, timeout=60)
+    first = invoke("first")
+    assert first.returncode == 1, first.stderr
+    assert "done: 52 reviewed, 3 errors, 0 already reviewed" in first.stdout
+    saved = _read_csv(out)
+    assert [r["ai_verdict"] for r in saved[:52]] == [["match", "no_match", "partial"][i % 3] for i in range(52)]
+    progress = json.loads(saved[55]["ai_review_progress"])
+    assert progress["tried"] == []
+    assert progress["search_progress"]["pending"] == [saved[55]["suggested_url"]]
+    assert json.loads(calls_path.read_text()).count(55) == 3
+    # Reproduce the missing #2730 protection: a writer that read the source
+    # before the first run must not replace this newer checkpoint snapshot.
+    stale = _read_csv(src)
+    with pytest.raises(review.ReviewInputError, match="checkpoint regression"):
+        review._write_rows(out, list(stale[0]), stale)
+    assert _read_csv(out) == saved
+    second = invoke("second")
+    assert second.returncode == 0, second.stderr
+    assert "checkpoint state: 52 completed, 3 errors, 45 pending" in second.stdout
+    assert "48 reviewed, 0 errors, 52 already reviewed" in second.stdout
+    assert json.loads(calls_path.read_text()) == list(range(52, 100))
+    assert _read_csv(out)[:52] == saved[:52]
+    assert "checkpoint-v2 source-sha256:" in second.stdout
+    with review.checkpoint_lock(out):
+        pass
+
+
+def test_checkpoint_only_completed_rows_survive_older_source(tmp_path):
+    src, out = tmp_path / "input.csv", tmp_path / "reviewed.csv"
+    _write_csv(src, [_row(exercise_key="a")])
+    previous = [_row(exercise_key="a", ai_verdict="no_match"),
+                _row(exercise_key="removed-from-source", ai_verdict="partial", suggested_url="")]
+    _write_csv(out, previous)
+    calls = []
+    counts = review.run_review(str(src), str(out), reviewer=_reviewer({}, calls), log=lambda _: None)
+    assert counts["skipped"] == 2
+    assert calls == []
+    assert [r["ai_verdict"] for r in _read_csv(out)] == ["no_match", "partial"]
+
+
+def test_pending_discovered_candidate_resumes_without_search(tmp_path):
+    src = tmp_path / "reviewed.csv"
+    _write_csv(src, [_row(suggested_url="")])
+    stopped = review.run_review(
+        str(src), str(src), reviewer=_reviewer({URL_B: httpx.Response(503)}),
+        search=lambda *args: iter([URL_B]), delay_s=0, log=lambda _: None,
+    )
+    assert stopped["gemini_stopped"] == 1
+    saved = json.loads(_read_csv(src)[0]["ai_review_progress"])
+    assert saved["tried"] == []
+    assert saved["search_progress"]["pending"] == [URL_B]
+    calls = []
+    resumed = review.run_review(str(src), str(src), reviewer=_reviewer({URL_B: _answer()}, calls),
+                                delay_s=0, log=lambda _: None)
+    assert resumed["reviewed"] == 1
+    assert len(calls) == 1
+
+
+@pytest.mark.parametrize("keys", [["a", "a"], ["a", ""]])
+def test_ambiguous_checkpoint_keys_fail_before_gemini(tmp_path, keys):
+    src = tmp_path / "reviewed.csv"
+    _write_csv(src, [_row(exercise_key=key) for key in keys])
+    calls = []
+    with pytest.raises(review.ReviewInputError, match="unique, nonblank"):
+        review.run_review(str(src), str(src), reviewer=_reviewer({}, calls))
+    assert calls == []
+    with review.checkpoint_lock(src):
+        pass
