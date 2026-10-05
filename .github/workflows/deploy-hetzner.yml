@@ -4,6 +4,11 @@ on:
   push:
     branches:
       - Main
+    # The web app ships separately and the backend never reads web/ at runtime.
+    # Redeploying restarts the worker, which kills any plan build in flight, so
+    # a frontend-only push must not trigger it. Mixed pushes still deploy.
+    paths-ignore:
+      - "web/**"
   workflow_dispatch:
 
 # Least privilege: the job only needs to read the repository so the runner can

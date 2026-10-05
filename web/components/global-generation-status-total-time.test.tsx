@@ -315,3 +315,48 @@ test("an active failure keeps the total next to the failure copy", async () => {
     clearRibbonStorage();
   }
 });
+
+// Closing an outcome ribbon used to erase it outright. For a build held for
+// admin review that left the athlete with no trace of it anywhere; the reopen
+// pill keeps one, while a finished plan they closed stays closed.
+const dismissedCases: { name: string; job: Partial<GenerationJobResponse>; expectPill: string | null }[] = [
+  {
+    name: "protected triage hold",
+    job: { status: "review_required", plan_id: null, latest_plan_id: null, requires_admin_resume: true },
+    expectPill: "Show plan build",
+  },
+  {
+    name: "retryable failure",
+    job: { status: "failed", plan_id: null, latest_plan_id: null, can_retry: true, error: "Stage 2 worker exited." },
+    expectPill: "Show build error",
+  },
+  {
+    name: "saved plan",
+    job: { status: "review_required", plan_id: "plan-1" },
+    expectPill: null,
+  },
+];
+
+for (const dismissedCase of dismissedCases) {
+  test(`closing the ribbon for a ${dismissedCase.name} ${dismissedCase.expectPill ? "leaves the reopen pill" : "stays closed"}`, async () => {
+    clearRibbonStorage();
+    const { terminalJob } = buildFixture();
+    const job = terminalJob(dismissedCase.job);
+    window.localStorage.setItem(`${RIBBON_DISMISSED_PREFIX}:${job.job_id}`, "1");
+    const restoreFetch = installFetchStub({ active: null, job, latest: job });
+    const harness = await mountRibbon();
+
+    try {
+      const text = harness.text();
+      if (dismissedCase.expectPill) {
+        assert.ok(text.includes(dismissedCase.expectPill), `expected the reopen pill, got: ${text}`);
+      } else {
+        assert.equal(text.trim(), "", `expected nothing, got: ${text}`);
+      }
+    } finally {
+      await harness.unmount();
+      restoreFetch();
+      clearRibbonStorage();
+    }
+  });
+}

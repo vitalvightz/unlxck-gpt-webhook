@@ -5,6 +5,9 @@ import {
   getPassiveLatestJobPlanTarget,
   getGenerationStatusTarget,
   isGenerationRibbonAcknowledgedRoute,
+  isActiveBuildScreen,
+  isRibbonBuildInProgress,
+  resolveRibbonDismissKey,
   isGenerationRibbonTargetRedundant,
   isProtectedTriageLatestJob,
   latestCompletedJobOpenablePlanId,
@@ -248,5 +251,44 @@ test("a resumed build reports the approval instead of a generic generating messa
   assert.equal(
     resolveAthleteResumeStatusMessage("completed", "admin_triage_resume", "Plan ready!"),
     "Plan ready!",
+  );
+});
+
+test("the ribbon stays off the build screen only while a build is running", () => {
+  assert.equal(isActiveBuildScreen("/generate", isRibbonBuildInProgress(true, "running", null)), true);
+  assert.equal(isActiveBuildScreen("/generate", isRibbonBuildInProgress(true, "queued", null)), true);
+  // An admin-review hold, a failure or a finished plan still shows there.
+  for (const phase of ["completed", "failed"]) {
+    assert.equal(isActiveBuildScreen("/generate", isRibbonBuildInProgress(true, phase, null)), false, phase);
+  }
+  assert.equal(
+    isActiveBuildScreen("/generate", isRibbonBuildInProgress(false, null, { status: "review_required" })),
+    false,
+  );
+  assert.equal(isActiveBuildScreen("/plans", true), false);
+  assert.equal(isActiveBuildScreen("/", true), false);
+  assert.equal(isActiveBuildScreen(null, true), false);
+});
+
+test("closing the ribbon mid-build does not hide the finished plan's notice", () => {
+  const building = resolveRibbonDismissKey({ isActive: true, phase: "running", jobId: "job_1", latestJob: null });
+  const finished = resolveRibbonDismissKey({ isActive: true, phase: "completed", jobId: "job_1", latestJob: null });
+  const passiveFinished = resolveRibbonDismissKey({
+    isActive: false,
+    phase: null,
+    jobId: null,
+    latestJob: { job_id: "job_1", status: "completed" },
+  });
+  assert.notEqual(building, finished);
+  // The finished key is unchanged, so visiting the plan still acknowledges it
+  // and an old "done" dismissal still applies.
+  assert.equal(finished, "unlxck:generation-ribbon-dismissed:job_1");
+  assert.equal(passiveFinished, finished);
+  for (const phase of ["submitting", "queued", "reconnecting", "finalizing"]) {
+    assert.equal(resolveRibbonDismissKey({ isActive: true, phase, jobId: "job_1", latestJob: null }), building, phase);
+  }
+  assert.equal(
+    resolveRibbonDismissKey({ isActive: false, phase: null, jobId: null, latestJob: { job_id: "job_1", status: "running" } }),
+    building,
   );
 });
