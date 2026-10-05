@@ -45,7 +45,7 @@ def test_shipped_policies_match_the_pre_migration_file_exactly():
 @pytest.mark.parametrize("policy_id", [p.policy_id for p in load_clinical_policies()])
 def test_shipped_profiles_cannot_enter_a_higher_stage(policy_id):
     shipped = next(p for p in load_clinical_policies() if p.policy_id == policy_id)
-    expected_stage = "calm" if policy_id == "wrist_impingement" else "restore"
+    expected_stage = "calm" if policy_id == "wrist_impingement" or shipped.injury_type == "hyperextension" else "restore"
     assert shipped.live_stages == (["calm"] if expected_stage == "calm" else ["calm", "restore"])
     assert not any(t.promotable for t in shipped.transitions)
     region, kind = shipped.region, shipped.injury_type
@@ -176,7 +176,7 @@ def test_frozen_snapshots_from_the_previous_file_are_not_held(policy_id, region,
 # Families route; profiles activate.
 UNPROFILED = [
     ("ankle", "hyperextension"), ("ankle", "swelling"), ("ankle", "pain"), ("ankle", "tightness"), ("chest", "sprain"),
-    ("chest", "contusion"), ("chest", "tendonitis"), ("neck", "impingement"), ("elbow", "hyperextension"),
+    ("chest", "contusion"), ("chest", "tendonitis"), ("neck", "impingement"), ("knee", "hyperextension"),
     ("groin", "tendonitis"), ("triceps", "tendonitis"), ("wrist", "instability"), ("lower_back", "stiffness"), ("knee", "soreness"),
 ]
 
@@ -200,7 +200,8 @@ def test_only_profiles_are_policies_and_families_carry_no_content():
         ("ankle", "instability"), ("knee", "instability"), ("toe", "sprain"), ("wrist", "sprain"),
         ("elbow", "sprain"), ("shoulder", "sprain"), ("shoulder", "instability"), ("hand", "sprain"), ("fingers", "sprain"),
         *((region, "tendonitis") for region in ["achilles", "shoulder", "biceps", "forearm", "elbow", "wrist", "hand", "fingers"]),
-        *((region, "impingement") for region in ["shoulder", "hip", "ankle", "elbow", "wrist"])}
+        *((region, "impingement") for region in ["shoulder", "hip", "ankle", "elbow", "wrist"]),
+        *((region, "hyperextension") for region in ["toe", "fingers", "elbow", "wrist", "hand", "shoulder"])}
     for family in catalog["families"]:
         assert set(family) <= {"family_id", "description", "injury_types", "transitions"}
     # Instability coverage requires its own regional profile and reviewed identities.

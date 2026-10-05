@@ -2407,6 +2407,294 @@
       "status": "active",
       "activation": "live",
       "content_hash": "ff83fb55365d3ce897e62f0c7714050fb7663119e3cc9e196dec16f1f8ea0171"
+    },
+    {
+      "policy_id": "toe_hyperextension",
+      "version": 1,
+      "region": "toe",
+      "injury_type": "hyperextension",
+      "pathway_family": "hyperextension_or_joint_trauma",
+      "evidence_sources": [
+        "https://www.orthoinfo.org/diseases--conditions/turf-toe/",
+        "https://www.nhs.uk/conditions/sprains-and-strains/"
+      ],
+      "prescriptions": [
+        {
+          "drill_id": "toe_hyperextension_recovery_support",
+          "bank_hash": "1d811392f38e0904e3d6bfb7e95203188edabfd7c5175ff52588e4fccbe1efa0",
+          "stage": "calm",
+          "instructions": "Protect the affected toe from being bent backwards again. Pause provoking push-off, tiptoe work, running and jumping. Rest the foot in a comfortable supported position. Follow any individually prescribed footwear, walking support or weight-bearing restriction without changing it. The affected toe, joint stability and injury grade need assessment before toe curls, stretching or loaded forefoot work; this guidance does not diagnose turf toe. Stop automatic rehab and seek assessment for giving way, locking, suspected instability, deformity, major swelling or loss of joint use. Seek urgent help for altered sensation, a cold or blue limb, or symptoms suggesting a fracture, dislocation or tear. Follow clinician restrictions. If symptoms worsen, stop the provoking activity and seek assessment rather than testing the joint.",
+          "dose": null,
+          "camp_doses": {},
+          "readiness_doses": {},
+          "allowed_severities": [
+            "low",
+            "moderate"
+          ],
+          "stop_when": [
+            "Stop automatic rehab and seek assessment for giving way, locking, suspected instability, deformity, major swelling or loss of joint use. Seek urgent help for altered sensation, a cold or blue limb, or symptoms suggesting a fracture, dislocation or tear. Follow clinician restrictions. If symptoms worsen, stop the provoking activity and seek assessment rather than testing the joint."
+          ],
+          "frequency": "scheduled_sessions",
+          "minimum_gap_days": 1,
+          "priority": 0,
+          "sources": [
+            "https://www.orthoinfo.org/diseases--conditions/turf-toe/",
+            "https://www.nhs.uk/conditions/sprains-and-strains/"
+          ]
+        }
+      ],
+      "blocked_regions": [
+        "toe"
+      ],
+      "blocked_tags": [],
+      "contact_limit": "none",
+      "live_stages": [
+        "calm"
+      ],
+      "transition_overrides": {},
+      "status": "active",
+      "activation": "live",
+      "content_hash": "6b3e0a5a3980180b80f4a4e3268be857288d1689002b55b5b910c4e2560fa221"
+    },
+    {
+      "policy_id": "fingers_hyperextension",
+      "version": 1,
+      "region": "fingers",
+      "injury_type": "hyperextension",
+      "pathway_family": "hyperextension_or_joint_trauma",
+      "evidence_sources": [
+        "https://www.guysandstthomas.nhs.uk/health-information/volar-plate-injuries-finger",
+        "https://www.nhs.uk/conditions/sprains-and-strains/"
+      ],
+      "prescriptions": [
+        {
+          "drill_id": "fingers_hyperextension_recovery_support",
+          "bank_hash": "ff775cdba821808d3521af2de90d02ce1e9f117f8d08701617ab558a83dba29e",
+          "stage": "calm",
+          "instructions": "Protect the injured finger from being pulled or bent backwards. Avoid gripping against resistance, catching impacts and contact work. Rest the hand comfortably supported. Follow any hand-therapist splint or strapping instructions exactly; do not change the finger position, undo the splint for app exercises or decide when to stop wearing it. Finger exercises need the assessed injury and individual protection plan; no automatic stretching or finger holds are prescribed. Stop automatic rehab and seek assessment for giving way, locking, suspected instability, deformity, major swelling or loss of joint use. Seek urgent help for altered sensation, a cold or blue limb, or symptoms suggesting a fracture, dislocation or tear. Follow clinician restrictions. If symptoms worsen, stop the provoking activity and seek assessment rather than testing the joint.",
+          "dose": null,
+          "camp_doses": {},
+          "readiness_doses": {},
+          "allowed_severities": [
+            "low",
+            "moderate"
+          ],
+          "stop_when": [
+            "Stop automatic rehab and seek assessment for giving way, locking, suspected instability, deformity, major swelling or loss of joint use. Seek urgent help for altered sensation, a cold or blue limb, or symptoms suggesting a fracture, dislocation or tear. Follow clinician restrictions. If symptoms worsen, stop the provoking activity and seek assessment rather than testing the joint."
+          ],
+          "frequency": "scheduled_sessions",
+          "minimum_gap_days": 1,
+          "priority": 0,
+          "sources": [
+            "https://www.guysandstthomas.nhs.uk/health-information/volar-plate-injuries-finger",
+            "https://www.nhs.uk/conditions/sprains-and-strains/"
+          ]
+        }
+      ],
+      "blocked_regions": [
+        "fingers"
+      ],
+      "blocked_tags": [],
+      "contact_limit": "none",
+      "live_stages": [
+        "calm"
+      ],
+      "transition_overrides": {},
+      "status": "active",
+      "activation": "live",
+      "content_hash": "adabb4dc3e173b03c47b590bbf14e850edea3ca8c5ed980e0ddf2ddf0d8ef549"
+    },
+    {
+      "policy_id": "elbow_hyperextension",
+      "version": 1,
+      "region": "elbow",
+      "injury_type": "hyperextension",
+      "pathway_family": "hyperextension_or_joint_trauma",
+      "evidence_sources": [
+        "https://ruh.nhs.uk/patients/patient_information/ORT047_Advice_after_a_soft_tissue_injury_of_the_elbow.pdf",
+        "https://www.nhs.uk/conditions/sprains-and-strains/"
+      ],
+      "prescriptions": [
+        {
+          "drill_id": "elbow_hyperextension_recovery_support",
+          "bank_hash": "f32a499f932b2024d8edfebd9a07ad0b0f8f45a711e33c42597ea0c450fc13da",
+          "stage": "calm",
+          "instructions": "Protect the elbow from repeat over-straightening. Pause pressing, throwing, forceful lockout and resisted elbow work. Support the arm comfortably at rest and follow any individually prescribed sling or movement restriction. Do not test stability, push into full extension or begin wall presses. The hospital movement advice assumes an assessed soft-tissue injury without broken bones; an app hyperextension label does not establish that assessment. Stop automatic rehab and seek assessment for giving way, locking, suspected instability, deformity, major swelling or loss of joint use. Seek urgent help for altered sensation, a cold or blue limb, or symptoms suggesting a fracture, dislocation or tear. Follow clinician restrictions. If symptoms worsen, stop the provoking activity and seek assessment rather than testing the joint.",
+          "dose": null,
+          "camp_doses": {},
+          "readiness_doses": {},
+          "allowed_severities": [
+            "low",
+            "moderate"
+          ],
+          "stop_when": [
+            "Stop automatic rehab and seek assessment for giving way, locking, suspected instability, deformity, major swelling or loss of joint use. Seek urgent help for altered sensation, a cold or blue limb, or symptoms suggesting a fracture, dislocation or tear. Follow clinician restrictions. If symptoms worsen, stop the provoking activity and seek assessment rather than testing the joint."
+          ],
+          "frequency": "scheduled_sessions",
+          "minimum_gap_days": 1,
+          "priority": 0,
+          "sources": [
+            "https://ruh.nhs.uk/patients/patient_information/ORT047_Advice_after_a_soft_tissue_injury_of_the_elbow.pdf",
+            "https://www.nhs.uk/conditions/sprains-and-strains/"
+          ]
+        }
+      ],
+      "blocked_regions": [
+        "elbow"
+      ],
+      "blocked_tags": [],
+      "contact_limit": "none",
+      "live_stages": [
+        "calm"
+      ],
+      "transition_overrides": {},
+      "status": "active",
+      "activation": "live",
+      "content_hash": "7686fd4d3bc42f218f5da42a11af89c8d0d779fbec9f6eb1d79fa38d3df27866"
+    },
+    {
+      "policy_id": "wrist_hyperextension",
+      "version": 1,
+      "region": "wrist",
+      "injury_type": "hyperextension",
+      "pathway_family": "hyperextension_or_joint_trauma",
+      "evidence_sources": [
+        "https://www.hey.nhs.uk/patient-leaflet/soft-tissue-injury-wrist-hand/",
+        "https://www.nhs.uk/conditions/sprains-and-strains/"
+      ],
+      "prescriptions": [
+        {
+          "drill_id": "wrist_hyperextension_recovery_support",
+          "bank_hash": "873c4c6103b8eeba3dcb65a2c70db660e28ef7f43484b4db8b509725d433e0d8",
+          "stage": "calm",
+          "instructions": "Protect the wrist from being bent backwards again and from weight through the palm or knuckles. Pause pushing, loaded wrist extension and heavy grip work. Rest the forearm and hand comfortably supported. Follow any individually prescribed splint and movement restriction; do not remove or taper protection because symptoms improve. Assessment of the injured wrist and its stability is needed before stretching, push-ups or resistance work. Stop automatic rehab and seek assessment for giving way, locking, suspected instability, deformity, major swelling or loss of joint use. Seek urgent help for altered sensation, a cold or blue limb, or symptoms suggesting a fracture, dislocation or tear. Follow clinician restrictions. If symptoms worsen, stop the provoking activity and seek assessment rather than testing the joint.",
+          "dose": null,
+          "camp_doses": {},
+          "readiness_doses": {},
+          "allowed_severities": [
+            "low",
+            "moderate"
+          ],
+          "stop_when": [
+            "Stop automatic rehab and seek assessment for giving way, locking, suspected instability, deformity, major swelling or loss of joint use. Seek urgent help for altered sensation, a cold or blue limb, or symptoms suggesting a fracture, dislocation or tear. Follow clinician restrictions. If symptoms worsen, stop the provoking activity and seek assessment rather than testing the joint."
+          ],
+          "frequency": "scheduled_sessions",
+          "minimum_gap_days": 1,
+          "priority": 0,
+          "sources": [
+            "https://www.hey.nhs.uk/patient-leaflet/soft-tissue-injury-wrist-hand/",
+            "https://www.nhs.uk/conditions/sprains-and-strains/"
+          ]
+        }
+      ],
+      "blocked_regions": [
+        "wrist"
+      ],
+      "blocked_tags": [],
+      "contact_limit": "none",
+      "live_stages": [
+        "calm"
+      ],
+      "transition_overrides": {},
+      "status": "active",
+      "activation": "live",
+      "content_hash": "e683473733be447a965d5aeabce641fb41bd3ad4920e1497d29d0d157e448c6a"
+    },
+    {
+      "policy_id": "hand_hyperextension",
+      "version": 1,
+      "region": "hand",
+      "injury_type": "hyperextension",
+      "pathway_family": "hyperextension_or_joint_trauma",
+      "evidence_sources": [
+        "https://www.hey.nhs.uk/patient-leaflet/soft-tissue-injury-wrist-hand/",
+        "https://www.nhs.uk/conditions/sprains-and-strains/"
+      ],
+      "prescriptions": [
+        {
+          "drill_id": "hand_hyperextension_recovery_support",
+          "bank_hash": "8849581598dfbd684ec71ca663ef5b40d3116a32d06ded5bf3569339fa3b017a",
+          "stage": "calm",
+          "instructions": "Protect the injured hand from repeated backward bending, forceful gripping and contact impacts. Support the hand comfortably at rest and avoid using it to bear body weight. Follow any individually prescribed hand protection and movement restrictions. The exact injured joint and safe movement range need assessment; do not pull fingers backwards, perform backhand wall crawls or follow a generic wrist or finger exercise protocol. Stop automatic rehab and seek assessment for giving way, locking, suspected instability, deformity, major swelling or loss of joint use. Seek urgent help for altered sensation, a cold or blue limb, or symptoms suggesting a fracture, dislocation or tear. Follow clinician restrictions. If symptoms worsen, stop the provoking activity and seek assessment rather than testing the joint.",
+          "dose": null,
+          "camp_doses": {},
+          "readiness_doses": {},
+          "allowed_severities": [
+            "low",
+            "moderate"
+          ],
+          "stop_when": [
+            "Stop automatic rehab and seek assessment for giving way, locking, suspected instability, deformity, major swelling or loss of joint use. Seek urgent help for altered sensation, a cold or blue limb, or symptoms suggesting a fracture, dislocation or tear. Follow clinician restrictions. If symptoms worsen, stop the provoking activity and seek assessment rather than testing the joint."
+          ],
+          "frequency": "scheduled_sessions",
+          "minimum_gap_days": 1,
+          "priority": 0,
+          "sources": [
+            "https://www.hey.nhs.uk/patient-leaflet/soft-tissue-injury-wrist-hand/",
+            "https://www.nhs.uk/conditions/sprains-and-strains/"
+          ]
+        }
+      ],
+      "blocked_regions": [
+        "hand"
+      ],
+      "blocked_tags": [],
+      "contact_limit": "none",
+      "live_stages": [
+        "calm"
+      ],
+      "transition_overrides": {},
+      "status": "active",
+      "activation": "live",
+      "content_hash": "6a9c068f309d4273d9a3accc47c9b1578e58aec320cfd6691c9f7b99668214ca"
+    },
+    {
+      "policy_id": "shoulder_hyperextension",
+      "version": 1,
+      "region": "shoulder",
+      "injury_type": "hyperextension",
+      "pathway_family": "hyperextension_or_joint_trauma",
+      "evidence_sources": [
+        "https://www.gatesheadhealth.nhs.uk/resources/shoulder-injury/",
+        "https://www.nhs.uk/conditions/sprains-and-strains/"
+      ],
+      "prescriptions": [
+        {
+          "drill_id": "shoulder_hyperextension_recovery_support",
+          "bank_hash": "303c39b3b3d758620c3993f53f2b71ae9f842b11d4d3d5f80bb143c47b29ad50",
+          "stage": "calm",
+          "instructions": "Protect the shoulder from repeat backward overstretching. Pause provoking reaching behind the body, bottom-range pressing, heavy lifting and contact work. Support the arm comfortably at rest and follow any individually prescribed sling or movement restriction without changing it. Do not test shoulder stability, force range or introduce band presses. Movement rehabilitation needs the assessed injury and individual restrictions; this guidance does not establish that the joint is stable. Stop automatic rehab and seek assessment for giving way, locking, suspected instability, deformity, major swelling or loss of joint use. Seek urgent help for altered sensation, a cold or blue limb, or symptoms suggesting a fracture, dislocation or tear. Follow clinician restrictions. If symptoms worsen, stop the provoking activity and seek assessment rather than testing the joint.",
+          "dose": null,
+          "camp_doses": {},
+          "readiness_doses": {},
+          "allowed_severities": [
+            "low",
+            "moderate"
+          ],
+          "stop_when": [
+            "Stop automatic rehab and seek assessment for giving way, locking, suspected instability, deformity, major swelling or loss of joint use. Seek urgent help for altered sensation, a cold or blue limb, or symptoms suggesting a fracture, dislocation or tear. Follow clinician restrictions. If symptoms worsen, stop the provoking activity and seek assessment rather than testing the joint."
+          ],
+          "frequency": "scheduled_sessions",
+          "minimum_gap_days": 1,
+          "priority": 0,
+          "sources": [
+            "https://www.gatesheadhealth.nhs.uk/resources/shoulder-injury/",
+            "https://www.nhs.uk/conditions/sprains-and-strains/"
+          ]
+        }
+      ],
+      "blocked_regions": [
+        "shoulder"
+      ],
+      "blocked_tags": [],
+      "contact_limit": "none",
+      "live_stages": [
+        "calm"
+      ],
+      "transition_overrides": {},
+      "status": "active",
+      "activation": "live",
+      "content_hash": "a9fbae774639c0a14804a927c1bb98c57e0266dc3f1f36da89b7530806a3b5f1"
     }
   ]
 }
