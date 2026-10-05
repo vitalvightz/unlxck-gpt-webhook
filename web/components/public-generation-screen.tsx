@@ -26,7 +26,7 @@ type Props = {
 };
 
 const PROGRESS_STORAGE_PREFIX = "unlxck:public-generation-progress:";
-const TIP_ROTATION_MS = 5_000;
+const TIP_ROTATION_MS = 7_000;
 const subscribeToNothing = () => () => {};
 
 function readSavedProgress(jobId: string | null): number {

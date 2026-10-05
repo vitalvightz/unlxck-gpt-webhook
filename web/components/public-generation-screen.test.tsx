@@ -88,15 +88,15 @@ const INJURY_INTAKE = {
 
 const running = { phase: "running" as const, startedAtMs: Date.now(), milestones: [] };
 
-test("one tip shows immediately and a 10-minute build never repeats a tip", (t) => {
+test("one tip shows immediately, rotates every 7s, and a 10-minute build never repeats a tip", (t) => {
   const timers = installFakeIntervals();
   t.after(timers.restore);
   const screen = mountScreen(running);
   const shown = [...screen.activeTips()];
   assert.equal(shown.length, 1);
-  // 10 minutes at one tip per 5 seconds.
-  for (let step = 0; step < 120; step += 1) {
-    act(() => timers.fire(5_000));
+  // 10 minutes at one tip per 7 seconds.
+  for (let step = 0; step < 86; step += 1) {
+    act(() => timers.fire(7_000));
     const current = screen.activeTips();
     assert.equal(current.length, 1);
     shown.push(current[0]);
@@ -111,7 +111,7 @@ test("the next build opens on tips this athlete has not seen yet", (t) => {
   const first = mountScreen(running);
   const seen = [...first.activeTips()];
   for (let step = 0; step < 20; step += 1) {
-    act(() => timers.fire(5_000));
+    act(() => timers.fire(7_000));
     seen.push(first.activeTips()[0]);
   }
   first.unmount();
@@ -125,7 +125,7 @@ test("the next build opens on tips this athlete has not seen yet", (t) => {
   const reopened: string[] = [];
   for (let step = 0; step < 20; step += 1) {
     reopened.push(container.querySelector(".public-build-tip-text-active")?.textContent ?? "");
-    act(() => timers.fire(5_000));
+    act(() => timers.fire(7_000));
   }
   act(() => root.unmount());
   container.remove();
@@ -139,7 +139,7 @@ test("tips follow the intake: an injured athlete gets recovery and safety tips",
   const screen = mountScreen({ ...running, intake: INJURY_INTAKE });
   for (let step = 0; step < 30; step += 1) {
     assert.ok(allowed.has(screen.activeTips()[0]));
-    act(() => timers.fire(5_000));
+    act(() => timers.fire(7_000));
   }
   screen.unmount();
 });
@@ -148,12 +148,12 @@ test("rotation stops once the build finishes, and nothing is left running on unm
   const timers = installFakeIntervals();
   t.after(timers.restore);
   const screen = mountScreen(running);
-  assert.ok(timers.live().includes(5_000));
+  assert.ok(timers.live().includes(7_000));
 
   screen.rerender({ ...running, phase: "finalizing" });
-  assert.ok(!timers.live().includes(5_000));
+  assert.ok(!timers.live().includes(7_000));
   const frozen = screen.activeTips();
-  act(() => timers.fire(5_000));
+  act(() => timers.fire(7_000));
   assert.deepEqual(screen.activeTips(), frozen);
 
   screen.unmount();
@@ -164,7 +164,7 @@ test("unmounting mid-build clears the tip and clock intervals", (t) => {
   const timers = installFakeIntervals();
   t.after(timers.restore);
   const screen = mountScreen(running);
-  assert.deepEqual([...timers.live()].sort(), [1_000, 5_000]);
+  assert.deepEqual([...timers.live()].sort(), [1_000, 7_000]);
   screen.unmount();
   assert.deepEqual(timers.live(), []);
 });
@@ -175,7 +175,7 @@ test("terminal states show no tip and start no rotation", (t) => {
   for (const phase of ["failed", "review_paused", "already_generated"] as const) {
     const screen = mountScreen({ phase, startedAtMs: Date.now() });
     assert.equal(screen.tipBox(), null, phase);
-    assert.ok(!timers.live().includes(5_000), phase);
+    assert.ok(!timers.live().includes(7_000), phase);
     screen.unmount();
   }
 });
@@ -190,7 +190,7 @@ test("a refreshed but equivalent intake keeps the current tip", (t) => {
   const timers = installFakeIntervals();
   t.after(timers.restore);
   const screen = mountScreen({ ...running, intake: INJURY_INTAKE });
-  act(() => timers.fire(5_000));
+  act(() => timers.fire(7_000));
   const before = screen.activeTips();
   for (let i = 0; i < 10; i += 1) {
     screen.rerender({ ...running, intake: { ...INJURY_INTAKE } });
