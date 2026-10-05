@@ -110,8 +110,8 @@ test("a deck covers the whole bank, contextual tips first", () => {
   assert.ok(deck.slice(0, primary.length).every((tip) => primaryIds.has(tip.id)));
 });
 
-test("the bank is big enough that a 10-minute build at 5s per tip never repeats", () => {
-  // 10 minutes / 5 seconds = 120 tips; every context must have more than that.
+test("the bank is big enough that a 10-minute build at 7s per tip never repeats", () => {
+  // 10 minutes / 7 seconds = 86 tips; keep generous headroom above that.
   assert.ok(LOADING_TIPS.length > 120, `${LOADING_TIPS.length} tips`);
   for (const category of new Set(LOADING_TIPS.map((tip) => tip.category))) {
     const count = LOADING_TIPS.filter((tip) => tip.category === category).length;
