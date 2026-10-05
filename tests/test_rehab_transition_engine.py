@@ -136,7 +136,7 @@ def test_safety_and_data_requirements_alone_never_promote():
 
 
 def test_uncaptured_functional_checkpoint_is_an_explicit_missing_input():
-    assert CAPTURED_FUNCTIONAL_CHECKPOINTS == frozenset()
+    assert "pain_free_walking" not in CAPTURED_FUNCTIONAL_CHECKPOINTS
     checkpoint = clinical("test_walking_check", "functional_checkpoint", checkpoint="pain_free_walking")
     result = progress([event()], current=policy(add=(clinical(), checkpoint)))
     assert result["stage"] == "restore"

@@ -1826,6 +1826,8 @@ def current_report_medical_hold_reasons(injury: Mapping[str, Any]) -> tuple[str,
         return ()
     fields = [str(injury.get(key) or "").strip() for key in ("body_area", "label", "description")]
     reasons = {symptom for text in fields for symptom in reported_medical_symptoms(text)}
+    if injury.get("achilles_assessment_medical_hold") is True:
+        reasons.add("an Achilles assessment concern requiring medical review")
     # Remove negation within each original field before composing a split
     # location/symptom report. A synthetic prefix must not revive denied symptoms.
     joined = " ".join(remove_negated_phrases(text) for text in fields)
