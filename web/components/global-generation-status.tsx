@@ -32,6 +32,40 @@ function TotalBuildTime({ label }: { label: string | null }) {
 }
 const RIBBON_DISMISSED_KEY = "unlxck:generation-ribbon-dismissed";
 const latestJobDismissKey = (jobId: string) => `${RIBBON_DISMISSED_KEY}:${jobId}`;
+// Hiding the ribbon while a plan builds is a separate choice from hiding its
+// outcome: closing "Building..." must not also swallow "Your plan is ready".
+export const buildingJobDismissKey = (jobId: string) => `${latestJobDismissKey(jobId)}:building`;
+
+const IN_PROGRESS_PHASES = new Set(["submitting", "queued", "running", "reconnecting", "finalizing"]);
+
+export function isRibbonBuildInProgress(
+  isActive: boolean,
+  phase: string | null,
+  latestJob: { status?: string | null } | null,
+): boolean {
+  return isActive
+    ? IN_PROGRESS_PHASES.has(phase ?? "")
+    : latestJob?.status === "queued" || latestJob?.status === "running";
+}
+
+export function resolveRibbonDismissKey({
+  isActive,
+  phase,
+  jobId,
+  latestJob,
+}: {
+  isActive: boolean;
+  phase: string | null;
+  jobId: string | null;
+  latestJob: { job_id?: string | null; status?: string | null } | null;
+}): string {
+  const isBuildInProgress = isRibbonBuildInProgress(isActive, phase, latestJob);
+  const ribbonJobId = !isActive && latestJob?.job_id ? latestJob.job_id : jobId;
+  if (!ribbonJobId) {
+    return RIBBON_DISMISSED_KEY;
+  }
+  return isBuildInProgress ? buildingJobDismissKey(ribbonJobId) : latestJobDismissKey(ribbonJobId);
+}
 
 type PassiveLatestJobStatus = "failed" | "review_required" | "completed" | "queued" | "running";
 
@@ -225,6 +259,13 @@ export function isGenerationRibbonTargetRedundant(pathname: string | null, targe
   return pathname === targetPath || (pathname === "/plans" && targetPath.startsWith("/plans/"));
 }
 
+// While a build is running, the build screen already shows it in full; a
+// ribbon pointing back at it only covers the bottom of that screen (on phones,
+// where the tips sit). Outcomes such as an admin-review hold still show there.
+export function isActiveBuildScreen(pathname: string | null, isBuildInProgress: boolean): boolean {
+  return isBuildInProgress && pathname === "/generate";
+}
+
 export function isGenerationRibbonAcknowledgedRoute(
   pathname: string | null,
   target: string | null,
@@ -395,7 +436,9 @@ export function GlobalGenerationStatus() {
   );
   const passivePlanTarget = !isActive ? getPassiveLatestJobPlanTarget(latestJob) : null;
   const acknowledgementTarget = isCompleted ? navigationTarget : passivePlanTarget;
-  const isRedundantRoute = isGenerationRibbonTargetRedundant(pathname, acknowledgementTarget);
+  const isRedundantRoute =
+    isActiveBuildScreen(pathname, isRibbonBuildInProgress(isActive, phase, latestJob)) ||
+    isGenerationRibbonTargetRedundant(pathname, acknowledgementTarget);
   const isAcknowledgementRoute = isGenerationRibbonAcknowledgedRoute(pathname, acknowledgementTarget);
   const ctaLabel = isCompleted && planId ? "View" : navigationTarget ? "Open" : "Refresh";
   // The elapsed reading survives into the terminal states instead of vanishing
@@ -410,12 +453,7 @@ export function GlobalGenerationStatus() {
   // values, so the number does not change across the handoff.
   const passiveTotalLabel = !isActive ? formatJobElapsedLabel(latestJob) : null;
 
-  const dismissKey =
-    !isActive && latestJob?.job_id
-      ? latestJobDismissKey(latestJob.job_id)
-      : jobId
-        ? latestJobDismissKey(jobId)
-        : RIBBON_DISMISSED_KEY;
+  const dismissKey = resolveRibbonDismissKey({ isActive, phase, jobId, latestJob });
 
   useEffect(() => {
     if (!isElapsedRunning) {
@@ -501,6 +539,7 @@ export function GlobalGenerationStatus() {
         window.localStorage.removeItem(RIBBON_DISMISSED_KEY);
         if (jobId) {
           window.localStorage.removeItem(latestJobDismissKey(jobId));
+          window.localStorage.removeItem(buildingJobDismissKey(jobId));
         }
       } catch {}
     }
@@ -534,13 +573,40 @@ export function GlobalGenerationStatus() {
     return null;
   }
 
+  const reopenPill = (label: string) => (
+    <button
+      ref={reopenRef}
+      type="button"
+      className="global-generation-status-reopen"
+      aria-label="Show generation ribbon"
+      style={
+        reopenPos
+          ? { left: reopenPos.x, top: reopenPos.y, right: "auto", bottom: "auto" }
+          : undefined
+      }
+      onPointerDown={handleReopenPointerDown}
+      onPointerMove={handleReopenPointerMove}
+      onPointerUp={handleReopenPointerUp}
+      onPointerCancel={handleReopenPointerUp}
+      onClick={handleReopenClick}
+    >
+      {label}
+    </button>
+  );
+
   if (!isActive && latestJob) {
     if (!shouldRenderPassiveLatestJobRibbon(latestJob)) {
       return null;
     }
 
     if (isDismissed) {
-      return null;
+      // A hold or a failure still needs the athlete's attention, so closing it
+      // leaves the small reopen pill rather than erasing every trace of the
+      // build. A finished plan the athlete has seen needs nothing more.
+      if (latestJob.status === "failed") {
+        return reopenPill("Show build error");
+      }
+      return isProtectedTriageLatestJob(latestJob) ? reopenPill("Show plan build") : null;
     }
 
     if (latestJob.status === "failed") {
@@ -895,26 +961,7 @@ export function GlobalGenerationStatus() {
   }
 
   if (isDismissed) {
-    return (
-      <button
-        ref={reopenRef}
-        type="button"
-        className="global-generation-status-reopen"
-        aria-label="Show generation ribbon"
-        style={
-          reopenPos
-            ? { left: reopenPos.x, top: reopenPos.y, right: "auto", bottom: "auto" }
-            : undefined
-        }
-        onPointerDown={handleReopenPointerDown}
-        onPointerMove={handleReopenPointerMove}
-        onPointerUp={handleReopenPointerUp}
-        onPointerCancel={handleReopenPointerUp}
-        onClick={handleReopenClick}
-      >
-        {isFailed ? "Show build error" : "Show plan build"}
-      </button>
-    );
+    return reopenPill(isFailed ? "Show build error" : "Show plan build");
   }
 
   const content = (

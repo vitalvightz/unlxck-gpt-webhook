@@ -11700,6 +11700,16 @@ html[data-theme="light"] .today-segment-multi.today-segment-active::before {
 }
 
 /* Global Generation Status Bar */
+/* The ribbon is fixed to the bottom of the screen, so page content reserves
+   room for it while it is showing instead of hiding underneath it. */
+:root {
+  --generation-ribbon-height: 72px;
+}
+
+html:has(.global-generation-status) .app-content {
+  padding-bottom: calc(var(--generation-ribbon-height) + 16px + var(--safe-area-bottom));
+}
+
 .global-generation-status {
   position: fixed;
   bottom: 0;
@@ -18233,15 +18243,26 @@ html[data-app-surface="workspace"][data-theme="dark"] .desktop-nav-toggle {
     line-height: 1;
   }
 
-  /* Lift the generation status bar above the tab bar when both are visible */
-  html[data-mobile-tab-bar="stacked"] .global-generation-status {
+  /* Lift the generation status bar (and its reopen pill) above the tab bar
+     whenever both are visible. Outcome ribbons for a held or failed build
+     show without a live build too, and used to sit on top of the tab bar. */
+  html[data-mobile-tab-bar] .global-generation-status {
     bottom: var(--mobile-tab-bar-clearance);
+  }
+
+  html[data-mobile-tab-bar] .global-generation-status-reopen {
+    bottom: calc(var(--mobile-tab-bar-clearance) + 12px);
   }
 
   /* Add bottom padding to app content so the tab bar doesn't cover the footer */
   html[data-mobile-tab-bar="active"] .app-content,
   html[data-mobile-tab-bar="stacked"] .app-content {
     padding-bottom: calc(36px + var(--mobile-tab-bar-clearance));
+  }
+
+  /* ...and the generation ribbon stacked above it, while it is showing. */
+  html[data-mobile-tab-bar]:has(.global-generation-status) .app-content {
+    padding-bottom: calc(36px + var(--mobile-tab-bar-clearance) + var(--generation-ribbon-height));
   }
 }
 
