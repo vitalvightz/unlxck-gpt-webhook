@@ -311,7 +311,12 @@
         "candidate_stages": [
           "load"
         ],
-        "captured_functional_checkpoints": [],
+        "captured_functional_checkpoints": [
+          "achilles_heel_rise_assessed",
+          "achilles_loading_response_assessed",
+          "achilles_range_load_assessed",
+          "achilles_site_assessed"
+        ],
         "current_content_problems": [],
         "drill_needs_repair": false,
         "evidence_missing_detail": "No active reviewed prescription approves this identity in its candidate stage. Existing movement sources do not establish regional advanced readiness.",
@@ -456,7 +461,12 @@
         "candidate_stages": [
           "load"
         ],
-        "captured_functional_checkpoints": [],
+        "captured_functional_checkpoints": [
+          "achilles_heel_rise_assessed",
+          "achilles_loading_response_assessed",
+          "achilles_range_load_assessed",
+          "achilles_site_assessed"
+        ],
         "current_content_problems": [
           "→",
           "rehab_stage",
@@ -186993,7 +187003,12 @@
       "calm+restore": 38
     },
     "camp_phase_instruction_drills": 1410,
-    "captured_functional_checkpoints": [],
+    "captured_functional_checkpoints": [
+      "achilles_heel_rise_assessed",
+      "achilles_loading_response_assessed",
+      "achilles_range_load_assessed",
+      "achilles_site_assessed"
+    ],
     "classification_breakdowns": {
       "canonical_region": {
         "achilles": {

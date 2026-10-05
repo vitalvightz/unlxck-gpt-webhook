@@ -138,7 +138,7 @@ def input_digest(path):
     return hashlib.sha256(path.read_bytes().replace(b"\r\n", b"\n")).hexdigest()
 
 
-def reachable(policy, stage):
+def reachable(policy, stage, checkpoints=CAPTURED_FUNCTIONAL_CHECKPOINTS):
     if stage not in policy.live_stages:
         return False
     if stage in {"calm", "restore"}:
@@ -148,7 +148,7 @@ def reachable(policy, stage):
         if transition is None or not transition.promotable:
             return False
         # The capture registry, rather than a data declaration, owns evaluability.
-        if any(r.kind == "functional_checkpoint" and r.checkpoint not in CAPTURED_FUNCTIONAL_CHECKPOINTS
+        if any(r.kind == "functional_checkpoint" and r.checkpoint not in checkpoints
                for r in transition.requirements):
             return False
     return True
@@ -320,7 +320,7 @@ def duplicate_clusters(rows, drills):
     return clusters
 
 
-def classify(row, exact_duplicate_ids):
+def classify(row, exact_duplicate_ids, checkpoints=CAPTURED_FUNCTIONAL_CHECKPOINTS):
     flags = []
     if row["duplicate_cluster_ids"]:
         flags.append("duplicate")
@@ -420,13 +420,13 @@ def classify(row, exact_duplicate_ids):
             "profile_evidence_missing": True,
             "evidence_missing_detail": "No active reviewed prescription approves this identity in its candidate stage. Existing movement sources do not establish regional advanced readiness.",
             "transition_criteria_missing": not any(ref["advanced_transition_promotable"] for ref in row["matching_profile_stage_gates"]),
-            "captured_functional_checkpoints": sorted(CAPTURED_FUNCTIONAL_CHECKPOINTS),
+            "captured_functional_checkpoints": sorted(checkpoints) if (row["canonical_region"], row["injury_type"]) == ("achilles", "tendonitis") else [],
             "required_product_inputs_not_captured": "A regional source must first define which strength/function/impact/skill inputs are actually necessary, then compare them with the capture registry. No current requirement may be inferred from a movement name or proxied by another signal.",
             "safety_blocks": ["identity_not_an_advanced_live_prescription", "regional_transition_and_input_evaluability_review_required", "complete_episode_history_and_no_unresolved_setback_still_required"],
         }
 
 
-def build_audit(bank, ledger, pathways):
+def build_audit(bank, ledger, pathways, *, captured_checkpoints=CAPTURED_FUNCTIONAL_CHECKPOINTS):
     """Return report + duplicate clusters, without mutating any input object."""
     catalog = PathwayCatalog.model_validate(pathways)
     policies = tuple(compose_policy(catalog, p) for p in catalog.profiles)
@@ -445,7 +445,7 @@ def build_audit(bank, ledger, pathways):
         for rx in p.prescriptions:
             references[rx.drill_id].append({
                 "policy_id": p.policy_id, "stage": rx.stage, "stage_live": rx.stage in p.live_stages,
-                "reachable_in_principle": reachable(p, rx.stage),
+                "reachable_in_principle": reachable(p, rx.stage, captured_checkpoints),
                 "advanced_transition_promotable": any(t.to_stage == rx.stage and t.promotable for t in p.transitions),
             })
     rows, drills = [], {}
@@ -510,7 +510,7 @@ def build_audit(bank, ledger, pathways):
         if cluster["classification"] == "exact_duplicate":
             duplicate_ids.update(cluster["ids_for_later_deprecation_review"])
     for row in rows:
-        classify(row, duplicate_ids)
+        classify(row, duplicate_ids, captured_checkpoints)
     profiles = []
     for policy in sorted(active, key=lambda p: p.policy_id):
         candidates = [r for r in rows if policy.policy_id in r["matching_active_profile_ids"] and r["plausible_future_stages"]]
@@ -543,7 +543,7 @@ def build_audit(bank, ledger, pathways):
         "live_unique_identities_by_stage": {s: len({r["drill_id"] for r in live_rows if s in r["stages_using_identity"]}) for s in STAGES},
         "active_profile_count": len(profiles),
         "promotable_advanced_transitions": sum(t.promotable for p in active for t in p.transitions),
-        "captured_functional_checkpoints": sorted(CAPTURED_FUNCTIONAL_CHECKPOINTS),
+        "captured_functional_checkpoints": sorted(captured_checkpoints),
         "active_profile_stage_counts": counts("+".join(p["live_stages"]) for p in profiles),
         "profiles_with_load_or_above": [p["policy_id"] for p in profiles if set(p["live_stages"]) & {"load", "dynamic", "return"}],
         "profiles_without_viable_advanced_candidate": [p["policy_id"] for p in profiles if p["no_viable_advanced_candidate"]],

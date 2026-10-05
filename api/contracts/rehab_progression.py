@@ -26,7 +26,9 @@ from .rehab_evidence import (
 
 #: Functional checkpoints whose input the app actually captures. Data cannot
 #: claim capture; a checkpoint becomes evaluable only when code reads its input.
-CAPTURED_FUNCTIONAL_CHECKPOINTS: frozenset[str] = frozenset()
+from .achilles_progression import CHECKPOINTS, read_achilles_checkpoint
+
+CAPTURED_FUNCTIONAL_CHECKPOINTS: frozenset[str] = CHECKPOINTS
 
 PASS, FAIL, UNKNOWN, MISSING_INPUT = "pass", "fail", "unknown", "missing_input"
 
@@ -133,8 +135,13 @@ def evaluate_transition(transition: PathwayTransition, *, policy: ClinicalPolicy
         elif kind == "functional_checkpoint":
             if requirement.checkpoint not in CAPTURED_FUNCTIONAL_CHECKPOINTS:
                 results.append(_result(requirement, MISSING_INPUT, f"functional_checkpoint_not_captured:{requirement.checkpoint}"))
-            else:  # pragma: no cover - no checkpoint input is captured yet.
-                results.append(_result(requirement, UNKNOWN, f"functional_checkpoint_unread:{requirement.checkpoint}"))
+            else:
+                setbacks = [d for d in (episode_setback_at(injury, exposures),
+                            injury.get("achilles_observation_setback_at")) if d is not None]
+                checkpoint = read_achilles_checkpoint(requirement.checkpoint, injury, setback_at=max(setbacks, default=None),
+                                                      history_truncated=history_truncated)
+                results.append({**_result(requirement, checkpoint["status"], checkpoint["reason_code"]),
+                                "checkpoint_observation": checkpoint})
     reasons = [r["reason_code"] for r in results if r["status"] != PASS]
     if transition.closed_reason:
         status, reasons = "closed", ["transition_closed_by_profile", *reasons]

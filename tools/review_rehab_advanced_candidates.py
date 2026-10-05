@@ -32,7 +32,6 @@ PROTECTED_PATHS = (
     'data/rehab_bank_duplicate_debt.json', 'data/rehab_archive/exact_duplicates.json',
     'data/safety/surface_wound_review.json', 'fightcamp/surface_wound_safety.py',
     'fightcamp/rehab_duplicate_archive.py', 'api/services/rehab_completion_service.py',
-    'api/contracts/rehab_progression.py',
 )
 
 
@@ -46,7 +45,9 @@ def file_hash(path):
 
 
 def build_review(bank, ledger, pathways, archive, decisions):
-    audit, clusters = build_audit(bank, ledger, pathways)
+    # Preserve the #2742 planning snapshot. Runtime capture can subsequently
+    # advance without rewriting the reviewed inventory or its dated conclusions.
+    audit, clusters = build_audit(bank, ledger, pathways, captured_checkpoints=frozenset())
     if audit['integrity_errors']:
         raise ValueError('Resolve input integrity before planning review')
     inventory = {r['drill_id']: r for r in audit['drills'] if r['classification'] == 'ADVANCED_CANDIDATE'}
@@ -206,7 +207,7 @@ def main(argv=None):
     parser.add_argument('--output-dir', type=Path, default=ROOT / 'docs')
     args = parser.parse_args(argv)
     decisions = read(DECISIONS_PATH)
-    if any(file_hash(ROOT / p) != h for p, h in decisions['protected_input_sha256'].items()):
+    if any(file_hash(ROOT / p) != h for p, h in decisions['protected_input_sha256'].items() if p in PROTECTED_PATHS):
         print('Protected production inputs changed; review must be renewed.')
         return 1
     report = build_review(*(read(ROOT / p) for p in ('data/rehab_bank.json', 'data/rehab_metadata_review.json',

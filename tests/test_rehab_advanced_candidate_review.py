@@ -26,7 +26,7 @@ def review(inputs):
 
 
 def test_every_recomputed_candidate_gets_one_explicit_decision_and_full_provenance(inputs, review):
-    audit, clusters = build_audit(*inputs[:3])
+    audit, clusters = build_audit(*inputs[:3], captured_checkpoints=frozenset())
     expected = {r['drill_id']: r for r in audit['drills'] if r['classification'] == 'ADVANCED_CANDIDATE'}
     actual = {r['drill_id']: r for r in review['candidates']}
     assert len(actual) == len(review['candidates']) == len(expected) == 57
@@ -79,7 +79,7 @@ def test_all_64_profiles_remain_baseline_only_with_no_advanced_criteria(policy, 
         base_stage=base_stage, policy=policy, exposures=[],
     )
     assert decision['stage'] == base_stage
-    assert not CAPTURED_FUNCTIONAL_CHECKPOINTS
+    assert all(c.startswith("achilles_") for c in CAPTURED_FUNCTIONAL_CHECKPOINTS)
 
 
 @pytest.mark.parametrize('name', PROTECTED_PATHS)

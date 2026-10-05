@@ -18,6 +18,7 @@ from fightcamp.surface_wound_safety import sanitize_surface_guidance
 from .rehab_stage import resolve_rehab_stage
 from .rehab_progression import resolve_reviewed_progression, episode_setback_at, _instant
 from .clinician_clearance import effective_clinician_clearance, clinician_clears_baseline
+from .achilles_progression import CHECKPOINTS, read_achilles_checkpoint
 
 
 def resolve_injury_policy(
@@ -42,6 +43,10 @@ def resolve_injury_policy(
         "prescription": None, "restrictions": {},
         "loading_hold": readiness_decision == "pull_back",
     }
+    if injury.get("achilles_progression_observations") and (region, kind) == ("achilles", "tendonitis"):
+        setbacks = [d for d in (episode_setback_at(injury, exposures), injury.get("achilles_observation_setback_at")) if d]
+        result["achilles_input_checkpoints"] = {key: read_achilles_checkpoint(
+            key, injury, setback_at=max(setbacks, default=None), history_truncated=history_truncated) for key in sorted(CHECKPOINTS)}
     if stage_decision.care_pathway == "wound_care":
         result.update(outcome="wound_care", summary="Follow the skin-care guidance for this injury.", reason_codes=["surface_wound_care"])
         return result
