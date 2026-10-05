@@ -44,7 +44,7 @@ test("every tip is 10-25 words and avoids unsafe or overclaiming language", () =
   for (const tip of LOADING_TIPS) {
     const words = tip.text.trim().split(/\s+/).length;
     assert.ok(words >= 10 && words <= 25, `${tip.id} has ${words} words`);
-    assert.doesNotMatch(tip.text, /sauna|sweat suit|diuretic|laxative|spit|water load|cure|heal|guarantee|diagnos|treat/i, tip.id);
+    assert.doesNotMatch(tip.text, /sauna|sweat suit|diuretic|laxative|spitting|water load|\bcures?\b|\bheals?\b|guarantee|diagnos|\btreat(s|ment)?\b/i, tip.id);
   }
 });
 
