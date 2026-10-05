@@ -502,7 +502,7 @@
   {
     "location": "heel",
     "type": "contusion",
-    "phase_progression": "GPP",
+    "phase_progression": "GPP → SPP → TAPER",
     "drills": [
       {
         "id": "heel_contusion_heel_taps_on_soft_mat",
@@ -555,6 +555,34 @@
         "sport_specificity": "unknown",
         "contact_level": "unknown",
         "evidence_notes": "Target region inherited from the canonical rehab-bank group; other classifications remain unreviewed."
+      },
+      {
+        "id": "heel_contusion_recovery_support",
+        "name": "Heel contusion protection guidance",
+        "notes": "Protect the bruised heel from repeated hard landings, running and direct pressure. Rest the foot comfortably supported and reduce provoking standing or walking. Follow any clinician-advised footwear, heel support or weight-bearing restriction. Do not tap or roll the bruised heel to desensitize it, start barefoot loading or assume that heel tenderness rules out a bone injury. The app does not distinguish heel-pad from deeper heel injury, so automatic exercises remain unavailable. Stop if symptoms worsen during or after the activity. Seek assessment for increasing or excessive swelling, an expanding lump or hematoma, inability to use or bear weight on the limb, or major loss of function. Seek urgent help for severe pain with tense swelling, compartment syndrome concern, altered sensation, a cold limb or circulation changes, an open wound, or suspected fracture, dislocation or tear. Follow clinician restrictions; CALM or RESTORE is not return-to-contact clearance.",
+        "rehab_stage": "calm",
+        "function": "recovery_downregulation",
+        "equipment": [],
+        "dose": null,
+        "impact": "none",
+        "load": "minimal",
+        "velocity": "low",
+        "pain_ceiling": null,
+        "allowed_severities": null,
+        "progress_when": null,
+        "regress_when": null,
+        "stop_when": null,
+        "target_regions": [
+          "heel"
+        ],
+        "laterality_applicability": "not_applicable",
+        "target_tissues": [
+          "heel soft tissue region"
+        ],
+        "contraction_type": "unknown",
+        "sport_specificity": "general_rehab",
+        "contact_level": "none",
+        "evidence_notes": "Sources: https://my.clevelandclinic.org/health/diseases/23275-heel-fat-pad-syndrome, https://my.clevelandclinic.org/health/diseases/heel-pain, https://yourhealth.leicestershospitals.nhs.uk/library/emergency-specialist-medicine/emergency-department/1660-care-after-minor-sprains-strains-or-bruises-soft-tissue-injuries/file. Protected regional baseline only; not diagnosis, structural healing or contact clearance. No numeric dose, pain ceiling, hematoma size, severity grade, brace duration or progression threshold inferred. Comfortable/non-provoking movement is a conservative baseline restriction. Product low/moderate eligibility and scheduled cadence are retained. Individual restrictions remain authoritative. No time/session-based progression or automatic massage/heat protocol."
       }
     ]
   },
@@ -1566,7 +1594,7 @@
   {
     "location": "shin",
     "type": "contusion",
-    "phase_progression": "GPP → SPP",
+    "phase_progression": "GPP → SPP → TAPER",
     "drills": [
       {
         "id": "shin_contusion_foam_roller_circles_mid_shin",
@@ -1619,6 +1647,34 @@
         "sport_specificity": "unknown",
         "contact_level": "unknown",
         "evidence_notes": "Target region inherited from the canonical rehab-bank group; other classifications remain unreviewed."
+      },
+      {
+        "id": "shin_contusion_recovery_support",
+        "name": "Shin contusion protection guidance",
+        "notes": "Protect the bruised shin from kicks, pad contact and kneeling pressure. Rest the leg comfortably supported and reduce provoking prolonged standing or walking. Follow any clinician-prescribed support or weight-bearing restriction. Do not use sticks, percussion devices or rollers over the bruise, or test contact tolerance. The exact depth of the impact injury is not established, so direct shin loading and automatic exercises remain unavailable. Stop if symptoms worsen during or after the activity. Seek assessment for increasing or excessive swelling, an expanding lump or hematoma, inability to use or bear weight on the limb, or major loss of function. Seek urgent help for severe pain with tense swelling, compartment syndrome concern, altered sensation, a cold limb or circulation changes, an open wound, or suspected fracture, dislocation or tear. Follow clinician restrictions; CALM or RESTORE is not return-to-contact clearance.",
+        "rehab_stage": "calm",
+        "function": "recovery_downregulation",
+        "equipment": [],
+        "dose": null,
+        "impact": "none",
+        "load": "minimal",
+        "velocity": "low",
+        "pain_ceiling": null,
+        "allowed_severities": null,
+        "progress_when": null,
+        "regress_when": null,
+        "stop_when": null,
+        "target_regions": [
+          "shin"
+        ],
+        "laterality_applicability": "not_applicable",
+        "target_tissues": [
+          "shin soft tissue region"
+        ],
+        "contraction_type": "unknown",
+        "sport_specificity": "general_rehab",
+        "contact_level": "none",
+        "evidence_notes": "Sources: https://yourhealth.leicestershospitals.nhs.uk/library/emergency-specialist-medicine/emergency-department/1660-care-after-minor-sprains-strains-or-bruises-soft-tissue-injuries/file, https://www.orthoinfo.org/diseases--conditions/muscle-contusion-bruise/. Protected regional baseline only; not diagnosis, structural healing or contact clearance. No numeric dose, pain ceiling, hematoma size, severity grade, brace duration or progression threshold inferred. Comfortable/non-provoking movement is a conservative baseline restriction. Product low/moderate eligibility and scheduled cadence are retained. Individual restrictions remain authoritative. No time/session-based progression or automatic massage/heat protocol."
       }
     ]
   },
@@ -1743,7 +1799,7 @@
   {
     "location": "shin",
     "type": "contusion",
-    "phase_progression": "GPP",
+    "phase_progression": "GPP → SPP → TAPER",
     "drills": [
       {
         "id": "shin_contusion_light_shin_percussion",
@@ -3210,7 +3266,7 @@
   {
     "location": "shin",
     "type": "contusion",
-    "phase_progression": "GPP → SPP",
+    "phase_progression": "GPP → SPP → TAPER",
     "drills": [
       {
         "id": "shin_contusion_foam_roller_circles_mid_shin_2",
@@ -3387,7 +3443,7 @@
   {
     "location": "shin",
     "type": "contusion",
-    "phase_progression": "GPP",
+    "phase_progression": "GPP → SPP → TAPER",
     "drills": [
       {
         "id": "shin_contusion_light_shin_percussion_2",
@@ -4983,7 +5039,7 @@
   {
     "location": "quads",
     "type": "contusion",
-    "phase_progression": "GPP → SPP",
+    "phase_progression": "GPP → SPP → TAPER",
     "drills": [
       {
         "id": "quads_contusion_light_quad_percussion_massage_gun",
@@ -5036,6 +5092,34 @@
         "sport_specificity": "unknown",
         "contact_level": "unknown",
         "evidence_notes": "Target region inherited from the canonical rehab-bank group; other classifications remain unreviewed."
+      },
+      {
+        "id": "quads_contusion_recovery_support",
+        "name": "Quads contusion protection guidance",
+        "notes": "Protect the bruised thigh from further blows, deep squatting, kicking and provoking knee loading. Rest the leg comfortably supported and follow any clinician-prescribed position, wrap, walking support or movement restriction. Do not massage, use a percussion gun, force a thigh stretch or deepen a wall sit. Do not set or remove a bent-knee brace yourself; the extent of the contusion and safe knee movement need individual assessment. Stop if symptoms worsen during or after the activity. Seek assessment for increasing or excessive swelling, an expanding lump or hematoma, inability to use or bear weight on the limb, or major loss of function. Seek urgent help for severe pain with tense swelling, compartment syndrome concern, altered sensation, a cold limb or circulation changes, an open wound, or suspected fracture, dislocation or tear. Follow clinician restrictions; CALM or RESTORE is not return-to-contact clearance.",
+        "rehab_stage": "calm",
+        "function": "recovery_downregulation",
+        "equipment": [],
+        "dose": null,
+        "impact": "none",
+        "load": "minimal",
+        "velocity": "low",
+        "pain_ceiling": null,
+        "allowed_severities": null,
+        "progress_when": null,
+        "regress_when": null,
+        "stop_when": null,
+        "target_regions": [
+          "quads"
+        ],
+        "laterality_applicability": "not_applicable",
+        "target_tissues": [
+          "quadriceps muscle region"
+        ],
+        "contraction_type": "unknown",
+        "sport_specificity": "general_rehab",
+        "contact_level": "none",
+        "evidence_notes": "Sources: https://www.orthoinfo.org/diseases--conditions/muscle-contusion-bruise/, https://yourhealth.leicestershospitals.nhs.uk/library/emergency-specialist-medicine/emergency-department/1660-care-after-minor-sprains-strains-or-bruises-soft-tissue-injuries/file. Protected regional baseline only; not diagnosis, structural healing or contact clearance. No numeric dose, pain ceiling, hematoma size, severity grade, brace duration or progression threshold inferred. Comfortable/non-provoking movement is a conservative baseline restriction. Product low/moderate eligibility and scheduled cadence are retained. Individual restrictions remain authoritative. No time/session-based progression or automatic massage/heat protocol."
       }
     ]
   },
@@ -12253,7 +12337,7 @@
   {
     "location": "shoulder",
     "type": "contusion",
-    "phase_progression": "GPP → TAPER",
+    "phase_progression": "GPP → SPP → TAPER",
     "drills": [
       {
         "id": "shoulder_contusion_gentle_band_pull_aparts",
@@ -12282,16 +12366,16 @@
         "evidence_notes": "Target region inherited from the canonical rehab-bank group; other classifications remain unreviewed."
       },
       {
-        "id": "shoulder_contusion_passive_arm_hang_trap_bar_support",
-        "name": "Passive Arm Hang (Trap Bar Support)",
-        "notes": "GPP: Restore overhead comfort → TAPER: Offload without CNS drain",
-        "rehab_stage": null,
+        "id": "shoulder_contusion_recovery_support",
+        "name": "Shoulder contusion protection guidance",
+        "notes": "Protect the bruised shoulder from repeated contact, heavy lifting and provoking reaching. Support the arm comfortably when resting and follow any individual sling or movement restriction. Do not press a ball or percussion device into the bruise, hang from a trap bar or add band resistance. This protection guidance does not establish structural healing or readiness for contact. Stop if symptoms worsen during or after the activity. Seek assessment for increasing or excessive swelling, an expanding lump or hematoma, inability to use or bear weight on the limb, or major loss of function. Seek urgent help for severe pain with tense swelling, compartment syndrome concern, altered sensation, a cold limb or circulation changes, an open wound, or suspected fracture, dislocation or tear. Follow clinician restrictions; CALM or RESTORE is not return-to-contact clearance.",
+        "rehab_stage": "calm",
         "function": "recovery_downregulation",
-        "equipment": null,
+        "equipment": [],
         "dose": null,
-        "impact": null,
-        "load": null,
-        "velocity": null,
+        "impact": "none",
+        "load": "minimal",
+        "velocity": "low",
         "pain_ceiling": null,
         "allowed_severities": null,
         "progress_when": null,
@@ -12300,12 +12384,44 @@
         "target_regions": [
           "shoulder"
         ],
-        "laterality_applicability": "unknown",
-        "target_tissues": null,
+        "laterality_applicability": "not_applicable",
+        "target_tissues": [
+          "shoulder soft tissue region"
+        ],
         "contraction_type": "unknown",
-        "sport_specificity": "unknown",
-        "contact_level": "unknown",
-        "evidence_notes": "Target region inherited from the canonical rehab-bank group; other classifications remain unreviewed."
+        "sport_specificity": "general_rehab",
+        "contact_level": "none",
+        "evidence_notes": "Sources: https://www.leedsth.nhs.uk/patients/resources/early-advice-and-exercises-for-soft-tissue-injuries-of-the-shoulder/, https://www.orthoinfo.org/diseases--conditions/muscle-contusion-bruise/, https://yourhealth.leicestershospitals.nhs.uk/library/emergency-specialist-medicine/emergency-department/1660-care-after-minor-sprains-strains-or-bruises-soft-tissue-injuries/file. Protected regional baseline only; not diagnosis, structural healing or contact clearance. No numeric dose, pain ceiling, hematoma size, severity grade, brace duration or progression threshold inferred. Comfortable/non-provoking movement is a conservative baseline restriction. Product low/moderate eligibility and scheduled cadence are retained. Individual restrictions remain authoritative. No time/session-based progression or automatic massage/heat protocol."
+      },
+      {
+        "id": "shoulder_contusion_passive_arm_hang_trap_bar_support",
+        "name": "Supported unweighted shoulder pendulum",
+        "notes": "Stand beside a stable support and lean slightly forwards with the uninjured hand supporting you. Let the affected arm hang relaxed, then gently allow a small slow forward-and-back pendulum movement within a comfortable range. Keep the hand empty; do not hang from a bar, pull the shoulder, swing forcefully, add weight or force range. Follow any clinician movement restriction and stop if this provokes the bruised shoulder. Stop if symptoms worsen during or after the activity. Seek assessment for increasing or excessive swelling, an expanding lump or hematoma, inability to use or bear weight on the limb, or major loss of function. Seek urgent help for severe pain with tense swelling, compartment syndrome concern, altered sensation, a cold limb or circulation changes, an open wound, or suspected fracture, dislocation or tear. Follow clinician restrictions; CALM or RESTORE is not return-to-contact clearance.",
+        "rehab_stage": "restore",
+        "function": "mobility",
+        "equipment": [
+          "stable_support"
+        ],
+        "dose": null,
+        "impact": "none",
+        "load": "minimal",
+        "velocity": "low",
+        "pain_ceiling": null,
+        "allowed_severities": null,
+        "progress_when": null,
+        "regress_when": null,
+        "stop_when": null,
+        "target_regions": [
+          "shoulder"
+        ],
+        "laterality_applicability": "side_specific",
+        "target_tissues": [
+          "shoulder soft tissue region"
+        ],
+        "contraction_type": "unknown",
+        "sport_specificity": "general_rehab",
+        "contact_level": "none",
+        "evidence_notes": "Sources: https://www.leedsth.nhs.uk/patients/resources/early-advice-and-exercises-for-soft-tissue-injuries-of-the-shoulder/, https://www.orthoinfo.org/diseases--conditions/muscle-contusion-bruise/, https://yourhealth.leicestershospitals.nhs.uk/library/emergency-specialist-medicine/emergency-department/1660-care-after-minor-sprains-strains-or-bruises-soft-tissue-injuries/file. Protected regional baseline only; not diagnosis, structural healing or contact clearance. No numeric dose, pain ceiling, hematoma size, severity grade, brace duration or progression threshold inferred. Comfortable/non-provoking movement is a conservative baseline restriction. Product low/moderate eligibility and scheduled cadence are retained. Individual restrictions remain authoritative. No time/session-based progression or automatic massage/heat protocol."
       }
     ]
   },
@@ -13173,7 +13289,7 @@
   {
     "location": "shoulder",
     "type": "contusion",
-    "phase_progression": "GPP → SPP",
+    "phase_progression": "GPP → SPP → TAPER",
     "drills": [
       {
         "id": "shoulder_contusion_soft_tissue_roll_with_lacrosse_ball",
@@ -13957,7 +14073,7 @@
   {
     "location": "bicep",
     "type": "contusion",
-    "phase_progression": "GPP → SPP",
+    "phase_progression": "GPP → SPP → TAPER",
     "drills": [
       {
         "id": "bicep_contusion_gentle_arm_swings_neutral_grip",
@@ -14010,6 +14126,34 @@
         "sport_specificity": "unknown",
         "contact_level": "unknown",
         "evidence_notes": "Target region inherited from the canonical rehab-bank group; other classifications remain unreviewed."
+      },
+      {
+        "id": "biceps_contusion_recovery_support",
+        "name": "Biceps contusion protection guidance",
+        "notes": "Protect the bruised front of the upper arm from contact, heavy pulling and repeated resisted elbow bending. Support the arm comfortably at rest and follow individual movement/support restrictions. Avoid direct massage or percussion, forceful stretching and faster arm swings to test tolerance. A muscle bruise label does not exclude deeper muscle or tendon injury; automatic resistance or stretching is not prescribed. Stop if symptoms worsen during or after the activity. Seek assessment for increasing or excessive swelling, an expanding lump or hematoma, inability to use or bear weight on the limb, or major loss of function. Seek urgent help for severe pain with tense swelling, compartment syndrome concern, altered sensation, a cold limb or circulation changes, an open wound, or suspected fracture, dislocation or tear. Follow clinician restrictions; CALM or RESTORE is not return-to-contact clearance.",
+        "rehab_stage": "calm",
+        "function": "recovery_downregulation",
+        "equipment": [],
+        "dose": null,
+        "impact": "none",
+        "load": "minimal",
+        "velocity": "low",
+        "pain_ceiling": null,
+        "allowed_severities": null,
+        "progress_when": null,
+        "regress_when": null,
+        "stop_when": null,
+        "target_regions": [
+          "bicep"
+        ],
+        "laterality_applicability": "not_applicable",
+        "target_tissues": [
+          "biceps muscle region"
+        ],
+        "contraction_type": "unknown",
+        "sport_specificity": "general_rehab",
+        "contact_level": "none",
+        "evidence_notes": "Sources: https://www.orthoinfo.org/diseases--conditions/muscle-contusion-bruise/, https://yourhealth.leicestershospitals.nhs.uk/library/emergency-specialist-medicine/emergency-department/1660-care-after-minor-sprains-strains-or-bruises-soft-tissue-injuries/file. Protected regional baseline only; not diagnosis, structural healing or contact clearance. No numeric dose, pain ceiling, hematoma size, severity grade, brace duration or progression threshold inferred. Comfortable/non-provoking movement is a conservative baseline restriction. Product low/moderate eligibility and scheduled cadence are retained. Individual restrictions remain authoritative. No time/session-based progression or automatic massage/heat protocol."
       }
     ]
   },
@@ -15268,7 +15412,7 @@
   {
     "location": "triceps",
     "type": "contusion",
-    "phase_progression": "GPP → SPP",
+    "phase_progression": "GPP → SPP → TAPER",
     "drills": [
       {
         "id": "triceps_contusion_soft_tissue_vibration_ball",
@@ -15321,6 +15465,34 @@
         "sport_specificity": "unknown",
         "contact_level": "unknown",
         "evidence_notes": "Target region inherited from the canonical rehab-bank group; other classifications remain unreviewed."
+      },
+      {
+        "id": "triceps_contusion_recovery_support",
+        "name": "Triceps contusion protection guidance",
+        "notes": "Protect the bruised back of the upper arm from contact, heavy pressing and resisted elbow straightening. Support the arm comfortably at rest and follow individual movement/support restrictions. Do not apply vibration balls, force an overhead stretch or increase arm-circle range to test recovery. Automatic stretching or resistance work needs an assessed injury and is not prescribed here. Stop if symptoms worsen during or after the activity. Seek assessment for increasing or excessive swelling, an expanding lump or hematoma, inability to use or bear weight on the limb, or major loss of function. Seek urgent help for severe pain with tense swelling, compartment syndrome concern, altered sensation, a cold limb or circulation changes, an open wound, or suspected fracture, dislocation or tear. Follow clinician restrictions; CALM or RESTORE is not return-to-contact clearance.",
+        "rehab_stage": "calm",
+        "function": "recovery_downregulation",
+        "equipment": [],
+        "dose": null,
+        "impact": "none",
+        "load": "minimal",
+        "velocity": "low",
+        "pain_ceiling": null,
+        "allowed_severities": null,
+        "progress_when": null,
+        "regress_when": null,
+        "stop_when": null,
+        "target_regions": [
+          "triceps"
+        ],
+        "laterality_applicability": "not_applicable",
+        "target_tissues": [
+          "triceps muscle region"
+        ],
+        "contraction_type": "unknown",
+        "sport_specificity": "general_rehab",
+        "contact_level": "none",
+        "evidence_notes": "Sources: https://www.orthoinfo.org/diseases--conditions/muscle-contusion-bruise/, https://yourhealth.leicestershospitals.nhs.uk/library/emergency-specialist-medicine/emergency-department/1660-care-after-minor-sprains-strains-or-bruises-soft-tissue-injuries/file. Protected regional baseline only; not diagnosis, structural healing or contact clearance. No numeric dose, pain ceiling, hematoma size, severity grade, brace duration or progression threshold inferred. Comfortable/non-provoking movement is a conservative baseline restriction. Product low/moderate eligibility and scheduled cadence are retained. Individual restrictions remain authoritative. No time/session-based progression or automatic massage/heat protocol."
       }
     ]
   },
@@ -15925,7 +16097,7 @@
   {
     "location": "forearm",
     "type": "contusion",
-    "phase_progression": "GPP",
+    "phase_progression": "GPP → SPP → TAPER",
     "drills": [
       {
         "id": "forearm_contusion_soft_tissue_circles_forearm_ball",
@@ -15978,6 +16150,34 @@
         "sport_specificity": "unknown",
         "contact_level": "unknown",
         "evidence_notes": "Target region inherited from the canonical rehab-bank group; other classifications remain unreviewed."
+      },
+      {
+        "id": "forearm_contusion_recovery_support",
+        "name": "Forearm contusion protection guidance",
+        "notes": "Protect the bruised forearm from contact, heavy grip work and resisted wrist movement. Support the arm comfortably without pressing on the bruise and follow any prescribed support or movement restriction. Do not roll a ball over the injured tissue or use a band as a recovery flush. Increasing tight swelling, abnormal sensation or circulation needs assessment rather than further loading. Stop if symptoms worsen during or after the activity. Seek assessment for increasing or excessive swelling, an expanding lump or hematoma, inability to use or bear weight on the limb, or major loss of function. Seek urgent help for severe pain with tense swelling, compartment syndrome concern, altered sensation, a cold limb or circulation changes, an open wound, or suspected fracture, dislocation or tear. Follow clinician restrictions; CALM or RESTORE is not return-to-contact clearance.",
+        "rehab_stage": "calm",
+        "function": "recovery_downregulation",
+        "equipment": [],
+        "dose": null,
+        "impact": "none",
+        "load": "minimal",
+        "velocity": "low",
+        "pain_ceiling": null,
+        "allowed_severities": null,
+        "progress_when": null,
+        "regress_when": null,
+        "stop_when": null,
+        "target_regions": [
+          "forearm"
+        ],
+        "laterality_applicability": "not_applicable",
+        "target_tissues": [
+          "forearm muscle region"
+        ],
+        "contraction_type": "unknown",
+        "sport_specificity": "general_rehab",
+        "contact_level": "none",
+        "evidence_notes": "Sources: https://www.orthoinfo.org/diseases--conditions/muscle-contusion-bruise/, https://yourhealth.leicestershospitals.nhs.uk/library/emergency-specialist-medicine/emergency-department/1660-care-after-minor-sprains-strains-or-bruises-soft-tissue-injuries/file. Protected regional baseline only; not diagnosis, structural healing or contact clearance. No numeric dose, pain ceiling, hematoma size, severity grade, brace duration or progression threshold inferred. Comfortable/non-provoking movement is a conservative baseline restriction. Product low/moderate eligibility and scheduled cadence are retained. Individual restrictions remain authoritative. No time/session-based progression or automatic massage/heat protocol."
       }
     ]
   },
@@ -17410,34 +17610,8 @@
   {
     "location": "elbow",
     "type": "contusion",
-    "phase_progression": "GPP → SPP",
+    "phase_progression": "GPP → SPP → TAPER",
     "drills": [
-      {
-        "id": "elbow_contusion_gentle_elbow_slides_on_wall",
-        "name": "Gentle Elbow Slides on Wall",
-        "notes": "GPP: Rebuild contact tolerance → SPP: Reintegrate into pushing mechanics",
-        "rehab_stage": null,
-        "function": "recovery_downregulation",
-        "equipment": null,
-        "dose": null,
-        "impact": null,
-        "load": null,
-        "velocity": null,
-        "pain_ceiling": null,
-        "allowed_severities": null,
-        "progress_when": null,
-        "regress_when": null,
-        "stop_when": null,
-        "target_regions": [
-          "elbow"
-        ],
-        "laterality_applicability": "unknown",
-        "target_tissues": null,
-        "contraction_type": "unknown",
-        "sport_specificity": "unknown",
-        "contact_level": "unknown",
-        "evidence_notes": "Target region inherited from the canonical rehab-bank group; other classifications remain unreviewed."
-      },
       {
         "id": "elbow_contusion_massage_gun_pass_lateral_elbow",
         "name": "Massage Gun Pass (Lateral Elbow)",
@@ -17463,6 +17637,62 @@
         "sport_specificity": "unknown",
         "contact_level": "unknown",
         "evidence_notes": "Target region inherited from the canonical rehab-bank group; other classifications remain unreviewed."
+      },
+      {
+        "id": "elbow_contusion_recovery_support",
+        "name": "Elbow contusion protection guidance",
+        "notes": "Protect the bruised elbow from contact, leaning on the injured area, heavy carrying and forceful pressing. Support the arm comfortably without pressure on the bruise and follow any individual sling or movement restriction. Do not apply a massage gun or push the elbow against a wall to build contact tolerance. Stop if symptoms worsen during or after the activity. Seek assessment for increasing or excessive swelling, an expanding lump or hematoma, inability to use or bear weight on the limb, or major loss of function. Seek urgent help for severe pain with tense swelling, compartment syndrome concern, altered sensation, a cold limb or circulation changes, an open wound, or suspected fracture, dislocation or tear. Follow clinician restrictions; CALM or RESTORE is not return-to-contact clearance.",
+        "rehab_stage": "calm",
+        "function": "recovery_downregulation",
+        "equipment": [],
+        "dose": null,
+        "impact": "none",
+        "load": "minimal",
+        "velocity": "low",
+        "pain_ceiling": null,
+        "allowed_severities": null,
+        "progress_when": null,
+        "regress_when": null,
+        "stop_when": null,
+        "target_regions": [
+          "elbow"
+        ],
+        "laterality_applicability": "not_applicable",
+        "target_tissues": [
+          "elbow soft tissue region"
+        ],
+        "contraction_type": "unknown",
+        "sport_specificity": "general_rehab",
+        "contact_level": "none",
+        "evidence_notes": "Sources: https://www.nbt.nhs.uk/our-services/a-z-services/emergency-department/ed-miu-patient-information/elbow-injuries, https://www.orthoinfo.org/diseases--conditions/muscle-contusion-bruise/, https://yourhealth.leicestershospitals.nhs.uk/library/emergency-specialist-medicine/emergency-department/1660-care-after-minor-sprains-strains-or-bruises-soft-tissue-injuries/file. Protected regional baseline only; not diagnosis, structural healing or contact clearance. No numeric dose, pain ceiling, hematoma size, severity grade, brace duration or progression threshold inferred. Comfortable/non-provoking movement is a conservative baseline restriction. Product low/moderate eligibility and scheduled cadence are retained. Individual restrictions remain authoritative. No time/session-based progression or automatic massage/heat protocol."
+      },
+      {
+        "id": "elbow_contusion_gentle_elbow_slides_on_wall",
+        "name": "Comfortable unloaded elbow movement",
+        "notes": "Sit with the upper arm relaxed by your side and the hand empty. Slowly bend and straighten the affected elbow through a small comfortable range, stopping short of pain. Do not press on a wall, lean on the bruise, force straightening or add resistance. Follow any clinician movement restriction; this is movement only, not pushing or contact preparation. Stop if symptoms worsen during or after the activity. Seek assessment for increasing or excessive swelling, an expanding lump or hematoma, inability to use or bear weight on the limb, or major loss of function. Seek urgent help for severe pain with tense swelling, compartment syndrome concern, altered sensation, a cold limb or circulation changes, an open wound, or suspected fracture, dislocation or tear. Follow clinician restrictions; CALM or RESTORE is not return-to-contact clearance.",
+        "rehab_stage": "restore",
+        "function": "mobility",
+        "equipment": [],
+        "dose": null,
+        "impact": "none",
+        "load": "minimal",
+        "velocity": "low",
+        "pain_ceiling": null,
+        "allowed_severities": null,
+        "progress_when": null,
+        "regress_when": null,
+        "stop_when": null,
+        "target_regions": [
+          "elbow"
+        ],
+        "laterality_applicability": "side_specific",
+        "target_tissues": [
+          "elbow soft tissue region"
+        ],
+        "contraction_type": "mixed",
+        "sport_specificity": "general_rehab",
+        "contact_level": "none",
+        "evidence_notes": "Sources: https://www.nbt.nhs.uk/our-services/a-z-services/emergency-department/ed-miu-patient-information/elbow-injuries, https://www.orthoinfo.org/diseases--conditions/muscle-contusion-bruise/, https://yourhealth.leicestershospitals.nhs.uk/library/emergency-specialist-medicine/emergency-department/1660-care-after-minor-sprains-strains-or-bruises-soft-tissue-injuries/file. Protected regional baseline only; not diagnosis, structural healing or contact clearance. No numeric dose, pain ceiling, hematoma size, severity grade, brace duration or progression threshold inferred. Comfortable/non-provoking movement is a conservative baseline restriction. Product low/moderate eligibility and scheduled cadence are retained. Individual restrictions remain authoritative. No time/session-based progression or automatic massage/heat protocol."
       }
     ]
   },
@@ -18268,7 +18498,7 @@
   {
     "location": "wrist",
     "type": "contusion",
-    "phase_progression": "GPP → SPP",
+    "phase_progression": "GPP → SPP → TAPER",
     "drills": [
       {
         "id": "wrist_contusion_soft_tissue_glide_with_ball",
@@ -18297,16 +18527,16 @@
         "evidence_notes": "Target region inherited from the canonical rehab-bank group; other classifications remain unreviewed."
       },
       {
-        "id": "wrist_contusion_wrist_flexion_extension_passes",
-        "name": "Wrist Flexion Extension Passes",
-        "notes": "GPP: Restore motion → SPP: Integrate joint into function",
-        "rehab_stage": null,
+        "id": "wrist_contusion_recovery_support",
+        "name": "Wrist contusion protection guidance",
+        "notes": "Protect the bruised wrist from contact, heavy grip, pushing through the hand and repeated provoking wrist loading. Rest the forearm and hand comfortably supported and follow prescribed splint or movement restrictions. Do not roll or tap the bruise, add glove impact or remove protection because its colour fades. Stop if symptoms worsen during or after the activity. Seek assessment for increasing or excessive swelling, an expanding lump or hematoma, inability to use or bear weight on the limb, or major loss of function. Seek urgent help for severe pain with tense swelling, compartment syndrome concern, altered sensation, a cold limb or circulation changes, an open wound, or suspected fracture, dislocation or tear. Follow clinician restrictions; CALM or RESTORE is not return-to-contact clearance.",
+        "rehab_stage": "calm",
         "function": "recovery_downregulation",
-        "equipment": null,
+        "equipment": [],
         "dose": null,
-        "impact": null,
-        "load": null,
-        "velocity": null,
+        "impact": "none",
+        "load": "minimal",
+        "velocity": "low",
         "pain_ceiling": null,
         "allowed_severities": null,
         "progress_when": null,
@@ -18315,12 +18545,44 @@
         "target_regions": [
           "wrist"
         ],
-        "laterality_applicability": "unknown",
-        "target_tissues": null,
+        "laterality_applicability": "not_applicable",
+        "target_tissues": [
+          "wrist soft tissue region"
+        ],
         "contraction_type": "unknown",
-        "sport_specificity": "unknown",
-        "contact_level": "unknown",
-        "evidence_notes": "Target region inherited from the canonical rehab-bank group; other classifications remain unreviewed."
+        "sport_specificity": "general_rehab",
+        "contact_level": "none",
+        "evidence_notes": "Sources: https://www.leedsth.nhs.uk/patients/resources/the-hand-and-wrist/, https://yourhealth.leicestershospitals.nhs.uk/library/emergency-specialist-medicine/emergency-department/1660-care-after-minor-sprains-strains-or-bruises-soft-tissue-injuries/file. Protected regional baseline only; not diagnosis, structural healing or contact clearance. No numeric dose, pain ceiling, hematoma size, severity grade, brace duration or progression threshold inferred. Comfortable/non-provoking movement is a conservative baseline restriction. Product low/moderate eligibility and scheduled cadence are retained. Individual restrictions remain authoritative. No time/session-based progression or automatic massage/heat protocol."
+      },
+      {
+        "id": "wrist_contusion_wrist_flexion_extension_passes",
+        "name": "Supported unloaded wrist movement",
+        "notes": "Support the forearm on a table with the hand relaxed and free to move beyond the edge. Slowly move the wrist a small amount upwards and downwards within a comfortable non-provoking range. Keep the hand empty and do not grip, stretch with the other hand, press on the bruise or add resistance. Follow individual splint and movement restrictions. Stop if symptoms worsen during or after the activity. Seek assessment for increasing or excessive swelling, an expanding lump or hematoma, inability to use or bear weight on the limb, or major loss of function. Seek urgent help for severe pain with tense swelling, compartment syndrome concern, altered sensation, a cold limb or circulation changes, an open wound, or suspected fracture, dislocation or tear. Follow clinician restrictions; CALM or RESTORE is not return-to-contact clearance.",
+        "rehab_stage": "restore",
+        "function": "mobility",
+        "equipment": [
+          "table"
+        ],
+        "dose": null,
+        "impact": "none",
+        "load": "minimal",
+        "velocity": "low",
+        "pain_ceiling": null,
+        "allowed_severities": null,
+        "progress_when": null,
+        "regress_when": null,
+        "stop_when": null,
+        "target_regions": [
+          "wrist"
+        ],
+        "laterality_applicability": "side_specific",
+        "target_tissues": [
+          "wrist soft tissue region"
+        ],
+        "contraction_type": "mixed",
+        "sport_specificity": "general_rehab",
+        "contact_level": "none",
+        "evidence_notes": "Sources: https://www.leedsth.nhs.uk/patients/resources/the-hand-and-wrist/, https://yourhealth.leicestershospitals.nhs.uk/library/emergency-specialist-medicine/emergency-department/1660-care-after-minor-sprains-strains-or-bruises-soft-tissue-injuries/file. Protected regional baseline only; not diagnosis, structural healing or contact clearance. No numeric dose, pain ceiling, hematoma size, severity grade, brace duration or progression threshold inferred. Comfortable/non-provoking movement is a conservative baseline restriction. Product low/moderate eligibility and scheduled cadence are retained. Individual restrictions remain authoritative. No time/session-based progression or automatic massage/heat protocol."
       }
     ]
   },
@@ -19268,7 +19530,7 @@
   {
     "location": "wrist",
     "type": "contusion",
-    "phase_progression": "GPP",
+    "phase_progression": "GPP → SPP → TAPER",
     "drills": [
       {
         "id": "wrist_contusion_tactile_tapping_finger_to_wrist",
@@ -19749,7 +20011,7 @@
   {
     "location": "hand",
     "type": "contusion",
-    "phase_progression": "GPP",
+    "phase_progression": "GPP → SPP → TAPER",
     "drills": [
       {
         "id": "hand_contusion_contrast_bath_warm_cold",
@@ -19802,6 +20064,62 @@
         "sport_specificity": "unknown",
         "contact_level": "unknown",
         "evidence_notes": "Target region inherited from the canonical rehab-bank group; other classifications remain unreviewed."
+      },
+      {
+        "id": "hand_contusion_recovery_support",
+        "name": "Hand contusion protection guidance",
+        "notes": "Protect the bruised hand from heavy gripping, carrying, punching and direct pressure. Rest it comfortably supported and follow any individually prescribed hand protection. Do not use contrast heat, ball pressure or a resisted grip squeeze as automatic treatment. New loss of movement or grip, excessive or increasing swelling, or altered sensation needs assessment. Stop if symptoms worsen during or after the activity. Seek assessment for increasing or excessive swelling, an expanding lump or hematoma, inability to use or bear weight on the limb, or major loss of function. Seek urgent help for severe pain with tense swelling, compartment syndrome concern, altered sensation, a cold limb or circulation changes, an open wound, or suspected fracture, dislocation or tear. Follow clinician restrictions; CALM or RESTORE is not return-to-contact clearance.",
+        "rehab_stage": "calm",
+        "function": "recovery_downregulation",
+        "equipment": [],
+        "dose": null,
+        "impact": "none",
+        "load": "minimal",
+        "velocity": "low",
+        "pain_ceiling": null,
+        "allowed_severities": null,
+        "progress_when": null,
+        "regress_when": null,
+        "stop_when": null,
+        "target_regions": [
+          "hand"
+        ],
+        "laterality_applicability": "not_applicable",
+        "target_tissues": [
+          "hand soft tissue region"
+        ],
+        "contraction_type": "unknown",
+        "sport_specificity": "general_rehab",
+        "contact_level": "none",
+        "evidence_notes": "Sources: https://www.royalberkshire.nhs.uk/media/opzgt14c/bruised-hand_dec25.pdf, https://www.leedsth.nhs.uk/patients/resources/the-hand-and-wrist/, https://yourhealth.leicestershospitals.nhs.uk/library/emergency-specialist-medicine/emergency-department/1660-care-after-minor-sprains-strains-or-bruises-soft-tissue-injuries/file. Protected regional baseline only; not diagnosis, structural healing or contact clearance. No numeric dose, pain ceiling, hematoma size, severity grade, brace duration or progression threshold inferred. Comfortable/non-provoking movement is a conservative baseline restriction. Product low/moderate eligibility and scheduled cadence are retained. Individual restrictions remain authoritative. No time/session-based progression or automatic massage/heat protocol."
+      },
+      {
+        "id": "hand_contusion_reviewed_restore",
+        "name": "Unloaded comfortable hand opening and closing",
+        "notes": "With the forearm comfortably supported without pressure on the bruise, gently open and close the affected hand through a small comfortable range. Keep the hand empty; do not squeeze a ball, clench tightly, push fingers with the other hand or massage the bruised tissue. Stop if movement worsens symptoms and follow individual movement restrictions. Stop if symptoms worsen during or after the activity. Seek assessment for increasing or excessive swelling, an expanding lump or hematoma, inability to use or bear weight on the limb, or major loss of function. Seek urgent help for severe pain with tense swelling, compartment syndrome concern, altered sensation, a cold limb or circulation changes, an open wound, or suspected fracture, dislocation or tear. Follow clinician restrictions; CALM or RESTORE is not return-to-contact clearance.",
+        "rehab_stage": "restore",
+        "function": "mobility",
+        "equipment": [],
+        "dose": null,
+        "impact": "none",
+        "load": "minimal",
+        "velocity": "low",
+        "pain_ceiling": null,
+        "allowed_severities": null,
+        "progress_when": null,
+        "regress_when": null,
+        "stop_when": null,
+        "target_regions": [
+          "hand"
+        ],
+        "laterality_applicability": "side_specific",
+        "target_tissues": [
+          "hand soft tissue region"
+        ],
+        "contraction_type": "mixed",
+        "sport_specificity": "general_rehab",
+        "contact_level": "none",
+        "evidence_notes": "Sources: https://www.royalberkshire.nhs.uk/media/opzgt14c/bruised-hand_dec25.pdf, https://www.leedsth.nhs.uk/patients/resources/the-hand-and-wrist/, https://yourhealth.leicestershospitals.nhs.uk/library/emergency-specialist-medicine/emergency-department/1660-care-after-minor-sprains-strains-or-bruises-soft-tissue-injuries/file. Protected regional baseline only; not diagnosis, structural healing or contact clearance. No numeric dose, pain ceiling, hematoma size, severity grade, brace duration or progression threshold inferred. Comfortable/non-provoking movement is a conservative baseline restriction. Product low/moderate eligibility and scheduled cadence are retained. Individual restrictions remain authoritative. No time/session-based progression or automatic massage/heat protocol."
       }
     ]
   },
@@ -21554,7 +21872,7 @@
   {
     "location": "fingers",
     "type": "contusion",
-    "phase_progression": "GPP",
+    "phase_progression": "GPP → SPP → TAPER",
     "drills": [
       {
         "id": "fingers_contusion_gentle_finger_taps_on_pad",
@@ -21607,6 +21925,62 @@
         "sport_specificity": "unknown",
         "contact_level": "unknown",
         "evidence_notes": "Target region inherited from the canonical rehab-bank group; other classifications remain unreviewed."
+      },
+      {
+        "id": "fingers_contusion_recovery_support",
+        "name": "Fingers contusion protection guidance",
+        "notes": "Protect the bruised fingers from catching impacts, punching, heavy grip and direct pressure. Rest the hand comfortably supported and follow any prescribed finger protection or movement restriction. Do not tap the fingers on a pad, grip a cold ball or roll the injured tissue to test contact tolerance. Stop if symptoms worsen during or after the activity. Seek assessment for increasing or excessive swelling, an expanding lump or hematoma, inability to use or bear weight on the limb, or major loss of function. Seek urgent help for severe pain with tense swelling, compartment syndrome concern, altered sensation, a cold limb or circulation changes, an open wound, or suspected fracture, dislocation or tear. Follow clinician restrictions; CALM or RESTORE is not return-to-contact clearance.",
+        "rehab_stage": "calm",
+        "function": "recovery_downregulation",
+        "equipment": [],
+        "dose": null,
+        "impact": "none",
+        "load": "minimal",
+        "velocity": "low",
+        "pain_ceiling": null,
+        "allowed_severities": null,
+        "progress_when": null,
+        "regress_when": null,
+        "stop_when": null,
+        "target_regions": [
+          "fingers"
+        ],
+        "laterality_applicability": "not_applicable",
+        "target_tissues": [
+          "finger soft tissue region"
+        ],
+        "contraction_type": "unknown",
+        "sport_specificity": "general_rehab",
+        "contact_level": "none",
+        "evidence_notes": "Sources: https://www.royalberkshire.nhs.uk/media/opzgt14c/bruised-hand_dec25.pdf, https://www.leedsth.nhs.uk/patients/resources/the-hand-and-wrist/, https://yourhealth.leicestershospitals.nhs.uk/library/emergency-specialist-medicine/emergency-department/1660-care-after-minor-sprains-strains-or-bruises-soft-tissue-injuries/file. Protected regional baseline only; not diagnosis, structural healing or contact clearance. No numeric dose, pain ceiling, hematoma size, severity grade, brace duration or progression threshold inferred. Comfortable/non-provoking movement is a conservative baseline restriction. Product low/moderate eligibility and scheduled cadence are retained. Individual restrictions remain authoritative. No time/session-based progression or automatic massage/heat protocol."
+      },
+      {
+        "id": "fingers_contusion_reviewed_restore",
+        "name": "Unloaded comfortable finger movement",
+        "notes": "Keep the hand relaxed and gently bend and straighten the affected fingers through a small comfortable range. Do not make a forceful fist, pull the fingers with the other hand, tap a pad or grip an object. Follow individual protection and movement restrictions and stop if the movement provokes the bruised fingers. Stop if symptoms worsen during or after the activity. Seek assessment for increasing or excessive swelling, an expanding lump or hematoma, inability to use or bear weight on the limb, or major loss of function. Seek urgent help for severe pain with tense swelling, compartment syndrome concern, altered sensation, a cold limb or circulation changes, an open wound, or suspected fracture, dislocation or tear. Follow clinician restrictions; CALM or RESTORE is not return-to-contact clearance.",
+        "rehab_stage": "restore",
+        "function": "mobility",
+        "equipment": [],
+        "dose": null,
+        "impact": "none",
+        "load": "minimal",
+        "velocity": "low",
+        "pain_ceiling": null,
+        "allowed_severities": null,
+        "progress_when": null,
+        "regress_when": null,
+        "stop_when": null,
+        "target_regions": [
+          "fingers"
+        ],
+        "laterality_applicability": "side_specific",
+        "target_tissues": [
+          "finger soft tissue region"
+        ],
+        "contraction_type": "mixed",
+        "sport_specificity": "general_rehab",
+        "contact_level": "none",
+        "evidence_notes": "Sources: https://www.royalberkshire.nhs.uk/media/opzgt14c/bruised-hand_dec25.pdf, https://www.leedsth.nhs.uk/patients/resources/the-hand-and-wrist/, https://yourhealth.leicestershospitals.nhs.uk/library/emergency-specialist-medicine/emergency-department/1660-care-after-minor-sprains-strains-or-bruises-soft-tissue-injuries/file. Protected regional baseline only; not diagnosis, structural healing or contact clearance. No numeric dose, pain ceiling, hematoma size, severity grade, brace duration or progression threshold inferred. Comfortable/non-provoking movement is a conservative baseline restriction. Product low/moderate eligibility and scheduled cadence are retained. Individual restrictions remain authoritative. No time/session-based progression or automatic massage/heat protocol."
       }
     ]
   },

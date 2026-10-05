@@ -2695,6 +2695,668 @@
       "status": "active",
       "activation": "live",
       "content_hash": "a9fbae774639c0a14804a927c1bb98c57e0266dc3f1f36da89b7530806a3b5f1"
+    },
+    {
+      "policy_id": "heel_contusion",
+      "version": 1,
+      "region": "heel",
+      "injury_type": "contusion",
+      "pathway_family": "contusion",
+      "evidence_sources": [
+        "https://my.clevelandclinic.org/health/diseases/23275-heel-fat-pad-syndrome",
+        "https://my.clevelandclinic.org/health/diseases/heel-pain",
+        "https://yourhealth.leicestershospitals.nhs.uk/library/emergency-specialist-medicine/emergency-department/1660-care-after-minor-sprains-strains-or-bruises-soft-tissue-injuries/file"
+      ],
+      "prescriptions": [
+        {
+          "drill_id": "heel_contusion_recovery_support",
+          "bank_hash": "6f7d59c43ff760802dcf7e774c3d9e502ed7155cef1b6d68757d2251666941b8",
+          "stage": "calm",
+          "instructions": "Protect the bruised heel from repeated hard landings, running and direct pressure. Rest the foot comfortably supported and reduce provoking standing or walking. Follow any clinician-advised footwear, heel support or weight-bearing restriction. Do not tap or roll the bruised heel to desensitize it, start barefoot loading or assume that heel tenderness rules out a bone injury. The app does not distinguish heel-pad from deeper heel injury, so automatic exercises remain unavailable. Stop if symptoms worsen during or after the activity. Seek assessment for increasing or excessive swelling, an expanding lump or hematoma, inability to use or bear weight on the limb, or major loss of function. Seek urgent help for severe pain with tense swelling, compartment syndrome concern, altered sensation, a cold limb or circulation changes, an open wound, or suspected fracture, dislocation or tear. Follow clinician restrictions; CALM or RESTORE is not return-to-contact clearance.",
+          "dose": null,
+          "camp_doses": {},
+          "readiness_doses": {},
+          "allowed_severities": [
+            "low",
+            "moderate"
+          ],
+          "stop_when": [
+            "Stop if symptoms worsen during or after the activity. Seek assessment for increasing or excessive swelling, an expanding lump or hematoma, inability to use or bear weight on the limb, or major loss of function. Seek urgent help for severe pain with tense swelling, compartment syndrome concern, altered sensation, a cold limb or circulation changes, an open wound, or suspected fracture, dislocation or tear. Follow clinician restrictions; CALM or RESTORE is not return-to-contact clearance."
+          ],
+          "frequency": "scheduled_sessions",
+          "minimum_gap_days": 1,
+          "priority": 0,
+          "sources": [
+            "https://my.clevelandclinic.org/health/diseases/23275-heel-fat-pad-syndrome",
+            "https://my.clevelandclinic.org/health/diseases/heel-pain",
+            "https://yourhealth.leicestershospitals.nhs.uk/library/emergency-specialist-medicine/emergency-department/1660-care-after-minor-sprains-strains-or-bruises-soft-tissue-injuries/file"
+          ]
+        }
+      ],
+      "blocked_regions": [
+        "heel"
+      ],
+      "blocked_tags": [],
+      "contact_limit": "none",
+      "live_stages": [
+        "calm"
+      ],
+      "transition_overrides": {},
+      "status": "active",
+      "activation": "live",
+      "content_hash": "369fddbd03756e8cf4e1711235dfebd578ac45d421d7ce9d48f9bcd18f8b30ef"
+    },
+    {
+      "policy_id": "shin_contusion",
+      "version": 1,
+      "region": "shin",
+      "injury_type": "contusion",
+      "pathway_family": "contusion",
+      "evidence_sources": [
+        "https://yourhealth.leicestershospitals.nhs.uk/library/emergency-specialist-medicine/emergency-department/1660-care-after-minor-sprains-strains-or-bruises-soft-tissue-injuries/file",
+        "https://www.orthoinfo.org/diseases--conditions/muscle-contusion-bruise/"
+      ],
+      "prescriptions": [
+        {
+          "drill_id": "shin_contusion_recovery_support",
+          "bank_hash": "469722badee524cce8f3a7851232480127ff4c2a56255e34f0497d42489d80fe",
+          "stage": "calm",
+          "instructions": "Protect the bruised shin from kicks, pad contact and kneeling pressure. Rest the leg comfortably supported and reduce provoking prolonged standing or walking. Follow any clinician-prescribed support or weight-bearing restriction. Do not use sticks, percussion devices or rollers over the bruise, or test contact tolerance. The exact depth of the impact injury is not established, so direct shin loading and automatic exercises remain unavailable. Stop if symptoms worsen during or after the activity. Seek assessment for increasing or excessive swelling, an expanding lump or hematoma, inability to use or bear weight on the limb, or major loss of function. Seek urgent help for severe pain with tense swelling, compartment syndrome concern, altered sensation, a cold limb or circulation changes, an open wound, or suspected fracture, dislocation or tear. Follow clinician restrictions; CALM or RESTORE is not return-to-contact clearance.",
+          "dose": null,
+          "camp_doses": {},
+          "readiness_doses": {},
+          "allowed_severities": [
+            "low",
+            "moderate"
+          ],
+          "stop_when": [
+            "Stop if symptoms worsen during or after the activity. Seek assessment for increasing or excessive swelling, an expanding lump or hematoma, inability to use or bear weight on the limb, or major loss of function. Seek urgent help for severe pain with tense swelling, compartment syndrome concern, altered sensation, a cold limb or circulation changes, an open wound, or suspected fracture, dislocation or tear. Follow clinician restrictions; CALM or RESTORE is not return-to-contact clearance."
+          ],
+          "frequency": "scheduled_sessions",
+          "minimum_gap_days": 1,
+          "priority": 0,
+          "sources": [
+            "https://yourhealth.leicestershospitals.nhs.uk/library/emergency-specialist-medicine/emergency-department/1660-care-after-minor-sprains-strains-or-bruises-soft-tissue-injuries/file",
+            "https://www.orthoinfo.org/diseases--conditions/muscle-contusion-bruise/"
+          ]
+        }
+      ],
+      "blocked_regions": [
+        "shin"
+      ],
+      "blocked_tags": [],
+      "contact_limit": "none",
+      "live_stages": [
+        "calm"
+      ],
+      "transition_overrides": {},
+      "status": "active",
+      "activation": "live",
+      "content_hash": "7f66a22831cd62e8705c3ba45c7f3493c0db7b28ff80c674138dd0b85ecd7660"
+    },
+    {
+      "policy_id": "quads_contusion",
+      "version": 1,
+      "region": "quads",
+      "injury_type": "contusion",
+      "pathway_family": "contusion",
+      "evidence_sources": [
+        "https://www.orthoinfo.org/diseases--conditions/muscle-contusion-bruise/",
+        "https://yourhealth.leicestershospitals.nhs.uk/library/emergency-specialist-medicine/emergency-department/1660-care-after-minor-sprains-strains-or-bruises-soft-tissue-injuries/file"
+      ],
+      "prescriptions": [
+        {
+          "drill_id": "quads_contusion_recovery_support",
+          "bank_hash": "026ccf3465634181b155630e52ec96d1919ded3bad681b808b784a8ef78e6804",
+          "stage": "calm",
+          "instructions": "Protect the bruised thigh from further blows, deep squatting, kicking and provoking knee loading. Rest the leg comfortably supported and follow any clinician-prescribed position, wrap, walking support or movement restriction. Do not massage, use a percussion gun, force a thigh stretch or deepen a wall sit. Do not set or remove a bent-knee brace yourself; the extent of the contusion and safe knee movement need individual assessment. Stop if symptoms worsen during or after the activity. Seek assessment for increasing or excessive swelling, an expanding lump or hematoma, inability to use or bear weight on the limb, or major loss of function. Seek urgent help for severe pain with tense swelling, compartment syndrome concern, altered sensation, a cold limb or circulation changes, an open wound, or suspected fracture, dislocation or tear. Follow clinician restrictions; CALM or RESTORE is not return-to-contact clearance.",
+          "dose": null,
+          "camp_doses": {},
+          "readiness_doses": {},
+          "allowed_severities": [
+            "low",
+            "moderate"
+          ],
+          "stop_when": [
+            "Stop if symptoms worsen during or after the activity. Seek assessment for increasing or excessive swelling, an expanding lump or hematoma, inability to use or bear weight on the limb, or major loss of function. Seek urgent help for severe pain with tense swelling, compartment syndrome concern, altered sensation, a cold limb or circulation changes, an open wound, or suspected fracture, dislocation or tear. Follow clinician restrictions; CALM or RESTORE is not return-to-contact clearance."
+          ],
+          "frequency": "scheduled_sessions",
+          "minimum_gap_days": 1,
+          "priority": 0,
+          "sources": [
+            "https://www.orthoinfo.org/diseases--conditions/muscle-contusion-bruise/",
+            "https://yourhealth.leicestershospitals.nhs.uk/library/emergency-specialist-medicine/emergency-department/1660-care-after-minor-sprains-strains-or-bruises-soft-tissue-injuries/file"
+          ]
+        }
+      ],
+      "blocked_regions": [
+        "quads"
+      ],
+      "blocked_tags": [],
+      "contact_limit": "none",
+      "live_stages": [
+        "calm"
+      ],
+      "transition_overrides": {},
+      "status": "active",
+      "activation": "live",
+      "content_hash": "e7fa20d5dd6b68f04a8e10acea0ee94d11d73dc5bf1f1309193563706dff9437"
+    },
+    {
+      "policy_id": "biceps_contusion",
+      "version": 1,
+      "region": "biceps",
+      "injury_type": "contusion",
+      "pathway_family": "contusion",
+      "evidence_sources": [
+        "https://www.orthoinfo.org/diseases--conditions/muscle-contusion-bruise/",
+        "https://yourhealth.leicestershospitals.nhs.uk/library/emergency-specialist-medicine/emergency-department/1660-care-after-minor-sprains-strains-or-bruises-soft-tissue-injuries/file"
+      ],
+      "prescriptions": [
+        {
+          "drill_id": "biceps_contusion_recovery_support",
+          "bank_hash": "9af8079b64ccdde488ac97c56958e1f055df3e16d12087451179983b6a8d87ee",
+          "stage": "calm",
+          "instructions": "Protect the bruised front of the upper arm from contact, heavy pulling and repeated resisted elbow bending. Support the arm comfortably at rest and follow individual movement/support restrictions. Avoid direct massage or percussion, forceful stretching and faster arm swings to test tolerance. A muscle bruise label does not exclude deeper muscle or tendon injury; automatic resistance or stretching is not prescribed. Stop if symptoms worsen during or after the activity. Seek assessment for increasing or excessive swelling, an expanding lump or hematoma, inability to use or bear weight on the limb, or major loss of function. Seek urgent help for severe pain with tense swelling, compartment syndrome concern, altered sensation, a cold limb or circulation changes, an open wound, or suspected fracture, dislocation or tear. Follow clinician restrictions; CALM or RESTORE is not return-to-contact clearance.",
+          "dose": null,
+          "camp_doses": {},
+          "readiness_doses": {},
+          "allowed_severities": [
+            "low",
+            "moderate"
+          ],
+          "stop_when": [
+            "Stop if symptoms worsen during or after the activity. Seek assessment for increasing or excessive swelling, an expanding lump or hematoma, inability to use or bear weight on the limb, or major loss of function. Seek urgent help for severe pain with tense swelling, compartment syndrome concern, altered sensation, a cold limb or circulation changes, an open wound, or suspected fracture, dislocation or tear. Follow clinician restrictions; CALM or RESTORE is not return-to-contact clearance."
+          ],
+          "frequency": "scheduled_sessions",
+          "minimum_gap_days": 1,
+          "priority": 0,
+          "sources": [
+            "https://www.orthoinfo.org/diseases--conditions/muscle-contusion-bruise/",
+            "https://yourhealth.leicestershospitals.nhs.uk/library/emergency-specialist-medicine/emergency-department/1660-care-after-minor-sprains-strains-or-bruises-soft-tissue-injuries/file"
+          ]
+        }
+      ],
+      "blocked_regions": [
+        "biceps"
+      ],
+      "blocked_tags": [],
+      "contact_limit": "none",
+      "live_stages": [
+        "calm"
+      ],
+      "transition_overrides": {},
+      "status": "active",
+      "activation": "live",
+      "content_hash": "dd72b45ba2c4d80abe117635d02207922f83744e0ea3635bf793181ee19539ae"
+    },
+    {
+      "policy_id": "triceps_contusion",
+      "version": 1,
+      "region": "triceps",
+      "injury_type": "contusion",
+      "pathway_family": "contusion",
+      "evidence_sources": [
+        "https://www.orthoinfo.org/diseases--conditions/muscle-contusion-bruise/",
+        "https://yourhealth.leicestershospitals.nhs.uk/library/emergency-specialist-medicine/emergency-department/1660-care-after-minor-sprains-strains-or-bruises-soft-tissue-injuries/file"
+      ],
+      "prescriptions": [
+        {
+          "drill_id": "triceps_contusion_recovery_support",
+          "bank_hash": "98ace622f4df56f6965df3ac8cec23dcaf9a75770ee14ad75d1c83e19ae85aa7",
+          "stage": "calm",
+          "instructions": "Protect the bruised back of the upper arm from contact, heavy pressing and resisted elbow straightening. Support the arm comfortably at rest and follow individual movement/support restrictions. Do not apply vibration balls, force an overhead stretch or increase arm-circle range to test recovery. Automatic stretching or resistance work needs an assessed injury and is not prescribed here. Stop if symptoms worsen during or after the activity. Seek assessment for increasing or excessive swelling, an expanding lump or hematoma, inability to use or bear weight on the limb, or major loss of function. Seek urgent help for severe pain with tense swelling, compartment syndrome concern, altered sensation, a cold limb or circulation changes, an open wound, or suspected fracture, dislocation or tear. Follow clinician restrictions; CALM or RESTORE is not return-to-contact clearance.",
+          "dose": null,
+          "camp_doses": {},
+          "readiness_doses": {},
+          "allowed_severities": [
+            "low",
+            "moderate"
+          ],
+          "stop_when": [
+            "Stop if symptoms worsen during or after the activity. Seek assessment for increasing or excessive swelling, an expanding lump or hematoma, inability to use or bear weight on the limb, or major loss of function. Seek urgent help for severe pain with tense swelling, compartment syndrome concern, altered sensation, a cold limb or circulation changes, an open wound, or suspected fracture, dislocation or tear. Follow clinician restrictions; CALM or RESTORE is not return-to-contact clearance."
+          ],
+          "frequency": "scheduled_sessions",
+          "minimum_gap_days": 1,
+          "priority": 0,
+          "sources": [
+            "https://www.orthoinfo.org/diseases--conditions/muscle-contusion-bruise/",
+            "https://yourhealth.leicestershospitals.nhs.uk/library/emergency-specialist-medicine/emergency-department/1660-care-after-minor-sprains-strains-or-bruises-soft-tissue-injuries/file"
+          ]
+        }
+      ],
+      "blocked_regions": [
+        "triceps"
+      ],
+      "blocked_tags": [],
+      "contact_limit": "none",
+      "live_stages": [
+        "calm"
+      ],
+      "transition_overrides": {},
+      "status": "active",
+      "activation": "live",
+      "content_hash": "bba6e81e5e766853416bbd24af7fa9764507d27a9801adf6fb060b83c8e78d4f"
+    },
+    {
+      "policy_id": "forearm_contusion",
+      "version": 1,
+      "region": "forearm",
+      "injury_type": "contusion",
+      "pathway_family": "contusion",
+      "evidence_sources": [
+        "https://www.orthoinfo.org/diseases--conditions/muscle-contusion-bruise/",
+        "https://yourhealth.leicestershospitals.nhs.uk/library/emergency-specialist-medicine/emergency-department/1660-care-after-minor-sprains-strains-or-bruises-soft-tissue-injuries/file"
+      ],
+      "prescriptions": [
+        {
+          "drill_id": "forearm_contusion_recovery_support",
+          "bank_hash": "b149e9c3850817def39cfe2d4b73591db7a1c18d5c06ddfc56dc24623ba334bb",
+          "stage": "calm",
+          "instructions": "Protect the bruised forearm from contact, heavy grip work and resisted wrist movement. Support the arm comfortably without pressing on the bruise and follow any prescribed support or movement restriction. Do not roll a ball over the injured tissue or use a band as a recovery flush. Increasing tight swelling, abnormal sensation or circulation needs assessment rather than further loading. Stop if symptoms worsen during or after the activity. Seek assessment for increasing or excessive swelling, an expanding lump or hematoma, inability to use or bear weight on the limb, or major loss of function. Seek urgent help for severe pain with tense swelling, compartment syndrome concern, altered sensation, a cold limb or circulation changes, an open wound, or suspected fracture, dislocation or tear. Follow clinician restrictions; CALM or RESTORE is not return-to-contact clearance.",
+          "dose": null,
+          "camp_doses": {},
+          "readiness_doses": {},
+          "allowed_severities": [
+            "low",
+            "moderate"
+          ],
+          "stop_when": [
+            "Stop if symptoms worsen during or after the activity. Seek assessment for increasing or excessive swelling, an expanding lump or hematoma, inability to use or bear weight on the limb, or major loss of function. Seek urgent help for severe pain with tense swelling, compartment syndrome concern, altered sensation, a cold limb or circulation changes, an open wound, or suspected fracture, dislocation or tear. Follow clinician restrictions; CALM or RESTORE is not return-to-contact clearance."
+          ],
+          "frequency": "scheduled_sessions",
+          "minimum_gap_days": 1,
+          "priority": 0,
+          "sources": [
+            "https://www.orthoinfo.org/diseases--conditions/muscle-contusion-bruise/",
+            "https://yourhealth.leicestershospitals.nhs.uk/library/emergency-specialist-medicine/emergency-department/1660-care-after-minor-sprains-strains-or-bruises-soft-tissue-injuries/file"
+          ]
+        }
+      ],
+      "blocked_regions": [
+        "forearm"
+      ],
+      "blocked_tags": [],
+      "contact_limit": "none",
+      "live_stages": [
+        "calm"
+      ],
+      "transition_overrides": {},
+      "status": "active",
+      "activation": "live",
+      "content_hash": "5fea1d8c15702d0109dcce92110e1bb7e4f720fea8301b9614402d0bc70ea123"
+    },
+    {
+      "policy_id": "shoulder_contusion",
+      "version": 1,
+      "region": "shoulder",
+      "injury_type": "contusion",
+      "pathway_family": "contusion",
+      "evidence_sources": [
+        "https://www.leedsth.nhs.uk/patients/resources/early-advice-and-exercises-for-soft-tissue-injuries-of-the-shoulder/",
+        "https://www.orthoinfo.org/diseases--conditions/muscle-contusion-bruise/",
+        "https://yourhealth.leicestershospitals.nhs.uk/library/emergency-specialist-medicine/emergency-department/1660-care-after-minor-sprains-strains-or-bruises-soft-tissue-injuries/file"
+      ],
+      "prescriptions": [
+        {
+          "drill_id": "shoulder_contusion_recovery_support",
+          "bank_hash": "378f77b074a9ce613ac332f26eca41458f5b40bc3f3c92265b96a77f1b253a37",
+          "stage": "calm",
+          "instructions": "Protect the bruised shoulder from repeated contact, heavy lifting and provoking reaching. Support the arm comfortably when resting and follow any individual sling or movement restriction. Do not press a ball or percussion device into the bruise, hang from a trap bar or add band resistance. This protection guidance does not establish structural healing or readiness for contact. Stop if symptoms worsen during or after the activity. Seek assessment for increasing or excessive swelling, an expanding lump or hematoma, inability to use or bear weight on the limb, or major loss of function. Seek urgent help for severe pain with tense swelling, compartment syndrome concern, altered sensation, a cold limb or circulation changes, an open wound, or suspected fracture, dislocation or tear. Follow clinician restrictions; CALM or RESTORE is not return-to-contact clearance.",
+          "dose": null,
+          "camp_doses": {},
+          "readiness_doses": {},
+          "allowed_severities": [
+            "low",
+            "moderate"
+          ],
+          "stop_when": [
+            "Stop if symptoms worsen during or after the activity. Seek assessment for increasing or excessive swelling, an expanding lump or hematoma, inability to use or bear weight on the limb, or major loss of function. Seek urgent help for severe pain with tense swelling, compartment syndrome concern, altered sensation, a cold limb or circulation changes, an open wound, or suspected fracture, dislocation or tear. Follow clinician restrictions; CALM or RESTORE is not return-to-contact clearance."
+          ],
+          "frequency": "scheduled_sessions",
+          "minimum_gap_days": 1,
+          "priority": 0,
+          "sources": [
+            "https://www.leedsth.nhs.uk/patients/resources/early-advice-and-exercises-for-soft-tissue-injuries-of-the-shoulder/",
+            "https://www.orthoinfo.org/diseases--conditions/muscle-contusion-bruise/",
+            "https://yourhealth.leicestershospitals.nhs.uk/library/emergency-specialist-medicine/emergency-department/1660-care-after-minor-sprains-strains-or-bruises-soft-tissue-injuries/file"
+          ]
+        },
+        {
+          "drill_id": "shoulder_contusion_passive_arm_hang_trap_bar_support",
+          "bank_hash": "7ffd44332fbd8ddc0e27c6972ae7f42a6848b8b7522b5584e741f9716d69c194",
+          "stage": "restore",
+          "instructions": "Stand beside a stable support and lean slightly forwards with the uninjured hand supporting you. Let the affected arm hang relaxed, then gently allow a small slow forward-and-back pendulum movement within a comfortable range. Keep the hand empty; do not hang from a bar, pull the shoulder, swing forcefully, add weight or force range. Follow any clinician movement restriction and stop if this provokes the bruised shoulder. Stop if symptoms worsen during or after the activity. Seek assessment for increasing or excessive swelling, an expanding lump or hematoma, inability to use or bear weight on the limb, or major loss of function. Seek urgent help for severe pain with tense swelling, compartment syndrome concern, altered sensation, a cold limb or circulation changes, an open wound, or suspected fracture, dislocation or tear. Follow clinician restrictions; CALM or RESTORE is not return-to-contact clearance.",
+          "dose": null,
+          "camp_doses": {},
+          "readiness_doses": {},
+          "allowed_severities": [
+            "low",
+            "moderate"
+          ],
+          "stop_when": [
+            "Stop if symptoms worsen during or after the activity. Seek assessment for increasing or excessive swelling, an expanding lump or hematoma, inability to use or bear weight on the limb, or major loss of function. Seek urgent help for severe pain with tense swelling, compartment syndrome concern, altered sensation, a cold limb or circulation changes, an open wound, or suspected fracture, dislocation or tear. Follow clinician restrictions; CALM or RESTORE is not return-to-contact clearance."
+          ],
+          "frequency": "scheduled_sessions",
+          "minimum_gap_days": 1,
+          "priority": 0,
+          "sources": [
+            "https://www.leedsth.nhs.uk/patients/resources/early-advice-and-exercises-for-soft-tissue-injuries-of-the-shoulder/",
+            "https://www.orthoinfo.org/diseases--conditions/muscle-contusion-bruise/",
+            "https://yourhealth.leicestershospitals.nhs.uk/library/emergency-specialist-medicine/emergency-department/1660-care-after-minor-sprains-strains-or-bruises-soft-tissue-injuries/file"
+          ]
+        }
+      ],
+      "blocked_regions": [
+        "shoulder"
+      ],
+      "blocked_tags": [],
+      "contact_limit": "none",
+      "live_stages": [
+        "calm",
+        "restore"
+      ],
+      "transition_overrides": {},
+      "status": "active",
+      "activation": "live",
+      "content_hash": "0ddfad296d2c8ef70a8e6161c7790a4f610cfbad9722b7953826f46c5e555d6a"
+    },
+    {
+      "policy_id": "elbow_contusion",
+      "version": 1,
+      "region": "elbow",
+      "injury_type": "contusion",
+      "pathway_family": "contusion",
+      "evidence_sources": [
+        "https://www.nbt.nhs.uk/our-services/a-z-services/emergency-department/ed-miu-patient-information/elbow-injuries",
+        "https://www.orthoinfo.org/diseases--conditions/muscle-contusion-bruise/",
+        "https://yourhealth.leicestershospitals.nhs.uk/library/emergency-specialist-medicine/emergency-department/1660-care-after-minor-sprains-strains-or-bruises-soft-tissue-injuries/file"
+      ],
+      "prescriptions": [
+        {
+          "drill_id": "elbow_contusion_recovery_support",
+          "bank_hash": "93c7a80ee725f1125d8e58babd4bbba139f0b5716f21596b165bd76ad0c2fae1",
+          "stage": "calm",
+          "instructions": "Protect the bruised elbow from contact, leaning on the injured area, heavy carrying and forceful pressing. Support the arm comfortably without pressure on the bruise and follow any individual sling or movement restriction. Do not apply a massage gun or push the elbow against a wall to build contact tolerance. Stop if symptoms worsen during or after the activity. Seek assessment for increasing or excessive swelling, an expanding lump or hematoma, inability to use or bear weight on the limb, or major loss of function. Seek urgent help for severe pain with tense swelling, compartment syndrome concern, altered sensation, a cold limb or circulation changes, an open wound, or suspected fracture, dislocation or tear. Follow clinician restrictions; CALM or RESTORE is not return-to-contact clearance.",
+          "dose": null,
+          "camp_doses": {},
+          "readiness_doses": {},
+          "allowed_severities": [
+            "low",
+            "moderate"
+          ],
+          "stop_when": [
+            "Stop if symptoms worsen during or after the activity. Seek assessment for increasing or excessive swelling, an expanding lump or hematoma, inability to use or bear weight on the limb, or major loss of function. Seek urgent help for severe pain with tense swelling, compartment syndrome concern, altered sensation, a cold limb or circulation changes, an open wound, or suspected fracture, dislocation or tear. Follow clinician restrictions; CALM or RESTORE is not return-to-contact clearance."
+          ],
+          "frequency": "scheduled_sessions",
+          "minimum_gap_days": 1,
+          "priority": 0,
+          "sources": [
+            "https://www.nbt.nhs.uk/our-services/a-z-services/emergency-department/ed-miu-patient-information/elbow-injuries",
+            "https://www.orthoinfo.org/diseases--conditions/muscle-contusion-bruise/",
+            "https://yourhealth.leicestershospitals.nhs.uk/library/emergency-specialist-medicine/emergency-department/1660-care-after-minor-sprains-strains-or-bruises-soft-tissue-injuries/file"
+          ]
+        },
+        {
+          "drill_id": "elbow_contusion_gentle_elbow_slides_on_wall",
+          "bank_hash": "06b76ea94db1e407af9fd309ac7b066bc65e340feeffe359b1fb482c2abad016",
+          "stage": "restore",
+          "instructions": "Sit with the upper arm relaxed by your side and the hand empty. Slowly bend and straighten the affected elbow through a small comfortable range, stopping short of pain. Do not press on a wall, lean on the bruise, force straightening or add resistance. Follow any clinician movement restriction; this is movement only, not pushing or contact preparation. Stop if symptoms worsen during or after the activity. Seek assessment for increasing or excessive swelling, an expanding lump or hematoma, inability to use or bear weight on the limb, or major loss of function. Seek urgent help for severe pain with tense swelling, compartment syndrome concern, altered sensation, a cold limb or circulation changes, an open wound, or suspected fracture, dislocation or tear. Follow clinician restrictions; CALM or RESTORE is not return-to-contact clearance.",
+          "dose": null,
+          "camp_doses": {},
+          "readiness_doses": {},
+          "allowed_severities": [
+            "low",
+            "moderate"
+          ],
+          "stop_when": [
+            "Stop if symptoms worsen during or after the activity. Seek assessment for increasing or excessive swelling, an expanding lump or hematoma, inability to use or bear weight on the limb, or major loss of function. Seek urgent help for severe pain with tense swelling, compartment syndrome concern, altered sensation, a cold limb or circulation changes, an open wound, or suspected fracture, dislocation or tear. Follow clinician restrictions; CALM or RESTORE is not return-to-contact clearance."
+          ],
+          "frequency": "scheduled_sessions",
+          "minimum_gap_days": 1,
+          "priority": 0,
+          "sources": [
+            "https://www.nbt.nhs.uk/our-services/a-z-services/emergency-department/ed-miu-patient-information/elbow-injuries",
+            "https://www.orthoinfo.org/diseases--conditions/muscle-contusion-bruise/",
+            "https://yourhealth.leicestershospitals.nhs.uk/library/emergency-specialist-medicine/emergency-department/1660-care-after-minor-sprains-strains-or-bruises-soft-tissue-injuries/file"
+          ]
+        }
+      ],
+      "blocked_regions": [
+        "elbow"
+      ],
+      "blocked_tags": [],
+      "contact_limit": "none",
+      "live_stages": [
+        "calm",
+        "restore"
+      ],
+      "transition_overrides": {},
+      "status": "active",
+      "activation": "live",
+      "content_hash": "15ffd322b2a29f43bdf20fd6f13b1a6025f000381dd9548d2f345ce730d9d39d"
+    },
+    {
+      "policy_id": "wrist_contusion",
+      "version": 1,
+      "region": "wrist",
+      "injury_type": "contusion",
+      "pathway_family": "contusion",
+      "evidence_sources": [
+        "https://www.leedsth.nhs.uk/patients/resources/the-hand-and-wrist/",
+        "https://yourhealth.leicestershospitals.nhs.uk/library/emergency-specialist-medicine/emergency-department/1660-care-after-minor-sprains-strains-or-bruises-soft-tissue-injuries/file"
+      ],
+      "prescriptions": [
+        {
+          "drill_id": "wrist_contusion_recovery_support",
+          "bank_hash": "b10332fdfa40f2443526d1ac22dfde50f6166249ba980836cf3059eeeaaea46c",
+          "stage": "calm",
+          "instructions": "Protect the bruised wrist from contact, heavy grip, pushing through the hand and repeated provoking wrist loading. Rest the forearm and hand comfortably supported and follow prescribed splint or movement restrictions. Do not roll or tap the bruise, add glove impact or remove protection because its colour fades. Stop if symptoms worsen during or after the activity. Seek assessment for increasing or excessive swelling, an expanding lump or hematoma, inability to use or bear weight on the limb, or major loss of function. Seek urgent help for severe pain with tense swelling, compartment syndrome concern, altered sensation, a cold limb or circulation changes, an open wound, or suspected fracture, dislocation or tear. Follow clinician restrictions; CALM or RESTORE is not return-to-contact clearance.",
+          "dose": null,
+          "camp_doses": {},
+          "readiness_doses": {},
+          "allowed_severities": [
+            "low",
+            "moderate"
+          ],
+          "stop_when": [
+            "Stop if symptoms worsen during or after the activity. Seek assessment for increasing or excessive swelling, an expanding lump or hematoma, inability to use or bear weight on the limb, or major loss of function. Seek urgent help for severe pain with tense swelling, compartment syndrome concern, altered sensation, a cold limb or circulation changes, an open wound, or suspected fracture, dislocation or tear. Follow clinician restrictions; CALM or RESTORE is not return-to-contact clearance."
+          ],
+          "frequency": "scheduled_sessions",
+          "minimum_gap_days": 1,
+          "priority": 0,
+          "sources": [
+            "https://www.leedsth.nhs.uk/patients/resources/the-hand-and-wrist/",
+            "https://yourhealth.leicestershospitals.nhs.uk/library/emergency-specialist-medicine/emergency-department/1660-care-after-minor-sprains-strains-or-bruises-soft-tissue-injuries/file"
+          ]
+        },
+        {
+          "drill_id": "wrist_contusion_wrist_flexion_extension_passes",
+          "bank_hash": "0d4e56ec4c551dfebf9d3b24d7649617a6651c5a829665fc6c0ab33030bc6a90",
+          "stage": "restore",
+          "instructions": "Support the forearm on a table with the hand relaxed and free to move beyond the edge. Slowly move the wrist a small amount upwards and downwards within a comfortable non-provoking range. Keep the hand empty and do not grip, stretch with the other hand, press on the bruise or add resistance. Follow individual splint and movement restrictions. Stop if symptoms worsen during or after the activity. Seek assessment for increasing or excessive swelling, an expanding lump or hematoma, inability to use or bear weight on the limb, or major loss of function. Seek urgent help for severe pain with tense swelling, compartment syndrome concern, altered sensation, a cold limb or circulation changes, an open wound, or suspected fracture, dislocation or tear. Follow clinician restrictions; CALM or RESTORE is not return-to-contact clearance.",
+          "dose": null,
+          "camp_doses": {},
+          "readiness_doses": {},
+          "allowed_severities": [
+            "low",
+            "moderate"
+          ],
+          "stop_when": [
+            "Stop if symptoms worsen during or after the activity. Seek assessment for increasing or excessive swelling, an expanding lump or hematoma, inability to use or bear weight on the limb, or major loss of function. Seek urgent help for severe pain with tense swelling, compartment syndrome concern, altered sensation, a cold limb or circulation changes, an open wound, or suspected fracture, dislocation or tear. Follow clinician restrictions; CALM or RESTORE is not return-to-contact clearance."
+          ],
+          "frequency": "scheduled_sessions",
+          "minimum_gap_days": 1,
+          "priority": 0,
+          "sources": [
+            "https://www.leedsth.nhs.uk/patients/resources/the-hand-and-wrist/",
+            "https://yourhealth.leicestershospitals.nhs.uk/library/emergency-specialist-medicine/emergency-department/1660-care-after-minor-sprains-strains-or-bruises-soft-tissue-injuries/file"
+          ]
+        }
+      ],
+      "blocked_regions": [
+        "wrist"
+      ],
+      "blocked_tags": [],
+      "contact_limit": "none",
+      "live_stages": [
+        "calm",
+        "restore"
+      ],
+      "transition_overrides": {},
+      "status": "active",
+      "activation": "live",
+      "content_hash": "64bcb8b29e5c81adc6751c5a73489ec895dba4c6ffa57b1e2b30639a9568e010"
+    },
+    {
+      "policy_id": "hand_contusion",
+      "version": 1,
+      "region": "hand",
+      "injury_type": "contusion",
+      "pathway_family": "contusion",
+      "evidence_sources": [
+        "https://www.royalberkshire.nhs.uk/media/opzgt14c/bruised-hand_dec25.pdf",
+        "https://www.leedsth.nhs.uk/patients/resources/the-hand-and-wrist/",
+        "https://yourhealth.leicestershospitals.nhs.uk/library/emergency-specialist-medicine/emergency-department/1660-care-after-minor-sprains-strains-or-bruises-soft-tissue-injuries/file"
+      ],
+      "prescriptions": [
+        {
+          "drill_id": "hand_contusion_recovery_support",
+          "bank_hash": "9ab6b515283455d598266665b1cdfa8c712e70e100efe38f4f6d7227e2287a17",
+          "stage": "calm",
+          "instructions": "Protect the bruised hand from heavy gripping, carrying, punching and direct pressure. Rest it comfortably supported and follow any individually prescribed hand protection. Do not use contrast heat, ball pressure or a resisted grip squeeze as automatic treatment. New loss of movement or grip, excessive or increasing swelling, or altered sensation needs assessment. Stop if symptoms worsen during or after the activity. Seek assessment for increasing or excessive swelling, an expanding lump or hematoma, inability to use or bear weight on the limb, or major loss of function. Seek urgent help for severe pain with tense swelling, compartment syndrome concern, altered sensation, a cold limb or circulation changes, an open wound, or suspected fracture, dislocation or tear. Follow clinician restrictions; CALM or RESTORE is not return-to-contact clearance.",
+          "dose": null,
+          "camp_doses": {},
+          "readiness_doses": {},
+          "allowed_severities": [
+            "low",
+            "moderate"
+          ],
+          "stop_when": [
+            "Stop if symptoms worsen during or after the activity. Seek assessment for increasing or excessive swelling, an expanding lump or hematoma, inability to use or bear weight on the limb, or major loss of function. Seek urgent help for severe pain with tense swelling, compartment syndrome concern, altered sensation, a cold limb or circulation changes, an open wound, or suspected fracture, dislocation or tear. Follow clinician restrictions; CALM or RESTORE is not return-to-contact clearance."
+          ],
+          "frequency": "scheduled_sessions",
+          "minimum_gap_days": 1,
+          "priority": 0,
+          "sources": [
+            "https://www.royalberkshire.nhs.uk/media/opzgt14c/bruised-hand_dec25.pdf",
+            "https://www.leedsth.nhs.uk/patients/resources/the-hand-and-wrist/",
+            "https://yourhealth.leicestershospitals.nhs.uk/library/emergency-specialist-medicine/emergency-department/1660-care-after-minor-sprains-strains-or-bruises-soft-tissue-injuries/file"
+          ]
+        },
+        {
+          "drill_id": "hand_contusion_reviewed_restore",
+          "bank_hash": "993fd0b5cbb40e58410bbab112450ac5082f5403db81918a5fd2ef6a50797616",
+          "stage": "restore",
+          "instructions": "With the forearm comfortably supported without pressure on the bruise, gently open and close the affected hand through a small comfortable range. Keep the hand empty; do not squeeze a ball, clench tightly, push fingers with the other hand or massage the bruised tissue. Stop if movement worsens symptoms and follow individual movement restrictions. Stop if symptoms worsen during or after the activity. Seek assessment for increasing or excessive swelling, an expanding lump or hematoma, inability to use or bear weight on the limb, or major loss of function. Seek urgent help for severe pain with tense swelling, compartment syndrome concern, altered sensation, a cold limb or circulation changes, an open wound, or suspected fracture, dislocation or tear. Follow clinician restrictions; CALM or RESTORE is not return-to-contact clearance.",
+          "dose": null,
+          "camp_doses": {},
+          "readiness_doses": {},
+          "allowed_severities": [
+            "low",
+            "moderate"
+          ],
+          "stop_when": [
+            "Stop if symptoms worsen during or after the activity. Seek assessment for increasing or excessive swelling, an expanding lump or hematoma, inability to use or bear weight on the limb, or major loss of function. Seek urgent help for severe pain with tense swelling, compartment syndrome concern, altered sensation, a cold limb or circulation changes, an open wound, or suspected fracture, dislocation or tear. Follow clinician restrictions; CALM or RESTORE is not return-to-contact clearance."
+          ],
+          "frequency": "scheduled_sessions",
+          "minimum_gap_days": 1,
+          "priority": 0,
+          "sources": [
+            "https://www.royalberkshire.nhs.uk/media/opzgt14c/bruised-hand_dec25.pdf",
+            "https://www.leedsth.nhs.uk/patients/resources/the-hand-and-wrist/",
+            "https://yourhealth.leicestershospitals.nhs.uk/library/emergency-specialist-medicine/emergency-department/1660-care-after-minor-sprains-strains-or-bruises-soft-tissue-injuries/file"
+          ]
+        }
+      ],
+      "blocked_regions": [
+        "hand"
+      ],
+      "blocked_tags": [],
+      "contact_limit": "none",
+      "live_stages": [
+        "calm",
+        "restore"
+      ],
+      "transition_overrides": {},
+      "status": "active",
+      "activation": "live",
+      "content_hash": "4987b3cbb3604b8011de955dc46ba017845b9c37438f4939b932c845d89c3a24"
+    },
+    {
+      "policy_id": "fingers_contusion",
+      "version": 1,
+      "region": "fingers",
+      "injury_type": "contusion",
+      "pathway_family": "contusion",
+      "evidence_sources": [
+        "https://www.royalberkshire.nhs.uk/media/opzgt14c/bruised-hand_dec25.pdf",
+        "https://www.leedsth.nhs.uk/patients/resources/the-hand-and-wrist/",
+        "https://yourhealth.leicestershospitals.nhs.uk/library/emergency-specialist-medicine/emergency-department/1660-care-after-minor-sprains-strains-or-bruises-soft-tissue-injuries/file"
+      ],
+      "prescriptions": [
+        {
+          "drill_id": "fingers_contusion_recovery_support",
+          "bank_hash": "f86e3f9d786fddf2f4240790130ea1987f2df120c131cfea787b51f4cda8bc61",
+          "stage": "calm",
+          "instructions": "Protect the bruised fingers from catching impacts, punching, heavy grip and direct pressure. Rest the hand comfortably supported and follow any prescribed finger protection or movement restriction. Do not tap the fingers on a pad, grip a cold ball or roll the injured tissue to test contact tolerance. Stop if symptoms worsen during or after the activity. Seek assessment for increasing or excessive swelling, an expanding lump or hematoma, inability to use or bear weight on the limb, or major loss of function. Seek urgent help for severe pain with tense swelling, compartment syndrome concern, altered sensation, a cold limb or circulation changes, an open wound, or suspected fracture, dislocation or tear. Follow clinician restrictions; CALM or RESTORE is not return-to-contact clearance.",
+          "dose": null,
+          "camp_doses": {},
+          "readiness_doses": {},
+          "allowed_severities": [
+            "low",
+            "moderate"
+          ],
+          "stop_when": [
+            "Stop if symptoms worsen during or after the activity. Seek assessment for increasing or excessive swelling, an expanding lump or hematoma, inability to use or bear weight on the limb, or major loss of function. Seek urgent help for severe pain with tense swelling, compartment syndrome concern, altered sensation, a cold limb or circulation changes, an open wound, or suspected fracture, dislocation or tear. Follow clinician restrictions; CALM or RESTORE is not return-to-contact clearance."
+          ],
+          "frequency": "scheduled_sessions",
+          "minimum_gap_days": 1,
+          "priority": 0,
+          "sources": [
+            "https://www.royalberkshire.nhs.uk/media/opzgt14c/bruised-hand_dec25.pdf",
+            "https://www.leedsth.nhs.uk/patients/resources/the-hand-and-wrist/",
+            "https://yourhealth.leicestershospitals.nhs.uk/library/emergency-specialist-medicine/emergency-department/1660-care-after-minor-sprains-strains-or-bruises-soft-tissue-injuries/file"
+          ]
+        },
+        {
+          "drill_id": "fingers_contusion_reviewed_restore",
+          "bank_hash": "b57ccf71866b20a43ae46f506753aaf77677c8228c540b5bd3c755b7d07a15e7",
+          "stage": "restore",
+          "instructions": "Keep the hand relaxed and gently bend and straighten the affected fingers through a small comfortable range. Do not make a forceful fist, pull the fingers with the other hand, tap a pad or grip an object. Follow individual protection and movement restrictions and stop if the movement provokes the bruised fingers. Stop if symptoms worsen during or after the activity. Seek assessment for increasing or excessive swelling, an expanding lump or hematoma, inability to use or bear weight on the limb, or major loss of function. Seek urgent help for severe pain with tense swelling, compartment syndrome concern, altered sensation, a cold limb or circulation changes, an open wound, or suspected fracture, dislocation or tear. Follow clinician restrictions; CALM or RESTORE is not return-to-contact clearance.",
+          "dose": null,
+          "camp_doses": {},
+          "readiness_doses": {},
+          "allowed_severities": [
+            "low",
+            "moderate"
+          ],
+          "stop_when": [
+            "Stop if symptoms worsen during or after the activity. Seek assessment for increasing or excessive swelling, an expanding lump or hematoma, inability to use or bear weight on the limb, or major loss of function. Seek urgent help for severe pain with tense swelling, compartment syndrome concern, altered sensation, a cold limb or circulation changes, an open wound, or suspected fracture, dislocation or tear. Follow clinician restrictions; CALM or RESTORE is not return-to-contact clearance."
+          ],
+          "frequency": "scheduled_sessions",
+          "minimum_gap_days": 1,
+          "priority": 0,
+          "sources": [
+            "https://www.royalberkshire.nhs.uk/media/opzgt14c/bruised-hand_dec25.pdf",
+            "https://www.leedsth.nhs.uk/patients/resources/the-hand-and-wrist/",
+            "https://yourhealth.leicestershospitals.nhs.uk/library/emergency-specialist-medicine/emergency-department/1660-care-after-minor-sprains-strains-or-bruises-soft-tissue-injuries/file"
+          ]
+        }
+      ],
+      "blocked_regions": [
+        "fingers"
+      ],
+      "blocked_tags": [],
+      "contact_limit": "none",
+      "live_stages": [
+        "calm",
+        "restore"
+      ],
+      "transition_overrides": {},
+      "status": "active",
+      "activation": "live",
+      "content_hash": "b5a37e79d8155ab744640a8942ce80a891dfd3c6659608808b7e87c5d3b8acc2"
     }
   ]
 }

@@ -39,7 +39,8 @@ def test_families_and_safety_baseline_invent_no_clinical_criteria():
     for policy in load_clinical_policies():
         assert [t.key for t in policy.transitions] == ["restore->load", "load->dynamic", "dynamic->return"]
         assert not any(t.promotable for t in policy.transitions)
-        calm_only = policy.policy_id == "wrist_impingement" or policy.injury_type == "hyperextension"
+        calm_only = (policy.policy_id == "wrist_impingement" or policy.injury_type == "hyperextension"
+                     or policy.policy_id in {f"{r}_contusion" for r in ["heel", "shin", "quads", "biceps", "triceps", "forearm"]})
         assert policy.live_stages == (["calm"] if calm_only else ["calm", "restore"])
 
 
@@ -57,7 +58,9 @@ def test_shipped_profiles_name_their_family():
         **{f"{region}_impingement": "joint_irritation_or_impingement" for region in [
             "shoulder", "hip", "ankle", "elbow", "wrist"]},
         **{f"{region}_hyperextension": "hyperextension_or_joint_trauma" for region in [
-            "toe", "fingers", "elbow", "wrist", "hand", "shoulder"]}}
+            "toe", "fingers", "elbow", "wrist", "hand", "shoulder"]},
+        **{f"{region}_contusion": "contusion" for region in [
+            "heel", "shin", "quads", "biceps", "triceps", "forearm", "shoulder", "elbow", "wrist", "hand", "fingers"]}}
 
 
 @pytest.mark.parametrize("raw,match", [

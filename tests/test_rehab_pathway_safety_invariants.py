@@ -45,7 +45,9 @@ def test_shipped_policies_match_the_pre_migration_file_exactly():
 @pytest.mark.parametrize("policy_id", [p.policy_id for p in load_clinical_policies()])
 def test_shipped_profiles_cannot_enter_a_higher_stage(policy_id):
     shipped = next(p for p in load_clinical_policies() if p.policy_id == policy_id)
-    expected_stage = "calm" if policy_id == "wrist_impingement" or shipped.injury_type == "hyperextension" else "restore"
+    calm_only = (policy_id == "wrist_impingement" or shipped.injury_type == "hyperextension"
+                 or policy_id in {f"{r}_contusion" for r in ["heel", "shin", "quads", "biceps", "triceps", "forearm"]})
+    expected_stage = "calm" if calm_only else "restore"
     assert shipped.live_stages == (["calm"] if expected_stage == "calm" else ["calm", "restore"])
     assert not any(t.promotable for t in shipped.transitions)
     region, kind = shipped.region, shipped.injury_type
@@ -201,7 +203,8 @@ def test_only_profiles_are_policies_and_families_carry_no_content():
         ("elbow", "sprain"), ("shoulder", "sprain"), ("shoulder", "instability"), ("hand", "sprain"), ("fingers", "sprain"),
         *((region, "tendonitis") for region in ["achilles", "shoulder", "biceps", "forearm", "elbow", "wrist", "hand", "fingers"]),
         *((region, "impingement") for region in ["shoulder", "hip", "ankle", "elbow", "wrist"]),
-        *((region, "hyperextension") for region in ["toe", "fingers", "elbow", "wrist", "hand", "shoulder"])}
+        *((region, "hyperextension") for region in ["toe", "fingers", "elbow", "wrist", "hand", "shoulder"]),
+        *((region, "contusion") for region in ["heel", "shin", "quads", "biceps", "triceps", "forearm", "shoulder", "elbow", "wrist", "hand", "fingers"])}
     for family in catalog["families"]:
         assert set(family) <= {"family_id", "description", "injury_types", "transitions"}
     # Instability coverage requires its own regional profile and reviewed identities.
