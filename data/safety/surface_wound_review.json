@@ -1,0 +1,1458 @@
+{
+  "ankle_blister_footwear_sock_strategy": {
+    "type": "blister",
+    "location": "ankle",
+    "name": "Footwear & Sock Strategy",
+    "content_hash": "439a0913009848a55108854e05a5594753a4cab6619638c995f6c76ae48e00b1",
+    "classification": "UNCERTAIN_REQUIRES_REVIEW",
+    "reason": "Pre-taping before sessions lacks instruction to avoid causative equipment until healed.",
+    "evidence": "NHS blisters",
+    "phase_text": [
+      "Switch to moisture-wicking socks and well-fitted mat shoes and tape known hot spots",
+      "Pre-tape and powder the foot before sessions",
+      "Use only proven, broken-in footwear in fight week"
+    ]
+  },
+  "ankle_blister_protect_the_intact_blister": {
+    "type": "blister",
+    "location": "ankle",
+    "name": "Protect the Intact Blister",
+    "content_hash": "e686ce9372909929dec7be2a26c3beb8c2eea6eaf6b162b85eaaf04bb91bd355",
+    "classification": "SAFE_AS_IS",
+    "reason": "Do not pop; padded/hydrocolloid protection and avoid friction.",
+    "evidence": "NHS blisters",
+    "phase_text": [
+      "Do not pop an intact blister; cover it with a donut pad or hydrocolloid",
+      "Pad the blister before sessions to take pressure off it",
+      "Keep it protected and avoid any new friction"
+    ]
+  },
+  "chest_abrasion_friction_offloading": {
+    "type": "abrasion",
+    "location": "chest",
+    "name": "Friction Offloading",
+    "content_hash": "5d77c88e8ada022ffb214c213709275f73aa02b020e367d7df4c5722b0e011c4",
+    "classification": "REMOVE_FROM_AUTOMATIC_OUTPUT",
+    "reason": "Taping before grappling over raw skin implies contact readiness.",
+    "evidence": "contact boundary",
+    "phase_text": [
+      "Pad the area and keep mat, glove, or gi friction off the raw skin",
+      "Tape or pad the site before grappling or bag work",
+      "Protect the area from re-scraping in the final week"
+    ]
+  },
+  "chest_abrasion_skin_barrier_ointment": {
+    "type": "abrasion",
+    "location": "chest",
+    "name": "Skin Barrier Ointment",
+    "content_hash": "97e22a7f34a51a63be140ee29174c81533d6f2754e69b57f7d6e6518281c4196",
+    "classification": "UNCERTAIN_REQUIRES_REVIEW",
+    "reason": "Unspecified antiseptic on raw skin with routine repeat dosing; agents/indications differ. Not a blanket ban on topical treatment.",
+    "evidence": "NATA trauma",
+    "phase_text": [
+      "Apply an antiseptic barrier ointment to keep it moist and stop the scab cracking",
+      "Reapply after showering and before bed",
+      "Keep the skin supple so it does not crack under contact"
+    ]
+  },
+  "elbow_abrasion_debride_clean_thoroughly": {
+    "type": "abrasion",
+    "location": "elbow",
+    "name": "Debride & Clean Thoroughly",
+    "content_hash": "97d1b51e392e5a72c213f242d525d92806ff78e91322527aadfc95214532583d",
+    "classification": "UNCERTAIN_REQUIRES_REVIEW",
+    "reason": "Name says debride; rinse ALL debris lacks embedded-object/remaining-contamination boundary. Text does not explicitly order cutting or probing.",
+    "evidence": "NHS cuts; NATA trauma",
+    "phase_text": [
+      "Rinse out all grit and debris with saline and clean the raw skin",
+      "Re-clean after sweaty sessions to keep the surface free of contamination",
+      "Keep the healing surface clean and intact"
+    ]
+  },
+  "elbow_abrasion_joint_pad_protection": {
+    "type": "abrasion",
+    "location": "elbow",
+    "name": "Joint Pad Protection",
+    "content_hash": "5010edfe4cb11f3b57428f08cdb4b02febd17d8dfde6f0a8f81fbd993a09a8f4",
+    "classification": "REMOVE_FROM_AUTOMATIC_OUTPUT",
+    "reason": "Explicit live rolls over raw skin protected only by a pad.",
+    "evidence": "contact boundary",
+    "phase_text": [
+      "Dress the mat burn and use a knee or elbow pad for grappling",
+      "Keep the pad on for live rolls to protect the raw skin",
+      "Protect the joint skin from friction pre-fight"
+    ]
+  },
+  "elbow_cut_daily_infection_check": {
+    "type": "cut",
+    "location": "elbow",
+    "name": "Daily Infection Check",
+    "content_hash": "7c46c4f52f9f5db2ce4ce5c4169b24e0e5cbba20f88af24dc758f4a7e7bbd7de",
+    "classification": "SAFE_AS_IS",
+    "reason": "Infection surveillance and review/pause; closed skin is not independent clearance.",
+    "evidence": "NHS cuts",
+    "phase_text": [
+      "Watch for spreading redness, warmth, swelling, pus, or fever and get it reviewed if any appear",
+      "Check the site daily and pause training if infection signs develop",
+      "Confirm the area is clean and closed before competition"
+    ]
+  },
+  "elbow_cut_no_reopen_protection": {
+    "type": "cut",
+    "location": "elbow",
+    "name": "No-Reopen Protection",
+    "content_hash": "92a1f54096800ebe716a6bd96ba9c18edf5f5621291c254f1ac396951bbdc2ff",
+    "classification": "REMOVE_FROM_AUTOMATIC_OUTPUT",
+    "reason": "Padding before sparring implies conditional contact with a healing wound.",
+    "evidence": "contact boundary",
+    "phase_text": [
+      "Avoid stretching, friction, or contact directly over the wound",
+      "Tape or pad the site before sparring and skip live contact if it can split open",
+      "Avoid any contact that could reopen the wound before weigh-in and fight night"
+    ]
+  },
+  "elbow_graze_joint_pad_protection": {
+    "type": "graze",
+    "location": "elbow",
+    "name": "Joint Pad Protection",
+    "content_hash": "5010edfe4cb11f3b57428f08cdb4b02febd17d8dfde6f0a8f81fbd993a09a8f4",
+    "classification": "REMOVE_FROM_AUTOMATIC_OUTPUT",
+    "reason": "Explicit live rolls over raw skin protected only by a pad.",
+    "evidence": "contact boundary",
+    "phase_text": [
+      "Dress the mat burn and use a knee or elbow pad for grappling",
+      "Keep the pad on for live rolls to protect the raw skin",
+      "Protect the joint skin from friction pre-fight"
+    ]
+  },
+  "elbow_graze_skin_barrier_ointment": {
+    "type": "graze",
+    "location": "elbow",
+    "name": "Skin Barrier Ointment",
+    "content_hash": "97e22a7f34a51a63be140ee29174c81533d6f2754e69b57f7d6e6518281c4196",
+    "classification": "UNCERTAIN_REQUIRES_REVIEW",
+    "reason": "Unspecified antiseptic on raw skin with routine repeat dosing; agents/indications differ. Not a blanket ban on topical treatment.",
+    "evidence": "NATA trauma",
+    "phase_text": [
+      "Apply an antiseptic barrier ointment to keep it moist and stop the scab cracking",
+      "Reapply after showering and before bed",
+      "Keep the skin supple so it does not crack under contact"
+    ]
+  },
+  "elbow_laceration_no_reopen_protection": {
+    "type": "laceration",
+    "location": "elbow",
+    "name": "No-Reopen Protection",
+    "content_hash": "92a1f54096800ebe716a6bd96ba9c18edf5f5621291c254f1ac396951bbdc2ff",
+    "classification": "REMOVE_FROM_AUTOMATIC_OUTPUT",
+    "reason": "Padding before sparring implies conditional contact with a healing wound.",
+    "evidence": "contact boundary",
+    "phase_text": [
+      "Avoid stretching, friction, or contact directly over the wound",
+      "Tape or pad the site before sparring and skip live contact if it can split open",
+      "Avoid any contact that could reopen the wound before weigh-in and fight night"
+    ]
+  },
+  "elbow_laceration_scar_mobility_once_closed": {
+    "type": "laceration",
+    "location": "elbow",
+    "name": "Scar Mobility Once Closed",
+    "content_hash": "fcbb5860737b3041de52e698d9a50619214fbc45a3bea418e5bd40ff1d3f4d38",
+    "classification": "UNCERTAIN_REQUIRES_REVIEW",
+    "reason": "Closure alone scopes scar massage and contact tolerance; no patient/assessment context.",
+    "evidence": "contact boundary",
+    "phase_text": [
+      "Leave the wound alone while it is still open",
+      "Once fully closed, use gentle scar massage to keep the skin supple",
+      "Keep the scar moisturised and mobile so it tolerates contact"
+    ]
+  },
+  "eye_cut_brow_orbital_cut_care": {
+    "type": "cut",
+    "location": "eye",
+    "name": "Brow & Orbital Cut Care",
+    "content_hash": "abbba4ebf6209192ca45ce8bf951460ff16aa666902cede53cb3766a042a15d0",
+    "classification": "CLINICIAN_ONLY",
+    "reason": "Automatic closure near the eye and sparring advice without assessment.",
+    "evidence": "NHS cuts; contact boundary",
+    "phase_text": [
+      "Close and dress the brow cut and avoid rubbing the eye area",
+      "Protect the brow in sparring and avoid head clashes",
+      "Confirm the brow is fully closed before competition"
+    ]
+  },
+  "eye_cut_no_reopen_protection": {
+    "type": "cut",
+    "location": "eye",
+    "name": "No-Reopen Protection",
+    "content_hash": "92a1f54096800ebe716a6bd96ba9c18edf5f5621291c254f1ac396951bbdc2ff",
+    "classification": "REMOVE_FROM_AUTOMATIC_OUTPUT",
+    "reason": "Padding before sparring implies conditional contact with a healing wound.",
+    "evidence": "contact boundary",
+    "phase_text": [
+      "Avoid stretching, friction, or contact directly over the wound",
+      "Tape or pad the site before sparring and skip live contact if it can split open",
+      "Avoid any contact that could reopen the wound before weigh-in and fight night"
+    ]
+  },
+  "eye_laceration_brow_orbital_cut_care": {
+    "type": "laceration",
+    "location": "eye",
+    "name": "Brow & Orbital Cut Care",
+    "content_hash": "abbba4ebf6209192ca45ce8bf951460ff16aa666902cede53cb3766a042a15d0",
+    "classification": "CLINICIAN_ONLY",
+    "reason": "Automatic closure near the eye and sparring advice without assessment.",
+    "evidence": "NHS cuts; contact boundary",
+    "phase_text": [
+      "Close and dress the brow cut and avoid rubbing the eye area",
+      "Protect the brow in sparring and avoid head clashes",
+      "Confirm the brow is fully closed before competition"
+    ]
+  },
+  "eye_laceration_clean_approximate_edges": {
+    "type": "laceration",
+    "location": "eye",
+    "name": "Clean & Approximate Edges",
+    "content_hash": "b467943336a1ab3dbf0018a70318d2702e3f4d6e78f3de9731b76393858460b9",
+    "classification": "CLINICIAN_ONLY",
+    "reason": "Automatic closure with glue/strips and repeated edge taping without assessment.",
+    "evidence": "NHS cuts",
+    "phase_text": [
+      "Irrigate the wound, then close with steri-strips or skin glue; get stitches if it is deep, gaping, or over a joint",
+      "Re-support the edges with tape after each session so the wound does not gap open",
+      "Confirm the wound is fully sealed and dry before competition week"
+    ]
+  },
+  "face_abrasion_debride_clean_thoroughly": {
+    "type": "abrasion",
+    "location": "face",
+    "name": "Debride & Clean Thoroughly",
+    "content_hash": "97d1b51e392e5a72c213f242d525d92806ff78e91322527aadfc95214532583d",
+    "classification": "UNCERTAIN_REQUIRES_REVIEW",
+    "reason": "Name says debride; rinse ALL debris lacks embedded-object/remaining-contamination boundary. Text does not explicitly order cutting or probing.",
+    "evidence": "NHS cuts; NATA trauma",
+    "phase_text": [
+      "Rinse out all grit and debris with saline and clean the raw skin",
+      "Re-clean after sweaty sessions to keep the surface free of contamination",
+      "Keep the healing surface clean and intact"
+    ]
+  },
+  "face_abrasion_facial_wound_protection": {
+    "type": "abrasion",
+    "location": "face",
+    "name": "Facial Wound Protection",
+    "content_hash": "1765b86b953a6ca6c093e852fb6698321c59be0d55e9fea7935801425c18115e",
+    "classification": "CLINICIAN_ONLY",
+    "reason": "Butterfly closure; headgear/control sparring is not wound or contact clearance.",
+    "evidence": "NHS cuts; contact boundary",
+    "phase_text": [
+      "Butterfly-close the wound, keep it clean, and sleep on the opposite side",
+      "Wear headgear and control sparring; avoid head contact that could split it",
+      "Seal a well-healed cut and make sure there is no open wound at weigh-in"
+    ]
+  },
+  "face_cut_clean_approximate_edges": {
+    "type": "cut",
+    "location": "face",
+    "name": "Clean & Approximate Edges",
+    "content_hash": "b467943336a1ab3dbf0018a70318d2702e3f4d6e78f3de9731b76393858460b9",
+    "classification": "CLINICIAN_ONLY",
+    "reason": "Automatic closure with glue/strips and repeated edge taping without assessment.",
+    "evidence": "NHS cuts",
+    "phase_text": [
+      "Irrigate the wound, then close with steri-strips or skin glue; get stitches if it is deep, gaping, or over a joint",
+      "Re-support the edges with tape after each session so the wound does not gap open",
+      "Confirm the wound is fully sealed and dry before competition week"
+    ]
+  },
+  "face_cut_facial_wound_protection": {
+    "type": "cut",
+    "location": "face",
+    "name": "Facial Wound Protection",
+    "content_hash": "1765b86b953a6ca6c093e852fb6698321c59be0d55e9fea7935801425c18115e",
+    "classification": "CLINICIAN_ONLY",
+    "reason": "Butterfly closure; headgear/control sparring is not wound or contact clearance.",
+    "evidence": "NHS cuts; contact boundary",
+    "phase_text": [
+      "Butterfly-close the wound, keep it clean, and sleep on the opposite side",
+      "Wear headgear and control sparring; avoid head contact that could split it",
+      "Seal a well-healed cut and make sure there is no open wound at weigh-in"
+    ]
+  },
+  "face_graze_facial_wound_protection": {
+    "type": "graze",
+    "location": "face",
+    "name": "Facial Wound Protection",
+    "content_hash": "1765b86b953a6ca6c093e852fb6698321c59be0d55e9fea7935801425c18115e",
+    "classification": "CLINICIAN_ONLY",
+    "reason": "Butterfly closure; headgear/control sparring is not wound or contact clearance.",
+    "evidence": "NHS cuts; contact boundary",
+    "phase_text": [
+      "Butterfly-close the wound, keep it clean, and sleep on the opposite side",
+      "Wear headgear and control sparring; avoid head contact that could split it",
+      "Seal a well-healed cut and make sure there is no open wound at weigh-in"
+    ]
+  },
+  "face_graze_skin_barrier_ointment": {
+    "type": "graze",
+    "location": "face",
+    "name": "Skin Barrier Ointment",
+    "content_hash": "97e22a7f34a51a63be140ee29174c81533d6f2754e69b57f7d6e6518281c4196",
+    "classification": "UNCERTAIN_REQUIRES_REVIEW",
+    "reason": "Unspecified antiseptic on raw skin with routine repeat dosing; agents/indications differ. Not a blanket ban on topical treatment.",
+    "evidence": "NATA trauma",
+    "phase_text": [
+      "Apply an antiseptic barrier ointment to keep it moist and stop the scab cracking",
+      "Reapply after showering and before bed",
+      "Keep the skin supple so it does not crack under contact"
+    ]
+  },
+  "face_laceration_clean_approximate_edges": {
+    "type": "laceration",
+    "location": "face",
+    "name": "Clean & Approximate Edges",
+    "content_hash": "b467943336a1ab3dbf0018a70318d2702e3f4d6e78f3de9731b76393858460b9",
+    "classification": "CLINICIAN_ONLY",
+    "reason": "Automatic closure with glue/strips and repeated edge taping without assessment.",
+    "evidence": "NHS cuts",
+    "phase_text": [
+      "Irrigate the wound, then close with steri-strips or skin glue; get stitches if it is deep, gaping, or over a joint",
+      "Re-support the edges with tape after each session so the wound does not gap open",
+      "Confirm the wound is fully sealed and dry before competition week"
+    ]
+  },
+  "face_laceration_facial_wound_protection": {
+    "type": "laceration",
+    "location": "face",
+    "name": "Facial Wound Protection",
+    "content_hash": "1765b86b953a6ca6c093e852fb6698321c59be0d55e9fea7935801425c18115e",
+    "classification": "CLINICIAN_ONLY",
+    "reason": "Butterfly closure; headgear/control sparring is not wound or contact clearance.",
+    "evidence": "NHS cuts; contact boundary",
+    "phase_text": [
+      "Butterfly-close the wound, keep it clean, and sleep on the opposite side",
+      "Wear headgear and control sparring; avoid head contact that could split it",
+      "Seal a well-healed cut and make sure there is no open wound at weigh-in"
+    ]
+  },
+  "fingers_blister_deroof_infection_watch": {
+    "type": "blister",
+    "location": "fingers",
+    "name": "Deroof & Infection Watch",
+    "content_hash": "ca1645427b8523730f1f9e0993616dcf37581a7067a29b5dc229d2c99de638c9",
+    "classification": "REMOVE_FROM_AUTOMATIC_OUTPUT",
+    "reason": "Healed OR fully protected before fight night suggests dressing alone clears contact.",
+    "evidence": "NHS blisters; contact boundary",
+    "phase_text": [
+      "Watch for the roof tearing off, redness, or pus",
+      "Pause friction work if the raw base is exposed",
+      "Confirm it is healed or fully protected before fight night"
+    ]
+  },
+  "fingers_blister_grip_friction_strategy": {
+    "type": "blister",
+    "location": "fingers",
+    "name": "Grip Friction Strategy",
+    "content_hash": "f5355e1142e07f1054ca0fa40762b7e5203cf63362bc03939f0249150aac514a",
+    "classification": "REMOVE_FROM_AUTOMATIC_OUTPUT",
+    "reason": "Trim torn calluses flat could remove living blister skin; no clinical scope.",
+    "evidence": "NHS blisters",
+    "phase_text": [
+      "Use chalk, grips, or tape and trim torn calluses flat",
+      "Tape the palm hot spots and manage pulling volume",
+      "Keep the grip protected and avoid new high-friction work"
+    ]
+  },
+  "fingers_cut_knuckle_cut_wrapping": {
+    "type": "cut",
+    "location": "fingers",
+    "name": "Knuckle Cut Wrapping",
+    "content_hash": "a04aa8c6e64c93d129504eda69d9089c1464094590b19c95604cbaf4fe380567",
+    "classification": "CLINICIAN_ONLY",
+    "reason": "Automatic knuckle closure; hand wounds may need assessment.",
+    "evidence": "NHS cuts",
+    "phase_text": [
+      "Clean and close the knuckle split and stay off the bag",
+      "Add knuckle padding under wraps and avoid bag work until it closes",
+      "Confirm it is sealed before gloving up"
+    ]
+  },
+  "fingers_cut_waterproof_occlusive_dressing": {
+    "type": "cut",
+    "location": "fingers",
+    "name": "Waterproof Occlusive Dressing",
+    "content_hash": "08cf08497493887359b7937cc1fd921eb9a5b9502eaabfc30c400e1d79d9fbb0",
+    "classification": "SAFE_AS_IS",
+    "reason": "Clean dry dressing, changed when wet/dirty; does not authorise contact.",
+    "evidence": "NHS cuts",
+    "phase_text": [
+      "Cover with a waterproof dressing; change it daily and whenever it gets sweaty",
+      "Re-dress before every session and protect the edges from sweat softening",
+      "Switch to a light protective cover once the wound has closed"
+    ]
+  },
+  "foot_blister_footwear_sock_strategy": {
+    "type": "blister",
+    "location": "foot",
+    "name": "Footwear & Sock Strategy",
+    "content_hash": "439a0913009848a55108854e05a5594753a4cab6619638c995f6c76ae48e00b1",
+    "classification": "UNCERTAIN_REQUIRES_REVIEW",
+    "reason": "Pre-taping before sessions lacks instruction to avoid causative equipment until healed.",
+    "evidence": "NHS blisters",
+    "phase_text": [
+      "Switch to moisture-wicking socks and well-fitted mat shoes and tape known hot spots",
+      "Pre-tape and powder the foot before sessions",
+      "Use only proven, broken-in footwear in fight week"
+    ]
+  },
+  "foot_blister_protect_the_intact_blister": {
+    "type": "blister",
+    "location": "foot",
+    "name": "Protect the Intact Blister",
+    "content_hash": "e686ce9372909929dec7be2a26c3beb8c2eea6eaf6b162b85eaaf04bb91bd355",
+    "classification": "SAFE_AS_IS",
+    "reason": "Do not pop; padded/hydrocolloid protection and avoid friction.",
+    "evidence": "NHS blisters",
+    "phase_text": [
+      "Do not pop an intact blister; cover it with a donut pad or hydrocolloid",
+      "Pad the blister before sessions to take pressure off it",
+      "Keep it protected and avoid any new friction"
+    ]
+  },
+  "foot_cut_daily_infection_check": {
+    "type": "cut",
+    "location": "foot",
+    "name": "Daily Infection Check",
+    "content_hash": "7c46c4f52f9f5db2ce4ce5c4169b24e0e5cbba20f88af24dc758f4a7e7bbd7de",
+    "classification": "SAFE_AS_IS",
+    "reason": "Infection surveillance and review/pause; closed skin is not independent clearance.",
+    "evidence": "NHS cuts",
+    "phase_text": [
+      "Watch for spreading redness, warmth, swelling, pus, or fever and get it reviewed if any appear",
+      "Check the site daily and pause training if infection signs develop",
+      "Confirm the area is clean and closed before competition"
+    ]
+  },
+  "foot_cut_waterproof_occlusive_dressing": {
+    "type": "cut",
+    "location": "foot",
+    "name": "Waterproof Occlusive Dressing",
+    "content_hash": "08cf08497493887359b7937cc1fd921eb9a5b9502eaabfc30c400e1d79d9fbb0",
+    "classification": "SAFE_AS_IS",
+    "reason": "Clean dry dressing, changed when wet/dirty; does not authorise contact.",
+    "evidence": "NHS cuts",
+    "phase_text": [
+      "Cover with a waterproof dressing; change it daily and whenever it gets sweaty",
+      "Re-dress before every session and protect the edges from sweat softening",
+      "Switch to a light protective cover once the wound has closed"
+    ]
+  },
+  "foot_graze_friction_offloading": {
+    "type": "graze",
+    "location": "foot",
+    "name": "Friction Offloading",
+    "content_hash": "5d77c88e8ada022ffb214c213709275f73aa02b020e367d7df4c5722b0e011c4",
+    "classification": "REMOVE_FROM_AUTOMATIC_OUTPUT",
+    "reason": "Taping before grappling over raw skin implies contact readiness.",
+    "evidence": "contact boundary",
+    "phase_text": [
+      "Pad the area and keep mat, glove, or gi friction off the raw skin",
+      "Tape or pad the site before grappling or bag work",
+      "Protect the area from re-scraping in the final week"
+    ]
+  },
+  "foot_graze_skin_barrier_ointment": {
+    "type": "graze",
+    "location": "foot",
+    "name": "Skin Barrier Ointment",
+    "content_hash": "97e22a7f34a51a63be140ee29174c81533d6f2754e69b57f7d6e6518281c4196",
+    "classification": "UNCERTAIN_REQUIRES_REVIEW",
+    "reason": "Unspecified antiseptic on raw skin with routine repeat dosing; agents/indications differ. Not a blanket ban on topical treatment.",
+    "evidence": "NATA trauma",
+    "phase_text": [
+      "Apply an antiseptic barrier ointment to keep it moist and stop the scab cracking",
+      "Reapply after showering and before bed",
+      "Keep the skin supple so it does not crack under contact"
+    ]
+  },
+  "forearm_abrasion_friction_offloading": {
+    "type": "abrasion",
+    "location": "forearm",
+    "name": "Friction Offloading",
+    "content_hash": "5d77c88e8ada022ffb214c213709275f73aa02b020e367d7df4c5722b0e011c4",
+    "classification": "REMOVE_FROM_AUTOMATIC_OUTPUT",
+    "reason": "Taping before grappling over raw skin implies contact readiness.",
+    "evidence": "contact boundary",
+    "phase_text": [
+      "Pad the area and keep mat, glove, or gi friction off the raw skin",
+      "Tape or pad the site before grappling or bag work",
+      "Protect the area from re-scraping in the final week"
+    ]
+  },
+  "forearm_abrasion_moist_healing_dressing": {
+    "type": "abrasion",
+    "location": "forearm",
+    "name": "Moist-Healing Dressing",
+    "content_hash": "8a041d751634b2aee9392ef14ec327db2282e4a2f5a55e266973f59dbf8d37a3",
+    "classification": "SAFE_AS_IS",
+    "reason": "Non-stick/hydrocolloid protection; does not authorise contact.",
+    "evidence": "NATA trauma",
+    "phase_text": [
+      "Cover with a non-stick dressing or hydrocolloid to keep it moist and protected",
+      "Re-dress before training to cut down friction over the raw skin",
+      "Use a minimal protective cover once new skin has formed"
+    ]
+  },
+  "forearm_cut_no_reopen_protection": {
+    "type": "cut",
+    "location": "forearm",
+    "name": "No-Reopen Protection",
+    "content_hash": "92a1f54096800ebe716a6bd96ba9c18edf5f5621291c254f1ac396951bbdc2ff",
+    "classification": "REMOVE_FROM_AUTOMATIC_OUTPUT",
+    "reason": "Padding before sparring implies conditional contact with a healing wound.",
+    "evidence": "contact boundary",
+    "phase_text": [
+      "Avoid stretching, friction, or contact directly over the wound",
+      "Tape or pad the site before sparring and skip live contact if it can split open",
+      "Avoid any contact that could reopen the wound before weigh-in and fight night"
+    ]
+  },
+  "forearm_cut_waterproof_occlusive_dressing": {
+    "type": "cut",
+    "location": "forearm",
+    "name": "Waterproof Occlusive Dressing",
+    "content_hash": "08cf08497493887359b7937cc1fd921eb9a5b9502eaabfc30c400e1d79d9fbb0",
+    "classification": "SAFE_AS_IS",
+    "reason": "Clean dry dressing, changed when wet/dirty; does not authorise contact.",
+    "evidence": "NHS cuts",
+    "phase_text": [
+      "Cover with a waterproof dressing; change it daily and whenever it gets sweaty",
+      "Re-dress before every session and protect the edges from sweat softening",
+      "Switch to a light protective cover once the wound has closed"
+    ]
+  },
+  "forearm_graze_friction_offloading": {
+    "type": "graze",
+    "location": "forearm",
+    "name": "Friction Offloading",
+    "content_hash": "5d77c88e8ada022ffb214c213709275f73aa02b020e367d7df4c5722b0e011c4",
+    "classification": "REMOVE_FROM_AUTOMATIC_OUTPUT",
+    "reason": "Taping before grappling over raw skin implies contact readiness.",
+    "evidence": "contact boundary",
+    "phase_text": [
+      "Pad the area and keep mat, glove, or gi friction off the raw skin",
+      "Tape or pad the site before grappling or bag work",
+      "Protect the area from re-scraping in the final week"
+    ]
+  },
+  "forearm_graze_moist_healing_dressing": {
+    "type": "graze",
+    "location": "forearm",
+    "name": "Moist-Healing Dressing",
+    "content_hash": "8a041d751634b2aee9392ef14ec327db2282e4a2f5a55e266973f59dbf8d37a3",
+    "classification": "SAFE_AS_IS",
+    "reason": "Non-stick/hydrocolloid protection; does not authorise contact.",
+    "evidence": "NATA trauma",
+    "phase_text": [
+      "Cover with a non-stick dressing or hydrocolloid to keep it moist and protected",
+      "Re-dress before training to cut down friction over the raw skin",
+      "Use a minimal protective cover once new skin has formed"
+    ]
+  },
+  "forearm_laceration_clean_approximate_edges": {
+    "type": "laceration",
+    "location": "forearm",
+    "name": "Clean & Approximate Edges",
+    "content_hash": "b467943336a1ab3dbf0018a70318d2702e3f4d6e78f3de9731b76393858460b9",
+    "classification": "CLINICIAN_ONLY",
+    "reason": "Automatic closure with glue/strips and repeated edge taping without assessment.",
+    "evidence": "NHS cuts",
+    "phase_text": [
+      "Irrigate the wound, then close with steri-strips or skin glue; get stitches if it is deep, gaping, or over a joint",
+      "Re-support the edges with tape after each session so the wound does not gap open",
+      "Confirm the wound is fully sealed and dry before competition week"
+    ]
+  },
+  "forearm_laceration_no_reopen_protection": {
+    "type": "laceration",
+    "location": "forearm",
+    "name": "No-Reopen Protection",
+    "content_hash": "92a1f54096800ebe716a6bd96ba9c18edf5f5621291c254f1ac396951bbdc2ff",
+    "classification": "REMOVE_FROM_AUTOMATIC_OUTPUT",
+    "reason": "Padding before sparring implies conditional contact with a healing wound.",
+    "evidence": "contact boundary",
+    "phase_text": [
+      "Avoid stretching, friction, or contact directly over the wound",
+      "Tape or pad the site before sparring and skip live contact if it can split open",
+      "Avoid any contact that could reopen the wound before weigh-in and fight night"
+    ]
+  },
+  "hand_abrasion_daily_infection_check": {
+    "type": "abrasion",
+    "location": "hand",
+    "name": "Daily Infection Check",
+    "content_hash": "7c46c4f52f9f5db2ce4ce5c4169b24e0e5cbba20f88af24dc758f4a7e7bbd7de",
+    "classification": "SAFE_AS_IS",
+    "reason": "Infection surveillance and review/pause; closed skin is not independent clearance.",
+    "evidence": "NHS cuts",
+    "phase_text": [
+      "Watch for spreading redness, warmth, swelling, pus, or fever and get it reviewed if any appear",
+      "Check the site daily and pause training if infection signs develop",
+      "Confirm the area is clean and closed before competition"
+    ]
+  },
+  "hand_abrasion_friction_offloading": {
+    "type": "abrasion",
+    "location": "hand",
+    "name": "Friction Offloading",
+    "content_hash": "5d77c88e8ada022ffb214c213709275f73aa02b020e367d7df4c5722b0e011c4",
+    "classification": "REMOVE_FROM_AUTOMATIC_OUTPUT",
+    "reason": "Taping before grappling over raw skin implies contact readiness.",
+    "evidence": "contact boundary",
+    "phase_text": [
+      "Pad the area and keep mat, glove, or gi friction off the raw skin",
+      "Tape or pad the site before grappling or bag work",
+      "Protect the area from re-scraping in the final week"
+    ]
+  },
+  "hand_blister_grip_friction_strategy": {
+    "type": "blister",
+    "location": "hand",
+    "name": "Grip Friction Strategy",
+    "content_hash": "f5355e1142e07f1054ca0fa40762b7e5203cf63362bc03939f0249150aac514a",
+    "classification": "REMOVE_FROM_AUTOMATIC_OUTPUT",
+    "reason": "Trim torn calluses flat could remove living blister skin; no clinical scope.",
+    "evidence": "NHS blisters",
+    "phase_text": [
+      "Use chalk, grips, or tape and trim torn calluses flat",
+      "Tape the palm hot spots and manage pulling volume",
+      "Keep the grip protected and avoid new high-friction work"
+    ]
+  },
+  "hand_blister_protect_the_intact_blister": {
+    "type": "blister",
+    "location": "hand",
+    "name": "Protect the Intact Blister",
+    "content_hash": "e686ce9372909929dec7be2a26c3beb8c2eea6eaf6b162b85eaaf04bb91bd355",
+    "classification": "SAFE_AS_IS",
+    "reason": "Do not pop; padded/hydrocolloid protection and avoid friction.",
+    "evidence": "NHS blisters",
+    "phase_text": [
+      "Do not pop an intact blister; cover it with a donut pad or hydrocolloid",
+      "Pad the blister before sessions to take pressure off it",
+      "Keep it protected and avoid any new friction"
+    ]
+  },
+  "hand_cut_daily_infection_check": {
+    "type": "cut",
+    "location": "hand",
+    "name": "Daily Infection Check",
+    "content_hash": "7c46c4f52f9f5db2ce4ce5c4169b24e0e5cbba20f88af24dc758f4a7e7bbd7de",
+    "classification": "SAFE_AS_IS",
+    "reason": "Infection surveillance and review/pause; closed skin is not independent clearance.",
+    "evidence": "NHS cuts",
+    "phase_text": [
+      "Watch for spreading redness, warmth, swelling, pus, or fever and get it reviewed if any appear",
+      "Check the site daily and pause training if infection signs develop",
+      "Confirm the area is clean and closed before competition"
+    ]
+  },
+  "hand_cut_knuckle_cut_wrapping": {
+    "type": "cut",
+    "location": "hand",
+    "name": "Knuckle Cut Wrapping",
+    "content_hash": "a04aa8c6e64c93d129504eda69d9089c1464094590b19c95604cbaf4fe380567",
+    "classification": "CLINICIAN_ONLY",
+    "reason": "Automatic knuckle closure; hand wounds may need assessment.",
+    "evidence": "NHS cuts",
+    "phase_text": [
+      "Clean and close the knuckle split and stay off the bag",
+      "Add knuckle padding under wraps and avoid bag work until it closes",
+      "Confirm it is sealed before gloving up"
+    ]
+  },
+  "hand_graze_friction_offloading": {
+    "type": "graze",
+    "location": "hand",
+    "name": "Friction Offloading",
+    "content_hash": "5d77c88e8ada022ffb214c213709275f73aa02b020e367d7df4c5722b0e011c4",
+    "classification": "REMOVE_FROM_AUTOMATIC_OUTPUT",
+    "reason": "Taping before grappling over raw skin implies contact readiness.",
+    "evidence": "contact boundary",
+    "phase_text": [
+      "Pad the area and keep mat, glove, or gi friction off the raw skin",
+      "Tape or pad the site before grappling or bag work",
+      "Protect the area from re-scraping in the final week"
+    ]
+  },
+  "hand_graze_skin_barrier_ointment": {
+    "type": "graze",
+    "location": "hand",
+    "name": "Skin Barrier Ointment",
+    "content_hash": "97e22a7f34a51a63be140ee29174c81533d6f2754e69b57f7d6e6518281c4196",
+    "classification": "UNCERTAIN_REQUIRES_REVIEW",
+    "reason": "Unspecified antiseptic on raw skin with routine repeat dosing; agents/indications differ. Not a blanket ban on topical treatment.",
+    "evidence": "NATA trauma",
+    "phase_text": [
+      "Apply an antiseptic barrier ointment to keep it moist and stop the scab cracking",
+      "Reapply after showering and before bed",
+      "Keep the skin supple so it does not crack under contact"
+    ]
+  },
+  "hand_laceration_clean_approximate_edges": {
+    "type": "laceration",
+    "location": "hand",
+    "name": "Clean & Approximate Edges",
+    "content_hash": "b467943336a1ab3dbf0018a70318d2702e3f4d6e78f3de9731b76393858460b9",
+    "classification": "CLINICIAN_ONLY",
+    "reason": "Automatic closure with glue/strips and repeated edge taping without assessment.",
+    "evidence": "NHS cuts",
+    "phase_text": [
+      "Irrigate the wound, then close with steri-strips or skin glue; get stitches if it is deep, gaping, or over a joint",
+      "Re-support the edges with tape after each session so the wound does not gap open",
+      "Confirm the wound is fully sealed and dry before competition week"
+    ]
+  },
+  "hand_laceration_knuckle_cut_wrapping": {
+    "type": "laceration",
+    "location": "hand",
+    "name": "Knuckle Cut Wrapping",
+    "content_hash": "a04aa8c6e64c93d129504eda69d9089c1464094590b19c95604cbaf4fe380567",
+    "classification": "CLINICIAN_ONLY",
+    "reason": "Automatic knuckle closure; hand wounds may need assessment.",
+    "evidence": "NHS cuts",
+    "phase_text": [
+      "Clean and close the knuckle split and stay off the bag",
+      "Add knuckle padding under wraps and avoid bag work until it closes",
+      "Confirm it is sealed before gloving up"
+    ]
+  },
+  "heel_blister_footwear_sock_strategy": {
+    "type": "blister",
+    "location": "heel",
+    "name": "Footwear & Sock Strategy",
+    "content_hash": "439a0913009848a55108854e05a5594753a4cab6619638c995f6c76ae48e00b1",
+    "classification": "UNCERTAIN_REQUIRES_REVIEW",
+    "reason": "Pre-taping before sessions lacks instruction to avoid causative equipment until healed.",
+    "evidence": "NHS blisters",
+    "phase_text": [
+      "Switch to moisture-wicking socks and well-fitted mat shoes and tape known hot spots",
+      "Pre-tape and powder the foot before sessions",
+      "Use only proven, broken-in footwear in fight week"
+    ]
+  },
+  "heel_blister_sterile_drainage_if_tense": {
+    "type": "blister",
+    "location": "heel",
+    "name": "Sterile Drainage If Tense",
+    "content_hash": "767fa940ce719441a2d0474273613619b6e91fe58f2bc5e6dc6422b45fdf5cae",
+    "classification": "DEPRECATE",
+    "reason": "Athlete-directed needle puncture/drainage. GP assessment/treatment is separate.",
+    "evidence": "NHS blisters",
+    "phase_text": [
+      "If it is large and painful, drain at the edge with a sterile needle, leave the roof on, and dress it",
+      "Keep it clean and re-dressed and do not peel the roof off",
+      "Make sure it is dry and closed before competition"
+    ]
+  },
+  "hip_abrasion_friction_offloading": {
+    "type": "abrasion",
+    "location": "hip",
+    "name": "Friction Offloading",
+    "content_hash": "5d77c88e8ada022ffb214c213709275f73aa02b020e367d7df4c5722b0e011c4",
+    "classification": "REMOVE_FROM_AUTOMATIC_OUTPUT",
+    "reason": "Taping before grappling over raw skin implies contact readiness.",
+    "evidence": "contact boundary",
+    "phase_text": [
+      "Pad the area and keep mat, glove, or gi friction off the raw skin",
+      "Tape or pad the site before grappling or bag work",
+      "Protect the area from re-scraping in the final week"
+    ]
+  },
+  "hip_abrasion_skin_barrier_ointment": {
+    "type": "abrasion",
+    "location": "hip",
+    "name": "Skin Barrier Ointment",
+    "content_hash": "97e22a7f34a51a63be140ee29174c81533d6f2754e69b57f7d6e6518281c4196",
+    "classification": "UNCERTAIN_REQUIRES_REVIEW",
+    "reason": "Unspecified antiseptic on raw skin with routine repeat dosing; agents/indications differ. Not a blanket ban on topical treatment.",
+    "evidence": "NATA trauma",
+    "phase_text": [
+      "Apply an antiseptic barrier ointment to keep it moist and stop the scab cracking",
+      "Reapply after showering and before bed",
+      "Keep the skin supple so it does not crack under contact"
+    ]
+  },
+  "hip_graze_friction_offloading": {
+    "type": "graze",
+    "location": "hip",
+    "name": "Friction Offloading",
+    "content_hash": "5d77c88e8ada022ffb214c213709275f73aa02b020e367d7df4c5722b0e011c4",
+    "classification": "REMOVE_FROM_AUTOMATIC_OUTPUT",
+    "reason": "Taping before grappling over raw skin implies contact readiness.",
+    "evidence": "contact boundary",
+    "phase_text": [
+      "Pad the area and keep mat, glove, or gi friction off the raw skin",
+      "Tape or pad the site before grappling or bag work",
+      "Protect the area from re-scraping in the final week"
+    ]
+  },
+  "hip_graze_moist_healing_dressing": {
+    "type": "graze",
+    "location": "hip",
+    "name": "Moist-Healing Dressing",
+    "content_hash": "8a041d751634b2aee9392ef14ec327db2282e4a2f5a55e266973f59dbf8d37a3",
+    "classification": "SAFE_AS_IS",
+    "reason": "Non-stick/hydrocolloid protection; does not authorise contact.",
+    "evidence": "NATA trauma",
+    "phase_text": [
+      "Cover with a non-stick dressing or hydrocolloid to keep it moist and protected",
+      "Re-dress before training to cut down friction over the raw skin",
+      "Use a minimal protective cover once new skin has formed"
+    ]
+  },
+  "jaw_cut_facial_wound_protection": {
+    "type": "cut",
+    "location": "jaw",
+    "name": "Facial Wound Protection",
+    "content_hash": "1765b86b953a6ca6c093e852fb6698321c59be0d55e9fea7935801425c18115e",
+    "classification": "CLINICIAN_ONLY",
+    "reason": "Butterfly closure; headgear/control sparring is not wound or contact clearance.",
+    "evidence": "NHS cuts; contact boundary",
+    "phase_text": [
+      "Butterfly-close the wound, keep it clean, and sleep on the opposite side",
+      "Wear headgear and control sparring; avoid head contact that could split it",
+      "Seal a well-healed cut and make sure there is no open wound at weigh-in"
+    ]
+  },
+  "jaw_cut_waterproof_occlusive_dressing": {
+    "type": "cut",
+    "location": "jaw",
+    "name": "Waterproof Occlusive Dressing",
+    "content_hash": "08cf08497493887359b7937cc1fd921eb9a5b9502eaabfc30c400e1d79d9fbb0",
+    "classification": "SAFE_AS_IS",
+    "reason": "Clean dry dressing, changed when wet/dirty; does not authorise contact.",
+    "evidence": "NHS cuts",
+    "phase_text": [
+      "Cover with a waterproof dressing; change it daily and whenever it gets sweaty",
+      "Re-dress before every session and protect the edges from sweat softening",
+      "Switch to a light protective cover once the wound has closed"
+    ]
+  },
+  "jaw_laceration_facial_wound_protection": {
+    "type": "laceration",
+    "location": "jaw",
+    "name": "Facial Wound Protection",
+    "content_hash": "1765b86b953a6ca6c093e852fb6698321c59be0d55e9fea7935801425c18115e",
+    "classification": "CLINICIAN_ONLY",
+    "reason": "Butterfly closure; headgear/control sparring is not wound or contact clearance.",
+    "evidence": "NHS cuts; contact boundary",
+    "phase_text": [
+      "Butterfly-close the wound, keep it clean, and sleep on the opposite side",
+      "Wear headgear and control sparring; avoid head contact that could split it",
+      "Seal a well-healed cut and make sure there is no open wound at weigh-in"
+    ]
+  },
+  "jaw_laceration_no_reopen_protection": {
+    "type": "laceration",
+    "location": "jaw",
+    "name": "No-Reopen Protection",
+    "content_hash": "92a1f54096800ebe716a6bd96ba9c18edf5f5621291c254f1ac396951bbdc2ff",
+    "classification": "REMOVE_FROM_AUTOMATIC_OUTPUT",
+    "reason": "Padding before sparring implies conditional contact with a healing wound.",
+    "evidence": "contact boundary",
+    "phase_text": [
+      "Avoid stretching, friction, or contact directly over the wound",
+      "Tape or pad the site before sparring and skip live contact if it can split open",
+      "Avoid any contact that could reopen the wound before weigh-in and fight night"
+    ]
+  },
+  "knee_abrasion_joint_pad_protection": {
+    "type": "abrasion",
+    "location": "knee",
+    "name": "Joint Pad Protection",
+    "content_hash": "5010edfe4cb11f3b57428f08cdb4b02febd17d8dfde6f0a8f81fbd993a09a8f4",
+    "classification": "REMOVE_FROM_AUTOMATIC_OUTPUT",
+    "reason": "Explicit live rolls over raw skin protected only by a pad.",
+    "evidence": "contact boundary",
+    "phase_text": [
+      "Dress the mat burn and use a knee or elbow pad for grappling",
+      "Keep the pad on for live rolls to protect the raw skin",
+      "Protect the joint skin from friction pre-fight"
+    ]
+  },
+  "knee_abrasion_moist_healing_dressing": {
+    "type": "abrasion",
+    "location": "knee",
+    "name": "Moist-Healing Dressing",
+    "content_hash": "8a041d751634b2aee9392ef14ec327db2282e4a2f5a55e266973f59dbf8d37a3",
+    "classification": "SAFE_AS_IS",
+    "reason": "Non-stick/hydrocolloid protection; does not authorise contact.",
+    "evidence": "NATA trauma",
+    "phase_text": [
+      "Cover with a non-stick dressing or hydrocolloid to keep it moist and protected",
+      "Re-dress before training to cut down friction over the raw skin",
+      "Use a minimal protective cover once new skin has formed"
+    ]
+  },
+  "knee_cut_no_reopen_protection": {
+    "type": "cut",
+    "location": "knee",
+    "name": "No-Reopen Protection",
+    "content_hash": "92a1f54096800ebe716a6bd96ba9c18edf5f5621291c254f1ac396951bbdc2ff",
+    "classification": "REMOVE_FROM_AUTOMATIC_OUTPUT",
+    "reason": "Padding before sparring implies conditional contact with a healing wound.",
+    "evidence": "contact boundary",
+    "phase_text": [
+      "Avoid stretching, friction, or contact directly over the wound",
+      "Tape or pad the site before sparring and skip live contact if it can split open",
+      "Avoid any contact that could reopen the wound before weigh-in and fight night"
+    ]
+  },
+  "knee_cut_scar_mobility_once_closed": {
+    "type": "cut",
+    "location": "knee",
+    "name": "Scar Mobility Once Closed",
+    "content_hash": "fcbb5860737b3041de52e698d9a50619214fbc45a3bea418e5bd40ff1d3f4d38",
+    "classification": "UNCERTAIN_REQUIRES_REVIEW",
+    "reason": "Closure alone scopes scar massage and contact tolerance; no patient/assessment context.",
+    "evidence": "contact boundary",
+    "phase_text": [
+      "Leave the wound alone while it is still open",
+      "Once fully closed, use gentle scar massage to keep the skin supple",
+      "Keep the scar moisturised and mobile so it tolerates contact"
+    ]
+  },
+  "knee_graze_joint_pad_protection": {
+    "type": "graze",
+    "location": "knee",
+    "name": "Joint Pad Protection",
+    "content_hash": "5010edfe4cb11f3b57428f08cdb4b02febd17d8dfde6f0a8f81fbd993a09a8f4",
+    "classification": "REMOVE_FROM_AUTOMATIC_OUTPUT",
+    "reason": "Explicit live rolls over raw skin protected only by a pad.",
+    "evidence": "contact boundary",
+    "phase_text": [
+      "Dress the mat burn and use a knee or elbow pad for grappling",
+      "Keep the pad on for live rolls to protect the raw skin",
+      "Protect the joint skin from friction pre-fight"
+    ]
+  },
+  "knee_graze_skin_barrier_ointment": {
+    "type": "graze",
+    "location": "knee",
+    "name": "Skin Barrier Ointment",
+    "content_hash": "97e22a7f34a51a63be140ee29174c81533d6f2754e69b57f7d6e6518281c4196",
+    "classification": "UNCERTAIN_REQUIRES_REVIEW",
+    "reason": "Unspecified antiseptic on raw skin with routine repeat dosing; agents/indications differ. Not a blanket ban on topical treatment.",
+    "evidence": "NATA trauma",
+    "phase_text": [
+      "Apply an antiseptic barrier ointment to keep it moist and stop the scab cracking",
+      "Reapply after showering and before bed",
+      "Keep the skin supple so it does not crack under contact"
+    ]
+  },
+  "knee_laceration_daily_infection_check": {
+    "type": "laceration",
+    "location": "knee",
+    "name": "Daily Infection Check",
+    "content_hash": "7c46c4f52f9f5db2ce4ce5c4169b24e0e5cbba20f88af24dc758f4a7e7bbd7de",
+    "classification": "SAFE_AS_IS",
+    "reason": "Infection surveillance and review/pause; closed skin is not independent clearance.",
+    "evidence": "NHS cuts",
+    "phase_text": [
+      "Watch for spreading redness, warmth, swelling, pus, or fever and get it reviewed if any appear",
+      "Check the site daily and pause training if infection signs develop",
+      "Confirm the area is clean and closed before competition"
+    ]
+  },
+  "knee_laceration_no_reopen_protection": {
+    "type": "laceration",
+    "location": "knee",
+    "name": "No-Reopen Protection",
+    "content_hash": "92a1f54096800ebe716a6bd96ba9c18edf5f5621291c254f1ac396951bbdc2ff",
+    "classification": "REMOVE_FROM_AUTOMATIC_OUTPUT",
+    "reason": "Padding before sparring implies conditional contact with a healing wound.",
+    "evidence": "contact boundary",
+    "phase_text": [
+      "Avoid stretching, friction, or contact directly over the wound",
+      "Tape or pad the site before sparring and skip live contact if it can split open",
+      "Avoid any contact that could reopen the wound before weigh-in and fight night"
+    ]
+  },
+  "neck_abrasion_debride_clean_thoroughly": {
+    "type": "abrasion",
+    "location": "neck",
+    "name": "Debride & Clean Thoroughly",
+    "content_hash": "97d1b51e392e5a72c213f242d525d92806ff78e91322527aadfc95214532583d",
+    "classification": "UNCERTAIN_REQUIRES_REVIEW",
+    "reason": "Name says debride; rinse ALL debris lacks embedded-object/remaining-contamination boundary. Text does not explicitly order cutting or probing.",
+    "evidence": "NHS cuts; NATA trauma",
+    "phase_text": [
+      "Rinse out all grit and debris with saline and clean the raw skin",
+      "Re-clean after sweaty sessions to keep the surface free of contamination",
+      "Keep the healing surface clean and intact"
+    ]
+  },
+  "neck_abrasion_friction_offloading": {
+    "type": "abrasion",
+    "location": "neck",
+    "name": "Friction Offloading",
+    "content_hash": "5d77c88e8ada022ffb214c213709275f73aa02b020e367d7df4c5722b0e011c4",
+    "classification": "REMOVE_FROM_AUTOMATIC_OUTPUT",
+    "reason": "Taping before grappling over raw skin implies contact readiness.",
+    "evidence": "contact boundary",
+    "phase_text": [
+      "Pad the area and keep mat, glove, or gi friction off the raw skin",
+      "Tape or pad the site before grappling or bag work",
+      "Protect the area from re-scraping in the final week"
+    ]
+  },
+  "neck_cut_clean_approximate_edges": {
+    "type": "cut",
+    "location": "neck",
+    "name": "Clean & Approximate Edges",
+    "content_hash": "b467943336a1ab3dbf0018a70318d2702e3f4d6e78f3de9731b76393858460b9",
+    "classification": "CLINICIAN_ONLY",
+    "reason": "Automatic closure with glue/strips and repeated edge taping without assessment.",
+    "evidence": "NHS cuts",
+    "phase_text": [
+      "Irrigate the wound, then close with steri-strips or skin glue; get stitches if it is deep, gaping, or over a joint",
+      "Re-support the edges with tape after each session so the wound does not gap open",
+      "Confirm the wound is fully sealed and dry before competition week"
+    ]
+  },
+  "neck_cut_no_reopen_protection": {
+    "type": "cut",
+    "location": "neck",
+    "name": "No-Reopen Protection",
+    "content_hash": "92a1f54096800ebe716a6bd96ba9c18edf5f5621291c254f1ac396951bbdc2ff",
+    "classification": "REMOVE_FROM_AUTOMATIC_OUTPUT",
+    "reason": "Padding before sparring implies conditional contact with a healing wound.",
+    "evidence": "contact boundary",
+    "phase_text": [
+      "Avoid stretching, friction, or contact directly over the wound",
+      "Tape or pad the site before sparring and skip live contact if it can split open",
+      "Avoid any contact that could reopen the wound before weigh-in and fight night"
+    ]
+  },
+  "neck_graze_debride_clean_thoroughly": {
+    "type": "graze",
+    "location": "neck",
+    "name": "Debride & Clean Thoroughly",
+    "content_hash": "97d1b51e392e5a72c213f242d525d92806ff78e91322527aadfc95214532583d",
+    "classification": "UNCERTAIN_REQUIRES_REVIEW",
+    "reason": "Name says debride; rinse ALL debris lacks embedded-object/remaining-contamination boundary. Text does not explicitly order cutting or probing.",
+    "evidence": "NHS cuts; NATA trauma",
+    "phase_text": [
+      "Rinse out all grit and debris with saline and clean the raw skin",
+      "Re-clean after sweaty sessions to keep the surface free of contamination",
+      "Keep the healing surface clean and intact"
+    ]
+  },
+  "neck_graze_skin_barrier_ointment": {
+    "type": "graze",
+    "location": "neck",
+    "name": "Skin Barrier Ointment",
+    "content_hash": "97e22a7f34a51a63be140ee29174c81533d6f2754e69b57f7d6e6518281c4196",
+    "classification": "UNCERTAIN_REQUIRES_REVIEW",
+    "reason": "Unspecified antiseptic on raw skin with routine repeat dosing; agents/indications differ. Not a blanket ban on topical treatment.",
+    "evidence": "NATA trauma",
+    "phase_text": [
+      "Apply an antiseptic barrier ointment to keep it moist and stop the scab cracking",
+      "Reapply after showering and before bed",
+      "Keep the skin supple so it does not crack under contact"
+    ]
+  },
+  "neck_laceration_clean_approximate_edges": {
+    "type": "laceration",
+    "location": "neck",
+    "name": "Clean & Approximate Edges",
+    "content_hash": "b467943336a1ab3dbf0018a70318d2702e3f4d6e78f3de9731b76393858460b9",
+    "classification": "CLINICIAN_ONLY",
+    "reason": "Automatic closure with glue/strips and repeated edge taping without assessment.",
+    "evidence": "NHS cuts",
+    "phase_text": [
+      "Irrigate the wound, then close with steri-strips or skin glue; get stitches if it is deep, gaping, or over a joint",
+      "Re-support the edges with tape after each session so the wound does not gap open",
+      "Confirm the wound is fully sealed and dry before competition week"
+    ]
+  },
+  "neck_laceration_no_reopen_protection": {
+    "type": "laceration",
+    "location": "neck",
+    "name": "No-Reopen Protection",
+    "content_hash": "92a1f54096800ebe716a6bd96ba9c18edf5f5621291c254f1ac396951bbdc2ff",
+    "classification": "REMOVE_FROM_AUTOMATIC_OUTPUT",
+    "reason": "Padding before sparring implies conditional contact with a healing wound.",
+    "evidence": "contact boundary",
+    "phase_text": [
+      "Avoid stretching, friction, or contact directly over the wound",
+      "Tape or pad the site before sparring and skip live contact if it can split open",
+      "Avoid any contact that could reopen the wound before weigh-in and fight night"
+    ]
+  },
+  "shin_abrasion_debride_clean_thoroughly": {
+    "type": "abrasion",
+    "location": "shin",
+    "name": "Debride & Clean Thoroughly",
+    "content_hash": "97d1b51e392e5a72c213f242d525d92806ff78e91322527aadfc95214532583d",
+    "classification": "UNCERTAIN_REQUIRES_REVIEW",
+    "reason": "Name says debride; rinse ALL debris lacks embedded-object/remaining-contamination boundary. Text does not explicitly order cutting or probing.",
+    "evidence": "NHS cuts; NATA trauma",
+    "phase_text": [
+      "Rinse out all grit and debris with saline and clean the raw skin",
+      "Re-clean after sweaty sessions to keep the surface free of contamination",
+      "Keep the healing surface clean and intact"
+    ]
+  },
+  "shin_abrasion_shin_sleeve_protection": {
+    "type": "abrasion",
+    "location": "shin",
+    "name": "Shin Sleeve Protection",
+    "content_hash": "9801a900753de3e4e20adc8923b0fbc688ea692a964c2e50ed24425b7f9da0e8",
+    "classification": "REMOVE_FROM_AUTOMATIC_OUTPUT",
+    "reason": "Guard/sleeve protection alone is not contact clearance.",
+    "evidence": "contact boundary",
+    "phase_text": [
+      "Cover the mat burn with a non-stick dressing and a shin sleeve",
+      "Wear a sleeve under the guard to stop re-scraping",
+      "Protect the shin from re-abrasion before the fight"
+    ]
+  },
+  "shin_blister_fix_the_friction_source": {
+    "type": "blister",
+    "location": "shin",
+    "name": "Fix the Friction Source",
+    "content_hash": "5d34b55f0b9674f6939859df58d227f8c1c9657a40df43f39c02237155ec7a02",
+    "classification": "UNCERTAIN_REQUIRES_REVIEW",
+    "reason": "Pre-taping/lubricant before sessions lacks distinction between prevention and an active blister.",
+    "evidence": "NHS blisters",
+    "phase_text": [
+      "Find the cause — footwear, wraps, or grip — and change socks, wraps, or taping",
+      "Pre-tape hot spots and use lubricant or powder to cut friction",
+      "Lock in proven gear and add no new footwear or wraps on fight week"
+    ]
+  },
+  "shin_blister_shin_sleeve_protection": {
+    "type": "blister",
+    "location": "shin",
+    "name": "Shin Sleeve Protection",
+    "content_hash": "9801a900753de3e4e20adc8923b0fbc688ea692a964c2e50ed24425b7f9da0e8",
+    "classification": "REMOVE_FROM_AUTOMATIC_OUTPUT",
+    "reason": "Guard/sleeve protection alone is not contact clearance.",
+    "evidence": "contact boundary",
+    "phase_text": [
+      "Cover the mat burn with a non-stick dressing and a shin sleeve",
+      "Wear a sleeve under the guard to stop re-scraping",
+      "Protect the shin from re-abrasion before the fight"
+    ]
+  },
+  "shin_cut_daily_infection_check": {
+    "type": "cut",
+    "location": "shin",
+    "name": "Daily Infection Check",
+    "content_hash": "7c46c4f52f9f5db2ce4ce5c4169b24e0e5cbba20f88af24dc758f4a7e7bbd7de",
+    "classification": "SAFE_AS_IS",
+    "reason": "Infection surveillance and review/pause; closed skin is not independent clearance.",
+    "evidence": "NHS cuts",
+    "phase_text": [
+      "Watch for spreading redness, warmth, swelling, pus, or fever and get it reviewed if any appear",
+      "Check the site daily and pause training if infection signs develop",
+      "Confirm the area is clean and closed before competition"
+    ]
+  },
+  "shin_cut_waterproof_occlusive_dressing": {
+    "type": "cut",
+    "location": "shin",
+    "name": "Waterproof Occlusive Dressing",
+    "content_hash": "08cf08497493887359b7937cc1fd921eb9a5b9502eaabfc30c400e1d79d9fbb0",
+    "classification": "SAFE_AS_IS",
+    "reason": "Clean dry dressing, changed when wet/dirty; does not authorise contact.",
+    "evidence": "NHS cuts",
+    "phase_text": [
+      "Cover with a waterproof dressing; change it daily and whenever it gets sweaty",
+      "Re-dress before every session and protect the edges from sweat softening",
+      "Switch to a light protective cover once the wound has closed"
+    ]
+  },
+  "shin_graze_shin_sleeve_protection": {
+    "type": "graze",
+    "location": "shin",
+    "name": "Shin Sleeve Protection",
+    "content_hash": "9801a900753de3e4e20adc8923b0fbc688ea692a964c2e50ed24425b7f9da0e8",
+    "classification": "REMOVE_FROM_AUTOMATIC_OUTPUT",
+    "reason": "Guard/sleeve protection alone is not contact clearance.",
+    "evidence": "contact boundary",
+    "phase_text": [
+      "Cover the mat burn with a non-stick dressing and a shin sleeve",
+      "Wear a sleeve under the guard to stop re-scraping",
+      "Protect the shin from re-abrasion before the fight"
+    ]
+  },
+  "shin_graze_skin_barrier_ointment": {
+    "type": "graze",
+    "location": "shin",
+    "name": "Skin Barrier Ointment",
+    "content_hash": "97e22a7f34a51a63be140ee29174c81533d6f2754e69b57f7d6e6518281c4196",
+    "classification": "UNCERTAIN_REQUIRES_REVIEW",
+    "reason": "Unspecified antiseptic on raw skin with routine repeat dosing; agents/indications differ. Not a blanket ban on topical treatment.",
+    "evidence": "NATA trauma",
+    "phase_text": [
+      "Apply an antiseptic barrier ointment to keep it moist and stop the scab cracking",
+      "Reapply after showering and before bed",
+      "Keep the skin supple so it does not crack under contact"
+    ]
+  },
+  "shin_laceration_clean_approximate_edges": {
+    "type": "laceration",
+    "location": "shin",
+    "name": "Clean & Approximate Edges",
+    "content_hash": "b467943336a1ab3dbf0018a70318d2702e3f4d6e78f3de9731b76393858460b9",
+    "classification": "CLINICIAN_ONLY",
+    "reason": "Automatic closure with glue/strips and repeated edge taping without assessment.",
+    "evidence": "NHS cuts",
+    "phase_text": [
+      "Irrigate the wound, then close with steri-strips or skin glue; get stitches if it is deep, gaping, or over a joint",
+      "Re-support the edges with tape after each session so the wound does not gap open",
+      "Confirm the wound is fully sealed and dry before competition week"
+    ]
+  },
+  "shin_laceration_waterproof_occlusive_dressing": {
+    "type": "laceration",
+    "location": "shin",
+    "name": "Waterproof Occlusive Dressing",
+    "content_hash": "08cf08497493887359b7937cc1fd921eb9a5b9502eaabfc30c400e1d79d9fbb0",
+    "classification": "SAFE_AS_IS",
+    "reason": "Clean dry dressing, changed when wet/dirty; does not authorise contact.",
+    "evidence": "NHS cuts",
+    "phase_text": [
+      "Cover with a waterproof dressing; change it daily and whenever it gets sweaty",
+      "Re-dress before every session and protect the edges from sweat softening",
+      "Switch to a light protective cover once the wound has closed"
+    ]
+  },
+  "shoulder_abrasion_friction_offloading": {
+    "type": "abrasion",
+    "location": "shoulder",
+    "name": "Friction Offloading",
+    "content_hash": "5d77c88e8ada022ffb214c213709275f73aa02b020e367d7df4c5722b0e011c4",
+    "classification": "REMOVE_FROM_AUTOMATIC_OUTPUT",
+    "reason": "Taping before grappling over raw skin implies contact readiness.",
+    "evidence": "contact boundary",
+    "phase_text": [
+      "Pad the area and keep mat, glove, or gi friction off the raw skin",
+      "Tape or pad the site before grappling or bag work",
+      "Protect the area from re-scraping in the final week"
+    ]
+  },
+  "shoulder_abrasion_moist_healing_dressing": {
+    "type": "abrasion",
+    "location": "shoulder",
+    "name": "Moist-Healing Dressing",
+    "content_hash": "8a041d751634b2aee9392ef14ec327db2282e4a2f5a55e266973f59dbf8d37a3",
+    "classification": "SAFE_AS_IS",
+    "reason": "Non-stick/hydrocolloid protection; does not authorise contact.",
+    "evidence": "NATA trauma",
+    "phase_text": [
+      "Cover with a non-stick dressing or hydrocolloid to keep it moist and protected",
+      "Re-dress before training to cut down friction over the raw skin",
+      "Use a minimal protective cover once new skin has formed"
+    ]
+  },
+  "toe_blister_footwear_sock_strategy": {
+    "type": "blister",
+    "location": "toe",
+    "name": "Footwear & Sock Strategy",
+    "content_hash": "439a0913009848a55108854e05a5594753a4cab6619638c995f6c76ae48e00b1",
+    "classification": "UNCERTAIN_REQUIRES_REVIEW",
+    "reason": "Pre-taping before sessions lacks instruction to avoid causative equipment until healed.",
+    "evidence": "NHS blisters",
+    "phase_text": [
+      "Switch to moisture-wicking socks and well-fitted mat shoes and tape known hot spots",
+      "Pre-tape and powder the foot before sessions",
+      "Use only proven, broken-in footwear in fight week"
+    ]
+  },
+  "toe_blister_offload_substitute": {
+    "type": "blister",
+    "location": "toe",
+    "name": "Offload & Substitute",
+    "content_hash": "9f7013eced29961b260ee259fdbd532668b670d83b218acf6f104b81ceee6ebd",
+    "classification": "SAFE_AS_IS",
+    "reason": "Reduce irritated-tissue volume and substitute low-friction work; no contact clearance.",
+    "evidence": "NHS blisters",
+    "phase_text": [
+      "Reduce volume on the irritated tissue while it settles",
+      "Swap in low-friction conditioning so the blister can heal",
+      "Keep only protected, pain-free work going into the fight"
+    ]
+  },
+  "unspecified_abrasion_debride_clean_thoroughly": {
+    "type": "abrasion",
+    "location": "unspecified",
+    "name": "Debride & Clean Thoroughly",
+    "content_hash": "97d1b51e392e5a72c213f242d525d92806ff78e91322527aadfc95214532583d",
+    "classification": "UNCERTAIN_REQUIRES_REVIEW",
+    "reason": "Name says debride; rinse ALL debris lacks embedded-object/remaining-contamination boundary. Text does not explicitly order cutting or probing.",
+    "evidence": "NHS cuts; NATA trauma",
+    "phase_text": [
+      "Rinse out all grit and debris with saline and clean the raw skin",
+      "Re-clean after sweaty sessions to keep the surface free of contamination",
+      "Keep the healing surface clean and intact"
+    ]
+  },
+  "unspecified_abrasion_moist_healing_dressing": {
+    "type": "abrasion",
+    "location": "unspecified",
+    "name": "Moist-Healing Dressing",
+    "content_hash": "8a041d751634b2aee9392ef14ec327db2282e4a2f5a55e266973f59dbf8d37a3",
+    "classification": "SAFE_AS_IS",
+    "reason": "Non-stick/hydrocolloid protection; does not authorise contact.",
+    "evidence": "NATA trauma",
+    "phase_text": [
+      "Cover with a non-stick dressing or hydrocolloid to keep it moist and protected",
+      "Re-dress before training to cut down friction over the raw skin",
+      "Use a minimal protective cover once new skin has formed"
+    ]
+  },
+  "unspecified_blister_fix_the_friction_source": {
+    "type": "blister",
+    "location": "unspecified",
+    "name": "Fix the Friction Source",
+    "content_hash": "5d34b55f0b9674f6939859df58d227f8c1c9657a40df43f39c02237155ec7a02",
+    "classification": "UNCERTAIN_REQUIRES_REVIEW",
+    "reason": "Pre-taping/lubricant before sessions lacks distinction between prevention and an active blister.",
+    "evidence": "NHS blisters",
+    "phase_text": [
+      "Find the cause — footwear, wraps, or grip — and change socks, wraps, or taping",
+      "Pre-tape hot spots and use lubricant or powder to cut friction",
+      "Lock in proven gear and add no new footwear or wraps on fight week"
+    ]
+  },
+  "unspecified_blister_protect_the_intact_blister": {
+    "type": "blister",
+    "location": "unspecified",
+    "name": "Protect the Intact Blister",
+    "content_hash": "e686ce9372909929dec7be2a26c3beb8c2eea6eaf6b162b85eaaf04bb91bd355",
+    "classification": "SAFE_AS_IS",
+    "reason": "Do not pop; padded/hydrocolloid protection and avoid friction.",
+    "evidence": "NHS blisters",
+    "phase_text": [
+      "Do not pop an intact blister; cover it with a donut pad or hydrocolloid",
+      "Pad the blister before sessions to take pressure off it",
+      "Keep it protected and avoid any new friction"
+    ]
+  },
+  "unspecified_cut_clean_approximate_edges": {
+    "type": "cut",
+    "location": "unspecified",
+    "name": "Clean & Approximate Edges",
+    "content_hash": "b467943336a1ab3dbf0018a70318d2702e3f4d6e78f3de9731b76393858460b9",
+    "classification": "CLINICIAN_ONLY",
+    "reason": "Automatic closure with glue/strips and repeated edge taping without assessment.",
+    "evidence": "NHS cuts",
+    "phase_text": [
+      "Irrigate the wound, then close with steri-strips or skin glue; get stitches if it is deep, gaping, or over a joint",
+      "Re-support the edges with tape after each session so the wound does not gap open",
+      "Confirm the wound is fully sealed and dry before competition week"
+    ]
+  },
+  "unspecified_cut_no_reopen_protection": {
+    "type": "cut",
+    "location": "unspecified",
+    "name": "No-Reopen Protection",
+    "content_hash": "92a1f54096800ebe716a6bd96ba9c18edf5f5621291c254f1ac396951bbdc2ff",
+    "classification": "REMOVE_FROM_AUTOMATIC_OUTPUT",
+    "reason": "Padding before sparring implies conditional contact with a healing wound.",
+    "evidence": "contact boundary",
+    "phase_text": [
+      "Avoid stretching, friction, or contact directly over the wound",
+      "Tape or pad the site before sparring and skip live contact if it can split open",
+      "Avoid any contact that could reopen the wound before weigh-in and fight night"
+    ]
+  },
+  "unspecified_graze_debride_clean_thoroughly": {
+    "type": "graze",
+    "location": "unspecified",
+    "name": "Debride & Clean Thoroughly",
+    "content_hash": "97d1b51e392e5a72c213f242d525d92806ff78e91322527aadfc95214532583d",
+    "classification": "UNCERTAIN_REQUIRES_REVIEW",
+    "reason": "Name says debride; rinse ALL debris lacks embedded-object/remaining-contamination boundary. Text does not explicitly order cutting or probing.",
+    "evidence": "NHS cuts; NATA trauma",
+    "phase_text": [
+      "Rinse out all grit and debris with saline and clean the raw skin",
+      "Re-clean after sweaty sessions to keep the surface free of contamination",
+      "Keep the healing surface clean and intact"
+    ]
+  },
+  "unspecified_graze_skin_barrier_ointment": {
+    "type": "graze",
+    "location": "unspecified",
+    "name": "Skin Barrier Ointment",
+    "content_hash": "97e22a7f34a51a63be140ee29174c81533d6f2754e69b57f7d6e6518281c4196",
+    "classification": "UNCERTAIN_REQUIRES_REVIEW",
+    "reason": "Unspecified antiseptic on raw skin with routine repeat dosing; agents/indications differ. Not a blanket ban on topical treatment.",
+    "evidence": "NATA trauma",
+    "phase_text": [
+      "Apply an antiseptic barrier ointment to keep it moist and stop the scab cracking",
+      "Reapply after showering and before bed",
+      "Keep the skin supple so it does not crack under contact"
+    ]
+  },
+  "unspecified_laceration_clean_approximate_edges": {
+    "type": "laceration",
+    "location": "unspecified",
+    "name": "Clean & Approximate Edges",
+    "content_hash": "b467943336a1ab3dbf0018a70318d2702e3f4d6e78f3de9731b76393858460b9",
+    "classification": "CLINICIAN_ONLY",
+    "reason": "Automatic closure with glue/strips and repeated edge taping without assessment.",
+    "evidence": "NHS cuts",
+    "phase_text": [
+      "Irrigate the wound, then close with steri-strips or skin glue; get stitches if it is deep, gaping, or over a joint",
+      "Re-support the edges with tape after each session so the wound does not gap open",
+      "Confirm the wound is fully sealed and dry before competition week"
+    ]
+  },
+  "unspecified_laceration_daily_infection_check": {
+    "type": "laceration",
+    "location": "unspecified",
+    "name": "Daily Infection Check",
+    "content_hash": "7c46c4f52f9f5db2ce4ce5c4169b24e0e5cbba20f88af24dc758f4a7e7bbd7de",
+    "classification": "SAFE_AS_IS",
+    "reason": "Infection surveillance and review/pause; closed skin is not independent clearance.",
+    "evidence": "NHS cuts",
+    "phase_text": [
+      "Watch for spreading redness, warmth, swelling, pus, or fever and get it reviewed if any appear",
+      "Check the site daily and pause training if infection signs develop",
+      "Confirm the area is clean and closed before competition"
+    ]
+  },
+  "upper_back_abrasion_friction_offloading": {
+    "type": "abrasion",
+    "location": "upper_back",
+    "name": "Friction Offloading",
+    "content_hash": "5d77c88e8ada022ffb214c213709275f73aa02b020e367d7df4c5722b0e011c4",
+    "classification": "REMOVE_FROM_AUTOMATIC_OUTPUT",
+    "reason": "Taping before grappling over raw skin implies contact readiness.",
+    "evidence": "contact boundary",
+    "phase_text": [
+      "Pad the area and keep mat, glove, or gi friction off the raw skin",
+      "Tape or pad the site before grappling or bag work",
+      "Protect the area from re-scraping in the final week"
+    ]
+  },
+  "upper_back_abrasion_moist_healing_dressing": {
+    "type": "abrasion",
+    "location": "upper_back",
+    "name": "Moist-Healing Dressing",
+    "content_hash": "8a041d751634b2aee9392ef14ec327db2282e4a2f5a55e266973f59dbf8d37a3",
+    "classification": "SAFE_AS_IS",
+    "reason": "Non-stick/hydrocolloid protection; does not authorise contact.",
+    "evidence": "NATA trauma",
+    "phase_text": [
+      "Cover with a non-stick dressing or hydrocolloid to keep it moist and protected",
+      "Re-dress before training to cut down friction over the raw skin",
+      "Use a minimal protective cover once new skin has formed"
+    ]
+  }
+}

@@ -32,6 +32,7 @@ from fightcamp.session_sequencing import is_support_session as _is_day_support_s
 from fightcamp.weekly_schedule_view import normalize_weekday
 from fightcamp.rehab_clinical import load_clinical_policies
 from fightcamp.rehab_protocols import get_rehab_bank
+from fightcamp.surface_wound_safety import sanitize_surface_guidance
 from api.contracts.injury_policy import resolve_injury_policy, reconcile_session_prescription, rehab_allocation_count
 from api.contracts.clinician_clearance import effective_clinician_clearance
 from api.services.injury_episode_service import apply_episode_observations, episode_observations, delayed_rehab_prompts, exposure_rows_with_observations
@@ -1377,6 +1378,8 @@ def upsert_session_completion(
         )
 
     frozen = existing.get("prescription_snapshot")
+    if frozen and sanitize_surface_guidance(frozen) != frozen and status_value in _TRAINING_COMPLETION_STATUSES and not stop_requested:
+        raise HTTPException(409, "Saved surface guidance was withdrawn. Refresh Today before training.")
     if not is_retro_log and status_value in _TRAINING_COMPLETION_STATUSES and str(existing.get("status")) not in {"done", "modified"}:
         if command and not live and any(injury.get("rehab_decision", {}).get("activation") in {"live", "retired"} for injury in command.open_injuries):
             raise HTTPException(409, "Refresh Today before training: no current session matches this request.")
@@ -3145,13 +3148,15 @@ def _build_today_command_view(
             target_entry, session_relation = next_entry, "next" if next_entry else None
             session_id = _session_id_for_entry(target_entry)
 
+    target_entry = sanitize_surface_guidance(target_entry)
+    today_completion = sanitize_surface_guidance(today_completion)
     view = build_command_view(
         current_training_day=training_day,
         plan=resolved_plan,
         recommendation=recommendation,
         injury_hold_exempt=today_is_support_filler,
         completion=today_completion,
-        next_session=_next_session_payload(target_entry, session_id, relation=session_relation),
+        next_session=sanitize_surface_guidance(_next_session_payload(target_entry, session_id, relation=session_relation)),
         session_scope=session_relation or "none",
         warnings=warnings,
         # Risk precedence per category, freshest signal first: today's check-in,

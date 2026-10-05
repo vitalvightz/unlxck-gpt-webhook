@@ -1,5 +1,7 @@
 from .injury_synonyms import parse_injury_phrase
 from .rehab_protocols import get_rehab_bank, normalize_rehab_location
+from .injury_registry import SURFACE_TISSUE_TYPES
+from .surface_wound_safety import SURFACE_CONTACT_BOUNDARY, approved_surface_drill
 from .weight_cut import (
     is_high_pressure_weight_cut,
     weight_cut_risk_band,
@@ -48,11 +50,15 @@ def _fetch_injury_drills(injuries: list, phase: str) -> list:
             continue
 
         for drill in entry.get("drills", []):
+            if entry_type in SURFACE_TISSUE_TYPES and not approved_surface_drill(drill):
+                continue
             name = drill.get("name")
             notes = drill.get("notes")
             if not name:
                 continue
             entry_str = f"{name} - {notes}" if notes else name
+            if entry_type in SURFACE_TISSUE_TYPES:
+                entry_str += SURFACE_CONTACT_BOUNDARY
             drills.append(entry_str)
             if len(drills) >= 2:
                 return drills

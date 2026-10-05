@@ -13,6 +13,7 @@ from fightcamp.rehab_clinical import ClinicalPolicy, content_hash, validate_clin
 from fightcamp.rehab_schema import normalize_severity_bucket
 from fightcamp.rehab_schema import canonical_rehab_locations
 from fightcamp.rehab_selector import select_rehab_candidate, filter_rehab_candidates
+from fightcamp.surface_wound_safety import sanitize_surface_guidance
 
 from .rehab_stage import resolve_rehab_stage
 from .rehab_progression import resolve_reviewed_progression, episode_setback_at, _instant
@@ -238,7 +239,10 @@ def reconcile_session_prescription(
     """
     live = [d for d in decisions if d.get("activation") in {"live", "retired"}]
     if frozen:
-        snapshot = deepcopy(dict(frozen))
+        snapshot = sanitize_surface_guidance(frozen)
+        if snapshot != frozen:
+            snapshot["safety_hold"] = True
+            snapshot["safety_hold_reason"] = "Saved surface guidance was withdrawn. Refresh your wound-care guidance."
         snapshot["frozen"] = True
         clearance_hold = _clinician_clearance_hold(snapshot.get("session"), injuries)
         if clearance_hold:
@@ -268,7 +272,12 @@ def reconcile_session_prescription(
                           or block.get("policy_review_hash") != (decision.get("prescription") or {}).get("policy_review_hash")):
                 snapshot["safety_hold"] = True
         return snapshot
+    safe_session = sanitize_surface_guidance(session)
+    withdrawn_surface = safe_session != session
+    session = safe_session
     clearance_hold = _clinician_clearance_hold(session, injuries)
+    if withdrawn_surface:
+        clearance_hold = clearance_hold or "Saved surface guidance was withdrawn. Refresh your wound-care guidance."
     if not live and not clearance_hold and allocation_ceiling is None:
         return None
     prescribed = [d for d in live if d.get("outcome") == "prescribed_rehab" and d.get("prescription")
