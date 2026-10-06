@@ -387,7 +387,9 @@ def _source_title_re(name: str) -> re.Pattern[str] | None:
     tokens = re.findall(r"[a-z0-9]+", str(name or "").casefold())
     if not tokens:
         return None
-    title = r"[\s\W]+".join(re.escape(token) for token in tokens)
+    # Closing brackets end a parenthetical name ("Pivot-and-Strike (Rotation
+    # Focus)"), so they may stand between its last word and the delimiter.
+    title = r"[\s\W]+".join(re.escape(token) for token in tokens) + r"[)\]]*"
     return re.compile(
         rf"^\s*(?:[-*•]\s*)?{title}(?:\s+or\s+[^.:,—–]+)?\s*(?:[.:,—–]|\s-\s)", re.IGNORECASE
     )
