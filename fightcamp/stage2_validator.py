@@ -351,8 +351,8 @@ _LATE_FIGHT_ANNOTATION_LABEL = re.compile(
     r"stop\s+rule|easier|"
     # "progression / regression / stop" style labels in any order or combination
     # (e.g. "Progression/regression/stop:", "Regression/stop:", "Stop/regress -").
-    r"(?:progress(?:ion)s?|regress(?:ion)s?|stop)"
-    r"(?:\s*[\/\-]\s*(?:progress(?:ion)s?|regress(?:ion)s?|stop))*|"
+    r"(?:progress(?:ion)?s?|regress(?:ion)?s?|stop)"
+    r"(?:\s*[\/\-]\s*(?:progress(?:ion)?s?|regress(?:ion)?s?|stop))*|"
     r"setup|set[\s-]?up|tempo|load(?:ing)?|dose|dosage|rest|format|"
     r"equipment|targets?|scaling|adjust(?:ment)s?|modif(?:y|ication)s?"
     # Tolerate a parenthetical qualifier before the label punctuation, e.g.
@@ -3063,6 +3063,14 @@ def _stage2_output_incomplete_errors(final_plan_text: str) -> list[dict[str, Any
     return []
 
 
+_PLAIN_PHASE_WEEK_HEADER = re.compile(r"^(?:GPP|SPP|TAPER)\s*[—–-]\s*Week\s+\d+\b", re.IGNORECASE)
+_PLAIN_PLAN_SECTION_HEADER = re.compile(
+    r"^(?:stop rules\b|progress and safety\b|safety summary\b|end of plan\b|"
+    r"nutrition\b|recovery notes?\b|selection rationale\b|athlete profile\b)[^:]*$",
+    re.IGNORECASE,
+)
+
+
 def _is_countdown_block_boundary(line: str) -> bool:
     """Return True when a line ends the current countdown day's body.
 
@@ -3077,7 +3085,11 @@ def _is_countdown_block_boundary(line: str) -> bool:
     """
     if _COUNTDOWN_LABEL_LINE.match(line):
         return False
-    return bool(_MARKDOWN_HEADER.match(line))
+    if _MARKDOWN_HEADER.match(line):
+        return True
+    # Plain-text renders carry the same sections without ``#`` markers: phase
+    # week headers and the plan-wide stop/progress/safety notes after D-0.
+    return bool(_PLAIN_PHASE_WEEK_HEADER.match(line) or _PLAIN_PLAN_SECTION_HEADER.match(line))
 
 
 def _countdown_blocks(final_plan_text: str) -> list[dict[str, Any]]:
@@ -3289,6 +3301,22 @@ def _late_camp_effective_prescription_warnings(
     if not blocks_by_day:
         return []
 
+    # Other sessions can share a D-day with a strength role (a strength block
+    # and a separate conditioning block on D-26). Their selected exercises are
+    # owned and dose-checked by their own roles, not this strength allow-list.
+    other_role_exercises_by_day: dict[int, list[tuple[int, str]]] = defaultdict(list)
+    for week in weeks:
+        for role in week.get("session_roles") or []:
+            if not isinstance(role, dict):
+                continue
+            role_day = _scheduled_role_d_day(week, role)
+            if role_day is None:
+                continue
+            for assignment in role.get("selected_exercise_assignments") or []:
+                name = str((assignment or {}).get("name") or "").strip() if isinstance(assignment, dict) else ""
+                if name:
+                    other_role_exercises_by_day[role_day].append((id(role), name))
+
     warnings: list[dict] = []
     seen: set[tuple[Any, ...]] = set()
     for week in weeks:
@@ -3325,6 +3353,11 @@ def _late_camp_effective_prescription_warnings(
                         ):
                             continue
                         if any(_line_has_exercise(rendered_line, name) for name in allowed_names):
+                            continue
+                        if any(
+                            owner != id(role) and _line_has_exercise(rendered_line, name)
+                            for owner, name in other_role_exercises_by_day.get(d_day, [])
+                        ):
                             continue
                         identity = (
                             d_day,
@@ -3531,7 +3564,7 @@ def _missing_selected_conditioning_assignment_warnings(
 
 _CONDITIONING_COUNT = r"(?P<low>\d+(?:\.\d+)?)(?:\s*[-–]\s*(?P<high>\d+(?:\.\d+)?))?"
 _CONDITIONING_INTERVAL = re.compile(
-    rf"\b{_CONDITIONING_COUNT}\s*(?:rounds?\s*)?[x×]\s*"
+    rf"\b{_CONDITIONING_COUNT}\s*(?:(?:rounds?|sets?|reps?|bursts?|efforts?)\s*)?[x×]\s*"
     r"(?P<work>\d+(?:\.\d+)?)\s*(?P<unit>seconds?|secs?|s|minutes?|mins?|m)\b",
     re.I,
 )
@@ -3545,7 +3578,17 @@ _CONDITIONING_RPE = re.compile(
 )
 _CONDITIONING_REST = re.compile(
     r"\b(?:rest|recovery)\s*[:=@]?\s*(?P<value>\d+(?:\.\d+)?)\s*"
-    r"(?P<unit>seconds?|secs?|s|minutes?|mins?|m)\b",
+    r"(?P<unit>seconds?|secs?|s|minutes?|mins?|m)\b"
+    # Trailing form used by source prescriptions: "1min rest", "120s rest".
+    r"|\b(?P<value_after>\d+(?:\.\d+)?)\s*(?P<unit_after>seconds?|secs?|s|minutes?|mins?|m)\s+"
+    r"(?:rest|recovery|off)\b",
+    re.I,
+)
+# Work-first form: "3min work, 1min rest x 3 rounds" is the same 3 x 3 min
+# interval as "3 rounds x 3 min work; rest 60 sec".
+_CONDITIONING_WORK_FIRST_INTERVAL = re.compile(
+    r"\b(?P<work>\d+(?:\.\d+)?)\s*(?P<unit>seconds?|secs?|s|minutes?|mins?|m)\s+(?:work|on)\b"
+    rf"[^x×]{{0,40}}?[x×]\s*{_CONDITIONING_COUNT}\s*(?:rounds?|sets?|reps?)\b",
     re.I,
 )
 _CONDITIONING_DURATION = re.compile(
@@ -3561,28 +3604,43 @@ def _conditioning_seconds(value: str, unit: str) -> float:
 def _conditioning_dose_bounds(value: str) -> dict[str, Any]:
     """Extract only concrete dose ceilings from an athlete-facing prescription."""
     text = str(value or "").replace("×", "x")
+    interval_matches = sorted(
+        [*_CONDITIONING_INTERVAL.finditer(text), *_CONDITIONING_WORK_FIRST_INTERVAL.finditer(text)],
+        key=lambda match: match.start(),
+    )
     intervals = [
         {
             "count": float(match.group("high") or match.group("low")),
             "work_sec": _conditioning_seconds(match.group("work"), match.group("unit")),
         }
-        for match in _CONDITIONING_INTERVAL.finditer(text)
+        for match in interval_matches
     ]
+    interval_spans = [match.span() for match in interval_matches]
+
+    def _inside_interval(position: int) -> bool:
+        return any(start <= position < end for start, end in interval_spans)
+
+    # "5 x 3 min" and "2 sets x 5 sec" are one interval dose, not an interval
+    # plus a separate set count; reading both made equal doses compare unequal.
     sets = [
         float(match.group("high") or match.group("low"))
         for match in _CONDITIONING_SETS.finditer(text)
+        if not _inside_interval(match.start())
     ]
     rpes = [float(match.group("high") or match.group("low")) for match in _CONDITIONING_RPE.finditer(text)]
+    rest_matches = list(_CONDITIONING_REST.finditer(text))
     rests = [
-        _conditioning_seconds(match.group("value"), match.group("unit"))
-        for match in _CONDITIONING_REST.finditer(text)
+        _conditioning_seconds(
+            match.group("value") or match.group("value_after"),
+            match.group("unit") or match.group("unit_after"),
+        )
+        for match in rest_matches
     ]
-    interval_spans = [match.span() for match in _CONDITIONING_INTERVAL.finditer(text)]
     durations = [
         _conditioning_seconds(match.group("value"), match.group("unit"))
         for match in _CONDITIONING_DURATION.finditer(text)
-        if not any(start <= match.start() < end for start, end in interval_spans)
-        and not any(rest.start() <= match.start() < rest.end() for rest in _CONDITIONING_REST.finditer(text))
+        if not _inside_interval(match.start())
+        and not any(rest.start() <= match.start() < rest.end() for rest in rest_matches)
     ]
     return {
         "intervals": intervals,
