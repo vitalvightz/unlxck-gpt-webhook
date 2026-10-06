@@ -98,6 +98,7 @@ RESPONSE_SCHEMA: dict[str, Any] = {
         "confidence": {"type": "number"},
         "what_is_shown": {"type": "string"},
         "structure_matches": {"type": "boolean"},
+        "context_matches": {"type": "boolean"},
         "added_elements": {"type": "array", "items": {"type": "string"}},
         "form_vs_cue": {"type": "string"},
         "orientation": {"type": "string", "enum": ["landscape", "vertical"]},
@@ -109,6 +110,7 @@ RESPONSE_SCHEMA: dict[str, Any] = {
         "confidence",
         "what_is_shown",
         "structure_matches",
+        "context_matches",
         "added_elements",
         "form_vs_cue",
         "orientation",
@@ -256,6 +258,8 @@ class VideoReview:
     start_s: int | None
     end_s: int | None
     structure_matches: bool = False
+    context_matches: bool = True
+    context_required: bool = False
     added_elements: tuple[str, ...] = ()
     # False when the model omitted added_elements or sent a non-list (possible
     # on the no-schema retry): absence is not proof that nothing was added.
@@ -282,11 +286,18 @@ class RowOutcome:
     search_progress: SearchProgress = field(default_factory=SearchProgress)
 
 
+def _combat_context_required(row: dict[str, str]) -> bool:
+    return (row.get("review_context_required") or "").strip().lower() in {"1", "true", "yes"}
+
+
 def build_prompt(row: dict[str, str]) -> str:
     name = (row.get("example_name") or row.get("exercise_key") or "").strip()
     aliases = ", ".join(a for a in (row.get("aliases") or "").split("|") if a.strip())
     cue = (row.get("plan_cue") or "").strip()
     block_type = (row.get("block_type") or "").strip()
+    review_sport = (row.get("review_sport") or "").strip()
+    review_context = (row.get("review_context") or "").strip()
+    context_required = _combat_context_required(row)
     lines = [
         "You are checking an exercise demo video for a combat-sports training app.",
         f"Exercise: {name}" + (f" (block type: {block_type})" if block_type else ""),
@@ -295,6 +306,16 @@ def build_prompt(row: dict[str, str]) -> str:
         lines.append(f"Other names for the same exercise in our plans: {aliases}")
     if cue:
         lines.append(f"Our coaching cue for it: \"{cue}\"")
+    if review_context:
+        lines.append(f"Canonical public training context: {review_context}")
+    if context_required:
+        lines += [
+            f"REQUIRED SPORT CONTEXT: {review_sport or 'combat sport'}.",
+            "The video must visibly demonstrate this drill in the required combat-sport context.",
+            "A visually similar movement from dance, hockey, general fitness, another unrelated sport,",
+            "or generic rehabilitation is NOT a match merely because the body movement looks similar.",
+            "For an unrelated context, set context_matches=false and do not return verdict='match'.",
+        ]
     lines += [
         "",
         "Watch the video and answer:",
@@ -310,9 +331,11 @@ def build_prompt(row: dict[str, str]) -> str:
         "   any equipment, partner and structure.",
         "4. structure_matches: true only if the drill's structure and training intent are the same",
         "   as the requested exercise and our cue.",
-        "5. added_elements: equipment, constraints, partner behaviour, footwork patterns or drill",
+        "5. context_matches: true only if the visible sport/training context satisfies any REQUIRED",
+        "   SPORT CONTEXT above. If no required context was supplied, return true.",
+        "6. added_elements: equipment, constraints, partner behaviour, footwork patterns or drill",
         "   structure in the video that are NOT part of the requested exercise. Empty list if none.",
-        "6. form_vs_cue: compare the whole drill with the requested exercise and our cue (structure,",
+        "7. form_vs_cue: compare the whole drill with the requested exercise and our cue (structure,",
         "   equipment, intent, pace and technique), listing every difference, or 'consistent with",
         "   cue'. Only describe what you can see.",
         "7. orientation: 'vertical' if the video is portrait (e.g. a YouTube Short), else 'landscape'.",
@@ -404,7 +427,7 @@ def normalize_orientation(value: Any) -> str:
     return "vertical" if _VERTICAL_TERMS.search(text) else "landscape"
 
 
-def parse_review(url: str, text: str) -> VideoReview:
+def parse_review(url: str, text: str, *, context_required: bool = False) -> VideoReview:
     try:
         data = json.loads(_strip_fences(text))
     except json.JSONDecodeError as exc:
@@ -438,6 +461,9 @@ def parse_review(url: str, text: str) -> VideoReview:
             end_s=end_s,
             # Only an explicit true confirms structure; missing fails safe.
             structure_matches=data.get("structure_matches") is True,
+            # Combat context is fail-safe only when the canonical bank marked it required.
+            context_matches=(data.get("context_matches") is True) if context_required else True,
+            context_required=context_required,
             added_elements=added,
             added_elements_reported=isinstance(raw_added, list),
         )
@@ -461,6 +487,8 @@ def enforce_structure(review: VideoReview) -> VideoReview:
         reasons.append("added elements not reported")
     if not review.structure_matches:
         reasons.append("drill structure not confirmed")
+    if review.context_required and not review.context_matches:
+        reasons.append("required combat context not confirmed")
     if not reasons:
         return review
     review.verdict = "partial"
@@ -559,7 +587,11 @@ class GeminiVideoReviewer:
             body = response.json()
         except ValueError as exc:
             raise GeminiError("response was not JSON") from exc
-        return parse_review(url, extract_text(body))
+        return parse_review(
+            url,
+            extract_text(body),
+            context_required=_combat_context_required(row),
+        )
 
 
 def candidate_urls(row: dict[str, str], max_candidates: int, *, exclude: set[str] | None = None) -> list[str]:
