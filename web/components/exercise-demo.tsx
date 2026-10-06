@@ -110,6 +110,9 @@ export function ExerciseDemo({
   const segment = demoSegmentLabel(media);
   const isCoach = media.source === "coach";
   const channel = media.channel_title?.trim() || null;
+  // Only an explicit "portrait" changes the frame: null, undefined and
+  // "landscape" all render the existing 16:9 layout untouched.
+  const portrait = media.orientation === "portrait";
   const playerActive = mode === "loading" || mode === "playing" || mode === "paused";
   const compact = watched && mode === "facade";
   const pinLeadCue = Boolean(leadCue) && !compact && mode !== "error";
@@ -291,7 +294,7 @@ export function ExerciseDemo({
   }
 
   return (
-    <div className="ex-demo" data-mode={mode}>
+    <div className="ex-demo" data-mode={mode} data-orientation={portrait ? "portrait" : undefined}>
       <div className="ex-demo-frame">
         {playerActive ? (
           <div ref={mountRef} className="ex-demo-player" />

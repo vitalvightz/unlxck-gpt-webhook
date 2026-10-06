@@ -39,6 +39,14 @@ YOUTUBE_API_TIMEOUT_SECONDS = 8.0
 # videos.list accepts up to 50 IDs per call (1 quota unit per call).
 _VIDEOS_PER_REQUEST = 50
 
+# With part=player, videos.list reports the embed size only when the request
+# bounds it. The value is arbitrary: only the reported width:height ratio is
+# read (see orientation_from_dimensions).
+_PLAYER_MAX_HEIGHT = 720
+# Matches the exercise_media.orientation check constraint. NULL (not detected
+# yet) is served as None and rendered as landscape.
+VIDEO_ORIENTATIONS = frozenset({"portrait", "landscape"})
+
 _VIDEO_ID_RE = re.compile(r"^[A-Za-z0-9_-]{11}$")
 # A dose the converter appended to the exercise name after a spaced dash:
 # "Assault Bike - 25 min", "Turkish Get-Up – 3 reps per side". The tail must
@@ -114,12 +122,15 @@ def _media_from_row(row: Mapping[str, Any]) -> ExerciseMedia | None:
         end_s = None
     source = "coach" if row.get("source") == "coach" else "curated"
     channel_title = str(row.get("channel_title") or "").strip()[:200] or None
+    orientation = row.get("orientation")
     return ExerciseMedia(
         video_id=video_id,
         start_s=start_s,
         end_s=end_s,
         source=source,
         channel_title=channel_title,
+        # Anything but a stored portrait/landscape is "not detected yet".
+        orientation=orientation if orientation in VIDEO_ORIENTATIONS else None,
     )
 
 
@@ -259,6 +270,23 @@ class VideoCheck:
     title: str | None = None
     channel_title: str | None = None
     made_for_kids: bool | None = None
+    # "portrait" | "landscape", or None when YouTube reported no dimensions.
+    orientation: str | None = None
+
+
+def orientation_from_dimensions(width: Any, height: Any) -> str | None:
+    """Portrait when taller than wide; square counts as landscape.
+
+    None when either side is missing or unusable, so a caller can tell "not
+    reported" from a real answer and keep what is already stored.
+    """
+    try:
+        w, h = float(width), float(height)
+    except (TypeError, ValueError):
+        return None
+    if not (w > 0 and h > 0):  # also rejects NaN
+        return None
+    return "portrait" if h > w else "landscape"
 
 
 def is_youtube_provider_failure(check: VideoCheck) -> bool:
@@ -276,11 +304,15 @@ def youtube_api_key() -> str | None:
 def _classify_video(item: Mapping[str, Any]) -> VideoCheck:
     snippet = item.get("snippet") or {}
     status = item.get("status") or {}
+    player = item.get("player") or {}
     made_for_kids = status.get("madeForKids")
     found = {
         "title": str(snippet.get("title") or "").strip()[:200] or None,
         "channel_title": str(snippet.get("channelTitle") or "").strip()[:200] or None,
         "made_for_kids": made_for_kids if isinstance(made_for_kids, bool) else None,
+        "orientation": orientation_from_dimensions(
+            player.get("embedWidth"), player.get("embedHeight")
+        ),
     }
     upload_status = status.get("uploadStatus")
     if upload_status is not None and upload_status != "processed":
@@ -307,7 +339,8 @@ def check_youtube_videos(
 
     One call covers up to 50 videos and reports what serving needs: whether
     the video still exists and is public or unlisted, whether embedding is
-    allowed, and its Made for Kids status. A video missing from the response
+    allowed, its Made for Kids status, and whether it is portrait or
+    landscape (from the embed dimensions). A video missing from the response
     is deleted or private. Transport errors and non-200 answers (quota, bad
     key) are "unknown": a flaky network must never retire a good video.
     """
@@ -343,9 +376,15 @@ def _check_batch(http: httpx.Client, batch: list[str], api_key: str) -> dict[str
         response = http.get(
             YOUTUBE_VIDEOS_URL,
             params={
-                "part": "snippet,status",
+                "part": "snippet,status,player",
                 "id": ",".join(batch),
-                "fields": "items(id,snippet(title,channelTitle),status(uploadStatus,privacyStatus,embeddable,madeForKids))",
+                # embedWidth / embedHeight are only returned with a size bound.
+                "maxHeight": _PLAYER_MAX_HEIGHT,
+                "fields": (
+                    "items(id,snippet(title,channelTitle),"
+                    "status(uploadStatus,privacyStatus,embeddable,madeForKids),"
+                    "player(embedWidth,embedHeight))"
+                ),
             },
             headers={"X-Goog-Api-Key": api_key},
         )
@@ -453,6 +492,7 @@ def _record_check(
             made_for_kids=result.made_for_kids,
             title=result.title,
             channel_title=result.channel_title,
+            orientation=result.orientation,
         )
     except Exception:  # noqa: BLE001
         logger.warning("exercise media status update failed key=%s", exercise_key, exc_info=True)

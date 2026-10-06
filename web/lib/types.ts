@@ -352,6 +352,8 @@ export type ExerciseMedia = {
   source: "curated" | "coach";
   /** YouTube channel that published the video, credited under the player. */
   channel_title?: string | null;
+  /** Frame shape. Absent or null = not detected yet: render as landscape. */
+  orientation?: "portrait" | "landscape" | null;
 };
 
 export type MeasuredValue = {

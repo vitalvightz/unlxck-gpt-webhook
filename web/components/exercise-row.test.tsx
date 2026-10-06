@@ -139,6 +139,29 @@ test("with media the open row leads with a tap-to-play demo and pins the key cue
   assert.equal(html.includes("Lower on a 3-1-1 tempo."), true);
 });
 
+test("only a portrait video marks the demo; landscape and undetected render the same markup", () => {
+  const render = (orientation?: ExerciseMedia["orientation"]) =>
+    renderToStaticMarkup(
+      <ExerciseMediaProvider
+        media={{ "Romanian Deadlift (RDL)": orientation === undefined ? coachDemo : { ...coachDemo, orientation } }}
+      >
+        <ExerciseRow block={rdl} open onToggle={() => {}} />
+      </ExerciseMediaProvider>,
+    );
+
+  const legacy = render();
+  assert.equal(legacy.includes("data-orientation"), false);
+  // Null (not detected yet) and landscape are byte-identical to a payload
+  // that predates the field: the 16:9 layout is the fallback, not a variant.
+  assert.equal(render(null), legacy);
+  assert.equal(render("landscape"), legacy);
+
+  const portrait = render("portrait");
+  assert.equal(portrait.includes('class="ex-demo" data-mode="facade" data-orientation="portrait"'), true);
+  // Same player, clip and caption: only the frame's shape is flagged.
+  assert.equal(portrait.replace(' data-orientation="portrait"', ""), legacy);
+});
+
 test("collapsed row with media shows a thumbnail and tells screen readers there is a demo", () => {
   const html = renderToStaticMarkup(
     <ExerciseMediaProvider media={{ "Romanian Deadlift (RDL)": { ...coachDemo, source: "curated" } }}>

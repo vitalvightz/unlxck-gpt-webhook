@@ -1559,6 +1559,8 @@ class ExerciseMedia(BaseModel):
     source: Literal["curated", "coach"] = "curated"
     # Shown with the player so a third-party demo credits its creator.
     channel_title: str | None = None
+    # Frame shape for the player. None = not detected yet: render as landscape.
+    orientation: Literal["portrait", "landscape"] | None = None
 
 
 class PlanOutputs(BaseModel):

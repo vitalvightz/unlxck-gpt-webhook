@@ -5197,7 +5197,7 @@ class SupabaseAppStore(CompactGenerationReads):
     # and written only by tools/exercise_media.py and the worker's daily check.
 
     _EXERCISE_MEDIA_SERVED_COLUMNS = (
-        "exercise_key,aliases,video_id,start_s,end_s,source,channel_title,made_for_kids"
+        "exercise_key,aliases,video_id,start_s,end_s,source,channel_title,made_for_kids,orientation"
     )
     # PostgREST caps a single read (1000 rows by default), so reads page until
     # a short page comes back.
@@ -5256,6 +5256,7 @@ class SupabaseAppStore(CompactGenerationReads):
         made_for_kids: bool | None = None,
         title: str | None = None,
         channel_title: str | None = None,
+        orientation: str | None = None,
     ) -> None:
         now_iso = datetime.now(timezone.utc).isoformat()
         payload: dict[str, Any] = {
@@ -5271,6 +5272,9 @@ class SupabaseAppStore(CompactGenerationReads):
             payload["title"] = title[:200]
         if channel_title:
             payload["channel_title"] = channel_title[:200]
+        # No dimensions reported: never null out an orientation already stored.
+        if orientation in ("portrait", "landscape"):
+            payload["orientation"] = orientation
         self._run_with_transient_retry(
             operation=f"update_exercise_media_status key={exercise_key}",
             fn=lambda: self.client.table("exercise_media")

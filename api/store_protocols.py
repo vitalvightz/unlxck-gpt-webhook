@@ -618,6 +618,7 @@ class ExerciseMediaStore(Protocol):
         made_for_kids: bool | None = None,
         title: str | None = None,
         channel_title: str | None = None,
+        orientation: str | None = None,
     ) -> None: ...
 
 
