@@ -520,11 +520,18 @@ async def attempt_structured_plan_for_result(
 
 _CARD_FAILED_STATUSES = frozenset({"invalid_fallback_used", "blocked_by_safety_audit"})
 _SALVAGED_PREFIX = "salvaged: "
+# Schema containment drops converter nodes too; a card that shipped after it is
+# just as much a salvaged card as one pruned for faithfulness.
+_SCHEMA_SALVAGE_PREFIX = "schema_salvage: "
 
 
 def _card_finding_kind(finding: str) -> str:
     """"COUNTDOWN" / "INTRODUCED" / "schema" ... for grouping, never the detail."""
     text = str(finding or "")
+    if text.startswith(_SCHEMA_SALVAGE_PREFIX):
+        return "schema_salvage"
+    if text.startswith("schema_salvage_refused:"):
+        return "schema_salvage_refused"
     for prefix in (_SALVAGED_PREFIX, "faithfulness: "):
         if text.startswith(prefix):
             text = text[len(prefix):]
@@ -552,7 +559,11 @@ def report_structured_card_outcome(
     or ``None``. Never raises.
     """
     try:
-        salvaged = [w for w in outcome.warnings if str(w).startswith(_SALVAGED_PREFIX)]
+        salvaged = [
+            w
+            for w in outcome.warnings
+            if str(w).startswith((_SALVAGED_PREFIX, _SCHEMA_SALVAGE_PREFIX))
+        ]
         failed = outcome.status in _CARD_FAILED_STATUSES or (
             outcome.status == "not_attempted" and bool(outcome.errors)
         )

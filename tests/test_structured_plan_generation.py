@@ -867,8 +867,10 @@ def test_invalid_block_is_contained_without_discarding_valid_sibling_cards():
     assert outcome.structured_plan["raw_markdown_fallback"] == raw_markdown
     blocks = outcome.structured_plan["weeks"][0]["days"][0]["sessions"][0]["blocks"]
     assert [block["display_name"] for block in blocks] == ["Barbell Back Squat"]
+    # The warning names the validation path and message that caused it.
     assert any(
-        "schema_salvage: omitted invalid block 'Malformed accessory'" == warning
+        warning.startswith("schema_salvage: omitted invalid block 'Malformed accessory' (")
+        and ".blocks.1.sets:" in warning
         for warning in outcome.warnings
     )
 
@@ -889,16 +891,19 @@ def test_invalid_session_is_contained_without_discarding_valid_day():
     assert outcome.status == "valid"
     sessions = outcome.structured_plan["weeks"][0]["days"][0]["sessions"]
     assert [session["title"] for session in sessions] == ["Power Transfer Touch"]
-    assert "schema_salvage: omitted invalid session 'Malformed session'" in outcome.warnings
+    assert any(
+        warning.startswith("schema_salvage: omitted invalid session 'Malformed session' (")
+        and ".sessions.1.completion:" in warning
+        for warning in outcome.warnings
+    )
 
 
-def test_invalid_day_is_contained_without_discarding_valid_week():
+def test_invalid_day_metadata_is_cleared_without_discarding_the_day():
+    # Formerly the whole day was omitted for its incomplete microdose card. The
+    # microdose is planner-owned metadata (the spine re-attaches it from the
+    # role map), so only that field goes and the day keeps its session.
     plan = _valid_plan()
-    bad_day = copy.deepcopy(plan["weeks"][0]["days"][0])
-    bad_day["date"] = "2026-05-30"
-    bad_day["countdown_label"] = "D-14"
-    bad_day["priority_microdose"] = {"goal": "speed"}
-    plan["weeks"][0]["days"].append(bad_day)
+    plan["weeks"][0]["days"][0]["priority_microdose"] = {"goal": "speed"}
 
     outcome = build_structured_plan_outcome(
         plan,
@@ -908,7 +913,23 @@ def test_invalid_day_is_contained_without_discarding_valid_week():
     assert outcome.status == "valid"
     days = outcome.structured_plan["weeks"][0]["days"]
     assert [day["countdown_label"] for day in days] == ["D-15"]
-    assert "schema_salvage: omitted invalid day 'D-14'" in outcome.warnings
+    assert days[0]["priority_microdose"] is None
+    assert [s["title"] for s in days[0]["sessions"]] == ["Power Transfer Touch"]
+    assert not any("omitted invalid day" in warning for warning in outcome.warnings)
+
+
+def test_unrepairable_day_without_planner_work_is_still_contained():
+    from api.structured_plan_generation import _salvage_invalid_training_nodes
+
+    plan = _valid_plan()
+    error = "weeks.0.days.0.today_card.mindset_anchor: Field required"
+    salvaged, warnings, refusals = _salvage_invalid_training_nodes(
+        plan, [error], raw_markdown="# raw"
+    )
+
+    assert refusals == []
+    assert salvaged["weeks"][0]["days"] == []
+    assert warnings == [f"schema_salvage: omitted invalid day 'D-15' ({error})"]
 
 
 def test_root_schema_failure_still_uses_whole_plan_fallback():
