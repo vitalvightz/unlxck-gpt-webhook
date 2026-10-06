@@ -3717,7 +3717,7 @@ def _goal_witness_rendered_doses(lines: list[str], witness: dict) -> list[str]:
 # work term. A trailing time unit ("4 x 30 sec") is deliberately excluded: that
 # is a timed interval and keeps the timed matching below.
 _AUTHORED_REP_DOSE = re.compile(
-    r"\b(?P<sets>\d+)\s*[x\u00d7]\s*(?P<reps>\d+)\s*"
+    r"\b(?P<sets>\d+)\s*(?:sets?\s*)?[x\u00d7]\s*(?P<reps>\d+)\s*"
     r"(?!\s*(?:s\b|sec|second|m\b|min|minute))(?:reps?\b|/\s*side|per\s+side|\b)",
     re.I,
 )

@@ -151,3 +151,17 @@ def test_unassigned_exercise_on_strength_day_is_still_blocked() -> None:
     warnings = _late_camp_effective_prescription_warnings(_shared_day_brief(), rendered)
     labels = [item["rendered_exercise"] for item in warnings if "exercise_allow_list" in (item.get("violation_dimensions") or [])]
     assert labels == ["Single-Leg Forward Hops"]
+
+
+def test_goal_witness_rep_dose_accepts_spelled_out_sets() -> None:
+    from fightcamp.stage2_validator import _goal_witness_dose_matches
+
+    witness = {
+        "name": "Depth Drop (No Rebound)",
+        "rounds": 6,
+        "work_sec": 3,
+        "rest_sec": 90,
+        "effective_prescription": "6x3 reps, 90s rest",
+    }
+    assert _goal_witness_dose_matches(witness, "- Depth Drop (No Rebound): 6 sets x 3 reps; rest 90 sec; RPE 7.")
+    assert not _goal_witness_dose_matches(witness, "- Depth Drop (No Rebound): 4 sets x 3 reps; rest 90 sec; RPE 7.")
