@@ -134,6 +134,20 @@ def test_queries_use_exercise_metadata_without_private_cues():
     assert "private" not in " ".join(queries)
 
 
+def test_queries_use_required_combat_context_from_bank_export():
+    row = _row(
+        example_name="Lead-foot pivot prep",
+        sport="",
+        review_sport="boxing",
+        review_context_required="true",
+        review_context="required combat context: boxing; context tags: boxer_footwork, boxer_stance",
+    )
+    queries = discovery.search_queries(row)
+    assert len(queries) == 3
+    assert all("boxing" in query.lower() for query in queries)
+    assert all("lead-foot pivot prep" in query.lower() for query in queries)
+
+
 @pytest.mark.parametrize("first", [
     _answer(verdict="partial"), _answer(verdict="no_match"),
     _answer(confidence=0.89), _answer(orientation="vertical", confidence=0.89),
