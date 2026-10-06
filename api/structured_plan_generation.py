@@ -27,10 +27,19 @@ from collections.abc import Mapping
 from typing import Any, Callable, Literal, get_args
 
 from fightcamp.session_sequencing import sequence_structured_plan
+from fightcamp.fight_date_utils import parse_fight_date
+from fightcamp.structured_session_identity import match_sessions_to_roles
 from fightcamp.weekly_schedule_view import normalize_weekday as _normalize_weekday
 
 from .state_machine import is_athlete_displayable_plan_status
-from .structured_plan_calendar_spine import reconcile_calendar_spine
+from .structured_plan_calendar_spine import (
+    ROLES_OWNED_ELSEWHERE,
+    _effective_dday as spine_effective_dday,
+    _parse_dday as spine_parse_dday,
+    _resolve_fight_date as spine_resolve_fight_date,
+    _role_dday as spine_role_dday,
+    reconcile_calendar_spine,
+)
 from .structured_plan_faithfulness import (
     PRESCRIPTION,
     _day_header_dday,
@@ -53,6 +62,7 @@ from .structured_plan_models import (
     BlockType,
     CompletionStatus,
     DailyCheckIn,
+    Day,
     DayType,
     EventType,
     LoadFocusValue,
@@ -67,6 +77,7 @@ from .structured_plan_models import (
     RiskLevel,
     SessionType,
     Severity,
+    TodayCard,
     UnitsSystem,
     WeekType,
     repair_structured_plan_once,
@@ -1436,11 +1447,31 @@ def _normalize_session(value: Any) -> dict[str, Any]:
     return out
 
 
+def _coerce_optional_text(value: Any) -> str | None:
+    """Optional athlete-facing copy as a string, or ``None``.
+
+    The converter sometimes mirrors a plan-level object into a day-level text
+    slot (``nutrition.weight_cut_warning`` is an object; ``today_card``'s is a
+    string). Keep the object's own display copy when it has one; anything else
+    is dropped rather than failing the whole day.
+    """
+    if isinstance(value, Mapping):
+        value = value.get("display_text") or value.get("text")
+    if isinstance(value, (list, tuple)):
+        value = " ".join(str(item).strip() for item in value if isinstance(item, str) and item.strip())
+    if not isinstance(value, str):
+        return None
+    return value.strip() or None
+
+
 def _normalize_today_card(value: Any) -> dict[str, Any]:
     out = dict(value) if isinstance(value, dict) else {}
     out["headline"] = _coerce_str(out.get("headline"))
     out["readiness_status"] = _enum(out.get("readiness_status"), _READINESS_VALUES, "train_as_planned")
     out["mindset_anchor"] = _normalize_mindset(out.get("mindset_anchor"))
+    for key in ("primary_warning", "nutrition_summary", "weight_cut_warning"):
+        if key in out:
+            out[key] = _coerce_optional_text(out.get(key))
     # Coach-owned contact that coexists with the day's app sessions — keep only a
     # non-empty string so the renderer never shows a blank contact block.
     contact = _coerce_str(out.get("coach_led_contact")).strip()
@@ -1632,9 +1663,27 @@ def _countdown_distance(label: Any) -> int | None:
         return None
 
 
+def _normalize_priority_microdose(value: Any) -> dict[str, str] | None:
+    """A complete planner microdose card, or ``None``.
+
+    The microdose is planner-owned: the calendar spine re-attaches it from the
+    weekly role map, so a partial converter copy is dropped, never repaired.
+    """
+    if not isinstance(value, Mapping):
+        return None
+    dose = {key: _coerce_str(value.get(key)).strip() for key in ("goal", "name", "prescription")}
+    return dose if all(dose.values()) else None
+
+
 def _normalize_day(value: Any) -> dict[str, Any]:
     out = dict(value) if isinstance(value, dict) else {}
     out["date"] = _coerce_str(out.get("date"))
+    if "weekday" in out:
+        # The source headers spell weekdays out ("D-23 (Friday)") and the model
+        # mirrors them; the schema stores the short form.
+        out["weekday"] = _normalize_weekday(out.get("weekday"))
+    if "priority_microdose" in out:
+        out["priority_microdose"] = _normalize_priority_microdose(out.get("priority_microdose"))
     out["countdown_label"] = _coerce_str(out.get("countdown_label"))
     out["phase_label"] = _normalize_phase(out.get("phase_label"))
     out["planning_week_index"] = _coerce_optional_int(out.get("planning_week_index"))
@@ -2769,6 +2818,95 @@ _TRAINING_NODE_ERROR_RE = re.compile(
     r"^weeks\.(\d+)\.days\.(\d+)"
     r"(?:\.sessions\.(\d+)(?:\.blocks\.(\d+))?)?(?:\.|:)"
 )
+_DAY_FIELD_ERROR_RE = re.compile(r"^weeks\.\d+\.days\.\d+\.([A-Za-z_]+)(?:\.([A-Za-z_]+))?")
+# Session types that carry planner-owned strength / conditioning work.
+_PLANNER_SC_SESSION_TYPES = frozenset({"strength_power", "conditioning"})
+
+
+def _optional_field_default(model: type[Any], name: str | None) -> tuple[bool, Any]:
+    """``(True, default)`` when ``name`` is an optional field of ``model``."""
+    info = model.model_fields.get(name or "")
+    if info is None or info.is_required():
+        return False, None
+    return True, info.get_default(call_default_factory=True)
+
+
+def _clear_invalid_day_metadata(day: dict[str, Any], error: str) -> str | None:
+    """Reset the optional day/today-card field ``error`` names; its path, or ``None``.
+
+    Day metadata (weekday, planner microdose, warnings copy) is presentation:
+    an invalid value there is a reason to drop that value, never the day's
+    sessions with it. Required fields are left for whole-day containment.
+    """
+    match = _DAY_FIELD_ERROR_RE.match(error)
+    if not match:
+        return None
+    field_name, child = match.groups()
+    if field_name == "today_card":
+        card = day.get("today_card")
+        clearable, default = _optional_field_default(TodayCard, child)
+        if not clearable or not isinstance(card, dict):
+            return None
+        card[child] = default
+        return f"today_card.{child}"
+    if field_name == "sessions":
+        return None
+    clearable, default = _optional_field_default(Day, field_name)
+    if not clearable:
+        return None
+    day[field_name] = default
+    return field_name
+
+
+def _planner_sc_roles_by_dday(planning_brief: Any) -> dict[int, list[dict[str, Any]]]:
+    """Stage 1's exercise-backed (strength / conditioning) roles per D-day."""
+    role_map = planning_brief.get("weekly_role_map") if isinstance(planning_brief, dict) else None
+    roles_by_dday: dict[int, list[dict[str, Any]]] = {}
+    if not isinstance(role_map, dict):
+        return roles_by_dday
+    for week in role_map.get("weeks") or []:
+        if not isinstance(week, dict):
+            continue
+        for role in week.get("session_roles") or []:
+            if not isinstance(role, dict) or not role.get("selected_exercise_assignments"):
+                continue
+            if str(role.get("role_key") or "").strip() in ROLES_OWNED_ELSEWHERE:
+                continue
+            d_day = spine_role_dday(week, role)
+            if d_day is not None:
+                roles_by_dday.setdefault(d_day, []).append(role)
+    return roles_by_dday
+
+
+def _planner_owned_session_indexes(
+    day: dict[str, Any],
+    roles_by_dday: dict[int, list[dict[str, Any]]],
+    fight_date: Any,
+) -> set[int]:
+    """Indexes of the day's sessions that carry a Stage 1 S&C role.
+
+    A session is planner-owned when it represents one of the day's roles under
+    the shared identity rule, or when it is strength/conditioning work on a day
+    Stage 1 scheduled strength/conditioning for (the converter often retitles
+    "Primary strength" as plain "Strength").
+    """
+    if not roles_by_dday:
+        return set()
+    d_day = spine_parse_dday(day.get("countdown_label"))
+    if d_day is None and fight_date is not None:
+        d_day = spine_effective_dday(day, fight_date)
+    roles = roles_by_dday.get(d_day) if d_day is not None else None
+    sessions = day.get("sessions")
+    if not roles or not isinstance(sessions, list):
+        return set()
+    owned = set(match_sessions_to_roles(sessions, roles, d_day))
+    owned.update(
+        index
+        for index, session in enumerate(sessions)
+        if isinstance(session, dict)
+        and str(session.get("session_type") or "") in _PLANNER_SC_SESSION_TYPES
+    )
+    return owned
 
 
 def _salvage_invalid_training_nodes(
@@ -2776,21 +2914,34 @@ def _salvage_invalid_training_nodes(
     errors: list[str],
     *,
     raw_markdown: str,
-) -> tuple[Any, list[str]]:
-    """Omit the smallest invalid training nodes while retaining valid siblings.
+    planning_brief: Any = None,
+) -> tuple[Any, list[str], list[str]]:
+    """Contain the smallest invalid training nodes while retaining valid siblings.
 
-    The raw source must be present before containment is allowed. It remains
-    embedded in the saved plan, so the omitted card/day is never the only copy
-    of the prescription. Root metadata, calendar/week structure, safety rules,
-    nutrition and other plan-wide failures remain fatal; this helper handles
-    only validation locations inside days/sessions/blocks.
+    Returns ``(salvaged, warnings, refusals)``. The raw source must be present
+    before containment is allowed. It remains embedded in the saved plan, so the
+    omitted card/day is never the only copy of the prescription. Root metadata,
+    calendar/week structure, safety rules, nutrition and other plan-wide
+    failures remain fatal; this helper handles only validation locations inside
+    days/sessions/blocks.
+
+    Containment is smallest-first: an invalid optional day field is cleared, a
+    block is dropped from its session, a session from its day, and a day only
+    when a required day field cannot be repaired. Each warning names the
+    validation path and message that caused it.
+
+    Structured conversion must never cost the athlete Stage 1 strength or
+    conditioning work. When containment would remove a session (or a day
+    holding one) that carries a planner-owned S&C role, salvage is refused and
+    ``refusals`` says why: the card then fails validation and the existing
+    repair / deterministic Stage 1 fallback builds it instead.
     """
     if not raw_markdown.strip() or not isinstance(candidate, dict):
-        return candidate, []
+        return candidate, [], []
 
-    block_targets: set[tuple[int, int, int, int]] = set()
-    session_targets: set[tuple[int, int, int]] = set()
-    day_targets: set[tuple[int, int]] = set()
+    block_targets: dict[tuple[int, int, int, int], list[str]] = {}
+    session_targets: dict[tuple[int, int, int], list[str]] = {}
+    day_errors: dict[tuple[int, int], list[str]] = {}
     for error in errors:
         match = _TRAINING_NODE_ERROR_RE.match(error)
         if not match:
@@ -2799,21 +2950,24 @@ def _salvage_invalid_training_nodes(
             int(value) if value is not None else None for value in match.groups()
         )
         if session_index is None:
-            day_targets.add((week_index, day_index))
+            day_errors.setdefault((week_index, day_index), []).append(error)
         elif block_index is None:
-            session_targets.add((week_index, day_index, session_index))
+            session_targets.setdefault((week_index, day_index, session_index), []).append(error)
         else:
-            block_targets.add((week_index, day_index, session_index, block_index))
+            block_targets.setdefault(
+                (week_index, day_index, session_index, block_index), []
+            ).append(error)
 
-    if not (block_targets or session_targets or day_targets):
-        return candidate, []
+    if not (block_targets or session_targets or day_errors):
+        return candidate, [], []
 
     salvaged = copy.deepcopy(candidate)
     salvaged["raw_markdown_fallback"] = raw_markdown
     warnings: list[str] = []
+    refusals: list[str] = []
     weeks = salvaged.get("weeks")
     if not isinstance(weeks, list):
-        return candidate, []
+        return candidate, [], []
 
     def _day_at(week_index: int, day_index: int) -> dict[str, Any] | None:
         if week_index < 0 or week_index >= len(weeks) or not isinstance(weeks[week_index], dict):
@@ -2823,11 +2977,77 @@ def _salvage_invalid_training_nodes(
             return None
         return days[day_index] if isinstance(days[day_index], dict) else None
 
+    def _day_label(day: Any) -> str:
+        if not isinstance(day, dict):
+            return "day"
+        return str(day.get("countdown_label") or day.get("date") or "day")
+
+    def _reason(node_errors: list[str]) -> str:
+        return "; ".join(node_errors[:3]) + (" ..." if len(node_errors) > 3 else "")
+
+    roles_by_dday = _planner_sc_roles_by_dday(planning_brief)
+    fight_date = None
+    if roles_by_dday and isinstance(planning_brief, dict):
+        fight_date = parse_fight_date(spine_resolve_fight_date(planning_brief))
+    # Ownership is judged on the day as the converter wrote it, before any
+    # sibling removal shifts indexes.
+    owned_cache: dict[tuple[int, int], set[int]] = {}
+
+    def _owned(week_index: int, day_index: int) -> set[int]:
+        key = (week_index, day_index)
+        if key not in owned_cache:
+            day = _day_at(week_index, day_index)
+            owned_cache[key] = (
+                _planner_owned_session_indexes(day, roles_by_dday, fight_date) if day else set()
+            )
+        return owned_cache[key]
+
+    # Day metadata first: clear what is optional, keep the day.
+    day_targets: dict[tuple[int, int], list[str]] = {}
+    for (week_index, day_index), node_errors in day_errors.items():
+        day = _day_at(week_index, day_index)
+        if day is None:
+            continue
+        unrepaired = []
+        for error in node_errors:
+            cleared = _clear_invalid_day_metadata(day, error)
+            if cleared is None:
+                unrepaired.append(error)
+            else:
+                warnings.append(
+                    f"schema_salvage: cleared invalid day field {cleared!r} "
+                    f"on {_day_label(day)!r} ({error})"
+                )
+        if unrepaired:
+            day_targets[(week_index, day_index)] = unrepaired
+            _owned(week_index, day_index)
+
+    for week_index, day_index, session_index in session_targets:
+        if (week_index, day_index) in day_targets:
+            continue
+        if session_index in _owned(week_index, day_index):
+            day = _day_at(week_index, day_index)
+            sessions = day.get("sessions") if day else None
+            session = sessions[session_index] if isinstance(sessions, list) and session_index < len(sessions) else None
+            title = str(session.get("title") or "session") if isinstance(session, dict) else "session"
+            refusals.append(
+                f"schema_salvage_refused: session {title!r} on {_day_label(day)!r} carries "
+                f"planner-owned strength/conditioning work "
+                f"({_reason(session_targets[(week_index, day_index, session_index)])})"
+            )
+    for (week_index, day_index), node_errors in day_targets.items():
+        if _owned(week_index, day_index):
+            refusals.append(
+                f"schema_salvage_refused: day {_day_label(_day_at(week_index, day_index))!r} "
+                f"carries planner-owned strength/conditioning work ({_reason(node_errors)})"
+            )
+    if refusals:
+        return candidate, [], refusals
+
     # Deepest nodes first. Parent targets then remove any still-invalid parent;
     # descending indexes keep sibling positions stable during each removal.
-    for week_index, day_index, session_index, block_index in sorted(
-        block_targets, reverse=True
-    ):
+    for key in sorted(block_targets, reverse=True):
+        week_index, day_index, session_index, block_index = key
         if (week_index, day_index) in day_targets or (
             week_index,
             day_index,
@@ -2844,9 +3064,12 @@ def _salvage_invalid_training_nodes(
             continue
         block = blocks.pop(block_index)
         name = str(block.get("display_name") or "block") if isinstance(block, dict) else "block"
-        warnings.append(f"schema_salvage: omitted invalid block {name!r}")
+        warnings.append(
+            f"schema_salvage: omitted invalid block {name!r} ({_reason(block_targets[key])})"
+        )
 
-    for week_index, day_index, session_index in sorted(session_targets, reverse=True):
+    for key in sorted(session_targets, reverse=True):
+        week_index, day_index, session_index = key
         if (week_index, day_index) in day_targets:
             continue
         day = _day_at(week_index, day_index)
@@ -2855,19 +3078,23 @@ def _salvage_invalid_training_nodes(
             continue
         session = sessions.pop(session_index)
         title = str(session.get("title") or "session") if isinstance(session, dict) else "session"
-        warnings.append(f"schema_salvage: omitted invalid session {title!r}")
+        warnings.append(
+            f"schema_salvage: omitted invalid session {title!r} ({_reason(session_targets[key])})"
+        )
 
-    for week_index, day_index in sorted(day_targets, reverse=True):
+    for key in sorted(day_targets, reverse=True):
+        week_index, day_index = key
         if not (0 <= week_index < len(weeks)) or not isinstance(weeks[week_index], dict):
             continue
         days = weeks[week_index].get("days")
         if not isinstance(days, list) or not (0 <= day_index < len(days)):
             continue
         day = days.pop(day_index)
-        label = str(day.get("countdown_label") or day.get("date") or "day") if isinstance(day, dict) else "day"
-        warnings.append(f"schema_salvage: omitted invalid day {label!r}")
+        warnings.append(
+            f"schema_salvage: omitted invalid day {_day_label(day)!r} ({_reason(day_targets[key])})"
+        )
 
-    return salvaged, warnings
+    return salvaged, warnings, []
 
 
 def build_structured_plan_outcome(
@@ -2994,11 +3221,13 @@ def build_structured_plan_outcome(
 
     first = safe_parse_structured_plan(cleaned, raw_markdown=raw_markdown or None)
     salvage_warnings: list[str] = []
+    salvage_refusals: list[str] = []
     if not first.ok:
-        salvaged, candidate_warnings = _salvage_invalid_training_nodes(
+        salvaged, candidate_warnings, salvage_refusals = _salvage_invalid_training_nodes(
             cleaned,
             list(first.errors),
             raw_markdown=raw_markdown,
+            planning_brief=planning_brief,
         )
         if candidate_warnings:
             salvaged_parse = safe_parse_structured_plan(
@@ -3008,7 +3237,7 @@ def build_structured_plan_outcome(
                 cleaned = salvaged
                 first = salvaged_parse
                 salvage_warnings = candidate_warnings
-    first_errors = list(first.errors)
+    first_errors = [*first.errors, *salvage_refusals]
     if first.ok and first.plan is not None:
         plan_dict = _with_deterministic_support(first.plan.model_dump(mode="json"), computed_support)
         plan_dict = _merge_locked_content(plan_dict, planning_brief)
