@@ -20360,6 +20360,65 @@ html[data-theme="light"] .loading-operational-item {
   overflow: hidden;
   background: #000;
 }
+/* Portrait demo (exercise_media.orientation = "portrait"). The frame is 9:16,
+   centred, and capped by height so the cues under it stay on screen. Nothing
+   here applies when the attribute is absent, so landscape and undetected
+   videos keep the rules above exactly.
+   aspect-ratio is safe here, unlike the landscape frame: there is no
+   min-height, and the width is clamped to the parent with min(100%, ...). */
+.ex-demo[data-orientation="portrait"] .ex-demo-frame {
+  --ex-demo-portrait-cap: min(70vh, 560px);
+  width: min(100%, calc(var(--ex-demo-portrait-cap) * 9 / 16));
+  height: auto;
+  min-height: 0;
+  padding-top: 0;
+  aspect-ratio: 9 / 16;
+  margin-inline: auto;
+}
+@supports (height: 1svh) {
+  .ex-demo[data-orientation="portrait"] .ex-demo-frame {
+    --ex-demo-portrait-cap: min(70svh, 560px);
+  }
+}
+/* Wide rows: the portrait demo takes a 240px column and the rest of the row
+   (why, stats, cues) sits beside it instead of under a tall video. Keyed on
+   the demo's own root, so the watched replay strip and the unavailable notice,
+   which render without it, stay full width. */
+.ex-row {
+  container: ex-row / inline-size;
+}
+@container ex-row (min-width: 560px) {
+  .ex-row-body:has(> .ex-demo[data-orientation="portrait"]) {
+    display: grid;
+    grid-template-columns: 240px minmax(0, 1fr);
+    /* Two explicit rows so the demo can span to the last line (1 / -1). The
+       1fr row absorbs the height the video adds beyond the copy. */
+    grid-template-rows: auto 1fr;
+    column-gap: 20px;
+    align-items: start;
+  }
+  .ex-row-body:has(> .ex-demo[data-orientation="portrait"]) > * {
+    grid-column: 2;
+  }
+  .ex-row-body > .ex-demo[data-orientation="portrait"] {
+    grid-column: 1;
+    grid-row: 1 / -1;
+  }
+  .ex-row-body > .ex-demo[data-orientation="portrait"] .ex-demo-frame {
+    width: 100%;
+  }
+  /* 240px is too narrow for badge, segment, channel and link on one line:
+     the meta text drops to its own line instead of ellipsizing to nothing. */
+  .ex-row-body > .ex-demo[data-orientation="portrait"] .ex-demo-caption {
+    flex-wrap: wrap;
+    justify-content: space-between;
+    row-gap: 4px;
+  }
+  .ex-row-body > .ex-demo[data-orientation="portrait"] .ex-demo-meta {
+    order: 1;
+    flex-basis: 100%;
+  }
+}
 .ex-demo-facade {
   position: absolute;
   inset: 0;

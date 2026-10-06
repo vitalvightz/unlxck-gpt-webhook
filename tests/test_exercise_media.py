@@ -736,7 +736,13 @@ def test_plan_read_serves_media_for_matching_blocks_only():
         AuthenticatedUser(user_id="athlete-1", email="ari@example.com", full_name="Ari", metadata={})
     )
     store.list_exercise_media = lambda: [
-        _row("back-squat", aliases=["Barbell Back Squat"], source="coach", channel_title="UNLXCK")
+        _row(
+            "back-squat",
+            aliases=["Barbell Back Squat"],
+            source="coach",
+            channel_title="UNLXCK",
+            orientation="portrait",
+        )
     ]
     plan = store.create_plan(
         athlete_id="athlete-1",
@@ -760,6 +766,7 @@ def test_plan_read_serves_media_for_matching_blocks_only():
             "end_s": 70,
             "source": "coach",
             "channel_title": "UNLXCK",
+            "orientation": "portrait",
         }
     }
 
@@ -871,3 +878,216 @@ def test_resolve_finds_media_for_a_display_name_carrying_its_dose():
     # Keyed by the name the card shows, so the web lookup still matches.
     assert resolved["Turkish Get-Up - 3 reps per side"].video_id == "AAAAAAAAAAA"
     assert resolved["Tempo Shadowboxing - 20 min"].video_id == "BBBBBBBBBBB"
+
+
+# -- orientation -------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("width", "height", "expected"),
+    [
+        (1280, 720, "landscape"),
+        (405, 720, "portrait"),
+        # The Data API has reported these as strings as well as numbers.
+        ("405", "720", "portrait"),
+        # Square is not taller than wide: it keeps the landscape frame.
+        (720, 720, "landscape"),
+        (None, 720, None),
+        (1280, None, None),
+        ("", "", None),
+        (0, 720, None),
+        ("wide", "tall", None),
+        (float("nan"), 720, None),
+    ],
+)
+def test_orientation_from_dimensions(width, height, expected):
+    assert media.orientation_from_dimensions(width, height) == expected
+
+
+def _sized(video_id, width, height, **kwargs):
+    return {**_video(video_id, **kwargs), "player": {"embedWidth": width, "embedHeight": height}}
+
+
+def test_check_youtube_videos_requests_player_dimensions_and_reads_orientation():
+    items = {
+        "AAAAAAAAAAA": _sized("AAAAAAAAAAA", 1280, 720),
+        "BBBBBBBBBBB": _sized("BBBBBBBBBBB", "405", "720"),
+        # No player block in the answer: orientation stays unknown.
+        "CCCCCCCCCCC": _video("CCCCCCCCCCC"),
+        # Retired videos still report their shape.
+        "DDDDDDDDDDD": _sized("DDDDDDDDDDD", 405, 720, embeddable=False),
+    }
+    requests: list[httpx.Request] = []
+
+    results = media.check_youtube_videos(list(items), api_key=API_KEY, client=_data_api(items, requests=requests))
+
+    assert {vid: r.orientation for vid, r in results.items()} == {
+        "AAAAAAAAAAA": "landscape",
+        "BBBBBBBBBBB": "portrait",
+        "CCCCCCCCCCC": None,
+        "DDDDDDDDDDD": "portrait",
+    }
+    params = requests[0].url.params
+    assert params["part"] == "snippet,status,player"
+    # Without a size bound the API omits embedWidth / embedHeight entirely.
+    assert params["maxHeight"] == "720"
+    assert "player(embedWidth,embedHeight)" in params["fields"]
+
+
+def test_sweep_records_orientation_and_never_nulls_a_stored_one():
+    client, store, _ = _build_client()
+    store.exercise_media = {
+        "new-portrait": {"exercise_key": "new-portrait", "video_id": "AAAAAAAAAAA", "status": "ok"},
+        "was-wrong": {
+            "exercise_key": "was-wrong", "video_id": "BBBBBBBBBBB", "status": "ok", "orientation": "portrait",
+        },
+        "no-dimensions": {
+            "exercise_key": "no-dimensions", "video_id": "CCCCCCCCCCC", "status": "ok", "orientation": "portrait",
+        },
+        "gone": {"exercise_key": "gone", "video_id": "DDDDDDDDDDD", "status": "ok", "orientation": "portrait"},
+    }
+    items = {
+        "AAAAAAAAAAA": _sized("AAAAAAAAAAA", 405, 720),
+        # YouTube's dimensions override whatever was stored (e.g. a Gemini fallback).
+        "BBBBBBBBBBB": _sized("BBBBBBBBBBB", 1280, 720),
+        "CCCCCCCCCCC": _video("CCCCCCCCCCC"),
+    }
+
+    media.run_media_verification_sweep(store, api_key=API_KEY, client=_data_api(items))
+
+    assert {key: row.get("orientation") for key, row in store.exercise_media.items()} == {
+        "new-portrait": "portrait",
+        "was-wrong": "landscape",
+        "no-dimensions": "portrait",
+        "gone": "portrait",
+    }
+    assert store.exercise_media["gone"]["status"] == "unavailable"
+
+
+def test_store_status_update_only_writes_a_known_orientation():
+    from api.store import SupabaseAppStore
+
+    payloads: list[dict] = []
+
+    class Query:
+        def update(self, payload):
+            payloads.append(payload)
+            return self
+
+        def eq(self, *_args):
+            return self
+
+        def execute(self):
+            return SimpleNamespace(data=[])
+
+    store = SupabaseAppStore.__new__(SupabaseAppStore)
+    store.client = SimpleNamespace(table=lambda _name: Query())
+    store._run_with_transient_retry = lambda *, operation, fn: fn()
+
+    store.update_exercise_media_status("a", status="ok", reason=None, orientation="portrait")
+    store.update_exercise_media_status("b", status="ok", reason=None, orientation=None)
+    store.update_exercise_media_status("c", status="ok", reason=None, orientation="sideways")
+
+    assert payloads[0]["orientation"] == "portrait"
+    assert "orientation" not in payloads[1]
+    assert "orientation" not in payloads[2]
+    assert "orientation" in SupabaseAppStore._EXERCISE_MEDIA_SERVED_COLUMNS.split(",")
+
+
+def test_index_serves_orientation_and_treats_anything_else_as_undetected():
+    index = media.build_media_index(
+        [
+            _row("portrait-drill", orientation="portrait"),
+            _row("landscape-drill", orientation="landscape"),
+            _row("undetected-drill", orientation=None),
+            _row("legacy-drill"),
+            _row("bad-value-drill", orientation="vertical"),
+        ]
+    )
+
+    assert {key: item.orientation for key, item in index.items()} == {
+        "portrait-drill": "portrait",
+        "landscape-drill": "landscape",
+        "undetected-drill": None,
+        "legacy-drill": None,
+        "bad-value-drill": None,
+    }
+
+
+@pytest.mark.parametrize(
+    ("row", "expected"),
+    [
+        ({"suggested_url": "https://youtu.be/AAAAAAAAAAA", "ai_orientation": "vertical"}, "portrait"),
+        ({"suggested_url": "https://youtube.com/shorts/AAAAAAAAAAA", "ai_orientation": " Landscape "}, "landscape"),
+        # The curator approved a different video than the one Gemini watched.
+        ({"suggested_url": "https://youtu.be/BBBBBBBBBBB", "ai_orientation": "vertical"}, None),
+        ({"suggested_url": "", "ai_orientation": "vertical"}, None),
+        ({"suggested_url": "https://youtu.be/AAAAAAAAAAA", "ai_orientation": ""}, None),
+        ({"suggested_url": "https://youtu.be/AAAAAAAAAAA", "ai_orientation": "portrait"}, None),
+        ({}, None),
+    ],
+)
+def test_review_orientation_maps_vertical_to_portrait_for_the_reviewed_video(row, expected):
+    assert media_tool.review_orientation(row, "AAAAAAAAAAA") == expected
+
+
+def test_import_prefers_api_orientation_and_falls_back_to_the_review(tmp_path, monkeypatch, capsys):
+    monkeypatch.setenv(media.YOUTUBE_API_KEY_ENV, API_KEY)
+    checks = {
+        # API says landscape, Gemini said vertical: the API wins.
+        "AAAAAAAAAAA": media.VideoCheck(status="ok", made_for_kids=False, orientation="landscape"),
+        # No dimensions: Gemini's vertical becomes portrait.
+        "BBBBBBBBBBB": media.VideoCheck(status="ok", made_for_kids=False),
+        # No dimensions, no review, same video as stored: the column is left alone.
+        "CCCCCCCCCCC": media.VideoCheck(status="ok", made_for_kids=False),
+        # No dimensions, no review, and the video changed: the old shape is cleared.
+        "DDDDDDDDDDD": media.VideoCheck(status="ok", made_for_kids=False),
+        # No dimensions, no review, brand new row: nothing to write.
+        "EEEEEEEEEEE": media.VideoCheck(status="ok", made_for_kids=False),
+    }
+    monkeypatch.setattr(media_tool, "check_youtube_videos", lambda ids, **_: {i: checks[i] for i in ids})
+    upserts: dict[str, dict] = {}
+
+    class Store:
+        def list_exercise_media_for_verification(self):
+            return [
+                {"exercise_key": "same-video", "aliases": [], "video_id": "CCCCCCCCCCC", "status": "ok"},
+                {"exercise_key": "swapped-video", "aliases": [], "video_id": "ZZZZZZZZZZZ", "status": "ok"},
+            ]
+
+        def upsert_exercise_media(self, row):
+            upserts[row["exercise_key"]] = row
+
+    monkeypatch.setattr(media_tool, "_build_store", lambda: Store())
+    columns = [*media_tool.CSV_COLUMNS, "suggested_url", "ai_orientation"]
+    path = tmp_path / "media.reviewed.csv"
+    with path.open("w", newline="", encoding="utf-8") as handle:
+        writer = csv.DictWriter(handle, fieldnames=columns, restval="")
+        writer.writeheader()
+        writer.writerows(
+            [
+                {"exercise_key": "api-wins", "youtube_url": "AAAAAAAAAAA",
+                 "suggested_url": "AAAAAAAAAAA", "ai_orientation": "vertical"},
+                {"exercise_key": "review-fallback", "youtube_url": "BBBBBBBBBBB",
+                 "suggested_url": "BBBBBBBBBBB", "ai_orientation": "vertical"},
+                {"exercise_key": "same-video", "youtube_url": "CCCCCCCCCCC"},
+                {"exercise_key": "swapped-video", "youtube_url": "DDDDDDDDDDD"},
+                {"exercise_key": "brand-new", "youtube_url": "EEEEEEEEEEE"},
+            ]
+        )
+
+    assert media_tool.main(["import", str(path)]) == 0
+
+    assert upserts["api-wins"]["orientation"] == "landscape"
+    assert upserts["review-fallback"]["orientation"] == "portrait"
+    assert "orientation" not in upserts["same-video"]
+    assert upserts["swapped-video"]["orientation"] is None
+    assert "orientation" not in upserts["brand-new"]
+    assert "/ portrait)" in capsys.readouterr().out
+
+
+def test_media_model_accepts_only_portrait_landscape_or_none():
+    assert ExerciseMedia(video_id="AAAAAAAAAAA").model_dump()["orientation"] is None
+    assert ExerciseMedia(video_id="AAAAAAAAAAA", orientation="portrait").orientation == "portrait"
+    with pytest.raises(ValueError):
+        ExerciseMedia(video_id="AAAAAAAAAAA", orientation="vertical")

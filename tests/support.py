@@ -1822,7 +1822,7 @@ class FakeStore(InMemoryNotificationLedger, FullRowStatusReads):
         return sum(1 for profile in self.profiles.values() if profile.get("role") == "admin")
 
     def list_exercise_media(self) -> list[dict]:
-        columns = ("exercise_key", "aliases", "video_id", "start_s", "end_s", "source", "channel_title", "made_for_kids")
+        columns = ("exercise_key", "aliases", "video_id", "start_s", "end_s", "source", "channel_title", "made_for_kids", "orientation")
         return [
             {column: row.get(column) for column in columns}
             for _key, row in sorted(self.exercise_media.items())
@@ -1842,6 +1842,7 @@ class FakeStore(InMemoryNotificationLedger, FullRowStatusReads):
         made_for_kids: bool | None = None,
         title: str | None = None,
         channel_title: str | None = None,
+        orientation: str | None = None,
     ) -> None:
         row = self.exercise_media.get(exercise_key)
         if row is None:
@@ -1853,6 +1854,8 @@ class FakeStore(InMemoryNotificationLedger, FullRowStatusReads):
             row["title"] = title[:200]
         if channel_title:
             row["channel_title"] = channel_title[:200]
+        if orientation in ("portrait", "landscape"):
+            row["orientation"] = orientation
 
     def clear_onboarding_draft(self, athlete_id: str) -> None:
         self.profiles[athlete_id]["onboarding_draft"] = None

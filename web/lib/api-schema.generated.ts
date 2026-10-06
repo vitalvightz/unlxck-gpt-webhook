@@ -421,6 +421,7 @@ export type ExerciseMedia = {
   end_s: number | null;
   source: "coach" | "curated";
   channel_title: string | null;
+  orientation: "landscape" | "portrait" | null;
 };
 
 export type ExposureDemand = {

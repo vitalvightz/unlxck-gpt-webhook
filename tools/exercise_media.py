@@ -22,7 +22,8 @@ Workflow:
     #    same movement.
 
     # 3. Check every video through the YouTube Data API (exists, embeddable,
-    #    and record its Made for Kids classification) and upsert. Dry-run first.
+    #    record its Made for Kids classification and portrait/landscape
+    #    orientation) and upsert. Dry-run first.
     python tools/exercise_media.py import media.csv --dry-run
     python tools/exercise_media.py import media.csv
 
@@ -49,7 +50,8 @@ Workflow:
     # A strong result also needs a usable loop. --redo-weak skips video IDs
     # recorded in ai_reviewed_video_ids and judges only new candidates.
 
-    # Re-check every stored video now (the worker also does this daily).
+    # Re-check every stored video now (the worker also does this daily). This
+    # also fills exercise_media.orientation for rows that do not have one yet.
     python tools/exercise_media.py verify
 
 CSV columns: exercise_key, family, example_name, block_type, occurrences,
@@ -348,6 +350,23 @@ def parse_import_row(row: dict[str, str]) -> tuple[dict[str, Any] | None, str | 
     )
 
 
+# The Gemini review writes "vertical" / "landscape" (ai_orientation); the
+# database stores "portrait" / "landscape".
+_REVIEW_ORIENTATIONS = {"vertical": "portrait", "landscape": "landscape"}
+
+
+def review_orientation(row: dict[str, str], video_id: str) -> str | None:
+    """Gemini's orientation for the video being imported, in database terms.
+
+    A fallback only: YouTube's reported dimensions win whenever they exist.
+    ai_orientation describes the reviewed video (suggested_url), so it is
+    ignored when a curator approved a different one in youtube_url.
+    """
+    if parse_youtube_video_id(row.get("suggested_url")) != video_id:
+        return None
+    return _REVIEW_ORIENTATIONS.get((row.get("ai_orientation") or "").strip().lower())
+
+
 def _cmd_candidates(args: argparse.Namespace) -> int:
     store = _build_store()
     plans_response = (
@@ -417,11 +436,14 @@ def _cmd_import(args: argparse.Namespace) -> int:
     # replaces its old aliases, so its own names are not held against it.
     owners: dict[str, str] = {}
     stored = store.list_exercise_media_for_verification() if store is not None else []
+    stored_video: dict[str, str] = {}
     for row in stored:
         _claim_names(owners, str(row.get("exercise_key") or ""), row.get("aliases") or [])
+        stored_video[str(row.get("exercise_key") or "")] = str(row.get("video_id") or "")
     rejected = 0
     written = 0
     parsed: list[tuple[int, dict[str, Any]]] = []
+    review_fallback: dict[int, str | None] = {}
     for line_no, row in enumerate(rows, start=2):
         payload, error = parse_import_row(row)
         if payload is not None and not error:
@@ -432,6 +454,7 @@ def _cmd_import(args: argparse.Namespace) -> int:
         elif payload is not None:
             _claim_names(owners, payload["exercise_key"], payload["aliases"])
             parsed.append((line_no, payload))
+            review_fallback[line_no] = review_orientation(row, payload["video_id"])
 
     with httpx.Client(timeout=YOUTUBE_API_TIMEOUT_SECONDS) as http:
         checks = check_youtube_videos(
@@ -457,24 +480,33 @@ def _cmd_import(args: argparse.Namespace) -> int:
             rejected += 1
             print(f"line {line_no}: {payload['exercise_key']} rejected - {check.reason}")
             continue
+        # YouTube's dimensions win; Gemini's answer only fills a gap.
+        orientation = check.orientation or review_fallback.get(line_no)
         label = (
             f"{payload['exercise_key']} -> {payload['video_id']} "
-            f"({check.title or 'untitled'} / {check.channel_title or 'unknown channel'})"
+            f"({check.title or 'untitled'} / {check.channel_title or 'unknown channel'}"
+            f" / {orientation or 'orientation unknown'})"
         )
         if store is None:
             print(f"line {line_no}: ok (dry run) {label}")
             continue
-        store.upsert_exercise_media(
-            {
-                **payload,
-                "status": "ok",
-                "status_reason": None,
-                "made_for_kids": check.made_for_kids,
-                "title": check.title,
-                "channel_title": check.channel_title,
-                "verified_at": datetime.now(timezone.utc).isoformat(),
-            }
-        )
+        record = {
+            **payload,
+            "status": "ok",
+            "status_reason": None,
+            "made_for_kids": check.made_for_kids,
+            "title": check.title,
+            "channel_title": check.channel_title,
+            "verified_at": datetime.now(timezone.utc).isoformat(),
+        }
+        # Unknown orientation leaves the column out, so re-importing the same
+        # video keeps what is stored. A different video must not inherit the
+        # old one's shape, so that case clears it until a sweep detects it.
+        if orientation is not None:
+            record["orientation"] = orientation
+        elif stored_video.get(payload["exercise_key"], payload["video_id"]) != payload["video_id"]:
+            record["orientation"] = None
+        store.upsert_exercise_media(record)
         written += 1
         print(f"line {line_no}: saved {label}")
     print(f"done: {written} saved, {rejected} rejected")
