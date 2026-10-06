@@ -1689,7 +1689,11 @@ export function PlanViewer({
   const openOngoing = isOpenOngoingPlan(plan.fight_date);
   const useSavedStructuredPlan = hasStructuredAthletePlan;
   const planDetailTitle = getPlanDisplayName(plan);
-  const fightDateLabel = plan.fight_date ? `Fight date ${formatPlanFightDate(plan.fight_date)}` : null;
+  // An unnamed fight-camp plan is titled by its fight date, so the meta line
+  // would only repeat the heading directly above it.
+  const titleIsFightDate = Boolean(plan.fight_date) && planDetailTitle === formatPlanFightDate(plan.fight_date);
+  const fightDateLabel =
+    plan.fight_date && !titleIsFightDate ? `Fight date ${formatPlanFightDate(plan.fight_date)}` : null;
 
   const blockedTitle =
     injuryTriage?.mode === "medical_hold"

@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useRef, useState, type TransitionEvent } from "react";
 
 import { useAppSession } from "@/components/auth-provider";
+import { LanguageSwitcher } from "@/components/language-switcher";
 import { Skeleton } from "@/components/skeleton";
 import { shouldShowAdminPanelLink } from "@/lib/admin-nav-visibility";
 import { getShellSurface, isAuthSurfaceRoute, shouldShowBrandTopbar } from "@/lib/app-surface";
@@ -505,6 +506,7 @@ export function AppNav() {
                     <button type="button" className="ghost-button" onClick={handleSignOut}>
                       {t("signOut")}
                     </button>
+                    <LanguageSwitcher placement="inline" />
                   </div>
                 </div>
               </div>
