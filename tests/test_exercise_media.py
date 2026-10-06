@@ -135,6 +135,42 @@ def test_parse_youtube_video_id(value, expected):
     assert media.parse_youtube_video_id(value) == expected
 
 
+def test_bank_rows_preserve_required_combat_context_for_review():
+    rows = media_tool.bank_rows(
+        [
+            {
+                "name": "Lead-foot pivot prep",
+                "category": "integrated_movement_control",
+                "movement": "mobility",
+                "method": "rehab",
+                "sport_specific": False,
+                "tactical_styles": ["boxing"],
+                "tags": ["pivot_readiness", "boxer_footwork", "boxer_stance"],
+            },
+            {
+                "name": "Landmine Anti-Rotation Press",
+                "category": "core",
+                "movement": "anti_rotation",
+                "method": "strength",
+                "tags": ["core", "anti_rotation"],
+            },
+        ],
+        existing_keys=set(),
+    )
+
+    pivot, landmine = rows
+    assert pivot["review_sport"] == "boxing"
+    assert pivot["review_context_required"] == "true"
+    assert "boxer_footwork" in pivot["review_context"]
+    assert "boxer_stance" in pivot["review_context"]
+
+    # Generic S&C movements remain sport-agnostic, so a correct demo from
+    # another sport is not rejected solely because of its presenter/context.
+    assert landmine["review_sport"] == ""
+    assert landmine["review_context"] == ""
+    assert landmine["review_context_required"] == "false"
+
+
 # -- index + resolution ------------------------------------------------------
 
 
