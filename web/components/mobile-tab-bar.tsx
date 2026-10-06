@@ -9,7 +9,18 @@ import { useAppSession } from "@/components/auth-provider";
 import { useGenerationStatus } from "@/components/generation-status-provider";
 import { BOTTOM_NAV_ITEMS } from "@/lib/beta-navigation";
 
-const HIDDEN_ROUTES = new Set<string>(["/generate", "/login", "/signup", "/forgot-password", "/reset-password"]);
+// `/private-trial` and `/consent` are one-way gates: every tab would only bounce
+// the athlete straight back to the gate, so the bar is dead chrome there (and it
+// sat on top of the gate's only action). The Menu keeps sign-out reachable.
+const HIDDEN_ROUTES = new Set<string>([
+  "/generate",
+  "/login",
+  "/signup",
+  "/forgot-password",
+  "/reset-password",
+  "/private-trial",
+  "/consent",
+]);
 
 const TAB_ICONS: Record<string, ReactNode> = {
   "/": (

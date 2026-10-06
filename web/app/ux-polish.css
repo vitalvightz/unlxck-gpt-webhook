@@ -1,0 +1,160 @@
+/* ---------------------------------------------------------------------------
+   UX polish pass (non-admin surfaces).
+
+   Loaded last so each rule is a small, named correction to an existing surface
+   rather than another override buried in globals.css. Every block says what
+   was wrong on screen; delete a block to get the old behaviour back.
+--------------------------------------------------------------------------- */
+
+/* 1. Kicker sat flush on the heading below it (0px gap) in the Today cards and
+      the auth cards, while the Today hero already had breathing room. */
+.today-card-head .kicker + h2,
+.auth-card .kicker + h2 {
+  margin-top: 6px;
+}
+
+/* 2. Guided-injury "Edit" rendered at browser-default 16px/400 next to 13px/600
+      controls. Match the surrounding tool buttons. */
+.gi-change-btn {
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.gi-change-btn:hover {
+  border-color: var(--border-strong);
+  color: var(--text-primary);
+}
+
+/* 3. Settings: the main column had no explicit track, so one wide child sized
+      the implicit column to its min-content and every section card overflowed
+      the page panel on a phone. */
+.settings-main,
+.settings-stack,
+.settings-subsection {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.settings-stack > *,
+.settings-card > * {
+  min-width: 0;
+}
+
+/* The theme picker's 280px minimum track is wider than a phone's card. */
+.settings-card .appearance-mode-grid {
+  grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 340px));
+}
+
+/* 4. Language switcher inside the navigation drawer (signed-in workspace). It
+      shares the Sign out row so the drawer does not grow and push the nav list
+      into scrolling on short screens. */
+.sidebar-user-actions:has(.unlxck-language-switcher-inline) {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+}
+
+.sidebar-user-actions:has(.unlxck-language-switcher-inline) > .ghost-button {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.unlxck-language-switcher-inline {
+  position: relative;
+  right: auto;
+  bottom: auto;
+  z-index: auto;
+  flex: 0 0 auto;
+  display: flex;
+}
+
+.unlxck-language-switcher-inline .unlxck-language-switcher-trigger {
+  min-height: 100%;
+  border-radius: 10px;
+  border-color: var(--border-default);
+  background: transparent;
+  color: var(--text-secondary);
+}
+
+.unlxck-language-switcher-inline .unlxck-language-switcher-trigger:hover {
+  border-color: var(--border-strong);
+  color: var(--text-primary);
+}
+
+.unlxck-language-switcher-inline .unlxck-language-menu {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 8px);
+  left: auto;
+  width: 210px;
+  border-radius: 12px;
+}
+
+/* 5. Public/auth pages keep the floating chip; give the safety footer room so
+      the chip no longer covers its last line. */
+html[data-app-surface="brand"] .app-safety-footer {
+  padding-right: 96px;
+  padding-left: 96px;
+}
+
+@media (max-width: 720px) {
+  html[data-app-surface="brand"] .app-safety-footer {
+    padding-right: var(--space-4);
+    padding-bottom: 72px;
+    padding-left: var(--space-4);
+  }
+
+  /* 6. Auth card: the sticky action tray is a square, full-bleed gradient, so
+        it painted over the card's rounded bottom corners and border. */
+  .auth-form-actions {
+    margin: 4px -15px -15px;
+    border-radius: 0 0 19px 19px;
+  }
+
+  /* 7. Settings "Save account": `flex: 1 1 140px` was written for a row, but
+        the action group stacks on a phone, so the basis became a 140px-tall
+        button. */
+  .settings-account-actions-buttons .cta,
+  .settings-account-actions-buttons .ghost-button {
+    flex: 0 0 auto;
+  }
+
+  /* 8. Camp Setup / Quick Build option lists were one full-width 72px row per
+        option — the three weekday pickers plus goals ran to ~40 stacked rows.
+        Two compact columns halve the scroll without shrinking the tap target
+        below 48px. */
+  .checkbox-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .checkbox-grid > .checkbox-card {
+    min-height: 48px;
+    gap: 8px;
+    padding: 10px 12px;
+    border-radius: 12px;
+  }
+
+  /* The global 46px input min-height stretched the 16px box into a 46px-tall
+     element; the label itself is the tap target here. */
+  .checkbox-grid > .checkbox-card input {
+    min-height: 0;
+  }
+
+  /* 14px mono with wide tracking broke "Wednesday" / "Conditioning" mid-word
+     in a half-width card. */
+  .checkbox-grid .checkbox-card-title {
+    font-size: 0.8125rem;
+    line-height: 1.25;
+    letter-spacing: 0.01em;
+    overflow-wrap: break-word;
+  }
+}
+
+/* Very narrow phones: long option labels need the full row back. */
+@media (max-width: 340px) {
+  .checkbox-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

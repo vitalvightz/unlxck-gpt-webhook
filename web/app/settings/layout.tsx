@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useMemo, useState, type ReactNode } from "react";
 
 import { AppSessionContext, useAppSession } from "@/components/auth-provider";
 import { reconcileSettingsMe } from "@/lib/settings-session-shield";
@@ -15,9 +15,14 @@ export default function SettingsLayout({ children }: Readonly<{ children: ReactN
   const parentSession = useAppSession();
   const [settingsMe, setSettingsMe] = useState<MeResponse | null>(parentSession.me);
 
-  useEffect(() => {
-    setSettingsMe((current) => reconcileSettingsMe(current, parentSession.me));
-  }, [parentSession.me]);
+  // Reconcile during render, not in an effect. An effect leaves one committed
+  // frame where the parent session is hydrated but this snapshot is still null;
+  // RequireAuth reads that frame as "signed in with no profile" and bounces a
+  // cold load of /settings to /login (and on to the landing route).
+  const reconciledMe = reconcileSettingsMe(settingsMe, parentSession.me);
+  if (reconciledMe !== settingsMe) {
+    setSettingsMe(reconciledMe);
+  }
 
   const replaceMe = useCallback(
     (nextMe: MeResponse | null) => {
@@ -28,8 +33,8 @@ export default function SettingsLayout({ children }: Readonly<{ children: ReactN
   );
 
   const settingsSession = useMemo(
-    () => ({ ...parentSession, me: settingsMe, replaceMe }),
-    [parentSession, replaceMe, settingsMe],
+    () => ({ ...parentSession, me: reconciledMe, replaceMe }),
+    [parentSession, reconciledMe, replaceMe],
   );
 
   return <AppSessionContext.Provider value={settingsSession}>{children}</AppSessionContext.Provider>;

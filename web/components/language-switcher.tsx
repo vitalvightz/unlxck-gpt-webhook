@@ -15,7 +15,13 @@ function readLocaleCookie() {
   return document.cookie.split("; ").find((value) => value.startsWith(`${LOCALE_COOKIE_NAME}=`))?.split("=")[1] ?? null;
 }
 
-export function LanguageSwitcher() {
+/**
+ * `floating` (default) is the fixed corner chip for the public/auth pages; it
+ * also owns the one-time profile-locale restore. Signed in, the chip sat behind
+ * the mobile tab bar and over the safety footer on desktop, so the workspace
+ * renders the `inline` variant inside the navigation drawer instead.
+ */
+export function LanguageSwitcher({ placement = "floating" }: Readonly<{ placement?: "floating" | "inline" }> = {}) {
   const router = useRouter();
   const t = useTranslations("LanguageSwitcher");
   const locale = resolveLocale(useLocale());
@@ -36,12 +42,13 @@ export function LanguageSwitcher() {
   }, [open]);
 
   useEffect(() => {
+    if (placement !== "floating") return;
     const profileLocale = profileLocaleToRestore(readLocaleCookie(), me?.profile.athlete_locale, locale);
     if (!profileLocale) return;
     writeLocaleCookie(profileLocale);
     document.documentElement.setAttribute("lang", profileLocale);
     router.refresh();
-  }, [locale, me?.profile.athlete_locale, router]);
+  }, [locale, me?.profile.athlete_locale, placement, router]);
 
   async function selectLocale(next: AppLocale) {
     if (pending || next === locale) return setOpen(false);
@@ -52,7 +59,9 @@ export function LanguageSwitcher() {
     }
     router.refresh(); setPending(null);
   }
-  return <div ref={rootRef} className="unlxck-language-switcher">
+  if (placement === "floating" && session) return null;
+
+  return <div ref={rootRef} className={placement === "inline" ? "unlxck-language-switcher unlxck-language-switcher-inline" : "unlxck-language-switcher"}>
     <button type="button" className="unlxck-language-switcher-trigger" aria-label={t("current", { language: current.label })} aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen((value) => !value)} disabled={pending !== null}>
       <span aria-hidden="true">◎</span><span>{current.shortLabel}</span><span aria-hidden="true">⌄</span>
     </button>

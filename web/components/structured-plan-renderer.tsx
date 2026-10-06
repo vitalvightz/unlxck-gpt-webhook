@@ -781,6 +781,10 @@ export function SessionCard({
   const isTechnicalSession = title === "Technical-only combat";
   const sessionType = cleanText(session.session_type);
   const objective = formatSessionObjective(session.objective);
+  // A rationale that is just the session title again ("Strength" / "Why
+  // Strength") explains nothing; show the line only when it adds a reason.
+  const objectiveRepeatsTitle =
+    objective != null && objective.trim().toLowerCase() === title.trim().toLowerCase();
   const duration = formatMeasured(session.planned_duration);
   const date = cleanText(day?.date);
   const countdown = formatCountdownLabel(day?.countdown_label);
@@ -831,7 +835,7 @@ export function SessionCard({
             <p className="sp-today-note">{DECLARED_LIGHT_COMBAT_DESCRIPTION}</p>
           ) : isTechnicalSession ? (
             <TechnicalCombatRationale />
-          ) : objective ? (
+          ) : objective && !objectiveRepeatsTitle ? (
             <p
               className={`sp-session-objective${blocks.length > 0 ? "" : " sp-session-instruction"}`}
             >
