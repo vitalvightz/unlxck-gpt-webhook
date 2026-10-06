@@ -484,15 +484,100 @@ def test_best_candidate_wins_and_confident_match_stops_early():
     assert outcome.tried == [URL_A, URL_B]  # stopped before URL_C
 
 
-def test_vertical_match_keeps_looking_for_landscape():
-    answers = {
-        URL_A: _answer(orientation="vertical"),
-        URL_B: _answer(confidence=0.8),
-    }
+def test_confident_vertical_match_is_strong_and_stops_search():
+    answers = {URL_A: _answer(orientation="vertical"), URL_B: _answer()}
     outcome = review.review_row(
         _reviewer(answers), _row(candidate_urls=URL_B), max_candidates=4, delay_s=0, sleep=lambda _: None
     )
-    assert outcome.best.url == URL_B
+    assert outcome.best.url == URL_A
+    assert outcome.tried == [URL_A]
+    updated = review.apply_outcome(_row(), outcome, model="m")
+    assert updated["needs_manual_video"] == "false"
+
+
+def _video(**overrides):
+    return review.parse_review(URL_A, json.dumps(_answer(**overrides)))
+
+
+@pytest.mark.parametrize(
+    ("overrides", "strong"),
+    [
+        ({}, True),
+        ({"orientation": "vertical"}, True),
+        ({"orientation": "vertical", "confidence": 0.89}, False),
+        ({"orientation": "vertical", "verdict": "partial"}, False),
+        ({"orientation": "vertical", "segment_start": None, "segment_end": None}, False),
+        ({"orientation": "landscape", "segment_start": None, "segment_end": None}, False),
+        ({"orientation": "vertical", "segment_start": "00:54", "segment_end": "00:42"}, False),
+        ({"verdict": "no_match"}, False),
+    ],
+)
+def test_strong_match_ignores_orientation(overrides, strong):
+    result = _video(**overrides)
+    assert review.is_strong_match(result) is strong
+    row = {
+        "ai_verdict": result.verdict,
+        "ai_confidence": f"{result.confidence:.2f}",
+        "ai_orientation": result.orientation,
+        "ai_start_s": "" if result.start_s is None else str(result.start_s),
+        "ai_end_s": "" if result.end_s is None else str(result.end_s),
+    }
+    assert review._row_is_strong(row) is strong
+
+
+@pytest.mark.parametrize(
+    "row",
+    [
+        {"ai_verdict": "match", "ai_confidence": "0.95", "ai_orientation": "vertical", "ai_start_s": "", "ai_end_s": ""},
+        {"ai_verdict": "match", "ai_confidence": "0.95", "ai_orientation": "landscape", "ai_start_s": "9", "ai_end_s": "3"},
+        {"ai_verdict": "partial", "ai_confidence": "0.95", "ai_orientation": "vertical", "ai_start_s": "3", "ai_end_s": "9"},
+        {"ai_verdict": "error", "ai_confidence": "", "ai_orientation": "", "ai_start_s": "", "ai_end_s": ""},
+        {"ai_verdict": "match", "ai_confidence": "bad", "ai_orientation": "vertical", "ai_start_s": "3", "ai_end_s": "9"},
+    ],
+)
+def test_row_is_strong_rejects_weak_rows(row):
+    assert review._row_is_strong(row) is False
+
+
+def test_ranking_still_prefers_landscape_when_otherwise_equal():
+    vertical = _video(orientation="vertical")
+    landscape = _video(orientation="landscape")
+    assert landscape.score > vertical.score
+    weak_landscape = _video(orientation="landscape", confidence=0.8)
+    weak_vertical = _video(orientation="vertical", confidence=0.85)
+    assert weak_landscape.score > weak_vertical.score
+    # A strong vertical match beats a weak landscape one.
+    assert vertical.score > weak_landscape.score
+
+
+def test_saved_vertical_matches_are_promoted_without_gemini(tmp_path):
+    src = tmp_path / "media.csv"
+    saved = dict(ai_verdict="match", ai_confidence="0.92", ai_orientation="vertical",
+                 ai_start_s="12", ai_end_s="20", needs_manual_video="true", ai_candidates_tried="4")
+    _write_csv(src, [
+        _row(exercise_key="vertical-match", start_s="12", end_s="20", **saved),
+        _row(exercise_key="vertical-partial", **{**saved, "ai_verdict": "partial"}),
+        _row(exercise_key="vertical-low", **{**saved, "ai_confidence": "0.85"}),
+        _row(exercise_key="vertical-no-loop", **{**saved, "ai_start_s": "", "ai_end_s": ""}),
+        _row(exercise_key="no-match", **{**saved, "ai_verdict": "no_match"}),
+    ])
+
+    calls = []
+    logs = []
+    counts = review.run_review(
+        str(src), str(src), reviewer=_reviewer({}, calls),
+        delay_s=0, sleep=lambda _: None, log=logs.append,
+    )
+
+    assert calls == []
+    assert counts["reviewed"] == 0 and counts["skipped"] == 5
+    rows = {row["exercise_key"]: row for row in _read_csv(src)}
+    promoted = rows["vertical-match"]
+    assert promoted["needs_manual_video"] == "false"
+    assert (promoted["suggested_url"], promoted["start_s"], promoted["end_s"]) == (URL_A, "12", "20")
+    for key in ("vertical-partial", "vertical-low", "vertical-no-loop", "no-match"):
+        assert rows[key]["needs_manual_video"] == "true", key
+    assert any("promoted 1 saved strong" in line for line in logs)
 
 
 def test_apply_outcome_prefills_loop_but_never_approves_or_overwrites():

@@ -136,7 +136,7 @@ def test_queries_use_exercise_metadata_without_private_cues():
 
 @pytest.mark.parametrize("first", [
     _answer(verdict="partial"), _answer(verdict="no_match"),
-    _answer(confidence=0.89), _answer(orientation="vertical"),
+    _answer(confidence=0.89), _answer(orientation="vertical", confidence=0.89),
 ])
 def test_weak_video_discovers_better_match_and_stops_early(first):
     calls, searches = [], []

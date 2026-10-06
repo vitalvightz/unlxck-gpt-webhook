@@ -578,7 +578,7 @@ def candidate_urls(row: dict[str, str], max_candidates: int, *, exclude: set[str
 def is_strong_match(result: VideoReview | None) -> bool:
     return bool(
         result and result.verdict == "match" and result.confidence >= STOP_CONFIDENCE
-        and result.orientation == "landscape" and clean_segment(result.start_s, result.end_s)[0] is not None
+        and clean_segment(result.start_s, result.end_s)[0] is not None
     )
 
 
@@ -589,9 +589,30 @@ def _row_is_strong(row: dict[str, str]) -> bool:
         return False
     return (
         row.get("ai_verdict") == "match" and confidence >= STOP_CONFIDENCE
-        and row.get("ai_orientation") == "landscape"
         and clean_segment(row.get("ai_start_s"), row.get("ai_end_s"))[0] is not None
     )
+
+
+def _promote_saved_strong_rows(rows: list[dict[str, str]]) -> set[str]:
+    """Clear needs_manual_video on completed rows that now pass _row_is_strong.
+
+    Rows reviewed under the old landscape-only gate (e.g. a confident vertical
+    match with a valid loop) are promoted from their saved verdict, without
+    another Gemini call. Only ever promotes; weak rows stay manual.
+    """
+    promoted = set()
+    for row in rows:
+        if (
+            (row.get("needs_manual_video") or "").strip() == "true"
+            and not (row.get("ai_review_progress") or "").strip()
+            and _row_is_strong(row)
+        ):
+            row["needs_manual_video"] = "false"
+            start_s, end_s = clean_segment(row.get("ai_start_s"), row.get("ai_end_s"))
+            if not (row.get("start_s") or "").strip() and not (row.get("end_s") or "").strip():
+                row["start_s"], row["end_s"] = str(start_s), str(end_s)
+            promoted.add(row.get("exercise_key") or "")
+    return promoted
 
 
 def _reviewed_ids(row: dict[str, str]) -> list[str]:
@@ -737,7 +758,7 @@ def review_row(
             outcome.best = result
         if checkpoint:
             checkpoint(outcome)
-        # A confident landscape match with a usable loop needs no more candidates. "match" has
+        # A confident match with a usable loop needs no more candidates. "match" has
         # already been checked against structure and added elements.
         if is_strong_match(result) or len(outcome.tried) >= max_candidates:
             break
@@ -1084,6 +1105,12 @@ def run_review(
 
     def save() -> None:
         _write_rows(out, fieldnames, rows, replace_keys=replace_keys)
+
+    promoted = _promote_saved_strong_rows(rows)
+    if promoted:
+        replace_keys.update(promoted)
+        log(f"promoted {len(promoted)} saved strong matches out of needs_manual_video (no Gemini calls)")
+        save()
 
     counts = {"reviewed": 0, "skipped": 0, "errors": 0}
     redo_weak_pass = 0
