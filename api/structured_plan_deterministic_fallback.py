@@ -36,7 +36,9 @@ from typing import Any
 from fightcamp.role_labels import athlete_facing_label_for
 from fightcamp.session_sequencing import sequence_structured_plan
 
-from .exercise_identity import block_exercise_key_for_name
+from fightcamp.exercise_identity import support_insert_exercise_key
+
+from .exercise_identity import block_exercise_key_for_name, normalize_exercise_key
 from .structured_plan_calendar_spine import (
     ROLES_OWNED_ELSEWHERE,
     reconcile_calendar_spine,
@@ -683,7 +685,7 @@ def _parsed_block(
     # split into numbers this module would have to invent.
     cues = [parsed.activity_dose] if parsed.activity_dose else []
     cues.extend(parsed.cues)
-    return {
+    block = {
         "block_id": f"deterministic-{d_day}-{role_key or 'role'}-display",
         "block_type": _block_type(role),
         "display_name": parsed.activity_name,
@@ -695,6 +697,59 @@ def _parsed_block(
         "substitutions": [],
         "progression_rule": parsed.progression or None,
         "stop_rules": list(parsed.stop_rules),
+    }
+    exercise_key = _insert_exercise_key(role)
+    if exercise_key:
+        block["exercise_key"] = exercise_key
+    return block
+
+
+def _insert_exercise_key(role: dict[str, Any]) -> str | None:
+    """The movement identity Stage 1 assigned this support insert, if any.
+
+    The planner stamps ``exercise_key`` on an insert that is one known physical
+    movement ("Shadowboxing Aerobic Flow" is tempo shadowboxing); older briefs
+    predate the stamp, so the same deterministic table is consulted for them.
+    Inserts without one (joint prep, breathing, visualisation) return ``None``.
+    """
+    stamped = normalize_exercise_key(role.get("exercise_key"))
+    if stamped:
+        return stamped
+    return support_insert_exercise_key(role.get("role_key"), role.get("athlete_facing_label"))
+
+
+_SENTENCE_SPLIT_RE = re.compile(r"(?<=[.!?])\s+(?=[A-Z])")
+
+
+def _insert_movement_block(
+    role: dict[str, Any], d_day: int, role_key: str, title: str, instruction: str
+) -> dict[str, Any] | None:
+    """One block for a support insert that IS one known movement, else ``None``.
+
+    Without a block the insert has nothing to carry its ``exercise_key``, so the
+    card prints the banked sentence as bare text and the demo never resolves.
+    The movement and its identity are the planner's; the dose is the banked
+    copy verbatim. Only clauses of its first sentence that are entirely one
+    quantity ("60 sec rest", "RPE 3") are lifted into stats; every other word
+    stays, in order, as the block's cues, so nothing is invented or dropped.
+    """
+    exercise_key = _insert_exercise_key(role)
+    if not exercise_key or not instruction:
+        return None
+    first, *more = _SENTENCE_SPLIT_RE.split(instruction.strip(), maxsplit=1)
+    fields, remainder = _lift_dose_fields(re.sub(r"\s*,\s*", "; ", first.strip()))
+    cues = [remainder] if remainder else []
+    cues.extend(sentence.strip() for sentence in more if sentence.strip())
+    return {
+        "block_id": f"deterministic-{d_day}-{role_key or 'role'}-movement",
+        "block_type": _block_type(role),
+        "display_name": title,
+        "exercise_key": exercise_key,
+        "order_index": 0,
+        "coaching_cues": cues,
+        "regression_options": [],
+        "substitutions": [],
+        **fields,
     }
 
 
@@ -719,6 +774,17 @@ def _session(
     title = athlete_facing_label_for(
         role_key, fallback=str(role.get("athlete_facing_label") or "").strip() or None
     )
+    if not blocks and parsed is not None and not parsed.activity_name:
+        # One-sentence copy for a known movement: give it a block so the
+        # planner's movement identity (and its demo) reaches the card.
+        movement = _insert_movement_block(
+            role, d_day, role_key, str(title or "Session"), parsed.instruction
+        )
+        if movement is not None:
+            blocks = [movement]
+            # The prescription now lives on the block; the session keeps only
+            # its rationale, or its title (which the card does not repeat).
+            parsed = _ParsedDisplayText(why=parsed.why)
     # ``day_assignment_reason`` is internal Stage 1 placement rationale
     # ("Declared hard sparring day is fixed in the weekly role map", "Use the
     # lowest-load day immediately before the primary strength anchor"). The
