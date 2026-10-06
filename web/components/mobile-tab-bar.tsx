@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 
 import { useAppSession } from "@/components/auth-provider";
 import { useGenerationStatus } from "@/components/generation-status-provider";
@@ -59,15 +59,20 @@ const TAB_ICONS: Record<string, ReactNode> = {
  * content showing underneath. The offset moves it back onto the visible edge.
  * It never lifts the bar (a keyboard shrinking the visual viewport must not
  * push it up), and is ignored while pinch-zoomed.
+ *
+ * `fixedBottom` is where the bar's bottom edge lands with no offset, measured
+ * from the bar itself: in an iOS home-screen app `window.innerHeight` can
+ * report the full visual height while the fixed layer is still sized to the
+ * keyboard-shrunk viewport, so the window alone reads "no gap".
  */
 export function visualViewportBottomOffset(
-  layoutHeight: number,
+  fixedBottom: number,
   viewport: { height: number; offsetTop: number; scale: number } | null | undefined,
 ): number {
-  if (!viewport || Math.abs(viewport.scale - 1) > 0.01 || !(layoutHeight > 0)) {
+  if (!viewport || Math.abs(viewport.scale - 1) > 0.01 || !(fixedBottom > 0)) {
     return 0;
   }
-  const gap = Math.round(layoutHeight - (viewport.offsetTop + viewport.height));
+  const gap = Math.round(fixedBottom - (viewport.offsetTop + viewport.height));
   return gap < 0 ? gap : 0;
 }
 
@@ -83,6 +88,7 @@ export function MobileTabBar() {
   const pathname = usePathname();
   const { isReady, session } = useAppSession();
   const { isActive: generationActive } = useGenerationStatus();
+  const barRef = useRef<HTMLElement>(null);
 
   const isAdminRoute = pathname === "/admin" || pathname.startsWith("/admin/");
   const isHidden = !isReady || !session || isAdminRoute || HIDDEN_ROUTES.has(pathname);
@@ -106,10 +112,24 @@ export function MobileTabBar() {
     }
     const root = document.documentElement;
     let frame = 0;
+    let applied = 0;
+    const timers = new Set<number>();
     const sync = () => {
       cancelAnimationFrame(frame);
       frame = requestAnimationFrame(() => {
-        const offset = visualViewportBottomOffset(window.innerHeight, viewport);
+        // While the drawer slides the bar off-screen its rect is not where
+        // `bottom: 0` lands; keep the current offset until it comes back.
+        if (root.dataset.mobileNavOpen === "true") {
+          return;
+        }
+        const bar = barRef.current;
+        // Undo the offset already applied to recover where `bottom: 0` lands.
+        const fixedBottom = bar ? bar.getBoundingClientRect().bottom + applied : window.innerHeight;
+        const offset = visualViewportBottomOffset(fixedBottom, viewport);
+        if (offset === applied) {
+          return;
+        }
+        applied = offset;
         if (offset === 0) {
           root.style.removeProperty("--visual-viewport-bottom-offset");
         } else {
@@ -117,15 +137,44 @@ export function MobileTabBar() {
         }
       });
     };
-    sync();
+    // The keyboard and the app-switcher settle after their events fire, and
+    // iOS does not always send a final viewport event; check again once the
+    // animation has finished.
+    const settle = () => {
+      sync();
+      for (const delay of [120, 400, 800]) {
+        const id = window.setTimeout(() => {
+          timers.delete(id);
+          sync();
+        }, delay);
+        timers.add(id);
+      }
+    };
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") {
+        settle();
+      }
+    };
+    settle();
     viewport.addEventListener("resize", sync);
     viewport.addEventListener("scroll", sync);
     window.addEventListener("scroll", sync, { passive: true });
+    window.addEventListener("resize", settle);
+    window.addEventListener("orientationchange", settle);
+    window.addEventListener("pageshow", settle);
+    document.addEventListener("focusout", settle);
+    document.addEventListener("visibilitychange", onVisibility);
     return () => {
       cancelAnimationFrame(frame);
+      timers.forEach((id) => window.clearTimeout(id));
       viewport.removeEventListener("resize", sync);
       viewport.removeEventListener("scroll", sync);
       window.removeEventListener("scroll", sync);
+      window.removeEventListener("resize", settle);
+      window.removeEventListener("orientationchange", settle);
+      window.removeEventListener("pageshow", settle);
+      document.removeEventListener("focusout", settle);
+      document.removeEventListener("visibilitychange", onVisibility);
       root.style.removeProperty("--visual-viewport-bottom-offset");
     };
   }, [isHidden]);
@@ -135,7 +184,7 @@ export function MobileTabBar() {
   }
 
   return (
-    <nav className="mobile-tab-bar" aria-label={t("primary")}>
+    <nav ref={barRef} className="mobile-tab-bar" aria-label={t("primary")}>
       {BOTTOM_NAV_ITEMS.map((tab) => {
         const active = isActive(pathname, tab.href);
         return (
