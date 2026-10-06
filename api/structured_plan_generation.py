@@ -41,6 +41,7 @@ from .structured_plan_calendar_spine import (
     reconcile_calendar_spine,
 )
 from .structured_plan_faithfulness import (
+    _source_day_section_lines,
     PRESCRIPTION,
     _day_header_dday,
     check_structured_faithfulness,
@@ -2909,6 +2910,91 @@ def _planner_owned_session_indexes(
     return owned
 
 
+def _role_session_type(role: dict[str, Any]) -> str:
+    # Deferred: the deterministic fallback imports the spine, which this module
+    # also imports; keep the import graph acyclic at load time.
+    from .structured_plan_deterministic_fallback import _session_type
+
+    return _session_type(role)
+
+
+def planner_sc_coverage_losses(
+    plan_dict: Any, planning_brief: Any, raw_markdown: str
+) -> list[str]:
+    """Stage 1 S&C roles the source rendered but the structured card lost.
+
+    A role counts when Stage 1 scheduled it with selected exercises, it is
+    strength/conditioning work, and the source text names one of its exercises
+    in that D-day's section (what Stage 2 actually rendered is what conversion
+    must preserve; a role the text never rendered is a separate Stage 2
+    underfill, not a conversion loss). It is represented when a session on its
+    day matches it under the shared identity rule, or failing that, an
+    otherwise-unclaimed session of the same session type is on that day.
+    """
+    roles_by_dday = _planner_sc_roles_by_dday(planning_brief)
+    if not roles_by_dday or not isinstance(plan_dict, dict) or not raw_markdown.strip():
+        return []
+    sections = _source_day_section_lines(raw_markdown)
+    fight_date = parse_fight_date(spine_resolve_fight_date(planning_brief))
+    sessions_by_dday: dict[int, list[Any]] = {}
+    for week in plan_dict.get("weeks") or []:
+        if not isinstance(week, dict):
+            continue
+        for day in week.get("days") or []:
+            if not isinstance(day, dict):
+                continue
+            d_day = spine_parse_dday(day.get("countdown_label"))
+            if d_day is None and fight_date is not None:
+                d_day = spine_effective_dday(day, fight_date)
+            sessions = day.get("sessions")
+            if d_day is not None and isinstance(sessions, list):
+                sessions_by_dday.setdefault(d_day, []).extend(sessions)
+
+    losses: list[str] = []
+    for d_day in sorted(roles_by_dday, reverse=True):
+        source = " ".join(sections.get(d_day, [])).casefold()
+        required = []
+        for role in roles_by_dday[d_day]:
+            if _role_session_type(role) not in _PLANNER_SC_SESSION_TYPES:
+                continue
+            names = [
+                str(assignment.get("name") or "").strip().casefold()
+                for assignment in role.get("selected_exercise_assignments") or []
+                if isinstance(assignment, dict)
+            ]
+            if any(name and name in source for name in names):
+                required.append(role)
+        if not required:
+            continue
+        sessions = sessions_by_dday.get(d_day, [])
+        matched = match_sessions_to_roles(sessions, required, d_day)
+        claimed = set(matched)
+        represented = {id(role) for role in matched.values()}
+        for role in required:
+            if id(role) in represented:
+                continue
+            session_type = _role_session_type(role)
+            index = next(
+                (
+                    i
+                    for i, session in enumerate(sessions)
+                    if i not in claimed
+                    and isinstance(session, dict)
+                    and session.get("session_type") == session_type
+                ),
+                None,
+            )
+            if index is not None:
+                claimed.add(index)
+                continue
+            losses.append(
+                f"planner_coverage: D-{d_day} {str(role.get('role_key') or 'role')!r} "
+                f"({session_type}) is rendered in the source but missing from the "
+                "structured card"
+            )
+    return losses
+
+
 def _salvage_invalid_training_nodes(
     candidate: Any,
     errors: list[str],
@@ -3162,6 +3248,17 @@ def build_structured_plan_outcome(
         # order each day's sessions and each session's blocks for execution.
         plan_dict = regroup_split_sessions(plan_dict, raw_markdown)
         plan_dict = sequence_structured_plan(plan_dict, planning_brief)
+        # Hard invariant for every candidate that can ship (first pass,
+        # schema-salvaged, faithfulness-pruned or model-repaired): conversion
+        # never costs Stage 1 strength/conditioning the source rendered. A card
+        # that lost one falls back to the deterministic Stage 1 card instead.
+        coverage_losses = planner_sc_coverage_losses(plan_dict, planning_brief, raw_markdown)
+        if coverage_losses:
+            return StructuredPlanOutcome(
+                status="invalid_fallback_used",
+                errors=coverage_losses,
+                warnings=list(faithfulness_warnings or []),
+            )
         blocking, advisory = split_findings(audit_structured_plan(plan_dict, computed_support))
         warnings = list(dict.fromkeys([*(faithfulness_warnings or []), *advisory]))
         if blocking:

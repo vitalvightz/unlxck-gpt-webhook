@@ -27,6 +27,7 @@ from api.structured_plan_calendar_spine import reconcile_calendar_spine
 from api.structured_plan_generation import (
     _salvage_invalid_training_nodes,
     build_structured_plan_outcome,
+    normalize_structured_plan_candidate,
 )
 from api.structured_plan_models import safe_parse_structured_plan
 from fightcamp.stage2_payload import build_computed_support
@@ -401,3 +402,92 @@ def test_weekday_spellings_normalize(weekday):
 
     expected = None if not weekday else "Fri"
     assert _normalize_day({"weekday": weekday})["weekday"] == expected
+
+
+# --- end-to-end coverage invariant (repair / first pass) --------------------
+
+
+def _short_weekday(d_day: int) -> str:
+    return _long_weekday(d_day)[:3]
+
+
+def _without_d23_strength(card: dict) -> dict:
+    card = copy.deepcopy(card)
+    card["weeks"][0]["days"] = [
+        day for day in card["weeks"][0]["days"] if day["countdown_label"] != "D-23"
+    ]
+    return card
+
+
+def test_repair_that_deletes_planner_strength_cannot_ship():
+    # 1. planner owns D-23 Strength; 2. the converter's session is schema-invalid.
+    broken = _corrupt_strength_session(_converter_card())
+    # 3. salvage correctly refuses to delete it.
+    _, _, refusals = _salvage_invalid_training_nodes(
+        copy.deepcopy(broken), ["weeks.0.days.2.sessions.0.completion: bad"],
+        raw_markdown=_source_text(), planning_brief=_brief(),
+    )
+    assert refusals
+    # 4. the repair model "fixes" the card by deleting D-23 Strength.
+    repaired = _without_d23_strength(_converter_card(weekday=_short_weekday))
+    # Schema-valid once the pipeline's own normalization runs on it.
+    assert safe_parse_structured_plan(normalize_structured_plan_candidate(repaired)).ok
+
+    outcome = _outcome(broken, repair_fn=lambda _data, _errors: copy.deepcopy(repaired))
+
+    # 5. the repaired card must not become athlete-visible.
+    assert outcome.status != "repair_attempted_valid"
+    assert outcome.status == "invalid_fallback_used"
+    assert outcome.structured_plan is None
+    assert any(
+        e.startswith("planner_coverage: D-23 'primary_strength_day' (strength_power)")
+        for e in outcome.errors
+    ), outcome.errors
+
+
+def test_repair_that_keeps_planner_strength_still_ships():
+    broken = _corrupt_strength_session(_converter_card())
+    fixed = _converter_card(weekday=_short_weekday)
+
+    outcome = _outcome(broken, repair_fn=lambda _data, _errors: copy.deepcopy(fixed))
+
+    assert outcome.status == "repair_attempted_valid", outcome.errors
+    assert _sc_counts(outcome.structured_plan) == _SC_COUNT
+
+
+def test_first_pass_card_that_silently_omits_planner_strength_is_rejected():
+    outcome = _outcome(_without_d23_strength(_converter_card()))
+
+    assert outcome.status == "invalid_fallback_used"
+    assert outcome.structured_plan is None
+    assert any("D-23 'primary_strength_day'" in e for e in outcome.errors)
+
+
+def test_retitled_planner_session_still_counts_as_represented():
+    card = _converter_card()
+    card["weeks"][0]["days"][2]["sessions"][0]["title"] = "Lower-body power"
+
+    outcome = _outcome(card)
+
+    assert outcome.status == "valid", outcome.errors
+
+
+def test_role_the_source_never_rendered_is_not_a_conversion_loss():
+    # Stage 2 underfill (the text omits a scheduled role) is a separate issue:
+    # the converter cannot be blamed for content it was never given.
+    brief = _brief()
+    brief["weekly_role_map"]["weeks"][0]["session_roles"].append(
+        {
+            "role_key": "strength_touch_day",
+            "category": "strength",
+            "athlete_facing_label": "Strength touch",
+            "scheduled_countdown_label": "D-13",
+            "selected_exercise_assignments": [{"name": "Explosive Straight Burst"}],
+        }
+    )
+
+    outcome = build_structured_plan_outcome(
+        _converter_card(), raw_markdown=_source_text(), planning_brief=brief
+    )
+
+    assert outcome.status == "valid", outcome.errors
