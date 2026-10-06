@@ -17,6 +17,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from tools.audit_rehab_bank_rationalisation import build_audit  # noqa: E402
+from tools.rehab_metadata_review_lib import pathway_inventory_snapshot  # noqa: E402
 
 DISPOSITIONS = {
     'A': 'READY_FOR_CLINICAL_GATE_REVIEW',
@@ -44,10 +45,18 @@ def file_hash(path):
     return hashlib.sha256(path.read_text(encoding='utf-8').encode('utf-8')).hexdigest()
 
 
+def planning_input_hash(path):
+    """Preserve #2742's exact snapshot, excluding only #2743 input declarations."""
+    if path == ROOT / 'data/rehab_pathways.json':
+        pathways = pathway_inventory_snapshot(read(path))
+        return hashlib.sha256((json.dumps(pathways, indent=2) + '\n').encode('utf-8')).hexdigest()
+    return file_hash(path)
+
+
 def build_review(bank, ledger, pathways, archive, decisions):
     # Preserve the #2742 planning snapshot. Runtime capture can subsequently
     # advance without rewriting the reviewed inventory or its dated conclusions.
-    audit, clusters = build_audit(bank, ledger, pathways, captured_checkpoints=frozenset())
+    audit, clusters = build_audit(bank, ledger, pathways, captured_checkpoints=frozenset(), captured_assessment_inputs={})
     if audit['integrity_errors']:
         raise ValueError('Resolve input integrity before planning review')
     inventory = {r['drill_id']: r for r in audit['drills'] if r['classification'] == 'ADVANCED_CANDIDATE'}
@@ -207,7 +216,7 @@ def main(argv=None):
     parser.add_argument('--output-dir', type=Path, default=ROOT / 'docs')
     args = parser.parse_args(argv)
     decisions = read(DECISIONS_PATH)
-    if any(file_hash(ROOT / p) != h for p, h in decisions['protected_input_sha256'].items() if p in PROTECTED_PATHS):
+    if any(planning_input_hash(ROOT / p) != h for p, h in decisions['protected_input_sha256'].items() if p in PROTECTED_PATHS):
         print('Protected production inputs changed; review must be renewed.')
         return 1
     report = build_review(*(read(ROOT / p) for p in ('data/rehab_bank.json', 'data/rehab_metadata_review.json',

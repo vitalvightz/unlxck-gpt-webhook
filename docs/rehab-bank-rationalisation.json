@@ -311,12 +311,13 @@
         "candidate_stages": [
           "load"
         ],
-        "captured_functional_checkpoints": [
+        "captured_assessment_inputs": [
           "achilles_heel_rise_assessed",
           "achilles_loading_response_assessed",
           "achilles_range_load_assessed",
           "achilles_site_assessed"
         ],
+        "captured_functional_checkpoints": [],
         "current_content_problems": [],
         "drill_needs_repair": false,
         "evidence_missing_detail": "No active reviewed prescription approves this identity in its candidate stage. Existing movement sources do not establish regional advanced readiness.",
@@ -461,12 +462,13 @@
         "candidate_stages": [
           "load"
         ],
-        "captured_functional_checkpoints": [
+        "captured_assessment_inputs": [
           "achilles_heel_rise_assessed",
           "achilles_loading_response_assessed",
           "achilles_range_load_assessed",
           "achilles_site_assessed"
         ],
+        "captured_functional_checkpoints": [],
         "current_content_problems": [
           "→",
           "rehab_stage",
@@ -183520,7 +183522,7 @@
   "input_sha256": {
     "rehab_bank.json": "13b47b8a2da99b16899dee3ba6fc51450834a90effe08e32bc153f990f3f6b2e",
     "rehab_metadata_review.json": "e5fd9144d8739290d70f3993710b72cc818e42b4e2b23cc568accf10655f48e7",
-    "rehab_pathways.json": "8df1afbf3e92997da63e7c6ec5b160e164dd414d3d1bce5cdaa0b8bb8b107e31"
+    "rehab_pathways.json": "5ea507ee0219ea31717c082d38cb3fd1d2bb49d91f6d939e98b8f96b5888ba3d"
   },
   "integrity_errors": [],
   "method": "Ordered LIVE, unsafe/low-value DEPRECATE, exact same-pair duplicate surplus, explicit MISPLACED, separate/specialist KEEP_DORMANT, textual REPAIR, fixed-reviewed ADVANCED_CANDIDATE, incomplete REPAIR, KEEP_DORMANT. Rules are conservative screening; semantic efficacy/indications remain uncertain.",
@@ -187003,12 +187005,13 @@
       "calm+restore": 38
     },
     "camp_phase_instruction_drills": 1410,
-    "captured_functional_checkpoints": [
+    "captured_assessment_inputs": [
       "achilles_heel_rise_assessed",
       "achilles_loading_response_assessed",
       "achilles_range_load_assessed",
       "achilles_site_assessed"
     ],
+    "captured_functional_checkpoints": [],
     "classification_breakdowns": {
       "canonical_region": {
         "achilles": {

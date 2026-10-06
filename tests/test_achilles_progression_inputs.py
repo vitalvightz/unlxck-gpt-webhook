@@ -6,7 +6,9 @@ import pytest
 from fastapi import HTTPException
 from pydantic import ValidationError
 
-from api.contracts.achilles_progression import AchillesProgressionInput, CHECKPOINTS, read_achilles_checkpoint
+from api.contracts.achilles_progression import AchillesProgressionInput
+from api.contracts.rehab_assessment import AchillesProgressionAssessment, AssessmentContext, input_definitions, read_assessment_input
+
 from api.contracts.injury_policy import resolve_injury_policy
 from api.contracts.rehab_progression import evaluate_transition
 from api.services.injury_episode_service import InjuryEpisodeObservation, apply_episode_observations, record_episode_observation
@@ -19,16 +21,17 @@ from tests.support import _build_client, withdraw_health_consent
 from api.services import today_service
 
 NOW = datetime(2026, 10, 5, 20, tzinfo=timezone.utc)
+CHECKPOINTS = frozenset(input_definitions())
 
 
 def assessment(**changes):
-    return AchillesProgressionInput(**{**dict(side="left", assessed_at="2026-10-05T15:00:00Z",
-        assessor="clinician_physio", site="insertional", incompatible_pathology="excluded",
+    envelope = {k: changes.pop(k, default) for k, default in dict(side="left", assessed_at="2026-10-05T15:00:00Z", assessor="clinician_physio").items()}
+    return AchillesProgressionAssessment(**envelope, payload=AchillesProgressionInput(**{**dict(site="insertional", incompatible_pathology="excluded",
         heel_rise_completed=True, heel_rise_mode="single_leg", heel_rise_quality="controlled", heel_rise_repetitions=1,
         heel_rise_assessor_usable=True, loading_task="heel_rise_assessment", loading_performed_at="2026-10-04T15:00:00Z",
         during_symptoms=3.0, delayed_symptoms=4.0, delayed_response_at="2026-10-05T15:00:00Z",
         range_assessed=True, permitted_range="floor_level", resistance="bodyweight",
-        range_load_tolerance="tolerated", range_load_assessor_usable=True), **changes})
+        range_load_tolerance="tolerated", range_load_assessor_usable=True), **changes}))
 
 
 @pytest.fixture
@@ -43,9 +46,13 @@ def context():
 
 def capture(context, value=None, report_id=None):
     store, athlete, injury = context
-    return record_episode_observation(store, athlete_id=athlete, training_day="2026-10-05",
+    event = record_episode_observation(store, athlete_id=athlete, training_day="2026-10-05",
         observation=InjuryEpisodeObservation(injury_id=injury["id"], injury_episode_id=injury["episode_id"],
-            event_type="achilles_progression_input", assessment=value or assessment(), report_id=report_id or uuid4()))
+            event_type="rehab_progression_assessment", assessment=value or assessment(), report_id=report_id or uuid4()))
+    # The fixture replays 5 October; recording must use that clock too.
+    event["created_at"] = "2026-10-05T16:00:00Z"
+    store.injury_episode_events[event["id"]]["created_at"] = event["created_at"]
+    return event
 
 
 def enriched(context, value=None):
@@ -55,7 +62,7 @@ def enriched(context, value=None):
 
 
 def read(row, key="achilles_heel_rise_assessed", **extra):
-    return read_achilles_checkpoint(key, row, as_of=NOW, **extra)
+    return read_assessment_input(key, AssessmentContext.from_injury(row, as_of=NOW, **extra))
 
 
 def test_real_capture_idempotent_owned_and_readable(context):
@@ -79,14 +86,14 @@ def test_real_capture_idempotent_owned_and_readable(context):
 def test_site_is_explicit_and_never_inferred(context, site, status):
     row = enriched(context, assessment(site=site))
     assert read(row, "achilles_site_assessed")["status"] == status
-    assert row["achilles_progression_observations"][0]["payload"]["assessment"]["site"] == site
+    assert row["progression_assessments"][0]["payload"]["assessment"]["payload"]["site"] == site
 
 
 @pytest.mark.parametrize("field,value", [("athlete_id", "other"), ("injury_id", "other"),
     ("injury_episode_id", "other")])
 def test_other_ownership_never_satisfies(context, field, value):
     row = enriched(context)
-    row["achilles_progression_observations"][0][field] = value
+    row["progression_assessments"][0][field] = value
     assert read(row)["status"] == "unknown"
 
 
@@ -126,16 +133,16 @@ def test_stale_future_and_newer_unknown_do_not_reuse_old_success(context):
     row = enriched(context)
     assert read(row, setback_at=datetime(2026, 10, 5, 15, tzinfo=timezone.utc))["status"] == "unknown"
     assert read(row, setback_at=datetime(2026, 10, 4, 16, tzinfo=timezone.utc))["status"] == "unknown"
-    row["achilles_episode_started_at"] = NOW
+    row["assessment_episode_started_at"] = NOW
     assert read(row)["status"] == "unknown"
-    row.pop("achilles_episode_started_at")
-    row["achilles_progression_observations"][0]["created_at"] = "2026-10-04T16:00:00Z"
+    row.pop("assessment_episode_started_at")
+    row["progression_assessments"][0]["created_at"] = "2026-10-04T16:00:00Z"
     assert read(row)["status"] == "unknown"
     old = enriched(context)
-    newer = deepcopy(old["achilles_progression_observations"][0])
+    newer = deepcopy(old["progression_assessments"][0])
     newer["id"], newer["created_at"] = "new", "2026-10-05T17:00:00Z"
-    newer["payload"]["assessment"].update(heel_rise_quality="unknown", heel_rise_assessor_usable=None)
-    old["achilles_progression_observations"].append(newer)
+    newer["payload"]["assessment"]["payload"].update(heel_rise_quality="unknown", heel_rise_assessor_usable=None)
+    old["progression_assessments"].append(newer)
     assert read(old)["status"] == "unknown"
 
 
@@ -144,9 +151,9 @@ def test_safety_hold_wins_and_reassuring_report_cannot_clear(context, field):
     row = enriched(context, assessment(**{field: "suspected" if field == "incompatible_pathology" else True}))
     assert current_report_medical_hold_reasons(row)
     assert all(read(row, key)["status"] == "fail" for key in CHECKPOINTS)
-    good = enriched(context)["achilles_progression_observations"][0]
+    good = enriched(context)["progression_assessments"][0]
     good["created_at"] = "2026-10-05T18:00:00Z"
-    row = apply_episode_observations(context[2], [*row["achilles_progression_observations"], good])
+    row = apply_episode_observations(context[2], [*row["progression_assessments"], good])
     assert current_report_medical_hold_reasons(row)
     decision = resolve_injury_policy(row, policies=load_clinical_policies(), bank=get_rehab_bank())
     assert decision["outcome"] == "medical_review"
@@ -165,8 +172,8 @@ def test_transition_engine_reads_capture_but_production_load_stays_closed(contex
     row = enriched(context)
     policy = next(p for p in load_clinical_policies() if p.policy_id == "achilles_tendonitis")
     transition = PathwayTransition(from_stage="restore", to_stage="load", closed_reason="test input shell",
-        requirements=[dict(requirement_id=k, kind="functional_checkpoint", checkpoint=k,
-                           basis="clinical", description="Synthetic capture test", sources=["synthetic capture fixture"]) for k in sorted(CHECKPOINTS)])
+        requirements=[dict(requirement_id=k, kind="input_availability", checkpoint=k,
+                           basis="data_sufficiency", description="Synthetic availability fixture") for k in sorted(CHECKPOINTS)])
     evaluated = evaluate_transition(transition, policy=policy, injury=row, exposures=[])
     assert evaluated["status"] == "closed"
     assert all(r["status"] == "pass" for r in evaluated["requirements"])
@@ -175,7 +182,7 @@ def test_transition_engine_reads_capture_but_production_load_stays_closed(contex
     assert after["stage"] in {"calm", "restore"}
     assert after["prescription"] == before["prescription"]
     assert after["progression"] == before["progression"]
-    assert set(after["achilles_input_checkpoints"]) == CHECKPOINTS
+    assert set(after["assessment_inputs"]) == CHECKPOINTS
     assert not any(t.promotable for t in policy.transitions)
     assert "load" not in policy.live_stages
 
@@ -188,7 +195,7 @@ def test_capture_rejects_cross_side_episode_owner_and_future(context):
         with pytest.raises(HTTPException):
             record_episode_observation(context[0], athlete_id=athlete, training_day="2026-10-05",
                 observation=InjuryEpisodeObservation(injury_id=context[2]["id"], injury_episode_id=episode,
-                    event_type="achilles_progression_input", assessment=assessment()))
+                    event_type="rehab_progression_assessment", assessment=assessment()))
 
 
 @pytest.mark.parametrize("changes", [dict(during_symptoms="same"), dict(during_symptoms=True),
@@ -204,7 +211,7 @@ def test_authenticated_api_owns_capture_and_requires_health_consent(context):
     injury = {**context[2], "athlete_id": "athlete-1"}
     store.injury_flags["athlete-1"] = [injury]
     body = dict(injury_id=injury["id"], injury_episode_id=injury["episode_id"],
-                event_type="achilles_progression_input", report_id=str(uuid4()), assessment=assessment().model_dump(mode="json"))
+                event_type="rehab_progression_assessment", report_id=str(uuid4()), assessment=assessment().model_dump(mode="json"))
     url = "/api/today/injury-episode-observation"
     assert client.post(url, json=body).status_code == 401
     headers = {"Authorization": "Bearer athlete-token"}
@@ -241,7 +248,7 @@ def test_today_concern_holds_training_and_preserves_other_episode(context, froze
     current = today_service.build_today_command_view(store, athlete_id=athlete, athlete_timezone="UTC", now=NOW)
     by_id = {r["id"]: r for r in current.open_injuries}
     assert by_id[injury["id"]]["rehab_decision"]["outcome"] == "medical_review"
-    assert "achilles_input_checkpoints" not in by_id[other["id"]]["rehab_decision"]
+    assert "assessment_inputs" not in by_id[other["id"]]["rehab_decision"]
     assert current.today.recommendation_state == "pull_back"
     assert current.live_prescription is None or current.live_prescription["safety_hold"]
     if frozen:
@@ -255,5 +262,5 @@ def test_today_concern_holds_training_and_preserves_other_episode(context, froze
 def test_truncated_or_forged_provenance_is_unknown(context):
     row = enriched(context)
     assert read(row, history_truncated=True)["status"] == "unknown"
-    row["achilles_progression_observations"][0]["payload"]["externally_verified"] = True
+    row["progression_assessments"][0]["payload"]["externally_verified"] = True
     assert read(row)["status"] == "unknown"

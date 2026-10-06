@@ -145,7 +145,9 @@ class _Renderer:
         if "const" in schema:
             return _literal(schema["const"])
         if "enum" in schema:
-            return _union([_literal(value) for value in schema["enum"]])
+            # Enum member order has no type meaning. Literal aliases can arrive
+            # in a different order after another model imports the same values.
+            return _union(sorted(_literal(value) for value in schema["enum"]))
         for key in ("anyOf", "oneOf"):
             if key in schema:
                 return _union([self.type_of(option, indent) for option in schema[key]])

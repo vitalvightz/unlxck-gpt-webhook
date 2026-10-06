@@ -28,6 +28,7 @@ from tools.rehab_metadata_review_lib import (  # noqa: E402
     REVIEW_FIELDS, classify_movement_archetype, detect_variable_demand_flags, source_hash,
 )
 from api.contracts.rehab_progression import CAPTURED_FUNCTIONAL_CHECKPOINTS  # noqa: E402
+from api.contracts.rehab_assessment import input_definitions  # noqa: E402
 
 CLASSIFICATIONS = (
     "LIVE", "ADVANCED_CANDIDATE", "KEEP_DORMANT", "REPAIR",
@@ -149,6 +150,9 @@ def reachable(policy, stage, checkpoints=CAPTURED_FUNCTIONAL_CHECKPOINTS):
             return False
         # The capture registry, rather than a data declaration, owns evaluability.
         if any(r.kind == "functional_checkpoint" and r.checkpoint not in checkpoints
+               for r in transition.requirements):
+            return False
+        if any(r.kind == "input_availability" and r.checkpoint not in input_definitions()
                for r in transition.requirements):
             return False
     return True
@@ -320,7 +324,7 @@ def duplicate_clusters(rows, drills):
     return clusters
 
 
-def classify(row, exact_duplicate_ids, checkpoints=CAPTURED_FUNCTIONAL_CHECKPOINTS):
+def classify(row, exact_duplicate_ids, checkpoints=CAPTURED_FUNCTIONAL_CHECKPOINTS, assessment_inputs=None):
     flags = []
     if row["duplicate_cluster_ids"]:
         flags.append("duplicate")
@@ -420,13 +424,20 @@ def classify(row, exact_duplicate_ids, checkpoints=CAPTURED_FUNCTIONAL_CHECKPOIN
             "profile_evidence_missing": True,
             "evidence_missing_detail": "No active reviewed prescription approves this identity in its candidate stage. Existing movement sources do not establish regional advanced readiness.",
             "transition_criteria_missing": not any(ref["advanced_transition_promotable"] for ref in row["matching_profile_stage_gates"]),
-            "captured_functional_checkpoints": sorted(checkpoints) if (row["canonical_region"], row["injury_type"]) == ("achilles", "tendonitis") else [],
+            "captured_functional_checkpoints": sorted(checkpoints),
             "required_product_inputs_not_captured": "A regional source must first define which strength/function/impact/skill inputs are actually necessary, then compare them with the capture registry. No current requirement may be inferred from a movement name or proxied by another signal.",
             "safety_blocks": ["identity_not_an_advanced_live_prescription", "regional_transition_and_input_evaluability_review_required", "complete_episode_history_and_no_unresolved_setback_still_required"],
         }
+        registered_inputs = input_definitions() if assessment_inputs is None else assessment_inputs
+        if registered_inputs:
+            available_inputs = sorted(
+                key for key, (_, protocol) in registered_inputs.items()
+                if (row["canonical_region"], row["injury_type"]) == (protocol.region, protocol.injury_type))
+            if available_inputs:
+                row["advanced_candidate_assessment"]["captured_assessment_inputs"] = available_inputs
 
 
-def build_audit(bank, ledger, pathways, *, captured_checkpoints=CAPTURED_FUNCTIONAL_CHECKPOINTS):
+def build_audit(bank, ledger, pathways, *, captured_checkpoints=CAPTURED_FUNCTIONAL_CHECKPOINTS, captured_assessment_inputs=None):
     """Return report + duplicate clusters, without mutating any input object."""
     catalog = PathwayCatalog.model_validate(pathways)
     policies = tuple(compose_policy(catalog, p) for p in catalog.profiles)
@@ -510,7 +521,7 @@ def build_audit(bank, ledger, pathways, *, captured_checkpoints=CAPTURED_FUNCTIO
         if cluster["classification"] == "exact_duplicate":
             duplicate_ids.update(cluster["ids_for_later_deprecation_review"])
     for row in rows:
-        classify(row, duplicate_ids, captured_checkpoints)
+        classify(row, duplicate_ids, captured_checkpoints, captured_assessment_inputs)
     profiles = []
     for policy in sorted(active, key=lambda p: p.policy_id):
         candidates = [r for r in rows if policy.policy_id in r["matching_active_profile_ids"] and r["plausible_future_stages"]]
@@ -544,6 +555,7 @@ def build_audit(bank, ledger, pathways, *, captured_checkpoints=CAPTURED_FUNCTIO
         "active_profile_count": len(profiles),
         "promotable_advanced_transitions": sum(t.promotable for p in active for t in p.transitions),
         "captured_functional_checkpoints": sorted(captured_checkpoints),
+        "captured_assessment_inputs": sorted(input_definitions()),
         "active_profile_stage_counts": counts("+".join(p["live_stages"]) for p in profiles),
         "profiles_with_load_or_above": [p["policy_id"] for p in profiles if set(p["live_stages"]) & {"load", "dynamic", "return"}],
         "profiles_without_viable_advanced_candidate": [p["policy_id"] for p in profiles if p["no_viable_advanced_candidate"]],
@@ -638,7 +650,7 @@ def markdown(report, duplicates):
     lines += ["", "Profiles with no screened viable advanced inventory: " + (", ".join(f"`{p}`" for p in s["profiles_without_viable_advanced_candidate"]) or "none") + ".",
               "", "Profiles with no exact-type candidate (regional unassigned inventory may exist): " + (", ".join(f"`{p}`" for p in s["profiles_without_exact_type_advanced_candidate"]) or "none") + ".",
               "", "Profiles with no fixed reviewed advanced inventory: " + (", ".join(f"`{p}`" for p in s["profiles_without_fixed_reviewed_advanced_candidate"]) or "none") + ".",
-              "", f"Promotable advanced transitions: **{s['promotable_advanced_transitions']}**. Captured functional checkpoints: `{json.dumps(s['captured_functional_checkpoints'])}`. Which regional strength/function/tolerance tests are necessary remains a literature/clinical decision; the audit does not substitute whole-athlete readiness, elapsed time, session counts or a different input. This audit activates no stage.",
+              "", f"Promotable advanced transitions: **{s['promotable_advanced_transitions']}**. Captured clinical functional checkpoints: `{json.dumps(s['captured_functional_checkpoints'])}`. Captured assessment availability inputs: `{json.dumps(s['captured_assessment_inputs'])}`. Which regional strength/function/tolerance tests are necessary remains a literature/clinical decision; the audit does not substitute whole-athlete readiness, elapsed time, session counts or a different input. This audit activates no stage.",
               ""]
     lines += ["## Deprecation candidates", "", "These are candidates for a separate review, not deletion instructions. Every ID remains in the bank.", ""]
     lines += [f"- `{r['drill_id']}`: {r['rationale']}" for r in report["drills"] if r["classification"] == "DEPRECATE"]

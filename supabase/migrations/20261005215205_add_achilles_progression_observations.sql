@@ -2,7 +2,7 @@
 -- No changes to exposures, completion rows, prescriptions or clinical profiles.
 alter table public.injury_episode_events drop constraint injury_episode_events_event_type_check;
 alter table public.injury_episode_events add constraint injury_episode_events_event_type_check
-  check (event_type in ('injury_checkin','delayed_rehab_response','clinician_clearance_report','achilles_progression_input'));
+  check (event_type in ('injury_checkin','delayed_rehab_response','clinician_clearance_report','rehab_progression_assessment'));
 
 create or replace function public.record_injury_episode_event(p_athlete_id uuid, p_event jsonb)
 returns public.injury_episode_events language plpgsql security definer
@@ -37,38 +37,44 @@ begin
               and e.injury_id = v_injury.id and e.injury_episode_id = (p_event->>'injury_episode_id')::uuid) then
       raise exception 'invalid delayed response' using errcode = '23514';
     end if;
-  elsif v_type = 'achilles_progression_input' then
-    -- API resolves exact tendonitis identity; recheck its text context under the
+  elsif v_type = 'rehab_progression_assessment' then
+    -- Registered API code validates the typed protocol, clinical payload and
+    -- computes medical_concern/observation_times. Recheck its injury context under the
     -- same athlete/episode lock so concurrent injury edits cannot misattribute it.
     if v_injury.status not in ('open','monitoring')
-       or v_payload->>'region' is distinct from 'achilles'
-       or v_payload->>'injury_type' is distinct from 'tendonitis'
+       or coalesce(v_payload->>'region','') = ''
+       or coalesce(v_payload->>'injury_type','') = ''
+       or coalesce(v_payload->>'profile_id','') = ''
        or v_payload->>'source' is distinct from 'athlete_reported'
        or v_payload->'externally_verified' is distinct from 'false'::jsonb
        or jsonb_typeof(v_payload->'assessment') is distinct from 'object'
+       or v_payload->'assessment'->'schema_version' is distinct from '1'::jsonb
+       or coalesce(v_payload->'assessment'->>'assessment_kind','') !~ '^[a-z0-9]+(_[a-z0-9]+)*$'
+       or coalesce(v_payload->'assessment'->>'protocol_version','') !~ '^[1-9][0-9]*$'
+       or jsonb_typeof(v_payload->'assessment'->'protocol_version') is distinct from 'number'
+       or jsonb_typeof(v_payload->'assessment'->'payload') is distinct from 'object'
+       or jsonb_typeof(v_payload->'medical_concern') is distinct from 'boolean'
        or v_payload->'injury_context'->>'body_area' is distinct from v_injury.body_area
        or v_payload->'injury_context'->>'description' is distinct from v_injury.description
        or v_payload->'assessment'->>'side' is distinct from v_injury.side
        or coalesce(v_payload->'assessment'->>'assessor','') not in ('self_reported','clinician_physio','coach_observed','unknown')
-       or coalesce(v_payload->'assessment'->>'site','') not in ('midportion','insertional','unknown')
+       or coalesce(v_payload->'assessment'->>'assessed_at','') !~ '(Z|[+-][0-9]{2}:[0-9]{2})$'
        or (v_payload->'assessment'->>'assessed_at')::timestamptz > now()
        or (v_payload->'assessment'->>'assessed_at')::timestamptz < v_injury.created_at
-       or nullif(v_payload->'assessment'->>'assessed_at','') is null
-       or (v_payload->'assessment'->>'loading_performed_at')::timestamptz > now()
-       or (v_payload->'assessment'->>'delayed_response_at')::timestamptz > now() then
-      raise exception 'invalid Achilles episode observation' using errcode = '23514';
+       or jsonb_typeof(v_payload->'observation_times') is distinct from 'array'
+       or jsonb_array_length(v_payload->'observation_times') = 0 then
+      raise exception 'invalid progression assessment envelope' using errcode = '23514';
+    end if;
+    if exists (select 1 from jsonb_array_elements_text(v_payload->'observation_times') t
+               where t !~ '(Z|[+-][0-9]{2}:[0-9]{2})$' or t::timestamptz > now() or t::timestamptz < v_injury.created_at) then
+      raise exception 'invalid progression assessment timestamps' using errcode = '23514';
     end if;
   else raise exception 'unknown episode event' using errcode = '22023';
   end if;
   insert into public.injury_episode_events (id, athlete_id, injury_id, injury_episode_id, event_type, payload)
     values ((p_event->>'id')::uuid, p_athlete_id, v_injury.id, (p_event->>'injury_episode_id')::uuid, v_type, v_payload)
     on conflict (id) do nothing returning * into v_result;
-  if found and v_type = 'achilles_progression_input' and (
-      v_payload->'assessment'->>'incompatible_pathology' = 'suspected'
-      or v_payload->'assessment'->>'suspected_rupture' = 'true'
-      or v_payload->'assessment'->>'marked_weakness' = 'true'
-      or v_payload->'assessment'->>'traumatic_loss_of_function' = 'true'
-      or v_payload->'assessment'->>'clinician_restriction' = 'true') then
+  if found and v_type = 'rehab_progression_assessment' and v_payload->'medical_concern' = 'true'::jsonb then
     update public.injury_flags set updated_at = clock_timestamp() where id = v_injury.id;
   end if;
   if v_result.id is null then

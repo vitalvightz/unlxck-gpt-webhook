@@ -55,6 +55,38 @@
       "checkpoint_id": "pain_free_submaximal_isometric",
       "description": "A submaximal resisted isometric contraction of the injured tissue is pain-free.",
       "required_input": "Per-injury report captured with a reviewed isometric exposure: was the hold pain-free? (yes / no / not sure)"
+    },
+    {
+      "checkpoint_id": "achilles_site_assessed",
+      "description": "Reported Achilles site and assessor.",
+      "required_input": "Explicit midportion/insertional/unknown site",
+      "basis": "data_sufficiency",
+      "assessment_kind": "achilles_tendon_progression_v1",
+      "protocol_version": 1
+    },
+    {
+      "checkpoint_id": "achilles_heel_rise_assessed",
+      "description": "Reported Achilles heel-rise observation; no readiness cutoff.",
+      "required_input": "Actual mode, quality, repetitions and assessor usability",
+      "basis": "data_sufficiency",
+      "assessment_kind": "achilles_tendon_progression_v1",
+      "protocol_version": 1
+    },
+    {
+      "checkpoint_id": "achilles_loading_response_assessed",
+      "description": "Reported loading and delayed symptoms; no pain cutoff.",
+      "required_input": "Actual loading task/time, during and delayed numeric symptoms/time",
+      "basis": "data_sufficiency",
+      "assessment_kind": "achilles_tendon_progression_v1",
+      "protocol_version": 1
+    },
+    {
+      "checkpoint_id": "achilles_range_load_assessed",
+      "description": "Reported permitted range and selected load; no readiness cutoff.",
+      "required_input": "Actual range, resistance, tolerance and assessor usability",
+      "basis": "data_sufficiency",
+      "assessment_kind": "achilles_tendon_progression_v1",
+      "protocol_version": 1
     }
   ],
   "families": [

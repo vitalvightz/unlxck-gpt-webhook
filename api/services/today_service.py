@@ -563,17 +563,18 @@ def _log_next_transition(row: Mapping[str, Any]) -> None:
 
 
 def _with_injury_policy(injuries, *, store, athlete_id, phase="", current_checkin=None, equipment=(), readiness_decision=None,
-                        training_day=None, training_session=None, observations_by_injury=None):
+                        training_day=None, training_session=None, observations_by_injury=None, as_of=None):
     if not injuries:
         return []
     policies, bank = load_clinical_policies(), get_rehab_bank()
+    as_of = as_of or datetime.now(timezone.utc)
     from api.contracts.rehab_schedule import schedule_rehab
     completions = store.list_rehab_schedule_completions(athlete_id, from_day=(parse_iso_date(training_day) - timedelta(days=14)).isoformat()) if training_day else []
     rows = []
     for injury in injuries:
         observations = (observations_by_injury[str(injury["id"])] if observations_by_injury is not None
                         else episode_observations(store, athlete_id, injury))
-        row = apply_episode_observations(injury, observations)
+        row = apply_episode_observations(injury, observations, as_of=as_of)
         exposures = []
         history_truncated = False
         reader = getattr(store, "list_rehab_exposures", None)
@@ -584,7 +585,7 @@ def _with_injury_policy(injuries, *, store, athlete_id, phase="", current_checki
         exposures = exposure_rows_with_observations(exposures, observations)
         row["rehab_decision"] = resolve_injury_policy(row, policies=policies, bank=bank, phase=phase,
                                                      exposures=exposures, current_checkin=current_checkin, equipment=equipment,
-                                                     history_truncated=history_truncated, readiness_decision=readiness_decision)
+                                                     history_truncated=history_truncated, readiness_decision=readiness_decision, as_of=as_of)
         if training_day:
             row["rehab_decision"]["schedule"] = schedule_rehab(row, row["rehab_decision"], training_day=training_day,
                 completions=completions, exposures=exposures, readiness_decision=readiness_decision, training_session=training_session)
@@ -595,7 +596,7 @@ def _with_injury_policy(injuries, *, store, athlete_id, phase="", current_checki
                 excluded.append(row["rehab_decision"]["prescription"]["drill_id"])
                 alternative = resolve_injury_policy(row, policies=policies, bank=bank, phase=phase, exposures=exposures,
                     current_checkin=current_checkin, equipment=equipment, history_truncated=history_truncated,
-                    readiness_decision=readiness_decision, excluded_drill_ids=excluded)
+                    readiness_decision=readiness_decision, excluded_drill_ids=excluded, as_of=as_of)
                 if not alternative.get("prescription"):
                     row["rehab_decision"] = first
                     break
@@ -2754,6 +2755,9 @@ def _build_today_command_view(
     active_plan: ActivePlanResolution | None = None,
 ) -> CommandView:
     training_day = resolve_training_day(athlete_timezone, now=now)
+    assessment_as_of = now or datetime.now(timezone.utc)
+    if assessment_as_of.tzinfo is None:
+        assessment_as_of = assessment_as_of.replace(tzinfo=timezone.utc)
     if active_plan is None:
         # The resolver reads the pointed-to plan through get_plan_for_athlete, so
         # this is already the full owner-scoped row; no second read is needed.
@@ -2767,7 +2771,7 @@ def _build_today_command_view(
     if not plan_row:
         injuries = _with_rehab_stage(_with_safe_session_context(_with_surface_class(_open_injury_flags(store, athlete_id))),
                                     store=store, athlete_id=athlete_id)
-        injuries = _with_injury_policy(injuries, store=store, athlete_id=athlete_id, training_day=training_day)
+        injuries = _with_injury_policy(injuries, store=store, athlete_id=athlete_id, training_day=training_day, as_of=assessment_as_of)
         symptom_recommendation = None
         if active_medical_hold_reasons(injuries):
             symptom_decision = build_readiness_adjustment(ReadinessCheckin(), ReadinessContext(open_injuries=injuries))
@@ -2957,7 +2961,7 @@ def _build_today_command_view(
         injury["label"] = build_injury_label(injury.get("body_area"), injury.get("description"))
 
     observations_by_injury = {str(row["id"]): episode_observations(store, athlete_id, row) for row in open_injuries}
-    open_injuries = [apply_episode_observations(row, observations_by_injury[str(row["id"])]) for row in open_injuries]
+    open_injuries = [apply_episode_observations(row, observations_by_injury[str(row["id"])], as_of=assessment_as_of) for row in open_injuries]
     support_projection = None
     support_owner_ids = set()
     ceiling = effective_clinician_clearance(open_injuries)
@@ -3094,7 +3098,7 @@ def _build_today_command_view(
     open_injuries = _with_injury_policy(open_injuries, store=store, athlete_id=athlete_id,
                                        phase=str(resolved_plan.get("phase") or ""), current_checkin=today_checkin, equipment=equipment,
                                        readiness_decision=(recommendation or {}).get("decision") or "not_checked_in", training_day=training_day,
-                                       training_session=training_session, observations_by_injury=observations_by_injury)
+                                       training_session=training_session, observations_by_injury=observations_by_injury, as_of=assessment_as_of)
     decisions = [injury["rehab_decision"] for injury in open_injuries]
     frozen = None if today_is_complete else (today_completion or {}).get("prescription_snapshot")
     live = reconcile_session_prescription(

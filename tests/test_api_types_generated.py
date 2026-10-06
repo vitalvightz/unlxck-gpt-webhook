@@ -7,6 +7,7 @@ the generated file current and the contract complete.
 """
 
 import re
+from copy import deepcopy
 import sys
 from pathlib import Path
 
@@ -28,6 +29,21 @@ def test_generated_types_match_the_api_schema():
     assert OUTPUT.read_text(encoding="utf-8") == render(SPEC), (
         "web/lib/api-schema.generated.ts is out of date: run python tools/generate_api_types.py"
     )
+
+
+def test_equivalent_enum_orders_generate_identical_types():
+    reordered = deepcopy(SPEC)
+    def reverse_enums(node):
+        if isinstance(node, dict):
+            if "enum" in node:
+                node["enum"] = list(reversed(node["enum"]))
+            for value in node.values():
+                reverse_enums(value)
+        elif isinstance(node, list):
+            for value in node:
+                reverse_enums(value)
+    reverse_enums(reordered)
+    assert render(reordered) == render(SPEC)
 
 
 def test_every_shared_type_is_checked_in_the_right_direction():

@@ -71,6 +71,9 @@ def postgres_database():
             setup.execute((ROOT / "supabase/migrations/20261001122553_restrict_injury_episode_trigger_execution.sql").read_text(encoding="utf-8"))
             setup.execute((ROOT / "supabase/migrations/20261002132000_count_rehab_bundle_allocations.sql").read_text(encoding="utf-8"))
             setup.execute((ROOT / "supabase/migrations/20261002134527_clinician_clearance_prescription_freshness.sql").read_text(encoding="utf-8"))
+            assessment_migration = (ROOT / "supabase/migrations/20261005215205_add_achilles_progression_observations.sql").read_text(encoding="utf-8")
+            setup.execute(assessment_migration)
+            setup.execute(assessment_migration)  # Repeatable unmerged migration.
             setup.execute("insert into profiles values (%s)", (ATHLETE,))
             setup.execute("""insert into injury_flags(id,athlete_id,description,body_region,side,episode_id)
                 values(%s,%s,'ankle sprain','ankle','left',%s)""", (INJURY, ATHLETE, EPISODE))
@@ -80,6 +83,53 @@ def postgres_database():
             admin.execute(sql.SQL("drop database {} with (force)").format(sql.Identifier(name)))
             for role in reversed(created_roles):
                 admin.execute(sql.SQL("drop role {}").format(sql.Identifier(role)))
+
+
+def test_assessment_rpc_generic_envelope_retry_concern_and_service_boundary(postgres_database):
+    import psycopg
+    from psycopg.types.json import Jsonb
+    from copy import deepcopy
+
+    with psycopg.connect(postgres_database) as connection:
+        injury, episode, identity = str(uuid4()), str(uuid4()), str(uuid4())
+        connection.execute("""insert into injury_flags(id,athlete_id,description,body_area,body_region,side,episode_id,created_at)
+            values(%s,%s,'Achilles tendonitis','Left Achilles','achilles','left',%s,now()-interval '30 days')""", (injury, ATHLETE, episode))
+        stamp = connection.execute("select (now()-interval '1 hour')::text").fetchone()[0]
+        # The SQL boundary is protocol-neutral; registered service code owns
+        # clinical validation. This second protocol exists only in this fixture.
+        event = dict(id=identity, injury_id=injury, injury_episode_id=episode, event_type="rehab_progression_assessment",
+            payload=dict(region="achilles", injury_type="tendonitis", profile_id="achilles_tendonitis",
+                source="athlete_reported", externally_verified=False, medical_concern=True,
+                observation_times=[stamp], injury_context=dict(body_area="Left Achilles", description="Achilles tendonitis"),
+                assessment=dict(schema_version=1, assessment_kind="synthetic_transport_fixture_v1", protocol_version=1,
+                    side="left", assessed_at=stamp, assessor="coach_observed", payload=dict(observed=True))))
+        # Normalize PostgreSQL's +00 shorthand to the transport's aware ISO format.
+        from datetime import datetime
+        stamp = datetime.fromisoformat(stamp).isoformat()
+        event['payload']['observation_times'] = [stamp]
+        event['payload']['assessment']['assessed_at'] = stamp
+        before = connection.execute("select updated_at from injury_flags where id=%s", (injury,)).fetchone()[0]
+        for role in ('anon', 'authenticated'):
+            assert not connection.execute("select has_function_privilege(%s,'public.record_injury_episode_event(uuid,jsonb)','EXECUTE')", (role,)).fetchone()[0]
+        connection.execute("grant select on injury_flags to service_role")
+        connection.execute("set local role service_role")
+        saved = connection.execute("select (record_injury_episode_event(%s,%s)).id", (ATHLETE, Jsonb(event))).fetchone()[0]
+        revision = connection.execute("select updated_at from injury_flags where id=%s", (injury,)).fetchone()[0]
+        assert revision > before
+        assert connection.execute("select (record_injury_episode_event(%s,%s)).id", (ATHLETE, Jsonb(event))).fetchone()[0] == saved
+        assert connection.execute("select updated_at from injury_flags where id=%s", (injury,)).fetchone()[0] == revision
+        for mutate in (lambda e: e.update(injury_episode_id=ATHLETE),
+            lambda e: e['payload']['assessment'].update(side='bilateral'),
+            lambda e: e['payload'].update(source='clinician_verified'),
+            lambda e: e['payload'].update(externally_verified=True),
+            lambda e: e['payload']['injury_context'].update(description='Elbow tendonitis'),
+            lambda e: e['payload']['assessment'].update(assessed_at='2099-01-01T00:00:00Z'),
+            lambda e: e['payload']['assessment'].update(assessed_at='2026-10-05T12:00:00'),
+            lambda e: e['payload']['assessment']['payload'].update(observed=False)):
+            bad = deepcopy(event)
+            mutate(bad)
+            with pytest.raises(psycopg.Error), connection.transaction():
+                connection.execute("select record_injury_episode_event(%s,%s)", (ATHLETE, Jsonb(bad)))
 
 
 def test_internal_episode_trigger_still_records_backend_updates(postgres_database):
