@@ -70,7 +70,7 @@ def search_queries(row: dict[str, str]) -> list[str]:
         return []
     # Only public exercise metadata goes to search providers, never an athlete's
     # cue, health information, notes or full intake.
-    sport = (row.get("sport") or "").strip()
+    sport = (row.get("review_sport") or row.get("sport") or "").strip()
     terms = " ".join(part for part in (name, sport) if part)
     aliases = [
         alias.strip().replace("-", " ")
