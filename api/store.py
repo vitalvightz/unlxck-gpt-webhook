@@ -4164,9 +4164,22 @@ class SupabaseAppStore(CompactGenerationReads):
             self._raise_operation_http_error(operation="record_injury_episode_event", detail="failed to record injury response", exc=exc)
 
     def list_injury_episode_events(self, athlete_id: str, *, injury_id: str, injury_episode_id: str) -> list[dict[str, Any]]:
-        response = (self.client.table("injury_episode_events").select("*").eq("athlete_id", athlete_id)
-                    .eq("injury_id", injury_id).eq("injury_episode_id", injury_episode_id).order("created_at", desc=True).execute())
-        return getattr(response, "data", None) or []
+        from api.contracts.rehab_assessment import AssessmentHistory
+        # Keyset pagination keeps older concerns visible even while new reports
+        # arrive. Never treat a PostgREST default page as complete episode history.
+        rows, before = [], None
+        while True:
+            query = (self.client.table("injury_episode_events").select("*").eq("athlete_id", athlete_id)
+                     .eq("injury_id", injury_id).eq("injury_episode_id", injury_episode_id)
+                     .order("created_at", desc=True).order("id", desc=True).limit(200))
+            if before:
+                stamp, identity = before
+                query = query.or_(f"created_at.lt.{stamp},and(created_at.eq.{stamp},id.lt.{identity})")
+            page = getattr(query.execute(), "data", None) or []
+            rows.extend(page)
+            if not page:
+                return AssessmentHistory(rows, history_complete=True)
+            before = (page[-1]["created_at"], page[-1]["id"])
 
     def list_pending_delayed_rehab(self, athlete_id: str, training_day: str) -> list[dict[str, Any]]:
         response = self.client.rpc("pending_delayed_rehab", {"p_athlete_id": athlete_id, "p_training_day": training_day}).execute()

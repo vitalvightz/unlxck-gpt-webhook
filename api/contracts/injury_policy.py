@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from copy import deepcopy
+from datetime import datetime, timezone
 import re
 from typing import Any, Mapping, Sequence
 
@@ -18,7 +19,7 @@ from fightcamp.surface_wound_safety import sanitize_surface_guidance
 from .rehab_stage import resolve_rehab_stage
 from .rehab_progression import resolve_reviewed_progression, episode_setback_at, _instant
 from .clinician_clearance import effective_clinician_clearance, clinician_clears_baseline
-from .achilles_progression import CHECKPOINTS, read_achilles_checkpoint
+from .rehab_assessment import AssessmentContext, input_definitions, read_assessment_input
 
 
 def resolve_injury_policy(
@@ -28,6 +29,7 @@ def resolve_injury_policy(
     history_truncated: bool = False,
     readiness_decision: str | None = None,
     excluded_drill_ids: Sequence[str] = (),
+    as_of: datetime | None = None,
 ) -> dict[str, Any]:
     parsed = parse_injury_entry(" ".join(str(injury.get(k) or "") for k in ("body_area", "description"))) or {}
     region = injury.get("canonical_location") or parsed.get("canonical_location") or injury.get("body_region")
@@ -43,10 +45,12 @@ def resolve_injury_policy(
         "prescription": None, "restrictions": {},
         "loading_hold": readiness_decision == "pull_back",
     }
-    if injury.get("achilles_progression_observations") and (region, kind) == ("achilles", "tendonitis"):
-        setbacks = [d for d in (episode_setback_at(injury, exposures), injury.get("achilles_observation_setback_at")) if d]
-        result["achilles_input_checkpoints"] = {key: read_achilles_checkpoint(
-            key, injury, setback_at=max(setbacks, default=None), history_truncated=history_truncated) for key in sorted(CHECKPOINTS)}
+    as_of = as_of or datetime.now(timezone.utc)
+    if injury.get("progression_assessments"):
+        context = AssessmentContext.from_injury(injury, as_of=as_of,
+            setback_at=episode_setback_at(injury, exposures), history_truncated=history_truncated)
+        result["assessment_inputs"] = {key: read_assessment_input(key, context)
+            for key, (_, protocol) in sorted(input_definitions().items()) if protocol.applies(injury)}
     if stage_decision.care_pathway == "wound_care":
         result.update(outcome="wound_care", summary="Follow the skin-care guidance for this injury.", reason_codes=["surface_wound_care"])
         return result
@@ -97,7 +101,7 @@ def resolve_injury_policy(
         result["reason_codes"] = ["rehab_policy_stale_or_incomplete"]
         return result
     progression = resolve_reviewed_progression({**injury, "body_region": region}, base_stage=str(stage), policy=policy,
-                                              exposures=exposures, history_truncated=history_truncated)
+                                               exposures=exposures, history_truncated=history_truncated, as_of=as_of)
     result["progression"] = progression
     if policy.activation == "live":
         stage = progression["stage"]

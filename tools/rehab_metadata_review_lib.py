@@ -23,6 +23,7 @@ Design invariants
 
 from __future__ import annotations
 
+from copy import deepcopy
 import hashlib
 import json
 import re
@@ -38,6 +39,15 @@ from fightcamp.rehab_schema import (  # noqa: E402
     CARE_TYPE_WOUND_CARE,
     care_type_for_injury_type,
 )
+
+
+def pathway_inventory_snapshot(pathways):
+    """Reconstruct pre-capture inventory while retaining every clinical declaration/profile."""
+    from fightcamp.rehab_pathways import FunctionalCheckpoint
+    snapshot = deepcopy(pathways)
+    snapshot['functional_checkpoints'] = [c for c in snapshot.get('functional_checkpoints', [])
+        if FunctionalCheckpoint.model_validate(c).basis != 'data_sufficiency']
+    return snapshot
 
 DEFAULT_BANK = REPO_ROOT / "data" / "rehab_bank.json"
 DEFAULT_LEDGER = REPO_ROOT / "data" / "rehab_metadata_review.json"

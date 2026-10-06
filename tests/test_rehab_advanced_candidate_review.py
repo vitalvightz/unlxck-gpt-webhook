@@ -26,7 +26,7 @@ def review(inputs):
 
 
 def test_every_recomputed_candidate_gets_one_explicit_decision_and_full_provenance(inputs, review):
-    audit, clusters = build_audit(*inputs[:3], captured_checkpoints=frozenset())
+    audit, clusters = build_audit(*inputs[:3], captured_checkpoints=frozenset(), captured_assessment_inputs={})
     expected = {r['drill_id']: r for r in audit['drills'] if r['classification'] == 'ADVANCED_CANDIDATE'}
     actual = {r['drill_id']: r for r in review['candidates']}
     assert len(actual) == len(review['candidates']) == len(expected) == 57
@@ -85,7 +85,8 @@ def test_all_64_profiles_remain_baseline_only_with_no_advanced_criteria(policy, 
 @pytest.mark.parametrize('name', PROTECTED_PATHS)
 def test_main_production_fingerprints_preserve_profiles_archive_surface_and_runtime(name):
     decisions = read(DECISIONS_PATH)
-    assert file_hash(ROOT / name) == decisions['protected_input_sha256'][name]
+    from tools.review_rehab_advanced_candidates import planning_input_hash
+    assert planning_input_hash(ROOT / name) == decisions['protected_input_sha256'][name]
 
 
 def test_no_cleanup_reclassification_or_stage_activation_leaks_into_planning(inputs, review):

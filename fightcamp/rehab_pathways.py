@@ -43,6 +43,7 @@ RequirementKind = Literal[
     "complete_history",
     "measured_dose",
     "functional_checkpoint",
+    "input_availability",
     "minimum_observations",
 ]
 RequirementBasis = Literal["clinical", "product_safety", "data_sufficiency"]
@@ -76,10 +77,12 @@ class TransitionRequirement(BaseModel):
             raise ValueError("only clinical requirements cite clinical sources")
         if (self.kind in _RESPONSE_KINDS) != bool(self.allowed_responses):
             raise ValueError("response requirements, and only they, declare allowed responses")
-        if (self.kind == "functional_checkpoint") != bool(self.checkpoint):
-            raise ValueError("functional checkpoints, and only they, name a checkpoint")
+        if (self.kind in {"functional_checkpoint", "input_availability"}) != bool(self.checkpoint):
+            raise ValueError("clinical checkpoints and input availability name a checkpoint")
         if self.kind == "functional_checkpoint" and self.basis != "clinical":
             raise ValueError("a functional checkpoint is a clinical criterion")
+        if self.kind == "input_availability" and self.basis != "data_sufficiency":
+            raise ValueError("input availability is data sufficiency, never clinical readiness")
         if (self.kind == "minimum_observations") != (self.minimum is not None):
             raise ValueError("observation minimums, and only they, declare a minimum")
         if self.requires_defined_dose and self.kind != "completed_reviewed_exposure":
@@ -141,11 +144,22 @@ class TransitionOverride(BaseModel):
 
 
 class FunctionalCheckpoint(BaseModel):
-    """A functional check a source may require. Declared even before it is captured."""
+    """One declared clinical checkpoint or explicitly nonclinical captured input."""
     model_config = ConfigDict(extra="forbid", frozen=True)
     checkpoint_id: str = Field(pattern=r"^[a-z0-9]+(?:_[a-z0-9]+)*$")
     description: str = Field(min_length=1)
     required_input: str = Field(min_length=1)
+    basis: Literal["clinical", "data_sufficiency"] = "clinical"
+    assessment_kind: str | None = None
+    protocol_version: int | None = Field(default=None, ge=1)
+
+    @model_validator(mode="after")
+    def coherent(self):
+        if (self.basis == "data_sufficiency") != bool(self.assessment_kind and self.protocol_version):
+            raise ValueError("captured input declarations require their assessment protocol/version")
+        if self.basis == "clinical" and (self.assessment_kind or self.protocol_version):
+            raise ValueError("input protocols cannot declare clinical readiness")
+        return self
 
 
 class PathwayCatalog(BaseModel):
@@ -167,6 +181,8 @@ class PathwayCatalog(BaseModel):
         if len(set(owned)) != len(owned):
             raise ValueError("an injury type belongs to more than one pathway family")
         checkpoints = {c.checkpoint_id for c in self.functional_checkpoints}
+        if len(checkpoints) != len(self.functional_checkpoints):
+            raise ValueError("duplicate checkpoint declaration")
         for family in self.families:
             keys = [transition_key(t.from_stage, t.to_stage) for t in family.transitions]
             if len(set(keys)) != len(keys) or set(keys) - {transition_key(*s) for s in TRANSITION_STAGES}:
@@ -188,6 +204,7 @@ def compose_transitions(catalog: PathwayCatalog, family: PathwayFamily,
                         overrides: dict[str, TransitionOverride]) -> list[PathwayTransition]:
     """Safety baseline + family requirements + profile exceptions, per stage step."""
     checkpoints = {c.checkpoint_id for c in catalog.functional_checkpoints}
+    bases = {c.checkpoint_id: c.basis for c in catalog.functional_checkpoints}
     unknown = set(overrides) - {transition_key(*s) for s in TRANSITION_STAGES}
     if unknown:
         raise ValueError(f"unknown transition override: {sorted(unknown)}")
@@ -211,6 +228,8 @@ def compose_transitions(catalog: PathwayCatalog, family: PathwayFamily,
         for requirement in requirements:
             if requirement.checkpoint and requirement.checkpoint not in checkpoints:
                 raise ValueError(f"unknown functional checkpoint: {requirement.checkpoint}")
+            if requirement.checkpoint and bases[requirement.checkpoint] != requirement.basis:
+                raise ValueError("checkpoint declaration and requirement basis must match")
         composed.append(PathwayTransition(from_stage=from_stage, to_stage=to_stage,
                                           requirements=requirements, closed_reason=closed))
     return composed

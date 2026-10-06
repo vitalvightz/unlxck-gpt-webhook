@@ -9,7 +9,10 @@ from fastapi import HTTPException
 from pydantic import BaseModel, ConfigDict, Field
 from api.contracts.training_day import resolve_training_day_str
 from api.contracts.clinician_clearance import canonical_clearance_scopes
-from api.contracts.achilles_progression import AchillesProgressionInput, achilles_identity, instant
+from api.contracts.rehab_assessment import (
+    ASSESSMENT_EVENT, AchillesProgressionAssessment, AssessmentContext, AssessmentHistory,
+    assessment_payload, exact_episode_events, instant,
+)
 
 
 def exposure_training_day(event: dict, athlete_timezone: str | None = None) -> str:
@@ -24,8 +27,8 @@ class InjuryEpisodeObservation(BaseModel):
     model_config = ConfigDict(extra="forbid")
     injury_id: UUID
     injury_episode_id: UUID
-    event_type: Literal["clinician_clearance_report", "delayed_rehab_response", "achilles_progression_input"]
-    assessment: AchillesProgressionInput | None = None
+    event_type: Literal["clinician_clearance_report", "delayed_rehab_response", "rehab_progression_assessment"]
+    assessment: AchillesProgressionAssessment | None = None
     scopes: list[Literal["rehab", "training", "contact"]] = Field(default_factory=list)
     exposure_id: UUID | None = None
     response: Literal["better", "same", "worse", "not_sure"] | None = None
@@ -39,24 +42,18 @@ def record_episode_observation(store, *, athlete_id: str, observation: InjuryEpi
         raise HTTPException(404, "injury not found")
     if observation.event_type != "delayed_rehab_response" and str(injury.get("episode_id")) != str(observation.injury_episode_id):
         raise HTTPException(409, "This injury episode changed. Refresh Today.")
-    if observation.event_type == "achilles_progression_input":
+    if observation.event_type == ASSESSMENT_EVENT:
         assessment = observation.assessment
         if not assessment or observation.scopes or observation.exposure_id or observation.response:
-            raise HTTPException(422, "An Achilles assessment is required without completion or clearance fields.")
-        if achilles_identity(injury) != ("achilles", "tendonitis") or injury.get("status") not in {"open", "monitoring"}:
-            raise HTTPException(409, "This assessment requires an active Achilles tendonitis episode.")
-        if assessment.side != (injury.get("side") or "unknown"):
-            raise HTTPException(409, "Assessment side must match the injury episode.")
-        now = datetime.now(timezone.utc)
-        if (any(d and d > now for d in (assessment.assessed_at, assessment.loading_performed_at, assessment.delayed_response_at))
-                or (instant(injury.get("created_at")) and assessment.assessed_at < instant(injury["created_at"]))):
-            raise HTTPException(422, "Assessment timestamps must belong to this episode and cannot be in the future.")
-        payload = {"region": "achilles", "injury_type": "tendonitis", "source": "athlete_reported",
-                   "externally_verified": False, "assessment": assessment.model_dump(mode="json"),
-                   "injury_context": {k: injury.get(k) for k in ("body_area", "description")}}
-        key = f"achilles:{athlete_id}:{observation.injury_id}:{observation.injury_episode_id}:{observation.report_id}"
+            raise HTTPException(422, "An assessment is required without completion or clearance fields.")
+        try:
+            payload = assessment_payload(assessment, injury, as_of=datetime.now(timezone.utc))
+        except ValueError as exc:
+            code = 422 if "timestamps" in str(exc) else 409
+            raise HTTPException(code, str(exc)) from exc
+        key = f"assessment:{athlete_id}:{observation.injury_id}:{observation.injury_episode_id}:{observation.report_id}"
     elif observation.assessment is not None:
-        raise HTTPException(422, "Assessment fields belong only to an Achilles observation.")
+        raise HTTPException(422, "Assessment fields belong only to a progression assessment.")
     elif observation.event_type == "clinician_clearance_report":
         if canonical_clearance_scopes(observation.scopes) is None or observation.exposure_id or observation.response:
             raise HTTPException(422, "Select what your clinician cleared you for.")
@@ -81,35 +78,22 @@ def record_episode_observation(store, *, athlete_id: str, observation: InjuryEpi
 def episode_observations(store, athlete_id: str, injury: dict) -> list[dict]:
     reader = getattr(store, "list_injury_episode_events", None)
     if not callable(reader) or not injury.get("episode_id"):
-        return []
+        return AssessmentHistory([], history_complete=False)
     return reader(athlete_id, injury_id=str(injury["id"]), injury_episode_id=str(injury["episode_id"]))
 
 
-def apply_episode_observations(injury: dict, observations: list[dict]) -> dict:
+def apply_episode_observations(injury: dict, observations: list[dict], *, as_of: datetime | None = None) -> dict:
     row = dict(injury)
     row.pop("clinician_clearance", None)
-    observations = [e for e in observations if e.get("injury_id") == str(row.get("id"))
-                    and e.get("injury_episode_id") == str(row.get("episode_id"))
-                    and str(e.get("athlete_id")) == str(row.get("athlete_id"))]
-    row.pop("achilles_progression_observations", None)
-    achilles = [e for e in observations if e.get("event_type") == "achilles_progression_input"]
-    if achilles and achilles_identity(row) == ("achilles", "tendonitis"):
-        row["achilles_progression_observations"] = achilles
-        starts = [instant(e.get("created_at")) for e in observations if e.get("event_type") == "injury_checkin"]
-        row["achilles_episode_started_at"] = min((s for s in starts if s), default=instant(row.get("created_at")))
-        # Concerning reports remain authoritative for this episode. A later
-        # reassuring assessment or clearance report cannot erase a medical hold.
-        for event in achilles:
-            payload = event.get("payload") or {}
-            if (payload.get("region"), payload.get("injury_type"), payload.get("source")) != ("achilles", "tendonitis", "athlete_reported"):
-                continue
-            try:
-                assessment = AchillesProgressionInput.model_validate(payload.get("assessment"))
-            except ValueError:
-                continue
-            if assessment.side == row.get("side") and assessment.safety_concern:
-                row["rehab_medical_gate"] = True
-                row["achilles_assessment_medical_hold"] = True
+    row["assessment_history_complete"] = getattr(observations, "history_complete", True)
+    observations = exact_episode_events(row, observations)
+    row["progression_assessments"] = [e for e in observations if e.get("event_type") == ASSESSMENT_EVENT]
+    starts = [instant(e.get("created_at")) for e in observations if e.get("event_type") == "injury_checkin"]
+    row["assessment_episode_started_at"] = min((s for s in starts if s), default=instant(row.get("created_at")))
+    context = AssessmentContext.from_injury(row, as_of=as_of or datetime.now(timezone.utc))
+    if context.reported_medical_concern:
+        row["rehab_medical_gate"] = True
+        row["progression_assessment_medical_hold"] = True
     from api.contracts.rehab_progression import _instant
     # Audit events can inherit an old status after a severity edit. Only a
     # database-marked explicit report may supply the recovery timestamp.
@@ -124,8 +108,7 @@ def apply_episode_observations(injury: dict, observations: list[dict]) -> dict:
                 or (e.get("event_type") == "delayed_rehab_response" and e.get("payload", {}).get("response") == "worse")]
     if row.get("latest_reported_status") == "worse" and row.get("updated_at"):
         setbacks.append(row["updated_at"])
-    if achilles:
-        row["achilles_observation_setback_at"] = max((instant(v) for v in setbacks if instant(v)), default=None)
+    row["assessment_setback_at"] = max((instant(v) for v in setbacks if instant(v)), default=None)
     def timestamp(value):
         return datetime.fromisoformat(str(value).replace("Z", "+00:00"))
     last_setback = max((timestamp(value) for value in setbacks if value), default=None)

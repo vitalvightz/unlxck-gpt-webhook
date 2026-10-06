@@ -3,6 +3,41 @@
 //   python tools/generate_api_types.py
 // tests/test_api_types_generated.py fails when this file is out of date.
 
+export type AchillesProgressionAssessment = {
+  schema_version?: 1;
+  assessment_kind?: "achilles_tendon_progression_v1";
+  protocol_version?: 1;
+  side: "bilateral" | "left" | "right" | "unknown";
+  assessed_at: string;
+  assessor: "clinician_physio" | "coach_observed" | "self_reported" | "unknown";
+  payload: AchillesProgressionInput;
+};
+
+export type AchillesProgressionInput = {
+  site?: "insertional" | "midportion" | "unknown";
+  incompatible_pathology?: "excluded" | "not_assessed" | "suspected" | "unknown";
+  suspected_rupture?: boolean | null;
+  marked_weakness?: boolean | null;
+  traumatic_loss_of_function?: boolean | null;
+  clinician_restriction?: boolean | null;
+  heel_rise_completed?: boolean | null;
+  heel_rise_mode?: "double_leg" | "single_leg" | "unknown";
+  heel_rise_quality?: "controlled" | "reduced_control" | "unable" | "unknown";
+  heel_rise_repetitions?: number | null;
+  heel_rise_assessor_usable?: boolean | null;
+  loading_performed_at?: string | null;
+  loading_task?: "clinician_selected" | "heel_rise_assessment" | "unknown";
+  during_symptoms?: number | null;
+  delayed_symptoms?: number | null;
+  delayed_response_at?: string | null;
+  range_assessed?: boolean | null;
+  permitted_range?: "clinician_limited" | "floor_level" | "unknown";
+  resistance?: "bodyweight" | "external" | "unknown";
+  resistance_kg?: number | null;
+  range_load_tolerance?: "not_tolerated" | "tolerated" | "unknown";
+  range_load_assessor_usable?: boolean | null;
+};
+
 /**
  * A body region the athlete is currently injured in, plus its match terms.
  *
@@ -18,8 +53,8 @@ export type ActiveInjuryRegion = {
 export type AdminAthleteRecord = {
   athlete_id: string;
   email: string;
-  role: "athlete" | "coach" | "gym_owner" | "admin";
-  access_status: "pending" | "approved";
+  role: "admin" | "athlete" | "coach" | "gym_owner";
+  access_status: "approved" | "pending";
   full_name: string;
   technical_style: string[];
   tactical_style: string[];
@@ -40,9 +75,9 @@ export type AdminAthleteRecord = {
 
 export type AdminFeedbackRecord = {
   id: string;
-  surface: "plan" | "daily_recommendation" | "session" | "global";
-  category: "plan_usefulness" | "recommendation_fit" | "recommendation_safety" | "session_review" | "bug_report" | "feature_request" | "safety_issue" | "general_feedback";
-  response: "yes" | "no" | "unsafe" | null;
+  surface: "daily_recommendation" | "global" | "plan" | "session";
+  category: "bug_report" | "feature_request" | "general_feedback" | "plan_usefulness" | "recommendation_fit" | "recommendation_safety" | "safety_issue" | "session_review";
+  response: "no" | "unsafe" | "yes" | null;
   reason: string | null;
   comment: string;
   structured_response: Record<string, unknown>;
@@ -81,7 +116,7 @@ export type AdminGenerationJobDiagnostic = {
   athlete_email: string;
   athlete_full_name: string;
   intake_id: string | null;
-  status: "queued" | "running" | "completed" | "review_required" | "failed";
+  status: "completed" | "failed" | "queued" | "review_required" | "running";
   source: string;
   created_at: string;
   started_at: string | null;
@@ -162,7 +197,7 @@ export type AdminReviewRecord = {
   adaptation_note_id: string | null;
   injury_flag_id: string | null;
   reason: string;
-  status: "pending" | "acknowledged" | "resolved";
+  status: "acknowledged" | "pending" | "resolved";
   resolution_notes: string;
   resolved_by: string;
   resolved_at: string | null;
@@ -203,7 +238,7 @@ export type AthleteContext = {
 
 export type AthleteProfileInput = {
   full_name: string;
-  sex?: "male" | "female" | null;
+  sex?: "female" | "male" | null;
   age?: number | null;
   weight_kg?: number | null;
   target_weight_kg?: number | null;
@@ -258,22 +293,22 @@ export type CommandView = {
 
 export type CommandViewToday = {
   training_day: string;
-  recommendation_state: "not_checked_in" | "train_as_planned" | "modify" | "pull_back";
+  recommendation_state: "modify" | "not_checked_in" | "pull_back" | "train_as_planned";
   recommendation_reason: string | null;
-  decision_tier: "stop" | "pull_back" | "modify" | "green" | "not_checked_in";
+  decision_tier: "green" | "modify" | "not_checked_in" | "pull_back" | "stop";
   injury_hold_exempt: boolean;
   recommendation_trigger_labels: string[];
   recommendation_context_labels: string[];
   recommendation_safety_checks: Record<string, string>[];
   recommendation_sources: string[];
-  recommendation_confidence: "high" | "moderate" | "low" | null;
+  recommendation_confidence: "high" | "low" | "moderate" | null;
   recommendation_confidence_note: string;
   primary_safety_notice: PrimarySafetyNotice | null;
   warnings: string[];
   next_session: Record<string, unknown>;
-  session_scope: "today" | "next" | "none";
+  session_scope: "next" | "none" | "today";
   session_label: string;
-  completion_status: "not_started" | "started" | "done" | "modified" | "skipped";
+  completion_status: "done" | "modified" | "not_started" | "skipped" | "started";
 };
 
 /** Post-session completion log (Section P). */
@@ -302,7 +337,7 @@ export type ComplianceAcceptanceRequest = {
 };
 
 export type ContextualFeedbackRequest = {
-  response: "yes" | "no" | "unsafe";
+  response: "no" | "unsafe" | "yes";
   reason?: string | null;
   comment?: string;
 };
@@ -323,19 +358,19 @@ export type CountdownLabel = {
 export type DailyCheckIn = {
   date: string;
   morning: MorningCheckIn;
-  decision: "train_as_planned" | "modify" | "pull_back" | "unavailable";
+  decision: "modify" | "pull_back" | "train_as_planned" | "unavailable";
   rules_triggered: string[];
 };
 
 /** A calendar day in the plan (Section J). */
 export type Day = {
   date: string;
-  weekday: "Mon" | "Tue" | "Wed" | "Thu" | "Fri" | "Sat" | "Sun" | null;
-  day_type: "high" | "moderate" | "low" | "recovery" | "rest" | "competition" | "travel" | "reintegration";
+  weekday: "Fri" | "Mon" | "Sat" | "Sun" | "Thu" | "Tue" | "Wed" | null;
+  day_type: "competition" | "high" | "low" | "moderate" | "recovery" | "reintegration" | "rest" | "travel";
   countdown_label: string;
-  phase_label: "GPP" | "SPP" | "TAPER" | "FIGHT_WEEK" | "REINTEGRATION";
+  phase_label: "FIGHT_WEEK" | "GPP" | "REINTEGRATION" | "SPP" | "TAPER";
   planning_week_index: number | null;
-  planning_week_phase: "GPP" | "SPP" | "TAPER" | "FIGHT_WEEK" | "REINTEGRATION" | null;
+  planning_week_phase: "FIGHT_WEEK" | "GPP" | "REINTEGRATION" | "SPP" | "TAPER" | null;
   planning_day_role_keys: string[];
   priority_microdose: PriorityMicrodose | null;
   today_card: TodayCard;
@@ -344,7 +379,7 @@ export type Day = {
 
 /** Target effort expressed via a named method (RPE, RIR, intent...). */
 export type EffortPrescription = {
-  method: "RPE" | "RIR" | "intent" | "velocity" | "heart_rate_zone" | "pace" | "max_effort_percent";
+  method: "RIR" | "RPE" | "heart_rate_zone" | "intent" | "max_effort_percent" | "pace" | "velocity";
   value: number | string;
   scale: string | null;
 };
@@ -354,7 +389,7 @@ export type EventContext = {
   fight_date: string | null;
   match_date: string | null;
   weigh_in_date: string | null;
-  event_type: "fight" | "match" | "trial" | "camp" | "none" | null;
+  event_type: "camp" | "fight" | "match" | "none" | "trial" | null;
   ruleset: string | null;
 };
 
@@ -371,19 +406,19 @@ export type ExerciseMedia = {
   video_id: string;
   start_s: number;
   end_s: number | null;
-  source: "curated" | "coach";
+  source: "coach" | "curated";
   channel_title: string | null;
 };
 
 export type ExposureDemand = {
   target_regions: string[];
   target_tissues: string[] | null;
-  load: "unknown" | "minimal" | "low" | "moderate" | "high";
-  impact: "unknown" | "none" | "low" | "moderate" | "high";
-  velocity: "unknown" | "low" | "moderate" | "high";
-  contraction_type: ("isometric" | "concentric" | "eccentric" | "mixed" | "unknown")[] | null;
-  sport_specificity: "general_rehab" | "combat_sport" | "unknown";
-  contact_level: "none" | "controlled" | "full" | "unknown" | null;
+  load: "high" | "low" | "minimal" | "moderate" | "unknown";
+  impact: "high" | "low" | "moderate" | "none" | "unknown";
+  velocity: "high" | "low" | "moderate" | "unknown";
+  contraction_type: ("concentric" | "eccentric" | "isometric" | "mixed" | "unknown")[] | null;
+  sport_specificity: "combat_sport" | "general_rehab" | "unknown";
+  contact_level: "controlled" | "full" | "none" | "unknown" | null;
   resistance_type: "assisted" | "bodyweight" | "external_load" | "unknown" | null;
   rom_context: string | null;
 };
@@ -391,12 +426,12 @@ export type ExposureDemand = {
 export type ExposureDemandRequest = {
   target_regions: string[];
   target_tissues?: string[] | null;
-  load: "unknown" | "minimal" | "low" | "moderate" | "high";
-  impact: "unknown" | "none" | "low" | "moderate" | "high";
-  velocity: "unknown" | "low" | "moderate" | "high";
-  contraction_type?: ("isometric" | "concentric" | "eccentric" | "mixed" | "unknown")[] | null;
-  sport_specificity?: "general_rehab" | "combat_sport" | "unknown";
-  contact_level?: "none" | "controlled" | "full" | "unknown" | null;
+  load: "high" | "low" | "minimal" | "moderate" | "unknown";
+  impact: "high" | "low" | "moderate" | "none" | "unknown";
+  velocity: "high" | "low" | "moderate" | "unknown";
+  contraction_type?: ("concentric" | "eccentric" | "isometric" | "mixed" | "unknown")[] | null;
+  sport_specificity?: "combat_sport" | "general_rehab" | "unknown";
+  contact_level?: "controlled" | "full" | "none" | "unknown" | null;
   resistance_type?: "assisted" | "bodyweight" | "external_load" | "unknown" | null;
   rom_context?: string | null;
 };
@@ -410,7 +445,7 @@ export type ExposureDose = {
   hold_seconds: number | null;
   completed_fraction: number | null;
   stopped_early: boolean | null;
-  completion_state: "performed_amount_unknown" | "partial_amount_unknown" | "quantified" | null;
+  completion_state: "partial_amount_unknown" | "performed_amount_unknown" | "quantified" | null;
 };
 
 export type ExposureDoseRequest = {
@@ -422,7 +457,7 @@ export type ExposureDoseRequest = {
   hold_seconds?: number | null;
   completed_fraction?: number | null;
   stopped_early?: boolean | null;
-  completion_state?: "performed_amount_unknown" | "partial_amount_unknown" | "quantified" | null;
+  completion_state?: "partial_amount_unknown" | "performed_amount_unknown" | "quantified" | null;
 };
 
 export type ExposureProvenance = {
@@ -433,7 +468,7 @@ export type ExposureProvenance = {
   policy_review_hash: string | null;
   policy_id: string | null;
   policy_version: number | null;
-  rehab_stage: "calm" | "restore" | "load" | "dynamic" | "return" | null;
+  rehab_stage: "calm" | "dynamic" | "load" | "restore" | "return" | null;
 };
 
 export type ExposureProvenanceRequest = {
@@ -444,32 +479,32 @@ export type ExposureProvenanceRequest = {
   policy_review_hash?: string | null;
   policy_id?: string | null;
   policy_version?: number | null;
-  rehab_stage?: "calm" | "restore" | "load" | "dynamic" | "return" | null;
+  rehab_stage?: "calm" | "dynamic" | "load" | "restore" | "return" | null;
 };
 
 export type ExposureResponse = {
-  during_response: "better" | "same" | "worse" | "not_sure" | "not_reported";
+  during_response: "better" | "not_reported" | "not_sure" | "same" | "worse";
   pain_during: number | "not_sure" | null;
   pain_immediate_after: number | "not_sure" | null;
-  next_day_response: "better" | "same" | "worse" | "not_yet_known" | "not_sure";
+  next_day_response: "better" | "not_sure" | "not_yet_known" | "same" | "worse";
   stopped_due_to_symptoms: boolean | null;
   worsening_reported: boolean | null;
 };
 
 export type ExposureResponseRequest = {
-  during_response?: "better" | "same" | "worse" | "not_sure" | "not_reported";
+  during_response?: "better" | "not_reported" | "not_sure" | "same" | "worse";
   pain_during?: number | "not_sure" | null;
   pain_immediate_after?: number | "not_sure" | null;
-  next_day_response?: "better" | "same" | "worse" | "not_yet_known" | "not_sure";
+  next_day_response?: "better" | "not_sure" | "not_yet_known" | "same" | "worse";
   stopped_due_to_symptoms?: boolean | null;
   worsening_reported?: boolean | null;
 };
 
 export type FeedbackRecord = {
   id: string;
-  surface: "plan" | "daily_recommendation" | "session" | "global";
-  category: "plan_usefulness" | "recommendation_fit" | "recommendation_safety" | "session_review" | "bug_report" | "feature_request" | "safety_issue" | "general_feedback";
-  response: "yes" | "no" | "unsafe" | null;
+  surface: "daily_recommendation" | "global" | "plan" | "session";
+  category: "bug_report" | "feature_request" | "general_feedback" | "plan_usefulness" | "recommendation_fit" | "recommendation_safety" | "safety_issue" | "session_review";
+  response: "no" | "unsafe" | "yes" | null;
   reason: string | null;
   comment: string;
   structured_response: Record<string, unknown>;
@@ -483,7 +518,7 @@ export type GenerationJobResponse = {
   job_id: string;
   athlete_id: string;
   client_request_id: string;
-  status: "queued" | "running" | "completed" | "review_required" | "failed";
+  status: "completed" | "failed" | "queued" | "review_required" | "running";
   created_at: string;
   updated_at: string;
   started_at: string | null;
@@ -519,7 +554,7 @@ export type GenerationRequestPayloadSummary = {
 export type GuidedInjuryInput = {
   area: string;
   zone: string;
-  severity: "" | "low" | "moderate" | "high";
+  severity: "" | "high" | "low" | "moderate";
   trend: string;
   avoid: string;
   notes: string;
@@ -538,7 +573,7 @@ export type GuidedInjuryInput = {
 export type GuidedInjuryInputRequest = {
   area?: string;
   zone?: string;
-  severity?: "" | "low" | "moderate" | "high";
+  severity?: "" | "high" | "low" | "moderate";
   trend?: string;
   avoid?: string;
   notes?: string;
@@ -561,10 +596,11 @@ export type HTTPValidationError = {
 export type InjuryEpisodeObservation = {
   injury_id: string;
   injury_episode_id: string;
-  event_type: "clinician_clearance_report" | "delayed_rehab_response";
-  scopes?: ("rehab" | "training" | "contact")[];
+  event_type: "clinician_clearance_report" | "delayed_rehab_response" | "rehab_progression_assessment";
+  assessment?: AchillesProgressionAssessment | null;
+  scopes?: ("contact" | "rehab" | "training")[];
   exposure_id?: string | null;
-  response?: "better" | "same" | "worse" | "not_sure" | null;
+  response?: "better" | "not_sure" | "same" | "worse" | null;
   report_id?: string;
 };
 
@@ -581,22 +617,22 @@ export type InjuryFlagRecord = {
   source: string;
   episode_id: string | null;
   body_region: string | null;
-  side: "left" | "right" | "bilateral" | "unknown";
+  side: "bilateral" | "left" | "right" | "unknown";
   body_area: string;
   description: string;
   severity: "mild" | "moderate" | "severe";
   severity_source: "manual" | "surface_system" | null;
   manual_severity: "mild" | "moderate" | "severe" | null;
-  status: "open" | "monitoring" | "resolved";
-  latest_reported_status: "ongoing" | "improving" | "worse" | "resolved";
+  status: "monitoring" | "open" | "resolved";
+  latest_reported_status: "improving" | "ongoing" | "resolved" | "worse";
   skin_integrity: "intact" | "open" | "unknown" | null;
-  bleeding_status: "none" | "controlled" | "uncontrolled" | null;
+  bleeding_status: "controlled" | "none" | "uncontrolled" | null;
   drainage: "none" | "present" | "unknown" | null;
   infection_signs: string[];
-  coverable: "yes" | "no" | "unknown" | null;
-  friction_or_contact_problem: "yes" | "no" | "unknown" | null;
-  surface_class: "non_surface" | "stable_surface" | "surface_local_restriction" | "surface_no_contact" | "surface_medical_review" | null;
-  rehab_stage: "calm" | "restore" | "load" | "dynamic" | "return" | null;
+  coverable: "no" | "unknown" | "yes" | null;
+  friction_or_contact_problem: "no" | "unknown" | "yes" | null;
+  surface_class: "non_surface" | "stable_surface" | "surface_local_restriction" | "surface_medical_review" | "surface_no_contact" | null;
+  rehab_stage: "calm" | "dynamic" | "load" | "restore" | "return" | null;
   rehab_stage_reasons: string[];
   rehab_care_pathway: "musculoskeletal" | "wound_care" | null;
   rehab_decision: InjuryRehabDecisionRecord | null;
@@ -607,7 +643,7 @@ export type InjuryFlagRecord = {
 };
 
 export type InjuryFlagUpdateRequest = {
-  status: "open" | "monitoring" | "resolved";
+  status: "monitoring" | "open" | "resolved";
 };
 
 export type InjuryRehabDecisionRecord = {
@@ -627,10 +663,10 @@ export type LandingResponse = {
 
 /** Week-level load dial settings (Section H). */
 export type LoadFocus = {
-  volume: "low" | "moderate" | "high" | "reduced" | "peak" | "build" | "maintain" | "unload";
-  intensity: "low" | "moderate" | "high" | "reduced" | "peak" | "build" | "maintain" | "unload";
-  specificity: "low" | "moderate" | "high" | "reduced" | "peak" | "build" | "maintain" | "unload";
-  fatigue_target: "low" | "moderate" | "high" | "reduced" | "peak" | "build" | "maintain" | "unload";
+  volume: "build" | "high" | "low" | "maintain" | "moderate" | "peak" | "reduced" | "unload";
+  intensity: "build" | "high" | "low" | "maintain" | "moderate" | "peak" | "reduced" | "unload";
+  specificity: "build" | "high" | "low" | "maintain" | "moderate" | "peak" | "reduced" | "unload";
+  fatigue_target: "build" | "high" | "low" | "maintain" | "moderate" | "peak" | "reduced" | "unload";
 };
 
 /**
@@ -642,7 +678,7 @@ export type LoadFocus = {
  *      "ref": "1RM", "display": "85% 1RM"}
  */
 export type LoadPrescription = {
-  method: "percentage" | "absolute" | "bodyweight" | "band" | "rpe" | "rir" | "velocity" | "relative" | "other";
+  method: "absolute" | "band" | "bodyweight" | "other" | "percentage" | "relative" | "rir" | "rpe" | "velocity";
   value: number;
   unit: string;
   ref: string | null;
@@ -766,10 +802,10 @@ export type NutritionDerivedState = {
   short_notice: boolean;
   fight_week: boolean;
   readiness_flags: string[];
-  fight_week_override_band: "none" | "final_day_protocol" | "micro_taper_protocol" | "mini_taper_protocol";
+  fight_week_override_band: "final_day_protocol" | "micro_taper_protocol" | "mini_taper_protocol" | "none";
   current_phase_effective: string | null;
   rolling_7_day_average_weight: number | null;
-  foundation_status: "incomplete" | "sufficient" | "complete";
+  foundation_status: "complete" | "incomplete" | "sufficient";
   missing_required_fields: string[];
 };
 
@@ -782,10 +818,10 @@ export type NutritionMonitoringInputRequest = {
 };
 
 export type NutritionProfileInput = {
-  sex: "male" | "female" | null;
+  sex: "female" | "male" | null;
   age: number | null;
   height_cm: number | null;
-  daily_activity_level: "low" | "mixed" | "active_job" | null;
+  daily_activity_level: "active_job" | "low" | "mixed" | null;
   dietary_restrictions: string[];
   food_preferences: string[];
   meals_per_day_preference: number | null;
@@ -796,10 +832,10 @@ export type NutritionProfileInput = {
 };
 
 export type NutritionProfileInputRequest = {
-  sex?: "male" | "female" | null;
+  sex?: "female" | "male" | null;
   age?: number | null;
   height_cm?: number | null;
-  daily_activity_level?: "low" | "mixed" | "active_job" | null;
+  daily_activity_level?: "active_job" | "low" | "mixed" | null;
   dietary_restrictions?: string[];
   food_preferences?: string[];
   meals_per_day_preference?: number | null;
@@ -811,12 +847,12 @@ export type NutritionProfileInputRequest = {
 
 export type NutritionReadinessInput = {
   sleep_quality: "good" | "mixed" | "poor" | null;
-  appetite_status: "normal" | "low" | "high" | null;
+  appetite_status: "high" | "low" | "normal" | null;
 };
 
 export type NutritionReadinessInputRequest = {
   sleep_quality?: "good" | "mixed" | "poor" | null;
-  appetite_status?: "normal" | "low" | "high" | null;
+  appetite_status?: "high" | "low" | "normal" | null;
 };
 
 export type NutritionSandCPreferences = {
@@ -852,45 +888,45 @@ export type NutritionSandCPreferencesRequest = {
 export type NutritionSharedCampContext = {
   fight_date: string;
   rounds_format: string;
-  weigh_in_type: "same_day" | "day_before" | "informal" | null;
+  weigh_in_type: "day_before" | "informal" | "same_day" | null;
   weigh_in_time: string | null;
   current_weight_kg: number | null;
   current_weight_recorded_at: string | null;
-  current_weight_source: "manual" | "latest_bodyweight_log" | "imported" | null;
+  current_weight_source: "imported" | "latest_bodyweight_log" | "manual" | null;
   target_weight_kg: number | null;
   target_weight_range_kg: number[] | null;
   phase_override: "GPP" | "SPP" | "TAPER" | null;
-  fatigue_level: "high" | "moderate" | "low" | null;
+  fatigue_level: "high" | "low" | "moderate" | null;
   weekly_training_frequency: number | null;
   training_availability: string[];
   hard_sparring_days: string[];
   support_work_days: string[];
-  session_types_by_day: Record<string, "hard_spar" | "technical" | "strength" | "conditioning" | "recovery" | "off">;
+  session_types_by_day: Record<string, "conditioning" | "hard_spar" | "off" | "recovery" | "strength" | "technical">;
   injuries: string;
   guided_injury: GuidedInjuryInput | null;
-  training_restriction_level: "none" | "minor" | "moderate" | "major" | null;
+  training_restriction_level: "major" | "minor" | "moderate" | "none" | null;
 };
 
 export type NutritionSharedCampContextRequest = {
   fight_date?: string;
   rounds_format?: string;
-  weigh_in_type?: "same_day" | "day_before" | "informal" | null;
+  weigh_in_type?: "day_before" | "informal" | "same_day" | null;
   weigh_in_time?: string | null;
   current_weight_kg?: number | null;
   current_weight_recorded_at?: string | null;
-  current_weight_source?: "manual" | "latest_bodyweight_log" | "imported" | null;
+  current_weight_source?: "imported" | "latest_bodyweight_log" | "manual" | null;
   target_weight_kg?: number | null;
   target_weight_range_kg?: number[] | null;
   phase_override?: "GPP" | "SPP" | "TAPER" | null;
-  fatigue_level?: "high" | "moderate" | "low" | null;
+  fatigue_level?: "high" | "low" | "moderate" | null;
   weekly_training_frequency?: number | null;
   training_availability?: string[];
   hard_sparring_days?: string[];
   support_work_days?: string[];
-  session_types_by_day?: Record<string, "hard_spar" | "technical" | "strength" | "conditioning" | "recovery" | "off">;
+  session_types_by_day?: Record<string, "conditioning" | "hard_spar" | "off" | "recovery" | "strength" | "technical">;
   injuries?: string;
   guided_injury?: GuidedInjuryInputRequest | null;
-  training_restriction_level?: "none" | "minor" | "moderate" | "major" | null;
+  training_restriction_level?: "major" | "minor" | "moderate" | "none" | null;
 };
 
 export type NutritionWorkspaceState = {
@@ -947,8 +983,8 @@ export type PlanActivationRequest = {
 
 export type PlanAdvisory = {
   kind: "sparring_adjustment";
-  action: "deload" | "convert";
-  risk_band: "green" | "amber" | "red" | "black" | null;
+  action: "convert" | "deload";
+  risk_band: "amber" | "black" | "green" | "red" | null;
   phase: string;
   week_label: string;
   days: string[];
@@ -1008,12 +1044,12 @@ export type PlanMetadata = {
   plan_id: string | null;
   title: string;
   sport: string;
-  plan_type: "fight_camp" | "open_ongoing_system" | "explosive_athlete" | "match_week" | "reintegration" | "general_performance";
+  plan_type: "explosive_athlete" | "fight_camp" | "general_performance" | "match_week" | "open_ongoing_system" | "reintegration";
   timezone: string;
-  status: "draft" | "active" | "completed" | "archived";
+  status: "active" | "archived" | "completed" | "draft";
   created_at: string | null;
   created_by: string | null;
-  units: "metric" | "imperial";
+  units: "imperial" | "metric";
 };
 
 /**
@@ -1026,7 +1062,7 @@ export type PlanMetadata = {
  * direct acute-cut instructions.
  */
 export type PlanNote = {
-  category: "weight_cut" | "injury" | "nutrition" | "training" | "recovery" | "general";
+  category: "general" | "injury" | "nutrition" | "recovery" | "training" | "weight_cut";
   label: string | null;
   text: string;
 };
@@ -1078,7 +1114,7 @@ export type PlanRequest = {
 };
 
 export type PlanSafetyState = {
-  state: "plan_ready" | "restricted_rehab_only" | "medical_hold" | "needs_review";
+  state: "medical_hold" | "needs_review" | "plan_ready" | "restricted_rehab_only";
   status_chip: string;
   header: string;
   subtext: string;
@@ -1086,7 +1122,7 @@ export type PlanSafetyState = {
   clinician_clearance_required: boolean;
   matched_high_risk_categories: string[];
   red_flags: string[];
-  sparring_risk_band: "green" | "amber" | "red" | "black" | null;
+  sparring_risk_band: "amber" | "black" | "green" | "red" | null;
   next_steps: string[];
 };
 
@@ -1128,9 +1164,9 @@ export type PlanSummary = {
  * priority so every client gets the same message hierarchy.
  */
 export type PrimarySafetyNotice = {
-  code: "skin_care" | "skin_local_protection" | "skin_no_contact" | "skin_medical_review";
+  code: "skin_care" | "skin_local_protection" | "skin_medical_review" | "skin_no_contact";
   injury_id: string;
-  chip: "SKIN CARE" | "CHECK";
+  chip: "CHECK" | "SKIN CARE";
   title: string;
   detail: string;
   action: string;
@@ -1149,8 +1185,8 @@ export type ProfileRecord = {
   email: string;
   username: string | null;
   username_change_history: string[];
-  role: "athlete" | "coach" | "gym_owner" | "admin";
-  access_status: "pending" | "approved";
+  role: "admin" | "athlete" | "coach" | "gym_owner";
+  access_status: "approved" | "pending";
   full_name: string;
   technical_style: string[];
   tactical_style: string[];
@@ -1206,7 +1242,7 @@ export type ProgressMilestone = {
 
 /** How a week relates to the previous one (Section I). */
 export type Progression = {
-  week_type: "build" | "stabilise" | "deload" | "specific_peak" | "taper" | "fight_week" | "reintegration";
+  week_type: "build" | "deload" | "fight_week" | "reintegration" | "specific_peak" | "stabilise" | "taper";
   planned_change_from_previous: string;
 };
 
@@ -1252,15 +1288,15 @@ export type RedFlagRule = {
   rule_id: string | null;
   metric: string | null;
   metric_group: string | null;
-  when: "morning_check_in" | "pre_session" | "during_session" | "post_session" | "next_day";
+  when: "during_session" | "morning_check_in" | "next_day" | "post_session" | "pre_session";
   operator: string | null;
   threshold: number | null;
   logic: string | null;
-  severity: "green" | "amber" | "red";
+  severity: "amber" | "green" | "red";
   applies_to: string[];
   display_text: string;
   action: string;
-  replacement_session_type: "strength_power" | "conditioning" | "skill" | "sparring" | "primer" | "recovery" | "rehab" | "fight_or_match" | "mixed" | null;
+  replacement_session_type: "conditioning" | "fight_or_match" | "mixed" | "primer" | "recovery" | "rehab" | "skill" | "sparring" | "strength_power" | null;
   affected_blocks: string[] | null;
   needs_human_review: boolean;
 };
@@ -1272,7 +1308,7 @@ export type RehabExposureEvent = {
   injury_episode_id: string;
   drill_id: string;
   body_region: string;
-  side: "left" | "right" | "bilateral" | "unknown";
+  side: "bilateral" | "left" | "right" | "unknown";
   demand: ExposureDemand;
   prescribed_dose: ExposureDose | null;
   dose_completed: ExposureDose;
@@ -1288,7 +1324,7 @@ export type RehabExposureEventRequest = {
   injury_episode_id: string;
   drill_id: string;
   body_region: string;
-  side: "left" | "right" | "bilateral" | "unknown";
+  side: "bilateral" | "left" | "right" | "unknown";
   demand: ExposureDemandRequest;
   prescribed_dose?: ExposureDoseRequest | null;
   dose_completed: ExposureDoseRequest;
@@ -1305,7 +1341,7 @@ export type RehabExposureEventRequest = {
  * localized, "rehab" while an unlocalizable injury is open.
  */
 export type RehabLabelPolicy = {
-  default_mode: "rehab" | "prehab";
+  default_mode: "prehab" | "rehab";
   active_regions: ActiveInjuryRegion[];
 };
 
@@ -1317,7 +1353,7 @@ export type RehabPrescriptionSummary = {
 export type RehabResponseAnswer = {
   injury_id: string;
   injury_episode_id: string;
-  during_response: "better" | "same" | "worse" | "not_sure";
+  during_response: "better" | "not_sure" | "same" | "worse";
   limit_response: "no" | "reduced" | "stopped";
 };
 
@@ -1337,7 +1373,7 @@ export type RehabResponsePromptResponse = {
   side: string;
   drill_ids: string[];
   during_question: string;
-  during_options: ("better" | "same" | "worse" | "not_sure")[];
+  during_options: ("better" | "not_sure" | "same" | "worse")[];
   limit_question: string;
   limit_options: ("no" | "reduced" | "stopped")[];
 };
@@ -1364,32 +1400,32 @@ export type RehabResponseResult = {
 };
 
 export type RehabScheduleRecord = {
-  state: "due" | "recovery_day" | "already_completed" | "held" | "deferred" | "unsupported";
+  state: "already_completed" | "deferred" | "due" | "held" | "recovery_day" | "unsupported";
   reason: string;
   next_due_day: string | null;
 };
 
 export type RiskWatchItem = {
-  category: "stop_red_flag" | "active_injury_worse" | "high_pain" | "weight_cut" | "fatigue" | "reminder";
+  category: "active_injury_worse" | "fatigue" | "high_pain" | "reminder" | "stop_red_flag" | "weight_cut";
   priority: number;
   icon: string;
   label: string;
   text: string;
   tone: string;
-  timeframe: "today" | "last_session" | "recent_sessions" | "active" | null;
+  timeframe: "active" | "last_session" | "recent_sessions" | "today" | null;
 };
 
 /** A single training session within a day (Section M). */
 export type Session = {
   session_id: string | null;
-  session_type: "strength_power" | "conditioning" | "skill" | "sparring" | "primer" | "recovery" | "rehab" | "fight_or_match" | "mixed";
+  session_type: "conditioning" | "fight_or_match" | "mixed" | "primer" | "recovery" | "rehab" | "skill" | "sparring" | "strength_power";
   title: string;
   objective: string;
   planned_duration: MeasuredValue | null;
   primary_stressor: string | null;
   cns_demand: string | null;
   impact_level: string | null;
-  completion_status: "not_started" | "done" | "modified" | "skipped";
+  completion_status: "done" | "modified" | "not_started" | "skipped";
   mindset_anchor: MindsetAnchor;
   blocks: SessionBlock[];
   completion: Completion | null;
@@ -1399,7 +1435,7 @@ export type Session = {
 /** An executable unit inside a session (Section N). */
 export type SessionBlock = {
   block_id: string | null;
-  block_type: "preparation" | "mobility_activation" | "plyometric_power" | "speed" | "strength" | "strength_speed" | "accessory" | "conditioning" | "skill" | "sparring" | "cooldown_recovery" | "nutrition" | "mindset" | "rehab";
+  block_type: "accessory" | "conditioning" | "cooldown_recovery" | "mindset" | "mobility_activation" | "nutrition" | "plyometric_power" | "preparation" | "rehab" | "skill" | "sparring" | "speed" | "strength" | "strength_speed";
   display_name: string;
   category: string | null;
   order_index: number | null;
@@ -1435,7 +1471,7 @@ export type SessionCompletionHistoryResponse = {
   plan_id: string;
   session_id: string;
   training_day: string;
-  status: "not_started" | "started" | "done" | "modified" | "skipped";
+  status: "done" | "modified" | "not_started" | "skipped" | "started";
   session_rpe: number | null;
   pain_after: number | null;
   modification_reason: string;
@@ -1445,7 +1481,7 @@ export type SessionCompletionHistoryResponse = {
   created_at: string;
   updated_at: string;
   prescription_snapshot: Record<string, unknown> | null;
-  rehab_performance: "done_as_shown" | "changed" | "stopped" | null;
+  rehab_performance: "changed" | "done_as_shown" | "stopped" | null;
   session_title: string | null;
 };
 
@@ -1455,7 +1491,7 @@ export type SessionCompletionRecordResponse = {
   plan_id: string;
   session_id: string;
   training_day: string;
-  status: "not_started" | "started" | "done" | "modified" | "skipped";
+  status: "done" | "modified" | "not_started" | "skipped" | "started";
   session_rpe: number | null;
   pain_after: number | null;
   modification_reason: string;
@@ -1465,15 +1501,15 @@ export type SessionCompletionRecordResponse = {
   created_at: string;
   updated_at: string;
   prescription_snapshot: Record<string, unknown> | null;
-  rehab_performance: "done_as_shown" | "changed" | "stopped" | null;
+  rehab_performance: "changed" | "done_as_shown" | "stopped" | null;
 };
 
 export type SessionCompletionRequest = {
   plan_id: string;
   session_id: string;
-  status: "not_started" | "started" | "done" | "modified" | "skipped";
+  status: "done" | "modified" | "not_started" | "skipped" | "started";
   prescription_revision?: string | null;
-  rehab_performance?: "done_as_shown" | "changed" | "stopped" | null;
+  rehab_performance?: "changed" | "done_as_shown" | "stopped" | null;
   training_day?: string | null;
   session_rpe?: number | null;
   pain_after?: number | null;
@@ -1483,8 +1519,8 @@ export type SessionCompletionRequest = {
 
 export type SessionCompletionResponse = {
   completion: SessionCompletionRecordResponse;
-  completion_status: "not_started" | "started" | "done" | "modified" | "skipped";
-  landing_session_state: "none" | "resume" | "completed";
+  completion_status: "done" | "modified" | "not_started" | "skipped" | "started";
+  landing_session_state: "completed" | "none" | "resume";
   rehab_response_prompts: RehabResponsePromptResponse[];
 };
 
@@ -1504,12 +1540,12 @@ export type SparringLogRecord = {
   plan_id: string | null;
   session_id: string | null;
   training_day: string;
-  source: "contact" | "session" | "free";
-  planned_intensity: "hard" | "light" | "technical" | "contact" | null;
-  intensity: "light" | "medium" | "hard";
+  source: "contact" | "free" | "session";
+  planned_intensity: "contact" | "hard" | "light" | "technical" | null;
+  intensity: "hard" | "light" | "medium";
   rounds_completed: number;
   round_seconds: number | null;
-  head_contact: "none" | "light" | "heavy";
+  head_contact: "heavy" | "light" | "none";
   rocked: boolean;
   notes: string;
   created_at: string;
@@ -1525,12 +1561,12 @@ export type SparringLogRecord = {
 export type SparringLogRequest = {
   plan_id?: string | null;
   session_id?: string | null;
-  source: "contact" | "session" | "free";
-  planned_intensity?: "hard" | "light" | "technical" | "contact" | null;
-  intensity: "light" | "medium" | "hard";
+  source: "contact" | "free" | "session";
+  planned_intensity?: "contact" | "hard" | "light" | "technical" | null;
+  intensity: "hard" | "light" | "medium";
   rounds_completed: number;
   round_seconds?: number | null;
-  head_contact: "none" | "light" | "heavy";
+  head_contact: "heavy" | "light" | "none";
   rocked?: boolean;
   notes?: string;
 };
@@ -1553,7 +1589,7 @@ export type SparringWindowSummary = {
 };
 
 export type StructuredCardState = {
-  state: "live" | "building" | "failed" | "not_attempted" | "none";
+  state: "building" | "failed" | "live" | "none" | "not_attempted";
   reasons: string[];
   schema_version: string | null;
   attempt_started_at: string | null;
@@ -1596,7 +1632,7 @@ export type TempoPrescription = {
  */
 export type TodayCard = {
   headline: string;
-  readiness_status: "train_as_planned" | "modify" | "pull_back" | "unavailable";
+  readiness_status: "modify" | "pull_back" | "train_as_planned" | "unavailable";
   mindset_anchor: MindsetAnchor;
   primary_warning: string | null;
   nutrition_summary: string | null;
@@ -1610,10 +1646,10 @@ export type TodayCheckinRecord = {
   plan_id: string;
   training_day: string;
   athlete_timezone: string;
-  sleep: "poor" | "okay" | "good";
+  sleep: "good" | "okay" | "poor";
   body: "flat" | "normal" | "sharp";
-  pain: "none" | "manageable" | "high";
-  phase: "GPP" | "SPP" | "TAPER" | "REINTEGRATION";
+  pain: "high" | "manageable" | "none";
+  phase: "GPP" | "REINTEGRATION" | "SPP" | "TAPER";
   active_injury: "none" | "stable" | "worse";
   previous_session: "none" | "normal" | "very_hard";
   sharp_pain: boolean;
@@ -1623,7 +1659,7 @@ export type TodayCheckinRecord = {
   illness_symptoms: boolean;
   cannot_warm_into_movement: boolean;
   worse_next_day_pain: boolean;
-  recommendation_state: "train_as_planned" | "modify" | "pull_back";
+  recommendation_state: "modify" | "pull_back" | "train_as_planned";
   recommendation_reason: string;
   recommendation_triggers: string[];
   created_at: string;
@@ -1632,10 +1668,10 @@ export type TodayCheckinRecord = {
 
 export type TodayCheckinRequest = {
   plan_id: string;
-  sleep: "poor" | "okay" | "good";
+  sleep: "good" | "okay" | "poor";
   body: "flat" | "normal" | "sharp";
-  pain: "none" | "manageable" | "high";
-  phase: "GPP" | "SPP" | "TAPER" | "REINTEGRATION";
+  pain: "high" | "manageable" | "none";
+  phase: "GPP" | "REINTEGRATION" | "SPP" | "TAPER";
   active_injury?: "none" | "stable" | "worse";
   previous_session?: "none" | "normal" | "very_hard";
   sharp_pain?: boolean;
@@ -1650,7 +1686,7 @@ export type TodayCheckinRequest = {
 export type TodayCheckinResponse = {
   checkin: TodayCheckinRecord;
   training_day: string;
-  recommendation_state: "train_as_planned" | "modify" | "pull_back";
+  recommendation_state: "modify" | "pull_back" | "train_as_planned";
   recommendation_reason: string;
   triggers: string[];
   warnings: string[];
@@ -1684,13 +1720,13 @@ export type TodayInjuryDeclaration = {
   body_area?: string;
   description?: string;
   severity?: "mild" | "moderate" | "severe" | null;
-  status?: "ongoing" | "improving" | "worse" | "resolved";
+  status?: "improving" | "ongoing" | "resolved" | "worse";
   skin_integrity?: "intact" | "open" | "unknown" | null;
-  bleeding_status?: "none" | "controlled" | "uncontrolled" | null;
+  bleeding_status?: "controlled" | "none" | "uncontrolled" | null;
   drainage?: "none" | "present" | "unknown" | null;
   infection_signs?: string[] | null;
-  coverable?: "yes" | "no" | "unknown" | null;
-  friction_or_contact_problem?: "yes" | "no" | "unknown" | null;
+  coverable?: "no" | "unknown" | "yes" | null;
+  friction_or_contact_problem?: "no" | "unknown" | "yes" | null;
 };
 
 export type UsernameChangeRequest = {
@@ -1716,7 +1752,7 @@ export type ValidationError = {
 export type Week = {
   week_id: string | null;
   week_index: number;
-  phase_label: "GPP" | "SPP" | "TAPER" | "FIGHT_WEEK" | "REINTEGRATION";
+  phase_label: "FIGHT_WEEK" | "GPP" | "REINTEGRATION" | "SPP" | "TAPER";
   week_goal: string;
   start_date: string;
   end_date: string;
@@ -1731,10 +1767,10 @@ export type Week = {
 };
 
 export type WeeklyDayEntry = {
-  weekday: "Mon" | "Tue" | "Wed" | "Thu" | "Fri" | "Sat" | "Sun";
+  weekday: "Fri" | "Mon" | "Sat" | "Sun" | "Thu" | "Tue" | "Wed";
   title: string;
-  sparring_day_class: "primary_hard" | "secondary_hard" | "managed_hard" | "technical" | "none";
-  effective_load: "hard" | "technical" | "reduced" | "none";
+  sparring_day_class: "managed_hard" | "none" | "primary_hard" | "secondary_hard" | "technical";
+  effective_load: "hard" | "none" | "reduced" | "technical";
   status: string;
   reason: string;
   coach_note: string;
@@ -1769,7 +1805,7 @@ export type WeeklySchedule = {
  * aggressive must route through ``requires_professional_support``.
  */
 export type WeightCutWarning = {
-  risk_level: "none" | "green" | "amber" | "red";
+  risk_level: "amber" | "green" | "none" | "red";
   display_text: string;
   requires_professional_support: boolean;
 };
@@ -1782,7 +1818,7 @@ export type XpAccountState = {
 
 export type XpAwardRecord = {
   id: string;
-  action: "daily_login" | "training_logged" | "planned_session_completed" | "recommended_fighter_content_watched" | "full_training_week_completed" | "profile_completed" | "first_intake_completed" | "first_plan_ready" | "first_checkin_completed" | "readiness_checkin_completed" | "injury_update_completed" | "stop_decision_followed" | "feedback_submitted" | "feedback_with_comment" | "first_plan_completed" | "phase_completed" | "camp_completed";
+  action: "camp_completed" | "daily_login" | "feedback_submitted" | "feedback_with_comment" | "first_checkin_completed" | "first_intake_completed" | "first_plan_completed" | "first_plan_ready" | "full_training_week_completed" | "injury_update_completed" | "phase_completed" | "planned_session_completed" | "profile_completed" | "readiness_checkin_completed" | "recommended_fighter_content_watched" | "stop_decision_followed" | "training_logged";
   amount: number;
   awarded_at: string;
   calendar_date: string | null;

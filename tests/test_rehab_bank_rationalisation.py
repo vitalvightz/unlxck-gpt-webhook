@@ -90,7 +90,8 @@ def test_production_bank_source_history_and_all_64_profiles_unchanged():
     # Retained + archived content must recover the immutable original baseline.
     assert digest(original_bank) == baseline["input_sha256"]["rehab_bank.json"]
     assert digest(original_ledger) == baseline["input_sha256"]["rehab_metadata_review.json"]
-    assert input_digest(ROOT / "data/rehab_pathways.json") == baseline["input_sha256"]["rehab_pathways.json"]
+    from tools.rehab_metadata_review_lib import pathway_inventory_snapshot
+    assert digest(pathway_inventory_snapshot(read("data/rehab_pathways.json"))) == baseline["input_sha256"]["rehab_pathways.json"]
     assert sorted(d["id"] for g in original_bank for d in g["drills"]) == baseline["bank_drill_ids"]
     raw = read("data/rehab_pathways.json")
     assert validate_archive(bank, ledger, raw, archive) == []
