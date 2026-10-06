@@ -917,7 +917,9 @@ export type InjuryFlagRecord = {
   id: string;
   athlete_id: string;
   episode_id?: string | null;
+  side?: import("./api-schema.generated").InjuryFlagRecord["side"];
   rehab_decision?: { outcome: string; summary: string; reason_codes: string[];
+    achilles_load_review?: import("./api-schema.generated").AchillesRestoreLoadReview | null;
     prescription?: { sources?: string[] } | null;
     schedule?: { state: "due" | "recovery_day" | "already_completed" | "held" | "deferred" | "unsupported";
       reason: string; next_due_day?: string | null } | null } | null;

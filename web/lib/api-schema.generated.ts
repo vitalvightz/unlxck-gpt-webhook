@@ -38,6 +38,19 @@ export type AchillesProgressionInput = {
   range_load_assessor_usable?: boolean | null;
 };
 
+export type AchillesRestoreLoadReview = {
+  criterion_id: "achilles_restore_load_review_v1";
+  criterion_version: 1;
+  status: "fail" | "unknown";
+  reason_codes: string[];
+  subtype: "insertional" | "midportion" | "unknown";
+  required_input_ids: string[];
+  observation_id: string | null;
+  externally_verified: false;
+  promotion_allowed: false;
+  sources: string[];
+};
+
 /**
  * A body region the athlete is currently injured in, plus its match terms.
  *
@@ -652,6 +665,7 @@ export type InjuryRehabDecisionRecord = {
   reason_codes: string[];
   prescription: RehabPrescriptionSummary | null;
   schedule: RehabScheduleRecord | null;
+  achilles_load_review: AchillesRestoreLoadReview | null;
 };
 
 export type LandingResponse = {

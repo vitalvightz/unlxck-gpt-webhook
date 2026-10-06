@@ -27,6 +27,7 @@ from .rehab_evidence import (
 #: Functional checkpoints whose input the app actually captures. Data cannot
 #: claim capture; a checkpoint becomes evaluable only when code reads its input.
 from .rehab_assessment import AssessmentContext, input_definitions, read_assessment_input
+from .achilles_restore_load import CRITERION_ID, review_achilles_restore_load
 
 CAPTURED_FUNCTIONAL_CHECKPOINTS: frozenset[str] = frozenset()
 
@@ -135,9 +136,16 @@ def evaluate_transition(transition: PathwayTransition, *, policy: ClinicalPolicy
                                    f"observed_response_groups_{count}_of_{requirement.minimum}",
                                    [e for g in performed_groups for e in g.events if e in performed]))
         elif kind == "functional_checkpoint":
-            # No clinical input reader/criterion is implemented yet. Availability
-            # declarations can never be consumed as clinical functional PASSes.
-            results.append(_result(requirement, MISSING_INPUT, f"functional_checkpoint_not_captured:{requirement.checkpoint}"))
+            if (requirement.checkpoint == CRITERION_ID and policy.policy_id == "achilles_tendonitis"
+                    and (transition.from_stage, transition.to_stage) == ("restore", "load")):
+                context = AssessmentContext.from_injury(injury, as_of=as_of,
+                    setback_at=episode_setback_at(injury, exposures), history_truncated=history_truncated)
+                review = review_achilles_restore_load(context)
+                results.append({**_result(requirement, review["status"], review["reason_codes"][0]),
+                                "clinical_review": review})
+            else:
+                # Availability declarations cannot satisfy clinical checkpoints.
+                results.append(_result(requirement, MISSING_INPUT, f"functional_checkpoint_not_captured:{requirement.checkpoint}"))
         elif kind == "input_availability":
             if requirement.checkpoint not in input_definitions():
                 results.append(_result(requirement, MISSING_INPUT, f"assessment_input_not_captured:{requirement.checkpoint}"))

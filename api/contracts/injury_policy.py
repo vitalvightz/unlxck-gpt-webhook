@@ -20,6 +20,7 @@ from .rehab_stage import resolve_rehab_stage
 from .rehab_progression import resolve_reviewed_progression, episode_setback_at, _instant
 from .clinician_clearance import effective_clinician_clearance, clinician_clears_baseline
 from .rehab_assessment import AssessmentContext, input_definitions, read_assessment_input
+from .achilles_restore_load import review_achilles_restore_load
 
 
 def resolve_injury_policy(
@@ -46,6 +47,10 @@ def resolve_injury_policy(
         "loading_hold": readiness_decision == "pull_back",
     }
     as_of = as_of or datetime.now(timezone.utc)
+    if region == "achilles" and kind == "tendonitis":
+        context = AssessmentContext.from_injury(injury, as_of=as_of,
+            setback_at=episode_setback_at(injury, exposures), history_truncated=history_truncated)
+        result["achilles_load_review"] = review_achilles_restore_load(context)
     if injury.get("progression_assessments"):
         context = AssessmentContext.from_injury(injury, as_of=as_of,
             setback_at=episode_setback_at(injury, exposures), history_truncated=history_truncated)
