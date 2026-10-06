@@ -103,6 +103,9 @@ CSV_COLUMNS = (
     "source",
     "aliases",
     "notes",
+    "review_sport",
+    "review_context",
+    "review_context_required",
 )
 
 # Blocks with nothing to demonstrate on camera.
@@ -220,6 +223,94 @@ def _served_media_keys(store: Any) -> set[str]:
     return existing
 
 
+_REVIEW_COMBAT_SPORTS = {"boxing", "kickboxing", "muay_thai", "mma", "wrestling", "bjj", "combat"}
+_REVIEW_COMBAT_TAG_PREFIXES = (
+    "boxer_",
+    "boxing_",
+    "kickboxing_",
+    "muay_thai_",
+    "mma_",
+    "wrestling_",
+    "bjj_",
+    "grappl",
+    "combat_",
+)
+
+
+def _review_context_token(value: Any) -> str:
+    return re.sub(r"[^a-z0-9]+", "_", str(value or "").strip().lower()).strip("_")
+
+
+def _review_list(value: Any) -> list[str]:
+    if isinstance(value, (list, tuple, set)):
+        return [str(item).strip() for item in value if str(item).strip()]
+    if isinstance(value, str) and value.strip():
+        return [value.strip()]
+    return []
+
+
+def _bank_review_context(record: dict[str, Any]) -> tuple[str, str, str]:
+    """Preserve public canonical sport context for media discovery/review.
+
+    Generic S&C exercises stay sport-agnostic. Combat context becomes required
+    only when the bank explicitly marks it via sport_specific or combat-technique
+    tags such as boxer_footwork / boxer_stance.
+    """
+    tags = _review_list(record.get("tags"))
+    tag_tokens = [_review_context_token(tag) for tag in tags]
+    context_tags = [
+        tag for tag, token in zip(tags, tag_tokens)
+        if token.startswith(_REVIEW_COMBAT_TAG_PREFIXES)
+    ]
+
+    raw_sports = [
+        *_review_list(record.get("sport")),
+        *_review_list(record.get("sports")),
+        *_review_list(record.get("tactical_styles")),
+    ]
+    sports: list[str] = []
+    for value in raw_sports:
+        token = _review_context_token(value)
+        if token in _REVIEW_COMBAT_SPORTS and token not in sports:
+            sports.append(token)
+
+    for token in tag_tokens:
+        inferred = None
+        if token.startswith(("boxer_", "boxing_")):
+            inferred = "boxing"
+        elif token.startswith("kickboxing_"):
+            inferred = "kickboxing"
+        elif token.startswith("muay_thai_"):
+            inferred = "muay_thai"
+        elif token.startswith("mma_"):
+            inferred = "mma"
+        elif token.startswith("wrestling_"):
+            inferred = "wrestling"
+        elif token.startswith("bjj_"):
+            inferred = "bjj"
+        elif token.startswith(("grappl", "combat_")):
+            inferred = "combat"
+        if inferred and inferred not in sports:
+            sports.append(inferred)
+
+    required = bool(sports) and (
+        record.get("sport_specific") is True or bool(context_tags)
+    )
+    if not required:
+        return "", "", "false"
+
+    parts = [f"required combat context: {', '.join(sports)}"]
+    if context_tags:
+        parts.append("context tags: " + ", ".join(context_tags))
+    movement = str(record.get("movement") or "").strip()
+    method = str(record.get("method") or "").strip()
+    if movement:
+        parts.append(f"movement: {movement}")
+    if method:
+        parts.append(f"method: {method}")
+    return " ".join(sports), "; ".join(parts), "true"
+
+
 def bank_rows(
     records: Iterable[Any],
     *,
@@ -242,6 +333,7 @@ def bank_rows(
             or record.get("modality")
             or ""
         ).strip()
+        review_sport, review_context, review_context_required = _bank_review_context(record)
         rows.append(
             {
                 "exercise_key": key,
@@ -255,6 +347,9 @@ def bank_rows(
                 "source": "curated",
                 "aliases": "",
                 "notes": "",
+                "review_sport": review_sport,
+                "review_context": review_context,
+                "review_context_required": review_context_required,
             }
         )
     return rows
