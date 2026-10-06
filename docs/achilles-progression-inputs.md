@@ -1,5 +1,7 @@
 # Achilles progression input contract
 
+Current follow-up: [Achilles RESTORE → LOAD clinical review](achilles-restore-load-criterion.md) adds a versioned fail-closed review and a Today reporting form. The original #2743 capture contract below remains intact. LOAD/DYNAMIC/RETURN are still closed; no profile, bank or prescription changed.
+
 This adds capture and readers for `achilles_tendonitis`, using the missing inputs identified in the #2742 review. LOAD stays closed; `achilles_tendonitis_eccentric_calf_drops_on_step` stays dormant. No clinical transition, threshold, profile, dose, bank identity or hash changes.
 
 ## Write and read paths

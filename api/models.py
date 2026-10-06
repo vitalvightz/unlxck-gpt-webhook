@@ -20,6 +20,7 @@ from .contracts.checkin_decision import (
     Sleep as CheckinSleep,
 )
 from .contracts.completion import CompletionStatus, LandingSessionState
+from .contracts.achilles_restore_load import AchillesRestoreLoadReview
 from .contracts.injury_checkin import (
     MAX_INFECTION_SIGNS,
     BleedingStatus as _BleedingStatus,
@@ -1973,6 +1974,7 @@ class InjuryRehabDecisionRecord(BaseModel):
     reason_codes: list[str] = Field(default_factory=list)
     prescription: RehabPrescriptionSummary | None = None
     schedule: RehabScheduleRecord | None = None
+    achilles_load_review: AchillesRestoreLoadReview | None = None
 
 
 class AthleteClearanceReport(BaseModel):

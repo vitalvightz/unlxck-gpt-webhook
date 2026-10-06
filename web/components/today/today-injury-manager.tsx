@@ -9,6 +9,7 @@ import {
   type BodyMapSide,
 } from "@/components/body-map";
 import { EffectiveClinicianClearanceStatus, InjuryCareStatus } from "@/components/today/injury-care-status";
+import { AchillesAssessmentForm } from "@/components/today/achilles-assessment-form";
 import { SegmentGroup } from "@/components/today/segment-group";
 import { useToast } from "@/components/toast-provider";
 import { submitTodayInjuryCheckin } from "@/lib/api";
@@ -637,6 +638,8 @@ export function TodayInjuryManager({
                 ) : null}
                 <p className="today-field-label today-injury-status-label">How is it today?</p>
                 {injury.rehab_decision || injury.episode_id ? <InjuryCareStatus injury={injury} token={token} onRefresh={onRefresh} /> : null}
+                <AchillesAssessmentForm key={`${injury.id}:${injury.episode_id}:${injury.side}`} injury={injury} token={token}
+                  onRefresh={onRefresh} disabled={isAdding || pendingFlagId !== null} />
                 <p className="today-field-hint today-injury-status-hint">
                   Only tap if it changed. We keep tracking it otherwise.
                 </p>
