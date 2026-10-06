@@ -55,9 +55,11 @@ Workflow:
     python tools/exercise_media.py verify
 
 CSV columns: exercise_key, family, example_name, block_type, occurrences,
-youtube_url, start_s, end_s, source, aliases, notes. Rows without youtube_url
-are skipped. aliases is a "|"-separated list of other names that should share
-the video. family is a curation hint only and is never used for matching.
+youtube_url, start_s, end_s, source, aliases, notes, plus public review_sport,
+review_context and review_context_required metadata for discovery/review. Rows
+without youtube_url are skipped. aliases is a "|"-separated list of other names
+that should share the video. family is a curation hint only and is never used
+for matching.
 
 Exit codes: 0 success / 1 some rows rejected, failed review or left unreviewed / 2 usage or operational error.
 """
