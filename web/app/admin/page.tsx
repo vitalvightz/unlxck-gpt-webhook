@@ -898,7 +898,7 @@ export default function AdminPage() {
                     <span className="badge">Needs resume</span>
                   </div>
                   <p className="muted">
-                    Review the athlete’s intake before approving this build.
+                    Review the athlete&apos;s intake before approving this build.
                   </p>
                   <ProfileRefreshWarningBanner job={job} />
                   <details className="admin-build-details">
