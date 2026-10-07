@@ -1,7 +1,7 @@
 -- Fix every signup that carries a date of birth failing with
 -- "Database error saving new user".
 --
--- 20260817120000_add_compliance_age_and_consent wrote the age check as
+-- 20260817213835_add_compliance_age_and_consent wrote the age check as
 -- current_date qualified with the pg_catalog schema. CURRENT_DATE is an SQL keyword, not a function, so
 -- it cannot be schema-qualified: Postgres reads the qualified form as a
 -- column of a table named pg_catalog and fails with 42P01 "missing FROM-clause

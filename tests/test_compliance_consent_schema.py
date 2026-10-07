@@ -13,13 +13,13 @@ from api.schema_requirements import REQUIRED_PROFILES_COLUMNS
 ROOT = Path(__file__).resolve().parents[1]
 SCHEMA = (ROOT / "supabase" / "schema.sql").read_text(encoding="utf-8")
 MIGRATION = (
-    ROOT / "supabase" / "migrations" / "20260817120000_add_compliance_age_and_consent.sql"
+    ROOT / "supabase" / "migrations" / "20260817213835_add_compliance_age_and_consent.sql"
 ).read_text(encoding="utf-8")
 BOOLEAN_MIGRATION = (
     ROOT
     / "supabase"
     / "migrations"
-    / "20260817130000_add_health_data_consent_boolean.sql"
+    / "20260817213846_add_health_data_consent_boolean.sql"
 ).read_text(encoding="utf-8")
 
 CONSENT_COLUMNS = (
@@ -162,7 +162,7 @@ def test_sql_keywords_are_never_schema_qualified():
         r"|localtimestamp|current_user|session_user|current_role)\b",
         re.IGNORECASE,
     )
-    superseded = "20260817120000_add_compliance_age_and_consent.sql"
+    superseded = "20260817213835_add_compliance_age_and_consent.sql"
     fix = (
         ROOT
         / "supabase"

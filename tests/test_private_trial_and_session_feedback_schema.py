@@ -13,10 +13,10 @@ from api.models import SESSION_FEEDBACK_SESSION_ID_MAX_CHARS
 ROOT = Path(__file__).resolve().parents[1]
 SCHEMA = (ROOT / "supabase" / "schema.sql").read_text(encoding="utf-8")
 TRIAL_MIGRATION = (
-    ROOT / "supabase" / "migrations" / "20260806120000_add_private_trial_acknowledgement.sql"
+    ROOT / "supabase" / "migrations" / "20260806021525_add_private_trial_acknowledgement.sql"
 ).read_text(encoding="utf-8")
 SESSION_MIGRATION = (
-    ROOT / "supabase" / "migrations" / "20260806120500_add_session_feedback_surface.sql"
+    ROOT / "supabase" / "migrations" / "20260806021555_add_session_feedback_surface.sql"
 ).read_text(encoding="utf-8")
 
 

@@ -32,4 +32,4 @@ The response contains coalesced evaluation facts with first/last timestamps, cou
 
 `UNLXCK_NOTIFICATION_FALLBACK_TRAINING_TIME` configures the athlete-local, low-confidence fallback (`18:00` by default).
 
-Apply `20260812155956_redesign_fight_camp_notifications.sql` before enabling `send`. The migration adds delivery metadata, templates, action states, evaluations, atomic claim/evaluation/action RPCs, RLS, and service-role-only grants. No production migration is applied by this branch.
+Apply `20260813072104_redesign_fight_camp_notifications.sql` before enabling `send`. The migration adds delivery metadata, templates, action states, evaluations, atomic claim/evaluation/action RPCs, RLS, and service-role-only grants. No production migration is applied by this branch.

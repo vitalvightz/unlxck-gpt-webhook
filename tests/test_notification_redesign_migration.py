@@ -5,19 +5,19 @@ MIGRATION = (
     Path(__file__).resolve().parents[1]
     / "supabase"
     / "migrations"
-    / "20260812155956_redesign_fight_camp_notifications.sql"
+    / "20260813072104_redesign_fight_camp_notifications.sql"
 )
 THROTTLE_MIGRATION = (
     Path(__file__).resolve().parents[1]
     / "supabase"
     / "migrations"
-    / "20260818150000_throttle_notification_evaluations.sql"
+    / "20260818111955_throttle_notification_evaluations.sql"
 )
 DEDUPE_LOOKUP_MIGRATION = (
     Path(__file__).resolve().parents[1]
     / "supabase"
     / "migrations"
-    / "20260820190000_index_notification_evaluation_dedupe_lookup.sql"
+    / "20260820213755_index_notification_evaluation_dedupe_lookup.sql"
 )
 
 

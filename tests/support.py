@@ -243,7 +243,7 @@ class InMemoryNotificationLedger:
     def claim_notification_delivery(self, params: dict, *, now_utc: datetime) -> dict:
         """The decisions of claim_notification_delivery_v2, step for step.
 
-        Source: supabase/migrations/20260812155956_redesign_fight_camp_notifications.sql.
+        Source: supabase/migrations/20260813072104_redesign_fight_camp_notifications.sql.
         ``now_utc`` stands in for the database clock.
         """
         ledger = self._notification_ledger()

@@ -26,7 +26,7 @@ MIGRATION = (
     Path(__file__).resolve().parents[1]
     / "supabase"
     / "migrations"
-    / "20260812155956_redesign_fight_camp_notifications.sql"
+    / "20260813072104_redesign_fight_camp_notifications.sql"
 )
 
 

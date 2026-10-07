@@ -4,7 +4,7 @@ from api.schema_requirements import REQUIRED_SESSION_COMPLETIONS_COLUMNS
 
 
 ROOT = Path(__file__).resolve().parents[1]
-MIGRATION = ROOT / "supabase/migrations/20260820180000_persist_rehab_response_contexts.sql"
+MIGRATION = ROOT / "supabase/migrations/20260930141613_persist_rehab_response_contexts.sql"
 SQL = MIGRATION.read_text(encoding="utf-8").lower()
 
 

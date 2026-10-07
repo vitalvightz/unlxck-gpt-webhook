@@ -1,7 +1,7 @@
 from pathlib import Path
 
 
-MIGRATION = Path("supabase/migrations/20260818130000_add_atomic_streak_activity_rpc.sql")
+MIGRATION = Path("supabase/migrations/20260818093311_add_atomic_streak_activity_rpc.sql")
 
 
 def test_activity_rpc_serializes_insert_and_streak_aggregate_update():
