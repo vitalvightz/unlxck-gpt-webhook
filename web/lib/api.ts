@@ -9,6 +9,9 @@ import type {
   AdminReviewRecord,
   AdminReviewResolveRequest,
   ComplianceAcceptanceRequest,
+  ExerciseLogListResponse,
+  ExerciseLogRequest,
+  ExerciseLogResponse,
   InjuryFlagCreateRequest,
   InjuryFlagRecord,
   InjuryFlagStatus,
@@ -1168,6 +1171,29 @@ export function submitSparringLog(
     token,
     body: JSON.stringify(payload),
   });
+}
+
+/** Log what was actually done for one block of today's started session. */
+export function submitExerciseLog(
+  token: string,
+  payload: ExerciseLogRequest,
+): Promise<ExerciseLogResponse> {
+  return readJson<ExerciseLogResponse>("/api/today/exercise-log", {
+    method: "POST",
+    token,
+    body: JSON.stringify(payload),
+  });
+}
+
+/** The athlete's exercise logs for one plan on the current training day. */
+export function listTodayExerciseLogs(
+  token: string,
+  planId: string,
+): Promise<ExerciseLogListResponse> {
+  const params = new URLSearchParams({ plan_id: planId });
+  return withTransientRetries(() =>
+    readJson<ExerciseLogListResponse>(`/api/today/exercise-logs?${params.toString()}`, { token }),
+  );
 }
 
 export function listPendingRehabResponses(

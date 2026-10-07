@@ -5,6 +5,7 @@ import { useMemo } from "react";
 import styles from "./today-screen.module.css";
 
 import { useAppSession } from "@/components/auth-provider";
+import { hasHealthDataConsent } from "@/lib/compliance";
 import { CampProgressBar } from "@/components/camp-progress-bar";
 import { ContextualFeedback } from "@/components/feedback/contextual-feedback";
 import { Skeleton } from "@/components/skeleton";
@@ -140,7 +141,7 @@ function TodayReadinessStrip({
 }
 
 export function TodayScreen() {
-  const { session } = useAppSession();
+  const { session, me } = useAppSession();
   const token = session?.access_token ?? null;
   const trainingDay = useTrainingDay();
   const {
@@ -233,6 +234,7 @@ export function TodayScreen() {
       rehabLabelPolicy={rehabLabelPolicy}
       exerciseMedia={exerciseMedia}
       planSchedule={planSchedule}
+      painReasonAllowed={hasHealthDataConsent(me)}
       token={token ?? ""}
       onRefresh={refresh}
     />
