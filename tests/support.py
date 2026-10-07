@@ -2309,8 +2309,9 @@ class FakeStore(InMemoryNotificationLedger, FullRowStatusReads):
     def adopt_or_create_intake_injury_flag(self, params: dict) -> dict | None:
         """In-memory adopt_or_create_intake_injury_flag_with_wound_fields.
 
-        Follows the RPC (supabase/migrations/20260804090000_add_intake_injury_source_key.sql
-        and 20260804093000_preserve_intake_wound_fields.sql) step by step, with
+        Follows the RPC (supabase/migrations/20260804090000_add_intake_injury_source_key.sql,
+        20260804093000_preserve_intake_wound_fields.sql and
+        20261008001000_intake_injury_identity_across_plans.sql) step by step, with
         one lock standing in for its advisory lock.
         """
         athlete_id = params["athlete_id"]
@@ -2345,8 +2346,47 @@ class FakeStore(InMemoryNotificationLedger, FullRowStatusReads):
                         },
                     )
 
+        identity = str(params.get("intake_identity") or "").strip() or None
+        severity = str(params["severity"] or "").strip().lower()
+
+        def description_key(value) -> str:
+            return _normalized_injury_description(re.sub(r"\s?\[training_impact:[^\]]*\]", "", str(value or "")))
+
         with self._intake_injury_lock:
             rows = self.injury_flags.get(athlete_id, [])
+            if not any(row.get("source_key") == source_key for row in rows):
+                # 20261008001000: carry the same live injury from another plan.
+                area = _normalized_injury_area(params["body_area"])
+                carried = sorted(
+                    (
+                        row
+                        for row in rows
+                        if row.get("source") == "intake"
+                        and str(row.get("status") or "").strip().lower() in ("open", "monitoring")
+                        and str(row.get("plan_id") or "") != str(plan_id)
+                        and (
+                            (identity is not None and row.get("intake_identity") == identity)
+                            or (
+                                row.get("intake_identity") is None
+                                and area
+                                and _normalized_injury_area(row.get("body_area")) == area
+                                and description_key(row.get("description")) == description_key(params["description"])
+                            )
+                        )
+                    ),
+                    key=lambda row: (row.get("intake_identity") is None, str(row.get("created_at") or ""), str(row["id"])),
+                )
+                if carried:
+                    row = carried[0]
+                    fields = {
+                        "plan_id": plan_id,
+                        "source_key": source_key,
+                        "intake_identity": identity or row.get("intake_identity"),
+                        "description": params["description"] if params["description"] is not None else row.get("description"),
+                    }
+                    if row.get("severity_source") != "surface_system" and severity in ("mild", "moderate", "severe"):
+                        fields["severity"] = severity
+                    self.update_injury_flag(row["id"], fields)
             flag = next((row for row in rows if row.get("source_key") == source_key), None)
             legacy = [row for row in rows if legacy_duplicate(row)]
             if flag is not None:
@@ -2386,6 +2426,8 @@ class FakeStore(InMemoryNotificationLedger, FullRowStatusReads):
             signs = params["infection_signs"]
             if not flag.get("infection_signs") and isinstance(signs, list) and signs:
                 wound["infection_signs"] = signs
+            if flag.get("intake_identity") is None and identity is not None:
+                wound["intake_identity"] = identity
             if wound:
                 self.update_injury_flag(flag["id"], wound)
             return self.get_injury_flag_for_athlete(flag["id"], athlete_id)
