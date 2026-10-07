@@ -585,7 +585,11 @@ export function TodaySessionPanel({
           openWeekNumber: todayOpenWeekNumber,
           allowDatedWeekdayMatch: openOngoing,
         });
-  const contactTarget: ContactTimerTarget | null =
+  // completion_status always describes today: once today is logged (done,
+  // modified or skipped) its contact is over, even while the card has moved on
+  // to the next session, so its rounds are no longer offered or re-loggable.
+  const todayLogged = status === "done" || status === "modified" || status === "skipped";
+  const contactTarget: ContactTimerTarget | null = todayLogged ? null :
     (todayResolved.inRange ? contactTimerTarget(todayResolved.day) : null) ??
     (resolvedDecision.sessionIsToday && session.coach_led_contact
       ? contactTimerTarget({ today_card: { coach_led_contact: session.coach_led_contact } } as StructuredDay)

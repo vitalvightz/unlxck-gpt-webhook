@@ -1008,3 +1008,14 @@ test("finished mixed rehab run survives a failed batch and opens populated revie
     window.localStorage.removeItem(key);
   }
 });
+
+test("a logged day no longer offers its sparring rounds", () => {
+  for (const status of ["done", "modified", "skipped"] as const) {
+    const state = contactDayState("green");
+    state.today.completion_status = status;
+    const html = renderPanel(state);
+    assert.doesNotMatch(html, /Sparring rounds<\/button>|>Start hard sparring</);
+    // With the day's rounds gone, the blank timer is back.
+    assert.match(html, /<\/svg>Free timer<\/button>/);
+  }
+});
