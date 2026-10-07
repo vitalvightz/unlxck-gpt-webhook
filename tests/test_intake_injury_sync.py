@@ -335,3 +335,52 @@ def test_a_keyed_row_resolves_later_unkeyed_duplicates() -> None:
     row = store.get_injury_flag_for_athlete(duplicate["id"], ATHLETE)
     assert row["status"] == "resolved" and row["resolved_at"]
     assert row["source_key"] == f"{keyed['source_key']}:legacy-duplicate:{duplicate['id']}"
+
+
+def test_new_plan_carries_the_open_injury_instead_of_duplicating_it() -> None:
+    store = FakeStore()
+    old_plan = _seed_generated_plan(store, intake_id="intake-old", active=False)
+    [old_flag] = sync_intake_injuries_for_plan(store, athlete_id=ATHLETE, plan_row=old_plan)
+    store.update_injury_flag(old_flag["id"], {"status": "monitoring"})
+
+    new_plan = _seed_generated_plan(store, intake_id="intake-new", active=True)
+    new_flags = sync_intake_injuries_for_plan(store, athlete_id=ATHLETE, plan_row=new_plan)
+
+    # Same row, same history: moved onto the new plan, its tracked state kept.
+    assert [flag["id"] for flag in new_flags] == [old_flag["id"]]
+    assert new_flags[0]["plan_id"] == new_plan["id"]
+    assert new_flags[0]["status"] == "monitoring"
+    assert len(store.injury_flags[ATHLETE]) == 1
+
+    # Reads of Today after the carry-over never write.
+    stamped = store.injury_flags[ATHLETE][0]["updated_at"]
+    sync_intake_injuries_for_plan(store, athlete_id=ATHLETE, plan_row=new_plan)
+    assert store.injury_flags[ATHLETE][0]["updated_at"] == stamped
+
+
+def test_a_reworded_injury_in_the_same_area_updates_the_carried_row() -> None:
+    store = FakeStore()
+    old_plan = _seed_generated_plan(store, intake_id="intake-old", active=False)
+    [old_flag] = sync_intake_injuries_for_plan(store, athlete_id=ATHLETE, plan_row=old_plan)
+
+    reworded = _active_ankle_intake()
+    reworded["guided_injuries"][0]["injury_subtypes"] = ["strain"]
+    new_plan = _seed_generated_plan(store, intake_id="intake-new", intake=reworded, active=True)
+    new_flags = sync_intake_injuries_for_plan(store, athlete_id=ATHLETE, plan_row=new_plan)
+
+    assert [flag["id"] for flag in new_flags] == [old_flag["id"]]
+    assert new_flags[0]["description"] != ANKLE_DESCRIPTION
+    assert "strain" in new_flags[0]["description"]
+
+
+def test_a_different_area_in_the_new_plan_is_a_new_injury() -> None:
+    store = FakeStore()
+    old_plan = _seed_generated_plan(store, intake_id="intake-old", active=False)
+    sync_intake_injuries_for_plan(store, athlete_id=ATHLETE, plan_row=old_plan)
+
+    knee = _active_ankle_intake()
+    knee["guided_injuries"][0].update(area="Right knee", zone="r_knee")
+    new_plan = _seed_generated_plan(store, intake_id="intake-new", intake=knee, active=True)
+    new_flags = sync_intake_injuries_for_plan(store, athlete_id=ATHLETE, plan_row=new_plan)
+
+    assert sorted(flag["body_area"] for flag in new_flags) == ["Left ankle", "Right knee"]
