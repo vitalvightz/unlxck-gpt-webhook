@@ -9,9 +9,11 @@ import { timerAudio } from "@/lib/session-timer/audio";
 import {
   buildGuideScript,
   elapsedBefore,
+  isCalmVisualisation,
   type FightVisualisation,
   type GuidePhase,
 } from "@/lib/fight-visualisation/script";
+import { CROWD_SOURCES, CrowdBed, crowdLevel, type FightLevel } from "@/lib/fight-visualisation/crowd";
 import { primeSpeech, speakLine, speechAvailable, stopSpeech } from "@/lib/fight-visualisation/narrator";
 
 type Status = "ready" | "playing" | "paused" | "done";
@@ -25,18 +27,19 @@ const PHASE_LABEL: Record<GuidePhase, string> = {
 };
 
 const VOICE_KEY = "unlxck.guided-visualisation.voice";
+const CROWD_KEY = "unlxck.guided-visualisation.crowd";
 
-function loadVoicePreference(): boolean {
+function loadPreference(key: string): boolean {
   try {
-    return window.localStorage.getItem(VOICE_KEY) !== "off";
+    return window.localStorage.getItem(key) !== "off";
   } catch {
     return true;
   }
 }
 
-function saveVoicePreference(on: boolean): void {
+function savePreference(key: string, on: boolean): void {
   try {
-    window.localStorage.setItem(VOICE_KEY, on ? "on" : "off");
+    window.localStorage.setItem(key, on ? "on" : "off");
   } catch {
     // A convenience only.
   }
@@ -79,11 +82,17 @@ function useWakeLock(active: boolean): void {
 
 export function GuidedVisualisation({
   visualisation,
+  firstName,
+  level = "amateur",
   finishLabel,
   onClose,
   onFinish,
 }: {
   visualisation: FightVisualisation;
+  /** Spoken first, then once more on the cue. */
+  firstName?: string | null;
+  /** Picks the crowd and the venue line: a small hall or an arena. */
+  level?: FightLevel;
   /** Shown on the done screen when `onFinish` is set, e.g. "Log session". */
   finishLabel?: string;
   onClose: () => void;
@@ -93,16 +102,21 @@ export function GuidedVisualisation({
   // render, and a new script would restart the line being spoken.
   const scriptKey = JSON.stringify(visualisation);
   const script = useMemo(
-    () => buildGuideScript(JSON.parse(scriptKey) as FightVisualisation),
-    [scriptKey],
+    () => buildGuideScript(JSON.parse(scriptKey) as FightVisualisation, { firstName, level }),
+    [scriptKey, firstName, level],
   );
+  const calm = isCalmVisualisation(visualisation);
   const [status, setStatus] = useState<Status>("ready");
   const [index, setIndex] = useState(0);
   const [holdLeft, setHoldLeft] = useState<number | null>(null);
   // The player only mounts after a tap, never on the server, so client-only
   // facts can seed state directly.
   const [canSpeak] = useState(speechAvailable);
-  const [voiceOn, setVoiceOn] = useState(() => speechAvailable() && loadVoicePreference());
+  const [voiceOn, setVoiceOn] = useState(() => speechAvailable() && loadPreference(VOICE_KEY));
+  const [crowdOn, setCrowdOn] = useState(() => loadPreference(CROWD_KEY));
+  // Only offered once the loop has actually loaded: no file, no toggle.
+  const [crowdReady, setCrowdReady] = useState(false);
+  const crowdRef = useRef<CrowdBed | null>(null);
   // Seconds left in the current hold when it was paused; resumes from there.
   const resumeHoldRef = useRef<number | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -111,6 +125,20 @@ export function GuidedVisualisation({
     rootRef.current?.focus();
     return stopSpeech;
   }, []);
+
+  useEffect(() => {
+    const bed = new CrowdBed(CROWD_SOURCES[level]);
+    crowdRef.current = bed;
+    let live = true;
+    void bed.load().then((loaded) => {
+      if (live) setCrowdReady(loaded);
+    });
+    return () => {
+      live = false;
+      bed.close();
+      crowdRef.current = null;
+    };
+  }, [level]);
 
   useWakeLock(status === "playing");
 
@@ -150,9 +178,22 @@ export function GuidedVisualisation({
     return () => window.clearInterval(interval);
   }, [status, index, voiceOn, script]);
 
+  const currentSegment = script.segments[Math.min(index, script.segments.length - 1)];
+  const speaking = status === "playing" && voiceOn && currentSegment.kind === "say";
+  const crowdTarget =
+    crowdOn && crowdReady && status === "playing"
+      ? crowdLevel({ phase: currentSegment.phase, speaking, calm })
+      : 0;
+  useEffect(() => {
+    // Slow glides between phases; a quicker duck when the voice comes in.
+    crowdRef.current?.fadeTo(crowdTarget, status === "done" ? 3 : speaking ? 0.6 : 1.8);
+  }, [crowdTarget, speaking, status]);
+
   function begin() {
-    // Both unlocks must happen inside the tap itself.
+    // Every unlock must happen inside the tap itself.
     timerAudio().unlock();
+    crowdRef.current?.unlock();
+    crowdRef.current?.start();
     if (voiceOn) primeSpeech();
     setIndex(0);
     resumeHoldRef.current = null;
@@ -165,9 +206,20 @@ export function GuidedVisualisation({
       setStatus("paused");
     } else if (status === "paused") {
       timerAudio().unlock();
+      crowdRef.current?.unlock();
       if (voiceOn) primeSpeech();
       setStatus("playing");
     }
+  }
+
+  function toggleCrowd() {
+    const next = !crowdOn;
+    if (next) {
+      crowdRef.current?.unlock();
+      crowdRef.current?.start();
+    }
+    setCrowdOn(next);
+    savePreference(CROWD_KEY, next);
   }
 
   function toggleVoice() {
@@ -175,7 +227,7 @@ export function GuidedVisualisation({
     if (next) primeSpeech();
     else stopSpeech();
     setVoiceOn(next);
-    saveVoicePreference(next);
+    savePreference(VOICE_KEY, next);
   }
 
   function close() {
@@ -183,7 +235,7 @@ export function GuidedVisualisation({
     onClose();
   }
 
-  const segment = script.segments[Math.min(index, script.segments.length - 1)];
+  const segment = currentSegment;
   const phase: GuidePhase = status === "ready" ? "settle" : status === "done" ? "close" : segment.phase;
   // The caption is the line being spoken, or during a hold the line just spoken.
   let caption = "";
@@ -235,17 +287,27 @@ export function GuidedVisualisation({
             <li>About {minutes} min</li>
             <li>Eyes closed</li>
             <li>{voiceOn ? "Voice guided" : "On-screen prompts"}</li>
+            {crowdReady && crowdOn ? <li>{level === "professional" ? "Arena crowd" : "Fight-hall crowd"}</li> : null}
           </ul>
           <p className="gv-hint">
             Sit or lie down somewhere quiet. Headphones help. The voice gives each step, then goes
             quiet so you can run the picture yourself.
           </p>
-          {canSpeak ? (
-            <label className="gv-toggle">
-              <input type="checkbox" checked={voiceOn} onChange={toggleVoice} />
-              <span>Voice</span>
-            </label>
-          ) : (
+          <div className="gv-toggles">
+            {canSpeak ? (
+              <label className="gv-toggle">
+                <input type="checkbox" checked={voiceOn} onChange={toggleVoice} />
+                <span>Voice</span>
+              </label>
+            ) : null}
+            {crowdReady ? (
+              <label className="gv-toggle">
+                <input type="checkbox" checked={crowdOn} onChange={toggleCrowd} />
+                <span>Crowd</span>
+              </label>
+            ) : null}
+          </div>
+          {canSpeak ? null : (
             <p className="gv-hint">Voice is not available on this device; prompts will show on screen.</p>
           )}
           <button type="button" className="gv-primary" onClick={begin}>
@@ -300,6 +362,11 @@ export function GuidedVisualisation({
             {canSpeak ? (
               <button type="button" className="gv-secondary" onClick={toggleVoice} aria-pressed={voiceOn}>
                 {voiceOn ? "Mute voice" : "Voice on"}
+              </button>
+            ) : null}
+            {crowdReady ? (
+              <button type="button" className="gv-secondary" onClick={toggleCrowd} aria-pressed={crowdOn}>
+                {crowdOn ? "Mute crowd" : "Crowd on"}
               </button>
             ) : null}
             <button type="button" className="gv-primary" onClick={togglePause}>

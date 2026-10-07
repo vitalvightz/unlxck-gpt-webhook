@@ -129,6 +129,13 @@
   color: var(--gv-ink-faint);
 }
 
+.gv-toggles {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 20px;
+}
+
 .gv-toggle {
   display: inline-flex;
   align-items: center;

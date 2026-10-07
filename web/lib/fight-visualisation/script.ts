@@ -21,6 +21,8 @@ export type FightVisualisation = {
   preBout: string | null;
   /** The prescribed dose, in seconds. */
   durationSec: number;
+  /** A camp-block session the athlete may skip, not the countdown protocol. */
+  optional: boolean;
 };
 
 export type GuidePhase = "settle" | "frame" | "rehearse" | "anchor" | "close";
@@ -39,6 +41,7 @@ export type GuideScript = {
 const VISUALISATION_TITLE_RE = /\bfight\s+visuali[sz]ation\b/i;
 const VISUALISATION_ID_RE = /fight-visuali[sz]ation$/i;
 const DEFAULT_DURATION_SEC = 5 * 60;
+const OPTIONAL_RE = /^optional[.:]\s*/i;
 
 /** True for the planner's locked Fight Visualisation session. */
 export function isFightVisualisationSession(
@@ -85,14 +88,19 @@ export function fightVisualisationFromSession(
   }
   if (steps.length === 0) return null;
 
+  // The server marks the optional camp block on the card's objective.
+  const objective = cleanText(session.objective);
+  const optional = Boolean(objective && OPTIONAL_RE.test(objective));
+
   return {
     name: cleanText(block.display_name) || "Fight Visualisation",
-    why: cleanText(block.purpose) || cleanText(session.objective),
+    why: cleanText(block.purpose) || (objective ? objective.replace(OPTIONAL_RE, "").trim() || null : null),
     steps,
     cue: cue ?? (cleanText(session.mindset_anchor?.confidence_anchor) || null),
     preBout,
     durationSec:
       measuredSeconds(block.duration) ?? measuredSeconds(session.planned_duration) ?? DEFAULT_DURATION_SEC,
+    optional,
   };
 }
 
@@ -105,20 +113,60 @@ export function estimateSpeechSec(text: string): number {
 /** Shortest silence that still lets the athlete see a step once. */
 const MIN_STEP_GAP_SEC = 5;
 /** Longest single silence: beyond this attention drifts rather than deepens. */
-const MAX_STEP_GAP_SEC = 75;
+const MAX_STEP_GAP_SEC = 90;
 /** At this length and above there is room for a full real-time run-through. */
 const RUN_THROUGH_MIN_SEC = 4 * 60;
-/** Share of the rehearsal time given to that run-through. */
+/** And at this length, a second one: repetitions are what build the skill. */
+const SECOND_RUN_THROUGH_MIN_SEC = 10 * 60;
+/** Share of the rehearsal time given to the run-throughs. */
 const RUN_THROUGH_SHARE = 0.35;
 const MAX_RUN_THROUGH_SEC = 150;
+/** D-1 / D-0 length and below: familiar and calm rather than fired up. */
+const CALM_MAX_SEC = 5 * 60;
+/** Silence after the setback line: long enough to see it go wrong and recover. */
+const COPING_GAP_SEC = 15;
+
+export type GuideOptions = {
+  /** Said first, and once more on the cue: the athlete hears themselves addressed. */
+  firstName?: string | null;
+  /** Amateur hall or professional arena, for the venue line. */
+  level?: "amateur" | "professional" | null;
+};
+
+/** First name only, from a profile full name. */
+export function firstNameOf(fullName: string | null | undefined): string | null {
+  const first = (fullName ?? "").trim().split(/\s+/)[0] ?? "";
+  // A handle or an email is not something to say out loud.
+  return first && /^[\p{L}][\p{L}'’-]*$/u.test(first) ? first : null;
+}
+
+export function isCalmVisualisation(visualisation: FightVisualisation): boolean {
+  return visualisation.durationSec <= CALM_MAX_SEC;
+}
 
 function sentence(text: string): string {
   return /[.!?]$/.test(text) ? text : `${text}.`;
 }
 
-export function buildGuideScript(visualisation: FightVisualisation): GuideScript {
+/**
+ * The spoken session. Built on PETTLEP and layered stimulus-response imagery:
+ * first person through the athlete's own eyes, the venue they will fight in,
+ * how the body feels, the bank's steps verbatim with silence to run each one,
+ * a setback they recover from, and real-time run-throughs on longer doses.
+ */
+export function buildGuideScript(
+  visualisation: FightVisualisation,
+  options: GuideOptions = {},
+): GuideScript {
+  const name = options.firstName?.trim() || null;
   const short = visualisation.durationSec < 3 * 60;
-  const runThrough = visualisation.durationSec >= RUN_THROUGH_MIN_SEC;
+  const calm = isCalmVisualisation(visualisation);
+  const runs =
+    visualisation.durationSec >= SECOND_RUN_THROUGH_MIN_SEC
+      ? 2
+      : visualisation.durationSec >= RUN_THROUGH_MIN_SEC
+        ? 1
+        : 0;
   const segments: GuideSegment[] = [];
   const say = (text: string, phase: GuidePhase) =>
     segments.push({ kind: "say", text, phase, estimateSec: estimateSpeechSec(text) });
@@ -126,7 +174,7 @@ export function buildGuideScript(visualisation: FightVisualisation): GuideScript
     segments.push({ kind: "hold", seconds: Math.max(1, Math.round(seconds)), phase });
 
   // Settle: the breath slows the athlete down before the picture starts.
-  say("Find somewhere quiet. Sit or lie down, and close your eyes.", "settle");
+  say(`${name ? `${name}. ` : ""}Find somewhere quiet. Sit or lie down, and close your eyes.`, "settle");
   hold(3, "settle");
   say("Breathe in through your nose.", "settle");
   hold(4, "settle");
@@ -139,6 +187,23 @@ export function buildGuideScript(visualisation: FightVisualisation): GuideScript
     hold(6, "settle");
   }
 
+  // Frame: perspective, environment and the body before the first step.
+  say("See it through your own eyes, as if you're there right now.", "frame");
+  hold(2, "frame");
+  say(
+    options.level === "professional"
+      ? "Hear the arena. The crowd, your corner, the referee."
+      : "Hear the hall. Your corner, the crowd, the referee.",
+    "frame",
+  );
+  hold(3, "frame");
+  say(
+    calm
+      ? "Feel your heart rate lift, then settle. You've been here before."
+      : "Feel your heart rate lift. That's your body getting ready.",
+    "frame",
+  );
+  hold(2, "frame");
   if (visualisation.why) {
     say(sentence(visualisation.why), "frame");
     hold(2, "frame");
@@ -146,34 +211,38 @@ export function buildGuideScript(visualisation: FightVisualisation): GuideScript
 
   // Everything except the rehearsal gaps is fixed; the rest of the dose is
   // silence for the athlete to run the picture.
+  const copingLine = short ? null : "If something goes wrong in the picture, see yourself reset and keep working.";
+  const runLines = [
+    "Now run it all again, start to finish, in real time.",
+    "Once more. A different round, the same calm. Start to finish.",
+  ].slice(0, runs);
+  const cueLines = visualisation.cue
+    ? [`${name ? `${name}, your` : "Your"} cue. ${sentence(visualisation.cue)}`, sentence(visualisation.cue)]
+    : [];
   const closing = [
-    ...(visualisation.cue ? [`Your cue. ${sentence(visualisation.cue)}`, sentence(visualisation.cue)] : []),
+    ...cueLines,
     ...(visualisation.preBout ? [`Before you walk out. ${sentence(visualisation.preBout)}`] : []),
     "Let the picture go. When you're ready, open your eyes.",
   ];
-  const runThroughLine = "Now run it all again, start to finish, in real time.";
-  const spokenSoFar = segments.reduce(
-    (sum, item) => sum + (item.kind === "say" ? item.estimateSec : item.seconds),
-    0,
-  );
-  const stepSpeech = visualisation.steps.reduce((sum, step) => sum + estimateSpeechSec(step), 0);
-  const closingSec =
-    closing.reduce((sum, line) => sum + estimateSpeechSec(line), 0) + 3 * closing.length;
+  const sum = (items: GuideSegment[]) =>
+    items.reduce((total, item) => total + (item.kind === "say" ? item.estimateSec : item.seconds), 0);
+  const speech = (lines: string[]) => lines.reduce((total, line) => total + estimateSpeechSec(line), 0);
   const fixedSec =
-    spokenSoFar + stepSpeech + closingSec + (runThrough ? estimateSpeechSec(runThroughLine) : 0);
+    sum(segments) +
+    speech(visualisation.steps) +
+    (copingLine ? estimateSpeechSec(copingLine) + COPING_GAP_SEC : 0) +
+    speech(runLines) +
+    speech(closing) +
+    3 * closing.length;
   const stepCount = visualisation.steps.length;
   const pool = Math.max(visualisation.durationSec - fixedSec, stepCount * MIN_STEP_GAP_SEC);
-  let runThroughSec = runThrough ? Math.min(pool * RUN_THROUGH_SHARE, MAX_RUN_THROUGH_SEC) : 0;
-  let stepGap = (pool - runThroughSec) / stepCount;
+  const runCap = runs * MAX_RUN_THROUGH_SEC;
+  let runTotal = Math.min(pool * RUN_THROUGH_SHARE * runs, runCap);
+  let stepGap = (pool - runTotal) / stepCount;
   if (stepGap > MAX_STEP_GAP_SEC) {
-    // Overflow goes to the run-through when there is one; otherwise the dose
-    // simply ends a little early rather than leaving minutes of dead air.
-    if (runThrough) {
-      runThroughSec = Math.min(
-        runThroughSec + (stepGap - MAX_STEP_GAP_SEC) * stepCount,
-        MAX_RUN_THROUGH_SEC,
-      );
-    }
+    // Overflow goes to the run-throughs; past their cap the session simply
+    // ends a little early rather than leaving minutes of dead air.
+    runTotal = Math.min(runTotal + (stepGap - MAX_STEP_GAP_SEC) * stepCount, runCap);
     stepGap = MAX_STEP_GAP_SEC;
   }
 
@@ -181,9 +250,13 @@ export function buildGuideScript(visualisation: FightVisualisation): GuideScript
     say(sentence(step), "rehearse");
     hold(Math.max(stepGap, MIN_STEP_GAP_SEC), "rehearse");
   }
-  if (runThrough) {
-    say(runThroughLine, "rehearse");
-    hold(runThroughSec, "rehearse");
+  if (copingLine) {
+    say(copingLine, "rehearse");
+    hold(COPING_GAP_SEC, "rehearse");
+  }
+  for (const line of runLines) {
+    say(line, "rehearse");
+    hold(runTotal / runs, "rehearse");
   }
 
   closing.forEach((line, index) => {
@@ -192,11 +265,7 @@ export function buildGuideScript(visualisation: FightVisualisation): GuideScript
     hold(3, phase);
   });
 
-  const totalSec = segments.reduce(
-    (sum, item) => sum + (item.kind === "say" ? item.estimateSec : item.seconds),
-    0,
-  );
-  return { visualisation, segments, totalSec: Math.round(totalSec) };
+  return { visualisation, segments, totalSec: Math.round(sum(segments)) };
 }
 
 /** Planned seconds elapsed before segment `index` starts. */

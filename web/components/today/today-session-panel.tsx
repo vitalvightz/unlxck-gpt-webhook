@@ -40,7 +40,8 @@ import {
   type ContactTimerTarget,
 } from "@/lib/session-timer/contact";
 import { dayTimerItems, timerSessionFor, type TimerItem } from "@/lib/session-timer/plan";
-import { fightVisualisationFromSession } from "@/lib/fight-visualisation/script";
+import { fightVisualisationFromSession, firstNameOf } from "@/lib/fight-visualisation/script";
+import { fightLevel } from "@/lib/fight-visualisation/crowd";
 import {
   resolveCurrentDay,
   resolveOpenPlanWeekNumber,
@@ -331,8 +332,14 @@ export function TodaySessionPanel({
   exerciseMedia,
   token,
   onRefresh,
+  athleteFullName,
+  professionalStatus,
 }: {
   state: TodayCommandView;
+  /** From the athlete's profile: the guided visualisation says their first name. */
+  athleteFullName?: string | null;
+  /** "amateur" / "professional": picks the guided visualisation's crowd. */
+  professionalStatus?: string | null;
   structuredPlan: StructuredPlan | null;
   /** Server-derived per-region Rehab/Prehab policy for the active plan. */
   rehabLabelPolicy?: RehabLabelPolicy | null;
@@ -569,7 +576,12 @@ export function TodaySessionPanel({
     canCompleteSession && !safeSession && Boolean(session.session_id) && timerItems.length > 0;
   // A day with nothing to time but a Fight Visualisation: starting the session
   // IS the guided run, and finishing it opens the log.
-  const guidedLeads = Boolean(guidedVisualisation) && canCompleteSession && !safeSession && !timerAvailable;
+  // An optional camp session never leads: it rides on the day's real work.
+  const guidedLeads =
+    Boolean(guidedVisualisation && !guidedVisualisation.optional) &&
+    canCompleteSession &&
+    !safeSession &&
+    !timerAvailable;
   const contactLockCopy =
     !clearanceAllowsContact
       ? CONTACT_LOCK_COPY.clinician_clearance
@@ -1200,6 +1212,8 @@ export function TodaySessionPanel({
       {guidedOpen && guidedVisualisation ? (
         <GuidedVisualisation
           visualisation={guidedVisualisation}
+          firstName={firstNameOf(athleteFullName)}
+          level={fightLevel(professionalStatus)}
           finishLabel="Log session"
           onClose={() => setGuidedOpen(false)}
           onFinish={
