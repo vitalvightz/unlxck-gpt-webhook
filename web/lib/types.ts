@@ -386,6 +386,9 @@ export type MindsetAnchor = {
 export type StructuredBlock = {
   block_id?: string | null;
   block_type?: string | null;
+  contact_level?: "none" | "controlled" | "full" | "unknown" | null;
+  mechanical_load_regions?: string[] | null;
+  tags?: string[] | null;
   display_name?: string | null;
   /** Canonical exercise identity (server-stamped); demo videos resolve on it. Absent on legacy plans. */
   exercise_key?: string | null;
@@ -1065,10 +1068,11 @@ export type TodayCommandView = {
     revision: string;
     session: StructuredSession;
     safety_hold: boolean;
+    training_hold_reason?: string;
     safety_hold_reason?: string;
     rehab_only?: boolean;
     frozen: boolean;
-    changes: Array<{ action: string; reason?: string; injury_id?: string }>;
+    changes: Array<{ action: string; reason?: string; injury_id?: string; restriction_reasons?: string[] }>;
   } | null;
   delayed_rehab_prompts?: Array<{
     exposure_id: string; injury_id: string; injury_episode_id: string; region: string;

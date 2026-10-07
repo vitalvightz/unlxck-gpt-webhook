@@ -336,7 +336,11 @@ def upsert_session_completion(
     # Retro logs record training that already happened, and skip / not-started do
     # not execute a session, so neither needs a live injury snapshot.
     if completion_status in _CURRENT_SESSION_EXECUTION_STATUSES and not is_retro_log:
-        if not _injury_flags_readable(store, athlete_id):
+        stopped = False
+        if completion_status == "modified" and payload.get("rehab_performance") == "stopped":
+            existing = store.get_session_completion(athlete_id, str(payload.get("session_id") or ""), current_day) or {}
+            stopped = _today_service._is_stopped_started_session(existing, payload)
+        if not stopped and not _injury_flags_readable(store, athlete_id):
             _raise_execution_unavailable()
 
     return _today_service.upsert_session_completion(
@@ -399,6 +403,7 @@ def _apply_fail_safe_to_command_view(
         # are still why it is conservative — but the confidence band was computed
         # from the context that STORED it, and this read could not be verified.
         _reband_confidence(view, context_status)
+        _hold_unverified_live_prescription(view, context_status)
         return view
 
     floored = apply_context_failsafe(_GREEN_BASE_ADJUSTMENT, context_status)
@@ -421,7 +426,23 @@ def _apply_fail_safe_to_command_view(
         timeframe="active",
     )
     view.risk_watch = sort_risk_watch([*view.risk_watch, reminder])
+    _hold_unverified_live_prescription(view, context_status)
     return view
+
+
+def _hold_unverified_live_prescription(view, context_status):
+    if not context_status.is_unavailable or not view.live_prescription:
+        return
+    live = view.live_prescription
+    live["safety_hold"] = True
+    live["safety_hold_reason"] = "Current safety context could not be verified. Refresh Today before resuming."
+    if not live.get("frozen"):
+        from fightcamp.rehab_clinical import content_hash
+        live["revision"] = content_hash({key: value for key, value in live.items() if key != "revision"})
+    if view.today.decision_tier != "not_checked_in":
+        view.today.recommendation_state = "pull_back"
+        view.today.decision_tier = "stop"
+        view.today.recommendation_reason = "Session blocked\n" + live["safety_hold_reason"] + "\nDo not start or resume this session."
 
 
 def _explain_from_triggers(view: CommandView, triggers: tuple[str, ...]) -> None:

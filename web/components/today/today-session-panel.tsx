@@ -477,16 +477,27 @@ export function TodaySessionPanel({
   const livePrescription = state.live_prescription;
   const sessionHasRehab = Boolean(livePrescription?.session.blocks?.some(block => block.block_type === "rehab"));
   const rehabChoiceRequired = (intent === "done" || reviewOpen) && sessionHasRehab;
+  const rehabOnlyPrescription = livePrescription?.session.session_type === "rehab";
   const current: CurrentDayResolution = livePrescription ? {
     ...storedCurrent, inRange: true,
-    day: { ...(storedCurrent.day ?? {}), date: state.today.training_day, sessions: [livePrescription.session] },
+    day: {
+      ...(storedCurrent.day ?? {}), date: state.today.training_day, sessions: [livePrescription.session],
+      ...(rehabOnlyPrescription ? {
+        day_type: "recovery",
+        today_card: {
+          headline: livePrescription.session.title,
+          nutrition_summary: storedCurrent.day?.today_card?.nutrition_summary,
+          weight_cut_warning: storedCurrent.day?.today_card?.weight_cut_warning,
+        },
+      } : {}),
+    },
     sessions: [livePrescription.session],
   } : storedCurrent;
   // Where the resolved day sits in the renewable development block (baseline /
   // progress / peak / deload). The resolved week position wins over the bare
   // anchor-derived number so the note always matches the blocks shown below.
   // Dated camps stay null and render unchanged.
-  const openWeekIntent = openOngoing
+  const openWeekIntent = openOngoing && !rehabOnlyPrescription
     ? openBlockWeekIntent(current.weekPos != null ? current.weekPos + 1 : openWeekNumber)
     : null;
   const showStructuredBlocks = current.inRange && Boolean(current.day);
@@ -526,8 +537,6 @@ export function TodaySessionPanel({
   // work, so reading rest-ness off the array disabled real sessions. The server
   // resolves the plan card — and rejects completion writes on a rest day — so
   // scope "today" is the single answer both sides use.
-  const reviewedRehabAllowed = livePrescription?.session.session_type === "rehab" && !livePrescription.safety_hold
-    && resolvedDecision.sessionIsToday && resolvedDecision.authoritativeTier !== "stop" && resolvedDecision.authoritativeTier !== "not_checked_in";
   // A training day is one session to the athlete: one start, one RPE, one log,
   // written by the backend to every session the card schedules that day. So the
   // timer runs every timeable block of the day. No timeable blocks means no
@@ -617,7 +626,7 @@ export function TodaySessionPanel({
       sameTitle(getSessionTitle(session), contactTarget?.headline ?? "") ||
       sameTitle(getSessionTitle(session), contactHeadline));
   const contactClearanceBlocked = contactIsSession && !clearanceAllowsContact;
-  const canCompleteSession = (resolvedDecision.canCompleteSession || reviewedRehabAllowed)
+  const canCompleteSession = resolvedDecision.canCompleteSession
     && !livePrescription?.safety_hold && !contactClearanceBlocked;
   const timerAvailable =
     canCompleteSession && !safeSession && Boolean(session.session_id) && timerItems.length > 0;
@@ -1285,7 +1294,6 @@ export function TodaySessionPanel({
       {sparringPrompt}
 
       {livePrescription?.safety_hold ? <p role="alert">{livePrescription.safety_hold_reason || "This session is on hold. Follow the current injury guidance before training."}</p> : null}
-      {livePrescription?.session.session_type === "rehab" && livePrescription.changes.some(change => change.action === "held") ? <p>Training is on hold. Your reviewed rehab is shown below.</p> : null}
       {livePrescription?.safety_hold && resolvedDecision.sessionIsToday ? <div className="today-session-actions">
         {livePrescription.frozen && status === "started" ? <button type="button" className="secondary-button" disabled={isSubmitting} onClick={() => setIntent("modified")}>Log stopped session</button> : null}
         <button type="button" className="ghost-button" disabled={isSubmitting} onClick={() => setIntent("skipped")}>Mark skipped</button>

@@ -97,6 +97,8 @@ export type TodaySessionOutcome =
   | "guidance_only"
   | "blocked"
   | "replaced_with_recovery"
+  | "replaced_with_rehab"
+  | "adjusted_prescription"
   | "preview";
 
 export type ResolvedTodayDecision = {
@@ -475,10 +477,19 @@ export function resolveTodayDecision(state: TodayCommandView): ResolvedTodayDeci
           hasSession ? getSessionTitle(state.today.next_session) : undefined,
         )
       : null;
+  const prescription = sessionIsToday ? state.live_prescription : null;
+  const reviewedRehabAllowed = prescription?.session.session_type === "rehab" && !prescription.safety_hold
+    && authoritativeTier !== "stop" && authoritativeTier !== "not_checked_in";
   const useSafeReplacement =
-    authoritativeTier === "stop" && hasSession && sessionIsToday;
+    authoritativeTier === "stop" && hasSession && sessionIsToday && !prescription;
   const sessionOutcome: TodaySessionOutcome = isPreview
     ? "preview"
+    : prescription?.safety_hold
+      ? "blocked"
+      : prescription?.rehab_only
+        ? "replaced_with_rehab"
+        : prescription?.changes.length
+          ? "adjusted_prescription"
     : authoritativeTier === "green" || authoritativeTier === "not_checked_in"
       ? "unchanged"
       : authoritativeTier === "modify"
@@ -524,7 +535,7 @@ export function resolveTodayDecision(state: TodayCommandView): ResolvedTodayDeci
   const tone = banner?.tone ?? getTierMeta(displayTier).tone;
   const blocksCurrentSession =
     sessionIsToday &&
-    (authoritativeTier === "stop" || authoritativeTier === "pull_back");
+    (Boolean(prescription?.safety_hold) || authoritativeTier === "stop" || (authoritativeTier === "pull_back" && !reviewedRehabAllowed));
   const severeInjuryBlocksCurrentSession =
     blocksCurrentSession &&
     !state.today.injury_hold_exempt &&

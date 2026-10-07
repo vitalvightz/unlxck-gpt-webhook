@@ -6,9 +6,9 @@ import { act } from "react";
 import { createRoot } from "react-dom/client";
 
 import { ToastProvider } from "@/components/toast-provider";
-import { AuthProvider } from "@/components/auth-provider";
+import { AuthProvider, AppSessionContext } from "@/components/auth-provider";
 import { TodaySessionBlocks, TodaySessionPanel } from "./today-session-panel";
-import { resolveCurrentDay } from "@/lib/camp-map";
+import { resolveCurrentDay, resolveTrainingDay, toISODate } from "@/lib/camp-map";
 import type { StructuredPlan, TodayCommandView } from "@/lib/types";
 
 test("weekday fallback never presents a stale template date as today", () => {
@@ -880,4 +880,40 @@ test("start session runs the day's visualisation first, then hands on to the tim
     assert.equal(document.querySelector('[aria-label="Guided Tactical Picture"]'), null);
     assert.ok(document.querySelector(".st-root"), "then the timer takes over");
   } finally { globalThis.fetch = original; act(() => root.unmount()); container.remove(); }
+});
+
+test("rehab replacement drops the held day's strength and combat coaching", async () => {
+  const state = reviewedSessionState(false);
+  state.today.training_day = toISODate(resolveTrainingDay(new Date()));
+  state.live_prescription!.rehab_only = true;
+  state.today.next_session!.calendar_date = state.today.training_day;
+  const structuredPlan: StructuredPlan = { weeks: [{ week_id: "w", days: [{
+    date: state.today.training_day, today_card: {
+      headline: "Strength", coach_led_contact: "Hard sparring", primary_warning: "Push today's strength load",
+      mindset_anchor: { focus_cue: "Keep a weekly power exposure" }, nutrition_summary: "Keep your normal nutrition plan",
+    }, sessions: [{ session_id: "original", title: "Strength", objective: "Build structural strength" }],
+  }] }] };
+  const container = document.createElement("div");
+  const root = createRoot(container);
+  const renderPanel = (view: TodayCommandView) => (
+    <AppSessionContext.Provider value={{ isReady: true, isMeHydrated: true, hasTransientMeError: false,
+      session: null, me: null, previewAppearanceMode: () => {}, refreshMe: async () => {},
+      replaceMe: () => {}, signOut: async () => {} }}>
+      <ToastProvider><TodaySessionPanel state={view} structuredPlan={structuredPlan} token="" onRefresh={async () => {}} /></ToastProvider>
+    </AppSessionContext.Provider>
+  );
+  try {
+    const original = { ...state, live_prescription: undefined, today: { ...state.today,
+      recommendation_state: "train_as_planned" as const, decision_tier: "green" as const,
+      next_session: { ...state.today.next_session, session_id: "original", title: "Strength" } } };
+    await act(async () => { root.render(renderPanel(original)); });
+    // Prove the held day's coaching was present before the live replacement.
+    assert.match(container.textContent!, /Build structural strength/);
+    assert.match(container.textContent!, /weekly power exposure/);
+    await act(async () => { root.render(renderPanel(state)); });
+    assert.match(container.textContent!, /Reviewed test rehab/);
+    assert.doesNotMatch(container.textContent!, /Hard sparring|weekly power exposure|Push today|Build structural strength/);
+  } finally {
+    await act(async () => { root.unmount(); });
+  }
 });

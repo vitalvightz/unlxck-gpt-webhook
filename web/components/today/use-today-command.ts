@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { getPlan, getToday } from "@/lib/api";
 import { buildStructuredPlanFromText } from "@/lib/plan-text-adapter";
@@ -90,17 +90,20 @@ export function useTodayCommand(token: string | null): TodayCommand {
   const [exerciseMedia, setExerciseMedia] = useState<Record<string, ExerciseMedia> | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const refreshSequence = useRef(0);
 
   const refresh = useCallback(async () => {
     if (!token) {
       return;
     }
+    const sequence = ++refreshSequence.current;
     try {
       const guessedPlanId = rememberedActivePlanId(token);
       const speculativePlan: Promise<PlanDetail | null> | null = guessedPlanId
         ? getPlan(token, guessedPlanId).catch(() => null)
         : null;
       const nextState = await getToday(token);
+      if (sequence !== refreshSequence.current) return;
       const activePlanId = nextState.active_plan.id;
       rememberActivePlanId(token, activePlanId);
       let nextStructuredPlan: StructuredPlan | null = null;
@@ -129,6 +132,7 @@ export function useTodayCommand(token: string | null): TodayCommand {
         }
       }
 
+      if (sequence !== refreshSequence.current) return;
       setStructuredPlan(nextStructuredPlan);
       setPlanSchedule(nextPlanSchedule);
       setRehabLabelPolicy(nextRehabLabelPolicy);
@@ -139,14 +143,17 @@ export function useTodayCommand(token: string | null): TodayCommand {
       // immediately so session/check-in/injury rewards do not wait for polling.
       requestXpRefresh();
     } catch (loadError) {
+      if (sequence !== refreshSequence.current) return;
       setError(loadError instanceof Error ? loadError.message : "Today failed to load.");
     } finally {
-      setIsLoading(false);
+      if (sequence === refreshSequence.current) setIsLoading(false);
     }
   }, [token]);
 
   useEffect(() => {
+    const sequenceCounter = refreshSequence;
     void refresh();
+    return () => { sequenceCounter.current++; };
   }, [refresh]);
 
   return {

@@ -830,3 +830,22 @@ test("stop red flags are hidden when today's main tier already blocks", () => {
   }
   assert.deepEqual(getSupplementaryRiskWatch(risks, resolveTodayDecision(BASE_STATE)), risks);
 });
+
+
+test("reviewed rehab uses one shared execution decision under reduced readiness", () => {
+  const state: TodayCommandView = {
+    ...BASE_STATE,
+    today: { ...BASE_STATE.today, recommendation_state: "pull_back", decision_tier: "pull_back" },
+    live_prescription: { revision: "a".repeat(64), frozen: false, safety_hold: false, rehab_only: true,
+      changes: [{ action: "held" }], session: { session_id: "session-1", session_type: "rehab", blocks: [] } },
+  };
+  const decision = resolveTodayDecision(state);
+  assert.equal(decision.canCompleteSession, true);
+  assert.equal(decision.blocksCurrentSession, false);
+  assert.equal(decision.sessionOutcome, "replaced_with_rehab");
+  assert.equal(decision.useSafeReplacement, false);
+  const held = resolveTodayDecision({ ...state, live_prescription: { ...state.live_prescription!, safety_hold: true } });
+  assert.equal(held.canCompleteSession, false);
+  assert.equal(held.blocksCurrentSession, true);
+  assert.equal(held.sessionOutcome, "blocked");
+});
