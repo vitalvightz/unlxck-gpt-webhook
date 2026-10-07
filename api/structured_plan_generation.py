@@ -52,7 +52,9 @@ from .structured_plan_locked_merge import merge_planner_owned_structured_content
 from .minor_safety import MINOR_WEIGHT_CUT_NOTE
 from .services.exercise_media import strip_dose_suffix
 from .exercise_identity import (
+    _name_forms as exercise_name_forms,
     block_exercise_key_for_name,
+    normalize_exercise_key,
     reconcile_canonical_names,
     reconcile_exercise_keys,
 )
@@ -2931,9 +2933,15 @@ def planner_sc_coverage_losses(
     strength/conditioning work, and the source text names one of its exercises
     in that D-day's section (what Stage 2 actually rendered is what conversion
     must preserve; a role the text never rendered is a separate Stage 2
-    underfill, not a conversion loss). It is represented when a session on its
-    day matches it under the shared identity rule, or failing that, an
-    otherwise-unclaimed session of the same session type is on that day.
+    underfill, not a conversion loss).
+
+    It is represented when one of its own exercises is on that day's card (by
+    the server-stamped ``exercise_key`` or the exact exercise name), whatever
+    session holds it: the converter may fold two roles into one session
+    ("Strength" carrying the fight-pace conditioning too), or title and type a
+    primer after its exercise. Failing that, a session matching the role under
+    the shared identity rule, or an otherwise-unclaimed session of the same
+    session type, also represents it.
     """
     roles_by_dday = _planner_sc_roles_by_dday(planning_brief)
     if not roles_by_dday or not isinstance(plan_dict, dict) or not raw_markdown.strip():
@@ -2941,6 +2949,7 @@ def planner_sc_coverage_losses(
     sections = _source_day_section_lines(raw_markdown)
     fight_date = parse_fight_date(spine_resolve_fight_date(planning_brief))
     sessions_by_dday: dict[int, list[Any]] = {}
+    exercises_by_dday: dict[int, set[str]] = {}
     for week in plan_dict.get("weeks") or []:
         if not isinstance(week, dict):
             continue
@@ -2953,6 +2962,15 @@ def planner_sc_coverage_losses(
             sessions = day.get("sessions")
             if d_day is not None and isinstance(sessions, list):
                 sessions_by_dday.setdefault(d_day, []).extend(sessions)
+                identities = exercises_by_dday.setdefault(d_day, set())
+                for session in sessions:
+                    for block in session.get("blocks") or [] if isinstance(session, dict) else []:
+                        if not isinstance(block, dict):
+                            continue
+                        key = normalize_exercise_key(block.get("exercise_key"))
+                        if key:
+                            identities.add(key)
+                        identities.update(exercise_name_forms(block.get("display_name")))
 
     losses: list[str] = []
     for d_day in sorted(roles_by_dday, reverse=True):
@@ -2968,6 +2986,17 @@ def planner_sc_coverage_losses(
             ]
             if any(name and name in source for name in names):
                 required.append(role)
+        on_card = exercises_by_dday.get(d_day, set())
+        required = [
+            role
+            for role in required
+            if not any(
+                (normalize_exercise_key(assignment.get("exercise_key")) or normalize_exercise_key(assignment.get("name")))
+                in on_card
+                for assignment in role.get("selected_exercise_assignments") or []
+                if isinstance(assignment, dict)
+            )
+        ]
         if not required:
             continue
         sessions = sessions_by_dday.get(d_day, [])

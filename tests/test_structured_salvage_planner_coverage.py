@@ -491,3 +491,53 @@ def test_role_the_source_never_rendered_is_not_a_conversion_loss():
     )
 
     assert outcome.status == "valid", outcome.errors
+
+
+# --- coverage is exercise-level, not session-shaped -------------------------
+#
+# Production (plans 6c418f41, d12963b2, 1e80d605): every card after the check
+# went live fell back, though the converter had kept the work. It folded D-16's
+# fight-pace conditioning into the "Strength" session, and typed/titled single-
+# exercise primers after their exercise, so no session LOOKED like the role.
+
+
+def _day(card: dict, d_day: int) -> dict:
+    return next(
+        day for week in card["weeks"] for day in week["days"]
+        if day["countdown_label"] == f"D-{d_day}"
+    )
+
+
+def test_two_roles_folded_into_one_session_are_both_represented():
+    card = _converter_card(weekday=_short_weekday)
+    d16 = _day(card, 16)
+    strength, conditioning = d16["sessions"]
+    strength["blocks"] += conditioning["blocks"]
+    d16["sessions"] = [strength]
+
+    outcome = _outcome(card)
+
+    assert outcome.status == "valid", outcome.errors
+
+
+def test_primer_titled_and_typed_after_its_exercise_is_represented():
+    card = _converter_card(weekday=_short_weekday)
+    session = _day(card, 26)["sessions"][0]
+    session.update(session_type="skill", title="Depth Drop (No Rebound)")
+
+    outcome = _outcome(card)
+
+    assert outcome.status == "valid", outcome.errors
+
+
+def test_role_whose_exercises_left_the_day_is_still_a_loss():
+    # The session survives in name only: its exercises moved off D-23.
+    card = _converter_card(weekday=_short_weekday)
+    session = _day(card, 23)["sessions"][0]
+    session.update(session_id="ses-mobility", session_type="skill", title="Mobility")
+    session["blocks"] = [{"block_type": "mobility_activation", "display_name": "Hip circles"}]
+
+    outcome = _outcome(card)
+
+    assert outcome.status == "invalid_fallback_used"
+    assert any("D-23 'primary_strength_day'" in e for e in outcome.errors)
