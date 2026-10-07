@@ -10,6 +10,7 @@ from api.services.active_plan import resolve_active_plan
 from api.services.today_service import _structured_session_entry_for_day, resolve_training_day
 from api.services.week_progress import COMPLETED_STATUSES, _latest_statuses, _plan_for_training_day
 from api.store import AppStore
+from api.optional_sessions import is_optional_session
 
 
 def _rows(value: object) -> list[dict[str, Any]]:
@@ -73,7 +74,11 @@ def _scheduled_days(plan: Mapping[str, Any], training_day: str) -> list[tuple[da
                 scheduled = date.fromisoformat(str(day_row.get("date")))
             except ValueError:
                 continue
-            ids = {str(row.get("session_id") or "").strip() for row in _rows(day_row.get("sessions"))}
+            ids = {
+                str(row.get("session_id") or "").strip()
+                for row in _rows(day_row.get("sessions"))
+                if not is_optional_session(row)
+            }
             ids.discard("")
             if ids:
                 result.append((scheduled, ids))
@@ -95,6 +100,7 @@ def _training_schedule(plan: Mapping[str, Any], training_day: str) -> dict[date,
             ids = {
                 str(session.get("session_id") or "").strip()
                 for session in _rows(day_row.get("sessions"))
+                if not is_optional_session(session)
             }
             ids.discard("")
             # Sessionless coach/technical work is still expected training. The

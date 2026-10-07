@@ -485,6 +485,12 @@ def merge_locked_structured_content(
     """
     plan = copy.deepcopy(structured_plan)
     result = LockedMergeResult(plan=plan)
+    # ``optional`` is server-owned: only a locked optional role below may set
+    # it, so a model-supplied value can never make real training skippable.
+    for day in _days(plan):
+        for session in day.get("sessions") or []:
+            if isinstance(session, dict):
+                session.pop("optional", None)
     if not isinstance(planning_brief, Mapping):
         return result
 
@@ -664,9 +670,12 @@ def merge_locked_structured_content(
         session["title"] = display_title
         session["objective"] = watch.get("why")
         if watch.get("optional") is True:
-            # The card's one optional marker: the camp Fight Visualisation is
-            # offered, not required, and the client reads this prefix.
+            # Offered, not required: the flag drives logging and adherence
+            # (api.optional_sessions); the prefix tells the athlete.
+            session["optional"] = True
             session["objective"] = f"Optional. {watch.get('why') or ''}".strip()
+        else:
+            session.pop("optional", None)
         session["mindset_anchor"] = anchor
         # ``coaching_cues`` carries the bank's instructions. The Fight
         # Visualisation bank's trusted ``cue`` (and its optional immediate

@@ -195,10 +195,11 @@ test("longer doses rehearse a setback and add real-time run-throughs", () => {
   assert.ok(!fightDay.some((line) => /goes wrong/.test(line)));
 });
 
-test("the optional camp session is read from the card's objective", () => {
+test("the optional camp session is read from the server's flag", () => {
   const camp = fightVisualisationFromSession({
     ...d7Session,
     objective: "Optional. Rehearse building range.",
+    optional: true,
     blocks: [{ ...d7Session.blocks![0], purpose: null }],
   });
   assert.equal(camp?.optional, true);

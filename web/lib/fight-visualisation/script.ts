@@ -88,9 +88,10 @@ export function fightVisualisationFromSession(
   }
   if (steps.length === 0) return null;
 
-  // The server marks the optional camp block on the card's objective.
+  // Server-owned flag; the objective also carries an athlete-facing
+  // "Optional." prefix, which is not repeated as the spoken why.
   const objective = cleanText(session.objective);
-  const optional = Boolean(objective && OPTIONAL_RE.test(objective));
+  const optional = session.optional === true;
 
   return {
     name: cleanText(block.display_name) || "Fight Visualisation",
