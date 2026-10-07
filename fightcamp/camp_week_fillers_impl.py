@@ -1034,7 +1034,9 @@ def _ensure_camp_visualizations(week: dict[str, Any], athlete_model: dict[str, A
         role = camp_visualization_role(athlete_model, d_day=d_day, weekday=day, ordinal=ordinal)
         if role is None:
             continue
-        _decorate_filler(role, day, d_day)
+        # Not a discretionary filler (no ``camp_week_filler``): its own layer,
+        # rendered exactly through its bank lock and outside the filler caps.
+        role["session_index"] = 0
         session_roles.append(role)
         added += 1
     return added
@@ -1043,7 +1045,12 @@ def _ensure_camp_visualizations(week: dict[str, Any], athlete_model: dict[str, A
 def _place_camp_visualizations(weekly_role_map: dict[str, Any], athlete_model: dict[str, Any]) -> None:
     """Runs last, over the final calendar, so day tiers see every placed role."""
     for week in weekly_role_map.get("weeks", []) or []:
-        if isinstance(week, dict) and str(week.get("phase") or "").strip().upper() in _FIGHT_PHASE_CAPS:
+        if (
+            isinstance(week, dict)
+            and str(week.get("phase") or "").strip().upper() in _FIGHT_PHASE_CAPS
+            # A compressed week is already crowded: leave it alone.
+            and not _week_is_compressed(week)
+        ):
             _ensure_camp_visualizations(week, athlete_model)
 
 

@@ -3,8 +3,6 @@
   "payload_variant": null,
   "roles": [
     [1, "GPP", "aerobic_coordination_day", "conditioning", "monday", 18, false, false, false, "", ""],
-    [1, "GPP", "fight_visualization", "support_insert", "monday", 18, false, false, false, "support", "low"],
-    [1, "GPP", "fight_visualization", "support_insert", "wednesday", 23, false, false, false, "support", "low"],
     [1, "GPP", "hard_sparring_day", "sparring", "friday", 21, false, false, false, "", ""],
     [1, "GPP", "hard_sparring_day", "sparring", "tuesday", 17, false, false, false, "", ""],
     [1, "GPP", "light_combat_day", "technical", "monday", 18, false, false, false, "support", "low"],

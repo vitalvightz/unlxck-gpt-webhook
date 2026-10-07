@@ -177,3 +177,21 @@ def test_card_marks_the_camp_session_optional():
     assert session["title"] == "Fight Visualisation"
     assert session["objective"].startswith("Optional. ")
     assert session["blocks"][0]["duration"] == {"value": 12, "unit": "minutes"}
+
+
+def test_compressed_week_gets_no_camp_session_and_none_is_a_discretionary_filler():
+    from fightcamp.camp_week_fillers import apply_camp_week_fillers
+
+    open_week = _week({"wednesday": (25, ["tactical_watch"]), "friday": (23, ["mobility_rehab"])})
+    crowded = _week({"wednesday": (32, ["tactical_watch"]), "friday": (30, ["mobility_rehab"])})
+    crowded["intentional_compression"] = {"active": True}
+    role_map = {"weeks": [crowded, open_week]}
+    apply_camp_week_fillers(role_map, _athlete(days_until_fight=34))
+    camp = [
+        (week_index, role)
+        for week_index, week in enumerate(role_map["weeks"])
+        for role in week["session_roles"]
+        if role.get("optional_fight_visualization")
+    ]
+    assert camp and all(week_index == 1 for week_index, _role in camp)
+    assert not any(role.get("camp_week_filler") for _index, role in camp)
