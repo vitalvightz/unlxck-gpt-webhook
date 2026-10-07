@@ -118,6 +118,13 @@ PLAN_SUMMARY_SELECT = (
     "id, athlete_id, full_name, fight_date, technical_style, plan_name, status, "
     "stage2_validator_report, pdf_url, created_at"
 )
+# Execution and logging need the calendar, deterministic fallback and schedule
+# metadata, never the Stage-2 prompts/results or admin review text.
+TRAINING_PLAN_SELECT = (
+    "id,athlete_id,intake_id,fight_date,technical_style,full_name,status,"
+    "plan_text,planning_brief,created_at,plan_name,parsing_metadata,"
+    "structured_plan,schema_version,stage2_status,stage2_attempt_count"
+)
 GENERATION_JOB_SELECT = "*"
 # Admin job-list endpoints never read stage1_result (the largest intermediate
 # blob, the full Stage 1 planner output). Listing many rows with select="*"
@@ -1998,6 +2005,32 @@ class SupabaseAppStore(CompactGenerationReads):
                 detail="failed to read plan",
                 exc=exc,
             )
+
+    def _owned_plan_projection(
+        self, plan_id: str, athlete_id: str, *, columns: str, operation: str
+    ) -> dict[str, Any] | None:
+        try:
+            return self._run_with_transient_retry(
+                operation=operation,
+                fn=lambda: self._select_first(
+                    self.client.table("plans").select(columns)
+                    .eq("id", plan_id).eq("athlete_id", athlete_id)
+                ),
+            )
+        except _STORE_CLIENT_ERRORS as exc:
+            self._raise_operation_http_error(operation=operation, detail="failed to read plan", exc=exc)
+
+    def get_plan_identity_for_athlete(self, plan_id: str, athlete_id: str) -> dict[str, Any] | None:
+        """Owner-scoped existence check without fetching any planner content."""
+        return self._owned_plan_projection(
+            plan_id, athlete_id, columns="id,athlete_id", operation="get_plan_identity_for_athlete"
+        )
+
+    def get_training_plan_for_athlete(self, plan_id: str, athlete_id: str) -> dict[str, Any] | None:
+        """The execution calendar and its unchanged deterministic fallback inputs."""
+        return self._owned_plan_projection(
+            plan_id, athlete_id, columns=TRAINING_PLAN_SELECT, operation="get_training_plan_for_athlete"
+        )
 
     def get_latest_plan(self, athlete_id: str) -> dict[str, Any] | None:
         try:

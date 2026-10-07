@@ -554,7 +554,7 @@ def build_today_router(*, require_profile, get_store) -> APIRouter:
         """Rehydrate valid unanswered prompts across one exact active plan."""
         require_health_feature_access(profile)
         plan_id_value = str(plan_id)
-        if not _plan_row_for_completion(store, profile=profile, plan_id=plan_id_value):
+        if not store.get_plan_identity_for_athlete(plan_id_value, profile.athlete_id):
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
         # Read one sentinel row beyond the bounded window. Omitted history is
         # never treated as answered or mutated; the explicit flag lets clients

@@ -47,7 +47,7 @@ from api.state_machine import (
 from api.generation_config import generation_worker_id
 from api.schema_requirements import GENERATION_JOB_STAGE2_COST_COLUMNS
 from api.store import _signup_date_of_birth, _generation_hard_max_runtime_seconds, _generation_startup_max_attempts, is_job_loaded_stalled_generation_job, is_stage1_planner_stalled_generation_job, is_startup_stale_generation_job
-from api.store import RehabExposureWindow
+from api.store import RehabExposureWindow, TRAINING_PLAN_SELECT
 from api.xp import XP_CALENDAR_SCOPED_ACTIONS, XP_REWARD_AMOUNTS, XpAction
 from api.services.xp_awards import XP_ABUSE_HARDENING_VERSION
 from api.services.notification_foundation import (
@@ -836,6 +836,15 @@ class FakeStore(InMemoryNotificationLedger, FullRowStatusReads):
     def get_latest_plan(self, athlete_id: str) -> dict | None:
         plans = self.list_user_plans(athlete_id)
         return plans[0] if plans else None
+
+    def get_plan_identity_for_athlete(self, plan_id: str, athlete_id: str) -> dict | None:
+        row = self.get_plan_for_athlete(plan_id, athlete_id)
+        return {"id": row["id"], "athlete_id": row["athlete_id"]} if row else None
+
+    def get_training_plan_for_athlete(self, plan_id: str, athlete_id: str) -> dict | None:
+        row = self.get_plan_for_athlete(plan_id, athlete_id)
+        # Exercise the actual production projection, including absent fields.
+        return {key: row[key] for key in TRAINING_PLAN_SELECT.split(",") if key in row} if row else None
 
     def get_active_plan_id(self, athlete_id: str) -> str | None:
         return self.active_plan_ids.get(athlete_id)

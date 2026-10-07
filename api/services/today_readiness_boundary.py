@@ -41,32 +41,47 @@ class _NoLegacyBootstrapStore:
 
 
 class _BuildReadCache:
-    """One Today build's intake and injury-flag reads, shared by the sync and the view.
+    """Successful reads shared within one Today build, never across requests.
 
     The intake-injury sync and the view each read the plan's intake row and the
     athlete's injury flags. Within one build those reads return the same rows,
     so the second is served from the first. Only successful reads are kept: a
     failed read is repeated by the next caller, so the view's readiness tracking
     still sees (and reports) its own failure. Any other store call may write an
-    injury flag, so it clears the cached flags; Today never writes an intake
-    row. Every caller gets its own copy of the rows.
+    injury flag, so it clears cached flags and history. History keys include the
+    requested limit; a smaller window never stands in for a larger one. Today
+    never writes an intake row. Every caller gets its own copy of the rows.
     """
 
     def __init__(self, store: AppStore):
         self._store = store
         self._intakes: dict[str, Any] = {}
         self._flags: dict[tuple[Any, ...], list[dict[str, Any]]] = {}
+        self._reads: dict[tuple[Any, ...], Any] = {}
 
     def __getattr__(self, name: str) -> Any:
         attr = getattr(self._store, name)
+        if callable(attr) and name in {"get_latest_intake", "list_today_checkins", "list_session_completions"}:
+            def read(*args: Any, **kwargs: Any) -> Any:
+                key = (name, args, tuple(sorted(kwargs.items())))
+                if key not in self._reads:
+                    # Failed reads are never cached; the next safety consumer
+                    # still performs its own read and records any failure.
+                    self._reads[key] = deepcopy(attr(*args, **kwargs))
+                return deepcopy(self._reads[key])
+            return read
         if not callable(attr) or name.startswith(("get_", "list_")):
             return attr
 
         def write(*args: Any, **kwargs: Any) -> Any:
             self._flags.clear()
+            self._reads.clear()
             return attr(*args, **kwargs)
 
         return write
+
+    def get_plan_for_athlete(self, plan_id: str, athlete_id: str) -> Any:
+        return self._store.get_training_plan_for_athlete(plan_id, athlete_id)
 
     def get_intake(self, intake_id: str) -> Any:
         if intake_id not in self._intakes:

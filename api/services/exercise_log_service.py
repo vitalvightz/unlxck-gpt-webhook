@@ -132,7 +132,7 @@ def _resolve_logging_day(
     """``(training_day, loggable blocks)`` once the plan and the day's start are checked."""
     _require_valid_plan_id(plan_id)
     # Service-role write: plan ownership is enforced here, not by RLS.
-    plan_row = store.get_plan_for_athlete(plan_id, athlete_id)
+    plan_row = store.get_training_plan_for_athlete(plan_id, athlete_id)
     if plan_row is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
 
@@ -311,7 +311,7 @@ def list_exercise_logs_for_today(
 ) -> tuple[str, list[dict[str, Any]]]:
     """``(training_day, logs)`` for one of the athlete's plans, today only."""
     _require_valid_plan_id(plan_id)
-    if store.get_plan_for_athlete(plan_id, athlete_id) is None:
+    if store.get_plan_identity_for_athlete(plan_id, athlete_id) is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
     training_day = resolve_training_day(athlete_timezone, now=now)
     rows = store.list_exercise_logs_for_day(athlete_id, plan_id=plan_id, training_day=training_day)
