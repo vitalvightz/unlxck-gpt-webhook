@@ -310,6 +310,42 @@ def test_a_pain_reason_is_kept_with_health_consent():
     assert resp.json()["log"]["reason"] == "pain"
 
 
+@pytest.mark.parametrize("reason", [None, "equipment", "pain"])
+def test_notes_are_blanked_without_health_consent_regardless_of_reason(reason):
+    client, store, _ = _build_client()
+    _seed_plan(store, blocks=[_squat()])
+    _start(client)
+    withdraw_health_consent(store, "athlete-1")
+
+    resp = _log(
+        client, status="modified", actual={"sets": 2}, reason=reason,
+        notes="Achilles pain getting worse",
+    )
+
+    assert resp.status_code == 201, resp.text
+    assert resp.json()["log"]["notes"] == ""
+    assert store.exercise_logs[0]["notes"] == ""
+    assert resp.json()["log"]["reason"] == (None if reason == "pain" else reason)
+    assert _reported(resp.json()["log"]) == {"sets": 2}
+
+
+def test_saving_again_without_health_consent_clears_previously_saved_notes():
+    client, store, _ = _build_client()
+    _seed_plan(store, blocks=[_squat()])
+    _start(client)
+    first = _log(client, notes="Achilles pain getting worse").json()["log"]
+    assert first["notes"] == "Achilles pain getting worse"
+    withdraw_health_consent(store, "athlete-1")
+
+    resp = _log(client, notes="Still painful")
+
+    assert resp.status_code == 201, resp.text
+    assert resp.json()["log"]["id"] == first["id"]
+    assert resp.json()["log"]["notes"] == ""
+    assert len(store.exercise_logs) == 1
+    assert store.exercise_logs[0]["notes"] == ""
+
+
 def test_lists_todays_logs_for_the_plan():
     client, store, _ = _build_client()
     training_day = _seed_plan(store, blocks=[_squat(), _plank()])
@@ -358,3 +394,62 @@ def test_the_frozen_session_prescription_is_what_gets_logged():
         "sets": 2,
         "reps": 10,
     }
+
+
+@pytest.mark.parametrize("keep_plank", [True, False])
+def test_safety_removed_block_cannot_fall_back_to_the_plan_card(keep_plank):
+    client, store, _ = _build_client()
+    training_day = _seed_plan(store, blocks=[_squat(), _plank()])
+    _start(client)
+    plank = _plank(block_id=f"blk-{training_day}-front-plank")
+    store.session_completions["athlete-1"][0]["prescription_snapshot"] = {
+        "plan_id": PLAN_ID,
+        "training_day": training_day,
+        "session": {"session_id": SESSION_ID, "blocks": [plank] if keep_plank else []},
+    }
+
+    resp = _log(client)
+
+    assert resp.status_code == 404, resp.text
+    assert store.exercise_logs == []
+    if keep_plank:
+        assert _log(client, block_id=plank["block_id"]).status_code == 201
+
+
+def test_a_frozen_session_does_not_disable_other_started_sessions_plan_fallback():
+    client, store, _ = _build_client()
+    training_day = _seed_plan(store, blocks=[_squat()])
+    sessions = store.plans[PLAN_ID]["structured_plan"]["weeks"][0]["days"][0]["sessions"]
+    sessions.append({"session_id": "s-accessory", "session_type": "strength_power", "blocks": [_plank()]})
+    _start(client)
+    completion = next(
+        row for row in store.session_completions["athlete-1"] if row["session_id"] == SESSION_ID
+    )
+    completion["prescription_snapshot"] = {
+        "plan_id": PLAN_ID,
+        "training_day": training_day,
+        "session": {"session_id": SESSION_ID, "blocks": []},
+    }
+
+    resp = _log(client, block_id=f"blk-{training_day}-front-plank")
+
+    assert resp.status_code == 201, resp.text
+    assert resp.json()["log"]["session_id"] == "s-accessory"
+
+
+@pytest.mark.parametrize(
+    "snapshot",
+    [
+        None,
+        {},
+        {"plan_id": OTHER_PLAN_ID, "session": {"session_id": SESSION_ID, "blocks": []}},
+        {"plan_id": PLAN_ID, "session": None},
+    ],
+)
+def test_a_missing_or_invalid_snapshot_still_allows_plan_card_fallback(snapshot):
+    client, store, _ = _build_client()
+    _seed_plan(store, blocks=[_squat()])
+    _start(client)
+    store.session_completions["athlete-1"][0]["prescription_snapshot"] = snapshot
+
+    assert _log(client).status_code == 201

@@ -85,17 +85,19 @@ def _loggable_blocks(
     """``(session_id, block)`` for every block of today's started sessions.
 
     A session started under live injury guidance was frozen on its completion
-    row; that frozen copy is what the athlete was shown, so it leads. The plan
-    card's own sessions follow, and only the ones that were actually started.
+    row; that frozen copy is authoritative, even when it contains no blocks.
+    The plan card is used only for started sessions without a valid snapshot.
     """
     plan_id = _clean(plan_row.get("id"))
     blocks: list[tuple[str | None, Mapping[str, Any]]] = []
+    frozen_session_ids: set[str] = set()
     for completion in completions:
         snapshot = completion.get("prescription_snapshot")
         session = snapshot.get("session") if isinstance(snapshot, Mapping) else None
         if not isinstance(session, Mapping) or _clean(snapshot.get("plan_id")) != plan_id:
             continue
         session_id = _clean(session.get("session_id")) or _clean(completion.get("session_id")) or None
+        frozen_session_ids.add(session_id or "")
         blocks.extend((session_id, block) for block in _iter_mapping_items(session.get("blocks")))
 
     started_session_ids = {_clean(row.get("session_id")) for row in completions}
@@ -104,7 +106,7 @@ def _loggable_blocks(
         day, _week = matched
         for session in _iter_mapping_items(day.get("sessions")):
             session_id = _clean(session.get("session_id"))
-            if session_id not in started_session_ids:
+            if session_id not in started_session_ids or session_id in frozen_session_ids:
                 continue
             blocks.extend((session_id, block) for block in _iter_mapping_items(session.get("blocks")))
     return blocks
@@ -167,7 +169,8 @@ def record_exercise_log(
         "reason": reason,
         "prescribed": _prescribed_snapshot(block),
         "actual": dict(actual) if isinstance(actual, Mapping) else {},
-        "notes": _clean(payload.get("notes")),
+        # Free text can contain health data, regardless of the selected reason.
+        "notes": _clean(payload.get("notes")) if health_consent_granted else "",
     }
     return store.upsert_exercise_log(athlete_id, fields)
 
