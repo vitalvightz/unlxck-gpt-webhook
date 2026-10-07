@@ -69,6 +69,7 @@ from .state_machine import (
 )
 from .store_performance import CompactGenerationReads
 from .store_protocols import AppStore, RehabExposureWindow
+from .structured_block_identity import ensure_structured_block_ids
 from .xp import XpAction
 from api.datetimes import parse_utc_datetime as _parse_datetime_utc
 from .settings import env_flag, env_float
@@ -1836,7 +1837,9 @@ class SupabaseAppStore(CompactGenerationReads):
             # Structured plan is written only when structured generation produced
             # a validated object; otherwise it stays NULL and the raw plan_text is
             # the fallback. schema_version mirrors the stored structured plan.
-            "structured_plan": result.get("structured_plan"),
+            # Every block is saved with a server-owned block_id: exercise logs
+            # key on it, so it is never left to the model.
+            "structured_plan": ensure_structured_block_ids(result.get("structured_plan")),
             "schema_version": result.get("schema_version"),
         }
 
@@ -3829,6 +3832,8 @@ class SupabaseAppStore(CompactGenerationReads):
                 value = result.get(optional_field)
                 if optional_field == "planning_brief":
                     value = _encode_structured_text(value)
+                elif optional_field == "structured_plan":
+                    value = ensure_structured_block_ids(value)
                 payload[optional_field] = value
         if "stage2_payload" in payload:
             _guard_persisted_json(
@@ -3982,7 +3987,7 @@ class SupabaseAppStore(CompactGenerationReads):
 
         payload = {"stage2_validator_report": stage2_validator_report or {}}
         if structured_plan is not None:
-            payload["structured_plan"] = structured_plan
+            payload["structured_plan"] = ensure_structured_block_ids(structured_plan)
             payload["schema_version"] = schema_version
         _guard_persisted_json(
             payload.get("structured_plan"),
