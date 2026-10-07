@@ -7,10 +7,7 @@ choice is the history-only signal.
 Each generated-plan injury receives a stable ``source_key``. The store writes
 it atomically (production: one database RPC), adopting a matching legacy row or
 inserting a new one. This preserves old resolved states and prevents concurrent
-duplicates. An open or monitoring intake injury from an earlier plan with the
-same body area and description is carried onto the new plan rather than
-duplicated, so regenerating a plan never shows the same injury twice. Body area
-alone is never an identity: distinct injuries in one area stay separate.
+duplicates.
 """
 
 from __future__ import annotations
@@ -183,8 +180,7 @@ def sync_intake_injuries_for_plan(
     No insert is attempted unless the existing flag set was read successfully.
     Legacy rows are atomically adopted before insertion, preserving resolved
     status. A resolved injury from another plan cannot suppress this plan because
-    the stable identity includes ``plan_id``; a still-live one with the same body
-    area and description is carried onto this plan instead of duplicated.
+    the stable identity includes ``plan_id``.
     """
     active_readable, open_flags = _list_flags(store, athlete_id, statuses=_ACTIVE_STATUSES)
     if not active_readable:
