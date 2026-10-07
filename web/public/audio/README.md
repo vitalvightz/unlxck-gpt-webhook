@@ -23,5 +23,10 @@ A missing file is not an error: the crowd toggle simply does not appear.
 
 | File | Source | Author | Licence |
 |---|---|---|---|
-| `crowd-amateur.mp3` | _pending_ | | CC0 |
-| `crowd-professional.mp3` | _pending_ | | CC0 |
+| `crowd-amateur.mp3` | [G29-44-Fight Crowd Yelling.wav](https://freesound.org/people/craigsmith/sounds/438404/) ("Mixed group fight crowd. Boxing match."), 3–63 s | craigsmith | CC0 1.0 |
+| `crowd-professional.mp3` | [Boston Garden Celtics Ambience 2.m4a](https://freesound.org/people/Douglas711/sounds/424297/) ("TD Garden, Boston ambience"), 3–63 s | Douglas711 | CC0 1.0 |
+
+Processing (ffmpeg): the steadiest 60 s window by momentary loudness, mono
+44.1 kHz, the last 3 s crossfaded into the first 3 s for a seamless loop,
+`loudnorm` to −20 LUFS, 96 kbps MP3. `crowd.ts` loops just inside the MP3
+encoder padding.
