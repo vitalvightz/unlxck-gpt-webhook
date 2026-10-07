@@ -94,13 +94,22 @@ def test_a_new_plan_carries_the_live_injury_and_never_carries_a_resolved_one(pos
             connection.execute("insert into plans(id) values (%s)", (plan,))
 
         old = _sync_key(connection, athlete, old_plan, f"intake:{old_plan}:a", "Left ankle", "Ankle sprain")
-        carried = _sync_key(connection, athlete, new_plan, f"intake:{new_plan}:b", "left-ankle", "Ankle strain")
+        carried = _sync_key(connection, athlete, new_plan, f"intake:{new_plan}:b", "left-ankle", " ankle  SPRAIN")
         assert carried["id"] == old["id"]
-        assert _live_flags(connection, athlete) == [(old["id"], new_plan, "Ankle strain")]
+        assert _live_flags(connection, athlete) == [(old["id"], new_plan, "Ankle sprain")]
 
         # A repeat read under the carried key is not a write.
-        again = _sync_key(connection, athlete, new_plan, f"intake:{new_plan}:b", "left-ankle", "Ankle strain")
+        again = _sync_key(connection, athlete, new_plan, f"intake:{new_plan}:b", "left-ankle", " ankle  SPRAIN")
         assert again["updated_at"] == carried["updated_at"]
+
+        # Same area, different injury: a new row; the sprain is not touched.
+        blister = _sync_key(connection, athlete, new_plan, f"intake:{new_plan}:x", "Left ankle", "Ankle blister")
+        assert blister["id"] != old["id"]
+        assert _live_flags(connection, athlete) == [
+            (old["id"], new_plan, "Ankle sprain"),
+            (blister["id"], new_plan, "Ankle blister"),
+        ]
+        connection.execute("update injury_flags set status = 'resolved', resolved_at = now() where id = %s", (blister["id"],))
 
         # Resolved is never carried: listing it again opens a new injury.
         connection.execute("update injury_flags set status = 'resolved', resolved_at = now() where id = %s", (old["id"],))
@@ -130,6 +139,9 @@ def test_the_migration_merges_existing_cross_plan_duplicates(postgres_database):
 
         kept = insert(old_plan, f"intake:{old_plan}:a", "Left ankle", "Ankle sprain", "10 days")
         duplicate = insert(new_plan, f"intake:{new_plan}:a", "Left ankle", "Ankle sprain", "1 day")
+        # A different injury in the same area, open across two plans: never merged.
+        old_blister = insert(old_plan, f"intake:{old_plan}:b", "Left ankle", "Ankle blister", "9 days")
+        new_cut = insert(new_plan, f"intake:{new_plan}:c", "Left ankle", "Ankle cut", "1 day")
         # Two injuries the athlete listed in the same area of one plan stay separate.
         knee_a = insert(new_plan, f"intake:{new_plan}:k1", "Right knee", "Knee sprain", "1 day")
         knee_b = insert(new_plan, f"intake:{new_plan}:k2", "Right knee", "Knee bruise", "1 day")
@@ -137,8 +149,14 @@ def test_the_migration_merges_existing_cross_plan_duplicates(postgres_database):
         connection.execute(CARRY_MIGRATION.read_text(encoding="utf-8"))
 
         live = {row[0]: row[1] for row in _live_flags(connection, athlete)}
-        assert set(live) == {kept, knee_a, knee_b}
+        assert set(live) == {kept, knee_a, knee_b, old_blister, new_cut}
         assert live[kept] == new_plan
+        assert live[old_blister] == old_plan
+        descriptions = dict(connection.execute(
+            "select id::text, description from injury_flags where athlete_id = %s", (athlete,)
+        ).fetchall())
+        assert descriptions[old_blister] == "Ankle blister"
+        assert descriptions[new_cut] == "Ankle cut"
         retired = connection.execute(
             "select status, source_key from injury_flags where id = %s", (duplicate,)
         ).fetchone()

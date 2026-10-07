@@ -2350,7 +2350,8 @@ class FakeStore(InMemoryNotificationLedger, FullRowStatusReads):
             rows = self.injury_flags.get(athlete_id, [])
             area = _normalized_injury_area(params["body_area"])
             if area and not any(row.get("source_key") == source_key for row in rows):
-                # 20261007210000: carry a live same-area injury from another plan.
+                # 20261007210000: carry the same live injury (area + description)
+                # from another plan; body area alone never matches.
                 description = _normalized_injury_description(params["description"])
                 carried = sorted(
                     (
@@ -2360,21 +2361,13 @@ class FakeStore(InMemoryNotificationLedger, FullRowStatusReads):
                         and str(row.get("plan_id") or "") != str(plan_id)
                         and str(row.get("status") or "").strip().lower() in ("open", "monitoring")
                         and _normalized_injury_area(row.get("body_area")) == area
+                        and _normalized_injury_description(row.get("description")) == description
                     ),
-                    key=lambda row: (
-                        _normalized_injury_description(row.get("description")) != description,
-                        str(row.get("created_at") or ""),
-                        str(row["id"]),
-                    ),
+                    key=lambda row: (str(row.get("created_at") or ""), str(row["id"])),
                 )
                 if carried:
                     self.update_injury_flag(
-                        carried[0]["id"],
-                        {
-                            "plan_id": plan_id,
-                            "source_key": source_key,
-                            "description": params["description"] if params["description"] is not None else carried[0].get("description"),
-                        },
+                        carried[0]["id"], {"plan_id": plan_id, "source_key": source_key}
                     )
             flag = next((row for row in rows if row.get("source_key") == source_key), None)
             legacy = [row for row in rows if legacy_duplicate(row)]

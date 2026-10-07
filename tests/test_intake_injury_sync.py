@@ -358,19 +358,27 @@ def test_new_plan_carries_the_open_injury_instead_of_duplicating_it() -> None:
     assert store.injury_flags[ATHLETE][0]["updated_at"] == stamped
 
 
-def test_a_reworded_injury_in_the_same_area_updates_the_carried_row() -> None:
+def test_a_different_injury_in_the_same_area_is_never_merged() -> None:
+    """Body area alone is not identity: an ankle sprain and an ankle blister
+    are two injuries, each with its own history."""
     store = FakeStore()
     old_plan = _seed_generated_plan(store, intake_id="intake-old", active=False)
-    [old_flag] = sync_intake_injuries_for_plan(store, athlete_id=ATHLETE, plan_row=old_plan)
+    [sprain] = sync_intake_injuries_for_plan(store, athlete_id=ATHLETE, plan_row=old_plan)
 
-    reworded = _active_ankle_intake()
-    reworded["guided_injuries"][0]["injury_subtypes"] = ["strain"]
-    new_plan = _seed_generated_plan(store, intake_id="intake-new", intake=reworded, active=True)
+    blister = _active_ankle_intake()
+    blister["guided_injuries"][0].update(
+        injury_type="surface_injury", injury_subtypes=["blister"], surface_type="blister"
+    )
+    new_plan = _seed_generated_plan(store, intake_id="intake-new", intake=blister, active=True)
     new_flags = sync_intake_injuries_for_plan(store, athlete_id=ATHLETE, plan_row=new_plan)
 
-    assert [flag["id"] for flag in new_flags] == [old_flag["id"]]
-    assert new_flags[0]["description"] != ANKLE_DESCRIPTION
-    assert "strain" in new_flags[0]["description"]
+    assert len(new_flags) == 2
+    kept = next(flag for flag in new_flags if flag["id"] == sprain["id"])
+    assert kept["description"] == ANKLE_DESCRIPTION
+    assert kept["plan_id"] == old_plan["id"]
+    added = next(flag for flag in new_flags if flag["id"] != sprain["id"])
+    assert added["plan_id"] == new_plan["id"]
+    assert "blister" in added["description"].lower()
 
 
 def test_a_different_area_in_the_new_plan_is_a_new_injury() -> None:

@@ -4,12 +4,14 @@
 -- from a camp setup that still lists the same injury inserted a second open
 -- row, and Today showed the injury twice.
 --
--- Identity is now the body area across plans: when a plan's intake lists an
--- injury and the athlete already has an open or monitoring intake injury in
--- that area from another plan, that row is carried onto the new plan (its
+-- Identity now holds across plans: when a plan's intake lists an injury and
+-- the athlete already has an open or monitoring intake injury from another
+-- plan with the same body area AND the same description (the identity the
+-- source_key already hashes), that row is carried onto the new plan (its
 -- history, rehab stage and check-ins stay attached) instead of a new row being
--- inserted. A reworded description updates the carried row. A resolved
--- injury is never carried: listing it again opens a new episode, as before.
+-- inserted. Body area alone is never enough: an ankle sprain and an ankle
+-- blister are different injuries and are never merged. A resolved injury is
+-- never carried: listing it again opens a new episode, as before.
 --
 -- The carry-over writes only when a plan's key is first seen, so repeated
 -- Today reads still never write (see 20261007193500).
@@ -72,8 +74,8 @@ begin
         ' ',
         '_'
       ) = v_area
+      and regexp_replace(lower(btrim(coalesce(description, ''))), '\s+', ' ', 'g') = v_description
     order by
-      (regexp_replace(lower(btrim(coalesce(description, ''))), '\s+', ' ', 'g') = v_description) desc,
       created_at asc,
       id asc
     limit 1
@@ -81,10 +83,7 @@ begin
 
     if v_carry_id is not null then
       update public.injury_flags
-      set
-        plan_id = p_plan_id,
-        source_key = p_source_key,
-        description = coalesce(p_description, description)
+      set plan_id = p_plan_id, source_key = p_source_key
       where id = v_carry_id;
     end if;
   end if;
@@ -149,11 +148,11 @@ grant execute on function public.adopt_or_create_intake_injury_flag_with_wound_f
   uuid, uuid, text, text, text, text, text, timestamptz, text, text, jsonb, text, text
 ) to service_role;
 
--- Merge the duplicates already created: for each athlete and body area whose
--- open or monitoring intake rows come from more than one plan (one row per
--- plan), keep the oldest row, move it onto the newest row's plan and key, and
--- retire the rest with a distinct audit key. Areas with two rows in the same
--- plan are separate injuries the athlete listed and are left alone.
+-- Merge the duplicates already created: for each athlete and injury identity
+-- (body area + description) whose open or monitoring intake rows come from
+-- more than one plan (one row per plan), keep the oldest row, move it onto the
+-- newest row's plan and key, and retire the rest with a distinct audit key.
+-- Rows that differ in description are different injuries and are untouched.
 create temporary table intake_injury_merge as
 with live as (
   select
@@ -161,41 +160,39 @@ with live as (
     athlete_id,
     plan_id,
     source_key,
-    description,
     created_at,
     replace(
       replace(replace(lower(btrim(coalesce(body_area, ''))), '-', '_'), '/', '_'),
       ' ',
       '_'
-    ) as area
+    ) as area,
+    regexp_replace(lower(btrim(coalesce(description, ''))), '\s+', ' ', 'g') as identity_description
   from public.injury_flags
   where source = 'intake'
     and plan_id is not null
     and lower(btrim(coalesce(status, ''))) in ('open', 'monitoring')
 ),
 groups as (
-  select athlete_id, area
+  select athlete_id, area, identity_description
   from live
   where area <> ''
-  group by athlete_id, area
+  group by athlete_id, area, identity_description
   having count(*) > 1 and count(*) = count(distinct plan_id)
-),
-ranked as (
-  select
-    live.*,
-    first_value(live.id) over oldest as keep_id,
-    first_value(live.plan_id) over newest as new_plan_id,
-    first_value(live.source_key) over newest as new_source_key,
-    first_value(live.description) over newest as new_description
-  from live
-  join groups using (athlete_id, area)
-  window
-    oldest as (partition by live.athlete_id, live.area order by live.created_at asc, live.id asc
-      rows between unbounded preceding and unbounded following),
-    newest as (partition by live.athlete_id, live.area order by live.created_at desc, live.id desc
-      rows between unbounded preceding and unbounded following)
 )
-select * from ranked;
+select
+  live.*,
+  first_value(live.id) over oldest as keep_id,
+  first_value(live.plan_id) over newest as new_plan_id,
+  first_value(live.source_key) over newest as new_source_key
+from live
+join groups using (athlete_id, area, identity_description)
+window
+  oldest as (partition by live.athlete_id, live.area, live.identity_description
+    order by live.created_at asc, live.id asc
+    rows between unbounded preceding and unbounded following),
+  newest as (partition by live.athlete_id, live.area, live.identity_description
+    order by live.created_at desc, live.id desc
+    rows between unbounded preceding and unbounded following);
 
 update public.injury_flags flags
 set
@@ -209,8 +206,7 @@ where flags.id = merge.id
 update public.injury_flags flags
 set
   plan_id = merge.new_plan_id,
-  source_key = merge.new_source_key,
-  description = coalesce(merge.new_description, flags.description)
+  source_key = merge.new_source_key
 from intake_injury_merge merge
 where flags.id = merge.id
   and merge.id = merge.keep_id
