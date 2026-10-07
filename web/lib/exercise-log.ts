@@ -311,6 +311,8 @@ export type LoggedValue = {
   label: string;
   /** What was done, e.g. "3" or "80 kg". */
   value: string;
+  /** The same with its noun: "3 sets", "80 kg", "RPE 8". */
+  text: string;
   /** The prescription it replaced; null when it only adds to it. */
   insteadOf: string | null;
 };
@@ -329,6 +331,7 @@ export function loggedValues(fields: LogField[], log: ExerciseLogRecord): Logged
       key: field.key,
       label: field.label,
       value: field.unit ? `${number} ${field.unit}` : number,
+      text: formatLogValue(field, value),
       insteadOf: departs ? `${formatPrescribed(field)}${field.unit ? ` ${field.unit}` : ""}` : null,
     });
   }

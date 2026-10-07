@@ -5,6 +5,7 @@ import { createContext, useContext, useId, useMemo, useState, type ReactNode } f
 import {
   EXERCISE_LOG_REASONS,
   EXERCISE_LOG_REASON_LABELS,
+  EXERCISE_LOG_STATUS_LABELS,
   buildLogEntry,
   draftFromLog,
   hasLoggableNumbers,
@@ -13,7 +14,6 @@ import {
   logSummary,
   loggedValues,
   type LogDraft,
-  type LogField,
 } from "@/lib/exercise-log";
 import { cleanText } from "@/lib/structured-plan";
 import type {
@@ -35,6 +35,8 @@ export type ExerciseLogging = {
   save: (request: Omit<ExerciseLogRequest, "plan_id">) => Promise<void>;
   /** Pain is health data: the reason is only offered with health consent. */
   painReasonAllowed: boolean;
+  /** Where a failed one-tap save on a collapsed row is reported. */
+  onError?: (message: string) => void;
 };
 
 const ExerciseLogContext = createContext<ExerciseLogging | null>(null);
@@ -59,15 +61,70 @@ function useBlockLogging(block: StructuredBlock) {
   return { logging, blockId, fields, log: logging.logs[blockId] ?? null };
 }
 
-/** The saved outcome on a collapsed row: "Done · 80 kg", "Changed · 3 sets", "Skipped". */
+function errorMessage(caught: unknown): string {
+  return caught instanceof Error ? caught.message : "Could not save. Try again.";
+}
+
+/**
+ * The tick at the start of a row: one tap logs the exercise as written without
+ * opening it. Once logged it shows the outcome, and a tap opens the row to
+ * change it.
+ */
+export function ExerciseLogTick({
+  block,
+  onOpen,
+}: {
+  block: StructuredBlock;
+  /** Opens the row, where a saved log is changed. */
+  onOpen: () => void;
+}) {
+  const state = useBlockLogging(block);
+  const [saving, setSaving] = useState(false);
+  if (!state) {
+    return null;
+  }
+  const { logging, blockId, log } = state;
+  const name = cleanText(block.display_name) || "exercise";
+
+  async function markDone() {
+    setSaving(true);
+    try {
+      await logging.save({ block_id: blockId, status: "as_prescribed" });
+    } catch (caught) {
+      logging.onError?.(errorMessage(caught));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <button
+      type="button"
+      className="ex-log-tick"
+      data-status={log?.status}
+      disabled={saving}
+      aria-label={
+        log ? `${name}: ${EXERCISE_LOG_STATUS_LABELS[log.status].toLowerCase()}. Change` : `Mark ${name} done as written`
+      }
+      onClick={() => (log ? onOpen() : void markDone())}
+    />
+  );
+}
+
+/** The numbers behind a saved log on a collapsed row: "80 kg", "Changed · 3 sets". */
 export function ExerciseLogBadge({ block }: { block: StructuredBlock }) {
   const state = useBlockLogging(block);
   if (!state?.log) {
     return null;
   }
+  const summary = logSummary(state.fields, state.log);
+  // The tick already says "done"; a line is only worth it when there is more.
+  if (state.log.status === "as_prescribed" && summary === EXERCISE_LOG_STATUS_LABELS.as_prescribed) {
+    return null;
+  }
   return (
     <span className="ex-row-log" data-status={state.log.status}>
-      {logSummary(state.fields, state.log)}
+      {summary}
     </span>
   );
 }
@@ -75,78 +132,35 @@ export function ExerciseLogBadge({ block }: { block: StructuredBlock }) {
 function ReasonChips({
   selected,
   painAllowed,
+  skipped = false,
   disabled,
   onSelect,
 }: {
   selected: ExerciseLogReason | null;
   painAllowed: boolean;
+  /** Nobody skips an exercise because they felt strong. */
+  skipped?: boolean;
   disabled: boolean;
   onSelect: (reason: ExerciseLogReason | null) => void;
 }) {
-  const legendId = useId();
-  const reasons = EXERCISE_LOG_REASONS.filter((reason) => painAllowed || reason !== "pain");
-  return (
-    <div className="ex-log-reason">
-      <p className="sp-stat-label" id={legendId}>
-        Why? (optional)
-      </p>
-      <div className="feedback-chips" role="group" aria-labelledby={legendId}>
-        {reasons.map((reason) => (
-          <button
-            key={reason}
-            type="button"
-            className={selected === reason ? "feedback-chip is-selected" : "feedback-chip"}
-            aria-pressed={selected === reason}
-            disabled={disabled}
-            onClick={() => onSelect(selected === reason ? null : reason)}
-          >
-            {EXERCISE_LOG_REASON_LABELS[reason]}
-          </button>
-        ))}
-      </div>
-    </div>
+  const reasons = EXERCISE_LOG_REASONS.filter(
+    (reason) => (painAllowed || reason !== "pain") && !(skipped && reason === "felt_strong"),
   );
-}
-
-function SavedLog({
-  fields,
-  log,
-  disabled,
-  onEdit,
-}: {
-  fields: LogField[];
-  log: ExerciseLogRecord;
-  disabled: boolean;
-  onEdit: () => void;
-}) {
-  const values = log.status === "skipped" ? [] : loggedValues(fields, log);
-  const heading =
-    log.status === "skipped" ? "Skipped" : log.status === "modified" ? "You changed it" : "Done as written";
   return (
-    <>
-      <div className="ex-log-result">
-        <p className="ex-log-status" data-status={log.status}>
-          {heading}
-          {log.reason ? <span className="ex-log-status-reason"> · {EXERCISE_LOG_REASON_LABELS[log.reason]}</span> : null}
-        </p>
-        <button type="button" className="ex-log-edit" disabled={disabled} onClick={onEdit}>
-          Edit
+    <div className="ex-log-reasons" role="group" aria-label="Why? (optional)">
+      {reasons.map((reason) => (
+        <button
+          key={reason}
+          type="button"
+          className="ex-log-chip"
+          aria-pressed={selected === reason}
+          disabled={disabled}
+          onClick={() => onSelect(selected === reason ? null : reason)}
+        >
+          {EXERCISE_LOG_REASON_LABELS[reason]}
         </button>
-      </div>
-      {values.length > 0 ? (
-        <dl className="ex-log-values">
-          {values.map((value) => (
-            <div key={value.key} className="ex-log-value" data-changed={value.insteadOf ? "true" : undefined}>
-              <dt className="sp-stat-label">{value.label}</dt>
-              <dd>
-                {value.value}
-                {value.insteadOf ? <span className="ex-log-instead"> not {value.insteadOf}</span> : null}
-              </dd>
-            </div>
-          ))}
-        </dl>
-      ) : null}
-    </>
+      ))}
+    </div>
   );
 }
 
@@ -157,8 +171,9 @@ function SavedLog({
 export function ExerciseLogPanel({ block }: { block: StructuredBlock }) {
   const state = useBlockLogging(block);
   const fieldId = useId();
-  // "choose" re-opens the three choices over a saved log, to change its outcome.
-  const [mode, setMode] = useState<"idle" | "choose" | "numbers" | "skip">("idle");
+  const [editing, setEditing] = useState(false);
+  // Re-opens the choices over a saved log, to change its outcome.
+  const [choosing, setChoosing] = useState(false);
   const [draft, setDraft] = useState<LogDraft>({});
   const [reason, setReason] = useState<ExerciseLogReason | null>(null);
   const [saving, setSaving] = useState(false);
@@ -172,18 +187,19 @@ export function ExerciseLogPanel({ block }: { block: StructuredBlock }) {
   const { logging, blockId, fields, log } = state;
   const entry = buildLogEntry(fields, draft);
 
-  function close() {
-    setMode("idle");
+  function closeEditor() {
+    setEditing(false);
+    setChoosing(false);
     setError(null);
     setConfirming(null);
   }
 
-  function open(next: "numbers" | "skip") {
-    setDraft(next === "numbers" ? draftFromLog(fields, log) : {});
+  function openEditor() {
+    setDraft(draftFromLog(fields, log));
     setReason(log?.reason ?? null);
     setError(null);
     setConfirming(null);
-    setMode(next);
+    setEditing(true);
   }
 
   async function save(request: Omit<ExerciseLogRequest, "plan_id" | "block_id">) {
@@ -191,9 +207,9 @@ export function ExerciseLogPanel({ block }: { block: StructuredBlock }) {
     setError(null);
     try {
       await logging.save({ block_id: blockId, ...request });
-      close();
+      closeEditor();
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Could not save. Try again.");
+      setError(errorMessage(caught));
     } finally {
       setSaving(false);
     }
@@ -217,17 +233,21 @@ export function ExerciseLogPanel({ block }: { block: StructuredBlock }) {
     });
   }
 
-  if (mode === "numbers") {
+  const alert = error ? (
+    <p className="form-error ex-log-error" role="alert">
+      {error}
+    </p>
+  ) : null;
+
+  if (editing) {
     return (
       <div className="ex-log" data-mode="numbers">
-        <p className="ex-log-title">What you did</p>
-        <p className="ex-log-help">Only fill in what was different. Empty means as written.</p>
-        <div className="ex-log-fields">
+        <div className="ex-log-fields" data-count={fields.length}>
           {fields.map((field) => (
             <label key={field.key} className="ex-log-field" htmlFor={`${fieldId}-${field.key}`}>
-              <span className="sp-stat-label">
+              <span className="ex-log-field-label">
                 {field.label}
-                {field.unit ? ` (${field.unit})` : ""}
+                {field.unit ? <span className="ex-log-field-unit"> {field.unit}</span> : null}
               </span>
               <input
                 id={`${fieldId}-${field.key}`}
@@ -244,6 +264,12 @@ export function ExerciseLogPanel({ block }: { block: StructuredBlock }) {
                   setDraft((current) => ({ ...current, [field.key]: event.target.value }));
                   setConfirming(null);
                 }}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
+                    event.preventDefault();
+                    saveNumbers();
+                  }
+                }}
               />
             </label>
           ))}
@@ -258,19 +284,15 @@ export function ExerciseLogPanel({ block }: { block: StructuredBlock }) {
         ) : null}
         {confirming ? (
           <p className="ex-log-confirm" role="alert">
-            {confirming.join("; ")}. Save it if that is right.
+            {confirming.join("; ")}?
           </p>
         ) : null}
-        {error ? (
-          <p className="form-error" role="alert">
-            {error}
-          </p>
-        ) : null}
-        <div className="ex-log-actions">
-          <button type="button" className="ghost-button" disabled={saving} onClick={close}>
+        {alert}
+        <div className="ex-log-bar">
+          <button type="button" className="ex-log-link" disabled={saving} onClick={closeEditor}>
             Cancel
           </button>
-          <button type="button" className="cta" disabled={saving} onClick={saveNumbers}>
+          <button type="button" className="ex-log-save" disabled={saving} onClick={saveNumbers}>
             {saving ? "Saving…" : confirming ? "Yes, save" : "Save"}
           </button>
         </div>
@@ -278,75 +300,73 @@ export function ExerciseLogPanel({ block }: { block: StructuredBlock }) {
     );
   }
 
-  if (mode === "skip") {
+  if (log && !choosing) {
+    const values = log.status === "skipped" ? [] : loggedValues(fields, log);
     return (
-      <div className="ex-log" data-mode="skip">
-        <p className="ex-log-title">Skip this exercise</p>
-        <ReasonChips
-          selected={reason}
-          painAllowed={logging.painReasonAllowed}
-          disabled={saving}
-          onSelect={setReason}
-        />
-        {error ? (
-          <p className="form-error" role="alert">
-            {error}
+      <div className="ex-log" data-mode="saved">
+        <div className="ex-log-bar">
+          <p className="ex-log-status" data-status={log.status}>
+            <span className="ex-log-status-label">{EXERCISE_LOG_STATUS_LABELS[log.status]}</span>
+            {values.map((value) => (
+              <span key={value.key} className="ex-log-status-value">
+                {value.text}
+                {value.insteadOf ? <span className="ex-log-instead"> not {value.insteadOf}</span> : null}
+              </span>
+            ))}
+            {log.reason && log.status !== "skipped" ? (
+              <span className="ex-log-status-value">{EXERCISE_LOG_REASON_LABELS[log.reason]}</span>
+            ) : null}
           </p>
-        ) : null}
-        <div className="ex-log-actions">
-          <button type="button" className="ghost-button" disabled={saving} onClick={close}>
-            Cancel
-          </button>
-          <button
-            type="button"
-            className="cta"
-            disabled={saving}
-            onClick={() => void save({ status: "skipped", reason })}
-          >
-            {saving ? "Saving…" : "Save skip"}
+          <button type="button" className="ex-log-link" disabled={saving} onClick={() => setChoosing(true)}>
+            Change
           </button>
         </div>
+        {/* A skip saves in one tap; why is a second, optional tap. */}
+        {log.status === "skipped" ? (
+          <ReasonChips
+            selected={log.reason}
+            painAllowed={logging.painReasonAllowed}
+            skipped
+            disabled={saving}
+            onSelect={(next) => void save({ status: "skipped", reason: next })}
+          />
+        ) : null}
+        {alert}
       </div>
     );
   }
 
   return (
-    <div className="ex-log" data-mode="idle" data-logged={log ? "true" : undefined}>
-      {log && mode !== "choose" ? (
-        <SavedLog fields={fields} log={log} disabled={saving} onEdit={() => setMode("choose")} />
-      ) : (
-        <>
-          <p className="ex-log-title">{log ? "Change this log" : "Log it"}</p>
-          <div className="ex-log-choices">
-            <button
-              type="button"
-              className="ex-log-choice ex-log-choice-primary"
-              disabled={saving}
-              onClick={() => void save({ status: "as_prescribed" })}
-            >
-              {saving ? "Saving…" : "Done as written"}
-            </button>
-            {hasLoggableNumbers(fields) ? (
-              <button type="button" className="ex-log-choice" disabled={saving} onClick={() => open("numbers")}>
-                Log numbers
-              </button>
-            ) : null}
-            <button type="button" className="ex-log-choice" disabled={saving} onClick={() => open("skip")}>
-              Skipped
-            </button>
-            {log ? (
-              <button type="button" className="ex-log-edit" disabled={saving} onClick={close}>
-                Cancel
-              </button>
-            ) : null}
-          </div>
-        </>
-      )}
-      {error ? (
-        <p className="form-error" role="alert">
-          {error}
-        </p>
-      ) : null}
+    <div className="ex-log" data-mode="idle">
+      <div className="ex-log-choices">
+        <button
+          type="button"
+          className="ex-log-choice ex-log-choice-primary"
+          disabled={saving}
+          onClick={() => void save({ status: "as_prescribed" })}
+        >
+          Done
+        </button>
+        {hasLoggableNumbers(fields) ? (
+          <button type="button" className="ex-log-choice" disabled={saving} onClick={openEditor}>
+            Log numbers
+          </button>
+        ) : null}
+        <button
+          type="button"
+          className="ex-log-choice"
+          disabled={saving}
+          onClick={() => void save({ status: "skipped" })}
+        >
+          Skip
+        </button>
+        {log ? (
+          <button type="button" className="ex-log-link" disabled={saving} onClick={closeEditor}>
+            Cancel
+          </button>
+        ) : null}
+      </div>
+      {alert}
     </div>
   );
 }

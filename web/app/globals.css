@@ -20342,24 +20342,86 @@ html[data-theme="light"] .loading-operational-item {
 
 /* -- Exercise log ---------------------------------------------------------- */
 /* What the athlete did, under the read-only prescription (Today, once the
-   session is started). */
+   session is started). Kept to one line wherever it can be. */
+.ex-log-tick {
+  position: relative;
+  z-index: 1;
+  flex: 0 0 auto;
+  width: 26px;
+  height: 26px;
+  /* A 26px mark with a 44px hit area, level with the exercise name. */
+  align-self: flex-start;
+  margin: -12px -9px -9px;
+  padding: 0;
+  border: 9px solid transparent;
+  border-radius: 50%;
+  background: none;
+  box-sizing: content-box;
+  cursor: pointer;
+}
+.ex-log-tick::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border: 1.5px solid var(--border-strong);
+  border-radius: 50%;
+  transition: border-color var(--transition-fast), background var(--transition-fast);
+}
+.ex-log-tick:hover:not(:disabled)::before,
+.ex-log-tick:focus-visible::before {
+  border-color: var(--text-primary);
+}
+.ex-log-tick:focus-visible {
+  outline: none;
+}
+.ex-log-tick:focus-visible::before {
+  outline: 2px solid var(--brand-red);
+  outline-offset: 2px;
+}
+.ex-log-tick:disabled {
+  opacity: 0.5;
+}
+.ex-log-tick::after {
+  content: "";
+  position: absolute;
+  opacity: 0;
+}
+.ex-log-tick[data-status]::after {
+  opacity: 1;
+}
+.ex-log-tick[data-status="as_prescribed"]::before {
+  border-color: var(--success-ink);
+  background: var(--success-ink);
+}
+.ex-log-tick[data-status="as_prescribed"]::after,
+.ex-log-tick[data-status="modified"]::after {
+  left: 9px;
+  top: 5px;
+  width: 6px;
+  height: 11px;
+  border: solid var(--bg-stat);
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+.ex-log-tick[data-status="modified"]::before {
+  border-color: var(--progress-gold);
+  background: var(--progress-gold);
+}
+.ex-log-tick[data-status="skipped"]::before {
+  border-color: var(--text-muted);
+}
+.ex-log-tick[data-status="skipped"]::after {
+  left: 8px;
+  top: 12px;
+  width: 10px;
+  border-top: 2px solid var(--text-muted);
+}
 .ex-row-log {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  margin-top: 2px;
+  margin-top: 1px;
   color: var(--success-ink);
   font-family: var(--font-mono);
   font-size: 0.76rem;
   line-height: 1.4;
-}
-.ex-row-log::before {
-  content: "";
-  flex: 0 0 auto;
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: currentColor;
 }
 .ex-row-log[data-status="modified"] {
   color: var(--progress-gold);
@@ -20370,215 +20432,199 @@ html[data-theme="light"] .loading-operational-item {
 .ex-log {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding-top: 14px;
-  border-top: 1px solid var(--border-subtle);
+  gap: 10px;
 }
-.ex-log-title {
-  margin: 0;
-  font-size: 0.8rem;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--text-primary);
-}
-.ex-log-help {
-  margin: -6px 0 0;
-  color: var(--text-secondary);
-  font-size: 0.82rem;
-  line-height: 1.45;
-}
-.ex-log-choices {
+.ex-log-choices,
+.ex-log-bar {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
   gap: 8px;
 }
-.ex-log-choice {
-  flex: 1 1 auto;
+.ex-log-choice,
+.ex-log-save {
+  flex: 1 1 0;
   min-height: 44px;
-  padding: 0 14px;
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-btn);
-  background: var(--bg-input);
-  color: var(--text-primary);
+  padding: 0 10px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--text-secondary);
   font: inherit;
-  font-size: 0.9rem;
+  font-size: 0.88rem;
   font-weight: 600;
+  white-space: nowrap;
   cursor: pointer;
-  transition: border-color var(--transition-fast), background var(--transition-fast);
+  transition: border-color var(--transition-fast), color var(--transition-fast), opacity var(--transition-fast);
 }
 .ex-log-choice:hover:not(:disabled),
 .ex-log-choice:focus-visible {
-  border-color: var(--brand-red);
+  border-color: var(--border-strong);
+  color: var(--text-primary);
 }
-.ex-log-choice-primary {
-  flex-basis: 100%;
+.ex-log-choice-primary,
+.ex-log-save {
+  flex-grow: 1.6;
   border-color: transparent;
   background: var(--text-primary);
   color: var(--bg-stat);
 }
 .ex-log-choice-primary:hover:not(:disabled),
-.ex-log-choice-primary:focus-visible {
+.ex-log-choice-primary:focus-visible,
+.ex-log-save:hover:not(:disabled),
+.ex-log-save:focus-visible {
   border-color: transparent;
-  opacity: 0.9;
+  color: var(--bg-stat);
+  opacity: 0.88;
 }
-.ex-log-choice:disabled,
-.ex-log-edit:disabled {
-  opacity: 0.5;
+.ex-log :is(.ex-log-choice, .ex-log-save, .ex-log-link, .ex-log-chip):disabled {
+  opacity: 0.45;
   cursor: not-allowed;
 }
-.ex-log-fields {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(88px, 1fr));
-  /* A label that wraps ("Duration (min)") must not push its input out of line. */
-  align-items: end;
-  gap: 8px;
-}
-.ex-log-field {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-  min-width: 0;
-}
-.ex-log-field input {
-  width: 100%;
-  min-height: 46px;
-  padding: 0 10px;
-  border: 1px solid var(--border-strong);
-  border-radius: 10px;
-  background: var(--bg-input);
-  color: var(--text-primary);
-  /* 16px keeps iOS from zooming the page when the field takes focus. */
-  font-size: 1rem;
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-}
-.ex-log-field input::placeholder {
-  color: var(--text-muted);
-  font-weight: 500;
-}
-.ex-log-field input:focus-visible {
-  outline: 2px solid var(--brand-red);
-  outline-offset: 1px;
-}
-.ex-log-field input[aria-invalid="true"] {
-  border-color: var(--danger-ink);
-}
-.ex-log-reason {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-.ex-log-reason .feedback-chips {
-  gap: 8px;
-}
-.ex-log-confirm {
-  margin: 0;
-  padding: 10px 12px;
-  border: 1px solid var(--progress-gold-border);
-  border-radius: 10px;
-  background: var(--progress-gold-soft);
-  color: var(--text-primary);
-  font-size: 0.86rem;
-  line-height: 1.45;
-}
-.ex-log-actions {
-  display: flex;
-  gap: 8px;
-}
-.ex-log-actions > button {
-  flex: 1 1 0;
-}
-.ex-log-result {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-.ex-log-status {
-  display: inline-flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 4px 8px;
-  margin: 0;
-  color: var(--success-ink);
-  font-size: 0.92rem;
-  font-weight: 700;
-}
-.ex-log-status::before {
-  content: "";
-  flex: 0 0 auto;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: currentColor;
-}
-.ex-log-status[data-status="modified"] {
-  color: var(--progress-gold);
-}
-.ex-log-status[data-status="skipped"] {
-  color: var(--text-secondary);
-}
-.ex-log-status-reason {
-  color: var(--text-secondary);
-  font-weight: 500;
-}
-.ex-log-edit {
+.ex-log-link {
   flex: 0 0 auto;
   min-height: 44px;
-  padding: 0 6px;
+  padding: 0 8px;
   border: 0;
   background: none;
-  color: var(--text-secondary);
+  color: var(--text-muted);
   font: inherit;
-  font-size: 0.86rem;
+  font-size: 0.84rem;
   font-weight: 600;
-  text-decoration: underline;
-  text-underline-offset: 3px;
   cursor: pointer;
 }
-.ex-log-edit:hover:not(:disabled),
-.ex-log-edit:focus-visible {
+.ex-log-link:hover:not(:disabled),
+.ex-log-link:focus-visible {
   color: var(--text-primary);
 }
-/* Same quiet panel as the prescription above it, so the two read as a pair. */
-.ex-log-values {
-  display: flex;
-  flex-wrap: wrap;
+.ex-log-bar > .ex-log-save {
+  flex: 1 1 auto;
+}
+/* The inputs are one quiet panel, cut like the prescription above it. */
+.ex-log-fields {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 1px;
-  margin: 0;
   background: var(--border-subtle);
   border-radius: 12px;
   overflow: hidden;
 }
-.ex-log-value {
-  flex: 1 1 30%;
+.ex-log-fields:is([data-count="1"], [data-count="2"], [data-count="3"]) {
+  grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
+}
+.ex-log-field {
   display: flex;
   flex-direction: column;
-  gap: 3px;
-  padding: 10px 10px 11px;
+  gap: 2px;
+  min-width: 0;
+  padding: 9px 10px 4px;
   background: var(--bg-support);
+  cursor: text;
 }
-.ex-log-value .sp-stat-label {
+.ex-log-field:focus-within {
+  background: var(--bg-input);
+  box-shadow: inset 0 -2px 0 var(--brand-red);
+}
+.ex-log-field:has(input[aria-invalid="true"]) {
+  box-shadow: inset 0 -2px 0 var(--danger-ink);
+}
+.ex-log-field-label {
   font-size: 0.64rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
   color: var(--text-muted);
+  white-space: nowrap;
 }
-.ex-log-value dd {
-  margin: 0;
+.ex-log-field-unit {
+  text-transform: none;
+  letter-spacing: 0;
+}
+.ex-log-field input {
+  width: 100%;
+  min-height: 34px;
+  padding: 0;
+  border: 0;
+  background: transparent;
   color: var(--text-primary);
-  font-size: 0.95rem;
+  /* 16px keeps iOS from zooming the page when the field takes focus. */
+  font-size: 1.05rem;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
-.ex-log-value[data-changed="true"] dd {
+.ex-log-field input:focus {
+  outline: none;
+}
+.ex-log-field input::placeholder {
+  color: var(--text-muted);
+  font-weight: 500;
+  opacity: 0.7;
+}
+.ex-log-reasons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.ex-log-chip {
+  min-height: 36px;
+  padding: 0 12px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: 0.82rem;
+  cursor: pointer;
+  transition: border-color var(--transition-fast), background var(--transition-fast), color var(--transition-fast);
+}
+.ex-log-chip:hover:not(:disabled),
+.ex-log-chip:focus-visible {
+  border-color: var(--border-strong);
+  color: var(--text-primary);
+}
+.ex-log-chip[aria-pressed="true"],
+.ex-log-chip[aria-pressed="true"]:hover:not(:disabled) {
+  border-color: var(--text-primary);
+  background: var(--text-primary);
+  color: var(--bg-stat);
+}
+.ex-log-confirm {
+  margin: 0;
   color: var(--progress-gold);
+  font-size: 0.86rem;
+  line-height: 1.4;
+}
+.ex-log-error {
+  margin: 0;
+}
+.ex-log-status {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 0;
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.5;
+}
+.ex-log-status-label {
+  color: var(--success-ink);
+  font-weight: 700;
+}
+.ex-log-status[data-status="modified"] .ex-log-status-label {
+  color: var(--progress-gold);
+}
+.ex-log-status[data-status="skipped"] .ex-log-status-label {
+  color: var(--text-secondary);
+}
+.ex-log-status-value::before {
+  content: "·";
+  margin: 0 7px;
+  color: var(--text-muted);
 }
 .ex-log-instead {
   color: var(--text-muted);
-  font-size: 0.78rem;
-  font-weight: 500;
-  white-space: nowrap;
 }
 
 /* -- Exercise demo --------------------------------------------------------- */

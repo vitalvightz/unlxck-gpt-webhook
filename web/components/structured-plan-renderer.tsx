@@ -83,7 +83,7 @@ import { GlossaryTooltip } from "@/components/glossary-tooltip";
 import { glossaryEntry } from "@/lib/glossary";
 import { WhyTooltip } from "@/components/why-tooltip";
 import { ExerciseDemo, ExerciseMediaProvider, useExerciseMedia } from "@/components/exercise-demo";
-import { ExerciseLogBadge, ExerciseLogPanel } from "@/components/exercise-log";
+import { ExerciseLogBadge, ExerciseLogPanel, ExerciseLogTick } from "@/components/exercise-log";
 import { demoThumbnailUrl } from "@/lib/exercise-demo";
 import { SafetyNote } from "@/components/safety-note";
 import { PLAN_SAFETY_NOTE } from "@/lib/safety-copy";
@@ -590,6 +590,8 @@ export function ExerciseRow({
           stays one big tap target while the type's glossary "i" (a button of
           its own) can sit in the header without nesting inside it. */}
       <div className="ex-row-head">
+        {/* Today, once the session is started: one tap logs it as written. */}
+        <ExerciseLogTick block={block} onOpen={() => (open ? undefined : onToggle())} />
         <span className="ex-row-text">
           <button
             type="button"

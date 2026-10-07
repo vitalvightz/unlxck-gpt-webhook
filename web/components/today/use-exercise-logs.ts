@@ -17,6 +17,7 @@ export function useTodayExerciseLogs({
   trainingDay,
   enabled,
   painReasonAllowed,
+  onError,
 }: {
   token: string;
   planId: string;
@@ -25,6 +26,8 @@ export function useTodayExerciseLogs({
   /** The server only accepts a log for a session started or completed today. */
   enabled: boolean;
   painReasonAllowed: boolean;
+  /** Reports a failed one-tap save from a collapsed row. */
+  onError?: (message: string) => void;
 }): ExerciseLogging | null {
   const scope = `${planId}:${trainingDay}`;
   const [loaded, setLoaded] = useState<{ scope: string; logs: Record<string, ExerciseLogRecord> }>({
@@ -72,8 +75,8 @@ export function useTodayExerciseLogs({
 
   const logs = loaded.scope === scope ? loaded.logs : EMPTY_LOGS;
   return useMemo(
-    () => (active ? { logs, save, painReasonAllowed } : null),
-    [active, logs, save, painReasonAllowed],
+    () => (active ? { logs, save, painReasonAllowed, onError } : null),
+    [active, logs, save, painReasonAllowed, onError],
   );
 }
 

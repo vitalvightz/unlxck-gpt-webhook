@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useSyncExternalStore, type ReactNode } from "react";
+import { useCallback, useEffect, useState, useSyncExternalStore, type ReactNode } from "react";
 
 import { ExerciseMediaProvider } from "@/components/exercise-demo";
 import { ExerciseLogProvider, type ExerciseLogging } from "@/components/exercise-log";
@@ -389,6 +389,10 @@ export function TodaySessionPanel({
   // Exercises are logged against a session started (or already completed)
   // today, which is the same condition the server enforces. A card that has
   // moved on to the next session shows another day's blocks, so it stays closed.
+  const reportExerciseLogError = useCallback(
+    (message: string) => showToast(message, { tone: "error" }),
+    [showToast],
+  );
   const exerciseLogging = useTodayExerciseLogs({
     token,
     planId: activePlanId,
@@ -397,6 +401,7 @@ export function TodaySessionPanel({
       resolvedDecision.sessionIsToday &&
       (status === "started" || status === "done" || status === "modified"),
     painReasonAllowed,
+    onError: reportExerciseLogError,
   });
   useEffect(() => {
     if (!token || !activePlanId) {

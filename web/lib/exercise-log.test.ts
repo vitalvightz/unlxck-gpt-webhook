@@ -159,9 +159,9 @@ test("a saved log reads back as its draft, its values and its one-line summary",
   });
   assert.deepEqual(draftFromLog(fields, changed), { sets: "3", reps: "6", load: "80" });
   assert.deepEqual(loggedValues(fields, changed), [
-    { key: "sets", label: "Sets", value: "3", insteadOf: "4" },
-    { key: "reps", label: "Reps", value: "6", insteadOf: "8" },
-    { key: "load", label: "Load", value: "80 kg", insteadOf: null },
+    { key: "sets", label: "Sets", value: "3", text: "3 sets", insteadOf: "4" },
+    { key: "reps", label: "Reps", value: "6", text: "6 reps", insteadOf: "8" },
+    { key: "load", label: "Load", value: "80 kg", text: "80 kg", insteadOf: null },
   ]);
   assert.equal(logSummary(fields, changed), "Changed · 3 sets · 6 reps · 80 kg");
   assert.equal(logSummary(fields, log(deadlift, {})), "Done");

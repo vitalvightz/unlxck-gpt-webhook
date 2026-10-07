@@ -51,17 +51,25 @@ type Saved = Omit<ExerciseLogRequest, "plan_id">;
 /** Mounts one open row with live logging and returns what it saved. */
 function mount(
   block: StructuredBlock,
-  options: { logs?: Record<string, ExerciseLogRecord>; painReasonAllowed?: boolean; fail?: string } = {},
+  options: {
+    logs?: Record<string, ExerciseLogRecord>;
+    painReasonAllowed?: boolean;
+    fail?: string;
+    open?: boolean;
+  } = {},
 ) {
   const container = document.createElement("div");
   document.body.appendChild(container);
   const saved: Saved[] = [];
+  const errors: string[] = [];
+  let toggles = 0;
   let logs = options.logs ?? {};
   let root: Root;
   const render = () => {
     const logging: ExerciseLogging = {
       logs,
       painReasonAllowed: options.painReasonAllowed ?? true,
+      onError: (message) => errors.push(message),
       save: async (request) => {
         if (options.fail) {
           throw new Error(options.fail);
@@ -80,7 +88,7 @@ function mount(
     };
     root.render(
       <ExerciseLogProvider logging={logging}>
-        <ExerciseRow block={block} open onToggle={() => {}} />
+        <ExerciseRow block={block} open={options.open ?? true} onToggle={() => (toggles += 1)} />
       </ExerciseLogProvider>,
     );
   };
@@ -90,12 +98,15 @@ function mount(
   });
   const button = (name: string) =>
     Array.from(container.querySelectorAll("button")).find((node) => node.textContent?.trim() === name);
-  const click = async (name: string) => {
-    const target = button(name);
-    assert.ok(target, `button "${name}" not found`);
+  const press = async (target: Element) => {
     await act(async () => {
       target.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
     });
+  };
+  const click = async (name: string) => {
+    const target = button(name);
+    assert.ok(target, `button "${name}" not found`);
+    await press(target);
   };
   const type = async (label: string, value: string) => {
     const field = Array.from(container.querySelectorAll("label")).find((node) =>
@@ -112,7 +123,10 @@ function mount(
   return {
     container,
     saved,
+    errors,
+    toggled: () => toggles,
     button,
+    press,
     click,
     type,
     text: () => container.textContent ?? "",
@@ -145,7 +159,7 @@ test("rehab blocks and blocks without a server id are never loggable", () => {
     );
   assert.equal(render({ ...deadlift, block_type: "rehab" }).includes("ex-log"), false);
   assert.equal(render({ ...deadlift, block_id: null }).includes("ex-log"), false);
-  assert.equal(render(deadlift).includes("Done as written"), true);
+  assert.equal(render(deadlift).includes("ex-log-tick"), true);
 });
 
 test("the prescription stays read-only: the stats are not inputs", () => {
@@ -154,13 +168,46 @@ test("the prescription stays read-only: the stats are not inputs", () => {
   view.unmount();
 });
 
-test("one tap logs the exercise as written", async () => {
-  const view = mount(deadlift);
-  await view.click("Done as written");
+test("the tick logs a collapsed exercise as written in one tap", async () => {
+  const view = mount(deadlift, { open: false });
+  const tick = view.container.querySelector<HTMLButtonElement>(".ex-log-tick");
+  assert.equal(tick?.getAttribute("aria-label"), "Mark Trap Bar Deadlift done as written");
+  await view.press(tick!);
 
   assert.deepEqual(view.saved, [{ block_id: "blk-deadlift", status: "as_prescribed" }]);
-  assert.equal(view.text().includes("Done as written"), true);
-  assert.ok(view.button("Edit"));
+  const logged = view.container.querySelector(".ex-log-tick");
+  assert.equal(logged?.getAttribute("data-status"), "as_prescribed");
+  assert.equal(logged?.getAttribute("aria-label"), "Trap Bar Deadlift: done. Change");
+  // A plain "done" needs no extra line under the name.
+  assert.equal(view.container.querySelector(".ex-row-log"), null);
+  view.unmount();
+});
+
+test("tapping the tick of a logged exercise opens it instead of saving again", async () => {
+  const view = mount(deadlift, { open: false, logs: { "blk-deadlift": record(deadlift) } });
+  await view.press(view.container.querySelector<HTMLButtonElement>(".ex-log-tick")!);
+
+  assert.deepEqual(view.saved, []);
+  assert.equal(view.toggled(), 1);
+  view.unmount();
+});
+
+test("a failed one-tap save is reported and leaves the exercise unlogged", async () => {
+  const view = mount(deadlift, { open: false, fail: "Start today's session before logging an exercise." });
+  await view.press(view.container.querySelector<HTMLButtonElement>(".ex-log-tick")!);
+
+  assert.deepEqual(view.errors, ["Start today's session before logging an exercise."]);
+  assert.equal(view.container.querySelector(".ex-log-tick")?.hasAttribute("data-status"), false);
+  view.unmount();
+});
+
+test("one tap inside the open row logs it as written", async () => {
+  const view = mount(deadlift);
+  await view.click("Done");
+
+  assert.deepEqual(view.saved, [{ block_id: "blk-deadlift", status: "as_prescribed" }]);
+  assert.equal(view.container.querySelector(".ex-log-status")?.textContent, "Done");
+  assert.ok(view.button("Change"));
   view.unmount();
 });
 
@@ -168,10 +215,10 @@ test("logging different numbers saves only the change, with the chosen reason", 
   const view = mount(deadlift);
   await view.click("Log numbers");
   // No reason is asked for until something actually departs from the plan.
-  assert.equal(view.text().includes("Why?"), false);
+  assert.equal(view.container.querySelector(".ex-log-reasons"), null);
   await view.type("Sets", "3");
   await view.type("Load", "80");
-  assert.equal(view.text().includes("Why?"), true);
+  assert.ok(view.container.querySelector(".ex-log-reasons"));
   await view.click("Equipment");
   await view.click("Save");
 
@@ -183,11 +230,11 @@ test("logging different numbers saves only the change, with the chosen reason", 
       reason: "equipment",
     },
   ]);
-  // Prescribed and actual side by side.
-  const values = view.container.querySelector(".ex-log-values")?.textContent ?? "";
-  assert.equal(values.includes("3 not 4"), true);
-  assert.equal(values.includes("80 kg"), true);
-  assert.equal(view.text().includes("You changed it"), true);
+  // Prescribed and actual on one line.
+  assert.equal(
+    view.container.querySelector(".ex-log-status")?.textContent,
+    "Changed3 sets not 480 kgEquipment",
+  );
   view.unmount();
 });
 
@@ -210,7 +257,7 @@ test("an entry far from the prescription is confirmed before it is saved", async
   await view.click("Save");
 
   assert.deepEqual(view.saved, []);
-  assert.equal(view.container.querySelector(".ex-log-confirm")?.textContent?.includes("15 min against 3 prescribed"), true);
+  assert.equal(view.container.querySelector(".ex-log-confirm")?.textContent, "15 min against 3 prescribed?");
 
   await view.click("Yes, save");
   assert.deepEqual(view.saved, [
@@ -250,25 +297,27 @@ test("an unusable number is pointed at and nothing is saved", async () => {
   view.unmount();
 });
 
-test("skipping takes an optional reason", async () => {
+test("skipping saves in one tap; the reason is a second, optional tap", async () => {
   const view = mount(deadlift);
-  await view.click("Skipped");
-  await view.click("Fatigue");
-  await view.click("Save skip");
+  await view.click("Skip");
+  assert.deepEqual(view.saved, [{ block_id: "blk-deadlift", status: "skipped" }]);
+  // Nobody skips because they felt strong.
+  assert.equal(view.button("Felt strong"), undefined);
 
-  assert.deepEqual(view.saved, [{ block_id: "blk-deadlift", status: "skipped", reason: "fatigue" }]);
-  assert.equal(view.text().includes("Skipped"), true);
+  await view.click("Fatigue");
+  assert.deepEqual(view.saved[1], { block_id: "blk-deadlift", status: "skipped", reason: "fatigue" });
+  assert.equal(view.button("Fatigue")?.getAttribute("aria-pressed"), "true");
   view.unmount();
 });
 
 test("the pain reason is only offered with health consent", async () => {
   const withConsent = mount(deadlift);
-  await withConsent.click("Skipped");
+  await withConsent.click("Skip");
   assert.ok(withConsent.button("Pain"));
   withConsent.unmount();
 
   const without = mount(deadlift, { painReasonAllowed: false });
-  await without.click("Skipped");
+  await without.click("Skip");
   assert.equal(without.button("Pain"), undefined);
   assert.ok(without.button("Fatigue"));
   without.unmount();
@@ -278,15 +327,15 @@ test("a saved log can be changed to a different outcome", async () => {
   const view = mount(deadlift, {
     logs: { "blk-deadlift": record(deadlift, { status: "modified", actual: { sets: 3 }, reason: "fatigue" }) },
   });
-  assert.equal(view.text().includes("You changed it"), true);
-  await view.click("Edit");
+  assert.equal(view.container.querySelector(".ex-log-status")?.textContent, "Changed3 sets not 4Fatigue");
+  await view.click("Change");
   await view.click("Log numbers");
   // The editor opens on what was saved.
   const sets = view.container.querySelector<HTMLInputElement>(".ex-log-field input");
   assert.equal(sets?.value, "3");
   await view.click("Cancel");
-  await view.click("Edit");
-  await view.click("Done as written");
+  await view.click("Change");
+  await view.click("Done");
 
   assert.deepEqual(view.saved, [{ block_id: "blk-deadlift", status: "as_prescribed" }]);
   view.unmount();
@@ -306,7 +355,7 @@ test("a failed save keeps the entry and shows the server's message", async () =>
   view.unmount();
 });
 
-test("a collapsed row carries the logged outcome", () => {
+test("a collapsed row carries the numbers that were logged", () => {
   const logging: ExerciseLogging = {
     logs: { "blk-deadlift": record(deadlift, { status: "modified", actual: { sets: 3, load: { value: 80, unit: "kg" } } }) },
     painReasonAllowed: true,
