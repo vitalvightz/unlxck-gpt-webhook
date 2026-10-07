@@ -60,18 +60,17 @@ export type TodayCommand = {
 
 const EMPTY_PLAN_SCHEDULE: TodayPlanSchedule = { scheduleContext: null, createdAt: null };
 
-// The active plan id the last Today read returned for this session. The plan
-// read used to start only after /api/today resolved, stacking two full round
-// trips on every Today load and refresh. With this remembered, the plan read
-// starts alongside Today and is used only when Today confirms the same plan.
-let rememberedActivePlan: { token: string; planId: string } | null = null;
+const PRESENTATION_TTL_MS = 60_000;
 
-function rememberedActivePlanId(token: string): string | null {
-  return rememberedActivePlan?.token === token ? rememberedActivePlan.planId : null;
-}
-
-function rememberActivePlanId(token: string, planId: string | null | undefined): void {
-  rememberedActivePlan = planId ? { token, planId } : null;
+function presentationKey(state: TodayCommandView): string {
+  return JSON.stringify({
+    plan: state.active_plan.id,
+    day: state.today.training_day,
+    // Rehab/Prehab labels follow the actual flag, not transient allocation or
+    // completion decorations added by the live Today command.
+    injuries: state.open_injuries.map(({ id, status, body_area, description, severity, updated_at }) =>
+      ({ id, status, body_area, description, severity, updated_at })),
+  });
 }
 
 /**
@@ -92,6 +91,8 @@ export function useTodayCommand(token: string | null): TodayCommand {
   const [error, setError] = useState<string | null>(null);
   const refreshSequence = useRef(0);
   const loadedPlanId = useRef<string | null>(null);
+  const presentation = useRef<{ token: string; key: string; loadedAt: number } | null>(null);
+  const pendingPlan = useRef<{ token: string; key: string; promise: Promise<PlanDetail | null> } | null>(null);
 
   const refresh = useCallback(async () => {
     if (!token) {
@@ -99,14 +100,9 @@ export function useTodayCommand(token: string | null): TodayCommand {
     }
     const sequence = ++refreshSequence.current;
     try {
-      const guessedPlanId = rememberedActivePlanId(token);
-      const speculativePlan: Promise<PlanDetail | null> | null = guessedPlanId
-        ? getPlan(token, guessedPlanId).catch(() => null)
-        : null;
       const nextState = await getToday(token);
       if (sequence !== refreshSequence.current) return;
       const activePlanId = nextState.active_plan.id;
-      rememberActivePlanId(token, activePlanId);
       // Readiness and save acknowledgement must not wait for presentation data.
       // Keep the current blocks during a same-plan refresh; the server's live
       // prescription in nextState remains authoritative for training actions.
@@ -120,6 +116,10 @@ export function useTodayCommand(token: string | null): TodayCommand {
         setExerciseMedia(null);
       }
       loadedPlanId.current = activePlanId ?? null;
+      const key = presentationKey(nextState);
+      const loaded = presentation.current;
+      if (activePlanId && loaded?.token === token && loaded.key === key
+        && Date.now() - loaded.loadedAt < PRESENTATION_TTL_MS) return;
       void (async () => {
         let nextStructuredPlan: StructuredPlan | null = null;
         let nextPlanSchedule = EMPTY_PLAN_SCHEDULE;
@@ -132,13 +132,13 @@ export function useTodayCommand(token: string | null): TodayCommand {
           // today is settled by the backend in `nextState` and is never
           // recomputed from this plan — see today_service.build_today_command_view.
           try {
-            const speculativeDetail =
-              speculativePlan && guessedPlanId === activePlanId ? await speculativePlan : null;
-            // A failed speculative read is already a failed plan read. Do not
-            // retry it serially and stretch every save by another retry budget.
-            const detail = speculativePlan && guessedPlanId === activePlanId
-              ? speculativeDetail
-              : await getPlan(token, activePlanId);
+            let pending = pendingPlan.current;
+            if (pending?.token !== token || pending.key !== key) {
+              pending = { token, key, promise: getPlan(token, activePlanId).catch(() => null) };
+              pendingPlan.current = pending;
+            }
+            const detail = await pending.promise;
+            if (pendingPlan.current === pending) pendingPlan.current = null;
             if (!detail) return;
             nextStructuredPlan = resolveTodayStructuredPlan(detail);
             nextPlanSchedule = {
@@ -154,6 +154,7 @@ export function useTodayCommand(token: string | null): TodayCommand {
         }
 
         if (sequence !== refreshSequence.current) return;
+        presentation.current = { token, key, loadedAt: Date.now() };
         setStructuredPlan(nextStructuredPlan);
         setPlanSchedule(nextPlanSchedule);
         setRehabLabelPolicy(nextRehabLabelPolicy);

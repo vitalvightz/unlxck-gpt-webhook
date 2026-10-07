@@ -934,7 +934,7 @@ def submit_today_checkin(
 
     # Writes are service-role (RLS does not gate them here), so the backend must
     # prove the plan belongs to the caller before persisting anything.
-    plan_row = store.get_plan_for_athlete(plan_id, athlete_id)
+    plan_row = store.get_training_plan_for_athlete(plan_id, athlete_id)
     if plan_row is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
 
@@ -1289,7 +1289,7 @@ def upsert_session_completion(
     _require_valid_plan_id(plan_id)
 
     # Service-role write: enforce plan ownership at the backend (RLS won't here).
-    plan_row = store.get_plan_for_athlete(plan_id, athlete_id)
+    plan_row = store.get_training_plan_for_athlete(plan_id, athlete_id)
     if plan_row is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
 
@@ -1578,10 +1578,6 @@ def submit_today_injury_checkin(
         current_training_day=training_day,
     ).plan
     plan_id = str(active_plan_row.get("id") or "").strip() if active_plan_row else None
-    if active_plan_row and plan_id:
-        full_plan_row = store.get_plan_for_athlete(plan_id, athlete_id)
-        if full_plan_row:
-            active_plan_row = full_plan_row
 
     for fields in plan.creates:
         identity = injury_evidence_identity(str(fields.get("body_area") or ""), str(fields.get("description") or ""))

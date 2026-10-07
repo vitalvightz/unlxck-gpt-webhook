@@ -6,7 +6,7 @@ from unittest.mock import MagicMock
 import pytest
 from fastapi import HTTPException
 
-from api.store import SupabaseAppStore
+from api.store import SupabaseAppStore, TRAINING_PLAN_SELECT
 
 ROWS = [
     {"plan_id": "p", "training_day": "2026-10-07", "block_id": "a", "status": "as_prescribed"},
@@ -57,3 +57,38 @@ def test_an_empty_batch_makes_no_request():
 
     assert store.upsert_exercise_logs("ath", []) == []
     client.table.assert_not_called()
+
+
+@pytest.mark.parametrize("method,columns", [
+    ("get_plan_identity_for_athlete", "id,athlete_id"),
+    ("get_training_plan_for_athlete", TRAINING_PLAN_SELECT),
+])
+def test_compact_plan_reads_keep_the_owner_scope(method, columns):
+    client = MagicMock()
+    query = client.table.return_value.select.return_value.eq.return_value.eq.return_value
+    query.limit.return_value.execute.return_value = SimpleNamespace(data=[{"id": "p", "athlete_id": "ath"}])
+    store = SupabaseAppStore(client=client, admin_emails=set())
+
+    assert getattr(store, method)("p", "ath") == {"id": "p", "athlete_id": "ath"}
+    client.table.assert_called_once_with("plans")
+    client.table.return_value.select.assert_called_once_with(columns)
+    client.table.return_value.select.return_value.eq.assert_called_once_with("id", "p")
+    client.table.return_value.select.return_value.eq.return_value.eq.assert_called_once_with("athlete_id", "ath")
+    query.limit.assert_called_once_with(1)
+
+
+def test_training_projection_keeps_fallback_inputs_without_stage2_blobs():
+    columns = set(TRAINING_PLAN_SELECT.split(","))
+    assert {"planning_brief", "plan_text", "structured_plan", "intake_id", "parsing_metadata"} <= columns
+    assert not columns & {"stage2_payload", "stage2_handoff_text", "stage2_retry_text", "draft_plan_text", "final_plan_text"}
+
+
+def test_failed_identity_read_is_an_outage_not_plan_not_found(monkeypatch):
+    import httpx
+    client = MagicMock()
+    store = SupabaseAppStore(client=client, admin_emails=set())
+    monkeypatch.setattr(store, "_select_first", lambda _query: (_ for _ in ()).throw(httpx.ConnectError("offline")))
+    monkeypatch.setattr("api.store.time.sleep", lambda _seconds: None)
+    with pytest.raises(HTTPException) as caught:
+        store.get_plan_identity_for_athlete("p", "ath")
+    assert caught.value.status_code == 503

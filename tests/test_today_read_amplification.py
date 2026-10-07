@@ -23,6 +23,7 @@ from api.services import today_service
 from api.services.fight_camp_notifications import FightCampDispatchResult
 from api.services import today_readiness_boundary_core
 from api.services.today_readiness_boundary import (
+    _BuildReadCache,
     build_today_command_view,
     reuse_today_command_views,
 )
@@ -505,3 +506,47 @@ def test_a_failed_shared_read_is_not_kept_so_the_view_reads_again():
 
     assert calls["n"] == 5  # the view read the open flags itself
     assert [injury["body_area"] for injury in view.open_injuries]
+
+
+def test_readiness_history_is_shared_only_within_one_build_and_same_limit():
+    store = _store_with_intake_injury()
+    build_today_command_view(store, athlete_id=ATHLETE, athlete_timezone="UTC", now=NOW)
+    assert store.reads["list_today_checkins"] == 1
+    store.reads.clear()
+    build_today_command_view(store, athlete_id=ATHLETE, athlete_timezone="UTC", now=NOW)
+    assert store.reads["list_today_checkins"] == 1
+
+
+def test_injury_update_uses_the_plan_already_read_by_active_plan_resolution():
+    store = _store_with_intake_injury()
+    flag_id = store.list_injury_flags(ATHLETE)[0]["id"]
+    store.reads.clear()
+
+    result = today_service.submit_today_injury_checkin(
+        store, athlete_id=ATHLETE, athlete_timezone="UTC", now=NOW,
+        payload={"injuries": [{"flag_id": flag_id, "status": "resolved"}]},
+    )
+
+    assert result["updated_injury_ids"] == [flag_id]
+    assert result["open_injuries"] == []
+    assert store.reads["get_plan_for_athlete"] == 1
+    assert store.reads["get_training_plan_for_athlete"] == 0
+
+
+def test_shared_history_retries_failures_and_invalidates_after_a_write():
+    store = _store_with_camp()
+    real_read = store.list_today_checkins
+    read = MagicMock(side_effect=[RuntimeError("temporarily down"), [{"id": "before"}], [{"id": "older"}]])
+    store.list_today_checkins = read
+    cache = _BuildReadCache(store)
+    with pytest.raises(RuntimeError):
+        cache.list_today_checkins(ATHLETE, limit=14)
+    first = cache.list_today_checkins(ATHLETE, limit=14)
+    first[0]["id"] = "mutated copy"
+    assert cache.list_today_checkins(ATHLETE, limit=14) == [{"id": "before"}]
+    assert read.call_count == 2
+    assert cache.list_today_checkins(ATHLETE, limit=28) == [{"id": "older"}]
+    assert read.call_count == 3
+    store.list_today_checkins = real_read
+    cache.upsert_today_checkin(ATHLETE, {"plan_id": PLAN, "training_day": "2026-06-03"})
+    assert cache.list_today_checkins(ATHLETE, limit=14)[0]["plan_id"] == PLAN
