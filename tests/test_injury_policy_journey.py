@@ -611,3 +611,110 @@ def test_skip_survives_raw_noncritical_rehab_read_failure(reviewed, monkeypatch)
     row = today_service.upsert_session_completion(store, athlete_id=ATHLETE, athlete_timezone="UTC", now=NOW,
         payload=dict(plan_id=PLAN, session_id="s", status="skipped", modification_reason="Resting today"))
     assert row["status"] == "skipped" and not row.get("prescription_snapshot")
+
+
+def test_rehab_replacement_does_not_borrow_held_training_coaching(reviewed):
+    session = {"session_id": "s", "session_type": "strength", "title": "Strength",
+               "objective": "Build structural strength", "coach_note": "Lift heavy",
+               "mindset_anchor": {"focus": "Power"}, "planned_duration": {"value": 60, "unit": "minutes"},
+               "coach_led_contact": "Hard sparring", "effective_load": "high",
+               "blocks": [{"block_id": "b", "block_type": "strength"}]}
+    snapshot = reconcile_session_prescription(session, decisions=[decide(reviewed)], plan_id=PLAN, training_day=DAY)
+    assert snapshot["rehab_only"]
+    replacement = snapshot["session"]
+    assert "strength" not in replacement.get("objective", "").lower()
+    assert not replacement.get("mindset_anchor") and not replacement.get("coach_led_contact")
+    assert not replacement.get("planned_duration")
+    assert replacement["effective_load"] == "reduced"
+
+
+def test_today_explains_the_rehab_replacement_instead_of_stored_green(reviewed, monkeypatch):
+    policy, bank, injury = reviewed
+    store = FakeStore()
+    store.injury_flags[ATHLETE] = [injury]
+    store.plans[PLAN] = {"id": PLAN, "athlete_id": ATHLETE, "status": "ready", "created_at": "2026-09-01T00:00:00Z",
+        "structured_plan": {"weeks": [{"phase_label": "GPP", "days": [{"date": DAY, "day_type": "moderate",
+            "sessions": [{"session_id": "strength", "session_type": "strength", "blocks": [{"block_id": "b", "block_type": "strength"}]}]}]}]}}
+    store.set_active_plan_id(ATHLETE, PLAN)
+    store.upsert_today_checkin(ATHLETE, {"plan_id": PLAN, "training_day": DAY, "recommendation_state": "train_as_planned", "pain": "none"})
+    monkeypatch.setattr(today_service, "load_clinical_policies", lambda: (policy,))
+    monkeypatch.setattr(today_service, "get_rehab_bank", lambda: bank)
+    view = today_service.build_today_command_view(store, athlete_id=ATHLETE, athlete_timezone="UTC", now=NOW)
+    assert view.live_prescription["rehab_only"] and not view.live_prescription["safety_hold"]
+    assert view.today.decision_tier == "modify" and view.today.recommendation_state == "modify"
+    assert "loading details" in view.today.recommendation_reason
+    assert store.get_today_checkin(ATHLETE, PLAN, DAY)["recommendation_state"] == "train_as_planned"
+    live = view.live_prescription
+    started = today_service.upsert_session_completion(store, athlete_id=ATHLETE, athlete_timezone="UTC", now=NOW,
+        payload={"plan_id": PLAN, "session_id": live["session"]["session_id"], "status": "started", "prescription_revision": live["revision"]})
+    assert started["prescription_snapshot"]["session"]["session_type"] == "rehab"
+
+
+@pytest.mark.parametrize("block_type", [
+    "preparation", "mobility_activation", "plyometric_power", "speed", "strength",
+    "strength_speed", "accessory", "conditioning", "cooldown_recovery", "nutrition", "mindset",
+])
+def test_no_contact_alone_does_not_hold_fitness_or_support_without_contact_metadata(reviewed, block_type):
+    decision = decide(reviewed)
+    decision["restrictions"] = {"blocked_regions": [], "blocked_tags": [], "contact_limit": "none"}
+    block = {"block_id": "b", "block_type": block_type, "display_name": "Work"}
+    session = {"session_id": "s", "session_type": "strength", "blocks": [block]}
+    snapshot = reconcile_session_prescription(session, decisions=[decision], plan_id=PLAN, training_day=DAY)
+    assert snapshot["session"]["session_id"] == "s"
+    assert snapshot["session"]["blocks"][0] == block
+    assert not snapshot["safety_hold"] and not snapshot["rehab_only"]
+    assert not snapshot["changes"]
+
+
+@pytest.mark.parametrize("block_type", ["strength", "conditioning", "preparation", "mobility_activation", "cooldown_recovery"])
+@pytest.mark.parametrize("contact", ["controlled", "full", "unknown", {}, 1])
+def test_no_contact_still_holds_explicit_contact_or_unknown_demands(reviewed, contact, block_type):
+    decision = decide(reviewed)
+    decision["restrictions"] = {"blocked_regions": [], "blocked_tags": [], "contact_limit": "none"}
+    block = {"block_id": "b", "block_type": block_type, "contact_level": contact}
+    snapshot = reconcile_session_prescription({"session_id": "s", "blocks": [block]}, decisions=[decision], plan_id=PLAN, training_day=DAY)
+    assert snapshot["rehab_only"] and snapshot["changes"][0]["action"] == "held"
+
+
+@pytest.mark.parametrize("regions, held", [(["shoulder"], False), (["ankle"], True), (None, True)])
+@pytest.mark.parametrize("block_type", ["strength", "conditioning", "plyometric_power", "speed", "accessory", "mobility_activation", "preparation", "cooldown_recovery"])
+def test_non_contact_default_preserves_injury_loading_guard(reviewed, regions, held, block_type):
+    block = {"block_id": "b", "block_type": block_type, "mechanical_load_regions": regions}
+    snapshot = reconcile_session_prescription({"session_id": "s", "blocks": [block]}, decisions=[decide(reviewed)], plan_id=PLAN, training_day=DAY)
+    assert snapshot["rehab_only"] is held
+    assert bool(snapshot["changes"]) is held
+
+
+@pytest.mark.parametrize("block_type", ["skill", "sparring", "unknown", None])
+@pytest.mark.parametrize("contact", ["controlled", "full", None])
+def test_no_contact_does_not_infer_partner_or_unknown_work_is_contact_free(reviewed, contact, block_type):
+    decision = decide(reviewed)
+    decision["restrictions"] = {"blocked_regions": [], "blocked_tags": [], "contact_limit": "none"}
+    block = {"block_id": "b", "block_type": block_type, "contact_level": contact}
+    snapshot = reconcile_session_prescription({"session_id": "s", "session_type": "sparring", "blocks": [block]}, decisions=[decision], plan_id=PLAN, training_day=DAY)
+    assert snapshot["rehab_only"]
+
+
+def test_explicit_solo_skill_remains_available_under_no_contact(reviewed):
+    decision = decide(reviewed)
+    decision["restrictions"] = {"blocked_regions": [], "blocked_tags": [], "contact_limit": "none"}
+    block = {"block_id": "b", "block_type": "skill", "contact_level": "none"}
+    snapshot = reconcile_session_prescription({"session_id": "s", "blocks": [block]}, decisions=[decision], plan_id=PLAN, training_day=DAY)
+    assert not snapshot["rehab_only"] and snapshot["session"]["blocks"][0] == block
+
+
+def test_equivalent_injury_row_order_keeps_the_same_prescription_revision(reviewed, monkeypatch):
+    policy, bank, injury = reviewed
+    second = {**injury, "id": str(uuid4()), "episode_id": str(uuid4())}
+    store = FakeStore()
+    store.injury_flags[ATHLETE] = [injury, second]
+    store.plans[PLAN] = {"id": PLAN, "athlete_id": ATHLETE, "status": "ready", "created_at": "2026-09-01T00:00:00Z",
+        "structured_plan": {"weeks": [{"phase_label": "GPP", "days": [{"date": DAY, "day_type": "rest", "sessions": []}]}]}}
+    store.set_active_plan_id(ATHLETE, PLAN)
+    store.upsert_today_checkin(ATHLETE, {"plan_id": PLAN, "training_day": DAY, "recommendation_state": "train_as_planned", "pain": "none"})
+    monkeypatch.setattr(today_service, "load_clinical_policies", lambda: (policy,))
+    monkeypatch.setattr(today_service, "get_rehab_bank", lambda: bank)
+    first = today_service.build_today_command_view(store, athlete_id=ATHLETE, athlete_timezone="UTC", now=NOW)
+    store.injury_flags[ATHLETE].reverse()
+    refreshed = today_service.build_today_command_view(store, athlete_id=ATHLETE, athlete_timezone="UTC", now=NOW)
+    assert first.live_prescription["revision"] == refreshed.live_prescription["revision"]

@@ -275,6 +275,9 @@ class SessionBlock(BaseModel):
     # key when this is absent; training content must not fail validation for it.
     block_id: str | None = None
     block_type: BlockType
+    contact_level: Literal["none", "controlled", "full", "unknown"] | None = None
+    mechanical_load_regions: list[str] | None = None
+    tags: list[str] | None = None
     display_name: str
     category: str | None = None
     order_index: int | None = None

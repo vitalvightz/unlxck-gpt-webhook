@@ -19,6 +19,13 @@ from fightcamp.surface_wound_safety import sanitize_surface_guidance
 from .rehab_stage import resolve_rehab_stage
 from .rehab_progression import resolve_reviewed_progression, episode_setback_at, _instant
 from .clinician_clearance import effective_clinician_clearance, clinician_clears_baseline
+
+
+_NON_CONTACT_BLOCK_TYPES = frozenset({
+    "preparation", "mobility_activation", "plyometric_power", "speed",
+    "strength", "strength_speed", "accessory", "conditioning",
+    "cooldown_recovery", "nutrition", "mindset", "rehab",
+})
 from .rehab_assessment import AssessmentContext, input_definitions, read_assessment_input
 from .achilles_restore_load import review_achilles_restore_load
 from .clinical_review_validity import ClinicalReviewInput
@@ -352,6 +359,15 @@ def reconcile_session_prescription(
     def string_set(value):
         return set(value) if isinstance(value, list) and all(isinstance(item, str) for item in value) else None
 
+    def contact_level(block):
+        # Fitness work does not imply opponent contact. Explicit declarations
+        # and combat-owned descriptions still retain their existing gates.
+        if (block.get("contact_level") is None and block.get("block_type") in _NON_CONTACT_BLOCK_TYPES
+                and not _session_has_contact(block)):
+            return "none"
+        value = block.get("contact_level")
+        return value if isinstance(value, str) else None
+
     replaced = set()
 
     def prescribed_block(decision, prescription):
@@ -406,8 +422,7 @@ def reconcile_session_prescription(
                 continue
         demands = string_set(block.get("mechanical_load_regions"))
         tags = string_set(block.get("tags"))
-        contact = block.get("contact_level")
-        contact = contact if isinstance(contact, str) else None
+        contact = contact_level(block)
         uncertain = bool(blocked_regions) and demands is None
         uncertain = uncertain or bool((demands or set()) - canonical_rehab_locations())
         uncertain = uncertain or (bool(blocked_tags) and tags is None)
@@ -425,8 +440,7 @@ def reconcile_session_prescription(
                          and bool(block.get("role")) and isinstance(block.get("dose"), Mapping)
                          and a.get("role") == block.get("role")
                          and a.get("dose") == block.get("dose")
-                         and isinstance(a.get("contact_level"), str)
-                         and a.get("contact_level") in contact_rank and contact_rank[a["contact_level"]] <= allowed_contact
+                         and contact_level(a) in contact_rank and contact_rank[contact_level(a)] <= allowed_contact
                          and (not block_contact_ceiling or not _session_has_contact(a))), None)
             if safe:
                 blocks.append({**deepcopy(safe), "block_id": block.get("block_id")})
@@ -436,7 +450,23 @@ def reconcile_session_prescription(
             else:
                 hold = True
                 blocks.append({**deepcopy(block), "_policy_held": True})
-                changes.append({"block_id": block.get("block_id"), "action": "held", "reason": "no_reviewed_safe_substitution"})
+                reasons = []
+                if blocked_regions and demands is None:
+                    reasons.append("missing_load_details")
+                if (demands or set()) - canonical_rehab_locations():
+                    reasons.append("unknown_load_regions")
+                if (demands or set()) & blocked_regions:
+                    reasons.append("injury_loading_restriction")
+                if blocked_tags and tags is None:
+                    reasons.append("missing_movement_details")
+                if (tags or set()) & blocked_tags:
+                    reasons.append("injury_movement_restriction")
+                if policy_contact_limit < contact_rank["full"] and contact not in contact_rank:
+                    reasons.append("missing_contact_details")
+                if clearance_contact or (contact in contact_rank and contact_rank[contact] > allowed_contact):
+                    reasons.append("contact_restriction")
+                changes.append({"block_id": block.get("block_id"), "action": "held", "reason": "no_reviewed_safe_substitution",
+                                "restriction_reasons": reasons})
         else:
             blocks.append(deepcopy(block))
     # Match the existing camp allocation ceiling. More affected episodes are
@@ -463,9 +493,12 @@ def reconcile_session_prescription(
             # Hold the original training while offering separately reviewed
             # rehab. It has its own completion identity, so a rehab completion
             # cannot assert that the scheduled strength/combat work was done.
-            entry = {**entry, "session_id": f"rehab-{training_day}", "session_type": "rehab", "title": "Today's rehab", "blocks": reviewed_blocks}
-            entry.pop("coach_led_contact", None)
-            entry["contact_level"] = "none"
+            entry = {key: value for key, value in entry.items() if key in {
+                "calendar_date", "weekday", "weekday_with_label", "day_label", "phase",
+            }}
+            entry.update(session_id=f"rehab-{training_day}", session_type="rehab", title="Today's rehab",
+                         objective="Follow the reviewed rehab for your current injury guidance.",
+                         effective_load="reduced", contact_level="none", blocks=reviewed_blocks)
             hold, rehab_only = False, True
     if session is None or rehab_only:
         # Only the allocations actually offered own this completion occurrence.
@@ -481,5 +514,13 @@ def reconcile_session_prescription(
                 "allocation_limit": day_budget}
     if clearance_hold and hold and not any(d.get("outcome") == "medical_review" for d in decisions):
         snapshot["safety_hold_reason"] = clearance_hold
+    if hold or rehab_only:
+        reasons = {reason for change in changes for reason in change.get("restriction_reasons", [])}
+        detail = ("The injury-loading details for your planned training are unavailable."
+                  if reasons & {"missing_load_details", "unknown_load_regions"}
+                  else "Your planned training conflicts with the current injury restrictions.")
+        snapshot["training_hold_reason"] = detail
+        if hold:
+            snapshot.setdefault("safety_hold_reason", detail)
     snapshot["revision"] = content_hash(snapshot)
     return snapshot

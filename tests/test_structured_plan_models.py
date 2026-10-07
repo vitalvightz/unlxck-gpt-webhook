@@ -8,6 +8,7 @@ from pydantic import ValidationError
 
 from api.structured_plan_models import (
     SCHEMA_VERSION,
+    SessionBlock,
     StructuredTrainingPlan,
     _STRICT_UNSUPPORTED_KEYWORDS,
     _is_free_form_object,
@@ -481,3 +482,19 @@ def test_malformed_structured_plan_column_warns_and_falls_back(caplog):
     assert structured is None
     assert version is None
     assert any("structured_plan column failed to parse" in r.message for r in caplog.records)
+
+
+@pytest.mark.parametrize("contact", ["none", "controlled", "full", "unknown"])
+def test_block_preserves_explicit_contact_level(contact):
+    block = SessionBlock.model_validate({"block_id": "b", "block_type": "conditioning",
+                                        "display_name": "Conditioning", "contact_level": contact})
+    assert block.model_dump()["contact_level"] == contact
+
+
+def test_block_preserves_supplied_load_regions_and_movement_tags():
+    block = SessionBlock.model_validate({"block_id": "b", "block_type": "strength", "display_name": "Work",
+                                        "mechanical_load_regions": ["chest"], "tags": ["horizontal_push"]})
+    assert block.model_dump()["mechanical_load_regions"] == ["chest"]
+    assert block.model_dump()["tags"] == ["horizontal_push"]
+    unknown = SessionBlock.model_validate({"block_id": "b", "block_type": "strength", "display_name": "Work"})
+    assert unknown.mechanical_load_regions is None and unknown.tags is None

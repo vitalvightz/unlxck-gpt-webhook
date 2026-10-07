@@ -574,3 +574,42 @@ def test_a_replaced_decision_is_made_now_and_stays_present_tense():
     view = build_today_command_view(store, athlete_id=ATHLETE, athlete_timezone="", now=NOW)
 
     assert "couldn't load your recent check-ins" in view.today.recommendation_confidence_note
+
+
+def test_standalone_rehab_can_be_declined_on_a_rest_day_without_an_injury_read():
+    store = _store_with_plan(FailingInjuryFlagsStore)
+    day = today_service.resolve_training_day("", now=NOW)
+    store.plans[PLAN]["structured_plan"] = {"weeks": [{"days": [{"date": day, "day_type": "rest", "sessions": []}]}]}
+    row = upsert_session_completion(store, athlete_id=ATHLETE, athlete_timezone="", now=NOW,
+        payload={"plan_id": PLAN, "session_id": f"rehab-{day}", "status": "skipped", "modification_reason": "Resting today"})
+    assert row["status"] == "skipped" and not row.get("prescription_snapshot")
+
+
+def test_stopped_logging_for_owned_frozen_session_survives_failed_injury_read():
+    store = _store_with_plan(FailingInjuryFlagsStore)
+    day = today_service.resolve_training_day("", now=NOW)
+    store.upsert_session_completion(ATHLETE, {
+        "plan_id": PLAN, "session_id": "session-1", "training_day": day,
+        "status": "started", "started_at": NOW.isoformat(),
+        "prescription_snapshot": {"plan_id": PLAN, "session": {"session_id": "session-1"}},
+    })
+    payload = {"plan_id": PLAN, "session_id": "session-1", "status": "modified",
+               "rehab_performance": "stopped", "modification_reason": "Stopped when symptoms changed"}
+    row = upsert_session_completion(store, athlete_id=ATHLETE, athlete_timezone="", payload=payload, now=NOW)
+    assert row["status"] == "modified" and row["rehab_performance"] == "stopped"
+    with pytest.raises(HTTPException) as refused:
+        upsert_session_completion(store, athlete_id=ATHLETE, athlete_timezone="", payload={**payload, "session_id": "unstarted"}, now=NOW)
+    assert refused.value.status_code == 503
+
+
+def test_unavailable_context_holds_frozen_rehab_even_with_conservative_checkin():
+    view = boundary_core.CommandView(today={"training_day": "2026-06-18",
+        "recommendation_state": "modify", "decision_tier": "modify"},
+        live_prescription={"revision": "a" * 64, "frozen": True, "safety_hold": False,
+                           "session": {"session_id": "rehab", "session_type": "rehab"}})
+    health = boundary_core.ReadinessContextHealth()
+    health.record("injury_flags", RuntimeError("unavailable"))
+    held = boundary_core._apply_fail_safe_to_command_view(view, health)
+    assert held.live_prescription["safety_hold"]
+    assert held.live_prescription["revision"] == "a" * 64
+    assert held.today.decision_tier == "stop"

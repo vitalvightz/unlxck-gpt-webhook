@@ -993,6 +993,16 @@ def _recommendation_mapping(checkin: Mapping[str, Any] | None) -> dict[str, Any]
 _TRAINING_COMPLETION_STATUSES: frozenset[str] = frozenset({"started", "done", "modified"})
 
 
+def _is_stopped_started_session(existing, payload):
+    """Only an owned, accepted occurrence may bypass execution reads to stop."""
+    return bool(existing.get("prescription_snapshot") and existing.get("started_at")
+                and existing.get("status") == "started"
+                and str(existing.get("plan_id")) == str(payload.get("plan_id"))
+                and str(existing.get("session_id")) == str(payload.get("session_id"))
+                and payload.get("status") == "modified" and payload.get("rehab_performance") == "stopped"
+                and str(payload.get("modification_reason") or "").strip())
+
+
 def _active_severe_injury(
     open_flags: Sequence[Mapping[str, Any]] | None,
 ) -> Mapping[str, Any] | None:
@@ -1299,6 +1309,7 @@ def upsert_session_completion(
         )
     training_day = requested_day or today
     existing = store.get_session_completion(athlete_id, session_id, training_day) or {}
+    accepted_stop = _is_stopped_started_session(existing, payload)
     stop_requested = bool(existing.get("plan_id") == plan_id and existing.get("started_at")
                           and existing.get("status") == "started" and status_value == "modified"
                           and payload.get("rehab_performance") == "stopped"
@@ -1324,14 +1335,9 @@ def upsert_session_completion(
     # day. ``not_started`` stays allowed so an already-written record can be
     # cleared.
     command = None
-    if not is_retro_log and status_value != "not_started":
-        try:
-            command = build_today_command_view(store, athlete_id=athlete_id, athlete_timezone=athlete_timezone, now=now)
-        except Exception:  # noqa: BLE001 - skip earns no training or rehab credit
-            # Skipping earns no rehab credit and must remain available when
-            # current injury evidence cannot be read. Training still fails closed.
-            if status_value != "skipped":
-                raise
+    if not is_retro_log and status_value in _TRAINING_COMPLETION_STATUSES and not accepted_stop:
+        from .today_readiness_boundary import build_today_command_view as build_current_command
+        command = build_current_command(store, athlete_id=athlete_id, athlete_timezone=athlete_timezone, now=now)
     live = command.live_prescription if command and str(command.active_plan.get("id")) == plan_id else None
     if command and str(command.active_plan.get("id")) != plan_id and status_value in _TRAINING_COMPLETION_STATUSES:
         if any(injury.get("rehab_decision", {}).get("activation") in {"live", "retired"}
@@ -1341,13 +1347,18 @@ def upsert_session_completion(
     saved_occurrence = existing.get("prescription_snapshot") or {}
     saved_standalone = saved_occurrence.get("plan_id") == plan_id and saved_occurrence.get("session", {}).get("session_id") == session_id
     severe = None
-    if not is_retro_log and status_value in _TRAINING_COMPLETION_STATUSES and not _completion_session_is_support(plan_row, training_day, session_id):
+    if not is_retro_log and status_value in _TRAINING_COMPLETION_STATUSES and not accepted_stop and not _completion_session_is_support(plan_row, training_day, session_id):
         severe = _active_severe_injury(_open_injury_flags(store, athlete_id))
     # The exception records stopping already-started work under a server-owned
     # hold. A client enum alone cannot bypass training or freshness gates.
-    stopped_started_session = bool(stop_requested and (severe is not None or
+    stopped_started_session = accepted_stop or bool(stop_requested and (severe is not None or
         (standalone and live.get("safety_hold"))))
-    if status_value != "not_started" and _structured_today(plan_row, training_day).is_rest_day and not (standalone or saved_standalone):
+    # Declining standalone rehab executes nothing and earns no credit. Its
+    # current episode may be unreadable, so accept the rehab identity shape
+    # without manufacturing a prescription snapshot or permission to train.
+    declined_rehab = status_value == "skipped" and bool(re.fullmatch(
+        rf"rehab-{re.escape(training_day)}(?:-[a-f0-9]{{24}})?", session_id))
+    if status_value != "not_started" and _structured_today(plan_row, training_day).is_rest_day and not (standalone or saved_standalone or declined_rehab):
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="That day is a rest day in your plan, so there is no session to log.",
@@ -3170,7 +3181,8 @@ def _build_today_command_view(
                 live["changes"].extend({"session_id": str(row["session_id"]), "action": "held",
                     "reason": "clinician_clearance_ceiling"} for row in today_candidates
                     if str(row["session_id"]) not in support_owner_ids)
-            live["injury_context"] = [{"id": row["id"], "episode_id": row.get("episode_id"), "updated_at": row.get("updated_at")} for row in open_injuries]
+            live["injury_context"] = [{"id": row["id"], "episode_id": row.get("episode_id"), "updated_at": row.get("updated_at")}
+                                      for row in sorted(open_injuries, key=lambda row: str(row["id"]))]
             live["evidence_context"] = store.get_rehab_schedule_revision(athlete_id)
             for block in live["session"].get("blocks", []):
                 if block.get("block_type") == "rehab" and not block.get("drill_snapshot"):
@@ -3217,6 +3229,7 @@ def _build_today_command_view(
         open_injuries=open_injuries,
     )
     if live:
+        policy_changed_guidance = False
         readiness_holds_session = view.today.decision_tier in {"stop", "not_checked_in"} or (
             view.today.decision_tier == "pull_back" and not live.get("rehab_only"))
         if not live["safety_hold"] and readiness_holds_session:
@@ -3224,6 +3237,23 @@ def _build_today_command_view(
             live["safety_hold_reason"] = ("Complete today's check-in before starting." if view.today.decision_tier == "not_checked_in"
                 else "Follow today's reduced-training guidance before training." if view.today.decision_tier == "pull_back"
                 else "Follow today's stop guidance before training.")
+        # Describe the actual prescription without weakening stronger readiness.
+        if live["safety_hold"] and view.today.decision_tier in {"green", "modify"}:
+            policy_changed_guidance = True
+            view.today.recommendation_state = "pull_back"
+            view.today.decision_tier = "stop"
+            view.today.recommendation_reason = "Session blocked\n" + live.get("safety_hold_reason", "This session is on hold for the current injury guidance.") + "\nDo not start this session. Review your injury guidance."
+        elif not live["safety_hold"] and view.today.decision_tier in {"green", "modify"} and (live.get("rehab_only") or live.get("changes")):
+            policy_changed_guidance = True
+            view.today.recommendation_state = "modify"
+            view.today.decision_tier = "modify"
+            if live.get("rehab_only"):
+                view.today.recommendation_reason = "Reviewed rehab today\n" + live.get("training_hold_reason", "Your planned training is held by the current injury restrictions.") + "\nFollow only the reviewed rehab shown today."
+            else:
+                view.today.recommendation_reason = "Session adjusted\nCurrent injury restrictions changed today's work.\nFollow the adjusted session shown and its current injury restrictions."
+        if policy_changed_guidance:
+            view.today.recommendation_trigger_labels = list(dict.fromkeys([*view.today.recommendation_trigger_labels, "Current injury restrictions"]))
+            view.today.recommendation_sources = list(dict.fromkeys([*view.today.recommendation_sources, "your tracked injuries"]))
         if not frozen:
             from fightcamp.rehab_clinical import content_hash
             live["readiness_context"] = {"id": today_checkin["id"], "updated_at": today_checkin.get("updated_at")} if today_checkin else None
