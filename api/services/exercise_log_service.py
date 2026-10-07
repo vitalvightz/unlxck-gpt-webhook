@@ -265,17 +265,25 @@ def recent_exercise_performances(store: AppStore, *, athlete_id: str, before_day
     return exercise_history_context(store, athlete_id=athlete_id, before_day=before_day)[0]
 
 
+# Today reads at most this many of the athlete's newest earlier logs, so the
+# cost of every Today load stays flat as history grows. Two pages reach well
+# past the movements a camp rotates through; one older than that is not recalled.
+_HISTORY_PAGE_ROWS = 500
+_HISTORY_SCAN_ROWS = 1000
+
+
 def exercise_history_context(store: AppStore, *, athlete_id: str, before_day: str) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     """Latest occurrence and latest reported weight per movement, across plans.
 
-    One paged read retains less frequent movements and loads omitted on a later
-    log. A latest skip or pain report prevents recalling an older weight.
+    A bounded, paged read of the newest history retains less frequent movements
+    and loads omitted on a later log. A latest skip or pain report prevents
+    recalling an older weight.
     """
     latest: dict[str, dict[str, Any]] = {}
     weights: dict[str, dict[str, Any]] = {}
     offset = 0
     while True:
-        rows = store.list_exercise_history(athlete_id, before_day=before_day, limit=500, offset=offset)
+        rows = store.list_exercise_history(athlete_id, before_day=before_day, limit=_HISTORY_PAGE_ROWS, offset=offset)
         for row in rows:
             prescribed = row.get("prescribed") or {}
             key = _clean(row.get("exercise_key"))
@@ -288,11 +296,11 @@ def exercise_history_context(store: AppStore, *, athlete_id: str, before_day: st
                 candidate = recent_exercise_loads(store, athlete_id=athlete_id, before_day=before_day, performances=[row])
                 if candidate:
                     weights[identity] = candidate[0]
-        if len(rows) < 500:
+        offset += len(rows)
+        if len(rows) < _HISTORY_PAGE_ROWS or offset >= _HISTORY_SCAN_ROWS:
             loads = [weight for identity, weight in weights.items()
                      if latest[identity].get("status") != "skipped" and latest[identity].get("reason") != "pain"]
             return list(latest.values()), loads
-        offset += len(rows)
 
 
 def recent_exercise_loads(

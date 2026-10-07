@@ -735,3 +735,18 @@ def test_less_frequent_exercises_are_not_lost_behind_recent_row_limit():
     store.exercise_logs.append(_history_row("older", training_day="2026-08-01", exercise_key="front-plank"))
     rows = recent_exercise_performances(store, athlete_id="athlete-1", before_day="2026-10-01")
     assert [row["exercise_key"] for row in rows] == ["trap-bar-deadlift", "front-plank"]
+
+
+def test_today_history_scan_is_bounded_however_long_the_history():
+    from api.services import exercise_log_service
+    from api.services.exercise_log_service import exercise_history_context
+    _, store, _ = _build_client()
+    cap = exercise_log_service._HISTORY_SCAN_ROWS
+    store.exercise_logs = [_history_row(f"{index:05d}") for index in range(cap + 600)]
+    store.exercise_logs.append(_history_row("beyond", training_day="2026-08-01", exercise_key="front-plank"))
+    reads = []
+    original = store.list_exercise_history
+    store.list_exercise_history = lambda *args, **kwargs: reads.append(kwargs) or original(*args, **kwargs)
+    performances, _ = exercise_history_context(store, athlete_id="athlete-1", before_day="2026-10-01")
+    assert sum(read["limit"] for read in reads) <= cap
+    assert [row["exercise_key"] for row in performances] == ["trap-bar-deadlift"]
