@@ -55,6 +55,7 @@ from api.services.exercise_log_service import (
     record_exercise_logs,
 )
 from api.services.progress_notifications import award_session_progress
+from api.services.completion_reads import CompletionReads
 from api.services.rehab_completion_service import (
     build_rehab_response_contexts,
     list_pending_rehab_response_sets,
@@ -407,6 +408,9 @@ def build_today_router(*, require_profile, get_store) -> APIRouter:
             payload=payload,
         )
         completion_status = completion_status_of(row)
+        # All consumers see the persisted completion. Share only post-save
+        # plan/history reads across streaks, XP, week progress and rehab prompts.
+        store = CompletionReads(store)
         if completion_status in {"done", "modified", "skipped"}:
             try:
                 invalidate_notification_action(

@@ -83,6 +83,12 @@ frequency and media verification deserve separate review; they were not changed.
    refreshes share a pending plan read. A failed read keeps the last good same-plan
    presentation and can retry; an old response cannot replace the newly active plan.
    Every change still requests a fresh authoritative Today command.
+4. Share owned plan and exact per-plan history reads across post-save streak,
+   XP, week-progress and rehab-prompt consumers. This scope starts after completion
+   persistence and ends with the request. Active-plan pointers and reward state
+   stay fresh; other mutations invalidate the cached rows. The route regression
+   case reduces post-save owned-plan reads from five to one and plan-history
+   reads from two to one, with identical streaks and idempotent rewards on retry.
 
 Generation, injury policy, clinical evidence rules and deterministic calendar
 fallbacks retain their existing behavior. Larger planner fields remain available
@@ -95,9 +101,9 @@ through the unchanged full-row store methods for generation and review.
    clinical validation, plan decoding, derived effects and reload time. Compare
    p50/p95 and payloads before promising a latency target. Supabase logs alone
    cannot identify which steps consumed a particular browser's five seconds.
-2. **Share completion-side context.** Resolve the active execution plan and
-   applicable completion history once for streak/XP consumers, with explicit
-   invalidation around writes and unchanged ownership/eligibility checks.
+2. **Further reduce completion-side work.** Post-save consumers now share owned
+   plan and exact per-plan history reads within the request. Assess the remaining
+   primary-save/readiness reads and derived processing before widening this scope.
    A durable outbox can move optional derived work off the response path while
    keeping retries and idempotency. Do not replace authoritative completion or
    rehab-context persistence with an unreliable background callback.
@@ -139,6 +145,7 @@ webpack build pass; the build used shell-only placeholder public configuration.
 | Check | Result |
 | --- | --- |
 | Focused backend suite, including reduced-row fixtures | 284 passed |
+| Completion-read follow-up: route, streaks, XP, rehab and retry checks | 116 passed |
 | Today/timer/review frontend suite | 70 passed |
 | TypeScript and production webpack build | Passed |
 | Python import compilation and targeted Ruff | Passed |
