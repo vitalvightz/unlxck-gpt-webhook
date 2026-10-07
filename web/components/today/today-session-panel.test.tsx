@@ -461,7 +461,8 @@ test("a declared sparring day leads with the sparring, with the app work alongsi
     html,
     /today-action-tray[\s\S]*class="cta"[^>]*>Start hard sparring<[\s\S]*class="secondary-button"[^>]*>Start Mobility flush</,
   );
-  assert.match(html, /<\/svg>Round timer<\/button>/);
+  // The planned rounds cover timing, so no blank timer beside them.
+  assert.doesNotMatch(html, /<\/svg>Free timer<\/button>/);
   // The lead button already starts the rounds, so no duplicate shortcut.
   assert.doesNotMatch(html, /<\/svg>Sparring rounds<\/button>/);
   assert.doesNotMatch(html, /completion is unavailable|nothing to log/);
@@ -539,10 +540,12 @@ test("sparring rounds stay locked until check-in, and are never offered under a 
   assert.doesNotMatch(unchecked, /Sparring rounds<\/button>/);
   assert.match(unchecked, /Sparring rounds unlock after check-in/);
   assert.doesNotMatch(unchecked, /locked by clinician clearance/);
+  // With the planned rounds locked, the blank timer is the way to time anything.
+  assert.match(unchecked, /<\/svg>Free timer<\/button>/);
 
   const stopped = renderPanel(contactDayState("stop"));
   assert.doesNotMatch(stopped, /Sparring rounds<\/button>/);
-  assert.doesNotMatch(stopped, /Round timer<\/button>/);
+  assert.doesNotMatch(stopped, /Free timer<\/button>/);
 });
 
 for (const level of ["rehab_only", "train_no_contact"] as const) {
