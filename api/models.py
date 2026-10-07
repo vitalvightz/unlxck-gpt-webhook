@@ -2478,6 +2478,11 @@ class ExerciseRecentLoad(BaseModel):
     training_day: str
 
 
+class ExerciseHistoryResponse(BaseModel):
+    logs: list[ExerciseLogRecord]
+    next_offset: int | None = None
+
+
 class ExerciseLogListResponse(BaseModel):
     """The athlete's exercise logs for one plan on the current training day."""
 
@@ -2485,6 +2490,7 @@ class ExerciseLogListResponse(BaseModel):
     logs: list[ExerciseLogRecord]
     # The latest weight per exercise from earlier days (any plan).
     recent_loads: list[ExerciseRecentLoad] = Field(default_factory=list)
+    recent_performances: list[ExerciseLogRecord] = Field(default_factory=list)
 
 
 class RehabResponsePromptResponse(BaseModel):

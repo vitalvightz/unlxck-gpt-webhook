@@ -568,6 +568,10 @@ class InjuryStore(Protocol):
         self, athlete_id: str, *, plan_id: str, training_day: str
     ) -> list[dict[str, Any]]: ...
 
+    def list_exercise_history(
+        self, athlete_id: str, *, before_day: str | None = None, limit: int = 50, offset: int = 0
+    ) -> list[dict[str, Any]]: ...
+
     def list_recent_exercise_loads(
         self, athlete_id: str, *, before_day: str, limit: int = 200
     ) -> list[dict[str, Any]]: ...

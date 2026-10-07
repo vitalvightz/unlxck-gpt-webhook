@@ -5,6 +5,9 @@ import {
   buildLogEntry,
   deriveSessionOutcome,
   lastLoadFor,
+  lastPerformanceFor,
+  performanceSummary,
+  progressionLoadFor,
   plannedSessionRpe,
   withLastLoad,
   draftFromLog,
@@ -252,4 +255,46 @@ test("last time's weight is carried into a done log, only when the plan names no
   assert.equal(lastLoadFor({ ...deadlift, load: { value: 80, unit: "kg" } }, recent), null);
   // A different unit is never mixed in.
   assert.equal(lastLoadFor(deadlift, [{ ...recent[0], load: { value: 220, unit: "lb" } }]), null);
+});
+
+
+test("exercise history follows a stable key across plans and rejects keyed variants", () => {
+  const movement = { ...deadlift, exercise_key: "trap-bar-deadlift" };
+  const previous = log(deadlift, { plan_id: "old-plan", exercise_key: "trap-bar-deadlift",
+    prescribed: deadlift, actual: { sets: 3, load: { value: 80, unit: "kg" } } });
+  assert.equal(lastPerformanceFor(movement, [previous]), previous);
+  assert.equal(lastPerformanceFor({ ...movement, exercise_key: "barbell-deadlift" }, [previous]), null);
+  assert.equal(lastLoadFor({ ...movement, exercise_key: "barbell-deadlift" }, [{
+    exercise_key: "trap-bar-deadlift", display_name: movement.display_name!, load: { value: 80, unit: "kg" }, training_day: "2026-10-01",
+  }]), null);
+  assert.match(performanceSummary(previous), /80 kg.*3 × 8/);
+});
+
+test("load suggestions require explicit progression, complete dose and reported effort", () => {
+  const movement = { ...deadlift, progression_rule: "Add 2.5 kg when all sets complete." };
+  const previous = log(deadlift, { prescribed: deadlift, actual: { load: { value: 80, unit: "kg" }, effort: { method: "RPE", value: 6 } } });
+  assert.deepEqual(progressionLoadFor(movement, previous, true), { value: 82.5, unit: "kg" });
+  assert.equal(progressionLoadFor(movement, previous, false), null);
+  for (const patch of [
+    { status: "skipped" as const }, { reason: "pain" as const }, { reason: "fatigue" as const },
+    { actual: { ...previous.actual, sets: 3 } }, { actual: { ...previous.actual, effort: null } },
+    { actual: { ...previous.actual, effort: { method: "RPE" as const, value: 9 } } },
+  ]) assert.equal(progressionLoadFor(movement, { ...previous, ...patch }, true), null);
+  for (const patch of [{ reps: 10 }, { load: { value: 60, unit: "kg" } }, { progression_rule: "Increase if comfortable" }]) {
+    assert.equal(progressionLoadFor({ ...movement, ...patch }, previous, true), null);
+  }
+});
+
+test("last painful or skipped occurrence cannot resurrect an older load", () => {
+  const recent = [{ exercise_key: null, display_name: deadlift.display_name!, load: { value: 80, unit: "kg" }, training_day: "2026-10-01" }];
+  for (const patch of [{ reason: "pain" as const }, { status: "skipped" as const }]) {
+    assert.deepEqual(withLastLoad(deadlift, { status: "as_prescribed" }, recent, [log(deadlift, patch)]), { status: "as_prescribed" });
+  }
+});
+
+
+test("history displays recorded measurement units without relabelling them", () => {
+  const previous = log(deadlift, { actual: { load: { value: 175, unit: "lb" } }, prescribed: deadlift });
+  assert.match(performanceSummary(previous), /175 lb/);
+  assert.equal(performanceSummary(previous).includes("175 kg"), false);
 });

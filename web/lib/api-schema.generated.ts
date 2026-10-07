@@ -457,6 +457,11 @@ export type EventContext = {
   ruleset: string | null;
 };
 
+export type ExerciseHistoryResponse = {
+  logs: ExerciseLogRecord[];
+  next_offset: number | null;
+};
+
 /**
  * What the athlete actually did for one block.
  *
@@ -535,6 +540,7 @@ export type ExerciseLogListResponse = {
   training_day: string;
   logs: ExerciseLogRecord[];
   recent_loads: ExerciseRecentLoad[];
+  recent_performances: ExerciseLogRecord[];
 };
 
 /** A quantity the athlete reports, in the plan's ``{value, unit}`` shape. */
@@ -1668,6 +1674,9 @@ export type Session = {
 export type SessionBlock = {
   block_id: string | null;
   block_type: "accessory" | "conditioning" | "cooldown_recovery" | "mindset" | "mobility_activation" | "nutrition" | "plyometric_power" | "preparation" | "rehab" | "skill" | "sparring" | "speed" | "strength" | "strength_speed";
+  contact_level: "controlled" | "full" | "none" | "unknown" | null;
+  mechanical_load_regions: string[] | null;
+  tags: string[] | null;
   display_name: string;
   category: string | null;
   order_index: number | null;

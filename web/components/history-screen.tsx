@@ -8,10 +8,12 @@ import { GlossaryTooltip } from "@/components/glossary-tooltip";
 import { Skeleton } from "@/components/skeleton";
 import {
   listInjuryFlags,
+  listExerciseHistory,
   listSessionCompletionHistory,
   listSparringLogHistory,
   listTodayCheckinHistory,
 } from "@/lib/api";
+import { EXERCISE_LOG_REASON_LABELS, EXERCISE_LOG_STATUS_LABELS, performanceSummary } from "@/lib/exercise-log";
 import { athleteTrainingDayISO } from "@/lib/camp-map";
 import { formatAppDate } from "@/lib/date-format";
 import {
@@ -40,16 +42,18 @@ import { loadHistoryWithAuthRecovery } from "@/lib/history-request";
 import type { TodayDecisionTone } from "@/lib/today";
 import type {
   InjuryFlagRecord,
+  ExerciseHistoryResponse,
   SparringLogHistoryResponse,
   TodayCheckinHistoryRecord,
   TodaySessionCompletionRecord,
 } from "@/lib/types";
 import { useTrainingDay } from "@/lib/use-training-day";
 
-type HistoryTab = "sessions" | "sparring" | "checkins" | "injuries";
+type HistoryTab = "sessions" | "exercises" | "sparring" | "checkins" | "injuries";
 
 const TABS: Array<{ id: HistoryTab; label: string }> = [
   { id: "sessions", label: "Sessions" },
+  { id: "exercises", label: "Exercises" },
   { id: "sparring", label: "Sparring" },
   { id: "checkins", label: "Check-ins" },
   { id: "injuries", label: "Injuries" },
@@ -437,7 +441,42 @@ function InjuryRows({ rows }: { rows: InjuryFlagRecord[] }) {
   );
 }
 
+function ExerciseRows({ history, onMore, loading }: {
+  history: ExerciseHistoryResponse; onMore: () => void; loading: boolean;
+}) {
+  const [search, setSearch] = useState("");
+  if (history.logs.length === 0) return <EmptyState eyebrow="Exercise history" title="No exercises logged yet."
+    description="Your logged loads, sets and reps appear here across every plan." example="Log an exercise on Today to start your record." />;
+  const rows = history.logs.filter((row) => String(row.prescribed.display_name ?? row.exercise_key ?? "")
+    .toLowerCase().includes(search.trim().toLowerCase()));
+  return <div className="history-tab-body">
+    <label className="history-exercise-search">Find an exercise
+      <input type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Exercise name" />
+    </label>
+    <ul className="history-list">
+      {rows.map((row) => <li key={row.id} className="history-row" data-tone={row.status === "skipped" ? "grey" : "green"}>
+        <div className="history-row-head">
+          <span className="history-row-title">{String(row.prescribed.display_name ?? row.exercise_key ?? "Exercise")}</span>
+          <StatusBadge tone={row.status === "skipped" ? "grey" : "green"} label={EXERCISE_LOG_STATUS_LABELS[row.status]} />
+        </div>
+        <div className="history-row-meta">{formatAppDate(row.training_day)}</div>
+        <p className="history-summary-line">{performanceSummary(row)}</p>
+        {row.reason ? <p className="muted history-row-note">{EXERCISE_LOG_REASON_LABELS[row.reason]}</p> : null}
+      </li>)}
+    </ul>
+    {!rows.length ? <p className="muted">No matching exercises in the loaded history.</p> : null}
+    {history.next_offset !== null ? <button className="secondary-button" disabled={loading} onClick={onMore}>
+      {loading ? "Loading…" : "Load earlier records"}
+    </button> : null}
+  </div>;
+}
+
 export function HistoryScreen() {
+  const { session } = useAppSession();
+  return <HistoryContent key={session?.access_token ?? "anonymous"} />;
+}
+
+function HistoryContent() {
   const { session, me } = useAppSession();
   const token = session?.access_token ?? null;
   const userId = session?.user_id ?? null;
@@ -453,6 +492,8 @@ export function HistoryScreen() {
     rows: null,
     error: null,
   });
+  const [exercises, setExercises] = useState<TabData<ExerciseHistoryResponse>>({ rows: null, error: null });
+  const [exerciseOffset, setExerciseOffset] = useState<number | null>(null);
   const [sparring, setSparring] = useState<TabData<SparringLogHistoryResponse>>({
     rows: null,
     error: null,
@@ -463,22 +504,9 @@ export function HistoryScreen() {
   });
   const [injuries, setInjuries] = useState<TabData<InjuryFlagRecord[]>>({ rows: null, error: null });
 
-  // The cache is keyed to the signed-in token: if it changes (sign-out /
-  // different account), drop every tab so one user's history can never be
-  // shown to another.
-  useEffect(() => {
-    setSessions({ rows: null, error: null });
-    setSparring({ rows: null, error: null });
-    setCheckins({ rows: null, error: null });
-    setInjuries({ rows: null, error: null });
-  }, [token]);
-
-  // Lazy per-tab fetch: each tab loads on first open and is cached for the
-  // rest of the visit. The tab states are dependencies on purpose: the
-  // token-change reset above lands one render later than this effect's first
-  // pass, so the effect must re-run when a cache flips back to null or the
-  // reset would strand the tab on its loading skeleton forever. A tab that
-  // already has rows or an error is left alone, so this cannot loop.
+  // Load each tab on first open, then retain its cache for this signed-in visit.
+  // Retry clears the error and reopens the same effect. The keyed parent drops
+  // every cache immediately when the account/token changes.
   useEffect(() => {
     if (!token) {
       return;
@@ -511,6 +539,16 @@ export function HistoryScreen() {
 
     if (tab === "sessions") {
       void load(sessions, listSessionCompletionHistory, setSessions);
+    } else if (tab === "exercises") {
+      if (exerciseOffset !== null && exercises.rows) {
+        const previous = exercises.rows;
+        void load({ rows: null, error: null }, async (accessToken) => {
+          const page = await listExerciseHistory(accessToken, exerciseOffset);
+          return { ...page, logs: [...previous.logs, ...page.logs].filter((row, index, all) => all.findIndex((item) => item.id === row.id) === index) };
+        }, (data) => { setExerciseOffset(null); setExercises(data.error ? { ...data, rows: previous } : data); });
+      } else {
+        void load(exercises, (accessToken) => listExerciseHistory(accessToken), setExercises);
+      }
     } else if (tab === "sparring") {
       void load(sparring, listSparringLogHistory, setSparring);
     } else if (tab === "checkins") {
@@ -521,11 +559,13 @@ export function HistoryScreen() {
     return () => {
       cancelled = true;
     };
-  }, [tab, token, userId, sessions, sparring, checkins, injuries]);
+  }, [tab, token, userId, sessions, exercises, exerciseOffset, sparring, checkins, injuries]);
 
   const active =
     tab === "sessions"
       ? sessions
+      : tab === "exercises"
+        ? exercises
       : tab === "sparring"
         ? sparring
         : tab === "checkins"
@@ -538,7 +578,7 @@ export function HistoryScreen() {
         <p className="kicker">Training record</p>
         <h1 className="form-section-title">History</h1>
         <p className="muted">
-          Every logged session, sparring round, daily check-in, and injury report, including
+          Every logged session, exercise, sparring round, daily check-in, and injury report, including
           resolved injuries.
         </p>
       </header>
@@ -566,6 +606,7 @@ export function HistoryScreen() {
             className="error-banner-retry"
             onClick={() => {
               if (tab === "sessions") setSessions({ rows: null, error: null });
+              else if (tab === "exercises") { setExerciseOffset(exercises.rows?.next_offset ?? null); setExercises((current) => ({ ...current, error: null })); }
               else if (tab === "sparring") setSparring({ rows: null, error: null });
               else if (tab === "checkins") setCheckins({ rows: null, error: null });
               else setInjuries({ rows: null, error: null });
@@ -578,6 +619,9 @@ export function HistoryScreen() {
         <ListSkeleton />
       ) : tab === "sessions" ? (
         <SessionRows rows={sessions.rows ?? []} today={today} />
+      ) : tab === "exercises" ? (
+        exercises.rows ? <ExerciseRows history={exercises.rows} loading={exerciseOffset !== null}
+          onMore={() => setExerciseOffset(exercises.rows?.next_offset ?? null)} /> : <ListSkeleton />
       ) : tab === "sparring" ? (
         sparring.rows ? <SparringRows history={sparring.rows} /> : <ListSkeleton />
       ) : tab === "checkins" ? (

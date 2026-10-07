@@ -11,6 +11,9 @@ import {
   hasLoggableNumbers,
   isLoggableBlock,
   lastLoadFor,
+  lastPerformanceFor,
+  performanceSummary,
+  progressionLoadFor,
   logFieldsForBlock,
   logSummary,
   loggedValues,
@@ -45,6 +48,8 @@ export type ExerciseLogging = {
   painReasonAllowed: boolean;
   /** Last weights per exercise, carried into a "done" so it never needs typing. */
   recentLoads?: readonly ExerciseRecentLoad[];
+  recentPerformances?: readonly ExerciseLogRecord[];
+  allowProgression?: boolean;
   /** Where a failed one-tap save on a collapsed row is reported. */
   onError?: (message: string) => void;
 };
@@ -110,7 +115,7 @@ export function ExerciseLogTick({
     try {
       await logging.save({
         block_id: blockId,
-        ...withLastLoad(block, { status: "as_prescribed" }, logging.recentLoads),
+        ...withLastLoad(block, { status: "as_prescribed" }, logging.recentLoads, logging.recentPerformances),
       });
     } catch (caught) {
       logging.onError?.(errorMessage(caught));
@@ -207,6 +212,8 @@ export function ExerciseLogPanel({ block }: { block: StructuredBlock }) {
     return null;
   }
   const { logging, blockId, fields, log } = state;
+  const previous = lastPerformanceFor(block, logging.recentPerformances);
+  const suggested = progressionLoadFor(block, previous, logging.allowProgression === true);
   const entry = buildLogEntry(fields, draft);
 
   function closeEditor() {
@@ -219,7 +226,9 @@ export function ExerciseLogPanel({ block }: { block: StructuredBlock }) {
   function openEditor() {
     // A fresh entry starts from last time's weight, so only a change is typed.
     setDraft(
-      log ? draftFromLog(fields, log) : draftFromLog(fields, withLastLoadRecord(block, logging.recentLoads)),
+      log ? draftFromLog(fields, log) : draftFromLog(fields, suggested
+        ? { actual: { load: suggested } } as ExerciseLogRecord
+        : previous?.status === "skipped" || previous?.reason === "pain" ? null : withLastLoadRecord(block, logging.recentLoads)),
     );
     setReason(log?.reason ?? null);
     setError(null);
@@ -363,12 +372,16 @@ export function ExerciseLogPanel({ block }: { block: StructuredBlock }) {
 
   return (
     <div className="ex-log" data-mode="idle">
+      {previous ? <p className="muted ex-log-previous">
+        Last: {performanceSummary(previous)}
+        {suggested ? <span className="ex-log-suggestion"> · Try {suggested.value} {suggested.unit}</span> : null}
+      </p> : null}
       <div className="ex-log-choices">
         <button
           type="button"
           className="ex-log-choice ex-log-choice-primary"
           disabled={saving}
-          onClick={() => void save(withLastLoad(block, { status: "as_prescribed" }, logging.recentLoads))}
+          onClick={() => void save(withLastLoad(block, { status: "as_prescribed" }, logging.recentLoads, logging.recentPerformances))}
         >
           Done
         </button>

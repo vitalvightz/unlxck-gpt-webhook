@@ -18,6 +18,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from api.compliance_guards import require_health_feature_access
 from api.compliance import evaluate_profile_compliance
 from api.models import (
+    ExerciseHistoryResponse,
     ExerciseLogBatchRequest,
     ExerciseLogBatchResponse,
     ExerciseLogListResponse,
@@ -50,7 +51,7 @@ from api.contracts.completion import completion_landing_state, completion_status
 from api.contracts.rehab_completion import COMPLETED_STATUSES
 from api.services.exercise_log_service import (
     list_exercise_logs_for_today,
-    recent_exercise_loads,
+    exercise_history_context,
     record_exercise_log,
     record_exercise_logs,
 )
@@ -696,6 +697,19 @@ def build_today_router(*, require_profile, get_store) -> APIRouter:
         )
         return ExerciseLogBatchResponse(logs=[_exercise_log_record(row) for row in rows])
 
+    @router.get("/api/history/exercises", response_model=ExerciseHistoryResponse)
+    def exercise_history(
+        offset: int = Query(default=0, ge=0),
+        limit: int = Query(default=50, ge=1, le=100),
+        profile: ProfileRecord = Depends(require_profile),
+        store: AppStore = Depends(get_store),
+    ) -> ExerciseHistoryResponse:
+        rows = store.list_exercise_history(profile.athlete_id, limit=limit + 1, offset=offset)
+        return ExerciseHistoryResponse(
+            logs=[_exercise_log_record(row) for row in rows[:limit]],
+            next_offset=offset + limit if len(rows) > limit else None,
+        )
+
     @router.get(
         "/api/today/exercise-logs",
         response_model=ExerciseLogListResponse,
@@ -712,12 +726,12 @@ def build_today_router(*, require_profile, get_store) -> APIRouter:
             athlete_timezone=profile.athlete_timezone,
             plan_id=str(plan_id),
         )
+        performances, loads = exercise_history_context(store, athlete_id=profile.athlete_id, before_day=training_day)
         return ExerciseLogListResponse(
             training_day=training_day,
             logs=[_exercise_log_record(row) for row in rows],
-            recent_loads=recent_exercise_loads(
-                store, athlete_id=profile.athlete_id, before_day=training_day
-            ),
+            recent_performances=[_exercise_log_record(row) for row in performances],
+            recent_loads=loads,
         )
 
     @router.get(

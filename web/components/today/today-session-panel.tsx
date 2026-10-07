@@ -431,6 +431,10 @@ export function TodaySessionPanel({
       resolvedDecision.sessionIsToday &&
       (status === "started" || status === "done" || status === "modified"),
     painReasonAllowed,
+    allowProgression: state.today.decision_tier === "green"
+      && state.open_injuries.length === 0
+      && /^(GPP|SPP)$/i.test(state.active_plan.phase ?? "")
+      && !state.live_prescription?.safety_hold,
     onError: reportExerciseLogError,
   });
   useEffect(() => {
@@ -1002,7 +1006,7 @@ export function TodaySessionPanel({
               return !block || isLoggableBlock(block);
             }).map((entry) => {
               const block = dayBlocksById.get(entry.block_id);
-              return block ? { ...entry, ...withLastLoad(block, entry, exerciseLogging.recentLoads) } : entry;
+              return block ? { ...entry, ...withLastLoad(block, entry, exerciseLogging.recentLoads, exerciseLogging.recentPerformances) } : entry;
             });
             if (entries.length > 0) {
               await exerciseLogging.saveMany(entries, { keepExisting: true });

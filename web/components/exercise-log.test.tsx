@@ -54,6 +54,8 @@ function mount(
   options: {
     logs?: Record<string, ExerciseLogRecord>;
     painReasonAllowed?: boolean;
+    recentPerformances?: ExerciseLogRecord[];
+    allowProgression?: boolean;
     fail?: string;
     open?: boolean;
   } = {},
@@ -69,6 +71,8 @@ function mount(
     const logging: ExerciseLogging = {
       logs,
       painReasonAllowed: options.painReasonAllowed ?? true,
+      recentPerformances: options.recentPerformances,
+      allowProgression: options.allowProgression,
       onError: (message) => errors.push(message),
       save: async (request) => {
         if (options.fail) {
@@ -369,4 +373,22 @@ test("a collapsed row carries the numbers that were logged", () => {
   );
   assert.equal(html.includes('class="ex-row-log" data-status="modified">Changed · 3 sets · 80 kg<'), true);
   assert.equal(html.split('class="ex-row-log"').length - 1, 1);
+});
+
+
+test("last performance stays inside the open row and the suggested load is editable", async () => {
+  const block = { ...deadlift, progression_rule: "Add 2.5 kg when all sets complete." };
+  const previous = record(deadlift, { plan_id: "previous-plan", actual: { load: { value: 80, unit: "kg" }, effort: { method: "RPE", value: 6 } } });
+  const collapsed = mount(block, { open: false, recentPerformances: [previous], allowProgression: true });
+  assert.equal(collapsed.text().includes("Last:"), false);
+  collapsed.unmount();
+  const view = mount(block, { recentPerformances: [previous], allowProgression: true });
+  assert.match(view.text(), /Last: 80 kg.*4 × 8.*Try 82.5 kg/);
+  await view.click("Log numbers");
+  const load = view.container.querySelector<HTMLInputElement>('.ex-log-field input[id$="-load"]');
+  assert.equal(load?.value, "82.5");
+  await view.type("Load", "80");
+  await view.click("Save");
+  assert.deepEqual(view.saved[0].actual?.load, { value: 80, unit: "kg" });
+  view.unmount();
 });

@@ -5357,6 +5357,17 @@ class SupabaseAppStore(CompactGenerationReads):
         )
         return getattr(response, "data", None) or []
 
+    def list_exercise_history(
+        self, athlete_id: str, *, before_day: str | None = None, limit: int = 50, offset: int = 0
+    ) -> list[dict[str, Any]]:
+        """Athlete-owned history across plans, ordered consistently for paging."""
+        query = self.client.table("exercise_logs").select("*").eq("athlete_id", athlete_id)
+        if before_day:
+            query = query.lt("training_day", before_day)
+        response = (query.order("training_day", desc=True).order("updated_at", desc=True)
+                    .order("id", desc=True).range(offset, offset + limit - 1).execute())
+        return getattr(response, "data", None) or []
+
     def list_recent_exercise_loads(
         self, athlete_id: str, *, before_day: str, limit: int = 200
     ) -> list[dict[str, Any]]:

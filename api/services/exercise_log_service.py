@@ -261,8 +261,50 @@ def record_exercise_logs(
     return [stored[fields["block_id"]] for fields in rows]
 
 
+def recent_exercise_performances(store: AppStore, *, athlete_id: str, before_day: str) -> list[dict[str, Any]]:
+    return exercise_history_context(store, athlete_id=athlete_id, before_day=before_day)[0]
+
+
+# Today reads at most this many of the athlete's newest earlier logs, so the
+# cost of every Today load stays flat as history grows. Two pages reach well
+# past the movements a camp rotates through; one older than that is not recalled.
+_HISTORY_PAGE_ROWS = 500
+_HISTORY_SCAN_ROWS = 1000
+
+
+def exercise_history_context(store: AppStore, *, athlete_id: str, before_day: str) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    """Latest occurrence and latest reported weight per movement, across plans.
+
+    A bounded, paged read of the newest history retains less frequent movements
+    and loads omitted on a later log. A latest skip or pain report prevents
+    recalling an older weight.
+    """
+    latest: dict[str, dict[str, Any]] = {}
+    weights: dict[str, dict[str, Any]] = {}
+    offset = 0
+    while True:
+        rows = store.list_exercise_history(athlete_id, before_day=before_day, limit=_HISTORY_PAGE_ROWS, offset=offset)
+        for row in rows:
+            prescribed = row.get("prescribed") or {}
+            key = _clean(row.get("exercise_key"))
+            name = _clean(prescribed.get("display_name")).casefold()
+            identity = f"key:{key}" if key else f"name:{name}"
+            if identity == "name:":
+                continue
+            latest.setdefault(identity, row)
+            if identity not in weights:
+                candidate = recent_exercise_loads(store, athlete_id=athlete_id, before_day=before_day, performances=[row])
+                if candidate:
+                    weights[identity] = candidate[0]
+        offset += len(rows)
+        if len(rows) < _HISTORY_PAGE_ROWS or offset >= _HISTORY_SCAN_ROWS:
+            loads = [weight for identity, weight in weights.items()
+                     if latest[identity].get("status") != "skipped" and latest[identity].get("reason") != "pain"]
+            return list(latest.values()), loads
+
+
 def recent_exercise_loads(
-    store: AppStore, *, athlete_id: str, before_day: str
+    store: AppStore, *, athlete_id: str, before_day: str, performances: list[dict[str, Any]] | None = None
 ) -> list[dict[str, Any]]:
     """The latest weight logged for each exercise before ``before_day``.
 
@@ -271,7 +313,10 @@ def recent_exercise_loads(
     """
     seen: set[str] = set()
     loads: list[dict[str, Any]] = []
-    for row in store.list_recent_exercise_loads(athlete_id, before_day=before_day):
+    rows = performances if performances is not None else store.list_recent_exercise_loads(athlete_id, before_day=before_day)
+    for row in rows:
+        if row.get("status") == "skipped" or row.get("reason") == "pain":
+            continue
         actual = row.get("actual") if isinstance(row.get("actual"), Mapping) else {}
         load = actual.get("load")
         # Only a well-formed weight is carried forward; anything else is skipped.

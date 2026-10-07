@@ -2577,6 +2577,13 @@ class FakeStore(InMemoryNotificationLedger, FullRowStatusReads):
             and str(row.get("training_day")) == training_day
         ]
 
+    def list_exercise_history(self, athlete_id: str, *, before_day: str | None = None,
+                              limit: int = 50, offset: int = 0) -> list[dict]:
+        rows = [dict(row) for row in self.exercise_logs if row["athlete_id"] == athlete_id
+                and (before_day is None or row["training_day"] < before_day)]
+        rows.sort(key=lambda row: (row["training_day"], row.get("updated_at", ""), row["id"]), reverse=True)
+        return rows[offset:offset + limit]
+
     def list_recent_exercise_loads(self, athlete_id: str, *, before_day: str, limit: int = 200) -> list[dict]:
         rows = [
             dict(row)
