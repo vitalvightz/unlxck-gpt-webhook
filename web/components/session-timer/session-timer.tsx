@@ -254,6 +254,13 @@ function Ring({ progress, children }: { progress: number | null; children: React
           strokeDashoffset={100 - clamped * 100}
           transform="rotate(-90 60 60)"
         />
+        {/* A lit head riding the arc's leading edge, turned with the same
+            easing as the arc so the two never part. */}
+        {progress !== null && clamped > 0 && clamped < 1 ? (
+          <g className="st-ring-head" style={{ transform: `rotate(${clamped * 360}deg)` }}>
+            <circle cx="60" cy="5" r="2.9" />
+          </g>
+        ) : null}
       </svg>
       <div className="st-ring-inner">{children}</div>
     </div>
@@ -1111,6 +1118,54 @@ export function SessionTimer({
         ? `Minimum hit. Only add ${countNoun(item)}s if you're moving well.`
         : null;
 
+  const nudges = timed && !view.paused;
+  // Pause is the primary action during a round, and Resume is primary
+  // whenever paused, so it only repeats here for sets and rest. The ring
+  // pauses too, so a bare icon is enough.
+  const showsPause =
+    (state.phase === "rest" || (state.phase === "work" && item?.kind !== "interval")) && !view.paused;
+  const secondary: ReactNode[] = [];
+  if (showsPause) {
+    secondary.push(
+      <button key="pause" type="button" className="st-square" onClick={togglePause} aria-label="Pause">
+        <Icon name="pause" />
+      </button>,
+    );
+  }
+  if (state.phase === "work" && item?.kind === "interval" && !view.paused) {
+    secondary.push(
+      <button key="end-round" type="button" onClick={() => timer.run(endRound)}>
+        <Icon name="skip" />
+        End round
+      </button>,
+    );
+  }
+  // Only ever moves to the next exercise. Nothing here can end the session:
+  // that is End session, which asks first. Highlighted once a set range's
+  // minimum is met, as the natural way on.
+  if (state.index + 1 < state.items.length) {
+    secondary.push(
+      <button
+        key="next"
+        type="button"
+        data-emphasis={canFinishItem ? "true" : undefined}
+        onClick={() => timer.run(finishItem)}
+      >
+        <Icon name="next" />
+        Next exercise
+      </button>,
+    );
+  }
+  // Work done without the clock: count it as planned in one tap.
+  if (item && done < plannedTarget(item) && !(item.kind === "task" && state.phase === "work")) {
+    secondary.push(
+      <button key="planned" type="button" onClick={() => timer.run(finishItemAsPlanned)}>
+        <Icon name="check" />
+        Done as planned
+      </button>,
+    );
+  }
+
   return (
     <ToBody>
     <div
@@ -1268,69 +1323,41 @@ export function SessionTimer({
 
       {state.phase !== "done" ? (
         <footer className="st-controls">
-          <PrimaryAction
-            timer={timer}
-            item={item}
-            canFinishItem={canFinishItem}
-            readyRemainingMs={view.readyRemainingMs}
-          />
-          <div className="st-secondary">
-            {/* Pause is the primary action during a round, and Resume is primary
-                whenever paused, so it only repeats here for sets and rest. */}
-            {(state.phase === "rest" || (state.phase === "work" && item?.kind !== "interval")) &&
-            !view.paused ? (
-              <button type="button" onClick={togglePause}>
-                <Icon name="pause" />
-                Pause
-              </button>
-            ) : null}
-            {timed && !view.paused ? (
-              <>
-                <button
-                  type="button"
-                  onClick={() => timer.update((s, at) => addTime(s, -10, at))}
-                  aria-label="Take 10 seconds off"
-                >
-                  <Icon name="minus" />
-                  10s
-                </button>
-                <button
-                  type="button"
-                  onClick={() => timer.update((s, at) => addTime(s, 10, at))}
-                  aria-label="Add 10 seconds"
-                >
-                  <Icon name="plus" />
-                  10s
-                </button>
-              </>
-            ) : null}
-            {state.phase === "work" && item?.kind === "interval" && !view.paused ? (
-              <button type="button" onClick={() => timer.run(endRound)}>
-                <Icon name="skip" />
-                End round
-              </button>
-            ) : null}
-            {/* Only ever moves to the next exercise. Nothing here can end the
-                session: that is End session, which asks first. Highlighted once
-                a set range's minimum is met, as the natural way on. */}
-            {state.index + 1 < state.items.length ? (
+          {/* ±10s flank the main action, so the row under it only has to hold
+              the ways forward and never cramps into two-line labels. */}
+          <div className="st-primary-row">
+            {nudges ? (
               <button
                 type="button"
-                data-emphasis={canFinishItem ? "true" : undefined}
-                onClick={() => timer.run(finishItem)}
+                className="st-nudge"
+                onClick={() => timer.update((s, at) => addTime(s, -10, at))}
+                aria-label="Take 10 seconds off"
               >
-                <Icon name="next" />
-                Next exercise
+                −10s
               </button>
             ) : null}
-            {/* Work done without the clock: count it as planned in one tap. */}
-            {item && done < plannedTarget(item) && !(item.kind === "task" && state.phase === "work") ? (
-              <button type="button" onClick={() => timer.run(finishItemAsPlanned)}>
-                <Icon name="check" />
-                Done as planned
+            <PrimaryAction
+              timer={timer}
+              item={item}
+              canFinishItem={canFinishItem}
+              readyRemainingMs={view.readyRemainingMs}
+            />
+            {nudges ? (
+              <button
+                type="button"
+                className="st-nudge"
+                onClick={() => timer.update((s, at) => addTime(s, 10, at))}
+                aria-label="Add 10 seconds"
+              >
+                +10s
               </button>
             ) : null}
           </div>
+          {secondary.length ? (
+            <div className="st-secondary" data-dense={secondary.length > 2 && !showsPause ? "true" : undefined}>
+              {secondary}
+            </div>
+          ) : null}
           {nextItem ? (
             <div className="st-next">
               <span className="st-next-label">Then</span>
