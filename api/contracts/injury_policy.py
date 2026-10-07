@@ -19,6 +19,9 @@ from fightcamp.surface_wound_safety import sanitize_surface_guidance
 from .rehab_stage import resolve_rehab_stage
 from .rehab_progression import resolve_reviewed_progression, episode_setback_at, _instant
 from .clinician_clearance import effective_clinician_clearance, clinician_clears_baseline
+from .rehab_assessment import AssessmentContext, input_definitions, read_assessment_input
+from .achilles_restore_load import review_achilles_restore_load
+from .clinical_review_validity import ClinicalReviewInput
 
 
 _NON_CONTACT_BLOCK_TYPES = frozenset({
@@ -26,9 +29,6 @@ _NON_CONTACT_BLOCK_TYPES = frozenset({
     "strength", "strength_speed", "accessory", "conditioning",
     "cooldown_recovery", "nutrition", "mindset", "rehab",
 })
-from .rehab_assessment import AssessmentContext, input_definitions, read_assessment_input
-from .achilles_restore_load import review_achilles_restore_load
-from .clinical_review_validity import ClinicalReviewInput
 
 
 def resolve_injury_policy(
