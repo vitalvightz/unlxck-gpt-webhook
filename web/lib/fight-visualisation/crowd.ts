@@ -40,6 +40,8 @@ export function crowdLevel(options: {
 
 type WebkitWindow = Window & { webkitAudioContext?: typeof AudioContext };
 
+const MP3_PADDING_SEC = 0.06;
+
 export class CrowdBed {
   private context: AudioContext | null = null;
   private gain: GainNode | null = null;
@@ -87,6 +89,12 @@ export class CrowdBed {
     const source = this.context.createBufferSource();
     source.buffer = this.buffer;
     source.loop = true;
+    // MP3 encoders pad a few ms of silence at each end; loop inside it so the
+    // bed never drops out at the seam.
+    if (this.buffer.duration > 1) {
+      source.loopStart = MP3_PADDING_SEC;
+      source.loopEnd = this.buffer.duration - MP3_PADDING_SEC;
+    }
     source.connect(this.gain);
     source.start();
     this.source = source;
