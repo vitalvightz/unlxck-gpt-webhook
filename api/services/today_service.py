@@ -95,6 +95,7 @@ from api.services.readiness_failsafe import (
     build_readiness_signal,
 )
 from api.datetimes import parse_calendar_date as _parse_structured_date
+from api.optional_sessions import is_optional_session
 
 logger = logging.getLogger(__name__)
 
@@ -1685,6 +1686,8 @@ def _select_structured_primary_session(sessions: list[Mapping[str, Any]]) -> Map
     joint prep or a tactical card can lead the day. Support-only work is passed
     over when the day also holds main training, keeping the slot on that work.
     """
+    # Optional work is offered beside the day, never the day itself.
+    sessions = [session for session in sessions if not is_optional_session(session)]
     if not sessions:
         return None
     with_blocks = [session for session in sessions if _structured_session_blocks(session)]
@@ -2007,6 +2010,10 @@ def _structured_day_session_entries(
     entries = [primary] if primary is not None else []
     seen = {_session_id_for_entry(primary)} if primary is not None else set()
     for session in _iter_mapping_items(day.get("sessions")):
+        # Optional work is not part of the day unit: no shared log is written
+        # to it and it never decides whether the day is done.
+        if is_optional_session(session):
+            continue
         entry = _structured_session_entry_for_day(day, week=week, session_override=session)
         if entry is None:
             continue

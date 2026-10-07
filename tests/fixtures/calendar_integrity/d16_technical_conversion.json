@@ -4,6 +4,9 @@
   "roles": [
     [1, "SPP", "alactic_speed_day", "conditioning", "thursday", 15, false, false, false, "", ""],
     [1, "SPP", "breathing_reset", "support_insert", "friday", 14, false, false, false, "support", "low"],
+    [1, "SPP", "fight_visualization", "support_insert", "monday", 11, true, false, false, "support", "low"],
+    [1, "SPP", "fight_visualization", "support_insert", "sunday", 12, true, false, false, "support", "low"],
+    [1, "SPP", "fight_visualization", "support_insert", "thursday", 15, true, false, false, "support", "low"],
     [1, "SPP", "fight_week_freshness_day", "recovery", "thursday", 15, true, false, false, "support", "low"],
     [1, "SPP", "hard_sparring_day", "sparring", "friday", 14, false, false, false, "", ""],
     [1, "SPP", "hard_sparring_day", "sparring", "tuesday", 10, true, false, false, "support", "low"],

@@ -428,6 +428,8 @@ export type StructuredSession = {
   blocks?: StructuredBlock[] | null;
   /** 1-based, server-decided position within the day; `sessions` is already in this order. */
   execution_order?: number | null;
+  /** Server-owned: offered, never required (the optional camp Fight Visualisation). */
+  optional?: boolean | null;
 };
 
 export type StructuredTodayCard = {

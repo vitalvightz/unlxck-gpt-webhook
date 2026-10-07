@@ -1550,6 +1550,7 @@ export type Session = {
   blocks: SessionBlock[];
   completion: Completion | null;
   execution_order: number | null;
+  optional: boolean | null;
 };
 
 /** An executable unit inside a session (Section N). */

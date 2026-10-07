@@ -237,6 +237,8 @@ export function TodayScreen() {
       painReasonAllowed={hasHealthDataConsent(me)}
       token={token ?? ""}
       onRefresh={refresh}
+      athleteFullName={me?.profile.full_name}
+      professionalStatus={me?.profile.professional_status}
     />
   );
 

@@ -30,6 +30,7 @@ _calendar_d_day = _impl._calendar_d_day
 _canonical_day = _impl._canonical_day
 _complete_week_physical_occupancy = _impl._complete_week_physical_occupancy
 _ensure_coordination_support = _impl._ensure_coordination_support
+_place_camp_visualizations = _impl._place_camp_visualizations
 _fill_week = _impl._fill_week
 _has_future_fight = _impl._has_future_fight
 _new_usage_ledger = _impl._new_usage_ledger
@@ -549,4 +550,6 @@ def apply_camp_week_fillers(
         for week in weekly_role_map.get("weeks", []) or []:
             if isinstance(week, dict):
                 _complete_week_physical_occupancy(week, athlete_model, usage_ledger)
+        # Optional camp Fight Visualisation, D-42..D-14 (the tail places its own).
+        _place_camp_visualizations(weekly_role_map, athlete_model)
     return weekly_role_map

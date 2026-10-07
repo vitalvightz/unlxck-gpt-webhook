@@ -38,6 +38,20 @@ FIGHT_VISUALIZATION_COUNTDOWN_DAYS = (7, 5, 3, 1, 0)
 ROLE_KEY = "fight_visualization"
 ATHLETE_FACING_LABEL = "Fight Visualisation"
 
+# Optional camp block. Imagery builds skill through repetition over weeks
+# (about three ~12-15 minute sessions a week for four-plus weeks in the
+# dose-response work), so the countdown alone starts too late to train anything.
+# The camp block runs from six weeks out up to the countdown, reuses the
+# style-owned situational entries (D-7 picture -> D-5 read -> D-3 reset, in
+# rotation) and is offered, never required: it rides on a Tactical Focus or
+# low-load day and the athlete may skip it.
+CAMP_VISUALIZATION_FIRST_DAY = 42
+CAMP_VISUALIZATION_LAST_DAY = 8
+CAMP_VISUALIZATIONS_PER_WEEK = 3
+CAMP_VISUALIZATION_DURATION_MIN = 12
+CAMP_VISUALIZATION_SOURCE_DAYS = (7, 5, 3)
+OPTIONAL_FLAG = "optional_fight_visualization"
+
 BANK_SPORTS = ("boxing", "kickboxing", "mma", "cross_sport")
 _BANK_STYLES = frozenset(STYLE_FAMILIES)
 
@@ -326,7 +340,10 @@ def select_for_athlete(
 
 
 def build_visualization_display_text(
-    entry: FightVisualization, *, prescribed_duration_min: int | None = None
+    entry: FightVisualization,
+    *,
+    prescribed_duration_min: int | None = None,
+    optional: bool = False,
 ) -> str:
     """Render the prescription in the shared athlete-facing session-body shape.
 
@@ -336,9 +353,10 @@ def build_visualization_display_text(
     prescription must stay inside one bulleted activity.
     """
     dose = prescribed_duration_min or entry.duration_min[1]
+    kind = "optional mental rehearsal" if optional else "mental rehearsal only"
     lines = [
         f"Why: {entry.why}",
-        f"- {entry.name}: {dose} minutes, mental rehearsal only. No physical load.",
+        f"- {entry.name}: {dose} minutes, {kind}. No physical load.",
         *(
             f"  Step {index}: {instruction}"
             for index, instruction in enumerate(entry.instructions, start=1)
@@ -395,3 +413,87 @@ def visualization_metadata(
             "meaningful_stress": False,
         },
     }
+
+
+def select_camp_visualization(
+    athlete_model: Any, ordinal: int
+) -> FightVisualization | None:
+    """The ``ordinal``-th camp session's content: the style's situational
+    entries in rotation, so consecutive sessions rehearse different pictures."""
+    source_day = CAMP_VISUALIZATION_SOURCE_DAYS[ordinal % len(CAMP_VISUALIZATION_SOURCE_DAYS)]
+    return select_for_athlete(athlete_model, source_day)
+
+
+def camp_visualization_role(
+    athlete_model: Any, *, d_day: int, weekday: str | None, ordinal: int
+) -> dict[str, Any] | None:
+    """A fully stamped optional camp Fight Visualisation role, or None."""
+    entry = select_camp_visualization(athlete_model, ordinal)
+    if entry is None:
+        return None
+    dose = CAMP_VISUALIZATION_DURATION_MIN
+    metadata = visualization_metadata(entry, prescribed_duration_min=dose)
+    metadata["fight_visualization"]["duration_min"] = [dose, dose]
+    metadata["fight_visualization"]["mode"] = "camp"
+    metadata["fight_visualization"]["optional"] = True
+    # Locked so it renders exactly from the bank, but not mandatory: missing it
+    # is never a planning failure, and the athlete may skip it.
+    metadata["governance"]["mandatory"] = False
+    metadata["preferred_tags"] = ["fight_visualization", "mental", "camp"]
+    day_title = str(weekday or "").strip().title()
+    role: dict[str, Any] = {
+        "category": "support_insert",
+        "role_key": ROLE_KEY,
+        "athlete_facing_label": ATHLETE_FACING_LABEL,
+        "rpe_max": 1,
+        "support_insert_category": "mental",
+        "support_insert_cost_category": "zero_cost",
+        "mechanical_load_regions": [],
+        "stress_class": "support",
+        "cost_class": "low",
+        "countdown_offset": d_day,
+        "countdown_label": f"D-{d_day}",
+        "scheduled_countdown_label": f"D-{d_day}",
+        **metadata,
+        "display_text": build_visualization_display_text(
+            entry, prescribed_duration_min=dose, optional=True
+        ),
+        "duration_min": [dose, dose],
+        "prescribed_duration_min": dose,
+        "fight_visualization_mode": "camp",
+        OPTIONAL_FLAG: True,
+    }
+    if day_title:
+        role["scheduled_day_hint"] = day_title
+        role["real_weekday"] = day_title
+        role["countdown_display_label"] = f"D-{d_day} ({day_title})"
+    return role
+
+
+def choose_camp_visualization_days(
+    candidates: dict[int, int],
+    limit: int = CAMP_VISUALIZATIONS_PER_WEEK,
+    taken: tuple[int, ...] = (),
+) -> list[int]:
+    """Pick up to ``limit`` countdown days from ``{d_day: tier}``.
+
+    Lower tiers win (0 = shares a Tactical Focus day, 1 = low-load day, 2 = any
+    other non-contact training day). Days next to an already chosen day are
+    taken only when nothing better spaced is left, so three sessions spread
+    across the week instead of bunching. ``taken`` are sessions the week already
+    holds: they count toward spacing, and ``limit`` is what is left to add.
+    Returned furthest-out first.
+    """
+    ordered = sorted(candidates, key=lambda d_day: (candidates[d_day], -d_day))
+    chosen: list[int] = []
+    for allow_adjacent in (False, True):
+        for d_day in ordered:
+            if len(chosen) >= limit:
+                break
+            if d_day in chosen or d_day in taken:
+                continue
+            spaced_from = (*chosen, *taken)
+            if not allow_adjacent and any(abs(d_day - other) <= 1 for other in spaced_from):
+                continue
+            chosen.append(d_day)
+    return sorted(chosen, reverse=True)

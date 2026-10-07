@@ -1,0 +1,301 @@
+/* Guided Fight Visualisation. Deliberately darker and stiller than the session
+   timer: the athlete's eyes are closed, so the screen only needs to be readable
+   at a glance and must not light up a dark room. One slow breathing orb carries
+   the pace; everything else is quiet text. */
+
+.gv-root {
+  --gv-base: #050507;
+  --gv-ink: #eef0f4;
+  --gv-ink-soft: rgba(238, 240, 244, 0.62);
+  --gv-ink-faint: rgba(238, 240, 244, 0.34);
+  --gv-line: rgba(255, 255, 255, 0.08);
+  --gv-surface: rgba(255, 255, 255, 0.05);
+  --gv-accent: #7f8bff;
+  --gv-glow: rgba(90, 104, 230, 0.16);
+  --gv-on-ink: #0b0c0f;
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+  padding: max(12px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom));
+  background: var(--gv-base);
+  color: var(--gv-ink);
+  font-family: var(--font-display, system-ui, sans-serif);
+  overflow-x: hidden;
+  overflow-y: auto;
+  outline: none;
+  isolation: isolate;
+  color-scheme: dark;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.gv-root[data-phase="settle"] { --gv-accent: #6fb7ff; --gv-glow: rgba(60, 140, 230, 0.14); }
+.gv-root[data-phase="rehearse"] { --gv-accent: #ff5a6e; --gv-glow: rgba(181, 18, 43, 0.16); }
+.gv-root[data-phase="anchor"] { --gv-accent: #ffb020; --gv-glow: rgba(230, 150, 0, 0.16); }
+.gv-root[data-phase="close"] { --gv-accent: #34d57f; --gv-glow: rgba(22, 163, 88, 0.14); }
+.gv-root[data-status="paused"] { --gv-accent: #9aa3b2; --gv-glow: rgba(120, 130, 150, 0.1); }
+
+.gv-glow {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: radial-gradient(90% 60% at 50% 42%, var(--gv-glow), transparent 70%);
+  transition: background 1.6s ease;
+}
+
+.gv-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.gv-kicker {
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--gv-ink-faint);
+}
+
+.gv-icon-button {
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--gv-surface);
+  color: var(--gv-ink-soft);
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.gv-ready,
+.gv-stage,
+.gv-done {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  width: 100%;
+  max-width: 520px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.gv-title {
+  margin: 0;
+  font-size: clamp(1.8rem, 7vw, 2.6rem);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.gv-why {
+  margin: 0;
+  font-size: 1.05rem;
+  line-height: 1.5;
+  color: var(--gv-ink-soft);
+}
+
+.gv-facts {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.gv-facts li {
+  padding: 6px 12px;
+  border: 1px solid var(--gv-line);
+  border-radius: 999px;
+  font-size: 0.85rem;
+  color: var(--gv-ink-soft);
+}
+
+.gv-hint {
+  margin: 0;
+  max-width: 40ch;
+  font-size: 0.92rem;
+  line-height: 1.5;
+  color: var(--gv-ink-faint);
+}
+
+.gv-toggles {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 20px;
+}
+
+.gv-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.95rem;
+  color: var(--gv-ink-soft);
+  cursor: pointer;
+}
+
+.gv-toggle input {
+  width: 20px;
+  height: 20px;
+  accent-color: var(--gv-accent);
+}
+
+.gv-primary,
+.gv-secondary {
+  min-height: 48px;
+  padding: 0 24px;
+  border-radius: 999px;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.gv-primary {
+  border: 0;
+  background: var(--gv-ink);
+  color: var(--gv-on-ink);
+}
+
+.gv-secondary {
+  border: 1px solid var(--gv-line);
+  background: var(--gv-surface);
+  color: var(--gv-ink-soft);
+}
+
+.gv-ready .gv-primary {
+  min-width: 200px;
+  margin-top: 6px;
+}
+
+/* The orb breathes on the settle rhythm: four in, six out. */
+.gv-orb {
+  width: min(56vw, 220px);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 40%, var(--gv-accent), transparent 68%);
+  opacity: 0.5;
+  animation: gv-breathe 10s ease-in-out infinite;
+  transition: background 1.6s ease;
+}
+
+.gv-root[data-status="paused"] .gv-orb {
+  animation-play-state: paused;
+  opacity: 0.25;
+}
+
+.gv-done .gv-orb {
+  width: min(32vw, 120px);
+  animation-duration: 14s;
+}
+
+@keyframes gv-breathe {
+  0% { transform: scale(0.72); opacity: 0.32; }
+  40% { transform: scale(1); opacity: 0.58; }
+  100% { transform: scale(0.72); opacity: 0.32; }
+}
+
+.gv-phase {
+  margin: 0;
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--gv-accent);
+}
+
+.gv-caption {
+  min-height: 4.5em;
+  margin: 0;
+  max-width: 30ch;
+  font-size: clamp(1.1rem, 4.6vw, 1.4rem);
+  line-height: 1.45;
+  color: var(--gv-ink-soft);
+}
+
+.gv-cue {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  font-size: 1.3rem;
+  font-weight: 600;
+}
+
+.gv-cue-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--gv-ink-faint);
+}
+
+.gv-done-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.gv-controls {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  max-width: 520px;
+  margin: 0 auto;
+}
+
+.gv-progress {
+  width: 100%;
+  height: 3px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--gv-line);
+}
+
+.gv-progress span {
+  display: block;
+  height: 100%;
+  background: var(--gv-accent);
+  transform-origin: left center;
+  transition: transform 250ms linear;
+}
+
+.gv-remaining {
+  margin: 0;
+  font-size: 0.82rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--gv-ink-faint);
+}
+
+.gv-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gv-orb {
+    animation: none;
+    transform: scale(0.86);
+  }
+  .gv-glow,
+  .gv-orb,
+  .gv-progress span {
+    transition: none;
+  }
+}

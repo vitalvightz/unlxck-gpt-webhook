@@ -3,6 +3,9 @@
   "payload_variant": null,
   "roles": [
     [1, "SPP", "fight_visualization", "support_insert", "friday", 7, true, false, false, "support", "low"],
+    [1, "SPP", "fight_visualization", "support_insert", "monday", 11, true, false, false, "support", "low"],
+    [1, "SPP", "fight_visualization", "support_insert", "sunday", 12, true, false, false, "support", "low"],
+    [1, "SPP", "fight_visualization", "support_insert", "wednesday", 9, true, false, false, "support", "low"],
     [1, "SPP", "hard_sparring_day", "sparring", "thursday", 8, true, false, false, "support", "low"],
     [1, "SPP", "light_combat_day", "technical", "monday", 11, true, false, false, "support", "low"],
     [1, "SPP", "neural_primer_day", "strength", "friday", 7, true, false, true, "meaningful_stress", "medium"],

@@ -354,6 +354,10 @@ class Session(BaseModel):
     # model-generated), and the day's ``sessions`` list is already in this
     # order. Distinct from any planning identity such as ``session_index``.
     execution_order: int | None = None
+    # Server-owned: True only for work offered but never required (the optional
+    # camp Fight Visualisation). Set by structured_plan_locked_merge, which clears
+    # any model-supplied value; read through api.optional_sessions.
+    optional: bool | None = None
 
 
 class TodayCard(BaseModel):
