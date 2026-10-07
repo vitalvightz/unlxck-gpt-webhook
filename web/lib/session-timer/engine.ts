@@ -314,6 +314,32 @@ export function finishItem(state: TimerState, now: number): TimerStep {
   return { state: completeItem(next, now, events), events };
 }
 
+/**
+ * The plan's count for the current exercise: what "done as planned" fills in.
+ * The plan's own number when the item carries it, else the timer's target.
+ */
+export function plannedTarget(item: TimerItem): number {
+  if (item.planned) return item.planned.min;
+  if (item.kind === "interval") return item.rounds;
+  if (item.kind === "sets") return item.sets?.min ?? 1;
+  return 1;
+}
+
+/**
+ * Mark the current exercise done as planned and move on, for work done
+ * without running the clock: its count is filled up to the plan.
+ */
+export function finishItemAsPlanned(state: TimerState, now: number): TimerStep {
+  const item = currentItem(state);
+  if (!item || state.phase === "done") {
+    return { state, events: [] };
+  }
+  const completed = [...state.completed];
+  completed[state.index] = Math.max(completed[state.index] ?? 0, plannedTarget(item));
+  const events: TimerEvent[] = [];
+  return { state: completeItem({ ...state, completed, pausedAt: null }, now, events), events };
+}
+
 /** End the whole session from anywhere. */
 export function endSession(state: TimerState, now: number): TimerState {
   return {

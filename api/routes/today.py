@@ -50,6 +50,7 @@ from api.contracts.completion import completion_landing_state, completion_status
 from api.contracts.rehab_completion import COMPLETED_STATUSES
 from api.services.exercise_log_service import (
     list_exercise_logs_for_today,
+    recent_exercise_loads,
     record_exercise_log,
     record_exercise_logs,
 )
@@ -687,6 +688,7 @@ def build_today_router(*, require_profile, get_store) -> APIRouter:
             plan_id=request_body.plan_id,
             entries=[entry.model_dump(exclude_none=True) for entry in request_body.entries],
             health_consent_granted=evaluate_profile_compliance(profile).health_consent_granted,
+            keep_existing=request_body.keep_existing,
         )
         return ExerciseLogBatchResponse(logs=[_exercise_log_record(row) for row in rows])
 
@@ -709,6 +711,9 @@ def build_today_router(*, require_profile, get_store) -> APIRouter:
         return ExerciseLogListResponse(
             training_day=training_day,
             logs=[_exercise_log_record(row) for row in rows],
+            recent_loads=recent_exercise_loads(
+                store, athlete_id=profile.athlete_id, before_day=training_day
+            ),
         )
 
     @router.get(

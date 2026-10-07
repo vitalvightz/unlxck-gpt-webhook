@@ -73,8 +73,16 @@
   font-size: 15px;
 }
 
+.today-review-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
 .today-review-chip {
-  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   min-height: 40px;
   padding: 0 16px;
   border: 1px solid var(--progress-gold-border);
@@ -85,6 +93,12 @@
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
+}
+
+.today-review-chip[data-tone="accent"] {
+  border-color: color-mix(in srgb, var(--brand-red) 45%, transparent);
+  background: var(--brand-red-soft);
+  color: var(--text-primary);
 }
 
 .today-review-chip:disabled {
@@ -106,6 +120,12 @@
 
 .today-review-footer .cta {
   width: 100%;
+}
+
+.today-review-planned {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 13px;
 }
 
 .today-review-unlogged {

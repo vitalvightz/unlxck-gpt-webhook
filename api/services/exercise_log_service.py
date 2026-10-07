@@ -218,12 +218,25 @@ def record_exercise_logs(
     plan_id: str,
     entries: list[Mapping[str, Any]],
     health_consent_granted: bool,
+    keep_existing: bool = False,
     now: datetime | None = None,
 ) -> list[dict[str, Any]]:
-    """Validate every entry, then upsert them all: one bad block writes nothing."""
+    """Validate every entry, then upsert them all: one bad block writes nothing.
+
+    With ``keep_existing`` a block already logged today keeps its log, which is
+    returned as stored instead of being overwritten.
+    """
     plan_id = _clean(plan_id)
     training_day, blocks = _resolve_logging_day(
         store, athlete_id=athlete_id, athlete_timezone=athlete_timezone, plan_id=plan_id, now=now
+    )
+    existing = (
+        {
+            _clean(row.get("block_id")): row
+            for row in store.list_exercise_logs_for_day(athlete_id, plan_id=plan_id, training_day=training_day)
+        }
+        if keep_existing
+        else {}
     )
     rows = [
         _log_fields(
@@ -235,7 +248,50 @@ def record_exercise_logs(
         )
         for entry in entries
     ]
-    return [store.upsert_exercise_log(athlete_id, fields) for fields in rows]
+    return [
+        existing[fields["block_id"]] if fields["block_id"] in existing else store.upsert_exercise_log(athlete_id, fields)
+        for fields in rows
+    ]
+
+
+def recent_exercise_loads(
+    store: AppStore, *, athlete_id: str, before_day: str
+) -> list[dict[str, Any]]:
+    """The latest weight logged for each exercise before ``before_day``.
+
+    Keyed by the planner's ``exercise_key`` when the log has one, otherwise by
+    the exercise's name, so the next "done" can carry the weight forward.
+    """
+    seen: set[str] = set()
+    loads: list[dict[str, Any]] = []
+    for row in store.list_recent_exercise_loads(athlete_id, before_day=before_day):
+        actual = row.get("actual") if isinstance(row.get("actual"), Mapping) else {}
+        load = actual.get("load")
+        # Only a well-formed weight is carried forward; anything else is skipped.
+        if (
+            not isinstance(load, Mapping)
+            or not isinstance(load.get("value"), (int, float))
+            or isinstance(load.get("value"), bool)
+            or load["value"] <= 0
+            or not _clean(load.get("unit"))
+        ):
+            continue
+        prescribed = row.get("prescribed") if isinstance(row.get("prescribed"), Mapping) else {}
+        exercise_key = _clean(row.get("exercise_key")) or None
+        display_name = _clean(prescribed.get("display_name"))
+        identity = f"key:{exercise_key}" if exercise_key else f"name:{display_name.lower()}"
+        if identity in seen or identity == "name:":
+            continue
+        seen.add(identity)
+        loads.append(
+            {
+                "exercise_key": exercise_key,
+                "display_name": display_name,
+                "load": {"value": load.get("value"), "unit": load.get("unit")},
+                "training_day": str(row.get("training_day") or "")[:10],
+            }
+        )
+    return loads
 
 
 def list_exercise_logs_for_today(
@@ -255,4 +311,9 @@ def list_exercise_logs_for_today(
     return training_day, rows
 
 
-__all__ = ["list_exercise_logs_for_today", "record_exercise_log", "record_exercise_logs"]
+__all__ = [
+    "list_exercise_logs_for_today",
+    "recent_exercise_loads",
+    "record_exercise_log",
+    "record_exercise_logs",
+]

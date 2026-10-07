@@ -3,7 +3,10 @@ import type {
   ExerciseLogActual,
   ExerciseLogReason,
   ExerciseLogRecord,
+  ExerciseLogMeasure,
+  ExerciseLogRequest,
   ExerciseLogStatus,
+  ExerciseRecentLoad,
   StructuredBlock,
   StructuredSession,
 } from "@/lib/types";
@@ -418,4 +421,62 @@ export function deriveSessionOutcome(
     .filter(Boolean)
     .join(" ");
   return { status, total: owed.length, logged, unlogged, reason: status === "done" ? "" : reason };
+}
+
+/**
+ * The weight this exercise was last logged with, to carry into today's log, or
+ * null. Only for weighed work whose plan names no weight (when it does, "done
+ * as written" already means that weight), and only in the same unit.
+ */
+export function lastLoadFor(
+  block: StructuredBlock,
+  recentLoads: readonly ExerciseRecentLoad[] | undefined,
+): ExerciseLogMeasure | null {
+  if (!recentLoads?.length) return null;
+  const field = logFieldsForBlock(block).find((item) => item.key === "load");
+  if (!field || field.prescribed) return null;
+  const key = cleanText(block.exercise_key);
+  const name = cleanText(block.display_name)?.toLowerCase() ?? "";
+  const match =
+    (key ? recentLoads.find((item) => item.exercise_key === key) : undefined) ??
+    (name ? recentLoads.find((item) => item.display_name.trim().toLowerCase() === name) : undefined);
+  if (!match || match.load.unit !== field.apiUnit || !finitePositiveNumber(match.load.value)) return null;
+  return { value: match.load.value, unit: match.load.unit };
+}
+
+/** A log of work done, with the last weight filled in when none was given. */
+export function withLastLoad<T extends Omit<ExerciseLogRequest, "plan_id" | "block_id">>(
+  block: StructuredBlock,
+  request: T,
+  recentLoads: readonly ExerciseRecentLoad[] | undefined,
+): T {
+  if (request.status === "skipped" || request.actual?.load) return request;
+  const load = lastLoadFor(block, recentLoads);
+  return load ? { ...request, actual: { ...(request.actual ?? {}), load } } : request;
+}
+
+/**
+ * The effort the session was planned at: the middle RPE of the exercises the
+ * session owes, rounded onto the 1-9 session effort scale. Null when the plan
+ * gives no RPE. The review starts
+ * there so a session that went to plan is one tap to confirm.
+ */
+export function plannedSessionRpe(sessions: readonly StructuredSession[]): number | null {
+  const values = sessions
+    .filter((session) => session.optional !== true)
+    .flatMap((session) => session.blocks ?? [])
+    .filter(isLoggableBlock)
+    .flatMap((block) => {
+      const effort = block.effort;
+      const value = typeof effort?.value === "number" ? effort.value : Number(effort?.value);
+      return cleanText(effort?.method)?.toUpperCase() === "RPE" && Number.isFinite(value) && value >= 1 && value <= 10
+        ? [value]
+        : [];
+    })
+    .sort((a, b) => a - b);
+  if (values.length === 0) return null;
+  const middle = values.length / 2;
+  const median = values.length % 2 ? values[Math.floor(middle)] : (values[middle - 1] + values[middle]) / 2;
+  // The session effort scale stops at 9 (Max Effort).
+  return Math.min(9, Math.round(median));
 }

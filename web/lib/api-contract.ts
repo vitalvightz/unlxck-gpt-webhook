@@ -115,12 +115,15 @@ export type SendExerciseLogActual = Sends<Web.ExerciseLogActual, Api.ExerciseLog
 export type SendExerciseLogEffort = Sends<Web.ExerciseLogEffort, Api.ExerciseLogEffortRequest>;
 export type SendExerciseLogMeasure = Sends<Web.ExerciseLogMeasure, Api.ExerciseLogMeasureRequest>;
 export type SendExerciseLogRequest = Sends<Web.ExerciseLogRequest, Api.ExerciseLogRequest>;
+export type SendExerciseLogBatchRequest = Sends<Web.ExerciseLogBatchRequest, Api.ExerciseLogBatchRequest>;
 export type ReadExerciseLogActual = Reads<Api.ExerciseLogActual, Web.ExerciseLogActual>;
 export type ReadExerciseLogEffort = Reads<Api.ExerciseLogEffort, Web.ExerciseLogEffort>;
 export type ReadExerciseLogMeasure = Reads<Api.ExerciseLogMeasure, Web.ExerciseLogMeasure>;
 export type ReadExerciseLogRecord = Reads<Api.ExerciseLogRecord, Web.ExerciseLogRecord>;
 export type ReadExerciseLogResponse = Reads<Api.ExerciseLogResponse, Web.ExerciseLogResponse>;
 export type ReadExerciseLogListResponse = Reads<Api.ExerciseLogListResponse, Web.ExerciseLogListResponse>;
+export type ReadExerciseLogBatchResponse = Reads<Api.ExerciseLogBatchResponse, Web.ExerciseLogBatchResponse>;
+export type ReadExerciseRecentLoad = Reads<Api.ExerciseRecentLoad, Web.ExerciseRecentLoad>;
 export type ReadSparringLogRecord = Reads<Api.SparringLogRecord, Web.SparringLogRecord>;
 export type SendSparringLogRequest = Sends<Web.SparringLogRequest, Api.SparringLogRequest>;
 export type ReadSparringLogResponse = Reads<Api.SparringLogResponse, Web.SparringLogResponse>;
@@ -185,6 +188,10 @@ export type DeclaredExerciseLogResponse = Expect<Declared<Web.ExerciseLogRespons
 export type DeclaredExerciseLogListResponse = Expect<
   Declared<Web.ExerciseLogListResponse, Api.ExerciseLogListResponse>
 >;
+export type DeclaredExerciseLogBatchResponse = Expect<
+  Declared<Web.ExerciseLogBatchResponse, Api.ExerciseLogBatchResponse>
+>;
+export type DeclaredExerciseRecentLoad = Expect<Declared<Web.ExerciseRecentLoad, Api.ExerciseRecentLoad>>;
 export type DeclaredSparringLogRecord = Expect<Declared<Web.SparringLogRecord, Api.SparringLogRecord>>;
 export type DeclaredSparringLogResponse = Expect<Declared<Web.SparringLogResponse, Api.SparringLogResponse>>;
 export type DeclaredSparringLogHistoryResponse = Expect<

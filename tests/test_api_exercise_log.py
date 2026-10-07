@@ -588,3 +588,59 @@ def test_batch_entries_follow_the_health_consent_rules():
     first, second = resp.json()["logs"]
     assert first["reason"] is None and first["notes"] == ""
     assert second["reason"] == "equipment"
+
+
+def test_the_timer_batch_never_overwrites_a_log_entered_by_hand():
+    client, store, _ = _build_client()
+    training_day = _seed_plan(store, blocks=[_squat(), _plank()])
+    _start(client)
+    squat_id = f"blk-{training_day}-trap-bar-deadlift"
+    _log(client, actual={"load": {"value": 100, "unit": "kg"}})
+
+    resp = client.post(
+        "/api/today/exercise-logs",
+        headers=ATHLETE,
+        json={
+            "plan_id": PLAN_ID,
+            "keep_existing": True,
+            "entries": [
+                {"block_id": squat_id, "status": "modified", "actual": {"sets": 2}},
+                {"block_id": f"blk-{training_day}-front-plank", "status": "as_prescribed"},
+            ],
+        },
+    )
+
+    assert resp.status_code == 201, resp.text
+    squat, plank = resp.json()["logs"]
+    assert squat["status"] == "as_prescribed"
+    assert _reported(squat) == {"load": {"value": 100.0, "unit": "kg"}}
+    assert plank["status"] == "as_prescribed"
+    assert len(store.exercise_logs) == 2
+
+
+def test_todays_list_carries_the_last_weight_per_exercise():
+    client, store, _ = _build_client()
+    training_day = _seed_plan(store, blocks=[_squat()])
+    _start(client)
+    _log(client)
+    older = {"athlete_id": "athlete-1", "plan_id": OTHER_PLAN_ID, "block_id": "x", "status": "as_prescribed",
+             "prescribed": {"display_name": "Trap Bar Deadlift"}, "exercise_key": "trap-bar-deadlift"}
+    store.exercise_logs += [
+        {**older, "id": "a", "training_day": "2020-01-01", "actual": {"load": {"value": 90, "unit": "kg"}}},
+        {**older, "id": "b", "training_day": "2020-01-08", "actual": {"load": {"value": 95, "unit": "kg"}}},
+        {**older, "id": "c", "training_day": "2020-01-09", "actual": {"sets": 3}},
+        {**older, "id": "d", "training_day": "2020-01-02", "exercise_key": None,
+         "prescribed": {"display_name": "Goblet Squat"}, "actual": {"load": {"value": 24, "unit": "kg"}}},
+        # Today's own log is not "last time".
+        {**older, "id": "e", "training_day": training_day, "actual": {"load": {"value": 200, "unit": "kg"}}},
+    ]
+
+    resp = client.get(f"/api/today/exercise-logs?plan_id={PLAN_ID}", headers=ATHLETE)
+
+    assert resp.status_code == 200
+    assert resp.json()["recent_loads"] == [
+        {"exercise_key": "trap-bar-deadlift", "display_name": "Trap Bar Deadlift",
+         "load": {"value": 95.0, "unit": "kg"}, "training_day": "2020-01-08"},
+        {"exercise_key": None, "display_name": "Goblet Squat",
+         "load": {"value": 24.0, "unit": "kg"}, "training_day": "2020-01-02"},
+    ]

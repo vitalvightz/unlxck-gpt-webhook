@@ -147,11 +147,17 @@ export function useSessionTimer({
   items,
   storageKey,
   audible,
+  keepFinishedRun = false,
 }: {
   items: TimerItem[];
   storageKey: string;
   /** False while the timer is minimised: the clock keeps running, and only the round bells, warnings and voice sound. */
   audible: boolean;
+  /**
+   * Keep a finished run saved until its owner clears it (after logging what it
+   * counted), so closing the app in between never loses the work.
+   */
+  keepFinishedRun?: boolean;
 }): SessionTimerController {
   const [state, setState] = useState<TimerState>(
     () => loadSavedRun(storageKey, items) ?? createTimerState(items),
@@ -193,13 +199,13 @@ export function useSessionTimer({
       }
       stateRef.current = next;
       setState(next);
-      if (next.phase === "done" && next.endedAt !== null) {
+      if (next.phase === "done" && next.endedAt !== null && !keepFinishedRun) {
         clearSavedRun(storageKey);
       } else {
         saveRun(storageKey, next);
       }
     },
-    [storageKey],
+    [storageKey, keepFinishedRun],
   );
 
   const run = useCallback(

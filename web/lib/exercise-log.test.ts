@@ -4,6 +4,9 @@ import assert from "node:assert/strict";
 import {
   buildLogEntry,
   deriveSessionOutcome,
+  lastLoadFor,
+  plannedSessionRpe,
+  withLastLoad,
   draftFromLog,
   hasLoggableNumbers,
   isLoggableBlock,
@@ -223,4 +226,30 @@ test("nothing done reads as a skipped session", () => {
 
 test("a day with nothing to log is done", () => {
   assert.equal(deriveSessionOutcome([{ session_id: "vis", optional: true, blocks: [visualisation] }], {}).status, "done");
+});
+
+test("the session effort starts at the plan's middle RPE, on the 1-9 scale", () => {
+  const rpe = (value: number): StructuredBlock => ({ ...deadlift, block_id: `b-${value}`, effort: { method: "RPE", value } });
+  assert.equal(plannedSessionRpe([{ session_id: "s", blocks: [rpe(6), rpe(8), rpe(7)] }]), 7);
+  assert.equal(plannedSessionRpe([{ session_id: "s", blocks: [rpe(10)] }]), 9);
+  assert.equal(plannedSessionRpe([{ session_id: "s", blocks: [plank] }]), null);
+});
+
+test("last time's weight is carried into a done log, only when the plan names none", () => {
+  const recent = [
+    { exercise_key: null, display_name: "trap bar deadlift", load: { value: 100, unit: "kg" }, training_day: "2026-10-01" },
+  ];
+  assert.deepEqual(lastLoadFor(deadlift, recent), { value: 100, unit: "kg" });
+  assert.deepEqual(withLastLoad(deadlift, { status: "as_prescribed" }, recent), {
+    status: "as_prescribed",
+    actual: { load: { value: 100, unit: "kg" } },
+  });
+  // A weight already given, a skip, a held plank, or a prescribed load is left alone.
+  const given = { status: "modified" as const, actual: { load: { value: 90, unit: "kg" } } };
+  assert.equal(withLastLoad(deadlift, given, recent), given);
+  assert.deepEqual(withLastLoad(deadlift, { status: "skipped" }, recent), { status: "skipped" });
+  assert.equal(lastLoadFor(plank, [{ ...recent[0], display_name: "Front Plank" }]), null);
+  assert.equal(lastLoadFor({ ...deadlift, load: { value: 80, unit: "kg" } }, recent), null);
+  // A different unit is never mixed in.
+  assert.equal(lastLoadFor(deadlift, [{ ...recent[0], load: { value: 220, unit: "lb" } }]), null);
 });

@@ -19,8 +19,10 @@ import {
   endRound,
   endSession,
   finishItem,
+  finishItemAsPlanned,
   isPrep,
   metPlan,
+  plannedTarget,
   pause,
   resume,
   setRestLength,
@@ -989,7 +991,7 @@ export function SessionTimer({
   /** Closes a timer that was never started, without logging anything. */
   onClose: () => void;
 }) {
-  const timer = useSessionTimer({ items, storageKey, audible: visible });
+  const timer = useSessionTimer({ items, storageKey, audible: visible, keepFinishedRun: handOffWhenDone });
   const { state, now } = timer;
   const [sheet, setSheet] = useState<"settings" | "adjust" | null>(null);
   const [confirmEnd, setConfirmEnd] = useState(false);
@@ -1039,12 +1041,18 @@ export function SessionTimer({
   useEffect(() => {
     finishRef.current = finish;
   });
-  const handingOff = handOffWhenDone && visible && state.phase === "done";
+  // Also when the run comes back already finished (the app closed between the
+  // last set and the hand-off): it is handed on, never left hidden.
+  const handingOff = handOffWhenDone && state.phase === "done";
   useEffect(() => {
     if (!handingOff) return;
-    const timeout = window.setTimeout(() => finishRef.current(), HANDOFF_MS);
+    const timeout = window.setTimeout(() => {
+      // A light tap as the card takes over, felt with the phone in a pocket.
+      timerAudio().buzz([40]);
+      finishRef.current();
+    }, visible ? HANDOFF_MS : 0);
     return () => window.clearTimeout(timeout);
-  }, [handingOff]);
+  }, [handingOff, visible]);
 
   if (!visible) {
     if (state.phase === "done") return null;
@@ -1150,7 +1158,7 @@ export function SessionTimer({
       {/* Tapping anywhere off an open sheet closes it. */}
       {sheet !== null ? <div className="st-scrim" aria-hidden="true" onClick={() => setSheet(null)} /> : null}
 
-      {handingOff ? (
+      {handingOff && visible ? (
         <main className="st-main st-done st-handoff">
           <div className="st-done-badge" aria-hidden="true">
             <Icon name="check" />
@@ -1295,6 +1303,13 @@ export function SessionTimer({
               >
                 <Icon name="next" />
                 Next exercise
+              </button>
+            ) : null}
+            {/* Work done without the clock: count it as planned in one tap. */}
+            {item && done < plannedTarget(item) && !(item.kind === "task" && state.phase === "work") ? (
+              <button type="button" onClick={() => timer.run(finishItemAsPlanned)}>
+                <Icon name="check" />
+                Done as planned
               </button>
             ) : null}
           </div>

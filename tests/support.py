@@ -2538,6 +2538,18 @@ class FakeStore(InMemoryNotificationLedger, FullRowStatusReads):
             and str(row.get("training_day")) == training_day
         ]
 
+    def list_recent_exercise_loads(self, athlete_id: str, *, before_day: str, limit: int = 200) -> list[dict]:
+        rows = [
+            dict(row)
+            for row in self.exercise_logs
+            if row["athlete_id"] == athlete_id
+            and str(row.get("training_day")) < before_day
+            and isinstance(row.get("actual"), dict)
+            and row["actual"].get("load") is not None
+        ]
+        rows.sort(key=lambda row: str(row.get("training_day")), reverse=True)
+        return rows[:limit]
+
     def create_admin_review(self, athlete_id: str, fields: dict) -> dict:
         row = {
             "id": str(uuid4()),
