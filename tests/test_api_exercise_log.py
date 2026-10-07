@@ -644,3 +644,52 @@ def test_todays_list_carries_the_last_weight_per_exercise():
         {"exercise_key": None, "display_name": "Goblet Squat",
          "load": {"value": 24.0, "unit": "kg"}, "training_day": "2020-01-02"},
     ]
+
+
+def test_a_batch_is_one_write_never_a_row_at_a_time(monkeypatch):
+    """Row-by-row upserts commit independently, so a failure partway through
+    would leave earlier rows written. The batch must go through the bulk write."""
+    client, store, _ = _build_client()
+    training_day = _seed_plan(store, blocks=[_squat(), _plank()])
+    _start(client)
+
+    def no_single_writes(*_args, **_kwargs):
+        raise AssertionError("a batch must not write rows one at a time")
+
+    monkeypatch.setattr(store, "upsert_exercise_log", no_single_writes)
+    resp = _log_many(
+        client,
+        [
+            {"block_id": f"blk-{training_day}-trap-bar-deadlift", "status": "as_prescribed"},
+            {"block_id": f"blk-{training_day}-front-plank", "status": "skipped"},
+        ],
+    )
+
+    assert resp.status_code == 201, resp.text
+    assert len(store.exercise_logs) == 2
+
+
+@pytest.mark.parametrize("keep_existing", [False, True])
+def test_a_failed_batch_write_leaves_every_log_as_it_was(keep_existing):
+    client, store, _ = _build_client()
+    training_day = _seed_plan(store, blocks=[_squat(), _plank()])
+    _start(client)
+    _log(client, actual={"load": {"value": 100, "unit": "kg"}})
+    before = copy.deepcopy(store.exercise_logs)
+    store.fail_next_exercise_log_batch = True
+
+    resp = client.post(
+        "/api/today/exercise-logs",
+        headers=ATHLETE,
+        json={
+            "plan_id": PLAN_ID,
+            "keep_existing": keep_existing,
+            "entries": [
+                {"block_id": f"blk-{training_day}-trap-bar-deadlift", "status": "skipped"},
+                {"block_id": f"blk-{training_day}-front-plank", "status": "as_prescribed"},
+            ],
+        },
+    )
+
+    assert resp.status_code == 500
+    assert store.exercise_logs == before

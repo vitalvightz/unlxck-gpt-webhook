@@ -221,22 +221,17 @@ def record_exercise_logs(
     keep_existing: bool = False,
     now: datetime | None = None,
 ) -> list[dict[str, Any]]:
-    """Validate every entry, then upsert them all: one bad block writes nothing.
+    """Validate every entry, then write them all in one atomic statement.
 
-    With ``keep_existing`` a block already logged today keeps its log, which is
-    returned as stored instead of being overwritten.
+    Validation runs first, so an invalid block writes nothing; the write itself
+    is a single bulk upsert, so a database failure writes nothing either.
+
+    With ``keep_existing`` a block already logged today keeps its log (the
+    database skips it on conflict) and is returned as stored.
     """
     plan_id = _clean(plan_id)
     training_day, blocks = _resolve_logging_day(
         store, athlete_id=athlete_id, athlete_timezone=athlete_timezone, plan_id=plan_id, now=now
-    )
-    existing = (
-        {
-            _clean(row.get("block_id")): row
-            for row in store.list_exercise_logs_for_day(athlete_id, plan_id=plan_id, training_day=training_day)
-        }
-        if keep_existing
-        else {}
     )
     rows = [
         _log_fields(
@@ -248,10 +243,22 @@ def record_exercise_logs(
         )
         for entry in entries
     ]
-    return [
-        existing[fields["block_id"]] if fields["block_id"] in existing else store.upsert_exercise_log(athlete_id, fields)
-        for fields in rows
-    ]
+    written = store.upsert_exercise_logs(athlete_id, rows, keep_existing=keep_existing)
+    if keep_existing:
+        # Kept rows are not returned by the write: read the day back so every
+        # entry is answered with what is now stored.
+        stored = {
+            _clean(row.get("block_id")): row
+            for row in store.list_exercise_logs_for_day(athlete_id, plan_id=plan_id, training_day=training_day)
+        }
+    else:
+        stored = {_clean(row.get("block_id")): row for row in written}
+    missing = [fields["block_id"] for fields in rows if fields["block_id"] not in stored]
+    if missing:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="failed to save exercise logs"
+        )
+    return [stored[fields["block_id"]] for fields in rows]
 
 
 def recent_exercise_loads(
