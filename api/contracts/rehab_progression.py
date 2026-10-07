@@ -28,6 +28,7 @@ from .rehab_evidence import (
 #: claim capture; a checkpoint becomes evaluable only when code reads its input.
 from .rehab_assessment import AssessmentContext, input_definitions, read_assessment_input
 from .achilles_restore_load import CRITERION_ID, review_achilles_restore_load
+from .clinical_review_validity import ClinicalReviewInput, ReviewReason, evaluate_clinical_review
 
 CAPTURED_FUNCTIONAL_CHECKPOINTS: frozenset[str] = frozenset()
 
@@ -67,8 +68,11 @@ def _result(requirement: TransitionRequirement, status: str, reason: str, events
 
 def evaluate_transition(transition: PathwayTransition, *, policy: ClinicalPolicy, injury: Mapping[str, Any],
                         exposures: Sequence[Mapping[str, Any]], history_truncated: bool = False,
-                        as_of: datetime | None = None) -> dict[str, Any]:
+                        as_of: datetime | None = None,
+                        clinical_review_input: ClinicalReviewInput | None = None) -> dict[str, Any]:
     """Evaluate one declared transition. Pure; never changes a stage itself."""
+    if clinical_review_input is not None and as_of is None:
+        raise ValueError("shared clinical review integration requires explicit as_of")
     as_of = as_of or datetime.now(timezone.utc)
     events, ignored = read_exact_events(athlete_id=str(injury.get("athlete_id") or ""), injury=injury,
                                         exposure_rows=exposures)
@@ -143,6 +147,30 @@ def evaluate_transition(transition: PathwayTransition, *, policy: ClinicalPolicy
                 review = review_achilles_restore_load(context)
                 results.append({**_result(requirement, review["status"], review["reason_codes"][0]),
                                 "clinical_review": review})
+            elif clinical_review_input is not None and requirement.checkpoint == clinical_review_input.context.criterion_id:
+                supplied = clinical_review_input
+                context = supplied.context
+                assessed = AssessmentContext.from_injury(injury, as_of=as_of,
+                    setback_at=episode_setback_at(injury, exposures), history_truncated=history_truncated)
+                # An explicit shadow input cannot substitute a different engine
+                # subject, policy, transition or hide known safety/history gates.
+                matches = (context.athlete_id, context.injury_id, context.injury_episode_id, context.side,
+                           context.profile_id, context.policy_version, context.policy_hash,
+                           context.transition.from_stage, context.transition.to_stage) == (
+                           str(injury.get("athlete_id")), str(injury.get("id")), str(injury.get("episode_id")), injury.get("side"),
+                           policy.policy_id, policy.version, policy.content_hash, transition.from_stage, transition.to_stage)
+                setback = assessed.setback_at
+                unsafe = (assessed.medical_hold or not assessed.history_complete
+                          or injury.get("latest_reported_status") == "worse"
+                          or (setback and context.current_packet.evidence_cutoff <= setback))
+                if not matches or unsafe or injury.get("status") not in {"open", "monitoring"}:
+                    results.append(_result(requirement, UNKNOWN, ReviewReason.ENGINE_CONTEXT.value))
+                else:
+                    review = evaluate_clinical_review(context, supplied.reviews, as_of=as_of,
+                        lifecycle=supplied.lifecycle, registry=supplied.registry, trust=supplied.trust)
+                    result = review.model_dump(mode="json")
+                    results.append({**_result(requirement, review.criterion_status.value, result["reason_codes"][0]),
+                                    "clinical_review": result})
             else:
                 # Availability declarations cannot satisfy clinical checkpoints.
                 results.append(_result(requirement, MISSING_INPUT, f"functional_checkpoint_not_captured:{requirement.checkpoint}"))
