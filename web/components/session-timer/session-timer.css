@@ -305,19 +305,45 @@
   overflow: visible;
 }
 
+/* The track is a faint, lit-from-above dish: a soft accent wash inside, so the ring reads as an object rather
+   than a flat outline. */
+.st-ring::before {
+  content: "";
+  position: absolute;
+  inset: 4%;
+  border-radius: 999px;
+  background: radial-gradient(
+    circle at 50% 0%,
+    color-mix(in srgb, var(--st-accent) 9%, transparent),
+    transparent 70%
+  );
+  transition: background 420ms ease;
+}
+
 .st-ring-track {
   fill: none;
-  stroke: var(--st-line);
-  stroke-width: 3.5;
+  stroke: rgba(255, 255, 255, 0.07);
+  stroke-width: 4;
 }
 
 .st-ring-fill {
   fill: none;
   stroke: var(--st-accent);
-  stroke-width: 3.5;
+  stroke-width: 4;
   stroke-linecap: round;
   filter: drop-shadow(0 0 6px color-mix(in srgb, var(--st-accent) 60%, transparent));
   transition: stroke-dashoffset 120ms linear, stroke 300ms ease;
+}
+
+.st-ring-head {
+  transform-origin: 60px 60px;
+  transform-box: view-box;
+  transition: transform 120ms linear;
+}
+
+.st-ring-head circle {
+  fill: #fff;
+  filter: drop-shadow(0 0 5px var(--st-accent)) drop-shadow(0 0 2px var(--st-accent));
 }
 
 .st-ring[data-timed="false"] .st-ring-fill {
@@ -369,6 +395,7 @@
 @media (prefers-reduced-motion: reduce) {
   .st-glow,
   .st-ring-fill,
+  .st-ring-head,
   .st-phase { transition: none; }
   .st-root[data-tone="warn"] .st-clock-digits,
   .st-main .st-phase-dot { animation: none; }
@@ -709,38 +736,114 @@
   box-shadow: 0 12px 32px rgba(181, 18, 43, 0.35);
 }
 
-.st-secondary {
-  display: grid;
-  grid-auto-flow: column;
-  grid-auto-columns: minmax(0, 1fr);
+/* The main action, with −10s / +10s either side of it while a clock runs. */
+.st-primary-row {
+  display: flex;
   gap: 8px;
 }
 
-.st-secondary button {
+.st-primary-row .st-primary {
+  flex: 1;
+  min-width: 0;
+  padding: 0 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.st-nudge {
+  flex: none;
+  width: 68px;
+  min-height: 64px;
+  border: 1px solid var(--st-line);
+  border-radius: 20px;
+  background: var(--st-surface);
+  color: var(--st-ink);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+  cursor: pointer;
+  transition: background 160ms ease, transform 120ms ease;
+}
+
+.st-nudge:hover { background: var(--st-surface-strong); }
+.st-nudge:active { transform: scale(0.96); }
+
+/* The ways forward: icon and label on one line, at most two labelled buttons
+   plus a bare pause square, so nothing wraps. */
+.st-secondary {
   display: flex;
-  flex-direction: column;
+  gap: 6px;
+}
+
+.st-secondary button {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
   align-items: center;
   justify-content: center;
-  gap: 4px;
-  min-height: 58px;
-  padding: 6px 4px;
+  gap: 7px;
+  min-height: 52px;
+  padding: 0 8px;
   border: 1px solid var(--st-line);
   border-radius: 16px;
   background: var(--st-surface);
   color: var(--st-ink);
   font: inherit;
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 600;
+  white-space: nowrap;
   cursor: pointer;
-  transition: background 160ms ease;
+  transition: background 160ms ease, border-color 160ms ease, transform 120ms ease;
 }
 
 .st-secondary button:hover { background: var(--st-surface-strong); }
+.st-secondary button:active { transform: scale(0.97); }
+
+.st-secondary .st-glyph {
+  width: 17px;
+  height: 17px;
+  color: var(--st-ink-soft);
+}
+
+.st-secondary .st-square {
+  flex: none;
+  width: 48px;
+  padding: 0;
+}
+
+.st-secondary .st-square .st-glyph { color: var(--st-ink); }
+
+/* Three labelled buttons (a round's End round beside both ways on): stack
+   each icon over a one-line label rather than squeeze them side by side. */
+.st-secondary[data-dense="true"] button {
+  flex-direction: column;
+  gap: 4px;
+  min-height: 58px;
+  padding: 6px 4px;
+  font-size: 12.5px;
+}
 
 .st-secondary button[data-emphasis="true"] {
   border-color: color-mix(in srgb, var(--st-accent) 45%, transparent);
   background: color-mix(in srgb, var(--st-accent) 16%, transparent);
   color: var(--st-ink);
+}
+
+.st-secondary button[data-emphasis="true"] .st-glyph { color: var(--st-accent); }
+
+/* Phones under 390px: drop the inline icons before a label would clip. */
+@media (max-width: 389px) {
+  .st-secondary:not([data-dense="true"]) button:not(.st-square) .st-glyph { display: none; }
+  .st-secondary button { font-size: 13.5px; }
+  .st-secondary[data-dense="true"] button { font-size: 12px; }
+  .st-nudge { width: 60px; }
+}
+
+@media (max-width: 349px) {
+  .st-secondary[data-dense="true"] button { font-size: 11px; }
 }
 
 .st-next {
