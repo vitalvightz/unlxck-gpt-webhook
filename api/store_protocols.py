@@ -554,6 +554,12 @@ class InjuryStore(Protocol):
         self, athlete_id: str, *, hard: bool = False, rocked: bool = False
     ) -> str | None: ...
 
+    def upsert_exercise_log(self, athlete_id: str, fields: dict[str, Any]) -> dict[str, Any]: ...
+
+    def list_exercise_logs_for_day(
+        self, athlete_id: str, *, plan_id: str, training_day: str
+    ) -> list[dict[str, Any]]: ...
+
 
 class FeedbackStore(Protocol):
     """Secure beta feedback (api/routes/feedback.py)."""

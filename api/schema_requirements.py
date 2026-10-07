@@ -60,6 +60,10 @@ REQUIRED_TABLES: tuple[str, ...] = (
     # A missing migration must fail the gate: the endpoint writes this table
     # and, for rocked reports, its admin review in one RPC.
     "sparring_logs",
+    # What the athlete actually did per prescribed block (POST
+    # /api/today/exercise-log). A missing migration must fail the gate: the
+    # in-session log would otherwise fail on every save.
+    "exercise_logs",
     "rehab_exposures",
     "injury_episode_events",
     # Durable XP aggregate + immutable award ledger. Award writes are atomic
@@ -356,6 +360,23 @@ REQUIRED_SPARRING_LOGS_COLUMNS: tuple[str, ...] = (
     "created_at",
 )
 
+REQUIRED_EXERCISE_LOGS_COLUMNS: tuple[str, ...] = (
+    "id",
+    "athlete_id",
+    "plan_id",
+    "session_id",
+    "block_id",
+    "exercise_key",
+    "training_day",
+    "status",
+    "reason",
+    "prescribed",
+    "actual",
+    "notes",
+    "created_at",
+    "updated_at",
+)
+
 REQUIRED_XP_ACCOUNTS_COLUMNS: tuple[str, ...] = (
     "athlete_id",
     "total_xp",
@@ -467,6 +488,7 @@ REQUIRED_COLUMNS: Mapping[str, tuple[str, ...]] = {
     "today_checkins": REQUIRED_TODAY_CHECKINS_COLUMNS,
     "session_completions": REQUIRED_SESSION_COMPLETIONS_COLUMNS,
     "sparring_logs": REQUIRED_SPARRING_LOGS_COLUMNS,
+    "exercise_logs": REQUIRED_EXERCISE_LOGS_COLUMNS,
     "xp_accounts": REQUIRED_XP_ACCOUNTS_COLUMNS,
     "xp_awards": REQUIRED_XP_AWARDS_COLUMNS,
     "beta_feedback": REQUIRED_BETA_FEEDBACK_COLUMNS,
@@ -592,6 +614,11 @@ INDEX_REQUIREMENTS: tuple[IndexRequirement, ...] = (
         accepted_names=("sparring_logs_athlete_day_idx",),
     ),
     IndexRequirement(
+        # The upsert's ON CONFLICT target: one log per plan/day/block.
+        label="exercise_logs plan/day/block uniqueness",
+        accepted_names=("exercise_logs_occurrence_key",),
+    ),
+    IndexRequirement(
         label="xp awards athlete/idempotency uniqueness",
         accepted_names=("xp_awards_athlete_idempotency_key",),
     ),
@@ -641,6 +668,7 @@ RLS_REQUIRED_TABLES: tuple[str, ...] = (
     "today_checkins",
     "session_completions",
     "sparring_logs",
+    "exercise_logs",
     "xp_accounts",
     "xp_awards",
     "beta_feedback",
