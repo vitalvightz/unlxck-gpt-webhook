@@ -12,6 +12,7 @@ import { useAppSession } from "@/components/auth-provider";
 import { PlanHistoryRowSkeleton, PlansFeaturedSkeleton } from "@/components/skeleton";
 import { useToast } from "@/components/toast-provider";
 import { ApiError, archivePlan, getActivePlan, listPlans, renamePlan, setActivePlan } from "@/lib/api";
+import { lockOverlayScroll } from "@/lib/overlay-scroll-lock";
 import { requestXpRefresh } from "@/lib/xp-events";
 import { markGenerationIntent } from "@/lib/generation-intent";
 import {
@@ -255,6 +256,10 @@ function PlanCard({
     renameInputRef.current?.focus();
     renameInputRef.current?.select();
   }, [isRenaming, renameDraftValue]);
+
+  useEffect(() => {
+    if (isDeleteConfirmOpen) return lockOverlayScroll();
+  }, [isDeleteConfirmOpen]);
 
   useEffect(() => {
     if (!isDeleteConfirmOpen) {
@@ -575,6 +580,10 @@ function LatestPlanCard({
     renameInputRef.current?.focus();
     renameInputRef.current?.select();
   }, [isRenaming, plan]);
+
+  useEffect(() => {
+    if (isDeleteConfirmOpen) return lockOverlayScroll();
+  }, [isDeleteConfirmOpen]);
 
   useEffect(() => {
     if (!isDeleteConfirmOpen) {

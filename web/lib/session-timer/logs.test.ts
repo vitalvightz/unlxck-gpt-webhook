@@ -58,3 +58,20 @@ test("runs saved before block ids existed log nothing", () => {
   const state = endSession({ ...createTimerState(items as TimerItem[]), completed: [3, 3, 3, 6, 1], index: 4 }, 0);
   assert.deepEqual(timerExerciseLogs(state), []);
 });
+
+test("mixed rehab runs log eligible done, modified and skipped exercises without sending rehab", () => {
+  const blocks: StructuredBlock[] = [...BLOCKS, {
+    block_id: "rehab", block_type: "rehab", display_name: "RDL hold", sets: 2, reps: "6",
+  }];
+  const items = buildTimerItems([{ session_id: "s", blocks }]);
+  for (const rehabDone of [0, 1, 2]) {
+    const state = endSession({ ...createTimerState(items), completed: [3, 2, 0, 6, 1, rehabDone], index: 5 }, 0);
+    assert.deepEqual(timerExerciseLogs(state), [
+      { block_id: "rope", status: "as_prescribed" },
+      { block_id: "press", status: "modified", actual: {sets: 2} },
+      { block_id: "rdl", status: "skipped" },
+      { block_id: "intervals", status: "as_prescribed" },
+      { block_id: "mobility", status: "as_prescribed" },
+    ]);
+  }
+});

@@ -4,6 +4,7 @@ import "./session-review.css";
 
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
+import { lockOverlayScroll } from "@/lib/overlay-scroll-lock";
 
 import type { ExerciseLogging } from "@/components/exercise-log";
 import { EffortSlider, FaceScale } from "@/components/rating-controls";
@@ -74,6 +75,9 @@ export function SessionReview({
   const [notes, setNotes] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [tickingRest, setTickingRest] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const writeInFlight = useRef(false);
+  const busy = isSubmitting || tickingRest || saving;
 
   const logs = logging?.logs ?? {};
   const outcome = deriveSessionOutcome(sessions, logs);
@@ -83,16 +87,16 @@ export function SessionReview({
   const blockedReason = outcome.status === "done" ? doneBlockedReason : undefined;
 
   useEffect(() => {
-    const previous = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
+    const releaseScroll = lockOverlayScroll();
     dialogRef.current?.focus({ preventScroll: true });
     return () => {
-      document.body.style.overflow = previous;
+      releaseScroll();
     };
   }, []);
 
   async function tickRest() {
-    if (!logging?.saveMany || unloggedCount === 0) return;
+    if (!logging?.saveMany || unloggedCount === 0 || writeInFlight.current || isSubmitting) return;
+    writeInFlight.current = true;
     setTickingRest(true);
     setError(null);
     try {
@@ -106,11 +110,13 @@ export function SessionReview({
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Could not save. Try again.");
     } finally {
+      writeInFlight.current = false;
       setTickingRest(false);
     }
   }
 
   async function save() {
+    if (writeInFlight.current || isSubmitting) return;
     setError(null);
     if (blockedReason) {
       setError(blockedReason);
@@ -124,24 +130,33 @@ export function SessionReview({
       setError("Say briefly what changed.");
       return;
     }
-    // Anything still unticked was not done: it is logged as skipped, as the
-    // line above the button says, so the exercise record is complete.
-    if (unloggedCount > 0 && logging?.saveMany) {
-      try {
-        await logging.saveMany(
-          outcome.unlogged.map((block) => ({ block_id: cleanText(block.block_id) ?? "", status: "skipped" })),
-        );
-      } catch (caught) {
-        setError(caught instanceof Error ? caught.message : "Could not save. Try again.");
-        return;
+    writeInFlight.current = true;
+    setSaving(true);
+    try {
+      // Anything still unticked was not done: it is logged as skipped, as the
+      // line above the button says, so the exercise record is complete.
+      if (unloggedCount > 0 && logging?.saveMany) {
+        try {
+          await logging.saveMany(
+            outcome.unlogged.map((block) => ({ block_id: cleanText(block.block_id) ?? "", status: "skipped" })),
+          );
+        } catch (caught) {
+          setError(caught instanceof Error ? caught.message : "Could not save. Try again.");
+          return;
+        }
       }
+      await onSave(outcome.status, {
+        sessionRpe: needsReviewFields ? sessionRpe : null,
+        painAfter: needsReviewFields ? painAfter : null,
+        modificationReason: outcome.status === "done" ? "" : reason.trim().slice(0, 2000),
+        notes: notes.trim(),
+      });
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Could not save. Try again.");
+    } finally {
+      writeInFlight.current = false;
+      setSaving(false);
     }
-    await onSave(outcome.status, {
-      sessionRpe: needsReviewFields ? sessionRpe : null,
-      painAfter: needsReviewFields ? painAfter : null,
-      modificationReason: outcome.status === "done" ? "" : reason.trim().slice(0, 2000),
-      notes: notes.trim(),
-    });
   }
 
   const sheet = (
@@ -151,7 +166,7 @@ export function SessionReview({
         className="today-review-sheet"
         tabIndex={-1}
         onKeyDown={(event) => {
-          if (event.key === "Escape" && !isSubmitting) onClose();
+          if (event.key === "Escape" && !busy) onClose();
         }}
       >
         <header className="today-review-head">
@@ -168,7 +183,7 @@ export function SessionReview({
             type="button"
             className="today-review-close"
             onClick={onClose}
-            disabled={isSubmitting}
+            disabled={busy}
             aria-label="Back to Today"
           >
             ×
@@ -184,7 +199,7 @@ export function SessionReview({
                 type="button"
                 className="today-review-chip"
                 onClick={() => void tickRest()}
-                disabled={tickingRest || isSubmitting}
+                disabled={busy}
               >
                 {tickingRest ? "Ticking…" : `Tick the other ${unloggedCount} as done`}
               </button>
@@ -258,9 +273,9 @@ export function SessionReview({
             type="button"
             className="cta"
             onClick={() => void save()}
-            disabled={isSubmitting || tickingRest}
+            disabled={busy}
           >
-            {isSubmitting ? "Saving..." : outcome.status === "skipped" ? "Save as skipped" : "Save session"}
+            {isSubmitting || saving ? "Saving..." : outcome.status === "skipped" ? "Save as skipped" : "Save session"}
           </button>
         </div>
       </div>

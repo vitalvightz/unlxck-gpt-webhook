@@ -6,6 +6,7 @@ import Image from "next/image";
 
 import { usePwaRuntime } from "@/components/pwa-register";
 import { rememberInstallGuideDismissal } from "@/lib/pwa";
+import { lockOverlayScroll } from "@/lib/overlay-scroll-lock";
 
 function ShareIcon() {
   return (
@@ -39,6 +40,7 @@ export function InstallUnlxck({ variant = "panel" }: { variant?: "panel" | "inli
       return;
     }
 
+    const releaseScroll = lockOverlayScroll();
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         setShowGuide(false);
@@ -76,14 +78,15 @@ export function InstallUnlxck({ variant = "panel" }: { variant?: "panel" | "inli
 
     document.documentElement.dataset.pwaInstallSheet = "open";
     document.body.dataset.pwaInstallSheet = "open";
-    closeRef.current?.focus();
+    closeRef.current?.focus({ preventScroll: true });
     window.addEventListener("keydown", handleKeyDown);
 
     return () => {
       delete document.documentElement.dataset.pwaInstallSheet;
       delete document.body.dataset.pwaInstallSheet;
       window.removeEventListener("keydown", handleKeyDown);
-      trigger?.focus();
+      releaseScroll();
+      trigger?.focus({ preventScroll: true });
     };
   }, [showGuide]);
 

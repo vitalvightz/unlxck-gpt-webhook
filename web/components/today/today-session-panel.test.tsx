@@ -10,6 +10,8 @@ import { AuthProvider, AppSessionContext } from "@/components/auth-provider";
 import { TodaySessionBlocks, TodaySessionPanel } from "./today-session-panel";
 import { resolveCurrentDay, resolveTrainingDay, toISODate } from "@/lib/camp-map";
 import type { StructuredPlan, TodayCommandView } from "@/lib/types";
+import { buildTimerItems } from "@/lib/session-timer/plan";
+import { createTimerState, endSession } from "@/lib/session-timer/engine";
 
 test("weekday fallback never presents a stale template date as today", () => {
   const plan = {
@@ -915,5 +917,72 @@ test("rehab replacement drops the held day's strength and combat coaching", asyn
     assert.doesNotMatch(container.textContent!, /Hard sparring|weekly power exposure|Push today|Build structural strength/);
   } finally {
     await act(async () => { root.unmount(); });
+  }
+});
+
+test("finished mixed rehab run survives a failed batch and opens populated review only after retry saves", async () => {
+  const state = contactDayState("green");
+  state.today.completion_status = "started";
+  state.today.next_session = { ...state.today.next_session, coach_led_contact: undefined, title: "Strength and rehab" };
+  const blocks = [
+    { block_id: "rope", block_type: "power", display_name: "Rope", sets: 3, reps: "8" },
+    { block_id: "press", block_type: "strength", display_name: "Press", sets: 3, reps: "8" },
+    { block_id: "rdl", block_type: "strength", display_name: "RDL", sets: 3, reps: "8" },
+    { block_id: "bike", block_type: "conditioning", display_name: "Bike", rounds: 6, work: {value: 30, unit: "seconds"} },
+    { block_id: "rehab", block_type: "rehab", display_name: "Rehab hold", sets: 2, reps: "6" },
+  ];
+  state.live_prescription = {revision: "a".repeat(64), frozen: false, safety_hold: false, changes: [],
+    session: {session_id: state.today.next_session.session_id!, session_type: "strength", title: "Strength and rehab", blocks}};
+  const items = buildTimerItems([state.live_prescription.session]);
+  const run = endSession({...createTimerState(items), completed: [3, 0, 1, 0, 2], index: 4}, Date.now());
+  const key = `unlxck.session-timer.run:plan-1:${state.today.next_session.session_id}:${state.today.training_day}`;
+  window.localStorage.setItem(key, JSON.stringify({version: 2, key, itemIds: items.map(item => `${item.kind}:${item.id}`), state: run}));
+  const originalFetch = globalThis.fetch;
+  const batches: Array<{ entries: Array<{ block_id: string; status: string }>; keep_existing: boolean }> = [];
+  const pending: Array<(response: Response) => void> = [];
+  const manual = {block_id: "press", status: "as_prescribed", actual: {load: {value: 25, unit: "kg"}}};
+  globalThis.fetch = ((input: string, init?: RequestInit) => {
+    if (init?.method === "POST") {
+      assert.match(String(input), /\/api\/today\/exercise-logs$/);
+      batches.push(JSON.parse(String(init.body)));
+      return new Promise<Response>(resolve => pending.push(resolve));
+    }
+    return Promise.resolve(new Response(JSON.stringify({logs: [manual], response_sets: [], history_truncated: false}), {status: 200}));
+  }) as typeof fetch;
+  const container = document.createElement("div");
+  document.body.appendChild(container);
+  const root = createRoot(container);
+  try {
+    await act(async () => { root.render(<AuthProvider><ToastProvider><TodaySessionPanel state={state}
+      structuredPlan={null} token="token" onRefresh={async () => {}} /></ToastProvider></AuthProvider>);
+      await new Promise(resolve => setTimeout(resolve, 20)); });
+    await act(async () => { await new Promise(resolve => setTimeout(resolve, 20)); });
+    assert.equal(batches.length, 1);
+    assert.deepEqual(batches[0].entries.map(entry => [entry.block_id, entry.status]), [
+      ["rope", "as_prescribed"], ["rdl", "modified"], ["bike", "skipped"],
+    ]);
+    assert.equal(batches[0].keep_existing, true);
+    assert.match(container.textContent ?? "", /Save timer results/);
+    assert.ok(window.localStorage.getItem(key));
+    assert.equal(document.querySelector(".today-review-root"), null);
+    await act(async () => { pending[0](new Response(JSON.stringify({detail: "Network write failed"}), {status: 409})); });
+    assert.ok(window.localStorage.getItem(key));
+    assert.equal(document.querySelector(".today-review-root"), null);
+    await act(async () => { document.querySelector<HTMLButtonElement>(".st-mini")!.click(); });
+    const retry = Array.from(document.querySelectorAll("button")).find(button => button.textContent === "Retry save")!;
+    assert.ok(retry);
+    await act(async () => { retry.click(); retry.click(); });
+    assert.equal(batches.length, 2);
+    assert.ok(window.localStorage.getItem(key));
+    await act(async () => { pending[1](new Response(JSON.stringify({logs: batches[1].entries}), {status: 200})); });
+    assert.equal(window.localStorage.getItem(key), null);
+    assert.equal(document.querySelector(".st-root"), null);
+    assert.match(document.querySelector(".today-review-root")?.textContent ?? "", /4 of 4 exercises logged/);
+    assert.match(document.querySelector(".today-review-root")?.textContent ?? "", /How much rehab/);
+  } finally {
+    await act(async () => { root.unmount(); });
+    container.remove();
+    globalThis.fetch = originalFetch;
+    window.localStorage.removeItem(key);
   }
 });

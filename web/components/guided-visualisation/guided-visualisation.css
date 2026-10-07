@@ -18,13 +18,16 @@
   z-index: 1000;
   display: flex;
   flex-direction: column;
-  min-height: 100dvh;
+  box-sizing: border-box;
+  height: 100dvh;
+  min-height: 0;
   padding: max(12px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom));
   background: var(--gv-base);
   color: var(--gv-ink);
   font-family: var(--font-display, system-ui, sans-serif);
   overflow-x: hidden;
   overflow-y: auto;
+  overscroll-behavior: contain;
   outline: none;
   isolation: isolate;
   color-scheme: dark;

@@ -9,6 +9,7 @@ import {
   type ReactNode,
 } from "react";
 import { createPortal } from "react-dom";
+import { lockOverlayScroll } from "@/lib/overlay-scroll-lock";
 
 import { useSessionTimer, type SessionTimerController } from "@/components/session-timer/use-session-timer";
 import { PREP_OPTIONS, timerAudio } from "@/lib/session-timer/audio";
@@ -987,7 +988,7 @@ export function SessionTimer({
   handOffWhenDone?: boolean;
   onMinimize: () => void;
   onExpand: () => void;
-  onFinish: (summary: SessionTimerSummary) => void;
+  onFinish: (summary: SessionTimerSummary) => void | Promise<void>;
   /** Closes a timer that was never started, without logging anything. */
   onClose: () => void;
 }) {
@@ -995,6 +996,10 @@ export function SessionTimer({
   const { state, now } = timer;
   const [sheet, setSheet] = useState<"settings" | "adjust" | null>(null);
   const [confirmEnd, setConfirmEnd] = useState(false);
+  const [finishing, setFinishing] = useState(false);
+  const [finishError, setFinishError] = useState<string | null>(null);
+  const finishInFlight = useRef(false);
+  const autoFinishAttempted = useRef(false);
   const [adjustHint, dismissAdjustHint] = useAdjustHint();
   const dialogRef = useRef<HTMLDivElement | null>(null);
   const miniDrag = useDraggableMini(onExpand);
@@ -1013,29 +1018,40 @@ export function SessionTimer({
 
   useEffect(() => {
     if (!visible) return;
-    const previous = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    dialogRef.current?.focus();
+    const releaseScroll = lockOverlayScroll();
+    dialogRef.current?.focus({ preventScroll: true });
     const onKey = (event: KeyboardEvent) => {
       if (event.key === "Escape") onMinimize();
     };
     window.addEventListener("keydown", onKey);
     return () => {
-      document.body.style.overflow = previous;
+      releaseScroll();
       window.removeEventListener("keydown", onKey);
     };
   }, [visible, onMinimize]);
 
   // While the mini bar floats, reserve room under the page so it never sits on
   // top of the last thing the athlete needs to tap (see .has-timer-mini).
-  const showsMini = !visible && state.phase !== "done";
+  const showsMini = !visible && (state.phase !== "done" || handOffWhenDone);
   useEffect(() => {
     if (!showsMini) return;
     return reserveMiniSpace();
   }, [showsMini]);
 
-  const finish = () =>
-    onFinish({ complete: metPlan(state), notes: summarizeRun(state), sparring: sparringSummary(state), run: state });
+  const finish = async () => {
+    if (finishInFlight.current) return;
+    finishInFlight.current = true;
+    setFinishing(true);
+    setFinishError(null);
+    try {
+      await onFinish({ complete: metPlan(state), notes: summarizeRun(state), sparring: sparringSummary(state), run: state });
+    } catch (error) {
+      setFinishError(error instanceof Error ? error.message : "Could not save the timer results. Retry save.");
+    } finally {
+      finishInFlight.current = false;
+      setFinishing(false);
+    }
+  };
   // The latest finish for the hand-off timeout below, without restarting it.
   const finishRef = useRef(finish);
   useEffect(() => {
@@ -1043,25 +1059,26 @@ export function SessionTimer({
   });
   // Also when the run comes back already finished (the app closed between the
   // last set and the hand-off): it is handed on, never left hidden.
-  const handingOff = handOffWhenDone && state.phase === "done";
+  const handingOff = handOffWhenDone && state.phase === "done" && !finishError;
   useEffect(() => {
-    if (!handingOff) return;
+    if (!handingOff || autoFinishAttempted.current) return;
     const timeout = window.setTimeout(() => {
       // A light tap as the card takes over, felt with the phone in a pocket.
       timerAudio().buzz([40]);
-      finishRef.current();
+      autoFinishAttempted.current = true;
+      void finishRef.current();
     }, visible ? HANDOFF_MS : 0);
     return () => window.clearTimeout(timeout);
   }, [handingOff, visible]);
 
   if (!visible) {
-    if (state.phase === "done") return null;
+    if (state.phase === "done" && !handOffWhenDone) return null;
     return (
       <ToBody>
         <button type="button" className="st-mini" data-tone={tone} {...miniDrag}>
           <span className="st-mini-phase">{phaseLabel(state, item, view)}</span>
           <span className="st-mini-title">{item?.title}</span>
-          <span className="st-mini-clock">{state.phase === "ready" ? "Open" : formatClock(clockSeconds)}</span>
+          <span className="st-mini-clock">{state.phase === "done" ? (finishError ? "Retry save" : finishing ? "Saving…" : "Log session") : state.phase === "ready" ? "Open" : formatClock(clockSeconds)}</span>
         </button>
       </ToBody>
     );
@@ -1167,8 +1184,8 @@ export function SessionTimer({
             {metPlan(state) ? "Session complete" : "Session ended"}
           </p>
           {sessionElapsed ? <p className="st-done-time">{sessionElapsed} total</p> : null}
-          <button type="button" className="st-link" onClick={finish}>
-            {finishLabel}
+          <button type="button" className="st-link" onClick={() => void finish()} disabled={finishing}>
+            {finishing ? "Saving exercises…" : finishLabel}
           </button>
         </main>
       ) : state.phase === "done" ? (
@@ -1187,8 +1204,9 @@ export function SessionTimer({
             ))}
           </ul>
           <div className="st-actions">
-            <button type="button" className="st-primary" onClick={finish}>
-              {finishLabel}
+            {finishError ? <p className="st-note" role="alert">{finishError} Your timer results are kept. Retry saving.</p> : null}
+            <button type="button" className="st-primary" onClick={() => void finish()} disabled={finishing}>
+              {finishing ? "Saving exercises…" : finishError ? "Retry save" : finishLabel}
             </button>
           </div>
         </main>

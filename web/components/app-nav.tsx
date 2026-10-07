@@ -13,6 +13,7 @@ import { getShellSurface, isAuthSurfaceRoute, shouldShowBrandTopbar } from "@/li
 import { isSafeAvatarImageUrl } from "@/lib/avatar-image-url";
 import { SIDE_NAV_ITEMS } from "@/lib/beta-navigation";
 import { isNavToggleCondensed } from "@/lib/nav-toggle-scroll";
+import { lockOverlayScroll } from "@/lib/overlay-scroll-lock";
 
 type MobileNavState = "closed" | "opening" | "open" | "closing";
 
@@ -201,14 +202,18 @@ export function AppNav() {
     }
 
     const mediaQuery = window.matchMedia(MOBILE_NAV_MEDIA_QUERY);
+    let releaseScroll: (() => void) | undefined;
     const syncScrollLock = () => {
       const shouldLock = mediaQuery.matches && isMobileDrawerVisible;
       if (shouldLock) {
+        releaseScroll ??= lockOverlayScroll();
         document.documentElement.dataset.mobileNavLock = "true";
         document.body.dataset.mobileNavLock = "true";
         return;
       }
 
+      releaseScroll?.();
+      releaseScroll = undefined;
       delete document.documentElement.dataset.mobileNavLock;
       delete document.body.dataset.mobileNavLock;
     };
@@ -218,6 +223,7 @@ export function AppNav() {
 
     return () => {
       mediaQuery.removeEventListener("change", syncScrollLock);
+      releaseScroll?.();
       delete document.documentElement.dataset.mobileNavLock;
       delete document.body.dataset.mobileNavLock;
     };

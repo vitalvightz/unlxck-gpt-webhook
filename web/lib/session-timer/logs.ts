@@ -22,7 +22,9 @@ export function timerExerciseLogs(
   const seen = new Set<string>();
   state.items.forEach((item, index) => {
     const blockId = item.blockId;
-    if (!blockId || seen.has(blockId) || existing[blockId]) {
+    // Rehab evidence belongs to session completion, never the exercise-log
+    // endpoint. One rehab entry would reject the entire atomic exercise batch.
+    if (item.blockType?.trim() === "rehab" || !blockId || seen.has(blockId) || existing[blockId]) {
       return;
     }
     seen.add(blockId);

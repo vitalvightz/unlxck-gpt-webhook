@@ -4,6 +4,7 @@ import "./guided-visualisation.css";
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { lockOverlayScroll } from "@/lib/overlay-scroll-lock";
 
 import { formatClock } from "@/lib/session-timer/plan";
 import { timerAudio } from "@/lib/session-timer/audio";
@@ -135,8 +136,12 @@ export function GuidedVisualisation({
   const rootRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    rootRef.current?.focus();
-    return stopSpeech;
+    const releaseScroll = lockOverlayScroll();
+    rootRef.current?.focus({ preventScroll: true });
+    return () => {
+      stopSpeech();
+      releaseScroll();
+    };
   }, []);
 
   useEffect(() => {

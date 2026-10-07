@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { lockOverlayScroll } from "@/lib/overlay-scroll-lock";
 
 import type { ActivePlanOverlapAction } from "@/lib/plan-active";
 import { formatPlanFightDate } from "@/lib/plan-format";
@@ -33,9 +34,8 @@ export function PlanSwitchDialog({
 
   useEffect(() => {
     const previousFocus = document.activeElement as HTMLElement | null;
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    dialogRef.current?.focus();
+    const releaseScroll = lockOverlayScroll();
+    dialogRef.current?.focus({ preventScroll: true });
 
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") {
@@ -63,8 +63,8 @@ export function PlanSwitchDialog({
     document.addEventListener("keydown", handleKeyDown);
     return () => {
       document.removeEventListener("keydown", handleKeyDown);
-      document.body.style.overflow = previousOverflow;
-      previousFocus?.focus();
+      releaseScroll();
+      previousFocus?.focus({ preventScroll: true });
     };
   }, []);
 
