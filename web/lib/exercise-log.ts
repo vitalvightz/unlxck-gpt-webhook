@@ -35,7 +35,7 @@ export const EXERCISE_LOG_REASON_LABELS: Record<ExerciseLogReason, string> = {
   equipment: "Equipment",
   fatigue: "Fatigue",
   pain: "Pain",
-  felt_strong: "Felt strong",
+  felt_strong: "Strong",
 };
 
 export const EXERCISE_LOG_STATUS_LABELS: Record<ExerciseLogStatus, string> = {

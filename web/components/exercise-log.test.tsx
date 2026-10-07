@@ -302,7 +302,7 @@ test("skipping saves in one tap; the reason is a second, optional tap", async ()
   await view.click("Skip");
   assert.deepEqual(view.saved, [{ block_id: "blk-deadlift", status: "skipped" }]);
   // Nobody skips because they felt strong.
-  assert.equal(view.button("Felt strong"), undefined);
+  assert.equal(view.button("Strong"), undefined);
 
   await view.click("Fatigue");
   assert.deepEqual(view.saved[1], { block_id: "blk-deadlift", status: "skipped", reason: "fatigue" });
