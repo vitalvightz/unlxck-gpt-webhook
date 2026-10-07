@@ -1207,6 +1207,61 @@ export type SparringLogHistoryResponse = {
   last_rocked_day: string | null;
 };
 
+export type ExerciseLogStatus = "as_prescribed" | "modified" | "skipped";
+export type ExerciseLogReason = "equipment" | "fatigue" | "pain" | "felt_strong";
+export type ExerciseLogMeasure = { value: number; unit: string };
+
+/** What the athlete did, in the block's own prescription shape. Only the
+ * fields that apply to the exercise are sent. */
+export type ExerciseLogActual = {
+  sets?: number | null;
+  reps?: number | null;
+  rounds?: number | null;
+  load?: ExerciseLogMeasure | null;
+  duration?: ExerciseLogMeasure | null;
+  work?: ExerciseLogMeasure | null;
+  rest?: ExerciseLogMeasure | null;
+  distance?: ExerciseLogMeasure | null;
+  effort?: ExerciseLogEffort | null;
+};
+export type ExerciseLogEffort = { method?: "RPE"; value: number };
+
+/** Logs one prescribed block of today's started session. The server resolves
+ * the prescription and the training day from `block_id`; the plan is unchanged. */
+export type ExerciseLogRequest = {
+  plan_id: string;
+  block_id: string;
+  status: ExerciseLogStatus;
+  actual?: ExerciseLogActual;
+  reason?: ExerciseLogReason | null;
+  notes?: string;
+};
+
+export type ExerciseLogRecord = {
+  id: string;
+  athlete_id: string;
+  plan_id: string | null;
+  session_id: string | null;
+  block_id: string;
+  exercise_key: string | null;
+  training_day: string;
+  status: ExerciseLogStatus;
+  reason: ExerciseLogReason | null;
+  /** The block's prescription fields as they were when it was logged. */
+  prescribed: Record<string, unknown>;
+  actual: ExerciseLogActual;
+  notes: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ExerciseLogResponse = { log: ExerciseLogRecord };
+
+export type ExerciseLogListResponse = {
+  training_day: string;
+  logs: ExerciseLogRecord[];
+};
+
 export type TodaySessionCompletionRequest = {
   plan_id: string;
   session_id: string;

@@ -2309,6 +2309,134 @@ class SparringLogHistoryResponse(BaseModel):
     last_rocked_day: str | None = None
 
 
+ExerciseLogStatus = Literal["as_prescribed", "modified", "skipped"]
+ExerciseLogReason = Literal["equipment", "fatigue", "pain", "felt_strong"]
+EXERCISE_LOG_NOTE_MAX_CHARS = 500
+_EXERCISE_LOG_TIME_UNITS = frozenset({"seconds", "minutes"})
+_EXERCISE_LOG_MEASURE_UNITS: dict[str, frozenset[str]] = {
+    "load": frozenset({"kg", "lb"}),
+    "duration": _EXERCISE_LOG_TIME_UNITS,
+    "work": _EXERCISE_LOG_TIME_UNITS,
+    "rest": _EXERCISE_LOG_TIME_UNITS,
+    "distance": frozenset({"meters", "km", "miles"}),
+}
+
+
+class ExerciseLogMeasure(BaseModel):
+    """A quantity the athlete reports, in the plan's ``{value, unit}`` shape."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    value: float = Field(ge=0, le=100000)
+    unit: str = Field(min_length=1, max_length=16)
+
+
+class ExerciseLogEffort(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    method: Literal["RPE"] = "RPE"
+    value: float = Field(ge=1, le=10)
+
+
+class ExerciseLogActual(BaseModel):
+    """What the athlete actually did for one block.
+
+    Same field names and shapes as the block's own prescription, so prescribed
+    and actual compare field by field. Every field is optional: the athlete
+    reports only what applies to the exercise (a plank has a duration and no
+    reps; a lift has sets, reps and the weight on the bar).
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    sets: int | None = Field(default=None, ge=0, le=50)
+    reps: int | None = Field(default=None, ge=0, le=1000)
+    rounds: int | None = Field(default=None, ge=0, le=100)
+    load: ExerciseLogMeasure | None = None
+    duration: ExerciseLogMeasure | None = None
+    work: ExerciseLogMeasure | None = None
+    rest: ExerciseLogMeasure | None = None
+    distance: ExerciseLogMeasure | None = None
+    effort: ExerciseLogEffort | None = None
+
+    @model_validator(mode="after")
+    def validate_units(self) -> "ExerciseLogActual":
+        for field_name, allowed in _EXERCISE_LOG_MEASURE_UNITS.items():
+            measure = getattr(self, field_name)
+            if measure is not None and measure.unit not in allowed:
+                raise ValueError(f"{field_name}.unit must be one of {sorted(allowed)}")
+        return self
+
+
+class ExerciseLogRequest(BaseModel):
+    """Log what was actually done for one prescribed block today.
+
+    The block is named by its server-owned ``block_id``; the server resolves the
+    prescription and the training day itself and never takes either from the
+    client. The plan is not changed by a log.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    plan_id: str = Field(min_length=1, max_length=64)
+    block_id: str = Field(min_length=1, max_length=200)
+    status: ExerciseLogStatus
+    actual: ExerciseLogActual = Field(default_factory=ExerciseLogActual)
+    reason: ExerciseLogReason | None = None
+    notes: str = Field(default="", max_length=EXERCISE_LOG_NOTE_MAX_CHARS)
+
+    @field_validator("notes", mode="before")
+    @classmethod
+    def clean_notes(cls, value: Any) -> str:
+        return str(value or "").strip()
+
+    @field_validator("plan_id", "block_id", mode="before")
+    @classmethod
+    def clean_id(cls, value: Any) -> str:
+        return str(value or "").strip()
+
+    @model_validator(mode="after")
+    def validate_status_fields(self) -> "ExerciseLogRequest":
+        has_actual = bool(self.actual.model_dump(exclude_none=True))
+        if self.status == "modified" and not has_actual:
+            raise ValueError("a modified exercise must say what was actually done")
+        if self.status == "skipped" and has_actual:
+            raise ValueError("a skipped exercise has no actual work")
+        if self.status == "as_prescribed" and self.reason is not None:
+            raise ValueError("a reason explains a change or a skip")
+        return self
+
+
+class ExerciseLogRecord(BaseModel):
+    id: str
+    athlete_id: str
+    plan_id: str | None = None
+    session_id: str | None = None
+    block_id: str
+    exercise_key: str | None = None
+    training_day: str
+    status: ExerciseLogStatus
+    reason: ExerciseLogReason | None = None
+    # The block as it was prescribed when logged, and what was done instead
+    # (only the fields the athlete reported are set).
+    prescribed: dict[str, Any] = Field(default_factory=dict)
+    actual: ExerciseLogActual = Field(default_factory=ExerciseLogActual)
+    notes: str = ""
+    created_at: str = ""
+    updated_at: str = ""
+
+
+class ExerciseLogResponse(BaseModel):
+    log: ExerciseLogRecord
+
+
+class ExerciseLogListResponse(BaseModel):
+    """The athlete's exercise logs for one plan on the current training day."""
+
+    training_day: str
+    logs: list[ExerciseLogRecord]
+
+
 class RehabResponsePromptResponse(BaseModel):
     """One injury's post-rehab question, as the athlete is shown it.
 

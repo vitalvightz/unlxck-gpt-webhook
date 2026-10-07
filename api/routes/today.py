@@ -18,6 +18,10 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from api.compliance_guards import require_health_feature_access
 from api.compliance import evaluate_profile_compliance
 from api.models import (
+    ExerciseLogListResponse,
+    ExerciseLogRecord,
+    ExerciseLogRequest,
+    ExerciseLogResponse,
     InjuryFlagRecord,
     LandingResponse,
     PendingRehabResponseSetResponse,
@@ -42,6 +46,7 @@ from api.models import (
 from api.contracts.command_view import CommandView
 from api.contracts.completion import completion_landing_state, completion_status_of
 from api.contracts.rehab_completion import COMPLETED_STATUSES
+from api.services.exercise_log_service import list_exercise_logs_for_today, record_exercise_log
 from api.services.progress_notifications import award_session_progress
 from api.services.rehab_completion_service import (
     build_rehab_response_contexts,
@@ -118,6 +123,17 @@ def _sparring_window(rows: list[SparringLogRecord], *, today: date, days: int) -
         hard_days=len({row.training_day for row in window if row.intensity == "hard"}),
         heavy_head_contact_sessions=sum(1 for row in window if row.head_contact == "heavy"),
         rocked_count=sum(1 for row in window if row.rocked),
+    )
+
+
+def _exercise_log_record(row: Mapping[str, Any]) -> ExerciseLogRecord:
+    return ExerciseLogRecord.model_validate(
+        {
+            **row,
+            "training_day": str(row.get("training_day") or "")[:10],
+            "created_at": str(row.get("created_at") or ""),
+            "updated_at": str(row.get("updated_at") or ""),
+        }
     )
 
 
@@ -616,6 +632,52 @@ def build_today_router(*, require_profile, get_store) -> APIRouter:
             log=_sparring_log_record(row),
             review_created=review_created,
             safety_notice=ROCKED_SAFETY_NOTICE if request_body.rocked else None,
+        )
+
+    @router.post(
+        "/api/today/exercise-log",
+        response_model=ExerciseLogResponse,
+        status_code=status.HTTP_201_CREATED,
+    )
+    def submit_exercise_log(
+        request_body: ExerciseLogRequest,
+        profile: ProfileRecord = Depends(require_profile),
+        store: AppStore = Depends(get_store),
+    ) -> ExerciseLogResponse:
+        """Record what was actually done for one block of today's started session.
+
+        The plan is not changed. The block is named by its server-owned
+        ``block_id``; the prescription and the training day are resolved here.
+        Saving the same block again corrects the earlier log.
+        """
+        row = record_exercise_log(
+            store,
+            athlete_id=profile.athlete_id,
+            athlete_timezone=profile.athlete_timezone,
+            payload=request_body.model_dump(exclude_none=True),
+            health_consent_granted=evaluate_profile_compliance(profile).health_consent_granted,
+        )
+        return ExerciseLogResponse(log=_exercise_log_record(row))
+
+    @router.get(
+        "/api/today/exercise-logs",
+        response_model=ExerciseLogListResponse,
+    )
+    def list_exercise_logs(
+        plan_id: UUID = Query(),
+        profile: ProfileRecord = Depends(require_profile),
+        store: AppStore = Depends(get_store),
+    ) -> ExerciseLogListResponse:
+        """The athlete's exercise logs for one plan on the current training day."""
+        training_day, rows = list_exercise_logs_for_today(
+            store,
+            athlete_id=profile.athlete_id,
+            athlete_timezone=profile.athlete_timezone,
+            plan_id=str(plan_id),
+        )
+        return ExerciseLogListResponse(
+            training_day=training_day,
+            logs=[_exercise_log_record(row) for row in rows],
         )
 
     @router.get(

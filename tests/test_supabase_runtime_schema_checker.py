@@ -147,6 +147,20 @@ def test_find_missing_index_constraints_none_when_all_present():
     assert find_missing_index_constraints(_all_required_index_names()) == []
 
 
+def test_exercise_log_schema_is_required_by_the_deploy_gate():
+    from api.schema_requirements import INDEX_REQUIREMENTS, REQUIRED_COLUMNS
+
+    assert "exercise_logs" in REQUIRED_TABLES
+    assert "exercise_logs" in RLS_REQUIRED_TABLES
+    for column in ("athlete_id", "plan_id", "block_id", "training_day", "status", "prescribed", "actual"):
+        assert column in REQUIRED_COLUMNS["exercise_logs"]
+    # The upsert names this constraint's columns as its conflict target.
+    assert any(
+        "exercise_logs_occurrence_key" in requirement.accepted_names
+        for requirement in INDEX_REQUIREMENTS
+    )
+
+
 def test_index_requirement_satisfied_by_constraint_alias():
     # The athlete/client-request requirement accepts either the unique index or
     # the uniqueness constraint name.
@@ -160,6 +174,7 @@ def test_index_requirement_satisfied_by_constraint_alias():
         "today_checkins_athlete_plan_day_key",
         "session_completions_athlete_session_day_key",
         "sparring_logs_athlete_day_idx",
+        "exercise_logs_occurrence_key",
         "injury_episode_events_delayed_once_idx",
         "xp_awards_athlete_idempotency_key",
         "xp_awards_one_daily_login_per_calendar_date",

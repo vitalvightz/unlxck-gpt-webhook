@@ -407,6 +407,111 @@ export type EventContext = {
 };
 
 /**
+ * What the athlete actually did for one block.
+ *
+ * Same field names and shapes as the block's own prescription, so prescribed
+ * and actual compare field by field. Every field is optional: the athlete
+ * reports only what applies to the exercise (a plank has a duration and no
+ * reps; a lift has sets, reps and the weight on the bar).
+ */
+export type ExerciseLogActual = {
+  sets: number | null;
+  reps: number | null;
+  rounds: number | null;
+  load: ExerciseLogMeasure | null;
+  duration: ExerciseLogMeasure | null;
+  work: ExerciseLogMeasure | null;
+  rest: ExerciseLogMeasure | null;
+  distance: ExerciseLogMeasure | null;
+  effort: ExerciseLogEffort | null;
+};
+
+/**
+ * What the athlete actually did for one block.
+ *
+ * Same field names and shapes as the block's own prescription, so prescribed
+ * and actual compare field by field. Every field is optional: the athlete
+ * reports only what applies to the exercise (a plank has a duration and no
+ * reps; a lift has sets, reps and the weight on the bar).
+ */
+export type ExerciseLogActualRequest = {
+  sets?: number | null;
+  reps?: number | null;
+  rounds?: number | null;
+  load?: ExerciseLogMeasureRequest | null;
+  duration?: ExerciseLogMeasureRequest | null;
+  work?: ExerciseLogMeasureRequest | null;
+  rest?: ExerciseLogMeasureRequest | null;
+  distance?: ExerciseLogMeasureRequest | null;
+  effort?: ExerciseLogEffortRequest | null;
+};
+
+export type ExerciseLogEffort = {
+  method: "RPE";
+  value: number;
+};
+
+export type ExerciseLogEffortRequest = {
+  method?: "RPE";
+  value: number;
+};
+
+/** The athlete's exercise logs for one plan on the current training day. */
+export type ExerciseLogListResponse = {
+  training_day: string;
+  logs: ExerciseLogRecord[];
+};
+
+/** A quantity the athlete reports, in the plan's ``{value, unit}`` shape. */
+export type ExerciseLogMeasure = {
+  value: number;
+  unit: string;
+};
+
+/** A quantity the athlete reports, in the plan's ``{value, unit}`` shape. */
+export type ExerciseLogMeasureRequest = {
+  value: number;
+  unit: string;
+};
+
+export type ExerciseLogRecord = {
+  id: string;
+  athlete_id: string;
+  plan_id: string | null;
+  session_id: string | null;
+  block_id: string;
+  exercise_key: string | null;
+  training_day: string;
+  status: "as_prescribed" | "modified" | "skipped";
+  reason: "equipment" | "fatigue" | "felt_strong" | "pain" | null;
+  prescribed: Record<string, unknown>;
+  actual: ExerciseLogActual;
+  notes: string;
+  created_at: string;
+  updated_at: string;
+};
+
+/**
+ * Log what was actually done for one prescribed block today.
+ *
+ * The block is named by its server-owned ``block_id``; the server resolves the
+ * prescription and the training day itself and never takes either from the
+ * client. The plan is not changed by a log.
+ */
+export type ExerciseLogRequest = {
+  plan_id: string;
+  block_id: string;
+  status: "as_prescribed" | "modified" | "skipped";
+  actual?: ExerciseLogActualRequest;
+  reason?: "equipment" | "fatigue" | "felt_strong" | "pain" | null;
+  notes?: string;
+};
+
+export type ExerciseLogResponse = {
+  log: ExerciseLogRecord;
+};
+
+/**
  * A curated demo video for one exercise (public.exercise_media).
  *
  * Resolved at read time by api/services/exercise_media.py. It deliberately

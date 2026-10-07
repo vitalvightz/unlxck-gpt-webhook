@@ -5197,6 +5197,51 @@ class SupabaseAppStore(CompactGenerationReads):
         rows = getattr(response, "data", None) or []
         return str(rows[0]["training_day"])[:10] if rows else None
 
+    # -- Exercise logs (public.exercise_logs) ---------------------------------
+    # What the athlete actually did for one prescribed block on one training
+    # day. Written by POST /api/today/exercise-log; the plan is never edited.
+
+    def upsert_exercise_log(self, athlete_id: str, fields: dict[str, Any]) -> dict[str, Any]:
+        """Write the one log for ``(plan_id, training_day, block_id)``; a second
+        save for the same block corrects it in place."""
+        operation = f"upsert_exercise_log athlete_id={athlete_id}"
+        payload = {"athlete_id": athlete_id, **fields}
+        try:
+            response = (
+                self.client.table("exercise_logs")
+                .upsert(payload, on_conflict="athlete_id,plan_id,training_day,block_id")
+                .execute()
+            )
+        except _STORE_CLIENT_ERRORS as exc:
+            self._raise_operation_http_error(
+                operation=operation,
+                detail="failed to save exercise log",
+                exc=exc,
+            )
+        rows = getattr(response, "data", None) or []
+        if not rows:
+            logger.error("[store] upsert_exercise_log:no_rows athlete_id=%s", athlete_id)
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="failed to save exercise log",
+            )
+        return rows[0]
+
+    def list_exercise_logs_for_day(
+        self, athlete_id: str, *, plan_id: str, training_day: str
+    ) -> list[dict[str, Any]]:
+        """One plan's logs on one training day (served by the occurrence key)."""
+        response = (
+            self.client.table("exercise_logs")
+            .select("*")
+            .eq("athlete_id", athlete_id)
+            .eq("plan_id", plan_id)
+            .eq("training_day", training_day)
+            .order("created_at")
+            .execute()
+        )
+        return getattr(response, "data", None) or []
+
     # -- Exercise demo videos (public.exercise_media) -------------------------
     # Read by api/services/exercise_media.py on plan reads (cached in-process)
     # and written only by tools/exercise_media.py and the worker's daily check.

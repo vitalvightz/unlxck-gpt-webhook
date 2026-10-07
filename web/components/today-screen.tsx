@@ -5,6 +5,7 @@ import { useMemo } from "react";
 import styles from "./today-screen.module.css";
 
 import { useAppSession } from "@/components/auth-provider";
+import { hasHealthDataConsent } from "@/lib/compliance";
 import { CampProgressBar } from "@/components/camp-progress-bar";
 import { ContextualFeedback } from "@/components/feedback/contextual-feedback";
 import { Skeleton } from "@/components/skeleton";
@@ -233,6 +234,7 @@ export function TodayScreen() {
       rehabLabelPolicy={rehabLabelPolicy}
       exerciseMedia={exerciseMedia}
       planSchedule={planSchedule}
+      painReasonAllowed={hasHealthDataConsent(me)}
       token={token ?? ""}
       onRefresh={refresh}
       athleteFullName={me?.profile.full_name}

@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState, useSyncExternalStore, type ReactNode } from "react";
+import { useCallback, useEffect, useState, useSyncExternalStore, type ReactNode } from "react";
 
 import { ExerciseMediaProvider } from "@/components/exercise-demo";
+import { ExerciseLogProvider, type ExerciseLogging } from "@/components/exercise-log";
 import { SessionFeedbackPrompt } from "@/components/feedback/session-feedback-prompt";
 import {
   SessionCompletionForm,
@@ -27,6 +28,7 @@ import { SessionTimer, type SessionTimerSummary } from "@/components/session-tim
 import { clearSavedRun, hasSavedRun } from "@/components/session-timer/use-session-timer";
 import { RehabResponsePrompt } from "@/components/today/rehab-response-prompt";
 import { SparringLogPrompt, type SparringDraft } from "@/components/today/sparring-log-prompt";
+import { useTodayExerciseLogs } from "@/components/today/use-exercise-logs";
 import { DelayedRehabResponse } from "@/components/today/injury-care-status";
 import { useToast } from "@/components/toast-provider";
 import { listPendingRehabResponses, submitTodaySessionCompletion } from "@/lib/api";
@@ -244,6 +246,7 @@ export function TodaySessionBlocks({
   openWeekIntent,
   rehabLabelPolicy,
   exerciseMedia,
+  exerciseLogging = null,
 }: {
   planId?: string;
   current: CurrentDayResolution;
@@ -259,6 +262,9 @@ export function TodaySessionBlocks({
   rehabLabelPolicy?: RehabLabelPolicy | null;
   /** Curated demo videos keyed by block display_name; same reason as above. */
   exerciseMedia?: Record<string, ExerciseMedia> | null;
+  /** In-session logging for the exercise rows; null until today's session is
+   * started, and whenever the card shows a day other than today. */
+  exerciseLogging?: ExerciseLogging | null;
 }) {
   if (!current.inRange || !current.day) {
     return null;
@@ -290,6 +296,7 @@ export function TodaySessionBlocks({
     <RehabLabelProvider policy={rehabLabelPolicy}>
     <ExerciseMediaProvider media={exerciseMedia}>
     <ExerciseRationaleProvider>
+    <ExerciseLogProvider logging={exerciseLogging}>
       <div className="today-blocks today-blocks-sessions">
         {weekIntentNote}
         <DaySessionContext day={displayDay} headline={headline} />
@@ -314,6 +321,7 @@ export function TodaySessionBlocks({
           />
         ))}
       </div>
+    </ExerciseLogProvider>
     </ExerciseRationaleProvider>
     </ExerciseMediaProvider>
     </RehabLabelProvider>
@@ -330,6 +338,7 @@ export function TodaySessionPanel({
   planSchedule,
   rehabLabelPolicy,
   exerciseMedia,
+  painReasonAllowed = false,
   token,
   onRefresh,
   athleteFullName,
@@ -348,6 +357,8 @@ export function TodaySessionPanel({
   /** Server schedule projection + plan creation date, used to anchor the
    * current week of a weekday-only (open / renewable) plan. */
   planSchedule?: TodayPlanSchedule | null;
+  /** Whether the athlete has health-data consent: gates the "Pain" log reason. */
+  painReasonAllowed?: boolean;
   token: string;
   onRefresh: () => Promise<void>;
 }) {
@@ -388,6 +399,23 @@ export function TodaySessionPanel({
   // instead of sticking on a memoized day.
   const trainingDay = useTrainingDay();
   const activePlanId = state.active_plan.id ?? "";
+  // Exercises are logged against a session started (or already completed)
+  // today, which is the same condition the server enforces. A card that has
+  // moved on to the next session shows another day's blocks, so it stays closed.
+  const reportExerciseLogError = useCallback(
+    (message: string) => showToast(message, { tone: "error" }),
+    [showToast],
+  );
+  const exerciseLogging = useTodayExerciseLogs({
+    token,
+    planId: activePlanId,
+    trainingDay: state.today.training_day,
+    enabled:
+      resolvedDecision.sessionIsToday &&
+      (status === "started" || status === "done" || status === "modified"),
+    painReasonAllowed,
+    onError: reportExerciseLogError,
+  });
   useEffect(() => {
     if (!token || !activePlanId) {
       return;
@@ -911,6 +939,7 @@ export function TodaySessionPanel({
             openWeekIntent={openWeekIntent}
             rehabLabelPolicy={rehabLabelPolicy}
             exerciseMedia={exerciseMedia}
+            exerciseLogging={exerciseLogging}
           />
         ) : (
           <p className="muted">No active plan card matched today. Use Open camp plan to find the next training target.</p>
@@ -1023,6 +1052,7 @@ export function TodaySessionPanel({
           openWeekIntent={openWeekIntent}
           rehabLabelPolicy={rehabLabelPolicy}
           exerciseMedia={exerciseMedia}
+          exerciseLogging={exerciseLogging}
         />
       ) : (
         <div className="today-session-summary">

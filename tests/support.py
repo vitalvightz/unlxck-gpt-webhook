@@ -508,6 +508,7 @@ class FakeStore(InMemoryNotificationLedger, FullRowStatusReads):
         self.adaptation_notes: dict[str, list[dict]] = {}
         self.admin_reviews: list[dict] = []
         self.sparring_logs: list[dict] = []
+        self.exercise_logs: list[dict] = []
         # Simulates the admin-review insert failing inside record_sparring_log.
         self.fail_sparring_review_insert = False
         self.push_subscriptions: dict[str, dict] = {}
@@ -2515,6 +2516,27 @@ class FakeStore(InMemoryNotificationLedger, FullRowStatusReads):
             and (not rocked or row.get("rocked"))
         ]
         return max(days) if days else None
+
+    def upsert_exercise_log(self, athlete_id: str, fields: dict) -> dict:
+        # Mirrors the table's occurrence key: one row per plan/day/block.
+        key = ("plan_id", "training_day", "block_id")
+        for row in self.exercise_logs:
+            if row["athlete_id"] == athlete_id and all(row.get(k) == fields.get(k) for k in key):
+                row.update({**fields, "updated_at": _now()})
+                return dict(row)
+        now = _now()
+        row = {"id": str(uuid4()), "athlete_id": athlete_id, "created_at": now, "updated_at": now, **fields}
+        self.exercise_logs.append(row)
+        return dict(row)
+
+    def list_exercise_logs_for_day(self, athlete_id: str, *, plan_id: str, training_day: str) -> list[dict]:
+        return [
+            dict(row)
+            for row in self.exercise_logs
+            if row["athlete_id"] == athlete_id
+            and row.get("plan_id") == plan_id
+            and str(row.get("training_day")) == training_day
+        ]
 
     def create_admin_review(self, athlete_id: str, fields: dict) -> dict:
         row = {
