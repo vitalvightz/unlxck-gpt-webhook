@@ -605,6 +605,26 @@ _PROGRESSION_LABELS = {"progress", "progression"}
 _PURPOSE_LABELS = {"purpose"}
 _WHY_LABELS = {"why", "why today"}
 
+#: Detail labels Stage 2 may write INLINE after an exercise's dose instead of
+#: on their own indented lines ("- Push-Up: 2 sets x 6 reps; RPE 6. Cue: ...
+#: Purpose: ... Stop: ..."). Only these known labels, and only at a sentence
+#: boundary, start a new detail line, so ordinary prose containing a colon is
+#: never split.
+_INLINE_DETAIL_LABELS = sorted(
+    {"cue", *_STOP_LABELS, *_REGRESSION_LABELS, *_PROGRESSION_LABELS, *_PURPOSE_LABELS},
+    key=len,
+    reverse=True,
+)
+_INLINE_DETAIL_RE = re.compile(
+    r"(?<=[.;!?])\s+(?=(?:" + "|".join(re.escape(label) for label in _INLINE_DETAIL_LABELS) + r")\s*:)",
+    re.IGNORECASE,
+)
+
+
+def _explode_inline_details(line: str) -> list[str]:
+    """One line per labelled detail, whether the text wrote them inline or not."""
+    return [part.strip() for part in _INLINE_DETAIL_RE.split(line) if part.strip()]
+
 
 @dataclass
 class _ParsedDisplayText:
@@ -624,7 +644,12 @@ class _ParsedDisplayText:
 def _parse_display_text(display_text: str) -> _ParsedDisplayText:
     """Split planner-authored copy into its labelled parts, wording preserved."""
     parsed = _ParsedDisplayText()
-    lines = [line.rstrip() for line in str(display_text or "").splitlines() if line.strip()]
+    lines = [
+        part
+        for line in str(display_text or "").splitlines()
+        if line.strip()
+        for part in _explode_inline_details(line.rstrip())
+    ]
     if not lines:
         return parsed
 
