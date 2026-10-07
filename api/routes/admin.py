@@ -75,6 +75,7 @@ from ..plan_mappers import (
 from ..generation_job_helpers import (
     _normalized_client_request_id,
     _job_response,
+    _job_final_result_triage_status,
     _is_stale_job,
     _generation_job_stale_after_seconds,
     _find_blocking_generation_job_for_athlete,
@@ -246,6 +247,34 @@ def build_admin_router() -> APIRouter:
             heartbeat_at=now_iso,
         )
         active_tasks.discard(job_id)
+        return _job_response(updated, store=store, viewer_role="admin")
+
+    @router.post("/api/admin/generation-jobs/{job_id}/reject", response_model=GenerationJobResponse)
+    def reject_triage_generation_job(
+        job_id: str,
+        profile: ProfileRecord = Depends(require_admin),
+        store: AppStore = Depends(get_store),
+    ) -> GenerationJobResponse:
+        job = store.get_generation_job(job_id)
+        if not job:
+            raise generation_job_not_found_error()
+        if (
+            job.get("status") != "review_required"
+            or job.get("plan_id")
+            or not _job_final_result_triage_status(job)
+            or _triage_job_has_resume_approval(job)
+        ):
+            raise HTTPException(status_code=409, detail="Only unapproved suspended builds can be rejected.")
+
+        now_iso = utc_now_iso()
+        final_result = dict(job.get("final_result") or {})
+        why_log = dict(final_result.get("why_log") or {})
+        why_log["admin_rejection"] = {"rejected_by": profile.athlete_id, "rejected_at": now_iso}
+        final_result.update(status="failed", stage2_status="admin_review_rejected", why_log=why_log)
+        updated = store.update_generation_job(
+            job_id, status="failed", final_result=final_result,
+            error="Build rejected by admin.", completed_at=now_iso, failed_at=now_iso,
+        )
         return _job_response(updated, store=store, viewer_role="admin")
 
     @router.post("/api/admin/plans/{plan_id}/manual-stage2", response_model=PlanDetail)

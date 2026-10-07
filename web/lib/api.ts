@@ -1002,6 +1002,13 @@ export function rejectApprovedPlan(token: string, planId: string): Promise<PlanD
   });
 }
 
+export function rejectAdminGenerationJob(token: string, jobId: string): Promise<GenerationJobResponse> {
+  return readJson<GenerationJobResponse>(`/api/admin/generation-jobs/${encodeURIComponent(jobId)}/reject`, {
+    method: "POST",
+    token,
+  });
+}
+
 export function adminArchivePlan(token: string, planId: string): Promise<PlanDetail> {
   return readJson<PlanDetail>(`/api/admin/plans/${encodeURIComponent(planId)}/archive`, {
     method: "POST",
