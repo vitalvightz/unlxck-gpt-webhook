@@ -45,3 +45,35 @@ def test_faithfulness_segment_finds_parenthetical_names():
     segment = _source_block_segment(SOURCE, "Jump Lunge (Alternating)")
     assert segment.startswith("- Jump Lunge (Alternating): 3 sets x 2 reps")
     assert "landing pain" in segment
+
+
+INLINE_SOURCE = """D-23 (Friday) — Strength.
+- Push-Up (Weighted): 2 sets x 6 reps; rest 90 sec; RPE 6. Cue: keep a straight line from head to heels. Purpose: build pressing strength for guard and power. Progress: next time do 3 sets x 6 reps. Easier: do 2 sets x 8 bodyweight push-ups. Stop: if shoulder pain or form breaks.
+- Depth Drop (No Rebound): 6 sets x 3 reps; rest 90 sec.
+  Cue: keep a straight line from head to heels.
+  Purpose: build pressing strength for guard and power.
+  Progress: next time do 3 sets x 6 reps.
+  Easier: do 2 sets x 8 bodyweight push-ups.
+  Stop: if shoulder pain or form breaks.
+"""
+
+
+def test_inline_details_parse_like_their_own_lines():
+    # Production (plan 1e80d605): Stage 2 wrote Cue/Purpose/Progress/Easier/Stop
+    # inline after the dose, and the whole run rendered as one cue paragraph.
+    lines = INLINE_SOURCE.splitlines()
+    inline = _source_block(lines, "Push-Up (Weighted)")
+    multiline = _source_block(lines, "Depth Drop (No Rebound)")
+
+    assert (inline["sets"], inline["reps"]) == (2, 6)
+    assert inline["effort"]["value"] == 6
+    assert inline["coaching_cues"] == ["Cue: keep a straight line from head to heels."]
+    for key in ("purpose", "coaching_cues", "regression_options", "progression_rule", "stop_rules"):
+        assert inline[key] == multiline[key], key
+
+
+def test_prose_with_a_colon_is_not_split():
+    from api.structured_plan_deterministic_fallback import _explode_inline_details
+
+    line = "- Ring Flow: 3 rounds; rest 60 sec. Note: stay light. Target: 3 clean exits."
+    assert _explode_inline_details(line) == [line]
