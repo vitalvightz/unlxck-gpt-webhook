@@ -509,6 +509,8 @@ class FakeStore(InMemoryNotificationLedger, FullRowStatusReads):
         self.admin_reviews: list[dict] = []
         self.sparring_logs: list[dict] = []
         self.exercise_logs: list[dict] = []
+        # Simulates the bulk write failing in the database (nothing commits).
+        self.fail_next_exercise_log_batch = False
         # Simulates the admin-review insert failing inside record_sparring_log.
         self.fail_sparring_review_insert = False
         self.push_subscriptions: dict[str, dict] = {}
@@ -2528,6 +2530,34 @@ class FakeStore(InMemoryNotificationLedger, FullRowStatusReads):
         row = {"id": str(uuid4()), "athlete_id": athlete_id, "created_at": now, "updated_at": now, **fields}
         self.exercise_logs.append(row)
         return dict(row)
+
+    def upsert_exercise_logs(self, athlete_id: str, rows: list[dict], *, keep_existing: bool = False) -> list[dict]:
+        # One statement in Postgres: either every row lands or none does. The
+        # fake applies the whole batch to a copy and swaps it in only at the end.
+        if self.fail_next_exercise_log_batch:
+            self.fail_next_exercise_log_batch = False
+            raise HTTPException(status_code=500, detail="failed to save exercise logs")
+        key = ("plan_id", "training_day", "block_id")
+        staged = [dict(row) for row in self.exercise_logs]
+        written: list[dict] = []
+        for fields in rows:
+            match = next(
+                (row for row in staged
+                 if row["athlete_id"] == athlete_id and all(row.get(k) == fields.get(k) for k in key)),
+                None,
+            )
+            if match is not None:
+                if keep_existing:
+                    continue  # ON CONFLICT DO NOTHING
+                match.update({**fields, "updated_at": _now()})
+                written.append(dict(match))
+                continue
+            now = _now()
+            row = {"id": str(uuid4()), "athlete_id": athlete_id, "created_at": now, "updated_at": now, **fields}
+            staged.append(row)
+            written.append(dict(row))
+        self.exercise_logs[:] = staged
+        return written
 
     def list_exercise_logs_for_day(self, athlete_id: str, *, plan_id: str, training_day: str) -> list[dict]:
         return [

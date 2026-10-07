@@ -556,8 +556,16 @@ class InjuryStore(Protocol):
 
     def upsert_exercise_log(self, athlete_id: str, fields: dict[str, Any]) -> dict[str, Any]: ...
 
+    def upsert_exercise_logs(
+        self, athlete_id: str, rows: list[dict[str, Any]], *, keep_existing: bool = False
+    ) -> list[dict[str, Any]]: ...
+
     def list_exercise_logs_for_day(
         self, athlete_id: str, *, plan_id: str, training_day: str
+    ) -> list[dict[str, Any]]: ...
+
+    def list_recent_exercise_loads(
+        self, athlete_id: str, *, before_day: str, limit: int = 200
     ) -> list[dict[str, Any]]: ...
 
 

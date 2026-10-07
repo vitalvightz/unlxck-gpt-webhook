@@ -5254,6 +5254,51 @@ class SupabaseAppStore(CompactGenerationReads):
             )
         return rows[0]
 
+    def upsert_exercise_logs(
+        self, athlete_id: str, rows: list[dict[str, Any]], *, keep_existing: bool = False
+    ) -> list[dict[str, Any]]:
+        """Write several logs in ONE request, so they commit together or not at all.
+
+        PostgREST runs a bulk upsert as a single ``INSERT ... ON CONFLICT``
+        statement, which Postgres commits atomically: a failure on any row
+        writes none of them. With ``keep_existing`` the conflict clause is
+        ``DO NOTHING``, so a block already logged keeps its row (decided by the
+        database at write time, not by an earlier read); only new rows come back.
+        """
+        if not rows:
+            return []
+        operation = f"upsert_exercise_logs athlete_id={athlete_id} count={len(rows)}"
+        payload = [{"athlete_id": athlete_id, **fields} for fields in rows]
+        try:
+            response = (
+                self.client.table("exercise_logs")
+                .upsert(
+                    payload,
+                    on_conflict="athlete_id,plan_id,training_day,block_id",
+                    ignore_duplicates=keep_existing,
+                )
+                .execute()
+            )
+        except _STORE_CLIENT_ERRORS as exc:
+            self._raise_operation_http_error(
+                operation=operation,
+                detail="failed to save exercise logs",
+                exc=exc,
+            )
+        written = getattr(response, "data", None) or []
+        if not keep_existing and len(written) != len(rows):
+            logger.error(
+                "[store] upsert_exercise_logs:row_mismatch athlete_id=%s expected=%s got=%s",
+                athlete_id,
+                len(rows),
+                len(written),
+            )
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="failed to save exercise logs",
+            )
+        return written
+
     def list_exercise_logs_for_day(
         self, athlete_id: str, *, plan_id: str, training_day: str
     ) -> list[dict[str, Any]]:
