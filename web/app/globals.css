@@ -20558,33 +20558,43 @@ html[data-theme="light"] .loading-operational-item {
   font-weight: 500;
   opacity: 0.7;
 }
+/* One segmented bar, as on the History tabs: every reason on a single line. */
 .ex-log-reasons {
   display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
+  gap: 2px;
+  padding: 4px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-pill);
+  background: var(--bg-surface-alt);
 }
 .ex-log-chip {
-  min-height: 36px;
-  padding: 0 12px;
-  border: 1px solid var(--border-default);
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 40px;
+  padding: 0 4px;
+  border: 1px solid transparent;
   border-radius: var(--radius-pill);
   background: transparent;
   color: var(--text-secondary);
   font: inherit;
-  font-size: 0.82rem;
+  /* Four reasons stay whole down to a 320px phone. */
+  font-size: clamp(0.72rem, 3.4vw, 0.84rem);
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   cursor: pointer;
   transition: border-color var(--transition-fast), background var(--transition-fast), color var(--transition-fast);
 }
 .ex-log-chip:hover:not(:disabled),
 .ex-log-chip:focus-visible {
-  border-color: var(--border-strong);
   color: var(--text-primary);
 }
 .ex-log-chip[aria-pressed="true"],
 .ex-log-chip[aria-pressed="true"]:hover:not(:disabled) {
-  border-color: var(--text-primary);
-  background: var(--text-primary);
-  color: var(--bg-stat);
+  border-color: var(--border-active);
+  background: var(--brand-red-soft);
+  color: var(--text-primary);
 }
 .ex-log-confirm {
   margin: 0;
