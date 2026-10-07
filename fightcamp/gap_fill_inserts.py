@@ -34,9 +34,13 @@ from .stage2_payload_late_fight import (
 )
 from .fight_visualization_library import (
     ATHLETE_FACING_LABEL as FIGHT_VISUALIZATION_LABEL,
+    CAMP_VISUALIZATION_FIRST_DAY,
+    CAMP_VISUALIZATION_LAST_DAY,
     FIGHT_VISUALIZATION_COUNTDOWN_DAYS,
     ROLE_KEY as FIGHT_VISUALIZATION_ROLE_KEY,
     build_visualization_display_text,
+    camp_visualization_role,
+    choose_camp_visualization_days,
     select_for_athlete,
     visualization_metadata,
 )
@@ -1002,8 +1006,9 @@ def _apply_bank_visualization(
     if entry is None:
         return False
     # The selected bank entry already reflects sport, style and countdown day.
-    # Shorten its zero-load rehearsal only when the athlete reports high fatigue.
-    prescribed_duration = entry.duration_min[0 if _has_high_fatigue(athlete_model) else 1]
+    # The rehearsal carries no physical load, so physical fatigue is no reason
+    # to cut it short: the prescribed dose is the bank's.
+    prescribed_duration = entry.duration_min[1]
     metadata = visualization_metadata(entry, prescribed_duration_min=prescribed_duration)
     governance = dict(metadata.pop("governance", {}) or {})
     role.update(metadata)
@@ -1078,6 +1083,61 @@ def _ensure_fight_visualization_days(
             continue
         additions.append(role)
         _record_insert_usage(usage_ledger, FIGHT_VISUALIZATION_ROLE_KEY, countdown_day)
+    return additions
+
+
+def camp_visualization_day_tier(day_roles: list[dict[str, Any]]) -> int | None:
+    """How well a day suits an optional camp Fight Visualisation.
+
+    0 = it already carries Tactical Focus (watch the picture, then rehearse it),
+    1 = everything on it is low-load support, 2 = any other non-contact day.
+    None = unsuitable: no scheduled work (a rest day stays a rest day), hard
+    contact, or a visualisation already there.
+    """
+    keys = {str(role.get("role_key") or "") for role in day_roles}
+    if not keys or FIGHT_VISUALIZATION_ROLE_KEY in keys or "hard_sparring_day" in keys:
+        return None
+    if "tactical_watch" in keys:
+        return 0
+    if all(is_low_cost_coexistable_filler(role) for role in day_roles):
+        return 1
+    return 2
+
+
+def _ensure_late_camp_visualizations(
+    session_sequence: list[dict[str, Any]],
+    athlete_model: dict[str, Any],
+    countdown_map: dict[str, str],
+    days_until_fight: int,
+) -> list[dict[str, Any]]:
+    """Optional camp Fight Visualisation on the late-fight path's D-13..D-8.
+
+    The normal-camp planner owns D-14 and further out; this covers the last
+    pre-countdown week of the same block so it reaches the countdown without a
+    gap.
+    """
+    if not _is_fight_sport(athlete_model):
+        return []
+    first = min(days_until_fight, 13, CAMP_VISUALIZATION_FIRST_DAY)
+    by_day: dict[int, list[dict[str, Any]]] = {}
+    for role in session_sequence:
+        offset = _role_offset(role)
+        if offset is not None and CAMP_VISUALIZATION_LAST_DAY <= offset <= first:
+            by_day.setdefault(offset, []).append(role)
+    candidates = {
+        offset: tier
+        for offset, roles in by_day.items()
+        if (tier := camp_visualization_day_tier(roles)) is not None
+    }
+    additions: list[dict[str, Any]] = []
+    for ordinal, offset in enumerate(choose_camp_visualization_days(candidates)):
+        weekday = str(countdown_map.get(f"D-{offset}") or "").strip() or None
+        # Each week runs picture -> read -> reset, the same order as the camp weeks.
+        role = camp_visualization_role(
+            athlete_model, d_day=offset, weekday=weekday, ordinal=ordinal
+        )
+        if role is not None:
+            additions.append(role)
     return additions
 
 
@@ -2109,6 +2169,14 @@ def apply_gap_fill_inserts(
             athlete_model,
             countdown_map,
             usage_ledger,
+        )
+    )
+    inserts.extend(
+        _ensure_late_camp_visualizations(
+            ordered + inserts,
+            athlete_model,
+            countdown_map,
+            days_until_fight,
         )
     )
     # Re-run the protocol over the finished sequence. It already placed every

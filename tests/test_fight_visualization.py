@@ -50,10 +50,21 @@ def _role(offset, role_key, **extra):
 
 
 def _visualizations(sequence):
+    """The mandatory countdown protocol only; optional camp sessions excluded."""
     return {
         role["countdown_offset"]: role
         for role in sequence
         if role.get("role_key") == "fight_visualization"
+        and not role.get("optional_fight_visualization")
+    }
+
+
+def _camp_visualizations(sequence):
+    return {
+        role["countdown_offset"]: role
+        for role in sequence
+        if role.get("role_key") == "fight_visualization"
+        and role.get("optional_fight_visualization")
     }
 
 
@@ -91,11 +102,11 @@ def test_bank_avoids_outcome_imagery_and_motivational_language():
 @pytest.mark.parametrize(
     "countdown_day,expected_name,duration",
     [
-        (7, "Tactical Picture", (6, 8)),
-        (5, "Read → React", (5, 7)),
-        (3, "Pressure → Reset", (4, 6)),
-        (1, "Familiar & Ready", (3, 5)),
-        (0, "Trust → Compete", (1, 3)),
+        (7, "Tactical Picture", (12, 12)),
+        (5, "Read → React", (10, 10)),
+        (3, "Pressure → Reset", (8, 8)),
+        (1, "Familiar & Ready", (5, 5)),
+        (0, "Trust → Compete", (2, 2)),
     ],
 )
 def test_countdown_day_identity_and_duration(countdown_day, expected_name, duration):
@@ -315,7 +326,8 @@ def test_stage1_owns_locked_governance():
     assert governance["selected_drill_name"] == role["fight_visualization"]["name"]
 
 
-@pytest.mark.parametrize("fatigue,expected_duration", [("low", 8), ("high", 6)])
+# Zero-load rehearsal: physical fatigue does not shorten it.
+@pytest.mark.parametrize("fatigue,expected_duration", [("low", 12), ("high", 12)])
 def test_visualization_uses_one_duration_from_source_through_card(fatigue, expected_duration):
     sequence = apply_gap_fill_inserts(
         [_role(12, "hard_sparring_day")], _athlete(fatigue=fatigue)

@@ -12,6 +12,7 @@ from api.services.effective_structured_plan import resolve_effective_structured_
 from api.services.progress_notifications import dispatch_progress_award_notification  # noqa: F401
 from api.services.xp_awards import ensure_xp_abuse_hardening
 from api.store import AppStore
+from api.optional_sessions import is_optional_session
 from api.contracts.completion import TERMINAL_COMPLETION_STATUSES as RESOLVED_STATUSES
 
 logger = logging.getLogger(__name__)
@@ -100,6 +101,9 @@ def _planned_session_ids(week: Mapping[str, Any]) -> set[str]:
         if str(day.get("day_type") or "").strip().lower() == "rest":
             continue
         for session in _mapping_rows(day.get("sessions")):
+            # Optional work is offered, not planned: skipping it misses nothing.
+            if is_optional_session(session):
+                continue
             session_id = str(session.get("session_id") or "").strip()
             if session_id:
                 planned.add(session_id)

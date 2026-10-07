@@ -140,7 +140,7 @@ function TodayReadinessStrip({
 }
 
 export function TodayScreen() {
-  const { session } = useAppSession();
+  const { session, me } = useAppSession();
   const token = session?.access_token ?? null;
   const trainingDay = useTrainingDay();
   const {
@@ -235,6 +235,8 @@ export function TodayScreen() {
       planSchedule={planSchedule}
       token={token ?? ""}
       onRefresh={refresh}
+      athleteFullName={me?.profile.full_name}
+      professionalStatus={me?.profile.professional_status}
     />
   );
 

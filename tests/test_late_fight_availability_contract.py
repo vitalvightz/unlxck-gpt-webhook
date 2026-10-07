@@ -156,6 +156,7 @@ def test_gap_fill_rehomes_two_targets_onto_declared_available_days():
         role
         for role in sequence
         if role.get("category") == "support_insert"
+        and not role.get("optional_fight_visualization")
         and 8 < int(role.get("countdown_offset") or 0) < 14
     ]
 

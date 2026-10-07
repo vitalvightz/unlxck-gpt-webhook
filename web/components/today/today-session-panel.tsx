@@ -16,6 +16,7 @@ import {
   SessionlessDayCard,
 } from "@/components/structured-plan-renderer";
 import { formatTrainingDay } from "@/components/today/format";
+import { GuidedVisualisation } from "@/components/guided-visualisation/guided-visualisation";
 import {
   CONTACT_RUN_KEY_PREFIX,
   pruneSavedTodayRuns,
@@ -38,7 +39,9 @@ import {
   savedRoundFormat,
   type ContactTimerTarget,
 } from "@/lib/session-timer/contact";
-import { dayTimerItems, type TimerItem } from "@/lib/session-timer/plan";
+import { dayTimerItems, timerSessionFor, type TimerItem } from "@/lib/session-timer/plan";
+import { fightVisualisationFromSession, firstNameOf } from "@/lib/fight-visualisation/script";
+import { fightLevel } from "@/lib/fight-visualisation/crowd";
 import {
   resolveCurrentDay,
   resolveOpenPlanWeekNumber,
@@ -123,7 +126,7 @@ const PLANNED_SPARRING_INTENSITY: Record<ContactTimerTarget["kind"], SparringPla
   coach_led: "contact",
 };
 
-type ToolIconName = "bell" | "timer" | "lock" | "check" | "adjust" | "skip";
+type ToolIconName = "bell" | "timer" | "lock" | "check" | "adjust" | "skip" | "voice";
 
 const TOOL_ICON_PATHS: Record<ToolIconName, ReactNode> = {
   // A ring bell: sparring rounds.
@@ -133,6 +136,8 @@ const TOOL_ICON_PATHS: Record<ToolIconName, ReactNode> = {
   check: <path d="M5 12.5l4.5 4.5L19 7.5" />,
   adjust: <path d="M4 8h9M17 8h3M4 16h3M11 16h9M15 6v4M9 14v4" />,
   skip: <path d="M6 6l12 12M18 6L6 18" />,
+  // A speaking head: the voice-guided visualisation.
+  voice: <path d="M15 8a5 5 0 00-10 0c0 2 1 3 1 5v3h3l1 2h2v-4M18 9a4 4 0 010 6M20.5 7a7 7 0 010 10" />,
 };
 
 function ToolIcon({ name }: { name: ToolIconName }) {
@@ -327,8 +332,14 @@ export function TodaySessionPanel({
   exerciseMedia,
   token,
   onRefresh,
+  athleteFullName,
+  professionalStatus,
 }: {
   state: TodayCommandView;
+  /** From the athlete's profile: the guided visualisation says their first name. */
+  athleteFullName?: string | null;
+  /** "amateur" / "professional": picks the guided visualisation's crowd. */
+  professionalStatus?: string | null;
   structuredPlan: StructuredPlan | null;
   /** Server-derived per-region Rehab/Prehab policy for the active plan. */
   rehabLabelPolicy?: RehabLabelPolicy | null;
@@ -362,6 +373,8 @@ export function TodaySessionPanel({
   const [timerNotes, setTimerNotes] = useState("");
   // Finished sparring rounds waiting for the athlete's quick log entry.
   const [sparringDraft, setSparringDraft] = useState<SparringDraft | null>(null);
+  // The voice-guided Fight Visualisation player, full screen while open.
+  const [guidedOpen, setGuidedOpen] = useState(false);
   const session = state.today.next_session;
   const status = state.today.completion_status;
   const duration = getSessionDuration(session);
@@ -481,6 +494,12 @@ export function TodaySessionPanel({
         countdown: timerCountdown,
       })
     : [];
+  // The day's Fight Visualisation, offered as a voice-guided run. Only when the
+  // session being logged is one of this day's, the same rule as the timer.
+  const guidedVisualisation =
+    hasResolvedDaySessions && timerSessionFor(current.sessions, session.session_id)
+      ? current.sessions.map(fightVisualisationFromSession).find((item) => item !== null) ?? null
+      : null;
   const timerKeys: Record<TimerSource, string> = {
     session: `${SESSION_RUN_KEY_PREFIX}${activePlanId}:${session.session_id ?? ""}:${state.today.training_day}`,
     contact: `${CONTACT_RUN_KEY_PREFIX}${activePlanId}:${state.today.training_day}`,
@@ -555,6 +574,14 @@ export function TodaySessionPanel({
     && !livePrescription?.safety_hold && !contactClearanceBlocked;
   const timerAvailable =
     canCompleteSession && !safeSession && Boolean(session.session_id) && timerItems.length > 0;
+  // A day with nothing to time but a Fight Visualisation: starting the session
+  // IS the guided run, and finishing it opens the log.
+  // An optional camp session never leads: it rides on the day's real work.
+  const guidedLeads =
+    Boolean(guidedVisualisation && !guidedVisualisation.optional) &&
+    canCompleteSession &&
+    !safeSession &&
+    !timerAvailable;
   const contactLockCopy =
     !clearanceAllowsContact
       ? CONTACT_LOCK_COPY.clinician_clearance
@@ -721,7 +748,10 @@ export function TodaySessionPanel({
   // timer is running: its mini bar is the way back in.
   function timerTools(trailing?: ReactNode, options: { contactAsPrimary?: boolean } = {}) {
     const showContact = Boolean(contactTarget) && !options.contactAsPrimary;
-    const tools = !anyTimerShown && (showContact || freeTimerAvailable);
+    // Leading the tray already, the guided run needs no second button.
+    const showGuided =
+      Boolean(guidedVisualisation) && !(guidedLeads && (status === "not_started" || status === "started"));
+    const tools = !anyTimerShown && !guidedOpen && (showContact || freeTimerAvailable || showGuided);
     if (!tools && !trailing) {
       return null;
     }
@@ -741,6 +771,12 @@ export function TodaySessionPanel({
               {contactLockCopy}
             </span>
           )
+        ) : null}
+        {tools && showGuided ? (
+          <button type="button" className="today-tool-button" data-accent="true" onClick={() => setGuidedOpen(true)}>
+            <ToolIcon name="voice" />
+            Guided visualisation
+          </button>
         ) : null}
         {tools && freeTimerAvailable ? (
           <button type="button" className="today-tool-button" onClick={roundTimer.open}>
@@ -954,11 +990,14 @@ export function TodaySessionPanel({
                   if (started && timerAvailable && !roundTimer.shown) {
                     setActiveTimer({ source: "session", mode: "open" });
                   }
+                  if (started && guidedLeads && !roundTimer.shown) {
+                    setGuidedOpen(true);
+                  }
                 });
               }}
               disabled={isSubmitting}
             >
-              {alongsideTitle ? `Start ${alongsideTitle}` : "Start session"}
+              {guidedLeads ? "Start guided visualisation" : alongsideTitle ? `Start ${alongsideTitle}` : "Start session"}
             </button>
           )}
           {timerTools(
@@ -1054,12 +1093,16 @@ export function TodaySessionPanel({
             type="button"
             className="cta"
             onClick={() => {
-              if (roundTimer.shown && (timerAvailable || (contactIsSession && contactTimerAvailable))) {
+              if (roundTimer.shown && (timerAvailable || guidedLeads || (contactIsSession && contactTimerAvailable))) {
                 showToast("Close the round timer to resume your session timer.", { tone: "info" });
                 return;
               }
               if (timerAvailable) {
                 openTimer("session");
+                return;
+              }
+              if (guidedLeads) {
+                setGuidedOpen(true);
                 return;
               }
               if (contactIsSession && contactTimerAvailable) {
@@ -1165,6 +1208,25 @@ export function TodaySessionPanel({
       ))}
 
       {renderTimer(headline)}
+
+      {guidedOpen && guidedVisualisation ? (
+        <GuidedVisualisation
+          visualisation={guidedVisualisation}
+          firstName={firstNameOf(athleteFullName)}
+          level={fightLevel(professionalStatus)}
+          finishLabel="Log session"
+          onClose={() => setGuidedOpen(false)}
+          onFinish={
+            guidedLeads && status === "started"
+              ? () => {
+                  setGuidedOpen(false);
+                  setTimerNotes("Guided visualisation completed.");
+                  setIntent("done");
+                }
+              : undefined
+          }
+        />
+      ) : null}
 
       {reviewableSession ? (
         <SessionFeedbackPrompt
