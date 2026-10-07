@@ -166,6 +166,39 @@ def test_create_plan_persists_valid_structured_plan():
     assert payload["schema_version"] == SCHEMA_VERSION
 
 
+def test_plan_creation_persists_the_same_derived_ids_every_reader_uses():
+    from uuid import UUID
+    from api.services.effective_structured_plan import resolve_effective_structured_plan
+
+    structured = _valid_plan()
+    session = structured["weeks"][0]["days"][0]["sessions"][0]
+    session["session_id"] = None
+    payload = _capture_create_plan({"status": "ready", "structured_plan": structured})
+    UUID(payload["id"])
+    saved = payload["structured_plan"]["weeks"][0]["days"][0]["sessions"][0]["session_id"]
+    assert saved.startswith(f"ses-{payload['id'][:8]}-")
+    assert resolve_effective_structured_plan(payload) == payload["structured_plan"]
+    assert session["session_id"] is None  # input remains untouched
+
+
+def test_stage2_and_artifact_writes_persist_missing_ids_with_existing_plan_scope():
+    from api.services.effective_structured_plan import ensure_structured_session_ids
+
+    structured = _valid_plan()
+    structured["weeks"][0]["days"][0]["sessions"][0]["session_id"] = None
+    plan_id = "11111111-2222-3333-4444-555555555555"
+    expected = ensure_structured_session_ids(structured, plan_id=plan_id)
+    store = SupabaseAppStore(client=MagicMock(), admin_emails=set())
+    stage2 = store._build_plan_stage2_payload({"id": plan_id, "status": "ready"},
+                                             {"status": "ready", "structured_plan": structured})
+    assert stage2["structured_plan"] == expected
+    store.get_plan = MagicMock(return_value={"id": plan_id, "structured_plan": expected})
+    store.update_plan_structured_artifacts(plan_id, structured_plan=structured,
+                                          schema_version=SCHEMA_VERSION, stage2_validator_report={})
+    written = store.client.table.return_value.update.call_args.args[0]
+    assert written["structured_plan"] == expected
+
+
 # ---------------------------------------------------------------------------
 # Mapping: _map_plan_detail
 # ---------------------------------------------------------------------------

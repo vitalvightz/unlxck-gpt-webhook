@@ -49,6 +49,7 @@ import { dayTimerItems, timerSessionFor, type TimerItem } from "@/lib/session-ti
 import { fightVisualisationFromSession, firstNameOf } from "@/lib/fight-visualisation/script";
 import { fightLevel } from "@/lib/fight-visualisation/crowd";
 import {
+  primarySessionOf,
   resolveCurrentDay,
   resolveOpenPlanWeekNumber,
   sessionIdentity,
@@ -165,8 +166,9 @@ function textValue(value: string | null | undefined): string {
   return typeof value === "string" ? value.trim() : "";
 }
 
-function getStructuredTodaySessionTitle(current: CurrentDayResolution): string {
-  const session = current.sessions[0];
+function getStructuredTodaySessionTitle(current: CurrentDayResolution, sessionId?: string): string {
+  const session = current.sessions.find((entry) => sessionId && entry.session_id === sessionId)
+    ?? primarySessionOf(current.day);
   const card = current.day?.today_card;
   return athleteFacingSessionTitle(
     textValue(session?.title) ||
@@ -1091,7 +1093,7 @@ export function TodaySessionPanel({
   }
 
   const sessionTitle = hasResolvedDaySessions
-    ? getStructuredTodaySessionTitle(current) || getSessionTitle(session)
+    ? getStructuredTodaySessionTitle(current, session.session_id) || getSessionTitle(session)
     : getSessionTitle(session);
   // Avoid the "Today's session / Today's session" stutter: when the session has
   // no real name and falls back to the generic title that already matches the

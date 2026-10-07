@@ -585,6 +585,25 @@ test("a next session on a declared sparring day is headlined by the sparring", (
   assert.doesNotMatch(html, />Start hard sparring<|>Start session</);
 });
 
+test("completed training previews the next main session instead of leading optional visualisation", () => {
+  const state = nextContactDayState();
+  state.today.completion_status = "done";
+  state.today.next_session = { session_id: "next-strength", title: "Strength", calendar_date: "2026-09-27",
+    session_relation: "next", effective_load: "moderate" };
+  const structuredPlan = { weeks: [{ week_index: 1, days: [{ date: "2026-09-27", weekday: "Sun", countdown_label: "D-20",
+    today_card: { headline: "Strength" }, sessions: [
+      { session_id: "optional-visualisation", title: "Fight Visualisation", optional: true,
+        blocks: [{ block_type: "mindset", display_name: "Tactical Picture" }] },
+      { session_id: "next-strength", title: "Strength", blocks: [{ block_type: "strength", display_name: "Squat", sets: 3, reps: 5 }] },
+    ] }] }] } as StructuredPlan;
+  const html = renderToStaticMarkup(<ToastProvider><TodaySessionPanel state={state}
+    structuredPlan={structuredPlan} token="token" onRefresh={async () => {}} /></ToastProvider>);
+  assert.match(html, /Next session/);
+  assert.match(html, /<h2 id="today-session-heading">Strength<\/h2>/);
+  assert.match(html, /Sun 27 Sept? 2026/);
+  assert.doesNotMatch(html, />Start session<|>Mark done</);
+});
+
 test("a next sparring day read from the plan card is headlined by the sparring", () => {
   const state = nextContactDayState();
   state.today.next_session = { ...state.today.next_session, coach_led_contact: undefined };
