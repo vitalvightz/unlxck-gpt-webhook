@@ -1511,6 +1511,15 @@ export function CampDayCard({
 
         <span className="cm-day-meta">
           <CompletionTag completion={completion} />
+          {completion.total === 0 && sessions.length > 0 ? (
+            // Support-only day (a visualisation, a Tactical Watch): it has work
+            // to open but nothing physical to count, so name it rather than
+            // leave the row's count slot blank.
+            <span className="cm-day-count cm-day-support">
+              Zero load
+              <span className="sr-only"> support only, no physical sessions</span>
+            </span>
+          ) : null}
         </span>
       </summary>
 
