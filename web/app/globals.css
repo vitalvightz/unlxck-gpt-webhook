@@ -2209,7 +2209,73 @@ html[data-theme="light"] .cta:disabled {
 }
 
 .admin-queue-grid {
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  grid-template-columns: 1fr;
+}
+
+.admin-queue > summary {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.admin-queue > summary::-webkit-details-marker {
+  display: none;
+}
+
+.admin-queue > summary:focus-visible {
+  outline: 2px solid var(--text-primary);
+  outline-offset: 6px;
+}
+
+.admin-queue > summary .form-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+}
+
+.admin-queue-toggle {
+  margin-inline-start: auto;
+  font-size: 24px;
+}
+
+.admin-queue[open] > summary .admin-queue-toggle {
+  transform: rotate(45deg);
+}
+
+.admin-queue-content {
+  display: grid;
+  gap: 16px;
+  margin-top: 18px;
+}
+
+.admin-queue .plan-card,
+.admin-queue .admin-active-row {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.admin-build-details > summary {
+  cursor: pointer;
+  color: var(--text-primary);
+  font-size: 13px;
+}
+
+.admin-build-details[open] {
+  display: grid;
+  gap: 10px;
+}
+
+.admin-feedback-disclosure .admin-feedback-panel {
+  padding: 0;
+  border: 0;
+  background: transparent;
 }
 
 .admin-plan-cleanup-bar,

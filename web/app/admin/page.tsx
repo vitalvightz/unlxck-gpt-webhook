@@ -6,9 +6,12 @@ import Link from "next/link";
 import { RequireAuth } from "@/components/auth-guard";
 import { useAppSession } from "@/components/auth-provider";
 import { EmptyState } from "@/components/empty-state";
+import { AdminQueue, AdminQueueList } from "@/components/admin-queue";
 import { AdminFeedbackPanel } from "@/components/admin-feedback-panel";
 import { formatAppDate, formatAppDateTime } from "@/lib/date-format";
 import {
+  adminArchivePlan,
+  rejectAdminGenerationJob,
   approveAdminAthlete,
   approveAndResumeGenerationFromJob,
   backfillStructuredPlans,
@@ -139,7 +142,7 @@ function ProfileRefreshWarningBanner({ job }: { job: AdminGenerationJobDiagnosti
   );
 }
 
-const DIRECTORY_PAGE_SIZE = 20;
+const DIRECTORY_PAGE_SIZE = 10;
 const ACTIVE_JOBS_POLL_INTERVAL_MS = 8000;
 const SEARCH_DEBOUNCE_MS = 300;
 
@@ -168,6 +171,7 @@ export default function AdminPage() {
   const [plansOffset, setPlansOffset] = useState(0);
   const [athletesHasMore, setAthletesHasMore] = useState(false);
   const [plansHasMore, setPlansHasMore] = useState(false);
+  const [rejectingBuildId, setRejectingBuildId] = useState<string | null>(null);
   const [resumingJobId, setResumingJobId] = useState<string | null>(null);
   const [cancellingJobId, setCancellingJobId] = useState<string | null>(null);
   const [selectedArchivedPlanIds, setSelectedArchivedPlanIds] = useState<string[]>([]);
@@ -487,7 +491,7 @@ export default function AdminPage() {
   }
 
   async function handleApproveAndResumeJob(jobId: string) {
-    if (!session?.access_token || resumingJobId) return;
+    if (!session?.access_token || resumingJobId || rejectingBuildId) return;
     setResumingJobId(jobId);
     setError(null);
     setMessage(null);
@@ -497,12 +501,36 @@ export default function AdminPage() {
         jobId,
         { reason: "admin reviewed and approved from dashboard" },
       );
-      setMessage("Resume queued. The triage item will leave the queue after refresh.");
+      setTriageJobs((jobs) => jobs.filter((job) => job.job_id !== jobId));
+      setMessage("Resume queued.");
       setReloadKey((value) => value + 1);
     } catch (resumeError) {
       setError(resumeError instanceof Error ? resumeError.message : "Failed to approve and resume generation.");
     } finally {
       setResumingJobId(null);
+    }
+  }
+
+  async function handleRejectBuild(id: string, name: string, kind: "job" | "plan") {
+    if (!session?.access_token || rejectingBuildId || resumingJobId) return;
+    if (!window.confirm(`Reject build for ${name}? ${kind === "plan" ? "The plan will be archived and kept in history." : "This closes the suspended build without generating a plan."}`)) return;
+    setRejectingBuildId(id);
+    setError(null);
+    setMessage(null);
+    try {
+      if (kind === "job") {
+        await rejectAdminGenerationJob(session.access_token, id);
+        setTriageJobs((jobs) => jobs.filter((job) => job.job_id !== id));
+      } else {
+        await adminArchivePlan(session.access_token, id);
+        setReviewPlans((items) => items.filter((plan) => plan.plan_id !== id));
+      }
+      setMessage(kind === "plan" ? "Build rejected. Plan archived in history." : "Build rejected.");
+      setReloadKey((value) => value + 1);
+    } catch (rejectError) {
+      setError(getErrorMessage(rejectError, "Failed to reject build."));
+    } finally {
+      setRejectingBuildId(null);
     }
   }
 
@@ -628,23 +656,15 @@ export default function AdminPage() {
               <p className="muted">
                 {isJobsLoading
                   ? "Checking reviews."
-                  : attentionReviews.length > 0
-                    ? "Athlete flags open."
-                    : "No flags open."}
+                  : `${triageAthleteCount} athlete${triageAthleteCount === 1 ? "" : "s"} awaiting a decision.`}
               </p>
             </article>
             <article className="status-card admin-summary-card" data-tone={attentionReviews.length > 0 ? "danger" : "neutral"}>
               <p className="status-label">Needs attention</p>
               <h2 className="plan-summary-title">
-                {isJobsLoading
-                  ? "-"
-                  : reviewPlans.length > 0
-                    ? reviewPlans.length
-                    : isDirectoryLoading
-                      ? "-"
-                      : plans.length}
+                {isJobsLoading ? "-" : attentionReviews.length}
               </h2>
-              <p className="muted">{isJobsLoading ? "Checking reviews." : "Athlete flags open."}</p>
+              <p className="muted">{isJobsLoading ? "Checking reviews." : attentionReviews.length ? "Athlete flags open." : "No flags open."}</p>
             </article>
             <article className="status-card admin-summary-card" data-tone="neutral">
               <p className="status-label">Athletes</p>
@@ -652,17 +672,9 @@ export default function AdminPage() {
               <p className="muted">{searchNeedle ? "Matches on this page." : "Accounts on this page."}</p>
             </article>
             <article className="status-card admin-summary-card" data-tone={reviewPlans.length > 0 ? "danger" : "neutral"}>
-              <p className="status-label">Plans</p>
-              <h2 className="plan-summary-title">{isDirectoryLoading ? "-" : plans.length}</h2>
-              <p className="muted">
-                {isJobsLoading
-                  ? "Checking reviews."
-                  : searchNeedle
-                    ? "Matches on this page."
-                    : reviewPlans.length > 0
-                      ? `${reviewPlans.length} held for decision.`
-                      : "Generations on this page."}
-              </p>
+              <p className="status-label">Held plans</p>
+              <h2 className="plan-summary-title">{isJobsLoading ? "-" : reviewPlans.length}</h2>
+              <p className="muted">{isJobsLoading ? "Checking reviews." : "Awaiting a decision."}</p>
             </article>
           </div>
         </div>
@@ -735,9 +747,8 @@ export default function AdminPage() {
           </button>
         </div>
 
-        {token ? <AdminFeedbackPanel token={token} reloadKey={reloadKey} /> : null}
 
-        <article className="list-card admin-active-panel">
+        <AdminQueue className="admin-active-panel" header={(
           <div className="form-section-header">
             <div>
               <p className="kicker">Live generation monitor</p>
@@ -752,6 +763,7 @@ export default function AdminPage() {
                   : `${activeJobs.length} active`}
             </span>
           </div>
+        )}>
 
           {!isJobsLoading ? (
             <div className="admin-active-summary" aria-label="Active generation states">
@@ -785,7 +797,7 @@ export default function AdminPage() {
               <p className="muted">No active generation jobs match this search.</p>
             </div>
           ) : (
-            <div className="admin-active-list">
+            <AdminQueueList className="admin-active-list" label="Live builds">
               {filteredActiveJobs.map((job) => (
                 <article
                   key={job.job_id}
@@ -802,6 +814,9 @@ export default function AdminPage() {
                   <div className="admin-active-progress" aria-label={`${getJobStatusLabel(job)} progress`}>
                     <span style={{ width: `${getActiveJobProgress(job)}%` }} />
                   </div>
+                  <ProfileRefreshWarningBanner job={job} />
+                  <details className="admin-build-details">
+                    <summary>Build details</summary>
                   <div className="admin-job-meta">
                     <span>Created {formatDateTime(job.created_at)}</span>
                     <span>Started {formatDateTime(job.started_at)}</span>
@@ -809,12 +824,12 @@ export default function AdminPage() {
                     <span>Source {formatJobSource(job.source)}</span>
                   </div>
                   <div className="admin-job-summary">
-                    <ProfileRefreshWarningBanner job={job} />
                     {job.is_stale ? <p className="error-text">{job.stale_reason || "This generation has stopped heartbeating."}</p> : null}
                     <p className="muted">Fight date: {job.request_payload_summary?.fight_date ? formatAppDate(job.request_payload_summary.fight_date) : "Not set"}</p>
                     <p className="muted">Format: {job.request_payload_summary?.fight_format || "Not set"}</p>
                     <p className="muted">Goals: {joinOrDash(job.request_payload_summary?.goals)}</p>
                   </div>
+                  </details>
                   <div className="plan-card-actions">
                     {job.athlete_id ? (
                       <Link href={`/admin/athletes/${job.athlete_id}`} className="ghost-button">
@@ -837,11 +852,11 @@ export default function AdminPage() {
                   </div>
                 </article>
               ))}
-            </div>
+            </AdminQueueList>
           )}
-        </article>
+        </AdminQueue>
 
-        <article className="list-card admin-triage-panel">
+        <AdminQueue className="admin-triage-panel" header={(
           <div className="form-section-header">
             <div>
               <p className="kicker">Triage resume queue</p>
@@ -849,6 +864,7 @@ export default function AdminPage() {
             </div>
             <span className="badge">{isJobsLoading ? "Checking" : `${triageJobs.length} open`}</span>
           </div>
+        )}>
 
           {isJobsLoading ? (
             <div className="support-panel">
@@ -870,7 +886,7 @@ export default function AdminPage() {
               <p className="muted">New protected triage outcomes will appear here even when no plan row was created.</p>
             </div>
           ) : (
-            <div className="plans-grid admin-queue-grid">
+            <AdminQueueList className="plans-grid admin-queue-grid" label="Suspended builds">
               {triageJobs.map((job) => (
                 <article key={job.job_id} className="plan-card admin-triage-card">
                   <div className="plan-card-header">
@@ -882,41 +898,49 @@ export default function AdminPage() {
                     <span className="badge">Needs resume</span>
                   </div>
                   <p className="muted">
-                    {job.stage2_status || "triage_blocked"} - no plan row was created, so this item is anchored to the generation job.
+                    Review the athlete’s intake before approving this build.
                   </p>
+                  <ProfileRefreshWarningBanner job={job} />
+                  <details className="admin-build-details">
+                    <summary>Build details</summary>
                   <div className="admin-job-meta">
                     <span>Created {formatDateTime(job.created_at)}</span>
                     <span>Source {job.source || "unknown"}</span>
                     <span>Job {job.job_id}</span>
                   </div>
                   <div className="admin-job-summary">
-                    <ProfileRefreshWarningBanner job={job} />
                     <p className="muted">Fight date: {job.request_payload_summary.fight_date ? formatAppDate(job.request_payload_summary.fight_date) : "Not set"}</p>
                     <p className="muted">Goals: {joinOrDash(job.request_payload_summary.goals)}</p>
                     <p className="muted">Injuries: {joinOrDash(job.request_payload_summary.injuries)}</p>
                   </div>
+                  </details>
                   <div className="plan-card-actions">
                     {job.athlete_id ? (
                       <Link href={`/admin/athletes/${job.athlete_id}`} className="ghost-button">
                         Open athlete
                       </Link>
                     ) : null}
+                    <button type="button" className="ghost-button danger-button"
+                      onClick={() => void handleRejectBuild(job.job_id, getJobDisplayName(job), "job")}
+                      disabled={rejectingBuildId !== null || resumingJobId !== null}>
+                      {rejectingBuildId === job.job_id ? "Rejecting..." : "Reject build"}
+                    </button>
                     <button
                       type="button"
                       className="cta"
                       onClick={() => void handleApproveAndResumeJob(job.job_id)}
-                      disabled={resumingJobId !== null}
+                      disabled={resumingJobId !== null || rejectingBuildId !== null}
                     >
                       {resumingJobId === job.job_id ? "Approving..." : "Approve & Resume"}
                     </button>
                   </div>
                 </article>
               ))}
-            </div>
+            </AdminQueueList>
           )}
-        </article>
+        </AdminQueue>
 
-        <article className="list-card admin-review-plans-panel">
+        <AdminQueue className="admin-review-plans-panel" header={(
           <div className="form-section-header">
             <div>
               <p className="kicker">Held &amp; review plans</p>
@@ -924,6 +948,7 @@ export default function AdminPage() {
             </div>
             <span className="badge">{isJobsLoading ? "Checking" : `${reviewPlans.length} held`}</span>
           </div>
+        )}>
 
           {isJobsLoading ? (
             <div className="support-panel">
@@ -945,7 +970,7 @@ export default function AdminPage() {
               <p className="muted">Held, blocked, and review-required plans appear here so they stay visible even when athlete details are unavailable.</p>
             </div>
           ) : (
-            <div className="plans-grid admin-queue-grid">
+            <AdminQueueList className="plans-grid admin-queue-grid" label="Held plans">
               {reviewPlans.map((plan) => (
                 <article key={plan.plan_id} className="plan-card admin-triage-card">
                   <div className="plan-card-header">
@@ -968,17 +993,22 @@ export default function AdminPage() {
                         Open athlete
                       </Link>
                     ) : null}
+                    <button type="button" className="ghost-button danger-button"
+                      onClick={() => void handleRejectBuild(plan.plan_id, getPlanDisplayName(plan), "plan")}
+                      disabled={rejectingBuildId !== null || resumingJobId !== null}>
+                      {rejectingBuildId === plan.plan_id ? "Rejecting..." : "Reject build"}
+                    </button>
                     <Link href={`/plans/${plan.plan_id}`} className="cta">
                       Review plan
                     </Link>
                   </div>
                 </article>
               ))}
-            </div>
+            </AdminQueueList>
           )}
-        </article>
+        </AdminQueue>
 
-        <article className="list-card admin-attention-panel">
+        <AdminQueue className="admin-attention-panel" header={(
           <div className="form-section-header">
             <div>
               <p className="kicker">Athlete attention queue</p>
@@ -986,6 +1016,7 @@ export default function AdminPage() {
             </div>
             <span className="badge">{isJobsLoading ? "Checking" : `${attentionReviews.length} open`}</span>
           </div>
+        )}>
 
           {isJobsLoading ? (
             <div className="support-panel">
@@ -1008,7 +1039,7 @@ export default function AdminPage() {
               </p>
             </div>
           ) : (
-            <div className="plans-grid admin-queue-grid">
+            <AdminQueueList className="plans-grid admin-queue-grid" label="Athlete attention">
               {attentionReviews.map((review) => (
                 <article key={review.id} className="plan-card admin-triage-card">
                   <div className="plan-card-header">
@@ -1037,16 +1068,23 @@ export default function AdminPage() {
                   </div>
                 </article>
               ))}
-            </div>
+            </AdminQueueList>
           )}
-        </article>
+        </AdminQueue>
+
+        {token ? (
+          <AdminQueue className="admin-feedback-disclosure" header={<h2>Feedback review</h2>}>
+            <AdminFeedbackPanel token={token} reloadKey={reloadKey} />
+          </AdminQueue>
+        ) : null}
 
         <div className="admin-grid">
-          <article className="list-card">
+          <AdminQueue header={(
             <div className="form-section-header">
               <p className="kicker">Athletes</p>
               <h2>{searchNeedle ? "Matching accounts" : "Recent accounts"}</h2>
             </div>
+          )}>
 
             {isDirectoryLoading ? (
               <div className="support-panel">
@@ -1126,9 +1164,9 @@ export default function AdminPage() {
                 </div>
               </>
             )}
-          </article>
+          </AdminQueue>
 
-          <article className="list-card">
+          <AdminQueue header={(
             <div className="form-section-header">
               <div>
                 <p className="kicker">Plans</p>
@@ -1138,6 +1176,7 @@ export default function AdminPage() {
                 <span className="badge">{archivedPlanIds.length} archived</span>
               ) : null}
             </div>
+          )}>
 
             {isDirectoryLoading ? (
               <div className="support-panel">
@@ -1243,7 +1282,7 @@ export default function AdminPage() {
                 </div>
               </>
             )}
-          </article>
+          </AdminQueue>
         </div>
       </section>
     </RequireAuth>

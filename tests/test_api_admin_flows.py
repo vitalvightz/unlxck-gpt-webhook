@@ -3203,3 +3203,47 @@ def test_restricted_rehab_only_job_cannot_be_approved_twice():
 
     assert first.status_code == 202
     assert second.status_code == 409
+
+
+def test_admin_rejects_suspended_build_and_cannot_resume_it():
+    client, store, _ = _build_client(enable_in_process_generation=False)
+    athlete = AuthenticatedUser(user_id="athlete-1", email="ari@example.com", full_name="Ari", metadata={})
+    store.ensure_profile(athlete)
+    request = _build_request()
+    intake = store.create_intake(athlete.user_id, request)
+    job = _seed_triage_blocked_job(store, athlete_id=athlete.user_id, intake_id=str(intake["id"]), request=request)
+    endpoint = f"/api/admin/generation-jobs/{job['id']}/reject"
+    assert client.post(endpoint, headers={"Authorization": "Bearer athlete-token"}).status_code == 403
+    response = client.post(endpoint, headers={"Authorization": "Bearer admin-token"})
+    assert response.status_code == 200
+    saved = store.get_generation_job(job["id"])
+    assert saved["status"] == "failed"
+    assert saved["final_result"]["stage2_status"] == "admin_review_rejected"
+    assert saved["final_result"]["why_log"]["injury_triage"] == job["final_result"]["why_log"]["injury_triage"]
+    assert saved["final_result"]["why_log"]["admin_rejection"]["rejected_by"]
+    queue = client.get("/api/admin/generation-jobs/triage", headers={"Authorization": "Bearer admin-token"})
+    assert all(item["job_id"] != job["id"] for item in queue.json())
+    assert client.post(endpoint, headers={"Authorization": "Bearer admin-token"}).status_code == 409
+    resume = client.post(f"/api/admin/generation-jobs/{job['id']}/approve-and-resume-generation",
+                         headers={"Authorization": "Bearer admin-token"}, json={"reason": "reviewed"})
+    assert resume.status_code == 409
+
+
+def test_admin_cannot_reject_running_or_approved_build():
+    client, store, _ = _build_client(enable_in_process_generation=False)
+    athlete = AuthenticatedUser(user_id="athlete-1", email="ari@example.com", full_name="Ari", metadata={})
+    store.ensure_profile(athlete)
+    request = _build_request()
+    intake = store.create_intake(athlete.user_id, request)
+    job = _seed_triage_blocked_job(store, athlete_id=athlete.user_id, intake_id=str(intake["id"]), request=request)
+    endpoint = f"/api/admin/generation-jobs/{job['id']}/reject"
+    headers = {"Authorization": "Bearer admin-token"}
+    running = store.create_or_get_generation_job(athlete_id=athlete.user_id,
+        client_request_id="reject_running", source="self_serve", request_payload=request.model_dump(mode="json"))
+    store.update_generation_job(running["id"], status="running")
+    assert client.post(f"/api/admin/generation-jobs/{running['id']}/reject", headers=headers).status_code == 409
+    final_result = dict(job["final_result"])
+    final_result["why_log"] = {**final_result["why_log"], "triage_resume_approval": {"approved": True}}
+    store.update_generation_job(job["id"], status="review_required", final_result=final_result)
+    assert client.post(endpoint, headers=headers).status_code == 409
+    assert client.post("/api/admin/generation-jobs/job_missing/reject", headers=headers).status_code == 404
