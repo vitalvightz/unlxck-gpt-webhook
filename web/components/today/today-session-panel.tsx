@@ -42,7 +42,9 @@ import {
   savedRoundFormat,
   type ContactTimerTarget,
 } from "@/lib/session-timer/contact";
+import { withLastLoad } from "@/lib/exercise-log";
 import { timerExerciseLogs } from "@/lib/session-timer/logs";
+import { cleanText } from "@/lib/structured-plan";
 import { dayTimerItems, timerSessionFor, type TimerItem } from "@/lib/session-timer/plan";
 import { fightVisualisationFromSession, firstNameOf } from "@/lib/fight-visualisation/script";
 import { fightLevel } from "@/lib/fight-visualisation/crowd";
@@ -488,6 +490,13 @@ export function TodaySessionPanel({
     ? openBlockWeekIntent(current.weekPos != null ? current.weekPos + 1 : openWeekNumber)
     : null;
   const showStructuredBlocks = current.inRange && Boolean(current.day);
+  // The day's blocks by id, to put each timer log back against its block.
+  const dayBlocksById = new Map(
+    current.sessions.flatMap((item) => item.blocks ?? []).flatMap((block) => {
+      const id = cleanText(block.block_id);
+      return id ? [[id, block] as const] : [];
+    }),
+  );
   const hasResolvedDaySessions = current.inRange && current.sessions.length > 0;
   const isSessionPreview = resolvedDecision.displayTier === "preview" || (hasSession && !resolvedDecision.sessionIsToday);
   const relationCopy = getSessionRelationCopy(
@@ -811,7 +820,7 @@ export function TodaySessionPanel({
     setGuidedNext(null);
     if (next === "timer" && timerAvailable) {
       openTimer("session");
-    } else if (next === "review") {
+    } else if (next === "review" && !reviewOpen) {
       openReview(false);
     }
   }
@@ -974,9 +983,16 @@ export function TodaySessionPanel({
           if (source === "session") {
             // What the timer counted becomes each exercise's log, then the
             // athlete lands on the session's one card to check and save it.
-            const entries = exerciseLogging ? timerExerciseLogs(summary.run, exerciseLogging.logs) : [];
+            // Last time's weight rides along, and the server keeps any log the
+            // athlete already entered by hand.
+            const entries = exerciseLogging
+              ? timerExerciseLogs(summary.run, exerciseLogging.logs).map((entry) => {
+                  const block = dayBlocksById.get(entry.block_id);
+                  return block ? { ...entry, ...withLastLoad(block, entry, exerciseLogging.recentLoads) } : entry;
+                })
+              : [];
             if (entries.length > 0 && exerciseLogging?.saveMany) {
-              void exerciseLogging.saveMany(entries).catch((error: unknown) => {
+              void exerciseLogging.saveMany(entries, { keepExisting: true }).catch((error: unknown) => {
                 showToast(
                   error instanceof Error ? error.message : "The timer's sets could not be saved. Tick them on the card.",
                   { tone: "error" },
@@ -1357,6 +1373,24 @@ export function TodaySessionPanel({
             ) : null
           }
           canCollectPain={painReasonAllowed}
+          extraAction={
+            guidedVisualisation?.blockId && exerciseLogging && !exerciseLogging.logs[guidedVisualisation.blockId] ? (
+              <button
+                type="button"
+                className="today-review-chip"
+                data-tone="accent"
+                onClick={() => {
+                  // Played over the review; finishing it ticks the row and
+                  // comes straight back here.
+                  setGuidedNext("review");
+                  setGuidedOpen(true);
+                }}
+              >
+                <ToolIcon name="voice" />
+                Play {guidedVisualisation.name} now
+              </button>
+            ) : null
+          }
           rehabChoice={sessionHasRehab ? rehabChoice : null}
           doneBlockedReason={
             sessionHasRehab && !rehabPerformance ? "Choose how much rehab you performed before saving." : undefined

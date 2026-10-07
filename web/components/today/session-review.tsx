@@ -7,7 +7,12 @@ import { createPortal } from "react-dom";
 
 import type { ExerciseLogging } from "@/components/exercise-log";
 import { EffortSlider, FaceScale } from "@/components/rating-controls";
-import { deriveSessionOutcome, type SessionOutcome } from "@/lib/exercise-log";
+import {
+  deriveSessionOutcome,
+  plannedSessionRpe,
+  withLastLoad,
+  type SessionOutcome,
+} from "@/lib/exercise-log";
 import { cleanText } from "@/lib/structured-plan";
 import { completionRequiresReviewFields } from "@/lib/today";
 import type { StructuredSession } from "@/lib/types";
@@ -31,6 +36,7 @@ export function SessionReview({
   logging,
   blocks,
   hint,
+  extraAction,
   canCollectPain,
   rehabChoice,
   doneBlockedReason,
@@ -46,6 +52,8 @@ export function SessionReview({
   blocks: ReactNode;
   /** One line under the title: where the ticks came from. */
   hint: string;
+  /** A shortcut beside the tick-the-rest chip (playing a skipped visualisation). */
+  extraAction?: ReactNode;
   canCollectPain: boolean;
   /** The rehab "how much did you do" choice, when the session carries rehab. */
   rehabChoice?: ReactNode;
@@ -57,7 +65,9 @@ export function SessionReview({
 }) {
   const fieldId = useId();
   const dialogRef = useRef<HTMLDivElement | null>(null);
-  const [sessionRpe, setSessionRpe] = useState<number | null>(null);
+  // Starts at the planned effort: a session that went to plan is a tap to confirm.
+  const [plannedRpe] = useState(() => plannedSessionRpe(sessions));
+  const [sessionRpe, setSessionRpe] = useState<number | null>(plannedRpe);
   const [painAfter, setPainAfter] = useState<number | null>(null);
   // Null until the athlete edits it: until then it follows the exercise logs.
   const [reasonEdit, setReasonEdit] = useState<string | null>(null);
@@ -87,7 +97,11 @@ export function SessionReview({
     setError(null);
     try {
       await logging.saveMany(
-        outcome.unlogged.map((block) => ({ block_id: cleanText(block.block_id) ?? "", status: "as_prescribed" })),
+        outcome.unlogged.map((block) => ({
+          block_id: cleanText(block.block_id) ?? "",
+          ...withLastLoad(block, { status: "as_prescribed" as const }, logging.recentLoads),
+        })),
+        { keepExisting: true },
       );
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Could not save. Try again.");
@@ -162,15 +176,20 @@ export function SessionReview({
         </header>
 
         <p className="today-review-hint">{hint}</p>
-        {unloggedCount > 0 && logging?.saveMany ? (
-          <button
-            type="button"
-            className="today-review-chip"
-            onClick={() => void tickRest()}
-            disabled={tickingRest || isSubmitting}
-          >
-            {tickingRest ? "Ticking…" : `Tick the other ${unloggedCount} as done`}
-          </button>
+        {extraAction || (unloggedCount > 0 && logging?.saveMany) ? (
+          <div className="today-review-chips">
+            {extraAction}
+            {unloggedCount > 0 && logging?.saveMany ? (
+              <button
+                type="button"
+                className="today-review-chip"
+                onClick={() => void tickRest()}
+                disabled={tickingRest || isSubmitting}
+              >
+                {tickingRest ? "Ticking…" : `Tick the other ${unloggedCount} as done`}
+              </button>
+            ) : null}
+          </div>
         ) : null}
 
         <div className="today-review-blocks">{blocks}</div>
@@ -181,6 +200,11 @@ export function SessionReview({
             <div className="today-completion-fields">
               <div className="field">
                 <span>Session effort</span>
+                {plannedRpe !== null ? (
+                  <p className="today-review-planned">
+                    Set to the effort your plan asked for. Move it if it felt different.
+                  </p>
+                ) : null}
                 <EffortSlider
                   id={`${fieldId}-session-rpe`}
                   ariaLabel="Session effort"

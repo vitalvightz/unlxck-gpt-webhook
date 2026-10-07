@@ -10,9 +10,11 @@ import {
   draftFromLog,
   hasLoggableNumbers,
   isLoggableBlock,
+  lastLoadFor,
   logFieldsForBlock,
   logSummary,
   loggedValues,
+  withLastLoad,
   type LogDraft,
 } from "@/lib/exercise-log";
 import { cleanText } from "@/lib/structured-plan";
@@ -20,6 +22,7 @@ import type {
   ExerciseLogReason,
   ExerciseLogRecord,
   ExerciseLogRequest,
+  ExerciseRecentLoad,
   StructuredBlock,
 } from "@/lib/types";
 
@@ -34,9 +37,14 @@ export type ExerciseLogging = {
   /** Saves (or corrects) one block's log. Rejects with a message to show. */
   save: (request: Omit<ExerciseLogRequest, "plan_id">) => Promise<void>;
   /** Saves several blocks at once (all or none), e.g. what the timer recorded. */
-  saveMany?: (requests: Omit<ExerciseLogRequest, "plan_id">[]) => Promise<void>;
+  saveMany?: (
+    requests: Omit<ExerciseLogRequest, "plan_id">[],
+    options?: { keepExisting?: boolean },
+  ) => Promise<void>;
   /** Pain is health data: the reason is only offered with health consent. */
   painReasonAllowed: boolean;
+  /** Last weights per exercise, carried into a "done" so it never needs typing. */
+  recentLoads?: readonly ExerciseRecentLoad[];
   /** Where a failed one-tap save on a collapsed row is reported. */
   onError?: (message: string) => void;
 };
@@ -61,6 +69,15 @@ function useBlockLogging(block: StructuredBlock) {
     return null;
   }
   return { logging, blockId, fields, log: logging.logs[blockId] ?? null };
+}
+
+/** Last time's weight as a draft-able log, or null when there is none. */
+function withLastLoadRecord(
+  block: StructuredBlock,
+  recentLoads: readonly ExerciseRecentLoad[] | undefined,
+): ExerciseLogRecord | null {
+  const load = lastLoadFor(block, recentLoads);
+  return load ? ({ actual: { load } } as ExerciseLogRecord) : null;
 }
 
 function errorMessage(caught: unknown): string {
@@ -91,7 +108,10 @@ export function ExerciseLogTick({
   async function markDone() {
     setSaving(true);
     try {
-      await logging.save({ block_id: blockId, status: "as_prescribed" });
+      await logging.save({
+        block_id: blockId,
+        ...withLastLoad(block, { status: "as_prescribed" }, logging.recentLoads),
+      });
     } catch (caught) {
       logging.onError?.(errorMessage(caught));
     } finally {
@@ -197,7 +217,10 @@ export function ExerciseLogPanel({ block }: { block: StructuredBlock }) {
   }
 
   function openEditor() {
-    setDraft(draftFromLog(fields, log));
+    // A fresh entry starts from last time's weight, so only a change is typed.
+    setDraft(
+      log ? draftFromLog(fields, log) : draftFromLog(fields, withLastLoadRecord(block, logging.recentLoads)),
+    );
     setReason(log?.reason ?? null);
     setError(null);
     setConfirming(null);
@@ -345,7 +368,7 @@ export function ExerciseLogPanel({ block }: { block: StructuredBlock }) {
           type="button"
           className="ex-log-choice ex-log-choice-primary"
           disabled={saving}
-          onClick={() => void save({ status: "as_prescribed" })}
+          onClick={() => void save(withLastLoad(block, { status: "as_prescribed" }, logging.recentLoads))}
         >
           Done
         </button>

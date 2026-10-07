@@ -5269,6 +5269,23 @@ class SupabaseAppStore(CompactGenerationReads):
         )
         return getattr(response, "data", None) or []
 
+    def list_recent_exercise_loads(
+        self, athlete_id: str, *, before_day: str, limit: int = 200
+    ) -> list[dict[str, Any]]:
+        """The athlete's latest logs that recorded a weight, newest day first,
+        from before ``before_day`` (served by ``exercise_logs_athlete_day_idx``)."""
+        response = (
+            self.client.table("exercise_logs")
+            .select("exercise_key,prescribed,actual,training_day")
+            .eq("athlete_id", athlete_id)
+            .lt("training_day", before_day)
+            .not_.is_("actual->load", "null")
+            .order("training_day", desc=True)
+            .limit(limit)
+            .execute()
+        )
+        return getattr(response, "data", None) or []
+
     # -- Exercise demo videos (public.exercise_media) -------------------------
     # Read by api/services/exercise_media.py on plan reads (cached in-process)
     # and written only by tools/exercise_media.py and the worker's daily check.

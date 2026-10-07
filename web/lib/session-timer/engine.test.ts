@@ -12,6 +12,7 @@ import {
   endRound,
   endSession,
   finishItem,
+  finishItemAsPlanned,
   HOLD_PREP_SEC,
   isPrep,
   metPlan,
@@ -561,4 +562,25 @@ test("tapped rounds count and speak as rounds, not sets", () => {
   assert.equal(calloutForEvents(step.events, step.state), "Round 2");
   state = endSession(step.state, T0 + 120_000);
   assert.equal(summarizeRun(state), "Timer: Shuttle sprints: 1/3 rounds");
+});
+
+test("done as planned fills the exercise up to the plan and moves on", () => {
+  let state = createTimerState([SQUAT, { ...ROUNDS, planned: { field: "rounds", min: 3 } }]);
+  state = startItem(state, 0).state;
+  state = completeSet(state, 1000).state;
+  state = finishItemAsPlanned(state, 2000).state;
+  assert.equal(state.completed[0], 3);
+  assert.equal(state.index, 1);
+  assert.equal(state.phase, "ready");
+  const last = finishItemAsPlanned(state, 3000);
+  assert.equal(last.state.completed[1], 3);
+  assert.equal(last.state.phase, "done");
+  assert.ok(last.events.includes("session_complete"));
+  assert.equal(metPlan(last.state), true);
+});
+
+test("done as planned never lowers work already done past the plan", () => {
+  let state = createTimerState([SQUAT]);
+  state = { ...state, completed: [5] };
+  assert.equal(finishItemAsPlanned(state, 0).state.completed[0], 5);
 });

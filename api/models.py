@@ -2425,6 +2425,9 @@ class ExerciseLogBatchRequest(BaseModel):
 
     plan_id: str = Field(min_length=1, max_length=64)
     entries: list[ExerciseLogEntry] = Field(min_length=1, max_length=60)
+    # Leave any block already logged today as it is: what the timer counted
+    # never overwrites what the athlete entered by hand.
+    keep_existing: bool = False
 
     @field_validator("plan_id", mode="before")
     @classmethod
@@ -2466,11 +2469,22 @@ class ExerciseLogBatchResponse(BaseModel):
     logs: list[ExerciseLogRecord]
 
 
+class ExerciseRecentLoad(BaseModel):
+    """The weight last logged for an exercise, carried into the next log."""
+
+    exercise_key: str | None = None
+    display_name: str = ""
+    load: ExerciseLogMeasure
+    training_day: str
+
+
 class ExerciseLogListResponse(BaseModel):
     """The athlete's exercise logs for one plan on the current training day."""
 
     training_day: str
     logs: list[ExerciseLogRecord]
+    # The latest weight per exercise from earlier days (any plan).
+    recent_loads: list[ExerciseRecentLoad] = Field(default_factory=list)
 
 
 class RehabResponsePromptResponse(BaseModel):

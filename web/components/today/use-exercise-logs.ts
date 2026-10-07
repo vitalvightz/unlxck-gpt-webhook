@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import type { ExerciseLogging } from "@/components/exercise-log";
 import { listTodayExerciseLogs, submitExerciseLog, submitExerciseLogs } from "@/lib/api";
-import type { ExerciseLogRecord } from "@/lib/types";
+import type { ExerciseLogRecord, ExerciseRecentLoad } from "@/lib/types";
 
 /**
  * Today's exercise logs for the active plan, and the save that writes one.
@@ -30,7 +30,11 @@ export function useTodayExerciseLogs({
   onError?: (message: string) => void;
 }): ExerciseLogging | null {
   const scope = `${planId}:${trainingDay}`;
-  const [loaded, setLoaded] = useState<{ scope: string; logs: Record<string, ExerciseLogRecord> }>({
+  const [loaded, setLoaded] = useState<{
+    scope: string;
+    logs: Record<string, ExerciseLogRecord>;
+    recentLoads?: ExerciseRecentLoad[];
+  }>({
     scope,
     logs: {},
   });
@@ -49,6 +53,7 @@ export function useTodayExerciseLogs({
         setLoaded((current) => ({
           scope,
           logs: current.scope === scope ? { ...fetched, ...current.logs } : fetched,
+          recentLoads: response.recent_loads ?? [],
         }));
       })
       .catch((error: unknown) => {
@@ -66,6 +71,7 @@ export function useTodayExerciseLogs({
     async (request) => {
       const response = await submitExerciseLog(token, { plan_id: planId, ...request });
       setLoaded((current) => ({
+        ...current,
         scope,
         logs: { ...(current.scope === scope ? current.logs : {}), [response.log.block_id]: response.log },
       }));
@@ -74,11 +80,16 @@ export function useTodayExerciseLogs({
   );
 
   const saveMany = useCallback<NonNullable<ExerciseLogging["saveMany"]>>(
-    async (requests) => {
+    async (requests, options) => {
       if (requests.length === 0) return;
-      const response = await submitExerciseLogs(token, { plan_id: planId, entries: requests });
+      const response = await submitExerciseLogs(token, {
+        plan_id: planId,
+        entries: requests,
+        ...(options?.keepExisting ? { keep_existing: true } : {}),
+      });
       const saved = Object.fromEntries(response.logs.map((log) => [log.block_id, log]));
       setLoaded((current) => ({
+        ...current,
         scope,
         logs: { ...(current.scope === scope ? current.logs : {}), ...saved },
       }));
@@ -87,9 +98,10 @@ export function useTodayExerciseLogs({
   );
 
   const logs = loaded.scope === scope ? loaded.logs : EMPTY_LOGS;
+  const recentLoads = loaded.scope === scope ? loaded.recentLoads : undefined;
   return useMemo(
-    () => (active ? { logs, save, saveMany, painReasonAllowed, onError } : null),
-    [active, logs, save, saveMany, painReasonAllowed, onError],
+    () => (active ? { logs, save, saveMany, recentLoads, painReasonAllowed, onError } : null),
+    [active, logs, save, saveMany, recentLoads, painReasonAllowed, onError],
   );
 }
 

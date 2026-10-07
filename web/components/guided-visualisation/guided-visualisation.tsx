@@ -3,6 +3,7 @@
 import "./guided-visualisation.css";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 import { formatClock } from "@/lib/session-timer/plan";
 import { timerAudio } from "@/lib/session-timer/audio";
@@ -284,7 +285,7 @@ export function GuidedVisualisation({
   const remaining = Math.max(0, Math.round(script.totalSec - elapsed));
   const minutes = Math.max(1, Math.round(script.totalSec / 60));
 
-  return (
+  const player = (
     <div
       ref={rootRef}
       className="gv-root"
@@ -427,4 +428,7 @@ export function GuidedVisualisation({
       ) : null}
     </div>
   );
+  // On the page body, like the session timer: it opens over the session's
+  // review sheet as well as over Today.
+  return typeof document === "undefined" ? player : createPortal(player, document.body);
 }

@@ -497,6 +497,20 @@ export type ExerciseLogActualRequest = {
   effort?: ExerciseLogEffortRequest | null;
 };
 
+/**
+ * Several blocks of today's session logged at once, e.g. when the session
+ * timer ends. All entries are accepted or none are.
+ */
+export type ExerciseLogBatchRequest = {
+  plan_id: string;
+  entries: ExerciseLogEntry[];
+  keep_existing?: boolean;
+};
+
+export type ExerciseLogBatchResponse = {
+  logs: ExerciseLogRecord[];
+};
+
 export type ExerciseLogEffort = {
   method: "RPE";
   value: number;
@@ -507,10 +521,20 @@ export type ExerciseLogEffortRequest = {
   value: number;
 };
 
+/** What was actually done for one prescribed block, named by ``block_id``. */
+export type ExerciseLogEntry = {
+  block_id: string;
+  status: "as_prescribed" | "modified" | "skipped";
+  actual?: ExerciseLogActualRequest;
+  reason?: "equipment" | "fatigue" | "felt_strong" | "pain" | null;
+  notes?: string;
+};
+
 /** The athlete's exercise logs for one plan on the current training day. */
 export type ExerciseLogListResponse = {
   training_day: string;
   logs: ExerciseLogRecord[];
+  recent_loads: ExerciseRecentLoad[];
 };
 
 /** A quantity the athlete reports, in the plan's ``{value, unit}`` shape. */
@@ -550,12 +574,12 @@ export type ExerciseLogRecord = {
  * client. The plan is not changed by a log.
  */
 export type ExerciseLogRequest = {
-  plan_id: string;
   block_id: string;
   status: "as_prescribed" | "modified" | "skipped";
   actual?: ExerciseLogActualRequest;
   reason?: "equipment" | "fatigue" | "felt_strong" | "pain" | null;
   notes?: string;
+  plan_id: string;
 };
 
 export type ExerciseLogResponse = {
@@ -578,6 +602,14 @@ export type ExerciseMedia = {
   source: "coach" | "curated";
   channel_title: string | null;
   orientation: "landscape" | "portrait" | null;
+};
+
+/** The weight last logged for an exercise, carried into the next log. */
+export type ExerciseRecentLoad = {
+  exercise_key: string | null;
+  display_name: string;
+  load: ExerciseLogMeasure;
+  training_day: string;
 };
 
 export type ExposureDemand = {

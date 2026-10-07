@@ -1262,13 +1262,25 @@ export type ExerciseLogResponse = { log: ExerciseLogRecord };
 export type ExerciseLogBatchRequest = {
   plan_id: string;
   entries: Omit<ExerciseLogRequest, "plan_id">[];
+  /** Leave blocks already logged today untouched (the timer never overwrites a hand log). */
+  keep_existing?: boolean;
 };
 
 export type ExerciseLogBatchResponse = { logs: ExerciseLogRecord[] };
 
+/** The weight last logged for an exercise on an earlier day. */
+export type ExerciseRecentLoad = {
+  exercise_key: string | null;
+  display_name: string;
+  load: ExerciseLogMeasure;
+  training_day: string;
+};
+
 export type ExerciseLogListResponse = {
   training_day: string;
   logs: ExerciseLogRecord[];
+  /** The latest weight per exercise from earlier days, to carry forward. */
+  recent_loads: ExerciseRecentLoad[];
 };
 
 export type TodaySessionCompletionRequest = {

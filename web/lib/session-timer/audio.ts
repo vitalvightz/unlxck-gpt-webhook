@@ -156,17 +156,19 @@ class TimerAudio {
     source.start(0);
   }
 
-  play(sound: TimerSound): void {
-    if (this.settings.vibrate) {
-      const pattern = VIBRATION[sound];
-      if (pattern && typeof navigator !== "undefined" && "vibrate" in navigator) {
-        try {
-          navigator.vibrate(pattern);
-        } catch {
-          // Vibration is best effort (unsupported on iOS).
-        }
-      }
+  /** A silent buzz, when the athlete keeps vibration on (best effort). */
+  buzz(pattern: number[]): void {
+    if (!this.settings.vibrate || typeof navigator === "undefined" || !("vibrate" in navigator)) return;
+    try {
+      navigator.vibrate(pattern);
+    } catch {
+      // Vibration is best effort (unsupported on iOS).
     }
+  }
+
+  play(sound: TimerSound): void {
+    const pattern = VIBRATION[sound];
+    if (pattern) this.buzz(pattern);
     const ctx = this.context;
     if (!this.settings.sound || !ctx || !this.master) return;
     if (ctx.state === "suspended") void ctx.resume();
