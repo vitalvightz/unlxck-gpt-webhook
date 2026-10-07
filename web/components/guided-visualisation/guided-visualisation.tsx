@@ -85,18 +85,30 @@ export function GuidedVisualisation({
   firstName,
   level = "amateur",
   finishLabel,
+  upNext,
+  skipLabel,
   onClose,
   onFinish,
+  onComplete,
+  onSkip,
 }: {
   visualisation: FightVisualisation;
   /** Spoken first, then once more on the cue. */
   firstName?: string | null;
   /** Picks the crowd and the venue line: a small hall or an arena. */
   level?: FightLevel;
-  /** Shown on the done screen when `onFinish` is set, e.g. "Log session". */
+  /** Shown on the done screen when `onFinish` is set, e.g. "Continue to training". */
   finishLabel?: string;
+  /** What `onFinish` leads to, shown on the done screen ("Battle Rope Slams"). */
+  upNext?: string | null;
+  /** Offered while the run is set up or playing when `onSkip` is set. */
+  skipLabel?: string;
   onClose: () => void;
   onFinish?: () => void;
+  /** Fired once when the run reaches its end, without waiting for a tap. */
+  onComplete?: () => void;
+  /** Moves on without finishing (the visualisation is optional). */
+  onSkip?: () => void;
 }) {
   // Keyed on content, not identity: the parent rebuilds the object on every
   // render, and a new script would restart the line being spoken.
@@ -141,6 +153,20 @@ export function GuidedVisualisation({
   }, [level]);
 
   useWakeLock(status === "playing");
+
+  // Reaching the end is what counts as doing it; the done screen's buttons
+  // only decide where to go next.
+  const onCompleteRef = useRef(onComplete);
+  useEffect(() => {
+    onCompleteRef.current = onComplete;
+  }, [onComplete]);
+  const completedRef = useRef(false);
+  useEffect(() => {
+    if (status === "done" && !completedRef.current) {
+      completedRef.current = true;
+      onCompleteRef.current?.();
+    }
+  }, [status]);
 
   useEffect(() => {
     if (status !== "playing") return;
@@ -235,6 +261,11 @@ export function GuidedVisualisation({
     onClose();
   }
 
+  function skip() {
+    stopSpeech();
+    onSkip?.();
+  }
+
   const segment = currentSegment;
   const phase: GuidePhase = status === "ready" ? "settle" : status === "done" ? "close" : segment.phase;
   // The caption is the line being spoken, or during a hold the line just spoken.
@@ -313,6 +344,11 @@ export function GuidedVisualisation({
           <button type="button" className="gv-primary" onClick={begin}>
             Begin
           </button>
+          {onSkip ? (
+            <button type="button" className="gv-link" onClick={skip}>
+              {skipLabel ?? "Skip"}
+            </button>
+          ) : null}
         </main>
       ) : status === "done" ? (
         <main className="gv-done">
@@ -322,6 +358,12 @@ export function GuidedVisualisation({
             <p className="gv-cue">
               <span className="gv-cue-label">Your cue</span>
               {visualisation.cue}
+            </p>
+          ) : null}
+          {onFinish && upNext ? (
+            <p className="gv-up-next">
+              <span className="gv-cue-label">Up next</span>
+              {upNext}
             </p>
           ) : null}
           <div className="gv-done-actions">
@@ -376,6 +418,11 @@ export function GuidedVisualisation({
               End
             </button>
           </div>
+          {onSkip ? (
+            <button type="button" className="gv-link" onClick={skip}>
+              {skipLabel ?? "Skip"}
+            </button>
+          ) : null}
         </footer>
       ) : null}
     </div>

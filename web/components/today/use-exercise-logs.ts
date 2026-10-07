@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import type { ExerciseLogging } from "@/components/exercise-log";
-import { listTodayExerciseLogs, submitExerciseLog } from "@/lib/api";
+import { listTodayExerciseLogs, submitExerciseLog, submitExerciseLogs } from "@/lib/api";
 import type { ExerciseLogRecord } from "@/lib/types";
 
 /**
@@ -73,10 +73,23 @@ export function useTodayExerciseLogs({
     [token, planId, scope],
   );
 
+  const saveMany = useCallback<NonNullable<ExerciseLogging["saveMany"]>>(
+    async (requests) => {
+      if (requests.length === 0) return;
+      const response = await submitExerciseLogs(token, { plan_id: planId, entries: requests });
+      const saved = Object.fromEntries(response.logs.map((log) => [log.block_id, log]));
+      setLoaded((current) => ({
+        scope,
+        logs: { ...(current.scope === scope ? current.logs : {}), ...saved },
+      }));
+    },
+    [token, planId, scope],
+  );
+
   const logs = loaded.scope === scope ? loaded.logs : EMPTY_LOGS;
   return useMemo(
-    () => (active ? { logs, save, painReasonAllowed, onError } : null),
-    [active, logs, save, painReasonAllowed, onError],
+    () => (active ? { logs, save, saveMany, painReasonAllowed, onError } : null),
+    [active, logs, save, saveMany, painReasonAllowed, onError],
   );
 }
 

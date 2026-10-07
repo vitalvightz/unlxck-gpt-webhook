@@ -33,6 +33,8 @@ export type ExerciseLogging = {
   logs: Readonly<Record<string, ExerciseLogRecord>>;
   /** Saves (or corrects) one block's log. Rejects with a message to show. */
   save: (request: Omit<ExerciseLogRequest, "plan_id">) => Promise<void>;
+  /** Saves several blocks at once (all or none), e.g. what the timer recorded. */
+  saveMany?: (requests: Omit<ExerciseLogRequest, "plan_id">[]) => Promise<void>;
   /** Pain is health data: the reason is only offered with health consent. */
   painReasonAllowed: boolean;
   /** Where a failed one-tap save on a collapsed row is reported. */

@@ -50,6 +50,7 @@ const d0: FightVisualisation = {
   preBout: "Twenty seconds: one breath, feet under you, fight cue up, go.",
   durationSec: 3 * 60,
   optional: false,
+  blockId: null,
 };
 
 test("the locked Fight Visualisation session is recognised by title or id", () => {
@@ -205,6 +206,18 @@ test("the optional camp session is read from the server's flag", () => {
   assert.equal(camp?.optional, true);
   assert.equal(camp?.why, "Rehearse building range.");
   assert.equal(fightVisualisationFromSession(d7Session)?.optional, false);
+});
+
+test("the visualisation names its block, so finishing the run can log it", () => {
+  const withId = fightVisualisationFromSession({
+    ...d7Session,
+    blocks: [{ ...d7Session.blocks![0], block_id: "locked-d-7-tactical-picture" }],
+  });
+  assert.equal(withId?.blockId, "locked-d-7-tactical-picture");
+  assert.equal(
+    fightVisualisationFromSession({ ...d7Session, blocks: [{ ...d7Session.blocks![0], block_id: null }] })?.blockId,
+    null,
+  );
 });
 
 test("the crowd sits under the voice and stays out of the settle", () => {

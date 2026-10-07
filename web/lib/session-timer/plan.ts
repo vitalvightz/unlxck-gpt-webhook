@@ -24,8 +24,17 @@ export type DoseRange = { min: number; max: number };
  */
 export type TimerStat = { kind: "target" | "load" | "effort"; value: string };
 
+/** The count the plan prescribed for a block, kept as written even when the
+ * athlete adjusts the target mid-run, so a log compares against the plan. */
+export type PlannedCount = { field: "sets" | "rounds"; min: number };
+
 type TimerItemBase = {
   id: string;
+  /** The plan block this item runs, for logging it. Absent on contact rounds
+   * and on runs saved by an older timer. */
+  blockId?: string | null;
+  /** What the plan prescribed; null when it gave no count to compare against. */
+  planned?: PlannedCount | null;
   title: string;
   /** Reps / distance / load / effort as one line (notes, and runs saved before `stats`). */
   detail: string | null;
@@ -269,7 +278,8 @@ export function blockToTimerItem(
     return null;
   }
   const title = cleanText(block.display_name) || "Block";
-  const id = cleanText(block.block_id) || `block-${position}`;
+  const blockId = cleanText(block.block_id) || null;
+  const id = blockId || `block-${position}`;
   const source = getSourcePrescriptionRangeOverrides(options.sourceText, title, options.countdown);
 
   const rounds = finitePositiveNumber(block.rounds) ? Math.round(block.rounds) : null;
@@ -295,6 +305,8 @@ export function blockToTimerItem(
     return {
       kind: "sets",
       id,
+      blockId,
+      planned: { field: "rounds", min: rounds },
       title,
       ...describeDose([repsPart(reps), distance, load, effort]),
       blockType,
@@ -316,6 +328,12 @@ export function blockToTimerItem(
     return {
       kind: "interval",
       id,
+      blockId,
+      planned: rounds
+        ? { field: "rounds", min: rounds }
+        : sets
+          ? { field: "sets", min: sets }
+          : { field: "rounds", min: 1 },
       title,
       ...describeDose([repsPart(reps), distance, load, effort]),
       blockType,
@@ -341,6 +359,8 @@ export function blockToTimerItem(
     return {
       kind: "sets",
       id,
+      blockId,
+      planned: setRange ? { field: "sets", min: setRange.min } : null,
       title,
       ...describeDose([
         holdSec ? null : repsPart(reps),
@@ -361,6 +381,8 @@ export function blockToTimerItem(
     return {
       kind: "interval",
       id,
+      blockId,
+      planned: { field: "rounds", min: 1 },
       title,
       ...describeDose([repsPart(reps), distance, load, effort]),
       blockType,
@@ -375,6 +397,8 @@ export function blockToTimerItem(
   return {
     kind: "task",
     id,
+    blockId,
+    planned: null,
     title,
     ...describeDose([repsPart(reps), distance, load, effort]),
     blockType,

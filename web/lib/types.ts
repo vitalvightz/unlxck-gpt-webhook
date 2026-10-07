@@ -1257,6 +1257,15 @@ export type ExerciseLogRecord = {
 
 export type ExerciseLogResponse = { log: ExerciseLogRecord };
 
+/** Several blocks logged at once (e.g. what the session timer recorded). All
+ * entries are saved, or none are. */
+export type ExerciseLogBatchRequest = {
+  plan_id: string;
+  entries: Omit<ExerciseLogRequest, "plan_id">[];
+};
+
+export type ExerciseLogBatchResponse = { logs: ExerciseLogRecord[] };
+
 export type ExerciseLogListResponse = {
   training_day: string;
   logs: ExerciseLogRecord[];

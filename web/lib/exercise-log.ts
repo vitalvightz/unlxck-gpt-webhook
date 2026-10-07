@@ -5,6 +5,7 @@ import type {
   ExerciseLogRecord,
   ExerciseLogStatus,
   StructuredBlock,
+  StructuredSession,
 } from "@/lib/types";
 
 /**
@@ -355,4 +356,66 @@ export function logSummary(fields: LogField[], log: ExerciseLogRecord): string {
  * logged with the session. */
 export function isLoggableBlock(block: StructuredBlock): boolean {
   return Boolean(cleanText(block.block_id)) && cleanText(block.block_type) !== "rehab";
+}
+
+export type SessionOutcome = {
+  /** The session status the exercise logs add up to. */
+  status: "done" | "modified" | "skipped";
+  /** Exercises the session owes (optional work and rehab are not counted). */
+  total: number;
+  logged: number;
+  /** Owed exercises with no log yet; they are saved as skipped. */
+  unlogged: StructuredBlock[];
+  /** What changed, in words, for the session's modification reason. "" when done. */
+  reason: string;
+};
+
+/**
+ * The session's outcome, read off its exercise logs, so the athlete logs each
+ * exercise once and never states the session result separately:
+ * every owed exercise done as written → done; nothing done → skipped; anything
+ * else → modified, with the changes spelled out as the reason. An exercise with
+ * no log counts as skipped. Optional sessions never decide the outcome.
+ */
+export function deriveSessionOutcome(
+  sessions: readonly StructuredSession[],
+  logs: Readonly<Record<string, ExerciseLogRecord>>,
+): SessionOutcome {
+  const owed = sessions
+    .filter((session) => session.optional !== true)
+    .flatMap((session) => session.blocks ?? [])
+    .filter(isLoggableBlock);
+  const changed: string[] = [];
+  const skipped: string[] = [];
+  const unlogged: StructuredBlock[] = [];
+  let logged = 0;
+  for (const block of owed) {
+    const name = cleanText(block.display_name) || "Exercise";
+    const log = logs[cleanText(block.block_id) ?? ""];
+    if (!log) {
+      unlogged.push(block);
+      skipped.push(name);
+      continue;
+    }
+    logged += 1;
+    if (log.status === "skipped") {
+      skipped.push(name);
+    } else if (log.status === "modified") {
+      const values = loggedValues(logFieldsForBlock(block), log).map((value) => value.text);
+      changed.push(values.length ? `${name} (${values.join(" · ")})` : name);
+    }
+  }
+  const status =
+    owed.length > 0 && skipped.length === owed.length
+      ? "skipped"
+      : changed.length === 0 && skipped.length === 0
+        ? "done"
+        : "modified";
+  const reason = [
+    changed.length ? `Changed: ${changed.join(", ")}.` : "",
+    skipped.length ? `Skipped: ${skipped.join(", ")}.` : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+  return { status, total: owed.length, logged, unlogged, reason: status === "done" ? "" : reason };
 }

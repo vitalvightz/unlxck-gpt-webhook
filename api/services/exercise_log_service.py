@@ -8,6 +8,10 @@ That is deliberate: every gate on training itself (rest day, safety hold,
 severe injury, check-in, stale prescription) is enforced once, on the session
 start, and a log can never record work the athlete was not cleared to begin.
 
+Optional work (the camp Fight Visualisation) never gets a completion row of its
+own when the day starts: it sits outside the day unit. Its blocks can still be
+logged once the day is started, so the athlete can say it was done.
+
 Rehab blocks are not logged here. Their dose is recorded by the rehab
 completion flow, which owns rehab evidence.
 """
@@ -20,6 +24,7 @@ from typing import Any
 
 from fastapi import HTTPException, status
 
+from api.optional_sessions import is_optional_session
 from api.store import AppStore
 
 from .today_service import (
@@ -87,6 +92,8 @@ def _loggable_blocks(
     A session started under live injury guidance was frozen on its completion
     row; that frozen copy is authoritative, even when it contains no blocks.
     The plan card is used only for started sessions without a valid snapshot.
+    Optional sessions ride on the started day: starting the day never writes
+    their row, so their blocks are open whenever any session is.
     """
     plan_id = _clean(plan_row.get("id"))
     blocks: list[tuple[str | None, Mapping[str, Any]]] = []
@@ -106,10 +113,77 @@ def _loggable_blocks(
         day, _week = matched
         for session in _iter_mapping_items(day.get("sessions")):
             session_id = _clean(session.get("session_id"))
-            if session_id not in started_session_ids or session_id in frozen_session_ids:
+            if session_id in frozen_session_ids:
+                continue
+            if session_id not in started_session_ids and not is_optional_session(session):
                 continue
             blocks.extend((session_id, block) for block in _iter_mapping_items(session.get("blocks")))
     return blocks
+
+
+def _resolve_logging_day(
+    store: AppStore,
+    *,
+    athlete_id: str,
+    athlete_timezone: str | None,
+    plan_id: str,
+    now: datetime | None,
+) -> tuple[str, list[tuple[str | None, Mapping[str, Any]]]]:
+    """``(training_day, loggable blocks)`` once the plan and the day's start are checked."""
+    _require_valid_plan_id(plan_id)
+    # Service-role write: plan ownership is enforced here, not by RLS.
+    plan_row = store.get_plan_for_athlete(plan_id, athlete_id)
+    if plan_row is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
+
+    training_day = resolve_training_day(athlete_timezone, now=now)
+    completions = _active_completions(
+        store, athlete_id=athlete_id, plan_id=plan_id, training_day=training_day
+    )
+    if not completions:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=_NOT_STARTED_DETAIL)
+    return training_day, _loggable_blocks(plan_row, training_day=training_day, completions=completions)
+
+
+def _log_fields(
+    entry: Mapping[str, Any],
+    *,
+    plan_id: str,
+    training_day: str,
+    blocks: list[tuple[str | None, Mapping[str, Any]]],
+    health_consent_granted: bool,
+) -> dict[str, Any]:
+    """The row to upsert for one entry, or the HTTP error that rejects it."""
+    block_id = _clean(entry.get("block_id"))
+    match = next(
+        ((session_id, block) for session_id, block in blocks if _clean(block.get("block_id")) == block_id),
+        None,
+    )
+    if match is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=_UNKNOWN_BLOCK_DETAIL)
+    session_id, block = match
+    if _clean(block.get("block_type")) == "rehab":
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=_REHAB_DETAIL)
+
+    reason = entry.get("reason")
+    if reason == "pain" and not health_consent_granted:
+        # Pain is health data. Without consent the training log is kept and the
+        # health field is dropped, as session completion does with pain_after.
+        reason = None
+    actual = entry.get("actual")
+    return {
+        "plan_id": plan_id,
+        "session_id": session_id,
+        "block_id": block_id,
+        "exercise_key": _clean(block.get("exercise_key")) or None,
+        "training_day": training_day,
+        "status": entry.get("status"),
+        "reason": reason,
+        "prescribed": _prescribed_snapshot(block),
+        "actual": dict(actual) if isinstance(actual, Mapping) else {},
+        # Free text can contain health data, regardless of the selected reason.
+        "notes": _clean(entry.get("notes")) if health_consent_granted else "",
+    }
 
 
 def record_exercise_log(
@@ -123,56 +197,45 @@ def record_exercise_log(
 ) -> dict[str, Any]:
     """Validate and upsert one exercise log for the server's training day."""
     plan_id = _clean(payload.get("plan_id"))
-    block_id = _clean(payload.get("block_id"))
-    _require_valid_plan_id(plan_id)
-    # Service-role write: plan ownership is enforced here, not by RLS.
-    plan_row = store.get_plan_for_athlete(plan_id, athlete_id)
-    if plan_row is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
-
-    training_day = resolve_training_day(athlete_timezone, now=now)
-    completions = _active_completions(
-        store, athlete_id=athlete_id, plan_id=plan_id, training_day=training_day
+    training_day, blocks = _resolve_logging_day(
+        store, athlete_id=athlete_id, athlete_timezone=athlete_timezone, plan_id=plan_id, now=now
     )
-    if not completions:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=_NOT_STARTED_DETAIL)
-
-    match = next(
-        (
-            (session_id, block)
-            for session_id, block in _loggable_blocks(
-                plan_row, training_day=training_day, completions=completions
-            )
-            if _clean(block.get("block_id")) == block_id
-        ),
-        None,
+    fields = _log_fields(
+        payload,
+        plan_id=plan_id,
+        training_day=training_day,
+        blocks=blocks,
+        health_consent_granted=health_consent_granted,
     )
-    if match is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=_UNKNOWN_BLOCK_DETAIL)
-    session_id, block = match
-    if _clean(block.get("block_type")) == "rehab":
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=_REHAB_DETAIL)
-
-    reason = payload.get("reason")
-    if reason == "pain" and not health_consent_granted:
-        # Pain is health data. Without consent the training log is kept and the
-        # health field is dropped, as session completion does with pain_after.
-        reason = None
-    actual = payload.get("actual")
-    fields = {
-        "plan_id": plan_id,
-        "session_id": session_id,
-        "block_id": block_id,
-        "exercise_key": _clean(block.get("exercise_key")) or None,
-        "training_day": training_day,
-        "status": payload.get("status"),
-        "reason": reason,
-        "prescribed": _prescribed_snapshot(block),
-        "actual": dict(actual) if isinstance(actual, Mapping) else {},
-        # Free text can contain health data, regardless of the selected reason.
-        "notes": _clean(payload.get("notes")) if health_consent_granted else "",
-    }
     return store.upsert_exercise_log(athlete_id, fields)
+
+
+def record_exercise_logs(
+    store: AppStore,
+    *,
+    athlete_id: str,
+    athlete_timezone: str | None,
+    plan_id: str,
+    entries: list[Mapping[str, Any]],
+    health_consent_granted: bool,
+    now: datetime | None = None,
+) -> list[dict[str, Any]]:
+    """Validate every entry, then upsert them all: one bad block writes nothing."""
+    plan_id = _clean(plan_id)
+    training_day, blocks = _resolve_logging_day(
+        store, athlete_id=athlete_id, athlete_timezone=athlete_timezone, plan_id=plan_id, now=now
+    )
+    rows = [
+        _log_fields(
+            entry,
+            plan_id=plan_id,
+            training_day=training_day,
+            blocks=blocks,
+            health_consent_granted=health_consent_granted,
+        )
+        for entry in entries
+    ]
+    return [store.upsert_exercise_log(athlete_id, fields) for fields in rows]
 
 
 def list_exercise_logs_for_today(
@@ -192,4 +255,4 @@ def list_exercise_logs_for_today(
     return training_day, rows
 
 
-__all__ = ["list_exercise_logs_for_today", "record_exercise_log"]
+__all__ = ["list_exercise_logs_for_today", "record_exercise_log", "record_exercise_logs"]

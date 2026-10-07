@@ -397,8 +397,10 @@ for (const level of ["rehab_only", "train_no_contact"] as const) {
       const html = renderPanel(state);
       assert.match(html, /Sparring exchange review/);
       assert.match(html, /Sparring rounds locked by clinician clearance/);
-      assert.match(html, status === "not_started" ? />Start session</ : />Resume session</);
-      if (status === "started") assert.match(html, /data-value="done"[\s\S]*data-value="modified"/);
+      // Nothing to time: a started session leads with logging it, and there is
+      // no separate done / modified pick.
+      assert.match(html, status === "not_started" ? />Start session</ : /class="cta"[^>]*>(<svg[\s\S]*?<\/svg>)?Finish session</);
+      assert.doesNotMatch(html, /data-value="done"|data-value="modified"|>Resume session</);
       assert.doesNotMatch(html, />Start hard sparring</);
     });
   }
@@ -418,9 +420,9 @@ for (const tier of ["green", "modify", "pull_back", "stop", "not_checked_in"] as
     const html = renderPanel(state);
     if (tier === "green" || tier === "modify") {
       assert.match(html, />Resume session<|Sparring rounds<\/button>/);
-      assert.match(html, /data-value="done"/);
+      assert.match(html, />Finish session</);
     } else {
-      assert.doesNotMatch(html, />Resume session<|>Start session<|>Start hard sparring<|data-value="done"|Sparring rounds<\/button>/);
+      assert.doesNotMatch(html, />Resume session<|>Start session<|>Start hard sparring<|>Finish session<|Sparring rounds<\/button>/);
     }
     assert.doesNotMatch(html, /locked by clinician clearance/);
   });
@@ -440,7 +442,7 @@ for (const sessionType of ["sparring", "mindset", "rehab"] as const) {
         session: { session_id: state.today.next_session!.session_id!, title: "Accepted work", session_type: sessionType,
           blocks: [{ block_id: "work", block_type: sessionType, display_name: "Accepted work" }] } };
       const html = renderPanel(state);
-      assert.doesNotMatch(html, />Resume session<|>Start session<|>Start hard sparring<|data-value="done"|Sparring rounds<\/button>/);
+      assert.doesNotMatch(html, />Resume session<|>Start session<|>Start hard sparring<|>Finish session<|Sparring rounds<\/button>/);
       assert.doesNotMatch(html, /locked by clinician clearance/);
       assert.match(html, /dizziness|medical advice/);
     });
@@ -652,7 +654,7 @@ test("a new safety hold offers stopped logging without resuming frozen work", ()
   assert.match(html, /Reviewed test rehab/);
   assert.match(html, />Log stopped session</);
   assert.match(html, />Mark skipped</);
-  assert.doesNotMatch(html, />Start session<|>Done<|>Resume session</);
+  assert.doesNotMatch(html, />Start session<|>Done<|>Resume session<|>Finish session</);
 });
 
 for (const [value, label] of [
@@ -680,29 +682,32 @@ for (const [value, label] of [
     }
     try {
       await act(async () => { root.render(<AuthProvider><ToastProvider><TodaySessionPanel state={state} structuredPlan={null} token="token" onRefresh={async () => { refreshes++; }} /></ToastProvider></AuthProvider>); });
-      await click("Done");
-      const form = container.querySelector("form");
-      const save = container.querySelector<HTMLButtonElement>('button[type="submit"]');
-      assert.ok(form);
+      await click("Finish session");
+      // The review sheet is portalled to the body: rehab alone owes no exercise
+      // ticks, so the session reads as done and asks for the rehab amount.
+      const sheet = document.querySelector<HTMLElement>(".today-review-root");
+      assert.ok(sheet);
+      const save = Array.from(sheet.querySelectorAll("button")).find((b) => b.textContent?.trim() === "Save session");
       assert.ok(save);
-      assert.equal(save.disabled, true);
       assert.equal(save.className, "cta");
       // Fill the existing required review field before choosing rehab performance.
-      const effort = container.querySelector<HTMLInputElement>('input[aria-label="Session effort"]');
+      const effort = sheet.querySelector<HTMLInputElement>('input[aria-label="Session effort"]');
       assert.ok(effort);
       await act(async () => { effort.dispatchEvent(new domWindow.MouseEvent("click", { bubbles: true })); });
-      await act(async () => { form.dispatchEvent(new domWindow.Event("submit", { bubbles: true, cancelable: true })); });
+      await act(async () => { save.dispatchEvent(new domWindow.MouseEvent("click", { bubbles: true })); });
       assert.equal(calls.length, 0);
-      await click(label);
-      assert.equal(save.disabled, false);
-      const group = container.querySelector('[aria-label="How much rehab did you do?"]');
+      assert.match(sheet.textContent ?? "", /Choose how much rehab you performed/);
+      const group = sheet.querySelector('[aria-label="How much rehab did you do?"]');
       assert.ok(group);
+      const option = Array.from(group.querySelectorAll("button")).find((b) => b.textContent?.trim() === label);
+      assert.ok(option);
+      await act(async () => { option.dispatchEvent(new domWindow.MouseEvent("click", { bubbles: true })); });
       for (const button of group.querySelectorAll("button")) {
         assert.ok(button.classList.contains("today-segment"));
         assert.equal(button.classList.contains("today-segment-active"), button.textContent === label);
         assert.equal(button.getAttribute("aria-pressed"), String(button.textContent === label));
       }
-      await act(async () => { form.dispatchEvent(new domWindow.Event("submit", { bubbles: true, cancelable: true })); });
+      await act(async () => { save.dispatchEvent(new domWindow.MouseEvent("click", { bubbles: true })); });
       assert.equal(calls.length, 1);
       assert.equal(calls[0].rehab_performance, value);
       assert.equal(calls[0].status, "done");
@@ -776,11 +781,11 @@ for (const level of ["rehab_only", "train_no_contact", "train_contact"] as const
       const html = renderPanel(state);
       if (level === "train_contact") {
         assert.match(html, status === "not_started" ? />Start hard sparring</ : />Resume session</);
-        if (status === "started") assert.match(html, /data-value="done"[\s\S]*data-value="modified"/);
+        if (status === "started") assert.match(html, />Finish session</);
         assert.doesNotMatch(html, /Sparring rounds locked by clinician clearance/);
       } else {
         assert.match(html, /Sparring rounds locked by clinician clearance/);
-        assert.doesNotMatch(html, />Start session<|>Start hard sparring<|>Resume session<|data-value="done"|data-value="modified"|<form/);
+        assert.doesNotMatch(html, />Start session<|>Start hard sparring<|>Resume session<|>Finish session<|<form/);
       }
     });
   }
@@ -799,13 +804,13 @@ for (const status of ["not_started", "started"] as const) {
     assert.match(html, /Reviewed non-contact work/);
     assert.match(html, /Sparring rounds locked by clinician clearance/);
     assert.match(html, status === "not_started" ? />Start session</ : />Resume session</);
-    if (status === "started") assert.match(html, /data-value="done"[\s\S]*data-value="modified"/);
+    if (status === "started") assert.match(html, />Finish session</);
     assert.doesNotMatch(html, />Start hard sparring</);
   });
 }
 
-for (const intent of ["done", "modified"] as const) {
-  test(`lowering contact clearance closes an already open generic ${intent} form`, async () => {
+for (const action of ["Finish session", "Skip session"] as const) {
+  test(`lowering contact clearance closes an already open ${action} log`, async () => {
     const container = document.createElement("div"); document.body.appendChild(container);
     const root = createRoot(container);
     const state = contactDayState("green");
@@ -821,16 +826,58 @@ for (const intent of ["done", "modified"] as const) {
     const render = () => root.render(<AuthProvider><ToastProvider><TodaySessionPanel state={state} structuredPlan={null} token="token" onRefresh={async () => {}} /></ToastProvider></AuthProvider>);
     try {
       await act(async () => { render(); });
-      const choice = container.querySelector<HTMLButtonElement>(`button[data-value="${intent}"]`);
+      const choice = Array.from(container.querySelectorAll("button")).find((b) => b.textContent?.trim() === action);
       assert.ok(choice);
       await act(async () => { choice.dispatchEvent(new domWindow.MouseEvent("click", { bubbles: true })); });
-      assert.ok(container.querySelector("form"));
+      // Finish opens the session's review sheet (portalled to the body); Skip the reason form.
+      const openLog = () => document.querySelector(".today-review-root") ?? container.querySelector("form");
+      assert.ok(openLog());
       state.effective_clinician_clearance = { ...state.effective_clinician_clearance!, level: "train_no_contact", scopes: ["rehab", "training"] };
       await act(async () => { render(); });
-      assert.equal(container.querySelector("form"), null);
-      assert.equal(container.querySelector('button[data-value="done"],button[data-value="modified"]'), null);
+      assert.equal(openLog(), null);
+      assert.equal(Array.from(container.querySelectorAll("button")).find((b) => b.textContent?.trim() === "Finish session"), undefined);
       assert.match(container.textContent ?? "", /Sparring rounds locked by clinician clearance/);
       assert.equal(writes.length, 0);
     } finally { globalThis.fetch = original; act(() => root.unmount()); container.remove(); }
   });
 }
+
+test("start session runs the day's visualisation first, then hands on to the timer", async () => {
+  const container = document.createElement("div"); document.body.appendChild(container);
+  const root = createRoot(container);
+  const state = contactDayState("green");
+  state.today.next_session = { ...state.today.next_session, coach_led_contact: undefined, title: "Fight Visualisation" };
+  state.live_prescription = { revision: "a".repeat(64), frozen: false, safety_hold: false, changes: [],
+    session: { session_id: state.today.next_session.session_id!, session_type: "skill", title: "Fight Visualisation",
+      blocks: [
+        { block_id: "vis-1", block_type: "mindset", display_name: "Tactical Picture",
+          coaching_cues: ["See the opponent clearly.", "Cue: Take the space."] },
+        { block_id: "rdl", block_type: "strength", display_name: "Romanian Deadlift", sets: 3, reps: "8" },
+      ] } };
+  const original = globalThis.fetch;
+  const posts: Array<Record<string, unknown>> = [];
+  globalThis.fetch = (async (_input, init) => {
+    if (init?.method === "POST") {
+      posts.push(JSON.parse(String(init.body)));
+      return new Response(JSON.stringify({ completion: { id: "completion-1" }, rehab_response_prompts: [] }), { status: 200 });
+    }
+    return new Response('{"response_sets":[],"history_truncated":false,"logs":[]}', { status: 200 });
+  }) as typeof fetch;
+  const button = (scope: ParentNode, label: string) =>
+    Array.from(scope.querySelectorAll("button")).find((b) => b.textContent?.trim() === label);
+  try {
+    await act(async () => { root.render(<AuthProvider><ToastProvider><TodaySessionPanel state={state} structuredPlan={null} token="token" onRefresh={async () => {}} /></ToastProvider></AuthProvider>); });
+    const start = button(container, "Start session");
+    assert.ok(start);
+    await act(async () => { start.dispatchEvent(new domWindow.MouseEvent("click", { bubbles: true })); });
+    assert.equal(posts[0]?.status, "started");
+    const player = document.querySelector<HTMLElement>('[aria-label="Guided Tactical Picture"]');
+    assert.ok(player, "the visualisation opens first");
+    assert.equal(document.querySelector(".st-root"), null);
+    const skip = button(player, "Skip to training");
+    assert.ok(skip);
+    await act(async () => { skip.dispatchEvent(new domWindow.MouseEvent("click", { bubbles: true })); });
+    assert.equal(document.querySelector('[aria-label="Guided Tactical Picture"]'), null);
+    assert.ok(document.querySelector(".st-root"), "then the timer takes over");
+  } finally { globalThis.fetch = original; act(() => root.unmount()); container.remove(); }
+});

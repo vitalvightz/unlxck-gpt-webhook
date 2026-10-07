@@ -2368,17 +2368,11 @@ class ExerciseLogActual(BaseModel):
         return self
 
 
-class ExerciseLogRequest(BaseModel):
-    """Log what was actually done for one prescribed block today.
-
-    The block is named by its server-owned ``block_id``; the server resolves the
-    prescription and the training day itself and never takes either from the
-    client. The plan is not changed by a log.
-    """
+class ExerciseLogEntry(BaseModel):
+    """What was actually done for one prescribed block, named by ``block_id``."""
 
     model_config = ConfigDict(extra="forbid")
 
-    plan_id: str = Field(min_length=1, max_length=64)
     block_id: str = Field(min_length=1, max_length=200)
     status: ExerciseLogStatus
     actual: ExerciseLogActual = Field(default_factory=ExerciseLogActual)
@@ -2390,13 +2384,13 @@ class ExerciseLogRequest(BaseModel):
     def clean_notes(cls, value: Any) -> str:
         return str(value or "").strip()
 
-    @field_validator("plan_id", "block_id", mode="before")
+    @field_validator("block_id", mode="before")
     @classmethod
-    def clean_id(cls, value: Any) -> str:
+    def clean_block_id(cls, value: Any) -> str:
         return str(value or "").strip()
 
     @model_validator(mode="after")
-    def validate_status_fields(self) -> "ExerciseLogRequest":
+    def validate_status_fields(self) -> "ExerciseLogEntry":
         has_actual = bool(self.actual.model_dump(exclude_none=True))
         if self.status == "modified" and not has_actual:
             raise ValueError("a modified exercise must say what was actually done")
@@ -2404,6 +2398,44 @@ class ExerciseLogRequest(BaseModel):
             raise ValueError("a skipped exercise has no actual work")
         if self.status == "as_prescribed" and self.reason is not None:
             raise ValueError("a reason explains a change or a skip")
+        return self
+
+
+class ExerciseLogRequest(ExerciseLogEntry):
+    """Log what was actually done for one prescribed block today.
+
+    The block is named by its server-owned ``block_id``; the server resolves the
+    prescription and the training day itself and never takes either from the
+    client. The plan is not changed by a log.
+    """
+
+    plan_id: str = Field(min_length=1, max_length=64)
+
+    @field_validator("plan_id", mode="before")
+    @classmethod
+    def clean_plan_id(cls, value: Any) -> str:
+        return str(value or "").strip()
+
+
+class ExerciseLogBatchRequest(BaseModel):
+    """Several blocks of today's session logged at once, e.g. when the session
+    timer ends. All entries are accepted or none are."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    plan_id: str = Field(min_length=1, max_length=64)
+    entries: list[ExerciseLogEntry] = Field(min_length=1, max_length=60)
+
+    @field_validator("plan_id", mode="before")
+    @classmethod
+    def clean_plan_id(cls, value: Any) -> str:
+        return str(value or "").strip()
+
+    @model_validator(mode="after")
+    def validate_unique_blocks(self) -> "ExerciseLogBatchRequest":
+        block_ids = [entry.block_id for entry in self.entries]
+        if len(set(block_ids)) != len(block_ids):
+            raise ValueError("each block can be logged once per request")
         return self
 
 
@@ -2428,6 +2460,10 @@ class ExerciseLogRecord(BaseModel):
 
 class ExerciseLogResponse(BaseModel):
     log: ExerciseLogRecord
+
+
+class ExerciseLogBatchResponse(BaseModel):
+    logs: list[ExerciseLogRecord]
 
 
 class ExerciseLogListResponse(BaseModel):

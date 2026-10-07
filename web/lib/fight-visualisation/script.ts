@@ -23,6 +23,8 @@ export type FightVisualisation = {
   durationSec: number;
   /** A camp-block session the athlete may skip, not the countdown protocol. */
   optional: boolean;
+  /** The block the run logs as done when it finishes; null when unidentified. */
+  blockId: string | null;
 };
 
 export type GuidePhase = "settle" | "frame" | "rehearse" | "anchor" | "close";
@@ -102,6 +104,7 @@ export function fightVisualisationFromSession(
     durationSec:
       measuredSeconds(block.duration) ?? measuredSeconds(session.planned_duration) ?? DEFAULT_DURATION_SEC,
     optional,
+    blockId: cleanText(block.block_id) || null,
   };
 }
 

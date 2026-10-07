@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 
 import {
   buildLogEntry,
+  deriveSessionOutcome,
   draftFromLog,
   hasLoggableNumbers,
   isLoggableBlock,
@@ -178,4 +179,48 @@ test("only blocks with a server id are loggable, and rehab never is", () => {
   assert.equal(isLoggableBlock({ ...deadlift, block_id: null }), false);
   assert.equal(isLoggableBlock({ ...deadlift, block_id: "  " }), false);
   assert.equal(isLoggableBlock({ block_id: "rehab:1", block_type: "rehab" }), false);
+});
+
+const visualisation: StructuredBlock = {
+  block_id: "vis-1",
+  block_type: "mindset",
+  display_name: "Tactical Picture",
+};
+
+const day = [
+  { session_id: "vis", optional: true, blocks: [visualisation] },
+  { session_id: "s1", blocks: [deadlift, plank, { block_id: "rehab-1", block_type: "rehab", display_name: "Ankle" }] },
+];
+
+test("a session is done when every owed exercise was done as written", () => {
+  const outcome = deriveSessionOutcome(day, {
+    [deadlift.block_id!]: log(deadlift, { status: "as_prescribed" }),
+    [plank.block_id!]: log(plank, { status: "as_prescribed" }),
+  });
+  // Optional visualisation and rehab are not owed.
+  assert.deepEqual(
+    { status: outcome.status, total: outcome.total, logged: outcome.logged, reason: outcome.reason },
+    { status: "done", total: 2, logged: 2, reason: "" },
+  );
+});
+
+test("changes and skips make it modified, with the reason written out", () => {
+  const outcome = deriveSessionOutcome(day, {
+    [deadlift.block_id!]: log(deadlift, { status: "modified", actual: { sets: 3, load: { value: 100, unit: "kg" } } }),
+  });
+  assert.equal(outcome.status, "modified");
+  assert.deepEqual(outcome.unlogged.map((block) => block.block_id), [plank.block_id]);
+  assert.equal(outcome.reason, "Changed: Trap Bar Deadlift (3 sets · 100 kg). Skipped: Front Plank.");
+});
+
+test("nothing done reads as a skipped session", () => {
+  const outcome = deriveSessionOutcome(day, {
+    [deadlift.block_id!]: log(deadlift, { status: "skipped" }),
+  });
+  assert.equal(outcome.status, "skipped");
+  assert.equal(outcome.reason, "Skipped: Trap Bar Deadlift, Front Plank.");
+});
+
+test("a day with nothing to log is done", () => {
+  assert.equal(deriveSessionOutcome([{ session_id: "vis", optional: true, blocks: [visualisation] }], {}).status, "done");
 });
