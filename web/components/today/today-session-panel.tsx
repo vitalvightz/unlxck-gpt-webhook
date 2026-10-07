@@ -27,6 +27,7 @@ import {
 import { SessionTimer, type SessionTimerSummary } from "@/components/session-timer/session-timer";
 import { clearSavedRun, hasSavedRun } from "@/components/session-timer/use-session-timer";
 import { RehabResponsePrompt } from "@/components/today/rehab-response-prompt";
+import { SessionReview } from "@/components/today/session-review";
 import { SparringLogPrompt, type SparringDraft } from "@/components/today/sparring-log-prompt";
 import { useTodayExerciseLogs } from "@/components/today/use-exercise-logs";
 import { DelayedRehabResponse } from "@/components/today/injury-care-status";
@@ -41,6 +42,7 @@ import {
   savedRoundFormat,
   type ContactTimerTarget,
 } from "@/lib/session-timer/contact";
+import { timerExerciseLogs } from "@/lib/session-timer/logs";
 import { dayTimerItems, timerSessionFor, type TimerItem } from "@/lib/session-timer/plan";
 import { fightVisualisationFromSession, firstNameOf } from "@/lib/fight-visualisation/script";
 import { fightLevel } from "@/lib/fight-visualisation/crowd";
@@ -386,6 +388,13 @@ export function TodaySessionPanel({
   const [sparringDraft, setSparringDraft] = useState<SparringDraft | null>(null);
   // The voice-guided Fight Visualisation player, full screen while open.
   const [guidedOpen, setGuidedOpen] = useState(false);
+  // Where a visualisation run started by Start session goes next: the session
+  // timer, or straight to the log when the day has nothing to time.
+  const [guidedNext, setGuidedNext] = useState<"timer" | "review" | null>(null);
+  // The one card the session is logged on (see SessionReview).
+  const [reviewOpen, setReviewOpen] = useState(false);
+  // Whether the open review was reached from the timer (its ticks came from it).
+  const [reviewFromTimer, setReviewFromTimer] = useState(false);
   const session = state.today.next_session;
   const status = state.today.completion_status;
   const duration = getSessionDuration(session);
@@ -464,7 +473,8 @@ export function TodaySessionPanel({
     allowDatedWeekdayMatch: openOngoing,
   });
   const livePrescription = state.live_prescription;
-  const rehabChoiceRequired = intent === "done" && Boolean(livePrescription?.session.blocks?.some(block => block.block_type === "rehab"));
+  const sessionHasRehab = Boolean(livePrescription?.session.blocks?.some(block => block.block_type === "rehab"));
+  const rehabChoiceRequired = (intent === "done" || reviewOpen) && sessionHasRehab;
   const current: CurrentDayResolution = livePrescription ? {
     ...storedCurrent, inRange: true,
     day: { ...(storedCurrent.day ?? {}), date: state.today.training_day, sessions: [livePrescription.session] },
@@ -610,6 +620,8 @@ export function TodaySessionPanel({
     canCompleteSession &&
     !safeSession &&
     !timerAvailable;
+  // Something to go back into while the session is started.
+  const canResume = timerAvailable || guidedLeads || (contactIsSession && contactTimerAvailable);
   const contactLockCopy =
     !clearanceAllowsContact
       ? CONTACT_LOCK_COPY.clinician_clearance
@@ -701,6 +713,7 @@ export function TodaySessionPanel({
         clearSavedRun(timerStorageKey);
         setActiveTimer((timer) => (timer?.source === "session" ? null : timer));
         setTimerNotes("");
+        setReviewOpen(false);
       }
       setRehabPerformance(undefined);
       // Non-empty only when the server established that this session contained
@@ -763,6 +776,64 @@ export function TodaySessionPanel({
     }
   }
 
+  /** Start session: the day's visualisation comes first when there is one,
+   * then the timer, so the run follows the card from the top. */
+  function startSession() {
+    // Audio only unlocks inside the tap itself, before any await.
+    if (timerAvailable) timerAudio().unlock();
+    const visualisationFirst = Boolean(guidedVisualisation);
+    void saveCompletion("started").then((started) => {
+      if (!started || roundTimer.shown) return;
+      if (visualisationFirst) {
+        setGuidedNext(timerAvailable ? "timer" : "review");
+        setGuidedOpen(true);
+        return;
+      }
+      if (timerAvailable) {
+        setActiveTimer({ source: "session", mode: "open" });
+      }
+    });
+  }
+
+  /** The visualisation run reached its end: that is the exercise done. */
+  function logVisualisationDone() {
+    const blockId = guidedVisualisation?.blockId;
+    if (!blockId || !exerciseLogging || exerciseLogging.logs[blockId]) return;
+    void exerciseLogging.save({ block_id: blockId, status: "as_prescribed" }).catch((error: unknown) => {
+      showToast(error instanceof Error ? error.message : "Could not log the visualisation.", { tone: "error" });
+    });
+  }
+
+  /** Leave the visualisation for what comes next in the session. */
+  function continueAfterGuided() {
+    const next = guidedNext;
+    setGuidedOpen(false);
+    setGuidedNext(null);
+    if (next === "timer" && timerAvailable) {
+      openTimer("session");
+    } else if (next === "review") {
+      openReview(false);
+    }
+  }
+
+  function openReview(fromTimer: boolean) {
+    setIntent(null);
+    setReviewFromTimer(fromTimer);
+    setReviewOpen(true);
+  }
+
+  // Asked once a session with reviewed rehab is logged as done.
+  const rehabChoice = (
+    <div role="group" aria-label="How much rehab did you do?" className="today-injury-guidance">
+      <p>How much rehab did you do?</p>
+      <div className="today-segment-row">
+        {([ ["done_as_shown", "Done as shown"], ["changed", "Changed it"], ["stopped", "Stopped early"] ] as const).map(([value, label]) => (
+          <button key={value} type="button" className={rehabPerformance === value ? "today-segment today-segment-active" : "today-segment"} aria-pressed={rehabPerformance === value} onClick={() => setRehabPerformance(value)}>{label}</button>
+        ))}
+      </div>
+    </div>
+  );
+
   const sparringPrompt = sparringDraft ? (
     <SparringLogPrompt
       key={`${sparringDraft.source}:${sparringDraft.rounds}:${sparringDraft.title}`}
@@ -801,7 +872,21 @@ export function TodaySessionPanel({
           )
         ) : null}
         {tools && showGuided ? (
-          <button type="button" className="today-tool-button" data-accent="true" onClick={() => setGuidedOpen(true)}>
+          <button
+            type="button"
+            className="today-tool-button"
+            data-accent="true"
+            disabled={isSubmitting}
+            onClick={() => {
+              // Doing today's visualisation is doing today's session: start it,
+              // so finishing the run logs the exercise.
+              if (canCompleteSession && !safeSession && status === "not_started") {
+                startSession();
+              } else {
+                setGuidedOpen(true);
+              }
+            }}
+          >
             <ToolIcon name="voice" />
             Guided visualisation
           </button>
@@ -859,6 +944,7 @@ export function TodaySessionPanel({
         sessionTitle={title}
         visible={mode === "open"}
         finishLabel={source === "session" ? "Log session" : "Done"}
+        handOffWhenDone={source === "session"}
         onMinimize={() => setActiveTimer({ source, mode: "minimized" })}
         onExpand={() => openTimer(source)}
         onClose={() => {
@@ -886,10 +972,18 @@ export function TodaySessionPanel({
             });
           }
           if (source === "session") {
-            setTimerNotes(summary.notes.slice(0, 2000));
-            // A run that fell short of the plan is logged as modified, so the
-            // athlete gives the reason instead of it silently reading as done.
-            setIntent(summary.complete ? "done" : "modified");
+            // What the timer counted becomes each exercise's log, then the
+            // athlete lands on the session's one card to check and save it.
+            const entries = exerciseLogging ? timerExerciseLogs(summary.run, exerciseLogging.logs) : [];
+            if (entries.length > 0 && exerciseLogging?.saveMany) {
+              void exerciseLogging.saveMany(entries).catch((error: unknown) => {
+                showToast(
+                  error instanceof Error ? error.message : "The timer's sets could not be saved. Tick them on the card.",
+                  { tone: "error" },
+                );
+              });
+            }
+            openReview(true);
             return;
           }
           if (
@@ -1012,18 +1106,7 @@ export function TodaySessionPanel({
             <button
               type="button"
               className={contactCta ? "secondary-button" : "cta"}
-              onClick={() => {
-                // Audio only unlocks inside the tap itself, before any await.
-                if (timerAvailable) timerAudio().unlock();
-                void saveCompletion("started").then((started) => {
-                  if (started && timerAvailable && !roundTimer.shown) {
-                    setActiveTimer({ source: "session", mode: "open" });
-                  }
-                  if (started && guidedLeads && !roundTimer.shown) {
-                    setGuidedOpen(true);
-                  }
-                });
-              }}
+              onClick={startSession}
               disabled={isSubmitting}
             >
               {guidedLeads ? "Start guided visualisation" : alongsideTitle ? `Start ${alongsideTitle}` : "Start session"}
@@ -1119,6 +1202,7 @@ export function TodaySessionPanel({
 
       {canCompleteSession && status === "started" ? (
         <div className="today-session-actions today-action-tray">
+          {canResume ? (
           <button
             type="button"
             className="cta"
@@ -1132,6 +1216,7 @@ export function TodaySessionPanel({
                 return;
               }
               if (guidedLeads) {
+                setGuidedNext("review");
                 setGuidedOpen(true);
                 return;
               }
@@ -1145,27 +1230,28 @@ export function TodaySessionPanel({
           >
             Resume session
           </button>
-          <div className="today-log-row">
-            <span className="today-log-label" id="today-log-label">
-              Log as
-            </span>
-            <div className="today-log-group" role="group" aria-labelledby="today-log-label">
-              {(["done", "modified", "skipped"] as const).map((value) => (
-                <button
-                  key={value}
-                  type="button"
-                  data-value={value}
-                  aria-pressed={intent === value}
-                  onClick={() => setIntent(value)}
-                  disabled={isSubmitting}
-                >
-                  <ToolIcon name={value === "done" ? "check" : value === "modified" ? "adjust" : "skip"} />
-                  {value === "done" ? "Done" : value === "modified" ? "Modified" : "Skipped"}
-                </button>
-              ))}
-            </div>
-          </div>
-          {timerTools()}
+          ) : null}
+          {/* The session is logged on its own card, from the exercises: there
+              is no separate done / modified pick to make and keep in step. */}
+          <button
+            type="button"
+            className={canResume ? "secondary-button" : "cta"}
+            onClick={() => openReview(false)}
+            disabled={isSubmitting}
+          >
+            <ToolIcon name="check" />
+            Finish session
+          </button>
+          {timerTools(
+            <button
+              type="button"
+              className="today-tool-link"
+              onClick={() => setIntent("skipped")}
+              disabled={isSubmitting}
+            >
+              Skip session
+            </button>,
+          )}
         </div>
       ) : null}
 
@@ -1188,16 +1274,7 @@ export function TodaySessionPanel({
         {livePrescription.frozen && status === "started" ? <button type="button" className="secondary-button" disabled={isSubmitting} onClick={() => setIntent("modified")}>Log stopped session</button> : null}
         <button type="button" className="ghost-button" disabled={isSubmitting} onClick={() => setIntent("skipped")}>Mark skipped</button>
       </div> : null}
-      {canCompleteSession && intent === "done" && livePrescription?.session.blocks?.some(block => block.block_type === "rehab") ? (
-        <div role="group" aria-label="How much rehab did you do?" className="today-injury-guidance">
-          <p>How much rehab did you do?</p>
-          <div className="today-segment-row">
-            {([ ["done_as_shown", "Done as shown"], ["changed", "Changed it"], ["stopped", "Stopped early"] ] as const).map(([value, label]) => (
-              <button key={value} type="button" className={rehabPerformance === value ? "today-segment today-segment-active" : "today-segment"} aria-pressed={rehabPerformance === value} onClick={() => setRehabPerformance(value)}>{label}</button>
-            ))}
-          </div>
-        </div>
-      ) : null}
+      {canCompleteSession && intent === "done" && sessionHasRehab ? rehabChoice : null}
       {(state.delayed_rehab_prompts ?? []).map(prompt => <DelayedRehabResponse key={prompt.exposure_id} prompt={prompt} token={token} onRefresh={onRefresh} />)}
       {canCompleteSession || (livePrescription?.safety_hold && (intent === "skipped" || (intent === "modified" && status === "started"))) ? (
         <SessionCompletionForm
@@ -1244,17 +1321,49 @@ export function TodaySessionPanel({
           visualisation={guidedVisualisation}
           firstName={firstNameOf(athleteFullName)}
           level={fightLevel(professionalStatus)}
-          finishLabel="Log session"
-          onClose={() => setGuidedOpen(false)}
-          onFinish={
-            guidedLeads && status === "started"
-              ? () => {
-                  setGuidedOpen(false);
-                  setTimerNotes("Guided visualisation completed.");
-                  setIntent("done");
-                }
-              : undefined
+          finishLabel={guidedNext === "timer" ? "Continue to training" : "Finish session"}
+          upNext={guidedNext === "timer" ? timerItems[0]?.title ?? null : null}
+          skipLabel="Skip to training"
+          onClose={() => {
+            setGuidedOpen(false);
+            setGuidedNext(null);
+          }}
+          onComplete={logVisualisationDone}
+          onFinish={guidedNext ? continueAfterGuided : undefined}
+          onSkip={guidedNext === "timer" ? continueAfterGuided : undefined}
+        />
+      ) : null}
+
+      {reviewOpen && canCompleteSession && status === "started" ? (
+        <SessionReview
+          title={headline}
+          sessions={showStructuredBlocks ? current.sessions : []}
+          logging={exerciseLogging}
+          hint={
+            reviewFromTimer
+              ? "Ticked from your timer. Tap any exercise to add the weight or change what you did."
+              : "Tick what you did. Tap an exercise to add the weight or change it."
           }
+          blocks={
+            showStructuredBlocks ? (
+              <TodaySessionBlocks
+                planId={state.active_plan?.id}
+                current={current}
+                headline={headline}
+                rehabLabelPolicy={rehabLabelPolicy}
+                exerciseMedia={exerciseMedia}
+                exerciseLogging={exerciseLogging}
+              />
+            ) : null
+          }
+          canCollectPain={painReasonAllowed}
+          rehabChoice={sessionHasRehab ? rehabChoice : null}
+          doneBlockedReason={
+            sessionHasRehab && !rehabPerformance ? "Choose how much rehab you performed before saving." : undefined
+          }
+          isSubmitting={isSubmitting}
+          onClose={() => setReviewOpen(false)}
+          onSave={(nextStatus, details) => saveCompletion(nextStatus, details)}
         />
       ) : null}
 

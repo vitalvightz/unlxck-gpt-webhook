@@ -9,6 +9,8 @@ import type {
   AdminReviewRecord,
   AdminReviewResolveRequest,
   ComplianceAcceptanceRequest,
+  ExerciseLogBatchRequest,
+  ExerciseLogBatchResponse,
   ExerciseLogListResponse,
   ExerciseLogRequest,
   ExerciseLogResponse,
@@ -1186,6 +1188,18 @@ export function submitExerciseLog(
   payload: ExerciseLogRequest,
 ): Promise<ExerciseLogResponse> {
   return readJson<ExerciseLogResponse>("/api/today/exercise-log", {
+    method: "POST",
+    token,
+    body: JSON.stringify(payload),
+  });
+}
+
+/** Log several blocks of today's started session at once; all or nothing. */
+export function submitExerciseLogs(
+  token: string,
+  payload: ExerciseLogBatchRequest,
+): Promise<ExerciseLogBatchResponse> {
+  return readJson<ExerciseLogBatchResponse>("/api/today/exercise-logs", {
     method: "POST",
     token,
     body: JSON.stringify(payload),

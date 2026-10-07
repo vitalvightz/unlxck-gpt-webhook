@@ -1,0 +1,121 @@
+/* The session's one log: the Today card's own rows in a full-screen sheet.
+   The backdrop is opaque from the first frame, so the hand-off from the timer
+   never flashes the page behind it; only the content eases in. Sits under
+   toasts (z-index 200) so a failed tick is still reported on top. */
+.today-review-root {
+  position: fixed;
+  inset: 0;
+  z-index: 150;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background: var(--bg-app);
+  color: var(--text-primary);
+}
+
+.today-review-sheet {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto;
+  padding: calc(var(--safe-area-top) + 16px) 16px calc(var(--safe-area-bottom) + 24px);
+  outline: none;
+  animation: today-review-in 260ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+@keyframes today-review-in {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+}
+
+.today-review-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.today-review-head h2 {
+  margin: 4px 0 0;
+  font-size: clamp(24px, 6vw, 30px);
+  line-height: 1.15;
+}
+
+.today-review-count {
+  margin: 6px 0 0;
+  color: var(--text-secondary);
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+
+.today-review-close {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-pill);
+  background: var(--bg-surface);
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.today-review-hint {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 15px;
+}
+
+.today-review-chip {
+  align-self: flex-start;
+  min-height: 40px;
+  padding: 0 16px;
+  border: 1px solid var(--progress-gold-border);
+  border-radius: var(--radius-pill);
+  background: var(--progress-gold-soft);
+  color: var(--progress-gold);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.today-review-chip:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.today-review-blocks {
+  display: grid;
+  gap: 12px;
+}
+
+.today-review-footer {
+  padding: 16px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-card);
+  background: var(--bg-panel);
+}
+
+.today-review-footer .cta {
+  width: 100%;
+}
+
+.today-review-unlogged {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .today-review-sheet {
+    animation: none;
+  }
+}

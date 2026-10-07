@@ -58,7 +58,12 @@ export type SessionTimerSummary = {
     /** From the first sparring block's structured intensity, when stated. */
     plannedIntensity: SparringPlannedIntensity | null;
   } | null;
+  /** The finished run itself, so the owner can log each exercise from it. */
+  run: TimerState;
 };
+
+/** How long "Session complete" holds before the run hands off to its log. */
+const HANDOFF_MS = 900;
 
 /** Completed sparring rounds across the run's sparring items. */
 export function sparringSummary(state: TimerState): SessionTimerSummary["sparring"] {
@@ -960,6 +965,7 @@ export function SessionTimer({
   sessionTitle,
   visible,
   finishLabel = "Log session",
+  handOffWhenDone = false,
   onMinimize,
   onExpand,
   onFinish,
@@ -971,6 +977,12 @@ export function SessionTimer({
   visible: boolean;
   /** The done screen's button: logging a planned session, or just closing. */
   finishLabel?: string;
+  /**
+   * Skip the per-exercise done list: show "Session complete" briefly, then
+   * finish by itself. The owner has already logged each exercise from the run
+   * and takes the athlete straight to the one card to check.
+   */
+  handOffWhenDone?: boolean;
   onMinimize: () => void;
   onExpand: () => void;
   onFinish: (summary: SessionTimerSummary) => void;
@@ -1021,7 +1033,18 @@ export function SessionTimer({
   }, [showsMini]);
 
   const finish = () =>
-    onFinish({ complete: metPlan(state), notes: summarizeRun(state), sparring: sparringSummary(state) });
+    onFinish({ complete: metPlan(state), notes: summarizeRun(state), sparring: sparringSummary(state), run: state });
+  // The latest finish for the hand-off timeout below, without restarting it.
+  const finishRef = useRef(finish);
+  useEffect(() => {
+    finishRef.current = finish;
+  });
+  const handingOff = handOffWhenDone && visible && state.phase === "done";
+  useEffect(() => {
+    if (!handingOff) return;
+    const timeout = window.setTimeout(() => finishRef.current(), HANDOFF_MS);
+    return () => window.clearTimeout(timeout);
+  }, [handingOff]);
 
   if (!visible) {
     if (state.phase === "done") return null;
@@ -1127,7 +1150,20 @@ export function SessionTimer({
       {/* Tapping anywhere off an open sheet closes it. */}
       {sheet !== null ? <div className="st-scrim" aria-hidden="true" onClick={() => setSheet(null)} /> : null}
 
-      {state.phase === "done" ? (
+      {handingOff ? (
+        <main className="st-main st-done st-handoff">
+          <div className="st-done-badge" aria-hidden="true">
+            <Icon name="check" />
+          </div>
+          <p className="st-done-title" aria-live="polite">
+            {metPlan(state) ? "Session complete" : "Session ended"}
+          </p>
+          {sessionElapsed ? <p className="st-done-time">{sessionElapsed} total</p> : null}
+          <button type="button" className="st-link" onClick={finish}>
+            {finishLabel}
+          </button>
+        </main>
+      ) : state.phase === "done" ? (
         <main className="st-main st-done">
           <div className="st-done-badge" aria-hidden="true">
             <Icon name="check" />

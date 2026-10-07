@@ -453,3 +453,138 @@ def test_a_missing_or_invalid_snapshot_still_allows_plan_card_fallback(snapshot)
     store.session_completions["athlete-1"][0]["prescription_snapshot"] = snapshot
 
     assert _log(client).status_code == 201
+
+
+def _add_optional_visualisation(store) -> str:
+    """The camp Fight Visualisation: optional, so starting the day never writes it."""
+    sessions = store.plans[PLAN_ID]["structured_plan"]["weeks"][0]["days"][0]["sessions"]
+    sessions.insert(
+        0,
+        {
+            "session_id": "locked-d-24-fight-visualization",
+            "session_type": "skill",
+            "title": "Fight Visualisation",
+            "optional": True,
+            "blocks": [{"block_id": "vis-1", "block_type": "mindset", "display_name": "Tactical Picture"}],
+        },
+    )
+    return "vis-1"
+
+
+def test_an_optional_visualisation_is_logged_once_the_day_is_started():
+    client, store, _ = _build_client()
+    _seed_plan(store, blocks=[_squat()])
+    block_id = _add_optional_visualisation(store)
+    _start(client)
+
+    resp = _log(client, block_id=block_id)
+
+    assert resp.status_code == 201, resp.text
+    assert resp.json()["log"]["session_id"] == "locked-d-24-fight-visualization"
+    # Logging it does not write the optional session into the day unit.
+    training_day = resolve_training_day(None)
+    assert store.get_session_completion("athlete-1", "locked-d-24-fight-visualization", training_day) is None
+
+
+def test_an_optional_visualisation_is_not_logged_before_the_day_starts():
+    client, store, _ = _build_client()
+    _seed_plan(store, blocks=[_squat()])
+    block_id = _add_optional_visualisation(store)
+
+    resp = _log(client, block_id=block_id)
+
+    assert resp.status_code == 409
+    assert store.exercise_logs == []
+
+
+def _log_many(client, entries, plan_id=PLAN_ID):
+    return client.post("/api/today/exercise-logs", headers=ATHLETE, json={"plan_id": plan_id, "entries": entries})
+
+
+def test_logs_several_blocks_in_one_request():
+    client, store, _ = _build_client()
+    training_day = _seed_plan(store, blocks=[_squat(), _plank()])
+    block_id = _add_optional_visualisation(store)
+    _start(client)
+
+    resp = _log_many(
+        client,
+        [
+            {"block_id": f"blk-{training_day}-trap-bar-deadlift", "status": "modified", "actual": {"sets": 2}},
+            {"block_id": f"blk-{training_day}-front-plank", "status": "skipped"},
+            {"block_id": block_id, "status": "as_prescribed"},
+        ],
+    )
+
+    assert resp.status_code == 201, resp.text
+    assert [(log["block_id"], log["status"]) for log in resp.json()["logs"]] == [
+        (f"blk-{training_day}-trap-bar-deadlift", "modified"),
+        (f"blk-{training_day}-front-plank", "skipped"),
+        (block_id, "as_prescribed"),
+    ]
+    assert len(store.exercise_logs) == 3
+
+
+def test_one_unknown_block_rejects_the_whole_batch():
+    client, store, _ = _build_client()
+    training_day = _seed_plan(store, blocks=[_squat()])
+    _start(client)
+
+    resp = _log_many(
+        client,
+        [
+            {"block_id": f"blk-{training_day}-trap-bar-deadlift", "status": "as_prescribed"},
+            {"block_id": "not-today", "status": "as_prescribed"},
+        ],
+    )
+
+    assert resp.status_code == 404
+    assert store.exercise_logs == []
+
+
+@pytest.mark.parametrize(
+    "entries",
+    [
+        [],
+        [{"block_id": "a", "status": "modified"}],
+        [{"block_id": "a", "status": "as_prescribed"}, {"block_id": "a", "status": "skipped"}],
+    ],
+)
+def test_invalid_batches_are_rejected(entries):
+    client, store, _ = _build_client()
+    _seed_plan(store, blocks=[_squat()])
+    _start(client)
+
+    assert _log_many(client, entries).status_code == 422
+    assert store.exercise_logs == []
+
+
+def test_a_batch_needs_the_session_started():
+    client, store, _ = _build_client()
+    training_day = _seed_plan(store, blocks=[_squat()])
+
+    resp = _log_many(client, [{"block_id": f"blk-{training_day}-trap-bar-deadlift", "status": "as_prescribed"}])
+
+    assert resp.status_code == 409
+    assert store.exercise_logs == []
+
+
+def test_batch_entries_follow_the_health_consent_rules():
+    client, store, _ = _build_client()
+    training_day = _seed_plan(store, blocks=[_squat(), _plank()])
+    _start(client)
+    withdraw_health_consent(store, "athlete-1")
+
+    resp = _log_many(
+        client,
+        [
+            {"block_id": f"blk-{training_day}-trap-bar-deadlift", "status": "modified",
+             "actual": {"sets": 2}, "reason": "pain", "notes": "Knee hurts"},
+            {"block_id": f"blk-{training_day}-front-plank", "status": "skipped", "reason": "equipment"},
+        ],
+    )
+
+    assert resp.status_code == 201, resp.text
+    first, second = resp.json()["logs"]
+    assert first["reason"] is None and first["notes"] == ""
+    assert second["reason"] == "equipment"

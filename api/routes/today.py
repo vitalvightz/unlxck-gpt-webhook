@@ -18,6 +18,8 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from api.compliance_guards import require_health_feature_access
 from api.compliance import evaluate_profile_compliance
 from api.models import (
+    ExerciseLogBatchRequest,
+    ExerciseLogBatchResponse,
     ExerciseLogListResponse,
     ExerciseLogRecord,
     ExerciseLogRequest,
@@ -46,7 +48,11 @@ from api.models import (
 from api.contracts.command_view import CommandView
 from api.contracts.completion import completion_landing_state, completion_status_of
 from api.contracts.rehab_completion import COMPLETED_STATUSES
-from api.services.exercise_log_service import list_exercise_logs_for_today, record_exercise_log
+from api.services.exercise_log_service import (
+    list_exercise_logs_for_today,
+    record_exercise_log,
+    record_exercise_logs,
+)
 from api.services.progress_notifications import award_session_progress
 from api.services.rehab_completion_service import (
     build_rehab_response_contexts,
@@ -658,6 +664,31 @@ def build_today_router(*, require_profile, get_store) -> APIRouter:
             health_consent_granted=evaluate_profile_compliance(profile).health_consent_granted,
         )
         return ExerciseLogResponse(log=_exercise_log_record(row))
+
+    @router.post(
+        "/api/today/exercise-logs",
+        response_model=ExerciseLogBatchResponse,
+        status_code=status.HTTP_201_CREATED,
+    )
+    def submit_exercise_logs(
+        request_body: ExerciseLogBatchRequest,
+        profile: ProfileRecord = Depends(require_profile),
+        store: AppStore = Depends(get_store),
+    ) -> ExerciseLogBatchResponse:
+        """Log several blocks of today's started session at once.
+
+        Used when the session timer ends: what the timer recorded is written in
+        one request. Every entry passes the single-log rules or nothing is saved.
+        """
+        rows = record_exercise_logs(
+            store,
+            athlete_id=profile.athlete_id,
+            athlete_timezone=profile.athlete_timezone,
+            plan_id=request_body.plan_id,
+            entries=[entry.model_dump(exclude_none=True) for entry in request_body.entries],
+            health_consent_granted=evaluate_profile_compliance(profile).health_consent_granted,
+        )
+        return ExerciseLogBatchResponse(logs=[_exercise_log_record(row) for row in rows])
 
     @router.get(
         "/api/today/exercise-logs",

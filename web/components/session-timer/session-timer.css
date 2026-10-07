@@ -885,6 +885,28 @@
 
 .st-summary li[data-skipped="true"] span { color: var(--st-ink-faint); }
 
+/* Hand-off: the badge lands, then the run passes to the session card. The
+   card opens over an opaque backdrop, so nothing flashes in between. */
+.st-handoff .st-done-badge {
+  animation: st-badge-land 420ms cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+}
+
+.st-handoff .st-done-title,
+.st-handoff .st-done-time {
+  animation: st-fade-in 320ms ease-out 120ms both;
+}
+
+@keyframes st-badge-land {
+  from { transform: scale(0.6); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .st-handoff .st-done-badge,
+  .st-handoff .st-done-title,
+  .st-handoff .st-done-time { animation: none; }
+}
+
 .st-done .st-actions {
   display: flex;
   flex-direction: column;
@@ -1129,8 +1151,8 @@ html[data-theme="light"] .st-mini[data-tone="open"] { --st-accent: #d4163a; }
 html[data-theme="light"] .st-mini[data-tone="rest"] { --st-accent: #0e9f53; }
 html[data-theme="light"] .st-mini[data-tone="warn"] { --st-accent: #c26b00; }
 
-/* Today action tray: the primary action, a segmented "Log as" control and a
-   quiet row of timer shortcuts, all inside the one existing tray surface. */
+/* Today action tray: the primary action, Finish session and a quiet row of
+   timer shortcuts, all inside the one existing tray surface. */
 .today-session-actions.today-action-tray {
   display: flex;
   flex-direction: column;
@@ -1138,63 +1160,13 @@ html[data-theme="light"] .st-mini[data-tone="warn"] { --st-accent: #c26b00; }
   padding: 10px;
 }
 
-.today-log-row {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.today-log-label {
-  flex: none;
-  font-size: var(--type-label-sm, 11px);
-  font-weight: 600;
-  letter-spacing: var(--tracking-label, 0.16em);
-  text-transform: uppercase;
-  color: var(--text-muted, #9aa1ac);
-}
-
-.today-log-group {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 2px;
-  padding: 3px;
-  border: 1px solid var(--border-default, #2a2f37);
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.025);
-}
-
-.today-log-group button {
+/* Finish session sits beside Resume as an equal secondary action. */
+.today-action-tray > .secondary-button,
+.today-action-tray > .cta {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  min-height: 40px;
-  padding: 0 8px;
-  border: 0;
-  border-radius: 9px;
-  background: transparent;
-  color: var(--text-secondary, #a7adb7);
-  font: inherit;
-  font-size: var(--type-body-sm, 13px);
-  font-weight: 600;
-  white-space: nowrap;
-  cursor: pointer;
-  transition: background 160ms ease, color 160ms ease;
-}
-
-.today-log-group button:hover {
-  background: rgba(255, 255, 255, 0.06);
-  color: var(--text-primary, #f5f7fa);
-}
-
-.today-log-group button[aria-pressed="true"] {
-  background: rgba(255, 255, 255, 0.1);
-  color: var(--text-primary, #f5f7fa);
-}
-
-.today-log-group button[data-value="done"]:hover .today-tool-icon,
-.today-log-group button[data-value="done"][aria-pressed="true"] .today-tool-icon {
-  color: var(--success-ink, #7de2a8);
+  gap: 8px;
 }
 
 /* Equal-width shortcuts on one line, however many there are. */
@@ -1284,19 +1256,9 @@ html[data-theme="light"] .st-mini[data-tone="warn"] { --st-accent: #c26b00; }
   color: var(--text-secondary, #a7adb7);
 }
 
-@media (max-width: 400px) {
-  .today-log-group button .today-tool-icon { display: none; }
-}
-
-html[data-theme="light"] .today-log-group,
 html[data-theme="light"] .today-tool-button {
   border-color: rgba(80, 81, 84, 0.14);
   background: rgba(255, 255, 255, 0.7);
-}
-
-html[data-theme="light"] .today-log-group button:hover,
-html[data-theme="light"] .today-log-group button[aria-pressed="true"] {
-  background: rgba(35, 36, 39, 0.07);
 }
 
 html[data-theme="light"] .today-action-tools {

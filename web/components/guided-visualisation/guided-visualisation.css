@@ -240,6 +240,30 @@
   color: var(--gv-ink-faint);
 }
 
+.gv-up-next {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--gv-ink-soft);
+}
+
+/* A quiet way past the optional run: never competes with Begin or Pause. */
+.gv-link {
+  min-height: 44px;
+  padding: 0 12px;
+  border: 0;
+  background: none;
+  color: var(--gv-ink-faint);
+  font: inherit;
+  font-size: 0.95rem;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
 .gv-done-actions {
   display: flex;
   flex-wrap: wrap;
