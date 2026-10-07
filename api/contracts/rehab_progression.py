@@ -203,7 +203,8 @@ def evaluate_transition(transition: PathwayTransition, *, policy: ClinicalPolicy
 
 def resolve_reviewed_progression(injury: Mapping[str, Any], *, base_stage: str,
                                 policy: ClinicalPolicy, exposures: Sequence[Mapping[str, Any]],
-                                history_truncated: bool = False, as_of: datetime | None = None) -> dict[str, Any]:
+                                history_truncated: bool = False, as_of: datetime | None = None,
+                                clinical_review_inputs: Mapping[str, ClinicalReviewInput] | None = None) -> dict[str, Any]:
     # Baseline: unchanged from the CALM/RESTORE-only engine.
     stage = base_stage if base_stage in {"calm", "restore"} else "calm"
     reasons = ["baseline_only_v1"]
@@ -219,7 +220,9 @@ def resolve_reviewed_progression(injury: Mapping[str, Any], *, base_stage: str,
     by_source = {t.from_stage: t for t in policy.transitions}
     while stage in by_source:
         evaluation = evaluate_transition(by_source[stage], policy=policy, injury=injury,
-                                         exposures=exposures, history_truncated=history_truncated, as_of=as_of)
+            exposures=exposures, history_truncated=history_truncated, as_of=as_of,
+            clinical_review_input=next((clinical_review_inputs[r.checkpoint] for r in by_source[stage].requirements
+                if r.checkpoint in (clinical_review_inputs or {})), None))
         if evaluation["status"] != "met" or not evaluation["target_stage_live"]:
             result["next_transition"] = evaluation
             break

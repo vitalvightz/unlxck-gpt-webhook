@@ -1,7 +1,7 @@
 """Shared immutable review contracts and compiled criterion bindings.
 
-These are internal contracts, not API requests. No production registry or trust
-channel is enabled. Authority must come from an independent server boundary.
+These are internal contracts, not API requests. The production registry remains
+empty. Authority comes from the separate service-only admin capture boundary.
 """
 from __future__ import annotations
 
@@ -198,6 +198,11 @@ class CriterionReviewRegistry:
     def get(self, criterion_id: str, version: int) -> CriterionReviewDefinition | None:
         return self._definitions.get((criterion_id, version))
 
+    def current(self, criterion_id: str) -> CriterionReviewDefinition | None:
+        """Highest compiled version for current capture; older versions remain replayable."""
+        return max((d for d in self._definitions.values() if d.criterion_id == criterion_id),
+                   key=lambda d: d.version, default=None)
+
     def parse(self, raw: Mapping | ClinicalProgressionReview) -> ClinicalProgressionReview:
         value = raw.model_dump(mode="python") if isinstance(raw, ClinicalProgressionReview) else raw
         definition = self.get(value.get("criterion_id"), value.get("criterion_version"))
@@ -221,6 +226,7 @@ class UnsupportedReviewTrust:
         return False
 
 
-# No real review payload, reviewed option or executable trust channel yet.
+# No production clinical criterion or reviewed option. Pure callers still default
+# to unsupported trust; only server-hydrated capture history supplies authority.
 CLINICAL_REVIEW_REGISTRY = CriterionReviewRegistry()
 UNSUPPORTED_REVIEW_TRUST = UnsupportedReviewTrust()

@@ -47,7 +47,7 @@ jobs:
       - name: Exercise real two-connection RPC and injury update races
         env:
           REHAB_TEST_DATABASE_URL: postgresql://postgres:rehab_test_only@127.0.0.1:5432/postgres
-        run: pytest tests/test_rehab_lock_concurrency.py -q
+        run: pytest tests/test_rehab_lock_concurrency.py tests/test_clinical_review_capture_postgres.py -q
 
   pytest:
     runs-on: ubuntu-latest

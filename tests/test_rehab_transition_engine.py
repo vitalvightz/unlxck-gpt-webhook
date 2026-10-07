@@ -242,7 +242,7 @@ def test_inconsistent_copied_response_group_is_unknown():
 
 def test_camp_phase_clearance_and_whole_athlete_signals_are_not_inputs():
     params = set(inspect.signature(resolve_reviewed_progression).parameters)
-    assert params == {"injury", "base_stage", "policy", "exposures", "history_truncated", "as_of"}
+    assert params == {"injury", "base_stage", "policy", "exposures", "history_truncated", "as_of", "clinical_review_inputs"}
     cleared = progress([], changes={"clinician_clearance": {"episode_id": EPISODE, "scopes": ["rehab", "training", "contact"]}})
     assert cleared["stage"] == "restore"
     # Baseline never starts above RESTORE, whatever the record claims.

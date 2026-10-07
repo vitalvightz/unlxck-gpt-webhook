@@ -584,9 +584,32 @@ def _with_injury_policy(injuries, *, store, athlete_id, phase="", current_checki
             exposures = list(window.rows)
             history_truncated = window.history_truncated
         exposures = exposure_rows_with_observations(exposures, observations)
+        # Only compiled criteria can request hydration. The production registry
+        # remains empty; no athlete payload or generic clearance grants review trust.
+        from api.contracts.clinical_progression_review import CLINICAL_REVIEW_REGISTRY
+        from api.contracts.rehab_assessment import assessment_identity
+        from api.services.clinical_review_capture_service import hydrate_review_input
+        review_inputs = {}
+        for policy in policies:
+            if (policy.region, policy.injury_type) != assessment_identity(injury):
+                continue
+            for transition in policy.transitions:
+                for requirement in transition.requirements:
+                    definition = CLINICAL_REVIEW_REGISTRY.current(requirement.checkpoint)
+                    if not definition or policy.policy_id not in definition.profile_ids:
+                        continue
+                    try:
+                        review_inputs[definition.criterion_id] = hydrate_review_input(
+                            store.get_clinical_review_capture_context(athlete_id, str(injury["id"]), str(injury["episode_id"])),
+                            criterion_id=definition.criterion_id, criterion_version=definition.version,
+                            as_of=as_of, registry=CLINICAL_REVIEW_REGISTRY, policies=policies, bank=bank)
+                    except (ValueError, HTTPException):
+                        # Unusable hydration cannot satisfy a clinical requirement.
+                        continue
         row["rehab_decision"] = resolve_injury_policy(row, policies=policies, bank=bank, phase=phase,
                                                      exposures=exposures, current_checkin=current_checkin, equipment=equipment,
-                                                     history_truncated=history_truncated, readiness_decision=readiness_decision, as_of=as_of)
+            history_truncated=history_truncated, readiness_decision=readiness_decision, as_of=as_of,
+            clinical_review_inputs=review_inputs)
         if training_day:
             row["rehab_decision"]["schedule"] = schedule_rehab(row, row["rehab_decision"], training_day=training_day,
                 completions=completions, exposures=exposures, readiness_decision=readiness_decision, training_session=training_session)
@@ -3119,6 +3142,13 @@ def _build_today_command_view(
         live["session"] = _entry_mapping_for_readiness(today_session_entry)
         live["safety_hold"] = True
         live["safety_hold_reason"] = "This session started before the current injury guidance. Stop and review your next session."
+    if live and frozen:
+        from api.services.clinical_review_freeze import frozen_review_hold
+        if frozen_review_hold(store, athlete_id, frozen,
+                work_state="started" if (today_completion or {}).get("status") == "started" else "unstarted",
+                as_of=assessment_as_of):
+            live["safety_hold"] = True
+            live["safety_hold_reason"] = "The clinical review for this saved work changed. Stop and review your next session."
     if live:
         for change in live.get("changes", []):
             if change.get("action") == "deferred":
