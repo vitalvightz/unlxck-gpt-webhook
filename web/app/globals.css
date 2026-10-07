@@ -17777,6 +17777,9 @@ html[data-theme="light"] .nutrition-log-row:first-child {
 
 .plan-dialog {
   width: min(100%, 460px);
+  max-height: calc(100dvh - 48px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
   display: grid;
   gap: 16px;
   padding: 22px;

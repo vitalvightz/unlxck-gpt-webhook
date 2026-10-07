@@ -12,6 +12,7 @@ import {
 import { createPortal } from "react-dom";
 
 import type { IntakeOption } from "@/lib/intake-options";
+import { lockOverlayScroll } from "@/lib/overlay-scroll-lock";
 
 type CustomSelectProps = {
   id: string;
@@ -65,6 +66,10 @@ export function CustomSelect({
     return () => mediaQuery.removeEventListener("change", sync);
   }, []);
 
+  useEffect(() => {
+    if (isMounted && isSheetMode) return lockOverlayScroll();
+  }, [isMounted, isSheetMode]);
+
   const optionList = includeEmptyOption
     ? [{ label: placeholder, value: "" }, ...options]
     : options;
@@ -117,7 +122,7 @@ export function CustomSelect({
     setIsOpen(false);
     if (!isMounted) {
       if (restoreFocus) {
-        triggerRef.current?.focus();
+        triggerRef.current?.focus({ preventScroll: true });
       }
       return;
     }
@@ -127,7 +132,7 @@ export function CustomSelect({
       setMenuPhase("closed");
       closeTimerRef.current = null;
       if (restoreFocus) {
-        triggerRef.current?.focus();
+        triggerRef.current?.focus({ preventScroll: true });
       }
     }, MENU_ANIMATION_MS);
   }, [clearCloseTimer, isMounted]);

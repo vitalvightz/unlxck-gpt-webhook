@@ -42,7 +42,7 @@ import {
   savedRoundFormat,
   type ContactTimerTarget,
 } from "@/lib/session-timer/contact";
-import { withLastLoad } from "@/lib/exercise-log";
+import { isLoggableBlock, withLastLoad } from "@/lib/exercise-log";
 import { timerExerciseLogs } from "@/lib/session-timer/logs";
 import { cleanText } from "@/lib/structured-plan";
 import { dayTimerItems, timerSessionFor, type TimerItem } from "@/lib/session-timer/plan";
@@ -347,12 +347,15 @@ export function TodaySessionPanel({
   onRefresh,
   athleteFullName,
   professionalStatus,
+  commandUnavailable = false,
 }: {
   state: TodayCommandView;
   /** From the athlete's profile: the guided visualisation says their first name. */
   athleteFullName?: string | null;
   /** "amateur" / "professional": picks the guided visualisation's crowd. */
   professionalStatus?: string | null;
+  /** Preserve drafts after a failed refresh; require fresh guidance for actions. */
+  commandUnavailable?: boolean;
   structuredPlan: StructuredPlan | null;
   /** Server-derived per-region Rehab/Prehab policy for the active plan. */
   rehabLabelPolicy?: RehabLabelPolicy | null;
@@ -397,6 +400,7 @@ export function TodaySessionPanel({
   const [reviewOpen, setReviewOpen] = useState(false);
   // Whether the open review was reached from the timer (its ticks came from it).
   const [reviewFromTimer, setReviewFromTimer] = useState(false);
+  const [timerHandoffPending, setTimerHandoffPending] = useState(false);
   const session = state.today.next_session;
   const status = state.today.completion_status;
   const duration = getSessionDuration(session);
@@ -706,6 +710,14 @@ export function TodaySessionPanel({
       notes?: string;
     } = {},
   ): Promise<boolean> {
+    if (timerHandoffPending) {
+      showToast("Save the timer results before completing this session.", { tone: "error" });
+      return false;
+    }
+    if (commandUnavailable) {
+      showToast("Refresh Today before saving this session.", { tone: "error" });
+      return false;
+    }
     if (!state.active_plan.id || !session.session_id || isSubmitting) {
       return false;
     }
@@ -778,6 +790,10 @@ export function TodaySessionPanel({
   }
 
   function openTimer(source: TimerSource) {
+    if (commandUnavailable) {
+      showToast("Refresh Today before opening a training timer.", { tone: "error" });
+      return;
+    }
     // The round timer is up: it keeps the screen until it closes.
     if (roundTimer.shown) return;
     // Audio only unlocks inside the tap itself.
@@ -969,7 +985,28 @@ export function TodaySessionPanel({
           clearSavedRun(storageKey);
           setActiveTimer(null);
         }}
-        onFinish={(summary: SessionTimerSummary) => {
+        onFinish={async (summary: SessionTimerSummary) => {
+          if (source === "session") {
+            setTimerHandoffPending(true);
+            // Keep the finished run and timer until the atomic batch succeeds.
+            // A failure stays on the timer with Retry save; no re-ticking.
+            if (!exerciseLogging?.saveMany) {
+              throw new Error("Exercise logging is unavailable. Refresh Today and retry saving this run.");
+            }
+            const entries = timerExerciseLogs(summary.run, exerciseLogging.logs).filter((entry) => {
+              // Also check the current block: a resumed older run may carry
+              // metadata from before the live rehab prescription changed.
+              const block = dayBlocksById.get(entry.block_id);
+              return !block || isLoggableBlock(block);
+            }).map((entry) => {
+              const block = dayBlocksById.get(entry.block_id);
+              return block ? { ...entry, ...withLastLoad(block, entry, exerciseLogging.recentLoads) } : entry;
+            });
+            if (entries.length > 0) {
+              await exerciseLogging.saveMany(entries, { keepExisting: true });
+            }
+            setTimerHandoffPending(false);
+          }
           clearSavedRun(storageKey);
           setActiveTimer(null);
           // Any sparring rounds actually done get the quick sparring log.
@@ -990,24 +1027,6 @@ export function TodaySessionPanel({
             });
           }
           if (source === "session") {
-            // What the timer counted becomes each exercise's log, then the
-            // athlete lands on the session's one card to check and save it.
-            // Last time's weight rides along, and the server keeps any log the
-            // athlete already entered by hand.
-            const entries = exerciseLogging
-              ? timerExerciseLogs(summary.run, exerciseLogging.logs).map((entry) => {
-                  const block = dayBlocksById.get(entry.block_id);
-                  return block ? { ...entry, ...withLastLoad(block, entry, exerciseLogging.recentLoads) } : entry;
-                })
-              : [];
-            if (entries.length > 0 && exerciseLogging?.saveMany) {
-              void exerciseLogging.saveMany(entries, { keepExisting: true }).catch((error: unknown) => {
-                showToast(
-                  error instanceof Error ? error.message : "The timer's sets could not be saved. Tick them on the card.",
-                  { tone: "error" },
-                );
-              });
-            }
             openReview(true);
             return;
           }
@@ -1261,11 +1280,11 @@ export function TodaySessionPanel({
           <button
             type="button"
             className={canResume ? "secondary-button" : "cta"}
-            onClick={() => openReview(false)}
+            onClick={() => timerHandoffPending ? openTimer("session") : openReview(false)}
             disabled={isSubmitting}
           >
             <ToolIcon name="check" />
-            Finish session
+            {timerHandoffPending ? "Save timer results" : "Finish session"}
           </button>
           {timerTools(
             <button

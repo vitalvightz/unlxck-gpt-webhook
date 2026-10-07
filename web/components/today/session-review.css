@@ -5,10 +5,13 @@
 .today-review-root {
   position: fixed;
   inset: 0;
+  height: 100dvh;
+  box-sizing: border-box;
   z-index: 150;
   overflow-y: auto;
+  overflow-x: hidden;
   overscroll-behavior: contain;
-  background: var(--bg-app);
+  background: var(--bg-app, #0a0a0b);
   color: var(--text-primary);
 }
 

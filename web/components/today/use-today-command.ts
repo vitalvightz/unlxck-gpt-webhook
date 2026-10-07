@@ -91,6 +91,7 @@ export function useTodayCommand(token: string | null): TodayCommand {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const refreshSequence = useRef(0);
+  const loadedPlanId = useRef<string | null>(null);
 
   const refresh = useCallback(async () => {
     if (!token) {
@@ -106,42 +107,58 @@ export function useTodayCommand(token: string | null): TodayCommand {
       if (sequence !== refreshSequence.current) return;
       const activePlanId = nextState.active_plan.id;
       rememberActivePlanId(token, activePlanId);
-      let nextStructuredPlan: StructuredPlan | null = null;
-      let nextPlanSchedule = EMPTY_PLAN_SCHEDULE;
-      let nextRehabLabelPolicy: RehabLabelPolicy | null = null;
-      let nextExerciseMedia: Record<string, ExerciseMedia> | null = null;
-
-      if (activePlanId) {
-        // Read-only and presentation-only: the plan supplies the blocks, the
-        // schedule context and the rehab labels Today renders. Which session is
-        // today is settled by the backend in `nextState` and is never
-        // recomputed from this plan — see today_service.build_today_command_view.
-        try {
-          const speculativeDetail =
-            speculativePlan && guessedPlanId === activePlanId ? await speculativePlan : null;
-          const detail = speculativeDetail ?? (await getPlan(token, activePlanId));
-          nextStructuredPlan = resolveTodayStructuredPlan(detail);
-          nextPlanSchedule = {
-            scheduleContext: detail?.schedule_context ?? null,
-            createdAt: detail?.created_at ?? null,
-          };
-          nextRehabLabelPolicy = detail?.rehab_label_policy ?? null;
-          nextExerciseMedia = detail?.outputs?.exercise_media ?? null;
-        } catch {
-          // Today still works from the command view alone.
-        }
-      }
-
-      if (sequence !== refreshSequence.current) return;
-      setStructuredPlan(nextStructuredPlan);
-      setPlanSchedule(nextPlanSchedule);
-      setRehabLabelPolicy(nextRehabLabelPolicy);
-      setExerciseMedia(nextExerciseMedia);
+      // Readiness and save acknowledgement must not wait for presentation data.
+      // Keep the current blocks during a same-plan refresh; the server's live
+      // prescription in nextState remains authoritative for training actions.
       setState(nextState);
       setError(null);
-      // Every successful Today write calls this refresh. Re-read the XP progress
-      // immediately so session/check-in/injury rewards do not wait for polling.
       requestXpRefresh();
+      if (loadedPlanId.current !== activePlanId) {
+        setStructuredPlan(null);
+        setPlanSchedule(EMPTY_PLAN_SCHEDULE);
+        setRehabLabelPolicy(null);
+        setExerciseMedia(null);
+      }
+      loadedPlanId.current = activePlanId ?? null;
+      void (async () => {
+        let nextStructuredPlan: StructuredPlan | null = null;
+        let nextPlanSchedule = EMPTY_PLAN_SCHEDULE;
+        let nextRehabLabelPolicy: RehabLabelPolicy | null = null;
+        let nextExerciseMedia: Record<string, ExerciseMedia> | null = null;
+
+        if (activePlanId) {
+          // Read-only and presentation-only: the plan supplies the blocks, the
+          // schedule context and the rehab labels Today renders. Which session is
+          // today is settled by the backend in `nextState` and is never
+          // recomputed from this plan — see today_service.build_today_command_view.
+          try {
+            const speculativeDetail =
+              speculativePlan && guessedPlanId === activePlanId ? await speculativePlan : null;
+            // A failed speculative read is already a failed plan read. Do not
+            // retry it serially and stretch every save by another retry budget.
+            const detail = speculativePlan && guessedPlanId === activePlanId
+              ? speculativeDetail
+              : await getPlan(token, activePlanId);
+            if (!detail) return;
+            nextStructuredPlan = resolveTodayStructuredPlan(detail);
+            nextPlanSchedule = {
+              scheduleContext: detail?.schedule_context ?? null,
+              createdAt: detail?.created_at ?? null,
+            };
+            nextRehabLabelPolicy = detail?.rehab_label_policy ?? null;
+            nextExerciseMedia = detail?.outputs?.exercise_media ?? null;
+          } catch {
+            // Preserve the last good same-plan blocks on a transient read failure.
+            return;
+          }
+        }
+
+        if (sequence !== refreshSequence.current) return;
+        setStructuredPlan(nextStructuredPlan);
+        setPlanSchedule(nextPlanSchedule);
+        setRehabLabelPolicy(nextRehabLabelPolicy);
+        setExerciseMedia(nextExerciseMedia);
+      })();
     } catch (loadError) {
       if (sequence !== refreshSequence.current) return;
       setError(loadError instanceof Error ? loadError.message : "Today failed to load.");
@@ -152,8 +169,9 @@ export function useTodayCommand(token: string | null): TodayCommand {
 
   useEffect(() => {
     const sequenceCounter = refreshSequence;
-    void refresh();
-    return () => { sequenceCounter.current++; };
+    let cancelled = false;
+    void Promise.resolve().then(() => { if (!cancelled) void refresh(); });
+    return () => { cancelled = true; sequenceCounter.current++; };
   }, [refresh]);
 
   return {

@@ -34,3 +34,37 @@ test("an older Today response cannot overwrite a refresh after an injury update"
     globalThis.fetch = originalFetch;
   }
 });
+
+test("Today publishes and refresh resolves before a slow plan read; older plan reads cannot overwrite it", async () => {
+  const originalFetch = globalThis.fetch;
+  const reads: Array<{ url: string; resolve: (response: Response) => void }> = [];
+  globalThis.fetch = ((url: string) => new Promise<Response>(resolve => reads.push({ url: String(url), resolve }))) as typeof fetch;
+  const root = createRoot(document.createElement("div"));
+  let current: TodayCommand;
+  function Probe() { current = useTodayCommand("slow-plan-token"); return null; }
+  const json = (value: unknown) => new Response(JSON.stringify(value), {status: 200});
+  const today = (reason: string) => json({ active_plan: { id: "plan-1" }, today: {
+    training_day: "2026-10-07", recommendation_reason: reason,
+  }, open_injuries: [], risk_watch: [] });
+  try {
+    await act(async () => { root.render(<Probe />); });
+    await act(async () => { reads[0].resolve(today("Initial")); });
+    assert.equal(current!.isLoading, false);
+    assert.equal(current!.state?.today.recommendation_reason, "Initial");
+    assert.equal(reads.length, 2); // The initial plan read is still pending.
+    let refresh: Promise<void>;
+    await act(async () => { refresh = current!.refresh(); });
+    const newToday = reads.findLast(read => read.url.endsWith("/api/today"))!;
+    await act(async () => { newToday.resolve(today("Fresh restriction")); await refresh!; });
+    assert.equal(current!.state?.today.recommendation_reason, "Fresh restriction");
+    const plans = reads.filter(read => read.url.includes("/plans/"));
+    assert.equal(plans.length, 2);
+    await act(async () => { plans[1].resolve(json({ outputs: {}, created_at: "new" })); });
+    assert.equal(current!.planSchedule.createdAt, "new");
+    await act(async () => { plans[0].resolve(json({ outputs: {}, created_at: "old" })); });
+    assert.equal(current!.planSchedule.createdAt, "new");
+  } finally {
+    await act(async () => { root.unmount(); });
+    globalThis.fetch = originalFetch;
+  }
+});

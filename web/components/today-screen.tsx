@@ -168,7 +168,7 @@ export function TodayScreen() {
   if (isLoading) {
     return <TodayLoadingState />;
   }
-  if (error) {
+  if (error && (!state || /unauthorized|forbidden|not authenticated/i.test(error))) {
     const isAccessIssue = /unauthorized|forbidden|not authenticated/i.test(error);
     return (
       <section className="panel today-shell today-error-state">
@@ -238,12 +238,19 @@ export function TodayScreen() {
       token={token ?? ""}
       onRefresh={refresh}
       athleteFullName={me?.profile.full_name}
+      commandUnavailable={Boolean(error)}
       professionalStatus={me?.profile.professional_status}
     />
   );
 
   return (
     <div className="today-page">
+      {error ? (
+        <section className="panel" role="alert">
+          <p>Today could not refresh. Your entries are still here. Refresh before starting or saving a session.</p>
+          <button type="button" className="secondary-button" onClick={() => void refresh()}>Retry Today</button>
+        </section>
+      ) : null}
       <section className={`panel today-shell ${styles.command}`}>
         <div className="today-hero-grid">
           <div className="today-hero-copy">
