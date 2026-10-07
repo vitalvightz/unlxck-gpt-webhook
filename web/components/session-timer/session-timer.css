@@ -1279,9 +1279,10 @@ html[data-theme="light"] .st-mini[data-tone="warn"] { --st-accent: #c26b00; }
 
 /* Equal-width shortcuts on one line, however many there are. */
 .today-action-tools {
-  display: grid;
-  grid-auto-flow: column;
-  grid-auto-columns: minmax(0, 1fr);
+  /* Flex-wrap, not equal grid columns: nowrap labels would otherwise spill
+     past their pill and collide with the neighbour on narrow screens. */
+  display: flex;
+  flex-wrap: wrap;
   gap: 8px;
   padding-top: 10px;
   border-top: 1px solid rgba(255, 255, 255, 0.06);
@@ -1294,8 +1295,8 @@ html[data-theme="light"] .st-mini[data-tone="warn"] { --st-accent: #c26b00; }
 
 .today-action-tools .today-tool-button,
 .today-action-tools .today-tool-lock {
+  flex: 1 1 auto;
   justify-content: center;
-  width: 100%;
 }
 
 .today-action-footer {
