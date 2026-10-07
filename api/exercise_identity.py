@@ -299,3 +299,114 @@ def reconcile_exercise_keys(structured_plan: Any, planning_brief: Any) -> Any:
                     block["exercise_key"] = key
                     changed = True
     return repaired if changed else structured_plan
+
+
+# ---------------------------------------------------------------------------
+# Server-owned names
+#
+# The model decides wording, but a block the server has tied to a planner
+# exercise by ``exercise_key`` is that exercise: its name is the planner's, not
+# whatever the converter wrote ("Lower-body power", "3 x 2 min easy rounds").
+# Names follow keys only; nothing is renamed on a fuzzy title match.
+# ---------------------------------------------------------------------------
+
+_SERVER_BUILT_ID_PREFIXES = ("locked-", "deterministic-")
+
+
+def _canonical_day_identity(
+    day_roles: list[dict[str, Any]],
+) -> tuple[dict[str, str], dict[str, dict[str, Any]]]:
+    """(key -> canonical name, key -> owning role) for one day's planner roles.
+
+    A key two roles name differently is ambiguous and left out, so a block is
+    only renamed when the day gives exactly one answer.
+    """
+    names: dict[str, str] = {}
+    owners: dict[str, dict[str, Any]] = {}
+    ambiguous: set[str] = set()
+    for role in day_roles:
+        entries: list[tuple[str, str]] = []
+        for assignment in _as_list(role.get("selected_exercise_assignments")):
+            if not isinstance(assignment, Mapping):
+                continue
+            name = str(assignment.get("name") or "").strip()
+            key = normalize_exercise_key(assignment.get("exercise_key")) or normalize_exercise_key(name)
+            if name and key:
+                entries.append((key, name))
+        insert = _support_insert(role)
+        label = str(role.get("athlete_facing_label") or "").strip()
+        if insert is not None and label:
+            entries.append((normalize_exercise_key(role.get("exercise_key")) or insert[1], label))
+        for key, name in entries:
+            if key in names and (names[key] != name or owners[key] is not role):
+                ambiguous.add(key)
+            names.setdefault(key, name)
+            owners.setdefault(key, role)
+    for key in ambiguous:
+        names.pop(key, None)
+        owners.pop(key, None)
+    return names, owners
+
+
+def reconcile_canonical_names(structured_plan: Any, planning_brief: Any) -> Any:
+    """Give every planner-keyed block its canonical name, and its session the role's label.
+
+    * A converter block carrying a planner ``exercise_key`` takes the planner's
+      name for that exercise, unless its name already contains it as one part
+      ("Speed microdose - Reactive Start Burst" keeps its label).
+    * A converter session whose keyed blocks all belong to one planner role on
+      that day takes the role's athlete-facing label as its title.
+
+    Server-built sessions and blocks (``locked-`` / ``deterministic-`` ids) are
+    already canonical and are left alone. Returns the input unchanged when
+    nothing changes, else a deep copy. Never raises.
+    """
+    try:
+        return _reconcile_canonical_names(structured_plan, planning_brief)
+    except Exception:  # naming is presentation; never block the card on it
+        return structured_plan
+
+
+def _reconcile_canonical_names(structured_plan: Any, planning_brief: Any) -> Any:
+    if not isinstance(structured_plan, dict) or not isinstance(planning_brief, Mapping):
+        return structured_plan
+    day_roles_for = _day_roles_lookup(planning_brief)
+    renamed = copy.deepcopy(structured_plan)
+    changed = False
+    for week in _as_list(renamed.get("weeks")):
+        if not isinstance(week, dict):
+            continue
+        for day in _as_list(week.get("days")):
+            if not isinstance(day, dict):
+                continue
+            day_roles, _ = day_roles_for(day)
+            if not day_roles:
+                continue
+            names, owners = _canonical_day_identity(day_roles)
+            if not names:
+                continue
+            for session in _as_list(day.get("sessions")):
+                if not isinstance(session, dict) or str(session.get("session_id") or "").startswith(
+                    _SERVER_BUILT_ID_PREFIXES
+                ):
+                    continue
+                session_roles: list[dict[str, Any]] = []
+                for block in _as_list(session.get("blocks")):
+                    if not isinstance(block, dict) or not _is_physical(block):
+                        continue
+                    key = normalize_exercise_key(block.get("exercise_key"))
+                    if not key or key not in names:
+                        continue
+                    if not any(role is owners[key] for role in session_roles):
+                        session_roles.append(owners[key])
+                    if str(block.get("block_id") or "").startswith(_SERVER_BUILT_ID_PREFIXES):
+                        continue
+                    if key not in _name_forms(block.get("display_name")):
+                        block["display_name"] = names[key]
+                        changed = True
+                if len(session_roles) == 1:
+                    label = str(session_roles[0].get("athlete_facing_label") or "").strip()
+                    if label and session.get("title") != label:
+                        session["title"] = label
+                        changed = True
+    return renamed if changed else structured_plan

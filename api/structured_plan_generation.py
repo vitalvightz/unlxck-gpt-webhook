@@ -51,7 +51,11 @@ from .structured_plan_faithfulness import (
 from .structured_plan_locked_merge import merge_planner_owned_structured_content
 from .minor_safety import MINOR_WEIGHT_CUT_NOTE
 from .services.exercise_media import strip_dose_suffix
-from .exercise_identity import block_exercise_key_for_name, reconcile_exercise_keys
+from .exercise_identity import (
+    block_exercise_key_for_name,
+    reconcile_canonical_names,
+    reconcile_exercise_keys,
+)
 from .structured_plan_safety import (
     athlete_safe_support,
     audit_structured_plan,
@@ -3247,6 +3251,11 @@ def build_structured_plan_outcome(
         # locked merge and any salvage pruning, so its day membership is final:
         # order each day's sessions and each session's blocks for execution.
         plan_dict = regroup_split_sessions(plan_dict, raw_markdown)
+        # Identity is the planner's: a block tied to a Stage 1 exercise by its
+        # server-stamped key takes that exercise's name, and its session the
+        # role's label. After faithfulness (which judges what the model wrote)
+        # and regrouping (which matches the model's names to the text).
+        plan_dict = reconcile_canonical_names(plan_dict, planning_brief)
         plan_dict = sequence_structured_plan(plan_dict, planning_brief)
         # Hard invariant for every candidate that can ship (first pass,
         # schema-salvaged, faithfulness-pruned or model-repaired): conversion
