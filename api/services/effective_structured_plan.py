@@ -10,6 +10,7 @@ from collections.abc import Sequence
 from datetime import date
 from typing import Any
 
+from api.structured_block_identity import ensure_structured_block_ids
 from api.structured_plan_deterministic_fallback import build_deterministic_structured_plan
 from api.structured_plan_models import safe_parse_structured_plan
 
@@ -172,12 +173,15 @@ def resolve_effective_structured_plan(
 
     Missing and malformed inputs fail closed. In particular, this resolver does
     not derive a calendar from broad recurring metadata. Every session in the
-    returned card carries a ``session_id`` (see ensure_structured_session_ids).
+    returned card carries a ``session_id`` (see ensure_structured_session_ids),
+    and every non-rehab block a ``block_id`` unique within its day (see
+    ensure_structured_block_ids), which is what exercise logs key on.
     """
     resolved = _resolve_effective_structured_plan(plan_row, raw_markdown=raw_markdown)
     if resolved is None:
         return None
-    return ensure_structured_session_ids(resolved, plan_id=plan_row.get("id"))
+    resolved = ensure_structured_session_ids(resolved, plan_id=plan_row.get("id"))
+    return ensure_structured_block_ids(resolved)
 
 
 def _resolve_effective_structured_plan(
