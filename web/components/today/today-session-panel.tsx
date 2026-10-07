@@ -890,7 +890,10 @@ export function TodaySessionPanel({
     // Leading the tray already, the guided run needs no second button.
     const showGuided =
       Boolean(guidedVisualisation) && !(guidedLeads && (status === "not_started" || status === "started"));
-    const tools = !anyTimerShown && !guidedOpen && (showContact || freeTimerAvailable || showGuided);
+    // A cleared sparring day already offers a round timer loaded with the plan;
+    // a blank one beside it reads as a duplicate.
+    const showFreeTimer = freeTimerAvailable && !contactTimerAvailable;
+    const tools = !anyTimerShown && !guidedOpen && (showContact || showFreeTimer || showGuided);
     if (!tools && !trailing) {
       return null;
     }
@@ -931,10 +934,10 @@ export function TodaySessionPanel({
             Guided visualisation
           </button>
         ) : null}
-        {tools && freeTimerAvailable ? (
+        {tools && showFreeTimer ? (
           <button type="button" className="today-tool-button" onClick={roundTimer.open}>
             <ToolIcon name="timer" />
-            Round timer
+            Free timer
           </button>
         ) : null}
       </div>
