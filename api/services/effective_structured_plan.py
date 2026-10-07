@@ -102,8 +102,8 @@ def _needs_session_ids(plan: Mapping[str, Any]) -> bool:
 
 
 def ensure_structured_session_ids(
-    plan: Mapping[str, Any], *, plan_id: Any = None
-) -> dict[str, Any]:
+    plan: Any, *, plan_id: Any = None
+) -> Any:
     """Give every structured session a stable id, deriving the missing ones.
 
     Completion, the session timer, streaks and week progress all key on
@@ -117,6 +117,8 @@ def ensure_structured_session_ids(
     sessions from colliding with the old plan's completion rows on the same day.
     Existing ids are never changed. The input is not mutated.
     """
+    if not isinstance(plan, Mapping):
+        return plan
     if not _needs_session_ids(plan):
         return dict(plan)
     # Copy only the week -> day -> session path being written; blocks and every

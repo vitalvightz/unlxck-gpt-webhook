@@ -807,6 +807,18 @@ test("primary session skips support work that leads the day in execution order",
   assert.equal(primarySessionOf(supportOnly)?.title, "Joint Prep");
 });
 
+test("optional visualisation never owns a required support day's completion", () => {
+  const optional = { title: "Fight Visualisation", session_id: "optional", optional: true,
+    blocks: [{ block_type: "mindset" }] };
+  const required = { title: "Breathing Reset", session_id: "required",
+    blocks: [{ block_type: "cooldown_recovery" }] };
+  const day = { date: "2026-10-07", sessions: [optional, required] };
+  assert.equal(primarySessionOf(day)?.session_id, "required");
+  const index = buildCompletionIndex([completionRow({ session_id: "required", training_day: day.date })]);
+  assert.equal(completionForSession(index, day, primarySessionOf(day))?.status, "done");
+  assert.equal(primarySessionOf({ ...day, sessions: [optional] }), null);
+});
+
 test("primary session is the first session with executable blocks", () => {
   const day = {
     date: "2026-06-20",

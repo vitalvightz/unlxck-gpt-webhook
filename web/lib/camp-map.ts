@@ -591,7 +591,7 @@ function isSupportSession(session: StructuredSession): boolean {
 export function primarySessionOf(
   day: StructuredDay | null | undefined,
 ): StructuredSession | null {
-  const sessions = getSessions(day);
+  const sessions = getSessions(day).filter((session) => session.optional !== true);
   if (sessions.length === 0) {
     return null;
   }

@@ -210,6 +210,43 @@ def _idless_sparring_day_calendar() -> dict:
     return plan
 
 
+@pytest.mark.parametrize("completion_status", ["done", "modified", "skipped", "started"])
+def test_frozen_day_log_advances_to_structured_next_target(completion_status):
+    """An accepted prescription must not resume after the day is logged."""
+    stored = _production_calendar()
+    day = stored["weeks"][0]["days"][1]
+    main = day["sessions"][0]
+    optional = copy.deepcopy(main)
+    optional.update(session_id="optional-visualisation", title="Fight Visualisation", optional=True)
+    day["sessions"].insert(0, optional)
+    store = FakeStore()
+    store.plans[PLAN] = {"id": PLAN, "athlete_id": ATHLETE, "status": "ready",
+                         "fight_date": "2026-10-22", "created_at": "2026-09-14T08:00:00+00:00",
+                         "structured_plan": stored}
+    store.set_active_plan_id(ATHLETE, PLAN)
+    snapshot = {"plan_id": PLAN, "training_day": day["date"], "revision": "accepted",
+                "session": {**copy.deepcopy(main), "calendar_date": day["date"]},
+                "injury_ids": [], "injury_context": [], "changes": [], "safety_hold": False}
+    store.upsert_session_completion(ATHLETE, {
+        "plan_id": PLAN, "session_id": main["session_id"], "training_day": day["date"],
+        "status": completion_status, "started_at": "2026-09-15T10:00:00+00:00",
+        "completed_at": None if completion_status == "started" else "2026-09-15T11:00:00+00:00",
+        "prescription_snapshot": snapshot,
+    })
+    view = build_today_command_view(store, athlete_id=ATHLETE, athlete_timezone="UTC",
+                                    now=datetime(2026, 9, 15, 12, tzinfo=timezone.utc))
+    assert view.today.completion_status == completion_status
+    if completion_status == "started":
+        assert view.today.session_scope == "today"
+        assert view.today.next_session["session_id"] == main["session_id"]
+        assert view.live_prescription is not None
+    else:
+        assert view.today.session_scope == "next"
+        assert view.today.next_session["calendar_date"] == "2026-09-21"
+        assert view.live_prescription is None
+    assert store.get_session_completion(ATHLETE, "optional-visualisation", day["date"]) is None
+
+
 def test_idless_sessions_get_stable_plan_scoped_ids_without_mutating_the_card():
     from api.services.effective_structured_plan import ensure_structured_session_ids
 

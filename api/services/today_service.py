@@ -2972,6 +2972,10 @@ def _build_today_command_view(
         if today_completion_id
         else today_completion
     )
+    # The logged day owner is resolved above, after the next-session scan.
+    # Recompute before reading its frozen prescription: a completed occurrence
+    # must not resume and replace the next target with the raw weekly fallback.
+    today_is_complete = completion_status_of(today_completion) in TERMINAL_COMPLETION_STATUSES
 
     structured_phase = _structured_phase_for_day(plan_row, training_day)
     resolved_plan = _plan_with_resolved_phase(
