@@ -439,7 +439,7 @@ export function lastLoadFor(
   const name = cleanText(block.display_name)?.toLowerCase() ?? "";
   const match =
     (key ? recentLoads.find((item) => item.exercise_key === key) : undefined) ??
-    (name ? recentLoads.find((item) => item.display_name.trim().toLowerCase() === name) : undefined);
+    (name ? recentLoads.find((item) => !item.exercise_key && item.display_name.trim().toLowerCase() === name) : undefined);
   if (!match || match.load.unit !== field.apiUnit || !finitePositiveNumber(match.load.value)) return null;
   return { value: match.load.value, unit: match.load.unit };
 }
@@ -449,7 +449,10 @@ export function withLastLoad<T extends Omit<ExerciseLogRequest, "plan_id" | "blo
   block: StructuredBlock,
   request: T,
   recentLoads: readonly ExerciseRecentLoad[] | undefined,
+  history?: readonly ExerciseLogRecord[],
 ): T {
+  const previous = lastPerformanceFor(block, history);
+  if (previous?.status === "skipped" || previous?.reason === "pain") return request;
   if (request.status === "skipped" || request.actual?.load) return request;
   const load = lastLoadFor(block, recentLoads);
   return load ? { ...request, actual: { ...(request.actual ?? {}), load } } : request;
@@ -479,4 +482,71 @@ export function plannedSessionRpe(sessions: readonly StructuredSession[]): numbe
   const median = values.length % 2 ? values[Math.floor(middle)] : (values[middle - 1] + values[middle]) / 2;
   // The session effort scale stops at 9 (Max Effort).
   return Math.min(9, Math.round(median));
+}
+
+/** A planner key is authoritative; names only match legacy records without keys. */
+export function lastPerformanceFor(block: StructuredBlock, history?: readonly ExerciseLogRecord[]): ExerciseLogRecord | null {
+  const key = cleanText(block.exercise_key);
+  const name = cleanText(block.display_name)?.toLowerCase();
+  return history?.find((row) => key && row.exercise_key
+    ? row.exercise_key === key
+    : !row.exercise_key && name && String(row.prescribed.display_name ?? "").trim().toLowerCase() === name) ?? null;
+}
+
+export function performanceSummary(log: ExerciseLogRecord): string {
+  if (log.status === "skipped") return "Skipped";
+  const block: StructuredBlock = {
+    ...log.prescribed,
+    ...Object.fromEntries((["load", "duration", "work", "distance"] as const)
+      .flatMap((key) => log.actual[key] ? [[key, log.actual[key]]] : [])),
+  };
+  const actual = { ...log.actual };
+  // Blank actual fields mean the saved prescription was followed, not today's dose.
+  for (const key of ["sets", "reps", "rounds"] as const) {
+    if (actual[key] == null && typeof block[key] === "number") actual[key] = block[key] as number;
+  }
+  const fields = logFieldsForBlock(block);
+  const values = loggedValues(fields, { ...log, actual });
+  const sets = fields.find((field) => field.key === "sets");
+  const reps = fields.find((field) => field.key === "reps");
+  const count = (field: LogField | undefined) => {
+    if (!field) return null;
+    const value = actualNumber(actual, field.key);
+    return value !== null ? formatNumber(value) : field.prescribed ? formatPrescribed(field) : null;
+  };
+  const setCount = count(sets);
+  const repCount = count(reps);
+  const compactDose = setCount !== null && repCount !== null ? `${setCount} × ${repCount}` : null;
+  const parts = [...fields].sort((a, b) => (a.key === "load" ? -1 : b.key === "load" ? 1 : 0)).flatMap((field) => {
+    if (compactDose && field.key === "sets") return [compactDose];
+    if (compactDose && field.key === "reps") return [];
+    const recorded = values.find((value) => value.key === field.key);
+    if (recorded) return [recorded.text];
+    if (field.key === "effort" || !field.prescribed) return [];
+    return [`${formatPrescribed(field)}${field.unit ? ` ${field.unit}` : ` ${field.label.toLowerCase()}`}`];
+  });
+  return parts.join(" · ") || EXERCISE_LOG_STATUS_LABELS[log.status];
+}
+
+/** Only a literal, supported progression rule can propose an increase. */
+export function progressionLoadFor(block: StructuredBlock, log: ExerciseLogRecord | null, allowed: boolean): ExerciseLogMeasure | null {
+  if (!allowed || !log || log.status === "skipped" || (log.reason != null && log.reason !== "felt_strong") || logFieldsForBlock(block).find((field) => field.key === "load")?.prescribed) return null;
+  const field = logFieldsForBlock(block).find((item) => item.key === "load");
+  const load = log.actual.load;
+  const effort = log.actual.effort;
+  const rule = cleanText(block.progression_rule);
+  const match = rule?.match(/^(?:add|increase(?: load)? by)\s+(\d+(?:\.\d+)?)\s*(kg|lb)\s+when all (?:sets|reps)(?: (?:are )?complete(?:d)?)?[.!]?$/i);
+  if (!field || !load || load.unit !== field.apiUnit || !finitePositiveNumber(load.value) || !match || load.unit !== match[2].toLowerCase()
+      || !effort || effort.method !== "RPE" || effort.value > 7
+      || block.effort?.method !== "RPE" || typeof block.effort.value !== "number" || effort.value > block.effort.value) return null;
+  for (const key of ["sets", "reps"] as const) {
+    const planned = log.prescribed[key];
+    const current = block[key];
+    const done = log.actual[key] ?? planned;
+    if (typeof planned !== "number" || typeof done !== "number" || typeof current !== "number"
+        || done < planned || current !== planned) return null;
+  }
+  const increment = Number(match[1]);
+  if (!(increment > 0 && increment <= load.value * 0.05)) return null;
+  return { value: Math.round((load.value + increment) * 100) / 100, unit: load.unit };
 }

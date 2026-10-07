@@ -1280,11 +1280,14 @@ export type ExerciseRecentLoad = {
   training_day: string;
 };
 
+export type ExerciseHistoryResponse = { logs: ExerciseLogRecord[]; next_offset: number | null };
+
 export type ExerciseLogListResponse = {
   training_day: string;
   logs: ExerciseLogRecord[];
   /** The latest weight per exercise from earlier days, to carry forward. */
   recent_loads: ExerciseRecentLoad[];
+  recent_performances: ExerciseLogRecord[];
 };
 
 export type TodaySessionCompletionRequest = {

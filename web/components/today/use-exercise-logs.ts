@@ -17,6 +17,7 @@ export function useTodayExerciseLogs({
   trainingDay,
   enabled,
   painReasonAllowed,
+  allowProgression = false,
   onError,
 }: {
   token: string;
@@ -26,14 +27,16 @@ export function useTodayExerciseLogs({
   /** The server only accepts a log for a session started or completed today. */
   enabled: boolean;
   painReasonAllowed: boolean;
+  allowProgression?: boolean;
   /** Reports a failed one-tap save from a collapsed row. */
   onError?: (message: string) => void;
 }): ExerciseLogging | null {
-  const scope = `${planId}:${trainingDay}`;
+  const scope = `${token}:${planId}:${trainingDay}`;
   const [loaded, setLoaded] = useState<{
     scope: string;
     logs: Record<string, ExerciseLogRecord>;
     recentLoads?: ExerciseRecentLoad[];
+    recentPerformances?: ExerciseLogRecord[];
   }>({
     scope,
     logs: {},
@@ -54,6 +57,7 @@ export function useTodayExerciseLogs({
           scope,
           logs: current.scope === scope ? { ...fetched, ...current.logs } : fetched,
           recentLoads: response.recent_loads ?? [],
+          recentPerformances: response.recent_performances ?? [],
         }));
       })
       .catch((error: unknown) => {
@@ -71,7 +75,7 @@ export function useTodayExerciseLogs({
     async (request) => {
       const response = await submitExerciseLog(token, { plan_id: planId, ...request });
       setLoaded((current) => ({
-        ...current,
+        ...(current.scope === scope ? current : {}),
         scope,
         logs: { ...(current.scope === scope ? current.logs : {}), [response.log.block_id]: response.log },
       }));
@@ -89,7 +93,7 @@ export function useTodayExerciseLogs({
       });
       const saved = Object.fromEntries(response.logs.map((log) => [log.block_id, log]));
       setLoaded((current) => ({
-        ...current,
+        ...(current.scope === scope ? current : {}),
         scope,
         logs: { ...(current.scope === scope ? current.logs : {}), ...saved },
       }));
@@ -99,9 +103,10 @@ export function useTodayExerciseLogs({
 
   const logs = loaded.scope === scope ? loaded.logs : EMPTY_LOGS;
   const recentLoads = loaded.scope === scope ? loaded.recentLoads : undefined;
+  const recentPerformances = loaded.scope === scope ? loaded.recentPerformances : undefined;
   return useMemo(
-    () => (active ? { logs, save, saveMany, recentLoads, painReasonAllowed, onError } : null),
-    [active, logs, save, saveMany, recentLoads, painReasonAllowed, onError],
+    () => (active ? { logs, save, saveMany, recentLoads, recentPerformances, allowProgression, painReasonAllowed, onError } : null),
+    [active, logs, save, saveMany, recentLoads, recentPerformances, allowProgression, painReasonAllowed, onError],
   );
 }
 

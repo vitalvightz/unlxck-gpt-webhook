@@ -92,3 +92,13 @@ def test_failed_identity_read_is_an_outage_not_plan_not_found(monkeypatch):
     with pytest.raises(HTTPException) as caught:
         store.get_plan_identity_for_athlete("p", "ath")
     assert caught.value.status_code == 503
+
+
+def test_exercise_history_read_is_cross_plan_owner_scoped_and_paginated():
+    store, client = _store([])
+    query = client.table.return_value.select.return_value.eq.return_value
+    query.lt.return_value.order.return_value.order.return_value.order.return_value.range.return_value.execute.return_value = SimpleNamespace(data=[])
+    assert store.list_exercise_history("ath", before_day="2026-10-07", limit=20, offset=40) == []
+    client.table.return_value.select.return_value.eq.assert_called_once_with("athlete_id", "ath")
+    query.lt.assert_called_once_with("training_day", "2026-10-07")
+    query.lt.return_value.order.return_value.order.return_value.order.return_value.range.assert_called_once_with(40, 59)

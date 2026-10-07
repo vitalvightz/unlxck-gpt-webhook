@@ -18,7 +18,7 @@ test("failed History tabs can be retried without losing the Sessions cache", asy
     const isSessions = url.includes("session-completions");
     const failed = !isSessions && fail;
     const body = failed ? { detail: "invalid authentication token" }
-      : url.includes("sparring-logs") ? { logs: [] } : [];
+      : url.includes("sparring-logs") ? { logs: [] } : url.includes("history/exercises") ? { logs: [], next_offset: null } : [];
     return new Response(JSON.stringify(body), {
       status: failed ? 401 : 200,
       headers: { "content-type": "application/json" },
@@ -44,7 +44,7 @@ test("failed History tabs can be retried without losing the Sessions cache", asy
     ));
     assert.match(container.textContent ?? "", /No sessions logged yet/);
     const initialSessionRequests = requests.filter((url) => url.includes("session-completions")).length;
-    for (const tab of ["Sparring", "Check-ins", "Injuries"]) {
+    for (const tab of ["Exercises", "Sparring", "Check-ins", "Injuries"]) {
       fail = true;
       await click(tab);
       assert.match(container.querySelector('[role="alert"]')?.textContent ?? "", /invalid authentication token/);
@@ -56,6 +56,38 @@ test("failed History tabs can be retried without losing the Sessions cache", asy
     await click("Sessions");
     assert.equal(requests.filter((url) => url.includes("session-completions")).length, initialSessionRequests);
     assert.ok(requests.includes("/api/injury-flags?include_resolved=true"));
+  } finally {
+    act(() => root.unmount());
+    container.remove();
+    globalThis.fetch = originalFetch;
+  }
+});
+
+
+test("switching accounts drops history before the next account finishes loading", async () => {
+  const originalFetch = globalThis.fetch;
+  let finishSecond: ((response: Response) => void) | undefined;
+  globalThis.fetch = async (_input, init) => {
+    if (new Headers(init?.headers).get("authorization") === "Bearer first") {
+      return new Response(JSON.stringify([{ id: "old", session_title: "First account session", status: "done", training_day: "2026-10-07" }]), { status: 200 });
+    }
+    return new Promise<Response>((resolve) => { finishSecond = resolve; });
+  };
+  const container = document.createElement("div");
+  document.body.appendChild(container);
+  const root = createRoot(container);
+  const render = (token: string) => root.render(<AppSessionContext.Provider value={{
+    session: { access_token: token }, me: null, isReady: true, isMeHydrated: true,
+    hasTransientMeError: false, refreshMe: async () => {}, signOut: async () => {},
+    replaceMe: () => {}, previewAppearanceMode: () => {},
+  }}><HistoryScreen /></AppSessionContext.Provider>);
+  try {
+    await act(async () => render("first"));
+    assert.match(container.textContent ?? "", /First account session/);
+    await act(async () => render("second"));
+    assert.equal(container.textContent?.includes("First account session"), false);
+    await act(async () => finishSecond?.(new Response("[]", { status: 200 })));
+    assert.match(container.textContent ?? "", /No sessions logged yet/);
   } finally {
     act(() => root.unmount());
     container.remove();

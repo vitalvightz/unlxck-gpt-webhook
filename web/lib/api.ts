@@ -11,6 +11,7 @@ import type {
   ComplianceAcceptanceRequest,
   ExerciseLogBatchRequest,
   ExerciseLogBatchResponse,
+  ExerciseHistoryResponse,
   ExerciseLogListResponse,
   ExerciseLogRequest,
   ExerciseLogResponse,
@@ -1207,6 +1208,10 @@ export function submitExerciseLogs(
 }
 
 /** The athlete's exercise logs for one plan on the current training day. */
+export function listExerciseHistory(token: string, offset = 0): Promise<ExerciseHistoryResponse> {
+  return withTransientRetries(() => readJson<ExerciseHistoryResponse>(`/api/history/exercises?offset=${offset}`, { token }));
+}
+
 export function listTodayExerciseLogs(
   token: string,
   planId: string,

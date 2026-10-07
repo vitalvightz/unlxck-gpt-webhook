@@ -693,3 +693,45 @@ def test_a_failed_batch_write_leaves_every_log_as_it_was(keep_existing):
 
     assert resp.status_code == 500
     assert store.exercise_logs == before
+
+
+def _history_row(identifier, plan_id=OTHER_PLAN_ID, athlete_id="athlete-1", **extra):
+    return {"id": identifier, "athlete_id": athlete_id, "plan_id": plan_id,
+            "session_id": "past", "block_id": identifier, "exercise_key": "trap-bar-deadlift",
+            "training_day": "2026-09-01", "status": "modified", "reason": None,
+            "prescribed": _squat(), "actual": {"sets": 3, "load": {"value": 80, "unit": "kg"}},
+            "created_at": "", "updated_at": "", **extra}
+
+
+def test_exercise_history_is_owned_and_cross_plan_with_pagination():
+    client, store, _ = _build_client()
+    store.exercise_logs = [_history_row("a"), _history_row("b", PLAN_ID),
+                           _history_row("private", athlete_id="athlete-2")]
+    first = client.get("/api/history/exercises?limit=1", headers=ATHLETE)
+    assert first.status_code == 200, first.text
+    assert [row["id"] for row in first.json()["logs"]] == ["b"]
+    assert first.json()["next_offset"] == 1
+    second = client.get("/api/history/exercises?limit=1&offset=1", headers=ATHLETE)
+    assert [row["id"] for row in second.json()["logs"]] == ["a"]
+    assert second.json()["next_offset"] is None
+    assert client.get("/api/history/exercises").status_code == 401
+
+
+def test_today_remembers_old_plan_actuals_and_does_not_reuse_a_painful_load():
+    client, store, _ = _build_client()
+    _seed_plan(store, blocks=[_squat()])
+    store.exercise_logs = [_history_row("old"), _history_row("new", reason="pain", training_day="2026-09-02")]
+    response = client.get(f"/api/today/exercise-logs?plan_id={PLAN_ID}", headers=ATHLETE)
+    assert response.status_code == 200, response.text
+    assert response.json()["recent_performances"][0]["actual"]["sets"] == 3
+    assert response.json()["recent_performances"][0]["plan_id"] == OTHER_PLAN_ID
+    assert response.json()["recent_loads"] == []
+
+
+def test_less_frequent_exercises_are_not_lost_behind_recent_row_limit():
+    from api.services.exercise_log_service import recent_exercise_performances
+    _, store, _ = _build_client()
+    store.exercise_logs = [_history_row(f"{index:04d}") for index in range(501)]
+    store.exercise_logs.append(_history_row("older", training_day="2026-08-01", exercise_key="front-plank"))
+    rows = recent_exercise_performances(store, athlete_id="athlete-1", before_day="2026-10-01")
+    assert [row["exercise_key"] for row in rows] == ["trap-bar-deadlift", "front-plank"]
