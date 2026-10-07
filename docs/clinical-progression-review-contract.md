@@ -1,5 +1,7 @@
 # Clinical progression review: implemented contract
 
+This page records the #2758 contract step. Its later persistence/trust/freshness implementation is described in [clinical progression review capture](clinical-progression-review-capture.md); the production criterion registry remains empty.
+
 Implements the contract/evaluator step of [the merged decision](clinical-progression-review-design.md) (#2757). These are internal Python types and pure functions. No real review is stored, trusted or used by Today. Production remains CALM/RESTORE only, with 64 active profiles, 103 live prescription identities and zero promotable higher-stage transitions.
 
 ## Files and public entry points

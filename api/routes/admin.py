@@ -7,6 +7,13 @@ import logging
 import uuid
 from typing import TYPE_CHECKING, Any
 
+from api.contracts.clinical_review_capture import (
+    ClinicalReviewCaptureRequest, ClinicalReviewCaptureResult, ClinicalReviewLifecycleRequest,
+)
+from api.services.clinical_review_capture_service import (
+    prepare_review_packet, record_clinical_review, record_review_lifecycle,
+)
+
 from fastapi import APIRouter, BackgroundTasks, Body, Depends, HTTPException, Query, Request, status
 from fastapi.responses import Response
 from pydantic import ValidationError
@@ -149,6 +156,23 @@ def _admin_archived_result(plan_row: dict[str, Any]) -> dict[str, Any]:
 
 def build_admin_router() -> APIRouter:
     router = APIRouter()
+
+    @router.get("/api/admin/athletes/{athlete_id}/injuries/{injury_id}/episodes/{episode_id}/clinical-review-packet")
+    def clinical_review_packet(athlete_id: uuid.UUID, injury_id: uuid.UUID, episode_id: uuid.UUID, criterion_id: str,
+                               criterion_version: int = Query(..., ge=1),
+                               recorder: ProfileRecord = Depends(require_admin), store: AppStore = Depends(get_store)):
+        return prepare_review_packet(store, recorder=recorder, athlete_id=athlete_id, injury_id=injury_id,
+            injury_episode_id=episode_id, criterion_id=criterion_id, criterion_version=criterion_version)
+
+    @router.post("/api/admin/clinical-progression-reviews", response_model=ClinicalReviewCaptureResult)
+    def capture_clinical_review(body: ClinicalReviewCaptureRequest,
+                                 recorder: ProfileRecord = Depends(require_admin), store: AppStore = Depends(get_store)):
+        return record_clinical_review(store, recorder=recorder, request=body)
+
+    @router.post("/api/admin/clinical-progression-reviews/lifecycle", response_model=ClinicalReviewCaptureResult)
+    def capture_clinical_review_lifecycle(body: ClinicalReviewLifecycleRequest,
+                                           recorder: ProfileRecord = Depends(require_admin), store: AppStore = Depends(get_store)):
+        return record_review_lifecycle(store, recorder=recorder, request=body)
 
     @router.get("/api/admin/plans", response_model=list[AdminPlanSummary])
     def list_admin_plans(

@@ -4168,6 +4168,32 @@ class SupabaseAppStore(CompactGenerationReads):
                 raise HTTPException(status_code=409, detail="The injury response changed. Refresh Today.") from exc
             self._raise_operation_http_error(operation="record_injury_episode_event", detail="failed to record injury response", exc=exc)
 
+    def get_clinical_review_capture_context(self, athlete_id: str, injury_id: str, episode_id: str) -> dict[str, Any]:
+        """One complete locked snapshot, private to the service capture boundary."""
+        try:
+            response = self.client.rpc("clinical_review_capture_context", {
+                "p_athlete_id": athlete_id, "p_injury_id": injury_id, "p_episode_id": episode_id}).execute()
+            return response.data
+        except _STORE_CLIENT_ERRORS as exc:
+            if any(code in str(exc) for code in ("23514", "23503")):
+                raise HTTPException(409, "The target injury episode changed.") from exc
+            self._raise_operation_http_error(operation="clinical_review_capture_context", detail="failed to read clinical review context", exc=exc)
+
+    def record_clinical_review_event(self, athlete_id: str, recorder_id: str, context: dict,
+                                    event: dict, supersession: dict | None) -> dict[str, Any]:
+        try:
+            response = self.client.rpc("record_clinical_review_event", {
+                "p_athlete_id": athlete_id, "p_recorder_id": recorder_id, "p_context": context,
+                "p_event": event, "p_supersession": supersession}).execute()
+            data = response.data
+            return data[0] if isinstance(data, list) and data else data
+        except _STORE_CLIENT_ERRORS as exc:
+            if any(code in str(exc) for code in ("23514", "23505", "22023")):
+                raise HTTPException(409, "Clinical review context or request changed. Refresh the evidence packet.") from exc
+            if "42501" in str(exc):
+                raise HTTPException(403, "Clinical review recorder or target access is no longer allowed.") from exc
+            self._raise_operation_http_error(operation="record_clinical_review_event", detail="failed to record clinical review", exc=exc)
+
     def list_injury_episode_events(self, athlete_id: str, *, injury_id: str, injury_episode_id: str) -> list[dict[str, Any]]:
         from api.contracts.rehab_assessment import AssessmentHistory
         # Keyset pagination keeps older concerns visible even while new reports
@@ -4443,7 +4469,8 @@ class SupabaseAppStore(CompactGenerationReads):
             response = (self.client.table(table).select("id").eq("athlete_id", athlete_id)
                         .order("created_at", desc=True).order("id", desc=True))
             if table == "injury_episode_events":
-                response = response.in_("event_type", ["injury_checkin", "delayed_rehab_response", "clinician_clearance_report"])
+                response = response.in_("event_type", ["injury_checkin", "delayed_rehab_response", "clinician_clearance_report",
+                    "rehab_progression_assessment", "clinical_progression_review", "clinical_progression_review_lifecycle"])
             response = response.limit(1).execute()
             rows = getattr(response, "data", None) or []
             revision[key] = rows[0]["id"] if rows else None

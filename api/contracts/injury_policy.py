@@ -21,6 +21,7 @@ from .rehab_progression import resolve_reviewed_progression, episode_setback_at,
 from .clinician_clearance import effective_clinician_clearance, clinician_clears_baseline
 from .rehab_assessment import AssessmentContext, input_definitions, read_assessment_input
 from .achilles_restore_load import review_achilles_restore_load
+from .clinical_review_validity import ClinicalReviewInput
 
 
 def resolve_injury_policy(
@@ -31,6 +32,7 @@ def resolve_injury_policy(
     readiness_decision: str | None = None,
     excluded_drill_ids: Sequence[str] = (),
     as_of: datetime | None = None,
+    clinical_review_inputs: Mapping[str, ClinicalReviewInput] | None = None,
 ) -> dict[str, Any]:
     parsed = parse_injury_entry(" ".join(str(injury.get(k) or "") for k in ("body_area", "description"))) or {}
     region = injury.get("canonical_location") or parsed.get("canonical_location") or injury.get("body_region")
@@ -106,7 +108,7 @@ def resolve_injury_policy(
         result["reason_codes"] = ["rehab_policy_stale_or_incomplete"]
         return result
     progression = resolve_reviewed_progression({**injury, "body_region": region}, base_stage=str(stage), policy=policy,
-                                               exposures=exposures, history_truncated=history_truncated, as_of=as_of)
+        exposures=exposures, history_truncated=history_truncated, as_of=as_of, clinical_review_inputs=clinical_review_inputs)
     result["progression"] = progression
     if policy.activation == "live":
         stage = progression["stage"]

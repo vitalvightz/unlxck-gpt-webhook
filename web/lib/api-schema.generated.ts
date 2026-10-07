@@ -283,6 +283,37 @@ export type Body_create_session_feedback_api_feedback_session_post = {
   screenshot?: string | null;
 };
 
+export type ClinicalReviewCaptureRequest = {
+  request_id: string;
+  athlete_id: string;
+  injury_id: string;
+  injury_episode_id: string;
+  criterion_id: string;
+  criterion_version: number;
+  statement: ConfirmedClinicalStatement;
+  supersedes_review_id?: string | null;
+};
+
+export type ClinicalReviewCaptureResult = {
+  event_id: string;
+  review_id: string;
+  recorded_at: string;
+  event_type: "clinical_progression_review" | "clinical_progression_review_lifecycle";
+};
+
+export type ClinicalReviewLifecycleRequest = {
+  request_id: string;
+  athlete_id: string;
+  injury_id: string;
+  injury_episode_id: string;
+  review_id: string;
+  action: "revoke" | "supersede";
+  replacement_review_id?: string | null;
+  effective_at: string;
+  confirmation_reference: string;
+  reason: string;
+};
+
 export type CoachMessagePushRequest = {
   athlete_id: string;
   message_id: string;
@@ -347,6 +378,26 @@ export type ComplianceAcceptanceRequest = {
   date_of_birth?: string | null;
   accept_terms?: boolean | null;
   health_data_consent?: boolean | null;
+};
+
+export type ConfirmedClinicalStatement = {
+  author_reference: string;
+  author_display_name: string;
+  qualification_reference: string;
+  clinical_scope: string;
+  statement_reference: string;
+  statement_text: string;
+  confirmation_reference: string;
+  reviewed_at: string;
+  confirmed_at: string;
+  reviewed_packet_revision: string;
+  decision: ReviewDecision;
+  interpretation: Record<string, unknown>;
+  selection?: ReviewSelectionRequest | null;
+  rationale: string;
+  structured_reasons: string[];
+  valid_until?: string | null;
+  expiry_reason?: string | null;
 };
 
 export type ContextualFeedbackRequest = {
@@ -1525,6 +1576,29 @@ export type RehabScheduleRecord = {
   next_due_day: string | null;
 };
 
+export type ReviewDecision = "approved" | "deferred" | "not_approved";
+
+export type ReviewSelectionRequest = {
+  option_id: string;
+  option_version: number;
+  range_choice: string;
+  resistance: SelectedResistance;
+  dose: ReviewedDose;
+  cadence: ReviewedCadence;
+  restrictions: string[];
+};
+
+export type ReviewedCadence = {
+  frequency: "daily" | "scheduled_sessions";
+  minimum_gap_days: number;
+};
+
+export type ReviewedDose = {
+  sets: number;
+  reps?: number | null;
+  duration_seconds?: number | null;
+};
+
 export type RiskWatchItem = {
   category: "active_injury_worse" | "fatigue" | "high_pain" | "reminder" | "stop_red_flag" | "weight_cut";
   priority: number;
@@ -1533,6 +1607,11 @@ export type RiskWatchItem = {
   text: string;
   tone: string;
   timeframe: "active" | "last_session" | "recent_sessions" | "today" | null;
+};
+
+export type SelectedResistance = {
+  mode: "bodyweight" | "external_kg";
+  kg?: number | null;
 };
 
 /** A single training session within a day (Section M). */
