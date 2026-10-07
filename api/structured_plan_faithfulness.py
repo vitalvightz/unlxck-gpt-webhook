@@ -108,7 +108,13 @@ def _source_block_segment(source: str, display_name: str) -> str:
     name_tokens = re.findall(r"[a-z0-9]+", str(display_name or "").casefold())
     if not name_tokens:
         return ""
-    title = r"^\s*(?:[-*•]\s*)?" + r"[\s\W]+".join(re.escape(token) for token in name_tokens)
+    # A name's own closing bracket ("Jump Lunge (Alternating)") sits between its
+    # last word and the delimiter; without it every parenthetical name misses.
+    title = (
+        r"^\s*(?:[-*•]\s*)?"
+        + r"[\s\W]+".join(re.escape(token) for token in name_tokens)
+        + r"[)\]]*"
+    )
     delimiter = r"\s*(?:[.:,—–]|\s-\s)"
     exact_pattern = re.compile(title + delimiter, re.I)
     # The block's title may be one option of a source choice ("Short sprint
