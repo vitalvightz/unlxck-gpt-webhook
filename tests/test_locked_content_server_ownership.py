@@ -193,5 +193,9 @@ def test_locked_content_still_fails_when_the_payload_really_lacks_it(camp_brief)
     unmerged = _stage2_plan_without_locked_content(ddays)
 
     violations = check_structured_faithfulness(unmerged, source_markdown, camp_brief)
-    assert len(violations) == len(roles)
+    # The optional camp Fight Visualisation is locked for exact rendering but
+    # never required, so only the mandatory roles can fail the plan.
+    required = [role for role in roles if not role.get("optional_fight_visualization")]
+    assert len(required) < len(roles), "fixture should include optional camp sessions"
+    assert len(violations) == len(required)
     assert all("lost required source content" in violation for violation in violations)

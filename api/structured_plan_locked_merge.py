@@ -663,6 +663,10 @@ def merge_locked_structured_content(
         anchor = _mindset_anchor(watch)
         session["title"] = display_title
         session["objective"] = watch.get("why")
+        if watch.get("optional") is True:
+            # The card's one optional marker: the camp Fight Visualisation is
+            # offered, not required, and the client reads this prefix.
+            session["objective"] = f"Optional. {watch.get('why') or ''}".strip()
         session["mindset_anchor"] = anchor
         # ``coaching_cues`` carries the bank's instructions. The Fight
         # Visualisation bank's trusted ``cue`` (and its optional immediate

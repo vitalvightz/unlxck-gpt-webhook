@@ -332,6 +332,7 @@ def _compact_role(role: dict[str, Any]) -> dict[str, Any]:
         "camp_week_filler",
         "mandatory_tactical_watch",
         "mandatory_fight_visualization",
+        "optional_fight_visualization",
         "weekly_requirement",
         "camp_phase",
         "stress_class",

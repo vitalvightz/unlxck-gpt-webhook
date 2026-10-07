@@ -5,7 +5,7 @@
     "countdown_day": 7,
     "sports": ["boxing"],
     "styles": ["distance_striker"],
-    "duration_min": [6, 8],
+    "duration_min": [12, 12],
     "why": "Rehearse building and rebuilding your range against a fighter who wants to close it.",
     "instructions": [
       "See the opponent starting to shorten the distance.",
@@ -21,7 +21,7 @@
     "countdown_day": 7,
     "sports": ["boxing"],
     "styles": ["brawler"],
-    "duration_min": [6, 8],
+    "duration_min": [12, 12],
     "why": "Rehearse taking space and finishing exchanges in position rather than chasing.",
     "instructions": [
       "Visualise them giving ground.",
@@ -37,7 +37,7 @@
     "countdown_day": 7,
     "sports": ["boxing"],
     "styles": ["counter_striker"],
-    "duration_min": [6, 8],
+    "duration_min": [12, 12],
     "why": "Rehearse waiting for a real committed cue before answering.",
     "instructions": [
       "See the opponent step into range.",
@@ -53,7 +53,7 @@
     "countdown_day": 7,
     "sports": ["boxing"],
     "styles": ["generic"],
-    "duration_min": [6, 8],
+    "duration_min": [12, 12],
     "why": "Rehearse the two or three situations this fight is most likely to be decided in.",
     "instructions": [
       "Pick the exchange you expect to repeat most in this fight.",
@@ -69,7 +69,7 @@
     "countdown_day": 7,
     "sports": ["kickboxing"],
     "styles": ["distance_striker"],
-    "duration_min": [6, 8],
+    "duration_min": [12, 12],
     "why": "Rehearse holding long range with kicks and leaving before the hands arrive.",
     "instructions": [
       "See the opponent closing to their punching range.",
@@ -85,7 +85,7 @@
     "countdown_day": 7,
     "sports": ["kickboxing"],
     "styles": ["pressure_fighter"],
-    "duration_min": [6, 8],
+    "duration_min": [12, 12],
     "why": "Rehearse walking them onto your shots instead of following them around the ring.",
     "instructions": [
       "See them giving ground and picking an exit side.",
@@ -101,7 +101,7 @@
     "countdown_day": 7,
     "sports": ["kickboxing"],
     "styles": ["counter_striker"],
-    "duration_min": [6, 8],
+    "duration_min": [12, 12],
     "why": "Rehearse reading a committed kick or entry and answering it cleanly.",
     "instructions": [
       "See the opponent load a kick or step in behind their hands.",
@@ -117,7 +117,7 @@
     "countdown_day": 7,
     "sports": ["kickboxing"],
     "styles": ["clinch_fighter"],
-    "duration_min": [6, 8],
+    "duration_min": [12, 12],
     "why": "Rehearse earning the clinch on your terms and scoring before the break.",
     "instructions": [
       "See the entry that gets you inside: after their kick, or behind your own hands.",
@@ -133,7 +133,7 @@
     "countdown_day": 7,
     "sports": ["kickboxing"],
     "styles": ["generic"],
-    "duration_min": [6, 8],
+    "duration_min": [12, 12],
     "why": "Rehearse the main exchanges of this fight across both punching and kicking range.",
     "instructions": [
       "Pick the range this fight will mostly be fought at.",
@@ -149,7 +149,7 @@
     "countdown_day": 7,
     "sports": ["mma"],
     "styles": ["distance_striker"],
-    "duration_min": [6, 8],
+    "duration_min": [12, 12],
     "why": "Rehearse striking at range while staying honest about the takedown.",
     "instructions": [
       "See the opponent closing distance with their hands or a level change.",
@@ -165,7 +165,7 @@
     "countdown_day": 7,
     "sports": ["mma"],
     "styles": ["pressure_fighter"],
-    "duration_min": [6, 8],
+    "duration_min": [12, 12],
     "why": "Rehearse using the cage to take space rather than chasing in open ground.",
     "instructions": [
       "See them backing up and choosing an exit along the fence.",
@@ -181,7 +181,7 @@
     "countdown_day": 7,
     "sports": ["mma"],
     "styles": ["counter_striker"],
-    "duration_min": [6, 8],
+    "duration_min": [12, 12],
     "why": "Rehearse answering a committed entry without being drawn onto a level change.",
     "instructions": [
       "See the opponent commit to an entry.",
@@ -197,7 +197,7 @@
     "countdown_day": 7,
     "sports": ["mma"],
     "styles": ["grappler"],
-    "duration_min": [6, 8],
+    "duration_min": [12, 12],
     "why": "Rehearse getting to your entry and converting the first control position.",
     "instructions": [
       "See the strike or feint that sets up your trained entry.",
@@ -213,7 +213,7 @@
     "countdown_day": 7,
     "sports": ["mma"],
     "styles": ["clinch_fighter"],
-    "duration_min": [6, 8],
+    "duration_min": [12, 12],
     "why": "Rehearse closing to the clinch and making the cage do the work.",
     "instructions": [
       "See your entry into the clinch behind a strike or on their exit.",
@@ -229,7 +229,7 @@
     "countdown_day": 7,
     "sports": ["mma"],
     "styles": ["hybrid"],
-    "duration_min": [6, 8],
+    "duration_min": [12, 12],
     "why": "Rehearse moving between striking and grappling on your own decision, not theirs.",
     "instructions": [
       "See the striking exchange you want to start with.",
@@ -245,7 +245,7 @@
     "countdown_day": 7,
     "sports": ["mma"],
     "styles": ["generic"],
-    "duration_min": [6, 8],
+    "duration_min": [12, 12],
     "why": "Rehearse the phases this fight is most likely to be decided in.",
     "instructions": [
       "Pick the phase you expect to spend most of the fight in: range, clinch or ground.",
@@ -261,7 +261,7 @@
     "countdown_day": 7,
     "sports": ["cross_sport"],
     "styles": ["generic"],
-    "duration_min": [6, 8],
+    "duration_min": [12, 12],
     "why": "Rehearse the main situation of this fight before the taper takes your sharpness elsewhere.",
     "instructions": [
       "Pick the situation you expect to repeat most in this bout.",
@@ -278,7 +278,7 @@
     "countdown_day": 5,
     "sports": ["boxing"],
     "styles": ["distance_striker"],
-    "duration_min": [5, 7],
+    "duration_min": [10, 10],
     "why": "Recognise the moment the opponent commits to closing distance.",
     "instructions": [
       "Picture the opponent beginning to close distance.",
@@ -294,7 +294,7 @@
     "countdown_day": 5,
     "sports": ["boxing"],
     "styles": ["brawler"],
-    "duration_min": [5, 7],
+    "duration_min": [10, 10],
     "why": "Recognise how the opponent reacts to pressure before committing to the next attack.",
     "instructions": [
       "Picture the opponent retreating straight, covering high or planting to counter.",
@@ -310,7 +310,7 @@
     "countdown_day": 5,
     "sports": ["boxing"],
     "styles": ["counter_striker"],
-    "duration_min": [5, 7],
+    "duration_min": [10, 10],
     "why": "Separate a real committed lead from a feint meant to draw your counter.",
     "instructions": [
       "Picture a feint, a half-step and a fully committed lead.",
@@ -326,7 +326,7 @@
     "countdown_day": 5,
     "sports": ["boxing"],
     "styles": ["generic"],
-    "duration_min": [5, 7],
+    "duration_min": [10, 10],
     "why": "Rehearse recognising the opponent's action before choosing a response.",
     "instructions": [
       "Picture three reactions you expect from this opponent.",
@@ -342,7 +342,7 @@
     "countdown_day": 5,
     "sports": ["kickboxing"],
     "styles": ["distance_striker"],
-    "duration_min": [5, 7],
+    "duration_min": [10, 10],
     "why": "Recognise the entry early enough to use your longest weapon.",
     "instructions": [
       "Picture the opponent stepping in, switching stance or loading a kick.",
@@ -358,7 +358,7 @@
     "countdown_day": 5,
     "sports": ["kickboxing"],
     "styles": ["pressure_fighter"],
-    "duration_min": [5, 7],
+    "duration_min": [10, 10],
     "why": "Recognise how the opponent answers pressure before you commit to the next attack.",
     "instructions": [
       "Picture them retreating straight, checking your kicks or planting to fire back.",
@@ -374,7 +374,7 @@
     "countdown_day": 5,
     "sports": ["kickboxing"],
     "styles": ["counter_striker"],
-    "duration_min": [5, 7],
+    "duration_min": [10, 10],
     "why": "Tell a committed kick from a feint before you counter.",
     "instructions": [
       "Picture a hand feint, a low kick and a committed head kick.",
@@ -390,7 +390,7 @@
     "countdown_day": 5,
     "sports": ["kickboxing"],
     "styles": ["clinch_fighter"],
-    "duration_min": [5, 7],
+    "duration_min": [10, 10],
     "why": "Recognise the moment the clinch is available and the moment it is gone.",
     "instructions": [
       "Picture them catching a kick, framing you off, or leaning in after a combination.",
@@ -406,7 +406,7 @@
     "countdown_day": 5,
     "sports": ["kickboxing"],
     "styles": ["generic"],
-    "duration_min": [5, 7],
+    "duration_min": [10, 10],
     "why": "Rehearse recognising hand or leg attacks early enough to answer them.",
     "instructions": [
       "Picture three familiar attacks from this opponent, at least one with the legs.",
@@ -422,7 +422,7 @@
     "countdown_day": 5,
     "sports": ["mma"],
     "styles": ["distance_striker"],
-    "duration_min": [5, 7],
+    "duration_min": [10, 10],
     "why": "Separate a striking entry from a takedown entry before you commit.",
     "instructions": [
       "Picture the opponent stepping in with hands high, then stepping in with a level change.",
@@ -438,7 +438,7 @@
     "countdown_day": 5,
     "sports": ["mma"],
     "styles": ["pressure_fighter"],
-    "duration_min": [5, 7],
+    "duration_min": [10, 10],
     "why": "Recognise how the opponent escapes your pressure at the cage.",
     "instructions": [
       "Picture them circling out, framing off, or shooting to escape the fence.",
@@ -454,7 +454,7 @@
     "countdown_day": 5,
     "sports": ["mma"],
     "styles": ["counter_striker"],
-    "duration_min": [5, 7],
+    "duration_min": [10, 10],
     "why": "Answer only genuine commitment, in striking and in grappling.",
     "instructions": [
       "Picture a feint, a real punch entry and a real shot.",
@@ -470,7 +470,7 @@
     "countdown_day": 5,
     "sports": ["mma"],
     "styles": ["grappler"],
-    "duration_min": [5, 7],
+    "duration_min": [10, 10],
     "why": "Recognise which takedown entry the opponent's stance is actually giving you.",
     "instructions": [
       "Picture them square, bladed, and backing toward the cage.",
@@ -486,7 +486,7 @@
     "countdown_day": 5,
     "sports": ["mma"],
     "styles": ["clinch_fighter"],
-    "duration_min": [5, 7],
+    "duration_min": [10, 10],
     "why": "Recognise how the opponent defends the clinch so you pick the right grip.",
     "instructions": [
       "Picture them framing on your hips, underhooking, or turning to face you.",
@@ -502,7 +502,7 @@
     "countdown_day": 5,
     "sports": ["mma"],
     "styles": ["hybrid"],
-    "duration_min": [5, 7],
+    "duration_min": [10, 10],
     "why": "Recognise which phase the opponent is offering and take it deliberately.",
     "instructions": [
       "Picture them striking at range, then backing to the cage, then reaching for the clinch.",
@@ -518,7 +518,7 @@
     "countdown_day": 5,
     "sports": ["mma"],
     "styles": ["generic"],
-    "duration_min": [5, 7],
+    "duration_min": [10, 10],
     "why": "Rehearse reading strike or grappling intent before responding.",
     "instructions": [
       "Picture three familiar actions from this opponent, at least one a level change.",
@@ -534,7 +534,7 @@
     "countdown_day": 5,
     "sports": ["cross_sport"],
     "styles": ["generic"],
-    "duration_min": [5, 7],
+    "duration_min": [10, 10],
     "why": "Rehearse recognising the opponent's action before choosing a response.",
     "instructions": [
       "Picture three familiar actions from this opponent.",
@@ -551,7 +551,7 @@
     "countdown_day": 3,
     "sports": ["boxing"],
     "styles": ["distance_striker"],
-    "duration_min": [4, 6],
+    "duration_min": [8, 8],
     "why": "Rehearse recovering range after it has been taken from you.",
     "instructions": [
       "Picture your back finding the ropes with the opponent in your chest.",
@@ -567,7 +567,7 @@
     "countdown_day": 3,
     "sports": ["boxing"],
     "styles": ["brawler"],
-    "duration_min": [4, 6],
+    "duration_min": [8, 8],
     "why": "Rehearse restarting pressure from position after being caught or escaped.",
     "instructions": [
       "Picture getting caught while entering.",
@@ -583,7 +583,7 @@
     "countdown_day": 3,
     "sports": ["boxing"],
     "styles": ["counter_striker"],
-    "duration_min": [4, 6],
+    "duration_min": [8, 8],
     "why": "Rehearse staying patient after a counter is read and beaten.",
     "instructions": [
       "Picture your counter being anticipated and answered.",
@@ -599,7 +599,7 @@
     "countdown_day": 3,
     "sports": ["boxing"],
     "styles": ["generic"],
-    "duration_min": [4, 6],
+    "duration_min": [8, 8],
     "why": "Rehearse recovering composure and position after a bad moment.",
     "instructions": [
       "Picture being caught clean in an exchange.",
@@ -615,7 +615,7 @@
     "countdown_day": 3,
     "sports": ["kickboxing"],
     "styles": ["distance_striker"],
-    "duration_min": [4, 6],
+    "duration_min": [8, 8],
     "why": "Rehearse recovering after your long weapons are caught or walked through.",
     "instructions": [
       "Picture your kick being caught and your balance taken.",
@@ -631,7 +631,7 @@
     "countdown_day": 3,
     "sports": ["kickboxing"],
     "styles": ["pressure_fighter"],
-    "duration_min": [4, 6],
+    "duration_min": [8, 8],
     "why": "Rehearse restarting pressure after being checked or countered on the way in.",
     "instructions": [
       "Picture your entry meeting a hard check or a clean counter.",
@@ -647,7 +647,7 @@
     "countdown_day": 3,
     "sports": ["kickboxing"],
     "styles": ["counter_striker"],
-    "duration_min": [4, 6],
+    "duration_min": [8, 8],
     "why": "Rehearse staying composed when your reads stop paying.",
     "instructions": [
       "Picture countering late and taking the shot instead.",
@@ -663,7 +663,7 @@
     "countdown_day": 3,
     "sports": ["kickboxing"],
     "styles": ["clinch_fighter"],
-    "duration_min": [4, 6],
+    "duration_min": [8, 8],
     "why": "Rehearse losing the clinch without losing the round.",
     "instructions": [
       "Picture your grip being stripped and being turned out of the clinch.",
@@ -679,7 +679,7 @@
     "countdown_day": 3,
     "sports": ["kickboxing"],
     "styles": ["generic"],
-    "duration_min": [4, 6],
+    "duration_min": [8, 8],
     "why": "Rehearse recovering composure and stance after adversity.",
     "instructions": [
       "Picture being caught clean or having a kick checked hard.",
@@ -695,7 +695,7 @@
     "countdown_day": 3,
     "sports": ["mma"],
     "styles": ["distance_striker"],
-    "duration_min": [4, 6],
+    "duration_min": [8, 8],
     "why": "Rehearse getting back to open space after being taken out of it.",
     "instructions": [
       "Picture your back hitting the cage with the opponent tied up on you.",
@@ -711,7 +711,7 @@
     "countdown_day": 3,
     "sports": ["mma"],
     "styles": ["pressure_fighter"],
-    "duration_min": [4, 6],
+    "duration_min": [8, 8],
     "why": "Rehearse restarting pressure after it is broken or reversed.",
     "instructions": [
       "Picture them escaping the fence and turning you into it.",
@@ -727,7 +727,7 @@
     "countdown_day": 3,
     "sports": ["mma"],
     "styles": ["counter_striker"],
-    "duration_min": [4, 6],
+    "duration_min": [8, 8],
     "why": "Rehearse composure when your counter is baited into a takedown.",
     "instructions": [
       "Picture your counter drawing a level change and ending on the mat.",
@@ -743,7 +743,7 @@
     "countdown_day": 3,
     "sports": ["mma"],
     "styles": ["grappler"],
-    "duration_min": [4, 6],
+    "duration_min": [8, 8],
     "why": "Rehearse continuing to work after a defended entry or a lost position.",
     "instructions": [
       "Picture your first takedown being defended.",
@@ -759,7 +759,7 @@
     "countdown_day": 3,
     "sports": ["mma"],
     "styles": ["clinch_fighter"],
-    "duration_min": [4, 6],
+    "duration_min": [8, 8],
     "why": "Rehearse recovering when the clinch is reversed against you.",
     "instructions": [
       "Picture being turned and pinned to the cage yourself.",
@@ -775,7 +775,7 @@
     "countdown_day": 3,
     "sports": ["mma"],
     "styles": ["hybrid"],
-    "duration_min": [4, 6],
+    "duration_min": [8, 8],
     "why": "Rehearse being forced into your weaker phase and getting back out.",
     "instructions": [
       "Picture the fight dragged into the phase you least want.",
@@ -791,7 +791,7 @@
     "countdown_day": 3,
     "sports": ["mma"],
     "styles": ["generic"],
-    "duration_min": [4, 6],
+    "duration_min": [8, 8],
     "why": "Rehearse recovering composure and position after a bad moment.",
     "instructions": [
       "Picture being caught clean or taken down.",
@@ -807,7 +807,7 @@
     "countdown_day": 3,
     "sports": ["cross_sport"],
     "styles": ["generic"],
-    "duration_min": [4, 6],
+    "duration_min": [8, 8],
     "why": "Rehearse adversity that ends with a decision, not with dwelling.",
     "instructions": [
       "Picture the moment in this fight that would rattle you most.",
@@ -824,7 +824,7 @@
     "countdown_day": 1,
     "sports": ["boxing"],
     "styles": ["generic"],
-    "duration_min": [3, 5],
+    "duration_min": [5, 5],
     "why": "Make tomorrow familiar without adding new information.",
     "instructions": [
       "Picture arriving, wrapping up and warming up.",
@@ -841,7 +841,7 @@
     "countdown_day": 1,
     "sports": ["kickboxing"],
     "styles": ["generic"],
-    "duration_min": [3, 5],
+    "duration_min": [5, 5],
     "why": "Make tomorrow familiar without adding new information.",
     "instructions": [
       "Picture arriving, wrapping up, shins and pads on, and warming up.",
@@ -858,7 +858,7 @@
     "countdown_day": 1,
     "sports": ["mma"],
     "styles": ["generic"],
-    "duration_min": [3, 5],
+    "duration_min": [5, 5],
     "why": "Make tomorrow familiar without adding new information.",
     "instructions": [
       "Picture arriving, wrapping up, gloves on and warming up.",
@@ -875,7 +875,7 @@
     "countdown_day": 1,
     "sports": ["cross_sport"],
     "styles": ["generic"],
-    "duration_min": [3, 5],
+    "duration_min": [5, 5],
     "why": "Make tomorrow familiar without adding new information.",
     "instructions": [
       "Picture arriving, getting ready and warming up in your normal order.",
@@ -892,7 +892,7 @@
     "countdown_day": 0,
     "sports": ["boxing"],
     "styles": ["generic"],
-    "duration_min": [1, 3],
+    "duration_min": [2, 2],
     "why": "Stop conscious over-analysis and hand the fight to your trained reactions.",
     "instructions": [
       "See the ring and feel your feet underneath you.",
@@ -909,7 +909,7 @@
     "countdown_day": 0,
     "sports": ["kickboxing"],
     "styles": ["generic"],
-    "duration_min": [1, 3],
+    "duration_min": [2, 2],
     "why": "Stop conscious over-analysis and hand the fight to your trained reactions.",
     "instructions": [
       "See the ring and feel your feet and shins loose.",
@@ -926,7 +926,7 @@
     "countdown_day": 0,
     "sports": ["mma"],
     "styles": ["generic"],
-    "duration_min": [1, 3],
+    "duration_min": [2, 2],
     "why": "Stop conscious over-analysis and hand the fight to your trained reactions.",
     "instructions": [
       "See the cage and feel your feet underneath you.",
@@ -943,7 +943,7 @@
     "countdown_day": 0,
     "sports": ["cross_sport"],
     "styles": ["generic"],
-    "duration_min": [1, 3],
+    "duration_min": [2, 2],
     "why": "Stop conscious over-analysis and hand the bout to your trained reactions.",
     "instructions": [
       "See the competition area and feel your feet underneath you.",

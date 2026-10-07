@@ -13,8 +13,16 @@ from .coordination_support_library import (
     select_coordination_support,
 )
 from .physical_occupancy_fill import fill_physical_occupancy
+from .fight_visualization_library import (
+    CAMP_VISUALIZATION_FIRST_DAY,
+    CAMP_VISUALIZATIONS_PER_WEEK,
+    OPTIONAL_FLAG,
+    camp_visualization_role,
+    choose_camp_visualization_days,
+)
 from .gap_fill_inserts import (
     PHYSICAL_INSERTS,
+    camp_visualization_day_tier,
     _new_usage_ledger,
     _priority_contribution,
     _record_insert_usage,
@@ -987,6 +995,58 @@ def _complete_week_physical_occupancy(
     _merge_unused_day_records(week, unused)
 
 
+def _ensure_camp_visualizations(week: dict[str, Any], athlete_model: dict[str, Any]) -> int:
+    """Offer up to three optional Fight Visualisations in a camp week.
+
+    Only D-42..D-14: the late-fight tail owns D-13 onward and places its own.
+    Those tail sessions still count toward this calendar week's three.
+    Days are ranked by ``camp_visualization_day_tier`` (Tactical Focus day, then
+    low-load days, then other non-contact days); rest days are never used.
+    """
+    session_roles = week.get("session_roles")
+    if not isinstance(session_roles, list):
+        return 0
+    by_day: dict[int, tuple[str, list[dict[str, Any]]]] = {}
+    existing: list[int] = []
+    for role in session_roles:
+        if not isinstance(role, dict):
+            continue
+        day = str(role.get("scheduled_day_hint") or role.get("real_weekday") or "").strip()
+        d_day = _calendar_d_day(week, day)
+        if role.get(OPTIONAL_FLAG) and d_day is not None:
+            existing.append(d_day)
+        if not day or d_day is None or not 14 <= d_day <= CAMP_VISUALIZATION_FIRST_DAY:
+            continue
+        by_day.setdefault(d_day, (day, []))[1].append(role)
+    candidates = {
+        d_day: tier
+        for d_day, (_day, roles) in by_day.items()
+        if (tier := camp_visualization_day_tier(roles)) is not None
+    }
+    added = 0
+    chosen = choose_camp_visualization_days(
+        candidates,
+        limit=max(0, CAMP_VISUALIZATIONS_PER_WEEK - len(existing)),
+        taken=tuple(existing),
+    )
+    for ordinal, d_day in enumerate(chosen, start=len(existing)):
+        day = by_day[d_day][0]
+        role = camp_visualization_role(athlete_model, d_day=d_day, weekday=day, ordinal=ordinal)
+        if role is None:
+            continue
+        _decorate_filler(role, day, d_day)
+        session_roles.append(role)
+        added += 1
+    return added
+
+
+def _place_camp_visualizations(weekly_role_map: dict[str, Any], athlete_model: dict[str, Any]) -> None:
+    """Runs last, over the final calendar, so day tiers see every placed role."""
+    for week in weekly_role_map.get("weeks", []) or []:
+        if isinstance(week, dict) and str(week.get("phase") or "").strip().upper() in _FIGHT_PHASE_CAPS:
+            _ensure_camp_visualizations(week, athlete_model)
+
+
 def apply_camp_week_fillers(
     weekly_role_map: dict[str, Any],
     athlete_model: dict[str, Any] | None = None,
@@ -1059,4 +1119,5 @@ def apply_camp_week_fillers(
         for week in weekly_role_map.get("weeks", []) or []:
             if isinstance(week, dict):
                 _complete_week_physical_occupancy(week, athlete_model, usage_ledger)
+        _place_camp_visualizations(weekly_role_map, athlete_model)
     return weekly_role_map

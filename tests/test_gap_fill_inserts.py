@@ -288,7 +288,14 @@ def _support_insert_session(offset: int, role_key: str = "tactical_watch", weekd
 
 
 def _insert_roles(sequence: list[dict]) -> list[dict]:
-    return [role for role in sequence if role.get("category") == "support_insert"]
+    # The optional camp Fight Visualisation is its own layer (see
+    # tests/test_camp_fight_visualization.py), not a gap filler.
+    return [
+        role
+        for role in sequence
+        if role.get("category") == "support_insert"
+        and not role.get("optional_fight_visualization")
+    ]
 
 
 def _training_context(days: int) -> TrainingContext:
