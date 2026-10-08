@@ -20826,11 +20826,15 @@ html[data-theme="light"] .loading-operational-item {
 }
 .ex-log-status-value::before {
   content: "·";
-  margin: 0 7px;
+  margin: 0 5px;
   color: var(--text-muted);
 }
 .ex-log-instead {
   color: var(--text-muted);
+}
+/* Flush to the card edge, so a change and its reason keep to one line. */
+.ex-log[data-mode="saved"] .ex-log-bar > .ex-log-link {
+  padding-right: 0;
 }
 
 /* -- Exercise demo --------------------------------------------------------- */
