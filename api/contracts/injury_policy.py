@@ -227,6 +227,38 @@ def _current_clearance_scopes(injuries: Sequence[Mapping[str, Any]]) -> list[lis
     return [effective["scopes"]] if effective else []
 
 
+_HARD_CONTACT_WORDS = ("hard", "live", "full contact", "full-contact", "all-out", "all out", "competition")
+_TECHNICAL_CONTACT_WORDS = ("technical", "light", "controlled", "positional", "flow")
+
+
+def _hard_contact(mapping: Mapping[str, Any] | None) -> bool:
+    """Contact that needs the contact scope: hard sparring, not technical sparring.
+
+    Only explicit technical wording or ``contact_level: controlled`` makes contact
+    technical. Today derives ``effective_load`` from the day type, so it is not
+    trusted to release anything; unqualified contact stays hard.
+    """
+    from .readiness_message import (
+        _iter_session_mappings, _mapping_executable_text, _session_has_contact, _session_text,
+        _text_mentions_exposure,
+    )
+
+    if not isinstance(mapping, Mapping) or not _session_has_contact(mapping):
+        return False
+    nested = ("blocks", "exercises", "movements", "items")
+    for item in _iter_session_mappings(mapping):
+        own = {key: value for key, value in item.items() if key not in nested and key != "effective_load"}
+        if not _session_has_contact(own):
+            continue
+        text = f"{_session_text(own)} {_mapping_executable_text(own)}".lower()
+        if (_text_mentions_exposure(text, _HARD_CONTACT_WORDS) or own.get("contact_level") == "full"
+                or item.get("effective_load") == "hard"):
+            return True
+        if own.get("contact_level") != "controlled" and not _text_mentions_exposure(text, _TECHNICAL_CONTACT_WORDS):
+            return True
+    return False
+
+
 def _clinician_clearance_hold(
     session: Mapping[str, Any] | None, injuries: Sequence[Mapping[str, Any]],
 ) -> str | None:
@@ -244,8 +276,8 @@ def _clinician_clearance_hold(
                           and all(b.get("block_type") == "rehab" for b in session["blocks"]))
             if contact or not (rehab_only or is_support_session(session)):
                 return "Your reported clinician clearance is for rehab only. Normal training is on hold."
-        elif "contact" not in scopes and contact:
-            return "Your reported clinician clearance excludes contact. Contact work is on hold."
+        elif "contact" not in scopes and (_hard_contact(session) or _hard_contact({**session, "blocks": []})):
+            return "Your reported clinician clearance excludes hard sparring. Hard sparring is on hold."
     return None
 
 
@@ -318,8 +350,11 @@ def reconcile_session_prescription(
         if (injury and decision.get("activation") == "live" and not decision.get("loading_hold")
                 and decision.get("outcome") != "medical_review" and clinician_clears_baseline(injury)):
             current["blocked_regions"], current["blocked_tags"] = [], []
+            # Training clearance covers technical sparring; hard sparring needs contact.
             if clinician_clears_baseline(injury, contact=True):
                 current["contact_limit"] = "full"
+            elif current.get("contact_limit", "none") == "none":
+                current["contact_limit"] = "controlled"
         restrictions.append(current)
     blocked_regions = set().union(*(set(r.get("blocked_regions", [])) for r in restrictions))
     blocked_tags = set().union(*(set(r.get("blocked_tags", [])) for r in restrictions))
@@ -333,10 +368,10 @@ def reconcile_session_prescription(
     # A contact heading/coach-owned portion cannot be removed by editing children.
     # Otherwise the existing block replacement path can retain safe non-contact work.
     block_contact_ceiling = (contact_ceiling and bool(entry.get("blocks"))
-                             and not _session_has_contact({**entry, "blocks": []})
+                             and not _hard_contact({**entry, "blocks": []})
                              and all("training" in scopes for scopes in clearance_scopes))
     if block_contact_ceiling:
-        allowed_contact = 0
+        allowed_contact = min(allowed_contact, contact_rank["controlled"])
     hold = bool(clearance_hold and not block_contact_ceiling) or any(d.get("outcome") == "medical_review" for d in decisions)
     # A current pull-back holds camp independently of tissue demand. Eligible
     # non-loading rehab can then use the existing standalone replacement path.
@@ -345,13 +380,17 @@ def reconcile_session_prescription(
     # The planner also uses a sparring type to budget app-owned support work.
     # An explicit contact headline/coach portion remains contact even when its
     # child blocks are only support; the allocation type alone is not that owner.
-    if allowed_contact < contact_rank["full"] and _session_has_contact({**entry, "blocks": [], "session_type": ""}):
+    headline = {**entry, "blocks": [], "session_type": ""}
+    if _session_has_contact(headline) and (allowed_contact < contact_rank["controlled"]
+                                           or (allowed_contact < contact_rank["full"] and _hard_contact(headline))):
         hold = True
-    # A blockless day has nothing to check against restrictions. Full clearance
-    # removes them all, so it releases a light/technical day as well as sparring.
-    cleared_blockless = (allowed_contact == contact_rank["full"]
-                         and not blocked_regions and not blocked_tags
-                         and any("contact" in scopes for scopes in clearance_scopes))
+    # A blockless day has nothing to check against restrictions. Clearance that
+    # removes them all releases it: training covers technical sparring, contact
+    # covers hard sparring.
+    cleared_blockless = (not blocked_regions and not blocked_tags
+                         and any("training" in scopes for scopes in clearance_scopes)
+                         and (allowed_contact == contact_rank["full"]
+                              or (allowed_contact >= contact_rank["controlled"] and not _hard_contact(entry))))
     if session is not None and not entry.get("blocks") and entry.get("session_type") != "rehab" and not cleared_blockless:
         hold = True
     blocks, changes = [], []
@@ -368,6 +407,8 @@ def reconcile_session_prescription(
                 and not _session_has_contact(block)):
             return "none"
         value = block.get("contact_level")
+        if value is None and _session_has_contact(block):
+            return "full" if _hard_contact(block) else "controlled"
         return value if isinstance(value, str) else None
 
     replaced = set()
@@ -429,7 +470,7 @@ def reconcile_session_prescription(
         uncertain = uncertain or bool((demands or set()) - canonical_rehab_locations())
         uncertain = uncertain or (bool(blocked_tags) and tags is None)
         uncertain = uncertain or (policy_contact_limit < contact_rank["full"] and contact not in contact_rank)
-        clearance_contact = block_contact_ceiling and _session_has_contact(block)
+        clearance_contact = block_contact_ceiling and _hard_contact(block)
         incompatible = uncertain or bool((demands or set()) & blocked_regions) or bool((tags or set()) & blocked_tags)
         incompatible = incompatible or (contact in contact_rank and contact_rank[contact] > allowed_contact) or clearance_contact
         if incompatible:
@@ -443,7 +484,7 @@ def reconcile_session_prescription(
                          and a.get("role") == block.get("role")
                          and a.get("dose") == block.get("dose")
                          and contact_level(a) in contact_rank and contact_rank[contact_level(a)] <= allowed_contact
-                         and (not block_contact_ceiling or not _session_has_contact(a))), None)
+                         and (not block_contact_ceiling or not _hard_contact(a))), None)
             if safe:
                 blocks.append({**deepcopy(safe), "block_id": block.get("block_id")})
                 changes.append({"block_id": block.get("block_id"), "action": "substituted"})

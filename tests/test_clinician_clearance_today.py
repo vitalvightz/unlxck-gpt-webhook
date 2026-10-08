@@ -76,19 +76,20 @@ def test_rehab_only_holds_normal_training_without_a_live_rehab_policy(context):
     session("sparring", "Hard sparring", []),
     session("hard_sparring", "Hard sparring", [dict(block_type="rounds", display_name="Rounds")]),
     session("strength", "Strength", [dict(block_type="contact", display_name="Contact sparring", contact_level="full")]),
-    session("technical", "Technical grappling", []),
     {**session(), "coach_led_contact": "Hard sparring"},
 ])
 def test_no_contact_holds_all_clear_contact_representations(context, entry):
     set_sessions(context, [entry])
     report(context, TRAIN)
     live = view(context).live_prescription
-    assert live["safety_hold"] and "excludes contact" in live["safety_hold_reason"]
+    assert live["safety_hold"] and "excludes hard sparring" in live["safety_hold_reason"]
     with pytest.raises(HTTPException, match="on hold"):
         execute(context, live)
 
 
-@pytest.mark.parametrize("entry", [session(), session("technical", "Non-contact shadowboxing", [])])
+@pytest.mark.parametrize("entry", [session(), session("technical", "Non-contact shadowboxing", []),
+                                   session("technical", "Technical grappling", []),
+                                   session("sparring", "Technical sparring", [])])
 def test_no_contact_keeps_otherwise_safe_noncontact_training(context, entry):
     set_sessions(context, [entry])
     report(context, TRAIN)
@@ -361,18 +362,33 @@ def test_live_full_clearance_allows_contact_owned_day_without_app_blocks(context
 
 
 @pytest.mark.parametrize("scopes", [None, TRAIN, CONTACT])
-def test_live_full_clearance_allows_headline_only_light_combat_day(context, scopes):
-    # A light technical day is lighter than sparring; full clearance releases it too.
+@pytest.mark.parametrize("headline", ["Light Combat / Technical", "Technical sparring", "Hard sparring"])
+def test_training_clearance_allows_technical_but_not_hard_headline_only_day(context, scopes, headline):
+    # Contact clearance is for hard sparring; training clearance covers technical work.
     live_injury(context, "ankle")
     day = context[0].plans[context[2]]["structured_plan"]["weeks"][0]["days"][0]
-    day.update(day_type="rest", sessions=[], today_card={"headline": "Light Combat / Technical"})
+    day.update(day_type="rest", sessions=[], today_card={"headline": headline})
     if scopes:
         report(context, scopes)
     live = view(context).live_prescription
-    assert (live["safety_hold"] or live["rehab_only"]) == (scopes != CONTACT)
-    if scopes == CONTACT:
+    allowed = scopes == CONTACT or (scopes == TRAIN and headline != "Hard sparring")
+    assert (live["safety_hold"] or live["rehab_only"]) != allowed
+    if allowed:
         assert live["session"]["session_id"] == DAY
         execute(context, live)
+
+
+def test_training_clearance_keeps_technical_blocks_and_removes_hard_sparring(context):
+    live_injury(context, "ankle")
+    set_sessions(context, [session("strength", "Strength", [
+        dict(block_id="squat", block_type="strength", mechanical_load_regions=["ankle"], contact_level="none"),
+        dict(block_id="positional", block_type="sparring", display_name="Positional sparring"),
+        dict(block_id="hard", block_type="sparring", display_name="Hard sparring")])])
+    report(context, TRAIN)
+    live = view(context).live_prescription
+    assert not live["safety_hold"]
+    kept = {b.get("block_id") for b in live["session"]["blocks"]}
+    assert {"squat", "positional"} <= kept and "hard" not in kept
 
 
 @pytest.mark.parametrize("flag", ["sharp_pain", "instability", "swelling", "neurological_symptoms", "illness_symptoms",
