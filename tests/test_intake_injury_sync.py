@@ -415,7 +415,7 @@ def test_a_pre_identity_row_is_carried_across_a_training_impact_change() -> None
     new_flags = sync_intake_injuries_for_plan(store, athlete_id=ATHLETE, plan_row=new_plan)
 
     assert [flag["id"] for flag in new_flags] == [old_flag["id"]]
-    assert new_flags[0]["intake_identity"] == "guided:chest:strain"
+    assert new_flags[0]["intake_identity"] == "guided:chest:strain:strain"
 
 
 def test_a_different_injury_in_the_same_area_is_never_merged() -> None:
@@ -451,3 +451,57 @@ def test_two_injuries_of_one_kind_in_one_plan_stay_two() -> None:
 
     assert len(flags) == len(again) == 2
     assert len(store.injury_flags[ATHLETE]) == 2
+
+
+def _surface_intake(kind: str) -> dict:
+    return {
+        "guided_injuries": [
+            {
+                "area": "Left ankle",
+                "zone": "l_ankle",
+                "severity": "low",
+                "trend": "stable",
+                "injury_type": "surface_injury",
+                "injury_subtypes": [f"surface_injury:{kind}"],
+                "surface_type": kind,
+            }
+        ]
+    }
+
+
+def test_a_blister_and_a_cut_on_one_ankle_are_never_merged() -> None:
+    """Same zone, same umbrella type (surface_injury): the specific condition
+    is what tells them apart."""
+    store = FakeStore()
+    old_plan = _seed_generated_plan(store, intake_id="intake-old", intake=_surface_intake("blister"), active=False)
+    [blister] = sync_intake_injuries_for_plan(store, athlete_id=ATHLETE, plan_row=old_plan)
+
+    new_plan = _seed_generated_plan(store, intake_id="intake-new", intake=_surface_intake("cut"), active=True)
+    new_flags = sync_intake_injuries_for_plan(store, athlete_id=ATHLETE, plan_row=new_plan)
+
+    assert len(new_flags) == 2
+    kept = next(flag for flag in new_flags if flag["id"] == blister["id"])
+    assert kept["plan_id"] == old_plan["id"]
+    assert "blister" in kept["description"].lower()
+    cut = next(flag for flag in new_flags if flag["id"] != blister["id"])
+    assert "cut" in cut["description"].lower()
+    assert cut["intake_identity"] != kept["intake_identity"]
+
+
+def test_the_same_blister_on_a_new_plan_is_carried() -> None:
+    store = FakeStore()
+    old_plan = _seed_generated_plan(store, intake_id="intake-old", intake=_surface_intake("blister"), active=False)
+    [blister] = sync_intake_injuries_for_plan(store, athlete_id=ATHLETE, plan_row=old_plan)
+
+    new_plan = _seed_generated_plan(store, intake_id="intake-new", intake=_surface_intake("blister"), active=True)
+    new_flags = sync_intake_injuries_for_plan(store, athlete_id=ATHLETE, plan_row=new_plan)
+
+    assert [flag["id"] for flag in new_flags] == [blister["id"]]
+    assert new_flags[0]["intake_identity"] == "guided:l_ankle:surface_injury:blister"
+
+
+def test_an_umbrella_type_without_a_specific_condition_has_no_identity() -> None:
+    from api.services.intake_injury_sync import _guided_identity
+
+    injury = {"zone": "l_ankle", "injury_type": "surface_injury", "injury_subtypes": [], "surface_type": ""}
+    assert _guided_identity(injury, {"body_area": "Left ankle"}) is None
