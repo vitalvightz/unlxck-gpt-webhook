@@ -1217,9 +1217,9 @@ export function GuidedInjuryCard({
               <>
                 <div className="gi-selection-summary">
                   <p className="gi-selection-title">{selectedFamilyOption?.label}</p>
-                  <button type="button" className="gi-change-btn" onClick={handleChangeCategory}>Change category</button>
+                  <button type="button" className="gi-text-link" onClick={handleChangeCategory}>Change category</button>
                 </div>
-                <div className="gi-subtype-grid" role="group" aria-label="Injury subtype">
+                <div className="gi-type-grid" role="group" aria-label="Injury subtype">
                   {getOptionsForFamily(activeFamily).map((opt) => {
                     if (opt.value === "unspecified") return null;
                     const subtypeKey = getSubtypeKey(opt);
@@ -1252,7 +1252,7 @@ export function GuidedInjuryCard({
                   })}
                 </div>
                 {typeComplete ? (
-                  <button type="button" className="gi-notes-toggle" onClick={() => setIsEditingType(false)}>Done</button>
+                  <button type="button" className="gi-text-link" onClick={() => setIsEditingType(false)}>Done</button>
                 ) : null}
               </>
             )}
