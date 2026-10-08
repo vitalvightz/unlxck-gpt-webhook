@@ -8,7 +8,7 @@ export function EffectiveClinicianClearanceStatus({ clearance }: {
   clearance: TodayCommandView["effective_clinician_clearance"];
 }) {
   if (!clearance) return null;
-  const label = { rehab_only: "Rehab only", train_no_contact: "Train, no contact", train_contact: "Train + contact" }[clearance.level];
+  const label = { rehab_only: "Rehab only", train_no_contact: "Train, no hard sparring", train_contact: "Train + hard sparring" }[clearance.level];
   return <div className="today-injury-guidance" role="note" aria-label="Effective clinician clearance">
     <p><strong>Effective clinician clearance: {label}</strong></p>
     <p>{clearance.level === "train_contact" ? "Based on" : "Limited by"}: {clearance.limited_by.map(injury => injury.label).join(", ")}</p>
@@ -40,8 +40,8 @@ export function InjuryCareStatus({ injury, token, onRefresh }: {
   const clearance = injury.clinician_clearance;
   const scopeLabels: Record<string, string> = {
     rehab: "Rehab only",
-    "rehab,training": "Train, no contact",
-    "contact,rehab,training": "Train + contact",
+    "rehab,training": "Train, no hard sparring",
+    "contact,rehab,training": "Train + hard sparring",
   };
   const scopeLabel = scopeLabels[[...(clearance?.scopes ?? [])].sort().join(",")]
     ?? "Scope unclear — update required";
@@ -65,8 +65,8 @@ export function InjuryCareStatus({ injury, token, onRefresh }: {
         <p>What were you cleared for? Athlete-reported, not verified. This sets your training and contact permissions. Red flags and safety holds still apply; it does not advance rehab.</p>
         <div className="today-segment-row">
           <button type="button" className="today-segment" disabled={busy} onClick={() => report(["rehab"])}>Rehab only</button>
-          <button type="button" className="today-segment" disabled={busy} onClick={() => report(["rehab", "training"])}>Train, no contact</button>
-          <button type="button" className="today-segment" disabled={busy} onClick={() => report(["rehab", "training", "contact"])}>Train + contact</button>
+          <button type="button" className="today-segment" disabled={busy} onClick={() => report(["rehab", "training"])}>Train, no hard sparring</button>
+          <button type="button" className="today-segment" disabled={busy} onClick={() => report(["rehab", "training", "contact"])}>Train + hard sparring</button>
         </div>
       </div> : null}
     </> : null}

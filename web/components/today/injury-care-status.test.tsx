@@ -24,8 +24,8 @@ async function click(container: HTMLElement, label: string) {
 
 for (const [label, scopes] of [
   ["Rehab only", ["rehab"]],
-  ["Train, no contact", ["rehab", "training"]],
-  ["Train + contact", ["rehab", "training", "contact"]],
+  ["Train, no hard sparring", ["rehab", "training"]],
+  ["Train + hard sparring", ["rehab", "training", "contact"]],
 ] as const) {
   test(`clinician clearance submits unchanged scopes for ${label}`, async () => {
     const container = document.createElement("div"); document.body.appendChild(container);
@@ -126,8 +126,8 @@ test("unsupported guidance shows a repeated reason only once and keeps schedule 
 
 for (const [scopes, label] of [
   [["rehab"], "Rehab only"],
-  [["rehab", "training"], "Train, no contact"],
-  [["rehab", "training", "contact"], "Train + contact"],
+  [["rehab", "training"], "Train, no hard sparring"],
+  [["rehab", "training", "contact"], "Train + hard sparring"],
 ] as const) {
   test(`current clearance shows ${label} and an update action`, () => {
     const html = renderToStaticMarkup(<InjuryCareStatus injury={{ ...injury, clinician_clearance: {
@@ -157,15 +157,15 @@ test("updating clearance displays the refreshed scope, and worsening removes cur
   }) as typeof fetch;
   try {
     await act(async () => { render(); });
-    assert.match(container.textContent ?? "", /Reported clearance for this injury: Train, no contact/);
+    assert.match(container.textContent ?? "", /Reported clearance for this injury: Train, no hard sparring/);
     await click(container, "Update clinician clearance");
-    await click(container, "Train + contact");
+    await click(container, "Train + hard sparring");
     assert.deepEqual(calls[0].scopes, ["rehab", "training", "contact"]);
     assert.equal(calls[0].event_type, "clinician_clearance_report");
     assert.ok(!("status" in calls[0]));
     assert.equal(current.status, "open");
-    assert.match(container.textContent ?? "", /Reported clearance for this injury: Train \+ contact/);
-    assert.doesNotMatch(container.textContent ?? "", /Reported clearance for this injury: Train, no contact/);
+    assert.match(container.textContent ?? "", /Reported clearance for this injury: Train \+ hard sparring/);
+    assert.doesNotMatch(container.textContent ?? "", /Reported clearance for this injury: Train, no hard sparring/);
     current = { ...current, clinician_clearance: null, latest_reported_status: "worse" };
     await act(async () => { render(); });
     assert.doesNotMatch(container.textContent ?? "", /Reported clearance for this injury:|Update clinician clearance/);
@@ -200,7 +200,7 @@ test("effective clearance remains authoritative above a permissive individual re
   </>);
   assert.match(html, /<strong>Effective clinician clearance: Rehab only<\/strong>/);
   assert.match(html, /Limited by: Chest strain/);
-  assert.match(html, /Reported clearance for this injury: Train \+ contact/);
+  assert.match(html, /Reported clearance for this injury: Train \+ hard sparring/);
   assert.doesNotMatch(html, /Effective clinician clearance: Train/);
 });
 
@@ -219,7 +219,7 @@ test("full clinician clearance names its report without implying an injury limit
     level: "train_contact", scopes: ["rehab", "training", "contact"], requires_update: false,
     limited_by: [{ injury_id: injury.id, injury_episode_id: injury.episode_id!, label: "Chest strain" }],
   }} />);
-  assert.match(html, /Effective clinician clearance: Train \+ contact/);
+  assert.match(html, /Effective clinician clearance: Train \+ hard sparring/);
   assert.match(html, /Based on: Chest strain/);
   assert.doesNotMatch(html, /Limited by:/);
 });
