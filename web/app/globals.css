@@ -20826,11 +20826,43 @@ html[data-theme="light"] .loading-operational-item {
 }
 .ex-log-status-value::before {
   content: "·";
-  margin: 0 7px;
+  margin: 0 4px;
   color: var(--text-muted);
 }
 .ex-log-instead {
   color: var(--text-muted);
+}
+/* A saved log is one tappable line: what was done, then a small pencil. */
+.ex-log-edit {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.ex-log-edit:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.ex-log-edit-icon {
+  flex: 0 0 auto;
+  fill: none;
+  stroke: var(--text-muted);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: stroke var(--transition-fast);
+}
+.ex-log-edit:hover:not(:disabled) .ex-log-edit-icon,
+.ex-log-edit:focus-visible .ex-log-edit-icon {
+  stroke: var(--text-primary);
 }
 
 /* -- Exercise demo --------------------------------------------------------- */

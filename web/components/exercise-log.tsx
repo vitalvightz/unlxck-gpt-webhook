@@ -6,6 +6,7 @@ import {
   EXERCISE_LOG_REASONS,
   EXERCISE_LOG_REASON_LABELS,
   EXERCISE_LOG_STATUS_LABELS,
+  backoffLoadFor,
   buildLogEntry,
   draftFromLog,
   hasLoggableNumbers,
@@ -213,7 +214,10 @@ export function ExerciseLogPanel({ block }: { block: StructuredBlock }) {
   }
   const { logging, blockId, fields, log } = state;
   const previous = lastPerformanceFor(block, logging.recentPerformances);
-  const suggested = progressionLoadFor(block, previous, logging.allowProgression === true);
+  const progression = progressionLoadFor(block, previous, logging.allowProgression === true);
+  // Easing off is offered at any readiness; it never needs a progression rule.
+  const backoff = progression ? null : backoffLoadFor(block, previous);
+  const suggested = progression ?? backoff;
   const entry = buildLogEntry(fields, draft);
 
   function closeEditor() {
@@ -338,8 +342,19 @@ export function ExerciseLogPanel({ block }: { block: StructuredBlock }) {
     const values = log.status === "skipped" ? [] : loggedValues(fields, log);
     return (
       <div className="ex-log" data-mode="saved">
-        <div className="ex-log-bar">
-          <p className="ex-log-status" data-status={log.status}>
+        {/* The whole line reopens the log, so it keeps the row's full width. */}
+        <button
+          type="button"
+          className="ex-log-edit"
+          disabled={saving}
+          aria-label={`${[
+            EXERCISE_LOG_STATUS_LABELS[log.status],
+            ...values.map((value) => (value.insteadOf ? `${value.text} not ${value.insteadOf}` : value.text)),
+            ...(log.reason && log.status !== "skipped" ? [EXERCISE_LOG_REASON_LABELS[log.reason]] : []),
+          ].join(", ")}. Change`}
+          onClick={() => setChoosing(true)}
+        >
+          <span className="ex-log-status" data-status={log.status}>
             <span className="ex-log-status-label">{EXERCISE_LOG_STATUS_LABELS[log.status]}</span>
             {values.map((value) => (
               <span key={value.key} className="ex-log-status-value">
@@ -350,11 +365,12 @@ export function ExerciseLogPanel({ block }: { block: StructuredBlock }) {
             {log.reason && log.status !== "skipped" ? (
               <span className="ex-log-status-value">{EXERCISE_LOG_REASON_LABELS[log.reason]}</span>
             ) : null}
-          </p>
-          <button type="button" className="ex-log-link" disabled={saving} onClick={() => setChoosing(true)}>
-            Change
-          </button>
-        </div>
+          </span>
+          <svg className="ex-log-edit-icon" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false">
+            <path d="M4 20h4L18.5 9.5a2.12 2.12 0 0 0-3-3L5 17v3Z" />
+            <path d="m14.5 7.5 3 3" />
+          </svg>
+        </button>
         {/* A skip saves in one tap; why is a second, optional tap. */}
         {log.status === "skipped" ? (
           <ReasonChips
@@ -374,7 +390,7 @@ export function ExerciseLogPanel({ block }: { block: StructuredBlock }) {
     <div className="ex-log" data-mode="idle">
       {previous ? <p className="muted ex-log-previous">
         Last: {performanceSummary(previous)}
-        {suggested ? <span className="ex-log-suggestion"> · Try {suggested.value} {suggested.unit}</span> : null}
+        {suggested ? <span className="ex-log-suggestion"> · {backoff ? "Ease to" : "Try"} {suggested.value} {suggested.unit}</span> : null}
       </p> : null}
       <div className="ex-log-choices">
         <button

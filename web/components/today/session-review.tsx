@@ -103,7 +103,7 @@ export function SessionReview({
       await logging.saveMany(
         outcome.unlogged.map((block) => ({
           block_id: cleanText(block.block_id) ?? "",
-          ...withLastLoad(block, { status: "as_prescribed" as const }, logging.recentLoads),
+          ...withLastLoad(block, { status: "as_prescribed" as const }, logging.recentLoads, logging.recentPerformances),
         })),
         { keepExisting: true },
       );

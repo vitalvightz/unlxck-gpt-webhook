@@ -211,7 +211,7 @@ test("one tap inside the open row logs it as written", async () => {
 
   assert.deepEqual(view.saved, [{ block_id: "blk-deadlift", status: "as_prescribed" }]);
   assert.equal(view.container.querySelector(".ex-log-status")?.textContent, "Done");
-  assert.ok(view.button("Change"));
+  assert.equal(view.container.querySelector(".ex-log-edit")?.getAttribute("aria-label"), "Done. Change");
   view.unmount();
 });
 
@@ -223,7 +223,7 @@ test("logging different numbers saves only the change, with the chosen reason", 
   await view.type("Sets", "3");
   await view.type("Load", "80");
   assert.ok(view.container.querySelector(".ex-log-reasons"));
-  await view.click("Equipment");
+  await view.click("No kit");
   await view.click("Save");
 
   assert.deepEqual(view.saved, [
@@ -237,7 +237,7 @@ test("logging different numbers saves only the change, with the chosen reason", 
   // Prescribed and actual on one line.
   assert.equal(
     view.container.querySelector(".ex-log-status")?.textContent,
-    "Changed3 sets not 480 kgEquipment",
+    "Changed3 sets not 480 kgNo kit",
   );
   view.unmount();
 });
@@ -306,11 +306,11 @@ test("skipping saves in one tap; the reason is a second, optional tap", async ()
   await view.click("Skip");
   assert.deepEqual(view.saved, [{ block_id: "blk-deadlift", status: "skipped" }]);
   // Nobody skips because they felt strong.
-  assert.equal(view.button("Strong"), undefined);
+  assert.equal(view.button("Felt strong"), undefined);
 
-  await view.click("Fatigue");
+  await view.click("Too tired");
   assert.deepEqual(view.saved[1], { block_id: "blk-deadlift", status: "skipped", reason: "fatigue" });
-  assert.equal(view.button("Fatigue")?.getAttribute("aria-pressed"), "true");
+  assert.equal(view.button("Too tired")?.getAttribute("aria-pressed"), "true");
   view.unmount();
 });
 
@@ -323,7 +323,7 @@ test("the pain reason is only offered with health consent", async () => {
   const without = mount(deadlift, { painReasonAllowed: false });
   await without.click("Skip");
   assert.equal(without.button("Pain"), undefined);
-  assert.ok(without.button("Fatigue"));
+  assert.ok(without.button("Too tired"));
   without.unmount();
 });
 
@@ -331,14 +331,16 @@ test("a saved log can be changed to a different outcome", async () => {
   const view = mount(deadlift, {
     logs: { "blk-deadlift": record(deadlift, { status: "modified", actual: { sets: 3 }, reason: "fatigue" }) },
   });
-  assert.equal(view.container.querySelector(".ex-log-status")?.textContent, "Changed3 sets not 4Fatigue");
-  await view.click("Change");
+  assert.equal(view.container.querySelector(".ex-log-status")?.textContent, "Changed3 sets not 4Too tired");
+  const edit = () => view.container.querySelector<HTMLButtonElement>(".ex-log-edit")!;
+  assert.equal(edit().getAttribute("aria-label"), "Changed, 3 sets not 4, Too tired. Change");
+  await view.press(edit());
   await view.click("Log numbers");
   // The editor opens on what was saved.
   const sets = view.container.querySelector<HTMLInputElement>(".ex-log-field input");
   assert.equal(sets?.value, "3");
   await view.click("Cancel");
-  await view.click("Change");
+  await view.press(edit());
   await view.click("Done");
 
   assert.deepEqual(view.saved, [{ block_id: "blk-deadlift", status: "as_prescribed" }]);
@@ -375,6 +377,31 @@ test("a collapsed row carries the numbers that were logged", () => {
   assert.equal(html.split('class="ex-row-log"').length - 1, 1);
 });
 
+
+test("a struggled weight is offered eased off, at any readiness, and stays editable", async () => {
+  const previous = record(deadlift, {
+    plan_id: "previous-plan", reason: "fatigue", status: "modified",
+    actual: { load: { value: 100, unit: "kg" }, effort: { method: "RPE", value: 9 } },
+  });
+  const view = mount(deadlift, { recentPerformances: [previous], allowProgression: false });
+  assert.match(view.text(), /Last: 100 kg.*Ease to 90 kg/);
+  await view.click("Log numbers");
+  const load = view.container.querySelector<HTMLInputElement>('.ex-log-field input[id$="-load"]');
+  assert.equal(load?.value, "90");
+  // "Done" records the eased weight on screen, not last time's.
+  await view.click("Cancel");
+  await view.click("Done");
+  assert.deepEqual(view.saved[0], { block_id: "blk-deadlift", status: "as_prescribed", actual: { load: { value: 90, unit: "kg" } } });
+  view.unmount();
+});
+
+test("a stated reason other than fatigue is not read as the weight being too much", () => {
+  const short = record(deadlift, { plan_id: "previous-plan", reason: "equipment", status: "modified",
+    actual: { sets: 2, load: { value: 100, unit: "kg" } } });
+  const view = mount(deadlift, { recentPerformances: [short] });
+  assert.doesNotMatch(view.text(), /Ease to/);
+  view.unmount();
+});
 
 test("last performance stays inside the open row and the suggested load is editable", async () => {
   const block = { ...deadlift, progression_rule: "Add 2.5 kg when all sets complete." };
