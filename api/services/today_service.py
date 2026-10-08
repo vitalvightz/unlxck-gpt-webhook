@@ -1426,6 +1426,8 @@ def upsert_session_completion(
         # cannot override a current red-flag STOP. Apply current readiness even
         # when an unsupported injury has no live prescription to carry a hold.
         if command.today.decision_tier == "stop":
+            if command._injury_hold_stop:
+                raise HTTPException(409, "This session is on hold for the current injury guidance.")
             raise HTTPException(409, "Training is stopped by today's current safety guidance.")
         if command.today.decision_tier == "not_checked_in" and command.effective_clinician_clearance:
             raise HTTPException(409, "Complete today's check-in before starting.")
@@ -3272,6 +3274,7 @@ def _build_today_command_view(
         # Describe the actual prescription without weakening stronger readiness.
         if live["safety_hold"] and view.today.decision_tier in {"green", "modify"}:
             policy_changed_guidance = True
+            view._injury_hold_stop = True
             view.today.recommendation_state = "pull_back"
             view.today.decision_tier = "stop"
             view.today.recommendation_reason = "Session blocked\n" + live.get("safety_hold_reason", "This session is on hold for the current injury guidance.") + "\nDo not start this session. Review your injury guidance."

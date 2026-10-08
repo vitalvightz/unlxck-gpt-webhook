@@ -15,7 +15,7 @@ from __future__ import annotations
 from datetime import date
 from typing import Any, Literal, Mapping, Sequence
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, PrivateAttr
 
 from .completion import CompletionStatus, completion_status_of
 from .readiness_message import (
@@ -340,6 +340,8 @@ class CommandView(BaseModel):
     delayed_rehab_prompts: list[dict[str, Any]] = Field(default_factory=list)
     week_summary: dict[str, Any] = Field(default_factory=dict)
     quick_actions: list[QuickAction] = Field(default_factory=list)
+    # The stop tier came from an injury hold, not a readiness red flag.
+    _injury_hold_stop: bool = PrivateAttr(default=False)
 
 
 def session_is_today(view: Any) -> bool:
