@@ -116,8 +116,8 @@ export function AchillesAssessmentForm({ injury, token, onRefresh, disabled = fa
 
   return <details className={styles.panel}>
     <summary>Record Achilles assessment</summary>
-    <p>Only log an assessment that already happened. Don&apos;t test yourself for this form.</p>
-    <p>Self-reported, not verified. It won&apos;t unlock loading rehab. Each save replaces the last, so fill in everything you know.</p>
+    <p>Only log an assessment that already happened. Don&apos;t test yourself for this form. Follow your clinician&apos;s restrictions.</p>
+    <p>Self-reported, not verified. It won&apos;t unlock loading rehab. Each save replaces the last, so fill in everything you know and leave the rest as unknown.</p>
     <form onSubmit={save}>
       <fieldset disabled={busy || disabled} className={styles.fields}>
         <legend>1. Assessment context — {injury.side} Achilles</legend>
@@ -152,7 +152,7 @@ export function AchillesAssessmentForm({ injury, token, onRefresh, disabled = fa
         <label>Symptoms during loading (0–10)<input name="during_symptoms" type="number" min="0" max="10" step="any" /></label>
         <label>Delayed symptoms (0–10, if observed)<input name="delayed_symptoms" type="number" min="0" max="10" step="any" /></label>
         <label>Delayed observation time (your local time)<input name="delayed_response_at" type="datetime-local" /></label>
-        <p className={styles.full}>Symptom ratings only. No score here means you&apos;re ready to load.</p>
+        <p className={styles.full}>These scores do not clear you to start loading rehab.</p>
       </fieldset>
       <fieldset disabled={busy || disabled} className={styles.fields}>
         <legend>4. Assessed range and load</legend>

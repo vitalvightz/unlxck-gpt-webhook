@@ -10,7 +10,7 @@ export function EffectiveClinicianClearanceStatus({ clearance }: {
   if (!clearance) return null;
   const label = { rehab_only: "Rehab only", train_no_contact: "Train, no hard sparring", train_contact: "Train + hard sparring" }[clearance.level];
   return <div className="today-injury-guidance" role="note" aria-label="Effective clinician clearance">
-    <p><strong>Cleared: {label}</strong> <small className="muted">· {clearance.level === "train_contact" ? "based on" : "limited by"} {clearance.limited_by.map(injury => injury.label).join(", ")}</small></p>
+    <p><strong>Reported clearance: {label}</strong> <small className="muted">· {clearance.level === "train_contact" ? "based on" : "limited by"} {clearance.limited_by.map(injury => injury.label).join(", ")}</small></p>
     {clearance.requires_update ? <p>Scope unclear. Rehab only until clarified.</p> : null}
   </div>;
 }

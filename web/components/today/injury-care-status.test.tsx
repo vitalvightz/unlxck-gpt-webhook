@@ -198,10 +198,10 @@ test("effective clearance remains authoritative above a permissive individual re
       episode_id: injury.episode_id!, scopes: ["rehab", "training", "contact"], source: "athlete_reported", externally_verified: false,
     } }} token="token" onRefresh={async () => {}} />
   </>);
-  assert.match(html, /<strong>Cleared: Rehab only<\/strong>/);
+  assert.match(html, /<strong>Reported clearance: Rehab only<\/strong>/);
   assert.match(html, /limited by Chest strain/);
   assert.match(html, /Your clearance: Train \+ hard sparring/);
-  assert.doesNotMatch(html, /Cleared: Train/);
+  assert.doesNotMatch(html, /Reported clearance: Train/);
 });
 
 test("unclear effective scope explains its conservative ceiling", () => {
@@ -209,7 +209,7 @@ test("unclear effective scope explains its conservative ceiling", () => {
     level: "rehab_only", scopes: ["rehab"], requires_update: true,
     limited_by: [{ injury_id: injury.id, injury_episode_id: injury.episode_id!, label: "Chest strain" }],
   }} />);
-  assert.match(html, /Cleared: Rehab only/);
+  assert.match(html, /Reported clearance: Rehab only/);
   assert.match(html, /Rehab only until clarified/);
   assert.equal(renderToStaticMarkup(<EffectiveClinicianClearanceStatus clearance={null} />), "");
 });
@@ -219,7 +219,7 @@ test("full clinician clearance names its report without implying an injury limit
     level: "train_contact", scopes: ["rehab", "training", "contact"], requires_update: false,
     limited_by: [{ injury_id: injury.id, injury_episode_id: injury.episode_id!, label: "Chest strain" }],
   }} />);
-  assert.match(html, /Cleared: Train \+ hard sparring/);
+  assert.match(html, /Reported clearance: Train \+ hard sparring/);
   assert.match(html, /based on Chest strain/);
   assert.doesNotMatch(html, /limited by/);
 });
