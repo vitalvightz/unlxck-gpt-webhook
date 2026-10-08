@@ -15,7 +15,7 @@ for (const [name, width] of [["mobile", 375], ["desktop", 1280]] as const) {
       await page.addStyleTag({ content: css });
       await page.getByText("Record Achilles assessment", { exact: true }).click();
       await expect(page.getByRole("button", { name: "Save assessment report" })).toBeVisible();
-      await expect(page.getByText("LOAD remains closed.", { exact: false })).toBeVisible();
+      await expect(page.getByText("It won't unlock loading rehab.", { exact: false })).toBeVisible();
       await page.getByLabel("Assessment time (your local time)").fill("2026-10-05T12:00");
       await page.getByLabel("Reported tendon site").selectOption("insertional");
       await expect(page.getByLabel("Reported tendon site")).toHaveValue("insertional");

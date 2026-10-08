@@ -177,10 +177,10 @@ export function PlanDetailScreen({ planId }: { planId: string }) {
         <PlanDetailStateCard
           phase="failed"
           eyebrow="Plan detail"
-          title="We could not restore this saved plan."
-          copy="The workspace could not pull the requested plan state. Review the error below, then retry from history."
-          railTitle="Recovery route"
-          railCopy="The saved plan itself is not deleted by this error. Returning to plan history and reopening the plan is safe."
+          title="We couldn't load this plan."
+          copy="Check the error below, then try again from your plans."
+          railTitle="Your plan is safe"
+          railCopy="Nothing was deleted. You can reopen it from your plans."
           error={error}
         />
       ) : plan ? (

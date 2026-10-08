@@ -54,7 +54,7 @@ test("unknown inputs save through the owned shared API without claiming verifica
     assert.equal(body.assessment?.payload.delayed_symptoms, null);
     assert.ok(!("externally_verified" in body.assessment!));
     assert.equal(ui.refreshes(), 1);
-    assert.match(ui.container.querySelector('[role="status"]')?.textContent ?? "", /LOAD remains closed/);
+    assert.match(ui.container.querySelector('[role="status"]')?.textContent ?? "", /Loading rehab stays locked/);
     assert.equal(ui.container.querySelector('[name="side"]'), null);
   } finally { ui.cleanup(); }
 });
@@ -73,7 +73,7 @@ test("actual clinician-attributed observations and exact measurements remain an 
     assert.equal(ui.calls[0].assessment?.payload.during_symptoms, 0);
     assert.equal(ui.calls[0].assessment?.payload.heel_rise_repetitions, 4);
     assert.equal(ui.calls[0].assessment?.payload.resistance_kg, 5.5);
-    assert.match(ui.container.textContent ?? "", /assessor identity is not verified/);
+    assert.match(ui.container.textContent ?? "", /not verified/);
   } finally { ui.cleanup(); }
 });
 

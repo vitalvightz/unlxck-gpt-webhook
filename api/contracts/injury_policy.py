@@ -91,7 +91,7 @@ def resolve_injury_policy(
             matched = next((p for p in policies if p.region == region and p.injury_type == kind
                             and p.activation == "live" and p.status == "active"), None)
             result.update(outcome="medical_review", reason_codes=["specific_injury_identity_conflict"],
-                          summary="Confirm the specific injury for this episode before using symptom guidance.",
+                          summary="Confirm the exact injury to get symptom guidance.",
                           restrictions={"blocked_regions": [region], "blocked_tags": [], "contact_limit": "none"})
             if matched:
                 result.update(activation="live", policy_id=matched.policy_id, policy_version=matched.version)
@@ -174,7 +174,7 @@ def resolve_injury_policy(
         dose = selected_dose.model_dump(exclude_none=True) if selected_dose else {}
         readiness_dose = prescription.readiness_doses.get(readiness_decision)
         if readiness_decision == "pull_back" and readiness_dose is None and prescription.dose is not None:
-            result.update(outcome="missing_information", summary="Follow today's reduced-training guidance. No reduced rehab dose is configured for this readiness state.",
+            result.update(outcome="missing_information", summary="Follow today's reduced-training guidance. No rehab is set for days like this.",
                           reason_codes=["reviewed_readiness_dose_missing"])
             return result
         if readiness_dose is not None:

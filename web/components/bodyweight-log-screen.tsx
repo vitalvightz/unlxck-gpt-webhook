@@ -239,7 +239,7 @@ export function BodyweightLogScreen() {
         <NutritionWorkspaceHeader
           athleteName={athleteName}
           title="Bodyweight log"
-          description="A dedicated fight-lab surface for daily weigh-ins, fasted context, disciplined trend review, and explicit history edits."
+          description="Log daily weigh-ins, track your trend and edit past entries."
         />
         <NutritionSubnav />
         <SafetyNote tone="warning">{WEIGHT_CUT_SAFETY}</SafetyNote>
@@ -253,7 +253,6 @@ export function BodyweightLogScreen() {
                 <div className={styles.heroHeaderCopy}>
                   <p className="kicker">Latest readout</p>
                   <h2 className="form-section-title">Current trace</h2>
-                  <p className="muted">The hero locks onto the latest logged number so weight stays the loudest signal on the page.</p>
                 </div>
               </div>
 
@@ -325,7 +324,7 @@ export function BodyweightLogScreen() {
                 <div className={styles.moduleHeaderCopy}>
                   <p className="kicker">Quick add</p>
                   <h2 className="form-section-title">New weigh-in</h2>
-                  <p className="muted">Entry-first flow: lock the number, add fasted context and notes, then save the log immediately.</p>
+                  <p className="muted">Enter your weight, add fasted status or notes, then save.</p>
                 </div>
               </div>
 
@@ -387,7 +386,6 @@ export function BodyweightLogScreen() {
               </div>
 
               <div className={styles.quickFooter}>
-                <p className="muted">Latest source behavior stays untouched. If the newest logged weight matches the effective current weight, the existing backend logic still marks it as log-driven.</p>
                 <button type="button" className="cta" onClick={handleQuickAddSave} disabled={isPending}>
                   {isPending ? "Saving..." : "Save entry"}
                 </button>
@@ -537,7 +535,7 @@ export function BodyweightLogScreen() {
                   eyebrow="Weigh-in history"
                   title="No weigh-ins logged yet."
                   description="Use the Quick add form above to record your first weigh-in."
-                  example="Once you log an entry, this list switches into reverse-chronological history with weight delta, fasted state, and inline edits."
+                  example="Entries show newest first, with the change from the last weigh-in."
                   primaryAction={{ label: "Log first weigh-in", href: "#bodyweight-quick-add" }}
                 />
               )}

@@ -820,8 +820,7 @@ function QuickBuildFormInner() {
         <p className="eyebrow">Quick Build</p>
         <h1 className="hero-title">Generate a plan in about two minutes.</h1>
         <p className="muted">
-          Quick Build uses safe defaults for fatigue, sparring intensity, and goal prioritization. Use Advanced Intake for full
-          control - you can also refine this plan afterwards.
+          Uses safe defaults for fatigue, sparring and goals. You can refine it later in Advanced Intake.
         </p>
       </section>
 
@@ -829,8 +828,7 @@ function QuickBuildFormInner() {
         <div className="quick-build-starters-copy">
           <span className="checkbox-group-label">One-tap starters</span>
           <p className="muted">
-            Tap a starter to fill your schedule, equipment, and focus in one go. Adjust anything below, or tap again to
-            clear.
+            Fills your schedule, equipment and focus in one tap. Tap again to clear.
           </p>
         </div>
         <div className="quick-build-starter-grid">

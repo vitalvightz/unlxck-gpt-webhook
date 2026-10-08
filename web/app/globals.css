@@ -8293,6 +8293,19 @@ html[data-theme="light"] .today-terminal-status {
   line-height: 1.5;
 }
 
+.today-injury-clearance-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.today-injury-guidance small {
+  font-size: 12px;
+  font-weight: 500;
+}
+
 .today-injury-guidance[data-tone="danger"] {
   border-color: rgba(226, 58, 76, 0.3);
   border-left-color: rgba(226, 58, 76, 0.82);

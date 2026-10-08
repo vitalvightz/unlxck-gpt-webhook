@@ -54,7 +54,7 @@ export function NutritionBodyweightChart({
           <div className={styles.chartHeaderCopy}>
             <p className="kicker">Trend chart</p>
             <h2 className="form-section-title">Weight trace</h2>
-            <p className="muted">This surface will map your daily drift, target line, and recent change as soon as the first weigh-in lands.</p>
+            <p className="muted">Your weight trend shows here once you log a weigh-in.</p>
           </div>
           <div className={styles.rangeRail} aria-label="Bodyweight chart range">
             {RANGE_OPTIONS.map((option) => (
@@ -74,7 +74,7 @@ export function NutritionBodyweightChart({
           <div className={styles.chartEmpty}>
             <p className={styles.chartEmptyTitle}>No trendline yet</p>
             <p className={styles.chartEmptyBody}>
-              Log the first weigh-in below to start the red trace, unlock recent-change context, and turn this panel into a useful cut monitor.
+              Log your first weigh-in below to start the chart.
             </p>
           </div>
         </div>
@@ -138,7 +138,7 @@ export function NutritionBodyweightChart({
         <div className={styles.chartHeaderCopy}>
           <p className="kicker">Trend chart</p>
           <h2 className="form-section-title">Weight trace</h2>
-          <p className="muted">Actual log entries drive the red trend line. The target line stays subtle so the data keeps first priority.</p>
+          <p className="muted">Red line: your weigh-ins. Faint line: your target.</p>
         </div>
         <div className={styles.rangeRail} aria-label="Bodyweight chart range">
           {RANGE_OPTIONS.map((option) => (

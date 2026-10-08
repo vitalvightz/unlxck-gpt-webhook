@@ -2041,10 +2041,10 @@ export function PlanIntakeForm() {
       ? "Goals and weak areas share a cap once you add a fight date, so the plan can match the camp window."
       : "Goals and weak areas share a cap once the fight date is set so the plan can match the camp window."
     : performanceFocusCapExceeded
-      ? `Goals and weak areas share this ${performanceFocusCapValue}-pick cap for ${performanceFocusWindowLabel}. ${performanceFocusReason} You are ${selectedPerformanceFocusCount - performanceFocusCapValue} over the current cap, so unselect to get back within it.`
+      ? `Up to ${performanceFocusCapValue} goals and weak areas combined for ${performanceFocusWindowLabel}. ${performanceFocusReason} You're ${selectedPerformanceFocusCount - performanceFocusCapValue} over. Unselect to continue.`
       : performanceFocusCapReached
-        ? `Goals and weak areas share this ${performanceFocusCapValue}-pick cap for ${performanceFocusWindowLabel}. ${performanceFocusReason} Cap reached. Unselect one to change your focus.`
-        : `Goals and weak areas share this ${performanceFocusCapValue}-pick cap for ${performanceFocusWindowLabel}. ${performanceFocusReason} You can add ${remainingPerformanceFocusSelections} more.`;
+        ? `Up to ${performanceFocusCapValue} goals and weak areas combined for ${performanceFocusWindowLabel}. ${performanceFocusReason} Limit reached. Unselect one to swap.`
+        : `Up to ${performanceFocusCapValue} goals and weak areas combined for ${performanceFocusWindowLabel}. ${performanceFocusReason} ${remainingPerformanceFocusSelections} left.`;
   const performanceFocusCapHint = performanceFocusCapValue === null
     ? noScheduledFight
       ? "No fight date yet. The cap opens once a fight is scheduled."
@@ -2697,7 +2697,7 @@ export function PlanIntakeForm() {
                       />
                       <p className="muted">
                         {getFieldHelperText(daysOutCtx, "weekly_training_frequency") ||
-                          "Count the total training sessions the week should carry. Hard sparring days and Light Combat days are labels inside that weekly total, not extra sessions on top."}
+                          "Total sessions per week. Hard sparring and Light Combat days count toward this, not on top of it."}
                       </p>
                       {invalidFieldId === "sessionsPerWeek" && error ? (
                         <p id="sessionsPerWeek-error" className="error-text" role="alert">{error}</p>
@@ -3370,7 +3370,7 @@ export function PlanIntakeForm() {
               </div>
               <div className="support-panel">
                 <p className="kicker">Nutrition foundation</p>
-                <p className="muted">Weight setup, bodyweight logging, and readiness fields now live in the dedicated nutrition workspace.</p>
+                <p className="muted">Weight, weigh-ins and readiness are set in Nutrition.</p>
                 <div className="plan-summary-actions">
                   <Link href="/nutrition" className="ghost-button">
                     Open nutrition workspace

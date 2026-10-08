@@ -896,7 +896,7 @@ function PlansSyncState() {
           <p className="kicker">Plan sync</p>
           <h2>Loading saved fight camps</h2>
           <p className="muted">
-            Pulling the active camp, plan history, and current intake from the athlete record.
+            One moment.
           </p>
         </div>
         <span className="badge status-badge-neutral">Syncing</span>
