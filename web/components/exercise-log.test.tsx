@@ -211,7 +211,7 @@ test("one tap inside the open row logs it as written", async () => {
 
   assert.deepEqual(view.saved, [{ block_id: "blk-deadlift", status: "as_prescribed" }]);
   assert.equal(view.container.querySelector(".ex-log-status")?.textContent, "Done");
-  assert.ok(view.button("Change"));
+  assert.equal(view.container.querySelector(".ex-log-edit")?.getAttribute("aria-label"), "Done. Change");
   view.unmount();
 });
 
@@ -332,13 +332,15 @@ test("a saved log can be changed to a different outcome", async () => {
     logs: { "blk-deadlift": record(deadlift, { status: "modified", actual: { sets: 3 }, reason: "fatigue" }) },
   });
   assert.equal(view.container.querySelector(".ex-log-status")?.textContent, "Changed3 sets not 4Too tired");
-  await view.click("Change");
+  const edit = () => view.container.querySelector<HTMLButtonElement>(".ex-log-edit")!;
+  assert.equal(edit().getAttribute("aria-label"), "Changed, 3 sets not 4, Too tired. Change");
+  await view.press(edit());
   await view.click("Log numbers");
   // The editor opens on what was saved.
   const sets = view.container.querySelector<HTMLInputElement>(".ex-log-field input");
   assert.equal(sets?.value, "3");
   await view.click("Cancel");
-  await view.click("Change");
+  await view.press(edit());
   await view.click("Done");
 
   assert.deepEqual(view.saved, [{ block_id: "blk-deadlift", status: "as_prescribed" }]);
