@@ -19,6 +19,8 @@
 --
 -- The carry writes only the first time a plan's key is seen, so repeated Today
 -- reads still never write (see 20261007193500).
+--
+-- The API calls this as sync_intake_injury_flag (see below).
 
 alter table public.injury_flags add column if not exists intake_identity text;
 
@@ -60,13 +62,11 @@ revoke all on function public.intake_injury_description_key(text) from public, a
 grant execute on function public.intake_injury_area_key(text) to service_role;
 grant execute on function public.intake_injury_description_key(text) to service_role;
 
--- The new parameter has a default, so the old 13-argument signature would make
--- every call ambiguous. Replace it.
-drop function if exists public.adopt_or_create_intake_injury_flag_with_wound_fields(
-  uuid, uuid, text, text, text, text, text, timestamptz, text, text, jsonb, text, text
-);
-
-create or replace function public.adopt_or_create_intake_injury_flag_with_wound_fields(
+-- A new name rather than a new overload: an extra defaulted parameter on the old
+-- name would make the running API's 13-argument calls ambiguous until it is
+-- redeployed. The old wrapper stays callable for that API and is otherwise
+-- superseded by this one.
+create or replace function public.sync_intake_injury_flag(
   p_athlete_id uuid,
   p_plan_id uuid,
   p_source_key text,
@@ -202,11 +202,11 @@ begin
 end;
 $$;
 
-revoke all on function public.adopt_or_create_intake_injury_flag_with_wound_fields(
+revoke all on function public.sync_intake_injury_flag(
   uuid, uuid, text, text, text, text, text, timestamptz, text, text, jsonb, text, text, text
 ) from public, anon, authenticated;
 
-grant execute on function public.adopt_or_create_intake_injury_flag_with_wound_fields(
+grant execute on function public.sync_intake_injury_flag(
   uuid, uuid, text, text, text, text, text, timestamptz, text, text, jsonb, text, text, text
 ) to service_role;
 

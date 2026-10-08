@@ -1,6 +1,7 @@
 """Real PostgreSQL: syncing intake injuries on a Today read never writes.
 
-Every Today build calls adopt_or_create_intake_injury_flag_with_wound_fields.
+Every Today build syncs intake injuries through sync_intake_injury_flag (before
+20261008001000, adopt_or_create_intake_injury_flag_with_wound_fields).
 When that RPC updated the row unconditionally, the updated_at trigger moved the
 injury's updated_at on every read; the live prescription revision includes it,
 so starting a session was always refused as "prescription changed".
@@ -69,7 +70,7 @@ def test_repeated_sync_leaves_the_injury_untouched_until_a_wound_field_is_new(po
 
 def _sync_injury(connection, athlete, plan, key, area, description, *, severity="moderate", identity=None):
     return connection.execute(
-        """select adopt_or_create_intake_injury_flag_with_wound_fields(
+        """select sync_intake_injury_flag(
              %s, %s, %s, %s, %s, %s, 'open', null, null, null, '[]'::jsonb, null, null, %s)""",
         (athlete, plan, key, area, description, severity, identity),
     ).fetchone()[0]

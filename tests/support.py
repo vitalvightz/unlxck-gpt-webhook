@@ -2307,7 +2307,7 @@ class FakeStore(InMemoryNotificationLedger, FullRowStatusReads):
         )
 
     def adopt_or_create_intake_injury_flag(self, params: dict) -> dict | None:
-        """In-memory adopt_or_create_intake_injury_flag_with_wound_fields.
+        """In-memory sync_intake_injury_flag.
 
         Follows the RPC (supabase/migrations/20260804090000_add_intake_injury_source_key.sql,
         20260804093000_preserve_intake_wound_fields.sql and
