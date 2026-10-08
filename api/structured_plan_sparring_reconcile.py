@@ -784,9 +784,14 @@ def _reconcile(structured_plan: Any, planning_brief: Any) -> list[str]:
                 }
                 day["today_card"] = card
             current = str(card.get("headline") or "").strip()
-            if contact.reason and card.get("contact_reason") != contact.reason:
-                card["contact_reason"] = contact.reason
-                notes.append(f"explained reduced contact on {identity}")
+            # The reason belongs to the final contact load only: a day that is
+            # no longer reduced must not keep a stale "Reduced dose" reason.
+            if contact.reason:
+                if card.get("contact_reason") != contact.reason:
+                    card["contact_reason"] = contact.reason
+                    notes.append(f"explained reduced contact on {identity}")
+            elif card.pop("contact_reason", None) is not None:
+                notes.append(f"cleared stale reduced-contact reason on {identity}")
             # A day the converter gave real app work renders as session cards, but
             # the coach-owned contact (a declared / downgraded sparring day) must
             # still show on that day. Technical-contact context does not decide

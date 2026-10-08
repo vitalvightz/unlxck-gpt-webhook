@@ -579,6 +579,17 @@ test("explains every reduced-dose sparring day deterministically", () => {
     REDUCED_CONTACT_FALLBACK_REASON,
   );
   assert.equal(getReducedContactReason({ today_card: { headline: "Hard sparring" } }), null);
+  // A stale reason left on a day that is now full hard or technical is ignored.
+  assert.equal(
+    getReducedContactReason({ today_card: { headline: "Hard sparring", contact_reason: stamped } }),
+    null,
+  );
+  assert.equal(
+    getReducedContactReason({
+      today_card: { headline: "Lower strength", coach_led_contact: "Technical-only combat", contact_reason: stamped },
+    }),
+    null,
+  );
   assert.equal(getReducedContactReason(null), null);
 });
 

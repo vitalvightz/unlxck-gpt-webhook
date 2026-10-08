@@ -9,6 +9,8 @@ from __future__ import annotations
 
 import re
 
+import pytest
+
 from api.structured_plan_sparring_reconcile import reconcile_coach_led_sparring_days
 
 # Mirror the web classifier (web/lib/structured-plan.ts) so the assertions prove a
@@ -554,6 +556,33 @@ def test_reduced_dose_without_known_code_uses_fixed_fallback_reason():
         "Reduced dose: It keeps this week's total sparring load manageable. "
         "Spar, but cut hard rounds and keep intensity controlled."
     )
+
+
+@pytest.mark.parametrize(
+    ("load", "status", "hard_day_class"),
+    [
+        ("hard", "hard_as_planned", "primary_hard"),
+        ("technical", "convert_to_technical_suggested", "technical"),
+    ],
+)
+@pytest.mark.parametrize("with_sessions", [False, True])
+def test_stale_reduced_reason_is_cleared_when_final_load_is_not_reduced(
+    load, status, hard_day_class, with_sessions
+):
+    stale = "Reduced dose: Your reported fatigue is high. Spar, but cut hard rounds and keep intensity controlled."
+    day = _day("D-31", headline="Hard sparring — reduced dose")
+    day["today_card"]["contact_reason"] = stale
+    if with_sessions:
+        day["sessions"] = [{"session_id": "viz", "title": "Neural Visualization", "blocks": []}]
+    plan = _structured_plan([day])
+    notes = reconcile_coach_led_sparring_days(
+        plan,
+        _planning_brief([{
+            "day": "Thursday", "effective_load": load, "status": status, "hard_day_class": hard_day_class,
+        }]),
+    )
+    assert "contact_reason" not in plan["weeks"][0]["days"][0]["today_card"]
+    assert any("cleared stale reduced-contact reason" in note for note in notes)
 
 
 def test_full_hard_and_technical_days_carry_no_contact_reason():

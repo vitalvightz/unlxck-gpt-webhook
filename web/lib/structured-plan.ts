@@ -1861,16 +1861,18 @@ export const REDUCED_CONTACT_FALLBACK_REASON =
  * Why a declared hard-sparring day was deloaded, or null when it was not. The
  * server stamps a deterministic ``today_card.contact_reason`` from the
  * planner's reason codes; a reduced-dose card without one gets the fixed
- * fallback so it never renders unexplained.
+ * fallback so it never renders unexplained. The reason is only trusted while
+ * the day's contact still reads as reduced dose.
  */
 export function getReducedContactReason(day: StructuredDay | null | undefined): string | null {
   const card = day?.today_card;
-  const reason = cleanText(card?.contact_reason);
-  if (reason) {
-    return reason;
-  }
   const contactText = `${cleanText(card?.headline) ?? ""} ${cleanText(card?.coach_led_contact) ?? ""}`;
-  return REDUCED_DOSE_RE.test(contactText) ? REDUCED_CONTACT_FALLBACK_REASON : null;
+  // The day must still read as reduced: a stale reason on a day that is now
+  // full hard or technical contact is never shown.
+  if (!REDUCED_DOSE_RE.test(contactText)) {
+    return null;
+  }
+  return cleanText(card?.contact_reason) ?? REDUCED_CONTACT_FALLBACK_REASON;
 }
 
 /**
