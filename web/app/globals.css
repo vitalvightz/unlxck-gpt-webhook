@@ -14625,8 +14625,35 @@ html[data-theme="light"] .injury-card-remove-btn:hover {
   grid-column: 1 / -1;
 }
 
+/* Safety follow-up answers use the same even tiles: three across for a
+   three-answer question (Yes / No / Not sure), otherwise two across. */
+.gi-safety-panel .gi-chip-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.gi-safety-panel .gi-chip-row:has(> .gi-chip:nth-child(3):last-child) {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.gi-safety-panel .gi-chip-row > .gi-chip {
+  justify-content: center;
+  min-height: 48px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  white-space: normal;
+  text-align: center;
+  line-height: 1.25;
+}
+
+.gi-safety-panel .gi-chip-row:not(:has(> .gi-chip:nth-child(3):last-child)) > .gi-chip:last-child:nth-child(odd) {
+  grid-column: 1 / -1;
+}
+
 .gi-text-link {
   justify-self: start;
+  white-space: nowrap;
   padding: 4px 0;
   border: 0;
   background: none;
@@ -14725,12 +14752,6 @@ html[data-theme="light"] .gi-suggested-types {
 .gi-selection-title { margin:0; font-weight:600; font-size:.86rem; }
 .gi-selection-helper { margin:2px 0 0; font-size:.76rem; color: var(--text-muted); }
 .gi-change-btn { min-height:44px; padding: 0 12px; border-radius:10px; border:1px solid rgba(255,255,255,.14); background:transparent; color:var(--text-secondary); }
-
-.gi-subtype-grid {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
 
 .gi-type-selector {
   display: grid;
