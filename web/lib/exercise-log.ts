@@ -550,3 +550,47 @@ export function progressionLoadFor(block: StructuredBlock, log: ExerciseLogRecor
   if (!(increment > 0 && increment <= load.value * 0.05)) return null;
   return { value: Math.round((load.value + increment) * 100) / 100, unit: load.unit };
 }
+
+/** Last time's weight is eased by this share when the athlete struggled with it. */
+const BACKOFF_RATIO = 0.9;
+
+/**
+ * A lighter weight to offer when last time's was too much: the athlete flagged
+ * fatigue, fell short of the sets or reps, or reported an RPE at least two over
+ * the plan's (9+ when the plan gave none). Only a suggestion, never applied on
+ * its own, and only while today's dose matches the one that was struggled with.
+ * Pain and skips are left out: those already stop the old weight carrying over.
+ */
+export function backoffLoadFor(block: StructuredBlock, log: ExerciseLogRecord | null): ExerciseLogMeasure | null {
+  if (!log || log.status === "skipped" || log.reason === "pain") return null;
+  const field = logFieldsForBlock(block).find((item) => item.key === "load");
+  const load = log.actual.load;
+  if (!field || field.prescribed || !load || load.unit !== field.apiUnit || !finitePositiveNumber(load.value)) return null;
+  // The block as it was shown last time.
+  const before = log.prescribed as StructuredBlock;
+  const todayReps = prescribedReps(block.reps)?.range;
+  const plannedReps = prescribedReps(before.reps)?.range;
+  if (block.sets !== before.sets || todayReps?.join() !== plannedReps?.join()) return null;
+
+  const plannedSets = finitePositiveNumber(before.sets) ? before.sets : null;
+  const doneSets = log.actual.sets;
+  const doneReps = log.actual.reps;
+  const missedDose =
+    (plannedSets !== null && typeof doneSets === "number" && doneSets < plannedSets) ||
+    (plannedReps !== undefined && typeof doneReps === "number" && doneReps < plannedReps[0]);
+  const effort = log.actual.effort;
+  const plannedRpe = before.effort;
+  const ceiling =
+    cleanText(plannedRpe?.method)?.toUpperCase() === "RPE" && typeof plannedRpe?.value === "number" && finitePositiveNumber(plannedRpe.value)
+      ? Math.min(plannedRpe.value + 2, 10)
+      : 9;
+  const overreached = effort?.method === "RPE" && typeof effort.value === "number" && effort.value >= ceiling;
+  if (log.reason !== "fatigue" && !missedDose && !overreached) return null;
+
+  // Plate-friendly steps for bar work, finer ones for light dumbbells.
+  const heavy = load.unit === "lb" ? load.value >= 55 : load.value >= 25;
+  const step = load.unit === "lb" ? (heavy ? 5 : 1) : heavy ? 2.5 : 0.5;
+  const eased = Math.round((load.value * BACKOFF_RATIO) / step) * step;
+  if (!(eased > 0 && eased < load.value)) return null;
+  return { value: Math.round(eased * 100) / 100, unit: load.unit };
+}

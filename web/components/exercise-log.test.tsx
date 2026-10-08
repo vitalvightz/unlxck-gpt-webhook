@@ -376,6 +376,19 @@ test("a collapsed row carries the numbers that were logged", () => {
 });
 
 
+test("a struggled weight is offered eased off, at any readiness, and stays editable", async () => {
+  const previous = record(deadlift, {
+    plan_id: "previous-plan", reason: "fatigue", status: "modified",
+    actual: { load: { value: 100, unit: "kg" }, effort: { method: "RPE", value: 9 } },
+  });
+  const view = mount(deadlift, { recentPerformances: [previous], allowProgression: false });
+  assert.match(view.text(), /Last: 100 kg.*Ease to 90 kg/);
+  await view.click("Log numbers");
+  const load = view.container.querySelector<HTMLInputElement>('.ex-log-field input[id$="-load"]');
+  assert.equal(load?.value, "90");
+  view.unmount();
+});
+
 test("last performance stays inside the open row and the suggested load is editable", async () => {
   const block = { ...deadlift, progression_rule: "Add 2.5 kg when all sets complete." };
   const previous = record(deadlift, { plan_id: "previous-plan", actual: { load: { value: 80, unit: "kg" }, effort: { method: "RPE", value: 6 } } });

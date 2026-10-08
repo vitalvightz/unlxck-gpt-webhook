@@ -6,6 +6,7 @@ import {
   EXERCISE_LOG_REASONS,
   EXERCISE_LOG_REASON_LABELS,
   EXERCISE_LOG_STATUS_LABELS,
+  backoffLoadFor,
   buildLogEntry,
   draftFromLog,
   hasLoggableNumbers,
@@ -213,7 +214,10 @@ export function ExerciseLogPanel({ block }: { block: StructuredBlock }) {
   }
   const { logging, blockId, fields, log } = state;
   const previous = lastPerformanceFor(block, logging.recentPerformances);
-  const suggested = progressionLoadFor(block, previous, logging.allowProgression === true);
+  const progression = progressionLoadFor(block, previous, logging.allowProgression === true);
+  // Easing off is offered at any readiness; it never needs a progression rule.
+  const backoff = progression ? null : backoffLoadFor(block, previous);
+  const suggested = progression ?? backoff;
   const entry = buildLogEntry(fields, draft);
 
   function closeEditor() {
@@ -374,7 +378,7 @@ export function ExerciseLogPanel({ block }: { block: StructuredBlock }) {
     <div className="ex-log" data-mode="idle">
       {previous ? <p className="muted ex-log-previous">
         Last: {performanceSummary(previous)}
-        {suggested ? <span className="ex-log-suggestion"> · Try {suggested.value} {suggested.unit}</span> : null}
+        {suggested ? <span className="ex-log-suggestion"> · {backoff ? "Ease to" : "Try"} {suggested.value} {suggested.unit}</span> : null}
       </p> : null}
       <div className="ex-log-choices">
         <button
