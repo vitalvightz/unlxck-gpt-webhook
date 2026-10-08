@@ -1011,7 +1011,12 @@ export function GuidedInjuryCard({
     setNotesOpen(true);
   }
 
-  function handleTypeSelect(opt: InjuryTypeOption | null) {
+  // Replacing the type resets the subtypes to exactly the new type (clearing it
+  // empties them). Subtypes override the type when saved, so a stale one — a
+  // revisited Sprain changed to Soreness — would otherwise put the old type back.
+  // Only the multi-select subtype grid, which manages the list itself, passes
+  // keepSubtypes.
+  function handleTypeSelect(opt: InjuryTypeOption | null, { keepSubtypes = false }: { keepSubtypes?: boolean } = {}) {
     if (!opt) {
       onUpdate("injury_type", "");
       onUpdate("injury_subtypes", []);
@@ -1027,6 +1032,7 @@ export function GuidedInjuryCard({
 
     if (isSame) {
       onUpdate("injury_type", "");
+      if (!keepSubtypes) onUpdate("injury_subtypes", []);
       clearTypeSpecificFields(onUpdate);
       onUpdate("notes", stripTaggedNotes(injury.notes, ["red_flags", "dislocation", "nerve_symptoms", "chest_symptoms"]));
       return;
@@ -1039,6 +1045,7 @@ export function GuidedInjuryCard({
       flagStaleExtraDetail();
     }
     clearTypeSpecificFields(onUpdate);
+    if (!keepSubtypes) onUpdate("injury_subtypes", [getSubtypeKey(opt)]);
     onUpdate("injury_type", opt.value);
     onUpdate("surface_type", opt.surface_type ?? "");
     const stripPrefixes: string[] = [];
@@ -1174,7 +1181,6 @@ export function GuidedInjuryCard({
                         const family = getFamilyForInjury({ ...injury, injury_type: opt.value });
                         if (family && family !== "not_sure") setDraftFamily(family);
                         handleTypeSelect(opt);
-                        onUpdate("injury_subtypes", [getSubtypeKey(opt)]);
                         setIsEditingType(false);
                       }}>{opt.label}</button>
                     ))}
@@ -1227,7 +1233,7 @@ export function GuidedInjuryCard({
                           opt.value === injury.injury_type &&
                           (opt.value !== "surface_injury" || (opt.surface_type ?? "") === injury.surface_type);
                         if (!injury.injury_type) {
-                          handleTypeSelect(opt);
+                          handleTypeSelect(opt, { keepSubtypes: true });
                           return;
                         }
                         if (isSelected && isPrimary) {
@@ -1237,7 +1243,7 @@ export function GuidedInjuryCard({
                             return;
                           }
                           const nextOpt = getOptionsForFamily(activeFamily).find((candidate) => getSubtypeKey(candidate) === nextPrimary);
-                          if (nextOpt) handleTypeSelect(nextOpt);
+                          if (nextOpt) handleTypeSelect(nextOpt, { keepSubtypes: true });
                         }
                       }}>
                         {opt.label}
