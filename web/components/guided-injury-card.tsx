@@ -8,6 +8,7 @@ import {
 } from "@/lib/intake-options";
 
 import { INJURY_IMPACT_OPTIONS, readInjuryImpact, writeInjuryImpact } from "@/lib/injury-impact";
+import { getInjuryRegion, isRibArea } from "@/lib/injury-region";
 import { isMuscleBodyMapZone } from "./body-map";
 
 // ── Injury-type option groups ────────────────────────────────────────
@@ -69,10 +70,10 @@ const INJURY_TYPE_GROUPS: InjuryTypeGroup[] = [
 ];
 
 const INJURY_FAMILIES: InjuryFamilyOption[] = [
-  { family: "pain_movement", label: "Muscle / tendon / joint pain", helper: "Soreness, tightness, strains. Used as fallback if description is unclear." },
-  { family: "structural", label: "Bone or dislocation", helper: "Fracture, dislocation, ligament. Used as fallback if description is unclear." },
-  { family: "head_nerve_breathing", label: "Head, nerve or breathing issue", helper: "Concussion, nerve, breathing. Used as fallback if description is unclear." },
-  { family: "surface", label: "Skin injury", helper: "Cuts, blisters, bruises. Used as fallback if description is unclear." },
+  { family: "pain_movement", label: "Muscle / tendon / joint pain", helper: "Strain, sprain, swelling" },
+  { family: "structural", label: "Bone or dislocation", helper: "Break, dislocation, ligament, surgery" },
+  { family: "head_nerve_breathing", label: "Head, nerve or breathing issue", helper: "Head knock, numbness, breathing" },
+  { family: "surface", label: "Skin injury", helper: "Cuts, grazes, blisters, bruises" },
 ];
 
 const FAMILY_TO_HEADING: Record<Exclude<InjuryFamily, "not_sure">, string> = {
@@ -247,6 +248,24 @@ function getOptionsForFamily(family: InjuryFamily): InjuryTypeOption[] {
   const group = INJURY_TYPE_GROUPS.find((item) => item.heading === heading);
   if (!group) return [];
   return group.options;
+}
+
+// Types to suggest first for an area, as subtype keys. The area only orders the
+// shortcut list; every type stays reachable through "Browse all types".
+function getSuggestedTypeKeys(area: string): string[] {
+  switch (getInjuryRegion(area)) {
+    case "head": return ["head_impact", "swelling", "nerve_symptoms", "surface_injury:cut", "surface_injury:laceration"];
+    case "hand_foot": return ["sprain", "swelling", "fracture", "dislocation", "surface_injury:cut", "surface_injury:blister"];
+    case "tendon": return ["tendon_ligament", "swelling", "strain", "post_surgery"];
+    case "joint": return ["sprain", "swelling", "instability", "tendon_ligament", "dislocation", "fracture"];
+    case "trunk": return isRibArea(area) ? ["fracture", "strain", "chest_breathing"] : ["strain", "nerve_symptoms", "post_surgery"];
+    case "muscle": return ["strain", "swelling", "tendon_ligament", "surface_injury:cut", "surface_injury:abrasion"];
+    default: return ["strain", "sprain", "swelling", "instability", "fracture", "dislocation"];
+  }
+}
+
+function findTypeOption(key: string): InjuryTypeOption | undefined {
+  return INJURY_TYPE_GROUPS.flatMap((group) => group.options).find((option) => getSubtypeKey(option) === key);
 }
 
 function isSafetyComplete(injury: GuidedInjuryState, family: InjuryFamily | ""): boolean {
@@ -948,6 +967,7 @@ export function GuidedInjuryCard({
     }
   }, [manualArea]);
   const [advancedType, setAdvancedType] = useState(false);
+  const [browseAllTypes, setBrowseAllTypes] = useState(false);
   const impact = readInjuryImpact(injury.notes);
   const [staleNote, setStaleNote] = useState(false);
   const [draftFamily, setDraftFamily] = useState<InjuryFamily | "">("");
@@ -1139,13 +1159,37 @@ export function GuidedInjuryCard({
                     { label: "Soreness", value: "pain" },
                     { label: "Tightness", value: "tightness" },
                     { label: "Bruise", value: "surface_injury", surface_type: "bruise" },
-                    { label: "Other", value: "unspecified" },
                   ].map((opt) => <button key={opt.label} type="button" className="gi-chip"
                     onClick={() => { handleTypeSelect(opt); setIsEditingType(false); }}>{opt.label}</button>)}
+                  <button type="button" className="gi-chip" onClick={() => setAdvancedType(true)}>Other</button>
                 </div>
-                <button type="button" className="gi-notes-toggle" onClick={() => setAdvancedType(true)}>More injury types</button>
               </>
+            ) : !activeFamily && !browseAllTypes ? (
+              <div className="gi-suggested-types">
+                <p className="gi-suggested-label">Common for {injury.area.trim().toLowerCase()}</p>
+                <div className="gi-chip-row" role="group" aria-label="Suggested injury types">
+                  {getSuggestedTypeKeys(injury.area).map((key) => findTypeOption(key)).filter((opt): opt is InjuryTypeOption => Boolean(opt))
+                    .map((opt) => (
+                      <button key={getSubtypeKey(opt)} type="button" className="gi-chip" onClick={() => {
+                        const family = getFamilyForInjury({ ...injury, injury_type: opt.value });
+                        if (family && family !== "not_sure") setDraftFamily(family);
+                        handleTypeSelect(opt);
+                        onUpdate("injury_subtypes", [getSubtypeKey(opt)]);
+                        setIsEditingType(false);
+                      }}>{opt.label}</button>
+                    ))}
+                  <button type="button" className="gi-chip" onClick={() => {
+                    handleTypeSelect({ label: "Not sure", value: "unspecified" });
+                    setIsEditingType(false);
+                  }}>Not sure</button>
+                </div>
+                <div className="gi-suggested-actions">
+                  <button type="button" className="gi-notes-toggle" onClick={() => setBrowseAllTypes(true)}>Browse all types</button>
+                  <button type="button" className="gi-notes-toggle" onClick={() => setAdvancedType(false)}>Back</button>
+                </div>
+              </div>
             ) : !activeFamily ? (
+              <>
               <div className="gi-family-grid" role="radiogroup" aria-label="Injury family">
                 {INJURY_FAMILIES.filter((family) => family.family !== "head_nerve_breathing" || isHeadSelected).map((family) => (
                   <button
@@ -1161,6 +1205,8 @@ export function GuidedInjuryCard({
                   </button>
                 ))}
               </div>
+              <button type="button" className="gi-notes-toggle" onClick={() => setBrowseAllTypes(false)}>Back to suggestions</button>
+              </>
             ) : (
               <>
                 <div className="gi-selection-summary">

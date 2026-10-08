@@ -19,8 +19,12 @@ import { TODAY_INJURY_MAX_WORDS } from "@/lib/input-limits";
 import {
   NO_TODAY_INJURY_TYPE,
   TODAY_INJURY_TYPE_OPTIONS,
+  TODAY_OTHER_INJURY_TYPES,
   type TodayInjuryTypeSelection,
+  type TodayOtherInjuryType,
   composeTodayInjuryDescription,
+  getTodayOtherInjuryTypes,
+  readTodayOtherInjuryType,
   isInjuryEntryLimited,
   limitInjuryEntryText,
 } from "@/lib/today-injury-input";
@@ -325,6 +329,8 @@ export function TodayInjuryManager({
   const [manualArea, setManualArea] = useState(false);
   const [notesOpen, setNotesOpen] = useState(false);
   const [newType, setNewType] = useState<TodayInjuryTypeSelection>(NO_TODAY_INJURY_TYPE);
+  // The more specific type picked under "Other" ("" = something else, described in the note).
+  const [newOtherType, setNewOtherType] = useState<TodayOtherInjuryType | "">("");
   const [newDetail, setNewDetail] = useState("");
   // Whether the last edit hit the word/character cap, so the hint can explain the
   // trim instead of a word silently vanishing.
@@ -514,7 +520,7 @@ export function TodayInjuryManager({
     setAddMissing(null);
     setIsAdding(true);
     try {
-      const description = writeInjuryImpact(composeTodayInjuryDescription({ injuryType: newType, detail: newDetail }), newImpact);
+      const description = writeInjuryImpact(composeTodayInjuryDescription({ injuryType: newType, otherType: newOtherType, detail: newDetail }), newImpact);
       // Whatever open injury the reconcile returns that was not here before this
       // add is the flag it just created — that is how we find it to route on.
       const previousIds = new Set(openInjuries.map((injury) => injury.id));
@@ -527,6 +533,7 @@ export function TodayInjuryManager({
       setNotesOpen(false);
       setBodyMapVisible(true);
       setNewType(NO_TODAY_INJURY_TYPE);
+      setNewOtherType("");
       setNewDetail("");
       setAreaLimited(false);
       setDetailLimited(false);
@@ -576,6 +583,7 @@ export function TodayInjuryManager({
     setNotesOpen(false);
     setBodyMapVisible(true);
     setNewType(NO_TODAY_INJURY_TYPE);
+    setNewOtherType("");
     setNewDetail("");
     setAreaLimited(false);
     setDetailLimited(false);
@@ -631,9 +639,12 @@ export function TodayInjuryManager({
                       const impact = readInjuryImpact(injury.description ?? "");
                       setNewImpact(impact?.value ?? "");
                       const description = writeInjuryImpact(injury.description ?? "", "");
-                      const type = TODAY_INJURY_TYPE_OPTIONS.find((option) => option.value !== "other" && new RegExp(`\\b${option.value}\\b`, "i").test(description));
+                      const otherType = readTodayOtherInjuryType(description);
+                      const type = otherType ? undefined : TODAY_INJURY_TYPE_OPTIONS.find((option) => option.value !== "other" && new RegExp(`\\b${option.value}\\b`, "i").test(description));
+                      const typeWord = otherType ? TODAY_OTHER_INJURY_TYPES[otherType].word : type?.value;
                       setNewType(type?.value ?? "other");
-                      setNewDetail(type ? description.replace(new RegExp(`^${type.value}\\.?\\s*`, "i"), "") : description);
+                      setNewOtherType(otherType);
+                      setNewDetail(typeWord ? description.replace(new RegExp(`^${typeWord}\\.?\\s*`, "i"), "") : description);
                       setNewZone(""); setBodyMapVisible(false); setManualArea(false); setNotesOpen(false); setAddMissing(null);
                       setIsAddFormOpen(true);
                     }}>Edit</button>
@@ -938,12 +949,15 @@ export function TodayInjuryManager({
             options={TODAY_INJURY_TYPE_OPTIONS}
             onChange={(value) => {
               setNewType(value);
+              if (value !== "other") setNewOtherType("");
               setAddMissing((current) => (current === "type" ? null : current));
             }}
             columns={2}
             required
             invalid={addMissing === "type"}
           />
+          {newType === "other" ? <TodayOtherTypePicker area={newArea.trim()} value={newOtherType}
+            onChange={setNewOtherType} onDescribe={() => { setNewOtherType(""); setNotesOpen(true); }} /> : null}
         </div>
         <div ref={impactGroupRef} className="injury-impact-input">
           <SegmentGroup label="How much is it affecting you?" value={newImpact}
@@ -996,5 +1010,34 @@ export function TodayInjuryManager({
         </button>
       </form>
     </section>
+  );
+}
+
+function TodayOtherTypePicker({ area, value, onChange, onDescribe }: {
+  area: string;
+  value: TodayOtherInjuryType | "";
+  onChange: (value: TodayOtherInjuryType | "") => void;
+  onDescribe: () => void;
+}) {
+  const { suggested, skin } = getTodayOtherInjuryTypes(area);
+  const chip = (type: TodayOtherInjuryType) => (
+    <button key={type} type="button" className={`gi-chip${value === type ? " gi-chip-selected" : ""}`}
+      aria-pressed={value === type} onClick={() => onChange(value === type ? "" : type)}>
+      {TODAY_OTHER_INJURY_TYPES[type].label}
+    </button>
+  );
+  return (
+    <div className="today-injury-other" role="group" aria-label="More specific type">
+      <p className="today-injury-other-label">{area ? `Common for ${area.toLowerCase()}` : "More types"}</p>
+      <div className="gi-chip-row">{suggested.map(chip)}</div>
+      {value && TODAY_OTHER_INJURY_TYPES[value].serious ? (
+        <p className="today-injury-other-warning" role="status">Get this checked by a clinician before training.</p>
+      ) : null}
+      <p className="today-injury-other-label">Skin</p>
+      <div className="gi-chip-row">{skin.map(chip)}</div>
+      <button type="button" className="gi-notes-toggle today-injury-other-describe" onClick={onDescribe}>
+        Something else? Describe it in a note
+      </button>
+    </div>
   );
 }

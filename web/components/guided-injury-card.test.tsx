@@ -21,7 +21,8 @@ test("more injury types depend on location and guide muscle selections to joints
   try {
     for (const [zone, area] of [["l_quad", "Left quad"], ["l_knee", "Left knee"], ["head", "Head / Neck"]]) {
       await act(async () => root.render(<Editor key={zone} zone={zone} area={area} />));
-      await press("More injury types");
+      await press("Other");
+      await press("Browse all types");
       const categories = Array.from(host.querySelectorAll('[role="radio"]')).map((entry) => entry.textContent);
       assert.ok(categories.every((text) => !text?.includes("Not sure")));
       assert.equal(categories.some((text) => text?.includes("Head, nerve or breathing issue")), zone === "head");
@@ -36,6 +37,7 @@ test("more injury types depend on location and guide muscle selections to joints
     }
     await act(async () => root.render(<Editor key="other" zone="l_quad" area="Left quad" />));
     await press("Other");
+    await press("Not sure");
     assert.equal(host.querySelector(".gi-selection-title")?.textContent, "Other");
   } finally { await act(async () => root.unmount()); host.remove(); }
 });
@@ -137,5 +139,28 @@ test("safety follow-ups still block saving until required answers are supplied",
     const remove = host.querySelector<HTMLButtonElement>('[aria-label="Remove injury 1"]');
     assert.ok(remove);
     assert.equal(remove.closest('[role="button"]'), null);
+  } finally { await act(async () => root.unmount()); host.remove(); }
+});
+
+test("Other suggests types for the area and one tap sets the type", async () => {
+  const host = document.createElement("div"); document.body.appendChild(host);
+  const root = createRoot(host);
+  function Editor() {
+    const [injury, setInjury] = useState({ ...EMPTY_GUIDED_INJURY, zone: "l_knee", area: "Left knee" });
+    return <GuidedInjuryCard injury={injury} index={0} isActive onToggleActive={() => {}} onRemove={() => {}}
+      onChangeArea={() => {}} onUpdate={(key, value) => setInjury((current) => ({ ...current, [key]: value }))} />;
+  }
+  const press = async (label: string) => {
+    const button = Array.from(host.querySelectorAll("button")).find((entry) => entry.textContent?.trim() === label);
+    assert.ok(button, label); await act(async () => button.click());
+  };
+  try {
+    await act(async () => root.render(<Editor />));
+    await press("Other");
+    assert.match(host.textContent ?? "", /Common for left knee/);
+    assert.ok(!(host.textContent ?? "").includes("Head impact / concussion"));
+    await press("Instability / giving way");
+    assert.equal(host.querySelector(".gi-selection-title")?.textContent, "Muscle / tendon / joint pain · Instability / giving way");
+    assert.doesNotMatch(host.textContent ?? "", /Used as fallback/);
   } finally { await act(async () => root.unmount()); host.remove(); }
 });

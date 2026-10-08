@@ -1399,3 +1399,90 @@ test("editing a saved injury updates its flag and retains the functional answer 
     assert.deepEqual(calls[0], { injuries: [{ flag_id: injury.id, body_area: "left shoulder", description: "tightness. worse when punching [training_impact:cant_train]", severity: "severe", status: "ongoing" }] });
   } finally { restore(); unmountMain(container, root); }
 });
+
+test("Other opens area-specific types that tap in the condition word", async () => {
+  const { calls, restore } = stubCheckin();
+  const container = document.createElement("div");
+  document.body.appendChild(container);
+  const root = createRoot(container);
+  try {
+    await act(async () => {
+      root.render(
+        <ToastProvider>
+          <TodayInjuryManager openInjuries={[]} token="t" onRefresh={async () => {}} />
+        </ToastProvider>,
+      );
+    });
+    await click(button(container, "+ Add injury"));
+    await click(button(container, "Can’t find the area? Enter it manually"));
+    const area = container.querySelector<HTMLInputElement>("#today-injury-area");
+    assert.ok(area);
+    await setInput(area, "left knee");
+    assert.equal(container.querySelector(".today-injury-other"), null);
+    await click(button(container, "Other"));
+    const picker = container.querySelector(".today-injury-other");
+    assert.ok(picker);
+    assert.match(picker.textContent ?? "", /Common for left knee/);
+    for (const label of ["Sprain / rolled", "Giving way", "Hyperextended", "Cut", "Graze / mat burn"]) button(container, label);
+    assert.ok(!Array.from(picker.querySelectorAll("button")).some((b) => b.textContent === "Head knock / concussion"));
+    assert.ok(!Array.from(picker.querySelectorAll("button")).some((b) => b.textContent === "Blister"));
+
+    await click(button(container, "Possible break"));
+    assert.match(container.textContent ?? "", /Get this checked by a clinician before training\./);
+    await click(button(container, "Sprain / rolled"));
+    assert.doesNotMatch(container.textContent ?? "", /Get this checked by a clinician/);
+    assert.equal(button(container, "Sprain / rolled").getAttribute("aria-pressed"), "true");
+    await click(button(container, "Limiting me"));
+
+    const form = container.querySelector<HTMLFormElement>("form.today-injury-add");
+    assert.ok(form);
+    await act(async () => {
+      form.dispatchEvent(new window.Event("submit", { bubbles: true, cancelable: true }));
+    });
+    await settle();
+    const injuries = calls[0].injuries as Array<{ body_area: string; description: string }>;
+    assert.equal(injuries[0].body_area, "left knee");
+    assert.match(injuries[0].description, /^sprain\b/);
+  } finally {
+    restore();
+    unmountMain(container, root);
+  }
+});
+
+test("switching away from Other drops its specific type", async () => {
+  const { calls, restore } = stubCheckin();
+  const container = document.createElement("div");
+  document.body.appendChild(container);
+  const root = createRoot(container);
+  try {
+    await act(async () => {
+      root.render(
+        <ToastProvider>
+          <TodayInjuryManager openInjuries={[]} token="t" onRefresh={async () => {}} />
+        </ToastProvider>,
+      );
+    });
+    await click(button(container, "+ Add injury"));
+    await click(button(container, "Can’t find the area? Enter it manually"));
+    const area = container.querySelector<HTMLInputElement>("#today-injury-area");
+    assert.ok(area);
+    await setInput(area, "right hamstring");
+    await click(button(container, "Other"));
+    await click(button(container, "Strain / pulled"));
+    await click(button(container, "Soreness"));
+    assert.equal(container.querySelector(".today-injury-other"), null);
+    await click(button(container, "Limiting me"));
+    const form = container.querySelector<HTMLFormElement>("form.today-injury-add");
+    assert.ok(form);
+    await act(async () => {
+      form.dispatchEvent(new window.Event("submit", { bubbles: true, cancelable: true }));
+    });
+    await settle();
+    const injuries = calls[0].injuries as Array<{ description: string }>;
+    assert.match(injuries[0].description, /^soreness\b/);
+    assert.doesNotMatch(injuries[0].description, /strain/);
+  } finally {
+    restore();
+    unmountMain(container, root);
+  }
+});
