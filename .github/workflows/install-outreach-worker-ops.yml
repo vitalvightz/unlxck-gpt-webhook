@@ -105,6 +105,7 @@ jobs:
           }
           trap rollback ERR
           
+          mkdir -p "$RELEASE"
           tar -xzf "$ARCHIVE" -C "$RELEASE"
           (
             set -a
