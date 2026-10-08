@@ -10,9 +10,8 @@ export function EffectiveClinicianClearanceStatus({ clearance }: {
   if (!clearance) return null;
   const label = { rehab_only: "Rehab only", train_no_contact: "Train, no hard sparring", train_contact: "Train + hard sparring" }[clearance.level];
   return <div className="today-injury-guidance" role="note" aria-label="Effective clinician clearance">
-    <p><strong>Effective clinician clearance: {label}</strong></p>
-    <p>{clearance.level === "train_contact" ? "Based on" : "Limited by"}: {clearance.limited_by.map(injury => injury.label).join(", ")}</p>
-    {clearance.requires_update ? <p>Scope unclear — update the reported clearance. Rehab only until clarified.</p> : null}
+    <p><strong>Cleared: {label}</strong> <small className="muted">· {clearance.level === "train_contact" ? "based on" : "limited by"} {clearance.limited_by.map(injury => injury.label).join(", ")}</small></p>
+    {clearance.requires_update ? <p>Scope unclear. Rehab only until clarified.</p> : null}
   </div>;
 }
 
@@ -50,19 +49,21 @@ export function InjuryCareStatus({ injury, token, onRefresh }: {
   const labels = { due: "Rehab due", recovery_day: "Recovery day", already_completed: "Today's allocation used",
     held: "Rehab held", deferred: "Rehab deferred", unsupported: "Guidance unavailable" };
   return <div className="today-injury-guidance" role="note">
-    {injury.rehab_decision ? <p>{injury.rehab_decision.summary}</p> : null}
-    {schedule ? <p><strong>{labels[schedule.state]}</strong>{schedule.state === "unsupported" && schedule.reason === injury.rehab_decision?.summary ? null : <> · {schedule.reason}</>}
+    {injury.rehab_decision && schedule?.reason !== injury.rehab_decision.summary ? <p>{injury.rehab_decision.summary}</p> : null}
+    {schedule ? <p><strong>{labels[schedule.state]}</strong> · {schedule.reason}
       {schedule.next_due_day && schedule.state !== "due" ? <> Next due: {schedule.next_due_day}.</> : null}</p> : null}
     {injury.rehab_decision?.prescription?.sources?.length ? <p className="muted">
       {injury.rehab_decision.prescription.sources.map((source, index) => <span key={source}>
         {index ? " · " : ""}<a href={source} target="_blank" rel="noopener noreferrer">Routine guidance{index ? ` ${index + 1}` : ""}</a>
       </span>)}
     </p> : null}
-    {clearance ? <p className="muted">Reported clearance for this injury: {scopeLabel}</p> : null}
+    {clearance || (injury.episode_id && !surface) ? <div className="today-injury-clearance-row">
+      {clearance ? <p className="muted">Your clearance: {scopeLabel}</p> : null}
+      {injury.episode_id && !surface ? <button type="button" className="gi-change-btn" onClick={() => setChoosing(!choosing)} disabled={busy}>{clearance ? "Change clearance" : "Add clinician clearance"}</button> : null}
+    </div> : null}
     {injury.episode_id && !surface ? <>
-      <button type="button" className="ghost-button" onClick={() => setChoosing(!choosing)} disabled={busy}>{clearance ? "Update clinician clearance" : "Report clinician clearance"}</button>
       {choosing ? <div role="group" aria-label="What were you cleared for?">
-        <p>What were you cleared for? Athlete-reported, not verified. This sets your training and contact permissions. Red flags and safety holds still apply; it does not advance rehab.</p>
+        <p>What were you cleared for? <small className="muted">Self-reported. Red flags and safety holds still apply; doesn&apos;t advance rehab.</small></p>
         <div className="today-segment-row">
           <button type="button" className="today-segment" disabled={busy} onClick={() => report(["rehab"])}>Rehab only</button>
           <button type="button" className="today-segment" disabled={busy} onClick={() => report(["rehab", "training"])}>Train, no hard sparring</button>

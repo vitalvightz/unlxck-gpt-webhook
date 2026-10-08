@@ -641,7 +641,7 @@ export function TodayInjuryManager({
                 <AchillesAssessmentForm key={`${injury.id}:${injury.episode_id}:${injury.side}`} injury={injury} token={token}
                   onRefresh={onRefresh} disabled={isAdding || pendingFlagId !== null} />
                 <p className="today-field-hint today-injury-status-hint">
-                  Only tap if it changed. We keep tracking it otherwise.
+                  Only tap if it changed.
                 </p>
                 <div
                   className="today-segment-row today-injury-status-row"
