@@ -379,6 +379,9 @@ class TodayCard(BaseModel):
     # day's app sessions. Rendered as a context line above the session cards so a
     # sparring day that also carries a low-load app touch shows both, not one.
     coach_led_contact: str | None = None
+    # Server-owned: deterministic explanation for a reduced-dose contact day,
+    # stamped by structured_plan_sparring_reconcile from the planner's reason codes.
+    contact_reason: str | None = None
 
 
 class PriorityMicrodose(BaseModel):

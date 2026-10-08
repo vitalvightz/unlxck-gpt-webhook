@@ -17,6 +17,7 @@ import {
   getBlockAdjustmentDisplay,
   getActiveNotesExcludingRedFlags,
   getCoachLedContactView,
+  getReducedContactReason,
   getDays,
   getDisplayableRedFlags,
   getFallbackSafetyNotes,
@@ -1018,6 +1019,7 @@ export function SessionlessDayCard({
         : title;
   const displayTag = isConverted ? TECHNICAL_COMBAT_TAG : tag;
   const isRest = kind === "rest";
+  const reducedReason = getReducedContactReason(day);
 
   return (
     <article className={`sp-session sp-day-card sp-day-card-${kind}`}>
@@ -1043,7 +1045,10 @@ export function SessionlessDayCard({
       ) : isConverted ? (
         <TechnicalCombatRationale title={displayTitle} />
       ) : coachLed ? (
-        <p className="sp-today-note">{HARD_SPARRING_SESSIONLESS_NOTE}</p>
+        <>
+          <p className="sp-today-note">{HARD_SPARRING_SESSIONLESS_NOTE}</p>
+          {reducedReason ? <p className="sp-today-note sp-contact-reason">{reducedReason}</p> : null}
+        </>
       ) : null}
       <PriorityMicrodoseCard day={day} />
       {warning ? <p className="sp-warning">{warning}</p> : null}
@@ -1085,12 +1090,14 @@ function CoachLedDayContext({
   kind,
   converted,
   headline,
+  reducedReason,
 }: {
   title: string;
   tag: string | null;
   kind: SessionlessDayKind;
   converted: boolean;
   headline?: string;
+  reducedReason?: string | null;
 }) {
   const isLightCombat = kind === "light_combat";
   // Only a converted hard-sparring day reads as "Technical Combat"; a technical
@@ -1128,6 +1135,9 @@ function CoachLedDayContext({
       ) : (
         <p className="sp-today-note">{description}</p>
       )}
+      {reducedReason && !isTechnical && !isLightCombat && !isDeclaredTechnical ? (
+        <p className="sp-today-note sp-contact-reason">{reducedReason}</p>
+      ) : null}
     </div>
   );
 }
@@ -1190,6 +1200,7 @@ export function DaySessionContext({ day, headline }: { day: StructuredDay; headl
           kind={coachLedContact.kind}
           converted={coachLedContact.converted}
           headline={headline}
+          reducedReason={getReducedContactReason(day)}
         />
       ) : null}
       {priorityMicrodose ? <PriorityMicrodoseCard day={day} /> : null}

@@ -1851,6 +1851,28 @@ export type CoachLedContactView = {
   converted: boolean;
 };
 
+const REDUCED_DOSE_RE = /\breduced\s+dose\b/i;
+// Mirrors _REDUCED_REASON_FALLBACK in api/structured_plan_sparring_reconcile.py,
+// for plans saved before the server stamped today_card.contact_reason.
+export const REDUCED_CONTACT_FALLBACK_REASON =
+  "Reduced dose: It keeps this week's total sparring load manageable. Spar, but cut hard rounds and keep intensity controlled.";
+
+/**
+ * Why a declared hard-sparring day was deloaded, or null when it was not. The
+ * server stamps a deterministic ``today_card.contact_reason`` from the
+ * planner's reason codes; a reduced-dose card without one gets the fixed
+ * fallback so it never renders unexplained.
+ */
+export function getReducedContactReason(day: StructuredDay | null | undefined): string | null {
+  const card = day?.today_card;
+  const reason = cleanText(card?.contact_reason);
+  if (reason) {
+    return reason;
+  }
+  const contactText = `${cleanText(card?.headline) ?? ""} ${cleanText(card?.coach_led_contact) ?? ""}`;
+  return REDUCED_DOSE_RE.test(contactText) ? REDUCED_CONTACT_FALLBACK_REASON : null;
+}
+
 /**
  * Coach-owned contact (declared / downgraded sparring) that coexists with a
  * day's app sessions, or null when none is set. Driven by the deterministic

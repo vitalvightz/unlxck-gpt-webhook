@@ -522,6 +522,51 @@ def test_normal_camp_deloaded_hard_day_renders_reduced_dose():
         ),
     )
     assert plan["weeks"][0]["days"][0]["today_card"]["headline"] == "Hard sparring — reduced dose"
+    assert plan["weeks"][0]["days"][0]["today_card"]["contact_reason"] == (
+        "Reduced dose: It falls back-to-back with another hard sparring day. "
+        "Spar, but cut hard rounds and keep intensity controlled."
+    )
+
+
+def test_reduced_dose_reason_is_stamped_even_when_headline_already_classifies():
+    plan = _structured_plan([_day("D-25", headline="Hard sparring — reduced dose")])
+    reconcile_coach_led_sparring_days(
+        plan,
+        _normal_camp_role_brief(
+            d_day=25,
+            status="deload_suggested",
+            hard_day_class="managed_hard",
+            reason_codes=["hard_day_cap", "four_hard_days"],
+        ),
+    )
+    card = plan["weeks"][0]["days"][0]["today_card"]
+    assert card["headline"] == "Hard sparring — reduced dose"
+    assert "Four or more hard sparring days" in card["contact_reason"]
+
+
+def test_reduced_dose_without_known_code_uses_fixed_fallback_reason():
+    brief = _planning_brief([{
+        "day": "Thursday", "status": "deload_suggested", "effective_load": "reduced",
+    }])
+    plan = _structured_plan([_day("D-31", headline="Recovery")])
+    reconcile_coach_led_sparring_days(plan, brief)
+    assert plan["weeks"][0]["days"][0]["today_card"]["contact_reason"] == (
+        "Reduced dose: It keeps this week's total sparring load manageable. "
+        "Spar, but cut hard rounds and keep intensity controlled."
+    )
+
+
+def test_full_hard_and_technical_days_carry_no_contact_reason():
+    hard_plan = [
+        {"day": "Thursday", "effective_load": "technical", "status": "convert_to_technical_suggested",
+         "hard_day_class": "technical"},
+        {"day": "Friday", "effective_load": "hard", "status": "hard_as_planned",
+         "hard_day_class": "primary_hard"},
+    ]
+    plan = _structured_plan([_day("D-31", headline="Rest"), _day("D-30", headline="Rest")])
+    reconcile_coach_led_sparring_days(plan, _planning_brief(hard_plan))
+    for day in plan["weeks"][0]["days"]:
+        assert "contact_reason" not in day["today_card"]
 
 
 def test_countdown_ban_outranks_a_role_still_claiming_hard_inside_d17():

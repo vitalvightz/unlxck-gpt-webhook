@@ -2,6 +2,8 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import {
+  getReducedContactReason,
+  REDUCED_CONTACT_FALLBACK_REASON,
   classifySessionlessDay,
   compactTimeUnits,
   getCoachLedContactView,
@@ -555,6 +557,29 @@ test("reads coach-led contact that coexists with app sessions", () => {
   });
   assert.equal(technical?.kind, "technical");
   assert.equal(technical?.tag, "Technical");
+});
+
+test("explains every reduced-dose sparring day deterministically", () => {
+  const stamped = "Reduced dose: It falls back-to-back with another hard sparring day.";
+  assert.equal(
+    getReducedContactReason({
+      today_card: { headline: "Hard sparring — reduced dose", contact_reason: stamped },
+    }),
+    stamped,
+  );
+  // Plans saved before the server stamped a reason still get the fixed fallback.
+  assert.equal(
+    getReducedContactReason({ today_card: { headline: "Hard sparring — reduced dose" } }),
+    REDUCED_CONTACT_FALLBACK_REASON,
+  );
+  assert.equal(
+    getReducedContactReason({
+      today_card: { headline: "Lower strength", coach_led_contact: "Hard sparring — reduced dose" },
+    }),
+    REDUCED_CONTACT_FALLBACK_REASON,
+  );
+  assert.equal(getReducedContactReason({ today_card: { headline: "Hard sparring" } }), null);
+  assert.equal(getReducedContactReason(null), null);
 });
 
 test("classifies a headline-less or rest day as a true rest day", () => {
