@@ -117,7 +117,7 @@ def test_production_rpc_preserves_wound_fields_and_medical_review() -> None:
 
     assert len(rpc_client.calls) == 1
     rpc_name, params = rpc_client.calls[0]
-    assert rpc_name == "adopt_or_create_intake_injury_flag_with_wound_fields"
+    assert rpc_name == "sync_intake_injury_flag"
     assert params == {
         "p_athlete_id": ATHLETE,
         "p_plan_id": plan["id"],
@@ -132,6 +132,7 @@ def test_production_rpc_preserves_wound_fields_and_medical_review() -> None:
         "p_infection_signs": ["pus"],
         "p_coverable": "no",
         "p_drainage": "present",
+        "p_intake_identity": "guided:r_shoulder:surface_injury",
     }
     assert params["p_source_key"].startswith(f"intake:{plan['id']}:")
     assert params["p_body_area"] and params["p_description"]

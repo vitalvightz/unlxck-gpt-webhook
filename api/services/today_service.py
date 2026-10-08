@@ -190,6 +190,38 @@ def _open_plan_has_not_started(plan_row: Mapping[str, Any], training_day: str) -
     return anchor is not None and current is not None and current < anchor
 
 
+def _dated_plan_has_not_started(plan_row: Mapping[str, Any], training_day: str) -> bool:
+    """True on a day before a dated plan's first card day.
+
+    A fight camp generated today usually starts tomorrow. Its weekly template is
+    keyed by weekday, so without this boundary today's weekday slot (often an
+    empty one) resolves as today's session: the athlete saw a held, untitled
+    "No training load" session instead of the plan's first day as next.
+    """
+    if open_plan_spec(plan_row) is not None:
+        return False
+    current = parse_iso_date(training_day)
+    if current is None:
+        return False
+    first = min(
+        (
+            parsed
+            for week in _structured_plan_weeks(plan_row, training_day=training_day)
+            for day in _iter_mapping_items(week.get("days"))
+            if (parsed := parse_iso_date(_clean_text(day.get("date"))[:10])) is not None
+        ),
+        default=None,
+    )
+    return first is not None and current < first
+
+
+def _plan_has_not_started(plan_row: Mapping[str, Any], training_day: str) -> bool:
+    """Before the plan's first day, its weekly rhythm schedules nothing today."""
+    return _open_plan_has_not_started(plan_row, training_day) or _dated_plan_has_not_started(
+        plan_row, training_day
+    )
+
+
 def _readiness_checkin_from(payload: Mapping[str, Any]) -> ReadinessCheckin:
     return ReadinessCheckin(**{field: payload[field] for field in _CHECKIN_INPUT_FIELDS})
 
@@ -299,7 +331,7 @@ def _resolve_today_session_entry(plan_row: Mapping[str, Any], training_day: str)
     # A renewable plan created Fri-Sun starts on the coming Monday. Its weekly
     # template still contains the current weekday, but that recurring rhythm is
     # not live before the anchor and must never become today's session.
-    if _open_plan_has_not_started(plan_row, training_day):
+    if _plan_has_not_started(plan_row, training_day):
         return {}
 
     training_date = parse_iso_date(training_day)
@@ -2842,7 +2874,7 @@ def _build_today_command_view(
         try:
             week_index, week = resolve_current_week(plan_row, today=training_date)
             today_entry, next_entry = resolve_today_and_next(week, today=training_date)
-            if _open_plan_has_not_started(plan_row, training_day):
+            if _plan_has_not_started(plan_row, training_day):
                 today_entry = None
         except Exception:
             # Malformed plan data must never crash Overview.
@@ -3294,7 +3326,7 @@ def resolve_today_landing(
             try:
                 _week_index, week = resolve_current_week(plan_row, today=training_date)
                 today_entry, next_entry = resolve_today_and_next(week, today=training_date)
-                if _open_plan_has_not_started(plan_row, training_day):
+                if _plan_has_not_started(plan_row, training_day):
                     today_entry = None
             except Exception:
                 today_entry = next_entry = None

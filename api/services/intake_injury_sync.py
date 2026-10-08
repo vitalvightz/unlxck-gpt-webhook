@@ -8,6 +8,14 @@ Each generated-plan injury receives a stable ``source_key``. The store writes
 it atomically (production: one database RPC), adopting a matching legacy row or
 inserting a new one. This preserves old resolved states and prevents concurrent
 duplicates.
+
+A guided injury also carries a plan-independent ``intake_identity`` (body zone
+plus injury type). When a new plan lists an injury whose identity matches an
+open or monitoring intake injury from another plan, the store carries that row
+onto the new plan instead of inserting a duplicate (see
+supabase/migrations/20261008001000_intake_injury_identity_across_plans.sql).
+The athlete's training-impact choice and notes are settings on the injury, so
+changing them in camp setup updates the injury rather than creating another.
 """
 
 from __future__ import annotations
@@ -60,6 +68,23 @@ def _source_key(*, plan_id: str, candidate: Mapping[str, Any]) -> str:
     return f"intake:{plan_id}:{digest}"
 
 
+def _guided_identity(injury: Mapping[str, Any], candidate: Mapping[str, Any]) -> str | None:
+    """What the injury is, independent of plan, notes and training impact.
+
+    The body zone (which carries the side, e.g. ``l_ankle``) and the injury type
+    tell two injuries apart: an ankle sprain and an ankle blister differ in
+    type. Without a type, nothing structured identifies the injury, so none is
+    given and the store falls back to area + description.
+    """
+    injury_type = _normalized_token(injury.get("injury_type"))
+    if not injury_type:
+        return None
+    place = _normalized_token(injury.get("zone")) or _normalized_token(candidate.get("body_area"))
+    if not place:
+        return None
+    return f"guided:{place}:{injury_type}"
+
+
 def _guided_candidate(
     injury: Mapping[str, Any],
     *,
@@ -71,7 +96,10 @@ def _guided_candidate(
     # Medical clearance permits training around an injury; it is not resolution.
     bootstrap_injury = dict(injury)
     bootstrap_injury["cleared"] = ""
-    return _guided_intake_injury_candidate(bootstrap_injury, plan_id=plan_id)
+    candidate = _guided_intake_injury_candidate(bootstrap_injury, plan_id=plan_id)
+    if candidate is not None:
+        candidate["intake_identity"] = _guided_identity(injury, candidate)
+    return candidate
 
 
 def _intake_injury_candidates(
@@ -157,6 +185,7 @@ def _atomic_adopt_or_create(
                 "infection_signs": candidate.get("infection_signs") or [],
                 "coverable": candidate.get("coverable"),
                 "drainage": candidate.get("drainage"),
+                "intake_identity": candidate.get("intake_identity"),
             }
         )
     except Exception:

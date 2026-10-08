@@ -5034,7 +5034,7 @@ class SupabaseAppStore(CompactGenerationReads):
         arguments without their ``p_`` prefix.
         """
         response = self.client.rpc(
-            "adopt_or_create_intake_injury_flag_with_wound_fields",
+            "sync_intake_injury_flag",
             {f"p_{key}": value for key, value in params.items()},
         ).execute()
         data = response.data

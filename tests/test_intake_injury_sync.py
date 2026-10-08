@@ -335,3 +335,119 @@ def test_a_keyed_row_resolves_later_unkeyed_duplicates() -> None:
     row = store.get_injury_flag_for_athlete(duplicate["id"], ATHLETE)
     assert row["status"] == "resolved" and row["resolved_at"]
     assert row["source_key"] == f"{keyed['source_key']}:legacy-duplicate:{duplicate['id']}"
+
+
+def _chest_strain_intake(impact: str, severity: str = "moderate") -> dict:
+    return {
+        "guided_injuries": [
+            {
+                "area": "Chest",
+                "zone": "chest",
+                "severity": severity,
+                "trend": "stable",
+                "injury_type": "strain",
+                "injury_subtypes": ["strain"],
+                "notes": f"[training_impact:{impact}]",
+            }
+        ]
+    }
+
+
+def _live(store: FakeStore) -> list[dict]:
+    return [flag for flag in store.injury_flags[ATHLETE] if flag["status"] in ("open", "monitoring")]
+
+
+def test_regenerating_a_plan_carries_the_open_injury_instead_of_duplicating_it() -> None:
+    store = FakeStore()
+    old_plan = _seed_generated_plan(store, intake_id="intake-old", active=False)
+    [old_flag] = sync_intake_injuries_for_plan(store, athlete_id=ATHLETE, plan_row=old_plan)
+    store.update_injury_flag(old_flag["id"], {"status": "monitoring"})
+
+    new_plan = _seed_generated_plan(store, intake_id="intake-new", active=True)
+    new_flags = sync_intake_injuries_for_plan(store, athlete_id=ATHLETE, plan_row=new_plan)
+
+    # Same row, same history: moved onto the new plan, its tracked state kept.
+    assert [flag["id"] for flag in new_flags] == [old_flag["id"]]
+    assert new_flags[0]["plan_id"] == new_plan["id"]
+    assert new_flags[0]["status"] == "monitoring"
+    assert len(store.injury_flags[ATHLETE]) == 1
+
+    # Reads of Today after the carry-over never write.
+    stamped = store.injury_flags[ATHLETE][0]["updated_at"]
+    sync_intake_injuries_for_plan(store, athlete_id=ATHLETE, plan_row=new_plan)
+    assert store.injury_flags[ATHLETE][0]["updated_at"] == stamped
+
+
+def test_changing_training_impact_in_camp_setup_updates_the_same_injury() -> None:
+    """The reported bug: limiting -> not limiting made a second chest strain."""
+    store = FakeStore()
+    old_plan = _seed_generated_plan(
+        store, intake_id="intake-old", intake=_chest_strain_intake("limiting"), active=False
+    )
+    [old_flag] = sync_intake_injuries_for_plan(store, athlete_id=ATHLETE, plan_row=old_plan)
+    store.update_injury_flag(old_flag["id"], {"status": "monitoring"})
+
+    new_plan = _seed_generated_plan(
+        store, intake_id="intake-new", intake=_chest_strain_intake("not_limiting", "low"), active=True
+    )
+    new_flags = sync_intake_injuries_for_plan(store, athlete_id=ATHLETE, plan_row=new_plan)
+
+    assert [flag["id"] for flag in new_flags] == [old_flag["id"]]
+    assert "[training_impact:not_limiting]" in new_flags[0]["description"]
+    assert new_flags[0]["severity"] == "mild"
+    assert new_flags[0]["status"] == "monitoring"
+    assert len(store.injury_flags[ATHLETE]) == 1
+
+
+def test_a_pre_identity_row_is_carried_across_a_training_impact_change() -> None:
+    """Rows created before intake_identity existed match on area + description
+    with the training-impact tag removed."""
+    store = FakeStore()
+    old_plan = _seed_generated_plan(
+        store, intake_id="intake-old", intake=_chest_strain_intake("limiting"), active=False
+    )
+    [old_flag] = sync_intake_injuries_for_plan(store, athlete_id=ATHLETE, plan_row=old_plan)
+    store.update_injury_flag(old_flag["id"], {"intake_identity": None})
+
+    new_plan = _seed_generated_plan(
+        store, intake_id="intake-new", intake=_chest_strain_intake("not_limiting"), active=True
+    )
+    new_flags = sync_intake_injuries_for_plan(store, athlete_id=ATHLETE, plan_row=new_plan)
+
+    assert [flag["id"] for flag in new_flags] == [old_flag["id"]]
+    assert new_flags[0]["intake_identity"] == "guided:chest:strain"
+
+
+def test_a_different_injury_in_the_same_area_is_never_merged() -> None:
+    """Body area alone is not identity: an ankle sprain and an ankle blister are
+    two injuries, each with its own history."""
+    store = FakeStore()
+    old_plan = _seed_generated_plan(store, intake_id="intake-old", active=False)
+    [sprain] = sync_intake_injuries_for_plan(store, athlete_id=ATHLETE, plan_row=old_plan)
+
+    blister = _active_ankle_intake()
+    blister["guided_injuries"][0].update(
+        injury_type="surface_injury", injury_subtypes=["blister"], surface_type="blister"
+    )
+    new_plan = _seed_generated_plan(store, intake_id="intake-new", intake=blister, active=True)
+    new_flags = sync_intake_injuries_for_plan(store, athlete_id=ATHLETE, plan_row=new_plan)
+
+    assert len(new_flags) == 2
+    kept = next(flag for flag in new_flags if flag["id"] == sprain["id"])
+    assert kept["description"] == ANKLE_DESCRIPTION
+    assert kept["plan_id"] == old_plan["id"]
+    added = next(flag for flag in new_flags if flag["id"] != sprain["id"])
+    assert "blister" in added["description"].lower()
+
+
+def test_two_injuries_of_one_kind_in_one_plan_stay_two() -> None:
+    store = FakeStore()
+    intake = _chest_strain_intake("limiting")
+    intake["guided_injuries"].append({**intake["guided_injuries"][0], "notes": "upper pec, from bench"})
+    plan = _seed_generated_plan(store, intake_id="intake-one", intake=intake, active=True)
+
+    flags = sync_intake_injuries_for_plan(store, athlete_id=ATHLETE, plan_row=plan)
+    again = sync_intake_injuries_for_plan(store, athlete_id=ATHLETE, plan_row=plan)
+
+    assert len(flags) == len(again) == 2
+    assert len(store.injury_flags[ATHLETE]) == 2
