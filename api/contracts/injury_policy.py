@@ -347,10 +347,12 @@ def reconcile_session_prescription(
     # child blocks are only support; the allocation type alone is not that owner.
     if allowed_contact < contact_rank["full"] and _session_has_contact({**entry, "blocks": [], "session_type": ""}):
         hold = True
-    cleared_contact_only = (contact_owned and allowed_contact == contact_rank["full"]
-                            and not blocked_regions and not blocked_tags
-                            and any("contact" in scopes for scopes in clearance_scopes))
-    if session is not None and not entry.get("blocks") and entry.get("session_type") != "rehab" and not cleared_contact_only:
+    # A blockless day has nothing to check against restrictions. Full clearance
+    # removes them all, so it releases a light/technical day as well as sparring.
+    cleared_blockless = (allowed_contact == contact_rank["full"]
+                         and not blocked_regions and not blocked_tags
+                         and any("contact" in scopes for scopes in clearance_scopes))
+    if session is not None and not entry.get("blocks") and entry.get("session_type") != "rehab" and not cleared_blockless:
         hold = True
     blocks, changes = [], []
     if clearance_hold and not block_contact_ceiling:

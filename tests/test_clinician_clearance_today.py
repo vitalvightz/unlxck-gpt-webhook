@@ -360,6 +360,21 @@ def test_live_full_clearance_allows_contact_owned_day_without_app_blocks(context
     execute(context, live)
 
 
+@pytest.mark.parametrize("scopes", [None, TRAIN, CONTACT])
+def test_live_full_clearance_allows_headline_only_light_combat_day(context, scopes):
+    # A light technical day is lighter than sparring; full clearance releases it too.
+    live_injury(context, "ankle")
+    day = context[0].plans[context[2]]["structured_plan"]["weeks"][0]["days"][0]
+    day.update(day_type="rest", sessions=[], today_card={"headline": "Light Combat / Technical"})
+    if scopes:
+        report(context, scopes)
+    live = view(context).live_prescription
+    assert (live["safety_hold"] or live["rehab_only"]) == (scopes != CONTACT)
+    if scopes == CONTACT:
+        assert live["session"]["session_id"] == DAY
+        execute(context, live)
+
+
 @pytest.mark.parametrize("flag", ["sharp_pain", "instability", "swelling", "neurological_symptoms", "illness_symptoms",
                                  "cannot_warm_into_movement", "worse_next_day_pain"])
 @pytest.mark.parametrize("completion_status", ["started", "done", "modified"])
