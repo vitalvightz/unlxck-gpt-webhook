@@ -1879,6 +1879,7 @@ export type TodayCard = {
   nutrition_summary: string | null;
   weight_cut_warning: string | null;
   coach_led_contact: string | null;
+  contact_reason: string | null;
 };
 
 export type TodayCheckinRecord = {

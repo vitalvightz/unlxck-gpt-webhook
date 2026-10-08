@@ -1486,6 +1486,11 @@ def _normalize_today_card(value: Any) -> dict[str, Any]:
         out["coach_led_contact"] = contact
     else:
         out.pop("coach_led_contact", None)
+    reason = _coerce_str(out.get("contact_reason")).strip()
+    if reason:
+        out["contact_reason"] = reason
+    else:
+        out.pop("contact_reason", None)
     return out
 
 

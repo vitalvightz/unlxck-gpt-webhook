@@ -449,6 +449,8 @@ export type StructuredTodayCard = {
    * session cards so the sparring day never disappears behind the app session.
    */
   coach_led_contact?: string | null;
+  /** Server-owned explanation for a reduced-dose (deloaded) hard-sparring day. */
+  contact_reason?: string | null;
 };
 
 export type PriorityMicrodose = {

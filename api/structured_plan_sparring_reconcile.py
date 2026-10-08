@@ -99,6 +99,49 @@ def _headline_for_load(load: str, d_day: int | None) -> str:
     return _HEADLINE_BY_LOAD["technical"]
 
 
+# A reduced-dose card must say why the declared hard day was deloaded. The
+# planner's reason codes are mapped to fixed athlete-facing sentences, most
+# specific first; no LLM text is involved.
+_REDUCED_REASON_BY_CODE: tuple[tuple[frozenset[str], str], ...] = (
+    (
+        frozenset({"final_week_sparring_cap", "fight_week_taper"}),
+        "Taper week keeps only one full hard sparring day.",
+    ),
+    (
+        frozenset({"consecutive_hard_days"}),
+        "It falls back-to-back with another hard sparring day.",
+    ),
+    (
+        frozenset({"hard_day_cap", "four_hard_days"}),
+        "Four or more hard sparring days are declared this week.",
+    ),
+    (
+        frozenset({"high_injury", "moderate_injury", "worsening", "instability", "daily_symptoms"}),
+        "It protects the injury you reported.",
+    ),
+    (frozenset({"high_fatigue"}), "Your reported fatigue is high."),
+    (frozenset({"high_cut"}), "Your weight cut is demanding this week."),
+    (frozenset({"high_week_pressure"}), "This week's overall load is high."),
+)
+_REDUCED_REASON_FALLBACK = "It keeps this week's total sparring load manageable."
+_REDUCED_DOSE_INSTRUCTION = "Spar, but cut hard rounds and keep intensity controlled."
+
+
+def _clean_codes(raw: Any) -> set[str]:
+    if not isinstance(raw, (list, tuple, set)):
+        return set()
+    return {str(code).strip() for code in raw if str(code).strip()}
+
+
+def _reduced_contact_reason(codes: set[str]) -> str:
+    """Deterministic athlete-facing explanation for a reduced-dose contact day."""
+    why = next(
+        (text for trigger, text in _REDUCED_REASON_BY_CODE if codes & trigger),
+        _REDUCED_REASON_FALLBACK,
+    )
+    return f"Reduced dose: {why} {_REDUCED_DOSE_INSTRUCTION}"
+
+
 # day_type carries no sparring value (high/moderate/low/...), so pick the closest
 # intensity bucket purely for the day's intensity tag. It does NOT drive the
 # coach-led classification — the headline does.
@@ -267,6 +310,7 @@ class _ContactDay:
         "day_type",
         "phase",
         "week_index",
+        "reason",
     )
 
     def __init__(
@@ -280,6 +324,7 @@ class _ContactDay:
         day_type: str,
         phase: str,
         week_index: int,
+        reason: str | None = None,
     ):
         self.date = date
         self.d_day = d_day
@@ -292,6 +337,8 @@ class _ContactDay:
         # is the authoritative home week for the day and is what insertion targets
         # first, so a dropped day at a week boundary still lands in the right week.
         self.week_index = week_index
+        # Athlete-facing explanation, set only for reduced-dose contact.
+        self.reason = reason
 
 
 def _normalize_weekday(value: Any) -> str | None:
@@ -395,6 +442,11 @@ def _deterministic_contact_days(planning_brief: dict[str, Any]) -> list[_Contact
             for day in (schedule or {}).get("days", [])
             if day.get("status") and isinstance(day.get("d_day"), int)
         }
+        resolved_codes = {
+            day["d_day"]: _clean_codes(day.get("reason_codes"))
+            for day in (schedule or {}).get("days", [])
+            if day.get("status") and isinstance(day.get("d_day"), int)
+        }
         load_rank = {"none": 0, "technical": 1, "reduced": 2, "hard": 3}
         role_phase = str(week.get("phase") or "").strip().upper()
         session_roles = week.get("session_roles")
@@ -450,6 +502,14 @@ def _deterministic_contact_days(planning_brief: dict[str, Any]) -> list[_Contact
                     day_type=_DAY_TYPE_BY_LOAD[load],
                     phase=role_phase,
                     week_index=week_index + 1,
+                    reason=(
+                        _reduced_contact_reason(
+                            _clean_codes(role.get("hard_sparring_reason_codes"))
+                            | resolved_codes.get(d_day, set())
+                        )
+                        if load == "reduced"
+                        else None
+                    ),
                 )
             )
 
@@ -494,6 +554,11 @@ def _deterministic_contact_days(planning_brief: dict[str, Any]) -> list[_Contact
                     day_type=_DAY_TYPE_BY_LOAD.get(load, "moderate"),
                     phase=phase,
                     week_index=week_index + 1,
+                    reason=(
+                        _reduced_contact_reason(_clean_codes(day.get("reason_codes")))
+                        if load == "reduced"
+                        else None
+                    ),
                 )
             )
 
@@ -560,6 +625,8 @@ def _build_coach_led_day(contact: _ContactDay, *, phase_fallback: str) -> dict[s
         },
         "sessions": [],
     }
+    if contact.reason:
+        day["today_card"]["contact_reason"] = contact.reason
     if contact.weekday:
         day["weekday"] = contact.weekday
     return day
@@ -717,6 +784,14 @@ def _reconcile(structured_plan: Any, planning_brief: Any) -> list[str]:
                 }
                 day["today_card"] = card
             current = str(card.get("headline") or "").strip()
+            # The reason belongs to the final contact load only: a day that is
+            # no longer reduced must not keep a stale "Reduced dose" reason.
+            if contact.reason:
+                if card.get("contact_reason") != contact.reason:
+                    card["contact_reason"] = contact.reason
+                    notes.append(f"explained reduced contact on {identity}")
+            elif card.pop("contact_reason", None) is not None:
+                notes.append(f"cleared stale reduced-contact reason on {identity}")
             # A day the converter gave real app work renders as session cards, but
             # the coach-owned contact (a declared / downgraded sparring day) must
             # still show on that day. Technical-contact context does not decide
