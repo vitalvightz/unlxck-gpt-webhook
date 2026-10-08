@@ -445,7 +445,7 @@ export function lastLoadFor(
   return { value: match.load.value, unit: match.load.unit };
 }
 
-/** A log of work done, with the last weight filled in when none was given. */
+/** A log of work done, with the last weight (eased after a struggle) filled in when none was given. */
 export function withLastLoad<T extends Omit<ExerciseLogRequest, "plan_id" | "block_id">>(
   block: StructuredBlock,
   request: T,
@@ -455,7 +455,8 @@ export function withLastLoad<T extends Omit<ExerciseLogRequest, "plan_id" | "blo
   const previous = lastPerformanceFor(block, history);
   if (previous?.status === "skipped" || previous?.reason === "pain") return request;
   if (request.status === "skipped" || request.actual?.load) return request;
-  const load = lastLoadFor(block, recentLoads);
+  // After a struggle the row offers an eased weight, so "done" records that one.
+  const load = backoffLoadFor(block, previous) ?? lastLoadFor(block, recentLoads);
   return load ? { ...request, actual: { ...(request.actual ?? {}), load } } : request;
 }
 
@@ -561,9 +562,12 @@ const BACKOFF_RATIO = 0.9;
  * the plan's (9+ when the plan gave none). Only a suggestion, never applied on
  * its own, and only while today's dose matches the one that was struggled with.
  * Pain and skips are left out: those already stop the old weight carrying over.
+ * A stated reason outranks what the numbers suggest, so short sets for want of
+ * kit, or a high RPE on a strong day, are not read as the weight being too much.
  */
 export function backoffLoadFor(block: StructuredBlock, log: ExerciseLogRecord | null): ExerciseLogMeasure | null {
   if (!log || log.status === "skipped" || log.reason === "pain") return null;
+  if (log.reason === "equipment" || log.reason === "felt_strong") return null;
   const field = logFieldsForBlock(block).find((item) => item.key === "load");
   const load = log.actual.load;
   if (!field || field.prescribed || !load || load.unit !== field.apiUnit || !finitePositiveNumber(load.value)) return null;

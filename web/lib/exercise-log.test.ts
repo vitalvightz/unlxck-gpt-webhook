@@ -302,6 +302,15 @@ test("a struggled weight suggests easing off, never a raise", () => {
   for (const patch of [{}, { actual: { effort: { method: "RPE" as const, value: 8 } } }, { reason: "felt_strong" as const }]) {
     assert.equal(backoffLoadFor(deadlift, struggled(patch)), null);
   }
+  // A stated reason outranks the numbers: missing kit or a strong day is not the weight being too much.
+  assert.equal(backoffLoadFor(deadlift, struggled({ reason: "equipment", status: "modified", actual: { sets: 2 } })), null);
+  assert.equal(backoffLoadFor(deadlift, struggled({ reason: "felt_strong", status: "modified", actual: { effort: { method: "RPE", value: 9 } } })), null);
+  // "Done" records the eased weight the row offered, not last time's.
+  const recent = [{ exercise_key: null, display_name: deadlift.display_name!, load: { value: 80, unit: "kg" }, training_day: "2026-10-01" }];
+  assert.deepEqual(withLastLoad(deadlift, { status: "as_prescribed" }, recent, [struggled({ reason: "fatigue", status: "modified" })]),
+    { status: "as_prescribed", actual: { load: { value: 72.5, unit: "kg" } } });
+  assert.deepEqual(withLastLoad(deadlift, { status: "as_prescribed" }, recent, [struggled({})]),
+    { status: "as_prescribed", actual: { load: { value: 80, unit: "kg" } } });
   // Pain and skips are handled by not carrying the weight over at all.
   for (const patch of [{ reason: "pain" as const }, { status: "skipped" as const }]) {
     assert.equal(backoffLoadFor(deadlift, struggled({ ...patch, actual: { sets: 2 } })), null);

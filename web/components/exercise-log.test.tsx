@@ -388,6 +388,18 @@ test("a struggled weight is offered eased off, at any readiness, and stays edita
   await view.click("Log numbers");
   const load = view.container.querySelector<HTMLInputElement>('.ex-log-field input[id$="-load"]');
   assert.equal(load?.value, "90");
+  // "Done" records the eased weight on screen, not last time's.
+  await view.click("Cancel");
+  await view.click("Done");
+  assert.deepEqual(view.saved[0], { block_id: "blk-deadlift", status: "as_prescribed", actual: { load: { value: 90, unit: "kg" } } });
+  view.unmount();
+});
+
+test("a stated reason other than fatigue is not read as the weight being too much", () => {
+  const short = record(deadlift, { plan_id: "previous-plan", reason: "equipment", status: "modified",
+    actual: { sets: 2, load: { value: 100, unit: "kg" } } });
+  const view = mount(deadlift, { recentPerformances: [short] });
+  assert.doesNotMatch(view.text(), /Ease to/);
   view.unmount();
 });
 
