@@ -4,7 +4,7 @@ import { window } from "./test-dom";
 import { act, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { GuidedInjuryCard } from "./guided-injury-card";
-import { EMPTY_GUIDED_INJURY, buildGuidedInjuryFields, type GuidedInjuryState } from "@/lib/guided-injury";
+import { EMPTY_GUIDED_INJURY, buildGuidedInjuryFields, normalizeGuidedInjuryState, type GuidedInjuryState } from "@/lib/guided-injury";
 
 test("more injury types depend on location and guide muscle selections to joints", async () => {
   const host = document.createElement("div"); document.body.appendChild(host);
@@ -21,7 +21,8 @@ test("more injury types depend on location and guide muscle selections to joints
   try {
     for (const [zone, area] of [["l_quad", "Left quad"], ["l_knee", "Left knee"], ["head", "Head / Neck"]]) {
       await act(async () => root.render(<Editor key={zone} zone={zone} area={area} />));
-      await press("More injury types");
+      await press("Other");
+      await press("Browse all types");
       const categories = Array.from(host.querySelectorAll('[role="radio"]')).map((entry) => entry.textContent);
       assert.ok(categories.every((text) => !text?.includes("Not sure")));
       assert.equal(categories.some((text) => text?.includes("Head, nerve or breathing issue")), zone === "head");
@@ -36,6 +37,7 @@ test("more injury types depend on location and guide muscle selections to joints
     }
     await act(async () => root.render(<Editor key="other" zone="l_quad" area="Left quad" />));
     await press("Other");
+    await press("Not sure");
     assert.equal(host.querySelector(".gi-selection-title")?.textContent, "Other");
   } finally { await act(async () => root.unmount()); host.remove(); }
 });
@@ -137,5 +139,106 @@ test("safety follow-ups still block saving until required answers are supplied",
     const remove = host.querySelector<HTMLButtonElement>('[aria-label="Remove injury 1"]');
     assert.ok(remove);
     assert.equal(remove.closest('[role="button"]'), null);
+  } finally { await act(async () => root.unmount()); host.remove(); }
+});
+
+test("Other suggests types for the area and one tap sets the type", async () => {
+  const host = document.createElement("div"); document.body.appendChild(host);
+  const root = createRoot(host);
+  function Editor() {
+    const [injury, setInjury] = useState({ ...EMPTY_GUIDED_INJURY, zone: "l_knee", area: "Left knee" });
+    return <GuidedInjuryCard injury={injury} index={0} isActive onToggleActive={() => {}} onRemove={() => {}}
+      onChangeArea={() => {}} onUpdate={(key, value) => setInjury((current) => ({ ...current, [key]: value }))} />;
+  }
+  const press = async (label: string) => {
+    const button = Array.from(host.querySelectorAll("button")).find((entry) => entry.textContent?.trim() === label);
+    assert.ok(button, label); await act(async () => button.click());
+  };
+  try {
+    await act(async () => root.render(<Editor />));
+    await press("Other");
+    assert.match(host.textContent ?? "", /Common for left knee/);
+    assert.ok(!(host.textContent ?? "").includes("Head impact / concussion"));
+    await press("Instability / giving way");
+    assert.equal(host.querySelector(".gi-selection-title")?.textContent, "Muscle / tendon / joint pain · Instability / giving way");
+    assert.doesNotMatch(host.textContent ?? "", /Used as fallback/);
+  } finally { await act(async () => root.unmount()); host.remove(); }
+});
+
+test("changing a saved injury's type drops the old subtype so it cannot override the new type", async () => {
+  const host = document.createElement("div"); document.body.appendChild(host);
+  const root = createRoot(host);
+  let latest: GuidedInjuryState | undefined;
+  function Editor({ initial }: { initial: GuidedInjuryState }) {
+    const [injury, setInjury] = useState<GuidedInjuryState>(initial);
+    latest = injury;
+    return <GuidedInjuryCard injury={injury} index={0} isActive onToggleActive={() => {}} onRemove={() => {}}
+      onChangeArea={() => {}} onUpdate={(key, value) => setInjury((current) => ({ ...current, [key]: value }))} />;
+  }
+  const press = async (label: string) => {
+    const button = Array.from(host.querySelectorAll("button")).find((entry) => entry.textContent?.trim() === label);
+    assert.ok(button, label); await act(async () => button.click());
+  };
+  const knee = { ...EMPTY_GUIDED_INJURY, zone: "l_knee", area: "Left knee", severity: "moderate" as const, trend: "stable" };
+  try {
+    // Revisit a saved sprain and change it to soreness.
+    await act(async () => root.render(<Editor key="sprain" initial={{ ...knee, injury_type: "sprain", injury_subtypes: ["sprain"] }} />));
+    await act(async () => host.querySelector<HTMLButtonElement>('[aria-label="Change injury type"]')!.click());
+    await press("Soreness");
+    assert.equal(latest?.injury_type, "pain");
+    assert.deepEqual(latest?.injury_subtypes, ["pain"]);
+    assert.equal(normalizeGuidedInjuryState(latest).injury_type, "pain");
+
+    // A suggestion tap replaces the previous subtype rather than adding to it.
+    await act(async () => root.render(<Editor key="suggest" initial={{ ...knee, injury_type: "unspecified", injury_subtypes: ["sprain"] }} />));
+    await act(async () => host.querySelector<HTMLButtonElement>('[aria-label="Change injury type"]')!.click());
+    await press("Other");
+    await press("Swelling");
+    assert.deepEqual(latest?.injury_subtypes, ["swelling"]);
+    assert.equal(normalizeGuidedInjuryState(latest).injury_type, "swelling");
+
+    // A quick pick is recorded as a subtype, so adding another keeps both.
+    await act(async () => root.render(<Editor key="fresh" initial={knee} />));
+    await press("Bruise");
+    assert.deepEqual(latest?.injury_subtypes, ["surface_injury:bruise"]);
+    await act(async () => host.querySelector<HTMLButtonElement>('[aria-label="Change injury type"]')!.click());
+    await press("Other");
+    await press("Cut / wound");
+    assert.deepEqual(latest?.injury_subtypes, ["surface_injury:bruise", "surface_injury:cut"]);
+    const saved = normalizeGuidedInjuryState(latest);
+    assert.equal(saved.injury_type, "surface_injury");
+    assert.equal(saved.surface_type, "bruise");
+  } finally { await act(async () => root.unmount()); host.remove(); }
+});
+
+test("the subtype grid still records several subtypes together", async () => {
+  const host = document.createElement("div"); document.body.appendChild(host);
+  const root = createRoot(host);
+  let latest: GuidedInjuryState | undefined;
+  function Editor() {
+    const [injury, setInjury] = useState<GuidedInjuryState>({ ...EMPTY_GUIDED_INJURY, zone: "l_knee", area: "Left knee" });
+    latest = injury;
+    return <GuidedInjuryCard injury={injury} index={0} isActive onToggleActive={() => {}} onRemove={() => {}}
+      onChangeArea={() => {}} onUpdate={(key, value) => setInjury((current) => ({ ...current, [key]: value }))} />;
+  }
+  const press = async (label: string) => {
+    const button = Array.from(host.querySelectorAll("button")).find((entry) => entry.textContent?.trim() === label);
+    assert.ok(button, label); await act(async () => button.click());
+  };
+  try {
+    await act(async () => root.render(<Editor />));
+    await press("Other");
+    await press("Browse all types");
+    const family = Array.from(host.querySelectorAll<HTMLButtonElement>('[role="radio"]')).find((entry) => entry.textContent?.startsWith("Muscle / tendon / joint pain"));
+    assert.ok(family); await act(async () => family.click());
+    await press("Sprain");
+    await act(async () => host.querySelector<HTMLButtonElement>('[aria-label="Change injury type"]')!.click());
+    await press("Swelling");
+    assert.equal(latest?.injury_type, "sprain");
+    assert.deepEqual(latest?.injury_subtypes, ["sprain", "swelling"]);
+    await act(async () => host.querySelector<HTMLButtonElement>('[aria-label="Change injury type"]')!.click());
+    await press("Sprain");
+    assert.deepEqual(latest?.injury_subtypes, ["swelling"]);
+    assert.equal(latest?.injury_type, "swelling");
   } finally { await act(async () => root.unmount()); host.remove(); }
 });

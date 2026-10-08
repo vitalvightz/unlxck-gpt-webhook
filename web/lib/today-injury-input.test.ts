@@ -78,3 +78,23 @@ test("isInjuryEntryLimited flags only entries that were actually trimmed", () =>
   assert.equal(isInjuryEntryLimited("back of left knee"), false);
   assert.equal(isInjuryEntryLimited("back of left knee area"), true);
 });
+
+test("Other types follow the area and write a word the scorer recognises", async () => {
+  const { getTodayOtherInjuryTypes, readTodayOtherInjuryType, TODAY_OTHER_INJURY_TYPES } = await import("./today-injury-input.ts");
+  assert.deepEqual(getTodayOtherInjuryTypes("Left knee").suggested,
+    ["sprain", "swelling", "instability", "stiffness", "hyperextension", "dislocation", "fracture"]);
+  assert.ok(getTodayOtherInjuryTypes("Right shoulder").suggested.includes("impingement"));
+  assert.equal(getTodayOtherInjuryTypes("Head / Neck").suggested[0], "concussion");
+  assert.ok(getTodayOtherInjuryTypes("Ribs").suggested.includes("fracture"));
+  assert.ok(getTodayOtherInjuryTypes("Left hand").skin.includes("blister"));
+  assert.ok(!getTodayOtherInjuryTypes("Left quad").skin.includes("blister"));
+  assert.ok(getTodayOtherInjuryTypes("somewhere odd").suggested.length >= 8);
+
+  assert.equal(composeTodayInjuryDescription({ injuryType: "other", otherType: "sprain", detail: "rolled it" }), "sprain. rolled it");
+  assert.equal(composeTodayInjuryDescription({ injuryType: "other", otherType: "nerve", detail: "" }), "numbness and tingling");
+  assert.equal(composeTodayInjuryDescription({ injuryType: "other", otherType: "", detail: "odd ache" }), "odd ache");
+  assert.equal(readTodayOtherInjuryType("fracture. fell on it"), "fracture");
+  assert.equal(readTodayOtherInjuryType("numbness and tingling"), "nerve");
+  assert.equal(readTodayOtherInjuryType("odd ache after a sprain"), "");
+  assert.ok(Object.values(TODAY_OTHER_INJURY_TYPES).filter((type) => type.serious).length === 4);
+});

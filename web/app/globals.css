@@ -8749,6 +8749,50 @@ html[data-theme="light"] .today-segment-multi.today-segment-active::before {
   background-color: #ffffff;
 }
 
+.today-injury-other {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+  padding: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.today-injury-other-label {
+  margin: 4px 0 0;
+  color: var(--text-muted);
+  font-family: var(--font-mono), monospace;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+}
+
+.today-injury-other-label:first-child {
+  margin-top: 0;
+}
+
+.today-injury-other-warning {
+  margin: 2px 0 0;
+  color: #e0344d;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.today-injury-other-describe {
+  justify-self: start;
+}
+
+html[data-theme="light"] .today-injury-other {
+  border-color: rgba(80, 81, 84, 0.12);
+  background: rgba(255, 255, 255, 0.6);
+}
+
+html[data-theme="light"] .today-injury-other-warning {
+  color: #bd1020;
+}
+
 .today-injury-add {
   display: flex;
   flex-direction: column;
@@ -14532,10 +14576,44 @@ html[data-theme="light"] .injury-card-remove-btn:hover {
   gap: 10px;
 }
 
+.gi-suggested-types {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.gi-suggested-label {
+  margin: 0;
+  color: var(--text-muted);
+  font-family: var(--font-mono), monospace;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+}
+
+.gi-suggested-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+html[data-theme="light"] .gi-suggested-types {
+  border-color: rgba(80, 81, 84, 0.12);
+  background: rgba(255, 255, 255, 0.6);
+}
+
 .gi-family-card {
   min-height: 44px;
   padding: 12px;
-  border-radius: 16px;
+  border-radius: 12px;
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
   border: 1px solid rgba(255, 255, 255, 0.08);
   background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.015));
   color: var(--text-primary);
@@ -14547,6 +14625,9 @@ html[data-theme="light"] .injury-card-remove-btn:hover {
 
 .gi-family-card small {
   color: var(--text-muted);
+  font-size: 0.78rem;
+  font-weight: 500;
+  line-height: 1.35;
 }
 
 .gi-family-card:hover {
