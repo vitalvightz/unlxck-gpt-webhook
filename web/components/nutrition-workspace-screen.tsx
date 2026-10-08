@@ -278,7 +278,7 @@ export function NutritionWorkspaceScreen() {
         <NutritionWorkspaceHeader
           athleteName={athleteName}
           title="Nutrition workspace"
-          description="Keep camp setup, readiness, and nutrition parameters here. Restrictions stay anchored to Advanced Intake, and the dedicated bodyweight log now lives on its own fight-lab screen."
+          description="Camp setup, readiness and nutrition settings. Weigh-ins have their own log."
         />
         <NutritionSubnav />
         <SafetyNote tone="warning">{WEIGHT_CUT_SAFETY}</SafetyNote>
@@ -359,7 +359,7 @@ export function NutritionWorkspaceScreen() {
                       </div>
                     ))}
                   </div>
-                  <p className="muted">Restrictions live in Advanced Intake so your nutrition workspace stays aligned with the core athlete profile.</p>
+                  <p className="muted">Restrictions are set in Advanced Intake.</p>
                   <div className="plan-summary-actions">
                     <Link href="/onboarding" className="ghost-button">Edit in Advanced Intake</Link>
                   </div>
@@ -374,7 +374,7 @@ export function NutritionWorkspaceScreen() {
                     <div className={styles.previewHeaderCopy}>
                       <p className="kicker">Bodyweight</p>
                       <h2 className="form-section-title">Preview</h2>
-                      <p className="muted">Latest readout lives here. Full logging, trend review, and history edits now happen in the dedicated bodyweight lab.</p>
+                      <p className="muted">Your latest numbers. Log and edit weigh-ins in the bodyweight log.</p>
                     </div>
                     <Link href="/nutrition/bodyweight-log" className="cta">Open bodyweight log</Link>
                   </div>
@@ -455,7 +455,6 @@ export function NutritionWorkspaceScreen() {
                           <option key={value || "empty"} value={value}>{value || "Select"}</option>
                         ))}
                       </select>
-                      <p className="muted">This stays tied to intake/current weight data and still respects latest-log matching behavior.</p>
                     </div>
                     <div className="field">
                       <label>Weight recorded at</label>
@@ -544,7 +543,7 @@ export function NutritionWorkspaceScreen() {
                       </div>
                     ))}
                   </div>
-                  <p className="muted">Pick the day type directly for each weekday. Hard sparring and Support Work Days (non-hard training / S&C-compatible slots) still feed the saved planning fields automatically, while conditioning and recovery stay available here too.</p>
+                  <p className="muted">Pick a day type for each weekday. Hard sparring and support days fill in from your schedule.</p>
                 </article>
 
                 <article className="step-card nutrition-section">
@@ -602,7 +601,7 @@ export function NutritionWorkspaceScreen() {
                       />
                     </div>
                   </div>
-                  <p className="muted">This workspace supports macro and micro planning inputs, not meal-by-meal food choices. We can add athlete food-level controls later if needed.</p>
+                  <p className="muted">Sets your macro and micronutrient targets, not individual meals.</p>
                 </article>
               </div>
 
@@ -615,7 +614,7 @@ export function NutritionWorkspaceScreen() {
               </article>
               <article className="support-panel">
                 <p className="kicker">Bodyweight</p>
-                <p className="muted">Open the dedicated log for premium trend review, quick add, and historical edits without leaving the Nutrition workspace.</p>
+                <p className="muted">Log weigh-ins, see your trend and edit past entries.</p>
                 <Link href="/nutrition/bodyweight-log" className="ghost-button">Go to log</Link>
               </article>
             </aside>

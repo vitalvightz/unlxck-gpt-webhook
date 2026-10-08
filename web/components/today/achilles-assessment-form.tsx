@@ -48,7 +48,7 @@ export function AchillesAssessmentForm({ injury, token, onRefresh, disabled = fa
   const pending = useRef<{ key: string; id: string } | null>(null);
   const review = injury.rehab_decision?.achilles_load_review;
   if (!review || !injury.episode_id || !["open", "monitoring"].includes(injury.status)) return null;
-  if (!injury.side || injury.side === "unknown") return <p className="today-field-hint">Confirm the Achilles side in your injury details before recording an assessment.</p>;
+  if (!injury.side || injury.side === "unknown") return <p className="today-field-hint">Set which Achilles (left or right) in your injury details first.</p>;
 
   async function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -73,7 +73,7 @@ export function AchillesAssessmentForm({ injury, token, onRefresh, disabled = fa
       if (reps !== null && !Number.isInteger(reps)) throw new Error("Repetitions must be a whole number.");
       if (heel !== true && (reps !== null || boolean(data, "heel_rise_assessor_usable") !== null
           || String(data.get("heel_rise_mode")) !== "unknown" || String(data.get("heel_rise_quality")) !== "unknown")) {
-        throw new Error("Heel-rise results need a completed assessment, including an assessment that found you unable to do the movement.");
+        throw new Error("Heel-rise results need a completed assessment (even one where you couldn't do the movement).");
       }
       if (range !== true && (numeric(data, "resistance_kg") !== null || boolean(data, "range_load_assessor_usable") !== null
           || ["permitted_range", "resistance", "range_load_tolerance"].some(name => String(data.get(name)) !== "unknown"))) {
@@ -106,7 +106,7 @@ export function AchillesAssessmentForm({ injury, token, onRefresh, disabled = fa
       await submitInjuryEpisodeObservation(token, { injury_id: injury.id, injury_episode_id: injury.episode_id!,
         event_type: "rehab_progression_assessment", report_id: pending.current.id, assessment });
       saved = true; pending.current = null;
-      setMessage("Assessment report saved. LOAD remains closed.");
+      setMessage("Assessment saved. Loading rehab stays locked.");
       await onRefresh();
     } catch (e) {
       setError(saved ? "Your report was saved, but Today could not refresh. Refresh the page to see the updated guidance."
@@ -116,9 +116,8 @@ export function AchillesAssessmentForm({ injury, token, onRefresh, disabled = fa
 
   return <details className={styles.panel}>
     <summary>Record Achilles assessment</summary>
-    <p>Record an assessment that already happened. Do not perform a new test for this form. Follow your clinician&apos;s restrictions.</p>
-    <p>LOAD remains closed. These are your reported observations, including any clinician or coach advice you report; assessor identity is not verified here.</p>
-    <p>Each save replaces the earlier assessment snapshot for this episode. Include all known answers again when adding a delayed response. Leave unassessed answers unknown.</p>
+    <p>Only log an assessment that already happened. Don&apos;t test yourself for this form.</p>
+    <p>Self-reported, not verified. It won&apos;t unlock loading rehab. Each save replaces the last, so fill in everything you know.</p>
     <form onSubmit={save}>
       <fieldset disabled={busy || disabled} className={styles.fields}>
         <legend>1. Assessment context — {injury.side} Achilles</legend>
@@ -136,7 +135,7 @@ export function AchillesAssessmentForm({ injury, token, onRefresh, disabled = fa
         <YesNo name="marked_weakness" label="Marked weakness?" />
         <YesNo name="traumatic_loss_of_function" label="Loss of function after trauma?" />
         <YesNo name="clinician_restriction" label="Current clinician restriction on loading?" />
-        <p className={styles.full}>A suspected rupture, sudden traumatic loss of function or another safety concern needs medical assessment before training.</p>
+        <p className={styles.full}>Suspected rupture, sudden loss of function or another safety concern? Get medically assessed before training.</p>
       </fieldset>
       <fieldset disabled={busy || disabled} className={styles.fields}>
         <legend>2. Existing heel-rise observation</legend>
@@ -153,11 +152,11 @@ export function AchillesAssessmentForm({ injury, token, onRefresh, disabled = fa
         <label>Symptoms during loading (0–10)<input name="during_symptoms" type="number" min="0" max="10" step="any" /></label>
         <label>Delayed symptoms (0–10, if observed)<input name="delayed_symptoms" type="number" min="0" max="10" step="any" /></label>
         <label>Delayed observation time (your local time)<input name="delayed_response_at" type="datetime-local" /></label>
-        <p className={styles.full}>These ratings record symptoms. No number here means you are ready for LOAD.</p>
+        <p className={styles.full}>Symptom ratings only. No score here means you&apos;re ready to load.</p>
       </fieldset>
       <fieldset disabled={busy || disabled} className={styles.fields}>
         <legend>4. Assessed range and load</legend>
-        <p className={styles.full}>Record clinician / physio advice only if it was actually given. Missing clinical advice remains unavailable.</p>
+        <p className={styles.full}>Only record clinician / physio advice that was actually given.</p>
         <YesNo name="range_assessed" label="Was range and load assessed?" />
         <label>Reported permitted range<select name="permitted_range" defaultValue="unknown"><option value="unknown">Not known</option><option value="floor_level">Floor level</option><option value="clinician_limited">Individually limited by clinician</option></select></label>
         <label>Assessed resistance<select name="resistance" defaultValue="unknown"><option value="unknown">Not known</option><option value="bodyweight">Bodyweight</option><option value="external">External resistance</option></select></label>

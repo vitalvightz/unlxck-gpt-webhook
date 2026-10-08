@@ -202,7 +202,7 @@ function SparringRows({ history }: { history: SparringLogHistoryResponse }) {
       <EmptyState
         eyebrow="Sparring history"
         title="No sparring logged yet."
-        description="When a sparring round timer on Today finishes, log how it went in a few taps. Every entry (rounds, intensity, head contact) is kept here with your weekly totals."
+        description="Finish a sparring round timer on Today to log your rounds. They'll show here with weekly totals."
         example="Thu 02 Jul 2026: 5 × 3 min · Hard · Light head contact"
         primaryAction={{ label: "Open Today", href: "/today" }}
       />
@@ -578,8 +578,7 @@ function HistoryContent() {
         <p className="kicker">Training record</p>
         <h1 className="form-section-title">History</h1>
         <p className="muted">
-          Every logged session, exercise, sparring round, daily check-in, and injury report, including
-          resolved injuries.
+          Your sessions, sparring, check-ins and injuries.
         </p>
       </header>
 

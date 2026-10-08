@@ -1035,8 +1035,7 @@ export default function SettingsPage() {
                 </div>
               </div>
               <p className="muted">
-                Your date of birth sets your age everywhere in UNLXCK, including Camp Setup and the
-                age-based safety rules. It is not editable from Camp Setup.
+                Sets your age across UNLXCK, including age-based safety rules. Change it here only.
               </p>
               {dateOfBirthMessage ? <p className="success-text">{dateOfBirthMessage}</p> : null}
               {dateOfBirthError ? <p className="error-text">{dateOfBirthError}</p> : null}
@@ -1440,7 +1439,7 @@ export default function SettingsPage() {
             <p className="kicker">Programme Defaults</p>
             <h2 className="form-section-title">Coming soon</h2>
           </div>
-          <p className="settings-coming-soon">These controls are saved as local preview preferences only. They do not yet change backend plan generation.</p>
+          <p className="settings-coming-soon">Preview only. These don&apos;t change your plans yet.</p>
           <div className="settings-control-grid">
             <div className="settings-subsection">
               <div className="settings-subsection-header">

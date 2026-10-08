@@ -161,8 +161,7 @@ export function RehabResponsePrompt({
     <section className="feedback-card rehab-response-card" aria-label="Injury response">
       <p className="session-feedback-title">How did the rehab work go?</p>
       <p className="muted session-feedback-intro">
-        Answer for the injury you did the work for. This is kept with that injury, separately
-        from your session review.
+        Saved with that injury, separate from your session review.
       </p>
 
       {prompts.map((prompt) => {

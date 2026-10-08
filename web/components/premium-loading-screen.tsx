@@ -73,46 +73,46 @@ export const PHASE_CONTENT: Record<
   submitting: {
     eyebrow: "Plan build",
     title: "Saving your intake.",
-    copy: "We are storing your answers first so the plan can be built from the exact setup you just entered.",
+    copy: "Saving your answers so the plan uses exactly what you entered.",
     chip: "Submitting",
     statusFallback: "Saving your intake now.",
-    reassurance: "Safe to leave and return. This workspace reconnects to the same saved plan build instead of starting over.",
+    reassurance: "Safe to leave and come back. We'll pick up the same build.",
     buildState: "Saving",
   },
   queued: {
     eyebrow: "Plan build",
     title: "Intake saved. Planner is next.",
-    copy: "Your setup is safely saved. The next step is building the camp plan from that saved intake.",
+    copy: "Your setup is saved. Building your camp plan next.",
     chip: "Queued",
     statusFallback: "Your saved intake is queued for planning.",
-    reassurance: "Safe to leave and return. This workspace reconnects to the same saved plan build instead of starting over.",
+    reassurance: "Safe to leave and come back. We'll pick up the same build.",
     buildState: "Queued",
   },
   running: {
     eyebrow: "Plan build",
     title: "Building your fight camp.",
-    copy: "The planner is shaping the camp structure, checking safety constraints, and preparing the athlete-facing plan.",
+    copy: "Structuring your camp and running safety checks.",
     chip: "Running",
     statusFallback: "Your saved plan build is in progress.",
-    reassurance: "Safe to leave and return. This workspace reconnects to the same saved plan build instead of starting over.",
+    reassurance: "Safe to leave and come back. We'll pick up the same build.",
     buildState: "Building",
   },
   reconnecting: {
     eyebrow: "Connection watch",
     title: "Reconnecting to the same plan build.",
-    copy: "The saved build is still intact. We are only restoring the browser link so this page can keep watching it.",
+    copy: "Your build is safe. Just reconnecting this page to it.",
     chip: "Reconnecting",
     statusFallback: "Reconnecting to the saved plan build now.",
-    reassurance: "Safe to leave and return. This workspace reconnects to the same saved plan build instead of starting over.",
+    reassurance: "Safe to leave and come back. We'll pick up the same build.",
     buildState: "Reconnecting",
   },
   finalizing: {
     eyebrow: "Final checks",
     title: "Plan ready. Opening workspace.",
-    copy: "The plan is complete. We are closing the final checks before it opens inside your workspace.",
+    copy: "Your plan is done. Finishing final checks before it opens.",
     chip: "Finalizing",
     statusFallback: "Final checks passed. Opening your saved plan.",
-    reassurance: "The saved plan is ready. This page is only closing the final handoff before your workspace opens.",
+    reassurance: "Your plan is ready and opening now.",
     buildState: "Opening",
   },
   already_generated: {
@@ -127,7 +127,7 @@ export const PHASE_CONTENT: Record<
   review_paused: {
     eyebrow: "Planning paused",
     title: "Admin review required",
-    copy: "Stage 1 triage flagged this intake for admin review before generation can continue. No plan was created; nothing was lost. The admin team can approve and resume from their console.",
+    copy: "Your intake was flagged for a safety review before we build the plan. Nothing was lost.",
     chip: "Admin review",
     statusFallback: "Planning paused. Admin review is required before generation can continue.",
     reassurance: "Your intake is saved and visible to admins. You'll be notified when the plan is ready.",
@@ -383,14 +383,13 @@ export function PremiumLoadingScreen({
                 <p className="loading-eyebrow">Build stopped</p>
                 <h2 className="form-section-title">What happened</h2>
                 <p className="muted">
-                  Your intake is saved exactly as you entered it. No partial plan was written, so nothing needs
-                  cleaning up before you try again.
+                  Your intake is saved. No partial plan was created, so you can just try again.
                 </p>
               </div>
               <div className="loading-support-note">
                 <p className="kicker">Still stuck?</p>
                 <p className="muted">
-                  If a retry stops the same way, refine the intake or open plan history to work from your last saved plan.
+                  If it fails again, edit your intake or open your last saved plan.
                 </p>
               </div>
             </div>
@@ -430,7 +429,7 @@ export function PremiumLoadingScreen({
             <div className="loading-support-note">
               <p className="kicker">Return flow</p>
               <p className="muted">
-                If the browser closes or the network drops, the next visit reconnects to the same saved plan build.
+                If you close the page or lose signal, we&apos;ll reconnect next time.
               </p>
             </div>
           </div>
