@@ -1029,13 +1029,13 @@ function TodayOtherTypePicker({ area, value, onChange, onDescribe }: {
   return (
     <div className="today-injury-other" role="group" aria-label="More specific type">
       <p className="today-injury-other-label">{area ? `Common for ${area.toLowerCase()}` : "More types"}</p>
-      <div className="gi-chip-row">{suggested.map(chip)}</div>
+      <div className="gi-type-grid">{suggested.map(chip)}</div>
       {value && TODAY_OTHER_INJURY_TYPES[value].serious ? (
         <p className="today-injury-other-warning" role="status">Get this checked by a clinician before training.</p>
       ) : null}
       <p className="today-injury-other-label">Skin</p>
-      <div className="gi-chip-row">{skin.map(chip)}</div>
-      <button type="button" className="gi-notes-toggle today-injury-other-describe" onClick={onDescribe}>
+      <div className="gi-type-grid">{skin.map(chip)}</div>
+      <button type="button" className="gi-text-link today-injury-other-describe" onClick={onDescribe}>
         Something else? Describe it in a note
       </button>
     </div>

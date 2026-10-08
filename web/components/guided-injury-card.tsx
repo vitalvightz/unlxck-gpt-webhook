@@ -1174,7 +1174,7 @@ export function GuidedInjuryCard({
             ) : !activeFamily && !browseAllTypes ? (
               <div className="gi-suggested-types">
                 <p className="gi-suggested-label">Common for {injury.area.trim().toLowerCase()}</p>
-                <div className="gi-chip-row" role="group" aria-label="Suggested injury types">
+                <div className="gi-type-grid" role="group" aria-label="Suggested injury types">
                   {getSuggestedTypeKeys(injury.area).map((key) => findTypeOption(key)).filter((opt): opt is InjuryTypeOption => Boolean(opt))
                     .map((opt) => (
                       <button key={getSubtypeKey(opt)} type="button" className="gi-chip" onClick={() => {
@@ -1190,8 +1190,8 @@ export function GuidedInjuryCard({
                   }}>Not sure</button>
                 </div>
                 <div className="gi-suggested-actions">
-                  <button type="button" className="gi-notes-toggle" onClick={() => setBrowseAllTypes(true)}>Browse all types</button>
-                  <button type="button" className="gi-notes-toggle" onClick={() => setAdvancedType(false)}>Back</button>
+                  <button type="button" className="gi-text-link" onClick={() => setBrowseAllTypes(true)}>Browse all types</button>
+                  <button type="button" className="gi-text-link" onClick={() => setAdvancedType(false)}>Back</button>
                 </div>
               </div>
             ) : !activeFamily ? (
@@ -1211,7 +1211,7 @@ export function GuidedInjuryCard({
                   </button>
                 ))}
               </div>
-              <button type="button" className="gi-notes-toggle" onClick={() => setBrowseAllTypes(false)}>Back to suggestions</button>
+              <button type="button" className="gi-text-link" onClick={() => setBrowseAllTypes(false)}>Back to suggestions</button>
               </>
             ) : (
               <>
