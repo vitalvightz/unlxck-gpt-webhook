@@ -9,8 +9,8 @@ it atomically (production: one database RPC), adopting a matching legacy row or
 inserting a new one. This preserves old resolved states and prevents concurrent
 duplicates.
 
-A guided injury also carries a plan-independent ``intake_identity`` (body zone
-plus injury type). When a new plan lists an injury whose identity matches an
+A guided injury also carries a plan-independent ``intake_identity`` (body zone,
+injury type and its specific condition). When a new plan lists an injury whose identity matches an
 open or monitoring intake injury from another plan, the store carries that row
 onto the new plan instead of inserting a duplicate (see
 supabase/migrations/20261008001000_intake_injury_identity_across_plans.sql).
@@ -68,21 +68,44 @@ def _source_key(*, plan_id: str, candidate: Mapping[str, Any]) -> str:
     return f"intake:{plan_id}:{digest}"
 
 
+def _guided_specifics(injury: Mapping[str, Any]) -> str:
+    """The specific condition inside the injury type, e.g. ``blister`` or ``cut``.
+
+    ``surface_injury``, ``pain`` and other types are umbrella families: an ankle
+    blister and an ankle cut share the type and differ only here. Subtypes may be
+    stored as ``family:specific`` pairs; the specific part is what identifies.
+    """
+    surface_type = _normalized_token(injury.get("surface_type"))
+    raw = injury.get("injury_subtypes")
+    subtypes = sorted(
+        {
+            token.rsplit(":", 1)[-1]
+            for item in (raw if isinstance(raw, list) else [])
+            if (token := _normalized_token(item))
+        }
+    )
+    specifics = sorted({surface_type, *subtypes} - {""})
+    return "+".join(specifics)
+
+
 def _guided_identity(injury: Mapping[str, Any], candidate: Mapping[str, Any]) -> str | None:
     """What the injury is, independent of plan, notes and training impact.
 
-    The body zone (which carries the side, e.g. ``l_ankle``) and the injury type
-    tell two injuries apart: an ankle sprain and an ankle blister differ in
-    type. Without a type, nothing structured identifies the injury, so none is
-    given and the store falls back to area + description.
+    The body zone (which carries the side, e.g. ``l_ankle``), the injury type and
+    its specific condition together tell two injuries apart: an ankle sprain and
+    an ankle blister differ in type, an ankle blister and an ankle cut only in
+    the specific condition. Without a type and a specific condition nothing
+    structured identifies the injury, so none is given and the store falls back
+    to area + description.
     """
     injury_type = _normalized_token(injury.get("injury_type"))
-    if not injury_type:
+    specifics = _guided_specifics(injury)
+    if not injury_type or not specifics:
         return None
     place = _normalized_token(injury.get("zone")) or _normalized_token(candidate.get("body_area"))
     if not place:
         return None
-    return f"guided:{place}:{injury_type}"
+    return f"guided:{place}:{injury_type}:{specifics}"
 
 
 def _guided_candidate(

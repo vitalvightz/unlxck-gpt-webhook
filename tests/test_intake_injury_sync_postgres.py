@@ -101,11 +101,11 @@ def test_a_training_impact_change_carries_the_same_injury_onto_the_new_plan(post
         athlete, (old_plan, new_plan) = _new_athlete(connection, 2)
 
         old = _sync_injury(connection, athlete, old_plan, f"intake:{old_plan}:a", "Chest",
-                           "Chest: strain. [training_impact:limiting]", identity="guided:chest:strain")
+                           "Chest: strain. [training_impact:limiting]", identity="guided:chest:strain:strain")
         connection.execute("update injury_flags set status = 'monitoring' where id = %s", (old["id"],))
         carried = _sync_injury(connection, athlete, new_plan, f"intake:{new_plan}:b", "Chest",
                                "Chest: strain. [training_impact:not_limiting]", severity="mild",
-                               identity="guided:chest:strain")
+                               identity="guided:chest:strain:strain")
 
         assert carried["id"] == old["id"]
         assert _live_flags(connection, athlete) == [
@@ -114,7 +114,7 @@ def test_a_training_impact_change_carries_the_same_injury_onto_the_new_plan(post
         # A repeat read under the carried key is not a write.
         again = _sync_injury(connection, athlete, new_plan, f"intake:{new_plan}:b", "Chest",
                              "Chest: strain. [training_impact:not_limiting]", severity="mild",
-                             identity="guided:chest:strain")
+                             identity="guided:chest:strain:strain")
         assert again["updated_at"] == carried["updated_at"]
 
 
@@ -129,9 +129,9 @@ def test_a_row_from_before_identity_is_carried_on_area_and_untagged_description(
         assert old["intake_identity"] is None
 
         carried = _sync_injury(connection, athlete, new_plan, f"intake:{new_plan}:b", "Chest",
-                               "Chest: strain. [training_impact:not_limiting]", identity="guided:chest:strain")
+                               "Chest: strain. [training_impact:not_limiting]", identity="guided:chest:strain:strain")
         assert carried["id"] == old["id"]
-        assert carried["intake_identity"] == "guided:chest:strain"
+        assert carried["intake_identity"] == "guided:chest:strain:strain"
 
 
 def test_distinct_injuries_in_one_area_are_never_merged_and_resolved_is_never_carried(postgres_database):
@@ -141,9 +141,9 @@ def test_distinct_injuries_in_one_area_are_never_merged_and_resolved_is_never_ca
         _setup(connection)
         athlete, (old_plan, new_plan, third_plan) = _new_athlete(connection, 3)
         sprain = _sync_injury(connection, athlete, old_plan, f"intake:{old_plan}:a", "Left ankle",
-                              "Left ankle: sprain", identity="guided:l_ankle:sprain")
+                              "Left ankle: sprain", identity="guided:l_ankle:tendon_ligament:sprain")
         blister = _sync_injury(connection, athlete, new_plan, f"intake:{new_plan}:x", "Left ankle",
-                               "Left ankle: blister", identity="guided:l_ankle:surface_injury")
+                               "Left ankle: blister", identity="guided:l_ankle:surface_injury:blister")
         assert blister["id"] != sprain["id"]
         assert [row[:3] for row in _live_flags(connection, athlete)] == [
             (sprain["id"], old_plan, "Left ankle: sprain"),
@@ -153,7 +153,7 @@ def test_distinct_injuries_in_one_area_are_never_merged_and_resolved_is_never_ca
         connection.execute("update injury_flags set status = 'resolved', resolved_at = now() where id = %s",
                            (sprain["id"],))
         reopened = _sync_injury(connection, athlete, third_plan, f"intake:{third_plan}:a", "Left ankle",
-                                "Left ankle: sprain", identity="guided:l_ankle:sprain")
+                                "Left ankle: sprain", identity="guided:l_ankle:tendon_ligament:sprain")
         assert reopened["id"] != sprain["id"]
         assert reopened["status"] == "open"
 
@@ -195,5 +195,5 @@ def test_the_migration_merges_existing_duplicates_like_the_reported_chest_strain
 
         # The next Today read for the new plan finds the kept row by its key.
         synced = _sync_injury(connection, athlete, new_plan, f"intake:{new_plan}:b", "Chest",
-                              "Chest: strain. [training_impact:not_limiting]", identity="guided:chest:strain")
+                              "Chest: strain. [training_impact:not_limiting]", identity="guided:chest:strain:strain")
         assert synced["id"] == kept

@@ -132,7 +132,7 @@ def test_production_rpc_preserves_wound_fields_and_medical_review() -> None:
         "p_infection_signs": ["pus"],
         "p_coverable": "no",
         "p_drainage": "present",
-        "p_intake_identity": "guided:r_shoulder:surface_injury",
+        "p_intake_identity": "guided:r_shoulder:surface_injury:cut",
     }
     assert params["p_source_key"].startswith(f"intake:{plan['id']}:")
     assert params["p_body_area"] and params["p_description"]
