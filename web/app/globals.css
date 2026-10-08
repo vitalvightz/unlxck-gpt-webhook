@@ -8262,6 +8262,120 @@ html[data-theme="light"] .today-terminal-status {
   white-space: nowrap;
 }
 
+.today-injury-name .today-injury-summary {
+  white-space: normal;
+}
+
+.today-injury-card .today-injury-meta {
+  flex-wrap: nowrap;
+  align-items: flex-start;
+}
+
+.today-injury-meta .gi-change-btn {
+  flex-shrink: 0;
+  min-height: 44px;
+}
+
+.today-injury-care {
+  display: grid;
+  gap: 10px;
+}
+
+.today-injury-care-section {
+  display: grid;
+  gap: 4px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.today-injury-care-section p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.today-injury-care-section .today-field-label {
+  color: var(--text-muted);
+  font-size: 10px;
+}
+
+.today-injury-clearance-head,
+.today-injury-update-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+}
+
+.today-injury-clearance-head > div {
+  flex: 1 1 140px;
+}
+
+.today-injury-clearance .today-field-label small {
+  margin-left: 6px;
+  font-family: var(--font-sans), sans-serif;
+  font-size: 10px;
+  font-weight: 400;
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+.today-injury-clearance-toggle {
+  min-height: 44px;
+  padding: 4px 0;
+  border: 0;
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 12px;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.today-injury-clearance-toggle:disabled {
+  opacity: 0.5;
+  cursor: wait;
+}
+
+.today-injury-clearance-toggle:focus-visible {
+  outline: 2px solid var(--brand-red);
+  outline-offset: 3px;
+}
+
+.today-injury-clearance-editor {
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+}
+
+.today-injury-clearance-editor .today-injury-clearance-options {
+  display: grid;
+  grid-template-columns: 1fr;
+}
+
+.today-injury-clearance-options .today-segment {
+  min-height: 44px;
+  text-align: left;
+}
+
+.today-injury-update-head {
+  padding-top: 10px;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.today-injury-update-head p {
+  margin: 0;
+}
+
+.today-injury-update-head .today-injury-status-hint {
+  font-size: 11px;
+}
+
 /* The session command stays in the Today decision banner. This compact strip is
    deliberately subordinate and belongs to one injury: it keeps an actionable
    skin restriction visible after the save toast has gone. */
@@ -8651,7 +8765,7 @@ html[data-theme="light"] .today-segment-multi.today-segment-active::before {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  margin-top: 12px;
+  margin-top: 0;
   text-align: left;
 }
 

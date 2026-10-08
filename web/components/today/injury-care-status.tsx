@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useId, useRef, useState } from "react";
 import { submitInjuryEpisodeObservation } from "@/lib/api";
 import type { InjuryFlagRecord, TodayCommandView } from "@/lib/types";
 
@@ -21,6 +21,7 @@ export function InjuryCareStatus({ injury, token, onRefresh }: {
   const [choosing, setChoosing] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const clearanceEditorId = useId();
   const pendingReport = useRef<{ key: string; id: string } | null>(null);
   async function report(scopes: Array<"rehab" | "training" | "contact">) {
     if (!injury.episode_id || busy) return;
@@ -48,29 +49,45 @@ export function InjuryCareStatus({ injury, token, onRefresh }: {
   const schedule = injury.rehab_decision?.schedule;
   const labels = { due: "Rehab due", recovery_day: "Recovery day", already_completed: "Today's allocation used",
     held: "Rehab held", deferred: "Rehab deferred", unsupported: "Guidance unavailable" };
-  return <div className="today-injury-guidance" role="note">
-    {injury.rehab_decision && schedule?.reason !== injury.rehab_decision.summary ? <p>{injury.rehab_decision.summary}</p> : null}
-    {schedule ? <p><strong>{labels[schedule.state]}</strong> · {schedule.reason}
+  const summary = injury.rehab_decision?.reason_codes.includes("missing_injury_identity")
+    ? "Add injury area and type to unlock rehab guidance."
+    : injury.rehab_decision?.summary;
+  // Keep Main's deduplication for every schedule state, applying the shorter
+  // identity prompt even when the backend repeats its summary as the reason.
+  const scheduleReason = schedule?.reason === injury.rehab_decision?.summary ? summary : schedule?.reason;
+  return <div className="today-injury-care">
+    {injury.rehab_decision ? <div className="today-injury-care-section" role="note" aria-label="Guidance">
+    <p className="today-field-label">Guidance</p>
+    {schedule?.reason !== injury.rehab_decision.summary ? <p>{summary}</p> : null}
+    {schedule ? <p><strong>{labels[schedule.state]}</strong> · {scheduleReason}
       {schedule.next_due_day && schedule.state !== "due" ? <> Next due: {schedule.next_due_day}.</> : null}</p> : null}
     {injury.rehab_decision?.prescription?.sources?.length ? <p className="muted">
       {injury.rehab_decision.prescription.sources.map((source, index) => <span key={source}>
         {index ? " · " : ""}<a href={source} target="_blank" rel="noopener noreferrer">Routine guidance{index ? ` ${index + 1}` : ""}</a>
       </span>)}
     </p> : null}
-    {clearance || (injury.episode_id && !surface) ? <div className="today-injury-clearance-row">
-      {clearance ? <p className="muted">Your clearance: {scopeLabel}</p> : null}
-      {injury.episode_id && !surface ? <button type="button" className="gi-change-btn" onClick={() => setChoosing(!choosing)} disabled={busy}>{clearance ? "Change clearance" : "Add clinician clearance"}</button> : null}
     </div> : null}
+    {clearance || (injury.episode_id && !surface) ? <div className="today-injury-care-section today-injury-clearance">
+    <div className="today-injury-clearance-head">
+      <div>
+        <p className="today-field-label">Clearance <small>Self-reported</small></p>
+        <p>{clearance ? scopeLabel : "Not reported"}</p>
+      </div>
     {injury.episode_id && !surface ? <>
-      {choosing ? <div role="group" aria-label="What were you cleared for?">
-        <p>What were you cleared for? <small className="muted">Self-reported. Red flags and safety holds still apply; doesn&apos;t advance rehab.</small></p>
-        <div className="today-segment-row">
-          <button type="button" className="today-segment" disabled={busy} onClick={() => report(["rehab"])}>Rehab only</button>
-          <button type="button" className="today-segment" disabled={busy} onClick={() => report(["rehab", "training"])}>Train, no hard sparring</button>
-          <button type="button" className="today-segment" disabled={busy} onClick={() => report(["rehab", "training", "contact"])}>Train + hard sparring</button>
-        </div>
-      </div> : null}
+      <button type="button" className="today-injury-clearance-toggle" aria-expanded={choosing} aria-controls={clearanceEditorId}
+        onClick={() => setChoosing((current) => !current)} disabled={busy}>{choosing ? "Hide" : clearance ? "Change clearance" : "Report clearance"}</button>
     </> : null}
+    </div>
+    {choosing ? <div id={clearanceEditorId} className="today-injury-clearance-editor" role="group" aria-label="What were you cleared for?">
+      <p>Choose what your clinician cleared you for.</p>
+      <p className="today-field-hint">Self-reported, not verified. Red flags and safety holds still apply; this does not advance rehab.</p>
+      <div className="today-segment-row today-injury-clearance-options">
+        <button type="button" className="today-segment" disabled={busy} onClick={() => report(["rehab"])}>Rehab only</button>
+        <button type="button" className="today-segment" disabled={busy} onClick={() => report(["rehab", "training"])}>Train, no hard sparring</button>
+        <button type="button" className="today-segment" disabled={busy} onClick={() => report(["rehab", "training", "contact"])}>Train + hard sparring</button>
+      </div>
+    </div> : null}
+    </div> : null}
     {error ? <p role="alert">{error}</p> : null}
   </div>;
 }

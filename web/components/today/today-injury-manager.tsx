@@ -590,12 +590,23 @@ export function TodayInjuryManager({
           <h2 id="today-injury-heading">Track today&apos;s injuries</h2>
         </div>
       </div>
-      <EffectiveClinicianClearanceStatus clearance={effectiveClearance} />
+      {/* Omit only a duplicate single-injury summary. Unclear or different
+          effective restrictions must remain visible above the individual report. */}
+      {effectiveClearance && (openInjuries.length !== 1 || effectiveClearance.requires_update ||
+        !openInjuries[0].episode_id ||
+        effectiveClearance.limited_by.some((item) => item.injury_id !== openInjuries[0].id) ||
+        [...effectiveClearance.scopes].sort().join(",") !==
+          [...(openInjuries[0].clinician_clearance?.scopes ?? [])].sort().join(",")) ?
+        <EffectiveClinicianClearanceStatus clearance={effectiveClearance} /> : null}
       {openInjuries.length ? (
         <ul className="today-injury-list">
           {openInjuries.map((injury) => {
             const selectedStatus = selectedStatusByFlagId[injury.id];
             const injuryType = getInjuryType(injury);
+            const injuryLabel = getInjuryLabel(injury);
+            const impact = readInjuryImpact(injury.description ?? "");
+            const impactLabel = impact?.value === "not_limiting" ? "Low impact today" : impact?.label ?? `${injury.severity} symptoms`;
+            const showInjuryType = injuryType && !injuryLabel.toLowerCase().includes(injuryType.toLowerCase());
             const surfaceGuidance = getSurfaceGuidance(injury);
             const isPending = pendingFlagId === injury.id;
             // Any in-flight write locks every row's status actions, not just its
@@ -608,10 +619,12 @@ export function TodayInjuryManager({
               <li key={injury.id} className="today-injury-item" data-severity={injury.severity}>
                 <div className="today-injury-meta">
                   <span className="today-injury-name">
-                    <strong>{getInjuryLabel(injury)}</strong>
-                    {injuryType ? <small>{injuryType}</small> : null}
+                    <strong>{injuryLabel}</strong>
+                    {showInjuryType ? <small>{injuryType}</small> : null}
+                    <small className="today-injury-summary">
+                      {injury.status === "monitoring" ? "Monitoring" : "Tracking"} · {impactLabel}
+                    </small>
                   </span>
-                  <span className="badge status-badge-neutral">{readInjuryImpact(injury.description ?? "")?.label ?? injury.severity}</span>
                   <button type="button" className="gi-change-btn" disabled={isAdding || pendingFlagId !== null}
                     onClick={() => {
                       setEditingFlagId(injury.id); setNewArea(injury.body_area);
@@ -624,7 +637,6 @@ export function TodayInjuryManager({
                       setNewZone(""); setBodyMapVisible(false); setManualArea(false); setNotesOpen(false); setAddMissing(null);
                       setIsAddFormOpen(true);
                     }}>Edit</button>
-                  {injury.status === "monitoring" ? <span className="badge">Monitoring</span> : null}
                 </div>
                 {surfaceGuidance ? (
                   <div
@@ -636,13 +648,13 @@ export function TodayInjuryManager({
                     <p>{surfaceGuidance.message}</p>
                   </div>
                 ) : null}
-                <p className="today-field-label today-injury-status-label">How is it today?</p>
                 {injury.rehab_decision || injury.episode_id ? <InjuryCareStatus injury={injury} token={token} onRefresh={onRefresh} /> : null}
                 <AchillesAssessmentForm key={`${injury.id}:${injury.episode_id}:${injury.side}`} injury={injury} token={token}
                   onRefresh={onRefresh} disabled={isAdding || pendingFlagId !== null} />
-                <p className="today-field-hint today-injury-status-hint">
-                  Only tap if it changed.
-                </p>
+                <div className="today-injury-update-head">
+                  <p className="today-field-label today-injury-status-label">Update today</p>
+                  <p className="today-field-hint today-injury-status-hint">Only tap if it changed.</p>
+                </div>
                 <div
                   className="today-segment-row today-injury-status-row"
                   role="group"
