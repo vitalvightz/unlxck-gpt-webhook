@@ -8,7 +8,7 @@ import { createRoot, type Root } from "react-dom/client";
 import { ToastProvider } from "../toast-provider";
 
 import { TodayInjuryManager } from "./today-injury-manager";
-import type { InjuryFlagRecord } from "@/lib/types";
+import type { InjuryFlagRecord, TodayCommandView } from "@/lib/types";
 
 // jsdom has no matchMedia; the card's body-map select reads it on mount.
 if (typeof domWindow.matchMedia !== "function") {
@@ -79,6 +79,32 @@ function mount(): { container: HTMLElement; root: Root; cleanup: () => void } {
     },
   };
 }
+
+test("single injury removes duplicate clearance while retaining overall safety restrictions", async () => {
+  const reported: InjuryFlagRecord = { ...SHOULDER, episode_id: "episode-1", status: "monitoring",
+    description: "strain [training_impact:not_limiting]",
+    clinician_clearance: { episode_id: "episode-1", scopes: ["rehab", "training", "contact"],
+      source: "athlete_reported", externally_verified: false } };
+  const effective: NonNullable<TodayCommandView["effective_clinician_clearance"]> = {
+    level: "train_contact", scopes: ["rehab", "training", "contact"], requires_update: false,
+    limited_by: [{ injury_id: reported.id, injury_episode_id: "episode-1", label: "Left shoulder strain" }],
+  };
+  const { container, root, cleanup } = mount();
+  try {
+    for (const [injuries, clearance, summaryVisible] of [
+      [[reported], effective, false],
+      [[reported, { ...SHOULDER, id: "another" }], effective, true],
+      [[reported], { ...effective, level: "rehab_only", scopes: ["rehab"] }, true],
+      [[reported], { ...effective, requires_update: true }, true],
+    ] as Array<[InjuryFlagRecord[], typeof effective, boolean]>) {
+      await act(async () => root.render(<TodayInjuryManager openInjuries={injuries} effectiveClearance={clearance}
+        token="t" onRefresh={async () => {}} />));
+      assert.equal(Boolean(container.querySelector('[aria-label="Effective clinician clearance"]')), summaryVisible);
+      assert.match(container.querySelector(".today-injury-summary")?.textContent ?? "", /Monitoring · Low impact today/);
+      assert.equal(container.querySelector(".today-injury-name small:not(.today-injury-summary)"), null);
+    }
+  } finally { cleanup(); }
+});
 
 async function settle() {
   await act(async () => {
@@ -165,7 +191,7 @@ test("an unknown injury type leaves no placeholder or secondary line", async () 
   });
 
   assert.equal(container.querySelector(".today-injury-name strong")?.textContent, "Right shoulder injury");
-  assert.equal(container.querySelector(".today-injury-name small"), null);
+  assert.equal(container.querySelector(".today-injury-name small:not(.today-injury-summary)"), null);
   assert.doesNotMatch(container.textContent ?? "", /Type not specified/);
   cleanup();
 });
@@ -228,8 +254,8 @@ test("the injury card never renders the planner's internal taxonomy tokens", asy
   assert.doesNotMatch(text, /surface injury/i);
   assert.doesNotMatch(text, /surface_injury/i);
   assert.equal(
-    container.querySelector(".today-injury-name small")?.textContent,
-    "blister",
+    container.querySelector(".today-injury-name small:not(.today-injury-summary)"),
+    null,
   );
 
   cleanup();
