@@ -223,7 +223,7 @@ test("logging different numbers saves only the change, with the chosen reason", 
   await view.type("Sets", "3");
   await view.type("Load", "80");
   assert.ok(view.container.querySelector(".ex-log-reasons"));
-  await view.click("Equipment");
+  await view.click("No kit");
   await view.click("Save");
 
   assert.deepEqual(view.saved, [
@@ -237,7 +237,7 @@ test("logging different numbers saves only the change, with the chosen reason", 
   // Prescribed and actual on one line.
   assert.equal(
     view.container.querySelector(".ex-log-status")?.textContent,
-    "Changed3 sets not 480 kgEquipment",
+    "Changed3 sets not 480 kgNo kit",
   );
   view.unmount();
 });
@@ -306,11 +306,11 @@ test("skipping saves in one tap; the reason is a second, optional tap", async ()
   await view.click("Skip");
   assert.deepEqual(view.saved, [{ block_id: "blk-deadlift", status: "skipped" }]);
   // Nobody skips because they felt strong.
-  assert.equal(view.button("Strong"), undefined);
+  assert.equal(view.button("Felt strong"), undefined);
 
-  await view.click("Fatigue");
+  await view.click("Too tired");
   assert.deepEqual(view.saved[1], { block_id: "blk-deadlift", status: "skipped", reason: "fatigue" });
-  assert.equal(view.button("Fatigue")?.getAttribute("aria-pressed"), "true");
+  assert.equal(view.button("Too tired")?.getAttribute("aria-pressed"), "true");
   view.unmount();
 });
 
@@ -323,7 +323,7 @@ test("the pain reason is only offered with health consent", async () => {
   const without = mount(deadlift, { painReasonAllowed: false });
   await without.click("Skip");
   assert.equal(without.button("Pain"), undefined);
-  assert.ok(without.button("Fatigue"));
+  assert.ok(without.button("Too tired"));
   without.unmount();
 });
 
@@ -331,7 +331,7 @@ test("a saved log can be changed to a different outcome", async () => {
   const view = mount(deadlift, {
     logs: { "blk-deadlift": record(deadlift, { status: "modified", actual: { sets: 3 }, reason: "fatigue" }) },
   });
-  assert.equal(view.container.querySelector(".ex-log-status")?.textContent, "Changed3 sets not 4Fatigue");
+  assert.equal(view.container.querySelector(".ex-log-status")?.textContent, "Changed3 sets not 4Too tired");
   await view.click("Change");
   await view.click("Log numbers");
   // The editor opens on what was saved.

@@ -35,11 +35,12 @@ export type LogField = {
 
 export const EXERCISE_LOG_REASONS: readonly ExerciseLogReason[] = ["equipment", "fatigue", "pain", "felt_strong"];
 
+// Short answers to "why?", so a chip reads on its own and in a saved log line.
 export const EXERCISE_LOG_REASON_LABELS: Record<ExerciseLogReason, string> = {
-  equipment: "Equipment",
-  fatigue: "Fatigue",
+  equipment: "No kit",
+  fatigue: "Too tired",
   pain: "Pain",
-  felt_strong: "Strong",
+  felt_strong: "Felt strong",
 };
 
 export const EXERCISE_LOG_STATUS_LABELS: Record<ExerciseLogStatus, string> = {
