@@ -8,7 +8,7 @@ import {
   type BodyMapSeverity,
   type BodyMapSide,
 } from "@/components/body-map";
-import { EffectiveClinicianClearanceStatus, InjuryCareStatus } from "@/components/today/injury-care-status";
+import { EffectiveClinicianClearanceStatus, InjuryCareStatus, InjuryClearance } from "@/components/today/injury-care-status";
 import { SegmentGroup } from "@/components/today/segment-group";
 import { useToast } from "@/components/toast-provider";
 import { submitTodayInjuryCheckin, submitInjuryEpisodeObservation } from "@/lib/api";
@@ -676,7 +676,7 @@ export function TodayInjuryManager({
                     <p>{surfaceGuidance.message}</p>
                   </div>
                 ) : null}
-                {injury.rehab_decision || injury.episode_id ? <InjuryCareStatus injury={injury} token={token} onRefresh={onRefresh} /> : null}
+                {injury.rehab_decision || injury.episode_id ? <InjuryCareStatus injury={injury} token={token} onRefresh={onRefresh} showClearance={false} /> : null}
                 <div className="today-injury-update-head">
                   <p className="today-field-label today-injury-status-label">How&apos;s your injury?</p>
                 </div>
@@ -720,7 +720,8 @@ export function TodayInjuryManager({
                     );
                   })}
                 </div>
-                <button type="button" className={`today-tool-link${confirmingClearId === injury.id ? " today-segment-pending" : ""}${selectedStatus === "resolved" ? " today-segment-active" : ""}`} aria-pressed={selectedStatus === "resolved"} aria-describedby={confirmingClearId === injury.id ? `${injury.id}-pending-hint` : undefined}
+                <InjuryClearance key={`${injury.id}:${injury.episode_id}`} injury={injury} token={token} onRefresh={onRefresh} />
+                <button type="button" className={`today-tool-link injury-resolve-link${confirmingClearId === injury.id ? " today-segment-pending" : ""}${selectedStatus === "resolved" ? " today-segment-active" : ""}`} aria-pressed={selectedStatus === "resolved"} aria-describedby={confirmingClearId === injury.id ? `${injury.id}-pending-hint` : undefined}
                   disabled={isAdding || pendingFlagId !== null} onClick={() => handleInjuryAction(injury, "resolved")}>Mark resolved</button>
                 {confirmingClearId === injury.id || surfaceFollowUpId === injury.id ? (
                   <p id={`${injury.id}-pending-hint`} className="today-injury-pending-hint">
