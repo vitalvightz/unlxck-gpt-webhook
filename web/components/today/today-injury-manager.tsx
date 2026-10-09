@@ -9,6 +9,7 @@ import {
   type BodyMapSide,
 } from "@/components/body-map";
 import { EffectiveClinicianClearanceStatus, InjuryCareStatus, InjuryClearance } from "@/components/today/injury-care-status";
+import { RehabStageMeter, rehabStageLabel } from "@/components/today/rehab-progress-status";
 import { SegmentGroup } from "@/components/today/segment-group";
 import { useToast } from "@/components/toast-provider";
 import { submitTodayInjuryCheckin, submitInjuryEpisodeObservation } from "@/lib/api";
@@ -304,6 +305,8 @@ export function TodayInjuryManager({
   // Clearing an injury removes it from tracking, so it asks for an explicit
   // confirmation first; this holds the flag id awaiting that "are you sure?".
   const [confirmingClearId, setConfirmingClearId] = useState<string | null>(null);
+  // Which injuries have their full check-in controls open under the summary row.
+  const [openInjuryIds, setOpenInjuryIds] = useState<Record<string, boolean>>({});
   // A skin injury needs its skin state before a report can be routed — on the
   // way up (worse) and on the way back down (a restricted wound reported easing
   // or the same). This holds the flag id, which report it belongs to, and the
@@ -611,7 +614,7 @@ export function TodayInjuryManager({
       <div className="today-card-head">
         <div>
           <p className="kicker">Injury check-in</p>
-          <h2 id="today-injury-heading">Track today&apos;s injuries</h2>
+          <h2 id="today-injury-heading">Injury management</h2>
         </div>
       </div>
       {/* Omit only a duplicate single-injury summary. Unclear or different
@@ -639,8 +642,43 @@ export function TodayInjuryManager({
             // discarded a follow-up in progress on its way to failing.
             const isLockedByOtherWrite = pendingFlagId !== null && !isPending;
 
+            const stageLabel = rehabStageLabel(injury.rehab_decision);
+            const restriction = injury.clinician_clearance?.scopes.includes("contact")
+              ? "Contact training"
+              : injury.clinician_clearance?.scopes.includes("training")
+                ? "Non-contact training"
+                : injury.clinician_clearance?.scopes.includes("rehab")
+                  ? "Rehab only"
+                  : null;
+            // A confirmation or follow-up in progress keeps the controls open.
+            const isOpen = Boolean(openInjuryIds[injury.id]) ||
+              confirmingClearId === injury.id || surfaceFollowUpId === injury.id;
+            const bodyId = `${injury.id}-controls`;
+
             return (
-              <li key={injury.id} className="today-injury-item" data-severity={injury.severity}>
+              <li key={injury.id} className="today-injury-item" data-severity={injury.severity} data-open={isOpen || undefined}>
+                <button
+                  type="button"
+                  className="today-injury-summary-row"
+                  aria-expanded={isOpen}
+                  aria-controls={bodyId}
+                  onClick={() => setOpenInjuryIds((current) => ({ ...current, [injury.id]: !isOpen }))}
+                >
+                  <span className="today-injury-summary-icon" data-region={injury.region_group ?? undefined} aria-hidden="true" />
+                  <span className="today-injury-summary-text">
+                    <strong>{injuryLabel}</strong>
+                    {stageLabel ? <span>Stage: <em>{stageLabel}</em></span> : <span>{impactLabel}</span>}
+                    <RehabStageMeter decision={injury.rehab_decision} />
+                  </span>
+                  <span className="today-injury-summary-chevron" aria-hidden="true" />
+                </button>
+                {restriction || stageLabel ? (
+                  <p className="today-injury-chips">
+                    {restriction ? <span data-kind="clearance">{restriction}</span> : null}
+                    {stageLabel ? <span data-kind="impact">{impactLabel.charAt(0).toUpperCase() + impactLabel.slice(1)}</span> : null}
+                  </p>
+                ) : null}
+                <div id={bodyId} className="today-injury-controls" hidden={!isOpen}>
                 <div className="today-injury-meta">
                   <span className="today-injury-name">
                     <strong>{injuryLabel}</strong>
@@ -873,6 +911,7 @@ export function TodayInjuryManager({
                     </div>
                   </div>
                 ) : null}
+                </div>
               </li>
             );
           })}

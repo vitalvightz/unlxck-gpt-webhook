@@ -67,3 +67,27 @@ export function RehabProgressStatus({ decision }: { decision: NonNullable<Injury
     </InjuryDetailSheet> : null}
   </>;
 }
+
+/** The stage at a glance for an injury's summary row: "Restore", the
+ * five-step meter, and where it goes next. Null when there is no stage. */
+export function RehabStageMeter({ decision }: { decision: InjuryFlagRecord["rehab_decision"] }) {
+  const stage = decision?.stage;
+  if (!stage || !STAGES.includes(stage)) return null;
+  const current = STAGES.indexOf(stage);
+  const next = decision.progression?.next_transition;
+  const unavailable = next && (!next.target_stage_live || next.status === "closed");
+  return <span className="injury-stage-meter">
+    <span className="injury-stage-meter-steps" aria-hidden="true">
+      {STAGES.map((value, index) => <span key={value} data-complete={index <= current} />)}
+    </span>
+    <span className="injury-stage-meter-text">
+      <span className="sr-only">Rehab stage {current + 1} of {STAGES.length}. </span>
+      {next ? <>Next: {LABELS[next.to_stage] ?? "Not available"}{unavailable ? " · Closed" : ""}</> : `Stage ${current + 1} of ${STAGES.length}`}
+    </span>
+  </span>;
+}
+
+export function rehabStageLabel(decision: InjuryFlagRecord["rehab_decision"]): string | null {
+  const stage = decision?.stage;
+  return stage && STAGES.includes(stage) ? LABELS[stage] : null;
+}

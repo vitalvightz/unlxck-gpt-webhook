@@ -655,6 +655,10 @@ export function ExerciseRow({
             />
             <span className="ex-demo-play-glyph ex-demo-play-glyph-sm" />
           </span>
+        ) : !open ? (
+          // Holds the thumbnail column where Today's section rows show one, so
+          // every title still lines up; hidden everywhere else.
+          <span className="ex-row-placeholder" data-kind={blockType || undefined} aria-hidden="true" />
         ) : null}
         <span className="ex-row-chevron" aria-hidden="true" />
       </div>
@@ -741,7 +745,14 @@ export function SessionCard({
   showDayLabels = true,
   completionInfo,
   openWeekIntent,
+  layout = "card",
+  sectionIndex = 0,
 }: {
+  /** "section" is Today's numbered session part: every exercise row in view,
+   * the rationale and coaching cues behind one disclosure. */
+  layout?: "card" | "section";
+  /** Zero-based position of this session in the day, for the "01 / ..." label. */
+  sectionIndex?: number;
   session: StructuredSession;
   day?: StructuredDay;
   /** Countdown used only to reconcile exact source prescription ranges. */
@@ -813,6 +824,90 @@ export function SessionCard({
       : showDayContext
         ? card?.mindset_anchor
         : undefined;
+
+  if (layout === "section") {
+    const sectionTitle = isDeclaredLightCombat
+      ? DECLARED_LIGHT_COMBAT_TITLE
+      : isTechnicalSession
+        ? TECHNICAL_COMBAT_TITLE
+        : title;
+    const sectionType = isDeclaredLightCombat
+      ? "Technical"
+      : isTechnicalSession
+        ? TECHNICAL_COMBAT_TAG
+        : sessionTypeLabel;
+    const sectionMeta = [
+      // The plan's estimate, not a measured time.
+      duration ? `~${duration}` : null,
+      blocks.length > 1 ? `${blocks.length} exercises` : null,
+    ].filter((part): part is string => Boolean(part));
+    // With blocks, the objective is the reason for the work and waits behind
+    // the disclosure. Without blocks it IS the prescription, so it stays out.
+    const objectiveIsInstruction = blocks.length === 0 && objective && !objectiveRepeatsTitle;
+    const whyText = isDeclaredLightCombat
+      ? DECLARED_LIGHT_COMBAT_DESCRIPTION
+      : !objectiveIsInstruction && objective && !objectiveRepeatsTitle
+        ? objective
+        : null;
+    const hasDetails =
+      Boolean(whyText) || isTechnicalSession || getSessionCoachingLines(sessionMindset).length > 0;
+    return (
+      <article className="sp-session" data-layout="section">
+        <header className="sp-section-head">
+          <div>
+            <p className="sp-section-eyebrow">
+              <span>{String(sectionIndex + 1).padStart(2, "0")}</span>
+              {sectionType ? <span>{sectionType}</span> : null}
+              {isZeroLoad ? <span>Zero load</span> : null}
+            </p>
+            {hideTitle && !isTechnicalSession ? null : (
+              <h3 className="sp-session-title">{sectionTitle}</h3>
+            )}
+          </div>
+          {sectionMeta.length > 0 || completionInfo?.display.label ? (
+            <p className="sp-section-meta">
+              {sectionMeta.join(" · ")}
+              {completionInfo?.display.label ? (
+                <span className="sp-tag sp-status-tag" data-tone={completionInfo.display.tone}>
+                  {completionInfo.display.label}
+                </span>
+              ) : null}
+            </p>
+          ) : null}
+        </header>
+        {objectiveIsInstruction ? (
+          <p className="sp-session-objective sp-session-instruction">{objective}</p>
+        ) : null}
+        {hasDetails ? (
+          <details className="sp-section-details">
+            <summary>Why this session</summary>
+            <div className="sp-section-details-body">
+              {isTechnicalSession ? <TechnicalCombatRationale /> : null}
+              {whyText ? <p className="sp-session-objective">{whyText}</p> : null}
+              <MindsetAnchorCard
+                anchor={sessionMindset}
+                dedupeContext={isTechnicalSession ? TECHNICAL_COMBAT_RATIONALE : whyText ?? objective}
+              />
+            </div>
+          </details>
+        ) : null}
+        {blocks.length > 0 ? (
+          <div className="sp-blocks ex-rows">
+            {blocks.map((block, index) => (
+              <ExerciseRow
+                key={cleanText(block.block_id) || `block-${index}`}
+                block={block}
+                open={openBlockIndex === index}
+                onToggle={() => setOpenBlockIndex((current) => (current === index ? null : index))}
+                openWeekIntent={openWeekIntent}
+                sourceCountdown={sourceCountdown}
+              />
+            ))}
+          </div>
+        ) : null}
+      </article>
+    );
+  }
 
   return (
     <article className="sp-session">

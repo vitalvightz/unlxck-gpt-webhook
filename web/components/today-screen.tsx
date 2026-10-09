@@ -61,28 +61,77 @@ function NoActivePlanState() {
   );
 }
 
-// A status value that, when a same-page target exists, doubles as a jump-link to
-// the section that resolves it — so the strip reads as a decision surface, not
-// just a status readout. Cells without a live target render as plain text.
-function ReadinessValue({
-  children,
+type TileIconName = "check" | "clock" | "pulse" | "injury" | "plan" | "history" | "timer";
+
+const TILE_ICON_PATHS: Record<TileIconName, string> = {
+  check: "M7 12.5l3.2 3.2L17 9",
+  clock: "M12 7.5V12l3 2",
+  pulse: "M5 12h3l2-4 4 8 2-4h3",
+  injury: "M12 7v6M12 16.5v.5",
+  plan: "M7 7h10M7 12h10M7 17h6",
+  history: "M5 12a7 7 0 107-7 7 7 0 00-5 2.1M5 5v3h3M12 8.5V12l2.5 1.5",
+  timer: "M12 13V9.5M9.5 3h5M12 21a8 8 0 100-16 8 8 0 000 16z",
+};
+
+function TileIcon({ name, ring = false }: { name: TileIconName; ring?: boolean }) {
+  return (
+    <svg className={styles.icon} viewBox="0 0 24 24" aria-hidden="true">
+      <g fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        {ring ? <circle cx="12" cy="12" r="10" /> : null}
+        <path d={TILE_ICON_PATHS[name]} />
+      </g>
+    </svg>
+  );
+}
+
+const SESSION_TILE_VALUE: Record<TodayCompletionStatus, string> = {
+  not_started: "Not started",
+  started: "In progress",
+  done: "Complete",
+  modified: "Modified",
+  skipped: "Skipped",
+};
+
+// One status tile. With a same-page target the whole tile is the jump-link to
+// the section that resolves it; without one it is a plain readout.
+function StatusTile({
+  label,
+  value,
+  tone,
+  icon,
   href,
   actionLabel,
 }: {
-  children: React.ReactNode;
+  label: string;
+  value: string;
+  tone?: "pending" | "clear" | "risk";
+  icon: TileIconName;
   href?: string;
-  actionLabel?: string;
+  actionLabel: string;
 }) {
-  if (!href) {
-    return <dd>{children}</dd>;
-  }
+  const body = (
+    <>
+      <span className={styles.tileIcon}>
+        <TileIcon name={icon} ring />
+      </span>
+      <span className={styles.tileText}>
+        <span className={styles.tileLabel}>{label}</span>
+        <span className={styles.tileValue}>{value}</span>
+      </span>
+      {href ? <span className={styles.chevron} aria-hidden="true" /> : null}
+    </>
+  );
   return (
-    <dd>
-      <a href={href}>
-        {children}
-        {actionLabel ? <span className="sr-only">, {actionLabel}</span> : null}
-      </a>
-    </dd>
+    <li className={styles.tile} data-tone={tone}>
+      {href ? (
+        <a href={href} className={styles.tileLink}>
+          {body}
+          <span className="sr-only">, {actionLabel}</span>
+        </a>
+      ) : (
+        body
+      )}
+    </li>
   );
 }
 
@@ -101,13 +150,9 @@ function TodayReadinessStrip({
   injuriesHref?: string;
   sessionHref?: string;
 }) {
-  const injuryLabel = openInjuryCount
-    ? `${openInjuryCount} active injur${openInjuryCount === 1 ? "y" : "ies"}`
-    : "No active injuries";
-  // Status-dot tones: pending (amber, pulsing) = needs the athlete's action,
-  // clear (green) = handled, risk (red, pulsing) = open injuries. The session
-  // cell reads pending while in progress and clear once any completion is
-  // logged (done / modified / skipped all count as "logged for today").
+  // Tones: pending (amber) = needs the athlete's action, clear (green) =
+  // handled, risk (red) = open injuries. The session reads pending while in
+  // progress and clear once any completion is logged.
   const sessionLogged =
     completionStatus === "done" ||
     completionStatus === "modified" ||
@@ -115,26 +160,32 @@ function TodayReadinessStrip({
   const sessionTone = sessionLogged ? "clear" : completionStatus === "started" ? "pending" : undefined;
 
   return (
-    <dl className="today-readiness-strip" aria-label="Today command status">
-      <div data-tone={needsCheckin ? "pending" : "clear"}>
-        <dt>Check-in</dt>
-        <ReadinessValue href={checkinHref} actionLabel="Go to today's check-in">
-          {needsCheckin ? "Due" : "Logged"}
-        </ReadinessValue>
-      </div>
-      <div data-tone={openInjuryCount ? "risk" : "clear"}>
-        <dt>Injury</dt>
-        <ReadinessValue href={injuriesHref} actionLabel="Go to injury manager">
-          {injuryLabel}
-        </ReadinessValue>
-      </div>
-      <div data-tone={sessionTone}>
-        <dt>Today’s session</dt>
-        <ReadinessValue href={sessionHref} actionLabel="Go to today's session">
-          {getCompletionLabel(completionStatus)}
-        </ReadinessValue>
-      </div>
-    </dl>
+    <ul className={styles.tiles} aria-label="Today command status">
+      <StatusTile
+        label="Check-in"
+        value={needsCheckin ? "Due" : "Done"}
+        tone={needsCheckin ? "pending" : "clear"}
+        icon={needsCheckin ? "clock" : "check"}
+        href={checkinHref}
+        actionLabel="Go to today's check-in"
+      />
+      <StatusTile
+        label="Today’s session"
+        value={SESSION_TILE_VALUE[completionStatus] ?? getCompletionLabel(completionStatus)}
+        tone={sessionTone}
+        icon={sessionLogged ? "check" : completionStatus === "started" ? "pulse" : "clock"}
+        href={sessionHref}
+        actionLabel="Go to today's session"
+      />
+      <StatusTile
+        label="Injuries"
+        value={openInjuryCount ? `${openInjuryCount} active` : "None"}
+        tone={openInjuryCount ? "risk" : "clear"}
+        icon={openInjuryCount ? "injury" : "check"}
+        href={injuriesHref}
+        actionLabel="Go to injury manager"
+      />
+    </ul>
   );
 }
 
@@ -249,28 +300,16 @@ export function TodayScreen() {
         </section>
       ) : null}
       <section className={`panel today-shell ${styles.command}`}>
-        <div className="today-hero-grid">
+        <div className={styles.hero}>
           <div className="today-hero-copy">
-            <p className={`kicker ${styles.planName}`}>{planTitle}</p>
+            <p className={styles.heroDate}>{trainingDayLabel}</p>
             <h1>Today</h1>
-            <p className="muted today-hero-meta">
-              <span>{trainingDayLabel}</span>
-              {openOngoing || activePlan.phase ? <span aria-hidden="true">·</span> : null}
-              <span>{openOngoing
-                ? "Ongoing 4-week block"
-                : activePlan.phase
-                  ? humanizeIfRawEnum(activePlan.phase)
-                  : null}</span>
-            </p>
+            <p className={styles.heroPhase}>{openOngoing
+              ? "Ongoing 4-week block"
+              : activePlan.phase
+                ? humanizeIfRawEnum(activePlan.phase)
+                : null}</p>
           </div>
-          <nav className={styles.links} aria-label="Today context">
-            <Link href={`/plans/${activePlan.id}`}>
-              Open camp plan
-            </Link>
-            <Link href="/history">
-              View history
-            </Link>
-          </nav>
         </div>
         <TodayReadinessStrip
           needsCheckin={showCheckin}
@@ -328,6 +367,35 @@ export function TodayScreen() {
           onRefresh={refresh}
         />
       ) : null}
+
+      <nav className={styles.quickActions} aria-label="Quick actions">
+        <p className={styles.quickTitle}>Quick actions</p>
+        <div className={styles.quickRow}>
+          {showCheckin ? (
+            <a href="#today-checkin" className={styles.quickAction}>
+              <TileIcon name="clock" />
+              Check in
+              <span className={styles.chevron} aria-hidden="true" />
+            </a>
+          ) : (
+            <Link href="/timer" className={styles.quickAction}>
+              <TileIcon name="timer" />
+              Round timer
+              <span className={styles.chevron} aria-hidden="true" />
+            </Link>
+          )}
+          <Link href={`/plans/${activePlan.id}`} className={styles.quickAction}>
+            <TileIcon name="plan" />
+            View plan
+            <span className={styles.chevron} aria-hidden="true" />
+          </Link>
+          <Link href="/history" className={styles.quickAction}>
+            <TileIcon name="history" />
+            History
+            <span className={styles.chevron} aria-hidden="true" />
+          </Link>
+        </div>
+      </nav>
 
       {resolvedDecision.recommendationState !== "not_checked_in" ? (
         <ContextualFeedback
