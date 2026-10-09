@@ -89,6 +89,7 @@ export function RehabResponsePrompt({
   sessionId,
   trainingDay,
   prompts,
+  guidance = false,
   onDismiss,
 }: Readonly<{
   token: string;
@@ -97,6 +98,8 @@ export function RehabResponsePrompt({
   /** Sent only for a retro-logged session; omitted means "the one just finished". */
   trainingDay?: string;
   prompts: RehabResponsePromptModel[];
+  /** Calm-stage guidance was followed, not exercises: ask about the day, not "the rehab work". */
+  guidance?: boolean;
   onDismiss: () => void;
 }>) {
   const [answers, setAnswers] = useState<Record<string, Answer>>({});
@@ -159,9 +162,9 @@ export function RehabResponsePrompt({
 
   return (
     <section className="feedback-card rehab-response-card" aria-label="Injury response">
-      <p className="session-feedback-title">How did the rehab work go?</p>
+      <p className="session-feedback-title">{guidance ? "How did it feel today?" : "How did the rehab work go?"}</p>
       <p className="muted session-feedback-intro">
-        Saved with that injury, separate from your session review.
+        {guidance ? "Saved with that injury. Worse keeps you in the calm stage." : "Saved with that injury, separate from your session review."}
       </p>
 
       {prompts.map((prompt) => {
@@ -170,7 +173,7 @@ export function RehabResponsePrompt({
           <div key={prompt.injury_id} className="rehab-response-injury">
             <p className="rehab-response-injury-label">{prompt.injury_label}</p>
             <ChoiceRow
-              legend={prompt.during_question}
+              legend={guidance ? "How did it feel while following the guidance?" : prompt.during_question}
               legendId={`rehab-during-${prompt.injury_id}`}
               options={prompt.during_options}
               labels={DURING_LABELS}
@@ -184,7 +187,7 @@ export function RehabResponsePrompt({
               }
             />
             <ChoiceRow
-              legend={prompt.limit_question}
+              legend={guidance ? "Did it make you ease off or stop anything?" : prompt.limit_question}
               legendId={`rehab-limit-${prompt.injury_id}`}
               options={prompt.limit_options}
               labels={LIMIT_LABELS}

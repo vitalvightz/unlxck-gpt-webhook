@@ -415,6 +415,9 @@ export type StructuredBlock = {
   /** Open/ongoing plans only: the block's own week-4 deload instruction. */
   deload_rule?: string | null;
   stop_rules?: string[] | null;
+  /** Rehab blocks only: server-frozen drill metadata. */
+  is_loading?: boolean | null;
+  drill_snapshot?: { rehab_stage?: string | null; function?: string | null; dose?: Record<string, unknown> | null } | null;
 };
 
 export type StructuredSession = {

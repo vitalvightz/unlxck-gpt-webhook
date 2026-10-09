@@ -66,6 +66,7 @@ import {
   getSafeSessionView,
   getSessionFocus,
   getSessionTitle,
+  isGuidanceOnlyRehabBlock,
   isHardCombatSession,
   resolveTodayDecision,
   resolveSessionFocusDate,
@@ -485,9 +486,16 @@ export function TodaySessionPanel({
     allowDatedWeekdayMatch: openOngoing,
   });
   const livePrescription = state.live_prescription;
-  const sessionHasRehab = Boolean(livePrescription?.session.blocks?.some(block => block.block_type === "rehab"));
+  // Calm-stage recovery support is guidance to follow, not rehab to log.
+  const sessionHasRehab = Boolean(livePrescription?.session.blocks?.some(block =>
+    block.block_type === "rehab" && !isGuidanceOnlyRehabBlock(block)));
   const rehabChoiceRequired = (intent === "done" || reviewOpen) && sessionHasRehab;
   const rehabOnlyPrescription = livePrescription?.session.session_type === "rehab";
+  const sessionHasGuidanceRehab = Boolean(livePrescription?.session.blocks?.some(isGuidanceOnlyRehabBlock));
+  // Followed guidance is all there is to report: no amount to choose.
+  const guidanceOnlyRehab = sessionHasGuidanceRehab && !sessionHasRehab;
+  // A rehab-only day of guidance has nothing to start: it is checked off.
+  const guidanceOnlyRehabDay = rehabOnlyPrescription && guidanceOnlyRehab;
   const current: CurrentDayResolution = livePrescription ? {
     ...storedCurrent, inRange: true,
     day: {
@@ -641,7 +649,9 @@ export function TodaySessionPanel({
       sameTitle(getSessionTitle(session), contactHeadline));
   const contactClearanceBlocked = contactIsSession && !clearanceAllowsContact;
   const canCompleteSession = resolvedDecision.canCompleteSession
-    && !livePrescription?.safety_hold && !contactClearanceBlocked;
+    && !livePrescription?.safety_hold && !contactClearanceBlocked && !guidanceOnlyRehabDay;
+  const guidanceCanCheckOff = guidanceOnlyRehabDay && resolvedDecision.canCompleteSession
+    && !livePrescription?.safety_hold;
   const timerAvailable =
     canCompleteSession && !safeSession && Boolean(session.session_id) && timerItems.length > 0;
   // A day with nothing to time but a Fight Visualisation: starting the session
@@ -707,6 +717,8 @@ export function TodaySessionPanel({
       ? "Follow the recommendation above. Do not start this session from Today."
       : contactClearanceBlocked
         ? "This contact session is locked by your effective clinician clearance."
+        : guidanceCanCheckOff
+          ? status === "done" ? "Guidance followed today." : "No rehab exercises at this stage. Follow the guidance, then check it off."
         : resolvedDecision.authoritativeTier === "not_checked_in"
           ? "Submit today's check-in to unlock session actions."
           : "This entry has nothing to log. Follow it as written.";
@@ -746,7 +758,7 @@ export function TodaySessionPanel({
         modification_reason: details.modificationReason ?? "",
         notes: details.notes ?? "",
         prescription_revision: livePrescription?.revision,
-        rehab_performance: nextStatus === "done" ? rehabPerformance : nextStatus === "modified" && livePrescription ? (livePrescription.safety_hold ? "stopped" : "changed") : undefined,
+        rehab_performance: nextStatus === "done" ? rehabPerformance ?? (guidanceOnlyRehab ? "done_as_shown" : undefined) : nextStatus === "modified" && livePrescription ? (livePrescription.safety_hold ? "stopped" : "changed") : undefined,
       });
       setIntent(null);
       if (nextStatus !== "started") {
@@ -783,7 +795,7 @@ export function TodaySessionPanel({
       // below is what surfaces the XP award, so the review prompt is queued
       // here and only renders once both have landed.
       setReviewableSession(
-        shouldPromptSessionFeedback(nextStatus)
+        shouldPromptSessionFeedback(nextStatus) && !guidanceOnlyRehabDay
           ? { planId: state.active_plan.id, sessionId: session.session_id }
           : null,
       );
@@ -1257,6 +1269,14 @@ export function TodaySessionPanel({
         </div>
       ) : null}
 
+      {guidanceCanCheckOff && status !== "done" ? (
+        <div className="today-session-actions today-action-tray">
+          <button type="button" className="cta" onClick={() => void saveCompletion("done")} disabled={isSubmitting}>
+            Followed it
+          </button>
+        </div>
+      ) : null}
+
       {canCompleteSession && status === "started" ? (
         <div className="today-session-actions today-action-tray">
           {canResume ? (
@@ -1362,6 +1382,7 @@ export function TodaySessionPanel({
           sessionId={pending.session_id}
           trainingDay={pending.training_day}
           prompts={pending.rehab_response_prompts}
+          guidance={guidanceOnlyRehab && pending.session_id === session.session_id}
           onDismiss={() =>
             setRehabResponses((current) =>
               current.filter((item) => item.completion_id !== pending.completion_id),

@@ -1,6 +1,7 @@
 import type {
   InjuryFlagRecord,
   InjuryLoadRegion,
+  StructuredBlock,
   TodayActiveInjury,
   TodayActivePlan,
   TodayCheckinBody,
@@ -1148,4 +1149,12 @@ export function getRiskWatchSummary(
     }
   }
   return { count, strongestLabel };
+}
+
+/** Calm-stage recovery support ("rest from loading, move comfortably") has no
+ * exercises: it is checked off as followed, never started or measured. */
+export function isGuidanceOnlyRehabBlock(block: StructuredBlock | null | undefined): boolean {
+  const drill = block?.drill_snapshot;
+  return block?.block_type === "rehab" && !block.is_loading && drill?.rehab_stage === "calm"
+    && drill.function === "recovery_downregulation" && !(drill.dose && Object.keys(drill.dose).length);
 }
