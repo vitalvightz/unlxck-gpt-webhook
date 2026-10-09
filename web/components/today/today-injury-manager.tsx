@@ -861,7 +861,7 @@ export function TodayInjuryManager({
           })}
         </ul>
       ) : (
-        <p className="muted">No injuries are being tracked. Add one below if something is bothering you.</p>
+        <p className="muted">No injuries tracked.</p>
       )}
 
       <button

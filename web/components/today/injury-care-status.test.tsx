@@ -39,13 +39,12 @@ for (const [label, scopes] of [
     }) as typeof fetch;
     try {
       await act(async () => { root.render(<InjuryCareStatus injury={injury} token="token" onRefresh={async () => { refreshes++; }} />); });
-      assert.match(container.textContent ?? "", /Recovery day/);
-      assert.match(container.textContent ?? "", /Next due: 2026-10-02/);
+      assert.match(container.textContent ?? "", /Rest day/);
+      assert.match(container.textContent ?? "", /Next Fri 2 Oct/);
       assert.equal(container.querySelector("a")?.getAttribute("href"), "https://www.nhs.uk/conditions/sprains-and-strains/");
       assert.equal(container.querySelector('[aria-expanded="false"]')?.textContent, "Report clearance");
       assert.equal(container.querySelector('[aria-label="What were you cleared for?"]'), null);
       await click(container, "Report clearance");
-      assert.match(container.textContent ?? "", /Choose what your clinician cleared you for/);
       assert.match(container.textContent ?? "", /Red flags and safety holds still apply; this does not advance rehab/);
       assert.equal(container.querySelectorAll(".today-segment-row > .today-segment").length, 3);
       await click(container, label);
@@ -86,7 +85,7 @@ for (const response of ["better", "same", "worse", "not_sure"] as const) {
         exposure_id: "exposure-1", response,
       });
       assert.equal(calls[0].exposure_id, "exposure-1");
-      assert.match(container.textContent ?? "", /response saved/);
+      assert.match(container.textContent ?? "", /Saved\. Thanks\./);
     } finally { globalThis.fetch = original; act(() => root.unmount()); container.remove(); }
   });
 }
@@ -122,7 +121,7 @@ test("unsupported guidance shows a repeated reason only once and keeps schedule 
       schedule: { state: "unsupported", reason },
     } }} token="token" onRefresh={async () => {}} />);
     assert.equal(html.split(summary).length - 1, 1);
-    assert.match(html, /Guidance unavailable/);
+    assert.match(html, /No rehab yet/);
     if (reason !== summary) assert.ok(html.includes(reason));
   }
 });
@@ -146,26 +145,69 @@ for (const [reasonCodes, summary, expected] of [
       } else {
         assert.ok(!text.includes(summary));
       }
-      if (reason) assert.match(text, /Rehab held/);
+      if (reason) assert.match(text, /Rehab on hold/);
       if (reason && reason !== summary) assert.ok(text.includes(reason));
     }
   });
 }
 
 for (const state of ["due", "recovery_day", "already_completed", "held", "deferred", "unsupported"] as const) {
-  test(`duplicate guidance is shown once for ${state} without losing the schedule or next due day`, () => {
+  test(`${state} guidance shows its label once, the next day, and a reason only when it explains something`, () => {
     const summary = "Keep the current injury restrictions in place.";
     const html = renderToStaticMarkup(<InjuryCareStatus injury={{ ...injury, rehab_decision: {
-      outcome: "prescribed_rehab", summary, reason_codes: [],
+      outcome: "missing_information", summary, reason_codes: [],
       schedule: { state, reason: summary, next_due_day: "2026-10-09" },
     } }} token="token" onRefresh={async () => {}} />);
     const text = new domWindow.DOMParser().parseFromString(html, "text/html").body.textContent ?? "";
     assert.equal(text.split(summary).length - 1, 1);
-    assert.ok(text.includes({ due: "Rehab due", recovery_day: "Recovery day", already_completed: "Today's allocation used",
-      held: "Rehab held", deferred: "Rehab deferred", unsupported: "Guidance unavailable" }[state]));
-    assert.equal(text.includes("Next due: 2026-10-09"), state !== "due");
+    assert.ok(text.includes({ due: "Rehab due today", recovery_day: "Rest day", already_completed: "Done for today",
+      held: "Rehab on hold", deferred: "Rehab moved", unsupported: "No rehab yet" }[state]));
+    assert.equal(text.includes("Next Fri 9 Oct"), state !== "due");
   });
 }
+
+test("a matched routine drops the boilerplate summary and the routine reason", () => {
+  for (const [state, reason, label] of [
+    ["already_completed", "You have already logged rehab for this injury today.", "Done for today"],
+    ["already_completed", "Today's rehab allocation is reserved by your started session.", "In today's session"],
+    ["recovery_day", "Allow the configured recovery gap before repeating this routine.", "Rest day"],
+    ["due", "Your baseline rehab is due today; missed work adds no extra volume.", "Rehab due today"],
+  ] as const) {
+    const html = renderToStaticMarkup(<InjuryCareStatus injury={{ ...injury, rehab_decision: {
+      outcome: "prescribed_rehab", summary: "Your rehab is matched to this injury's current recovery stage.", reason_codes: [],
+      schedule: { state, reason, next_due_day: "2026-10-10" },
+    } }} token="token" onRefresh={async () => {}} />);
+    const text = new domWindow.DOMParser().parseFromString(html, "text/html").body.textContent ?? "";
+    assert.ok(text.includes(label), label);
+    assert.ok(!text.includes("current recovery stage"));
+    assert.ok(!text.includes(reason));
+  }
+  const held = renderToStaticMarkup(<InjuryCareStatus injury={{ ...injury, rehab_decision: {
+    outcome: "prescribed_rehab", summary: "Your rehab is matched to this injury's current recovery stage.", reason_codes: [],
+    schedule: { state: "deferred", reason: "Demanding training already loads this region today.", next_due_day: "2026-10-10" },
+  } }} token="token" onRefresh={async () => {}} />);
+  assert.match(held, /Rehab moved/);
+  assert.match(held, /Demanding training already loads this region today\./);
+});
+
+test("a next-day question that is no longer open disappears instead of showing a server error", async () => {
+  const container = document.createElement("div"); document.body.appendChild(container);
+  const root = createRoot(container);
+  const original = globalThis.fetch;
+  let refreshes = 0;
+  globalThis.fetch = (async () => new Response(JSON.stringify({ detail: "The next-day response opens on a later training day." }),
+    { status: 409, headers: { "content-type": "application/json", "x-request-id": "9fb3b8a7" } })) as typeof fetch;
+  try {
+    await act(async () => { root.render(<DelayedRehabResponse token="token" onRefresh={async () => { refreshes += 1; }} prompt={{
+      exposure_id: "exposure-1", injury_id: "injury-1", injury_episode_id: "episode-1", region: "Chest",
+      question: "How did this injury feel the day after rehab?", options: ["better", "same", "worse", "not_sure"],
+    }} />); });
+    assert.match(container.textContent ?? "", /How's your chest after yesterday's rehab\?/);
+    await click(container, "Better");
+    assert.equal(container.textContent, "");
+    assert.equal(refreshes, 1);
+  } finally { globalThis.fetch = original; act(() => root.unmount()); container.remove(); }
+});
 
 for (const [level, scopes, label] of [
   ["train_no_contact", ["rehab", "training"], "Train, no hard sparring"],

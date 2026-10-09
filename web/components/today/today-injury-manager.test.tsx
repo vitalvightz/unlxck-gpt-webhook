@@ -345,7 +345,7 @@ test("persistent guidance follows refreshed injury data and clears with the inju
 
   await render([]);
   assert.equal(container.querySelector(".today-injury-guidance"), null);
-  assert.match(container.textContent ?? "", /No injuries are being tracked/);
+  assert.match(container.textContent ?? "", /No injuries tracked\./);
 
   cleanup();
 });
@@ -888,7 +888,7 @@ test("add injury form is collapsed by default and opens from the empty-state tri
     assert.ok(form);
     assert.equal(trigger.getAttribute("aria-expanded"), "false");
     assert.equal(form.hidden, true);
-    assert.match(container.textContent ?? "", /No injuries are being tracked/);
+    assert.match(container.textContent ?? "", /No injuries tracked\./);
 
     await click(trigger);
 
