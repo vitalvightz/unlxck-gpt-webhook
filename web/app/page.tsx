@@ -7,12 +7,12 @@ import { useTranslations } from "next-intl";
 import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 
 import { useAppSession } from "@/components/auth-provider";
-import { CampProgressBar } from "@/components/camp-progress-bar";
 import { EmptyState } from "@/components/empty-state";
+import { FightCampCountdown } from "@/components/fight-camp-countdown";
 import { InstallUnlxck } from "@/components/install-unlxck";
 import { PlansFeaturedSkeleton, Skeleton } from "@/components/skeleton";
 import { XpProgressCard, XpProgressCardSkeleton } from "@/components/xp-progress-card";
-import { getPlan, getToday } from "@/lib/api";
+import { getPlan, getPlanCompletions, getToday } from "@/lib/api";
 import { useTrainingDay } from "@/lib/use-training-day";
 import {
   getOptionLabel,
@@ -31,7 +31,14 @@ import {
   getTierMeta,
   resolveTodayDecision,
 } from "@/lib/today";
-import type { PlanSummary, StructuredPlan, TodayActivePlan, TodayCommandView } from "@/lib/types";
+import type {
+  PlanScheduleContext,
+  PlanSummary,
+  StructuredPlan,
+  TodayActivePlan,
+  TodayCommandView,
+  TodaySessionCompletionRecord,
+} from "@/lib/types";
 
 function formatPlanCount(value: number): string {
   return `${value} saved plan${value === 1 ? "" : "s"}`;
@@ -260,6 +267,11 @@ export default function HomePage() {
   const [commandState, setCommandState] = useState<TodayCommandView | null>(null);
   const [commandError, setCommandError] = useState<string | null>(null);
   const [structuredPlan, setStructuredPlan] = useState<StructuredPlan | null>(null);
+  const [planSchedule, setPlanSchedule] = useState<{
+    createdAt: string | null;
+    scheduleContext: PlanScheduleContext | null;
+  } | null>(null);
+  const [planCompletions, setPlanCompletions] = useState<TodaySessionCompletionRecord[] | null>(null);
 
   useEffect(() => {
     if (isReady && session && isMeHydrated && !me) {
@@ -325,14 +337,17 @@ export default function HomePage() {
     };
   }, [session?.access_token]);
 
-  // Best-effort structured plan for the camp-progress bar. Read-only: if it
-  // fails, Overview just hides the bar (the rest of the command view is
-  // unaffected). Mirrors how Today loads the same data.
+  // Best-effort structured plan and session completions for the fight-camp
+  // countdown. Read-only: if the plan fails, Overview just hides the countdown;
+  // if completions fail, it only drops the "Banked" line (the rest of the
+  // command view is unaffected). Mirrors how Today loads the same data.
   const activePlanId = commandState?.active_plan?.id;
   useEffect(() => {
     const token = session?.access_token;
     if (!token || !activePlanId) {
       setStructuredPlan(null);
+      setPlanSchedule(null);
+      setPlanCompletions(null);
       return;
     }
     let cancelled = false;
@@ -340,11 +355,27 @@ export default function HomePage() {
       .then((detail) => {
         if (!cancelled) {
           setStructuredPlan(detail.outputs?.structured_plan ?? null);
+          setPlanSchedule({
+            createdAt: detail.created_at ?? null,
+            scheduleContext: detail.schedule_context ?? null,
+          });
         }
       })
       .catch(() => {
         if (!cancelled) {
           setStructuredPlan(null);
+          setPlanSchedule(null);
+        }
+      });
+    getPlanCompletions(token, activePlanId)
+      .then((response) => {
+        if (!cancelled) {
+          setPlanCompletions(response.completions ?? null);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setPlanCompletions(null);
         }
       });
     return () => {
@@ -581,7 +612,17 @@ export default function HomePage() {
             <div className="overview-operational-item"><span className="overview-operational-label">{openOngoing ? "Mode" : "Phase"}</span><span className="overview-operational-value">{openOngoing ? "Ongoing" : humanizeIfRawEnum(activePlan.phase) || "Not set"}</span></div>
             <div className="overview-operational-item"><span className="overview-operational-label">Fight date</span><span className="overview-operational-value">{openOngoing ? "Not scheduled" : formatPlanFightDate(String(activePlan.fight_date || ""))}</span></div>
           </div>
-          <CampProgressBar plan={structuredPlan} trainingDay={trainingDay} variant="overview" />
+          <FightCampCountdown
+            plan={structuredPlan}
+            trainingDay={trainingDay}
+            completions={planCompletions}
+            hints={{
+              currentWeekNumber: planSchedule?.scheduleContext?.current_week_number,
+              anchorDate: planSchedule?.scheduleContext?.anchor_date,
+              createdAt: planSchedule?.createdAt,
+            }}
+            variant="overview"
+          />
           <OverviewRiskWatch risks={risks} />
         </section>
       </>
