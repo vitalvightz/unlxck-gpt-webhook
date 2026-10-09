@@ -835,6 +835,9 @@ def test_bank_rows_excludes_covered_keys_and_deduplicates():
             "source": "curated",
             "aliases": "",
             "notes": "",
+            "review_sport": "",
+            "review_context": "",
+            "review_context_required": "false",
         }
     ]
 
