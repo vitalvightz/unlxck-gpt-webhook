@@ -415,6 +415,9 @@ export type StructuredBlock = {
   /** Open/ongoing plans only: the block's own week-4 deload instruction. */
   deload_rule?: string | null;
   stop_rules?: string[] | null;
+  /** Rehab blocks only: server-frozen drill metadata. */
+  is_loading?: boolean | null;
+  drill_snapshot?: { rehab_stage?: string | null; function?: string | null; dose?: Record<string, unknown> | null } | null;
 };
 
 export type StructuredSession = {
@@ -1335,6 +1338,8 @@ export type RehabResponsePrompt = {
   during_options: RehabDuringResponse[];
   limit_question: string;
   limit_options: RehabLimitResponse[];
+  /** Server-decided from the completed drills: calm-stage guidance was followed, not exercises. */
+  guidance_only?: boolean;
 };
 
 export type TodaySessionCompletionResponse = {

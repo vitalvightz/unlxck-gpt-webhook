@@ -146,6 +146,9 @@ export function RehabResponsePrompt({
   if (prompts.length === 0) {
     return null;
   }
+  // The server marks this from the completed drills, so the wording survives
+  // Today moving on to the next session and a reload of pending prompts.
+  const guidance = prompts.every((prompt) => prompt.guidance_only);
 
   if (isSent) {
     return (
@@ -159,9 +162,9 @@ export function RehabResponsePrompt({
 
   return (
     <section className="feedback-card rehab-response-card" aria-label="Injury response">
-      <p className="session-feedback-title">How did the rehab work go?</p>
+      <p className="session-feedback-title">{guidance ? "How did it feel today?" : "How did the rehab work go?"}</p>
       <p className="muted session-feedback-intro">
-        Saved with that injury, separate from your session review.
+        {guidance ? "Saved with that injury. Worse keeps you in the calm stage." : "Saved with that injury, separate from your session review."}
       </p>
 
       {prompts.map((prompt) => {

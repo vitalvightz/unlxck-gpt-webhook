@@ -2785,7 +2785,7 @@ begin
   ) values (
     (p_event->>'exposure_id')::uuid, p_athlete_id, (p_event->>'injury_id')::uuid,
     (p_event->>'injury_episode_id')::uuid, p_event->>'drill_id', v_region, v_side,
-    v_demand, p_event->'prescribed_dose', v_completed, v_response, p_event,
+    v_demand, nullif(p_event->'prescribed_dose', 'null'::jsonb), v_completed, v_response, p_event,
     p_event#>>'{provenance,source}', (p_event->>'occurred_at')::timestamptz,
     (p_event#>>'{provenance,recorded_at}')::timestamptz
   ) returning * into v_result;

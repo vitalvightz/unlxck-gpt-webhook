@@ -27,8 +27,10 @@ const migration = readFileSync("supabase/migrations/20260930173118_injury_episod
 await db.exec(readFileSync("supabase/migrations/20260820170000_add_rehab_response_group_identity.sql", "utf8"));
 await db.exec(migration);
 const profileMigration = readFileSync("supabase/migrations/20261002234842_pathway_profile_unknown_side.sql", "utf8");
+const nullDoseMigration = readFileSync("supabase/migrations/20261009100907_rehab_exposure_json_null_prescribed_dose.sql", "utf8");
 await db.exec(profileMigration);
 await db.exec(profileMigration); // CREATE OR REPLACE preserves the existing grants and observations.
+await db.exec(nullDoseMigration);
 const athlete = "00000000-0000-4000-8000-000000000001";
 const other = "00000000-0000-4000-8000-000000000002";
 const plan = "00000000-0000-4000-8000-000000000003";
@@ -64,6 +66,7 @@ await test("pending migration can be reapplied without losing history", async ()
   const before = (await db.query("select count(*)::int n from injury_episode_events")).rows[0].n;
   await db.exec(migration);
   await db.exec(profileMigration);
+  await db.exec(nullDoseMigration);
   assert.equal((await db.query("select count(*)::int n from injury_episode_events")).rows[0].n,before);
 });
 const first = await snapshot("2026-09-30", "training-first");
@@ -120,6 +123,11 @@ await test("exposure and delayed feedback are immutable and idempotent", async (
   await db.query("select record_injury_episode_event($1,$2::jsonb)",[athlete,JSON.stringify(observation)]);
   await rejects(() => start(stale),"prescription_revision_conflict");
   assert.deepEqual((await db.query("select event_json from rehab_exposures where id=$1",[exposure.exposure_id])).rows[0].event_json,exposure);
+});
+await test("an explicit null prescribed dose persists as SQL null", async () => {
+  const undosed = {...exposure,exposure_id:"00000000-0000-4000-8000-000000000024",response_group_id:"00000000-0000-4000-8000-000000000025",prescribed_dose:null};
+  await db.query("select record_rehab_exposure($1,$2::jsonb)",[athlete,JSON.stringify(undosed)]);
+  assert.equal((await db.query("select prescribed_dose from rehab_exposures where id=$1",[undosed.exposure_id])).rows[0].prescribed_dose,null);
 });
 await test("reopening isolates claims and preserves historical observations", async () => {
   const old = (await db.query("select prescription_snapshot from session_completions where session_id='training-first'")).rows[0].prescription_snapshot;

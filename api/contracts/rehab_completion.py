@@ -496,14 +496,26 @@ class RehabResponsePrompt:
     body_region: str
     side: str
     drill_ids: tuple[str, ...] = ()
+    # Calm-stage recovery support only: guidance was followed, not exercises.
+    guidance_only: bool = False
 
     @property
     def during_question(self) -> str:
+        if self.guidance_only:
+            return "How did it feel while following the guidance?"
         return "How did it feel during the rehab work?"
 
     @property
     def limit_question(self) -> str:
+        if self.guidance_only:
+            return "Did it make you ease off or stop anything?"
         return "Did you have to reduce or stop because of it?"
+
+
+def is_guidance_only_rehab(drill: Mapping[str, Any] | None) -> bool:
+    """Calm-stage recovery support: rest and comfortable movement, no exercises."""
+    return (isinstance(drill, Mapping) and drill.get("rehab_stage") == "calm"
+            and drill.get("function") == "recovery_downregulation" and not drill.get("dose"))
 
 
 def build_rehab_response_prompts(
