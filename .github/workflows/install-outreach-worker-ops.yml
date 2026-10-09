@@ -25,7 +25,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: vitalvightz/ig-outreach
-          ref: 42851ba17149ed1c2435b6a6bb0fb7e8ce4b9112
+          ref: 5f6883a4982361627442ace321b4c98c333b1fe4
           path: outreach-src
 
       - name: Vendor Python dependencies
