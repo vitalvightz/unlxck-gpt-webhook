@@ -336,6 +336,8 @@ class CommandView(BaseModel):
     # prefill against (never the raw plan). Empty when nothing is being tracked.
     open_injuries: list[dict[str, Any]] = Field(default_factory=list)
     live_prescription: dict[str, Any] | None = None
+    # Existing ExerciseMedia values are attached by the presentation service.
+    exercise_media: dict[str, Any] = Field(default_factory=dict)
     effective_clinician_clearance: dict[str, Any] | None = None
     delayed_rehab_prompts: list[dict[str, Any]] = Field(default_factory=list)
     week_summary: dict[str, Any] = Field(default_factory=dict)

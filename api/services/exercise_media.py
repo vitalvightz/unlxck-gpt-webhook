@@ -242,6 +242,21 @@ def resolve_plan_exercise_media(
     return resolved
 
 
+def resolve_session_exercise_media(session: Mapping[str, Any], index: Mapping[str, ExerciseMedia]) -> dict[str, ExerciseMedia]:
+    """Current/frozen rehab can be generated after the saved plan. Exact IDs only."""
+    resolved = {}
+    for block in session.get("blocks", []):
+        if block.get("block_type") in NON_PHYSICAL_BLOCK_TYPES:
+            continue
+        if (block.get("block_type") == "rehab" and block.get("exercise_key")
+                and normalize_exercise_key(block["exercise_key"]) != normalize_exercise_key(block.get("rehab_drill_id"))):
+            continue
+        key = normalize_exercise_key(block.get("exercise_key") or block.get("rehab_drill_id"))
+        if key and (media := index.get(key)) is not None:
+            resolved[f"{EXERCISE_KEY_MEDIA_PREFIX}{key}"] = media
+    return resolved
+
+
 def attach_exercise_media(detail: Any, store: Any) -> Any:
     """Populate ``detail.outputs.exercise_media`` in place. Never raises."""
     try:

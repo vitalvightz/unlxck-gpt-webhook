@@ -510,6 +510,8 @@ def _coerce_rehab_generation_context(raw_value: dict[str, object]) -> dict[str, 
         "available_equipment": list(equipment)
         if isinstance(equipment, (list, tuple))
         else None,
+        "policy_injury": context.get("policy_injury") if isinstance(context.get("policy_injury"), dict) else None,
+        "rehab_history_truncated": context.get("rehab_history_truncated", False) is True,
     }
 
 
@@ -657,6 +659,8 @@ def _apply_rehab_generation_context(
         ("athlete_id", "athlete_id"),
         ("rehab_care_pathway", "rehab_care_pathway"),
         ("available_equipment", "available_equipment"),
+        ("policy_injury", "policy_injury"),
+        ("rehab_history_truncated", "rehab_history_truncated"),
     ):
         value = context.get(source_key)
         if value is not None:

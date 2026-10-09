@@ -54,7 +54,8 @@ def exactly_interchangeable(members, review_records):
 
 def reconstruct_original(bank, ledger, archive):
     """Recover the complete pre-migration JSON objects from retained + archived rows."""
-    original_bank, original_ledger = deepcopy(bank), deepcopy(ledger)
+    from tools.rehab_metadata_review_lib import before_elbow_content_addition
+    original_bank, original_ledger = before_elbow_content_addition(bank, ledger)
     removed_groups = {r['original_group_index']: r['group'] for r in archive['records'] if r['group_removed']}
     for position, group in sorted(removed_groups.items()):
         original_bank.insert(position, {**deepcopy(group), 'drills': []})

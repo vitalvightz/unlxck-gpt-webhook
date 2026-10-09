@@ -5,6 +5,7 @@ import { ApiError, submitInjuryEpisodeObservation } from "@/lib/api";
 import type { InjuryFlagRecord, TodayCommandView } from "@/lib/types";
 import { InjuryChevron, InjuryDetailSheet } from "./injury-detail-sheet";
 import { RehabProgressStatus } from "./rehab-progress-status";
+import { LateralElbowAssessmentForm } from "./lateral-elbow-assessment-form";
 
 const SCHEDULE_LABELS = { due: "Rehab due today", recovery_day: "Rest day", already_completed: "Done for today",
   held: "Rehab on hold", deferred: "Rehab moved", unsupported: "No rehab yet" } as const;
@@ -101,6 +102,8 @@ export function InjuryClearance({ injury, token, onRefresh }: {
         </div>
         <footer className="injury-sheet-footer"><button type="submit" className="injury-sheet-save" disabled={busy || !injury.episode_id || surface}>{busy ? "Saving…" : "Save changes"}</button></footer>
       </form>
+      {injury.rehab_decision?.policy_id === "elbow_tendonitis" ?
+        <LateralElbowAssessmentForm key={injury.episode_id} injury={injury} token={token} onRefresh={onRefresh} /> : null}
     </InjuryDetailSheet> : null}
   </div>;
 }

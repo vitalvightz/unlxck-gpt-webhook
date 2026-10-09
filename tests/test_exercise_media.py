@@ -1130,3 +1130,12 @@ def test_media_model_accepts_only_portrait_landscape_or_none():
     assert ExerciseMedia(video_id="AAAAAAAAAAA", orientation="portrait").orientation == "portrait"
     with pytest.raises(ValueError):
         ExerciseMedia(video_id="AAAAAAAAAAA", orientation="vertical")
+
+
+def test_current_rehab_media_never_borrows_a_different_drill_or_display_name():
+    index = media.build_media_index([_row("elbow-tendonitis-supported-hand-weight-wrist-extension")])
+    key = "elbow-tendonitis-supported-hand-weight-wrist-extension"
+    valid = dict(block_type="rehab", exercise_key=key, rehab_drill_id=key.replace("-", "_"))
+    assert list(media.resolve_session_exercise_media({"blocks": [valid]}, index)) == [f"exercise:{key}"]
+    assert not media.resolve_session_exercise_media({"blocks": [{**valid, "rehab_drill_id": "another"}]}, index)
+    assert not media.resolve_session_exercise_media({"blocks": [{"block_type": "rehab", "display_name": key}]}, index)

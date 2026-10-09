@@ -1,0 +1,296 @@
+"""Second profile through shared capture, policy, Today, completion and freeze."""
+from copy import deepcopy
+from datetime import timedelta
+from uuid import uuid4
+
+import pytest
+from fastapi import HTTPException
+
+from api.contracts.elbow_restore_load_option import ELBOW_LOAD_OPTION as OPTION
+from api.contracts.injury_policy import resolve_injury_policy
+from api.contracts.lateral_elbow_progression import INPUT, evaluate_elbow_entry
+from api.contracts.rehab_assessment import AssessmentContext, LateralElbowProgressionAssessment, read_assessment_input
+from api.services.clinical_review_freeze import frozen_review_hold
+from api.services.injury_episode_service import InjuryEpisodeObservation, apply_episode_observations, record_episode_observation
+from api.services.rehab_completion_service import record_rehab_exposures
+from fightcamp.rehab_clinical import load_clinical_policies
+from fightcamp.rehab_protocols import get_rehab_bank
+from tests.support import FakeStore
+from tests.test_achilles_load_activation import DAY, NOW, execute, report_permission, view
+from tests.test_rehab_transition_engine import event
+
+
+def assessment(**changes):
+    envelope = {k: changes.pop(k, v) for k, v in dict(side="left", assessor="clinician_physio",
+        assessed_at=(NOW - timedelta(hours=2)).isoformat()).items()}
+    return LateralElbowProgressionAssessment(**envelope, payload=dict(subtype="lateral", course="chronic",
+        safety_screen="clear", pain_irritability="acceptable", elbow_wrist_motion="acceptable",
+        grip_task="daily_grip_task", grip_function="acceptable", wrist_extension_task="supported_hand_weight",
+        wrist_extension_tolerance="acceptable", option_recommended=True) | changes)
+
+
+def bundle(*, assessed=True, permission="loading", **changes):
+    store, athlete, plan = FakeStore(), str(uuid4()), str(uuid4())
+    store.intakes[athlete] = [dict(id=str(uuid4()), athlete_id=athlete, equipment_access=["table"])]
+    injury = store.create_injury_flag(athlete, dict(body_area="Left elbow", description="Lateral elbow tendonitis",
+        severity="mild", status="monitoring", latest_reported_status="improving"))
+    injury.update(side="left", canonical_location="elbow", body_region="elbow", injury_type="tendonitis",
+                  created_at="2026-09-01T00:00:00Z", updated_at="2026-09-01T00:00:00Z")
+    store.injury_flags[athlete][0].update(injury)
+    opening = dict(id=str(uuid4()), athlete_id=athlete, injury_id=injury["id"], injury_episode_id=injury["episode_id"],
+        event_type="injury_checkin", created_at="2026-09-01T00:00:00Z",
+        payload=dict(explicit_report=True, latest_reported_status="improving"))
+    store.injury_episode_events = {opening["id"]: opening}
+    policy = next(p for p in load_clinical_policies() if p.policy_id == "elbow_tendonitis")
+    restore = next(d for g in get_rehab_bank() for d in g["drills"] if d["id"] == policy.prescriptions[1].drill_id)
+    exposure = event(drill=restore, policy_id=policy.policy_id, athlete=athlete, episode=injury["episode_id"],
+                     bank_hash=policy.prescriptions[1].bank_hash)
+    exposure.update(injury_id=injury["id"], injury_episode_id=injury["episode_id"])
+    exposure["event_json"].update(injury_id=injury["id"], body_region="elbow")
+    exposure["event_json"]["demand"]["target_regions"] = ["elbow"]
+    store.rehab_exposures[exposure["id"]] = exposure
+    store.plans[plan] = dict(id=plan, athlete_id=athlete, intake_id=store.intakes[athlete][0]["id"], status="ready",
+        created_at="2026-09-01T00:00:00Z", structured_plan={"weeks": [{"phase_label": "GPP", "days": [{"date": DAY,
+        "day_type": "strength", "sessions": [dict(session_id="training", session_type="strength", title="Strength",
+        blocks=[dict(block_id="training", block_type="strength", display_name="Arm work",
+                     mechanical_load_regions=["elbow"], contact_level="none")])]}]}]})
+    store.set_active_plan_id(athlete, plan)
+    store.upsert_today_checkin(athlete, dict(plan_id=plan, training_day=DAY, recommendation_state="train_as_planned", pain="none", body="good"))
+    result = store, None, None, athlete, plan, injury
+    report_permission(result, permission)
+    if assessed:
+        capture(result, assessment(**changes))
+    return result
+
+
+def capture(b, value, report_id=None):
+    observation = InjuryEpisodeObservation(injury_id=b[5]["id"], injury_episode_id=b[5]["episode_id"],
+        event_type="rehab_progression_assessment", assessment=value, report_id=report_id or uuid4())
+    row = record_episode_observation(b[0], athlete_id=b[3], observation=observation, training_day=DAY)
+    row["created_at"] = (NOW - timedelta(hours=1)).isoformat()
+    b[0].injury_episode_events[row["id"]] = row
+    return row
+
+
+def context(b, **kwargs):
+    injury = apply_episode_observations(b[0].injury_flags[b[3]][0], list(b[0].injury_episode_events.values()), as_of=NOW)
+    return AssessmentContext.from_injury(injury, as_of=NOW, **kwargs)
+
+
+def test_real_capture_today_start_complete_and_daily_allocation():
+    b = bundle()
+    current = view(b)
+    assert current.open_injuries[0]["rehab_decision"]["stage"] == "load"
+    live = current.live_prescription
+    assert live and not live["safety_hold"]
+    block = live["session"]["blocks"][0]
+    assert block["rehab_drill_id"] == OPTION.drill_id
+    assert block["exercise_key"] == OPTION.drill_id.replace("_", "-")
+    assert block["dose"] == dict(sets=1, reps=10)
+    assert block["instructions"] == OPTION.instructions
+    assert block["range_choice"] == OPTION.range_choices[0]
+    assert block["resistance"] == dict(mode="bodyweight", kg=None)
+    assert block["frequency"] == "daily" and block["minimum_gap_days"] == 1
+    assert "clinical_review_pin" not in block
+    assert not any(e["event_type"] == "clinical_progression_review" for e in b[0].injury_episode_events.values())
+    execute(b, live)
+    done = execute(b, live, "done", rehab_performance="done_as_shown")
+    events = record_rehab_exposures(b[0], athlete_id=b[3], plan_row=b[0].plans[b[4]], training_day=DAY,
+        session_id=live["session"]["session_id"], completion=done,
+        answers={b[5]["id"]: dict(injury_episode_id=b[5]["episode_id"], during_response="same", limit_response=None)})
+    assert len(events) == 1 and events[0].dose_completed.reps == 10
+    assert events[0].body_region == "elbow" and events[0].side == "left"
+    next_live = view(b).live_prescription
+    assert not next_live or all(v.get("rehab_drill_id") != OPTION.drill_id for v in next_live["session"]["blocks"])
+
+
+@pytest.mark.parametrize("changes", [dict(subtype="unknown"), dict(subtype="medial"), dict(subtype="posterior"),
+    dict(grip_function="unknown"), dict(grip_function="not_acceptable"), dict(elbow_wrist_motion="unknown"),
+    dict(pain_irritability="not_acceptable"), dict(wrist_extension_tolerance="unknown"),
+    dict(wrist_extension_tolerance="not_acceptable"), dict(course="acute_traumatic"), dict(safety_screen="concern"),
+    dict(option_recommended=None), dict(option_recommended=False), dict(assessor="self_reported")])
+def test_unconfirmed_or_unsatisfactory_clinician_function_never_promotes(changes):
+    b = bundle(**changes)
+    assert evaluate_elbow_entry(context(b))["status"] != "pass"
+    assert view(b).open_injuries[0]["rehab_decision"]["stage"] != "load"
+
+
+def test_recorded_is_not_clinically_satisfactory():
+    b = bundle(grip_function="not_acceptable")
+    assert read_assessment_input(INPUT, context(b))["status"] == "pass"
+    assert evaluate_elbow_entry(context(b))["status"] == "fail"
+
+
+def test_old_good_assessment_recorded_again_cannot_supersede_later_bad_function():
+    b = bundle(grip_function="not_acceptable")
+    row = capture(b, assessment(assessed_at=(NOW - timedelta(days=1)).isoformat()))
+    row["created_at"] = (NOW - timedelta(minutes=10)).isoformat()
+    assert evaluate_elbow_entry(context(b))["reason_code"] == "elbow_later_unsatisfactory_function"
+
+
+@pytest.mark.parametrize("permission", [None, "not_cleared", "gentle_recovery"])
+def test_function_does_not_replace_separate_rehab_permission(permission):
+    assert view(bundle(permission=permission)).open_injuries[0]["rehab_decision"]["stage"] == "restore"
+
+
+def test_permission_alone_and_completion_alone_do_not_supply_function():
+    b = bundle(assessed=False)
+    assert view(b).open_injuries[0]["rehab_decision"]["stage"] == "restore"
+    report_permission(b, "sport_specific", scopes=["rehab", "training", "contact"])
+    assert view(b).open_injuries[0]["rehab_decision"]["stage"] == "restore"
+
+
+@pytest.mark.parametrize("field", ["athlete_id", "injury_id", "injury_episode_id"])
+def test_wrong_ownership_fails_closed(field):
+    b = bundle()
+    for e in b[0].injury_episode_events.values():
+        if e["event_type"] == "rehab_progression_assessment":
+            e[field] = str(uuid4())
+    assert evaluate_elbow_entry(context(b))["status"] == "unknown"
+
+
+@pytest.mark.parametrize("mutation", ["wrong_side", "future", "episode", "history", "worse", "medical", "restriction", "no_function", "equipment", "permission", "setback"])
+def test_future_frozen_work_invalidated_without_rewriting_history(mutation):
+    b = bundle()
+    live = deepcopy(view(b).live_prescription)
+    row = b[0].injury_flags[b[3]][0]
+    observed = next(e for e in b[0].injury_episode_events.values() if e["event_type"] == "rehab_progression_assessment")
+    if mutation == "wrong_side":
+        observed["payload"]["assessment"]["side"] = "right"
+    elif mutation == "future":
+        observed["payload"]["assessment"]["assessed_at"] = (NOW + timedelta(days=1)).isoformat()
+    elif mutation == "episode":
+        row["episode_id"] = str(uuid4())
+    elif mutation == "history":
+        from api.contracts.rehab_assessment import AssessmentHistory
+        b[0].list_injury_episode_events = lambda *args, **kwargs: AssessmentHistory(list(b[0].injury_episode_events.values()), history_complete=False)
+    elif mutation == "worse":
+        row["latest_reported_status"] = "worse"
+    elif mutation in {"medical", "restriction"}:
+        row[f"{mutation}_hold"] = True
+    elif mutation == "no_function":
+        observed["payload"]["assessment"]["payload"]["grip_function"] = "unknown"
+    elif mutation == "equipment":
+        b[0].intakes[b[3]][0]["equipment_access"] = []
+    elif mutation == "permission":
+        for e in b[0].injury_episode_events.values():
+            if e["event_type"] == "clinician_clearance_report":
+                e["payload"]["rehabilitation_permission"]["level"] = "not_cleared"
+    elif mutation == "setback":
+        exposure = next(iter(b[0].rehab_exposures.values()))
+        exposure["event_json"]["response"]["during_response"] = "worse"
+        exposure["response_recorded_at"] = (NOW - timedelta(minutes=30)).isoformat()
+    original = deepcopy(live)
+    assert frozen_review_hold(b[0], b[3], live, work_state="unstarted", as_of=NOW)
+    assert live == original
+    assert not frozen_review_hold(b[0], b[3], live, work_state="completed", as_of=NOW)
+
+
+@pytest.mark.parametrize("description,kind", [("Elbow tightness", "tightness"), ("Medial elbow tendonitis", "tendonitis"),
+    ("Posterior elbow tendonitis", "tendonitis"), ("Elbow tendonitis with nerve symptoms", "tendonitis")])
+def test_other_presentations_cannot_borrow_lateral_observations(description, kind):
+    b = bundle()
+    row = b[0].injury_flags[b[3]][0]
+    row.update(description=description, injury_type=kind)
+    assert view(b).open_injuries[0]["rehab_decision"]["stage"] != "load"
+
+
+def test_missing_responses_and_reviewed_work_remain_required():
+    for field in ("during_response", "next_day_response"):
+        b = bundle()
+        next(iter(b[0].rehab_exposures.values()))["event_json"]["response"][field] = "not_reported"
+        assert view(b).open_injuries[0]["rehab_decision"]["stage"] == "restore"
+    b = bundle()
+    b[0].rehab_exposures.clear()
+    assert view(b).open_injuries[0]["rehab_decision"]["stage"] == "restore"
+
+
+def test_no_dynamic_return_or_training_grant():
+    b = bundle(permission="sport_specific")
+    v = view(b)
+    d = v.open_injuries[0]["rehab_decision"]
+    assert d["stage"] == "load" and not d["progression"]["next_transition"]["target_stage_live"]
+    assert v.effective_clinician_clearance["level"] == "rehab_only"
+    assert next(p for p in load_clinical_policies() if p.policy_id == "elbow_tendonitis").live_stages == ["calm", "restore", "load"]
+
+
+def test_capture_side_episode_timestamps_idempotency_and_no_fake_verification():
+    b = bundle(assessed=False)
+    identity = uuid4()
+    first = capture(b, assessment(), identity)
+    assert capture(b, assessment(), identity) == first
+    assert first["payload"]["source"] == "athlete_reported" and first["payload"]["externally_verified"] is False
+    for change in (dict(side="right"), dict(assessed_at="2020-01-01T00:00:00Z"), dict(assessed_at="2099-01-01T00:00:00Z")):
+        with pytest.raises(HTTPException):
+            capture(b, assessment(**change))
+
+
+def test_generation_uses_same_owned_gate_and_option():
+    from api.services.rehab_stage_snapshot import resolve_open_injury_rehab_context
+    from fightcamp.input_parsing import _coerce_rehab_generation_context, _apply_rehab_generation_context
+    from fightcamp.rehab_protocols import _episode_context, _reviewed_episode_option
+    b = bundle()
+    contexts = resolve_open_injury_rehab_context(b[0], b[3])
+    assert len(contexts) == 1
+    raw = next(iter(contexts.values()))
+    raw["available_equipment"] = ["table"]
+    parsed = _coerce_rehab_generation_context(dict(rehab_generation_context=raw))
+    entry = dict(injury_type="tendonitis", severity="mild", laterality="left")
+    _apply_rehab_generation_context(entry, parsed)
+    generated = _reviewed_episode_option(_episode_context(entry), "elbow", "GPP")
+    assert generated["decision"]["stage"] == "load" and generated["drill"]["id"] == OPTION.drill_id
+    assert generated["decision"]["prescription"]["dose"] == dict(sets=1, reps=10)
+    row = context(b).injury
+    assert resolve_injury_policy(row, policies=load_clinical_policies(), bank=get_rehab_bank(),
+        equipment=["table"], exposures=list(b[0].rehab_exposures.values()), as_of=NOW)["stage"] == "load"
+
+
+def test_multi_injury_and_started_history_remain_authoritative():
+    b = bundle()
+    live = view(b).live_prescription
+    saved = deepcopy(execute(b, live)["prescription_snapshot"])
+    report_permission(b, "not_cleared")
+    assert not frozen_review_hold(b[0], b[3], saved, work_state="started", as_of=NOW)
+    b[0].create_injury_flag(b[3], dict(body_area="Wrist", description="Wrist strain", severity="severe", status="open"))
+    assert view(b).live_prescription["safety_hold"]
+    assert b[0].session_completions[b[3]][0]["prescription_snapshot"] == saved
+
+
+def test_rehab_youtube_media_is_exact_identity_decoration_not_prescription():
+    from api.services.exercise_media import reset_media_index_cache
+    b = bundle()
+    initial = view(b).live_prescription
+    b[0].list_exercise_media = lambda: [dict(exercise_key=OPTION.drill_id,
+        video_id="hQgFixeXdZo", source="curated", made_for_kids=False, start_s=5, end_s=20)]
+    reset_media_index_cache()
+    try:
+        decorated = view(b)
+        assert decorated.exercise_media["exercise:elbow-tendonitis-supported-hand-weight-wrist-extension"].video_id == "hQgFixeXdZo"
+        assert decorated.live_prescription == initial
+        assert all("video_id" not in block for block in decorated.live_prescription["session"]["blocks"])
+    finally:
+        reset_media_index_cache()
+
+
+@pytest.mark.parametrize("field", ["id", "episode_id", "athlete_id", "side", "injury_type"])
+def test_generation_cannot_mix_owned_observations_with_another_episode(field):
+    from api.services.rehab_stage_snapshot import resolve_open_injury_rehab_context
+    from fightcamp.input_parsing import _coerce_rehab_generation_context, _apply_rehab_generation_context
+    from fightcamp.rehab_protocols import _episode_context, _reviewed_episode_option
+    b = bundle()
+    raw = next(iter(resolve_open_injury_rehab_context(b[0], b[3]).values()))
+    raw["policy_injury"][field] = "another"
+    entry = dict(injury_type="tendonitis", severity="mild", laterality="left")
+    _apply_rehab_generation_context(entry, _coerce_rehab_generation_context(dict(rehab_generation_context=raw)))
+    generated = _reviewed_episode_option(_episode_context(entry), "elbow", "GPP")
+    assert generated["decision"]["stage"] != "load"
+
+
+def test_unstarted_work_rechecks_current_stage_evidence_not_just_function():
+    b = bundle()
+    live = deepcopy(view(b).live_prescription)
+    exposure = next(iter(b[0].rehab_exposures.values()))
+    exposure["event_json"]["response"]["next_day_response"] = "not_reported"
+    assert evaluate_elbow_entry(context(b))["status"] == "pass"
+    assert frozen_review_hold(b[0], b[3], live, work_state="unstarted", as_of=NOW)
+    assert not frozen_review_hold(b[0], b[3], live, work_state="started", as_of=NOW)

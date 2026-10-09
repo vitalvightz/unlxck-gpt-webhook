@@ -50,6 +50,11 @@ def planning_input_hash(path):
     if path == ROOT / 'data/rehab_pathways.json':
         pathways = pathway_inventory_snapshot(before_achilles_load_activation(read(path)))
         return hashlib.sha256((json.dumps(pathways, indent=2) + '\n').encode('utf-8')).hexdigest()
+    if path.name in {'rehab_bank.json', 'rehab_metadata_review.json'}:
+        from tools.rehab_metadata_review_lib import before_elbow_content_addition
+        bank, ledger = before_elbow_content_addition(read(ROOT / 'data/rehab_bank.json'), read(ROOT / 'data/rehab_metadata_review.json'))
+        value = bank if path.name == 'rehab_bank.json' else ledger
+        return hashlib.sha256((json.dumps(value, indent=2, ensure_ascii=False) + '\n').encode('utf-8')).hexdigest()
     return file_hash(path)
 
 
@@ -57,6 +62,8 @@ def build_review(bank, ledger, pathways, archive, decisions):
     # Preserve the #2742 planning snapshot. Runtime capture can subsequently
     # advance without rewriting the reviewed inventory or its dated conclusions.
     pathways = before_achilles_load_activation(pathways)
+    from tools.rehab_metadata_review_lib import before_elbow_content_addition
+    bank, ledger = before_elbow_content_addition(bank, ledger)
     audit, clusters = build_audit(bank, ledger, pathways, captured_checkpoints=frozenset(), captured_assessment_inputs={})
     if audit['integrity_errors']:
         raise ValueError('Resolve input integrity before planning review')

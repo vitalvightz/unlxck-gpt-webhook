@@ -953,10 +953,19 @@ def _reviewed_episode_option(episode: dict, location: str | None, phase: str):
     if not any((p.activation == "live" or p.status == "retired") and p.region == location and p.injury_type == episode.get("injury_type") for p in policies):
         return None
     from api.contracts.injury_policy import resolve_injury_policy
+    owned = episode.get("policy_injury") or {}
+    mismatched = bool(owned) and any(
+        str(owned.get(source) or "") != str(episode.get(target) or "")
+        for source, target in (("id", "injury_id"), ("episode_id", "episode_id"),
+                               ("athlete_id", "athlete_id"), ("side", "side"),
+                               ("injury_type", "injury_type"))
+    )
     decision = resolve_injury_policy(
-        {**episode, "id": episode.get("injury_id"), "canonical_location": location, "body_region": location},
+        {**episode, **({} if mismatched else owned),
+         "id": episode.get("injury_id"), "canonical_location": location, "body_region": location},
         policies=policies, bank=get_rehab_bank(), phase=phase,
         equipment=episode.get("available_equipment") or (), exposures=episode.get("rehab_exposures") or (),
+        history_truncated=mismatched or episode.get("rehab_history_truncated", False),
     )
     prescription = decision.get("prescription")
     if not prescription:
@@ -1400,6 +1409,8 @@ def _episode_context(entry: dict) -> dict | None:
         "rehab_care_pathway": entry.get("rehab_care_pathway"),
         "rehab_medical_gate": entry.get("rehab_medical_gate"),
         "clinician_clearance": entry.get("clinician_clearance"),
+        "policy_injury": entry.get("policy_injury"),
+        "rehab_history_truncated": entry.get("rehab_history_truncated", False),
         "latest_reported_status": entry.get("latest_reported_status"),
         "latest_reported_at": entry.get("latest_reported_at"),
         "status": entry.get("status"),

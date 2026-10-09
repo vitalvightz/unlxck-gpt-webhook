@@ -21,7 +21,7 @@ from tests.support import _build_client, withdraw_health_consent
 from api.services import today_service
 
 NOW = datetime(2026, 10, 5, 20, tzinfo=timezone.utc)
-CHECKPOINTS = frozenset(input_definitions())
+CHECKPOINTS = frozenset(key for key, (_, protocol) in input_definitions().items() if protocol.profile_id == "achilles_tendonitis")
 
 
 def assessment(**changes):

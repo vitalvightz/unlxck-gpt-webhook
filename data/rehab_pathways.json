@@ -93,6 +93,20 @@
       "description": "Self-reported loading permission and confirmed midportion applicability of the reviewed floor option; no medical verification or readiness claim.",
       "required_input": "Current episode rehabilitation permission and simple injury location.",
       "basis": "clinical"
+    },
+    {
+      "checkpoint_id": "lateral_elbow_function_assessed_v1",
+      "description": "Reported clinician elbow function observations; availability is not satisfactory function.",
+      "required_input": "Lateral subtype/course, clinician-assessed motion, grip task and wrist-extension tolerance, safety and exact option recommendation.",
+      "basis": "data_sufficiency",
+      "assessment_kind": "lateral_elbow_progression_v1",
+      "protocol_version": 1
+    },
+    {
+      "checkpoint_id": "lateral_elbow_restore_load_v1",
+      "description": "Reported clinician assessment supports the bounded lateral hand-weight wrist-extension option.",
+      "required_input": "Complete current exact-side functional observation plus separate current rehabilitation loading permission.",
+      "basis": "clinical"
     }
   ],
   "families": [
@@ -1868,13 +1882,16 @@
     },
     {
       "policy_id": "elbow_tendonitis",
-      "version": 1,
+      "version": 2,
       "region": "elbow",
       "injury_type": "tendonitis",
       "pathway_family": "tendon_rehab",
       "evidence_sources": [
         "https://www.nhs.uk/conditions/tendonitis/",
-        "https://msk-bexley.nhs.uk/conditions/elbow-pain/tennis-elbow"
+        "https://msk-bexley.nhs.uk/conditions/elbow-pain/tennis-elbow",
+        "https://www.jospt.org/doi/10.2519/jospt.2022.0302",
+        "https://www.rjah.nhs.uk/our-services/therapy/supported-self-care/tennis-elbow/",
+        "https://pmc.ncbi.nlm.nih.gov/articles/PMC8432114/"
       ],
       "prescriptions": [
         {
@@ -1924,6 +1941,35 @@
             "https://www.nhs.uk/conditions/tendonitis/",
             "https://msk-bexley.nhs.uk/conditions/elbow-pain/tennis-elbow"
           ]
+        },
+        {
+          "drill_id": "elbow_tendonitis_supported_hand_weight_wrist_extension",
+          "bank_hash": "56ba697662f47d146b43af38d56c4712d0e645d986b4a51b5a5ffc3ecbd711ef",
+          "stage": "load",
+          "instructions": "Support the affected forearm palm-down on a table with the wrist free to move. With the hand empty, raise the wrist in the comfortable range assessed by your clinician, then slowly lower over five seconds. Keep the forearm supported. No dumbbell, band, forceful grip, forced end range, speed or automatic increase. Stop if symptoms worsen during or after the work.",
+          "dose": {
+            "sets": 1,
+            "reps": 10
+          },
+          "allowed_severities": [
+            "low",
+            "moderate"
+          ],
+          "stop_when": [
+            "Hand weight only: 1 set of 10, maximum once daily. No added resistance or automatic increase.",
+            "Keep the forearm supported and use only the comfortable range assessed by your clinician.",
+            "Stop for worsening during or delayed symptoms and seek clinical review.",
+            "Stop and seek assessment for trauma, loss of function, numbness, a hot red swollen elbow or fever.",
+            "Follow clinician restrictions; this grants no training or contact clearance."
+          ],
+          "frequency": "daily",
+          "minimum_gap_days": 1,
+          "sources": [
+            "https://www.jospt.org/doi/10.2519/jospt.2022.0302",
+            "https://www.rjah.nhs.uk/our-services/therapy/supported-self-care/tennis-elbow/",
+            "https://pmc.ncbi.nlm.nih.gov/articles/PMC8432114/"
+          ],
+          "required_rehabilitation_level": "loading"
         }
       ],
       "blocked_regions": [
@@ -1933,12 +1979,31 @@
       "contact_limit": "none",
       "live_stages": [
         "calm",
-        "restore"
+        "restore",
+        "load"
       ],
-      "transition_overrides": {},
+      "transition_overrides": {
+        "restore->load": {
+          "reason": "Consider only the bounded lateral hand-weight option after separately reported clinician function assessment and loading permission; shared exposure and safety requirements remain.",
+          "add_requirements": [
+            {
+              "requirement_id": "lateral_elbow_restore_load_v1",
+              "kind": "functional_checkpoint",
+              "basis": "clinical",
+              "checkpoint": "lateral_elbow_restore_load_v1",
+              "description": "Reported clinician judgment supports this exact starter option for subacute/chronic lateral tendon symptoms, not a universal strength threshold.",
+              "sources": [
+                "https://www.jospt.org/doi/10.2519/jospt.2022.0302",
+                "https://www.rjah.nhs.uk/our-services/therapy/supported-self-care/tennis-elbow/",
+                "https://pmc.ncbi.nlm.nih.gov/articles/PMC8432114/"
+              ]
+            }
+          ]
+        }
+      },
       "status": "active",
       "activation": "live",
-      "content_hash": "7ec17f3b4d8399f276c139d9cada8e29f6a06a05da2824bdc8572ea14ce3d12f"
+      "content_hash": "54ed5be1448e7127798c4cdf958d022fa6842b13bf25f22314284a6604a83728"
     },
     {
       "policy_id": "wrist_tendonitis",

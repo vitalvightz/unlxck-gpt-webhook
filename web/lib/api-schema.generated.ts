@@ -329,6 +329,7 @@ export type CommandView = {
   risk_watch: RiskWatchItem[];
   open_injuries: Record<string, unknown>[];
   live_prescription: Record<string, unknown> | null;
+  exercise_media: Record<string, unknown>;
   effective_clinician_clearance: Record<string, unknown> | null;
   delayed_rehab_prompts: Record<string, unknown>[];
   week_summary: Record<string, unknown>;
@@ -807,7 +808,7 @@ export type InjuryEpisodeObservation = {
   injury_id: string;
   injury_episode_id: string;
   event_type: "clinician_clearance_report" | "delayed_rehab_response" | "rehab_progression_assessment";
-  assessment?: AchillesProgressionAssessment | null;
+  assessment?: AchillesProgressionAssessment | LateralElbowProgressionAssessment | null;
   scopes?: ("contact" | "rehab" | "training")[];
   rehabilitation_permission?: RehabilitationPermission | null;
   exposure_id?: string | null;
@@ -871,6 +872,29 @@ export type LandingResponse = {
   cta: string;
   row: number;
   reason: string;
+};
+
+export type LateralElbowProgressionAssessment = {
+  schema_version?: 1;
+  assessment_kind?: "lateral_elbow_progression_v1";
+  protocol_version?: 1;
+  side: "bilateral" | "left" | "right" | "unknown";
+  assessed_at: string;
+  assessor: "clinician_physio" | "coach_observed" | "self_reported" | "unknown";
+  payload: LateralElbowProgressionInput;
+};
+
+export type LateralElbowProgressionInput = {
+  subtype?: "lateral" | "medial" | "posterior" | "unknown";
+  course?: "acute_traumatic" | "chronic" | "subacute" | "unknown";
+  safety_screen?: "clear" | "concern" | "unknown";
+  pain_irritability?: "acceptable" | "not_acceptable" | "unknown";
+  elbow_wrist_motion?: "acceptable" | "not_acceptable" | "unknown";
+  grip_task?: "clinician_grip_test" | "daily_grip_task" | "unknown";
+  grip_function?: "acceptable" | "not_acceptable" | "unknown";
+  wrist_extension_task?: "supported_hand_weight" | "unknown";
+  wrist_extension_tolerance?: "acceptable" | "not_acceptable" | "unknown";
+  option_recommended?: boolean | null;
 };
 
 /** Week-level load dial settings (Section H). */

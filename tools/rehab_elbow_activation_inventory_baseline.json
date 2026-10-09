@@ -1,0 +1,158 @@
+{
+  "schema_version": 1,
+  "base_commit": "8d125da5",
+  "historical_profile": {
+    "policy_id": "elbow_tendonitis",
+    "version": 1,
+    "region": "elbow",
+    "injury_type": "tendonitis",
+    "pathway_family": "tendon_rehab",
+    "evidence_sources": [
+      "https://www.nhs.uk/conditions/tendonitis/",
+      "https://msk-bexley.nhs.uk/conditions/elbow-pain/tennis-elbow"
+    ],
+    "prescriptions": [
+      {
+        "drill_id": "elbow_tendonitis_recovery_support",
+        "bank_hash": "bba06306eb6833e7388738b3529589d29a803b527e6a8194a76faa078c0f37ac",
+        "stage": "calm",
+        "instructions": "Reduce activities that aggravate the affected tendon and keep the area comfortably supported. Avoid heavy lifting, strong gripping or twisting that worsens symptoms; do not repeatedly test the painful tendon. Keep ordinary comfortable movement as symptoms allow rather than applying a universal prolonged-rest timetable. Follow any clinician-directed restrictions. Sudden severe pain, a snap or pop with loss of function, suspected rupture, a hot red swollen area, fever or altered sensation needs medical assessment. Reduce provocative grip and repetitive hand loading; follow any individual splint advice without changing prescribed protection.",
+        "dose": null,
+        "camp_doses": {},
+        "readiness_doses": {},
+        "allowed_severities": [
+          "low",
+          "moderate"
+        ],
+        "stop_when": [
+          "Stop for pain or worsening symptoms during or after the work.",
+          "Seek assessment for suspected rupture, loss of function, altered sensation, a hot red swollen area or fever."
+        ],
+        "frequency": "scheduled_sessions",
+        "minimum_gap_days": 1,
+        "priority": 0,
+        "sources": [
+          "https://www.nhs.uk/conditions/tendonitis/",
+          "https://msk-bexley.nhs.uk/conditions/elbow-pain/tennis-elbow"
+        ]
+      },
+      {
+        "drill_id": "elbow_tendonitis_reviewed_restore",
+        "bank_hash": "3dea3cfb63f42c1ce270bfb0c57eb970211d617d2d2db558943e38007954d784",
+        "stage": "restore",
+        "instructions": "Keep the affected upper arm comfortably by your side and slowly bend and straighten the elbow within a pain-free range with the hand empty. Do not force end range, squeeze a ball, perform wrist curls or add resistance. A red, hot or swollen elbow needs assessment before exercise. This baseline does not diagnose lateral, medial or posterior tendon involvement. Stop if pain or symptoms worsen during or after the movement. This conservative baseline does not establish readiness for resistance or sport.",
+        "dose": null,
+        "camp_doses": {},
+        "readiness_doses": {},
+        "allowed_severities": [
+          "low",
+          "moderate"
+        ],
+        "stop_when": [
+          "Stop for pain or worsening symptoms during or after the work.",
+          "Seek assessment for suspected rupture, loss of function, altered sensation, a hot red swollen area or fever."
+        ],
+        "frequency": "scheduled_sessions",
+        "minimum_gap_days": 1,
+        "priority": 0,
+        "sources": [
+          "https://www.nhs.uk/conditions/tendonitis/",
+          "https://msk-bexley.nhs.uk/conditions/elbow-pain/tennis-elbow"
+        ]
+      }
+    ],
+    "blocked_regions": [
+      "elbow"
+    ],
+    "blocked_tags": [],
+    "contact_limit": "none",
+    "live_stages": [
+      "calm",
+      "restore"
+    ],
+    "transition_overrides": {},
+    "status": "active",
+    "activation": "live",
+    "content_hash": "7ec17f3b4d8399f276c139d9cada8e29f6a06a05da2824bdc8572ea14ce3d12f"
+  },
+  "activated_profile_sha256": "eed6bc7aa8f9a86844ba5e2adad4ab3b008b4a188f09cd185ac1f9c2245ab074",
+  "activated_checkpoints": [
+    {
+      "checkpoint_id": "lateral_elbow_function_assessed_v1",
+      "description": "Reported clinician elbow function observations; availability is not satisfactory function.",
+      "required_input": "Lateral subtype/course, clinician-assessed motion, grip task and wrist-extension tolerance, safety and exact option recommendation.",
+      "basis": "data_sufficiency",
+      "assessment_kind": "lateral_elbow_progression_v1",
+      "protocol_version": 1
+    },
+    {
+      "checkpoint_id": "lateral_elbow_restore_load_v1",
+      "description": "Reported clinician assessment supports the bounded lateral hand-weight wrist-extension option.",
+      "required_input": "Complete current exact-side functional observation plus separate current rehabilitation loading permission.",
+      "basis": "clinical"
+    }
+  ],
+  "new_drill": {
+    "id": "elbow_tendonitis_supported_hand_weight_wrist_extension",
+    "name": "Supported hand-weight wrist extension",
+    "notes": "Support the affected forearm palm-down on a table with the wrist free to move. With the hand empty, raise the wrist in the comfortable range assessed by your clinician, then slowly lower over five seconds. Keep the forearm supported. No dumbbell, band, forceful grip, forced end range, speed or automatic increase. Stop if symptoms worsen during or after the work.",
+    "rehab_stage": "load",
+    "function": "tendon_loading",
+    "equipment": [
+      "table"
+    ],
+    "dose": null,
+    "impact": "none",
+    "load": "minimal",
+    "velocity": "low",
+    "pain_ceiling": null,
+    "allowed_severities": null,
+    "progress_when": null,
+    "regress_when": null,
+    "stop_when": null,
+    "target_regions": [
+      "elbow"
+    ],
+    "laterality_applicability": "side_specific",
+    "target_tissues": [
+      "common wrist extensor tendon at elbow"
+    ],
+    "contraction_type": "mixed",
+    "sport_specificity": "general_rehab",
+    "contact_level": "none",
+    "evidence_notes": "Sources: https://www.rjah.nhs.uk/our-services/therapy/supported-self-care/tennis-elbow/ and https://www.jospt.org/doi/10.2519/jospt.2022.0302. Narrow hand-weight-only starter, not the dormant clinician-selected dumbbell candidate. Requires reported clinician assessment of subacute/chronic lateral presentation, motion, grip and exact task tolerance. Ten repetitions are the lower end of RJAH guidance; once-daily cap is a conservative product ceiling, not a universal clinical cadence or readiness threshold. No quantitative grip strength is inferred."
+  },
+  "new_review": {
+    "drill_id": "elbow_tendonitis_supported_hand_weight_wrist_extension",
+    "source_hash": "8294b8ec0a5276dca5b25ac0a40f71cad18e170099fd5c900c699158fa4efce5",
+    "location": "elbow",
+    "injury_type": "tendonitis",
+    "name": "Supported hand-weight wrist extension",
+    "notes": "Support the affected forearm palm-down on a table with the wrist free to move. With the hand empty, raise the wrist in the comfortable range assessed by your clinician, then slowly lower over five seconds. Keep the forearm supported. No dumbbell, band, forceful grip, forced end range, speed or automatic increase. Stop if symptoms worsen during or after the work.",
+    "movement_archetype": "bodyweight_strength",
+    "proposed": {
+      "rehab_stage": "load",
+      "function": "tendon_loading",
+      "equipment": [
+        "table"
+      ],
+      "impact": "none",
+      "load": "minimal",
+      "velocity": "low",
+      "target_regions": [
+        "elbow"
+      ],
+      "laterality_applicability": "side_specific",
+      "target_tissues": [
+        "common wrist extensor tendon at elbow"
+      ],
+      "contraction_type": "mixed",
+      "sport_specificity": "general_rehab",
+      "contact_level": "none",
+      "evidence_notes": "Sources: https://www.rjah.nhs.uk/our-services/therapy/supported-self-care/tennis-elbow/ and https://www.jospt.org/doi/10.2519/jospt.2022.0302. Narrow hand-weight-only starter, not the dormant clinician-selected dumbbell candidate. Requires reported clinician assessment of subacute/chronic lateral presentation, motion, grip and exact task tolerance. Ten repetitions are the lower end of RJAH guidance; once-daily cap is a conservative product ceiling, not a universal clinical cadence or readiness threshold. No quantitative grip strength is inferred."
+    },
+    "flags": [],
+    "review_state": "reviewed",
+    "review_version": 1
+  }
+}

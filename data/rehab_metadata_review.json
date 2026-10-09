@@ -16918,6 +16918,39 @@
     "review_version": 1
   },
   {
+    "drill_id": "elbow_tendonitis_supported_hand_weight_wrist_extension",
+    "source_hash": "8294b8ec0a5276dca5b25ac0a40f71cad18e170099fd5c900c699158fa4efce5",
+    "location": "elbow",
+    "injury_type": "tendonitis",
+    "name": "Supported hand-weight wrist extension",
+    "notes": "Support the affected forearm palm-down on a table with the wrist free to move. With the hand empty, raise the wrist in the comfortable range assessed by your clinician, then slowly lower over five seconds. Keep the forearm supported. No dumbbell, band, forceful grip, forced end range, speed or automatic increase. Stop if symptoms worsen during or after the work.",
+    "movement_archetype": "bodyweight_strength",
+    "proposed": {
+      "rehab_stage": "load",
+      "function": "tendon_loading",
+      "equipment": [
+        "table"
+      ],
+      "impact": "none",
+      "load": "minimal",
+      "velocity": "low",
+      "target_regions": [
+        "elbow"
+      ],
+      "laterality_applicability": "side_specific",
+      "target_tissues": [
+        "common wrist extensor tendon at elbow"
+      ],
+      "contraction_type": "mixed",
+      "sport_specificity": "general_rehab",
+      "contact_level": "none",
+      "evidence_notes": "Sources: https://www.rjah.nhs.uk/our-services/therapy/supported-self-care/tennis-elbow/ and https://www.jospt.org/doi/10.2519/jospt.2022.0302. Narrow hand-weight-only starter, not the dormant clinician-selected dumbbell candidate. Requires reported clinician assessment of subacute/chronic lateral presentation, motion, grip and exact task tolerance. Ten repetitions are the lower end of RJAH guidance; once-daily cap is a conservative product ceiling, not a universal clinical cadence or readiness threshold. No quantitative grip strength is inferred."
+    },
+    "flags": [],
+    "review_state": "reviewed",
+    "review_version": 1
+  },
+  {
     "drill_id": "elbow_swelling_overhead_elbow_pumps_band_assisted",
     "source_hash": "1b69d394dce95857830a3a93abf5d0f35eb53a39f8e9823c2e3fb6ab6502bd58",
     "location": "elbow",

@@ -488,3 +488,14 @@ def test_restore_rejects_advanced_drills_from_primary_and_alternates():
     # The stage-exact drill leads; the more-protective CALM drill is a valid swap.
     assert result.selected_drill_id == "restore-control"
     assert "calm-iso" in ranked_ids
+
+
+@pytest.mark.parametrize("field", ["guided_injury", "guided_injuries"])
+def test_client_context_is_removed_without_a_matching_owned_flag(field):
+    original = _guided("Left elbow", rehab_generation_context={
+        "rehab_stage": "load", "policy_injury": {"progression_assessments": ["fabricated"]}})
+    payload = {field: [original] if field == "guided_injuries" else original}
+    annotated = annotate_payload_with_rehab_stage(payload, store=FakeStore(), athlete_id=ATHLETE)
+    injury = annotated[field][0] if field == "guided_injuries" else annotated[field]
+    assert "rehab_generation_context" not in injury
+    assert "rehab_generation_context" in original

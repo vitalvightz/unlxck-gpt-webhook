@@ -8,8 +8,8 @@
    transition is open, declares at least one source-backed clinical criterion,
    every requirement passes and the target stage is live in the policy.
 
-Reported rehabilitation permission is an explicit ceiling for the single
-reviewed Achilles LOAD option. Training scope, camp phase, elapsed time and
+Reported rehabilitation permission is an explicit ceiling for reviewed LOAD
+options. Elbow additionally requires reported clinician functional assessment. Training scope, camp phase, elapsed time and
 whole-athlete signals cannot supply that permission or injury tolerance.
 Missing evidence or a missing captured input is reported, never assumed.
 """
@@ -33,9 +33,10 @@ from .achilles_restore_load import CRITERION_ID, review_achilles_restore_load
 from .clinical_review_validity import ClinicalReviewInput, ReviewReason, evaluate_clinical_review
 from .clinical_progression_review import CLINICAL_REVIEW_REGISTRY
 from .clinician_clearance import LOAD_PERMISSION_CHECKPOINT, achilles_load_permission_reason
+from .lateral_elbow_progression import CRITERION as ELBOW_CRITERION, evaluate_elbow_entry
 
 CAPTURED_FUNCTIONAL_CHECKPOINTS: frozenset[str] = frozenset(
-    [*(key[0] for key in CLINICAL_REVIEW_REGISTRY._definitions), LOAD_PERMISSION_CHECKPOINT])
+    [*(key[0] for key in CLINICAL_REVIEW_REGISTRY._definitions), LOAD_PERMISSION_CHECKPOINT, ELBOW_CRITERION])
 
 PASS, FAIL, UNKNOWN, MISSING_INPUT = "pass", "fail", "unknown", "missing_input"
 
@@ -145,7 +146,14 @@ def evaluate_transition(transition: PathwayTransition, *, policy: ClinicalPolicy
                                    f"observed_response_groups_{count}_of_{requirement.minimum}",
                                    [e for g in performed_groups for e in g.events if e in performed]))
         elif kind == "functional_checkpoint":
-            if (requirement.checkpoint == LOAD_PERMISSION_CHECKPOINT and policy.policy_id == "achilles_tendonitis"
+            if (requirement.checkpoint == ELBOW_CRITERION and policy.policy_id == "elbow_tendonitis"
+                    and (transition.from_stage, transition.to_stage) == ("restore", "load")):
+                context = AssessmentContext.from_injury(injury, as_of=as_of,
+                    setback_at=episode_setback_at(injury, exposures), history_truncated=history_truncated)
+                entry = evaluate_elbow_entry(context)
+                results.append({**_result(requirement, entry["status"], entry["reason_code"]),
+                                "assessment_observation_id": entry.get("observation_id")})
+            elif (requirement.checkpoint == LOAD_PERMISSION_CHECKPOINT and policy.policy_id == "achilles_tendonitis"
                     and (transition.from_stage, transition.to_stage) == ("restore", "load")):
                 reason = achilles_load_permission_reason(injury)
                 results.append(_result(requirement, UNKNOWN if reason else PASS,

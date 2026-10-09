@@ -7,6 +7,7 @@ import re
 from typing import Any, Mapping, Sequence
 
 from fightcamp.injury_formatting import parse_injury_entry
+from fightcamp.exercise_identity import normalize_exercise_key
 from fightcamp.injury_negation import remove_negated_phrases
 from fightcamp.injury_taxonomy import INJURY_TAXONOMY
 from fightcamp.injury_location_registry import get_rehab_location_candidates
@@ -29,6 +30,26 @@ _NON_CONTACT_BLOCK_TYPES = frozenset({
     "strength", "strength_speed", "accessory", "conditioning",
     "cooldown_recovery", "nutrition", "mindset", "rehab",
 })
+
+
+def reported_load_option(profile_id):
+    """Fixed reviewed content, independent of verified clinician-review pins."""
+    from .achilles_restore_load_pilot import ACHILLES_LOAD_OPTION
+    from .elbow_restore_load_option import ELBOW_LOAD_OPTION
+    return {"achilles_tendonitis": ACHILLES_LOAD_OPTION,
+            "elbow_tendonitis": ELBOW_LOAD_OPTION}.get(profile_id)
+
+
+def reported_load_hold(profile_id, injury, *, as_of, exposures=(), history_truncated=False):
+    if profile_id == "achilles_tendonitis":
+        return achilles_load_permission_reason(injury)
+    if profile_id == "elbow_tendonitis":
+        from .lateral_elbow_progression import evaluate_elbow_entry
+        context = AssessmentContext.from_injury(injury, as_of=as_of,
+            setback_at=episode_setback_at(injury, exposures), history_truncated=history_truncated)
+        entry = evaluate_elbow_entry(context)
+        return entry["reason_code"] if entry["status"] != "pass" else None
+    return "reported_loading_option_unavailable"
 
 
 def resolve_injury_policy(
@@ -185,7 +206,11 @@ def resolve_injury_policy(
         drill = deepcopy(drill_by_id[identity])
         reviewed_work = None
         if prescription.required_rehabilitation_level:
-            if achilles_load_permission_reason(injury) or readiness_decision == "pull_back":
+            option = reported_load_option(policy.policy_id)
+            if (option is None or option.drill_id != identity
+                    or reported_load_hold(policy.policy_id, injury, as_of=as_of,
+                        exposures=exposures, history_truncated=history_truncated)
+                    or readiness_decision == "pull_back"):
                 result["reason_codes"] = ["reported_rehabilitation_permission_unavailable_or_held"]
                 return result
         if prescription.clinical_criterion:
@@ -232,10 +257,9 @@ def resolve_injury_policy(
             "is_loading": prescription.stage != "calm" and drill.get("function") in {"tendon_loading", "isometric_analgesia", "activation", "control"},
         })
         if prescription.required_rehabilitation_level:
-            from .achilles_restore_load_pilot import ACHILLES_LOAD_OPTION
             resolved_drills[-1].update(required_rehabilitation_level=prescription.required_rehabilitation_level,
-                range_choice="floor_level", resistance={"mode": "bodyweight", "kg": None},
-                mandatory_restrictions=list(ACHILLES_LOAD_OPTION.mandatory_restrictions))
+                range_choice=option.range_choices[0], resistance={"mode": "bodyweight", "kg": None},
+                mandatory_restrictions=list(option.mandatory_restrictions))
         if reviewed_work:
             resolved_drills[-1].update(frequency=selection.cadence.frequency,
                 minimum_gap_days=selection.cadence.minimum_gap_days,
@@ -473,7 +497,7 @@ def reconcile_session_prescription(
             "block_id": identity, "block_type": "rehab", "title": prescription["drill"]["name"],
             "display_name": prescription["drill"]["name"], "coaching_cues": [prescription["instructions"]],
             **({"duration": {"value": prescription["dose"]["duration_seconds"], "unit": "seconds"}} if "duration_seconds" in prescription["dose"] else {}),
-            "rehab_drill_id": prescription["drill_id"], "injury_id": decision["injury_id"],
+            "rehab_drill_id": prescription["drill_id"], "exercise_key": normalize_exercise_key(prescription["drill_id"]), "injury_id": decision["injury_id"],
             "injury_episode_id": decision["injury_episode_id"], "target_regions": [decision["region"]],
             "dose": prescription["dose"], "instructions": prescription["instructions"],
             **prescription["dose"],

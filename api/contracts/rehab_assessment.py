@@ -12,6 +12,7 @@ from fightcamp.injury_formatting import parse_injury_entry
 from fightcamp.rehab_clinical import load_pathway_catalog
 
 from .achilles_progression import AchillesProgressionInput, read_achilles_input
+from .lateral_elbow_progression import LateralElbowProgressionInput, read_elbow_input, PROTOCOL
 
 ASSESSMENT_EVENT = "rehab_progression_assessment"
 PayloadT = TypeVar("PayloadT", bound=BaseModel)
@@ -78,6 +79,11 @@ class AchillesProgressionAssessment(RehabProgressionAssessment[AchillesProgressi
         return self
 
 
+class LateralElbowProgressionAssessment(RehabProgressionAssessment[LateralElbowProgressionInput]):
+    assessment_kind: Literal["lateral_elbow_progression_v1"] = "lateral_elbow_progression_v1"
+    protocol_version: Literal[1] = 1
+
+
 @dataclass(frozen=True)
 class AssessmentProtocol:
     envelope_type: type[RehabProgressionAssessment]
@@ -94,8 +100,12 @@ class AssessmentProtocol:
         return assessment_identity(injury) == (self.region, self.injury_type)
 
 
-# Only production-supported clinical protocol. Test registrations are isolated.
+# Production-supported typed protocols. Test registrations are isolated.
 ASSESSMENT_PROTOCOLS = {
+    PROTOCOL: AssessmentProtocol(
+        LateralElbowProgressionAssessment, LateralElbowProgressionInput, 1, "elbow", "tendonitis", "elbow_tendonitis",
+        read_elbow_input, lambda payload: (), lambda payload: payload.safety_concern,
+    ),
     "achilles_tendon_progression_v1": AssessmentProtocol(
         AchillesProgressionAssessment, AchillesProgressionInput, 1, "achilles", "tendonitis", "achilles_tendonitis",
         read_achilles_input,
