@@ -1381,6 +1381,7 @@ export function TodaySessionPanel({
           planId={pending.plan_id}
           sessionId={pending.session_id}
           trainingDay={pending.training_day}
+          currentTrainingDay={state.today.training_day}
           prompts={pending.rehab_response_prompts}
           onDismiss={() =>
             setRehabResponses((current) =>

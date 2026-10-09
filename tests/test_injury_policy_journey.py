@@ -535,6 +535,12 @@ def test_shared_drill_names_do_not_allocate_another_episode(monkeypatch):
 @pytest.mark.parametrize("timezone,occurred,day,allowed", [
     ("Pacific/Honolulu", "2026-10-01T05:00:00Z", "2026-10-01", True),
     ("Pacific/Auckland", "2026-09-30T18:00:00Z", "2026-10-01", False),
+    # Logged rehab is stamped at midnight UTC on its own training day: that
+    # names the day, so the next-day question waits for the following day
+    # even where midnight UTC falls before the local rollover.
+    ("Europe/London", "2026-10-01T00:00:00Z", "2026-10-01", False),
+    ("Europe/London", "2026-10-01T00:00:00Z", "2026-10-02", True),
+    ("Pacific/Honolulu", "2026-10-01T00:00:00Z", "2026-10-01", False),
 ])
 def test_delayed_feedback_uses_athlete_training_day_and_survives_reopening(reviewed, timezone, occurred, day, allowed):
     store = FakeStore()
