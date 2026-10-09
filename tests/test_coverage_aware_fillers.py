@@ -331,7 +331,9 @@ def test_live_wrapper_previous_filler_reduces_next_week_remaining_need():
 def test_live_wrapper_counts_meaningful_coverage_from_other_scheduled_week():
     athlete = _athlete(
         days_until_fight=28,
-        weaknesses=["footwork"],
+        # Keep an unmet target: physical-frequency policy still fills the slot
+        # when every selected target is covered, using a safe fallback.
+        weaknesses=["footwork", "mobility"],
         primary_weak_area="footwork",
     )
     week_one = _fight_dated_spp_week(main_d_day=28, filler_d_day=26)
@@ -354,6 +356,7 @@ def test_live_wrapper_counts_meaningful_coverage_from_other_scheduled_week():
     first = _discretionary_roles(week_one)
     assert len(first) == 1
     assert not _supports(first[0], "footwork")
+    assert _supports(first[0], "mobility")
 
 
 def test_normal_and_late_paths_share_target_aware_selection():
