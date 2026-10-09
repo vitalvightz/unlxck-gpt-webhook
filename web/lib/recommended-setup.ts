@@ -85,7 +85,7 @@ export const EQUIPMENT_PRESETS: EquipmentPreset[] = [
     description: "Everything available",
     equipment_access: EQUIPMENT_ACCESS_OPTIONS
       .map((option) => option.value)
-      .filter((value) => value !== "partner"),
+      .filter((value) => value !== "partner" && value !== "stable_support"),
   },
 ];
 

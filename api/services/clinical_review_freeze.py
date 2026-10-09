@@ -1,10 +1,39 @@
 """Prospective pin/safety overlays; never rewrite started/completed content."""
 from copy import deepcopy
 from datetime import datetime, timezone
+import logging
 
 from api.contracts.clinical_review_validity import FrozenClinicalReviewPin, evaluate_clinical_review, evaluate_frozen_review
 from api.contracts.reviewed_prescription import validate_prescription_selection
 from api.services.clinical_review_capture_service import hydrate_review_input
+from api.contracts.clinical_progression_review import CLINICAL_REVIEW_REGISTRY
+from fightcamp.rehab_clinical import content_hash, load_clinical_policies
+
+logger = logging.getLogger(__name__)
+
+
+def executable_selection_matches(block, option, selection):
+    """Executable fields cannot drift from the shared selected-work identity."""
+    if "rehab_drill_id" not in block:
+        return True  # Non-executable legacy pin projections remain supported.
+    dose = selection.dose.model_dump(exclude_none=True)
+    return (block.get("rehab_drill_id") == selection.drill_id
+        and block.get("bank_hash") == selection.bank_hash
+        and content_hash(block.get("drill_snapshot")) == selection.bank_hash
+        and block.get("instructions") == option.instructions
+        and block.get("coaching_cues") == [option.instructions]
+        and block.get("display_name") == block.get("drill_snapshot", {}).get("name")
+        and block.get("title") == block.get("drill_snapshot", {}).get("name")
+        and block.get("dose") == dose
+        and all(block.get(key) == dose.get(key) for key in ("sets", "reps", "duration_seconds"))
+        and block.get("range_choice") == selection.range_choice
+        and block.get("resistance") == selection.resistance.model_dump(mode="json")
+        and block.get("mandatory_restrictions") == list(selection.restrictions)
+        and block.get("frequency") == selection.cadence.frequency
+        and block.get("minimum_gap_days") == selection.cadence.minimum_gap_days
+        and not any(block.get(key) for key in ("load", "weight", "alternates", "exercises",
+            "prescription", "duration_minutes", "rest", "rest_seconds", "tempo", "rpe", "intensity"))
+        and (not block.get("duration") or "duration_seconds" in dose))
 
 
 def pin_reviewed_work(block, evaluation, *, option, selection):
@@ -24,8 +53,60 @@ def frozen_review_hold(store, athlete_id, snapshot, *, work_state, as_of=None, r
     if work_state == "completed":
         return False
     now = as_of or datetime.now(timezone.utc)
+    current_registry = registry or CLINICAL_REVIEW_REGISTRY
+    gated_drills = {o.drill_id for definition in current_registry._definitions.values() for o in definition.options}
     for block in snapshot.get("session", {}).get("blocks", []):
+        if block.get("required_rehabilitation_level") == "loading":
+            # A self-report has no verified-clinician pin. Withdraw incompatible
+            # future work, while leaving started/completed snapshots intact.
+            try:
+                from api.services.injury_episode_service import apply_episode_observations, episode_observations
+                from api.contracts.clinician_clearance import achilles_load_permission_reason
+                injury = store.get_injury_flag_for_athlete(block["injury_id"], athlete_id)
+                if not injury or str(injury.get("episode_id")) != block.get("injury_episode_id"):
+                    return True
+                current = apply_episode_observations(injury, episode_observations(store, athlete_id, injury), as_of=now)
+                if work_state == "unstarted" and achilles_load_permission_reason(current):
+                    return True
+                if work_state == "unstarted":
+                    plan = store.get_plan_for_athlete(snapshot.get("plan_id"), athlete_id) or {}
+                    intake = (store.get_intake(plan["intake_id"]) if plan.get("intake_id")
+                              else store.get_latest_intake(athlete_id)) or {}
+                    if intake.get("athlete_id") != athlete_id:
+                        return True
+                    intake = intake.get("intake") or intake
+                    if "stable_support" not in (intake.get("equipment_access") or []):
+                        return True
+                policy = next(p for p in (policies if policies is not None else load_clinical_policies())
+                              if p.policy_id == block.get("policy_id"))
+                prescription = next(p for p in policy.prescriptions if p.drill_id == block.get("rehab_drill_id"))
+                from api.contracts.achilles_restore_load_pilot import ACHILLES_LOAD_OPTION
+                if (prescription.required_rehabilitation_level != "loading"
+                        or block.get("policy_review_hash") != policy.content_hash
+                        or block.get("bank_hash") != prescription.bank_hash
+                        or block.get("dose") != prescription.dose.model_dump(exclude_none=True)
+                        or block.get("instructions") != prescription.instructions
+                        or block.get("coaching_cues") != [prescription.instructions]
+                        or block.get("mandatory_restrictions") != list(ACHILLES_LOAD_OPTION.mandatory_restrictions)
+                        or block.get("title") != block.get("drill_snapshot", {}).get("name")
+                        or block.get("display_name") != block.get("drill_snapshot", {}).get("name")
+                        or block.get("stop_rules") != prescription.stop_when
+                        or block.get("range_choice") != "floor_level"
+                        or block.get("resistance") != {"mode": "bodyweight", "kg": None}
+                        or block.get("frequency") != "daily" or block.get("minimum_gap_days") != 1
+                        or content_hash(block.get("drill_snapshot")) != prescription.bank_hash
+                        or any(block.get(name) != getattr(prescription.dose, name) for name in ("sets", "reps", "duration_seconds"))
+                        or any(block.get(name) for name in ("load", "weight", "prescription", "alternates", "exercises", "tempo", "rpe", "intensity", "duration_minutes", "rest", "rest_seconds", "duration"))):
+                    return True
+            except (ValueError, TypeError, KeyError, StopIteration):
+                return True
+            except Exception as exc:  # noqa: BLE001 - unavailable safety inputs hold future work
+                logger.error("reported_permission_work_failed category=%s", type(exc).__name__)
+                return True
+            continue
         if "clinical_review_pin" not in block:
+            if block.get("rehab_drill_id") in gated_drills:
+                return True
             continue
         try:
             pin = FrozenClinicalReviewPin.model_validate(block["clinical_review_pin"])
@@ -39,6 +120,26 @@ def frozen_review_hold(store, athlete_id, snapshot, *, work_state, as_of=None, r
                 lifecycle=supplied.lifecycle, registry=supplied.registry, trust=supplied.trust)
             if evaluate_frozen_review(pin, evaluation, work_state=work_state, as_of=now).safety_hold:
                 return True
-        except Exception:  # noqa: BLE001 - unavailable/malformed authority holds future work
+            definition = supplied.registry.current(pin.criterion_id)
+            review = next(supplied.registry.parse(value) for value in supplied.reviews
+                          if (value.get("review_id") if isinstance(value, dict) else value.review_id) == pin.review_id)
+            selection = review.selected_prescription
+            option = next(o for o in definition.options if o.option_id == pin.option_id)
+            if (block.get("reviewed_prescription") != {"option": option.model_dump(mode="json"),
+                    "selection": selection.model_dump(mode="json")}
+                    or not executable_selection_matches(block, option, selection)):
+                return True
+            if block.get("rehab_drill_id"):
+                current_policy = next(p for p in (policies if policies is not None else load_clinical_policies())
+                                      if p.policy_id == option.profile_id)
+                prescription = next(p for p in current_policy.prescriptions if p.drill_id == option.drill_id)
+                if (block.get("stop_rules") != prescription.stop_when
+                        or prescription.clinical_criterion != pin.criterion_id):
+                    return True
+        except (ValueError, KeyError, StopIteration):
+            logger.info("clinical_review_work_unavailable category=invalid_saved_work")
+            return True
+        except Exception as exc:  # noqa: BLE001 - unavailable authority holds future work
+            logger.error("clinical_review_work_failed category=%s", type(exc).__name__)
             return True
     return False

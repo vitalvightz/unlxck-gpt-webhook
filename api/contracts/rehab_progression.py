@@ -8,8 +8,10 @@
    transition is open, declares at least one source-backed clinical criterion,
    every requirement passes and the target stage is live in the policy.
 
-No clinician report, camp phase, elapsed time or whole-athlete signal is an
-input. Missing evidence or a missing captured input is reported, never assumed.
+Reported rehabilitation permission is an explicit ceiling for the single
+reviewed Achilles LOAD option. Training scope, camp phase, elapsed time and
+whole-athlete signals cannot supply that permission or injury tolerance.
+Missing evidence or a missing captured input is reported, never assumed.
 """
 from __future__ import annotations
 
@@ -29,8 +31,11 @@ from .rehab_evidence import (
 from .rehab_assessment import AssessmentContext, input_definitions, read_assessment_input
 from .achilles_restore_load import CRITERION_ID, review_achilles_restore_load
 from .clinical_review_validity import ClinicalReviewInput, ReviewReason, evaluate_clinical_review
+from .clinical_progression_review import CLINICAL_REVIEW_REGISTRY
+from .clinician_clearance import LOAD_PERMISSION_CHECKPOINT, achilles_load_permission_reason
 
-CAPTURED_FUNCTIONAL_CHECKPOINTS: frozenset[str] = frozenset()
+CAPTURED_FUNCTIONAL_CHECKPOINTS: frozenset[str] = frozenset(
+    [*(key[0] for key in CLINICAL_REVIEW_REGISTRY._definitions), LOAD_PERMISSION_CHECKPOINT])
 
 PASS, FAIL, UNKNOWN, MISSING_INPUT = "pass", "fail", "unknown", "missing_input"
 
@@ -140,7 +145,12 @@ def evaluate_transition(transition: PathwayTransition, *, policy: ClinicalPolicy
                                    f"observed_response_groups_{count}_of_{requirement.minimum}",
                                    [e for g in performed_groups for e in g.events if e in performed]))
         elif kind == "functional_checkpoint":
-            if (requirement.checkpoint == CRITERION_ID and policy.policy_id == "achilles_tendonitis"
+            if (requirement.checkpoint == LOAD_PERMISSION_CHECKPOINT and policy.policy_id == "achilles_tendonitis"
+                    and (transition.from_stage, transition.to_stage) == ("restore", "load")):
+                reason = achilles_load_permission_reason(injury)
+                results.append(_result(requirement, UNKNOWN if reason else PASS,
+                                       reason or "reported_permission_and_option_applicable"))
+            elif (requirement.checkpoint == CRITERION_ID and policy.policy_id == "achilles_tendonitis"
                     and (transition.from_stage, transition.to_stage) == ("restore", "load")):
                 context = AssessmentContext.from_injury(injury, as_of=as_of,
                     setback_at=episode_setback_at(injury, exposures), history_truncated=history_truncated)
@@ -171,6 +181,8 @@ def evaluate_transition(transition: PathwayTransition, *, policy: ClinicalPolicy
                     result = review.model_dump(mode="json")
                     results.append({**_result(requirement, review.criterion_status.value, result["reason_codes"][0]),
                                     "clinical_review": result})
+            elif CLINICAL_REVIEW_REGISTRY.current(requirement.checkpoint) is not None:
+                results.append(_result(requirement, UNKNOWN, ReviewReason.MISSING.value))
             else:
                 # Availability declarations cannot satisfy clinical checkpoints.
                 results.append(_result(requirement, MISSING_INPUT, f"functional_checkpoint_not_captured:{requirement.checkpoint}"))
@@ -204,7 +216,8 @@ def evaluate_transition(transition: PathwayTransition, *, policy: ClinicalPolicy
 def resolve_reviewed_progression(injury: Mapping[str, Any], *, base_stage: str,
                                 policy: ClinicalPolicy, exposures: Sequence[Mapping[str, Any]],
                                 history_truncated: bool = False, as_of: datetime | None = None,
-                                clinical_review_inputs: Mapping[str, ClinicalReviewInput] | None = None) -> dict[str, Any]:
+                                clinical_review_inputs: Mapping[str, ClinicalReviewInput] | None = None,
+                                target_content_available: Mapping[str, bool] | None = None) -> dict[str, Any]:
     # Baseline: unchanged from the CALM/RESTORE-only engine.
     stage = base_stage if base_stage in {"calm", "restore"} else "calm"
     reasons = ["baseline_only_v1"]
@@ -223,6 +236,9 @@ def resolve_reviewed_progression(injury: Mapping[str, Any], *, base_stage: str,
             exposures=exposures, history_truncated=history_truncated, as_of=as_of,
             clinical_review_input=next((clinical_review_inputs[r.checkpoint] for r in by_source[stage].requirements
                 if r.checkpoint in (clinical_review_inputs or {})), None))
+        if (evaluation["status"] == "met" and target_content_available is not None
+                and not target_content_available.get(evaluation["to_stage"], False)):
+            evaluation.update(status="blocked", reason_codes=["reviewed_target_content_unavailable"])
         if evaluation["status"] != "met" or not evaluation["target_stage_live"]:
             result["next_transition"] = evaluation
             break

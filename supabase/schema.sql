@@ -2370,7 +2370,7 @@ alter table public.session_completions
   add column if not exists prescription_snapshot jsonb
     check (prescription_snapshot is null or jsonb_typeof(prescription_snapshot) = 'object'),
   add column if not exists rehab_performance text
-    check (rehab_performance in ('done_as_shown', 'changed', 'stopped'));
+    check (rehab_performance in ('done_as_shown', 'changed', 'stopped', 'skipped'));
 
 create or replace function public.lock_injury_prescription_context()
 returns trigger language plpgsql set search_path = public, pg_temp as $$

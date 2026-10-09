@@ -284,6 +284,8 @@ def test_multi_injury_restrictions_and_episode_ownership_do_not_weaken(first, se
 
 def test_previous_48_profiles_and_all_other_bank_hashes_preserved(tmp_path):
     raw = read("data/rehab_pathways.json")
+    from tools.rehab_metadata_review_lib import before_achilles_load_activation
+    raw = before_achilles_load_activation(raw)
     before = read("tests/fixtures/rehab_profiles_before_nonspecific.json")
     assert len(before) == 48 and len(raw["profiles"]) == 64
     previous_ids = {p["policy_id"] for p in before}
@@ -293,6 +295,8 @@ def test_previous_48_profiles_and_all_other_bank_hashes_preserved(tmp_path):
     path.write_text(json.dumps(raw), encoding="utf-8")
     old_policies = load_clinical_policies(path)
     for p in old_policies:
+        if p.policy_id == "achilles_tendonitis":
+            continue  # The exact policy-v2 activation is covered separately.
         for stage in ("calm", "restore"):
             for side in ("left", "unknown"):
                 row = injury(p.region, p.injury_type, stage, side=side)

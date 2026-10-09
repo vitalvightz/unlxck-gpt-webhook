@@ -62,6 +62,7 @@ from api.services.rehab_completion_service import (
     list_pending_rehab_response_sets,
     rehab_response_contexts_by_injury,
     record_rehab_exposures,
+    record_reported_permission_rehab,
 )
 from api.services.notification_foundation import invalidate_notification_action
 from api.services.today_command_cache import remember_today_command
@@ -475,7 +476,7 @@ def build_today_router(*, require_profile, get_store) -> APIRouter:
             completion_status=completion_status,
             landing_session_state=completion_landing_state(completion_status),
             rehab_response_prompts=_rehab_prompts_for_completion(
-                store, profile=profile, completion=row
+                store, profile=profile, completion=row, simple_rehab=request_body.rehab_tracking == "injury_checkin"
             ),
         )
 
@@ -487,7 +488,7 @@ def build_today_router(*, require_profile, get_store) -> APIRouter:
         return store.get_plan_for_athlete(plan_id, profile.athlete_id)
 
     def _rehab_prompts_for_completion(
-        store: AppStore, *, profile: ProfileRecord, completion: dict[str, Any]
+        store: AppStore, *, profile: ProfileRecord, completion: dict[str, Any], simple_rehab: bool = False
     ) -> list[dict[str, Any]]:
         """The injury-specific prompts this completion raises, or none.
 
@@ -533,6 +534,10 @@ def build_today_router(*, require_profile, get_store) -> APIRouter:
                 if not persisted or persisted.get("rehab_response_contexts") is None:
                     raise RuntimeError("rehab response context was not persisted")
                 completion.update(persisted)
+            if simple_rehab and completion.get("rehab_response_contexts"):
+                record_reported_permission_rehab(store, athlete_id=profile.athlete_id,
+                    plan_row=_plan_row_for_completion(store, profile=profile, plan_id=completion["plan_id"]),
+                    completion=completion)
             pending = list_pending_rehab_response_sets(
                 store,
                 athlete_id=profile.athlete_id,

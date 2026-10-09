@@ -232,7 +232,7 @@ class UnsupportedReviewTrust:
         return False
 
 
-# Pure callers still default to unsupported trust. This compiled shadow binding
-# cannot activate a closed transition or create a live prescription.
+# Pure callers still default to unsupported trust. The compiled binding supplies
+# clinical interpretation; policy and the current engine still own activation.
 CLINICAL_REVIEW_REGISTRY = CriterionReviewRegistry((achilles_review_definition(),))
 UNSUPPORTED_REVIEW_TRUST = UnsupportedReviewTrust()

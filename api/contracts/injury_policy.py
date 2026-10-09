@@ -18,10 +18,10 @@ from fightcamp.surface_wound_safety import sanitize_surface_guidance
 
 from .rehab_stage import resolve_rehab_stage
 from .rehab_progression import resolve_reviewed_progression, episode_setback_at, _instant
-from .clinician_clearance import effective_clinician_clearance, clinician_clears_baseline
+from .clinician_clearance import effective_clinician_clearance, clinician_clears_baseline, achilles_load_permission_reason
 from .rehab_assessment import AssessmentContext, input_definitions, read_assessment_input
 from .achilles_restore_load import review_achilles_restore_load
-from .clinical_review_validity import ClinicalReviewInput
+from .clinical_review_validity import ClinicalReviewInput, evaluate_clinical_review
 
 
 _NON_CONTACT_BLOCK_TYPES = frozenset({
@@ -114,8 +114,21 @@ def resolve_injury_policy(
     if validate_clinical_bank((policy,), bank):
         result["reason_codes"] = ["rehab_policy_stale_or_incomplete"]
         return result
+    target_content = None
+    if any(p.clinical_criterion or p.required_rehabilitation_level for p in policy.prescriptions):
+        target_content = {}
+        bank_index = {d["id"]:d for group in bank for d in group.get("drills",[])}
+        for target in policy.live_stages:
+            options = [{**bank_index[p.drill_id], "injury_type":kind, "allowed_severities":p.allowed_severities}
+                       for p in policy.prescriptions if p.stage == target and (p.clinical_criterion or p.required_rehabilitation_level)]
+            if options:
+                eligible, _ = filter_rehab_candidates(injury={**injury,"body_region":region,"injury_type":kind,
+                    "body_region_aliases":get_rehab_location_candidates(region)}, rehab_stage=target,
+                    candidates=options, available_equipment=equipment, exposures=exposures, activated_stages=policy.live_stages)
+                target_content[target] = bool(eligible)
     progression = resolve_reviewed_progression({**injury, "body_region": region}, base_stage=str(stage), policy=policy,
-        exposures=exposures, history_truncated=history_truncated, as_of=as_of, clinical_review_inputs=clinical_review_inputs)
+        exposures=exposures, history_truncated=history_truncated, as_of=as_of, clinical_review_inputs=clinical_review_inputs,
+        target_content_available=target_content)
     result["progression"] = progression
     if policy.activation == "live":
         stage = progression["stage"]
@@ -170,14 +183,40 @@ def resolve_injury_policy(
     for identity in selected_ids:
         prescription = prescriptions[identity]
         drill = deepcopy(drill_by_id[identity])
+        reviewed_work = None
+        if prescription.required_rehabilitation_level:
+            if achilles_load_permission_reason(injury) or readiness_decision == "pull_back":
+                result["reason_codes"] = ["reported_rehabilitation_permission_unavailable_or_held"]
+                return result
+        if prescription.clinical_criterion:
+            supplied = (clinical_review_inputs or {}).get(prescription.clinical_criterion)
+            if supplied is None or readiness_decision == "pull_back":
+                result["reason_codes"] = ["reviewed_selection_unavailable_or_held"]
+                return result
+            evaluation = evaluate_clinical_review(supplied.context, supplied.reviews, as_of=as_of,
+                lifecycle=supplied.lifecycle, registry=supplied.registry, trust=supplied.trust)
+            if not evaluation.pin or evaluation.criterion_status != "pass" or not evaluation.prescription_valid:
+                result["reason_codes"] = ["reviewed_selection_invalid"]
+                return result
+            review = next(supplied.registry.parse(value) for value in supplied.reviews
+                          if (value.get("review_id") if isinstance(value, Mapping) else value.review_id) == evaluation.review_id)
+            definition = supplied.registry.current(prescription.clinical_criterion)
+            option = next(o for o in definition.options if o.option_id == review.selected_prescription.option_id)
+            selection = review.selected_prescription
+            if (selection.drill_id != identity or selection.bank_hash != prescription.bank_hash
+                    or option.instructions != prescription.instructions):
+                result["reason_codes"] = ["reviewed_selection_policy_mismatch"]
+                return result
+            reviewed_work = (evaluation, option, selection)
         selected_dose = prescription.camp_doses.get(phase.upper(), prescription.dose)
-        dose = selected_dose.model_dump(exclude_none=True) if selected_dose else {}
+        dose = (selection.dose.model_dump(exclude_none=True) if reviewed_work else
+                selected_dose.model_dump(exclude_none=True) if selected_dose else {})
         readiness_dose = prescription.readiness_doses.get(readiness_decision)
         if readiness_decision == "pull_back" and readiness_dose is None and prescription.dose is not None:
             result.update(outcome="missing_information", summary="Follow today's reduced-training guidance. No rehab is set for days like this.",
                           reason_codes=["reviewed_readiness_dose_missing"])
             return result
-        if readiness_dose is not None:
+        if readiness_dose is not None and not reviewed_work:
             for name, value in readiness_dose.model_dump(exclude_none=True).items():
                 if name in dose:
                     dose[name] = min(dose[name], value)
@@ -192,6 +231,18 @@ def resolve_injury_policy(
             "minimum_gap_days": prescription.minimum_gap_days,
             "is_loading": prescription.stage != "calm" and drill.get("function") in {"tendon_loading", "isometric_analgesia", "activation", "control"},
         })
+        if prescription.required_rehabilitation_level:
+            from .achilles_restore_load_pilot import ACHILLES_LOAD_OPTION
+            resolved_drills[-1].update(required_rehabilitation_level=prescription.required_rehabilitation_level,
+                range_choice="floor_level", resistance={"mode": "bodyweight", "kg": None},
+                mandatory_restrictions=list(ACHILLES_LOAD_OPTION.mandatory_restrictions))
+        if reviewed_work:
+            resolved_drills[-1].update(frequency=selection.cadence.frequency,
+                minimum_gap_days=selection.cadence.minimum_gap_days,
+                range_choice=selection.range_choice, resistance=selection.resistance.model_dump(mode="json"),
+                mandatory_restrictions=list(selection.restrictions))
+            from api.services.clinical_review_freeze import pin_reviewed_work
+            resolved_drills[-1] = pin_reviewed_work(resolved_drills[-1], evaluation, option=option, selection=selection)
     resolved = resolved_drills[0]
     if bundle_ids:
         resolved = {
@@ -416,7 +467,7 @@ def reconcile_session_prescription(
         identity = f"rehab:{decision['injury_id']}:{decision['injury_episode_id']}"
         if decision["prescription"].get("drills"):
             identity = f"{identity}:{prescription['drill_id']}"
-        return {
+        block = {
             **({"rehab_allocation_id": f"rehab:{decision['injury_id']}:{decision['injury_episode_id']}"}
                if decision["prescription"].get("drills") else {}),
             "block_id": identity, "block_type": "rehab", "title": prescription["drill"]["name"],
@@ -434,6 +485,14 @@ def reconcile_session_prescription(
             "is_loading": prescription["is_loading"],
             "source_references": prescription["sources"],
         }
+        if prescription.get("required_rehabilitation_level"):
+            block.update({key: deepcopy(prescription[key]) for key in (
+                "required_rehabilitation_level", "range_choice", "resistance", "mandatory_restrictions", "frequency")})
+        if prescription.get("clinical_review_pin"):
+            block.update({key: deepcopy(prescription[key]) for key in (
+                "range_choice", "resistance", "mandatory_restrictions", "frequency",
+                "clinical_review_pin", "reviewed_prescription")})
+        return block
 
     def prescribed_blocks(decision):
         current = decision["prescription"]

@@ -183,8 +183,8 @@ def test_transition_engine_reads_capture_but_production_load_stays_closed(contex
     assert after["prescription"] == before["prescription"]
     assert after["progression"] == before["progression"]
     assert set(after["assessment_inputs"]) == CHECKPOINTS
-    assert not any(t.promotable for t in policy.transitions)
-    assert "load" not in policy.live_stages
+    assert policy.transitions[0].promotable and "load" in policy.live_stages
+    assert after["stage"] != "load"  # Availability cannot replace trusted approval.
 
 
 def test_capture_rejects_cross_side_episode_owner_and_future(context):

@@ -668,7 +668,7 @@ test("reviewed rehab remains available under reduced readiness and uses server b
   const state = reviewedSessionState(false);
   const html = renderToStaticMarkup(<AuthProvider><ToastProvider><TodaySessionPanel state={state} structuredPlan={null} token="token" onRefresh={async () => {}} /></ToastProvider></AuthProvider>);
   assert.match(html, /Reviewed test rehab/);
-  assert.match(html, />Start session</);
+  assert.match(html, />Completed</);
   assert.doesNotMatch(html, /Do not start this session/);
 });
 
@@ -689,7 +689,7 @@ test("calm-stage guidance is checked off, never started", () => {
   const html = renderToStaticMarkup(<AuthProvider><ToastProvider><TodaySessionPanel state={guidanceDayState()} structuredPlan={null} token="token" onRefresh={async () => {}} /></ToastProvider></AuthProvider>);
   assert.match(html, /Chest strain recovery support/);
   assert.match(html, /No rehab exercises at this stage/);
-  assert.match(html, />Followed it</);
+  assert.match(html, />Completed</);
   assert.doesNotMatch(html, />Start session<|>Skip session<|How much rehab did you do/);
 });
 
@@ -710,14 +710,13 @@ test("checking off guidance saves it as followed and asks how it felt", async ()
   }) as typeof fetch;
   try {
     await act(async () => { root.render(<AuthProvider><ToastProvider><TodaySessionPanel state={guidanceDayState()} structuredPlan={null} token="token" onRefresh={async () => {}} /></ToastProvider></AuthProvider>); });
-    const button = Array.from(container.querySelectorAll("button")).find(b => b.textContent?.trim() === "Followed it");
+    const button = Array.from(container.querySelectorAll("button")).find(b => b.textContent?.trim() === "Completed");
     assert.ok(button);
     await act(async () => { button.dispatchEvent(new domWindow.MouseEvent("click", { bubbles: true })); });
     assert.equal(calls.length, 1);
     assert.equal(calls[0].status, "done");
     assert.equal(calls[0].rehab_performance, "done_as_shown");
-    assert.match(container.textContent ?? "", /How did it feel today\?/);
-    assert.match(container.textContent ?? "", /while following the guidance/);
+    assert.doesNotMatch(container.textContent ?? "", /How did it feel today\?|while following the guidance/);
     assert.doesNotMatch(container.textContent ?? "", /How did the rehab work go|during the rehab work/);
   } finally { globalThis.fetch = original; act(() => root.unmount()); container.remove(); }
 });
@@ -744,8 +743,7 @@ test("guidance wording survives Today moving on to the next session", async () =
     const text = container.textContent ?? "";
     assert.match(text, /Reviewed test rehab/);
     // The prompt is from the day before, so it names that day.
-    assert.match(text, /How did it feel on Friday\?/);
-    assert.match(text, /while following the guidance/);
+    assert.doesNotMatch(text, /How did it feel on Friday\?|while following the guidance/);
     assert.doesNotMatch(text, /How did the rehab work go|during the rehab work/);
   } finally { globalThis.fetch = original; act(() => root.unmount()); container.remove(); }
 });
@@ -759,10 +757,10 @@ test("a new safety hold offers stopped logging without resuming frozen work", ()
   assert.doesNotMatch(html, />Start session<|>Done<|>Resume session<|>Finish session</);
 });
 
-for (const [value, label] of [
-  ["done_as_shown", "Done as shown"], ["changed", "Changed it"], ["stopped", "Stopped early"],
+for (const [status, performance, label] of [
+  ["done", "done_as_shown", "Completed"], ["modified", "changed", "Modified"], ["skipped", undefined, "Skipped"],
 ] as const) {
-  test(`rehab completion selects and submits ${value}`, async () => {
+  test(`simple rehab ${label} saves without a questionnaire`, async () => {
     const container = document.createElement("div"); document.body.appendChild(container);
     const root = createRoot(container);
     const state = reviewedSessionState(false);
@@ -771,49 +769,20 @@ for (const [value, label] of [
     const calls: Array<Record<string, unknown>> = [];
     let refreshes = 0;
     globalThis.fetch = (async (_input, init) => {
-      if (init?.method === "POST") {
-        calls.push(JSON.parse(String(init.body)));
-        return new Response(JSON.stringify({ completion: { id: "completion-1" }, rehab_response_prompts: [] }), { status: 200 });
-      }
-      return new Response('{"response_sets":[],"history_truncated":false}', { status: 200 });
+      if (init?.method === "POST") calls.push(JSON.parse(String(init.body)));
+      return new Response(JSON.stringify({ completion: { id: "completion-1" }, rehab_response_prompts: [] }), { status: 200 });
     }) as typeof fetch;
-    async function click(label: string) {
-      const button = Array.from(container.querySelectorAll("button")).find(b => b.textContent?.trim() === label);
-      assert.ok(button, label);
-      await act(async () => { button.dispatchEvent(new domWindow.MouseEvent("click", { bubbles: true })); });
-    }
     try {
       await act(async () => { root.render(<AuthProvider><ToastProvider><TodaySessionPanel state={state} structuredPlan={null} token="token" onRefresh={async () => { refreshes++; }} /></ToastProvider></AuthProvider>); });
-      await click("Finish session");
-      // The review sheet is portalled to the body: rehab alone owes no exercise
-      // ticks, so the session reads as done and asks for the rehab amount.
-      const sheet = document.querySelector<HTMLElement>(".today-review-root");
-      assert.ok(sheet);
-      const save = Array.from(sheet.querySelectorAll("button")).find((b) => b.textContent?.trim() === "Save session");
-      assert.ok(save);
-      assert.equal(save.className, "cta");
-      // Fill the existing required review field before choosing rehab performance.
-      const effort = sheet.querySelector<HTMLInputElement>('input[aria-label="Session effort"]');
-      assert.ok(effort);
-      await act(async () => { effort.dispatchEvent(new domWindow.MouseEvent("click", { bubbles: true })); });
-      await act(async () => { save.dispatchEvent(new domWindow.MouseEvent("click", { bubbles: true })); });
-      assert.equal(calls.length, 0);
-      assert.match(sheet.textContent ?? "", /Choose how much rehab you performed/);
-      const group = sheet.querySelector('[aria-label="How much rehab did you do?"]');
-      assert.ok(group);
-      const option = Array.from(group.querySelectorAll("button")).find((b) => b.textContent?.trim() === label);
-      assert.ok(option);
-      await act(async () => { option.dispatchEvent(new domWindow.MouseEvent("click", { bubbles: true })); });
-      for (const button of group.querySelectorAll("button")) {
-        assert.ok(button.classList.contains("today-segment"));
-        assert.equal(button.classList.contains("today-segment-active"), button.textContent === label);
-        assert.equal(button.getAttribute("aria-pressed"), String(button.textContent === label));
-      }
-      await act(async () => { save.dispatchEvent(new domWindow.MouseEvent("click", { bubbles: true })); });
+      assert.equal(container.querySelectorAll('[aria-label="Did you complete your rehab?"] button').length, 3);
+      assert.equal(container.querySelectorAll("textarea, select, input").length, 0);
+      const button = Array.from(container.querySelectorAll("button")).find(b => b.textContent?.trim() === label);
+      assert.ok(button);
+      await act(async () => { button.dispatchEvent(new domWindow.MouseEvent("click", { bubbles: true })); });
       assert.equal(calls.length, 1);
-      assert.equal(calls[0].rehab_performance, value);
-      assert.equal(calls[0].status, "done");
-      assert.equal(calls[0].session_rpe, 5);
+      assert.equal(calls[0].rehab_performance, performance);
+      assert.equal(calls[0].status, status);
+      assert.equal(calls[0].session_rpe, null);
       assert.equal(refreshes, 1);
     } finally { globalThis.fetch = original; act(() => root.unmount()); container.remove(); }
   });
@@ -840,7 +809,7 @@ test("one live rehab session renders every reviewed bundle drill", () => {
   const html = renderPanel(state);
   assert.match(html, /Reviewed supported balance/);
   assert.match(html, /Reviewed heel lowering/);
-  assert.equal((html.match(/>Start session</g) ?? []).length, 1);
+  assert.equal((html.match(/>Completed</g) ?? []).length, 1);
 });
 
 test("contact actions respect live holds and reviewed rehab replacements", () => {
@@ -854,8 +823,8 @@ test("contact actions respect live holds and reviewed rehab replacements", () =>
     };
     const html = renderPanel(state);
     assert.doesNotMatch(html, />Start hard sparring<|<h2 id="today-session-heading">Hard sparring<|Sparring rounds<\/button>/);
-    assert.match(html, /Sparring rounds locked today/);
-    if (rehabOnly) assert.match(html, />Start session</);
+    if (!rehabOnly) assert.match(html, /Sparring rounds locked today/);
+    if (rehabOnly) assert.match(html, />Completed</);
   }
 });
 
@@ -1078,7 +1047,7 @@ test("finished mixed rehab run survives a failed batch and opens populated revie
     assert.equal(window.localStorage.getItem(key), null);
     assert.equal(document.querySelector(".st-root"), null);
     assert.match(document.querySelector(".today-review-root")?.textContent ?? "", /4 of 4 exercises logged/);
-    assert.match(document.querySelector(".today-review-root")?.textContent ?? "", /How much rehab/);
+    assert.match(document.querySelector(".today-review-root")?.textContent ?? "", /Did you complete your rehab/);
   } finally {
     await act(async () => { root.unmount(); });
     container.remove();

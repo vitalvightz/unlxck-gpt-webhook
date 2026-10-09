@@ -311,7 +311,7 @@ test("a failed save surfaces the error and keeps the answers editable", async ()
   cleanup(container, root);
 });
 
-test("Today rehydrates a skipped unanswered prompt from durable server state", async () => {
+test("Today uses the injury check-in instead of a duplicate rehab response questionnaire", async () => {
   const prompt = ankle();
   const state: TodayCommandView = {
     active_plan: {
@@ -376,27 +376,13 @@ test("Today rehydrates a skipped unanswered prompt from durable server state", a
   }
 
   const first = mount();
-  renderPanel(first.root);
-  await settle();
-  await settle();
-  assert.match(first.container.textContent ?? "", /LEFT ANKLE/);
-  act(() => buttonByText(first.container, "Skip").click());
-  await settle();
-  assert.doesNotMatch(first.container.textContent ?? "", /LEFT ANKLE/);
-  cleanup(first.container, first.root);
-
-  const nextDayState: TodayCommandView = {
-    ...state,
-    today: { ...state.today, training_day: "2026-08-21" },
-  };
-  const reopened = mount();
-  renderPanel(reopened.root, nextDayState);
-  await settle();
-  await settle();
-  assert.match(reopened.container.textContent ?? "", /LEFT ANKLE/);
-  assert.equal(calls.filter((url) => url.includes("/api/today/rehab-responses/pending")).length, 2);
-  assert.equal(calls.some((url) => url.includes("training_day=")), false);
-
-  cleanup(reopened.container, reopened.root);
-  globalThis.fetch = originalFetch;
+  try {
+    renderPanel(first.root);
+    await settle();
+    assert.doesNotMatch(first.container.textContent ?? "", /LEFT ANKLE|How did the rehab work go/);
+    assert.equal(calls.filter((url) => url.includes("/api/today/rehab-responses/pending")).length, 0);
+  } finally {
+    cleanup(first.container, first.root);
+    globalThis.fetch = originalFetch;
+  }
 });

@@ -73,6 +73,10 @@ jobs:
   test-full-suite:
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0, 1, 2, 3, 4, 5]
     permissions:
       contents: read
 
@@ -108,7 +112,22 @@ jobs:
           pip check
 
       - name: Run full pytest suite
-        run: pytest tests/ -q
+        env:
+          PYTEST_SHARD: ${{ matrix.shard }}
+        # Round-robin modules cover the same default pytest filename patterns,
+        # once each. Main's unsharded suite exhausted 20 minutes at 39%.
+        run: |
+          python - <<'PY'
+          import os
+          import pathlib
+          import subprocess
+          import sys
+          files = sorted(p for p in pathlib.Path("tests").rglob("*.py")
+                         if p.match("test_*.py") or p.match("*_test.py"))
+          selected = files[int(os.environ["PYTEST_SHARD"])::6]
+          assert selected, "every full-suite shard must contain tests"
+          sys.exit(subprocess.call([sys.executable, "-m", "pytest", "-q", *map(str, selected)]))
+          PY
 
   test-runtime-surfaces:
     runs-on: ubuntu-latest

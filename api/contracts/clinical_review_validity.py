@@ -326,9 +326,16 @@ def evaluate_clinical_review(context: ReviewValidityContext, reviews: tuple[Mapp
     elif review.decision == ReviewDecision.NOT_APPROVED:
         status, codes = CriterionStatus.FAIL, ("clinical_decision_not_approved",)
     else:
-        clinical = definition.evaluate(review.interpretation)
-        if clinical.status == CriterionStatus.PASS and definition.evaluate_review is not None:
-            clinical = definition.evaluate_review(review, context)
+        try:
+            clinical = definition.evaluate(review.interpretation)
+            if clinical.status == CriterionStatus.PASS and definition.evaluate_review is not None:
+                clinical = definition.evaluate_review(review, context)
+        except Exception as exc:  # noqa: BLE001 - unexpected evaluator failures cannot authorize work
+            import logging
+            logging.getLogger(__name__).error("clinical_review_evaluator_failed criterion=%s category=%s",
+                context.criterion_id, type(exc).__name__)
+            reasons.append("clinical_review_evaluator_failed")
+            return invalid(review, trusted=trusted, prescription_valid=prescription_valid, pin=pin)
         status, codes = clinical.status, clinical.reason_codes
     return ReviewEvaluation(evaluated_at=as_of, review_id=review.review_id, validity="valid", trusted=trusted,
         clinical_decision=review.decision, criterion_status=status, prescription_valid=prescription_valid,

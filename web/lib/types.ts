@@ -935,7 +935,7 @@ export type InjuryFlagRecord = {
     prescription?: { sources?: string[] } | null;
     schedule?: { state: "due" | "recovery_day" | "already_completed" | "held" | "deferred" | "unsupported";
       reason: string; next_due_day?: string | null } | null } | null;
-  clinician_clearance?: { episode_id: string; scopes: string[]; source: "athlete_reported"; externally_verified: false } | null;
+  clinician_clearance?: { episode_id: string; scopes: string[]; source: "athlete_reported"; externally_verified: false; rehabilitation_permission?: { schema_version: 1; level: "gentle_recovery" | "loading" | "sport_specific" | "not_cleared" } | null } | null;
   plan_id?: string | null;
   source: string;
   body_area: string;
@@ -1300,7 +1300,8 @@ export type TodaySessionCompletionRequest = {
   session_id: string;
   status: TodayCompletionStatus;
   prescription_revision?: string;
-  rehab_performance?: "done_as_shown" | "changed" | "stopped";
+  rehab_tracking?: "injury_checkin" | null;
+  rehab_performance?: "done_as_shown" | "changed" | "stopped" | "skipped";
   /** Omitted for the Today flow (server resolves the athlete-local day). A
    * retro-log passes the explicit past day; the server enforces the 7-day
    * back-fill window. */

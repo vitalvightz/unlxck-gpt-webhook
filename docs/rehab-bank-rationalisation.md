@@ -2,7 +2,7 @@
 
 ## Executive summary
 
-Current inputs contain **755 groups / 1601 drills**, **64 active profiles**, and **103 unique live MSK identities** (6.43% of the whole bank).
+Current inputs contain **755 groups / 1601 drills**, **64 active profiles**, and **104 unique live MSK identities** (6.5% of the whole bank).
 
 This report is generated read-only: the audit itself never rewrites bank content, review history, profile hashes or stage activation. It describes current selectable inventory; retired exact identities and their complete provenance are preserved separately in data/rehab_archive/exact_duplicates.json when consolidation has been applied. Each retained drill has exactly one primary bucket. Secondary flags overlap; duplicate clusters overlap and must not be summed as distinct drills.
 
@@ -10,15 +10,15 @@ Classification is evidence-backed inventory triage, not a clinical approval of d
 
 | Primary bucket | Drills |
 | --- | ---: |
-| LIVE | 103 |
-| ADVANCED_CANDIDATE | 57 |
+| LIVE | 104 |
+| ADVANCED_CANDIDATE | 56 |
 | KEEP_DORMANT | 208 |
 | REPAIR | 1149 |
 | DUPLICATE_OR_MERGE | 0 |
 | MISPLACED | 17 |
 | DEPRECATE | 67 |
 
-Reviewed: **162 / 1601 (10.12%)**; MSK-only reviewed percentage: **10.82%**. Dormant potentially useful: **88.32%** (ADVANCED_CANDIDATE + KEEP_DORMANT + REPAIR). Likely eventually removable: **4.18%** (DEPRECATE + exact duplicate surplus); MISPLACED means relocation review, not removal.
+Reviewed: **162 / 1601 (10.12%)**; MSK-only reviewed percentage: **10.82%**. Dormant potentially useful: **88.26%** (ADVANCED_CANDIDATE + KEEP_DORMANT + REPAIR). Likely eventually removable: **4.18%** (DEPRECATE + exact duplicate surplus); MISPLACED means relocation review, not removal.
 
 ## Production footprint
 
@@ -26,11 +26,11 @@ Reviewed: **162 / 1601 (10.12%)**; MSK-only reviewed percentage: **10.82%**. Dor
 | --- | ---: |
 | CALM | 64 |
 | RESTORE | 39 |
-| LOAD | 0 |
+| LOAD | 1 |
 | DYNAMIC | 0 |
 | RETURN | 0 |
 
-Active profiles by stages: `{"calm": 26, "calm+restore": 38}`. Reviewed identities referenced by active profiles: **103**. Advanced live profiles: **0**.
+Active profiles by stages: `{"calm": 26, "calm+restore": 37, "calm+restore+load": 1}`. Reviewed identities referenced by active profiles: **104**. Advanced live profiles: **1**.
 
 Reachability means the profile/baseline can select a stage in principle; it is not clearance for every athlete. Severity, red flags, clinician restrictions, side, complete history and setbacks remain authoritative. CALM/RESTORE use the existing report ladder. Advanced availability requires a live target, a promotable clinical transition and captured required checkpoints.
 
@@ -138,14 +138,14 @@ Aliases are resolved by the existing registry: bicep → biceps, hamstrings → 
 | muscle_strain | 16 | 19 | 4 | 52 | 0 | 0 | 4 |
 | nonspecific_msk_symptoms | 19 | 0 | 31 | 299 | 0 | 1 | 12 |
 | surface_wound_care | 0 | 0 | 103 | 0 | 0 | 0 | 1 |
-| tendon_rehab | 16 | 6 | 2 | 47 | 0 | 0 | 1 |
+| tendon_rehab | 17 | 5 | 2 | 47 | 0 | 0 | 1 |
 | unspecified_fallback | 0 | 0 | 53 | 567 | 0 | 16 | 28 |
 
 ### Region classification
 
 | Identity | LIVE | ADVANCED_CANDIDATE | KEEP_DORMANT | REPAIR | DUPLICATE_OR_MERGE | MISPLACED | DEPRECATE |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| achilles | 2 | 1 | 0 | 24 | 0 | 0 | 0 |
+| achilles | 3 | 0 | 0 | 24 | 0 | 0 | 0 |
 | ankle | 7 | 4 | 3 | 35 | 0 | 0 | 0 |
 | biceps | 5 | 5 | 1 | 53 | 0 | 0 | 1 |
 | calf | 2 | 3 | 1 | 31 | 0 | 0 | 0 |
@@ -491,7 +491,7 @@ Surface loading fields are intentionally absent. Empty equipment lists mean no e
 
 | Candidate stage | All dormant screening candidates | Fixed reviewed candidates |
 | --- | ---: | ---: |
-| LOAD | 501 | 52 |
+| LOAD | 500 | 51 |
 | DYNAMIC | 36 | 5 |
 | RETURN | 3 | 0 |
 
@@ -501,7 +501,7 @@ Fixed reviewed candidates are mechanically defined movements; their exact region
 
 | Profile | Live stages | Fixed reviewed advanced IDs | Other exact-type candidates | Unassigned regional candidates |
 | --- | --- | --- | ---: | ---: |
-| achilles_tendonitis | calm, restore | achilles_tendonitis_eccentric_calf_drops_on_step | 1 | 13 |
+| achilles_tendonitis | calm, restore, load | none | 1 | 13 |
 | ankle_impingement | calm, restore | none | 0 | 16 |
 | ankle_instability | calm, restore | ankle_instability_foam_pad_jump_stick, ankle_instability_lateral_hop_stick_drill | 0 | 16 |
 | ankle_sprain | calm, restore | ankle_sprain_banded_ankle_circles, ankle_sprain_single_leg_balance_on_foam_pad | 0 | 16 |
@@ -570,9 +570,9 @@ Profiles with no screened viable advanced inventory: `fingers_contusion`.
 
 Profiles with no exact-type candidate (regional unassigned inventory may exist): `ankle_impingement`, `biceps_contusion`, `elbow_contusion`, `elbow_impingement`, `elbow_stiffness`, `fingers_contusion`, `hamstring_strain`, `hand_contusion`, `heel_contusion`, `hip_impingement`, `hip_pain`, `knee_pain`, `neck_stiffness`, `neck_tightness`, `quads_contusion`, `shin_contusion`, `shoulder_impingement`, `shoulder_tightness`, `triceps_contusion`, `wrist_contusion`.
 
-Profiles with no fixed reviewed advanced inventory: `ankle_impingement`, `biceps_contusion`, `elbow_contusion`, `elbow_hyperextension`, `elbow_impingement`, `elbow_pain`, `elbow_stiffness`, `fingers_contusion`, `fingers_hyperextension`, `fingers_pain`, `fingers_tendonitis`, `forearm_contusion`, `hamstring_strain`, `hand_contusion`, `hand_hyperextension`, `hand_pain`, `hand_tendonitis`, `heel_contusion`, `hip_impingement`, `hip_pain`, `knee_pain`, `lower_back_pain`, `lower_back_stiffness`, `neck_soreness`, `neck_stiffness`, `neck_tightness`, `quads_contusion`, `shin_contusion`, `shoulder_contusion`, `shoulder_hyperextension`, `shoulder_impingement`, `shoulder_pain`, `shoulder_soreness`, `shoulder_tightness`, `toe_hyperextension`, `triceps_contusion`, `wrist_contusion`, `wrist_hyperextension`, `wrist_impingement`, `wrist_pain`, `wrist_stiffness`.
+Profiles with no fixed reviewed advanced inventory: `achilles_tendonitis`, `ankle_impingement`, `biceps_contusion`, `elbow_contusion`, `elbow_hyperextension`, `elbow_impingement`, `elbow_pain`, `elbow_stiffness`, `fingers_contusion`, `fingers_hyperextension`, `fingers_pain`, `fingers_tendonitis`, `forearm_contusion`, `hamstring_strain`, `hand_contusion`, `hand_hyperextension`, `hand_pain`, `hand_tendonitis`, `heel_contusion`, `hip_impingement`, `hip_pain`, `knee_pain`, `lower_back_pain`, `lower_back_stiffness`, `neck_soreness`, `neck_stiffness`, `neck_tightness`, `quads_contusion`, `shin_contusion`, `shoulder_contusion`, `shoulder_hyperextension`, `shoulder_impingement`, `shoulder_pain`, `shoulder_soreness`, `shoulder_tightness`, `toe_hyperextension`, `triceps_contusion`, `wrist_contusion`, `wrist_hyperextension`, `wrist_impingement`, `wrist_pain`, `wrist_stiffness`.
 
-Promotable advanced transitions: **0**. Captured clinical functional checkpoints: `[]`. Captured assessment availability inputs: `["achilles_heel_rise_assessed", "achilles_loading_response_assessed", "achilles_range_load_assessed", "achilles_site_assessed"]`. Which regional strength/function/tolerance tests are necessary remains a literature/clinical decision; the audit does not substitute whole-athlete readiness, elapsed time, session counts or a different input. This audit activates no stage.
+Promotable advanced transitions: **1**. Captured clinical functional checkpoints: `["achilles_midportion_reported_load_permission_v1", "achilles_restore_load_clinical_review_v1"]`. Captured assessment availability inputs: `["achilles_heel_rise_assessed", "achilles_loading_response_assessed", "achilles_range_load_assessed", "achilles_site_assessed"]`. Which regional strength/function/tolerance tests are necessary remains a literature/clinical decision; the audit does not substitute whole-athlete readiness, elapsed time, session counts or a different input. This audit activates no stage.
 
 ## Deprecation candidates
 

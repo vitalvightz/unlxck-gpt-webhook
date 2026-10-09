@@ -8,7 +8,7 @@ from uuid import UUID, NAMESPACE_URL, uuid4, uuid5
 from fastapi import HTTPException
 from pydantic import BaseModel, ConfigDict, Field
 from api.contracts.training_day import resolve_training_day_str
-from api.contracts.clinician_clearance import canonical_clearance_scopes
+from api.contracts.clinician_clearance import canonical_clearance_scopes, RehabilitationPermission
 from api.contracts.rehab_assessment import (
     ASSESSMENT_EVENT, AchillesProgressionAssessment, AssessmentContext, AssessmentHistory,
     assessment_payload, exact_episode_events, instant,
@@ -19,7 +19,7 @@ def exposure_training_day(event: dict, athlete_timezone: str | None = None) -> s
     recorded = (event.get("provenance") or {}).get("training_day")
     if recorded:
         return str(recorded)
-    occurred = datetime.fromisoformat(str(event.get("occurred_at") or "").replace("Z", "+00:00"))
+    occurred = datetime.fromisoformat(str(event.get("occurred_at") or event.get("created_at") or "").replace("Z", "+00:00"))
     # Logged rehab is stamped at midnight UTC on its training day (see
     # rehab_completion._training_day_instant). That stamp names the day; it is
     # not a moment to localise, or the day rollover pushes it a day early and
@@ -36,6 +36,7 @@ class InjuryEpisodeObservation(BaseModel):
     event_type: Literal["clinician_clearance_report", "delayed_rehab_response", "rehab_progression_assessment"]
     assessment: AchillesProgressionAssessment | None = None
     scopes: list[Literal["rehab", "training", "contact"]] = Field(default_factory=list)
+    rehabilitation_permission: RehabilitationPermission | None = None
     exposure_id: UUID | None = None
     response: Literal["better", "same", "worse", "not_sure"] | None = None
     report_id: UUID = Field(default_factory=uuid4)
@@ -50,7 +51,7 @@ def record_episode_observation(store, *, athlete_id: str, observation: InjuryEpi
         raise HTTPException(409, "This injury episode changed. Refresh Today.")
     if observation.event_type == ASSESSMENT_EVENT:
         assessment = observation.assessment
-        if not assessment or observation.scopes or observation.exposure_id or observation.response:
+        if not assessment or observation.scopes or observation.rehabilitation_permission or observation.exposure_id or observation.response:
             raise HTTPException(422, "An assessment is required without completion or clearance fields.")
         try:
             payload = assessment_payload(assessment, injury, as_of=datetime.now(timezone.utc))
@@ -64,9 +65,11 @@ def record_episode_observation(store, *, athlete_id: str, observation: InjuryEpi
         if canonical_clearance_scopes(observation.scopes) is None or observation.exposure_id or observation.response:
             raise HTTPException(422, "Select what your clinician cleared you for.")
         payload = {"scopes": sorted(set(observation.scopes)), "source": "athlete_reported", "externally_verified": False}
+        if observation.rehabilitation_permission is not None:
+            payload["rehabilitation_permission"] = observation.rehabilitation_permission.model_dump(mode="json")
         key = f"clearance:{athlete_id}:{observation.injury_id}:{observation.injury_episode_id}:{observation.report_id}"
     else:
-        if not observation.exposure_id or not observation.response or observation.scopes:
+        if not observation.exposure_id or not observation.response or observation.scopes or observation.rehabilitation_permission:
             raise HTTPException(422, "An exposure and next-day response are required.")
         rows = store.list_rehab_exposures_by_ids(athlete_id, [str(observation.exposure_id)])
         event = (rows[0].get("event_json") or {}) if rows else {}
@@ -129,18 +132,38 @@ def apply_episode_observations(injury: dict, observations: list[dict], *, as_of:
         row["clinician_clearance"] = {"episode_id": row["episode_id"], "scopes": scopes,
                                       "source": "athlete_reported", "externally_verified": False,
                                       "scope_reported_at": {scope: latest["created_at"] for scope in scopes}}
+        if "rehabilitation_permission" in latest.get("payload", {}):
+            row["clinician_clearance"]["rehabilitation_permission"] = latest["payload"]["rehabilitation_permission"]
     return row
 
 
-def exposure_rows_with_observations(rows, observations):
+def exposure_rows_with_observations(rows, observations, athlete_timezone=None):
     """Derived delayed answers; the original exposure is never rewritten."""
     delayed = {e["payload"]["exposure_id"]: e for e in observations
                if e.get("event_type") == "delayed_rehab_response"}
     result = []
     for row in rows:
         derived = dict(row)
+        event = row.get("event_json") or {}
+        # A same-day explicit injury response after logged work can describe that
+        # work. Earlier check-ins never become evidence of future tolerance.
+        if (event.get("response", {}).get("during_response") == "not_reported"
+                and (event.get("provenance") or {}).get("response_tracking") == "injury_checkin"):
+            reports = [e for e in observations if e.get("event_type") == "injury_checkin"
+                and e.get("payload", {}).get("explicit_report") is True
+                and e.get("payload", {}).get("latest_reported_status") in {"improving", "ongoing", "worse"}
+                and e.get("injury_id") == event.get("injury_id")
+                and e.get("injury_episode_id") == event.get("injury_episode_id")
+                and instant(e.get("created_at")) and instant(row.get("created_at"))
+                and instant(e["created_at"]) >= instant(row["created_at"])
+                and exposure_training_day(e, athlete_timezone) == exposure_training_day(event, athlete_timezone)]
+            if reports:
+                report = max(reports, key=lambda e: (e["payload"]["latest_reported_status"] == "worse", instant(e["created_at"]), str(e.get("id"))))
+                answer = {"improving": "better", "ongoing": "same", "worse": "worse"}[report["payload"]["latest_reported_status"]]
+                event = {**event, "response": {**event.get("response", {}), "during_response": answer}}
+                derived["event_json"] = event
         if row.get("id") in delayed:
-            event = dict(row.get("event_json") or {})
+            event = dict(derived.get("event_json") or event)
             observation = delayed[row["id"]]
             event["response"] = {**event.get("response", {}), "next_day_response": observation["payload"]["response"]}
             derived["response_recorded_at"] = observation["created_at"]

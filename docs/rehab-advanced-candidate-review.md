@@ -2,7 +2,9 @@
 
 Reviewed 2026-10-05 against Main `7f47255e6b4f3a975cec128f0af93424846e9256` after #2741.
 
-**57 audit candidates before / 57 after; 54 remain in advanced planning, including 18 ready for clinical LOAD gate review. 23 profiles have exact-type inventory.** No production content, identity, review provenance, profile hash or stage is changed. All 64 profiles and 103 LIVE identities remain CALM/RESTORE only.
+**57 audit candidates before / 57 after; 54 remain in advanced planning, including 18 ready for clinical LOAD gate review. 23 profiles have exact-type inventory.** This dated review changed no production content, identity, review provenance, profile hash or stage. At its baseline, all 64 profiles and 103 LIVE identities were CALM/RESTORE only.
+
+This document preserves the #2742 planning snapshot. The subsequent single Achilles LOAD activation is described in [the criterion documentation](achilles-restore-load-criterion.md); the current inventory is in [the bank audit](rehab-bank-rationalisation.md). Historical projection is restricted to the exact approved activation delta and is not used by production.
 
 This is a clinically informed engineering shortlist, not independent clinical sign-off. A means mechanically suitable for the next clinical gate review, not safe to prescribe now. Ranking is a judgment about evidence applicability, current content, safety ambiguity and the size of the missing input work; it is not a candidate-count score.
 

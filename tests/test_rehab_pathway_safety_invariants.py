@@ -41,7 +41,7 @@ def test_shipped_policies_match_the_pre_migration_file_exactly():
         assert after.live_stages == before.live_stages
 
 
-# 3. No shipped profile can reach LOAD, DYNAMIC or RETURN, even with ideal evidence.
+# 3. Exposure alone cannot activate LOAD; DYNAMIC and RETURN stay closed.
 @pytest.mark.parametrize("policy_id", [p.policy_id for p in load_clinical_policies()])
 def test_shipped_profiles_cannot_enter_a_higher_stage(policy_id):
     shipped = next(p for p in load_clinical_policies() if p.policy_id == policy_id)
@@ -49,8 +49,10 @@ def test_shipped_profiles_cannot_enter_a_higher_stage(policy_id):
                  or policy_id in {f"{r}_contusion" for r in ["heel", "shin", "quads", "biceps", "triceps", "forearm"]}
                      or policy_id in {'lower_back_stiffness', 'shoulder_pain', 'shoulder_tightness', 'neck_tightness', 'elbow_pain', 'wrist_pain', 'neck_soreness', 'hip_pain', 'shoulder_soreness', 'elbow_stiffness', 'knee_pain', 'hand_pain', 'fingers_pain'})
     expected_stage = "calm" if calm_only else "restore"
-    assert shipped.live_stages == (["calm"] if expected_stage == "calm" else ["calm", "restore"])
-    assert not any(t.promotable for t in shipped.transitions)
+    assert shipped.live_stages == (["calm","restore","load"] if policy_id == "achilles_tendonitis" else
+        ["calm"] if expected_stage == "calm" else ["calm","restore"])
+    assert not any(t.promotable for t in (shipped.transitions[1:] if policy_id == "achilles_tendonitis" else shipped.transitions))
+    assert bool(shipped.transitions[0].promotable) == (policy_id == "achilles_tendonitis")
     region, kind = shipped.region, shipped.injury_type
     row = injury(body_region=region, canonical_location=region, injury_type=kind, description=f"{region} {kind}")
     if expected_stage == "calm":
@@ -65,6 +67,8 @@ def test_shipped_profiles_cannot_enter_a_higher_stage(policy_id):
     assert decision["stage"] == expected_stage
     if expected_stage == "calm":
         assert "next_transition" not in decision["progression"]
+    elif policy_id == "achilles_tendonitis":
+        assert decision["progression"]["next_transition"]["reason_codes"] == ["rehabilitation_loading_not_reported"]
     else:
         assert decision["progression"]["next_transition"]["reason_codes"] == ["no_clinical_criteria_declared"]
 

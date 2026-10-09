@@ -122,7 +122,7 @@ function buttonNamed(container: HTMLElement, label: string): HTMLButtonElement {
 }
 
 function statusButton(container: HTMLElement, label: string): HTMLButtonElement {
-  const match = Array.from(container.querySelectorAll(".today-segment-row button")).find(
+  const match = Array.from(container.querySelectorAll(label === "Mark resolved" ? ".today-tool-link" : ".today-segment-row button")).find(
     (button) => button.textContent?.trim() === label,
   );
   assert.ok(match, `expected a "${label}" status button`);
@@ -487,7 +487,7 @@ test("a non-surface injury marked worse saves directly, with no skin questions",
   }
 });
 
-test("the check-in offers only change actions — no 'Same' to confirm", async () => {
+test("daily response uses Better, Same and Worse", async () => {
   // "Same" is the implicit default: an untouched injury stays ongoing in the
   // backend, so the row only ever asks about a CHANGE. A bright 'Same' button
   // read as a required daily confirmation — the confusion this removes.
@@ -502,8 +502,8 @@ test("the check-in offers only change actions — no 'Same' to confirm", async (
   const labels = Array.from(
     container.querySelectorAll<HTMLButtonElement>(".today-injury-status-row button"),
   ).map((button) => button.textContent?.trim());
-  assert.deepEqual(labels, ["Easing", "Worse", "Resolved"]);
-  assert.doesNotMatch(container.textContent ?? "", /\bSame\b/);
+  assert.deepEqual(labels, ["Better", "Same", "Worse"]);
+  assert.match(container.textContent ?? "", /Same/);
 
   cleanup();
 });
@@ -519,17 +519,17 @@ test("resolving an injury is not marked selected until the confirmed write succe
       );
     });
 
-    await click(statusButton(container, "Resolved"));
+    await click(statusButton(container, "Mark resolved"));
     // The confirmation is open, but nothing has been sent or marked saved.
     assert.equal(failing.calls.length, 0);
-    assertNotSelected(statusButton(container, "Resolved"));
-    assert.ok(statusButton(container, "Resolved").classList.contains("today-segment-pending"));
+    assertNotSelected(statusButton(container, "Mark resolved"));
+    assert.ok(statusButton(container, "Mark resolved").classList.contains("today-segment-pending"));
 
     await click(buttonNamed(container, "Yes, resolve"));
 
     // The write failed: no selected state, and the confirmation stays open.
     assert.equal(failing.calls.length, 1);
-    assertNotSelected(statusButton(container, "Resolved"));
+    assertNotSelected(statusButton(container, "Mark resolved"));
     assert.match(container.textContent ?? "", /Resolve this injury\?/);
   } finally {
     failing.restore();
@@ -541,7 +541,7 @@ test("resolving an injury is not marked selected until the confirmed write succe
 
     assert.equal(succeeding.calls.length, 1);
     assert.deepEqual(succeeding.calls[0].injuries, [{ flag_id: BLISTER.id, status: "resolved" }]);
-    assertSelected(statusButton(container, "Resolved"));
+    assertSelected(statusButton(container, "Mark resolved"));
     assert.doesNotMatch(container.textContent ?? "", /Resolve this injury\?/);
 
     cleanup();
@@ -561,12 +561,12 @@ test("a restricted wound reported easing rechecks the skin before the restrictio
       );
     });
 
-    await click(statusButton(container, "Easing"));
+    await click(statusButton(container, "Better"));
 
     // Nothing is written on the tap alone: an open wound cannot stop blocking
     // contact without the athlete saying the skin has closed.
     assert.equal(calls.length, 0);
-    assertNotSelected(statusButton(container, "Easing"));
+    assertNotSelected(statusButton(container, "Better"));
     assert.match(container.textContent ?? "", /Is the skin closed now\?/);
     // Friction is asked on the way back down too: it is what holds a closed
     // wound at a local restriction, so a recheck that could not answer it would
@@ -594,7 +594,7 @@ test("a restricted wound reported easing rechecks the skin before the restrictio
         ],
       },
     ]);
-    assertSelected(statusButton(container, "Easing"));
+    assertSelected(statusButton(container, "Better"));
 
     cleanup();
   } finally {
@@ -618,7 +618,7 @@ test("the recheck opens on what is stored, so saving it cannot silently clear an
       );
     });
 
-    await click(statusButton(container, "Easing"));
+    await click(statusButton(container, "Better"));
     // Pre-filled from the record: the stored infection sign is still selected.
     assert.equal(buttonNamed(container, "Pus").getAttribute("aria-pressed"), "true");
     assert.equal(buttonNamed(container, "Open or burst").getAttribute("aria-pressed"), "true");
@@ -649,7 +649,7 @@ test("a stable skin injury reported easing saves directly, with no recheck", asy
       );
     });
 
-    await click(statusButton(container, "Easing"));
+    await click(statusButton(container, "Better"));
 
     assert.deepEqual(calls, [{ injuries: [{ flag_id: "flag-blister", status: "improving" }] }]);
     assert.doesNotMatch(container.textContent ?? "", /Is the skin closed now\?/);
@@ -688,7 +688,7 @@ test("an untouched recheck preserves a stored drainage the bleeding answer does 
       );
     });
 
-    await click(statusButton(container, "Easing"));
+    await click(statusButton(container, "Better"));
     await click(buttonNamed(container, "Save update"));
 
     const sent = (calls[0]?.injuries as Array<Record<string, unknown>>)[0];
@@ -719,7 +719,7 @@ test("changing the bleeding answer does replace the stored drainage", async () =
       );
     });
 
-    await click(statusButton(container, "Easing"));
+    await click(statusButton(container, "Better"));
     await click(buttonNamed(container, "No"));
     await click(buttonNamed(container, "Save update"));
 
@@ -765,7 +765,7 @@ test("a write in flight locks every row, so another injury's follow-up cannot be
     });
 
     // Start a write on the shoulder and leave it hanging.
-    await click(statusButton(container, "Easing"));
+    await click(statusButton(container, "Better"));
     assert.equal(calls.length, 1);
 
     // Every status button is now disabled, including the other injury's.
@@ -808,9 +808,9 @@ test("a pending answer is announced, not just outlined", async () => {
       );
     });
 
-    await click(statusButton(container, "Resolved"));
+    await click(statusButton(container, "Mark resolved"));
 
-    const cleared = statusButton(container, "Resolved");
+    const cleared = statusButton(container, "Mark resolved");
     assertNotSelected(cleared);
     const describedBy = cleared.getAttribute("aria-describedby");
     assert.ok(describedBy, "expected the pending button to describe its state");
@@ -914,8 +914,8 @@ test("active injuries stay first with name, type, severity, actions, and the add
     assert.match(list.textContent ?? "", /Left shoulder/);
     assert.match(list.textContent ?? "", /Bruise/);
     assert.match(list.textContent ?? "", /moderate/);
-    assert.ok(button(container, "Easing"));
-    assert.ok(button(container, "Resolved"));
+    assert.ok(button(container, "Better"));
+    assert.ok(button(container, "Mark resolved"));
   } finally {
     unmountMain(container, root);
   }
@@ -1251,14 +1251,14 @@ test("existing injury status actions still submit through the current refresh fl
     refreshes += 1;
   });
   try {
-    await click(button(container, "Easing"));
+    await click(button(container, "Better"));
     await settle();
 
     assert.deepEqual(payload, { injuries: [{ flag_id: "injury-1", status: "improving" }] });
     assert.equal(refreshes, 1);
-    assert.equal(button(container, "Easing").getAttribute("aria-pressed"), "true");
+    assert.equal(button(container, "Better").getAttribute("aria-pressed"), "true");
 
-    await click(button(container, "Resolved"));
+    await click(button(container, "Mark resolved"));
     assert.match(container.textContent ?? "", /Resolve this injury/);
     await click(button(container, "Cancel"));
     assert.doesNotMatch(container.textContent ?? "", /Resolve this injury/);
@@ -1485,4 +1485,44 @@ test("switching away from Other drops its specific type", async () => {
     restore();
     unmountMain(container, root);
   }
+});
+
+
+test("Achilles Today omits the worksheet and Same reuses injury tracking plus an episode-bound next-day response", async () => {
+  const { container, root, cleanup } = mount();
+  const original = globalThis.fetch;
+  const calls: Array<{ url: string; body: Record<string, unknown> }> = [];
+  const achilles = { ...SHOULDER, id: "achilles", episode_id: "episode", body_area: "Left Achilles", description: "Left Achilles tendonitis" };
+  globalThis.fetch = (async (input, init) => {
+    calls.push({ url: String(input), body: JSON.parse(String(init?.body)) });
+    return new Response(JSON.stringify({ open_injuries: [achilles] }), { status: 200 });
+  }) as typeof fetch;
+  try {
+    await act(async () => root.render(<TodayInjuryManager openInjuries={[achilles]} token="token" onRefresh={async () => {}}
+      delayedPrompts={[{ injury_id: "achilles", injury_episode_id: "episode", exposure_id: "exposure", region: "achilles", question: "After rehab?", options: ["better", "same", "worse", "not_sure"] }]} />));
+    assert.doesNotMatch(container.textContent ?? "", /Heel-rise|assessor|Achilles assessment|Range of motion|Loading task/);
+    await click(statusButton(container, "Same"));
+    assert.deepEqual(calls[0].body.injuries, [{ flag_id: "achilles", status: "ongoing" }]);
+    assert.equal(calls[1].body.event_type, "delayed_rehab_response");
+    assert.equal(calls[1].body.response, "same");
+  } finally { globalThis.fetch = original; cleanup(); }
+});
+
+test("a failed delayed response cannot block the current worsening report", async () => {
+  const { container, root, cleanup } = mount();
+  const original = globalThis.fetch;
+  const calls: Array<Record<string, unknown>> = [];
+  const injury = { ...SHOULDER, episode_id: "episode" };
+  globalThis.fetch = (async (_input, init) => {
+    calls.push(JSON.parse(String(init?.body)));
+    return new Response(JSON.stringify(calls.length === 1 ? { open_injuries: [injury] } : { detail: "Unavailable" }), { status: calls.length === 1 ? 200 : 500 });
+  }) as typeof fetch;
+  try {
+    await act(async () => root.render(<TodayInjuryManager openInjuries={[injury]} token="token" onRefresh={async () => {}}
+      delayedPrompts={[{ injury_id: injury.id, injury_episode_id: "episode", exposure_id: "exposure", region: "shoulder", question: "After rehab?", options: ["better", "same", "worse", "not_sure"] }]} />));
+    await click(statusButton(container, "Worse"));
+    assert.deepEqual(calls[0].injuries, [{ flag_id: injury.id, status: "worse" }]);
+    assert.equal(calls[1].response, "worse");
+    assert.equal(statusButton(container, "Worse").getAttribute("aria-pressed"), "true");
+  } finally { globalThis.fetch = original; cleanup(); }
 });

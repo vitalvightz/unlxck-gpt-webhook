@@ -1134,3 +1134,43 @@ class TestRetroLoggedSessions:
 
         event = next(iter(store.rehab_exposures.values()))["event_json"]
         assert event["occurred_at"].startswith(yesterday)
+
+
+@pytest.mark.parametrize("status,performance,count", [("done", None, 1), ("modified", "changed", 1), ("done", "skipped", 0), ("skipped", None, 0)])
+def test_simple_tracking_records_work_without_duplicate_questions(rehab_day, status, performance, count):
+    client, store, day, injury = rehab_day
+    result = _complete(client, status=status, rehab_tracking="injury_checkin", rehab_performance=performance,
+                       modification_reason="Rehab modified or skipped" if status != "done" else "")
+    assert result.status_code == 201, result.text
+    assert result.json()["rehab_response_prompts"] == []
+    assert len(store.rehab_exposures) == count
+    if count:
+        event = next(iter(store.rehab_exposures.values()))["event_json"]
+        assert event["injury_episode_id"] == injury["episode_id"]
+        assert event["provenance"]["response_tracking"] == "injury_checkin"
+        assert event["response"]["during_response"] == "not_reported"
+        assert event["dose_completed"]["reps"] is None
+        # Retrying completion reuses the immutable response context/exposure.
+        retry = _complete(client, status=status, rehab_tracking="injury_checkin", rehab_performance=performance,
+                          modification_reason="Rehab modified" if status != "done" else "")
+        assert retry.status_code == 201
+        assert len(store.rehab_exposures) == 1
+
+
+def test_daily_checkin_projects_only_observed_responses_after_completed_work():
+    from copy import deepcopy
+    from api.services.injury_episode_service import exposure_rows_with_observations
+    event = dict(injury_id="injury", injury_episode_id="episode", occurred_at="2026-10-09T00:00:00Z",
+                 provenance=dict(source="athlete_logged_rehab", response_tracking="injury_checkin"),
+                 response=dict(during_response="not_reported"))
+    row = dict(id="exposure", created_at="2026-10-09T12:00:00Z", event_json=event)
+    def report(status, hour, episode="episode", explicit=True):
+        return dict(id=str(hour), injury_id="injury", injury_episode_id=episode, event_type="injury_checkin",
+                    created_at=f"2026-10-09T{hour:02}:00:00Z", payload=dict(explicit_report=explicit, latest_reported_status=status))
+    saved = deepcopy(row)
+    assert exposure_rows_with_observations([row], [report("improving",11)])[0]["event_json"]["response"]["during_response"] == "not_reported"
+    assert exposure_rows_with_observations([row], [report("ongoing",13)])[0]["event_json"]["response"]["during_response"] == "same"
+    assert exposure_rows_with_observations([row], [report("improving",13,"new-episode")])[0]["event_json"]["response"]["during_response"] == "not_reported"
+    assert exposure_rows_with_observations([row], [report("improving",13,explicit=False)])[0]["event_json"]["response"]["during_response"] == "not_reported"
+    assert exposure_rows_with_observations([row], [report("worse",13), report("improving",14)])[0]["event_json"]["response"]["during_response"] == "worse"
+    assert row == saved

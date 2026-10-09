@@ -229,6 +229,8 @@ def test_original_audit_hashes_ids_and_review_history_preserved():
 
 def test_previous_31_profiles_hashes_decisions_schedules_and_snapshots_unchanged(tmp_path):
     raw = read("data/rehab_pathways.json")
+    from tools.rehab_metadata_review_lib import before_achilles_load_activation
+    raw = before_achilles_load_activation(raw)
     previous = read("tests/fixtures/rehab_profiles_before_hyperextension.json")
     assert len(previous) == 31
     previous_ids = {p["policy_id"] for p in previous}
@@ -237,6 +239,8 @@ def test_previous_31_profiles_hashes_decisions_schedules_and_snapshots_unchanged
     baseline = tmp_path / "before.json"
     baseline.write_text(json.dumps(raw), encoding="utf-8")
     for policy in load_clinical_policies(baseline):
+        if policy.policy_id == "achilles_tendonitis":
+            continue  # The exact policy-v2 activation is covered separately.
         for stage in ("calm", "restore"):
             for side in ("left", "unknown"):
                 row = injury(policy.region, policy.injury_type, stage, side=side)

@@ -74,6 +74,12 @@ def postgres_database():
             assessment_migration = (ROOT / "supabase/migrations/20261005215205_add_achilles_progression_observations.sql").read_text(encoding="utf-8")
             setup.execute(assessment_migration)
             setup.execute(assessment_migration)  # Repeatable unmerged migration.
+            # Exercise the upgrade from the deployed constraint, not only fresh schema.
+            setup.execute("alter table session_completions drop constraint session_completions_rehab_performance_check")
+            setup.execute("alter table session_completions add constraint session_completions_rehab_performance_check check (rehab_performance in ('done_as_shown', 'changed', 'stopped'))")
+            completion_migration = (ROOT / "supabase/migrations/20261009151500_allow_skipped_rehab_performance.sql").read_text(encoding="utf-8")
+            setup.execute(completion_migration)
+            setup.execute(completion_migration)
             setup.execute("insert into profiles values (%s)", (ATHLETE,))
             setup.execute("""insert into injury_flags(id,athlete_id,description,body_region,side,episode_id)
                 values(%s,%s,'ankle sprain','ankle','left',%s)""", (INJURY, ATHLETE, EPISODE))
@@ -83,6 +89,20 @@ def postgres_database():
             admin.execute(sql.SQL("drop database {} with (force)").format(sql.Identifier(name)))
             for role in reversed(created_roles):
                 admin.execute(sql.SQL("drop role {}").format(sql.Identifier(role)))
+
+
+def test_skipped_rehab_constraint_upgrade(postgres_database):
+    import psycopg
+    with psycopg.connect(postgres_database) as connection:
+        plan = str(uuid4())
+        connection.execute("insert into plans values (%s)", (plan,))
+        values = (ATHLETE, plan, "skipped-rehab-migration")
+        connection.execute("""insert into session_completions
+            (athlete_id,plan_id,session_id,training_day,status,rehab_performance)
+            values(%s,%s,%s,current_date,'done','skipped')""", values)
+        assert connection.execute("select rehab_performance from session_completions where session_id=%s", (values[2],)).fetchone()[0] == "skipped"
+        with pytest.raises(psycopg.errors.CheckViolation), connection.transaction():
+            connection.execute("update session_completions set rehab_performance='unrecognised' where session_id=%s", (values[2],))
 
 
 def test_assessment_rpc_generic_envelope_retry_concern_and_service_boundary(postgres_database):

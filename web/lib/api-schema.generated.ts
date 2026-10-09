@@ -670,6 +670,7 @@ export type ExposureDoseRequest = {
 
 export type ExposureProvenance = {
   source: "athlete_logged_rehab" | "clinician_logged_rehab" | "coach_logged_rehab";
+  response_tracking: "injury_checkin" | null;
   recorded_at: string;
   prescription_revision: string | null;
   bank_hash: string | null;
@@ -681,6 +682,7 @@ export type ExposureProvenance = {
 
 export type ExposureProvenanceRequest = {
   source: "athlete_logged_rehab" | "clinician_logged_rehab" | "coach_logged_rehab";
+  response_tracking?: "injury_checkin" | null;
   recorded_at: string;
   prescription_revision?: string | null;
   bank_hash?: string | null;
@@ -807,6 +809,7 @@ export type InjuryEpisodeObservation = {
   event_type: "clinician_clearance_report" | "delayed_rehab_response" | "rehab_progression_assessment";
   assessment?: AchillesProgressionAssessment | null;
   scopes?: ("contact" | "rehab" | "training")[];
+  rehabilitation_permission?: RehabilitationPermission | null;
   exposure_id?: string | null;
   response?: "better" | "not_sure" | "same" | "worse" | null;
   report_id?: string;
@@ -1615,6 +1618,11 @@ export type RehabScheduleRecord = {
   next_due_day: string | null;
 };
 
+export type RehabilitationPermission = {
+  schema_version?: 1;
+  level: "gentle_recovery" | "loading" | "not_cleared" | "sport_specific";
+};
+
 export type ReviewDecision = "approved" | "deferred" | "not_approved";
 
 export type ReviewSelectionRequest = {
@@ -1723,7 +1731,7 @@ export type SessionCompletionHistoryResponse = {
   created_at: string;
   updated_at: string;
   prescription_snapshot: Record<string, unknown> | null;
-  rehab_performance: "changed" | "done_as_shown" | "stopped" | null;
+  rehab_performance: "changed" | "done_as_shown" | "skipped" | "stopped" | null;
   session_title: string | null;
 };
 
@@ -1743,7 +1751,7 @@ export type SessionCompletionRecordResponse = {
   created_at: string;
   updated_at: string;
   prescription_snapshot: Record<string, unknown> | null;
-  rehab_performance: "changed" | "done_as_shown" | "stopped" | null;
+  rehab_performance: "changed" | "done_as_shown" | "skipped" | "stopped" | null;
 };
 
 export type SessionCompletionRequest = {
@@ -1751,7 +1759,8 @@ export type SessionCompletionRequest = {
   session_id: string;
   status: "done" | "modified" | "not_started" | "skipped" | "started";
   prescription_revision?: string | null;
-  rehab_performance?: "changed" | "done_as_shown" | "stopped" | null;
+  rehab_tracking?: "injury_checkin" | null;
+  rehab_performance?: "changed" | "done_as_shown" | "skipped" | "stopped" | null;
   training_day?: string | null;
   session_rpe?: number | null;
   pain_after?: number | null;

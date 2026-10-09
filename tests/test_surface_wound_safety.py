@@ -44,6 +44,8 @@ def test_review_covers_all_104_and_bank_has_not_changed():
     # policy review hashes, bank identities and metadata review-state bytes.
     baseline = json.loads((ROOT / 'tests/fixtures/rehab_bank_rationalisation_baseline.json').read_text())
     raw = json.loads((ROOT / 'data/rehab_pathways.json').read_text())
+    from tools.rehab_metadata_review_lib import before_achilles_load_activation
+    raw = before_achilles_load_activation(raw)
     assert {p['policy_id']: p['content_hash'] for p in raw['profiles']} == baseline['profile_hashes']
 
 

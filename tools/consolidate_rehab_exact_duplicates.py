@@ -18,7 +18,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from tools.audit_rehab_bank_rationalisation import build_audit, input_digest  # noqa: E402
-from tools.rehab_metadata_review_lib import source_hash, pathway_inventory_snapshot  # noqa: E402
+from tools.rehab_metadata_review_lib import source_hash, pathway_inventory_snapshot, before_achilles_load_activation  # noqa: E402
 from tools.validate_rehab_metadata_review import validate as validate_reviews  # noqa: E402
 
 ARCHIVE_PATH = Path('rehab_archive/exact_duplicates.json')
@@ -156,7 +156,7 @@ def validate_archive(bank, ledger, pathways, archive):
             errors.append('Archived source hash mismatch: ' + identifier)
     old_bank, old_ledger = reconstruct_original(bank, ledger, archive)
     for name, value in [('rehab_bank.json', old_bank), ('rehab_metadata_review.json', old_ledger),
-                        ('rehab_pathways.json', pathway_inventory_snapshot(pathways))]:
+                        ('rehab_pathways.json', pathway_inventory_snapshot(before_achilles_load_activation(pathways)))]:
         if digest(value) != archive['source_input_sha256'][name]:
             errors.append('Cannot reconstruct original source: ' + name)
     return errors

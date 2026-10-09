@@ -1,0 +1,88 @@
+{
+  "source_commit": "2c849735006e55552d2cc36da220a52ac30c3328",
+  "purpose": "Reconstruct the dated pre-activation inventory only for historical archive/planning verification. Runtime and current inventory audits use the live catalog.",
+  "activated_profile_sha256": "0297b3c134bd0be38dabd83bd1ed91bc1dbc4cbf1d764fb52e6fa3ab4767d701",
+  "activated_checkpoint": {
+    "checkpoint_id": "achilles_midportion_reported_load_permission_v1",
+    "description": "Self-reported loading permission and confirmed midportion applicability of the reviewed floor option; no medical verification or readiness claim.",
+    "required_input": "Current episode rehabilitation permission and simple injury location.",
+    "basis": "clinical"
+  },
+  "historical_profile": {
+    "policy_id": "achilles_tendonitis",
+    "version": 1,
+    "region": "achilles",
+    "injury_type": "tendonitis",
+    "pathway_family": "tendon_rehab",
+    "evidence_sources": [
+      "https://www.nhs.uk/conditions/tendonitis/",
+      "https://myjointhealthhub.bnssg.nhs.uk/foot-ankle-pain/achilles-tendinopathy/",
+      "https://www.kentcht.nhs.uk/leaflet/achilles-insertional-tendinopathy/"
+    ],
+    "prescriptions": [
+      {
+        "drill_id": "achilles_tendonitis_recovery_support",
+        "bank_hash": "70a9441201b7667d69ce922ce9bf1767629a54475efc6c268107ece7456755f8",
+        "stage": "calm",
+        "instructions": "Reduce activities that aggravate the affected tendon and keep the area comfortably supported. Avoid heavy lifting, strong gripping or twisting that worsens symptoms; do not repeatedly test the painful tendon. Keep ordinary comfortable movement as symptoms allow rather than applying a universal prolonged-rest timetable. Follow any clinician-directed restrictions. Sudden severe pain, a snap or pop with loss of function, suspected rupture, a hot red swollen area, fever or altered sensation needs medical assessment. Reduce provocative running, hopping and forceful push-off; do not stretch into deep dorsiflexion or use heel drops below floor level when insertional status is unknown.",
+        "dose": null,
+        "camp_doses": {},
+        "readiness_doses": {},
+        "allowed_severities": [
+          "low",
+          "moderate"
+        ],
+        "stop_when": [
+          "Stop for pain or worsening symptoms during or after the work.",
+          "Seek assessment for suspected rupture, loss of function, altered sensation, a hot red swollen area or fever."
+        ],
+        "frequency": "scheduled_sessions",
+        "minimum_gap_days": 1,
+        "priority": 0,
+        "sources": [
+          "https://www.nhs.uk/conditions/tendonitis/",
+          "https://myjointhealthhub.bnssg.nhs.uk/foot-ankle-pain/achilles-tendinopathy/",
+          "https://www.kentcht.nhs.uk/leaflet/achilles-insertional-tendinopathy/"
+        ]
+      },
+      {
+        "drill_id": "achilles_tendonitis_reviewed_restore",
+        "bank_hash": "d8eed079ec51160e7a52dacbf26871bc25e7b0f0df70f1ef42be50694aabad4e",
+        "stage": "restore",
+        "instructions": "Sit with the affected foot flat on the floor and the knee bent. Slowly lift the heel within a comfortable pain-free range, then lower it to floor level with the forefoot resting on the floor. Do not add weight, stand on a step, drop below floor level or bounce. This is seated movement, not a strength test or a required isometric-first protocol. Stop if pain or symptoms worsen during or after the movement. This conservative baseline does not establish readiness for resistance or sport.",
+        "dose": null,
+        "camp_doses": {},
+        "readiness_doses": {},
+        "allowed_severities": [
+          "low",
+          "moderate"
+        ],
+        "stop_when": [
+          "Stop for pain or worsening symptoms during or after the work.",
+          "Seek assessment for suspected rupture, loss of function, altered sensation, a hot red swollen area or fever."
+        ],
+        "frequency": "scheduled_sessions",
+        "minimum_gap_days": 1,
+        "priority": 0,
+        "sources": [
+          "https://www.nhs.uk/conditions/tendonitis/",
+          "https://myjointhealthhub.bnssg.nhs.uk/foot-ankle-pain/achilles-tendinopathy/",
+          "https://www.kentcht.nhs.uk/leaflet/achilles-insertional-tendinopathy/"
+        ]
+      }
+    ],
+    "blocked_regions": [
+      "achilles"
+    ],
+    "blocked_tags": [],
+    "contact_limit": "none",
+    "live_stages": [
+      "calm",
+      "restore"
+    ],
+    "transition_overrides": {},
+    "status": "active",
+    "activation": "live",
+    "content_hash": "980f17573faffb778a4c75ae47cd108ad1cac1e20d89ba923e437c6d55923900"
+  }
+}

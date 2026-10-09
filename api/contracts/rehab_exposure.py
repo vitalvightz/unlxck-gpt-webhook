@@ -165,6 +165,7 @@ class ExposureResponse(BaseModel):
 class ExposureProvenance(BaseModel):
     model_config = ConfigDict(extra="forbid")
     source: Literal["athlete_logged_rehab", "clinician_logged_rehab", "coach_logged_rehab"]
+    response_tracking: Literal["injury_checkin"] | None = None
     recorded_at: datetime
     prescription_revision: str | None = Field(default=None, pattern=r"^[a-f0-9]{64}$")
     bank_hash: str | None = Field(default=None, pattern=r"^[a-f0-9]{64}$")

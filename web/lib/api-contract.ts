@@ -185,6 +185,7 @@ export type DeclaredExerciseLogEffort = Expect<Declared<Web.ExerciseLogEffort, A
 export type DeclaredExerciseLogMeasure = Expect<Declared<Web.ExerciseLogMeasure, Api.ExerciseLogMeasure>>;
 export type DeclaredExerciseLogRecord = Expect<Declared<Web.ExerciseLogRecord, Api.ExerciseLogRecord>>;
 export type DeclaredExerciseHistoryResponse = Expect<Declared<Web.ExerciseHistoryResponse, Api.ExerciseHistoryResponse>>;
+export type ReadExerciseHistoryResponse = Reads<Api.ExerciseHistoryResponse, Web.ExerciseHistoryResponse>;
 export type DeclaredExerciseLogResponse = Expect<Declared<Web.ExerciseLogResponse, Api.ExerciseLogResponse>>;
 export type DeclaredExerciseLogListResponse = Expect<
   Declared<Web.ExerciseLogListResponse, Api.ExerciseLogListResponse>

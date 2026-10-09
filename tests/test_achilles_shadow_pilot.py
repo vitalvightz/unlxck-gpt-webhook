@@ -25,7 +25,7 @@ from api.services.clinical_review_capture_service import (
     build_review_context, hydrate_review_input, prepare_review_packet, record_clinical_review, record_review_lifecycle,
 )
 from api.services.injury_episode_service import apply_episode_observations
-from fightcamp.rehab_clinical import content_hash, load_clinical_policies
+from fightcamp.rehab_clinical import content_hash, load_clinical_policies, compose_policy, load_pathway_catalog
 from fightcamp.rehab_protocols import get_rehab_bank
 from fightcamp.rehab_pathways import TransitionRequirement
 from tests.clinical_capture_fixtures import capture_bundle
@@ -38,7 +38,13 @@ def shadow_bundle(*, side="left", **changes):
     injury = store.snapshot["injury"]
     injury.update(canonical_location="achilles", body_region="achilles", injury_type="tendonitis",
                   side=side, body_area=f"{side.title()} Achilles", description=f"{side.title()} Achilles tendonitis")
-    policy = next(p for p in load_clinical_policies() if p.policy_id == "achilles_tendonitis")
+    # Preserve the pre-activation shadow contract. The live athlete workflow
+    # now uses self-reported permissions; it does not register trusted reviews
+    # as a gate. These tests continue to exercise the retained private machinery.
+    import json
+    from pathlib import Path
+    historical = json.loads((Path(__file__).parents[1] / "tools/rehab_achilles_activation_inventory_baseline.json").read_text(encoding="utf-8"))["historical_profile"]
+    policy = compose_policy(load_pathway_catalog(), historical)
     bank = get_rehab_bank()
     value = assessment(**dict(side=side, site="midportion", suspected_rupture=False, marked_weakness=False,
                              traumatic_loss_of_function=False, clinician_restriction=False) | changes)
@@ -105,7 +111,7 @@ def shadow_policy(policy):
             TransitionRequirement(requirement_id=CRITERION_ID, kind="functional_checkpoint", basis="clinical",
                 checkpoint=CRITERION_ID, description="Trusted exact Achilles interpretation and bounded work.",
                 sources=list(PILOT_SOURCES))]})
-    return policy.model_copy(update={"transitions":[transition,*policy.transitions[1:]]})
+    return policy.model_copy(update={"transitions":[transition,*policy.transitions[1:]], "live_stages":["calm","restore"]})
 
 
 def test_production_shadow_complete_chain_pass_stays_restore_and_never_schedules_load():
@@ -277,7 +283,10 @@ def test_capture_rejects_unreviewed_selection(mutation):
 
 def test_shadow_capture_cannot_bind_an_undeclared_live_target():
     bundle = shadow_bundle()
-    bundle[3]["policies"] = (bundle[3]["policies"][0].model_copy(update={"live_stages":["calm","restore","load"]}),)
+    current = bundle[3]["policies"][0]
+    undeclared = current.transitions[0].model_copy(update={"requirements":
+        [r for r in current.transitions[0].requirements if r.checkpoint != CRITERION_ID]})
+    bundle[3]["policies"] = (current.model_copy(update={"live_stages":["calm", "restore", "load"], "transitions":[undeclared,*current.transitions[1:]]}),)
     with pytest.raises(HTTPException, match="clinical criterion does not match this transition"):
         write(bundle)
     assert bundle[0].writes == 0
@@ -402,10 +411,10 @@ def test_bank_identity_display_mechanics_and_all_live_inventory_unchanged():
     assert drill["name"] == "Floor-level controlled Achilles lowering"
     assert drill["notes"] == OPTION.instructions and content_hash(drill) == OPTION.bank_hash
     assert len(policies) == 64
-    assert len({rx.drill_id for p in policies for rx in p.prescriptions}) == 103
-    assert all(set(p.live_stages) <= {"calm", "restore"} for p in policies)
-    assert all(not t.promotable for p in policies for t in p.transitions)
-    assert OPTION.drill_id not in {rx.drill_id for p in policies for rx in p.prescriptions}
+    assert len({rx.drill_id for p in policies for rx in p.prescriptions}) == 104
+    assert all(set(p.live_stages) <= {"calm", "restore"} for p in policies if p.policy_id != OPTION.profile_id)
+    assert [(p.policy_id,t.key) for p in policies for t in p.transitions if t.promotable] == [(OPTION.profile_id,"restore->load")]
+    assert OPTION.drill_id in {rx.drill_id for p in policies for rx in p.prescriptions}
     definition = CLINICAL_REVIEW_REGISTRY.current(CRITERION_ID)
     assert definition.profile_ids == frozenset({"achilles_tendonitis"}) and definition.requires_prescription
     assert set(CLINICAL_REVIEW_REGISTRY._definitions) == {(CRITERION_ID,1)}

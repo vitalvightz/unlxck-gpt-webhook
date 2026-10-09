@@ -242,11 +242,15 @@ def test_inconsistent_copied_response_group_is_unknown():
 
 def test_camp_phase_clearance_and_whole_athlete_signals_are_not_inputs():
     params = set(inspect.signature(resolve_reviewed_progression).parameters)
-    assert params == {"injury", "base_stage", "policy", "exposures", "history_truncated", "as_of", "clinical_review_inputs"}
+    assert params == {"injury", "base_stage", "policy", "exposures", "history_truncated", "as_of", "clinical_review_inputs",
+        "target_content_available"}
     cleared = progress([], changes={"clinician_clearance": {"episode_id": EPISODE, "scopes": ["rehab", "training", "contact"]}})
     assert cleared["stage"] == "restore"
     # Baseline never starts above RESTORE, whatever the record claims.
     assert progress([], base="load")["stage"] == "calm"
+    # Eligible target content cannot substitute for missing clinical evidence.
+    assert resolve_reviewed_progression(injury(),base_stage="restore",policy=policy(),exposures=[],
+        target_content_available={"load":True})["stage"] == "restore"
 
 
 def test_end_to_end_policy_resolution_prescribes_reviewed_load_work_and_setbacks_demote():
