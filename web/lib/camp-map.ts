@@ -497,6 +497,16 @@ export type CountdownMilestone = {
   iso: string | null;
 };
 
+export type TimelineMilestone = {
+  label: string;
+  iso: string;
+  /** 0-100 position along the camp track. */
+  pct: number;
+  passed: boolean;
+  /** The upcoming milestone shown as "Next up". */
+  next: boolean;
+};
+
 export type FightCampCountdown = {
   /** "fight" counts down to the event date; "block" to the end of an open plan's
    * renewable block (no fight scheduled). */
@@ -513,6 +523,8 @@ export type FightCampCountdown = {
   /** Athlete-facing name of the phase today sits in, or null. */
   phaseLabel: string | null;
   segments: CountdownSegment[];
+  /** Every milestone on the timeline (fight mode), positioned along the track. */
+  milestones: TimelineMilestone[];
   nextMilestone: CountdownMilestone | null;
   /** Physical sessions done over those scheduled up to and including today.
    * Null without live completions (or nothing scheduled yet). */
@@ -665,6 +677,21 @@ function fightCountdown(
       .filter((candidate) => candidate.daysAway >= 1)
       .sort((a, b) => a.daysAway - b.daysAway || a.order - b.order)
       .map(({ label, daysAway, iso }) => ({ label, daysAway, iso }))[0] ?? null;
+  const milestones: TimelineMilestone[] = span > 0
+    ? candidates
+        .map((candidate) => ({ candidate, ms: isoToMs(candidate.iso) }))
+        .filter((entry): entry is { candidate: { label: string; iso: string }; ms: number } =>
+          entry.ms !== null && entry.ms >= startMs && entry.ms <= endMs,
+        )
+        .sort((a, b) => a.ms - b.ms)
+        .map(({ candidate, ms }) => ({
+          label: candidate.label,
+          iso: candidate.iso,
+          pct: ((ms - startMs) / span) * 100,
+          passed: ms <= todayMs,
+          next: nextMilestone?.iso === candidate.iso && nextMilestone.label === candidate.label,
+        }))
+    : [];
 
   let banked: Completion | null = null;
   if (completions) {
@@ -691,6 +718,7 @@ function fightCountdown(
     weekLabel: camp.weekLabel,
     phaseLabel: currentSegment?.label ?? null,
     segments,
+    milestones,
     nextMilestone,
     banked,
   };
@@ -745,6 +773,7 @@ function blockCountdown(
     weekLabel: `Week ${weekNumber} of ${weekCount}`,
     phaseLabel: currentPhase ? COUNTDOWN_PHASE_LABELS[currentPhase] : null,
     segments,
+    milestones: [],
     nextMilestone,
     banked: null,
   };
