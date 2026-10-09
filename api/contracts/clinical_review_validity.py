@@ -94,6 +94,9 @@ class ReviewValidityContext(ReviewModel):
     safety_history: tuple[ReviewSafetyEvent, ...] = ()
     medical_hold: bool = Field(default=False, strict=True)
     restriction_hold: bool = Field(default=False, strict=True)
+    # Complete server-owned assessment event bytes, using the existing protocol
+    # readers. Never populated from a clinician capture request.
+    assessment_events: tuple[dict, ...] = ()
 
 
 class FrozenClinicalReviewPin(ReviewModel):
@@ -324,6 +327,8 @@ def evaluate_clinical_review(context: ReviewValidityContext, reviews: tuple[Mapp
         status, codes = CriterionStatus.FAIL, ("clinical_decision_not_approved",)
     else:
         clinical = definition.evaluate(review.interpretation)
+        if clinical.status == CriterionStatus.PASS and definition.evaluate_review is not None:
+            clinical = definition.evaluate_review(review, context)
         status, codes = clinical.status, clinical.reason_codes
     return ReviewEvaluation(evaluated_at=as_of, review_id=review.review_id, validity="valid", trusted=trusted,
         clinical_decision=review.decision, criterion_status=status, prescription_valid=prescription_valid,

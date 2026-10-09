@@ -1,6 +1,6 @@
 # Shared clinical progression review capture
 
-Base: latest Main after #2758 (`d5e06c52`, including #2763 and #2764). This implements the persistence/trust step described in [the design](clinical-progression-review-design.md) and [the contract](clinical-progression-review-contract.md). It does not define a real clinical criterion, supply an Achilles option, activate LOAD, or change clinician clearance. The production registry stays empty.
+Base: latest Main after #2758 (`d5e06c52`, including #2763 and #2764). This implements the persistence/trust step described in [the design](clinical-progression-review-design.md) and [the contract](clinical-progression-review-contract.md). It does not define a real clinical criterion, supply an Achilles option, activate LOAD, or change clinician clearance. This describes the #2765 baseline. The later [Achilles shadow pilot](achilles-restore-load-criterion.md) registers the first dormant criterion/option without activating LOAD.
 
 ## Storage and permissions
 
@@ -66,6 +66,12 @@ The prospective Today overlay hydrates/evaluates pins and holds unstarted accept
 
 Tests cover route authorisation, strict requests, target consent, exact context and actors, manual-source receipts, bounded selections, deterministic packets, later evidence/version/policy/bank changes, idempotency, lifecycle and frozen safety. Real disposable PostgreSQL 17.11 tests exercise anon/authenticated/owner/unrelated role boundaries, service writes, immutable/private history, concurrent duplicate insertion, assessment/setback/closure/episode/consent/role races, competing replacement/revoke races and revocation versus acceptance. CI runs them alongside the existing PostgreSQL lock tests. The deployment schema requirements include the new receipt column and restricted functions: apply the migration before deploying the API. Coordinate those steps because the extended SQL freshness source and the API revision source must agree; acceptance through the old API may briefly reject an assessment-aware snapshot until the new API is deployed. The migration is tested locally; this PR does not apply it to a live database.
 
-Preservation remains 64 active profiles, 103 live identities, CALM/RESTORE only, zero promotable higher-stage transitions, unchanged bank/review ledger/archive, clinician clearance, multi-injury precedence, surface/wound rules and completion/exposure semantics. No clinician portal, public admin/athlete UI, upload, provider integration, lateral elbow implementation, real Achilles criterion/option or production activation.
+Preservation remains 64 active profiles, 103 live identities, CALM/RESTORE only, zero promotable higher-stage transitions, unchanged bank/review ledger/archive, clinician clearance, multi-injury precedence, surface/wound rules and completion/exposure semantics. No clinician portal, public admin/athlete UI, upload, provider integration, lateral elbow implementation or production activation. The Achilles criterion/option is now defined by the separate shadow pilot.
 
-Exact next PR: **ACHILLES REVIEWED LOAD OPTION + CLINICAL INTERPRETATION PILOT**. Define exact applicability, reviewed LOAD choices and bounded range/resistance/dose/cadence with a sourced typed interpretation, using this channel in shadow first. Keep `achilles_restore_load_review_v1` non-passing. Production activation remains a separate final PR.
+The **ACHILLES REVIEWED LOAD OPTION + CLINICAL INTERPRETATION PILOT** now uses this channel. It keeps `achilles_restore_load_review_v1` non-passing and production pathway data unchanged. Production activation remains a separate PR.
+
+## Current shadow packet bindings
+
+The prepared packet additionally returns this exact injury context, compiled reviewed options with their hashes, and the registry-controlled interpretation schema. Its revision includes current policy version/hash, criterion/version, interpretation schema, option hashes and current reviewed bank hashes. A material change after preparation requires a new clinical decision before recording; capture cannot silently stamp the changed configuration onto the old statement.
+
+The first real criterion can be captured while its exact target stage is disabled and its transition non-promotable, even though the production pathway does not yet declare the checkpoint. A live target still requires its exact declaration. This uses the existing append-only writer/receipt/lifecycle flow and requires no additional migration.

@@ -616,8 +616,8 @@ def _with_injury_policy(injuries, *, store, athlete_id, phase="", current_checki
             exposures = list(window.rows)
             history_truncated = window.history_truncated
         exposures = exposure_rows_with_observations(exposures, observations)
-        # Only compiled criteria can request hydration. The production registry
-        # remains empty; no athlete payload or generic clearance grants review trust.
+        # Only compiled criteria can request hydration. Athlete payloads and
+        # generic clearance cannot grant review trust or activate LOAD.
         from api.contracts.clinical_progression_review import CLINICAL_REVIEW_REGISTRY
         from api.contracts.rehab_assessment import assessment_identity
         from api.services.clinical_review_capture_service import hydrate_review_input
@@ -635,8 +635,9 @@ def _with_injury_policy(injuries, *, store, athlete_id, phase="", current_checki
                             store.get_clinical_review_capture_context(athlete_id, str(injury["id"]), str(injury["episode_id"])),
                             criterion_id=definition.criterion_id, criterion_version=definition.version,
                             as_of=as_of, registry=CLINICAL_REVIEW_REGISTRY, policies=policies, bank=bank)
-                    except (ValueError, HTTPException):
-                        # Unusable hydration cannot satisfy a clinical requirement.
+                    except Exception:  # noqa: BLE001 - unavailable authority fails closed
+                        # Missing/unavailable private history cannot satisfy a
+                        # clinical requirement or interrupt conservative rehab.
                         continue
         row["rehab_decision"] = resolve_injury_policy(row, policies=policies, bank=bank, phase=phase,
                                                      exposures=exposures, current_checkin=current_checkin, equipment=equipment,
