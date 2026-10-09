@@ -84,12 +84,14 @@ export function InjuryClearance({ injury, token, onRefresh }: {
               {rehabLevel === value ? <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4 4L19 6" /></svg> : null}
             </label>)}
           </fieldset>
-          <div className="field">
-            <label htmlFor={`${clearanceEditorId}-training`}>Training level</label>
-            <select id={`${clearanceEditorId}-training`} value={trainingLevel} disabled={busy || !injury.episode_id || surface} onChange={e => setTrainingLevel(e.target.value)}>
-              <option value="rehab">Rehab only</option><option value="training">Non-contact training</option><option value="contact">Contact training</option>
-            </select>
-          </div>
+          <fieldset className="injury-permission-options" disabled={busy || !injury.episode_id || surface}>
+            <legend>Training level</legend>
+            {([['rehab', 'Rehab only'], ['training', 'Non-contact training'], ['contact', 'Contact training']] as const).map(([value, label]) => <label key={value} data-selected={trainingLevel === value}>
+              <input type="radio" name={`${clearanceEditorId}-training`} value={value} checked={trainingLevel === value} onChange={() => setTrainingLevel(value)} />
+              <span>{label}</span>
+              {trainingLevel === value ? <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4 4L19 6" /></svg> : null}
+            </label>)}
+          </fieldset>
           <p className="injury-sheet-note">Update only when your clinician’s advice changes. Injury restrictions and safety holds still apply.</p>
           <p className="injury-sheet-note">Unlxck does not issue or verify medical clearance.</p>
           {injury.rehab_decision?.prescription?.sources?.length ? <details className="injury-guidance-sources"><summary>Guidance sources</summary>

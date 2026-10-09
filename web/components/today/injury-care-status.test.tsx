@@ -18,11 +18,10 @@ const injury: InjuryFlagRecord = {
 
 async function click(container: HTMLElement, label: string) {
   const surface = document.querySelector<HTMLElement>('[role="dialog"]') ?? container;
-  const training = Array.from(surface.querySelectorAll("select")).find(select => Array.from(select.options).some(option => option.textContent === label));
+  const training = Array.from(surface.querySelectorAll<HTMLInputElement>('input[type="radio"]')).find(input => input.closest("label")?.textContent === label);
   if (training) {
     await act(async () => {
-      training.value = Array.from(training.options).find(option => option.textContent === label)!.value;
-      training.dispatchEvent(new domWindow.Event("change", { bubbles: true }));
+      training.click();
     });
     label = "Save changes";
   }
@@ -57,8 +56,8 @@ for (const [label, scopes] of [
       await click(container, "Report clearance");
       assert.ok(document.querySelector('[role="dialog"] details a[href*="nhs"]'));
       assert.match(document.querySelector('[role="dialog"]')?.textContent ?? "", /Injury restrictions and safety holds still apply./);
-      assert.equal(document.querySelector('[role="dialog"]')?.querySelectorAll("select").length, 1);
-      assert.equal(document.querySelector('[role="dialog"]')?.querySelectorAll('input[type="radio"]').length, 4);
+      assert.equal(document.querySelector('[role="dialog"]')?.querySelectorAll("select").length, 0);
+      assert.equal(document.querySelector('[role="dialog"]')?.querySelectorAll('input[type="radio"]').length, 7);
       await click(container, label);
       assert.match(String(calls[0].report_id), /^[a-f0-9-]{36}$/);
       const { report_id: firstReportId, ...body } = calls[0];
@@ -66,8 +65,8 @@ for (const [label, scopes] of [
       assert.equal(refreshes, 1);
       assert.equal(document.querySelector('[role="dialog"]'), null);
       await click(container, "Report clearance");
-      assert.equal(document.querySelector('[role="dialog"]')?.querySelectorAll("select").length, 1);
-      assert.equal(document.querySelector('[role="dialog"]')?.querySelectorAll('input[type="radio"]').length, 4);
+      assert.equal(document.querySelector('[role="dialog"]')?.querySelectorAll("select").length, 0);
+      assert.equal(document.querySelector('[role="dialog"]')?.querySelectorAll('input[type="radio"]').length, 7);
       await click(container, label);
       assert.notEqual(calls[1].report_id, firstReportId);
       assert.equal(container.querySelector('input[type="file"]'), null);
@@ -350,13 +349,12 @@ test("Clinical Clearance has two simple selectors and sends versioned self-repor
     const dialog = document.querySelector<HTMLElement>('[role="dialog"]')!;
     assert.match(dialog.textContent ?? "", /Clinical Clearance · Self-reported/);
     assert.match(dialog.textContent ?? "", /does not issue or verify medical clearance/);
-    assert.equal(dialog.querySelectorAll('input[type="radio"]').length, 4);
+    assert.equal(dialog.querySelectorAll('input[type="radio"]').length, 7);
     assert.equal(dialog.querySelectorAll("textarea, input[type=text]").length, 0);
     await act(async () => { dialog.querySelector<HTMLInputElement>('input[value="loading"]')!.click(); });
-    const training = dialog.querySelector("select")!;
+    const training = dialog.querySelector<HTMLInputElement>('input[value="training"]')!;
     await act(async () => {
-      training.value = "training";
-      training.dispatchEvent(new domWindow.Event("change", { bubbles: true }));
+      training.click();
     });
     await click(container, "Save changes");
     assert.deepEqual(calls[0].rehabilitation_permission, { schema_version: 1, level: "loading" });
