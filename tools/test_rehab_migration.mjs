@@ -31,6 +31,8 @@ const nullDoseMigration = readFileSync("supabase/migrations/20261009100907_rehab
 await db.exec(profileMigration);
 await db.exec(profileMigration); // CREATE OR REPLACE preserves the existing grants and observations.
 await db.exec(nullDoseMigration);
+const delayedWindowMigration = readFileSync("supabase/migrations/20261009124547_pending_delayed_rehab_recent_window.sql", "utf8");
+await db.exec(delayedWindowMigration);
 const athlete = "00000000-0000-4000-8000-000000000001";
 const other = "00000000-0000-4000-8000-000000000002";
 const plan = "00000000-0000-4000-8000-000000000003";
@@ -67,6 +69,7 @@ await test("pending migration can be reapplied without losing history", async ()
   await db.exec(migration);
   await db.exec(profileMigration);
   await db.exec(nullDoseMigration);
+  await db.exec(delayedWindowMigration);
   assert.equal((await db.query("select count(*)::int n from injury_episode_events")).rows[0].n,before);
 });
 const first = await snapshot("2026-09-30", "training-first");
@@ -209,5 +212,20 @@ for (const [index, [region, kind]] of guidanceProfiles.entries()) {
     await rejects(() => db.query("select record_rehab_exposure($1,$2::jsonb)", [other,JSON.stringify(report)]),"injury not found");
   });
 }
+await test("expired exposures cannot crowd yesterday's next-day question out of the limit", async () => {
+  const flag = (await db.query("select * from injury_flags where id=$1",[injury])).rows[0];
+  const insert = (id, day) => db.query(`insert into rehab_exposures(id,athlete_id,injury_id,injury_episode_id,drill_id,body_region,side,
+      demand,completed_dose,response,event_json,evidence_source,occurred_at,recorded_at)
+    values($1::uuid,$2,$3,$4,'ankle_sprain_heel_lowering','ankle','left','{"load":"low"}','{"completion_state":"performed_amount_unknown"}',
+      '{"next_day_response":"not_yet_known"}',jsonb_build_object('response_group_id',$1::text),'athlete_logged_rehab',$5,$5)`,
+    [id, athlete, injury, flag.episode_id, `${day}T00:00:00Z`]);
+  for (let index = 0; index < 101; index++) {
+    await insert(`10000000-0000-4000-8000-${String(index).padStart(12, "0")}`, "2026-06-01");
+  }
+  const yesterday = "20000000-0000-4000-8000-000000000001";
+  await insert(yesterday, "2026-12-01");
+  const rows = (await db.query("select id from pending_delayed_rehab($1,'2026-12-02')",[athlete])).rows.map(row => row.id);
+  assert.deepEqual(rows, [yesterday]);
+});
 console.log(`${passed} database acceptance checks passed (single PostgreSQL connection; advisory locking inspected separately).`);
 await db.close();

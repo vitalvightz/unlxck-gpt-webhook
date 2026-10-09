@@ -272,6 +272,29 @@ class TestPendingPromptRehydration:
         assert pending["training_day"] == training_day
         assert pending["rehab_response_prompts"] == completion["rehab_response_prompts"]
 
+    @pytest.mark.parametrize("days_ago,offered", [(1, True), (2, False)])
+    def test_pending_prompts_are_offered_on_the_day_and_the_day_after(
+        self, rehab_day, days_ago, offered
+    ):
+        from datetime import date, timedelta
+
+        client, store, training_day, _injury = rehab_day
+        _complete(client)
+        earlier = (date.fromisoformat(training_day) - timedelta(days=days_ago)).isoformat()
+        # Move the stored session back in time, context and all, as if it had
+        # been logged that day and never answered.
+        for row in store.session_completions["athlete-1"]:
+            if row.get("session_id") == SESSION_ID:
+                row["training_day"] = earlier
+                row["rehab_response_contexts"] = [
+                    {**context, "training_day": earlier}
+                    for context in row.get("rehab_response_contexts") or []
+                ]
+
+        response_sets = _pending(client).json()["response_sets"]
+
+        assert bool(response_sets) == offered
+
     def test_bounded_plan_history_reports_truncation_without_mutating_contexts(
         self, rehab_day
     ):

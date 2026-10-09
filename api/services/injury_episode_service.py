@@ -1,7 +1,7 @@
 """Episode-scoped athlete observations; no diagnosis or fabricated clearance."""
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import date, datetime, time, timedelta, timezone
 from typing import Literal
 from uuid import UUID, NAMESPACE_URL, uuid4, uuid5
 
@@ -20,6 +20,12 @@ def exposure_training_day(event: dict, athlete_timezone: str | None = None) -> s
     if recorded:
         return str(recorded)
     occurred = datetime.fromisoformat(str(event.get("occurred_at") or "").replace("Z", "+00:00"))
+    # Logged rehab is stamped at midnight UTC on its training day (see
+    # rehab_completion._training_day_instant). That stamp names the day; it is
+    # not a moment to localise, or the day rollover pushes it a day early and
+    # the next-day question opens on the same day the rehab was done.
+    if occurred.utcoffset() == timedelta(0) and occurred.time() == time(0):
+        return occurred.date().isoformat()
     return resolve_training_day_str(occurred, athlete_timezone=athlete_timezone)
 
 
@@ -147,7 +153,10 @@ def delayed_rehab_prompts(store, athlete_id: str, training_day: str, athlete_tim
     reader = getattr(store, "list_pending_delayed_rehab", None)
     if not callable(reader):
         return []
+    # Asked on the day after only: a "day after" answer recalled days later is
+    # a guess, and an unanswered prompt should not linger on Today.
+    previous_day = (date.fromisoformat(training_day) - timedelta(days=1)).isoformat()
     return [{"exposure_id": row["id"], "injury_id": row["injury_id"], "injury_episode_id": row["injury_episode_id"],
              "region": row["body_region"], "question": "How did this injury feel the day after rehab?",
              "options": ["better", "same", "worse", "not_sure"]} for row in reader(athlete_id, training_day)
-            if exposure_training_day(row.get("event_json") or row, athlete_timezone) < training_day]
+            if exposure_training_day(row.get("event_json") or row, athlete_timezone) == previous_day]

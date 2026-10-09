@@ -743,7 +743,8 @@ test("guidance wording survives Today moving on to the next session", async () =
     await act(async () => { await new Promise((resolve) => setTimeout(resolve, 0)); });
     const text = container.textContent ?? "";
     assert.match(text, /Reviewed test rehab/);
-    assert.match(text, /How did it feel today\?/);
+    // The prompt is from the day before, so it names that day.
+    assert.match(text, /How did it feel on Friday\?/);
     assert.match(text, /while following the guidance/);
     assert.doesNotMatch(text, /How did the rehab work go|during the rehab work/);
   } finally { globalThis.fetch = original; act(() => root.unmount()); container.remove(); }

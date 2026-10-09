@@ -364,7 +364,7 @@ def test_delayed_response_is_separate_durable_and_idempotent(reviewed):
     injury = reviewed[2]
     store.injury_flags[ATHLETE] = [injury]
     exposure_id = str(uuid4())
-    event = {"injury_id": injury["id"], "injury_episode_id": injury["episode_id"], "body_region": "ankle", "occurred_at": "2026-09-28T12:00:00Z", "response": {"next_day_response": "not_yet_known"}}
+    event = {"injury_id": injury["id"], "injury_episode_id": injury["episode_id"], "body_region": "ankle", "occurred_at": "2026-09-29T12:00:00Z", "response": {"next_day_response": "not_yet_known"}}
     store.rehab_exposures[exposure_id] = {"id": exposure_id, "athlete_id": ATHLETE, "event_json": event}
     assert delayed_rehab_prompts(store, ATHLETE, DAY)
     observation = InjuryEpisodeObservation(injury_id=injury["id"], injury_episode_id=injury["episode_id"], event_type="delayed_rehab_response", exposure_id=exposure_id, response="same")
@@ -374,6 +374,22 @@ def test_delayed_response_is_separate_durable_and_idempotent(reviewed):
     record_episode_observation(store, athlete_id=ATHLETE, observation=observation, training_day=DAY)
     with pytest.raises(HTTPException):
         record_episode_observation(store, athlete_id=ATHLETE, observation=observation.model_copy(update={"response": "worse"}), training_day=DAY)
+
+
+@pytest.mark.parametrize("occurred,shown", [
+    ("2026-09-30T00:00:00Z", False),  # same day: the day after has not come yet
+    ("2026-09-29T00:00:00Z", True),   # the day after: asked
+    ("2026-09-28T00:00:00Z", False),  # older: no longer offered
+])
+def test_next_day_question_is_offered_on_the_following_day_only(reviewed, occurred, shown):
+    store = FakeStore()
+    injury = reviewed[2]
+    store.injury_flags[ATHLETE] = [injury]
+    exposure_id = str(uuid4())
+    event = {"injury_id": injury["id"], "injury_episode_id": injury["episode_id"], "body_region": "ankle",
+             "occurred_at": occurred, "response": {"next_day_response": "not_yet_known"}}
+    store.rehab_exposures[exposure_id] = {"id": exposure_id, "athlete_id": ATHLETE, "event_json": event}
+    assert bool(delayed_rehab_prompts(store, ATHLETE, DAY, "Europe/London")) == shown
 
 
 def test_active_chest_pilot_rest_day_start_completion_and_feedback_through_api():
@@ -535,6 +551,12 @@ def test_shared_drill_names_do_not_allocate_another_episode(monkeypatch):
 @pytest.mark.parametrize("timezone,occurred,day,allowed", [
     ("Pacific/Honolulu", "2026-10-01T05:00:00Z", "2026-10-01", True),
     ("Pacific/Auckland", "2026-09-30T18:00:00Z", "2026-10-01", False),
+    # Logged rehab is stamped at midnight UTC on its own training day: that
+    # names the day, so the next-day question waits for the following day
+    # even where midnight UTC falls before the local rollover.
+    ("Europe/London", "2026-10-01T00:00:00Z", "2026-10-01", False),
+    ("Europe/London", "2026-10-01T00:00:00Z", "2026-10-02", True),
+    ("Pacific/Honolulu", "2026-10-01T00:00:00Z", "2026-10-01", False),
 ])
 def test_delayed_feedback_uses_athlete_training_day_and_survives_reopening(reviewed, timezone, occurred, day, allowed):
     store = FakeStore()
