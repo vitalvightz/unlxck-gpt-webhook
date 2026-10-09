@@ -62,7 +62,11 @@ test("Today lays a multi-session day out as numbered parts with every exercise i
             session_type: "skill",
             objective: "Rehearse recognising the opponent's action before choosing a response.",
             planned_duration: { value: 12, unit: "min" },
-            blocks: [{ block_id: "read-react", block_type: "mindset", display_name: "Read -> React" }],
+            blocks: [
+              { block_id: "read-react", block_type: "mindset", display_name: "Read -> React" },
+              { block_id: "watch", block_type: "skill", display_name: "Tactical Watch: Southpaw Entries" },
+              { block_id: "cars", block_type: "preparation", display_name: "Hip CARs" },
+            ],
           },
           {
             session_id: "strength",
@@ -88,9 +92,15 @@ test("Today lays a multi-session day out as numbered parts with every exercise i
   assert.match(html, /2 exercises/);
   // Every exercise is listed without a Show more / Show less step.
   assert.doesNotMatch(html, /Show more|Show less/);
-  for (const name of ["Read -&gt; React", "Slow-Lowered Pull-Up", "Single-Leg RDL Hold"]) {
+  for (const name of ["Read -&gt; React", "Tactical Watch: Southpaw Entries", "Slow-Lowered Pull-Up", "Single-Leg RDL Hold"]) {
     assert.match(html, new RegExp(name));
   }
+  // No demo video: each row shows an icon for what kind of work it is.
+  const glyphs = [...html.matchAll(/class="ex-row-placeholder" aria-hidden="true"><svg[^>]*><path d="([^"]+)"/g)]
+    .map((match) => match[1]);
+  assert.equal(glyphs.length, 5);
+  assert.equal(new Set(glyphs.slice(0, 3)).size, 3, "visualisation, tactical watch and mobility differ");
+  assert.equal(glyphs[3], glyphs[4], "both strength rows share the strength icon");
   // The rationale waits behind one disclosure per part, closed by default.
   assert.equal(html.match(/<summary>Why this session<\/summary>/g)?.length, 2);
   assert.doesNotMatch(html, /<details class="sp-section-details" open/);
@@ -428,7 +438,9 @@ test("a previewed multi-part day is named by its parts and opens on its own prev
     const sheet = dialogs[dialogs.length - 1];
     assert.notEqual(sheet, screen);
     assert.equal(sheet.querySelector("h2")?.textContent, "Slow-Lowered Pull-Up");
-    assert.match(sheet.querySelector(".ex-detail-stop")?.textContent ?? "", /sharp chest pain/);
+    // Rows leave the stop rule to the sheet, which states it as one plain line.
+    assert.equal(screen.querySelector(".ex-row-stop"), null);
+    assert.equal(sheet.querySelector(".ex-detail-stop")?.textContent, "Stop if any sharp chest pain.");
     const sections = [...sheet.querySelectorAll<HTMLDetailsElement>("details.ex-detail-section")];
     assert.deepEqual(
       sections.map((section) => section.querySelector("summary")?.textContent),
