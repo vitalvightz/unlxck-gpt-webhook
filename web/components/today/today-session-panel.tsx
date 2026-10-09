@@ -17,6 +17,7 @@ import {
   SessionlessDayCard,
 } from "@/components/structured-plan-renderer";
 import { formatTrainingDay } from "@/components/today/format";
+import { InjuryDetailSheet } from "@/components/today/injury-detail-sheet";
 import { GuidedVisualisation } from "@/components/guided-visualisation/guided-visualisation";
 import {
   CONTACT_RUN_KEY_PREFIX,
@@ -157,6 +158,22 @@ function sessionSummaryChips(
     exercises > 0 ? { icon: "exercises", label: `${exercises} exercise${exercises === 1 ? "" : "s"}` } : null,
   ];
   return chips.filter((chip): chip is SummaryChip => chip !== null);
+}
+
+function SummaryChipList({ chips }: { chips: SummaryChip[] }) {
+  return (
+    <ul className="today-session-chips" aria-label="Session summary">
+      {chips.map((chip) => (
+        <li key={chip.label}>
+          <ToolIcon name={chip.icon} />
+          <span>
+            {chip.estimate ? <><span aria-hidden="true">~</span><span className="sr-only">About </span></> : null}
+            {chip.label}
+          </span>
+        </li>
+      ))}
+    </ul>
+  );
 }
 
 /** A part's type in a word or two ("Strength & Power" reads "Strength"). */
@@ -468,7 +485,7 @@ export function TodaySessionPanel({
   // Whether the open review was reached from the timer (its ticks came from it).
   const [reviewFromTimer, setReviewFromTimer] = useState(false);
   const [timerHandoffPending, setTimerHandoffPending] = useState(false);
-  // A previewed (not yet today's) session keeps its parts behind one tap.
+  // A previewed (not yet today's) session opens on its own screen.
   const [previewOpen, setPreviewOpen] = useState(false);
   const session = state.today.next_session;
   const status = state.today.completion_status;
@@ -1192,10 +1209,10 @@ export function TodaySessionPanel({
         ),
       ).join(" + ")
     : "";
-  // While a preview keeps its parts closed, their names are the only sign of
-  // what else the day holds, so they show under the headline.
+  // A preview's parts live on their own screen, so their names show under
+  // the headline as the sign of what else the day holds.
   const shownTitle = partsTitle || headline;
-  const partsSubtitle = multiPart || (isSessionPreview && !previewOpen)
+  const partsSubtitle = multiPart || isSessionPreview
     ? namedParts
         .map((item) => athleteFacingSessionTitle(textValue(item.title)))
         .filter((title) => title && !sameTitle(title, shownTitle))
@@ -1227,15 +1244,7 @@ export function TodaySessionPanel({
             </p>
           ) : null}
           {summaryChips.length > 0 ? (
-            <ul className="today-session-chips" aria-label="Session summary">
-              {summaryChips.map((chip) => (
-                <li key={chip.label}>
-                  <ToolIcon name={chip.icon} />
-                  {chip.estimate ? <><span aria-hidden="true">~</span><span className="sr-only">About </span></> : null}
-                  {chip.label}
-                </li>
-              ))}
-            </ul>
+            <SummaryChipList chips={summaryChips} />
           ) : null}
         </div>
       </div>
@@ -1285,30 +1294,60 @@ export function TodaySessionPanel({
           <button
             type="button"
             className="cta"
-            aria-expanded={previewOpen}
-            aria-controls="today-session-parts"
-            onClick={() => setPreviewOpen((open) => !open)}
+            aria-haspopup="dialog"
+            onClick={() => setPreviewOpen(true)}
           >
             <ToolIcon name="play" />
-            {previewOpen ? "Hide session" : "Preview session"}
+            Preview session
           </button>
         </div>
       ) : null}
       {safeSession ? (
         <SafeSessionCard view={safeSession} />
       ) : showStructuredBlocks ? (
-        isSessionPreview && !previewOpen ? null : (
-        <div id="today-session-parts">
-        <TodaySessionBlocks
-          planId={state.active_plan?.id}
-          current={current}
-          headline={shownTitle}
-          openWeekIntent={openWeekIntent}
-          rehabLabelPolicy={rehabLabelPolicy}
-          exerciseMedia={exerciseMedia}
-          exerciseLogging={exerciseLogging}
-        />
-        </div>
+        // A previewed day is read on its own screen; today's work stays here.
+        isSessionPreview ? (
+          previewOpen ? (
+            <InjuryDetailSheet
+              title={shownTitle}
+              variant="screen"
+              closeLabel="Back to Today"
+              onClose={() => setPreviewOpen(false)}
+            >
+              <div className="today-preview-screen">
+                <p className="today-preview-meta">
+                  <span>{relationCopy.kicker}</span>
+                  {sessionDateLabel ? <span>{sessionDateLabel}</span> : null}
+                </p>
+                {summaryChips.length > 0 ? (
+                  <SummaryChipList chips={summaryChips} />
+                ) : null}
+                <TodaySessionBlocks
+                  planId={state.active_plan?.id}
+                  current={current}
+                  headline={shownTitle}
+                  openWeekIntent={openWeekIntent}
+                  rehabLabelPolicy={rehabLabelPolicy}
+                  exerciseMedia={exerciseMedia}
+                  exerciseLogging={exerciseLogging}
+                />
+                <p className="today-pending-line">
+                  <span className="today-pending-pill">Pending</span>
+                  Check in on the day to unlock this session.
+                </p>
+              </div>
+            </InjuryDetailSheet>
+          ) : null
+        ) : (
+          <TodaySessionBlocks
+            planId={state.active_plan?.id}
+            current={current}
+            headline={shownTitle}
+            openWeekIntent={openWeekIntent}
+            rehabLabelPolicy={rehabLabelPolicy}
+            exerciseMedia={exerciseMedia}
+            exerciseLogging={exerciseLogging}
+          />
         )
       ) : (
         <div className="today-session-summary">
