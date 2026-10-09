@@ -586,7 +586,6 @@ export default function HomePage() {
             trainingDay={commandState?.today?.training_day}
             phase={activePlan.phase ? String(activePlan.phase) : null}
             plan={structuredPlan}
-            variant="overview"
           />
           <OverviewRiskWatch risks={risks} />
         </section>

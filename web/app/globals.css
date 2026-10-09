@@ -3535,27 +3535,14 @@ html[data-theme="light"] .today-safe-list[data-kind="blocked"] li::before {
   line-height: 1.5;
 }
 
-/* Fight-camp countdown: days to fight night, the gold camp-progress bar
-   (reuses .overview-progress-track/fill) and the next phase change. Card on
-   Overview, compact strip on Today. */
+/* Fight-camp countdown on Overview: days to fight night, the gold
+   camp-progress bar (reuses .overview-progress-track/fill) and the next phase
+   change. On load the bar sweeps in while the day count ticks down to today
+   (see FightCountdown); both are off under reduced motion. */
 .fight-countdown {
   display: grid;
-  gap: 10px;
-  min-width: 0;
-}
-
-.fight-countdown[data-variant="today"] {
-  margin: 2px 0 0;
-  padding: 14px 16px;
-  border: 1px solid var(--progress-gold-border);
-  border-radius: 12px;
-  background:
-    radial-gradient(circle at top left, var(--progress-gold-soft), transparent 60%),
-    rgba(255, 255, 255, 0.02);
-}
-
-.fight-countdown[data-variant="overview"] {
   gap: 14px;
+  min-width: 0;
   margin-top: 4px;
   padding: 18px 20px;
   border: 1px solid var(--progress-gold-border);
@@ -3596,7 +3583,7 @@ html[data-theme="light"] .today-safe-list[data-kind="blocked"] li::before {
   font-variant-numeric: tabular-nums;
 }
 
-.fight-countdown[data-variant="overview"] .fight-countdown-number {
+.fight-countdown .fight-countdown-number {
   font-size: clamp(44px, 7vw, 64px);
   line-height: 1;
   letter-spacing: -0.03em;
@@ -3634,8 +3621,39 @@ html[data-theme="light"] .today-safe-list[data-kind="blocked"] li::before {
   text-transform: uppercase;
 }
 
-html[data-theme="light"] .fight-countdown[data-variant="today"] {
-  background: color-mix(in srgb, var(--progress-gold) 6%, white);
+/* The fill waits at zero until the card scrolls into view (data-revealed),
+   then sweeps to today's position. */
+.fight-countdown-fill {
+  transform: scaleX(0);
+  transform-origin: left center;
+}
+
+/* Until the count-down starts, hide the number so it doesn't flash today's
+   value before ticking down from the camp's length. */
+.fight-countdown[data-pending="true"] .fight-countdown-number {
+  visibility: hidden;
+}
+
+.fight-countdown[data-revealed="true"] .fight-countdown-fill {
+  transform: none;
+  animation: fight-countdown-fill-in 1100ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes fight-countdown-fill-in {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fight-countdown-fill,
+  .fight-countdown[data-revealed="true"] .fight-countdown-fill {
+    transform: none;
+    animation: none;
+  }
+
+  .fight-countdown[data-pending="true"] .fight-countdown-number {
+    visibility: visible;
+  }
 }
 
 .onboarding-validation-panel {
