@@ -140,6 +140,11 @@ def main():
     # Replace existing profiles in place so later family rollouts do not make
     # rerunning this seed reorder the catalog or churn otherwise identical bytes.
     replacements = {p["policy_id"]: p for p in profiles}
+    # A baseline seed cannot replace a later clinically activated policy.
+    for existing in raw["profiles"]:
+        generated = replacements.get(existing["policy_id"])
+        if generated and existing.get("version", 1) > generated["version"]:
+            replacements[existing["policy_id"]] = existing
     raw["profiles"] = [replacements.pop(p["policy_id"], p) for p in raw["profiles"]] + list(replacements.values())
     debt = read("rehab_bank_duplicate_debt.json")
     # The reviewed floor-level variant no longer duplicates the untouched step

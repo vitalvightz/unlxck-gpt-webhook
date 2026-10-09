@@ -4397,7 +4397,7 @@ class SupabaseAppStore(CompactGenerationReads):
         except HTTPException:
             raise
         except _STORE_CLIENT_ERRORS as exc:
-            if any(code in str(exc) for code in ("prescription_revision_conflict", "rehab_daily_allocation_conflict", "rehab_exposure_cannot_be_reset")):
+            if any(code in str(exc) for code in ("prescription_revision_conflict", "rehab_daily_allocation_conflict", "rehab_exposure_cannot_be_reset", "clinical_review_pin_invalidated_hold")):
                 raise HTTPException(status_code=409, detail="Your session prescription changed. Refresh Today before starting.") from exc
             self._raise_operation_http_error(
                 operation=f"upsert_session_completion athlete_id={athlete_id}",

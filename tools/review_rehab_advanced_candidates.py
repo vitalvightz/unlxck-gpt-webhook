@@ -17,7 +17,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from tools.audit_rehab_bank_rationalisation import build_audit  # noqa: E402
-from tools.rehab_metadata_review_lib import pathway_inventory_snapshot  # noqa: E402
+from tools.rehab_metadata_review_lib import pathway_inventory_snapshot, before_achilles_load_activation  # noqa: E402
 
 DISPOSITIONS = {
     'A': 'READY_FOR_CLINICAL_GATE_REVIEW',
@@ -48,7 +48,7 @@ def file_hash(path):
 def planning_input_hash(path):
     """Preserve #2742's exact snapshot, excluding only #2743 input declarations."""
     if path == ROOT / 'data/rehab_pathways.json':
-        pathways = pathway_inventory_snapshot(read(path))
+        pathways = pathway_inventory_snapshot(before_achilles_load_activation(read(path)))
         return hashlib.sha256((json.dumps(pathways, indent=2) + '\n').encode('utf-8')).hexdigest()
     return file_hash(path)
 
@@ -56,6 +56,7 @@ def planning_input_hash(path):
 def build_review(bank, ledger, pathways, archive, decisions):
     # Preserve the #2742 planning snapshot. Runtime capture can subsequently
     # advance without rewriting the reviewed inventory or its dated conclusions.
+    pathways = before_achilles_load_activation(pathways)
     audit, clusters = build_audit(bank, ledger, pathways, captured_checkpoints=frozenset(), captured_assessment_inputs={})
     if audit['integrity_errors']:
         raise ValueError('Resolve input integrity before planning review')
@@ -158,7 +159,8 @@ def markdown(report):
     s = report['summary']
     lines = ['# Advanced rehab candidate review', '',
              f"Reviewed {report['reviewed_at']} against Main `{report['base_commit']}` after #2741.", '',
-             f"**{s['advanced_candidate_count_before']} audit candidates before / {s['advanced_candidate_count_after']} after; {s['advanced_planning_candidate_count_after']} remain in advanced planning, including {s['load_gate_review_shortlist_count']} ready for clinical LOAD gate review. {s['profile_count_with_candidates']} profiles have exact-type inventory.** No production content, identity, review provenance, profile hash or stage is changed. All 64 profiles and 103 LIVE identities remain CALM/RESTORE only.", '',
+             f"**{s['advanced_candidate_count_before']} audit candidates before / {s['advanced_candidate_count_after']} after; {s['advanced_planning_candidate_count_after']} remain in advanced planning, including {s['load_gate_review_shortlist_count']} ready for clinical LOAD gate review. {s['profile_count_with_candidates']} profiles have exact-type inventory.** This dated review changed no production content, identity, review provenance, profile hash or stage. At its baseline, all 64 profiles and 103 LIVE identities were CALM/RESTORE only.", '',
+             'This document preserves the #2742 planning snapshot. The subsequent single Achilles LOAD activation is described in [the criterion documentation](achilles-restore-load-criterion.md); the current inventory is in [the bank audit](rehab-bank-rationalisation.md). Historical projection is restricted to the exact approved activation delta and is not used by production.', '',
              'This is a clinically informed engineering shortlist, not independent clinical sign-off. A means mechanically suitable for the next clinical gate review, not safe to prescribe now. Ranking is a judgment about evidence applicability, current content, safety ambiguity and the size of the missing input work; it is not a candidate-count score.', '',
              '## Recommended first wave', '']
     lines += [f"{i}. **{w['policy_id']}** — {w['reason']}" for i, w in enumerate(report['first_wave'], 1)]

@@ -87,6 +87,12 @@
       "basis": "data_sufficiency",
       "assessment_kind": "achilles_tendon_progression_v1",
       "protocol_version": 1
+    },
+    {
+      "checkpoint_id": "achilles_restore_load_clinical_review_v1",
+      "description": "Trusted clinician interpretation and exact bounded Achilles LOAD selection.",
+      "required_input": "Independently confirmed current clinician review and selected prescription.",
+      "basis": "clinical"
     }
   ],
   "families": [
@@ -1505,14 +1511,17 @@
     },
     {
       "policy_id": "achilles_tendonitis",
-      "version": 1,
+      "version": 2,
       "region": "achilles",
       "injury_type": "tendonitis",
       "pathway_family": "tendon_rehab",
       "evidence_sources": [
         "https://www.nhs.uk/conditions/tendonitis/",
         "https://myjointhealthhub.bnssg.nhs.uk/foot-ankle-pain/achilles-tendinopathy/",
-        "https://www.kentcht.nhs.uk/leaflet/achilles-insertional-tendinopathy/"
+        "https://www.kentcht.nhs.uk/leaflet/achilles-insertional-tendinopathy/",
+        "https://bjsm.bmj.com/content/55/20/1125",
+        "https://www.orthopt.org/uploads/content_files/files/Achilles_Pain_revision_2024.pdf",
+        "https://www.dynamichealth.nhs.uk/help-and-advice/foot-or-ankle-pain/ankle-tendon-pain/"
       ],
       "prescriptions": [
         {
@@ -1564,6 +1573,37 @@
             "https://myjointhealthhub.bnssg.nhs.uk/foot-ankle-pain/achilles-tendinopathy/",
             "https://www.kentcht.nhs.uk/leaflet/achilles-insertional-tendinopathy/"
           ]
+        },
+        {
+          "drill_id": "achilles_tendonitis_eccentric_calf_drops_on_step",
+          "bank_hash": "557056e938e245ccf7bda3621958820389212034a4eb47c3fb4d04d3e58bad2f",
+          "stage": "load",
+          "instructions": "Beside stable support on firm level ground, raise both heels, then transfer weight to the affected leg and slowly lower its heel only to the floor. Do not use a step, lower into deep dorsiflexion, increase depth or add speed or weight. Stop if symptoms worsen during or after the work.",
+          "dose": {
+            "sets": 1,
+            "reps": 10
+          },
+          "allowed_severities": [
+            "low",
+            "moderate"
+          ],
+          "stop_when": [
+            "Once daily only: 1 set of 10 controlled lowerings beside stable support on level ground.",
+            "Bodyweight only: no added resistance.",
+            "No step or lowering below floor level.",
+            "No speed, bouncing, hopping or automatic progression.",
+            "Stop for worsening during or delayed symptoms and seek clinical review.",
+            "Stop and seek assessment for a snap, sudden pain or loss of function.",
+            "Follow clinician restrictions; this prescription grants no training or contact clearance."
+          ],
+          "frequency": "daily",
+          "minimum_gap_days": 1,
+          "sources": [
+            "https://bjsm.bmj.com/content/55/20/1125",
+            "https://www.orthopt.org/uploads/content_files/files/Achilles_Pain_revision_2024.pdf",
+            "https://www.dynamichealth.nhs.uk/help-and-advice/foot-or-ankle-pain/ankle-tendon-pain/"
+          ],
+          "clinical_criterion": "achilles_restore_load_clinical_review_v1"
         }
       ],
       "blocked_regions": [
@@ -1573,12 +1613,59 @@
       "contact_limit": "none",
       "live_stages": [
         "calm",
-        "restore"
+        "restore",
+        "load"
       ],
-      "transition_overrides": {},
+      "transition_overrides": {
+        "restore->load": {
+          "reason": "Activate only the exact clinician-reviewed midportion Achilles LOAD option.",
+          "add_requirements": [
+            {
+              "requirement_id": "achilles_site_assessed",
+              "kind": "input_availability",
+              "basis": "data_sufficiency",
+              "checkpoint": "achilles_site_assessed",
+              "description": "Assessment data sufficiency only; no readiness cutoff."
+            },
+            {
+              "requirement_id": "achilles_heel_rise_assessed",
+              "kind": "input_availability",
+              "basis": "data_sufficiency",
+              "checkpoint": "achilles_heel_rise_assessed",
+              "description": "Assessment data sufficiency only; no readiness cutoff."
+            },
+            {
+              "requirement_id": "achilles_loading_response_assessed",
+              "kind": "input_availability",
+              "basis": "data_sufficiency",
+              "checkpoint": "achilles_loading_response_assessed",
+              "description": "Assessment data sufficiency only; no readiness cutoff."
+            },
+            {
+              "requirement_id": "achilles_range_load_assessed",
+              "kind": "input_availability",
+              "basis": "data_sufficiency",
+              "checkpoint": "achilles_range_load_assessed",
+              "description": "Assessment data sufficiency only; no readiness cutoff."
+            },
+            {
+              "requirement_id": "achilles_restore_load_clinical_review_v1",
+              "kind": "functional_checkpoint",
+              "basis": "clinical",
+              "checkpoint": "achilles_restore_load_clinical_review_v1",
+              "description": "Trusted current clinical interpretation and bounded prescription must PASS.",
+              "sources": [
+                "https://bjsm.bmj.com/content/55/20/1125",
+                "https://www.orthopt.org/uploads/content_files/files/Achilles_Pain_revision_2024.pdf",
+                "https://www.dynamichealth.nhs.uk/help-and-advice/foot-or-ankle-pain/ankle-tendon-pain/"
+              ]
+            }
+          ]
+        }
+      },
       "status": "active",
       "activation": "live",
-      "content_hash": "980f17573faffb778a4c75ae47cd108ad1cac1e20d89ba923e437c6d55923900"
+      "content_hash": "e24e2186a15c16f79d8a669721b165da9e80b3b9f3edc29173a92f73a098a101"
     },
     {
       "policy_id": "shoulder_tendonitis",

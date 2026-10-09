@@ -153,6 +153,7 @@ export const EQUIPMENT_ACCESS_GROUPS: EquipmentAccessGroup[] = [
     options: [
       { label: "Foam Roller", value: "foam_roller" },
       { label: "Towel", value: "towel" },
+      { label: "Stable support for rehab", value: "stable_support" },
     ],
   },
 ];

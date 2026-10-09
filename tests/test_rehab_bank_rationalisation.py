@@ -9,7 +9,7 @@ from fightcamp.rehab_clinical import content_hash, load_clinical_policies, polic
 from tools.audit_rehab_bank_rationalisation import (
     CLASSIFICATIONS, ROOT, affirmative_progression, build_audit, input_digest, json_text, main,
 )
-from tools.rehab_metadata_review_lib import source_hash
+from tools.rehab_metadata_review_lib import source_hash, before_achilles_load_activation
 from tools.consolidate_rehab_exact_duplicates import reconstruct_original, digest, validate_archive
 
 
@@ -78,7 +78,8 @@ def test_every_active_prescription_resolves_and_stage_counts_are_unique(inputs, 
             assert row["classification"] == "LIVE" and policy["policy_id"] in row["profile_ids"]
             actual[rx["stage"]].add(rx["drill_id"])
     assert audit[0]["summary"]["live_unique_identities_by_stage"] == {s: len(ids) for s, ids in actual.items()}
-    assert all(not actual[s] for s in ("load", "dynamic", "return"))
+    assert actual["load"] == {"achilles_tendonitis_eccentric_calf_drops_on_step"}
+    assert all(not actual[s] for s in ("dynamic", "return"))
 
 
 def test_production_bank_source_history_and_all_64_profiles_unchanged():
@@ -91,14 +92,19 @@ def test_production_bank_source_history_and_all_64_profiles_unchanged():
     assert digest(original_bank) == baseline["input_sha256"]["rehab_bank.json"]
     assert digest(original_ledger) == baseline["input_sha256"]["rehab_metadata_review.json"]
     from tools.rehab_metadata_review_lib import pathway_inventory_snapshot
-    assert digest(pathway_inventory_snapshot(read("data/rehab_pathways.json"))) == baseline["input_sha256"]["rehab_pathways.json"]
+    assert digest(pathway_inventory_snapshot(before_achilles_load_activation(read("data/rehab_pathways.json")))) == baseline["input_sha256"]["rehab_pathways.json"]
     assert sorted(d["id"] for g in original_bank for d in g["drills"]) == baseline["bank_drill_ids"]
     raw = read("data/rehab_pathways.json")
     assert validate_archive(bank, ledger, raw, archive) == []
     assert len(raw["profiles"]) == len(baseline["profile_hashes"]) == 64
-    assert {p["policy_id"]: p["content_hash"] for p in raw["profiles"]} == baseline["profile_hashes"]
-    assert {p["policy_id"]: hashlib.sha256(json.dumps(p, sort_keys=True, separators=(",", ":")).encode()).hexdigest() for p in raw["profiles"]} == baseline["profile_raw_sha256"]
+    historical = before_achilles_load_activation(raw)
+    assert {p["policy_id"]: p["content_hash"] for p in historical["profiles"]} == baseline["profile_hashes"]
+    assert {p["policy_id"]: hashlib.sha256(json.dumps(p, sort_keys=True, separators=(",", ":")).encode()).hexdigest() for p in historical["profiles"]} == baseline["profile_raw_sha256"]
     for policy in load_clinical_policies():
+        if policy.policy_id == "achilles_tendonitis":
+            assert policy.live_stages == ["calm","restore","load"]
+            assert not any(t.promotable for t in policy.transitions[1:])
+            continue
         assert policy_review_hash(policy) == baseline["profile_hashes"][policy.policy_id]
         assert set(policy.live_stages) <= {"calm", "restore"}
         assert not any(t.promotable for t in policy.transitions)
@@ -138,8 +144,8 @@ def test_dormant_advanced_candidates_do_not_become_prescriptions(audit):
         assert not row["live_progression_path_reachable"]
         assert row["advanced_candidate_assessment"]["readiness_class"] == "GOOD_FIXED_MECHANICS_GATE_NOT_READY"
         assert row["advanced_candidate_assessment"]["safety_blocks"]
-    assert report["summary"]["promotable_advanced_transitions"] == 0
-    assert report["summary"]["profiles_with_load_or_above"] == []
+    assert report["summary"]["promotable_advanced_transitions"] == 1
+    assert report["summary"]["profiles_with_load_or_above"] == ["achilles_tendonitis"]
 
 
 def test_unassigned_region_inventory_is_visible_without_borrowing_a_diagnosis(audit):

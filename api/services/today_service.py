@@ -635,9 +635,15 @@ def _with_injury_policy(injuries, *, store, athlete_id, phase="", current_checki
                             store.get_clinical_review_capture_context(athlete_id, str(injury["id"]), str(injury["episode_id"])),
                             criterion_id=definition.criterion_id, criterion_version=definition.version,
                             as_of=as_of, registry=CLINICAL_REVIEW_REGISTRY, policies=policies, bank=bank)
-                    except Exception:  # noqa: BLE001 - unavailable authority fails closed
+                    except (ValueError, HTTPException) as exc:
+                        logger.info("[today] clinical_review_unavailable criterion=%s category=%s",
+                            definition.criterion_id, type(exc).__name__)
+                        continue
+                    except Exception as exc:  # noqa: BLE001 - unavailable authority fails closed
                         # Missing/unavailable private history cannot satisfy a
                         # clinical requirement or interrupt conservative rehab.
+                        logger.error("[today] clinical_review_hydration_failed criterion=%s category=%s",
+                            definition.criterion_id, type(exc).__name__)
                         continue
         row["rehab_decision"] = resolve_injury_policy(row, policies=policies, bank=bank, phase=phase,
                                                      exposures=exposures, current_checkin=current_checkin, equipment=equipment,
@@ -650,6 +656,8 @@ def _with_injury_policy(injuries, *, store, athlete_id, phase="", current_checki
             # alternative. Nothing is added to the one-routine daily allocation.
             excluded, first = [], row["rehab_decision"]
             while row["rehab_decision"].get("prescription") and row["rehab_decision"]["schedule"]["state"] in {"recovery_day", "held", "deferred"}:
+                if row["rehab_decision"]["prescription"].get("clinical_review_pin"):
+                    break
                 excluded.append(row["rehab_decision"]["prescription"]["drill_id"])
                 alternative = resolve_injury_policy(row, policies=policies, bank=bank, phase=phase, exposures=exposures,
                     current_checkin=current_checkin, equipment=equipment, history_truncated=history_truncated,
@@ -1464,6 +1472,12 @@ def upsert_session_completion(
             if not frozen and not stopped_started_session:
                 frozen = live
     performance = payload.get("rehab_performance") or existing.get("rehab_performance")
+    if frozen and status_value in _TRAINING_COMPLETION_STATUSES and not stop_requested and not accepted_stop and str(existing.get("status")) not in {"done", "modified"}:
+        from api.services.clinical_review_freeze import frozen_review_hold
+        if frozen_review_hold(store, athlete_id, frozen,
+                work_state="started" if existing.get("status") == "started" else "unstarted",
+                as_of=now or datetime.now(timezone.utc)):
+            raise HTTPException(409, "The clinical review or prescribed work changed. Stop and refresh Today.")
     if performance == "done_as_shown" and (not frozen or status_value != "done"):
         raise HTTPException(422, "Confirm rehab as shown only for a completed, saved prescription.")
     if (status_value == "done" and frozen and any(b.get("block_type") == "rehab" for b in frozen.get("session", {}).get("blocks", []))
@@ -3154,6 +3168,8 @@ def _build_today_command_view(
     equipment = intake.get("equipment") or ()
     if not isinstance(equipment, (list, tuple)):
         equipment = ()
+    if "stable_support" in (intake.get("equipment_access") or []):
+        equipment = [*equipment, "stable_support"]
     # Today logs the entire training day. Reconcile every scheduled block,
     # preserving the primary completion identity and checking sibling demands.
     training_session = _entry_mapping_for_readiness(today_session_entry) if today_session_entry else None

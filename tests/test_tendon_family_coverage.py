@@ -123,8 +123,8 @@ def test_achilles_tendon_loading_function_cannot_bypass_live_stage_gates():
     assert decision["prescription"]["drill"]["rehab_stage"] == "restore"
     assert schedule_rehab(row, decision, training_day=DAY)["state"] == "due"
     policy = next(p for p in load_clinical_policies() if p.policy_id == "achilles_tendonitis")
-    assert policy.live_stages == ["calm", "restore"]
-    assert not any(t.promotable for t in policy.transitions)
+    assert policy.live_stages == ["calm", "restore", "load"]
+    assert policy.transitions[0].promotable and not any(t.promotable for t in policy.transitions[1:])
     for stage in ("load", "dynamic", "return"):
         injected = resolve({**row, "rehab_stage": stage})
         assert injected["stage"] == "calm"
@@ -166,7 +166,11 @@ def test_external_stage_cannot_open_an_advanced_rung(region, kind, stage):
     assert decision["stage"] in {"calm", "restore"}
     assert decision["prescription"]["drill"]["rehab_stage"] in {"calm", "restore"}
     policy = next(p for p in load_clinical_policies() if (p.region, p.injury_type) == (region, kind))
-    assert policy.live_stages == ["calm", "restore"] and not any(t.promotable for t in policy.transitions)
+    if policy.policy_id == "achilles_tendonitis":
+        assert policy.live_stages == ["calm", "restore", "load"]
+        assert policy.transitions[0].promotable and not any(t.promotable for t in policy.transitions[1:])
+    else:
+        assert policy.live_stages == ["calm", "restore"] and not any(t.promotable for t in policy.transitions)
 
 
 @pytest.mark.parametrize("region,kind", PAIRS)
@@ -234,7 +238,8 @@ def test_inventory_repaired_id_history_and_tendon_content_preservation():
     assert len(tendon_ids - hashes.keys()) == 15
     ledger = {r["drill_id"]: r for r in historical_ledger}
     active = {p.drill_id for policy in load_clinical_policies() for p in policy.prescriptions}
-    assert {r["drill_id"] for r in audit} & active == {"wrist_tendonitis_pronation_supination_twists"}
+    assert {r["drill_id"] for r in audit} & active == {"wrist_tendonitis_pronation_supination_twists",
+        "achilles_tendonitis_eccentric_calf_drops_on_step"}
     for record in audit:
         current = ledger[record["drill_id"]]
         if record["drill_id"] in REPAIRED:
@@ -251,8 +256,9 @@ def test_dormant_reviewed_load_work_is_not_a_prescription():
                 and r["review_state"] == "reviewed" and r["proposed"]["rehab_stage"] == "load"}
     assert len(load_ids) == 6
     policies = [p for p in load_clinical_policies() if p.injury_type == "tendonitis"]
-    assert not load_ids & {r.drill_id for p in policies for r in p.prescriptions}
-    assert all(p.live_stages == ["calm", "restore"] and not any(t.promotable for t in p.transitions) for p in policies)
+    assert load_ids & {r.drill_id for p in policies for r in p.prescriptions} == {"achilles_tendonitis_eccentric_calf_drops_on_step"}
+    assert all(p.live_stages == ["calm", "restore"] and not any(t.promotable for t in p.transitions)
+        for p in policies if p.policy_id != "achilles_tendonitis")
 
 
 @pytest.mark.parametrize("region", REGIONS)

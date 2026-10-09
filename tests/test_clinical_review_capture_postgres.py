@@ -149,7 +149,8 @@ def test_real_postgres_achilles_shadow_criterion_and_revocation(capture_postgres
     result = evaluate_clinical_review(supplied.context,supplied.reviews,as_of=now,trust=supplied.trust)
     assert result.validity == "valid" and result.trusted and result.criterion_status == "pass"
     injury = apply_episode_observations(snapshot["injury"],snapshot["events"],as_of=now)
-    transition = evaluate_transition(shadow_policy(policy).transitions[0],policy=policy,injury=injury,
+    pilot = shadow_policy(policy)
+    transition = evaluate_transition(pilot.transitions[0],policy=pilot,injury=injury,
         exposures=[],as_of=now,clinical_review_input=supplied)
     assert next(r for r in transition["requirements"] if r["requirement_id"] == CRITERION_ID)["status"] == "pass"
     assert transition["status"] == "closed" and not transition["target_stage_live"]

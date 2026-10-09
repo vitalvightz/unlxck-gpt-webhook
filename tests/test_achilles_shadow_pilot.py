@@ -105,7 +105,7 @@ def shadow_policy(policy):
             TransitionRequirement(requirement_id=CRITERION_ID, kind="functional_checkpoint", basis="clinical",
                 checkpoint=CRITERION_ID, description="Trusted exact Achilles interpretation and bounded work.",
                 sources=list(PILOT_SOURCES))]})
-    return policy.model_copy(update={"transitions":[transition,*policy.transitions[1:]]})
+    return policy.model_copy(update={"transitions":[transition,*policy.transitions[1:]], "live_stages":["calm","restore"]})
 
 
 def test_production_shadow_complete_chain_pass_stays_restore_and_never_schedules_load():
@@ -127,7 +127,7 @@ def test_production_shadow_complete_chain_pass_stays_restore_and_never_schedules
     assert resolved["stage"] == "restore"
     live_resolved = resolve_reviewed_progression(injury, base_stage="restore", policy=kwargs["policies"][0],
         exposures=store.snapshot["exposures"], as_of=NOW, clinical_review_inputs={CRITERION_ID:supplied})
-    assert live_resolved["stage"] == "restore" and not live_resolved["next_transition"]["target_stage_live"]
+    assert live_resolved["stage"] == "load" and not live_resolved["next_transition"]["target_stage_live"]
     decision = resolve_injury_policy(injury, policies=(pilot,), bank=kwargs["bank"],
         exposures=store.snapshot["exposures"], as_of=NOW, clinical_review_inputs={CRITERION_ID: supplied})
     assert decision["stage"] == "restore" and decision["prescription"]["drill_id"] != OPTION.drill_id
@@ -277,7 +277,10 @@ def test_capture_rejects_unreviewed_selection(mutation):
 
 def test_shadow_capture_cannot_bind_an_undeclared_live_target():
     bundle = shadow_bundle()
-    bundle[3]["policies"] = (bundle[3]["policies"][0].model_copy(update={"live_stages":["calm","restore","load"]}),)
+    current = bundle[3]["policies"][0]
+    undeclared = current.transitions[0].model_copy(update={"requirements":
+        [r for r in current.transitions[0].requirements if r.checkpoint != CRITERION_ID]})
+    bundle[3]["policies"] = (current.model_copy(update={"transitions":[undeclared,*current.transitions[1:]]}),)
     with pytest.raises(HTTPException, match="clinical criterion does not match this transition"):
         write(bundle)
     assert bundle[0].writes == 0
@@ -402,10 +405,10 @@ def test_bank_identity_display_mechanics_and_all_live_inventory_unchanged():
     assert drill["name"] == "Floor-level controlled Achilles lowering"
     assert drill["notes"] == OPTION.instructions and content_hash(drill) == OPTION.bank_hash
     assert len(policies) == 64
-    assert len({rx.drill_id for p in policies for rx in p.prescriptions}) == 103
-    assert all(set(p.live_stages) <= {"calm", "restore"} for p in policies)
-    assert all(not t.promotable for p in policies for t in p.transitions)
-    assert OPTION.drill_id not in {rx.drill_id for p in policies for rx in p.prescriptions}
+    assert len({rx.drill_id for p in policies for rx in p.prescriptions}) == 104
+    assert all(set(p.live_stages) <= {"calm", "restore"} for p in policies if p.policy_id != OPTION.profile_id)
+    assert [(p.policy_id,t.key) for p in policies for t in p.transitions if t.promotable] == [(OPTION.profile_id,"restore->load")]
+    assert OPTION.drill_id in {rx.drill_id for p in policies for rx in p.prescriptions}
     definition = CLINICAL_REVIEW_REGISTRY.current(CRITERION_ID)
     assert definition.profile_ids == frozenset({"achilles_tendonitis"}) and definition.requires_prescription
     assert set(CLINICAL_REVIEW_REGISTRY._definitions) == {(CRITERION_ID,1)}

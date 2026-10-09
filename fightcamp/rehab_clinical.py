@@ -11,7 +11,7 @@ import json
 from pathlib import Path
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator, model_serializer
 
 from .config import DATA_DIR
 from .rehab_pathways import PathwayCatalog, PathwayTransition, TransitionOverride, compose_transitions
@@ -64,6 +64,14 @@ class ClinicalPrescription(BaseModel):
     minimum_gap_days: int = Field(default=1, ge=1, le=14)
     priority: int = 0
     sources: list[str] = Field(default_factory=list)
+    clinical_criterion: str | None = None
+
+    @model_serializer(mode="wrap")
+    def preserve_baseline_shape(self, handler):
+        raw = handler(self)
+        if self.clinical_criterion is None:
+            raw.pop("clinical_criterion", None)
+        return raw
 
     @model_validator(mode="after")
     def bounded_camp_dose(self):
@@ -141,6 +149,12 @@ class ClinicalPolicy(BaseModel):
                 raise ValueError(f"{stage} cannot be live without an open transition with clinical criteria")
             if not any(p.stage == stage for p in self.prescriptions):
                 raise ValueError(f"{stage} cannot be live without a reviewed prescription")
+        for prescription in self.prescriptions:
+            if prescription.clinical_criterion and not any(
+                    t.to_stage == prescription.stage and t.promotable and
+                    any(r.checkpoint == prescription.clinical_criterion and r.basis == "clinical" for r in t.requirements)
+                    for t in self.transitions):
+                raise ValueError("clinician-selected prescription needs its exact open clinical transition")
         if set(self.blocked_regions) - canonical_rehab_locations():
             raise ValueError("unknown restricted region")
         if self.status == "active" and self.content_hash != policy_review_hash(self):

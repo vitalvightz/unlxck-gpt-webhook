@@ -49,6 +49,25 @@ def pathway_inventory_snapshot(pathways):
         if FunctionalCheckpoint.model_validate(c).basis != 'data_sufficiency']
     return snapshot
 
+
+def before_achilles_load_activation(pathways):
+    """Exact approved activation delta only; preserve dated archive/planning inputs.
+
+    Current audits and runtime never use this projection. Any change to the
+    approved profile/checkpoint or any other profile still fails old fingerprints.
+    """
+    from fightcamp.rehab_clinical import content_hash
+    manifest = json.loads((REPO_ROOT / 'tools/rehab_achilles_activation_inventory_baseline.json').read_text(encoding='utf-8'))
+    snapshot = deepcopy(pathways)
+    checkpoint = manifest['activated_checkpoint']
+    for index, profile in enumerate(snapshot['profiles']):
+        if (profile['policy_id'] == manifest['historical_profile']['policy_id']
+                and content_hash(profile) == manifest['activated_profile_sha256']
+                and checkpoint in snapshot.get('functional_checkpoints', [])):
+            snapshot['profiles'][index] = manifest['historical_profile']
+            snapshot['functional_checkpoints'].remove(checkpoint)
+    return snapshot
+
 DEFAULT_BANK = REPO_ROOT / "data" / "rehab_bank.json"
 DEFAULT_LEDGER = REPO_ROOT / "data" / "rehab_metadata_review.json"
 

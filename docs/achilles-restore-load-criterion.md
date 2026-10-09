@@ -1,8 +1,8 @@
-# Achilles RESTORE → LOAD shadow pilot
+# Achilles RESTORE → LOAD conditional activation
 
-**Achilles LOAD is NOT LIVE.** Production pathway data is unchanged: CALM/RESTORE only, no LOAD prescription and no promotable higher-stage transition. DYNAMIC/RETURN remain disabled. The compiled review can PASS in shadow; it cannot create Today work, frozen production sessions or training/contact clearance.
+**Only Achilles LOAD is conditionally live.** Profile `achilles_tendonitis`, policy version 2, declares the existing v1 clinical criterion and its four availability inputs. The current progression engine can advance RESTORE → LOAD only when the trusted clinical review, exact selected work and all product safety/history requirements pass. DYNAMIC/RETURN remain disabled. Approval grants no training/contact clearance.
 
-Base: Main `d0c4dd7b`, after #2765 merged (`cbb6bf8e`). This uses #2743 assessment capture, #2748 input diagnostics and #2757/#2758/#2765 shared review contracts, trust, persistence, lifecycle and freeze checks. No new table, migration, review channel or rules architecture.
+Activation base: Main `2c849735`, after shadow PR #2796 merged. The original shadow base was Main `d0c4dd7b`, after #2765. This uses #2743 assessment capture, #2748 input diagnostics and #2757/#2758/#2765 shared review contracts, trust, persistence, lifecycle and freeze checks. No new table, migration, review channel or rules architecture. Existing shadow approvals bind the previous policy hash and require a fresh clinician decision against policy version 2 before production use.
 
 ## Applicability
 
@@ -39,7 +39,7 @@ The interpretation names the exact latest assessment event/content hash, support
 
 The four existing domains remain availability only: `achilles_site_assessed`, `achilles_heel_rise_assessed`, `achilles_loading_response_assessed`, `achilles_range_load_assessed`. Their PASS does not imply clinical PASS. The legacy `achilles_restore_load_review_v1` and `rehab_decision.achilles_load_review` remain the original non-passing athlete-report diagnostic.
 
-## Exact dormant prescription
+## Exact production prescription
 
 Option: `achilles_midportion_floor_lowering_bodyweight_v1`, version **1**, required by this criterion. Drill: `achilles_tendonitis_eccentric_calf_drops_on_step`. Current display name is **Floor-level controlled Achilles lowering**. Keep the historical ID for compatibility: name/instructions already correct the legacy `on_step` semantics. No drill ID, bank mechanics, metadata review or historical reference changes.
 
@@ -72,16 +72,20 @@ Shared replay pins exact athlete/injury/episode/side, current packet and safety 
 
 The shared registry's optional contextual evaluator is a narrow extension to the existing compiled definition. It consumes complete server-owned assessment event bytes after shared trust/validity and typed judgments succeed, using the existing protocol readers. It is not another persistence or review architecture.
 
-## Shadow versus activation
+## Today, acceptance and continuation
 
 Production capture accepts a compiled exact profile/transition binding before a pathway declaration only when the target stage is disabled **and** the existing transition is non-promotable. A live target requires its exact declared clinical checkpoint. This exception cannot create a criterion from client JSON.
 
-The shadow engine fixture adds this real criterion and its four availability inputs to an isolated closed transition with the unchanged policy hash/live content. Persisted trusted review → shared valid selection → clinical PASS → engine requirement PASS is proven. All fixture requirements can pass while `status=closed`, `target_stage_live=false` and the athlete remains RESTORE. The unchanged production resolver also stays RESTORE. Today shadow hydration selects only the existing RESTORE prescription and hides private statement/qualification/confirmation details. No production generator emits the new option or frozen pins.
+Today hydrates the existing private review channel and runs the current engine. An exact LOAD prescription must also be eligible for the current injury severity, side and equipment. Stable support must be selected explicitly in the intake; gym presets do not imply it. Missing equipment prevents LOAD promotion. Without trusted approval Today remains conservative. Unrelated injury restrictions and clinician clearance retain their existing precedence.
 
-All 64 active profiles/hashes, 103 live identities, bank/review/archive/pathway data, CALM/RESTORE behaviour, clearance, multi-injury precedence, surface safety and completion/exposure semantics are preserved.
+The selected dose, range, resistance, cadence, instructions and seven restrictions are materialised into the actual Today block with the shared frozen review pin and selection sidecar. Camp phase, readiness adjustments and alternate-drill scheduling cannot substitute or escalate this work. Existing daily slot limits, same-day allocation checks and minimum calendar-day gap apply. Acceptance and continuation replay current review validity and match the executable block against the exact selection, bank snapshot and policy restrictions.
 
-Remaining evidence limits: there is no universal stage threshold or optimal-dose proof for this floor-only one-bout starting option, and no justification for automatic external loading, insertional progression or sport/contact clearance. V1 depends on the exact qualified clinical judgment. Activation must still declare the criterion, add the exact reviewed LOAD prescription/live stage, surface/pin validated work through Today and preserve all safety/invalidation checks. That work belongs to the next separate PR; DYNAMIC/RETURN stay closed.
+Unstarted saved work is held after invalidation. Started work remains immutable and unsafe continuation is rejected; stopping remains available. Completed snapshots and exposure history remain historical. Unexpected hydration, evaluator or frozen-work failures fail closed and log the failure category without clinical payloads or exception messages; expected missing/malformed authority is logged separately.
+
+All other 63 profile hashes, bank identities/mechanics, metadata review ledger and historical duplicate archive are unchanged. Current inventory is 104 LIVE identities and 56 dormant advanced candidates: one exact Achilles LOAD identity moved into production. Dated #2742 planning and archive fingerprints use an exact approved activation projection, while current audits and runtime use the actual catalog.
+
+The isolated shadow fixture still proves that clinical PASS cannot open a disabled target. Production now declares the clinical checkpoint explicitly. Remaining evidence limits are unchanged: no universal stage threshold or optimal-dose proof, automatic external loading, insertional progression or sport/contact clearance. V1 depends on the exact qualified clinical judgment; DYNAMIC/RETURN stay closed.
 
 ## Verification
 
-See `tests/test_achilles_shadow_pilot.py` for production-registry capture/replay, all-judgment conjunction, actual observations, bounded selections, wrong attribution, lifecycle, version/hash/packet invalidation, clearance independence, engine safety and RESTORE-only Today. The existing PostgreSQL capture suite includes the real Achilles criterion/option through the service-only writer and revocation. It requires the disposable localhost database supplied by existing CI. Local runs without `REHAB_TEST_DATABASE_URL` skip it; no live database is touched.
+`tests/test_achilles_load_activation.py` exercises registration → structured assessment → trusted capture → LOAD → actual Today → acceptance → completion → exact exposure. It covers unapproved/inapplicable cases, missing support, frozen invalidation/tampering, completed history and safe failure logging. `tests/test_achilles_shadow_pilot.py` retains all-judgment, observation, attribution, lifecycle, version/hash/packet, clearance and isolated closed-target checks. The existing PostgreSQL capture suite includes the real Achilles criterion/option through the service-only writer and revocation, alongside frozen acceptance/race tests. It requires the disposable localhost database supplied by existing CI. Local runs without `REHAB_TEST_DATABASE_URL` skip it; no live database is touched.
