@@ -37,29 +37,42 @@ function useRevealed<T extends Element>(ready: boolean): [React.RefObject<T | nu
   return [ref, revealed];
 }
 
+function prefersReducedMotion(): boolean {
+  return typeof window !== "undefined" && Boolean(window.matchMedia?.("(prefers-reduced-motion: reduce)").matches);
+}
+
 /** Ticks the day count down from the camp's length to today's value once the
- * card is revealed, in step with the bar's CSS fill. Renders the final value on
- * the server and skips the animation under reduced motion. */
+ * card is revealed, in step with the bar's CSS fill. From reveal until the last
+ * frame it shows the animated value (starting at `from`), so today's count
+ * never flashes before the tick-down. Renders the final value on the server and
+ * skips the animation under reduced motion. Plays once per mount. */
 function useCountdownTick(target: number, from: number | null, revealed: boolean): number {
   const [animated, setAnimated] = useState<number | null>(null);
+  const [done, setDone] = useState(false);
+  const willAnimate = from !== null && from > target && !prefersReducedMotion();
   useLayoutEffect(() => {
-    const reduce = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
-    if (!revealed || reduce || from === null || from <= target) {
+    if (!revealed || done || !willAnimate || from === null) {
       return;
     }
     let frame = 0;
     const start = performance.now();
-    // The first frame runs before the next paint, so the count starts at `from`.
     const step = (now: number) => {
       const t = Math.min(1, (now - start) / COUNT_MS);
       const eased = 1 - Math.pow(1 - t, 3);
-      setAnimated(t < 1 ? Math.round(from - (from - target) * eased) : null);
-      if (t < 1) frame = requestAnimationFrame(step);
+      if (t < 1) {
+        setAnimated(Math.round(from - (from - target) * eased));
+        frame = requestAnimationFrame(step);
+      } else {
+        setDone(true);
+      }
     };
     frame = requestAnimationFrame(step);
     return () => cancelAnimationFrame(frame);
-  }, [target, from, revealed]);
-  return animated ?? target;
+  }, [target, from, revealed, done, willAnimate]);
+  if (revealed && willAnimate && !done) {
+    return animated ?? from;
+  }
+  return target;
 }
 
 /**
