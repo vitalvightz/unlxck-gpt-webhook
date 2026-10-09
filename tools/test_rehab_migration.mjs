@@ -31,7 +31,7 @@ const nullDoseMigration = readFileSync("supabase/migrations/20261009100907_rehab
 await db.exec(profileMigration);
 await db.exec(profileMigration); // CREATE OR REPLACE preserves the existing grants and observations.
 await db.exec(nullDoseMigration);
-const delayedWindowMigration = readFileSync("supabase/migrations/20261009150000_pending_delayed_rehab_recent_window.sql", "utf8");
+const delayedWindowMigration = readFileSync("supabase/migrations/20261009124547_pending_delayed_rehab_recent_window.sql", "utf8");
 await db.exec(delayedWindowMigration);
 const athlete = "00000000-0000-4000-8000-000000000001";
 const other = "00000000-0000-4000-8000-000000000002";
