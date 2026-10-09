@@ -27,7 +27,7 @@ const migration = readFileSync("supabase/migrations/20260930173118_injury_episod
 await db.exec(readFileSync("supabase/migrations/20260820170000_add_rehab_response_group_identity.sql", "utf8"));
 await db.exec(migration);
 const profileMigration = readFileSync("supabase/migrations/20261002234842_pathway_profile_unknown_side.sql", "utf8");
-const nullDoseMigration = readFileSync("supabase/migrations/20261009030000_rehab_exposure_json_null_prescribed_dose.sql", "utf8");
+const nullDoseMigration = readFileSync("supabase/migrations/20261009100907_rehab_exposure_json_null_prescribed_dose.sql", "utf8");
 await db.exec(profileMigration);
 await db.exec(profileMigration); // CREATE OR REPLACE preserves the existing grants and observations.
 await db.exec(nullDoseMigration);
