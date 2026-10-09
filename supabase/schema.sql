@@ -2606,7 +2606,8 @@ returns setof public.rehab_exposures language sql security definer
 set search_path = public, pg_temp as $$
   select e.* from public.rehab_exposures e
     join public.injury_flags i on i.id = e.injury_id and i.athlete_id = e.athlete_id
-    where e.athlete_id = p_athlete_id and e.occurred_at::date < p_training_day + 1
+    where e.athlete_id = p_athlete_id
+      and e.occurred_at::date between p_training_day - 2 and p_training_day
       and coalesce(e.response->>'next_day_response','not_yet_known') = 'not_yet_known'
       and not exists (select 1 from public.injury_episode_events o
          where o.athlete_id = e.athlete_id and o.event_type = 'delayed_rehab_response' and o.payload->>'exposure_id' = e.id::text)
