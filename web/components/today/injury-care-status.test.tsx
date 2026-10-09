@@ -373,7 +373,7 @@ test("compact clearance keeps unknown rehabilitation permission visible", () => 
 });
 
 test("surface guidance sources remain available without a clearance sheet", () => {
-  const html = renderToStaticMarkup(<InjuryCareStatus injury={{ ...injury, surface_class: "surface_injury", rehab_decision: {
+  const html = renderToStaticMarkup(<InjuryCareStatus injury={{ ...injury, surface_class: "stable_surface", rehab_decision: {
     ...injury.rehab_decision!, outcome: "wound_care",
   } }} token="token" onRefresh={async () => {}} />);
   assert.match(html, /Guidance sources/);
