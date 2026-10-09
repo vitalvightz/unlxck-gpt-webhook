@@ -703,8 +703,8 @@ test("checking off guidance saves it as followed and asks how it felt", async ()
       calls.push(JSON.parse(String(init.body)));
       return new Response(JSON.stringify({ completion: { id: "completion-1", plan_id: "plan-1", session_id: "rehab-2026-08-01", training_day: "2026-08-01" },
         rehab_response_prompts: [{ injury_id: "injury-1", injury_episode_id: "episode-1", injury_label: "Chest", body_region: "chest", side: "unknown",
-          during_question: "How did it feel during the rehab work?", during_options: ["better", "same", "worse", "not_sure"],
-          limit_question: "Did you have to reduce or stop because of it?", limit_options: ["no", "reduced", "stopped"] }] }), { status: 200 });
+          during_question: "How did it feel while following the guidance?", during_options: ["better", "same", "worse", "not_sure"],
+          limit_question: "Did it make you ease off or stop anything?", limit_options: ["no", "reduced", "stopped"], guidance_only: true }] }), { status: 200 });
     }
     return new Response('{"response_sets":[],"history_truncated":false}', { status: 200 });
   }) as typeof fetch;
@@ -719,6 +719,33 @@ test("checking off guidance saves it as followed and asks how it felt", async ()
     assert.match(container.textContent ?? "", /How did it feel today\?/);
     assert.match(container.textContent ?? "", /while following the guidance/);
     assert.doesNotMatch(container.textContent ?? "", /How did the rehab work go|during the rehab work/);
+  } finally { globalThis.fetch = original; act(() => root.unmount()); container.remove(); }
+});
+
+test("guidance wording survives Today moving on to the next session", async () => {
+  const container = document.createElement("div"); document.body.appendChild(container);
+  const root = createRoot(container);
+  const original = globalThis.fetch;
+  // Today now shows the next, exercise-bearing session; the guidance prompt is
+  // rehydrated from the server and must keep its own wording.
+  const state = reviewedSessionState(false);
+  state.today.recommendation_state = "train_as_planned";
+  state.today.decision_tier = "green";
+  state.live_prescription!.changes = [];
+  globalThis.fetch = (async () => new Response(JSON.stringify({ history_truncated: false, response_sets: [{
+    completion_id: "completion-1", plan_id: "plan-1", session_id: "rehab-2026-07-31", training_day: "2026-07-31",
+    rehab_response_prompts: [{ injury_id: "injury-1", injury_episode_id: "episode-1", injury_label: "CHEST", body_region: "chest", side: "unknown",
+      drill_ids: ["chest_strain_recovery_support"], during_question: "How did it feel while following the guidance?",
+      during_options: ["better", "same", "worse", "not_sure"], limit_question: "Did it make you ease off or stop anything?",
+      limit_options: ["no", "reduced", "stopped"], guidance_only: true }] }] }), { status: 200 })) as typeof fetch;
+  try {
+    await act(async () => { root.render(<AuthProvider><ToastProvider><TodaySessionPanel state={state} structuredPlan={null} token="token" onRefresh={async () => {}} /></ToastProvider></AuthProvider>); });
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 0)); });
+    const text = container.textContent ?? "";
+    assert.match(text, /Reviewed test rehab/);
+    assert.match(text, /How did it feel today\?/);
+    assert.match(text, /while following the guidance/);
+    assert.doesNotMatch(text, /How did the rehab work go|during the rehab work/);
   } finally { globalThis.fetch = original; act(() => root.unmount()); container.remove(); }
 });
 

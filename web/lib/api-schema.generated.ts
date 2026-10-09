@@ -1585,6 +1585,7 @@ export type RehabResponsePromptResponse = {
   during_options: ("better" | "not_sure" | "same" | "worse")[];
   limit_question: string;
   limit_options: ("no" | "reduced" | "stopped")[];
+  guidance_only: boolean;
 };
 
 /**

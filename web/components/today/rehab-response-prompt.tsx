@@ -89,7 +89,6 @@ export function RehabResponsePrompt({
   sessionId,
   trainingDay,
   prompts,
-  guidance = false,
   onDismiss,
 }: Readonly<{
   token: string;
@@ -98,8 +97,6 @@ export function RehabResponsePrompt({
   /** Sent only for a retro-logged session; omitted means "the one just finished". */
   trainingDay?: string;
   prompts: RehabResponsePromptModel[];
-  /** Calm-stage guidance was followed, not exercises: ask about the day, not "the rehab work". */
-  guidance?: boolean;
   onDismiss: () => void;
 }>) {
   const [answers, setAnswers] = useState<Record<string, Answer>>({});
@@ -149,6 +146,9 @@ export function RehabResponsePrompt({
   if (prompts.length === 0) {
     return null;
   }
+  // The server marks this from the completed drills, so the wording survives
+  // Today moving on to the next session and a reload of pending prompts.
+  const guidance = prompts.every((prompt) => prompt.guidance_only);
 
   if (isSent) {
     return (
@@ -173,7 +173,7 @@ export function RehabResponsePrompt({
           <div key={prompt.injury_id} className="rehab-response-injury">
             <p className="rehab-response-injury-label">{prompt.injury_label}</p>
             <ChoiceRow
-              legend={guidance ? "How did it feel while following the guidance?" : prompt.during_question}
+              legend={prompt.during_question}
               legendId={`rehab-during-${prompt.injury_id}`}
               options={prompt.during_options}
               labels={DURING_LABELS}
@@ -187,7 +187,7 @@ export function RehabResponsePrompt({
               }
             />
             <ChoiceRow
-              legend={guidance ? "Did it make you ease off or stop anything?" : prompt.limit_question}
+              legend={prompt.limit_question}
               legendId={`rehab-limit-${prompt.injury_id}`}
               options={prompt.limit_options}
               labels={LIMIT_LABELS}

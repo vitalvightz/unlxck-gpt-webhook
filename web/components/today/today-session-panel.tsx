@@ -1382,7 +1382,6 @@ export function TodaySessionPanel({
           sessionId={pending.session_id}
           trainingDay={pending.training_day}
           prompts={pending.rehab_response_prompts}
-          guidance={guidanceOnlyRehab && pending.session_id === session.session_id}
           onDismiss={() =>
             setRehabResponses((current) =>
               current.filter((item) => item.completion_id !== pending.completion_id),

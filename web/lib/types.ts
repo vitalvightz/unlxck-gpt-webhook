@@ -1338,6 +1338,8 @@ export type RehabResponsePrompt = {
   during_options: RehabDuringResponse[];
   limit_question: string;
   limit_options: RehabLimitResponse[];
+  /** Server-decided from the completed drills: calm-stage guidance was followed, not exercises. */
+  guidance_only?: boolean;
 };
 
 export type TodaySessionCompletionResponse = {

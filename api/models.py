@@ -2516,6 +2516,8 @@ class RehabResponsePromptResponse(BaseModel):
     during_options: list[RehabDuringResponse] = Field(default_factory=list)
     limit_question: str
     limit_options: list[RehabLimitResponse] = Field(default_factory=list)
+    # Calm-stage guidance was followed rather than exercises performed.
+    guidance_only: bool = False
 
 
 class SessionCompletionResponse(BaseModel):

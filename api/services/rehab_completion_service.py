@@ -50,6 +50,7 @@ from api.contracts.rehab_completion import (
     build_rehab_exposure_event,
     build_rehab_response_prompts,
     build_response_group_id,
+    is_guidance_only_rehab,
     resolve_rehab_completion,
 )
 from api.contracts.rehab_exposure import RehabExposureEvent
@@ -520,18 +521,30 @@ def _prompt_from_context(
     label = _clean(injury.get("label")) or " ".join(
         part for part in (side if side in {"left", "right"} else "", region) if part
     ).strip()
+    drill_ids = tuple(
+        _clean(item.get("drill_id"))
+        for item in _mappings(context.get("expected_exposures"))
+        if _clean(item.get("drill_id"))
+    )
     return RehabResponsePrompt(
         injury_id=_clean(context.get("injury_id")),
         injury_episode_id=_clean(context.get("injury_episode_id")),
         injury_label=label.upper(),
         body_region=region,
         side=side,
-        drill_ids=tuple(
-            _clean(item.get("drill_id"))
-            for item in _mappings(context.get("expected_exposures"))
-            if _clean(item.get("drill_id"))
-        ),
+        drill_ids=drill_ids,
+        # Read from the drill, not from what Today shows now: a reloaded prompt
+        # keeps its wording after Today advances to the next session.
+        guidance_only=bool(drill_ids) and all(_is_guidance_drill(drill_id) for drill_id in drill_ids),
     )
+
+
+def _is_guidance_drill(drill_id: str) -> bool:
+    drill = rehab_drill_by_id(drill_id)
+    if drill is None:
+        from fightcamp.rehab_duplicate_archive import archived_rehab_drill_by_id
+        drill = archived_rehab_drill_by_id(drill_id)
+    return is_guidance_only_rehab(drill)
 
 
 def list_pending_rehab_response_sets(
@@ -803,6 +816,7 @@ def prompts_as_payload(prompts: Iterable[RehabResponsePrompt]) -> list[dict[str,
             "during_options": list(DURING_ANSWERS),
             "limit_question": prompt.limit_question,
             "limit_options": list(LIMIT_ANSWERS),
+            "guidance_only": prompt.guidance_only,
         }
         for prompt in prompts
     ]
