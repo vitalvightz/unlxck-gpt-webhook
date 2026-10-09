@@ -1,11 +1,11 @@
 {
   "source_commit": "2c849735006e55552d2cc36da220a52ac30c3328",
   "purpose": "Reconstruct the dated pre-activation inventory only for historical archive/planning verification. Runtime and current inventory audits use the live catalog.",
-  "activated_profile_sha256": "56eaff8575fd38bec5d417679ff67c776cbed900de8f3dda507d2a9d71923c46",
+  "activated_profile_sha256": "0297b3c134bd0be38dabd83bd1ed91bc1dbc4cbf1d764fb52e6fa3ab4767d701",
   "activated_checkpoint": {
-    "checkpoint_id": "achilles_restore_load_clinical_review_v1",
-    "description": "Trusted clinician interpretation and exact bounded Achilles LOAD selection.",
-    "required_input": "Independently confirmed current clinician review and selected prescription.",
+    "checkpoint_id": "achilles_midportion_reported_load_permission_v1",
+    "description": "Self-reported loading permission and confirmed midportion applicability of the reviewed floor option; no medical verification or readiness claim.",
+    "required_input": "Current episode rehabilitation permission and simple injury location.",
     "basis": "clinical"
   },
   "historical_profile": {

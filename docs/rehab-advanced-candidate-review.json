@@ -10409,7 +10409,7 @@
   ],
   "protected_input_sha256": {
     "api/contracts/rehab_progression.py": "60a75bd48ec9cbdf5475392aad551e599c20c54039e14ce52205a132a79c75f6",
-    "api/services/rehab_completion_service.py": "638520fea0e1d23c95400ac446728073b86de7f87b51a2a3b8a8988e67104628",
+    "api/services/rehab_completion_service.py": "0695b8dac6aa854e2ebc855d625a80e699e74a3ab80ec86c3228e204fdfaeaf0",
     "data/rehab_archive/exact_duplicates.json": "67299acd7b7cdb573d8624226c193964444ff6537c3e25c1a3261ced81274b21",
     "data/rehab_bank.json": "13b47b8a2da99b16899dee3ba6fc51450834a90effe08e32bc153f990f3f6b2e",
     "data/rehab_bank_duplicate_debt.json": "8f967faffe7f2ddd4dc7f9e0d64c83a00fa1502deb0af17c3a06c07ac34b7f69",

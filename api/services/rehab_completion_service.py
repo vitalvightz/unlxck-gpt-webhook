@@ -282,7 +282,8 @@ def resolve_completed_session_rehab(
     completion_plan_id = _clean((completion or {}).get("plan_id"))
     if not plan_id or completion_plan_id != plan_id:
         return RehabCompletionResolution(), []
-    if _clean((completion or {}).get("status")).lower() not in COMPLETED_STATUSES:
+    if (_clean((completion or {}).get("status")).lower() not in COMPLETED_STATUSES
+            or (completion or {}).get("rehab_performance") == "skipped"):
         return RehabCompletionResolution(), []
     items = session_rehab_items(plan_row, training_day=training_day, session_id=session_id,
                                prescription=(completion or {}).get("prescription_snapshot"))
@@ -649,6 +650,23 @@ def list_pending_rehab_response_sets(
     return list(grouped.values())
 
 
+def record_reported_permission_rehab(store, *, athlete_id, plan_row, completion):
+    """Record actual work once; the existing injury check-in supplies its response.
+
+    No response, symptom limit or performed quantity is inferred from permission.
+    Explicit 'completed as shown' alone can quantify the frozen prescription.
+    """
+    contexts = rehab_response_contexts_by_injury(completion, athlete_id=athlete_id)
+    answers = {injury_id: {"injury_episode_id": context["injury_episode_id"],
+                           "during_response": None, "limit_response": None}
+               for injury_id, context in contexts.items()}
+    if not answers:
+        return []
+    return record_rehab_exposures(store, athlete_id=athlete_id, plan_row=plan_row,
+        training_day=completion["training_day"], session_id=completion["session_id"], completion=completion,
+        answers=answers, expected_contexts=contexts, source="athlete_logged_rehab", response_tracking="injury_checkin")
+
+
 def record_rehab_exposures(
     store: Any,
     *,
@@ -660,6 +678,7 @@ def record_rehab_exposures(
     answers: Mapping[str, Mapping[str, Any]],
     expected_contexts: Mapping[str, Mapping[str, Any]] | None = None,
     source: str = "athlete_logged_rehab",
+    response_tracking: str | None = None,
 ) -> list[RehabExposureEvent]:
     """Append one exposure per eligible candidate the athlete answered for.
 
@@ -720,6 +739,8 @@ def record_rehab_exposures(
             limit=answer.get("limit_response"),
             source=source,
         )
+        if response_tracking:
+            event = event.model_copy(update={"provenance": event.provenance.model_copy(update={"response_tracking": response_tracking})})
         injury = injuries_by_id.get(_clean(candidate.injury_id))
         if injury is None or not event.is_attributable_to(injury):
             # The same identity check `POST /api/rehab-exposures` applies, so

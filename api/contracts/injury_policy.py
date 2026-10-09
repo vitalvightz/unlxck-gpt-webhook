@@ -18,7 +18,7 @@ from fightcamp.surface_wound_safety import sanitize_surface_guidance
 
 from .rehab_stage import resolve_rehab_stage
 from .rehab_progression import resolve_reviewed_progression, episode_setback_at, _instant
-from .clinician_clearance import effective_clinician_clearance, clinician_clears_baseline
+from .clinician_clearance import effective_clinician_clearance, clinician_clears_baseline, achilles_load_permission_reason
 from .rehab_assessment import AssessmentContext, input_definitions, read_assessment_input
 from .achilles_restore_load import review_achilles_restore_load
 from .clinical_review_validity import ClinicalReviewInput, evaluate_clinical_review
@@ -115,12 +115,12 @@ def resolve_injury_policy(
         result["reason_codes"] = ["rehab_policy_stale_or_incomplete"]
         return result
     target_content = None
-    if any(p.clinical_criterion for p in policy.prescriptions):
+    if any(p.clinical_criterion or p.required_rehabilitation_level for p in policy.prescriptions):
         target_content = {}
         bank_index = {d["id"]:d for group in bank for d in group.get("drills",[])}
         for target in policy.live_stages:
             options = [{**bank_index[p.drill_id], "injury_type":kind, "allowed_severities":p.allowed_severities}
-                       for p in policy.prescriptions if p.stage == target and p.clinical_criterion]
+                       for p in policy.prescriptions if p.stage == target and (p.clinical_criterion or p.required_rehabilitation_level)]
             if options:
                 eligible, _ = filter_rehab_candidates(injury={**injury,"body_region":region,"injury_type":kind,
                     "body_region_aliases":get_rehab_location_candidates(region)}, rehab_stage=target,
@@ -184,6 +184,10 @@ def resolve_injury_policy(
         prescription = prescriptions[identity]
         drill = deepcopy(drill_by_id[identity])
         reviewed_work = None
+        if prescription.required_rehabilitation_level:
+            if achilles_load_permission_reason(injury) or readiness_decision == "pull_back":
+                result["reason_codes"] = ["reported_rehabilitation_permission_unavailable_or_held"]
+                return result
         if prescription.clinical_criterion:
             supplied = (clinical_review_inputs or {}).get(prescription.clinical_criterion)
             if supplied is None or readiness_decision == "pull_back":
@@ -227,6 +231,11 @@ def resolve_injury_policy(
             "minimum_gap_days": prescription.minimum_gap_days,
             "is_loading": prescription.stage != "calm" and drill.get("function") in {"tendon_loading", "isometric_analgesia", "activation", "control"},
         })
+        if prescription.required_rehabilitation_level:
+            from .achilles_restore_load_pilot import ACHILLES_LOAD_OPTION
+            resolved_drills[-1].update(required_rehabilitation_level=prescription.required_rehabilitation_level,
+                range_choice="floor_level", resistance={"mode": "bodyweight", "kg": None},
+                mandatory_restrictions=list(ACHILLES_LOAD_OPTION.mandatory_restrictions))
         if reviewed_work:
             resolved_drills[-1].update(frequency=selection.cadence.frequency,
                 minimum_gap_days=selection.cadence.minimum_gap_days,
@@ -476,6 +485,9 @@ def reconcile_session_prescription(
             "is_loading": prescription["is_loading"],
             "source_references": prescription["sources"],
         }
+        if prescription.get("required_rehabilitation_level"):
+            block.update({key: deepcopy(prescription[key]) for key in (
+                "required_rehabilitation_level", "range_choice", "resistance", "mandatory_restrictions", "frequency")})
         if prescription.get("clinical_review_pin"):
             block.update({key: deepcopy(prescription[key]) for key in (
                 "range_choice", "resistance", "mandatory_restrictions", "frequency",

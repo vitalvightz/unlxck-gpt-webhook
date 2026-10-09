@@ -62,7 +62,7 @@ def test_shared_review_passes_only_one_requirement_engine_keeps_other_gates(seco
     assert empty["status"] == "blocked" and "no_reviewed_stage_exposure" in empty["reason_codes"]
     completed = engine(supplied, current, subject, (event(),))
     assert completed["status"] == "met" and completed["target_stage_live"]
-    assert CAPTURED_FUNCTIONAL_CHECKPOINTS == frozenset({"achilles_restore_load_clinical_review_v1"})
+    assert CAPTURED_FUNCTIONAL_CHECKPOINTS == frozenset({"achilles_restore_load_clinical_review_v1", "achilles_midportion_reported_load_permission_v1"})
 
 
 def test_approval_cannot_activate_a_shadow_target():

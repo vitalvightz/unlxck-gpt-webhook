@@ -25,7 +25,7 @@ from api.services.clinical_review_capture_service import (
     build_review_context, hydrate_review_input, prepare_review_packet, record_clinical_review, record_review_lifecycle,
 )
 from api.services.injury_episode_service import apply_episode_observations
-from fightcamp.rehab_clinical import content_hash, load_clinical_policies
+from fightcamp.rehab_clinical import content_hash, load_clinical_policies, compose_policy, load_pathway_catalog
 from fightcamp.rehab_protocols import get_rehab_bank
 from fightcamp.rehab_pathways import TransitionRequirement
 from tests.clinical_capture_fixtures import capture_bundle
@@ -38,7 +38,13 @@ def shadow_bundle(*, side="left", **changes):
     injury = store.snapshot["injury"]
     injury.update(canonical_location="achilles", body_region="achilles", injury_type="tendonitis",
                   side=side, body_area=f"{side.title()} Achilles", description=f"{side.title()} Achilles tendonitis")
-    policy = next(p for p in load_clinical_policies() if p.policy_id == "achilles_tendonitis")
+    # Preserve the pre-activation shadow contract. The live athlete workflow
+    # now uses self-reported permissions; it does not register trusted reviews
+    # as a gate. These tests continue to exercise the retained private machinery.
+    import json
+    from pathlib import Path
+    historical = json.loads((Path(__file__).parents[1] / "tools/rehab_achilles_activation_inventory_baseline.json").read_text(encoding="utf-8"))["historical_profile"]
+    policy = compose_policy(load_pathway_catalog(), historical)
     bank = get_rehab_bank()
     value = assessment(**dict(side=side, site="midportion", suspected_rupture=False, marked_weakness=False,
                              traumatic_loss_of_function=False, clinician_restriction=False) | changes)
@@ -127,7 +133,7 @@ def test_production_shadow_complete_chain_pass_stays_restore_and_never_schedules
     assert resolved["stage"] == "restore"
     live_resolved = resolve_reviewed_progression(injury, base_stage="restore", policy=kwargs["policies"][0],
         exposures=store.snapshot["exposures"], as_of=NOW, clinical_review_inputs={CRITERION_ID:supplied})
-    assert live_resolved["stage"] == "load" and not live_resolved["next_transition"]["target_stage_live"]
+    assert live_resolved["stage"] == "restore" and not live_resolved["next_transition"]["target_stage_live"]
     decision = resolve_injury_policy(injury, policies=(pilot,), bank=kwargs["bank"],
         exposures=store.snapshot["exposures"], as_of=NOW, clinical_review_inputs={CRITERION_ID: supplied})
     assert decision["stage"] == "restore" and decision["prescription"]["drill_id"] != OPTION.drill_id
@@ -280,7 +286,7 @@ def test_shadow_capture_cannot_bind_an_undeclared_live_target():
     current = bundle[3]["policies"][0]
     undeclared = current.transitions[0].model_copy(update={"requirements":
         [r for r in current.transitions[0].requirements if r.checkpoint != CRITERION_ID]})
-    bundle[3]["policies"] = (current.model_copy(update={"transitions":[undeclared,*current.transitions[1:]]}),)
+    bundle[3]["policies"] = (current.model_copy(update={"live_stages":["calm", "restore", "load"], "transitions":[undeclared,*current.transitions[1:]]}),)
     with pytest.raises(HTTPException, match="clinical criterion does not match this transition"):
         write(bundle)
     assert bundle[0].writes == 0

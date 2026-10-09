@@ -56,6 +56,54 @@ def frozen_review_hold(store, athlete_id, snapshot, *, work_state, as_of=None, r
     current_registry = registry or CLINICAL_REVIEW_REGISTRY
     gated_drills = {o.drill_id for definition in current_registry._definitions.values() for o in definition.options}
     for block in snapshot.get("session", {}).get("blocks", []):
+        if block.get("required_rehabilitation_level") == "loading":
+            # A self-report has no verified-clinician pin. Withdraw incompatible
+            # future work, while leaving started/completed snapshots intact.
+            try:
+                from api.services.injury_episode_service import apply_episode_observations, episode_observations
+                from api.contracts.clinician_clearance import achilles_load_permission_reason
+                injury = store.get_injury_flag_for_athlete(block["injury_id"], athlete_id)
+                if not injury or str(injury.get("episode_id")) != block.get("injury_episode_id"):
+                    return True
+                current = apply_episode_observations(injury, episode_observations(store, athlete_id, injury), as_of=now)
+                if work_state == "unstarted" and achilles_load_permission_reason(current):
+                    return True
+                if work_state == "unstarted":
+                    plan = store.get_plan_for_athlete(snapshot.get("plan_id"), athlete_id) or {}
+                    intake = (store.get_intake(plan["intake_id"]) if plan.get("intake_id")
+                              else store.get_latest_intake(athlete_id)) or {}
+                    if intake.get("athlete_id") != athlete_id:
+                        return True
+                    intake = intake.get("intake") or intake
+                    if "stable_support" not in (intake.get("equipment_access") or []):
+                        return True
+                policy = next(p for p in (policies if policies is not None else load_clinical_policies())
+                              if p.policy_id == block.get("policy_id"))
+                prescription = next(p for p in policy.prescriptions if p.drill_id == block.get("rehab_drill_id"))
+                from api.contracts.achilles_restore_load_pilot import ACHILLES_LOAD_OPTION
+                if (prescription.required_rehabilitation_level != "loading"
+                        or block.get("policy_review_hash") != policy.content_hash
+                        or block.get("bank_hash") != prescription.bank_hash
+                        or block.get("dose") != prescription.dose.model_dump(exclude_none=True)
+                        or block.get("instructions") != prescription.instructions
+                        or block.get("coaching_cues") != [prescription.instructions]
+                        or block.get("mandatory_restrictions") != list(ACHILLES_LOAD_OPTION.mandatory_restrictions)
+                        or block.get("title") != block.get("drill_snapshot", {}).get("name")
+                        or block.get("display_name") != block.get("drill_snapshot", {}).get("name")
+                        or block.get("stop_rules") != prescription.stop_when
+                        or block.get("range_choice") != "floor_level"
+                        or block.get("resistance") != {"mode": "bodyweight", "kg": None}
+                        or block.get("frequency") != "daily" or block.get("minimum_gap_days") != 1
+                        or content_hash(block.get("drill_snapshot")) != prescription.bank_hash
+                        or any(block.get(name) != getattr(prescription.dose, name) for name in ("sets", "reps", "duration_seconds"))
+                        or any(block.get(name) for name in ("load", "weight", "prescription", "alternates", "exercises", "tempo", "rpe", "intensity", "duration_minutes", "rest", "rest_seconds", "duration"))):
+                    return True
+            except (ValueError, TypeError, KeyError, StopIteration):
+                return True
+            except Exception as exc:  # noqa: BLE001 - unavailable safety inputs hold future work
+                logger.error("reported_permission_work_failed category=%s", type(exc).__name__)
+                return True
+            continue
         if "clinical_review_pin" not in block:
             if block.get("rehab_drill_id") in gated_drills:
                 return True

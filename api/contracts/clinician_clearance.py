@@ -1,10 +1,52 @@
-"""Current episode clearance sets training scope, never rehab recovery."""
+"""Episode-bound, self-reported clinician permissions; never medical verification."""
 from collections.abc import Mapping, Sequence
+from typing import Literal
+import re
+
+from pydantic import BaseModel, ConfigDict
 
 from .injury_checkin import build_injury_label, injury_consequence_tier
 
 _SCOPES = (("rehab",), ("rehab", "training"), ("rehab", "training", "contact"))
 _LEVELS = ("rehab_only", "train_no_contact", "train_contact")
+
+LOAD_PERMISSION_CHECKPOINT = "achilles_midportion_reported_load_permission_v1"
+
+
+class RehabilitationPermission(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+    schema_version: Literal[1] = 1
+    level: Literal["gentle_recovery", "loading", "sport_specific", "not_cleared"]
+
+
+def permits_rehabilitation_loading(injury: Mapping) -> bool:
+    report = injury.get("clinician_clearance")
+    if not isinstance(report, Mapping) or str(report.get("episode_id")) != str(injury.get("episode_id")):
+        return False
+    try:
+        permission = RehabilitationPermission.model_validate(report.get("rehabilitation_permission"))
+    except (ValueError, TypeError):
+        return False
+    return (bool(injury.get("episode_id")) and injury.get("status") in {"open", "monitoring"}
+            and permission.level in {"loading", "sport_specific"})
+
+
+def achilles_load_permission_reason(injury: Mapping) -> str | None:
+    """Applicability of the single reviewed option, without diagnosing readiness."""
+    if not permits_rehabilitation_loading(injury):
+        return "rehabilitation_loading_not_reported"
+    # Only the explicit injury-information answer applies. Legacy training
+    # scopes, clinical worksheets and free-text guesses cannot supply this.
+    description = str(injury.get("description") or "")
+    locations = re.findall(r"\[achilles_site:(midportion|insertional|unknown)\]", description)
+    if locations != ["midportion"]:
+        return "achilles_midportion_not_confirmed"
+    if (injury.get("rehab_medical_gate") or injury.get("progression_assessment_medical_hold")
+            or injury.get("medical_hold") or injury.get("restriction_hold")
+            or injury.get("latest_reported_status") == "worse"
+            or str(injury.get("severity")) not in {"mild", "moderate", "low", "medium"}):
+        return "injury_loading_safety_hold"
+    return None
 
 
 def canonical_clearance_scopes(value):

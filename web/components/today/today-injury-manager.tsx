@@ -9,10 +9,9 @@ import {
   type BodyMapSide,
 } from "@/components/body-map";
 import { EffectiveClinicianClearanceStatus, InjuryCareStatus } from "@/components/today/injury-care-status";
-import { AchillesAssessmentForm } from "@/components/today/achilles-assessment-form";
 import { SegmentGroup } from "@/components/today/segment-group";
 import { useToast } from "@/components/toast-provider";
-import { submitTodayInjuryCheckin } from "@/lib/api";
+import { submitTodayInjuryCheckin, submitInjuryEpisodeObservation } from "@/lib/api";
 import { normalizeInjuryLabel, resolveInjuryTypeLabel } from "@/lib/injury-display";
 import { INJURY_IMPACT_OPTIONS, readInjuryImpact, writeInjuryImpact, type InjuryImpact } from "@/lib/injury-impact";
 import { TODAY_INJURY_MAX_WORDS } from "@/lib/input-limits";
@@ -23,6 +22,7 @@ import {
   type TodayInjuryTypeSelection,
   type TodayOtherInjuryType,
   composeTodayInjuryDescription,
+  readAchillesSite, stripAchillesSite, writeAchillesSite, type AchillesSite,
   getTodayOtherInjuryTypes,
   readTodayOtherInjuryType,
   isInjuryEntryLimited,
@@ -41,15 +41,10 @@ import type {
   TodayCommandView,
 } from "@/lib/types";
 
-// "Same" is deliberately NOT an option. An injury left untouched stays exactly
-// where it is (the backend keeps it "ongoing"), so a per-day "nothing changed"
-// tap was pure ceremony — and a bright, pre-selectable "Same" button read to
-// athletes as a required daily confirmation. The check-in now only asks for a
-// CHANGE: easing, worse, or resolved. Silence supplies no recovery evidence.
 const INJURY_STATUS_ACTIONS: Array<{ value: TodayInjuryCheckinStatus; label: string }> = [
-  { value: "improving", label: "Easing" },
+  { value: "improving", label: "Better" },
+  { value: "ongoing", label: "Same" },
   { value: "worse", label: "Worse" },
-  { value: "resolved", label: "Resolved" },
 ];
 
 // Surface (skin) follow-up ----------------------------------------------------
@@ -291,11 +286,13 @@ function getSurfaceGuidance(injury: InjuryFlagRecord): SurfaceGuidance | null {
 export function TodayInjuryManager({
   openInjuries,
   effectiveClearance,
+  delayedPrompts = [],
   token,
   onRefresh,
 }: {
   openInjuries: InjuryFlagRecord[];
   effectiveClearance?: TodayCommandView["effective_clinician_clearance"];
+  delayedPrompts?: TodayCommandView["delayed_rehab_prompts"];
   token: string;
   onRefresh: () => Promise<void>;
 }) {
@@ -332,6 +329,7 @@ export function TodayInjuryManager({
   // The more specific type picked under "Other" ("" = something else, described in the note).
   const [newOtherType, setNewOtherType] = useState<TodayOtherInjuryType | "">("");
   const [newDetail, setNewDetail] = useState("");
+  const [achillesSite, setAchillesSite] = useState<AchillesSite>("unknown");
   // Whether the last edit hit the word/character cap, so the hint can explain the
   // trim instead of a word silently vanishing.
   const [areaLimited, setAreaLimited] = useState(false);
@@ -380,6 +378,16 @@ export function TodayInjuryManager({
     }
     setPendingFlagId(flagId);
     try {
+      // The same three-button response answers yesterday's rehab question.
+      // Match the exact episode; never attach an answer after an injury changes.
+      const currentInjury = openInjuries.find(injury => injury.id === flagId);
+      for (const prompt of delayedPrompts ?? []) {
+        if (prompt.injury_id === flagId && prompt.injury_episode_id === currentInjury?.episode_id && status !== "resolved") {
+          await submitInjuryEpisodeObservation(token, { injury_id: flagId, injury_episode_id: prompt.injury_episode_id,
+            event_type: "delayed_rehab_response", exposure_id: prompt.exposure_id,
+            response: status === "improving" ? "better" : status === "worse" ? "worse" : "same" });
+        }
+      }
       const response = await submit([declaration ?? { flag_id: flagId, status }]);
       setSelectedStatusByFlagId((current) => ({ ...current, [flagId]: status }));
       const previous = openInjuries.find((injury) => injury.id === flagId);
@@ -520,7 +528,8 @@ export function TodayInjuryManager({
     setAddMissing(null);
     setIsAdding(true);
     try {
-      const description = writeInjuryImpact(composeTodayInjuryDescription({ injuryType: newType, otherType: newOtherType, detail: newDetail }), newImpact);
+      let description = writeInjuryImpact(composeTodayInjuryDescription({ injuryType: newType, otherType: newOtherType, detail: newDetail }), newImpact);
+      if (/achilles/i.test(area)) description = writeAchillesSite(description, achillesSite);
       // Whatever open injury the reconcile returns that was not here before this
       // add is the flag it just created — that is how we find it to route on.
       const previousIds = new Set(openInjuries.map((injury) => injury.id));
@@ -534,7 +543,7 @@ export function TodayInjuryManager({
       setBodyMapVisible(true);
       setNewType(NO_TODAY_INJURY_TYPE);
       setNewOtherType("");
-      setNewDetail("");
+      setNewDetail(""); setAchillesSite("unknown");
       setAreaLimited(false);
       setDetailLimited(false);
       setNewZone("");
@@ -584,7 +593,7 @@ export function TodayInjuryManager({
     setBodyMapVisible(true);
     setNewType(NO_TODAY_INJURY_TYPE);
     setNewOtherType("");
-    setNewDetail("");
+    setNewDetail(""); setAchillesSite("unknown");
     setAreaLimited(false);
     setDetailLimited(false);
     setAddMissing(null);
@@ -638,7 +647,8 @@ export function TodayInjuryManager({
                       setEditingFlagId(injury.id); setNewArea(injury.body_area);
                       const impact = readInjuryImpact(injury.description ?? "");
                       setNewImpact(impact?.value ?? "");
-                      const description = writeInjuryImpact(injury.description ?? "", "");
+                      setAchillesSite(readAchillesSite(injury.description ?? ""));
+                      const description = stripAchillesSite(writeInjuryImpact(injury.description ?? "", ""));
                       const otherType = readTodayOtherInjuryType(description);
                       const type = otherType ? undefined : TODAY_INJURY_TYPE_OPTIONS.find((option) => option.value !== "other" && new RegExp(`\\b${option.value}\\b`, "i").test(description));
                       const typeWord = otherType ? TODAY_OTHER_INJURY_TYPES[otherType].word : type?.value;
@@ -660,11 +670,8 @@ export function TodayInjuryManager({
                   </div>
                 ) : null}
                 {injury.rehab_decision || injury.episode_id ? <InjuryCareStatus injury={injury} token={token} onRefresh={onRefresh} /> : null}
-                <AchillesAssessmentForm key={`${injury.id}:${injury.episode_id}:${injury.side}`} injury={injury} token={token}
-                  onRefresh={onRefresh} disabled={isAdding || pendingFlagId !== null} />
                 <div className="today-injury-update-head">
-                  <p className="today-field-label today-injury-status-label">Update today</p>
-                  <p className="today-field-hint today-injury-status-hint">Only tap if it changed.</p>
+                  <p className="today-field-label today-injury-status-label">How&apos;s your injury?</p>
                 </div>
                 <div
                   className="today-segment-row today-injury-status-row"
@@ -706,6 +713,8 @@ export function TodayInjuryManager({
                     );
                   })}
                 </div>
+                <button type="button" className={`today-tool-link${confirmingClearId === injury.id ? " today-segment-pending" : ""}${selectedStatus === "resolved" ? " today-segment-active" : ""}`} aria-pressed={selectedStatus === "resolved"} aria-describedby={confirmingClearId === injury.id ? `${injury.id}-pending-hint` : undefined}
+                  disabled={isAdding || pendingFlagId !== null} onClick={() => handleInjuryAction(injury, "resolved")}>Mark resolved</button>
                 {confirmingClearId === injury.id || surfaceFollowUpId === injury.id ? (
                   <p id={`${injury.id}-pending-hint`} className="today-injury-pending-hint">
                     Not saved yet. Confirm below.
@@ -959,6 +968,14 @@ export function TodayInjuryManager({
           {newType === "other" ? <TodayOtherTypePicker area={newArea.trim()} value={newOtherType}
             onChange={setNewOtherType} onDescribe={() => { setNewOtherType(""); setNotesOpen(true); }} /> : null}
         </div>
+        {/achilles/i.test(newArea) ? <div className="field">
+          <label htmlFor="today-achilles-site">Where is the Achilles problem?</label>
+          <select id="today-achilles-site" value={achillesSite} onChange={event => setAchillesSite(event.target.value as AchillesSite)}>
+            <option value="unknown">Not sure</option>
+            <option value="midportion">Above the heel</option>
+            <option value="insertional">Where the tendon meets the heel</option>
+          </select>
+        </div> : null}
         <div ref={impactGroupRef} className="injury-impact-input">
           <SegmentGroup label="How much is it affecting you?" value={newImpact}
             options={INJURY_IMPACT_OPTIONS.map(({ value, label }) => ({ value, label }))}

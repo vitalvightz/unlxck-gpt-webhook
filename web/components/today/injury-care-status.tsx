@@ -19,7 +19,7 @@ export function EffectiveClinicianClearanceStatus({ clearance }: {
   clearance: TodayCommandView["effective_clinician_clearance"];
 }) {
   if (!clearance) return null;
-  const label = { rehab_only: "Rehab only", train_no_contact: "Train, no hard sparring", train_contact: "Train + hard sparring" }[clearance.level];
+  const label = { rehab_only: "Rehab only", train_no_contact: "Non-contact training", train_contact: "Contact training" }[clearance.level];
   return <div className="today-injury-guidance" role="note" aria-label="Effective clinician clearance">
     <p><strong>Reported clearance: {label}</strong> <small className="muted">· {clearance.level === "train_contact" ? "based on" : "limited by"} {clearance.limited_by.map(injury => injury.label).join(", ")}</small></p>
     {clearance.requires_update ? <p>Scope unclear. Rehab only until clarified.</p> : null}
@@ -30,18 +30,21 @@ export function InjuryCareStatus({ injury, token, onRefresh }: {
   injury: InjuryFlagRecord; token: string; onRefresh: () => Promise<void>;
 }) {
   const [choosing, setChoosing] = useState(false);
+  const [rehabLevel, setRehabLevel] = useState<"gentle_recovery" | "loading" | "sport_specific" | "not_cleared">("not_cleared");
+  const [trainingLevel, setTrainingLevel] = useState("rehab");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const clearanceEditorId = useId();
   const pendingReport = useRef<{ key: string; id: string } | null>(null);
-  async function report(scopes: Array<"rehab" | "training" | "contact">) {
+  async function report() {
+    const scopes: Array<"rehab" | "training" | "contact"> = trainingLevel === "contact" ? ["rehab", "training", "contact"] : trainingLevel === "training" ? ["rehab", "training"] : ["rehab"];
     if (!injury.episode_id || busy) return;
     setBusy(true); setError("");
     try {
-      const key = `${injury.episode_id}:${scopes.join(",")}`;
+      const key = `${injury.episode_id}:${scopes.join(",")}:${rehabLevel}`;
       if (pendingReport.current?.key !== key) pendingReport.current = { key, id: crypto.randomUUID() };
       await submitInjuryEpisodeObservation(token, { injury_id: injury.id, injury_episode_id: injury.episode_id,
-        event_type: "clinician_clearance_report", scopes, report_id: pendingReport.current.id });
+        event_type: "clinician_clearance_report", scopes, rehabilitation_permission: { schema_version: 1, level: rehabLevel }, report_id: pendingReport.current.id });
       await onRefresh();
       pendingReport.current = null;
       setChoosing(false);
@@ -51,8 +54,8 @@ export function InjuryCareStatus({ injury, token, onRefresh }: {
   const clearance = injury.clinician_clearance;
   const scopeLabels: Record<string, string> = {
     rehab: "Rehab only",
-    "rehab,training": "Train, no hard sparring",
-    "contact,rehab,training": "Train + hard sparring",
+    "rehab,training": "Non-contact training",
+    "contact,rehab,training": "Contact training",
   };
   const scopeLabel = scopeLabels[[...(clearance?.scopes ?? [])].sort().join(",")]
     ?? "Scope unclear — update required";
@@ -92,21 +95,35 @@ export function InjuryCareStatus({ injury, token, onRefresh }: {
     {clearance || (injury.episode_id && !surface) ? <div className="today-injury-care-section today-injury-clearance">
     <div className="today-injury-clearance-head">
       <div>
-        <p className="today-field-label">Clearance <small>Self-reported</small></p>
-        <p>{clearance ? scopeLabel : "Not reported"}</p>
+        <p className="today-field-label">Clinical Clearance <small>Self-reported</small></p>
+        <p>{clearance ? `${({ gentle_recovery: "Gentle recovery", loading: "Strengthening / loading", sport_specific: "Sport-specific rehab", not_cleared: "Not sure / not cleared" })[clearance.rehabilitation_permission?.level ?? "not_cleared"]} · ${scopeLabel}` : "Not reported"}</p>
+        <p className="today-field-hint">Based on what you say your clinician advised. Unlxck does not issue or verify medical clearance. Update only when their advice changes.</p>
       </div>
     {injury.episode_id && !surface ? <>
       <button type="button" className="today-injury-clearance-toggle" aria-expanded={choosing} aria-controls={clearanceEditorId}
-        onClick={() => setChoosing((current) => !current)} disabled={busy}>{choosing ? "Hide" : clearance ? "Change clearance" : "Report clearance"}</button>
+        onClick={() => { if (!choosing) { setRehabLevel(clearance?.rehabilitation_permission?.level ?? "not_cleared"); setTrainingLevel(clearance?.scopes.includes("contact") ? "contact" : clearance?.scopes.includes("training") ? "training" : "rehab"); } setChoosing((current) => !current); }} disabled={busy}>{choosing ? "Hide" : clearance ? "Change clearance" : "Report clearance"}</button>
     </> : null}
     </div>
     {choosing ? <div id={clearanceEditorId} className="today-injury-clearance-editor" role="group" aria-label="What were you cleared for?">
-      <p className="today-field-hint">Red flags and safety holds still apply; this does not advance rehab.</p>
-      <div className="today-segment-row today-injury-clearance-options">
-        <button type="button" className="today-segment" disabled={busy} onClick={() => report(["rehab"])}>Rehab only</button>
-        <button type="button" className="today-segment" disabled={busy} onClick={() => report(["rehab", "training"])}>Train, no hard sparring</button>
-        <button type="button" className="today-segment" disabled={busy} onClick={() => report(["rehab", "training", "contact"])}>Train + hard sparring</button>
+      <p className="today-field-hint">Injury restrictions and safety holds still apply.</p>
+      <div className="field">
+        <label htmlFor={`${clearanceEditorId}-rehab`}>Rehabilitation level</label>
+        <select id={`${clearanceEditorId}-rehab`} value={rehabLevel} disabled={busy} onChange={e => setRehabLevel(e.target.value as typeof rehabLevel)}>
+          <option value="gentle_recovery">Gentle recovery</option>
+          <option value="loading">Strengthening / loading</option>
+          <option value="sport_specific">Sport-specific rehab</option>
+          <option value="not_cleared">Not sure / not cleared</option>
+        </select>
       </div>
+      <div className="field">
+        <label htmlFor={`${clearanceEditorId}-training`}>Training level</label>
+        <select id={`${clearanceEditorId}-training`} value={trainingLevel} disabled={busy} onChange={e => setTrainingLevel(e.target.value)}>
+          <option value="rehab">Rehab only</option>
+          <option value="training">Non-contact training</option>
+          <option value="contact">Contact training</option>
+        </select>
+      </div>
+      <button type="button" className="secondary-button" disabled={busy} onClick={() => report()}>{busy ? "Saving…" : "Save clearance"}</button>
     </div> : null}
     </div> : null}
     {error ? <p role="alert">{error}</p> : null}

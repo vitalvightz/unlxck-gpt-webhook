@@ -65,12 +65,15 @@ class ClinicalPrescription(BaseModel):
     priority: int = 0
     sources: list[str] = Field(default_factory=list)
     clinical_criterion: str | None = None
+    required_rehabilitation_level: Literal["loading"] | None = None
 
     @model_serializer(mode="wrap")
     def preserve_baseline_shape(self, handler):
         raw = handler(self)
         if self.clinical_criterion is None:
             raw.pop("clinical_criterion", None)
+        if self.required_rehabilitation_level is None:
+            raw.pop("required_rehabilitation_level", None)
         return raw
 
     @model_validator(mode="after")

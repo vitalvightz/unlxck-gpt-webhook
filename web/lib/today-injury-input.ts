@@ -164,3 +164,15 @@ export function composeTodayInjuryDescription(input: {
   const detail = collapseWhitespace(input.detail);
   return [typeWord, detail].filter(Boolean).join(". ");
 }
+
+export type AchillesSite = "midportion" | "insertional" | "unknown";
+export function readAchillesSite(description: string): AchillesSite {
+  const matches = [...description.matchAll(/\[achilles_site:(midportion|insertional|unknown)\]/g)];
+  return matches.length === 1 ? matches[0][1] as AchillesSite : "unknown";
+}
+export function stripAchillesSite(description: string): string {
+  return description.replace(/\s*\[achilles_site:(midportion|insertional|unknown)\]/g, "").trim();
+}
+export function writeAchillesSite(description: string, site: AchillesSite): string {
+  return `${stripAchillesSite(description)} [achilles_site:${site}]`;
+}

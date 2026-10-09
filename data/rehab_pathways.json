@@ -89,9 +89,9 @@
       "protocol_version": 1
     },
     {
-      "checkpoint_id": "achilles_restore_load_clinical_review_v1",
-      "description": "Trusted clinician interpretation and exact bounded Achilles LOAD selection.",
-      "required_input": "Independently confirmed current clinician review and selected prescription.",
+      "checkpoint_id": "achilles_midportion_reported_load_permission_v1",
+      "description": "Self-reported loading permission and confirmed midportion applicability of the reviewed floor option; no medical verification or readiness claim.",
+      "required_input": "Current episode rehabilitation permission and simple injury location.",
       "basis": "clinical"
     }
   ],
@@ -1603,7 +1603,7 @@
             "https://www.orthopt.org/uploads/content_files/files/Achilles_Pain_revision_2024.pdf",
             "https://www.dynamichealth.nhs.uk/help-and-advice/foot-or-ankle-pain/ankle-tendon-pain/"
           ],
-          "clinical_criterion": "achilles_restore_load_clinical_review_v1"
+          "required_rehabilitation_level": "loading"
         }
       ],
       "blocked_regions": [
@@ -1618,42 +1618,14 @@
       ],
       "transition_overrides": {
         "restore->load": {
-          "reason": "Activate only the exact clinician-reviewed midportion Achilles LOAD option.",
+          "reason": "Consider only the reviewed midportion floor option within self-reported clinician permissions; retain shared exposure and safety requirements.",
           "add_requirements": [
             {
-              "requirement_id": "achilles_site_assessed",
-              "kind": "input_availability",
-              "basis": "data_sufficiency",
-              "checkpoint": "achilles_site_assessed",
-              "description": "Assessment data sufficiency only; no readiness cutoff."
-            },
-            {
-              "requirement_id": "achilles_heel_rise_assessed",
-              "kind": "input_availability",
-              "basis": "data_sufficiency",
-              "checkpoint": "achilles_heel_rise_assessed",
-              "description": "Assessment data sufficiency only; no readiness cutoff."
-            },
-            {
-              "requirement_id": "achilles_loading_response_assessed",
-              "kind": "input_availability",
-              "basis": "data_sufficiency",
-              "checkpoint": "achilles_loading_response_assessed",
-              "description": "Assessment data sufficiency only; no readiness cutoff."
-            },
-            {
-              "requirement_id": "achilles_range_load_assessed",
-              "kind": "input_availability",
-              "basis": "data_sufficiency",
-              "checkpoint": "achilles_range_load_assessed",
-              "description": "Assessment data sufficiency only; no readiness cutoff."
-            },
-            {
-              "requirement_id": "achilles_restore_load_clinical_review_v1",
+              "requirement_id": "achilles_midportion_reported_load_permission_v1",
               "kind": "functional_checkpoint",
               "basis": "clinical",
-              "checkpoint": "achilles_restore_load_clinical_review_v1",
-              "description": "Trusted current clinical interpretation and bounded prescription must PASS.",
+              "checkpoint": "achilles_midportion_reported_load_permission_v1",
+              "description": "Self-reported loading permission and confirmed midportion applicability of the reviewed floor option; no medical verification or readiness claim.",
               "sources": [
                 "https://bjsm.bmj.com/content/55/20/1125",
                 "https://www.orthopt.org/uploads/content_files/files/Achilles_Pain_revision_2024.pdf",
@@ -1665,7 +1637,7 @@
       },
       "status": "active",
       "activation": "live",
-      "content_hash": "e24e2186a15c16f79d8a669721b165da9e80b3b9f3edc29173a92f73a098a101"
+      "content_hash": "5ff715a474424088cf1549c6b38cc3f1fa51b25b7da118ec1ca767f330d55a1a"
     },
     {
       "policy_id": "shoulder_tendonitis",

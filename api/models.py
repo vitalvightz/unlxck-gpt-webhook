@@ -2163,7 +2163,8 @@ class SessionCompletionRequest(BaseModel):
     session_id: str = Field(min_length=1)
     status: CompletionStatus
     prescription_revision: str | None = Field(default=None, pattern=r"^[a-f0-9]{64}$")
-    rehab_performance: Literal["done_as_shown", "changed", "stopped"] | None = None
+    rehab_tracking: Literal["injury_checkin"] | None = None
+    rehab_performance: Literal["done_as_shown", "changed", "stopped", "skipped"] | None = None
     # Omitted for the normal Today flow (the server resolves the athlete-local
     # training day). A retro-log passes an explicit past day; the service
     # enforces the back-fill window and terminal-status rule.
@@ -2210,7 +2211,7 @@ class SessionCompletionRecordResponse(BaseModel):
     created_at: str = ""
     updated_at: str = ""
     prescription_snapshot: dict[str, Any] | None = None
-    rehab_performance: Literal["done_as_shown", "changed", "stopped"] | None = None
+    rehab_performance: Literal["done_as_shown", "changed", "stopped", "skipped"] | None = None
 
 
 class SessionCompletionHistoryResponse(SessionCompletionRecordResponse):

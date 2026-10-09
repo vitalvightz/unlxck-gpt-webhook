@@ -26,13 +26,11 @@ import {
 } from "@/components/session-timer/round-timer-provider";
 import { SessionTimer, type SessionTimerSummary } from "@/components/session-timer/session-timer";
 import { clearSavedRun, hasSavedRun } from "@/components/session-timer/use-session-timer";
-import { RehabResponsePrompt } from "@/components/today/rehab-response-prompt";
 import { SessionReview } from "@/components/today/session-review";
 import { SparringLogPrompt, type SparringDraft } from "@/components/today/sparring-log-prompt";
 import { useTodayExerciseLogs } from "@/components/today/use-exercise-logs";
-import { DelayedRehabResponse } from "@/components/today/injury-care-status";
 import { useToast } from "@/components/toast-provider";
-import { listPendingRehabResponses, submitTodaySessionCompletion } from "@/lib/api";
+import { submitTodaySessionCompletion } from "@/lib/api";
 import { timerAudio } from "@/lib/session-timer/audio";
 import {
   CONTACT_FORMAT_MEMORY_KEY,
@@ -75,7 +73,6 @@ import {
 import type {
   ExerciseMedia,
   RehabLabelPolicy,
-  PendingRehabResponseSet,
   SparringPlannedIntensity,
   StructuredDay,
   StructuredPlan,
@@ -375,17 +372,13 @@ export function TodaySessionPanel({
   const { showToast } = useToast();
   const [intent, setIntent] = useState<CompletionIntent>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [rehabPerformance, setRehabPerformance] = useState<"done_as_shown" | "changed" | "stopped" | undefined>();
+  const [rehabPerformance, setRehabPerformance] = useState<"done_as_shown" | "changed" | "stopped" | "skipped" | undefined>();
   // The session the athlete just logged as trained, captured at write time.
   // The refresh that follows can advance `next_session` to tomorrow's card, so
   // reading the id live would attach the review to the wrong session.
   const [reviewableSession, setReviewableSession] = useState<
     { planId: string; sessionId: string } | null
   >(null);
-  // Interaction stays local, but existence comes from durable server context.
-  // This is an array so two completed sessions on one day cannot hide each
-  // other's independently pending injury response.
-  const [rehabResponses, setRehabResponses] = useState<PendingRehabResponseSet[]>([]);
   // The running timer, full screen or minimised to a bar while it keeps time.
   const [activeTimer, setActiveTimer] = useState<
     { source: TimerSource; mode: "open" | "minimized" } | null
@@ -438,31 +431,6 @@ export function TodaySessionPanel({
       && !state.live_prescription?.safety_hold,
     onError: reportExerciseLogError,
   });
-  useEffect(() => {
-    if (!token || !activePlanId) {
-      return;
-    }
-    let cancelled = false;
-    void listPendingRehabResponses(token, activePlanId)
-      .then((pending) => {
-        if (!cancelled) {
-          setRehabResponses(pending.response_sets);
-          if (pending.history_truncated && process.env.NODE_ENV !== "production") {
-            console.warn("Pending rehab response history was truncated");
-          }
-        }
-      })
-      .catch((error: unknown) => {
-        // A read failure must not fabricate an answered state. Keep any prompt
-        // already in memory; a remount/retry can retrieve the durable context.
-        if (process.env.NODE_ENV !== "production") {
-          console.error("Pending rehab responses could not be loaded", error);
-        }
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [activePlanId, token]);
   // Center the structured blocks on whatever the backend command view targets:
   // today's day in the normal case, or the NEXT scheduled session's day once
   // today is logged / carries no app card (session_relation === "next"). Resolving
@@ -743,8 +711,8 @@ export function TodaySessionPanel({
     if (!state.active_plan.id || !session.session_id || isSubmitting) {
       return false;
     }
-    if (nextStatus === "done" && rehabChoiceRequired && !rehabPerformance) {
-      showToast("Choose how much rehab you performed before saving.", { tone: "error" });
+    if (nextStatus === "done" && rehabChoiceRequired && !rehabPerformance && !rehabOnlyPrescription) {
+      showToast("Choose Completed, Modified or Skipped for rehab.", { tone: "error" });
       return false;
     }
     setIsSubmitting(true);
@@ -758,7 +726,8 @@ export function TodaySessionPanel({
         modification_reason: details.modificationReason ?? "",
         notes: details.notes ?? "",
         prescription_revision: livePrescription?.revision,
-        rehab_performance: nextStatus === "done" ? rehabPerformance ?? (guidanceOnlyRehab ? "done_as_shown" : undefined) : nextStatus === "modified" && livePrescription ? (livePrescription.safety_hold ? "stopped" : "changed") : undefined,
+        rehab_tracking: "injury_checkin",
+        rehab_performance: nextStatus === "done" ? rehabPerformance ?? (rehabOnlyPrescription || guidanceOnlyRehab ? "done_as_shown" : undefined) : nextStatus === "modified" && livePrescription ? (livePrescription.safety_hold ? "stopped" : rehabPerformance ?? "changed") : undefined,
       });
       setIntent(null);
       if (nextStatus !== "started") {
@@ -768,34 +737,12 @@ export function TodaySessionPanel({
         setReviewOpen(false);
       }
       setRehabPerformance(undefined);
-      // Non-empty only when the server established that this session contained
-      // rehab attributable to a known injury, so a normal session never shows
-      // this block.
-      const prompts = completion.rehab_response_prompts ?? [];
-      setRehabResponses((current) => {
-        const others = current.filter(
-          (item) => item.completion_id !== completion.completion.id,
-        );
-        if (prompts.length === 0) {
-          return others;
-        }
-        return [
-          ...others,
-          {
-            completion_id: completion.completion.id,
-            plan_id: completion.completion.plan_id,
-            session_id: completion.completion.session_id,
-            training_day: completion.completion.training_day,
-            rehab_response_prompts: prompts,
-          },
-        ];
-      });
       showToast(getCompletionLabel(nextStatus), { tone: "success" });
       // Order matters: the confirmation toast is already up and the refresh
       // below is what surfaces the XP award, so the review prompt is queued
       // here and only renders once both have landed.
       setReviewableSession(
-        shouldPromptSessionFeedback(nextStatus) && !guidanceOnlyRehabDay
+        shouldPromptSessionFeedback(nextStatus) && !rehabOnlyPrescription
           ? { planId: state.active_plan.id, sessionId: session.session_id }
           : null,
       );
@@ -880,10 +827,10 @@ export function TodaySessionPanel({
 
   // Asked once a session with reviewed rehab is logged as done.
   const rehabChoice = (
-    <div role="group" aria-label="How much rehab did you do?" className="today-injury-guidance">
-      <p>How much rehab did you do?</p>
+    <div role="group" aria-label="Did you complete your rehab?" className="today-injury-guidance">
+      <p>Did you complete your rehab?</p>
       <div className="today-segment-row">
-        {([ ["done_as_shown", "Done as shown"], ["changed", "Changed it"], ["stopped", "Stopped early"] ] as const).map(([value, label]) => (
+        {([ ["done_as_shown", "Completed"], ["changed", "Modified"], ["skipped", "Skipped"] ] as const).map(([value, label]) => (
           <button key={value} type="button" className={rehabPerformance === value ? "today-segment today-segment-active" : "today-segment"} aria-pressed={rehabPerformance === value} onClick={() => setRehabPerformance(value)}>{label}</button>
         ))}
       </div>
@@ -1110,7 +1057,7 @@ export function TodaySessionPanel({
         {contactOnlyTray}
         {sparringPrompt}
         {renderTimer(formatTrainingDay(state.today.training_day))}
-        {(state.delayed_rehab_prompts ?? []).map(prompt => <DelayedRehabResponse key={prompt.exposure_id} prompt={prompt} token={token} onRefresh={onRefresh} />)}
+
       </section>
     );
   }
@@ -1164,7 +1111,7 @@ export function TodaySessionPanel({
           ) : null}
         </div>
       </div>
-      {canCompleteSession && !safeSession && status === "not_started" ? (
+      {canCompleteSession && !rehabOnlyPrescription && !safeSession && status === "not_started" ? (
         <div className="today-session-actions today-action-tray">
           {contactCta ? (
             <button type="button" className="cta" onClick={startContact} disabled={isSubmitting}>
@@ -1269,15 +1216,7 @@ export function TodaySessionPanel({
         </div>
       ) : null}
 
-      {guidanceCanCheckOff && status !== "done" ? (
-        <div className="today-session-actions today-action-tray">
-          <button type="button" className="cta" onClick={() => void saveCompletion("done")} disabled={isSubmitting}>
-            Followed it
-          </button>
-        </div>
-      ) : null}
-
-      {canCompleteSession && status === "started" ? (
+      {canCompleteSession && !rehabOnlyPrescription && status === "started" ? (
         <div className="today-session-actions today-action-tray">
           {canResume ? (
           <button
@@ -1343,6 +1282,14 @@ export function TodaySessionPanel({
         <div className="today-session-actions today-action-tray">{timerTools()}</div>
       ) : null}
 
+      {rehabOnlyPrescription && (canCompleteSession || guidanceCanCheckOff) && !["done", "modified", "skipped"].includes(status) ? <div className="today-injury-guidance" role="group" aria-label="Did you complete your rehab?">
+        <p>Did you complete your rehab?</p>
+        <div className="today-segment-row">
+          {([["done", "Completed"], ["modified", "Modified"], ["skipped", "Skipped"]] as const).map(([value, label]) =>
+            <button key={value} type="button" className="today-segment" disabled={isSubmitting}
+              onClick={() => saveCompletion(value, { modificationReason: value === "done" ? "" : `Rehab ${label.toLowerCase()}` })}>{label}</button>)}
+        </div>
+      </div> : null}
       {sparringPrompt}
 
       {livePrescription?.safety_hold ? <p role="alert">{livePrescription.safety_hold_reason || "This session is on hold. Follow the current injury guidance before training."}</p> : null}
@@ -1350,15 +1297,15 @@ export function TodaySessionPanel({
         {livePrescription.frozen && status === "started" ? <button type="button" className="secondary-button" disabled={isSubmitting} onClick={() => setIntent("modified")}>Log stopped session</button> : null}
         <button type="button" className="ghost-button" disabled={isSubmitting} onClick={() => setIntent("skipped")}>Mark skipped</button>
       </div> : null}
-      {canCompleteSession && intent === "done" && sessionHasRehab ? rehabChoice : null}
-      {(state.delayed_rehab_prompts ?? []).map(prompt => <DelayedRehabResponse key={prompt.exposure_id} prompt={prompt} token={token} onRefresh={onRefresh} />)}
-      {canCompleteSession || (livePrescription?.safety_hold && (intent === "skipped" || (intent === "modified" && status === "started"))) ? (
+      {canCompleteSession && !rehabOnlyPrescription && intent === "done" && sessionHasRehab ? rehabChoice : null}
+
+      {(!rehabOnlyPrescription && canCompleteSession) || (livePrescription?.safety_hold && (intent === "skipped" || (intent === "modified" && status === "started"))) ? (
         <SessionCompletionForm
           key={`${intent ?? "closed"}:${timerNotes}`}
           intent={intent}
           initialNotes={timerNotes}
           isSubmitting={isSubmitting}
-          submissionBlockedReason={rehabChoiceRequired && !rehabPerformance ? "Choose how much rehab you performed before saving." : undefined}
+          submissionBlockedReason={rehabChoiceRequired && !rehabPerformance ? "Choose Completed, Modified or Skipped for rehab." : undefined}
           onCancel={() => setIntent(null)}
           onSubmit={async (nextStatus, details) => {
             await saveCompletion(nextStatus, {
@@ -1370,26 +1317,6 @@ export function TodaySessionPanel({
           }}
         />
       ) : null}
-
-      {/* Above the session review on purpose: an injury observation is the more
-          time-sensitive of the two, and the athlete should not have to get past
-          a programming survey to report that something hurt. */}
-      {rehabResponses.map((pending) => (
-        <RehabResponsePrompt
-          key={`rehab-${pending.completion_id}`}
-          token={token}
-          planId={pending.plan_id}
-          sessionId={pending.session_id}
-          trainingDay={pending.training_day}
-          currentTrainingDay={state.today.training_day}
-          prompts={pending.rehab_response_prompts}
-          onDismiss={() =>
-            setRehabResponses((current) =>
-              current.filter((item) => item.completion_id !== pending.completion_id),
-            )
-          }
-        />
-      ))}
 
       {renderTimer(headline)}
 
@@ -1454,7 +1381,7 @@ export function TodaySessionPanel({
           }
           rehabChoice={sessionHasRehab ? rehabChoice : null}
           doneBlockedReason={
-            sessionHasRehab && !rehabPerformance ? "Choose how much rehab you performed before saving." : undefined
+            sessionHasRehab && !rehabPerformance ? "Choose Completed, Modified or Skipped for rehab." : undefined
           }
           isSubmitting={isSubmitting}
           onClose={() => setReviewOpen(false)}

@@ -17,6 +17,14 @@ const injury: InjuryFlagRecord = {
 };
 
 async function click(container: HTMLElement, label: string) {
+  const training = Array.from(container.querySelectorAll("select")).find(select => Array.from(select.options).some(option => option.textContent === label));
+  if (training) {
+    await act(async () => {
+      training.value = Array.from(training.options).find(option => option.textContent === label)!.value;
+      training.dispatchEvent(new domWindow.Event("change", { bubbles: true }));
+    });
+    label = "Save clearance";
+  }
   const button = Array.from(container.querySelectorAll("button")).find(b => b.textContent === label);
   assert.ok(button, label);
   await act(async () => { button.dispatchEvent(new domWindow.MouseEvent("click", { bubbles: true })); });
@@ -24,8 +32,8 @@ async function click(container: HTMLElement, label: string) {
 
 for (const [label, scopes] of [
   ["Rehab only", ["rehab"]],
-  ["Train, no hard sparring", ["rehab", "training"]],
-  ["Train + hard sparring", ["rehab", "training", "contact"]],
+  ["Non-contact training", ["rehab", "training"]],
+  ["Contact training", ["rehab", "training", "contact"]],
 ] as const) {
   test(`clinician clearance submits unchanged scopes for ${label}`, async () => {
     const container = document.createElement("div"); document.body.appendChild(container);
@@ -45,16 +53,16 @@ for (const [label, scopes] of [
       assert.equal(container.querySelector('[aria-expanded="false"]')?.textContent, "Report clearance");
       assert.equal(container.querySelector('[aria-label="What were you cleared for?"]'), null);
       await click(container, "Report clearance");
-      assert.match(container.textContent ?? "", /Red flags and safety holds still apply; this does not advance rehab/);
-      assert.equal(container.querySelectorAll(".today-segment-row > .today-segment").length, 3);
+      assert.match(container.textContent ?? "", /Injury restrictions and safety holds still apply./);
+      assert.equal(container.querySelectorAll("select").length, 2);
       await click(container, label);
       assert.match(String(calls[0].report_id), /^[a-f0-9-]{36}$/);
       const { report_id: firstReportId, ...body } = calls[0];
-      assert.deepEqual(body, { injury_id: "injury-1", injury_episode_id: "episode-1", event_type: "clinician_clearance_report", scopes });
+      assert.deepEqual(body, { injury_id: "injury-1", injury_episode_id: "episode-1", event_type: "clinician_clearance_report", scopes, rehabilitation_permission: { schema_version: 1, level: "not_cleared" } });
       assert.equal(refreshes, 1);
       assert.equal(container.querySelector('[aria-label="What were you cleared for?"]'), null);
       await click(container, "Report clearance");
-      assert.equal(container.querySelectorAll(".today-segment-row > .today-segment").length, 3);
+      assert.equal(container.querySelectorAll("select").length, 2);
       await click(container, label);
       assert.notEqual(calls[1].report_id, firstReportId);
       assert.equal(container.querySelector('input[type="file"]'), null);
@@ -210,8 +218,8 @@ test("a next-day question that is no longer open disappears instead of showing a
 });
 
 for (const [level, scopes, label] of [
-  ["train_no_contact", ["rehab", "training"], "Train, no hard sparring"],
-  ["train_contact", ["rehab", "training", "contact"], "Train + hard sparring"],
+  ["train_no_contact", ["rehab", "training"], "Non-contact training"],
+  ["train_contact", ["rehab", "training", "contact"], "Contact training"],
 ] as const) {
   test(`overall clearance preserves the ${label} wording`, () => {
     const html = renderToStaticMarkup(<EffectiveClinicianClearanceStatus clearance={{ level, scopes: [...scopes],
@@ -224,8 +232,8 @@ for (const [level, scopes, label] of [
 
 for (const [scopes, label] of [
   [["rehab"], "Rehab only"],
-  [["rehab", "training"], "Train, no hard sparring"],
-  [["rehab", "training", "contact"], "Train + hard sparring"],
+  [["rehab", "training"], "Non-contact training"],
+  [["rehab", "training", "contact"], "Contact training"],
 ] as const) {
   test(`current clearance shows ${label} and an update action`, () => {
     const html = renderToStaticMarkup(<InjuryCareStatus injury={{ ...injury, clinician_clearance: {
@@ -255,15 +263,15 @@ test("updating clearance displays the refreshed scope, and worsening removes cur
   }) as typeof fetch;
   try {
     await act(async () => { render(); });
-    assert.match(container.textContent ?? "", /Train, no hard sparring/);
+    assert.match(container.textContent ?? "", /Non-contact training/);
     await click(container, "Change clearance");
-    await click(container, "Train + hard sparring");
+    await click(container, "Contact training");
     assert.deepEqual(calls[0].scopes, ["rehab", "training", "contact"]);
     assert.equal(calls[0].event_type, "clinician_clearance_report");
     assert.ok(!("status" in calls[0]));
     assert.equal(current.status, "open");
-    assert.match(container.textContent ?? "", /Train \+ hard sparring/);
-    assert.doesNotMatch(container.textContent ?? "", /Train, no hard sparring/);
+    assert.match(container.textContent ?? "", /Contact training/);
+    assert.doesNotMatch(container.textContent ?? "", /Non-contact training/);
     current = { ...current, clinician_clearance: null, latest_reported_status: "worse" };
     await act(async () => { render(); });
     assert.doesNotMatch(container.textContent ?? "", /Change clearance/);
@@ -298,7 +306,7 @@ test("effective clearance remains authoritative above a permissive individual re
   </>);
   assert.match(html, /<strong>Reported clearance: Rehab only<\/strong>/);
   assert.match(html, /limited by Chest strain/);
-  assert.match(html, /Train \+ hard sparring/);
+  assert.match(html, /Contact training/);
   assert.doesNotMatch(html, /Reported clearance: Train/);
 });
 
@@ -317,7 +325,34 @@ test("full clinician clearance names its report without implying an injury limit
     level: "train_contact", scopes: ["rehab", "training", "contact"], requires_update: false,
     limited_by: [{ injury_id: injury.id, injury_episode_id: injury.episode_id!, label: "Chest strain" }],
   }} />);
-  assert.match(html, /Reported clearance: Train \+ hard sparring/);
+  assert.match(html, /Reported clearance: Contact training/);
   assert.match(html, /based on Chest strain/);
   assert.doesNotMatch(html, /limited by/);
+});
+
+
+test("Clinical Clearance has two simple selectors and sends versioned self-reported permissions", async () => {
+  const container = document.createElement("div"); document.body.appendChild(container);
+  const root = createRoot(container);
+  const original = globalThis.fetch;
+  const calls: Array<Record<string, unknown>> = [];
+  globalThis.fetch = (async (_input, init) => { calls.push(JSON.parse(String(init?.body))); return new Response("{}", { status: 200 }); }) as typeof fetch;
+  try {
+    await act(async () => root.render(<InjuryCareStatus injury={injury} token="token" onRefresh={async () => {}} />));
+    assert.match(container.textContent ?? "", /Clinical Clearance\s+Self-reported/);
+    assert.match(container.textContent ?? "", /does not issue or verify medical clearance/);
+    await click(container, "Report clearance");
+    const selects = container.querySelectorAll("select");
+    assert.equal(selects.length, 2);
+    assert.equal(container.querySelectorAll("input, textarea").length, 0);
+    await act(async () => {
+      selects[0].value = "loading";
+      selects[0].dispatchEvent(new domWindow.Event("change", { bubbles: true }));
+      selects[1].value = "training";
+      selects[1].dispatchEvent(new domWindow.Event("change", { bubbles: true }));
+    });
+    await click(container, "Save clearance");
+    assert.deepEqual(calls[0].rehabilitation_permission, { schema_version: 1, level: "loading" });
+    assert.deepEqual(calls[0].scopes, ["rehab", "training"]);
+  } finally { globalThis.fetch = original; act(() => root.unmount()); container.remove(); }
 });
