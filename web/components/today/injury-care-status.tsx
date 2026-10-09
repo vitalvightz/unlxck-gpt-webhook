@@ -1,8 +1,19 @@
 "use client";
 
 import { useId, useRef, useState } from "react";
-import { submitInjuryEpisodeObservation } from "@/lib/api";
+import { ApiError, submitInjuryEpisodeObservation } from "@/lib/api";
 import type { InjuryFlagRecord, TodayCommandView } from "@/lib/types";
+
+const SCHEDULE_LABELS = { due: "Rehab due today", recovery_day: "Rest day", already_completed: "Done for today",
+  held: "Rehab on hold", deferred: "Rehab moved", unsupported: "No rehab yet" } as const;
+const ROUTINE_SCHEDULE_STATES = new Set<string>(["due", "recovery_day", "already_completed"]);
+const NEXT_DAY_FORMAT = new Intl.DateTimeFormat("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
+
+/** "Sat 10 Oct" for an ISO training day; the raw value if it does not parse. */
+function formatNextDay(day: string): string {
+  const date = new Date(`${day}T12:00:00Z`);
+  return Number.isNaN(date.getTime()) ? day : NEXT_DAY_FORMAT.format(date).replace(",", "");
+}
 
 export function EffectiveClinicianClearanceStatus({ clearance }: {
   clearance: TodayCommandView["effective_clinician_clearance"];
@@ -47,20 +58,31 @@ export function InjuryCareStatus({ injury, token, onRefresh }: {
     ?? "Scope unclear — update required";
   const surface = injury.rehab_decision?.outcome === "wound_care" || Boolean(injury.surface_class && injury.surface_class !== "non_surface");
   const schedule = injury.rehab_decision?.schedule;
-  const labels = { due: "Rehab due", recovery_day: "Recovery day", already_completed: "Today's allocation used",
-    held: "Rehab held", deferred: "Rehab deferred", unsupported: "Guidance unavailable" };
   const summary = injury.rehab_decision?.reason_codes.includes("missing_injury_identity")
     ? "Add injury area and type to unlock rehab guidance."
     : injury.rehab_decision?.summary;
-  // Keep Main's deduplication for every schedule state, applying the shorter
-  // identity prompt even when the backend repeats its summary as the reason.
-  const scheduleReason = schedule?.reason === injury.rehab_decision?.summary ? summary : schedule?.reason;
+  // Routine states say everything in their label, so their backend reason
+  // ("You have already logged rehab for this injury today.") is not repeated.
+  // Held, deferred and unsupported keep it: it says why.
+  const routine = schedule ? ROUTINE_SCHEDULE_STATES.has(schedule.state) : false;
+  const scheduleLabel = schedule
+    ? schedule.state === "already_completed" && /started session/i.test(schedule.reason)
+      ? "In today's session"
+      : SCHEDULE_LABELS[schedule.state]
+    : "";
+  const scheduleReason = !schedule || routine ? ""
+    : schedule.reason === injury.rehab_decision?.summary ? summary ?? "" : schedule.reason;
+  // A matched routine's summary ("Your rehab is matched…") only restates that
+  // there is a schedule; the schedule line carries the state instead.
+  const showSummary = Boolean(summary) && !(injury.rehab_decision?.outcome === "prescribed_rehab" && schedule)
+    && summary !== scheduleReason;
   return <div className="today-injury-care">
     {injury.rehab_decision ? <div className="today-injury-care-section" role="note" aria-label="Guidance">
     <p className="today-field-label">Guidance</p>
-    {schedule?.reason !== injury.rehab_decision.summary ? <p>{summary}</p> : null}
-    {schedule ? <p><strong>{labels[schedule.state]}</strong> · {scheduleReason}
-      {schedule.next_due_day && schedule.state !== "due" ? <> Next due: {schedule.next_due_day}.</> : null}</p> : null}
+    {showSummary ? <p>{summary}</p> : null}
+    {schedule ? <p><strong>{scheduleLabel}</strong>
+      {schedule.next_due_day && schedule.state !== "due" ? <span className="muted"> · Next {formatNextDay(schedule.next_due_day)}</span> : null}</p> : null}
+    {scheduleReason ? <p className="muted">{scheduleReason}</p> : null}
     {injury.rehab_decision?.prescription?.sources?.length ? <p className="muted">
       {injury.rehab_decision.prescription.sources.map((source, index) => <span key={source}>
         {index ? " · " : ""}<a href={source} target="_blank" rel="noopener noreferrer">Routine guidance{index ? ` ${index + 1}` : ""}</a>
@@ -79,8 +101,7 @@ export function InjuryCareStatus({ injury, token, onRefresh }: {
     </> : null}
     </div>
     {choosing ? <div id={clearanceEditorId} className="today-injury-clearance-editor" role="group" aria-label="What were you cleared for?">
-      <p>Choose what your clinician cleared you for.</p>
-      <p className="today-field-hint">Self-reported, not verified. Red flags and safety holds still apply; this does not advance rehab.</p>
+      <p className="today-field-hint">Red flags and safety holds still apply; this does not advance rehab.</p>
       <div className="today-segment-row today-injury-clearance-options">
         <button type="button" className="today-segment" disabled={busy} onClick={() => report(["rehab"])}>Rehab only</button>
         <button type="button" className="today-segment" disabled={busy} onClick={() => report(["rehab", "training"])}>Train, no hard sparring</button>
@@ -98,6 +119,7 @@ export function DelayedRehabResponse({ prompt, token, onRefresh }: {
 }) {
   const [busy, setBusy] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [closed, setClosed] = useState(false);
   const [error, setError] = useState("");
   async function answer(response: typeof prompt.options[number]) {
     if (busy) return;
@@ -107,12 +129,23 @@ export function DelayedRehabResponse({ prompt, token, onRefresh }: {
         event_type: "delayed_rehab_response", exposure_id: prompt.exposure_id, response });
       setSaved(true);
       await onRefresh();
-    } catch (e) { setError(e instanceof Error ? e.message : "Could not save your response."); }
+    } catch (e) {
+      // 409: the question is not open (yet or any more), e.g. a Today screen
+      // loaded before a day rollover or a deploy. Drop it instead of showing a
+      // raw server error; the refresh brings back the correct prompts.
+      if (e instanceof ApiError && e.status === 409) {
+        setClosed(true);
+        await onRefresh().catch(() => {});
+      } else {
+        setError(e instanceof Error ? e.message : "Could not save your response.");
+      }
+    }
     finally { setBusy(false); }
   }
-  if (saved) return <p role="status">Next-day response saved.</p>;
+  if (closed) return null;
+  if (saved) return <p role="status">Saved. Thanks.</p>;
   return <div className="today-injury-guidance" role="group" aria-label={`Next-day response for ${prompt.region}`}>
-    <p>{prompt.question} <strong>{prompt.region}</strong></p>
+    <p>How&apos;s your <strong>{prompt.region.toLowerCase()}</strong> after yesterday&apos;s rehab?</p>
     <div className="today-segment-row">
       {prompt.options.map(option => <button key={option} type="button" className="today-segment" disabled={busy} onClick={() => answer(option)}>
         {({ better: "Better", same: "Same", worse: "Worse", not_sure: "Not sure" })[option]}
