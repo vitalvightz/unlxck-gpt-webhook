@@ -1,8 +1,8 @@
 # Clinical progression review: implemented contract
 
-This page records the #2758 contract step. Its later persistence/trust/freshness implementation is described in [clinical progression review capture](clinical-progression-review-capture.md); the production criterion registry remains empty.
+This page records the #2758 contract step. Its later persistence/trust/freshness implementation is described in [clinical progression review capture](clinical-progression-review-capture.md); the production registry now contains the dormant [Achilles shadow criterion](achilles-restore-load-criterion.md). Registration does not activate LOAD.
 
-Implements the contract/evaluator step of [the merged decision](clinical-progression-review-design.md) (#2757). These are internal Python types and pure functions. No real review is stored, trusted or used by Today. Production remains CALM/RESTORE only, with 64 active profiles, 103 live prescription identities and zero promotable higher-stage transitions.
+Implements the contract/evaluator step of [the merged decision](clinical-progression-review-design.md) (#2757). These are internal Python types and pure functions. #2765 added trusted storage; the Achilles shadow pilot adds the first real typed criterion and bounded option. Production remains CALM/RESTORE only, with 64 active profiles, 103 live prescription identities and zero promotable higher-stage transitions.
 
 ## Files and public entry points
 
@@ -94,3 +94,9 @@ Unimplemented: any database event type/migration/RPC, writer/API/admin tool, cli
 Next PR: restricted manual-confirmation capture using one shared episode-event type and a service-only trusted writer, with an authenticated admin recording independently confirmed qualified-clinician decisions. It must establish server provenance, target consent/access, source completeness, exact packet/reference ownership, idempotency, lifecycle concurrency and review/assessment/revocation freshness under acceptance locks. Keep LOAD closed.
 
 Later Achilles work supplies a newly reviewed typed interpretation/criterion and clinically reviewed exact option set; it must not turn `achilles_restore_load_review_v1` into PASS. A future elbow protocol can register its own payload/evaluator/options in this same envelope after separate clinical content review, without a new storage model, authority mechanism or episode evaluator. Activation needs a separate explicit PR.
+
+## Achilles shadow contextual check
+
+The compiled definition optionally supplies `evaluate_review(review, context)` after shared validity and typed judgment PASS. The first production binding uses it to read the exact latest Achilles assessment through the existing protocol readers and check interpretation event/content and materialised selection hashes. `ReviewValidityContext.assessment_events` contains complete server-owned raw assessment snapshots; capture requests cannot populate it. The interpretation itself remains a strict frozen Achilles model, never a dictionary rule language.
+
+Production capture may precede the pathway declaration only for a compiled exact profile/transition whose target is disabled and whose transition is non-promotable. Engine fixtures declare the real requirement in memory with a closed transition. Production pathway data/live content is unchanged; no LOAD work or clearance is created. See the Achilles document for sources, applicability, bounded dose and explicit PASS/FAIL/UNKNOWN rules.

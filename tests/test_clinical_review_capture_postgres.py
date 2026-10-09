@@ -93,6 +93,74 @@ def call_writer(connection, store, captured):
         (store.scope[0],ADMIN,Jsonb(context),Jsonb(event),Jsonb(supersession) if supersession else None)).fetchone()[0]
 
 
+def test_real_postgres_achilles_shadow_criterion_and_revocation(capture_postgres):
+    """Production Achilles contract through the existing service-only SQL writer."""
+    import psycopg
+    from psycopg.types.json import Jsonb
+    from datetime import timedelta
+    from api.contracts.achilles_restore_load_pilot import CRITERION_ID
+    from api.contracts.clinical_progression_review import CLINICAL_REVIEW_REGISTRY
+    from api.contracts.clinical_review_capture import ClinicalReviewCaptureRequest, ClinicalReviewLifecycleRequest
+    from api.contracts.clinical_review_validity import evaluate_clinical_review
+    from api.contracts.rehab_assessment import assessment_payload
+    from api.contracts.rehab_progression import evaluate_transition, resolve_reviewed_progression
+    from api.services.clinical_review_capture_service import hydrate_review_input, record_review_lifecycle
+    from api.services.injury_episode_service import apply_episode_observations
+    from tests.test_achilles_shadow_pilot import shadow_bundle, shadow_policy
+    from tests.test_achilles_progression_inputs import assessment
+
+    store, recorder, _, _ = postgres_bundle(capture_postgres)
+    _, _, template, kwargs = shadow_bundle()
+    policy = kwargs["policies"][0]
+    with psycopg.connect(capture_postgres) as connection:
+        connection.execute("""update injury_flags set description='Left Achilles tendonitis',
+            body_area='Left Achilles',body_region='achilles' where id=%s""", (store.scope[1],))
+    snapshot = store.get_clinical_review_capture_context(*store.scope)
+    now = datetime.now(timezone.utc)
+    observation = assessment(site="midportion", suspected_rupture=False, marked_weakness=False,
+        traumatic_loss_of_function=False, clinician_restriction=False, assessed_at=now-timedelta(minutes=1),
+        loading_performed_at=now-timedelta(days=1), delayed_response_at=now-timedelta(minutes=2))
+    payload = assessment_payload(observation, snapshot["injury"], as_of=now)
+    assessment_id = str(uuid4())
+    with psycopg.connect(capture_postgres) as connection:
+        connection.execute("""insert into injury_episode_events(id,athlete_id,injury_id,injury_episode_id,event_type,payload)
+            values(%s,%s,%s,%s,'rehab_progression_assessment',%s)""", (assessment_id,*store.scope,Jsonb(payload)))
+    snapshot = store.get_clinical_review_capture_context(*store.scope)
+    now = datetime.now(timezone.utc)
+    definition = CLINICAL_REVIEW_REGISTRY.current(CRITERION_ID)
+    context = build_review_context(snapshot, definition=definition, policy=policy, bank=kwargs["bank"], as_of=now)
+    raw = template.model_dump(mode="json")
+    raw.update(athlete_id=store.scope[0],injury_id=store.scope[1],injury_episode_id=store.scope[2])
+    raw["statement"].update(reviewed_at=now.isoformat(),confirmed_at=now.isoformat(),
+        reviewed_packet_revision=context.current_packet.packet_revision)
+    from fightcamp.rehab_clinical import content_hash
+    raw["statement"]["interpretation"].update(assessment_event_id=assessment_id, assessment_content_hash=content_hash(payload))
+    request = ClinicalReviewCaptureRequest.model_validate(raw)
+    kwargs.pop("as_of")
+    recorded = record_clinical_review(store,recorder=recorder,request=request,**kwargs)
+    snapshot = store.get_clinical_review_capture_context(*store.scope)
+    now = datetime.now(timezone.utc)
+    supplied = hydrate_review_input(snapshot, criterion_id=CRITERION_ID,criterion_version=1,as_of=now,**kwargs)
+    result = evaluate_clinical_review(supplied.context,supplied.reviews,as_of=now,trust=supplied.trust)
+    assert result.validity == "valid" and result.trusted and result.criterion_status == "pass"
+    injury = apply_episode_observations(snapshot["injury"],snapshot["events"],as_of=now)
+    transition = evaluate_transition(shadow_policy(policy).transitions[0],policy=policy,injury=injury,
+        exposures=[],as_of=now,clinical_review_input=supplied)
+    assert next(r for r in transition["requirements"] if r["requirement_id"] == CRITERION_ID)["status"] == "pass"
+    assert transition["status"] == "closed" and not transition["target_stage_live"]
+    assert resolve_reviewed_progression(injury,base_stage="restore",policy=policy,exposures=[],as_of=now,
+        clinical_review_inputs={CRITERION_ID:supplied})["stage"] == "restore"
+    action = ClinicalReviewLifecycleRequest(request_id=uuid4(),athlete_id=request.athlete_id,injury_id=request.injury_id,
+        injury_episode_id=request.injury_episode_id,review_id=recorded.review_id,action="revoke",effective_at=now,
+        confirmation_reference="Postgres shadow withdrawal",reason="Clinician withdrew the exact option")
+    record_review_lifecycle(store,recorder=recorder,request=action)
+    now = datetime.now(timezone.utc)
+    supplied = hydrate_review_input(store.get_clinical_review_capture_context(*store.scope),criterion_id=CRITERION_ID,
+        criterion_version=1,as_of=now,**kwargs)
+    result = evaluate_clinical_review(supplied.context,supplied.reviews,as_of=now,lifecycle=supplied.lifecycle,trust=supplied.trust)
+    assert result.validity == "invalid" and result.criterion_status == "unknown"
+
+
 def test_real_service_channel_privileges_private_owner_stream_and_immutability(capture_postgres):
     import psycopg
     store,recorder,request,kwargs = postgres_bundle(capture_postgres)

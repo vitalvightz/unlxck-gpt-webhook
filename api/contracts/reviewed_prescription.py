@@ -1,4 +1,4 @@
-"""Bounded individual selections; no production options or materialisation writer."""
+"""Bounded individual selections; registration does not schedule executable work."""
 from __future__ import annotations
 
 from enum import Enum

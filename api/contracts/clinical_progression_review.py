@@ -1,7 +1,7 @@
 """Shared immutable review contracts and compiled criterion bindings.
 
-These are internal contracts, not API requests. The production registry remains
-empty. Authority comes from the separate service-only admin capture boundary.
+These are internal contracts, not API requests. Authority comes from the
+separate service-only admin capture boundary; registration does not activate work.
 """
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
 from types import MappingProxyType
-from typing import Callable, Generic, Literal, Mapping, Protocol, TypeVar
+from typing import TYPE_CHECKING, Callable, Generic, Literal, Mapping, Protocol, TypeVar
 
 from pydantic import AwareDatetime, Field, model_validator
 
@@ -17,6 +17,10 @@ from .reviewed_prescription import (
     Digest, Identifier, ReviewModel, ReviewTransition, ReviewedPrescriptionOption,
     ReviewedPrescriptionSelection, Version,
 )
+from .achilles_restore_load_pilot import achilles_review_definition
+
+if TYPE_CHECKING:
+    from .clinical_review_validity import ReviewValidityContext
 
 
 class ReviewDecision(str, Enum):
@@ -173,12 +177,14 @@ class CriterionReviewDefinition(Generic[PayloadT]):
     options: tuple[ReviewedPrescriptionOption, ...]
     evaluate: Callable[[PayloadT], ClinicalCriterionResult]
     requires_prescription: bool = True
+    evaluate_review: Callable[[ClinicalProgressionReview, ReviewValidityContext], ClinicalCriterionResult] | None = None
 
     def __post_init__(self):
         if (not self.criterion_id or type(self.version) is not int or self.version < 1
                 or not self.profile_ids or not self.clinical_scope
                 or not issubclass(self.payload_type, ReviewModel) or self.payload_type is ReviewModel
-                or not callable(self.evaluate)):
+                or not callable(self.evaluate)
+                or (self.evaluate_review is not None and not callable(self.evaluate_review))):
             raise ValueError("criterion needs a strict typed payload and compiled evaluator")
         if len({o.option_id for o in self.options}) != len(self.options):
             raise ValueError("duplicate reviewed option identity")
@@ -226,7 +232,7 @@ class UnsupportedReviewTrust:
         return False
 
 
-# No production clinical criterion or reviewed option. Pure callers still default
-# to unsupported trust; only server-hydrated capture history supplies authority.
-CLINICAL_REVIEW_REGISTRY = CriterionReviewRegistry()
+# Pure callers still default to unsupported trust. This compiled shadow binding
+# cannot activate a closed transition or create a live prescription.
+CLINICAL_REVIEW_REGISTRY = CriterionReviewRegistry((achilles_review_definition(),))
 UNSUPPORTED_REVIEW_TRUST = UnsupportedReviewTrust()

@@ -61,8 +61,15 @@ def _binding(injury, criterion_id, version, registry, policies):
     if len(matches) != 1 or matches[0].policy_id not in definition.profile_ids:
         raise HTTPException(409, "clinical criterion does not match this injury profile")
     policy = matches[0]
-    if not any(t.from_stage == definition.transition.from_stage and t.to_stage == definition.transition.to_stage
-               and any(r.checkpoint == criterion_id for r in t.requirements) for t in policy.transitions):
+    transition = next((t for t in policy.transitions if t.from_stage == definition.transition.from_stage
+                       and t.to_stage == definition.transition.to_stage), None)
+    # Compiled profile/transition bindings may capture a shadow review before a
+    # live pathway declares the checkpoint. Both production protections must
+    # remain: target disabled and transition non-promotable. Live capture still
+    # requires the exact checkpoint declaration. No request can register a rule.
+    declared = transition and any(r.checkpoint == criterion_id for r in transition.requirements)
+    shadow = transition and not transition.promotable and transition.to_stage not in policy.live_stages
+    if not declared and not shadow:
         raise HTTPException(409, "clinical criterion does not match this transition")
     return definition, policy
 
@@ -114,12 +121,17 @@ def build_review_context(snapshot, *, definition, policy, bank, as_of):
     setback = max((instant(e["occurred_at"]) for e in safety if e["kind"] == "setback"), default=None)
     if setback:
         references = [r for r in references if r["observed_at"] > setback]
+    bank_by_id = {d["id"]: content_hash(d) for group in bank for d in group.get("drills", [])}
+    reviewed_bank = {o.drill_id: bank_by_id.get(o.drill_id) for o in definition.options}
     safety_revision = content_hash({"injury": injury, "safety": safety})
     packet = ReviewedEvidencePacket(evidence_cutoff=max(dates), safety_revision=safety_revision,
-        packet_revision=content_hash({"injury": injury, "events": evidence, "exposures": exposures}),
+        packet_revision=content_hash({"injury": injury, "events": evidence, "exposures": exposures,
+            "policy_version": policy.version, "policy_hash": policy.content_hash,
+            "criterion_id": definition.criterion_id, "criterion_version": definition.version,
+            "interpretation_schema": definition.payload_type.model_json_schema(),
+            "options": [o.option_hash for o in definition.options], "bank": reviewed_bank}),
         references=tuple(references), clearance_event_id=next((e["id"] for e in reversed(evidence)
             if e["event_type"] == "clinician_clearance_report"), None))
-    bank_by_id = {d["id"]: content_hash(d) for group in bank for d in group.get("drills", [])}
     return ReviewValidityContext(athlete_id=scope[0], injury_id=scope[1], injury_episode_id=scope[2], side=injury["side"],
         profile_id=policy.policy_id, policy_version=policy.version, policy_hash=policy.content_hash,
         criterion_id=definition.criterion_id, criterion_version=definition.version, transition=definition.transition,
@@ -127,7 +139,8 @@ def build_review_context(snapshot, *, definition, policy, bank, as_of):
         current_packet=packet, bank=tuple(dict(drill_id=key, bank_hash=bank_by_id[key])
             for key in sorted({o.drill_id for o in definition.options}) if key in bank_by_id), safety_history=tuple(safety),
         medical_hold=bool(row.get("rehab_medical_gate") or resolve_rehab_stage(row).medical_gate),
-        restriction_hold=bool(row.get("restriction_hold")))
+        restriction_hold=bool(row.get("restriction_hold")),
+        assessment_events=tuple(e for e in evidence if e["event_type"] == "rehab_progression_assessment"))
 
 
 def hydrate_review_input(snapshot, *, criterion_id, criterion_version, as_of, registry=CLINICAL_REVIEW_REGISTRY,
@@ -155,6 +168,10 @@ def prepare_review_packet(store, *, recorder, athlete_id, injury_id, injury_epis
     supplied = hydrate_review_input(snapshot, criterion_id=criterion_id, criterion_version=criterion_version,
         registry=registry, policies=policies, bank=bank, as_of=as_of or datetime.now(timezone.utc))
     return {"context": supplied.context.model_dump(mode="json"),
+            "injury": snapshot["injury"],
+            "reviewed_options": [o.model_dump(mode="json") | {"option_hash": o.option_hash}
+                                 for o in supplied.registry.current(criterion_id).options],
+            "interpretation_schema": supplied.registry.current(criterion_id).payload_type.model_json_schema(),
             "observations": [e for e in snapshot["events"] if e["event_type"] not in {REVIEW_EVENT, LIFECYCLE_EVENT}],
             "exposures": snapshot["exposures"]}
 

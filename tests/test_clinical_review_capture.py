@@ -51,7 +51,7 @@ def test_real_channel_server_envelope_replay_and_engine(second):
     resolved = resolve_reviewed_progression(store.snapshot["injury"], base_stage="restore", policy=policy,
         exposures=[], as_of=NOW, clinical_review_inputs={request.criterion_id: supplied})
     assert resolved["stage"] == "restore"
-    assert not CLINICAL_REVIEW_REGISTRY._definitions
+    assert CLINICAL_REVIEW_REGISTRY.get(request.criterion_id, 1) is None
 
 
 @pytest.mark.parametrize("field", ["externally_verified", "trusted", "verified_clinician", "profile_id", "side",
@@ -262,7 +262,7 @@ def test_admin_json_route_uses_real_authorisation_dependency(role,email,status):
     app.include_router(build_admin_router())
     app.dependency_overrides[get_store] = lambda:store
     app.dependency_overrides[require_profile] = lambda:recorder
-    # The production registry is empty even for a real authorised operator.
+    # Synthetic criteria are never registered for an authorised operator.
     response = TestClient(app).post('/api/admin/clinical-progression-reviews',json=request.model_dump(mode="json"))
     assert response.status_code == status and store.writes == 0
 
