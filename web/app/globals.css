@@ -19256,7 +19256,9 @@ html[data-app-surface="workspace"][data-theme="dark"] .desktop-nav-toggle {
    component: absolute, not fixed, so iOS cannot draw it away from its trigger. */
 .why-tooltip-bubble {
   position: absolute;
-  z-index: 120;
+  /* Above every sheet and dialog (they sit at 1600), so an "i" inside one
+     opens over it rather than behind it. */
+  z-index: 1700;
   min-width: min(220px, calc(100vw - 16px));
   max-width: min(320px, calc(100vw - 16px));
   padding: 12px 14px;

@@ -359,3 +359,28 @@ test("the bubble is placed in document coordinates, so it stays by its trigger o
     cleanup(container, root);
   }
 });
+
+test("inside a sheet's scroll lock the bubble follows the pinned body, not the page scroll", async () => {
+  // A sheet pins <body> (position: fixed, top: -scroll) and the page scroll
+  // reads 0; the bubble, absolute on <body>, must offset by body's own box.
+  const { container, root } = mount();
+  const body = document.body;
+  const previousPosition = body.style.position;
+  const previousRect = body.getBoundingClientRect;
+  body.style.position = "fixed";
+  body.getBoundingClientRect = () => ({ top: -900, left: 0, right: 0, bottom: 0, width: 0, height: 0, x: 0, y: -900, toJSON: () => ({}) });
+  try {
+    const bubble = await openTooltip(
+      container,
+      root,
+      { top: 400, left: 400, width: 16, height: 16 },
+      { width: 320, height: 120 },
+    );
+    assert.equal(Number.parseFloat(bubble.style.top), 272 + 900);
+    assert.equal(Number.parseFloat(bubble.style.left), 400 + 8 - 160);
+  } finally {
+    body.style.position = previousPosition;
+    body.getBoundingClientRect = previousRect;
+    cleanup(container, root);
+  }
+});

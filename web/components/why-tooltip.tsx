@@ -155,8 +155,13 @@ export function WhyTooltip({
     // same glitch that floats the bottom tab bar), which left the bubble far
     // from its "i"; document coordinates move with the content the trigger
     // sits in, so the two stay together.
-    const top = viewportTop + window.scrollY;
-    const left = viewportLeft + window.scrollX;
+    // While an open sheet's scroll lock pins <body> (position: fixed, shifted
+    // up by the saved scroll), <body> is the containing block and the page
+    // scroll reads 0, so the offset comes from <body>'s own box instead.
+    const bodyLocked = getComputedStyle(document.body).position === "fixed";
+    const origin = bodyLocked ? document.body.getBoundingClientRect() : null;
+    const top = viewportTop + (origin ? -origin.top : window.scrollY);
+    const left = viewportLeft + (origin ? -origin.left : window.scrollX);
 
     setPosition((current) =>
       current &&

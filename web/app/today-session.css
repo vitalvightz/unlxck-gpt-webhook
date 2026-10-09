@@ -347,22 +347,6 @@
   font-size: var(--type-body-sm);
 }
 
-/* The stop rule stays on the collapsed row as a one-line warning; the full
-   rule is one tap away in the open row. */
-.sp-session[data-layout="section"] .ex-row-stop {
-  display: -webkit-box;
-  overflow: hidden;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 1;
-  line-clamp: 1;
-  color: var(--danger-ink);
-  font-size: var(--type-meta);
-}
-
-.sp-session[data-layout="section"] .ex-row-stop .sp-stat-label {
-  margin-right: 6px;
-}
-
 @media (max-width: 420px) {
   .sp-session[data-layout="section"] .ex-row-thumb,
   .sp-session[data-layout="section"] .ex-row-placeholder {
@@ -482,29 +466,14 @@
 
 /* No demo video: a type glyph holds the thumbnail's place. */
 .sp-session[data-layout="section"] .ex-row-placeholder {
-  position: relative;
+  display: grid;
+  place-items: center;
+  color: var(--text-muted);
 }
 
-.sp-session[data-layout="section"] .ex-row-placeholder::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  margin: auto;
+.ex-row-placeholder svg {
   width: 26px;
   height: 26px;
-  background: var(--text-muted);
-  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M3 12h18M6 8v8M9 6v12M15 6v12M18 8v8'/%3E%3C/svg%3E") center / contain no-repeat;
-  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M3 12h18M6 8v8M9 6v12M15 6v12M18 8v8'/%3E%3C/svg%3E") center / contain no-repeat;
-}
-
-.sp-session[data-layout="section"] .ex-row-placeholder:is([data-kind="mindset"], [data-kind="skill"], [data-kind="visualisation"], [data-kind="tactical"])::after {
-  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M9 4a3 3 0 00-3 3 3 3 0 00-2 5 3 3 0 002 5 3 3 0 006 1V5a3 3 0 00-3-1zM15 4a3 3 0 013 3 3 3 0 012 5 3 3 0 01-2 5 3 3 0 01-6 1'/%3E%3C/svg%3E");
-  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M9 4a3 3 0 00-3 3 3 3 0 00-2 5 3 3 0 002 5 3 3 0 006 1V5a3 3 0 00-3-1zM15 4a3 3 0 013 3 3 3 0 012 5 3 3 0 01-2 5 3 3 0 01-6 1'/%3E%3C/svg%3E");
-}
-
-.sp-session[data-layout="section"] .ex-row-placeholder:is([data-kind="rehab"], [data-kind="mobility"], [data-kind="prehab"])::after {
-  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 3l7 3v5c0 4.5-3 8.2-7 10-4-1.8-7-5.5-7-10V6z'/%3E%3C/svg%3E");
-  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 3l7 3v5c0 4.5-3 8.2-7 10-4-1.8-7-5.5-7-10V6z'/%3E%3C/svg%3E");
 }
 
 /* -- Injury management: one compact row per injury ------------------------ */
@@ -699,8 +668,8 @@
 .today-preview-screen .today-session-chips { margin: 0; }
 
 .ex-detail-summary { color: var(--text-secondary); font-family: var(--font-mono); text-transform: uppercase; letter-spacing: 0.06em; }
-.ex-detail-stop { display: grid; gap: 4px; padding: 12px 14px; border-radius: var(--radius-stat); background: var(--danger-soft); }
-.ex-detail-stop .sp-stat-label { color: var(--danger-ink); }
+.ex-detail-stop { display: flex; align-items: flex-start; gap: 10px; color: var(--text-secondary); }
+.ex-detail-stop svg { flex: 0 0 auto; width: 18px; height: 18px; margin-top: 2px; fill: none; stroke: var(--danger-ink); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .ex-detail-section { border-top: 1px solid var(--border-subtle); }
 .ex-detail-section > summary { display: flex; align-items: center; justify-content: space-between; min-height: 48px; font-weight: 600; cursor: pointer; list-style: none; }
 .ex-detail-section > summary::-webkit-details-marker { display: none; }
