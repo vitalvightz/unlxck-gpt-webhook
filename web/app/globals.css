@@ -22545,6 +22545,39 @@ html[data-theme="light"] .sp-status-tag[data-tone="neutral"] {
   font-size: 0.88rem;
 }
 
+/* Answer chips use the injury check-in's even tiles: every option the same
+   size, two up (three when there are exactly three), a lone last one spanning
+   the row, so a set of answers reads as one tidy block. */
+.feedback-chips {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.feedback-chips:has(> .feedback-chip:nth-child(3):last-child) {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.feedback-chips > .feedback-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  white-space: normal;
+  text-align: center;
+  line-height: 1.25;
+}
+
+.feedback-chips:not(:has(> .feedback-chip:nth-child(3):last-child)) > .feedback-chip:last-child:nth-child(odd) {
+  grid-column: 1 / -1;
+}
+
+.feedback-chip.is-selected {
+  color: var(--text-primary);
+}
+
 .feedback-comment label {
   font-size: 0.88rem;
   font-weight: 700;
