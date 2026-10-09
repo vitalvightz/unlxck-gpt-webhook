@@ -23172,3 +23172,89 @@ html[data-theme="light"] .sp-status-tag[data-tone="neutral"] {
   .history-tab { grid-column: span 2; }
   .history-tab:nth-child(n + 4) { grid-column: span 3; }
 }
+
+/* Injury daily workspace: engine progress first, details in a focused sheet. */
+.today-injury-card .today-injury-item { padding: 20px; gap: 16px; border: 1px solid var(--border-default); border-radius: 20px; background: var(--bg-panel); }
+.today-injury-card .today-injury-item[data-severity="severe"] { border-color: var(--danger-ink); background: var(--bg-panel); }
+.today-injury-card .today-injury-name strong { font-size: 20px; line-height: 1.3; letter-spacing: -0.025em; }
+.today-injury-card .today-injury-summary { margin-top: 4px; font-size: 13px; line-height: 1.5; color: var(--text-secondary); }
+.today-injury-card .gi-change-btn { min-height: 44px; border-radius: 999px; padding: 8px 14px; font-size: 13px; }
+.today-injury-card .today-injury-care { gap: 12px; }
+.injury-progress { display: flex; align-items: end; justify-content: space-between; gap: 20px; padding-top: 20px; border-top: 1px solid var(--border-default); }
+.injury-progress-label { margin: 0 0 4px; color: var(--text-secondary); font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; }
+.injury-progress strong { font-size: 28px; line-height: 1.2; font-weight: 650; letter-spacing: -0.04em; }
+.injury-progress-next { display: grid; gap: 8px; justify-items: end; max-width: 58%; }
+.injury-progress-next > span { color: var(--text-secondary); font-size: 12px; text-align: right; }
+.injury-progress ol { display: flex; gap: 4px; margin: 0; padding: 0; list-style: none; }
+.injury-progress li { width: clamp(18px, 4vw, 28px); height: 5px; border-radius: 4px; background: var(--border-strong); }
+.injury-progress li[data-complete="true"] { background: #df514b; }
+.injury-rehab-status { display: grid; gap: 8px; }
+.injury-rehab-status p { margin: 0; color: var(--text-secondary); font-size: 14px; line-height: 1.6; }
+.injury-rehab-action { display: flex; align-items: center; justify-content: space-between; gap: 16px; border-radius: 14px; padding: 16px; text-decoration: none; color: var(--text-primary); background: var(--bg-surface-alt); transition: background 160ms ease; }
+.injury-rehab-action > span { display: grid; gap: 3px; }
+.injury-rehab-action strong { font-size: 15px; font-weight: 550; }
+.injury-rehab-action small { color: var(--text-secondary); font-size: 12px; line-height: 1.5; }
+.injury-rehab-action:hover { background: var(--bg-surface); }
+.injury-rehab-label { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 8px; padding: 14px 0; }
+.injury-rehab-label strong { color: var(--text-primary); font-weight: 550; }
+.injury-rehab-label small { font-size: 12px; }
+.injury-safety-reason { border-left: 2px solid var(--danger-ink); padding-left: 12px; }
+.injury-detail-link { display: flex; width: 100%; align-items: center; justify-content: space-between; gap: 12px; min-height: 44px; padding: 0; border: 0; background: transparent; color: var(--text-secondary); font: 500 14px/1.5 var(--font-sans); text-align: left; cursor: pointer; }
+.injury-detail-link:hover { color: var(--text-primary); }
+.injury-detail-link:disabled { cursor: wait; opacity: 0.5; }
+.injury-progress-link { font-size: 12px; min-height: 32px; }
+.injury-chevron { flex-shrink: 0; width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+.today-injury-card .today-injury-update-head { border: 0; padding-top: 0; }
+.today-injury-card .today-injury-status-label { font: 500 15px/1.5 var(--font-sans); color: var(--text-secondary); letter-spacing: 0; text-transform: none; }
+.today-injury-card .today-injury-status-row { gap: 8px; }
+.today-injury-card .today-injury-status-row .today-segment { min-height: 48px; border-radius: 12px; background: transparent; border: 1px solid var(--border-strong); font: 550 14px/1.4 var(--font-sans); }
+.today-injury-card .today-injury-status-row .today-segment-active { background: var(--brand-red-soft); border-color: var(--brand-red); }
+.injury-clearance { border-top: 1px solid var(--border-default); padding-top: 4px; }
+.injury-clearance-summary { margin: -2px 0 0; color: var(--text-muted); font-size: 11px; line-height: 1.5; }
+.today-injury-card .injury-resolve-link { align-self: flex-start; min-height: 32px; padding: 0; border: 0; background: transparent; font: inherit; font-size: 11px; color: var(--text-muted); cursor: pointer; }
+.injury-guidance-sources { font-size: 12px; color: var(--text-secondary); }
+.injury-guidance-sources summary { cursor: pointer; padding: 8px 0; }
+.injury-guidance-sources a { display: block; padding: 6px 0; color: var(--text-secondary); }
+.injury-sheet-backdrop { position: fixed; inset: 0; z-index: 1600; display: flex; align-items: center; justify-content: center; padding: 24px; background: rgba(0,0,0,0.7); }
+.injury-sheet { width: min(100%,480px); max-height: calc(100dvh - 48px); overflow-y: auto; overscroll-behavior: contain; border: 1px solid var(--border-default); border-radius: 24px; background: var(--bg-panel); color: var(--text-primary); box-shadow: 0 24px 80px rgba(0,0,0,0.4); animation: injury-sheet-enter 180ms ease-out; }
+.injury-sheet-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 20px 20px 0; }
+.injury-sheet-header h2 { margin: 0; font: 600 21px/1.3 var(--font-sans); letter-spacing: -0.03em; }
+.injury-sheet-close { display: grid; place-items: center; flex-shrink: 0; height: 44px; width: 44px; margin-right: -8px; border: 0; background: transparent; color: var(--text-secondary); cursor: pointer; }
+.injury-sheet-close svg, .injury-permission-options svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.injury-sheet-body { display: grid; gap: 20px; padding: 16px 20px 20px; }
+.injury-sheet-body p { margin: 0; font-size: 14px; line-height: 1.55; overflow-wrap: anywhere; }
+.injury-sheet-body .injury-sheet-caption { font-size: 11px; color: var(--text-secondary); }
+.injury-sheet-body .injury-sheet-note { font-size: 12px; color: var(--text-secondary); }
+.injury-sheet-body .field { margin: 0; gap: 8px; }
+.injury-sheet-body .field > label, .injury-permission-options legend { font: 500 15px/1.5 var(--font-sans); letter-spacing: 0; text-transform: none; color: var(--text-primary); }
+.injury-sheet-body select { font: 400 15px/1.5 var(--font-sans); min-height: 52px; background-color: var(--bg-surface-alt); border: 1px solid var(--border-default); border-radius: 12px; }
+.injury-permission-options { border: 0; min-width: 0; padding: 0; margin: 0; }
+.injury-permission-options legend { padding: 0 0 10px; }
+.injury-permission-options label { position: relative; display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 54px; padding: 12px 16px; background: var(--bg-surface-alt); color: var(--text-secondary); cursor: pointer; font: 400 14px/1.5 var(--font-sans); }
+.injury-permission-options label:first-of-type { border-radius: 12px 12px 0 0; }
+.injury-permission-options label:last-child { border-radius: 0 0 12px 12px; }
+.injury-permission-options label + label::before { content: ""; position: absolute; top: 0; left: 16px; right: 16px; height: 1px; background: var(--border-default); }
+.injury-permission-options input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.injury-permission-options label[data-selected="true"] { color: var(--text-primary); }
+.injury-permission-options label:has(input:focus-visible) { outline: 2px solid var(--brand-red); outline-offset: -2px; z-index: 1; }
+.injury-permission-options svg { color: #df514b; flex-shrink: 0; }
+.injury-sheet-footer { position: sticky; bottom: 0; padding: 12px 20px 20px; background: var(--bg-panel); }
+.injury-sheet-save { width: 100%; min-height: 48px; padding: 12px 20px; border: 0; border-radius: 999px; background: var(--text-primary); color: var(--bg-panel); font: 600 15px/1.4 var(--font-sans); cursor: pointer; }
+.injury-sheet-save:disabled { opacity: 0.5; cursor: wait; }
+.injury-detail-link:focus-visible, .injury-rehab-action:focus-visible, .injury-sheet-close:focus-visible, .injury-sheet-save:focus-visible { outline: 2px solid var(--brand-red); outline-offset: 3px; }
+.injury-sheet-lead { font-weight: 600; }
+.injury-requirements { list-style: none; padding: 0; margin: 0; }
+.injury-requirements li { padding: 16px 0; border-bottom: 1px solid var(--border-default); }
+.injury-requirements li:first-child { padding-top: 0; }
+.injury-requirements li > div { display: flex; justify-content: space-between; gap: 16px; font-size: 13px; }
+.injury-requirements strong { font-weight: 550; }
+.injury-requirements span { color: var(--text-secondary); flex-shrink: 0; font-size: 11px; }
+.injury-requirements li > p { margin-top: 8px; color: var(--text-secondary); font-size: 12px; }
+@keyframes injury-sheet-enter { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+@media (max-width: 600px) {
+  .today-injury-card .today-injury-item { padding: 18px; }
+  .injury-sheet-backdrop { align-items: end; padding: 12px 8px max(8px, env(safe-area-inset-bottom)); }
+  .injury-sheet { max-height: calc(100dvh - 32px - env(safe-area-inset-top)); border-radius: 24px; }
+  .injury-sheet-footer { padding-bottom: max(16px, env(safe-area-inset-bottom)); }
+}
+@media (prefers-reduced-motion: reduce) { .injury-sheet { animation: none; } .injury-rehab-action { transition: none; } }

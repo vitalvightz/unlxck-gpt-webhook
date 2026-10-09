@@ -194,3 +194,10 @@ test("keeps existing recognised injury detail labels", () => {
   assert.equal(resolveInjuryTypeLabel("blister"), "blister");
   assert.equal(resolveInjuryTypeLabel("ankle sprain"), "ankle sprain");
 });
+
+
+test("Achilles metadata stays internal while athlete wording is preserved", () => {
+  assert.equal(resolveInjuryTypeLabel("tendonitis [training_impact:limiting] [achilles_site:midportion]"), "tendonitis");
+  assert.equal(normalizeInjuryLabel("Right Achilles [achilles_site:unknown]"), "Right Achilles");
+  assert.equal(resolveInjuryTypeLabel("[achilles_site:insertional]"), "");
+});

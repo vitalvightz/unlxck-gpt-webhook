@@ -3,6 +3,8 @@
 import { useId, useRef, useState } from "react";
 import { ApiError, submitInjuryEpisodeObservation } from "@/lib/api";
 import type { InjuryFlagRecord, TodayCommandView } from "@/lib/types";
+import { InjuryChevron, InjuryDetailSheet } from "./injury-detail-sheet";
+import { RehabProgressStatus } from "./rehab-progress-status";
 
 const SCHEDULE_LABELS = { due: "Rehab due today", recovery_day: "Rest day", already_completed: "Done for today",
   held: "Rehab on hold", deferred: "Rehab moved", unsupported: "No rehab yet" } as const;
@@ -26,7 +28,7 @@ export function EffectiveClinicianClearanceStatus({ clearance }: {
   </div>;
 }
 
-export function InjuryCareStatus({ injury, token, onRefresh }: {
+export function InjuryClearance({ injury, token, onRefresh }: {
   injury: InjuryFlagRecord; token: string; onRefresh: () => Promise<void>;
 }) {
   const [choosing, setChoosing] = useState(false);
@@ -60,6 +62,50 @@ export function InjuryCareStatus({ injury, token, onRefresh }: {
   const scopeLabel = scopeLabels[[...(clearance?.scopes ?? [])].sort().join(",")]
     ?? "Scope unclear — update required";
   const surface = injury.rehab_decision?.outcome === "wound_care" || Boolean(injury.surface_class && injury.surface_class !== "non_surface");
+  if (!clearance && (!injury.episode_id || surface)) return null;
+  const labels = { gentle_recovery: "Gentle recovery", loading: "Strengthening / loading", sport_specific: "Sport-specific rehab", not_cleared: "Not sure / not cleared" };
+  return <div className="injury-clearance">
+    <button type="button" className="injury-detail-link" aria-expanded={choosing} aria-haspopup="dialog"
+      aria-label={clearance ? "Change clearance" : "Report clearance"} disabled={busy}
+      onClick={() => { setRehabLevel(clearance?.rehabilitation_permission?.level ?? "not_cleared"); setTrainingLevel(clearance?.scopes.includes("contact") ? "contact" : clearance?.scopes.includes("training") ? "training" : "rehab"); setError(""); setChoosing(true); }}>
+      <span>Clearance &amp; restrictions</span><InjuryChevron />
+    </button>
+    {clearance ? <p className="injury-clearance-summary">{labels[clearance.rehabilitation_permission?.level ?? "not_cleared"]} · {scopeLabel} · Self-reported</p> : null}
+    {choosing ? <InjuryDetailSheet title="Clearance & restrictions" busy={busy} onClose={() => setChoosing(false)}>
+      <form onSubmit={event => { event.preventDefault(); void report(); }}>
+        <div className="injury-sheet-body">
+          <p className="injury-sheet-caption">Clinical Clearance · Self-reported</p>
+          <p className="muted">Record what your clinician advised. Your rehab engine still checks progression.</p>
+          <fieldset className="injury-permission-options" disabled={busy || !injury.episode_id || surface}>
+            <legend>Rehabilitation level</legend>
+            {(["not_cleared", "gentle_recovery", "loading", "sport_specific"] as const).map(value => <label key={value} data-selected={rehabLevel === value}>
+              <input type="radio" name={`${clearanceEditorId}-rehab`} value={value} checked={rehabLevel === value} onChange={() => setRehabLevel(value)} />
+              <span>{labels[value]}</span>
+              {rehabLevel === value ? <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4 4L19 6" /></svg> : null}
+            </label>)}
+          </fieldset>
+          <div className="field">
+            <label htmlFor={`${clearanceEditorId}-training`}>Training level</label>
+            <select id={`${clearanceEditorId}-training`} value={trainingLevel} disabled={busy || !injury.episode_id || surface} onChange={e => setTrainingLevel(e.target.value)}>
+              <option value="rehab">Rehab only</option><option value="training">Non-contact training</option><option value="contact">Contact training</option>
+            </select>
+          </div>
+          <p className="injury-sheet-note">Update only when your clinician’s advice changes. Injury restrictions and safety holds still apply.</p>
+          <p className="injury-sheet-note">Unlxck does not issue or verify medical clearance.</p>
+          {injury.rehab_decision?.prescription?.sources?.length ? <details className="injury-guidance-sources"><summary>Guidance sources</summary>
+            {injury.rehab_decision.prescription.sources.map((source, index) => <a key={source} href={source} target="_blank" rel="noopener noreferrer">Routine guidance{index ? ` ${index + 1}` : ""}</a>)}
+          </details> : null}
+          {error ? <p role="alert">{error}</p> : null}
+        </div>
+        <footer className="injury-sheet-footer"><button type="submit" className="injury-sheet-save" disabled={busy || !injury.episode_id || surface}>{busy ? "Saving…" : "Save changes"}</button></footer>
+      </form>
+    </InjuryDetailSheet> : null}
+  </div>;
+}
+
+export function InjuryCareStatus({ injury, token, onRefresh, showClearance = true }: {
+  injury: InjuryFlagRecord; token: string; onRefresh: () => Promise<void>; showClearance?: boolean;
+}) {
   const schedule = injury.rehab_decision?.schedule;
   const summary = injury.rehab_decision?.reason_codes.includes("missing_injury_identity")
     ? "Add injury area and type to unlock rehab guidance."
@@ -80,53 +126,21 @@ export function InjuryCareStatus({ injury, token, onRefresh }: {
   const showSummary = Boolean(summary) && !(injury.rehab_decision?.outcome === "prescribed_rehab" && schedule)
     && summary !== scheduleReason;
   return <div className="today-injury-care">
-    {injury.rehab_decision ? <div className="today-injury-care-section" role="note" aria-label="Guidance">
-    <p className="today-field-label">Guidance</p>
-    {showSummary ? <p>{summary}</p> : null}
-    {schedule ? <p><strong>{scheduleLabel}</strong>
-      {schedule.next_due_day && schedule.state !== "due" ? <span className="muted"> · Next {formatNextDay(schedule.next_due_day)}</span> : null}</p> : null}
-    {scheduleReason ? <p className="muted">{scheduleReason}</p> : null}
-    {injury.rehab_decision?.prescription?.sources?.length ? <p className="muted">
-      {injury.rehab_decision.prescription.sources.map((source, index) => <span key={source}>
-        {index ? " · " : ""}<a href={source} target="_blank" rel="noopener noreferrer">Routine guidance{index ? ` ${index + 1}` : ""}</a>
-      </span>)}
-    </p> : null}
-    </div> : null}
-    {clearance || (injury.episode_id && !surface) ? <div className="today-injury-care-section today-injury-clearance">
-    <div className="today-injury-clearance-head">
-      <div>
-        <p className="today-field-label">Clinical Clearance <small>Self-reported</small></p>
-        <p>{clearance ? `${({ gentle_recovery: "Gentle recovery", loading: "Strengthening / loading", sport_specific: "Sport-specific rehab", not_cleared: "Not sure / not cleared" })[clearance.rehabilitation_permission?.level ?? "not_cleared"]} · ${scopeLabel}` : "Not reported"}</p>
-        <p className="today-field-hint">Based on what you say your clinician advised. Unlxck does not issue or verify medical clearance. Update only when their advice changes.</p>
+    {injury.rehab_decision ? <>
+      <RehabProgressStatus decision={injury.rehab_decision} />
+      <div className="injury-rehab-status" role="note" aria-label="Guidance">
+        {showSummary ? <p>{summary}</p> : null}
+        {schedule ? <>
+          {schedule.state === "due" ? <a className="injury-rehab-action" href="#today-session"><span><strong>{scheduleLabel}</strong><small>View today’s recovery exercises</small></span><InjuryChevron /></a>
+            : <p className="injury-rehab-label"><strong>{scheduleLabel}</strong>{schedule.next_due_day ? <small>Next {formatNextDay(schedule.next_due_day)}</small> : null}</p>}
+        </> : null}
+        {scheduleReason ? <p className="injury-safety-reason">{scheduleReason}</p> : null}
       </div>
-    {injury.episode_id && !surface ? <>
-      <button type="button" className="today-injury-clearance-toggle" aria-expanded={choosing} aria-controls={clearanceEditorId}
-        onClick={() => { if (!choosing) { setRehabLevel(clearance?.rehabilitation_permission?.level ?? "not_cleared"); setTrainingLevel(clearance?.scopes.includes("contact") ? "contact" : clearance?.scopes.includes("training") ? "training" : "rehab"); } setChoosing((current) => !current); }} disabled={busy}>{choosing ? "Hide" : clearance ? "Change clearance" : "Report clearance"}</button>
+      {(!injury.episode_id || injury.rehab_decision.outcome === "wound_care" || Boolean(injury.surface_class && injury.surface_class !== "non_surface")) && injury.rehab_decision.prescription?.sources?.length ? <details className="injury-guidance-sources"><summary>Guidance sources</summary>
+        {injury.rehab_decision.prescription.sources.map((source, index) => <a key={source} href={source} target="_blank" rel="noopener noreferrer">Routine guidance{index ? ` ${index + 1}` : ""}</a>)}
+      </details> : null}
     </> : null}
-    </div>
-    {choosing ? <div id={clearanceEditorId} className="today-injury-clearance-editor" role="group" aria-label="What were you cleared for?">
-      <p className="today-field-hint">Injury restrictions and safety holds still apply.</p>
-      <div className="field">
-        <label htmlFor={`${clearanceEditorId}-rehab`}>Rehabilitation level</label>
-        <select id={`${clearanceEditorId}-rehab`} value={rehabLevel} disabled={busy} onChange={e => setRehabLevel(e.target.value as typeof rehabLevel)}>
-          <option value="gentle_recovery">Gentle recovery</option>
-          <option value="loading">Strengthening / loading</option>
-          <option value="sport_specific">Sport-specific rehab</option>
-          <option value="not_cleared">Not sure / not cleared</option>
-        </select>
-      </div>
-      <div className="field">
-        <label htmlFor={`${clearanceEditorId}-training`}>Training level</label>
-        <select id={`${clearanceEditorId}-training`} value={trainingLevel} disabled={busy} onChange={e => setTrainingLevel(e.target.value)}>
-          <option value="rehab">Rehab only</option>
-          <option value="training">Non-contact training</option>
-          <option value="contact">Contact training</option>
-        </select>
-      </div>
-      <button type="button" className="secondary-button" disabled={busy} onClick={() => report()}>{busy ? "Saving…" : "Save clearance"}</button>
-    </div> : null}
-    </div> : null}
-    {error ? <p role="alert">{error}</p> : null}
+    {showClearance ? <InjuryClearance key={`${injury.id}:${injury.episode_id}`} injury={injury} token={token} onRefresh={onRefresh} /> : null}
   </div>;
 }
 

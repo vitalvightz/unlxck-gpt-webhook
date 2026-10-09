@@ -17,15 +17,16 @@ const injury: InjuryFlagRecord = {
 };
 
 async function click(container: HTMLElement, label: string) {
-  const training = Array.from(container.querySelectorAll("select")).find(select => Array.from(select.options).some(option => option.textContent === label));
+  const surface = document.querySelector<HTMLElement>('[role="dialog"]') ?? container;
+  const training = Array.from(surface.querySelectorAll("select")).find(select => Array.from(select.options).some(option => option.textContent === label));
   if (training) {
     await act(async () => {
       training.value = Array.from(training.options).find(option => option.textContent === label)!.value;
       training.dispatchEvent(new domWindow.Event("change", { bubbles: true }));
     });
-    label = "Save clearance";
+    label = "Save changes";
   }
-  const button = Array.from(container.querySelectorAll("button")).find(b => b.textContent === label);
+  const button = Array.from(surface.querySelectorAll("button")).find(b => b.textContent === (label === "Save clearance" ? "Save changes" : label) || b.getAttribute("aria-label") === label);
   assert.ok(button, label);
   await act(async () => { button.dispatchEvent(new domWindow.MouseEvent("click", { bubbles: true })); });
 }
@@ -49,20 +50,24 @@ for (const [label, scopes] of [
       await act(async () => { root.render(<InjuryCareStatus injury={injury} token="token" onRefresh={async () => { refreshes++; }} />); });
       assert.match(container.textContent ?? "", /Rest day/);
       assert.match(container.textContent ?? "", /Next Fri 2 Oct/);
-      assert.equal(container.querySelector("a")?.getAttribute("href"), "https://www.nhs.uk/conditions/sprains-and-strains/");
-      assert.equal(container.querySelector('[aria-expanded="false"]')?.textContent, "Report clearance");
-      assert.equal(container.querySelector('[aria-label="What were you cleared for?"]'), null);
+      assert.equal(container.querySelector("select"), null);
+      assert.equal(container.querySelector('[aria-expanded="false"]')?.textContent, "Clearance & restrictions");
+      assert.equal(document.querySelector('[role="dialog"]'), null);
+      assert.equal(container.querySelector('a[href*="nhs"]'), null);
       await click(container, "Report clearance");
-      assert.match(container.textContent ?? "", /Injury restrictions and safety holds still apply./);
-      assert.equal(container.querySelectorAll("select").length, 2);
+      assert.ok(document.querySelector('[role="dialog"] details a[href*="nhs"]'));
+      assert.match(document.querySelector('[role="dialog"]')?.textContent ?? "", /Injury restrictions and safety holds still apply./);
+      assert.equal(document.querySelector('[role="dialog"]')?.querySelectorAll("select").length, 1);
+      assert.equal(document.querySelector('[role="dialog"]')?.querySelectorAll('input[type="radio"]').length, 4);
       await click(container, label);
       assert.match(String(calls[0].report_id), /^[a-f0-9-]{36}$/);
       const { report_id: firstReportId, ...body } = calls[0];
       assert.deepEqual(body, { injury_id: "injury-1", injury_episode_id: "episode-1", event_type: "clinician_clearance_report", scopes, rehabilitation_permission: { schema_version: 1, level: "not_cleared" } });
       assert.equal(refreshes, 1);
-      assert.equal(container.querySelector('[aria-label="What were you cleared for?"]'), null);
+      assert.equal(document.querySelector('[role="dialog"]'), null);
       await click(container, "Report clearance");
-      assert.equal(container.querySelectorAll("select").length, 2);
+      assert.equal(document.querySelector('[role="dialog"]')?.querySelectorAll("select").length, 1);
+      assert.equal(document.querySelector('[role="dialog"]')?.querySelectorAll('input[type="radio"]').length, 4);
       await click(container, label);
       assert.notEqual(calls[1].report_id, firstReportId);
       assert.equal(container.querySelector('input[type="file"]'), null);
@@ -114,7 +119,7 @@ test("clearance retry keeps the report identity when refresh fails after saving"
     }} />); });
     await click(container, "Report clearance");
     await click(container, "Rehab only");
-    assert.match(container.textContent ?? "", /Refresh failed/);
+    assert.match(document.querySelector('[role="dialog"]')?.textContent ?? "", /Refresh failed/);
     await click(container, "Rehab only");
     assert.equal(calls.length, 2);
     assert.equal(calls[0].report_id, calls[1].report_id);
@@ -274,15 +279,15 @@ test("updating clearance displays the refreshed scope, and worsening removes cur
     assert.doesNotMatch(container.textContent ?? "", /Non-contact training/);
     current = { ...current, clinician_clearance: null, latest_reported_status: "worse" };
     await act(async () => { render(); });
-    assert.doesNotMatch(container.textContent ?? "", /Change clearance/);
-    assert.match(container.textContent ?? "", /Report clearance/);
+    assert.equal(container.querySelector('[aria-label="Change clearance"]'), null);
+    assert.ok(container.querySelector('[aria-label="Report clearance"]'));
   } finally { globalThis.fetch = original; act(() => root.unmount()); container.remove(); }
 });
 
 test("no current clearance uses the report action without claiming a current scope", () => {
   const html = renderToStaticMarkup(<InjuryCareStatus injury={injury} token="token" onRefresh={async () => {}} />);
   assert.ok(html.includes("Report clearance"));
-  assert.ok(html.includes("Not reported"));
+  assert.ok(!html.includes("Non-contact training"));
 });
 
 
@@ -339,20 +344,39 @@ test("Clinical Clearance has two simple selectors and sends versioned self-repor
   globalThis.fetch = (async (_input, init) => { calls.push(JSON.parse(String(init?.body))); return new Response("{}", { status: 200 }); }) as typeof fetch;
   try {
     await act(async () => root.render(<InjuryCareStatus injury={injury} token="token" onRefresh={async () => {}} />));
-    assert.match(container.textContent ?? "", /Clinical Clearance\s+Self-reported/);
-    assert.match(container.textContent ?? "", /does not issue or verify medical clearance/);
+    assert.equal(container.querySelector("select"), null);
+    assert.doesNotMatch(container.textContent ?? "", /does not issue or verify/);
     await click(container, "Report clearance");
-    const selects = container.querySelectorAll("select");
-    assert.equal(selects.length, 2);
-    assert.equal(container.querySelectorAll("input, textarea").length, 0);
+    const dialog = document.querySelector<HTMLElement>('[role="dialog"]')!;
+    assert.match(dialog.textContent ?? "", /Clinical Clearance · Self-reported/);
+    assert.match(dialog.textContent ?? "", /does not issue or verify medical clearance/);
+    assert.equal(dialog.querySelectorAll('input[type="radio"]').length, 4);
+    assert.equal(dialog.querySelectorAll("textarea, input[type=text]").length, 0);
+    await act(async () => { dialog.querySelector<HTMLInputElement>('input[value="loading"]')!.click(); });
+    const training = dialog.querySelector("select")!;
     await act(async () => {
-      selects[0].value = "loading";
-      selects[0].dispatchEvent(new domWindow.Event("change", { bubbles: true }));
-      selects[1].value = "training";
-      selects[1].dispatchEvent(new domWindow.Event("change", { bubbles: true }));
+      training.value = "training";
+      training.dispatchEvent(new domWindow.Event("change", { bubbles: true }));
     });
-    await click(container, "Save clearance");
+    await click(container, "Save changes");
     assert.deepEqual(calls[0].rehabilitation_permission, { schema_version: 1, level: "loading" });
     assert.deepEqual(calls[0].scopes, ["rehab", "training"]);
   } finally { globalThis.fetch = original; act(() => root.unmount()); container.remove(); }
+});
+
+
+test("compact clearance keeps unknown rehabilitation permission visible", () => {
+  const html = renderToStaticMarkup(<InjuryCareStatus injury={{ ...injury, clinician_clearance: {
+    episode_id: "episode-1", scopes: ["rehab", "training"], source: "athlete_reported", externally_verified: false,
+  } }} token="token" onRefresh={async () => {}} />);
+  assert.match(html, /Not sure \/ not cleared.*Non-contact training.*Self-reported/);
+});
+
+test("surface guidance sources remain available without a clearance sheet", () => {
+  const html = renderToStaticMarkup(<InjuryCareStatus injury={{ ...injury, surface_class: "stable_surface", rehab_decision: {
+    ...injury.rehab_decision!, outcome: "wound_care",
+  } }} token="token" onRefresh={async () => {}} />);
+  assert.match(html, /Guidance sources/);
+  assert.match(html, /https:\/\/www.nhs.uk\/conditions\/sprains-and-strains\//);
+  assert.doesNotMatch(html, /Report clearance/);
 });
