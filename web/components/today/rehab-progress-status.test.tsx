@@ -57,3 +57,19 @@ for (const closed of [false, true]) {
     } finally { act(() => root.unmount()); container.remove(); }
   });
 }
+
+
+test("missing rehab responses direct athletes to rehab records, not the daily check-in", async () => {
+  const container = document.createElement("div"); document.body.appendChild(container);
+  const root = createRoot(container);
+  try {
+    await act(async () => root.render(<RehabProgressStatus decision={{ ...decision, progression: { next_transition: {
+      ...decision.progression!.next_transition!, reason_codes: ["during_response_not_reported", "next_day_response_not_reported"], requirements: [],
+    } } }} />));
+    await act(async () => container.querySelector("button")!.click());
+    const text = document.querySelector('[role="dialog"]')!.textContent ?? "";
+    assert.match(text, /Log your rehab session and answer its injury-response question/);
+    assert.match(text, /next-day rehab follow-up when it appears in Today/);
+    assert.doesNotMatch(text, /Better, Same or Worse/);
+  } finally { act(() => root.unmount()); container.remove(); }
+});

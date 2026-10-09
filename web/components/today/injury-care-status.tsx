@@ -70,7 +70,7 @@ export function InjuryClearance({ injury, token, onRefresh }: {
       onClick={() => { setRehabLevel(clearance?.rehabilitation_permission?.level ?? "not_cleared"); setTrainingLevel(clearance?.scopes.includes("contact") ? "contact" : clearance?.scopes.includes("training") ? "training" : "rehab"); setError(""); setChoosing(true); }}>
       <span>Clearance &amp; restrictions</span><InjuryChevron />
     </button>
-    {clearance ? <p className="injury-clearance-summary">{scopeLabel} · Self-reported</p> : null}
+    {clearance ? <p className="injury-clearance-summary">{labels[clearance.rehabilitation_permission?.level ?? "not_cleared"]} · {scopeLabel} · Self-reported</p> : null}
     {choosing ? <InjuryDetailSheet title="Clearance & restrictions" busy={busy} onClose={() => setChoosing(false)}>
       <form onSubmit={event => { event.preventDefault(); void report(); }}>
         <div className="injury-sheet-body">
@@ -136,7 +136,7 @@ export function InjuryCareStatus({ injury, token, onRefresh, showClearance = tru
         </> : null}
         {scheduleReason ? <p className="injury-safety-reason">{scheduleReason}</p> : null}
       </div>
-      {!injury.episode_id && injury.rehab_decision.prescription?.sources?.length ? <details className="injury-guidance-sources"><summary>Guidance sources</summary>
+      {(!injury.episode_id || injury.rehab_decision.outcome === "wound_care" || Boolean(injury.surface_class && injury.surface_class !== "non_surface")) && injury.rehab_decision.prescription?.sources?.length ? <details className="injury-guidance-sources"><summary>Guidance sources</summary>
         {injury.rehab_decision.prescription.sources.map((source, index) => <a key={source} href={source} target="_blank" rel="noopener noreferrer">Routine guidance{index ? ` ${index + 1}` : ""}</a>)}
       </details> : null}
     </> : null}

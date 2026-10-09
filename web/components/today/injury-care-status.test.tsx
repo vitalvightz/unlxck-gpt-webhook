@@ -363,3 +363,20 @@ test("Clinical Clearance has two simple selectors and sends versioned self-repor
     assert.deepEqual(calls[0].scopes, ["rehab", "training"]);
   } finally { globalThis.fetch = original; act(() => root.unmount()); container.remove(); }
 });
+
+
+test("compact clearance keeps unknown rehabilitation permission visible", () => {
+  const html = renderToStaticMarkup(<InjuryCareStatus injury={{ ...injury, clinician_clearance: {
+    episode_id: "episode-1", scopes: ["rehab", "training"], source: "athlete_reported", externally_verified: false,
+  } }} token="token" onRefresh={async () => {}} />);
+  assert.match(html, /Not sure \/ not cleared.*Non-contact training.*Self-reported/);
+});
+
+test("surface guidance sources remain available without a clearance sheet", () => {
+  const html = renderToStaticMarkup(<InjuryCareStatus injury={{ ...injury, surface_class: "surface_injury", rehab_decision: {
+    ...injury.rehab_decision!, outcome: "wound_care",
+  } }} token="token" onRefresh={async () => {}} />);
+  assert.match(html, /Guidance sources/);
+  assert.match(html, /https:\/\/www.nhs.uk\/conditions\/sprains-and-strains\//);
+  assert.doesNotMatch(html, /Report clearance/);
+});

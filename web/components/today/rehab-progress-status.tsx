@@ -25,8 +25,8 @@ const REASONS: Record<string, string> = {
   no_reviewed_stage_exposure: "Record completion of your current-stage rehab first.",
   no_defined_dose_completed: "No completed current-stage prescription is recorded yet.",
   no_reviewed_response_group: "An injury response after current-stage rehab is still needed.",
-  during_response_not_reported: "Report how your injury feels after rehab using Better, Same or Worse.",
-  next_day_response_not_reported: "Report how your injury feels the next day using Better, Same or Worse.",
+  during_response_not_reported: "Log your rehab session and answer its injury-response question.",
+  next_day_response_not_reported: "Answer the next-day rehab follow-up when it appears in Today.",
   during_response_worse: "Your injury felt worse after rehab. Follow the current conservative guidance.",
   next_day_response_worse: "Your injury felt worse the next day. Follow the current conservative guidance.",
 };
