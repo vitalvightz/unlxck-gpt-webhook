@@ -248,7 +248,8 @@ EXCLUSIVE_HINTS = {
         "gave way", "giving way", "apprehension", "fear", "afraid",
         "don’t trust", "don't trust", "can’t trust", "can't trust",
         "dislocate", "dislocated", "sublux", "subluxation",
-        "unreliable", "unstable"
+        "unreliable", "unstable",
+        "gives way", "gave out", "gives out", "giving out"
     },
 }
 
@@ -286,12 +287,17 @@ TENDONITIS_REQUIRED_HINTS = {
     "tendon pain", "tendon ache", "tendon sore", "tendon hurt",
     "patellar tendon", "patellar tendinopathy",
     "jumper's knee", "jumpers knee", "jumper knee",
+    "tendinitis", "tendonosis", "tendonopathy", "tendon irritation", "tendon flare",
+    "tendon niggle", "tennis elbow", "golfer's elbow", "golfers elbow",
+    "epicondylitis", "lateral epicondylitis", "medial epicondylitis",
+    "de quervain", "de quervain's", "de quervains",
 }
 
 IMPINGEMENT_GATE_HINTS = {
     "pinch", "pinching", "jam", "jamming", "block", "blocking", "stuck", "sticking",
     "won't lift", "won't raise", "won't rotate", "won't turn", "won't reach",
     "painful arc", "painful range", "bone on bone", "impinge", "impingement",
+    "pinched", "impinged", "impinging",
 }
 IMPINGEMENT_LOW_SPECIFICITY = {"click", "clicking", "clunk", "clunking", "catch", "catching"}
 
@@ -629,7 +635,10 @@ INJURY_SYNONYM_MAP = {
         "joint shift", "knee went", "ankle went", "wrist went",
         "click out", "shift out", "unhinged",
         "stretched ligament",
-        "sprain", "sprained", "inversion", "eversion", "rolled over", "turned over"
+        "sprain", "sprained", "inversion", "eversion", "rolled over", "turned over",
+        "turned ankle", "turned my ankle", "went over on", "went over on my ankle",
+        "jammed finger", "jammed thumb", "jammed toe", "stoved finger", "stoved thumb",
+        "sprung", "sprung joint", "tweaked ankle", "tweaked my ankle"
     ],
 
     # Muscle/Tendon - every possible pull/tear description
@@ -640,7 +649,9 @@ INJURY_SYNONYM_MAP = {
         "pinged", "twinge", "twinging", "sharp pain", "acute pain",
         "muscle went",
         "strain", "strained", "muscle failure",
-        "overworked", "worked too hard"
+        "overworked", "worked too hard",
+        "tweak", "tweaked", "tweaky", "pulls", "pulled muscle",
+        "cramps", "charlie horse", "spasm", "spasms", "spasming", "muscle spasm"
     ],
     # Tightness - every stiffness phrase
     "tightness": [
@@ -649,7 +660,8 @@ INJURY_SYNONYM_MAP = {
         "hard to move", "limited motion", "reduced range", "can't reach", "can't stretch",
         "warming up", "slow to loosen", "loosen", "loosen up", "looser",
         "like a rock", "like concrete", "like a board", "like a log",
-        "needs massage", "needs foam roll", "needs lacrosse ball"
+        "needs massage", "needs foam roll", "needs lacrosse ball",
+        "tightened", "tightened up", "tightening", "tense", "tensed up", "tension", "taut"
     ],
 
 
@@ -679,6 +691,14 @@ INJURY_SYNONYM_MAP = {
         "carpet burn",
         "floor burn",
         "canvas burn",
+        "rug burn",
+        "rope burn",
+        "skinned",
+        "skinned knee",
+        "skinned elbow",
+        "chafe",
+        "chafed",
+        "chafing",
     ],
     "cut": [
         "cut",
@@ -700,6 +720,12 @@ INJURY_SYNONYM_MAP = {
         "open wound",
         "surface cut",
         "bleeding cut",
+        "split lip",
+        "busted lip",
+        "cut lip",
+        "cut eyebrow",
+        "cut above eye",
+        "cut over eye",
     ],
     "laceration": [
         "laceration",
@@ -719,6 +745,14 @@ INJURY_SYNONYM_MAP = {
         "stitched",
         "staples",
         "stapled",
+        "steri strips",
+        "steri-strips",
+        "butterfly stitches",
+        "skin glue",
+        "skin flap",
+        "flap of skin",
+        "torn skin",
+        "skin torn",
     ],
     "graze": [
         "graze",
@@ -732,6 +766,11 @@ INJURY_SYNONYM_MAP = {
         "scratch mark",
         "scratches",
         "skin scratch",
+        "grazes",
+        "scuff",
+        "scuffed",
+        "scuffs",
+        "scuff mark",
     ],
     "blister": [
         "blister",
@@ -748,6 +787,14 @@ INJURY_SYNONYM_MAP = {
         "boot rub",
         "shoe rub",
         "glove rub",
+        "blood blisters",
+        "popped blister",
+        "burst blister",
+        "blister popped",
+        "torn callus",
+        "callus tear",
+        "hand blister",
+        "foot blister",
     ],
 
     # Bruise - every impact description
@@ -762,7 +809,9 @@ INJURY_SYNONYM_MAP = {
         "dent", "dented", "indent", "indentation",
         "hit", "struck", "banged", "banged up",
         "trauma", "traumatic", "blunt", "blunt force",
-        "from strike", "from kick", "from knee", "from elbow", "from hit"
+        "from strike", "from kick", "from knee", "from elbow", "from hit",
+        "bruising", "bruises", "bone bruise", "dead arm", "shin clash",
+        "clashed shins", "checked kick", "checked a kick", "took a knock"
     ],
 
     # Swelling - every fluid retention phrase
@@ -773,7 +822,9 @@ INJURY_SYNONYM_MAP = {
         "heat", "warmth", "fluid", "fluid retention",
         "edema", "oedema", "can't see bone", "can't see definition",
         "looks fat", "looks bigger", "looks swollen", "looks puffy",
-        "like a balloon", "like a melon", "like a sausage"
+        "like a balloon", "like a melon", "like a sausage",
+        "swelled", "swelled up", "swollen up", "puffed up", "goose egg",
+        "effusion", "water on the knee", "fat lip"
     ],
 
     # Tendon Overuse - every chronic tendon phrase
@@ -789,7 +840,11 @@ INJURY_SYNONYM_MAP = {
         "always sore", "always hurts", "never goes away",
         "recurring", "comes and goes", "use pain", "activity pain",
         "patellar tendon", "patellar tendinopathy",
-        "jumper's knee", "jumpers knee", "jumper knee"
+        "jumper's knee", "jumpers knee", "jumper knee",
+        "tendinitis", "tendonosis", "tendonopathy", "tendon irritation", "tendon flare",
+        "tendon niggle", "tennis elbow", "golfer's elbow", "golfers elbow",
+        "epicondylitis", "lateral epicondylitis", "medial epicondylitis",
+        "de quervain", "de quervain's", "de quervains"
     ],
 
     # Pinching - every joint catching phrase
@@ -800,7 +855,8 @@ INJURY_SYNONYM_MAP = {
         "painful arc", "painful range", "limited by pain", "stopped by pain",
         "shoulder catch", "hip catch", "elbow catch", "wrist catch",
         "ankle catch", "knee catch", "joint catch", "bone on bone",
-        "rubbing", "grinding", "bone rub", "impinge", "impingement"
+        "rubbing", "grinding", "bone rub", "impinge", "impingement",
+        "pinched", "pinchy", "impinged", "impinging"
     ],
 
     # Joint Instability - every giving way phrase
@@ -810,7 +866,9 @@ INJURY_SYNONYM_MAP = {
         "apprehension", "nervous", "nervousness", "hesitant", "hesitation",
         "trust issues", "don't trust", "afraid to move", "scared to move",
         "feels wrong", "feels off", "feels loose", "feels unstable",
-        "feels unreliable", "feels dangerous", "feels unsafe"
+        "feels unreliable", "feels dangerous", "feels unsafe",
+        "gave way", "giving way", "gives way", "gave out", "gives out", "giving out",
+        "buckled", "buckles", "buckling", "wobbly", "wobbles", "lax", "laxity"
     ],
 
     # Stiff Joint - every limited motion phrase
@@ -823,7 +881,9 @@ INJURY_SYNONYM_MAP = {
         "can't extend", "can't rotate", "can't turn", "can't twist",
         "morning", "first thing", "after rest", "after sitting",
         "after sleeping", "needs cracking", "needs popping", "needs loosening",
-        "needs warming", "needs working", "needs mobilization"
+        "needs warming", "needs working", "needs mobilization",
+        "stiffened", "stiffened up", "stiffening", "creaky", "creaking", "rigid",
+        "limited mobility", "poor mobility", "lack of mobility"
     ],
 
     # General Pain - every pain descriptor
@@ -837,6 +897,8 @@ INJURY_SYNONYM_MAP = {
         "diffuse", "spread", "spreading", "widespread", "focused", "focal",
         "point", "specific", "general", "all over", "everywhere", "nowhere",
         "shin splint", "shin splints", "medial tibial stress syndrome", "mtss",
+        "hurts", "pains", "aches", "achy", "achey", "tender", "tenderness",
+        "niggle", "niggling", "niggly", "discomfort",
     ],
 
     # Soreness - every recovery phrase
@@ -848,7 +910,8 @@ INJURY_SYNONYM_MAP = {
         "after workout", "after training", "after session", "next day", "next morning",
         "48 hour", "48 hours", "two day", "two days", "good pain", "good hurt",
         "bad pain", "bad hurt", "too much", "overdid it", "pushed too hard",
-        "went too hard", "over trained", "over worked", "over reached"
+        "went too hard", "over trained", "over worked", "over reached",
+        "sorer", "sorest", "overtrained", "overreached", "overdone it", "overdid"
     ],
 
     # Hyperextension - every overstretched phrase
@@ -861,7 +924,10 @@ INJURY_SYNONYM_MAP = {
         "extended too far", "straightened too far", "reversed", "reversal",
         "backwards", "backward", "wrong way", "opposite way", "other way",
         "knee hyperextend", "elbow hyperextend", "wrist hyperextend",
-        "finger hyperextend", "toe hyperextend", "joint hyperextend"
+        "finger hyperextend", "toe hyperextend", "joint hyperextend",
+        "hyperextending", "hyper extend", "hyper extended", "hyper-extend", "hyper-extended",
+        "overextending", "armbar", "armbarred", "arm barred", "kneebar", "kneebarred",
+        "knee bar"
     ],
 
     # Vague catch-all type has no specific synonyms. Any description that
@@ -1157,6 +1223,99 @@ LEGACY_LOCATION_MAP = {
     "radius": "wrist",
     "ulna": "wrist",
     "forearm ends": "wrist",
+    # Common athlete phrasing for body regions
+    "toenails": "toe",
+    "arches": "foot",
+    "plantar fascia": "foot",
+    "plantar": "foot",
+    "top of foot": "foot",
+    "bottom of foot": "foot",
+    "ankle bone": "ankle",
+    "outer ankle": "ankle",
+    "inner ankle": "ankle",
+    "calf muscle": "calf",
+    "calf muscles": "calf",
+    "rib": "chest",
+    "pectoral": "chest",
+    "pectoralis": "chest",
+    "breast bone": "chest",
+    "collar bone": "chest",
+    "abdomen": "core",
+    "abdominals": "core",
+    "stomach": "core",
+    "belly": "core",
+    "midsection": "core",
+    "lower abs": "core",
+    "upper abs": "core",
+    "inner elbow": "elbow",
+    "outer elbow": "elbow",
+    "elbow crease": "elbow",
+    "tip of elbow": "elbow",
+    "lip": "face",
+    "lips": "face",
+    "mouth": "face",
+    "nose": "face",
+    "ear": "face",
+    "ears": "face",
+    "cauliflower ear": "face",
+    "temple": "face",
+    "eye socket": "face",
+    "under eye": "face",
+    "above eye": "face",
+    "bridge of nose": "face",
+    "thumbs": "fingers",
+    "pinky": "fingers",
+    "pinky finger": "fingers",
+    "ring finger": "fingers",
+    "index finger": "fingers",
+    "middle finger": "fingers",
+    "fingertip": "fingers",
+    "fingertips": "fingers",
+    "thumb joint": "fingers",
+    "finger joint": "fingers",
+    "finger joints": "fingers",
+    "knuckle": "hand",
+    "palms": "hand",
+    "back of hand": "hand",
+    "hand bone": "hand",
+    "boxer's knuckle": "hand",
+    "boxers knuckle": "hand",
+    "forearm muscle": "forearm",
+    "forearm muscles": "forearm",
+    "wrist flexors": "forearm",
+    "adductor": "groin",
+    "groin muscle": "groin",
+    "inner thighs": "groin",
+    "hip bone": "hip",
+    "hip bones": "hip",
+    "hip crease": "hip",
+    "front of hip": "hip",
+    "side of hip": "hip",
+    "back of neck": "neck",
+    "side of neck": "neck",
+    "neck muscle": "neck",
+    "neck muscles": "neck",
+    "oblique": "obliques",
+    "flank": "obliques",
+    "flanks": "obliques",
+    "shinbone": "shin",
+    "front of shin": "shin",
+    "inner shin": "shin",
+    "delt": "shoulder",
+    "delts": "shoulder",
+    "deltoids": "shoulder",
+    "front delt": "shoulder",
+    "rear delt": "shoulder",
+    "side delt": "shoulder",
+    "ac joint": "shoulder",
+    "shoulder joint": "shoulder",
+    "top of shoulder": "shoulder",
+    "back of arm": "triceps",
+    "back of upper arm": "triceps",
+    "wrist joint": "wrist",
+    "inner wrist": "wrist",
+    "outer wrist": "wrist",
+    "tfcc": "wrist",
 }
 
 LOCATION_MAP = dict(LEGACY_LOCATION_MAP)
