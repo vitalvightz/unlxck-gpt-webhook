@@ -13,7 +13,6 @@ import { InstallUnlxck } from "@/components/install-unlxck";
 import { PlansFeaturedSkeleton, Skeleton } from "@/components/skeleton";
 import { XpProgressCard, XpProgressCardSkeleton } from "@/components/xp-progress-card";
 import { getPlan, getToday } from "@/lib/api";
-import { useTrainingDay } from "@/lib/use-training-day";
 import {
   getOptionLabel,
   PROFESSIONAL_STATUS_OPTIONS,
@@ -256,7 +255,6 @@ export default function HomePage() {
   }));
   const { isReady, isMeHydrated, hasTransientMeError, session, me, signOut, refreshMe } = useAppSession();
   const router = useRouter();
-  const trainingDay = useTrainingDay();
   const [commandState, setCommandState] = useState<TodayCommandView | null>(null);
   const [commandError, setCommandError] = useState<string | null>(null);
   const [structuredPlan, setStructuredPlan] = useState<StructuredPlan | null>(null);

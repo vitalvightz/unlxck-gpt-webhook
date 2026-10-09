@@ -28,7 +28,6 @@ import {
   resolveTodayDecision,
   shouldShowTodayCheckin,
 } from "@/lib/today";
-import { useTrainingDay } from "@/lib/use-training-day";
 import type { TodayCompletionStatus } from "@/lib/types";
 
 function TodayLoadingState() {
@@ -142,7 +141,6 @@ function TodayReadinessStrip({
 export function TodayScreen() {
   const { session, me } = useAppSession();
   const token = session?.access_token ?? null;
-  const trainingDay = useTrainingDay();
   const {
     state,
     structuredPlan,
