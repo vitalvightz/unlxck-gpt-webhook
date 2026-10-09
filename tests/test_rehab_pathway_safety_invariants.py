@@ -41,7 +41,7 @@ def test_shipped_policies_match_the_pre_migration_file_exactly():
         assert after.live_stages == before.live_stages
 
 
-# 3. No shipped profile can reach LOAD, DYNAMIC or RETURN, even with ideal evidence.
+# 3. Exposure alone cannot activate LOAD; DYNAMIC and RETURN stay closed.
 @pytest.mark.parametrize("policy_id", [p.policy_id for p in load_clinical_policies()])
 def test_shipped_profiles_cannot_enter_a_higher_stage(policy_id):
     shipped = next(p for p in load_clinical_policies() if p.policy_id == policy_id)
@@ -68,7 +68,7 @@ def test_shipped_profiles_cannot_enter_a_higher_stage(policy_id):
     if expected_stage == "calm":
         assert "next_transition" not in decision["progression"]
     elif policy_id == "achilles_tendonitis":
-        assert "clinical_review_missing" in decision["progression"]["next_transition"]["reason_codes"]
+        assert decision["progression"]["next_transition"]["reason_codes"] == ["rehabilitation_loading_not_reported"]
     else:
         assert decision["progression"]["next_transition"]["reason_codes"] == ["no_clinical_criteria_declared"]
 
