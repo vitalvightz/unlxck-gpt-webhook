@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 
+import { useToast } from "@/components/toast-provider";
 import { submitRehabResponses } from "@/lib/api";
 import type {
   RehabDuringResponse,
@@ -99,9 +100,9 @@ export function RehabResponsePrompt({
   prompts: RehabResponsePromptModel[];
   onDismiss: () => void;
 }>) {
+  const { showToast } = useToast();
   const [answers, setAnswers] = useState<Record<string, Answer>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isSent, setIsSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Only fully answered injuries are sent. A half-answered one is not a partial
@@ -131,7 +132,9 @@ export function RehabResponsePrompt({
           limit_response: answer.limit,
         })),
       });
-      setIsSent(true);
+      // Answered prompts leave Today, as a logged sparring card does.
+      showToast("Logged against your injury.", { tone: "success" });
+      onDismiss();
     } catch (submitError) {
       setError(
         submitError instanceof Error
@@ -149,16 +152,6 @@ export function RehabResponsePrompt({
   // The server marks this from the completed drills, so the wording survives
   // Today moving on to the next session and a reload of pending prompts.
   const guidance = prompts.every((prompt) => prompt.guidance_only);
-
-  if (isSent) {
-    return (
-      <section className="feedback-card rehab-response-card feedback-inline" aria-label="Injury response">
-        <p className="feedback-confirmation" role="status">
-          Logged against your injury. Thank you.
-        </p>
-      </section>
-    );
-  }
 
   return (
     <section className="feedback-card rehab-response-card" aria-label="Injury response">
@@ -210,10 +203,10 @@ export function RehabResponsePrompt({
         </p>
       ) : null}
 
-      <div className="feedback-actions">
+      <div className="feedback-actions session-feedback-submit-row">
         <button
           type="button"
-          className="primary-button"
+          className="cta"
           disabled={isSubmitting || complete.length === 0}
           onClick={submit}
         >
