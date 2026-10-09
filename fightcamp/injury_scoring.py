@@ -103,9 +103,13 @@ LOCATION_MAP: dict[str, list[str]] = _build_location_map(LOCATION_MAP)
 def _first_location_hit(t_clean: str) -> str:
     """
     Returns first matched canonical location.
-    Deterministic: iterates LOCATION_MAP in insertion order.
+    Deterministic: iterates LOCATION_MAP in insertion order, but a generic
+    word that maps to "unspecified" (e.g. "arm") never shadows a specific
+    region in the same text (e.g. "back of arm" -> triceps).
     """
     for loc, syns in LOCATION_MAP.items():
+        if loc == "unspecified":
+            continue
         for s in syns:
             if safe_phrase_search(s, t_clean):
                 return loc
