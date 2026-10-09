@@ -491,7 +491,7 @@
   display: flex;
   align-items: center;
   height: 40px;
-  border-radius: 999px;
+  border-radius: var(--radius-btn);
   background: var(--st-surface-strong);
 }
 
@@ -510,7 +510,7 @@
   width: 42px;
   height: 40px;
   border: 0;
-  border-radius: 999px;
+  border-radius: calc(var(--radius-btn) - 4px);
   background: transparent;
   color: var(--st-ink-soft);
   font-size: 18px;
@@ -536,7 +536,7 @@
   gap: 4px;
   height: 40px;
   padding: 0 4px 0 12px;
-  border-radius: 999px;
+  border-radius: var(--radius-btn);
   background: var(--st-surface-strong);
   font-family: var(--st-digits);
   font-size: 19px;
@@ -566,7 +566,7 @@
   width: 36px;
   height: 32px;
   border: 0;
-  border-radius: 999px;
+  border-radius: calc(var(--radius-btn) - 4px);
   background: transparent;
   color: var(--st-ink);
   font-size: 16px;
@@ -658,7 +658,7 @@
   min-height: 40px;
   padding: 0 14px;
   border: 1px solid var(--st-line);
-  border-radius: 999px;
+  border-radius: var(--radius-btn);
   background: var(--st-surface);
   color: var(--st-ink-soft);
   font: inherit;
@@ -1106,7 +1106,7 @@
 .st-choice-options button {
   min-height: 40px;
   border: 1px solid var(--st-line);
-  border-radius: 999px;
+  border-radius: var(--radius-btn);
   background: var(--st-surface);
   color: var(--st-ink-soft);
   font: inherit;
@@ -1314,7 +1314,7 @@ html[data-theme="light"] .st-mini[data-tone="warn"] { --st-accent: #c26b00; }
   white-space: nowrap;
   padding: 0 12px;
   border: 1px solid var(--border-default, #2a2f37);
-  border-radius: 999px;
+  border-radius: var(--radius-btn);
   background: rgba(255, 255, 255, 0.03);
   color: var(--text-primary, #f5f7fa);
   font: inherit;
