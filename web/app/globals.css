@@ -22833,9 +22833,13 @@ html[data-theme="light"] .sp-status-tag[data-tone="neutral"] {
 .rehab-response-injury {
   display: grid;
   gap: 12px;
-  padding: 12px;
-  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.1));
-  border-radius: 12px;
+}
+
+/* Questions sit directly in the card, like the session review; a rule only
+   separates injuries when more than one is asked about. */
+.rehab-response-injury + .rehab-response-injury {
+  padding-top: 14px;
+  border-top: 1px solid var(--border-default);
 }
 
 .rehab-response-injury-label {

@@ -86,13 +86,15 @@ function render(
 ) {
   act(() => {
     root.render(
-      <RehabResponsePrompt
-        token="test-token"
-        planId="plan-1"
-        sessionId="session-1"
-        prompts={prompts}
-        onDismiss={onDismiss}
-      />,
+      <ToastProvider>
+        <RehabResponsePrompt
+          token="test-token"
+          planId="plan-1"
+          sessionId="session-1"
+          prompts={prompts}
+          onDismiss={onDismiss}
+        />
+      </ToastProvider>,
     );
   });
 }
@@ -165,7 +167,8 @@ test("save stays disabled until an injury is fully answered", async () => {
 test("answering returns the server-issued episode context with the athlete's words", async () => {
   const { calls, restore } = captureFetch();
   const { container, root } = mount();
-  render(root, [ankle()]);
+  let dismissed = 0;
+  render(root, [ankle()], () => { dismissed++; });
 
   act(() => {
     chipInGroup(container, "rehab-during-injury-ankle", "Worse").click();
@@ -196,7 +199,9 @@ test("answering returns the server-issued episode context with the athlete's wor
     "session_id",
     "training_day",
   ]);
-  assert.match(container.textContent ?? "", /Logged against your injury/);
+  // Answered prompts leave Today; the confirmation is a toast, not a card.
+  assert.equal(dismissed, 1);
+  assert.match(document.body.textContent ?? "", /Logged against your injury/);
 
   restore();
   cleanup(container, root);
