@@ -149,3 +149,31 @@ export function FightCountdown({
     </section>
   );
 }
+
+/** Placeholder text block: shimmer sized by its (invisible) text. */
+function Bone({ children }: { children: string }) {
+  return <span className="skeleton skeleton-text fight-countdown-bone">{children}</span>;
+}
+
+/** Placeholder shown in the countdown's slot while the plan calendar loads
+ * (like the XP card's skeleton), so Overview lays out once and the card fills
+ * in place instead of popping in later. It reuses the card's own markup with
+ * invisible stand-in text, so it is the card's exact size at every width. */
+export function FightCountdownSkeleton() {
+  return (
+    <section className="fight-countdown fight-countdown-skeleton" aria-busy="true" aria-label="Fight countdown loading">
+      <div className="fight-countdown-head">
+        <div>
+          <p className="fight-countdown-kicker"><Bone>Fight camp</Bone></p>
+          <p className="fight-countdown-days">
+            <span className="fight-countdown-number"><Bone>00</Bone></span> <Bone>days to fight night</Bone>
+          </p>
+          <p className="fight-countdown-date"><Bone>Sat 00 Nov 0000</Bone></p>
+        </div>
+        <span className="fight-countdown-meta"><Bone>Week 0 of 0 · General prep</Bone></span>
+      </div>
+      <div className="overview-progress-track fight-countdown-track" aria-hidden="true" />
+      <p className="fight-countdown-next"><Bone>Next Specific prep starts in 00 days</Bone></p>
+    </section>
+  );
+}

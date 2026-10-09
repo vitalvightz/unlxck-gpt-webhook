@@ -4,7 +4,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { renderToStaticMarkup } from "react-dom/server";
 
-import { FightCountdown } from "./fight-countdown";
+import { FightCountdown, FightCountdownSkeleton } from "./fight-countdown";
 
 test("server render shows the final day count, not the animation's start", () => {
   const html = renderToStaticMarkup(
@@ -22,4 +22,13 @@ test("server render shows the final day count, not the animation's start", () =>
 
 test("renders nothing for an open plan", () => {
   assert.equal(renderToStaticMarkup(<FightCountdown fightDate={null} trainingDay="2026-06-10" />), "");
+});
+
+test("skeleton reuses the card's markup so it holds the card's exact size", () => {
+  const html = renderToStaticMarkup(<FightCountdownSkeleton />);
+  assert.match(html, /class="fight-countdown fight-countdown-skeleton"/);
+  assert.match(html, /aria-busy="true"/);
+  for (const part of ["fight-countdown-kicker", "fight-countdown-number", "fight-countdown-date", "fight-countdown-meta", "fight-countdown-track", "fight-countdown-next"]) {
+    assert.match(html, new RegExp(part));
+  }
 });
