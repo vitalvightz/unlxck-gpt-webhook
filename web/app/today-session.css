@@ -1,0 +1,692 @@
+/* Today session overview: a scannable header, then numbered session parts
+   with flat exercise rows. Loaded last so it settles the shared structured-plan
+   styles for Today only; Plan Detail keeps its cards. Colours come from the
+   theme tokens, so light and dark follow the athlete's appearance setting. */
+
+/* The page grid's implicit column would size to its widest nowrap content and
+   push the whole screen past a phone's width; pin it to the viewport. */
+.today-page,
+.today-card {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+/* -- Header ---------------------------------------------------------------- */
+.today-session-head .today-session-eyebrow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px 12px;
+  margin-bottom: 8px;
+}
+
+.today-session-head .today-session-eyebrow .kicker {
+  margin: 0;
+  color: var(--text-secondary);
+}
+
+.today-session-head .today-session-eyebrow .kicker,
+.today-session-date {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: var(--type-label-sm);
+  font-weight: 600;
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+}
+
+.today-session-head .today-session-eyebrow .kicker {
+  color: var(--brand-red);
+}
+
+.today-session-date {
+  color: var(--text-secondary);
+}
+
+.today-session-parts {
+  margin: 6px 0 0;
+  color: var(--text-secondary);
+  font-size: var(--type-body-lg);
+}
+
+.today-session-head h2 {
+  margin: 0;
+  font-size: clamp(28px, 7vw, 36px);
+  line-height: 1.08;
+  letter-spacing: -0.02em;
+}
+
+.today-session-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.today-session-chips li {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-secondary);
+  font-size: var(--type-body);
+  line-height: 1.2;
+}
+
+.today-session-chips {
+  gap: 8px 18px;
+  margin-top: 14px;
+}
+
+.today-session-chips .today-tool-icon {
+  width: 18px;
+  height: 18px;
+  color: var(--text-muted);
+}
+
+/* -- Injury strip: one line, the injury manager behind it ------------------- */
+.today-injury-strip {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 16px 0 0;
+  padding: 12px 14px;
+  border-radius: var(--radius-stat);
+  background: var(--bg-stat);
+  color: var(--text-primary);
+  text-decoration: none;
+}
+
+.today-injury-strip:hover {
+  background: var(--bg-surface-alt);
+}
+
+.today-injury-strip:focus-visible {
+  outline: 2px solid var(--brand-red);
+  outline-offset: 2px;
+}
+
+.today-injury-strip .today-tool-icon {
+  flex: 0 0 auto;
+  width: 20px;
+  height: 20px;
+  color: var(--text-secondary);
+}
+
+.today-injury-strip-text {
+  display: flex;
+  flex: 1 1 auto;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.today-injury-strip-title {
+  font-weight: 600;
+  font-size: var(--type-body);
+}
+
+.today-injury-strip-detail {
+  overflow: hidden;
+  color: var(--text-secondary);
+  font-size: var(--type-body-sm);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.today-injury-strip-chevron {
+  flex: 0 0 auto;
+  width: 8px;
+  height: 8px;
+  margin-right: 4px;
+  border-top: 2px solid var(--text-muted);
+  border-right: 2px solid var(--text-muted);
+  transform: rotate(45deg);
+}
+
+/* -- Start: one full-width action ------------------------------------------- */
+.today-session-card .today-action-tray > .cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 52px;
+  border-radius: 12px;
+  font-size: var(--type-body-lg);
+}
+
+.today-session-card .today-action-tray > .cta .today-tool-icon {
+  width: 20px;
+  height: 20px;
+}
+
+/* -- Numbered session parts ------------------------------------------------- */
+.today-blocks-sessions > .sp-session[data-layout="section"] + .sp-session[data-layout="section"] {
+  margin-top: 8px;
+  padding-top: 20px;
+}
+
+.sp-section-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.sp-section-head > :first-child {
+  min-width: 0;
+}
+
+.sp-section-eyebrow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0;
+  margin: 0 0 4px;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: var(--type-label-sm);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+}
+
+.sp-section-eyebrow > span + span::before {
+  content: "/";
+  margin: 0 0.6em;
+}
+
+.sp-section-eyebrow > span + span + span::before {
+  content: "·";
+}
+
+.sp-session[data-layout="section"] .sp-session-title {
+  font-size: var(--type-title-md);
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+}
+
+.sp-section-meta {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 3px;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: var(--type-label-sm);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+/* One disclosure per part replaces the WHY / coach cue / Show less stack. */
+.sp-section-details {
+  margin: -4px 0 12px;
+}
+
+.sp-section-details > summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-secondary);
+  font-size: var(--type-body-sm);
+  cursor: pointer;
+  list-style: none;
+}
+
+.sp-section-details > summary::-webkit-details-marker {
+  display: none;
+}
+
+.sp-section-details > summary::after {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: translateY(-2px) rotate(45deg);
+  transition: transform 0.15s ease;
+}
+
+.sp-section-details[open] > summary::after {
+  transform: translateY(1px) rotate(-135deg);
+}
+
+.sp-section-details > summary:focus-visible {
+  outline: 2px solid var(--brand-red);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.sp-section-details-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.sp-section-details-body .sp-session-objective {
+  margin: 0;
+}
+
+/* -- Flat exercise rows: one surface, hairline separators -------------------- */
+.sp-session[data-layout="section"] .ex-rows {
+  gap: 0;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-card);
+  overflow: hidden;
+}
+
+.sp-session[data-layout="section"] .ex-row {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.sp-session[data-layout="section"] .ex-row + .ex-row {
+  border-top: 1px solid var(--border-subtle);
+}
+
+.sp-session[data-layout="section"] .ex-row[data-open="true"] {
+  background: var(--bg-stat);
+}
+
+.sp-session[data-layout="section"] .ex-row-head {
+  gap: 14px;
+  min-height: 88px;
+  padding: 12px 16px 12px 12px;
+}
+
+.sp-session[data-layout="section"] .ex-row-toggle::after {
+  border-radius: 0;
+}
+
+/* Thumbnail leads the row, after the log tick when the session is running. */
+.sp-session[data-layout="section"] .ex-row-thumb,
+.sp-session[data-layout="section"] .ex-row-placeholder {
+  order: 1;
+  width: 64px;
+  height: 64px;
+  border-radius: 12px;
+}
+
+.sp-session[data-layout="section"] .ex-row-thumb img {
+  opacity: 0.9;
+}
+
+.ex-row-placeholder {
+  display: none;
+}
+
+.sp-session[data-layout="section"] .ex-row-placeholder {
+  display: block;
+  flex: 0 0 auto;
+  background: var(--bg-stat);
+  pointer-events: none;
+}
+
+.sp-session[data-layout="section"] .ex-row-text {
+  order: 2;
+}
+
+.sp-session[data-layout="section"] .ex-row-chevron {
+  order: 3;
+  border-color: var(--text-muted);
+  border-top: 0;
+  border-left: 0;
+  transform: rotate(-45deg);
+}
+
+.sp-session[data-layout="section"] .ex-row[data-open="true"] .ex-row-chevron {
+  transform: translateY(-2px) rotate(45deg);
+}
+
+.sp-session[data-layout="section"] .ex-row-title {
+  font-size: var(--type-body-lg);
+  font-weight: 600;
+}
+
+.sp-session[data-layout="section"] .ex-row-meta {
+  color: var(--text-secondary);
+  font-family: var(--font-sans);
+  font-size: var(--type-body-sm);
+}
+
+/* The stop rule stays on the collapsed row as a one-line warning; the full
+   rule is one tap away in the open row. */
+.sp-session[data-layout="section"] .ex-row-stop {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 1;
+  line-clamp: 1;
+  color: var(--danger-ink);
+  font-size: var(--type-meta);
+}
+
+.sp-session[data-layout="section"] .ex-row-stop .sp-stat-label {
+  margin-right: 6px;
+}
+
+.sp-session[data-layout="section"] .ex-row-body {
+  padding: 0 16px 16px;
+}
+
+@media (max-width: 420px) {
+  .sp-session[data-layout="section"] .ex-row-thumb,
+  .sp-session[data-layout="section"] .ex-row-placeholder {
+    width: 56px;
+    height: 56px;
+  }
+}
+
+/* -- Guidance card ---------------------------------------------------------- */
+.today-page .today-decision-banner .today-decision-action {
+  font-size: clamp(22px, 6vw, 28px);
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+}
+
+/* "Why this decision?" reads as a row to tap, not a stray link. */
+.today-page .today-decision-banner .today-decision-disclosure {
+  justify-self: stretch;
+  width: 100%;
+}
+
+.today-page .today-decision-banner .today-decision-disclosure > summary {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 52px;
+  padding: 0 14px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-stat);
+  background: var(--bg-stat);
+  color: var(--text-primary);
+  font-size: var(--type-body);
+  font-weight: 600;
+  cursor: pointer;
+  list-style: none;
+}
+
+.today-page .today-decision-banner .today-decision-disclosure > summary::-webkit-details-marker {
+  display: none;
+}
+
+.today-page .today-decision-banner .today-decision-disclosure > summary::before {
+  content: "";
+  flex: 0 0 auto;
+  width: 20px;
+  height: 20px;
+  background: var(--text-secondary);
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M14 3H7a2 2 0 00-2 2v14a2 2 0 002 2h10a2 2 0 002-2V8z'/%3E%3Cpath d='M14 3v5h5M9 13h6M9 17h6'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M14 3H7a2 2 0 00-2 2v14a2 2 0 002 2h10a2 2 0 002-2V8z'/%3E%3Cpath d='M14 3v5h5M9 13h6M9 17h6'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+
+.today-page .today-decision-banner .today-decision-disclosure > summary::after {
+  content: "";
+  width: 7px;
+  height: 7px;
+  margin-left: auto;
+  border-top: 2px solid var(--text-muted);
+  border-right: 2px solid var(--text-muted);
+  transform: rotate(45deg);
+  transition: transform 0.15s ease;
+}
+
+.today-page .today-decision-banner .today-decision-disclosure[open] > summary::after {
+  transform: rotate(135deg);
+}
+
+.today-page .today-decision-banner .today-decision-disclosure > summary:focus-visible {
+  outline: 2px solid var(--brand-red);
+  outline-offset: 2px;
+}
+
+/* -- Summary card fit and finish --------------------------------------------- */
+.today-session-head,
+.today-session-head > div {
+  width: 100%;
+  min-width: 0;
+}
+
+/* The primary action sits on the card itself, not in a second box. */
+.today-session-card .today-action-tray {
+  padding: 0;
+  border: 0;
+  background: none;
+  box-shadow: none;
+}
+
+/* Eyebrow across the top; title and meta share the row beneath it. */
+.sp-section-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: baseline;
+  column-gap: 12px;
+}
+
+.sp-section-head > :first-child {
+  display: contents;
+}
+
+.sp-section-eyebrow {
+  grid-column: 1 / -1;
+}
+
+.sp-section-eyebrow {
+  flex-wrap: nowrap;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.sp-section-meta {
+  grid-column: 2;
+  justify-self: end;
+}
+
+/* No demo video: a type glyph holds the thumbnail's place. */
+.sp-session[data-layout="section"] .ex-row-placeholder {
+  position: relative;
+}
+
+.sp-session[data-layout="section"] .ex-row-placeholder::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  width: 26px;
+  height: 26px;
+  background: var(--text-muted);
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M3 12h18M6 8v8M9 6v12M15 6v12M18 8v8'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M3 12h18M6 8v8M9 6v12M15 6v12M18 8v8'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+
+.sp-session[data-layout="section"] .ex-row-placeholder:is([data-kind="mindset"], [data-kind="skill"], [data-kind="visualisation"], [data-kind="tactical"])::after {
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M9 4a3 3 0 00-3 3 3 3 0 00-2 5 3 3 0 002 5 3 3 0 006 1V5a3 3 0 00-3-1zM15 4a3 3 0 013 3 3 3 0 012 5 3 3 0 01-2 5 3 3 0 01-6 1'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M9 4a3 3 0 00-3 3 3 3 0 00-2 5 3 3 0 002 5 3 3 0 006 1V5a3 3 0 00-3-1zM15 4a3 3 0 013 3 3 3 0 012 5 3 3 0 01-2 5 3 3 0 01-6 1'/%3E%3C/svg%3E");
+}
+
+.sp-session[data-layout="section"] .ex-row-placeholder:is([data-kind="rehab"], [data-kind="mobility"], [data-kind="prehab"])::after {
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 3l7 3v5c0 4.5-3 8.2-7 10-4-1.8-7-5.5-7-10V6z'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 3l7 3v5c0 4.5-3 8.2-7 10-4-1.8-7-5.5-7-10V6z'/%3E%3C/svg%3E");
+}
+
+/* -- Injury management: one compact row per injury ------------------------ */
+.today-injury-card .today-injury-item {
+  gap: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+.today-injury-summary-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 14px;
+  border: 0;
+  background: none;
+  color: var(--text-primary);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.today-injury-summary-row:focus-visible {
+  outline: 2px solid var(--brand-red);
+  outline-offset: -2px;
+  border-radius: var(--radius-stat);
+}
+
+.today-injury-summary-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background:
+    radial-gradient(circle at 50% 55%, var(--danger-soft), transparent 70%),
+    var(--bg-stat);
+  position: relative;
+}
+
+.today-injury-summary-icon::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  width: 24px;
+  height: 24px;
+  background: var(--danger-ink);
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 12h3l2-5 4 10 2-5h5'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 12h3l2-5 4 10 2-5h5'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+
+.today-injury-summary-text {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.today-injury-summary-text strong {
+  font-size: var(--type-body-lg);
+  line-height: 1.25;
+}
+
+.today-injury-summary-text span {
+  color: var(--text-secondary);
+  font-size: var(--type-body-sm);
+}
+
+.today-injury-summary-text em {
+  color: var(--progress-gold);
+  font-style: normal;
+  font-weight: 600;
+}
+
+/* Under "Stage: Restore": the five steps, then where it goes next. */
+.today-injury-summary-text .injury-stage-meter {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  margin-top: 4px;
+}
+
+.injury-stage-meter-steps {
+  display: flex;
+  gap: 3px;
+}
+
+.injury-stage-meter-steps > span {
+  width: 12px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--border-strong);
+}
+
+.injury-stage-meter-steps > span[data-complete="true"] {
+  background: var(--progress-gold);
+}
+
+.injury-stage-meter-text {
+  color: var(--text-secondary);
+  font-size: var(--type-meta);
+  white-space: nowrap;
+}
+
+.today-injury-summary-chevron {
+  width: 7px;
+  height: 7px;
+  margin-right: 4px;
+  border-top: 2px solid var(--text-muted);
+  border-right: 2px solid var(--text-muted);
+  transform: rotate(45deg);
+  transition: transform 0.15s ease;
+}
+
+.today-injury-item[data-open] .today-injury-summary-chevron {
+  transform: rotate(135deg);
+}
+
+.today-injury-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  margin: 0;
+  padding: 10px 14px 12px 74px;
+  border-top: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+  font-size: var(--type-body-sm);
+}
+
+.today-injury-chips > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.today-injury-chips > span::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--text-muted);
+}
+
+.today-injury-chips > span[data-kind="clearance"]::before {
+  background: var(--progress-gold);
+}
+
+.today-injury-controls {
+  display: grid;
+  gap: 12px;
+  padding: 0 14px 14px;
+}
+
+.today-injury-controls[hidden] {
+  display: none;
+}
+
+@media (max-width: 420px) {
+  .today-injury-chips {
+    padding-left: 14px;
+  }
+}
+
+/* Open, the summary row already names the injury: keep only its Edit action. */
+.today-injury-controls .today-injury-meta {
+  justify-content: flex-end;
+}
+
+.today-injury-controls .today-injury-name {
+  display: none;
+}
