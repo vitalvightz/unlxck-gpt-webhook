@@ -109,8 +109,11 @@ export function InjuryCareStatus({ injury, token, onRefresh, showClearance = tru
   injury: InjuryFlagRecord; token: string; onRefresh: () => Promise<void>; showClearance?: boolean;
 }) {
   const schedule = injury.rehab_decision?.schedule;
+  const outcome = injury.rehab_decision?.outcome;
+  const trackingOnly = outcome === "unsupported_prescription" || (outcome === "missing_information" && injury.rehab_decision?.reason_codes.includes("missing_injury_identity"));
+  const resolved = outcome === "no_rehab_indicated" && injury.rehab_decision?.reason_codes.includes("resolved_episode");
   const summary = injury.rehab_decision?.reason_codes.includes("missing_injury_identity")
-    ? "Add injury area and type to unlock rehab guidance."
+    ? "Guided rehab could not be matched. Review your injury details."
     : injury.rehab_decision?.summary;
   // Routine states say everything in their label, so their backend reason
   // ("You have already logged rehab for this injury today.") is not repeated.
@@ -129,14 +132,19 @@ export function InjuryCareStatus({ injury, token, onRefresh, showClearance = tru
     && summary !== scheduleReason;
   return <div className="today-injury-care">
     {injury.rehab_decision ? <>
-      <RehabProgressStatus decision={injury.rehab_decision} />
+      {outcome === "prescribed_rehab" ? <RehabProgressStatus decision={injury.rehab_decision} /> : null}
       <div className="injury-rehab-status" role="note" aria-label="Guidance">
-        {showSummary ? <p>{summary}</p> : null}
-        {schedule ? <>
+        {trackingOnly ? <><p className="injury-rehab-label"><strong>Recovery monitoring</strong></p>
+          <p className="muted">{outcome === "unsupported_prescription" ? "No guided rehab programme is available for this injury yet." : summary}</p>
+          <p className="injury-sheet-note">Injury restrictions and safety checks still apply.</p></>
+          : resolved ? <p className="injury-rehab-label"><strong>Recovered</strong></p>
+          : showSummary ? <p>{summary}</p> : null}
+        {!trackingOnly && !resolved && schedule ? <>
           {schedule.state === "due" ? <a className="injury-rehab-action" href="#today-session"><span><strong>{scheduleLabel}</strong><small>View today’s recovery exercises</small></span><InjuryChevron /></a>
             : <p className="injury-rehab-label"><strong>{scheduleLabel}</strong>{schedule.next_due_day ? <small>Next {formatNextDay(schedule.next_due_day)}</small> : null}</p>}
         </> : null}
-        {scheduleReason ? <p className="injury-safety-reason">{scheduleReason}</p> : null}
+        {trackingOnly && (schedule?.state === "held" || schedule?.state === "deferred") ? <p className="injury-rehab-label"><strong>{scheduleLabel}</strong></p> : null}
+        {scheduleReason && !resolved && (!trackingOnly || ((schedule?.state === "held" || schedule?.state === "deferred") && scheduleReason !== summary)) ? <p className="injury-safety-reason">{scheduleReason}</p> : null}
       </div>
       {(!injury.episode_id || injury.rehab_decision.outcome === "wound_care" || Boolean(injury.surface_class && injury.surface_class !== "non_surface")) && injury.rehab_decision.prescription?.sources?.length ? <details className="injury-guidance-sources"><summary>Guidance sources</summary>
         {injury.rehab_decision.prescription.sources.map((source, index) => <a key={source} href={source} target="_blank" rel="noopener noreferrer">Routine guidance{index ? ` ${index + 1}` : ""}</a>)}

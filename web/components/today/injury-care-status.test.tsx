@@ -132,14 +132,14 @@ test("unsupported guidance shows a repeated reason only once and keeps schedule 
       outcome: "unsupported_prescription", summary, reason_codes: [],
       schedule: { state: "unsupported", reason },
     } }} token="token" onRefresh={async () => {}} />);
-    assert.equal(html.split(summary).length - 1, 1);
-    assert.match(html, /No rehab yet/);
-    if (reason !== summary) assert.ok(html.includes(reason));
+    assert.match(html, /Recovery monitoring/);
+    assert.match(html, /No guided rehab programme is available/);
+    assert.doesNotMatch(html, /No rehab yet/);
   }
 });
 
 for (const [reasonCodes, summary, expected] of [
-  [["missing_injury_identity"], "Add the injury area and type so your rehab can be matched.", "Add injury area and type to unlock rehab guidance."],
+  [["missing_injury_identity"], "Add the injury area and type so your rehab can be matched.", "Guided rehab could not be matched. Review your injury details."],
   [["stage_not_activated"], "More injury-specific evidence is needed before changing your rehab.", "More injury-specific evidence is needed before changing your rehab."],
   [["reviewed_readiness_dose_missing"], "Follow today's reduced-training guidance. No rehab is set for days like this.", "Follow today's reduced-training guidance. No rehab is set for days like this."],
   [[], "Your clinician must review the assessment first.", "Your clinician must review the assessment first."],
@@ -377,4 +377,25 @@ test("surface guidance sources remain available without a clearance sheet", () =
   assert.match(html, /Guidance sources/);
   assert.match(html, /https:\/\/www.nhs.uk\/conditions\/sprains-and-strains\//);
   assert.doesNotMatch(html, /Report clearance/);
+});
+
+
+test("unsupported elbow monitoring does not imply a route to Load, even with permission", () => {
+  for (const outcome of ["unsupported_prescription", "missing_information"]) {
+    const html = renderToStaticMarkup(<InjuryCareStatus injury={{ ...injury, body_area: "Right elbow", description: "tightness", clinician_clearance: {
+      episode_id: "episode-1", scopes: ["rehab", "training", "contact"], source: "athlete_reported", externally_verified: false,
+      rehabilitation_permission: { schema_version: 1, level: "sport_specific" },
+    }, rehab_decision: { outcome, summary: "Add the injury area and type so your rehab can be matched.", reason_codes: outcome === "missing_information" ? ["missing_injury_identity"] : [], stage: "restore",
+      progression: { next_transition: { to_stage: "load", status: "closed", target_stage_live: false, reason_codes: [] } }, schedule: { state: "unsupported", reason: "No matching exercise." },
+    } }} token="token" onRefresh={async () => {}} />);
+    assert.match(html, /Recovery monitoring/);
+    assert.match(html, /Sport-specific rehab.*Contact training/);
+    assert.doesNotMatch(html, /Rehabilitation stages|Next:|Progression requirements|unlock rehab|Add injury area/);
+  }
+});
+
+test("resolved injuries do not need to traverse rehab stages", () => {
+  const html = renderToStaticMarkup(<InjuryCareStatus injury={{ ...injury, rehab_decision: { outcome: "no_rehab_indicated", summary: "Resolved", reason_codes: ["resolved_episode"], stage: "return" } }} token="token" onRefresh={async () => {}} />);
+  assert.match(html, /Recovered/);
+  assert.doesNotMatch(html, /Rehabilitation stages/);
 });
