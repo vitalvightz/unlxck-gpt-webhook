@@ -6,7 +6,7 @@ import styles from "./today-screen.module.css";
 
 import { useAppSession } from "@/components/auth-provider";
 import { hasHealthDataConsent } from "@/lib/compliance";
-import { CampProgressBar } from "@/components/camp-progress-bar";
+import { FightCountdown } from "@/components/fight-countdown";
 import { ContextualFeedback } from "@/components/feedback/contextual-feedback";
 import { Skeleton } from "@/components/skeleton";
 import { formatTrainingDay } from "@/components/today/format";
@@ -275,7 +275,13 @@ export function TodayScreen() {
             </Link>
           </nav>
         </div>
-        <CampProgressBar plan={structuredPlan} trainingDay={trainingDay} variant="today" />
+        <FightCountdown
+          fightDate={activePlan.fight_date}
+          trainingDay={state.today.training_day}
+          phase={activePlan.phase}
+          plan={structuredPlan}
+          variant="today"
+        />
         <TodayReadinessStrip
           needsCheckin={showCheckin}
           openInjuryCount={state.open_injuries?.length ?? 0}

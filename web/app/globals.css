@@ -3535,60 +3535,107 @@ html[data-theme="light"] .today-safe-list[data-kind="blocked"] li::before {
   line-height: 1.5;
 }
 
-/* Camp progress bar — shared "how far through camp" strip on Today + Overview.
-   Reuses the gold .overview-progress track/fill with a labelled header. */
-.camp-progress {
+/* Fight-camp countdown: days to fight night, the gold camp-progress bar
+   (reuses .overview-progress-track/fill) and the next phase change. Card on
+   Overview, compact strip on Today. */
+.fight-countdown {
   display: grid;
-  gap: 8px;
+  gap: 10px;
+  min-width: 0;
 }
 
-.camp-progress[data-variant="today"] {
+.fight-countdown[data-variant="today"] {
   margin: 2px 0 0;
   padding: 14px 16px;
-  border: 1px solid color-mix(in srgb, var(--progress-gold, #d6af6a) 18%, transparent);
+  border: 1px solid var(--progress-gold-border);
   border-radius: 12px;
   background:
-    radial-gradient(circle at top left, color-mix(in srgb, var(--progress-gold, #d6af6a) 8%, transparent), transparent 60%),
+    radial-gradient(circle at top left, var(--progress-gold-soft), transparent 60%),
     rgba(255, 255, 255, 0.02);
 }
 
-.camp-progress[data-variant="overview"] {
+.fight-countdown[data-variant="overview"] {
+  gap: 14px;
   margin-top: 4px;
+  padding: 18px 20px;
+  border: 1px solid var(--progress-gold-border);
+  border-radius: 14px;
+  background:
+    radial-gradient(circle at top left, var(--progress-gold-soft), transparent 60%),
+    var(--bg-surface);
 }
 
-.camp-progress-head {
+.fight-countdown-head {
   display: flex;
-  align-items: baseline;
+  align-items: flex-end;
   justify-content: space-between;
-  gap: 12px;
+  flex-wrap: wrap;
+  gap: 6px 16px;
 }
 
-.camp-progress-label {
-  color: var(--text-muted);
+.fight-countdown-kicker {
+  margin: 0 0 6px;
+  color: var(--progress-gold);
   font-family: var(--font-mono), monospace;
-  font-size: 11px;
+  font-size: var(--type-label-sm);
   font-weight: 700;
-  letter-spacing: 0.14em;
+  letter-spacing: var(--tracking-kicker);
   text-transform: uppercase;
 }
 
-.camp-progress-meta {
-  color: var(--progress-gold, #d6af6a);
+.fight-countdown-days {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: var(--type-body-lg);
+  font-weight: 600;
+}
+
+.fight-countdown-number {
+  color: var(--text-primary);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.fight-countdown[data-variant="overview"] .fight-countdown-number {
+  font-size: clamp(44px, 7vw, 64px);
+  line-height: 1;
+  letter-spacing: -0.03em;
+}
+
+.fight-countdown-date {
+  margin: 6px 0 0;
+  color: var(--text-muted);
+  font-size: var(--type-body-sm);
+}
+
+.fight-countdown-meta {
+  color: var(--progress-gold);
   font-family: var(--font-mono), monospace;
-  font-size: 12px;
+  font-size: var(--type-meta);
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  text-align: right;
 }
 
-html[data-theme="light"] .camp-progress[data-variant="today"] {
-  border-color: color-mix(in srgb, var(--progress-gold, #96713b) 22%, transparent);
-  background: color-mix(in srgb, var(--progress-gold, #96713b) 6%, white);
+.fight-countdown-next {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: var(--type-body-sm);
+  font-weight: 600;
 }
 
-html[data-theme="light"] .camp-progress-meta {
-  color: var(--progress-gold, #96713b);
+.fight-countdown-next-label {
+  margin-right: 6px;
+  color: var(--text-muted);
+  font-family: var(--font-mono), monospace;
+  font-size: var(--type-label-xs);
+  font-weight: 700;
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+}
+
+html[data-theme="light"] .fight-countdown[data-variant="today"] {
+  background: color-mix(in srgb, var(--progress-gold) 6%, white);
 }
 
 .onboarding-validation-panel {
