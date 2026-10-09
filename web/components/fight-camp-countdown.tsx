@@ -75,7 +75,7 @@ export function FightCampCountdown({
   const rounded = Math.round(pct);
   const isFight = mode === "fight";
   const dayZero = daysOut === 0;
-  const targetPhrase = isFight ? "to fight night" : "left in this block";
+  const { targetPhrase } = countdown;
   const meta = [weekLabel, phaseLabel].filter(Boolean).join(" · ");
   const ariaLabel = [
     isFight ? "Fight camp countdown" : "Training block countdown",
@@ -173,7 +173,7 @@ export function FightCampCountdown({
               {banked.done}
               <span className="fight-countdown-stat-of"> / {banked.total}</span>
             </span>
-            <span className="fight-countdown-stat-sub">sessions trained</span>
+            <span className="fight-countdown-stat-sub">app sessions logged</span>
           </div>
         ) : null}
         <div className="fight-countdown-stat">

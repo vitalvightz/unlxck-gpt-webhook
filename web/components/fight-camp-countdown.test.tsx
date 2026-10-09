@@ -69,6 +69,7 @@ test("Overview countdown shows banked sessions and milestone pins", () => {
     />,
   );
   assert.match(html, /Banked<\/span><span class="fight-countdown-stat-value">1<span class="fight-countdown-stat-of"> \/ 1/);
+  assert.match(html, /app sessions logged/);
   assert.match(html, /fight-countdown-pin" data-passed="true"/);
 });
 

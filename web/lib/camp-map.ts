@@ -196,6 +196,27 @@ function isoToNoonMs(value: string | null | undefined): number | null {
 }
 
 /**
+ * Local-noon ms of an open plan's first training Monday: the server anchor when
+ * provided, else derived from plan creation — the Monday of the creation week
+ * for a Mon-Thu plan, the coming Monday for a Fri-Sun one (the same
+ * shift-then-truncate the backend uses; Python weekday(): Mon=0). Null when
+ * neither is usable.
+ */
+export function resolveOpenPlanAnchorMs(hints?: OpenScheduleHints | null): number | null {
+  const anchorMs = isoToNoonMs(hints?.anchorDate);
+  if (anchorMs !== null) {
+    return anchorMs;
+  }
+  const createdMs = isoToNoonMs(hints?.createdAt);
+  if (createdMs === null) {
+    return null;
+  }
+  const shiftedMs = createdMs + 3 * 86_400_000;
+  const shiftedWeekday = (new Date(shiftedMs).getDay() + 6) % 7;
+  return shiftedMs - shiftedWeekday * 86_400_000;
+}
+
+/**
  * The 1-based week number of the renewable block containing `today`, for a
  * weekday-only open plan. Mirrors the backend projection
  * (api/services/open_plan_timeline.py): an explicit server week number wins;
@@ -220,18 +241,7 @@ export function resolveOpenPlanWeekNumber(
     return Math.min(Math.trunc(explicit), weekCount);
   }
 
-  let anchorMs = isoToNoonMs(hints?.anchorDate);
-  if (anchorMs === null) {
-    const createdMs = isoToNoonMs(hints?.createdAt);
-    if (createdMs !== null) {
-      // Monday of the week the plan can start training in: the creation week for
-      // a Mon-Thu plan, the next one for Fri-Sun. Same shift-then-truncate the
-      // backend uses (Python weekday(): Mon=0).
-      const shiftedMs = createdMs + 3 * 86_400_000;
-      const shiftedWeekday = (new Date(shiftedMs).getDay() + 6) % 7;
-      anchorMs = shiftedMs - shiftedWeekday * 86_400_000;
-    }
-  }
+  const anchorMs = resolveOpenPlanAnchorMs(hints);
   if (anchorMs === null) {
     return null;
   }
@@ -512,6 +522,9 @@ export type FightCampCountdown = {
    * renewable block (no fight scheduled). */
   mode: "fight" | "block";
   targetLabel: string;
+  /** Athlete-facing phrase after the day count: "to fight night", "left in
+   * this block" or "until your block starts". */
+  targetPhrase: string;
   targetISO: string | null;
   /** Whole days until the target; 0 on fight day / the block's last day. */
   daysOut: number;
@@ -526,8 +539,10 @@ export type FightCampCountdown = {
   /** Every milestone on the timeline (fight mode), positioned along the track. */
   milestones: TimelineMilestone[];
   nextMilestone: CountdownMilestone | null;
-  /** Physical sessions done over those scheduled up to and including today.
-   * Null without live completions (or nothing scheduled yet). */
+  /** App sessions logged done over the app sessions scheduled up to and
+   * including today. Coach-led contact (sparring, technical) is excluded: the
+   * app can't record it, so counting it would read as missed work. Null without
+   * live completions (or nothing loggable scheduled yet). */
   banked: Completion | null;
 };
 
@@ -619,17 +634,21 @@ function fightCountdown(
     });
   });
   dated.sort((a, b) => a.ms - b.ms);
-  if (!dated.length) {
+  // Fight night is the timeline's end: days scheduled after it (post-fight
+  // reintegration) sit outside the camp, so the fill, phase strip and
+  // milestones all share the same endpoint as getCampProgress.
+  const campDays = dated.filter(({ ms }) => ms <= eventMs);
+  if (!campDays.length) {
     return null;
   }
 
   // Phase segments: consecutive days sharing a phase. Unknown/reintegration
   // days fold into the running segment so the strip never shows gaps.
-  const startMs = dated[0].ms;
-  const endMs = Math.max(eventMs, dated[dated.length - 1].ms);
+  const startMs = campDays[0].ms;
+  const endMs = eventMs;
   const span = endMs - startMs;
   const runs: Array<{ key: string; startMs: number; startIso: string }> = [];
-  dated.forEach(({ iso, ms, phase }) => {
+  campDays.forEach(({ iso, ms, phase }) => {
     const last = runs[runs.length - 1];
     if (phase && (!last || last.key !== phase)) {
       runs.push({ key: phase, startMs: ms, startIso: iso });
@@ -656,7 +675,7 @@ function fightCountdown(
   runs.slice(1).forEach((run) => {
     candidates.push({ label: `${COUNTDOWN_PHASE_LABELS[run.key]} begins`, iso: run.startIso });
   });
-  const lastHardSpar = [...dated]
+  const lastHardSpar = [...campDays]
     .reverse()
     .find(({ day }) => safeRoleKeys(day).includes("hard_sparring_day"));
   if (lastHardSpar) {
@@ -696,11 +715,11 @@ function fightCountdown(
   let banked: Completion | null = null;
   if (completions) {
     const index = buildCompletionIndex(completions);
-    const sum = dated
+    const sum = campDays
       .filter(({ iso }) => iso <= todayIso)
       .reduce<Completion>(
         (acc, { day }) => {
-          const done = dayCompletion(day, index);
+          const done = dayCompletion(day, index, { includeCoachLed: false });
           return { done: acc.done + done.done, total: acc.total + done.total };
         },
         { done: 0, total: 0 },
@@ -711,6 +730,7 @@ function fightCountdown(
   return {
     mode: "fight",
     targetLabel: "Fight night",
+    targetPhrase: "to fight night",
     targetISO: eventIso,
     daysOut,
     headline: countdownHeadline(daysOut, "Fight day"),
@@ -737,6 +757,35 @@ function blockCountdown(
   hints: OpenScheduleHints | null | undefined,
 ): FightCampCountdown | null {
   const weekCount = weeks.length;
+  // A plan created late in the week starts the coming Monday; until then the
+  // block hasn't begun, so count down to its start with no progress shown.
+  const anchorMs = resolveOpenPlanAnchorMs(hints);
+  const todayNoonMs = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 12).getTime();
+  if (anchorMs !== null && todayNoonMs < anchorMs) {
+    const daysToStart = Math.round((anchorMs - todayNoonMs) / MS_PER_DAY);
+    const startIso = toISODate(new Date(anchorMs));
+    return {
+      mode: "block",
+      targetLabel: "Block starts",
+      targetPhrase: "until your block starts",
+      targetISO: startIso,
+      daysOut: daysToStart,
+      headline: countdownHeadline(daysToStart, "Starts today"),
+      pct: 0,
+      weekLabel: null,
+      phaseLabel: null,
+      segments: weeks.map((week, index) => ({
+        key: normalizedPhaseKey(resolvedWeekPhase(week)) ?? "WEEK",
+        label: `Week ${index + 1}`,
+        startPct: (index / weekCount) * 100,
+        widthPct: 100 / weekCount,
+        current: false,
+      })),
+      milestones: [],
+      nextMilestone: { label: "Week 1 starts", daysAway: daysToStart, iso: startIso },
+      banked: null,
+    };
+  }
   const weekNumber = resolveOpenPlanWeekNumber(plan, today, hints);
   if (!weekNumber) {
     return null;
@@ -766,6 +815,7 @@ function blockCountdown(
   return {
     mode: "block",
     targetLabel: "Block complete",
+    targetPhrase: "left in this block",
     targetISO: toISODate(target),
     daysOut,
     headline: countdownHeadline(daysOut, "Last day"),

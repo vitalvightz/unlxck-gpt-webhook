@@ -966,9 +966,63 @@ test("getFightCampCountdown banks only sessions on or before today", () => {
     { training_day: "2026-06-03", session_id: "s-2026-06-03", status: "skipped" },
     { training_day: "2026-06-05", session_id: "s-2026-06-05", status: "modified" },
   ] as TodaySessionCompletionRecord[];
-  const countdown = getFightCampCountdown(countdownPlan(), new Date(2026, 5, 6), { completions });
-  // Sessions on Jun 1, 3, 5 are scheduled so far; two were trained.
+  const plan = countdownPlan();
+  // Coach-led sparring on Jun 2: real training, but the app can't log it, so
+  // it must not sit in the denominator as an apparent miss.
+  plan.weeks![0].days![1].today_card = { coach_led_contact: "Coach-led sparring" };
+  assert.deepEqual(dayCompletion(plan.weeks![0].days![1]), { done: 0, total: 1 });
+  const countdown = getFightCampCountdown(plan, new Date(2026, 5, 6), { completions });
+  // App sessions on Jun 1, 3, 5 are scheduled so far; two were logged.
   assert.deepEqual(countdown?.banked, { done: 2, total: 3 });
+});
+
+test("getFightCampCountdown ends the timeline at fight night even with post-fight days", () => {
+  const plan = countdownPlan();
+  plan.weeks!.push({
+    week_index: 5,
+    phase_label: "REINTEGRATION",
+    days: Array.from({ length: 7 }, (_, dayIndex) => ({
+      date: toISODate(new Date(2026, 5, 29 + dayIndex)),
+      phase_label: "REINTEGRATION",
+      day_type: "recovery",
+      sessions: [],
+    })),
+  });
+  const today = new Date(2026, 5, 10);
+  const countdown = getFightCampCountdown(plan, today);
+  const baseline = getFightCampCountdown(countdownPlan(), today);
+  assert.ok(countdown && baseline);
+  assert.deepEqual(countdown.segments, baseline.segments);
+  assert.equal(countdown.pct, baseline.pct);
+  const last = countdown.segments[countdown.segments.length - 1];
+  assert.ok(Math.abs(last.startPct + last.widthPct - 100) < 1e-9);
+  assert.ok(countdown.milestones.every((milestone) => milestone.pct <= 100));
+});
+
+test("getFightCampCountdown counts down to an open block that hasn't started", () => {
+  const weekdays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] as const;
+  const plan = {
+    weeks: [1, 2, 3, 4].map((index) => ({
+      week_index: index,
+      days: weekdays.map((weekday) => ({ weekday, day_type: "moderate", sessions: [] })),
+    })),
+  } as StructuredPlan;
+  // Created Fri 2026-06-12 → the block starts Mon 2026-06-15.
+  const hints = { createdAt: "2026-06-12T18:00:00Z" };
+  const saturday = getFightCampCountdown(plan, new Date(2026, 5, 13), { hints });
+  assert.ok(saturday);
+  assert.equal(saturday.pct, 0);
+  assert.equal(saturday.daysOut, 2);
+  assert.equal(saturday.targetPhrase, "until your block starts");
+  assert.equal(saturday.targetISO, "2026-06-15");
+  assert.equal(saturday.weekLabel, null);
+  assert.ok(saturday.segments.every((segment) => !segment.current));
+  assert.deepEqual(saturday.nextMilestone, { label: "Week 1 starts", daysAway: 2, iso: "2026-06-15" });
+
+  const monday = getFightCampCountdown(plan, new Date(2026, 5, 15), { hints });
+  assert.equal(monday?.weekLabel, "Week 1 of 4");
+  assert.equal(monday?.targetPhrase, "left in this block");
+  assert.ok((monday?.pct ?? 0) > 0);
 });
 
 test("getFightCampCountdown counts down an open plan's renewable block", () => {
