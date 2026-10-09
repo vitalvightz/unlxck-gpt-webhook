@@ -26,3 +26,16 @@ def test_exercise_prompt_keeps_rehab_work_wording():
 def test_mixed_guidance_and_exercise_is_asked_as_rehab_work():
     payload = _payload("chest_strain_recovery_support", "ankle_sprain_heel_lowering")
     assert payload["guidance_only"] is False
+
+
+def test_pending_prompts_from_older_sessions_are_no_longer_offered():
+    from api.services.rehab_completion_service import list_pending_rehab_response_sets
+
+    class UntouchedStore:
+        def __getattr__(self, name):
+            raise AssertionError(f"an expired completion must not be read further ({name})")
+
+    old = {"id": "completion-1", "status": "done", "training_day": "2026-10-07", "plan_id": "plan"}
+    assert list_pending_rehab_response_sets(
+        UntouchedStore(), athlete_id="athlete", completions=[old], earliest_training_day="2026-10-08"
+    ) == []

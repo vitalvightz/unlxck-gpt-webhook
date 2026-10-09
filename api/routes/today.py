@@ -570,12 +570,17 @@ def build_today_router(*, require_profile, get_store) -> APIRouter:
             limit=PENDING_REHAB_COMPLETION_LIMIT + 1,
         )
         history_truncated = len(completions) > PENDING_REHAB_COMPLETION_LIMIT
+        # Offered on the session's day and the day after, then dropped.
+        earliest_day = (
+            date.fromisoformat(resolve_training_day(profile.athlete_timezone)) - timedelta(days=1)
+        ).isoformat()
         response_sets = [
             PendingRehabResponseSetResponse(**item)
             for item in list_pending_rehab_response_sets(
                 store,
                 athlete_id=profile.athlete_id,
                 completions=completions[:PENDING_REHAB_COMPLETION_LIMIT],
+                earliest_training_day=earliest_day,
             )
         ]
         return PendingRehabResponsesResponse(

@@ -552,9 +552,17 @@ def list_pending_rehab_response_sets(
     *,
     athlete_id: str,
     completions: Iterable[Mapping[str, Any]],
+    earliest_training_day: str | None = None,
 ) -> list[dict[str, Any]]:
-    """Rehydrate unanswered valid prompts from immutable completion context."""
-    completion_rows = [row for row in completions if isinstance(row, Mapping)]
+    """Rehydrate unanswered valid prompts from immutable completion context.
+
+    ``earliest_training_day`` drops prompts from older sessions: how a session
+    felt, recalled days later, is a guess, and a skipped prompt should not keep
+    coming back. Nothing is deleted; the prompt is only no longer offered.
+    """
+    completion_rows = [row for row in completions if isinstance(row, Mapping)
+                       and (earliest_training_day is None
+                            or _clean(row.get("training_day")) >= earliest_training_day)]
     valid: list[tuple[Mapping[str, Any], dict[str, Any], Mapping[str, Any]]] = []
     for completion in completion_rows:
         if _clean(completion.get("status")).lower() not in COMPLETED_STATUSES:
