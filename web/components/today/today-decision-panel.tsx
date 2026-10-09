@@ -70,7 +70,16 @@ export function TodayDecisionPanel({
   const isCurrentGuidance = !isPreview;
   // Current-day readiness evidence cannot clear or restrict a future session.
   // Preview cards explain only which planned session their copy is framing.
-  const triggerLabels = clean(isPreview || isSafetyNotice ? undefined : triggers);
+  // A trigger that only names what the reason line already says ("Right
+  // achilles tendonitis — restricts today's training" under "Your right
+  // achilles tendonitis limits ...") is said once, up there.
+  const detailText = (banner.detail ?? "").toLowerCase();
+  const triggerLabels = clean(isPreview || isSafetyNotice ? undefined : triggers).filter((trigger) => {
+    const [subject, effect] = trigger.split(" — ");
+    if (!effect) return true;
+    const name = subject.trim().toLowerCase();
+    return !(name.length > 3 && detailText.includes(name));
+  });
   const contextLabels = clean(isPreview || isSafetyNotice ? undefined : context);
   const checks = (isPreview ? [] : (safetyChecks ?? [])).filter(
     (check) => check.label?.trim() && check.result_label?.trim(),
@@ -96,6 +105,10 @@ export function TodayDecisionPanel({
     Number(checks.length > 0) +
     Number(contextLabels.length > 0) +
     Number(usedSources.length > 0 || Boolean(note));
+  const directive = splitDirective(banner.action);
+  // The reasons open by themselves only when they decide whether to train at
+  // all (a red day, a safety notice); an adjusted day keeps them a tap away.
+  const openEvidence = isCurrentGuidance && (isSafetyNotice || banner.tone === "red");
   return (
     <div
       id="today-decision"
@@ -113,14 +126,19 @@ export function TodayDecisionPanel({
             {banner.chip}
           </span>
         </div>
-        {banner.action ? <p className="today-decision-action">{banner.action}</p> : null}
+        {directive ? (
+          <p className="today-decision-action">
+            {directive.lead}
+            {directive.rest ? <span className="today-decision-action-rest">{directive.rest}</span> : null}
+          </p>
+        ) : null}
         {!isCompactPreview ? <p className="today-decision-detail">{banner.detail}</p> : null}
         {banner.safety && !isSupersededReadinessMessage(banner.safety) ? (
           <p className="today-decision-safety">{banner.safety}</p>
         ) : null}
       </div>
       {hasEvidence ? (
-        <details className="today-decision-disclosure" open={isCurrentGuidance && banner.displayState !== "go"}>
+        <details className="today-decision-disclosure" open={openEvidence}>
           <summary>{isSafetyNotice ? "Why this message?" : "Why this decision?"}</summary>
         <dl className="today-decision-evidence" data-evidence-count={evidenceCount}>
           {triggerLabels.length ? (
@@ -179,6 +197,17 @@ export function TodayDecisionPanel({
       ) : null}
     </div>
   );
+}
+
+/** "Keep it controlled: skip sparring, …" reads as a short title over the
+ * specifics. Only a short lead splits; anything else stays one sentence. */
+function splitDirective(action: string | undefined): { lead: string; rest: string } | null {
+  const text = (action ?? "").trim();
+  if (!text) return null;
+  const match = /^([^:]{3,40}):\s+(.+)$/.exec(text);
+  if (!match) return { lead: text, rest: "" };
+  const rest = match[2].charAt(0).toUpperCase() + match[2].slice(1);
+  return { lead: `${match[1]}.`, rest };
 }
 
 function clean(values: string[] | undefined): string[] {
