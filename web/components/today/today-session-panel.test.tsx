@@ -335,13 +335,13 @@ test("the session header carries the day, summary chips and a compact injury str
   // The year is dropped and the camp countdown left to the page header.
   assert.match(html, /class="today-session-date">Sat 10 Oct</);
   assert.doesNotMatch(html, /today-session-countdown/);
-  assert.match(html, /<\/svg><span aria-hidden="true">~<\/span><span class="sr-only">About <\/span>32 min<\/li>/);
+  assert.match(html, /<\/svg><span><span aria-hidden="true">~<\/span><span class="sr-only">About <\/span>32 min<\/span><\/li>/);
   assert.match(html, /href="#today-injury" class="today-injury-strip"/);
   assert.match(html, /Training around Right achilles tendonitis \+ Chest strain/);
   assert.ok(html.indexOf("today-injury-strip") < html.indexOf(">Start session</"));
 });
 
-test("a previewed multi-part day is named by its parts and opens on Preview session", async () => {
+test("a previewed multi-part day is named by its parts and opens on its own preview screen", async () => {
   const plan = {
     weeks: [{
       week_index: 1,
@@ -353,7 +353,9 @@ test("a previewed multi-part day is named by its parts and opens on Preview sess
             blocks: [{ block_id: "read-react", block_type: "mindset", display_name: "Read React" }] },
           { session_id: "2026-10-10-strength", title: "Controlled strength", session_type: "strength_power",
             planned_duration: { value: 23, unit: "min" },
-            blocks: [{ block_id: "pull", block_type: "strength", display_name: "Slow-Lowered Pull-Up", sets: 2, reps: "6" }] },
+            blocks: [{ block_id: "pull", block_type: "strength", display_name: "Slow-Lowered Pull-Up", sets: 2, reps: "6",
+              purpose: "Pulling strength for clinch control.", coaching_cues: ["Three seconds down."],
+              stop_rules: ["Stop: any sharp chest pain."] }] },
         ],
       }],
     }],
@@ -399,16 +401,52 @@ test("a previewed multi-part day is named by its parts and opens on Preview sess
     assert.equal(container.querySelector(".today-session-parts")?.textContent, "Fight IQ · Controlled strength");
     const chips = [...container.querySelectorAll(".today-session-chips li")].map((chip) => chip.textContent);
     assert.deepEqual(chips, ["~About 35 min", "Technical", "2 exercises"]);
-    // Parts stay closed until the athlete asks for them.
-    assert.equal(container.querySelector("#today-session-parts"), null);
+    // The parts are not on Today itself: Preview session opens their screen.
+    assert.doesNotMatch(container.textContent ?? "", /Slow-Lowered Pull-Up/);
     const preview = [...container.querySelectorAll("button")].find((item) => item.textContent === "Preview session");
     assert.ok(preview);
-    assert.equal(preview.getAttribute("aria-expanded"), "false");
+    assert.equal(preview.getAttribute("aria-haspopup"), "dialog");
     await act(async () => {
       preview.dispatchEvent(new domWindow.MouseEvent("click", { bubbles: true }));
     });
-    assert.equal(preview.getAttribute("aria-expanded"), "true");
-    assert.match(container.querySelector("#today-session-parts")?.textContent ?? "", /Slow-Lowered Pull-Up/);
+    const screen = domWindow.document.querySelector('[role="dialog"][data-variant="screen"]');
+    assert.ok(screen);
+    assert.equal(screen.querySelector("h2")?.textContent, "Strength + Skill");
+    assert.match(screen.textContent ?? "", /Slow-Lowered Pull-Up/);
+    assert.doesNotMatch(container.textContent ?? "", /Slow-Lowered Pull-Up/);
+
+    // An exercise opens its own sheet over the preview: the dose and stop rule
+    // in view, every other detail behind its own closed section.
+    const row = [...screen.querySelectorAll<HTMLButtonElement>(".ex-row-toggle")]
+      .find((item) => item.textContent?.includes("Slow-Lowered Pull-Up"));
+    assert.ok(row);
+    assert.equal(row.getAttribute("aria-haspopup"), "dialog");
+    await act(async () => {
+      row.dispatchEvent(new domWindow.MouseEvent("click", { bubbles: true }));
+    });
+    const dialogs = domWindow.document.querySelectorAll('[role="dialog"]');
+    const sheet = dialogs[dialogs.length - 1];
+    assert.notEqual(sheet, screen);
+    assert.equal(sheet.querySelector("h2")?.textContent, "Slow-Lowered Pull-Up");
+    assert.match(sheet.querySelector(".ex-detail-stop")?.textContent ?? "", /sharp chest pain/);
+    const sections = [...sheet.querySelectorAll<HTMLDetailsElement>("details.ex-detail-section")];
+    assert.deepEqual(
+      sections.map((section) => section.querySelector("summary")?.textContent),
+      ["Why it's here", "Coaching cues", "Full prescription"],
+    );
+    assert.ok(sections.every((section) => !section.open));
+
+    // Escape closes only the topmost sheet; Back closes the preview.
+    await act(async () => {
+      domWindow.document.dispatchEvent(new domWindow.KeyboardEvent("keydown", { key: "Escape" }));
+    });
+    assert.equal(domWindow.document.querySelectorAll('[role="dialog"]').length, 1);
+    const back = screen.querySelector<HTMLButtonElement>('button[aria-label="Back to Today"]');
+    assert.ok(back);
+    await act(async () => {
+      back.dispatchEvent(new domWindow.MouseEvent("click", { bubbles: true }));
+    });
+    assert.equal(domWindow.document.querySelector('[role="dialog"]'), null);
   } finally {
     await act(async () => root.unmount());
     container.remove();

@@ -290,10 +290,6 @@
   border-top: 1px solid var(--border-subtle);
 }
 
-.sp-session[data-layout="section"] .ex-row[data-open="true"] {
-  background: var(--bg-stat);
-}
-
 .sp-session[data-layout="section"] .ex-row-head {
   gap: 14px;
   min-height: 88px;
@@ -340,10 +336,6 @@
   transform: rotate(-45deg);
 }
 
-.sp-session[data-layout="section"] .ex-row[data-open="true"] .ex-row-chevron {
-  transform: translateY(-2px) rotate(45deg);
-}
-
 .sp-session[data-layout="section"] .ex-row-title {
   font-size: var(--type-body-lg);
   font-weight: 600;
@@ -369,10 +361,6 @@
 
 .sp-session[data-layout="section"] .ex-row-stop .sp-stat-label {
   margin-right: 6px;
-}
-
-.sp-session[data-layout="section"] .ex-row-body {
-  padding: 0 16px 16px;
 }
 
 @media (max-width: 420px) {
@@ -690,3 +678,36 @@
 .today-injury-controls .today-injury-name {
   display: none;
 }
+
+/* -- Session preview screen and exercise sheet ------------------------------ */
+.injury-sheet-backdrop[data-variant="screen"] { padding: 0; align-items: stretch; background: var(--bg-app); }
+.injury-sheet[data-variant="screen"] {
+  width: 100%;
+  max-width: none;
+  height: 100dvh;
+  max-height: none;
+  border: 0;
+  border-radius: 0;
+  background: var(--bg-app);
+  padding-top: env(safe-area-inset-top);
+}
+/* Back sits before the title on a full screen. */
+.injury-sheet[data-variant="screen"] .injury-sheet-header { flex-direction: row-reverse; justify-content: flex-end; gap: 4px; }
+.injury-sheet[data-variant="screen"] .injury-sheet-close { margin: 0 0 0 -12px; }
+.today-preview-screen { display: grid; gap: 16px; max-width: 720px; margin: 0 auto; padding: 8px 20px 32px; }
+.today-preview-meta { display: flex; justify-content: space-between; margin: 0; color: var(--text-secondary); font: 600 var(--type-label-sm) var(--font-mono); letter-spacing: var(--tracking-label); text-transform: uppercase; }
+.today-preview-screen .today-session-chips { margin: 0; }
+
+.ex-detail-summary { color: var(--text-secondary); font-family: var(--font-mono); text-transform: uppercase; letter-spacing: 0.06em; }
+.ex-detail-stop { display: grid; gap: 4px; padding: 12px 14px; border-radius: var(--radius-stat); background: var(--danger-soft); }
+.ex-detail-stop .sp-stat-label { color: var(--danger-ink); }
+.ex-detail-section { border-top: 1px solid var(--border-subtle); }
+.ex-detail-section > summary { display: flex; align-items: center; justify-content: space-between; min-height: 48px; font-weight: 600; cursor: pointer; list-style: none; }
+.ex-detail-section > summary::-webkit-details-marker { display: none; }
+.ex-detail-section > summary::after { content: ""; width: 7px; height: 7px; border-right: 2px solid var(--text-muted); border-bottom: 2px solid var(--text-muted); transform: translateY(-2px) rotate(45deg); transition: transform 0.15s ease; }
+.ex-detail-section[open] > summary::after { transform: translateY(2px) rotate(-135deg); }
+.ex-detail-section > summary:focus-visible { outline: 2px solid var(--brand-red); outline-offset: 2px; }
+.ex-detail-section[open] { display: grid; gap: 10px; padding-bottom: 14px; }
+
+/* The light theme's gold is too pale for small text on its own tint. */
+html[data-theme="light"] .today-pending-pill { color: #6f5120; }
