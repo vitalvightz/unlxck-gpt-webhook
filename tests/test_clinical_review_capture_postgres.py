@@ -58,7 +58,7 @@ class PostgresCaptureStore:
                 (athlete_id,recorder_id,Jsonb(context),Jsonb(event),Jsonb(supersession) if supersession else None)).fetchone()[0]
 
 
-def postgres_bundle(dsn):
+def postgres_bundle(dsn, *, achilles=False):
     import psycopg
     from psycopg import sql
     now = datetime.now(timezone.utc)
@@ -70,8 +70,10 @@ def postgres_bundle(dsn):
             sql.SQL(',').join(map(sql.Identifier,profile)), sql.SQL(',').join(sql.Placeholder() for _ in profile)), tuple(profile.values()))
         connection.execute("""insert into injury_flags(id,athlete_id,episode_id,description,body_area,body_region,side,
             status,severity,latest_reported_status,created_at,updated_at)
-            values(%s,%s,%s,'Left ankle sprain','Left ankle','ankle','left','monitoring','mild','improving',
-            now()-interval '30 days',now()-interval '1 day')""", (injury,athlete,episode))
+            values(%s,%s,%s,%s,%s,%s,'left','monitoring','mild','improving',
+            now()-interval '30 days',now()-interval '1 day')""", (injury,athlete,episode,
+                'Left Achilles tendonitis' if achilles else 'Left ankle sprain',
+                'Left Achilles' if achilles else 'Left ankle', 'achilles' if achilles else 'ankle'))
     store = PostgresCaptureStore(dsn,athlete,injury,episode)
     snapshot = store.get_clinical_review_capture_context(*store.scope)
     context = build_review_context(snapshot, definition=kwargs["registry"].current(request.criterion_id),
@@ -109,12 +111,15 @@ def test_real_postgres_achilles_shadow_criterion_and_revocation(capture_postgres
     from tests.test_achilles_shadow_pilot import shadow_bundle, shadow_policy
     from tests.test_achilles_progression_inputs import assessment
 
-    store, recorder, _, _ = postgres_bundle(capture_postgres)
+    store, recorder, _, _ = postgres_bundle(capture_postgres, achilles=True)
     _, _, template, kwargs = shadow_bundle()
     policy = kwargs["policies"][0]
     with psycopg.connect(capture_postgres) as connection:
-        connection.execute("""update injury_flags set description='Left Achilles tendonitis',
-            body_area='Left Achilles',body_region='achilles' where id=%s""", (store.scope[1],))
+        # Backdated disposable episode setup must also backdate its opening
+        # audit event; readiness observations cannot predate the episode start.
+        connection.execute("""update injury_episode_events set created_at=(select created_at
+            from injury_flags where id=%s) where injury_id=%s and event_type='injury_checkin'""",
+            (store.scope[1],store.scope[1]))
     snapshot = store.get_clinical_review_capture_context(*store.scope)
     now = datetime.now(timezone.utc)
     observation = assessment(site="midportion", suspected_rupture=False, marked_weakness=False,
