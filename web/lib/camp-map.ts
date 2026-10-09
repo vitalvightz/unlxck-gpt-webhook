@@ -20,6 +20,7 @@ import {
   getSessions,
   getWeeks,
   planNoteLabel,
+  resolvedWeekPhase,
 } from "./structured-plan.ts";
 import type {
   StructuredDay,
@@ -392,7 +393,7 @@ export type CampProgress = {
 
 /** Local-midnight ms for a plain "YYYY-MM-DD", parsed at midnight to align with today's normalized training day. */
 function isoToMs(iso: string | null): number | null {
-  if (!iso || !/^\\d{4}-\\d{2}-\\d{2}$/.test(iso.slice(0, 10))) {
+  if (!iso || !/^\d{4}-\d{2}-\d{2}$/.test(iso.slice(0, 10))) {
     return null;
   }
   const ms = new Date(`${iso.slice(0, 10)}T00:00:00`).getTime();
@@ -478,6 +479,275 @@ export function deriveCountdownLabel(
     return null;
   }
   return `D-${diffDays}`;
+}
+
+export type CountdownSegment = {
+  /** Phase key ("GPP", "SPP", "TAPER", "FIGHT_WEEK") or the week's phase in block mode. */
+  key: string;
+  label: string;
+  startPct: number;
+  widthPct: number;
+  current: boolean;
+};
+
+export type CountdownMilestone = {
+  label: string;
+  /** Whole days from today; always >= 1 (milestones are strictly upcoming). */
+  daysAway: number;
+  iso: string | null;
+};
+
+export type FightCampCountdown = {
+  /** "fight" counts down to the event date; "block" to the end of an open plan's
+   * renewable block (no fight scheduled). */
+  mode: "fight" | "block";
+  targetLabel: string;
+  targetISO: string | null;
+  /** Whole days until the target; 0 on fight day / the block's last day. */
+  daysOut: number;
+  /** "23 days", "1 day", "Fight day" / "Last day". */
+  headline: string;
+  /** 0-100 timeline completion. */
+  pct: number;
+  weekLabel: string | null;
+  /** Athlete-facing name of the phase today sits in, or null. */
+  phaseLabel: string | null;
+  segments: CountdownSegment[];
+  nextMilestone: CountdownMilestone | null;
+  /** Physical sessions done over those scheduled up to and including today.
+   * Null without live completions (or nothing scheduled yet). */
+  banked: Completion | null;
+};
+
+const COUNTDOWN_PHASE_LABELS: Record<string, string> = {
+  GPP: "GPP",
+  SPP: "SPP",
+  TAPER: "Taper",
+  FIGHT_WEEK: "Fight week",
+};
+
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
+function startOfLocalDayMs(date: Date): number {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
+}
+
+function wholeDaysBetween(fromMs: number, toMs: number): number {
+  return Math.round((toMs - fromMs) / MS_PER_DAY);
+}
+
+function countdownHeadline(daysOut: number, zeroLabel: string): string {
+  if (daysOut <= 0) return zeroLabel;
+  return daysOut === 1 ? "1 day" : `${daysOut} days`;
+}
+
+function normalizedPhaseKey(value: string | null | undefined): string | null {
+  const key = cleanText(value)?.toUpperCase().replace(/[\s-]+/g, "_");
+  return key && COUNTDOWN_PHASE_LABELS[key] ? key : null;
+}
+
+/**
+ * Everything the fight-camp countdown card shows: days to fight night (or, for
+ * an open plan with no fight, to the end of the current renewable block), the
+ * phase timeline with today's position, the next upcoming milestone, and the
+ * sessions banked so far. Pure and defensive like `getCampProgress`: returns
+ * null when there isn't enough plan to draw it, or once the fight has passed.
+ */
+export function getFightCampCountdown(
+  plan: StructuredPlan | null | undefined,
+  today: Date | null,
+  options?: {
+    completions?: readonly TodaySessionCompletionRecord[] | null;
+    hints?: OpenScheduleHints | null;
+  },
+): FightCampCountdown | null {
+  const weeks = getWeeks(plan);
+  if (!weeks.length || !today) {
+    return null;
+  }
+  const eventIso =
+    cleanText(plan?.event_context?.fight_date)?.slice(0, 10) ||
+    cleanText(plan?.event_context?.match_date)?.slice(0, 10) ||
+    null;
+  if (eventIso) {
+    return fightCountdown(plan, weeks, today, eventIso, options?.completions);
+  }
+  return blockCountdown(plan, weeks, today, options?.hints);
+}
+
+function fightCountdown(
+  plan: StructuredPlan | null | undefined,
+  weeks: StructuredWeek[],
+  today: Date,
+  eventIso: string,
+  completions: readonly TodaySessionCompletionRecord[] | null | undefined,
+): FightCampCountdown | null {
+  const eventMs = isoToMs(eventIso);
+  const camp = getCampProgress(plan, today);
+  if (eventMs === null || !camp) {
+    return null;
+  }
+  const todayMs = startOfLocalDayMs(today);
+  const todayIso = toISODate(today);
+  const daysOut = wholeDaysBetween(todayMs, eventMs);
+  if (daysOut < 0) {
+    return null;
+  }
+
+  type DatedDay = { iso: string; ms: number; phase: string | null; day: StructuredDay };
+  const dated: DatedDay[] = [];
+  weeks.forEach((week) => {
+    const weekPhase = normalizedPhaseKey(resolvedWeekPhase(week));
+    getDays(week).forEach((day) => {
+      const iso = dayISO(day);
+      const ms = isoToMs(iso);
+      if (iso && ms !== null) {
+        dated.push({ iso, ms, phase: normalizedPhaseKey(day.phase_label) ?? weekPhase, day });
+      }
+    });
+  });
+  dated.sort((a, b) => a.ms - b.ms);
+  if (!dated.length) {
+    return null;
+  }
+
+  // Phase segments: consecutive days sharing a phase. Unknown/reintegration
+  // days fold into the running segment so the strip never shows gaps.
+  const startMs = dated[0].ms;
+  const endMs = Math.max(eventMs, dated[dated.length - 1].ms);
+  const span = endMs - startMs;
+  const runs: Array<{ key: string; startMs: number; startIso: string }> = [];
+  dated.forEach(({ iso, ms, phase }) => {
+    const last = runs[runs.length - 1];
+    if (phase && (!last || last.key !== phase)) {
+      runs.push({ key: phase, startMs: ms, startIso: iso });
+    }
+  });
+  const segments: CountdownSegment[] = span > 0
+    ? runs.map((run, index) => {
+        const segStart = index === 0 ? startMs : run.startMs;
+        const segEnd = index + 1 < runs.length ? runs[index + 1].startMs : endMs;
+        const isLast = index + 1 === runs.length;
+        return {
+          key: run.key,
+          label: COUNTDOWN_PHASE_LABELS[run.key],
+          startPct: ((segStart - startMs) / span) * 100,
+          widthPct: ((segEnd - segStart) / span) * 100,
+          current: todayMs >= segStart && (todayMs < segEnd || (isLast && todayMs <= segEnd)),
+        };
+      })
+    : [];
+  const currentSegment = segments.find((segment) => segment.current);
+
+  // Upcoming milestones, earliest first; ties keep this listing order.
+  const candidates: Array<{ label: string; iso: string }> = [];
+  runs.slice(1).forEach((run) => {
+    candidates.push({ label: `${COUNTDOWN_PHASE_LABELS[run.key]} begins`, iso: run.startIso });
+  });
+  const lastHardSpar = [...dated]
+    .reverse()
+    .find(({ day }) => safeRoleKeys(day).includes("hard_sparring_day"));
+  if (lastHardSpar) {
+    candidates.push({ label: "Last hard spar", iso: lastHardSpar.iso });
+  }
+  const weighInIso = cleanText(plan?.event_context?.weigh_in_date)?.slice(0, 10);
+  if (weighInIso && isoToMs(weighInIso) !== null) {
+    candidates.push({ label: "Weigh-in", iso: weighInIso });
+  }
+  candidates.push({ label: "Fight night", iso: eventIso });
+  const nextMilestone =
+    candidates
+      .map((candidate, order) => ({
+        ...candidate,
+        order,
+        daysAway: wholeDaysBetween(todayMs, isoToMs(candidate.iso) ?? todayMs),
+      }))
+      .filter((candidate) => candidate.daysAway >= 1)
+      .sort((a, b) => a.daysAway - b.daysAway || a.order - b.order)
+      .map(({ label, daysAway, iso }) => ({ label, daysAway, iso }))[0] ?? null;
+
+  let banked: Completion | null = null;
+  if (completions) {
+    const index = buildCompletionIndex(completions);
+    const sum = dated
+      .filter(({ iso }) => iso <= todayIso)
+      .reduce<Completion>(
+        (acc, { day }) => {
+          const done = dayCompletion(day, index);
+          return { done: acc.done + done.done, total: acc.total + done.total };
+        },
+        { done: 0, total: 0 },
+      );
+    banked = sum.total > 0 ? sum : null;
+  }
+
+  return {
+    mode: "fight",
+    targetLabel: "Fight night",
+    targetISO: eventIso,
+    daysOut,
+    headline: countdownHeadline(daysOut, "Fight day"),
+    pct: camp.pct,
+    weekLabel: camp.weekLabel,
+    phaseLabel: currentSegment?.label ?? null,
+    segments,
+    nextMilestone,
+    banked,
+  };
+}
+
+function safeRoleKeys(day: StructuredDay): string[] {
+  return Array.isArray(day.planning_day_role_keys)
+    ? day.planning_day_role_keys.filter((key): key is string => typeof key === "string")
+    : [];
+}
+
+function blockCountdown(
+  plan: StructuredPlan | null | undefined,
+  weeks: StructuredWeek[],
+  today: Date,
+  hints: OpenScheduleHints | null | undefined,
+): FightCampCountdown | null {
+  const weekCount = weeks.length;
+  const weekNumber = resolveOpenPlanWeekNumber(plan, today, hints);
+  if (!weekNumber) {
+    return null;
+  }
+  // Renewable blocks run Monday-Sunday weeks from their anchor Monday.
+  const weekdayPos = (today.getDay() + 6) % 7;
+  const daysLeftThisWeek = 6 - weekdayPos;
+  const daysOut = daysLeftThisWeek + (weekCount - weekNumber) * 7;
+  const totalDays = weekCount * 7;
+  const elapsed = (weekNumber - 1) * 7 + weekdayPos + 1;
+  const target = new Date(today.getFullYear(), today.getMonth(), today.getDate() + daysOut);
+  const segments: CountdownSegment[] = weeks.map((week, index) => ({
+    key: normalizedPhaseKey(resolvedWeekPhase(week)) ?? "WEEK",
+    label: `Week ${index + 1}`,
+    startPct: (index / weekCount) * 100,
+    widthPct: 100 / weekCount,
+    current: index + 1 === weekNumber,
+  }));
+  const currentPhase = normalizedPhaseKey(resolvedWeekPhase(weeks[weekNumber - 1]));
+  const nextMilestone: CountdownMilestone = {
+    label: weekNumber < weekCount ? `Week ${weekNumber + 1} starts` : "New block starts",
+    daysAway: daysLeftThisWeek + 1,
+    iso: toISODate(
+      new Date(today.getFullYear(), today.getMonth(), today.getDate() + daysLeftThisWeek + 1),
+    ),
+  };
+  return {
+    mode: "block",
+    targetLabel: "Block complete",
+    targetISO: toISODate(target),
+    daysOut,
+    headline: countdownHeadline(daysOut, "Last day"),
+    pct: Math.max(0, Math.min(100, (elapsed / totalDays) * 100)),
+    weekLabel: `Week ${weekNumber} of ${weekCount}`,
+    phaseLabel: currentPhase ? COUNTDOWN_PHASE_LABELS[currentPhase] : null,
+    segments,
+    nextMilestone,
+    banked: null,
+  };
 }
 
 export type Completion = { done: number; total: number };
