@@ -6,7 +6,6 @@ import styles from "./today-screen.module.css";
 
 import { useAppSession } from "@/components/auth-provider";
 import { hasHealthDataConsent } from "@/lib/compliance";
-import { CampProgressBar } from "@/components/camp-progress-bar";
 import { ContextualFeedback } from "@/components/feedback/contextual-feedback";
 import { Skeleton } from "@/components/skeleton";
 import { formatTrainingDay } from "@/components/today/format";
@@ -29,7 +28,6 @@ import {
   resolveTodayDecision,
   shouldShowTodayCheckin,
 } from "@/lib/today";
-import { useTrainingDay } from "@/lib/use-training-day";
 import type { TodayCompletionStatus } from "@/lib/types";
 
 function TodayLoadingState() {
@@ -143,7 +141,6 @@ function TodayReadinessStrip({
 export function TodayScreen() {
   const { session, me } = useAppSession();
   const token = session?.access_token ?? null;
-  const trainingDay = useTrainingDay();
   const {
     state,
     structuredPlan,
@@ -275,7 +272,6 @@ export function TodayScreen() {
             </Link>
           </nav>
         </div>
-        <CampProgressBar plan={structuredPlan} trainingDay={trainingDay} variant="today" />
         <TodayReadinessStrip
           needsCheckin={showCheckin}
           openInjuryCount={state.open_injuries?.length ?? 0}

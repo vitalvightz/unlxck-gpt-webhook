@@ -7,13 +7,12 @@ import { useTranslations } from "next-intl";
 import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 
 import { useAppSession } from "@/components/auth-provider";
-import { CampProgressBar } from "@/components/camp-progress-bar";
 import { EmptyState } from "@/components/empty-state";
+import { FightCountdown } from "@/components/fight-countdown";
 import { InstallUnlxck } from "@/components/install-unlxck";
 import { PlansFeaturedSkeleton, Skeleton } from "@/components/skeleton";
 import { XpProgressCard, XpProgressCardSkeleton } from "@/components/xp-progress-card";
 import { getPlan, getToday } from "@/lib/api";
-import { useTrainingDay } from "@/lib/use-training-day";
 import {
   getOptionLabel,
   PROFESSIONAL_STATUS_OPTIONS,
@@ -256,7 +255,6 @@ export default function HomePage() {
   }));
   const { isReady, isMeHydrated, hasTransientMeError, session, me, signOut, refreshMe } = useAppSession();
   const router = useRouter();
-  const trainingDay = useTrainingDay();
   const [commandState, setCommandState] = useState<TodayCommandView | null>(null);
   const [commandError, setCommandError] = useState<string | null>(null);
   const [structuredPlan, setStructuredPlan] = useState<StructuredPlan | null>(null);
@@ -581,7 +579,12 @@ export default function HomePage() {
             <div className="overview-operational-item"><span className="overview-operational-label">{openOngoing ? "Mode" : "Phase"}</span><span className="overview-operational-value">{openOngoing ? "Ongoing" : humanizeIfRawEnum(activePlan.phase) || "Not set"}</span></div>
             <div className="overview-operational-item"><span className="overview-operational-label">Fight date</span><span className="overview-operational-value">{openOngoing ? "Not scheduled" : formatPlanFightDate(String(activePlan.fight_date || ""))}</span></div>
           </div>
-          <CampProgressBar plan={structuredPlan} trainingDay={trainingDay} variant="overview" />
+          <FightCountdown
+            fightDate={activePlan.fight_date ? String(activePlan.fight_date) : null}
+            trainingDay={commandState?.today?.training_day}
+            phase={activePlan.phase ? String(activePlan.phase) : null}
+            plan={structuredPlan}
+          />
           <OverviewRiskWatch risks={risks} />
         </section>
       </>
