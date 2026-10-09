@@ -378,18 +378,25 @@ export function TodayInjuryManager({
     }
     setPendingFlagId(flagId);
     try {
+      // Save the current safety report even if a delayed response fails.
+      const response = await submit([declaration ?? { flag_id: flagId, status }]);
+      setSelectedStatusByFlagId((current) => ({ ...current, [flagId]: status }));
       // The same three-button response answers yesterday's rehab question.
       // Match the exact episode; never attach an answer after an injury changes.
-      const currentInjury = openInjuries.find(injury => injury.id === flagId);
-      for (const prompt of delayedPrompts ?? []) {
-        if (prompt.injury_id === flagId && prompt.injury_episode_id === currentInjury?.episode_id && status !== "resolved") {
+      const currentInjury = response.open_injuries.find(injury => injury.id === flagId);
+      const matchingPrompts = (delayedPrompts ?? []).filter(prompt => prompt.injury_id === flagId
+        && prompt.injury_episode_id === currentInjury?.episode_id && status !== "resolved");
+      try {
+        for (const prompt of matchingPrompts) {
           await submitInjuryEpisodeObservation(token, { injury_id: flagId, injury_episode_id: prompt.injury_episode_id,
             event_type: "delayed_rehab_response", exposure_id: prompt.exposure_id,
             response: status === "improving" ? "better" : status === "worse" ? "worse" : "same" });
         }
+        if (matchingPrompts.length) await onRefresh();
+      } catch {
+        showToast("Injury updated. Your rehab response could not be saved; try the same response again.", { tone: "error" });
+        return true;
       }
-      const response = await submit([declaration ?? { flag_id: flagId, status }]);
-      setSelectedStatusByFlagId((current) => ({ ...current, [flagId]: status }));
       const previous = openInjuries.find((injury) => injury.id === flagId);
       const updated = response.open_injuries.find((injury) => injury.id === flagId);
       const severityRaised =
@@ -427,7 +434,7 @@ export function TodayInjuryManager({
     }
   }
 
-  // "Easing" applies straight away. "Resolved" routes through an inline
+  // Better/Same apply straight away. "Resolved" routes through an inline
   // confirmation because it removes the injury from tracking, and "Worse" on a
   // known skin injury routes through the surface follow-up, because how a wound
   // is worse (open? bleeding? coverable?) is what decides whether anything about

@@ -1502,8 +1502,27 @@ test("Achilles Today omits the worksheet and Same reuses injury tracking plus an
       delayedPrompts={[{ injury_id: "achilles", injury_episode_id: "episode", exposure_id: "exposure", region: "achilles", question: "After rehab?", options: ["better", "same", "worse", "not_sure"] }]} />));
     assert.doesNotMatch(container.textContent ?? "", /Heel-rise|assessor|Achilles assessment|Range of motion|Loading task/);
     await click(statusButton(container, "Same"));
-    assert.equal(calls[0].body.event_type, "delayed_rehab_response");
-    assert.equal(calls[0].body.response, "same");
-    assert.deepEqual(calls[1].body.injuries, [{ flag_id: "achilles", status: "ongoing" }]);
+    assert.deepEqual(calls[0].body.injuries, [{ flag_id: "achilles", status: "ongoing" }]);
+    assert.equal(calls[1].body.event_type, "delayed_rehab_response");
+    assert.equal(calls[1].body.response, "same");
+  } finally { globalThis.fetch = original; cleanup(); }
+});
+
+test("a failed delayed response cannot block the current worsening report", async () => {
+  const { container, root, cleanup } = mount();
+  const original = globalThis.fetch;
+  const calls: Array<Record<string, unknown>> = [];
+  const injury = { ...SHOULDER, episode_id: "episode" };
+  globalThis.fetch = (async (_input, init) => {
+    calls.push(JSON.parse(String(init?.body)));
+    return new Response(JSON.stringify(calls.length === 1 ? { open_injuries: [injury] } : { detail: "Unavailable" }), { status: calls.length === 1 ? 200 : 500 });
+  }) as typeof fetch;
+  try {
+    await act(async () => root.render(<TodayInjuryManager openInjuries={[injury]} token="token" onRefresh={async () => {}}
+      delayedPrompts={[{ injury_id: injury.id, injury_episode_id: "episode", exposure_id: "exposure", region: "shoulder", question: "After rehab?", options: ["better", "same", "worse", "not_sure"] }]} />));
+    await click(statusButton(container, "Worse"));
+    assert.deepEqual(calls[0].injuries, [{ flag_id: injury.id, status: "worse" }]);
+    assert.equal(calls[1].response, "worse");
+    assert.equal(statusButton(container, "Worse").getAttribute("aria-pressed"), "true");
   } finally { globalThis.fetch = original; cleanup(); }
 });
