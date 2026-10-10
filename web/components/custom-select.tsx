@@ -49,6 +49,7 @@ export function CustomSelect({
   const optionRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const closeTimerRef = useRef<number | null>(null);
   const [isOpen, setIsOpen] = useState(false);
+  const [portalTarget, setPortalTarget] = useState<Element | null>(null);
   const [isMounted, setIsMounted] = useState(false);
   const [menuPhase, setMenuPhase] = useState<MenuPhase>("closed");
   const [activeIndex, setActiveIndex] = useState(-1);
@@ -142,6 +143,7 @@ export function CustomSelect({
       return;
     }
     clearCloseTimer();
+    setPortalTarget(triggerRef.current?.closest("dialog") ?? document.body);
     updateMenuPosition();
     const requestedIndex = preferredIndex ?? (selectedIndex >= 0 ? selectedIndex : 0);
     const nextIndex = optionList[requestedIndex]?.disabled
@@ -360,7 +362,9 @@ export function CustomSelect({
                 </div>
               </div>
             </>,
-            document.body,
+            // Keep a picker inside its native modal's top layer so its menu
+            // remains visible and interactive while the rest of the page is inert.
+            portalTarget ?? document.body,
           )
         : null}
     </>

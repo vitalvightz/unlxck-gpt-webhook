@@ -1,10 +1,11 @@
 # Log Training
 
-Implements the first delivery from investigation PR #2816. Plan offers one inline
+Implements the first delivery from investigation PR #2816. Plan offers a single Log Training action row opening a modal
 form: activity, whole minutes (1–600, matching the existing session-duration
 boundary), and reported Easy / Moderate / Hard effort. Saving requires neither
-an active plan nor a prescribed session. The same Plan history shows completed
-Unlxck sessions and manual entries, with edits/deletion only for manual work.
+an active plan nor a prescribed session. The existing History page shows completed Unlxck sessions and manual entries,
+with edits/deletion only for manual work. Plan shows a brief save confirmation,
+with no session feed.
 An optional training-date disclosure allows logging yesterday or earlier work;
 the default form still shows only the three required fields.
 The existing History session tab reads the same service, retaining prescribed
@@ -81,7 +82,7 @@ Backdated 60-minute Hard Sparring reaches both adaptive paths on its reported da
 future/invalid dates, local rollover, retry conflicts and legacy fingerprints are tested.
 
 `web/e2e/log-training.spec.ts` exercises the actual Plan UI and API adapter at
-390px and 1280px, with isolated API responses: log, reload, edit, delete, retry
+390px and 1280px, with isolated API responses: log, navigation to History, reload, edit, delete, retry
 identity, field count, accessibility and overflow. It uses no live athlete data.
 The optional-date mobile flow verifies logging yesterday, reloading and editing
 without moving the recorded training day.

@@ -1,0 +1,15 @@
+.training { min-width: 0; }
+.actionRow { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; min-height: 44px; padding: 12px 0; background: transparent; color: var(--text-primary); border: 0; border-bottom: 1px solid var(--border-default); text-align: left; cursor: pointer; font: inherit; }
+.actionRow > span:first-child { display: grid; gap: 4px; }
+.actionRow strong { font-size: var(--type-title-sm); }
+.actionRow > span:last-child { font-size: 24px; }
+.actionRow:focus-visible { outline: 2px solid var(--brand-red); outline-offset: 4px; }
+.form { display: grid; gap: 14px; }
+.form select, .form input { width: 100%; min-height: 44px; }
+.actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.actions button { min-height: 44px; }
+.dateChoice summary { cursor: pointer; min-height: 44px; display: list-item; align-content: center; }
+.dateChoice label { margin-top: 8px; }
+.dialog { width: min(440px, calc(100vw - 32px)); max-height: calc(100dvh - 32px); overflow-y: auto; box-sizing: border-box; padding: 24px; color: var(--text-primary); background: var(--bg-panel); border: 1px solid var(--border-subtle); border-radius: 16px; }
+.dialog::backdrop { background: rgb(0 0 0 / 75%); }
+.dialog h2 { margin: 0 0 20px; }

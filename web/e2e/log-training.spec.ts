@@ -1,4 +1,4 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Locator, type Page } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import { isolateFromNetwork } from "./support";
 import type { TrainingHistorySession } from "../lib/training-history";
@@ -61,8 +61,15 @@ async function setup(page: Page, baseURL: string, lostResponse = false) {
   return submissions;
 }
 
+async function choose(scope: Page | Locator, page: Page, field: string, option: string) {
+  await scope.getByRole("combobox", { name: field, exact: true }).click();
+  await expect(page.getByRole("listbox")).toBeVisible();
+  await page.getByRole("option", { name: option, exact: true }).click();
+  await expect(page.getByRole("listbox")).toHaveCount(0);
+}
+
 for (const width of [390, 1280]) {
-  test(`Plan logs, edits and deletes external work without a plan (${width}px)`, async ({ page, baseURL }) => {
+  test(`Plan logs work; History edits and deletes it (${width}px)`, async ({ page, baseURL }) => {
     await page.setViewportSize({ width, height: 844 });
     const errors: string[] = [];
     page.on("pageerror", error => errors.push(error.message));
@@ -70,11 +77,19 @@ for (const width of [390, 1280]) {
     await page.goto("/plan");
     await page.getByRole("button", { name: "Log Training", exact: true }).click();
     const form = page.getByRole("form", { name: "Log Training", exact: true });
-    await expect(form.locator("input[required], select[required]")).toHaveCount(3);
+    await expect(form.getByRole("combobox")).toHaveCount(2);
+    await expect(form.locator("input[required]")).toHaveCount(1);
     await expect(form.getByLabel("Training date (optional)")).toBeHidden();
-    await form.getByRole("combobox", { name: "Activity", exact: true }).selectOption("sparring");
+    await form.getByRole("combobox", { name: "Activity", exact: true }).press("ArrowDown");
+    await expect(page.getByRole("listbox")).toBeVisible();
+    await expect(page.locator(".custom-select-menu-sheet")).toHaveCount(width === 390 ? 1 : 0);
+    await page.screenshot({ path: test.info().outputPath("activity-picker.png") });
+    await page.keyboard.press("Escape");
+    await expect(page.getByRole("listbox")).toHaveCount(0);
+    await expect(page.getByRole("dialog")).toBeVisible();
+    await choose(form, page, "Activity", "Sparring");
     await form.getByLabel("Duration (minutes)").fill("60");
-    await form.getByRole("combobox", { name: "Effort", exact: true }).selectOption("hard");
+    await choose(form, page, "Effort", "Hard");
     // Compare rendered styling with the existing Plan CTA, catching unstyled
     // default buttons even if saving still works functionally.
     const ctaAppearance = (element: Element) => {
@@ -84,22 +99,28 @@ for (const width of [390, 1280]) {
     expect(await form.getByRole("button", { name: "Save Session", exact: true }).evaluate(ctaAppearance))
       .toEqual(await page.getByRole("link", { name: "Quick Build New Plan" }).evaluate(ctaAppearance));
     await page.screenshot({ path: test.info().outputPath("log-training-form.png") });
-    expect((await new AxeBuilder({ page }).include('[aria-label="Your Training"]').analyze()).violations).toEqual([]);
+    expect((await new AxeBuilder({ page }).include('dialog').analyze()).violations).toEqual([]);
     await form.getByRole("button", { name: "Save Session", exact: true }).click();
-    const history = page.getByRole("list", { name: "Training history" });
-    await expect(history).toContainText("Added by you · Completed · 60 min · Hard");
-    await expect(history).toContainText("Strength & Power");
-    await page.screenshot({ path: test.info().outputPath("unified-training-history.png") });
-    await expect(history.getByRole("button", { name: "Edit Strength & Power" })).toHaveCount(0);
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+    await expect(page.getByRole("region", { name: "Log Training", exact: true }).getByRole("status")).toContainText("logged successfully");
+    await expect(page.locator(".history-list")).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Edit Sparring" })).toHaveCount(0);
     expect(submissions[0]).toMatchObject({ activity: "sparring", duration_minutes: 60, effort: "hard" });
     expect(Object.keys(submissions[0]).sort()).toEqual(["activity", "client_request_id", "duration_minutes", "effort"]);
     await page.reload();
+    await expect(page.getByRole("button", { name: "Edit Sparring" })).toHaveCount(0);
+    if (width === 390) await page.getByRole("button", { name: "Open navigation" }).click();
+    await page.getByRole("link", { name: /^History/ }).first().click();
+    const history = page.locator(".history-list");
+    await expect(history).toContainText("Sparring");
+    await expect(history.getByRole("button", { name: "Edit Strength & Power" })).toHaveCount(0);
     await page.getByRole("button", { name: "Edit Sparring", exact: true }).click();
-    await page.getByRole("combobox", { name: "Activity", exact: true }).selectOption("boxing");
+    await choose(page, page, "Activity", "Boxing");
     await page.getByLabel("Duration (minutes)").fill("45");
-    await page.getByRole("combobox", { name: "Effort", exact: true }).selectOption("moderate");
+    await choose(page, page, "Effort", "Moderate");
     await page.getByRole("button", { name: "Save Session", exact: true }).click();
-    await expect(history).toContainText("45 min · Moderate");
+    await expect(history).toContainText("45 min");
+    await expect(history).toContainText("Moderate");
     await page.goto("/history");
     await expect(page.locator(".history-list")).toContainText("Boxing");
     await expect(page.locator(".history-list")).toContainText("Added by you");
@@ -107,9 +128,16 @@ for (const width of [390, 1280]) {
     await expect(page.locator(".history-list")).toContainText("RPE 7/10");
     await expect(page.locator(".history-list")).toContainText("Coach session");
     await expect(page.locator(".history-list > li")).toHaveCount(2);
-    await page.goto("/plan");
     await page.getByRole("button", { name: "Delete Boxing", exact: true }).click();
     await expect(history.getByRole("listitem")).toHaveCount(1);
+    await page.reload();
+    await expect(history).not.toContainText("Boxing");
+    await page.goto("/plan");
+    await expect(page.locator(".history-list")).toHaveCount(0);
+    await page.getByRole("button", { name: "Log Training", exact: true }).click();
+    await page.keyboard.press("Escape");
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Log Training", exact: true })).toBeFocused();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     expect(errors).toEqual([]);
   });
@@ -119,13 +147,13 @@ test("retry after a lost save response keeps the same request ID", async ({ page
   const submissions = await setup(page, baseURL!, true);
   await page.goto("/plans");
   await page.getByRole("button", { name: "Log Training", exact: true }).click();
-  await page.getByRole("combobox", { name: "Activity", exact: true }).selectOption("sparring");
+  await choose(page, page, "Activity", "Sparring");
   await page.getByLabel("Duration (minutes)").fill("60");
-  await page.getByRole("combobox", { name: "Effort", exact: true }).selectOption("hard");
+  await choose(page, page, "Effort", "Hard");
   await page.getByRole("button", { name: "Save Session", exact: true }).click();
-  await expect(page.getByRole("region", { name: "Your Training" }).getByRole("alert")).toContainText("response lost");
+  await expect(page.getByRole("dialog").getByRole("alert")).toContainText("response lost");
   await page.getByRole("button", { name: "Save Session", exact: true }).click();
-  await expect(page.getByRole("list", { name: "Training history" }).getByRole("listitem")).toHaveCount(2);
+  await expect(page.getByRole("region", { name: "Log Training", exact: true }).getByRole("status")).toContainText("logged successfully");
   expect(submissions).toHaveLength(2);
   expect(submissions[1].client_request_id).toBe(submissions[0].client_request_id);
 });
@@ -135,22 +163,24 @@ test("log yesterday's sparring with the optional date and preserve it after edit
   const submissions = await setup(page, baseURL!);
   await page.goto("/plans");
   await page.getByRole("button", { name: "Log Training", exact: true }).click();
-  await page.getByRole("combobox", { name: "Activity", exact: true }).selectOption("sparring");
+  await choose(page, page, "Activity", "Sparring");
   await page.getByLabel("Duration (minutes)").fill("60");
-  await page.getByRole("combobox", { name: "Effort", exact: true }).selectOption("hard");
+  await choose(page, page, "Effort", "Hard");
   await page.getByText("Training date · Current day", { exact: true }).click();
   await page.getByLabel("Training date (optional)").fill("2026-10-09");
   await page.screenshot({ path: test.info().outputPath("backdated-training-form.png") });
-  expect((await new AxeBuilder({ page }).include('[aria-label="Your Training"]').analyze()).violations).toEqual([]);
+  expect((await new AxeBuilder({ page }).include('dialog').analyze()).violations).toEqual([]);
   await page.getByRole("button", { name: "Save Session", exact: true }).click();
   expect(submissions[0]).toMatchObject({ activity: "sparring", duration_minutes: 60, effort: "hard", training_day: "2026-10-09" });
-  const history = page.getByRole("list", { name: "Training history" });
+  await page.goto("/history");
+  const history = page.locator(".history-list");
   await expect(history).toContainText("Fri 09 Oct 2026");
   await page.reload();
   await page.getByRole("button", { name: "Edit Sparring", exact: true }).click();
   await page.getByLabel("Duration (minutes)").fill("45");
   await page.getByRole("button", { name: "Save Session", exact: true }).click();
   await expect(history).toContainText("Fri 09 Oct 2026");
-  await expect(history).toContainText("45 min · Hard");
+  await expect(history).toContainText("45 min");
+  await expect(history).toContainText("Hard");
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });

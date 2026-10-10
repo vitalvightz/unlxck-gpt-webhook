@@ -6,7 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { RequireAuth } from "@/components/auth-guard";
 import { useAppSession } from "@/components/auth-provider";
 import { PlanViewer } from "@/components/plan-viewer";
-import { TrainingHistory } from "@/components/training-history";
+import { LogTraining } from "@/components/log-training";
 import { ApiError, getPlan } from "@/lib/api";
 import type { PlanDetail } from "@/lib/types";
 
@@ -141,7 +141,7 @@ export function PlanDetailScreen({ planId }: { planId: string }) {
 
   return (
     <RequireAuth>
-      {(!plan || plan.athlete_id === me?.profile.athlete_id) ? <TrainingHistory accessToken={session?.access_token ?? null} /> : null}
+      {(!plan || plan.athlete_id === me?.profile.athlete_id) ? <LogTraining accessToken={session?.access_token ?? null} /> : null}
       {recovered ? (
         <section className="panel loading-card loading-shell loading-phase-finalizing athlete-motion-slot athlete-motion-status">
           <article className="status-card loading-context-panel loading-context-panel-compact">

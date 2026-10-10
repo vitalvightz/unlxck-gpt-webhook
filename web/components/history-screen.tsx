@@ -10,6 +10,7 @@ import {
   listInjuryFlags,
   listExerciseHistory,
   getTrainingHistory,
+  deleteExternalTraining,
   listSparringLogHistory,
   listTodayCheckinHistory,
 } from "@/lib/api";
@@ -46,6 +47,7 @@ import type {
   SparringLogHistoryResponse,
   TodayCheckinHistoryRecord,
 } from "@/lib/types";
+import { LogTraining } from "./log-training";
 import type { TrainingHistorySession } from "@/lib/training-history";
 import { useTrainingDay } from "@/lib/use-training-day";
 
@@ -138,7 +140,20 @@ function Chips({ chips }: { chips: HistoryChip[] }) {
   );
 }
 
-function SessionRows({ rows, today }: { rows: TrainingHistorySession[]; today: string | null }) {
+function SessionRows({ rows, today, token, onUpdate, onDelete }: {
+  rows: TrainingHistorySession[]; today: string | null; token: string | null;
+  onUpdate: (row: TrainingHistorySession) => void; onDelete: (id: string) => Promise<void>;
+}) {
+  const [deleting, setDeleting] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  async function remove(id: string) {
+    if (deleting) return;
+    setDeleting(id);
+    setError(null);
+    try { await onDelete(id); }
+    catch (reason) { setError(reason instanceof Error ? reason.message : "Unable to delete session. Try again."); }
+    finally { setDeleting(null); }
+  }
   if (rows.length === 0) {
     return (
       <EmptyState
@@ -155,6 +170,7 @@ function SessionRows({ rows, today }: { rows: TrainingHistorySession[]; today: s
     : null;
   return (
     <div className="history-tab-body">
+      {error ? <p className="error-banner" role="alert">{error}</p> : null}
       {week ? (
         <section className="history-summary" aria-label="Sessions in the last 7 days">
           <SummaryGroup
@@ -187,6 +203,10 @@ function SessionRows({ rows, today }: { rows: TrainingHistorySession[]; today: s
               ) : null}
               {row.pain_after != null ? <span>Pain after {row.pain_after}/10</span> : null}
             </div>
+            {row.source === "external" ? <div className="history-row-meta">
+              <LogTraining accessToken={token} entry={row} onSaved={onUpdate} />
+              <button className="ghost-button" type="button" disabled={deleting !== null} aria-label={`Delete ${row.title}`} onClick={() => void remove(row.id)}>{deleting === row.id ? "Deleting…" : "Delete"}</button>
+            </div> : null}
             {row.modification_reason ? (
               <p className="muted history-row-note">Reason: {row.modification_reason}</p>
             ) : null}
@@ -620,7 +640,13 @@ function HistoryContent() {
       ) : active.rows === null ? (
         <ListSkeleton />
       ) : tab === "sessions" ? (
-        <SessionRows rows={sessions.rows ?? []} today={today} />
+        <SessionRows rows={sessions.rows ?? []} today={today} token={token}
+          onUpdate={row => setSessions(previous => ({ ...previous, rows: previous.rows?.map(item => item.source === "external" && item.id === row.id ? row : item) ?? null }))}
+          onDelete={async id => {
+            if (!token) return;
+            await deleteExternalTraining(token, id);
+            setSessions(previous => ({ ...previous, rows: previous.rows?.filter(item => !(item.source === "external" && item.id === id)) ?? null }));
+          }} />
       ) : tab === "exercises" ? (
         exercises.rows ? <ExerciseRows history={exercises.rows} loading={exerciseOffset !== null}
           onMore={() => setExerciseOffset(exercises.rows?.next_offset ?? null)} /> : <ListSkeleton />
