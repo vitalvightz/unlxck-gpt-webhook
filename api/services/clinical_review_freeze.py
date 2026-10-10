@@ -72,6 +72,12 @@ def frozen_review_hold(store, athlete_id, snapshot, *, work_state, as_of=None, r
                 if option is None:
                     return True
                 if work_state == "unstarted":
+                    if block.get("policy_id") == "ankle_sprain":
+                        from api.contracts.ankle_restore_load import seated_ankle_multi_injury_hold
+                        active_injuries = store.list_injury_flags(athlete_id,
+                            statuses=("open", "monitoring"), limit=500)
+                        if seated_ankle_multi_injury_hold(current, active_injuries):
+                            return True
                     window = store.list_rehab_exposures(athlete_id, injury_id=injury["id"],
                                                        injury_episode_id=injury["episode_id"])
                     if reported_load_hold(block.get("policy_id"), current, as_of=now,

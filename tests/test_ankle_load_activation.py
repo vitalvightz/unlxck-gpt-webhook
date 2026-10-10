@@ -73,6 +73,50 @@ def test_other_lower_limb_episode_cannot_borrow_bilateral_loading_permission():
     assert context["policy_injury"]["restriction_hold"] is True
 
 
+@pytest.mark.parametrize("area", ["Right ankle", "Right foot", "Right calf", "Right heel", "Right Achilles", "Right toe"])
+def test_new_lower_limb_injury_blocks_saved_unstarted_load(area):
+    from fastapi import HTTPException
+    b = bundle()
+    live = view(b).live_prescription
+    assert live["session"]["blocks"][0]["rehab_drill_id"] == OPTION.drill_id
+    saved = b[0].upsert_session_completion(b[3], dict(plan_id=b[4], session_id=live["session"]["session_id"],
+        training_day=DAY, status="not_started", prescription_snapshot=deepcopy(live)))
+    snapshot = deepcopy(saved["prescription_snapshot"])
+    assert not frozen_review_hold(b[0], b[3], snapshot, work_state="unstarted", as_of=NOW)
+    b[0].create_injury_flag(b[3], dict(body_area=area, description="strain", severity="mild", status="open"))
+    assert frozen_review_hold(b[0], b[3], snapshot, work_state="unstarted", as_of=NOW)
+    with pytest.raises(HTTPException):
+        execute(b, live)
+    assert b[0].session_completions[b[3]][0]["status"] == "not_started"
+    assert b[0].session_completions[b[3]][0]["prescription_snapshot"] == snapshot
+    assert not frozen_review_hold(b[0], b[3], snapshot, work_state="started", as_of=NOW)
+    assert not frozen_review_hold(b[0], b[3], snapshot, work_state="completed", as_of=NOW)
+    assert snapshot == saved["prescription_snapshot"]
+
+
+@pytest.mark.parametrize("status,other_athlete", [("resolved", False), ("open", True)])
+def test_resolved_or_other_athlete_leg_injury_does_not_hold_saved_load(status, other_athlete):
+    b = bundle()
+    snapshot = deepcopy(view(b).live_prescription)
+    b[0].create_injury_flag(str(uuid4()) if other_athlete else b[3],
+        dict(body_area="Right ankle", description="sprain", severity="mild", status=status))
+    assert not frozen_review_hold(b[0], b[3], snapshot, work_state="unstarted", as_of=NOW)
+
+
+@pytest.mark.parametrize("status,work_state", [("started", "started"), ("done", "completed")])
+def test_second_leg_injury_preserves_started_and_completed_records(status, work_state):
+    b = bundle()
+    live = view(b).live_prescription
+    record = execute(b, live)
+    if status == "done":
+        record = execute(b, live, "done", rehab_performance="done_as_shown")
+    historical = deepcopy(b[0].session_completions[b[3]][0])
+    b[0].create_injury_flag(b[3], dict(body_area="Right foot", description="strain", severity="mild", status="monitoring"))
+    assert not frozen_review_hold(b[0], b[3], record["prescription_snapshot"], work_state=work_state, as_of=NOW)
+    view(b)
+    assert b[0].session_completions[b[3]][0] == historical
+
+
 @pytest.mark.parametrize("detail", ["medial", "deltoid", "high ankle", "syndesmotic", "suspected fracture",
     "structural injury", "unstable", "persistent instability", "recurrent sprain", "giving way", "unable to bear weight",
     "bony tenderness", "deformity", "numbness", "cold foot"])
