@@ -1,4 +1,5 @@
 import type { ExternalTrainingFields, TrainingHistorySession } from "@/lib/training-history";
+import type { LibraryFeaturedResponse, LibraryPreview, LibrarySearchResponse } from "@/lib/api-schema.generated";
 import type {
   ApproveAndResumeGenerationRequest,
   AdminAthleteRecord,
@@ -56,6 +57,19 @@ import { parseXpAwardResponse, type XpAwardResult } from "@/lib/xp";
 const EXPLICIT_API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") ?? null;
 const LOCAL_API_BASE_URL = "http://127.0.0.1:8000";
 const DEFAULT_API_REQUEST_TIMEOUT_MS = 60_000;
+
+export function searchTrainingLibrary(token: string, params: URLSearchParams, signal?: AbortSignal) {
+  return readJson<LibrarySearchResponse>(`/api/training/library?${params}`, { token, signal });
+}
+
+export function getTrainingLibraryEntry(token: string, catalogueId: string, signal?: AbortSignal) {
+  const params = new URLSearchParams({ catalogue_id: catalogueId });
+  return readJson<LibraryPreview>(`/api/training/library/entry?${params}`, { token, signal });
+}
+
+export function getFeaturedDrill(token: string, signal?: AbortSignal) {
+  return readJson<LibraryFeaturedResponse>("/api/training/library/featured", { token, signal });
+}
 
 function getApiBaseUrl(): string {
   if (typeof window !== "undefined") {

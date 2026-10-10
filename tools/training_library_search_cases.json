@@ -1,0 +1,493 @@
+{
+  "scope": "30 Training queries with source-reviewed positive anchors and exclusion controls; not exhaustive relevance ground truth or scientific effect validation.",
+  "cases": [
+    {
+      "query": "punching power",
+      "relevant": [
+        "Medicine Ball Hook Throw",
+        "Standing Cable Punch Simulation",
+        "Half-Kneeling Medicine-Ball Punch Throw",
+        "Landmine Split-Stance Punch Press",
+        "Max-Power Bag Burst",
+        "Med Ball Chest Pass (Reactive)"
+      ],
+      "exclude": [
+        "Seated Russian Twist (Band-Resisted)",
+        "Carioca Sprint",
+        "Kettlebell Swing"
+      ],
+      "reason": "Named punch-power work plus clearly labelled related upper-body/rotational power; generic rotation or lower-body force alone is insufficient.",
+      "baseline_total": 4,
+      "baseline_anchors_found": [
+        "Medicine Ball Hook Throw",
+        "Standing Cable Punch Simulation",
+        "Max-Power Bag Burst"
+      ],
+      "baseline_exclusions_found": []
+    },
+    {
+      "query": "hit harder",
+      "relevant": [
+        "Medicine Ball Hook Throw",
+        "Band-Resisted Straight Punch",
+        "Landmine Split-Stance Punch Press"
+      ],
+      "exclude": [
+        "Cross-Step Lunge",
+        "Kettlebell Swing"
+      ],
+      "reason": "Same bounded punching intent in everyday language.",
+      "baseline_total": 0,
+      "baseline_anchors_found": [],
+      "baseline_exclusions_found": []
+    },
+    {
+      "query": "hand speed",
+      "relevant": [
+        "Band-Resisted Jab-Cross Primer",
+        "Explosive Boxing Burst Intervals"
+      ],
+      "exclude": [
+        "Band Row Speed Focus",
+        "Boxing Shuffle Drill (Ladder)"
+      ],
+      "reason": "Hand/striking context plus speed; foot speed or row speed is insufficient.",
+      "baseline_total": 72,
+      "baseline_anchors_found": [
+        "Band-Resisted Jab-Cross Primer"
+      ],
+      "baseline_exclusions_found": []
+    },
+    {
+      "query": "reaction speed",
+      "relevant": [
+        "Call-and-Response Direction Change",
+        "Cage Cut-to-Entry Choice"
+      ],
+      "exclude": [
+        "Trap Bar Jump",
+        "Kettlebell Swing"
+      ],
+      "reason": "Explicit cue response, not rebound mechanics.",
+      "baseline_total": 59,
+      "baseline_anchors_found": [
+        "Call-and-Response Direction Change",
+        "Cage Cut-to-Entry Choice"
+      ],
+      "baseline_exclusions_found": []
+    },
+    {
+      "query": "faster reactions",
+      "relevant": [
+        "Call-and-Response Direction Change",
+        "Cage Cut-to-Entry Choice"
+      ],
+      "exclude": [
+        "Trap Bar Jump"
+      ],
+      "reason": "Plain-English cue-response synonym.",
+      "baseline_total": 0,
+      "baseline_anchors_found": [],
+      "baseline_exclusions_found": []
+    },
+    {
+      "query": "gas tank",
+      "relevant": [
+        "Assault Bike Easy Gas Tank Ride",
+        "3-Min Round Intervals (Bag/Pads)"
+      ],
+      "exclude": [
+        "Medicine Ball Hook Throw"
+      ],
+      "reason": "Explicit aerobic/repeated-effort conditioning evidence.",
+      "baseline_total": 9,
+      "baseline_anchors_found": [
+        "Assault Bike Easy Gas Tank Ride"
+      ],
+      "baseline_exclusions_found": []
+    },
+    {
+      "query": "lasting rounds",
+      "relevant": [
+        "3-Min Round Intervals (Bag/Pads)",
+        "Assault Bike Zone 2 Steady"
+      ],
+      "exclude": [
+        "Medicine Ball Hook Throw"
+      ],
+      "reason": "Aerobic and work-capacity work; does not label alactic work as aerobic.",
+      "baseline_total": 0,
+      "baseline_anchors_found": [],
+      "baseline_exclusions_found": []
+    },
+    {
+      "query": "round fitness",
+      "relevant": [
+        "3-Min Round Intervals (Bag/Pads)",
+        "Heavy Bag Power Intervals"
+      ],
+      "exclude": [
+        "Standing Cable Punch Simulation"
+      ],
+      "reason": "Explicit glycolytic/work-capacity evidence.",
+      "baseline_total": 0,
+      "baseline_anchors_found": [],
+      "baseline_exclusions_found": []
+    },
+    {
+      "query": "short bursts",
+      "relevant": [
+        "Max-Power Bag Burst",
+        "Assault Bike Sprint Intervals"
+      ],
+      "exclude": [
+        "Assault Bike Zone 2 Steady"
+      ],
+      "reason": "Explicit ATP-PCr/alactic work; no endurance-dose claim.",
+      "baseline_total": 23,
+      "baseline_anchors_found": [],
+      "baseline_exclusions_found": []
+    },
+    {
+      "query": "foot work",
+      "relevant": [
+        "Cage Cutting Footwork",
+        "45-Degree Angle Step to Jab Reset"
+      ],
+      "exclude": [
+        "Medicine Ball Hook Throw"
+      ],
+      "reason": "Footwork synonyms use explicit technical/movement evidence.",
+      "baseline_total": 10,
+      "baseline_anchors_found": [],
+      "baseline_exclusions_found": []
+    },
+    {
+      "query": "change direction",
+      "relevant": [
+        "Call-and-Response Direction Change",
+        "Shot-Reshot Direction Change"
+      ],
+      "exclude": [
+        "Medicine Ball Hook Throw"
+      ],
+      "reason": "Named direction-change and explicit agility work.",
+      "baseline_total": 153,
+      "baseline_anchors_found": [
+        "Call-and-Response Direction Change",
+        "Shot-Reshot Direction Change"
+      ],
+      "baseline_exclusions_found": []
+    },
+    {
+      "query": "create angles",
+      "relevant": [
+        "45-Degree Angle Step to Jab Reset",
+        "Level-Change Feint to Angle"
+      ],
+      "exclude": [
+        "Standing Cable Punch Simulation"
+      ],
+      "reason": "Explicit angle-creation tactical function.",
+      "baseline_total": 3,
+      "baseline_anchors_found": [
+        "45-Degree Angle Step to Jab Reset"
+      ],
+      "baseline_exclusions_found": []
+    },
+    {
+      "query": "defensive movement",
+      "relevant": [
+        "Defensive Movement Drill",
+        "Defensive Movement Flow",
+        "Sprawl Exit to Ring Angle"
+      ],
+      "exclude": [
+        "Medicine Ball Hook Throw"
+      ],
+      "reason": "Named defence or explicit defensive exit/pathway function.",
+      "baseline_total": 17,
+      "baseline_anchors_found": [
+        "Defensive Movement Drill",
+        "Defensive Movement Flow",
+        "Sprawl Exit to Ring Angle"
+      ],
+      "baseline_exclusions_found": []
+    },
+    {
+      "query": "manage range",
+      "relevant": [
+        "Intercepting Jab on Cue",
+        "Teep Retreat and Re-Stance"
+      ],
+      "exclude": [
+        "Medicine Ball Hook Throw"
+      ],
+      "reason": "Explicit distance/range-management evidence.",
+      "baseline_total": 14,
+      "baseline_anchors_found": [
+        "Teep Retreat and Re-Stance"
+      ],
+      "baseline_exclusions_found": []
+    },
+    {
+      "query": "cut off ring",
+      "relevant": [
+        "Ring Cut-Off Walkdown",
+        "Cage Cutting Footwork"
+      ],
+      "exclude": [
+        "Standing Cable Punch Simulation"
+      ],
+      "reason": "Explicit ring/cage control; includes cage equivalents as discovery.",
+      "baseline_total": 4,
+      "baseline_anchors_found": [
+        "Ring Cut-Off Walkdown"
+      ],
+      "baseline_exclusions_found": []
+    },
+    {
+      "query": "stop takedowns",
+      "relevant": [
+        "Defensive Sprawl Intervals",
+        "Sprawl Exit to Ring Angle"
+      ],
+      "exclude": [
+        "Medicine Ball Hook Throw"
+      ],
+      "reason": "Explicit sprawl/takedown-defence context.",
+      "baseline_total": 4,
+      "baseline_anchors_found": [],
+      "baseline_exclusions_found": []
+    },
+    {
+      "query": "recover stance",
+      "relevant": [
+        "Switch-Step Stance Recovery",
+        "Sprawl-to-Stance-Recover"
+      ],
+      "exclude": [
+        "Medicine Ball Hook Throw"
+      ],
+      "reason": "Explicit stance/base recovery.",
+      "baseline_total": 96,
+      "baseline_anchors_found": [
+        "Switch-Step Stance Recovery",
+        "Sprawl-to-Stance-Recover"
+      ],
+      "baseline_exclusions_found": []
+    },
+    {
+      "query": "kick balance",
+      "relevant": [
+        "Kick-Catch Balance Reset",
+        "Kick-and-Stick"
+      ],
+      "exclude": [
+        "Medicine Ball Hook Throw"
+      ],
+      "reason": "Kick recovery quality plus named balance work.",
+      "baseline_total": 46,
+      "baseline_anchors_found": [
+        "Kick-Catch Balance Reset",
+        "Kick-and-Stick"
+      ],
+      "baseline_exclusions_found": []
+    },
+    {
+      "query": "single leg balance",
+      "relevant": [
+        "Single-Leg Balance (Eyes Closed)",
+        "Single-Leg Rotational Hop to Balance"
+      ],
+      "exclude": [
+        "Standing Cable Punch Simulation"
+      ],
+      "reason": "Explicit single-leg context and balance quality.",
+      "baseline_total": 12,
+      "baseline_anchors_found": [
+        "Single-Leg Balance (Eyes Closed)",
+        "Single-Leg Rotational Hop to Balance"
+      ],
+      "baseline_exclusions_found": []
+    },
+    {
+      "query": "core stability",
+      "relevant": [
+        "Cable Pallof Press",
+        "Anti-Rotation Press"
+      ],
+      "exclude": [
+        "Heavy Bag Power Intervals"
+      ],
+      "reason": "Anti-rotation/core-control evidence; trunk-loading risk alone is insufficient.",
+      "baseline_total": 126,
+      "baseline_anchors_found": [
+        "Cable Pallof Press",
+        "Anti-Rotation Press"
+      ],
+      "baseline_exclusions_found": []
+    },
+    {
+      "query": "shoulder stability",
+      "relevant": [
+        "Standing scapular CARs",
+        "Scapular Pull-Up Hold"
+      ],
+      "exclude": [
+        "Ground-N-Pound Intervals"
+      ],
+      "reason": "Explicit scapular/stability evidence; generic shoulder loading is insufficient.",
+      "baseline_total": 62,
+      "baseline_anchors_found": [
+        "Standing scapular CARs",
+        "Scapular Pull-Up Hold"
+      ],
+      "baseline_exclusions_found": [
+        "Ground-N-Pound Intervals"
+      ]
+    },
+    {
+      "query": "grip endurance",
+      "relevant": [
+        "Farmer Walk Hold (Static)",
+        "Towel/Gi Row Isometric Hold"
+      ],
+      "exclude": [
+        "Neck Harness Flexion"
+      ],
+      "reason": "Grip context plus endurance/isometric work; grip_neck category alone is insufficient.",
+      "baseline_total": 12,
+      "baseline_anchors_found": [],
+      "baseline_exclusions_found": []
+    },
+    {
+      "query": "neck strength",
+      "relevant": [
+        "Band-Resisted Neck Extension",
+        "Neck Harness Flexion"
+      ],
+      "exclude": [
+        "Chin tuck nod",
+        "Eye-head dissociation drill"
+      ],
+      "reason": "Neck context plus strength/isometric work; mobility and vestibular work are excluded.",
+      "baseline_total": 7,
+      "baseline_anchors_found": [],
+      "baseline_exclusions_found": []
+    },
+    {
+      "query": "loosen up",
+      "relevant": [
+        "90/90 hip switches",
+        "Banded Hip Flexor Stretch"
+      ],
+      "exclude": [
+        "Medicine Ball Hook Throw"
+      ],
+      "reason": "Explicit mobility/stiffness evidence.",
+      "baseline_total": 0,
+      "baseline_anchors_found": [],
+      "baseline_exclusions_found": []
+    },
+    {
+      "query": "hip mobility",
+      "relevant": [
+        "90/90 hip switches",
+        "Banded Hip Flexor Stretch"
+      ],
+      "exclude": [
+        "Kettlebell Swing"
+      ],
+      "reason": "Mobility plus hip context; hip loading alone is insufficient.",
+      "baseline_total": 12,
+      "baseline_anchors_found": [
+        "90/90 hip switches",
+        "Banded Hip Flexor Stretch"
+      ],
+      "baseline_exclusions_found": []
+    },
+    {
+      "query": "ankle mobility",
+      "relevant": [
+        "Knee-to-wall dorsiflexion pulse",
+        "Bent-knee soleus pulse at wall"
+      ],
+      "exclude": [
+        "Trap Bar Jump"
+      ],
+      "reason": "Mobility plus ankle context; ankle loading alone is insufficient.",
+      "baseline_total": 8,
+      "baseline_anchors_found": [
+        "Knee-to-wall dorsiflexion pulse",
+        "Bent-knee soleus pulse at wall"
+      ],
+      "baseline_exclusions_found": []
+    },
+    {
+      "query": "hand foot coordination",
+      "relevant": [
+        "Catch-Return-Step Out",
+        "Double Jab to Exit Angle"
+      ],
+      "exclude": [
+        "Band Row Speed Focus"
+      ],
+      "reason": "Explicit foot-hand timing quality.",
+      "baseline_total": 59,
+      "baseline_anchors_found": [
+        "Catch-Return-Step Out",
+        "Double Jab to Exit Angle"
+      ],
+      "baseline_exclusions_found": []
+    },
+    {
+      "query": "get stronger",
+      "relevant": [
+        "Isometric Mid-Thigh Pull",
+        "Anti-Rotation Press"
+      ],
+      "exclude": [
+        "Assault Bike Zone 2 Steady"
+      ],
+      "reason": "Explicit strength method/maintenance goal.",
+      "baseline_total": 0,
+      "baseline_anchors_found": [],
+      "baseline_exclusions_found": []
+    },
+    {
+      "query": "explosive legs",
+      "relevant": [
+        "Box Jump",
+        "Jump Squat",
+        "Trap Bar Jump"
+      ],
+      "exclude": [
+        "Standing Cable Punch Simulation"
+      ],
+      "reason": "Explicit leg/jump context plus power evidence.",
+      "baseline_total": 17,
+      "baseline_anchors_found": [
+        "Box Jump",
+        "Jump Squat",
+        "Trap Bar Jump"
+      ],
+      "baseline_exclusions_found": []
+    },
+    {
+      "query": "low impact cardio",
+      "relevant": [
+        "Assault Bike Easy Gas Tank Ride",
+        "Air Dyne Bike Aerobic Base"
+      ],
+      "exclude": [
+        "Medicine Ball Hook Throw"
+      ],
+      "reason": "Conditioning classification plus explicit low/zero-impact tag; no injury clearance implied.",
+      "baseline_total": 0,
+      "baseline_anchors_found": [],
+      "baseline_exclusions_found": []
+    }
+  ],
+  "baseline_commit": "68df57bb3ce4ee6e84bb7c7c6021074e0bd23454"
+}

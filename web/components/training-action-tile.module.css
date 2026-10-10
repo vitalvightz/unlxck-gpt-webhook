@@ -1,0 +1,16 @@
+.actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.actions > :only-child { grid-column: 1 / -1; }
+.tile { position: relative; display: flex; align-items: flex-start; gap: 8px; width: 100%; min-width: 0; min-height: 112px; height: 100%; padding: 16px 22px 16px 12px; border: 1px solid var(--border-default); border-radius: var(--radius-stat); background: var(--bg-panel); color: var(--text-primary); font: inherit; text-align: left; cursor: pointer; transition: border-color var(--transition-fast), background var(--transition-fast); }
+.log { border-color: color-mix(in srgb, var(--brand-red) 42%, var(--border-default)); background: color-mix(in srgb, var(--brand-red) 7%, var(--bg-panel)); }
+.tile:hover { border-color: var(--text-muted); background: var(--bg-surface); }
+.tile:focus-visible { outline: 2px solid var(--brand-red); outline-offset: 3px; }
+.icon { display: grid; place-items: center; flex: 0 0 30px; width: 30px; height: 30px; border-radius: 50%; background: var(--bg-surface-alt); }
+.icon svg { width: 19px; height: 19px; }
+.log .icon { background: var(--brand-red); color: #fff; }
+.copy { display: grid; min-width: 0; gap: 7px; flex: 1; }
+.copy strong { font-size: var(--type-body); font-weight: 700; line-height: 1.3; }
+.copy > span { color: var(--text-secondary); font-size: var(--type-meta); line-height: 1.5; }
+.chevron { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); width: 12px; height: 12px; fill: none; stroke: var(--text-muted); stroke-width: 1.8; }
+@media (min-width: 600px) { .actions { gap: var(--space-3); } .tile { padding: 20px; align-items: center; } .icon { flex-basis: 38px; width: 38px; height: 38px; } .copy strong { font-size: var(--type-body-lg); } .copy > span { font-size: var(--type-body); } }
+@media (max-width: 360px) { .tile { padding: 14px 10px; gap: 7px; } .icon { flex-basis: 24px; width: 24px; height: 24px; } .copy strong { font-size: 12px; } .copy > span { font-size: 11px; } .chevron { display: none; } }
+@media (prefers-reduced-motion: reduce) { .tile { transition: none; } }

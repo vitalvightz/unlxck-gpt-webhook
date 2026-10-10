@@ -7,6 +7,7 @@ import { type FormEvent, useState } from "react";
 import { InjuryDetailSheet } from "@/components/today/injury-detail-sheet";
 import { useToast } from "@/components/toast-provider";
 import { archivePlan, renamePlan } from "@/lib/api";
+import { isSafeAvatarImageUrl } from "@/lib/avatar-image-url";
 import { toISODate } from "@/lib/camp-map";
 import { getFightCountdown } from "@/lib/fight-countdown";
 import { markGenerationIntent } from "@/lib/generation-intent";
@@ -462,17 +463,25 @@ export function CurrentCampCard({
 
   if (!plan) {
     return (
-      <article className={styles.campCard}>
+      <article className={`${styles.campCard} ${styles.emptyCamp}`}>
         <p className={styles.eyebrow}>{t("currentCamp")}</p>
         <h2 className={styles.campTitle}>No active plan</h2>
         <p className="muted">
           {hasSavedIntake
             ? "No active plan is selected. Make one of your saved plans active."
-            : "Complete Intake or Quick Build to create your first active plan."}
+            : "Quick Build or complete Intake to start your camp."}
         </p>
-        <Link href={hasSavedIntake ? "/onboarding" : "/quick-build"} className="cta">
-          {hasSavedIntake ? "Resume Advanced Intake" : "Quick Build New Plan"}
-        </Link>
+        {hasSavedIntake ? <Link href="/onboarding" className="cta">Resume Advanced Intake</Link> :
+          <div className={styles.campActions}>
+            <Link href="/quick-build" className={`cta ${styles.buildAction}`}>
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m13 2-8 12h6l-1 8 9-13h-7z" /></svg>
+              Quick Build Plan
+            </Link>
+            <Link href="/onboarding" className={`secondary-button ${styles.buildAction}`}>
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4H5v17h14V4h-4M9 2h6v5H9zM8 11h8m-8 4h8" /></svg>
+              Generate Camp
+            </Link>
+          </div>}
       </article>
     );
   }
@@ -541,6 +550,7 @@ export function CurrentCampCard({
 export function AthleteProfileRow({ me }: { me: MeResponse | null }) {
   const t = useTranslations("Workspace");
   const [open, setOpen] = useState(false);
+  const [failedAvatar, setFailedAvatar] = useState<string | null>(null);
   const profileLines = summarizeProfile(me);
   const intakeLines = summarizeIntake(me);
   const hasIntake = Boolean(getIntakeSource(me));
@@ -549,13 +559,25 @@ export function AthleteProfileRow({ me }: { me: MeResponse | null }) {
     .filter((value) => value && value !== "Not set yet" && value !== "Athlete profile")
     .join(" · ");
   const facts = [...profileLines.slice(1), ...intakeLines];
+  const name = profileLines[0]?.value ?? "Athlete";
+  const avatar = isSafeAvatarImageUrl(me?.profile.avatar_url) ? me?.profile.avatar_url : null;
+  const initials = name.split(/\s+/).filter(Boolean).slice(0, 2).map(part => part[0]).join("").toUpperCase();
+  const stance = me?.profile.stance?.replaceAll("_", " ");
+  const sportSummary = [...profileLines.slice(1).map(line => line.value).filter(value => value !== "Not set yet"),
+    ...(stance ? [stance.charAt(0).toUpperCase() + stance.slice(1)] : [])].join(" · ");
 
   return (
     <>
-      <button type="button" className={styles.profileRow} aria-haspopup="dialog" onClick={() => setOpen(true)}>
+      <button type="button" className={styles.profileRow} aria-label={`Athlete profile: ${summary || name}`} aria-haspopup="dialog" onClick={() => setOpen(true)}>
+        <span className={styles.profileAvatar} aria-hidden="true">
+          {avatar && avatar !== failedAvatar ?
+            // eslint-disable-next-line @next/next/no-img-element -- saved HTTPS/data avatars use the same safe URL policy as AppNav
+            <img src={avatar} alt="" onError={() => setFailedAvatar(avatar)} /> : <span>{initials}</span>}
+        </span>
         <span className={styles.rowText}>
           <span className={styles.sectionTitle}>{t("athleteProfile")}</span>
-          <span className={styles.rowMeta}>{summary || "Not set yet"}</span>
+          <span className={styles.profileSummary}><span className={styles.profileName}>{name}</span>
+            <span className={styles.rowMeta}> · {sportSummary || "Not set yet"}</span></span>
         </span>
         <span className={styles.chevron} aria-hidden="true" />
       </button>
@@ -575,6 +597,7 @@ export function AthleteProfileRow({ me }: { me: MeResponse | null }) {
             ) : (
               <p className="muted">No plan source details saved yet.</p>
             )}
+            <Link href="/profile" className="secondary-button">Edit profile & photo</Link>
             <Link href="/onboarding" className="secondary-button">
               {hasIntake ? "Review & edit intake" : "Complete Advanced Intake"}
             </Link>

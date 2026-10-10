@@ -10,16 +10,18 @@ import {
   type TrainingActivity, type TrainingEffort, type TrainingHistorySession,
 } from "@/lib/training-history";
 import styles from "./log-training.module.css";
+import { TrainingActionContent } from "./training-action-tile";
+import tileStyles from "./training-action-tile.module.css";
 
 const label = (value: string) => value.charAt(0).toUpperCase() + value.slice(1);
 
-type Props = { accessToken: string | null; entry?: TrainingHistorySession; onSaved?: (row: TrainingHistorySession) => void };
+type Props = { accessToken: string | null; entry?: TrainingHistorySession; onSaved?: (row: TrainingHistorySession) => void; variant?: "compact" | "tile" };
 
 export function LogTraining(props: Props) {
   return props.accessToken ? <LogTrainingContent key={props.accessToken} {...props} accessToken={props.accessToken} /> : null;
 }
 
-function LogTrainingContent({ accessToken, entry, onSaved }: Props & { accessToken: string }) {
+function LogTrainingContent({ accessToken, entry, onSaved, variant = "compact" }: Props & { accessToken: string }) {
   const [open, setOpen] = useState(false);
   const editing = entry?.id;
   const [activity, setActivity] = useState<TrainingActivity | "">("");
@@ -99,9 +101,8 @@ function LogTrainingContent({ accessToken, entry, onSaved }: Props & { accessTok
       {entry ? <button className={styles.editButton} type="button" onClick={() => startEdit(entry)} aria-haspopup="dialog" aria-label={`Edit ${entry.title}`} title="Edit session">
         <svg className="ex-log-edit-icon" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false"><path d="M4 20h4L18.5 9.5a2.12 2.12 0 0 0-3-3L5 17v3Z" /><path d="m14.5 7.5 3 3" /></svg>
       </button> :
-        <button className={styles.actionRow} type="button" onClick={() => startEdit()} aria-haspopup="dialog" aria-label="Log Training">
-          <span><strong>Log Training</strong><span className="muted">Record a session outside Unlxck.</span></span>
-          <span aria-hidden="true">+</span>
+        <button className={variant === "tile" ? `${tileStyles.tile} ${tileStyles.log}` : styles.actionRow} type="button" onClick={() => startEdit()} aria-haspopup="dialog" aria-label="Log Training">
+          {variant === "tile" ? <TrainingActionContent kind="log" /> : <><span><strong>Log Training</strong><span className="muted">Record a session outside Unlxck.</span></span><span aria-hidden="true">+</span></>}
         </button>}
       {open ? (
         <dialog ref={dialog} className={styles.dialog} aria-label={editing ? "Edit training" : "Log Training"} onCancel={event => { if (busy) event.preventDefault(); else setOpen(false); }}>

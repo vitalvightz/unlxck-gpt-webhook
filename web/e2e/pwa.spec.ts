@@ -43,6 +43,9 @@ test("manifest, service worker, icon, and offline assets are production-ready", 
   expect(rootCsp).toMatch(/script-src 'self' 'nonce-[^']+' 'strict-dynamic'/);
   expect(rootCsp).toContain("worker-src 'self' blob:");
   expect(rootCsp).toContain("manifest-src 'self'");
+  const connections = rootCsp.match(/(?:^|;)\s*connect-src\s+([^;]+)/)?.[1].split(/\s+/) ?? [];
+  expect(connections).toContain("https://fonts.googleapis.com");
+  expect(connections).not.toContain("*");
 
   for (const path of [
     "/icons/icon-192x192.png",

@@ -1,0 +1,2901 @@
+{
+  "scope": "30 Training queries with source-reviewed positive anchors and exclusion controls; not exhaustive relevance ground truth or scientific effect validation.",
+  "training_entries": 1010,
+  "baseline_commit": "68df57bb3ce4ee6e84bb7c7c6021074e0bd23454",
+  "baseline_anchors_found": 34,
+  "baseline_exclusions_found": 1,
+  "source_revisions": {
+    "conditioning_bank.json": "0545f27a588598a73988f9874dca85dad103ab83cdc69c05f6b28605eb8c2537",
+    "coordination/grappling.json": "655bfeb697845a93a8aa51353bc121a6fc6d8a07154e452eb1478d669c44964c",
+    "coordination/kicks.json": "ab258da761323d7a08be1aabeab75692d16ff289df90d1db8c453d3c27196399",
+    "coordination/mma_transitions.json": "3a8767a6083e1ae51f108dfaab85c4bcc798c9f090002a673746a2029a5e5edc",
+    "coordination/striking.json": "f658fa3113edf4bbe3cfbdec9a50788c5c908b4225f9767e0d15daf809f3bbff",
+    "coordination/universal.json": "7dace5870c80d79d724cd4360eded38bdb03f6c42cd9994768ae3cdaa98afeb2",
+    "exercise_bank.json": "e37b723160b37b60c7f401124d6f0f0b4a11649ec99bcc2bd7ee43078fcf2937",
+    "style_conditioning_bank.json": "44c27a2b6d7fda6616945e44992842c795c3447c1039581c63e802ff57899911",
+    "style_taper_conditioning.json": "5b9aa72f2da66ba02424f847f786bb2d758c16b47ae422f64a0a98ff9bd62a4c",
+    "technical_footwork_bank.json": "ea8fdb6eebc9649bc63c3b03562023b43d1ffeb144be18bbcc9617a372d8cba3"
+  },
+  "concepts": 57,
+  "phrases": 172,
+  "entries_with_any_discovery_rule": 1006,
+  "entries_with_non_equipment_rule": 1003,
+  "unmapped_entry_names": [
+    "Face Pull",
+    "TRX Row",
+    "Scapular Pull-Up",
+    "Grappler's Blindfold Pummeling"
+  ],
+  "goal_filter_entries": 222,
+  "vocabulary": {
+    "tags": {
+      "entries": 1010,
+      "distinct": 234,
+      "frequencies": {
+        "acceleration": 4,
+        "adductor": 1,
+        "adductors": 6,
+        "aerobic": 60,
+        "agility": 13,
+        "anaconda": 1,
+        "angle_exit": 12,
+        "angles": 12,
+        "ankle_mobility": 3,
+        "anti_extension": 1,
+        "anti_rotation": 40,
+        "armbar": 2,
+        "balance": 58,
+        "balance_challenge": 1,
+        "balance_static": 3,
+        "ballistic_low_volume": 6,
+        "bicep_slicer": 2,
+        "bjj": 50,
+        "body_kick": 6,
+        "boxer_footwork": 4,
+        "boxer_stance": 5,
+        "boxing": 120,
+        "brawler": 41,
+        "breathing_core": 1,
+        "breathing_integrated": 1,
+        "buggy_choke": 1,
+        "cage_work": 7,
+        "carry_heavy": 10,
+        "clinch": 9,
+        "clinch_fighter": 55,
+        "clinch_knee": 1,
+        "cluster": 1,
+        "cns_freshness": 60,
+        "cognitive": 5,
+        "compound": 15,
+        "concentric": 4,
+        "conditioning": 46,
+        "contrast": 6,
+        "contrast_pairing": 1,
+        "coordination": 162,
+        "core": 99,
+        "counter_striker": 74,
+        "cross_pattern": 1,
+        "crucifix": 1,
+        "d'arce": 1,
+        "d1_if_familiar": 3,
+        "d1_ok": 6,
+        "daily_rehab_only": 2,
+        "decision_making": 4,
+        "deep_knee_flexion_loaded": 1,
+        "defense": 1,
+        "distance_striker": 93,
+        "eccentric": 17,
+        "elastic": 5,
+        "elbow_extension_heavy": 1,
+        "electric_chair": 1,
+        "endurance": 23,
+        "environmental": 2,
+        "explosive": 98,
+        "explosive_upper_push": 1,
+        "ezekiel": 1,
+        "familiarity_preferred": 2,
+        "familiarity_required": 7,
+        "foot_control": 2,
+        "footwork": 117,
+        "front_rack": 1,
+        "gas_tank": 8,
+        "glute_load_high": 5,
+        "glute_set": 1,
+        "glycolytic": 23,
+        "gogoplata": 1,
+        "grappler": 20,
+        "grappling": 33,
+        "grip": 52,
+        "guillotine": 1,
+        "guillotine_variation": 1,
+        "hamstring": 7,
+        "heel_hook": 1,
+        "high_cns": 17,
+        "high_impact_lower": 6,
+        "high_impact_upper": 1,
+        "hip_control": 1,
+        "hip_dominant": 18,
+        "hip_flexion_loaded": 4,
+        "hip_flexor": 1,
+        "hip_lock": 1,
+        "hip_rotation": 1,
+        "horizontal_power": 10,
+        "horizontal_push": 1,
+        "hybrid": 3,
+        "improvised": 2,
+        "intensity": 1,
+        "inverted_triangle": 1,
+        "isolation": 14,
+        "isometric": 61,
+        "japanese_necktie": 1,
+        "karate": 1,
+        "kickboxing": 109,
+        "kicker": 46,
+        "kimura": 1,
+        "late_strength_touch": 24,
+        "lateral": 10,
+        "lateral_movement": 11,
+        "lateral_power": 3,
+        "lateral_reset": 1,
+        "leg_lock": 4,
+        "light_impact": 2,
+        "loop_choke": 1,
+        "low_cns": 15,
+        "low_eccentric": 27,
+        "low_impact": 142,
+        "low_kick": 9,
+        "low_soreness": 17,
+        "low_volume": 58,
+        "lower_body": 1,
+        "lunge_pattern": 1,
+        "maximal_strength_maintenance": 9,
+        "mech_acceleration": 109,
+        "mech_anti_rotation": 2,
+        "mech_axial_heavy": 3,
+        "mech_ballistic": 318,
+        "mech_change_of_direction": 150,
+        "mech_cns_high": 111,
+        "mech_deceleration": 126,
+        "mech_grip_crush": 3,
+        "mech_grip_intensive": 48,
+        "mech_grip_support": 192,
+        "mech_hinge_isometric": 3,
+        "mech_hip_rotation": 10,
+        "mech_landing_impact": 119,
+        "mech_lateral_shift": 7,
+        "mech_lower_hip_hinge": 214,
+        "mech_lower_jump": 71,
+        "mech_lower_lateral": 47,
+        "mech_lower_limb_weight_bearing": 25,
+        "mech_lower_lunge": 176,
+        "mech_lower_squat": 64,
+        "mech_max_velocity": 9,
+        "mech_plantarflexion": 5,
+        "mech_reactive": 279,
+        "mech_reactive_rebound": 13,
+        "mech_shoulder_overhead": 64,
+        "mech_systemic_fatigue": 288,
+        "mech_trunk_flexion": 2,
+        "mech_trunk_rotation": 284,
+        "mech_trunk_stability": 573,
+        "mech_upper_carry": 28,
+        "mech_upper_press": 244,
+        "mech_upper_pull": 91,
+        "mental_toughness": 4,
+        "mir_lock": 1,
+        "mma": 214,
+        "mobility": 50,
+        "movement_quality": 23,
+        "muay_thai": 124,
+        "neck": 6,
+        "neck_optional": 4,
+        "neural_primer": 17,
+        "no_d1": 12,
+        "no_d4_to_d1": 14,
+        "no_d7_to_d1": 1,
+        "no_high_cut": 6,
+        "north_south_choke": 1,
+        "overhead": 9,
+        "parasympathetic": 6,
+        "pec_loaded": 4,
+        "pivot": 4,
+        "pivot_readiness": 3,
+        "plyometric": 31,
+        "posterior_chain": 95,
+        "posterior_shoulder": 1,
+        "power": 18,
+        "pressure_fighter": 63,
+        "pull": 9,
+        "push": 3,
+        "quad_dominant": 37,
+        "rate_of_force": 27,
+        "reaction": 22,
+        "reactive": 89,
+        "rear_naked_choke": 1,
+        "recovery": 27,
+        "rehab_friendly": 90,
+        "ringcraft": 9,
+        "rotational": 27,
+        "row_heavy": 1,
+        "scap_control": 1,
+        "scap_retraction": 1,
+        "scrambler": 50,
+        "serratus": 2,
+        "sharpness": 68,
+        "shoulder_heavy": 1,
+        "shoulder_mobility": 1,
+        "shoulder_readiness": 2,
+        "shoulders": 50,
+        "single_leg": 2,
+        "skill": 12,
+        "skill_refinement": 181,
+        "sled": 8,
+        "soleus": 1,
+        "spatial_awareness": 2,
+        "speed": 50,
+        "spinal_lock": 1,
+        "spine_extension_loaded": 1,
+        "sport_specific": 11,
+        "stability": 35,
+        "stance": 10,
+        "stance_reset": 15,
+        "step_and_stick": 2,
+        "striking": 21,
+        "submission_hunter": 46,
+        "switch_hitter": 1,
+        "switch_kick": 1,
+        "t_spine_rotation": 4,
+        "tactical": 48,
+        "taper_micro_support": 23,
+        "teep": 4,
+        "top_control": 1,
+        "transition": 9,
+        "triangle": 1,
+        "triceps": 3,
+        "triphasic": 5,
+        "triple_extension": 10,
+        "unilateral": 7,
+        "upper_back": 9,
+        "upper_body": 56,
+        "upper_push": 1,
+        "vestibular_sensitive": 1,
+        "visual_processing": 47,
+        "work_capacity": 36,
+        "wrestler": 46,
+        "wrestling": 25,
+        "wrist_extension_high": 1,
+        "wrist_loaded_extension": 4,
+        "zero_impact": 39
+      },
+      "tokens_mentioned_by_rules": [
+        "aerobic",
+        "agility",
+        "angle_exit",
+        "angles",
+        "ankle_mobility",
+        "anti_extension",
+        "anti_rotation",
+        "balance",
+        "balance_challenge",
+        "balance_static",
+        "boxer_footwork",
+        "boxing",
+        "breathing_core",
+        "cage_work",
+        "coordination",
+        "core",
+        "decision_making",
+        "endurance",
+        "explosive",
+        "footwork",
+        "gas_tank",
+        "glycolytic",
+        "grip",
+        "hamstring",
+        "hip_dominant",
+        "horizontal_push",
+        "isometric",
+        "lateral_movement",
+        "low_impact",
+        "mech_upper_press",
+        "mobility",
+        "neck",
+        "neural_primer",
+        "parasympathetic",
+        "plyometric",
+        "posterior_chain",
+        "power",
+        "pull",
+        "push",
+        "rate_of_force",
+        "reaction",
+        "recovery",
+        "ringcraft",
+        "rotational",
+        "scap_control",
+        "scap_retraction",
+        "serratus",
+        "single_leg",
+        "spatial_awareness",
+        "speed",
+        "stance_reset",
+        "striking",
+        "transition",
+        "upper_back",
+        "upper_body",
+        "upper_push",
+        "visual_processing",
+        "work_capacity",
+        "zero_impact"
+      ],
+      "unmapped_tokens": [
+        "acceleration",
+        "adductor",
+        "adductors",
+        "anaconda",
+        "armbar",
+        "ballistic_low_volume",
+        "bicep_slicer",
+        "bjj",
+        "body_kick",
+        "boxer_stance",
+        "brawler",
+        "breathing_integrated",
+        "buggy_choke",
+        "carry_heavy",
+        "clinch",
+        "clinch_fighter",
+        "clinch_knee",
+        "cluster",
+        "cns_freshness",
+        "cognitive",
+        "compound",
+        "concentric",
+        "conditioning",
+        "contrast",
+        "contrast_pairing",
+        "counter_striker",
+        "cross_pattern",
+        "crucifix",
+        "d'arce",
+        "d1_if_familiar",
+        "d1_ok",
+        "daily_rehab_only",
+        "deep_knee_flexion_loaded",
+        "defense",
+        "distance_striker",
+        "eccentric",
+        "elastic",
+        "elbow_extension_heavy",
+        "electric_chair",
+        "environmental",
+        "explosive_upper_push",
+        "ezekiel",
+        "familiarity_preferred",
+        "familiarity_required",
+        "foot_control",
+        "front_rack",
+        "glute_load_high",
+        "glute_set",
+        "gogoplata",
+        "grappler",
+        "grappling",
+        "guillotine",
+        "guillotine_variation",
+        "heel_hook",
+        "high_cns",
+        "high_impact_lower",
+        "high_impact_upper",
+        "hip_control",
+        "hip_flexion_loaded",
+        "hip_flexor",
+        "hip_lock",
+        "hip_rotation",
+        "horizontal_power",
+        "hybrid",
+        "improvised",
+        "intensity",
+        "inverted_triangle",
+        "isolation",
+        "japanese_necktie",
+        "karate",
+        "kickboxing",
+        "kicker",
+        "kimura",
+        "late_strength_touch",
+        "lateral",
+        "lateral_power",
+        "lateral_reset",
+        "leg_lock",
+        "light_impact",
+        "loop_choke",
+        "low_cns",
+        "low_eccentric",
+        "low_kick",
+        "low_soreness",
+        "low_volume",
+        "lower_body",
+        "lunge_pattern",
+        "maximal_strength_maintenance",
+        "mech_acceleration",
+        "mech_anti_rotation",
+        "mech_axial_heavy",
+        "mech_ballistic",
+        "mech_change_of_direction",
+        "mech_cns_high",
+        "mech_deceleration",
+        "mech_grip_crush",
+        "mech_grip_intensive",
+        "mech_grip_support",
+        "mech_hinge_isometric",
+        "mech_hip_rotation",
+        "mech_landing_impact",
+        "mech_lateral_shift",
+        "mech_lower_hip_hinge",
+        "mech_lower_jump",
+        "mech_lower_lateral",
+        "mech_lower_limb_weight_bearing",
+        "mech_lower_lunge",
+        "mech_lower_squat",
+        "mech_max_velocity",
+        "mech_plantarflexion",
+        "mech_reactive",
+        "mech_reactive_rebound",
+        "mech_shoulder_overhead",
+        "mech_systemic_fatigue",
+        "mech_trunk_flexion",
+        "mech_trunk_rotation",
+        "mech_trunk_stability",
+        "mech_upper_carry",
+        "mech_upper_pull",
+        "mental_toughness",
+        "mir_lock",
+        "mma",
+        "movement_quality",
+        "muay_thai",
+        "neck_optional",
+        "no_d1",
+        "no_d4_to_d1",
+        "no_d7_to_d1",
+        "no_high_cut",
+        "north_south_choke",
+        "overhead",
+        "pec_loaded",
+        "pivot",
+        "pivot_readiness",
+        "posterior_shoulder",
+        "pressure_fighter",
+        "quad_dominant",
+        "reactive",
+        "rear_naked_choke",
+        "rehab_friendly",
+        "row_heavy",
+        "scrambler",
+        "sharpness",
+        "shoulder_heavy",
+        "shoulder_mobility",
+        "shoulder_readiness",
+        "shoulders",
+        "skill",
+        "skill_refinement",
+        "sled",
+        "soleus",
+        "spinal_lock",
+        "spine_extension_loaded",
+        "sport_specific",
+        "stability",
+        "stance",
+        "step_and_stick",
+        "submission_hunter",
+        "switch_hitter",
+        "switch_kick",
+        "t_spine_rotation",
+        "tactical",
+        "taper_micro_support",
+        "teep",
+        "top_control",
+        "triangle",
+        "triceps",
+        "triphasic",
+        "triple_extension",
+        "unilateral",
+        "vestibular_sensitive",
+        "wrestler",
+        "wrestling",
+        "wrist_extension_high",
+        "wrist_loaded_extension"
+      ]
+    },
+    "qualities": {
+      "entries": 58,
+      "distinct": 28,
+      "frequencies": {
+        "angle_creation": 7,
+        "balance": 15,
+        "bilateral_control": 4,
+        "decision_reaction": 4,
+        "defense_offense_transition": 5,
+        "distance_control": 4,
+        "foot_hand_timing": 12,
+        "footwork": 9,
+        "hand_coordination": 1,
+        "hand_foot_timing": 1,
+        "hand_timing": 1,
+        "head_foot_timing": 2,
+        "head_hand_timing": 2,
+        "hip_hand_coordination": 1,
+        "hip_leg_coordination": 1,
+        "kick_recovery": 10,
+        "knee_foot_timing": 1,
+        "level_change_timing": 3,
+        "limb_independence": 6,
+        "postural_control": 4,
+        "reaction": 20,
+        "rhythm": 6,
+        "spatial_awareness": 14,
+        "stance_transition": 2,
+        "tactile_reaction": 5,
+        "transition": 25,
+        "visual_motor": 3,
+        "weight_transfer": 6
+      },
+      "tokens_mentioned_by_rules": [
+        "angle_creation",
+        "balance",
+        "bilateral_control",
+        "decision_reaction",
+        "defense_offense_transition",
+        "distance_control",
+        "foot_hand_timing",
+        "footwork",
+        "hand_coordination",
+        "hand_foot_timing",
+        "hand_timing",
+        "head_foot_timing",
+        "head_hand_timing",
+        "hip_hand_coordination",
+        "hip_leg_coordination",
+        "kick_recovery",
+        "knee_foot_timing",
+        "level_change_timing",
+        "limb_independence",
+        "postural_control",
+        "reaction",
+        "rhythm",
+        "spatial_awareness",
+        "stance_transition",
+        "tactile_reaction",
+        "transition",
+        "visual_motor",
+        "weight_transfer"
+      ],
+      "unmapped_tokens": []
+    },
+    "goals": {
+      "entries": 55,
+      "distinct": 10,
+      "frequencies": {
+        "balance": 36,
+        "coordination": 11,
+        "injury_prevention": 4,
+        "maximal_strength_maintenance": 6,
+        "mobility": 37,
+        "posture": 1,
+        "power": 11,
+        "readiness": 41,
+        "skill_refinement": 8,
+        "speed": 11
+      },
+      "tokens_mentioned_by_rules": [
+        "balance",
+        "coordination",
+        "maximal_strength_maintenance",
+        "mobility",
+        "power",
+        "readiness",
+        "speed"
+      ],
+      "unmapped_tokens": [
+        "injury_prevention",
+        "posture",
+        "skill_refinement"
+      ]
+    },
+    "movement": {
+      "entries": 339,
+      "distinct": 28,
+      "frequencies": {
+        "carry": 4,
+        "complex": 1,
+        "compound": 24,
+        "core": 24,
+        "dynamic": 39,
+        "eccentric": 1,
+        "footwork": 1,
+        "hinge": 9,
+        "horizontal_jump": 6,
+        "horizontal_push": 15,
+        "isometric": 74,
+        "isometric_hold": 2,
+        "lateral": 4,
+        "lateral_reactive": 10,
+        "locomotion": 1,
+        "mobility": 46,
+        "olympic": 1,
+        "pull": 13,
+        "reactive": 1,
+        "rotation": 2,
+        "rotational": 19,
+        "sprint": 2,
+        "squat": 12,
+        "squat_to_press": 1,
+        "unilateral": 4,
+        "vertical_jump": 14,
+        "vertical_push": 8,
+        "wrist_extension": 1
+      },
+      "tokens_mentioned_by_rules": [
+        "core",
+        "footwork",
+        "hinge",
+        "horizontal_jump",
+        "horizontal_push",
+        "isometric",
+        "isometric_hold",
+        "lateral",
+        "lateral_reactive",
+        "mobility",
+        "pull",
+        "rotation",
+        "rotational",
+        "squat_to_press",
+        "vertical_jump",
+        "vertical_push"
+      ],
+      "unmapped_tokens": [
+        "carry",
+        "complex",
+        "compound",
+        "dynamic",
+        "eccentric",
+        "locomotion",
+        "olympic",
+        "reactive",
+        "sprint",
+        "squat",
+        "unilateral",
+        "wrist_extension"
+      ]
+    },
+    "method": {
+      "entries": 339,
+      "distinct": 8,
+      "frequencies": {
+        "conditioning": 11,
+        "contrast": 5,
+        "plyometric": 29,
+        "power": 65,
+        "primer": 3,
+        "rehab": 78,
+        "strength": 142,
+        "strength_conditioning": 6
+      },
+      "tokens_mentioned_by_rules": [
+        "contrast",
+        "plyometric",
+        "power",
+        "primer",
+        "strength",
+        "strength_conditioning"
+      ],
+      "unmapped_tokens": [
+        "conditioning",
+        "rehab"
+      ]
+    },
+    "system": {
+      "entries": 613,
+      "distinct": 7,
+      "frequencies": {
+        "ATP-PCr": 167,
+        "aerobic": 185,
+        "alactic": 63,
+        "anaerobic_alactic": 1,
+        "cognitive": 1,
+        "glycolytic": 195,
+        "hypertrophy": 1
+      },
+      "tokens_mentioned_by_rules": [
+        "ATP-PCr",
+        "aerobic",
+        "alactic",
+        "anaerobic_alactic",
+        "glycolytic"
+      ],
+      "unmapped_tokens": [
+        "cognitive",
+        "hypertrophy"
+      ]
+    },
+    "modality": {
+      "entries": 504,
+      "distinct": 306,
+      "frequencies": {
+        "MMA kick recoil and stance recovery": 1,
+        "MMA kick-or-defend decisions": 1,
+        "MMA low-kick repeatability": 1,
+        "Muay Thai frame-and-knee counters": 1,
+        "acceleration primer": 1,
+        "aerial transitions": 1,
+        "angle creation": 1,
+        "angle striking": 1,
+        "anti-fence range management": 1,
+        "attack-reset-rebuild shadow intervals": 1,
+        "back control": 1,
+        "bag interval": 1,
+        "bag round": 1,
+        "bag_work": 6,
+        "balanced close exchanges near the cage": 1,
+        "bike": 10,
+        "bike cadence primer": 1,
+        "bilateral MMA kicking and stance recovery": 1,
+        "bilateral round-kick technical flow": 1,
+        "body-head pressure intervals": 1,
+        "body-kick repeatability": 1,
+        "bodyweight": 2,
+        "breathing": 2,
+        "brief clinch interruption and strike on break": 1,
+        "brief knee reentry burst": 1,
+        "cage IQ": 1,
+        "cage defence-counter-escape": 1,
+        "cage-position counter flow": 1,
+        "carry": 1,
+        "climb": 2,
+        "climbing": 1,
+        "clinch": 1,
+        "clinch entry sharpness": 1,
+        "clinch position sharpness": 3,
+        "clinch repositioning burst": 1,
+        "clinch-to-punch intervals": 1,
+        "close exchange with live takedown decision": 1,
+        "close striking with brief tie-up interruptions": 1,
+        "close-range escape to preferred range": 1,
+        "combo endurance": 1,
+        "compact close-range MMA striking": 1,
+        "compact mixed-strike cluster": 1,
+        "compound": 3,
+        "contested inside-position intervals": 1,
+        "continuous": 16,
+        "control transitions": 1,
+        "controlled cage-cutting flow": 1,
+        "controlled entry interception": 1,
+        "controlled stalking flow": 1,
+        "counter timing sharpness": 1,
+        "cued defence-to-offence intervals": 1,
+        "decision interval": 1,
+        "decision round": 1,
+        "decision rounds": 1,
+        "defence and movement interval": 1,
+        "defence-clinch-return burst": 1,
+        "defence-return sharpness": 3,
+        "defence-to-mixed-strike burst": 1,
+        "defense": 2,
+        "defensive endurance": 1,
+        "defensive scrambling": 1,
+        "defensive urgency": 1,
+        "durability": 2,
+        "dynamic movement": 1,
+        "economical range movement": 1,
+        "elliptical": 2,
+        "entry timing": 1,
+        "entry-safe low-kick selection": 1,
+        "erg": 3,
+        "escape-cue pressure decisions": 1,
+        "evade and kick counter": 1,
+        "explosive": 1,
+        "explosive cage-position reversal": 1,
+        "explosive cutoff and shadow attack": 1,
+        "explosive entry and exit": 1,
+        "explosive entry and scoring burst": 1,
+        "explosive entry-exit": 1,
+        "explosive inside-position burst": 1,
+        "explosive inside-position win and stabilisation": 1,
+        "explosive pressure escape": 1,
+        "explosive reactive kick single": 1,
+        "explosive score and pre-contact exit": 1,
+        "explosive standups": 1,
+        "extension power": 1,
+        "failed scoring entry recovery": 1,
+        "failed shot recovery": 1,
+        "failed-entry exploitation": 1,
+        "fatigue finishing": 1,
+        "fatigue recovery": 1,
+        "fatigued strike and level-change decisions": 1,
+        "flexibility + finish": 1,
+        "footwork": 6,
+        "grappler": 3,
+        "grappling position sharpness": 5,
+        "grip fighting": 1,
+        "ground to stand": 1,
+        "ground transitions": 1,
+        "guard recovery": 1,
+        "hand speed primer": 1,
+        "high-density MMA clinch decisions under fatigue": 1,
+        "high-density representative decision round": 1,
+        "hip pressure": 1,
+        "hybrid transitions": 1,
+        "in-out scoring with shot readiness": 1,
+        "intercept timing sharpness": 1,
+        "interval": 10,
+        "inversion drills": 1,
+        "isolated attacks": 1,
+        "isolated pressure": 1,
+        "isometric": 4,
+        "isometric endurance": 1,
+        "jab-led pressure flow": 1,
+        "jump": 1,
+        "jump_rope": 3,
+        "kettlebell": 2,
+        "kick and level-change-ready reset": 1,
+        "kick counter sharpness": 2,
+        "kick recoil and anti-entry exit": 1,
+        "kick recoil sharpness": 3,
+        "kick recoil technical flow": 1,
+        "kick timing rehearsal": 1,
+        "kick transition sharpness": 1,
+        "kick-and-exit technical endurance": 1,
+        "kick-led offence under limited-space pressure": 1,
+        "kick-led pressure flow": 1,
+        "kick-step pressure rounds": 1,
+        "lane seal sharpness": 1,
+        "lateral cutoff flow": 1,
+        "leg entanglement drills": 1,
+        "level-change intercept option": 1,
+        "limited-space kick selection and recovery": 1,
+        "linear kick entry control and frame": 1,
+        "live clinch work": 1,
+        "live reaction": 3,
+        "live reps": 1,
+        "long-range hand speed": 1,
+        "long-weapon intercept or parry-counter": 1,
+        "low-kick power and exit": 1,
+        "maximal bag punching burst": 1,
+        "med_ball": 3,
+        "mixed defence-counter-reposition intervals": 1,
+        "mixed kick-defence flow": 1,
+        "mixed reactions": 1,
+        "mixed-cue technical flow": 1,
+        "mixed_modal": 2,
+        "muay thai scrambles": 1,
+        "neural stance cue": 11,
+        "open-space MMA range flow": 1,
+        "pad round": 1,
+        "pad strike": 1,
+        "pad_drills": 1,
+        "partner": 1,
+        "partner-led cage-aware range flow": 1,
+        "partner-led level-change recognition flow": 1,
+        "partner-led long-range MMA decisions": 1,
+        "plyo": 4,
+        "pocket burst sharpness": 1,
+        "pocket exchange sharpness": 1,
+        "pocket rhythm rehearsal": 1,
+        "position-first clinch attack choices": 1,
+        "positional advancement": 1,
+        "positional flow": 1,
+        "positional interval": 1,
+        "positional power": 2,
+        "positional recovery": 1,
+        "positional rope and corner pressure": 1,
+        "positional scoring interval": 1,
+        "precision endurance": 1,
+        "precision power": 1,
+        "pressure combination rounds": 1,
+        "pressure drills": 1,
+        "pressure entry sharpness": 2,
+        "pressure escape interval": 1,
+        "pressure escape repeatability": 1,
+        "pressure finish": 1,
+        "pressure kick sharpness": 1,
+        "pressure movement rehearsal": 1,
+        "punch-to-clinch reentry burst": 1,
+        "quality rounds": 1,
+        "range entry sharpness": 2,
+        "range management": 1,
+        "range rhythm rehearsal": 1,
+        "range timing sharpness": 1,
+        "range-adaptive kick selection": 1,
+        "range-control technical endurance": 1,
+        "reaction": 1,
+        "reactive": 3,
+        "reactive body-kick power": 1,
+        "reactive check and return": 1,
+        "reactive corner trapping burst": 1,
+        "reactive counter burst": 1,
+        "reactive cutoff and re-attack intervals": 1,
+        "reactive decision": 1,
+        "reactive escape recatch": 1,
+        "reactive fence escape denial": 1,
+        "reactive footwork": 1,
+        "reactive interception": 1,
+        "reactive interception and angle exit": 1,
+        "reactive lateral boundary escape": 1,
+        "reactive level-threat pressure burst": 1,
+        "reactive low-kick recatch intervals": 1,
+        "reactive pad round": 2,
+        "reactive pad strike": 1,
+        "reactive pocket exchange burst": 1,
+        "reactive power": 3,
+        "reactive range decisions": 1,
+        "reactive range restoration": 1,
+        "reactive ring-cutting intervals": 1,
+        "reactive strike": 1,
+        "rear-kick power": 1,
+        "repeat burst conditioning": 1,
+        "repeat range restoration": 1,
+        "repeated cage-position battles": 1,
+        "repeated cage-pressure escapes": 1,
+        "repeated check-return decisions": 1,
+        "repeated close exchanges with live shot decisions": 1,
+        "repeated compact exchange intervals": 1,
+        "repeated counter interval": 1,
+        "repeated interception and open-space recovery": 1,
+        "repeated strike-or-shot decisions": 1,
+        "representative clinch decision rounds": 1,
+        "representative close-exchange decisions": 1,
+        "representative inside decision rounds": 1,
+        "representative mixed-cue counter rounds": 1,
+        "reshot timing sharpness": 1,
+        "restricted mixed-threat decision": 1,
+        "rope": 2,
+        "ropes": 1,
+        "rotational burst sharpness": 1,
+        "rotational finish": 1,
+        "row": 6,
+        "rower": 1,
+        "run": 4,
+        "sandbag": 3,
+        "scoring and repositioning": 1,
+        "scoring interval": 1,
+        "scramble recovery sharpness": 4,
+        "shadow_boxing": 1,
+        "shadowbox": 3,
+        "short strikes conditional on standing clinch control": 1,
+        "short-range repeatability rounds": 1,
+        "shot entry sharpness": 4,
+        "shot to finish": 1,
+        "shoulder pressure": 1,
+        "shoulder stamina": 1,
+        "sinking mechanics": 1,
+        "sled": 17,
+        "sleeve control": 1,
+        "solo clinch position rehearsal": 2,
+        "solo grappling position rehearsal": 2,
+        "solo scramble base rehearsal": 1,
+        "solo submission pathway rehearsal": 2,
+        "solo wrestling timing rehearsal": 1,
+        "sparring": 1,
+        "sprint": 4,
+        "stairs": 2,
+        "standing clinch recovery after a level-change threat": 1,
+        "steady-state": 1,
+        "stop-hit response": 1,
+        "strike": 5,
+        "strike and footwork": 1,
+        "strike and reactive shot defence": 1,
+        "strike and reposition": 1,
+        "strike-to-clinch transition burst": 1,
+        "strike-to-fence pressure intervals": 1,
+        "strike-to-shot recognition flow": 1,
+        "striking": 6,
+        "striking endurance": 1,
+        "style sharpness": 1,
+        "submission entry sharpness": 6,
+        "sustainable close-range exchange rounds": 1,
+        "sustainable favourable and unfavourable cage positioning": 1,
+        "sustainable partner-led MMA pocket exchange": 1,
+        "sustainable standing clinch position flow": 1,
+        "sustainable uncalled MMA clinch decisions": 1,
+        "swim": 10,
+        "swing": 1,
+        "switch-kick repeatability": 1,
+        "tactile sensitivity": 1,
+        "takedown defence-counter-exit": 1,
+        "takedown-defence counter power": 1,
+        "target-choice kick repeatability": 1,
+        "technical check-return flow": 1,
+        "technical endurance": 3,
+        "technical flow": 4,
+        "technical interval": 1,
+        "technical partner flow": 1,
+        "technical range movement": 1,
+        "technical rhythm rehearsal": 1,
+        "technical separation flow": 1,
+        "technical stop-hit flow": 1,
+        "technical_footwork": 25,
+        "teep-led walk-down burst": 1,
+        "three-cue range decision burst": 1,
+        "throw": 2,
+        "tire": 1,
+        "top-position striking with stable base": 1,
+        "transition chains": 1,
+        "transitional awareness": 1,
+        "unpredictable counter rounds": 1,
+        "unpredictable defensive choice": 1,
+        "variable-target pocket intervals": 1,
+        "visual counter rehearsal": 1,
+        "walk": 5,
+        "wall scrambling": 1,
+        "wrestler": 2
+      },
+      "tokens_mentioned_by_rules": [
+        "counter timing sharpness",
+        "defense",
+        "defensive scrambling",
+        "footwork",
+        "hand speed primer",
+        "isometric endurance",
+        "long-range hand speed",
+        "maximal bag punching burst",
+        "precision power",
+        "pressure escape interval",
+        "range management",
+        "reactive counter burst",
+        "shoulder stamina",
+        "technical_footwork"
+      ],
+      "unmapped_tokens": [
+        "MMA kick recoil and stance recovery",
+        "MMA kick-or-defend decisions",
+        "MMA low-kick repeatability",
+        "Muay Thai frame-and-knee counters",
+        "acceleration primer",
+        "aerial transitions",
+        "angle creation",
+        "angle striking",
+        "anti-fence range management",
+        "attack-reset-rebuild shadow intervals",
+        "back control",
+        "bag interval",
+        "bag round",
+        "bag_work",
+        "balanced close exchanges near the cage",
+        "bike",
+        "bike cadence primer",
+        "bilateral MMA kicking and stance recovery",
+        "bilateral round-kick technical flow",
+        "body-head pressure intervals",
+        "body-kick repeatability",
+        "bodyweight",
+        "breathing",
+        "brief clinch interruption and strike on break",
+        "brief knee reentry burst",
+        "cage IQ",
+        "cage defence-counter-escape",
+        "cage-position counter flow",
+        "carry",
+        "climb",
+        "climbing",
+        "clinch",
+        "clinch entry sharpness",
+        "clinch position sharpness",
+        "clinch repositioning burst",
+        "clinch-to-punch intervals",
+        "close exchange with live takedown decision",
+        "close striking with brief tie-up interruptions",
+        "close-range escape to preferred range",
+        "combo endurance",
+        "compact close-range MMA striking",
+        "compact mixed-strike cluster",
+        "compound",
+        "contested inside-position intervals",
+        "continuous",
+        "control transitions",
+        "controlled cage-cutting flow",
+        "controlled entry interception",
+        "controlled stalking flow",
+        "cued defence-to-offence intervals",
+        "decision interval",
+        "decision round",
+        "decision rounds",
+        "defence and movement interval",
+        "defence-clinch-return burst",
+        "defence-return sharpness",
+        "defence-to-mixed-strike burst",
+        "defensive endurance",
+        "defensive urgency",
+        "durability",
+        "dynamic movement",
+        "economical range movement",
+        "elliptical",
+        "entry timing",
+        "entry-safe low-kick selection",
+        "erg",
+        "escape-cue pressure decisions",
+        "evade and kick counter",
+        "explosive",
+        "explosive cage-position reversal",
+        "explosive cutoff and shadow attack",
+        "explosive entry and exit",
+        "explosive entry and scoring burst",
+        "explosive entry-exit",
+        "explosive inside-position burst",
+        "explosive inside-position win and stabilisation",
+        "explosive pressure escape",
+        "explosive reactive kick single",
+        "explosive score and pre-contact exit",
+        "explosive standups",
+        "extension power",
+        "failed scoring entry recovery",
+        "failed shot recovery",
+        "failed-entry exploitation",
+        "fatigue finishing",
+        "fatigue recovery",
+        "fatigued strike and level-change decisions",
+        "flexibility + finish",
+        "grappler",
+        "grappling position sharpness",
+        "grip fighting",
+        "ground to stand",
+        "ground transitions",
+        "guard recovery",
+        "high-density MMA clinch decisions under fatigue",
+        "high-density representative decision round",
+        "hip pressure",
+        "hybrid transitions",
+        "in-out scoring with shot readiness",
+        "intercept timing sharpness",
+        "interval",
+        "inversion drills",
+        "isolated attacks",
+        "isolated pressure",
+        "isometric",
+        "jab-led pressure flow",
+        "jump",
+        "jump_rope",
+        "kettlebell",
+        "kick and level-change-ready reset",
+        "kick counter sharpness",
+        "kick recoil and anti-entry exit",
+        "kick recoil sharpness",
+        "kick recoil technical flow",
+        "kick timing rehearsal",
+        "kick transition sharpness",
+        "kick-and-exit technical endurance",
+        "kick-led offence under limited-space pressure",
+        "kick-led pressure flow",
+        "kick-step pressure rounds",
+        "lane seal sharpness",
+        "lateral cutoff flow",
+        "leg entanglement drills",
+        "level-change intercept option",
+        "limited-space kick selection and recovery",
+        "linear kick entry control and frame",
+        "live clinch work",
+        "live reaction",
+        "live reps",
+        "long-weapon intercept or parry-counter",
+        "low-kick power and exit",
+        "med_ball",
+        "mixed defence-counter-reposition intervals",
+        "mixed kick-defence flow",
+        "mixed reactions",
+        "mixed-cue technical flow",
+        "mixed_modal",
+        "muay thai scrambles",
+        "neural stance cue",
+        "open-space MMA range flow",
+        "pad round",
+        "pad strike",
+        "pad_drills",
+        "partner",
+        "partner-led cage-aware range flow",
+        "partner-led level-change recognition flow",
+        "partner-led long-range MMA decisions",
+        "plyo",
+        "pocket burst sharpness",
+        "pocket exchange sharpness",
+        "pocket rhythm rehearsal",
+        "position-first clinch attack choices",
+        "positional advancement",
+        "positional flow",
+        "positional interval",
+        "positional power",
+        "positional recovery",
+        "positional rope and corner pressure",
+        "positional scoring interval",
+        "precision endurance",
+        "pressure combination rounds",
+        "pressure drills",
+        "pressure entry sharpness",
+        "pressure escape repeatability",
+        "pressure finish",
+        "pressure kick sharpness",
+        "pressure movement rehearsal",
+        "punch-to-clinch reentry burst",
+        "quality rounds",
+        "range entry sharpness",
+        "range rhythm rehearsal",
+        "range timing sharpness",
+        "range-adaptive kick selection",
+        "range-control technical endurance",
+        "reaction",
+        "reactive",
+        "reactive body-kick power",
+        "reactive check and return",
+        "reactive corner trapping burst",
+        "reactive cutoff and re-attack intervals",
+        "reactive decision",
+        "reactive escape recatch",
+        "reactive fence escape denial",
+        "reactive footwork",
+        "reactive interception",
+        "reactive interception and angle exit",
+        "reactive lateral boundary escape",
+        "reactive level-threat pressure burst",
+        "reactive low-kick recatch intervals",
+        "reactive pad round",
+        "reactive pad strike",
+        "reactive pocket exchange burst",
+        "reactive power",
+        "reactive range decisions",
+        "reactive range restoration",
+        "reactive ring-cutting intervals",
+        "reactive strike",
+        "rear-kick power",
+        "repeat burst conditioning",
+        "repeat range restoration",
+        "repeated cage-position battles",
+        "repeated cage-pressure escapes",
+        "repeated check-return decisions",
+        "repeated close exchanges with live shot decisions",
+        "repeated compact exchange intervals",
+        "repeated counter interval",
+        "repeated interception and open-space recovery",
+        "repeated strike-or-shot decisions",
+        "representative clinch decision rounds",
+        "representative close-exchange decisions",
+        "representative inside decision rounds",
+        "representative mixed-cue counter rounds",
+        "reshot timing sharpness",
+        "restricted mixed-threat decision",
+        "rope",
+        "ropes",
+        "rotational burst sharpness",
+        "rotational finish",
+        "row",
+        "rower",
+        "run",
+        "sandbag",
+        "scoring and repositioning",
+        "scoring interval",
+        "scramble recovery sharpness",
+        "shadow_boxing",
+        "shadowbox",
+        "short strikes conditional on standing clinch control",
+        "short-range repeatability rounds",
+        "shot entry sharpness",
+        "shot to finish",
+        "shoulder pressure",
+        "sinking mechanics",
+        "sled",
+        "sleeve control",
+        "solo clinch position rehearsal",
+        "solo grappling position rehearsal",
+        "solo scramble base rehearsal",
+        "solo submission pathway rehearsal",
+        "solo wrestling timing rehearsal",
+        "sparring",
+        "sprint",
+        "stairs",
+        "standing clinch recovery after a level-change threat",
+        "steady-state",
+        "stop-hit response",
+        "strike",
+        "strike and footwork",
+        "strike and reactive shot defence",
+        "strike and reposition",
+        "strike-to-clinch transition burst",
+        "strike-to-fence pressure intervals",
+        "strike-to-shot recognition flow",
+        "striking",
+        "striking endurance",
+        "style sharpness",
+        "submission entry sharpness",
+        "sustainable close-range exchange rounds",
+        "sustainable favourable and unfavourable cage positioning",
+        "sustainable partner-led MMA pocket exchange",
+        "sustainable standing clinch position flow",
+        "sustainable uncalled MMA clinch decisions",
+        "swim",
+        "swing",
+        "switch-kick repeatability",
+        "tactile sensitivity",
+        "takedown defence-counter-exit",
+        "takedown-defence counter power",
+        "target-choice kick repeatability",
+        "technical check-return flow",
+        "technical endurance",
+        "technical flow",
+        "technical interval",
+        "technical partner flow",
+        "technical range movement",
+        "technical rhythm rehearsal",
+        "technical separation flow",
+        "technical stop-hit flow",
+        "teep-led walk-down burst",
+        "three-cue range decision burst",
+        "throw",
+        "tire",
+        "top-position striking with stable base",
+        "transition chains",
+        "transitional awareness",
+        "unpredictable counter rounds",
+        "unpredictable defensive choice",
+        "variable-target pocket intervals",
+        "visual counter rehearsal",
+        "walk",
+        "wall scrambling",
+        "wrestler"
+      ]
+    },
+    "tactical_function": {
+      "entries": 25,
+      "distinct": 15,
+      "frequencies": {
+        "angle_creation": 11,
+        "base_recovery": 10,
+        "cage_control": 2,
+        "clinch_management": 2,
+        "counter_setup": 4,
+        "defensive_exit": 9,
+        "exit_lane_control": 4,
+        "kick_recovery": 5,
+        "pressure": 7,
+        "range_management": 9,
+        "ring_cutting": 4,
+        "scramble_recovery": 2,
+        "standup_transition": 2,
+        "takedown_defense": 3,
+        "takedown_setup": 1
+      },
+      "tokens_mentioned_by_rules": [
+        "angle_creation",
+        "base_recovery",
+        "cage_control",
+        "counter_setup",
+        "defensive_exit",
+        "exit_lane_control",
+        "kick_recovery",
+        "range_management",
+        "ring_cutting",
+        "scramble_recovery",
+        "standup_transition",
+        "takedown_defense"
+      ],
+      "unmapped_tokens": [
+        "clinch_management",
+        "pressure",
+        "takedown_setup"
+      ]
+    },
+    "body_region": {
+      "entries": 37,
+      "distinct": 14,
+      "frequencies": {
+        "ankle": 2,
+        "ankle_foot_hip": 2,
+        "calf_ankle": 1,
+        "core_trunk": 3,
+        "foot": 2,
+        "foot_ankle_hip": 1,
+        "full_body_stance": 1,
+        "groin_adductor": 1,
+        "hip": 5,
+        "neck": 4,
+        "neck_vestibular": 1,
+        "shoulder_scapula": 6,
+        "stance_footwork": 4,
+        "thoracic_spine": 4
+      },
+      "tokens_mentioned_by_rules": [
+        "ankle",
+        "ankle_foot_hip",
+        "calf_ankle",
+        "foot_ankle_hip",
+        "hip",
+        "neck",
+        "neck_vestibular"
+      ],
+      "unmapped_tokens": [
+        "core_trunk",
+        "foot",
+        "full_body_stance",
+        "groin_adductor",
+        "shoulder_scapula",
+        "stance_footwork",
+        "thoracic_spine"
+      ]
+    },
+    "weaknesses": {
+      "entries": 55,
+      "distinct": 17,
+      "frequencies": {
+        "acceleration": 1,
+        "adductor_groin": 1,
+        "balance": 8,
+        "cns_fatigue": 8,
+        "coordination_proprioception": 8,
+        "core_stability": 1,
+        "footwork": 2,
+        "grip_strength": 3,
+        "lateral_movement": 2,
+        "posterior_chain": 7,
+        "posture": 2,
+        "recovery": 1,
+        "rhythm": 2,
+        "shoulder_endurance": 1,
+        "shoulder_stability": 1,
+        "stability": 36,
+        "stiffness": 37
+      },
+      "tokens_mentioned_by_rules": [
+        "core_stability",
+        "grip_strength",
+        "recovery",
+        "rhythm",
+        "shoulder_endurance",
+        "shoulder_stability",
+        "stiffness"
+      ],
+      "unmapped_tokens": [
+        "acceleration",
+        "adductor_groin",
+        "balance",
+        "cns_fatigue",
+        "coordination_proprioception",
+        "footwork",
+        "lateral_movement",
+        "posterior_chain",
+        "posture",
+        "stability"
+      ]
+    },
+    "category": {
+      "entries": 339,
+      "distinct": 28,
+      "frequencies": {
+        "balance": 7,
+        "balance_support": 1,
+        "boxing": 23,
+        "combat": 15,
+        "core": 41,
+        "deadlift": 1,
+        "finishers": 3,
+        "full_body": 10,
+        "grip": 2,
+        "grip_neck": 5,
+        "integrated_movement_control": 5,
+        "lateral": 8,
+        "locomotion": 10,
+        "lower_body": 87,
+        "mobility": 15,
+        "mobility_balance_support": 4,
+        "muay_thai": 1,
+        "proprioception": 5,
+        "pull": 1,
+        "reactive": 7,
+        "recovery": 10,
+        "rehab_mobility": 2,
+        "rehab_sensorimotor": 1,
+        "rehab_strength_isometric": 2,
+        "striking": 11,
+        "unconventional": 5,
+        "upper_body": 55,
+        "wrestler": 2
+      },
+      "tokens_mentioned_by_rules": [
+        "balance",
+        "balance_support",
+        "boxing",
+        "core",
+        "grip",
+        "lower_body",
+        "proprioception",
+        "recovery",
+        "striking",
+        "upper_body"
+      ],
+      "unmapped_tokens": [
+        "combat",
+        "deadlift",
+        "finishers",
+        "full_body",
+        "grip_neck",
+        "integrated_movement_control",
+        "lateral",
+        "locomotion",
+        "mobility",
+        "mobility_balance_support",
+        "muay_thai",
+        "pull",
+        "reactive",
+        "rehab_mobility",
+        "rehab_sensorimotor",
+        "rehab_strength_isometric",
+        "unconventional",
+        "wrestler"
+      ]
+    }
+  },
+  "queries": [
+    {
+      "query": "punching power",
+      "relevant": [
+        "Medicine Ball Hook Throw",
+        "Standing Cable Punch Simulation",
+        "Half-Kneeling Medicine-Ball Punch Throw",
+        "Landmine Split-Stance Punch Press",
+        "Max-Power Bag Burst",
+        "Med Ball Chest Pass (Reactive)"
+      ],
+      "exclude": [
+        "Seated Russian Twist (Band-Resisted)",
+        "Carioca Sprint",
+        "Kettlebell Swing"
+      ],
+      "reason": "Named punch-power work plus clearly labelled related upper-body/rotational power; generic rotation or lower-body force alone is insufficient.",
+      "baseline_total": 4,
+      "baseline_anchors_found": [
+        "Medicine Ball Hook Throw",
+        "Standing Cable Punch Simulation",
+        "Max-Power Bag Burst"
+      ],
+      "baseline_exclusions_found": [],
+      "total": 37,
+      "anchor_ranks": {
+        "Medicine Ball Hook Throw": 1,
+        "Standing Cable Punch Simulation": 2,
+        "Half-Kneeling Medicine-Ball Punch Throw": 7,
+        "Landmine Split-Stance Punch Press": 8,
+        "Max-Power Bag Burst": 9,
+        "Med Ball Chest Pass (Reactive)": 27
+      },
+      "missed": [],
+      "excluded_found": [],
+      "top_five": [
+        {
+          "name": "Medicine Ball Hook Throw",
+          "discovery_match": null
+        },
+        {
+          "name": "Standing Cable Punch Simulation",
+          "discovery_match": null
+        },
+        {
+          "name": "Band-Resisted Jab-Cross Primer",
+          "discovery_match": "Matches · Punch-specific power"
+        },
+        {
+          "name": "Band-Resisted Punch",
+          "discovery_match": "Matches · Punch-specific power"
+        },
+        {
+          "name": "Band-Resisted Straight Punch",
+          "discovery_match": "Matches · Punch-specific power"
+        }
+      ]
+    },
+    {
+      "query": "hit harder",
+      "relevant": [
+        "Medicine Ball Hook Throw",
+        "Band-Resisted Straight Punch",
+        "Landmine Split-Stance Punch Press"
+      ],
+      "exclude": [
+        "Cross-Step Lunge",
+        "Kettlebell Swing"
+      ],
+      "reason": "Same bounded punching intent in everyday language.",
+      "baseline_total": 0,
+      "baseline_anchors_found": [],
+      "baseline_exclusions_found": [],
+      "total": 37,
+      "anchor_ranks": {
+        "Medicine Ball Hook Throw": 1,
+        "Band-Resisted Straight Punch": 5,
+        "Landmine Split-Stance Punch Press": 8
+      },
+      "missed": [],
+      "excluded_found": [],
+      "top_five": [
+        {
+          "name": "Medicine Ball Hook Throw",
+          "discovery_match": "Matches · Punch-specific power"
+        },
+        {
+          "name": "Standing Cable Punch Simulation",
+          "discovery_match": "Matches · Punch-specific power"
+        },
+        {
+          "name": "Band-Resisted Jab-Cross Primer",
+          "discovery_match": "Matches · Punch-specific power"
+        },
+        {
+          "name": "Band-Resisted Punch",
+          "discovery_match": "Matches · Punch-specific power"
+        },
+        {
+          "name": "Band-Resisted Straight Punch",
+          "discovery_match": "Matches · Punch-specific power"
+        }
+      ]
+    },
+    {
+      "query": "hand speed",
+      "relevant": [
+        "Band-Resisted Jab-Cross Primer",
+        "Explosive Boxing Burst Intervals"
+      ],
+      "exclude": [
+        "Band Row Speed Focus",
+        "Boxing Shuffle Drill (Ladder)"
+      ],
+      "reason": "Hand/striking context plus speed; foot speed or row speed is insufficient.",
+      "baseline_total": 72,
+      "baseline_anchors_found": [
+        "Band-Resisted Jab-Cross Primer"
+      ],
+      "baseline_exclusions_found": [],
+      "total": 15,
+      "anchor_ranks": {
+        "Band-Resisted Jab-Cross Primer": 5,
+        "Explosive Boxing Burst Intervals": 2
+      },
+      "missed": [],
+      "excluded_found": [],
+      "top_five": [
+        {
+          "name": "Counter-Striker Split-Line Punch Isometric Hold",
+          "discovery_match": "Matches · Hand speed"
+        },
+        {
+          "name": "Explosive Boxing Burst Intervals",
+          "discovery_match": "Matches · Hand speed"
+        },
+        {
+          "name": "Max-Power Bag Burst",
+          "discovery_match": "Matches · Hand speed"
+        },
+        {
+          "name": "Punch-Slide Repeatability",
+          "discovery_match": "Matches · Hand speed"
+        },
+        {
+          "name": "Band-Resisted Jab-Cross Primer",
+          "discovery_match": "Matches · Hand speed"
+        }
+      ]
+    },
+    {
+      "query": "reaction speed",
+      "relevant": [
+        "Call-and-Response Direction Change",
+        "Cage Cut-to-Entry Choice"
+      ],
+      "exclude": [
+        "Trap Bar Jump",
+        "Kettlebell Swing"
+      ],
+      "reason": "Explicit cue response, not rebound mechanics.",
+      "baseline_total": 59,
+      "baseline_anchors_found": [
+        "Call-and-Response Direction Change",
+        "Cage Cut-to-Entry Choice"
+      ],
+      "baseline_exclusions_found": [],
+      "total": 50,
+      "anchor_ranks": {
+        "Call-and-Response Direction Change": 2,
+        "Cage Cut-to-Entry Choice": 1
+      },
+      "missed": [],
+      "excluded_found": [],
+      "top_five": [
+        {
+          "name": "Cage Cut-to-Entry Choice",
+          "discovery_match": null
+        },
+        {
+          "name": "Call-and-Response Direction Change",
+          "discovery_match": null
+        },
+        {
+          "name": "Catch-Return-Step Out",
+          "discovery_match": null
+        },
+        {
+          "name": "Check-Return-Cross",
+          "discovery_match": null
+        },
+        {
+          "name": "Check-Return-Kick",
+          "discovery_match": null
+        }
+      ]
+    },
+    {
+      "query": "faster reactions",
+      "relevant": [
+        "Call-and-Response Direction Change",
+        "Cage Cut-to-Entry Choice"
+      ],
+      "exclude": [
+        "Trap Bar Jump"
+      ],
+      "reason": "Plain-English cue-response synonym.",
+      "baseline_total": 0,
+      "baseline_anchors_found": [],
+      "baseline_exclusions_found": [],
+      "total": 48,
+      "anchor_ranks": {
+        "Call-and-Response Direction Change": 2,
+        "Cage Cut-to-Entry Choice": 1
+      },
+      "missed": [],
+      "excluded_found": [],
+      "top_five": [
+        {
+          "name": "Cage Cut-to-Entry Choice",
+          "discovery_match": "Matches · Reaction to cues"
+        },
+        {
+          "name": "Call-and-Response Direction Change",
+          "discovery_match": "Matches · Reaction to cues"
+        },
+        {
+          "name": "Catch-Return-Step Out",
+          "discovery_match": "Matches · Reaction to cues"
+        },
+        {
+          "name": "Check-Return-Cross",
+          "discovery_match": "Matches · Reaction to cues"
+        },
+        {
+          "name": "Check-Return-Kick",
+          "discovery_match": "Matches · Reaction to cues"
+        }
+      ]
+    },
+    {
+      "query": "gas tank",
+      "relevant": [
+        "Assault Bike Easy Gas Tank Ride",
+        "3-Min Round Intervals (Bag/Pads)"
+      ],
+      "exclude": [
+        "Medicine Ball Hook Throw"
+      ],
+      "reason": "Explicit aerobic/repeated-effort conditioning evidence.",
+      "baseline_total": 9,
+      "baseline_anchors_found": [
+        "Assault Bike Easy Gas Tank Ride"
+      ],
+      "baseline_exclusions_found": [],
+      "total": 401,
+      "anchor_ranks": {
+        "Assault Bike Easy Gas Tank Ride": 1,
+        "3-Min Round Intervals (Bag/Pads)": 4
+      },
+      "missed": [],
+      "excluded_found": [],
+      "top_five": [
+        {
+          "name": "Assault Bike Easy Gas Tank Ride",
+          "discovery_match": null
+        },
+        {
+          "name": "Nasal Shadowboxing Flow (Gas Tank)",
+          "discovery_match": null
+        },
+        {
+          "name": "Rower Gas-Tank Flush",
+          "discovery_match": null
+        },
+        {
+          "name": "3-Min Round Intervals (Bag/Pads)",
+          "discovery_match": "Matches · Aerobic endurance"
+        },
+        {
+          "name": "Aerobic power circuits",
+          "discovery_match": "Matches · Aerobic endurance"
+        }
+      ]
+    },
+    {
+      "query": "lasting rounds",
+      "relevant": [
+        "3-Min Round Intervals (Bag/Pads)",
+        "Assault Bike Zone 2 Steady"
+      ],
+      "exclude": [
+        "Medicine Ball Hook Throw"
+      ],
+      "reason": "Aerobic and work-capacity work; does not label alactic work as aerobic.",
+      "baseline_total": 0,
+      "baseline_anchors_found": [],
+      "baseline_exclusions_found": [],
+      "total": 401,
+      "anchor_ranks": {
+        "3-Min Round Intervals (Bag/Pads)": 60,
+        "Assault Bike Zone 2 Steady": 4
+      },
+      "missed": [],
+      "excluded_found": [],
+      "top_five": [
+        {
+          "name": "Aerobic power circuits",
+          "discovery_match": "Matches · Aerobic endurance"
+        },
+        {
+          "name": "Air Dyne Bike Aerobic Base",
+          "discovery_match": "Matches · Aerobic endurance"
+        },
+        {
+          "name": "Assault Bike Easy Gas Tank Ride",
+          "discovery_match": "Matches · Aerobic endurance"
+        },
+        {
+          "name": "Assault Bike Zone 2 Steady",
+          "discovery_match": "Matches · Aerobic endurance"
+        },
+        {
+          "name": "Band-Resisted Jab/Cross (Slow Tempo)",
+          "discovery_match": "Matches · Aerobic endurance"
+        }
+      ]
+    },
+    {
+      "query": "round fitness",
+      "relevant": [
+        "3-Min Round Intervals (Bag/Pads)",
+        "Heavy Bag Power Intervals"
+      ],
+      "exclude": [
+        "Standing Cable Punch Simulation"
+      ],
+      "reason": "Explicit glycolytic/work-capacity evidence.",
+      "baseline_total": 0,
+      "baseline_anchors_found": [],
+      "baseline_exclusions_found": [],
+      "total": 218,
+      "anchor_ranks": {
+        "3-Min Round Intervals (Bag/Pads)": 1,
+        "Heavy Bag Power Intervals": 65
+      },
+      "missed": [],
+      "excluded_found": [],
+      "top_five": [
+        {
+          "name": "3-Min Round Intervals (Bag/Pads)",
+          "discovery_match": "Matches · Repeated hard efforts"
+        },
+        {
+          "name": "5-10-15 Ladder (Box Jumps/Push-Ups/KB Swings)",
+          "discovery_match": "Matches · Repeated hard efforts"
+        },
+        {
+          "name": "Agility Ladder Power Drills",
+          "discovery_match": "Matches · Repeated hard efforts"
+        },
+        {
+          "name": "Air Dyne Bike Aerobic Base",
+          "discovery_match": "Matches · Repeated hard efforts"
+        },
+        {
+          "name": "Assault Bike Capacity Builder",
+          "discovery_match": "Matches · Repeated hard efforts"
+        }
+      ]
+    },
+    {
+      "query": "short bursts",
+      "relevant": [
+        "Max-Power Bag Burst",
+        "Assault Bike Sprint Intervals"
+      ],
+      "exclude": [
+        "Assault Bike Zone 2 Steady"
+      ],
+      "reason": "Explicit ATP-PCr/alactic work; no endurance-dose claim.",
+      "baseline_total": 23,
+      "baseline_anchors_found": [],
+      "baseline_exclusions_found": [],
+      "total": 232,
+      "anchor_ranks": {
+        "Max-Power Bag Burst": 192,
+        "Assault Bike Sprint Intervals": 5
+      },
+      "missed": [],
+      "excluded_found": [],
+      "top_five": [
+        {
+          "name": "Alternating Bounds",
+          "discovery_match": "Matches · Short explosive efforts"
+        },
+        {
+          "name": "Arm-Drag-Back-Catch-Release",
+          "discovery_match": "Matches · Short explosive efforts"
+        },
+        {
+          "name": "Arm Drag to Backtake",
+          "discovery_match": "Matches · Short explosive efforts"
+        },
+        {
+          "name": "Armbar Entry-Catch-Release",
+          "discovery_match": "Matches · Short explosive efforts"
+        },
+        {
+          "name": "Assault Bike Sprint Intervals",
+          "discovery_match": "Matches · Short explosive efforts"
+        }
+      ]
+    },
+    {
+      "query": "foot work",
+      "relevant": [
+        "Cage Cutting Footwork",
+        "45-Degree Angle Step to Jab Reset"
+      ],
+      "exclude": [
+        "Medicine Ball Hook Throw"
+      ],
+      "reason": "Footwork synonyms use explicit technical/movement evidence.",
+      "baseline_total": 10,
+      "baseline_anchors_found": [],
+      "baseline_exclusions_found": [],
+      "total": 130,
+      "anchor_ranks": {
+        "Cage Cutting Footwork": 24,
+        "45-Degree Angle Step to Jab Reset": 14
+      },
+      "missed": [],
+      "excluded_found": [],
+      "top_five": [
+        {
+          "name": "Cut-Off Step to Combination",
+          "discovery_match": "Matches · Footwork"
+        },
+        {
+          "name": "Jab-Step Sync",
+          "discovery_match": "Matches · Footwork"
+        },
+        {
+          "name": "Lead-foot pivot prep",
+          "discovery_match": "Matches · Footwork"
+        },
+        {
+          "name": "Lead-leg single-leg stance with guard",
+          "discovery_match": "Matches · Footwork"
+        },
+        {
+          "name": "Long-Guard Clinch Entry Step",
+          "discovery_match": "Matches · Footwork"
+        }
+      ]
+    },
+    {
+      "query": "change direction",
+      "relevant": [
+        "Call-and-Response Direction Change",
+        "Shot-Reshot Direction Change"
+      ],
+      "exclude": [
+        "Medicine Ball Hook Throw"
+      ],
+      "reason": "Named direction-change and explicit agility work.",
+      "baseline_total": 153,
+      "baseline_anchors_found": [
+        "Call-and-Response Direction Change",
+        "Shot-Reshot Direction Change"
+      ],
+      "baseline_exclusions_found": [],
+      "total": 30,
+      "anchor_ranks": {
+        "Call-and-Response Direction Change": 1,
+        "Shot-Reshot Direction Change": 2
+      },
+      "missed": [],
+      "excluded_found": [],
+      "top_five": [
+        {
+          "name": "Call-and-Response Direction Change",
+          "discovery_match": null
+        },
+        {
+          "name": "Shot-Reshot Direction Change",
+          "discovery_match": null
+        },
+        {
+          "name": "Alternating Skater Hops",
+          "discovery_match": "Matches · Change direction"
+        },
+        {
+          "name": "Cage Circle and Cut-Off",
+          "discovery_match": null
+        },
+        {
+          "name": "Carioca Sprint",
+          "discovery_match": "Matches · Change direction"
+        }
+      ]
+    },
+    {
+      "query": "create angles",
+      "relevant": [
+        "45-Degree Angle Step to Jab Reset",
+        "Level-Change Feint to Angle"
+      ],
+      "exclude": [
+        "Standing Cable Punch Simulation"
+      ],
+      "reason": "Explicit angle-creation tactical function.",
+      "baseline_total": 3,
+      "baseline_anchors_found": [
+        "45-Degree Angle Step to Jab Reset"
+      ],
+      "baseline_exclusions_found": [],
+      "total": 26,
+      "anchor_ranks": {
+        "45-Degree Angle Step to Jab Reset": 1,
+        "Level-Change Feint to Angle": 5
+      },
+      "missed": [],
+      "excluded_found": [],
+      "top_five": [
+        {
+          "name": "45-Degree Angle Step to Jab Reset",
+          "discovery_match": null
+        },
+        {
+          "name": "Cage Circle and Cut-Off",
+          "discovery_match": "Matches · Create angles"
+        },
+        {
+          "name": "Check-Hook Pivot Out Shadow Drill",
+          "discovery_match": "Matches · Create angles"
+        },
+        {
+          "name": "Fence Exit to Center Rebase",
+          "discovery_match": "Matches · Create angles"
+        },
+        {
+          "name": "Level-Change Feint to Angle",
+          "discovery_match": "Matches · Create angles"
+        }
+      ]
+    },
+    {
+      "query": "defensive movement",
+      "relevant": [
+        "Defensive Movement Drill",
+        "Defensive Movement Flow",
+        "Sprawl Exit to Ring Angle"
+      ],
+      "exclude": [
+        "Medicine Ball Hook Throw"
+      ],
+      "reason": "Named defence or explicit defensive exit/pathway function.",
+      "baseline_total": 17,
+      "baseline_anchors_found": [
+        "Defensive Movement Drill",
+        "Defensive Movement Flow",
+        "Sprawl Exit to Ring Angle"
+      ],
+      "baseline_exclusions_found": [],
+      "total": 17,
+      "anchor_ranks": {
+        "Defensive Movement Drill": 1,
+        "Defensive Movement Flow": 2,
+        "Sprawl Exit to Ring Angle": 11
+      },
+      "missed": [],
+      "excluded_found": [],
+      "top_five": [
+        {
+          "name": "Defensive Movement Drill",
+          "discovery_match": null
+        },
+        {
+          "name": "Defensive Movement Flow",
+          "discovery_match": null
+        },
+        {
+          "name": "Check and Return Step",
+          "discovery_match": null
+        },
+        {
+          "name": "Check-Hook Pivot Out Shadow Drill",
+          "discovery_match": null
+        },
+        {
+          "name": "Clinch Exit Square-Up Reset",
+          "discovery_match": null
+        }
+      ]
+    },
+    {
+      "query": "manage range",
+      "relevant": [
+        "Intercepting Jab on Cue",
+        "Teep Retreat and Re-Stance"
+      ],
+      "exclude": [
+        "Medicine Ball Hook Throw"
+      ],
+      "reason": "Explicit distance/range-management evidence.",
+      "baseline_total": 14,
+      "baseline_anchors_found": [
+        "Teep Retreat and Re-Stance"
+      ],
+      "baseline_exclusions_found": [],
+      "total": 15,
+      "anchor_ranks": {
+        "Intercepting Jab on Cue": 1,
+        "Teep Retreat and Re-Stance": 5
+      },
+      "missed": [],
+      "excluded_found": [],
+      "top_five": [
+        {
+          "name": "Intercepting Jab on Cue",
+          "discovery_match": "Matches · Distance management"
+        },
+        {
+          "name": "Long Guard-Teep Reset",
+          "discovery_match": "Matches · Distance management"
+        },
+        {
+          "name": "Pull-Counter Reset",
+          "discovery_match": "Matches · Distance management"
+        },
+        {
+          "name": "Teep-Recover-Jab",
+          "discovery_match": "Matches · Distance management"
+        },
+        {
+          "name": "Teep Retreat and Re-Stance",
+          "discovery_match": null
+        }
+      ]
+    },
+    {
+      "query": "cut off ring",
+      "relevant": [
+        "Ring Cut-Off Walkdown",
+        "Cage Cutting Footwork"
+      ],
+      "exclude": [
+        "Standing Cable Punch Simulation"
+      ],
+      "reason": "Explicit ring/cage control; includes cage equivalents as discovery.",
+      "baseline_total": 4,
+      "baseline_anchors_found": [
+        "Ring Cut-Off Walkdown"
+      ],
+      "baseline_exclusions_found": [],
+      "total": 18,
+      "anchor_ranks": {
+        "Ring Cut-Off Walkdown": 1,
+        "Cage Cutting Footwork": 13
+      },
+      "missed": [],
+      "excluded_found": [],
+      "top_five": [
+        {
+          "name": "Ring Cut-Off Walkdown",
+          "discovery_match": null
+        },
+        {
+          "name": "Anti-Fence Range Rounds",
+          "discovery_match": "Matches · Ring and cage control"
+        },
+        {
+          "name": "Cage-Aware Range Flow",
+          "discovery_match": "Matches · Ring and cage control"
+        },
+        {
+          "name": "Cage Circle and Cut-Off",
+          "discovery_match": null
+        },
+        {
+          "name": "Cage Escape Intervals",
+          "discovery_match": "Matches · Ring and cage control"
+        }
+      ]
+    },
+    {
+      "query": "stop takedowns",
+      "relevant": [
+        "Defensive Sprawl Intervals",
+        "Sprawl Exit to Ring Angle"
+      ],
+      "exclude": [
+        "Medicine Ball Hook Throw"
+      ],
+      "reason": "Explicit sprawl/takedown-defence context.",
+      "baseline_total": 4,
+      "baseline_anchors_found": [],
+      "baseline_exclusions_found": [],
+      "total": 23,
+      "anchor_ranks": {
+        "Defensive Sprawl Intervals": 2,
+        "Sprawl Exit to Ring Angle": 21
+      },
+      "missed": [],
+      "excluded_found": [],
+      "top_five": [
+        {
+          "name": "Band-Resisted Sprawl to Sprint",
+          "discovery_match": "Matches · Takedown defence"
+        },
+        {
+          "name": "Defensive Sprawl Intervals",
+          "discovery_match": "Matches · Takedown defence"
+        },
+        {
+          "name": "Max Knee & Sprawl Complex",
+          "discovery_match": "Matches · Takedown defence"
+        },
+        {
+          "name": "Reactive Sprawl Jumps",
+          "discovery_match": "Matches · Takedown defence"
+        },
+        {
+          "name": "Sprawl-Burpee Complex",
+          "discovery_match": "Matches · Takedown defence"
+        }
+      ]
+    },
+    {
+      "query": "recover stance",
+      "relevant": [
+        "Switch-Step Stance Recovery",
+        "Sprawl-to-Stance-Recover"
+      ],
+      "exclude": [
+        "Medicine Ball Hook Throw"
+      ],
+      "reason": "Explicit stance/base recovery.",
+      "baseline_total": 96,
+      "baseline_anchors_found": [
+        "Switch-Step Stance Recovery",
+        "Sprawl-to-Stance-Recover"
+      ],
+      "baseline_exclusions_found": [],
+      "total": 54,
+      "anchor_ranks": {
+        "Switch-Step Stance Recovery": 2,
+        "Sprawl-to-Stance-Recover": 1
+      },
+      "missed": [],
+      "excluded_found": [],
+      "top_five": [
+        {
+          "name": "Sprawl-to-Stance-Recover",
+          "discovery_match": null
+        },
+        {
+          "name": "Switch-Step Stance Recovery",
+          "discovery_match": null
+        },
+        {
+          "name": "Switch-Kick Stance Recovery",
+          "discovery_match": "Matches · Base recovery"
+        },
+        {
+          "name": "45-Degree Angle Step to Jab Reset",
+          "discovery_match": "Matches · Base recovery"
+        },
+        {
+          "name": "Cross-Lead Kick Switch",
+          "discovery_match": "Matches · Base recovery"
+        }
+      ]
+    },
+    {
+      "query": "kick balance",
+      "relevant": [
+        "Kick-Catch Balance Reset",
+        "Kick-and-Stick"
+      ],
+      "exclude": [
+        "Medicine Ball Hook Throw"
+      ],
+      "reason": "Kick recovery quality plus named balance work.",
+      "baseline_total": 46,
+      "baseline_anchors_found": [
+        "Kick-Catch Balance Reset",
+        "Kick-and-Stick"
+      ],
+      "baseline_exclusions_found": [],
+      "total": 16,
+      "anchor_ranks": {
+        "Kick-Catch Balance Reset": 1,
+        "Kick-and-Stick": 5
+      },
+      "missed": [],
+      "excluded_found": [],
+      "top_five": [
+        {
+          "name": "Kick-Catch Balance Reset",
+          "discovery_match": null
+        },
+        {
+          "name": "Check and Return Step",
+          "discovery_match": null
+        },
+        {
+          "name": "Check-Return-Cross",
+          "discovery_match": "Matches · Kick recovery"
+        },
+        {
+          "name": "Jab-Low Kick Reset",
+          "discovery_match": "Matches · Kick recovery"
+        },
+        {
+          "name": "Kick-and-Stick",
+          "discovery_match": null
+        }
+      ]
+    },
+    {
+      "query": "single leg balance",
+      "relevant": [
+        "Single-Leg Balance (Eyes Closed)",
+        "Single-Leg Rotational Hop to Balance"
+      ],
+      "exclude": [
+        "Standing Cable Punch Simulation"
+      ],
+      "reason": "Explicit single-leg context and balance quality.",
+      "baseline_total": 12,
+      "baseline_anchors_found": [
+        "Single-Leg Balance (Eyes Closed)",
+        "Single-Leg Rotational Hop to Balance"
+      ],
+      "baseline_exclusions_found": [],
+      "total": 11,
+      "anchor_ranks": {
+        "Single-Leg Balance (Eyes Closed)": 1,
+        "Single-Leg Rotational Hop to Balance": 2
+      },
+      "missed": [],
+      "excluded_found": [],
+      "top_five": [
+        {
+          "name": "Single-Leg Balance (Eyes Closed)",
+          "discovery_match": null
+        },
+        {
+          "name": "Single-Leg Rotational Hop to Balance",
+          "discovery_match": null
+        },
+        {
+          "name": "Lead-leg single-leg stance with guard",
+          "discovery_match": null
+        },
+        {
+          "name": "Rear-leg single-leg stance with guard",
+          "discovery_match": null
+        },
+        {
+          "name": "🔥 Single-Leg Combat Stance Hold (Weighted)",
+          "discovery_match": null
+        }
+      ]
+    },
+    {
+      "query": "core stability",
+      "relevant": [
+        "Cable Pallof Press",
+        "Anti-Rotation Press"
+      ],
+      "exclude": [
+        "Heavy Bag Power Intervals"
+      ],
+      "reason": "Anti-rotation/core-control evidence; trunk-loading risk alone is insufficient.",
+      "baseline_total": 126,
+      "baseline_anchors_found": [
+        "Cable Pallof Press",
+        "Anti-Rotation Press"
+      ],
+      "baseline_exclusions_found": [],
+      "total": 46,
+      "anchor_ranks": {
+        "Cable Pallof Press": 5,
+        "Anti-Rotation Press": 3
+      },
+      "missed": [],
+      "excluded_found": [],
+      "top_five": [
+        {
+          "name": "Ab Wheel Rollout (Kneeling)",
+          "discovery_match": null
+        },
+        {
+          "name": "Anti-Rotation Med Ball Slam",
+          "discovery_match": null
+        },
+        {
+          "name": "Anti-Rotation Press",
+          "discovery_match": null
+        },
+        {
+          "name": "Banded Pallof (Walking)",
+          "discovery_match": null
+        },
+        {
+          "name": "Cable Pallof Press",
+          "discovery_match": null
+        }
+      ]
+    },
+    {
+      "query": "shoulder stability",
+      "relevant": [
+        "Standing scapular CARs",
+        "Scapular Pull-Up Hold"
+      ],
+      "exclude": [
+        "Ground-N-Pound Intervals"
+      ],
+      "reason": "Explicit scapular/stability evidence; generic shoulder loading is insufficient.",
+      "baseline_total": 62,
+      "baseline_anchors_found": [
+        "Standing scapular CARs",
+        "Scapular Pull-Up Hold"
+      ],
+      "baseline_exclusions_found": [
+        "Ground-N-Pound Intervals"
+      ],
+      "total": 6,
+      "anchor_ranks": {
+        "Standing scapular CARs": 1,
+        "Scapular Pull-Up Hold": 3
+      },
+      "missed": [],
+      "excluded_found": [],
+      "top_five": [
+        {
+          "name": "Standing scapular CARs",
+          "discovery_match": null
+        },
+        {
+          "name": "Band face pull light",
+          "discovery_match": null
+        },
+        {
+          "name": "Scapular Pull-Up Hold",
+          "discovery_match": null
+        },
+        {
+          "name": "Serratus wall slide",
+          "discovery_match": null
+        },
+        {
+          "name": "Wall scap push-up plus",
+          "discovery_match": null
+        }
+      ]
+    },
+    {
+      "query": "grip endurance",
+      "relevant": [
+        "Farmer Walk Hold (Static)",
+        "Towel/Gi Row Isometric Hold"
+      ],
+      "exclude": [
+        "Neck Harness Flexion"
+      ],
+      "reason": "Grip context plus endurance/isometric work; grip_neck category alone is insufficient.",
+      "baseline_total": 12,
+      "baseline_anchors_found": [],
+      "baseline_exclusions_found": [],
+      "total": 12,
+      "anchor_ranks": {
+        "Farmer Walk Hold (Static)": 2,
+        "Towel/Gi Row Isometric Hold": 7
+      },
+      "missed": [],
+      "excluded_found": [],
+      "top_five": [
+        {
+          "name": "Atlas Stone Load Isometric (120% max stone @ lap)",
+          "discovery_match": "Matches · Grip endurance"
+        },
+        {
+          "name": "Farmer Walk Hold (Static)",
+          "discovery_match": "Matches · Grip endurance"
+        },
+        {
+          "name": "Isometric Mid-Thigh Pull",
+          "discovery_match": "Matches · Grip endurance"
+        },
+        {
+          "name": "Kettlebell Suitcase Carry Hold",
+          "discovery_match": "Matches · Grip endurance"
+        },
+        {
+          "name": "Rack Pull Isometric (125% 1RM @ mid-shin)",
+          "discovery_match": "Matches · Grip endurance"
+        }
+      ]
+    },
+    {
+      "query": "neck strength",
+      "relevant": [
+        "Band-Resisted Neck Extension",
+        "Neck Harness Flexion"
+      ],
+      "exclude": [
+        "Chin tuck nod",
+        "Eye-head dissociation drill"
+      ],
+      "reason": "Neck context plus strength/isometric work; mobility and vestibular work are excluded.",
+      "baseline_total": 7,
+      "baseline_anchors_found": [],
+      "baseline_exclusions_found": [],
+      "total": 5,
+      "anchor_ranks": {
+        "Band-Resisted Neck Extension": 1,
+        "Neck Harness Flexion": 3
+      },
+      "missed": [],
+      "excluded_found": [],
+      "top_five": [
+        {
+          "name": "Band-Resisted Neck Extension",
+          "discovery_match": "Matches · Neck strength"
+        },
+        {
+          "name": "Grappler’s Bridge (Weighted)",
+          "discovery_match": null
+        },
+        {
+          "name": "Neck Harness Flexion",
+          "discovery_match": "Matches · Neck strength"
+        },
+        {
+          "name": "Neck Harness Lateral Flexion",
+          "discovery_match": "Matches · Neck strength"
+        },
+        {
+          "name": "Neck Harness Flexion/Extension",
+          "discovery_match": null
+        }
+      ]
+    },
+    {
+      "query": "loosen up",
+      "relevant": [
+        "90/90 hip switches",
+        "Banded Hip Flexor Stretch"
+      ],
+      "exclude": [
+        "Medicine Ball Hook Throw"
+      ],
+      "reason": "Explicit mobility/stiffness evidence.",
+      "baseline_total": 0,
+      "baseline_anchors_found": [],
+      "baseline_exclusions_found": [],
+      "total": 50,
+      "anchor_ranks": {
+        "90/90 hip switches": 1,
+        "Banded Hip Flexor Stretch": 38
+      },
+      "missed": [],
+      "excluded_found": [],
+      "top_five": [
+        {
+          "name": "90/90 hip switches",
+          "discovery_match": "Matches · Mobility"
+        },
+        {
+          "name": "Adductor rock-back",
+          "discovery_match": "Matches · Mobility"
+        },
+        {
+          "name": "Band face pull light",
+          "discovery_match": "Matches · Mobility"
+        },
+        {
+          "name": "Band pull-apart low volume",
+          "discovery_match": "Matches · Mobility"
+        },
+        {
+          "name": "Bent-knee soleus pulse at wall",
+          "discovery_match": "Matches · Mobility"
+        }
+      ]
+    },
+    {
+      "query": "hip mobility",
+      "relevant": [
+        "90/90 hip switches",
+        "Banded Hip Flexor Stretch"
+      ],
+      "exclude": [
+        "Kettlebell Swing"
+      ],
+      "reason": "Mobility plus hip context; hip loading alone is insufficient.",
+      "baseline_total": 12,
+      "baseline_anchors_found": [
+        "90/90 hip switches",
+        "Banded Hip Flexor Stretch"
+      ],
+      "baseline_exclusions_found": [],
+      "total": 10,
+      "anchor_ranks": {
+        "90/90 hip switches": 1,
+        "Banded Hip Flexor Stretch": 2
+      },
+      "missed": [],
+      "excluded_found": [],
+      "top_five": [
+        {
+          "name": "90/90 hip switches",
+          "discovery_match": null
+        },
+        {
+          "name": "Banded Hip Flexor Stretch",
+          "discovery_match": null
+        },
+        {
+          "name": "Half-kneeling hip flexor with glute set",
+          "discovery_match": null
+        },
+        {
+          "name": "Lead-foot pivot prep",
+          "discovery_match": null
+        },
+        {
+          "name": "Lead-leg single-leg stance with guard",
+          "discovery_match": null
+        }
+      ]
+    },
+    {
+      "query": "ankle mobility",
+      "relevant": [
+        "Knee-to-wall dorsiflexion pulse",
+        "Bent-knee soleus pulse at wall"
+      ],
+      "exclude": [
+        "Trap Bar Jump"
+      ],
+      "reason": "Mobility plus ankle context; ankle loading alone is insufficient.",
+      "baseline_total": 8,
+      "baseline_anchors_found": [
+        "Knee-to-wall dorsiflexion pulse",
+        "Bent-knee soleus pulse at wall"
+      ],
+      "baseline_exclusions_found": [],
+      "total": 8,
+      "anchor_ranks": {
+        "Knee-to-wall dorsiflexion pulse": 2,
+        "Bent-knee soleus pulse at wall": 1
+      },
+      "missed": [],
+      "excluded_found": [],
+      "top_five": [
+        {
+          "name": "Bent-knee soleus pulse at wall",
+          "discovery_match": null
+        },
+        {
+          "name": "Knee-to-wall dorsiflexion pulse",
+          "discovery_match": null
+        },
+        {
+          "name": "Lead-foot pivot prep",
+          "discovery_match": null
+        },
+        {
+          "name": "Lead-leg single-leg stance with guard",
+          "discovery_match": null
+        },
+        {
+          "name": "Rear-leg single-leg stance with guard",
+          "discovery_match": null
+        }
+      ]
+    },
+    {
+      "query": "hand foot coordination",
+      "relevant": [
+        "Catch-Return-Step Out",
+        "Double Jab to Exit Angle"
+      ],
+      "exclude": [
+        "Band Row Speed Focus"
+      ],
+      "reason": "Explicit foot-hand timing quality.",
+      "baseline_total": 59,
+      "baseline_anchors_found": [
+        "Catch-Return-Step Out",
+        "Double Jab to Exit Angle"
+      ],
+      "baseline_exclusions_found": [],
+      "total": 14,
+      "anchor_ranks": {
+        "Catch-Return-Step Out": 1,
+        "Double Jab to Exit Angle": 3
+      },
+      "missed": [],
+      "excluded_found": [],
+      "top_five": [
+        {
+          "name": "Catch-Return-Step Out",
+          "discovery_match": null
+        },
+        {
+          "name": "Cut-Off Step to Combination",
+          "discovery_match": null
+        },
+        {
+          "name": "Double Jab to Exit Angle",
+          "discovery_match": null
+        },
+        {
+          "name": "Hand-Fight to Snapdown Reaction",
+          "discovery_match": null
+        },
+        {
+          "name": "Intercepting Jab on Cue",
+          "discovery_match": null
+        }
+      ]
+    },
+    {
+      "query": "get stronger",
+      "relevant": [
+        "Isometric Mid-Thigh Pull",
+        "Anti-Rotation Press"
+      ],
+      "exclude": [
+        "Assault Bike Zone 2 Steady"
+      ],
+      "reason": "Explicit strength method/maintenance goal.",
+      "baseline_total": 0,
+      "baseline_anchors_found": [],
+      "baseline_exclusions_found": [],
+      "total": 148,
+      "anchor_ranks": {
+        "Isometric Mid-Thigh Pull": 2,
+        "Anti-Rotation Press": 9
+      },
+      "missed": [],
+      "excluded_found": [],
+      "top_five": [
+        {
+          "name": "Counter-Striker Split-Line Punch Isometric Hold",
+          "discovery_match": "Matches · Strength"
+        },
+        {
+          "name": "Isometric Mid-Thigh Pull",
+          "discovery_match": "Matches · Strength"
+        },
+        {
+          "name": "Overcoming Split-Squat Isometric",
+          "discovery_match": "Matches · Strength"
+        },
+        {
+          "name": "Punch-Specific Max Isometric Hold",
+          "discovery_match": "Matches · Strength"
+        },
+        {
+          "name": "Towel/Gi Row Isometric Hold",
+          "discovery_match": "Matches · Strength"
+        }
+      ]
+    },
+    {
+      "query": "explosive legs",
+      "relevant": [
+        "Box Jump",
+        "Jump Squat",
+        "Trap Bar Jump"
+      ],
+      "exclude": [
+        "Standing Cable Punch Simulation"
+      ],
+      "reason": "Explicit leg/jump context plus power evidence.",
+      "baseline_total": 17,
+      "baseline_anchors_found": [
+        "Box Jump",
+        "Jump Squat",
+        "Trap Bar Jump"
+      ],
+      "baseline_exclusions_found": [],
+      "total": 33,
+      "anchor_ranks": {
+        "Box Jump": 2,
+        "Jump Squat": 5,
+        "Trap Bar Jump": 10
+      },
+      "missed": [],
+      "excluded_found": [],
+      "top_five": [
+        {
+          "name": "Back Squat → Box Jump",
+          "discovery_match": null
+        },
+        {
+          "name": "Box Jump",
+          "discovery_match": null
+        },
+        {
+          "name": "Heavy RDL → Broad Jump",
+          "discovery_match": null
+        },
+        {
+          "name": "Jump Lunge (Alternating)",
+          "discovery_match": null
+        },
+        {
+          "name": "Jump Squat",
+          "discovery_match": null
+        }
+      ]
+    },
+    {
+      "query": "low impact cardio",
+      "relevant": [
+        "Assault Bike Easy Gas Tank Ride",
+        "Air Dyne Bike Aerobic Base"
+      ],
+      "exclude": [
+        "Medicine Ball Hook Throw"
+      ],
+      "reason": "Conditioning classification plus explicit low/zero-impact tag; no injury clearance implied.",
+      "baseline_total": 0,
+      "baseline_anchors_found": [],
+      "baseline_exclusions_found": [],
+      "total": 94,
+      "anchor_ranks": {
+        "Assault Bike Easy Gas Tank Ride": 2,
+        "Air Dyne Bike Aerobic Base": 1
+      },
+      "missed": [],
+      "excluded_found": [],
+      "top_five": [
+        {
+          "name": "Air Dyne Bike Aerobic Base",
+          "discovery_match": "Matches · Low-impact conditioning"
+        },
+        {
+          "name": "Assault Bike Easy Gas Tank Ride",
+          "discovery_match": "Matches · Low-impact conditioning"
+        },
+        {
+          "name": "Assault Bike Rhythm Primer",
+          "discovery_match": "Matches · Low-impact conditioning"
+        },
+        {
+          "name": "Assault Bike Sprint Intervals",
+          "discovery_match": "Matches · Low-impact conditioning"
+        },
+        {
+          "name": "Assault Bike Zone 2 Steady",
+          "discovery_match": "Matches · Low-impact conditioning"
+        }
+      ]
+    }
+  ],
+  "anchors_found": 67,
+  "anchors_total": 67,
+  "exclusions_found": 0,
+  "exclusions_total": 36
+}

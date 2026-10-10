@@ -1,0 +1,19 @@
+.link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: max-content;
+  min-height: 44px;
+  margin-left: auto;
+  padding: 0 12px;
+  border: 1px solid var(--border-default);
+  border-radius: 12px;
+  color: var(--text-primary);
+  font-size: var(--type-body);
+  font-weight: 600;
+  white-space: nowrap;
+}
+.link:hover { background: var(--bg-stat); }
+.link:focus-visible { outline: 2px solid var(--brand-red); outline-offset: 3px; }
+.link svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.7; }
