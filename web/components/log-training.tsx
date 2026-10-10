@@ -90,13 +90,15 @@ function LogTrainingContent({ accessToken, entry, onSaved }: Props & { accessTok
       setOpen(false);
       setSaved(`${row.title} logged successfully. Saved to Training History.`);
     } catch (reason) {
-      if (currentToken.current === token) setError(reason instanceof Error ? reason.message : "Unable to save session. Try again.");
+      if (currentToken.current === token) setError(reason instanceof Error ? reason.message.replace("The plan service", "The training service") : "Unable to save session. Try again.");
     } finally { if (currentToken.current === token) setBusy(false); }
   }
 
   return (
-    <section className={entry ? undefined : styles.training} aria-label={entry ? `Manage ${entry.title}` : "Log Training"}>
-      {entry ? <button className="ghost-button" type="button" onClick={() => startEdit(entry)} aria-haspopup="dialog" aria-label={`Edit ${entry.title}`}>Edit</button> :
+    <div className={entry ? styles.editControl : styles.training} role={entry ? undefined : "region"} aria-label={entry ? `Manage ${entry.title}` : "Log Training"}>
+      {entry ? <button className={styles.editButton} type="button" onClick={() => startEdit(entry)} aria-haspopup="dialog" aria-label={`Edit ${entry.title}`} title="Edit session">
+        <svg className="ex-log-edit-icon" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false"><path d="M4 20h4L18.5 9.5a2.12 2.12 0 0 0-3-3L5 17v3Z" /><path d="m14.5 7.5 3 3" /></svg>
+      </button> :
         <button className={styles.actionRow} type="button" onClick={() => startEdit()} aria-haspopup="dialog" aria-label="Log Training">
           <span><strong>Log Training</strong><span className="muted">Record a session outside Unlxck.</span></span>
           <span aria-hidden="true">+</span>
@@ -134,6 +136,6 @@ function LogTrainingContent({ accessToken, entry, onSaved }: Props & { accessTok
         </dialog>
       ) : null}
       {saved && !entry ? <p className="muted" role="status">{saved}</p> : null}
-    </section>
+    </div>
   );
 }

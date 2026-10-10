@@ -5,7 +5,10 @@ form: activity, whole minutes (1–600, matching the existing session-duration
 boundary), and reported Easy / Moderate / Hard effort. Saving requires neither
 an active plan nor a prescribed session. The existing History page shows completed Unlxck sessions and manual entries,
 with edits/deletion only for manual work. Plan shows a brief save confirmation,
-with no session feed.
+with no session feed. Manual edit/delete controls are a small pencil and adjacent
+Delete action. Those idempotent API operations retry transient gateway/network
+failures using the existing bounded retry helper; permanent errors retain the
+entry and leave the form/action available for retry.
 An optional training-date disclosure allows logging yesterday or earlier work;
 the default form still shows only the three required fields.
 The existing History session tab reads the same service, retaining prescribed

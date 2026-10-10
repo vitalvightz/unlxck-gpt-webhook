@@ -13,3 +13,7 @@
 .dialog { width: min(440px, calc(100vw - 32px)); max-height: calc(100dvh - 32px); overflow-y: auto; box-sizing: border-box; padding: 24px; color: var(--text-primary); background: var(--bg-panel); border: 1px solid var(--border-subtle); border-radius: 16px; }
 .dialog::backdrop { background: rgb(0 0 0 / 75%); }
 .dialog h2 { margin: 0 0 20px; }
+
+.editControl { display: inline-flex; flex: 0 0 auto; }
+.editButton { display: inline-flex; justify-content: center; align-items: center; flex: 0 0 auto; width: 44px; min-height: 44px; padding: 0; border: 0; background: transparent; color: var(--text-muted); cursor: pointer; }
+.editButton:focus-visible { outline: 2px solid var(--brand-red); outline-offset: 2px; }
