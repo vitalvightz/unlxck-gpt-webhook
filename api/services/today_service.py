@@ -57,6 +57,7 @@ from api.contracts.rehab_exposure import injury_evidence_identity
 from api.contracts.landing import LandingDecision, resolve_landing
 from api.contracts.rehab_stage import resolve_rehab_stages
 from api.contracts.readiness_message import (
+    _SESSION_RECENCY_WINDOW_DAYS,
     ReadinessAdjustment,
     ReadinessCheckin,
     ReadinessContext,
@@ -844,7 +845,14 @@ def _readiness_context_and_status(
     if not checkins_ok:
         builder.add(CHECKINS_UNAVAILABLE)
 
-    recent_sessions, completions_ok = _checked_recent_session_completions(store, athlete_id)
+    # Session-level work only. Keep rehab/XP completion reads prescribed-only.
+    from .training_history import training_history
+    try:
+        recent_sessions = training_history(store, athlete_id)
+        completions_ok = True
+    except Exception:
+        logger.exception("[today] training_history_read_failed")
+        recent_sessions, completions_ok = [], False
     if not completions_ok:
         builder.add(COMPLETIONS_UNAVAILABLE)
 
@@ -3091,12 +3099,21 @@ def _build_today_command_view(
             # Readiness follows the already accepted support, not its held
             # coach-led sibling. Reconciliation still freezes and gates it.
             support_projection = accepted_session
-    if active_medical_hold_reasons(open_injuries) or (today_checkin and any(event.get("event_type") == "clinician_clearance_report"
+    recent_manual_work = False
+    if today_checkin:
+        try:
+            # Tombstones trigger a refresh after deletion, but never count as
+            # workload. The boundary tracks outages through its existing floor.
+            first_day = (training_date - timedelta(days=_SESSION_RECENCY_WINDOW_DAYS)).isoformat()
+            recent_manual_work = any(row.get("athlete_id") == athlete_id and first_day <= str(row.get("training_day", "")) <= training_day
+                for row in store.list_external_training_sessions(athlete_id, include_deleted=True))
+        except Exception:
+            logger.exception("[today] external_training_refresh_read_failed")
+    if recent_manual_work or active_medical_hold_reasons(open_injuries) or (today_checkin and any(event.get("event_type") == "clinician_clearance_report"
                              for events in observations_by_injury.values() for event in events)):
-        # Clearance can remove a generic injury floor, while current medical
-        # reports must escalate even without a check-in or clearance report.
-        # Re-evaluate inputs, retaining fatigue, red flags and context fail-safes.
-        # History is unchanged; this is the current execution recommendation.
+        # Reuse the current decision engine when manual work changes its inputs.
+        # Preserve existing injury refresh, accepted prescriptions and fail-safes;
+        # neither the check-in history nor the saved plan is rewritten here.
         decision, _ = _readiness_decision_with_failsafe(
             store, checkin=_stored_readiness_checkin_from(today_checkin or {}), athlete_id=athlete_id,
             plan_row=plan_row, training_day=training_day,

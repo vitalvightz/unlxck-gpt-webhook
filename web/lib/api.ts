@@ -1,3 +1,4 @@
+import type { ExternalTrainingFields, TrainingHistorySession } from "@/lib/training-history";
 import type {
   ApproveAndResumeGenerationRequest,
   AdminAthleteRecord,
@@ -458,6 +459,22 @@ async function readJson<T>(path: string, init?: ApiRequestInit): Promise<T> {
     }
     throw new Error("Server returned an unreadable response.");
   }
+}
+
+export function getTrainingHistory(token: string, includeSkipped = false): Promise<{ sessions: TrainingHistorySession[] }> {
+  return readJson(includeSkipped ? "/api/training/history?include_skipped=true&limit=200" : "/api/training/history", { token });
+}
+
+export function logExternalTraining(token: string, body: ExternalTrainingFields & { client_request_id: string }): Promise<TrainingHistorySession> {
+  return readJson("/api/training/sessions", { method: "POST", token, body: JSON.stringify(body) });
+}
+
+export function editExternalTraining(token: string, id: string, body: ExternalTrainingFields): Promise<TrainingHistorySession> {
+  return readJson(`/api/training/sessions/${encodeURIComponent(id)}`, { method: "PATCH", token, body: JSON.stringify(body) });
+}
+
+export function deleteExternalTraining(token: string, id: string): Promise<void> {
+  return requestVoid(`/api/training/sessions/${encodeURIComponent(id)}`, { method: "DELETE", token });
 }
 
 async function requestVoid(path: string, init?: ApiRequestInit): Promise<void> {

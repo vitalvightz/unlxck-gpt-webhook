@@ -61,7 +61,7 @@ class _BuildReadCache:
 
     def __getattr__(self, name: str) -> Any:
         attr = getattr(self._store, name)
-        if callable(attr) and name in {"get_latest_intake", "list_today_checkins", "list_session_completions"}:
+        if callable(attr) and name in {"get_latest_intake", "list_today_checkins", "list_session_completions", "list_external_training_sessions"}:
             def read(*args: Any, **kwargs: Any) -> Any:
                 key = (name, args, tuple(sorted(kwargs.items())))
                 if key not in self._reads:

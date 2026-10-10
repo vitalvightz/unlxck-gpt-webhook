@@ -9,7 +9,7 @@ import { Skeleton } from "@/components/skeleton";
 import {
   listInjuryFlags,
   listExerciseHistory,
-  listSessionCompletionHistory,
+  getTrainingHistory,
   listSparringLogHistory,
   listTodayCheckinHistory,
 } from "@/lib/api";
@@ -45,8 +45,8 @@ import type {
   ExerciseHistoryResponse,
   SparringLogHistoryResponse,
   TodayCheckinHistoryRecord,
-  TodaySessionCompletionRecord,
 } from "@/lib/types";
+import type { TrainingHistorySession } from "@/lib/training-history";
 import { useTrainingDay } from "@/lib/use-training-day";
 
 type HistoryTab = "sessions" | "exercises" | "sparring" | "checkins" | "injuries";
@@ -138,13 +138,13 @@ function Chips({ chips }: { chips: HistoryChip[] }) {
   );
 }
 
-function SessionRows({ rows, today }: { rows: TodaySessionCompletionRecord[]; today: string | null }) {
+function SessionRows({ rows, today }: { rows: TrainingHistorySession[]; today: string | null }) {
   if (rows.length === 0) {
     return (
       <EmptyState
         eyebrow="Session history"
         title="No sessions logged yet."
-        description="Every session you mark done, modified, or skipped on Today is recorded here with its RPE and reason."
+        description="Completed training from Plan and sessions marked done, modified, or skipped on Today appear here."
         example="Thu 02 Jul 2026: Done · RPE 7/10"
         primaryAction={{ label: "Open Today", href: "/today" }}
       />
@@ -169,13 +169,16 @@ function SessionRows({ rows, today }: { rows: TodaySessionCompletionRecord[]; to
       ) : null}
       <ul className="history-list">
         {rows.map((row) => (
-          <li key={row.id} className="history-row" data-tone={sessionStatusTone(row.status)}>
+          <li key={`${row.source}-${row.id}`} className="history-row" data-tone={sessionStatusTone(row.status)}>
             <div className="history-row-head">
-              <span className="history-row-title">{row.session_title?.trim() || "Session"}</span>
+              <span className="history-row-title">{row.title?.trim() || "Session"}</span>
               <StatusBadge tone={sessionStatusTone(row.status)} label={sessionStatusLabel(row.status)} />
             </div>
             <div className="history-row-meta">
               <RowDate day={row.training_day} today={today} />
+              <span>{row.source === "external" ? "Added by you" : "Unlxck"}</span>
+              {row.duration_minutes ? <span>{row.duration_minutes} min</span> : null}
+              {row.effort ? <span>{row.effort.charAt(0).toUpperCase() + row.effort.slice(1)}</span> : null}
               {row.session_rpe != null ? (
                 <span>
                   RPE {row.session_rpe}/10
@@ -488,7 +491,7 @@ function HistoryContent() {
   const today = trainingDay ? athleteTrainingDayISO(new Date(), me?.profile.athlete_timezone) : null;
 
   const [tab, setTab] = useState<HistoryTab>("sessions");
-  const [sessions, setSessions] = useState<TabData<TodaySessionCompletionRecord[]>>({
+  const [sessions, setSessions] = useState<TabData<TrainingHistorySession[]>>({
     rows: null,
     error: null,
   });
@@ -538,7 +541,7 @@ function HistoryContent() {
     };
 
     if (tab === "sessions") {
-      void load(sessions, listSessionCompletionHistory, setSessions);
+      void load(sessions, async accessToken => (await getTrainingHistory(accessToken, true)).sessions, setSessions);
     } else if (tab === "exercises") {
       if (exerciseOffset !== null && exercises.rows) {
         const previous = exercises.rows;

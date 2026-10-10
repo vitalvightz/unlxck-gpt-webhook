@@ -12,6 +12,7 @@ from dataclasses import dataclass, field, replace
 from datetime import date
 from functools import lru_cache
 from typing import Any, Callable, Literal, Mapping, Sequence
+from fightcamp.completed_workload import completed_workload
 
 RecommendationDecision = Literal["train_as_planned", "modify", "pull_back"]
 SessionRisk = Literal["low", "medium", "high", "unknown"]
@@ -630,27 +631,8 @@ def _pain_worsening_trend(checkin: ReadinessCheckin, prior_rows: Sequence[Mappin
 
 
 def _recent_hard_session_count(context: ReadinessContext) -> int:
-    training_day = _clean(context.training_day)
-    today_date = _parse_iso_day(training_day)
-    count = 0
-    for row in context.recent_sessions[:3]:
-        if today_date is not None:
-            # Only count hard sessions from the recent window — a hard session weeks
-            # ago is not "recent load".
-            delta = _days_before(today_date, _clean(row.get("training_day")))
-            if delta is None or not (0 <= delta <= _SESSION_RECENCY_WINDOW_DAYS):
-                continue
-        try:
-            rpe = int(row.get("session_rpe") if row.get("session_rpe") is not None else row.get("rpe"))
-        except (TypeError, ValueError):
-            rpe = 0
-        try:
-            pain_after = int(row.get("pain_after") or 0)
-        except (TypeError, ValueError):
-            pain_after = 0
-        if rpe >= 8 or pain_after >= 6:
-            count += 1
-    return count
+    return completed_workload(context.recent_sessions, context.training_day,
+        days=_SESSION_RECENCY_WINDOW_DAYS + 1)["demanding_sessions"]
 
 
 def _intake_athlete(context: ReadinessContext) -> Mapping[str, Any]:

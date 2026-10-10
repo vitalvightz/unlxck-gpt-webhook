@@ -14,6 +14,12 @@ from typing import Any, Mapping
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi.responses import Response
+
+from api.contracts.external_training import ExternalTrainingCreate, ExternalTrainingFields, TrainingHistorySession, TrainingHistoryResponse
+from api.services.training_history import (
+    training_history, create_external_training, update_external_training, delete_external_training,
+)
 
 from api.compliance_guards import require_health_feature_access
 from api.compliance import evaluate_profile_compliance
@@ -190,6 +196,48 @@ def _session_history_title(
 
 def build_today_router(*, require_profile, get_store) -> APIRouter:
     router = APIRouter(tags=["today"])
+
+    @router.post("/api/training/sessions", response_model=TrainingHistorySession, status_code=201)
+    def log_external_training(body: ExternalTrainingCreate,
+                              profile: ProfileRecord = Depends(require_profile),
+                              store: AppStore = Depends(get_store)):
+        require_health_feature_access(profile)
+        return create_external_training(store, profile.athlete_id, profile.athlete_timezone, body)
+
+    @router.patch("/api/training/sessions/{entry_id}", response_model=TrainingHistorySession)
+    def edit_external_training(entry_id: UUID, body: ExternalTrainingFields,
+                               profile: ProfileRecord = Depends(require_profile),
+                               store: AppStore = Depends(get_store)):
+        require_health_feature_access(profile)
+        return update_external_training(store, profile.athlete_id, str(entry_id), body)
+
+    @router.delete("/api/training/sessions/{entry_id}", status_code=204)
+    def remove_external_training(entry_id: UUID,
+                                 profile: ProfileRecord = Depends(require_profile),
+                                 store: AppStore = Depends(get_store)):
+        delete_external_training(store, profile.athlete_id, str(entry_id))
+        return Response(status_code=204)
+
+    @router.get("/api/training/history", response_model=TrainingHistoryResponse)
+    def list_training_history(limit: int = Query(default=30, ge=1, le=200), include_skipped: bool = False,
+                              profile: ProfileRecord = Depends(require_profile),
+                              store: AppStore = Depends(get_store)):
+        rows = training_history(store, profile.athlete_id, limit=200, include_skipped=include_skipped)[:limit]
+        plans = {}
+        for row in rows:
+            if row["source"] == "external":
+                continue
+            plan_id = str(row.get("plan_id") or "")
+            if plan_id not in plans:
+                plan = store.get_plan_for_athlete(plan_id, profile.athlete_id)
+                structured = resolve_effective_structured_plan(plan) if plan else None
+                plans[plan_id] = (plan, structured) if plan and structured else None
+            resolved = plans[plan_id]
+            frozen = row.get("prescription_snapshot") or {}
+            row["title"] = (frozen.get("session") or {}).get("title") or (
+                _session_history_title(*resolved, row) if resolved else None) or "Unlxck session"
+            row["id"] = str(row.get("id") or row.get("session_id"))
+        return {"sessions": rows}
 
     @router.post("/api/today/injury-episode-observation")
     def injury_episode_observation(

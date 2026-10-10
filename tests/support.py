@@ -495,6 +495,7 @@ class FakeStore(InMemoryNotificationLedger, FullRowStatusReads):
         self.generation_jobs: dict[str, dict] = {}
         self.today_checkins: dict[str, list[dict]] = {}
         self.session_completions: dict[str, list[dict]] = {}
+        self.external_training_sessions: dict[str, dict] = {}
         self.session_logs: dict[str, list[dict]] = {}
         self.athlete_streak_rows: dict[str, dict] = {}
         self.daily_activity: dict[str, set[str]] = {}
@@ -1967,6 +1968,36 @@ class FakeStore(InMemoryNotificationLedger, FullRowStatusReads):
                     row["updated_at"] = _now()
                 return copy.deepcopy(row)
         return None
+
+    def create_external_training_session(self, athlete_id: str, fields: dict) -> dict:
+        existing = next((row for row in self.external_training_sessions.values()
+                         if row["athlete_id"] == athlete_id and row["client_request_id"] == fields["client_request_id"]), None)
+        if existing:
+            return dict(existing)
+        row = {**fields, "id": str(uuid4()), "athlete_id": athlete_id,
+               "created_at": _now(), "updated_at": _now(), "deleted_at": None}
+        self.external_training_sessions[row["id"]] = row
+        return dict(row)
+
+    def list_external_training_sessions(self, athlete_id: str, *, limit: int = 200, include_deleted: bool = False) -> list[dict]:
+        return sorted((dict(row) for row in self.external_training_sessions.values()
+                       if row["athlete_id"] == athlete_id and (include_deleted or not row.get("deleted_at"))),
+                      key=lambda row: (row["training_day"], row["created_at"]), reverse=True)[:limit]
+
+    def update_external_training_session(self, athlete_id: str, entry_id: str, fields: dict) -> dict | None:
+        row = self.external_training_sessions.get(entry_id)
+        if not row or row["athlete_id"] != athlete_id or row.get("deleted_at"):
+            return None
+        row.update(fields)
+        row["updated_at"] = _now()
+        return dict(row)
+
+    def delete_external_training_session(self, athlete_id: str, entry_id: str) -> bool:
+        row = self.external_training_sessions.get(entry_id)
+        if not row or row["athlete_id"] != athlete_id:
+            return False
+        row["deleted_at"] = row.get("deleted_at") or _now()
+        return True
 
     def list_session_completions(self, athlete_id: str, *, limit: int = 30) -> list[dict]:
         rows = sorted(
