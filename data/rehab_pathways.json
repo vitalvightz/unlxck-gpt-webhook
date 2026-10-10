@@ -113,6 +113,12 @@
       "description": "Reported loading permission and explicit lateral applicability for the supported empty-hand starter; no functional assessment or medical verification claim.",
       "required_input": "Current episode rehabilitation permission and one elbow location answer in existing injury details; reuse valid existing lateral observations when available.",
       "basis": "clinical"
+    },
+    {
+      "checkpoint_id": "ankle_lateral_reported_seated_load_v1",
+      "description": "Eligibility for the seated no-added-resistance lateral-sprain starter, not a function assessment or medical verification.",
+      "required_input": "Current episode loading permission and one clinician-described sprain type answer in existing injury details.",
+      "basis": "clinical"
     }
   ],
   "families": [
@@ -245,7 +251,7 @@
     },
     {
       "policy_id": "ankle_sprain",
-      "version": 4,
+      "version": 5,
       "pathway_family": "ligament_sprain_or_instability",
       "region": "ankle",
       "injury_type": "sprain",
@@ -254,9 +260,13 @@
       "evidence_sources": [
         "https://www.nhs.uk/conditions/sprains-and-strains/",
         "https://www.whittington.nhs.uk/mini-apps/leaflet/Default.asp?id=53&print=1",
-        "https://services.eastcheshire.nhs.uk/physiotherapy-service/self-help/ankle-and-foot-pain-physiotherapy-self-help"
+        "https://services.eastcheshire.nhs.uk/physiotherapy-service/self-help/ankle-and-foot-pain-physiotherapy-self-help",
+        "https://www.jospt.org/doi/10.2519/jospt.2021.0302",
+        "https://www.ouh.nhs.uk/media/i0ldiecy/116454sprain.pdf",
+        "https://msk-bexley.nhs.uk/conditions/foot-and-ankle-pain/ankle-sprain",
+        "https://pmc.ncbi.nlm.nih.gov/articles/PMC8824326/"
       ],
-      "content_hash": "d88c6de44d3cb6e120a86863594525505a03ee37a900e307f5d4ce6b0c9f173b",
+      "content_hash": "fc5631c73f0305a700e555b2e5609a696c4fac376a4ad7f34f1a2dda30f9c9b1",
       "prescriptions": [
         {
           "drill_id": "ankle_sprain_gentle_movement",
@@ -327,6 +337,35 @@
           "sources": [
             "https://services.eastcheshire.nhs.uk/physiotherapy-service/self-help/ankle-and-foot-pain-physiotherapy-self-help"
           ]
+        },
+        {
+          "drill_id": "ankle_sprain_seated_bilateral_heel_raise",
+          "priority": 20,
+          "bank_hash": "358d6b8544800e9a90abc940cce456e30ade19200d824bccd8b78f5653a42d34",
+          "stage": "load",
+          "instructions": "Sit on a stable chair with both feet flat on the floor. Keeping the front of both feet on the floor, slowly raise both heels within a comfortable range and slowly lower them to the floor. Stay seated; no weights, band, pressure on the knees, step, forced range or automatic increase. Follow clinician restrictions. Stop if pain or symptoms worsen during or after the work.",
+          "dose": {
+            "sets": 1,
+            "reps": 10
+          },
+          "allowed_severities": [
+            "low"
+          ],
+          "stop_when": [
+            "Maximum 1 set of 10 once daily, seated with no added resistance or automatic increase.",
+            "Use only a comfortable range within clinician restrictions; stop for pain or worsening during or delayed symptoms.",
+            "Seek assessment for loss of function, inability to bear weight, bony tenderness, deformity, altered sensation, severe swelling or instability.",
+            "This grants no running, jumping, cutting, sparring or contact clearance."
+          ],
+          "frequency": "daily",
+          "minimum_gap_days": 1,
+          "sources": [
+            "https://www.jospt.org/doi/10.2519/jospt.2021.0302",
+            "https://www.ouh.nhs.uk/media/i0ldiecy/116454sprain.pdf",
+            "https://msk-bexley.nhs.uk/conditions/foot-and-ankle-pain/ankle-sprain",
+            "https://pmc.ncbi.nlm.nih.gov/articles/PMC8824326/"
+          ],
+          "required_rehabilitation_level": "loading"
         }
       ],
       "blocked_regions": [
@@ -336,7 +375,8 @@
       "contact_limit": "none",
       "live_stages": [
         "calm",
-        "restore"
+        "restore",
+        "load"
       ],
       "stage_bundles": {
         "restore": [
@@ -344,7 +384,26 @@
           "ankle_sprain_heel_lowering"
         ]
       },
-      "transition_overrides": {}
+      "transition_overrides": {
+        "restore->load": {
+          "reason": "Only the seated no-added-resistance starter for a reported clinician-described uncomplicated lateral sprain, with loading permission and all shared RESTORE exposure/response and safety gates. No grade, fracture exclusion or capacity measurements are inferred.",
+          "add_requirements": [
+            {
+              "requirement_id": "ankle_lateral_reported_seated_load_v1",
+              "kind": "functional_checkpoint",
+              "basis": "clinical",
+              "checkpoint": "ankle_lateral_reported_seated_load_v1",
+              "description": "Reported clinician-described uncomplicated lateral applicability and loading permission for the seated starter; unsupported or conflicting presentations remain blocked.",
+              "sources": [
+                "https://www.jospt.org/doi/10.2519/jospt.2021.0302",
+                "https://www.ouh.nhs.uk/media/i0ldiecy/116454sprain.pdf",
+                "https://msk-bexley.nhs.uk/conditions/foot-and-ankle-pain/ankle-sprain",
+                "https://pmc.ncbi.nlm.nih.gov/articles/PMC8824326/"
+              ]
+            }
+          ]
+        }
+      }
     },
     {
       "policy_id": "hamstring_strain",

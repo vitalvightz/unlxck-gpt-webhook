@@ -75,16 +75,16 @@ def test_every_owned_profile_ranked_by_explicit_judgment_not_candidate_count(rev
 @pytest.mark.parametrize('policy', load_clinical_policies(), ids=lambda p: p.policy_id)
 @pytest.mark.parametrize('base_stage', ['calm', 'restore'])
 def test_all_64_profiles_remain_baseline_only_with_no_advanced_criteria(policy, base_stage):
-    assert set(policy.live_stages) <= ({'calm','restore','load'} if policy.policy_id in {'achilles_tendonitis', 'elbow_tendonitis'} else {'calm','restore'})
+    assert set(policy.live_stages) <= ({'calm','restore','load'} if policy.policy_id in {'achilles_tendonitis', 'elbow_tendonitis', 'ankle_sprain'} else {'calm','restore'})
     assert 'calm' in policy.live_stages
-    assert not any(t.promotable for t in (policy.transitions[1:] if policy.policy_id in {'achilles_tendonitis', 'elbow_tendonitis'} else policy.transitions))
-    assert all(p.stage in ({'calm','restore','load'} if policy.policy_id in {'achilles_tendonitis', 'elbow_tendonitis'} else {'calm','restore'}) for p in policy.prescriptions)
+    assert not any(t.promotable for t in (policy.transitions[1:] if policy.policy_id in {'achilles_tendonitis', 'elbow_tendonitis', 'ankle_sprain'} else policy.transitions))
+    assert all(p.stage in ({'calm','restore','load'} if policy.policy_id in {'achilles_tendonitis', 'elbow_tendonitis', 'ankle_sprain'} else {'calm','restore'}) for p in policy.prescriptions)
     decision = resolve_reviewed_progression(
         {'id': 'injury', 'athlete_id': 'athlete', 'episode_id': 'episode'},
         base_stage=base_stage, policy=policy, exposures=[],
     )
     assert decision['stage'] == base_stage
-    assert all(c.startswith(("achilles_", "lateral_elbow_")) for c in CAPTURED_FUNCTIONAL_CHECKPOINTS)
+    assert all(c.startswith(("achilles_", "lateral_elbow_", "ankle_lateral_")) for c in CAPTURED_FUNCTIONAL_CHECKPOINTS)
 
 
 @pytest.mark.parametrize('name', PROTECTED_PATHS)

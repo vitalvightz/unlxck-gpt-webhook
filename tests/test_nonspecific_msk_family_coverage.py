@@ -295,8 +295,10 @@ def test_previous_48_profiles_and_all_other_bank_hashes_preserved(tmp_path):
     path.write_text(json.dumps(raw), encoding="utf-8")
     old_policies = load_clinical_policies(path)
     for p in old_policies:
-        if p.policy_id in {"achilles_tendonitis", "elbow_tendonitis"}:
-            continue  # The exact policy-v2 activation is covered separately.
+        if p.policy_id in {"achilles_tendonitis", "elbow_tendonitis", "ankle_sprain"}:
+            # Exact versioned activations are covered by their own journey and
+            # baseline tests; every other profile still compares identically.
+            continue
         for stage in ("calm", "restore"):
             for side in ("left", "unknown"):
                 row = injury(p.region, p.injury_type, stage, side=side)

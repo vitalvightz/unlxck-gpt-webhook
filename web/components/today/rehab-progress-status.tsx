@@ -12,6 +12,9 @@ const REQUIREMENTS: Record<string, string> = {
   next_day_response: "Next-day response", functional_checkpoint: "Permission and exercise suitability",
 };
 const REASONS: Record<string, string> = {
+  ankle_uncomplicated_lateral_not_reported: "This starter is for a clinician-described uncomplicated outer ankle sprain. Update the sprain type in Edit injury if you know it; otherwise follow today's guidance.",
+  ankle_conflicting_or_unsupported_presentation: "Your ankle details include another sprain type, instability or a concern needing assessment. Loading stays on hold.",
+  ankle_loading_severity_not_supported: "This starter is only available for a mild uncomplicated sprain. Follow today's conservative guidance.",
   assessment_observation_missing: "LOAD is on hold: your current records do not establish whether this elbow starter is suitable. Clearance and completed rehab cannot confirm grip, movement and tolerance for this exercise. Continue today's guidance.",
   elbow_function_assessment_incomplete: "LOAD is on hold: your current records do not establish whether this elbow starter is suitable. Clearance and completed rehab cannot confirm grip, movement and tolerance for this exercise. Continue today's guidance.",
   elbow_lateral_applicability_not_confirmed: "Confirm the elbow location in Edit injury. This starter is for outside-of-elbow tendon problems only.",

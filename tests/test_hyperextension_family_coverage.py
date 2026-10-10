@@ -239,8 +239,10 @@ def test_previous_31_profiles_hashes_decisions_schedules_and_snapshots_unchanged
     baseline = tmp_path / "before.json"
     baseline.write_text(json.dumps(raw), encoding="utf-8")
     for policy in load_clinical_policies(baseline):
-        if policy.policy_id in {"achilles_tendonitis", "elbow_tendonitis"}:
-            continue  # The exact policy-v2 activation is covered separately.
+        if policy.policy_id in {"achilles_tendonitis", "elbow_tendonitis", "ankle_sprain"}:
+            # Exact versioned activations are covered by their own journey and
+            # baseline tests; every other profile still compares identically.
+            continue
         for stage in ("calm", "restore"):
             for side in ("left", "unknown"):
                 row = injury(policy.region, policy.injury_type, stage, side=side)

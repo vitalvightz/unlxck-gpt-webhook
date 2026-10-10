@@ -79,6 +79,13 @@ def before_achilles_load_activation(pathways, *, preserve_achilles=False):
                 snapshot['functional_checkpoints'].remove(checkpoint)
             if consumer_matches:
                 snapshot['functional_checkpoints'].remove(consumer['checkpoint'])
+    ankle = json.loads((REPO_ROOT / 'tools/rehab_ankle_activation_inventory_baseline.json').read_text(encoding='utf-8'))
+    for index, profile in enumerate(snapshot['profiles']):
+        if (profile['policy_id'] == ankle['historical_profile']['policy_id']
+                and content_hash(profile) == ankle['activated_profile_sha256']
+                and ankle['activated_checkpoint'] in snapshot['functional_checkpoints']):
+            snapshot['profiles'][index] = ankle['historical_profile']
+            snapshot['functional_checkpoints'].remove(ankle['activated_checkpoint'])
     return snapshot
 
 
@@ -93,10 +100,12 @@ def before_elbow_content_addition(bank, ledger):
     revisions = [(manifest['new_drill'], manifest['new_review'])]
     if consumer := manifest.get('consumer_revision'):
         revisions.append((consumer['drill'], consumer['review']))
+    ankle = json.loads((REPO_ROOT / 'tools/rehab_ankle_activation_inventory_baseline.json').read_text(encoding='utf-8'))
+    revisions.append((ankle['new_drill'], ankle['new_review']))
     for drill, review in revisions:
         if review in ledger:
             for group in bank:
-                if group.get('location') == 'elbow' and group.get('type') == 'tendonitis' and drill in group['drills']:
+                if group.get('location') == review['location'] and group.get('type') == review['injury_type'] and drill in group['drills']:
                     group['drills'].remove(drill)
                     ledger.remove(review)
                     break

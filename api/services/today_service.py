@@ -608,6 +608,9 @@ def _with_injury_policy(injuries, *, store, athlete_id, phase="", current_checki
         observations = (observations_by_injury[str(injury["id"])] if observations_by_injury is not None
                         else episode_observations(store, athlete_id, injury))
         row = apply_episode_observations(injury, observations, as_of=as_of)
+        from api.contracts.ankle_restore_load import seated_ankle_multi_injury_hold
+        if seated_ankle_multi_injury_hold(row, injuries):
+            row["restriction_hold"] = True
         exposures = []
         history_truncated = False
         reader = getattr(store, "list_rehab_exposures", None)
@@ -3175,6 +3178,8 @@ def _build_today_command_view(
         equipment = [*equipment, "stable_support"]
     if "table" in (intake.get("equipment_access") or []):
         equipment = [*equipment, "table"]
+    if "chair" in (intake.get("equipment_access") or []):
+        equipment = [*equipment, "chair"]
     # Today logs the entire training day. Reconcile every scheduled block,
     # preserving the primary completion identity and checking sibling demands.
     training_session = _entry_mapping_for_readiness(today_session_entry) if today_session_entry else None

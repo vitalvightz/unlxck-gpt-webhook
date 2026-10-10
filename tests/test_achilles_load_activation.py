@@ -48,7 +48,9 @@ def report_permission(bundle, level, *, scopes=None):
         values["rehabilitation_permission"] = dict(schema_version=1, level=level)
     event = record_episode_observation(bundle[0], athlete_id=bundle[3],
         observation=InjuryEpisodeObservation(**values), training_day=DAY)
-    event["created_at"] = (NOW-timedelta(minutes=1)).isoformat()
+    # Preserve call order in replay: UUID ordering must not choose between two
+    # advice updates artificially recorded at exactly the same instant.
+    event["created_at"] = (NOW-timedelta(minutes=1)+timedelta(microseconds=len(bundle[0].injury_episode_events))).isoformat()
     bundle[0].injury_episode_events[event["id"]] = event
     return event
 

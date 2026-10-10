@@ -38,7 +38,7 @@ def test_families_and_safety_baseline_invent_no_clinical_criteria():
     assert all(r.basis != "clinical" for f in catalog.families for t in f.transitions for r in t.requirements)
     for policy in load_clinical_policies():
         assert [t.key for t in policy.transitions] == ["restore->load", "load->dynamic", "dynamic->return"]
-        if policy.policy_id in {"achilles_tendonitis", "elbow_tendonitis"}:
+        if policy.policy_id in {"achilles_tendonitis", "elbow_tendonitis", "ankle_sprain"}:
             assert policy.transitions[0].promotable and not any(t.promotable for t in policy.transitions[1:])
             assert policy.live_stages == ["calm","restore","load"]
             continue

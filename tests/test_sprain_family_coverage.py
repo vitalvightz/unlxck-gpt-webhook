@@ -161,6 +161,10 @@ def test_whole_family_audit_and_preserved_existing_profile_hashes():
     assert {r["drill_id"] for r in audit} <= bank_ids
     hashes = json.loads((ROOT / "tests/fixtures/rehab_profiles_before_sprain.json").read_text())
     current = {p.policy_id: p.content_hash for p in load_clinical_policies()}
+    # Preserve the original sprain-family migration hash. Only the exact pinned
+    # ankle LOAD delta is projected out; its v5 behaviour is tested separately.
+    from tests.test_rehab_pathway_equivalence import composed
+    current["ankle_sprain"] = next(p.content_hash for p in composed() if p.policy_id == "ankle_sprain")
     assert {k: current[k] for k in hashes} == hashes
 
 

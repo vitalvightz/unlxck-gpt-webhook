@@ -188,3 +188,16 @@ export function stripElbowSite(description: string): string {
 export function writeElbowSite(description: string, site: ElbowSite): string {
   return `${stripElbowSite(description)} [elbow_site:${site}]`;
 }
+
+export type AnkleScope = "uncomplicated_lateral" | "other" | "unknown";
+export function readAnkleScope(description: string): AnkleScope {
+  const matches = [...description.matchAll(/\[ankle_scope:([^\]]*)\]/g)];
+  return matches.length === 1 && ["uncomplicated_lateral", "other", "unknown"].includes(matches[0][1])
+    ? matches[0][1] as AnkleScope : "unknown";
+}
+export function stripAnkleScope(description: string): string {
+  return description.replace(/\s*\[ankle_scope:[^\]]*\]/g, "").trim();
+}
+export function writeAnkleScope(description: string, scope: AnkleScope): string {
+  return `${stripAnkleScope(description)} [ankle_scope:${scope}]`;
+}

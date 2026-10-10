@@ -157,6 +157,35 @@
     },
     {
       "canonical_identity_candidates_to_keep": [
+        "ankle_sprain_seated_bilateral_heel_raise"
+      ],
+      "canonical_region": "ankle",
+      "canonical_regions": [
+        "ankle"
+      ],
+      "classification": "near_duplicate",
+      "cluster_id": "duplicate_5ffeda460866bcc9",
+      "confidence": "requires_variant_review",
+      "drill_ids": [
+        "ankle_sprain_seated_bilateral_heel_raise",
+        "ankle_unspecified_single_leg_heel_raise_with_knee_bend"
+      ],
+      "ids_for_later_deprecation_review": [],
+      "injury_types": [
+        "sprain",
+        "unspecified"
+      ],
+      "preserve_source_history": true,
+      "profile_reference_migration_required": false,
+      "profile_reference_review_required": true,
+      "rationale": "Same movement signal; compare range, equipment, laterality, demand and indication before merging. Different symptom/diagnosis labels retain separate profile ownership.",
+      "recommended_next_action": "Manual comparison only; preserve all identities and exact type/region boundaries. Shared mechanics alone is not clinical interchangeability.",
+      "signals": [
+        "curated_movement_family"
+      ]
+    },
+    {
+      "canonical_identity_candidates_to_keep": [
         "ankle_unspecified_ankle_cars_controlled_articular_rotations"
       ],
       "canonical_region": null,

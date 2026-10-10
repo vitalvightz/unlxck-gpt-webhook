@@ -166,13 +166,16 @@ def resolve_open_injury_rehab_context(
                 episode_id=episode_id,
             ),
         }
-        # The second advanced profile needs the same owned observations Today
-        # evaluates, not a stage stamp that silently drops its functional gate.
+        # Reported-permission profiles need the same owned evidence as Today,
+        # not a stage stamp that silently drops the exercise-suitability gate.
         from api.contracts.rehab_assessment import assessment_identity
-        if assessment_identity(flag) == ("elbow", "tendonitis"):
+        if assessment_identity(flag) in {("elbow", "tendonitis"), ("ankle", "sprain")}:
             from .injury_episode_service import apply_episode_observations, episode_observations, exposure_rows_with_observations
             observations = episode_observations(store, athlete_id, flag)
             context_by_identity[key]["policy_injury"] = apply_episode_observations(flag, observations)
+            from api.contracts.ankle_restore_load import seated_ankle_multi_injury_hold
+            if seated_ankle_multi_injury_hold(flag, flags):
+                context_by_identity[key]["policy_injury"]["restriction_hold"] = True
             window = store.list_rehab_exposures(athlete_id, injury_id=injury_id, injury_episode_id=episode_id)
             context_by_identity[key]["rehab_exposures"] = exposure_rows_with_observations(window.rows, observations)
             context_by_identity[key]["rehab_history_truncated"] = window.history_truncated
@@ -181,7 +184,7 @@ def resolve_open_injury_rehab_context(
                 intake = intake.get("intake") or intake
                 context_by_identity[key]["available_equipment"] = [
                     *(intake.get("equipment") or []),
-                    *(key for key in ("table", "stable_support") if key in (intake.get("equipment_access") or []))]
+                    *(key for key in ("table", "stable_support", "chair") if key in (intake.get("equipment_access") or []))]
     return context_by_identity
 
 

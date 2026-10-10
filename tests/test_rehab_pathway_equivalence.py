@@ -18,7 +18,7 @@ import pytest
 
 from api.contracts.injury_policy import reconcile_session_prescription, resolve_injury_policy
 from api.contracts.rehab_schedule import schedule_rehab
-from fightcamp.rehab_clinical import load_clinical_policies, policy_review_hash
+from fightcamp.rehab_clinical import load_clinical_policies, policy_review_hash, compose_policy
 from fightcamp.rehab_protocols import get_rehab_bank
 from tests.support import FakeStore
 
@@ -34,7 +34,15 @@ def legacy():
 
 
 def composed():
-    return tuple(p for p in load_clinical_policies() if p.policy_id in REGIONS)
+    # This suite pins the original family-composition migration, not subsequent
+    # versioned activations. Subtract only the manifest-pinned activation delta;
+    # new ankle behaviour is covered by test_ankle_load_activation.
+    import json
+    from fightcamp.rehab_pathways import PathwayCatalog
+    from tools.rehab_metadata_review_lib import before_achilles_load_activation
+    raw = json.loads((LEGACY_PATH.parents[2] / "data/rehab_pathways.json").read_text(encoding="utf-8"))
+    catalog = PathwayCatalog.model_validate(before_achilles_load_activation(raw))
+    return tuple(compose_policy(catalog, p) for p in catalog.profiles if p["policy_id"] in REGIONS)
 
 
 def strip(decision):
