@@ -34,9 +34,10 @@ from .clinical_review_validity import ClinicalReviewInput, ReviewReason, evaluat
 from .clinical_progression_review import CLINICAL_REVIEW_REGISTRY
 from .clinician_clearance import LOAD_PERMISSION_CHECKPOINT, achilles_load_permission_reason
 from .lateral_elbow_progression import CRITERION as ELBOW_CRITERION, PERMISSION_CRITERION, evaluate_elbow_entry, evaluate_elbow_permission
+from .ankle_restore_load import CRITERION as ANKLE_CRITERION, evaluate_ankle_permission
 
 CAPTURED_FUNCTIONAL_CHECKPOINTS: frozenset[str] = frozenset(
-    [*(key[0] for key in CLINICAL_REVIEW_REGISTRY._definitions), LOAD_PERMISSION_CHECKPOINT, ELBOW_CRITERION, PERMISSION_CRITERION])
+    [*(key[0] for key in CLINICAL_REVIEW_REGISTRY._definitions), LOAD_PERMISSION_CHECKPOINT, ELBOW_CRITERION, PERMISSION_CRITERION, ANKLE_CRITERION])
 
 PASS, FAIL, UNKNOWN, MISSING_INPUT = "pass", "fail", "unknown", "missing_input"
 
@@ -146,7 +147,13 @@ def evaluate_transition(transition: PathwayTransition, *, policy: ClinicalPolicy
                                    f"observed_response_groups_{count}_of_{requirement.minimum}",
                                    [e for g in performed_groups for e in g.events if e in performed]))
         elif kind == "functional_checkpoint":
-            if (requirement.checkpoint == PERMISSION_CRITERION and policy.policy_id == "elbow_tendonitis"
+            if (requirement.checkpoint == ANKLE_CRITERION and policy.policy_id == "ankle_sprain"
+                    and (transition.from_stage, transition.to_stage) == ("restore", "load")):
+                context = AssessmentContext.from_injury(injury, as_of=as_of,
+                    setback_at=episode_setback_at(injury, exposures), history_truncated=history_truncated)
+                entry = evaluate_ankle_permission(context)
+                results.append(_result(requirement, entry["status"], entry["reason_code"]))
+            elif (requirement.checkpoint == PERMISSION_CRITERION and policy.policy_id == "elbow_tendonitis"
                     and (transition.from_stage, transition.to_stage) == ("restore", "load")):
                 context = AssessmentContext.from_injury(injury, as_of=as_of,
                     setback_at=episode_setback_at(injury, exposures), history_truncated=history_truncated)

@@ -64,7 +64,7 @@ def test_shared_review_passes_only_one_requirement_engine_keeps_other_gates(seco
     assert completed["status"] == "met" and completed["target_stage_live"]
     assert CAPTURED_FUNCTIONAL_CHECKPOINTS == frozenset({
         "achilles_restore_load_clinical_review_v1", "achilles_midportion_reported_load_permission_v1",
-        "lateral_elbow_restore_load_v1", "lateral_elbow_reported_load_permission_v2",
+        "lateral_elbow_restore_load_v1", "lateral_elbow_reported_load_permission_v2", "ankle_lateral_reported_seated_load_v1",
     })
     elbow = next(p for p in load_clinical_policies() if p.policy_id == "elbow_tendonitis")
     checkpoints = [r.checkpoint for r in elbow.transitions[0].requirements if r.kind == "functional_checkpoint"]
@@ -188,7 +188,7 @@ def test_current_frozen_pin_accepts_only_unstarted_work():
 def test_production_catalog_remains_calm_restore_only():
     policies = load_clinical_policies()
     assert len(policies) == 64
-    assert sum(len(p.prescriptions) for p in policies) == 105
-    assert [(p.policy_id,t.key) for p in policies for t in p.transitions if t.promotable] == [("achilles_tendonitis","restore->load"), ("elbow_tendonitis","restore->load")]
-    assert all(set(p.live_stages) <= {"calm", "restore"} for p in policies if p.policy_id not in {"achilles_tendonitis", "elbow_tendonitis"})
+    assert sum(len(p.prescriptions) for p in policies) == 106
+    assert [(p.policy_id,t.key) for p in policies for t in p.transitions if t.promotable] == [("ankle_sprain","restore->load"), ("achilles_tendonitis","restore->load"), ("elbow_tendonitis","restore->load")]
+    assert all(set(p.live_stages) <= {"calm", "restore"} for p in policies if p.policy_id not in {"achilles_tendonitis", "elbow_tendonitis", "ankle_sprain"})
     assert {stage for p in policies for stage in p.live_stages} == {"calm", "restore", "load"}

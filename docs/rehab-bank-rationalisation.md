@@ -2,7 +2,7 @@
 
 ## Executive summary
 
-Current inputs contain **755 groups / 1602 drills**, **64 active profiles**, and **105 unique live MSK identities** (6.55% of the whole bank).
+Current inputs contain **755 groups / 1603 drills**, **64 active profiles**, and **106 unique live MSK identities** (6.61% of the whole bank).
 
 This report is generated read-only: the audit itself never rewrites bank content, review history, profile hashes or stage activation. It describes current selectable inventory; retired exact identities and their complete provenance are preserved separately in data/rehab_archive/exact_duplicates.json when consolidation has been applied. Each retained drill has exactly one primary bucket. Secondary flags overlap; duplicate clusters overlap and must not be summed as distinct drills.
 
@@ -10,7 +10,7 @@ Classification is evidence-backed inventory triage, not a clinical approval of d
 
 | Primary bucket | Drills |
 | --- | ---: |
-| LIVE | 105 |
+| LIVE | 106 |
 | ADVANCED_CANDIDATE | 56 |
 | KEEP_DORMANT | 208 |
 | REPAIR | 1149 |
@@ -18,7 +18,7 @@ Classification is evidence-backed inventory triage, not a clinical approval of d
 | MISPLACED | 17 |
 | DEPRECATE | 67 |
 
-Reviewed: **163 / 1602 (10.17%)**; MSK-only reviewed percentage: **10.88%**. Dormant potentially useful: **88.2%** (ADVANCED_CANDIDATE + KEEP_DORMANT + REPAIR). Likely eventually removable: **4.18%** (DEPRECATE + exact duplicate surplus); MISPLACED means relocation review, not removal.
+Reviewed: **164 / 1603 (10.23%)**; MSK-only reviewed percentage: **10.94%**. Dormant potentially useful: **88.15%** (ADVANCED_CANDIDATE + KEEP_DORMANT + REPAIR). Likely eventually removable: **4.18%** (DEPRECATE + exact duplicate surplus); MISPLACED means relocation review, not removal.
 
 ## Production footprint
 
@@ -26,11 +26,11 @@ Reviewed: **163 / 1602 (10.17%)**; MSK-only reviewed percentage: **10.88%**. Dor
 | --- | ---: |
 | CALM | 64 |
 | RESTORE | 39 |
-| LOAD | 2 |
+| LOAD | 3 |
 | DYNAMIC | 0 |
 | RETURN | 0 |
 
-Active profiles by stages: `{"calm": 26, "calm+restore": 36, "calm+restore+load": 2}`. Reviewed identities referenced by active profiles: **105**. Advanced live profiles: **2**.
+Active profiles by stages: `{"calm": 26, "calm+restore": 35, "calm+restore+load": 3}`. Reviewed identities referenced by active profiles: **106**. Advanced live profiles: **3**.
 
 Reachability means the profile/baseline can select a stage in principle; it is not clearance for every athlete. Severity, red flags, clinician restrictions, side, complete history and setbacks remain authoritative. CALM/RESTORE use the existing report ladder. Advanced availability requires a live target, a promotable clinical transition and captured required checkpoints.
 
@@ -57,7 +57,7 @@ Reachability means the profile/baseline can select a stage in principle; it is n
 | laceration | 20 |
 | pain | 88 |
 | soreness | 78 |
-| sprain | 61 |
+| sprain | 62 |
 | stiffness | 72 |
 | strain | 95 |
 | swelling | 44 |
@@ -70,7 +70,7 @@ Reachability means the profile/baseline can select a stage in principle; it is n
 | Canonical region | Drills |
 | --- | ---: |
 | achilles | 27 |
-| ankle | 49 |
+| ankle | 50 |
 | biceps | 65 |
 | calf | 37 |
 | chest | 30 |
@@ -108,7 +108,7 @@ Reachability means the profile/baseline can select a stage in principle; it is n
 | contusion | 69 |
 | hyperextension_or_joint_trauma | 48 |
 | joint_irritation_or_impingement | 54 |
-| ligament_sprain_or_instability | 133 |
+| ligament_sprain_or_instability | 134 |
 | muscle_strain | 95 |
 | nonspecific_msk_symptoms | 362 |
 | surface_wound_care | 104 |
@@ -121,7 +121,7 @@ Reachability means the profile/baseline can select a stage in principle; it is n
 | --- | ---: |
 | needs_review | 1335 |
 | outside_msk_review_ledger | 104 |
-| reviewed | 163 |
+| reviewed | 164 |
 
 Aliases are resolved by the existing registry: bicep → biceps, hamstrings → hamstring, glutes → glute, lower_back → lower back, upper_back → upper back. The report retains the original group location/index; no bank vocabulary is rewritten.
 
@@ -134,7 +134,7 @@ Aliases are resolved by the existing registry: bicep → biceps, hamstrings → 
 | contusion | 16 | 0 | 5 | 33 | 0 | 0 | 15 |
 | hyperextension_or_joint_trauma | 6 | 0 | 2 | 40 | 0 | 0 | 0 |
 | joint_irritation_or_impingement | 9 | 0 | 3 | 41 | 0 | 0 | 1 |
-| ligament_sprain_or_instability | 21 | 32 | 5 | 70 | 0 | 0 | 5 |
+| ligament_sprain_or_instability | 22 | 32 | 5 | 70 | 0 | 0 | 5 |
 | muscle_strain | 16 | 19 | 4 | 52 | 0 | 0 | 4 |
 | nonspecific_msk_symptoms | 19 | 0 | 31 | 299 | 0 | 1 | 12 |
 | surface_wound_care | 0 | 0 | 103 | 0 | 0 | 0 | 1 |
@@ -146,7 +146,7 @@ Aliases are resolved by the existing registry: bicep → biceps, hamstrings → 
 | Identity | LIVE | ADVANCED_CANDIDATE | KEEP_DORMANT | REPAIR | DUPLICATE_OR_MERGE | MISPLACED | DEPRECATE |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
 | achilles | 3 | 0 | 0 | 24 | 0 | 0 | 0 |
-| ankle | 7 | 4 | 3 | 35 | 0 | 0 | 0 |
+| ankle | 8 | 4 | 3 | 35 | 0 | 0 | 0 |
 | biceps | 5 | 5 | 1 | 53 | 0 | 0 | 1 |
 | calf | 2 | 3 | 1 | 31 | 0 | 0 | 0 |
 | chest | 2 | 2 | 2 | 23 | 0 | 0 | 1 |
@@ -183,7 +183,7 @@ Aliases are resolved by the existing registry: bicep → biceps, hamstrings → 
 | --- | ---: |
 | calm | 64 |
 | dynamic | 5 |
-| load | 55 |
+| load | 56 |
 | missing | 1437 |
 | restore | 41 |
 
@@ -197,7 +197,7 @@ Aliases are resolved by the existing registry: bicep → biceps, hamstrings → 
 | missing | 525 |
 | mobility | 234 |
 | recovery_downregulation | 191 |
-| tendon_loading | 129 |
+| tendon_loading | 130 |
 
 ### equipment
 
@@ -207,7 +207,7 @@ Aliases are resolved by the existing registry: bicep → biceps, hamstrings → 
 | barbell+landmine | 1 |
 | cable_machine | 1 |
 | cable_machine+fat_grip | 1 |
-| chair | 1 |
+| chair | 2 |
 | cloth+wall | 1 |
 | dumbbell | 1 |
 | dumbbell+table | 3 |
@@ -237,7 +237,7 @@ Aliases are resolved by the existing registry: bicep → biceps, hamstrings → 
 | Value | Drills |
 | --- | ---: |
 | low | 38 |
-| minimal | 96 |
+| minimal | 97 |
 | missing | 1437 |
 | moderate | 15 |
 | unknown | 16 |
@@ -247,7 +247,7 @@ Aliases are resolved by the existing registry: bicep → biceps, hamstrings → 
 | Value | Drills |
 | --- | ---: |
 | missing | 1437 |
-| none | 160 |
+| none | 161 |
 | unknown | 5 |
 
 ### velocity
@@ -255,7 +255,7 @@ Aliases are resolved by the existing registry: bicep → biceps, hamstrings → 
 | Value | Drills |
 | --- | ---: |
 | high | 2 |
-| low | 160 |
+| low | 161 |
 | missing | 1437 |
 | moderate | 3 |
 
@@ -266,7 +266,7 @@ Aliases are resolved by the existing registry: bicep → biceps, hamstrings → 
 | bilateral_only | 1 |
 | missing | 104 |
 | not_applicable | 74 |
-| side_specific | 90 |
+| side_specific | 91 |
 | unknown | 1333 |
 
 ### contraction_type
@@ -276,7 +276,7 @@ Aliases are resolved by the existing registry: bicep → biceps, hamstrings → 
 | eccentric | 5 |
 | isometric | 26 |
 | missing | 104 |
-| mixed | 68 |
+| mixed | 69 |
 | unknown | 1399 |
 
 ### sport_specificity
@@ -284,7 +284,7 @@ Aliases are resolved by the existing registry: bicep → biceps, hamstrings → 
 | Value | Drills |
 | --- | ---: |
 | combat_sport | 2 |
-| general_rehab | 163 |
+| general_rehab | 164 |
 | missing | 104 |
 | unknown | 1333 |
 
@@ -293,7 +293,7 @@ Aliases are resolved by the existing registry: bicep → biceps, hamstrings → 
 | Value | Drills |
 | --- | ---: |
 | missing | 104 |
-| none | 165 |
+| none | 166 |
 | unknown | 1333 |
 
 ### target_regions
@@ -301,7 +301,7 @@ Aliases are resolved by the existing registry: bicep → biceps, hamstrings → 
 | Value | Drills |
 | --- | ---: |
 | achilles | 27 |
-| ankle | 47 |
+| ankle | 48 |
 | bicep | 63 |
 | bicep+biceps | 2 |
 | calf | 37 |
@@ -349,6 +349,7 @@ Aliases are resolved by the existing registry: bicep → biceps, hamstrings → 
 | biceps muscle | 6 |
 | biceps muscle region | 1 |
 | biceps tendons | 3 |
+| calf muscle-tendon unit acting at ankle | 1 |
 | chest region soft tissues | 2 |
 | common wrist extensor tendon at elbow | 2 |
 | elbow joint region | 3 |
@@ -408,9 +409,9 @@ Surface loading fields are intentionally absent. Empty equipment lists mean no e
 
 ## Biggest debt areas
 
-- **93 duplicate/near-duplicate/uncertain clusters**, involving **227 unique drills**; kinds: `{"intentionally_distinct": 44, "near_duplicate": 22, "uncertain": 27}`.
+- **94 duplicate/near-duplicate/uncertain clusters**, involving **229 unique drills**; kinds: `{"intentionally_distinct": 44, "near_duplicate": 23, "uncertain": 27}`.
 - **1410** drills contain camp-phase instructions; **1172** contain arrows or hidden progression signals.
-- **117** have mechanism-language or naming flags; kinds: `{"clinically_unsafe_implication": 23, "harmless_naming_debt": 15, "none": 1485, "unsupported_mechanism_language": 79}`.
+- **117** have mechanism-language or naming flags; kinds: `{"clinically_unsafe_implication": 23, "harmless_naming_debt": 15, "none": 1486, "unsupported_mechanism_language": 79}`.
 - **64** have general-training/performance signals. Only explicit indication-free tasks receive primary MISPLACED; a compound lift or mobility exercise is not automatically non-rehab.
 
 ### Hidden progression breakdowns
@@ -504,7 +505,7 @@ Fixed reviewed candidates are mechanically defined movements; their exact region
 | achilles_tendonitis | calm, restore, load | none | 1 | 13 |
 | ankle_impingement | calm, restore | none | 0 | 16 |
 | ankle_instability | calm, restore | ankle_instability_foam_pad_jump_stick, ankle_instability_lateral_hop_stick_drill | 0 | 16 |
-| ankle_sprain | calm, restore | ankle_sprain_banded_ankle_circles, ankle_sprain_single_leg_balance_on_foam_pad | 0 | 16 |
+| ankle_sprain | calm, restore, load | ankle_sprain_banded_ankle_circles, ankle_sprain_single_leg_balance_on_foam_pad | 0 | 16 |
 | biceps_contusion | calm | none | 0 | 19 |
 | biceps_strain | calm, restore | bicep_strain_band_resisted_eccentric_curl, bicep_strain_cable_curl_with_fat_grip, bicep_strain_isometric_bicep_curl_hold_mid_range, bicep_strain_supinated_isometric_elbow_hold | 0 | 19 |
 | biceps_tendonitis | calm, restore | bicep_tendonitis_incline_db_curl_eccentric_focus | 1 | 19 |
@@ -572,7 +573,7 @@ Profiles with no exact-type candidate (regional unassigned inventory may exist):
 
 Profiles with no fixed reviewed advanced inventory: `achilles_tendonitis`, `ankle_impingement`, `biceps_contusion`, `elbow_contusion`, `elbow_hyperextension`, `elbow_impingement`, `elbow_pain`, `elbow_stiffness`, `fingers_contusion`, `fingers_hyperextension`, `fingers_pain`, `fingers_tendonitis`, `forearm_contusion`, `hamstring_strain`, `hand_contusion`, `hand_hyperextension`, `hand_pain`, `hand_tendonitis`, `heel_contusion`, `hip_impingement`, `hip_pain`, `knee_pain`, `lower_back_pain`, `lower_back_stiffness`, `neck_soreness`, `neck_stiffness`, `neck_tightness`, `quads_contusion`, `shin_contusion`, `shoulder_contusion`, `shoulder_hyperextension`, `shoulder_impingement`, `shoulder_pain`, `shoulder_soreness`, `shoulder_tightness`, `toe_hyperextension`, `triceps_contusion`, `wrist_contusion`, `wrist_hyperextension`, `wrist_impingement`, `wrist_pain`, `wrist_stiffness`.
 
-Promotable advanced transitions: **2**. Captured clinical functional checkpoints: `["achilles_midportion_reported_load_permission_v1", "achilles_restore_load_clinical_review_v1", "lateral_elbow_reported_load_permission_v2", "lateral_elbow_restore_load_v1"]`. Captured assessment availability inputs: `["achilles_heel_rise_assessed", "achilles_loading_response_assessed", "achilles_range_load_assessed", "achilles_site_assessed", "lateral_elbow_function_assessed_v1"]`. Which regional strength/function/tolerance tests are necessary remains a literature/clinical decision; the audit does not substitute whole-athlete readiness, elapsed time, session counts or a different input. This audit activates no stage.
+Promotable advanced transitions: **3**. Captured clinical functional checkpoints: `["achilles_midportion_reported_load_permission_v1", "achilles_restore_load_clinical_review_v1", "ankle_lateral_reported_seated_load_v1", "lateral_elbow_reported_load_permission_v2", "lateral_elbow_restore_load_v1"]`. Captured assessment availability inputs: `["achilles_heel_rise_assessed", "achilles_loading_response_assessed", "achilles_range_load_assessed", "achilles_site_assessed", "lateral_elbow_function_assessed_v1"]`. Which regional strength/function/tolerance tests are necessary remains a literature/clinical decision; the audit does not substitute whole-athlete readiness, elapsed time, session counts or a different input. This audit activates no stage.
 
 ## Deprecation candidates
 

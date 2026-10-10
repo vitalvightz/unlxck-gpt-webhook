@@ -60,7 +60,7 @@ test("equipment groups contain every supported option exactly once", () => {
     Combat: ["heavy_bag", "pads", "partner"],
     "Plyometrics & movement": ["box", "agility_ladder", "hurdles", "jump_rope"],
     "Functional & accessories": ["medicine_ball", "sandbag", "bulgarian_bag", "bands", "trx", "pullup_bar", "swiss_ball", "bosu_ball", "neck_harness", "weight_belt", "water_jug"],
-    Recovery: ["foam_roller", "towel", "stable_support", "table"],
+    Recovery: ["foam_roller", "towel", "stable_support", "table", "chair"],
   };
 
   assert.deepEqual(

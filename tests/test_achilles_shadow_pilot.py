@@ -411,9 +411,9 @@ def test_bank_identity_display_mechanics_and_all_live_inventory_unchanged():
     assert drill["name"] == "Floor-level controlled Achilles lowering"
     assert drill["notes"] == OPTION.instructions and content_hash(drill) == OPTION.bank_hash
     assert len(policies) == 64
-    assert len({rx.drill_id for p in policies for rx in p.prescriptions}) == 105
-    assert all(set(p.live_stages) <= {"calm", "restore"} for p in policies if p.policy_id not in {OPTION.profile_id, "elbow_tendonitis"})
-    assert [(p.policy_id,t.key) for p in policies for t in p.transitions if t.promotable] == [(OPTION.profile_id,"restore->load"), ("elbow_tendonitis","restore->load")]
+    assert len({rx.drill_id for p in policies for rx in p.prescriptions}) == 106
+    assert all(set(p.live_stages) <= {"calm", "restore"} for p in policies if p.policy_id not in {OPTION.profile_id, "elbow_tendonitis", "ankle_sprain"})
+    assert [(p.policy_id,t.key) for p in policies for t in p.transitions if t.promotable] == [("ankle_sprain","restore->load"), (OPTION.profile_id,"restore->load"), ("elbow_tendonitis","restore->load")]
     assert OPTION.drill_id in {rx.drill_id for p in policies for rx in p.prescriptions}
     definition = CLINICAL_REVIEW_REGISTRY.current(CRITERION_ID)
     assert definition.profile_ids == frozenset({"achilles_tendonitis"}) and definition.requires_prescription

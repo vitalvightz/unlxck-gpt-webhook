@@ -78,7 +78,7 @@ def test_every_active_prescription_resolves_and_stage_counts_are_unique(inputs, 
             assert row["classification"] == "LIVE" and policy["policy_id"] in row["profile_ids"]
             actual[rx["stage"]].add(rx["drill_id"])
     assert audit[0]["summary"]["live_unique_identities_by_stage"] == {s: len(ids) for s, ids in actual.items()}
-    assert actual["load"] == {"achilles_tendonitis_eccentric_calf_drops_on_step", "elbow_tendonitis_supported_hand_weight_wrist_extension"}
+    assert actual["load"] == {"achilles_tendonitis_eccentric_calf_drops_on_step", "elbow_tendonitis_supported_hand_weight_wrist_extension", "ankle_sprain_seated_bilateral_heel_raise"}
     assert all(not actual[s] for s in ("dynamic", "return"))
 
 
@@ -101,7 +101,7 @@ def test_production_bank_source_history_and_all_64_profiles_unchanged():
     assert {p["policy_id"]: p["content_hash"] for p in historical["profiles"]} == baseline["profile_hashes"]
     assert {p["policy_id"]: hashlib.sha256(json.dumps(p, sort_keys=True, separators=(",", ":")).encode()).hexdigest() for p in historical["profiles"]} == baseline["profile_raw_sha256"]
     for policy in load_clinical_policies():
-        if policy.policy_id in {"achilles_tendonitis", "elbow_tendonitis"}:
+        if policy.policy_id in {"achilles_tendonitis", "elbow_tendonitis", "ankle_sprain"}:
             assert policy.live_stages == ["calm","restore","load"]
             assert not any(t.promotable for t in policy.transitions[1:])
             continue
@@ -144,8 +144,8 @@ def test_dormant_advanced_candidates_do_not_become_prescriptions(audit):
         assert not row["live_progression_path_reachable"]
         assert row["advanced_candidate_assessment"]["readiness_class"] == "GOOD_FIXED_MECHANICS_GATE_NOT_READY"
         assert row["advanced_candidate_assessment"]["safety_blocks"]
-    assert report["summary"]["promotable_advanced_transitions"] == 2
-    assert report["summary"]["profiles_with_load_or_above"] == ["achilles_tendonitis", "elbow_tendonitis"]
+    assert report["summary"]["promotable_advanced_transitions"] == 3
+    assert report["summary"]["profiles_with_load_or_above"] == ["achilles_tendonitis", "ankle_sprain", "elbow_tendonitis"]
 
 
 def test_unassigned_region_inventory_is_visible_without_borrowing_a_diagnosis(audit):

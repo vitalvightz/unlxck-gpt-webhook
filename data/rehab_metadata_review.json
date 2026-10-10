@@ -174,6 +174,39 @@
     "review_version": 1
   },
   {
+    "drill_id": "ankle_sprain_seated_bilateral_heel_raise",
+    "source_hash": "3012dfd5a17ff0518a1b7781c3c740bc9e7c29ed260e3a61b26bab9611e2e044",
+    "location": "ankle",
+    "injury_type": "sprain",
+    "name": "Seated controlled ankle heel raises",
+    "notes": "Sit on a stable chair with both feet flat on the floor. Keeping the front of both feet on the floor, slowly raise both heels within a comfortable range and slowly lower them to the floor. Stay seated; no weights, band, pressure on the knees, step, forced range or automatic increase. Follow clinician restrictions. Stop if pain or symptoms worsen during or after the work.",
+    "movement_archetype": "bodyweight_strength",
+    "proposed": {
+      "rehab_stage": "load",
+      "function": "tendon_loading",
+      "equipment": [
+        "chair"
+      ],
+      "impact": "none",
+      "load": "minimal",
+      "velocity": "low",
+      "target_regions": [
+        "ankle"
+      ],
+      "laterality_applicability": "side_specific",
+      "target_tissues": [
+        "calf muscle-tendon unit acting at ankle"
+      ],
+      "contraction_type": "mixed",
+      "sport_specificity": "general_rehab",
+      "contact_level": "none",
+      "evidence_notes": "OUH NHS ankle-sprain guidance supports seated heel raises with feet flat and slow lowering. Bexley NHS ankle-sprain guidance provides 10 repetitions in a comfortable range. One set, maximum once daily, no added resistance and mild clinician-described uncomplicated lateral presentation are conservative product limits, not validated LOAD thresholds or injury grades. This seated strengthening option does not certify standing weight-bearing tolerance, ROM, strength, stability or sport readiness. Existing RESTORE includes standing tasks; LOAD here is a bounded permission stage, not a claim this movement imposes greater force than every RESTORE task. Sources: https://www.jospt.org/doi/10.2519/jospt.2021.0302, https://www.ouh.nhs.uk/media/i0ldiecy/116454sprain.pdf, https://msk-bexley.nhs.uk/conditions/foot-and-ankle-pain/ankle-sprain, https://pmc.ncbi.nlm.nih.gov/articles/PMC8824326/"
+    },
+    "flags": [],
+    "review_state": "reviewed",
+    "review_version": 1
+  },
+  {
     "drill_id": "toe_hyperextension_towel_scrunches_toe_curls",
     "source_hash": "e553058557c233bd8c3f87c279dcffcebd2bcc3f9c130323fde6950aaa891710",
     "location": "toe",

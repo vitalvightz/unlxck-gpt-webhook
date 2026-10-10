@@ -116,8 +116,8 @@ def test_all_64_profile_decisions_today_and_frozen_work_equal_original(policy, s
     if prior:
         assert reconcile_session_prescription(None, decisions=[after], plan_id='plan', training_day='2026-10-05', frozen=prior) == {
             **reconcile_session_prescription(None, decisions=[before], plan_id='plan', training_day='2026-10-05', frozen=prior)}
-    assert set(policy.live_stages) <= ({'calm','restore','load'} if policy.policy_id in {'achilles_tendonitis', 'elbow_tendonitis'} else {'calm','restore'})
-    assert not any(t.promotable for t in (policy.transitions[1:] if policy.policy_id in {'achilles_tendonitis', 'elbow_tendonitis'} else policy.transitions))
+    assert set(policy.live_stages) <= ({'calm','restore','load'} if policy.policy_id in {'achilles_tendonitis', 'elbow_tendonitis', 'ankle_sprain'} else {'calm','restore'})
+    assert not any(t.promotable for t in (policy.transitions[1:] if policy.policy_id in {'achilles_tendonitis', 'elbow_tendonitis', 'ankle_sprain'} else policy.transitions))
 
 
 @pytest.mark.parametrize('field,value', [

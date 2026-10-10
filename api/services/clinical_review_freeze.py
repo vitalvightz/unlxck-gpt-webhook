@@ -86,7 +86,7 @@ def frozen_review_hold(store, athlete_id, snapshot, *, work_state, as_of=None, r
                     intake = intake.get("intake") or intake
                     if not set(block.get("drill_snapshot", {}).get("equipment") or []) <= set(intake.get("equipment_access") or []):
                         return True
-                    if block.get("policy_id") == "elbow_tendonitis":
+                    if block.get("policy_id") in {"elbow_tendonitis", "ankle_sprain"}:
                         from api.contracts.injury_policy import resolve_injury_policy
                         from fightcamp.rehab_protocols import get_rehab_bank
                         decision = resolve_injury_policy(current,
