@@ -294,3 +294,14 @@ def test_unstarted_work_rechecks_current_stage_evidence_not_just_function():
     assert evaluate_elbow_entry(context(b))["status"] == "pass"
     assert frozen_review_hold(b[0], b[3], live, work_state="unstarted", as_of=NOW)
     assert not frozen_review_hold(b[0], b[3], live, work_state="started", as_of=NOW)
+
+
+def test_elbow_activation_preserves_both_existing_baselines_and_achilles_profile():
+    import json
+    from pathlib import Path
+    root = Path(__file__).resolve().parents[1]
+    manifest = json.loads((root / "tools/rehab_elbow_activation_inventory_baseline.json").read_text(encoding="utf-8"))
+    profiles = json.loads((root / "data/rehab_pathways.json").read_text(encoding="utf-8"))["profiles"]
+    elbow = next(p for p in profiles if p["policy_id"] == "elbow_tendonitis")
+    assert elbow["prescriptions"][:2] == manifest["historical_profile"]["prescriptions"]
+    assert next(p for p in profiles if p["policy_id"] == "achilles_tendonitis")["content_hash"] == "5ff715a474424088cf1549c6b38cc3f1fa51b25b7da118ec1ca767f330d55a1a"

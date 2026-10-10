@@ -122,9 +122,18 @@ def main():
             # reviewed profile, not a legacy SPP-only group label, gates access.
             if region == "wrist":
                 target_group["phase_progression"] = "GPP → SPP → TAPER"
+            placed = False
             for existing_group in bank:
-                existing_group["drills"] = [d for d in existing_group["drills"] if d["id"] != identity]
-            target_group["drills"].append(drill)
+                retained = []
+                for existing in existing_group["drills"]:
+                    if existing["id"] != identity:
+                        retained.append(existing)
+                    elif existing_group is target_group and not placed:
+                        retained.append(drill)
+                        placed = True
+                existing_group["drills"] = retained
+            if not placed:
+                target_group["drills"].append(drill)
             reviewed[identity] = mark_reviewed(target_group, drill, prior)
             prescriptions.append(dict(drill_id=identity, bank_hash=content_hash(drill), stage=stage, instructions=text,
                                       dose=None, allowed_severities=["low", "moderate"], sources=sources,

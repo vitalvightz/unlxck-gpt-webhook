@@ -11,6 +11,7 @@ from fightcamp.rehab_clinical import load_clinical_policies
 from fightcamp.rehab_duplicate_archive import archived_rehab_drill_by_id
 from fightcamp.rehab_protocols import rehab_drill_by_id, rehab_drill_options_for_phase
 from tools.audit_rehab_bank_rationalisation import build_audit
+from tools.rehab_metadata_review_lib import before_elbow_content_addition, before_achilles_load_activation
 from tools.consolidate_rehab_exact_duplicates import (
     consolidate, digest, exactly_interchangeable, main, reconstruct_original, validate_archive,
 )
@@ -25,6 +26,10 @@ def read(name):
 ARCHIVE = read('rehab_archive/exact_duplicates.json')
 ROWS = ARCHIVE['records']
 BANK, LEDGER, PATHWAYS = [read(n + '.json') for n in ('rehab_bank', 'rehab_metadata_review', 'rehab_pathways')]
+# This suite preserves the dated exact-duplicate cleanup, before the separately
+# reviewed elbow addition. The projection accepts exact content/provenance only.
+BANK, LEDGER = before_elbow_content_addition(BANK, LEDGER)
+PATHWAYS = before_achilles_load_activation(PATHWAYS, preserve_achilles=True)
 OLD_BANK, OLD_LEDGER = reconstruct_original(BANK, LEDGER, ARCHIVE)
 INDEX = {d['id']: (g, d) for g in BANK for d in g['drills']}
 
@@ -111,8 +116,8 @@ def test_all_64_profile_decisions_today_and_frozen_work_equal_original(policy, s
     if prior:
         assert reconcile_session_prescription(None, decisions=[after], plan_id='plan', training_day='2026-10-05', frozen=prior) == {
             **reconcile_session_prescription(None, decisions=[before], plan_id='plan', training_day='2026-10-05', frozen=prior)}
-    assert set(policy.live_stages) <= ({'calm','restore','load'} if policy.policy_id == 'achilles_tendonitis' else {'calm','restore'})
-    assert not any(t.promotable for t in (policy.transitions[1:] if policy.policy_id == 'achilles_tendonitis' else policy.transitions))
+    assert set(policy.live_stages) <= ({'calm','restore','load'} if policy.policy_id in {'achilles_tendonitis', 'elbow_tendonitis'} else {'calm','restore'})
+    assert not any(t.promotable for t in (policy.transitions[1:] if policy.policy_id in {'achilles_tendonitis', 'elbow_tendonitis'} else policy.transitions))
 
 
 @pytest.mark.parametrize('field,value', [

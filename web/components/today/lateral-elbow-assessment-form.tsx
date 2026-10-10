@@ -48,7 +48,7 @@ export function LateralElbowAssessmentForm({ injury, token, onRefresh }: {
       if (pending.current?.fingerprint !== fingerprint) pending.current = { fingerprint, id: crypto.randomUUID() };
       await submitInjuryEpisodeObservation(token, { injury_id: injury.id, injury_episode_id: injury.episode_id!,
         event_type: "rehab_progression_assessment", report_id: pending.current.id, assessment });
-      setMessage("Assessment report saved. Your rehab engine checks eligibility.");
+      setMessage("Assessment report saved. Progression requirements updated.");
       await onRefresh(); pending.current = null;
     } catch (e) { setError(e instanceof Error ? e.message : "Could not save assessment."); }
     finally { setBusy(false); }

@@ -447,7 +447,7 @@ def test_22_23_24_load_dynamic_return_remain_production_inaccessible():
     assert MAX_RESOLVABLE_STAGE not in {STAGE_LOAD, STAGE_DYNAMIC, STAGE_RETURN}
     # No shipped policy declares a promotable transition or a live higher stage.
     for policy in load_clinical_policies():
-        if policy.policy_id == "achilles_tendonitis":
+        if policy.policy_id in {"achilles_tendonitis", "elbow_tendonitis"}:
             assert not any(t.promotable for t in policy.transitions[1:])
             assert policy.live_stages == ["calm","restore","load"]
             continue

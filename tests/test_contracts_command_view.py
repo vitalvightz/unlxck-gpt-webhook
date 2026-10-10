@@ -257,6 +257,7 @@ class TestShape:
             "week_summary",
             "quick_actions",
             "live_prescription",
+            "exercise_media",
             "effective_clinician_clearance",
             "delayed_rehab_prompts",
         }

@@ -50,7 +50,7 @@ def pathway_inventory_snapshot(pathways):
     return snapshot
 
 
-def before_achilles_load_activation(pathways):
+def before_achilles_load_activation(pathways, *, preserve_achilles=False):
     """Exact approved activation delta only; preserve dated archive/planning inputs.
 
     Current audits and runtime never use this projection. Any change to the
@@ -61,7 +61,7 @@ def before_achilles_load_activation(pathways):
     snapshot = deepcopy(pathways)
     checkpoint = manifest['activated_checkpoint']
     for index, profile in enumerate(snapshot['profiles']):
-        if (profile['policy_id'] == manifest['historical_profile']['policy_id']
+        if (not preserve_achilles and profile['policy_id'] == manifest['historical_profile']['policy_id']
                 and content_hash(profile) == manifest['activated_profile_sha256']
                 and checkpoint in snapshot.get('functional_checkpoints', [])):
             snapshot['profiles'][index] = manifest['historical_profile']

@@ -208,7 +208,7 @@ def test_previous_37_profiles_hashes_decisions_schedules_and_snapshots_unchanged
     baseline = tmp_path / "before.json"
     baseline.write_text(json.dumps(raw), encoding="utf-8")
     for policy in load_clinical_policies(baseline):
-        if policy.policy_id == "achilles_tendonitis":
+        if policy.policy_id in {"achilles_tendonitis", "elbow_tendonitis"}:
             continue  # The exact policy-v2 activation is covered separately.
         for stage in ("calm", "restore"):
             for side in ("left", "unknown"):

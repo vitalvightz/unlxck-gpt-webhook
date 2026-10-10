@@ -1,6 +1,6 @@
 # Lateral elbow RESTORE to LOAD implementation
 
-Base: Main `8d125da5`. PR #2802 was confirmed merged before work began. This change activates one bounded option through the existing engine; production activation requires merging and deploying the PR.
+Started from Main `8d125da5`, then rebased onto latest Main `699c9401` (#2803). PR #2802 was confirmed merged before work began. This change activates one bounded option through the existing engine; production activation requires merging and deploying the PR.
 
 ## 1. Exact applicability
 
