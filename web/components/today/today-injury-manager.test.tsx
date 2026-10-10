@@ -1511,7 +1511,28 @@ test("switching away from Other drops its specific type", async () => {
 });
 
 
-for (const [area, policyId] of [["Achilles", "achilles_tendonitis"], ["elbow", "elbow_tendonitis"]] as const) {
+test("ankle editor adds one occasional subtype answer, defaults unknown, and hides internal markers", async () => {
+  const { calls, restore } = stubCheckin();
+  const { container, root } = mountMain([mainInjury({ body_area: "Left ankle", description: "sprain [training_impact:limiting] [ankle_scope:unknown]" })]);
+  try {
+    assert.doesNotMatch(container.textContent ?? "", /ankle_scope/);
+    const summaryRow = container.querySelector<HTMLButtonElement>(".today-injury-summary-row");
+    if (summaryRow?.getAttribute("aria-expanded") === "false") await click(summaryRow);
+    await click(button(container, "Edit"));
+    assert.match(container.textContent ?? "", /What type of sprain did your clinician describe\?/);
+    assert.equal(container.querySelector('input[type="datetime-local"]'), null);
+    assert.equal(container.querySelector('select'), null);
+    assert.doesNotMatch(container.textContent ?? "", /Balance score|ROM measurement|Assessment date/);
+    await click(button(container, "Uncomplicated outer ankle sprain"));
+    const form = container.querySelector("form")!;
+    await act(async () => form.dispatchEvent(new window.Event("submit", { bubbles: true, cancelable: true })));
+    const saved = (calls[0].injuries as Array<{ description: string }>)[0].description;
+    assert.equal(saved, "sprain [training_impact:limiting] [ankle_scope:uncomplicated_lateral]");
+    assert.equal(calls.length, 1);
+  } finally { restore(); unmountMain(container, root); }
+});
+
+for (const [area, policyId] of [["Achilles", "achilles_tendonitis"], ["elbow", "elbow_tendonitis"], ["ankle", "ankle_sprain"]] as const) {
 for (const [label, status, response] of [["Better", "improving", "better"], ["Same", "ongoing", "same"], ["Worse", "worse", "worse"]] as const) {
 test(`${area} Today has no worksheet and one ${label} tap records the injury and episode-bound next-day response`, async () => {
   const { container, root, cleanup } = mount();

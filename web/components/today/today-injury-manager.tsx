@@ -25,6 +25,7 @@ import {
   composeTodayInjuryDescription,
   readAchillesSite, stripAchillesSite, writeAchillesSite, type AchillesSite,
   readElbowSite, stripElbowSite, writeElbowSite, type ElbowSite,
+  readAnkleScope, stripAnkleScope, writeAnkleScope, type AnkleScope,
   getTodayOtherInjuryTypes,
   readTodayOtherInjuryType,
   isInjuryEntryLimited,
@@ -335,6 +336,7 @@ export function TodayInjuryManager({
   const [newDetail, setNewDetail] = useState("");
   const [achillesSite, setAchillesSite] = useState<AchillesSite>("unknown");
   const [elbowSite, setElbowSite] = useState<ElbowSite>("unknown");
+  const [ankleScope, setAnkleScope] = useState<AnkleScope>("unknown");
   // Whether the last edit hit the word/character cap, so the hint can explain the
   // trim instead of a word silently vanishing.
   const [areaLimited, setAreaLimited] = useState(false);
@@ -543,6 +545,7 @@ export function TodayInjuryManager({
       let description = writeInjuryImpact(composeTodayInjuryDescription({ injuryType: newType, otherType: newOtherType, detail: newDetail }), newImpact);
       if (/achilles/i.test(area)) description = writeAchillesSite(description, achillesSite);
       if (/elbow/i.test(area) && newOtherType === "tendonitis") description = writeElbowSite(description, elbowSite);
+      if (/ankle/i.test(area) && newOtherType === "sprain") description = writeAnkleScope(description, ankleScope);
       // Whatever open injury the reconcile returns that was not here before this
       // add is the flag it just created — that is how we find it to route on.
       const previousIds = new Set(openInjuries.map((injury) => injury.id));
@@ -556,7 +559,7 @@ export function TodayInjuryManager({
       setBodyMapVisible(true);
       setNewType(NO_TODAY_INJURY_TYPE);
       setNewOtherType("");
-      setNewDetail(""); setAchillesSite("unknown"); setElbowSite("unknown");
+      setNewDetail(""); setAchillesSite("unknown"); setElbowSite("unknown"); setAnkleScope("unknown");
       setAreaLimited(false);
       setDetailLimited(false);
       setNewZone("");
@@ -606,7 +609,7 @@ export function TodayInjuryManager({
     setBodyMapVisible(true);
     setNewType(NO_TODAY_INJURY_TYPE);
     setNewOtherType("");
-    setNewDetail(""); setAchillesSite("unknown"); setElbowSite("unknown");
+    setNewDetail(""); setAchillesSite("unknown"); setElbowSite("unknown"); setAnkleScope("unknown");
     setAreaLimited(false);
     setDetailLimited(false);
     setAddMissing(null);
@@ -689,7 +692,8 @@ export function TodayInjuryManager({
                       setNewImpact(impact?.value ?? "");
                       setAchillesSite(readAchillesSite(injury.description ?? ""));
                       setElbowSite(readElbowSite(injury.description ?? ""));
-                      const description = stripElbowSite(stripAchillesSite(writeInjuryImpact(injury.description ?? "", "")));
+                      setAnkleScope(readAnkleScope(injury.description ?? ""));
+                      const description = stripAnkleScope(stripElbowSite(stripAchillesSite(writeInjuryImpact(injury.description ?? "", ""))));
                       const otherType = readTodayOtherInjuryType(description);
                       const type = otherType ? undefined : TODAY_INJURY_TYPE_OPTIONS.find((option) => option.value !== "other" && new RegExp(`\\b${option.value}\\b`, "i").test(description));
                       const typeWord = otherType ? TODAY_OTHER_INJURY_TYPES[otherType].word : type?.value;
@@ -1038,6 +1042,12 @@ export function TodayInjuryManager({
           value={elbowSite}
           options={[{ value: "lateral", label: "Outside of elbow" }, { value: "other", label: "Elsewhere" }, { value: "unknown", label: "Not sure" }]}
           onChange={value => setElbowSite(value as ElbowSite)}
+        /> : null}
+        {/ankle/i.test(newArea) && newOtherType === "sprain" ? <SegmentGroup
+          label="What type of sprain did your clinician describe?"
+          value={ankleScope}
+          options={[{ value: "uncomplicated_lateral", label: "Uncomplicated outer ankle sprain" }, { value: "other", label: "Another type" }, { value: "unknown", label: "Not sure" }]}
+          onChange={value => setAnkleScope(value as AnkleScope)}
         /> : null}
         <div ref={impactGroupRef} className="injury-impact-input">
           <SegmentGroup label="How much is it affecting you?" value={newImpact}

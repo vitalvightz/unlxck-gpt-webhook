@@ -1,0 +1,249 @@
+{
+  "historical_profile": {
+    "policy_id": "ankle_sprain",
+    "version": 4,
+    "pathway_family": "ligament_sprain_or_instability",
+    "region": "ankle",
+    "injury_type": "sprain",
+    "status": "active",
+    "activation": "live",
+    "evidence_sources": [
+      "https://www.nhs.uk/conditions/sprains-and-strains/",
+      "https://www.whittington.nhs.uk/mini-apps/leaflet/Default.asp?id=53&print=1",
+      "https://services.eastcheshire.nhs.uk/physiotherapy-service/self-help/ankle-and-foot-pain-physiotherapy-self-help"
+    ],
+    "content_hash": "d88c6de44d3cb6e120a86863594525505a03ee37a900e307f5d4ce6b0c9f173b",
+    "prescriptions": [
+      {
+        "drill_id": "ankle_sprain_gentle_movement",
+        "bank_hash": "9ad8cc97eb7320cecee9148ad339c1d5580b0923417f6a048ecaf68929e4c440",
+        "stage": "calm",
+        "instructions": "Once the ankle is less painful, sit with the foot supported and gently move it up and down or trace the alphabet. Start with a small comfortable amount and build gradually. Keep within a comfortable range; do not force movement.",
+        "dose": null,
+        "camp_doses": {},
+        "readiness_doses": {},
+        "allowed_severities": [
+          "low",
+          "moderate"
+        ],
+        "stop_when": [
+          "Stop if pain prevents comfortable movement or symptoms worsen.",
+          "Seek help for severe or worsening pain, swelling or inability to use the area."
+        ],
+        "frequency": "daily",
+        "minimum_gap_days": 1,
+        "priority": 0,
+        "sources": [
+          "https://www.nhs.uk/conditions/sprains-and-strains/",
+          "https://www.whittington.nhs.uk/mini-apps/leaflet/Default.asp?id=53&print=1"
+        ]
+      },
+      {
+        "drill_id": "ankle_sprain_supported_balance",
+        "bank_hash": "f00f718eb8220c4f7ff0539627368fe22f7218b81b8ee82d3fad9d567276eae3",
+        "stage": "restore",
+        "instructions": "When standing and weight bearing are comfortable, practise balancing on the affected leg on firm ground, close to a stable counter for support. Start with a short comfortable attempt and build gradually. Keep support available; do not use a cushion or close your eyes.",
+        "dose": null,
+        "camp_doses": {},
+        "readiness_doses": {},
+        "allowed_severities": [
+          "low",
+          "moderate"
+        ],
+        "stop_when": [
+          "Stop if pain prevents comfortable movement or symptoms worsen.",
+          "Seek help for severe or worsening pain, swelling or inability to use the area."
+        ],
+        "frequency": "daily",
+        "minimum_gap_days": 1,
+        "priority": 5,
+        "sources": [
+          "https://www.whittington.nhs.uk/mini-apps/leaflet/Default.asp?id=53&print=1"
+        ]
+      },
+      {
+        "drill_id": "ankle_sprain_heel_lowering",
+        "bank_hash": "c932d4b2b5a7bbfe4fbc77249ed2056cea2416add6982a3a5c84bc38cb5445ea",
+        "stage": "restore",
+        "instructions": "When weight bearing and gentle calf movement are comfortable, use a stable support and practise controlled heel lowering as shown in the linked ankle rehabilitation guidance. Work at your own pace, up to 2 sets on alternate days. The source gives no repetition target; stop before symptoms worsen.",
+        "dose": null,
+        "camp_doses": {},
+        "readiness_doses": {},
+        "allowed_severities": [
+          "low",
+          "moderate"
+        ],
+        "stop_when": [
+          "Stop if pain prevents comfortable movement or symptoms worsen.",
+          "Seek help for severe or worsening pain, swelling or inability to use the area."
+        ],
+        "frequency": "daily",
+        "minimum_gap_days": 2,
+        "priority": 10,
+        "sources": [
+          "https://services.eastcheshire.nhs.uk/physiotherapy-service/self-help/ankle-and-foot-pain-physiotherapy-self-help"
+        ]
+      }
+    ],
+    "blocked_regions": [
+      "ankle"
+    ],
+    "blocked_tags": [],
+    "contact_limit": "none",
+    "live_stages": [
+      "calm",
+      "restore"
+    ],
+    "stage_bundles": {
+      "restore": [
+        "ankle_sprain_supported_balance",
+        "ankle_sprain_heel_lowering"
+      ]
+    },
+    "transition_overrides": {}
+  },
+  "activated_profile_sha256": "860082415b7b7822251ef9a3fca41d785f0e4d235bbbe12a303a5e39874ff292",
+  "activated_checkpoint": {
+    "checkpoint_id": "ankle_lateral_reported_seated_load_v1",
+    "description": "Eligibility for the seated no-added-resistance lateral-sprain starter, not a function assessment or medical verification.",
+    "required_input": "Current episode loading permission and one clinician-described sprain type answer in existing injury details.",
+    "basis": "clinical"
+  },
+  "new_drill": {
+    "id": "ankle_sprain_seated_bilateral_heel_raise",
+    "name": "Seated controlled ankle heel raises",
+    "notes": "Sit on a stable chair with both feet flat on the floor. Keeping the front of both feet on the floor, slowly raise both heels within a comfortable range and slowly lower them to the floor. Stay seated; no weights, band, pressure on the knees, step, forced range or automatic increase. Follow clinician restrictions. Stop if pain or symptoms worsen during or after the work.",
+    "rehab_stage": "load",
+    "function": "tendon_loading",
+    "equipment": [
+      "chair"
+    ],
+    "dose": {
+      "sets": 1,
+      "reps": 10
+    },
+    "impact": "none",
+    "load": "minimal",
+    "velocity": "low",
+    "pain_ceiling": "unrestricted",
+    "allowed_severities": [
+      "low"
+    ],
+    "progress_when": [],
+    "regress_when": [
+      "Symptoms worsen: stop loading and follow conservative guidance."
+    ],
+    "stop_when": [
+      "Stop for pain or worsening during or delayed symptoms. Follow clinician restrictions."
+    ],
+    "target_regions": [
+      "ankle"
+    ],
+    "laterality_applicability": "side_specific",
+    "target_tissues": [
+      "calf muscle-tendon unit acting at ankle"
+    ],
+    "contraction_type": "mixed",
+    "sport_specificity": "general_rehab",
+    "contact_level": "none",
+    "evidence_notes": "OUH NHS ankle-sprain guidance supports seated heel raises with feet flat and slow lowering. Bexley NHS ankle-sprain guidance provides 10 repetitions in a comfortable range. One set, maximum once daily, no added resistance and mild clinician-described uncomplicated lateral presentation are conservative product limits, not validated LOAD thresholds or injury grades. This seated strengthening option does not certify standing weight-bearing tolerance, ROM, strength, stability or sport readiness. Existing RESTORE includes standing tasks; LOAD here is a bounded permission stage, not a claim this movement imposes greater force than every RESTORE task. Sources: https://www.jospt.org/doi/10.2519/jospt.2021.0302, https://www.ouh.nhs.uk/media/i0ldiecy/116454sprain.pdf, https://msk-bexley.nhs.uk/conditions/foot-and-ankle-pain/ankle-sprain, https://pmc.ncbi.nlm.nih.gov/articles/PMC8824326/"
+  },
+  "new_review": {
+    "drill_id": "ankle_sprain_seated_bilateral_heel_raise",
+    "source_hash": "3012dfd5a17ff0518a1b7781c3c740bc9e7c29ed260e3a61b26bab9611e2e044",
+    "location": "ankle",
+    "injury_type": "sprain",
+    "name": "Seated controlled ankle heel raises",
+    "notes": "Sit on a stable chair with both feet flat on the floor. Keeping the front of both feet on the floor, slowly raise both heels within a comfortable range and slowly lower them to the floor. Stay seated; no weights, band, pressure on the knees, step, forced range or automatic increase. Follow clinician restrictions. Stop if pain or symptoms worsen during or after the work.",
+    "movement_archetype": "bodyweight_strength",
+    "proposed": {
+      "rehab_stage": "load",
+      "function": "tendon_loading",
+      "equipment": [
+        "chair"
+      ],
+      "impact": "none",
+      "load": "minimal",
+      "velocity": "low",
+      "target_regions": [
+        "ankle"
+      ],
+      "laterality_applicability": "side_specific",
+      "target_tissues": [
+        "calf muscle-tendon unit acting at ankle"
+      ],
+      "contraction_type": "mixed",
+      "sport_specificity": "general_rehab",
+      "contact_level": "none",
+      "evidence_notes": "OUH NHS ankle-sprain guidance supports seated heel raises with feet flat and slow lowering. Bexley NHS ankle-sprain guidance provides 10 repetitions in a comfortable range. One set, maximum once daily, no added resistance and mild clinician-described uncomplicated lateral presentation are conservative product limits, not validated LOAD thresholds or injury grades. This seated strengthening option does not certify standing weight-bearing tolerance, ROM, strength, stability or sport readiness. Existing RESTORE includes standing tasks; LOAD here is a bounded permission stage, not a claim this movement imposes greater force than every RESTORE task. Sources: https://www.jospt.org/doi/10.2519/jospt.2021.0302, https://www.ouh.nhs.uk/media/i0ldiecy/116454sprain.pdf, https://msk-bexley.nhs.uk/conditions/foot-and-ankle-pain/ankle-sprain, https://pmc.ncbi.nlm.nih.gov/articles/PMC8824326/"
+    },
+    "flags": [],
+    "review_state": "reviewed",
+    "review_version": 1
+  },
+  "unchanged_profiles_sha256": {
+    "chest_strain": "19050cdf7574d5604b292d8ad0a535794d2da4b31ac3a4a1e30ca3303e6677db",
+    "hamstring_strain": "b1e01ef5fad679df998b314913559d4de5ac3ae55897a1d6c0e7d2541e5c113a",
+    "calf_strain": "0229e381a4357f49e83e97fee2ac1f326adff2cb4f9565acd3aca873d7f4c1c9",
+    "groin_strain": "b3f6e366edcdfc07909bc8c3fce067da8b23cb29d4e09cc6a25463779ac026a7",
+    "quads_strain": "604e9378fbb2cda509a753ca607f44715241c8f879744c5495d523567f393f41",
+    "biceps_strain": "b6ca61f91759b478b32f2019e9634f708c3357f37f8b3205b393e1ccd89c0f0e",
+    "triceps_strain": "d3fdfac641a853f8675ab0d25365776a93dba57c3c6805d644a26c02c08d6564",
+    "shoulder_strain": "6c1bd3986816e67e1366acecad21284c15396dfdd51fcda86be04082eaa25789",
+    "ankle_instability": "b238f290a2cfd2de7a0e261fab1162e3489606680277a15a7f4694a0d8182409",
+    "knee_instability": "396566372754e42150f2893b27fd1106f89928297c0f287b9743d173f9a5c830",
+    "toe_sprain": "7f28bb72225a5f75f27a5f109e473d4d4212a2e0c64e243ef5666e0f8b1994e6",
+    "wrist_sprain": "85041d43bc8b592c231aa07ee15be7e06502b7c9fc3c7c3b2c8f5849b1845c54",
+    "elbow_sprain": "076d4f178d3c7e4a8c4444799aa3acf3caf45879da78f52a05f104b9f9b434d1",
+    "shoulder_sprain": "b0490bf9e2eac56d8c5852ed14f61388fe628b8f6f40e0d52d898cf2b0652be9",
+    "shoulder_instability": "990895b897ea1000c1666347ab7465c6fa73aa1d825ba300f7bad99e9f5a48ff",
+    "hand_sprain": "a81ccebf8493e1d8a4e786defdc51252a4056eb3573448ffb20fb78be8e7f150",
+    "fingers_sprain": "35eaf39213d4dc6a0511eb050448a2c4fea70e3615b41d562e5d914d74cf7a5c",
+    "achilles_tendonitis": "0297b3c134bd0be38dabd83bd1ed91bc1dbc4cbf1d764fb52e6fa3ab4767d701",
+    "shoulder_tendonitis": "03c808ebf2cf424321473642de68e57f0d9c63d241d048232102a349158faaae",
+    "biceps_tendonitis": "210b258d508b23403564cdc85ca287a40341b70f519e2dc34c335b0a5c16269d",
+    "forearm_tendonitis": "09e1d89a7929f76bf70543cfc28912e175ebeebbf71f41ec0e0da2453edb9a89",
+    "elbow_tendonitis": "67553c8c5d9c066d205f52eb27943561da2944819380cd45404824394275289f",
+    "wrist_tendonitis": "0d6bd594e9da9096687a39f3fa32b680ac088145431fe8d29de01219c9fbf976",
+    "hand_tendonitis": "4394ba67e9fceb6c16edd7ebd83e4b51240a18b2b5a0704d0829ede467cf628e",
+    "fingers_tendonitis": "658edeb331973ee9225c0ebf49240e80cb09fc40bb5d189826546034823c9787",
+    "shoulder_impingement": "9428e6587cf39eee17e85a5adc8256bc38abf2ff4e94ce8a1ef44a672aef212b",
+    "hip_impingement": "4f61eee1d728888e1657cbaab2b98dfcf3a39e5b04cbcf954c390b0355d51593",
+    "ankle_impingement": "3df70359298c12b88d779765856d8950cbd5e2c919bdfe88c72dff5cb3c6b1b6",
+    "elbow_impingement": "d0929cebc425c804c3bf173b58945dbd30005459a89a6444b55fccb047c63e10",
+    "wrist_impingement": "9b668ffb11118073a3332f0214812380c5ba15589cd1c8fc63bff5d015ec355e",
+    "toe_hyperextension": "f823a134d987e05c7b1238cc95755cba63f972c575b4bd8649af3b66d67c1c4a",
+    "fingers_hyperextension": "446bb0f55a9fed04a824b755dd4d3562db5a0f07732422704f7e2b391e2f1872",
+    "elbow_hyperextension": "bcf629e58cc62829e95f8f0ce6b92a082b400680718757eb067d32cd46dd19ac",
+    "wrist_hyperextension": "d7a8de43e0318374125f95607bca6f7039a0c6c003a29c6f04045432074a0c20",
+    "hand_hyperextension": "6cf6076614ee034fe65a49798bf4ff7ccc5ec92d93cd6019eb28cc32472ebac4",
+    "shoulder_hyperextension": "2cefb39c28534ade1d8425fa96b124013ce69bf649ae0067051a34c3a42d87ce",
+    "heel_contusion": "9fa04c161d9df7c63f7696c5b804ce9f7997ddc8a0138052c18ae3a6361bb7cb",
+    "shin_contusion": "ebeb22357b8f6493ac205e4b88a293bf3825b0973ec125a93cb4e076f92b8572",
+    "quads_contusion": "6b242323090b8854e6241ea043f22adcf9c6a9094416496b51f0561e6d5f2279",
+    "biceps_contusion": "c07bdc7c92c9c0cd111c949c5590801616930b107324f0340edb5fad396e44a3",
+    "triceps_contusion": "52985d4fd08773e1238e30c9e8357b781eadb9519f750b81306ee72ffc21a592",
+    "forearm_contusion": "fc3907fea03d7ba5911dbd5f1b088ff88d4d6929df94cfb08314dbd25eaaecff",
+    "shoulder_contusion": "eda45d3cd3da4d26ab3f03d9abd66dd03fda03318b91c1efdf9939b1b27a05e8",
+    "elbow_contusion": "16a614b4938233a54c453b08c94a064b4d4a857a054ce2e6ddb02a77e55e7df4",
+    "wrist_contusion": "28e661fa39582dfe7b5aecf9832fd0bc58adf1ac0e471995f57468010ebd2f9a",
+    "hand_contusion": "4990ead7253ed49a09af2ed05bfc0eb9143e8d08522aeb24f8651cd82e839714",
+    "fingers_contusion": "d129fc5361f4f51bc74ef2c6a2d14373bdbe2fe9d8c1a3a9bb850870cd152855",
+    "shoulder_pain": "900f1d1d01a6d777147d81345d579414459581dbd5e5b8c9c26807b7c51d0d0d",
+    "elbow_pain": "82e9fbf923c0bcd0dc130beb10fdcc2a0fc6fc0930bac36f14435d34c909cb4f",
+    "wrist_pain": "7f1a22feadf6ab8d6df3bc429b12b5e20bef2ce2a332310702a943b906b633a9",
+    "hand_pain": "a32a548babf93e9b08cfe6ac3de1c2b84fa9cb1ac20dddcca540fa9d648047ad",
+    "fingers_pain": "321f34ebab3288db5e9e5c3df8ab7e15e2806a811db0381806604359e261ce17",
+    "knee_pain": "0a380931d551a33e512263376e3578d8342b8a7b470d8ecaccd07ba644ef5fad",
+    "hip_pain": "8faaaecc6625bc03b383faa697c28ef22bebdad61dc09c21ea7a8cd5dbbfae5a",
+    "lower_back_pain": "cfdf842a75dc7dcafd406d8beb06b6fb306a001b71b63fa22eb2917de971f71f",
+    "neck_stiffness": "d54e4f0621bc991d9cbcebf3783388f6c0926ae7a85940609fcd56116dabe44c",
+    "elbow_stiffness": "6a067c0c2d4a9ef5e19cfd07182bc1c0868af16c31b9183b0a0b19f7b9ca8284",
+    "wrist_stiffness": "07044650cb70014fcbdd90d2950e62318fdd3936696c1f2b71cb6db439937bee",
+    "lower_back_stiffness": "466852716953c53d3d0f769c9e5da70a5b1f7fe93a0ed640ff178fcea326dbd2",
+    "neck_tightness": "4a435088da3fc20f08a8ba1db71730fe9746e94c77737e519b09235c6b990ff6",
+    "shoulder_tightness": "229be1cda33ef3846858aa51dab6e802d980b88215b93199e1520ce5d031461c",
+    "neck_soreness": "5abd96932300b254c80a5b542c2da179ad726d73acf66e385b1660de084418f8",
+    "shoulder_soreness": "aaf167ee489e9a54d9fc75cb6039318e2f8d73489b12720a9d41bf20ddbbf4f5"
+  }
+}

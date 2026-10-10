@@ -89,6 +89,16 @@ test("isInjuryEntryLimited flags only entries that were actually trimmed", () =>
   assert.equal(isInjuryEntryLimited("back of left knee area"), true);
 });
 
+test("ankle applicability requires one explicit clinician-described answer and replaces stale markers", async () => {
+  const { readAnkleScope, stripAnkleScope, writeAnkleScope } = await import("./today-injury-input.ts");
+  assert.equal(readAnkleScope("outer ankle sprain"), "unknown");
+  assert.equal(readAnkleScope("sprain [ankle_scope:uncomplicated_lateral]"), "uncomplicated_lateral");
+  assert.equal(readAnkleScope("[ankle_scope:uncomplicated_lateral] [ankle_scope:other]"), "unknown");
+  assert.equal(readAnkleScope("[ankle_scope:made_up]"), "unknown");
+  assert.equal(stripAnkleScope("sprain [ankle_scope:unknown]"), "sprain");
+  assert.equal(writeAnkleScope("sprain [ankle_scope:uncomplicated_lateral]", "other"), "sprain [ankle_scope:other]");
+});
+
 test("Other types follow the area and write a word the scorer recognises", async () => {
   const { getTodayOtherInjuryTypes, readTodayOtherInjuryType, TODAY_OTHER_INJURY_TYPES } = await import("./today-injury-input.ts");
   assert.deepEqual(getTodayOtherInjuryTypes("Left knee").suggested,
