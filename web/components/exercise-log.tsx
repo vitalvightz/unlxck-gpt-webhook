@@ -67,6 +67,12 @@ export function ExerciseLogProvider({
   return <ExerciseLogContext.Provider value={logging}>{children}</ExerciseLogContext.Provider>;
 }
 
+/** True while the owning surface (Today) has the session running and provides
+ * logging; false in a preview or anywhere without a provider. */
+export function useExerciseLoggingActive(): boolean {
+  return useContext(ExerciseLogContext) !== null;
+}
+
 function useBlockLogging(block: StructuredBlock) {
   const logging = useContext(ExerciseLogContext);
   const blockId = cleanText(block.block_id);

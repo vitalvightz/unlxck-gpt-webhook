@@ -84,7 +84,7 @@ import { GlossaryTooltip } from "@/components/glossary-tooltip";
 import { glossaryEntry } from "@/lib/glossary";
 import { WhyTooltip } from "@/components/why-tooltip";
 import { ExerciseDemo, ExerciseMediaProvider, useExerciseMedia } from "@/components/exercise-demo";
-import { ExerciseLogBadge, ExerciseLogPanel, ExerciseLogTick } from "@/components/exercise-log";
+import { ExerciseLogBadge, ExerciseLogPanel, ExerciseLogTick, useExerciseLoggingActive } from "@/components/exercise-log";
 import { demoThumbnailUrl } from "@/lib/exercise-demo";
 import { SafetyNote } from "@/components/safety-note";
 import { InjuryDetailSheet } from "@/components/today/injury-detail-sheet";
@@ -785,9 +785,10 @@ export function ExerciseRow({
 
 /**
  * One exercise in its own sheet (Today). What to do and when to stop are
- * always in view; the demo, the reasons, the coaching cues and the full
- * prescription each open on their own. Logging sits at the foot once the
- * session is running.
+ * always in view; the reasons, the coaching cues and the full prescription
+ * each open on their own. In a preview the demo starts open (paused on its
+ * tap-to-play frame, nothing loads until tapped); once the session is running
+ * it is collapsed like the rest and logging sits at the foot.
  */
 function ExerciseDetail({
   block,
@@ -809,6 +810,7 @@ function ExerciseDetail({
   const whyTodayRaw = athleteFacingRationale(block.why_today);
   const whyToday = sameCopy(builds, whyTodayRaw) ? null : whyTodayRaw;
   const cues = getBlockExecutionDisplay(block).cues;
+  const sessionRunning = useExerciseLoggingActive();
 
   return (
     <div className="injury-sheet-body ex-detail">
@@ -825,7 +827,7 @@ function ExerciseDetail({
         </p>
       ) : null}
       {media ? (
-        <details className="ex-detail-section">
+        <details className="ex-detail-section" open={!sessionRunning}>
           <summary>Demo video</summary>
           <ExerciseDemo media={media} exerciseName={title} />
         </details>
