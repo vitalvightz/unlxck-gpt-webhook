@@ -1389,6 +1389,9 @@ test("editing a saved injury updates its flag and retains the functional answer 
   const { calls, restore } = stubCheckin({ openInjuries: [injury] });
   try {
     assert.doesNotMatch(container.textContent ?? "", /training_impact/);
+    // Edit (a pencil) shows once the injury is open.
+    const summaryRow = container.querySelector<HTMLButtonElement>(".today-injury-summary-row");
+    if (summaryRow?.getAttribute("aria-expanded") === "false") await click(summaryRow);
     await click(button(container, "Edit"));
     assert.equal(button(container, "Limiting me").getAttribute("aria-pressed"), "true");
     assert.equal(button(container, "Tightness").getAttribute("aria-pressed"), "true");

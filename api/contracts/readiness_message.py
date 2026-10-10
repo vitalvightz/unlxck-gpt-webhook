@@ -3177,9 +3177,10 @@ def _resolve_readiness_adjustment(
     # athlete carrying an open injury that their "check is clear".
     if injury_floor == "modify" and decision == "train_as_planned":
         decision = "modify"
-        label = injury_label or "your injury"
         title = "Load controlled."
-        reason = f"An active injury ({label}) means hard combat work needs to be limited today."
+        # Named once, in plain words: "Your right achilles tendonitis limits ...".
+        injury_phrase = _natural_injury_label(injury_label) if injury_label else "injury"
+        reason = f"Your {injury_phrase} limits hard combat work today."
         action = "Keep it controlled: skip sparring, clinch pressure, hard bag work, and all-out rounds."
     elif decision == "train_as_planned":
         green_injury = _first_active_open_injury(context)

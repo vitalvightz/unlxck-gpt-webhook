@@ -27,6 +27,7 @@ import "./plan-display-polish.css";
 import "../components/language-switcher.css";
 import "../components/session-timer/session-timer.css";
 import "./ux-polish.css";
+import "./today-session.css";
 
 const THEME_INIT_SCRIPT = `(function(){try{var m=localStorage.getItem(${JSON.stringify(
   APPEARANCE_STORAGE_KEY,

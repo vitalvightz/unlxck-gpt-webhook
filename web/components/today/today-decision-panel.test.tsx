@@ -73,7 +73,7 @@ test("green guidance keeps the same compact shell when a session is live", () =>
   assert.ok(!/<details[^>]*\sopen/.test(html));
 });
 
-test("evidence is in an open native disclosure with separate trigger and context", () => {
+test("an adjusted day keeps its evidence in a closed native disclosure with separate trigger and context", () => {
   const html = render({
     banner: BANNER,
     triggers: ["Poor sleep for 3 days", "Feeling flat"],
@@ -85,7 +85,7 @@ test("evidence is in an open native disclosure with separate trigger and context
   assert.ok(html.includes("Context"));
   assert.ok(html.includes("<details"));
   assert.ok(html.includes("<summary>Why this decision?</summary>"));
-  assert.ok(/<details[^>]*\sopen/.test(html));
+  assert.ok(!/<details[^>]*\sopen/.test(html));
   assert.equal((html.match(/today-decision-values/g) ?? []).length, 2);
   assert.ok(html.includes('data-evidence-count="2"'));
   assert.ok(!html.includes(" · "));
@@ -391,4 +391,26 @@ test("a current skin-care message stays authoritative over preview timing", () =
   assert.ok(!html.includes("Poor sleep"));
   assert.ok(!html.includes("Taper phase"));
   assert.ok(!html.includes("next planned session"));
+});
+
+test("a short lead before a colon becomes the title over the specifics", () => {
+  const html = render({
+    banner: { ...BANNER, action: "Keep it controlled: skip sparring, clinch pressure, and all-out rounds." },
+  });
+  assert.match(
+    html,
+    /<p class="today-decision-action">Keep it controlled\.<span class="today-decision-action-rest">Skip sparring, clinch pressure, and all-out rounds\.<\/span><\/p>/,
+  );
+  const plain = render({ banner: BANNER });
+  assert.match(plain, /<p class="today-decision-action">Cut 1 round and do not add extra conditioning\.<\/p>/);
+});
+
+test("a trigger the reason line already names is not repeated under Why", () => {
+  const html = render({
+    banner: { ...BANNER, detail: "Your right achilles tendonitis limits hard combat work today." },
+    triggers: ["Right achilles tendonitis — restricts today's training", "Poor sleep"],
+    sources: ["today's check-in"],
+  });
+  assert.equal(html.match(/achilles tendonitis/gi)?.length, 1);
+  assert.match(html, /Poor sleep/);
 });

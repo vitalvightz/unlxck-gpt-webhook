@@ -37,29 +37,42 @@ function useRevealed<T extends Element>(ready: boolean): [React.RefObject<T | nu
   return [ref, revealed];
 }
 
+function prefersReducedMotion(): boolean {
+  return typeof window !== "undefined" && Boolean(window.matchMedia?.("(prefers-reduced-motion: reduce)").matches);
+}
+
 /** Ticks the day count down from the camp's length to today's value once the
- * card is revealed, in step with the bar's CSS fill. Renders the final value on
- * the server and skips the animation under reduced motion. */
+ * card is revealed, in step with the bar's CSS fill. From reveal until the last
+ * frame it shows the animated value (starting at `from`), so today's count
+ * never flashes before the tick-down. Renders the final value on the server and
+ * skips the animation under reduced motion. Plays once per mount. */
 function useCountdownTick(target: number, from: number | null, revealed: boolean): number {
   const [animated, setAnimated] = useState<number | null>(null);
+  const [done, setDone] = useState(false);
+  const willAnimate = from !== null && from > target && !prefersReducedMotion();
   useLayoutEffect(() => {
-    const reduce = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
-    if (!revealed || reduce || from === null || from <= target) {
+    if (!revealed || done || !willAnimate || from === null) {
       return;
     }
     let frame = 0;
     const start = performance.now();
-    // The first frame runs before the next paint, so the count starts at `from`.
     const step = (now: number) => {
       const t = Math.min(1, (now - start) / COUNT_MS);
       const eased = 1 - Math.pow(1 - t, 3);
-      setAnimated(t < 1 ? Math.round(from - (from - target) * eased) : null);
-      if (t < 1) frame = requestAnimationFrame(step);
+      if (t < 1) {
+        setAnimated(Math.round(from - (from - target) * eased));
+        frame = requestAnimationFrame(step);
+      } else {
+        setDone(true);
+      }
     };
     frame = requestAnimationFrame(step);
     return () => cancelAnimationFrame(frame);
-  }, [target, from, revealed]);
-  return animated ?? target;
+  }, [target, from, revealed, done, willAnimate]);
+  if (revealed && willAnimate && !done) {
+    return animated ?? from;
+  }
+  return target;
 }
 
 /**
@@ -133,6 +146,34 @@ export function FightCountdown({
           <span className="fight-countdown-next-label">Next</span> {nextLabel}
         </p>
       ) : null}
+    </section>
+  );
+}
+
+/** Placeholder text block: shimmer sized by its (invisible) text. */
+function Bone({ children }: { children: string }) {
+  return <span className="skeleton skeleton-text fight-countdown-bone">{children}</span>;
+}
+
+/** Placeholder shown in the countdown's slot while the plan calendar loads
+ * (like the XP card's skeleton), so Overview lays out once and the card fills
+ * in place instead of popping in later. It reuses the card's own markup with
+ * invisible stand-in text, so it is the card's exact size at every width. */
+export function FightCountdownSkeleton() {
+  return (
+    <section className="fight-countdown fight-countdown-skeleton" aria-busy="true" aria-label="Fight countdown loading">
+      <div className="fight-countdown-head">
+        <div>
+          <p className="fight-countdown-kicker"><Bone>Fight camp</Bone></p>
+          <p className="fight-countdown-days">
+            <span className="fight-countdown-number"><Bone>00</Bone></span> <Bone>days to fight night</Bone>
+          </p>
+          <p className="fight-countdown-date"><Bone>Sat 00 Nov 0000</Bone></p>
+        </div>
+        <span className="fight-countdown-meta"><Bone>Week 0 of 0 · General prep</Bone></span>
+      </div>
+      <div className="overview-progress-track fight-countdown-track" aria-hidden="true" />
+      <p className="fight-countdown-next"><Bone>Next Specific prep starts in 00 days</Bone></p>
     </section>
   );
 }

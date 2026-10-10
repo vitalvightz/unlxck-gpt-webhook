@@ -41,9 +41,70 @@ test("weekday fallback never presents a stale template date as today", () => {
 
   assert.equal(current.matchType, "weekday");
   assert.equal(current.trainingDayISO, "2026-07-18");
-  assert.equal(html.includes("Sat 18 Jul 2026"), true);
+  // Today's session header owns the date; the numbered sections below it must
+  // never bring the template row's stale date back.
+  assert.match(html, /data-layout="section"/);
   assert.equal(html.includes("Sat 13 Jun 2026"), false);
   assert.equal(html.includes("2026-06-13"), false);
+});
+
+test("Today lays a multi-session day out as numbered parts with every exercise in view", () => {
+  const plan = {
+    weeks: [{
+      week_index: 1,
+      days: [{
+        date: "2026-10-10",
+        weekday: "Sat",
+        sessions: [
+          {
+            session_id: "fight-iq",
+            title: "Fight Visualisation",
+            session_type: "skill",
+            objective: "Rehearse recognising the opponent's action before choosing a response.",
+            planned_duration: { value: 12, unit: "min" },
+            blocks: [
+              { block_id: "read-react", block_type: "mindset", display_name: "Read -> React" },
+              { block_id: "watch", block_type: "skill", display_name: "Tactical Watch: Southpaw Entries" },
+              { block_id: "cars", block_type: "preparation", display_name: "Hip CARs" },
+            ],
+          },
+          {
+            session_id: "strength",
+            title: "Controlled Strength",
+            session_type: "strength_power",
+            objective: "Keep basic pulling strength and single-leg control before weekly sparring.",
+            blocks: [
+              { block_id: "pull-up", block_type: "strength", display_name: "Slow-Lowered Pull-Up", sets: 2, reps: "6" },
+              { block_id: "sl-rdl", block_type: "strength", display_name: "Single-Leg RDL Hold", sets: 2, reps: "20 s" },
+            ],
+          },
+        ],
+      }],
+    }],
+  } as StructuredPlan;
+  const current = resolveCurrentDay(plan, new Date(2026, 9, 10));
+  const html = renderToStaticMarkup(<TodaySessionBlocks current={current} headline="Strength" />);
+
+  assert.equal(html.match(/data-layout="section"/g)?.length, 2);
+  assert.match(html, /<span>01<\/span>/);
+  assert.match(html, /<span>02<\/span>/);
+  assert.match(html, /~12 min/);
+  assert.match(html, /2 exercises/);
+  // Every exercise is listed without a Show more / Show less step.
+  assert.doesNotMatch(html, /Show more|Show less/);
+  for (const name of ["Read -&gt; React", "Tactical Watch: Southpaw Entries", "Slow-Lowered Pull-Up", "Single-Leg RDL Hold"]) {
+    assert.match(html, new RegExp(name));
+  }
+  // No demo video: each row shows an icon for what kind of work it is.
+  const glyphs = [...html.matchAll(/class="ex-row-placeholder" aria-hidden="true"><svg[^>]*><path d="([^"]+)"/g)]
+    .map((match) => match[1]);
+  assert.equal(glyphs.length, 5);
+  assert.equal(new Set(glyphs.slice(0, 3)).size, 3, "visualisation, tactical watch and mobility differ");
+  assert.equal(glyphs[3], glyphs[4], "both strength rows share the strength icon");
+  // The rationale waits behind one disclosure per part, closed by default.
+  assert.equal(html.match(/<summary>Why this session<\/summary>/g)?.length, 2);
+  assert.doesNotMatch(html, /<details class="sp-section-details" open/);
+  assert.ok(html.indexOf("Why this session") < html.indexOf("Keep basic pulling strength"));
 });
 
 test("today shows no session blocks while the plan's block has not started", () => {
@@ -248,6 +309,160 @@ test("today's session actions stay locked until check-in is submitted", () => {
 
   assert.match(html, /Submit today&#x27;s check-in to unlock session actions\./);
   assert.doesNotMatch(html, />Start session<|>Skip session<|>Mark skipped</);
+});
+
+test("the session header carries the day, summary chips and a compact injury strip", () => {
+  const state: TodayCommandView = {
+    active_plan: { id: "plan-1", name: "Active fight camp", phase: "SPP", fight_date: "2026-11-05" },
+    today: {
+      training_day: "2026-10-10",
+      recommendation_state: "train_as_planned",
+      decision_tier: "green",
+      warnings: [],
+      next_session: {
+        session_id: "2026-10-10-strength",
+        title: "Strength",
+        calendar_date: "2026-10-10",
+        d_day: -26,
+        estimated_duration: 32,
+        session_relation: "today",
+      },
+      session_scope: "today",
+      session_label: "Today's session",
+      completion_status: "not_started",
+    },
+    risk_watch: [],
+    open_injuries: [
+      { label: "Right achilles tendonitis", body_area: "achilles" },
+      { label: "Chest strain", body_area: "chest" },
+    ] as TodayCommandView["open_injuries"],
+    week_summary: {},
+    quick_actions: [],
+  };
+
+  const html = renderPanel(state);
+
+  // The year is dropped and the camp countdown left to the page header.
+  assert.match(html, /class="today-session-date">Sat 10 Oct</);
+  assert.doesNotMatch(html, /today-session-countdown/);
+  assert.match(html, /<\/svg><span><span aria-hidden="true">~<\/span><span class="sr-only">About <\/span>32 min<\/span><\/li>/);
+  assert.match(html, /href="#today-injury" class="today-injury-strip"/);
+  assert.match(html, /Training around Right achilles tendonitis \+ Chest strain/);
+  assert.ok(html.indexOf("today-injury-strip") < html.indexOf(">Start session</"));
+});
+
+test("a previewed multi-part day is named by its parts and opens on its own preview screen", async () => {
+  const plan = {
+    weeks: [{
+      week_index: 1,
+      days: [{
+        date: "2026-10-10",
+        weekday: "Sat",
+        sessions: [
+          { session_id: "viz", title: "Fight IQ", session_type: "skill", planned_duration: { value: 12, unit: "min" },
+            blocks: [{ block_id: "read-react", block_type: "mindset", display_name: "Read React" }] },
+          { session_id: "2026-10-10-strength", title: "Controlled strength", session_type: "strength_power",
+            planned_duration: { value: 23, unit: "min" },
+            blocks: [{ block_id: "pull", block_type: "strength", display_name: "Slow-Lowered Pull-Up", sets: 2, reps: "6",
+              purpose: "Pulling strength for clinch control.", coaching_cues: ["Three seconds down."],
+              stop_rules: ["Stop: any sharp chest pain."] }] },
+        ],
+      }],
+    }],
+  } as StructuredPlan;
+  const state: TodayCommandView = {
+    active_plan: { id: "plan-1", name: "Fight camp", phase: "GPP", fight_date: "2026-11-05" },
+    today: {
+      training_day: "2026-10-09",
+      recommendation_state: "train_as_planned",
+      decision_tier: "green",
+      warnings: [],
+      next_session: {
+        session_id: "2026-10-10-strength",
+        title: "Strength",
+        calendar_date: "2026-10-10",
+        session_relation: "next",
+        effective_load: "technical",
+      },
+      session_scope: "next",
+      session_label: "Next session",
+      completion_status: "done",
+    },
+    risk_watch: [],
+    open_injuries: [],
+    week_summary: {},
+    quick_actions: [],
+  };
+  const container = domWindow.document.createElement("div");
+  domWindow.document.body.append(container);
+  const root = createRoot(container);
+  await act(async () => {
+    root.render(
+      <AuthProvider>
+        <ToastProvider>
+          <TodaySessionPanel state={state} structuredPlan={plan} token="token" onRefresh={async () => {}} />
+        </ToastProvider>
+      </AuthProvider>,
+    );
+  });
+  try {
+    const heading = container.querySelector("#today-session-heading");
+    assert.equal(heading?.textContent, "Strength + Skill");
+    assert.equal(container.querySelector(".today-session-parts")?.textContent, "Fight IQ · Controlled strength");
+    const chips = [...container.querySelectorAll(".today-session-chips li")].map((chip) => chip.textContent);
+    assert.deepEqual(chips, ["~About 35 min", "Technical", "2 exercises"]);
+    // The parts are not on Today itself: Preview session opens their screen.
+    assert.doesNotMatch(container.textContent ?? "", /Slow-Lowered Pull-Up/);
+    const preview = [...container.querySelectorAll("button")].find((item) => item.textContent === "Preview session");
+    assert.ok(preview);
+    assert.equal(preview.getAttribute("aria-haspopup"), "dialog");
+    await act(async () => {
+      preview.dispatchEvent(new domWindow.MouseEvent("click", { bubbles: true }));
+    });
+    const screen = domWindow.document.querySelector('[role="dialog"][data-variant="screen"]');
+    assert.ok(screen);
+    assert.equal(screen.querySelector("h2")?.textContent, "Strength + Skill");
+    assert.match(screen.textContent ?? "", /Slow-Lowered Pull-Up/);
+    assert.doesNotMatch(container.textContent ?? "", /Slow-Lowered Pull-Up/);
+
+    // An exercise opens its own sheet over the preview: the dose and stop rule
+    // in view, every other detail behind its own closed section.
+    const row = [...screen.querySelectorAll<HTMLButtonElement>(".ex-row-toggle")]
+      .find((item) => item.textContent?.includes("Slow-Lowered Pull-Up"));
+    assert.ok(row);
+    assert.equal(row.getAttribute("aria-haspopup"), "dialog");
+    await act(async () => {
+      row.dispatchEvent(new domWindow.MouseEvent("click", { bubbles: true }));
+    });
+    const dialogs = domWindow.document.querySelectorAll('[role="dialog"]');
+    const sheet = dialogs[dialogs.length - 1];
+    assert.notEqual(sheet, screen);
+    assert.equal(sheet.querySelector("h2")?.textContent, "Slow-Lowered Pull-Up");
+    // Rows leave the stop rule to the sheet, which states it as one plain line.
+    assert.equal(screen.querySelector(".ex-row-stop"), null);
+    assert.equal(sheet.querySelector(".ex-detail-stop")?.textContent, "Stop if any sharp chest pain.");
+    const sections = [...sheet.querySelectorAll<HTMLDetailsElement>("details.ex-detail-section")];
+    assert.deepEqual(
+      sections.map((section) => section.querySelector("summary")?.textContent),
+      ["Why it's here", "Coaching cues", "Full prescription"],
+    );
+    assert.ok(sections.every((section) => !section.open));
+
+    // Escape closes only the topmost sheet; Back closes the preview.
+    await act(async () => {
+      domWindow.document.dispatchEvent(new domWindow.KeyboardEvent("keydown", { key: "Escape" }));
+    });
+    assert.equal(domWindow.document.querySelectorAll('[role="dialog"]').length, 1);
+    const back = screen.querySelector<HTMLButtonElement>('button[aria-label="Back to Today"]');
+    assert.ok(back);
+    await act(async () => {
+      back.dispatchEvent(new domWindow.MouseEvent("click", { bubbles: true }));
+    });
+    assert.equal(domWindow.document.querySelector('[role="dialog"]'), null);
+  } finally {
+    await act(async () => root.unmount());
+    container.remove();
+  }
 });
 
 test("a session the backend scopes to today unlocks on that scope alone", () => {
@@ -603,7 +818,9 @@ test("completed training previews the next main session instead of leading optio
     structuredPlan={structuredPlan} token="token" onRefresh={async () => {}} /></ToastProvider>);
   assert.match(html, /Next session/);
   assert.match(html, /<h2 id="today-session-heading">Strength<\/h2>/);
-  assert.match(html, /Sun 27 Sept? 2026/);
+  // The eyebrow drops the year; the optional visualisation never names the day.
+  assert.match(html, /class="today-session-date">Sun 27 Sept?</);
+  assert.doesNotMatch(html, /class="today-session-parts"/);
   assert.doesNotMatch(html, />Start session<|>Mark done</);
 });
 

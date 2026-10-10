@@ -17,6 +17,7 @@ import {
   SessionlessDayCard,
 } from "@/components/structured-plan-renderer";
 import { formatTrainingDay } from "@/components/today/format";
+import { InjuryDetailSheet } from "@/components/today/injury-detail-sheet";
 import { GuidedVisualisation } from "@/components/guided-visualisation/guided-visualisation";
 import {
   CONTACT_RUN_KEY_PREFIX,
@@ -42,7 +43,7 @@ import {
 } from "@/lib/session-timer/contact";
 import { isLoggableBlock, withLastLoad } from "@/lib/exercise-log";
 import { timerExerciseLogs } from "@/lib/session-timer/logs";
-import { cleanText } from "@/lib/structured-plan";
+import { cleanText, getBlocks, isZeroLoadSupportSession } from "@/lib/structured-plan";
 import { dayTimerItems, timerSessionFor, type TimerItem } from "@/lib/session-timer/plan";
 import { fightVisualisationFromSession, firstNameOf } from "@/lib/fight-visualisation/script";
 import { fightLevel } from "@/lib/fight-visualisation/crowd";
@@ -56,7 +57,8 @@ import {
 import type { TodayPlanSchedule } from "@/components/today/use-today-command";
 import { openBlockWeekIntent, type OpenBlockWeekIntent } from "@/lib/open-block";
 import { isOpenOngoingPlan } from "@/lib/plan-format";
-import { athleteFacingSessionTitle, humanizeIfRawEnum } from "@/lib/plan-labels";
+import { athleteFacingSessionTitle, formatPlanLabel, humanizeIfRawEnum } from "@/lib/plan-labels";
+import { resolveSessionTypeLabel } from "@/lib/rehab-label";
 import { shouldPromptSessionFeedback } from "@/lib/session-feedback";
 import { useTrainingDay } from "@/lib/use-training-day";
 import {
@@ -76,6 +78,7 @@ import type {
   SparringPlannedIntensity,
   StructuredDay,
   StructuredPlan,
+  StructuredSession,
   TodayCommandView,
   TodayCompletionStatus,
   TodaySession,
@@ -112,6 +115,81 @@ function getSessionDuration(session: TodaySession): string | null {
   return null;
 }
 
+/** `estimate` marks a figure the plan states but nothing measured: shown "~". */
+type SummaryChip = { icon: ToolIconName; label: string; estimate?: boolean };
+
+const LOAD_LABELS: Record<string, string> = {
+  hard: "Hard",
+  technical: "Technical",
+  reduced: "Reduced load",
+  none: "Zero load",
+};
+
+/** At-a-glance chips under the session headline: total time, how hard it
+ * loads the body, and the exercise count. Minutes are summed only when every
+ * session states them; otherwise the backend duration stands. */
+function sessionSummaryChips(
+  sessions: StructuredSession[],
+  fallbackDuration: string | null,
+  effectiveLoad: string | null | undefined,
+): SummaryChip[] {
+  const minutes = sessions.map((item) => {
+    const measured = item.planned_duration;
+    return measured && typeof measured.value === "number" && /^min/i.test(measured.unit ?? "")
+      ? measured.value
+      : null;
+  });
+  const totalMinutes = sessions.length > 0 && minutes.every((value) => value !== null)
+    ? minutes.reduce<number>((sum, value) => sum + (value ?? 0), 0)
+    : null;
+  const exercises = sessions.reduce((sum, item) => sum + getBlocks(item).length, 0);
+  const loadKey = textValue(effectiveLoad).toLowerCase();
+  const load = sessions.length > 0 && sessions.every(isZeroLoadSupportSession)
+    ? "Zero load"
+    : loadKey
+      ? LOAD_LABELS[loadKey] ?? formatPlanLabel(loadKey)
+      : "";
+  // Session time is the plan's own estimate, never derived from the
+  // prescription, so it always reads as approximate.
+  const time = totalMinutes ? `${totalMinutes} min` : fallbackDuration?.replace(/^~\s*/, "") ?? null;
+  const chips: Array<SummaryChip | null> = [
+    time ? { icon: "clock", label: time, estimate: true } : null,
+    load ? { icon: "load", label: load } : null,
+    exercises > 0 ? { icon: "exercises", label: `${exercises} exercise${exercises === 1 ? "" : "s"}` } : null,
+  ];
+  return chips.filter((chip): chip is SummaryChip => chip !== null);
+}
+
+function SummaryChipList({ chips }: { chips: SummaryChip[] }) {
+  return (
+    <ul className="today-session-chips" aria-label="Session summary">
+      {chips.map((chip) => (
+        <li key={chip.label}>
+          <ToolIcon name={chip.icon} />
+          <span>
+            {chip.estimate ? <><span aria-hidden="true">~</span><span className="sr-only">About </span></> : null}
+            {chip.label}
+          </span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+/** A part's type in a word or two ("Strength & Power" reads "Strength"). */
+function shortSessionType(session: StructuredSession, policy: RehabLabelPolicy | null | undefined): string {
+  const label = resolveSessionTypeLabel(session, policy) || formatPlanLabel(textValue(session.session_type));
+  return label.split(/\s*[&/]\s*/)[0].trim();
+}
+
+/** "Right achilles tendonitis + Chest strain": what today's work is built around. */
+function injuryStripText(injuries: TodayCommandView["open_injuries"]): string {
+  const labels = injuries
+    .map((injury) => textValue(injury.label) || textValue(injury.body_area))
+    .filter(Boolean);
+  return Array.from(new Set(labels)).join(" + ");
+}
+
 /** Which timer is running: today's planned session, or today's coach-led contact
  * (sparring the athlete declared, with no app session to start). Plain rounds
  * run on the app-wide round timer. */
@@ -131,7 +209,7 @@ const PLANNED_SPARRING_INTENSITY: Record<ContactTimerTarget["kind"], SparringPla
   coach_led: "contact",
 };
 
-type ToolIconName = "bell" | "timer" | "lock" | "check" | "adjust" | "skip" | "voice";
+type ToolIconName = "bell" | "timer" | "lock" | "check" | "adjust" | "skip" | "voice" | "play" | "shield" | "clock" | "load" | "exercises";
 
 const TOOL_ICON_PATHS: Record<ToolIconName, ReactNode> = {
   // A ring bell: sparring rounds.
@@ -143,6 +221,14 @@ const TOOL_ICON_PATHS: Record<ToolIconName, ReactNode> = {
   skip: <path d="M6 6l12 12M18 6L6 18" />,
   // A speaking head: the voice-guided visualisation.
   voice: <path d="M15 8a5 5 0 00-10 0c0 2 1 3 1 5v3h3l1 2h2v-4M18 9a4 4 0 010 6M20.5 7a7 7 0 010 10" />,
+  play: <path d="M12 21a9 9 0 100-18 9 9 0 000 18zM10 8.5v7l5.5-3.5z" />,
+  // Injury-aware session: the plan is built around open injuries.
+  shield: <path d="M12 3l7 3v5c0 4.5-3 8.2-7 10-4-1.8-7-5.5-7-10V6zM9 12l2 2 4-4" />,
+  clock: <path d="M12 21a9 9 0 100-18 9 9 0 000 18zM12 7.5V12l3 2" />,
+  // Rising bars: how hard the day loads the body.
+  load: <path d="M6 19v-4M12 19V10M18 19V5" />,
+  // A dumbbell: the number of exercises.
+  exercises: <path d="M3 12h18M6 8v8M9 6v12M15 6v12M18 8v8" />,
 };
 
 function ToolIcon({ name }: { name: ToolIconName }) {
@@ -317,6 +403,8 @@ export function TodaySessionBlocks({
             })}
             session={session}
             day={index === 0 ? displayDay : undefined}
+            layout="section"
+            sectionIndex={index}
             defaultOpenBlocks
             initiallyOpenFirstBlock={false}
             hideTitle={Boolean(headline && sameTitle(headline, athleteFacingSessionTitle(session.title || displayDay.today_card?.headline || "")))}
@@ -397,6 +485,8 @@ export function TodaySessionPanel({
   // Whether the open review was reached from the timer (its ticks came from it).
   const [reviewFromTimer, setReviewFromTimer] = useState(false);
   const [timerHandoffPending, setTimerHandoffPending] = useState(false);
+  // A previewed (not yet today's) session opens on its own screen.
+  const [previewOpen, setPreviewOpen] = useState(false);
   const session = state.today.next_session;
   const status = state.today.completion_status;
   const duration = getSessionDuration(session);
@@ -1052,7 +1142,7 @@ export function TodaySessionPanel({
             exerciseLogging={exerciseLogging}
           />
         ) : (
-          <p className="muted">No active plan card matched today. Use Open camp plan to find the next training target.</p>
+          <p className="muted">No active plan card matched today. Use View plan to find the next training target.</p>
         )}
         {contactOnlyTray}
         {sparringPrompt}
@@ -1092,6 +1182,46 @@ export function TodaySessionPanel({
       ? sessionTitle.trim()
       : "";
   const alongsideLabel = contactLeads ? "Also today" : "Also that day";
+  // Eyebrow: which day this is. The camp countdown lives in the page header.
+  const sessionDateLabel = session.calendar_date
+    ? formatTrainingDay(session.calendar_date).replace(
+        new RegExp(`\\s${session.calendar_date.slice(0, 4)}$`),
+        "",
+      )
+    : textValue(session.weekday_with_label || session.weekday);
+  // A day of several parts is named by them, primary first ("Strength +
+  // Skill"), with their own names underneath in the order they are trained.
+  // Optional extras never name the day, and contact days keep their contact
+  // headline.
+  const namedParts = showStructuredBlocks && !safeSession
+    ? current.sessions.filter((item) => !item.optional)
+    : [];
+  const multiPart = namedParts.length > 1 && headline === sessionHeadline;
+  const primaryPart = multiPart
+    ? namedParts.find((item) => item.session_id === session.session_id) ?? namedParts[0]
+    : null;
+  const partsTitle = primaryPart
+    ? Array.from(
+        new Set(
+          [primaryPart, ...namedParts.filter((item) => item !== primaryPart)]
+            .map((item) => shortSessionType(item, rehabLabelPolicy))
+            .filter(Boolean),
+        ),
+      ).join(" + ")
+    : "";
+  // A preview's parts live on their own screen, so their names show under
+  // the headline as the sign of what else the day holds.
+  const shownTitle = partsTitle || headline;
+  const partsSubtitle = multiPart || isSessionPreview
+    ? namedParts
+        .map((item) => athleteFacingSessionTitle(textValue(item.title)))
+        .filter((title) => title && !sameTitle(title, shownTitle))
+        .join(" · ")
+    : "";
+  const summaryChips = safeSession
+    ? []
+    : sessionSummaryChips(showStructuredBlocks ? current.sessions : [], duration, session.effective_load);
+  const injuryText = injuryStripText(state.open_injuries ?? []);
 
   return (
     <section
@@ -1100,17 +1230,34 @@ export function TodaySessionPanel({
       data-tone={cardTone}
       aria-labelledby="today-session-heading"
     >
-      <div className="today-card-head">
+      <div className="today-card-head today-session-head">
         <div>
-          <p className="kicker">{relationCopy.kicker}</p>
-          <h2 id="today-session-heading">{headline}</h2>
+          <div className="today-session-eyebrow">
+            <p className="kicker">{relationCopy.kicker}</p>
+            {sessionDateLabel ? <p className="today-session-date">{sessionDateLabel}</p> : null}
+          </div>
+          <h2 id="today-session-heading">{shownTitle}</h2>
+          {partsSubtitle ? <p className="today-session-parts">{partsSubtitle}</p> : null}
           {alongsideTitle && !showStructuredBlocks ? (
             <p className="today-session-alongside">
               <span className="today-detail-label">{alongsideLabel}</span> {alongsideTitle}
             </p>
           ) : null}
+          {summaryChips.length > 0 ? (
+            <SummaryChipList chips={summaryChips} />
+          ) : null}
         </div>
       </div>
+      {injuryText && !safeSession && !isSessionPreview ? (
+        <a href="#today-injury" className="today-injury-strip">
+          <ToolIcon name="shield" />
+          <span className="today-injury-strip-text">
+            <span className="today-injury-strip-title">Injury-aware session</span>
+            <span className="today-injury-strip-detail">Training around {injuryText}</span>
+          </span>
+          <span className="today-injury-strip-chevron" aria-hidden="true" />
+        </a>
+      ) : null}
       {canCompleteSession && !rehabOnlyPrescription && !safeSession && status === "not_started" ? (
         <div className="today-session-actions today-action-tray">
           {contactCta ? (
@@ -1125,6 +1272,7 @@ export function TodaySessionPanel({
               onClick={startSession}
               disabled={isSubmitting}
             >
+              {contactCta ? null : <ToolIcon name="play" />}
               {guidedLeads ? "Start guided visualisation" : alongsideTitle ? `Start ${alongsideTitle}` : "Start session"}
             </button>
           )}
@@ -1141,18 +1289,66 @@ export function TodaySessionPanel({
           )}
         </div>
       ) : null}
+      {isSessionPreview && showStructuredBlocks && !safeSession ? (
+        <div className="today-session-actions today-action-tray">
+          <button
+            type="button"
+            className="cta"
+            aria-haspopup="dialog"
+            onClick={() => setPreviewOpen(true)}
+          >
+            <ToolIcon name="play" />
+            Preview session
+          </button>
+        </div>
+      ) : null}
       {safeSession ? (
         <SafeSessionCard view={safeSession} />
       ) : showStructuredBlocks ? (
-        <TodaySessionBlocks
-          planId={state.active_plan?.id}
-          current={current}
-          headline={headline}
-          openWeekIntent={openWeekIntent}
-          rehabLabelPolicy={rehabLabelPolicy}
-          exerciseMedia={exerciseMedia}
-          exerciseLogging={exerciseLogging}
-        />
+        // A previewed day is read on its own screen; today's work stays here.
+        isSessionPreview ? (
+          previewOpen ? (
+            <InjuryDetailSheet
+              title={shownTitle}
+              variant="screen"
+              closeLabel="Back to Today"
+              onClose={() => setPreviewOpen(false)}
+            >
+              <div className="today-preview-screen">
+                <p className="today-preview-meta">
+                  <span>{relationCopy.kicker}</span>
+                  {sessionDateLabel ? <span>{sessionDateLabel}</span> : null}
+                </p>
+                {summaryChips.length > 0 ? (
+                  <SummaryChipList chips={summaryChips} />
+                ) : null}
+                <TodaySessionBlocks
+                  planId={state.active_plan?.id}
+                  current={current}
+                  headline={shownTitle}
+                  openWeekIntent={openWeekIntent}
+                  rehabLabelPolicy={rehabLabelPolicy}
+                  exerciseMedia={exerciseMedia}
+                  exerciseLogging={exerciseLogging}
+                />
+                <p className="today-pending-line">
+                  <span className="today-pending-pill">Pending</span>
+                  Check in on the day to unlock this session.
+                </p>
+              </div>
+            </InjuryDetailSheet>
+          ) : null
+        ) : (
+          <TodaySessionBlocks
+            planId={state.active_plan?.id}
+            current={current}
+            headline={shownTitle}
+            openWeekIntent={openWeekIntent}
+            rehabLabelPolicy={rehabLabelPolicy}
+            exerciseMedia={exerciseMedia}
+            exerciseLogging={exerciseLogging}
+          />
+        )
       ) : (
         <div className="today-session-summary">
           <div>

@@ -84,9 +84,10 @@ import { GlossaryTooltip } from "@/components/glossary-tooltip";
 import { glossaryEntry } from "@/lib/glossary";
 import { WhyTooltip } from "@/components/why-tooltip";
 import { ExerciseDemo, ExerciseMediaProvider, useExerciseMedia } from "@/components/exercise-demo";
-import { ExerciseLogBadge, ExerciseLogPanel, ExerciseLogTick } from "@/components/exercise-log";
+import { ExerciseLogBadge, ExerciseLogPanel, ExerciseLogTick, useExerciseLoggingActive } from "@/components/exercise-log";
 import { demoThumbnailUrl } from "@/lib/exercise-demo";
 import { SafetyNote } from "@/components/safety-note";
+import { InjuryDetailSheet } from "@/components/today/injury-detail-sheet";
 import { PLAN_SAFETY_NOTE } from "@/lib/safety-copy";
 import {
   applySourceSetRange,
@@ -392,6 +393,8 @@ export function BlockCard({
   sourceCountdown,
   embedded = false,
   hideLeadCue = false,
+  hideCues = false,
+  hideStopRule = false,
 }: {
   block: StructuredBlock;
   /** Development-block week intent of an open (renewable) plan. Adds the
@@ -403,6 +406,9 @@ export function BlockCard({
   embedded?: boolean;
   /** The demo pins the first cue under the video; skip it in the list. */
   hideLeadCue?: boolean;
+  /** The exercise sheet shows cues and the stop rule in their own places. */
+  hideCues?: boolean;
+  hideStopRule?: boolean;
 }) {
   const rehabLabelPolicy = useContext(RehabLabelContext);
   const { title, load, metrics, rest, effort, compactStopRule } = useBlockPrescription(
@@ -417,7 +423,7 @@ export function BlockCard({
   // through to no tooltip rather than to a guess.
   const effortMethod = cleanText(block.effort?.method);
   const { cues: allCues, regressions, substitutions } = getBlockExecutionDisplay(block);
-  const cues = hideLeadCue ? allCues.slice(1) : allCues;
+  const cues = hideCues ? [] : hideLeadCue ? allCues.slice(1) : allCues;
   const { progression } = getBlockAdjustmentDisplay(block);
   const weekDirective = openBlockWeekDirective(openWeekIntent, block);
   // A week directive owns progression/deload programming for open plans, while
@@ -431,7 +437,7 @@ export function BlockCard({
     ...(showProgressionAside && progression
       ? [{ label: "Progress" as const, text: progression }]
       : []),
-    ...(compactStopRule
+    ...(compactStopRule && !hideStopRule
       ? [{ label: "Stop rule" as const, text: compactStopRule }]
       : []),
   ];
@@ -550,6 +556,65 @@ function sameCopy(a: string | null, b: string | null): boolean {
   return Boolean(a && b) && norm(a) === norm(b);
 }
 
+type ExerciseGlyphName =
+  | "strength" | "power" | "conditioning" | "mobility" | "recovery" | "rehab"
+  | "skill" | "visualisation" | "tactical" | "breathing";
+
+const EXERCISE_GLYPH_PATHS: Record<ExerciseGlyphName, string> = {
+  strength: "M3 12h18M6 8v8M9 6v12M15 6v12M18 8v8",
+  power: "M13 2 4 14h7l-1 8 9-12h-7z",
+  conditioning: "M3 12h4l2-5 4 10 2-5h6",
+  mobility: "M20 12a8 8 0 1 1-2.3-5.7M20 4v4h-4",
+  recovery: "M5 19c0-8 6-14 14-14 0 8-6 14-14 14zM5 19l7-7",
+  rehab: "M12 3l7 3v5c0 4.5-3 8.2-7 10-4-1.8-7-5.5-7-10V6zM12 9v6M9 12h6",
+  skill: "M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM12 16a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM12 12h.01",
+  visualisation: "M9 4a3 3 0 0 0-3 3 3 3 0 0 0-2 5 3 3 0 0 0 2 5 3 3 0 0 0 6 1V5a3 3 0 0 0-3-1zM15 4a3 3 0 0 1 3 3 3 3 0 0 1 2 5 3 3 0 0 1-2 5 3 3 0 0 1-6 1",
+  tactical: "M3 5h18v12H3zM8 21h8M12 17v4M10 8.5v5l4-2.5z",
+  breathing: "M3 9h11a3 3 0 1 0-3-3M3 15h15a3 3 0 1 1-3 3M3 12h7",
+};
+
+const BLOCK_TYPE_GLYPHS: Record<string, ExerciseGlyphName> = {
+  strength: "strength",
+  accessory: "strength",
+  strength_speed: "power",
+  plyometric_power: "power",
+  speed: "power",
+  conditioning: "conditioning",
+  preparation: "mobility",
+  mobility_activation: "mobility",
+  cooldown_recovery: "recovery",
+  rehab: "rehab",
+  skill: "skill",
+  sparring: "skill",
+  mindset: "visualisation",
+};
+
+/** The icon that stands in for a missing demo: the exercise's name refines its
+ * type (a "Tactical Watch" is a skill block, but it is film, not a drill). */
+function exerciseGlyph(block: StructuredBlock): ExerciseGlyphName {
+  const name = (cleanText(block.display_name) ?? "").toLowerCase();
+  if (/tactical|watch|film|footage/.test(name)) return "tactical";
+  if (/visuali|imagery|read\s*(?:→|->|and)\s*react/.test(name)) return "visualisation";
+  if (/breath/.test(name)) return "breathing";
+  if (/mobility|stretch|\bcars\b/.test(name)) return "mobility";
+  return BLOCK_TYPE_GLYPHS[cleanText(block.block_type) ?? ""] ?? "strength";
+}
+
+function ExerciseGlyph({ block }: { block: StructuredBlock }) {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path
+        d={EXERCISE_GLYPH_PATHS[exerciseGlyph(block)]}
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 /**
  * One exercise in a session: a compact row (name, headline stat, demo thumbnail)
  * that expands to the demo, what the exercise builds, why it is in today's
@@ -561,10 +626,13 @@ export function ExerciseRow({
   onToggle,
   openWeekIntent,
   sourceCountdown,
+  detail = "inline",
 }: {
   block: StructuredBlock;
   open: boolean;
   onToggle: () => void;
+  /** "sheet" opens the exercise in its own sheet (Today) instead of in place. */
+  detail?: "inline" | "sheet";
   openWeekIntent?: OpenBlockWeekIntent | null;
   sourceCountdown?: string | null;
 }) {
@@ -584,6 +652,8 @@ export function ExerciseRow({
   // Matches the demo's first render (facade, not yet known to be watched), so
   // the server markup and hydration never print the lead cue twice.
   const [leadCuePinned, setLeadCuePinned] = useState(Boolean(media && leadCue));
+  // A row whose detail opens in a sheet keeps its compact face underneath.
+  const rowCollapsed = !open || detail === "sheet";
 
   return (
     <div className="ex-row" data-open={open ? "true" : "false"}>
@@ -599,6 +669,7 @@ export function ExerciseRow({
             className="ex-row-toggle"
             aria-expanded={open}
             aria-controls={bodyId}
+            aria-haspopup={detail === "sheet" ? "dialog" : undefined}
             onClick={onToggle}
           >
             <span className="ex-row-title">{title}</span>
@@ -628,10 +699,11 @@ export function ExerciseRow({
             </span>
           ) : null}
           {/* What was logged for it today; open, the log panel below says so. */}
-          {!open ? <ExerciseLogBadge block={block} /> : null}
+          {rowCollapsed ? <ExerciseLogBadge block={block} /> : null}
           {/* Stop criteria are safety instructions: never hidden behind the tap.
-              Collapsed, the row carries it; open, the full card below does. */}
-          {!open && compactStopRule ? (
+              Collapsed, the row carries it; open, the full card below does.
+              Rows that open a sheet leave it to the sheet, which leads with it. */}
+          {!open && detail === "inline" && compactStopRule ? (
             <span className="ex-row-stop">
               <span className="sp-stat-label">Stop rule</span>
               {compactStopRule}
@@ -640,7 +712,7 @@ export function ExerciseRow({
         </span>
         {/* Collapsed rows show which exercises have a demo; open, the demo
             itself is right below. On the right so every title lines up. */}
-        {media && !open ? (
+        {media && rowCollapsed ? (
           <span className="ex-row-thumb" aria-hidden="true">
             {/* eslint-disable-next-line @next/next/no-img-element -- remote YouTube thumbnail, not a local asset */}
             <img
@@ -655,10 +727,22 @@ export function ExerciseRow({
             />
             <span className="ex-demo-play-glyph ex-demo-play-glyph-sm" />
           </span>
+        ) : rowCollapsed ? (
+          // Holds the thumbnail column where Today's section rows show one, so
+          // every title still lines up; hidden everywhere else.
+          <span className="ex-row-placeholder" aria-hidden="true">
+            <ExerciseGlyph block={block} />
+          </span>
         ) : null}
         <span className="ex-row-chevron" aria-hidden="true" />
       </div>
-      {open ? (
+      {open && detail === "sheet" ? (
+        <InjuryDetailSheet title={title} onClose={onToggle}>
+          <div id={bodyId}>
+            <ExerciseDetail block={block} openWeekIntent={openWeekIntent} sourceCountdown={sourceCountdown} />
+          </div>
+        </InjuryDetailSheet>
+      ) : open ? (
         <div id={bodyId} className="ex-row-body">
           {media ? (
             <ExerciseDemo
@@ -695,6 +779,99 @@ export function ExerciseRow({
           <ExerciseLogPanel block={block} />
         </div>
       ) : null}
+    </div>
+  );
+}
+
+/**
+ * One exercise in its own sheet (Today). What to do and when to stop are
+ * always in view; the reasons, the coaching cues and the full prescription
+ * each open on their own. In a preview the demo starts open (paused on its
+ * tap-to-play frame, nothing loads until tapped); once the session is running
+ * it is collapsed like the rest and logging sits at the foot.
+ */
+function ExerciseDetail({
+  block,
+  openWeekIntent,
+  sourceCountdown,
+}: {
+  block: StructuredBlock;
+  openWeekIntent?: OpenBlockWeekIntent | null;
+  sourceCountdown?: string | null;
+}) {
+  const rehabLabelPolicy = useContext(RehabLabelContext);
+  const prescription = useBlockPrescription(block, sourceCountdown);
+  const { title, compactStopRule } = prescription;
+  const blockType = cleanText(block.block_type);
+  const tagLabel = blockType ? blockTagLabel(block, rehabLabelPolicy) : null;
+  const media = useExerciseMedia(block.display_name, block.exercise_key);
+  const summary = exerciseRowSummary(block, prescription);
+  const builds = athleteFacingRationale(block.purpose);
+  const whyTodayRaw = athleteFacingRationale(block.why_today);
+  const whyToday = sameCopy(builds, whyTodayRaw) ? null : whyTodayRaw;
+  const cues = getBlockExecutionDisplay(block).cues;
+  const sessionRunning = useExerciseLoggingActive();
+
+  return (
+    <div className="injury-sheet-body ex-detail">
+      {tagLabel || summary ? (
+        <p className="ex-detail-summary">{[tagLabel, summary].filter(Boolean).join(" · ")}</p>
+      ) : null}
+      {/* Safety instructions are never behind a tap: one plain line. */}
+      {compactStopRule ? (
+        <p className="ex-detail-stop">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" />
+          </svg>
+          <span>Stop if {compactStopRule.replace(/^(?:if|when)\s+/i, "")}</span>
+        </p>
+      ) : null}
+      {media ? (
+        <details className="ex-detail-section" open={!sessionRunning}>
+          <summary>Demo video</summary>
+          <ExerciseDemo media={media} exerciseName={title} />
+        </details>
+      ) : null}
+      {builds || whyToday ? (
+        <details className="ex-detail-section">
+          <summary>Why it&apos;s here</summary>
+          {builds ? (
+            <p className="ex-row-why-line">
+              <span className="sp-stat-label">Builds</span>
+              {builds}
+            </p>
+          ) : null}
+          {whyToday ? (
+            <p className="ex-row-why-line ex-row-why-today">
+              <span className="sp-stat-label">Why today</span>
+              {whyToday}
+            </p>
+          ) : null}
+        </details>
+      ) : null}
+      {cues.length > 0 ? (
+        <details className="ex-detail-section">
+          <summary>Coaching cues</summary>
+          <ul className="sp-cues">
+            {cues.map((cue, index) => (
+              <li key={`${cue}-${index}`}>{cue}</li>
+            ))}
+          </ul>
+        </details>
+      ) : null}
+      <details className="ex-detail-section">
+        <summary>Full prescription</summary>
+        <BlockCard
+          block={block}
+          openWeekIntent={openWeekIntent}
+          sourceCountdown={sourceCountdown}
+          embedded
+          hideCues
+          hideStopRule
+        />
+      </details>
+      {/* Renders only where a started session provides logging (Today). */}
+      <ExerciseLogPanel block={block} />
     </div>
   );
 }
@@ -741,7 +918,14 @@ export function SessionCard({
   showDayLabels = true,
   completionInfo,
   openWeekIntent,
+  layout = "card",
+  sectionIndex = 0,
 }: {
+  /** "section" is Today's numbered session part: every exercise row in view,
+   * the rationale and coaching cues behind one disclosure. */
+  layout?: "card" | "section";
+  /** Zero-based position of this session in the day, for the "01 / ..." label. */
+  sectionIndex?: number;
   session: StructuredSession;
   day?: StructuredDay;
   /** Countdown used only to reconcile exact source prescription ranges. */
@@ -813,6 +997,91 @@ export function SessionCard({
       : showDayContext
         ? card?.mindset_anchor
         : undefined;
+
+  if (layout === "section") {
+    const sectionTitle = isDeclaredLightCombat
+      ? DECLARED_LIGHT_COMBAT_TITLE
+      : isTechnicalSession
+        ? TECHNICAL_COMBAT_TITLE
+        : title;
+    const sectionType = isDeclaredLightCombat
+      ? "Technical"
+      : isTechnicalSession
+        ? TECHNICAL_COMBAT_TAG
+        : sessionTypeLabel;
+    const sectionMeta = [
+      // The plan's estimate, not a measured time.
+      duration ? `~${duration}` : null,
+      blocks.length > 1 ? `${blocks.length} exercises` : null,
+    ].filter((part): part is string => Boolean(part));
+    // With blocks, the objective is the reason for the work and waits behind
+    // the disclosure. Without blocks it IS the prescription, so it stays out.
+    const objectiveIsInstruction = blocks.length === 0 && objective && !objectiveRepeatsTitle;
+    const whyText = isDeclaredLightCombat
+      ? DECLARED_LIGHT_COMBAT_DESCRIPTION
+      : !objectiveIsInstruction && objective && !objectiveRepeatsTitle
+        ? objective
+        : null;
+    const hasDetails =
+      Boolean(whyText) || isTechnicalSession || getSessionCoachingLines(sessionMindset).length > 0;
+    return (
+      <article className="sp-session" data-layout="section">
+        <header className="sp-section-head">
+          <div>
+            <p className="sp-section-eyebrow">
+              <span>{String(sectionIndex + 1).padStart(2, "0")}</span>
+              {sectionType ? <span>{sectionType}</span> : null}
+              {isZeroLoad ? <span>Zero load</span> : null}
+            </p>
+            {hideTitle && !isTechnicalSession ? null : (
+              <h3 className="sp-session-title">{sectionTitle}</h3>
+            )}
+          </div>
+          {sectionMeta.length > 0 || completionInfo?.display.label ? (
+            <p className="sp-section-meta">
+              {sectionMeta.join(" · ")}
+              {completionInfo?.display.label ? (
+                <span className="sp-tag sp-status-tag" data-tone={completionInfo.display.tone}>
+                  {completionInfo.display.label}
+                </span>
+              ) : null}
+            </p>
+          ) : null}
+        </header>
+        {objectiveIsInstruction ? (
+          <p className="sp-session-objective sp-session-instruction">{objective}</p>
+        ) : null}
+        {hasDetails ? (
+          <details className="sp-section-details">
+            <summary>Why this session</summary>
+            <div className="sp-section-details-body">
+              {isTechnicalSession ? <TechnicalCombatRationale /> : null}
+              {whyText ? <p className="sp-session-objective">{whyText}</p> : null}
+              <MindsetAnchorCard
+                anchor={sessionMindset}
+                dedupeContext={isTechnicalSession ? TECHNICAL_COMBAT_RATIONALE : whyText ?? objective}
+              />
+            </div>
+          </details>
+        ) : null}
+        {blocks.length > 0 ? (
+          <div className="sp-blocks ex-rows">
+            {blocks.map((block, index) => (
+              <ExerciseRow
+                key={cleanText(block.block_id) || `block-${index}`}
+                block={block}
+                open={openBlockIndex === index}
+                onToggle={() => setOpenBlockIndex((current) => (current === index ? null : index))}
+                openWeekIntent={openWeekIntent}
+                sourceCountdown={sourceCountdown}
+                detail="sheet"
+              />
+            ))}
+          </div>
+        ) : null}
+      </article>
+    );
+  }
 
   return (
     <article className="sp-session">

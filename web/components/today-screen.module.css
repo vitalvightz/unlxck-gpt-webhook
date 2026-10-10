@@ -7,41 +7,6 @@
   display: none;
 }
 
-.planName {
-  overflow-wrap: anywhere;
-}
-
-.command :global(.today-hero-meta) {
-  gap: 0.45em;
-}
-
-.links {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px 20px;
-}
-
-.links a {
-  display: inline-flex;
-  align-items: center;
-  min-height: 44px;
-  color: var(--text-secondary);
-  font-size: 13px;
-  font-weight: 600;
-  text-decoration: underline;
-  text-underline-offset: 4px;
-}
-
-.links a:hover {
-  color: var(--text-primary);
-}
-
-.links a:focus-visible {
-  outline: 2px solid var(--text-primary);
-  outline-offset: 4px;
-  border-radius: 2px;
-}
-
 .nextStep {
   display: flex;
   align-items: center;
@@ -79,31 +44,6 @@
   outline-offset: 4px;
 }
 
-.command :global(.today-readiness-strip) {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-}
-
-/* The 44px touch target and vertical centring live on the row (dot + value),
-   not on the anchor's own content. An inline-flex anchor turns its wrapped
-   text and its trailing chevron into two independently cross-axis-centred
-   flex items, so once the longest label ("No active injuries") wraps to a
-   second line, the chevron ends up centred beside the whole two-line block
-   instead of trailing the label's own last line. Flexing the row instead
-   keeps the anchor a normal (block-level, since it's now a flex item) box
-   whose own text and trailing chevron still flow and wrap together as one
-   unit, exactly like any other wrapped sentence. */
-.command :global(.today-readiness-strip dd) {
-  display: flex;
-  align-items: center;
-  min-height: 44px;
-  white-space: normal;
-  overflow-wrap: anywhere;
-}
-
-.command :global(.today-readiness-strip dd > a) {
-  min-width: 0;
-}
-
 @media (max-width: 720px) {
   .nextStep {
     align-items: flex-start;
@@ -116,30 +56,236 @@
     align-items: center;
   }
 
-  .command :global(.today-hero-grid) {
-    gap: 8px;
-  }
 
-  .links {
-    width: 100%;
-  }
-
-  .command :global(.today-readiness-strip div) {
-    padding: 10px 8px;
-    align-content: start;
-  }
-
-  .command :global(.today-readiness-strip dt) {
-    font-size: 9px;
-    letter-spacing: 0.04em;
-  }
-
-  .command :global(.today-readiness-strip dd) {
-    font-size: 12px;
-  }
 }
 
 :global(html[data-theme="light"]) .command {
   background: #fff !important;
   border-color: rgba(20, 20, 25, 0.12) !important;
+}
+
+/* -- Hero: date, Today, phase; the camp countdown pill on the right ------- */
+.hero {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.hero :global(.today-hero-copy) {
+  min-width: 0;
+}
+
+.hero h1 {
+  margin: 2px 0;
+  font-size: clamp(44px, 12vw, 64px);
+  line-height: 0.95;
+  letter-spacing: -0.03em;
+}
+
+.heroDate,
+.heroPhase {
+  margin: 0;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: var(--type-label-sm);
+  letter-spacing: var(--tracking-kicker);
+  text-transform: uppercase;
+}
+
+.heroPhase:empty {
+  display: none;
+}
+
+.tileLink:focus-visible,
+.quickAction:focus-visible {
+  outline: 2px solid var(--brand-red);
+  outline-offset: 2px;
+}
+
+.icon {
+  display: block;
+  width: 20px;
+  height: 20px;
+}
+
+.chevron {
+  flex: 0 0 auto;
+  width: 7px;
+  height: 7px;
+  margin-left: auto;
+  border-top: 2px solid var(--text-muted);
+  border-right: 2px solid var(--text-muted);
+  transform: rotate(45deg);
+}
+
+/* -- Status tiles ---------------------------------------------------------- */
+.tiles {
+  padding: 0;
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+}
+
+.tile {
+  min-width: 0;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-stat);
+  background: var(--bg-stat);
+  --tile-ink: var(--text-secondary);
+}
+
+.tile[data-tone="clear"] {
+  --tile-ink: var(--success-ink);
+}
+
+.tile[data-tone="pending"] {
+  --tile-ink: var(--progress-gold);
+}
+
+.tile[data-tone="risk"] {
+  --tile-ink: var(--danger-ink);
+}
+
+.tile > div,
+.tile,
+.tileLink {
+  color: var(--text-primary);
+}
+
+.tileLink,
+.tile:not(:has(.tileLink)) {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 64px;
+  padding: 10px 12px;
+  text-decoration: none;
+}
+
+.tileLink:hover {
+  background: var(--bg-surface-alt);
+  border-radius: inherit;
+}
+
+.tileIcon {
+  flex: 0 0 auto;
+  color: var(--tile-ink);
+}
+
+.tileIcon .icon {
+  width: 30px;
+  height: 30px;
+}
+
+.tileText {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.tileLabel {
+  overflow: hidden;
+  color: var(--text-secondary);
+  font-size: var(--type-meta);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tileValue {
+  margin: 0;
+  font-size: var(--type-body);
+  font-weight: 650;
+  line-height: 1.2;
+}
+
+/* Three tiles on a phone: icon above the text so the words keep their room. */
+@media (max-width: 480px) {
+  .tileLink,
+  .tile:not(:has(.tileLink)) {
+    position: relative;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 10px;
+  }
+
+  .tileIcon .icon {
+    width: 26px;
+    height: 26px;
+  }
+
+  .tile .chevron {
+    position: absolute;
+    top: 18px;
+    right: 12px;
+  }
+
+  .tileLabel {
+    font-size: var(--type-label-sm);
+  }
+}
+
+/* -- Quick actions --------------------------------------------------------- */
+.quickActions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.quickTitle {
+  margin: 0;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: var(--type-label-sm);
+  letter-spacing: var(--tracking-kicker);
+  text-transform: uppercase;
+}
+
+.quickRow {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.quickAction {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  min-height: 52px;
+  padding: 10px 12px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-stat);
+  color: var(--text-primary);
+  font-size: var(--type-body-sm);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.quickAction:hover {
+  border-color: var(--border-strong);
+}
+
+.quickAction > .icon {
+  flex: 0 0 auto;
+  color: var(--text-secondary);
+}
+
+@media (max-width: 480px) {
+  .quickAction {
+    position: relative;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+
+  .quickAction .chevron {
+    position: absolute;
+    top: 16px;
+    right: 12px;
+  }
 }
