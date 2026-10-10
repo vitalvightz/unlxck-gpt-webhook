@@ -4,7 +4,7 @@ import { useId, useRef, useState } from "react";
 import { ApiError, submitInjuryEpisodeObservation } from "@/lib/api";
 import type { InjuryFlagRecord, TodayCommandView } from "@/lib/types";
 import { InjuryChevron, InjuryDetailSheet } from "./injury-detail-sheet";
-import { RehabProgressStatus } from "./rehab-progress-status";
+import { RehabProgressStatus, rehabStageLabel } from "./rehab-progress-status";
 
 const SCHEDULE_LABELS = { due: "Rehab due today", recovery_day: "Rest day", already_completed: "Done for today",
   held: "Rehab on hold", deferred: "Rehab moved", unsupported: "No rehab yet" } as const;
@@ -68,9 +68,12 @@ export function InjuryClearance({ injury, token, onRefresh }: {
     <button type="button" className="injury-detail-link" aria-expanded={choosing} aria-haspopup="dialog"
       aria-label={clearance ? "Change clearance" : "Report clearance"} disabled={busy}
       onClick={() => { setRehabLevel(clearance?.rehabilitation_permission?.level ?? "not_cleared"); setTrainingLevel(clearance?.scopes.includes("contact") ? "contact" : clearance?.scopes.includes("training") ? "training" : "rehab"); setError(""); setChoosing(true); }}>
-      <span>Clearance &amp; restrictions</span><InjuryChevron />
+      <span>Clearance</span>
+      {/* Just the training level, on the same line; the rehab level and its
+          self-reported source are in the "Clearance & restrictions" sheet. */}
+      {clearance ? <span className="injury-clearance-value">{scopeLabel}</span> : null}
+      <InjuryChevron />
     </button>
-    {clearance ? <p className="injury-clearance-summary">{labels[clearance.rehabilitation_permission?.level ?? "not_cleared"]} · {scopeLabel} · Self-reported</p> : null}
     {choosing ? <InjuryDetailSheet title="Clearance & restrictions" busy={busy} onClose={() => setChoosing(false)}>
       <form onSubmit={event => { event.preventDefault(); void report(); }}>
         <div className="injury-sheet-body">
@@ -130,22 +133,36 @@ export function InjuryCareStatus({ injury, token, onRefresh, showClearance = tru
   // there is a schedule; the schedule line carries the state instead.
   const showSummary = Boolean(summary) && !(injury.rehab_decision?.outcome === "prescribed_rehab" && schedule)
     && summary !== scheduleReason;
+  // Under a stage block, a routine non-actionable state ("Done for today",
+  // "Rest day") folds into it as a small line instead of its own row. "Rehab
+  // due today" keeps its row: it links to today's exercises.
+  const foldSchedule = outcome === "prescribed_rehab" && Boolean(rehabStageLabel(injury.rehab_decision))
+    && Boolean(schedule) && routine && schedule?.state !== "due";
+  const stageStatusLine = foldSchedule && schedule
+    // Non-breaking spaces keep "next Sat 10 Oct" on one line when it wraps.
+    ? `${scheduleLabel}${schedule.next_due_day ? ` · next\u00a0${formatNextDay(schedule.next_due_day).replace(/ /g, "\u00a0")}` : ""}`
+    : null;
+  const showScheduleRow = !trackingOnly && !resolved && Boolean(schedule) && !foldSchedule;
+  const showTrackingSchedule = trackingOnly && (schedule?.state === "held" || schedule?.state === "deferred");
+  const showReason = Boolean(scheduleReason) && !resolved
+    && (!trackingOnly || ((schedule?.state === "held" || schedule?.state === "deferred") && scheduleReason !== summary));
+  const hasGuidance = trackingOnly || resolved || showSummary || showScheduleRow || showTrackingSchedule || showReason;
   return <div className="today-injury-care">
     {injury.rehab_decision ? <>
-      {outcome === "prescribed_rehab" ? <RehabProgressStatus decision={injury.rehab_decision} /> : null}
-      <div className="injury-rehab-status" role="note" aria-label="Guidance">
+      {outcome === "prescribed_rehab" ? <RehabProgressStatus decision={injury.rehab_decision} statusLine={stageStatusLine} /> : null}
+      {hasGuidance ? <div className="injury-rehab-status" role="note" aria-label="Guidance">
         {trackingOnly ? <><p className="injury-rehab-label"><strong>Recovery monitoring</strong></p>
           <p className="muted">{outcome === "unsupported_prescription" ? "No guided rehab programme is available for this injury yet." : summary}</p>
           <p className="injury-sheet-note">Injury restrictions and safety checks still apply.</p></>
           : resolved ? <p className="injury-rehab-label"><strong>Recovered</strong></p>
           : showSummary ? <p>{summary}</p> : null}
-        {!trackingOnly && !resolved && schedule ? <>
+        {showScheduleRow && schedule ? <>
           {schedule.state === "due" ? <a className="injury-rehab-action" href="#today-session"><span><strong>{scheduleLabel}</strong><small>View today’s recovery exercises</small></span><InjuryChevron /></a>
             : <p className="injury-rehab-label"><strong>{scheduleLabel}</strong>{schedule.next_due_day ? <small>Next {formatNextDay(schedule.next_due_day)}</small> : null}</p>}
         </> : null}
-        {trackingOnly && (schedule?.state === "held" || schedule?.state === "deferred") ? <p className="injury-rehab-label"><strong>{scheduleLabel}</strong></p> : null}
-        {scheduleReason && !resolved && (!trackingOnly || ((schedule?.state === "held" || schedule?.state === "deferred") && scheduleReason !== summary)) ? <p className="injury-safety-reason">{scheduleReason}</p> : null}
-      </div>
+        {showTrackingSchedule ? <p className="injury-rehab-label"><strong>{scheduleLabel}</strong></p> : null}
+        {showReason ? <p className="injury-safety-reason">{scheduleReason}</p> : null}
+      </div> : null}
       {(!injury.episode_id || injury.rehab_decision.outcome === "wound_care" || Boolean(injury.surface_class && injury.surface_class !== "non_surface")) && injury.rehab_decision.prescription?.sources?.length ? <details className="injury-guidance-sources"><summary>Guidance sources</summary>
         {injury.rehab_decision.prescription.sources.map((source, index) => <a key={source} href={source} target="_blank" rel="noopener noreferrer">Routine guidance{index ? ` ${index + 1}` : ""}</a>)}
       </details> : null}

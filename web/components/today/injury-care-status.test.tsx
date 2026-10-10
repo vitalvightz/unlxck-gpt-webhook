@@ -50,7 +50,7 @@ for (const [label, scopes] of [
       assert.match(container.textContent ?? "", /Rest day/);
       assert.match(container.textContent ?? "", /Next Fri 2 Oct/);
       assert.equal(container.querySelector("select"), null);
-      assert.equal(container.querySelector('[aria-expanded="false"]')?.textContent, "Clearance & restrictions");
+      assert.match(container.querySelector('[aria-expanded="false"]')?.textContent ?? "", /^Clearance/);
       assert.equal(document.querySelector('[role="dialog"]'), null);
       assert.equal(container.querySelector('a[href*="nhs"]'), null);
       await click(container, "Report clearance");
@@ -363,11 +363,39 @@ test("Clinical Clearance has two simple selectors and sends versioned self-repor
 });
 
 
-test("compact clearance keeps unknown rehabilitation permission visible", () => {
+test("compact clearance shows only the training level; the rest is in its sheet", () => {
   const html = renderToStaticMarkup(<InjuryCareStatus injury={{ ...injury, clinician_clearance: {
     episode_id: "episode-1", scopes: ["rehab", "training"], source: "athlete_reported", externally_verified: false,
   } }} token="token" onRefresh={async () => {}} />);
-  assert.match(html, /Not sure \/ not cleared.*Non-contact training.*Self-reported/);
+  assert.match(html, /<span>Clearance<\/span><span class="injury-clearance-value">Non-contact training<\/span>/);
+  assert.doesNotMatch(html, /Not sure \/ not cleared|Self-reported/);
+});
+
+test("a routine state folds under the stage block, which opens progression requirements itself", () => {
+  const html = renderToStaticMarkup(<InjuryCareStatus injury={{ ...injury, rehab_decision: {
+    outcome: "prescribed_rehab", summary: "Your rehab is matched to this injury's current recovery stage.", reason_codes: [], stage: "restore",
+    progression: { next_transition: { to_stage: "load", status: "blocked", target_stage_live: true, reason_codes: [], requirements: [] } },
+    schedule: { state: "already_completed", reason: "You have already logged rehab for this injury today.", next_due_day: "2026-10-10" },
+  } }} token="token" onRefresh={async () => {}} />);
+  const body = new domWindow.DOMParser().parseFromString(html, "text/html").body;
+  const stage = body.querySelector<HTMLButtonElement>("button.injury-progress");
+  assert.ok(stage);
+  assert.equal(stage.getAttribute("aria-haspopup"), "dialog");
+  assert.equal(stage.querySelector(".injury-progress-status")?.textContent?.replace(/\u00a0/g, " "), "Done for today · next Sat 10 Oct");
+  assert.match(stage.getAttribute("aria-label") ?? "", /Progression requirements/);
+  // No separate requirements row and no separate schedule row.
+  assert.equal(body.querySelector(".injury-progress-link"), null);
+  assert.equal(body.querySelector(".injury-rehab-label"), null);
+  assert.equal((body.textContent ?? "").split("Done for today").length - 1, 1);
+});
+
+test("rehab due today keeps its own row: it links to the exercises", () => {
+  const html = renderToStaticMarkup(<InjuryCareStatus injury={{ ...injury, rehab_decision: {
+    outcome: "prescribed_rehab", summary: "Matched.", reason_codes: [], stage: "restore",
+    schedule: { state: "due", reason: "Due.", next_due_day: "2026-10-10" },
+  } }} token="token" onRefresh={async () => {}} />);
+  assert.match(html, /class="injury-rehab-action" href="#today-session"/);
+  assert.doesNotMatch(html, /injury-progress-status/);
 });
 
 test("surface guidance sources remain available without a clearance sheet", () => {
@@ -389,7 +417,7 @@ test("unsupported elbow monitoring does not imply a route to Load, even with per
       progression: { next_transition: { to_stage: "load", status: "closed", target_stage_live: false, reason_codes: [] } }, schedule: { state: "unsupported", reason: "No matching exercise." },
     } }} token="token" onRefresh={async () => {}} />);
     assert.match(html, /Recovery monitoring/);
-    assert.match(html, /Sport-specific rehab.*Contact training/);
+    assert.match(html, /injury-clearance-value">Contact training</);
     assert.doesNotMatch(html, /Rehabilitation stages|Next:|Progression requirements|unlock rehab|Add injury area/);
   }
 });

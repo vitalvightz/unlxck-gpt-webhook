@@ -23273,14 +23273,15 @@ html[data-theme="light"] .sp-status-tag[data-tone="neutral"] {
 .today-injury-card .today-injury-summary { margin-top: 4px; font-size: 13px; line-height: 1.5; color: var(--text-secondary); }
 .today-injury-card .gi-change-btn { min-height: 44px; border-radius: 999px; padding: 8px 14px; font-size: 13px; }
 .today-injury-card .today-injury-care { gap: 12px; }
-.injury-progress { display: flex; align-items: end; justify-content: space-between; gap: 20px; padding-top: 20px; border-top: 1px solid var(--border-default); }
-.injury-progress-label { margin: 0 0 4px; color: var(--text-secondary); font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; }
-.injury-progress strong { font-size: 28px; line-height: 1.2; font-weight: 650; letter-spacing: -0.04em; }
-.injury-progress-next { display: grid; gap: 8px; justify-items: end; max-width: 58%; }
-.injury-progress-next > span { color: var(--text-secondary); font-size: 12px; text-align: right; }
-.injury-progress ol { display: flex; gap: 4px; margin: 0; padding: 0; list-style: none; }
-.injury-progress li { width: clamp(18px, 4vw, 28px); height: 5px; border-radius: 4px; background: var(--border-strong); }
-.injury-progress li[data-complete="true"] { background: #df514b; }
+/* One compact progression row; the summary row above shows the stage itself. */
+.injury-progress { display: flex; width: 100%; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 0; border: 0; border-top: 1px solid var(--border-default); background: transparent; color: inherit; font: inherit; text-align: left; }
+button.injury-progress { cursor: pointer; }
+button.injury-progress:focus-visible { outline: 2px solid var(--brand-red); outline-offset: 3px; }
+.injury-progress > svg { flex: none; color: var(--text-muted); }
+button.injury-progress:hover > svg { color: var(--text-primary); }
+.injury-progress-main { display: grid; gap: 2px; min-width: 0; }
+.injury-progress-title { color: var(--text-primary); font-size: 14px; font-weight: 600; line-height: 1.4; }
+.injury-progress-status { color: var(--text-muted); font-size: 12px; line-height: 1.5; }
 .injury-rehab-status { display: grid; gap: 8px; }
 .injury-rehab-status p { margin: 0; color: var(--text-secondary); font-size: 14px; line-height: 1.6; }
 .injury-rehab-action { display: flex; align-items: center; justify-content: space-between; gap: 16px; border-radius: 14px; padding: 16px; text-decoration: none; color: var(--text-primary); background: var(--bg-surface-alt); transition: background 160ms ease; }
@@ -23295,7 +23296,6 @@ html[data-theme="light"] .sp-status-tag[data-tone="neutral"] {
 .injury-detail-link { display: flex; width: 100%; align-items: center; justify-content: space-between; gap: 12px; min-height: 44px; padding: 0; border: 0; background: transparent; color: var(--text-secondary); font: 500 14px/1.5 var(--font-sans); text-align: left; cursor: pointer; }
 .injury-detail-link:hover { color: var(--text-primary); }
 .injury-detail-link:disabled { cursor: wait; opacity: 0.5; }
-.injury-progress-link { font-size: 12px; min-height: 32px; }
 .injury-chevron { flex-shrink: 0; width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
 .today-injury-card .today-injury-update-head { border: 0; padding-top: 0; }
 .today-injury-card .today-injury-status-label { font: 500 15px/1.5 var(--font-sans); color: var(--text-secondary); letter-spacing: 0; text-transform: none; }
@@ -23303,7 +23303,7 @@ html[data-theme="light"] .sp-status-tag[data-tone="neutral"] {
 .today-injury-card .today-injury-status-row .today-segment { min-height: 48px; border-radius: 12px; background: transparent; border: 1px solid var(--border-strong); font: 550 14px/1.4 var(--font-sans); }
 .today-injury-card .today-injury-status-row .today-segment-active { background: var(--brand-red-soft); border-color: var(--brand-red); }
 .injury-clearance { border-top: 1px solid var(--border-default); padding-top: 4px; }
-.injury-clearance-summary { margin: -2px 0 0; color: var(--text-muted); font-size: 11px; line-height: 1.5; }
+.injury-clearance-value { margin-left: auto; color: var(--text-muted); font-size: 12px; text-align: right; }
 .today-injury-card .injury-resolve-link { align-self: flex-start; min-height: 32px; padding: 0; border: 0; background: transparent; font: inherit; font-size: 11px; color: var(--text-muted); cursor: pointer; }
 .injury-guidance-sources { font-size: 12px; color: var(--text-secondary); }
 .injury-guidance-sources summary { cursor: pointer; padding: 8px 0; }

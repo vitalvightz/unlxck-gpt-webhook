@@ -31,26 +31,34 @@ const REASONS: Record<string, string> = {
   next_day_response_worse: "Your injury felt worse the next day. Follow the current conservative guidance.",
 };
 
-export function RehabProgressStatus({ decision }: { decision: NonNullable<InjuryFlagRecord["rehab_decision"]> }) {
+/** The rehab progression row inside an open injury. The injury's summary row
+ * above already shows the stage, its five-step meter and where it goes next,
+ * so this stays one compact line: "Progression to Load", with the day's rehab
+ * status ("Done for today · next Sat 10 Oct") under it. With a next stage the
+ * whole row opens the progression requirements. */
+export function RehabProgressStatus({ decision, statusLine }: {
+  decision: NonNullable<InjuryFlagRecord["rehab_decision"]>;
+  statusLine?: string | null;
+}) {
   const [open, setOpen] = useState(false);
   const stage = decision.stage;
   if (!stage || !STAGES.includes(stage)) return null;
-  const current = STAGES.indexOf(stage);
   const next = decision.progression?.next_transition;
   const unavailable = next && (!next.target_stage_live || next.status === "closed");
+  const title = next ? `Progression to ${LABELS[next.to_stage] ?? "next stage"}${unavailable ? " · Closed" : ""}` : null;
+  if (!title && !statusLine) return null;
+  const content = <>
+    <span className="injury-progress-main">
+      {title ? <span className="injury-progress-title">{title}</span> : null}
+      {statusLine ? <span className="injury-progress-status">{statusLine}</span> : null}
+    </span>
+    {next ? <InjuryChevron /> : null}
+  </>;
   return <>
-    <div className="injury-progress">
-      <div><p className="injury-progress-label">Rehab stage</p><strong>{LABELS[stage]}</strong></div>
-      <div className="injury-progress-next">
-        {next ? <span>Next: {LABELS[next.to_stage] ?? "Not available"}{unavailable ? " · Closed" : ""}</span> : null}
-        <ol aria-label="Rehabilitation stages">{STAGES.map((value, index) =>
-          <li key={value} aria-current={value === stage ? "step" : undefined} data-complete={index <= current}>
-            <span className="sr-only">{LABELS[value]}{value === stage ? ", current stage" : ""}</span>
-          </li>)}</ol>
-      </div>
-    </div>
-    {next ? <button type="button" className="injury-detail-link injury-progress-link" onClick={() => setOpen(true)}
-      aria-haspopup="dialog">Progression requirements<InjuryChevron /></button> : null}
+    {next ? <button type="button" className="injury-progress" aria-haspopup="dialog"
+      aria-label={`${title}${statusLine ? `. ${statusLine}` : ""}. Progression requirements`}
+      onClick={() => setOpen(true)}>{content}</button>
+      : <div className="injury-progress">{content}</div>}
     {open && next ? <InjuryDetailSheet title="Progression requirements" onClose={() => setOpen(false)}>
       <div className="injury-sheet-body">
         <p className="injury-sheet-lead">{LABELS[stage]} → {LABELS[next.to_stage] ?? "Next stage"}</p>
