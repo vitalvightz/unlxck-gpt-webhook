@@ -1,0 +1,317 @@
+/* Plans tab: the current camp at a glance, saved plans as compact rows, and the
+   athlete profile as one line. Management lives in a sheet, not on the page. */
+
+.page {
+  display: grid;
+  gap: 24px;
+}
+
+.pageTitle {
+  margin: 0;
+  font-size: clamp(30px, 8vw, 40px);
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+}
+
+/* -- Current camp ----------------------------------------------------------- */
+.campCard {
+  display: grid;
+  gap: 16px;
+  padding: 20px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-card);
+  background: var(--bg-stat);
+}
+
+.campHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.eyebrow {
+  margin: 0;
+  color: var(--danger-ink);
+  font-family: var(--font-mono);
+  font-size: var(--type-label-sm);
+  font-weight: 600;
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+}
+
+.activePill {
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+  background: var(--danger-soft);
+  color: var(--danger-ink);
+  font-family: var(--font-mono);
+  font-size: var(--type-label-sm);
+  font-weight: 600;
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+}
+
+.campTitle {
+  margin: -6px 0 0;
+  font-size: var(--type-title-md);
+  line-height: 1.2;
+}
+
+.fightRow {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.factLabel,
+.facts dt,
+.campFacts dt {
+  margin: 0;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: var(--type-label-sm);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.fightDate {
+  margin: 4px 0 0;
+  font-size: var(--type-body-lg);
+  font-weight: 600;
+}
+
+.countdown {
+  text-align: right;
+}
+
+.countdownValue {
+  margin: 0;
+  color: var(--danger-ink);
+  font-size: 30px;
+  font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.campFacts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin: 0;
+}
+
+.campFacts dd,
+.facts dd {
+  margin: 4px 0 0;
+  font-size: var(--type-body);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.primaryAction {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 52px;
+  border-radius: 12px;
+}
+
+.quietLinks {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-top: -4px;
+  color: var(--text-muted);
+}
+
+.quietLinks a,
+.quietLinks button {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 4px;
+  border: 0;
+  background: none;
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: var(--type-body);
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.quietLinks a:hover,
+.quietLinks button:hover {
+  color: var(--text-primary);
+}
+
+/* -- Sections --------------------------------------------------------------- */
+.section {
+  display: grid;
+  gap: 12px;
+}
+
+.sectionHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.sectionTitle {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: var(--type-title-sm);
+  font-weight: 650;
+}
+
+.sectionMeta {
+  color: var(--text-secondary);
+  font-size: var(--type-body-sm);
+}
+
+/* -- Rows ------------------------------------------------------------------- */
+.rows {
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-card);
+  list-style: none;
+}
+
+.rows li + li {
+  border-top: 1px solid var(--border-subtle);
+}
+
+.row,
+.profileRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 64px;
+  padding: 14px 16px;
+  border: 0;
+  background: none;
+  color: var(--text-primary);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.row:hover {
+  background: var(--bg-stat);
+}
+
+.profileRow {
+  padding: 4px 0;
+}
+
+.rowText {
+  display: flex;
+  flex: 1 1 auto;
+  min-width: 0;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.rowTitle {
+  font-size: var(--type-body-lg);
+  font-weight: 600;
+}
+
+.rowMeta {
+  color: var(--text-secondary);
+  font-size: var(--type-body-sm);
+}
+
+.chevron {
+  flex: 0 0 auto;
+  width: 7px;
+  height: 7px;
+  margin-right: 4px;
+  border-top: 2px solid var(--text-muted);
+  border-right: 2px solid var(--text-muted);
+  transform: rotate(45deg);
+}
+
+.archiveToggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: var(--type-body-sm);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.toggleChevron {
+  width: 6px;
+  height: 6px;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: translateY(-2px) rotate(45deg);
+}
+
+.archiveToggle[aria-expanded="true"] .toggleChevron {
+  transform: translateY(1px) rotate(-135deg);
+}
+
+.row:focus-visible,
+.profileRow:focus-visible,
+.archiveToggle:focus-visible,
+.quietLinks a:focus-visible,
+.quietLinks button:focus-visible {
+  outline: 2px solid var(--brand-red);
+  outline-offset: -2px;
+  border-radius: 8px;
+}
+
+/* -- Manage and profile sheets ---------------------------------------------- */
+.facts {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+}
+
+.sheetActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.sheetActions[data-stack="true"] {
+  display: grid;
+}
+
+.sheetActions[data-stack="true"] > * {
+  justify-content: center;
+  text-align: center;
+}
+
+.inlineForm {
+  display: grid;
+  gap: 10px;
+}
+
+.inlineForm label {
+  font-weight: 600;
+}
+
+@media (max-width: 380px) {
+  .campFacts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

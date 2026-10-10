@@ -3,163 +3,37 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { createPortal } from "react-dom";
-import { type FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { PlanSwitchDialog } from "@/components/plan-switch-dialog";
 import { RequireAuth } from "@/components/auth-guard";
 import { useAppSession } from "@/components/auth-provider";
-import { PlanHistoryRowSkeleton, PlansFeaturedSkeleton } from "@/components/skeleton";
+import {
+  AthleteProfileRow,
+  canSetActive,
+  CurrentCampCard,
+  getIntakeSource,
+  PlanManageSheet,
+  PlanRow,
+} from "@/components/plans/plan-dashboard";
+import styles from "@/components/plans/plans.module.css";
+import { PlanHistoryRowSkeleton } from "@/components/skeleton";
 import { useToast } from "@/components/toast-provider";
-import { ApiError, archivePlan, getActivePlan, listPlans, renamePlan, setActivePlan } from "@/lib/api";
-import { lockOverlayScroll } from "@/lib/overlay-scroll-lock";
+import { ApiError, getActivePlan, getToday, listPlans, setActivePlan } from "@/lib/api";
+import { getOptionLabels, TACTICAL_STYLE_OPTIONS } from "@/lib/intake-options";
+import { humanizeIfRawEnum } from "@/lib/plan-labels";
 import { requestXpRefresh } from "@/lib/xp-events";
-import { markGenerationIntent } from "@/lib/generation-intent";
-import {
-  EQUIPMENT_ACCESS_OPTIONS,
-  getOptionLabels,
-  TACTICAL_STYLE_OPTIONS,
-  TECHNICAL_STYLE_OPTIONS,
-} from "@/lib/intake-options";
-import {
-  formatAthletePlanStatus,
-  formatPlanFightDate,
-  formatPlanStatus,
-  formatPlanTimestamp,
-  getPlanDisplayName,
-  getPlanStyleSummary,
-} from "@/lib/plan-format";
+import { formatPlanStatus, getPlanDisplayName } from "@/lib/plan-format";
 import {
   type ActivePlanOverlapAction,
-  canSetActivePlan,
-  isCompletedFightCamp,
   isActivePlanOverlapError,
   isArchivedPlan,
 } from "@/lib/plan-active";
 import { getPlanReviewReason, isHeldForAdminReviewPlan } from "@/lib/plan-review";
-import type { MeResponse, PlanRequest, PlanSummary, ProfileRecord } from "@/lib/types";
-
-type SummaryLine = {
-  label: string;
-  value: string;
-};
-
-function getRenameDraftValue(plan: PlanSummary): string {
-  return plan.plan_name?.trim() || plan.fight_date || "";
-}
+import type { PlanSummary } from "@/lib/types";
 
 function getArchivedPlans(plans: PlanSummary[]): PlanSummary[] {
   return plans.filter((plan) => isArchivedPlan(plan.status));
-}
-
-function canSetActive(plan: PlanSummary): boolean {
-  return canSetActivePlan(plan.activation_state);
-}
-
-function isActivePlan(plan: PlanSummary, activePlanId: string | null): boolean {
-  return Boolean(activePlanId && plan.plan_id === activePlanId);
-}
-
-function formatCompactList(values: string[], fallback: string): string {
-  return values.length ? values.join(", ") : fallback;
-}
-
-function formatWeeklySessions(value: number | null | undefined): string | null {
-  if (!Number.isFinite(value) || value === null || value === undefined || value <= 0) {
-    return null;
-  }
-  return `${value} session${value === 1 ? "" : "s"} per week`;
-}
-
-function countTrainingDays(availability: string[] | undefined): number | null {
-  if (!availability?.length) {
-    return null;
-  }
-  return availability.length;
-}
-
-function summarizeEquipment(equipmentAccess: string[] | undefined): string | null {
-  if (!equipmentAccess?.length) {
-    return null;
-  }
-  const labels = getOptionLabels(EQUIPMENT_ACCESS_OPTIONS, equipmentAccess);
-  const visible = labels.slice(0, 3);
-  const remaining = labels.length - visible.length;
-  return remaining > 0 ? `${visible.join(", ")} +${remaining} more` : visible.join(", ");
-}
-
-function getPlanVersionLabel(plan: PlanSummary): string {
-  if (plan.plan_name?.trim()) {
-    return "Named plan";
-  }
-  return plan.fight_date ? "Fight camp" : "Open camp";
-}
-
-function getProfileSource(me: MeResponse | null): ProfileRecord | null {
-  return me?.profile ?? null;
-}
-
-type DraftWithSource = PlanRequest & { plan_source?: string };
-
-function getSavedDetailedDraft(me: MeResponse | null): PlanRequest | null {
-  const draft = me?.profile?.onboarding_draft as DraftWithSource | null | undefined;
-  if (!draft) {
-    return null;
-  }
-  return draft.plan_source === "quick_build" ? null : draft;
-}
-
-function getIntakeSource(me: MeResponse | null): PlanRequest | null {
-  return me?.latest_intake ?? getSavedDetailedDraft(me) ?? null;
-}
-
-function summarizeProfile(me: MeResponse | null): SummaryLine[] {
-  const profile = getProfileSource(me);
-  const intake = getIntakeSource(me);
-  const athleteName = profile?.full_name?.trim() || intake?.athlete.full_name?.trim() || "Athlete profile";
-  const technicalStyle = getOptionLabels(
-    TECHNICAL_STYLE_OPTIONS,
-    profile?.technical_style?.length ? profile.technical_style : intake?.athlete.technical_style ?? [],
-  );
-  const tacticalStyle = getOptionLabels(
-    TACTICAL_STYLE_OPTIONS,
-    profile?.tactical_style?.length ? profile.tactical_style : intake?.athlete.tactical_style ?? [],
-  );
-
-  const lines: SummaryLine[] = [
-    { label: "Athlete", value: athleteName },
-    { label: "Combat sport", value: formatCompactList(technicalStyle, "Not set yet") },
-  ];
-
-  if (tacticalStyle.length) {
-    lines.push({ label: "Tactical style", value: tacticalStyle.join(", ") });
-  }
-
-  return lines;
-}
-
-function summarizeIntake(me: MeResponse | null): SummaryLine[] {
-  const intake = getIntakeSource(me);
-  if (!intake) {
-    return [];
-  }
-
-  const lines: SummaryLine[] = [];
-  const weeklySessions = formatWeeklySessions(intake.weekly_training_frequency);
-  const trainingDayCount = countTrainingDays(intake.training_availability);
-  const equipmentSummary = summarizeEquipment(intake.equipment_access);
-
-  if (weeklySessions) {
-    lines.push({ label: "Weekly volume", value: weeklySessions });
-  }
-  if (trainingDayCount !== null) {
-    lines.push({ label: "Training days", value: `${trainingDayCount} day${trainingDayCount === 1 ? "" : "s"} available` });
-  }
-  if (equipmentSummary) {
-    lines.push({ label: "Equipment", value: equipmentSummary });
-  }
-
-  return lines;
 }
 
 function HeldPlansReviewNotice({ plans }: { plans: PlanSummary[] }) {
@@ -207,687 +81,6 @@ function HeldPlansReviewNotice({ plans }: { plans: PlanSummary[] }) {
   );
 }
 
-function PlanCard({
-  plan,
-  accessToken,
-  onPlanDeleted,
-  onPlanRenamed,
-  activePlanId,
-  onSetActive,
-  isSettingActive,
-}: {
-  plan: PlanSummary;
-  accessToken: string | null;
-  onPlanDeleted: (planId: string) => void;
-  onPlanRenamed: (updatedPlan: PlanSummary) => void;
-  activePlanId: string | null;
-  onSetActive: (plan: PlanSummary) => Promise<void>;
-  isSettingActive: boolean;
-}) {
-  const { showToast } = useToast();
-  const [pendingAction, setPendingAction] = useState<"rename" | "delete" | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [isRenaming, setIsRenaming] = useState(false);
-  const [renameDraft, setRenameDraft] = useState(() => getRenameDraftValue(plan));
-  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
-  const renameInputRef = useRef<HTMLInputElement | null>(null);
-  const renameDraftValue = plan.plan_name?.trim() || plan.fight_date || "";
-  const planTitle = getPlanDisplayName(plan);
-  const fightDateLabel = formatPlanFightDate(plan.fight_date);
-  const createdLabel = formatPlanTimestamp(plan.created_at);
-  const styleSummary = getPlanStyleSummary(plan);
-  const statusLabel = formatAthletePlanStatus(plan.status);
-  const versionLabel = getPlanVersionLabel(plan);
-  const isActionPending = pendingAction !== null || isSettingActive;
-  const renameInputId = `rename-plan-${plan.plan_id}`;
-  const active = isActivePlan(plan, activePlanId);
-  const eligibleForActive = canSetActive(plan);
-  const archived = isArchivedPlan(plan.status);
-  const completed = isCompletedFightCamp(plan.activation_state);
-  const reviewReason = getPlanReviewReason(plan);
-
-  useEffect(() => {
-    if (!isRenaming) {
-      setRenameDraft(renameDraftValue);
-      return;
-    }
-
-    renameInputRef.current?.focus();
-    renameInputRef.current?.select();
-  }, [isRenaming, renameDraftValue]);
-
-  useEffect(() => {
-    if (isDeleteConfirmOpen) return lockOverlayScroll();
-  }, [isDeleteConfirmOpen]);
-
-  useEffect(() => {
-    if (!isDeleteConfirmOpen) {
-      return;
-    }
-
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape" && pendingAction !== "delete") {
-        setIsDeleteConfirmOpen(false);
-      }
-    }
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => {
-      window.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [isDeleteConfirmOpen, pendingAction]);
-
-  function handleRenameStart() {
-    setMessage(null);
-    setError(null);
-    setRenameDraft(getRenameDraftValue(plan));
-    setIsRenaming(true);
-  }
-
-  function handleRenameCancel() {
-    if (isActionPending) {
-      return;
-    }
-
-    setError(null);
-    setRenameDraft(getRenameDraftValue(plan));
-    setIsRenaming(false);
-  }
-
-  async function handleRenameSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-
-    if (!accessToken) {
-      setError("Session expired. Sign in again.");
-      return;
-    }
-
-    const currentName = plan.plan_name?.trim() || "";
-    const normalizedName = renameDraft.trim();
-    if (!normalizedName) {
-      setError("Plan name cannot be empty.");
-      return;
-    }
-    if (normalizedName === currentName) {
-      setError(null);
-      setIsRenaming(false);
-      return;
-    }
-
-    setPendingAction("rename");
-    setError(null);
-    setMessage(null);
-    try {
-      const updatedPlan = await renamePlan(accessToken, plan.plan_id, normalizedName);
-      onPlanRenamed(updatedPlan);
-      showToast("Plan renamed.", { tone: "success" });
-      setIsRenaming(false);
-    } catch (renameError) {
-      const errorMessage = renameError instanceof Error ? renameError.message : "Unable to rename this plan.";
-      if (errorMessage.includes("Unable to reach the server") || errorMessage.includes("502") || errorMessage.includes("503") || errorMessage.includes("504")) {
-        setError("Connection issue. Try again in a minute.");
-      } else {
-        setError(errorMessage);
-      }
-    } finally {
-      setPendingAction(null);
-    }
-  }
-
-  function handleDeleteRequest() {
-    setMessage(null);
-    setError(null);
-    setIsDeleteConfirmOpen(true);
-  }
-
-  function handleDeleteDismiss() {
-    if (pendingAction === "delete") {
-      return;
-    }
-
-    setIsDeleteConfirmOpen(false);
-  }
-
-  async function handleDeleteConfirm() {
-    if (!accessToken) {
-      setError("Session expired. Sign in again.");
-      return;
-    }
-
-    setPendingAction("delete");
-    setError(null);
-    setMessage(null);
-    try {
-      await archivePlan(accessToken, plan.plan_id);
-      setIsDeleteConfirmOpen(false);
-      onPlanDeleted(plan.plan_id);
-      showToast(`Archived ${getPlanDisplayName(plan)}.`, { tone: "success" });
-    } catch (deleteError) {
-      const errorMessage = deleteError instanceof Error ? deleteError.message : "Unable to delete this plan.";
-      if (errorMessage.includes("Unable to reach the server") || errorMessage.includes("502") || errorMessage.includes("503") || errorMessage.includes("504")) {
-        setError("Connection issue. Try again in a minute.");
-      } else {
-        setError(errorMessage);
-      }
-    } finally {
-      setPendingAction(null);
-    }
-  }
-
-  const inlineRenameForm = isRenaming ? (
-    <form className="plan-inline-rename" onSubmit={handleRenameSubmit}>
-      <label className="plan-inline-rename-label" htmlFor={renameInputId}>
-        Rename plan
-      </label>
-      <div className="plan-inline-rename-row">
-        <input
-          ref={renameInputRef}
-          id={renameInputId}
-          value={renameDraft}
-          onChange={(event) => setRenameDraft(event.target.value)}
-          className="plan-inline-rename-input"
-          disabled={isActionPending}
-          maxLength={120}
-        />
-        <div className="plan-inline-rename-actions">
-          <button type="submit" className="secondary-button" disabled={isActionPending}>
-            {pendingAction === "rename" ? "Saving..." : "Save"}
-          </button>
-          <button type="button" className="ghost-button" onClick={handleRenameCancel} disabled={isActionPending}>
-            Cancel
-          </button>
-        </div>
-      </div>
-    </form>
-  ) : null;
-
-  const deleteConfirmationModal = isDeleteConfirmOpen && typeof document !== "undefined"
-    ? createPortal(
-      <div className="plan-dialog-backdrop" role="presentation" onClick={handleDeleteDismiss}>
-        <div
-          className="plan-dialog"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby={`delete-plan-title-${plan.plan_id}`}
-          aria-describedby={`delete-plan-body-${plan.plan_id}`}
-          onClick={(event) => event.stopPropagation()}
-        >
-          <div className="plan-dialog-header">
-            <p className="kicker">Archive plan</p>
-            <h2 id={`delete-plan-title-${plan.plan_id}`} className="plan-dialog-title">
-              Archive {getPlanDisplayName(plan)}?
-            </h2>
-          </div>
-          <p id={`delete-plan-body-${plan.plan_id}`} className="muted">
-            This moves the plan to your archived list. You can still view it later.
-          </p>
-          {error ? <div className="error-banner">{error}</div> : null}
-          <div className="plan-dialog-actions">
-            <button type="button" className="ghost-button" onClick={handleDeleteDismiss} disabled={pendingAction === "delete"}>
-              Cancel
-            </button>
-            <button type="button" className="secondary-button" onClick={handleDeleteConfirm} disabled={pendingAction === "delete"}>
-              {pendingAction === "delete" ? "Archiving..." : "Archive"}
-            </button>
-          </div>
-        </div>
-      </div>,
-      document.body,
-    )
-    : null;
-
-  return (
-    <>
-      <article className={`plan-history-row plan-history-row-card${archived ? " plan-history-row-archived" : ""}`}>
-        <div className="plan-history-copy">
-          <p className="label">{versionLabel}</p>
-          <Link href={`/plans/${plan.plan_id}`}>
-            <h2 className="plan-card-title">{planTitle}</h2>
-          </Link>
-          {inlineRenameForm}
-          <div className="plan-card-meta">
-            {plan.fight_date ? <span className="muted">Fight {fightDateLabel}</span> : null}
-            <span className="muted">{styleSummary}</span>
-            <span className="muted">Built {createdLabel}</span>
-          </div>
-          {reviewReason ? <p className="muted">{reviewReason}</p> : null}
-        </div>
-        <div className="plan-history-meta">
-          <span className={`badge${archived || completed ? " status-badge-neutral plan-archived-badge" : ""}`}>
-            {active ? "ACTIVE" : archived ? "ARCHIVED" : completed ? "COMPLETED" : statusLabel}
-          </span>
-          {!active && completed ? <span className="muted">Camp complete</span> : null}
-          {!active && !completed && !eligibleForActive ? <span className="muted">Cannot be active</span> : null}
-          <div className="plan-card-actions plans-history-actions">
-            <Link href={`/plans/${plan.plan_id}`} className="ghost-button">
-              {archived ? "Preview" : "Open"}
-            </Link>
-            {archived ? (
-              <Link href="/onboarding" className="ghost-button">
-                Create New Plan
-              </Link>
-            ) : null}
-            {!archived && !active && eligibleForActive ? (
-              <button type="button" className="secondary-button" onClick={() => void onSetActive(plan)} disabled={isActionPending || isRenaming}>
-                {isSettingActive ? "Setting..." : "Activate"}
-              </button>
-            ) : null}
-            {!archived ? (
-              <details className="plan-action-menu plans-history-menu">
-                <summary className="ghost-button">Manage</summary>
-                <div className="plan-action-menu-popover">
-                  <button type="button" className="ghost-button" onClick={handleRenameStart} disabled={isActionPending || isRenaming}>
-                    {pendingAction === "rename" ? "Saving..." : isRenaming ? "Editing name" : "Rename"}
-                  </button>
-                  <button type="button" className="ghost-button danger-button" onClick={handleDeleteRequest} disabled={isActionPending || isRenaming}>
-                    {pendingAction === "delete" ? "Archiving..." : "Archive"}
-                  </button>
-                </div>
-              </details>
-            ) : null}
-          </div>
-        </div>
-        {message || (error && !isDeleteConfirmOpen) ? (
-          <div className="plan-history-feedback">
-            {message ? <div className="success-banner">{message}</div> : null}
-            {error ? <div className="error-banner">{error}</div> : null}
-          </div>
-        ) : null}
-      </article>
-      {deleteConfirmationModal}
-    </>
-  );
-}
-
-function DashboardSummary({
-  title,
-  lines,
-  emptyLabel,
-  compact = false,
-}: {
-  title: string;
-  lines: SummaryLine[];
-  emptyLabel: string;
-  compact?: boolean;
-}) {
-  return (
-    <div className={`plans-dashboard-summary${compact ? " plans-dashboard-summary-compact" : ""}`}>
-      <p className="label">{title}</p>
-      {lines.length ? (
-        <div className="plans-dashboard-summary-grid">
-          {lines.map((line) => (
-            <div key={`${title}-${line.label}`} className="plans-dashboard-summary-row">
-              <span className="plans-dashboard-summary-term">{line.label}</span>
-              <span className="plans-dashboard-summary-value">{line.value}</span>
-            </div>
-          ))}
-        </div>
-      ) : (
-        <p className="muted">{emptyLabel}</p>
-      )}
-    </div>
-  );
-}
-
-function LatestPlanCard({
-  plan,
-  intake,
-  accessToken,
-  onPlanDeleted,
-  onPlanRenamed,
-}: {
-  plan: PlanSummary | null;
-  intake: PlanRequest | null;
-  accessToken: string | null;
-  onPlanDeleted: (planId: string) => void;
-  onPlanRenamed: (updatedPlan: PlanSummary) => void;
-}) {
-  const { showToast } = useToast();
-  const [pendingAction, setPendingAction] = useState<"rename" | "delete" | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [isRenaming, setIsRenaming] = useState(false);
-  const [renameDraft, setRenameDraft] = useState(() => (plan ? getRenameDraftValue(plan) : ""));
-  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
-  const renameInputRef = useRef<HTMLInputElement | null>(null);
-  const fightDate = plan?.fight_date || "";
-  const hasSavedIntake = Boolean(intake);
-  const latestPlanLines: SummaryLine[] = [];
-  const renameInputId = plan ? `rename-latest-plan-${plan.plan_id}` : "rename-latest-plan";
-  const isActionPending = pendingAction !== null;
-
-  if (plan) {
-    latestPlanLines.push({ label: "Created", value: formatPlanTimestamp(plan.created_at) });
-    if (fightDate) {
-      latestPlanLines.push({ label: "Fight date", value: formatPlanFightDate(fightDate) });
-    }
-    if (plan.status?.trim()) {
-      latestPlanLines.push({ label: "Status", value: formatAthletePlanStatus(plan.status) });
-    }
-  }
-
-  useEffect(() => {
-    if (!plan) {
-      setRenameDraft("");
-      setIsRenaming(false);
-      return;
-    }
-    if (!isRenaming) {
-      setRenameDraft(getRenameDraftValue(plan));
-      return;
-    }
-
-    renameInputRef.current?.focus();
-    renameInputRef.current?.select();
-  }, [isRenaming, plan]);
-
-  useEffect(() => {
-    if (isDeleteConfirmOpen) return lockOverlayScroll();
-  }, [isDeleteConfirmOpen]);
-
-  useEffect(() => {
-    if (!isDeleteConfirmOpen) {
-      return;
-    }
-
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape" && pendingAction !== "delete") {
-        setIsDeleteConfirmOpen(false);
-      }
-    }
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => {
-      window.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [isDeleteConfirmOpen, pendingAction]);
-
-  function handleRenameStart() {
-    if (!plan) {
-      return;
-    }
-    setError(null);
-    setRenameDraft(getRenameDraftValue(plan));
-    setIsRenaming(true);
-  }
-
-  function handleRenameCancel() {
-    if (isActionPending || !plan) {
-      return;
-    }
-    setError(null);
-    setRenameDraft(getRenameDraftValue(plan));
-    setIsRenaming(false);
-  }
-
-  async function handleRenameSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-
-    if (!plan) {
-      return;
-    }
-    if (!accessToken) {
-      setError("Session expired. Sign in again.");
-      return;
-    }
-
-    const currentName = plan.plan_name?.trim() || "";
-    const normalizedName = renameDraft.trim();
-    if (!normalizedName) {
-      setError("Plan name cannot be empty.");
-      return;
-    }
-    if (normalizedName === currentName) {
-      setError(null);
-      setIsRenaming(false);
-      return;
-    }
-
-    setPendingAction("rename");
-    setError(null);
-    try {
-      const updatedPlan = await renamePlan(accessToken, plan.plan_id, normalizedName);
-      onPlanRenamed(updatedPlan);
-      showToast("Plan renamed.", { tone: "success" });
-      setIsRenaming(false);
-    } catch (renameError) {
-      const errorMessage = renameError instanceof Error ? renameError.message : "Unable to rename this plan.";
-      if (errorMessage.includes("Unable to reach the server") || errorMessage.includes("502") || errorMessage.includes("503") || errorMessage.includes("504")) {
-        setError("Connection issue. Try again in a minute.");
-      } else {
-        setError(errorMessage);
-      }
-    } finally {
-      setPendingAction(null);
-    }
-  }
-
-  function handleDeleteRequest() {
-    setError(null);
-    setIsDeleteConfirmOpen(true);
-  }
-
-  function handleDeleteDismiss() {
-    if (pendingAction === "delete") {
-      return;
-    }
-    setIsDeleteConfirmOpen(false);
-  }
-
-  async function handleDeleteConfirm() {
-    if (!plan) {
-      return;
-    }
-    if (!accessToken) {
-      setError("Session expired. Sign in again.");
-      return;
-    }
-
-    setPendingAction("delete");
-    setError(null);
-    try {
-      await archivePlan(accessToken, plan.plan_id);
-      setIsDeleteConfirmOpen(false);
-      onPlanDeleted(plan.plan_id);
-      showToast(`Archived ${getPlanDisplayName(plan)}.`, { tone: "success" });
-    } catch (deleteError) {
-      const errorMessage = deleteError instanceof Error ? deleteError.message : "Unable to delete this plan.";
-      if (errorMessage.includes("Unable to reach the server") || errorMessage.includes("502") || errorMessage.includes("503") || errorMessage.includes("504")) {
-        setError("Connection issue. Try again in a minute.");
-      } else {
-        setError(errorMessage);
-      }
-    } finally {
-      setPendingAction(null);
-    }
-  }
-
-  const inlineRenameForm = plan && isRenaming ? (
-    <form className="plan-inline-rename" onSubmit={handleRenameSubmit}>
-      <label className="plan-inline-rename-label" htmlFor={renameInputId}>
-        Rename latest plan
-      </label>
-      <div className="plan-inline-rename-row">
-        <input
-          ref={renameInputRef}
-          id={renameInputId}
-          value={renameDraft}
-          onChange={(event) => setRenameDraft(event.target.value)}
-          className="plan-inline-rename-input"
-          disabled={isActionPending}
-          maxLength={120}
-        />
-        <div className="plan-inline-rename-actions">
-          <button type="submit" className="secondary-button" disabled={isActionPending}>
-            {pendingAction === "rename" ? "Saving..." : "Save"}
-          </button>
-          <button type="button" className="ghost-button" onClick={handleRenameCancel} disabled={isActionPending}>
-            Cancel
-          </button>
-        </div>
-      </div>
-    </form>
-  ) : null;
-
-  const deleteConfirmationModal = plan && isDeleteConfirmOpen && typeof document !== "undefined"
-    ? createPortal(
-      <div className="plan-dialog-backdrop" role="presentation" onClick={handleDeleteDismiss}>
-        <div
-          className="plan-dialog"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby={`delete-latest-plan-title-${plan.plan_id}`}
-          aria-describedby={`delete-latest-plan-body-${plan.plan_id}`}
-          onClick={(event) => event.stopPropagation()}
-        >
-          <div className="plan-dialog-header">
-            <p className="kicker">Archive latest plan</p>
-            <h2 id={`delete-latest-plan-title-${plan.plan_id}`} className="plan-dialog-title">
-              Archive {getPlanDisplayName(plan)}?
-            </h2>
-          </div>
-          <p id={`delete-latest-plan-body-${plan.plan_id}`} className="muted">
-            This moves the plan to your archived list. You can still view it later.
-          </p>
-          {error ? <div className="error-banner">{error}</div> : null}
-          <div className="plan-dialog-actions">
-            <button type="button" className="ghost-button" onClick={handleDeleteDismiss} disabled={pendingAction === "delete"}>
-              Cancel
-            </button>
-            <button type="button" className="secondary-button" onClick={handleDeleteConfirm} disabled={pendingAction === "delete"}>
-              {pendingAction === "delete" ? "Archiving..." : "Archive"}
-            </button>
-          </div>
-        </div>
-      </div>,
-      document.body,
-    )
-    : null;
-
-  return (
-    <>
-      <article className="list-card plans-dashboard-card plans-dashboard-primary-card">
-        <div className="plans-dashboard-card-header">
-          <div className="plans-dashboard-card-copy">
-            <p className="kicker">Active Plan</p>
-            <h2>{plan ? getPlanDisplayName(plan) : "No active plan"}</h2>
-            <p className="muted">
-              {plan
-                ? "This plan controls Overview and Today."
-                : hasSavedIntake
-                  ? "No active plan is selected. Activate one of your saved plans."
-                  : "Complete Intake or Quick Build to create your first active plan."}
-            </p>
-            {!plan ? (
-              <div className="empty-state-example plans-dashboard-empty-example">
-                <p className="label">What appears here next</p>
-                <p className="empty-state-example-body">
-                  Once a plan is active, it opens here with fight date, status, and management actions.
-                </p>
-              </div>
-            ) : null}
-          </div>
-          {plan?.status ? <span className="badge">ACTIVE</span> : null}
-        </div>
-
-        <DashboardSummary
-          title="Current snapshot"
-          lines={latestPlanLines}
-          emptyLabel="No active plan metadata yet."
-          compact
-        />
-
-        {inlineRenameForm}
-
-        <div className="plan-card-actions plans-dashboard-actions">
-          {plan ? (
-            <>
-              <Link href={`/plans/${plan.plan_id}`} className="cta">
-                Open plan
-              </Link>
-              <Link
-                href={intake ? "/generate" : "/onboarding"}
-                className="ghost-button"
-                onClick={() => {
-                  if (intake) {
-                    markGenerationIntent();
-                  }
-                }}
-              >
-                New version
-              </Link>
-              <details className="plan-action-menu plans-dashboard-management-actions">
-                <summary className="ghost-button">Manage</summary>
-                <div className="plan-action-menu-popover">
-                  <button type="button" className="ghost-button" onClick={handleRenameStart} disabled={isActionPending || isRenaming}>
-                    {pendingAction === "rename" ? "Saving..." : isRenaming ? "Editing name" : "Rename"}
-                  </button>
-                  <button type="button" className="ghost-button danger-button" onClick={handleDeleteRequest} disabled={isActionPending || isRenaming}>
-                    {pendingAction === "delete" ? "Archiving..." : "Archive"}
-                  </button>
-                </div>
-              </details>
-            </>
-          ) : (
-            <Link href={hasSavedIntake ? "/onboarding" : "/quick-build"} className="cta">
-              {hasSavedIntake ? "Resume Advanced Intake" : "Quick Build New Plan"}
-            </Link>
-          )}
-        </div>
-
-        {error && !isDeleteConfirmOpen ? <div className="error-banner">{error}</div> : null}
-      </article>
-      {deleteConfirmationModal}
-    </>
-  );
-}
-
-function IntakeCard({
-  me,
-}: {
-  me: MeResponse | null;
-}) {
-  const profileLines = summarizeProfile(me);
-  const intake = getIntakeSource(me);
-  const intakeLines = summarizeIntake(me);
-  const hasIntake = Boolean(intake);
-  const sourceLines = [...profileLines.slice(1), ...intakeLines];
-
-  return (
-    <article className="list-card plans-dashboard-card plans-source-card">
-      <div className="plans-dashboard-card-header">
-        <div className="plans-dashboard-card-copy">
-          <p className="kicker">Plan source</p>
-          <h2>{profileLines[0]?.value || "Athlete profile"}</h2>
-          <p className="muted">Profile and intake details used for your next build.</p>
-        </div>
-        <span className={`badge ${hasIntake ? "status-badge-success" : "status-badge-neutral"}`}>
-          {hasIntake ? "Intake ready" : "Profile only"}
-        </span>
-      </div>
-
-      {sourceLines.length ? (
-        <dl className="plans-source-facts">
-          {sourceLines.map((line) => (
-            <div key={line.label} className="plans-source-fact">
-              <dt>{line.label}</dt>
-              <dd>{line.value}</dd>
-            </div>
-          ))}
-        </dl>
-      ) : (
-        <p className="muted">No plan source details saved yet.</p>
-      )}
-
-      <div className="plan-card-actions plans-dashboard-actions">
-        <Link href="/onboarding" className="ghost-button">
-          {hasIntake ? "Review & edit intake" : "Complete Advanced Intake"}
-        </Link>
-      </div>
-    </article>
-  );
-}
-
 function PlansSyncState() {
   return (
     <article className="list-card plans-sync-card" aria-busy="true">
@@ -923,6 +116,10 @@ export default function PlansPage() {
   const [isSettingActivePlanId, setIsSettingActivePlanId] = useState<string | null>(null);
   const [overlapConflictPlan, setOverlapConflictPlan] = useState<PlanSummary | null>(null);
   const [isArchiveOpen, setIsArchiveOpen] = useState(false);
+  // The plan whose Manage sheet is open, if any.
+  const [managedPlanId, setManagedPlanId] = useState<string | null>(null);
+  // The active camp's phase, from the Today command; extra, so never awaited.
+  const [activePhase, setActivePhase] = useState<{ planId: string; phase: string } | null>(null);
   const latestTokenRef = useRef(session?.access_token);
 
   useEffect(() => {
@@ -939,8 +136,10 @@ export default function PlansPage() {
   const heldForReviewPlans = visiblePlans.filter(isHeldForAdminReviewPlan);
   const archivedPlans = getArchivedPlans(visiblePlans);
   const otherSavedPlans = visiblePlans.filter((plan) => plan.plan_id !== activePlan?.plan_id && !isArchivedPlan(plan.status));
-  const archiveCountLabel = archivedPlans.length === 1 ? "1 plan" : `${archivedPlans.length} plans`;
   const hasPlans = visiblePlans.length > 0;
+  const managedPlan = managedPlanId ? visiblePlans.find((plan) => plan.plan_id === managedPlanId) ?? null : null;
+  const tacticalStyle = getOptionLabels(TACTICAL_STYLE_OPTIONS, me?.profile?.tactical_style ?? [])[0] ?? null;
+  const phase = activePlan && activePhase?.planId === activePlan.plan_id ? activePhase.phase : null;
 
   const loadPlans = useCallback(async () => {
     const token = session?.access_token;
@@ -989,6 +188,25 @@ export default function PlansPage() {
       setIsArchiveOpen(false);
     }
   }, [archivedPlans.length]);
+
+  useEffect(() => {
+    const token = session?.access_token;
+    if (!token) return;
+    let cancelled = false;
+    getToday(token)
+      .then((command) => {
+        const planId = command.active_plan?.id;
+        const rawPhase = command.active_plan?.phase;
+        if (!cancelled && planId && rawPhase) {
+          setActivePhase({ planId, phase: humanizeIfRawEnum(rawPhase) });
+        }
+      })
+      // The phase is a nicety: without it the card simply leaves it out.
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [session?.access_token]);
 
   function handlePlanDeleted(planId: string) {
     setLocalPlans((current) => {
@@ -1048,14 +266,8 @@ export default function PlansPage() {
 
   return (
     <RequireAuth>
-      <section className="panel">
-        <div className="section-heading">
-          <div className="athlete-motion-slot athlete-motion-header">
-            <p className="kicker">{t("planDashboard")}</p>
-            <h1>{t("planWorkspace")}</h1>
-            <p className="muted">{t("planSummary")}</p>
-          </div>
-        </div>
+      <section className={`panel ${styles.page}`}>
+        <h1 className={`athlete-motion-slot athlete-motion-header ${styles.pageTitle}`}>{t("planWorkspace")}</h1>
 
         {error ? (
           <div className="error-banner athlete-motion-slot athlete-motion-status" role="alert">
@@ -1077,29 +289,25 @@ export default function PlansPage() {
           <HeldPlansReviewNotice plans={heldForReviewPlans} />
         ) : null}
 
-        <div className="plans-dashboard-stack athlete-motion-slot athlete-motion-main">
+        <div className="athlete-motion-slot athlete-motion-main">
           {isPlanListLoading ? (
             <PlansSyncState />
           ) : (
-            <LatestPlanCard
+            <CurrentCampCard
               plan={activePlan}
               intake={intakeSource}
-              accessToken={session?.access_token ?? null}
-              onPlanDeleted={handlePlanDeleted}
-              onPlanRenamed={handlePlanRenamed}
+              tacticalStyle={tacticalStyle}
+              phase={phase}
+              onManage={() => setManagedPlanId(activePlan?.plan_id ?? null)}
             />
           )}
         </div>
 
         {isLoading ? (
-          <div className="plans-history-block athlete-motion-slot athlete-motion-main" aria-busy="true">
-            <div className="plans-history-header">
-              <div className="plans-history-header-copy">
-                <p className="kicker">{t("planManager")}</p>
-                <h2>{t("syncingHistory")}</h2>
-                <p className="muted">{t("savedVersions")}</p>
-              </div>
-              <span className="badge status-badge-neutral">{t("loading")}</span>
+          <div className={`athlete-motion-slot athlete-motion-main ${styles.section}`} aria-busy="true">
+            <div className={styles.sectionHead}>
+              <h2 className={styles.sectionTitle}>{t("previousPlans")}</h2>
+              <span className={styles.sectionMeta}>{t("loading")}</span>
             </div>
             <div className="plan-history-list plans-history-list">
               <PlanHistoryRowSkeleton />
@@ -1109,81 +317,74 @@ export default function PlansPage() {
         ) : null}
 
         {!isLoading && hasPlans ? (
-          <div className="plans-history-block athlete-motion-slot athlete-motion-main">
-            <div className="plans-history-header">
-              <div className="plans-history-header-copy">
-                <p className="kicker">{t("planManager")}</p>
-                <h2>{t("otherPlans")}</h2>
-                <p className="muted">{t("comparePlans")}</p>
-              </div>
-              {archivedPlans.length ? (
-                <button
-                  type="button"
-                  className={`plans-history-toggle ${isArchiveOpen ? "plans-history-toggle-open" : ""}`.trim()}
-                  onClick={() => setIsArchiveOpen((current) => !current)}
-                  aria-expanded={isArchiveOpen}
-                  aria-controls="plans-history-dropdown"
-                  aria-label={isArchiveOpen ? "Hide older saved plans" : "Show older saved plans"}
-                >
-                  <span className="plans-history-toggle-copy">
-                    {isArchiveOpen ? t("hideArchive") : t("viewArchive")}
-                  </span>
-                  <span className="plans-history-toggle-meta">
-                    <span className="plans-history-toggle-count">{archiveCountLabel}</span>
-                    <span className="custom-select-chevron" aria-hidden="true" />
-                  </span>
-                </button>
-              ) : (
-                <span className="badge status-badge-neutral">{t("noEarlierPlans")}</span>
-              )}
+          <div className={`athlete-motion-slot athlete-motion-main ${styles.section}`}>
+            <div className={styles.sectionHead}>
+              <h2 className={styles.sectionTitle}>{t("previousPlans")}</h2>
+              {otherSavedPlans.length ? (
+                <span className={styles.sectionMeta}>{t("savedCount", { count: otherSavedPlans.length })}</span>
+              ) : null}
             </div>
-
-            {/* Archive expands directly under its toggle so opening/closing it is
-                visible right where the control is — not appended far below the
-                always-shown recent plans, where it read as "not working". */}
-            {archivedPlans.length > 0 && isArchiveOpen ? (
-              <div id="plans-history-dropdown" className="plans-history-dropdown" role="region" aria-label={t("olderPlans")}>
-                <div className="plan-history-list plans-history-list">
-                  {archivedPlans.map((plan) => (
-                    <PlanCard
-                      key={plan.plan_id}
-                      plan={plan}
-                      accessToken={session?.access_token ?? null}
-                      onPlanDeleted={handlePlanDeleted}
-                      onPlanRenamed={handlePlanRenamed}
-                      activePlanId={activePlanId}
-                      onSetActive={handleSetActive}
-                      isSettingActive={isSettingActivePlanId === plan.plan_id}
-                    />
-                  ))}
-                </div>
-              </div>
-            ) : null}
-
             {otherSavedPlans.length > 0 ? (
-              <div className="plan-history-list plans-history-list">
+              <ul className={styles.rows}>
                 {otherSavedPlans.map((plan) => (
-                  <PlanCard
+                  <PlanRow
                     key={plan.plan_id}
                     plan={plan}
-                    accessToken={session?.access_token ?? null}
-                    onPlanDeleted={handlePlanDeleted}
-                    onPlanRenamed={handlePlanRenamed}
                     activePlanId={activePlanId}
-                    onSetActive={handleSetActive}
-                    isSettingActive={isSettingActivePlanId === plan.plan_id}
+                    onOpen={() => setManagedPlanId(plan.plan_id)}
                   />
                 ))}
-              </div>
+              </ul>
             ) : (
               <p className="muted">No other saved plans.</p>
             )}
+
+            {archivedPlans.length ? (
+              <>
+                <button
+                  type="button"
+                  className={styles.archiveToggle}
+                  onClick={() => setIsArchiveOpen((current) => !current)}
+                  aria-expanded={isArchiveOpen}
+                  aria-controls="plans-archive"
+                >
+                  {t("archivedCount", { count: archivedPlans.length })}
+                  <span className={styles.toggleChevron} aria-hidden="true" />
+                </button>
+                {isArchiveOpen ? (
+                  <ul id="plans-archive" className={styles.rows} aria-label={t("olderPlans")}>
+                    {archivedPlans.map((plan) => (
+                      <PlanRow
+                        key={plan.plan_id}
+                        plan={plan}
+                        activePlanId={activePlanId}
+                        onOpen={() => setManagedPlanId(plan.plan_id)}
+                      />
+                    ))}
+                  </ul>
+                ) : null}
+              </>
+            ) : null}
           </div>
         ) : null}
 
-        <div className="plans-source-block athlete-motion-slot athlete-motion-main">
-          {isProfileLoading ? <PlansFeaturedSkeleton /> : <IntakeCard me={me} />}
+        <div className={`athlete-motion-slot athlete-motion-main ${styles.section}`}>
+          {isProfileLoading ? null : <AthleteProfileRow me={me} />}
         </div>
+
+        {managedPlan ? (
+          <PlanManageSheet
+            key={managedPlan.plan_id}
+            plan={managedPlan}
+            activePlanId={activePlanId}
+            accessToken={session?.access_token ?? null}
+            isSettingActive={isSettingActivePlanId === managedPlan.plan_id}
+            onSetActive={handleSetActive}
+            onPlanRenamed={handlePlanRenamed}
+            onPlanDeleted={handlePlanDeleted}
+            onClose={() => setManagedPlanId(null)}
+          />
+        ) : null}
 
         {overlapConflictPlan ? (
           <PlanSwitchDialog
