@@ -24,6 +24,7 @@ import {
   type TodayOtherInjuryType,
   composeTodayInjuryDescription,
   readAchillesSite, stripAchillesSite, writeAchillesSite, type AchillesSite,
+  readElbowSite, stripElbowSite, writeElbowSite, type ElbowSite,
   getTodayOtherInjuryTypes,
   readTodayOtherInjuryType,
   isInjuryEntryLimited,
@@ -333,6 +334,7 @@ export function TodayInjuryManager({
   const [newOtherType, setNewOtherType] = useState<TodayOtherInjuryType | "">("");
   const [newDetail, setNewDetail] = useState("");
   const [achillesSite, setAchillesSite] = useState<AchillesSite>("unknown");
+  const [elbowSite, setElbowSite] = useState<ElbowSite>("unknown");
   // Whether the last edit hit the word/character cap, so the hint can explain the
   // trim instead of a word silently vanishing.
   const [areaLimited, setAreaLimited] = useState(false);
@@ -540,6 +542,7 @@ export function TodayInjuryManager({
     try {
       let description = writeInjuryImpact(composeTodayInjuryDescription({ injuryType: newType, otherType: newOtherType, detail: newDetail }), newImpact);
       if (/achilles/i.test(area)) description = writeAchillesSite(description, achillesSite);
+      if (/elbow/i.test(area) && newOtherType === "tendonitis") description = writeElbowSite(description, elbowSite);
       // Whatever open injury the reconcile returns that was not here before this
       // add is the flag it just created — that is how we find it to route on.
       const previousIds = new Set(openInjuries.map((injury) => injury.id));
@@ -553,7 +556,7 @@ export function TodayInjuryManager({
       setBodyMapVisible(true);
       setNewType(NO_TODAY_INJURY_TYPE);
       setNewOtherType("");
-      setNewDetail(""); setAchillesSite("unknown");
+      setNewDetail(""); setAchillesSite("unknown"); setElbowSite("unknown");
       setAreaLimited(false);
       setDetailLimited(false);
       setNewZone("");
@@ -603,7 +606,7 @@ export function TodayInjuryManager({
     setBodyMapVisible(true);
     setNewType(NO_TODAY_INJURY_TYPE);
     setNewOtherType("");
-    setNewDetail(""); setAchillesSite("unknown");
+    setNewDetail(""); setAchillesSite("unknown"); setElbowSite("unknown");
     setAreaLimited(false);
     setDetailLimited(false);
     setAddMissing(null);
@@ -685,7 +688,8 @@ export function TodayInjuryManager({
                       const impact = readInjuryImpact(injury.description ?? "");
                       setNewImpact(impact?.value ?? "");
                       setAchillesSite(readAchillesSite(injury.description ?? ""));
-                      const description = stripAchillesSite(writeInjuryImpact(injury.description ?? "", ""));
+                      setElbowSite(readElbowSite(injury.description ?? ""));
+                      const description = stripElbowSite(stripAchillesSite(writeInjuryImpact(injury.description ?? "", "")));
                       const otherType = readTodayOtherInjuryType(description);
                       const type = otherType ? undefined : TODAY_INJURY_TYPE_OPTIONS.find((option) => option.value !== "other" && new RegExp(`\\b${option.value}\\b`, "i").test(description));
                       const typeWord = otherType ? TODAY_OTHER_INJURY_TYPES[otherType].word : type?.value;
@@ -1029,6 +1033,12 @@ export function TodayInjuryManager({
             <option value="insertional">Where the tendon meets the heel</option>
           </select>
         </div> : null}
+        {/elbow/i.test(newArea) && newOtherType === "tendonitis" ? <SegmentGroup
+          label="Where is the elbow problem?"
+          value={elbowSite}
+          options={[{ value: "lateral", label: "Outside of elbow" }, { value: "other", label: "Elsewhere" }, { value: "unknown", label: "Not sure" }]}
+          onChange={value => setElbowSite(value as ElbowSite)}
+        /> : null}
         <div ref={impactGroupRef} className="injury-impact-input">
           <SegmentGroup label="How much is it affecting you?" value={newImpact}
             options={INJURY_IMPACT_OPTIONS.map(({ value, label }) => ({ value, label }))}

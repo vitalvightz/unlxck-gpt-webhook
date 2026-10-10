@@ -16547,7 +16547,7 @@
       {
         "id": "elbow_tendonitis_supported_hand_weight_wrist_extension",
         "name": "Supported hand-weight wrist extension",
-        "notes": "Support the affected forearm palm-down on a table with the wrist free to move. With the hand empty, raise the wrist in the comfortable range assessed by your clinician, then slowly lower over five seconds. Keep the forearm supported. No dumbbell, band, forceful grip, forced end range, speed or automatic increase. Stop if symptoms worsen during or after the work.",
+        "notes": "Support the affected forearm palm-down on a table with the wrist free to move. With the hand empty, raise the wrist in the comfortable range, within any clinician restrictions, then slowly lower over five seconds. Keep the forearm supported. No dumbbell, band, forceful grip, forced end range, speed or automatic increase. Stop if symptoms worsen during or after the work.",
         "rehab_stage": "load",
         "function": "tendon_loading",
         "equipment": [
@@ -16572,7 +16572,7 @@
         "contraction_type": "mixed",
         "sport_specificity": "general_rehab",
         "contact_level": "none",
-        "evidence_notes": "Sources: https://www.rjah.nhs.uk/our-services/therapy/supported-self-care/tennis-elbow/ and https://www.jospt.org/doi/10.2519/jospt.2022.0302. Narrow hand-weight-only starter, not the dormant clinician-selected dumbbell candidate. Requires reported clinician assessment of subacute/chronic lateral presentation, motion, grip and exact task tolerance. Ten repetitions are the lower end of RJAH guidance; once-daily cap is a conservative product ceiling, not a universal clinical cadence or readiness threshold. No quantitative grip strength is inferred."
+        "evidence_notes": "Sources: https://www.rjah.nhs.uk/our-services/therapy/supported-self-care/tennis-elbow/ and https://www.jospt.org/doi/10.2519/jospt.2022.0302. Narrow hand-weight-only starter, not the dormant clinician-selected dumbbell candidate. For explicitly reported lateral tendon symptoms with rehabilitation loading permission and non-worsening reviewed RESTORE exposure. No grip strength or range-of-motion assessment is inferred. RJAH patient guidance supports the movement with symptom monitoring; the clinical guideline is not used to impose a consumer assessment checklist. Ten repetitions are the lower end of RJAH guidance; once-daily cap is a conservative product ceiling, not a universal clinical cadence or readiness threshold. No quantitative grip strength is inferred."
       }
     ]
   },

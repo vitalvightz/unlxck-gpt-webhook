@@ -1403,6 +1403,26 @@ test("editing a saved injury updates its flag and retains the functional answer 
   } finally { restore(); unmountMain(container, root); }
 });
 
+test("elbow tendon location is one simple answer in existing injury edit, retained without a worksheet", async () => {
+  const injury = { ...SHOULDER, body_area: "left elbow", description: "tendonitis [training_impact:limiting] [elbow_site:unknown]" };
+  const { container, root } = mountMain([injury]);
+  const { calls, restore } = stubCheckin({ openInjuries: [injury] });
+  try {
+    assert.doesNotMatch(container.textContent ?? "", /elbow_site/);
+    const summaryRow = container.querySelector<HTMLButtonElement>(".today-injury-summary-row");
+    if (summaryRow?.getAttribute("aria-expanded") === "false") await click(summaryRow);
+    await click(button(container, "Edit"));
+    assert.match(container.textContent ?? "", /Where is the elbow problem\?/);
+    assert.equal(container.querySelector('input[type="datetime-local"]'), null);
+    await click(button(container, "Outside of elbow"));
+    const form = container.querySelector("form")!;
+    await act(async () => form.dispatchEvent(new window.Event("submit", { bubbles: true, cancelable: true })));
+    const saved = (calls[0].injuries as Array<{ description: string }>)[0].description;
+    assert.equal(saved, "tendonitis [training_impact:limiting] [elbow_site:lateral]");
+    assert.equal(calls.length, 1);
+  } finally { restore(); unmountMain(container, root); }
+});
+
 test("Other opens area-specific types that tap in the condition word", async () => {
   const { calls, restore } = stubCheckin();
   const container = document.createElement("div");

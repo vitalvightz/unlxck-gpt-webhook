@@ -154,5 +154,77 @@
     "flags": [],
     "review_state": "reviewed",
     "review_version": 1
+  },
+  "consumer_revision": {
+    "profile_sha256": "67553c8c5d9c066d205f52eb27943561da2944819380cd45404824394275289f",
+    "checkpoint": {
+      "checkpoint_id": "lateral_elbow_reported_load_permission_v2",
+      "description": "Reported loading permission and explicit lateral applicability for the supported empty-hand starter; no functional assessment or medical verification claim.",
+      "required_input": "Current episode rehabilitation permission and one elbow location answer in existing injury details; reuse valid existing lateral observations when available.",
+      "basis": "clinical"
+    },
+    "drill": {
+      "id": "elbow_tendonitis_supported_hand_weight_wrist_extension",
+      "name": "Supported hand-weight wrist extension",
+      "notes": "Support the affected forearm palm-down on a table with the wrist free to move. With the hand empty, raise the wrist in the comfortable range, within any clinician restrictions, then slowly lower over five seconds. Keep the forearm supported. No dumbbell, band, forceful grip, forced end range, speed or automatic increase. Stop if symptoms worsen during or after the work.",
+      "rehab_stage": "load",
+      "function": "tendon_loading",
+      "equipment": [
+        "table"
+      ],
+      "dose": null,
+      "impact": "none",
+      "load": "minimal",
+      "velocity": "low",
+      "pain_ceiling": null,
+      "allowed_severities": null,
+      "progress_when": null,
+      "regress_when": null,
+      "stop_when": null,
+      "target_regions": [
+        "elbow"
+      ],
+      "laterality_applicability": "side_specific",
+      "target_tissues": [
+        "common wrist extensor tendon at elbow"
+      ],
+      "contraction_type": "mixed",
+      "sport_specificity": "general_rehab",
+      "contact_level": "none",
+      "evidence_notes": "Sources: https://www.rjah.nhs.uk/our-services/therapy/supported-self-care/tennis-elbow/ and https://www.jospt.org/doi/10.2519/jospt.2022.0302. Narrow hand-weight-only starter, not the dormant clinician-selected dumbbell candidate. For explicitly reported lateral tendon symptoms with rehabilitation loading permission and non-worsening reviewed RESTORE exposure. No grip strength or range-of-motion assessment is inferred. RJAH patient guidance supports the movement with symptom monitoring; the clinical guideline is not used to impose a consumer assessment checklist. Ten repetitions are the lower end of RJAH guidance; once-daily cap is a conservative product ceiling, not a universal clinical cadence or readiness threshold. No quantitative grip strength is inferred."
+    },
+    "review": {
+      "drill_id": "elbow_tendonitis_supported_hand_weight_wrist_extension",
+      "source_hash": "4ca3859cf1c41fce6ff41c90dfbf50fcc97b473c6088f3a72ec6f577bb6ea271",
+      "location": "elbow",
+      "injury_type": "tendonitis",
+      "name": "Supported hand-weight wrist extension",
+      "notes": "Support the affected forearm palm-down on a table with the wrist free to move. With the hand empty, raise the wrist in the comfortable range, within any clinician restrictions, then slowly lower over five seconds. Keep the forearm supported. No dumbbell, band, forceful grip, forced end range, speed or automatic increase. Stop if symptoms worsen during or after the work.",
+      "movement_archetype": "bodyweight_strength",
+      "proposed": {
+        "rehab_stage": "load",
+        "function": "tendon_loading",
+        "equipment": [
+          "table"
+        ],
+        "impact": "none",
+        "load": "minimal",
+        "velocity": "low",
+        "target_regions": [
+          "elbow"
+        ],
+        "laterality_applicability": "side_specific",
+        "target_tissues": [
+          "common wrist extensor tendon at elbow"
+        ],
+        "contraction_type": "mixed",
+        "sport_specificity": "general_rehab",
+        "contact_level": "none",
+        "evidence_notes": "Sources: https://www.rjah.nhs.uk/our-services/therapy/supported-self-care/tennis-elbow/ and https://www.jospt.org/doi/10.2519/jospt.2022.0302. Narrow hand-weight-only starter, not the dormant clinician-selected dumbbell candidate. For explicitly reported lateral tendon symptoms with rehabilitation loading permission and non-worsening reviewed RESTORE exposure. No grip strength or range-of-motion assessment is inferred. RJAH patient guidance supports the movement with symptom monitoring; the clinical guideline is not used to impose a consumer assessment checklist. Ten repetitions are the lower end of RJAH guidance; once-daily cap is a conservative product ceiling, not a universal clinical cadence or readiness threshold. No quantitative grip strength is inferred."
+      },
+      "flags": [],
+      "review_state": "reviewed",
+      "review_version": 1
+    }
   }
 }

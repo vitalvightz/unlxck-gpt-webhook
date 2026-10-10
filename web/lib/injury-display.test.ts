@@ -200,4 +200,6 @@ test("Achilles metadata stays internal while athlete wording is preserved", () =
   assert.equal(resolveInjuryTypeLabel("tendonitis [training_impact:limiting] [achilles_site:midportion]"), "tendonitis");
   assert.equal(normalizeInjuryLabel("Right Achilles [achilles_site:unknown]"), "Right Achilles");
   assert.equal(resolveInjuryTypeLabel("[achilles_site:insertional]"), "");
+  assert.equal(resolveInjuryTypeLabel("tendonitis [elbow_site:lateral]"), "tendonitis");
+  assert.equal(normalizeInjuryLabel("Left elbow [elbow_site:unknown]"), "Left elbow");
 });

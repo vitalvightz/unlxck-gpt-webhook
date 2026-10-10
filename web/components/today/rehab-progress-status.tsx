@@ -14,11 +14,12 @@ const REQUIREMENTS: Record<string, string> = {
 const REASONS: Record<string, string> = {
   assessment_observation_missing: "LOAD is on hold: your current records do not establish whether this elbow starter is suitable. Clearance and completed rehab cannot confirm grip, movement and tolerance for this exercise. Continue today's guidance.",
   elbow_function_assessment_incomplete: "LOAD is on hold: your current records do not establish whether this elbow starter is suitable. Clearance and completed rehab cannot confirm grip, movement and tolerance for this exercise. Continue today's guidance.",
-  elbow_lateral_applicability_not_confirmed: "This starter is only available for a confirmed lateral elbow presentation.",
+  elbow_lateral_applicability_not_confirmed: "Confirm the elbow location in Edit injury. This starter is for outside-of-elbow tendon problems only.",
   elbow_function_or_safety_not_acceptable: "Your reported elbow function or symptoms do not support this starter yet.",
   elbow_later_unsatisfactory_function: "A later assessment reported unsuitable elbow function. An older assessment cannot replace it.",
   elbow_hand_weight_option_not_recommended: "Your clinician has not recommended this exact starter.",
   elbow_conflicting_or_unsupported_presentation: "Your injury details include a different elbow presentation or another concern.",
+  elbow_loading_severity_not_supported: "Your current injury severity does not support this starter. Follow today's conservative guidance.",
   assessment_observation_stale_or_future: "Existing suitability evidence is not current for this injury episode. Loading stays on hold; continue today's guidance.",
   assessment_history_incomplete: "Assessment history is unavailable. Loading stays on hold.",
   assessment_medical_or_setback_hold: "A worsening response or medical concern is holding progression.",
