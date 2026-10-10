@@ -26,6 +26,8 @@ def fixture(bundle=True):
     policy = next(p for p in load_clinical_policies() if p.policy_id == "ankle_sprain")
     if not bundle:
         # Keep the pre-bundle v3 policy explicit; default tests use live content.
+        from tests.test_rehab_pathway_equivalence import composed
+        policy = next(p for p in composed() if p.policy_id == "ankle_sprain")
         raw = policy.model_dump()
         raw.update(version=3, status="draft", activation="shadow", content_hash=None,
                    stage_bundles={})
@@ -249,8 +251,9 @@ def test_live_ankle_restore_bundle_keeps_reviewed_bank_content_and_self_paced_do
     bank = get_rehab_bank()
     decision = resolve_injury_policy({**injury, "severity": severity}, policies=load_clinical_policies(),
                                     bank=bank, phase=phase)
-    assert policy.version == 4 and policy.stage_bundles == {"restore": IDS}
-    assert policy.live_stages == ["calm", "restore"] and not any(t.promotable for t in policy.transitions)
+    assert policy.version == 5 and policy.stage_bundles == {"restore": IDS}
+    assert policy.live_stages == ["calm", "restore", "load"]
+    assert {t.to_stage for t in policy.transitions if t.promotable} == {"load"}
     assert policy.pathway_family == "ligament_sprain_or_instability"
     assert validate_clinical_bank((policy,), bank) == []
     assert policy_review_hash(policy) == policy.content_hash
@@ -364,17 +367,25 @@ def test_live_bundle_never_enables_advanced_stages_even_with_clearance(stage):
     assert "drills" not in decision["prescription"]
 
 
-def test_pilot_seed_reproduces_live_policy_content_without_changing_bank(tmp_path, monkeypatch):
+def test_pilot_seed_reproduces_historical_baseline_without_changing_bank(tmp_path, monkeypatch):
     import json
     from tools import seed_rehab_pilot
     bank = get_rehab_bank()
-    expected = load_clinical_policies()
+    from tools.rehab_metadata_review_lib import before_achilles_load_activation
+    # This seed owns the original v4 CALM/RESTORE baseline, not the later LOAD
+    # activation. Subtract only the exact pinned addition before replaying it.
+    from fightcamp.rehab_clinical import PATHWAYS_PATH
+    manifest = json.loads((PATHWAYS_PATH.parent.parent / "tools/rehab_ankle_activation_inventory_baseline.json").read_text(encoding="utf-8"))
+    group = next(g for g in bank if g["location"] == "ankle" and g["type"] == "sprain")
+    assert manifest["new_drill"] in group["drills"]
+    group["drills"].remove(manifest["new_drill"])
     data = tmp_path / "data"
     data.mkdir()
     (data / "rehab_bank.json").write_text(json.dumps(bank), encoding="utf-8")
-    from fightcamp.rehab_clinical import PATHWAYS_PATH
-    committed = PATHWAYS_PATH.read_text(encoding="utf-8")
+    committed = json.dumps(before_achilles_load_activation(json.loads(PATHWAYS_PATH.read_text(encoding="utf-8"))),
+        ensure_ascii=False, indent=2) + "\n"
     (data / "rehab_pathways.json").write_text(committed, encoding="utf-8")
+    expected = load_clinical_policies(data / "rehab_pathways.json")
     monkeypatch.setattr(seed_rehab_pilot, "ROOT", tmp_path)
     seed_rehab_pilot.main()
     assert json.loads((data / "rehab_bank.json").read_text(encoding="utf-8")) == bank
