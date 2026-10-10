@@ -10,7 +10,6 @@ import {
   type TrainingActivity, type TrainingEffort, type TrainingHistorySession,
 } from "@/lib/training-history";
 import styles from "./log-training.module.css";
-import planStyles from "./plans/plans.module.css";
 
 const label = (value: string) => value.charAt(0).toUpperCase() + value.slice(1);
 
@@ -96,12 +95,12 @@ function LogTrainingContent({ accessToken, entry, onSaved }: Props & { accessTok
   }
 
   return (
-    <section className={entry ? undefined : `${planStyles.campCard} ${styles.training}`} aria-label={entry ? `Manage ${entry.title}` : "Log Training"}>
+    <section className={entry ? undefined : styles.training} aria-label={entry ? `Manage ${entry.title}` : "Log Training"}>
       {entry ? <button className="ghost-button" type="button" onClick={() => startEdit(entry)} aria-haspopup="dialog" aria-label={`Edit ${entry.title}`}>Edit</button> :
-        <div className={`${planStyles.campHead} ${styles.heading}`}>
-          <div><p className={planStyles.eyebrow}>TRAINING PLAN</p><h2>Log Training</h2><p className="muted">Record a session outside Unlxck.</p></div>
-          <button className="secondary-button" type="button" onClick={() => startEdit()} aria-haspopup="dialog" aria-label="Log Training">+</button>
-        </div>}
+        <button className={styles.actionRow} type="button" onClick={() => startEdit()} aria-haspopup="dialog" aria-label="Log Training">
+          <span><strong>Log Training</strong><span className="muted">Record a session outside Unlxck.</span></span>
+          <span aria-hidden="true">+</span>
+        </button>}
       {open ? (
         <dialog ref={dialog} className={styles.dialog} aria-label={editing ? "Edit training" : "Log Training"} onCancel={event => { if (busy) event.preventDefault(); else setOpen(false); }}>
         <h2>{editing ? "Edit training" : "Log Training"}</h2>

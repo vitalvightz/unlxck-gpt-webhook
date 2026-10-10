@@ -1,6 +1,6 @@
 # Log Training
 
-Implements the first delivery from investigation PR #2816. Plan offers a compact Log Training action opening a modal
+Implements the first delivery from investigation PR #2816. Plan offers a single Log Training action row opening a modal
 form: activity, whole minutes (1–600, matching the existing session-duration
 boundary), and reported Easy / Moderate / Hard effort. Saving requires neither
 an active plan nor a prescribed session. The existing History page shows completed Unlxck sessions and manual entries,
