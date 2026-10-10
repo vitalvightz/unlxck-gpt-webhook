@@ -5,6 +5,9 @@ endpoint, scheduling, database tables, prescription engine or planner wiring.
 `fightcamp.training_catalogue.build_catalogue()` reads the same 14 sources as the
 audit, retains every row and returns owned records with raw metadata, source and
 row hashes, JSON pointers, field states, classification and search evidence.
+Source hashes normalise CRLF to LF before SHA-256 so Git's Windows and Linux
+checkouts describe the same revision; all other source bytes are preserved.
+They are not raw on-disk byte digests. Row hashes separately use canonical JSON.
 It deliberately avoids runtime loaders that infer tags or supply defaults.
 
 ## Identity
@@ -24,7 +27,7 @@ Never regenerate the manifest wholesale. Strict loading rejects new/unbound rows
 orphan bindings and duplicate identities rather than guessing which row changed.
 The report retains unbound rows with an explicit exclusion reason.
 
-This leaves every source bank byte-for-byte unchanged. Existing name-based media
+This leaves every source bank unchanged. Existing name-based media
 `exercise_key` behaviour is untouched; catalogue references are separate from
 media slugs and occurrence/block IDs. Non-workout content has no catalogue media
 key. Rehab keeps its raw drill ID for its existing pathway/media consumers.
@@ -121,8 +124,12 @@ python -m compileall -q fightcamp/training_catalogue.py tools/report_training_ca
 Tests cover row reordering, reviewed identity rebinding after metadata/name edits,
 missing/stale/duplicate bindings, repeated names and variants, raw restriction
 preservation, alias context, equipment uncertainty and report reproducibility.
-They compare bank hashes against the original audit and compare deterministic
+They compare bank hashes against the original audit's LF/CRLF equivalents, prove
+complete catalogue/report equality across checkout line endings, and compare deterministic
 plan text and Stage 2 prescribed payload before/after catalogue use. Existing
 bank, phase, coordination, rehab selector and media tests provide regression
 coverage. No frontend/deployment or live database behaviour is part of this PR.
 The unrelated legacy bank-validator debt documented in #2816 is not repaired.
+Full-suite follow-up also refreshes the generated API types for #2817's existing
+contracts and updates three legacy static assertions to the current Plan
+dashboard component. Neither change alters API or frontend behaviour.

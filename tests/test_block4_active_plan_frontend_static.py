@@ -17,23 +17,28 @@ def test_plans_imports_active_plan_helpers_and_calls_set_active_endpoint():
 
 def test_plan_manager_renders_active_and_set_active_states():
     source = _read("web/app/plans/page.tsx")
+    dashboard = _read("web/components/plans/plan-dashboard.tsx")
     helper = _read("web/lib/plan-active.ts")
-    assert "ACTIVE" in source
-    assert "Activate" in source
-    assert "COMPLETED" in source
-    assert "Camp complete" in source
-    assert "Cannot be active" in source
+    assert "PlanManageSheet" in source
+    assert 'return "Active"' in dashboard
+    assert '"Make active"' in dashboard
+    assert "isCompletedFightCamp(plan.activation_state)" in dashboard
+    assert "Camp complete" in dashboard
+    assert "Can't be active" in dashboard
     assert "function canSetActivePlan" in helper
     assert 'activationState === "eligible"' in helper
-    assert "plan.activation_state" in source
+    assert "return canSetActivePlan(plan.activation_state)" in dashboard
+    assert "const canActivate = !archived && !active && canSetActive(plan)" in dashboard
 
 
 def test_plan_manager_never_promotes_latest_saved_plan_to_active():
     source = _read("web/app/plans/page.tsx")
     assert "latestEligiblePlan" not in source
     assert "explicitActivePlan && canSetActive(explicitActivePlan) ? explicitActivePlan : null" in source
-    assert '"No active plan"' in source
-    assert "Activate one of your saved plans." in source
+    assert "CurrentCampCard" in source
+    dashboard = _read("web/components/plans/plan-dashboard.tsx")
+    assert "No active plan</h2>" in dashboard
+    assert "Make one of your saved plans active." in dashboard
 
 
 def test_successful_activation_refreshes_progress_and_streak_views():
@@ -80,9 +85,12 @@ def test_plan_alias_falls_back_to_plans_when_active_plan_missing():
 
 def test_archived_plan_action_does_not_claim_to_duplicate():
     plans_page = _read("web/app/plans/page.tsx")
+    dashboard = _read("web/components/plans/plan-dashboard.tsx")
     plan_viewer = _read("web/components/plan-viewer.tsx")
 
     assert "Duplicate as New Plan" not in plans_page
+    assert "Duplicate as New Plan" not in dashboard
     assert "Duplicate as New Plan" not in plan_viewer
-    assert "Create New Plan" in plans_page
+    assert "PlanManageSheet" in plans_page
+    assert "Create new plan" in dashboard
     assert "Create New Plan" in plan_viewer

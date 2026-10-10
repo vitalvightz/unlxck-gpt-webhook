@@ -64,6 +64,20 @@ def test_identity_is_stable_across_reordering_and_json_layout(entries, data_copy
     }
 
 
+def test_source_integrity_and_coverage_are_independent_of_checkout_line_endings(data_copy):
+    for source in SOURCES:
+        path = data_copy / source
+        path.write_bytes(path.read_bytes().replace(b"\r\n", b"\n"))
+    lf_entries = catalogue.build_catalogue(data_copy)
+    lf_report = coverage_report(data_copy)
+    for source in SOURCES:
+        path = data_copy / source
+        path.write_bytes(path.read_bytes().replace(b"\n", b"\r\n"))
+    assert catalogue.build_catalogue(data_copy) == lf_entries
+    assert coverage_report(data_copy) == lf_report
+    assert catalogue.source_hash(b'{"name":"Original"}\r\n') != catalogue.source_hash(b'{"name":"Edited"}\r\n')
+
+
 def test_metadata_edit_requires_reviewed_rebinding_not_a_new_identity(entries, data_copy):
     source = "exercise_bank.json"
     payload = json.loads((data_copy / source).read_bytes())
@@ -205,9 +219,14 @@ def test_metadata_provenance_raw_restrictions_and_no_invented_defaults(entries):
 
 def test_catalogue_is_non_mutating_and_does_not_change_bank_consumers(entries):
     baseline = json.loads((Path(__file__).resolve().parents[1] / "reports/training_library_metadata_audit.json").read_bytes())
-    # Raw source hashes from #2816 are the baseline for all existing consumers.
+    # #2816 retained Windows checkout-byte hashes. Accept only the LF/CRLF
+    # equivalents of those exact bytes; content/other formatting must not drift.
     for bank in baseline["banks"]:
-        assert hashlib.sha256((catalogue.DATA_DIR / bank["source"]).read_bytes()).hexdigest() == bank["sha256"]
+        raw_lf = (catalogue.DATA_DIR / bank["source"]).read_bytes().replace(b"\r\n", b"\n")
+        assert bank["sha256"] in {
+            catalogue.source_hash(raw_lf),
+            hashlib.sha256(raw_lf.replace(b"\n", b"\r\n")).hexdigest(),
+        }
         payload = json.loads((catalogue.DATA_DIR / bank["source"]).read_bytes())
         assert len(source_rows(bank["source"], payload)) == bank["entries"]
     owned = catalogue.build_catalogue()

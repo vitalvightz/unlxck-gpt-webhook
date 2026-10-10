@@ -70,6 +70,15 @@ def content_hash(value: object) -> str:
     ).encode()).hexdigest()
 
 
+def source_hash(raw: bytes) -> str:
+    """Source revision with CRLF normalised to LF, independent of Git checkout.
+
+    Preserve all other bytes. This is not a raw on-disk byte digest; row bindings
+    still use canonical JSON content hashes independently of source formatting.
+    """
+    return hashlib.sha256(raw.replace(b"\r\n", b"\n")).hexdigest()
+
+
 def strings(value: object) -> list[str]:
     if isinstance(value, str):
         return [value.strip()] if value.strip() else []
@@ -186,7 +195,7 @@ def build_catalogue(data_dir: Path = DATA_DIR, *, strict: bool = True) -> list[d
     entries, used_bindings = [], set()
     for source in SOURCE_CLASSES:
         raw_bytes = (data_dir / source).read_bytes()
-        source_sha = hashlib.sha256(raw_bytes).hexdigest()
+        source_sha = source_hash(raw_bytes)
         for row, group, pointer in iter_source_rows(source, json.loads(raw_bytes)):
             if not isinstance(row, dict) or not strings(row.get("name")):
                 raise ValueError(f"Unnamed or malformed catalogue row: {source}{pointer}")

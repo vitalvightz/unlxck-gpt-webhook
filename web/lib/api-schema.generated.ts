@@ -711,6 +711,20 @@ export type ExposureResponseRequest = {
   worsening_reported?: boolean | null;
 };
 
+export type ExternalTrainingCreate = {
+  activity: "boxing" | "conditioning" | "other" | "roadwork" | "sparring" | "strength";
+  duration_minutes: number;
+  effort: "easy" | "hard" | "moderate";
+  client_request_id: string;
+  training_day?: string | null;
+};
+
+export type ExternalTrainingFields = {
+  activity: "boxing" | "conditioning" | "other" | "roadwork" | "sparring" | "strength";
+  duration_minutes: number;
+  effort: "easy" | "hard" | "moderate";
+};
+
 export type FeedbackRecord = {
   id: string;
   surface: "daily_recommendation" | "global" | "plan" | "session";
@@ -2003,6 +2017,26 @@ export type TodayInjuryDeclaration = {
   infection_signs?: string[] | null;
   coverable?: "no" | "unknown" | "yes" | null;
   friction_or_contact_problem?: "no" | "unknown" | "yes" | null;
+};
+
+export type TrainingHistoryResponse = {
+  sessions: TrainingHistorySession[];
+};
+
+export type TrainingHistorySession = {
+  id: string;
+  source: "external" | "unlxck";
+  training_day: string;
+  status: "done" | "modified" | "skipped";
+  title: string;
+  activity: "boxing" | "conditioning" | "other" | "roadwork" | "sparring" | "strength" | null;
+  duration_minutes: number | null;
+  effort: "easy" | "hard" | "moderate" | null;
+  plan_id: string | null;
+  session_rpe: number | null;
+  pain_after: number | null;
+  modification_reason: string | null;
+  notes: string | null;
 };
 
 export type UsernameChangeRequest = {

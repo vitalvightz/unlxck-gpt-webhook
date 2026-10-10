@@ -7,7 +7,6 @@ from __future__ import annotations
 
 import argparse
 from collections import Counter, defaultdict
-import hashlib
 import json
 from pathlib import Path
 import sys
@@ -17,7 +16,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from fightcamp.training_catalogue import (  # noqa: E402
-    DATA_DIR, METADATA_FIELDS, SOURCE_CLASSES, build_catalogue,
+    DATA_DIR, METADATA_FIELDS, SOURCE_CLASSES, build_catalogue, source_hash,
 )
 
 
@@ -29,7 +28,7 @@ def coverage_report(data_dir: Path = DATA_DIR) -> dict:
         rows = [entry for entry in entries if entry["source"] == source]
         banks.append({
             "source": source,
-            "sha256": hashlib.sha256((data_dir / source).read_bytes()).hexdigest(),
+            "sha256": source_hash((data_dir / source).read_bytes()),
             "total_entries": len(rows),
             "physical_candidates_requiring_validation": sum(row["eligibility"]["physical_candidate"] for row in rows),
             "rehabilitation_requiring_pathway_validation": sum(row["content_class"] == "rehabilitation" for row in rows),
@@ -47,6 +46,7 @@ def coverage_report(data_dir: Path = DATA_DIR) -> dict:
     return {
         "schema_version": 1,
         "method": "Raw source evidence and pinned identities; candidates are not permission to prescribe.",
+        "source_hash_method": "SHA-256 of source bytes with CRLF normalised to LF; all other bytes preserved.",
         "total_entries": len(entries),
         "physical_candidates_requiring_validation": sum(e["eligibility"]["physical_candidate"] for e in entries),
         "rehabilitation_requiring_pathway_validation": sum(e["content_class"] == "rehabilitation" for e in entries),

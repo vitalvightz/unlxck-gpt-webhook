@@ -1,6 +1,7 @@
 {
   "schema_version": 1,
   "method": "Raw source evidence and pinned identities; candidates are not permission to prescribe.",
+  "source_hash_method": "SHA-256 of source bytes with CRLF normalised to LF; all other bytes preserved.",
   "total_entries": 2855,
   "physical_candidates_requiring_validation": 1010,
   "rehabilitation_requiring_pathway_validation": 1499,
@@ -14,7 +15,7 @@
   "banks": [
     {
       "source": "exercise_bank.json",
-      "sha256": "f545942c841dd413506dd6f831853555d32a9e4a3cb791b33a4d62edd25b0a0e",
+      "sha256": "e37b723160b37b60c7f401124d6f0f0b4a11649ec99bcc2bd7ee43078fcf2937",
       "total_entries": 339,
       "physical_candidates_requiring_validation": 339,
       "rehabilitation_requiring_pathway_validation": 0,
@@ -167,7 +168,7 @@
     },
     {
       "source": "conditioning_bank.json",
-      "sha256": "dfc6831990a2ad55723f6aab3640e5339844db460879987597595759de05e39f",
+      "sha256": "0545f27a588598a73988f9874dca85dad103ab83cdc69c05f6b28605eb8c2537",
       "total_entries": 236,
       "physical_candidates_requiring_validation": 236,
       "rehabilitation_requiring_pathway_validation": 0,
@@ -318,7 +319,7 @@
     },
     {
       "source": "style_conditioning_bank.json",
-      "sha256": "496b0af4bd6cc9bda366db0e45499d1f105d5d20e7dfabd3c1e9210db98a233e",
+      "sha256": "44c27a2b6d7fda6616945e44992842c795c3447c1039581c63e802ff57899911",
       "total_entries": 277,
       "physical_candidates_requiring_validation": 277,
       "rehabilitation_requiring_pathway_validation": 0,
@@ -459,7 +460,7 @@
     },
     {
       "source": "style_taper_conditioning.json",
-      "sha256": "178eaebb2ad86766901b0d8999270b7c0d937961bdb07881e63fb118d7de2761",
+      "sha256": "5b9aa72f2da66ba02424f847f786bb2d758c16b47ae422f64a0a98ff9bd62a4c",
       "total_entries": 75,
       "physical_candidates_requiring_validation": 75,
       "rehabilitation_requiring_pathway_validation": 0,
@@ -601,7 +602,7 @@
     },
     {
       "source": "technical_footwork_bank.json",
-      "sha256": "c027cd352553a175263d72c906ad7dbece270f6d9209d4b09652ba702e6c824a",
+      "sha256": "ea8fdb6eebc9649bc63c3b03562023b43d1ffeb144be18bbcc9617a372d8cba3",
       "total_entries": 25,
       "physical_candidates_requiring_validation": 25,
       "rehabilitation_requiring_pathway_validation": 0,
@@ -743,7 +744,7 @@
     },
     {
       "source": "coordination_bank.json",
-      "sha256": "96d6cb72232569b9d0a5fc67af14519d22f395de1fbf899799956a582eb3fdec",
+      "sha256": "4305c5e437f187d7b499b50bbb7b3f635d9f1a2aa93abce02723a308b0825b27",
       "total_entries": 0,
       "physical_candidates_requiring_validation": 0,
       "rehabilitation_requiring_pathway_validation": 0,
@@ -798,7 +799,7 @@
     },
     {
       "source": "coordination/universal.json",
-      "sha256": "c1bf75c4ddf0b03fa4a80b7f9bf46180fa7991d0ed17e5b6d6114b05f4eb5f73",
+      "sha256": "7dace5870c80d79d724cd4360eded38bdb03f6c42cd9994768ae3cdaa98afeb2",
       "total_entries": 12,
       "physical_candidates_requiring_validation": 12,
       "rehabilitation_requiring_pathway_validation": 0,
@@ -939,7 +940,7 @@
     },
     {
       "source": "coordination/striking.json",
-      "sha256": "fa83faef4feba812094e12008d6c647837459a59e5b8a63feb8600be0067a8a3",
+      "sha256": "f658fa3113edf4bbe3cfbdec9a50788c5c908b4225f9767e0d15daf809f3bbff",
       "total_entries": 18,
       "physical_candidates_requiring_validation": 18,
       "rehabilitation_requiring_pathway_validation": 0,
@@ -1080,7 +1081,7 @@
     },
     {
       "source": "coordination/kicks.json",
-      "sha256": "bdf3958d307c7ec099104faa24ac03ee0a4c378220a5bae73de718e6d4530657",
+      "sha256": "ab258da761323d7a08be1aabeab75692d16ff289df90d1db8c453d3c27196399",
       "total_entries": 12,
       "physical_candidates_requiring_validation": 12,
       "rehabilitation_requiring_pathway_validation": 0,
@@ -1221,7 +1222,7 @@
     },
     {
       "source": "coordination/mma_transitions.json",
-      "sha256": "7c09b1223c353d384cd0cfa8727a52983849c04d0e032f0767e7e351eea44ccd",
+      "sha256": "3a8767a6083e1ae51f108dfaab85c4bcc798c9f090002a673746a2029a5e5edc",
       "total_entries": 9,
       "physical_candidates_requiring_validation": 9,
       "rehabilitation_requiring_pathway_validation": 0,
@@ -1362,7 +1363,7 @@
     },
     {
       "source": "coordination/grappling.json",
-      "sha256": "6729b8bbcffa25c94cd22a2387c4fa02a91526f0294c4bda7005a1e450aa7e54",
+      "sha256": "655bfeb697845a93a8aa51353bc121a6fc6d8a07154e452eb1478d669c44964c",
       "total_entries": 7,
       "physical_candidates_requiring_validation": 7,
       "rehabilitation_requiring_pathway_validation": 0,
@@ -1503,7 +1504,7 @@
     },
     {
       "source": "rehab_bank.json",
-      "sha256": "92bdf1e42eb0fb3ae44053b775ab28a09580a0e61c502d7f79c3a249acfa267e",
+      "sha256": "163436f5df81320746fad53ab66d20712a44d8f0a764ad70ff9137f77e9c89bf",
       "total_entries": 1603,
       "physical_candidates_requiring_validation": 0,
       "rehabilitation_requiring_pathway_validation": 1499,
@@ -1668,7 +1669,7 @@
     },
     {
       "source": "tactical_watch_bank.json",
-      "sha256": "91b530dab7e00d05efbb5b5ed8e6a7e0efb4251f540ed4596c523e41b95ad2d6",
+      "sha256": "a8acad21e369f7ef9f0d5eb706e5c177e6e825287cf197d6f2f05d35fb714be6",
       "total_entries": 183,
       "physical_candidates_requiring_validation": 0,
       "rehabilitation_requiring_pathway_validation": 0,
@@ -1809,7 +1810,7 @@
     },
     {
       "source": "fight_visualization_bank.json",
-      "sha256": "81e417123d62221e4a6fcb48c359718e544dabc5d3de7bd387c50af04c7d7775",
+      "sha256": "74ab5307eb3fff7df4e4b00cc68a8a7477191e542badf5aaad44bc2983bbea64",
       "total_entries": 59,
       "physical_candidates_requiring_validation": 0,
       "rehabilitation_requiring_pathway_validation": 0,
