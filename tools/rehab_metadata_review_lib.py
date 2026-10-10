@@ -68,12 +68,17 @@ def before_achilles_load_activation(pathways, *, preserve_achilles=False):
             snapshot['functional_checkpoints'].remove(checkpoint)
     elbow = json.loads((REPO_ROOT / 'tools/rehab_elbow_activation_inventory_baseline.json').read_text(encoding='utf-8'))
     for index, profile in enumerate(snapshot['profiles']):
+        consumer = elbow.get('consumer_revision', {})
+        consumer_matches = (content_hash(profile) == consumer.get('profile_sha256')
+                            and consumer.get('checkpoint') in snapshot['functional_checkpoints'])
         if (profile['policy_id'] == elbow['historical_profile']['policy_id']
-                and content_hash(profile) == elbow['activated_profile_sha256']
+                and (content_hash(profile) == elbow['activated_profile_sha256'] or consumer_matches)
                 and all(c in snapshot['functional_checkpoints'] for c in elbow['activated_checkpoints'])):
             snapshot['profiles'][index] = elbow['historical_profile']
             for checkpoint in elbow['activated_checkpoints']:
                 snapshot['functional_checkpoints'].remove(checkpoint)
+            if consumer_matches:
+                snapshot['functional_checkpoints'].remove(consumer['checkpoint'])
     return snapshot
 
 
@@ -85,12 +90,16 @@ def before_elbow_content_addition(bank, ledger):
     """
     manifest = json.loads((REPO_ROOT / 'tools/rehab_elbow_activation_inventory_baseline.json').read_text(encoding='utf-8'))
     bank, ledger = deepcopy(bank), deepcopy(ledger)
-    if manifest['new_review'] in ledger:
-        for group in bank:
-            if group.get('location') == 'elbow' and group.get('type') == 'tendonitis' and manifest['new_drill'] in group['drills']:
-                group['drills'].remove(manifest['new_drill'])
-                ledger.remove(manifest['new_review'])
-                break
+    revisions = [(manifest['new_drill'], manifest['new_review'])]
+    if consumer := manifest.get('consumer_revision'):
+        revisions.append((consumer['drill'], consumer['review']))
+    for drill, review in revisions:
+        if review in ledger:
+            for group in bank:
+                if group.get('location') == 'elbow' and group.get('type') == 'tendonitis' and drill in group['drills']:
+                    group['drills'].remove(drill)
+                    ledger.remove(review)
+                    break
     return bank, ledger
 
 DEFAULT_BANK = REPO_ROOT / "data" / "rehab_bank.json"

@@ -80,3 +80,24 @@ test("missing rehab responses direct athletes to rehab records, not the daily ch
     assert.doesNotMatch(text, /Better, Same or Worse/);
   } finally { act(() => root.unmount()); container.remove(); }
 });
+
+test("missing elbow suitability shows the actual blocker once without another questionnaire", async () => {
+  const container = document.createElement("div"); document.body.appendChild(container);
+  const root = createRoot(container);
+  try {
+    await act(async () => root.render(<RehabProgressStatus decision={{ ...decision, policy_id: "elbow_tendonitis",
+      progression: { next_transition: { ...decision.progression!.next_transition!,
+        reason_codes: ["assessment_observation_missing", "elbow_function_assessment_incomplete"], requirements: [
+          { requirement_id: "function", kind: "functional_checkpoint", status: "unknown", reason_code: "assessment_observation_missing" },
+          { requirement_id: "observations", kind: "input_availability", status: "unknown", reason_code: "elbow_function_assessment_incomplete" },
+        ] } } }} />));
+    await act(async () => container.querySelector("button")!.click());
+    const dialog = document.querySelector('[role="dialog"]')!;
+    const text = dialog.textContent ?? "";
+    assert.equal(dialog.querySelectorAll(".injury-requirements li").length, 1);
+    assert.match(text, /LOAD is on hold/);
+    assert.match(text, /Clearance and completed rehab cannot confirm grip, movement and tolerance/);
+    assert.doesNotMatch(text, /Report your clinician|Leave unassessed|timestamp|date|questionnaire|rehab engine/i);
+    assert.equal(dialog.querySelectorAll("form, input, select, textarea").length, 0);
+  } finally { act(() => root.unmount()); container.remove(); }
+});

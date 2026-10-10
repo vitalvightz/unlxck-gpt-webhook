@@ -8,7 +8,7 @@ from fastapi import HTTPException
 
 from api.contracts.elbow_restore_load_option import ELBOW_LOAD_OPTION as OPTION
 from api.contracts.injury_policy import resolve_injury_policy
-from api.contracts.lateral_elbow_progression import INPUT, evaluate_elbow_entry
+from api.contracts.lateral_elbow_progression import INPUT, evaluate_elbow_entry, evaluate_elbow_permission
 from api.contracts.rehab_assessment import AssessmentContext, LateralElbowProgressionAssessment, read_assessment_input
 from api.services.clinical_review_freeze import frozen_review_hold
 from api.services.injury_episode_service import InjuryEpisodeObservation, apply_episode_observations, record_episode_observation
@@ -138,6 +138,164 @@ def test_permission_alone_and_completion_alone_do_not_supply_function():
     assert view(b).open_injuries[0]["rehab_decision"]["stage"] == "restore"
     report_permission(b, "sport_specific", scopes=["rehab", "training", "contact"])
     assert view(b).open_injuries[0]["rehab_decision"]["stage"] == "restore"
+
+
+@pytest.mark.parametrize("permission", ["loading", "sport_specific"])
+def test_permission_and_completion_cannot_guess_elbow_location(permission):
+    b = bundle(assessed=False, permission=permission)
+    current = view(b)
+    decision = current.open_injuries[0]["rehab_decision"]
+    assert decision["stage"] == "restore"
+    transition = decision["progression"]["next_transition"]
+    assert transition["status"] == "blocked"
+    assert "elbow_lateral_applicability_not_confirmed" in transition["reason_codes"]
+    assert all(row["event_type"] != "rehab_progression_assessment" for row in b[0].injury_episode_events.values())
+    # Free-text "lateral" is not a replacement for the explicit location answer.
+    assert next(iter(b[0].rehab_exposures.values()))
+
+
+def consumer_bundle(*, site="lateral", **kwargs):
+    b = bundle(assessed=False, **kwargs)
+    b[0].injury_flags[b[3]][0]["description"] += f" [elbow_site:{site}]"
+    return b
+
+
+@pytest.mark.parametrize("permission", ["loading", "sport_specific"])
+def test_new_consumer_reaches_load_without_assessment_or_fake_function(permission):
+    b = consumer_bundle(permission=permission)
+    current = view(b)
+    assert current.open_injuries[0]["rehab_decision"]["stage"] == "load"
+    assert current.live_prescription["session"]["blocks"][0]["rehab_drill_id"] == OPTION.drill_id
+    assert evaluate_elbow_permission(context(b))["status"] == "pass"
+    assert read_assessment_input(INPUT, context(b))["status"] == "unknown"
+    assert not any(e["event_type"] in {"rehab_progression_assessment", "clinical_progression_review"}
+                   for e in b[0].injury_episode_events.values())
+    execute(b, current.live_prescription)
+    execute(b, current.live_prescription, "done", rehab_performance="done_as_shown")
+
+
+@pytest.mark.parametrize("site", ["unknown", "other", "lateral] [elbow_site:unknown"])
+def test_consumer_unknown_other_or_ambiguous_location_stays_closed(site):
+    assert view(consumer_bundle(site=site)).open_injuries[0]["rehab_decision"]["stage"] == "restore"
+
+
+@pytest.mark.parametrize("description", ["Medial elbow tendonitis", "Posterior elbow tendonitis", "Traumatic elbow tendonitis", "Elbow tendonitis with tingling"])
+def test_consumer_location_cannot_override_conflicting_injury_details(description):
+    b = consumer_bundle()
+    b[0].injury_flags[b[3]][0]["description"] = description + " [elbow_site:lateral]"
+    assert view(b).open_injuries[0]["rehab_decision"]["stage"] != "load"
+
+
+@pytest.mark.parametrize("permission", [None, "gentle_recovery", "not_cleared"])
+def test_consumer_contact_scope_does_not_replace_loading_permission(permission):
+    b = consumer_bundle(permission=permission)
+    report_permission(b, permission, scopes=["rehab", "training", "contact"])
+    assert view(b).open_injuries[0]["rehab_decision"]["stage"] == "restore"
+
+
+@pytest.mark.parametrize("field", ["during_response", "next_day_response"])
+@pytest.mark.parametrize("answer", ["not_reported", "worse"])
+def test_consumer_completion_and_better_do_not_override_missing_or_worse_response(field, answer):
+    b = consumer_bundle()
+    next(iter(b[0].rehab_exposures.values()))["event_json"]["response"][field] = answer
+    assert view(b).open_injuries[0]["rehab_decision"]["stage"] != "load"
+
+
+@pytest.mark.parametrize("mutation", ["location", "permission", "worse", "medical", "restriction", "side", "history", "equipment", "no_work"])
+def test_consumer_changes_invalidate_unstarted_work_preserving_started_and_completed(mutation):
+    b = consumer_bundle()
+    live = deepcopy(view(b).live_prescription)
+    row = b[0].injury_flags[b[3]][0]
+    if mutation == "location":
+        row["description"] = row["description"].replace("elbow_site:lateral", "elbow_site:unknown")
+    elif mutation == "permission":
+        report_permission(b, "not_cleared")
+    elif mutation == "worse":
+        row["latest_reported_status"] = "worse"
+    elif mutation in {"medical", "restriction"}:
+        row[f"{mutation}_hold"] = True
+    elif mutation == "side":
+        row["side"] = "right"
+    elif mutation == "history":
+        from api.contracts.rehab_assessment import AssessmentHistory
+        b[0].list_injury_episode_events = lambda *args, **kwargs: AssessmentHistory(list(b[0].injury_episode_events.values()), history_complete=False)
+    elif mutation == "equipment":
+        b[0].intakes[b[3]][0]["equipment_access"] = []
+    elif mutation == "no_work":
+        b[0].rehab_exposures.clear()
+    original = deepcopy(live)
+    assert frozen_review_hold(b[0], b[3], live, work_state="unstarted", as_of=NOW)
+    assert not frozen_review_hold(b[0], b[3], live, work_state="started", as_of=NOW)
+    assert not frozen_review_hold(b[0], b[3], live, work_state="completed", as_of=NOW)
+    assert live == original
+
+
+@pytest.mark.parametrize("changes", [dict(grip_function="not_acceptable"), dict(safety_screen="concern"),
+    dict(elbow_wrist_motion="not_acceptable"), dict(wrist_extension_tolerance="not_acceptable"),
+    dict(option_recommended=False), dict(subtype="medial"), dict(course="acute_traumatic")])
+def test_consumer_location_and_permission_never_erase_known_adverse_observations(changes):
+    b = consumer_bundle()
+    capture(b, assessment(**changes))
+    capture(b, assessment())
+    assert evaluate_elbow_permission(context(b))["status"] == "fail"
+    assert view(b).open_injuries[0]["rehab_decision"]["stage"] != "load"
+
+
+def test_consumer_generation_uses_same_eligibility_without_assessment():
+    from api.services.rehab_stage_snapshot import resolve_open_injury_rehab_context
+    from fightcamp.input_parsing import _coerce_rehab_generation_context, _apply_rehab_generation_context
+    from fightcamp.rehab_protocols import _episode_context, _reviewed_episode_option
+    b = consumer_bundle()
+    raw = next(iter(resolve_open_injury_rehab_context(b[0], b[3]).values()))
+    raw["available_equipment"] = ["table"]
+    entry = dict(injury_type="tendonitis", severity="mild", laterality="left")
+    _apply_rehab_generation_context(entry, _coerce_rehab_generation_context(dict(rehab_generation_context=raw)))
+    assert _reviewed_episode_option(_episode_context(entry), "elbow", "GPP")["decision"]["stage"] == "load"
+
+
+@pytest.mark.parametrize("performance,eligible", [("done_as_shown", True), ("changed", False), ("skipped", False)])
+def test_real_restore_completion_and_existing_checkins_supply_consumer_progression(performance, eligible):
+    from api.services.injury_episode_service import exposure_rows_with_observations
+    from api.services.rehab_completion_service import build_rehab_response_contexts, record_reported_permission_rehab
+    b = consumer_bundle()
+    b[0].rehab_exposures.clear()
+    current = view(b)
+    assert current.open_injuries[0]["rehab_decision"]["stage"] == "restore"
+    live = current.live_prescription
+    execute(b, live)
+    completion = execute(b, live, "done", rehab_performance=performance, rehab_tracking="injury_checkin")
+    # Match the existing session-completion route's follow-up capture.
+    _, contexts = build_rehab_response_contexts(b[0], athlete_id=b[3], plan_row=b[0].plans[b[4]],
+        training_day=DAY, session_id=completion["session_id"], completion=completion)
+    persisted = b[0].initialize_session_completion_rehab_contexts(b[3], completion_id=completion["id"],
+        plan_id=b[4], session_id=completion["session_id"], training_day=DAY, contexts=contexts)
+    completion.update(persisted)
+    record_reported_permission_rehab(b[0], athlete_id=b[3], plan_row=b[0].plans[b[4]], completion=completion)
+    if performance == "skipped":
+        assert not b[0].rehab_exposures
+        assert view(b).open_injuries[0]["rehab_decision"]["stage"] != "load"
+        return
+    row = next(iter(b[0].rehab_exposures.values()))
+    row["created_at"] = NOW.isoformat()
+    assert row["event_json"]["response"]["during_response"] == "not_reported"
+    assert view(b).open_injuries[0]["rehab_decision"]["stage"] != "load"
+    checkin = dict(id=str(uuid4()), athlete_id=b[3], injury_id=b[5]["id"], injury_episode_id=b[5]["episode_id"],
+        event_type="injury_checkin", created_at=(NOW + timedelta(minutes=1)).isoformat(),
+        payload=dict(explicit_report=True, latest_reported_status="ongoing"))
+    b[0].injury_episode_events[checkin["id"]] = checkin
+    observation = InjuryEpisodeObservation(injury_id=b[5]["id"], injury_episode_id=b[5]["episode_id"],
+        event_type="delayed_rehab_response", exposure_id=row["id"], response="same")
+    delayed = record_episode_observation(b[0], athlete_id=b[3], observation=observation,
+        training_day=(NOW + timedelta(days=1)).date().isoformat())
+    delayed["created_at"] = (NOW + timedelta(days=1)).isoformat()
+    b[0].injury_episode_events[delayed["id"]] = delayed
+    events = list(b[0].injury_episode_events.values())
+    injury = apply_episode_observations(b[0].injury_flags[b[3]][0], events, as_of=NOW + timedelta(days=1))
+    decision = resolve_injury_policy(injury, policies=load_clinical_policies(), bank=get_rehab_bank(),
+        equipment=["table"], exposures=exposure_rows_with_observations(list(b[0].rehab_exposures.values()), events),
+        as_of=NOW + timedelta(days=1))
+    assert (decision["stage"] == "load") is eligible
+    assert not any(e["event_type"] == "rehab_progression_assessment" for e in events)
 
 
 @pytest.mark.parametrize("field", ["athlete_id", "injury_id", "injury_episode_id"])

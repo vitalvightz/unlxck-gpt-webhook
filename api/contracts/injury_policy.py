@@ -44,10 +44,10 @@ def reported_load_hold(profile_id, injury, *, as_of, exposures=(), history_trunc
     if profile_id == "achilles_tendonitis":
         return achilles_load_permission_reason(injury)
     if profile_id == "elbow_tendonitis":
-        from .lateral_elbow_progression import evaluate_elbow_entry
+        from .lateral_elbow_progression import evaluate_elbow_permission
         context = AssessmentContext.from_injury(injury, as_of=as_of,
             setback_at=episode_setback_at(injury, exposures), history_truncated=history_truncated)
-        entry = evaluate_elbow_entry(context)
+        entry = evaluate_elbow_permission(context)
         return entry["reason_code"] if entry["status"] != "pass" else None
     return "reported_loading_option_unavailable"
 

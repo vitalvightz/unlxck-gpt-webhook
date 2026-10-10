@@ -14,6 +14,6 @@ Today now resolves approved exercise media for its current rehab blocks through 
 ## First LOAD clips to review
 
 - Achilles: floor-level controlled lowering, bodyweight, stable support. Despite the historical drill ID containing `on_step`, the approved prescription is floor-level only. Reject step/drop, excessive dorsiflexion and weighted demonstrations.
-- Lateral elbow: palm-down table-supported forearm, empty hand, comfortable assessed wrist range, slow five-second lowering. Reject dumbbells, bands, forceful grip and forced end range.
+- Lateral elbow: palm-down table-supported forearm, empty hand, comfortable wrist range within clinician restrictions, slow five-second lowering. Reject dumbbells, bands, forceful grip and forced end range.
 
 A video illustrates mechanics; it cannot expand permission, dose, exercise selection or clinical eligibility. Neither LOAD clip is assigned yet.

@@ -200,7 +200,7 @@ export function formatInjuryDetail(
   description: string | null | undefined,
   options: { bodyArea?: string | null } = {},
 ): string {
-  const raw = collapseWhitespace(String(description ?? "").replace(/\s?\[(?:training_impact|achilles_site):[^\]]*\]/g, ""));
+  const raw = collapseWhitespace(String(description ?? "").replace(/\s?\[(?:training_impact|achilles_site|elbow_site):[^\]]*\]/g, ""));
   if (!raw) {
     return "";
   }
@@ -258,7 +258,7 @@ export function resolveInjuryTypeLabel(
  * "L5-S1 stiffness"          -> "L5-S1 stiffness"
  */
 export function normalizeInjuryLabel(raw: string | null | undefined): string {
-  const trimmed = collapseWhitespace(String(raw ?? "").replace(/\s?\[(?:training_impact|achilles_site):[^\]]*\]/g, ""));
+  const trimmed = collapseWhitespace(String(raw ?? "").replace(/\s?\[(?:training_impact|achilles_site|elbow_site):[^\]]*\]/g, ""));
   if (!trimmed) {
     return "";
   }

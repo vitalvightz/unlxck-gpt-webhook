@@ -107,6 +107,12 @@
       "description": "Reported clinician assessment supports the bounded lateral hand-weight wrist-extension option.",
       "required_input": "Complete current exact-side functional observation plus separate current rehabilitation loading permission.",
       "basis": "clinical"
+    },
+    {
+      "checkpoint_id": "lateral_elbow_reported_load_permission_v2",
+      "description": "Reported loading permission and explicit lateral applicability for the supported empty-hand starter; no functional assessment or medical verification claim.",
+      "required_input": "Current episode rehabilitation permission and one elbow location answer in existing injury details; reuse valid existing lateral observations when available.",
+      "basis": "clinical"
     }
   ],
   "families": [
@@ -1882,7 +1888,7 @@
     },
     {
       "policy_id": "elbow_tendonitis",
-      "version": 2,
+      "version": 3,
       "region": "elbow",
       "injury_type": "tendonitis",
       "pathway_family": "tendon_rehab",
@@ -1944,9 +1950,9 @@
         },
         {
           "drill_id": "elbow_tendonitis_supported_hand_weight_wrist_extension",
-          "bank_hash": "56ba697662f47d146b43af38d56c4712d0e645d986b4a51b5a5ffc3ecbd711ef",
+          "bank_hash": "7d9132531396ef0ad7d694eacb5ec60721afb5094fa54d79056f2941dc45a2a5",
           "stage": "load",
-          "instructions": "Support the affected forearm palm-down on a table with the wrist free to move. With the hand empty, raise the wrist in the comfortable range assessed by your clinician, then slowly lower over five seconds. Keep the forearm supported. No dumbbell, band, forceful grip, forced end range, speed or automatic increase. Stop if symptoms worsen during or after the work.",
+          "instructions": "Support the affected forearm palm-down on a table with the wrist free to move. With the hand empty, raise the wrist in the comfortable range, within any clinician restrictions, then slowly lower over five seconds. Keep the forearm supported. No dumbbell, band, forceful grip, forced end range, speed or automatic increase. Stop if symptoms worsen during or after the work.",
           "dose": {
             "sets": 1,
             "reps": 10
@@ -1957,7 +1963,7 @@
           ],
           "stop_when": [
             "Hand weight only: 1 set of 10, maximum once daily. No added resistance or automatic increase.",
-            "Keep the forearm supported and use only the comfortable range assessed by your clinician.",
+            "Keep the forearm supported and use only a comfortable range within clinician restrictions.",
             "Stop for worsening during or delayed symptoms and seek clinical review.",
             "Stop and seek assessment for trauma, loss of function, numbness, a hot red swollen elbow or fever.",
             "Follow clinician restrictions; this grants no training or contact clearance."
@@ -1984,14 +1990,14 @@
       ],
       "transition_overrides": {
         "restore->load": {
-          "reason": "Consider only the bounded lateral hand-weight option after separately reported clinician function assessment and loading permission; shared exposure and safety requirements remain.",
+          "reason": "Consider only the supported empty-hand lateral starter with explicit loading permission and location; reviewed RESTORE exposure, attributable responses, restrictions and safety requirements remain mandatory. No grip or ROM result is inferred.",
           "add_requirements": [
             {
-              "requirement_id": "lateral_elbow_restore_load_v1",
+              "requirement_id": "lateral_elbow_reported_load_permission_v2",
               "kind": "functional_checkpoint",
               "basis": "clinical",
-              "checkpoint": "lateral_elbow_restore_load_v1",
-              "description": "Reported clinician judgment supports this exact starter option for subacute/chronic lateral tendon symptoms, not a universal strength threshold.",
+              "checkpoint": "lateral_elbow_reported_load_permission_v2",
+              "description": "Self-reported loading permission and confirmed lateral applicability of this bounded empty-hand starter; existing adverse observations veto progression.",
               "sources": [
                 "https://www.jospt.org/doi/10.2519/jospt.2022.0302",
                 "https://www.rjah.nhs.uk/our-services/therapy/supported-self-care/tennis-elbow/",
@@ -2003,7 +2009,7 @@
       },
       "status": "active",
       "activation": "live",
-      "content_hash": "54ed5be1448e7127798c4cdf958d022fa6842b13bf25f22314284a6604a83728"
+      "content_hash": "76ddc4dcf6375467549933670e7268829a2496a34a7e7e503fece71f456b0ff5"
     },
     {
       "policy_id": "wrist_tendonitis",

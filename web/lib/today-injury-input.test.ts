@@ -7,7 +7,17 @@ import {
   composeTodayInjuryDescription,
   isInjuryEntryLimited,
   limitInjuryEntryText,
+  readElbowSite, stripElbowSite, writeElbowSite,
 } from "./today-injury-input.ts";
+
+test("elbow location remains explicit and editing replaces rather than duplicates it", () => {
+  assert.equal(readElbowSite("lateral elbow tendonitis"), "unknown");
+  assert.equal(readElbowSite("[elbow_site:lateral] [elbow_site:unknown]"), "unknown");
+  const saved = writeElbowSite("tendonitis [elbow_site:other]", "lateral");
+  assert.equal(saved, "tendonitis [elbow_site:lateral]");
+  assert.equal(readElbowSite(saved), "lateral");
+  assert.equal(stripElbowSite(saved), "tendonitis");
+});
 
 test("only minor, non-escalating types plus Other are offered", () => {
   assert.deepEqual(

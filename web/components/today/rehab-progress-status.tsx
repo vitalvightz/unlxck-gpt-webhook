@@ -12,14 +12,15 @@ const REQUIREMENTS: Record<string, string> = {
   next_day_response: "Next-day response", functional_checkpoint: "Permission and exercise suitability",
 };
 const REASONS: Record<string, string> = {
-  assessment_observation_missing: "Report your clinician’s elbow assessment in Clearance & restrictions.",
-  elbow_function_assessment_incomplete: "Your clinician’s elbow assessment is incomplete. Leave unassessed details as unsure.",
-  elbow_lateral_applicability_not_confirmed: "This starter is only available for a confirmed lateral elbow presentation.",
+  assessment_observation_missing: "LOAD is on hold: your current records do not establish whether this elbow starter is suitable. Clearance and completed rehab cannot confirm grip, movement and tolerance for this exercise. Continue today's guidance.",
+  elbow_function_assessment_incomplete: "LOAD is on hold: your current records do not establish whether this elbow starter is suitable. Clearance and completed rehab cannot confirm grip, movement and tolerance for this exercise. Continue today's guidance.",
+  elbow_lateral_applicability_not_confirmed: "Confirm the elbow location in Edit injury. This starter is for outside-of-elbow tendon problems only.",
   elbow_function_or_safety_not_acceptable: "Your reported elbow function or symptoms do not support this starter yet.",
   elbow_later_unsatisfactory_function: "A later assessment reported unsuitable elbow function. An older assessment cannot replace it.",
   elbow_hand_weight_option_not_recommended: "Your clinician has not recommended this exact starter.",
   elbow_conflicting_or_unsupported_presentation: "Your injury details include a different elbow presentation or another concern.",
-  assessment_observation_stale_or_future: "Report an assessment from this injury episode after any setback.",
+  elbow_loading_severity_not_supported: "Your current injury severity does not support this starter. Follow today's conservative guidance.",
+  assessment_observation_stale_or_future: "Existing suitability evidence is not current for this injury episode. Loading stays on hold; continue today's guidance.",
   assessment_history_incomplete: "Assessment history is unavailable. Loading stays on hold.",
   assessment_medical_or_setback_hold: "A worsening response or medical concern is holding progression.",
   rehabilitation_loading_not_reported: "Report what your clinician has permitted in Clearance & restrictions.",
@@ -73,8 +74,11 @@ export function RehabProgressStatus({ decision, statusLine }: {
       <div className="injury-sheet-body">
         <p className="injury-sheet-lead">{LABELS[stage]} → {LABELS[next.to_stage] ?? "Next stage"}</p>
         <p className="muted">{unavailable ? "This next stage is closed. Reported permission does not open it."
-          : "Your rehab engine checks these before changing your stage."}</p>
-        {!unavailable ? <ul className="injury-requirements">{(next.requirements ?? []).map(item => <li key={item.requirement_id}>
+          : "These checks keep your rehab within your reported permissions and current injury response."}</p>
+        {!unavailable ? <ul className="injury-requirements">{(next.requirements ?? []).filter((item, index, items) =>
+          item.status === "pass" || !REASONS[item.reason_code] || !items.slice(0, index).some(previous =>
+            previous.status !== "pass" && REASONS[previous.reason_code] === REASONS[item.reason_code])
+        ).map(item => <li key={item.requirement_id}>
           <div><strong>{REQUIREMENTS[item.kind] ?? "Progression check"}</strong>
             <span>{item.status === "pass" ? "Complete" : item.status === "fail" ? "On hold" : "Not yet confirmed"}</span></div>
           {item.status !== "pass" ? <p>{REASONS[item.reason_code] ?? "This check is not yet satisfied. Continue the current injury guidance."}</p> : null}

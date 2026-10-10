@@ -176,3 +176,15 @@ export function stripAchillesSite(description: string): string {
 export function writeAchillesSite(description: string, site: AchillesSite): string {
   return `${stripAchillesSite(description)} [achilles_site:${site}]`;
 }
+
+export type ElbowSite = "lateral" | "other" | "unknown";
+export function readElbowSite(description: string): ElbowSite {
+  const matches = [...description.matchAll(/\[elbow_site:(lateral|other|unknown)\]/g)];
+  return matches.length === 1 ? matches[0][1] as ElbowSite : "unknown";
+}
+export function stripElbowSite(description: string): string {
+  return description.replace(/\s*\[elbow_site:(lateral|other|unknown)\]/g, "").trim();
+}
+export function writeElbowSite(description: string, site: ElbowSite): string {
+  return `${stripElbowSite(description)} [elbow_site:${site}]`;
+}
