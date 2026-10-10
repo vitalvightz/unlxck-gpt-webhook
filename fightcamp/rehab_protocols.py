@@ -962,7 +962,9 @@ def _reviewed_episode_option(episode: dict, location: str | None, phase: str):
     )
     decision = resolve_injury_policy(
         {**episode, **({} if mismatched else owned),
-         "id": episode.get("injury_id"), "canonical_location": location, "body_region": location},
+         "id": episode.get("injury_id"), "canonical_location": location, "body_region": location,
+         # Fresh intake severity must not be softened by an older owned flag.
+         **({"severity": "high"} if _normalize_rehab_severity(episode.get("severity")) == "high" else {})},
         policies=policies, bank=get_rehab_bank(), phase=phase,
         equipment=episode.get("available_equipment") or (), exposures=episode.get("rehab_exposures") or (),
         history_truncated=mismatched or episode.get("rehab_history_truncated", False),

@@ -245,17 +245,18 @@ def test_generation_uses_same_owned_gate_and_option():
         equipment=["table"], exposures=list(b[0].rehab_exposures.values()), as_of=NOW)["stage"] == "load"
 
 
-@pytest.mark.parametrize("changes,eligible", [(dict(), True),
-    (dict(permission="not_cleared"), False), (dict(subtype="unknown"), False),
-    (dict(subtype="medial"), False), (dict(grip_function="not_acceptable"), False)])
-def test_full_guided_intake_to_generation_uses_owned_elbow_policy(changes, eligible):
+@pytest.mark.parametrize("changes,severity,eligible", [(dict(), "mild", True),
+    (dict(permission="not_cleared"), "mild", False), (dict(subtype="unknown"), "mild", False),
+    (dict(subtype="medial"), "mild", False), (dict(grip_function="not_acceptable"), "mild", False),
+    (dict(), "severe", False)])
+def test_full_guided_intake_to_generation_uses_owned_elbow_policy(changes, severity, eligible):
     from api.services.rehab_stage_snapshot import annotate_payload_with_rehab_stage
     from fightcamp.input_parsing import _extract_guided_injuries, _parse_guided_injuries
     from fightcamp.rehab_protocols import generate_rehab_protocols
 
     b = bundle(**changes)
     payload = annotate_payload_with_rehab_stage(dict(guided_injuries=[dict(
-        area="Left elbow", severity="mild", trend="improving", injury_type="tendon_ligament",
+        area="Left elbow", severity=severity, trend="improving", injury_type="tendon_ligament",
         notes="Lateral elbow tendonitis", timeframe="three_plus_months")]), store=b[0], athlete_id=b[3])
     entries, _ = _parse_guided_injuries(_extract_guided_injuries(payload))
     block, _ = generate_rehab_protocols(injury_string="left elbow tendonitis",
