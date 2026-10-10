@@ -170,6 +170,7 @@ export function TrainingLibrary({ accessToken }: { accessToken: string }) {
             </span>
             <span className={styles.drillCopy}><span className={styles.name}>{entry.name}</span>
               <span className={styles.focus}>{entry.focus.length ? entry.focus.slice(0, 2).join(" · ") : contentTypes[entry.content_type]?.label}</span>
+              {entry.discovery_match ? <span className={styles.meta}>{entry.discovery_match}</span> : null}
               <span className={styles.meta}>{equipmentText(entry)} · {entry.context}</span>
               {entry.media ? <span className="sr-only">Has demo video.</span> : null}
             </span><span className={styles.chevron} aria-hidden="true" />
@@ -193,6 +194,7 @@ export function TrainingLibrary({ accessToken }: { accessToken: string }) {
             </select>
           </label>;
         })}
+        <p className={styles.meta}>Goal filters use source labels. Related matches are for discovery.</p>
         <div className={styles.filterActions}>
           <button className="injury-sheet-save" onClick={() => setFilterOpen(false)}>Show results</button>
           <button className={styles.reset} onClick={() => changeSearch(() => setFilters({}))}>Reset filters</button>

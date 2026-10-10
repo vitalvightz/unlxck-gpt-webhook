@@ -8,9 +8,9 @@ Plan → **Find a Drill** opens `/plans/library`, including when the athlete has
 
 All 2,855 entries are accounted for: 1,010 Training, 1,499 Rehab, 346 Learn (104 care, 183 tactical, 59 visualisation). Duplicate names keep separate IDs and source/sport/style/pathway context. Four repeated pathway contexts also display their different original notes.
 
-Names, descriptions, cues, notes, instructions, qualities, tags, movement, equipment and reviewed aliases are searched together. Every query term must match, with word prefixes and bounded spelling tolerance. Exact names rank first, then name phrases/partials, reviewed alias phrases, technical metadata and descriptions; ties sort by normalised name and stable ID. Search does not create metadata.
+Names, descriptions, cues, notes, instructions, qualities, tags, movement, equipment and reviewed aliases are searched together. Every query term must match, with word prefixes and bounded spelling tolerance. Exact names rank first, then name phrases/partials, existing reviewed aliases, directly supported discovery concepts, technical metadata, literal descriptions and clearly labelled related work; ties sort by normalised name and stable ID. Recognised fighter phrases require a complete supported concept or strong literal match, so unrelated words scattered across risk tags cannot manufacture an intent. Search does not create metadata.
 
-The process-local cache checks source, manifest and alias file stats on each request. A lock allows one rebuild per revision. Invalid identities or changes while loading return 503 without serving stale records. Pagination passes the returned revision; a changed revision returns 409 and the UI refreshes instead of mixing pages. Media uses the existing independent media cache, exact exercise keys, or canonical rehab drill IDs; Learn entries never acquire exercise demonstrations.
+The process-local cache checks source, manifest and alias file stats and the reviewed discovery vocabulary on each request. A lock allows one rebuild per revision. Invalid identities or changes while loading return 503 without serving stale records. Pagination passes the returned revision; a changed revision returns 409 and the UI refreshes instead of mixing pages. Media uses the existing independent media cache, exact exercise keys, or canonical rehab drill IDs; Learn entries never acquire exercise demonstrations.
 
 ## Verified filters
 
@@ -26,7 +26,13 @@ Only values with source evidence appear; combined filters use AND. Facets reflec
 
 Coverage counts entries with at least one supported value, not permissions to use those entries. Unknown/null/absent equipment never earns **No equipment**. That value requires explicit empty equipment or only `none`/`bodyweight`. Difficulty is omitted.
 
-Foundation aliases remain unchanged. Two discovery context rules extend the search vocabulary: **Explosive legs** requires both explicit `lower_body` anatomy and `explosive` tags; **Defensive movement** requires an explicit `defensive_exit` or `takedown_defense` tactical function. Broad rotation, sprinting or reactive-mechanics mappings are not added. `Legs` is a display synonym for explicit `lower_body`, not an inferred quality.
+Foundation aliases remain unchanged. The two existing source-backed Goal context rules remain unchanged: **Explosive legs** requires both explicit `lower_body` anatomy and `explosive` tags; **Defensive movement** requires an explicit `defensive_exit` or `takedown_defense` tactical function. Broad rotation, sprinting or reactive mechanics do not acquire Goal labels. `Legs` is a display synonym for explicit `lower_body`, not an inferred quality.
+
+## Reviewed discovery taxonomy
+
+A separate taxonomy has 57 reviewed concepts and 172 distinct everyday phrases, each with explicit field/token evidence, conjunctions where needed, and a rationale. It includes energy systems, cue response, technical timing, footwork/range functions, mobility regions, strength/power and equipment language. Related rotational/upper-body power is discoverable for punching intent without receiving the Punching power Goal label. Search synonyms do not modify banks or foundation aliases.
+
+The reproducible [30-query review](training-library-search-review.md) records 67/67 relevant anchors found (34/67 before) and 0/36 exclusions returned (1/36 before), along with rankings, misses and gaps. This finite review is not exhaustive ground truth. Full token frequencies and unmapped values are in [the audit data](training-library-search-audit.json).
 
 ## Example Training queries
 
@@ -34,25 +40,25 @@ These are search matches across original evidence and aliases, not counts of app
 
 | Query | Matches | Examples |
 | --- | ---: | --- |
-| Punching power | 4 | Medicine Ball Hook Throw; Standing Cable Punch Simulation (reviewed aliases rank first) |
-| Reaction speed | 59 | Cage Cut-to-Entry Choice; Call-and-Response Direction Change |
-| Stamina | 61 | 3-Min Round Intervals (Bag/Pads); Aerobic power circuits |
-| Core stability | 126 | Ab Wheel Rollout (Kneeling); Anti-Rotation Med Ball Slam |
-| Shoulder control | 9 | Standing scapular CARs; Ground-N-Pound Intervals |
+| Punching power | 37 | Medicine Ball Hook Throw; Standing Cable Punch Simulation (reviewed aliases rank first) |
+| Reaction speed | 50 | Cage Cut-to-Entry Choice; Call-and-Response Direction Change |
+| Stamina | 206 | 3-Min Round Intervals (Bag/Pads); Aerobic power circuits |
+| Core stability | 46 | Ab Wheel Rollout (Kneeling); Anti-Rotation Med Ball Slam |
+| Shoulder control | 5 | Standing scapular CARs; Scapular Pull-Up Hold |
 | Footwork | 139 | Cage Cutting Footwork; Footwork Ladder (Continuous Flow) |
-| Explosive legs | 17 | Back Squat → Box Jump; Box Jump |
+| Explosive legs | 33 | Back Squat → Box Jump; Box Jump |
 | Medicine ball | 34 | Half-Kneeling Medicine-Ball Punch Throw; Kneeling Single-Arm Medicine Ball Slam |
 | Defensive movement | 17 | Defensive Movement Drill; Defensive Movement Flow |
 
-`medicne ball` and `punchng power` also find results. Search handles punctuation such as the arrows in Learn names. A local warm-query sample took approximately 17–32 ms; this is an observation, not a production latency guarantee.
+`medicne ball` and `punchng power` also find results. Search handles punctuation such as the arrows in Learn names. The revised local 15-query samples had medians of 32-35 ms for punching power, hand speed and gas tank; this is not a production latency guarantee.
 
 ## UI and limitations
 
-The mobile-first screen follows Today's grouped exercise rows, shared type icons, verified demo thumbnails, chevrons, typography tokens and white sheet CTA. `ExerciseGlyphIcon` is extracted unchanged from the structured renderer; its existing name/type selection logic stays in that renderer. The library chooses icons only from catalogue classifications.
+The mobile-first screen follows Today's grouped exercise rows, shared type icons, verified demo thumbnails, chevrons, typography tokens and white sheet CTA. Training, Rehab and Learn each occupy one third of the available width on desktop and mobile. `ExerciseGlyphIcon` is extracted unchanged from the structured renderer; its existing name/type selection logic stays in that renderer. The library chooses icons only from catalogue classifications.
 
 Find a Drill lives above the current camp and independently on plan detail. It does not depend on the training-history component, so replacing that component with compact Log Training cannot remove library discovery.
 
-One Filters sheet, category controls, reset/empty states and revision-aware pagination keep discovery compact. Search is debounced and aborted requests cannot overwrite newer results. Preview reuses `InjuryDetailSheet`, `ExerciseDemo` and Today's coaching disclosure styling; existing Instructions/Cues stay visible, additional Why/Progress/Regress/Stop coaching is collapsed. No missing videos or explanations are generated.
+One Filters sheet, category controls, reset/empty states and revision-aware pagination keep discovery compact. Match reasons distinguish expanded discovery from source Goal labels; related matches are labelled in the result rows, and the Filters sheet explains the distinction. Search is debounced and aborted requests cannot overwrite newer results. Preview reuses `InjuryDetailSheet`, `ExerciseDemo` and Today's coaching disclosure styling; existing Instructions/Cues stay visible, additional Why/Progress/Regress/Stop coaching is collapsed. No missing videos or explanations are generated.
 
 2,580 entries have some existing coaching guidance; 275 do not. Equipment, sport and goal coverage is sparse in Rehab/Learn. Available search text can still match those records, while choosing an explicit filter intentionally restricts results to supported evidence. Name matches cannot bypass a user-selected equipment/sport filter. Several source tags are technical; the UI humanises separators but does not reinterpret their meaning.
 

@@ -7,7 +7,7 @@ const athlete = "00000000-0000-4000-8000-000000000001";
 const storageKey = `sb-${new URL(process.env.NEXT_PUBLIC_SUPABASE_URL ?? "https://stub.supabase.co").hostname.split(".")[0]}-auth-token`;
 const entry = (name: string, equipment: string[] | null, overrides: Partial<LibraryEntry> = {}): LibraryEntry => ({
   catalogue_id: name, name, equipment, equipment_state: equipment === null ? "absent" : "known", content_type: "strength_power",
-  category: "training", context: "Strength", focus: ["Punching power"], exercise_key: null, media: null,
+  category: "training", context: "Strength", focus: ["Punching power"], discovery_match: null, exercise_key: null, media: null,
   selection_boundary: "training_validation_required", prescription_allowed: false, ...overrides,
 });
 const drills = [entry("Medicine Ball Hook Throw", ["medicine_ball"]), entry("Standing Cable Punch Simulation", ["cable"]),
@@ -52,7 +52,7 @@ async function setup(page: Page, baseURL: string) {
       const entries = rows.filter(row => (!gear || row.equipment?.includes(gear)) && (!q || q === "punching power" || normalize(row.name).includes(normalize(q))));
       const values = (list: string[]) => list.map(value => ({ value, label: value.replaceAll("_", " "), count: 1 }));
       return json({ entries, total: entries.length, catalogue_total: 2855, offset: 0, limit: 24, next_offset: null, revision: "test",
-        facets: { type: values(["strength_power"]), goal: values(["Punching power"]), sport: [], equipment: values(q ? ["medicine_ball", "cable", "heavy_bag", "punching_bag"] : ["medicine_ball", "barbell"]), body_focus: [] } });
+        facets: { type: values(["strength_power"]), goal: values(["Punching power"]), sport: [], equipment: values(q ? ["medicine_ball", "cable", "heavy_bag", "punching_bag"] : ["medicine_ball", "barbell", "agility_ladder"]), body_focus: [] } });
     }
     if (url.pathname === "/api/me") return json({ profile: {
       athlete_id: athlete, email: "fighter@example.com", full_name: "Carlos", role: "athlete", access_status: "approved",
@@ -69,11 +69,16 @@ async function setup(page: Page, baseURL: string) {
   return { calls, fail: (value: boolean) => { failSearch = value; } };
 }
 
-for (const width of [390, 1280]) {
+for (const width of [320, 390, 1280, 1440]) {
   test(`Find a Drill without an active plan: search, filter, preview (${width}px)`, async ({ page, baseURL }) => {
     await page.setViewportSize({ width, height: 844 });
     const errors: string[] = [];
+    const consoleErrors: string[] = [];
     page.on("pageerror", error => errors.push(error.message));
+    page.on("console", message => {
+      // A deliberate no-active-plan 404 is handled by Plan's empty state.
+      if (message.type() === "error" && !message.location().url.includes("/api/plans/active")) consoleErrors.push(message.text());
+    });
     const { calls } = await setup(page, baseURL!);
     await page.goto("/plan");
     const libraryLink = page.getByRole("link", { name: "Find a Drill", exact: true });
@@ -84,12 +89,24 @@ for (const width of [390, 1280]) {
     await expect(page).toHaveURL(/\/plans\/library$/);
     await expect(page.getByRole("heading", { name: "Find a Drill" })).toBeVisible();
     await expect(page.getByRole("button", { name: "Training", exact: true })).toHaveAttribute("aria-pressed", "true");
+    const categories = page.getByRole("group", { name: "Library category" });
+    const tabWidths = await categories.getByRole("button").evaluateAll(buttons => buttons.map(button => button.getBoundingClientRect().width));
+    expect(Math.max(...tabWidths) - Math.min(...tabWidths)).toBeLessThan(2);
+    const tabBox = (await categories.boundingBox())!;
+    const libraryBox = (await page.getByRole("region", { name: "Training library" }).boundingBox())!;
+    expect(Math.abs(tabBox.width - libraryBox.width)).toBeLessThan(2);
     const search = page.getByRole("searchbox", { name: "Search drills" });
     await search.fill("punching power");
     const results = page.getByRole("list", { name: "Drill results" });
-    await expect(results.locator("li")).toHaveCount(4);
+    if (process.env.LIBRARY_TEST_API) {
+      await expect(results.locator("li")).not.toHaveCount(0);
+      await expect(results).toContainText("Half-Kneeling Medicine-Ball Punch Throw");
+      await expect(results).toContainText("Matches · Punch-specific power");
+    } else {
+      await expect(results.locator("li")).toHaveCount(4);
+    }
     await expect(results.locator("li").first()).toContainText("Medicine Ball Hook Throw");
-    expect((await search.boundingBox())!.width).toBeGreaterThanOrEqual(180);
+    expect((await search.boundingBox())!.width).toBeGreaterThanOrEqual(width < 390 ? 140 : 180);
     expect((await page.getByRole("button", { name: "Filters", exact: true }).boundingBox())!.width).toBeLessThan(160);
     await page.screenshot({ path: test.info().outputPath(`library-search-${width}.png`), fullPage: false, animations: "disabled" });
     await page.getByRole("button", { name: "Filters", exact: true }).click();
@@ -98,7 +115,12 @@ for (const width of [390, 1280]) {
     await expect(filters).not.toContainText("Difficulty");
     await filters.getByRole("combobox", { name: "Equipment", exact: true }).selectOption("medicine_ball");
     await filters.getByRole("button", { name: "Show results" }).click();
-    await expect(results.locator("li")).toHaveCount(1);
+    if (process.env.LIBRARY_TEST_API) {
+      await expect(results).toContainText("Med Ball Chest Pass (Reactive)");
+      await expect(results).toContainText("Related · Upper-body power");
+    } else {
+      await expect(results.locator("li")).toHaveCount(1);
+    }
     await page.screenshot({ path: test.info().outputPath(`library-${width}.png`), fullPage: false, animations: "disabled" });
     expect((await new AxeBuilder({ page }).include('[aria-label="Training library"]').analyze()).violations).toEqual([]);
     const drill = results.getByRole("button").first();
@@ -113,6 +135,7 @@ for (const width of [390, 1280]) {
     await expect(drill).toBeFocused();
     expect(calls.some(value => value.includes("sport="))).toBe(false);
     expect(errors).toEqual([]);
+    expect(consoleErrors).toEqual([]);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   });
 }
@@ -123,7 +146,7 @@ test("Categories, collapsed coaching, empty reset and unavailable retry", async 
   const search = page.getByRole("searchbox", { name: "Search drills" });
   await expect(page.getByRole("list", { name: "Drill results" })).toBeVisible();
   await page.getByRole("button", { name: "Filters", exact: true }).click();
-  await page.getByRole("dialog").getByRole("combobox", { name: "Equipment", exact: true }).selectOption("barbell");
+  await page.getByRole("dialog").getByRole("combobox", { name: "Equipment", exact: true }).selectOption("agility_ladder");
   await page.getByRole("button", { name: "Show results" }).click();
   await search.fill("punching power");
   await expect(page.getByRole("heading", { name: "No drills found" })).toBeVisible();

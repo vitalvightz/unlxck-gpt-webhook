@@ -55,6 +55,7 @@ export function AppNav() {
   const closeTimeoutRef = useRef<number | null>(null);
   const desktopNavToggleRef = useRef<HTMLButtonElement | null>(null);
   const hasSession = Boolean(session);
+  const sessionIdentity = session?.user_id ?? session?.email ?? (session ? "signed-in" : null);
   const isSessionResolving = Boolean(session && !isMeHydrated);
   const shellSurface = getShellSurface(pathname, hasSession);
   const showBrandTopbar = isReady && shouldShowBrandTopbar(pathname, hasSession);
@@ -246,14 +247,15 @@ export function AppNav() {
     };
   }, [closeMobileDrawer, isMobileDrawerVisible]);
 
-  // Close the drawer when the route or session changes (link navigation, sign
-  // out). This must NOT depend on isMobileDrawerVisible: including it re-ran the
+  // Close for route/account changes and sign-out. Same-account token refreshes
+  // must preserve the menu the athlete just opened. This must NOT depend on
+  // isMobileDrawerVisible: including it re-ran the
   // effect the instant the drawer opened and closed it again in the same frame,
   // so the Menu button appeared to do nothing. closeMobileDrawer is a no-op when
   // the drawer is already closed, so no open-state guard is needed here.
   useEffect(() => {
     closeMobileDrawer();
-  }, [closeMobileDrawer, pathname, session]);
+  }, [closeMobileDrawer, pathname, sessionIdentity]);
 
   useEffect(() => {
     if (pendingNavHref && isActive(pathname, pendingNavHref)) {

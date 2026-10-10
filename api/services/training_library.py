@@ -14,6 +14,7 @@ from fightcamp.training_catalogue import (
     ALIASES_FILE, DATA_DIR, MANIFEST_FILE, PHYSICAL_CLASSES, SOURCE_CLASSES,
     build_catalogue, strings,
 )
+from api.services.training_library_vocabulary import CONCEPTS, supports
 
 CLASS_LABELS = {
     "strength_power": "Strength & power", "conditioning": "Conditioning",
@@ -85,14 +86,18 @@ def _prepare(entry: dict) -> dict:
     descriptions = " ".join(piece["text"] for piece in entry["search_evidence"] if piece["field"] in {"description", "cue", "notes", "instructions", "why"})
     name = text_key(entry["name"])
     alias_text, metadata_text, description_text = map(text_key, (aliases, metadata, descriptions))
+    discovery = [rule for rule in CONCEPTS if entry["content_class"] in PHYSICAL_CLASSES and supports(entry, rule)]
     # A reviewed display term for the explicit lower_body category lets a fighter
     # type 'legs' without inventing a training quality.
     body_text = " ".join(BODY_LABELS.get(value, label(value)) for value in body)
     gear_text = "no equipment bodyweight" if equipment_values == {"no_equipment"} else ""
+    # Keep expanded discovery phrases out of the lexical word bag: otherwise a
+    # hand-timing phrase plus an unrelated speed tag could manufacture a match.
     corpus = text_key(" ".join((name, alias_text, metadata_text, description_text, body_text, gear_text)))
     return {
         "entry": entry, "facets": facets, "name": name, "aliases": alias_text,
         "metadata": metadata_text, "description": description_text,
+        "discovery": discovery,
         "words": frozenset(corpus.split()),
         "summary": {
             "catalogue_id": entry["catalogue_id"], "name": entry["name"],
@@ -125,9 +130,12 @@ class LibraryCache:
         self._index: LibraryIndex | None = None
 
     def _signature(self) -> tuple:
-        return tuple((source, stat.st_mtime_ns, stat.st_ctime_ns, stat.st_size)
+        sources = tuple((source, stat.st_mtime_ns, stat.st_ctime_ns, stat.st_size)
                      for source in (*SOURCE_CLASSES, MANIFEST_FILE, ALIASES_FILE)
                      for stat in [(self.data_dir / source).stat()])
+        # The reviewed vocabulary is also a cache input. Source revision checks
+        # still protect pagination when search semantics change.
+        return (*sources, ("discovery_vocabulary", repr(CONCEPTS)))
 
     def get(self) -> LibraryIndex:
         with self._lock:
@@ -158,26 +166,81 @@ class LibraryCache:
 cache = LibraryCache()
 
 
-def _score(record: dict, query: str, matches: dict[str, dict[str, int]]) -> int | None:
+def _score(record: dict, query: str, matches: dict[str, dict[str, int]], groups: list | None = None) -> int | None:
     if not query:
         return 0
-    terms = query.split()
+    terms = _query_terms(query)
     words = record["words"]
-    # Bound fuzzy work to spelling variations, not arbitrary semantic guesses.
     penalties = 0
-    for term in terms:
-        costs = [cost for word, cost in matches[term].items() if word in words]
-        if not costs:
+    semantic_scores = []
+    for chunk, rules in groups or [(terms, ())]:
+        supported = [rule for rule in rules if rule in record.get("discovery", [])]
+        literal = all(set(matches[term]).intersection(words) for term in chunk)
+        # Recognised fighter intents need a phrase/name match or supported
+        # concept. Scattered mechanical-risk words cannot satisfy the intent.
+        phrase = " ".join(chunk)
+        strong_literal = any(phrase in record.get(field, "") for field in ("name", "aliases", "metadata", "description")) or all(
+            any(word.startswith(term) for word in record["name"].split()) for term in chunk)
+        if supported:
+            semantic_scores.append(max(450 if rule.related else
+                800 if any(text_key(phrase) in record.get("aliases", "") for phrase in rule.phrases) else 700 for rule in supported))
+        elif not literal or (rules and not strong_literal):
             return None
-        penalties += min(costs)
+        for term in chunk:
+            costs = [cost for word, cost in matches[term].items() if word in words]
+            if costs:
+                penalties += min(costs)
     if query == record["name"]:
         return 1000
+    scores = [400]
     for field, score in (("name", 900), ("aliases", 800), ("metadata", 650), ("description", 500)):
-        if query in record[field]:
-            return score - penalties
+        if query in record.get(field, ""):
+            scores.append(score)
     if all(any(word.startswith(term) for word in record["name"].split()) for term in terms):
-        return 850 - penalties
-    return 400 - penalties
+        scores.append(850)
+    if semantic_scores:
+        scores.append(min(semantic_scores))
+    return max(scores) - penalties
+
+
+def _query_terms(query: str) -> list[str]:
+    words = query.split()
+    # A small closed list permits "I want to hit harder" without treating
+    # unsupported training concepts as synonyms. Single-word searches survive.
+    meaningful = [word for word in words if word not in {"i", "want", "to", "my", "for", "the", "a", "an", "and", "with"}]
+    return meaningful or words
+
+
+def _intent_groups(query: str) -> list:
+    terms = _query_terms(query)
+    phrases = [(tuple(_query_terms(text_key(phrase))), rule) for rule in CONCEPTS for phrase in rule.phrases]
+    groups = []
+    position = 0
+    while position < len(terms):
+        candidates = []
+        for words, rule in phrases:
+            chunk = terms[position:position + len(words)]
+            if len(chunk) == len(words) and all(term == word or (len(term) >= 3 and word.startswith(term)) or
+                    (len(term) >= 4 and abs(len(term) - len(word)) <= 2 and SequenceMatcher(None, term, word).ratio() >= .84)
+                    for term, word in zip(chunk, words)):
+                candidates.append((len(words), rule))
+        length = max((length for length, _ in candidates), default=1)
+        groups.append((terms[position:position + length], tuple(dict.fromkeys(rule for size, rule in candidates if size == length))))
+        position += length
+    return groups
+
+
+def _discovery_match(record: dict, query: str, groups: list) -> str | None:
+    terms = set(_query_terms(query))
+    original = set(text_key(" ".join(record.get(field, "") for field in ("name", "aliases", "metadata", "description"))).split())
+    if not terms or terms <= original:
+        return None
+    for _, rules in groups:
+        supported = [rule for rule in rules if rule in record.get("discovery", [])]
+        if supported:
+            rule = next((rule for rule in supported if not rule.related), supported[0])
+            return f"{'Related' if rule.related else 'Matches'} · {rule.label}"
+    return None
 
 
 def _matches(record: dict, filters: dict, *, except_field: str | None = None) -> bool:
@@ -193,16 +256,17 @@ def search(index: LibraryIndex, *, q: str = "", category: str = "training", filt
     filters = filters or {}
     ranked = []
     query = text_key(q)
+    groups = _intent_groups(query) if query and category == "training" else []
     vocabulary = set().union(*(r["words"] for r in index.records if r["summary"]["category"] == category))
     matches = {term: {word: 0 if term == word else 1 if word.startswith(term) else 2
                       for word in vocabulary if term == word or
                       (len(term) >= 3 and word.startswith(term)) or
                       (len(term) >= 4 and abs(len(term) - len(word)) <= 2 and SequenceMatcher(None, term, word).ratio() >= .84)}
-               for term in query.split()}
+               for term in _query_terms(query)}
     for record in index.records:
         if record["summary"]["category"] != category:
             continue
-        score = _score(record, query, matches)
+        score = _score(record, query, matches, groups)
         if score is not None:
             ranked.append((score, record))
     facets = {}
@@ -211,7 +275,7 @@ def search(index: LibraryIndex, *, q: str = "", category: str = "training", filt
         facets[field] = [{"value": value, "label": CLASS_LABELS.get(value, BODY_LABELS.get(value, "No equipment" if value == "no_equipment" else label(value))), "count": count}
                          for value, count in sorted(counts.items(), key=lambda pair: label(pair[0]))]
     selected = [r for score, r in sorted(ranked, key=lambda pair: (-pair[0], pair[1]["name"], pair[1]["entry"]["catalogue_id"])) if _matches(r, filters)]
-    return {"entries": [r["summary"].copy() for r in selected[offset:offset + limit]], "total": len(selected),
+    return {"entries": [{**r["summary"], "discovery_match": _discovery_match(r, query, groups)} for r in selected[offset:offset + limit]], "total": len(selected),
             "catalogue_total": len(index.records), "offset": offset, "limit": limit,
             "next_offset": offset + limit if offset + limit < len(selected) else None,
             "revision": index.revision, "facets": facets}

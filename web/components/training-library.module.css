@@ -50,7 +50,7 @@
 .coaching { border-top: 1px solid var(--border-subtle); }
 .coaching summary { cursor: pointer; min-height: 48px; align-content: center; font-weight: 600; }
 .coaching section { padding-top: 16px; }
-@media (min-width: 1000px) { .results { grid-template-columns: repeat(2, minmax(0, 1fr)); } .results li + li { border-top: 0; } .results li:nth-child(n+3) { border-top: 1px solid var(--border-subtle); } .results li:nth-child(even) { border-left: 1px solid var(--border-subtle); } .categories { max-width: 420px; } }
+@media (min-width: 1000px) { .results { grid-template-columns: repeat(2, minmax(0, 1fr)); } .results li + li { border-top: 0; } .results li:nth-child(n+3) { border-top: 1px solid var(--border-subtle); } .results li:nth-child(even) { border-left: 1px solid var(--border-subtle); } }
 @media (max-width: 420px) { .thumbnail { width: 56px; height: 56px; } .drill { gap: 10px; } }
 @media (max-width: 360px) { .filterButton svg { display: none; } .header h1 { font-size: 36px; } }
 @media (prefers-reduced-motion: reduce) { .categories button, .drill { transition: none; } }

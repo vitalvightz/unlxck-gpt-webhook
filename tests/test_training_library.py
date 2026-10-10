@@ -3,6 +3,7 @@ from collections import Counter, defaultdict
 from copy import deepcopy
 import json
 import shutil
+from pathlib import Path
 
 import pytest
 
@@ -93,9 +94,43 @@ def test_query_and_filters_combine_and_reset(index):
     params = dict(q="punching power", filters=dict(type="strength_power", equipment="medicine_ball", goal="Punching power"))
     result = lib.search(index, **params)
     assert [e["name"] for e in result["entries"]] == ["Medicine Ball Hook Throw"]
-    assert lib.search(index, q="punching power", filters={"equipment": "barbell"})["total"] == 0
-    assert lib.search(index, q="punching power")["total"] == 4
+    assert lib.search(index, q="punching power", filters={"equipment": "barbell", "goal": "Punching power"})["total"] == 0
+    expanded = lib.search(index, q="punching power", limit=100)
+    assert "Half-Kneeling Medicine-Ball Punch Throw" in {row["name"] for row in expanded["entries"]}
+    assert {r["entry"]["name"] for r in index.records if "Punching power" in r["facets"]["goal"]} == {"Medicine Ball Hook Throw", "Standing Cable Punch Simulation"}
     assert "difficulty" not in result["facets"]
+
+
+SEARCH_CASES = json.loads((Path(__file__).parents[1] / "tools/training_library_search_cases.json").read_text(encoding="utf-8"))["cases"]
+
+
+@pytest.mark.parametrize("case", SEARCH_CASES, ids=lambda case: case["query"])
+def test_reviewed_fighter_query_anchors_and_exclusions(index, case):
+    entries = lib.search(index, q=case["query"], limit=3000)["entries"]
+    names = {entry["name"] for entry in entries}
+    assert set(case["relevant"]) <= names, case["reason"]
+    assert not set(case["exclude"]).intersection(names), case["reason"]
+    assert all(not entry["prescription_allowed"] for entry in entries)
+
+
+def test_discovery_taxonomy_does_not_change_goal_facets_or_mix_alias_words(index):
+    punching = lib.search(index, q="hit harder", limit=100)
+    assert [r["name"] for r in punching["entries"][:2]] == ["Medicine Ball Hook Throw", "Standing Cable Punch Simulation"]
+    related = next(r for r in punching["entries"] if r["name"] == "Med Ball Chest Pass (Reactive)")
+    assert related["discovery_match"].startswith("Related")
+    assert "Punching power" not in index.by_id[related["catalogue_id"]]["facets"]["goal"]
+    assert lib.search(index, q="I want to hit harder") == lib.search(index, q="hit harder")
+    combined = lib.search(index, q="punching power medicine ball", limit=100)["entries"]
+    assert combined and all("medicine_ball" in row["equipment"] for row in combined)
+    assert "Band Row Speed Focus" not in {r["name"] for r in lib.search(index, q="hand speed", limit=100)["entries"]}
+
+
+def test_vocabulary_change_invalidates_cache_and_pagination_revision(monkeypatch):
+    cache = lib.LibraryCache()
+    first = cache.get()
+    monkeypatch.setattr(lib, "CONCEPTS", lib.CONCEPTS[:-1])
+    second = cache.get()
+    assert second is not first and second.revision != first.revision
 
 
 def test_missing_metadata_does_not_exclude_name_search_and_unknown_is_not_no_equipment(index):

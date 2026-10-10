@@ -19,6 +19,7 @@ class LibraryEntry(BaseModel):
     category: LibraryCategory
     context: str
     focus: list[str]
+    discovery_match: str | None = None
     equipment: list[str] | None
     equipment_state: str
     exercise_key: str | None

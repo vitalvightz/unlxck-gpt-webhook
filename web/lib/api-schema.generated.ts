@@ -918,6 +918,7 @@ export type LibraryEntry = {
   category: "learn" | "rehab" | "training";
   context: string;
   focus: string[];
+  discovery_match: string | null;
   equipment: string[] | null;
   equipment_state: string;
   exercise_key: string | null;
@@ -939,6 +940,7 @@ export type LibraryPreview = {
   category: "learn" | "rehab" | "training";
   context: string;
   focus: string[];
+  discovery_match: string | null;
   equipment: string[] | null;
   equipment_state: string;
   exercise_key: string | null;
