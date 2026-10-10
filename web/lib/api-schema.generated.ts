@@ -911,6 +911,57 @@ export type LateralElbowProgressionInput = {
   option_recommended?: boolean | null;
 };
 
+export type LibraryEntry = {
+  catalogue_id: string;
+  name: string;
+  content_type: string;
+  category: "learn" | "rehab" | "training";
+  context: string;
+  focus: string[];
+  equipment: string[] | null;
+  equipment_state: string;
+  exercise_key: string | null;
+  media: ExerciseMedia | null;
+  selection_boundary: string;
+  prescription_allowed: false;
+};
+
+export type LibraryFacet = {
+  value: string;
+  label: string;
+  count: number;
+};
+
+export type LibraryPreview = {
+  catalogue_id: string;
+  name: string;
+  content_type: string;
+  category: "learn" | "rehab" | "training";
+  context: string;
+  focus: string[];
+  equipment: string[] | null;
+  equipment_state: string;
+  exercise_key: string | null;
+  media: ExerciseMedia | null;
+  selection_boundary: string;
+  prescription_allowed: false;
+  source: string;
+  source_revision: string;
+  row_revision: string;
+  guidance: Record<string, string[]>;
+};
+
+export type LibrarySearchResponse = {
+  entries: LibraryEntry[];
+  total: number;
+  catalogue_total: number;
+  offset: number;
+  limit: number;
+  next_offset: number | null;
+  revision: string;
+  facets: Record<string, LibraryFacet[]>;
+};
+
 /** Week-level load dial settings (Section H). */
 export type LoadFocus = {
   volume: "build" | "high" | "low" | "maintain" | "moderate" | "peak" | "reduced" | "unload";

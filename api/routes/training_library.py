@@ -1,0 +1,69 @@
+"""Authenticated, read-only discovery. No planner or scheduling operations."""
+import logging
+
+from fastapi import APIRouter, Depends, HTTPException, Query
+
+from api.contracts.training_library import LibraryCategory, LibraryPreview, LibrarySearchResponse
+from api.services import training_library as library
+from api.services.exercise_media import load_media_index
+from fightcamp.exercise_identity import normalize_exercise_key
+
+logger = logging.getLogger(__name__)
+
+
+def _index():
+    try:
+        return library.cache.get()
+    except (OSError, ValueError, KeyError, TypeError, AttributeError):
+        logger.exception("Training catalogue unavailable or invalid")
+        raise HTTPException(503, "Training library is temporarily unavailable.") from None
+
+
+def _attach_media(payload, record, media):
+    entry = record["entry"]
+    if payload["category"] == "training":
+        key = entry["exercise_key"]
+    elif payload["category"] == "rehab":
+        key = normalize_exercise_key(entry["source_id"])
+    else:
+        return
+    payload["media"] = media.get(key)
+
+
+def build_training_library_router(*, require_profile, get_store):
+    router = APIRouter(prefix="/api/training/library", tags=["training library"])
+
+    @router.get("", response_model=LibrarySearchResponse)
+    def find_drills(
+        q: str = Query("", max_length=100), category: LibraryCategory = "training",
+        type_filter: str | None = Query(None, alias="type", max_length=100),
+        goal: str | None = Query(None, max_length=100), sport: str | None = Query(None, max_length=100),
+        equipment: str | None = Query(None, max_length=100), body_focus: str | None = Query(None, max_length=100),
+        offset: int = Query(0, ge=0, le=10000), limit: int = Query(24, ge=1, le=50),
+        revision: str | None = Query(None, max_length=64),
+        profile=Depends(require_profile), store=Depends(get_store),
+    ):
+        index = _index()
+        if revision and revision != index.revision:
+            raise HTTPException(409, "Library changed. Refresh your search.")
+        result = library.search(index, q=q, category=category, offset=offset, limit=limit,
+                                filters=dict(type=type_filter, goal=goal, sport=sport,
+                                             equipment=equipment, body_focus=body_focus))
+        media = load_media_index(store)
+        for payload in result["entries"]:
+            _attach_media(payload, index.by_id[payload["catalogue_id"]], media)
+        return result
+
+    @router.get("/entry", response_model=LibraryPreview)
+    def drill_preview(
+        catalogue_id: str = Query(..., min_length=1, max_length=250),
+        profile=Depends(require_profile), store=Depends(get_store),
+    ):
+        record = _index().by_id.get(catalogue_id)
+        if record is None:
+            raise HTTPException(404, "Drill is no longer available.")
+        result = library.preview(record)
+        _attach_media(result, record, load_media_index(store))
+        return result
+
+    return router

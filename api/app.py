@@ -63,6 +63,7 @@ from .generation_job_helpers import (
     _triage_plan_has_resume_approval as _triage_plan_has_resume_approval,
 )
 from .routes.admin import build_admin_router
+from .routes.training_library import build_training_library_router
 from .routes import (
     build_daily_router,
     build_feedback_router,
@@ -640,6 +641,7 @@ def create_app(
             get_store=get_store,
         )
     )
+    app.include_router(build_training_library_router(require_profile=require_profile, get_store=get_store))
     app.include_router(
         build_xp_router(
             require_profile=require_profile,
