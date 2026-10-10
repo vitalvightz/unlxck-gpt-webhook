@@ -62,7 +62,15 @@ def test_shared_review_passes_only_one_requirement_engine_keeps_other_gates(seco
     assert empty["status"] == "blocked" and "no_reviewed_stage_exposure" in empty["reason_codes"]
     completed = engine(supplied, current, subject, (event(),))
     assert completed["status"] == "met" and completed["target_stage_live"]
-    assert CAPTURED_FUNCTIONAL_CHECKPOINTS == frozenset({"achilles_restore_load_clinical_review_v1", "achilles_midportion_reported_load_permission_v1", "lateral_elbow_restore_load_v1"})
+    assert CAPTURED_FUNCTIONAL_CHECKPOINTS == frozenset({
+        "achilles_restore_load_clinical_review_v1", "achilles_midportion_reported_load_permission_v1",
+        "lateral_elbow_restore_load_v1", "lateral_elbow_reported_load_permission_v2",
+    })
+    elbow = next(p for p in load_clinical_policies() if p.policy_id == "elbow_tendonitis")
+    checkpoints = [r.checkpoint for r in elbow.transitions[0].requirements if r.kind == "functional_checkpoint"]
+    # Compatibility reader remains registered, but the consumer pathway must
+    # use the permission criterion rather than require the removed worksheet.
+    assert checkpoints == ["lateral_elbow_reported_load_permission_v2"]
 
 
 def test_approval_cannot_activate_a_shadow_target():

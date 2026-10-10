@@ -76,7 +76,7 @@ def test_shipped_policies_are_sourced_active_and_self_paced():
     from fightcamp.rehab_schema import CONTRACT_FIELDS, PAIN_CEILING_UNRESTRICTED
     bank = {d["id"]: d for group in get_rehab_bank() for d in group["drills"]}
     for policy in policies:
-        assert policy.version == {"chest_strain": 3, "ankle_sprain": 4, "achilles_tendonitis":2, "elbow_tendonitis":2}.get(policy.policy_id, 1)
+        assert policy.version == {"chest_strain": 3, "ankle_sprain": 4, "achilles_tendonitis":2, "elbow_tendonitis":3}.get(policy.policy_id, 1)
         for prescription in policy.prescriptions:
             drill = bank[prescription.drill_id]
             if policy.policy_id in {"chest_strain", "ankle_sprain"}:

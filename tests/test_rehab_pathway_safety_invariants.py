@@ -68,7 +68,20 @@ def test_shipped_profiles_cannot_enter_a_higher_stage(policy_id):
     if expected_stage == "calm":
         assert "next_transition" not in decision["progression"]
     elif policy_id == "elbow_tendonitis":
-        assert decision["progression"]["next_transition"]["reason_codes"] == ["assessment_observation_missing"]
+        next_transition = decision["progression"]["next_transition"]
+        assert next_transition["status"] == "blocked" and next_transition["target_stage_live"]
+        assert next_transition["reason_codes"] == ["elbow_lateral_applicability_not_confirmed"]
+        # Ideal completed work cannot invent location, even with permission.
+        permission = dict(episode_id=row["episode_id"], rehabilitation_permission=dict(schema_version=1, level="loading"))
+        missing_location = resolve_injury_policy({**row, "clinician_clearance": permission}, policies=(shipped,),
+            bank=get_rehab_bank(), exposures=ideal, equipment=["table"])
+        assert missing_location["stage"] == "restore"
+        assert missing_location["progression"]["next_transition"]["reason_codes"] == ["elbow_lateral_applicability_not_confirmed"]
+        # Location also cannot manufacture the separate rehabilitation permission.
+        missing_permission = resolve_injury_policy({**row, "description": row["description"] + " [elbow_site:lateral]"},
+            policies=(shipped,), bank=get_rehab_bank(), exposures=ideal, equipment=["table"])
+        assert missing_permission["stage"] == "restore"
+        assert missing_permission["progression"]["next_transition"]["reason_codes"] == ["rehabilitation_loading_not_reported"]
     elif policy_id == "achilles_tendonitis":
         assert decision["progression"]["next_transition"]["reason_codes"] == ["rehabilitation_loading_not_reported"]
     else:
