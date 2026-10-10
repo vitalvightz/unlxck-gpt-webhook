@@ -8,11 +8,12 @@ import { type ReactNode, useCallback, useEffect, useRef, useState } from "react"
 
 import { useAppSession } from "@/components/auth-provider";
 import { EmptyState } from "@/components/empty-state";
-import { FightCountdown } from "@/components/fight-countdown";
+import { FightCountdown, FightCountdownSkeleton } from "@/components/fight-countdown";
 import { InstallUnlxck } from "@/components/install-unlxck";
 import { PlansFeaturedSkeleton, Skeleton } from "@/components/skeleton";
 import { XpProgressCard, XpProgressCardSkeleton } from "@/components/xp-progress-card";
 import { getPlan, getToday } from "@/lib/api";
+import { getFightCountdown } from "@/lib/fight-countdown";
 import {
   getOptionLabel,
   PROFESSIONAL_STATUS_OPTIONS,
@@ -592,6 +593,8 @@ export default function HomePage() {
               phase={activePlan.phase ? String(activePlan.phase) : null}
               plan={structuredPlan}
             />
+          ) : getFightCountdown({ fightDate: activePlan.fight_date, trainingDay: commandState?.today?.training_day }) ? (
+            <FightCountdownSkeleton />
           ) : null}
           <OverviewRiskWatch risks={risks} />
         </section>

@@ -3621,6 +3621,17 @@ html[data-theme="light"] .today-safe-list[data-kind="blocked"] li::before {
   text-transform: uppercase;
 }
 
+/* Skeleton: the card's own markup with invisible stand-in text, so the
+   shimmer blocks take the real text's size. Scoped to beat the later generic
+   .skeleton rule (inline-block + vertical-align: middle add line height). */
+.fight-countdown .fight-countdown-bone {
+  display: inline;
+  vertical-align: baseline;
+  color: transparent;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
+
 /* The fill waits at zero until the card scrolls into view (data-revealed),
    then sweeps to today's position. */
 .fight-countdown-fill {
