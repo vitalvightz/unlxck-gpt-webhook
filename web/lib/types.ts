@@ -931,6 +931,7 @@ export type InjuryFlagRecord = {
   episode_id?: string | null;
   side?: import("./api-schema.generated").InjuryFlagRecord["side"];
   rehab_decision?: { outcome: string; summary: string; reason_codes: string[];
+    policy_id?: string;
     stage?: "calm" | "restore" | "load" | "dynamic" | "return";
     progression?: { next_transition?: { to_stage: string; status: string; target_stage_live: boolean;
       reason_codes: string[]; requirements?: Array<{ requirement_id: string; kind: string; status: string; reason_code: string }> } };
@@ -1066,6 +1067,7 @@ export type TodaySession = {
 };
 
 export type TodayCommandView = {
+  exercise_media?: Record<string, ExerciseMedia>;
   effective_clinician_clearance?: {
     level: "rehab_only" | "train_no_contact" | "train_contact";
     scopes: string[];

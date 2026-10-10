@@ -3173,6 +3173,8 @@ def _build_today_command_view(
         equipment = ()
     if "stable_support" in (intake.get("equipment_access") or []):
         equipment = [*equipment, "stable_support"]
+    if "table" in (intake.get("equipment_access") or []):
+        equipment = [*equipment, "table"]
     # Today logs the entire training day. Reconcile every scheduled block,
     # preserving the primary completion identity and checking sibling demands.
     training_session = _entry_mapping_for_readiness(today_session_entry) if today_session_entry else None
@@ -3314,6 +3316,10 @@ def _build_today_command_view(
             live["readiness_context"] = {"id": today_checkin["id"], "updated_at": today_checkin.get("updated_at")} if today_checkin else None
             live["revision"] = content_hash({k: v for k, v in live.items() if k != "revision"})
     view.live_prescription = live
+    if live:
+        # Presentation only: never part of the frozen prescription/revision.
+        from .exercise_media import load_media_index, resolve_session_exercise_media
+        view.exercise_media = resolve_session_exercise_media(live.get("session") or {}, load_media_index(store))
     view.effective_clinician_clearance = effective_clinician_clearance(open_injuries)
     view.delayed_rehab_prompts = delayed_rehab_prompts(store, athlete_id, training_day, athlete_timezone)
     return view

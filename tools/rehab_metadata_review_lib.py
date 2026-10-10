@@ -50,7 +50,7 @@ def pathway_inventory_snapshot(pathways):
     return snapshot
 
 
-def before_achilles_load_activation(pathways):
+def before_achilles_load_activation(pathways, *, preserve_achilles=False):
     """Exact approved activation delta only; preserve dated archive/planning inputs.
 
     Current audits and runtime never use this projection. Any change to the
@@ -61,12 +61,37 @@ def before_achilles_load_activation(pathways):
     snapshot = deepcopy(pathways)
     checkpoint = manifest['activated_checkpoint']
     for index, profile in enumerate(snapshot['profiles']):
-        if (profile['policy_id'] == manifest['historical_profile']['policy_id']
+        if (not preserve_achilles and profile['policy_id'] == manifest['historical_profile']['policy_id']
                 and content_hash(profile) == manifest['activated_profile_sha256']
                 and checkpoint in snapshot.get('functional_checkpoints', [])):
             snapshot['profiles'][index] = manifest['historical_profile']
             snapshot['functional_checkpoints'].remove(checkpoint)
+    elbow = json.loads((REPO_ROOT / 'tools/rehab_elbow_activation_inventory_baseline.json').read_text(encoding='utf-8'))
+    for index, profile in enumerate(snapshot['profiles']):
+        if (profile['policy_id'] == elbow['historical_profile']['policy_id']
+                and content_hash(profile) == elbow['activated_profile_sha256']
+                and all(c in snapshot['functional_checkpoints'] for c in elbow['activated_checkpoints'])):
+            snapshot['profiles'][index] = elbow['historical_profile']
+            for checkpoint in elbow['activated_checkpoints']:
+                snapshot['functional_checkpoints'].remove(checkpoint)
     return snapshot
+
+
+def before_elbow_content_addition(bank, ledger):
+    """Historical tools only; exclude precisely the new reviewed identity.
+
+    Drift in either content or provenance is never masked by ID alone. Runtime
+    and current audits use the full bank. Existing dated fixtures stay immutable.
+    """
+    manifest = json.loads((REPO_ROOT / 'tools/rehab_elbow_activation_inventory_baseline.json').read_text(encoding='utf-8'))
+    bank, ledger = deepcopy(bank), deepcopy(ledger)
+    if manifest['new_review'] in ledger:
+        for group in bank:
+            if group.get('location') == 'elbow' and group.get('type') == 'tendonitis' and manifest['new_drill'] in group['drills']:
+                group['drills'].remove(manifest['new_drill'])
+                ledger.remove(manifest['new_review'])
+                break
+    return bank, ledger
 
 DEFAULT_BANK = REPO_ROOT / "data" / "rehab_bank.json"
 DEFAULT_LEDGER = REPO_ROOT / "data" / "rehab_metadata_review.json"

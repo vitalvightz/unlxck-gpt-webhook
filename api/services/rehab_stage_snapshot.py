@@ -166,6 +166,22 @@ def resolve_open_injury_rehab_context(
                 episode_id=episode_id,
             ),
         }
+        # The second advanced profile needs the same owned observations Today
+        # evaluates, not a stage stamp that silently drops its functional gate.
+        from api.contracts.rehab_assessment import assessment_identity
+        if assessment_identity(flag) == ("elbow", "tendonitis"):
+            from .injury_episode_service import apply_episode_observations, episode_observations, exposure_rows_with_observations
+            observations = episode_observations(store, athlete_id, flag)
+            context_by_identity[key]["policy_injury"] = apply_episode_observations(flag, observations)
+            window = store.list_rehab_exposures(athlete_id, injury_id=injury_id, injury_episode_id=episode_id)
+            context_by_identity[key]["rehab_exposures"] = exposure_rows_with_observations(window.rows, observations)
+            context_by_identity[key]["rehab_history_truncated"] = window.history_truncated
+            intake = store.get_latest_intake(athlete_id) or {}
+            if intake.get("athlete_id") == athlete_id:
+                intake = intake.get("intake") or intake
+                context_by_identity[key]["available_equipment"] = [
+                    *(intake.get("equipment") or []),
+                    *(key for key in ("table", "stable_support") if key in (intake.get("equipment_access") or []))]
     return context_by_identity
 
 
@@ -193,6 +209,19 @@ def annotate_payload_with_rehab_stage(
         return dict(payload) if isinstance(payload, Mapping) else payload
 
     result = dict(payload)
+    # This context is server-owned and ephemeral. Never reuse a client-supplied
+    # assessment/permission stamp, including when reads fail or identity changes.
+    def _unstamped(injury):
+        if not isinstance(injury, Mapping):
+            return injury
+        clean = dict(injury)
+        clean.pop("rehab_generation_context", None)
+        return clean
+
+    if isinstance(result.get("guided_injuries"), list):
+        result["guided_injuries"] = [_unstamped(injury) for injury in result["guided_injuries"]]
+    if isinstance(result.get("guided_injury"), Mapping):
+        result["guided_injury"] = _unstamped(result["guided_injury"])
     try:
         context_by_identity = resolve_open_injury_rehab_context(store, athlete_id)
     except Exception:

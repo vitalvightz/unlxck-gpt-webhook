@@ -166,7 +166,7 @@ def test_actual_load_prescription_and_other_profiles_remain_unchanged(context):
     assert before["prescription"] == after["prescription"]
     assert after["achilles_load_review"]["status"] == "unknown"
     for p in load_clinical_policies():
-        if p.policy_id == "achilles_tendonitis":
+        if p.policy_id in {"achilles_tendonitis", "elbow_tendonitis"}:
             assert p.live_stages == ["calm","restore","load"] and not any(t.promotable for t in p.transitions[1:])
             continue
         assert set(p.live_stages) <= {"calm", "restore"}
@@ -181,10 +181,16 @@ def test_all_64_main_profile_hashes_bank_and_archive_are_preserved():
     root = Path(__file__).resolve().parents[1]
     baseline = json.loads((root / "tests/fixtures/achilles_restore_load_baseline.json").read_text(encoding="utf-8"))
     assert len(baseline["profile_hashes"]) == 64
-    assert {p.policy_id: p.content_hash for p in load_clinical_policies() if p.policy_id != "achilles_tendonitis"} == {
-        k:v for k,v in baseline["profile_hashes"].items() if k != "achilles_tendonitis"}
+    assert {p.policy_id: p.content_hash for p in load_clinical_policies() if p.policy_id not in {"achilles_tendonitis", "elbow_tendonitis"}} == {
+        k:v for k,v in baseline["profile_hashes"].items() if k not in {"achilles_tendonitis", "elbow_tendonitis"}}
     for name, expected in baseline["file_hashes"].items():
         actual = (root / "data" / name).read_text(encoding="utf-8")
+        if name in {"rehab_bank.json", "rehab_metadata_review.json"}:
+            from tools.rehab_metadata_review_lib import before_elbow_content_addition
+            bank, ledger = before_elbow_content_addition(
+                json.loads((root / "data/rehab_bank.json").read_text(encoding="utf-8")),
+                json.loads((root / "data/rehab_metadata_review.json").read_text(encoding="utf-8")))
+            actual = json.dumps(bank if name == "rehab_bank.json" else ledger, indent=2, ensure_ascii=False) + "\n"
         if name == "rehab_pathways.json":
             from tools.rehab_metadata_review_lib import before_achilles_load_activation
             actual = json.dumps(before_achilles_load_activation(json.loads(actual)),indent=2,ensure_ascii=False)+"\n"

@@ -10,7 +10,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from api.contracts.training_day import resolve_training_day_str
 from api.contracts.clinician_clearance import canonical_clearance_scopes, RehabilitationPermission
 from api.contracts.rehab_assessment import (
-    ASSESSMENT_EVENT, AchillesProgressionAssessment, AssessmentContext, AssessmentHistory,
+    ASSESSMENT_EVENT, AchillesProgressionAssessment, LateralElbowProgressionAssessment, AssessmentContext, AssessmentHistory,
     assessment_payload, exact_episode_events, instant,
 )
 
@@ -34,7 +34,7 @@ class InjuryEpisodeObservation(BaseModel):
     injury_id: UUID
     injury_episode_id: UUID
     event_type: Literal["clinician_clearance_report", "delayed_rehab_response", "rehab_progression_assessment"]
-    assessment: AchillesProgressionAssessment | None = None
+    assessment: AchillesProgressionAssessment | LateralElbowProgressionAssessment | None = None
     scopes: list[Literal["rehab", "training", "contact"]] = Field(default_factory=list)
     rehabilitation_permission: RehabilitationPermission | None = None
     exposure_id: UUID | None = None

@@ -62,7 +62,7 @@ def test_shared_review_passes_only_one_requirement_engine_keeps_other_gates(seco
     assert empty["status"] == "blocked" and "no_reviewed_stage_exposure" in empty["reason_codes"]
     completed = engine(supplied, current, subject, (event(),))
     assert completed["status"] == "met" and completed["target_stage_live"]
-    assert CAPTURED_FUNCTIONAL_CHECKPOINTS == frozenset({"achilles_restore_load_clinical_review_v1", "achilles_midportion_reported_load_permission_v1"})
+    assert CAPTURED_FUNCTIONAL_CHECKPOINTS == frozenset({"achilles_restore_load_clinical_review_v1", "achilles_midportion_reported_load_permission_v1", "lateral_elbow_restore_load_v1"})
 
 
 def test_approval_cannot_activate_a_shadow_target():
@@ -180,7 +180,7 @@ def test_current_frozen_pin_accepts_only_unstarted_work():
 def test_production_catalog_remains_calm_restore_only():
     policies = load_clinical_policies()
     assert len(policies) == 64
-    assert sum(len(p.prescriptions) for p in policies) == 104
-    assert [(p.policy_id,t.key) for p in policies for t in p.transitions if t.promotable] == [("achilles_tendonitis","restore->load")]
-    assert all(set(p.live_stages) <= {"calm", "restore"} for p in policies if p.policy_id != "achilles_tendonitis")
+    assert sum(len(p.prescriptions) for p in policies) == 105
+    assert [(p.policy_id,t.key) for p in policies for t in p.transitions if t.promotable] == [("achilles_tendonitis","restore->load"), ("elbow_tendonitis","restore->load")]
+    assert all(set(p.live_stages) <= {"calm", "restore"} for p in policies if p.policy_id not in {"achilles_tendonitis", "elbow_tendonitis"})
     assert {stage for p in policies for stage in p.live_stages} == {"calm", "restore", "load"}

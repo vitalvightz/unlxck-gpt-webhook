@@ -16543,6 +16543,36 @@
         "sport_specificity": "general_rehab",
         "contact_level": "none",
         "evidence_notes": "Sources: https://www.nhs.uk/conditions/tendonitis/, https://msk-bexley.nhs.uk/conditions/elbow-pain/tennis-elbow. Protected regional baseline, not a subtype diagnosis or complete tendon-loading protocol. No numeric dose or pain threshold inferred. Pain-free range is a conservative product constraint, not a universal assertion that pain during tendon exercise is unsafe. Existing low/moderate eligibility and scheduling cadence remain product rules."
+      },
+      {
+        "id": "elbow_tendonitis_supported_hand_weight_wrist_extension",
+        "name": "Supported hand-weight wrist extension",
+        "notes": "Support the affected forearm palm-down on a table with the wrist free to move. With the hand empty, raise the wrist in the comfortable range assessed by your clinician, then slowly lower over five seconds. Keep the forearm supported. No dumbbell, band, forceful grip, forced end range, speed or automatic increase. Stop if symptoms worsen during or after the work.",
+        "rehab_stage": "load",
+        "function": "tendon_loading",
+        "equipment": [
+          "table"
+        ],
+        "dose": null,
+        "impact": "none",
+        "load": "minimal",
+        "velocity": "low",
+        "pain_ceiling": null,
+        "allowed_severities": null,
+        "progress_when": null,
+        "regress_when": null,
+        "stop_when": null,
+        "target_regions": [
+          "elbow"
+        ],
+        "laterality_applicability": "side_specific",
+        "target_tissues": [
+          "common wrist extensor tendon at elbow"
+        ],
+        "contraction_type": "mixed",
+        "sport_specificity": "general_rehab",
+        "contact_level": "none",
+        "evidence_notes": "Sources: https://www.rjah.nhs.uk/our-services/therapy/supported-self-care/tennis-elbow/ and https://www.jospt.org/doi/10.2519/jospt.2022.0302. Narrow hand-weight-only starter, not the dormant clinician-selected dumbbell candidate. Requires reported clinician assessment of subacute/chronic lateral presentation, motion, grip and exact task tolerance. Ten repetitions are the lower end of RJAH guidance; once-daily cap is a conservative product ceiling, not a universal clinical cadence or readiness threshold. No quantitative grip strength is inferred."
       }
     ]
   },

@@ -23351,3 +23351,8 @@ button.injury-progress:hover > svg { color: var(--text-primary); }
   .injury-sheet-footer { padding-bottom: max(16px, env(safe-area-inset-bottom)); }
 }
 @media (prefers-reduced-motion: reduce) { .injury-sheet { animation: none; } .injury-rehab-action { transition: none; } }
+
+.injury-elbow-assessment { margin: 0 20px 20px; }
+.injury-elbow-assessment > form { margin-top: 12px; }
+.injury-elbow-assessment .injury-sheet-body { padding: 0; }
+.injury-elbow-fields { display: grid; gap: 16px; border: 0; padding: 0; margin: 0; min-width: 0; }

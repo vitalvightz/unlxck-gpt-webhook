@@ -12,6 +12,16 @@ const REQUIREMENTS: Record<string, string> = {
   next_day_response: "Next-day response", functional_checkpoint: "Permission and exercise suitability",
 };
 const REASONS: Record<string, string> = {
+  assessment_observation_missing: "Report your clinician’s elbow assessment in Clearance & restrictions.",
+  elbow_function_assessment_incomplete: "Your clinician’s elbow assessment is incomplete. Leave unassessed details as unsure.",
+  elbow_lateral_applicability_not_confirmed: "This starter is only available for a confirmed lateral elbow presentation.",
+  elbow_function_or_safety_not_acceptable: "Your reported elbow function or symptoms do not support this starter yet.",
+  elbow_later_unsatisfactory_function: "A later assessment reported unsuitable elbow function. An older assessment cannot replace it.",
+  elbow_hand_weight_option_not_recommended: "Your clinician has not recommended this exact starter.",
+  elbow_conflicting_or_unsupported_presentation: "Your injury details include a different elbow presentation or another concern.",
+  assessment_observation_stale_or_future: "Report an assessment from this injury episode after any setback.",
+  assessment_history_incomplete: "Assessment history is unavailable. Loading stays on hold.",
+  assessment_medical_or_setback_hold: "A worsening response or medical concern is holding progression.",
   rehabilitation_loading_not_reported: "Report what your clinician has permitted in Clearance & restrictions.",
   achilles_midportion_not_confirmed: "Confirm the Achilles location in your injury details. This exercise is for midportion problems only.",
   injury_loading_safety_hold: "Your current injury restrictions take priority over loading permission.",

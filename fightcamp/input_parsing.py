@@ -510,6 +510,8 @@ def _coerce_rehab_generation_context(raw_value: dict[str, object]) -> dict[str, 
         "available_equipment": list(equipment)
         if isinstance(equipment, (list, tuple))
         else None,
+        "policy_injury": context.get("policy_injury") if isinstance(context.get("policy_injury"), dict) else None,
+        "rehab_history_truncated": context.get("rehab_history_truncated", False) is True,
     }
 
 
@@ -582,6 +584,15 @@ def _parse_guided_injury(guided_injury: GuidedInjury) -> tuple[list[dict[str, st
             }
 
         injury_entry = resolve_guided_injury_entry(guided_injury, injury_entry)
+
+        # The area-only parser can leave an unspecified rehab type after the
+        # guided notes resolve the second live LOAD profile. Keep its canonical
+        # type at the episode selector boundary; applicability is still checked
+        # by the owned clinical policy, never inferred from these notes alone.
+        if (injury_entry.get("canonical_location") == "elbow"
+                and injury_entry.get("injury_type") == "tendonitis"
+                and injury_entry.get("rehab_type") in (None, "", "unspecified")):
+            injury_entry["rehab_type"] = "tendonitis"
 
         laterality = injury_entry.get("laterality") or injury_entry.get("side")
         display_location = strip_guided_laterality(guided_injury.area, laterality)
@@ -657,6 +668,8 @@ def _apply_rehab_generation_context(
         ("athlete_id", "athlete_id"),
         ("rehab_care_pathway", "rehab_care_pathway"),
         ("available_equipment", "available_equipment"),
+        ("policy_injury", "policy_injury"),
+        ("rehab_history_truncated", "rehab_history_truncated"),
     ):
         value = context.get(source_key)
         if value is not None:

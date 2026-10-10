@@ -19,7 +19,7 @@ const injury: InjuryFlagRecord = { id: "injury-owned", athlete_id: "athlete-owne
 async function mount(row = injury, options: { fail?: boolean; refreshFails?: boolean; disabled?: boolean } = {}) {
   const container = document.createElement("div"); document.body.appendChild(container);
   const root = createRoot(container);
-  const calls: InjuryEpisodeObservation[] = [];
+  const calls: (Omit<InjuryEpisodeObservation, "assessment"> & { assessment?: import("@/lib/api-schema.generated").AchillesProgressionAssessment | null })[] = [];
   const originalFetch = globalThis.fetch, originalFormData = globalThis.FormData;
   globalThis.FormData = domWindow.FormData;
   globalThis.fetch = (async (_input, init) => {

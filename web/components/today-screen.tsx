@@ -280,7 +280,7 @@ export function TodayScreen() {
       state={state}
       structuredPlan={structuredPlan}
       rehabLabelPolicy={rehabLabelPolicy}
-      exerciseMedia={exerciseMedia}
+      exerciseMedia={{ ...exerciseMedia, ...state.exercise_media }}
       planSchedule={planSchedule}
       painReasonAllowed={hasHealthDataConsent(me)}
       token={token ?? ""}

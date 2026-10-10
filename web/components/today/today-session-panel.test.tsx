@@ -1283,3 +1283,18 @@ test("a logged day no longer offers its sparring rounds", () => {
     assert.match(html, /<\/svg>Free timer<\/button>/);
   }
 });
+
+
+test("current rehab uses its canonical YouTube identity through the S&C player", () => {
+  const key = "elbow-tendonitis-supported-hand-weight-wrist-extension";
+  const plan = { weeks: [{ week_index: 1, days: [{ date: "2026-09-29", weekday: "Tue", sessions: [{
+    session_id: "rehab-current", title: "Rehab", blocks: [{ block_id: "elbow-current", block_type: "rehab",
+      display_name: "Supported hand-weight wrist extension", exercise_key: key, sets: 1, reps: 10 }],
+  }] }] }] } as StructuredPlan;
+  const current = resolveCurrentDay(plan, new Date(2026, 8, 29));
+  const media = { provider: "youtube", video_id: "hQgFixeXdZo", start_s: 5, end_s: 20, source: "curated" } as const;
+  const html = renderToStaticMarkup(<TodaySessionBlocks current={current} exerciseMedia={{ [`exercise:${key}`]: media }} />);
+  assert.match(html, /class="ex-row-thumb"/);
+  const wrong = renderToStaticMarkup(<TodaySessionBlocks current={current} exerciseMedia={{ "Supported hand-weight wrist extension": media }} />);
+  assert.doesNotMatch(wrong, /class="ex-row-thumb"/);
+});

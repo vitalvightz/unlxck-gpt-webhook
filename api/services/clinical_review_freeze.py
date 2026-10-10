@@ -8,6 +8,7 @@ from api.contracts.reviewed_prescription import validate_prescription_selection
 from api.services.clinical_review_capture_service import hydrate_review_input
 from api.contracts.clinical_progression_review import CLINICAL_REVIEW_REGISTRY
 from fightcamp.rehab_clinical import content_hash, load_clinical_policies
+from fightcamp.exercise_identity import normalize_exercise_key
 
 logger = logging.getLogger(__name__)
 
@@ -60,14 +61,22 @@ def frozen_review_hold(store, athlete_id, snapshot, *, work_state, as_of=None, r
             # A self-report has no verified-clinician pin. Withdraw incompatible
             # future work, while leaving started/completed snapshots intact.
             try:
-                from api.services.injury_episode_service import apply_episode_observations, episode_observations
-                from api.contracts.clinician_clearance import achilles_load_permission_reason
+                from api.services.injury_episode_service import apply_episode_observations, episode_observations, exposure_rows_with_observations
+                from api.contracts.injury_policy import reported_load_hold, reported_load_option
                 injury = store.get_injury_flag_for_athlete(block["injury_id"], athlete_id)
                 if not injury or str(injury.get("episode_id")) != block.get("injury_episode_id"):
                     return True
-                current = apply_episode_observations(injury, episode_observations(store, athlete_id, injury), as_of=now)
-                if work_state == "unstarted" and achilles_load_permission_reason(current):
+                observations = episode_observations(store, athlete_id, injury)
+                current = apply_episode_observations(injury, observations, as_of=now)
+                option = reported_load_option(block.get("policy_id"))
+                if option is None:
                     return True
+                if work_state == "unstarted":
+                    window = store.list_rehab_exposures(athlete_id, injury_id=injury["id"],
+                                                       injury_episode_id=injury["episode_id"])
+                    if reported_load_hold(block.get("policy_id"), current, as_of=now,
+                            exposures=window.rows, history_truncated=window.history_truncated):
+                        return True
                 if work_state == "unstarted":
                     plan = store.get_plan_for_athlete(snapshot.get("plan_id"), athlete_id) or {}
                     intake = (store.get_intake(plan["intake_id"]) if plan.get("intake_id")
@@ -75,23 +84,37 @@ def frozen_review_hold(store, athlete_id, snapshot, *, work_state, as_of=None, r
                     if intake.get("athlete_id") != athlete_id:
                         return True
                     intake = intake.get("intake") or intake
-                    if "stable_support" not in (intake.get("equipment_access") or []):
+                    if not set(block.get("drill_snapshot", {}).get("equipment") or []) <= set(intake.get("equipment_access") or []):
                         return True
+                    if block.get("policy_id") == "elbow_tendonitis":
+                        from api.contracts.injury_policy import resolve_injury_policy
+                        from fightcamp.rehab_protocols import get_rehab_bank
+                        decision = resolve_injury_policy(current,
+                            policies=policies if policies is not None else load_clinical_policies(),
+                            bank=bank if bank is not None else get_rehab_bank(),
+                            equipment=intake.get("equipment_access") or [],
+                            exposures=exposure_rows_with_observations(window.rows, observations),
+                            history_truncated=window.history_truncated, as_of=now)
+                        if (decision.get("stage") != "load" or
+                                (decision.get("prescription") or {}).get("drill_id") != option.drill_id):
+                            return True
                 policy = next(p for p in (policies if policies is not None else load_clinical_policies())
                               if p.policy_id == block.get("policy_id"))
                 prescription = next(p for p in policy.prescriptions if p.drill_id == block.get("rehab_drill_id"))
-                from api.contracts.achilles_restore_load_pilot import ACHILLES_LOAD_OPTION
                 if (prescription.required_rehabilitation_level != "loading"
+                        or prescription.drill_id != option.drill_id
+                        or prescription.bank_hash != option.bank_hash
                         or block.get("policy_review_hash") != policy.content_hash
                         or block.get("bank_hash") != prescription.bank_hash
+                        or normalize_exercise_key(block.get("exercise_key", prescription.drill_id)) != normalize_exercise_key(prescription.drill_id)
                         or block.get("dose") != prescription.dose.model_dump(exclude_none=True)
                         or block.get("instructions") != prescription.instructions
                         or block.get("coaching_cues") != [prescription.instructions]
-                        or block.get("mandatory_restrictions") != list(ACHILLES_LOAD_OPTION.mandatory_restrictions)
+                        or block.get("mandatory_restrictions") != list(option.mandatory_restrictions)
                         or block.get("title") != block.get("drill_snapshot", {}).get("name")
                         or block.get("display_name") != block.get("drill_snapshot", {}).get("name")
                         or block.get("stop_rules") != prescription.stop_when
-                        or block.get("range_choice") != "floor_level"
+                        or block.get("range_choice") != option.range_choices[0]
                         or block.get("resistance") != {"mode": "bodyweight", "kg": None}
                         or block.get("frequency") != "daily" or block.get("minimum_gap_days") != 1
                         or content_hash(block.get("drill_snapshot")) != prescription.bank_hash
