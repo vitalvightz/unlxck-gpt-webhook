@@ -1,0 +1,4928 @@
+{
+  "method": "raw source fields; no defaults, inference, eligibility or metadata repairs",
+  "total_entries": 2855,
+  "banks": [
+    {
+      "source": "exercise_bank.json",
+      "sha256": "f545942c841dd413506dd6f831853555d32a9e4a3cb791b33a4d62edd25b0a0e",
+      "entries": 339,
+      "rehab_groups": null,
+      "explicit_id_or_key": 0,
+      "duplicate_explicit_ids": {},
+      "equipment_known": 339,
+      "sport_field_or_explicit_tag": 8,
+      "fields": {
+        "tags": {
+          "populated": 339
+        },
+        "equipment": {
+          "populated": 339
+        },
+        "sports": {
+          "absent": 339
+        },
+        "qualities": {
+          "absent": 339
+        },
+        "category": {
+          "populated": 339
+        },
+        "method": {
+          "populated": 339
+        },
+        "movement": {
+          "populated": 339
+        },
+        "difficulty": {
+          "absent": 339
+        },
+        "phases": {
+          "populated": 339
+        },
+        "system": {
+          "absent": 339
+        },
+        "mechanical_risk_tags": {
+          "absent": 36,
+          "empty": 9,
+          "populated": 294
+        },
+        "duration": {
+          "absent": 339
+        },
+        "duration_min": {
+          "absent": 339
+        },
+        "total_minutes": {
+          "absent": 339
+        },
+        "work_sec": {
+          "absent": 339
+        },
+        "rest_sec": {
+          "absent": 339
+        },
+        "rounds": {
+          "absent": 339
+        },
+        "rpe": {
+          "absent": 339
+        },
+        "rpe_max": {
+          "absent": 339
+        },
+        "intensity": {
+          "absent": 339
+        },
+        "notes": {
+          "absent": 272,
+          "populated": 67
+        },
+        "description": {
+          "absent": 339
+        },
+        "cue": {
+          "absent": 339
+        },
+        "instructions": {
+          "absent": 339
+        },
+        "why": {
+          "absent": 339
+        },
+        "progress": {
+          "absent": 339
+        },
+        "progression": {
+          "absent": 339
+        },
+        "regress": {
+          "absent": 339
+        },
+        "regression": {
+          "absent": 339
+        },
+        "stop": {
+          "absent": 339
+        },
+        "stop_rules": {
+          "absent": 339
+        },
+        "target_regions": {
+          "absent": 339
+        },
+        "rehab_stage": {
+          "absent": 339
+        },
+        "function": {
+          "absent": 339
+        },
+        "dose": {
+          "absent": 339
+        },
+        "allowed_severities": {
+          "absent": 339
+        },
+        "pain_ceiling": {
+          "absent": 339
+        },
+        "progress_when": {
+          "absent": 339
+        },
+        "regress_when": {
+          "absent": 339
+        },
+        "stop_when": {
+          "absent": 339
+        },
+        "laterality_applicability": {
+          "absent": 339
+        },
+        "contact_level": {
+          "absent": 339
+        }
+      },
+      "tag_counts": {
+        "acceleration": 3,
+        "adductor": 1,
+        "adductors": 4,
+        "agility": 13,
+        "ankle_mobility": 3,
+        "anti_extension": 1,
+        "anti_rotation": 38,
+        "balance": 26,
+        "balance_challenge": 1,
+        "balance_static": 3,
+        "ballistic_low_volume": 3,
+        "bicep_slicer": 1,
+        "boxer_footwork": 4,
+        "boxer_stance": 5,
+        "boxing": 7,
+        "breathing_core": 1,
+        "breathing_integrated": 1,
+        "carry_heavy": 10,
+        "clinch_fighter": 3,
+        "cluster": 1,
+        "cns_freshness": 26,
+        "compound": 9,
+        "conditioning": 4,
+        "contrast": 4,
+        "coordination": 16,
+        "core": 75,
+        "counter_striker": 10,
+        "cross_pattern": 1,
+        "d1_if_familiar": 3,
+        "d1_ok": 6,
+        "daily_rehab_only": 2,
+        "deep_knee_flexion_loaded": 1,
+        "distance_striker": 10,
+        "eccentric": 5,
+        "elastic": 1,
+        "elbow_extension_heavy": 1,
+        "endurance": 11,
+        "explosive": 50,
+        "explosive_upper_push": 1,
+        "familiarity_preferred": 2,
+        "familiarity_required": 7,
+        "foot_control": 2,
+        "footwork": 12,
+        "front_rack": 1,
+        "glute_load_high": 5,
+        "glute_set": 1,
+        "grappler": 1,
+        "grappling": 1,
+        "grip": 31,
+        "hamstring": 7,
+        "high_cns": 16,
+        "hip_control": 1,
+        "hip_dominant": 11,
+        "hip_flexor": 1,
+        "hip_lock": 1,
+        "hip_rotation": 1,
+        "horizontal_power": 8,
+        "horizontal_push": 1,
+        "isolation": 14,
+        "isometric": 61,
+        "kickboxing": 3,
+        "kicker": 5,
+        "late_strength_touch": 24,
+        "lateral_power": 1,
+        "lateral_reset": 1,
+        "low_eccentric": 27,
+        "low_impact": 28,
+        "low_soreness": 17,
+        "maximal_strength_maintenance": 9,
+        "mech_ballistic": 92,
+        "mech_cns_high": 37,
+        "mech_deceleration": 3,
+        "mech_grip_crush": 3,
+        "mech_grip_support": 114,
+        "mech_hinge_isometric": 3,
+        "mech_landing_impact": 40,
+        "mech_lower_hip_hinge": 43,
+        "mech_lower_jump": 35,
+        "mech_lower_lateral": 18,
+        "mech_lower_lunge": 14,
+        "mech_lower_squat": 34,
+        "mech_max_velocity": 8,
+        "mech_reactive": 55,
+        "mech_shoulder_overhead": 21,
+        "mech_systemic_fatigue": 35,
+        "mech_trunk_flexion": 2,
+        "mech_trunk_rotation": 45,
+        "mech_trunk_stability": 203,
+        "mech_upper_carry": 18,
+        "mech_upper_press": 63,
+        "mech_upper_pull": 34,
+        "mma": 2,
+        "mobility": 50,
+        "neck": 4,
+        "neck_optional": 4,
+        "neural_primer": 15,
+        "no_d1": 12,
+        "no_d4_to_d1": 14,
+        "no_d7_to_d1": 1,
+        "no_high_cut": 6,
+        "overhead": 2,
+        "pec_loaded": 4,
+        "pivot_readiness": 3,
+        "plyometric": 10,
+        "posterior_chain": 40,
+        "posterior_shoulder": 1,
+        "power": 8,
+        "pressure_fighter": 8,
+        "pull": 6,
+        "push": 3,
+        "quad_dominant": 27,
+        "rate_of_force": 26,
+        "reactive": 14,
+        "recovery": 1,
+        "rehab_friendly": 86,
+        "rotational": 18,
+        "row_heavy": 1,
+        "scap_control": 1,
+        "scap_retraction": 1,
+        "scrambler": 5,
+        "serratus": 2,
+        "shoulder_heavy": 1,
+        "shoulder_mobility": 1,
+        "shoulder_readiness": 2,
+        "shoulders": 33,
+        "single_leg": 2,
+        "skill_refinement": 8,
+        "sled": 8,
+        "soleus": 1,
+        "speed": 14,
+        "spine_extension_loaded": 1,
+        "sport_specific": 11,
+        "stability": 34,
+        "step_and_stick": 2,
+        "striking": 2,
+        "submission_hunter": 1,
+        "t_spine_rotation": 4,
+        "tactical": 1,
+        "taper_micro_support": 23,
+        "triceps": 3,
+        "triphasic": 5,
+        "triple_extension": 6,
+        "unilateral": 2,
+        "upper_back": 9,
+        "upper_body": 25,
+        "upper_push": 1,
+        "vestibular_sensitive": 1,
+        "work_capacity": 10,
+        "wrestler": 2,
+        "wrestling": 1,
+        "wrist_extension_high": 1,
+        "zero_impact": 1
+      }
+    },
+    {
+      "source": "conditioning_bank.json",
+      "sha256": "dfc6831990a2ad55723f6aab3640e5339844db460879987597595759de05e39f",
+      "entries": 236,
+      "rehab_groups": null,
+      "explicit_id_or_key": 0,
+      "duplicate_explicit_ids": {},
+      "equipment_known": 236,
+      "sport_field_or_explicit_tag": 25,
+      "fields": {
+        "tags": {
+          "populated": 236
+        },
+        "equipment": {
+          "empty": 74,
+          "populated": 162
+        },
+        "sports": {
+          "absent": 236
+        },
+        "qualities": {
+          "absent": 236
+        },
+        "category": {
+          "absent": 236
+        },
+        "method": {
+          "absent": 236
+        },
+        "movement": {
+          "absent": 236
+        },
+        "difficulty": {
+          "absent": 236
+        },
+        "phases": {
+          "populated": 236
+        },
+        "system": {
+          "populated": 236
+        },
+        "mechanical_risk_tags": {
+          "absent": 1,
+          "empty": 2,
+          "populated": 233
+        },
+        "duration": {
+          "populated": 236
+        },
+        "duration_min": {
+          "absent": 236
+        },
+        "total_minutes": {
+          "absent": 14,
+          "populated": 222
+        },
+        "work_sec": {
+          "absent": 62,
+          "populated": 174
+        },
+        "rest_sec": {
+          "absent": 102,
+          "populated": 134
+        },
+        "rounds": {
+          "absent": 87,
+          "populated": 149
+        },
+        "rpe": {
+          "populated": 236
+        },
+        "rpe_max": {
+          "absent": 236
+        },
+        "intensity": {
+          "populated": 236
+        },
+        "notes": {
+          "absent": 1,
+          "empty": 3,
+          "populated": 232
+        },
+        "description": {
+          "absent": 236
+        },
+        "cue": {
+          "absent": 236
+        },
+        "instructions": {
+          "absent": 236
+        },
+        "why": {
+          "absent": 236
+        },
+        "progress": {
+          "absent": 236
+        },
+        "progression": {
+          "absent": 236
+        },
+        "regress": {
+          "absent": 236
+        },
+        "regression": {
+          "absent": 236
+        },
+        "stop": {
+          "absent": 236
+        },
+        "stop_rules": {
+          "absent": 236
+        },
+        "target_regions": {
+          "absent": 236
+        },
+        "rehab_stage": {
+          "absent": 236
+        },
+        "function": {
+          "absent": 236
+        },
+        "dose": {
+          "absent": 236
+        },
+        "allowed_severities": {
+          "absent": 236
+        },
+        "pain_ceiling": {
+          "absent": 236
+        },
+        "progress_when": {
+          "absent": 236
+        },
+        "regress_when": {
+          "absent": 236
+        },
+        "stop_when": {
+          "absent": 236
+        },
+        "laterality_applicability": {
+          "absent": 236
+        },
+        "contact_level": {
+          "absent": 236
+        }
+      },
+      "tag_counts": {
+        "acceleration": 1,
+        "adductors": 2,
+        "aerobic": 60,
+        "anti_rotation": 2,
+        "balance": 1,
+        "bjj": 2,
+        "boxing": 15,
+        "brawler": 4,
+        "clinch": 2,
+        "clinch_fighter": 2,
+        "cns_freshness": 16,
+        "cognitive": 3,
+        "compound": 6,
+        "concentric": 4,
+        "conditioning": 42,
+        "contrast": 2,
+        "contrast_pairing": 1,
+        "coordination": 17,
+        "core": 24,
+        "counter_striker": 11,
+        "defense": 1,
+        "distance_striker": 10,
+        "eccentric": 12,
+        "elastic": 4,
+        "endurance": 12,
+        "environmental": 2,
+        "explosive": 24,
+        "footwork": 19,
+        "gas_tank": 8,
+        "glycolytic": 23,
+        "grappler": 2,
+        "grip": 19,
+        "high_cns": 1,
+        "high_impact_lower": 5,
+        "high_impact_upper": 1,
+        "hip_dominant": 7,
+        "horizontal_power": 2,
+        "hybrid": 1,
+        "improvised": 2,
+        "intensity": 1,
+        "karate": 1,
+        "kickboxing": 6,
+        "kicker": 4,
+        "lateral": 1,
+        "lateral_power": 2,
+        "light_impact": 2,
+        "low_cns": 15,
+        "low_impact": 53,
+        "low_volume": 2,
+        "lower_body": 1,
+        "lunge_pattern": 1,
+        "mech_acceleration": 16,
+        "mech_anti_rotation": 1,
+        "mech_axial_heavy": 3,
+        "mech_ballistic": 108,
+        "mech_change_of_direction": 7,
+        "mech_cns_high": 71,
+        "mech_deceleration": 1,
+        "mech_grip_intensive": 27,
+        "mech_grip_support": 28,
+        "mech_landing_impact": 68,
+        "mech_lower_hip_hinge": 79,
+        "mech_lower_jump": 34,
+        "mech_lower_lateral": 4,
+        "mech_lower_lunge": 32,
+        "mech_lower_squat": 15,
+        "mech_max_velocity": 1,
+        "mech_reactive": 88,
+        "mech_reactive_rebound": 12,
+        "mech_shoulder_overhead": 38,
+        "mech_systemic_fatigue": 123,
+        "mech_trunk_rotation": 38,
+        "mech_trunk_stability": 68,
+        "mech_upper_carry": 10,
+        "mech_upper_press": 54,
+        "mech_upper_pull": 21,
+        "mental_toughness": 4,
+        "mma": 10,
+        "muay_thai": 7,
+        "neck": 2,
+        "neural_primer": 2,
+        "overhead": 7,
+        "parasympathetic": 6,
+        "plyometric": 21,
+        "posterior_chain": 55,
+        "power": 10,
+        "pressure_fighter": 6,
+        "pull": 3,
+        "quad_dominant": 10,
+        "rate_of_force": 1,
+        "reaction": 3,
+        "reactive": 27,
+        "recovery": 25,
+        "rehab_friendly": 4,
+        "rotational": 9,
+        "scrambler": 4,
+        "sharpness": 4,
+        "shoulders": 17,
+        "skill": 12,
+        "skill_refinement": 7,
+        "speed": 8,
+        "stability": 1,
+        "striking": 18,
+        "submission_hunter": 2,
+        "top_control": 1,
+        "transition": 3,
+        "triple_extension": 4,
+        "unilateral": 5,
+        "upper_body": 31,
+        "work_capacity": 26,
+        "wrestler": 6,
+        "zero_impact": 12
+      }
+    },
+    {
+      "source": "style_conditioning_bank.json",
+      "sha256": "496b0af4bd6cc9bda366db0e45499d1f105d5d20e7dfabd3c1e9210db98a233e",
+      "entries": 277,
+      "rehab_groups": null,
+      "explicit_id_or_key": 0,
+      "duplicate_explicit_ids": {},
+      "equipment_known": 277,
+      "sport_field_or_explicit_tag": 259,
+      "fields": {
+        "tags": {
+          "populated": 277
+        },
+        "equipment": {
+          "populated": 277
+        },
+        "sports": {
+          "absent": 277
+        },
+        "qualities": {
+          "absent": 277
+        },
+        "category": {
+          "absent": 277
+        },
+        "method": {
+          "absent": 277
+        },
+        "movement": {
+          "absent": 277
+        },
+        "difficulty": {
+          "absent": 277
+        },
+        "phases": {
+          "populated": 277
+        },
+        "system": {
+          "populated": 277
+        },
+        "mechanical_risk_tags": {
+          "populated": 277
+        },
+        "duration": {
+          "populated": 277
+        },
+        "duration_min": {
+          "absent": 277
+        },
+        "total_minutes": {
+          "absent": 86,
+          "populated": 191
+        },
+        "work_sec": {
+          "absent": 53,
+          "populated": 224
+        },
+        "rest_sec": {
+          "absent": 48,
+          "populated": 229
+        },
+        "rounds": {
+          "absent": 88,
+          "populated": 189
+        },
+        "rpe": {
+          "populated": 277
+        },
+        "rpe_max": {
+          "absent": 277
+        },
+        "intensity": {
+          "populated": 277
+        },
+        "notes": {
+          "populated": 277
+        },
+        "description": {
+          "absent": 277
+        },
+        "cue": {
+          "absent": 277
+        },
+        "instructions": {
+          "absent": 277
+        },
+        "why": {
+          "absent": 277
+        },
+        "progress": {
+          "absent": 277
+        },
+        "progression": {
+          "absent": 277
+        },
+        "regress": {
+          "absent": 277
+        },
+        "regression": {
+          "absent": 277
+        },
+        "stop": {
+          "absent": 277
+        },
+        "stop_rules": {
+          "absent": 277
+        },
+        "target_regions": {
+          "absent": 277
+        },
+        "rehab_stage": {
+          "absent": 277
+        },
+        "function": {
+          "absent": 277
+        },
+        "dose": {
+          "absent": 277
+        },
+        "allowed_severities": {
+          "absent": 277
+        },
+        "pain_ceiling": {
+          "absent": 277
+        },
+        "progress_when": {
+          "absent": 277
+        },
+        "regress_when": {
+          "absent": 277
+        },
+        "stop_when": {
+          "absent": 277
+        },
+        "laterality_applicability": {
+          "absent": 277
+        },
+        "contact_level": {
+          "absent": 277
+        }
+      },
+      "tag_counts": {
+        "anaconda": 1,
+        "armbar": 2,
+        "balance": 18,
+        "ballistic_low_volume": 3,
+        "bicep_slicer": 1,
+        "bjj": 22,
+        "body_kick": 6,
+        "boxing": 60,
+        "brawler": 26,
+        "buggy_choke": 1,
+        "cage_work": 7,
+        "clinch_fighter": 38,
+        "clinch_knee": 1,
+        "cognitive": 2,
+        "coordination": 38,
+        "counter_striker": 35,
+        "crucifix": 1,
+        "d'arce": 1,
+        "decision_making": 4,
+        "distance_striker": 54,
+        "electric_chair": 1,
+        "explosive": 24,
+        "ezekiel": 1,
+        "footwork": 55,
+        "gogoplata": 1,
+        "grappler": 2,
+        "grappling": 1,
+        "guillotine": 1,
+        "guillotine_variation": 1,
+        "heel_hook": 1,
+        "high_impact_lower": 1,
+        "hybrid": 2,
+        "inverted_triangle": 1,
+        "japanese_necktie": 1,
+        "kickboxing": 53,
+        "kicker": 22,
+        "kimura": 1,
+        "lateral": 2,
+        "leg_lock": 4,
+        "loop_choke": 1,
+        "low_kick": 9,
+        "mech_acceleration": 57,
+        "mech_ballistic": 118,
+        "mech_change_of_direction": 92,
+        "mech_cns_high": 2,
+        "mech_deceleration": 80,
+        "mech_grip_intensive": 21,
+        "mech_grip_support": 31,
+        "mech_landing_impact": 10,
+        "mech_lateral_shift": 7,
+        "mech_lower_hip_hinge": 71,
+        "mech_lower_jump": 1,
+        "mech_lower_lunge": 113,
+        "mech_reactive": 134,
+        "mech_reactive_rebound": 1,
+        "mech_shoulder_overhead": 4,
+        "mech_systemic_fatigue": 130,
+        "mech_trunk_rotation": 131,
+        "mech_trunk_stability": 214,
+        "mech_upper_press": 107,
+        "mech_upper_pull": 19,
+        "mir_lock": 1,
+        "mma": 120,
+        "muay_thai": 66,
+        "north_south_choke": 1,
+        "pressure_fighter": 31,
+        "reactive": 47,
+        "rear_naked_choke": 1,
+        "scrambler": 31,
+        "skill_refinement": 41,
+        "spatial_awareness": 2,
+        "speed": 27,
+        "spinal_lock": 1,
+        "striking": 1,
+        "submission_hunter": 33,
+        "switch_kick": 1,
+        "teep": 4,
+        "triangle": 1,
+        "visual_processing": 31,
+        "wrestler": 23
+      }
+    },
+    {
+      "source": "style_taper_conditioning.json",
+      "sha256": "178eaebb2ad86766901b0d8999270b7c0d937961bdb07881e63fb118d7de2761",
+      "entries": 75,
+      "rehab_groups": null,
+      "explicit_id_or_key": 0,
+      "duplicate_explicit_ids": {},
+      "equipment_known": 75,
+      "sport_field_or_explicit_tag": 75,
+      "fields": {
+        "tags": {
+          "populated": 75
+        },
+        "equipment": {
+          "populated": 75
+        },
+        "sports": {
+          "absent": 75
+        },
+        "qualities": {
+          "absent": 75
+        },
+        "category": {
+          "absent": 75
+        },
+        "method": {
+          "absent": 75
+        },
+        "movement": {
+          "absent": 75
+        },
+        "difficulty": {
+          "absent": 75
+        },
+        "phases": {
+          "populated": 75
+        },
+        "system": {
+          "populated": 75
+        },
+        "mechanical_risk_tags": {
+          "empty": 3,
+          "populated": 72
+        },
+        "duration": {
+          "populated": 75
+        },
+        "duration_min": {
+          "absent": 75
+        },
+        "total_minutes": {
+          "populated": 75
+        },
+        "work_sec": {
+          "populated": 75
+        },
+        "rest_sec": {
+          "populated": 75
+        },
+        "rounds": {
+          "populated": 75
+        },
+        "rpe": {
+          "absent": 75
+        },
+        "rpe_max": {
+          "populated": 75
+        },
+        "intensity": {
+          "populated": 75
+        },
+        "notes": {
+          "absent": 75
+        },
+        "description": {
+          "populated": 75
+        },
+        "cue": {
+          "absent": 75
+        },
+        "instructions": {
+          "absent": 75
+        },
+        "why": {
+          "absent": 75
+        },
+        "progress": {
+          "absent": 75
+        },
+        "progression": {
+          "absent": 75
+        },
+        "regress": {
+          "absent": 75
+        },
+        "regression": {
+          "absent": 75
+        },
+        "stop": {
+          "absent": 75
+        },
+        "stop_rules": {
+          "absent": 75
+        },
+        "target_regions": {
+          "absent": 75
+        },
+        "rehab_stage": {
+          "absent": 75
+        },
+        "function": {
+          "absent": 75
+        },
+        "dose": {
+          "absent": 75
+        },
+        "allowed_severities": {
+          "absent": 75
+        },
+        "pain_ceiling": {
+          "absent": 75
+        },
+        "progress_when": {
+          "absent": 75
+        },
+        "regress_when": {
+          "absent": 75
+        },
+        "stop_when": {
+          "absent": 75
+        },
+        "laterality_applicability": {
+          "absent": 75
+        },
+        "contact_level": {
+          "populated": 75
+        }
+      },
+      "tag_counts": {
+        "bjj": 24,
+        "boxing": 29,
+        "brawler": 7,
+        "clinch": 7,
+        "clinch_fighter": 7,
+        "cns_freshness": 18,
+        "coordination": 25,
+        "counter_striker": 11,
+        "distance_striker": 12,
+        "footwork": 5,
+        "grappler": 10,
+        "grappling": 31,
+        "kickboxing": 41,
+        "kicker": 9,
+        "low_impact": 3,
+        "low_volume": 56,
+        "mech_acceleration": 36,
+        "mech_anti_rotation": 1,
+        "mech_change_of_direction": 34,
+        "mech_deceleration": 37,
+        "mech_grip_support": 15,
+        "mech_lower_hip_hinge": 16,
+        "mech_lower_lunge": 7,
+        "mech_trunk_rotation": 48,
+        "mech_trunk_stability": 32,
+        "mech_upper_press": 20,
+        "mech_upper_pull": 12,
+        "mma": 74,
+        "muay_thai": 45,
+        "pressure_fighter": 10,
+        "reaction": 18,
+        "recovery": 1,
+        "scrambler": 7,
+        "sharpness": 64,
+        "skill_refinement": 69,
+        "submission_hunter": 9,
+        "tactical": 47,
+        "transition": 6,
+        "visual_processing": 15,
+        "wrestler": 10,
+        "wrestling": 22,
+        "zero_impact": 26
+      }
+    },
+    {
+      "source": "technical_footwork_bank.json",
+      "sha256": "c027cd352553a175263d72c906ad7dbece270f6d9209d4b09652ba702e6c824a",
+      "entries": 25,
+      "rehab_groups": null,
+      "explicit_id_or_key": 0,
+      "duplicate_explicit_ids": {},
+      "equipment_known": 25,
+      "sport_field_or_explicit_tag": 25,
+      "fields": {
+        "tags": {
+          "populated": 25
+        },
+        "equipment": {
+          "empty": 25
+        },
+        "sports": {
+          "absent": 25
+        },
+        "qualities": {
+          "absent": 25
+        },
+        "category": {
+          "absent": 25
+        },
+        "method": {
+          "absent": 25
+        },
+        "movement": {
+          "absent": 25
+        },
+        "difficulty": {
+          "absent": 25
+        },
+        "phases": {
+          "populated": 25
+        },
+        "system": {
+          "populated": 25
+        },
+        "mechanical_risk_tags": {
+          "populated": 25
+        },
+        "duration": {
+          "populated": 25
+        },
+        "duration_min": {
+          "absent": 25
+        },
+        "total_minutes": {
+          "absent": 8,
+          "populated": 17
+        },
+        "work_sec": {
+          "absent": 8,
+          "populated": 17
+        },
+        "rest_sec": {
+          "populated": 25
+        },
+        "rounds": {
+          "absent": 8,
+          "populated": 17
+        },
+        "rpe": {
+          "populated": 25
+        },
+        "rpe_max": {
+          "absent": 25
+        },
+        "intensity": {
+          "populated": 25
+        },
+        "notes": {
+          "populated": 25
+        },
+        "description": {
+          "absent": 25
+        },
+        "cue": {
+          "populated": 25
+        },
+        "instructions": {
+          "absent": 25
+        },
+        "why": {
+          "absent": 25
+        },
+        "progress": {
+          "absent": 25
+        },
+        "progression": {
+          "absent": 25
+        },
+        "regress": {
+          "absent": 25
+        },
+        "regression": {
+          "absent": 25
+        },
+        "stop": {
+          "absent": 25
+        },
+        "stop_rules": {
+          "absent": 25
+        },
+        "target_regions": {
+          "absent": 25
+        },
+        "rehab_stage": {
+          "absent": 25
+        },
+        "function": {
+          "absent": 25
+        },
+        "dose": {
+          "absent": 25
+        },
+        "allowed_severities": {
+          "absent": 25
+        },
+        "pain_ceiling": {
+          "absent": 25
+        },
+        "progress_when": {
+          "absent": 25
+        },
+        "regress_when": {
+          "absent": 25
+        },
+        "stop_when": {
+          "absent": 25
+        },
+        "laterality_applicability": {
+          "absent": 25
+        },
+        "contact_level": {
+          "absent": 25
+        }
+      },
+      "tag_counts": {
+        "angle_exit": 12,
+        "angles": 12,
+        "balance": 13,
+        "bjj": 2,
+        "boxing": 9,
+        "brawler": 4,
+        "clinch_fighter": 5,
+        "coordination": 8,
+        "counter_striker": 7,
+        "distance_striker": 7,
+        "footwork": 25,
+        "grappler": 5,
+        "kickboxing": 6,
+        "kicker": 6,
+        "lateral": 7,
+        "lateral_movement": 11,
+        "mech_change_of_direction": 17,
+        "mech_deceleration": 5,
+        "mech_hip_rotation": 10,
+        "mech_lower_limb_weight_bearing": 25,
+        "mech_plantarflexion": 5,
+        "mma": 8,
+        "movement_quality": 23,
+        "muay_thai": 6,
+        "pivot": 4,
+        "pressure_fighter": 8,
+        "ringcraft": 9,
+        "scrambler": 3,
+        "stance": 10,
+        "stance_reset": 15,
+        "submission_hunter": 1,
+        "switch_hitter": 1,
+        "wrestler": 5,
+        "wrestling": 2
+      }
+    },
+    {
+      "source": "coordination_bank.json",
+      "sha256": "96d6cb72232569b9d0a5fc67af14519d22f395de1fbf899799956a582eb3fdec",
+      "entries": 0,
+      "rehab_groups": null,
+      "explicit_id_or_key": 0,
+      "duplicate_explicit_ids": {},
+      "equipment_known": 0,
+      "sport_field_or_explicit_tag": 0,
+      "fields": {
+        "tags": {},
+        "equipment": {},
+        "sports": {},
+        "qualities": {},
+        "category": {},
+        "method": {},
+        "movement": {},
+        "difficulty": {},
+        "phases": {},
+        "system": {},
+        "mechanical_risk_tags": {},
+        "duration": {},
+        "duration_min": {},
+        "total_minutes": {},
+        "work_sec": {},
+        "rest_sec": {},
+        "rounds": {},
+        "rpe": {},
+        "rpe_max": {},
+        "intensity": {},
+        "notes": {},
+        "description": {},
+        "cue": {},
+        "instructions": {},
+        "why": {},
+        "progress": {},
+        "progression": {},
+        "regress": {},
+        "regression": {},
+        "stop": {},
+        "stop_rules": {},
+        "target_regions": {},
+        "rehab_stage": {},
+        "function": {},
+        "dose": {},
+        "allowed_severities": {},
+        "pain_ceiling": {},
+        "progress_when": {},
+        "regress_when": {},
+        "stop_when": {},
+        "laterality_applicability": {},
+        "contact_level": {}
+      },
+      "tag_counts": {}
+    },
+    {
+      "source": "coordination/universal.json",
+      "sha256": "c1bf75c4ddf0b03fa4a80b7f9bf46180fa7991d0ed17e5b6d6114b05f4eb5f73",
+      "entries": 12,
+      "rehab_groups": null,
+      "explicit_id_or_key": 12,
+      "duplicate_explicit_ids": {},
+      "equipment_known": 12,
+      "sport_field_or_explicit_tag": 12,
+      "fields": {
+        "tags": {
+          "populated": 12
+        },
+        "equipment": {
+          "populated": 12
+        },
+        "sports": {
+          "populated": 12
+        },
+        "qualities": {
+          "populated": 12
+        },
+        "category": {
+          "absent": 12
+        },
+        "method": {
+          "absent": 12
+        },
+        "movement": {
+          "absent": 12
+        },
+        "difficulty": {
+          "absent": 12
+        },
+        "phases": {
+          "populated": 12
+        },
+        "system": {
+          "absent": 12
+        },
+        "mechanical_risk_tags": {
+          "populated": 12
+        },
+        "duration": {
+          "absent": 12
+        },
+        "duration_min": {
+          "populated": 12
+        },
+        "total_minutes": {
+          "absent": 12
+        },
+        "work_sec": {
+          "absent": 12
+        },
+        "rest_sec": {
+          "absent": 12
+        },
+        "rounds": {
+          "absent": 12
+        },
+        "rpe": {
+          "populated": 12
+        },
+        "rpe_max": {
+          "absent": 12
+        },
+        "intensity": {
+          "absent": 12
+        },
+        "notes": {
+          "absent": 12
+        },
+        "description": {
+          "absent": 12
+        },
+        "cue": {
+          "populated": 12
+        },
+        "instructions": {
+          "absent": 12
+        },
+        "why": {
+          "populated": 12
+        },
+        "progress": {
+          "absent": 12
+        },
+        "progression": {
+          "absent": 12
+        },
+        "regress": {
+          "absent": 12
+        },
+        "regression": {
+          "absent": 12
+        },
+        "stop": {
+          "absent": 12
+        },
+        "stop_rules": {
+          "absent": 12
+        },
+        "target_regions": {
+          "absent": 12
+        },
+        "rehab_stage": {
+          "absent": 12
+        },
+        "function": {
+          "absent": 12
+        },
+        "dose": {
+          "absent": 12
+        },
+        "allowed_severities": {
+          "absent": 12
+        },
+        "pain_ceiling": {
+          "absent": 12
+        },
+        "progress_when": {
+          "absent": 12
+        },
+        "regress_when": {
+          "absent": 12
+        },
+        "stop_when": {
+          "absent": 12
+        },
+        "laterality_applicability": {
+          "absent": 12
+        },
+        "contact_level": {
+          "absent": 12
+        }
+      },
+      "tag_counts": {
+        "coordination": 12,
+        "footwork": 1,
+        "low_impact": 12,
+        "mech_cns_high": 1,
+        "mech_landing_impact": 1,
+        "mech_lower_jump": 1,
+        "mech_lower_lateral": 6,
+        "mech_lower_lunge": 1,
+        "mech_lower_squat": 1,
+        "mech_reactive": 2,
+        "mech_trunk_rotation": 1,
+        "mech_trunk_stability": 10,
+        "reaction": 1,
+        "reactive": 1,
+        "skill_refinement": 10,
+        "speed": 1,
+        "visual_processing": 1
+      }
+    },
+    {
+      "source": "coordination/striking.json",
+      "sha256": "fa83faef4feba812094e12008d6c647837459a59e5b8a63feb8600be0067a8a3",
+      "entries": 18,
+      "rehab_groups": null,
+      "explicit_id_or_key": 18,
+      "duplicate_explicit_ids": {},
+      "equipment_known": 18,
+      "sport_field_or_explicit_tag": 18,
+      "fields": {
+        "tags": {
+          "populated": 18
+        },
+        "equipment": {
+          "populated": 18
+        },
+        "sports": {
+          "populated": 18
+        },
+        "qualities": {
+          "populated": 18
+        },
+        "category": {
+          "absent": 18
+        },
+        "method": {
+          "absent": 18
+        },
+        "movement": {
+          "absent": 18
+        },
+        "difficulty": {
+          "absent": 18
+        },
+        "phases": {
+          "populated": 18
+        },
+        "system": {
+          "absent": 18
+        },
+        "mechanical_risk_tags": {
+          "populated": 18
+        },
+        "duration": {
+          "absent": 18
+        },
+        "duration_min": {
+          "populated": 18
+        },
+        "total_minutes": {
+          "absent": 18
+        },
+        "work_sec": {
+          "absent": 18
+        },
+        "rest_sec": {
+          "absent": 18
+        },
+        "rounds": {
+          "absent": 18
+        },
+        "rpe": {
+          "populated": 18
+        },
+        "rpe_max": {
+          "absent": 18
+        },
+        "intensity": {
+          "absent": 18
+        },
+        "notes": {
+          "absent": 18
+        },
+        "description": {
+          "absent": 18
+        },
+        "cue": {
+          "populated": 18
+        },
+        "instructions": {
+          "absent": 18
+        },
+        "why": {
+          "populated": 18
+        },
+        "progress": {
+          "absent": 18
+        },
+        "progression": {
+          "absent": 18
+        },
+        "regress": {
+          "absent": 18
+        },
+        "regression": {
+          "absent": 18
+        },
+        "stop": {
+          "absent": 18
+        },
+        "stop_rules": {
+          "absent": 18
+        },
+        "target_regions": {
+          "absent": 18
+        },
+        "rehab_stage": {
+          "absent": 18
+        },
+        "function": {
+          "absent": 18
+        },
+        "dose": {
+          "absent": 18
+        },
+        "allowed_severities": {
+          "absent": 18
+        },
+        "pain_ceiling": {
+          "absent": 18
+        },
+        "progress_when": {
+          "absent": 18
+        },
+        "regress_when": {
+          "absent": 18
+        },
+        "stop_when": {
+          "absent": 18
+        },
+        "laterality_applicability": {
+          "absent": 18
+        },
+        "contact_level": {
+          "absent": 18
+        }
+      },
+      "tag_counts": {
+        "coordination": 18,
+        "low_impact": 18,
+        "mech_lower_lateral": 8,
+        "mech_lower_lunge": 4,
+        "mech_trunk_rotation": 11,
+        "mech_trunk_stability": 18,
+        "skill_refinement": 18
+      }
+    },
+    {
+      "source": "coordination/kicks.json",
+      "sha256": "bdf3958d307c7ec099104faa24ac03ee0a4c378220a5bae73de718e6d4530657",
+      "entries": 12,
+      "rehab_groups": null,
+      "explicit_id_or_key": 12,
+      "duplicate_explicit_ids": {},
+      "equipment_known": 12,
+      "sport_field_or_explicit_tag": 12,
+      "fields": {
+        "tags": {
+          "populated": 12
+        },
+        "equipment": {
+          "populated": 12
+        },
+        "sports": {
+          "populated": 12
+        },
+        "qualities": {
+          "populated": 12
+        },
+        "category": {
+          "absent": 12
+        },
+        "method": {
+          "absent": 12
+        },
+        "movement": {
+          "absent": 12
+        },
+        "difficulty": {
+          "absent": 12
+        },
+        "phases": {
+          "populated": 12
+        },
+        "system": {
+          "absent": 12
+        },
+        "mechanical_risk_tags": {
+          "populated": 12
+        },
+        "duration": {
+          "absent": 12
+        },
+        "duration_min": {
+          "populated": 12
+        },
+        "total_minutes": {
+          "absent": 12
+        },
+        "work_sec": {
+          "absent": 12
+        },
+        "rest_sec": {
+          "absent": 12
+        },
+        "rounds": {
+          "absent": 12
+        },
+        "rpe": {
+          "populated": 12
+        },
+        "rpe_max": {
+          "absent": 12
+        },
+        "intensity": {
+          "absent": 12
+        },
+        "notes": {
+          "absent": 12
+        },
+        "description": {
+          "absent": 12
+        },
+        "cue": {
+          "populated": 12
+        },
+        "instructions": {
+          "absent": 12
+        },
+        "why": {
+          "populated": 12
+        },
+        "progress": {
+          "absent": 12
+        },
+        "progression": {
+          "absent": 12
+        },
+        "regress": {
+          "absent": 12
+        },
+        "regression": {
+          "absent": 12
+        },
+        "stop": {
+          "absent": 12
+        },
+        "stop_rules": {
+          "absent": 12
+        },
+        "target_regions": {
+          "absent": 12
+        },
+        "rehab_stage": {
+          "absent": 12
+        },
+        "function": {
+          "absent": 12
+        },
+        "dose": {
+          "absent": 12
+        },
+        "allowed_severities": {
+          "absent": 12
+        },
+        "pain_ceiling": {
+          "absent": 12
+        },
+        "progress_when": {
+          "absent": 12
+        },
+        "regress_when": {
+          "absent": 12
+        },
+        "stop_when": {
+          "absent": 12
+        },
+        "laterality_applicability": {
+          "absent": 12
+        },
+        "contact_level": {
+          "absent": 12
+        }
+      },
+      "tag_counts": {
+        "coordination": 12,
+        "hip_flexion_loaded": 3,
+        "low_impact": 12,
+        "mech_lower_lateral": 5,
+        "mech_lower_lunge": 1,
+        "mech_lower_squat": 5,
+        "mech_shoulder_overhead": 1,
+        "mech_trunk_rotation": 7,
+        "mech_trunk_stability": 12,
+        "skill_refinement": 12
+      }
+    },
+    {
+      "source": "coordination/mma_transitions.json",
+      "sha256": "7c09b1223c353d384cd0cfa8727a52983849c04d0e032f0767e7e351eea44ccd",
+      "entries": 9,
+      "rehab_groups": null,
+      "explicit_id_or_key": 9,
+      "duplicate_explicit_ids": {},
+      "equipment_known": 9,
+      "sport_field_or_explicit_tag": 9,
+      "fields": {
+        "tags": {
+          "populated": 9
+        },
+        "equipment": {
+          "populated": 9
+        },
+        "sports": {
+          "populated": 9
+        },
+        "qualities": {
+          "populated": 9
+        },
+        "category": {
+          "absent": 9
+        },
+        "method": {
+          "absent": 9
+        },
+        "movement": {
+          "absent": 9
+        },
+        "difficulty": {
+          "absent": 9
+        },
+        "phases": {
+          "populated": 9
+        },
+        "system": {
+          "absent": 9
+        },
+        "mechanical_risk_tags": {
+          "populated": 9
+        },
+        "duration": {
+          "absent": 9
+        },
+        "duration_min": {
+          "populated": 9
+        },
+        "total_minutes": {
+          "absent": 9
+        },
+        "work_sec": {
+          "absent": 9
+        },
+        "rest_sec": {
+          "absent": 9
+        },
+        "rounds": {
+          "absent": 9
+        },
+        "rpe": {
+          "populated": 9
+        },
+        "rpe_max": {
+          "absent": 9
+        },
+        "intensity": {
+          "absent": 9
+        },
+        "notes": {
+          "absent": 9
+        },
+        "description": {
+          "absent": 9
+        },
+        "cue": {
+          "populated": 9
+        },
+        "instructions": {
+          "absent": 9
+        },
+        "why": {
+          "populated": 9
+        },
+        "progress": {
+          "absent": 9
+        },
+        "progression": {
+          "absent": 9
+        },
+        "regress": {
+          "absent": 9
+        },
+        "regression": {
+          "absent": 9
+        },
+        "stop": {
+          "absent": 9
+        },
+        "stop_rules": {
+          "absent": 9
+        },
+        "target_regions": {
+          "absent": 9
+        },
+        "rehab_stage": {
+          "absent": 9
+        },
+        "function": {
+          "absent": 9
+        },
+        "dose": {
+          "absent": 9
+        },
+        "allowed_severities": {
+          "absent": 9
+        },
+        "pain_ceiling": {
+          "absent": 9
+        },
+        "progress_when": {
+          "absent": 9
+        },
+        "regress_when": {
+          "absent": 9
+        },
+        "stop_when": {
+          "absent": 9
+        },
+        "laterality_applicability": {
+          "absent": 9
+        },
+        "contact_level": {
+          "absent": 9
+        }
+      },
+      "tag_counts": {
+        "coordination": 9,
+        "hip_flexion_loaded": 1,
+        "low_impact": 9,
+        "mech_grip_support": 2,
+        "mech_lower_hip_hinge": 5,
+        "mech_lower_lateral": 4,
+        "mech_lower_lunge": 3,
+        "mech_lower_squat": 6,
+        "mech_trunk_stability": 9,
+        "mech_upper_pull": 2,
+        "skill_refinement": 9,
+        "wrist_loaded_extension": 2
+      }
+    },
+    {
+      "source": "coordination/grappling.json",
+      "sha256": "6729b8bbcffa25c94cd22a2387c4fa02a91526f0294c4bda7005a1e450aa7e54",
+      "entries": 7,
+      "rehab_groups": null,
+      "explicit_id_or_key": 7,
+      "duplicate_explicit_ids": {},
+      "equipment_known": 7,
+      "sport_field_or_explicit_tag": 7,
+      "fields": {
+        "tags": {
+          "populated": 7
+        },
+        "equipment": {
+          "populated": 7
+        },
+        "sports": {
+          "populated": 7
+        },
+        "qualities": {
+          "populated": 7
+        },
+        "category": {
+          "absent": 7
+        },
+        "method": {
+          "absent": 7
+        },
+        "movement": {
+          "absent": 7
+        },
+        "difficulty": {
+          "absent": 7
+        },
+        "phases": {
+          "populated": 7
+        },
+        "system": {
+          "absent": 7
+        },
+        "mechanical_risk_tags": {
+          "populated": 7
+        },
+        "duration": {
+          "absent": 7
+        },
+        "duration_min": {
+          "populated": 7
+        },
+        "total_minutes": {
+          "absent": 7
+        },
+        "work_sec": {
+          "absent": 7
+        },
+        "rest_sec": {
+          "absent": 7
+        },
+        "rounds": {
+          "absent": 7
+        },
+        "rpe": {
+          "populated": 7
+        },
+        "rpe_max": {
+          "absent": 7
+        },
+        "intensity": {
+          "absent": 7
+        },
+        "notes": {
+          "absent": 7
+        },
+        "description": {
+          "absent": 7
+        },
+        "cue": {
+          "populated": 7
+        },
+        "instructions": {
+          "absent": 7
+        },
+        "why": {
+          "populated": 7
+        },
+        "progress": {
+          "absent": 7
+        },
+        "progression": {
+          "absent": 7
+        },
+        "regress": {
+          "absent": 7
+        },
+        "regression": {
+          "absent": 7
+        },
+        "stop": {
+          "absent": 7
+        },
+        "stop_rules": {
+          "absent": 7
+        },
+        "target_regions": {
+          "absent": 7
+        },
+        "rehab_stage": {
+          "absent": 7
+        },
+        "function": {
+          "absent": 7
+        },
+        "dose": {
+          "absent": 7
+        },
+        "allowed_severities": {
+          "absent": 7
+        },
+        "pain_ceiling": {
+          "absent": 7
+        },
+        "progress_when": {
+          "absent": 7
+        },
+        "regress_when": {
+          "absent": 7
+        },
+        "stop_when": {
+          "absent": 7
+        },
+        "laterality_applicability": {
+          "absent": 7
+        },
+        "contact_level": {
+          "absent": 7
+        }
+      },
+      "tag_counts": {
+        "coordination": 7,
+        "grip": 2,
+        "low_impact": 7,
+        "mech_grip_support": 2,
+        "mech_lower_lateral": 2,
+        "mech_lower_lunge": 1,
+        "mech_lower_squat": 3,
+        "mech_trunk_rotation": 3,
+        "mech_trunk_stability": 7,
+        "mech_upper_pull": 3,
+        "skill_refinement": 7,
+        "wrist_loaded_extension": 2
+      }
+    },
+    {
+      "source": "rehab_bank.json",
+      "sha256": "92bdf1e42eb0fb3ae44053b775ab28a09580a0e61c502d7f79c3a249acfa267e",
+      "entries": 1603,
+      "rehab_groups": 755,
+      "explicit_id_or_key": 1603,
+      "duplicate_explicit_ids": {},
+      "equipment_known": 166,
+      "sport_field_or_explicit_tag": 0,
+      "fields": {
+        "tags": {
+          "absent": 1603
+        },
+        "equipment": {
+          "absent": 104,
+          "empty": 102,
+          "null": 1333,
+          "populated": 64
+        },
+        "sports": {
+          "absent": 1603
+        },
+        "qualities": {
+          "absent": 1603
+        },
+        "category": {
+          "absent": 1603
+        },
+        "method": {
+          "absent": 1603
+        },
+        "movement": {
+          "absent": 1603
+        },
+        "difficulty": {
+          "absent": 1603
+        },
+        "phases": {
+          "absent": 1603
+        },
+        "system": {
+          "absent": 1603
+        },
+        "mechanical_risk_tags": {
+          "absent": 1603
+        },
+        "duration": {
+          "absent": 1603
+        },
+        "duration_min": {
+          "absent": 1603
+        },
+        "total_minutes": {
+          "absent": 1603
+        },
+        "work_sec": {
+          "absent": 1603
+        },
+        "rest_sec": {
+          "absent": 1603
+        },
+        "rounds": {
+          "absent": 1603
+        },
+        "rpe": {
+          "absent": 1603
+        },
+        "rpe_max": {
+          "absent": 1603
+        },
+        "intensity": {
+          "absent": 1603
+        },
+        "notes": {
+          "populated": 1603
+        },
+        "description": {
+          "absent": 1603
+        },
+        "cue": {
+          "absent": 1603
+        },
+        "instructions": {
+          "absent": 1603
+        },
+        "why": {
+          "absent": 1603
+        },
+        "progress": {
+          "absent": 1603
+        },
+        "progression": {
+          "absent": 1603
+        },
+        "regress": {
+          "absent": 1603
+        },
+        "regression": {
+          "absent": 1603
+        },
+        "stop": {
+          "absent": 1603
+        },
+        "stop_rules": {
+          "absent": 1603
+        },
+        "target_regions": {
+          "absent": 104,
+          "populated": 1451,
+          "unknown": 48
+        },
+        "rehab_stage": {
+          "absent": 104,
+          "null": 1333,
+          "populated": 166
+        },
+        "function": {
+          "absent": 104,
+          "null": 421,
+          "populated": 1078
+        },
+        "dose": {
+          "absent": 104,
+          "empty": 5,
+          "null": 1491,
+          "populated": 3
+        },
+        "allowed_severities": {
+          "absent": 104,
+          "null": 1491,
+          "populated": 8
+        },
+        "pain_ceiling": {
+          "absent": 104,
+          "null": 1491,
+          "populated": 8
+        },
+        "progress_when": {
+          "absent": 104,
+          "empty": 6,
+          "null": 1491,
+          "populated": 2
+        },
+        "regress_when": {
+          "absent": 104,
+          "null": 1491,
+          "populated": 8
+        },
+        "stop_when": {
+          "absent": 104,
+          "null": 1491,
+          "populated": 8
+        },
+        "laterality_applicability": {
+          "absent": 104,
+          "populated": 166,
+          "unknown": 1333
+        },
+        "contact_level": {
+          "absent": 104,
+          "populated": 166,
+          "unknown": 1333
+        }
+      },
+      "tag_counts": {}
+    },
+    {
+      "source": "tactical_watch_bank.json",
+      "sha256": "91b530dab7e00d05efbb5b5ed8e6a7e0efb4251f540ed4596c523e41b95ad2d6",
+      "entries": 183,
+      "rehab_groups": null,
+      "explicit_id_or_key": 183,
+      "duplicate_explicit_ids": {},
+      "equipment_known": 0,
+      "sport_field_or_explicit_tag": 183,
+      "fields": {
+        "tags": {
+          "populated": 183
+        },
+        "equipment": {
+          "absent": 183
+        },
+        "sports": {
+          "populated": 183
+        },
+        "qualities": {
+          "absent": 183
+        },
+        "category": {
+          "absent": 183
+        },
+        "method": {
+          "absent": 183
+        },
+        "movement": {
+          "absent": 183
+        },
+        "difficulty": {
+          "absent": 183
+        },
+        "phases": {
+          "populated": 183
+        },
+        "system": {
+          "absent": 183
+        },
+        "mechanical_risk_tags": {
+          "absent": 183
+        },
+        "duration": {
+          "absent": 183
+        },
+        "duration_min": {
+          "populated": 183
+        },
+        "total_minutes": {
+          "absent": 183
+        },
+        "work_sec": {
+          "absent": 183
+        },
+        "rest_sec": {
+          "absent": 183
+        },
+        "rounds": {
+          "absent": 183
+        },
+        "rpe": {
+          "absent": 183
+        },
+        "rpe_max": {
+          "absent": 183
+        },
+        "intensity": {
+          "absent": 183
+        },
+        "notes": {
+          "absent": 183
+        },
+        "description": {
+          "absent": 183
+        },
+        "cue": {
+          "absent": 183
+        },
+        "instructions": {
+          "populated": 183
+        },
+        "why": {
+          "populated": 183
+        },
+        "progress": {
+          "populated": 183
+        },
+        "progression": {
+          "absent": 183
+        },
+        "regress": {
+          "absent": 183
+        },
+        "regression": {
+          "absent": 183
+        },
+        "stop": {
+          "absent": 183
+        },
+        "stop_rules": {
+          "absent": 183
+        },
+        "target_regions": {
+          "absent": 183
+        },
+        "rehab_stage": {
+          "absent": 183
+        },
+        "function": {
+          "absent": 183
+        },
+        "dose": {
+          "absent": 183
+        },
+        "allowed_severities": {
+          "absent": 183
+        },
+        "pain_ceiling": {
+          "absent": 183
+        },
+        "progress_when": {
+          "absent": 183
+        },
+        "regress_when": {
+          "absent": 183
+        },
+        "stop_when": {
+          "absent": 183
+        },
+        "laterality_applicability": {
+          "absent": 183
+        },
+        "contact_level": {
+          "absent": 183
+        }
+      },
+      "tag_counts": {
+        "brawler": 8,
+        "clinch_fighter": 17,
+        "counter_striker": 24,
+        "distance_striker": 26,
+        "generic": 58,
+        "grappler": 11,
+        "hybrid": 18,
+        "pressure_fighter": 21,
+        "tactical_watch": 183
+      }
+    },
+    {
+      "source": "fight_visualization_bank.json",
+      "sha256": "81e417123d62221e4a6fcb48c359718e544dabc5d3de7bd387c50af04c7d7775",
+      "entries": 59,
+      "rehab_groups": null,
+      "explicit_id_or_key": 59,
+      "duplicate_explicit_ids": {},
+      "equipment_known": 0,
+      "sport_field_or_explicit_tag": 59,
+      "fields": {
+        "tags": {
+          "absent": 59
+        },
+        "equipment": {
+          "absent": 59
+        },
+        "sports": {
+          "populated": 59
+        },
+        "qualities": {
+          "absent": 59
+        },
+        "category": {
+          "absent": 59
+        },
+        "method": {
+          "absent": 59
+        },
+        "movement": {
+          "absent": 59
+        },
+        "difficulty": {
+          "absent": 59
+        },
+        "phases": {
+          "absent": 59
+        },
+        "system": {
+          "absent": 59
+        },
+        "mechanical_risk_tags": {
+          "absent": 59
+        },
+        "duration": {
+          "absent": 59
+        },
+        "duration_min": {
+          "populated": 59
+        },
+        "total_minutes": {
+          "absent": 59
+        },
+        "work_sec": {
+          "absent": 59
+        },
+        "rest_sec": {
+          "absent": 59
+        },
+        "rounds": {
+          "absent": 59
+        },
+        "rpe": {
+          "absent": 59
+        },
+        "rpe_max": {
+          "absent": 59
+        },
+        "intensity": {
+          "absent": 59
+        },
+        "notes": {
+          "absent": 59
+        },
+        "description": {
+          "absent": 59
+        },
+        "cue": {
+          "populated": 59
+        },
+        "instructions": {
+          "populated": 59
+        },
+        "why": {
+          "populated": 59
+        },
+        "progress": {
+          "absent": 59
+        },
+        "progression": {
+          "absent": 59
+        },
+        "regress": {
+          "absent": 59
+        },
+        "regression": {
+          "absent": 59
+        },
+        "stop": {
+          "absent": 59
+        },
+        "stop_rules": {
+          "absent": 59
+        },
+        "target_regions": {
+          "absent": 59
+        },
+        "rehab_stage": {
+          "absent": 59
+        },
+        "function": {
+          "absent": 59
+        },
+        "dose": {
+          "absent": 59
+        },
+        "allowed_severities": {
+          "absent": 59
+        },
+        "pain_ceiling": {
+          "absent": 59
+        },
+        "progress_when": {
+          "absent": 59
+        },
+        "regress_when": {
+          "absent": 59
+        },
+        "stop_when": {
+          "absent": 59
+        },
+        "laterality_applicability": {
+          "absent": 59
+        },
+        "contact_level": {
+          "absent": 59
+        }
+      },
+      "tag_counts": {}
+    }
+  ],
+  "duplicate_name_groups": 58,
+  "duplicate_names": [
+    {
+      "normalized_name": "ankle cars (controlled articular rotations)",
+      "occurrences": [
+        {
+          "source": "rehab_bank.json",
+          "row": 929,
+          "name": "Ankle CARs (Controlled Articular Rotations)",
+          "group_context": {
+            "group_index": 418,
+            "drill_index": 0,
+            "location": "ankle",
+            "type": "unspecified"
+          }
+        },
+        {
+          "source": "rehab_bank.json",
+          "row": 1341,
+          "name": "Ankle CARs (Controlled Articular Rotations)",
+          "group_context": {
+            "group_index": 624,
+            "drill_index": 0,
+            "location": "shin",
+            "type": "unspecified"
+          }
+        }
+      ]
+    },
+    {
+      "normalized_name": "brow & orbital cut care",
+      "occurrences": [
+        {
+          "source": "rehab_bank.json",
+          "row": 1505,
+          "name": "Brow & Orbital Cut Care",
+          "group_context": {
+            "group_index": 706,
+            "drill_index": 0,
+            "location": "eye",
+            "type": "cut"
+          }
+        },
+        {
+          "source": "rehab_bank.json",
+          "row": 1527,
+          "name": "Brow & Orbital Cut Care",
+          "group_context": {
+            "group_index": 717,
+            "drill_index": 0,
+            "location": "eye",
+            "type": "laceration"
+          }
+        }
+      ]
+    },
+    {
+      "normalized_name": "child\u2019s pose with side reach",
+      "occurrences": [
+        {
+          "source": "rehab_bank.json",
+          "row": 233,
+          "name": "Child\u2019s Pose with Side Reach",
+          "group_context": {
+            "group_index": 104,
+            "drill_index": 0,
+            "location": "lower_back",
+            "type": "tightness"
+          }
+        },
+        {
+          "source": "rehab_bank.json",
+          "row": 283,
+          "name": "Child\u2019s Pose with Side Reach",
+          "group_context": {
+            "group_index": 128,
+            "drill_index": 0,
+            "location": "lower_back",
+            "type": "tightness"
+          }
+        }
+      ]
+    },
+    {
+      "normalized_name": "clean & approximate edges",
+      "occurrences": [
+        {
+          "source": "rehab_bank.json",
+          "row": 1499,
+          "name": "Clean & Approximate Edges",
+          "group_context": {
+            "group_index": 703,
+            "drill_index": 0,
+            "location": "unspecified",
+            "type": "cut"
+          }
+        },
+        {
+          "source": "rehab_bank.json",
+          "row": 1502,
+          "name": "Clean & Approximate Edges",
+          "group_context": {
+            "group_index": 704,
+            "drill_index": 1,
+            "location": "face",
+            "type": "cut"
+          }
+        },
+        {
+          "source": "rehab_bank.json",
+          "row": 1519,
+          "name": "Clean & Approximate Edges",
+          "group_context": {
+            "group_index": 713,
+            "drill_index": 0,
+            "location": "neck",
+            "type": "cut"
+          }
+        },
+        {
+          "source": "rehab_bank.json",
+          "row": 1523,
+          "name": "Clean & Approximate Edges",
+          "group_context": {
+            "group_index": 715,
+            "drill_index": 0,
+            "location": "unspecified",
+            "type": "laceration"
+          }
+        },
+        {
+          "source": "rehab_bank.json",
+          "row": 1526,
+          "name": "Clean & Approximate Edges",
+          "group_context": {
+            "group_index": 716,
+            "drill_index": 1,
+            "location": "face",
+            "type": "laceration"
+          }
+        },
+        {
+          "source": "rehab_bank.json",
+          "row": 1528,
+          "name": "Clean & Approximate Edges",
+          "group_context": {
+            "group_index": 717,
+            "drill_index": 1,
+            "location": "eye",
+            "type": "laceration"
+          }
+        },
+        {
+          "source": "rehab_bank.json",
+          "row": 1532,
+          "name": "Clean & Approximate Edges",
+          "group_context": {
+            "group_index": 719,
+            "drill_index": 1,
+            "location": "hand",
+            "type": "laceration"
+          }
+        },
+        {
+          "source": "rehab_bank.json",
+          "row": 1533,
+          "name": "Clean & Approximate Edges",
+          "group_context": {
+            "group_index": 720,
+            "drill_index": 0,
+            "location": "forearm",
+            "type": "laceration"
+          }
+        },
+        {
+          "source": "rehab_bank.json",
+          "row": 1539,
+          "name": "Clean & Approximate Edges",
+          "group_context": {
+            "group_index": 723,
+            "drill_index": 0,
+            "location": "shin",
+            "type": "laceration"
+          }
+        },
+        {
+          "source": "rehab_bank.json",
+          "row": 1541,
+          "name": "Clean & Approximate Edges",
+          "group_context": {
+            "group_index": 724,
+            "drill_index": 0,
+            "location": "neck",
+            "type": "laceration"
+          }
+        }
+      ]
+    },
+    {
+      "normalized_name": "comfortable unloaded elbow movement",
+      "occurrences": [
+        {
+          "source": "rehab_bank.json",
+          "row": 456,
+          "name": "Comfortable unloaded elbow movement",
+          "group_context": {
+            "group_index": 203,
+            "drill_index": 3,
+            "location": "bicep",
+            "type": "tendonitis"
+          }
+        },
+        {
+          "source": "rehab_bank.json",
+          "row": 555,
+          "name": "Comfortable unloaded elbow movement",
+          "group_context": {
+            "group_index": 247,
+            "drill_index": 3,
+            "location": "elbow",
+            "type": "tendonitis"
+          }
+        },
+        {
+          "source": "rehab_bank.json",
+          "row": 574,
+          "name": "Comfortable unloaded elbow movement",
+          "group_context": {
+            "group_index": 254,
+            "drill_index": 2,
+            "location": "elbow",
+            "type": "contusion"
+          }
+        }
+      ]
+    },
+    {
+      "normalized_name": "daily infection check",
+      "occurrences": [
+        {
+          "source": "rehab_bank.json",
+          "row": 1508,
+          "name": "Daily Infection Check",
+          "group_context": {
+            "group_index": 707,
+            "drill_index": 1,
+            "location": "hand",
+            "type": "cut"
+          }
+        },
+        {
+          "source": "rehab_bank.json",
+          "row": 1514,
+          "name": "Daily Infection Check",
+          "group_context": {
+            "group_index": 710,
+            "drill_index": 1,
+            "location": "elbow",
+            "type": "cut"
+          }
+        },
+        {
+          "source": "rehab_bank.json",
+          "row": 1518,
+          "name": "Daily Infection Check",
+          "group_context": {
+            "group_index": 712,
+            "drill_index": 1,
+            "location": "shin",
+            "type": "cut"
+          }
+        },
+        {
+          "source": "rehab_bank.json",
+          "row": 1522,
+          "name": "Daily Infection Check",
+          "group_context": {
+            "group_index": 714,
+            "drill_index": 1,
+            "location": "foot",
+            "type": "cut"
+          }
+        },
+        {
+          "source": "rehab_bank.json",
+          "row": 1524,
+          "name": "Daily Infection Check",
+          "group_context": {
+            "group_index": 715,
+            "drill_index": 1,
+            "location": "unspecified",
+            "type": "laceration"
+          }
+        },
+        {
+          "source": "rehab_bank.json",
+          "row": 1538,
+          "name": "Daily Infection Check",
+          "group_context": {
+            "group_index": 722,
+            "drill_index": 1,
+            "location": "knee",
+            "type": "laceration"
+          }
+        },
+        {
+          "source": "rehab_bank.json",
+          "row": 1564,
+          "name": "Daily Infection Check",
+          "group_context": {
+            "group_index": 735,
+            "drill_index": 1,
+            "location": "hand",
+            "type": "abrasion"
+          }
+        }
+      ]
+    },
+    {
+      "normalized_name": "debride & clean thoroughly",
+      "occurrences": [
+        {
+          "source": "rehab_bank.json",
+          "row": 1543,
+          "name": "Debride & Clean Thoroughly",
+          "group_context": {
+            "group_index": 725,
+            "drill_index": 0,
+            "location": "unspecified",
+            "type": "abrasion"
+          }
+        },
+        {
+          "source": "rehab_bank.json",
+          "row": 1546,
+          "name": "Debride & Clean Thoroughly",
+          "group_context": {
+            "group_index": 726,
+            "drill_index": 1,
+            "location": "face",
+            "type": "abrasion"
+          }
+        },
+        {
+          "source": "rehab_bank.json",
+          "row": 1547,
+          "name": "Debride & Clean Thoroughly",
+          "group_context": {
+            "group_index": 727,
+            "drill_index": 0,
+            "location": "neck",
+            "type": "abrasion"
+          }
+        },
+        {
+          "source": "rehab_bank.json",
+          "row": 1554,
+          "name": "Debride & Clean Thoroughly",
+          "group_context": {
+            "group_index": 730,
+            "drill_index": 1,
+            "location": "elbow",
+            "type": "abrasion"
+          }
+        },
+        {
+          "source": "rehab_bank.json",
+          "row": 1562,
+          "name": "Debride & Clean Thoroughly",
+          "group_context": {
+            "group_index": 734,
+            "drill_index": 1,
+            "location": "shin",
+            "type": "abrasion"
+          }
+        },
+        {
+          "source": "rehab_bank.json",
+          "row": 1567,
+          "name": "Debride & Clean Thoroughly",
+          "group_context": {
+            "group_index": 737,
+            "drill_index": 0,
+            "location": "unspecified",
+            "type": "graze"
+          }
+        },
+        {
+          "source": "rehab_bank.json",
+          "row": 1583,
+          "name": "Debride & Clean Thoroughly",
+          "group_context": {
+            "group_index": 745,
+            "drill_index": 0,
+            "location": "neck",
+            "type": "graze"
+          }
+        }
+      ]
+    },
+    {
+      "normalized_name": "depth jump to sprint",
+      "occurrences": [
+        {
+          "source": "exercise_bank.json",
+          "row": 143,
+          "name": "Depth Jump to Sprint"
+        },
+        {
+          "source": "conditioning_bank.json",
+          "row": 30,
+          "name": "Depth Jump to Sprint"
+        }
+      ]
+    },
+    {
+      "normalized_name": "dynamic calf stretch with tibial rotation",
+      "occurrences": [
+        {
+          "source": "rehab_bank.json",
+          "row": 940,
+          "name": "Dynamic Calf Stretch with Tibial Rotation",
+          "group_context": {
+            "group_index": 423,
+            "drill_index": 1,
+            "location": "ankle",
+            "type": "unspecified"
+          }
+        },
+        {
+          "source": "rehab_bank.json",
+          "row": 997,
+          "name": "Dynamic Calf Stretch with Tibial Rotation",
+          "group_context": {
+            "group_index": 452,
+            "drill_index": 0,
+            "location": "calf",
+            "type": "unspecified"
+          }
+        }
+      ]
+    },
+    {
+      "normalized_name": "eccentric wrist curls (3s lowering)",
+      "occurrences": [
+        {
+          "source": "rehab_bank.json",
+          "row": 1041,
+          "name": "Eccentric Wrist Curls (3s Lowering)",
+          "group_context": {
+            "group_index": 474,
+            "drill_index": 0,
+            "location": "elbow",
+            "type": "unspecified"
+          }
+        },
+        {
+          "source": "rehab_bank.json",
+          "row": 1115,
+          "name": "Eccentric Wrist Curls (3s Lowering)",
+          "group_context": {
+            "group_index": 511,
+            "drill_index": 0,
+            "location": "forearm",
+            "type": "unspecified"
+          }
+        },
+        {
+          "source": "rehab_bank.json",
+          "row": 1473,
+          "name": "Eccentric Wrist Curls (3s Lowering)",
+          "group_context": {
+            "group_index": 690,
+            "drill_index": 0,
+            "location": "wrist",
+            "type": "unspecified"
+          }
+        }
+      ]
+    },
+    {
+      "normalized_name": "elevated wrist pumps",
+      "occurrences": [
+        {
+          "source": "rehab_bank.json",
+          "row": 531,
+          "name": "Elevated Wrist Pumps",
+          "group_context": {
+            "group_index": 238,
+            "drill_index": 0,
+            "location": "forearm",
+            "type": "swelling"
+          }
+        },
+        {
+          "source": "rehab_bank.json",
+          "row": 593,
+          "name": "Elevated Wrist Pumps",
+          "group_context": {
+            "group_index": 262,
+            "drill_index": 0,
+            "location": "wrist",
+            "type": "swelling"
+          }
+        }
+      ]
+    },
+    {
+      "normalized_name": "facial wound protection",
+      "occurrences": [
+        {
+          "source": "rehab_bank.json",
+          "row": 1501,
+          "name": "Facial Wound Protection",
+          "group_context": {
+            "group_index": 704,
+            "drill_index": 0,
+            "location": "face",
+            "type": "cut"
+          }
+        },
+        {
+          "source": "rehab_bank.json",
+          "row": 1503,
+          "name": "Facial Wound Protection",
+          "group_context": {
+            "group_index": 705,
+            "drill_index": 0,
+            "location": "jaw",
+            "type": "cut"
+          }
+        },
+        {
+          "source": "rehab_bank.json",
+          "row": 1525,
+          "name": "Facial Wound Protection",
+          "group_context": {
+            "group_index": 716,
+            "drill_index": 0,
+            "location": "face",
+            "type": "laceration"
+          }
+        },
+        {
+          "source": "rehab_bank.json",
+          "row": 1529,
+          "name": "Facial Wound Protection",
+          "group_context": {
+            "group_index": 718,
+            "drill_index": 0,
+            "location": "jaw",
+            "type": "laceration"
+          }
+        },
+        {
+          "source": "rehab_bank.json",
+          "row": 1545,
+          "name": "Facial Wound Protection",
+          "group_context": {
+            "group_index": 726,
+            "drill_index": 0,
+            "location": "face",
+            "type": "abrasion"
+          }
+        },
+        {
+          "source": "rehab_bank.json",
+          "row": 1569,
+          "name": "Facial Wound Protection",
+          "group_context": {
+            "group_index": 738,
+            "drill_index": 0,
+            "location": "face",
+            "type": "graze"
+          }
+        }
+      ]
+    },
+    {
+      "normalized_name": "familiar & ready",
+      "occurrences": [
+        {
+          "source": "fight_visualization_bank.json",
+          "row": 51,
+          "name": "Familiar & Ready"
+        },
+        {
+          "source": "fight_visualization_bank.json",
+          "row": 52,
+          "name": "Familiar & Ready"
+        },
+        {
+          "source": "fight_visualization_bank.json",
+          "row": 53,
+          "name": "Familiar & Ready"
+        },
+        {
+          "source": "fight_visualization_bank.json",
+          "row": 54,
+          "name": "Familiar & Ready"
+        }
+      ]
+    },
+    {
+      "normalized_name": "fix the friction source",
+      "occurrences": [
+        {
+          "source": "rehab_bank.json",
+          "row": 1588,
+          "name": "Fix the Friction Source",
+          "group_context": {
+            "group_index": 747,
+            "drill_index": 1,
+            "location": "unspecified",
+            "type": "blister"
+          }
+        },
+        {
+          "source": "rehab_bank.json",
+          "row": 1600,
+          "name": "Fix the Friction Source",
+          "group_context": {
+            "group_index": 753,
+            "drill_index": 1,
+            "location": "shin",
+            "type": "blister"
+          }
+        }
+      ]
+    },
+    {
+      "normalized_name": "footwear & sock strategy",
+      "occurrences": [
+        {
+          "source": "rehab_bank.json",
+          "row": 1589,
+          "name": "Footwear & Sock Strategy",
+          "group_context": {
+            "group_index": 748,
+            "drill_index": 0,
+            "location": "foot",
+            "type": "blister"
+          }
+        },
+        {
+          "source": "rehab_bank.json",
+          "row": 1591,
+          "name": "Footwear & Sock Strategy",
+          "group_context": {
+            "group_index": 749,
+            "drill_index": 0,
+            "location": "heel",
+            "type": "blister"
+          }
+        },
+        {
+          "source": "rehab_bank.json",
+          "row": 1593,
+          "name": "Footwear & Sock Strategy",
+          "group_context": {
+            "group_index": 750,
+            "drill_index": 0,
+            "location": "toe",
+            "type": "blister"
+          }
+        },
+        {
+          "source": "rehab_bank.json",
+          "row": 1601,
+          "name": "Footwear & Sock Strategy",
+          "group_context": {
+            "group_index": 754,
+            "drill_index": 0,
+            "location": "ankle",
+            "type": "blister"
+          }
+        }
+      ]
+    },
+    {
+      "normalized_name": "friction offloading",
+      "occurrences": [
+        {
+          "source": "rehab_bank.json",
+          "row": 1548,
+          "name": "Friction Offloading",
+          "group_context": {
+            "group_index": 727,
+            "drill_index": 1,
+            "location": "neck",
+            "type": "abrasion"
+          }
+        },
+        {
+          "source": "rehab_bank.json",
+          "row": 1549,
+          "name": "Friction Offloading",
+          "group_context": {
+            "group_index": 728,
+            "drill_index": 0,
+            "location": "shoulder",
+            "type": "abrasion"
+          }
+        },
+        {
+          "source": "rehab_bank.json",
+          "row": 1551,
+          "name": "Friction Offloading",
+          "group_context": {
+            "group_index": 729,
+            "drill_index": 0,
+            "location": "chest",
+            "type": "abrasion"
+          }
+        },
+        {
+          "source": "rehab_bank.json",
+          "row": 1556,
+          "name": "Friction Offloading",
+          "group_context": {
+            "group_index": 731,
+            "drill_index": 1,
+            "location": "forearm",
+            "type": "abrasion"
+          }
+        },
+        {
+          "source": "rehab_bank.json",
+          "row": 1557,
+          "name": "Friction Offloading",
+          "group_context": {
+            "group_index": 732,
+            "drill_index": 0,
+            "location": "hip",
+            "type": "abrasion"
+          }
+        },
+        {
+          "source": "rehab_bank.json",
+          "row": 1563,
+          "name": "Friction Offloading",
+          "group_context": {
+            "group_index": 735,
+            "drill_index": 0,
+            "location": "hand",
+            "type": "abrasion"
+          }
+        },
+        {
+          "source": "rehab_bank.json",
+          "row": 1565,
+          "name": "Friction Offloading",
+          "group_context": {
+            "group_index": 736,
+            "drill_index": 0,
+            "location": "upper_back",
+            "type": "abrasion"
+          }
+        },
+        {
+          "source": "rehab_bank.json",
+          "row": 1574,
+          "name": "Friction Offloading",
+          "group_context": {
+            "group_index": 740,
+            "drill_index": 1,
+            "location": "forearm",
+            "type": "graze"
+          }
+        },
+        {
+          "source": "rehab_bank.json",
+          "row": 1575,
+          "name": "Friction Offloading",
+          "group_context": {
+            "group_index": 741,
+            "drill_index": 0,
+            "location": "hand",
+            "type": "graze"
+          }
+        },
+        {
+          "source": "rehab_bank.json",
+          "row": 1577,
+          "name": "Friction Offloading",
+          "group_context": {
+            "group_index": 742,
+            "drill_index": 0,
+            "location": "hip",
+            "type": "graze"
+          }
+        },
+        {
+          "source": "rehab_bank.json",
+          "row": 1585,
+          "name": "Friction Offloading",
+          "group_context": {
+            "group_index": 746,
+            "drill_index": 0,
+            "location": "foot",
+            "type": "graze"
+          }
+        }
+      ]
+    },
+    {
+      "normalized_name": "grip friction strategy",
+      "occurrences": [
+        {
+          "source": "rehab_bank.json",
+          "row": 1595,
+          "name": "Grip Friction Strategy",
+          "group_context": {
+            "group_index": 751,
+            "drill_index": 0,
+            "location": "hand",
+            "type": "blister"
+          }
+        },
+        {
+          "source": "rehab_bank.json",
+          "row": 1597,
+          "name": "Grip Friction Strategy",
+          "group_context": {
+            "group_index": 752,
+            "drill_index": 0,
+            "location": "fingers",
+            "type": "blister"
+          }
+        }
+      ]
+    },
+    {
+      "normalized_name": "joint pad protection",
+      "occurrences": [
+        {
+          "source": "rehab_bank.json",
+          "row": 1553,
+          "name": "Joint Pad Protection",
+          "group_context": {
+            "group_index": 730,
+            "drill_index": 0,
+            "location": "elbow",
+            "type": "abrasion"
+          }
+        },
+        {
+          "source": "rehab_bank.json",
+          "row": 1559,
+          "name": "Joint Pad Protection",
+          "group_context": {
+            "group_index": 733,
+            "drill_index": 0,
+            "location": "knee",
+            "type": "abrasion"
+          }
+        },
+        {
+          "source": "rehab_bank.json",
+          "row": 1571,
+          "name": "Joint Pad Protection",
+          "group_context": {
+            "group_index": 739,
+            "drill_index": 0,
+            "location": "elbow",
+            "type": "graze"
+          }
+        },
+        {
+          "source": "rehab_bank.json",
+          "row": 1579,
+          "name": "Joint Pad Protection",
+          "group_context": {
+            "group_index": 743,
+            "drill_index": 0,
+            "location": "knee",
+            "type": "graze"
+          }
+        }
+      ]
+    },
+    {
+      "normalized_name": "knuckle cut wrapping",
+      "occurrences": [
+        {
+          "source": "rehab_bank.json",
+          "row": 1507,
+          "name": "Knuckle Cut Wrapping",
+          "group_context": {
+            "group_index": 707,
+            "drill_index": 0,
+            "location": "hand",
+            "type": "cut"
+          }
+        },
+        {
+          "source": "rehab_bank.json",
+          "row": 1509,
+          "name": "Knuckle Cut Wrapping",
+          "group_context": {
+            "group_index": 708,
+            "drill_index": 0,
+            "location": "fingers",
+            "type": "cut"
+          }
+        },
+        {
+          "source": "rehab_bank.json",
+          "row": 1531,
+          "name": "Knuckle Cut Wrapping",
+          "group_context": {
+            "group_index": 719,
+            "drill_index": 0,
+            "location": "hand",
+            "type": "laceration"
+          }
+        }
+      ]
+    },
+    {
+      "normalized_name": "knuckle push-up holds",
+      "occurrences": [
+        {
+          "source": "rehab_bank.json",
+          "row": 1193,
+          "name": "Knuckle Push-Up Holds",
+          "group_context": {
+            "group_index": 550,
+            "drill_index": 0,
+            "location": "hand",
+            "type": "unspecified"
+          }
+        },
+        {
+          "source": "rehab_bank.json",
+          "row": 1483,
+          "name": "Knuckle Push-Up Holds",
+          "group_context": {
+            "group_index": 695,
+            "drill_index": 0,
+            "location": "wrist",
+            "type": "unspecified"
+          }
+        }
+      ]
+    },
+    {
+      "normalized_name": "marble pickups with toes",
+      "occurrences": [
+        {
+          "source": "rehab_bank.json",
+          "row": 938,
+          "name": "Marble Pickups with Toes",
+          "group_context": {
+            "group_index": 422,
+            "drill_index": 1,
+            "location": "ankle",
+            "type": "unspecified"
+          }
+        },
+        {
+          "source": "rehab_bank.json",
+          "row": 998,
+          "name": "Marble Pickups with Toes",
+          "group_context": {
+            "group_index": 452,
+            "drill_index": 1,
+            "location": "calf",
+            "type": "unspecified"
+          }
+        }
+      ]
+    },
+    {
+      "normalized_name": "massage gun \u2013 lumbar sweep",
+      "occurrences": [
+        {
+          "source": "rehab_bank.json",
+          "row": 234,
+          "name": "Massage Gun \u2013 Lumbar Sweep",
+          "group_context": {
+            "group_index": 104,
+            "drill_index": 1,
+            "location": "lower_back",
+            "type": "tightness"
+          }
+        },
+        {
+          "source": "rehab_bank.json",
+          "row": 284,
+          "name": "Massage Gun \u2013 Lumbar Sweep",
+          "group_context": {
+            "group_index": 128,
+            "drill_index": 1,
+            "location": "lower_back",
+            "type": "tightness"
+          }
+        }
+      ]
+    },
+    {
+      "normalized_name": "median nerve flossing",
+      "occurrences": [
+        {
+          "source": "rehab_bank.json",
+          "row": 1209,
+          "name": "Median Nerve Flossing",
+          "group_context": {
+            "group_index": 558,
+            "drill_index": 0,
+            "location": "hand",
+            "type": "unspecified"
+          }
+        },
+        {
+          "source": "rehab_bank.json",
+          "row": 1479,
+          "name": "Median Nerve Flossing",
+          "group_context": {
+            "group_index": 693,
+            "drill_index": 0,
+            "location": "wrist",
+            "type": "unspecified"
+          }
+        }
+      ]
+    },
+    {
+      "normalized_name": "mini-band lateral walks",
+      "occurrences": [
+        {
+          "source": "rehab_bank.json",
+          "row": 82,
+          "name": "Mini-Band Lateral Walks",
+          "group_context": {
+            "group_index": 32,
+            "drill_index": 1,
+            "location": "knee",
+            "type": "strain"
+          }
+        },
+        {
+          "source": "rehab_bank.json",
+          "row": 105,
+          "name": "Mini-Band Lateral Walks",
+          "group_context": {
+            "group_index": 44,
+            "drill_index": 0,
+            "location": "knee",
+            "type": "instability"
+          }
+        }
+      ]
+    },
+    {
+      "normalized_name": "moist-healing dressing",
+      "occurrences": [
+        {
+          "source": "rehab_bank.json",
+          "row": 1544,
+          "name": "Moist-Healing Dressing",
+          "group_context": {
+            "group_index": 725,
+            "drill_index": 1,
+            "location": "unspecified",
+            "type": "abrasion"
+          }
+        },
+        {
+          "source": "rehab_bank.json",
+          "row": 1550,
+          "name": "Moist-Healing Dressing",
+          "group_context": {
+            "group_index": 728,
+            "drill_index": 1,
+            "location": "shoulder",
+            "type": "abrasion"
+          }
+        },
+        {
+          "source": "rehab_bank.json",
+          "row": 1555,
+          "name": "Moist-Healing Dressing",
+          "group_context": {
+            "group_index": 731,
+            "drill_index": 0,
+            "location": "forearm",
+            "type": "abrasion"
+          }
+        },
+        {
+          "source": "rehab_bank.json",
+          "row": 1560,
+          "name": "Moist-Healing Dressing",
+          "group_context": {
+            "group_index": 733,
+            "drill_index": 1,
+            "location": "knee",
+            "type": "abrasion"
+          }
+        },
+        {
+          "source": "rehab_bank.json",
+          "row": 1566,
+          "name": "Moist-Healing Dressing",
+          "group_context": {
+            "group_index": 736,
+            "drill_index": 1,
+            "location": "upper_back",
+            "type": "abrasion"
+          }
+        },
+        {
+          "source": "rehab_bank.json",
+          "row": 1573,
+          "name": "Moist-Healing Dressing",
+          "group_context": {
+            "group_index": 740,
+            "drill_index": 0,
+            "location": "forearm",
+            "type": "graze"
+          }
+        },
+        {
+          "source": "rehab_bank.json",
+          "row": 1578,
+          "name": "Moist-Healing Dressing",
+          "group_context": {
+            "group_index": 742,
+            "drill_index": 1,
+            "location": "hip",
+            "type": "graze"
+          }
+        }
+      ]
+    },
+    {
+      "normalized_name": "night splint (neutral position)",
+      "occurrences": [
+        {
+          "source": "rehab_bank.json",
+          "row": 1222,
+          "name": "Night Splint (Neutral Position)",
+          "group_context": {
+            "group_index": 564,
+            "drill_index": 1,
+            "location": "heel",
+            "type": "unspecified"
+          }
+        },
+        {
+          "source": "rehab_bank.json",
+          "row": 1343,
+          "name": "Night Splint (Neutral Position)",
+          "group_context": {
+            "group_index": 625,
+            "drill_index": 0,
+            "location": "shin",
+            "type": "unspecified"
+          }
+        }
+      ]
+    },
+    {
+      "normalized_name": "night splint-assisted calf stretch",
+      "occurrences": [
+        {
+          "source": "rehab_bank.json",
+          "row": 906,
+          "name": "Night Splint-Assisted Calf Stretch",
+          "group_context": {
+            "group_index": 406,
+            "drill_index": 1,
+            "location": "achilles",
+            "type": "unspecified"
+          }
+        },
+        {
+          "source": "rehab_bank.json",
+          "row": 989,
+          "name": "Night Splint-Assisted Calf Stretch",
+          "group_context": {
+            "group_index": 448,
+            "drill_index": 0,
+            "location": "calf",
+            "type": "unspecified"
+          }
+        }
+      ]
+    },
+    {
+      "normalized_name": "no-reopen protection",
+      "occurrences": [
+        {
+          "source": "rehab_bank.json",
+          "row": 1500,
+          "name": "No-Reopen Protection",
+          "group_context": {
+            "group_index": 703,
+            "drill_index": 1,
+            "location": "unspecified",
+            "type": "cut"
+          }
+        },
+        {
+          "source": "rehab_bank.json",
+          "row": 1506,
+          "name": "No-Reopen Protection",
+          "group_context": {
+            "group_index": 706,
+            "drill_index": 1,
+            "location": "eye",
+            "type": "cut"
+          }
+        },
+        {
+          "source": "rehab_bank.json",
+          "row": 1512,
+          "name": "No-Reopen Protection",
+          "group_context": {
+            "group_index": 709,
+            "drill_index": 1,
+            "location": "forearm",
+            "type": "cut"
+          }
+        },
+        {
+          "source": "rehab_bank.json",
+          "row": 1513,
+          "name": "No-Reopen Protection",
+          "group_context": {
+            "group_index": 710,
+            "drill_index": 0,
+            "location": "elbow",
+            "type": "cut"
+          }
+        },
+        {
+          "source": "rehab_bank.json",
+          "row": 1515,
+          "name": "No-Reopen Protection",
+          "group_context": {
+            "group_index": 711,
+            "drill_index": 0,
+            "location": "knee",
+            "type": "cut"
+          }
+        },
+        {
+          "source": "rehab_bank.json",
+          "row": 1520,
+          "name": "No-Reopen Protection",
+          "group_context": {
+            "group_index": 713,
+            "drill_index": 1,
+            "location": "neck",
+            "type": "cut"
+          }
+        },
+        {
+          "source": "rehab_bank.json",
+          "row": 1530,
+          "name": "No-Reopen Protection",
+          "group_context": {
+            "group_index": 718,
+            "drill_index": 1,
+            "location": "jaw",
+            "type": "laceration"
+          }
+        },
+        {
+          "source": "rehab_bank.json",
+          "row": 1534,
+          "name": "No-Reopen Protection",
+          "group_context": {
+            "group_index": 720,
+            "drill_index": 1,
+            "location": "forearm",
+            "type": "laceration"
+          }
+        },
+        {
+          "source": "rehab_bank.json",
+          "row": 1535,
+          "name": "No-Reopen Protection",
+          "group_context": {
+            "group_index": 721,
+            "drill_index": 0,
+            "location": "elbow",
+            "type": "laceration"
+          }
+        },
+        {
+          "source": "rehab_bank.json",
+          "row": 1537,
+          "name": "No-Reopen Protection",
+          "group_context": {
+            "group_index": 722,
+            "drill_index": 0,
+            "location": "knee",
+            "type": "laceration"
+          }
+        },
+        {
+          "source": "rehab_bank.json",
+          "row": 1542,
+          "name": "No-Reopen Protection",
+          "group_context": {
+            "group_index": 724,
+            "drill_index": 1,
+            "location": "neck",
+            "type": "laceration"
+          }
+        }
+      ]
+    },
+    {
+      "normalized_name": "paraffin wax therapy",
+      "occurrences": [
+        {
+          "source": "rehab_bank.json",
+          "row": 1121,
+          "name": "Paraffin Wax Therapy",
+          "group_context": {
+            "group_index": 514,
+            "drill_index": 0,
+            "location": "forearm",
+            "type": "unspecified"
+          }
+        },
+        {
+          "source": "rehab_bank.json",
+          "row": 1205,
+          "name": "Paraffin Wax Therapy",
+          "group_context": {
+            "group_index": 556,
+            "drill_index": 0,
+            "location": "hand",
+            "type": "unspecified"
+          }
+        },
+        {
+          "source": "rehab_bank.json",
+          "row": 1477,
+          "name": "Paraffin Wax Therapy",
+          "group_context": {
+            "group_index": 692,
+            "drill_index": 0,
+            "location": "wrist",
+            "type": "unspecified"
+          }
+        }
+      ]
+    },
+    {
+      "normalized_name": "plate pinch rotations",
+      "occurrences": [
+        {
+          "source": "exercise_bank.json",
+          "row": 134,
+          "name": "Plate Pinch Rotations"
+        },
+        {
+          "source": "rehab_bank.json",
+          "row": 1132,
+          "name": "Plate Pinch Rotations",
+          "group_context": {
+            "group_index": 519,
+            "drill_index": 1,
+            "location": "forearm",
+            "type": "unspecified"
+          }
+        }
+      ]
+    },
+    {
+      "normalized_name": "pressure \u2192 reset",
+      "occurrences": [
+        {
+          "source": "fight_visualization_bank.json",
+          "row": 34,
+          "name": "Pressure \u2192 Reset"
+        },
+        {
+          "source": "fight_visualization_bank.json",
+          "row": 35,
+          "name": "Pressure \u2192 Reset"
+        },
+        {
+          "source": "fight_visualization_bank.json",
+          "row": 36,
+          "name": "Pressure \u2192 Reset"
+        },
+        {
+          "source": "fight_visualization_bank.json",
+          "row": 37,
+          "name": "Pressure \u2192 Reset"
+        },
+        {
+          "source": "fight_visualization_bank.json",
+          "row": 38,
+          "name": "Pressure \u2192 Reset"
+        },
+        {
+          "source": "fight_visualization_bank.json",
+          "row": 39,
+          "name": "Pressure \u2192 Reset"
+        },
+        {
+          "source": "fight_visualization_bank.json",
+          "row": 40,
+          "name": "Pressure \u2192 Reset"
+        },
+        {
+          "source": "fight_visualization_bank.json",
+          "row": 41,
+          "name": "Pressure \u2192 Reset"
+        },
+        {
+          "source": "fight_visualization_bank.json",
+          "row": 42,
+          "name": "Pressure \u2192 Reset"
+        },
+        {
+          "source": "fight_visualization_bank.json",
+          "row": 43,
+          "name": "Pressure \u2192 Reset"
+        },
+        {
+          "source": "fight_visualization_bank.json",
+          "row": 44,
+          "name": "Pressure \u2192 Reset"
+        },
+        {
+          "source": "fight_visualization_bank.json",
+          "row": 45,
+          "name": "Pressure \u2192 Reset"
+        },
+        {
+          "source": "fight_visualization_bank.json",
+          "row": 46,
+          "name": "Pressure \u2192 Reset"
+        },
+        {
+          "source": "fight_visualization_bank.json",
+          "row": 47,
+          "name": "Pressure \u2192 Reset"
+        },
+        {
+          "source": "fight_visualization_bank.json",
+          "row": 48,
+          "name": "Pressure \u2192 Reset"
+        },
+        {
+          "source": "fight_visualization_bank.json",
+          "row": 49,
+          "name": "Pressure \u2192 Reset"
+        },
+        {
+          "source": "fight_visualization_bank.json",
+          "row": 50,
+          "name": "Pressure \u2192 Reset"
+        }
+      ]
+    },
+    {
+      "normalized_name": "protect the intact blister",
+      "occurrences": [
+        {
+          "source": "rehab_bank.json",
+          "row": 1587,
+          "name": "Protect the Intact Blister",
+          "group_context": {
+            "group_index": 747,
+            "drill_index": 0,
+            "location": "unspecified",
+            "type": "blister"
+          }
+        },
+        {
+          "source": "rehab_bank.json",
+          "row": 1590,
+          "name": "Protect the Intact Blister",
+          "group_context": {
+            "group_index": 748,
+            "drill_index": 1,
+            "location": "foot",
+            "type": "blister"
+          }
+        },
+        {
+          "source": "rehab_bank.json",
+          "row": 1596,
+          "name": "Protect the Intact Blister",
+          "group_context": {
+            "group_index": 751,
+            "drill_index": 1,
+            "location": "hand",
+            "type": "blister"
+          }
+        },
+        {
+          "source": "rehab_bank.json",
+          "row": 1602,
+          "name": "Protect the Intact Blister",
+          "group_context": {
+            "group_index": 754,
+            "drill_index": 1,
+            "location": "ankle",
+            "type": "blister"
+          }
+        }
+      ]
+    },
+    {
+      "normalized_name": "read \u2192 react",
+      "occurrences": [
+        {
+          "source": "fight_visualization_bank.json",
+          "row": 17,
+          "name": "Read \u2192 React"
+        },
+        {
+          "source": "fight_visualization_bank.json",
+          "row": 18,
+          "name": "Read \u2192 React"
+        },
+        {
+          "source": "fight_visualization_bank.json",
+          "row": 19,
+          "name": "Read \u2192 React"
+        },
+        {
+          "source": "fight_visualization_bank.json",
+          "row": 20,
+          "name": "Read \u2192 React"
+        },
+        {
+          "source": "fight_visualization_bank.json",
+          "row": 21,
+          "name": "Read \u2192 React"
+        },
+        {
+          "source": "fight_visualization_bank.json",
+          "row": 22,
+          "name": "Read \u2192 React"
+        },
+        {
+          "source": "fight_visualization_bank.json",
+          "row": 23,
+          "name": "Read \u2192 React"
+        },
+        {
+          "source": "fight_visualization_bank.json",
+          "row": 24,
+          "name": "Read \u2192 React"
+        },
+        {
+          "source": "fight_visualization_bank.json",
+          "row": 25,
+          "name": "Read \u2192 React"
+        },
+        {
+          "source": "fight_visualization_bank.json",
+          "row": 26,
+          "name": "Read \u2192 React"
+        },
+        {
+          "source": "fight_visualization_bank.json",
+          "row": 27,
+          "name": "Read \u2192 React"
+        },
+        {
+          "source": "fight_visualization_bank.json",
+          "row": 28,
+          "name": "Read \u2192 React"
+        },
+        {
+          "source": "fight_visualization_bank.json",
+          "row": 29,
+          "name": "Read \u2192 React"
+        },
+        {
+          "source": "fight_visualization_bank.json",
+          "row": 30,
+          "name": "Read \u2192 React"
+        },
+        {
+          "source": "fight_visualization_bank.json",
+          "row": 31,
+          "name": "Read \u2192 React"
+        },
+        {
+          "source": "fight_visualization_bank.json",
+          "row": 32,
+          "name": "Read \u2192 React"
+        },
+        {
+          "source": "fight_visualization_bank.json",
+          "row": 33,
+          "name": "Read \u2192 React"
+        }
+      ]
+    },
+    {
+      "normalized_name": "reverse tyler twist (flexbar)",
+      "occurrences": [
+        {
+          "source": "rehab_bank.json",
+          "row": 1042,
+          "name": "Reverse Tyler Twist (Flexbar)",
+          "group_context": {
+            "group_index": 474,
+            "drill_index": 1,
+            "location": "elbow",
+            "type": "unspecified"
+          }
+        },
+        {
+          "source": "rehab_bank.json",
+          "row": 1116,
+          "name": "Reverse Tyler Twist (Flexbar)",
+          "group_context": {
+            "group_index": 511,
+            "drill_index": 1,
+            "location": "forearm",
+            "type": "unspecified"
+          }
+        },
+        {
+          "source": "rehab_bank.json",
+          "row": 1481,
+          "name": "Reverse Tyler Twist (Flexbar)",
+          "group_context": {
+            "group_index": 694,
+            "drill_index": 0,
+            "location": "wrist",
+            "type": "unspecified"
+          }
+        }
+      ]
+    },
+    {
+      "normalized_name": "rice bucket finger extensions",
+      "occurrences": [
+        {
+          "source": "rehab_bank.json",
+          "row": 1048,
+          "name": "Rice Bucket Finger Extensions",
+          "group_context": {
+            "group_index": 477,
+            "drill_index": 1,
+            "location": "elbow",
+            "type": "unspecified"
+          }
+        },
+        {
+          "source": "rehab_bank.json",
+          "row": 1190,
+          "name": "Rice Bucket Finger Extensions",
+          "group_context": {
+            "group_index": 548,
+            "drill_index": 1,
+            "location": "hand",
+            "type": "unspecified"
+          }
+        },
+        {
+          "source": "rehab_bank.json",
+          "row": 1472,
+          "name": "Rice Bucket Finger Extensions",
+          "group_context": {
+            "group_index": 689,
+            "drill_index": 1,
+            "location": "wrist",
+            "type": "unspecified"
+          }
+        }
+      ]
+    },
+    {
+      "normalized_name": "rubber band finger extensions",
+      "occurrences": [
+        {
+          "source": "rehab_bank.json",
+          "row": 698,
+          "name": "Rubber Band Finger Extensions",
+          "group_context": {
+            "group_index": 307,
+            "drill_index": 0,
+            "location": "fingers",
+            "type": "strain"
+          }
+        },
+        {
+          "source": "rehab_bank.json",
+          "row": 1127,
+          "name": "Rubber Band Finger Extensions",
+          "group_context": {
+            "group_index": 517,
+            "drill_index": 0,
+            "location": "forearm",
+            "type": "unspecified"
+          }
+        }
+      ]
+    },
+    {
+      "normalized_name": "sandbag shouldering",
+      "occurrences": [
+        {
+          "source": "exercise_bank.json",
+          "row": 87,
+          "name": "Sandbag Shouldering"
+        },
+        {
+          "source": "conditioning_bank.json",
+          "row": 53,
+          "name": "Sandbag Shouldering"
+        }
+      ]
+    },
+    {
+      "normalized_name": "scar mobility once closed",
+      "occurrences": [
+        {
+          "source": "rehab_bank.json",
+          "row": 1516,
+          "name": "Scar Mobility Once Closed",
+          "group_context": {
+            "group_index": 711,
+            "drill_index": 1,
+            "location": "knee",
+            "type": "cut"
+          }
+        },
+        {
+          "source": "rehab_bank.json",
+          "row": 1536,
+          "name": "Scar Mobility Once Closed",
+          "group_context": {
+            "group_index": 721,
+            "drill_index": 1,
+            "location": "elbow",
+            "type": "laceration"
+          }
+        }
+      ]
+    },
+    {
+      "normalized_name": "shin sleeve protection",
+      "occurrences": [
+        {
+          "source": "rehab_bank.json",
+          "row": 1561,
+          "name": "Shin Sleeve Protection",
+          "group_context": {
+            "group_index": 734,
+            "drill_index": 0,
+            "location": "shin",
+            "type": "abrasion"
+          }
+        },
+        {
+          "source": "rehab_bank.json",
+          "row": 1581,
+          "name": "Shin Sleeve Protection",
+          "group_context": {
+            "group_index": 744,
+            "drill_index": 0,
+            "location": "shin",
+            "type": "graze"
+          }
+        },
+        {
+          "source": "rehab_bank.json",
+          "row": 1599,
+          "name": "Shin Sleeve Protection",
+          "group_context": {
+            "group_index": 753,
+            "drill_index": 0,
+            "location": "shin",
+            "type": "blister"
+          }
+        }
+      ]
+    },
+    {
+      "normalized_name": "side plank march",
+      "occurrences": [
+        {
+          "source": "rehab_bank.json",
+          "row": 262,
+          "name": "Side Plank March",
+          "group_context": {
+            "group_index": 117,
+            "drill_index": 1,
+            "location": "obliques",
+            "type": "tightness"
+          }
+        },
+        {
+          "source": "rehab_bank.json",
+          "row": 309,
+          "name": "Side Plank March",
+          "group_context": {
+            "group_index": 141,
+            "drill_index": 0,
+            "location": "lower_back",
+            "type": "instability"
+          }
+        }
+      ]
+    },
+    {
+      "normalized_name": "side plank with reach under",
+      "occurrences": [
+        {
+          "source": "rehab_bank.json",
+          "row": 212,
+          "name": "Side Plank with Reach Under",
+          "group_context": {
+            "group_index": 93,
+            "drill_index": 1,
+            "location": "core",
+            "type": "instability"
+          }
+        },
+        {
+          "source": "rehab_bank.json",
+          "row": 251,
+          "name": "Side Plank with Reach Under",
+          "group_context": {
+            "group_index": 112,
+            "drill_index": 0,
+            "location": "obliques",
+            "type": "strain"
+          }
+        }
+      ]
+    },
+    {
+      "normalized_name": "single-leg balance on foam pad",
+      "occurrences": [
+        {
+          "source": "rehab_bank.json",
+          "row": 0,
+          "name": "Single-Leg Balance on Foam Pad",
+          "group_context": {
+            "group_index": 0,
+            "drill_index": 0,
+            "location": "ankle",
+            "type": "sprain"
+          }
+        },
+        {
+          "source": "rehab_bank.json",
+          "row": 899,
+          "name": "Single-Leg Balance on Foam Pad",
+          "group_context": {
+            "group_index": 403,
+            "drill_index": 0,
+            "location": "achilles",
+            "type": "unspecified"
+          }
+        },
+        {
+          "source": "rehab_bank.json",
+          "row": 1097,
+          "name": "Single-Leg Balance on Foam Pad",
+          "group_context": {
+            "group_index": 502,
+            "drill_index": 0,
+            "location": "foot",
+            "type": "unspecified"
+          }
+        }
+      ]
+    },
+    {
+      "normalized_name": "single-leg balance with eyes closed",
+      "occurrences": [
+        {
+          "source": "rehab_bank.json",
+          "row": 104,
+          "name": "Single-Leg Balance with Eyes Closed",
+          "group_context": {
+            "group_index": 43,
+            "drill_index": 1,
+            "location": "knee",
+            "type": "unspecified"
+          }
+        },
+        {
+          "source": "rehab_bank.json",
+          "row": 936,
+          "name": "Single-Leg Balance with Eyes Closed",
+          "group_context": {
+            "group_index": 421,
+            "drill_index": 1,
+            "location": "ankle",
+            "type": "unspecified"
+          }
+        },
+        {
+          "source": "rehab_bank.json",
+          "row": 994,
+          "name": "Single-Leg Balance with Eyes Closed",
+          "group_context": {
+            "group_index": 450,
+            "drill_index": 1,
+            "location": "calf",
+            "type": "unspecified"
+          }
+        }
+      ]
+    },
+    {
+      "normalized_name": "single-leg sit-to-stand (eccentric focus)",
+      "occurrences": [
+        {
+          "source": "rehab_bank.json",
+          "row": 1135,
+          "name": "Single-Leg Sit-to-Stand (Eccentric Focus)",
+          "group_context": {
+            "group_index": 521,
+            "drill_index": 0,
+            "location": "glutes",
+            "type": "unspecified"
+          }
+        },
+        {
+          "source": "rehab_bank.json",
+          "row": 1315,
+          "name": "Single-Leg Sit-to-Stand (Eccentric Focus)",
+          "group_context": {
+            "group_index": 611,
+            "drill_index": 0,
+            "location": "quads",
+            "type": "unspecified"
+          }
+        }
+      ]
+    },
+    {
+      "normalized_name": "skin barrier ointment",
+      "occurrences": [
+        {
+          "source": "rehab_bank.json",
+          "row": 1552,
+          "name": "Skin Barrier Ointment",
+          "group_context": {
+            "group_index": 729,
+            "drill_index": 1,
+            "location": "chest",
+            "type": "abrasion"
+          }
+        },
+        {
+          "source": "rehab_bank.json",
+          "row": 1558,
+          "name": "Skin Barrier Ointment",
+          "group_context": {
+            "group_index": 732,
+            "drill_index": 1,
+            "location": "hip",
+            "type": "abrasion"
+          }
+        },
+        {
+          "source": "rehab_bank.json",
+          "row": 1568,
+          "name": "Skin Barrier Ointment",
+          "group_context": {
+            "group_index": 737,
+            "drill_index": 1,
+            "location": "unspecified",
+            "type": "graze"
+          }
+        },
+        {
+          "source": "rehab_bank.json",
+          "row": 1570,
+          "name": "Skin Barrier Ointment",
+          "group_context": {
+            "group_index": 738,
+            "drill_index": 1,
+            "location": "face",
+            "type": "graze"
+          }
+        },
+        {
+          "source": "rehab_bank.json",
+          "row": 1572,
+          "name": "Skin Barrier Ointment",
+          "group_context": {
+            "group_index": 739,
+            "drill_index": 1,
+            "location": "elbow",
+            "type": "graze"
+          }
+        },
+        {
+          "source": "rehab_bank.json",
+          "row": 1576,
+          "name": "Skin Barrier Ointment",
+          "group_context": {
+            "group_index": 741,
+            "drill_index": 1,
+            "location": "hand",
+            "type": "graze"
+          }
+        },
+        {
+          "source": "rehab_bank.json",
+          "row": 1580,
+          "name": "Skin Barrier Ointment",
+          "group_context": {
+            "group_index": 743,
+            "drill_index": 1,
+            "location": "knee",
+            "type": "graze"
+          }
+        },
+        {
+          "source": "rehab_bank.json",
+          "row": 1582,
+          "name": "Skin Barrier Ointment",
+          "group_context": {
+            "group_index": 744,
+            "drill_index": 1,
+            "location": "shin",
+            "type": "graze"
+          }
+        },
+        {
+          "source": "rehab_bank.json",
+          "row": 1584,
+          "name": "Skin Barrier Ointment",
+          "group_context": {
+            "group_index": 745,
+            "drill_index": 1,
+            "location": "neck",
+            "type": "graze"
+          }
+        },
+        {
+          "source": "rehab_bank.json",
+          "row": 1586,
+          "name": "Skin Barrier Ointment",
+          "group_context": {
+            "group_index": 746,
+            "drill_index": 1,
+            "location": "foot",
+            "type": "graze"
+          }
+        }
+      ]
+    },
+    {
+      "normalized_name": "sledgehammer strikes",
+      "occurrences": [
+        {
+          "source": "exercise_bank.json",
+          "row": 86,
+          "name": "Sledgehammer Strikes"
+        },
+        {
+          "source": "conditioning_bank.json",
+          "row": 66,
+          "name": "Sledgehammer Strikes"
+        }
+      ]
+    },
+    {
+      "normalized_name": "supine 90/90 breathing",
+      "occurrences": [
+        {
+          "source": "rehab_bank.json",
+          "row": 239,
+          "name": "Supine 90/90 Breathing",
+          "group_context": {
+            "group_index": 107,
+            "drill_index": 0,
+            "location": "lower_back",
+            "type": "pain"
+          }
+        },
+        {
+          "source": "rehab_bank.json",
+          "row": 289,
+          "name": "Supine 90/90 Breathing",
+          "group_context": {
+            "group_index": 131,
+            "drill_index": 0,
+            "location": "lower_back",
+            "type": "pain"
+          }
+        }
+      ]
+    },
+    {
+      "normalized_name": "supported eccentric wrist extension",
+      "occurrences": [
+        {
+          "source": "rehab_bank.json",
+          "row": 523,
+          "name": "Supported eccentric wrist extension",
+          "group_context": {
+            "group_index": 235,
+            "drill_index": 0,
+            "location": "forearm",
+            "type": "tendonitis"
+          }
+        },
+        {
+          "source": "rehab_bank.json",
+          "row": 552,
+          "name": "Supported eccentric wrist extension",
+          "group_context": {
+            "group_index": 247,
+            "drill_index": 0,
+            "location": "elbow",
+            "type": "tendonitis"
+          }
+        }
+      ]
+    },
+    {
+      "normalized_name": "supported shoulder pendulum",
+      "occurrences": [
+        {
+          "source": "rehab_bank.json",
+          "row": 378,
+          "name": "Supported shoulder pendulum",
+          "group_context": {
+            "group_index": 173,
+            "drill_index": 3,
+            "location": "shoulder",
+            "type": "strain"
+          }
+        },
+        {
+          "source": "rehab_bank.json",
+          "row": 403,
+          "name": "Supported shoulder pendulum",
+          "group_context": {
+            "group_index": 181,
+            "drill_index": 3,
+            "location": "shoulder",
+            "type": "sprain"
+          }
+        }
+      ]
+    },
+    {
+      "normalized_name": "supported unloaded wrist movement",
+      "occurrences": [
+        {
+          "source": "rehab_bank.json",
+          "row": 526,
+          "name": "Supported unloaded wrist movement",
+          "group_context": {
+            "group_index": 235,
+            "drill_index": 3,
+            "location": "forearm",
+            "type": "tendonitis"
+          }
+        },
+        {
+          "source": "rehab_bank.json",
+          "row": 599,
+          "name": "Supported unloaded wrist movement",
+          "group_context": {
+            "group_index": 264,
+            "drill_index": 2,
+            "location": "wrist",
+            "type": "stiffness"
+          }
+        },
+        {
+          "source": "rehab_bank.json",
+          "row": 605,
+          "name": "Supported unloaded wrist movement",
+          "group_context": {
+            "group_index": 266,
+            "drill_index": 2,
+            "location": "wrist",
+            "type": "contusion"
+          }
+        }
+      ]
+    },
+    {
+      "normalized_name": "tactical picture",
+      "occurrences": [
+        {
+          "source": "fight_visualization_bank.json",
+          "row": 0,
+          "name": "Tactical Picture"
+        },
+        {
+          "source": "fight_visualization_bank.json",
+          "row": 1,
+          "name": "Tactical Picture"
+        },
+        {
+          "source": "fight_visualization_bank.json",
+          "row": 2,
+          "name": "Tactical Picture"
+        },
+        {
+          "source": "fight_visualization_bank.json",
+          "row": 3,
+          "name": "Tactical Picture"
+        },
+        {
+          "source": "fight_visualization_bank.json",
+          "row": 4,
+          "name": "Tactical Picture"
+        },
+        {
+          "source": "fight_visualization_bank.json",
+          "row": 5,
+          "name": "Tactical Picture"
+        },
+        {
+          "source": "fight_visualization_bank.json",
+          "row": 6,
+          "name": "Tactical Picture"
+        },
+        {
+          "source": "fight_visualization_bank.json",
+          "row": 7,
+          "name": "Tactical Picture"
+        },
+        {
+          "source": "fight_visualization_bank.json",
+          "row": 8,
+          "name": "Tactical Picture"
+        },
+        {
+          "source": "fight_visualization_bank.json",
+          "row": 9,
+          "name": "Tactical Picture"
+        },
+        {
+          "source": "fight_visualization_bank.json",
+          "row": 10,
+          "name": "Tactical Picture"
+        },
+        {
+          "source": "fight_visualization_bank.json",
+          "row": 11,
+          "name": "Tactical Picture"
+        },
+        {
+          "source": "fight_visualization_bank.json",
+          "row": 12,
+          "name": "Tactical Picture"
+        },
+        {
+          "source": "fight_visualization_bank.json",
+          "row": 13,
+          "name": "Tactical Picture"
+        },
+        {
+          "source": "fight_visualization_bank.json",
+          "row": 14,
+          "name": "Tactical Picture"
+        },
+        {
+          "source": "fight_visualization_bank.json",
+          "row": 15,
+          "name": "Tactical Picture"
+        },
+        {
+          "source": "fight_visualization_bank.json",
+          "row": 16,
+          "name": "Tactical Picture"
+        }
+      ]
+    },
+    {
+      "normalized_name": "tongue-to-palate isometric holds",
+      "occurrences": [
+        {
+          "source": "rehab_bank.json",
+          "row": 1074,
+          "name": "Tongue-to-Palate Isometric Holds",
+          "group_context": {
+            "group_index": 490,
+            "drill_index": 1,
+            "location": "face",
+            "type": "unspecified"
+          }
+        },
+        {
+          "source": "rehab_bank.json",
+          "row": 1246,
+          "name": "Tongue-to-Palate Isometric Holds",
+          "group_context": {
+            "group_index": 576,
+            "drill_index": 1,
+            "location": "jaw",
+            "type": "unspecified"
+          }
+        }
+      ]
+    },
+    {
+      "normalized_name": "trust \u2192 compete",
+      "occurrences": [
+        {
+          "source": "fight_visualization_bank.json",
+          "row": 55,
+          "name": "Trust \u2192 Compete"
+        },
+        {
+          "source": "fight_visualization_bank.json",
+          "row": 56,
+          "name": "Trust \u2192 Compete"
+        },
+        {
+          "source": "fight_visualization_bank.json",
+          "row": 57,
+          "name": "Trust \u2192 Compete"
+        },
+        {
+          "source": "fight_visualization_bank.json",
+          "row": 58,
+          "name": "Trust \u2192 Compete"
+        }
+      ]
+    },
+    {
+      "normalized_name": "ulnar nerve tensioners",
+      "occurrences": [
+        {
+          "source": "rehab_bank.json",
+          "row": 1210,
+          "name": "Ulnar Nerve Tensioners",
+          "group_context": {
+            "group_index": 558,
+            "drill_index": 1,
+            "location": "hand",
+            "type": "unspecified"
+          }
+        },
+        {
+          "source": "rehab_bank.json",
+          "row": 1480,
+          "name": "Ulnar Nerve Tensioners",
+          "group_context": {
+            "group_index": 693,
+            "drill_index": 1,
+            "location": "wrist",
+            "type": "unspecified"
+          }
+        }
+      ]
+    },
+    {
+      "normalized_name": "very light flexbar oscillations",
+      "occurrences": [
+        {
+          "source": "rehab_bank.json",
+          "row": 1046,
+          "name": "Very Light Flexbar Oscillations",
+          "group_context": {
+            "group_index": 476,
+            "drill_index": 1,
+            "location": "elbow",
+            "type": "unspecified"
+          }
+        },
+        {
+          "source": "rehab_bank.json",
+          "row": 1122,
+          "name": "Very Light Flexbar Oscillations",
+          "group_context": {
+            "group_index": 514,
+            "drill_index": 1,
+            "location": "forearm",
+            "type": "unspecified"
+          }
+        }
+      ]
+    },
+    {
+      "normalized_name": "waterproof occlusive dressing",
+      "occurrences": [
+        {
+          "source": "rehab_bank.json",
+          "row": 1504,
+          "name": "Waterproof Occlusive Dressing",
+          "group_context": {
+            "group_index": 705,
+            "drill_index": 1,
+            "location": "jaw",
+            "type": "cut"
+          }
+        },
+        {
+          "source": "rehab_bank.json",
+          "row": 1510,
+          "name": "Waterproof Occlusive Dressing",
+          "group_context": {
+            "group_index": 708,
+            "drill_index": 1,
+            "location": "fingers",
+            "type": "cut"
+          }
+        },
+        {
+          "source": "rehab_bank.json",
+          "row": 1511,
+          "name": "Waterproof Occlusive Dressing",
+          "group_context": {
+            "group_index": 709,
+            "drill_index": 0,
+            "location": "forearm",
+            "type": "cut"
+          }
+        },
+        {
+          "source": "rehab_bank.json",
+          "row": 1517,
+          "name": "Waterproof Occlusive Dressing",
+          "group_context": {
+            "group_index": 712,
+            "drill_index": 0,
+            "location": "shin",
+            "type": "cut"
+          }
+        },
+        {
+          "source": "rehab_bank.json",
+          "row": 1521,
+          "name": "Waterproof Occlusive Dressing",
+          "group_context": {
+            "group_index": 714,
+            "drill_index": 0,
+            "location": "foot",
+            "type": "cut"
+          }
+        },
+        {
+          "source": "rehab_bank.json",
+          "row": 1540,
+          "name": "Waterproof Occlusive Dressing",
+          "group_context": {
+            "group_index": 723,
+            "drill_index": 1,
+            "location": "shin",
+            "type": "laceration"
+          }
+        }
+      ]
+    },
+    {
+      "normalized_name": "wrist cars (controlled articular rotations)",
+      "occurrences": [
+        {
+          "source": "rehab_bank.json",
+          "row": 636,
+          "name": "Wrist CARs (Controlled Articular Rotations)",
+          "group_context": {
+            "group_index": 281,
+            "drill_index": 0,
+            "location": "wrist",
+            "type": "stiffness"
+          }
+        },
+        {
+          "source": "rehab_bank.json",
+          "row": 1469,
+          "name": "Wrist CARs (Controlled Articular Rotations)",
+          "group_context": {
+            "group_index": 688,
+            "drill_index": 0,
+            "location": "wrist",
+            "type": "unspecified"
+          }
+        }
+      ]
+    },
+    {
+      "normalized_name": "wrist distraction with band",
+      "occurrences": [
+        {
+          "source": "rehab_bank.json",
+          "row": 589,
+          "name": "Wrist Distraction with Band",
+          "group_context": {
+            "group_index": 260,
+            "drill_index": 1,
+            "location": "wrist",
+            "type": "impingement"
+          }
+        },
+        {
+          "source": "rehab_bank.json",
+          "row": 640,
+          "name": "Wrist Distraction with Band",
+          "group_context": {
+            "group_index": 283,
+            "drill_index": 0,
+            "location": "wrist",
+            "type": "impingement"
+          }
+        }
+      ]
+    }
+  ]
+}
