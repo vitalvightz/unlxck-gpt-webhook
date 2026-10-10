@@ -933,6 +933,10 @@ export type LibraryFacet = {
   count: number;
 };
 
+export type LibraryFeaturedResponse = {
+  entry: LibraryEntry | null;
+};
+
 export type LibraryPreview = {
   catalogue_id: string;
   name: string;

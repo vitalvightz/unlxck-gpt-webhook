@@ -10,6 +10,8 @@ import { RequireAuth } from "@/components/auth-guard";
 import { LogTraining } from "@/components/log-training";
 import { useAppSession } from "@/components/auth-provider";
 import { TrainingLibraryLink } from "@/components/training-library-link";
+import { FeaturedDrill } from "@/components/featured-drill";
+import actionStyles from "@/components/training-action-tile.module.css";
 import {
   AthleteProfileRow,
   canSetActive,
@@ -268,9 +270,19 @@ export default function PlansPage() {
 
   return (
     <RequireAuth>
-      <section className={`panel ${styles.page}`}>
-        <h1 className={`athlete-motion-slot athlete-motion-header ${styles.pageTitle}`}>{t("planWorkspace")}</h1>
-        <LogTraining accessToken={session?.access_token ?? null} />
+      <section className={styles.page}>
+        <header className={styles.pageHeader}>
+          <Link href="/history" className={styles.historyLink}>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19v-5m5 5V9m5 10V5m5 14V2" /></svg>
+            View History <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7" /></svg>
+          </Link>
+          <h1 className={`athlete-motion-slot athlete-motion-header ${styles.pageTitle}`}>{t("planWorkspace")}</h1>
+          <p className={styles.pageSubtitle}>Build, manage and add to your training.</p>
+        </header>
+        <div className={actionStyles.actions}>
+          <LogTraining accessToken={session?.access_token ?? null} variant="tile" />
+          <TrainingLibraryLink variant="tile" />
+        </div>
 
         {error ? (
           <div className="error-banner athlete-motion-slot athlete-motion-status" role="alert">
@@ -293,7 +305,6 @@ export default function PlansPage() {
         ) : null}
 
         <div className="athlete-motion-slot athlete-motion-main">
-          <div className={styles.libraryAction}><TrainingLibraryLink /></div>
           {isPlanListLoading ? (
             <PlansSyncState />
           ) : (
@@ -375,6 +386,8 @@ export default function PlansPage() {
         <div className={`athlete-motion-slot athlete-motion-main ${styles.section}`}>
           {isProfileLoading ? null : <AthleteProfileRow me={me} />}
         </div>
+
+        <FeaturedDrill accessToken={session?.access_token ?? null} />
 
         {managedPlan ? (
           <PlanManageSheet

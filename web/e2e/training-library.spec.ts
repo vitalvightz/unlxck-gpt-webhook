@@ -17,6 +17,9 @@ const learn = entry("Pressure → Reset", null, { category: "learn", content_typ
 
 async function setup(page: Page, baseURL: string) {
   await isolateFromNetwork(page, baseURL);
+  // Isolation deliberately blocks the Google Fonts import; serve an empty
+  // stylesheet so expected fallback typography does not emit a network error.
+  await page.route("https://fonts.googleapis.com/**", route => route.fulfill({ contentType: "text/css", body: "" }));
   await page.addInitScript(([key, value]) => localStorage.setItem(key, value), [storageKey, JSON.stringify({
     access_token: "athlete-token", refresh_token: "test-refresh", token_type: "bearer", expires_in: 86400,
     expires_at: Math.floor(Date.now() / 1000) + 86400,
@@ -39,6 +42,7 @@ async function setup(page: Page, baseURL: string) {
         const response = await page.request.get(`${process.env.LIBRARY_TEST_API}${url.pathname}${url.search}`, { headers: { Authorization: "Bearer athlete-token" } });
         return route.fulfill({ response });
       }
+      if (url.pathname.endsWith("/featured")) return json({ entry: null });
       if (url.pathname.endsWith("/entry")) {
         const selected = [...drills, rehab, learn].find(row => row.catalogue_id === url.searchParams.get("catalogue_id"))!;
         return json({ ...selected, source: "source.json", source_revision: "test", row_revision: "test",
@@ -69,6 +73,46 @@ async function setup(page: Page, baseURL: string) {
   return { calls, fail: (value: boolean) => { failSearch = value; } };
 }
 
+for (const width of [390, 1280]) {
+  test(`Plan actions and featured curated demo (${width}px)`, async ({ page, baseURL }) => {
+    await page.setViewportSize({ width, height: 844 });
+    await setup(page, baseURL!);
+    const media = { video_id: "9dWwmyZ1Wng", start_s: 18, end_s: 24, source: "curated", channel_title: "Free Fitness Videos", orientation: "landscape" };
+    await page.route("**/api/training/library/featured", route => route.fulfill({ contentType: "application/json", body: JSON.stringify({ entry: { ...drills[0], media } }) }));
+    // External services are isolated in CI. Thumbnail identity and the actual
+    // native player are checked here; live thumbnail/playback get separate QA.
+    await page.route("https://i.ytimg.com/**", route => route.fulfill({ status: 204, body: "" }));
+    await page.goto("/plan");
+    const log = page.getByRole("button", { name: "Log Training", exact: true });
+    const find = page.getByRole("link", { name: "Find a Drill", exact: true });
+    const logBox = (await log.boundingBox())!;
+    const findBox = (await find.boundingBox())!;
+    expect(Math.abs(logBox.y - findBox.y)).toBeLessThan(2);
+    expect(Math.abs(logBox.width - findBox.width)).toBeLessThan(2);
+    expect(Math.abs(logBox.height - findBox.height)).toBeLessThan(2);
+    await log.click();
+    await expect(page.getByRole("dialog", { name: "Log Training", exact: true })).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(log).toBeFocused();
+    const profile = page.getByRole("button", { name: /^Athlete profile:/ });
+    await profile.click();
+    await expect(page.getByRole("link", { name: "Edit profile & photo" })).toHaveAttribute("href", "/profile");
+    await page.keyboard.press("Escape");
+    const featured = page.getByRole("region", { name: "Featured drill", exact: true });
+    await expect(featured).toContainText("Editor’s pick");
+    const featuredBox = (await featured.boundingBox())!;
+    const mainBox = (await page.getByRole("main").boundingBox())!;
+    expect(Math.abs(featuredBox.x + featuredBox.width / 2 - mainBox.x - mainBox.width / 2)).toBeLessThan(2);
+    await expect(featured.getByRole("button", { name: "Play Medicine Ball Hook Throw demo" })).toBeVisible();
+    await expect(featured.getByRole("link", { name: "Watch on YouTube" })).toHaveAttribute("href", "https://www.youtube.com/watch?v=9dWwmyZ1Wng&t=18s");
+    await featured.getByRole("button", { name: /^Medicine Ball Hook Throw/ }).click();
+    await expect(page.getByRole("dialog", { name: "Medicine Ball Hook Throw", exact: true })).toContainText("Discovery only");
+    await page.keyboard.press("Escape");
+    expect((await new AxeBuilder({ page }).include('main').analyze()).violations).toEqual([]);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  });
+}
+
 for (const width of [320, 390, 1280, 1440]) {
   test(`Find a Drill without an active plan: search, filter, preview (${width}px)`, async ({ page, baseURL }) => {
     await page.setViewportSize({ width, height: 844 });
@@ -77,7 +121,7 @@ for (const width of [320, 390, 1280, 1440]) {
     page.on("pageerror", error => errors.push(error.message));
     page.on("console", message => {
       // A deliberate no-active-plan 404 is handled by Plan's empty state.
-      if (message.type() === "error" && !message.location().url.includes("/api/plans/active")) consoleErrors.push(message.text());
+      if (message.type() === "error" && !message.location().url.includes("/api/plans/active")) consoleErrors.push(`${message.location().url}: ${message.text()}`);
     });
     const { calls } = await setup(page, baseURL!);
     await page.goto("/plan");

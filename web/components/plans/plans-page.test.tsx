@@ -34,7 +34,7 @@ function plan(id: string, overrides: Partial<PlanSummary> = {}): PlanSummary {
 
 type Call = { url: string; method: string; body: string | null };
 
-async function mountPlans(plans: PlanSummary[], activeId: string | null) {
+async function mountPlans(plans: PlanSummary[], activeId: string | null, profile: Partial<MeResponse["profile"]> = {}) {
   const calls: Call[] = [];
   const originalFetch = globalThis.fetch;
   const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status });
@@ -58,7 +58,7 @@ async function mountPlans(plans: PlanSummary[], activeId: string | null) {
 
   const me = {
     profile: { athlete_id: "athlete-1", full_name: "King", role: "athlete", access_status: "approved",
-      technical_style: ["boxing"], tactical_style: ["pressure_fighter"] },
+      technical_style: ["boxing"], tactical_style: ["pressure_fighter"], ...profile },
     latest_intake: null,
     plan_count: plans.length,
   } as unknown as MeResponse;
@@ -195,7 +195,7 @@ test("management lives in a sheet: make active only for an eligible saved plan, 
 test("the athlete profile is one line that opens its details", async () => {
   const view = await mountPlans([plan("active-1")], "active-1");
   try {
-    const row = buttonByText(view.host, "Athlete profileKing · Boxing · Pressure Fighter");
+    const row = view.host.querySelector<HTMLButtonElement>('button[aria-label="Athlete profile: King · Boxing · Pressure Fighter"]');
     assert.ok(row, view.host.textContent ?? "");
     await view.click(row);
     const sheet = openDialog();
@@ -204,4 +204,19 @@ test("the athlete profile is one line that opens its details", async () => {
   } finally {
     await view.cleanup();
   }
+});
+
+test("the profile uses the saved photo, falls back on image failure, and opens profile editing", async () => {
+  const avatar = "https://example.com/saved-athlete-photo.jpg";
+  const view = await mountPlans([], null, { avatar_url: avatar });
+  try {
+    const row = view.host.querySelector<HTMLButtonElement>('button[aria-label^="Athlete profile:"]');
+    const image = row?.querySelector("img");
+    assert.equal(image?.getAttribute("src"), avatar);
+    await act(async () => image?.dispatchEvent(new window.Event("error")));
+    assert.equal(row?.querySelector("img"), null);
+    assert.equal(row?.querySelector('[aria-hidden="true"]')?.textContent, "K");
+    await view.click(row);
+    assert.equal(openDialog()?.querySelector('a[href="/profile"]')?.textContent, "Edit profile & photo");
+  } finally { await view.cleanup(); }
 });

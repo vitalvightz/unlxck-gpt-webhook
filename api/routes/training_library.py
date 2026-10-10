@@ -3,7 +3,7 @@ import logging
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 
-from api.contracts.training_library import LibraryCategory, LibraryPreview, LibrarySearchResponse
+from api.contracts.training_library import LibraryCategory, LibraryFeaturedResponse, LibraryPreview, LibrarySearchResponse
 from api.services import training_library as library
 from api.services.exercise_media import load_media_index
 from fightcamp.exercise_identity import normalize_exercise_key
@@ -53,6 +53,26 @@ def build_training_library_router(*, require_profile, get_store):
         for payload in result["entries"]:
             _attach_media(payload, index.by_id[payload["catalogue_id"]], media)
         return result
+
+    @router.get("/featured", response_model=LibraryFeaturedResponse)
+    def featured_drill(profile=Depends(require_profile), store=Depends(get_store)):
+        # Editorial priority, never a popularity score or a prescription. Only
+        # current, curated demos on exact Training identities may be featured.
+        index = _index()
+        media = load_media_index(store)
+        preferred = ("medicine-ball-hook-throw", "check-hook-pivot-burst", "standing-cable-punch-simulation")
+        candidates = [record for record in index.records if record["summary"]["category"] == "training"
+                      and record["entry"]["exercise_key"] in media]
+        if not candidates:
+            return {"entry": None}
+        candidates.sort(key=lambda record: (
+            preferred.index(record["entry"]["exercise_key"]) if record["entry"]["exercise_key"] in preferred else len(preferred),
+            record["entry"]["catalogue_id"],
+        ))
+        record = candidates[0]
+        payload = dict(record["summary"])
+        _attach_media(payload, record, media)
+        return {"entry": payload}
 
     @router.get("/entry", response_model=LibraryPreview)
     def drill_preview(

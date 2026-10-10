@@ -197,6 +197,41 @@ def test_source_change_during_loading_is_rejected(copied_data, monkeypatch):
         cache.get()
 
 
+def test_featured_drill_requires_authenticated_training_and_current_curated_media(index, monkeypatch):
+    client, store, _ = _build_client()
+    monkeypatch.setattr(lib, "cache", lib.LibraryCache())
+    reset_media_index_cache()
+    try:
+        assert client.get("/api/training/library/featured").status_code == 401
+        assert client.get("/api/training/library/featured", headers=AUTH).json() == {"entry": None}
+        # A rehab demo alone can never become a featured Training drill.
+        rehab = next(r["entry"] for r in index.records if r["summary"]["category"] == "rehab")
+        from fightcamp.exercise_identity import normalize_exercise_key
+        rehab_key = normalize_exercise_key(rehab["source_id"])
+        store.exercise_media[rehab_key] = {"exercise_key": rehab_key, "video_id": "abcdefghijk", "made_for_kids": False, "status": "ok"}
+        reset_media_index_cache()
+        assert client.get("/api/training/library/featured", headers=AUTH).json()["entry"] is None
+        for key in ("standing-cable-punch-simulation", "medicine-ball-hook-throw"):
+            store.exercise_media[key] = {"exercise_key": key, "video_id": "abcdefghijk", "made_for_kids": False, "status": "ok"}
+        reset_media_index_cache()
+        selected = client.get("/api/training/library/featured", headers=AUTH).json()["entry"]
+        assert selected["name"] == "Medicine Ball Hook Throw"
+        assert selected["media"]["video_id"] == "abcdefghijk"
+        assert selected["category"] == "training" and selected["prescription_allowed"] is False
+        assert index.by_id[selected["catalogue_id"]]["summary"]["media"] is None
+        store.exercise_media["medicine-ball-hook-throw"]["status"] = "unavailable"
+        reset_media_index_cache()
+        fallback = client.get("/api/training/library/featured", headers=AUTH).json()["entry"]
+        assert fallback["name"] == "Standing Cable Punch Simulation"
+        store.exercise_media["standing-cable-punch-simulation"]["made_for_kids"] = None
+        reset_media_index_cache()
+        assert client.get("/api/training/library/featured", headers=AUTH).json()["entry"] is None
+        assert client.post("/api/training/library/featured", headers=AUTH).status_code == 405
+    finally:
+        reset_media_index_cache()
+        client.close()
+
+
 def test_api_auth_pagination_media_and_preview(index, monkeypatch):
     client, store, _ = _build_client()
     reset_media_index_cache()

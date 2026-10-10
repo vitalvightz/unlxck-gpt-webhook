@@ -35,6 +35,10 @@ class LibraryPreview(LibraryEntry):
     guidance: dict[str, list[str]] = Field(default_factory=dict)
 
 
+class LibraryFeaturedResponse(BaseModel):
+    entry: LibraryEntry | None = None
+
+
 class LibrarySearchResponse(BaseModel):
     entries: list[LibraryEntry]
     total: int

@@ -28,7 +28,7 @@ const readable = (value: string) => value.replaceAll("_", " ").replaceAll("-", "
 const equipmentText = (entry: LibraryEntry) => entry.equipment === null ? "Equipment unspecified"
   : entry.equipment.length ? entry.equipment.map(readable).join(" · ") : "No equipment";
 
-function DrillPreview({ entry, token, onClose }: { entry: LibraryEntry; token: string; onClose: () => void }) {
+export function DrillPreview({ entry, token, onClose }: { entry: LibraryEntry; token: string; onClose: () => void }) {
   const [detail, setDetail] = useState<LibraryPreview | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [retry, setRetry] = useState(0);

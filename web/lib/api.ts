@@ -1,5 +1,5 @@
 import type { ExternalTrainingFields, TrainingHistorySession } from "@/lib/training-history";
-import type { LibraryPreview, LibrarySearchResponse } from "@/lib/api-schema.generated";
+import type { LibraryFeaturedResponse, LibraryPreview, LibrarySearchResponse } from "@/lib/api-schema.generated";
 import type {
   ApproveAndResumeGenerationRequest,
   AdminAthleteRecord,
@@ -65,6 +65,10 @@ export function searchTrainingLibrary(token: string, params: URLSearchParams, si
 export function getTrainingLibraryEntry(token: string, catalogueId: string, signal?: AbortSignal) {
   const params = new URLSearchParams({ catalogue_id: catalogueId });
   return readJson<LibraryPreview>(`/api/training/library/entry?${params}`, { token, signal });
+}
+
+export function getFeaturedDrill(token: string, signal?: AbortSignal) {
+  return readJson<LibraryFeaturedResponse>("/api/training/library/featured", { token, signal });
 }
 
 function getApiBaseUrl(): string {
