@@ -151,7 +151,7 @@ function SessionRows({ rows, today, token, onUpdate, onDelete }: {
     setDeleting(id);
     setError(null);
     try { await onDelete(id); }
-    catch (reason) { setError(reason instanceof Error ? reason.message : "Unable to delete session. Try again."); }
+    catch (reason) { setError(reason instanceof Error ? reason.message.replace("The plan service", "The training service") : "Unable to delete session. Try again."); }
     finally { setDeleting(null); }
   }
   if (rows.length === 0) {
@@ -203,9 +203,9 @@ function SessionRows({ rows, today, token, onUpdate, onDelete }: {
               ) : null}
               {row.pain_after != null ? <span>Pain after {row.pain_after}/10</span> : null}
             </div>
-            {row.source === "external" ? <div className="history-row-meta">
+            {row.source === "external" ? <div className="history-session-actions">
               <LogTraining accessToken={token} entry={row} onSaved={onUpdate} />
-              <button className="ghost-button" type="button" disabled={deleting !== null} aria-label={`Delete ${row.title}`} onClick={() => void remove(row.id)}>{deleting === row.id ? "Deleting…" : "Delete"}</button>
+              <button className="history-session-delete" type="button" disabled={deleting !== null} aria-label={`Delete ${row.title}`} onClick={() => void remove(row.id)}>{deleting === row.id ? "Deleting…" : "Delete"}</button>
             </div> : null}
             {row.modification_reason ? (
               <p className="muted history-row-note">Reason: {row.modification_reason}</p>

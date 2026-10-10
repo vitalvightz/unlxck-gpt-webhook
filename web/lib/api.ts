@@ -470,11 +470,14 @@ export function logExternalTraining(token: string, body: ExternalTrainingFields 
 }
 
 export function editExternalTraining(token: string, id: string, body: ExternalTrainingFields): Promise<TrainingHistorySession> {
-  return readJson(`/api/training/sessions/${encodeURIComponent(id)}`, { method: "PATCH", token, body: JSON.stringify(body) });
+  const payload = JSON.stringify(body);
+  // Replaying the same field replacement is safe after a lost gateway response.
+  return withTransientRetries(() => readJson(`/api/training/sessions/${encodeURIComponent(id)}`, { method: "PATCH", token, body: payload }));
 }
 
 export function deleteExternalTraining(token: string, id: string): Promise<void> {
-  return requestVoid(`/api/training/sessions/${encodeURIComponent(id)}`, { method: "DELETE", token });
+  // The backend keeps a tombstone and treats repeated deletes as successful.
+  return withTransientRetries(() => requestVoid(`/api/training/sessions/${encodeURIComponent(id)}`, { method: "DELETE", token }));
 }
 
 async function requestVoid(path: string, init?: ApiRequestInit): Promise<void> {

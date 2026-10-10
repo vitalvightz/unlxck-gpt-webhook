@@ -12,7 +12,7 @@ const prescribed: TrainingHistorySession = {
   session_rpe: 7, notes: "Coach session",
 };
 
-async function setup(page: Page, baseURL: string, lostResponse = false) {
+async function setup(page: Page, baseURL: string, lostResponse = false, failMutations = false) {
   await isolateFromNetwork(page, baseURL);
   await page.addInitScript(([key, value]) => localStorage.setItem(key, value), [storageKey, JSON.stringify({
     access_token: token, refresh_token: "test-refresh", token_type: "bearer",
@@ -21,6 +21,8 @@ async function setup(page: Page, baseURL: string, lostResponse = false) {
   })]);
   let sessions = [prescribed];
   const submissions: Record<string, unknown>[] = [];
+  let editAttempts = 0;
+  let deleteAttempts = 0;
   await page.route("**/api/**", async route => {
     const request = route.request();
     const path = new URL(request.url()).pathname;
@@ -49,10 +51,14 @@ async function setup(page: Page, baseURL: string, lostResponse = false) {
     }
     if (path.startsWith("/api/training/sessions/") && request.method() === "PATCH") {
       const body = request.postDataJSON();
+      editAttempts += 1;
+      if (failMutations && editAttempts === 1) return route.fulfill({ status: 502, contentType: "text/html", body: "<html>Bad Gateway</html>" });
       sessions[0] = { ...sessions[0], ...body, title: "Boxing" };
       return json(sessions[0]);
     }
     if (path.startsWith("/api/training/sessions/") && request.method() === "DELETE") {
+      deleteAttempts += 1;
+      if (failMutations && deleteAttempts === 1) return route.fulfill({ status: 502, contentType: "text/html", body: "<html>Bad Gateway</html>" });
       sessions = sessions.filter(row => row.source !== "external");
       return route.fulfill({ status: 204 });
     }
@@ -73,7 +79,7 @@ for (const width of [390, 1280]) {
     await page.setViewportSize({ width, height: 844 });
     const errors: string[] = [];
     page.on("pageerror", error => errors.push(error.message));
-    const submissions = await setup(page, baseURL!);
+    const submissions = await setup(page, baseURL!, false, true);
     await page.goto("/plan");
     await page.getByRole("button", { name: "Log Training", exact: true }).click();
     const form = page.getByRole("form", { name: "Log Training", exact: true });
@@ -114,7 +120,17 @@ for (const width of [390, 1280]) {
     const history = page.locator(".history-list");
     await expect(history).toContainText("Sparring");
     await expect(history.getByRole("button", { name: "Edit Strength & Power" })).toHaveCount(0);
-    await page.getByRole("button", { name: "Edit Sparring", exact: true }).click();
+    const editButton = history.getByRole("button", { name: "Edit Sparring", exact: true });
+    const deleteButton = history.getByRole("button", { name: "Delete Sparring", exact: true });
+    const editBox = await editButton.boundingBox();
+    const deleteBox = await deleteButton.boundingBox();
+    expect(Math.abs(editBox!.y - deleteBox!.y)).toBeLessThanOrEqual(2);
+    expect(editBox!.width).toBeLessThanOrEqual(44);
+    expect(deleteBox!.width).toBeLessThan(120);
+    expect(deleteBox!.x).toBeGreaterThan(editBox!.x);
+    await page.screenshot({ path: test.info().outputPath("history-compact-controls.png") });
+    expect((await new AxeBuilder({ page }).include(".history-list").analyze()).violations).toEqual([]);
+    await editButton.click();
     await choose(page, page, "Activity", "Boxing");
     await page.getByLabel("Duration (minutes)").fill("45");
     await choose(page, page, "Effort", "Moderate");
@@ -183,4 +199,48 @@ test("log yesterday's sparring with the optional date and preserve it after edit
   await expect(history).toContainText("45 min");
   await expect(history).toContainText("Hard");
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});
+
+
+test("failed edits and deletes preserve the session and allow another attempt", async ({ page, baseURL }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await setup(page, baseURL!);
+  await page.goto("/plans");
+  await page.getByRole("button", { name: "Log Training", exact: true }).click();
+  await choose(page, page, "Activity", "Sparring");
+  await page.getByLabel("Duration (minutes)").fill("60");
+  await choose(page, page, "Effort", "Hard");
+  await page.getByRole("button", { name: "Save Session", exact: true }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await page.goto("/history");
+  let fail = true;
+  const attempts: string[] = [];
+  await page.route("**/api/training/sessions/*", async route => {
+    attempts.push(route.request().method());
+    if (fail && route.request().method() === "DELETE") return route.fulfill({ status: 502, contentType: "text/html", body: "<html>Bad Gateway</html>" });
+    if (fail) return route.fulfill({ status: 403, contentType: "application/json", body: JSON.stringify({ detail: "Session could not be changed." }) });
+    await route.fallback();
+  });
+  const history = page.locator(".history-list");
+  await page.getByRole("button", { name: "Edit Sparring", exact: true }).click();
+  await page.getByLabel("Duration (minutes)").fill("45");
+  await page.getByRole("button", { name: "Save Session", exact: true }).click();
+  await expect(page.getByRole("dialog").getByRole("alert")).toContainText("Session could not be changed");
+  await expect(page.getByLabel("Duration (minutes)")).toHaveValue("45");
+  await expect(history).toContainText("60 min");
+  expect(attempts).toEqual(["PATCH"]);
+  fail = false;
+  await page.getByRole("button", { name: "Save Session", exact: true }).click();
+  await expect(history).toContainText("45 min");
+  fail = true;
+  await page.getByRole("button", { name: "Delete Boxing", exact: true }).click();
+  await expect(page.getByRole("alert").filter({ hasText: "The training service is temporarily unavailable" })).toBeVisible();
+  await expect(history).toContainText("Boxing");
+  await expect(page.getByRole("button", { name: "Delete Boxing", exact: true })).toBeEnabled();
+  expect(attempts).toEqual(["PATCH", "PATCH", "DELETE", "DELETE", "DELETE"]);
+  fail = false;
+  await page.getByRole("button", { name: "Delete Boxing", exact: true }).click();
+  await expect(history).not.toContainText("Boxing");
+  await page.reload();
+  await expect(history.getByRole("listitem")).toHaveCount(1);
 });
