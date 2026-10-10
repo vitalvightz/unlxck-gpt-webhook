@@ -191,7 +191,7 @@ jobs:
               skip==0 {print}
             '
             echo "# BEGIN UNLXCK OUTREACH WORKER"
-            echo "*/2 * * * 1-5 $BASE/run.sh >> $BASE/outreach.log 2>&1"
+            echo "*/2 * * * * $BASE/run.sh >> $BASE/outreach.log 2>&1"
             echo "*/2 * * * * $BASE/run-counter.sh >> $BASE/counter.log 2>&1"
             echo "# END UNLXCK OUTREACH WORKER"
           } > "$NEW_CRON"
