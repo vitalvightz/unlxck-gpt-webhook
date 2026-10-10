@@ -479,7 +479,7 @@ export function CurrentCampCard({
             </Link>
             <Link href="/onboarding" className={`secondary-button ${styles.buildAction}`}>
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4H5v17h14V4h-4M9 2h6v5H9zM8 11h8m-8 4h8" /></svg>
-              Complete Intake
+              Generate Camp
             </Link>
           </div>}
       </article>
