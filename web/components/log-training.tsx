@@ -1,0 +1,140 @@
+"use client";
+
+import { type FormEvent, useEffect, useId, useRef, useState } from "react";
+import { CustomSelect } from "./custom-select";
+import { editExternalTraining, logExternalTraining } from "@/lib/api";
+import { lockOverlayScroll } from "@/lib/overlay-scroll-lock";
+import { formatAppDate } from "@/lib/date-format";
+import {
+  TRAINING_ACTIVITIES, TRAINING_EFFORTS,
+  type TrainingActivity, type TrainingEffort, type TrainingHistorySession,
+} from "@/lib/training-history";
+import styles from "./log-training.module.css";
+import planStyles from "./plans/plans.module.css";
+
+const label = (value: string) => value.charAt(0).toUpperCase() + value.slice(1);
+
+type Props = { accessToken: string | null; entry?: TrainingHistorySession; onSaved?: (row: TrainingHistorySession) => void };
+
+export function LogTraining(props: Props) {
+  return props.accessToken ? <LogTrainingContent key={props.accessToken} {...props} accessToken={props.accessToken} /> : null;
+}
+
+function LogTrainingContent({ accessToken, entry, onSaved }: Props & { accessToken: string }) {
+  const [open, setOpen] = useState(false);
+  const editing = entry?.id;
+  const [activity, setActivity] = useState<TrainingActivity | "">("");
+  const [duration, setDuration] = useState("");
+  const [effort, setEffort] = useState<TrainingEffort | "">("");
+  const [trainingDay, setTrainingDay] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const [saved, setSaved] = useState<string | null>(null);
+  const dialog = useRef<HTMLDialogElement>(null);
+  const requestId = useRef<string | null>(null);
+  const currentToken = useRef<string | null>(accessToken);
+  const fieldId = useId();
+
+  useEffect(() => {
+    currentToken.current = accessToken;
+    return () => { currentToken.current = null; };
+  }, [accessToken]);
+
+  useEffect(() => {
+    if (!open) return;
+    const previous = document.activeElement as HTMLElement | null;
+    const release = lockOverlayScroll();
+    dialog.current?.showModal();
+    dialog.current?.querySelector<HTMLButtonElement>('[role="combobox"]')?.focus();
+    return () => { release(); previous?.focus(); };
+  }, [open]);
+
+  useEffect(() => {
+    if (!saved) return;
+    const timer = setTimeout(() => setSaved(null), 5000);
+    return () => clearTimeout(timer);
+  }, [saved]);
+
+  function startEdit(row?: TrainingHistorySession) {
+    setActivity(row?.activity ?? "");
+    setDuration(row?.duration_minutes?.toString() ?? "");
+    setEffort(row?.effort ?? "");
+    setTrainingDay("");
+    requestId.current = null;
+    setError(null);
+    setSaved(null);
+    setOpen(true);
+  }
+
+  async function save(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!accessToken || busy) return;
+    if (!activity || !effort) {
+      setError("Select an activity and effort."); return;
+    }
+    const minutes = Number(duration);
+    if (!Number.isInteger(minutes) || minutes < 1 || minutes > 600) {
+      setError("Enter a whole number from 1 to 600 minutes."); return;
+    }
+    const token = accessToken;
+    setBusy(true);
+    setError(null);
+    try {
+      const body = { activity, duration_minutes: minutes, effort };
+      const row = editing
+        ? await editExternalTraining(token, editing, body)
+        : await logExternalTraining(token, { ...body, ...(trainingDay ? { training_day: trainingDay } : {}), client_request_id: requestId.current ??= crypto.randomUUID() });
+      if (currentToken.current !== token) return;
+      onSaved?.(row);
+      requestId.current = null;
+      setOpen(false);
+      setSaved(`${row.title} logged successfully. Saved to Training History.`);
+    } catch (reason) {
+      if (currentToken.current === token) setError(reason instanceof Error ? reason.message : "Unable to save session. Try again.");
+    } finally { if (currentToken.current === token) setBusy(false); }
+  }
+
+  return (
+    <section className={entry ? undefined : `${planStyles.campCard} ${styles.training}`} aria-label={entry ? `Manage ${entry.title}` : "Log Training"}>
+      {entry ? <button className="ghost-button" type="button" onClick={() => startEdit(entry)} aria-haspopup="dialog" aria-label={`Edit ${entry.title}`}>Edit</button> :
+        <div className={`${planStyles.campHead} ${styles.heading}`}>
+          <div><p className={planStyles.eyebrow}>TRAINING PLAN</p><h2>Log Training</h2><p className="muted">Record a session outside Unlxck.</p></div>
+          <button className="secondary-button" type="button" onClick={() => startEdit()} aria-haspopup="dialog" aria-label="Log Training">+</button>
+        </div>}
+      {open ? (
+        <dialog ref={dialog} className={styles.dialog} aria-label={editing ? "Edit training" : "Log Training"} onCancel={event => { if (busy) event.preventDefault(); else setOpen(false); }}>
+        <h2>{editing ? "Edit training" : "Log Training"}</h2>
+        <form className={styles.form} onSubmit={save} aria-label={editing ? "Edit training" : "Log Training"}>
+          <div className="field"><label htmlFor={`${fieldId}-activity`}>Activity</label>
+            <CustomSelect id={`${fieldId}-activity`} value={activity} disabled={busy} placeholder="Select activity"
+              options={TRAINING_ACTIVITIES.map(value => ({ value, label: label(value) }))}
+              onChange={value => { setActivity(value as TrainingActivity); requestId.current = null; }} />
+          </div>
+          <label className="field"><span>Duration (minutes)</span>
+            <input type="number" inputMode="numeric" required min={1} max={600} step={1} value={duration} disabled={busy} onChange={event => { setDuration(event.target.value); requestId.current = null; }} />
+          </label>
+          <div className="field"><label htmlFor={`${fieldId}-effort`}>Effort</label>
+            <CustomSelect id={`${fieldId}-effort`} value={effort} disabled={busy} placeholder="Select effort"
+              options={TRAINING_EFFORTS.map(value => ({ value, label: label(value) }))}
+              onChange={value => { setEffort(value as TrainingEffort); requestId.current = null; }} />
+          </div>
+          {!editing ? <details className={styles.dateChoice}>
+            <summary>Training date · {trainingDay ? formatAppDate(trainingDay) : "Current day"}</summary>
+            <label className="field"><span>Training date (optional)</span>
+              <input type="date" value={trainingDay} disabled={busy} onChange={event => { setTrainingDay(event.target.value); requestId.current = null; }} />
+            </label>
+            <p className="muted">Leave blank for your current training day.</p>
+          </details> : null}
+          <div className={styles.actions}>
+            <button className="cta" type="submit" disabled={busy}>{busy ? "Saving…" : "Save Session"}</button>
+            <button className="ghost-button" type="button" disabled={busy} onClick={() => { setOpen(false); setError(null); }}>Cancel</button>
+          </div>
+          {error ? <p className="error-banner" role="alert">{error}</p> : null}
+        </form>
+        </dialog>
+      ) : null}
+      {saved && !entry ? <p className="muted" role="status">{saved}</p> : null}
+    </section>
+  );
+}
