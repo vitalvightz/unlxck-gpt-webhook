@@ -585,6 +585,15 @@ def _parse_guided_injury(guided_injury: GuidedInjury) -> tuple[list[dict[str, st
 
         injury_entry = resolve_guided_injury_entry(guided_injury, injury_entry)
 
+        # The area-only parser can leave an unspecified rehab type after the
+        # guided notes resolve the second live LOAD profile. Keep its canonical
+        # type at the episode selector boundary; applicability is still checked
+        # by the owned clinical policy, never inferred from these notes alone.
+        if (injury_entry.get("canonical_location") == "elbow"
+                and injury_entry.get("injury_type") == "tendonitis"
+                and injury_entry.get("rehab_type") in (None, "", "unspecified")):
+            injury_entry["rehab_type"] = "tendonitis"
+
         laterality = injury_entry.get("laterality") or injury_entry.get("side")
         display_location = strip_guided_laterality(guided_injury.area, laterality)
         if display_location and is_clean_guided_display_location(guided_injury.area, injury_entry):
