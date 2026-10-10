@@ -1,0 +1,77 @@
+{
+  "schema_version": 1,
+  "token_aliases": [
+    {
+      "field": "tags",
+      "token": "aerobic",
+      "label": "Stamina",
+      "rationale": "Explicit aerobic training quality; no claim about session dose."
+    },
+    {
+      "field": "qualities",
+      "token": "aerobic_capacity",
+      "label": "Stamina",
+      "rationale": "Explicit aerobic capacity quality."
+    },
+    {
+      "field": "tags",
+      "token": "anti_rotation",
+      "label": "Core stability",
+      "rationale": "Resisting trunk rotation is the stated training quality."
+    },
+    {
+      "field": "qualities",
+      "token": "anti_rotation",
+      "label": "Core stability",
+      "rationale": "Resisting trunk rotation is the stated training quality."
+    },
+    {
+      "field": "tags",
+      "token": "reaction",
+      "label": "Reaction speed",
+      "rationale": "Explicit reaction training; reactive rebound mechanics alone do not qualify."
+    },
+    {
+      "field": "qualities",
+      "token": "reaction",
+      "label": "Reaction speed",
+      "rationale": "Explicit cue-response quality."
+    },
+    {
+      "field": "qualities",
+      "token": "decision_reaction",
+      "label": "Reaction speed",
+      "rationale": "Explicit decision-response quality."
+    },
+    {
+      "field": "qualities",
+      "token": "tactile_reaction",
+      "label": "Reaction speed",
+      "rationale": "Explicit tactile response quality."
+    },
+    {
+      "field": "qualities",
+      "token": "reactive_agility",
+      "label": "Reaction speed",
+      "rationale": "Explicit reactive agility quality; no generic reactive token mapping."
+    },
+    {
+      "field": "tags",
+      "token": "scap_control",
+      "label": "Shoulder control",
+      "rationale": "Explicit scapular control; scapular retraction alone is not broadened."
+    }
+  ],
+  "entry_aliases": {
+    "exercise_bank.json:17025c12-1375-4e1b-bcef-d7c1d0c8f515": {
+      "label": "Punching power",
+      "row_sha256": "fda62811965f75902cc129f65f2b8f993b86b477cd275d874d91e9b60f7fcec4",
+      "rationale": "Named hook throw with rotational movement and power method provides punching context."
+    },
+    "exercise_bank.json:450fed7d-0192-40d1-ab31-15add9479979": {
+      "label": "Punching power",
+      "row_sha256": "8c845dff826beb5de82907d52849482479a0c80bb292842e03cdaf402298339f",
+      "rationale": "Named punch simulation with rotational movement provides punching context."
+    }
+  }
+}
