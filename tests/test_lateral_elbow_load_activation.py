@@ -140,6 +140,21 @@ def test_permission_alone_and_completion_alone_do_not_supply_function():
     assert view(b).open_injuries[0]["rehab_decision"]["stage"] == "restore"
 
 
+@pytest.mark.parametrize("permission", ["loading", "sport_specific"])
+def test_consumer_journey_does_not_fabricate_missing_starter_suitability(permission):
+    b = bundle(assessed=False, permission=permission)
+    current = view(b)
+    decision = current.open_injuries[0]["rehab_decision"]
+    assert decision["stage"] == "restore"
+    transition = decision["progression"]["next_transition"]
+    assert transition["status"] == "blocked"
+    assert "assessment_observation_missing" in transition["reason_codes"]
+    assert all(row["event_type"] != "rehab_progression_assessment" for row in b[0].injury_episode_events.values())
+    # The fixture already has reviewed RESTORE work, during/next-day responses,
+    # improving injury details and permission. None asserts grip or motion.
+    assert next(iter(b[0].rehab_exposures.values()))
+
+
 @pytest.mark.parametrize("field", ["athlete_id", "injury_id", "injury_episode_id"])
 def test_wrong_ownership_fails_closed(field):
     b = bundle()

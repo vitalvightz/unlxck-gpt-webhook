@@ -4,7 +4,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { window as domWindow } from "../test-dom";
 import { act } from "react";
 import { createRoot } from "react-dom/client";
-import { InjuryCareStatus, DelayedRehabResponse, EffectiveClinicianClearanceStatus } from "./injury-care-status";
+import { InjuryCareStatus, InjuryClearance, DelayedRehabResponse, EffectiveClinicianClearanceStatus } from "./injury-care-status";
 import type { InjuryFlagRecord } from "@/lib/types";
 
 const injury: InjuryFlagRecord = {
@@ -28,6 +28,34 @@ async function click(container: HTMLElement, label: string) {
   const button = Array.from(surface.querySelectorAll("button")).find(b => b.textContent === (label === "Save clearance" ? "Save changes" : label) || b.getAttribute("aria-label") === label);
   assert.ok(button, label);
   await act(async () => { button.dispatchEvent(new domWindow.MouseEvent("click", { bubbles: true })); });
+}
+
+for (const policyId of ["achilles_tendonitis", "elbow_tendonitis"]) {
+  test(`${policyId} clearance has only the existing two permissions and no assessment worksheet`, async () => {
+    const container = document.createElement("div"); document.body.appendChild(container);
+    const root = createRoot(container);
+    const original = globalThis.fetch;
+    const calls: Array<Record<string, unknown>> = [];
+    globalThis.fetch = (async (_input, init) => {
+      calls.push(JSON.parse(String(init?.body)));
+      return new Response("{}", { status: 200, headers: { "content-type": "application/json" } });
+    }) as typeof fetch;
+    try {
+      await act(async () => root.render(<InjuryClearance injury={{ ...injury,
+        rehab_decision: { ...injury.rehab_decision!, policy_id: policyId } }} token="token" onRefresh={async () => {}} />));
+      await click(container, "Report clearance");
+      const dialog = document.querySelector('[role="dialog"]')!;
+      assert.equal(dialog.querySelectorAll("fieldset").length, 2);
+      assert.equal(dialog.querySelectorAll("form").length, 1);
+      assert.equal(dialog.querySelectorAll('select, textarea, input[type="datetime-local"], input[type="date"], input[type="number"]').length, 0);
+      assert.doesNotMatch(dialog.textContent ?? "", /Report clinician rehab assessment|assessor|heel-rise|grip task|assessment time/i);
+      await click(container, "Strengthening / loading");
+      assert.equal(calls.length, 1);
+      assert.equal(calls[0].event_type, "clinician_clearance_report");
+      assert.deepEqual(calls[0].rehabilitation_permission, { schema_version: 1, level: "loading" });
+      assert.equal("assessment" in calls[0], false);
+    } finally { globalThis.fetch = original; act(() => root.unmount()); container.remove(); }
+  });
 }
 
 for (const [label, scopes] of [

@@ -1,6 +1,8 @@
 # Lateral elbow RESTORE to LOAD implementation
 
-Started from Main `8d125da5`, then integrated latest Main `0d6022d9` (through #2811), retaining its Today and session-preview updates. PR #2802 was confirmed merged before work began. This change activates one bounded option through the existing engine; production activation requires merging and deploying the PR.
+Started from Main `8d125da5`, then integrated latest Main `0d6022d9` (through #2811), retaining its Today and session-preview updates. PR #2802 was confirmed merged before work began. The bounded elbow option can execute only with existing valid suitability evidence. The consumer workflow does not collect clinical assessments: without that evidence LOAD stays blocked. Production use requires merging and deploying the PR.
+
+Consumer-workflow correction: GitHub reports #2813 merged at `2026-10-10T14:14:27Z`, before these corrections were published. The correction is a separate unmerged follow-up against Main `4d7dd5cf`; it removes the athlete worksheet rather than weakening or replacing its backend safeguard.
 
 ## 1. Exact applicability
 
@@ -27,11 +29,29 @@ Unsupported assumptions deliberately excluded: numeric pain/ROM/grip cutoffs, un
 
 Existing typed `RehabProgressionAssessment` envelope and protocol registry, `rehab_progression_assessment` event, injury-episode observation endpoint/table, ownership reader, pathway requirement model, progression resolver, reviewed fixed-prescription contracts, clinician_clearance_report, exposure/delayed-response capture, Today scheduling/allocation, generation context and frozen-work checks. No new engine, generic clinical layer, event type, endpoint, portal or persistence table.
 
-## 4. New observations
+## 4. Athlete interaction and retained observations
 
-`lateral_elbow_progression_v1` v1 payload: subtype, course, safety_screen, pain_irritability, elbow_wrist_motion, grip_task, grip_function, wrist_extension_task, wrist_extension_tolerance, option_recommended. Categorical functional judgments are clinician-assessed, athlete-reported; quantitative force or range is never inferred. Unknown defaults stay unknown. Shared side, assessor, assessed_at, ownership and source fields remain authoritative. The existing shared envelope is extended with a typed elbow member.
+No new athlete assessment fields. The removed elbow questionnaire had eight dropdowns and an assessment date/time input. Retained backend `lateral_elbow_progression_v1` v1 observations can evaluate existing valid data: subtype, course, safety_screen, pain_irritability, elbow_wrist_motion, grip_task, grip_function, wrist_extension_task, wrist_extension_tolerance, option_recommended. These are not inferred from permission, symptom trend or completion. Shared ownership, side, actual observation time and provenance checks remain unchanged; no timestamp or acceptable result is manufactured.
 
-The optional capture form sits collapsed inside Clearance & restrictions only for this profile. It is an occasional clinician assessment report, not another daily check-in. Today cards, Better/Same/Worse, session completion and next-day response controls remain in their existing places.
+The form, import, form tests and its CSS are removed. The existing progression view explains that LOAD is on hold because current records cannot establish grip, movement and tolerance for this starter; it does not direct the athlete to fill another form. Permission, injury details, completion and Better/Same/Worse remain the only existing consumer inputs. No new form, question, portal, upload or UI section replaces the worksheet.
+
+### Exact journey counts before and after this rework
+
+Count one selection, field entry or button activation as one interaction; exclude individual keyboard keystrokes/native picker mechanics. These counts describe successful single-injury actions, not network retries or clinically necessary injury reclassification.
+
+| Journey step | Before | After |
+| --- | --- | --- |
+| Elbow progression worksheet, enough data to attempt eligibility | 9 answers (8 selections + 1 date/time), Save, open clearance, expand form = **12 interactions** | **0 answers, 0 extra interactions**; missing evidence blocks LOAD |
+| Achilles assessment in Today | **0** (already not rendered) | **0** |
+| Clinician advice changes, both permission levels updated | 2 decisions + open + Save = **4** | **4**, unchanged; no repeat when advice is unchanged |
+| Achilles location clarification within existing injury details | **1** selection, once; existing injury save | **1**, unchanged; unknown location cannot unlock the midportion starter |
+| Standalone rehab completion | **1** Completed/Modified/Skipped tap | **1**, unchanged |
+| Injury response after rehab | **1** Better/Same/Worse tap | **1**, unchanged |
+| Next-day response, when pending | **1** existing injury-response tap | **1**, unchanged; same tap records the exact-episode follow-up |
+
+Normal standalone rehab remains **2 interactions on the rehab day**: complete the work and report the injury response when needed. A pending next-day response takes **1 existing injury-response tap**; no separate duplicate answer or Save. Mixed S&C sessions retain their normal session log and one existing rehab-completion choice. Multi-injury reports stay separate and episode-bound; no answer for one injury supplies another's evidence.
+
+The legacy Achilles assessment and post-rehab questionnaire components are not mounted by Today. The active session panel sends `rehab_tracking=injury_checkin`; actual completion creates exposure, a same-day explicit response after that exposure supplies attributable tolerance, and the existing next-day tap records the delayed response. Earlier check-ins do not prove future tolerance. We retain those safeguards and do not modify unused components to claim a UX improvement.
 
 ## 5. Criterion and PASS
 
@@ -51,7 +71,7 @@ Supported hand-weight wrist extension: affected forearm palm-down on a table, wr
 
 ## 8–9. Activation, Today and generation
 
-The elbow profile is live through LOAD in this branch. Today produces a real eligible block, schedules it, freezes it at start and captures completion/exposure without inventing measurements. Daily allocation prevents repeated work. Generation hydrates the same owned assessment/permission/exposures and uses the same policy decision. Incoming client generation context is stripped before the server snapshot; mismatched owned identities cannot supply advanced evidence. No manual stage flag is introduced.
+The elbow option is executable through the shared engine only when existing valid evidence satisfies every gate. A consumer with permission, completion and improving symptoms but no starter-suitability evidence remains at RESTORE: there is no new consumer questionnaire or automatic route around that blocker. For valid existing records Today can schedule a real block, freeze it at start and capture completion/exposure; generation uses the same owned decision. Daily allocation, stripped incoming client context and exact identities remain authoritative. No manual stage flag is introduced.
 
 Training can coexist only where existing clearance and multi-injury safety allow it. Elbow progression grants no contact permission. DYNAMIC and RETURN stay closed.
 
@@ -83,7 +103,7 @@ This criterion is a conservative product rule, not a clinically validated diagno
 | --- | --- | --- |
 | Applicability | Explicit midportion site | Reported assessed lateral, subacute/chronic, exact side |
 | Permission | Explicit self-reported rehab loading/sport-specific | Same existing permission contract |
-| Functional gate | Old worksheet/admin/trusted-review gates are not mandatory after #2797 | New typed categorical reported clinician-function criterion through the existing assessment registry |
+| Functional gate | Old worksheet/admin/trusted-review gates are not mandatory after #2797 | Existing suitability evidence must satisfy the retained typed criterion; no consumer questionnaire and no inferred PASS |
 | Stage authority | Shared progression engine and exposure responses | Same engine and requirement evaluation |
 | Prescription | Floor-level controlled lowering, bodyweight, 1×10 maximum daily | Supported empty-hand wrist extension, 1×10 maximum daily |
 | Persistence | Existing episode events | Same event/endpoint/table; one typed payload member |

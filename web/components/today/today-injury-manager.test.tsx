@@ -1491,25 +1491,34 @@ test("switching away from Other drops its specific type", async () => {
 });
 
 
-test("Achilles Today omits the worksheet and Same reuses injury tracking plus an episode-bound next-day response", async () => {
+for (const [area, policyId] of [["Achilles", "achilles_tendonitis"], ["elbow", "elbow_tendonitis"]] as const) {
+for (const [label, status, response] of [["Better", "improving", "better"], ["Same", "ongoing", "same"], ["Worse", "worse", "worse"]] as const) {
+test(`${area} Today has no worksheet and one ${label} tap records the injury and episode-bound next-day response`, async () => {
   const { container, root, cleanup } = mount();
   const original = globalThis.fetch;
   const calls: Array<{ url: string; body: Record<string, unknown> }> = [];
-  const achilles = { ...SHOULDER, id: "achilles", episode_id: "episode", body_area: "Left Achilles", description: "Left Achilles tendonitis" };
+  const injury: InjuryFlagRecord = { ...SHOULDER, id: "injury", episode_id: "episode", body_area: `Left ${area}`,
+    description: `Left ${area} tendonitis`, rehab_decision: { policy_id: policyId, outcome: "prescribed_rehab",
+      summary: "Current rehab", reason_codes: [], stage: "restore" } };
   globalThis.fetch = (async (input, init) => {
     calls.push({ url: String(input), body: JSON.parse(String(init?.body)) });
-    return new Response(JSON.stringify({ open_injuries: [achilles] }), { status: 200 });
+    return new Response(JSON.stringify({ open_injuries: [injury] }), { status: 200 });
   }) as typeof fetch;
   try {
-    await act(async () => root.render(<TodayInjuryManager openInjuries={[achilles]} token="token" onRefresh={async () => {}}
-      delayedPrompts={[{ injury_id: "achilles", injury_episode_id: "episode", exposure_id: "exposure", region: "achilles", question: "After rehab?", options: ["better", "same", "worse", "not_sure"] }]} />));
+    await act(async () => root.render(<TodayInjuryManager openInjuries={[injury]} token="token" onRefresh={async () => {}}
+      delayedPrompts={[{ injury_id: "injury", injury_episode_id: "episode", exposure_id: "exposure", region: area.toLowerCase(), question: "After rehab?", options: ["better", "same", "worse", "not_sure"] }]} />));
     assert.doesNotMatch(container.textContent ?? "", /Heel-rise|assessor|Achilles assessment|Range of motion|Loading task/);
-    await click(statusButton(container, "Same"));
-    assert.deepEqual(calls[0].body.injuries, [{ flag_id: "achilles", status: "ongoing" }]);
+    assert.equal(container.querySelector('input[type="datetime-local"]'), null);
+    await click(statusButton(container, label));
+    assert.equal(calls.length, 2); // Two owned records, one athlete tap.
+    assert.deepEqual(calls[0].body.injuries, [{ flag_id: "injury", status }]);
     assert.equal(calls[1].body.event_type, "delayed_rehab_response");
-    assert.equal(calls[1].body.response, "same");
+    assert.equal(calls[1].body.response, response);
+    assert.equal(calls[1].body.exposure_id, "exposure");
   } finally { globalThis.fetch = original; cleanup(); }
 });
+}
+}
 
 test("a failed delayed response cannot block the current worsening report", async () => {
   const { container, root, cleanup } = mount();
