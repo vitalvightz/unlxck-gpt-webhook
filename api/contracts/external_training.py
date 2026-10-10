@@ -1,8 +1,9 @@
 """Completed external work, independent of plan/prescription identities."""
+from datetime import date
 from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, StrictInt
+from pydantic import BaseModel, ConfigDict, Field, StrictInt, field_validator
 
 Activity = Literal["sparring", "boxing", "roadwork", "strength", "conditioning", "other"]
 Effort = Literal["easy", "moderate", "hard"]
@@ -18,6 +19,16 @@ class ExternalTrainingFields(BaseModel):
 
 class ExternalTrainingCreate(ExternalTrainingFields):
     client_request_id: UUID
+    training_day: date | None = None
+
+    @field_validator("training_day", mode="before")
+    @classmethod
+    def validate_training_day(cls, value):
+        if value is None:
+            return None
+        if not isinstance(value, str) or len(value) != 10:
+            raise ValueError("Use a training date in YYYY-MM-DD format.")
+        return date.fromisoformat(value)
 
 
 class TrainingHistorySession(BaseModel):

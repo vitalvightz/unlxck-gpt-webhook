@@ -5,6 +5,8 @@ form: activity, whole minutes (1–600, matching the existing session-duration
 boundary), and reported Easy / Moderate / Hard effort. Saving requires neither
 an active plan nor a prescribed session. The same Plan history shows completed
 Unlxck sessions and manual entries, with edits/deletion only for manual work.
+An optional training-date disclosure allows logging yesterday or earlier work;
+the default form still shows only the three required fields.
 The existing History session tab reads the same service, retaining prescribed
 RPE, pain, notes, reasons and skipped records; skipped work is never adaptive load.
 
@@ -18,12 +20,17 @@ and service-role queries explicitly scope every read/update/delete to the actor.
 Reading prior history and deleting entries remain available after consent withdrawal.
 The runtime schema checker includes the table, RLS and indexes.
 
-The server assigns the athlete-local training day using the existing 03:00
-rollover, including DST handling. Edits cannot change its date or owner. Atomic
+When no date is supplied, the server assigns the athlete-local training day using
+the existing 03:00 rollover, including DST handling. An explicit ISO date may
+select that day or earlier; future training days are rejected against the same
+local boundary. Edits cannot change its recorded date or owner. Atomic
 conflict-ignore insertion plus an immutable original-request fingerprint makes
 retries safe across date changes and subsequent edits. Deleted rows retain a
 tombstone, so a late retry cannot recreate them. There is no plan FK: deleting or
 regenerating a plan does not delete manual history. Account deletion still cascades.
+Omitting the date retains the original three-field request fingerprint, preserving
+retries from earlier clients. Explicit dates are part of the retry identity.
+Backdating uses the existing date column and requires no additional migration.
 
 `training_history` merges terminal `session_completions` with live
 manual entries. Exercise logs and sparring detail logs are detail records, never
@@ -70,10 +77,14 @@ independence, cache invalidation, both adaptive inputs and decisions, stale read
 failed history, planned-work exclusion, and unchanged rehab/XP evidence. Store
 query tests verify privileged-client scoping. Existing prescribed completion,
 Today/readiness, generation, rehab and XP tests provide regression coverage.
+Backdated 60-minute Hard Sparring reaches both adaptive paths on its reported day;
+future/invalid dates, local rollover, retry conflicts and legacy fingerprints are tested.
 
 `web/e2e/log-training.spec.ts` exercises the actual Plan UI and API adapter at
 390px and 1280px, with isolated API responses: log, reload, edit, delete, retry
 identity, field count, accessibility and overflow. It uses no live athlete data.
+The optional-date mobile flow verifies logging yesterday, reloading and editing
+without moving the recorded training day.
 
 The migration also runs on isolated PostgreSQL via PGlite:
 
@@ -86,5 +97,6 @@ node tests/sql/external_training_sessions.test.mjs
 
 This verifies actual SQL constraints, RLS, forbidden browser writes, concurrent
 request keys, plan independence and edit/delete retry safety. Production migration
-application and live Supabase/PostgREST verification are deployment follow-ups.
-There are no backdating controls, recurring sessions, custom plans or library changes.
+application is complete on `unlxckpdf`, with live catalog verification of constraints,
+RLS, grants and migration history. Live API/PostgREST verification remains a
+deployment follow-up. There are no recurring sessions, custom plans or library changes.

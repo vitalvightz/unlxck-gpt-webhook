@@ -33,11 +33,16 @@ def training_history(store, athlete_id: str, *, limit: int = 200, prescribed: li
 def create_external_training(store, athlete_id: str, athlete_timezone: str | None,
                              body: ExternalTrainingCreate, *, now: datetime | None = None) -> dict:
     now = now or datetime.now(timezone.utc)
-    fields = body.model_dump(mode="json", exclude={"client_request_id"})
+    current_day = resolve_training_day_str(now, athlete_timezone=athlete_timezone)
+    training_day = body.training_day.isoformat() if body.training_day else current_day
+    if training_day > current_day:
+        raise HTTPException(422, "Training date cannot be after your current training day.")
+    # Preserve existing request fingerprints when the optional date is omitted.
+    fields = body.model_dump(mode="json", exclude={"client_request_id"}, exclude_none=True)
     fingerprint = hashlib.sha256(json.dumps(fields, sort_keys=True).encode()).hexdigest()
     row = store.create_external_training_session(athlete_id, {
         **fields, "client_request_id": str(body.client_request_id), "request_fingerprint": fingerprint,
-        "training_day": resolve_training_day_str(now, athlete_timezone=athlete_timezone),
+        "training_day": training_day,
     })
     if row.get("deleted_at"):
         raise HTTPException(410, "This session was deleted. Log new work with a new request ID.")

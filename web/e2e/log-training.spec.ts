@@ -40,7 +40,7 @@ async function setup(page: Page, baseURL: string, lostResponse = false) {
       const body = request.postDataJSON();
       submissions.push(body);
       if (!sessions.some(row => row.source === "external")) sessions = [{
-        id: "00000000-0000-4000-8000-000000000010", source: "external", training_day: "2026-10-10", status: "done",
+        id: "00000000-0000-4000-8000-000000000010", source: "external", training_day: body.training_day ?? "2026-10-10", status: "done",
         plan_id: null,
         title: "Sparring", activity: body.activity, duration_minutes: body.duration_minutes, effort: body.effort,
       }, ...sessions];
@@ -70,7 +70,8 @@ for (const width of [390, 1280]) {
     await page.goto("/plan");
     await page.getByRole("button", { name: "Log Training", exact: true }).click();
     const form = page.getByRole("form", { name: "Log Training", exact: true });
-    await expect(form.locator("input, select")).toHaveCount(3);
+    await expect(form.locator("input[required], select[required]")).toHaveCount(3);
+    await expect(form.getByLabel("Training date (optional)")).toBeHidden();
     await form.getByRole("combobox", { name: "Activity", exact: true }).selectOption("sparring");
     await form.getByLabel("Duration (minutes)").fill("60");
     await form.getByRole("combobox", { name: "Effort", exact: true }).selectOption("hard");
@@ -127,4 +128,29 @@ test("retry after a lost save response keeps the same request ID", async ({ page
   await expect(page.getByRole("list", { name: "Training history" }).getByRole("listitem")).toHaveCount(2);
   expect(submissions).toHaveLength(2);
   expect(submissions[1].client_request_id).toBe(submissions[0].client_request_id);
+});
+
+test("log yesterday's sparring with the optional date and preserve it after editing", async ({ page, baseURL }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  const submissions = await setup(page, baseURL!);
+  await page.goto("/plans");
+  await page.getByRole("button", { name: "Log Training", exact: true }).click();
+  await page.getByRole("combobox", { name: "Activity", exact: true }).selectOption("sparring");
+  await page.getByLabel("Duration (minutes)").fill("60");
+  await page.getByRole("combobox", { name: "Effort", exact: true }).selectOption("hard");
+  await page.getByText("Training date · Current day", { exact: true }).click();
+  await page.getByLabel("Training date (optional)").fill("2026-10-09");
+  await page.screenshot({ path: test.info().outputPath("backdated-training-form.png") });
+  expect((await new AxeBuilder({ page }).include('[aria-label="Your Training"]').analyze()).violations).toEqual([]);
+  await page.getByRole("button", { name: "Save Session", exact: true }).click();
+  expect(submissions[0]).toMatchObject({ activity: "sparring", duration_minutes: 60, effort: "hard", training_day: "2026-10-09" });
+  const history = page.getByRole("list", { name: "Training history" });
+  await expect(history).toContainText("Fri 09 Oct 2026");
+  await page.reload();
+  await page.getByRole("button", { name: "Edit Sparring", exact: true }).click();
+  await page.getByLabel("Duration (minutes)").fill("45");
+  await page.getByRole("button", { name: "Save Session", exact: true }).click();
+  await expect(history).toContainText("Fri 09 Oct 2026");
+  await expect(history).toContainText("45 min · Hard");
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });

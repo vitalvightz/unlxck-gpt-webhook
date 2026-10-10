@@ -465,7 +465,7 @@ export function getTrainingHistory(token: string, includeSkipped = false): Promi
   return readJson(includeSkipped ? "/api/training/history?include_skipped=true&limit=200" : "/api/training/history", { token });
 }
 
-export function logExternalTraining(token: string, body: ExternalTrainingFields & { client_request_id: string }): Promise<TrainingHistorySession> {
+export function logExternalTraining(token: string, body: ExternalTrainingFields & { client_request_id: string; training_day?: string }): Promise<TrainingHistorySession> {
   return readJson("/api/training/sessions", { method: "POST", token, body: JSON.stringify(body) });
 }
 

@@ -10,4 +10,6 @@
 .row h3 { margin: 4px 0; font-size: var(--type-title-sm); overflow-wrap: anywhere; }
 .row p { margin: 0; }
 .date { color: var(--text-muted); font-size: var(--type-label-sm); }
+.dateChoice summary { cursor: pointer; min-height: 44px; display: list-item; align-content: center; }
+.dateChoice label { margin-top: 8px; }
 @media (max-width: 480px) { .row { align-items: flex-start; flex-direction: column; } .heading { align-items: flex-start; flex-direction: column; } }

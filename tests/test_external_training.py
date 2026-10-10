@@ -1,6 +1,6 @@
 """Manual work is independent of prescriptions, but shared readiness evidence."""
 import copy
-from datetime import datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 import logging
 from uuid import uuid4
 
@@ -106,6 +106,8 @@ def test_ownership_and_authentication(api):
     {"duration_minutes": 60.5}, {"duration_minutes": True}, {"duration_minutes": "60"},
     {"effort": "RPE 8"}, {"effort": "Hard"}, {"activity": "rehab"},
     {"training_day": "2027-01-01"}, {"plan_id": str(uuid4())},
+    {"training_day": "2026-02-30"}, {"training_day": "2026-10-09T12:00:00Z"},
+    {"training_day": 1791547200}, {"training_day": True},
     {"client_request_id": "not-a-uuid"},
 ])
 def test_invalid_inputs(api, change):
@@ -128,6 +130,50 @@ def test_athlete_local_day_rollover_dst_and_retry(zone, instant, expected):
     assert first["training_day"] == expected
     retry = create_external_training(store, "athlete-1", zone, request, now=NOW.replace(day=26))
     assert retry["training_day"] == expected and retry["id"] == first["id"]
+
+
+def test_backdated_api_logging_and_retry_keep_the_reported_day(api):
+    client, _ = api
+    current_day = date.fromisoformat(log(api)["training_day"])
+    yesterday = (current_day - timedelta(days=1)).isoformat()
+    payload = body(training_day=yesterday)
+    first = client.post("/api/training/sessions", headers=AUTH, json=payload)
+    assert first.status_code == 201 and first.json()["training_day"] == yesterday
+    retry = client.post("/api/training/sessions", headers=AUTH, json=payload)
+    assert retry.json()["id"] == first.json()["id"]
+    assert len(history(client)) == 2
+    changed_date = {**payload, "training_day": (current_day - timedelta(days=2)).isoformat()}
+    assert client.post("/api/training/sessions", headers=AUTH, json=changed_date).status_code == 409
+
+
+def test_selected_date_respects_local_rollover_and_rejects_future_work():
+    from fastapi import HTTPException
+    store = FakeStore()
+    instant = datetime.fromisoformat("2026-10-11T02:30:00+00:00")
+    # New York is still on the 10th, and Auckland's training day is the 11th.
+    future = ExternalTrainingCreate(**body(training_day="2026-10-11"))
+    with pytest.raises(HTTPException) as error:
+        create_external_training(store, "athlete-1", "America/New_York", future, now=instant)
+    assert error.value.status_code == 422 and not store.external_training_sessions
+    accepted = create_external_training(store, "athlete-1", "Pacific/Auckland", future, now=instant)
+    assert accepted["training_day"] == "2026-10-11"
+    before_rollover = datetime.fromisoformat("2026-10-25T01:30:00+00:00")
+    with pytest.raises(HTTPException):
+        create_external_training(store, "athlete-1", "Europe/London",
+            ExternalTrainingCreate(**body(training_day="2026-10-25")), now=before_rollover)
+
+
+def test_omitted_date_keeps_existing_retry_fingerprint():
+    import hashlib
+    import json
+    store = FakeStore()
+    request = ExternalTrainingCreate(**body())
+    row = create_external_training(store, "athlete-1", None, request, now=NOW)
+    original_fields = request.model_dump(mode="json", exclude={"client_request_id", "training_day"})
+    assert row["request_fingerprint"] == hashlib.sha256(json.dumps(original_fields, sort_keys=True).encode()).hexdigest()
+    explicit_null = ExternalTrainingCreate(**request.model_dump(mode="json"))
+    retry = create_external_training(store, "athlete-1", None, explicit_null, now=NOW + timedelta(days=1))
+    assert retry["id"] == row["id"] and retry["training_day"] == DAY
 
 
 def test_plan_deletion_and_regeneration_do_not_erase_manual_history(api):
@@ -197,6 +243,23 @@ def test_sixty_minutes_hard_sparring_reaches_both_paths_without_rpe_or_contact_i
     assert history_input["workload"]["hard_minutes"] == 60
     assert history_input["sessions"][0]["effort"] == "hard"
     assert not sparring_readiness_flags(generation.training_context.sparring_readiness)
+
+
+def test_yesterdays_sixty_minutes_hard_sparring_reaches_both_adaptive_paths(monkeypatch):
+    store = FakeStore()
+    request = ExternalTrainingCreate(**body(training_day="2026-10-09"))
+    row = create_external_training(store, "athlete-1", "Europe/London", request, now=NOW)
+    today = adaptive_context(store)
+    assert today.recent_sessions[0]["training_day"] == "2026-10-09"
+    assert completed_workload(today.recent_sessions, DAY)["hard_minutes"] == 60
+    generation = generation_context(store, monkeypatch)
+    evidence = generation.training_context.sparring_readiness["training_history"]
+    assert evidence["sessions"][0]["id"] == row["id"]
+    assert evidence["workload"]["hard_minutes"] == 60
+    assert "session_rpe" not in evidence["sessions"][0]
+    assert not sparring_readiness_flags(generation.training_context.sparring_readiness)
+    retry = create_external_training(store, "athlete-1", "Europe/London", request, now=NOW + timedelta(days=1))
+    assert retry["id"] == row["id"] and retry["training_day"] == "2026-10-09"
 
 
 def test_repeated_workload_with_poor_readiness_uses_existing_today_and_generation_controls(monkeypatch):

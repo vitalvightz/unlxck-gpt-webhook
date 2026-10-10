@@ -24,6 +24,7 @@ function TrainingHistoryContent({ accessToken }: { accessToken: string }) {
   const [activity, setActivity] = useState<TrainingActivity | "">("");
   const [duration, setDuration] = useState("");
   const [effort, setEffort] = useState<TrainingEffort | "">("");
+  const [trainingDay, setTrainingDay] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [historyError, setHistoryError] = useState<string | null>(null);
@@ -50,6 +51,7 @@ function TrainingHistoryContent({ accessToken }: { accessToken: string }) {
     setActivity(row?.activity ?? "");
     setDuration(row?.duration_minutes?.toString() ?? "");
     setEffort(row?.effort ?? "");
+    setTrainingDay("");
     requestId.current = null;
     setError(null);
     setSaved(false);
@@ -70,7 +72,7 @@ function TrainingHistoryContent({ accessToken }: { accessToken: string }) {
       const body = { activity, duration_minutes: minutes, effort };
       const row = editing
         ? await editExternalTraining(token, editing, body)
-        : await logExternalTraining(token, { ...body, client_request_id: requestId.current ??= crypto.randomUUID() });
+        : await logExternalTraining(token, { ...body, ...(trainingDay ? { training_day: trainingDay } : {}), client_request_id: requestId.current ??= crypto.randomUUID() });
       if (currentToken.current !== token) return;
       setRows(previous => sortTrainingHistory([row, ...previous.filter(item => !(item.source === row.source && item.id === row.id))]));
       requestId.current = null;
@@ -122,6 +124,13 @@ function TrainingHistoryContent({ accessToken }: { accessToken: string }) {
               {TRAINING_EFFORTS.map(value => <option key={value} value={value}>{label(value)}</option>)}
             </select>
           </label>
+          {!editing ? <details className={styles.dateChoice}>
+            <summary>Training date · {trainingDay ? formatAppDate(trainingDay) : "Current day"}</summary>
+            <label className="field"><span>Training date (optional)</span>
+              <input type="date" value={trainingDay} disabled={busy} onChange={event => { setTrainingDay(event.target.value); requestId.current = null; }} />
+            </label>
+            <p className="muted">Leave blank for your current training day.</p>
+          </details> : null}
           <div className={styles.actions}>
             <button className="cta" type="submit" disabled={busy}>{busy ? "Saving…" : "Save Session"}</button>
             <button className="ghost-button" type="button" disabled={busy} onClick={() => { setOpen(false); setEditing(null); setError(null); }}>Cancel</button>
