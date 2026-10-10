@@ -628,8 +628,8 @@ html .today-page .today-decision-banner[data-tone] {
 
 .today-injury-chips {
   display: flex;
-  flex-wrap: wrap;
-  gap: 6px 16px;
+  align-items: center;
+  gap: 12px;
   margin: 0;
   padding: 10px 14px 12px 74px;
   border-top: 1px solid var(--border-subtle);
@@ -637,13 +637,22 @@ html .today-page .today-decision-banner[data-tone] {
   font-size: var(--type-body-sm);
 }
 
-.today-injury-chips > span {
+/* The chips wrap among themselves; Edit (open only) stays pinned right. */
+.today-injury-chip-list {
+  display: flex;
+  flex: 1;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  min-width: 0;
+}
+
+.today-injury-chip-list > span {
   display: inline-flex;
   align-items: center;
   gap: 6px;
 }
 
-.today-injury-chips > span::before {
+.today-injury-chip-list > span::before {
   content: "";
   width: 6px;
   height: 6px;
@@ -651,7 +660,7 @@ html .today-page .today-decision-banner[data-tone] {
   background: var(--text-muted);
 }
 
-.today-injury-chips > span[data-kind="clearance"]::before {
+.today-injury-chip-list > span[data-kind="clearance"]::before {
   background: var(--progress-gold);
 }
 
@@ -671,9 +680,50 @@ html .today-page .today-decision-banner[data-tone] {
   }
 }
 
-/* Open, the summary row already names the injury: keep only its Edit action. */
+/* Open, the summary row already names the injury and Edit sits on the chips
+   line, so the meta row (name kept for its accessible text) takes no space. */
 .today-injury-controls .today-injury-meta {
-  justify-content: flex-end;
+  display: none;
+}
+
+.today-injury-chips .today-injury-edit {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  margin: -6px -8px -6px 0;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.today-injury-chips .today-injury-edit svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.today-injury-chips .today-injury-edit:hover {
+  background: var(--bg-stat);
+  color: var(--text-primary);
+}
+
+.today-injury-chips .today-injury-edit:focus-visible {
+  outline: 2px solid var(--brand-red);
+  outline-offset: 2px;
+}
+
+.today-injury-chips .today-injury-edit:disabled {
+  cursor: wait;
+  opacity: 0.5;
 }
 
 .today-injury-controls .today-injury-name {

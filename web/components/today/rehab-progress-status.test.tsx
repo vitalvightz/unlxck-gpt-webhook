@@ -16,14 +16,21 @@ const decision: NonNullable<InjuryFlagRecord["rehab_decision"]> = {
     ] } },
 };
 
-test("stage is only shown when supplied by the engine", () => {
+test("progression is one compact row, only when the engine supplies a stage", () => {
   assert.equal(renderToStaticMarkup(<RehabProgressStatus decision={{ ...decision, stage: undefined }} />), "");
-  const html = renderToStaticMarkup(<RehabProgressStatus decision={decision} />);
-  assert.match(html, /Restore/);
-  assert.match(html, /Next: Load/);
-  assert.equal((html.match(/aria-current="step"/g) ?? []).length, 1);
-  assert.equal((html.match(/data-complete="true"/g) ?? []).length, 2);
-  assert.doesNotMatch(html, /\d+%/);
+  const html = renderToStaticMarkup(<RehabProgressStatus decision={decision} statusLine="Done for today · next Sat 10 Oct" />);
+  assert.match(html, /<button[^>]*class="injury-progress"/);
+  assert.match(html, /Progression to Load/);
+  assert.match(html, /Done for today · next Sat 10 Oct/);
+  // The summary row above already shows the stage and its meter.
+  assert.doesNotMatch(html, /aria-current="step"|data-complete|Rehab stage<|\d+%/);
+});
+
+test("a closed next stage says so, and a stage with no next stage and no status renders nothing", () => {
+  const closed = renderToStaticMarkup(<RehabProgressStatus decision={{ ...decision, progression: { next_transition: {
+    ...decision.progression!.next_transition!, status: "closed", target_stage_live: false } } }} />);
+  assert.match(closed, /Progression to Load · Closed/);
+  assert.equal(renderToStaticMarkup(<RehabProgressStatus decision={{ ...decision, progression: {} }} />), "");
 });
 
 for (const closed of [false, true]) {

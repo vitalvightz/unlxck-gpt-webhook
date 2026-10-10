@@ -672,22 +672,14 @@ export function TodayInjuryManager({
                   </span>
                   <span className="today-injury-summary-chevron" aria-hidden="true" />
                 </button>
-                {restriction || stageLabel ? (
+                {restriction || stageLabel || isOpen ? (
                   <p className="today-injury-chips">
-                    {restriction ? <span data-kind="clearance">{restriction}</span> : null}
-                    {stageLabel ? <span data-kind="impact">{impactLabel.charAt(0).toUpperCase() + impactLabel.slice(1)}</span> : null}
-                  </p>
-                ) : null}
-                <div id={bodyId} className="today-injury-controls" hidden={!isOpen}>
-                <div className="today-injury-meta">
-                  <span className="today-injury-name">
-                    <strong>{injuryLabel}</strong>
-                    {showInjuryType ? <small>{injuryType}</small> : null}
-                    <small className="today-injury-summary">
-                      {injury.status === "monitoring" ? "Monitoring" : "Tracking"} · {impactLabel}
-                    </small>
-                  </span>
-                  <button type="button" className="gi-change-btn" disabled={isAdding || pendingFlagId !== null}
+                    <span className="today-injury-chip-list">
+                      {restriction ? <span data-kind="clearance">{restriction}</span> : null}
+                      {stageLabel ? <span data-kind="impact">{impactLabel.charAt(0).toUpperCase() + impactLabel.slice(1)}</span> : null}
+                    </span>
+                    {/* Open, a pencil (Edit) rides this line instead of taking a row of its own. */}
+                    {isOpen ? <button type="button" className="today-injury-edit" title="Edit injury" disabled={isAdding || pendingFlagId !== null}
                     onClick={() => {
                       setEditingFlagId(injury.id); setNewArea(injury.body_area);
                       const impact = readInjuryImpact(injury.description ?? "");
@@ -702,7 +694,21 @@ export function TodayInjuryManager({
                       setNewDetail(typeWord ? description.replace(new RegExp(`^${typeWord}\\.?\\s*`, "i"), "") : description);
                       setNewZone(""); setBodyMapVisible(false); setManualArea(false); setNotesOpen(false); setAddMissing(null);
                       setIsAddFormOpen(true);
-                    }}>Edit</button>
+                    }}>
+                      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg>
+                      <span className="sr-only">Edit</span>
+                    </button> : null}
+                  </p>
+                ) : null}
+                <div id={bodyId} className="today-injury-controls" hidden={!isOpen}>
+                <div className="today-injury-meta">
+                  <span className="today-injury-name">
+                    <strong>{injuryLabel}</strong>
+                    {showInjuryType ? <small>{injuryType}</small> : null}
+                    <small className="today-injury-summary">
+                      {injury.status === "monitoring" ? "Monitoring" : "Tracking"} · {impactLabel}
+                    </small>
+                  </span>
                 </div>
                 {surfaceGuidance ? (
                   <div
