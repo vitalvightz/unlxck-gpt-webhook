@@ -2,9 +2,8 @@
 from __future__ import annotations
 
 from collections import Counter, defaultdict
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from difflib import SequenceMatcher
-import hashlib
 from pathlib import Path
 import re
 import threading
@@ -12,7 +11,7 @@ import unicodedata
 
 from fightcamp.training_catalogue import (
     ALIASES_FILE, DATA_DIR, MANIFEST_FILE, PHYSICAL_CLASSES, SOURCE_CLASSES,
-    build_catalogue, strings,
+    build_catalogue, content_hash, source_hash, strings,
 )
 from api.services.training_library_vocabulary import CONCEPTS, supports
 
@@ -119,7 +118,7 @@ class LibraryIndex:
 
 
 class LibraryCache:
-    """Cheap source stats per request; rebuild only on a revision change.
+    """Cheap source stats per request; content-based public pagination revision.
 
     Invalid revisions fail closed: never fall back to a previously valid index.
     The lock prevents concurrent requests rebuilding the same 2,855 records.
@@ -133,15 +132,23 @@ class LibraryCache:
         sources = tuple((source, stat.st_mtime_ns, stat.st_ctime_ns, stat.st_size)
                      for source in (*SOURCE_CLASSES, MANIFEST_FILE, ALIASES_FILE)
                      for stat in [(self.data_dir / source).stat()])
-        # The reviewed vocabulary is also a cache input. Source revision checks
-        # still protect pagination when search semantics change.
+        # Stats only invalidate this process's cache, never the public revision.
+        # The reviewed vocabulary is also a cache input.
         return (*sources, ("discovery_vocabulary", repr(CONCEPTS)))
+
+    def _revision(self) -> str:
+        # Include every source and review input, including files with no entries.
+        # Normalise checkout line endings just like the catalogue's source hashes.
+        sources = [(source, source_hash((self.data_dir / source).read_bytes()))
+                   for source in (*SOURCE_CLASSES, MANIFEST_FILE, ALIASES_FILE)]
+        return content_hash({"sources": sources, "discovery_vocabulary": [asdict(rule) for rule in CONCEPTS]})
 
     def get(self) -> LibraryIndex:
         with self._lock:
             signature = self._signature()
             if self._index is not None and self._index.signature == signature:
                 return self._index
+            revision = self._revision()
             entries = build_catalogue(self.data_dir)
             if self._signature() != signature:
                 raise ValueError("Catalogue changed while loading")
@@ -158,7 +165,6 @@ class LibraryCache:
                     # identical/absent notes use neutral numbered variants.
                     suffix = note if all(notes) and len(set(notes)) == len(group) else f"Variant {ordinal}"
                     record["summary"]["context"] += f" · {suffix}"
-            revision = hashlib.sha256(repr(signature).encode()).hexdigest()
             self._index = LibraryIndex(signature, revision, records, {r["entry"]["catalogue_id"]: r for r in records})
             return self._index
 

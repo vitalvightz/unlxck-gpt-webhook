@@ -2,6 +2,7 @@
 from collections import Counter, defaultdict
 from copy import deepcopy
 import json
+import os
 import shutil
 from pathlib import Path
 
@@ -131,6 +132,54 @@ def test_vocabulary_change_invalidates_cache_and_pagination_revision(monkeypatch
     monkeypatch.setattr(lib, "CONCEPTS", lib.CONCEPTS[:-1])
     second = cache.get()
     assert second is not first and second.revision != first.revision
+
+
+def test_revision_is_stable_across_instances_timestamps_and_checkout_line_endings(copied_data):
+    cache = lib.LibraryCache(copied_data)
+    first = cache.get()
+    replica = copied_data / "replica"
+    for source in (*SOURCE_CLASSES, MANIFEST_FILE, ALIASES_FILE):
+        original = copied_data / source
+        target = replica / source
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(original.read_bytes().replace(b"\r\n", b"\n").replace(b"\n", b"\r\n"))
+        stamp = original.stat().st_mtime_ns + 10_000_000_000
+        os.utime(original, ns=(stamp, stamp))
+        os.utime(target, ns=(stamp + 10_000_000_000, stamp + 10_000_000_000))
+    refreshed = cache.get()
+    other_instance = lib.LibraryCache(replica).get()
+    assert refreshed is not first
+    assert first.revision == refreshed.revision == other_instance.revision
+    assert lib.search(first, offset=50) == lib.search(other_instance, offset=50)
+
+
+@pytest.mark.parametrize("source", [MANIFEST_FILE, ALIASES_FILE])
+def test_review_file_content_changes_pagination_revision(copied_data, source):
+    cache = lib.LibraryCache(copied_data)
+    first = cache.get()
+    path = copied_data / source
+    path.write_bytes(path.read_bytes() + b"\n")
+    assert cache.get().revision != first.revision
+
+
+def test_api_accepts_pagination_revision_from_instance_with_different_timestamps(copied_data, monkeypatch):
+    client, _, _ = _build_client()
+    try:
+        monkeypatch.setattr(lib, "cache", lib.LibraryCache(copied_data))
+        first = client.get("/api/training/library", headers=AUTH).json()
+        for source in (*SOURCE_CLASSES, MANIFEST_FILE, ALIASES_FILE):
+            path = copied_data / source
+            stamp = path.stat().st_mtime_ns + 10_000_000_000
+            os.utime(path, ns=(stamp, stamp))
+        monkeypatch.setattr(lib, "cache", lib.LibraryCache(copied_data))
+        next_page = client.get("/api/training/library", headers=AUTH,
+                               params={"revision": first["revision"], "offset": first["next_offset"]})
+        assert next_page.status_code == 200
+        assert next_page.json()["revision"] == first["revision"]
+        assert {row["catalogue_id"] for row in first["entries"]}.isdisjoint(
+            row["catalogue_id"] for row in next_page.json()["entries"])
+    finally:
+        client.close()
 
 
 def test_missing_metadata_does_not_exclude_name_search_and_unknown_is_not_no_equipment(index):
