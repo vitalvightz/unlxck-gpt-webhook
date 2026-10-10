@@ -1,0 +1,15 @@
+.training { min-width: 0; }
+.heading h2 { margin: 4px 0 0; font-size: var(--type-title-md); }
+.form { display: grid; gap: 14px; }
+.form select, .form input { width: 100%; min-height: 44px; }
+.actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.actions button { min-height: 44px; }
+.history { display: grid; gap: 0; list-style: none; padding: 0; margin: 0; }
+.row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px 0; border-top: 1px solid var(--border-subtle); }
+.copy { min-width: 0; }
+.row h3 { margin: 4px 0; font-size: var(--type-title-sm); overflow-wrap: anywhere; }
+.row p { margin: 0; }
+.date { color: var(--text-muted); font-size: var(--type-label-sm); }
+.dateChoice summary { cursor: pointer; min-height: 44px; display: list-item; align-content: center; }
+.dateChoice label { margin-top: 8px; }
+@media (max-width: 480px) { .row { align-items: flex-start; flex-direction: column; } .heading { align-items: flex-start; flex-direction: column; } }

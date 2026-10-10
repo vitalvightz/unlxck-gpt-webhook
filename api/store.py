@@ -4445,6 +4445,44 @@ class SupabaseAppStore(CompactGenerationReads):
         # Return the exact row so the caller can use that immutable winner.
         return self.get_session_completion(athlete_id, session_id, training_day)
 
+    def create_external_training_session(self, athlete_id: str, fields: dict[str, Any]) -> dict[str, Any]:
+        # ON CONFLICT DO NOTHING is atomic. A retry cannot overwrite an edit or
+        # resurrect a deleted occurrence, even when it crosses local midnight.
+        self.client.table("external_training_sessions").upsert(
+            {**fields, "athlete_id": athlete_id},
+            on_conflict="athlete_id,client_request_id", ignore_duplicates=True,
+        ).execute()
+        row = self._select_first(self.client.table("external_training_sessions").select("*")
+            .eq("athlete_id", athlete_id).eq("client_request_id", fields["client_request_id"]))
+        if not row:
+            raise HTTPException(500, "Failed to save training session.")
+        return row
+
+    def list_external_training_sessions(self, athlete_id: str, *, limit: int = 200, include_deleted: bool = False) -> list[dict[str, Any]]:
+        query = self.client.table("external_training_sessions").select("*").eq("athlete_id", athlete_id)
+        if not include_deleted:
+            query = query.is_("deleted_at", "null")
+        response = query.order("training_day", desc=True).order("created_at", desc=True).limit(limit).execute()
+        return getattr(response, "data", None) or []
+
+    def update_external_training_session(self, athlete_id: str, entry_id: str, fields: dict[str, Any]) -> dict[str, Any] | None:
+        response = (self.client.table("external_training_sessions")
+            .update({key: fields[key] for key in ("activity", "duration_minutes", "effort")})
+            .eq("athlete_id", athlete_id).eq("id", entry_id).is_("deleted_at", "null").execute())
+        return (getattr(response, "data", None) or [None])[0]
+
+    def delete_external_training_session(self, athlete_id: str, entry_id: str) -> bool:
+        query = self.client.table("external_training_sessions").select("*").eq("athlete_id", athlete_id).eq("id", entry_id)
+        row = self._select_first(query)
+        if not row:
+            return False
+        if row.get("deleted_at"):
+            return True
+        response = (self.client.table("external_training_sessions")
+            .update({"deleted_at": datetime.now(timezone.utc).isoformat()})
+            .eq("athlete_id", athlete_id).eq("id", entry_id).execute())
+        return bool(getattr(response, "data", None))
+
     def list_session_completions(
         self, athlete_id: str, *, limit: int = 30
     ) -> list[dict[str, Any]]:

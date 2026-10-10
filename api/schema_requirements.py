@@ -64,6 +64,7 @@ REQUIRED_TABLES: tuple[str, ...] = (
     # /api/today/exercise-log). A missing migration must fail the gate: the
     # in-session log would otherwise fail on every save.
     "exercise_logs",
+    "external_training_sessions",
     "rehab_exposures",
     "injury_episode_events",
     # Durable XP aggregate + immutable award ledger. Award writes are atomic
@@ -377,6 +378,11 @@ REQUIRED_EXERCISE_LOGS_COLUMNS: tuple[str, ...] = (
     "updated_at",
 )
 
+REQUIRED_EXTERNAL_TRAINING_COLUMNS: tuple[str, ...] = (
+    "id", "athlete_id", "client_request_id", "request_fingerprint", "training_day",
+    "activity", "duration_minutes", "effort", "deleted_at", "created_at", "updated_at",
+)
+
 REQUIRED_XP_ACCOUNTS_COLUMNS: tuple[str, ...] = (
     "athlete_id",
     "total_xp",
@@ -489,6 +495,7 @@ REQUIRED_COLUMNS: Mapping[str, tuple[str, ...]] = {
     "session_completions": REQUIRED_SESSION_COMPLETIONS_COLUMNS,
     "sparring_logs": REQUIRED_SPARRING_LOGS_COLUMNS,
     "exercise_logs": REQUIRED_EXERCISE_LOGS_COLUMNS,
+    "external_training_sessions": REQUIRED_EXTERNAL_TRAINING_COLUMNS,
     "xp_accounts": REQUIRED_XP_ACCOUNTS_COLUMNS,
     "xp_awards": REQUIRED_XP_AWARDS_COLUMNS,
     "beta_feedback": REQUIRED_BETA_FEEDBACK_COLUMNS,
@@ -626,6 +633,8 @@ INDEX_REQUIREMENTS: tuple[IndexRequirement, ...] = (
         label="xp awards athlete/idempotency uniqueness",
         accepted_names=("xp_awards_athlete_idempotency_key",),
     ),
+    IndexRequirement(label="external training request uniqueness", accepted_names=("external_training_sessions_request_key",)),
+    IndexRequirement(label="external training athlete/day index", accepted_names=("external_training_sessions_athlete_day_idx",)),
     IndexRequirement(
         label="xp awards one daily login per account calendar date",
         accepted_names=("xp_awards_one_daily_login_per_calendar_date",),
@@ -673,6 +682,7 @@ RLS_REQUIRED_TABLES: tuple[str, ...] = (
     "session_completions",
     "sparring_logs",
     "exercise_logs",
+    "external_training_sessions",
     "xp_accounts",
     "xp_awards",
     "beta_feedback",

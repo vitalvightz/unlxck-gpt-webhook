@@ -174,6 +174,9 @@ class _ReadinessTrackingStore:
             "recent_sessions", lambda: self._store.list_session_completions(athlete_id, limit=limit)
         )
 
+    def list_external_training_sessions(self, athlete_id: str, *, limit: int = 200, include_deleted: bool = False) -> list[dict[str, Any]]:
+        return self._call_list("recent_sessions", lambda: self._store.list_external_training_sessions(athlete_id, limit=limit, include_deleted=include_deleted))
+
     def list_injury_flags(
         self,
         athlete_id: str,

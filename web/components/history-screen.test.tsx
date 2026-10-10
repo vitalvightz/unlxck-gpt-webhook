@@ -15,10 +15,10 @@ test("failed History tabs can be retried without losing the Sessions cache", asy
     const url = String(input);
     requests.push(url);
     assert.equal(new Headers(init?.headers).get("authorization"), "Bearer token");
-    const isSessions = url.includes("session-completions");
+    const isSessions = url.includes("training/history");
     const failed = !isSessions && fail;
     const body = failed ? { detail: "invalid authentication token" }
-      : url.includes("sparring-logs") ? { logs: [] } : url.includes("history/exercises") ? { logs: [], next_offset: null } : [];
+      : isSessions ? { sessions: [] } : url.includes("sparring-logs") ? { logs: [] } : url.includes("history/exercises") ? { logs: [], next_offset: null } : [];
     return new Response(JSON.stringify(body), {
       status: failed ? 401 : 200,
       headers: { "content-type": "application/json" },
@@ -43,7 +43,7 @@ test("failed History tabs can be retried without losing the Sessions cache", asy
       </AppSessionContext.Provider>,
     ));
     assert.match(container.textContent ?? "", /No sessions logged yet/);
-    const initialSessionRequests = requests.filter((url) => url.includes("session-completions")).length;
+    const initialSessionRequests = requests.filter((url) => url.includes("training/history")).length;
     for (const tab of ["Exercises", "Sparring", "Check-ins", "Injuries"]) {
       fail = true;
       await click(tab);
@@ -54,7 +54,7 @@ test("failed History tabs can be retried without losing the Sessions cache", asy
       assert.ok(container.querySelector('[role="status"]'));
     }
     await click("Sessions");
-    assert.equal(requests.filter((url) => url.includes("session-completions")).length, initialSessionRequests);
+    assert.equal(requests.filter((url) => url.includes("training/history")).length, initialSessionRequests);
     assert.ok(requests.includes("/api/injury-flags?include_resolved=true"));
   } finally {
     act(() => root.unmount());
@@ -69,7 +69,7 @@ test("switching accounts drops history before the next account finishes loading"
   let finishSecond: ((response: Response) => void) | undefined;
   globalThis.fetch = async (_input, init) => {
     if (new Headers(init?.headers).get("authorization") === "Bearer first") {
-      return new Response(JSON.stringify([{ id: "old", session_title: "First account session", status: "done", training_day: "2026-10-07" }]), { status: 200 });
+      return new Response(JSON.stringify({ sessions: [{ id: "old", source: "unlxck", title: "First account session", status: "done", training_day: "2026-10-07" }] }), { status: 200 });
     }
     return new Promise<Response>((resolve) => { finishSecond = resolve; });
   };
@@ -86,7 +86,7 @@ test("switching accounts drops history before the next account finishes loading"
     assert.match(container.textContent ?? "", /First account session/);
     await act(async () => render("second"));
     assert.equal(container.textContent?.includes("First account session"), false);
-    await act(async () => finishSecond?.(new Response("[]", { status: 200 })));
+    await act(async () => finishSecond?.(new Response('{"sessions":[]}', { status: 200 })));
     assert.match(container.textContent ?? "", /No sessions logged yet/);
   } finally {
     act(() => root.unmount());

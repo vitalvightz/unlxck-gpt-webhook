@@ -7,6 +7,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { PlanSwitchDialog } from "@/components/plan-switch-dialog";
 import { RequireAuth } from "@/components/auth-guard";
+import { TrainingHistory } from "@/components/training-history";
 import { useAppSession } from "@/components/auth-provider";
 import {
   AthleteProfileRow,
@@ -268,6 +269,7 @@ export default function PlansPage() {
     <RequireAuth>
       <section className={`panel ${styles.page}`}>
         <h1 className={`athlete-motion-slot athlete-motion-header ${styles.pageTitle}`}>{t("planWorkspace")}</h1>
+        <TrainingHistory accessToken={session?.access_token ?? null} />
 
         {error ? (
           <div className="error-banner athlete-motion-slot athlete-motion-status" role="alert">

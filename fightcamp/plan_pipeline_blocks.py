@@ -7,6 +7,7 @@ from time import perf_counter
 from .bout_format import bout_format_metadata
 from .coach_review import run_coach_review
 from .conditioning import generate_conditioning_block
+from api.contracts.readiness_message import ReadinessCheckin, ReadinessContext, build_readiness_adjustment
 from .injury_location import canonicalize_location
 from .mindset_module import get_mindset_by_phase
 from .nutrition import generate_nutrition_block
@@ -155,6 +156,22 @@ def _generate_conditioning_blocks(context: PlanRuntimeContext, *, progress_callb
     # Compute once per request; spread into per-phase flags dict below.
     base_flags = context.training_context.to_flags()
 
+    # Use the existing Today decision engine for recent external work. Only
+    # conditioning selection in the first active phase receives this snapshot;
+    # phase lengths, strength, contact permissions and coach sessions are intact.
+    history = context.training_context.sparring_readiness.get("training_history", {})
+    workload_adjustment = None
+    first_phase = next((phase for phase in PHASES if context.phase_active(phase)), None)
+    current_checkins = [row for row in history.get("checkins", []) if row.get("training_day") == history.get("as_of")]
+    if history.get("available") and any(row.get("source") == "external" for row in history.get("sessions", [])) and current_checkins:
+        latest = max(current_checkins, key=lambda row: row.get("updated_at", ""))
+        checkin = ReadinessCheckin(**{key: value for key, value in latest.items() if key in ReadinessCheckin.__dataclass_fields__})
+        workload_adjustment = build_readiness_adjustment(checkin, ReadinessContext(
+            training_day=history.get("as_of", ""), phase=first_phase or checkin.phase,
+            today_session={"session_type": "conditioning", "title": "Conditioning"},
+            recent_sessions=history.get("sessions", []), recent_checkins=history.get("checkins", []),
+        ))
+
     logger = logging.getLogger(__name__)
     conditioning_started = perf_counter()
 
@@ -164,6 +181,14 @@ def _generate_conditioning_blocks(context: PlanRuntimeContext, *, progress_callb
         phase_code = f"stage1_conditioning_phase_{phase.lower()}"
         _emit_progress(progress_callback, f"{phase_code}_started", f"Stage 1 conditioning {phase} started")
         phase_started = perf_counter()
+        phase_flags = {**base_flags}
+        # Reuse the existing moderate-fatigue conditioning selector only when
+        # the Today engine finds repeated hard work AND poor current readiness.
+        if (phase == first_phase and workload_adjustment
+                and workload_adjustment.decision in {"modify", "pull_back"}
+                and "recent_hard_load_plus_poor_today" in workload_adjustment.triggers
+                and base_flags.get("fatigue") in {"low", "none"}):
+            phase_flags["fatigue"] = "moderate"
         (
             block_text,
             names,
@@ -173,7 +198,7 @@ def _generate_conditioning_blocks(context: PlanRuntimeContext, *, progress_callb
             candidate_reservoir,
         ) = generate_conditioning_block(
             {
-                **base_flags,
+                **phase_flags,
                 "phase": phase,
                 "sport": context.canonical_sport,
                 # Round-based conditioning is dosed at the athlete's own round
@@ -200,7 +225,7 @@ def _generate_conditioning_blocks(context: PlanRuntimeContext, *, progress_callb
                 "time_to_fight_days": context.plan_input.days_until_fight,
                 "days_until_fight": context.plan_input.days_until_fight,
                 "weeks_out": context.plan_input.weeks_out,
-                "fatigue_level": context.training_context.fatigue,
+                "fatigue_level": phase_flags.get("fatigue", context.training_context.fatigue),
                 "injuries": context.training_context.injuries,
                 "fight_format": context.training_context.fight_format,
                 "bout_format": bout_format_metadata(context.plan_input.rounds_format),

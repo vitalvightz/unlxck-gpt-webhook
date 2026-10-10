@@ -9,6 +9,8 @@ from fightcamp.sparring_readiness import recent_rows
 from api.contracts.readiness_message import classify_injury_surface
 
 from .today_service import _structured_plan_weeks, resolve_training_day
+from .training_history import training_history
+from fightcamp.completed_workload import completed_workload
 
 logger = logging.getLogger(__name__)
 
@@ -76,6 +78,20 @@ def annotate_payload_with_sparring_readiness(
     completions = recent_rows(
         read("list_session_completions", lambda: store.list_session_completions(athlete_id, limit=200)), as_of
     )
+    # Keep contact permission evidence prescribed-only. Manual Sparring/Hard
+    # describes effort, never head contact. Conditioning shares Today's engine.
+    history_input = {"as_of": as_of, "sessions": [], "checkins": context["checkins"], "available": True}
+    try:
+        history_input["sessions"] = recent_rows(training_history(
+            store, athlete_id, prescribed=completions), as_of)
+    except Exception:
+        logger.warning("[generation] completed training history unavailable", exc_info=True)
+        history_input["available"] = False
+    history_input["sessions"] = [{key: row[key] for key in (
+        "id", "source", "plan_id", "session_id", "training_day", "status", "session_rpe",
+        "pain_after", "duration_minutes", "effort", "activity") if key in row}
+        for row in history_input["sessions"]]
+    history_input["workload"] = completed_workload(history_input["sessions"], as_of)
     plans = {}
     for row in completions:
         if row.get("status") not in {"done", "modified"}:
@@ -103,4 +119,6 @@ def annotate_payload_with_sparring_readiness(
     }
     for key, allowed in fields.items():
         context[key] = [{field: row[field] for field in allowed if field in row} for row in context[key]]
+    history_input["checkins"] = context["checkins"]
+    context["training_history"] = history_input
     return {**payload, "_sparring_readiness": context}

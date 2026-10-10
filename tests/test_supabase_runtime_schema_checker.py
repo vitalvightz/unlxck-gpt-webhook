@@ -175,6 +175,8 @@ def test_index_requirement_satisfied_by_constraint_alias():
         "session_completions_athlete_session_day_key",
         "sparring_logs_athlete_day_idx",
         "exercise_logs_occurrence_key",
+        "external_training_sessions_request_key",
+        "external_training_sessions_athlete_day_idx",
         "injury_episode_events_delayed_once_idx",
         "xp_awards_athlete_idempotency_key",
         "xp_awards_one_daily_login_per_calendar_date",
