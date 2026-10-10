@@ -50,6 +50,8 @@ These are search matches across original evidence and aliases, not counts of app
 
 The mobile-first screen follows Today's grouped exercise rows, shared type icons, verified demo thumbnails, chevrons, typography tokens and white sheet CTA. `ExerciseGlyphIcon` is extracted unchanged from the structured renderer; its existing name/type selection logic stays in that renderer. The library chooses icons only from catalogue classifications.
 
+Find a Drill lives above the current camp and independently on plan detail. It does not depend on the training-history component, so replacing that component with compact Log Training cannot remove library discovery.
+
 One Filters sheet, category controls, reset/empty states and revision-aware pagination keep discovery compact. Search is debounced and aborted requests cannot overwrite newer results. Preview reuses `InjuryDetailSheet`, `ExerciseDemo` and Today's coaching disclosure styling; existing Instructions/Cues stay visible, additional Why/Progress/Regress/Stop coaching is collapsed. No missing videos or explanations are generated.
 
 2,580 entries have some existing coaching guidance; 275 do not. Equipment, sport and goal coverage is sparse in Rehab/Learn. Available search text can still match those records, while choosing an explicit filter intentionally restricts results to supported evidence. Name matches cannot bypass a user-selected equipment/sport filter. Several source tags are technical; the UI humanises separators but does not reinterpret their meaning.

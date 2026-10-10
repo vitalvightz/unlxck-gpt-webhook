@@ -9,6 +9,7 @@ import { PlanSwitchDialog } from "@/components/plan-switch-dialog";
 import { RequireAuth } from "@/components/auth-guard";
 import { LogTraining } from "@/components/log-training";
 import { useAppSession } from "@/components/auth-provider";
+import { TrainingLibraryLink } from "@/components/training-library-link";
 import {
   AthleteProfileRow,
   canSetActive,
@@ -292,6 +293,7 @@ export default function PlansPage() {
         ) : null}
 
         <div className="athlete-motion-slot athlete-motion-main">
+          <div className={styles.libraryAction}><TrainingLibraryLink /></div>
           {isPlanListLoading ? (
             <PlansSyncState />
           ) : (

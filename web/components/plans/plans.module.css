@@ -13,6 +13,12 @@
   letter-spacing: -0.02em;
 }
 
+.libraryAction {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 16px;
+}
+
 /* -- Current camp ----------------------------------------------------------- */
 .campCard {
   display: grid;

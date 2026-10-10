@@ -76,7 +76,11 @@ for (const width of [390, 1280]) {
     page.on("pageerror", error => errors.push(error.message));
     const { calls } = await setup(page, baseURL!);
     await page.goto("/plan");
-    await page.getByRole("link", { name: "Find a Drill", exact: true }).click();
+    const libraryLink = page.getByRole("link", { name: "Find a Drill", exact: true });
+    await expect(libraryLink).toBeInViewport();
+    expect((await libraryLink.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+    await page.screenshot({ path: test.info().outputPath(`plan-library-entry-${width}.png`), fullPage: false, animations: "disabled" });
+    await libraryLink.click();
     await expect(page).toHaveURL(/\/plans\/library$/);
     await expect(page.getByRole("heading", { name: "Find a Drill" })).toBeVisible();
     await expect(page.getByRole("button", { name: "Training", exact: true })).toHaveAttribute("aria-pressed", "true");
