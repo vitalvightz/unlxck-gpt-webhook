@@ -748,7 +748,7 @@ export function CustomPlanBuilder({ accessToken, planId }: { accessToken: string
             ...current, exercise: { ...current.exercise, media_id, community_revision_id: null },
           } : current);
           setVideoOpen(false);
-          if (editing.exercise.community_id) setCommunityOpen(true);
+          if (editingCommunityId) setCommunityOpen(true);
         }} /> : null}
     </section>
   );
