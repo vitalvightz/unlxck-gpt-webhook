@@ -1,6 +1,7 @@
 import type { ExternalTrainingFields, TrainingHistorySession } from "@/lib/training-history";
 import type { LibraryFeaturedResponse, LibraryPreview, LibrarySearchResponse } from "@/lib/api-schema.generated";
 import type { CustomDoseSuggestion, CustomPlan, CustomPlanInput } from "@/lib/api-schema.generated";
+import type { PrivateMediaPreview, PrivateMediaSettings, UploadPermission, UploadState, YouTubeClipInput } from "@/lib/api-schema.generated";
 import type {
   ApproveAndResumeGenerationRequest,
   AdminAthleteRecord,
@@ -58,6 +59,24 @@ import { parseXpAwardResponse, type XpAwardResult } from "@/lib/xp";
 const EXPLICIT_API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") ?? null;
 const LOCAL_API_BASE_URL = "http://127.0.0.1:8000";
 const DEFAULT_API_REQUEST_TIMEOUT_MS = 60_000;
+
+export function getPrivateMediaSettings(token: string, signal?: AbortSignal) {
+  return readJson<PrivateMediaSettings>("/api/private-media/settings", { token, signal });
+}
+export function getPrivateMedia(token: string, id: string, signal?: AbortSignal) {
+  return readJson<PrivateMediaPreview>(`/api/private-media/${encodeURIComponent(id)}`, { token, signal });
+}
+export function createPrivateYouTubeClip(token: string, body: YouTubeClipInput, signal?: AbortSignal) {
+  return readJson<PrivateMediaPreview>("/api/private-media/youtube", { token, method: "POST", body: JSON.stringify(body), signal });
+}
+export function reservePrivateUpload(token: string, file: File, signal?: AbortSignal) {
+  return readJson<UploadPermission>("/api/private-media/uploads", {
+    token, method: "POST", body: JSON.stringify({ size_bytes: file.size, content_type: file.type }), signal,
+  });
+}
+export function getPrivateUpload(token: string, id: string, signal?: AbortSignal) {
+  return readJson<UploadState>(`/api/private-media/uploads/${encodeURIComponent(id)}`, { token, signal });
+}
 
 export function searchTrainingLibrary(token: string, params: URLSearchParams, signal?: AbortSignal) {
   return readJson<LibrarySearchResponse>(`/api/training/library?${params}`, { token, signal });

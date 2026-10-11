@@ -497,6 +497,8 @@ class FakeStore(InMemoryNotificationLedger, FullRowStatusReads):
         self.session_completions: dict[str, list[dict]] = {}
         self.external_training_sessions: dict[str, dict] = {}
         self.custom_plans: dict[str, dict] = {}
+        self.private_media: dict[str, dict] = {}
+        self.private_video_assets: dict[str, dict] = {}
         self.session_logs: dict[str, list[dict]] = {}
         self.athlete_streak_rows: dict[str, dict] = {}
         self.daily_activity: dict[str, set[str]] = {}
@@ -1969,6 +1971,37 @@ class FakeStore(InMemoryNotificationLedger, FullRowStatusReads):
                     row["updated_at"] = _now()
                 return copy.deepcopy(row)
         return None
+
+    def private_media_worker_healthy(self) -> bool:
+        return False
+
+    def claim_private_media_budget(self, athlete_id: str) -> None:
+        if sum(row['athlete_id'] == athlete_id for row in self.private_media.values()) >= 200:
+            raise HTTPException(429, 'Video limit reached. Try again later.')
+
+    def reserve_private_video(self, athlete_id: str, size_bytes: int, content_type: str) -> dict:
+        # The in-memory store has no isolated processor or storage permissions.
+        raise HTTPException(503, 'Video uploads are unavailable.')
+
+    def create_private_media(self, athlete_id: str, fields: dict) -> dict:
+        row = {**copy.deepcopy(fields), 'id': str(uuid4()), 'athlete_id': athlete_id, 'created_at': _now()}
+        self.private_media[row['id']] = row
+        return copy.deepcopy(row)
+
+    def get_private_media(self, athlete_id: str, media_id: str) -> dict | None:
+        row = self.private_media.get(media_id)
+        return copy.deepcopy(row) if row and row['athlete_id'] == athlete_id else None
+
+    def get_private_media_for_asset(self, athlete_id: str, asset_id: str) -> dict | None:
+        return next((copy.deepcopy(row) for row in self.private_media.values()
+                     if row['athlete_id'] == athlete_id and row.get('asset_id') == asset_id), None)
+
+    def get_private_video_asset(self, athlete_id: str, asset_id: str) -> dict | None:
+        row = self.private_video_assets.get(asset_id)
+        return copy.deepcopy(row) if row and row['athlete_id'] == athlete_id else None
+
+    def private_video_signed_url(self, path: str, *, expires_in: int) -> str:
+        raise HTTPException(503, 'Private video storage is unavailable.')
 
     def create_custom_plan(self, athlete_id: str, fields: dict) -> dict:
         row = {**copy.deepcopy(fields), "athlete_id": athlete_id, "id": str(uuid4()),

@@ -1144,6 +1144,7 @@ export type ManualExercise = {
   name: string;
   equipment: string | null;
   notes: string | null;
+  media_id: string | null;
   dose: CustomDose;
   incomplete: boolean;
 };
@@ -1154,6 +1155,7 @@ export type ManualExerciseInput = {
   name: string;
   equipment?: string | null;
   notes?: string | null;
+  media_id?: string | null;
   dose?: CustomDoseRequest;
 };
 
@@ -1650,6 +1652,23 @@ export type PriorityMicrodose = {
   goal: string;
   name: string;
   prescription: string;
+};
+
+export type PrivateMediaPreview = {
+  id: string;
+  provider: "uploaded" | "youtube";
+  video_id: string | null;
+  asset_id: string | null;
+  start_s: number;
+  end_s: number;
+  channel_title: string | null;
+  orientation: "landscape" | "portrait" | null;
+  url: string | null;
+};
+
+export type PrivateMediaSettings = {
+  uploads_available: boolean;
+  youtube_available: boolean;
 };
 
 export type ProfileRecord = {
@@ -2283,6 +2302,23 @@ export type TrainingHistorySession = {
   notes: string | null;
 };
 
+export type UploadInput = {
+  size_bytes: number;
+  content_type: "video/mp4" | "video/quicktime" | "video/webm";
+};
+
+export type UploadPermission = {
+  asset_id: string;
+  bucket: "private-demo-intake";
+  path: string;
+  expires_at: string;
+};
+
+export type UploadState = {
+  status: "deleted" | "processing" | "queued" | "rejected" | "reserved" | "verified";
+  media: PrivateMediaPreview | null;
+};
+
 export type UsernameChangeRequest = {
   username: string;
 };
@@ -2383,4 +2419,10 @@ export type XpAwardResponse = {
   previous_total_xp: number;
   awarded: boolean;
   award: XpAwardRecord | null;
+};
+
+export type YouTubeClipInput = {
+  url: string;
+  start_s: number;
+  end_s: number;
 };

@@ -65,6 +65,7 @@ from .generation_job_helpers import (
 from .routes.admin import build_admin_router
 from .routes.training_library import build_training_library_router
 from .routes.custom_plans import build_custom_plans_router
+from .routes.private_media import build_private_media_router
 from .routes import (
     build_daily_router,
     build_feedback_router,
@@ -644,6 +645,7 @@ def create_app(
     )
     app.include_router(build_training_library_router(require_profile=require_profile, get_store=get_store))
     app.include_router(build_custom_plans_router(require_profile=require_profile, get_store=get_store))
+    app.include_router(build_private_media_router(require_profile=require_profile, get_store=get_store))
     app.include_router(
         build_xp_router(
             require_profile=require_profile,

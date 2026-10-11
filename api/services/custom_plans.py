@@ -14,7 +14,7 @@ from api.services.exercise_media import load_media_index
 from api.services.training_library import cache, preview
 
 
-def plan_fields(store, body: CustomPlanInput, previous: dict | None = None) -> dict:
+def plan_fields(store, body: CustomPlanInput, previous: dict | None = None, *, athlete_id: str | None = None) -> dict:
     fields = body.model_dump(mode="json")
     old = {
         exercise["catalogue_id"]: exercise["snapshot"]
@@ -41,6 +41,7 @@ def plan_fields(store, body: CustomPlanInput, previous: dict | None = None) -> d
     previous_ids = {
         e["id"]: e for s in (previous or {}).get("sessions", []) for e in s["exercises"]
     }
+    supplied = {str(e.id): e.model_fields_set for s in body.sessions for e in s.exercises}
     for exercise in exercises:
         prior = previous_ids.get(exercise["id"])
         if prior and (
@@ -53,6 +54,16 @@ def plan_fields(store, body: CustomPlanInput, previous: dict | None = None) -> d
             )
         exercise["incomplete"] = dose_incomplete(exercise["dose"])
         if exercise["origin"] == "manual":
+            # Older clients know nothing about media_id; omission preserves the
+            # saved attachment. Explicit null is the owner's remove action.
+            if prior and "media_id" not in supplied[exercise["id"]]:
+                exercise["media_id"] = prior.get("media_id")
+            if exercise.get("media_id"):
+                from api.services.private_media import owned_media
+
+                if not athlete_id:
+                    raise HTTPException(403, "Video ownership could not be verified.")
+                owned_media(store, athlete_id, exercise["media_id"])
             continue
         identity = exercise["catalogue_id"]
         record = index.by_id.get(identity)

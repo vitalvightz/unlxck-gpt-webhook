@@ -1,7 +1,7 @@
 """Saved self-directed drafts. These contracts never authorise execution."""
 
 from datetime import datetime
-from typing import Annotated, Literal
+from typing import Annotated, Literal, get_args
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints, model_validator
@@ -14,6 +14,12 @@ Name = Annotated[
 Weekday = Literal[
     "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"
 ]
+WEEKDAYS = get_args(Weekday)
+
+
+def ordered_sessions(sessions):
+    # Python's stable sort retains athlete order within a day and among drafts.
+    return sorted(sessions, key=lambda session: WEEKDAYS.index(session.weekday) if session.weekday else 7)
 
 
 class DraftModel(BaseModel):
@@ -85,6 +91,7 @@ class ManualExerciseInput(DraftModel):
     name: Name
     equipment: str | None = Field(None, max_length=120)
     notes: str | None = Field(None, max_length=2000)
+    media_id: UUID | None = None
     dose: CustomDose = Field(default_factory=CustomDose)
 
 
@@ -127,6 +134,7 @@ class CustomPlanInput(DraftModel):
         ]
         if len(ids) != len(set(ids)):
             raise ValueError("Session and exercise IDs must be unique within a plan.")
+        self.sessions = ordered_sessions(self.sessions)
         return self
 
 
@@ -160,6 +168,12 @@ class CustomPlan(BaseModel):
     incomplete: bool
     created_at: datetime
     updated_at: datetime
+
+    @model_validator(mode="after")
+    def calendar_order(self):
+        # Existing saved plans gain the same display order without rewriting IDs.
+        self.sessions = ordered_sessions(self.sessions)
+        return self
 
 
 class CustomDoseSuggestion(BaseModel):

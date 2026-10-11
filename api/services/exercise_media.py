@@ -287,6 +287,15 @@ class VideoCheck:
     made_for_kids: bool | None = None
     # "portrait" | "landscape", or None when YouTube reported no dimensions.
     orientation: str | None = None
+    duration_seconds: float | None = None
+
+
+def youtube_duration_seconds(value: Any) -> float | None:
+    match = re.fullmatch(r"PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+(?:\.\d+)?)S)?", str(value or ""))
+    if not match or not any(match.groups()):
+        return None
+    duration = sum(float(v or 0) * factor for v, factor in zip(match.groups(), (3600, 60, 1)))
+    return duration if 0 < duration < float("inf") else None
 
 
 def orientation_from_dimensions(width: Any, height: Any) -> str | None:
@@ -328,6 +337,7 @@ def _classify_video(item: Mapping[str, Any]) -> VideoCheck:
         "orientation": orientation_from_dimensions(
             player.get("embedWidth"), player.get("embedHeight")
         ),
+        "duration_seconds": youtube_duration_seconds((item.get("contentDetails") or {}).get("duration")),
     }
     upload_status = status.get("uploadStatus")
     if upload_status is not None and upload_status != "processed":
@@ -391,14 +401,14 @@ def _check_batch(http: httpx.Client, batch: list[str], api_key: str) -> dict[str
         response = http.get(
             YOUTUBE_VIDEOS_URL,
             params={
-                "part": "snippet,status,player",
+                "part": "snippet,status,player,contentDetails",
                 "id": ",".join(batch),
                 # embedWidth / embedHeight are only returned with a size bound.
                 "maxHeight": _PLAYER_MAX_HEIGHT,
                 "fields": (
                     "items(id,snippet(title,channelTitle),"
                     "status(uploadStatus,privacyStatus,embeddable,madeForKids),"
-                    "player(embedWidth,embedHeight))"
+                    "player(embedWidth,embedHeight),contentDetails(duration))"
                 ),
             },
             headers={"X-Goog-Api-Key": api_key},

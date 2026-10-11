@@ -152,6 +152,7 @@ async function setup(page: Page, baseURL: string) {
               ...exercise,
               equipment: exercise.equipment ?? null,
               notes: exercise.notes ?? null,
+              media_id: exercise.media_id ?? null,
               dose,
               incomplete,
             };
@@ -342,6 +343,93 @@ for (const width of [320, 390, 1280]) {
   });
 }
 
+for (const width of [320, 390, 1280]) {
+  test(`Private video clip selection, playback and persistence (${width}px)`, async ({ page, baseURL }) => {
+    await page.setViewportSize({ width, height: 844 });
+    const errors: string[] = [];
+    page.on("pageerror", error => errors.push(error.message));
+    const { saved } = await setup(page, baseURL!);
+    const media = { id: "00000000-0000-4000-8000-000000000099", provider: "youtube", video_id: "abcdefghijk",
+      start_s: 10, end_s: 25, asset_id: null, channel_title: "Coach", orientation: "landscape", url: null };
+    let verified = false;
+    await page.route("**/api/private-media/**", async route => {
+      const path = new URL(route.request().url()).pathname;
+      if (path.endsWith("/settings")) return route.fulfill({ json: { uploads_available: false, youtube_available: true } });
+      if (path.endsWith("/youtube")) {
+        expect(route.request().postDataJSON()).toEqual({ url: "https://youtube.com/watch?v=abcdefghijk", start_s: 10, end_s: 25 });
+        verified = true;
+      }
+      return route.fulfill({ json: media });
+    });
+    // Deterministic offline IFrame API: verify the existing player receives the selected segment.
+    await page.route("https://www.youtube.com/iframe_api", route => route.fulfill({ contentType: "text/javascript", body: `
+      window.YT = { PlayerState: { PLAYING: 1, PAUSED: 2, ENDED: 0 }, Player: function(target, options) {
+        window.__clipOptions = options;
+        let time = options.playerVars.start;
+        this.playVideo = () => options.events.onStateChange({ data: 1, target: this });
+        this.pauseVideo = () => options.events.onStateChange({ data: 2, target: this });
+        this.seekTo = value => { time = value; window.__clipSeek = value; window.__clipTime = value; };
+        this.getCurrentTime = () => window.__clipTime ?? time;
+        this.setPlaybackRate = () => {}; this.mute = () => {}; this.unMute = () => {}; this.destroy = () => {};
+        setTimeout(() => options.events.onReady({ target: this }), 0);
+      }}; window.onYouTubeIframeAPIReady?.();
+    ` }));
+    await page.goto("/plans/custom");
+    await page.getByRole("button", { name: "+ Add Session", exact: true }).click();
+    await page.getByRole("button", { name: "Create my exercise", exact: true }).click();
+    await page.getByLabel("Exercise name", { exact: true }).fill("My defensive drill");
+    await page.getByRole("button", { name: "Add video (optional)", exact: true }).click();
+    const sheet = page.getByRole("dialog", { name: "Demonstration video", exact: true });
+    await expect(sheet.getByRole("button", { name: "Upload video", exact: true })).toBeDisabled();
+    await sheet.getByRole("button", { name: "YouTube link", exact: true }).click();
+    await sheet.getByLabel("YouTube link", { exact: true }).fill("https://youtube.com/watch?v=abcdefghijk");
+    await sheet.getByLabel("Start (seconds)").fill("10");
+    await sheet.getByLabel("End (seconds)").fill("50");
+    await sheet.getByRole("button", { name: "Preview clip", exact: true }).click();
+    await expect(sheet.getByRole("alert")).toContainText("between 1 and 30 seconds");
+    expect(verified).toBe(false);
+    await sheet.getByLabel("End (seconds)").fill("25");
+    await sheet.getByRole("button", { name: "Preview clip", exact: true }).click();
+    await sheet.getByRole("button", { name: "Play My defensive drill demo", exact: true }).click();
+    await expect(sheet.getByRole("button", { name: "Pause", exact: true })).toBeVisible();
+    expect(await page.evaluate(() => {
+      const options = (window as unknown as { __clipOptions: { host: string; playerVars: { start: number; end: number; playsinline: number } } }).__clipOptions;
+      return { host: options.host, start: options.playerVars.start, end: options.playerVars.end, inline: options.playerVars.playsinline };
+    })).toEqual({ host: "https://www.youtube-nocookie.com", start: 10, end: 25, inline: 1 });
+    await sheet.getByRole("button", { name: "Replay", exact: true }).click();
+    expect(await page.evaluate(() => (window as unknown as { __clipSeek: number }).__clipSeek)).toBe(10);
+    await page.evaluate(() => { (window as unknown as { __clipTime: number }).__clipTime = 25; });
+    await expect.poll(() => page.evaluate(() => (window as unknown as { __clipTime: number }).__clipTime)).toBe(10);
+    expect(await sheet.evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true);
+    if (width >= 1024) {
+      const settings = await sheet.getByText("Optional · Up to 30 seconds · Private", { exact: true }).boundingBox();
+      const preview = await sheet.getByRole("button", { name: "Use video", exact: true }).boundingBox();
+      expect(preview!.x).toBeGreaterThan(settings!.x + settings!.width);
+      expect((await sheet.boundingBox())!.width).toBe(720);
+    }
+    await page.screenshot({ path: `${process.env.TEMP ?? "/tmp"}/unlxck-private-video-${width}.png`, fullPage: false });
+    await sheet.getByRole("button", { name: "Use video", exact: true }).click();
+    await page.getByRole("button", { name: "Add exercise", exact: true }).click();
+    if (width >= 1024) {
+      await page.getByRole("button", { name: "+ Add Session", exact: true }).click();
+      const first = await page.getByRole("region", { name: "Session 1", exact: true }).boundingBox();
+      const second = await page.getByRole("region", { name: "Session 2", exact: true }).boundingBox();
+      expect(second!.x).toBeGreaterThan(first!.x + first!.width);
+      expect(second!.y).toBe(first!.y);
+      await page.screenshot({ path: `${process.env.TEMP ?? "/tmp"}/unlxck-private-builder-${width}.png`, fullPage: true });
+    }
+    await page.getByRole("button", { name: "Save Plan", exact: true }).click();
+    await expect(page).toHaveURL(/custom\?plan=/);
+    expect([...saved.values()][0].sessions[0].exercises[0]).toMatchObject({ origin: "manual", media_id: media.id });
+    await page.reload();
+    await page.getByRole("button", { name: "Edit dose for My defensive drill", exact: true }).click();
+    await expect(page.getByRole("button", { name: "Replace video", exact: true })).toBeVisible();
+    await page.getByRole("button", { name: "Remove video", exact: true }).click();
+    await expect(page.getByRole("button", { name: "Add video (optional)", exact: true })).toBeVisible();
+    expect(errors).toEqual([]);
+  });
+}
+
 test("Saved-plan failures are visible and retryable", async ({ page, baseURL }) => {
   await setup(page, baseURL!);
   const id = "00000000-0000-4000-8000-000000000099";
@@ -392,3 +480,28 @@ test("Saved-plan failures are visible and retryable", async ({ page, baseURL }) 
   await page.getByRole("button", { name: "Retry custom plans" }).click();
   await expect(page.getByText("No saved custom plans yet. Build your own training week.")).toBeVisible();
 });
+
+for (const width of [390, 1280]) {
+  test(`Sessions stay in calendar order before save and after reopening (${width}px)`, async ({ page, baseURL }) => {
+    await page.setViewportSize({ width, height: 844 });
+    const { saved } = await setup(page, baseURL!);
+    await page.goto('/plans/custom');
+    const days = ['Sunday', 'Friday', 'Monday', 'Wednesday', 'Tuesday', 'Thursday', 'Saturday', 'Monday', null];
+    for (const [index, day] of days.entries()) {
+      await page.getByRole('button', { name: '+ Add Session', exact: true }).click();
+      await page.getByRole('button', { name: `Edit session ${index + 1}`, exact: true }).click();
+      await page.getByLabel('Session name', { exact: true }).fill(`Day ${index}`);
+      await page.getByLabel('Day', { exact: true }).selectOption(day ?? '');
+      await page.getByRole('button', { name: 'Done', exact: true }).click();
+    }
+    const expected = ['Day 2', 'Day 7', 'Day 4', 'Day 3', 'Day 5', 'Day 1', 'Day 6', 'Day 0', 'Day 8'];
+    const names = page.getByRole('region', { name: /^Session \d+$/ }).getByRole('heading', { level: 2 });
+    await expect(names).toHaveText(expected);
+    await page.getByRole('button', { name: 'Save Plan', exact: true }).click();
+    await expect(page).toHaveURL(/custom\?plan=/);
+    expect([...saved.values()][0].sessions.map(session => session.name)).toEqual(expected);
+    await page.reload();
+    await expect(names).toHaveText(expected);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  });
+}
