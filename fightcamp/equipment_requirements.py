@@ -77,6 +77,13 @@ def equipment_setup_available(requirement: dict, available: set[str]) -> bool:
         mode = group["mode"]
         if mode == "UNKNOWN" or mode not in MODES:
             return False
+        if ((mode == "SINGLE" and len(items) != 1) or (mode in {"ALL", "ANY"} and len(items) < 2)
+                or (mode == "OPTIONAL" and not items)):
+            return False
+        # A capability set cannot prove a pair/count. Do not accept a quantified
+        # mandatory setup without an inventory that establishes its quantity.
+        if mode != "OPTIONAL" and any(item.get("quantity") not in (None, 1) for item in group["items"]):
+            return False
         if mode in {"SINGLE", "ALL"} and (not items or not items <= available):
             return False
         if mode == "ANY" and not items & available:

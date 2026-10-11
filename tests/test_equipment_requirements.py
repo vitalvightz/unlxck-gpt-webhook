@@ -78,6 +78,12 @@ def test_optional_attachment_does_not_remove_mandatory_requirement():
     assert not requirements.equipment_setup_available({}, {"kettlebell"})
 
 
+def test_capability_token_does_not_prove_two_kettlebells_or_invalid_setup():
+    pair = {"status": "reviewed", "groups": [{"mode": "SINGLE", "items": [{"canonical_id": "kettlebell", "quantity": 2}]}]}
+    assert not requirements.equipment_setup_available(pair, {"kettlebell"})
+    assert not requirements.equipment_setup_available({"status": "reviewed", "groups": [{"mode": "OPTIONAL", "items": []}]}, set())
+
+
 def test_climbing_source_associations_are_corrected_in_effective_metadata(index):
     climbing = ids(library.search(index, filters={"equipment": "climbing_rope"}, limit=3000))
     assert len(climbing) == 2
@@ -167,8 +173,9 @@ def test_api_returns_mandatory_setup_and_original_equipment_without_granting_pre
         assert body["equipment_requirements"]["status"] == "reviewed"
         assert body["prescription_allowed"] is False
         assert body["selection_boundary"] == "training_validation_required"
-        filtered = client.get("/api/training/library", params={"equipment": "no_equipment", "limit": 100}, headers={"Authorization": "Bearer athlete-token"})
+        filtered = client.get("/api/training/library", params={"equipment": "no_equipment", "limit": 24}, headers={"Authorization": "Bearer athlete-token"})
         assert filtered.status_code == 200
+        assert filtered.json()["total"] == 263
         assert identity not in {entry["catalogue_id"] for entry in filtered.json()["entries"]}
     finally:
         client.close()

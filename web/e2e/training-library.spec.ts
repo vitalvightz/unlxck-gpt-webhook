@@ -155,7 +155,7 @@ for (const width of [320, 390, 1280]) {
     });
     const reviewed = { ...drills[0], catalogue_id: "exercise_bank.json:7731eda3-0acb-4c6d-b81f-c917bb0d2b62", name: "Rotational Sledgehammer Strike", equipment: ["sledgehammer", "tire"], equipment_requirements: makeRequirement("ALL", ["sledgehammer", "tire"]) };
     const unknown = { ...drills[0], catalogue_id: "exercise_bank.json:1c2ee7d5-21f5-4e40-bbc7-347a090d7413", name: "Tabata Sprints (Treadmill/Row)", equipment: ["treadmill/rower"], equipment_requirements: makeRequirement("UNKNOWN", []) };
-    await page.route("**/api/training/library/**", route => {
+    await page.route("**/api/training/library**", route => {
       const url = new URL(route.request().url());
       const selected = url.searchParams.get("catalogue_id") === unknown.catalogue_id ? unknown : reviewed;
       const entries = url.searchParams.get("equipment") ? [reviewed] : [reviewed, unknown];
