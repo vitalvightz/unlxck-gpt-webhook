@@ -1,194 +1,694 @@
 "use client";
-
 import Link from "next/link";
-import { useEffect, useState } from "react";
-import { deleteCustomPlan, getCustomPlan, listCustomPlans, saveCustomPlan } from "@/lib/api";
-import type { CustomDose, CustomPlan, CustomSession, LibraryEntry } from "@/lib/api-schema.generated";
+import { useRouter } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
+import { deleteCustomPlan, getCustomDoseSuggestion, getCustomPlan, saveCustomPlan } from "@/lib/api";
+import type {
+  CustomDoseSuggestion,
+  CustomExercise,
+  CustomSession,
+  LibraryEntry,
+  ManualExercise,
+} from "@/lib/api-schema.generated";
+import { InjuryDetailSheet } from "./today/injury-detail-sheet";
 import { DrillPreview, TrainingLibrary } from "./training-library";
+import { CustomDoseEditor } from "./custom-dose-editor";
+import { blankDose, doseSummary } from "@/lib/custom-plan-dose";
 import styles from "./custom-plan-builder.module.css";
-
-type Exercise = Omit<CustomSession["exercises"][number], "snapshot"> & { snapshot: LibraryEntry };
+type Exercise = (Omit<CustomExercise, "snapshot"> & { snapshot: LibraryEntry }) | ManualExercise;
 type Session = Omit<CustomSession, "exercises"> & { exercises: Exercise[] };
-type Draft = { id?: string; name: string; sessions: Session[] };
+type Draft = { id?: string; name: string; sessions: Session[]; incomplete?: boolean };
 const weekdays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"] as const;
-const emptyDraft = (): Draft => ({ name: "My Training Plan", sessions: [] });
-const incomplete = (dose: CustomDose) => dose.mode === "reps" ? !dose.sets || !dose.reps : !dose.duration_seconds;
-
-function DoseEditor({ exercise, onChange }: { exercise: Exercise; onChange: (dose: CustomDose) => void }) {
-  const dose = exercise.dose;
-  function number(field: "sets" | "reps" | "duration_seconds" | "rest_seconds", label: string, min: number, max: number) {
-    return <label><span>{label}</span><input aria-label={`${exercise.snapshot.name} ${label}`} type="number" inputMode="numeric"
-      min={min} max={max} step={1} value={dose[field] ?? ""}
-      onChange={event => onChange({ ...dose, [field]: event.target.value === "" ? null : Number(event.target.value) })} /></label>;
-  }
-  return <div className={styles.dose}>
-    <label><span>Dose</span><select aria-label={`${exercise.snapshot.name} Dose`} value={dose.mode}
-      onChange={event => onChange({ ...dose, mode: event.target.value as CustomDose["mode"], reps: null, duration_seconds: null })}>
-      <option value="reps">Sets × reps</option><option value="duration">Duration</option>
-    </select></label>
-    {number("sets", "Sets", 1, 100)}
-    {dose.mode === "reps" ? number("reps", "Reps", 1, 1000) : number("duration_seconds", "Duration (sec)", 1, 36000)}
-    {number("rest_seconds", "Rest (sec)", 0, 3600)}
-    <details className={styles.optional}><summary>Load / intensity</summary>
-      <label><span>Optional load or intensity</span><input aria-label={`${exercise.snapshot.name} Load or intensity`} maxLength={80}
-        placeholder={exercise.snapshot.content_type === "strength_power" ? "e.g. 40 kg or RPE 7" : "e.g. easy pace or RPE 7"}
-        value={dose.load_or_intensity ?? ""} onChange={event => onChange({ ...dose, load_or_intensity: event.target.value || null })} /></label>
-    </details>
-  </div>;
+const nameOf = (e: Exercise) => (e.origin === "manual" ? e.name : e.snapshot.name);
+function PencilIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M12 20h9" />
+      <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
+    </svg>
+  );
 }
-
-export function CustomPlanBuilder({ accessToken }: { accessToken: string }) {
-  const [draft, setDraft] = useState<Draft>(emptyDraft);
-  const [plans, setPlans] = useState<CustomPlan[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [listRetry, setListRetry] = useState(0);
-  const [pending, setPending] = useState(false);
-  const [dirty, setDirty] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
-  const [selecting, setSelecting] = useState<string | null>(null);
-  const [preview, setPreview] = useState<LibraryEntry | null>(null);
-  const [confirmDelete, setConfirmDelete] = useState(false);
-
+export function CustomPlanBuilder({ accessToken, planId }: { accessToken: string; planId?: string }) {
+  const router = useRouter();
+  const [draft, setDraft] = useState<Draft>({
+    name: "My Training Plan",
+    sessions: [],
+  });
+  const [loading, setLoading] = useState(!!planId),
+    [retry, setRetry] = useState(0),
+    [pending, setPending] = useState(false),
+    [dirty, setDirty] = useState(false);
+  const [opened, setOpened] = useState(!planId);
+  const [error, setError] = useState<string>(),
+    [message, setMessage] = useState<string>();
+  const [selecting, setSelecting] = useState<string>(),
+    [editing, setEditing] = useState<{
+      sessionId: string;
+      exercise: Exercise;
+      fresh?: boolean;
+      position: number;
+      original: Exercise;
+      originalPosition: number;
+    }>();
+  const [sessionEdit, setSessionEdit] = useState<Session>(),
+    [preview, setPreview] = useState<LibraryEntry>();
+  const [suggestion, setSuggestion] = useState<CustomDoseSuggestion>(),
+    [suggestionError, setSuggestionError] = useState<string>(),
+    [suggesting, setSuggesting] = useState(false);
+  const suggestionRequest = useRef(0);
+  const mounted = useRef(true);
   useEffect(() => {
-    const controller = new AbortController();
-    void listCustomPlans(accessToken, controller.signal).then(value => {
-      if (!controller.signal.aborted) setPlans(value);
-    }).catch(reason => {
-      if (!controller.signal.aborted) setError(reason instanceof Error ? reason.message : "Unable to load custom plans.");
-    }).finally(() => { if (!controller.signal.aborted) setLoading(false); });
-    return () => controller.abort();
-  }, [accessToken, listRetry]);
-
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
+  const sheetDirty =
+    Boolean(
+      editing &&
+      (JSON.stringify(editing.exercise) !== JSON.stringify(editing.original) ||
+        editing.position !== editing.originalPosition),
+    ) ||
+    Boolean(
+      sessionEdit &&
+      JSON.stringify(sessionEdit) !== JSON.stringify(draft.sessions.find((s) => s.id === sessionEdit.id)),
+    );
+  const unsaved = dirty || sheetDirty;
+  const releaseGuard = useRef<() => Promise<void>>(async () => {});
+  const loaded = useRef(false),
+    heading = useRef<HTMLHeadingElement>(null);
   useEffect(() => {
-    if (!dirty) return;
-    const warn = (event: BeforeUnloadEvent) => { event.preventDefault(); };
+    if (!planId || loaded.current) return;
+    let active = true;
+    void getCustomPlan(accessToken, planId)
+      .then((plan) => {
+        if (active) {
+          loaded.current = true;
+          setOpened(true);
+          setError(undefined);
+          setDraft(plan);
+          setDirty(false);
+          window.scrollTo(0, 0);
+        }
+      })
+      .catch((reason) => {
+        if (active) setError(reason instanceof Error ? reason.message : "Unable to open plan.");
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [accessToken, planId, retry]);
+  useEffect(() => {
+    if (!loading && loaded.current) heading.current?.focus({ preventScroll: true });
+  }, [loading]);
+  useEffect(() => {
+    if (!unsaved) return;
+    const warn = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+    };
+    // Keep a same-URL entry while dirty so Back can confirm without losing edits.
+    const state = { ...window.history.state, customDraftGuard: true };
+    window.history.pushState(state, "", window.location.href);
+    const back = () => {
+      if (!window.confirm("Discard unsaved changes?")) {
+        window.history.pushState(state, "", window.location.href);
+        return;
+      }
+      window.removeEventListener("popstate", back);
+      setDirty(false);
+      window.history.back();
+    };
+    const release = () => {
+      window.removeEventListener("popstate", back);
+      if (!window.history.state?.customDraftGuard) return Promise.resolve();
+      return new Promise<void>((resolve) => {
+        window.addEventListener("popstate", () => resolve(), { once: true });
+        window.history.back();
+      });
+    };
+    releaseGuard.current = release;
+    window.addEventListener("popstate", back);
+    const click = (e: MouseEvent) => {
+      const anchor = (e.target as Element)?.closest<HTMLAnchorElement>("a[href]");
+      if (!anchor || e.ctrlKey || e.metaKey || anchor.target === "_blank") return;
+      e.preventDefault();
+      e.stopPropagation();
+      if (window.confirm("Discard unsaved changes?"))
+        void release().then(() => {
+          setDirty(false);
+          router.push(anchor.href);
+        });
+    };
     window.addEventListener("beforeunload", warn);
-    return () => window.removeEventListener("beforeunload", warn);
-  }, [dirty]);
-
-  function change(next: Draft) { setDraft(next); setDirty(true); setMessage(null); setConfirmDelete(false); }
-  function sessionChange(id: string, update: (session: Session) => Session) {
-    change({ ...draft, sessions: draft.sessions.map(session => session.id === id ? update(session) : session) });
+    document.addEventListener("click", click, true);
+    return () => {
+      window.removeEventListener("beforeunload", warn);
+      document.removeEventListener("click", click, true);
+      window.removeEventListener("popstate", back);
+      releaseGuard.current = async () => {};
+    };
+  }, [unsaved, router]);
+  function change(next: Draft) {
+    setDraft(next);
+    setDirty(true);
+    setMessage(undefined);
   }
-  function canLeave() { return !dirty || window.confirm("Discard unsaved changes?"); }
-
+  function sessionChange(id: string, update: (s: Session) => Session) {
+    change({
+      ...draft,
+      sessions: draft.sessions.map((s) => (s.id === id ? update(s) : s)),
+    });
+  }
+  function edit(sessionId: string, exercise: Exercise, fresh = false) {
+    suggestionRequest.current++;
+    setSuggesting(false);
+    setSuggestion(undefined);
+    setSuggestionError(undefined);
+    setEditing({
+      sessionId,
+      exercise,
+      fresh,
+      position: draft.sessions.find((s) => s.id === sessionId)?.exercises.findIndex((e) => e.id === exercise.id) ?? 0,
+      original: exercise,
+      originalPosition:
+        draft.sessions.find((s) => s.id === sessionId)?.exercises.findIndex((e) => e.id === exercise.id) ?? 0,
+    });
+  }
+  async function suggest() {
+    if (!editing || editing.exercise.origin !== "catalogue") return;
+    const request = ++suggestionRequest.current;
+    setSuggesting(true);
+    setSuggestionError(undefined);
+    try {
+      const result = await getCustomDoseSuggestion(accessToken, editing.exercise.catalogue_id);
+      if (request === suggestionRequest.current) setSuggestion(result);
+    } catch (e) {
+      if (request === suggestionRequest.current)
+        setSuggestionError(e instanceof Error ? e.message : "Unable to load source suggestion.");
+    } finally {
+      if (request === suggestionRequest.current) setSuggesting(false);
+    }
+  }
   async function save() {
-    setPending(true); setError(null); setMessage(null);
+    setPending(true);
+    setError(undefined);
     try {
-      const saved = await saveCustomPlan(accessToken, { name: draft.name, sessions: draft.sessions.map(session => ({
-        id: session.id, name: session.name, weekday: session.weekday,
-        exercises: session.exercises.map(exercise => ({ id: exercise.id, catalogue_id: exercise.catalogue_id, dose: exercise.dose })),
-      })) }, draft.id);
-      setDraft(saved); setDirty(false);
-      setPlans(previous => [saved, ...previous.filter(plan => plan.id !== saved.id)]);
-      setMessage(saved.incomplete ? "Draft saved. Some sessions or doses are incomplete." : "Plan saved.");
-    } catch (reason) { setError(reason instanceof Error ? reason.message : "Unable to save plan."); }
-    finally { setPending(false); }
+      const saved = await saveCustomPlan(
+        accessToken,
+        {
+          name: draft.name,
+          sessions: draft.sessions.map((s) => ({
+            id: s.id,
+            name: s.name,
+            weekday: s.weekday,
+            exercises: s.exercises.map((e) =>
+              e.origin === "manual"
+                ? {
+                    id: e.id,
+                    origin: e.origin,
+                    name: e.name,
+                    equipment: e.equipment,
+                    notes: e.notes,
+                    dose: e.dose,
+                  }
+                : {
+                    id: e.id,
+                    origin: "catalogue" as const,
+                    catalogue_id: e.catalogue_id,
+                    dose: e.dose,
+                  },
+            ),
+          })),
+        },
+        draft.id,
+      );
+      if (!mounted.current) return;
+      await releaseGuard.current();
+      setDraft(saved);
+      setOpened(true);
+      setDirty(false);
+      setMessage(saved.incomplete ? "Draft saved. Complete any unfinished doses when ready." : "Plan saved.");
+      window.history.replaceState(window.history.state, "", `/plans/custom?plan=${saved.id}`);
+      loaded.current = true;
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Unable to save plan.");
+    } finally {
+      setPending(false);
+    }
   }
-
-  async function open(id: string) {
-    if (!canLeave()) return;
-    setPending(true); setError(null); setMessage(null); setConfirmDelete(false);
-    try { setDraft(await getCustomPlan(accessToken, id)); setDirty(false); }
-    catch (reason) { setError(reason instanceof Error ? reason.message : "Unable to open plan."); }
-    finally { setPending(false); }
-  }
-
-  async function remove() {
-    if (!draft.id) return;
-    setPending(true); setError(null);
-    try {
-      await deleteCustomPlan(accessToken, draft.id);
-      setPlans(previous => previous.filter(plan => plan.id !== draft.id));
-      setDraft(emptyDraft()); setDirty(false); setConfirmDelete(false); setMessage("Plan deleted.");
-    } catch (reason) { setError(reason instanceof Error ? reason.message : "Unable to delete plan."); }
-    finally { setPending(false); }
-  }
-
-  if (selecting) return <TrainingLibrary accessToken={accessToken} onBack={() => setSelecting(null)} onSelect={entry => {
-    if (entry.category !== "training") return;
-    sessionChange(selecting, session => ({ ...session, exercises: [...session.exercises, {
-      id: crypto.randomUUID(), catalogue_id: entry.catalogue_id, snapshot: entry, incomplete: true,
-      dose: { mode: entry.content_type === "strength_power" ? "reps" : "duration", sets: null, reps: null,
-        duration_seconds: null, rest_seconds: null, load_or_intensity: null },
-    }] }));
-    setSelecting(null);
-  }} />;
-
-  return <section className={styles.builder} aria-label="Custom training plan builder">
-    <header className={styles.header}>
-      <Link href="/plans" onClick={event => { if (pending || !canLeave()) event.preventDefault(); }}>← Plans</Link>
-      <p className="kicker">UNLXCK / SELF-DIRECTED</p>
-      <h1>MY TRAINING PLAN</h1>
-      <p className="muted">Custom plans are self-directed and aren&apos;t checked against your training readiness.</p>
-    </header>
-    {error ? <p className="error-banner" role="alert">{error}</p> : null}
-    {message ? <p role="status">{message}</p> : null}
-    <form onSubmit={event => { event.preventDefault(); void save(); }}>
-      <fieldset disabled={pending} className={styles.editor}>
-        <label className={styles.planName}><span>Plan name</span><input required maxLength={100} value={draft.name}
-          onChange={event => change({ ...draft, name: event.target.value })} /></label>
-        {draft.sessions.map((session, sessionIndex) => <section key={session.id} className={styles.session} aria-label={`Session ${sessionIndex + 1}`}>
-          <div className={styles.sessionHead}>
-            <label><span>Day</span><select aria-label={`Session ${sessionIndex + 1} Day`} value={session.weekday ?? ""}
-              onChange={event => sessionChange(session.id, current => ({ ...current, weekday: event.target.value as Session["weekday"] || null }))}>
-              <option value="">Unassigned</option>{weekdays.map(day => <option key={day}>{day}</option>)}
-            </select></label>
-            <label><span>Session name</span><input required maxLength={100} value={session.name} aria-label={`Session ${sessionIndex + 1} name`}
-              onChange={event => sessionChange(session.id, current => ({ ...current, name: event.target.value }))} /></label>
-            <button type="button" className="ghost-button" aria-label={`Remove session ${sessionIndex + 1}`}
-              onClick={() => change({ ...draft, sessions: draft.sessions.filter(current => current.id !== session.id) })}>Remove</button>
-          </div>
-          <ol className={styles.exercises}>
-            {session.exercises.map((exercise, index) => <li key={exercise.id} className={styles.exercise}>
-              <div className={styles.exerciseHead}>
-                <button type="button" className={styles.exerciseName} onClick={() => setPreview(exercise.snapshot)}>{exercise.snapshot.name}</button>
-                {incomplete(exercise.dose) ? <span className={styles.incomplete}>Incomplete dose</span> : null}
-                <div className={styles.order}>
-                  {([-1, 1] as const).map(direction => <button type="button" key={direction} className="ghost-button"
-                    disabled={index + direction < 0 || index + direction >= session.exercises.length}
-                    aria-label={`Move ${exercise.snapshot.name} ${direction === -1 ? "up" : "down"}`}
-                    onClick={() => sessionChange(session.id, current => {
-                      const exercises = [...current.exercises];
-                      [exercises[index], exercises[index + direction]] = [exercises[index + direction], exercises[index]];
-                      return { ...current, exercises };
-                    })}>{direction === -1 ? "↑" : "↓"}</button>)}
-                  <button type="button" className="ghost-button" aria-label={`Remove ${exercise.snapshot.name}`}
-                    onClick={() => sessionChange(session.id, current => ({ ...current, exercises: current.exercises.filter(item => item.id !== exercise.id) }))}>×</button>
-                </div>
-              </div>
-              <DoseEditor exercise={exercise} onChange={dose => sessionChange(session.id, current => ({ ...current,
-                exercises: current.exercises.map(item => item.id === exercise.id ? { ...item, dose } : item),
-              }))} />
-            </li>)}
-          </ol>
-          {!session.exercises.length ? <p className="muted">Add exercises to this session. Empty sessions save as drafts.</p> : null}
-          <button type="button" className="secondary-button" disabled={session.exercises.length >= 100} onClick={() => setSelecting(session.id)}>+ Add Exercise</button>
-        </section>)}
-        <div className={styles.actions}>
-          <button type="button" className="secondary-button" disabled={draft.sessions.length >= 28} onClick={() => change({ ...draft,
-            sessions: [...draft.sessions, { id: crypto.randomUUID(), name: "Training", weekday: null, exercises: [] }],
-          })}>+ Add Session</button>
-          <button type="submit" className="cta">{pending ? "Saving…" : "Save Plan"}</button>
-          <span className="muted">{dirty ? "Unsaved changes" : draft.id ? "Saved custom plan" : "New custom plan"}</span>
+  if (loading)
+    return (
+      <section className={styles.builder}>
+        <p role="status">Opening custom plan…</p>
+      </section>
+    );
+  if (planId && !opened)
+    return (
+      <section className={styles.builder}>
+        <Link href="/plans#custom-plans">← Saved custom plans</Link>
+        <p role="alert">{error}</p>
+        <button
+          className="ghost-button"
+          onClick={() => {
+            setLoading(true);
+            setError(undefined);
+            setRetry((n) => n + 1);
+          }}
+        >
+          Retry opening plan
+        </button>
+      </section>
+    );
+  if (selecting)
+    return (
+      <TrainingLibrary
+        accessToken={accessToken}
+        onBack={() => setSelecting(undefined)}
+        onSelect={(entry) => {
+          if (entry.category !== "training") return;
+          sessionChange(selecting, (s) => ({
+            ...s,
+            exercises: [
+              ...s.exercises,
+              {
+                id: crypto.randomUUID(),
+                origin: "catalogue",
+                catalogue_id: entry.catalogue_id,
+                snapshot: entry,
+                incomplete: true,
+                dose: blankDose(),
+              },
+            ],
+          }));
+          setSelecting(undefined);
+        }}
+      />
+    );
+  return (
+    <section className={styles.builder} aria-label="Custom training plan builder">
+      <header className={styles.header}>
+        <Link href="/plans#custom-plans">← Saved custom plans</Link>
+        <div className={styles.row}>
+          <h1 ref={heading} tabIndex={-1}>
+            {draft.name}
+          </h1>
+          <span className={styles.badge}>{dirty ? "Unsaved" : draft.id ? "Saved" : "New"}</span>
         </div>
-      </fieldset>
-    </form>
-    <section className={styles.saved} aria-label="Saved custom plans">
-      <div className={styles.actions}><h2>Custom plans</h2><button className="ghost-button" disabled={pending} onClick={() => {
-        if (canLeave()) { setDraft(emptyDraft()); setDirty(false); setConfirmDelete(false); setError(null); setMessage(null); }
-      }}>New plan</button></div>
-      {loading ? <p role="status">Loading custom plans…</p> : plans.length ? <ul>{plans.map(plan => <li key={plan.id}>
-        <button disabled={pending} onClick={() => void open(plan.id)}>{plan.name}</button>
-        <span className="muted">Self-directed{plan.incomplete ? " · Draft" : ""}</span>
-      </li>)}</ul> : <p className="muted">No saved custom plans yet.</p>}
-      {error && !loading ? <button className="ghost-button" disabled={pending} onClick={() => { setError(null); setLoading(true); setListRetry(value => value + 1); }}>Refresh saved plans</button> : null}
-      {draft.id ? <div className={styles.actions}>{confirmDelete ? <>
-        <span>Delete this custom plan?</span><button className="secondary-button" disabled={pending} onClick={() => void remove()}>Confirm delete</button>
-        <button className="ghost-button" disabled={pending} onClick={() => setConfirmDelete(false)}>Keep plan</button>
-      </> : <button className="ghost-button" disabled={pending} onClick={() => setConfirmDelete(true)}>Delete plan</button>}</div> : null}
+        <p className="muted">Self-directed. Readiness checks do not apply.</p>
+      </header>
+      {error ? (
+        <p className="error-banner" role="alert">
+          {error}
+        </p>
+      ) : null}
+      {message ? (
+        <p role="status">
+          {message} <Link href="/plans#custom-plans">View saved plans</Link>
+        </p>
+      ) : null}
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          void save();
+        }}
+      >
+        <fieldset className={styles.editor} disabled={pending}>
+          <label>
+            <span>Plan name</span>
+            <input
+              required
+              maxLength={100}
+              value={draft.name}
+              onChange={(e) => change({ ...draft, name: e.target.value })}
+            />
+          </label>
+          {!draft.sessions.length ? (
+            <p className="muted">Start with a session. Add library exercises or create your own.</p>
+          ) : null}
+          {draft.sessions.map((s, i) => (
+            <section key={s.id} className={styles.session} aria-label={`Session ${i + 1}`}>
+              <div className={styles.row}>
+                <div>
+                  <small className={styles.weekday}>{s.weekday ?? "Unassigned"}</small>
+                  <h2>{s.name}</h2>
+                </div>
+                <button
+                  type="button"
+                  className={styles.editButton}
+                  aria-label={`Edit session ${i + 1}`}
+                  title="Edit session"
+                  onClick={() => setSessionEdit(s)}
+                >
+                  <PencilIcon />
+                </button>
+              </div>
+              <ol className={styles.exercises}>
+                {s.exercises.map((e) => (
+                  <li key={e.id} className={styles.exercise}>
+                    <div className={styles.row}>
+                      <div className={styles.exerciseText}>
+                        <strong>{nameOf(e)}</strong>
+                        <small>
+                          {e.origin === "manual" ? "My exercise · " : ""}
+                          {doseSummary(e.dose)}
+                        </small>
+                      </div>
+                      <button
+                        type="button"
+                        className={styles.editButton}
+                        aria-label={`Edit dose for ${nameOf(e)}`}
+                        title="Edit dose"
+                        onClick={() => edit(s.id, e)}
+                      >
+                        <PencilIcon />
+                      </button>
+                    </div>
+                  </li>
+                ))}
+              </ol>
+              {!s.exercises.length ? <p className="muted">No exercises yet. This session saves as a draft.</p> : null}
+              <div className={styles.row}>
+                <button
+                  type="button"
+                  className="ghost-button"
+                  disabled={s.exercises.length >= 100}
+                  onClick={() => setSelecting(s.id)}
+                >
+                  Add from library
+                </button>
+                <button
+                  type="button"
+                  className="ghost-button"
+                  disabled={s.exercises.length >= 100}
+                  onClick={() =>
+                    edit(
+                      s.id,
+                      {
+                        id: crypto.randomUUID(),
+                        origin: "manual",
+                        name: "",
+                        equipment: null,
+                        notes: null,
+                        dose: blankDose(),
+                        incomplete: true,
+                      },
+                      true,
+                    )
+                  }
+                >
+                  Create my exercise
+                </button>
+              </div>
+            </section>
+          ))}
+          <button
+            type="button"
+            className="secondary-button"
+            disabled={draft.sessions.length >= 28}
+            onClick={() =>
+              change({
+                ...draft,
+                sessions: [
+                  ...draft.sessions,
+                  {
+                    id: crypto.randomUUID(),
+                    name: "Training",
+                    weekday: null,
+                    exercises: [],
+                  },
+                ],
+              })
+            }
+          >
+            + Add Session
+          </button>
+          <div className={styles.saveBar}>
+            <span role="status">
+              {dirty
+                ? "Unsaved changes"
+                : draft.id
+                  ? draft.incomplete
+                    ? "Draft saved"
+                    : "Plan saved"
+                  : "New custom plan"}
+            </span>
+            <button type="submit" className="cta">
+              {pending ? "Saving…" : "Save Plan"}
+            </button>
+          </div>
+        </fieldset>
+      </form>
+      {draft.id ? (
+        <button
+          className="ghost-button"
+          disabled={pending}
+          onClick={async () => {
+            if (!window.confirm("Delete this custom plan?")) return;
+            setPending(true);
+            try {
+              await deleteCustomPlan(accessToken, draft.id!);
+              setDirty(false);
+              router.push("/plans#custom-plans");
+            } catch (e) {
+              setError(e instanceof Error ? e.message : "Unable to delete plan.");
+              setPending(false);
+            }
+          }}
+        >
+          Delete plan
+        </button>
+      ) : null}
+      {sessionEdit ? (
+        <InjuryDetailSheet
+          title="Edit session"
+          onClose={() => {
+            const original = draft.sessions.find((s) => s.id === sessionEdit.id);
+            if (JSON.stringify(original) === JSON.stringify(sessionEdit) || window.confirm("Discard session edits?")) {
+              if (sheetDirty && !dirty) void releaseGuard.current().then(() => setSessionEdit(undefined));
+              else setSessionEdit(undefined);
+            }
+          }}
+        >
+          <form
+            className={styles.sheet}
+            onSubmit={(e) => {
+              e.preventDefault();
+              sessionChange(sessionEdit.id, () => sessionEdit);
+              setSessionEdit(undefined);
+            }}
+          >
+            <label>
+              <span>Session name</span>
+              <input
+                required
+                maxLength={100}
+                value={sessionEdit.name}
+                onChange={(e) => setSessionEdit({ ...sessionEdit, name: e.target.value })}
+              />
+            </label>
+            <label>
+              <span>Day</span>
+              <select
+                aria-label="Day"
+                value={sessionEdit.weekday ?? ""}
+                onChange={(e) =>
+                  setSessionEdit({
+                    ...sessionEdit,
+                    weekday: (e.target.value as Session["weekday"]) || null,
+                  })
+                }
+              >
+                <option value="">Unassigned</option>
+                {weekdays.map((day) => (
+                  <option key={day}>{day}</option>
+                ))}
+              </select>
+            </label>
+            <button className="cta">Done</button>
+            <button
+              type="button"
+              className="ghost-button"
+              onClick={() => {
+                if (window.confirm("Remove this session and its exercises?")) {
+                  change({
+                    ...draft,
+                    sessions: draft.sessions.filter((s) => s.id !== sessionEdit.id),
+                  });
+                  setSessionEdit(undefined);
+                }
+              }}
+            >
+              Remove session
+            </button>
+          </form>
+        </InjuryDetailSheet>
+      ) : null}
+      {editing ? (
+        <InjuryDetailSheet
+          title={editing.fresh ? "Create my exercise" : nameOf(editing.exercise)}
+          onClose={() => {
+            if (
+              (JSON.stringify(editing.original) === JSON.stringify(editing.exercise) &&
+                editing.originalPosition === editing.position) ||
+              window.confirm("Discard exercise edits?")
+            ) {
+              suggestionRequest.current++;
+              if (sheetDirty && !dirty) void releaseGuard.current().then(() => setEditing(undefined));
+              else setEditing(undefined);
+            }
+          }}
+        >
+          <form
+            className={styles.sheet}
+            onSubmit={(event) => {
+              event.preventDefault();
+              const { sessionId, exercise, fresh, position } = editing;
+              sessionChange(sessionId, (s) => {
+                if (fresh) return { ...s, exercises: [...s.exercises, exercise] };
+                const exercises = s.exercises.filter((e) => e.id !== exercise.id);
+                exercises.splice(position, 0, exercise);
+                return { ...s, exercises };
+              });
+              setEditing(undefined);
+            }}
+          >
+            {editing.exercise.origin === "manual" ? (
+              <>
+                {(["name", "equipment", "notes"] as const).map((field) => (
+                  <label key={field}>
+                    <span>{field === "name" ? "Exercise name" : `${field} (optional)`}</span>
+                    <input
+                      required={field === "name"}
+                      maxLength={field === "name" ? 100 : field === "notes" ? 2000 : 120}
+                      value={(editing.exercise as ManualExercise)[field] ?? ""}
+                      onChange={(e) =>
+                        setEditing({
+                          ...editing,
+                          exercise: {
+                            ...editing.exercise,
+                            [field]: e.target.value,
+                          },
+                        })
+                      }
+                    />
+                  </label>
+                ))}
+              </>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  className="ghost-button"
+                  onClick={() =>
+                    setPreview(editing.exercise.origin === "catalogue" ? editing.exercise.snapshot : undefined)
+                  }
+                >
+                  View library exercise
+                </button>
+                <button type="button" className="ghost-button" disabled={suggesting} onClick={() => void suggest()}>
+                  {suggesting ? "Loading source…" : "Suggested format"}
+                </button>
+                {suggestionError ? <p role="alert">{suggestionError}</p> : null}
+                {suggestion ? (
+                  <div>
+                    <p>{suggestion.original || "No explicit dosage in this source."}</p>
+                    <small className="muted">Source: {suggestion.source}</small>
+                    {suggestion.dose ? (
+                      <button
+                        type="button"
+                        className="secondary-button"
+                        onClick={() => {
+                          if (
+                            Object.entries(editing.exercise.dose).some(([k, v]) => k !== "mode" && v != null) &&
+                            !window.confirm("Replace the current dose with the source suggestion?")
+                          )
+                            return;
+                          setEditing({
+                            ...editing,
+                            exercise: {
+                              ...editing.exercise,
+                              dose: suggestion.dose!,
+                            },
+                          });
+                        }}
+                      >
+                        Use source suggestion
+                      </button>
+                    ) : null}
+                  </div>
+                ) : null}
+              </>
+            )}
+            {!editing.fresh && draft.sessions.find((s) => s.id === editing.sessionId)!.exercises.length > 1 ? (
+              <label>
+                <span>Position in session</span>
+                <select
+                  aria-label="Position in session"
+                  value={editing.position}
+                  onChange={(e) => setEditing({ ...editing, position: Number(e.target.value) })}
+                >
+                  {draft.sessions
+                    .find((s) => s.id === editing.sessionId)!
+                    .exercises.map((e, index) => (
+                      <option key={e.id} value={index}>
+                        {index + 1}
+                      </option>
+                    ))}
+                </select>
+              </label>
+            ) : null}
+            <CustomDoseEditor
+              dose={editing.exercise.dose}
+              onChange={(dose) =>
+                setEditing({
+                  ...editing,
+                  exercise: { ...editing.exercise, dose },
+                })
+              }
+            />
+            <button className="cta">{editing.fresh ? "Add exercise" : "Done"}</button>
+            {!editing.fresh ? (
+              <>
+                <button
+                  type="button"
+                  className="ghost-button"
+                  disabled={draft.sessions.find((s) => s.id === editing.sessionId)!.exercises.length >= 100}
+                  onClick={() => {
+                    sessionChange(editing.sessionId, (s) => ({
+                      ...s,
+                      exercises: [...s.exercises, { ...editing.exercise, id: crypto.randomUUID() }],
+                    }));
+                    setEditing(undefined);
+                  }}
+                >
+                  Copy exercise
+                </button>
+                <button
+                  type="button"
+                  className="ghost-button"
+                  onClick={() => {
+                    if (window.confirm("Remove this exercise?")) {
+                      sessionChange(editing.sessionId, (s) => ({
+                        ...s,
+                        exercises: s.exercises.filter((e) => e.id !== editing.exercise.id),
+                      }));
+                      setEditing(undefined);
+                    }
+                  }}
+                >
+                  Remove exercise
+                </button>
+              </>
+            ) : null}
+          </form>
+        </InjuryDetailSheet>
+      ) : null}
+      {preview ? (
+        <DrillPreview entry={preview} token={accessToken} onClose={() => setPreview(undefined)} selfDirected />
+      ) : null}
     </section>
-    {preview ? <DrillPreview entry={preview} token={accessToken} onClose={() => setPreview(null)} selfDirected /> : null}
-  </section>;
+  );
 }

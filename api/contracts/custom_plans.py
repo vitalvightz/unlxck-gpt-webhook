@@ -1,4 +1,5 @@
 """Saved self-directed drafts. These contracts never authorise execution."""
+
 from datetime import datetime
 from typing import Annotated, Literal
 from uuid import UUID
@@ -7,8 +8,12 @@ from pydantic import BaseModel, ConfigDict, Field, StringConstraints, model_vali
 
 from api.contracts.training_library import LibraryEntry
 
-Name = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=100)]
-Weekday = Literal["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+Name = Annotated[
+    str, StringConstraints(strip_whitespace=True, min_length=1, max_length=100)
+]
+Weekday = Literal[
+    "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"
+]
 
 
 class DraftModel(BaseModel):
@@ -16,31 +21,98 @@ class DraftModel(BaseModel):
 
 
 class CustomDose(DraftModel):
-    mode: Literal["reps", "duration"] = "reps"
+    mode: Literal["reps", "duration", "intervals", "text"] = "reps"
     sets: int | None = Field(None, strict=True, ge=1, le=100)
     reps: int | None = Field(None, strict=True, ge=1, le=1000)
     duration_seconds: int | None = Field(None, strict=True, ge=1, le=36000)
     rest_seconds: int | None = Field(None, strict=True, ge=0, le=3600)
     load_or_intensity: str | None = Field(None, max_length=80)
 
+    rounds: int | None = Field(None, strict=True, ge=1, le=100)
+    work_seconds: int | None = Field(None, strict=True, ge=1, le=36000)
+    rpe: float | None = Field(None, strict=True, ge=1, le=10)
+    tempo: str | None = Field(None, max_length=40)
+    per_side: bool | None = Field(None, strict=True)
+    distance: float | None = Field(None, strict=True, gt=0, le=100000)
+    distance_unit: Literal["m", "km", "mi", "yd"] | None = None
+    prescription: str | None = Field(None, max_length=500)
+
     @model_validator(mode="after")
     def matching_mode(self):
-        if (self.mode == "reps" and self.duration_seconds is not None) or (self.mode == "duration" and self.reps is not None):
-            raise ValueError("Use reps or duration for the selected dose mode.")
+        fields = {
+            "reps": (
+                "duration_seconds",
+                "rounds",
+                "work_seconds",
+                "distance",
+                "distance_unit",
+                "prescription",
+            ),
+            "duration": ("reps", "rounds", "work_seconds", "prescription"),
+            "intervals": (
+                "sets",
+                "reps",
+                "duration_seconds",
+                "distance",
+                "distance_unit",
+                "prescription",
+            ),
+            "text": (
+                "sets",
+                "reps",
+                "duration_seconds",
+                "rounds",
+                "work_seconds",
+                "distance",
+                "distance_unit",
+            ),
+        }
+        if any(getattr(self, field) is not None for field in fields[self.mode]):
+            raise ValueError("Fields do not match the selected dose mode.")
         return self
 
 
 class CustomExerciseInput(DraftModel):
     id: UUID
+    origin: Literal["catalogue"] = "catalogue"
     catalogue_id: str = Field(min_length=1, max_length=250)
     dose: CustomDose = Field(default_factory=CustomDose)
+
+
+class ManualExerciseInput(DraftModel):
+    id: UUID
+    origin: Literal["manual"]
+    name: Name
+    equipment: str | None = Field(None, max_length=120)
+    notes: str | None = Field(None, max_length=2000)
+    dose: CustomDose = Field(default_factory=CustomDose)
+
+
+ExerciseInput = Annotated[
+    CustomExerciseInput | ManualExerciseInput, Field(discriminator="origin")
+]
+
+
+def legacy_origins(value):
+    if isinstance(value, dict):
+        value = dict(value)
+        value["exercises"] = [
+            dict(exercise, origin=exercise.get("origin", "catalogue"))
+            for exercise in value.get("exercises", [])
+        ]
+    return value
 
 
 class CustomSessionInput(DraftModel):
     id: UUID
     name: Name
     weekday: Weekday | None = None
-    exercises: list[CustomExerciseInput] = Field(default_factory=list, max_length=100)
+    exercises: list[ExerciseInput] = Field(default_factory=list, max_length=100)
+
+    @model_validator(mode="before")
+    @classmethod
+    def legacy(cls, value):
+        return legacy_origins(value)
 
 
 class CustomPlanInput(DraftModel):
@@ -50,7 +122,9 @@ class CustomPlanInput(DraftModel):
     @model_validator(mode="after")
     def unique_occurrences(self):
         ids = [session.id for session in self.sessions]
-        ids += [exercise.id for session in self.sessions for exercise in session.exercises]
+        ids += [
+            exercise.id for session in self.sessions for exercise in session.exercises
+        ]
         if len(ids) != len(set(ids)):
             raise ValueError("Session and exercise IDs must be unique within a plan.")
         return self
@@ -68,8 +142,14 @@ class CustomExercise(CustomExerciseInput):
     incomplete: bool
 
 
+class ManualExercise(ManualExerciseInput):
+    incomplete: bool
+
+
 class CustomSession(CustomSessionInput):
-    exercises: list[CustomExercise] = Field(default_factory=list)
+    exercises: list[
+        Annotated[CustomExercise | ManualExercise, Field(discriminator="origin")]
+    ] = Field(default_factory=list)
 
 
 class CustomPlan(BaseModel):
@@ -80,3 +160,11 @@ class CustomPlan(BaseModel):
     incomplete: bool
     created_at: datetime
     updated_at: datetime
+
+
+class CustomDoseSuggestion(BaseModel):
+    dose: CustomDose | None = None
+    original: str
+    source: str
+    source_revision: str
+    row_revision: str

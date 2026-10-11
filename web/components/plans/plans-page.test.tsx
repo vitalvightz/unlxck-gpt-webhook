@@ -46,6 +46,7 @@ async function mountPlans(plans: PlanSummary[], activeId: string | null, profile
       return activeId ? json(plans.find((item) => item.plan_id === activeId)) : json({ detail: "none" }, 404);
     }
     if (url.endsWith("/api/plans") && method === "GET") return json(plans);
+    if (url.endsWith("/api/custom-plans")) return json([]);
     if (url.endsWith("/api/training/history")) return json({ sessions: [] });
     if (url.endsWith("/api/today")) return json({ active_plan: { id: activeId, phase: "GPP" } });
     if (method === "PATCH") {

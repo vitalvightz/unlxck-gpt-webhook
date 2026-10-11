@@ -1,36 +1,208 @@
-.builder { max-width: 880px; margin: 0 auto; padding: 24px 16px 48px; }
-.header { margin-bottom: 24px; }
-.header > a { display: inline-block; margin-bottom: 20px; color: var(--text-muted); }
-.header h1 { font-size: clamp(1.6rem, 5vw, 2.5rem); font-weight: 900; letter-spacing: -.04em; margin: 8px 0; }
-.editor { border: 0; padding: 0; margin: 0; min-width: 0; }
-.builder label { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
-.builder label > span { color: var(--text-muted); font-size: .75rem; }
-.builder input, .builder select { width: 100%; min-width: 0; padding: 10px; font-size: 16px; border: 1px solid var(--border-default); border-radius: 6px; background: var(--bg-stat); color: var(--text-primary); }
-.planName { max-width: 480px; margin-bottom: 24px; }
-.session { border-top: 1px solid var(--border-default); padding: 20px 0 24px; }
-.sessionHead { display: grid; grid-template-columns: 1fr 1.5fr; gap: 12px; align-items: end; }
-.sessionHead > button { grid-column: 2; justify-self: end; }
-.exercises { list-style: none; padding: 0; margin: 16px 0; }
-.exercise { padding: 16px 0; border-top: 1px solid var(--border-default); }
-.exerciseHead { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
-.exerciseName { background: none; border: none; color: var(--text-primary); text-align: left; font-size: 1rem; font-weight: 750; padding: 0; cursor: pointer; }
-.incomplete { color: var(--text-muted); font-size: .7rem; }
-.order { display: flex; margin-left: auto; gap: 4px; }
-.order button { min-width: 40px; min-height: 40px; padding: 8px; }
-.dose { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
-.optional { grid-column: 1 / -1; font-size: .8rem; }
-.optional summary { cursor: pointer; color: var(--text-muted); padding: 8px 0; }
-.optional label { max-width: 360px; }
-.actions { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; margin-top: 16px; }
-.actions > button { min-height: 44px; }
-.saved { border-top: 1px solid var(--border-default); margin-top: 32px; padding-top: 12px; }
-.saved h2 { margin-right: auto; font-size: 1.1rem; }
-.saved ul { list-style: none; padding: 0; }
-.saved li { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; border-bottom: 1px solid var(--border-default); padding: 14px 0; }
-.saved li button { background: none; border: none; color: var(--text-primary); padding: 0; font-weight: 700; cursor: pointer; text-align: left; }
-@media (min-width: 640px) {
-  .builder { padding: 32px 24px 64px; }
-  .sessionHead { grid-template-columns: 160px 1fr auto; }
-  .sessionHead > button { grid-column: auto; }
-  .dose { grid-template-columns: minmax(130px, 1.5fr) repeat(3, minmax(80px, 1fr)); }
+.builder {
+  max-width: 880px;
+  margin: auto;
+  display: grid;
+  gap: 20px;
+  padding-bottom: 100px;
+}
+.header {
+  display: grid;
+  gap: 12px;
+}
+.header h1 {
+  font-size: clamp(24px, 5vw, 34px);
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.header p {
+  margin: 0;
+  font-size: 14px;
+}
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+}
+.row > * {
+  min-width: 0;
+}
+.row :global(.ghost-button) {
+  width: auto;
+  flex-shrink: 0;
+  padding: 8px;
+  font-size: 14px;
+  min-height: 44px;
+}
+.badge {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+.editor {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+.editor label,
+.sheet label {
+  display: grid;
+  gap: 6px;
+  color: var(--text-secondary);
+  font-size: 14px;
+  min-width: 0;
+}
+.editor input,
+.sheet input,
+.sheet select,
+.sheet textarea {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  border: 1px solid var(--border-default);
+  background: var(--bg-input);
+  color: var(--text-primary);
+  border-radius: var(--radius-btn);
+  padding: 10px;
+  font: inherit;
+  font-size: 16px;
+}
+.sheet input[type="checkbox"] {
+  width: 24px;
+  min-height: 24px;
+}
+.session,
+.saved {
+  padding: 16px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-card);
+  min-width: 0;
+}
+.session h2,
+.saved h2 {
+  font-size: 18px;
+  margin: 4px 0;
+  overflow-wrap: anywhere;
+}
+.exercises,
+.saved ul {
+  list-style: none;
+  padding: 0;
+  margin: 12px 0;
+}
+.exercise {
+  padding: 12px 0;
+  border-top: 1px solid var(--border-default);
+}
+.exerciseText {
+  display: grid;
+  gap: 6px;
+  overflow-wrap: anywhere;
+}
+.exerciseText small,
+.savedLink small {
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1.5;
+}
+.sheet {
+  display: grid;
+  gap: 16px;
+  padding: 20px;
+}
+.dose {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.wide {
+  grid-column: 1 / -1;
+}
+.saveBar {
+  position: fixed;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: min(880px, calc(100% - 32px));
+  padding: 12px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-card);
+  box-sizing: border-box;
+}
+.saveBar span {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+.saveBar :global(.cta) {
+  width: auto;
+  min-width: 112px;
+}
+.savedLink {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+  padding: 16px 0;
+  min-height: 44px;
+  border-top: 1px solid var(--border-default);
+  color: var(--text-primary);
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+.savedLink small {
+  grid-column: 1 / -1;
+}
+.savedLink span {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+@media (max-width: 767px) {
+  .saveBar {
+    bottom: calc(var(--mobile-tab-bar-clearance) + 8px);
+  }
+  .builder {
+    padding-bottom: 110px;
+  }
+  .session {
+    padding: 12px;
+  }
+}
+.weekday {
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.editButton {
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-btn);
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+.editButton svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }

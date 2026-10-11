@@ -198,6 +198,39 @@ def test_source_drift_is_rejected_instead_of_refreshing_baseline(monkeypatch):
         audit.build_reports()
 
 
+def test_retained_historical_receipts_match_frozen_hashes():
+    baseline = json.loads(audit.BASELINE.read_bytes())
+    expected = {**baseline["production_files"], **baseline["configuration_files"]}
+    receipts = json.loads((audit.ROOT / "tools/metadata_integrity_original_sources.json").read_bytes())
+    for relative, source in receipts.items():
+        assert audit.source_hash(source.encode("utf-8")) == expected[relative], relative
+
+
+def test_tampered_historical_receipt_is_rejected(monkeypatch):
+    receipt_bytes = (audit.ROOT / "tools/metadata_integrity_original_sources.json").read_bytes()
+    receipts = json.loads(receipt_bytes)
+    receipts["api/app.py"] += "\n# tampered historical receipt\n"
+    original_loads = json.loads
+    monkeypatch.setattr(audit.json, "loads", lambda value, *args, **kwargs:
+                        receipts if value == receipt_bytes else original_loads(value, *args, **kwargs))
+    with pytest.raises(ValueError, match="Historical source drift: api/app.py"):
+        with audit.historical_sources():
+            pytest.fail("Tampered receipt must be rejected before replay")
+
+
+def test_custom_plan_boundary_does_not_allow_unrelated_production_changes(monkeypatch):
+    from tools import audit_canonical_metadata as canonical
+
+    baseline = json.loads(canonical.BASELINE.read_bytes())
+    current = canonical.snapshot()
+    current["production_files"]["fightcamp/conditioning.py"] = "f" * 64
+    original_snapshot = canonical.snapshot
+    monkeypatch.setattr(canonical, "snapshot", lambda root=canonical.ROOT:
+                        current if root == canonical.ROOT else original_snapshot(root))
+    with pytest.raises(ValueError, match="Unapproved production diff"):
+        canonical.preservation(baseline)
+
+
 def test_running_full_audit_preserves_deterministic_training_outputs(reports):
     from fightcamp.main import generate_plan
     from support import _build_request
