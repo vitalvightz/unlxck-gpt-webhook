@@ -169,3 +169,27 @@ def test_exact_working_dose_rule():
     # Numbers that are not a dose are left as written.
     assert _exact_working_dose("Use D-21 to D-8 only") == "Use D-21 to D-8 only"
     assert _exact_working_dose("Band tension 20-30% BW") == "Band tension 20% BW"
+
+
+def test_microdose_retains_selected_name_dose_and_single_representation():
+    name = "Med-Ball Rotational Throw"
+    dose = "2 x 3/side @ RPE 7"
+    role = {
+        "role_key": "secondary_strength_day",
+        "category": "strength",
+        "scheduled_d_day": 50,
+        "priority_microdose": {"goal": "power", "name": name, "prescription": dose},
+        "selected_exercise_assignments": [
+            {"name": "Back Squat", "base_prescription": "3 x 8 @ RPE 6"},
+            {"name": name, "slot_group": "priority_microdose", "base_prescription": dose},
+        ],
+    }
+
+    session = _session(role, 50)
+    blocks = session["blocks"]
+    assert [block["display_name"] for block in blocks] == [name, "Back Squat"]
+    assert blocks[0]["coaching_cues"] == [dose]
+    assert blocks[0]["purpose"] == "Power microdose"
+    assert blocks[0]["exercise_key"] == "med-ball-rotational-throw"
+    assert blocks[0]["block_type"] == "plyometric_power"
+    assert blocks[0]["order_index"] == 0

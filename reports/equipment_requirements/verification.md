@@ -36,11 +36,37 @@ performed. No merge was performed.
 - Reviewed mapping: 25 compact records, approximately 11 KB / 27 lines.
 - New pre-change baseline: approximately 2.8 KB / 118 lines of digests/counts.
 - Generated human summary: approximately 6 KB / 96 lines.
-- One additive original UI source receipt: 13,360 bytes, verified against the
-  existing frozen PR #2822 hash, to preserve offline historical replay after
-  updating the preview. All four previous receipts are byte-for-byte unchanged.
+- Two additive original source receipts: UI (13,360 bytes) and deterministic
+  fallback (41,635 bytes), verified against the existing frozen PR #2822 hashes
+  to preserve offline historical replay. All four previous receipts and baseline
+  reports are byte-for-byte unchanged.
 - No per-exercise inventory, full API fixture or full training plan was added.
   Browser screenshots and complete comparison outputs remain untracked.
+
+## Requested CI repairs
+
+- Docker now explicitly checks both `training-metadata.json` and
+  `equipment-requirements.json` under `/app/shared`, and calls their actual
+  runtime loaders during the image build. Local runtime loading validates all
+  25 reviews and builds the 2,855-entry catalogue. Docker is unavailable locally;
+  an actual container build has not been run here.
+- The equipment API test requests `limit=24`, inside the unchanged maximum of
+  50. The complete filtered total remains asserted; no API limit was changed.
+- The recurring fallback failure was a display-name mismatch, not missing
+  Stage 1 selection: `Med-Ball Rotational Throw` was a selected assignment, but
+  the fallback prefixed its name with `Power microdose -`. The fallback now keeps
+  the exact selected name and existing media key, with the priority label in
+  the existing purpose field, keeping dose cues unchanged. Membership and dose
+  assertions are unchanged.
+  This is a separate fallback presentation repair; generator selection,
+  membership, doses, safety gates and equipment interpretation are untouched.
+- A focused regression verifies the selected name, unchanged dose/media key,
+  power block classification, order and exactly one microdose representation.
+  Final reruns: 84 fallback, microdose, contact/card and identity tests passed;
+  97 shared-contract and equipment/API tests passed. The strict three-payload
+  fixed-seed comparison and canonical report/source checks also passed.
+  Existing Stage 2 prompt tests run with Python UTF-8 mode on Windows; their
+  default file reads otherwise fail under the local CP1252 encoding.
 
 ## Remaining correctness boundary
 
