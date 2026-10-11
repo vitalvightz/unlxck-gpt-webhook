@@ -214,3 +214,15 @@
   stroke-linecap: round;
   stroke-linejoin: round;
 }
+
+/* Compact, inline revision notice using the same control styles as Today. */
+.communityNotice {
+  display: grid;
+  justify-items: start;
+  gap: 8px;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--text-secondary);
+  border-left: 2px solid var(--border-default);
+  padding-left: 10px;
+}

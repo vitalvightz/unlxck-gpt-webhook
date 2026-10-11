@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { SavedCustomPlans } from "@/components/saved-custom-plans";
+import { MyCommunitySubmissions } from "@/components/community-exercises";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -281,7 +282,7 @@ export default function PlansPage() {
           <p className={styles.pageSubtitle}>Build, manage and add to your training.</p>
           <Link href="/plans/custom" className="ghost-button">Build My Own Plan</Link>
         </header>
-        {session?.access_token ? <SavedCustomPlans accessToken={session.access_token} /> : null}
+        {session?.access_token ? <><SavedCustomPlans accessToken={session.access_token} /><MyCommunitySubmissions token={session.access_token} /></> : null}
         <div className={actionStyles.actions}>
           <LogTraining accessToken={session?.access_token ?? null} variant="tile" />
           <TrainingLibraryLink variant="tile" />

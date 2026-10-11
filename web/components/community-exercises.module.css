@@ -12,3 +12,10 @@
 .actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .reviewContent { display: grid; gap: 16px; min-width: 0; }
 @media(min-width:820px) { .reviewContent { grid-template-columns: minmax(0,1fr) minmax(0,1fr); align-items: start; } .dialog:global(.injury-sheet) { width: min(100%,720px); } }
+
+.notice { border-left: 2px solid var(--border-default); padding-left: 10px; font-size: 13px; line-height: 1.45; color: var(--text-secondary); }
+.submissions { margin: 8px 0 16px; min-width: 0; }
+.submissionRow { border-top: 1px solid var(--border-default); padding: 8px 0; display: flex; justify-content: space-between; align-items: center; gap: 12px; min-width: 0; }
+.submissionRow > span { display: grid; gap: 4px; min-width: 0; overflow-wrap: anywhere; font-size: 13px; }
+.submissionRow > span > span { font-size: 12px; }
+.submissionRow button { flex-shrink: 0; }

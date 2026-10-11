@@ -1482,7 +1482,7 @@ export function getCustomDoseSuggestion(token: string, catalogueId: string) {
  return readJson<CustomDoseSuggestion>(`/api/custom-plans/source-suggestion?catalogue_id=${encodeURIComponent(catalogueId)}`, { token });
 }
 import type { CommunityDraft, CommunityDecision, CommunityEntry, CommunitySearch } from './api-schema.generated';
-export function listCommunityExercises(token: string, scope: 'public' | 'review' | 'mine', query = '', offset = 0, signal?: AbortSignal) {
+export function listCommunityExercises(token: string, scope: 'public' | 'review' | 'history' | 'mine', query = '', offset = 0, signal?: AbortSignal) {
   return readJson<CommunitySearch>(`/api/community-exercises${scope === 'public' ? '' : `/${scope}`}?q=${encodeURIComponent(query)}&offset=${offset}`, { token, signal });
 }
 export function getCommunityExercise(token: string, id: string, scope: 'revisions' | 'review' | 'owned' = 'revisions', signal?: AbortSignal) {
