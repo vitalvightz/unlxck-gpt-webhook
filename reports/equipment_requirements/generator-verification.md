@@ -37,6 +37,7 @@ Only strength selections, their reason logs, and corresponding candidate slots/a
 - 89 new generator/source regressions, including complete fixed-clock plan comparisons (88 passed together; final added source-drift check passed separately).
 - Ruff across api/fightcamp/tests/tools; Python compilation/import execution; frontend TypeScript check: passed.
 - Bank validation, tag audit/migration/authority, rehab schema/review/clinical validators: passed.
-- Frozen audit, full Python suite and hosted CI: results will be recorded after completion.
+- Frozen audit compatibility: 53 tests passed; equipment audit `--check` passed.
+- Full Python shards, runtime regression suites, PostgreSQL concurrency/schema checks and web build run in hosted CI. Final results are recorded on the implementation PR.
 
-Limitations: this corrects only the five reviewed records. Other unresolved equipment compounds retain their existing behavior. PostgreSQL/live-schema and hosted build checks depend on their existing CI environments; no deployment, schema or environment-variable changes are part of this PR. Initial local parallel attempts hit memory limits and pre-existing random UUID test-collection mismatches; verification uses sequential local execution and the existing hosted CI shards.
+Limitations: this corrects only the five reviewed records. Other unresolved equipment compounds retain their existing behavior. PostgreSQL/live-schema and hosted build checks depend on their existing CI environments; no deployment, schema or environment-variable changes are part of this PR. Initial local parallel attempts hit memory limits and pre-existing random UUID test-collection mismatches; relevant suites use sequential local execution, with the complete suite delegated to the existing hosted CI shards.

@@ -205,4 +205,4 @@ def test_prechange_hashes_all_identities_queries_and_unrelated_facets_are_preser
     assert report["all_source_hashes_unchanged"] and report["identity_media_and_boundary_parity"]
     assert report["ordered_30_search_controls_unchanged"]
     assert audit.markdown(report) == (audit.OUT / "README.md").read_text(encoding="utf8")
-    assert content_hash(report) == content_hash(audit.build_report())
+    assert content_hash(report) == content_hash(audit.build_report(index=index))
