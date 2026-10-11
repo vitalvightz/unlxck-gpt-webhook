@@ -13,6 +13,7 @@ from fightcamp.training_catalogue import (
     ALIASES_FILE, DATA_DIR, MANIFEST_FILE, PHYSICAL_CLASSES, SOURCE_CLASSES,
     build_catalogue, content_hash, source_hash, strings,
 )
+from fightcamp.training_metadata import CONTRACT_FILES, canonical_filter, filter_label, load_projection, project_entry
 from api.services.training_library_vocabulary import CONCEPTS, supports
 
 CLASS_LABELS = {
@@ -53,7 +54,7 @@ def _known(entry: dict, field: str) -> list[str]:
     return strings(entry["raw"].get(field)) if entry["metadata"].get(field, {}).get("state") == "known" else []
 
 
-def _prepare(entry: dict) -> dict:
+def _prepare(entry: dict, *, projection: dict | None = None) -> dict:
     goals = {alias["label"] for alias in entry["aliases"]}
     goals.update(label(value) for value in _known(entry, "goals"))
     body = set(_known(entry, "body_region") + _known(entry, "target_regions"))
@@ -68,7 +69,11 @@ def _prepare(entry: dict) -> dict:
     equipment = _known(entry, "equipment")
     equipment_known = entry["metadata"]["equipment"]["state"] == "known"
     equipment_values = set(equipment)
-    if equipment_known and (not equipment or equipment_values <= {"none", "bodyweight"}):
+    projected = project_entry(entry, projection) if projection else []
+    if projection and equipment_known:
+        equipment_values = {value["canonical_id"] for value in projected if value["source_field"] == "equipment" and value["filter_eligible"]}
+    body.update(value["canonical_id"] for value in projected if value["dimension"] == "anatomical_focus" and value["filter_eligible"])
+    if equipment_known and (not equipment or set(equipment) <= {"none", "bodyweight"}):
         equipment_values = {"no_equipment"}
     facets = {
         "type": {entry["content_class"]}, "goal": goals,
@@ -94,7 +99,7 @@ def _prepare(entry: dict) -> dict:
     # hand-timing phrase plus an unrelated speed tag could manufacture a match.
     corpus = text_key(" ".join((name, alias_text, metadata_text, description_text, body_text, gear_text)))
     return {
-        "entry": entry, "facets": facets, "name": name, "aliases": alias_text,
+        "entry": entry, "facets": facets, "name": name, "aliases": alias_text, "projection": projected,
         "metadata": metadata_text, "description": description_text,
         "discovery": discovery,
         "words": frozenset(corpus.split()),
@@ -115,6 +120,7 @@ class LibraryIndex:
     revision: str
     records: tuple[dict, ...]
     by_id: dict[str, dict]
+    projection: dict | None = None
 
 
 class LibraryCache:
@@ -134,14 +140,17 @@ class LibraryCache:
                      for stat in [(self.data_dir / source).stat()])
         # Stats only invalidate this process's cache, never the public revision.
         # The reviewed vocabulary is also a cache input.
-        return (*sources, ("discovery_vocabulary", repr(CONCEPTS)))
+        contracts = tuple((path.name, stat.st_mtime_ns, stat.st_ctime_ns, stat.st_size)
+                          for path in CONTRACT_FILES for stat in [path.stat()])
+        return (*sources, *contracts, ("discovery_vocabulary", repr(CONCEPTS)))
 
     def _revision(self) -> str:
         # Include every source and review input, including files with no entries.
         # Normalise checkout line endings just like the catalogue's source hashes.
         sources = [(source, source_hash((self.data_dir / source).read_bytes()))
                    for source in (*SOURCE_CLASSES, MANIFEST_FILE, ALIASES_FILE)]
-        return content_hash({"sources": sources, "discovery_vocabulary": [asdict(rule) for rule in CONCEPTS]})
+        contracts = [(path.name, source_hash(path.read_bytes())) for path in CONTRACT_FILES]
+        return content_hash({"sources": sources, "projection_contracts": contracts, "discovery_vocabulary": [asdict(rule) for rule in CONCEPTS]})
 
     def get(self) -> LibraryIndex:
         with self._lock:
@@ -150,9 +159,10 @@ class LibraryCache:
                 return self._index
             revision = self._revision()
             entries = build_catalogue(self.data_dir)
+            projection = load_projection()
             if self._signature() != signature:
                 raise ValueError("Catalogue changed while loading")
-            records = tuple(_prepare(entry) for entry in entries)
+            records = tuple(_prepare(entry, projection=projection) for entry in entries)
             duplicate_contexts = defaultdict(list)
             for record in records:
                 duplicate_contexts[(record["summary"]["category"], record["name"], record["summary"]["context"])].append(record)
@@ -165,7 +175,7 @@ class LibraryCache:
                     # identical/absent notes use neutral numbered variants.
                     suffix = note if all(notes) and len(set(notes)) == len(group) else f"Variant {ordinal}"
                     record["summary"]["context"] += f" · {suffix}"
-            self._index = LibraryIndex(signature, revision, records, {r["entry"]["catalogue_id"]: r for r in records})
+            self._index = LibraryIndex(signature, revision, records, {r["entry"]["catalogue_id"]: r for r in records}, projection)
             return self._index
 
 
@@ -217,6 +227,29 @@ def _query_terms(query: str) -> list[str]:
     return meaningful or words
 
 
+def _word_matches(terms: list[str], vocabulary: set | frozenset) -> dict:
+    return {term: {word: 0 if term == word else 1 if word.startswith(term) else 2
+                   for word in vocabulary if term == word or
+                   (len(term) >= 3 and word.startswith(term)) or
+                   (len(term) >= 4 and abs(len(term) - len(word)) <= 2 and SequenceMatcher(None, term, word).ratio() >= .84)}
+            for term in terms}
+
+
+def _canonical_query(record: dict, query: str, projection: dict | None) -> str:
+    for mapping in (projection or {}).get("mappings", []):
+        evidence = next((value for value in record.get("projection", [])
+                         if value["audit_decision"] == mapping["audit_decision"] and value["filter_eligible"]), None)
+        if not evidence:
+            continue
+        phrases = {text_key(value) for value in (*mapping["source_values"], mapping["label"])}
+        for phrase in sorted(phrases, key=lambda value: (-len(value), value)):
+            pattern = r"(?<!\w)" + re.escape(phrase) + r"(?!\w)"
+            if re.search(pattern, query):
+                query = re.sub(pattern, text_key(evidence["source_value"]), query)
+                break
+    return query
+
+
 def _intent_groups(query: str) -> list:
     terms = _query_terms(query)
     phrases = [(tuple(_query_terms(text_key(phrase))), rule) for rule in CONCEPTS for phrase in rule.phrases]
@@ -259,7 +292,7 @@ def _matches(record: dict, filters: dict, *, except_field: str | None = None) ->
 
 
 def search(index: LibraryIndex, *, q: str = "", category: str = "training", filters: dict | None = None, offset: int = 0, limit: int = 24) -> dict:
-    filters = filters or {}
+    filters = {field: canonical_filter(field, value, category, index.projection) for field, value in (filters or {}).items()}
     ranked = []
     query = text_key(q)
     groups = _intent_groups(query) if query and category == "training" else []
@@ -272,13 +305,27 @@ def search(index: LibraryIndex, *, q: str = "", category: str = "training", filt
     for record in index.records:
         if record["summary"]["category"] != category:
             continue
+        # Suspect equipment declarations remain source evidence, but cannot
+        # establish that a climbing drill is battle-rope work.
+        blocked_phrases = [text_key(value) for item in record.get("projection", []) if not item["filter_eligible"]
+                           for mapping in (index.projection or {}).get("mappings", []) if mapping["audit_decision"] == item["audit_decision"]
+                           for value in mapping["source_values"]]
+        if any(re.search(r"(?<!\w)" + re.escape(phrase) + r"(?!\w)", query) for phrase in blocked_phrases):
+            continue
         score = _score(record, query, matches, groups)
+        # Only previously unmatched lexical queries can use a reviewed naming
+        # equivalent. Existing intent/ranking evidence stays unchanged.
+        if score is None and not any(rules for _, rules in groups):
+            alternate = _canonical_query(record, query, index.projection)
+            if alternate != query:
+                alternate_score = _score(record, alternate, _word_matches(_query_terms(alternate), record["words"]), _intent_groups(alternate) if category == "training" else [])
+                score = min(650, alternate_score) if alternate_score is not None else None
         if score is not None:
             ranked.append((score, record))
     facets = {}
     for field in FILTERS:
         counts = Counter(value for _, r in ranked if _matches(r, filters, except_field=field) for value in r["facets"][field])
-        facets[field] = [{"value": value, "label": CLASS_LABELS.get(value, BODY_LABELS.get(value, "No equipment" if value == "no_equipment" else label(value))), "count": count}
+        facets[field] = [{"value": value, "label": filter_label(field, value, index.projection) or CLASS_LABELS.get(value, BODY_LABELS.get(value, "No equipment" if value == "no_equipment" else label(value))), "count": count}
                          for value, count in sorted(counts.items(), key=lambda pair: label(pair[0]))]
     selected = [r for score, r in sorted(ranked, key=lambda pair: (-pair[0], pair[1]["name"], pair[1]["entry"]["catalogue_id"])) if _matches(r, filters)]
     return {"entries": [{**r["summary"], "discovery_match": _discovery_match(r, query, groups)} for r in selected[offset:offset + limit]], "total": len(selected),
@@ -290,6 +337,9 @@ def search(index: LibraryIndex, *, q: str = "", category: str = "training", filt
 def preview(record: dict) -> dict:
     entry = record["entry"]
     return {**record["summary"], "source": entry["source"], "source_revision": entry["source_sha256"],
+            "metadata_projection": record.get("projection", []),
+            "equipment_source": {"state": entry["metadata"]["equipment"]["state"], "raw": entry["raw"].get("equipment"),
+                                 "guidance": {f: entry["raw"][f] for f in ("name", "equipment_note", "instructions", "notes", "description") if f in entry["raw"]}},
             "row_revision": entry["row_sha256"], "guidance": {
                 title: list(dict.fromkeys(value for field in fields for value in _known(entry, field)))
                 for title, fields in GUIDANCE_FIELDS.items() if any(_known(entry, field) for field in fields)

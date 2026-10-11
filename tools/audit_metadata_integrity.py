@@ -9,6 +9,7 @@ from __future__ import annotations
 import argparse
 import ast
 from collections import Counter, defaultdict
+from contextlib import contextmanager
 from difflib import SequenceMatcher
 import itertools
 import json
@@ -16,6 +17,7 @@ from pathlib import Path
 import re
 import subprocess
 import sys
+from tempfile import TemporaryDirectory
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
@@ -127,6 +129,9 @@ def leaves(value, field="", pointer=""):
 
 
 def tracked(root):
+    replay = root / ".audit-tracked.json"
+    if replay.exists():
+        return json.loads(replay.read_bytes())
     result = subprocess.run(["git", "ls-files", "-z"], cwd=root, check=True, capture_output=True)
     return sorted(result.stdout.decode().rstrip("\0").split("\0"))
 
@@ -711,11 +716,51 @@ def markdown(reports):
     return "\n".join(lines)
 
 
+@contextmanager
+def historical_sources():
+    """Replay PR 1 offline, with original code receipts and current unchanged banks.
+
+    Only the four explicitly retained pre-projection sources may differ. Every
+    replay byte is checked against the original frozen hashes before extraction.
+    Current production auditing remains strict and never refreshes its baseline.
+    """
+    baseline = json.loads(BASELINE.read_bytes())
+    originals = json.loads((ROOT / "tools/metadata_integrity_original_sources.json").read_bytes())
+    expected = {**baseline["production_files"], **baseline["configuration_files"],
+                **{"data/" + p: v["sha256"] for p, v in baseline["banks"].items()},
+                **{"data/" + p: v for p, v in baseline["identity_inputs"].items()}}
+    with TemporaryDirectory(prefix="unlxck-pr1-replay-") as temporary:
+        replay = Path(temporary).resolve()
+        for relative, digest in sorted(expected.items()):
+            target = (replay / relative).resolve()
+            if not target.is_relative_to(replay):
+                raise ValueError("Invalid historical source path")
+            data = originals[relative].encode("utf-8") if relative in originals else (ROOT / relative).read_bytes()
+            if source_hash(data) != digest:
+                raise ValueError("Historical source drift: " + relative)
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_bytes(data)
+        (replay / ".audit-tracked.json").write_text(dumps(sorted(expected)), encoding="utf-8")
+        (replay / "tools").mkdir(exist_ok=True)
+        (replay / "tools" / BASELINE.name).write_bytes(BASELINE.read_bytes())
+        # The resolved directory is the explicitly created temporary workspace;
+        # TemporaryDirectory cleans up only this verified directory.
+        yield replay
+
+
+def historical_reports():
+    with historical_sources() as replay:
+        return build_reports(replay)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--check", action="store_true")
+    parser.add_argument("--historical", action="store_true", help="Replay immutable PR 1 evidence; requires --check")
     args = parser.parse_args()
-    reports = build_reports()
+    if args.historical and not args.check:
+        parser.error("Historical evidence is read-only; use --historical --check")
+    reports = historical_reports() if args.historical else build_reports()
     outputs = {OUT / name: report_json(report) for name, report in reports.items()}
     outputs[OUT / "README.md"] = markdown(reports)
     outputs[OUT / "roadmap.md"] = (ROOT / "tools/metadata_integrity_roadmap.md").read_text(encoding="utf-8")

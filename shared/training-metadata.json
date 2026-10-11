@@ -1,0 +1,8 @@
+{
+  "catalogue_projection": {
+    "scope": "discovery_only",
+    "mappings": [
+      {"field":"tags","canonical_id":"adductors","label":"Inner thighs (adductors)","source_values":["adductor","adductors"],"dimension":"anatomical_focus","subtype":"hip_adductors","content_classes":["strength_power","conditioning","technical_coordination"],"audit_decision":"MI-a793c6f54e62"}
+    ]
+  }
+}

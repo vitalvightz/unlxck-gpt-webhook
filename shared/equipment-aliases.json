@@ -30,5 +30,19 @@
       "pad_work",
       "pad work"
     ]
+  },
+  "catalogue_projection": {
+    "scope": "discovery_only",
+    "mappings": [
+      {"field":"equipment","canonical_id":"battle_ropes","label":"Battle ropes","source_values":["battle_rope","battle_ropes"],"dimension":"equipment","subtype":null,"audit_decision":"MI-f400cf810ade"},
+      {"field":"equipment","canonical_id":"kettlebell","label":"Kettlebell","source_values":["kettlebell","kettlebells"],"dimension":"equipment","subtype":null,"audit_decision":"MI-45e540176268"},
+      {"field":"equipment","canonical_id":"weight_vest","label":"Weight vest","source_values":["weight_vest","weighted_vest"],"dimension":"equipment","subtype":null,"audit_decision":"MI-35204cfd5cf6"},
+      {"field":"equipment","canonical_id":"rower","label":"Rower","source_values":["rower","rowing_machine"],"dimension":"equipment","subtype":null,"audit_decision":"MI-c8c1f7bc7749"},
+      {"field":"equipment","canonical_id":"double_end_bag","label":"Double-end bag","source_values":["double-end_bag","double_end_bag"],"dimension":"equipment","subtype":null,"audit_decision":"MI-1d52007d31ef"}
+    ],
+    "association_reviews": [
+      {"catalogue_id":"conditioning_bank.json:8fe1dfe1-f794-48a5-bc0f-b7ff8b7d9a1d","row_sha256":"d6b405c0d9c862be4644d8d2b826c7af8336158fcab429fffe887815c1048c37","field":"equipment","source_value":"battle_ropes","audit_decision":"MI-f400cf810ade","reason":"Rope Climb + Short Sprint explicitly says Requires: Climbing Rope. Retain the suspect battle-rope association as raw evidence; it cannot qualify battle-rope discovery."},
+      {"catalogue_id":"conditioning_bank.json:d9d814a9-d76f-4a38-9714-76aa32afeb00","row_sha256":"156aa72c33a3050af96007668c6cd625f179376cd39e3fbc6be5e4dad0a44b47","field":"equipment","source_value":"battle_rope","audit_decision":"MI-f400cf810ade","reason":"Rope Climb Sprints explicitly says Requires: Climbing Rope. Retain the suspect battle-rope association as raw evidence; it cannot qualify battle-rope discovery."}
+    ]
   }
 }

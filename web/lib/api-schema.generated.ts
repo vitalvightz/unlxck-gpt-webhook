@@ -955,6 +955,8 @@ export type LibraryPreview = {
   source_revision: string;
   row_revision: string;
   guidance: Record<string, string[]>;
+  metadata_projection: ProjectedMetadata[];
+  equipment_source: Record<string, unknown>;
 };
 
 export type LibrarySearchResponse = {
@@ -1551,6 +1553,27 @@ export type ProgressMilestone = {
 export type Progression = {
   week_type: "build" | "deload" | "fight_week" | "reintegration" | "specific_peak" | "stabilise" | "taper";
   planned_change_from_previous: string;
+};
+
+export type ProjectedMetadata = {
+  canonical_id: string;
+  label: string;
+  source_value: string;
+  source_field: string;
+  dimension: string;
+  subtype: string | null;
+  catalogue_id: string;
+  source: string;
+  source_pointer: string;
+  source_revision: string;
+  row_revision: string;
+  audit_decision: string | null;
+  audit_report: string | null;
+  audit_revision: string | null;
+  status: "association_review" | "reviewed_alias" | "source_value" | "unresolved_compound";
+  filter_eligible: boolean;
+  association_note: string | null;
+  requirement_evidence: Record<string, unknown>;
 };
 
 export type PushSettingsResponse = {

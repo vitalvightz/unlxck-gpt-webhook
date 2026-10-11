@@ -18,7 +18,7 @@ def reports():
     paths = [audit.ROOT / path for path in audit.tracked(audit.ROOT)
              if path.endswith((".py", ".json", ".ts", ".tsx", ".sql"))]
     before = {str(path): hashlib.sha256(path.read_bytes()).hexdigest() for path in paths}
-    result = audit.build_reports()
+    result = audit.historical_reports()
     assert before == {str(path): hashlib.sha256(path.read_bytes()).hexdigest() for path in paths}
     return result
 
@@ -117,7 +117,7 @@ def test_fixed_duration_range_is_valid_while_repeated_risk_token_is_flagged():
 
 
 def test_reports_are_deterministic_and_retained_reports_match(reports):
-    again = audit.build_reports()
+    again = audit.historical_reports()
     assert {k: audit.dumps(v) for k, v in reports.items()} == {k: audit.dumps(v) for k, v in again.items()}
     for name, report in reports.items():
         assert (audit.ROOT / audit.OUT / name).read_text(encoding="utf-8") == audit.report_json(report)
@@ -126,7 +126,11 @@ def test_reports_are_deterministic_and_retained_reports_match(reports):
 
 def test_frozen_bank_production_and_identity_baselines_are_unchanged(reports):
     baseline = json.loads(audit.BASELINE.read_bytes())
-    assert audit.snapshot() == baseline
+    current = audit.snapshot()
+    for key in ("banks", "identity_inputs", "identities"):
+        assert current[key] == baseline[key]
+    # The historical replay above still checks every original production hash;
+    # PR 2 separately verifies its narrow allowed diff and frozen plan outputs.
     entries = build_catalogue()
     assert {e["catalogue_id"]: {"row_sha256": e["row_sha256"], "exercise_key": e["exercise_key"]} for e in entries} == baseline["identities"]
     assert len({e["catalogue_id"] for e in entries}) == 2855
@@ -198,7 +202,7 @@ def test_running_full_audit_preserves_deterministic_training_outputs(reports):
     payload = _build_request().to_payload()
     payload["random_seed"] = 7
     before = asyncio.run(generate_plan(deepcopy(payload)))
-    audit.build_reports()
+    audit.historical_reports()
     after = asyncio.run(generate_plan(deepcopy(payload)))
     assert before["plan_text"] and before["plan_text"] == after["plan_text"]
     assert before["stage2_payload"] == after["stage2_payload"]
