@@ -14,6 +14,9 @@ from fightcamp.training_catalogue import (
     build_catalogue, content_hash, source_hash, strings,
 )
 from fightcamp.training_metadata import CONTRACT_FILES, canonical_filter, filter_label, load_projection, project_entry
+from fightcamp.equipment_requirements import (
+    REQUIREMENTS_FILE, load_equipment_reviews, project_requirements, requirement_items,
+)
 from api.services.training_library_vocabulary import CONCEPTS, supports
 
 CLASS_LABELS = {
@@ -54,7 +57,7 @@ def _known(entry: dict, field: str) -> list[str]:
     return strings(entry["raw"].get(field)) if entry["metadata"].get(field, {}).get("state") == "known" else []
 
 
-def _prepare(entry: dict, *, projection: dict | None = None) -> dict:
+def _prepare(entry: dict, *, projection: dict | None = None, equipment_reviews: dict | None = None) -> dict:
     goals = {alias["label"] for alias in entry["aliases"]}
     goals.update(label(value) for value in _known(entry, "goals"))
     body = set(_known(entry, "body_region") + _known(entry, "target_regions"))
@@ -75,6 +78,12 @@ def _prepare(entry: dict, *, projection: dict | None = None) -> dict:
     body.update(value["canonical_id"] for value in projected if value["dimension"] == "anatomical_focus" and value["filter_eligible"])
     if equipment_known and (not equipment or set(equipment) <= {"none", "bodyweight"}):
         equipment_values = {"no_equipment"}
+    requirements = project_requirements(entry, equipment_reviews) if equipment_reviews is not None else None
+    if requirements:
+        # Explicitly unresolved compounds retain their whole legacy token. They
+        # cannot certify a component apparatus or acquire No Equipment.
+        equipment_values = requirement_items(requirements) if requirements["status"] == "reviewed" else equipment_values - {"no_equipment"}
+        equipment_known = True
     facets = {
         "type": {entry["content_class"]}, "goal": goals,
         "sport": {e["value"] for e in entry["sport_evidence"]},
@@ -100,16 +109,20 @@ def _prepare(entry: dict, *, projection: dict | None = None) -> dict:
     corpus = text_key(" ".join((name, alias_text, metadata_text, description_text, body_text, gear_text)))
     return {
         "entry": entry, "facets": facets, "name": name, "aliases": alias_text, "projection": projected,
+        "equipment_requirements": requirements,
         "metadata": metadata_text, "description": description_text,
         "discovery": discovery,
         "words": frozenset(corpus.split()),
         "summary": {
             "catalogue_id": entry["catalogue_id"], "name": entry["name"],
             "content_type": entry["content_class"], "category": category_of(entry["content_class"]),
-            "context": context, "focus": focus, "equipment": equipment if equipment_known else None,
+            "context": context, "focus": focus,
+            "equipment": (sorted(requirement_items(requirements)) if requirements["status"] == "reviewed" else equipment)
+                         if requirements else equipment if equipment_known else None,
             "equipment_state": entry["metadata"]["equipment"]["state"],
             "exercise_key": entry["exercise_key"], "media": None,
             "selection_boundary": entry["eligibility"]["boundary"], "prescription_allowed": False,
+            **({"equipment_requirements": requirements} if equipment_reviews is not None else {}),
         },
     }
 
@@ -121,6 +134,7 @@ class LibraryIndex:
     records: tuple[dict, ...]
     by_id: dict[str, dict]
     projection: dict | None = None
+    equipment_reviews: dict | None = None
 
 
 class LibraryCache:
@@ -129,8 +143,9 @@ class LibraryCache:
     Invalid revisions fail closed: never fall back to a previously valid index.
     The lock prevents concurrent requests rebuilding the same 2,855 records.
     """
-    def __init__(self, data_dir: Path = DATA_DIR):
+    def __init__(self, data_dir: Path = DATA_DIR, *, reviewed_requirements: bool = True):
         self.data_dir = data_dir
+        self.reviewed_requirements = reviewed_requirements
         self._lock = threading.Lock()
         self._index: LibraryIndex | None = None
 
@@ -141,7 +156,7 @@ class LibraryCache:
         # Stats only invalidate this process's cache, never the public revision.
         # The reviewed vocabulary is also a cache input.
         contracts = tuple((path.name, stat.st_mtime_ns, stat.st_ctime_ns, stat.st_size)
-                          for path in CONTRACT_FILES for stat in [path.stat()])
+                          for path in (*CONTRACT_FILES, *((REQUIREMENTS_FILE,) if self.reviewed_requirements else ())) for stat in [path.stat()])
         return (*sources, *contracts, ("discovery_vocabulary", repr(CONCEPTS)))
 
     def _revision(self) -> str:
@@ -149,7 +164,8 @@ class LibraryCache:
         # Normalise checkout line endings just like the catalogue's source hashes.
         sources = [(source, source_hash((self.data_dir / source).read_bytes()))
                    for source in (*SOURCE_CLASSES, MANIFEST_FILE, ALIASES_FILE)]
-        contracts = [(path.name, source_hash(path.read_bytes())) for path in CONTRACT_FILES]
+        contracts = [(path.name, source_hash(path.read_bytes())) for path in
+                     (*CONTRACT_FILES, *((REQUIREMENTS_FILE,) if self.reviewed_requirements else ()))]
         return content_hash({"sources": sources, "projection_contracts": contracts, "discovery_vocabulary": [asdict(rule) for rule in CONCEPTS]})
 
     def get(self) -> LibraryIndex:
@@ -160,9 +176,14 @@ class LibraryCache:
             revision = self._revision()
             entries = build_catalogue(self.data_dir)
             projection = load_projection()
+            equipment_reviews = load_equipment_reviews() if self.reviewed_requirements else None
+            if equipment_reviews is not None:
+                missing = set(equipment_reviews) - {entry["catalogue_id"] for entry in entries}
+                if missing:
+                    raise ValueError("Missing reviewed equipment identities: " + str(sorted(missing)))
             if self._signature() != signature:
                 raise ValueError("Catalogue changed while loading")
-            records = tuple(_prepare(entry, projection=projection) for entry in entries)
+            records = tuple(_prepare(entry, projection=projection, equipment_reviews=equipment_reviews) for entry in entries)
             duplicate_contexts = defaultdict(list)
             for record in records:
                 duplicate_contexts[(record["summary"]["category"], record["name"], record["summary"]["context"])].append(record)
@@ -175,7 +196,7 @@ class LibraryCache:
                     # identical/absent notes use neutral numbered variants.
                     suffix = note if all(notes) and len(set(notes)) == len(group) else f"Variant {ordinal}"
                     record["summary"]["context"] += f" · {suffix}"
-            self._index = LibraryIndex(signature, revision, records, {r["entry"]["catalogue_id"]: r for r in records}, projection)
+            self._index = LibraryIndex(signature, revision, records, {r["entry"]["catalogue_id"]: r for r in records}, projection, equipment_reviews)
             return self._index
 
 
@@ -293,6 +314,18 @@ def _matches(record: dict, filters: dict, *, except_field: str | None = None) ->
 
 def search(index: LibraryIndex, *, q: str = "", category: str = "training", filters: dict | None = None, offset: int = 0, limit: int = 24) -> dict:
     filters = {field: canonical_filter(field, value, category, index.projection) for field, value in (filters or {}).items()}
+    # Reviewed compounds remain accepted as legacy filters, without making their
+    # punctuation a general splitting rule or changing independent AND filters.
+    legacy_equipment = filters.get("equipment")
+    if index.equipment_reviews and legacy_equipment and re.search(r"[,/+|&]", legacy_equipment):
+        legacy_ids = {identity for identity, review in index.equipment_reviews.items()
+                      if review["action"] == "CORRECT" and review["source_value"] == legacy_equipment}
+    else:
+        legacy_ids = set()
+    def matches_filters(record: dict, except_field: str | None = None) -> bool:
+        if legacy_ids and except_field != "equipment":
+            return record["entry"]["catalogue_id"] in legacy_ids and _matches(record, filters, except_field="equipment")
+        return _matches(record, filters, except_field=except_field)
     ranked = []
     query = text_key(q)
     groups = _intent_groups(query) if query and category == "training" else []
@@ -324,10 +357,10 @@ def search(index: LibraryIndex, *, q: str = "", category: str = "training", filt
             ranked.append((score, record))
     facets = {}
     for field in FILTERS:
-        counts = Counter(value for _, r in ranked if _matches(r, filters, except_field=field) for value in r["facets"][field])
+        counts = Counter(value for _, r in ranked if matches_filters(r, field) for value in r["facets"][field])
         facets[field] = [{"value": value, "label": filter_label(field, value, index.projection) or CLASS_LABELS.get(value, BODY_LABELS.get(value, "No equipment" if value == "no_equipment" else label(value))), "count": count}
                          for value, count in sorted(counts.items(), key=lambda pair: label(pair[0]))]
-    selected = [r for score, r in sorted(ranked, key=lambda pair: (-pair[0], pair[1]["name"], pair[1]["entry"]["catalogue_id"])) if _matches(r, filters)]
+    selected = [r for score, r in sorted(ranked, key=lambda pair: (-pair[0], pair[1]["name"], pair[1]["entry"]["catalogue_id"])) if matches_filters(r)]
     return {"entries": [{**r["summary"], "discovery_match": _discovery_match(r, query, groups)} for r in selected[offset:offset + limit]], "total": len(selected),
             "catalogue_total": len(index.records), "offset": offset, "limit": limit,
             "next_offset": offset + limit if offset + limit < len(selected) else None,

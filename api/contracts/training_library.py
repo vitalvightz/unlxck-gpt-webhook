@@ -12,6 +12,29 @@ class LibraryFacet(BaseModel):
     count: int
 
 
+class EquipmentRequirementItem(BaseModel):
+    canonical_id: str
+    kind: Literal["apparatus", "partner"]
+    quantity: int | None = None
+
+
+class EquipmentRequirementGroup(BaseModel):
+    mode: Literal["SINGLE", "ALL", "ANY", "OPTIONAL", "UNKNOWN"]
+    items: list[EquipmentRequirementItem]
+
+
+class EquipmentRequirements(BaseModel):
+    status: Literal["reviewed", "unresolved"]
+    groups: list[EquipmentRequirementGroup]
+    source_value: str | list[str] | None
+    source: str
+    source_pointer: str
+    catalogue_id: str
+    row_revision: str
+    audit_decisions: list[str]
+    evidence: str
+
+
 class LibraryEntry(BaseModel):
     catalogue_id: str
     name: str
@@ -22,6 +45,7 @@ class LibraryEntry(BaseModel):
     discovery_match: str | None = None
     equipment: list[str] | None
     equipment_state: str
+    equipment_requirements: EquipmentRequirements | None = None
     exercise_key: str | None
     media: ExerciseMedia | None = None
     selection_boundary: str

@@ -7,7 +7,7 @@ import canonicalFixture from "./fixtures/canonical-metadata-library.json";
 const athlete = "00000000-0000-4000-8000-000000000001";
 const storageKey = `sb-${new URL(process.env.NEXT_PUBLIC_SUPABASE_URL ?? "https://stub.supabase.co").hostname.split(".")[0]}-auth-token`;
 const entry = (name: string, equipment: string[] | null, overrides: Partial<LibraryEntry> = {}): LibraryEntry => ({
-  catalogue_id: name, name, equipment, equipment_state: equipment === null ? "absent" : "known", content_type: "strength_power",
+  catalogue_id: name, name, equipment, equipment_state: equipment === null ? "absent" : "known", equipment_requirements: null, content_type: "strength_power",
   category: "training", context: "Strength", focus: ["Punching power"], discovery_match: null, exercise_key: null, media: null,
   selection_boundary: "training_validation_required", prescription_allowed: false, ...overrides,
 });
@@ -142,6 +142,50 @@ async function setup(page: Page, baseURL: string) {
     return json({ notifications: [], unread_count: 0, level: 1, total_xp: 0 });
   });
   return { calls, fail: (value: boolean) => { failSearch = value; } };
+}
+
+for (const width of [320, 390, 1280]) {
+  test(`Reviewed equipment setup and unresolved requirements (${width}px)`, async ({ page, baseURL }) => {
+    await page.setViewportSize({ width, height: 844 });
+    await setup(page, baseURL!);
+    const makeRequirement = (mode: "ALL" | "UNKNOWN", items: string[]) => ({
+      status: mode === "UNKNOWN" ? "unresolved" : "reviewed", groups: [{ mode, items: items.map(canonical_id => ({ canonical_id, kind: "apparatus", quantity: null })) }],
+      source_value: mode === "ALL" ? "sledgehammer/tire" : "treadmill/rower", source: "exercise_bank.json", source_pointer: "/equipment",
+      catalogue_id: "fixture", row_revision: "fixture", audit_decisions: ["MI-71931d8b6978"], evidence: "Reviewed source apparatus; mandatory target retained.",
+    });
+    const reviewed = { ...drills[0], catalogue_id: "exercise_bank.json:7731eda3-0acb-4c6d-b81f-c917bb0d2b62", name: "Rotational Sledgehammer Strike", equipment: ["sledgehammer", "tire"], equipment_requirements: makeRequirement("ALL", ["sledgehammer", "tire"]) };
+    const unknown = { ...drills[0], catalogue_id: "exercise_bank.json:1c2ee7d5-21f5-4e40-bbc7-347a090d7413", name: "Tabata Sprints (Treadmill/Row)", equipment: ["treadmill/rower"], equipment_requirements: makeRequirement("UNKNOWN", []) };
+    await page.route("**/api/training/library/**", route => {
+      const url = new URL(route.request().url());
+      const selected = url.searchParams.get("catalogue_id") === unknown.catalogue_id ? unknown : reviewed;
+      const entries = url.searchParams.get("equipment") ? [reviewed] : [reviewed, unknown];
+      const body = url.pathname.endsWith("/entry") ? { ...selected, source: "exercise_bank.json", source_revision: "fixture", row_revision: "fixture", guidance: {} }
+        : { entries, total: entries.length, catalogue_total: 2855, offset: 0, limit: 24, next_offset: null, revision: "fixture",
+          facets: { type: [], sport: [], goal: [], body_focus: [], equipment: [{ value: "sledgehammer", label: "Sledgehammer", count: 1 }] } };
+      return route.fulfill({ contentType: "application/json", body: JSON.stringify(body) });
+    });
+    await page.goto("/plans/library");
+    const results = page.getByRole("list", { name: "Drill results" });
+    await expect(results).toContainText("Requires: sledgehammer + tire");
+    await expect(results).toContainText("Equipment setup needs review");
+    await expect(results).not.toContainText("No equipment");
+    await page.getByRole("button", { name: /^Filters/ }).click();
+    const filters = page.getByRole("dialog", { name: "Filters", exact: true });
+    await filters.getByRole("combobox", { name: "Equipment", exact: true }).selectOption("sledgehammer");
+    await filters.getByRole("button", { name: "Show results", exact: true }).click();
+    await expect(results).not.toContainText("Tabata Sprints");
+    const drill = results.getByRole("button").first();
+    await drill.click();
+    const preview = page.getByRole("dialog", { name: reviewed.name, exact: true });
+    await expect(preview.getByRole("heading", { name: "Equipment setup" })).toBeVisible();
+    await expect(preview).toContainText("Requires: sledgehammer + tire");
+    await expect(preview).toContainText("Discovery only");
+    expect((await new AxeBuilder({ page }).include('[role="dialog"]').analyze()).violations).toEqual([]);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    await page.screenshot({ path: test.info().outputPath(`equipment-requirements-${width}.png`), animations: "disabled" });
+    await page.keyboard.press("Escape");
+    await expect(drill).toBeFocused();
+  });
 }
 
 for (const width of [390, 1280]) {

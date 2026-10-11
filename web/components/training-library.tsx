@@ -8,6 +8,7 @@ import { ExerciseDemo } from "./exercise-demo";
 import { ExerciseGlyphIcon, type ExerciseGlyphName } from "./exercise-glyph";
 import { demoThumbnailUrl } from "@/lib/exercise-demo";
 import { InjuryDetailSheet } from "./today/injury-detail-sheet";
+import { libraryEquipmentText as equipmentText } from "@/lib/equipment-requirements";
 import styles from "./training-library.module.css";
 
 type Category = LibraryEntry["category"];
@@ -25,8 +26,6 @@ const boundaries: Record<Category, string> = {
   learn: "For learning and care. These entries are not workout exercises.",
 };
 const readable = (value: string) => value.replaceAll("_", " ").replaceAll("-", " ");
-const equipmentText = (entry: LibraryEntry) => entry.equipment === null ? "Equipment unspecified"
-  : entry.equipment.length ? entry.equipment.map(readable).join(" · ") : "No equipment";
 
 export function DrillPreview({ entry, token, onClose }: { entry: LibraryEntry; token: string; onClose: () => void }) {
   const [detail, setDetail] = useState<LibraryPreview | null>(null);
@@ -49,6 +48,10 @@ export function DrillPreview({ entry, token, onClose }: { entry: LibraryEntry; t
       {error ? <div role="alert"><p>{error}</p><button className="secondary-button" onClick={() => { setError(null); setRetry(n => n + 1); }}>Retry preview</button></div>
         : !detail ? <p role="status">Loading drill…</p> : <>
           {detail.media ? <ExerciseDemo media={detail.media} exerciseName={detail.name} /> : null}
+          {detail.equipment_requirements ? <section>
+            <h3>Equipment setup</h3><p>{equipmentText(detail)}</p>
+            <p className={styles.meta}>{detail.equipment_requirements.evidence}</p>
+          </section> : null}
           {["Instructions", "Cues"].map(title => detail.guidance[title]?.length ? <section key={title}>
             <h3>{title}</h3>{detail.guidance[title].map(text => <p key={text}>{text}</p>)}
           </section> : null)}

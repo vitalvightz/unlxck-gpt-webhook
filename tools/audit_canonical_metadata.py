@@ -32,6 +32,11 @@ OUT = ROOT / "reports/canonical_metadata"
 ALLOWED_CHANGED = frozenset({"api/services/training_library.py", "api/contracts/training_library.py",
                             "shared/equipment-aliases.json", "web/lib/api-schema.generated.ts"})
 ALLOWED_ADDED = frozenset({"fightcamp/training_metadata.py", "shared/training-metadata.json"})
+# Later equipment remediation is checked separately, without refreshing PR 2's
+# frozen reports or changing its discovery-only historical projection.
+EQUIPMENT_CHANGED = frozenset({"web/components/training-library.tsx"})
+EQUIPMENT_ADDED = frozenset({"fightcamp/equipment_requirements.py", "shared/equipment-requirements.json",
+                             "web/lib/equipment-requirements.ts"})
 
 
 def dumps(value):
@@ -145,7 +150,7 @@ def collection_order_differences(left, right, path=""):
 
 
 def browser_fixture():
-    index = library.LibraryCache().get()
+    index = library.LibraryCache(reviewed_requirements=False).get()
     cases = [{}, {"equipment": "kettlebell"}, {"equipment": "kettlebell", "type": "strength_power"},
              {"type": "strength_power"}, {"equipment": "battle_ropes"}, {"body_focus": "adductors"}]
     responses = {"&".join(f"{key}={value}" for key, value in sorted(filters.items())): library.search(index, filters=filters)
@@ -154,7 +159,7 @@ def browser_fixture():
             for response in responses.values() for r in response["entries"]}}
 
 
-def consumer_receipts():
+def consumer_receipts(*, historical=False):
     reviewed = {
         "fightcamp/training_metadata.py": {
             "project_value": "Field-scoped reviewed aliases, raw requirements and pinned source-association exclusions; discovery only",
@@ -198,6 +203,13 @@ def consumer_receipts():
     ):
         line = next(n for n, text in enumerate((ROOT / path).read_text(encoding="utf-8").splitlines(), 1) if phrase in text)
         receipts.append({"file": path, "function": function, "line": line, "usage": usage, "programming_sensitive": False})
+    if historical:
+        # PR 2's report retains its original line references. Current line
+        # references belong in the later remediation report, not this baseline.
+        retained = json.loads((OUT / "before-after.json").read_bytes())["affected_consumer_receipts"]
+        if {(r["file"], r["function"], r["usage"]) for r in receipts} != {(r["file"], r["function"], r["usage"]) for r in retained}:
+            raise ValueError("Historical consumer definitions changed")
+        return retained
     return receipts
 
 
@@ -211,15 +223,15 @@ def preservation(baseline):
         raise ValueError("PR 1 evidence changed")
     changed = sorted(p for p, h in original["production_files"].items() if current["production_files"].get(p) != h)
     added = sorted(set(current["production_files"]) - set(original["production_files"]))
-    if not set(changed) <= ALLOWED_CHANGED or not set(added) <= ALLOWED_ADDED:
+    if not set(changed) <= ALLOWED_CHANGED | EQUIPMENT_CHANGED or not set(added) <= ALLOWED_ADDED | EQUIPMENT_ADDED:
         raise ValueError("Unapproved production diff: " + str((changed, added)))
     for p, h in original["configuration_files"].items():
         if current["configuration_files"].get(p) != h and p != "shared/equipment-aliases.json":
             raise ValueError("Programming/clinical configuration drift: " + p)
-    if set(current["configuration_files"]) - set(original["configuration_files"]) - {"shared/training-metadata.json"}:
+    if set(current["configuration_files"]) - set(original["configuration_files"]) - {"shared/training-metadata.json", "shared/equipment-requirements.json"}:
         raise ValueError("Unapproved configuration added")
     originals = json.loads((ROOT / "tools/metadata_integrity_original_sources.json").read_bytes())
-    if set(originals) != ALLOWED_CHANGED:
+    if set(originals) != ALLOWED_CHANGED | EQUIPMENT_CHANGED:
         raise ValueError("Unexpected historical source receipts")
     for p, text in originals.items():
         if source_hash(text.encode()) != original["production_files"][p]:
@@ -230,14 +242,15 @@ def preservation(baseline):
             "source_hash_parity": True, "catalogue_identity_and_media_key_parity": True,
             "pr1_evidence_hash_parity": True, "planner_clinical_configuration_parity": True,
             "persisted_equipment_alias_contract_parity": True,
-            "allowed_changed_production": changed, "added_projection_sources": added}
+            "allowed_changed_production": sorted(set(changed) - EQUIPMENT_CHANGED),
+            "added_projection_sources": sorted(set(added) - EQUIPMENT_ADDED)}
 
 
-def build_report():
+def build_report(*, verified_plans=None):
     baseline = json.loads(BASELINE.read_bytes())
     protected = preservation(baseline)
     projection = load_projection()
-    index = library.LibraryCache().get()
+    index = library.LibraryCache(reviewed_requirements=False).get()
     issues = json.loads((ROOT / "reports/metadata_integrity/remediation.json").read_bytes())["issues"]
     by_issue = {i["issue_id"]: i for i in issues}
     groups = []
@@ -270,7 +283,7 @@ def build_report():
                 raise ValueError("Unrelated facet drift: " + field)
         if r["summary"]["prescription_allowed"] is not False:
             raise ValueError("Discovery prescription boundary changed")
-    plans = controlled_plan_parity(baseline)
+    plans = verified_plans if verified_plans is not None else controlled_plan_parity(baseline)
     applied = {m["audit_decision"] for m in projection["mappings"]}
     occurrences = [{k: v[k] for k in ("catalogue_id", "source", "source_pointer", "row_revision", "source_field", "source_value", "canonical_id", "label", "dimension", "subtype", "audit_decision", "status", "filter_eligible", "association_note")}
                    for r in index.records for v in r["projection"]]
@@ -279,7 +292,7 @@ def build_report():
               for category in ("training", "rehab", "learn")}
     return {"base_revision": BASE_REVISION, "scope": "discovery_only; raw banks and planner unchanged",
             "preservation": protected, "groups": groups, "facets": facets, "projected_values": occurrences,
-            "affected_consumer_receipts": consumer_receipts(),
+            "affected_consumer_receipts": consumer_receipts(historical=True),
             "withheld_source_associations": projection["association_reviews"],
             "remaining_register_issues": [{key: i[key] for key in ("issue_id", "field", "existing_values", "recommended_action", "confidence", "manual_review_required")}
                                          for i in issues if i["issue_id"] not in applied],

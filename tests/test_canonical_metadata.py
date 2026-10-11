@@ -21,6 +21,11 @@ def baseline():
     return json.loads(audit.BASELINE.read_bytes())
 
 
+@pytest.fixture(scope="module")
+def verified_plans(baseline):
+    return audit.controlled_plan_parity(baseline)
+
+
 @pytest.mark.parametrize("ordinal", range(6))
 @pytest.mark.parametrize("category", ["training", "rehab", "learn"])
 def test_reviewed_aliases_have_one_option_distinct_counts_and_legacy_compatibility(index, ordinal, category):
@@ -218,14 +223,14 @@ def test_raw_banks_ids_media_keys_and_planner_sources_have_no_drift(baseline):
     assert audit.preservation(baseline)["catalogue_entries"] == 2855
 
 
-def test_frozen_fixed_seed_plans_and_prescription_doses_are_identical(baseline):
-    result = audit.controlled_plan_parity(baseline)
+def test_frozen_fixed_seed_plans_and_prescription_doses_are_identical(baseline, verified_plans):
+    result = verified_plans
     assert len(result["plans"]) == 3
     assert result["original_capture"] == baseline["plans"]
 
 
-def test_report_is_deterministic_and_matches_retained_evidence():
-    report = audit.build_report()
+def test_report_is_deterministic_and_matches_retained_evidence(verified_plans):
+    report = audit.build_report(verified_plans=verified_plans)
     assert audit.dumps(report) == (audit.OUT / "before-after.json").read_text(encoding="utf-8")
     assert audit.markdown(report) == (audit.OUT / "README.md").read_text(encoding="utf-8")
 
