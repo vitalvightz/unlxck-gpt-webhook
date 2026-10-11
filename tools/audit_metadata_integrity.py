@@ -800,6 +800,9 @@ def historical_library_index(*, reviewed_requirements=False):
     from fightcamp.training_metadata import load_projection
 
     projection = load_projection()
+    # PR #2822/#2823 replay predates per-entry Goal curation. Keep those frozen
+    # facets and reports reproducible; live Goal corrections have their own tests.
+    projection["goal_reviews"] = []
     reviews = json.loads((ROOT / "shared/equipment-requirements.json").read_bytes())["reviews"]
     for review in reviews:
         if review.get("source_history"):
@@ -814,6 +817,8 @@ def historical_library_index(*, reviewed_requirements=False):
         paths = []
         for path in (*library.CONTRACT_FILES, library.REQUIREMENTS_FILE):
             text = path.read_text(encoding="utf8")
+            if path.name == "training-metadata.json":
+                text = text.split(',\n    "goal_reviews":')[0] + "\n  }\n}\n"
             for current in json.loads((ROOT / "shared/equipment-requirements.json").read_bytes())["reviews"]:
                 if not current.get("source_history"):
                     continue

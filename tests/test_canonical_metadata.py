@@ -50,7 +50,11 @@ def test_reviewed_aliases_have_one_option_distinct_counts_and_legacy_compatibili
 def test_all_original_metadata_and_provenance_remain_available(index):
     for record in index.records:
         detail = lib.preview(record)
-        assert LibraryPreview.model_validate(detail).model_dump()["metadata_projection"] == detail["metadata_projection"]
+        serialized = LibraryPreview.model_validate(detail).model_dump()["metadata_projection"]
+        for value in serialized:
+            if not value["goal_evidence"]:
+                value.pop("goal_evidence")
+        assert serialized == detail["metadata_projection"]
         assert detail["equipment_source"]["raw"] == record["entry"]["raw"].get("equipment")
         for value in record["projection"]:
             raw = record["entry"]["raw"][value["source_field"]]
@@ -165,8 +169,11 @@ def test_existing_query_orders_goals_and_unrelated_facets_are_identical(index, b
     assert audit.query_results(index) == baseline["queries"]
     for r in index.records:
         for field in ("goal", "type", "sport"):
-            assert sorted(r["facets"][field]) == baseline["original_facets"][r["entry"]["catalogue_id"]][field]
-    assert sum(bool(r["facets"]["goal"]) for r in index.records if r["summary"]["category"] == "training") == 222
+            expected = set(baseline["original_facets"][r["entry"]["catalogue_id"]][field])
+            if field == "goal":
+                expected.update(v["label"] for v in r["projection"] if v["status"] == "reviewed_goal")
+            assert r["facets"][field] == expected
+    assert sum(bool(r["facets"]["goal"]) for r in index.records if r["summary"]["category"] == "training") == 250
 
 
 def test_anatomical_focus_has_reviewed_training_evidence_only(index):

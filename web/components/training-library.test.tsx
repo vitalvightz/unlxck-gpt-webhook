@@ -89,3 +89,31 @@ test("Unavailable search removes stale drills; retry restores them", async () =>
     assert.equal(ui.host.querySelectorAll("li").length, 1);
   } finally { await ui.cleanup(); }
 });
+
+test("Goal filter reaches the API and preview shows reviewed adaptation and execution", async () => {
+  const calls: string[] = [];
+  const ui = await mount((async input => {
+    const url = String(input); calls.push(url);
+    if (url.includes("/library/entry")) return json({ ...entry, focus: ["Coordination"], guidance: {},
+      metadata_projection: [{ canonical_id: "coordination", label: "Coordination", status: "reviewed_goal",
+        goal_evidence: { why: "Coordinate opposite hand-foot support.", cue: "Finish with a stable base." } }] });
+    return json(response({ facets: { goal: [{ value: "Coordination", label: "Coordination", count: 24 }] } }));
+  }) as typeof fetch);
+  try {
+    await ui.click("Filters");
+    const select = Array.from(document.querySelectorAll("select")).find(control =>
+      Array.from(control.options).some(option => option.value === "Coordination"));
+    assert.ok(select);
+    await act(async () => { select.value = "Coordination"; select.dispatchEvent(new window.Event("change", { bubbles: true })); });
+    await settle();
+    assert.ok(calls.some(url => url.includes("goal=Coordination")));
+    await ui.click("Show results");
+    const drill = ui.host.querySelector<HTMLButtonElement>("li button");
+    assert.ok(drill);
+    await act(async () => drill.click());
+    await settle();
+    assert.ok(document.body.textContent?.includes("Goal: Coordination"));
+    assert.ok(document.body.textContent?.includes("Coordinate opposite hand-foot support."));
+    assert.ok(document.body.textContent?.includes("Finish with a stable base."));
+  } finally { await ui.cleanup(); }
+});

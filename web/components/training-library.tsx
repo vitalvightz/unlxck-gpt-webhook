@@ -48,6 +48,11 @@ export function DrillPreview({ entry, token, onClose }: { entry: LibraryEntry; t
       {error ? <div role="alert"><p>{error}</p><button className="secondary-button" onClick={() => { setError(null); setRetry(n => n + 1); }}>Retry preview</button></div>
         : !detail ? <p role="status">Loading drill…</p> : <>
           {detail.media ? <ExerciseDemo media={detail.media} exerciseName={detail.name} /> : null}
+          {detail.metadata_projection.filter(value => value.status === "reviewed_goal").map(value => <section key={value.canonical_id}>
+            <h3>Goal: {value.label}</h3>
+            <p>{String(value.goal_evidence.why)}</p>
+            <p>{String(value.goal_evidence.cue)}</p>
+          </section>)}
           {detail.equipment_requirements ? <section>
             <h3>Equipment setup</h3><p>{equipmentText(detail)}</p>
             <p className={styles.meta}>{detail.equipment_requirements.evidence}</p>
@@ -197,7 +202,7 @@ export function TrainingLibrary({ accessToken }: { accessToken: string }) {
             </select>
           </label>;
         })}
-        <p className={styles.meta}>Goal filters use source labels. Related matches are for discovery.</p>
+        <p className={styles.meta}>Goal filters use source evidence. Related matches are for discovery.</p>
         <div className={styles.filterActions}>
           <button className="injury-sheet-save" onClick={() => setFilterOpen(false)}>Show results</button>
           <button className={styles.reset} onClick={() => changeSearch(() => setFilters({}))}>Reset filters</button>
