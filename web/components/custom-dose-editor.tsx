@@ -1,0 +1,168 @@
+"use client";
+import { useState } from "react";
+import type { CustomDose } from "@/lib/api-schema.generated";
+import styles from "./custom-plan-builder.module.css";
+import { blankDose } from "@/lib/custom-plan-dose";
+function DurationField({
+  value,
+  label,
+  onChange,
+}: {
+  value: number | null;
+  label: string;
+  onChange: (value: number | null) => void;
+}) {
+  const [unit, setUnit] = useState(value && value % 60 === 0 ? 60 : 1);
+  return (
+    <label>
+      <span>{label}</span>
+      <div className={styles.row}>
+        <input
+          aria-label={label}
+          type="number"
+          inputMode="decimal"
+          min={1 / unit}
+          max={36000 / unit}
+          step="any"
+          value={value == null ? "" : value / unit}
+          onChange={(e) => onChange(e.target.value === "" ? null : Math.round(Number(e.target.value) * unit))}
+        />
+        <select aria-label={`${label} unit`} value={unit} onChange={(e) => setUnit(Number(e.target.value))}>
+          <option value={1}>sec</option>
+          <option value={60}>min</option>
+        </select>
+      </div>
+    </label>
+  );
+}
+export function CustomDoseEditor({ dose, onChange }: { dose: CustomDose; onChange: (dose: CustomDose) => void }) {
+  function number(
+    field: "sets" | "reps" | "rest_seconds" | "rounds" | "rpe" | "distance",
+    label: string,
+    min: number,
+    max: number,
+    step = 1,
+  ) {
+    return (
+      <label>
+        <span>{label}</span>
+        <input
+          aria-label={label}
+          type="number"
+          inputMode="decimal"
+          min={min}
+          max={max}
+          step={step}
+          value={dose[field] ?? ""}
+          onChange={(event) =>
+            onChange({
+              ...dose,
+              [field]: event.target.value === "" ? null : Number(event.target.value),
+            })
+          }
+        />
+      </label>
+    );
+  }
+  return (
+    <div className={styles.dose}>
+      <label>
+        <span>Format</span>
+        <select
+          aria-label="Dose format"
+          value={dose.mode}
+          onChange={(event) => onChange(blankDose(event.target.value as CustomDose["mode"]))}
+        >
+          <option value="reps">Sets × reps</option>
+          <option value="duration">Continuous</option>
+          <option value="intervals">Intervals / rounds</option>
+          <option value="text">Text prescription</option>
+        </select>
+      </label>
+      {dose.mode === "reps" ? (
+        <>
+          {number("sets", "Sets", 1, 100)}
+          {number("reps", "Reps", 1, 1000)}
+          {number("rest_seconds", "Rest (sec)", 0, 3600)}
+        </>
+      ) : dose.mode === "duration" ? (
+        <>
+          <DurationField
+            value={dose.duration_seconds}
+            label="Duration"
+            onChange={(value) => onChange({ ...dose, duration_seconds: value })}
+          />
+          {number("distance", "Distance (optional)", 0.001, 100000, 0.001)}
+          <label>
+            <span>Distance unit</span>
+            <select
+              aria-label="Distance unit"
+              value={dose.distance_unit ?? ""}
+              onChange={(e) =>
+                onChange({
+                  ...dose,
+                  distance_unit: (e.target.value || null) as CustomDose["distance_unit"],
+                })
+              }
+            >
+              <option value="">Choose unit</option>
+              {["m", "km", "mi", "yd"].map((unit) => (
+                <option key={unit}>{unit}</option>
+              ))}
+            </select>
+          </label>
+        </>
+      ) : dose.mode === "intervals" ? (
+        <>
+          {number("rounds", "Rounds", 1, 100)}
+          <DurationField
+            value={dose.work_seconds}
+            label="Work duration"
+            onChange={(value) => onChange({ ...dose, work_seconds: value })}
+          />
+          {number("rest_seconds", "Rest between (sec)", 0, 3600)}
+        </>
+      ) : (
+        <label className={styles.wide}>
+          <span>Prescription</span>
+          <textarea
+            aria-label="Prescription"
+            maxLength={500}
+            value={dose.prescription ?? ""}
+            onChange={(e) => onChange({ ...dose, prescription: e.target.value })}
+          />
+        </label>
+      )}
+      <label className={styles.wide}>
+        <span>{dose.mode === "reps" ? "Load / units (optional)" : "Intensity (optional)"}</span>
+        <input
+          aria-label="Load or intensity"
+          maxLength={80}
+          value={dose.load_or_intensity ?? ""}
+          onChange={(e) => onChange({ ...dose, load_or_intensity: e.target.value || null })}
+        />
+      </label>
+      {number("rpe", "RPE (optional)", 1, 10, 0.5)}
+      {dose.mode === "reps" ? (
+        <>
+          <label>
+            <span>Tempo (optional)</span>
+            <input
+              maxLength={40}
+              value={dose.tempo ?? ""}
+              onChange={(e) => onChange({ ...dose, tempo: e.target.value || null })}
+            />
+          </label>
+          <label className={styles.row}>
+            <input
+              type="checkbox"
+              checked={dose.per_side ?? false}
+              onChange={(e) => onChange({ ...dose, per_side: e.target.checked })}
+            />
+            Per side
+          </label>
+        </>
+      ) : null}
+    </div>
+  );
+}

@@ -1,6 +1,6 @@
 import type { ExternalTrainingFields, TrainingHistorySession } from "@/lib/training-history";
 import type { LibraryFeaturedResponse, LibraryPreview, LibrarySearchResponse } from "@/lib/api-schema.generated";
-import type { CustomPlan, CustomPlanInput } from "@/lib/api-schema.generated";
+import type { CustomDoseSuggestion, CustomPlan, CustomPlanInput } from "@/lib/api-schema.generated";
 import type {
   ApproveAndResumeGenerationRequest,
   AdminAthleteRecord,
@@ -1457,4 +1457,8 @@ export function deletePushSubscription(token: string, endpoint: string): Promise
     token,
     body: JSON.stringify({ endpoint }),
   });
+}
+
+export function getCustomDoseSuggestion(token: string, catalogueId: string) {
+ return readJson<CustomDoseSuggestion>(`/api/custom-plans/source-suggestion?catalogue_id=${encodeURIComponent(catalogueId)}`, { token });
 }

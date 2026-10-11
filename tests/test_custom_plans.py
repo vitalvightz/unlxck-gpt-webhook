@@ -167,3 +167,176 @@ def test_privileged_store_queries_are_owner_scoped(operation):
         if operation == "update":
             query.update.assert_called_once_with({"name": "Plan", "sessions": [], "incomplete": True})
     client.table.assert_called_once_with("custom_training_plans")
+
+
+def test_manual_and_legacy_round_trip(api, identities):
+    client, store = api
+    before = copy.deepcopy(store.plans)
+    body = payload(identities)
+    manual = {
+        "id": str(uuid4()),
+        "origin": "manual",
+        "name": "My bag rounds",
+        "equipment": "Heavy bag",
+        "notes": "My practice",
+        "dose": {
+            "mode": "intervals",
+            "rounds": 5,
+            "work_seconds": 300,
+            "rest_seconds": 30,
+            "rpe": 7,
+        },
+    }
+    body["sessions"][0]["exercises"].insert(0, manual)
+    created = client.post(URL, headers=AUTH, json=body)
+    assert created.status_code == 201, created.text
+    plan = created.json()
+    path = f"{URL}/{plan['id']}"
+    assert plan["sessions"][0]["exercises"][0]["origin"] == "manual"
+    assert "snapshot" not in plan["sessions"][0]["exercises"][0]
+    body["sessions"][0]["exercises"].reverse()
+    manual["name"] = "Renamed rounds"
+    assert client.put(path, headers=AUTH, json=body).status_code == 200
+    assert client.get(path, headers=OTHER).status_code == 404
+    assert client.put(path, headers=OTHER, json=body).status_code == 404
+    assert client.delete(path, headers=OTHER).status_code == 404
+    # Persisted PR #2831 rows have neither origin nor new optional dose fields.
+    row = store.custom_plans[plan["id"]]
+    for session in row["sessions"]:
+        for exercise in session["exercises"]:
+            if exercise["origin"] == "catalogue":
+                exercise.pop("origin")
+                for field in (
+                    "rounds",
+                    "work_seconds",
+                    "rpe",
+                    "tempo",
+                    "per_side",
+                    "distance",
+                    "distance_unit",
+                    "prescription",
+                ):
+                    exercise["dose"].pop(field, None)
+    assert client.get(path, headers=AUTH).status_code == 200
+    assert client.get(URL, headers=AUTH).status_code == 200
+    body["sessions"][0]["exercises"] = [manual]
+    assert client.put(path, headers=AUTH, json=body).status_code == 200
+    for field in (
+        "catalogue_id",
+        "snapshot",
+        "verified_goals",
+        "athlete_id",
+        "execution_allowed",
+    ):
+        invalid = copy.deepcopy(body)
+        invalid["sessions"][0]["exercises"][0][field] = "injected"
+        assert client.put(path, headers=AUTH, json=invalid).status_code == 422
+    assert store.plans == before
+
+
+@pytest.mark.parametrize(
+    "raw,mode,seconds",
+    [
+        (
+            {
+                "rounds": 5,
+                "work_sec": 300,
+                "rest_sec": 30,
+                "total_minutes": 27,
+                "duration": "5 x 5min rounds, 30s rest",
+                "rpe": 7,
+            },
+            "intervals",
+            300,
+        ),
+        ({"total_minutes": 30}, "duration", 1800),
+        ({"duration": "90 seconds"}, "duration", 90),
+        ({"duration": "10 min", "rpe": 6}, "duration", 600),
+        ({"sets": 3, "reps": 8, "rest_sec": 90}, "reps", None),
+        (
+            {
+                "rounds": 5,
+                "work_sec": 300,
+                "rest_sec": 30,
+                "duration": "3x5min, 30s rest",
+            },
+            "text",
+            None,
+        ),
+        ({"rounds": 5, "work_sec": 300}, "text", None),
+        ({"rounds": "5", "total_minutes": 30}, "text", None),
+        (
+            {
+                "rounds": 5,
+                "work_sec": 300,
+                "rest_sec": 30,
+                "prescription": "3x5min, 30s rest",
+            },
+            "text",
+            None,
+        ),
+        ({}, None, None),
+    ],
+)
+def test_source_suggestions_current_explicit_evidence(
+    api, identities, monkeypatch, raw, mode, seconds
+):
+    client, _ = api
+    identity = identities["training"][0]
+    record = copy.deepcopy(cache.get().by_id[identity])
+    record["entry"]["raw"] = raw
+    monkeypatch.setattr(cache, "get", lambda: SimpleNamespace(by_id={identity: record}))
+    response = client.get(
+        f"{URL}/source-suggestion", params={"catalogue_id": identity}, headers=AUTH
+    )
+    assert response.status_code == 200, response.text
+    result = response.json()
+    assert result["source_revision"] and result["row_revision"]
+    assert (result["dose"]["mode"] if result["dose"] else None) == mode
+    if seconds:
+        assert (
+            result["dose"][
+                "work_seconds" if mode == "intervals" else "duration_seconds"
+            ]
+            == seconds
+        )
+    assert (
+        client.get(
+            f"{URL}/source-suggestion", params={"catalogue_id": identity}
+        ).status_code
+        == 401
+    )
+
+
+@pytest.mark.parametrize(
+    "dose",
+    [
+        {"mode": "intervals", "rounds": 0},
+        {"mode": "intervals", "work_seconds": 1.5},
+        {"mode": "duration", "rounds": 5},
+        {"mode": "text", "reps": 5},
+        {"mode": "reps", "rpe": 11},
+        {"mode": "duration", "distance": -1},
+        {"mode": "duration", "distance_unit": "unknown"},
+    ],
+)
+def test_new_dose_validation(api, dose):
+    client, _ = api
+    body = {
+        "name": "Draft",
+        "sessions": [
+            {
+                "id": str(uuid4()),
+                "name": "Practice",
+                "exercises": [
+                    {
+                        "id": str(uuid4()),
+                        "origin": "manual",
+                        "name": "My practice",
+                        "dose": dose,
+                    }
+                ],
+            }
+        ],
+    }
+    assert client.post(URL, headers=AUTH, json=body).status_code == 422

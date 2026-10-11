@@ -420,25 +420,50 @@ export type CountdownLabel = {
 };
 
 export type CustomDose = {
-  mode: "duration" | "reps";
+  mode: "duration" | "intervals" | "reps" | "text";
   sets: number | null;
   reps: number | null;
   duration_seconds: number | null;
   rest_seconds: number | null;
   load_or_intensity: string | null;
+  rounds: number | null;
+  work_seconds: number | null;
+  rpe: number | null;
+  tempo: string | null;
+  per_side: boolean | null;
+  distance: number | null;
+  distance_unit: "km" | "m" | "mi" | "yd" | null;
+  prescription: string | null;
 };
 
 export type CustomDoseRequest = {
-  mode?: "duration" | "reps";
+  mode?: "duration" | "intervals" | "reps" | "text";
   sets?: number | null;
   reps?: number | null;
   duration_seconds?: number | null;
   rest_seconds?: number | null;
   load_or_intensity?: string | null;
+  rounds?: number | null;
+  work_seconds?: number | null;
+  rpe?: number | null;
+  tempo?: string | null;
+  per_side?: boolean | null;
+  distance?: number | null;
+  distance_unit?: "km" | "m" | "mi" | "yd" | null;
+  prescription?: string | null;
+};
+
+export type CustomDoseSuggestion = {
+  dose: CustomDose | null;
+  original: string;
+  source: string;
+  source_revision: string;
+  row_revision: string;
 };
 
 export type CustomExercise = {
   id: string;
+  origin: "catalogue";
   catalogue_id: string;
   dose: CustomDose;
   snapshot: CustomExerciseSnapshot;
@@ -447,6 +472,7 @@ export type CustomExercise = {
 
 export type CustomExerciseInput = {
   id: string;
+  origin?: "catalogue";
   catalogue_id: string;
   dose?: CustomDoseRequest;
 };
@@ -492,14 +518,14 @@ export type CustomSession = {
   id: string;
   name: string;
   weekday: "Friday" | "Monday" | "Saturday" | "Sunday" | "Thursday" | "Tuesday" | "Wednesday" | null;
-  exercises: CustomExercise[];
+  exercises: (CustomExercise | ManualExercise)[];
 };
 
 export type CustomSessionInput = {
   id: string;
   name: string;
   weekday?: "Friday" | "Monday" | "Saturday" | "Sunday" | "Thursday" | "Tuesday" | "Wednesday" | null;
-  exercises?: CustomExerciseInput[];
+  exercises?: (CustomExerciseInput | ManualExerciseInput)[];
 };
 
 /** A dated check-in plus the resulting decision (Section Q). */
@@ -1110,6 +1136,25 @@ export type LoadPrescription = {
   unit: string;
   ref: string | null;
   display: string | null;
+};
+
+export type ManualExercise = {
+  id: string;
+  origin: "manual";
+  name: string;
+  equipment: string | null;
+  notes: string | null;
+  dose: CustomDose;
+  incomplete: boolean;
+};
+
+export type ManualExerciseInput = {
+  id: string;
+  origin: "manual";
+  name: string;
+  equipment?: string | null;
+  notes?: string | null;
+  dose?: CustomDoseRequest;
 };
 
 export type ManualStage2SubmissionRequest = {

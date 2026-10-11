@@ -28,7 +28,7 @@ export function InjuryDetailSheet({ title, children, onClose, busy = false, vari
       }
       if (event.key !== "Tab") return;
       const controls = Array.from(panel.current?.querySelectorAll<HTMLElement>(
-        'button:not(:disabled), select:not(:disabled), input:not(:disabled), summary, a[href], [tabindex="0"]',
+        'button:not(:disabled), select:not(:disabled), input:not(:disabled), textarea:not(:disabled), summary, a[href], [tabindex="0"]',
       ) ?? []).filter(control => {
         const details = control.closest("details");
         return !details || details.open || control.tagName === "SUMMARY";

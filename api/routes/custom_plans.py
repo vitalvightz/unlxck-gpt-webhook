@@ -3,8 +3,8 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Response
 
-from api.contracts.custom_plans import CustomPlan, CustomPlanInput
-from api.services.custom_plans import plan_fields
+from api.contracts.custom_plans import CustomDoseSuggestion, CustomPlan, CustomPlanInput
+from api.services.custom_plans import plan_fields, source_suggestion
 
 
 def build_custom_plans_router(*, require_profile, get_store):
@@ -23,6 +23,10 @@ def build_custom_plans_router(*, require_profile, get_store):
     @router.post("", response_model=CustomPlan, status_code=201)
     def create_custom_plan(body: CustomPlanInput, profile=Depends(require_profile), store=Depends(get_store)):
         return store.create_custom_plan(profile.athlete_id, plan_fields(store, body))
+
+    @router.get("/source-suggestion", response_model=CustomDoseSuggestion)
+    def suggest(catalogue_id: str, profile=Depends(require_profile)):
+        return source_suggestion(catalogue_id)
 
     @router.get("/{plan_id}", response_model=CustomPlan)
     def read_custom_plan(plan_id: UUID, profile=Depends(require_profile), store=Depends(get_store)):
