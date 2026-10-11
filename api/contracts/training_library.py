@@ -35,6 +35,12 @@ class EquipmentRequirements(BaseModel):
     evidence: str
 
 
+class ExerciseDetail(BaseModel):
+    value: str
+    label: str
+    group: Literal["movement", "training_method", "skill_focus"]
+
+
 class LibraryEntry(BaseModel):
     catalogue_id: str
     name: str
@@ -42,6 +48,8 @@ class LibraryEntry(BaseModel):
     category: LibraryCategory
     context: str
     focus: list[str]
+    verified_goals: list[str] = Field(default_factory=list)
+    exercise_details: list[ExerciseDetail] = Field(default_factory=list)
     discovery_match: str | None = None
     equipment: list[str] | None
     equipment_state: str

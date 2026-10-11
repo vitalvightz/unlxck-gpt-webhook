@@ -54,3 +54,20 @@
 @media (max-width: 420px) { .thumbnail { width: 56px; height: 56px; } .drill { gap: 10px; } }
 @media (max-width: 360px) { .filterButton svg { display: none; } .header h1 { font-size: 36px; } }
 @media (prefers-reduced-motion: reduce) { .categories button, .drill { transition: none; } }
+
+.filters h3 { margin: 0; font-size: var(--type-body); font-weight: 600; }
+.filters p { margin: 0; }
+.explore { display: grid; gap: 0; border: 1px solid var(--border-default); border-radius: 12px; padding: 0 14px; }
+.explore > label { padding: 14px 0; margin: 0; }
+.explore > label + label { border-top: 1px solid var(--border-subtle); }
+.otherFilters summary { min-height: 44px; cursor: pointer; font-weight: 600; }
+.otherFilters[open] > p { margin-bottom: 12px; }
+.filterActions { grid-template-columns: 1fr 1.6fr; position: sticky; bottom: 0; background: var(--bg-panel); padding-block: 12px; }
+.activeFilters { display: flex; flex-wrap: wrap; gap: 8px; }
+.activeFilters button { min-height: 44px; border: 1px solid var(--border-default); border-radius: 24px; background: var(--bg-stat); color: var(--text-primary); padding: 8px 12px; font-size: 13px; }
+.activeFilters span { margin-left: 6px; }
+.emptyActions { display: flex; flex-wrap: wrap; gap: 8px; }
+.exerciseDetails { margin: 0; display: grid; gap: 8px; font-size: 13px; }
+.exerciseDetails div { display: grid; grid-template-columns: 110px 1fr; gap: 12px; }
+.exerciseDetails dt { color: var(--text-secondary); }
+.exerciseDetails dd { margin: 0; }

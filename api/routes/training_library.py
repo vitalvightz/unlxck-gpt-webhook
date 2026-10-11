@@ -39,6 +39,8 @@ def build_training_library_router(*, require_profile, get_store):
         type_filter: str | None = Query(None, alias="type", max_length=100),
         goal: str | None = Query(None, max_length=100), sport: str | None = Query(None, max_length=100),
         equipment: str | None = Query(None, max_length=100), body_focus: str | None = Query(None, max_length=100),
+        movement: str | None = Query(None, max_length=100), training_method: str | None = Query(None, max_length=100),
+        skill_focus: str | None = Query(None, max_length=100),
         offset: int = Query(0, ge=0, le=10000), limit: int = Query(24, ge=1, le=50),
         revision: str | None = Query(None, max_length=64),
         profile=Depends(require_profile), store=Depends(get_store),
@@ -48,7 +50,8 @@ def build_training_library_router(*, require_profile, get_store):
             raise HTTPException(409, "Library changed. Refresh your search.")
         result = library.search(index, q=q, category=category, offset=offset, limit=limit,
                                 filters=dict(type=type_filter, goal=goal, sport=sport,
-                                             equipment=equipment, body_focus=body_focus))
+                                             equipment=equipment, body_focus=body_focus, movement=movement,
+                                             training_method=training_method, skill_focus=skill_focus))
         media = load_media_index(store)
         for payload in result["entries"]:
             _attach_media(payload, index.by_id[payload["catalogue_id"]], media)

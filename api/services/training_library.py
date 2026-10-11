@@ -13,7 +13,7 @@ from fightcamp.training_catalogue import (
     ALIASES_FILE, DATA_DIR, MANIFEST_FILE, PHYSICAL_CLASSES, SOURCE_CLASSES,
     build_catalogue, content_hash, source_hash, strings,
 )
-from fightcamp.training_metadata import CONTRACT_FILES, canonical_filter, filter_label, load_projection, project_entry
+from fightcamp.training_metadata import CONTRACT_FILES, canonical_filter, exercise_details, filter_label, load_projection, project_entry
 from fightcamp.equipment_requirements import (
     REQUIREMENTS_FILE, load_equipment_reviews, project_requirements, requirement_items,
 )
@@ -38,6 +38,7 @@ GUIDANCE_FIELDS = {
     "Regress": ("regress", "regression", "regress_when"), "Stop": ("stop", "stop_rules", "stop_when", "quality_stop_rule"),
 }
 FILTERS = ("type", "goal", "sport", "equipment", "body_focus")
+DETAIL_FILTERS = ("movement", "training_method", "skill_focus")
 
 
 def text_key(text: str) -> str:
@@ -100,6 +101,9 @@ def _prepare(entry: dict, *, projection: dict | None = None, equipment_reviews: 
     goals.update(value["label"] for value in projected if value["dimension"] == "goals" and value["filter_eligible"])
     if goals:
         focus = sorted(goals)
+    details = exercise_details(entry, projection or {})
+    if (projection or {}).get("discovery_filters"):
+        facets.update({group: {d["value"] for d in details if d["group"] == group} for group in DETAIL_FILTERS})
     metadata = " ".join(piece["text"] for piece in entry["search_evidence"] if piece["field"] not in {"name", "description", "cue", "notes", "instructions", "why"})
     descriptions = " ".join(piece["text"] for piece in entry["search_evidence"] if piece["field"] in {"description", "cue", "notes", "instructions", "why"})
     name = text_key(entry["name"])
@@ -122,6 +126,7 @@ def _prepare(entry: dict, *, projection: dict | None = None, equipment_reviews: 
             "catalogue_id": entry["catalogue_id"], "name": entry["name"],
             "content_type": entry["content_class"], "category": category_of(entry["content_class"]),
             "context": context, "focus": focus,
+            **({"verified_goals": sorted(goals), "exercise_details": details} if (projection or {}).get("discovery_filters") else {}),
             "equipment": (sorted(requirement_items(requirements)) if requirements["status"] == "reviewed" else equipment)
                          if requirements else equipment if equipment_known else None,
             "equipment_state": entry["metadata"]["equipment"]["state"],
@@ -314,14 +319,15 @@ def _discovery_match(record: dict, query: str, groups: list) -> str | None:
 def _matches(record: dict, filters: dict, *, except_field: str | None = None) -> bool:
     for field, selected in filters.items():
         if selected and field != except_field:
-            values = record["facets"][field]
+            values = record["facets"].get(field, set())
             if selected not in values and not (field == "sport" and "universal" in values):
                 return False
     return True
 
 
 def search(index: LibraryIndex, *, q: str = "", category: str = "training", filters: dict | None = None, offset: int = 0, limit: int = 24) -> dict:
-    filters = {field: canonical_filter(field, value, category, index.projection) for field, value in (filters or {}).items()}
+    filters = {field: value if field in DETAIL_FILTERS else canonical_filter(field, value, category, index.projection)
+               for field, value in (filters or {}).items()}
     # Reviewed compounds remain accepted as legacy filters, without making their
     # punctuation a general splitting rule or changing independent AND filters.
     legacy_equipment = filters.get("equipment")
@@ -336,6 +342,10 @@ def search(index: LibraryIndex, *, q: str = "", category: str = "training", filt
         return _matches(record, filters, except_field=except_field)
     ranked = []
     query = text_key(q)
+    # Only exact approved friendly phrases add discovery matches. The existing
+    # lexical corpus and scores for existing queries stay untouched.
+    friendly = [r for r in (index.projection or {}).get("discovery_filters", [])
+                if category == "training" and text_key(r["label"]) == query]
     groups = _intent_groups(query) if query and category == "training" else []
     vocabulary = set().union(*(r["words"] for r in index.records if r["summary"]["category"] == category))
     matches = {term: {word: 0 if term == word else 1 if word.startswith(term) else 2
@@ -354,6 +364,8 @@ def search(index: LibraryIndex, *, q: str = "", category: str = "training", filt
         if any(re.search(r"(?<!\w)" + re.escape(phrase) + r"(?!\w)", query) for phrase in blocked_phrases):
             continue
         score = _score(record, query, matches, groups)
+        if score is None and any(r["id"] in record["facets"].get(r["group"], set()) for r in friendly):
+            score = 400
         # Only previously unmatched lexical queries can use a reviewed naming
         # equivalent. Existing intent/ranking evidence stays unchanged.
         if score is None and not any(rules for _, rules in groups):
@@ -364,9 +376,11 @@ def search(index: LibraryIndex, *, q: str = "", category: str = "training", filt
         if score is not None:
             ranked.append((score, record))
     facets = {}
-    for field in FILTERS:
+    fields = (*FILTERS, *DETAIL_FILTERS) if (index.projection or {}).get("discovery_filters") and category == "training" else FILTERS
+    for field in fields:
         counts = Counter(value for _, r in ranked if matches_filters(r, field) for value in r["facets"][field])
-        facets[field] = [{"value": value, "label": filter_label(field, value, index.projection) or CLASS_LABELS.get(value, BODY_LABELS.get(value, "No equipment" if value == "no_equipment" else label(value))), "count": count}
+        friendly_labels = {r["id"]: r["label"] for r in (index.projection or {}).get("discovery_filters", []) if r["group"] == field}
+        facets[field] = [{"value": value, "label": friendly_labels.get(value) or filter_label(field, value, index.projection) or CLASS_LABELS.get(value, BODY_LABELS.get(value, "No equipment" if value == "no_equipment" else label(value))), "count": count}
                          for value, count in sorted(counts.items(), key=lambda pair: label(pair[0]))]
     selected = [r for score, r in sorted(ranked, key=lambda pair: (-pair[0], pair[1]["name"], pair[1]["entry"]["catalogue_id"])) if matches_filters(r)]
     return {"entries": [{**r["summary"], "discovery_match": _discovery_match(r, query, groups)} for r in selected[offset:offset + limit]], "total": len(selected),

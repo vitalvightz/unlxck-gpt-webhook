@@ -34,6 +34,9 @@ ALLOWED_ADDED = frozenset({"fightcamp/training_metadata.py", "shared/training-me
 # Later equipment remediation is checked separately, without refreshing PR 2's
 # frozen reports or changing its discovery-only historical projection.
 EQUIPMENT_CHANGED = frozenset({"web/components/training-library.tsx"})
+# Additive discovery query parameters; the original route is retained as an
+# exact, hash-verified receipt so historical reports do not need regeneration.
+DISCOVERY_CHANGED = frozenset({"api/routes/training_library.py"})
 # Separately requested CI repair: preserve selected names in fallback cards.
 # Its original hash-verified source is retained for immutable audit replay.
 FALLBACK_CHANGED = frozenset({"api/structured_plan_deterministic_fallback.py"})
@@ -231,7 +234,7 @@ def preservation(baseline):
         raise ValueError("PR 1 evidence changed")
     changed = sorted(p for p, h in original["production_files"].items() if current["production_files"].get(p) != h)
     added = sorted(set(current["production_files"]) - set(original["production_files"]))
-    if not set(changed) <= ALLOWED_CHANGED | EQUIPMENT_CHANGED | FALLBACK_CHANGED | {"fightcamp/strength.py"} or not set(added) <= ALLOWED_ADDED | EQUIPMENT_ADDED:
+    if not set(changed) <= ALLOWED_CHANGED | EQUIPMENT_CHANGED | FALLBACK_CHANGED | DISCOVERY_CHANGED | {"fightcamp/strength.py"} or not set(added) <= ALLOWED_ADDED | EQUIPMENT_ADDED:
         raise ValueError("Unapproved production diff: " + str((changed, added)))
     for p, h in original["configuration_files"].items():
         if current["configuration_files"].get(p) != h and p not in {"shared/equipment-aliases.json", "data/training_catalogue_ids.json"}:
@@ -239,7 +242,7 @@ def preservation(baseline):
     if set(current["configuration_files"]) - set(original["configuration_files"]) - {"shared/training-metadata.json", "shared/equipment-requirements.json"}:
         raise ValueError("Unapproved configuration added")
     originals = json.loads((ROOT / "tools/metadata_integrity_original_sources.json").read_bytes())
-    if set(originals) != ALLOWED_CHANGED | EQUIPMENT_CHANGED | FALLBACK_CHANGED:
+    if set(originals) != ALLOWED_CHANGED | EQUIPMENT_CHANGED | FALLBACK_CHANGED | DISCOVERY_CHANGED:
         raise ValueError("Unexpected historical source receipts")
     for p, text in originals.items():
         if source_hash(text.encode()) != original["production_files"][p]:
@@ -250,7 +253,7 @@ def preservation(baseline):
             "source_hash_parity": True, "catalogue_identity_and_media_key_parity": True,
             "pr1_evidence_hash_parity": True, "planner_clinical_configuration_parity": True,
             "persisted_equipment_alias_contract_parity": True,
-            "allowed_changed_production": sorted(set(changed) - EQUIPMENT_CHANGED - FALLBACK_CHANGED - {"fightcamp/strength.py"}),
+            "allowed_changed_production": sorted(set(changed) - EQUIPMENT_CHANGED - FALLBACK_CHANGED - DISCOVERY_CHANGED - {"fightcamp/strength.py"}),
             "added_projection_sources": sorted(set(added) - EQUIPMENT_ADDED)}
 
 

@@ -8,7 +8,7 @@ import type { LibraryEntry, LibrarySearchResponse } from "@/lib/api-schema.gener
 
 const entry: LibraryEntry = { catalogue_id: "stable-id", name: "Medicine Ball Hook Throw", category: "training", content_type: "strength_power",
   context: "Strength", equipment: ["medicine_ball"], equipment_state: "known", equipment_requirements: null, exercise_key: "medicine-ball-hook-throw", media: null,
-  focus: ["Punching power"], discovery_match: null, selection_boundary: "training_validation_required", prescription_allowed: false };
+  focus: ["Punching power"], verified_goals: ["Punching power"], exercise_details: [], discovery_match: null, selection_boundary: "training_validation_required", prescription_allowed: false };
 const response = (overrides: Partial<LibrarySearchResponse> = {}): LibrarySearchResponse => ({ entries: [entry], total: 1, catalogue_total: 2855,
   offset: 0, limit: 24, next_offset: null, revision: "initial", facets: {}, ...overrides });
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status });
@@ -115,5 +115,53 @@ test("Goal filter reaches the API and preview shows reviewed adaptation and exec
     assert.ok(document.body.textContent?.includes("Goal: Coordination"));
     assert.ok(document.body.textContent?.includes("Coordinate opposite hand-foot support."));
     assert.ok(document.body.textContent?.includes("Finish with a stable base."));
+  } finally { await ui.cleanup(); }
+});
+
+test("Detailed browsing works without a Goal, clears chips and clears incompatible category filters", async () => {
+  const calls: URL[] = [];
+  const hold = { ...entry, catalogue_id: "hold", name: "Static stance hold", focus: [], verified_goals: [],
+    exercise_details: [{ value: "static_holds", label: "Static holds", group: "training_method" as const }] };
+  const ui = await mount((async input => {
+    const url = new URL(String(input), "http://localhost"); calls.push(url);
+    if (url.pathname.endsWith("/entry")) return json({ ...hold, guidance: { Why: ["Coach detail"] }, metadata_projection: [] });
+    const selected = url.searchParams.get("training_method");
+    const empty = selected && url.searchParams.get("movement");
+    return json(response({ entries: empty ? [] : selected ? [hold] : [entry, hold], total: empty ? 0 : selected ? 1 : 2,
+      facets: { training_method: [{ value: "static_holds", label: "Static holds", count: 1 }],
+        movement: [{ value: "rotation", label: "Rotation", count: 1 }] } }));
+  }) as typeof fetch);
+  async function select(title: string, value: string) {
+    const control = Array.from(document.querySelectorAll("label")).find(label => label.querySelector("span")?.textContent === title)?.querySelector("select");
+    assert.ok(control);
+    await act(async () => { control.value = value; control.dispatchEvent(new window.Event("change", { bubbles: true })); });
+    await settle();
+  }
+  try {
+    assert.equal(ui.host.querySelectorAll("li").length, 2);
+    await ui.click("Filters"); await select("Training method", "static_holds"); await ui.click("Show results");
+    assert.equal(ui.host.querySelectorAll("li").length, 1);
+    assert.ok(ui.host.textContent?.includes("Method: Static holds"));
+    assert.equal(calls.at(-1)?.searchParams.get("goal"), null);
+    const drill = ui.host.querySelector<HTMLButtonElement>("li button")!;
+    assert.ok(drill.textContent?.includes("Static holds"));
+    assert.ok(!drill.textContent?.includes("Goal:"));
+    await act(async () => drill.click()); await settle();
+    assert.ok(document.body.textContent?.includes("Exercise details"));
+    assert.ok(document.body.querySelector("details")?.textContent?.includes("Coach detail"));
+    await act(async () => document.querySelector<HTMLButtonElement>('[aria-label="Close drill preview"]')!.click()); await settle();
+    await act(async () => ui.host.querySelector<HTMLButtonElement>('[aria-label="Remove Training method filter"]')!.click()); await settle();
+    assert.equal(ui.host.querySelectorAll("li").length, 2);
+    await ui.click("Filters"); await select("Training method", "static_holds"); await select("Movement", "rotation"); await ui.click("Show results");
+    assert.ok(ui.host.textContent?.includes("No exercises match these filters."));
+    assert.ok(ui.host.textContent?.includes("Movement: Rotation"));
+    await ui.click("Clear one filter");
+    assert.equal(ui.host.querySelectorAll("li").length, 2);
+    await ui.click("Rehab");
+    assert.equal(calls.at(-1)?.searchParams.get("movement"), null);
+    assert.equal(calls.at(-1)?.searchParams.get("training_method"), null);
+    await ui.click("Filters");
+    assert.ok(!document.body.textContent?.includes("Explore exercises"));
+    assert.ok(!Array.from(document.querySelectorAll("label")).some(label => label.querySelector("span")?.textContent === "Movement"));
   } finally { await ui.cleanup(); }
 });

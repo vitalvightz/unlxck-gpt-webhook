@@ -17,7 +17,7 @@ AUDIT_REVISION = "ad82c28911103e11915a5567fc18623c056ba7d4"
 
 
 def load_projection() -> dict:
-    mappings, reviews, goal_reviews = [], [], []
+    mappings, reviews, goal_reviews, discovery_filters = [], [], [], []
     for path in CONTRACT_FILES:
         contract = require_object(load_shared_contract(path.name), "catalogue_projection", source=path.name)
         if contract.get("scope") != "discovery_only":
@@ -25,13 +25,33 @@ def load_projection() -> dict:
         mappings.extend(contract["mappings"])
         reviews.extend(contract.get("association_reviews", []))
         goal_reviews.extend(contract.get("goal_reviews", []))
+        discovery_filters.extend(contract.get("discovery_filters", []))
     keys = [(m["field"], value) for m in mappings for value in m["source_values"]]
     if len(keys) != len(set(keys)):
         raise ValueError("Ambiguous field-scoped metadata alias")
     goal_keys = [(r["catalogue_id"], r["canonical_id"]) for r in goal_reviews]
     if len(goal_keys) != len(set(goal_keys)):
         raise ValueError("Duplicate reviewed Goal assignment")
-    return {"mappings": mappings, "association_reviews": reviews, "goal_reviews": goal_reviews}
+    ids = [(r["group"], r["id"]) for r in discovery_filters]
+    if len(ids) != len(set(ids)) or any(group not in {"movement", "training_method", "skill_focus"} for group, _ in ids):
+        raise ValueError("Invalid discovery filter dictionary")
+    return {"mappings": mappings, "association_reviews": reviews, "goal_reviews": goal_reviews,
+            "discovery_filters": discovery_filters}
+
+
+def exercise_details(entry: dict, projection: dict) -> list[dict]:
+    """Closed, field-specific descriptive labels; never Goal or safety evidence."""
+    if entry["content_class"] not in {"strength_power", "conditioning", "technical_coordination"}:
+        return []
+    result = []
+    for rule in projection.get("discovery_filters", []):
+        for source in rule["sources"]:
+            raw = entry["raw"].get(source["field"])
+            values = [raw] if isinstance(raw, str) else raw if isinstance(raw, list) else []
+            if set(source["values"]).intersection(v for v in values if isinstance(v, str)):
+                result.append({"value": rule["id"], "label": rule["label"], "group": rule["group"]})
+                break
+    return result
 
 
 def mapping_for(field: str, value: str, projection: dict, content_class: str | None = None) -> dict | None:
