@@ -449,6 +449,29 @@ export type EffortPrescription = {
   scale: string | null;
 };
 
+export type EquipmentRequirementGroup = {
+  mode: "ALL" | "ANY" | "OPTIONAL" | "SINGLE" | "UNKNOWN";
+  items: EquipmentRequirementItem[];
+};
+
+export type EquipmentRequirementItem = {
+  canonical_id: string;
+  kind: "apparatus" | "partner";
+  quantity: number | null;
+};
+
+export type EquipmentRequirements = {
+  status: "reviewed" | "unresolved";
+  groups: EquipmentRequirementGroup[];
+  source_value: string | string[] | null;
+  source: string;
+  source_pointer: string;
+  catalogue_id: string;
+  row_revision: string;
+  audit_decisions: string[];
+  evidence: string;
+};
+
 /** The event the plan counts down to (Section D). */
 export type EventContext = {
   fight_date: string | null;
@@ -921,6 +944,7 @@ export type LibraryEntry = {
   discovery_match: string | null;
   equipment: string[] | null;
   equipment_state: string;
+  equipment_requirements: EquipmentRequirements | null;
   exercise_key: string | null;
   media: ExerciseMedia | null;
   selection_boundary: string;
@@ -947,6 +971,7 @@ export type LibraryPreview = {
   discovery_match: string | null;
   equipment: string[] | null;
   equipment_state: string;
+  equipment_requirements: EquipmentRequirements | null;
   exercise_key: string | null;
   media: ExerciseMedia | null;
   selection_boundary: string;

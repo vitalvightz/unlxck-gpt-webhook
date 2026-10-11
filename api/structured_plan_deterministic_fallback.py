@@ -484,12 +484,13 @@ def _microdose_block(role: dict[str, Any], d_day: int, role_key: str) -> dict[st
     return {
         "block_id": f"deterministic-{d_day}-{role_key}-microdose",
         "block_type": _MICRODOSE_BLOCK_TYPE_BY_GOAL.get(goal, "accessory"),
-        # The label travels in the display name so the athlete can see this is a
-        # small priority touch rather than the session's main work.
-        "display_name": f"{label} - {name}",
+        # Preserve the selected exercise name for closed-membership checks and
+        # identity resolution. The priority label belongs in its purpose.
+        "display_name": name,
         "exercise_key": block_exercise_key_for_name(name),
         "order_index": 0,
         "coaching_cues": [prescription] if prescription else [],
+        "purpose": label,
         "regression_options": [],
         "substitutions": [],
     }
