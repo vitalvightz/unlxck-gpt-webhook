@@ -83,15 +83,20 @@ function ReviewSheet({ token, initial, onClose, onChanged }: { token: string; in
 export function AdminCommunityQueue({ token }: { token: string }) {
   const [result, setResult] = useState<CommunitySearch>(), [selected, setSelected] = useState<CommunityEntry>(), [error, setError] = useState<string>();
   const [loading, setLoading] = useState(true), [offset, setOffset] = useState(0), [retry, setRetry] = useState(0);
+  const [scope, setScope] = useState<'review' | 'history'>('review');
   useEffect(() => {
     const controller = new AbortController();
-    void listCommunityExercises(token, 'review', '', offset, controller.signal).then(value => { if (!controller.signal.aborted) { setResult(value); setError(undefined); } })
+    void listCommunityExercises(token, scope, '', offset, controller.signal).then(value => { if (!controller.signal.aborted) { setResult(value); setError(undefined); } })
       .catch(reason => { if (!controller.signal.aborted) setError(communityError(reason)); }).finally(() => { if (!controller.signal.aborted) setLoading(false); });
     return () => controller.abort();
-  }, [token, offset, retry]);
+  }, [token, offset, retry, scope]);
   return <AdminQueue header={<div className="form-section-header"><div><p className="kicker">Community</p><h2>Exercise reviews</h2></div><span className="badge">{loading ? 'Checking' : result?.total ?? 0}</span></div>}>
     {error ? <div role="alert"><p>{error}</p><button className="secondary-button" onClick={() => setRetry(n => n + 1)}>Retry reviews</button></div> : null}
-    {!loading && !result?.entries.length ? <p className="muted">No community submissions to review.</p> : null}
+    <div className={layout.actions} role="group" aria-label="Review queue">
+      <button type="button" className={scope === 'review' ? 'secondary-button' : 'ghost-button'} aria-pressed={scope === 'review'} onClick={() => { setScope('review'); setResult(undefined); setLoading(true); setOffset(0); }}>Needs review</button>
+      <button type="button" className={scope === 'history' ? 'secondary-button' : 'ghost-button'} aria-pressed={scope === 'history'} onClick={() => { setScope('history'); setResult(undefined); setLoading(true); setOffset(0); }}>History</button>
+    </div>
+    {!loading && !result?.entries.length ? <p className="muted">{scope === 'review' ? 'No exercises waiting for review.' : 'No reviewed submissions yet.'}</p> : null}
     <AdminQueueList className={layout.stack} label="Community exercise reviews">{result?.entries.map(entry => <div className={`list-row ${layout.reviewRow}`} key={entry.revision_id}>
       {/* eslint-disable-next-line @next/next/no-img-element -- existing demonstration thumbnail */}
       {entry.thumbnail ? <img className={layout.reviewThumb} src={entry.thumbnail} alt="" loading="lazy" /> : null}
