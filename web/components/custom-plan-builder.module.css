@@ -1,0 +1,36 @@
+.builder { max-width: 880px; margin: 0 auto; padding: 24px 16px 48px; }
+.header { margin-bottom: 24px; }
+.header > a { display: inline-block; margin-bottom: 20px; color: var(--text-muted); }
+.header h1 { font-size: clamp(1.6rem, 5vw, 2.5rem); font-weight: 900; letter-spacing: -.04em; margin: 8px 0; }
+.editor { border: 0; padding: 0; margin: 0; min-width: 0; }
+.builder label { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.builder label > span { color: var(--text-muted); font-size: .75rem; }
+.builder input, .builder select { width: 100%; min-width: 0; padding: 10px; font-size: 16px; border: 1px solid var(--border-default); border-radius: 6px; background: var(--bg-stat); color: var(--text-primary); }
+.planName { max-width: 480px; margin-bottom: 24px; }
+.session { border-top: 1px solid var(--border-default); padding: 20px 0 24px; }
+.sessionHead { display: grid; grid-template-columns: 1fr 1.5fr; gap: 12px; align-items: end; }
+.sessionHead > button { grid-column: 2; justify-self: end; }
+.exercises { list-style: none; padding: 0; margin: 16px 0; }
+.exercise { padding: 16px 0; border-top: 1px solid var(--border-default); }
+.exerciseHead { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+.exerciseName { background: none; border: none; color: var(--text-primary); text-align: left; font-size: 1rem; font-weight: 750; padding: 0; cursor: pointer; }
+.incomplete { color: var(--text-muted); font-size: .7rem; }
+.order { display: flex; margin-left: auto; gap: 4px; }
+.order button { min-width: 40px; min-height: 40px; padding: 8px; }
+.dose { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.optional { grid-column: 1 / -1; font-size: .8rem; }
+.optional summary { cursor: pointer; color: var(--text-muted); padding: 8px 0; }
+.optional label { max-width: 360px; }
+.actions { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; margin-top: 16px; }
+.actions > button { min-height: 44px; }
+.saved { border-top: 1px solid var(--border-default); margin-top: 32px; padding-top: 12px; }
+.saved h2 { margin-right: auto; font-size: 1.1rem; }
+.saved ul { list-style: none; padding: 0; }
+.saved li { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; border-bottom: 1px solid var(--border-default); padding: 14px 0; }
+.saved li button { background: none; border: none; color: var(--text-primary); padding: 0; font-weight: 700; cursor: pointer; text-align: left; }
+@media (min-width: 640px) {
+  .builder { padding: 32px 24px 64px; }
+  .sessionHead { grid-template-columns: 160px 1fr auto; }
+  .sessionHead > button { grid-column: auto; }
+  .dose { grid-template-columns: minmax(130px, 1.5fr) repeat(3, minmax(80px, 1fr)); }
+}

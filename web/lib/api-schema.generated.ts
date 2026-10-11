@@ -419,6 +419,89 @@ export type CountdownLabel = {
   anchor: string;
 };
 
+export type CustomDose = {
+  mode: "duration" | "reps";
+  sets: number | null;
+  reps: number | null;
+  duration_seconds: number | null;
+  rest_seconds: number | null;
+  load_or_intensity: string | null;
+};
+
+export type CustomDoseRequest = {
+  mode?: "duration" | "reps";
+  sets?: number | null;
+  reps?: number | null;
+  duration_seconds?: number | null;
+  rest_seconds?: number | null;
+  load_or_intensity?: string | null;
+};
+
+export type CustomExercise = {
+  id: string;
+  catalogue_id: string;
+  dose: CustomDose;
+  snapshot: CustomExerciseSnapshot;
+  incomplete: boolean;
+};
+
+export type CustomExerciseInput = {
+  id: string;
+  catalogue_id: string;
+  dose?: CustomDoseRequest;
+};
+
+export type CustomExerciseSnapshot = {
+  catalogue_id: string;
+  name: string;
+  content_type: string;
+  category: "training";
+  context: string;
+  focus: string[];
+  verified_goals: string[];
+  exercise_details: ExerciseDetail[];
+  discovery_match: string | null;
+  equipment: string[] | null;
+  equipment_state: string;
+  equipment_requirements: EquipmentRequirements | null;
+  exercise_key: string | null;
+  media: ExerciseMedia | null;
+  selection_boundary: string;
+  prescription_allowed: false;
+  source: string;
+  source_revision: string;
+  row_revision: string;
+};
+
+export type CustomPlan = {
+  id: string;
+  name: string;
+  kind: "self_directed";
+  sessions: CustomSession[];
+  incomplete: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export type CustomPlanInput = {
+  name: string;
+  sessions?: CustomSessionInput[];
+};
+
+export type CustomSession = {
+  id: string;
+  name: string;
+  weekday: "Friday" | "Monday" | "Saturday" | "Sunday" | "Thursday" | "Tuesday" | "Wednesday" | null;
+  exercises: CustomExercise[];
+};
+
+export type CustomSessionInput = {
+  id: string;
+  name: string;
+  weekday?: "Friday" | "Monday" | "Saturday" | "Sunday" | "Thursday" | "Tuesday" | "Wednesday" | null;
+  exercises?: CustomExerciseInput[];
+};
+
 /** A dated check-in plus the resulting decision (Section Q). */
 export type DailyCheckIn = {
   date: string;

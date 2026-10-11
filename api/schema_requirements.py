@@ -65,6 +65,7 @@ REQUIRED_TABLES: tuple[str, ...] = (
     # in-session log would otherwise fail on every save.
     "exercise_logs",
     "external_training_sessions",
+    "custom_training_plans",
     "rehab_exposures",
     "injury_episode_events",
     # Durable XP aggregate + immutable award ledger. Award writes are atomic
@@ -496,6 +497,7 @@ REQUIRED_COLUMNS: Mapping[str, tuple[str, ...]] = {
     "sparring_logs": REQUIRED_SPARRING_LOGS_COLUMNS,
     "exercise_logs": REQUIRED_EXERCISE_LOGS_COLUMNS,
     "external_training_sessions": REQUIRED_EXTERNAL_TRAINING_COLUMNS,
+    "custom_training_plans": ("id", "athlete_id", "name", "kind", "sessions", "incomplete", "created_at", "updated_at"),
     "xp_accounts": REQUIRED_XP_ACCOUNTS_COLUMNS,
     "xp_awards": REQUIRED_XP_AWARDS_COLUMNS,
     "beta_feedback": REQUIRED_BETA_FEEDBACK_COLUMNS,
@@ -635,6 +637,7 @@ INDEX_REQUIREMENTS: tuple[IndexRequirement, ...] = (
     ),
     IndexRequirement(label="external training request uniqueness", accepted_names=("external_training_sessions_request_key",)),
     IndexRequirement(label="external training athlete/day index", accepted_names=("external_training_sessions_athlete_day_idx",)),
+    IndexRequirement(label="custom plans athlete index", accepted_names=("custom_training_plans_athlete_updated_idx",)),
     IndexRequirement(
         label="xp awards one daily login per account calendar date",
         accepted_names=("xp_awards_one_daily_login_per_calendar_date",),
@@ -666,6 +669,7 @@ INDEX_REQUIREMENTS: tuple[IndexRequirement, ...] = (
 # ---------------------------------------------------------------------------
 
 RLS_REQUIRED_TABLES: tuple[str, ...] = (
+    "custom_training_plans",
     "rehab_exposures", "injury_episode_events",
     "profiles",
     "plans",

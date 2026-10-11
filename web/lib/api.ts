@@ -1,5 +1,6 @@
 import type { ExternalTrainingFields, TrainingHistorySession } from "@/lib/training-history";
 import type { LibraryFeaturedResponse, LibraryPreview, LibrarySearchResponse } from "@/lib/api-schema.generated";
+import type { CustomPlan, CustomPlanInput } from "@/lib/api-schema.generated";
 import type {
   ApproveAndResumeGenerationRequest,
   AdminAthleteRecord,
@@ -69,6 +70,24 @@ export function getTrainingLibraryEntry(token: string, catalogueId: string, sign
 
 export function getFeaturedDrill(token: string, signal?: AbortSignal) {
   return readJson<LibraryFeaturedResponse>("/api/training/library/featured", { token, signal });
+}
+
+export function listCustomPlans(token: string, signal?: AbortSignal) {
+  return readJson<CustomPlan[]>("/api/custom-plans", { token, signal });
+}
+
+export function getCustomPlan(token: string, id: string) {
+  return readJson<CustomPlan>(`/api/custom-plans/${encodeURIComponent(id)}`, { token });
+}
+
+export function saveCustomPlan(token: string, body: CustomPlanInput, id?: string) {
+  return readJson<CustomPlan>(id ? `/api/custom-plans/${encodeURIComponent(id)}` : "/api/custom-plans", {
+    token, method: id ? "PUT" : "POST", body: JSON.stringify(body),
+  });
+}
+
+export function deleteCustomPlan(token: string, id: string) {
+  return requestVoid(`/api/custom-plans/${encodeURIComponent(id)}`, { token, method: "DELETE" });
 }
 
 function getApiBaseUrl(): string {
