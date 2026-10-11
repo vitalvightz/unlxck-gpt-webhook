@@ -15,6 +15,7 @@ import itertools
 import json
 from pathlib import Path
 import re
+import shutil
 import subprocess
 import sys
 from tempfile import TemporaryDirectory
@@ -754,7 +755,7 @@ def original_equipment_source(relative):
     This is audit replay, never a planner input or an identity authority.
     Unknown edits still fail the existing historical digest checks.
     """
-    data = (ROOT / relative).read_bytes().replace(b"\r\n", b"\n")
+    data = reverse_mechanical_source(relative, (ROOT / relative).read_bytes().replace(b"\r\n", b"\n"))
     if relative == "fightcamp/strength.py":
         fallback_gate = '''            if not ignore_restrictions and not evaluate_restriction_impact(
                 restrictions,
@@ -768,7 +769,10 @@ def original_equipment_source(relative):
             raise ValueError("Strength fallback history drift")
         return data.replace(fallback_gate, b"")
     reviews = json.loads((ROOT / "shared/equipment-requirements.json").read_bytes())["reviews"]
+    mechanical = {c["catalogue_id"]: c for c in reviewed_mechanical_changes()}
     for review in reviews:
+        if review["catalogue_id"] in mechanical:
+            review["row_sha256"] = mechanical[review["catalogue_id"]]["before_sha256"]
         history = review.get("source_history", [])
         if not history:
             continue
@@ -793,6 +797,55 @@ def original_equipment_source(relative):
     return data
 
 
+def reviewed_mechanical_changes():
+    """Seven explicit field deltas for historical replay, never runtime policy."""
+    path = ROOT / "tools/mechanical_metadata_changes.json"
+    return json.loads(path.read_bytes())["changes"] if path.exists() else []
+
+
+def reverse_mechanical_source(relative, data):
+    """Reconstruct Main's exact pre-correction rows; reject unrelated drift."""
+    for change in reviewed_mechanical_changes():
+        if relative == "data/" + change["catalogue_id"].split(":", 1)[0]:
+            row = next((r for r in json.loads(data) if content_hash(r) == change["after_sha256"]), None)
+            if row is None or any(row.get(k) != v for k, v in change["after"].items()):
+                raise ValueError("Mechanical source history drift: " + change["catalogue_id"])
+            original = {**row, **change["before"]}
+            if content_hash(original) != change["before_sha256"]:
+                raise ValueError("Mechanical history changes unrelated fields")
+            def encoded(value):
+                return ("  " + json.dumps(value, ensure_ascii=False, indent=2).replace("\n", "\n  ")).encode()
+            if data.count(encoded(row)) != 1:
+                raise ValueError("Ambiguous mechanical source history")
+            data = data.replace(encoded(row), encoded(original))
+        elif relative == "data/training_catalogue_ids.json":
+            if data.count(change["after_sha256"].encode()) != 1:
+                raise ValueError("Mechanical manifest history drift")
+            data = data.replace(change["after_sha256"].encode(), change["before_sha256"].encode())
+    return data
+
+
+@contextmanager
+def mechanical_baseline_sources():
+    """Temporary Main inputs for complete plan comparisons, without plan dumps."""
+    with TemporaryDirectory(prefix="unlxck-mechanical-before-") as temporary:
+        replay = Path(temporary).resolve()
+        for directory in ("fightcamp", "api", "data", "shared"):
+            shutil.copytree(ROOT / directory, replay / directory,
+                            ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
+        for relative in ("data/exercise_bank.json", "data/conditioning_bank.json",
+                         "data/training_catalogue_ids.json"):
+            path = replay / relative
+            path.write_bytes(reverse_mechanical_source(relative, path.read_bytes().replace(b"\r\n", b"\n")))
+        for name in ("equipment-requirements.json", "training-metadata.json"):
+            path = replay / "shared" / name
+            text = path.read_text(encoding="utf8")
+            for change in reviewed_mechanical_changes():
+                text = text.replace(change["after_sha256"], change["before_sha256"])
+            path.write_text(text, encoding="utf8")
+        yield replay
+
+
 def historical_library_index(*, reviewed_requirements=False):
     """Replay the frozen discovery contracts against hash-verified original rows."""
     from unittest.mock import patch
@@ -801,13 +854,16 @@ def historical_library_index(*, reviewed_requirements=False):
 
     projection = load_projection()
     reviews = json.loads((ROOT / "shared/equipment-requirements.json").read_bytes())["reviews"]
+    mechanical = {c["catalogue_id"]: c for c in reviewed_mechanical_changes()}
     for review in reviews:
+        current_hash = review["row_sha256"]
         if review.get("source_history"):
-            current_hash = review["row_sha256"]
             review.update(review.pop("source_history")[0])
-            for association in projection["association_reviews"]:
-                if association["row_sha256"] == current_hash:
-                    association["row_sha256"] = review["row_sha256"]
+        elif review["catalogue_id"] in mechanical:
+            review["row_sha256"] = mechanical[review["catalogue_id"]]["before_sha256"]
+        for association in projection["association_reviews"]:
+            if association["row_sha256"] == current_hash:
+                association["row_sha256"] = review["row_sha256"]
     with historical_sources() as replay, patch.object(library, "load_projection", return_value=projection), patch.object(
         library, "load_equipment_reviews", return_value={r["catalogue_id"]: r for r in reviews}
     ):
@@ -826,6 +882,8 @@ def historical_library_index(*, reviewed_requirements=False):
                     text = text.replace(compact(current), compact(old))
                 else:
                     text = text.replace(current["row_sha256"], prior["row_sha256"])
+            for change in mechanical.values():
+                text = text.replace(change["after_sha256"], change["before_sha256"])
             target = replay / "shared" / path.name
             target.write_text(text, encoding="utf8", newline="\n")
             paths.append(target)
