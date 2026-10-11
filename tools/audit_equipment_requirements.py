@@ -13,6 +13,7 @@ sys.path.insert(0, str(ROOT))
 from api.services import training_library as library  # noqa: E402
 from fightcamp.training_catalogue import build_catalogue, content_hash  # noqa: E402
 from tools import audit_canonical_metadata as canonical  # noqa: E402
+from tools.audit_metadata_integrity import historical_library_index  # noqa: E402
 
 BASELINE = ROOT / "tools/equipment_requirements_baseline.json"
 OUT = ROOT / "reports/equipment_requirements"
@@ -20,8 +21,10 @@ OUT = ROOT / "reports/equipment_requirements"
 
 def build_report(*, index=None):
     baseline = json.loads(BASELINE.read_bytes())
-    index = index or library.LibraryCache().get()
-    historical = library.LibraryCache(reviewed_requirements=False).get()
+    # This command verifies PR #2824's frozen evidence. Current generator/source
+    # verification lives in test_generator_equipment_accuracy.py.
+    index = index or historical_library_index(reviewed_requirements=True)
+    historical = historical_library_index()
     entries = build_catalogue()
     protected = canonical.preservation(json.loads(canonical.BASELINE.read_bytes()))
     identities = {e["catalogue_id"]: [e["source_id"], e["exercise_key"], e["eligibility"]] for e in entries}

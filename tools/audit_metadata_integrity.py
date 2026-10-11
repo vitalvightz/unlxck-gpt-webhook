@@ -718,7 +718,7 @@ def markdown(reports):
 
 @contextmanager
 def historical_sources():
-    """Replay PR 1 offline, with original code receipts and current unchanged banks.
+    """Replay PR 1 offline, with original code receipts and reviewed bank history.
 
     Only the four explicitly retained pre-projection sources may differ. Every
     replay byte is checked against the original frozen hashes before extraction.
@@ -735,7 +735,7 @@ def historical_sources():
             target = (replay / relative).resolve()
             if not target.is_relative_to(replay):
                 raise ValueError("Invalid historical source path")
-            data = originals[relative].encode("utf-8") if relative in originals else (ROOT / relative).read_bytes()
+            data = originals[relative].encode("utf-8") if relative in originals else original_equipment_source(relative)
             if source_hash(data) != digest:
                 raise ValueError("Historical source drift: " + relative)
             target.parent.mkdir(parents=True, exist_ok=True)
@@ -746,6 +746,91 @@ def historical_sources():
         # The resolved directory is the explicitly created temporary workspace;
         # TemporaryDirectory cleans up only this verified directory.
         yield replay
+
+
+def original_equipment_source(relative):
+    """Reverse only reviewed equipment/hash edits; frozen file hashes verify bytes.
+
+    This is audit replay, never a planner input or an identity authority.
+    Unknown edits still fail the existing historical digest checks.
+    """
+    data = (ROOT / relative).read_bytes().replace(b"\r\n", b"\n")
+    if relative == "fightcamp/strength.py":
+        fallback_gate = '''            if not ignore_restrictions and not evaluate_restriction_impact(
+                restrictions,
+                text=" ".join(str(ex.get(field, "") or "") for field in ("name", "movement", "method", "notes")),
+                tags=tags,
+                limit_penalty=-0.75,
+            ).get("allowed", True):
+                continue
+'''.encode()
+        if data.count(fallback_gate) != 1:
+            raise ValueError("Strength fallback history drift")
+        return data.replace(fallback_gate, b"")
+    reviews = json.loads((ROOT / "shared/equipment-requirements.json").read_bytes())["reviews"]
+    for review in reviews:
+        history = review.get("source_history", [])
+        if not history:
+            continue
+        source = review["catalogue_id"].split(":", 1)[0]
+        prior = history[0]
+        if relative == "data/" + source:
+            rows = json.loads(data)
+            row = next((r for r in rows if content_hash(r) == review["row_sha256"]), None)
+            if row is None or row.get("equipment") != review["source_value"]:
+                raise ValueError("Equipment source history drift: " + review["catalogue_id"])
+            original = {**row, "equipment": prior["source_value"]}
+            if content_hash(original) != prior["row_sha256"]:
+                raise ValueError("Equipment history changes non-equipment fields")
+            def encoded(value):
+                return ("  " + json.dumps(value, ensure_ascii=False, indent=2).replace("\n", "\n  ")).encode()
+            current_bytes = encoded(row)
+            if data.count(current_bytes) != 1:
+                raise ValueError("Ambiguous equipment source history")
+            data = data.replace(current_bytes, encoded(original))
+        elif relative == "data/training_catalogue_ids.json":
+            data = data.replace(review["row_sha256"].encode(), prior["row_sha256"].encode())
+    return data
+
+
+def historical_library_index(*, reviewed_requirements=False):
+    """Replay the frozen discovery contracts against hash-verified original rows."""
+    from unittest.mock import patch
+    from api.services import training_library as library
+    from fightcamp.training_metadata import load_projection
+
+    projection = load_projection()
+    reviews = json.loads((ROOT / "shared/equipment-requirements.json").read_bytes())["reviews"]
+    for review in reviews:
+        if review.get("source_history"):
+            current_hash = review["row_sha256"]
+            review.update(review.pop("source_history")[0])
+            for association in projection["association_reviews"]:
+                if association["row_sha256"] == current_hash:
+                    association["row_sha256"] = review["row_sha256"]
+    with historical_sources() as replay, patch.object(library, "load_projection", return_value=projection), patch.object(
+        library, "load_equipment_reviews", return_value={r["catalogue_id"]: r for r in reviews}
+    ):
+        paths = []
+        for path in (*library.CONTRACT_FILES, library.REQUIREMENTS_FILE):
+            text = path.read_text(encoding="utf8")
+            for current in json.loads((ROOT / "shared/equipment-requirements.json").read_bytes())["reviews"]:
+                if not current.get("source_history"):
+                    continue
+                prior = current["source_history"][0]
+                if path == library.REQUIREMENTS_FILE:
+                    old = {k: v for k, v in current.items() if k != "source_history"}
+                    old.update(prior)
+                    def compact(value):
+                        return json.dumps(value, ensure_ascii=False, separators=(",", ":"))
+                    text = text.replace(compact(current), compact(old))
+                else:
+                    text = text.replace(current["row_sha256"], prior["row_sha256"])
+            target = replay / "shared" / path.name
+            target.write_text(text, encoding="utf8", newline="\n")
+            paths.append(target)
+        with patch.object(library, "CONTRACT_FILES", tuple(paths[:-1])), patch.object(library, "REQUIREMENTS_FILE", paths[-1]):
+            return library.LibraryCache(replay / "data", reviewed_requirements=reviewed_requirements).get()
 
 
 def historical_reports():

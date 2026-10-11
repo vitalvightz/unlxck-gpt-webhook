@@ -91,7 +91,7 @@ def test_climbing_source_associations_are_corrected_in_effective_metadata(index)
         detail = library.preview(index.by_id[identity])
         assert detail["equipment"] == ["climbing_rope"]
         assert requirements.requirement_items(detail["equipment_requirements"]) == {"climbing_rope"}
-        assert detail["equipment_source"]["raw"] != detail["equipment"]
+        assert detail["equipment_source"]["raw"] == detail["equipment"]
     for value in ("battle_rope", "battle_ropes"):
         result = library.search(index, filters={"equipment": value}, limit=3000)
         assert result["total"] == 7 and not climbing & ids(result)
@@ -169,7 +169,7 @@ def test_api_returns_mandatory_setup_and_original_equipment_without_granting_pre
         assert response.status_code == 200
         body = response.json()
         assert body["equipment"] == ["pullup_bar", "towel"]
-        assert body["equipment_source"]["raw"] == []
+        assert body["equipment_source"]["raw"] == ["towel", "pullup_bar"]
         assert body["equipment_requirements"]["status"] == "reviewed"
         assert body["prescription_allowed"] is False
         assert body["selection_boundary"] == "training_validation_required"
@@ -195,7 +195,7 @@ def test_review_contract_invalid_modes_duplicate_ids_and_unverified_items_fail(m
 
 
 def test_prechange_hashes_all_identities_queries_and_unrelated_facets_are_preserved(index):
-    report = audit.build_report(index=index)
+    report = audit.build_report()
     assert report["reviewed_records"] == 25
     assert report["corrected_records"] == 14
     assert report["unresolved_records"] == 11
