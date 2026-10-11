@@ -858,6 +858,7 @@ def historical_library_index(*, reviewed_requirements=False):
     projection["goal_reviews"] = []
     projection["discovery_filters"] = []
     projection["facet_aliases"] = []
+    projection["mappings"] = [m for m in projection["mappings"] if not m.get("discovery_expansion")]
     reviews = json.loads((ROOT / "shared/equipment-requirements.json").read_bytes())["reviews"]
     mechanical = {c["catalogue_id"]: c for c in reviewed_mechanical_changes()}
     for review in reviews:
@@ -877,6 +878,11 @@ def historical_library_index(*, reviewed_requirements=False):
             text = path.read_text(encoding="utf8")
             if path.name == "training-metadata.json":
                 text = text.split(',\n    "goal_reviews":')[0] + "\n  }\n}\n"
+                # Later anatomy labels share the existing adapter, while this
+                # replay must retain the exact original contract bytes.
+                for mapping in load_projection()["mappings"]:
+                    if mapping.get("discovery_expansion"):
+                        text = text.replace(',\n      ' + json.dumps(mapping, separators=(",", ":")), "")
             for current in json.loads((ROOT / "shared/equipment-requirements.json").read_bytes())["reviews"]:
                 if not current.get("source_history"):
                     continue

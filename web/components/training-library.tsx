@@ -12,7 +12,7 @@ import { libraryEquipmentText as equipmentText } from "@/lib/equipment-requireme
 import styles from "./training-library.module.css";
 
 type Category = LibraryEntry["category"];
-const filterLabels = { type: "Training type", goal: "Goal", sport: "Sport", equipment: "Equipment", body_focus: "Body area", movement: "Movement", training_method: "Training method", skill_focus: "Skill focus" };
+const filterLabels = { type: "Training type", goal: "Goal", sport: "Sport", equipment: "Equipment", body_focus: "Body area", movement: "Movement", training_method: "Training method", skill_focus: "Skill focus", physical_focus: "Physical focus" };
 const contentTypes: Record<string, { label: string; icon: ExerciseGlyphName }> = {
   strength_power: { label: "Strength & power", icon: "strength" }, conditioning: { label: "Conditioning", icon: "conditioning" },
   technical_coordination: { label: "Technical drills", icon: "skill" }, rehabilitation: { label: "Rehabilitation", icon: "rehab" },
@@ -20,9 +20,9 @@ const contentTypes: Record<string, { label: string; icon: ExerciseGlyphName }> =
   visualisation: { label: "Visualisation", icon: "visualisation" },
 };
 type Filters = Partial<Record<keyof typeof filterLabels, string>>;
-const detailFields = ["movement", "training_method", "skill_focus"] as const;
+const detailFields = ["movement", "training_method", "skill_focus", "physical_focus"] as const;
 const otherFields = ["sport", "equipment", "body_focus", "type"] as const;
-const examples = { movement: "Squat, hip hinge, rotation", training_method: "Static holds, plyometric drills, lowering-focused", skill_focus: "Footwork, striking, grappling" };
+const examples = { movement: "Squat, hip hinge, rotation", training_method: "Static holds, plyometric drills, lowering-focused", skill_focus: "Footwork, striking, grappling", physical_focus: "Balance, coordination, agility, visual focus" };
 const boundaries: Record<Category, string> = {
   training: "Discovery only. Injury, phase, equipment and programming checks still apply.",
   rehab: "Rehab pathway only. Your current stage and clinical clearance still apply.",

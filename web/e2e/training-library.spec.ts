@@ -275,7 +275,7 @@ for (const width of [320, 390, 1280, 1440]) {
     await page.getByRole("button", { name: "Filters", exact: true }).click();
     const filters = page.getByRole("dialog", { name: "Filters", exact: true });
     await filters.getByText("Other filters", { exact: true }).click();
-    await expect(filters.getByRole("combobox")).toHaveCount(8);
+    await expect(filters.getByRole("combobox")).toHaveCount(9);
     await expect(filters).not.toContainText("Difficulty");
     await filters.getByRole("combobox", { name: "Equipment", exact: true }).selectOption("medicine_ball");
     await filters.getByRole("button", { name: "Show results" }).click();

@@ -34,7 +34,7 @@ def load_projection() -> dict:
     if len(goal_keys) != len(set(goal_keys)):
         raise ValueError("Duplicate reviewed Goal assignment")
     ids = [(r["group"], r["id"]) for r in discovery_filters]
-    if len(ids) != len(set(ids)) or any(group not in {"movement", "training_method", "skill_focus"} for group, _ in ids):
+    if len(ids) != len(set(ids)) or any(group not in {"movement", "training_method", "skill_focus", "physical_focus"} for group, _ in ids):
         raise ValueError("Invalid discovery filter dictionary")
     return {"mappings": mappings, "association_reviews": reviews, "goal_reviews": goal_reviews,
             "discovery_filters": discovery_filters, "facet_aliases": facet_aliases}
@@ -47,6 +47,8 @@ def exercise_details(entry: dict, projection: dict) -> list[dict]:
     result = []
     for rule in projection.get("discovery_filters", []):
         for source in rule["sources"]:
+            if source.get("content_classes") and entry["content_class"] not in source["content_classes"]:
+                continue
             raw = entry["raw"].get(source["field"])
             values = [raw] if isinstance(raw, str) else raw if isinstance(raw, list) else []
             if set(source["values"]).intersection(v for v in values if isinstance(v, str)):
@@ -80,8 +82,8 @@ def project_value(entry: dict, field: str, value: str, projection: dict, pointer
         "row_revision": entry["row_sha256"],
         "source_revision": entry["source_sha256"],
         "audit_decision": mapping["audit_decision"] if mapping else None,
-        "audit_report": AUDIT_REPORT if mapping else None,
-        "audit_revision": AUDIT_REVISION if mapping else None,
+        "audit_report": AUDIT_REPORT if mapping and mapping.get("audit_decision") else None,
+        "audit_revision": AUDIT_REVISION if mapping and mapping.get("audit_decision") else None,
         "status": "association_review" if review else "reviewed_alias" if mapping else "unresolved_compound" if compound else "source_value",
         "filter_eligible": known and review is None,
         "association_note": review["reason"] if review else None,

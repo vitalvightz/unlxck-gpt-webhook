@@ -181,7 +181,7 @@ def test_anatomical_focus_has_reviewed_training_evidence_only(index):
     assert result["total"] == 7
     for row in result["entries"]:
         values = index.by_id[row["catalogue_id"]]["projection"]
-        anatomy = next(v for v in values if v["dimension"] == "anatomical_focus")
+        anatomy = next(v for v in values if v["dimension"] == "anatomical_focus" and v["canonical_id"] == "adductors")
         assert anatomy["subtype"] == "hip_adductors"
         assert anatomy["source_field"] == "tags"
     assert all(not any(v["dimension"] == "anatomical_focus" for v in r["projection"]) for r in index.records if r["summary"]["category"] != "training")

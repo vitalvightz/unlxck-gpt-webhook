@@ -484,7 +484,7 @@ export type EventContext = {
 export type ExerciseDetail = {
   value: string;
   label: string;
-  group: "movement" | "skill_focus" | "training_method";
+  group: "movement" | "physical_focus" | "skill_focus" | "training_method";
 };
 
 export type ExerciseHistoryResponse = {

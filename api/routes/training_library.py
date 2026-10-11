@@ -41,6 +41,7 @@ def build_training_library_router(*, require_profile, get_store):
         equipment: str | None = Query(None, max_length=100), body_focus: str | None = Query(None, max_length=100),
         movement: str | None = Query(None, max_length=100), training_method: str | None = Query(None, max_length=100),
         skill_focus: str | None = Query(None, max_length=100),
+        physical_focus: str | None = Query(None, max_length=100),
         offset: int = Query(0, ge=0, le=10000), limit: int = Query(24, ge=1, le=50),
         revision: str | None = Query(None, max_length=64),
         profile=Depends(require_profile), store=Depends(get_store),
@@ -51,7 +52,8 @@ def build_training_library_router(*, require_profile, get_store):
         result = library.search(index, q=q, category=category, offset=offset, limit=limit,
                                 filters=dict(type=type_filter, goal=goal, sport=sport,
                                              equipment=equipment, body_focus=body_focus, movement=movement,
-                                             training_method=training_method, skill_focus=skill_focus))
+                                             training_method=training_method, skill_focus=skill_focus,
+                                             physical_focus=physical_focus))
         media = load_media_index(store)
         for payload in result["entries"]:
             _attach_media(payload, index.by_id[payload["catalogue_id"]], media)
