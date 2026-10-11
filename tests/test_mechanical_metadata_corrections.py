@@ -210,7 +210,26 @@ def test_actual_search_queries_and_all_facets_have_before_after_parity():
     current = LibraryCache().get()
     with mechanical_baseline_sources() as before_root:
         reviews = json.loads((before_root / 'shared/equipment-requirements.json').read_bytes())['reviews']
-        with patch.object(library, 'load_equipment_reviews', return_value={r['catalogue_id']: r for r in reviews}):
+        projection = deepcopy(current.projection)
+        before_entries = {e['catalogue_id']: e for e in build_catalogue(before_root / 'data')}
+        mechanical_ids = {change['catalogue_id'] for change in CHANGES}
+        for goal in projection['goal_reviews']:
+            before_entry = before_entries[goal['catalogue_id']]
+            after_entry = current.by_id[goal['catalogue_id']]['entry']
+            if before_entry['row_sha256'] != goal['row_sha256']:
+                assert goal['catalogue_id'] in mechanical_ids
+                # Rebind the current discovery receipt only for this historical
+                # comparison, proving adaptation/dose evidence did not change.
+                for field in goal['evidence_fields']:
+                    old, new = before_entry['raw'][field], after_entry['raw'][field]
+                    if field == 'tags':
+                        old = [v for v in old if not v.startswith('mech_')]
+                        new = [v for v in new if not v.startswith('mech_')]
+                    assert old == new
+                goal['row_sha256'] = before_entry['row_sha256']
+        with patch.object(library, 'load_projection', return_value=projection), patch.object(
+            library, 'load_equipment_reviews', return_value={r['catalogue_id']: r for r in reviews}
+        ):
             before = LibraryCache(before_root / 'data').get()
     assert query_results(before) == query_results(current)
     assert {r['entry']['catalogue_id']: r['facets'] for r in before.records} == {

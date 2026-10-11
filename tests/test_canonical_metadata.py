@@ -69,7 +69,7 @@ def test_all_original_metadata_and_provenance_remain_available(index):
 
 
 @pytest.mark.parametrize("field,values", [
-    ("equipment", ["mat", "mats", "bands", "mini_band", "spin_bike", "assault_bike", "thai_pads", "focus_mitts", "climbing_rope"]),
+    ("equipment", ["bands", "mini_band", "spin_bike", "assault_bike", "thai_pads", "focus_mitts", "climbing_rope"]),
     ("body_focus", ["neck", "neck_vestibular", "groin_adductor", "hip_adductors"]),
     ("goal", ["hand_foot_timing", "foot_hand_timing", "reaction", "mech_reactive", "grip", "mech_grip_support", "alactic", "glycolytic"]),
 ])

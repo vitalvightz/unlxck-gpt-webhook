@@ -36,6 +36,20 @@ def test_dictionary_is_field_scoped_descriptive_and_source_supported():
     assert any(not e["verified_goals"] for e in holds["entries"])
     friendly = lib.search(index, q="static holds", limit=3000)
     assert {e["catalogue_id"] for e in holds["entries"]} <= {e["catalogue_id"] for e in friendly["entries"]}
+    assert next(r["label"] for r in rules if r["id"] == "slow_lowering") == "Lowering-focused"
+    for alias in index.projection["facet_aliases"]:
+        field = alias["field"]
+        # Both spellings select the exact same distinct exercises, including
+        # rows containing both values; raw source requirements remain intact.
+        results = [lib.search(index, filters={field: value}, limit=3000) for value in alias["source_values"]]
+        assert all(result == results[0] for result in results)
+        expected = {r["entry"]["catalogue_id"] for r in training if alias["canonical_id"] in r["facets"][field]}
+        assert {e["catalogue_id"] for e in results[0]["entries"]} == expected
+        options = lib.search(index)["facets"][field]
+        assert next(o for o in options if o["value"] == alias["canonical_id"])["count"] == len(expected)
+        assert not {o["value"] for o in options}.intersection(set(alias["source_values"]) - {alias["canonical_id"]})
+    assert next(o for o in lib.search(index)["facets"]["body_focus"] if o["value"] == "lower_body")["label"] == "Legs"
+    assert "neck_vestibular" in {o["value"] for o in lib.search(index)["facets"]["body_focus"]}
 
 
 def test_api_combines_optional_groups_counts_pagination_and_category_boundary():

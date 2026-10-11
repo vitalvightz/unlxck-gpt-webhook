@@ -22,7 +22,7 @@ const contentTypes: Record<string, { label: string; icon: ExerciseGlyphName }> =
 type Filters = Partial<Record<keyof typeof filterLabels, string>>;
 const detailFields = ["movement", "training_method", "skill_focus"] as const;
 const otherFields = ["sport", "equipment", "body_focus", "type"] as const;
-const examples = { movement: "Squat, hip hinge, rotation", training_method: "Static holds, plyometric drills, slow lowering", skill_focus: "Footwork, striking, grappling" };
+const examples = { movement: "Squat, hip hinge, rotation", training_method: "Static holds, plyometric drills, lowering-focused", skill_focus: "Footwork, striking, grappling" };
 const boundaries: Record<Category, string> = {
   training: "Discovery only. Injury, phase, equipment and programming checks still apply.",
   rehab: "Rehab pathway only. Your current stage and clinical clearance still apply.",
@@ -227,9 +227,8 @@ export function TrainingLibrary({ accessToken }: { accessToken: string }) {
             </span><span className={styles.chevron} aria-hidden="true" />
           </button>
         </li>)}
-      </ul> : <div className={styles.empty}><h2>{category === "training" ? "No exercises match these filters." : "No drills found"}</h2>
+      </ul> : <div className={styles.empty}><h2>{category === "training" ? count ? query.trim() ? "No exercises match this search and these filters." : "No exercises match these filters." : "No exercises match your search." : "No drills found"}</h2>
         {category !== "training" ? <><p>Try a shorter name or reset your filters.</p><button className="secondary-button" onClick={() => changeSearch(() => { setQuery(""); setFilters({}); })}>Reset search</button></> : count ? <div className={styles.emptyActions}>
-          <button className="secondary-button" onClick={() => removeFilter(Object.keys(filters).find(key => filters[key as keyof Filters]) as keyof Filters)}>Clear one filter</button>
           <button className="secondary-button" onClick={() => changeSearch(() => setFilters({}))}>Clear all filters</button>
         </div> : <button className="secondary-button" onClick={() => changeSearch(() => setQuery(""))}>Clear search</button>}
       </div>}

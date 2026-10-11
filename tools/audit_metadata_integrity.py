@@ -857,6 +857,7 @@ def historical_library_index(*, reviewed_requirements=False):
     # facets and reports reproducible; live Goal corrections have their own tests.
     projection["goal_reviews"] = []
     projection["discovery_filters"] = []
+    projection["facet_aliases"] = []
     reviews = json.loads((ROOT / "shared/equipment-requirements.json").read_bytes())["reviews"]
     mechanical = {c["catalogue_id"]: c for c in reviewed_mechanical_changes()}
     for review in reviews:

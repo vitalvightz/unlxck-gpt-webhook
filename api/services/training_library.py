@@ -116,6 +116,11 @@ def _prepare(entry: dict, *, projection: dict | None = None, equipment_reviews: 
     # Keep expanded discovery phrases out of the lexical word bag: otherwise a
     # hand-timing phrase plus an unrelated speed tag could manufacture a match.
     corpus = text_key(" ".join((name, alias_text, metadata_text, description_text, body_text, gear_text)))
+    # Condense only reviewed discovery facets after constructing the original
+    # search corpus. Preserve source equipment, capability checks and ranking.
+    if category_of(entry["content_class"]) == "training":
+        for field in ("equipment", "body_focus"):
+            facets[field] = {canonical_filter(field, v, "training", projection) for v in facets[field]}
     return {
         "entry": entry, "facets": facets, "name": name, "aliases": alias_text, "projection": projected,
         "equipment_requirements": requirements,
@@ -377,10 +382,11 @@ def search(index: LibraryIndex, *, q: str = "", category: str = "training", filt
             ranked.append((score, record))
     facets = {}
     fields = (*FILTERS, *DETAIL_FILTERS) if (index.projection or {}).get("discovery_filters") and category == "training" else FILTERS
+    label_projection = index.projection if category == "training" else {"mappings": (index.projection or {}).get("mappings", [])}
     for field in fields:
         counts = Counter(value for _, r in ranked if matches_filters(r, field) for value in r["facets"][field])
         friendly_labels = {r["id"]: r["label"] for r in (index.projection or {}).get("discovery_filters", []) if r["group"] == field}
-        facets[field] = [{"value": value, "label": friendly_labels.get(value) or filter_label(field, value, index.projection) or CLASS_LABELS.get(value, BODY_LABELS.get(value, "No equipment" if value == "no_equipment" else label(value))), "count": count}
+        facets[field] = [{"value": value, "label": friendly_labels.get(value) or filter_label(field, value, label_projection) or CLASS_LABELS.get(value, BODY_LABELS.get(value, "No equipment" if value == "no_equipment" else label(value))), "count": count}
                          for value, count in sorted(counts.items(), key=lambda pair: label(pair[0]))]
     selected = [r for score, r in sorted(ranked, key=lambda pair: (-pair[0], pair[1]["name"], pair[1]["entry"]["catalogue_id"])) if matches_filters(r)]
     return {"entries": [{**r["summary"], "discovery_match": _discovery_match(r, query, groups)} for r in selected[offset:offset + limit]], "total": len(selected),

@@ -126,7 +126,7 @@ test("Detailed browsing works without a Goal, clears chips and clears incompatib
     const url = new URL(String(input), "http://localhost"); calls.push(url);
     if (url.pathname.endsWith("/entry")) return json({ ...hold, guidance: { Why: ["Coach detail"] }, metadata_projection: [] });
     const selected = url.searchParams.get("training_method");
-    const empty = selected && url.searchParams.get("movement");
+    const empty = selected && url.searchParams.get("movement") || url.searchParams.get("q") === "missing";
     return json(response({ entries: empty ? [] : selected ? [hold] : [entry, hold], total: empty ? 0 : selected ? 1 : 2,
       facets: { training_method: [{ value: "static_holds", label: "Static holds", count: 1 }],
         movement: [{ value: "rotation", label: "Rotation", count: 1 }] } }));
@@ -155,7 +155,13 @@ test("Detailed browsing works without a Goal, clears chips and clears incompatib
     await ui.click("Filters"); await select("Training method", "static_holds"); await select("Movement", "rotation"); await ui.click("Show results");
     assert.ok(ui.host.textContent?.includes("No exercises match these filters."));
     assert.ok(ui.host.textContent?.includes("Movement: Rotation"));
-    await ui.click("Clear one filter");
+    assert.ok(!ui.host.textContent?.includes("Clear one filter"));
+    await ui.click("Clear all filters");
+    assert.equal(ui.host.querySelectorAll("li").length, 2);
+    await ui.input("missing"); await settle(220);
+    assert.ok(ui.host.textContent?.includes("No exercises match your search."));
+    assert.ok(!ui.host.textContent?.includes("No exercises match these filters."));
+    await ui.click("Clear search");
     assert.equal(ui.host.querySelectorAll("li").length, 2);
     await ui.click("Rehab");
     assert.equal(calls.at(-1)?.searchParams.get("movement"), null);

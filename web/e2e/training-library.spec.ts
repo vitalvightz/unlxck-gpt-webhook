@@ -162,7 +162,7 @@ for (const width of [320, 390, 1280]) {
       const url = new URL(route.request().url());
       const selected = url.searchParams.get("catalogue_id") === unknown.catalogue_id ? unknown : reviewed;
       const entries = url.searchParams.get("equipment") ? [reviewed] : [reviewed, unknown];
-      const body = url.pathname.endsWith("/entry") ? { ...selected, source: "exercise_bank.json", source_revision: "fixture", row_revision: "fixture", guidance: {} }
+      const body = url.pathname.endsWith("/entry") ? { ...selected, source: "exercise_bank.json", source_revision: "fixture", row_revision: "fixture", guidance: {}, metadata_projection: [] }
         : { entries, total: entries.length, catalogue_total: 2855, offset: 0, limit: 24, next_offset: null, revision: "fixture",
           facets: { type: [], sport: [], goal: [], body_focus: [], equipment: [{ value: "sledgehammer", label: "Sledgehammer", count: 1 }] } };
       return route.fulfill({ contentType: "application/json", body: JSON.stringify(body) });
@@ -314,7 +314,7 @@ test("Categories, collapsed coaching, empty reset and unavailable retry", async 
   await page.getByRole("dialog").getByRole("combobox", { name: "Equipment", exact: true }).selectOption("agility_ladder");
   await page.getByRole("button", { name: "Show results" }).click();
   await search.fill("punching power");
-  await expect(page.getByRole("heading", { name: "No exercises match these filters." })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "No exercises match this search and these filters." })).toBeVisible();
   await page.getByRole("button", { name: "Clear all filters" }).click();
   await expect(search).toHaveValue("punching power");
   await expect(page.getByRole("list", { name: "Drill results" })).toBeVisible();
