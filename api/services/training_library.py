@@ -95,6 +95,11 @@ def _prepare(entry: dict, *, projection: dict | None = None, equipment_reviews: 
                            *[label(v) for f in ("sports", "styles") for v in _known(entry, f)]])
     focus = sorted(goals) or [label(v) for f in ("movement", "category", "qualities", "function") for v in _known(entry, f)][:2]
     aliases = " ".join(sorted(goals))
+    # Reviewed Goals affect facets/preview only. Preserve the original lexical
+    # aliases and word bag so adding a facet cannot silently boost search rank.
+    goals.update(value["label"] for value in projected if value["dimension"] == "goals" and value["filter_eligible"])
+    if goals:
+        focus = sorted(goals)
     metadata = " ".join(piece["text"] for piece in entry["search_evidence"] if piece["field"] not in {"name", "description", "cue", "notes", "instructions", "why"})
     descriptions = " ".join(piece["text"] for piece in entry["search_evidence"] if piece["field"] in {"description", "cue", "notes", "instructions", "why"})
     name = text_key(entry["name"])
@@ -176,6 +181,9 @@ class LibraryCache:
             revision = self._revision()
             entries = build_catalogue(self.data_dir)
             projection = load_projection()
+            missing_goals = {r["catalogue_id"] for r in projection.get("goal_reviews", [])} - {entry["catalogue_id"] for entry in entries}
+            if missing_goals:
+                raise ValueError("Missing reviewed Goal identities: " + str(sorted(missing_goals)))
             equipment_reviews = load_equipment_reviews() if self.reviewed_requirements else None
             if equipment_reviews is not None:
                 missing = set(equipment_reviews) - {entry["catalogue_id"] for entry in entries}

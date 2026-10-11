@@ -17,17 +17,21 @@ AUDIT_REVISION = "ad82c28911103e11915a5567fc18623c056ba7d4"
 
 
 def load_projection() -> dict:
-    mappings, reviews = [], []
+    mappings, reviews, goal_reviews = [], [], []
     for path in CONTRACT_FILES:
         contract = require_object(load_shared_contract(path.name), "catalogue_projection", source=path.name)
         if contract.get("scope") != "discovery_only":
             raise ValueError("Metadata projection must remain discovery-only")
         mappings.extend(contract["mappings"])
         reviews.extend(contract.get("association_reviews", []))
+        goal_reviews.extend(contract.get("goal_reviews", []))
     keys = [(m["field"], value) for m in mappings for value in m["source_values"]]
     if len(keys) != len(set(keys)):
         raise ValueError("Ambiguous field-scoped metadata alias")
-    return {"mappings": mappings, "association_reviews": reviews}
+    goal_keys = [(r["catalogue_id"], r["canonical_id"]) for r in goal_reviews]
+    if len(goal_keys) != len(set(goal_keys)):
+        raise ValueError("Duplicate reviewed Goal assignment")
+    return {"mappings": mappings, "association_reviews": reviews, "goal_reviews": goal_reviews}
 
 
 def mapping_for(field: str, value: str, projection: dict, content_class: str | None = None) -> dict | None:
@@ -81,6 +85,30 @@ def project_entry(entry: dict, projection: dict) -> list[dict]:
                 continue
             pointer = entry["source_pointer"] + "/" + field + ("/" + str(ordinal) if ordinal is not None else "")
             result.append(project_value(entry, field, value, projection, pointer))
+    for review in projection.get("goal_reviews", []):
+        if review["catalogue_id"] != entry["catalogue_id"]:
+            continue
+        if entry["content_class"] not in {"strength_power", "conditioning", "technical_coordination"}:
+            raise ValueError("Goal reviews must apply only to Training")
+        if entry["row_sha256"] != review["row_sha256"]:
+            raise ValueError("Stale Goal review: " + entry["catalogue_id"])
+        # Exact reviewed identities only. No name/tag/method/energy inference.
+        evidence = {field: entry["raw"][field] for field in review["evidence_fields"]}
+        if review.get("programming_evidence"):
+            evidence["programming_context"] = review["programming_evidence"]
+        source_field = review.get("source_field", "why")
+        result.append({
+            "canonical_id": review["canonical_id"], "label": review["label"],
+            "source_field": source_field, "source_value": str(entry["raw"][source_field]),
+            "dimension": "goals", "subtype": None,
+            "catalogue_id": entry["catalogue_id"], "source": entry["source"],
+            "source_pointer": entry["source_pointer"] + "/" + source_field,
+            "row_revision": entry["row_sha256"], "source_revision": entry["source_sha256"],
+            "audit_decision": review["audit_decision"], "audit_report": AUDIT_REPORT,
+            "audit_revision": AUDIT_REVISION, "status": "reviewed_goal", "filter_eligible": True,
+            "association_note": review["rationale"], "requirement_evidence": {},
+            "goal_evidence": evidence,
+        })
     return result
 
 

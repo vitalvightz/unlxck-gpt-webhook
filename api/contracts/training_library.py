@@ -67,10 +67,11 @@ class ProjectedMetadata(BaseModel):
     audit_decision: str | None
     audit_report: str | None
     audit_revision: str | None
-    status: Literal["reviewed_alias", "source_value", "unresolved_compound", "association_review"]
+    status: Literal["reviewed_alias", "source_value", "unresolved_compound", "association_review", "reviewed_goal"]
     filter_eligible: bool
     association_note: str | None
     requirement_evidence: dict[str, object] = Field(default_factory=dict)
+    goal_evidence: dict[str, object] = Field(default_factory=dict)
 
 
 class LibraryPreview(LibraryEntry):

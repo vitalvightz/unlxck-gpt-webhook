@@ -1595,10 +1595,11 @@ export type ProjectedMetadata = {
   audit_decision: string | null;
   audit_report: string | null;
   audit_revision: string | null;
-  status: "association_review" | "reviewed_alias" | "source_value" | "unresolved_compound";
+  status: "association_review" | "reviewed_alias" | "reviewed_goal" | "source_value" | "unresolved_compound";
   filter_eligible: boolean;
   association_note: string | null;
   requirement_evidence: Record<string, unknown>;
+  goal_evidence: Record<string, unknown>;
 };
 
 export type PushSettingsResponse = {
