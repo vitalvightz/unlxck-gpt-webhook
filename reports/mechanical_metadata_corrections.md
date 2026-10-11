@@ -1,6 +1,8 @@
-# Mechanical metadata corrections — PR #2826
+# Mechanical metadata corrections — PR #2827 (requested stage #2826)
 
-Base: Main `acafae19` (merged #2825), pulled before editing. Seven source rows
+Source baseline: Main `acafae19` (merged #2825), pulled before editing. Main's
+subsequent `371cbeed` verification-only follow-up (#2826) is also included.
+Seven source rows
 address portions of four original findings. This does not close the broad audit
 findings or certify the rest of the catalogue. No selection engine, clinical
 policy, goals, doses or normalization code is changed.
@@ -80,17 +82,33 @@ changes, all 2,855 identity/media checks and complete fixed-clock plans. Complet
 plan outputs remain temporary and are not committed. Hosted full CI must pass
 before merge; no deployment or merge is authorized by this report.
 
-Local results: 168 new regressions passed (126 real-generator matrix cases,
-28 injury comparisons, seven clinical restrictions and seven identity/semantic/
+Local results: 183 new regressions passed (126 real-generator matrix cases,
+28 injury comparisons, 14 high/critical cut cases, seven clinical restrictions and eight identity/semantic/
 plan checks). All three full Main control plan texts and Stage 2 payloads match
 exactly at UTC 2026-10-11 09:00, seed 7, Python hash seed 0. No full-plan
 selection, prescription, rehab, scheduling or workload drift occurs in these
 controls. Real-bank isometric candidates lose exactly 0.25 score and false
 ballistic categories; their selected work and prescribed doses remain exact.
+In the full-bank late-selector diagnostics, that category change reorders the
+same winner members at D-21, D-13 and D-7. The retained golden is first checked
+against reconstructed actual Main, then against exact documented permutations,
+the 0.25 score/reason change and Slow-Lowered Pull-Up's added missing-cost block
+reason. No golden file is overwritten and no unmatched difference is ignored.
 Existing schema gates still exclude rope work lacking late-window declarations;
 removing false impact does not make those drills late-safe.
 
 Ruff over api/fightcamp/tests/tools, bank validation, tag audit/migration and
 authority checks passed. The bank validator reports existing metadata debt;
 clearing the unsupported eccentric cost adds an intentional unknown-cost warning.
-Broader regressions and hosted full CI are pending; no results are assumed.
+Additional local suites passed: 218 strength/conditioning/injury/rehab/tag cases;
+280 equipment-stage/catalogue/library/frozen-audit cases; 27 GPP/late-selector/
+mechanism/restriction cases. All 30 actual ordered fighter-search controls and
+all facets match pre-correction Main. Rehab schema/review/clinical validation
+and injury-vocabulary checks passed. Hosted full CI is rerunning on the final
+commit; its final result remains a pre-merge requirement.
+
+Initial hosted Python CI passed five complete shards and runtime checks; its
+remaining shard reported only the late-selector golden mismatch described above
+(2,420 passed, 22 skipped in that shard). The precise before/after golden check
+now passes locally. The final commit reruns all hosted checks; no failed
+assertion or golden file is removed or blindly refreshed.

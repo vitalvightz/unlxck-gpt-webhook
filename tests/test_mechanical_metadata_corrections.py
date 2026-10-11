@@ -4,6 +4,7 @@ import json
 import os
 import subprocess
 import sys
+from unittest.mock import patch
 
 import pytest
 
@@ -123,6 +124,21 @@ def test_declared_clinical_restriction_cannot_be_bypassed(monkeypatch, change):
     assert all(e['name'] != row['name'] for e in result[2])
 
 
+@pytest.mark.parametrize('change', CHANGES, ids=lambda c: c['name'])
+@pytest.mark.parametrize('cut_bucket', ['high', 'critical'])
+def test_weight_cut_and_reduced_capacity_do_not_gain_permissions(monkeypatch, change, cut_bucket):
+    row = record(change['name'])
+    f = flags(row['name'], EQUIPMENT)
+    f.update(days_until_fight=7, fatigue='high', training_frequency=1, days_available=1,
+             cut_health_bucket=cut_bucket, cut_severity_bucket=cut_bucket)
+    before = run(monkeypatch, {**row, **change['before']}, f)
+    after = run(monkeypatch, row, f)
+    assert after[1] <= before[1]
+    if row.get('movement') == 'isometric':
+        assert row['name'] not in after[1]
+        assert candidate(after, row) is None
+
+
 @pytest.mark.parametrize('name', ['Battle Ropes Tempo Burner', 'Battle Rope Gauntlet', 'Battle Rope Waves'])
 def test_rope_corrections_remove_false_ankle_hits_but_keep_upper_body_risk(monkeypatch, name):
     row = record(name)
@@ -186,6 +202,19 @@ def test_unrelated_edit_cannot_hide_in_mechanical_history():
     next(r for r in rows if r['name'] == CHANGES[0]['name'])['duration'] = 'invented dose'
     with pytest.raises(ValueError, match='Mechanical source history drift'):
         reverse_mechanical_source('data/conditioning_bank.json', json.dumps(rows).encode())
+
+
+def test_actual_search_queries_and_all_facets_have_before_after_parity():
+    from api.services import training_library as library
+    from tools.audit_canonical_metadata import query_results
+    current = LibraryCache().get()
+    with mechanical_baseline_sources() as before_root:
+        reviews = json.loads((before_root / 'shared/equipment-requirements.json').read_bytes())['reviews']
+        with patch.object(library, 'load_equipment_reviews', return_value={r['catalogue_id']: r for r in reviews}):
+            before = LibraryCache(before_root / 'data').get()
+    assert query_results(before) == query_results(current)
+    assert {r['entry']['catalogue_id']: r['facets'] for r in before.records} == {
+        r['entry']['catalogue_id']: r['facets'] for r in current.records}
 
 
 def test_complete_fixed_clock_main_plan_comparison(tmp_path):
