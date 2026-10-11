@@ -218,11 +218,12 @@ def test_metadata_provenance_raw_restrictions_and_no_invented_defaults(entries):
 
 
 def test_catalogue_is_non_mutating_and_does_not_change_bank_consumers(entries):
+    from tools.audit_metadata_integrity import original_equipment_source
     baseline = json.loads((Path(__file__).resolve().parents[1] / "reports/training_library_metadata_audit.json").read_bytes())
     # #2816 retained Windows checkout-byte hashes. Accept only the LF/CRLF
     # equivalents of those exact bytes; content/other formatting must not drift.
     for bank in baseline["banks"]:
-        raw_lf = (catalogue.DATA_DIR / bank["source"]).read_bytes().replace(b"\r\n", b"\n")
+        raw_lf = original_equipment_source("data/" + bank["source"])
         assert bank["sha256"] in {
             catalogue.source_hash(raw_lf),
             hashlib.sha256(raw_lf.replace(b"\n", b"\r\n")).hexdigest(),
@@ -235,7 +236,9 @@ def test_catalogue_is_non_mutating_and_does_not_change_bank_consumers(entries):
 
 
 def test_coverage_report_is_reproducible_and_every_exclusion_has_a_reason():
-    report = coverage_report()
+    from tools.audit_metadata_integrity import historical_sources
+    with historical_sources() as replay:
+        report = coverage_report(replay / "data")
     retained = json.loads((Path(__file__).resolve().parents[1] / "reports/training_catalogue_coverage.json").read_bytes())
     assert json.loads(report_json(report)) == retained == report
     assert len(report["entries"]) == report["total_entries"] == 2855

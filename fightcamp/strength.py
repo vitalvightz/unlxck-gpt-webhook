@@ -2455,6 +2455,13 @@ def generate_strength_block(*, flags: dict, weaknesses=None):
             if not set(ex_equipment).issubset(set(equipment_access)):
                 continue
             tags = ex.get("tags", [])
+            if not ignore_restrictions and not evaluate_restriction_impact(
+                restrictions,
+                text=" ".join(str(ex.get(field, "") or "") for field in ("name", "movement", "method", "notes")),
+                tags=tags,
+                limit_penalty=-0.75,
+            ).get("allowed", True):
+                continue
             tags_lower = set(normalize_tags(tags))
             details = " ".join(
                 [

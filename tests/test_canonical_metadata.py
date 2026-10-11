@@ -97,6 +97,7 @@ def test_unknown_equipment_does_not_become_no_equipment_or_a_verified_alias(inde
 
 
 def test_climbing_association_is_withheld_but_raw_evidence_and_identity_survive(index):
+    index = audit.historical_library_index(reviewed_requirements=True)
     excluded = {r["catalogue_id"] for r in index.projection["association_reviews"]}
     for query in ("battle rope", "battle ropes", "battle_rope", "battle_ropes"):
         assert not excluded & {e["catalogue_id"] for e in lib.search(index, q=query, limit=3000)["entries"]}

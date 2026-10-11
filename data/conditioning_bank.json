@@ -2326,7 +2326,6 @@
   {
     "name": "Rope Climb Sprints",
     "equipment": [
-      "battle_rope",
       "climbing_rope"
     ],
     "phases": [
@@ -2773,7 +2772,10 @@
   },
   {
     "name": "Towel Pull-Up Sprints",
-    "equipment": [],
+    "equipment": [
+      "towel",
+      "pullup_bar"
+    ],
     "phases": [
       "SPP"
     ],
@@ -4600,7 +4602,6 @@
   {
     "name": "Rope Climb + Short Sprint",
     "equipment": [
-      "battle_ropes",
       "climbing_rope"
     ],
     "phases": [

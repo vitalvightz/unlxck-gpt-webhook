@@ -9397,7 +9397,7 @@
       "mech_grip_support",
       "mech_upper_pull"
     ],
-    "equipment": "bodyweight",
+    "equipment": "pullup_bar",
     "movement_cost": "low",
     "impact_cost": "low",
     "eccentric_cost": "low",
@@ -15760,7 +15760,7 @@
       "mobility"
     ],
     "equipment": [
-      "bodyweight"
+      "towel"
     ],
     "phase_role": "late_strength_touch",
     "subfamily": "mobility_balance",

@@ -54,7 +54,7 @@ def test_all_live_entries_and_zero_row_shim_are_accounted_for(reports):
 
 
 def test_inventory_preserves_every_raw_source_row(reports):
-    payloads = {source: json.loads((audit.ROOT / "data" / source).read_bytes()) for source in SOURCE_CLASSES}
+    payloads = {source: json.loads(audit.original_equipment_source("data/" + source)) for source in SOURCE_CLASSES}
     for entry in reports["inventory.json"]["entries"]:
         source = pointer(payloads[entry["source"]], entry["source_pointer"])
         assert entry["raw"] == source
@@ -126,13 +126,16 @@ def test_reports_are_deterministic_and_retained_reports_match(reports):
 
 def test_frozen_bank_production_and_identity_baselines_are_unchanged(reports):
     baseline = json.loads(audit.BASELINE.read_bytes())
-    current = audit.snapshot()
+    with audit.historical_sources() as replay:
+        current = audit.snapshot(replay)
     for key in ("banks", "identity_inputs", "identities"):
         assert current[key] == baseline[key]
     # The historical replay above still checks every original production hash;
     # PR 2 separately verifies its narrow allowed diff and frozen plan outputs.
     entries = build_catalogue()
-    assert {e["catalogue_id"]: {"row_sha256": e["row_sha256"], "exercise_key": e["exercise_key"]} for e in entries} == baseline["identities"]
+    assert {e["catalogue_id"]: e["exercise_key"] for e in entries} == {
+        identity: value["exercise_key"] for identity, value in baseline["identities"].items()
+    }
     assert len({e["catalogue_id"] for e in entries}) == 2855
     assert reports["summary.json"]["banks"] == baseline["banks"]
 

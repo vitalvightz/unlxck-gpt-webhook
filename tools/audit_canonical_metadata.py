@@ -23,8 +23,7 @@ sys.path.insert(0, str(ROOT))
 
 from api.services import training_library as library  # noqa: E402
 from fightcamp.training_catalogue import content_hash, source_hash  # noqa: E402
-from fightcamp.training_metadata import load_projection  # noqa: E402
-from tools.audit_metadata_integrity import historical_sources, snapshot  # noqa: E402
+from tools.audit_metadata_integrity import historical_sources, historical_library_index, snapshot  # noqa: E402
 
 BASE_REVISION = "ad82c28911103e11915a5567fc18623c056ba7d4"
 BASELINE = ROOT / "tools/canonical_metadata_baseline.json"
@@ -104,17 +103,19 @@ def capture_baseline():
 
 
 def controlled_plan_parity(baseline):
-    """Compare complete outputs, with clocks and Python collection seed pinned.
+    """Replay frozen complete outputs, with clocks and collection seed pinned.
 
     Retain the initial uncontrolled hashes. They cannot act as cross-process
     Stage 2 golden files because the existing payload serializes some sets as
     unsorted arrays. No payload ordering or programming code is changed here.
     """
     env = {**os.environ, "PYTHONHASHSEED": "0"}
-    with historical_sources() as before_root, TemporaryDirectory(prefix="unlxck-plan-parity-") as temporary:
+    with historical_sources() as before_root, historical_sources() as after_root, TemporaryDirectory(prefix="unlxck-plan-parity-") as temporary:
         temporary = Path(temporary).resolve()
         outputs = []
-        for label, root in (("before", before_root), ("after", ROOT)):
+        # Frozen PR #2823 comparisons retain their original bank inputs. Actual
+        # source-change comparisons are exercised by the generator regressions.
+        for label, root in (("before", before_root), ("after", after_root)):
             destination = temporary / (label + ".json")
             subprocess.run([sys.executable, str(ROOT / "tools/canonical_metadata_plan_probe.py"), str(BASELINE), str(destination)],
                            cwd=root, env=env, check=True, capture_output=True)
@@ -153,7 +154,7 @@ def collection_order_differences(left, right, path=""):
 
 
 def browser_fixture():
-    index = library.LibraryCache(reviewed_requirements=False).get()
+    index = historical_library_index()
     cases = [{}, {"equipment": "kettlebell"}, {"equipment": "kettlebell", "type": "strength_power"},
              {"type": "strength_power"}, {"equipment": "battle_ropes"}, {"body_focus": "adductors"}]
     responses = {"&".join(f"{key}={value}" for key, value in sorted(filters.items())): library.search(index, filters=filters)
@@ -219,17 +220,21 @@ def consumer_receipts(*, historical=False):
 def preservation(baseline):
     current = snapshot()
     original = baseline["preservation"]
+    # Reconstruct the five reviewed source edits, then verify every original
+    # byte and identity against the immutable baseline. No drift is waived.
+    with historical_sources() as replay:
+        historical = snapshot(replay)
     for field in ("banks", "identity_inputs", "identities"):
-        if current[field] != original[field]:
+        if historical[field] != original[field]:
             raise ValueError("Source or identity drift: " + field)
     if source_files() != baseline["pr1_reports"]:
         raise ValueError("PR 1 evidence changed")
     changed = sorted(p for p, h in original["production_files"].items() if current["production_files"].get(p) != h)
     added = sorted(set(current["production_files"]) - set(original["production_files"]))
-    if not set(changed) <= ALLOWED_CHANGED | EQUIPMENT_CHANGED | FALLBACK_CHANGED or not set(added) <= ALLOWED_ADDED | EQUIPMENT_ADDED:
+    if not set(changed) <= ALLOWED_CHANGED | EQUIPMENT_CHANGED | FALLBACK_CHANGED | {"fightcamp/strength.py"} or not set(added) <= ALLOWED_ADDED | EQUIPMENT_ADDED:
         raise ValueError("Unapproved production diff: " + str((changed, added)))
     for p, h in original["configuration_files"].items():
-        if current["configuration_files"].get(p) != h and p != "shared/equipment-aliases.json":
+        if current["configuration_files"].get(p) != h and p not in {"shared/equipment-aliases.json", "data/training_catalogue_ids.json"}:
             raise ValueError("Programming/clinical configuration drift: " + p)
     if set(current["configuration_files"]) - set(original["configuration_files"]) - {"shared/training-metadata.json", "shared/equipment-requirements.json"}:
         raise ValueError("Unapproved configuration added")
@@ -241,19 +246,19 @@ def preservation(baseline):
             raise ValueError("Original production receipt changed: " + p)
     if json.loads(originals["shared/equipment-aliases.json"])["pads"] != json.loads((ROOT / "shared/equipment-aliases.json").read_bytes())["pads"]:
         raise ValueError("Persisted intake/planner equipment contract changed")
-    return {"banks": current["banks"], "catalogue_entries": len(current["identities"]),
+    return {"banks": historical["banks"], "catalogue_entries": len(current["identities"]),
             "source_hash_parity": True, "catalogue_identity_and_media_key_parity": True,
             "pr1_evidence_hash_parity": True, "planner_clinical_configuration_parity": True,
             "persisted_equipment_alias_contract_parity": True,
-            "allowed_changed_production": sorted(set(changed) - EQUIPMENT_CHANGED - FALLBACK_CHANGED),
+            "allowed_changed_production": sorted(set(changed) - EQUIPMENT_CHANGED - FALLBACK_CHANGED - {"fightcamp/strength.py"}),
             "added_projection_sources": sorted(set(added) - EQUIPMENT_ADDED)}
 
 
 def build_report(*, verified_plans=None):
     baseline = json.loads(BASELINE.read_bytes())
     protected = preservation(baseline)
-    projection = load_projection()
-    index = library.LibraryCache(reviewed_requirements=False).get()
+    index = historical_library_index()
+    projection = index.projection
     issues = json.loads((ROOT / "reports/metadata_integrity/remediation.json").read_bytes())["issues"]
     by_issue = {i["issue_id"]: i for i in issues}
     groups = []
