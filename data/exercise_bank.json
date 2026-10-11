@@ -9400,7 +9400,7 @@
     "equipment": "pullup_bar",
     "movement_cost": "low",
     "impact_cost": "low",
-    "eccentric_cost": "low",
+    "eccentric_cost": "",
     "landing_cost": "none",
     "cns_load": "low",
     "soreness_risk": "low",
@@ -9409,7 +9409,7 @@
       "mech_upper_pull"
     ],
     "low_impact": true,
-    "low_eccentric": true,
+    "low_eccentric": false,
     "cns_freshness": true,
     "cut_buckets_allowed": [
       "none",
@@ -11919,8 +11919,7 @@
       "mech_hinge_isometric",
       "mech_lower_hip_hinge",
       "mech_grip_support",
-      "mech_trunk_stability",
-      "mech_ballistic"
+      "mech_trunk_stability"
     ],
     "equipment": "trap_bar,pins",
     "phase_role": "late_strength_touch",
@@ -11973,7 +11972,6 @@
     "movement_cost": "moderate",
     "impact_cost": "low",
     "mechanical_risk_tags": [
-      "mech_ballistic",
       "mech_grip_support",
       "mech_hinge_isometric",
       "mech_lower_hip_hinge",
@@ -12008,8 +12006,7 @@
       "clinch_fighter",
       "grappler",
       "wrestler",
-      "boxing",
-      "mech_ballistic"
+      "boxing"
     ],
     "equipment": "trap_bar,pins",
     "phase_role": "late_strength_touch",
@@ -12066,7 +12063,6 @@
     "movement_cost": "moderate",
     "impact_cost": "low",
     "mechanical_risk_tags": [
-      "mech_ballistic",
       "mech_grip_support",
       "mech_hinge_isometric",
       "mech_lower_hip_hinge",

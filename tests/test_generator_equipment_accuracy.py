@@ -6,7 +6,7 @@ from fightcamp import conditioning, strength
 from fightcamp.training_catalogue import build_catalogue, content_hash, SOURCE_CLASSES, DATA_DIR
 from fightcamp.training_context import normalize_equipment_list, normalize_athlete_equipment_list
 from api.services import training_library as library
-from tools.audit_metadata_integrity import historical_sources
+from tools.audit_metadata_integrity import historical_sources, mechanical_baseline_sources, reviewed_mechanical_changes
 
 NAMES = ('Rope Climb + Short Sprint', 'Rope Climb Sprints', 'Towel Pull-Up Sprints',
          'Slow-Lowered Pull-Up', 'Towel-assisted lateral neck isometric')
@@ -67,6 +67,7 @@ def test_real_generator_equipment_candidates(monkeypatch, ordinal, equipment):
 
 def test_exact_five_edits_preserve_all_catalogue_media_and_history():
     current = build_catalogue()
+    mechanical = {c['catalogue_id']: c for c in reviewed_mechanical_changes()}
     with historical_sources() as replay:
         original = build_catalogue(replay / 'data')
         before = {r['catalogue_id']: r for r in original}
@@ -75,11 +76,19 @@ def test_exact_five_edits_preserve_all_catalogue_media_and_history():
         changed = []
         for identity, old in before.items():
             new = after[identity]
+            # PR #2825's original equipment assertions remain exact. Later
+            # reviewed mechanical deltas have independent source/runtime tests.
+            new_raw = new['raw']
+            if identity in mechanical:
+                change = mechanical[identity]
+                assert content_hash(new_raw) == change['after_sha256']
+                new_raw = {**new_raw, **change['before']}
+                assert content_hash(new_raw) == change['before_sha256']
             assert (new['source_id'], new['exercise_key'], new['eligibility']) == (old['source_id'], old['exercise_key'], old['eligibility'])
             assert new['raw_group'] == old['raw_group']
-            if new['raw'] != old['raw']:
+            if new_raw != old['raw']:
                 changed.append(new['name'])
-                assert {**new['raw'], 'equipment': old['raw']['equipment']} == old['raw']
+                assert {**new_raw, 'equipment': old['raw']['equipment']} == old['raw']
                 assert 'required_equipment' not in new['raw']
         assert set(changed) == set(NAMES) and len(changed) == 5
         for source in SOURCE_CLASSES:
@@ -177,8 +186,8 @@ def test_complete_fixed_clock_plans_have_only_explained_changes(tmp_path):
     from tools.audit_canonical_metadata import ROOT, BASELINE
 
     outputs = []
-    with historical_sources() as before_root:
-        for label, root in (('before', before_root), ('after', ROOT)):
+    with historical_sources() as before_root, mechanical_baseline_sources() as main_root:
+        for label, root in (('before', before_root), ('after', main_root)):
             destination = tmp_path / (label + '.json')
             subprocess.run([sys.executable, str(ROOT / 'tools/canonical_metadata_plan_probe.py'),
                             str(BASELINE), str(destination)], cwd=root,

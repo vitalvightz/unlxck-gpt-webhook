@@ -2125,9 +2125,7 @@
       "mech_shoulder_overhead",
       "mech_trunk_stability",
       "mech_grip_intensive",
-      "mech_systemic_fatigue",
-      "mech_landing_impact",
-      "mech_reactive"
+      "mech_systemic_fatigue"
     ],
     "notes": "Upper body: reduce waves if shoulder turnover slows.",
     "equipment_note": "Requires: Battle Ropes",
@@ -2135,13 +2133,11 @@
     "rest_sec": 90,
     "rounds": 4,
     "total_minutes": 12.5,
-    "impact_cost": "high",
+    "impact_cost": "low",
     "lactate_load": "high",
     "movement_cost": "high",
     "mechanical_risk_tags": [
       "mech_grip_intensive",
-      "mech_landing_impact",
-      "mech_reactive",
       "mech_shoulder_overhead",
       "mech_systemic_fatigue",
       "mech_trunk_stability"
@@ -3961,9 +3957,7 @@
       "mech_shoulder_overhead",
       "mech_trunk_stability",
       "mech_grip_intensive",
-      "mech_systemic_fatigue",
-      "mech_landing_impact",
-      "mech_reactive"
+      "mech_systemic_fatigue"
     ],
     "notes": "Double waves only (RPE 8).",
     "equipment_note": "Requires: Battle Ropes",
@@ -3972,13 +3966,11 @@
     "rounds": 8,
     "total_minutes": 14.5,
     "rpe": 8,
-    "impact_cost": "high",
+    "impact_cost": "low",
     "lactate_load": "high",
     "movement_cost": "high",
     "mechanical_risk_tags": [
       "mech_grip_intensive",
-      "mech_landing_impact",
-      "mech_reactive",
       "mech_shoulder_overhead",
       "mech_systemic_fatigue",
       "mech_trunk_stability"
@@ -8366,8 +8358,6 @@
       "conditioning",
       "explosive",
       "mech_ballistic",
-      "mech_landing_impact",
-      "mech_reactive",
       "mech_systemic_fatigue"
     ],
     "notes": "Upper body glycolytic work; lower body unloaded",
@@ -8376,13 +8366,11 @@
     "rounds": 4,
     "total_minutes": 3.67,
     "rpe": 9,
-    "impact_cost": "high",
+    "impact_cost": "low",
     "lactate_load": "high",
     "movement_cost": "high",
     "mechanical_risk_tags": [
       "mech_ballistic",
-      "mech_landing_impact",
-      "mech_reactive",
       "mech_systemic_fatigue"
     ],
     "stress_class": "anchor",
@@ -9204,7 +9192,6 @@
       "counter_striker",
       "distance_striker",
       "striking",
-      "mech_reactive",
       "mech_trunk_rotation"
     ],
     "notes": "Light slips, rolls, parries, steps, and exits. Conversational pace only. No sharp cutting or high-output defensive bursts.",
@@ -9214,7 +9201,6 @@
     "lactate_load": "low",
     "movement_cost": "low",
     "mechanical_risk_tags": [
-      "mech_reactive",
       "mech_trunk_rotation"
     ],
     "stress_class": "support",
