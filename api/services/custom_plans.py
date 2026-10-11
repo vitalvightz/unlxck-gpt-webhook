@@ -58,6 +58,19 @@ def plan_fields(store, body: CustomPlanInput, previous: dict | None = None, *, a
             # saved attachment. Explicit null is the owner's remove action.
             if prior and "media_id" not in supplied[exercise["id"]]:
                 exercise["media_id"] = prior.get("media_id")
+            for field in ("community_id", "community_revision_id"):
+                if prior and field not in supplied[exercise["id"]]:
+                    exercise[field] = prior.get(field)
+            if exercise.get("community_id"):
+                store.community_rpc("community_owned_revision", {"p_actor_id": athlete_id, "p_exercise_id": exercise["community_id"]})
+            if exercise.get("community_revision_id"):
+                from api.services.community_exercises import detail_row
+                revision = detail_row(store, athlete_id, exercise["community_revision_id"])
+                existing = prior and prior.get("community_revision_id") == exercise["community_revision_id"]
+                if not existing and not revision.get("published"):
+                    raise HTTPException(409, 'This community exercise is no longer available.')
+                if exercise.get("media_id"):
+                    raise HTTPException(422, 'Community media uses its approved revision.')
             if exercise.get("media_id"):
                 from api.services.private_media import owned_media
 

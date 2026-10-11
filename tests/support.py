@@ -1972,6 +1972,9 @@ class FakeStore(InMemoryNotificationLedger, FullRowStatusReads):
                 return copy.deepcopy(row)
         return None
 
+    def community_rpc(self, name: str, params: dict):
+        raise HTTPException(503, 'Community storage is unavailable.')
+
     def private_media_worker_healthy(self) -> bool:
         return False
 

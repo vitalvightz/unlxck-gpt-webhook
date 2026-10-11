@@ -59,6 +59,13 @@ PRIVATE_MEDIA_ADDED = frozenset({"api/contracts/private_media.py", "api/routes/p
                                 "web/components/private-exercise-video.tsx"})
 
 
+# Stage B is separate from frozen catalogue and planner authority.
+COMMUNITY_CHANGED = frozenset({"web/app/admin/page.tsx"})
+COMMUNITY_ADDED = frozenset({"api/community_store.py", "api/contracts/community_exercises.py",
+    "api/routes/community_exercises.py", "api/services/community_exercises.py",
+    "web/components/community-exercises.tsx", "web/e2e/custom-plan-fixture.ts", "web/components/admin-community-queue.tsx"})
+
+
 def dumps(value):
     return json.dumps(value, ensure_ascii=True, indent=2, sort_keys=True) + "\n"
 
@@ -249,7 +256,7 @@ def preservation(baseline):
         raise ValueError("PR 1 evidence changed")
     changed = sorted(p for p, h in original["production_files"].items() if current["production_files"].get(p) != h)
     added = sorted(set(current["production_files"]) - set(original["production_files"]))
-    if not set(changed) <= ALLOWED_CHANGED | EQUIPMENT_CHANGED | FALLBACK_CHANGED | DISCOVERY_CHANGED | CUSTOM_PLAN_CHANGED | PRIVATE_MEDIA_CHANGED | {"fightcamp/strength.py"} or not set(added) <= ALLOWED_ADDED | EQUIPMENT_ADDED | CUSTOM_PLAN_ADDED | PRIVATE_MEDIA_ADDED:
+    if not set(changed) <= ALLOWED_CHANGED | EQUIPMENT_CHANGED | FALLBACK_CHANGED | DISCOVERY_CHANGED | CUSTOM_PLAN_CHANGED | PRIVATE_MEDIA_CHANGED | COMMUNITY_CHANGED | {"fightcamp/strength.py"} or not set(added) <= ALLOWED_ADDED | EQUIPMENT_ADDED | CUSTOM_PLAN_ADDED | PRIVATE_MEDIA_ADDED | COMMUNITY_ADDED:
         raise ValueError("Unapproved production diff: " + str((changed, added)))
     for p, h in original["configuration_files"].items():
         if current["configuration_files"].get(p) != h and p not in {"shared/equipment-aliases.json", "data/training_catalogue_ids.json"}:
@@ -257,7 +264,7 @@ def preservation(baseline):
     if set(current["configuration_files"]) - set(original["configuration_files"]) - {"shared/training-metadata.json", "shared/equipment-requirements.json"}:
         raise ValueError("Unapproved configuration added")
     originals = json.loads((ROOT / "tools/metadata_integrity_original_sources.json").read_bytes())
-    if set(originals) != ALLOWED_CHANGED | EQUIPMENT_CHANGED | FALLBACK_CHANGED | DISCOVERY_CHANGED | CUSTOM_PLAN_CHANGED | PRIVATE_MEDIA_CHANGED:
+    if set(originals) != ALLOWED_CHANGED | EQUIPMENT_CHANGED | FALLBACK_CHANGED | DISCOVERY_CHANGED | CUSTOM_PLAN_CHANGED | PRIVATE_MEDIA_CHANGED | COMMUNITY_CHANGED:
         raise ValueError("Unexpected historical source receipts")
     for p, text in originals.items():
         if source_hash(text.encode()) != original["production_files"][p]:
@@ -268,8 +275,8 @@ def preservation(baseline):
             "source_hash_parity": True, "catalogue_identity_and_media_key_parity": True,
             "pr1_evidence_hash_parity": True, "planner_clinical_configuration_parity": True,
             "persisted_equipment_alias_contract_parity": True,
-            "allowed_changed_production": sorted(set(changed) - EQUIPMENT_CHANGED - FALLBACK_CHANGED - DISCOVERY_CHANGED - CUSTOM_PLAN_CHANGED - PRIVATE_MEDIA_CHANGED - {"fightcamp/strength.py"}),
-            "added_projection_sources": sorted(set(added) - EQUIPMENT_ADDED - CUSTOM_PLAN_ADDED - PRIVATE_MEDIA_ADDED)}
+            "allowed_changed_production": sorted(set(changed) - EQUIPMENT_CHANGED - FALLBACK_CHANGED - DISCOVERY_CHANGED - CUSTOM_PLAN_CHANGED - PRIVATE_MEDIA_CHANGED - COMMUNITY_CHANGED - {"fightcamp/strength.py"}),
+            "added_projection_sources": sorted(set(added) - EQUIPMENT_ADDED - CUSTOM_PLAN_ADDED - PRIVATE_MEDIA_ADDED - COMMUNITY_ADDED)}
 
 
 def build_report(*, verified_plans=None):

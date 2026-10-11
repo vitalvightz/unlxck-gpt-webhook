@@ -11,7 +11,7 @@ import { InjuryDetailSheet } from "./today/injury-detail-sheet";
 import styles from "./custom-plan-builder.module.css";
 import layout from "./private-exercise-video.module.css";
 
-export function PrivateVideoPlayer({ media, name }: { media: PrivateMediaPreview; name: string }) {
+export function PrivateVideoPlayer({ media, name, visibility = "private" }: { media: PrivateMediaPreview; name: string; visibility?: "private" | "community" }) {
   const video = useRef<HTMLVideoElement>(null);
   const [playing, setPlaying] = useState(false), [slow, setSlow] = useState(false);
   const [failed, setFailed] = useState(false);
@@ -29,7 +29,7 @@ export function PrivateVideoPlayer({ media, name }: { media: PrivateMediaPreview
           aria-label={`${name} demonstration`} onPlay={() => setPlaying(true)} onPause={() => setPlaying(false)}
           onError={() => setFailed(true)} />
       </div>
-      <div className="ex-demo-caption"><span className="ex-demo-meta">Demo · Private</span></div>
+      <div className="ex-demo-caption"><span className="ex-demo-meta">Demo · {visibility === "community" ? "Community" : "Private"}</span></div>
       <div className="ex-demo-controls" role="group" aria-label="Demo controls">
         <button type="button" className="ex-demo-control" onClick={() => {
           if (playing) video.current?.pause(); else void video.current?.play().catch(() => setFailed(true));
@@ -62,12 +62,12 @@ export function PrivateExerciseVideo({ token, id, name }: { token: string; id: s
     : <p role="status">{error ? "Video unavailable. You can keep using your exercise." : "Opening video…"}</p>}</div>;
 }
 
-export function PrivateExerciseVideoSheet({ token, name, onClose, onAttach }: {
-  token: string; name: string; onClose: () => void; onAttach: (id: string) => void;
+export function PrivateExerciseVideoSheet({ token, name, onClose, onAttach, initialMedia }: {
+  token: string; name: string; onClose: () => void; onAttach: (id: string) => void; initialMedia?: PrivateMediaPreview;
 }) {
   const [settings, setSettings] = useState<PrivateMediaSettings>();
   const [choice, setChoice] = useState<"upload" | "youtube">();
-  const [url, setUrl] = useState(""), [start, setStart] = useState("0"), [end, setEnd] = useState("30");
+  const [url, setUrl] = useState(initialMedia?.video_id ? `https://www.youtube.com/watch?v=${initialMedia.video_id}` : ""), [start, setStart] = useState(String(initialMedia?.start_s ?? 0)), [end, setEnd] = useState(String(initialMedia?.end_s ?? 30));
   const [media, setMedia] = useState<PrivateMediaPreview>(), [pending, setPending] = useState(false);
   const [error, setError] = useState<string>(), [status, setStatus] = useState<string>();
   const request = useRef<AbortController | null>(null);
