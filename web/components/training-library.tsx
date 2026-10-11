@@ -12,7 +12,7 @@ import { libraryEquipmentText as equipmentText } from "@/lib/equipment-requireme
 import styles from "./training-library.module.css";
 
 type Category = LibraryEntry["category"];
-const filterLabels = { type: "Training type", goal: "Goal", sport: "Sport", equipment: "Equipment", body_focus: "Body area", movement: "Movement", training_method: "Training method", skill_focus: "Skill focus" };
+const filterLabels = { type: "Training type", goal: "Goal", sport: "Sport", equipment: "Equipment", body_focus: "Body area", movement: "Movement", training_method: "Training method", skill_focus: "Skill focus", physical_focus: "Physical focus" };
 const contentTypes: Record<string, { label: string; icon: ExerciseGlyphName }> = {
   strength_power: { label: "Strength & power", icon: "strength" }, conditioning: { label: "Conditioning", icon: "conditioning" },
   technical_coordination: { label: "Technical drills", icon: "skill" }, rehabilitation: { label: "Rehabilitation", icon: "rehab" },
@@ -20,9 +20,9 @@ const contentTypes: Record<string, { label: string; icon: ExerciseGlyphName }> =
   visualisation: { label: "Visualisation", icon: "visualisation" },
 };
 type Filters = Partial<Record<keyof typeof filterLabels, string>>;
-const detailFields = ["movement", "training_method", "skill_focus"] as const;
+const detailFields = ["movement", "training_method", "skill_focus", "physical_focus"] as const;
 const otherFields = ["sport", "equipment", "body_focus", "type"] as const;
-const examples = { movement: "Squat, hip hinge, rotation", training_method: "Static holds, plyometric drills, lowering-focused", skill_focus: "Footwork, striking, grappling" };
+const examples = { movement: "Squat, hip hinge, rotation", training_method: "Static holds, plyometric drills, lowering-focused", skill_focus: "Footwork, striking, grappling", physical_focus: "Balance, coordination, agility, visual focus" };
 const boundaries: Record<Category, string> = {
   training: "Discovery only. Injury, phase, equipment and programming checks still apply.",
   rehab: "Rehab pathway only. Your current stage and clinical clearance still apply.",
@@ -90,6 +90,12 @@ export function TrainingLibrary({ accessToken }: { accessToken: string }) {
   const [filters, setFilters] = useState<Filters>({});
   const [selectedLabels, setSelectedLabels] = useState<Filters>({});
   const [filterOpen, setFilterOpen] = useState(false);
+  const [otherOpen, setOtherOpen] = useState(false);
+  const [picker, setPicker] = useState<keyof Filters | null>(null);
+  const [optionQuery, setOptionQuery] = useState("");
+  const pickerBack = useRef<HTMLButtonElement>(null);
+  const filterTriggers = useRef<Partial<Record<keyof Filters, HTMLButtonElement | null>>>({});
+  const previousPicker = useRef<keyof Filters | null>(null);
   const [selected, setSelected] = useState<LibraryEntry | null>(null);
   const [result, setResult] = useState<LibrarySearchResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -115,6 +121,14 @@ export function TrainingLibrary({ accessToken }: { accessToken: string }) {
     }, query ? 200 : 0);
     return () => { clearTimeout(timer); controller.abort(); pageRequest.current?.abort(); };
   }, [accessToken, query, category, filters, retry]);
+
+  useEffect(() => {
+    if (filterOpen && picker) pickerBack.current?.focus({ preventScroll: true });
+    else if (filterOpen && previousPicker.current) filterTriggers.current[previousPicker.current]?.focus({ preventScroll: true });
+    previousPicker.current = picker;
+  }, [filterOpen, picker]);
+
+  function closeFilters() { setFilterOpen(false); setPicker(null); setOptionQuery(""); setOtherOpen(false); }
 
   function changeSearch(update: () => void) {
     generation.current++;
@@ -151,13 +165,21 @@ export function TrainingLibrary({ accessToken }: { accessToken: string }) {
   }
   function selector(field: keyof Filters) {
     const choices = result?.facets[field] ?? [];
-    return <label className="field" key={field}><span>{category !== "training" && field === "body_focus" ? "Body focus" : filterLabels[field]}</span>
+    if (category === "training") return <button key={field} className={styles.filterTrigger}
+      ref={element => { filterTriggers.current[field] = element; }}
+      aria-label={`${filterLabels[field]}: ${filters[field] ? selectedLabel(field, filters[field]!) : "Any"}`}
+      onClick={() => { setOptionQuery(""); setPicker(field); }}>
+      <span><span className={styles.filterTitle}>{filterLabels[field]}</span>
+        <span className={styles.filterValue}>{filters[field] ? selectedLabel(field, filters[field]!) : field in examples ? examples[field as keyof typeof examples] : "Any"}</span>
+      </span><span className={styles.chevron} aria-hidden="true" />
+    </button>;
+    return <label className="field" key={field}><span>{field === "body_focus" ? "Body focus" : filterLabels[field]}</span>
       <select value={filters[field] ?? ""} onChange={event => {
         const value = event.target.value;
         setSelectedLabels(previous => ({ ...previous, [field]: choices.find(choice => choice.value === value)?.label ?? "" }));
         changeSearch(() => setFilters(previous => ({ ...previous, [field]: value })));
       }}>
-        <option value="">{category === "training" ? "Any" : "All"}</option>
+        <option value="">All</option>
         {filters[field] && !choices.some(choice => choice.value === filters[field]) ? <option value={filters[field]}>{selectedLabel(field, filters[field]!)} (0)</option> : null}
         {choices.map(choice => <option key={choice.value} value={choice.value}>{choice.label} ({choice.count})</option>)}
       </select>
@@ -234,23 +256,46 @@ export function TrainingLibrary({ accessToken }: { accessToken: string }) {
       </div>}
       {result.next_offset !== null ? <button className={`secondary-button ${styles.more}`} disabled={paging} onClick={() => void more()}>{paging ? "Loading…" : "Load more"}</button> : null}
     </> : null}
-    {filterOpen ? <InjuryDetailSheet title="Filters" onClose={() => setFilterOpen(false)} closeLabel="Close filters">
+    {filterOpen ? <InjuryDetailSheet title={picker ? filterLabels[picker] : "Filters"} onClose={closeFilters} closeLabel="Close filters">
       <div className={`injury-sheet-body ${styles.filters}`}>
+        {picker ? <>
+          <button ref={pickerBack} className={styles.pickerBack} onClick={() => setPicker(null)}>← Back to filters</button>
+          <label className={styles.optionSearch}><span className="sr-only">Search {filterLabels[picker].toLowerCase()} options</span>
+            <input type="search" value={optionQuery} placeholder="Search options…"
+              onChange={event => setOptionQuery(event.target.value)} />
+          </label>
+          <div className={styles.optionList} role="group" aria-label={`${filterLabels[picker]} options`}>
+            <button data-value="" aria-pressed={!filters[picker]} onClick={() => { removeFilter(picker); setPicker(null); }}>
+              <span>Any</span><span aria-hidden="true">{!filters[picker] ? "✓" : ""}</span>
+            </button>
+            {filters[picker] && !(result?.facets[picker] ?? []).some(choice => choice.value === filters[picker]) ?
+              <button aria-pressed="true" onClick={() => setPicker(null)}><span>{selectedLabel(picker, filters[picker]!)}</span><span>0 <span aria-hidden="true">✓</span></span></button> : null}
+            {(result?.facets[picker] ?? []).filter(choice => choice.label.toLocaleLowerCase().includes(optionQuery.trim().toLocaleLowerCase())).map(choice =>
+              <button key={choice.value} data-value={choice.value} aria-label={`${choice.label}, ${choice.count} drills`} aria-pressed={filters[picker] === choice.value} onClick={() => {
+                setSelectedLabels(previous => ({ ...previous, [picker]: choice.label }));
+                changeSearch(() => setFilters(previous => ({ ...previous, [picker]: choice.value })));
+                setPicker(null);
+              }}><span>{choice.label}</span><span className={styles.optionCount}>{choice.count} <span aria-hidden="true">{filters[picker] === choice.value ? "✓" : ""}</span></span></button>)}
+          </div>
+          {!(result?.facets[picker] ?? []).some(choice => choice.label.toLocaleLowerCase().includes(optionQuery.trim().toLocaleLowerCase())) ?
+            <p role="status" className={styles.meta}>No matching options.</p> : null}
+        </> : <>
         {category === "training" ? <>
           <h3>What do you want to improve?</h3>
           {selector("goal")}
           <p className={styles.meta}>Choose a training goal, or explore exercises below.</p>
           <h3>Explore exercises</h3>
           <div className={styles.explore}>{detailFields.map(selector)}</div>
-          <details className={styles.otherFilters}><summary>Other filters</summary>
+          <details className={styles.otherFilters} open={otherOpen} onToggle={event => setOtherOpen(event.currentTarget.open)}><summary>Other filters</summary>
             <p className={styles.meta}>Sport, equipment, body area and training type</p>
             <div className={styles.filters}>{otherFields.map(selector)}</div>
           </details>
         </> : (["type", "goal", "sport", "equipment", "body_focus"] as const).map(selector)}
         <div className={styles.filterActions}>
           <button className="secondary-button" onClick={() => changeSearch(() => setFilters({}))}>Clear filters</button>
-          <button className="injury-sheet-save" onClick={() => setFilterOpen(false)}>Show results</button>
+          <button className="injury-sheet-save" onClick={closeFilters}>Show results</button>
         </div>
+        </>}
       </div>
     </InjuryDetailSheet> : null}
     {selected ? <DrillPreview key={selected.catalogue_id} entry={selected} token={accessToken} onClose={() => setSelected(null)} /> : null}

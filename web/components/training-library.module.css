@@ -58,8 +58,8 @@
 .filters h3 { margin: 0; font-size: var(--type-body); font-weight: 600; }
 .filters p { margin: 0; }
 .explore { display: grid; gap: 0; border: 1px solid var(--border-default); border-radius: 12px; padding: 0 14px; }
-.explore > label { padding: 14px 0; margin: 0; }
-.explore > label + label { border-top: 1px solid var(--border-subtle); }
+.explore > .filterTrigger { padding: 14px 0; margin: 0; }
+.explore > .filterTrigger + .filterTrigger { border-top: 1px solid var(--border-subtle); }
 .otherFilters summary { min-height: 44px; cursor: pointer; font-weight: 600; }
 .otherFilters[open] > p { margin-bottom: 12px; }
 .filterActions { grid-template-columns: 1fr 1.6fr; position: sticky; bottom: 0; background: var(--bg-panel); padding-block: 12px; }
@@ -71,3 +71,16 @@
 .exerciseDetails div { display: grid; grid-template-columns: 110px 1fr; gap: 12px; }
 .exerciseDetails dt { color: var(--text-secondary); }
 .exerciseDetails dd { margin: 0; }
+
+.filterTrigger { display: flex; align-items: center; gap: 16px; width: 100%; min-height: 64px; padding: 12px 0; border: 0; border-radius: 0; background: transparent; color: var(--text-primary); text-align: left; }
+.filterTrigger > span:first-child { display: grid; gap: 5px; min-width: 0; }
+.filterTitle { font-size: 16px; font-weight: 600; }
+.filterValue { font-size: 13px; line-height: 1.5; color: var(--text-secondary); overflow-wrap: anywhere; }
+.filterTrigger:focus-visible, .optionList button:focus-visible, .pickerBack:focus-visible { outline: 2px solid var(--brand-red); outline-offset: -2px; }
+.pickerBack { justify-self: start; min-height: 44px; padding: 0; background: transparent; border: 0; color: var(--text-secondary); font-size: 14px; }
+.optionSearch { position: sticky; top: 0; z-index: 1; background: var(--bg-panel); padding-block: 4px; }
+.optionSearch input { width: 100%; min-height: 48px; padding: 12px; font-size: 16px; background: var(--bg-stat); color: var(--text-primary); border: 1px solid var(--border-default); border-radius: 10px; }
+.optionList { display: grid; }
+.optionList button { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 52px; width: 100%; padding: 12px 8px; border: 0; border-bottom: 1px solid var(--border-subtle); border-radius: 0; background: transparent; color: var(--text-primary); text-align: left; font-size: 15px; }
+.optionList button[aria-pressed="true"] { background: var(--bg-stat); font-weight: 600; }
+.optionCount { flex-shrink: 0; color: var(--text-secondary); font-size: 13px; }

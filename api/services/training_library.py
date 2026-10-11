@@ -38,7 +38,7 @@ GUIDANCE_FIELDS = {
     "Regress": ("regress", "regression", "regress_when"), "Stop": ("stop", "stop_rules", "stop_when", "quality_stop_rule"),
 }
 FILTERS = ("type", "goal", "sport", "equipment", "body_focus")
-DETAIL_FILTERS = ("movement", "training_method", "skill_focus")
+DETAIL_FILTERS = ("movement", "training_method", "skill_focus", "physical_focus")
 
 
 def text_key(text: str) -> str:
@@ -277,7 +277,8 @@ def _word_matches(terms: list[str], vocabulary: set | frozenset) -> dict:
 def _canonical_query(record: dict, query: str, projection: dict | None) -> str:
     for mapping in (projection or {}).get("mappings", []):
         evidence = next((value for value in record.get("projection", [])
-                         if value["audit_decision"] == mapping["audit_decision"] and value["filter_eligible"]), None)
+                         if value["source_field"] == mapping["field"] and value["canonical_id"] == mapping["canonical_id"]
+                         and value["filter_eligible"]), None)
         if not evidence:
             continue
         phrases = {text_key(value) for value in (*mapping["source_values"], mapping["label"])}
@@ -364,7 +365,8 @@ def search(index: LibraryIndex, *, q: str = "", category: str = "training", filt
         # Suspect equipment declarations remain source evidence, but cannot
         # establish that a climbing drill is battle-rope work.
         blocked_phrases = [text_key(value) for item in record.get("projection", []) if not item["filter_eligible"]
-                           for mapping in (index.projection or {}).get("mappings", []) if mapping["audit_decision"] == item["audit_decision"]
+                           for mapping in (index.projection or {}).get("mappings", [])
+                           if mapping["audit_decision"] is not None and mapping["audit_decision"] == item["audit_decision"]
                            for value in mapping["source_values"]]
         if any(re.search(r"(?<!\w)" + re.escape(phrase) + r"(?!\w)", query) for phrase in blocked_phrases):
             continue
@@ -388,6 +390,9 @@ def search(index: LibraryIndex, *, q: str = "", category: str = "training", filt
         friendly_labels = {r["id"]: r["label"] for r in (index.projection or {}).get("discovery_filters", []) if r["group"] == field}
         facets[field] = [{"value": value, "label": friendly_labels.get(value) or filter_label(field, value, label_projection) or CLASS_LABELS.get(value, BODY_LABELS.get(value, "No equipment" if value == "no_equipment" else label(value))), "count": count}
                          for value, count in sorted(counts.items(), key=lambda pair: label(pair[0]))]
+        if field in DETAIL_FILTERS:
+            order = {r["id"]: ordinal for ordinal, r in enumerate((index.projection or {}).get("discovery_filters", []))}
+            facets[field].sort(key=lambda option: order[option["value"]])
     selected = [r for score, r in sorted(ranked, key=lambda pair: (-pair[0], pair[1]["name"], pair[1]["entry"]["catalogue_id"])) if matches_filters(r)]
     return {"entries": [{**r["summary"], "discovery_match": _discovery_match(r, query, groups)} for r in selected[offset:offset + limit]], "total": len(selected),
             "catalogue_total": len(index.records), "offset": offset, "limit": limit,

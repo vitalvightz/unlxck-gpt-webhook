@@ -16,6 +16,11 @@ const drills = [entry("Medicine Ball Hook Throw", ["medicine_ball"]), entry("Sta
 const rehab = entry("Banded Heel Push with Hold", ["band"], { category: "rehab", content_type: "rehabilitation", context: "Rehab · Achilles · Pain", selection_boundary: "rehab_pathway_only" });
 const learn = entry("Pressure → Reset", null, { category: "learn", content_type: "visualisation", context: "Visualisation · Boxing · Brawler", selection_boundary: "excluded" });
 
+async function chooseFilter(page: Page, field: string, value: string) {
+  await page.getByRole("dialog").getByRole("button", { name: new RegExp(`^${field}: `) }).click();
+  await page.getByRole("dialog").locator(`button[data-value="${value}"]`).click();
+}
+
 for (const width of [320, 390, 1280]) {
   test(`Reviewed canonical filters preserve independent selections (${width}px)`, async ({ page, baseURL }) => {
     await page.setViewportSize({ width, height: 844 });
@@ -49,30 +54,34 @@ for (const width of [320, 390, 1280]) {
       return sheet;
     };
     let filters = await openFilters();
-    const equipment = filters.getByRole("combobox", { name: "Equipment", exact: true });
+    await filters.getByRole("button", { name: /^Equipment: / }).click();
+    const equipment = page.getByRole("group", { name: "Equipment options", exact: true });
     for (const [value, label] of [["battle_ropes", "Battle ropes (7)"], ["kettlebell", "Kettlebell (24)"], ["weight_vest", "Weight vest (6)"], ["rower", "Rower (8)"], ["double_end_bag", "Double-end bag (4)"]]) {
-      await expect(equipment.locator(`option[value="${value}"]`)).toHaveCount(1);
-      await expect(equipment.locator(`option[value="${value}"]`)).toHaveText(label);
+      await expect(equipment.locator(`button[data-value="${value}"]`)).toHaveCount(1);
+      await expect(equipment.locator(`button[data-value="${value}"]`)).toHaveText(label.replace(" (", "").replace(")", "") + " ");
     }
-    for (const value of ["battle_rope", "kettlebells", "weighted_vest", "rowing_machine", "double-end_bag"]) await expect(equipment.locator(`option[value="${value}"]`)).toHaveCount(0);
-    await expect(filters.getByRole("combobox", { name: "Body area", exact: true }).locator('option[value="adductors"]')).toHaveText("Inner thighs (adductors) (7)");
+    for (const value of ["battle_rope", "kettlebells", "weighted_vest", "rowing_machine", "double-end_bag"]) await expect(equipment.locator(`button[data-value="${value}"]`)).toHaveCount(0);
+    await page.getByRole("button", { name: "← Back to filters", exact: true }).click();
+    await filters.getByRole("button", { name: /^Body area: / }).click();
+    await expect(page.getByRole("dialog").locator('button[data-value="adductors"]')).toHaveText("Inner thighs (adductors)7 ");
+    await page.getByRole("button", { name: "← Back to filters", exact: true }).click();
     await page.screenshot({ path: test.info().outputPath(`canonical-filters-${width}.png`), animations: "disabled" });
     expect((await new AxeBuilder({ page }).include('[role="dialog"]').analyze()).violations).toEqual([]);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-    await equipment.selectOption("kettlebell");
+    await chooseFilter(page, "Equipment", "kettlebell");
     await expect(status).toHaveText("24 drills");
-    await filters.getByRole("combobox", { name: "Training type", exact: true }).selectOption("strength_power");
+    await chooseFilter(page, "Training type", "strength_power");
     const combined = canonicalFixture.responses["equipment=kettlebell&type=strength_power"];
     await expect(status).toHaveText(`${combined.total} drills`);
     await filters.getByRole("button", { name: "Show results", exact: true }).click();
     filters = await openFilters();
-    await expect(filters.getByRole("combobox", { name: "Training type", exact: true })).toHaveValue("strength_power");
-    await expect(filters.getByRole("combobox", { name: "Equipment", exact: true })).toHaveValue("kettlebell");
-    await filters.getByRole("combobox", { name: "Equipment", exact: true }).selectOption("");
-    await expect(filters.getByRole("combobox", { name: "Training type", exact: true })).toHaveValue("strength_power");
-    await filters.getByRole("combobox", { name: "Training type", exact: true }).selectOption("");
+    await expect(filters.getByRole("button", { name: /^Training type: / })).toHaveAccessibleName("Training type: Strength & power");
+    await expect(filters.getByRole("button", { name: /^Equipment: / })).toHaveAccessibleName("Equipment: Kettlebell");
+    await chooseFilter(page, "Equipment", "");
+    await expect(filters.getByRole("button", { name: /^Training type: / })).toHaveAccessibleName("Training type: Strength & power");
+    await chooseFilter(page, "Training type", "");
     await expect(status).toHaveText("1,010 drills");
-    await filters.getByRole("combobox", { name: "Equipment", exact: true }).selectOption("battle_ropes");
+    await chooseFilter(page, "Equipment", "battle_ropes");
     await expect(status).toHaveText("7 drills");
     await filters.getByRole("button", { name: "Show results", exact: true }).click();
     const results = page.getByRole("list", { name: "Drill results" });
@@ -175,7 +184,7 @@ for (const width of [320, 390, 1280]) {
     await page.getByRole("button", { name: /^Filters/ }).click();
     const filters = page.getByRole("dialog", { name: "Filters", exact: true });
     await filters.getByText("Other filters", { exact: true }).click();
-    await filters.getByRole("combobox", { name: "Equipment", exact: true }).selectOption("sledgehammer");
+    await chooseFilter(page, "Equipment", "sledgehammer");
     await filters.getByRole("button", { name: "Show results", exact: true }).click();
     await expect(results).not.toContainText("Tabata Sprints");
     const drill = results.getByRole("button").first();
@@ -275,9 +284,10 @@ for (const width of [320, 390, 1280, 1440]) {
     await page.getByRole("button", { name: "Filters", exact: true }).click();
     const filters = page.getByRole("dialog", { name: "Filters", exact: true });
     await filters.getByText("Other filters", { exact: true }).click();
-    await expect(filters.getByRole("combobox")).toHaveCount(8);
+    await expect(filters.getByRole("combobox")).toHaveCount(0);
+    await expect(filters.locator('button[aria-label*=": "]')).toHaveCount(9);
     await expect(filters).not.toContainText("Difficulty");
-    await filters.getByRole("combobox", { name: "Equipment", exact: true }).selectOption("medicine_ball");
+    await chooseFilter(page, "Equipment", "medicine_ball");
     await filters.getByRole("button", { name: "Show results" }).click();
     if (process.env.LIBRARY_TEST_API) {
       await expect(results).toContainText("Med Ball Chest Pass (Reactive)");
@@ -311,7 +321,7 @@ test("Categories, collapsed coaching, empty reset and unavailable retry", async 
   await expect(page.getByRole("list", { name: "Drill results" })).toBeVisible();
   await page.getByRole("button", { name: "Filters", exact: true }).click();
   await page.getByRole("dialog").getByText("Other filters", { exact: true }).click();
-  await page.getByRole("dialog").getByRole("combobox", { name: "Equipment", exact: true }).selectOption("agility_ladder");
+  await chooseFilter(page, "Equipment", "agility_ladder");
   await page.getByRole("button", { name: "Show results" }).click();
   await search.fill("punching power");
   await expect(page.getByRole("heading", { name: "No exercises match this search and these filters." })).toBeVisible();
@@ -340,4 +350,33 @@ test("Categories, collapsed coaching, empty reset and unavailable retry", async 
   controls.fail(false);
   await page.getByRole("button", { name: "Retry search" }).click();
   await expect(page.getByRole("heading", { name: "No drills found" })).toBeVisible();
+});
+
+test("Mobile Skill focus picker searches 22 choices and restores filter focus", async ({ page, baseURL }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await setup(page, baseURL!);
+  const labels = ["Footwork", "Striking", "Grappling", "Defence", "Clinch work", "Angle exits", "Create angles", "Takedown defence", "Takedown entries", "Manage range", "Cut off the ring", "Ring positioning", "Cage positioning", "Set up counters", "Apply pressure", "Recover your base", "Scrambles & stand-ups", "Kicking & kick recovery", "Hand-foot timing", "Cue-response practice", "Stance transitions", "Decision practice"];
+  await page.route("**/api/training/library**", route => route.fulfill({ contentType: "application/json", body: JSON.stringify({
+    entries: [drills[0]], total: 1, catalogue_total: 2855, offset: 0, limit: 24, next_offset: null, revision: "picker",
+    facets: { skill_focus: labels.map((label, i) => ({ value: `skill_${i}`, label, count: 1 })) },
+  }) }));
+  await page.goto("/plans/library");
+  await page.getByRole("button", { name: "Filters", exact: true }).click();
+  await page.getByRole("button", { name: "Skill focus: Any", exact: true }).click();
+  const picker = page.getByRole("dialog", { name: "Skill focus", exact: true });
+  await expect(picker.locator('button[data-value]')).toHaveCount(23);
+  await expect(picker.getByRole("button", { name: "← Back to filters", exact: true })).toBeFocused();
+  await page.screenshot({ path: test.info().outputPath("skill-focus-picker-390.png"), animations: "disabled" });
+  const search = picker.getByRole("searchbox", { name: "Search skill focus options" });
+  await search.fill("takedown def");
+  await expect(picker.locator('button[data-value]')).toHaveCount(2);
+  await expect(picker.locator('button[data-value="skill_7"]')).toHaveText("Takedown defence1");
+  expect((await new AxeBuilder({ page }).include('[role="dialog"]').analyze()).violations).toEqual([]);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await picker.locator('button[data-value="skill_7"]').click();
+  const filters = page.getByRole("dialog", { name: "Filters", exact: true });
+  await expect(filters.getByRole("button", { name: "Skill focus: Takedown defence", exact: true })).toBeFocused();
+  await filters.getByRole("button", { name: "Show results", exact: true }).click();
+  await page.getByRole("button", { name: "Remove Skill focus filter", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Filters", exact: true })).toBeVisible();
 });

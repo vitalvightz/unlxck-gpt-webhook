@@ -38,7 +38,7 @@ class EquipmentRequirements(BaseModel):
 class ExerciseDetail(BaseModel):
     value: str
     label: str
-    group: Literal["movement", "training_method", "skill_focus"]
+    group: Literal["movement", "training_method", "skill_focus", "physical_focus"]
 
 
 class LibraryEntry(BaseModel):
