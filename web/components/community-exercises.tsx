@@ -158,7 +158,7 @@ export function MyCommunitySubmissions({ token }: { token: string }) {
     {open ? <div className={layout.stack}>
       {error ? <p role="alert">{error} <button type="button" className="secondary-button" onClick={reload}>Retry</button></p> : null}
       {loading && !entries.length ? <p role="status">Loading submissions…</p> : null}
-      {!loading && !entries.length && !error ? <p className="muted">You haven't submitted any community exercises.</p> : null}
+      {!loading && !entries.length && !error ? <p className="muted">No community submissions yet.</p> : null}
       {entries.map(entry => <div className={layout.submissionRow} key={entry.id}>
         <span><strong>{entry.name}</strong><span className="muted">{communityStatus(entry.status)}{entry.reason ? ` · ${entry.reason}` : ''}</span></span>
         <button type="button" className="ghost-button" onClick={() => setSelected(entry)}>Manage</button>
