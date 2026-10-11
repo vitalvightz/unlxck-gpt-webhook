@@ -32,12 +32,15 @@ Full generator plans use the existing probe: UTC clock 2026-10-11 09:00, athlete
 
 Only strength selections, their reason logs, and corresponding candidate slots/alternates differ. All other Stage 2 content, conditioning, rehab, workload and scheduling match exactly. Rendering differs only in the selected-name summaries and the explained reason-log entries. Isolated before/after generator comparisons additionally prove both rope drills gain eligibility with climbing rope alone, the three missing-apparatus drills lose eligibility, and complete-equipment doses/scores remain identical. Towel Pull-Up Sprints correctly changes `universally_available` from true to false.
 
+Additional current-state checks retain the original seven-window selector golden and assert exactly one additional D-1 `late_block_d1_equipment` reason for the towel-assisted neck drill, with every other diagnostic/winner unchanged. GPP role coverage now counts only anchor-capable providers, matching the existing promotion gate: without a pull-up bar, the remaining upper-pull metadata match is rehab support and cannot promise a base anchor. Adding a pull-up bar restores that supported role. No support drill or apparatus substitution is introduced to hide this reduced availability.
+
 ## Verification
 
 - 89 new generator/source regressions, including complete fixed-clock plan comparisons (88 passed together; final added source-drift check passed separately).
 - Ruff across api/fightcamp/tests/tools; Python compilation/import execution; frontend TypeScript check: passed.
 - Bank validation, tag audit/migration/authority, rehab schema/review/clinical validators: passed.
 - Frozen audit compatibility: 53 tests passed; equipment audit `--check` passed.
+- Catalogue/library/equipment/identity suite: 171 passed. GPP coverage and late-selector expectation regressions: 24 passed.
 - Full Python shards, runtime regression suites, PostgreSQL concurrency/schema checks and web build run in hosted CI. Final results are recorded on the implementation PR.
 
 Limitations: this corrects only the five reviewed records. Other unresolved equipment compounds retain their existing behavior. PostgreSQL/live-schema and hosted build checks depend on their existing CI environments; no deployment, schema or environment-variable changes are part of this PR. Initial local parallel attempts hit memory limits and pre-existing random UUID test-collection mismatches; relevant suites use sequential local execution, with the complete suite delegated to the existing hosted CI shards.
