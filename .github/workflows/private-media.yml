@@ -6,6 +6,7 @@ on:
       - 'media_processor/**'
       - 'tools/*private_media*'
       - 'supabase/migrations/*private_exercise_media.sql'
+      - 'supabase/migrations/*private_media*.sql'
       - '.github/workflows/private-media.yml'
 jobs:
   processing:

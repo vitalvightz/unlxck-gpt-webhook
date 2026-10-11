@@ -13,7 +13,7 @@ from api.services.exercise_media import VideoCheck, youtube_duration_seconds, YO
 from api.store import SupabaseAppStore
 from media_processor import process as processor
 from tests.support import _build_client
-from tools.private_media_worker import docker_command, isolated_run
+from tools.private_media_worker import docker_command, isolated_run, process_one, cleanup
 
 AUTH = {"Authorization": "Bearer athlete-token"}
 OTHER = {"Authorization": "Bearer admin-token"}
@@ -377,3 +377,54 @@ def test_docker_sandbox_digest_and_timeout_removal(monkeypatch):
     with pytest.raises(TimeoutError):
         isolated_run(command)
     assert calls[0][:3] == ["docker", "rm", "-f"]
+
+
+def test_finalisation_response_loss_keeps_both_objects_and_durable_proof(monkeypatch):
+    import base64
+    import hashlib
+    demo = b'processed rendition'
+    asset = {'id': 'asset', 'athlete_id': 'owner', 'intake_path': 'owner/asset/source', 'size_bytes': 3}
+    proof = {'duration': 10, 'width': 1280, 'height': 720, 'sha256': hashlib.sha256(demo).hexdigest()}
+    client = MagicMock()
+    client.rpc.return_value.execute.side_effect = [SimpleNamespace(data=[asset]), ConnectionError('response lost')]
+    query = client.table.return_value
+    query.update.return_value = query.eq.return_value = query
+    query.execute.return_value = SimpleNamespace(data=[asset])
+    intake, ready = MagicMock(), MagicMock()
+    client.storage.from_.side_effect = lambda name: intake if name == 'private-demo-intake' else ready
+    intake.download.return_value = b'raw'
+    monkeypatch.setattr('tools.private_media_worker.isolated_run', lambda command: json.dumps({**proof, 'rendition_base64': base64.b64encode(demo).decode()}).encode())
+    with pytest.raises(ConnectionError):
+        process_one(client, 'sha256:' + 'a' * 64)
+    intake.remove.assert_not_called()
+    ready.remove.assert_not_called()
+    assert all(call.args[0].get('status') != 'rejected' for call in query.update.call_args_list)
+    query.update.assert_called_once()
+    assert query.update.call_args.args[0]['sha256'] == proof['sha256']
+
+    # A restarted worker reuses the proven rendition instead of decoding again.
+    asset.update(sha256=proof['sha256'], duration_seconds=10, width=1280, height=720)
+    client.rpc.return_value.execute.side_effect = [SimpleNamespace(data=[asset]), SimpleNamespace(data=None)]
+    ready.download.return_value = demo
+    ready.upload.reset_mock()
+    assert process_one(client, 'sha256:' + 'a' * 64)
+    ready.upload.assert_not_called()
+    ready.remove.assert_not_called()
+    intake.remove.assert_called_once_with([asset['intake_path']])
+
+
+def test_cleanup_partial_storage_failure_retries_before_deleting_database_rows():
+    client = MagicMock()
+    asset = {'id': 'asset', 'athlete_id': 'owner', 'intake_path': 'owner/asset/source'}
+    def rpc(name, *args):
+        return SimpleNamespace(execute=lambda: SimpleNamespace(data=[asset] if name == 'private_video_cleanup_candidates' else []))
+    client.rpc.side_effect = rpc
+    intake, ready = MagicMock(), MagicMock()
+    client.storage.from_.side_effect = lambda name: intake if name == 'private-demo-intake' else ready
+    ready.remove.side_effect = [ConnectionError('response lost'), None]
+    with pytest.raises(ConnectionError):
+        cleanup(client)
+    client.table.assert_not_called()
+    cleanup(client)
+    assert ready.remove.call_count == 2
+    client.table.assert_any_call('private_video_assets')

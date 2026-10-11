@@ -343,7 +343,7 @@ for (const width of [320, 390, 1280]) {
   });
 }
 
-for (const width of [320, 390]) {
+for (const width of [320, 390, 1280]) {
   test(`Private video clip selection, playback and persistence (${width}px)`, async ({ page, baseURL }) => {
     await page.setViewportSize({ width, height: 844 });
     const errors: string[] = [];
@@ -401,9 +401,23 @@ for (const width of [320, 390]) {
     await page.evaluate(() => { (window as unknown as { __clipTime: number }).__clipTime = 25; });
     await expect.poll(() => page.evaluate(() => (window as unknown as { __clipTime: number }).__clipTime)).toBe(10);
     expect(await sheet.evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true);
+    if (width >= 1024) {
+      const settings = await sheet.getByText("Optional · Up to 30 seconds · Private", { exact: true }).boundingBox();
+      const preview = await sheet.getByRole("button", { name: "Use video", exact: true }).boundingBox();
+      expect(preview!.x).toBeGreaterThan(settings!.x + settings!.width);
+      expect((await sheet.boundingBox())!.width).toBe(720);
+    }
     await page.screenshot({ path: `${process.env.TEMP ?? "/tmp"}/unlxck-private-video-${width}.png`, fullPage: false });
     await sheet.getByRole("button", { name: "Use video", exact: true }).click();
     await page.getByRole("button", { name: "Add exercise", exact: true }).click();
+    if (width >= 1024) {
+      await page.getByRole("button", { name: "+ Add Session", exact: true }).click();
+      const first = await page.getByRole("region", { name: "Session 1", exact: true }).boundingBox();
+      const second = await page.getByRole("region", { name: "Session 2", exact: true }).boundingBox();
+      expect(second!.x).toBeGreaterThan(first!.x + first!.width);
+      expect(second!.y).toBe(first!.y);
+      await page.screenshot({ path: `${process.env.TEMP ?? "/tmp"}/unlxck-private-builder-${width}.png`, fullPage: true });
+    }
     await page.getByRole("button", { name: "Save Plan", exact: true }).click();
     await expect(page).toHaveURL(/custom\?plan=/);
     expect([...saved.values()][0].sessions[0].exercises[0]).toMatchObject({ origin: "manual", media_id: media.id });

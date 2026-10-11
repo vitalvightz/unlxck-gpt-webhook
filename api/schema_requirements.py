@@ -550,6 +550,7 @@ REQUIRED_FUNCTIONS: tuple[str, ...] = (
     "public.finish_private_video",
     "public.private_video_cleanup_candidates",
     "public.private_demo_orphan_objects",
+    "public.cleanup_private_youtube_previews",
     "public.validate_custom_plan_private_media",
     "public.award_athlete_xp",
     "public.claim_notification_delivery_v2",

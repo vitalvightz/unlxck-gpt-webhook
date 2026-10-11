@@ -77,6 +77,23 @@ def process_one(client, image):
         return False
     asset = rows[0]
     path = f"{asset['athlete_id']}/{asset['id']}/demo.mp4"
+    ready = client.storage.from_("private-demo-ready")
+    # A previous worker may have uploaded successfully and lost the response.
+    # Durable proof is written before upload; retry only these immutable bytes.
+    if asset.get("sha256"):
+        try:
+            demo = ready.download(path)
+        except Exception:
+            demo = None
+        if demo is not None:
+            if hashlib.sha256(demo).hexdigest() != asset["sha256"]:
+                raise ValueError("stored rendition proof mismatch")
+            finalize(client, asset, {
+                "duration": asset["duration_seconds"], "width": asset["width"],
+                "height": asset["height"], "sha256": asset["sha256"],
+            })
+            return True
+    validated = False
     try:
         with tempfile.TemporaryDirectory(prefix="unlxck-demo-") as directory:
             base = Path(directory)
@@ -91,22 +108,43 @@ def process_one(client, image):
             demo = base64.b64decode(result.pop("rendition_base64"), validate=True)
             if not 0 < len(demo) <= 20 * 1024 * 1024 or hashlib.sha256(demo).hexdigest() != result["sha256"]:
                 raise ValueError("invalid rendition")
-            client.storage.from_("private-demo-ready").upload(path, demo, {"content-type": "video/mp4", "upsert": "false"})
-            client.rpc("finish_private_video", {
-                "p_asset_id": asset["id"], "p_duration": result["duration"],
-                "p_width": result["width"], "p_height": result["height"], "p_sha256": result["sha256"],
-            }).execute()
-    except Exception:
-        # Fail closed. Cleanup retries rendition deletion on subsequent sweeps.
+            validated = True
+            staged = client.table("private_video_assets").update({
+                "duration_seconds": result["duration"], "width": result["width"],
+                "height": result["height"], "sha256": result["sha256"],
+                "processor_version": "isolated-v1", "rendition_path": path,
+            }).eq("id", asset["id"]).eq("status", "processing").execute().data
+            if not staged:
+                return True
+            try:
+                ready.upload(path, demo, {"content-type": "video/mp4", "upsert": "false"})
+            except Exception:
+                # Upload may have committed, or another retry already wrote it.
+                if hashlib.sha256(ready.download(path)).hexdigest() != result["sha256"]:
+                    raise ValueError("stored rendition proof mismatch")
+            finalize(client, asset, result)
+    except ValueError:
+        if validated:
+            raise
+        # Only a definitive validation failure rejects a job. Storage/DB failures
+        # retain both objects; the stale lease is reclaimable by the next worker.
         client.table("private_video_assets").update({"status": "rejected"}).eq("id", asset["id"]).eq("status", "processing").execute()
-        client.storage.from_("private-demo-ready").remove([path])
         log.warning("Private video rejected asset_id=%s", asset["id"])
-    finally:
-        client.storage.from_("private-demo-intake").remove([asset["intake_path"]])
     return True
 
 
+def finalize(client, asset, result):
+    client.rpc("finish_private_video", {
+        "p_asset_id": asset["id"], "p_duration": result["duration"],
+        "p_width": result["width"], "p_height": result["height"], "p_sha256": result["sha256"],
+    }).execute()
+    # Never delete the finished object here. A lost DB response leaves raw bytes
+    # for retention cleanup; a lost removal response is harmless to retry.
+    client.storage.from_("private-demo-intake").remove([asset["intake_path"]])
+
+
 def cleanup(client):
+    client.rpc("cleanup_private_youtube_previews", {"p_athlete_id": None}).execute()
     for asset in client.rpc("private_video_cleanup_candidates").execute().data:
         client.storage.from_("private-demo-intake").remove([asset["intake_path"]])
         path = f"{asset['athlete_id']}/{asset['id']}/demo.mp4"

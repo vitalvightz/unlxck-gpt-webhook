@@ -8,7 +8,9 @@ The catalogue, frozen banks, generator and clinical prescription system are unch
 
 ## Deployment gate
 
-1. Apply `20261011200003_private_exercise_media.sql` before deploying the API.
+1. Apply `20261011203627_private_exercise_media.sql` and
+   `20261011203631_private_media_retry_cleanup.sql` before deploying the API.
+   Both were applied to the linked `unlxckpdf` project on 2026-10-11 at the user's request.
    The existing runtime schema gate requires its tables, functions, indexes and RLS.
 2. YouTube uses the existing server-only `YOUTUBE_DATA_API_KEY`. No new client key.
 3. Deploy `tools/private_media_worker.py` on a **dedicated Linux Docker host**.
@@ -34,8 +36,8 @@ python tools/private_media_worker.py
 ```
 
 Do not run processing inside the web API, Vercel request handlers or generation worker.
-No environment values, live schema, storage permissions or production switches are
-changed by this PR. Upload controls show unavailable until the server gate is healthy.
+The authorized migrations created private storage buckets and database safeguards.
+No environment values or upload/publication switches were changed. Upload controls show unavailable until the server gate is healthy.
 
 ## Security and retention
 
@@ -61,12 +63,20 @@ changed by this PR. Upload controls show unavailable until the server gate is he
   Database checks also prevent cross-owner JSON references and serialize saves with
   cleanup. Only processed renditions receive a **60-second** read URL; these are bearer
   URLs once issued, so copying one permits access until expiry. Raw bytes never do.
-- Raw sources are removed immediately after processing. Stalled/abandoned/rejected
+- Finalisation is idempotent for the same rendition proof and rejects mismatched
+  revisions. Proof persists before an immutable upload; stale processing leases can
+  be reclaimed after ten minutes. Network errors preserve raw and ready objects.
+  Retries reuse the hashed rendition. Raw cleanup runs only after confirmed verification,
+  with a sweep reclaiming verified raw leftovers after one hour.
+- Raw sources are removed after confirmed processing. Stalled/abandoned/rejected
   assets are removed after 24 hours. Unreferenced verified renditions expire after seven
   days; saved-plan references retain them. Orphan objects from account deletion become
   eligible after one hour. Each worker sweep is bounded to 100 candidates; alert on backlog
   and heartbeat loss. Cleanup retries until storage removals succeed. Quota attempt records
-  expire after 24 hours on the owner's next attempt. YouTube URLs are not uploaded assets.
+  expire after 24 hours on the owner's next attempt. Unused YouTube preview records
+  expire after 24 hours, bounded to 200 per sweep; saved-plan references retain them.
+  Cleanup runs before quota checks, even without an upload worker, and during worker
+  sweeps. Row locks serialize cleanup with plan saves. The 200-record limit remains.
 - YouTube input accepts HTTPS provider URLs only, reusing the existing ID parser and
   Data API availability, embedding and classification checks. End time must fall within
   the reported duration; the selected segment is 1–30 seconds. No arbitrary URL fetching
@@ -78,7 +88,9 @@ Uses `InjuryDetailSheet`, the custom builder's fields, global `cta`, `secondary-
 and `ghost-button`, plus `ExerciseDemo` and its established `ex-demo-*` controls.
 Only spacing, grid layout and media sizing are new CSS. Clip fields collapse after
 verification; alternate source selection sits in a disclosure. Athlete UI contains no
-storage paths, processing internals or validation metadata.
+storage paths, processing internals or validation metadata. Desktop sessions use
+Today's two-column rhythm; the existing sheet places settings beside the preview
+on desktop while retaining the compact mobile stack.
 
 Relevant checks:
 
@@ -92,7 +104,7 @@ node tools/test_private_media_migration.mjs /tmp/media-sql
 ```
 
 PostgreSQL checks run against an isolated WASM database, never the linked project.
-Browser tests at 320/390px exercise mocked YouTube API playback settings, replay,
+Browser tests at 320/390/1280px exercise mocked YouTube API playback settings, replay,
 segment looping, validation, saved-plan reopening and removal. These checks do not
 claim live YouTube playback, hosted decoding, actual Safari or physical iPhone testing.
 The separate Linux processing CI runs real MP4/WebM, >30-second, disguised HTML and

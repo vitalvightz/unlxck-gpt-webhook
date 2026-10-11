@@ -129,8 +129,9 @@ export function PrivateExerciseVideoSheet({ token, name, onClose, onAttach }: {
     </fieldset>
   </form>;
   return (
-    <InjuryDetailSheet title="Demonstration video" onClose={onClose} busy={pending}>
-      <div className={`${styles.sheet} ${layout.content}`}>
+    <InjuryDetailSheet title="Demonstration video" onClose={onClose} busy={pending} panelClassName={media ? layout.dialog : undefined}>
+      <div className={`${styles.sheet} ${layout.content}`} data-preview={Boolean(media)}>
+        <div className={layout.settings}>
         <p className="muted">Optional · Up to 30 seconds · Private</p>
         {error ? <p role="alert">{error}</p> : null}
         {!choice ? <div className={layout.choices}>
@@ -142,10 +143,11 @@ export function PrivateExerciseVideoSheet({ token, name, onClose, onAttach }: {
           <input type="file" accept="video/mp4,video/quicktime,video/webm" disabled={pending} onChange={(e) => void upload(e.target.files?.[0])} />
         </label> : media ? <details><summary>Edit clip</summary>{clipForm}</details> : clipForm}
         {status ? <p role="status">{status}</p> : null}
-        {media ? <div className={layout.preview}><PrivateVideoPlayer key={media.id} media={media} name={name} />
-          <button type="button" className="cta" onClick={() => onAttach(media.id)}>Use video</button></div> : null}
         {choice ? <details><summary>Video options</summary><button type="button" className="ghost-button" disabled={pending}
           onClick={() => { setChoice(undefined); changed(); }}>Change video source</button></details> : null}
+        </div>
+        {media ? <div className={layout.preview}><PrivateVideoPlayer key={media.id} media={media} name={name} />
+          <button type="button" className="cta" onClick={() => onAttach(media.id)}>Use video</button></div> : null}
       </div>
     </InjuryDetailSheet>
   );

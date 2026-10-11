@@ -7,9 +7,10 @@ import { lockOverlayScroll } from "@/lib/overlay-scroll-lock";
 /** Injury details stay off the daily card; reuse the app's iOS scroll lock.
  * `variant="screen"` fills the viewport for a full screen (Today's session
  * preview). Sheets stack: only the topmost one answers Escape and Tab. */
-export function InjuryDetailSheet({ title, children, onClose, busy = false, variant = "sheet", closeLabel = "Close" }: {
+export function InjuryDetailSheet({ title, children, onClose, busy = false, variant = "sheet", closeLabel = "Close", panelClassName }: {
   title: string; children: ReactNode; onClose: () => void; busy?: boolean;
   variant?: "sheet" | "screen"; closeLabel?: string;
+  panelClassName?: string;
 }) {
   const titleId = useId();
   const panel = useRef<HTMLDivElement>(null);
@@ -46,7 +47,7 @@ export function InjuryDetailSheet({ title, children, onClose, busy = false, vari
   }, []);
   if (typeof document === "undefined") return null;
   return createPortal(<div className="injury-sheet-backdrop" data-variant={variant} onClick={() => { if (!busy) onClose(); }}>
-    <div className="injury-sheet" data-variant={variant} ref={panel} role="dialog" aria-modal="true" aria-labelledby={titleId}
+    <div className={`injury-sheet${panelClassName ? ` ${panelClassName}` : ""}`} data-variant={variant} ref={panel} role="dialog" aria-modal="true" aria-labelledby={titleId}
       aria-busy={busy} tabIndex={-1} onClick={event => event.stopPropagation()}>
       <div className="injury-sheet-header"><h2 id={titleId}>{title}</h2>
         <button type="button" className="injury-sheet-close" aria-label={closeLabel} disabled={busy} onClick={onClose}>
