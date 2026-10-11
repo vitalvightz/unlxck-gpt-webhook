@@ -79,6 +79,15 @@ def build_community_router(*, require_profile, require_admin, get_store):
     ):
         return listing(store, admin.athlete_id, "review", q, offset)
 
+    @router.get("/history", response_model=CommunitySearch)
+    def history(
+        q: str = Query("", max_length=100),
+        offset: int = Query(0, ge=0),
+        admin=Depends(require_admin),
+        store=Depends(get_store),
+    ):
+        return listing(store, admin.athlete_id, "history", q, offset)
+
     @router.get("/review/{revision_id}", response_model=CommunityEntry)
     def review(
         revision_id: UUID, admin=Depends(require_admin), store=Depends(get_store)
