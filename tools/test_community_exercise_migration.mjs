@@ -30,6 +30,7 @@ await db.exec(readFileSync("supabase/migrations/20261011203631_private_media_ret
 
 await db.exec(readFileSync('supabase/migrations/20261011212949_community_exercise_review.sql','utf8'));
 await db.exec(readFileSync('supabase/migrations/20261011214749_community_review_retention_reports.sql','utf8'));
+await db.exec(readFileSync('supabase/migrations/20261011225000_community_review_active_history.sql','utf8'));
 const owner='00000000-0000-4000-8000-000000000001', admin='00000000-0000-4000-8000-000000000002', other='00000000-0000-4000-8000-000000000003';
 await db.query("insert into profiles(id,role,username,avatar_url) values($1,'athlete','fighter','https://example.com/profile.png'),($2,'admin','admin',null),($3,'athlete','other',null)",[owner,admin,other]);
 await db.exec('set role service_role');
@@ -57,6 +58,9 @@ await test('explicit rights and attribution consent are required',async()=>{
   await assert.rejects(command(owner,'submit',{...submit,attribution_consent:false}));
   await command(owner,'submit',submit);
   assert.equal((await detail(owner,revision)).status,'in_review');
+  assert.equal((await list(admin,'review')).total,1);
+  assert.equal((await list(admin,'history')).total,0);
+  await assert.rejects(list(owner,'history'));
   assert.equal((await list(other)).total,0);
 });
 await test('review retains unused YouTube media and cannot publish without verification and confirmation',async()=>{
@@ -79,6 +83,8 @@ await test('only final confirmed revision publishes with live consenting profile
   await command(admin,'verify',{revision_id:revision,verified_media_id:clip,youtube_id:'abcdefghijk',youtube_verified:true});
   await command(admin,'confirm',{revision_id:revision,final_confirmation:true});
   await command(admin,'approve',{revision_id:revision,final_confirmation:true,username:'forged',avatar_url:'https://evil.test'});
+  assert.equal((await list(admin,'review')).total,0);
+  assert.equal((await list(admin,'history')).total,1);
   const found=await list(other);assert.equal(found.total,1);assert.equal(found.entries[0].contributor.username,'fighter');assert.equal(found.entries[0].contributor.avatar_url,'https://example.com/profile.png');
   await db.exec('reset role');await db.query("update profiles set username='updated',avatar_url=null where id=$1",[owner]);await db.exec('set role service_role');
   assert.equal((await list(other)).entries[0].contributor.username,'updated');
@@ -98,6 +104,8 @@ await test('new public edits preserve approved media and saved snapshots until r
 });
 await test('admins dismiss individual reports with an audited reason without removing publication',async()=>{
   await command(other,'report',{revision_id:revision,reason:'Outdated concern'});
+  assert.equal((await list(admin,'review')).total,1);
+  assert.equal((await list(admin,'history')).total,0);
   const report=(await detail(admin,revision,true)).reports[0];
   const dismiss=(actor,reason)=>db.query('select community_dismiss_report($1,$2,$3,$4)',[actor,revision,report.id,reason]);
   await db.exec('set role authenticated');await assert.rejects(dismiss(admin,'Direct client request'));await db.exec('set role service_role');
@@ -110,6 +118,8 @@ await test('admins dismiss individual reports with an audited reason without rem
   const audit=reviewed.audit.filter(x=>x.action==='dismiss_report');assert.equal(audit.length,1);
   assert.equal(audit[0].details.report_id,report.id);assert.equal(audit[0].details.reason,'Reviewed; the demonstration is correct');
   assert.equal((await list(other)).total,1);
+  assert.equal((await list(admin,'review')).total,0);
+  assert.equal((await list(admin,'history')).total,1);
 });
 await test('reports enter moderation, removal hides discovery but retains saved private use',async()=>{
   await command(owner,'report',{revision_id:revision,reason:'Video mismatch'});

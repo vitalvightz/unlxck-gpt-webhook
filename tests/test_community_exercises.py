@@ -56,7 +56,7 @@ def api():
     return client, store, record, calls
 
 
-@pytest.mark.parametrize("path", ["", "/mine", "/review", "/revisions/" + str(uuid4())])
+@pytest.mark.parametrize("path", ["", "/mine", "/review", "/history", "/revisions/" + str(uuid4())])
 def test_community_requires_authentication(api, path):
     client, _, _, calls = api
     assert client.get(BASE + path).status_code == 401
@@ -67,6 +67,7 @@ def test_community_requires_authentication(api, path):
     "method,path,payload",
     [
         ("get", "/review", None),
+        ("get", "/history", None),
         ("get", "/review/" + str(uuid4()), None),
         ("put", "/review/" + str(uuid4()), {"name": "Edited"}),
         (
@@ -300,3 +301,25 @@ def test_report_dismissal_is_admin_only_and_requires_report_and_reason(api):
     assert calls[0][0] == "community_dismiss_report"
     assert calls[0][1]["p_report_id"] == report
     assert calls[0][1]["p_reason"] == "False report"
+
+def test_admin_history_is_separate_from_active_queue(api):
+    client, _, _, calls = api
+    response = client.get(BASE + "/history", headers=ADMIN)
+    assert response.status_code == 200
+    assert calls[-1][0] == "community_list"
+    assert calls[-1][1]["p_scope"] == "history"
+
+
+def test_rejection_sends_reason_to_authoritative_transition(api):
+    client, _, record, calls = api
+    response = client.post(
+        f"{BASE}/review/{record['revision_id']}",
+        headers=ADMIN,
+        json={"action": "reject", "reason": "Incorrect demonstration"},
+    )
+    assert response.status_code == 200
+    assert calls[-1][0] == "community_detail"
+    command_calls = [data for name, data in calls if name == "community_command"]
+    assert len(command_calls) == 1
+    assert command_calls[0]["p_action"] == "reject"
+    assert command_calls[0]["p_payload"]["reason"] == "Incorrect demonstration"

@@ -130,7 +130,7 @@ test('Reject and request changes use visible, reason-gated confirmation sheets',
   const actions=await mockCommunity(page,entry('in_review'));
   await page.goto('/admin');
   await page.getByRole('heading',{name:'Exercise reviews'}).click();
-  await page.getByRole('button',{name:'Review',exact:true}).click();
+  await page.locator('details.admin-queue').filter({has:page.getByRole('heading',{name:'Exercise reviews',exact:true})}).getByRole('button',{name:'Review',exact:true}).click();
   const review=page.getByRole('dialog',{name:'My defensive drill'});
   const reject=review.getByRole('button',{name:'Reject',exact:true});
   await expect(reject).toBeEnabled();
