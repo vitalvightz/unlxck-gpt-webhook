@@ -1058,6 +1058,13 @@ def test_conditioning_bridge_phase_keeps_glycolytic_candidate_for_selected_gas_t
 def test_audit_snapshot_matches_golden():
     _reset_selector_bank_caches()
     expected = json.loads((SNAPSHOT_DIR / "after.json").read_text(encoding="utf-8"))
+    # Preserve the historical golden. Correcting the towel requirement adds
+    # exactly one apparatus block at D-1; every winner, dose and other reason
+    # across all seven windows must still match the original evidence.
+    neck = next(row for row in expected["d1"]["strength"]["blocked"]
+                if row["name"] == "Towel-assisted lateral neck isometric")
+    assert neck["reason_codes"] == ["late_block_d1_forbidden_modality"]
+    neck["reason_codes"].append("late_block_d1_equipment")
     assert build_snapshot() == expected
 
 
