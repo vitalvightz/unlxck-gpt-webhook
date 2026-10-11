@@ -13,6 +13,7 @@ import type {
 import { InjuryDetailSheet } from "./today/injury-detail-sheet";
 import { DrillPreview, TrainingLibrary } from "./training-library";
 import { CustomDoseEditor } from "./custom-dose-editor";
+import { PrivateExerciseVideo, PrivateExerciseVideoSheet } from "./private-exercise-video";
 import { blankDose, doseSummary } from "@/lib/custom-plan-dose";
 import styles from "./custom-plan-builder.module.css";
 type Exercise = (Omit<CustomExercise, "snapshot"> & { snapshot: LibraryEntry }) | ManualExercise;
@@ -52,6 +53,7 @@ export function CustomPlanBuilder({ accessToken, planId }: { accessToken: string
     }>();
   const [sessionEdit, setSessionEdit] = useState<Session>(),
     [preview, setPreview] = useState<LibraryEntry>();
+  const [videoOpen, setVideoOpen] = useState(false);
   const [suggestion, setSuggestion] = useState<CustomDoseSuggestion>(),
     [suggestionError, setSuggestionError] = useState<string>(),
     [suggesting, setSuggesting] = useState(false);
@@ -212,6 +214,7 @@ export function CustomPlanBuilder({ accessToken, planId }: { accessToken: string
                     name: e.name,
                     equipment: e.equipment,
                     notes: e.notes,
+                    media_id: e.media_id,
                     dose: e.dose,
                   }
                 : {
@@ -392,6 +395,7 @@ export function CustomPlanBuilder({ accessToken, planId }: { accessToken: string
                         name: "",
                         equipment: null,
                         notes: null,
+                        media_id: null,
                         dose: blankDose(),
                         incomplete: true,
                       },
@@ -576,6 +580,13 @@ export function CustomPlanBuilder({ accessToken, planId }: { accessToken: string
                     />
                   </label>
                 ))}
+                {editing.exercise.media_id ? <PrivateExerciseVideo token={accessToken} id={editing.exercise.media_id} name={editing.exercise.name} /> : null}
+                <button type="button" className="ghost-button" onClick={() => setVideoOpen(true)}>
+                  {editing.exercise.media_id ? "Replace video" : "Add video (optional)"}
+                </button>
+                {editing.exercise.media_id ? <button type="button" className="ghost-button" onClick={() => setEditing((current) =>
+                  current?.exercise.origin === "manual" ? { ...current, exercise: { ...current.exercise, media_id: null } } : current,
+                )}>Remove video</button> : null}
               </>
             ) : (
               <>
@@ -689,6 +700,14 @@ export function CustomPlanBuilder({ accessToken, planId }: { accessToken: string
       {preview ? (
         <DrillPreview entry={preview} token={accessToken} onClose={() => setPreview(undefined)} selfDirected />
       ) : null}
+      {videoOpen && editing?.exercise.origin === "manual" ? <PrivateExerciseVideoSheet
+        token={accessToken} name={editing.exercise.name || "My exercise"} onClose={() => setVideoOpen(false)}
+        onAttach={(media_id) => {
+          setEditing((current) => current?.exercise.origin === "manual" ? {
+            ...current, exercise: { ...current.exercise, media_id },
+          } : current);
+          setVideoOpen(false);
+        }} /> : null}
     </section>
   );
 }

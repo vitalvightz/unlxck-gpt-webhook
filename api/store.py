@@ -12,6 +12,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from typing import Any, Callable
 from uuid import uuid4
+from api.private_media_store import PrivateMediaStoreMixin
 
 import httpx
 from fastapi import HTTPException, status
@@ -692,7 +693,7 @@ def _job_loaded_milestone(now_iso: str) -> dict[str, Any]:
 
 
 @dataclass
-class SupabaseAppStore(CompactGenerationReads):
+class SupabaseAppStore(PrivateMediaStoreMixin, CompactGenerationReads):
     client: Client
     admin_emails: set[str]
 

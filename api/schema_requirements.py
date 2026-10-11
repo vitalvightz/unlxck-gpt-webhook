@@ -66,6 +66,10 @@ REQUIRED_TABLES: tuple[str, ...] = (
     "exercise_logs",
     "external_training_sessions",
     "custom_training_plans",
+    "private_video_assets",
+    "private_exercise_media",
+    "private_media_budget",
+    "private_media_worker_health",
     "rehab_exposures",
     "injury_episode_events",
     # Durable XP aggregate + immutable award ledger. Award writes are atomic
@@ -498,6 +502,10 @@ REQUIRED_COLUMNS: Mapping[str, tuple[str, ...]] = {
     "exercise_logs": REQUIRED_EXERCISE_LOGS_COLUMNS,
     "external_training_sessions": REQUIRED_EXTERNAL_TRAINING_COLUMNS,
     "custom_training_plans": ("id", "athlete_id", "name", "kind", "sessions", "incomplete", "created_at", "updated_at"),
+    "private_video_assets": ("id", "athlete_id", "status", "size_bytes", "content_type", "intake_path", "rendition_path", "duration_seconds", "width", "height", "sha256", "processor_version", "upload_expires_at", "processed_at", "created_at", "updated_at"),
+    "private_exercise_media": ("id", "athlete_id", "provider", "video_id", "asset_id", "start_s", "end_s", "channel_title", "orientation", "made_for_kids", "created_at"),
+    "private_media_budget": ("athlete_id", "upload", "created_at"),
+    "private_media_worker_health": ("id", "healthy_at"),
     "xp_accounts": REQUIRED_XP_ACCOUNTS_COLUMNS,
     "xp_awards": REQUIRED_XP_AWARDS_COLUMNS,
     "beta_feedback": REQUIRED_BETA_FEEDBACK_COLUMNS,
@@ -536,6 +544,13 @@ REQUIRED_FUNCTIONS: tuple[str, ...] = (
     # (api/store.py); a missing lock RPC must fail this check too.
     "public.validate_generation_job_active_lock",
     "public.claim_beta_feedback_rate_limit",
+    "public.claim_private_media_budget",
+    "public.reserve_private_video",
+    "public.claim_private_video",
+    "public.finish_private_video",
+    "public.private_video_cleanup_candidates",
+    "public.private_demo_orphan_objects",
+    "public.validate_custom_plan_private_media",
     "public.award_athlete_xp",
     "public.claim_notification_delivery_v2",
     "public.record_notification_evaluation",
@@ -638,6 +653,9 @@ INDEX_REQUIREMENTS: tuple[IndexRequirement, ...] = (
     IndexRequirement(label="external training request uniqueness", accepted_names=("external_training_sessions_request_key",)),
     IndexRequirement(label="external training athlete/day index", accepted_names=("external_training_sessions_athlete_day_idx",)),
     IndexRequirement(label="custom plans athlete index", accepted_names=("custom_training_plans_athlete_updated_idx",)),
+    IndexRequirement(label="private video owner index", accepted_names=("private_video_assets_owner_created_idx",)),
+    IndexRequirement(label="private media owner index", accepted_names=("private_exercise_media_owner_idx",)),
+    IndexRequirement(label="private media quota index", accepted_names=("private_media_budget_owner_created_idx",)),
     IndexRequirement(
         label="xp awards one daily login per account calendar date",
         accepted_names=("xp_awards_one_daily_login_per_calendar_date",),
@@ -669,6 +687,10 @@ INDEX_REQUIREMENTS: tuple[IndexRequirement, ...] = (
 # ---------------------------------------------------------------------------
 
 RLS_REQUIRED_TABLES: tuple[str, ...] = (
+    "private_video_assets",
+    "private_exercise_media",
+    "private_media_budget",
+    "private_media_worker_health",
     "custom_training_plans",
     "rehab_exposures", "injury_episode_events",
     "profiles",

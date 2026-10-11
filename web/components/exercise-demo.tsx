@@ -74,6 +74,7 @@ export function ExerciseDemo({
   exerciseName,
   leadCue,
   onLeadCuePinnedChange,
+  preview = false,
 }: {
   media: ExerciseMedia;
   exerciseName: string;
@@ -82,6 +83,8 @@ export function ExerciseDemo({
   /** Tells the row whether the lead cue is shown here, so the cue list below
    * does not print it twice. */
   onLeadCuePinnedChange?: (pinned: boolean) => void;
+  /** Clip selection always shows the current portion, even on a watched video. */
+  preview?: boolean;
 }) {
   const [mode, setMode] = useState<DemoMode>("facade");
   // Server snapshot is "not watched", so SSR and hydration agree; the client
@@ -114,7 +117,7 @@ export function ExerciseDemo({
   // "landscape" all render the existing 16:9 layout untouched.
   const portrait = media.orientation === "portrait";
   const playerActive = mode === "loading" || mode === "playing" || mode === "paused";
-  const compact = watched && mode === "facade";
+  const compact = !preview && watched && mode === "facade";
   const pinLeadCue = Boolean(leadCue) && !compact && mode !== "error";
 
   useEffect(() => {

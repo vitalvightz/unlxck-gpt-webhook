@@ -22,7 +22,7 @@ def build_custom_plans_router(*, require_profile, get_store):
 
     @router.post("", response_model=CustomPlan, status_code=201)
     def create_custom_plan(body: CustomPlanInput, profile=Depends(require_profile), store=Depends(get_store)):
-        return store.create_custom_plan(profile.athlete_id, plan_fields(store, body))
+        return store.create_custom_plan(profile.athlete_id, plan_fields(store, body, athlete_id=profile.athlete_id))
 
     @router.get("/source-suggestion", response_model=CustomDoseSuggestion)
     def suggest(catalogue_id: str, profile=Depends(require_profile)):
@@ -35,7 +35,7 @@ def build_custom_plans_router(*, require_profile, get_store):
     @router.put("/{plan_id}", response_model=CustomPlan)
     def update_custom_plan(plan_id: UUID, body: CustomPlanInput, profile=Depends(require_profile), store=Depends(get_store)):
         previous = owned(store, profile.athlete_id, plan_id)
-        row = store.update_custom_plan(profile.athlete_id, str(plan_id), plan_fields(store, body, previous))
+        row = store.update_custom_plan(profile.athlete_id, str(plan_id), plan_fields(store, body, previous, athlete_id=profile.athlete_id))
         if row is None:
             raise HTTPException(404, "Custom plan not found.")
         return row

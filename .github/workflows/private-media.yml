@@ -1,0 +1,33 @@
+name: Private media security
+on:
+  pull_request:
+    paths:
+      - 'api/**private_media*.py'
+      - 'media_processor/**'
+      - 'tools/*private_media*'
+      - 'supabase/migrations/*private_exercise_media.sql'
+      - '.github/workflows/private-media.yml'
+jobs:
+  processing:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build fresh malware scanner and decoder
+        run: docker build --pull -t unlxck-private-media ./media_processor
+      - name: Exercise isolated processing with real fixtures
+        run: python tools/test_private_media_processor.py --image "$(docker image inspect unlxck-private-media --format '{{.Id}}')"
+  storage:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: web/.nvmrc
+      - name: Install isolated PostgreSQL runtime outside the checkout
+        run: npm install --prefix "$RUNNER_TEMP/media-sql" @electric-sql/pglite@0.5.8
+      - name: Check ownership, storage RLS, quotas and retention
+        run: node tools/test_private_media_migration.mjs "$RUNNER_TEMP/media-sql"

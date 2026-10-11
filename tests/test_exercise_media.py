@@ -967,7 +967,7 @@ def test_check_youtube_videos_requests_player_dimensions_and_reads_orientation()
         "DDDDDDDDDDD": "portrait",
     }
     params = requests[0].url.params
-    assert params["part"] == "snippet,status,player"
+    assert params["part"] == "snippet,status,player,contentDetails"
     # Without a size bound the API omits embedWidth / embedHeight entirely.
     assert params["maxHeight"] == "720"
     assert "player(embedWidth,embedHeight)" in params["fields"]
