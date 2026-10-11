@@ -15,11 +15,11 @@ function ReviewSheet({ token, initial, onClose, onChanged }: { token: string; in
   const [mediaId, setMediaId] = useState(initial.media_id), [videoOpen, setVideoOpen] = useState(false), [busy, setBusy] = useState(false), [error, setError] = useState<string>();
   const [confirmation, setConfirmation] = useState(false), [reason, setReason] = useState('');
   const changed = name !== entry.name || equipment !== (entry.equipment ?? '') || notes !== (entry.notes ?? '') || mediaId !== entry.media_id;
-  async function perform(action: CommunityDecision['action'] | 'edit') {
+  async function perform(action: CommunityDecision['action'] | 'edit', reportId?: string) {
     setBusy(true); setError(undefined);
     try {
       const next = action === 'edit' ? await saveCommunityDraft(token, { name, equipment: equipment || null, notes: notes || null, media_id: mediaId }, entry.revision_id)
-        : await decideCommunityExercise(token, entry.revision_id, { action, reason: reason || null, final_confirmation: confirmation });
+        : await decideCommunityExercise(token, entry.revision_id, { action, reason: reason || null, final_confirmation: confirmation, report_id: reportId ?? null });
       setEntry(next); setName(next.name); setEquipment(next.equipment ?? ''); setNotes(next.notes ?? ''); setMediaId(next.media_id); setConfirmation(false); onChanged();
     } catch (reason) { setError(communityError(reason)); } finally { setBusy(false); }
   }
@@ -30,7 +30,7 @@ function ReviewSheet({ token, initial, onClose, onChanged }: { token: string; in
           {mediaId !== entry.media_id ? mediaId ? <PrivateExerciseVideo token={token} id={mediaId} name={name} /> : <p className="muted">No demonstration video.</p> : entry.media ? <PrivateVideoPlayer key={entry.revision_id} media={entry.media} name={entry.name} /> : <p className="muted">No demonstration video.</p>}
           {entry.equipment ? <p>{entry.equipment}</p> : null}{entry.notes ? <p>{entry.notes}</p> : null}
           {entry.reason ? <p>{entry.reason}</p> : null}
-          {entry.reports.length ? <details><summary>Reports ({entry.reports.length})</summary>{entry.reports.map((report, i) => <p key={i}>{String(report.reason)}</p>)}</details> : null}
+          {entry.reports.length ? <details><summary>Reports ({entry.reports.length})</summary>{entry.reports.some(report => report.status === 'open') ? <label><span>Dismissal reason</span><textarea disabled={busy} maxLength={1000} value={reason} onChange={e => setReason(e.target.value)} /></label> : null}{entry.reports.map((report, i) => <p key={i}>{String(report.reason)}{report.status === 'open' ? <button className="ghost-button" disabled={busy || !reason.trim()} onClick={() => void perform('dismiss_report', String(report.id))}>Dismiss report</button> : <span className="muted"> · Resolved</span>}</p>)}</details> : null}
           <details><summary>Audit history</summary>{entry.audit.map((event, i) => <p className="muted" key={i}>{String(event.action).replaceAll('_', ' ')} · {formatAppDateTime(String(event.created_at))}{(event.details as { reason?: string })?.reason ? ` · ${(event.details as { reason: string }).reason}` : ''}</p>)}</details>
         </div>
         <div className={layout.stack}>

@@ -44,7 +44,11 @@ def api():
         calls.append((name, deepcopy(params)))
         if name == "community_list":
             return {"entries": [record], "total": 1, "next_offset": None}
-        if name == "community_command" or name == "community_owned_revision":
+        if (
+            name == "community_command"
+            or name == "community_owned_revision"
+            or name == "community_dismiss_report"
+        ):
             return record["revision_id"]
         return deepcopy(record)
 
@@ -120,7 +124,8 @@ def test_consent_cannot_be_omitted_or_forged(api):
 
 
 @pytest.mark.parametrize(
-    "action", ["approve", "confirm", "reject", "request_changes", "remove"]
+    "action",
+    ["approve", "confirm", "reject", "request_changes", "remove", "dismiss_report"],
 )
 def test_review_requires_explicit_confirmation_or_reason(api, action):
     client, _, record, calls = api
@@ -272,3 +277,26 @@ def test_community_plan_reference_is_separate_and_withdrawal_preserves_saved_sna
         == record["revision_id"]
     )
     assert not store.plans
+
+
+def test_report_dismissal_is_admin_only_and_requires_report_and_reason(api):
+    client, _, record, calls = api
+    path = f"{BASE}/review/{record['revision_id']}"
+    report = str(uuid4())
+    body = {"action": "dismiss_report", "reason": "False report", "report_id": report}
+    assert client.post(path, headers=AUTH, json=body).status_code == 403
+    assert (
+        client.post(
+            path, headers=ADMIN, json={"action": "dismiss_report", "reason": "Reason"}
+        ).status_code
+        == 422
+    )
+    assert (
+        client.post(path, headers=ADMIN, json={**body, "reason": "  "}).status_code
+        == 422
+    )
+    assert not calls
+    assert client.post(path, headers=ADMIN, json=body).status_code == 200
+    assert calls[0][0] == "community_dismiss_report"
+    assert calls[0][1]["p_report_id"] == report
+    assert calls[0][1]["p_reason"] == "False report"

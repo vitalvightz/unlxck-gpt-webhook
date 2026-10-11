@@ -26,9 +26,16 @@ class CommunitySubmission(BaseModel):
 class CommunityDecision(BaseModel):
     model_config = ConfigDict(extra="forbid")
     action: Literal[
-        "verify", "confirm", "approve", "request_changes", "reject", "remove"
+        "verify",
+        "confirm",
+        "approve",
+        "request_changes",
+        "reject",
+        "remove",
+        "dismiss_report",
     ]
     reason: str | None = Field(None, max_length=1000)
+    report_id: UUID | None = None
     final_confirmation: bool = Field(False, strict=True)
 
 

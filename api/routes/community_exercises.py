@@ -107,7 +107,7 @@ def build_community_router(*, require_profile, require_admin, get_store):
         payload = body.model_dump(mode="json")
         payload["revision_id"] = str(revision_id)
         if (
-            body.action in ("reject", "request_changes", "remove")
+            body.action in ("reject", "request_changes", "remove", "dismiss_report")
             and not (body.reason or "").strip()
         ):
             raise HTTPException(422, "Add a reason for this decision.")
@@ -121,7 +121,20 @@ def build_community_router(*, require_profile, require_admin, get_store):
                     detail_row(store, admin.athlete_id, revision_id, admin=True)
                 )
             )
-        revision = command(store, admin.athlete_id, body.action, payload)
+        if body.action == "dismiss_report":
+            if not body.report_id:
+                raise HTTPException(422, "Select the report to dismiss.")
+            revision = store.community_rpc(
+                "community_dismiss_report",
+                {
+                    "p_actor_id": admin.athlete_id,
+                    "p_revision_id": str(revision_id),
+                    "p_report_id": str(body.report_id),
+                    "p_reason": body.reason,
+                },
+            )
+        else:
+            revision = command(store, admin.athlete_id, body.action, payload)
         return read(store, admin.athlete_id, revision, True)
 
     @router.get("/revisions/{revision_id}", response_model=CommunityEntry)

@@ -11,6 +11,7 @@ class CommunityStoreMixin:
             "community_detail",
             "community_list",
             "community_owned_revision",
+            "community_dismiss_report",
         }:
             raise ValueError("unsupported community operation")
         try:

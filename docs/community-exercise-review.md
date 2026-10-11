@@ -21,7 +21,13 @@ Cleanup now retains media referenced by pending reviews, current publications an
 ## Verification
 
 - Critical API tests: consent, authentication/admin denial, strict actor/profile inputs, trusted media verification, short-lived previews, separate saved revision identities and legacy-client preservation.
-- `node tools/test_community_exercise_migration.mjs <isolated-pglite-install>`: 10 actual PostgreSQL groups covering RLS, transitions, immutable edits, verification, attribution, reports, withdrawal, cleanup and account deletion. Existing Stage A SQL/processor CI remains in place.
+- `node tools/test_community_exercise_migration.mjs <isolated-pglite-install>`: 12 actual PostgreSQL groups covering RLS, transitions, immutable edits, verification, attribution, reports, withdrawal, cleanup and account deletion. Existing Stage A SQL/processor CI remains in place.
 - Playwright: six new consent/discovery/admin journeys at 320/390/1280px; existing custom-plan/video/clipping/calendar-order journeys preserved. Mock APIs exercise UI; database/security tests exercise real SQL separately.
 - Frontend build, typecheck, lint (existing warnings), 1,865 unit tests and frozen catalogue/planner audit pass.
 - No physical iPhone/Safari or production athlete upload was performed. No production contributions were seeded or approved.
+
+## Corrective retention and report dismissal
+
+Apply the new `20261011214749_community_review_retention_reports.sql` after Stage B; do not modify the applied migration. The corrective migration was applied to unlxckpdf on 2026-10-11. Changes requested retain the current revision's video for **30 days from the admin request**, including private correction drafts saved during that window. Editing a draft does not extend the deadline; resubmitting protects media throughout review, and a subsequent admin change request starts a fresh window. Existing requests receive 30 days from corrective rollout. After expiry, unreferenced media becomes eligible for the existing YouTube/asset cleanup worker; published and saved-plan references remain protected. Rejection or withdrawal ends correction-specific protection.
+
+Within Reports in the existing review sheet, admins can dismiss an individual false/outdated report with a mandatory reason. Dismissal resolves only that report, records report ID/reason/admin/time in audit history, leaves publication and verification unchanged and is safe to retry. Direct client RPC calls and non-admin API calls are denied.

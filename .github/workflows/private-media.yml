@@ -8,6 +8,7 @@ on:
       - 'tools/*community_exercise*'
       - 'api/**community*.py'
       - 'supabase/migrations/*community_exercise*.sql'
+      - 'supabase/migrations/*community_review*.sql'
       - 'supabase/migrations/*private_exercise_media.sql'
       - 'supabase/migrations/*private_media*.sql'
       - '.github/workflows/private-media.yml'

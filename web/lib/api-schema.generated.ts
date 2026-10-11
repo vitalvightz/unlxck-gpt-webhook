@@ -362,8 +362,9 @@ export type CommunityContributor = {
 };
 
 export type CommunityDecision = {
-  action: "approve" | "confirm" | "reject" | "remove" | "request_changes" | "verify";
+  action: "approve" | "confirm" | "dismiss_report" | "reject" | "remove" | "request_changes" | "verify";
   reason?: string | null;
+  report_id?: string | null;
   final_confirmation?: boolean;
 };
 

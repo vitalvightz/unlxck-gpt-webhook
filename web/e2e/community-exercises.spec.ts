@@ -14,7 +14,7 @@ async function mockCommunity(page: Page, initial: CommunityEntry) {
   if(req.method()==='POST' && path.endsWith('/drafts')) { actions.push('draft'); current={...current,...body,status:'private'}; return json(current,201); }
   if(req.method()==='POST' && path.endsWith('/submit')) { expect(body).toEqual({share_rights:true,attribution_consent:true});actions.push('submit');current={...current,status:'in_review'}; }
   if(req.method()==='PUT') { actions.push('edit');current={...current,...body,revision_id:'00000000-0000-4000-8000-000000000083',verified:false,confirmed:false}; }
-  if(req.method()==='POST' && path.includes('/review/')) { actions.push(body.action);current={...current,verified:true,confirmed:body.action==='confirm'||body.action==='approve',published:body.action==='approve',has_publication:body.action==='approve',status:body.action==='approve'?'published':'in_review'}; }
+  if(req.method()==='POST' && path.includes('/review/')) { actions.push(body.action);if(body.action==='dismiss_report'){expect(body.reason).toBe('Outdated report');current={...current,reports:current.reports.map(r=>r.id===body.report_id?{...r,status:'resolved'}:r)};return json(current);}current={...current,verified:true,confirmed:body.action==='confirm'||body.action==='approve',published:body.action==='approve',has_publication:body.action==='approve',status:body.action==='approve'?'published':'in_review'}; }
   if(path.endsWith('/report')) { actions.push('report');return route.fulfill({status:204}); }
   return json(current);
  });
@@ -60,3 +60,12 @@ for(const width of [320,390,1280]) {
   await page.screenshot({path:`${process.env.TEMP ?? "/tmp"}/unlxck-community-review-${width}.png`});
  });
 }
+
+ test('Dismiss a report without removing the published exercise',async({page,baseURL})=>{
+  await setup(page,baseURL!,'admin');const published={...entry('published'),verified:true,confirmed:true,reports:[{id:'00000000-0000-4000-8000-000000000084',status:'open',reason:'Old concern'}]};
+  const actions=await mockCommunity(page,published);await page.goto('/admin');await page.getByRole('heading',{name:'Exercise reviews',exact:true}).click();
+  await page.locator('details.admin-queue').filter({has:page.getByRole('heading',{name:'Exercise reviews',exact:true})}).getByRole('button',{name:'Review',exact:true}).click();
+  const sheet=page.getByRole('dialog',{name:published.name,exact:true});await sheet.getByText('Reports (1)',{exact:true}).click();
+  await expect(sheet.getByRole('button',{name:'Dismiss report',exact:true})).toBeDisabled();await sheet.getByLabel('Dismissal reason',{exact:true}).fill('Outdated report');
+  await sheet.getByRole('button',{name:'Dismiss report',exact:true}).click();await expect(sheet.getByText('· Resolved',{exact:false})).toBeVisible();await expect(sheet.getByText(/Published/)).toBeVisible();expect(actions).toEqual(['dismiss_report']);
+ });

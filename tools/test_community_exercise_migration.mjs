@@ -29,6 +29,7 @@ await db.exec(readFileSync("supabase/migrations/20261011203627_private_exercise_
 await db.exec(readFileSync("supabase/migrations/20261011203631_private_media_retry_cleanup.sql", "utf8"));
 
 await db.exec(readFileSync('supabase/migrations/20261011212949_community_exercise_review.sql','utf8'));
+await db.exec(readFileSync('supabase/migrations/20261011214749_community_review_retention_reports.sql','utf8'));
 const owner='00000000-0000-4000-8000-000000000001', admin='00000000-0000-4000-8000-000000000002', other='00000000-0000-4000-8000-000000000003';
 await db.query("insert into profiles(id,role,username,avatar_url) values($1,'athlete','fighter','https://example.com/profile.png'),($2,'admin','admin',null),($3,'athlete','other',null)",[owner,admin,other]);
 await db.exec('set role service_role');
@@ -95,9 +96,24 @@ await test('new public edits preserve approved media and saved snapshots until r
   await command(admin,'reject',{revision_id:next,reason:'Wrong movement'});
   assert.equal((await detail(owner,next)).status,'rejected');
 });
+await test('admins dismiss individual reports with an audited reason without removing publication',async()=>{
+  await command(other,'report',{revision_id:revision,reason:'Outdated concern'});
+  const report=(await detail(admin,revision,true)).reports[0];
+  const dismiss=(actor,reason)=>db.query('select community_dismiss_report($1,$2,$3,$4)',[actor,revision,report.id,reason]);
+  await db.exec('set role authenticated');await assert.rejects(dismiss(admin,'Direct client request'));await db.exec('set role service_role');
+  await assert.rejects(dismiss(owner,'Not an admin'));
+  await assert.rejects(dismiss(admin,'  '));
+  await dismiss(admin,'Reviewed; the demonstration is correct');
+  await dismiss(admin,'Retry after lost response');
+  const reviewed=await detail(admin,revision,true);
+  assert.equal(reviewed.reports[0].status,'resolved');
+  const audit=reviewed.audit.filter(x=>x.action==='dismiss_report');assert.equal(audit.length,1);
+  assert.equal(audit[0].details.report_id,report.id);assert.equal(audit[0].details.reason,'Reviewed; the demonstration is correct');
+  assert.equal((await list(other)).total,1);
+});
 await test('reports enter moderation, removal hides discovery but retains saved private use',async()=>{
-  await command(other,'report',{revision_id:revision,reason:'Video mismatch'});
-  assert.equal((await detail(admin,revision,true)).reports[0].reason,'Video mismatch');
+  await command(owner,'report',{revision_id:revision,reason:'Video mismatch'});
+  assert.ok((await detail(admin,revision,true)).reports.some(x=>x.reason==='Video mismatch'&&x.status==='open'));
   await assert.rejects(command(owner,'remove',{revision_id:revision,reason:'unauthorized'}));
   await command(admin,'remove',{revision_id:revision,reason:'Review video'});
   assert.equal((await list(other)).total,0);
@@ -121,10 +137,35 @@ await test('processed uploaded media stays retained through review and stale app
   let id=await command(owner,'draft',{name:'Uploaded drill',media_id:media});await command(owner,'submit',{revision_id:id,share_rights:true,attribution_consent:true});
   await db.query("update private_video_assets set created_at=now()-interval '8 days' where id=$1",[asset.id]);
   assert.ok(!(await db.query('select * from private_video_cleanup_candidates()')).rows.some(x=>x.id===asset.id));
+  await command(admin,'request_changes',{revision_id:id,reason:'Fix instructions'});
+  await db.query("update community_exercise_revisions set changes_requested_at=now()-interval '29 days' where id=$1",[id]);
+  assert.ok(!(await db.query('select * from private_video_cleanup_candidates()')).rows.some(x=>x.id===asset.id));
+  await db.exec("begin");
+  await db.query("update community_exercise_revisions set changes_requested_at=now()-interval '31 days' where id=$1",[id]);
+  assert.ok((await db.query('select * from private_video_cleanup_candidates()')).rows.some(x=>x.id===asset.id));
+  await db.exec('rollback');
+  await command(owner,'submit',{revision_id:id,share_rights:true,attribution_consent:true});
   await assert.rejects(command(admin,'verify',{revision_id:id,verified_media_id:media,sha256:'wrong'}));
   await command(admin,'verify',{revision_id:id,verified_media_id:media,sha256:'proof'});await command(admin,'confirm',{revision_id:id,final_confirmation:true});
   id=await command(admin,'edit',{revision_id:id,name:'Uploaded drill',media_id:clip});
   await assert.rejects(command(admin,'approve',{revision_id:id,final_confirmation:true}));
+});
+await test('correction media is retained for 30 days including private correction drafts, then abandoned media expires',async()=>{
+  const media=(await db.query("insert into private_exercise_media(athlete_id,provider,video_id,start_s,end_s,made_for_kids) values($1,'youtube','abcdefghijk',0,20,false) returning id",[owner])).rows[0].id;
+  let rev=await command(owner,'draft',{name:'Correction window',media_id:media});
+  const exercise=(await detail(owner,rev)).id;
+  await command(owner,'submit',{revision_id:rev,share_rights:true,attribution_consent:true});
+  await command(admin,'request_changes',{revision_id:rev,reason:'Adjust cues'});
+  const retained=async()=> (await db.query('select community_media_retained($1) as retained',[media])).rows[0].retained;
+  await db.query("update community_exercise_revisions set changes_requested_at=now()-interval '29 days' where id=$1",[rev]);
+  await db.query("update private_exercise_media set created_at=now()-interval '40 days' where id=$1",[media]);
+  assert.equal(await retained(),true);await db.query('select cleanup_private_youtube_previews(null)');
+  assert.equal((await db.query('select id from private_exercise_media where id=$1',[media])).rows.length,1);
+  rev=await command(owner,'draft',{exercise_id:exercise,expected_revision_id:rev,name:'Corrected cues',media_id:media});
+  assert.equal(await retained(),true);
+  await db.query("update community_exercise_revisions set changes_requested_at=now()-interval '31 days' where id=$1",[rev]);
+  assert.equal(await retained(),false);await db.query('select cleanup_private_youtube_previews(null)');
+  assert.equal((await db.query('select id from private_exercise_media where id=$1',[media])).rows.length,0);
 });
 await test('account deletion removes public attribution and media identity safely',async()=>{
   await db.exec('reset role');await db.query('delete from profiles where id=$1',[owner]);await db.exec('set role service_role');
