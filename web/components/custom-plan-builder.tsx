@@ -2,8 +2,9 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { deleteCustomPlan, getCustomDoseSuggestion, getCustomPlan, saveCustomPlan } from "@/lib/api";
+import { deleteCustomPlan, getCommunityExercise, getCustomDoseSuggestion, getCustomPlan, saveCustomPlan } from "@/lib/api";
 import type {
+  CommunityEntry,
   CustomDoseSuggestion,
   CustomExercise,
   CustomSession,
@@ -13,7 +14,7 @@ import type {
 import { InjuryDetailSheet } from "./today/injury-detail-sheet";
 import { DrillPreview, TrainingLibrary } from "./training-library";
 import { CustomDoseEditor } from "./custom-dose-editor";
-import { CommunityContributionSheet, CommunityExercisePreview } from "./community-exercises";
+import { CommunityContributionSheet, CommunityExercisePreview, communityDetailsChanged } from "./community-exercises";
 import { PrivateExerciseVideo, PrivateExerciseVideoSheet } from "./private-exercise-video";
 import { blankDose, doseSummary } from "@/lib/custom-plan-dose";
 import styles from "./custom-plan-builder.module.css";
@@ -59,6 +60,18 @@ export function CustomPlanBuilder({ accessToken, planId }: { accessToken: string
   const [sessionEdit, setSessionEdit] = useState<Session>(),
     [preview, setPreview] = useState<LibraryEntry>();
   const [videoOpen, setVideoOpen] = useState(false), [communityOpen, setCommunityOpen] = useState(false), [communityPreview, setCommunityPreview] = useState<string>();
+  const [linkedCommunity, setLinkedCommunity] = useState<{ id: string; entry?: CommunityEntry; error?: boolean }>();
+  const editingCommunityId = editing?.exercise.origin === "manual" ? editing.exercise.community_id : null;
+  useEffect(() => {
+    if (!editingCommunityId) return;
+    const request = new AbortController();
+    void getCommunityExercise(accessToken, editingCommunityId, 'owned', request.signal).then(entry => {
+      if (!request.signal.aborted) setLinkedCommunity({ id: editingCommunityId, entry });
+    }).catch(() => {
+      if (!request.signal.aborted) setLinkedCommunity({ id: editingCommunityId, error: true });
+    });
+    return () => request.abort();
+  }, [accessToken, editingCommunityId, communityOpen]);
   const [suggestion, setSuggestion] = useState<CustomDoseSuggestion>(),
     [suggestionError, setSuggestionError] = useState<string>(),
     [suggesting, setSuggesting] = useState(false);
@@ -597,6 +610,14 @@ export function CustomPlanBuilder({ accessToken, planId }: { accessToken: string
                 ))}
                 {editing.exercise.community_revision_id ? <button type="button" className="ghost-button" onClick={() => setCommunityPreview(editing.exercise.origin === 'manual' ? editing.exercise.community_revision_id ?? undefined : undefined)}>View community exercise</button> :
                   <button type="button" className="ghost-button" disabled={!editing.exercise.name.trim()} onClick={() => setCommunityOpen(true)}>{editing.exercise.community_id ? 'Community submission' : 'Community · Private'}</button>}
+                {editing.exercise.community_id && linkedCommunity?.id === editing.exercise.community_id && linkedCommunity.entry &&
+                  communityDetailsChanged(linkedCommunity.entry, editing.exercise) ? <div role="status" className={styles.communityNotice}>
+                    {linkedCommunity.entry.media_id !== editing.exercise.media_id
+                      ? 'Video not included in community submission yet.' : 'Your community submission has older exercise details.'}
+                    <button type="button" className="secondary-button" onClick={() => setCommunityOpen(true)}>Update community submission</button>
+                  </div> : null}
+                {editing.exercise.community_id && linkedCommunity?.id === editing.exercise.community_id && linkedCommunity.error
+                  ? <button type="button" className="ghost-button" onClick={() => setCommunityOpen(true)}>Check community submission</button> : null}
                 {editing.exercise.media_id ? <PrivateExerciseVideo token={accessToken} id={editing.exercise.media_id} name={editing.exercise.name} /> : null}
                 <button type="button" className="ghost-button" onClick={() => setVideoOpen(true)}>
                   {editing.exercise.media_id ? "Replace video" : "Add video (optional)"}
@@ -727,6 +748,7 @@ export function CustomPlanBuilder({ accessToken, planId }: { accessToken: string
             ...current, exercise: { ...current.exercise, media_id, community_revision_id: null },
           } : current);
           setVideoOpen(false);
+          if (editing.exercise.community_id) setCommunityOpen(true);
         }} /> : null}
     </section>
   );
