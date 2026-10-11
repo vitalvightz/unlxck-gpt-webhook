@@ -721,8 +721,10 @@ def markdown(reports):
 def historical_sources():
     """Replay PR 1 offline, with original code receipts and reviewed bank history.
 
-    Only the four explicitly retained pre-projection sources may differ. Every
-    replay byte is checked against the original frozen hashes before extraction.
+    Retained receipts preserve sources that have since evolved, including the
+    custom-plan runtime and UI. Those receipts were recovered from the original
+    audit commit ad82c28911103e11915a5567fc18623c056ba7d4, not current code.
+    Every replay byte is checked against the original frozen hashes before extraction.
     Current production auditing remains strict and never refreshes its baseline.
     """
     baseline = json.loads(BASELINE.read_bytes())
