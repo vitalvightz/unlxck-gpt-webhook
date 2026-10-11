@@ -173,7 +173,7 @@ def test_existing_query_orders_goals_and_unrelated_facets_are_identical(index, b
             if field == "goal":
                 expected.update(v["label"] for v in r["projection"] if v["status"] == "reviewed_goal")
             assert r["facets"][field] == expected
-    assert sum(bool(r["facets"]["goal"]) for r in index.records if r["summary"]["category"] == "training") == 250
+    assert sum(bool(r["facets"]["goal"]) for r in index.records if r["summary"]["category"] == "training") == 266
 
 
 def test_anatomical_focus_has_reviewed_training_evidence_only(index):

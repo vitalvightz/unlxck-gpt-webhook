@@ -94,12 +94,15 @@ def project_entry(entry: dict, projection: dict) -> list[dict]:
             raise ValueError("Stale Goal review: " + entry["catalogue_id"])
         # Exact reviewed identities only. No name/tag/method/energy inference.
         evidence = {field: entry["raw"][field] for field in review["evidence_fields"]}
+        if review.get("programming_evidence"):
+            evidence["programming_context"] = review["programming_evidence"]
+        source_field = review.get("source_field", "why")
         result.append({
             "canonical_id": review["canonical_id"], "label": review["label"],
-            "source_field": "why", "source_value": entry["raw"]["why"],
+            "source_field": source_field, "source_value": str(entry["raw"][source_field]),
             "dimension": "goals", "subtype": None,
             "catalogue_id": entry["catalogue_id"], "source": entry["source"],
-            "source_pointer": entry["source_pointer"] + "/why",
+            "source_pointer": entry["source_pointer"] + "/" + source_field,
             "row_revision": entry["row_sha256"], "source_revision": entry["source_sha256"],
             "audit_decision": review["audit_decision"], "audit_report": AUDIT_REPORT,
             "audit_revision": AUDIT_REVISION, "status": "reviewed_goal", "filter_eligible": True,

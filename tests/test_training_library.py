@@ -52,9 +52,17 @@ def test_reviewed_punching_aliases_lead_and_generic_rotation_is_not_an_alias(ind
         if "Punching power" in r["facets"]["goal"]:
             assert r["entry"]["name"] in {"Medicine Ball Hook Throw", "Standing Cable Punch Simulation"}
         if "Stamina" in r["facets"]["goal"]:
-            assert "aerobic" in r["entry"]["raw"].get("tags", []) or "aerobic_capacity" in r["entry"]["raw"].get("qualities", [])
+            reviewed = any(v["status"] == "reviewed_goal" and v["label"] == "Stamina" for v in r["projection"])
+            assert "aerobic" in r["entry"]["raw"].get("tags", []) or "aerobic_capacity" in r["entry"]["raw"].get("qualities", []) or reviewed
+            if reviewed:
+                assert r["entry"]["raw"]["intensity"] == "zone 2"
+                assert r["entry"]["raw"]["total_minutes"] >= 35
         if "Reaction speed" in r["facets"]["goal"]:
-            assert "reaction" in r["entry"]["raw"].get("tags", []) or {"reaction", "decision_reaction", "tactile_reaction", "reactive_agility"}.intersection(r["entry"]["raw"].get("qualities", []))
+            reviewed = any(v["status"] == "reviewed_goal" and v["label"] == "Reaction speed" for v in r["projection"])
+            assert "reaction" in r["entry"]["raw"].get("tags", []) or {"reaction", "decision_reaction", "tactile_reaction", "reactive_agility"}.intersection(r["entry"]["raw"].get("qualities", [])) or reviewed
+            if reviewed:
+                assert "cue" in r["entry"]["raw"]["notes"]
+                assert r["entry"]["raw"]["rest_sec"] >= 45
         if "Explosive legs" in r["facets"]["goal"]:
             assert r["entry"]["raw"].get("category") == "lower_body"
             assert "explosive" in r["entry"]["raw"].get("tags", [])

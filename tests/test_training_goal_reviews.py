@@ -9,7 +9,7 @@ from api.contracts.training_library import LibraryPreview
 from api.services import training_library as lib
 from fightcamp import training_metadata as metadata
 from fightcamp.tag_maps import GOAL_NORMALIZER
-from fightcamp.training_catalogue import content_hash
+from fightcamp.training_catalogue import content_hash, source_hash
 from tests.support import _build_client
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -38,9 +38,17 @@ def test_each_review_adds_a_supported_goal_filter_and_preview(index, review):
         assert record[field] == before[field]
     detail = LibraryPreview.model_validate(lib.preview(record)).model_dump()
     evidence = next(v for v in detail["metadata_projection"] if v["status"] == "reviewed_goal")
-    assert evidence["goal_evidence"] == {f: entry["raw"][f] for f in review["evidence_fields"]}
+    expected = {f: entry["raw"][f] for f in review["evidence_fields"]}
+    if review.get("programming_evidence"):
+        expected["programming_context"] = review["programming_evidence"]
+        from fightcamp.strength import _classify_prescription_type, _prescription_templates
+        context = review["programming_evidence"]
+        assert context["source_sha256"] == source_hash((ROOT / context["source"]).read_bytes())
+        assert context["archetype"] == _classify_prescription_type(entry["raw"])
+        assert context["dose"] == _prescription_templates(context["phase"])[context["archetype"]]
+    assert evidence["goal_evidence"] == expected
     assert evidence["row_revision"] == content_hash(entry["raw"]) == review["row_sha256"]
-    assert evidence["source_pointer"] == entry["source_pointer"] + "/why"
+    assert evidence["source_pointer"] == entry["source_pointer"] + "/" + review.get("source_field", "why")
     assert evidence["association_note"] == review["rationale"]
     assert detail["focus"] == [review["label"]]
     assert detail["prescription_allowed"] is False
@@ -51,8 +59,8 @@ def test_exact_new_coverage_and_no_other_facet_or_category_changes(index):
     assert base["goal_filter_entries"] == 222
     changed = {r["entry"]["catalogue_id"] for r in index.records if sorted(r["facets"]["goal"]) != base["original_facets"][r["entry"]["catalogue_id"]]["goal"]}
     assert changed == {r["catalogue_id"] for r in REVIEWS}
-    assert len(changed) == 28
-    assert sum(bool(r["facets"]["goal"]) for r in index.records if r["summary"]["category"] == "training") == 250
+    assert len(changed) == 44
+    assert sum(bool(r["facets"]["goal"]) for r in index.records if r["summary"]["category"] == "training") == 266
 
 
 @pytest.mark.parametrize("raw", [

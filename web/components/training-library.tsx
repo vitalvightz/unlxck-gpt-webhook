@@ -50,8 +50,9 @@ export function DrillPreview({ entry, token, onClose }: { entry: LibraryEntry; t
           {detail.media ? <ExerciseDemo media={detail.media} exerciseName={detail.name} /> : null}
           {detail.metadata_projection.filter(value => value.status === "reviewed_goal").map(value => <section key={value.canonical_id}>
             <h3>Goal: {value.label}</h3>
-            <p>{String(value.goal_evidence.why)}</p>
-            <p>{String(value.goal_evidence.cue)}</p>
+            <p>{String(value.goal_evidence.why ?? value.source_value)}</p>
+            {value.goal_evidence.cue ? <p>{String(value.goal_evidence.cue)}</p> : null}
+            {value.association_note ? <p className={styles.meta}>{value.association_note}</p> : null}
           </section>)}
           {detail.equipment_requirements ? <section>
             <h3>Equipment setup</h3><p>{equipmentText(detail)}</p>
