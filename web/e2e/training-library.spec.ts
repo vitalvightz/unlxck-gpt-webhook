@@ -2,6 +2,7 @@ import { expect, test, type Page } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import { isolateFromNetwork } from "./support";
 import type { LibraryEntry } from "../lib/api-schema.generated";
+import canonicalFixture from "./fixtures/canonical-metadata-library.json";
 
 const athlete = "00000000-0000-4000-8000-000000000001";
 const storageKey = `sb-${new URL(process.env.NEXT_PUBLIC_SUPABASE_URL ?? "https://stub.supabase.co").hostname.split(".")[0]}-auth-token`;
@@ -14,6 +15,76 @@ const drills = [entry("Medicine Ball Hook Throw", ["medicine_ball"]), entry("Sta
   entry("Max-Power Bag Burst", ["heavy_bag"]), entry("Straight-Shot Re-Angle", ["punching_bag"])];
 const rehab = entry("Banded Heel Push with Hold", ["band"], { category: "rehab", content_type: "rehabilitation", context: "Rehab · Achilles · Pain", selection_boundary: "rehab_pathway_only" });
 const learn = entry("Pressure → Reset", null, { category: "learn", content_type: "visualisation", context: "Visualisation · Boxing · Brawler", selection_boundary: "excluded" });
+
+for (const width of [320, 390, 1280]) {
+  test(`Reviewed canonical filters preserve independent selections (${width}px)`, async ({ page, baseURL }) => {
+    await page.setViewportSize({ width, height: 844 });
+    const errors: string[] = [];
+    page.on("pageerror", error => errors.push(error.message));
+    page.on("console", message => { if (message.type() === "error") errors.push(message.text()); });
+    await setup(page, baseURL!);
+    await page.route("**/api/training/library**", async route => {
+      const url = new URL(route.request().url());
+      expect(route.request().method()).toBe("GET");
+      expect(route.request().headers().authorization).toBe("Bearer athlete-token");
+      if (process.env.LIBRARY_TEST_API) {
+        const response = await page.request.get(`${process.env.LIBRARY_TEST_API}${url.pathname}${url.search}`, { headers: { Authorization: "Bearer athlete-token" } });
+        return route.fulfill({ response });
+      }
+      const key = [...url.searchParams.entries()].filter(([key, value]) => ["equipment", "type", "body_focus"].includes(key) && value).sort().map(([key, value]) => `${key}=${value}`).join("&");
+      const body = url.pathname.endsWith("/entry")
+        ? canonicalFixture.previews[url.searchParams.get("catalogue_id")! as keyof typeof canonicalFixture.previews]
+        : canonicalFixture.responses[key as keyof typeof canonicalFixture.responses];
+      expect(body, `Backend-derived fixture exists for ${url.search}`).toBeTruthy();
+      return route.fulfill({ contentType: "application/json", body: JSON.stringify(body) });
+    });
+    await page.goto("/plans/library");
+    await expect(page.getByRole("heading", { name: "Find a Drill", exact: true })).toBeVisible();
+    const status = page.getByRole("region", { name: "Training library" }).getByRole("status");
+    await expect(status).toHaveText("1,010 drills");
+    const openFilters = async () => {
+      await page.getByRole("button", { name: /^Filters/ }).click();
+      return page.getByRole("dialog", { name: "Filters", exact: true });
+    };
+    let filters = await openFilters();
+    const equipment = filters.getByRole("combobox", { name: "Equipment", exact: true });
+    for (const [value, label] of [["battle_ropes", "Battle ropes (7)"], ["kettlebell", "Kettlebell (24)"], ["weight_vest", "Weight vest (6)"], ["rower", "Rower (8)"], ["double_end_bag", "Double-end bag (4)"]]) {
+      await expect(equipment.locator(`option[value="${value}"]`)).toHaveCount(1);
+      await expect(equipment.locator(`option[value="${value}"]`)).toHaveText(label);
+    }
+    for (const value of ["battle_rope", "kettlebells", "weighted_vest", "rowing_machine", "double-end_bag"]) await expect(equipment.locator(`option[value="${value}"]`)).toHaveCount(0);
+    await expect(filters.getByRole("combobox", { name: "Body focus", exact: true }).locator('option[value="adductors"]')).toHaveText("Inner thighs (adductors) (7)");
+    await page.screenshot({ path: test.info().outputPath(`canonical-filters-${width}.png`), animations: "disabled" });
+    expect((await new AxeBuilder({ page }).include('[role="dialog"]').analyze()).violations).toEqual([]);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    await equipment.selectOption("kettlebell");
+    await expect(status).toHaveText("24 drills");
+    await filters.getByRole("combobox", { name: "Training type", exact: true }).selectOption("strength_power");
+    const combined = canonicalFixture.responses["equipment=kettlebell&type=strength_power"];
+    await expect(status).toHaveText(`${combined.total} drills`);
+    await filters.getByRole("button", { name: "Show results", exact: true }).click();
+    filters = await openFilters();
+    await expect(filters.getByRole("combobox", { name: "Training type", exact: true })).toHaveValue("strength_power");
+    await expect(filters.getByRole("combobox", { name: "Equipment", exact: true })).toHaveValue("kettlebell");
+    await filters.getByRole("combobox", { name: "Equipment", exact: true }).selectOption("");
+    await expect(filters.getByRole("combobox", { name: "Training type", exact: true })).toHaveValue("strength_power");
+    await filters.getByRole("combobox", { name: "Training type", exact: true }).selectOption("");
+    await expect(status).toHaveText("1,010 drills");
+    await filters.getByRole("combobox", { name: "Equipment", exact: true }).selectOption("battle_ropes");
+    await expect(status).toHaveText("7 drills");
+    await filters.getByRole("button", { name: "Show results", exact: true }).click();
+    const results = page.getByRole("list", { name: "Drill results" });
+    await expect(results).not.toContainText("Rope Climb");
+    const drill = results.getByRole("button").first();
+    await drill.focus(); await page.keyboard.press("Enter");
+    await expect(page.getByRole("dialog")).toContainText("Discovery only");
+    await page.keyboard.press("Escape");
+    await expect(drill).toBeFocused();
+    await page.screenshot({ path: test.info().outputPath(`canonical-results-${width}.png`), animations: "disabled" });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    expect(errors).toEqual([]);
+  });
+}
 
 async function setup(page: Page, baseURL: string) {
   await isolateFromNetwork(page, baseURL);

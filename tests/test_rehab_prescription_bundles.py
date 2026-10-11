@@ -370,7 +370,9 @@ def test_live_bundle_never_enables_advanced_stages_even_with_clearance(stage):
 def test_pilot_seed_reproduces_historical_baseline_without_changing_bank(tmp_path, monkeypatch):
     import json
     from tools import seed_rehab_pilot
-    bank = get_rehab_bank()
+    # Subtract the historical activation from a fixture, never the shared live
+    # cache consumed by later pathway-safety and completion assertions.
+    bank = deepcopy(get_rehab_bank())
     from tools.rehab_metadata_review_lib import before_achilles_load_activation
     # This seed owns the original v4 CALM/RESTORE baseline, not the later LOAD
     # activation. Subtract only the exact pinned addition before replaying it.
@@ -391,3 +393,5 @@ def test_pilot_seed_reproduces_historical_baseline_without_changing_bank(tmp_pat
     assert json.loads((data / "rehab_bank.json").read_text(encoding="utf-8")) == bank
     assert (data / "rehab_pathways.json").read_text(encoding="utf-8") == committed
     assert load_clinical_policies(data / "rehab_pathways.json") == expected
+    live_group = next(g for g in get_rehab_bank() if g["location"] == "ankle" and g["type"] == "sprain")
+    assert manifest["new_drill"] in live_group["drills"]

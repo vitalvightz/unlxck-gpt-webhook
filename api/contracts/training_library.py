@@ -28,11 +28,34 @@ class LibraryEntry(BaseModel):
     prescription_allowed: Literal[False] = False
 
 
+class ProjectedMetadata(BaseModel):
+    canonical_id: str
+    label: str
+    source_value: str
+    source_field: str
+    dimension: str
+    subtype: str | None
+    catalogue_id: str
+    source: str
+    source_pointer: str
+    source_revision: str
+    row_revision: str
+    audit_decision: str | None
+    audit_report: str | None
+    audit_revision: str | None
+    status: Literal["reviewed_alias", "source_value", "unresolved_compound", "association_review"]
+    filter_eligible: bool
+    association_note: str | None
+    requirement_evidence: dict[str, object] = Field(default_factory=dict)
+
+
 class LibraryPreview(LibraryEntry):
     source: str
     source_revision: str
     row_revision: str
     guidance: dict[str, list[str]] = Field(default_factory=dict)
+    metadata_projection: list[ProjectedMetadata] = Field(default_factory=list)
+    equipment_source: dict[str, object] = Field(default_factory=dict)
 
 
 class LibraryFeaturedResponse(BaseModel):
