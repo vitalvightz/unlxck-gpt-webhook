@@ -12,7 +12,7 @@ import { libraryEquipmentText as equipmentText } from "@/lib/equipment-requireme
 import styles from "./training-library.module.css";
 
 type Category = LibraryEntry["category"];
-const filterLabels = { type: "Training type", goal: "Goal", sport: "Sport", equipment: "Equipment", body_focus: "Body focus" };
+const filterLabels = { type: "Training type", goal: "Goal", sport: "Sport", equipment: "Equipment", body_focus: "Body area", movement: "Movement", training_method: "Training method", skill_focus: "Skill focus" };
 const contentTypes: Record<string, { label: string; icon: ExerciseGlyphName }> = {
   strength_power: { label: "Strength & power", icon: "strength" }, conditioning: { label: "Conditioning", icon: "conditioning" },
   technical_coordination: { label: "Technical drills", icon: "skill" }, rehabilitation: { label: "Rehabilitation", icon: "rehab" },
@@ -20,6 +20,9 @@ const contentTypes: Record<string, { label: string; icon: ExerciseGlyphName }> =
   visualisation: { label: "Visualisation", icon: "visualisation" },
 };
 type Filters = Partial<Record<keyof typeof filterLabels, string>>;
+const detailFields = ["movement", "training_method", "skill_focus"] as const;
+const otherFields = ["sport", "equipment", "body_focus", "type"] as const;
+const examples = { movement: "Squat, hip hinge, rotation", training_method: "Static holds, plyometric drills, lowering-focused", skill_focus: "Footwork, striking, grappling" };
 const boundaries: Record<Category, string> = {
   training: "Discovery only. Injury, phase, equipment and programming checks still apply.",
   rehab: "Rehab pathway only. Your current stage and clinical clearance still apply.",
@@ -54,6 +57,14 @@ export function DrillPreview({ entry, token, onClose }: { entry: LibraryEntry; t
             {value.goal_evidence.cue ? <p>{String(value.goal_evidence.cue)}</p> : null}
             {value.association_note ? <p className={styles.meta}>{value.association_note}</p> : null}
           </section>)}
+          {detail.category === "training" ? detail.verified_goals?.filter(goal => !detail.metadata_projection.some(value => value.status === "reviewed_goal" && value.label === goal)).map(goal => <p key={goal} className={styles.focus}>Goal: {goal}</p>) : null}
+          {detail.category === "training" && detail.exercise_details?.length ? <section>
+            <h3>Exercise details</h3>
+            <dl className={styles.exerciseDetails}>{detailFields.map(group => {
+              const values = detail.exercise_details.filter(value => value.group === group);
+              return values.length ? <div key={group}><dt>{filterLabels[group]}</dt><dd>{values.map(value => value.label).join(" · ")}</dd></div> : null;
+            })}</dl>
+          </section> : null}
           {detail.equipment_requirements ? <section>
             <h3>Equipment setup</h3><p>{equipmentText(detail)}</p>
             <p className={styles.meta}>{detail.equipment_requirements.evidence}</p>
@@ -77,6 +88,7 @@ export function TrainingLibrary({ accessToken }: { accessToken: string }) {
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState<Category>("training");
   const [filters, setFilters] = useState<Filters>({});
+  const [selectedLabels, setSelectedLabels] = useState<Filters>({});
   const [filterOpen, setFilterOpen] = useState(false);
   const [selected, setSelected] = useState<LibraryEntry | null>(null);
   const [result, setResult] = useState<LibrarySearchResponse | null>(null);
@@ -131,6 +143,28 @@ export function TrainingLibrary({ accessToken }: { accessToken: string }) {
     } finally { if (generation.current === requestGeneration) setPaging(false); }
   }
 
+  function selectedLabel(field: keyof Filters, value: string) {
+    return result?.facets[field]?.find(choice => choice.value === value)?.label ?? selectedLabels[field] ?? (detailFields.some(key => key === field) ? "Selected" : readable(value));
+  }
+  function removeFilter(field: keyof Filters) {
+    changeSearch(() => setFilters(previous => { const next = { ...previous }; delete next[field]; return next; }));
+  }
+  function selector(field: keyof Filters) {
+    const choices = result?.facets[field] ?? [];
+    return <label className="field" key={field}><span>{category !== "training" && field === "body_focus" ? "Body focus" : filterLabels[field]}</span>
+      <select value={filters[field] ?? ""} onChange={event => {
+        const value = event.target.value;
+        setSelectedLabels(previous => ({ ...previous, [field]: choices.find(choice => choice.value === value)?.label ?? "" }));
+        changeSearch(() => setFilters(previous => ({ ...previous, [field]: value })));
+      }}>
+        <option value="">{category === "training" ? "Any" : "All"}</option>
+        {filters[field] && !choices.some(choice => choice.value === filters[field]) ? <option value={filters[field]}>{selectedLabel(field, filters[field]!)} (0)</option> : null}
+        {choices.map(choice => <option key={choice.value} value={choice.value}>{choice.label} ({choice.count})</option>)}
+      </select>
+      {field in examples && !filters[field] ? <small className={styles.meta}>{examples[field as keyof typeof examples]}</small> : null}
+    </label>;
+  }
+
   return <section className={styles.library} aria-label="Training library">
     <header className={styles.header}>
       <div className={styles.headerTop}>
@@ -142,7 +176,7 @@ export function TrainingLibrary({ accessToken }: { accessToken: string }) {
     <div className={styles.searchRow}>
       <label className={styles.search}><span className="sr-only">Search drills</span>
         <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10" cy="10" r="6" /><path d="m15 15 5 5" /></svg>
-        <input type="search" maxLength={100} placeholder="Name, goal or equipment" value={query}
+        <input type="search" maxLength={100} placeholder="Search exercises…" value={query}
           onChange={event => changeSearch(() => setQuery(event.target.value))} />
       </label>
       <button className={`secondary-button ${styles.filterButton}`} onClick={() => setFilterOpen(true)} aria-haspopup="dialog">
@@ -161,6 +195,14 @@ export function TrainingLibrary({ accessToken }: { accessToken: string }) {
       <p role="status" aria-live="polite">{loading ? "Searching…" : result ? `${result.total.toLocaleString()} ${category === "learn" ? result.total === 1 ? "entry" : "entries" : result.total === 1 ? "drill" : "drills"}` : "Library unavailable"}</p>
       {count ? <button className={styles.reset} onClick={() => changeSearch(() => setFilters({}))}>Reset filters</button> : null}
     </div>
+    {count ? <div className={styles.activeFilters} aria-label="Active filters">
+      {Object.entries(filters).filter(([, value]) => value).map(([key, value]) => {
+        const field = key as keyof Filters;
+        return <button key={field} aria-label={`Remove ${filterLabels[field]} filter`} onClick={() => removeFilter(field)}>
+          {field === "training_method" ? "Method" : filterLabels[field]}: {selectedLabel(field, value!)} <span aria-hidden="true">×</span>
+        </button>;
+      })}
+    </div> : null}
     {error ? <div className={styles.empty} role="alert"><p>{error}</p>
       <button className="secondary-button" onClick={() => changeSearch(() => setRetry(n => n + 1))}>Retry search</button>
     </div> : null}
@@ -178,35 +220,36 @@ export function TrainingLibrary({ accessToken }: { accessToken: string }) {
               </> : null}
             </span>
             <span className={styles.drillCopy}><span className={styles.name}>{entry.name}</span>
-              <span className={styles.focus}>{entry.focus.length ? entry.focus.slice(0, 2).join(" · ") : contentTypes[entry.content_type]?.label}</span>
+              <span className={styles.focus}>{entry.category === "training" ? entry.verified_goals?.length ? `Goal: ${entry.verified_goals.slice(0, 2).join(" · ")}` : entry.exercise_details?.slice(0, 2).map(value => value.label).join(" · ") || contentTypes[entry.content_type]?.label : entry.focus.slice(0, 2).join(" · ") || contentTypes[entry.content_type]?.label}</span>
               {entry.discovery_match ? <span className={styles.meta}>{entry.discovery_match}</span> : null}
               <span className={styles.meta}>{equipmentText(entry)} · {entry.context}</span>
               {entry.media ? <span className="sr-only">Has demo video.</span> : null}
             </span><span className={styles.chevron} aria-hidden="true" />
           </button>
         </li>)}
-      </ul> : <div className={styles.empty}><h2>No drills found</h2><p>Try a shorter name or reset your filters.</p>
-        <button className="secondary-button" onClick={() => changeSearch(() => { setQuery(""); setFilters({}); })}>Reset search</button>
+      </ul> : <div className={styles.empty}><h2>{category === "training" ? count ? query.trim() ? "No exercises match this search and these filters." : "No exercises match these filters." : "No exercises match your search." : "No drills found"}</h2>
+        {category !== "training" ? <><p>Try a shorter name or reset your filters.</p><button className="secondary-button" onClick={() => changeSearch(() => { setQuery(""); setFilters({}); })}>Reset search</button></> : count ? <div className={styles.emptyActions}>
+          <button className="secondary-button" onClick={() => changeSearch(() => setFilters({}))}>Clear all filters</button>
+        </div> : <button className="secondary-button" onClick={() => changeSearch(() => setQuery(""))}>Clear search</button>}
       </div>}
       {result.next_offset !== null ? <button className={`secondary-button ${styles.more}`} disabled={paging} onClick={() => void more()}>{paging ? "Loading…" : "Load more"}</button> : null}
     </> : null}
     {filterOpen ? <InjuryDetailSheet title="Filters" onClose={() => setFilterOpen(false)} closeLabel="Close filters">
       <div className={`injury-sheet-body ${styles.filters}`}>
-        {Object.entries(filterLabels).map(([key, title]) => {
-          const field = key as keyof Filters;
-          const choices = result?.facets[field] ?? [];
-          return <label className="field" key={key}><span>{title}</span>
-            <select value={filters[field] ?? ""} onChange={event => changeSearch(() => setFilters(previous => ({ ...previous, [field]: event.target.value })))}>
-              <option value="">All</option>
-              {filters[field] && !choices.some(choice => choice.value === filters[field]) ? <option value={filters[field]}>{readable(filters[field]!)}</option> : null}
-              {choices.map(choice => <option key={choice.value} value={choice.value}>{choice.label} ({choice.count})</option>)}
-            </select>
-          </label>;
-        })}
-        <p className={styles.meta}>Goal filters use source evidence. Related matches are for discovery.</p>
+        {category === "training" ? <>
+          <h3>What do you want to improve?</h3>
+          {selector("goal")}
+          <p className={styles.meta}>Choose a training goal, or explore exercises below.</p>
+          <h3>Explore exercises</h3>
+          <div className={styles.explore}>{detailFields.map(selector)}</div>
+          <details className={styles.otherFilters}><summary>Other filters</summary>
+            <p className={styles.meta}>Sport, equipment, body area and training type</p>
+            <div className={styles.filters}>{otherFields.map(selector)}</div>
+          </details>
+        </> : (["type", "goal", "sport", "equipment", "body_focus"] as const).map(selector)}
         <div className={styles.filterActions}>
+          <button className="secondary-button" onClick={() => changeSearch(() => setFilters({}))}>Clear filters</button>
           <button className="injury-sheet-save" onClick={() => setFilterOpen(false)}>Show results</button>
-          <button className={styles.reset} onClick={() => changeSearch(() => setFilters({}))}>Reset filters</button>
         </div>
       </div>
     </InjuryDetailSheet> : null}

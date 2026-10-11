@@ -481,6 +481,12 @@ export type EventContext = {
   ruleset: string | null;
 };
 
+export type ExerciseDetail = {
+  value: string;
+  label: string;
+  group: "movement" | "skill_focus" | "training_method";
+};
+
 export type ExerciseHistoryResponse = {
   logs: ExerciseLogRecord[];
   next_offset: number | null;
@@ -941,6 +947,8 @@ export type LibraryEntry = {
   category: "learn" | "rehab" | "training";
   context: string;
   focus: string[];
+  verified_goals: string[];
+  exercise_details: ExerciseDetail[];
   discovery_match: string | null;
   equipment: string[] | null;
   equipment_state: string;
@@ -968,6 +976,8 @@ export type LibraryPreview = {
   category: "learn" | "rehab" | "training";
   context: string;
   focus: string[];
+  verified_goals: string[];
+  exercise_details: ExerciseDetail[];
   discovery_match: string | null;
   equipment: string[] | null;
   equipment_state: string;

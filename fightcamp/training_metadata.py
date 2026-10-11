@@ -17,7 +17,7 @@ AUDIT_REVISION = "ad82c28911103e11915a5567fc18623c056ba7d4"
 
 
 def load_projection() -> dict:
-    mappings, reviews, goal_reviews = [], [], []
+    mappings, reviews, goal_reviews, discovery_filters, facet_aliases = [], [], [], [], []
     for path in CONTRACT_FILES:
         contract = require_object(load_shared_contract(path.name), "catalogue_projection", source=path.name)
         if contract.get("scope") != "discovery_only":
@@ -25,13 +25,34 @@ def load_projection() -> dict:
         mappings.extend(contract["mappings"])
         reviews.extend(contract.get("association_reviews", []))
         goal_reviews.extend(contract.get("goal_reviews", []))
+        discovery_filters.extend(contract.get("discovery_filters", []))
+        facet_aliases.extend(contract.get("facet_aliases", []))
     keys = [(m["field"], value) for m in mappings for value in m["source_values"]]
     if len(keys) != len(set(keys)):
         raise ValueError("Ambiguous field-scoped metadata alias")
     goal_keys = [(r["catalogue_id"], r["canonical_id"]) for r in goal_reviews]
     if len(goal_keys) != len(set(goal_keys)):
         raise ValueError("Duplicate reviewed Goal assignment")
-    return {"mappings": mappings, "association_reviews": reviews, "goal_reviews": goal_reviews}
+    ids = [(r["group"], r["id"]) for r in discovery_filters]
+    if len(ids) != len(set(ids)) or any(group not in {"movement", "training_method", "skill_focus"} for group, _ in ids):
+        raise ValueError("Invalid discovery filter dictionary")
+    return {"mappings": mappings, "association_reviews": reviews, "goal_reviews": goal_reviews,
+            "discovery_filters": discovery_filters, "facet_aliases": facet_aliases}
+
+
+def exercise_details(entry: dict, projection: dict) -> list[dict]:
+    """Closed, field-specific descriptive labels; never Goal or safety evidence."""
+    if entry["content_class"] not in {"strength_power", "conditioning", "technical_coordination"}:
+        return []
+    result = []
+    for rule in projection.get("discovery_filters", []):
+        for source in rule["sources"]:
+            raw = entry["raw"].get(source["field"])
+            values = [raw] if isinstance(raw, str) else raw if isinstance(raw, list) else []
+            if set(source["values"]).intersection(v for v in values if isinstance(v, str)):
+                result.append({"value": rule["id"], "label": rule["label"], "group": rule["group"]})
+                break
+    return result
 
 
 def mapping_for(field: str, value: str, projection: dict, content_class: str | None = None) -> dict | None:
@@ -113,6 +134,11 @@ def project_entry(entry: dict, projection: dict) -> list[dict]:
 
 
 def canonical_filter(field: str, value: str, category: str, projection: dict | None) -> str:
+    if category == "training":
+        alias = next((r for r in (projection or {}).get("facet_aliases", [])
+                      if r["field"] == field and value in r["source_values"]), None)
+        if alias:
+            return alias["canonical_id"]
     source_field = "equipment" if field == "equipment" else "tags" if field == "body_focus" and category == "training" else None
     if projection and source_field:
         # No clinical target-region aliases and no parent/subtype substitution.
@@ -123,6 +149,10 @@ def canonical_filter(field: str, value: str, category: str, projection: dict | N
 
 
 def filter_label(field: str, value: str, projection: dict | None) -> str | None:
+    alias = next((r for r in (projection or {}).get("facet_aliases", [])
+                  if r["field"] == field and r["canonical_id"] == value), None)
+    if alias:
+        return alias["label"]
     dimension = "equipment" if field == "equipment" else "anatomical_focus" if field == "body_focus" else None
     return next((m["label"] for m in (projection or {}).get("mappings", [])
                  if m["dimension"] == dimension and m["canonical_id"] == value), None)
