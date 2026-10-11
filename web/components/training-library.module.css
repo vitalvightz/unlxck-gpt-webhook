@@ -4,6 +4,7 @@
 .header h1 { margin: 0; font-size: clamp(40px, 10vw, 56px); line-height: .98; letter-spacing: -.03em; }
 .back { display: inline-flex; align-items: center; min-height: 44px; color: var(--text-secondary); font-size: 14px; }
 .back svg { width: 18px; height: 18px; margin-left: -5px; fill: none; stroke: currentColor; stroke-width: 1.8; }
+button.back { border: 0; background: none; padding: 0; cursor: pointer; }
 .eyebrow { margin: 0; color: var(--danger-ink); font-family: var(--font-mono); font-size: var(--type-label-sm); letter-spacing: var(--tracking-label); }
 .searchRow { display: flex; gap: 8px; }
 .search { flex: 1; min-width: 0; position: relative; }

@@ -4445,6 +4445,34 @@ class SupabaseAppStore(CompactGenerationReads):
         # Return the exact row so the caller can use that immutable winner.
         return self.get_session_completion(athlete_id, session_id, training_day)
 
+    def create_custom_plan(self, athlete_id: str, fields: dict[str, Any]) -> dict[str, Any]:
+        payload = {key: fields[key] for key in ("name", "sessions", "incomplete")}
+        response = self.client.table("custom_training_plans").insert({**payload, "athlete_id": athlete_id}).execute()
+        rows = getattr(response, "data", None) or []
+        if not rows:
+            raise HTTPException(500, "Failed to save custom plan.")
+        return rows[0]
+
+    def list_custom_plans(self, athlete_id: str) -> list[dict[str, Any]]:
+        response = (self.client.table("custom_training_plans").select("*")
+                    .eq("athlete_id", athlete_id).order("updated_at", desc=True).execute())
+        return getattr(response, "data", None) or []
+
+    def get_custom_plan(self, athlete_id: str, plan_id: str) -> dict[str, Any] | None:
+        return self._select_first(self.client.table("custom_training_plans").select("*")
+                                  .eq("athlete_id", athlete_id).eq("id", plan_id))
+
+    def update_custom_plan(self, athlete_id: str, plan_id: str, fields: dict[str, Any]) -> dict[str, Any] | None:
+        response = (self.client.table("custom_training_plans")
+                    .update({key: fields[key] for key in ("name", "sessions", "incomplete")})
+                    .eq("athlete_id", athlete_id).eq("id", plan_id).execute())
+        return (getattr(response, "data", None) or [None])[0]
+
+    def delete_custom_plan(self, athlete_id: str, plan_id: str) -> bool:
+        response = (self.client.table("custom_training_plans").delete()
+                    .eq("athlete_id", athlete_id).eq("id", plan_id).execute())
+        return bool(getattr(response, "data", None))
+
     def create_external_training_session(self, athlete_id: str, fields: dict[str, Any]) -> dict[str, Any]:
         # ON CONFLICT DO NOTHING is atomic. A retry cannot overwrite an edit or
         # resurrect a deleted occurrence, even when it crosses local midnight.

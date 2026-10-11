@@ -496,6 +496,7 @@ class FakeStore(InMemoryNotificationLedger, FullRowStatusReads):
         self.today_checkins: dict[str, list[dict]] = {}
         self.session_completions: dict[str, list[dict]] = {}
         self.external_training_sessions: dict[str, dict] = {}
+        self.custom_plans: dict[str, dict] = {}
         self.session_logs: dict[str, list[dict]] = {}
         self.athlete_streak_rows: dict[str, dict] = {}
         self.daily_activity: dict[str, set[str]] = {}
@@ -1968,6 +1969,31 @@ class FakeStore(InMemoryNotificationLedger, FullRowStatusReads):
                     row["updated_at"] = _now()
                 return copy.deepcopy(row)
         return None
+
+    def create_custom_plan(self, athlete_id: str, fields: dict) -> dict:
+        row = {**copy.deepcopy(fields), "athlete_id": athlete_id, "id": str(uuid4()),
+               "kind": "self_directed", "created_at": _now(), "updated_at": _now()}
+        self.custom_plans[row["id"]] = row
+        return copy.deepcopy(row)
+
+    def list_custom_plans(self, athlete_id: str) -> list[dict]:
+        return [copy.deepcopy(row) for row in self.custom_plans.values() if row["athlete_id"] == athlete_id]
+
+    def get_custom_plan(self, athlete_id: str, plan_id: str) -> dict | None:
+        row = self.custom_plans.get(plan_id)
+        return copy.deepcopy(row) if row and row["athlete_id"] == athlete_id else None
+
+    def update_custom_plan(self, athlete_id: str, plan_id: str, fields: dict) -> dict | None:
+        if not self.get_custom_plan(athlete_id, plan_id):
+            return None
+        self.custom_plans[plan_id].update(copy.deepcopy(fields), updated_at=_now())
+        return self.get_custom_plan(athlete_id, plan_id)
+
+    def delete_custom_plan(self, athlete_id: str, plan_id: str) -> bool:
+        if not self.get_custom_plan(athlete_id, plan_id):
+            return False
+        del self.custom_plans[plan_id]
+        return True
 
     def create_external_training_session(self, athlete_id: str, fields: dict) -> dict:
         existing = next((row for row in self.external_training_sessions.values()

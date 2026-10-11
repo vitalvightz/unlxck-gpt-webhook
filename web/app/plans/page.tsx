@@ -278,6 +278,7 @@ export default function PlansPage() {
           </Link>
           <h1 className={`athlete-motion-slot athlete-motion-header ${styles.pageTitle}`}>{t("planWorkspace")}</h1>
           <p className={styles.pageSubtitle}>Build, manage and add to your training.</p>
+          <Link href="/plans/custom" className="ghost-button">Build My Own Plan</Link>
         </header>
         <div className={actionStyles.actions}>
           <LogTraining accessToken={session?.access_token ?? null} variant="tile" />

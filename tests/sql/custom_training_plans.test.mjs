@@ -1,0 +1,50 @@
+// Same isolated PGLITE_ROOT convention as external_training_sessions.test.mjs.
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+import { createRequire } from "node:module";
+import { resolve } from "node:path";
+
+const require = createRequire(resolve(process.env.PGLITE_ROOT ?? "web", "package.json"));
+const { PGlite } = require("@electric-sql/pglite");
+const db = new PGlite();
+const owner = "00000000-0000-4000-8000-000000000001";
+const other = "00000000-0000-4000-8000-000000000002";
+const migration = await readFile(new URL("../../supabase/migrations/20261011164637_add_custom_training_plans.sql", import.meta.url), "utf8");
+await db.exec(`
+  create role anon; create role authenticated; create role service_role bypassrls;
+  create schema auth;
+  create function auth.uid() returns uuid language sql as $$ select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;
+  grant usage on schema auth to authenticated; grant execute on function auth.uid() to authenticated;
+  create table public.profiles (id uuid primary key);
+  create function public.set_updated_at() returns trigger language plpgsql as $$ begin new.updated_at = now(); return new; end $$;
+  insert into public.profiles values ('${owner}'), ('${other}');
+`);
+await db.exec(migration);
+await db.exec(migration);
+await db.exec("set role service_role");
+const sessions = [{ id: "session-b", weekday: "Tuesday", exercises: [{ catalogue_id: "exact-b" }, { catalogue_id: "exact-a" }] },
+  { id: "session-a", weekday: "Monday", exercises: [] }];
+const insert = "insert into public.custom_training_plans (athlete_id, name, sessions) values ($1,$2,$3) returning *";
+const first = (await db.query(insert, [owner, "Weekly strength", JSON.stringify(sessions)])).rows[0];
+await db.query(insert, [other, "Other athlete", "[]"]);
+assert.equal(first.kind, "self_directed");
+assert.deepEqual(first.sessions, sessions);
+await db.exec(`reset role; set role authenticated; set request.jwt.claim.sub = '${owner}'`);
+assert.equal((await db.query("select * from public.custom_training_plans")).rows.length, 1);
+assert.equal((await db.query("select * from public.custom_training_plans")).rows[0].id, first.id);
+await assert.rejects(db.query(insert, [owner, "Unvalidated exercise", "[]"]), /permission denied/);
+await assert.rejects(db.query("update public.custom_training_plans set name = 'forged'"), /permission denied/);
+await assert.rejects(db.query("delete from public.custom_training_plans"), /permission denied/);
+await db.exec(`set request.jwt.claim.sub = '${other}'`);
+assert.equal((await db.query("select * from public.custom_training_plans where id = $1", [first.id])).rows.length, 0);
+await db.exec("reset role; set role anon");
+await assert.rejects(db.query("select * from public.custom_training_plans"), /permission denied/);
+await db.exec("reset role; set role service_role");
+assert.equal((await db.query("update public.custom_training_plans set name = 'edited' where id = $1 and athlete_id = $2 returning id", [first.id, other])).rows.length, 0);
+assert.equal((await db.query("delete from public.custom_training_plans where id = $1 and athlete_id = $2 returning id", [first.id, other])).rows.length, 0);
+await db.query("update public.custom_training_plans set name = 'edited', sessions = $1 where id = $2 and athlete_id = $3", [JSON.stringify(sessions.toReversed()), first.id, owner]);
+assert.deepEqual((await db.query("select sessions from public.custom_training_plans where id = $1", [first.id])).rows[0].sessions, sessions.toReversed());
+await assert.rejects(db.query("update public.custom_training_plans set kind = 'active' where id = $1", [first.id]), /check constraint/);
+assert.equal((await db.query("delete from public.custom_training_plans where id = $1 and athlete_id = $2 returning id", [first.id, owner])).rows.length, 1);
+await db.close();
+console.log("PASS: migration replay, owner RLS, validated server-only writes, order preservation, edit/delete ownership and self-directed constraint");

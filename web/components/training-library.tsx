@@ -30,7 +30,10 @@ const boundaries: Record<Category, string> = {
 };
 const readable = (value: string) => value.replaceAll("_", " ").replaceAll("-", " ");
 
-export function DrillPreview({ entry, token, onClose }: { entry: LibraryEntry; token: string; onClose: () => void }) {
+export function DrillPreview({ entry, token, onClose, onAdd, selfDirected = false }: {
+  entry: LibraryEntry; token: string; onClose: () => void;
+  onAdd?: (entry: LibraryEntry) => void; selfDirected?: boolean;
+}) {
   const [detail, setDetail] = useState<LibraryPreview | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [retry, setRetry] = useState(0);
@@ -47,7 +50,7 @@ export function DrillPreview({ entry, token, onClose }: { entry: LibraryEntry; t
   return <InjuryDetailSheet title={current.name} onClose={onClose} closeLabel="Close drill preview">
     <div className={`injury-sheet-body ${styles.preview}`}>
       <p className={styles.meta}>{current.context} · {equipmentText(current)}</p>
-      <p className={styles.boundary}>{boundaries[current.category]}</p>
+      {!selfDirected ? <p className={styles.boundary}>{boundaries[current.category]}</p> : null}
       {error ? <div role="alert"><p>{error}</p><button className="secondary-button" onClick={() => { setError(null); setRetry(n => n + 1); }}>Retry preview</button></div>
         : !detail ? <p role="status">Loading drill…</p> : <>
           {detail.media ? <ExerciseDemo media={detail.media} exerciseName={detail.name} /> : null}
@@ -80,11 +83,14 @@ export function DrillPreview({ entry, token, onClose }: { entry: LibraryEntry; t
             </details> : null}
           {!Object.keys(detail.guidance).length ? <p className={styles.meta}>Coaching guidance unavailable.</p> : null}
         </>}
+      {onAdd && detail?.category === "training" ? <button className="injury-sheet-save" onClick={() => onAdd(detail)}>Add to Session</button> : null}
     </div>
   </InjuryDetailSheet>;
 }
 
-export function TrainingLibrary({ accessToken }: { accessToken: string }) {
+export function TrainingLibrary({ accessToken, onSelect, onBack }: {
+  accessToken: string; onSelect?: (entry: LibraryEntry) => void; onBack?: () => void;
+}) {
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState<Category>("training");
   const [filters, setFilters] = useState<Filters>({});
@@ -190,7 +196,7 @@ export function TrainingLibrary({ accessToken }: { accessToken: string }) {
   return <section className={styles.library} aria-label="Training library">
     <header className={styles.header}>
       <div className={styles.headerTop}>
-        <Link href="/plan" className={styles.back}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14 6-6 6 6 6" /></svg>Plan</Link>
+        {onBack ? <button className={styles.back} onClick={onBack}>← Back to plan</button> : <Link href="/plan" className={styles.back}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14 6-6 6 6 6" /></svg>Plan</Link>}
         <p className={styles.eyebrow}>UNLXCK / LIBRARY</p>
       </div>
       <h1>Find a Drill</h1>
@@ -206,12 +212,12 @@ export function TrainingLibrary({ accessToken }: { accessToken: string }) {
         Filters{count ? ` (${count})` : ""}
       </button>
     </div>
-    <div className={styles.categories} role="group" aria-label="Library category">
+    {!onSelect ? <div className={styles.categories} role="group" aria-label="Library category">
       {(["training", "rehab", "learn"] as const).map(value => <button key={value} aria-pressed={category === value}
         onClick={() => { if (value !== category) changeSearch(() => { setCategory(value); setFilters({}); }); }}>
         {value === "training" ? "Training" : value === "rehab" ? "Rehab" : "Learn"}
       </button>)}
-    </div>
+    </div> : null}
     {category !== "training" ? <p className={styles.boundary}>{boundaries[category]}</p> : null}
     <div className={styles.resultHeading}>
       <p role="status" aria-live="polite">{loading ? "Searching…" : result ? `${result.total.toLocaleString()} ${category === "learn" ? result.total === 1 ? "entry" : "entries" : result.total === 1 ? "drill" : "drills"}` : "Library unavailable"}</p>
@@ -298,6 +304,6 @@ export function TrainingLibrary({ accessToken }: { accessToken: string }) {
         </>}
       </div>
     </InjuryDetailSheet> : null}
-    {selected ? <DrillPreview key={selected.catalogue_id} entry={selected} token={accessToken} onClose={() => setSelected(null)} /> : null}
+    {selected ? <DrillPreview key={selected.catalogue_id} entry={selected} token={accessToken} onClose={() => setSelected(null)} onAdd={onSelect} selfDirected={Boolean(onSelect)} /> : null}
   </section>;
 }
