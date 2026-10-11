@@ -20,6 +20,10 @@ type Exercise = (Omit<CustomExercise, "snapshot"> & { snapshot: LibraryEntry }) 
 type Session = Omit<CustomSession, "exercises"> & { exercises: Exercise[] };
 type Draft = { id?: string; name: string; sessions: Session[]; incomplete?: boolean };
 const weekdays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"] as const;
+function orderedDraft(draft: Draft): Draft {
+  const day = (session: Session) => session.weekday ? weekdays.indexOf(session.weekday) : 7;
+  return { ...draft, sessions: [...draft.sessions].sort((a, b) => day(a) - day(b)) };
+}
 const nameOf = (e: Exercise) => (e.origin === "manual" ? e.name : e.snapshot.name);
 function PencilIcon() {
   return (
@@ -88,7 +92,7 @@ export function CustomPlanBuilder({ accessToken, planId }: { accessToken: string
           loaded.current = true;
           setOpened(true);
           setError(undefined);
-          setDraft(plan);
+          setDraft(orderedDraft(plan));
           setDirty(false);
           window.scrollTo(0, 0);
         }
@@ -154,7 +158,7 @@ export function CustomPlanBuilder({ accessToken, planId }: { accessToken: string
     };
   }, [unsaved, router]);
   function change(next: Draft) {
-    setDraft(next);
+    setDraft(orderedDraft(next));
     setDirty(true);
     setMessage(undefined);
   }
@@ -230,7 +234,7 @@ export function CustomPlanBuilder({ accessToken, planId }: { accessToken: string
       );
       if (!mounted.current) return;
       await releaseGuard.current();
-      setDraft(saved);
+      setDraft(orderedDraft(saved));
       setOpened(true);
       setDirty(false);
       setMessage(saved.incomplete ? "Draft saved. Complete any unfinished doses when ready." : "Plan saved.");

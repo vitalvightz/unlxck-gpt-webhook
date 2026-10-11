@@ -74,9 +74,9 @@ def test_owner_crud_preserves_order_identity_and_generated_state(api, identities
     assert edited.status_code == 200, edited.text
     reopened = client.get(path, headers=AUTH).json()
     assert reopened["name"] == body["name"]
-    assert [session["id"] for session in reopened["sessions"]] == [session["id"] for session in body["sessions"]]
-    assert [exercise["id"] for exercise in reopened["sessions"][1]["exercises"]] == [exercise["id"] for exercise in body["sessions"][1]["exercises"]]
-    assert reopened["sessions"][1]["exercises"][0]["dose"]["duration_seconds"] == 30
+    assert [session["id"] for session in reopened["sessions"]] == [session["id"] for session in reversed(body["sessions"])]
+    assert [exercise["id"] for exercise in reopened["sessions"][0]["exercises"]] == [exercise["id"] for exercise in body["sessions"][1]["exercises"]]
+    assert reopened["sessions"][0]["exercises"][0]["dose"]["duration_seconds"] == 30
     assert client.delete(path, headers=AUTH).status_code == 204
     assert client.get(path, headers=AUTH).status_code == 404
     assert client.get(URL, headers=AUTH).json() == []
@@ -340,3 +340,23 @@ def test_new_dose_validation(api, dose):
         ],
     }
     assert client.post(URL, headers=AUTH, json=body).status_code == 422
+
+
+def test_calendar_order_is_stable_on_save_and_legacy_reads(api):
+    client, store = api
+    days = ['Sunday', None, 'Wednesday', 'Monday', 'Friday', 'Monday', 'Tuesday', 'Saturday', 'Thursday', None]
+    sessions = [{'id': str(uuid4()), 'name': f'Session {i}', 'weekday': day, 'exercises': [
+        {'id': str(uuid4()), 'origin': 'manual', 'name': name, 'dose': {'mode': 'reps', 'sets': 2, 'reps': 5}}
+        for name in ('Second drill', 'First drill')]} for i, day in enumerate(days)]
+    response = client.post(URL, headers=AUTH, json={'name': 'Out of order', 'sessions': sessions})
+    assert response.status_code == 201
+    plan = response.json()
+    expected = [3, 5, 6, 2, 8, 4, 7, 0, 1, 9]
+    assert [session['id'] for session in plan['sessions']] == [sessions[i]['id'] for i in expected]
+    assert [session['id'] for session in store.custom_plans[plan['id']]['sessions']] == [sessions[i]['id'] for i in expected]
+    assert all([e['name'] for e in s['exercises']] == ['Second drill', 'First drill'] for s in plan['sessions'])
+    # Older saved records are ordered on read without changing their identities.
+    store.custom_plans[plan['id']]['sessions'] = [plan['sessions'][expected.index(i)] for i in range(len(days))]
+    reopened = client.get(f"{URL}/{plan['id']}", headers=AUTH).json()
+    listed = client.get(URL, headers=AUTH).json()[0]
+    assert reopened['sessions'] == listed['sessions'] == plan['sessions']

@@ -90,7 +90,10 @@ Only spacing, grid layout and media sizing are new CSS. Clip fields collapse aft
 verification; alternate source selection sits in a disclosure. Athlete UI contains no
 storage paths, processing internals or validation metadata. Desktop sessions use
 Today's two-column rhythm; the existing sheet places settings beside the preview
-on desktop while retaining the compact mobile stack.
+on desktop while retaining the compact mobile stack. Sessions always appear
+Monday through Sunday, with unassigned sessions last. Same-day session order and
+exercise order are preserved. API reads also order older saved plans without an
+identity rewrite; saves persist calendar order.
 
 Relevant checks:
 

@@ -480,3 +480,28 @@ test("Saved-plan failures are visible and retryable", async ({ page, baseURL }) 
   await page.getByRole("button", { name: "Retry custom plans" }).click();
   await expect(page.getByText("No saved custom plans yet. Build your own training week.")).toBeVisible();
 });
+
+for (const width of [390, 1280]) {
+  test(`Sessions stay in calendar order before save and after reopening (${width}px)`, async ({ page, baseURL }) => {
+    await page.setViewportSize({ width, height: 844 });
+    const { saved } = await setup(page, baseURL!);
+    await page.goto('/plans/custom');
+    const days = ['Sunday', 'Friday', 'Monday', 'Wednesday', 'Tuesday', 'Thursday', 'Saturday', 'Monday', null];
+    for (const [index, day] of days.entries()) {
+      await page.getByRole('button', { name: '+ Add Session', exact: true }).click();
+      await page.getByRole('button', { name: `Edit session ${index + 1}`, exact: true }).click();
+      await page.getByLabel('Session name', { exact: true }).fill(`Day ${index}`);
+      await page.getByLabel('Day', { exact: true }).selectOption(day ?? '');
+      await page.getByRole('button', { name: 'Done', exact: true }).click();
+    }
+    const expected = ['Day 2', 'Day 7', 'Day 4', 'Day 3', 'Day 5', 'Day 1', 'Day 6', 'Day 0', 'Day 8'];
+    const names = page.getByRole('region', { name: /^Session \d+$/ }).getByRole('heading', { level: 2 });
+    await expect(names).toHaveText(expected);
+    await page.getByRole('button', { name: 'Save Plan', exact: true }).click();
+    await expect(page).toHaveURL(/custom\?plan=/);
+    expect([...saved.values()][0].sessions.map(session => session.name)).toEqual(expected);
+    await page.reload();
+    await expect(names).toHaveText(expected);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  });
+}
