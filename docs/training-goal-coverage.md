@@ -2,15 +2,15 @@
 
 Base: Main `371cbeed29cc20eed693f4b8abdbe5540c1cc030`.
 
-Original verified Goal coverage: **222/1,010 (22.0%)**. Added **44 assignments on 44 previously unclassified Training entries**. Updated coverage: **266/1,010 (26.3%)**. Existing assignments corrected: **0**.
+Original verified Goal coverage: **222/1,010 (22.0%)**. Added **56 assignments on 56 previously unclassified Training entries**. Updated coverage: **278/1,010 (27.5%)**. Existing assignments corrected: **0**.
 
-Assignments: 24 Coordination, 4 Balance, 2 Strength, 1 Maximal strength maintenance, 4 Power, 2 Speed, 3 Stamina, 2 Conditioning, 2 Reaction speed.
+Assignments: 24 Coordination, 4 Balance, 4 Strength, 1 Maximal strength maintenance, 8 Power, 5 Speed, 3 Stamina, 5 Conditioning, 2 Reaction speed.
 
 ## Evidence and scope
 
 Each review lives in the existing discovery-only `shared/training-metadata.json` projection and binds the original catalogue ID to its unchanged source-row SHA256 and original missing-Goal issue from PR #2822. The preview retains raw execution, method/quality, phase, intensity and dose evidence. No Goal is inferred automatically from a name, apparatus, mechanical tag, energy label or search synonym.
 
-- Strength: Back Squat and Front Squat combine explicit strength method and loaded squat movement with their existing SPP dose of 3-5 sets of 3-5 at 85-90% 1RM. This supports Strength, without claiming every GPP dose builds maximal strength.
+- Strength: Back Squat, Front Squat, Barbell Overhead Press and Cluster Set Trap Bar Deadlift combine explicit strength method and loaded squat movement with their existing SPP dose of 3-5 sets of 3-5 at 85-90% 1RM. This supports Strength, without claiming every GPP dose builds maximal strength.
 - Strength maintenance: Trap Bar Deadlift explicitly declares retention, familiarity, non-grinding execution, low volume and D-21 to D-8 restrictions.
 - Power: light/full-rest hip-driven scoop throws, crisp low-volume Olympic lifting, explicit BikeErg power-adaptation repeats and explosive airborne push-ups with full rests.
 - Speed: explicit sprint acceleration qualities with maximum-speed/full-rest programming, and punch-fast/release instructions with a handspeed cue and short sets.
@@ -19,7 +19,7 @@ Each review lives in the existing discovery-only `shared/training-metadata.json`
 - Reaction speed: an unpredictable partner toss cue or explicit coach go-cue initiates repeated responses with recovery. Generic reactive/rebound mechanisms are excluded.
 - Coordination/Balance: explicit sequencing, limb-timing, landing and stance-recovery purposes are practised for eight minutes at RPE 4.
 
-Programming context is retained only for the five strength-bank reviews that need it, with the exact existing classifier, phase, archetype, dose, source file and source hash. This is a review receipt, not a programming change.
+Programming context is retained only for the seven strength-bank reviews that need it, with the exact existing classifier, phase, archetype, dose, source file and source hash. This is a review receipt, not a programming change.
 
 ## Exact catalogue records
 
@@ -70,6 +70,19 @@ Programming context is retained only for the five strength-bank reviews that nee
 | `conditioning_bank.json:2c6f32bb-6455-4af3-b9af-4430dc3a5315` | Reactive Med Ball Chest Pass | Reaction speed | Partner gives unpredictable toss cue. Ball: 3–5kg. Emphasize snap.; 6x3 reps, 45s rest |
 | `conditioning_bank.json:867b1778-d022-4cd8-8d4c-39ec00cc0d36` | Wall Reactive Jump (Cue Start) | Reaction speed | Start facing wall, coach gives go-cue. Jump straight up.; 5x3 reps, 1min rest |
 
+| `conditioning_bank.json:283e927e-1dd4-4ab3-8588-5e60e13f44f1` | Seated Med Ball Chest Pop | Power | Seated on floor, rapid chest-level throws. Partner return or wall.; 4x5 reps, 45s rest |
+| `conditioning_bank.json:1a52c18d-90f2-40d7-bfb3-4aaa9f491164` | Band-Resisted Broad Jump | Power | Hamstring: ease band tension and range if the posterior chain feels tight. Land soft, full reset between reps.; 6x3 reps, 1:8 rest |
+| `conditioning_bank.json:73c8cfb6-4e21-41ff-9018-99ca0a7922a2` | Box Jump (Max Height) | Power | Box height 24-30". Max height intent, full reset between reps.; 6x3 reps, 90s rest |
+| `conditioning_bank.json:379423d7-c259-40e6-9401-91abaa9a22f6` | Clap Push-Up Sprints | Power | 6x5 reps + 10yd sprint, 2min rest |
+| `conditioning_bank.json:36e5c3e8-defd-428d-89e9-e0c3ef41a2e2` | Band-Resisted Vertical Jump | Speed | Use light resistance bands. Emphasize speed over height.; 5x3 reps, 90s rest |
+| `conditioning_bank.json:6094ad21-7d58-418a-b28e-04d106cf73fd` | Explosive Boxing Burst Intervals | Speed | Short glove-free boxing bursts: jab-cross, angle out, reset. Stop while it still feels crisp.; 3-4 x 6 sec, 90s rest |
+| `conditioning_bank.json:1d9e3a60-449f-429d-9ff5-c7b7c336836e` | Split-Step Ankle Snap Pogo | Speed | Low-amplitude ankle snaps for quickness. Keep contacts crisp and brief.; 2–4 x 5–8s or 6–10 contacts, full rest |
+| `conditioning_bank.json:61710abe-e41e-4545-9abb-7e39c0910acf` | Versa Climber EMOM Capacity | Conditioning | 15min EMOM: 12 floors |
+| `conditioning_bank.json:0d1e01ca-0883-404c-8d6d-dffc2be098ea` | Double-End Bag Circuit | Conditioning | 5x2min rounds with 30s transitions |
+| `conditioning_bank.json:720ad3a8-0411-4036-8878-4173b374c172` | Shadowboxing Power Bursts | Conditioning | Max-speed combos. No pacing (RPE 9); 10x15s on/45s off |
+| `exercise_bank.json:ab64c3ed-5f2d-48bb-b9d4-c391c8712e72` | Cluster Set Trap Bar Deadlift | Strength | strength; SPP: 3–5x3–5 @ 85–90% 1RM with contrast training (pair with explosive move). |
+| `exercise_bank.json:bbcbe94f-27a1-484f-9ddc-c3565b29cdde` | Barbell Overhead Press | Strength | strength; SPP: 3–5x3–5 @ 85–90% 1RM with contrast training (pair with explosive move). |
+
 ## Generator and preservation
 
 Generator behaviour is unchanged. Strength scoring still matches original bank tags against athlete goals/weaknesses; conditioning and coordination still consume original bank qualities, doses and phases. None imports the discovery projection. No bank, scoring map, eligibility, priority, ranking, adaptive plan, dose, fatigue, injury rule, rehab rule, contact permission, permanent ID, exercise key or media association changes. No source identity rebinding is needed.
@@ -80,11 +93,13 @@ Original audit reports and baselines remain untouched. Historical replay exclude
 
 ## Verification
 
-- Expanded batch: 141 Goal/catalogue/library tests passed, covering every review, raw preview/API evidence, existing filters, canonical vocabulary, actual strength dose receipts, all query anchors and exclusions, stale/missing identity rejection and misleading-tag negative controls.
+- Latest 12-entry expansion: all 65 focused Goal review tests passed, including filters, preview evidence, source hashes and misleading-tag controls.
+
+- Prior expanded batch: 141 Goal/catalogue/library tests passed, covering every review, raw preview/API evidence, existing filters, canonical vocabulary, actual strength dose receipts, all query anchors and exclusions, stale/missing identity rejection and misleading-tag negative controls.
 - Ruff and TypeScript checks passed. The previous batch also passed 1,609 generator regressions; its sole Windows MemoryError passed on retry of all seven tests in that module. Planner inputs remain unchanged in this expansion.
-- Previous historical metadata compatibility run: all 14 passed. The frozen equipment-report check is rerun for this expansion; original reports are not refreshed.
+- Previous historical metadata compatibility run: all 14 passed. The frozen equipment-report check passed for the prior expansion; original reports are not refreshed.
 - Existing frontend interaction tests cover Goal selection and preview evidence. Hosted CI runs full build and regression checks on the updated PR; no additional inventory or full audit report is generated.
 
 ## Remaining limitations
 
-**744 Training entries remain without verified Goals.** A generic strength method without a verified dose does not establish maximal strength; gripping does not establish Grip Strength; aerobic demand alone does not establish aerobic development. Less-specific technical practice entries and candidates with insufficient purpose/dose evidence remain unresolved. There is no coverage quota, programming migration or efficacy-certification claim.
+**732 Training entries remain without verified Goals.** A generic strength method without a verified dose does not establish maximal strength; gripping does not establish Grip Strength; aerobic demand alone does not establish aerobic development. Less-specific technical practice entries and candidates with insufficient purpose/dose evidence remain unresolved. There is no coverage quota, programming migration or efficacy-certification claim.

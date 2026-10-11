@@ -59,8 +59,8 @@ def test_exact_new_coverage_and_no_other_facet_or_category_changes(index):
     assert base["goal_filter_entries"] == 222
     changed = {r["entry"]["catalogue_id"] for r in index.records if sorted(r["facets"]["goal"]) != base["original_facets"][r["entry"]["catalogue_id"]]["goal"]}
     assert changed == {r["catalogue_id"] for r in REVIEWS}
-    assert len(changed) == 44
-    assert sum(bool(r["facets"]["goal"]) for r in index.records if r["summary"]["category"] == "training") == 266
+    assert len(changed) == 56
+    assert sum(bool(r["facets"]["goal"]) for r in index.records if r["summary"]["category"] == "training") == 278
 
 
 @pytest.mark.parametrize("raw", [
