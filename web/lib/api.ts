@@ -1481,3 +1481,25 @@ export function deletePushSubscription(token: string, endpoint: string): Promise
 export function getCustomDoseSuggestion(token: string, catalogueId: string) {
  return readJson<CustomDoseSuggestion>(`/api/custom-plans/source-suggestion?catalogue_id=${encodeURIComponent(catalogueId)}`, { token });
 }
+import type { CommunityDraft, CommunityDecision, CommunityEntry, CommunitySearch } from './api-schema.generated';
+export function listCommunityExercises(token: string, scope: 'public' | 'review' | 'mine', query = '', offset = 0, signal?: AbortSignal) {
+  return readJson<CommunitySearch>(`/api/community-exercises${scope === 'public' ? '' : `/${scope}`}?q=${encodeURIComponent(query)}&offset=${offset}`, { token, signal });
+}
+export function getCommunityExercise(token: string, id: string, scope: 'revisions' | 'review' | 'owned' = 'revisions', signal?: AbortSignal) {
+  return readJson<CommunityEntry>(`/api/community-exercises/${scope}/${id}`, { token, signal });
+}
+export function saveCommunityDraft(token: string, body: CommunityDraft, reviewRevision?: string) {
+  return readJson<CommunityEntry>(reviewRevision ? `/api/community-exercises/review/${reviewRevision}` : '/api/community-exercises/drafts', { token, method: reviewRevision ? 'PUT' : 'POST', body: JSON.stringify(body) });
+}
+export function submitCommunityExercise(token: string, revision: string) {
+  return readJson<CommunityEntry>(`/api/community-exercises/revisions/${revision}/submit`, { token, method: 'POST', body: JSON.stringify({ share_rights: true, attribution_consent: true }) });
+}
+export function decideCommunityExercise(token: string, revision: string, body: CommunityDecision) {
+  return readJson<CommunityEntry>(`/api/community-exercises/review/${revision}`, { token, method: 'POST', body: JSON.stringify(body) });
+}
+export function withdrawCommunityExercise(token: string, revision: string) {
+  return readJson<CommunityEntry>(`/api/community-exercises/revisions/${revision}/withdraw`, { token, method: 'POST' });
+}
+export function reportCommunityExercise(token: string, revision: string, reason: string) {
+  return requestVoid(`/api/community-exercises/revisions/${revision}/report`, { token, method: 'POST', body: JSON.stringify({ reason }) });
+}

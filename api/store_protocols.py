@@ -662,6 +662,10 @@ class ExerciseMediaStore(Protocol):
     ) -> None: ...
 
 
+class CommunityStore(Protocol):
+    def community_rpc(self, name: str, params: dict[str, Any]) -> Any: ...
+
+
 class PrivateMediaStore(Protocol):
     def private_media_worker_healthy(self) -> bool: ...
     def claim_private_media_budget(self, athlete_id: str) -> None: ...
@@ -688,6 +692,7 @@ class AppStore(
     FeedbackStore,
     ExerciseMediaStore,
     PrivateMediaStore,
+    CommunityStore,
     Protocol,
 ):
     """Everything the app, worker and routes persist."""

@@ -356,6 +356,65 @@ export type CommandViewToday = {
   completion_status: "done" | "modified" | "not_started" | "skipped" | "started";
 };
 
+export type CommunityContributor = {
+  username: string;
+  avatar_url: string | null;
+};
+
+export type CommunityDecision = {
+  action: "approve" | "confirm" | "dismiss_report" | "reject" | "remove" | "request_changes" | "verify";
+  reason?: string | null;
+  report_id?: string | null;
+  final_confirmation?: boolean;
+};
+
+export type CommunityDraft = {
+  exercise_id?: string | null;
+  expected_revision_id?: string | null;
+  name: string;
+  equipment?: string | null;
+  notes?: string | null;
+  media_id?: string | null;
+};
+
+export type CommunityEntry = {
+  id: string;
+  revision_id: string;
+  name: string;
+  equipment: string | null;
+  notes: string | null;
+  media_id: string | null;
+  status: "changes_requested" | "in_review" | "private" | "published" | "rejected" | "superseded";
+  submitted_at: string | null;
+  created_at: string;
+  reason: string | null;
+  verified: boolean;
+  confirmed: boolean;
+  published: boolean;
+  has_publication: boolean;
+  contributor: CommunityContributor | null;
+  media: PrivateMediaPreview | null;
+  thumbnail: string | null;
+  audit: Record<string, unknown>[];
+  reports: Record<string, unknown>[];
+  prescription_allowed: false;
+};
+
+export type CommunityReport = {
+  reason: string;
+};
+
+export type CommunitySearch = {
+  entries: CommunityEntry[];
+  total: number;
+  next_offset: number | null;
+};
+
+export type CommunitySubmission = {
+  share_rights: true;
+  attribution_consent: true;
+};
+
 /** Post-session completion log (Section P). */
 export type Completion = {
   session_rpe: number | null;
@@ -1145,6 +1204,8 @@ export type ManualExercise = {
   equipment: string | null;
   notes: string | null;
   media_id: string | null;
+  community_id: string | null;
+  community_revision_id: string | null;
   dose: CustomDose;
   incomplete: boolean;
 };
@@ -1156,6 +1217,8 @@ export type ManualExerciseInput = {
   equipment?: string | null;
   notes?: string | null;
   media_id?: string | null;
+  community_id?: string | null;
+  community_revision_id?: string | null;
   dose?: CustomDoseRequest;
 };
 

@@ -5,6 +5,10 @@ on:
       - 'api/**private_media*.py'
       - 'media_processor/**'
       - 'tools/*private_media*'
+      - 'tools/*community_exercise*'
+      - 'api/**community*.py'
+      - 'supabase/migrations/*community_exercise*.sql'
+      - 'supabase/migrations/*community_review*.sql'
       - 'supabase/migrations/*private_exercise_media.sql'
       - 'supabase/migrations/*private_media*.sql'
       - '.github/workflows/private-media.yml'
@@ -31,4 +35,6 @@ jobs:
       - name: Install isolated PostgreSQL runtime outside the checkout
         run: npm install --prefix "$RUNNER_TEMP/media-sql" @electric-sql/pglite@0.5.8
       - name: Check ownership, storage RLS, quotas and retention
-        run: node tools/test_private_media_migration.mjs "$RUNNER_TEMP/media-sql"
+        run: |
+          node tools/test_private_media_migration.mjs "$RUNNER_TEMP/media-sql"
+          node tools/test_community_exercise_migration.mjs "$RUNNER_TEMP/media-sql"

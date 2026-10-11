@@ -179,6 +179,7 @@ def test_index_requirement_satisfied_by_constraint_alias():
         "external_training_sessions_athlete_day_idx",
         "custom_training_plans_athlete_updated_idx",
         "private_video_assets_owner_created_idx",
+        "community_revision_queue_idx", "community_exercises_creator_idx",
         "private_exercise_media_owner_idx",
         "private_media_budget_owner_created_idx",
         "injury_episode_events_delayed_once_idx",

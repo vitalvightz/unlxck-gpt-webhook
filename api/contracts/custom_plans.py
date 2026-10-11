@@ -92,6 +92,8 @@ class ManualExerciseInput(DraftModel):
     equipment: str | None = Field(None, max_length=120)
     notes: str | None = Field(None, max_length=2000)
     media_id: UUID | None = None
+    community_id: UUID | None = None
+    community_revision_id: UUID | None = None
     dose: CustomDose = Field(default_factory=CustomDose)
 
 

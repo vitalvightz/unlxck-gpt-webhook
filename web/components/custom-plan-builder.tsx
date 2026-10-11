@@ -13,6 +13,7 @@ import type {
 import { InjuryDetailSheet } from "./today/injury-detail-sheet";
 import { DrillPreview, TrainingLibrary } from "./training-library";
 import { CustomDoseEditor } from "./custom-dose-editor";
+import { CommunityContributionSheet, CommunityExercisePreview } from "./community-exercises";
 import { PrivateExerciseVideo, PrivateExerciseVideoSheet } from "./private-exercise-video";
 import { blankDose, doseSummary } from "@/lib/custom-plan-dose";
 import styles from "./custom-plan-builder.module.css";
@@ -57,7 +58,7 @@ export function CustomPlanBuilder({ accessToken, planId }: { accessToken: string
     }>();
   const [sessionEdit, setSessionEdit] = useState<Session>(),
     [preview, setPreview] = useState<LibraryEntry>();
-  const [videoOpen, setVideoOpen] = useState(false);
+  const [videoOpen, setVideoOpen] = useState(false), [communityOpen, setCommunityOpen] = useState(false), [communityPreview, setCommunityPreview] = useState<string>();
   const [suggestion, setSuggestion] = useState<CustomDoseSuggestion>(),
     [suggestionError, setSuggestionError] = useState<string>(),
     [suggesting, setSuggesting] = useState(false);
@@ -219,6 +220,8 @@ export function CustomPlanBuilder({ accessToken, planId }: { accessToken: string
                     equipment: e.equipment,
                     notes: e.notes,
                     media_id: e.media_id,
+                    community_id: e.community_id,
+                    community_revision_id: e.community_revision_id,
                     dose: e.dose,
                   }
                 : {
@@ -274,6 +277,12 @@ export function CustomPlanBuilder({ accessToken, planId }: { accessToken: string
       <TrainingLibrary
         accessToken={accessToken}
         onBack={() => setSelecting(undefined)}
+        onSelectCommunity={(entry) => {
+          sessionChange(selecting, s => ({ ...s, exercises: [...s.exercises, { id: crypto.randomUUID(), origin: 'manual', name: entry.name,
+            equipment: entry.equipment, notes: entry.notes, media_id: null, community_id: null, community_revision_id: entry.revision_id,
+            incomplete: true, dose: blankDose() }] }));
+          setSelecting(undefined);
+        }}
         onSelect={(entry) => {
           if (entry.category !== "training") return;
           sessionChange(selecting, (s) => ({
@@ -400,6 +409,8 @@ export function CustomPlanBuilder({ accessToken, planId }: { accessToken: string
                         equipment: null,
                         notes: null,
                         media_id: null,
+                        community_id: null,
+                        community_revision_id: null,
                         dose: blankDose(),
                         incomplete: true,
                       },
@@ -584,6 +595,8 @@ export function CustomPlanBuilder({ accessToken, planId }: { accessToken: string
                     />
                   </label>
                 ))}
+                {editing.exercise.community_revision_id ? <button type="button" className="ghost-button" onClick={() => setCommunityPreview(editing.exercise.origin === 'manual' ? editing.exercise.community_revision_id ?? undefined : undefined)}>View community exercise</button> :
+                  <button type="button" className="ghost-button" disabled={!editing.exercise.name.trim()} onClick={() => setCommunityOpen(true)}>{editing.exercise.community_id ? 'Community submission' : 'Community · Private'}</button>}
                 {editing.exercise.media_id ? <PrivateExerciseVideo token={accessToken} id={editing.exercise.media_id} name={editing.exercise.name} /> : null}
                 <button type="button" className="ghost-button" onClick={() => setVideoOpen(true)}>
                   {editing.exercise.media_id ? "Replace video" : "Add video (optional)"}
@@ -704,11 +717,14 @@ export function CustomPlanBuilder({ accessToken, planId }: { accessToken: string
       {preview ? (
         <DrillPreview entry={preview} token={accessToken} onClose={() => setPreview(undefined)} selfDirected />
       ) : null}
+      {communityOpen && editing?.exercise.origin === 'manual' ? <CommunityContributionSheet key={accessToken} token={accessToken} exercise={editing.exercise} onClose={() => setCommunityOpen(false)}
+        onIdentity={id => setEditing(current => current?.exercise.origin === 'manual' ? { ...current, exercise: { ...current.exercise, community_id: id } } : current)} /> : null}
+      {communityPreview ? <CommunityExercisePreview key={`${accessToken}:${communityPreview}`} token={accessToken} revision={communityPreview} onClose={() => setCommunityPreview(undefined)} /> : null}
       {videoOpen && editing?.exercise.origin === "manual" ? <PrivateExerciseVideoSheet
         token={accessToken} name={editing.exercise.name || "My exercise"} onClose={() => setVideoOpen(false)}
         onAttach={(media_id) => {
           setEditing((current) => current?.exercise.origin === "manual" ? {
-            ...current, exercise: { ...current.exercise, media_id },
+            ...current, exercise: { ...current.exercise, media_id, community_revision_id: null },
           } : current);
           setVideoOpen(false);
         }} /> : null}

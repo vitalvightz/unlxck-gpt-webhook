@@ -1,6 +1,8 @@
 "use client";
 
 import Link from "next/link";
+import { CommunityDiscovery } from "./community-exercises";
+import type { CommunityEntry } from "@/lib/api-schema.generated";
 import { useEffect, useRef, useState } from "react";
 import { ApiError, getTrainingLibraryEntry, searchTrainingLibrary } from "@/lib/api";
 import type { LibraryEntry, LibraryPreview, LibrarySearchResponse } from "@/lib/api-schema.generated";
@@ -88,8 +90,8 @@ export function DrillPreview({ entry, token, onClose, onAdd, selfDirected = fals
   </InjuryDetailSheet>;
 }
 
-export function TrainingLibrary({ accessToken, onSelect, onBack }: {
-  accessToken: string; onSelect?: (entry: LibraryEntry) => void; onBack?: () => void;
+export function TrainingLibrary({ accessToken, onSelect, onBack, onSelectCommunity }: {
+  accessToken: string; onSelect?: (entry: LibraryEntry) => void; onBack?: () => void; onSelectCommunity?: (entry: CommunityEntry) => void;
 }) {
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState<Category>("training");
@@ -262,6 +264,7 @@ export function TrainingLibrary({ accessToken, onSelect, onBack }: {
       </div>}
       {result.next_offset !== null ? <button className={`secondary-button ${styles.more}`} disabled={paging} onClick={() => void more()}>{paging ? "Loading…" : "Load more"}</button> : null}
     </> : null}
+    {category === "training" && !count ? <CommunityDiscovery key={accessToken} token={accessToken} query={query} onAdd={onSelectCommunity} /> : null}
     {filterOpen ? <InjuryDetailSheet title={picker ? filterLabels[picker] : "Filters"} onClose={closeFilters} closeLabel="Close filters">
       <div className={`injury-sheet-body ${styles.filters}`}>
         {picker ? <>

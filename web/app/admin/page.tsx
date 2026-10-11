@@ -6,6 +6,7 @@ import Link from "next/link";
 import { RequireAuth } from "@/components/auth-guard";
 import { useAppSession } from "@/components/auth-provider";
 import { EmptyState } from "@/components/empty-state";
+import { AdminCommunityQueue } from "@/components/admin-community-queue";
 import { AdminQueue, AdminQueueList } from "@/components/admin-queue";
 import { AdminFeedbackPanel } from "@/components/admin-feedback-panel";
 import { formatAppDate, formatAppDateTime } from "@/lib/date-format";
@@ -748,6 +749,7 @@ export default function AdminPage() {
         </div>
 
 
+        {isAdminReady && token ? <AdminCommunityQueue key={token} token={token} /> : null}
         <AdminQueue className="admin-active-panel" header={(
           <div className="form-section-header">
             <div>
