@@ -143,3 +143,20 @@ test('Reject and request changes use visible, reason-gated confirmation sheets',
   expect(actions).toContain('reject');
   expect(await review.evaluate(el=>el.scrollWidth<=el.clientWidth)).toBe(true);
 });
+
+test('Unsaved-plan submissions can be corrected from My submissions',async({page,baseURL})=>{
+  await setup(page,baseURL!);
+  const actions=await mockCommunity(page,entry('changes_requested'));
+  await page.goto('/plans');
+  await page.getByRole('button',{name:'My submissions',exact:true}).click();
+  await expect(page.getByText('My defensive drill',{exact:true})).toBeVisible();
+  await page.getByRole('button',{name:'Manage',exact:true}).click();
+  const sheet=page.getByRole('dialog',{name:'Community exercise'});
+  await sheet.getByText('Edit exercise or video',{exact:true}).click();
+  await sheet.getByLabel('Exercise name',{exact:true}).fill('My corrected drill');
+  await expect(sheet.getByRole('button',{name:'Update community submission'})).toBeDisabled();
+  await sheet.getByRole('checkbox').nth(0).check();await sheet.getByRole('checkbox').nth(1).check();
+  await sheet.getByRole('button',{name:'Update community submission'}).click();
+  await expect(sheet.getByText('In review',{exact:true})).toBeVisible();
+  expect(actions).toEqual(['draft','submit']);
+});

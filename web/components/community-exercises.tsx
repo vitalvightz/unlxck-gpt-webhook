@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { getCommunityExercise, saveCommunityDraft, submitCommunityExercise, withdrawCommunityExercise, reportCommunityExercise, listCommunityExercises } from '@/lib/api';
 import type { CommunityEntry, CommunitySearch, ManualExercise } from '@/lib/api-schema.generated';
 import { InjuryDetailSheet } from './today/injury-detail-sheet';
-import { PrivateExerciseVideo, PrivateVideoPlayer } from './private-exercise-video';
+import { PrivateExerciseVideo, PrivateExerciseVideoSheet, PrivateVideoPlayer } from './private-exercise-video';
 import { blankDose } from '@/lib/custom-plan-dose';
 import { ExerciseGlyphIcon } from './exercise-glyph';
 import library from './training-library.module.css';
@@ -25,9 +25,12 @@ export function communityDetailsChanged(entry: CommunityEntry, exercise: ManualE
     (entry.notes ?? '') !== (exercise.notes ?? '') ||
     (entry.media_id ?? null) !== (exercise.media_id ?? null);
 }
-export function CommunityContributionSheet({ token, exercise, onClose, onIdentity }: {
-  token: string; exercise: ManualExercise; onClose: () => void; onIdentity: (id: string) => void;
+export function CommunityContributionSheet({ token, exercise, onClose, onIdentity, standalone = false }: {
+  token: string; exercise: ManualExercise; onClose: () => void; onIdentity: (id: string) => void; standalone?: boolean;
 }) {
+  const [workingExercise, setWorkingExercise] = useState(exercise);
+  const [editVideoOpen, setEditVideoOpen] = useState(false);
+  const candidate = standalone ? workingExercise : exercise;
   const [entry, setEntry] = useState<CommunityEntry>(), [loading, setLoading] = useState(Boolean(exercise.community_id));
   const [busy, setBusy] = useState(false), [error, setError] = useState<string>(), [rights, setRights] = useState(false), [consent, setConsent] = useState(false), [retry, setRetry] = useState(0);
   useEffect(() => {
@@ -38,32 +41,39 @@ export function CommunityContributionSheet({ token, exercise, onClose, onIdentit
     }).catch(reason => { if (!controller.signal.aborted) setError(communityError(reason)); }).finally(() => { if (!controller.signal.aborted) setLoading(false); });
     return () => controller.abort();
   }, [token, exercise.community_id, entry?.id, retry]);
-  const changed = entry ? communityDetailsChanged(entry, exercise) : false;
-  const videoChanged = Boolean(entry && (entry.media_id ?? null) !== (exercise.media_id ?? null));
+  const changed = entry ? communityDetailsChanged(entry, candidate) : false;
+  const videoChanged = Boolean(entry && (entry.media_id ?? null) !== (candidate.media_id ?? null));
   const canSubmit = !entry || changed || ['private', 'changes_requested', 'rejected'].includes(entry.status);
   async function save(submit: boolean) {
     setBusy(true); setError(undefined);
     try {
       let current = entry;
       if (!current || changed) {
-        current = await saveCommunityDraft(token, { exercise_id: current?.id ?? null, expected_revision_id: current?.revision_id ?? null, name: exercise.name, equipment: exercise.equipment ?? null, notes: exercise.notes ?? null, media_id: exercise.media_id ?? null });
+        current = await saveCommunityDraft(token, { exercise_id: current?.id ?? null, expected_revision_id: current?.revision_id ?? null, name: candidate.name, equipment: candidate.equipment ?? null, notes: candidate.notes ?? null, media_id: candidate.media_id ?? null });
         setEntry(current); onIdentity(current.id);
       }
       if (submit) current = await submitCommunityExercise(token, current.revision_id);
       setEntry(current); setRights(false); setConsent(false);
     } catch (reason) { setError(communityError(reason)); } finally { setBusy(false); }
   }
-  return <InjuryDetailSheet title="Community exercise" onClose={onClose} busy={busy}><div className={`${fields.sheet} ${layout.stack}`}>
-    <div><strong>{exercise.name}</strong><p className="muted">{entry ? communityStatus(entry.status) : 'Private'}</p></div>
+  return <><InjuryDetailSheet title="Community exercise" onClose={onClose} busy={busy}><div className={`${fields.sheet} ${layout.stack}`}>
+    <div><strong>{candidate.name}</strong><p className="muted">{entry ? communityStatus(entry.status) : 'Private'}</p></div>
     {entry?.reason ? <p>{entry.reason}</p> : null}
     {error ? <div role="alert"><p>{error}</p>{exercise.community_id && !entry ? <button type="button" className="secondary-button" onClick={() => { setLoading(true); setRetry(n => n + 1); }}>Retry</button> : null}</div> : null}
     {loading ? <p role="status">Opening submission…</p> : <>
-      {videoChanged ? <p role="status" className={layout.notice}>Video not included in community submission yet. Your saved plan keeps its own video until you submit an update.</p> : null}
+      {standalone ? <details><summary>Edit exercise or video</summary><div className={layout.stack}>
+        {(['name', 'equipment', 'notes'] as const).map(field => <label key={field}><span>{field === 'name' ? 'Exercise name' : field === 'notes' ? 'Instructions' : 'Equipment'}</span>
+          <input value={candidate[field] ?? ''} required={field === 'name'} maxLength={field === 'name' ? 100 : field === 'notes' ? 2000 : 120}
+            onChange={event => setWorkingExercise(current => ({ ...current, [field]: event.target.value }))} /></label>)}
+        <button type="button" className="ghost-button" onClick={() => setEditVideoOpen(true)}>{candidate.media_id ? 'Replace video' : 'Add video'}</button>
+        {candidate.media_id ? <button type="button" className="ghost-button" onClick={() => setWorkingExercise(current => ({ ...current, media_id: null }))}>Remove video</button> : null}
+      </div></details> : null}
+      {videoChanged ? <p role="status" className={layout.notice}>Video not included in community submission yet. Update this revision to send your new video for review.</p> : null}
       {changed && !videoChanged ? <p role="status" className={layout.notice}>Your exercise details have changed since this submission. Update it for another review.</p> : null}
       {entry?.media_id ? entry.media ? <><p className="muted">Video currently submitted for review</p><PrivateVideoPlayer key={entry.revision_id} media={entry.media} name={entry.name} /></> :
         <p role="alert">The submitted video cannot be previewed. Do not publish until it is available.</p> :
         <p className="muted">No video attached to this community submission.</p>}
-      {videoChanged && exercise.media_id ? <><p className="muted">New video in your private exercise</p><PrivateExerciseVideo token={token} id={exercise.media_id} name={exercise.name} /></> : null}
+      {videoChanged && candidate.media_id ? <><p className="muted">New video in your private exercise</p><PrivateExerciseVideo token={token} id={candidate.media_id} name={candidate.name} /></> : null}
       {canSubmit ? <>
         <p className="muted">{changed ? 'A new revision will require fresh admin approval. Your previous publication stays unchanged until then.' : 'Approval makes this exercise public.'}</p>
         <label className={layout.check}><input type="checkbox" checked={rights} disabled={busy} onChange={e => setRights(e.target.checked)} /><span>I have permission to share this exercise and any video.</span></label>
@@ -74,7 +84,10 @@ export function CommunityContributionSheet({ token, exercise, onClose, onIdentit
         setBusy(true); setError(undefined); try { setEntry(await withdrawCommunityExercise(token, entry.revision_id)); } catch (reason) { setError(communityError(reason)); } finally { setBusy(false); }
       }}>Withdraw submission and public credit</button></details> : null}
     </>}
-  </div></InjuryDetailSheet>;
+  </div></InjuryDetailSheet>
+    {standalone && editVideoOpen ? <PrivateExerciseVideoSheet token={token} name={candidate.name || 'My exercise'}
+      onClose={() => setEditVideoOpen(false)} onAttach={id => { setWorkingExercise(current => ({ ...current, media_id: id })); setEditVideoOpen(false); }} /> : null}
+  </>;
 }
 export function CommunityExercisePreview({ token, revision, onClose, onAdd }: { token: string; revision: string; onClose: () => void; onAdd?: (entry: CommunityEntry) => void }) {
   const [entry, setEntry] = useState<CommunityEntry>(), [error, setError] = useState<string>(), [retry, setRetry] = useState(0);
@@ -165,7 +178,7 @@ export function MyCommunitySubmissions({ token }: { token: string }) {
       </div>)}
       {nextOffset != null ? <button type="button" className="secondary-button" disabled={loading} onClick={() => setOffset(nextOffset)}>Load more</button> : null}
     </div> : null}
-    {exercise && selected ? <CommunityContributionSheet key={selected.revision_id} token={token} exercise={exercise}
+    {exercise && selected ? <CommunityContributionSheet key={selected.revision_id} token={token} exercise={exercise} standalone
       onIdentity={() => undefined} onClose={() => { setSelected(undefined); reload(); }} /> : null}
   </div>;
 }
