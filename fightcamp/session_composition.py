@@ -1826,6 +1826,25 @@ def _conditioning_role_is_hard_spar_adjacent(week: dict[str, Any], role: dict[st
     )
 
 
+def _option_metadata(option: dict[str, Any]) -> dict[str, Any]:
+    metadata = option.get("selection_metadata")
+    return metadata if isinstance(metadata, dict) else option
+
+
+def _conditioning_option_has_authority(option: dict[str, Any]) -> bool:
+    """A conditioning option may fill a system role only with fulfilment authority."""
+    authority = option.get("fulfillment_authority")
+    if authority is not None:
+        return authority is True
+    metadata = _option_metadata(option)
+    return has_meaningful_fulfillment_authority(
+        metadata,
+        source_kind="conditioning",
+        source=str(metadata.get("_schema_source") or ""),
+        allow_legacy_unstamped=True,
+    )
+
+
 def _is_low_load_support_role(role: dict[str, Any]) -> bool:
     """An unused day upgraded to low-load support (mobility, recovery flush,
     rehab-friendly or low-aerobic gas tank). Its contract is the role's own
@@ -1908,33 +1927,18 @@ def compose_normal_conditioning_assignments(
                 if not isinstance(slot, dict) or str(slot.get("role") or "").strip().lower() != preferred_system:
                     continue
                 option = slot.get("selected")
-                if not isinstance(option, dict):
-                    continue
-                metadata = option.get("selection_metadata") if isinstance(option.get("selection_metadata"), dict) else option
-                authority = option.get("fulfillment_authority")
-                if authority is not True and not (
-                    authority is None
-                    and has_meaningful_fulfillment_authority(
-                        metadata,
-                        source_kind="conditioning",
-                        source=str(metadata.get("_schema_source") or ""),
-                        allow_legacy_unstamped=True,
-                    )
-                ):
+                if not isinstance(option, dict) or not _conditioning_option_has_authority(option):
                     continue
                 is_selected = True
-                if low_load_only and not _meets_low_load_support_contract(role, metadata):
+                if low_load_only and not _meets_low_load_support_contract(role, _option_metadata(option)):
+                    # An alternate passes every check the selected drill must.
                     option = next(
                         (
                             alternate
                             for alternate in slot.get("alternates") or []
                             if isinstance(alternate, dict)
-                            and _meets_low_load_support_contract(
-                                role,
-                                alternate.get("selection_metadata")
-                                if isinstance(alternate.get("selection_metadata"), dict)
-                                else alternate,
-                            )
+                            and _conditioning_option_has_authority(alternate)
+                            and _meets_low_load_support_contract(role, _option_metadata(alternate))
                         ),
                         None,
                     )
@@ -2570,32 +2574,58 @@ def suppress_unfilled_physical_roles(brief: dict[str, Any]) -> dict[str, Any]:
     counted as delivered training. Recovery, sparring and zero-load support
     roles are untouched.
     """
+    from .physical_session_frequency import (
+        audit_physical_session_frequency,
+        is_physical_session_role,
+        role_countdown_offset,
+        unused_day_record,
+    )
+
+    def _split(roles: list[Any], week: dict[str, Any]) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+        """Suppression rows, plus an unused-day record for every day left empty."""
+        removed = [role for role in roles if _is_unfilled_physical_role(role)]
+        roles[:] = [role for role in roles if not _is_unfilled_physical_role(role)]
+        occupied = {role_countdown_offset(role) for role in roles if is_physical_session_role(role)}
+        rows, unused = [], []
+        for role in removed:
+            d_day = role_d_day(week, role)
+            rows.append(_unfilled_role_suppression(role, d_day))
+            weekday = role.get("scheduled_day_hint") or role.get("real_weekday") or role.get("countdown_weekday")
+            if isinstance(d_day, int) and weekday and d_day not in occupied:
+                occupied.add(d_day)
+                unused.append(unused_day_record(weekday, d_day, EMPTY_PHYSICAL_SESSION_REASON))
+        return rows, unused
+
+    role_map = brief.get("weekly_role_map") or {}
     sequence = brief.get("late_fight_session_sequence")
     if isinstance(sequence, list):
         # A late-fight brief's calendar authority is its session sequence; its
         # weekly_role_map is an earlier allocation the selector never fills.
-        spec = brief.setdefault("late_fight_plan_spec", {})
-        spec["suppressed_roles"] = [
-            *(spec.get("suppressed_roles") or []),
-            *(_unfilled_role_suppression(role, role_d_day({}, role)) for role in sequence if _is_unfilled_physical_role(role)),
-        ]
-        sequence[:] = [role for role in sequence if not _is_unfilled_physical_role(role)]
+        if not any(_is_unfilled_physical_role(role) for role in sequence):
+            return brief
+        from .stage2_payload import _record_late_fight_unused_days, late_fight_sequence_budget
+
+        rows, unused = _split(sequence, {})
+        spec = brief["late_fight_plan_spec"]
+        spec["suppressed_roles"] = [*(spec.get("suppressed_roles") or []), *rows]
+        # The spec's counts and caps describe the sequence; recount them from
+        # the same owner the builder uses.
+        spec.update(late_fight_sequence_budget(sequence, spec.get("role_budget")))
+        _record_late_fight_unused_days(role_map, unused)
         return brief
-    role_map = brief.get("weekly_role_map") or {}
+
+    from .camp_week_fillers_impl import _merge_unused_day_records
+
     for week in role_map.get("weeks") or []:
         roles = week.get("session_roles") if isinstance(week, dict) else None
         if not isinstance(roles, list) or not any(_is_unfilled_physical_role(role) for role in roles):
             continue
-        week.setdefault("suppressed_roles", []).extend(
-            _unfilled_role_suppression(role, role_d_day(week, role))
-            for role in roles if _is_unfilled_physical_role(role)
-        )
-        roles[:] = [role for role in roles if not _is_unfilled_physical_role(role)]
+        rows, unused = _split(roles, week)
+        week.setdefault("suppressed_roles", []).extend(rows)
+        _merge_unused_day_records(week, unused)
     if isinstance(role_map.get("physical_session_frequency_audit"), dict):
         # The frequency audit ran inside calendar integrity, before membership
         # existed; recount so a removed session is never reported as trained.
-        from .physical_session_frequency import audit_physical_session_frequency
-
         role_map["physical_session_frequency_audit"]["warnings"] = audit_physical_session_frequency(
             role_map, brief.get("athlete_snapshot") or {}
         )

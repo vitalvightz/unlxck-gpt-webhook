@@ -16,11 +16,14 @@ from fightcamp import input_parsing
 from fightcamp.calendar_context import role_d_day
 from fightcamp.goal_preservation import collect_goal_evidence
 from fightcamp.main import generate_plan_sync
+from fightcamp.physical_session_frequency import _explained_offsets, is_physical_session_role, role_countdown_offset
 from fightcamp.session_composition import (
     EMPTY_PHYSICAL_SESSION_REASON,
     _meets_low_load_support_contract,
+    compose_normal_conditioning_assignments,
     suppress_unfilled_physical_roles,
 )
+from fightcamp.stage2_payload import late_fight_sequence_budget
 
 _NOW = dt.datetime(2026, 1, 4, 12)
 _REPO = Path(__file__).resolve().parents[1]
@@ -168,10 +171,53 @@ def test_low_load_support_days_hold_only_low_load_work_or_are_suppressed(key):
     assert any(s["role_key"].startswith("converted_") for s in _empty_suppressions(brief))
 
 
+def _low_load_week(alternate_authority):
+    role = {"role_key": "converted_rehab_friendly_support_day", "category": "conditioning",
+            "preferred_system": "aerobic", "scheduled_day_hint": "Monday", **_LOW_LOAD_ROLE}
+    pools = {"SPP": {"conditioning_slots": [{
+        "slot_id": "spp_aerobic_1", "role": "aerobic",
+        "selected": {**_bank("Kettlebell Swings (EMOM Aerobic)"), "fulfillment_authority": True},
+        "alternates": [{**_bank("Tempo Shadowboxing"), "fulfillment_authority": alternate_authority}],
+    }]}}
+    week = {"week_index": 1, "phase": "SPP", "calendar_days": [{"weekday": "monday", "d_day": 25}],
+            "session_roles": [role]}
+    compose_normal_conditioning_assignments(weekly_role_map={"weeks": [week]}, candidate_pools=pools)
+    return [m["name"] for m in role["selected_exercise_assignments"]]
+
+
+def test_a_low_load_alternate_without_fulfilment_authority_is_never_scheduled():
+    assert _low_load_week(alternate_authority=False) == []
+
+
+def test_a_low_load_alternate_with_fulfilment_authority_replaces_the_failing_drill():
+    assert _low_load_week(alternate_authority=True) == ["Tempo Shadowboxing"]
+
+
 def test_dedicated_rehab_roles_are_not_rewritten():
     brief = _plan("bjj35_shoulder_rehab_friendly")
     rehab = [r for _, roles, _ in _surfaces(brief) for r in roles if r["role_key"] == "mobility_rehab"]
     assert any(r.get("selected_exercise_assignments") for r in rehab)
+
+
+@pytest.mark.parametrize("key", sorted(_SCENARIOS))
+def test_every_day_emptied_by_suppression_is_explained(key):
+    brief = _plan(key)
+    weeks = brief["weekly_role_map"]["weeks"]
+    explained = {offset for w in weeks for offset in _explained_offsets(w)}
+    occupied = {role_countdown_offset(r) for _, roles, _ in _surfaces(brief) for r in roles if is_physical_session_role(r)}
+    for row in _empty_suppressions(brief):
+        assert row["original_d_day"] in occupied | explained
+
+
+def test_late_fight_counts_and_caps_match_the_sequence_after_suppression():
+    brief = _plan("kick10_late")
+    spec = brief["late_fight_plan_spec"]
+    assert _empty_suppressions(brief), "scenario must remove a late-fight session"
+    expected = late_fight_sequence_budget(brief["late_fight_session_sequence"], spec["role_budget"])
+    assert {key: spec[key] for key in expected} == expected
+    suppressed = {s["role_key"] for s in _empty_suppressions(brief)}
+    remaining = {r["role_key"] for r in brief["late_fight_session_sequence"]}
+    assert not set(spec["visible_session_roles"]) & (suppressed - remaining)
 
 
 # ---------------------------------------------------------------------------
@@ -204,13 +250,27 @@ def test_pass_removes_empty_strength_and_conditioning_and_keeps_everything_else(
     ]
 
 
-def test_pass_acts_on_the_late_fight_sequence_and_leaves_the_mirror():
-    mirror = {"weeks": [_week({"role_key": "neural_primer_day", "category": "strength"})]}
-    sequence = [{"role_key": "neural_primer_day", "category": "strength", "scheduled_countdown_label": "D-7"},
-                {"role_key": "strength_touch_day", "category": "strength",
+def test_pass_acts_on_the_late_fight_sequence_and_reconciles_its_counts():
+    mirror = {"weeks": [{**_week({"role_key": "neural_primer_day", "category": "strength"}),
+                         "countdown_span": {"start_day": 13, "end_day": 1}}]}
+    sequence = [{"role_key": "neural_primer_day", "category": "strength", "scheduled_countdown_label": "D-7",
+                 "countdown_offset": 7, "scheduled_day_hint": "Friday", "stress_class": "meaningful_stress"},
+                {"role_key": "strength_touch_day", "category": "strength", "scheduled_countdown_label": "D-12",
+                 "countdown_offset": 12, "stress_class": "meaningful_stress",
                  "selected_exercise_assignments": [{"name": "Band-Resisted Punch"}]}]
-    brief = {"weekly_role_map": mirror, "late_fight_session_sequence": sequence, "late_fight_plan_spec": {}}
+    spec = {"role_budget": {"max_meaningful_stress_exposures": 2, "selected_active_roles": 2,
+                            "selected_meaningful_stress_exposures": 2},
+            "visible_session_cap": 2, "max_active_roles": 2,
+            "visible_session_roles": ["neural_primer_day", "strength_touch_day"]}
+    brief = {"weekly_role_map": mirror, "late_fight_session_sequence": sequence, "late_fight_plan_spec": spec}
     suppress_unfilled_physical_roles(brief)
     assert [r["role_key"] for r in sequence] == ["strength_touch_day"]
-    assert [s["role_key"] for s in brief["late_fight_plan_spec"]["suppressed_roles"]] == ["neural_primer_day"]
+    assert [s["role_key"] for s in spec["suppressed_roles"]] == ["neural_primer_day"]
+    assert (spec["visible_session_cap"], spec["max_active_roles"], spec["visible_session_roles"]) == (
+        1, 1, ["strength_touch_day"])
+    assert spec["role_budget"]["selected_meaningful_stress_exposures"] == 1
+    assert spec["role_budget"]["max_meaningful_stress_exposures"] == 2
+    # The emptied D-7 is explained; the stale mirror's roles are not rewritten.
+    assert [(e["countdown_offset"], e["reason_code"]) for e in mirror["weeks"][0]["intentionally_unused_days"]] == [
+        (7, EMPTY_PHYSICAL_SESSION_REASON)]
     assert len(mirror["weeks"][0]["session_roles"]) == 1
