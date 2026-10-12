@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { renderToStaticMarkup } from "react-dom/server";
-import { ExerciseRow, StructuredPlanRenderer } from "./structured-plan-renderer";
+import { BlockCard, ExerciseRow, StructuredPlanRenderer } from "./structured-plan-renderer";
 import { ExerciseMediaProvider } from "./exercise-demo";
 import { PrivateExerciseMediaProvider } from "./private-exercise-video";
 import type { StructuredBlock, StructuredPlan, StructuredDay } from "../lib/types";
@@ -21,6 +21,48 @@ test("the shared Enhanced Card renders the exact athlete dose and only available
   assert.match(html, /tempo 3-1-X/);
   assert.match(html, /Use my rack/);
   assert.doesNotMatch(html, /Why today|Why it|Progress|Easier|Stop rule/);
+});
+
+test("structured athlete entries keep enhanced metric tiles and exact prescription details", () => {
+  const html = renderToStaticMarkup(<BlockCard block={{ ...block,
+    athlete_dose: { mode: "reps" }, load: { display: "80 kg" }, effort: { method: "RPE", value: 7 },
+    coaching_cues: ["Brace before each rep"], stop_rules: ["Stop if form breaks"],
+  }} />);
+  assert.match(html, /class="sp-block-stats" data-count="4"/);
+  assert.match(html, /sp-stat-label">Volume/);
+  assert.match(html, /sp-stat-label">Load/);
+  assert.match(html, /sp-stat-label">Rest/);
+  assert.match(html, /sp-stat-label">Effort/);
+  assert.match(html, /tempo 3-1-X · per side/);
+  assert.match(html, /Brace before each rep/);
+  assert.match(html, /Stop if form breaks/);
+});
+
+test("custom intervals keep zero rest visible; free text and legacy text keep their fallback", () => {
+  const intervals = renderToStaticMarkup(<BlockCard block={{ ...block, sets: null, reps: null,
+    athlete_dose: { mode: "intervals" }, rounds: 5, work: { value: 180, unit: "seconds" },
+    rest: { value: 0, unit: "seconds" }, prescription_text: "5 × 180s · rest 0s",
+  }} />);
+  assert.match(intervals, /sp-block-stats/);
+  assert.match(intervals, /sp-stat-label">Rounds/);
+  assert.match(intervals, /sp-stat-label">Work/);
+  assert.match(intervals, /rest 0s/);
+  for (const athlete_dose of [null, { mode: "text" }, { mode: "unknown" }]) {
+    const fallback = renderToStaticMarkup(<BlockCard block={{ ...block, athlete_dose }} />);
+    assert.doesNotMatch(fallback, /sp-block-stats/);
+    assert.match(fallback, /3 × 5 · 80 kg · rest 90s · tempo 3-1-X · per side/);
+  }
+});
+
+test("athlete bodyweight and free-form intensity use the existing load tile without inventing a weight", () => {
+  const html = renderToStaticMarkup(<BlockCard block={{ ...block,
+    athlete_dose: { mode: "duration" }, sets: 4, reps: null, duration: { value: 15, unit: "seconds" },
+    intensity: "Bodyweight", prescription_text: "4 × 15s · Bodyweight · rest 90s",
+  }} />);
+  assert.match(html, /sp-stat-label">Load/);
+  assert.match(html, /Bodyweight/);
+  assert.doesNotMatch(html, /kg|lbs/);
+  assert.ok(html.indexOf('class="sp-block-stats"') < html.indexOf('class="sp-block-purpose"'));
 });
 
 test("catalogue media and private attachments render within the existing exercise row", () => {

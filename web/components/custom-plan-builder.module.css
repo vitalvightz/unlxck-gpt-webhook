@@ -77,21 +77,16 @@
   min-height: 24px;
 }
 .session {
-  padding: 16px;
-  background: var(--bg-panel);
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius-card);
   min-width: 0;
 }
 .session h2 {
-  font-size: 18px;
   margin: 4px 0;
   overflow-wrap: anywhere;
 }
 .exercises {
   list-style: none;
   padding: 0;
-  margin: 12px 0;
+  margin: 10px 0 12px;
 }
 .exercise {
   padding: 12px 0;
@@ -157,9 +152,6 @@
   }
   .builder {
     padding-bottom: calc(var(--custom-save-height, 160px) + var(--mobile-tab-bar-clearance) + 32px);
-  }
-  .session {
-    padding: 12px;
   }
 }
 .weekday {
@@ -320,5 +312,6 @@
   z-index: 1;
   flex: 0 0 auto;
   color: var(--text-muted);
+  border: 0;
 }
 .cardAction svg { fill: currentColor; stroke: none; }
