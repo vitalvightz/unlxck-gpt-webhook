@@ -88,3 +88,12 @@ def test_startup_validation_preserves_non_column_error():
     with pytest.raises(APIError) as rejected:
         store.validate_runtime_schema()
     assert rejected.value is exc
+
+
+def test_invalid_input_message_does_not_echo_submitted_value(caplog):
+    store = SupabaseAppStore(client=MagicMock(), admin_emails=set())
+    exc = error("22P02", 'invalid input syntax for type uuid: "private athlete input"')
+    store._log_create_plan_postgrest_error(athlete_id="athlete", intake_id="intake", payload={}, exc=exc)
+    assert "code=22P02" in caplog.text
+    assert "invalid input syntax for type uuid" in caplog.text
+    assert "private athlete input" not in caplog.text

@@ -994,13 +994,17 @@ class SupabaseAppStore(CommunityStoreMixin, PrivateMediaStoreMixin, CompactGener
         payload: dict[str, Any],
         exc: PostgrestAPIError,
     ) -> None:
+        message = str(exc.message or "")
+        if str(exc.code or "").startswith("22"):
+            # Invalid-input messages may echo a submitted UUID/date/JSON value.
+            message = re.sub(r":\s*.*", ": [redacted input]", message, flags=re.DOTALL)
         logger.error(
             "[store] create_plan:postgrest_error athlete_id=%s intake_id=%s error_type=%s code=%s message=%s details=%s hint=%s payload_keys=%s",
             athlete_id,
             intake_id,
             type(exc).__name__,
             getattr(exc, "code", None),
-            sanitize_error_text(exc.message or ""),
+            sanitize_error_text(message),
             # PostgreSQL constraint details include the complete failing row or
             # foreign-key values. Preserve presence, never log those values.
             "[redacted database detail]" if exc.details else None,
