@@ -299,9 +299,11 @@ export default function PlansPage() {
           </Link>
           <h1 className={`athlete-motion-slot athlete-motion-header ${styles.pageTitle}`}>{activePlan?.fight_date ? t("fightCampHeading") : t("planWorkspace")}</h1>
           <p className={styles.pageSubtitle}>Build, manage and add to your training.</p>
-          <Link href="/plans/custom" className="ghost-button">Build My Own Plan</Link>
+          <Link href="/plans/custom" className={`ghost-button ${styles.buildLink}`}>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
+            Build My Own Plan
+          </Link>
         </header>
-        {session?.access_token ? <MyCommunitySubmissions token={session.access_token} /> : null}
         <div className={actionStyles.actions}>
           <LogTraining accessToken={session?.access_token ?? null} variant="tile" />
           <TrainingLibraryLink variant="tile" />
@@ -419,6 +421,13 @@ export default function PlansPage() {
         </div>
 
         <FeaturedDrill accessToken={session?.access_token ?? null} />
+
+        {/* Occasional, contributor-only: lives at the end instead of above the daily actions. */}
+        {session?.access_token ? (
+          <section aria-label="Community submissions" className={styles.section}>
+            <MyCommunitySubmissions token={session.access_token} />
+          </section>
+        ) : null}
 
         {managedPlan ? (
           <PlanManageSheet
