@@ -23,6 +23,7 @@ from .plan_pipeline_runtime import (
 from .lead_summary import render_lead_summary
 from .plan_rendering_utils import sanitize_phase_text, sanitize_stage_output
 from .session_sequencing import in_stamped_execution_order
+from .session_composition import suppress_unfilled_physical_roles
 from .stage2_payload import (
     build_computed_support,
     build_planning_brief,
@@ -692,6 +693,7 @@ def build_stage2_outputs(
     )
 
     if isinstance(planning_brief, dict):
+        suppress_unfilled_physical_roles(planning_brief)
         planning_brief["stage1_selection_summary"] = stage1_selection_summary
         late_fight_draft = _render_late_fight_stage1_draft(
             context=context,

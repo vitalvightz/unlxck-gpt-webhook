@@ -226,6 +226,42 @@ def _dedupe_preserve_order(values: list[str]) -> list[str]:
 def _compress_short_camp_priorities(athlete_model: dict) -> dict:
     return stage2_planning_brief_module._compress_short_camp_priorities(athlete_model)
 
+
+def late_fight_sequence_budget(
+    session_sequence: list[dict], base_role_budget: dict | None
+) -> dict[str, Any]:
+    """Session counts a late-fight spec derives from its visible sequence.
+
+    One owner for the builder and for any later pass that removes roles, so the
+    counts can never describe sessions the sequence no longer holds.
+    """
+    app_sequence = [
+        role
+        for role in session_sequence
+        if isinstance(role, dict) and _is_app_owned_visible_role(role.get("role_key"))
+    ]
+    return {
+        "role_budget": {
+            **dict(base_role_budget or {}),
+            "selected_active_roles": sum(
+                1 for role in app_sequence if not is_low_cost_coexistable_filler(role)
+            ),
+            "selected_meaningful_stress_exposures": sum(
+                1 for role in app_sequence if role.get("stress_class") == "meaningful_stress"
+            ),
+            "selected_support_roles": sum(
+                1
+                for role in app_sequence
+                if role.get("stress_class") == "support"
+                and not is_low_cost_coexistable_filler(role)
+            ),
+        },
+        "visible_session_cap": len(app_sequence),
+        "max_active_roles": len(app_sequence),
+        "visible_session_roles": [role.get("role_key") for role in app_sequence],
+    }
+
+
 def _record_late_fight_unused_days(
     weekly_role_map: dict, unused_days: list[dict]
 ) -> None:
@@ -1386,11 +1422,6 @@ def _build_planning_brief(
             ),
         )
         _record_late_fight_unused_days(weekly_role_map, _occupancy_unused)
-        app_session_sequence = [
-            role
-            for role in session_sequence
-            if _is_app_owned_visible_role(role.get("role_key"))
-        ]
 
         late_fight_plan_spec = _with_late_fight_allowed_exercises(
             spec={
@@ -1399,33 +1430,10 @@ def _build_planning_brief(
                 # _effective_map resolves the effective dose against the pool that
                 # actually produced this sequence, not an arbitrary first pool.
                 "phase": late_fight_phase,
-                "role_budget": {
-                    **dict(base_late_fight_plan_spec.get("role_budget", {})),
-                    "selected_active_roles": sum(
-                        1
-                        for role in app_session_sequence
-                        if not is_low_cost_coexistable_filler(role)
-                    ),
-                    "selected_meaningful_stress_exposures": sum(
-                        1
-                        for role in app_session_sequence
-                        if role.get("stress_class") == "meaningful_stress"
-                    ),
-                    "selected_support_roles": sum(
-                        1
-                        for role in app_session_sequence
-                        if role.get("stress_class") == "support"
-                        and not is_low_cost_coexistable_filler(role)
-                    ),
-                },
                 "visible_session_sequence": session_sequence,
-                "visible_session_cap": len(app_session_sequence),
-                "max_active_roles": len(app_session_sequence),
-                "visible_session_roles": [
-                    role.get("role_key")
-                    for role in app_session_sequence
-                    if isinstance(role, dict)
-                ],
+                **late_fight_sequence_budget(
+                    session_sequence, base_late_fight_plan_spec.get("role_budget")
+                ),
             },
             candidate_pools=candidate_pools,
             days_until_fight=days_until_fight,
@@ -2391,11 +2399,6 @@ def build_stage2_payload(
                 base_late_fight_plan_spec.get("countdown_weekday_map", {})
             ),
         )
-        app_visible_session_sequence = [
-            role
-            for role in visible_session_sequence
-            if _is_app_owned_visible_role(role.get("role_key"))
-        ]
 
         late_fight_plan_spec = _with_late_fight_allowed_exercises(
             spec={
@@ -2404,33 +2407,10 @@ def build_stage2_payload(
                 # every consumer resolves the effective dose against the correct
                 # pool rather than an arbitrary candidate-pool key.
                 "phase": _resolve_late_fight_phase(phase_briefs),
-                "role_budget": {
-                    **dict(base_late_fight_plan_spec.get("role_budget", {})),
-                    "selected_active_roles": sum(
-                        1
-                        for role in app_visible_session_sequence
-                        if not is_low_cost_coexistable_filler(role)
-                    ),
-                    "selected_meaningful_stress_exposures": sum(
-                        1
-                        for role in app_visible_session_sequence
-                        if role.get("stress_class") == "meaningful_stress"
-                    ),
-                    "selected_support_roles": sum(
-                        1
-                        for role in app_visible_session_sequence
-                        if role.get("stress_class") == "support"
-                        and not is_low_cost_coexistable_filler(role)
-                    ),
-                },
                 "visible_session_sequence": visible_session_sequence,
-                "visible_session_cap": len(app_visible_session_sequence),
-                "max_active_roles": len(app_visible_session_sequence),
-                "visible_session_roles": [
-                    role.get("role_key")
-                    for role in app_visible_session_sequence
-                    if isinstance(role, dict)
-                ],
+                **late_fight_sequence_budget(
+                    visible_session_sequence, base_late_fight_plan_spec.get("role_budget")
+                ),
             },
             candidate_pools=candidate_pools,
             days_until_fight=days_until_fight,
