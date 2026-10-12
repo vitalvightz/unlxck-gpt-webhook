@@ -1091,13 +1091,13 @@ test("getOverviewPrimaryAction resolves one dominant CTA per athlete state", () 
   });
   // A future session must not be presented as today's session.
   assert.deepEqual(getOverviewPrimaryAction(base), {
-    href: "/today#today-session",
-    label: "Next session",
+    href: "/today?preview=1",
+    label: "Preview session",
   });
-  // A session matched to the training day keeps the today's-session label.
+  // A session matched to the training day is started on Today.
   assert.deepEqual(getOverviewPrimaryAction({ ...base, sessionIsToday: true }), {
     href: "/today#today-session",
-    label: "Today's session",
+    label: "Start session",
   });
 });
 
@@ -1115,10 +1115,11 @@ test("Overview consumes the shared authoritative resolver", () => {
   assert.equal(source.includes("resolvedDecision?.severeInjuryBlocksCurrentSession"), true);
   assert.equal(source.includes("getInjuryOverrideBanner(commandState"), false);
   assert.equal(source.includes("resolveDecisionTier(commandState?.today"), false);
-  assert.equal(source.includes("getOverviewCommandEyebrow(decisionTier)"), true);
+  // Home's one action and alerts row come from the same resolved state.
+  assert.equal(source.includes("getOverviewPrimaryAction({"), true);
+  assert.equal(source.includes("<TrainingAlertsRow state={commandState} />"), true);
   assert.equal(source.includes("overview-risk-footer"), false);
   assert.equal(source.includes("getRiskWatchText(risk)"), false);
-  assert.equal(source.includes("Review {overflow} more on Today"), true);
 });
 
 // ---------------------------------------------------------------------------

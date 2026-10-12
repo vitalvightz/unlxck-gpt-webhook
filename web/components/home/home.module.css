@@ -1,0 +1,206 @@
+/* Home layout. Surfaces come from the original command panel and status
+   cards (hero-panel, overview-command-shell, status-card); this file only
+   lays them out and uses the existing gold/red tokens. */
+
+.page {
+  display: grid;
+  gap: 16px;
+}
+
+.title {
+  margin: 0;
+  font-size: clamp(34px, 9vw, 44px);
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+
+/* Above the panel's red wash. */
+.shellBody {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  gap: 18px;
+}
+
+/* -- Current block: the fight countdown's gold card ------------------------ */
+.blockTitle {
+  color: var(--text-primary);
+  font-size: var(--type-title-md);
+  font-weight: 700;
+}
+
+.blockFill {
+  background: var(--progress-gold);
+}
+
+/* -- Sections --------------------------------------------------------------- */
+.section {
+  display: grid;
+  gap: 10px;
+}
+
+.sectionHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.sectionTitle {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: var(--type-title-sm);
+  font-weight: 650;
+}
+
+.sectionMeta {
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: var(--type-label-sm);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.card {
+  display: grid;
+  gap: 10px;
+}
+
+.cardTitle {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: var(--type-title-md);
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.cardSubtitle {
+  margin: -4px 0 0;
+  color: var(--text-secondary);
+  font-size: var(--type-body);
+}
+
+.card :global(.today-session-chips) {
+  margin: 0;
+}
+
+/* -- Today's call on Up next ------------------------------------------------- */
+.decision {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 2px 0 0;
+  color: var(--text-secondary);
+  font-size: var(--type-body);
+  line-height: 1.4;
+}
+
+.decisionChip {
+  flex: 0 0 auto;
+  padding: 2px 8px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-pill);
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: var(--type-label-xs);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.decision[data-tone="green"] .decisionChip {
+  border-color: rgba(39, 174, 96, 0.34);
+  color: var(--success-ink);
+}
+
+.decision[data-tone="amber"] .decisionChip {
+  border-color: var(--progress-gold-border);
+  color: var(--progress-gold);
+}
+
+.decision[data-tone="red"] .decisionChip {
+  border-color: rgba(219, 47, 64, 0.4);
+  color: var(--danger-ink);
+}
+
+.action {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+/* -- This week: gold, like the countdown and XP ------------------------------ */
+.weekCount {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: var(--type-body);
+}
+
+.weekNumber {
+  color: var(--text-primary);
+  font-size: 34px;
+  font-weight: 800;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.segments {
+  display: flex;
+  gap: 6px;
+}
+
+.segments > span {
+  flex: 1 1 0;
+  height: 6px;
+  border-radius: var(--radius-pill);
+  background: var(--border-default);
+}
+
+.segments > span[data-done] {
+  background: var(--progress-gold);
+}
+
+.heroMeta {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: var(--type-body-sm);
+  line-height: 1.45;
+}
+
+/* -- Training alerts --------------------------------------------------------- */
+.alertRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--text-primary);
+  text-decoration: none;
+}
+
+.alertText {
+  display: grid;
+  flex: 1 1 auto;
+  gap: 4px;
+}
+
+.alertText .sectionMeta {
+  font-family: var(--font-sans);
+  font-size: var(--type-body-sm);
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.chevron {
+  flex: 0 0 auto;
+  width: 7px;
+  height: 7px;
+  margin-right: 4px;
+  border-top: 2px solid var(--text-muted);
+  border-right: 2px solid var(--text-muted);
+  transform: rotate(45deg);
+}
+
+.alertRow:focus-visible {
+  outline: 2px solid var(--brand-red);
+  outline-offset: 2px;
+}
