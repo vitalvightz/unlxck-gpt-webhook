@@ -143,13 +143,13 @@ function useExerciseChange(scope: SessionScope | null) {
     [scope, showToast],
   );
   const restore = useCallback(
-    async (changeId: string, name: string) => {
+    async (changeId: string, name: string, done = `Restored ${name}`) => {
       if (!scope) return;
       const { customisation, date } = scope;
       try {
         const result = await undoExerciseChange(customisation.token, customisation.planId, changeId, date);
         customisation.onSessionChanged(date, result.session ?? null);
-        showToast(`Restored ${name}`, { tone: "success" });
+        showToast(done, { tone: "success" });
       } catch (caught) {
         showToast(messageOf(caught, "Couldn't restore. Try again."), { tone: "error" });
       }
@@ -267,6 +267,24 @@ export function ExerciseActions({ block, title }: { block: StructuredBlock; titl
                     <span>Restore</span>
                   </button>
                 ) : null}
+                {change?.override_id && change.action === "edit" ? (
+                  <button
+                    type="button"
+                    className={styles.action}
+                    aria-label={`Revert edit to ${title}`}
+                    disabled={busy}
+                    onClick={() => {
+                      setBusy(true);
+                      void restore(change.override_id!, title, `Reverted ${title}`).finally(() => {
+                        setBusy(false);
+                        close();
+                      });
+                    }}
+                  >
+                    <RestoreIcon />
+                    <span>Revert</span>
+                  </button>
+                ) : null}
                 <button
                   type="button"
                   className={styles.action}
@@ -319,7 +337,7 @@ export function ExerciseActions({ block, title }: { block: StructuredBlock; titl
               {/* Where the edit applies is chosen before saving, not after. */}
               {scope.customisation.canRepeat ? <div className={styles.scopes} role="radiogroup" aria-label="Apply edits to">
                 <button type="button" className={styles.scope} role="radio" aria-checked={editScope === "occurrence"} onClick={() => setEditScope("occurrence")}>Just this workout</button>
-                <button type="button" className={styles.scope} role="radio" aria-checked={editScope === "future"} onClick={() => setEditScope("future")}>Future workouts</button>
+                <button type="button" className={styles.scope} role="radio" aria-checked={editScope === "future"} onClick={() => setEditScope("future")}>Every {weekdayName(scope.date)}</button>
               </div> : null}
             </ExercisePrescriptionEditor>
           </div>
@@ -395,6 +413,11 @@ export function RemovedExercises({ session }: { session: StructuredSession }) {
 }
 
 type Scope = "occurrence" | "future";
+
+/** "Monday" for an ISO date, read as a calendar day (never shifted by timezone). */
+export function weekdayName(isoDate: string): string {
+  return new Date(`${isoDate.slice(0, 10)}T00:00:00Z`).toLocaleDateString("en-GB", { weekday: "long", timeZone: "UTC" });
+}
 
 function ExerciseOptionsSheet({
   mode,

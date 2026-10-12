@@ -433,7 +433,7 @@ export type StructuredBlock = {
 
 export type AthleteExerciseChange = {
   override_id?: string | null;
-  action?: "swap" | "add" | "remove" | null;
+  action?: "swap" | "add" | "remove" | "edit" | null;
   scope?: "occurrence" | "future" | null;
   from_date?: string | null;
   original_name?: string | null;
