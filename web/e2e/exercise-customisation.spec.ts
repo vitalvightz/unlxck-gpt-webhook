@@ -188,6 +188,8 @@ for (const width of [390, 1280]) {
     await edit.getByLabel("Rounds", { exact: true }).fill("5");
     await edit.getByLabel("Work", { exact: true }).fill("25");
     await edit.getByLabel("Rest", { exact: true }).fill("75");
+    await expect(edit.locator("details")).not.toHaveAttribute("open");
+    await edit.locator("summary").click();
     await edit.getByLabel("Weight or intensity").fill("Easy uphill pace");
     await edit.getByLabel("RPE (optional)", { exact: true }).fill("6.5");
     await edit.getByLabel("Cues", { exact: true }).fill("Run tall; keep the shoulders relaxed.");
@@ -235,6 +237,7 @@ for (const technical of ["session", "sessionless"]) {
     const edit = page.getByRole("dialog", { name: "Edit Parry-Cross-Pivot" });
     await edit.getByLabel("Duration unit").selectOption("60");
     await edit.getByLabel("Duration", { exact: true }).fill("3");
+    await edit.locator("summary").click();
     await edit.getByLabel("Cues", { exact: true }).fill("Light feet, relaxed shoulders.");
     await edit.getByRole("button", { name: "Save changes" }).click();
     await expect(edit).toHaveCount(0);
@@ -302,4 +305,35 @@ test("Custom drafts and published plans use the same editable exercise cards", a
   await publishedCard.getByRole("button", { name: "My shadowboxing", exact: true }).click();
   await publishedCard.scrollIntoViewIfNeeded();
   if (shots) await page.screenshot({ path: `${shots}/custom-published-390.png` });
+});
+
+
+test("Cue-only editing preserves an existing RIR prescription after reload", async ({ page, baseURL }) => {
+  test.skip(!api, "Run with the seeded API");
+  await page.request.post(`${api}/__e2e/reset?rir=true`);
+  await page.setViewportSize({ width: 390, height: 844 });
+  const writes = await setup(page, baseURL!);
+  await page.goto("/today");
+  await page.getByRole("button", { name: "Change Back Squat", exact: true }).click();
+  await page.getByRole("dialog", { name: "Back Squat", exact: true }).getByRole("button", { name: "Edit", exact: true }).click();
+  const edit = page.getByRole("dialog", { name: "Edit Back Squat", exact: true });
+  await expect(edit.locator("details")).not.toHaveAttribute("open");
+  await edit.locator("summary").click();
+  await edit.getByLabel("Cues", { exact: true }).fill("Brace before moving");
+  await edit.getByRole("button", { name: "Save changes" }).click();
+  await expect(edit).toHaveCount(0);
+  const change = writes.at(-1)!.body as { action: string; dose?: unknown };
+  expect(change.action).toBe("edit");
+  expect(change.dose).toBeUndefined();
+  const headers = { Authorization: "Bearer athlete-token" };
+  const state = await (await page.request.get(`${api}/api/today`, { headers })).json();
+  const squat = state.today.next_session.blocks.find((block: { exercise_key: string }) => block.exercise_key === "back-squat");
+  expect(squat.effort).toMatchObject({ method: "RIR", value: 3 });
+  expect(squat.coaching_cues).toEqual(["Brace before moving"]);
+  await page.reload();
+  await expect(page.locator(".ex-row").filter({ hasText: "Back Squat" })).toContainText("RIR 3");
+  await page.getByRole("button", { name: "Change Back Squat", exact: true }).click();
+  await page.getByRole("dialog", { name: "Back Squat", exact: true }).getByRole("button", { name: "Edit", exact: true }).click();
+  await edit.locator("summary").click();
+  await expect(edit.getByLabel("Cues", { exact: true })).toHaveValue("Brace before moving");
 });

@@ -44,11 +44,19 @@ def build_app():
     )
 
     @app.post("/__e2e/reset")
-    def reset(technical: str = ""):  # Each browser case starts from the generated plan alone.
+    def reset(technical: str = "", rir: bool = False):  # Each browser case starts from the generated plan alone.
         store.session_completions.clear()
         store.today_checkins.clear()
         seed_open(store)
         release_seed()
+        if rir:
+            from tests.test_exercise_customisation import OPEN_PLAN_ID
+
+            for day in store.plans[OPEN_PLAN_ID]["structured_plan"]["weeks"][0]["days"]:
+                for session in day.get("sessions", []):
+                    for block in session.get("blocks", []):
+                        if block.get("exercise_key") == "back-squat":
+                            block["effort"] = {"method": "RIR", "value": 3}
         if technical:
             from datetime import date
             from api.services.today_service import resolve_training_day

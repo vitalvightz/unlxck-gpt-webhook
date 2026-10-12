@@ -5,7 +5,7 @@ import Link from "next/link";
 
 import { ExerciseDemo } from "@/components/exercise-demo";
 import { ExercisePrescriptionEditor } from "@/components/exercise-prescription-editor";
-import { doseFromBlock, type DoseDraft } from "@/lib/exercise-dose";
+import { doseFromBlock, finishedDose, type DoseDraft } from "@/lib/exercise-dose";
 import { useToast } from "@/components/toast-provider";
 import { InjuryDetailSheet } from "@/components/today/injury-detail-sheet";
 import {
@@ -309,7 +309,7 @@ export function ExerciseActions({ block, title }: { block: StructuredBlock; titl
               cues={block.coaching_cues ?? []} stopRules={block.stop_rules ?? []}
               onSubmit={(dose, coaching_cues, stop_rules) => {
                 setBusy(true); setError(null);
-                void apply({ action: "edit", block_id: blockId, dose, coaching_cues, stop_rules, scope: editScope }, `Updated ${title}`)
+                void apply({ action: "edit", block_id: blockId, dose: JSON.stringify(dose) === JSON.stringify(finishedDose(doseFromBlock(block))) ? undefined : dose, coaching_cues, stop_rules, scope: editScope }, `Updated ${title}`)
                   .then(close).catch(caught => setError(messageOf(caught, "Couldn't save. Try again.")))
                   .finally(() => setBusy(false));
               }} />

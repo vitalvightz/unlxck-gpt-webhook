@@ -887,3 +887,63 @@ def test_legacy_recurring_title_match_refuses_ambiguous_sessions():
     card["weeks"][0]["days"][0]["sessions"].pop()
     resolved = apply_exercise_overrides({"exercise_overrides": [entry]}, card)
     assert resolved["weeks"][0]["days"][0]["sessions"][0]["blocks"] == []
+
+
+@pytest.mark.parametrize("dose", [None, {"mode": "reps", "sets": 4, "reps": 6, "load_or_intensity": "100 kg", "rest_seconds": 180}])
+def test_edit_preserves_rir_and_unrepresented_prescription_metadata(dose):
+    client, store, _ = _build_client()
+    prescribed = back_squat(effort={"method": "RIR", "value": 3},
+                           tempo={"eccentric": 3, "pause_bottom": 1, "concentric": "X"})
+    today = seed_dated(store, blocks=[prescribed, plank()])
+    before = detail_day(client, PLAN_ID, today)["sessions"][0]["blocks"][0]
+    response, _ = change(client, PLAN_ID, action="edit", date=today.isoformat(), session_id=SESSION_ID,
+                         block_id=squat_id(today), dose=dose, coaching_cues=["Brace before moving"])
+    assert response.status_code == 200, response.text
+    after = response.json()["session"]["blocks"][0]
+    for field in ("effort", "tempo", "load", "rest"):
+        assert after[field] == before[field]
+    assert after["reps"] == (6 if dose else before["reps"])
+    assert after["coaching_cues"] == ["Brace before moving"]
+
+
+def test_edit_rechecks_new_injury_before_writing_load():
+    client, store, _ = _build_client()
+    today = seed_dated(store)
+    store.create_injury_flag("athlete-1", {"body_area": "knee", "description": "knee pain on squats"})
+    response, _ = change(client, PLAN_ID, action="edit", date=today.isoformat(), session_id=SESSION_ID,
+                         block_id=squat_id(today), dose={"mode": "reps", "sets": 4, "reps": 5, "load_or_intensity": "120 kg"})
+    assert response.status_code == 409, response.text
+    assert store.plans[PLAN_ID]["exercise_overrides"] == []
+
+
+def test_edit_fails_closed_when_current_injury_guidance_is_unavailable():
+    client, store, _ = _build_client()
+    today = seed_dated(store)
+
+    def unavailable(*args, **kwargs):
+        raise RuntimeError("injury guidance unavailable")
+
+    store.list_injury_flags = unavailable
+    response, _ = change(client, PLAN_ID, action="edit", date=today.isoformat(), session_id=SESSION_ID,
+                         block_id=squat_id(today), dose={"mode": "reps", "sets": 4, "reps": 5, "load_or_intensity": "120 kg"})
+    assert response.status_code == 503, response.text
+    assert store.plans[PLAN_ID]["exercise_overrides"] == []
+
+
+def test_edit_checks_requested_load_against_live_policy(monkeypatch):
+    client, store, _ = _build_client()
+    today = seed_dated(store)
+
+    def load_ceiling(session, **kwargs):
+        block = session["blocks"][0]
+        return {"safety_hold": block.get("load", {}).get("value", 0) > 100,
+                "session": session}
+
+    monkeypatch.setattr("api.services.exercise_customisation.reconcile_session_prescription", load_ceiling)
+    for weight, expected in [(120, 409), (95, 200)]:
+        response, _ = change(client, PLAN_ID, action="edit", date=today.isoformat(), session_id=SESSION_ID,
+                             block_id=squat_id(today), dose={"mode": "reps", "sets": 4, "reps": 5,
+                                                            "load_or_intensity": f"{weight} kg"})
+        assert response.status_code == expected, response.text
+        if expected == 409:
+            assert store.plans[PLAN_ID]["exercise_overrides"] == []

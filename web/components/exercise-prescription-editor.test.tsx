@@ -33,3 +33,22 @@ test("hill runs show work and rounds, then submit editable rest instead of sets 
     host.remove();
   }
 });
+
+
+test("existing exercise coaching fields stay collapsed until the disclosure is opened", async () => {
+  const host = document.createElement("div");
+  document.body.appendChild(host);
+  const root = createRoot(host);
+  try {
+    await act(async () => root.render(<ExercisePrescriptionEditor
+      initial={{ mode: "reps", sets: 3, reps: 8 }} action="Save changes" busy={false}
+      cues={["Brace"]} stopRules={["Stop for sharp pain"]} onSubmit={() => {}} />));
+    const advanced = host.querySelector<HTMLDetailsElement>("details")!;
+    assert.equal(advanced.open, false);
+    await act(async () => advanced.querySelector("summary")!.click());
+    assert.equal(advanced.open, true);
+  } finally {
+    await act(async () => root.unmount());
+    host.remove();
+  }
+});

@@ -1181,12 +1181,15 @@ def apply_change(
         new_block = deepcopy(dict(occurrence.block or {}))
         if payload.get("dose") is not None:
             dumped = _validated_dose(payload["dose"])
-            # Changing format removes the old prescription's fields; a timed
-            # drill cannot keep stale reps or a previous exercise's weight.
-            for field in ("sets", "reps", "rounds", "duration", "distance", "work", "rest", "effort", "load",
-                          "intensity", "tempo", "prescription_text", "athlete_dose"):
-                new_block.pop(field, None)
-            new_block.update(_dose_fields(dumped))
+            new_block = _edited_dose(new_block, dumped)
+            # Validate the final requested prescription against today's injury
+            # guidance, not only the original exercise's catalogue identity.
+            safety = SafetyContext(store, athlete_id=athlete_id, occurrence=occurrence,
+                                   equipment=sorted(athlete.equipment))
+            record = _record_for_block(_library_index(), new_block)
+            raw = record["entry"]["raw"] if record else new_block
+            if (safety.has_injuries and _strings(raw.get("contraindications"))) or not safety.allows(new_block, raw):
+                raise HTTPException(409, "That prescription doesn't fit your current injury guidance.")
         for field in ("coaching_cues", "stop_rules"):
             if payload.get(field) is not None:
                 values = payload[field]
@@ -1239,6 +1242,44 @@ def apply_change(
     result["session"] = effective_session(store, athlete_id=athlete_id, athlete_timezone=athlete_timezone,
                                           plan_id=plan_id, day=occurrence.date.isoformat(),
                                           session_id=entry["session_id"], now=now)
+    return result
+
+
+def _edited_dose(original: dict, dose: dict) -> dict:
+    """Keep prescription metadata that the editor cannot represent unchanged."""
+    old_dose = original.get("athlete_dose") or {}
+    old_mode = old_dose.get("mode") or (
+        "intervals" if original.get("rounds") and original.get("work") else
+        "distance" if original.get("distance") else "duration" if original.get("duration") else
+        "reps" if original.get("sets") and original.get("reps") else "text")
+    fields = _dose_fields(dose)
+    result = deepcopy(original)
+    for field in ("sets", "reps", "rounds", "duration", "distance", "work", "prescription_text", "athlete_dose"):
+        result.pop(field, None)
+    if old_mode != dose["mode"]:
+        for field in ("rest", "load", "intensity", "tempo"):
+            result.pop(field, None)
+    # RIR, percentage and other effort methods are not an empty RPE target.
+    # Only an explicitly supplied RPE replaces the existing effort method.
+    if dose.get("rpe") is None:
+        fields.pop("effort", None)
+    if old_mode == dose["mode"]:
+        old_load = original.get("load") or {}
+        if dose.get("load_or_intensity") == (old_load.get("display") or original.get("intensity")):
+            fields.pop("load", None)
+            fields.pop("intensity", None)
+        elif dose.get("load_or_intensity"):
+            result.pop("load", None)
+            result.pop("intensity", None)
+        if dose.get("tempo") and dose.get("tempo") != old_dose.get("tempo"):
+            result.pop("tempo", None)
+        for field in ("duration", "work", "rest"):
+            old = original.get(field) or {}
+            new = fields.get(field) or {}
+            factor = 60 if str(old.get("unit", "")).lower().startswith("min") else 1
+            if isinstance(old.get("value"), (int, float)) and old["value"] * factor == new.get("value"):
+                fields[field] = deepcopy(old)
+    result.update(fields)
     return result
 
 

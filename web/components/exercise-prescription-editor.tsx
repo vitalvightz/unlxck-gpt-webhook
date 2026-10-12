@@ -65,7 +65,7 @@ export function ExercisePrescriptionEditor({ initial, action, busy, cues, stopRu
         </label>}
       <TimeField label="Rest" rest value={dose.rest_seconds} onChange={v => update("rest_seconds", v)} />
     </div>
-    <details className={styles.advanced} open={coaching ? true : undefined}>
+    <details className={styles.advanced}>
       <summary>Weight, effort{coaching ? " & coaching" : " & tempo"}</summary>
       <div className={styles.doseGrid}>
         <label className={`${styles.doseField} ${styles.wideField}`}><span>Weight / intensity</span>
