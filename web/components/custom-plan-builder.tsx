@@ -27,6 +27,7 @@ type Exercise = (Omit<CustomExercise, "snapshot"> & { snapshot: LibraryEntry }) 
 type Session = Omit<CustomSession, "exercises" | "session_type"> & { exercises: Exercise[]; session_type?: CustomSession["session_type"] };
 type Draft = { id?: string; name: string; sessions: Session[]; incomplete?: boolean };
 const weekdays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"] as const;
+const REST_DAY_REMINDER = "Keep this day for recovery.";
 type Weekday = (typeof weekdays)[number];
 /** The day strip shows one dot per day, coloured by the day's first non-rest session type. */
 function dayType(sessions: Session[]) {
@@ -239,6 +240,19 @@ export function CustomPlanBuilder({ accessToken, planId, onboarding = null }: { 
         draft.sessions.find((s) => s.id === sessionId)?.exercises.findIndex((e) => e.id === exercise.id) ?? 0,
     });
   }
+
+  function addSessionOnDay(weekday: Session["weekday"]) {
+    const session: Session = {
+      id: crypto.randomUUID(),
+      name: "Training",
+      weekday,
+      session_type: "mixed",
+      exercises: [],
+    };
+    change({ ...draft, sessions: [...draft.sessions, session] });
+    setSessionEdit(session);
+  }
+
   async function suggest() {
     if (!editing || editing.exercise.origin !== "catalogue") return;
     const request = ++suggestionRequest.current;
@@ -283,10 +297,18 @@ export function CustomPlanBuilder({ accessToken, planId, onboarding = null }: { 
             <small className={styles.weekday}>{s.weekday ?? "Unassigned"}</small>
             <h2>{s.name}</h2>
           </div>
-          <button type="button" className={styles.editButton} aria-label={`Edit session ${i + 1}`} title="Edit session"
-            onClick={() => setSessionEdit(s)}>
-            <PencilIcon />
-          </button>
+          <div className={styles.sessionActions}>
+            <button type="button" className={styles.editButton} aria-label={`Edit session ${i + 1}`} title="Edit session"
+              onClick={() => setSessionEdit(s)}>
+              <PencilIcon />
+            </button>
+            {s.weekday && ["rest", "recovery"].includes(s.session_type ?? "mixed") ? (
+              <button type="button" className={styles.editButton} aria-label={`Add session on ${s.weekday}`} title="Add session"
+                disabled={draft.sessions.length >= 28} onClick={() => addSessionOnDay(s.weekday)}>
+                <PencilIcon />
+              </button>
+            ) : null}
+          </div>
         </div>
         {s.session_type !== "rest" ? <PrivateExerciseMediaProvider token={accessToken}>
           <ExerciseMediaProvider media={Object.fromEntries(s.exercises.flatMap(e => e.origin === "catalogue" && e.snapshot.media && e.snapshot.exercise_key
@@ -303,8 +325,8 @@ export function CustomPlanBuilder({ accessToken, planId, onboarding = null }: { 
                     } />
                 </li>
               ))}
-            </ol></ExerciseMediaProvider></PrivateExerciseMediaProvider> : <p className="muted">Rest day</p>}
-        {!s.exercises.length && s.session_type !== "rest" ? <p className="muted">{s.session_type === "recovery" ? "Recovery day — No exercises required." : ["sparring", "skill"].includes(s.session_type ?? "mixed") ? "Coach-led day — Add editable rounds if useful." : "Workout needs exercises."}</p> : null}
+            </ol></ExerciseMediaProvider></PrivateExerciseMediaProvider> : <p className="muted">{REST_DAY_REMINDER}</p>}
+        {!s.exercises.length && s.session_type !== "rest" ? <p className="muted">{s.session_type === "recovery" ? REST_DAY_REMINDER : ["sparring", "skill"].includes(s.session_type ?? "mixed") ? "Coach-led day — Add editable rounds if useful." : "Workout needs exercises."}</p> : null}
         {s.session_type === "recovery" && s.exercises.length ? <p className="muted">Optional recovery work — No workout completion required.</p> : null}
         {s.session_type !== "rest" ? (
           <button type="button" className={styles.addExercise} aria-label={`Add exercise to ${s.name}`}
@@ -506,15 +528,11 @@ export function CustomPlanBuilder({ accessToken, planId, onboarding = null }: { 
               <div className={styles.emptyDay}>
                 <small className={styles.weekday}>{selectedDay}</small>
                 <h2>Rest day</h2>
-                <p className="muted">Nothing scheduled.</p>
-                <button type="button" className="ghost-button" aria-label={`Add session on ${selectedDay}`}
+                <p className="muted">{REST_DAY_REMINDER}</p>
+                <button type="button" className={styles.emptyDayEditButton} aria-label={`Add session on ${selectedDay}`} title="Add session"
                   disabled={draft.sessions.length >= 28}
-                  onClick={() => {
-                    const session: Session = { id: crypto.randomUUID(), name: "Training", weekday: selectedDay, session_type: "mixed", exercises: [] };
-                    change({ ...draft, sessions: [...draft.sessions, session] });
-                    setSessionEdit(session);
-                  }}>
-                  Add session
+                  onClick={() => addSessionOnDay(selectedDay)}>
+                  <PencilIcon />
                 </button>
               </div>
             )}

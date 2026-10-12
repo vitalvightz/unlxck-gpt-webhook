@@ -198,6 +198,7 @@
   stroke-linecap: round;
   stroke-linejoin: round;
 }
+.sessionActions { display: flex; gap: 8px; flex: 0 0 auto; }
 
 /* Compact, inline revision notice using the same control styles as Today. */
 .communityNotice {
@@ -261,6 +262,20 @@
 .emptyDay h2 { margin: 0; font-size: 18px; }
 .emptyDay p { margin: 0 0 8px; font-size: 14px; }
 .emptyDay :global(.ghost-button) { width: auto; min-height: 44px; padding: 0 18px; }
+.emptyDayEditButton {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-btn);
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+.emptyDayEditButton:hover:not(:disabled), .emptyDayEditButton:focus-visible { color: var(--text-primary); border-color: var(--border-strong); }
+.emptyDayEditButton:disabled { cursor: not-allowed; opacity: 0.45; }
+.emptyDayEditButton svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
 /* The single add action replaces the paired library/custom buttons on every card. */
 .addExercise {
   display: flex;

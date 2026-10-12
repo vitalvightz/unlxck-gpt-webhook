@@ -62,3 +62,25 @@ test("Token refresh keeps an opened plan and unsaved edits", async () => {
     globalThis.fetch = originalFetch;
   }
 });
+
+test("rest days offer a pencil control that opens a new session", async () => {
+  const host = document.createElement("div");
+  document.body.appendChild(host);
+  const root = createRoot(host);
+  const router = { push() {}, replace() {}, refresh() {}, back() {}, forward() {}, prefetch() {}, bfcacheId: "fixture" };
+  try {
+    await act(async () => root.render(
+      <AppRouterContext.Provider value={router}>
+        <ToastProvider><CustomPlanBuilder accessToken="test-token" /></ToastProvider>
+      </AppRouterContext.Provider>,
+    ));
+    assert.match(host.textContent!, /Keep this day for recovery\./);
+    const addSession = host.querySelector<HTMLButtonElement>('[aria-label="Add session on Monday"]')!;
+    await act(async () => addSession.click());
+    assert.equal(document.querySelector<HTMLInputElement>('input[value="Training"]')?.value, "Training");
+    assert.match(document.body.textContent!, /Edit session/);
+  } finally {
+    await act(async () => root.unmount());
+    host.remove();
+  }
+});
