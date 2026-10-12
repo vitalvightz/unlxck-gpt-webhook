@@ -27,6 +27,7 @@ import {
 } from "@/lib/plan-format";
 import { getPlanReviewReason } from "@/lib/plan-review";
 import { useTrainingDay } from "@/lib/use-training-day";
+import type { CustomPlan } from "@/lib/api-schema.generated";
 import type { MeResponse, PlanRequest, PlanSummary, ProfileRecord } from "@/lib/types";
 
 import styles from "./plans.module.css";
@@ -431,11 +432,33 @@ export function PlanRow({
     <li>
       <button type="button" className={styles.row} aria-haspopup="dialog" onClick={onOpen}>
         <span className={styles.rowText}>
-          <span className={styles.rowTitle}>{getPlanDisplayName(plan)}</span>
+          <span className={styles.rowHeading}><span className={styles.rowTitle}>{getPlanDisplayName(plan)}</span>{plan.custom_plan_id ? <span className={styles.customPill}>Custom</span> : null}</span>
           <span className={styles.rowMeta}>{meta.join(" · ")}</span>
         </span>
         <span className={styles.chevron} aria-hidden="true" />
       </button>
+    </li>
+  );
+}
+
+/** Unpublished prescriptions use the same saved-list layout and open the editor. */
+export function CustomDraftRow({ draft }: { draft: CustomPlan }) {
+  const days = new Set(draft.sessions.map((session) => session.weekday).filter(Boolean));
+  return (
+    <li>
+      <Link href={`/plans/custom?plan=${draft.id}`} className={styles.row}>
+        <span className={styles.rowText}>
+          <span className={styles.rowHeading}>
+            <span className={styles.rowTitle}>{draft.name}</span>
+            <span className={styles.customPill}>Custom</span>
+          </span>
+          <span className={styles.rowMeta}>
+            {draft.incomplete ? "Draft" : "Saved draft"} · {draft.sessions.length} session{draft.sessions.length === 1 ? "" : "s"}
+            {days.size ? ` · ${days.size} day${days.size === 1 ? "" : "s"}` : " · No days assigned"}
+          </span>
+        </span>
+        <span className={styles.chevron} aria-hidden="true" />
+      </Link>
     </li>
   );
 }
@@ -499,7 +522,7 @@ export function CurrentCampCard({
   return (
     <article className={styles.campCard}>
       <div className={styles.campHead}>
-        <p className={styles.eyebrow}>{t("currentCamp")}</p>
+        <p className={styles.eyebrow}>{plan.custom_plan_id ? "Custom open plan" : t("currentCamp")}</p>
         <span className={styles.activePill}>Active</span>
       </div>
       <h2 className={styles.campTitle}>{title}</h2>
@@ -530,12 +553,12 @@ export function CurrentCampCard({
       </Link>
       <div className={styles.quietLinks}>
         <Link
-          href={intake ? "/generate" : "/onboarding"}
+          href={plan.custom_plan_id ? `/plans/custom?plan=${plan.custom_plan_id}` : intake ? "/generate" : "/onboarding"}
           onClick={() => {
-            if (intake) markGenerationIntent();
+            if (intake && !plan.custom_plan_id) markGenerationIntent();
           }}
         >
-          {t("newVersion")}
+          {plan.custom_plan_id ? "Edit Plan" : t("newVersion")}
         </Link>
         <span aria-hidden="true">·</span>
         <button type="button" aria-haspopup="dialog" onClick={onManage}>

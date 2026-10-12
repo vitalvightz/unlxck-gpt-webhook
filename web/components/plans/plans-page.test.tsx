@@ -11,6 +11,7 @@ import messages from "../../messages/en.json";
 import PlansPage from "../../app/plans/page";
 import { AppSessionContext } from "../auth-provider";
 import { ToastProvider } from "../toast-provider";
+import type { CustomPlan } from "@/lib/api-schema.generated";
 import type { MeResponse, PlanSummary } from "@/lib/types";
 
 function isoInDays(days: number): string {
@@ -34,7 +35,7 @@ function plan(id: string, overrides: Partial<PlanSummary> = {}): PlanSummary {
 
 type Call = { url: string; method: string; body: string | null };
 
-async function mountPlans(plans: PlanSummary[], activeId: string | null, profile: Partial<MeResponse["profile"]> = {}) {
+async function mountPlans(plans: PlanSummary[], activeId: string | null, profile: Partial<MeResponse["profile"]> = {}, drafts: CustomPlan[] = []) {
   const calls: Call[] = [];
   const originalFetch = globalThis.fetch;
   const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status });
@@ -46,7 +47,7 @@ async function mountPlans(plans: PlanSummary[], activeId: string | null, profile
       return activeId ? json(plans.find((item) => item.plan_id === activeId)) : json({ detail: "none" }, 404);
     }
     if (url.endsWith("/api/plans") && method === "GET") return json(plans);
-    if (url.endsWith("/api/custom-plans")) return json([]);
+    if (url.endsWith("/api/custom-plans")) return json(drafts);
     if (url.endsWith("/api/training/history")) return json({ sessions: [] });
     if (url.endsWith("/api/today")) return json({ active_plan: { id: activeId, phase: "GPP" } });
     if (method === "PATCH") {
@@ -219,5 +220,43 @@ test("the profile uses the saved photo, falls back on image failure, and opens p
     assert.equal(row?.querySelector('[aria-hidden="true"]')?.textContent, "K");
     await view.click(row);
     assert.equal(openDialog()?.querySelector('a[href="/profile"]')?.textContent, "Edit profile & photo");
+  } finally { await view.cleanup(); }
+});
+
+
+test("custom drafts share the saved plan list with a clear badge and open the builder", async () => {
+  const draft: CustomPlan = { id: "draft-1", name: "My strength week", kind: "self_directed",
+    incomplete: true, sessions: [], created_at: "2026-10-08T12:00:00Z", updated_at: "2026-10-08T12:00:00Z" };
+  const view = await mountPlans([plan("ai-1")], null, {}, [draft]);
+  try {
+    assert.equal(view.host.querySelector('section[aria-label="Saved custom plans"]'), null);
+    const list = view.host.querySelector('section[aria-label="Saved plans"]');
+    assert.equal(list?.querySelectorAll("li").length, 2);
+    assert.match(list?.textContent ?? "", /2 saved/);
+    const link = list?.querySelector('a[href="/plans/custom?plan=draft-1"]');
+    assert.match(link?.textContent ?? "", /My strength weekCustomDraft/);
+  } finally { await view.cleanup(); }
+});
+
+test("published custom plans share normal management and do not duplicate their saved draft", async () => {
+  const draft: CustomPlan = { id: "draft-1", name: "Athlete week", kind: "self_directed",
+    incomplete: false, sessions: [], created_at: "2026-10-08T12:00:00Z", updated_at: "2026-10-08T12:00:00Z" };
+  const view = await mountPlans([plan("custom-1", { custom_plan_id: draft.id, fight_date: "" })], null, {}, [draft]);
+  try {
+    const list = view.host.querySelector('section[aria-label="Saved plans"]');
+    assert.equal(list?.querySelectorAll("li").length, 1);
+    assert.match(list?.textContent ?? "", /Custom/);
+    await view.click(list?.querySelector('button[aria-haspopup="dialog"]'));
+    assert.ok(buttonByText(openDialog()!, "Make active"));
+    assert.equal(openDialog()?.querySelector('a[href="/plans/custom-1"]')?.textContent, "Open plan");
+  } finally { await view.cleanup(); }
+});
+
+test("an active custom plan has an editor action instead of starting AI generation", async () => {
+  const view = await mountPlans([plan("custom-1", { custom_plan_id: "draft-1", fight_date: "" })], "custom-1");
+  try {
+    assert.match(view.host.textContent ?? "", /Custom open plan/);
+    assert.equal(view.host.querySelector('a[href="/plans/custom?plan=draft-1"]')?.textContent, "Edit Plan");
+    assert.equal(view.host.querySelector('a[href="/generate"]'), null);
   } finally { await view.cleanup(); }
 });

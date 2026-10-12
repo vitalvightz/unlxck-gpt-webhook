@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { SavedCustomPlans } from "@/components/saved-custom-plans";
 import { MyCommunitySubmissions } from "@/components/community-exercises";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -21,11 +20,12 @@ import {
   getIntakeSource,
   PlanManageSheet,
   PlanRow,
+  CustomDraftRow,
 } from "@/components/plans/plan-dashboard";
 import styles from "@/components/plans/plans.module.css";
 import { PlanHistoryRowSkeleton } from "@/components/skeleton";
 import { useToast } from "@/components/toast-provider";
-import { ApiError, getActivePlan, getToday, listPlans, setActivePlan } from "@/lib/api";
+import { ApiError, getActivePlan, getToday, listCustomPlans, listPlans, setActivePlan } from "@/lib/api";
 import { getOptionLabels, TACTICAL_STYLE_OPTIONS } from "@/lib/intake-options";
 import { humanizeIfRawEnum } from "@/lib/plan-labels";
 import { requestXpRefresh } from "@/lib/xp-events";
@@ -36,6 +36,7 @@ import {
   isArchivedPlan,
 } from "@/lib/plan-active";
 import { getPlanReviewReason, isHeldForAdminReviewPlan } from "@/lib/plan-review";
+import type { CustomPlan } from "@/lib/api-schema.generated";
 import type { PlanSummary } from "@/lib/types";
 
 function getArchivedPlans(plans: PlanSummary[]): PlanSummary[] {
@@ -114,6 +115,8 @@ export default function PlansPage() {
   const router = useRouter();
   const { showToast } = useToast();
   const { isMeHydrated, me, session } = useAppSession();
+  const [customDrafts, setCustomDrafts] = useState<CustomPlan[]>([]);
+  const [customError, setCustomError] = useState<string | null>(null);
   const [plans, setPlans] = useState<PlanSummary[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -142,7 +145,14 @@ export default function PlansPage() {
   const heldForReviewPlans = visiblePlans.filter(isHeldForAdminReviewPlan);
   const archivedPlans = getArchivedPlans(visiblePlans);
   const otherSavedPlans = visiblePlans.filter((plan) => plan.plan_id !== activePlan?.plan_id && !isArchivedPlan(plan.status));
-  const hasPlans = visiblePlans.length > 0;
+  // A published custom plan already has its own shared row and Edit Plan action.
+  // Keep unfinished edits visible alongside it; do not list its complete draft twice.
+  const unpublishedDrafts = customDrafts.filter((draft) => draft.incomplete ||
+    !visiblePlans.some((plan) => plan.custom_plan_id === draft.id));
+  const savedRows = [
+    ...otherSavedPlans.map((plan) => ({ kind: "published" as const, plan, date: plan.created_at })),
+    ...unpublishedDrafts.map((draft) => ({ kind: "draft" as const, draft, date: draft.updated_at })),
+  ].sort((left, right) => new Date(right.date).getTime() - new Date(left.date).getTime());
   const managedPlan = managedPlanId ? visiblePlans.find((plan) => plan.plan_id === managedPlanId) ?? null : null;
   const tacticalStyle = getOptionLabels(TACTICAL_STYLE_OPTIONS, me?.profile?.tactical_style ?? [])[0] ?? null;
   const phase = activePlan && activePhase?.planId === activePlan.plan_id ? activePhase.phase : null;
@@ -155,7 +165,7 @@ export default function PlansPage() {
     setIsLoading(true);
     setError(null);
     try {
-      const [nextPlans, active] = await Promise.all([
+      const [nextPlans, active, custom] = await Promise.all([
         listPlans(token),
         getActivePlan(token).catch((activeError) => {
           if (activeError instanceof ApiError && activeError.status === 404) {
@@ -163,12 +173,21 @@ export default function PlansPage() {
           }
           throw activeError;
         }),
+        listCustomPlans(token).then((rows) => {
+          if (!Array.isArray(rows)) throw new Error("Unable to load custom drafts.");
+          return { rows, error: null };
+        }).catch((reason: unknown) => ({
+          rows: [] as CustomPlan[],
+          error: reason instanceof Error ? reason.message : "Unable to load custom drafts.",
+        })),
       ]);
       // Ignore results from a request that the current session has moved past.
       if (latestTokenRef.current !== token) {
         return;
       }
       setPlans(nextPlans);
+      setCustomDrafts(custom.rows);
+      setCustomError(custom.error);
       setActivePlanId(active?.plan_id ?? null);
     } catch (plansError) {
       if (latestTokenRef.current !== token) {
@@ -282,7 +301,7 @@ export default function PlansPage() {
           <p className={styles.pageSubtitle}>Build, manage and add to your training.</p>
           <Link href="/plans/custom" className="ghost-button">Build My Own Plan</Link>
         </header>
-        {session?.access_token ? <><SavedCustomPlans accessToken={session.access_token} /><MyCommunitySubmissions token={session.access_token} /></> : null}
+        {session?.access_token ? <MyCommunitySubmissions token={session.access_token} /> : null}
         <div className={actionStyles.actions}>
           <LogTraining accessToken={session?.access_token ?? null} variant="tile" />
           <TrainingLibraryLink variant="tile" />
@@ -335,29 +354,37 @@ export default function PlansPage() {
           </div>
         ) : null}
 
-        {!isLoading && hasPlans ? (
-          <div className={`athlete-motion-slot athlete-motion-main ${styles.section}`}>
+        {!isLoading ? (
+          <section id="custom-plans" aria-label="Saved plans" className={`athlete-motion-slot athlete-motion-main ${styles.section}`}>
             <div className={styles.sectionHead}>
               <h2 className={styles.sectionTitle}>{t("previousPlans")}</h2>
-              {otherSavedPlans.length ? (
-                <span className={styles.sectionMeta}>{t("savedCount", { count: otherSavedPlans.length })}</span>
+              {savedRows.length ? (
+                <span className={styles.sectionMeta}>{t("savedCount", { count: savedRows.length })}</span>
               ) : null}
             </div>
-            {otherSavedPlans.length > 0 ? (
+            {savedRows.length > 0 ? (
               <ul className={styles.rows}>
-                {otherSavedPlans.map((plan) => (
+                {savedRows.map((row) => row.kind === "draft" ? (
+                  <CustomDraftRow key={`draft:${row.draft.id}`} draft={row.draft} />
+                ) : (
                   <PlanRow
-                    key={plan.plan_id}
-                    plan={plan}
+                    key={row.plan.plan_id}
+                    plan={row.plan}
                     activePlanId={activePlanId}
-                    onOpen={() => setManagedPlanId(plan.plan_id)}
+                    onOpen={() => setManagedPlanId(row.plan.plan_id)}
                   />
                 ))}
               </ul>
             ) : (
-              <p className="muted">No other saved plans.</p>
+              <p className="muted">{visiblePlans.length ? "No other saved plans." : "No saved plans yet. Build your own plan or create a camp."}</p>
             )}
 
+            {customError ? (
+              <div className="error-banner" role="alert">
+                <span>{customError}</span>
+                <button className="error-banner-retry" onClick={() => void loadPlans()}>Retry custom plans</button>
+              </div>
+            ) : null}
             {archivedPlans.length ? (
               <>
                 <button
@@ -384,7 +411,7 @@ export default function PlansPage() {
                 ) : null}
               </>
             ) : null}
-          </div>
+          </section>
         ) : null}
 
         <div className={`athlete-motion-slot athlete-motion-main ${styles.section}`}>

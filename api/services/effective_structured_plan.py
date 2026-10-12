@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from copy import deepcopy
 import logging
 import re
 from collections.abc import Mapping
@@ -182,6 +183,33 @@ def resolve_effective_structured_plan(
     resolved = _resolve_effective_structured_plan(plan_row, raw_markdown=raw_markdown)
     if resolved is None:
         return None
+    # These fields are server-owned by custom publication, never by a model.
+    # A generated card cannot claim athlete authority or private attachments.
+    brief = _mapping(plan_row.get("planning_brief")) or {}
+    if not brief.get("custom_plan"):
+        fields = ("prescription_source", "prescription_text", "athlete_dose",
+                  "private_media_id", "community_revision_id", "source_session_id", "catalogue_id")
+        sessions = [session for week in resolved.get("weeks") or [] if isinstance(week, Mapping)
+                    for day in week.get("days") or [] for session in _session_rows(day) if isinstance(session, Mapping)]
+        nodes = [resolved.get("plan_metadata") or {}, *sessions,
+                 *(block for session in sessions for block in session.get("blocks") or [] if isinstance(block, Mapping))]
+        if any(node.get(field) is not None for node in nodes if isinstance(node, Mapping) for field in fields):
+            resolved = deepcopy(resolved)
+            if isinstance(resolved.get("plan_metadata"), dict):
+                resolved["plan_metadata"].pop("prescription_source", None)
+            for week in resolved.get("weeks") or []:
+                if not isinstance(week, Mapping):
+                    continue
+                for day in week.get("days") or []:
+                    for session in _session_rows(day):
+                        if not isinstance(session, dict):
+                            continue
+                        session.pop("prescription_source", None)
+                        for block in session.get("blocks") or []:
+                            if not isinstance(block, dict):
+                                continue
+                            for field in fields:
+                                block.pop(field, None)
     resolved = ensure_structured_session_ids(resolved, plan_id=plan_row.get("id"))
     return ensure_structured_block_ids(resolved)
 

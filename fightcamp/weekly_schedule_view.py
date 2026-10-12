@@ -262,9 +262,10 @@ def _open_ongoing_weekly_schedule(
     if not isinstance(template, dict):
         return None
 
-    development_block = open_spec.get("development_block")
-    week_count = len(development_block) if isinstance(development_block, dict) else 4
-    week_count = max(1, week_count)
+    # Development copy is optional metadata, not the cycle length. The shared
+    # Open Plan projector always renews four weeks, including older custom
+    # snapshots whose development_block is empty.
+    week_count = 4
     if week_index >= week_count:
         return None
 

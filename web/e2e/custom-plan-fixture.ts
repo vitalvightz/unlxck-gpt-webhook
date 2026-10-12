@@ -131,6 +131,7 @@ export async function setup(page: Page, baseURL: string, role = "athlete") {
       expect(Object.keys(body).sort()).toEqual(["name", "sessions"]);
       const sessions = (body.sessions ?? []).map((session) => ({
         ...session,
+        session_type: session.session_type ?? "mixed",
         weekday: session.weekday ?? null,
         exercises: (session.exercises ?? []).map((exercise) => {
           const dose = { ...blankDose(), ...exercise.dose };

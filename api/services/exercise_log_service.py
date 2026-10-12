@@ -52,6 +52,9 @@ _PRESCRIBED_FIELDS: tuple[str, ...] = (
     "effort",
     "tempo",
     "intensity",
+    "prescription_text",
+    "athlete_dose",
+    "notes",
 )
 
 _NOT_STARTED_DETAIL = "Start today's session before logging an exercise."
@@ -105,7 +108,8 @@ def _loggable_blocks(
             continue
         session_id = _clean(session.get("session_id")) or _clean(completion.get("session_id")) or None
         frozen_session_ids.add(session_id or "")
-        blocks.extend((session_id, block) for block in _iter_mapping_items(session.get("blocks")))
+        blocks.extend((block.get("source_session_id") or session_id, block)
+                      for block in _iter_mapping_items(session.get("blocks")))
 
     started_session_ids = {_clean(row.get("session_id")) for row in completions}
     matched = _structured_day_for_training_day(plan_row, training_day)

@@ -187,6 +187,7 @@ export type AdminPlanOutputs = {
 };
 
 export type AdminPlanSummary = {
+  custom_plan_id: string | null;
   plan_id: string;
   plan_name: string | null;
   athlete_id: string;
@@ -577,6 +578,7 @@ export type CustomSession = {
   id: string;
   name: string;
   weekday: "Friday" | "Monday" | "Saturday" | "Sunday" | "Thursday" | "Tuesday" | "Wednesday" | null;
+  session_type: "conditioning" | "mixed" | "recovery" | "skill" | "sparring" | "strength_power";
   exercises: (CustomExercise | ManualExercise)[];
 };
 
@@ -584,6 +586,7 @@ export type CustomSessionInput = {
   id: string;
   name: string;
   weekday?: "Friday" | "Monday" | "Saturday" | "Sunday" | "Thursday" | "Tuesday" | "Wednesday" | null;
+  session_type?: "conditioning" | "mixed" | "recovery" | "skill" | "sparring" | "strength_power";
   exercises?: (CustomExerciseInput | ManualExerciseInput)[];
 };
 
@@ -1554,6 +1557,7 @@ export type PlanCompletionsResponse = {
 };
 
 export type PlanDetail = {
+  custom_plan_id: string | null;
   plan_id: string;
   plan_name: string | null;
   athlete_id: string;
@@ -1582,6 +1586,7 @@ export type PlanMetadata = {
   title: string;
   sport: string;
   plan_type: "explosive_athlete" | "fight_camp" | "general_performance" | "match_week" | "open_ongoing_system" | "reintegration";
+  prescription_source: "athlete" | null;
   timezone: string;
   status: "active" | "archived" | "completed" | "draft";
   created_at: string | null;
@@ -1680,6 +1685,7 @@ export type PlanScheduleContext = {
 };
 
 export type PlanSummary = {
+  custom_plan_id: string | null;
   plan_id: string;
   plan_name: string | null;
   athlete_id: string;
@@ -2029,6 +2035,7 @@ export type SelectedResistance = {
 export type Session = {
   session_id: string | null;
   session_type: "conditioning" | "fight_or_match" | "mixed" | "primer" | "recovery" | "rehab" | "skill" | "sparring" | "strength_power";
+  prescription_source: "athlete" | null;
   title: string;
   objective: string;
   planned_duration: MeasuredValue | null;
@@ -2077,6 +2084,14 @@ export type SessionBlock = {
   red_flags: RedFlagRule[];
   rehab_drill_id: string | null;
   exercise_key: string | null;
+  prescription_source: "athlete" | null;
+  prescription_text: string | null;
+  athlete_dose: Record<string, unknown> | null;
+  catalogue_id: string | null;
+  private_media_id: string | null;
+  community_revision_id: string | null;
+  source_session_id: string | null;
+  notes: string | null;
 };
 
 export type SessionCompletionHistoryResponse = {

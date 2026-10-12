@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState, useSyncExternalStore, type ReactNode } from "react";
 
 import { ExerciseMediaProvider } from "@/components/exercise-demo";
+import { PrivateExerciseMediaProvider } from "@/components/private-exercise-video";
 import { ExerciseLogProvider, type ExerciseLogging } from "@/components/exercise-log";
 import { SessionFeedbackPrompt } from "@/components/feedback/session-feedback-prompt";
 import {
@@ -337,6 +338,7 @@ export function TodaySessionBlocks({
   rehabLabelPolicy,
   exerciseMedia,
   exerciseLogging = null,
+  accessToken,
 }: {
   planId?: string;
   current: CurrentDayResolution;
@@ -355,6 +357,7 @@ export function TodaySessionBlocks({
   /** In-session logging for the exercise rows; null until today's session is
    * started, and whenever the card shows a day other than today. */
   exerciseLogging?: ExerciseLogging | null;
+  accessToken?: string | null;
 }) {
   if (!current.inRange || !current.day) {
     return null;
@@ -384,6 +387,7 @@ export function TodaySessionBlocks({
   }
   return (
     <RehabLabelProvider policy={rehabLabelPolicy}>
+    <PrivateExerciseMediaProvider token={accessToken}>
     <ExerciseMediaProvider media={exerciseMedia}>
     <ExerciseRationaleProvider>
     <ExerciseLogProvider logging={exerciseLogging}>
@@ -416,6 +420,7 @@ export function TodaySessionBlocks({
     </ExerciseLogProvider>
     </ExerciseRationaleProvider>
     </ExerciseMediaProvider>
+    </PrivateExerciseMediaProvider>
     </RehabLabelProvider>
   );
 }
@@ -554,10 +559,15 @@ export function TodaySessionPanel({
   const guidanceOnlyRehab = sessionHasGuidanceRehab && !sessionHasRehab;
   // A rehab-only day of guidance has nothing to start: it is checked off.
   const guidanceOnlyRehabDay = rehabOnlyPrescription && guidanceOnlyRehab;
+  const liveSessions = livePrescription?.session.prescription_source === "athlete" && storedCurrent.sessions.length
+    ? storedCurrent.sessions.map(s => ({
+        ...s, blocks: (livePrescription.session.blocks ?? []).filter(b => b.source_session_id === s.session_id),
+      }))
+    : livePrescription ? [livePrescription.session] : [];
   const current: CurrentDayResolution = livePrescription ? {
     ...storedCurrent, inRange: true,
     day: {
-      ...(storedCurrent.day ?? {}), date: state.today.training_day, sessions: [livePrescription.session],
+      ...(storedCurrent.day ?? {}), date: state.today.training_day, sessions: liveSessions,
       ...(rehabOnlyPrescription ? {
         day_type: "recovery",
         today_card: {
@@ -567,14 +577,14 @@ export function TodaySessionPanel({
         },
       } : {}),
     },
-    sessions: [livePrescription.session],
+    sessions: liveSessions,
   } : storedCurrent;
   // Where the resolved day sits in the renewable development block (baseline /
   // progress / peak / deload). The resolved week position wins over the bare
   // anchor-derived number so the note always matches the blocks shown below.
   // Dated camps stay null and render unchanged.
   const openWeekIntent = openOngoing && !rehabOnlyPrescription
-    ? openBlockWeekIntent(current.weekPos != null ? current.weekPos + 1 : openWeekNumber)
+    ? openBlockWeekIntent(current.weekPos != null ? current.weekPos + 1 : openWeekNumber, current.sessions.some(s => s.prescription_source === "athlete"))
     : null;
   const showStructuredBlocks = current.inRange && Boolean(current.day);
   // The day's blocks by id, to put each timer log back against its block.
@@ -598,7 +608,7 @@ export function TodaySessionPanel({
   // session in place of the real blocks so Today never displays hard combat as
   // available under a stop. Future sessions stay visible but read as pending.
   const safeSession =
-    resolvedDecision.useSafeReplacement && !livePrescription
+    resolvedDecision.useSafeReplacement && !livePrescription && !current.sessions.some(s => s.prescription_source === "athlete")
       ? getSafeSessionView(getSessionTitle(session), state.open_injuries)
       : null;
   const nextIsHardCombat = isHardCombatSession(session);
@@ -1140,6 +1150,7 @@ export function TodaySessionPanel({
             rehabLabelPolicy={rehabLabelPolicy}
             exerciseMedia={exerciseMedia}
             exerciseLogging={exerciseLogging}
+            accessToken={token}
           />
         ) : (
           <p className="muted">No active plan card matched today. Use View plan to find the next training target.</p>
@@ -1330,6 +1341,7 @@ export function TodaySessionPanel({
                   rehabLabelPolicy={rehabLabelPolicy}
                   exerciseMedia={exerciseMedia}
                   exerciseLogging={exerciseLogging}
+                  accessToken={token}
                 />
                 <p className="today-pending-line">
                   <span className="today-pending-pill">Pending</span>
@@ -1347,6 +1359,7 @@ export function TodaySessionPanel({
             rehabLabelPolicy={rehabLabelPolicy}
             exerciseMedia={exerciseMedia}
             exerciseLogging={exerciseLogging}
+            accessToken={token}
           />
         )
       ) : (
@@ -1553,6 +1566,7 @@ export function TodaySessionPanel({
                 rehabLabelPolicy={rehabLabelPolicy}
                 exerciseMedia={exerciseMedia}
                 exerciseLogging={exerciseLogging}
+                accessToken={token}
               />
             ) : null
           }

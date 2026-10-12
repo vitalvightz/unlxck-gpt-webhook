@@ -1585,6 +1585,11 @@ def upsert_session_completion(
         status_value in {"done", "modified"}
         and str(existing.get("status") or "not_started") not in {"done", "modified"}
     )
+    from api.plan_mappers import _decode_structured_text
+    if (_decode_structured_text(plan_row.get("planning_brief")) or {}).get("custom_plan"):
+        # All scheduled sessions share the existing day-level completion. A
+        # retry submitted through a sibling must not claim another XP award.
+        row["_day_credit_key"] = f"{athlete_id}:{training_day}"
     return row
 
 
@@ -2963,6 +2968,19 @@ def _build_today_command_view(
     today_session_entry = (
         today_candidates[0] if today_candidates and today_logged_entry is None else None
     )
+    # Custom days execute as one combined workout through the existing
+    # completion fan-out. Name every required session so the summary describes
+    # the same unit as the Enhanced Cards and the completion action.
+    from api.plan_mappers import _decode_structured_text
+    is_custom_plan = bool((_decode_structured_text(plan_row.get("planning_brief")) or {}).get("custom_plan"))
+    if is_custom_plan and today_session_entry is not None and len(today_candidates) > 1:
+        today_session_entry = {
+            **_entry_mapping_for_readiness(today_session_entry),
+            "title": " / ".join(
+                str(_entry_mapping_for_readiness(entry).get("title") or "Session")
+                for entry in today_candidates
+            ),
+        }
     has_today_session = has_scheduled_day_content(today_session_entry)
     today_session_id = _session_id_for_entry(today_session_entry) if has_today_session else None
     rehab_occurrence = completions.rehab_completion(plan_id, training_day)
@@ -3090,7 +3108,7 @@ def _build_today_command_view(
                 other_entries.append(app_entry)
         # Do not discard otherwise-permitted ordinary non-contact camp under
         # train/no-contact. This exception offers independently safe support.
-        if support_entries and (ceiling["level"] == "rehab_only" or all(_session_has_contact(row) for row in other_entries)):
+        if support_entries and not any(entry.get("prescription_source") == "athlete" for entry in today_candidates) and (ceiling["level"] == "rehab_only" or all(_session_has_contact(row) for row in other_entries)):
             support_projection = {**support_entries[0], "blocks": [block for row in support_entries for block in row["blocks"]]}
             support_owner_ids = {str(row["session_id"]) for row in support_entries}
     if completion_status_of(today_completion) == "started":
@@ -3341,7 +3359,12 @@ def _build_today_command_view(
     if live:
         # Presentation only: never part of the frozen prescription/revision.
         from .exercise_media import load_media_index, resolve_session_exercise_media
-        view.exercise_media = resolve_session_exercise_media(live.get("session") or {}, load_media_index(store))
+        from api.plan_mappers import _decode_structured_text
+        custom = _decode_structured_text(plan_row.get("planning_brief"))
+        if custom and custom.get("custom_plan"):
+            view.exercise_media = custom["custom_plan"].get("exercise_media") or {}
+        else:
+            view.exercise_media = resolve_session_exercise_media(live.get("session") or {}, load_media_index(store))
     view.effective_clinician_clearance = effective_clinician_clearance(open_injuries)
     view.delayed_rehab_prompts = delayed_rehab_prompts(store, athlete_id, training_day, athlete_timezone)
     return view

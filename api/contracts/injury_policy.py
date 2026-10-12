@@ -429,6 +429,7 @@ def reconcile_session_prescription(
     if session is None and not prescribed:
         return None
     entry = deepcopy(dict(session or {"session_id": f"rehab-{training_day}", "title": "Today's rehab", "session_type": "rehab", "blocks": []}))
+    athlete_owned = entry.get("prescription_source") == "athlete"
     # A partial support projection needs accepted ownership even when no rehab
     # policy is live. Its caller retains the original day's allocation ceiling.
     restrictions = []
@@ -581,10 +582,10 @@ def reconcile_session_prescription(
                          and a.get("dose") == block.get("dose")
                          and contact_level(a) in contact_rank and contact_rank[contact_level(a)] <= allowed_contact
                          and (not block_contact_ceiling or not _hard_contact(a))), None)
-            if safe:
+            if safe and not athlete_owned:
                 blocks.append({**deepcopy(safe), "block_id": block.get("block_id")})
                 changes.append({"block_id": block.get("block_id"), "action": "substituted"})
-            elif clearance_contact and not uncertain and not ((demands or set()) & blocked_regions) and not ((tags or set()) & blocked_tags):
+            elif not athlete_owned and clearance_contact and not uncertain and not ((demands or set()) & blocked_regions) and not ((tags or set()) & blocked_tags):
                 changes.append({"block_id": block.get("block_id"), "action": "removed", "reason": "clinician_clearance_ceiling"})
             else:
                 hold = True
@@ -616,6 +617,8 @@ def reconcile_session_prescription(
     budget = max(0, day_budget - rehab_allocation_count(blocks))
     for index, decision in enumerate(sorted((d for d in prescribed if (d["injury_id"], d["injury_episode_id"]) not in replaced),
                                              key=lambda d: d["injury_id"])):
+        if athlete_owned:
+            continue
         if index >= budget:
             changes.append({"injury_id": decision["injury_id"], "action": "deferred", "reason": "rehab_slot_budget"})
             continue
@@ -625,7 +628,7 @@ def reconcile_session_prescription(
     entry["blocks"] = blocks
     rehab_only = session is None and bool(blocks) and all(
         block.get("block_type") == "rehab" and block.get("policy_id") and not block.get("_policy_held") for block in blocks)
-    if hold and not any(d.get("outcome") == "medical_review" for d in decisions):
+    if hold and not athlete_owned and not any(d.get("outcome") == "medical_review" for d in decisions):
         reviewed_blocks = [block for block in blocks if block.get("block_type") == "rehab" and block.get("policy_id")
                            and not block.get("_policy_held")]
         if reviewed_blocks:

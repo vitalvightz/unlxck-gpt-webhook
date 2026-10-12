@@ -1531,6 +1531,7 @@ class ProfileRecord(BaseModel):
 
 
 class PlanSummary(BaseModel):
+    custom_plan_id: str | None = None
     plan_id: str
     plan_name: str | None = None
     athlete_id: str

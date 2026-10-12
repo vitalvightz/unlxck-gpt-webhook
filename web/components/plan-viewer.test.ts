@@ -44,6 +44,19 @@ function makePlan(overrides: { status?: string; planText?: string }): PlanDetail
   } as unknown as PlanDetail;
 }
 
+test("validated custom cards are released without AI markdown, including archived history", () => {
+  const custom = {
+    ...makePlan({ planText: "" }), custom_plan_id: "draft",
+    structured_card_state: { state: "live", reasons: [] } as StructuredCardState,
+    outputs: { plan_text: "", structured_plan: { plan_metadata: { prescription_source: "athlete" as const } } },
+  };
+  assert.equal(isPlanReleasedToAthlete(custom), true);
+  assert.equal(isPlanReleasedToAthlete({ ...custom, status: "archived" }), true);
+  assert.equal(isPlanReleasedToAthlete({ ...custom, status: "held_for_review" }), false);
+  assert.equal(isPlanReleasedToAthlete({ ...custom, structured_card_state: { state: "failed", reasons: [] } }), false);
+  assert.equal(isPlanReleasedToAthlete(makePlan({ planText: "" })), false);
+});
+
 test("plan feedback is visible to athletes and only the owning admin", () => {
   assert.equal(canShowContextualPlanFeedback("athlete", "athlete-1", "athlete-1"), true);
   assert.equal(canShowContextualPlanFeedback("admin", "admin-1", "admin-1"), true);

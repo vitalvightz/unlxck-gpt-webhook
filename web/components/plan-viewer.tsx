@@ -127,10 +127,13 @@ const ATHLETE_VISIBLE_STATUSES = new Set(["ready", "publishable_with_flags"]);
  * timeout on the approve request.
  */
 export function isPlanReleasedToAthlete(
-  plan: Pick<PlanDetail, "status" | "outputs">,
+  plan: Pick<PlanDetail, "status" | "outputs"> & Partial<Pick<PlanDetail, "custom_plan_id" | "structured_card_state">>,
 ): boolean {
   const status = (plan.status || "").trim().toLowerCase();
-  return ATHLETE_VISIBLE_STATUSES.has(status) && Boolean(plan.outputs.plan_text.trim());
+  const customCard = Boolean(plan.custom_plan_id && plan.structured_card_state?.state === "live"
+    && plan.outputs.structured_plan?.plan_metadata?.prescription_source === "athlete");
+  return (ATHLETE_VISIBLE_STATUSES.has(status) || (status === "archived" && customCard))
+    && (Boolean(plan.outputs.plan_text.trim()) || customCard);
 }
 
 /**
@@ -2722,6 +2725,9 @@ export function PlanViewer({
           <Link href="/plans" className="ghost-button">
             All plans
           </Link>
+          {plan.custom_plan_id && plan.athlete_id === viewerProfileId ? (
+            <Link className="ghost-button" href={`/plans/custom?plan=${plan.custom_plan_id}`}>Edit Plan</Link>
+          ) : null}
           {archivedPreview && viewerRole === "athlete" ? (
             <Link href="/onboarding" className="ghost-button">
               Create New Plan
@@ -2753,7 +2759,7 @@ export function PlanViewer({
                     </button>
                   </>
                 ) : null}
-                {hasPublishedPlan ? (
+                {hasPublishedPlan && athletePlanText ? (
                   <QuickCopyButton text={athletePlanText} artifactKey="athlete-plan" />
                 ) : null}
                 {isViewerAdmin ? (
@@ -2975,6 +2981,7 @@ export function PlanViewer({
                   isAdmin={isViewerAdmin}
                   rehabLabelPolicy={rehabLabelPolicy}
                   exerciseMedia={plan.outputs.exercise_media}
+                  accessToken={accessToken}
                 />
               ) : holdPlanForEnhancedCard ? (
                 <EnhancedCardLockInCard accessToken={accessToken} />

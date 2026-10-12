@@ -116,6 +116,7 @@ class CustomSessionInput(DraftModel):
     id: UUID
     name: Name
     weekday: Weekday | None = None
+    session_type: Literal["mixed", "strength_power", "conditioning", "skill", "sparring", "recovery"] = "mixed"
     exercises: list[ExerciseInput] = Field(default_factory=list, max_length=100)
 
     @model_validator(mode="before")

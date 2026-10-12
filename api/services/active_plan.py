@@ -257,6 +257,11 @@ def _active_plan_overlap(
 
     current_range = plan_date_range(current)
     candidate_range = plan_date_range(candidate)
+    from api.services.open_plan_timeline import open_plan_spec
+    if open_plan_spec(current) or open_plan_spec(candidate):
+        # Renewable plans have no end date; their undated templates must still
+        # participate in the existing explicit pause/replace choice.
+        return current
     if not current_range or not candidate_range:
         return None
     return current if _ranges_overlap(current_range, candidate_range) else None
@@ -314,6 +319,17 @@ def set_active_plan(
     plan = store.get_plan_for_athlete(plan_id, athlete_id)
     if plan is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
+    if _decode_mapping(plan.get("planning_brief")).get("custom_plan"):
+        from api.structured_plan_models import safe_parse_structured_plan
+        from api.services.open_plan_timeline import project_open_structured_plan
+        parsed = safe_parse_structured_plan(plan.get("structured_plan"))
+        if not parsed.ok or parsed.plan is None:
+            raise HTTPException(409, "This custom plan's prescription is invalid. Edit the plan before activating.")
+        _, context = project_open_structured_plan(
+            plan, parsed.plan.model_dump(mode="json"), current_training_day=current_training_day or date.today()
+        )
+        if context["projection_status"] != "projected":
+            raise HTTPException(409, "This custom plan's schedule is invalid. Edit the plan before activating.")
     activation_state = get_plan_activation_state(
         plan,
         current_training_day=current_training_day,
@@ -338,6 +354,16 @@ def set_active_plan(
         plan,
         current_training_day=current_training_day,
     )
+    if overlapping_active:
+        previous_custom = _decode_mapping(overlapping_active.get("planning_brief")).get("custom_plan") or {}
+        candidate_custom = _decode_mapping(plan.get("planning_brief")).get("custom_plan") or {}
+        if previous_custom.get("id") and previous_custom.get("id") == candidate_custom.get("id"):
+            day = str(current_training_day or date.today())[:10]
+            rows = store.list_session_completions(athlete_id, limit=500)
+            if any(str(row.get("plan_id")) == str(overlapping_active["id"])
+                   and str(row.get("training_day"))[:10] == day
+                   and row.get("status") in {"started", "done", "modified", "skipped"} for row in rows):
+                raise HTTPException(409, "Today's workout has already been logged or started. Activate your edited plan on the next training day.")
     if overlapping_active and normalized_action is None:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,

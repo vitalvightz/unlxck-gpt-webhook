@@ -59,12 +59,12 @@ for (const width of [320, 390, 1280]) {
     await page.getByRole("button", { name: "Edit dose for My bag rounds", exact: true }).click();
     await page.getByLabel("Position in session").selectOption("0");
     await page.getByRole("button", { name: "Done", exact: true }).click();
-    await page.getByRole("button", { name: "Save Plan", exact: true }).click();
+    await page.getByRole("button", { name: "Save draft", exact: true }).click();
     await expect(page).toHaveURL(/custom\?plan=/);
     await expect(page.getByText("Unsaved changes", { exact: true })).toHaveCount(0);
-    await page.getByRole("link", { name: /Saved custom plans/ }).click();
+    await page.getByRole("link", { name: /Saved plans/ }).click();
     const card = page
-      .getByRole("region", { name: "Saved custom plans" })
+      .getByRole("region", { name: "Saved plans" })
       .getByRole("link")
       .filter({ hasText: `Weekly strength ${width}` });
     await card.scrollIntoViewIfNeeded();
@@ -84,12 +84,12 @@ for (const width of [320, 390, 1280]) {
     await expect(page.getByLabel("Exercise name")).toHaveValue("My renamed rounds");
     await page.getByRole("button", { name: "Done", exact: true }).click();
     page.once("dialog", (dialog) => dialog.dismiss());
-    await page.getByRole("link", { name: /Saved custom plans/ }).click();
+    await page.getByRole("link", { name: /Saved plans/ }).click();
     await expect(page.getByLabel("Plan name")).toBeVisible();
     page.once("dialog", (dialog) => dialog.dismiss());
     await page.goBack();
     await expect(page.getByText("My renamed rounds", { exact: true })).toBeVisible();
-    await page.getByRole("button", { name: "Save Plan", exact: true }).click();
+    await page.getByRole("button", { name: "Save draft", exact: true }).click();
     await expect(page.getByText("Unsaved changes", { exact: true })).toHaveCount(0);
     await page.goBack();
     await expect(page).toHaveURL(/\/plans(?:#custom-plans)?$/);
@@ -101,7 +101,7 @@ for (const width of [320, 390, 1280]) {
       fullPage: true,
     });
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-    const saveBounds = await page.getByRole("button", { name: "Save Plan", exact: true }).boundingBox();
+    const saveBounds = await page.getByRole("button", { name: "Save draft", exact: true }).boundingBox();
     expect(saveBounds!.y + saveBounds!.height).toBeLessThan(width < 768 ? 780 : 844);
     expect(
       (await new AxeBuilder({ page }).include('[aria-label="Custom training plan builder"]').analyze()).violations,
@@ -110,7 +110,7 @@ for (const width of [320, 390, 1280]) {
     await page.getByRole("button", { name: "Delete plan", exact: true }).click();
     await expect(
       page
-        .getByRole("region", { name: "Saved custom plans" })
+        .getByRole("region", { name: "Saved plans" })
         .getByRole("link")
         .filter({ hasText: `Weekly strength ${width}` }),
     ).toHaveCount(0);
@@ -196,7 +196,7 @@ for (const width of [320, 390, 1280]) {
       expect(second!.y).toBe(first!.y);
       await page.screenshot({ path: `${process.env.TEMP ?? "/tmp"}/unlxck-private-builder-${width}.png`, fullPage: true });
     }
-    await page.getByRole("button", { name: "Save Plan", exact: true }).click();
+    await page.getByRole("button", { name: "Save draft", exact: true }).click();
     await expect(page).toHaveURL(/custom\?plan=/);
     expect([...saved.values()][0].sessions[0].exercises[0]).toMatchObject({ origin: "manual", media_id: media.id });
     await page.reload();
@@ -249,14 +249,14 @@ test("Saved-plan failures are visible and retryable", async ({ page, baseURL }) 
     }),
   );
   await page.goto("/plans");
-  await expect(page.getByRole("region", { name: "Saved custom plans" }).getByRole("alert")).toContainText(
+  await expect(page.getByRole("region", { name: "Saved plans" }).getByRole("alert")).toContainText(
     "temporarily unavailable",
   );
   await expect(page.getByRole("button", { name: "Retry custom plans" })).toBeVisible();
   await expect(page.getByRole("link", { name: "Build My Own Plan" })).toBeVisible();
   await page.route("**/api/custom-plans", (route) => route.fulfill({ contentType: "application/json", body: "[]" }));
   await page.getByRole("button", { name: "Retry custom plans" }).click();
-  await expect(page.getByText("No saved custom plans yet. Build your own training week.")).toBeVisible();
+  await expect(page.getByText("No saved plans yet. Build your own plan or create a camp.")).toBeVisible();
 });
 
 for (const width of [390, 1280]) {
@@ -275,11 +275,50 @@ for (const width of [390, 1280]) {
     const expected = ['Day 2', 'Day 7', 'Day 4', 'Day 3', 'Day 5', 'Day 1', 'Day 6', 'Day 0', 'Day 8'];
     const names = page.getByRole('region', { name: /^Session \d+$/ }).getByRole('heading', { level: 2 });
     await expect(names).toHaveText(expected);
-    await page.getByRole('button', { name: 'Save Plan', exact: true }).click();
+    await page.getByRole('button', { name: 'Save draft', exact: true }).click();
     await expect(page).toHaveURL(/custom\?plan=/);
     expect([...saved.values()][0].sessions.map(session => session.name)).toEqual(expected);
     await page.reload();
     await expect(names).toHaveText(expected);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  });
+}
+
+
+for (const width of [320, 390, 1280]) {
+  test(`AI and custom plans share one saved list (${width}px)`, async ({ page, baseURL }) => {
+    await page.setViewportSize({ width, height: 900 });
+    const errors: string[] = [];
+    page.on("pageerror", (error) => errors.push(error.message));
+    const { saved } = await setup(page, baseURL!);
+    const publishedDraft = "00000000-0000-4000-8000-000000000011";
+    saved.set(publishedDraft, { id: publishedDraft, name: "Already published", kind: "self_directed",
+      incomplete: false, sessions: [], created_at: "2026-10-11T12:00:00Z", updated_at: "2026-10-11T12:00:00Z" });
+    const draftId = "00000000-0000-4000-8000-000000000012";
+    saved.set(draftId, { id: draftId, name: "My custom strength and conditioning week with a longer title",
+      kind: "self_directed", incomplete: true, sessions: [], created_at: "2026-10-12T12:00:00Z",
+      updated_at: "2026-10-12T12:00:00Z" });
+    const base = { athlete_id: "00000000-0000-4000-8000-000000000001", full_name: "Carlos", fight_date: "",
+      technical_style: ["boxing"], created_at: "2026-10-11T12:00:00Z", status: "ready", activation_state: "eligible" };
+    const active = { ...base, plan_id: "active-custom", plan_name: "My active week", custom_plan_id: "active-draft" };
+    await page.route("**/api/plans", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify([
+      active, { ...base, plan_id: "custom-week", plan_name: "Published custom week", custom_plan_id: publishedDraft },
+      { ...base, plan_id: "ai-week", plan_name: "Boxing performance block" },
+    ]) }));
+    await page.route("**/api/plans/active", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify(active) }));
+    await page.goto("/plans");
+    const list = page.getByRole("region", { name: "Saved plans", exact: true });
+    await expect(list.getByRole("listitem")).toHaveCount(3);
+    await expect(list.getByText("Custom", { exact: true })).toHaveCount(2);
+    await expect(list.getByText("3 saved", { exact: true })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Custom plans", exact: true })).toHaveCount(0);
+    await expect(page.getByRole("link", { name: "Edit Plan", exact: true })).toHaveAttribute("href", "/plans/custom?plan=active-draft");
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+    await list.scrollIntoViewIfNeeded();
+    const accessibility = await new AxeBuilder({ page }).include('section[aria-label="Saved plans"]').analyze();
+    expect(accessibility.violations).toEqual([]);
+    await list.getByRole("link").click();
+    await expect(page).toHaveURL(new RegExp(`plans/custom\\?plan=${draftId}`));
+    expect(errors).toEqual([]);
   });
 }

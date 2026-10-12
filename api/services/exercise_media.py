@@ -261,6 +261,9 @@ def attach_exercise_media(detail: Any, store: Any) -> Any:
     """Populate ``detail.outputs.exercise_media`` in place. Never raises."""
     try:
         outputs = getattr(detail, "outputs", None)
+        if getattr(detail, "custom_plan_id", None):
+            # The published athlete prescription owns its catalogue snapshot.
+            return detail
         structured_plan = getattr(outputs, "structured_plan", None)
         if outputs is None or structured_plan is None:
             return detail

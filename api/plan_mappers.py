@@ -260,7 +260,9 @@ def _map_plan_summary(
                 normalized_status = "publishable_with_flags"
             else:
                 normalized_status = "ready"
+    custom = report.get("custom_plan")
     return PlanSummary(
+        custom_plan_id=custom.get("id") if isinstance(custom, dict) else None,
         plan_id=str(row["id"]),
         plan_name=(str(row["plan_name"]).strip() if row.get("plan_name") is not None else None) or None,
         athlete_id=str(row["athlete_id"]),
@@ -686,6 +688,7 @@ def _map_plan_detail(
     return PlanDetail(
         **summary.model_dump(mode="json"),
         outputs=PlanOutputs(
+            exercise_media=(planning_brief or {}).get("custom_plan", {}).get("exercise_media") or {},
             plan_text=display_plan_text,
             pdf_url=row.get("pdf_url"),
             structured_plan=structured_plan,
@@ -698,7 +701,7 @@ def _map_plan_detail(
             structured_schema_version=structured_schema_version,
         ),
         advisories=build_plan_advisories(planning_brief=planning_brief),
-        plan_source=plan_source,
+        plan_source="custom" if (planning_brief or {}).get("custom_plan") else plan_source,
         schedule_context=PlanScheduleContext(**raw_schedule_context),
         profile_refresh_failed=bool(
             (row.get("why_log") if isinstance(row.get("why_log"), dict) else {}).get(

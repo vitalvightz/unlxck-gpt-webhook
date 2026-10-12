@@ -1,6 +1,11 @@
-"""Owner-scoped custom draft storage only; no planner, readiness or completion writes."""
+"""Owner-scoped drafts and deterministic publication into the shared plan store."""
 
 import re
+import hashlib
+import json
+from copy import deepcopy
+from datetime import datetime, timezone
+from uuid import UUID, uuid5
 
 from fastapi import HTTPException
 
@@ -12,6 +17,217 @@ from api.contracts.custom_plans import (
 )
 from api.services.exercise_media import load_media_index
 from api.services.training_library import cache, preview
+
+
+def custom_open_plan_result(draft: dict, profile, *, training_day: str) -> dict:
+    """Compile exactly the saved prescription, with no exercise selection."""
+    from api.structured_plan_models import SCHEMA_VERSION, StructuredTrainingPlan
+
+    sessions = draft.get("sessions") or []
+    if (not sessions or draft.get("incomplete")
+            or any(not s.get("weekday") or (not s.get("exercises") and
+                   s.get("session_type", "mixed") not in {"skill", "sparring"}) for s in sessions)):
+        raise HTTPException(422, "Assign every session to a day and complete its exercise doses before using this plan.")
+    revision = hashlib.sha256(json.dumps(
+        {k: draft[k] for k in ("name", "sessions")}, sort_keys=True, separators=(",", ":")
+    ).encode()).hexdigest()
+    plan_id = str(uuid5(UUID(draft["id"]), revision))
+    anchor = {"intent": "", "focus_cue": "", "reset_cue": ""}
+    days = []
+    hard, technical = [], []
+    from api.contracts.custom_plans import WEEKDAYS
+    for weekday in WEEKDAYS:
+        daily = [s for s in sessions if s["weekday"] == weekday]
+        if not daily:
+            continue
+        short = weekday[:3]
+        if any(s.get("session_type") == "sparring" for s in daily):
+            hard.append(short)
+        if any(s.get("session_type") == "skill" for s in daily):
+            technical.append(short)
+        rendered = []
+        for position, session in enumerate(daily, 1):
+            session_id = str(uuid5(UUID(plan_id), session["id"]))
+            blocks = []
+            for order, exercise in enumerate(session["exercises"], 1):
+                dose = exercise["dose"]
+                snapshot = exercise.get("snapshot") or {}
+                content_type = snapshot.get("content_type")
+                block_type = {"conditioning": "conditioning", "skill": "skill",
+                              "strength": "strength", "power": "plyometric_power",
+                              "speed": "speed"}.get(content_type) or {
+                                  "strength_power": "strength", "conditioning": "conditioning",
+                                  "skill": "skill", "sparring": "sparring", "recovery": "cooldown_recovery",
+                              }.get(session.get("session_type"), "accessory")
+                # A manual exercise has unknown mechanical demand. Missing
+                # metadata must stay unknown for the shared injury guards.
+                block = {
+                    "block_id": str(uuid5(UUID(plan_id), exercise["id"])), "block_type": block_type,
+                    "display_name": exercise.get("name") or snapshot["name"],
+                    "order_index": order, "exercise_key": snapshot.get("exercise_key"),
+                    "catalogue_id": exercise.get("catalogue_id"),
+                    "private_media_id": exercise.get("media_id"), "notes": exercise.get("notes"),
+                    "community_revision_id": exercise.get("community_revision_id"),
+                    "source_session_id": session_id,
+                    "prescription_source": "athlete", "athlete_dose": deepcopy(dose),
+                    "prescription_text": _dose_text(dose),
+                }
+                if exercise.get("origin") == "catalogue":
+                    record = cache.get().by_id.get(exercise["catalogue_id"])
+                    raw = record["entry"]["raw"] if record else {}
+                    for field in ("mechanical_load_regions", "tags", "contact_level", "impact_level"):
+                        if raw.get(field) is not None:
+                            block[field] = deepcopy(raw[field])
+                    guidance = preview(record).get("guidance", {}) if record else {}
+                    for target, source in (("coaching_cues", "Cues"), ("stop_rules", "Stop"),
+                                           ("regression_options", "Regress")):
+                        if guidance.get(source):
+                            block[target] = guidance[source]
+                    for target, source in (("purpose", "Why"), ("progression_rule", "Progress")):
+                        if guidance.get(source):
+                            block[target] = "\n".join(guidance[source])
+                for field in ("sets", "reps", "rounds"):
+                    if dose.get(field) is not None:
+                        block[field] = dose[field]
+                for field, source in (("duration", "duration_seconds"), ("work", "work_seconds"), ("rest", "rest_seconds")):
+                    if dose.get(source) is not None:
+                        block[field] = {"value": dose[source], "unit": "seconds"}
+                if dose.get("distance") is not None:
+                    block["distance"] = {"value": dose["distance"], "unit": dose["distance_unit"]}
+                if dose.get("rpe") is not None:
+                    block["effort"] = {"method": "RPE", "value": dose["rpe"]}
+                if dose.get("load_or_intensity"):
+                    # Free text stays text. Do not manufacture numeric load.
+                    block["intensity"] = dose["load_or_intensity"]
+                    weight = re.fullmatch(r"(\d+(?:\.\d+)?)\s*(kg|lb|lbs)", dose["load_or_intensity"].strip(), re.I)
+                    if weight:
+                        block["load"] = {"method": "absolute", "value": float(weight[1]),
+                                         "unit": "kg" if weight[2].lower() == "kg" else "lb",
+                                         "display": dose["load_or_intensity"]}
+                blocks.append(block)
+            rendered.append({
+                "session_id": session_id, "session_type": session.get("session_type", "mixed"),
+                "prescription_source": "athlete",
+                "title": session["name"], "objective": "", "mindset_anchor": anchor,
+                "execution_order": position, "blocks": blocks,
+            })
+        days.append({
+            "date": "", "weekday": short, "day_type": "moderate", "countdown_label": "",
+            "phase_label": "GPP", "sessions": rendered,
+            "today_card": {"headline": " / ".join(s["name"] for s in daily),
+                           "readiness_status": "train_as_planned", "mindset_anchor": anchor,
+                           "coach_led_contact": "Hard sparring" if short in hard else None},
+        })
+    structured = StructuredTrainingPlan.model_validate({
+        "plan_metadata": {"title": draft["name"], "sport": ", ".join(profile.technical_style),
+                          "prescription_source": "athlete",
+                          "plan_type": "open_ongoing_system", "timezone": profile.athlete_timezone or "UTC",
+                          "status": "draft", "created_by": profile.athlete_id},
+        "athlete_context": {"athlete_id": profile.athlete_id, "sport_profile": ", ".join(profile.technical_style)},
+        "event_context": {"event_type": "none"},
+        "weeks": [{"week_id": "custom-template", "week_index": 1, "phase_label": "GPP",
+                   "week_goal": "", "start_date": "", "end_date": "",
+                   "load_focus": {k: "maintain" for k in ("volume", "intensity", "specificity", "fatigue_target")},
+                   "progression": {"week_type": "stabilise", "planned_change_from_previous": ""},
+                   "days": days}],
+        "nutrition": {k: "" for k in ("summary", "daily_focus", "training_day_guidance", "fight_week_guidance")},
+    }).model_dump(mode="json")
+    # The same saved prescription has one published row, including concurrent
+    # retries. Changed drafts produce a new row; old plans/logs remain immutable.
+    structured["plan_metadata"]["plan_id"] = plan_id
+    return {
+        "plan_id": plan_id, "status": "ready", "plan_name": draft["name"],
+        "plan_text": "", "structured_plan": structured, "schema_version": SCHEMA_VERSION,
+        "stage2_status": "not_required",
+        "stage2_validator_report": {
+            "custom_plan": {"id": draft["id"]},
+            "structured_plan": {"status": "valid", "schema_version": SCHEMA_VERSION},
+        },
+        "planning_brief": {
+            "custom_plan": {
+                "id": draft["id"], "revision": revision,
+                "exercise_media": {
+                    f'exercise:{e["snapshot"]["exercise_key"]}': deepcopy(e["snapshot"]["media"])
+                    for s in sessions for e in s["exercises"]
+                    if e.get("snapshot", {}).get("exercise_key") and e["snapshot"].get("media")
+                },
+            },
+            "athlete_snapshot": {"plan_creation_weekday": datetime.fromisoformat(training_day).strftime("%a"),
+                                 "plan_creation_weekday_basis": "athlete_local_weekday"},
+            "open_plan_spec": {
+                "plan_type": "open_ongoing_system",
+                "weekly_template": {
+                    "training_days": [d["weekday"] for d in days], "hard_sparring_days": hard,
+                    "coach_owned_days": {"hard_sparring_days": hard, "technical_skill_days": technical},
+                },
+                "development_block": {
+                    f"week_{week}": "Maintain the saved athlete prescription"
+                    for week in range(1, 5)
+                },
+            },
+        },
+    }
+
+
+def _dose_text(dose: dict) -> str:
+    if dose["mode"] == "reps":
+        parts = [f'{dose["sets"]} × {dose["reps"]}']
+    elif dose["mode"] == "duration":
+        parts = [f'{dose["duration_seconds"]}s']
+        if dose.get("sets"):
+            parts[0] = f'{dose["sets"]} × {parts[0]}'
+    elif dose["mode"] == "intervals":
+        parts = [f'{dose["rounds"]} × {dose["work_seconds"]}s']
+    else:
+        parts = [dose["prescription"]]
+    if dose.get("distance"):
+        parts.append(f'{dose["distance"]} {dose["distance_unit"]}')
+    if dose.get("load_or_intensity"):
+        parts.append(dose["load_or_intensity"])
+    if dose.get("rest_seconds") is not None:
+        parts.append(f'rest {dose["rest_seconds"]}s')
+    if dose.get("rpe"):
+        parts.append(f'RPE {dose["rpe"]}')
+    if dose.get("tempo"):
+        parts.append(f'tempo {dose["tempo"]}')
+    if dose.get("per_side"):
+        parts.append("per side")
+    return " · ".join(parts)
+
+
+def publish_custom_plan(store, draft: dict, profile) -> dict:
+    from api.contracts.training_day import resolve_training_day_str
+    from api.models import AthleteProfileInput, PlanRequest
+    from api.services.open_plan_timeline import project_open_structured_plan
+
+    latest = store.get_latest_intake(profile.athlete_id)
+    if not latest:
+        raise HTTPException(409, "Complete onboarding before using a custom training plan.")
+    training_day = resolve_training_day_str(datetime.now(timezone.utc), athlete_timezone=profile.athlete_timezone)
+    result = custom_open_plan_result(draft, profile, training_day=training_day)
+    existing = store.get_plan_for_athlete(result["plan_id"], profile.athlete_id)
+    if existing:
+        return existing
+    # Check the same projector Today/Plan Detail use before saving an executable row.
+    _, context = project_open_structured_plan(
+        {"created_at": training_day, "planning_brief": result["planning_brief"]},
+        result["structured_plan"], current_training_day=training_day,
+    )
+    if context["projection_status"] != "projected":
+        raise HTTPException(422, "This plan's weekly schedule could not be validated.")
+    request = PlanRequest(athlete=AthleteProfileInput(
+        full_name=profile.full_name, technical_style=profile.technical_style,
+        athlete_timezone=profile.athlete_timezone,
+    ), no_scheduled_fight=True)
+    try:
+        return store.create_plan(athlete_id=profile.athlete_id, intake_id=latest["id"],
+                                 request=request, result=result, plan_id=result["plan_id"])
+    except HTTPException:
+        # A concurrent publication may have won the primary-key insert.
+        existing = store.get_plan_for_athlete(result["plan_id"], profile.athlete_id)
+        if existing:
+            return existing
+        raise
 
 
 def plan_fields(store, body: CustomPlanInput, previous: dict | None = None, *, athlete_id: str | None = None) -> dict:
@@ -100,7 +316,9 @@ def plan_fields(store, body: CustomPlanInput, previous: dict | None = None, *, a
             )
     fields["incomplete"] = (
         not fields["sessions"]
-        or any(not session["exercises"] for session in fields["sessions"])
+        or any(not session.get("weekday") for session in fields["sessions"])
+        or any(not session["exercises"] and session.get("session_type") not in {"skill", "sparring"}
+               for session in fields["sessions"])
         or any(exercise["incomplete"] for exercise in exercises)
     )
     return fields

@@ -294,6 +294,8 @@ def reconcile_exercise_keys(structured_plan: Any, planning_brief: Any) -> Any:
                     session, session_roles.get(index), day_roles, day_members, pool_keys
                 )
                 for block, key in stamped:
+                    if block.get("prescription_source") == "athlete":
+                        continue
                     if block.get("exercise_key") == key or (key is None and "exercise_key" not in block):
                         continue
                     block["exercise_key"] = key

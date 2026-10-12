@@ -247,7 +247,7 @@ def award_session_progress(
             result = store.award_xp(
                 athlete_id,
                 action=action,
-                idempotency_key=f"{action}:{completion_id}",
+                idempotency_key=f"{action}:{completion.get('_day_credit_key') or completion_id}",
                 calendar_date=training_day,
             )
         except Exception:  # noqa: BLE001 - XP must never break session completion
