@@ -19,7 +19,6 @@ import json
 
 import pytest
 
-from fightcamp.goal_preservation import _sync_microdose_membership
 from fightcamp.role_labels import athlete_facing_label_for
 from fightcamp.prescription_resolver import (
     _parse_sets_reps,
@@ -141,16 +140,8 @@ def test_parse_sets_reps_ignores_a_unit_bearing_second_term(dose, expected):
     assert _parse_sets_reps(dose) == expected
 
 
-def test_carry_microdose_keeps_its_unit_through_the_countdown_overlay():
-    """The manifest and the effective-prescription envelope must not diverge."""
-    microdose = {
-        "goal": "strength",
-        "name": "Loaded Carry Touch",
-        "prescription": "2 x 20 m @ RPE 7",
-        "sets": 2,
-        "intents": ["meaningful_strength"],
-        "authority": "v1",
-    }
+def test_carry_dose_keeps_its_unit_through_the_countdown_overlay():
+    """A distance-dosed carry slot keeps its metres when the countdown band applies."""
     role = {
         "role_key": "primary_strength_day",
         "category": "strength",
@@ -159,10 +150,8 @@ def test_carry_microdose_keeps_its_unit_through_the_countdown_overlay():
         "strength_dose_cap": {"max_sets": 3, "max_reps": 3, "loaded_allowed": True},
         "rpe_cap": "6-7",
     }
-    _sync_microdose_membership(role, microdose)
-    assignment = role["selected_exercise_assignments"][0]
     slot = {
-        "slot_id": assignment["slot_id"],
+        "slot_id": "spp_strength_carry",
         "priority": 1,
         "session_index": 1,
         "quality_class": "anchor_loaded",
@@ -175,8 +164,7 @@ def test_carry_microdose_keeps_its_unit_through_the_countdown_overlay():
         },
     }
     resolved = resolve_strength_slot_prescription(role=role, slot=slot, athlete_state={})
-    assert resolved["effective_prescription"] == assignment["effective_prescription"]
-    assert "20 m" in resolved["effective_prescription"]
+    assert resolved["effective_prescription"] == "2 x 20 m @ RPE 7"
 
     # Still reduce-only: a tighter band lowers the carry count, keeps the unit.
     role["strength_dose_cap"] = {"max_sets": 1, "max_reps": 3, "loaded_allowed": True}

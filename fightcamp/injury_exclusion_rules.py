@@ -749,10 +749,29 @@ INJURY_RULES = {
             "repeated hops",
             "hard forefoot hops",
             "toe bounce",
+            # Same jump/sprint wording the Achilles and calf rules already ban.
+            "depth jump",
+            "drop jump",
+            "max sprint",
+            "maximal sprint",
+            "full sprint",
+            "all-out sprint",
         ],
         "ban_tags": [
             "foot_impact_high",
             "forefoot_load_high",
+            # Landing, jump and rebound impact passes through the foot on every
+            # contact. These are the ankle/knee/Achilles impact tags, weighted
+            # by the same severity model (low severity lands in modify, not
+            # exclude; clinical sign-off pending on that boundary).
+            "high_impact_plyo",
+            "landing_stress_high",
+            "mech_landing_impact",
+            "reactive_rebound_high",
+            "mech_reactive_rebound",
+            # Sprint/max-velocity push-off loads the forefoot (calf/Achilles tags).
+            "max_velocity",
+            "mech_max_velocity",
             # Forefoot push-off / plantarflexion load (kick-recovery footwork).
             "mech_plantarflexion",
             # The foot bears body weight in every stance and step, so a severe
@@ -775,11 +794,26 @@ INJURY_RULES = {
             "repeated hops",
             "forefoot hops",
             "toe bounce",
+            "depth jump",
+            "drop jump",
+            "max sprint",
+            "maximal sprint",
+            "full sprint",
+            "all-out sprint",
         ],
         "ban_tags": [
             "foot_impact_high",
             "forefoot_load_high",
             "toe_extension_high",
+            # Same landing/rebound/max-velocity tags as the foot rule: the
+            # forefoot and great toe take every landing and sprint push-off.
+            "high_impact_plyo",
+            "landing_stress_high",
+            "mech_landing_impact",
+            "reactive_rebound_high",
+            "mech_reactive_rebound",
+            "max_velocity",
+            "mech_max_velocity",
             # The forefoot/great toe loads through terminal stance and push-off in
             # standing locomotion, so a severe structural toe injury can omit all
             # technical footwork; mild/moderate still allow/modify by severity.

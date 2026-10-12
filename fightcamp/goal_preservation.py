@@ -6,7 +6,6 @@ can discharge this contract; neither role names nor LLM prose are evidence.
 """
 from __future__ import annotations
 
-from .exercise_identity import normalize_exercise_key
 from .weight_cut import cut_justifies_goal_deferral
 
 from copy import deepcopy
@@ -82,7 +81,7 @@ _WEAKNESS_FLOOR_TARGETS = {
     # The Gas Tank preset pairs a conditioning goal with a gas_tank weakness, so
     # gas_tank is a real floor obligation on the conditioning family: it is
     # recognised, repaired and deferred like any other. It is deliberately NOT
-    # microdose-expandable - `_MICRODOSE_SPECS` holds no conditioning spec, so
+    # microdose-expandable - `_MICRODOSE_GOAL_INTENTS` holds no conditioning goal, so
     # the fallback tier declines it and the conditioning workload-envelope
     # architecture stays the sole authority on conditioning volume.
     "gas_tank": "conditioning",
@@ -403,82 +402,49 @@ def _strength_stimuli(role: dict, slots: list[dict], brief: dict) -> list[dict]:
 # ``_restore_goal_roles`` can only restore a WHOLE role from the week's
 # ``goal_repair_candidates``. When the session or category cap blocks that, a
 # primary goal could go cold for an entire build week even though an existing
-# physical session that day could safely host a few sets. These specs are that
-# fallback: the smallest exposure that still produces honest development
-# evidence for the goal.
+# strength session that day could safely host one more already-selected
+# exercise. This tier is that fallback.
 #
-# Conditioning is deliberately absent. It owns its own system/workload
-# architecture (including the gas-tank workload-envelope gate), and letting this
-# tier add conditioning would re-open exactly the spillover that gate closed.
-# Recovery and weight_cut are absent because deterministic daily support already
-# services them.
-_MICRODOSE_SPECS: dict[str, dict[str, Any]] = {
-    "power": {
-        # Honest collision class for this exposure. Only genuinely low-cost /
-        # neural work may coexist with a coach-owned light-combat day; the
-        # strength touch is MEANINGFUL_STRENGTH and stays forbidden there.
-        "load_class": "NEURAL_MICRODOSE",
-        "name": "Med-Ball Rotational Throw",
-        "prescription": "2 x 3/side @ RPE 7",
-        "sets": 2,
-        "intents": ["ballistic_power"],
-    },
-    "speed": {
-        # Honest collision class for this exposure. Only genuinely low-cost /
-        # neural work may coexist with a coach-owned light-combat day; the
-        # strength touch is MEANINGFUL_STRENGTH and stays forbidden there.
-        "load_class": "NEURAL_MICRODOSE",
-        "name": "Reactive Start Burst",
-        "prescription": "3 x 4 sec @ RPE 7, full rest",
-        "sets": 3,
-        "intents": ["speed_quality"],
-    },
-    "strength": {
-        # Honest collision class for this exposure. Only genuinely low-cost /
-        # neural work may coexist with a coach-owned light-combat day; the
-        # strength touch is MEANINGFUL_STRENGTH and stays forbidden there.
-        "load_class": "MEANINGFUL_STRENGTH",
-        "name": "Loaded Carry Touch",
-        "prescription": "2 x 20 m @ RPE 7",
-        "sets": 2,
-        "intents": ["meaningful_strength"],
-    },
-    "footwork": {
-        # Honest collision class for this exposure. Only genuinely low-cost /
-        # neural work may coexist with a coach-owned light-combat day; the
-        # strength touch is MEANINGFUL_STRENGTH and stays forbidden there.
-        "load_class": "LOW_LOAD_PHYSICAL",
-        "name": "Reactive Footwork Walkthrough",
-        "prescription": "2 x 60 sec",
-        "sets": 2,
-        "intents": ["footwork_practice"],
-    },
-    "mobility": {
-        # Honest collision class for this exposure. Only genuinely low-cost /
-        # neural work may coexist with a coach-owned light-combat day; the
-        # strength touch is MEANINGFUL_STRENGTH and stays forbidden there.
-        "load_class": "LOW_LOAD_PHYSICAL",
-        "name": "Targeted Mobility Touch",
-        "prescription": "2 x 60 sec/side",
-        "sets": 2,
-        "intents": ["mobility_dose"],
-    },
+# It never authors an exercise or a dose. The only candidates are the phase's
+# Stage 1 ``strength_slots``, which already passed injury, equipment and
+# restriction filtering at selection; the dose is whatever the canonical
+# ``prescription_resolver`` resolves for the host's scheduled day; and the
+# evidence is read back through the ordinary strength-evidence path. When no
+# pool candidate survives those owners, the gap is recorded, not filled.
+#
+# Only goals the strength pool can evidence are floor-eligible. Conditioning
+# owns its own system/workload architecture; recovery and weight_cut are
+# serviced by deterministic daily support; footwork and mobility have no
+# strength-pool candidate and are reported as uncovered rather than invented.
+_MICRODOSE_GOAL_INTENTS: dict[str, str] = {
+    "power": "ballistic_power",
+    "speed": "speed_quality",
+    "strength": "meaningful_strength",
 }
 
-# A microdose attaches only to a session that is already a physical training
-# day and can absorb a few quality sets without changing what the session is.
+# A microdose attaches only to an existing strength session that already has
+# closed membership: only the strength dose resolver can price a strength-slot
+# member, and an empty session is not a session to hang development on.
 # Sparring, recovery, fight day and zero-cost tactical roles are never hosts:
 # hard contact owns its own freshness, recovery-only stays recovery-only, and a
 # Tactical Watch day is not physical capacity just because it sits on the
 # calendar.
-_MICRODOSE_HOST_CATEGORIES = {"strength", "technical", "conditioning"}
+_MICRODOSE_HOST_CATEGORIES = {"strength"}
 _MICRODOSE_FORBIDDEN_HOST_CATEGORIES = {"sparring", "recovery", "fight_day", "mobility"}
+_MICRODOSE_SOURCE = "phase_pool"
 
 
 def _microdose_stimuli(role: dict) -> list[dict]:
-    """Evidence for a microdose already attached to this role."""
+    """Evidence for a legacy, spec-authored microdose on a previously saved brief.
+
+    A pool-sourced microdose is an ordinary closed strength member, so its
+    evidence comes from ``_strength_stimuli`` with the resolver's dose; it must
+    not be counted a second time here.
+    """
     microdose = role.get("priority_microdose")
     if not isinstance(microdose, dict) or not microdose.get("intents"):
+        return []
+    if microdose.get("source") == _MICRODOSE_SOURCE:
         return []
     prescription = str(microdose.get("prescription") or "")
     # The witness carries reps as well as sets, exactly as `_strength_stimuli`
@@ -500,76 +466,11 @@ def _microdose_stimuli(role: dict) -> list[dict]:
     ]
 
 
-_MICRODOSE_SLOT_GROUP = "priority_microdose"
-
-
-def _microdose_slot_id(microdose: dict) -> str:
-    return f"priority_microdose::{microdose.get('goal')}"
-
-
-def _sync_microdose_membership(role: dict, microdose: dict) -> None:
-    """Carry an attached microdose into the host's closed-membership contract.
-
-    ``priority_microdose`` on its own is goal evidence, not a renderable session
-    member. Stage 2 renders a role from ``selected_exercise_assignments``, prices
-    it from ``effective_strength_prescriptions`` and is held to the complete
-    allow-list in ``effective_strength_envelope``. A microdose that reaches none
-    of the three is legally unrenderable, which is exactly how an attached touch
-    became a ``goal_preservation_render_mismatch``.
-
-    Mirror the SAME microdose into those three structures. The floor's own
-    prescription stays the dose authority: no bank lookup, no second dose, no new
-    rendering path. Idempotent - re-running replaces only this microdose's own
-    entries and leaves selected membership otherwise untouched.
-    """
-    name = str(microdose.get("name") or "").strip()
-    prescription = str(microdose.get("prescription") or "").strip()
-    if not name or not prescription:
-        return
-    slot_id = _microdose_slot_id(microdose)
-
-    def _without_microdose(items: list) -> list:
-        return [
-            item for item in items or []
-            if not isinstance(item, dict)
-            or (item.get("slot_id") != slot_id and str(item.get("name") or "").strip() != name)
-        ]
-
-    role["selected_exercise_assignments"] = _without_microdose(
-        role.get("selected_exercise_assignments")
-    ) + [{
-        "slot_id": slot_id,
-        "name": name,
-        "slot_group": _MICRODOSE_SLOT_GROUP,
-        "base_prescription": prescription,
-        "effective_prescription": prescription,
-        "dose_authority": "weekly_priority_exposure_floor",
-        "goal": microdose.get("goal"),
-        "exercise_key": normalize_exercise_key(name) or None,
-    }]
-    role["effective_strength_prescriptions"] = _without_microdose(
-        role.get("effective_strength_prescriptions")
-    ) + [{
-        "slot_id": slot_id,
-        "name": name,
-        "effective_prescription": prescription,
-        "dose_authority": "weekly_priority_exposure_floor",
-        "effective_loaded": False,
-        "dose_role_kind": "support",
-    }]
-    envelope = role.get("effective_strength_envelope")
-    if not isinstance(envelope, dict):
-        envelope = {}
-    allowed = [
-        str(item.get("name") or "").strip()
-        for item in role["selected_exercise_assignments"]
-        if isinstance(item, dict) and str(item.get("name") or "").strip()
+def _strength_members(role: dict) -> list[dict]:
+    return [
+        item for item in role.get("selected_exercise_assignments") or []
+        if isinstance(item, dict) and item.get("slot_group") == "strength_slots"
     ]
-    envelope.update(
-        allowed_exercise_names=list(dict.fromkeys(allowed)),
-        complete_exercise_allow_list=True,
-    )
-    role["effective_strength_envelope"] = envelope
 
 
 # Provenance, not rendered text. A declared hard-sparring appointment keeps
@@ -590,57 +491,8 @@ def _carries_hard_sparring_provenance(role: dict) -> bool:
     return any(role.get(key) for key in _HARD_SPARRING_PROVENANCE_KEYS)
 
 
-def _microdose_coexists_on_protected_day(role: dict, spec: dict) -> bool:
-    """May this exposure share a day that generic bookkeeping marked unused?
-
-    A weekday can appear in ``intentionally_unused_days`` while still carrying a
-    real coach-owned session - a declared light-combat day is planner bookkeeping
-    "unused" and an actual scheduled physical session at the same time. Rejecting
-    the host on the weekday alone skipped a legal technical host and let a
-    conditioning day win.
-
-    The answer is not ours to invent: ask `combat_load_policy`, which is the sole
-    authority on what may share a combat day and which already grants the
-    low-load / neural-microdose exception only to a provenance-stamped declared
-    light-combat appointment.
-    """
-    from .combat_load_policy import (
-        CalendarCollisionContext,
-        LoadClass,
-        _profile,
-        evaluate_calendar_candidate,
-        role_load_profile,
-    )
-
-    existing = role_load_profile(role)
-    if existing is None:
-        # No canonical profile means no coach-owned session to coexist with, so
-        # the day stays protected.
-        return False
-    load_class = getattr(LoadClass, str(spec.get("load_class") or ""), None)
-    if load_class is None:
-        return False
-    # `_profile` picks the occupancy the policy itself pairs with this load
-    # class. Choosing one here would be restating its doctrine, and it rejects a
-    # physical load stamped as coexistable support anyway.
-    candidate = _profile(load_class)
-    decision = evaluate_calendar_candidate(
-        candidate,
-        CalendarCollisionContext(
-            candidate_position=0,
-            candidate_scope=None,
-            same_day_profiles=(existing,),
-            previous_hard_distance=None,
-            next_hard_distance=None,
-            between_effective_hard_contacts=False,
-            hard_contact_gap_intervening_days=None,
-        ),
-    )
-    return decision.allowed
-
-
 def _microdose_host_roles(week: dict) -> list[dict]:
-    """Existing sessions in this week that may host a microdose, best first."""
+    """Existing strength sessions in this week that may host a microdose."""
     hosts = []
     for role in week.get("session_roles") or []:
         if not isinstance(role, dict):
@@ -651,13 +503,8 @@ def _microdose_host_roles(week: dict) -> list[dict]:
         if _carries_hard_sparring_provenance(role):
             # Declared hard sparring keeps its strict collision treatment even
             # after the canonical resolver converts its effective contact down
-            # to technical-only. `combat_load_policy` grants the low-load /
-            # neural-microdose coexistence exception ONLY to a
-            # provenance-stamped declared light-combat appointment, never to a
-            # hard appointment that merely renders as technical. Category alone
-            # would not catch a converted day if it were ever recategorised, so
-            # check provenance directly rather than bypassing that authority
-            # from inside goal preservation.
+            # to technical-only. Category alone would not catch a converted day
+            # if it were ever recategorised, so check provenance directly.
             continue
         if category not in _MICRODOSE_HOST_CATEGORIES:
             continue
@@ -668,12 +515,12 @@ def _microdose_host_roles(week: dict) -> list[dict]:
         # A support insert is not a session; it cannot host development.
         if role.get("support_insert_category") or role.get("support_kind"):
             continue
+        # An empty session is not a host: nothing was composed there for a
+        # touch to hang off, and filling it would author the session.
+        if not _strength_members(role):
+            continue
         hosts.append(role)
-    # An S&C session absorbs quality work most cleanly, then technical work;
-    # a conditioning session is the last resort because the added sets compete
-    # with its energy-system purpose.
-    order = {"strength": 0, "technical": 1, "conditioning": 2}
-    return sorted(hosts, key=lambda role: order.get(str(role.get("category") or "").lower(), 3))
+    return hosts
 
 
 def _assignment_for_slot(role: dict, slot: dict, selected: dict) -> dict:
@@ -890,18 +737,46 @@ def _role_matches_goal(role: dict, goal: str) -> bool:
     return category == {"mobility": "mobility", "recovery": "recovery", "skill_refinement": "technical"}.get(goal)
 
 
+def _realised_load_not_increased(before: Any, after: Any) -> bool:
+    """True when adding the member leaves the host's measured cross-day load intact.
+
+    Both values come from ``session_composition.realised_role_stress``, the
+    measurement the calendar's realised-load revalidation already judged the
+    host on. An added member that raises either axis, or touches a new body
+    region, would change a load that pass will not see again, so it is refused.
+    """
+    if after is None:
+        return before is None
+    if before is None:
+        return False
+    return (
+        after.systemic <= before.systemic
+        and after.neural_mechanical <= before.neural_mechanical
+        and set(after.regions) <= set(before.regions)
+    )
+
+
 def _attach_goal_microdose(brief: dict, ordinal: int, entry: dict) -> dict | None:
-    """Weekly exposure floor: smallest legal exposure on an existing session.
+    """Weekly exposure floor: one more already-selected exercise on an existing session.
 
     Reached only when ``_restore_goal_roles`` has already established that a
     whole role cannot be restored inside the week's session/category budget.
-    Adds no session, no training day and no frequency: it hangs a few sets off a
-    session the athlete is already doing, and the host keeps its own identity.
+    Adds no session, no training day and no frequency, and never authors an
+    exercise or a dose: the candidate is a Stage 1 strength-pool slot (already
+    injury-, equipment- and restriction-filtered), it must fit the host's
+    composed exercise cap and leave the host's measured load unchanged, and its
+    dose is the one ``prescription_resolver`` resolves for the host's day.
 
     Returns an audit record, or None when the goal is not floor-eligible at all.
     """
-    spec = _MICRODOSE_SPECS.get(entry["goal"])
-    if spec is None:
+    from .prescription_resolver import apply_effective_strength_prescriptions
+    from .session_composition import (
+        _scheduled_phase_for_role,
+        assignment_from_slot,
+        realised_role_stress,
+    )
+
+    if entry["goal"] not in _MICRODOSE_GOAL_INTENTS and entry["goal"] not in {"footwork", "mobility"}:
         # Conditioning and support-serviced goals are owned elsewhere.
         return None
     if entry["state"] != "build":
@@ -930,50 +805,108 @@ def _attach_goal_microdose(brief: dict, ordinal: int, entry: dict) -> dict | Non
         return {"week_index": week.get("week_index"), "result": "floor_already_met",
                 "reason_codes": ["existing_weekly_exposure"]}
 
+    if entry["goal"] not in _MICRODOSE_GOAL_INTENTS:
+        # No selected pool family can evidence this goal; inventing a drill to
+        # cover it is exactly what this tier must not do.
+        return {"week_index": week.get("week_index"), "goal": entry["goal"],
+                "result": "floor_no_safe_candidate",
+                "reason_codes": ["no_phase_pool_candidate_for_goal"]}
+
+    hosts = _microdose_host_roles(week)
+    refusals: list[str] = []
     protected_days = {str(d.get("day") or "").lower() for d in week.get("intentionally_unused_days") or []}
-    for host in _microdose_host_roles(week):
+    pools = brief.get("candidate_pools") or {}
+    for host in hosts:
         host_day = role_d_day(week, host)
         if not isinstance(host_day, int) or host_day <= 13:
             # Reuse the established developmental cutoff: no new development
             # inside the taper / fight-week tail.
             continue
         if str(host.get("scheduled_day_hint") or "").lower() in protected_days:
-            # A truly unused / rest / recovery day stays protected. A day marked
-            # unused by generic bookkeeping that nevertheless holds a real
-            # coach-owned session is decided by the canonical collision policy,
-            # not by the bookkeeping flag.
-            if not _microdose_coexists_on_protected_day(host, spec):
-                continue
-        trial = deepcopy(brief)
-        trial_host = trial["weekly_role_map"]["weeks"][ordinal]["session_roles"][
-            (week.get("session_roles") or []).index(host)
-        ]
-        trial_host["priority_microdose"] = {
-            "goal": entry["goal"],
-            "name": spec["name"],
-            "prescription": spec["prescription"],
-            "sets": spec["sets"],
-            "intents": list(spec["intents"]),
-            "authority": VERSION,
-        }
-        # ``microdose_attached`` must mean renderable on the host, not merely
-        # visible as goal evidence. Synchronise the host's closed membership
-        # with this same microdose before the no-regression trial is judged.
-        _sync_microdose_membership(trial_host, trial_host["priority_microdose"])
-        _, missing_before = _coverage(entry, brief, collect_goal_evidence(brief))
-        _, missing_after = _coverage(entry, trial, collect_goal_evidence(trial))
-        retained = {(e.get("d_day"), e.get("name"), tuple(e["intents"])) for e in collect_goal_evidence(trial)}
-        # Same no-regression guard the role repair uses: a floor exposure may
-        # not pay for this goal by erasing another stimulus.
-        if len(missing_after) >= len(missing_before) or any(
-            (e.get("d_day"), e.get("name"), tuple(e["intents"])) not in retained
-            for e in collect_goal_evidence(brief)
-        ):
+            # A truly unused / rest / recovery day stays protected.
             continue
-        brief["weekly_role_map"] = trial["weekly_role_map"]
-        return {"week_index": week.get("week_index"), "d_day": host_day,
-                "role_key": host.get("role_key"), "goal": entry["goal"],
-                "result": "microdose_attached", "reason_codes": ["weekly_priority_exposure_floor"]}
+        cap = (host.get("strength_composition_policy") or {}).get("effective_exercise_cap")
+        if isinstance(cap, int) and len(_strength_members(host)) >= cap:
+            # The composition owner already sized this session for the
+            # athlete's readiness; the floor does not overrule it.
+            refusals.append("host_at_composed_exercise_cap")
+            continue
+        phase = _scheduled_phase_for_role(week, host) or str(week.get("phase") or "").strip().upper()
+        pool = pools.get(phase) if isinstance(pools, dict) else None
+        slots = [slot for slot in (pool or {}).get("strength_slots") or [] if isinstance(slot, dict)]
+        members = {
+            (str(item.get("slot_id") or ""), str(item.get("name") or ""))
+            for item in _strength_members(host)
+        }
+        host_index = (week.get("session_roles") or []).index(host)
+        candidates = [
+            slot for slot in slots
+            if (str(slot.get("slot_id") or ""), str((slot.get("selected") or {}).get("name") or "")) not in members
+            and _slot_allowed(slot, host, brief)
+        ]
+        if not candidates:
+            refusals.append("no_eligible_phase_pool_candidate")
+            continue
+        _, missing_before = _coverage(entry, brief, collect_goal_evidence(brief))
+        before_stress = realised_role_stress(host)
+        for slot in candidates:
+            assignment = assignment_from_slot(phase, "strength_slots", slot)
+            if not assignment:
+                continue
+            assignment["priority_microdose_goal"] = entry["goal"]
+            trial = deepcopy(brief)
+            trial_host = trial["weekly_role_map"]["weeks"][ordinal]["session_roles"][host_index]
+            trial_host["selected_exercise_assignments"] = [
+                *(trial_host.get("selected_exercise_assignments") or []), assignment,
+            ]
+            # The canonical resolver prices the new member for this exact day
+            # (countdown caps, pre-hard-contact pruning, readiness reductions).
+            apply_effective_strength_prescriptions(
+                weekly_role_map=trial["weekly_role_map"],
+                candidate_pools=trial.get("candidate_pools") or {},
+                athlete_model=_athlete(trial),
+            )
+            resolved = next(
+                (item for item in trial_host.get("effective_strength_prescriptions") or []
+                 if item.get("slot_id") == assignment.get("slot_id") and item.get("name") == assignment["name"]),
+                None,
+            )
+            if resolved is None or not any(
+                item.get("slot_id") == assignment.get("slot_id") for item in trial_host.get("selected_exercise_assignments") or []
+            ):
+                refusals.append("resolver_did_not_admit_candidate")
+                continue
+            if not _realised_load_not_increased(before_stress, realised_role_stress(trial_host)):
+                refusals.append("host_realised_load_would_increase")
+                continue
+            trial_evidence = collect_goal_evidence(trial)
+            _, missing_after = _coverage(entry, trial, trial_evidence)
+            retained = {(e.get("d_day"), e.get("name"), tuple(e["intents"])) for e in trial_evidence}
+            # Same no-regression guard the role repair uses: a floor exposure may
+            # not pay for this goal by erasing another stimulus.
+            if len(missing_after) >= len(missing_before) or any(
+                (e.get("d_day"), e.get("name"), tuple(e["intents"])) not in retained
+                for e in collect_goal_evidence(brief)
+            ):
+                refusals.append("candidate_adds_no_coverage")
+                continue
+            sets, _ = _sets_reps(str(resolved.get("effective_prescription") or ""))
+            trial_host["priority_microdose"] = {
+                "goal": entry["goal"],
+                "name": assignment["name"],
+                "slot_id": assignment.get("slot_id"),
+                "prescription": resolved.get("effective_prescription"),
+                "sets": int(resolved.get("effective_max_sets", sets) or sets),
+                "intents": [entry["required_intent"]],
+                "dose_authority": resolved.get("dose_authority"),
+                "source": _MICRODOSE_SOURCE,
+                "authority": VERSION,
+            }
+            brief["weekly_role_map"] = trial["weekly_role_map"]
+            return {"week_index": week.get("week_index"), "d_day": host_day,
+                    "role_key": host.get("role_key"), "goal": entry["goal"],
+                    "exercise": assignment["name"],
+                    "result": "microdose_attached", "reason_codes": ["weekly_priority_exposure_floor"]}
 
     # An earlier obligation in the same week may already hold the only session
     # that could have hosted this one - `_microdose_host_roles` excludes a role
@@ -992,6 +925,14 @@ def _attach_goal_microdose(brief: dict, ordinal: int, entry: dict) -> dict | Non
                 "result": "floor_no_safe_capacity",
                 "reason_codes": ["priority_capacity_spent"],
                 "held_by": [goal for goal in taken if goal and goal != entry["goal"]]}
+    if refusals:
+        # Hosts existed, but no already-selected pool exercise survived the
+        # injury/equipment/restriction-filtered pool, the composed cap, the dose
+        # resolver and the host's measured load. Safety outranks coverage: the
+        # gap is recorded, never filled with an invented exercise.
+        return {"week_index": week.get("week_index"), "goal": entry["goal"],
+                "result": "floor_no_safe_candidate",
+                "reason_codes": sorted(set(refusals))}
     return {"week_index": week.get("week_index"), "result": "floor_no_safe_host",
             "reason_codes": ["no_compatible_existing_session"]}
 
