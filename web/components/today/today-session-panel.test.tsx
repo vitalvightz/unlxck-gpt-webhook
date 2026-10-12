@@ -1298,3 +1298,58 @@ test("current rehab uses its canonical YouTube identity through the S&C player",
   const wrong = renderToStaticMarkup(<TodaySessionBlocks current={current} exerciseMedia={{ "Supported hand-weight wrist extension": media }} />);
   assert.doesNotMatch(wrong, /class="ex-row-thumb"/);
 });
+
+test("Home's Preview session link opens the previewed day's screen once", async () => {
+  const plan = {
+    weeks: [{
+      week_index: 1,
+      days: [{
+        date: "2026-10-10",
+        weekday: "Sat",
+        sessions: [{ session_id: "2026-10-10-strength", title: "Controlled strength", session_type: "strength_power",
+          blocks: [{ block_id: "pull", block_type: "strength", display_name: "Slow-Lowered Pull-Up", sets: 2, reps: "6" }] }],
+      }],
+    }],
+  } as StructuredPlan;
+  const state: TodayCommandView = {
+    active_plan: { id: "plan-1", name: "Fight camp", phase: "GPP", fight_date: "2026-11-05" },
+    today: {
+      training_day: "2026-10-09",
+      recommendation_state: "train_as_planned",
+      decision_tier: "green",
+      warnings: [],
+      next_session: { session_id: "2026-10-10-strength", title: "Strength", calendar_date: "2026-10-10", session_relation: "next" },
+      session_scope: "next",
+      session_label: "Next session",
+      completion_status: "done",
+    },
+    risk_watch: [],
+    open_injuries: [],
+    week_summary: {},
+    quick_actions: [],
+  };
+  domWindow.history.replaceState(null, "", "/today?preview=1");
+  const container = domWindow.document.createElement("div");
+  domWindow.document.body.append(container);
+  const root = createRoot(container);
+  await act(async () => {
+    root.render(
+      <AuthProvider>
+        <ToastProvider>
+          <TodaySessionPanel state={state} structuredPlan={plan} token="token" onRefresh={async () => {}} />
+        </ToastProvider>
+      </AuthProvider>,
+    );
+  });
+  try {
+    const screen = domWindow.document.querySelector('[role="dialog"][data-variant="screen"]');
+    assert.ok(screen);
+    assert.match(screen.textContent ?? "", /Slow-Lowered Pull-Up/);
+    // The param is dropped so a refresh or Back does not reopen it.
+    assert.equal(domWindow.location.search, "");
+  } finally {
+    await act(async () => root.unmount());
+    container.remove();
+    domWindow.history.replaceState(null, "", "/");
+  }
+});
