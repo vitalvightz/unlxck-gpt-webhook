@@ -992,6 +992,9 @@ def test_dose_not_heavier_needs_every_quantity_comparable_and_no_higher():
     assert not _dose_not_heavier(squat, {**back_squat(), "duration": {"value": 30, "unit": "seconds"}})
     assert not _dose_not_heavier(plank(), plank(duration={"value": 2, "unit": "minutes"}))
     assert _dose_not_heavier(plank(), plank(duration={"value": 30, "unit": "seconds"}))
+    jump = {"display_name": "Jump Squat", "sets": 4, "reps": 3}
+    assert _dose_not_heavier(jump, {**jump, "sets": 3, "intensity": "Bodyweight"})
+    assert not _dose_not_heavier(jump, {**jump, "sets": 3, "intensity": "weighted vest"})
 
 
 def test_contraindications_only_count_for_an_injured_region():

@@ -1351,6 +1351,15 @@ def _dose_magnitudes(block: Mapping[str, Any]) -> dict[str, float]:
     return out
 
 
+_NO_ADDED_LOAD = {"", "bodyweight", "body weight", "bw", "unloaded", "no load", "none"}
+
+
+def _intensity(block: Mapping[str, Any]) -> str:
+    text = _clean(block.get("intensity")).lower()
+    # Bodyweight adds nothing, so it reads the same as no stated intensity.
+    return "" if text in _NO_ADDED_LOAD else text
+
+
 def _dose_not_heavier(original: Mapping[str, Any], edited: Mapping[str, Any]) -> bool:
     """True when the edit only keeps or lowers the dose of the same exercise.
 
@@ -1361,7 +1370,7 @@ def _dose_not_heavier(original: Mapping[str, Any], edited: Mapping[str, Any]) ->
     before, after = _dose_magnitudes(original), _dose_magnitudes(edited)
     if any(field not in before or value > before[field] for field, value in after.items()):
         return False
-    if _clean(edited.get("intensity")) != _clean(original.get("intensity")) and "load" not in after:
+    if _intensity(edited) != _intensity(original) and "load" not in after:
         return False
     if edited.get("effort") != original.get("effort") and "rpe" not in after:
         return False
