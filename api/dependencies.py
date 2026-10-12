@@ -154,14 +154,6 @@ def require_profile(
     try:
         profile = _map_profile_row(store.ensure_profile(user))
         request.state.athlete_id = profile.athlete_id
-        if profile.access_status != "approved":
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail={
-                    "code": "account_pending_approval",
-                    "message": "Your account is waiting for admin approval.",
-                },
-            )
         logger.debug(
             "[auth] profile_resolved request_id=%s athlete_id=%s auth_event=%s status=%s",
             request_id,

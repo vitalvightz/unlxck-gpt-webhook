@@ -416,22 +416,19 @@ export default function HomePage() {
             <p className="eyebrow">Welcome to UNLXCK</p>
             <h1 className="hero-title">Build your fight camp in minutes.</h1>
             <p className="overview-command-summary">
-              Create your athlete profile, generate a structured camp plan, and manage your setup from one dashboard.
-            </p>
-            <p className="muted welcome-context">
-              Designed for fighters and combat athletes. Quick Build takes about 2 minutes. Advanced Intake gives more control.
+              Set your goals, get your plan, start training. It takes about two minutes.
             </p>
             <div className="hero-actions welcome-actions">
-              <Link href="/onboarding" className="cta">
-                Start Advanced Intake
-              </Link>
-              <Link href="/quick-build" className="secondary-button">
-                Use Quick Build
+              <Link href="/quick-build" className="cta">
+                Build my plan
               </Link>
               <Link href="/demo-plan" className="ghost-button">
                 View Demo Plan
               </Link>
             </div>
+            <p className="muted welcome-context">
+              Want more control? <Link href="/onboarding" className="auth-text-link">Use Advanced Intake</Link>.
+            </p>
             <InstallUnlxck variant="inline" />
           </div>
         </section>

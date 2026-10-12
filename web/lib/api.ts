@@ -5,6 +5,7 @@ import type { PrivateMediaPreview, PrivateMediaSettings, UploadPermission, Uploa
 import type {
   ApproveAndResumeGenerationRequest,
   AdminAthleteRecord,
+  AdminTimeToFirstPlanSummary,
   AdminLatestIntakeUpdateRequest,
   AdminGenerationJobDiagnostic,
   AdminFeedbackRecord,
@@ -883,16 +884,15 @@ export function listAdminAthletes(
   );
 }
 
-export function getAdminAthlete(token: string, athleteId: string): Promise<AdminAthleteRecord> {
+export function getAdminTimeToFirstPlan(token: string, days = 30): Promise<AdminTimeToFirstPlanSummary> {
   return withTransientRetries(() =>
-    readJson<AdminAthleteRecord>(`/api/admin/athletes/${encodeURIComponent(athleteId)}`, { token }),
+    readJson<AdminTimeToFirstPlanSummary>(`/api/admin/metrics/time-to-first-plan?days=${days}`, { token }),
   );
 }
 
-export function approveAdminAthlete(token: string, athleteId: string): Promise<AdminAthleteRecord> {
-  return readJson<AdminAthleteRecord>(
-    `/api/admin/athletes/${encodeURIComponent(athleteId)}/approve`,
-    { method: "POST", token },
+export function getAdminAthlete(token: string, athleteId: string): Promise<AdminAthleteRecord> {
+  return withTransientRetries(() =>
+    readJson<AdminAthleteRecord>(`/api/admin/athletes/${encodeURIComponent(athleteId)}`, { token }),
   );
 }
 

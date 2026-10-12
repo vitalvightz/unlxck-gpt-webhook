@@ -11,8 +11,7 @@ import { requiresComplianceAcceptance } from "@/lib/compliance";
  *
  * The backend already refuses to save an onboarding draft without them, so this
  * is not the control — it is what turns that refusal into a screen the athlete
- * can act on instead of an error banner. Mirrors RequirePrivateTrialAck, and
- * runs outside it so the Terms are settled before the trial briefing.
+ * can act on instead of an error banner.
  */
 export function RequireComplianceAcceptance({ children }: Readonly<{ children: React.ReactNode }>) {
   const router = useRouter();

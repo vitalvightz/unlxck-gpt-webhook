@@ -63,6 +63,14 @@ def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
+def _first_usable_plan_at(plans: list[dict]) -> str | None:
+    """Mirrors admin_athlete_rollups.first_usable_plan_at."""
+    usable = sorted(
+        plan["created_at"] for plan in plans if plan.get("status") in {"ready", "publishable_with_flags"}
+    )
+    return usable[0] if usable else None
+
+
 def _parse_iso(value: object) -> datetime | None:
     if not value:
         return None
@@ -1798,6 +1806,7 @@ class FakeStore(InMemoryNotificationLedger, FullRowStatusReads):
                 **profile,
                 "plan_count": len(plans),
                 "latest_plan_created_at": plans[-1]["created_at"] if plans else None,
+                "first_usable_plan_at": _first_usable_plan_at(plans),
             })
         rows.sort(key=lambda row: row["updated_at"], reverse=True)
         rows = _filter_admin_rows(
@@ -1815,15 +1824,22 @@ class FakeStore(InMemoryNotificationLedger, FullRowStatusReads):
             **profile,
             "plan_count": len(plans),
             "latest_plan_created_at": plans[-1]["created_at"] if plans else None,
+            "first_usable_plan_at": _first_usable_plan_at(plans),
         }
 
-    def approve_profile_access(self, athlete_id: str) -> dict:
-        profile = self.profiles.get(athlete_id)
-        if not profile:
-            raise HTTPException(status_code=404, detail="athlete not found")
-        profile["access_status"] = "approved"
-        profile["updated_at"] = _now()
-        return profile
+    def list_admin_signup_activation(self, *, since: str, limit: int = 5000) -> list[dict]:
+        rows = []
+        for profile in self.profiles.values():
+            if str(profile.get("created_at") or "") < since:
+                continue
+            rows.append({
+                "id": profile["id"],
+                "role": profile.get("role"),
+                "created_at": profile.get("created_at"),
+                "first_usable_plan_at": _first_usable_plan_at(self.list_user_plans(profile["id"])),
+            })
+        rows.sort(key=lambda row: str(row["created_at"]), reverse=True)
+        return rows[:limit]
 
     def list_admin_athletes_by_ids(self, athlete_ids: list[str]) -> list[dict]:
         self.list_admin_athletes_by_ids_calls += 1
@@ -1842,6 +1858,7 @@ class FakeStore(InMemoryNotificationLedger, FullRowStatusReads):
             **profile,
             "plan_count": len(plans),
             "latest_plan_created_at": plans[-1]["created_at"] if plans else None,
+            "first_usable_plan_at": _first_usable_plan_at(plans),
         }
 
     def count_admin_profiles(self) -> int:

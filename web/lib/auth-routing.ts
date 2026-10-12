@@ -1,20 +1,26 @@
 import { requiresComplianceAcceptance } from "@/lib/compliance";
-import { requiresPrivateTrialAcknowledgement } from "@/lib/private-trial";
 import type { MeResponse } from "@/lib/types";
 
 /**
- * Where an athlete belongs once the private trial briefing is behind them:
- * their latest plan if they have one, otherwise onboarding.
+ * The default route to a first plan: Quick Build asks only what changes the
+ * plan or the safety call (sport, fight date, schedule, goals, injuries).
+ * Advanced Intake stays available for athletes who want more control, but it is
+ * never the default path for someone who has not trained with UNLXCK yet.
  *
- * Kept separate from `getAuthenticatedLandingHref` so the trial screen can send
- * the tester onwards after they acknowledge without re-entering the gate.
+ * Sign up → Set goals (Quick Build) → Get plan → Train.
+ */
+export const FIRST_PLAN_HREF = "/quick-build";
+
+/**
+ * Where an athlete belongs once signup is complete: their latest plan if they
+ * have one, otherwise the shortest route to a first plan.
  */
 export function getAthleteWorkspaceHref(me: MeResponse | null): string {
   if (me?.latest_plan?.plan_id) {
     return `/plans/${me.latest_plan.plan_id}`;
   }
 
-  return "/onboarding";
+  return FIRST_PLAN_HREF;
 }
 
 export function getAuthenticatedLandingHref(me: MeResponse | null): string {
@@ -34,19 +40,14 @@ export function getAuthenticatedLandingHref(me: MeResponse | null): string {
   }
 
   // Age and Terms come first: an athlete who has not accepted the Terms has not
-  // completed signup, so they cannot be sent into the trial briefing or intake.
-  // Only reached by accounts that predate the consent fields — a signup through
-  // the current form already satisfies this.
+  // completed signup, so they cannot be sent into intake. Only reached by
+  // accounts that predate the consent fields — a signup through the current
+  // form already satisfies this.
   if (requiresComplianceAcceptance(me)) {
     return "/consent";
   }
 
-  // The trial briefing sits between account creation and onboarding: a tester
-  // has to know what the trial asks of them before they start answering intake
-  // questions. It is shown once — the acknowledgement lives on the profile.
-  if (requiresPrivateTrialAcknowledgement(me)) {
-    return "/private-trial";
-  }
-
+  // The private trial briefing is no longer a gate between signup and the first
+  // plan. It stays readable in Settings and at /private-trial.
   return getAthleteWorkspaceHref(me);
 }

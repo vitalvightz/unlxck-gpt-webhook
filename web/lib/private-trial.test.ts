@@ -48,20 +48,18 @@ test("an unresolved profile is not gated, so loading never stalls behind the scr
   assert.equal(requiresPrivateTrialAcknowledgement(null), false);
 });
 
-test("a fresh sign-up lands on the briefing, not on intake", () => {
-  assert.equal(getAuthenticatedLandingHref(meFixture({})), "/private-trial");
+test("the briefing is not a gate: a fresh sign-up goes straight to Quick Build", () => {
+  assert.equal(getAuthenticatedLandingHref(meFixture({})), "/quick-build");
 });
 
-test("the briefing sits ahead of an existing plan too, and only once", () => {
-  const unacknowledged = meFixture({ planId: "plan-9" });
-  assert.equal(getAuthenticatedLandingHref(unacknowledged), "/private-trial");
-
+test("an athlete with a plan lands on it, briefed or not", () => {
+  assert.equal(getAuthenticatedLandingHref(meFixture({ planId: "plan-9" })), "/plans/plan-9");
   const acknowledged = meFixture({ planId: "plan-9", ack: "2026-08-06T09:00:00Z" });
   assert.equal(getAuthenticatedLandingHref(acknowledged), "/plans/plan-9");
 });
 
-test("acknowledging continues to intake for an athlete with no plan yet", () => {
-  assert.equal(getAthleteWorkspaceHref(meFixture({})), "/onboarding");
+test("the workspace for an athlete with no plan yet is Quick Build", () => {
+  assert.equal(getAthleteWorkspaceHref(meFixture({})), "/quick-build");
 });
 
 test("acknowledging continues to the latest plan when one exists", () => {

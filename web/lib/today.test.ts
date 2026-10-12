@@ -1056,7 +1056,7 @@ test("getOverviewPrimaryAction resolves one dominant CTA per athlete state", () 
 
   // No plans at all -> build the first one.
   assert.deepEqual(getOverviewPrimaryAction({ ...base, hasActivePlan: false, planCount: 0 }), {
-    href: "/onboarding",
+    href: "/quick-build",
     label: "Build your plan",
   });
   // Plans exist but none active -> select one on /plans (the beta test account).

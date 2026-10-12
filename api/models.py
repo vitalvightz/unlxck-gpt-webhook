@@ -1481,7 +1481,7 @@ class ProfileRecord(BaseModel):
     username: str | None = None
     username_change_history: list[str] = Field(default_factory=list)
     role: UserRole
-    access_status: Literal["pending", "approved"] = "pending"
+    access_status: Literal["pending", "approved"] = "approved"
     full_name: str
     technical_style: list[str] = Field(default_factory=list)
     tactical_style: list[str] = Field(default_factory=list)
@@ -1824,7 +1824,7 @@ class AdminAthleteRecord(BaseModel):
     athlete_id: str
     email: str
     role: UserRole
-    access_status: Literal["pending", "approved"] = "pending"
+    access_status: Literal["pending", "approved"] = "approved"
     full_name: str
     technical_style: list[str] = Field(default_factory=list)
     tactical_style: list[str] = Field(default_factory=list)
@@ -1841,6 +1841,18 @@ class AdminAthleteRecord(BaseModel):
     updated_at: str
     plan_count: int = 0
     latest_plan_created_at: str | None = None
+    first_usable_plan_at: str | None = None
+    time_to_first_usable_plan_seconds: int | None = None
+
+
+class AdminTimeToFirstPlanSummary(BaseModel):
+    """Signup → first usable plan, for athletes who signed up in the window."""
+
+    window_days: int
+    signups: int
+    with_usable_plan: int
+    median_seconds: int | None = None
+    p75_seconds: int | None = None
 
 
 class AdminLatestIntakeUpdateRequest(BaseModel):

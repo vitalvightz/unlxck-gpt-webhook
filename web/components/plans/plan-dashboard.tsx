@@ -492,7 +492,7 @@ export function CurrentCampCard({
         <p className="muted">
           {hasSavedIntake
             ? "No active plan is selected. Make one of your saved plans active."
-            : "Quick Build or complete Intake to start your camp."}
+            : "Set your goals and get a plan in about two minutes."}
         </p>
         {hasSavedIntake ? <Link href="/onboarding" className="cta">Resume Advanced Intake</Link> :
           <div className={styles.campActions}>
@@ -500,9 +500,9 @@ export function CurrentCampCard({
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m13 2-8 12h6l-1 8 9-13h-7z" /></svg>
               Quick Build Plan
             </Link>
-            <Link href="/onboarding" className={`secondary-button ${styles.buildAction}`}>
+            <Link href="/onboarding" className={`ghost-button ${styles.buildAction}`}>
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4H5v17h14V4h-4M9 2h6v5H9zM8 11h8m-8 4h8" /></svg>
-              Generate Camp
+              Advanced Intake
             </Link>
           </div>}
       </article>

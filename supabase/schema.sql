@@ -84,7 +84,7 @@ create table if not exists public.profiles (
       check (username is null or username ~ '^[a-z0-9]([a-z0-9._-]*[a-z0-9])?$'),
   username_change_history jsonb not null default '[]'::jsonb,
   role public.app_role not null default 'athlete',
-  access_status text not null default 'pending'
+  access_status text not null default 'approved'
     constraint profiles_access_status_check check (access_status in ('pending', 'approved')),
   full_name text not null default '',
   technical_style text[] not null default '{}',
@@ -1123,7 +1123,12 @@ select
   p.updated_at,
   count(pl.id)::int as plan_count,
   max(pl.created_at) as latest_plan_created_at,
-  p.access_status
+  p.access_status,
+  -- Earliest plan the athlete could train from; see
+  -- 20261012140100_admin_time_to_first_usable_plan.sql.
+  min(pl.created_at) filter (
+    where pl.status in ('ready', 'publishable_with_flags')
+  ) as first_usable_plan_at
 from public.profiles p
 left join public.plans pl on pl.athlete_id = p.id
 group by
