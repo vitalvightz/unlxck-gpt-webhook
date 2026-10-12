@@ -1139,3 +1139,34 @@ def test_current_rehab_media_never_borrows_a_different_drill_or_display_name():
     assert list(media.resolve_session_exercise_media({"blocks": [valid]}, index)) == [f"exercise:{key}"]
     assert not media.resolve_session_exercise_media({"blocks": [{**valid, "rehab_drill_id": "another"}]}, index)
     assert not media.resolve_session_exercise_media({"blocks": [{"block_type": "rehab", "display_name": key}]}, index)
+
+
+def test_custom_plan_keeps_its_snapshot_and_resolves_added_exercises():
+    snapshot = media.ExerciseMedia(video_id="aaaaaaaaaaa", start_s=0)
+
+    class Store:
+        def list_exercise_media(self):
+            return [_row("cross-body-carry", video_id="bqBvsheL9AM"), _row("published", video_id="bbbbbbbbbbb")]
+
+    blocks = [
+        SimpleNamespace(exercise_key="published", block_type="strength", athlete_change=None),
+        SimpleNamespace(exercise_key="cross-body-carry", block_type="accessory",
+                        athlete_change={"action": "add", "override_id": "x"}),
+    ]
+    plan = SimpleNamespace(weeks=[SimpleNamespace(days=[SimpleNamespace(sessions=[SimpleNamespace(blocks=blocks)])])])
+    outputs = SimpleNamespace(structured_plan=plan, exercise_media={"exercise:published": snapshot})
+    detail = SimpleNamespace(custom_plan_id="custom-1", outputs=outputs)
+
+    media.attach_exercise_media(detail, Store())
+
+    assert outputs.exercise_media["exercise:published"] is snapshot
+    assert outputs.exercise_media["exercise:cross-body-carry"].video_id == "bqBvsheL9AM"
+
+
+def test_custom_plan_without_athlete_changes_never_loads_the_index():
+    class Store:
+        def list_exercise_media(self):
+            raise AssertionError("not needed")
+
+    blocks = [{"exercise_key": "published", "block_type": "strength"}]
+    assert media.with_athlete_change_media({"exercise:published": "kept"}, blocks, Store()) == {"exercise:published": "kept"}

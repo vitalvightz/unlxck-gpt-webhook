@@ -3374,11 +3374,12 @@ def _build_today_command_view(
     view.live_prescription = live
     if live:
         # Presentation only: never part of the frozen prescription/revision.
-        from .exercise_media import load_media_index, resolve_session_exercise_media
+        from .exercise_media import load_media_index, resolve_session_exercise_media, with_athlete_change_media
         from api.plan_mappers import _decode_structured_text
         custom = _decode_structured_text(plan_row.get("planning_brief"))
         if custom and custom.get("custom_plan"):
-            view.exercise_media = custom["custom_plan"].get("exercise_media") or {}
+            view.exercise_media = with_athlete_change_media(
+                custom["custom_plan"].get("exercise_media"), (live.get("session") or {}).get("blocks") or [], store)
         else:
             view.exercise_media = resolve_session_exercise_media(live.get("session") or {}, load_media_index(store))
     view.effective_clinician_clearance = effective_clinician_clearance(open_injuries)
