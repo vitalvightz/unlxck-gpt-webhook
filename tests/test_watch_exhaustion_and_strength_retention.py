@@ -10,7 +10,7 @@ import datetime as dt
 
 import pytest
 
-from fightcamp import camp_week_fillers_impl, input_parsing, tactical_watch_library
+from fightcamp import camp_week_fillers_impl, gap_fill_inserts, input_parsing, tactical_watch_library
 from fightcamp.goal_preservation import validate_goal_preservation
 from fightcamp.main import generate_plan_sync
 from fightcamp.tactical_watch_library import (
@@ -100,6 +100,17 @@ def test_an_empty_bank_records_a_skip_instead_of_failing(monkeypatch):
             "session_roles": [{"role_key": "tactical_watch", "scheduled_day_hint": "Monday"}]}
     assert camp_week_fillers_impl._ensure_tactical_watch(week, {"sport": "wrestling"}, "GPP", set(), {}) is False
     assert week["tactical_watch_skipped"] == {"reason_code": "tactical_watch_bank_empty", "phase": "GPP"}
+
+
+def test_gap_fill_paths_skip_instead_of_failing_on_an_empty_bank(monkeypatch):
+    monkeypatch.setattr(tactical_watch_library, "ordered_phase_bank", lambda *a, **k: ())
+    athlete = {"sport": "wrestling", "days_until_fight": 20}
+    assert gap_fill_inserts._build_insert_role("tactical_watch", athlete, 10, usage_ledger={}) is None
+    role = {"role_key": "tactical_watch"}
+    assert gap_fill_inserts._apply_bank_watch(role, athlete, phase="SPP", used_watch_keys=set()) is False
+    assert role["tactical_watch_skipped"]["reason_code"] == "tactical_watch_bank_empty"
+    sequence = [{"role_key": "technical_shadow_rhythm", "countdown_offset": d} for d in (12, 5)]
+    assert gap_fill_inserts._ensure_weekly_tactical_watches(sequence, athlete, {}, {}) == []
 
 
 # ---------------------------------------------------------------------------

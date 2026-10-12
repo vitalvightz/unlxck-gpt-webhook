@@ -45,6 +45,7 @@ from .fight_visualization_library import (
     visualization_metadata,
 )
 from .tactical_watch_library import (
+    TacticalWatchBankExhausted,
     build_watch_display_text,
     extract_tactical_style,
     select_tactical_watch,
@@ -969,18 +970,23 @@ def _apply_bank_watch(
     *,
     phase: str,
     used_watch_keys: set[str],
-) -> None:
+) -> bool:
     """Stamp the selected Tactical Watch from the JSON bank onto ``role``.
 
     Every athlete-facing string comes from ``data/tactical_watch_bank.json``;
-    this only formats what the bank already holds.
+    this only formats what the bank already holds. Returns False, recording
+    the skip on ``role``, when no eligible watch exists for this phase.
     """
-    watch = select_tactical_watch(
-        extract_tactical_style(athlete_model),
-        phase,
-        used_watch_keys,
-        allow_reuse=True,
-    )
+    try:
+        watch = select_tactical_watch(
+            extract_tactical_style(athlete_model),
+            phase,
+            used_watch_keys,
+            allow_reuse=True,
+        )
+    except TacticalWatchBankExhausted:
+        role["tactical_watch_skipped"] = {"reason_code": "tactical_watch_bank_empty", "phase": phase}
+        return False
     metadata = watch_metadata(watch)
     watch_governance = dict(metadata.pop("governance", {}) or {})
     role.update(metadata)
@@ -993,6 +999,7 @@ def _apply_bank_watch(
     role["duration_min"] = [watch.duration_minutes, watch.duration_minutes]
     role["prescribed_duration_min"] = watch.duration_minutes
     used_watch_keys.add(watch.key)
+    return True
 
 def _apply_bank_visualization(
     role: dict[str, Any], athlete_model: dict[str, Any], countdown_day: int
@@ -1385,7 +1392,8 @@ def _build_insert_role(
     weekday: str | None = None,
     *,
     usage_ledger: dict[str, Any] | None = None,
-) -> dict[str, Any]:
+) -> dict[str, Any] | None:
+    """None only for a tactical_watch with no eligible bank content."""
     meta = _INSERT_META[role_key]
     label = str(meta["label"])
     if role_key == "aerobic_shadow_flow" and normalize_sport(
@@ -1438,12 +1446,13 @@ def _build_insert_role(
             if usage_ledger is not None
             else set()
         )
-        _apply_bank_watch(
+        if not _apply_bank_watch(
             role,
             athlete_model,
             phase=_watch_phase_for_offset(athlete_model, insert_offset),
             used_watch_keys=used_watch_keys,
-        )
+        ):
+            return None
     if role_key == FIGHT_VISUALIZATION_ROLE_KEY:
         _apply_bank_visualization(role, athlete_model, insert_offset)
     if weekday:
@@ -1886,16 +1895,19 @@ def _ensure_weekly_tactical_watches(
                 weekday,
                 usage_ledger=usage_ledger,
             )
+            if watch is None:
+                continue
             additions.append(watch)
             _record_insert_usage(usage_ledger, "tactical_watch", offset)
         elif not watch.get("tactical_watch_key"):
             offset = int(_role_offset(watch) or 0)
-            _apply_bank_watch(
+            if not _apply_bank_watch(
                 watch,
                 athlete_model,
                 phase=_watch_phase_for_offset(athlete_model, offset),
                 used_watch_keys=used_watch_keys,
-            )
+            ):
+                continue
 
         watch["mandatory_tactical_watch"] = True
         watch["weekly_requirement"] = "fight_tactical_watch"
@@ -2302,6 +2314,8 @@ def select_physical_occupancy_insert(
         return None
 
     role = _build_insert_role(role_key, athlete_model, insert_offset, usage_ledger=usage_ledger)
+    if role is None:
+        return None
     if role_key == "footwork_walkthrough":
         _apply_bank_footwork(role, athlete_model, insert_offset, usage_ledger)
     role["physical_occupancy_fill"] = True
