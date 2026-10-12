@@ -89,7 +89,7 @@ export default function DemoPlanPage() {
 
       <section className="support-panel">
         <div className="form-section-header">
-          <p className="kicker">Camp context</p>
+          <p className="kicker">Camp progress</p>
           <h2 className="form-section-title">Sample athlete setup</h2>
         </div>
         <div className="overview-detail-grid">

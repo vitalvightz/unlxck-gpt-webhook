@@ -198,7 +198,7 @@ function OverviewRiskWatch({ risks = [] }: { risks?: TodayCommandView["risk_watc
   if (!risks.length) {
     return (
       <article className="status-card overview-command-card overview-risk-card">
-        <p className="status-label">Risk watch</p>
+        <p className="status-label">Training alerts</p>
         <p className="muted">No active warnings.</p>
       </article>
     );
@@ -210,7 +210,7 @@ function OverviewRiskWatch({ risks = [] }: { risks?: TodayCommandView["risk_watc
 
   return (
     <article className="status-card overview-command-card overview-risk-card">
-      <p className="status-label">Risk watch</p>
+      <p className="status-label">Training alerts</p>
       <div className="overview-risk-list">
         {visible.map((risk, index) => {
           const timeframe = getRiskTimeframeLabel(risk.timeframe);
@@ -360,7 +360,7 @@ export default function HomePage() {
   if (session && hasTransientMeError) {
     return (
       <section className="panel loading-card">
-        <p className="kicker">Overview</p>
+        <p className="kicker">Home</p>
         <h1>Workspace temporarily unavailable</h1>
         <p className="muted">We couldn&apos;t load your athlete profile. Please try again.</p>
         <div className="hero-actions">
@@ -378,7 +378,7 @@ export default function HomePage() {
   if (!isReady) {
     return (
       <section className="panel loading-card">
-        <p className="kicker">Overview</p>
+        <p className="kicker">Home</p>
         <h1>Loading your athlete workspace</h1>
         <p className="muted">Checking saved intake and plan history.</p>
       </section>
@@ -392,7 +392,7 @@ export default function HomePage() {
   if (session && isMeHydrated && !me) {
     return (
       <section className="panel loading-card">
-        <p className="kicker">Overview</p>
+        <p className="kicker">Home</p>
         <h1>Redirecting to login</h1>
         <p className="muted">Session expired. Sign in again.</p>
       </section>
@@ -445,7 +445,7 @@ export default function HomePage() {
     if (!commandState && commandError) {
       return (
         <section className="panel loading-card">
-          <p className="kicker">Overview</p>
+          <p className="kicker">Home</p>
           <h1>Camp command view unavailable</h1>
           <p className="muted">{commandError}</p>
           <div className="hero-actions">
@@ -551,7 +551,7 @@ export default function HomePage() {
               <div className="plan-summary-actions overview-primary-actions">
                 <Link href={primaryHref} className="cta overview-primary-action">{primaryLabel}</Link>
                 {hasActivePlan ? (
-                  <Link href={`/plans/${activePlan.id}`} className="secondary-button">Camp plan</Link>
+                  <Link href={`/plans/${activePlan.id}`} className="secondary-button">{openOngoing ? "Training plan" : "Fight camp"}</Link>
                 ) : (
                   <Link href="/quick-build" className="secondary-button">Quick Build</Link>
                 )}
@@ -579,7 +579,7 @@ export default function HomePage() {
         {/* Secondary — camp context, progress, full risk watch, disclaimer.
             Available but visually reduced so it never competes with the command. */}
         <section className="panel overview-secondary athlete-motion-slot athlete-motion-status">
-          <p className="kicker overview-secondary-eyebrow">{openOngoing ? "Training context" : "Camp context"}</p>
+          <p className="kicker overview-secondary-eyebrow">{openOngoing ? "Block progress" : "Camp progress"}</p>
           <div className="overview-operational-strip" aria-label={openOngoing ? "Training status" : "Camp status"}>
             <div className="overview-operational-item"><span className="overview-operational-label">Plan</span><span className="overview-operational-value">{String(activePlan.name || "No active plan")}</span></div>
             <div className="overview-operational-item"><span className="overview-operational-label">{openOngoing ? "Cycle" : "Camp day"}</span><span className="overview-operational-value">{openOngoing ? "Renewable 4-week block" : campDay || "Not set"}</span></div>

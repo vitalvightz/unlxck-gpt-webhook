@@ -260,7 +260,7 @@ export function XpProgressCardView({
     >
       <div className="xp-progress-heading">
         <div>
-          <p className="status-label">XP PROGRESS</p>
+          <p className="status-label">YOUR LEVEL</p>
           <p className="xp-progress-level">Level {level.currentLevel.level}</p>
         </div>
         <p className="xp-progress-rank">{level.currentLevel.title}</p>

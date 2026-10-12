@@ -114,7 +114,7 @@ export function FightCountdown({
     >
       <div className="fight-countdown-head">
         <div>
-          <p className="fight-countdown-kicker">Fight camp</p>
+          <p className="fight-countdown-kicker">Fight countdown</p>
           <p className="fight-countdown-days" aria-hidden="true">
             {fightDay ? (
               "Fight day"
@@ -164,7 +164,7 @@ export function FightCountdownSkeleton() {
     <section className="fight-countdown fight-countdown-skeleton" aria-busy="true" aria-label="Fight countdown loading">
       <div className="fight-countdown-head">
         <div>
-          <p className="fight-countdown-kicker"><Bone>Fight camp</Bone></p>
+          <p className="fight-countdown-kicker"><Bone>Fight countdown</Bone></p>
           <p className="fight-countdown-days">
             <span className="fight-countdown-number"><Bone>00</Bone></span> <Bone>days to fight night</Bone>
           </p>
