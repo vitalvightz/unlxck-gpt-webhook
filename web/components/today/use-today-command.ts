@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { getPlan, getToday } from "@/lib/api";
 import { buildStructuredPlanFromText } from "@/lib/plan-text-adapter";
+import { patchPlanSession } from "@/lib/exercise-customisation";
 import { shouldRenderStructuredPlan } from "@/lib/structured-plan";
 import type {
   PlanDetail,
@@ -12,6 +13,7 @@ import type {
   ExerciseMedia,
   StructuredPlan,
   TodayCommandView,
+  StructuredSession,
 } from "@/lib/types";
 import { requestXpRefresh } from "@/lib/xp-events";
 
@@ -56,6 +58,8 @@ export type TodayCommand = {
   isLoading: boolean;
   error: string | null;
   refresh: () => Promise<void>;
+  /** Applies an athlete's exercise change to the shown plan, then reloads it. */
+  patchSession: (date: string, session: StructuredSession | null) => void;
 };
 
 const EMPTY_PLAN_SCHEDULE: TodayPlanSchedule = { scheduleContext: null, createdAt: null };
@@ -168,6 +172,16 @@ export function useTodayCommand(token: string | null): TodayCommand {
     }
   }, [token]);
 
+  // An athlete's swap / add / remove: show the server's effective session at
+  // once, then reload the plan past the presentation cache so every other
+  // date a recurring change touches catches up.
+  const patchSession = useCallback((date: string, session: StructuredSession | null) => {
+    if (session) setStructuredPlan((current) => patchPlanSession(current, date, session));
+    presentation.current = null;
+    pendingPlan.current = null;
+    void refresh();
+  }, [refresh]);
+
   useEffect(() => {
     const sequenceCounter = refreshSequence;
     let cancelled = false;
@@ -183,6 +197,7 @@ export function useTodayCommand(token: string | null): TodayCommand {
     exerciseMedia,
     isLoading,
     error,
+    patchSession,
     refresh,
   };
 }

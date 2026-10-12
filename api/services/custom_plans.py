@@ -126,24 +126,7 @@ def custom_open_plan_result(draft: dict, profile, *, training_day: str) -> dict:
                     for target, source in (("purpose", "Why"), ("progression_rule", "Progress")):
                         if guidance.get(source):
                             block[target] = "\n".join(guidance[source])
-                for field in ("sets", "reps", "rounds"):
-                    if dose.get(field) is not None:
-                        block[field] = dose[field]
-                for field, source in (("duration", "duration_seconds"), ("work", "work_seconds"), ("rest", "rest_seconds")):
-                    if dose.get(source) is not None:
-                        block[field] = {"value": dose[source], "unit": "seconds"}
-                if dose.get("distance") is not None:
-                    block["distance"] = {"value": dose["distance"], "unit": dose["distance_unit"]}
-                if dose.get("rpe") is not None:
-                    block["effort"] = {"method": "RPE", "value": dose["rpe"]}
-                if dose.get("load_or_intensity"):
-                    # Free text stays text. Do not manufacture numeric load.
-                    block["intensity"] = dose["load_or_intensity"]
-                    weight = re.fullmatch(r"(\d+(?:\.\d+)?)\s*(kg|lb|lbs)", dose["load_or_intensity"].strip(), re.I)
-                    if weight:
-                        block["load"] = {"method": "absolute", "value": float(weight[1]),
-                                         "unit": "kg" if weight[2].lower() == "kg" else "lb",
-                                         "display": dose["load_or_intensity"]}
+                block.update(dose_block_fields(dose))
                 blocks.append(block)
             rendered.append({
                 "session_id": session_id, "session_type": session.get("session_type", "mixed"),
@@ -209,6 +192,34 @@ def custom_open_plan_result(draft: dict, profile, *, training_day: str) -> dict:
             },
         },
     }
+
+
+def dose_block_fields(dose: dict) -> dict:
+    """The shared numeric block fields for one athlete dose (CustomDose shape)."""
+    fields: dict = {}
+    for field in ("sets", "reps", "rounds"):
+        if dose.get(field) is not None:
+            fields[field] = dose[field]
+    for field, source in (("duration", "duration_seconds"), ("work", "work_seconds"), ("rest", "rest_seconds")):
+        if dose.get(source) is not None:
+            fields[field] = {"value": dose[source], "unit": "seconds"}
+    if dose.get("distance") is not None:
+        fields["distance"] = {"value": dose["distance"], "unit": dose["distance_unit"]}
+    if dose.get("rpe") is not None:
+        fields["effort"] = {"method": "RPE", "value": dose["rpe"]}
+    if dose.get("load_or_intensity"):
+        # Free text stays text. Do not manufacture numeric load.
+        fields["intensity"] = dose["load_or_intensity"]
+        weight = re.fullmatch(r"(\d+(?:\.\d+)?)\s*(kg|lb|lbs)", dose["load_or_intensity"].strip(), re.I)
+        if weight:
+            fields["load"] = {"method": "absolute", "value": float(weight[1]),
+                              "unit": "kg" if weight[2].lower() == "kg" else "lb",
+                              "display": dose["load_or_intensity"]}
+    return fields
+
+
+def dose_text(dose: dict) -> str:
+    return _dose_text(dose)
 
 
 def _dose_text(dose: dict) -> str:

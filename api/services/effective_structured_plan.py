@@ -210,8 +210,36 @@ def resolve_effective_structured_plan(
                                 continue
                             for field in fields:
                                 block.pop(field, None)
+    resolved = _without_athlete_change_claims(resolved)
     resolved = ensure_structured_session_ids(resolved, plan_id=plan_row.get("id"))
     return ensure_structured_block_ids(resolved)
+
+
+def _without_athlete_change_claims(plan: dict[str, Any]) -> dict[str, Any]:
+    """Drop override provenance a stored card claims for itself.
+
+    ``athlete_change`` / ``athlete_removed`` mark changes applied from
+    plans.exercise_overrides after projection. A stored card (generated or
+    custom) never carries them legitimately, so a model cannot fake an
+    athlete-directed change or hide one.
+    """
+    sessions = [session for week in plan.get("weeks") or [] if isinstance(week, Mapping)
+                for day in week.get("days") or [] for session in _session_rows(day) if isinstance(session, Mapping)]
+    if not any("athlete_removed" in session or any(
+            isinstance(block, Mapping) and "athlete_change" in block for block in session.get("blocks") or [])
+            for session in sessions):
+        return plan
+    plan = deepcopy(plan)
+    for week in plan.get("weeks") or []:
+        for day in (week.get("days") or []) if isinstance(week, Mapping) else []:
+            for session in _session_rows(day):
+                if not isinstance(session, dict):
+                    continue
+                session.pop("athlete_removed", None)
+                for block in session.get("blocks") or []:
+                    if isinstance(block, dict):
+                        block.pop("athlete_change", None)
+    return plan
 
 
 def _resolve_effective_structured_plan(

@@ -36,6 +36,9 @@ type Declared<WebType, Served, Unsent extends PropertyKey = never> = [
 // - NutritionSandCPreferences.goal_weakness_collision_details: the API declares
 //   a list of string maps; the web reads each as { tag, label, detail }.
 //
+// - ExerciseChangeResult.session: the occurrence's effective session, sent as
+//   an untyped object; the web reads it as the StructuredSession it renders.
+//
 // Fields the web reads that the API's schema does not declare:
 // - InjuryFlagRecord label / canonical_location / region_group / load_region /
 //   consequence: added to Today's injury rows, which the API sends untyped
@@ -116,6 +119,13 @@ export type SendExerciseLogEffort = Sends<Web.ExerciseLogEffort, Api.ExerciseLog
 export type SendExerciseLogMeasure = Sends<Web.ExerciseLogMeasure, Api.ExerciseLogMeasureRequest>;
 export type SendExerciseLogRequest = Sends<Web.ExerciseLogRequest, Api.ExerciseLogRequest>;
 export type SendExerciseLogBatchRequest = Sends<Web.ExerciseLogBatchRequest, Api.ExerciseLogBatchRequest>;
+export type ReadExerciseAlternative = Reads<Api.ExerciseAlternative, Web.ExerciseAlternative>;
+export type SendExerciseChangeRequest = Sends<Web.ExerciseChangeRequest, Api.ExerciseChangeRequest>;
+export type ReadExerciseChangeResult = Reads<
+  Omit<Api.ExerciseChangeResult, "session">, Omit<Web.ExerciseChangeResult, "session">
+>;
+export type ReadExerciseChangeScope = Reads<Api.ExerciseChangeScope, Web.ExerciseChangeScope>;
+export type ReadExerciseOptionsResponse = Reads<Api.ExerciseOptionsResponse, Web.ExerciseOptionsResponse>;
 export type ReadExerciseLogActual = Reads<Api.ExerciseLogActual, Web.ExerciseLogActual>;
 export type ReadExerciseLogEffort = Reads<Api.ExerciseLogEffort, Web.ExerciseLogEffort>;
 export type ReadExerciseLogMeasure = Reads<Api.ExerciseLogMeasure, Web.ExerciseLogMeasure>;
@@ -172,6 +182,10 @@ export type DeclaredPendingRehabResponsesResponse = Expect<Declared<Web.PendingR
 export type DeclaredPlanAdvisory = Expect<Declared<Web.PlanAdvisory, Api.PlanAdvisory>>;
 export type DeclaredPlanCompletionsResponse = Expect<Declared<Web.PlanCompletionsResponse, Api.PlanCompletionsResponse>>;
 export type DeclaredPlanDetail = Expect<Declared<Web.PlanDetail, Api.PlanDetail>>;
+export type DeclaredExerciseAlternative = Expect<Declared<Web.ExerciseAlternative, Api.ExerciseAlternative>>;
+export type DeclaredExerciseChangeResult = Expect<Declared<Web.ExerciseChangeResult, Api.ExerciseChangeResult>>;
+export type DeclaredExerciseChangeScope = Expect<Declared<Web.ExerciseChangeScope, Api.ExerciseChangeScope>>;
+export type DeclaredExerciseOptionsResponse = Expect<Declared<Web.ExerciseOptionsResponse, Api.ExerciseOptionsResponse>>;
 export type DeclaredPlanOutputs = Expect<Declared<Web.PlanOutputs, Api.PlanOutputs>>;
 export type DeclaredPlanScheduleContext = Expect<Declared<Web.PlanScheduleContext, Api.PlanScheduleContext>>;
 export type DeclaredPlanSummary = Expect<Declared<Web.PlanSummary, Api.PlanSummary>>;

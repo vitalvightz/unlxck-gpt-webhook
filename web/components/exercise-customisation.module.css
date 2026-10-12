@@ -1,0 +1,551 @@
+/* Exercise swap / add / remove: discreet on the card, decisive in the sheet. */
+
+.dots {
+  position: relative;
+  z-index: 1;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  margin: -6px -6px -6px 0;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+/* A 44px hit area around the visible 36px control. */
+.dots::before {
+  content: "";
+  position: absolute;
+  inset: -4px;
+}
+.dots svg {
+  width: 18px;
+  height: 18px;
+  fill: currentColor;
+}
+.dots:hover {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.06);
+}
+.dots:focus-visible {
+  outline: 2px solid var(--brand-red);
+  outline-offset: 0;
+  color: var(--text-primary);
+}
+
+.sheet {
+  width: min(100%, 520px);
+}
+
+.menu {
+  display: grid;
+  gap: 12px;
+  padding: 14px 16px 18px;
+}
+.provenance {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+/* One horizontal bar of equal actions: no stacked list of rows. */
+.actionBar {
+  display: flex;
+  gap: 8px;
+}
+.action {
+  flex: 1 1 0;
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 52px;
+  padding: 0 12px;
+  border: 1px solid var(--border-default);
+  border-radius: 14px;
+  background: var(--bg-surface-alt);
+  color: var(--text-primary);
+  font: 600 14px/1 var(--font-sans);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: border-color var(--transition-fast), background var(--transition-fast);
+}
+.action svg {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+  fill: none;
+  stroke: var(--text-secondary);
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.action:hover {
+  border-color: var(--border-strong);
+}
+.action[data-tone="danger"] {
+  color: var(--danger-ink);
+}
+.action[data-tone="danger"] svg {
+  stroke: var(--danger-ink);
+}
+.action:focus-visible {
+  outline: 2px solid var(--brand-red);
+  outline-offset: 2px;
+}
+.action:disabled {
+  opacity: 0.55;
+  cursor: wait;
+}
+
+/* Message and its two answers share a line wherever they fit. */
+.confirm {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+.confirm p {
+  flex: 1 1 200px;
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.45;
+}
+.inlineActions {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.primary,
+.secondary,
+.danger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0 18px;
+  border-radius: 999px;
+  font: 600 14px/1 var(--font-sans);
+  cursor: pointer;
+  text-decoration: none;
+}
+.primary {
+  border: 0;
+  background: var(--text-primary);
+  color: var(--bg-panel);
+}
+.secondary {
+  border: 1px solid var(--border-default);
+  background: transparent;
+  color: var(--text-primary);
+}
+.danger {
+  border: 0;
+  background: var(--brand-red);
+  color: #fff;
+}
+.primary:disabled,
+.secondary:disabled,
+.danger:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.primary:focus-visible,
+.secondary:focus-visible,
+.danger:focus-visible,
+.more:focus-visible,
+.add:focus-visible,
+.scope:focus-visible,
+.thumb:focus-visible {
+  outline: 2px solid var(--brand-red);
+  outline-offset: 2px;
+}
+
+.body {
+  display: grid;
+  /* One column that may shrink below its content's intrinsic width (inputs). */
+  grid-template-columns: minmax(0, 1fr);
+  gap: 14px;
+  padding: 14px 16px 18px;
+}
+
+/* One-line library search at the top of Add. */
+.search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 48px;
+  padding: 0 6px 0 14px;
+  border: 1px solid var(--border-default);
+  border-radius: 14px;
+  background: var(--bg-input);
+}
+/* Focus is shown on the whole field, not as a box inside it. */
+.search:focus-within {
+  border-color: var(--border-active);
+  box-shadow: 0 0 0 3px var(--brand-red-soft);
+}
+.search svg {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+  fill: none;
+  stroke: var(--text-muted);
+  stroke-width: 1.8;
+  stroke-linecap: round;
+}
+.search input {
+  flex: 1 1 0;
+  width: 100%;
+  min-width: 0;
+  height: 46px;
+  border: 0;
+  background: transparent;
+  color: var(--text-primary);
+  font: 400 16px/1.2 var(--font-sans);
+  outline: none;
+}
+.search input:focus,
+.search input:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+.search input::placeholder {
+  color: var(--text-muted);
+}
+.search input::-webkit-search-cancel-button {
+  display: none;
+}
+.search button {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+.search button:focus-visible {
+  outline: 2px solid var(--brand-red);
+}
+
+.scopes {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 4px;
+  padding: 4px;
+  border-radius: 14px;
+  background: var(--bg-surface-alt);
+}
+.scope {
+  min-height: 40px;
+  white-space: nowrap;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text-secondary);
+  font: 500 13px/1.25 var(--font-sans);
+  cursor: pointer;
+}
+.scope[aria-checked="true"] {
+  background: var(--bg-stat);
+  color: var(--text-primary);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.04), 0 4px 12px rgba(0, 0, 0, 0.25);
+}
+
+.options {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.options[data-refreshing="true"] {
+  opacity: 0.55;
+  transition: opacity var(--transition-fast);
+}
+.option {
+  border: 1px solid var(--border-subtle);
+  border-radius: 16px;
+  background: var(--bg-stat);
+  overflow: hidden;
+  transition: border-color var(--transition-fast), opacity var(--transition-fast);
+}
+.option:hover {
+  border-color: var(--border-default);
+}
+.option[data-pending="true"] {
+  border-color: var(--border-active);
+}
+.optionRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-right: 12px;
+}
+.optionMain {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+  min-height: 60px;
+  padding: 11px 4px 11px 14px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.optionMain:focus-visible {
+  outline: 2px solid var(--brand-red);
+  outline-offset: -2px;
+  border-radius: 16px;
+}
+.optionMain:disabled {
+  cursor: wait;
+}
+/* Name and dose on one line, reason and kit on the next. */
+.optionLine {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  min-width: 0;
+}
+.optionName {
+  flex: 1 1 auto;
+  min-width: 0;
+  font: 600 15px/1.3 var(--font-sans);
+  color: var(--text-primary);
+  overflow-wrap: break-word;
+}
+.optionDose {
+  flex: 0 0 auto;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+.optionDose:empty {
+  display: none;
+}
+.optionReason {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 13px;
+  line-height: 1.35;
+  color: var(--text-muted);
+}
+.optionKit {
+  flex: 0 0 auto;
+  font-size: 12px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+.thumb {
+  position: relative;
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 10px;
+  background: #000;
+  overflow: hidden;
+  cursor: pointer;
+}
+.thumb img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.72;
+}
+.preview {
+  padding: 0 12px 12px;
+}
+
+.skeleton {
+  height: 72px;
+  border-radius: 16px;
+  background: linear-gradient(90deg, var(--bg-stat) 0%, var(--bg-surface-alt) 50%, var(--bg-stat) 100%);
+  background-size: 200% 100%;
+  animation: shimmer 1.2s ease-in-out infinite;
+}
+@keyframes shimmer {
+  from { background-position: 100% 0; }
+  to { background-position: -100% 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .skeleton { animation: none; }
+}
+
+/* Fields and the confirm button on one row. */
+.dose {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  padding: 0 12px 12px 14px;
+}
+.doseField {
+  flex: 1 1 0;
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.doseField input {
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  padding: 8px;
+  border: 1px solid var(--border-default);
+  border-radius: 10px;
+  background: var(--bg-input);
+  color: var(--text-primary);
+  font: 500 16px/1.2 var(--font-mono);
+  text-align: center;
+}
+.doseField input:focus-visible {
+  outline: 2px solid var(--brand-red);
+  outline-offset: 0;
+}
+.dose .primary {
+  flex: 0 0 auto;
+  padding: 0 16px;
+}
+
+.notice {
+  display: grid;
+  gap: 10px;
+  justify-items: start;
+}
+.notice p,
+.error {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+.error {
+  color: var(--danger-ink);
+}
+
+.more {
+  justify-self: center;
+  min-height: 44px;
+  padding: 0 14px;
+  border: 0;
+  background: transparent;
+  color: var(--text-secondary);
+  font: 500 14px/1 var(--font-sans);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  cursor: pointer;
+}
+
+/* Quiet session foot: add and restore share one line. */
+.foot {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+  margin-top: 2px;
+}
+.add {
+  flex: 0 0 auto;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 4px;
+  border: 0;
+  background: transparent;
+  color: var(--text-secondary);
+  font: 500 14px/1 var(--font-sans);
+  cursor: pointer;
+}
+.add span {
+  font-size: 18px;
+  line-height: 1;
+  color: var(--text-muted);
+}
+.add:hover {
+  color: var(--text-primary);
+}
+.removed {
+  flex: 0 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  scrollbar-width: none;
+  gap: 0 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.removed li {
+  display: inline-flex;
+  min-width: 0;
+}
+.removed li:only-child {
+  flex: 0 1 auto;
+}
+.removed button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 0 4px;
+  border: 0;
+  background: transparent;
+  color: var(--text-secondary);
+  font: 500 13px/1 var(--font-sans);
+  cursor: pointer;
+}
+.removed button svg {
+  width: 15px;
+  height: 15px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.removed button span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.removed button {
+  min-width: 0;
+  max-width: 100%;
+}
+.removed button:hover {
+  color: var(--text-primary);
+}
+.removed button:focus-visible {
+  outline: 2px solid var(--brand-red);
+  outline-offset: 2px;
+}

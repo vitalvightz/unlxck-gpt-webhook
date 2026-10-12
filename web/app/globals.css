@@ -19750,6 +19750,10 @@ html[data-theme="light"] .loading-operational-item {
 .ex-row-chevron {
   pointer-events: none;
 }
+/* A row with the swap / remove control ends on it instead of the chevron. */
+.ex-row-head:has([data-exercise-actions]) .ex-row-chevron {
+  display: none;
+}
 .ex-row-thumb {
   position: relative;
   flex: 0 0 auto;

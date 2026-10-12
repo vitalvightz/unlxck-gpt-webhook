@@ -53,6 +53,7 @@ from .structured_plan_generation import (
 )
 from .structured_plan_locked_merge import merge_planner_owned_structured_content
 from .services.effective_structured_plan import resolve_effective_structured_plan
+from .services.exercise_overrides import apply_exercise_overrides
 from .services.open_plan_timeline import project_open_structured_plan
 from .services.active_plan import get_plan_activation_state
 
@@ -662,6 +663,9 @@ def _map_plan_detail(
         structured_payload,
         current_training_day=current_training_day or datetime.now(timezone.utc).date(),
     )
+    # The athlete's exercise changes, applied to dated days exactly as Today
+    # applies them (api/services/exercise_overrides.py).
+    projected_payload = apply_exercise_overrides(row, projected_payload) or projected_payload
     if (
         raw_schedule_context.get("schedule_mode") == "open_recurring"
         and raw_schedule_context.get("projection_status") == "unavailable"

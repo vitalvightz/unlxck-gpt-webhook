@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState, useSyncExternalStore, type ReactNode 
 import { ExerciseMediaProvider } from "@/components/exercise-demo";
 import { PrivateExerciseMediaProvider } from "@/components/private-exercise-video";
 import { ExerciseLogProvider, type ExerciseLogging } from "@/components/exercise-log";
+import { ExerciseCustomisationProvider, type ExerciseCustomisation } from "@/components/exercise-customisation";
 import { SessionFeedbackPrompt } from "@/components/feedback/session-feedback-prompt";
 import {
   SessionCompletionForm,
@@ -339,9 +340,12 @@ export function TodaySessionBlocks({
   exerciseMedia,
   exerciseLogging = null,
   accessToken,
+  exerciseCustomisation = null,
 }: {
   planId?: string;
   current: CurrentDayResolution;
+  /** Swap / add / remove on the shown workout; null where it can't change. */
+  exerciseCustomisation?: ExerciseCustomisation | null;
   /** Heading already shown by the surrounding Today card. */
   headline?: string;
   /** Development-block week intent of an open (renewable) plan: headlines where
@@ -391,6 +395,7 @@ export function TodaySessionBlocks({
     <ExerciseMediaProvider media={exerciseMedia}>
     <ExerciseRationaleProvider>
     <ExerciseLogProvider logging={exerciseLogging}>
+    <ExerciseCustomisationProvider value={exerciseCustomisation}>
       <div className="today-blocks today-blocks-sessions">
         {weekIntentNote}
         <DaySessionContext day={displayDay} headline={headline} />
@@ -414,9 +419,11 @@ export function TodaySessionBlocks({
             hideTitle={Boolean(headline && sameTitle(headline, athleteFacingSessionTitle(session.title || displayDay.today_card?.headline || "")))}
             showDayContext={false}
             openWeekIntent={openWeekIntent}
+            occurrenceDate={displayDay.date}
           />
         ))}
       </div>
+    </ExerciseCustomisationProvider>
     </ExerciseLogProvider>
     </ExerciseRationaleProvider>
     </ExerciseMediaProvider>
@@ -441,8 +448,11 @@ export function TodaySessionPanel({
   athleteFullName,
   professionalStatus,
   commandUnavailable = false,
+  onPlanSessionChanged,
 }: {
   state: TodayCommandView;
+  /** Applies an athlete's exercise change to the shown plan (see useTodayCommand). */
+  onPlanSessionChanged?: (date: string, session: StructuredSession | null) => void;
   /** From the athlete's profile: the guided visualisation says their first name. */
   athleteFullName?: string | null;
   /** "amateur" / "professional": picks the guided visualisation's crowd. */
@@ -512,6 +522,15 @@ export function TodaySessionPanel({
     (message: string) => showToast(message, { tone: "error" }),
     [showToast],
   );
+  // Swap / add / remove stays available until the shown workout starts. Once
+  // it is started or logged it keeps its prescription (the server enforces
+  // the same rule); a stale or failed Today never offers it.
+  const sessionUnderway = resolvedDecision.sessionIsToday && status !== "not_started";
+  const customisationDay = state.today.training_day;
+  const exerciseCustomisation: ExerciseCustomisation | null =
+    token && activePlanId && onPlanSessionChanged && !commandUnavailable && !sessionUnderway
+      ? { token, planId: activePlanId, today: customisationDay, onSessionChanged: onPlanSessionChanged }
+      : null;
   const exerciseLogging = useTodayExerciseLogs({
     token,
     planId: activePlanId,
@@ -1156,6 +1175,7 @@ export function TodaySessionPanel({
             exerciseMedia={exerciseMedia}
             exerciseLogging={exerciseLogging}
             accessToken={token}
+            exerciseCustomisation={exerciseCustomisation}
           />
         ) : (
           <p className="muted">No active plan card matched today. Use View plan to find the next training target.</p>
@@ -1348,6 +1368,7 @@ export function TodaySessionPanel({
                   exerciseMedia={exerciseMedia}
                   exerciseLogging={exerciseLogging}
                   accessToken={token}
+                  exerciseCustomisation={exerciseCustomisation}
                 />
                 <p className="today-pending-line">
                   <span className="today-pending-pill">Pending</span>
@@ -1366,6 +1387,7 @@ export function TodaySessionPanel({
             exerciseMedia={exerciseMedia}
             exerciseLogging={exerciseLogging}
             accessToken={token}
+            exerciseCustomisation={exerciseCustomisation}
           />
         )
       ) : (
@@ -1573,6 +1595,7 @@ export function TodaySessionPanel({
                 exerciseMedia={exerciseMedia}
                 exerciseLogging={exerciseLogging}
                 accessToken={token}
+                exerciseCustomisation={exerciseCustomisation}
               />
             ) : null
           }

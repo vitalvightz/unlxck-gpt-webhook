@@ -328,6 +328,12 @@
   order: 2;
 }
 
+/* The swap / remove control sits at the row's end and replaces the chevron:
+   the whole row still opens the exercise. */
+.sp-session[data-layout="section"] [data-exercise-actions] {
+  order: 4;
+}
+
 .sp-session[data-layout="section"] .ex-row-chevron {
   order: 3;
   border-color: var(--text-muted);
