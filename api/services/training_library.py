@@ -386,7 +386,15 @@ def search(index: LibraryIndex, *, q: str = "", category: str = "training", filt
     fields = (*FILTERS, *DETAIL_FILTERS) if (index.projection or {}).get("discovery_filters") and category == "training" else FILTERS
     label_projection = index.projection if category == "training" else {"mappings": (index.projection or {}).get("mappings", [])}
     for field in fields:
-        counts = Counter(value for _, r in ranked if matches_filters(r, field) for value in r["facets"][field])
+        pool = [r for _, r in ranked if matches_filters(r, field)]
+        counts = Counter(value for r in pool for value in r["facets"][field])
+        if field == "sport":
+            # Universal drills match every sport filter, so each sport's count
+            # must include them or the option undercounts what it returns.
+            universal = [r["facets"]["sport"] for r in pool if "universal" in r["facets"]["sport"]]
+            for value in counts:
+                if value != "universal":
+                    counts[value] += sum(value not in sports for sports in universal)
         friendly_labels = {r["id"]: r["label"] for r in (index.projection or {}).get("discovery_filters", []) if r["group"] == field}
         facets[field] = [{"value": value, "label": friendly_labels.get(value) or filter_label(field, value, label_projection) or CLASS_LABELS.get(value, BODY_LABELS.get(value, "No equipment" if value == "no_equipment" else label(value))), "count": count}
                          for value, count in sorted(counts.items(), key=lambda pair: label(pair[0]))]

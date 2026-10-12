@@ -328,6 +328,18 @@ for (const width of [320, 390, 1280]) {
     await expect(page.getByRole("heading", { name: "Custom plans", exact: true })).toHaveCount(0);
     await expect(page.getByRole("link", { name: "Edit Plan", exact: true })).toHaveAttribute("href", "/plans/custom?plan=active-draft");
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+    // Build and History are equal-width buttons with centred content and no clipped labels.
+    const headerButtons = await Promise.all(["Build My Own Plan", "View History"].map(async (name) => {
+      const link = page.getByRole("link", { name, exact: true });
+      return { box: (await link.boundingBox())!, fits: await link.evaluate((node) => node.scrollWidth <= node.clientWidth) };
+    }));
+    expect(Math.abs(headerButtons[0].box.width - headerButtons[1].box.width)).toBeLessThan(1);
+    expect(headerButtons.every(({ fits }) => fits)).toBe(true);
+    if (width < 961) {
+      const tiles = (await page.getByRole("button", { name: "Log Training", exact: true }).boundingBox())!;
+      expect(Math.abs(headerButtons[0].box.x - tiles.x)).toBeLessThan(1);
+      expect(Math.abs(headerButtons[0].box.width - tiles.width)).toBeLessThan(1);
+    }
     await list.scrollIntoViewIfNeeded();
     const accessibility = await new AxeBuilder({ page }).include('section[aria-label="Saved plans"]').analyze();
     expect(accessibility.violations).toEqual([]);

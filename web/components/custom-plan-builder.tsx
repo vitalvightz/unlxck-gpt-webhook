@@ -913,7 +913,8 @@ export function CustomPlanBuilder({ accessToken, planId, onboarding = null }: { 
         <DrillPreview entry={preview} token={accessToken} onClose={() => setPreview(undefined)} selfDirected />
       ) : null}
       {communityOpen && editing?.exercise.origin === 'manual' ? <CommunityContributionSheet key={accessToken} token={accessToken} exercise={editing.exercise} onClose={() => setCommunityOpen(false)}
-        onIdentity={id => setEditing(current => current?.exercise.origin === 'manual' ? { ...current, exercise: { ...current.exercise, community_id: id } } : current)} /> : null}
+        onIdentity={id => setEditing(current => current?.exercise.origin === 'manual' ? { ...current, exercise: { ...current.exercise, community_id: id } } : current)}
+        onEquipment={equipment => setEditing(current => current?.exercise.origin === 'manual' ? { ...current, exercise: { ...current.exercise, equipment } } : current)} /> : null}
       {communityPreview ? <CommunityExercisePreview key={`${accessToken}:${communityPreview}`} token={accessToken} revision={communityPreview} onClose={() => setCommunityPreview(undefined)} /> : null}
       {videoOpen && editing?.exercise.origin === "manual" ? <PrivateExerciseVideoSheet
         token={accessToken} name={editing.exercise.name || "My exercise"} onClose={() => setVideoOpen(false)}
