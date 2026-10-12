@@ -59,7 +59,7 @@ for (const width of [320, 390, 1280]) {
     await page.getByRole("button", { name: "Edit dose for My bag rounds", exact: true }).click();
     await page.getByLabel("Position in session").selectOption("0");
     await page.getByRole("button", { name: "Done", exact: true }).click();
-    await page.getByRole("button", { name: "Save Plan", exact: true }).click();
+    await page.getByRole("button", { name: "Save draft", exact: true }).click();
     await expect(page).toHaveURL(/custom\?plan=/);
     await expect(page.getByText("Unsaved changes", { exact: true })).toHaveCount(0);
     await page.getByRole("link", { name: /Saved custom plans/ }).click();
@@ -89,7 +89,7 @@ for (const width of [320, 390, 1280]) {
     page.once("dialog", (dialog) => dialog.dismiss());
     await page.goBack();
     await expect(page.getByText("My renamed rounds", { exact: true })).toBeVisible();
-    await page.getByRole("button", { name: "Save Plan", exact: true }).click();
+    await page.getByRole("button", { name: "Save draft", exact: true }).click();
     await expect(page.getByText("Unsaved changes", { exact: true })).toHaveCount(0);
     await page.goBack();
     await expect(page).toHaveURL(/\/plans(?:#custom-plans)?$/);
@@ -101,7 +101,7 @@ for (const width of [320, 390, 1280]) {
       fullPage: true,
     });
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-    const saveBounds = await page.getByRole("button", { name: "Save Plan", exact: true }).boundingBox();
+    const saveBounds = await page.getByRole("button", { name: "Save draft", exact: true }).boundingBox();
     expect(saveBounds!.y + saveBounds!.height).toBeLessThan(width < 768 ? 780 : 844);
     expect(
       (await new AxeBuilder({ page }).include('[aria-label="Custom training plan builder"]').analyze()).violations,
@@ -196,7 +196,7 @@ for (const width of [320, 390, 1280]) {
       expect(second!.y).toBe(first!.y);
       await page.screenshot({ path: `${process.env.TEMP ?? "/tmp"}/unlxck-private-builder-${width}.png`, fullPage: true });
     }
-    await page.getByRole("button", { name: "Save Plan", exact: true }).click();
+    await page.getByRole("button", { name: "Save draft", exact: true }).click();
     await expect(page).toHaveURL(/custom\?plan=/);
     expect([...saved.values()][0].sessions[0].exercises[0]).toMatchObject({ origin: "manual", media_id: media.id });
     await page.reload();
@@ -275,7 +275,7 @@ for (const width of [390, 1280]) {
     const expected = ['Day 2', 'Day 7', 'Day 4', 'Day 3', 'Day 5', 'Day 1', 'Day 6', 'Day 0', 'Day 8'];
     const names = page.getByRole('region', { name: /^Session \d+$/ }).getByRole('heading', { level: 2 });
     await expect(names).toHaveText(expected);
-    await page.getByRole('button', { name: 'Save Plan', exact: true }).click();
+    await page.getByRole('button', { name: 'Save draft', exact: true }).click();
     await expect(page).toHaveURL(/custom\?plan=/);
     expect([...saved.values()][0].sessions.map(session => session.name)).toEqual(expected);
     await page.reload();

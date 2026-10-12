@@ -85,6 +85,7 @@ import { GlossaryTooltip } from "@/components/glossary-tooltip";
 import { glossaryEntry } from "@/lib/glossary";
 import { WhyTooltip } from "@/components/why-tooltip";
 import { ExerciseDemo, ExerciseMediaProvider, useExerciseMedia } from "@/components/exercise-demo";
+import { PrivateExerciseMediaProvider, PrescribedPrivateVideo } from "@/components/private-exercise-video";
 import { ExerciseLogBadge, ExerciseLogPanel, ExerciseLogTick, useExerciseLoggingActive } from "@/components/exercise-log";
 import { demoThumbnailUrl } from "@/lib/exercise-demo";
 import { SafetyNote } from "@/components/safety-note";
@@ -468,7 +469,9 @@ export function BlockCard({
           ) : null}
         </div>
       )}
-      {statCount > 0 ? (
+      {block.prescription_text ? <p className="sp-block-purpose">{block.prescription_text}</p> : null}
+      {block.notes ? <p className="sp-block-purpose">{block.notes}</p> : null}
+      {statCount > 0 && !block.prescription_text ? (
         <div className="sp-block-stats" data-count={statCount}>
           {metrics.map((metric) => (
             <span key={metric.label} className="sp-stat">
@@ -546,6 +549,7 @@ function exerciseRowSummary(
   block: StructuredBlock,
   prescription: { metrics: { value: string }[]; load: string | null; effort: string | null },
 ): string | null {
+  if (block.prescription_text) return block.prescription_text;
   const headline =
     prescription.metrics[0]?.value || prescription.load || formatMeasured(block.duration);
   const parts = [headline, prescription.effort].filter((part): part is string => Boolean(part));
@@ -615,7 +619,8 @@ export function ExerciseRow({
   const { title, compactStopRule } = prescription;
   const blockType = cleanText(block.block_type);
   const tagLabel = blockType ? blockTagLabel(block, rehabLabelPolicy) : null;
-  const media = useExerciseMedia(block.display_name, block.exercise_key);
+  const resolvedMedia = useExerciseMedia(block.display_name, block.exercise_key);
+  const media = block.prescription_source === "athlete" && !block.exercise_key ? null : resolvedMedia;
   const summary = exerciseRowSummary(block, prescription);
   const showRationale = useContext(ExerciseRationaleContext);
   const builds = showRationale ? athleteFacingRationale(block.purpose) : null;
@@ -717,6 +722,7 @@ export function ExerciseRow({
         </InjuryDetailSheet>
       ) : open ? (
         <div id={bodyId} className="ex-row-body">
+          {block.private_media_id ? <PrescribedPrivateVideo id={block.private_media_id} name={title} /> : null}
           {media ? (
             <ExerciseDemo
               media={media}
@@ -777,7 +783,8 @@ function ExerciseDetail({
   const { title, compactStopRule } = prescription;
   const blockType = cleanText(block.block_type);
   const tagLabel = blockType ? blockTagLabel(block, rehabLabelPolicy) : null;
-  const media = useExerciseMedia(block.display_name, block.exercise_key);
+  const resolvedMedia = useExerciseMedia(block.display_name, block.exercise_key);
+  const media = block.prescription_source === "athlete" && !block.exercise_key ? null : resolvedMedia;
   const summary = exerciseRowSummary(block, prescription);
   const builds = athleteFacingRationale(block.purpose);
   const whyTodayRaw = athleteFacingRationale(block.why_today);
@@ -803,6 +810,12 @@ function ExerciseDetail({
         <details className="ex-detail-section" open={!sessionRunning}>
           <summary>Demo video</summary>
           <ExerciseDemo media={media} exerciseName={title} />
+        </details>
+      ) : null}
+      {block.private_media_id ? (
+        <details className="ex-detail-section" open={!sessionRunning}>
+          <summary>Demo video</summary>
+          <PrescribedPrivateVideo id={block.private_media_id} name={title} />
         </details>
       ) : null}
       {builds || whyToday ? (
@@ -1717,7 +1730,7 @@ export function CampDayCard({
         fallbackLabel || `Week ${weekNumber} training day`,
       )
     : weekday || date || fallbackLabel || "Training day";
-  const weekIntent = openOngoing ? openBlockWeekIntent(weekNumber) : null;
+  const weekIntent = openOngoing ? openBlockWeekIntent(weekNumber, sessions.some(s => s.prescription_source === "athlete")) : null;
   const completion = dayCompletion(day, completionIndex);
   const dayIso = storedDate ? storedDate.slice(0, 10) : null;
 
@@ -2453,7 +2466,7 @@ function WeekOverview({
   const heading = openOngoing
     ? `Block ${scheduleContext?.block_number ?? 1} · ${openWeekHeading}`
     : `Week ${weekNumber}`;
-  const weekIntent = openOngoing ? openBlockWeekIntent(weekNumber) : null;
+  const weekIntent = openOngoing ? openBlockWeekIntent(weekNumber, getDays(week).some(d => getSessions(d).some(s => s.prescription_source === "athlete"))) : null;
   // The pill only names the phase (GPP / SPP / Taper); the selected week's
   // heading is where it gets explained, one tap away.
   const phaseEntry = openOngoing ? null : glossaryEntry(resolvedWeekPhase(week));
@@ -2520,6 +2533,7 @@ export function StructuredPlanRenderer({
   isAdmin = false,
   rehabLabelPolicy,
   exerciseMedia,
+  accessToken,
 }: {
   plan: StructuredPlan;
   /** Renewable four-week plan without a scheduled fight date. */
@@ -2561,6 +2575,7 @@ export function StructuredPlanRenderer({
   rehabLabelPolicy?: RehabLabelPolicy | null;
   /** Curated demo videos keyed by block display_name (PlanOutputs.exercise_media). */
   exerciseMedia?: Record<string, ExerciseMedia> | null;
+  accessToken?: string | null;
 }) {
   const weeks = getWeeks(plan);
   const completionIndex = useMemo(
@@ -2732,6 +2747,7 @@ export function StructuredPlanRenderer({
 
   return (
     <RehabLabelProvider policy={rehabLabelPolicy}>
+    <PrivateExerciseMediaProvider token={accessToken}>
     <ExerciseMediaProvider media={exerciseMedia}>
     <PlanSourceTextContext.Provider value={rawFallback}>
     <PlanSafetyTextContext.Provider value={safetyOwnershipTexts}>
@@ -2904,6 +2920,7 @@ export function StructuredPlanRenderer({
     </PlanSafetyTextContext.Provider>
     </PlanSourceTextContext.Provider>
     </ExerciseMediaProvider>
+    </PrivateExerciseMediaProvider>
     </RehabLabelProvider>
   );
 }

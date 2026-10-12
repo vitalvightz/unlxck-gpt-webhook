@@ -1818,12 +1818,13 @@ class SupabaseAppStore(CommunityStoreMixin, PrivateMediaStoreMixin, CompactGener
         intake_id: str,
         request: PlanRequest,
         result: dict[str, Any],
+        plan_id: str | None = None,
     ) -> dict[str, Any]:
         result_status = str(result.get("status") or "generated").strip().lower()
         if not is_plan_status(result_status):
             raise _status_transition_error(f"unknown plan status: {result_status!r}")
         visible_plan_text = _visible_plan_text_for_status(result, status_value=result_status)
-        plan_id = str(uuid4())
+        plan_id = plan_id or str(uuid4())
         payload = {
             "id": plan_id,
             "athlete_id": athlete_id,
@@ -1831,7 +1832,7 @@ class SupabaseAppStore(CommunityStoreMixin, PrivateMediaStoreMixin, CompactGener
             "fight_date": request.fight_date.strip() or None,
             "technical_style": request.athlete.technical_style,
             "full_name": request.athlete.full_name,
-            "plan_name": "",
+            "plan_name": result.get("plan_name", ""),
             "status": result_status,
             "plan_text": visible_plan_text,
             "draft_plan_text": result.get("draft_plan_text", result.get("plan_text", "")),

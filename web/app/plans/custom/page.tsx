@@ -5,15 +5,16 @@ import { RequireAuth } from "@/components/auth-guard";
 import { useAppSession } from "@/components/auth-provider";
 import { CustomPlanBuilder } from "@/components/custom-plan-builder";
 function Editor() {
-  const { session } = useAppSession();
+  const { session, me } = useAppSession();
   const planId = useSearchParams().get("plan") ?? undefined;
   return (
     <RequireAuth>
-      {session?.access_token ? (
+      {session?.access_token && me ? (
         <CustomPlanBuilder
           key={`${session.user_id}:${planId ?? "new"}`}
           accessToken={session.access_token}
           planId={planId}
+          onboarding={me}
         />
       ) : null}
     </RequireAuth>

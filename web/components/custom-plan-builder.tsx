@@ -2,7 +2,9 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { deleteCustomPlan, getCommunityExercise, getCustomDoseSuggestion, getCustomPlan, saveCustomPlan } from "@/lib/api";
+import { deleteCustomPlan, getCommunityExercise, getCustomDoseSuggestion, getCustomPlan, publishCustomPlan, saveCustomPlan } from "@/lib/api";
+import type { MeResponse } from "@/lib/types";
+import { customSchedulePrefill } from "@/lib/custom-plan-schedule";
 import type {
   CommunityEntry,
   CustomDoseSuggestion,
@@ -19,7 +21,7 @@ import { PrivateExerciseVideo, PrivateExerciseVideoSheet } from "./private-exerc
 import { blankDose, doseSummary } from "@/lib/custom-plan-dose";
 import styles from "./custom-plan-builder.module.css";
 type Exercise = (Omit<CustomExercise, "snapshot"> & { snapshot: LibraryEntry }) | ManualExercise;
-type Session = Omit<CustomSession, "exercises"> & { exercises: Exercise[] };
+type Session = Omit<CustomSession, "exercises" | "session_type"> & { exercises: Exercise[]; session_type?: CustomSession["session_type"] };
 type Draft = { id?: string; name: string; sessions: Session[]; incomplete?: boolean };
 const weekdays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"] as const;
 function orderedDraft(draft: Draft): Draft {
@@ -35,12 +37,12 @@ function PencilIcon() {
     </svg>
   );
 }
-export function CustomPlanBuilder({ accessToken, planId }: { accessToken: string; planId?: string }) {
+export function CustomPlanBuilder({ accessToken, planId, onboarding = null }: { accessToken: string; planId?: string; onboarding?: MeResponse | null }) {
   const router = useRouter();
-  const [draft, setDraft] = useState<Draft>({
+  const [draft, setDraft] = useState<Draft>(() => ({
     name: "My Training Plan",
-    sessions: [],
-  });
+    sessions: planId ? [] : customSchedulePrefill(onboarding),
+  }));
   const [loading, setLoading] = useState(!!planId),
     [retry, setRetry] = useState(0),
     [pending, setPending] = useState(false),
@@ -212,7 +214,7 @@ export function CustomPlanBuilder({ accessToken, planId }: { accessToken: string
       if (request === suggestionRequest.current) setSuggesting(false);
     }
   }
-  async function save() {
+  async function save(viewPlan = false) {
     setPending(true);
     setError(undefined);
     try {
@@ -224,6 +226,7 @@ export function CustomPlanBuilder({ accessToken, planId }: { accessToken: string
             id: s.id,
             name: s.name,
             weekday: s.weekday,
+            session_type: s.session_type ?? "mixed",
             exercises: s.exercises.map((e) =>
               e.origin === "manual"
                 ? {
@@ -256,6 +259,10 @@ export function CustomPlanBuilder({ accessToken, planId }: { accessToken: string
       setMessage(saved.incomplete ? "Draft saved. Complete any unfinished doses when ready." : "Plan saved.");
       window.history.replaceState(window.history.state, "", `/plans/custom?plan=${saved.id}`);
       loaded.current = true;
+      if (viewPlan) {
+        const published = await publishCustomPlan(accessToken, saved.id);
+        router.push(`/plans/${published.plan_id}`);
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Unable to save plan.");
     } finally {
@@ -326,7 +333,7 @@ export function CustomPlanBuilder({ accessToken, planId }: { accessToken: string
           </h1>
           <span className={styles.badge}>{dirty ? "Unsaved" : draft.id ? "Saved" : "New"}</span>
         </div>
-        <p className="muted">Self-directed. Readiness checks do not apply.</p>
+        <p className="muted">Choose your exercises. Train with your usual readiness and safety checks.</p>
       </header>
       {error ? (
         <p className="error-banner" role="alert">
@@ -468,7 +475,10 @@ export function CustomPlanBuilder({ accessToken, planId }: { accessToken: string
                   : "New custom plan"}
             </span>
             <button type="submit" className="cta">
-              {pending ? "Saving…" : "Save Plan"}
+              {pending ? "Saving…" : "Save draft"}
+            </button>
+            <button type="button" className="cta" onClick={() => void save(true)}>
+              Save &amp; view plan
             </button>
           </div>
         </fieldset>
@@ -537,6 +547,18 @@ export function CustomPlanBuilder({ accessToken, planId }: { accessToken: string
                 {weekdays.map((day) => (
                   <option key={day}>{day}</option>
                 ))}
+              </select>
+            </label>
+            <label>
+              <span>Session type</span>
+              <select aria-label="Session type" value={sessionEdit.session_type ?? "mixed"}
+                onChange={(e) => setSessionEdit({ ...sessionEdit, session_type: e.target.value as CustomSession["session_type"] })}>
+                <option value="mixed">Workout</option>
+                <option value="strength_power">Strength / power</option>
+                <option value="conditioning">Conditioning</option>
+                <option value="skill">Light technical / skill</option>
+                <option value="sparring">Hard sparring</option>
+                <option value="recovery">Recovery</option>
               </select>
             </label>
             <button className="cta">Done</button>

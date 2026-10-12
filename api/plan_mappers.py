@@ -685,7 +685,9 @@ def _map_plan_detail(
     structured_debug = structured_debug if isinstance(structured_debug, dict) else {}
     return PlanDetail(
         **summary.model_dump(mode="json"),
+        custom_plan_id=(planning_brief or {}).get("custom_plan", {}).get("id"),
         outputs=PlanOutputs(
+            exercise_media=(planning_brief or {}).get("custom_plan", {}).get("exercise_media"),
             plan_text=display_plan_text,
             pdf_url=row.get("pdf_url"),
             structured_plan=structured_plan,
@@ -698,7 +700,7 @@ def _map_plan_detail(
             structured_schema_version=structured_schema_version,
         ),
         advisories=build_plan_advisories(planning_brief=planning_brief),
-        plan_source=plan_source,
+        plan_source="custom" if (planning_brief or {}).get("custom_plan") else plan_source,
         schedule_context=PlanScheduleContext(**raw_schedule_context),
         profile_refresh_failed=bool(
             (row.get("why_log") if isinstance(row.get("why_log"), dict) else {}).get(

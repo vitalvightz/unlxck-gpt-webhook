@@ -614,6 +614,8 @@ async def prepare_structured_plan_rebuild(
     if not plan_row:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
     plan_row = dict(plan_row)
+    if (_decode_structured_text(plan_row.get("planning_brief")) or {}).get("custom_plan"):
+        raise HTTPException(409, "Custom prescriptions are rebuilt by saving them in Edit Plan.")
     if _has_live_structured_card(plan_row):
         return {"queued": False, "plan_id": plan_id}
 

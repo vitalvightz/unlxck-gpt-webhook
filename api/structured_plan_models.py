@@ -321,6 +321,15 @@ class SessionBlock(BaseModel):
     # never taken from the model. None on legacy plans and on blocks with no
     # deterministic identity, which fall back to display_name matching.
     exercise_key: str | None = None
+    # Athlete-authored prescriptions retain their exact text and dose alongside
+    # the shared numeric fields. No guessed load, coaching or movement metadata.
+    prescription_source: Literal["athlete"] | None = None
+    prescription_text: str | None = None
+    athlete_dose: dict[str, Any] | None = None
+    catalogue_id: str | None = None
+    private_media_id: str | None = None
+    source_session_id: str | None = None
+    notes: str | None = None
 
 
 class Completion(BaseModel):
@@ -342,6 +351,7 @@ class Session(BaseModel):
     # value that can collide with another session.
     session_id: str | None = None
     session_type: SessionType
+    prescription_source: Literal["athlete"] | None = None
     title: str
     objective: str
     planned_duration: MeasuredValue | None = None
@@ -516,6 +526,7 @@ class PlanMetadata(BaseModel):
     title: str
     sport: str
     plan_type: PlanType
+    prescription_source: Literal["athlete"] | None = None
     timezone: str
     status: PlanStatus
     created_at: str | None = None

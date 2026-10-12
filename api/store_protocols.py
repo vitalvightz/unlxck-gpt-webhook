@@ -79,6 +79,7 @@ class PlanStore(Protocol):
         intake_id: str,
         request: PlanRequest,
         result: dict[str, Any],
+        plan_id: str | None = None,
     ) -> dict[str, Any]: ...
 
     def list_user_plans(self, athlete_id: str) -> list[dict[str, Any]]: ...

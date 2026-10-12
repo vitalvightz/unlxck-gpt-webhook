@@ -1717,6 +1717,7 @@ class RehabLabelPolicy(BaseModel):
 
 
 class PlanDetail(PlanSummary):
+    custom_plan_id: str | None = None
     outputs: PlanOutputs
     safety_state: PlanSafetyState
     structured_card_state: StructuredCardState = Field(default_factory=StructuredCardState)

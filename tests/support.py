@@ -788,9 +788,9 @@ class FakeStore(InMemoryNotificationLedger, FullRowStatusReads):
                 return row
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="intake not found")
 
-    def create_plan(self, *, athlete_id: str, intake_id: str, request: PlanRequest, result: dict) -> dict:
+    def create_plan(self, *, athlete_id: str, intake_id: str, request: PlanRequest, result: dict, plan_id: str | None = None) -> dict:
         profile = self.profiles[athlete_id]
-        plan_id = str(uuid4())
+        plan_id = plan_id or str(uuid4())
         result_status = str(result.get("status") or "generated").strip().lower()
         if not is_plan_status(result_status):
             raise _status_transition_error(f"unknown plan status: {result_status!r}")
@@ -800,7 +800,7 @@ class FakeStore(InMemoryNotificationLedger, FullRowStatusReads):
             "intake_id": intake_id,
             "fight_date": request.fight_date.strip() or None,
             "technical_style": request.athlete.technical_style,
-            "plan_name": "",
+            "plan_name": result.get("plan_name", ""),
             "status": result_status,
             "plan_text": result.get("plan_text", ""),
             "draft_plan_text": result.get("draft_plan_text", result.get("plan_text", "")),

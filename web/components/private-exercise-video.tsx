@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import {
   createPrivateYouTubeClip, getPrivateMedia, getPrivateMediaSettings, getPrivateUpload, reservePrivateUpload,
 } from "@/lib/api";
@@ -10,6 +10,15 @@ import { ExerciseDemo } from "./exercise-demo";
 import { InjuryDetailSheet } from "./today/injury-detail-sheet";
 import styles from "./custom-plan-builder.module.css";
 import layout from "./private-exercise-video.module.css";
+
+const PrivateMediaToken = createContext<string | null>(null);
+export function PrivateExerciseMediaProvider({ token, children }: { token?: string | null; children: ReactNode }) {
+  return <PrivateMediaToken.Provider value={token ?? null}>{children}</PrivateMediaToken.Provider>;
+}
+export function PrescribedPrivateVideo({ id, name }: { id: string; name: string }) {
+  const token = useContext(PrivateMediaToken);
+  return token ? <PrivateExerciseVideo token={token} id={id} name={name} /> : null;
+}
 
 export function PrivateVideoPlayer({ media, name, visibility = "private" }: { media: PrivateMediaPreview; name: string; visibility?: "private" | "community" }) {
   const video = useRef<HTMLVideoElement>(null);

@@ -384,6 +384,13 @@ export type MindsetAnchor = {
 };
 
 export type StructuredBlock = {
+  prescription_source?: "athlete" | null;
+  prescription_text?: string | null;
+  athlete_dose?: Record<string, unknown> | null;
+  catalogue_id?: string | null;
+  private_media_id?: string | null;
+  source_session_id?: string | null;
+  notes?: string | null;
   block_id?: string | null;
   block_type?: string | null;
   contact_level?: "none" | "controlled" | "full" | "unknown" | null;
@@ -421,6 +428,7 @@ export type StructuredBlock = {
 };
 
 export type StructuredSession = {
+  prescription_source?: "athlete" | null;
   session_id?: string | null;
   session_type?: string | null;
   title?: string | null;
@@ -561,6 +569,7 @@ export type DeterministicSupport = {
 };
 
 export type StructuredPlanMetadata = {
+  prescription_source?: "athlete" | null;
   title?: string | null;
   sport?: string | null;
   plan_type?: string | null;
@@ -709,6 +718,7 @@ export type PlanScheduleContext = {
 };
 
 export type PlanDetail = PlanSummary & {
+  custom_plan_id?: string | null;
   outputs: PlanOutputs;
   advisories: PlanAdvisory[];
   admin_outputs?: AdminPlanOutputs | null;

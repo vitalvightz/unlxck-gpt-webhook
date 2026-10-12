@@ -99,6 +99,12 @@ export function getCustomPlan(token: string, id: string) {
   return readJson<CustomPlan>(`/api/custom-plans/${encodeURIComponent(id)}`, { token });
 }
 
+export function publishCustomPlan(token: string, id: string) {
+  return readJson<PlanSummary>(`/api/custom-plans/${encodeURIComponent(id)}/open-plan`, {
+    token, method: "POST",
+  });
+}
+
 export function saveCustomPlan(token: string, body: CustomPlanInput, id?: string) {
   return readJson<CustomPlan>(id ? `/api/custom-plans/${encodeURIComponent(id)}` : "/api/custom-plans", {
     token, method: id ? "PUT" : "POST", body: JSON.stringify(body),

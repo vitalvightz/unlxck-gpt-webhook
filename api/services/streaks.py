@@ -130,7 +130,9 @@ def qualifying_training_days(
     session, or to a sessionless coach/technical day in that completion's plan.
     Completed legacy/manual ``session_logs`` are authoritative actual training.
     """
-    schedules: dict[str, dict[date, set[str]]] = {}
+    from api.services.open_plan_timeline import open_plan_anchor_date, open_plan_spec
+    plans: dict[str, dict[str, Any] | None] = {}
+    schedules: dict[tuple[str, int], dict[date, set[str]]] = {}
     qualifying: set[date] = set()
     skipped: set[date] = set()
     for row in _all_completions(store, athlete_id):
@@ -141,10 +143,15 @@ def qualifying_training_days(
         except ValueError:
             continue
         plan_id = str(row.get("plan_id") or "")
-        if plan_id not in schedules:
-            plan = store.get_plan_for_athlete(plan_id, athlete_id) if plan_id else None
-            schedules[plan_id] = _training_schedule(plan, today.isoformat()) if plan else {}
-        expected_ids = schedules[plan_id].get(activity_day)
+        if plan_id not in plans:
+            plans[plan_id] = store.get_plan_for_athlete(plan_id, athlete_id) if plan_id else None
+        plan = plans[plan_id]
+        anchor = open_plan_anchor_date(plan) if plan and open_plan_spec(plan) else None
+        block = max(0, (activity_day - anchor).days // 28) if anchor else 0
+        schedule_key = (plan_id, block)
+        if schedule_key not in schedules:
+            schedules[schedule_key] = _training_schedule(plan, activity_day.isoformat()) if plan else {}
+        expected_ids = schedules[schedule_key].get(activity_day)
         session_id = str(row.get("session_id") or "").strip()
         # Before canonical identity was enforced, the supported Today flow used
         # the local day as its key for sessionless coach/technical cards. Accept

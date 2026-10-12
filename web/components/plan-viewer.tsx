@@ -2975,6 +2975,7 @@ export function PlanViewer({
                   isAdmin={isViewerAdmin}
                   rehabLabelPolicy={rehabLabelPolicy}
                   exerciseMedia={plan.outputs.exercise_media}
+                  accessToken={accessToken}
                 />
               ) : holdPlanForEnhancedCard ? (
                 <EnhancedCardLockInCard accessToken={accessToken} />

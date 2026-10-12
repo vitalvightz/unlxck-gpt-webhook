@@ -64,11 +64,15 @@ export const OPEN_BLOCK_WEEK_LABELS: readonly string[] = OPEN_BLOCK_WEEK_INTENTS
  * four-week block (callers gate on the plan being open/ongoing). */
 export function openBlockWeekIntent(
   weekNumber: number | null | undefined,
+  athletePrescribed = false,
 ): OpenBlockWeekIntent | null {
   if (typeof weekNumber !== "number" || !Number.isFinite(weekNumber)) {
     return null;
   }
-  return OPEN_BLOCK_WEEK_INTENTS[Math.trunc(weekNumber) - 1] ?? null;
+  const intent = OPEN_BLOCK_WEEK_INTENTS[Math.trunc(weekNumber) - 1] ?? null;
+  return intent && athletePrescribed
+    ? { ...intent, summary: "Follow your saved prescription. Change doses in Edit Plan." }
+    : intent;
 }
 
 export type OpenBlockWeekDirective = {

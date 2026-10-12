@@ -4,7 +4,9 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Response
 
 from api.contracts.custom_plans import CustomDoseSuggestion, CustomPlan, CustomPlanInput
-from api.services.custom_plans import plan_fields, source_suggestion
+from api.services.custom_plans import plan_fields, publish_custom_plan, source_suggestion
+from api.models import PlanSummary
+from api.plan_mappers import _map_plan_summary
 
 
 def build_custom_plans_router(*, require_profile, get_store):
@@ -31,6 +33,20 @@ def build_custom_plans_router(*, require_profile, get_store):
     @router.get("/{plan_id}", response_model=CustomPlan)
     def read_custom_plan(plan_id: UUID, profile=Depends(require_profile), store=Depends(get_store)):
         return owned(store, profile.athlete_id, plan_id)
+
+    @router.post("/{plan_id}/open-plan", response_model=PlanSummary)
+    def publish(plan_id: UUID, profile=Depends(require_profile), store=Depends(get_store)):
+        row = owned(store, profile.athlete_id, plan_id)
+        # Revalidate saved doses and attachments on publication too.
+        body = CustomPlanInput.model_validate({
+            "name": row["name"], "sessions": [
+                {**{k: s[k] for k in ("id", "name", "weekday")}, "session_type": s.get("session_type", "mixed"),
+                 "exercises": [{k: v for k, v in e.items() if k not in {"snapshot", "incomplete"}}
+                               for e in s["exercises"]]} for s in row["sessions"]
+            ],
+        })
+        fields = plan_fields(store, body, row, athlete_id=profile.athlete_id)
+        return _map_plan_summary(publish_custom_plan(store, {**row, **fields}, profile))
 
     @router.put("/{plan_id}", response_model=CustomPlan)
     def update_custom_plan(plan_id: UUID, body: CustomPlanInput, profile=Depends(require_profile), store=Depends(get_store)):

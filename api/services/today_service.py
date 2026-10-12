@@ -1585,6 +1585,11 @@ def upsert_session_completion(
         status_value in {"done", "modified"}
         and str(existing.get("status") or "not_started") not in {"done", "modified"}
     )
+    from api.plan_mappers import _decode_structured_text
+    if (_decode_structured_text(plan_row.get("planning_brief")) or {}).get("custom_plan"):
+        # All scheduled sessions share the existing day-level completion. A
+        # retry submitted through a sibling must not claim another XP award.
+        row["_day_credit_key"] = f"{athlete_id}:{training_day}"
     return row
 
 
@@ -3090,7 +3095,7 @@ def _build_today_command_view(
                 other_entries.append(app_entry)
         # Do not discard otherwise-permitted ordinary non-contact camp under
         # train/no-contact. This exception offers independently safe support.
-        if support_entries and (ceiling["level"] == "rehab_only" or all(_session_has_contact(row) for row in other_entries)):
+        if support_entries and not any(entry.get("prescription_source") == "athlete" for entry in today_candidates) and (ceiling["level"] == "rehab_only" or all(_session_has_contact(row) for row in other_entries)):
             support_projection = {**support_entries[0], "blocks": [block for row in support_entries for block in row["blocks"]]}
             support_owner_ids = {str(row["session_id"]) for row in support_entries}
     if completion_status_of(today_completion) == "started":
@@ -3341,7 +3346,12 @@ def _build_today_command_view(
     if live:
         # Presentation only: never part of the frozen prescription/revision.
         from .exercise_media import load_media_index, resolve_session_exercise_media
-        view.exercise_media = resolve_session_exercise_media(live.get("session") or {}, load_media_index(store))
+        from api.plan_mappers import _decode_structured_text
+        custom = _decode_structured_text(plan_row.get("planning_brief"))
+        if custom and custom.get("custom_plan"):
+            view.exercise_media = custom["custom_plan"].get("exercise_media") or {}
+        else:
+            view.exercise_media = resolve_session_exercise_media(live.get("session") or {}, load_media_index(store))
     view.effective_clinician_clearance = effective_clinician_clearance(open_injuries)
     view.delayed_rehab_prompts = delayed_rehab_prompts(store, athlete_id, training_day, athlete_timezone)
     return view
