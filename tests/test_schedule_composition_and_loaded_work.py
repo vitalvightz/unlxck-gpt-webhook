@@ -19,7 +19,16 @@ from fightcamp.main import generate_plan_sync
 from fightcamp.planner_authority_integrity import planner_authority_findings
 from fightcamp.planner_context import planner_athlete_model_context
 from fightcamp.prescription_resolver import apply_effective_strength_prescriptions
-from fightcamp.session_composition import _scheduled_phase_for_role, compose_normal_strength_assignments
+from fightcamp import session_composition
+from fightcamp.calendar_integrity import _stamp_relocation
+from fightcamp.combat_load_policy import PlacementDirective
+from fightcamp.physical_session_frequency import is_physical_session_role
+from fightcamp.session_composition import (
+    _scheduled_phase_for_role,
+    compose_normal_strength_assignments,
+    reconcile_relocated_strength,
+    stale_strength_roles,
+)
 
 _NOW = dt.datetime(2026, 1, 4, 12)
 _FULL_GYM = ("barbell", "dumbbells", "kettlebells", "medicine_ball", "heavy_bag", "bodyweight",
@@ -141,6 +150,92 @@ def test_shipped_membership_is_what_the_composer_gives_the_final_calendar(key):
                 assert set(shipped) <= set(final), (role["role_key"], role_d_day(week, role))
             else:
                 assert shipped == final, (role["role_key"], role_d_day(week, role))
+
+
+@pytest.mark.parametrize("key", _NORMAL)
+def test_every_strength_role_was_composed_and_dosed_for_the_day_it_is_on(key):
+    """Covers composer-, governor- and revalidation-moved roles alike (the
+    boxer56/70 and kickboxing35 camps include composer relocations)."""
+    brief = _plan(key)
+    assert stale_strength_roles(brief["weekly_role_map"]) == set()
+    for week in brief["weekly_role_map"]["weeks"]:
+        for role in _normal_strength(week):
+            envelope = role.get("effective_strength_envelope") or {}
+            if "scheduled_d_day" in envelope:
+                assert envelope["scheduled_d_day"] == role_d_day(week, role)
+
+
+def _physical_days(week):
+    return {role_d_day(week, r) for r in week["session_roles"] if is_physical_session_role(r)}
+
+
+def _moved_copy(key):
+    """A finished map with one strength role moved to a free day of its week
+    after its membership was chosen, as any mover would leave it."""
+    brief = _plan(key)
+    role_map = copy.deepcopy(brief["weekly_role_map"])
+    for week in role_map["weeks"]:
+        busy = _physical_days(week)
+        free = [d for d in week["calendar_days"] if d["d_day"] not in busy and d["d_day"] > 14]
+        strength = _normal_strength(week)
+        if strength and len(free) >= 3:
+            role = strength[0]
+            _stamp_relocation(role, weekday=free[0]["weekday"], d_day=free[0]["d_day"],
+                              reason_code="test_move", directive=PlacementDirective.ALLOW)
+            return brief, role_map, week, role
+    raise AssertionError("no movable strength role")
+
+
+def _with_athlete(brief, fn):
+    token = planner_athlete_model_context.set(brief["athlete_snapshot"])
+    try:
+        return fn()
+    finally:
+        planner_athlete_model_context.reset(token)
+
+
+def test_a_role_moved_after_composition_is_recomposed_for_its_destination():
+    brief, role_map, week, role = _moved_copy("boxer56_novice_revalidation_move")
+    assert stale_strength_roles(role_map) == {id(role)}
+    _with_athlete(brief, lambda: reconcile_relocated_strength(
+        role_map, candidate_pools=brief["candidate_pools"], replace_callback=lambda m: None))
+    assert stale_strength_roles(role_map) == set()
+    assert role["strength_composition_policy"]["composed_for_d_day"] == role_d_day(week, role)
+
+
+def test_a_second_move_is_reconciled_without_another_round(monkeypatch):
+    """Recomposition relocates (forced here), the governor re-run moves the role
+    again; the bounded final pass composes it for where it ended up and moves
+    nothing further."""
+    brief, role_map, week, role = _moved_copy("boxer56_novice_revalidation_move")
+    real = session_composition.compose_normal_strength_assignments
+    calls = []
+
+    def compose(**kwargs):
+        calls.append(kwargs.get("allow_relocation", True))
+        out = real(**kwargs)
+        if len(calls) == 1:  # the composer's own mover relocates it
+            day = next(d for d in week["calendar_days"] if d["d_day"] not in _physical_days(week) and d["d_day"] > 14)
+            _stamp_relocation(role, weekday=day["weekday"], d_day=day["d_day"], reason_code="mover", directive=PlacementDirective.ALLOW)
+        return out
+
+    composed_for = role_d_day(week, role)
+
+    def governor(role_map):  # and the governor moves it once more, to a new day
+        governor.calls += 1
+        taken = _physical_days(week) | {composed_for}
+        day = next(d for d in week["calendar_days"] if d["d_day"] not in taken and d["d_day"] > 14)
+        _stamp_relocation(role, weekday=day["weekday"], d_day=day["d_day"], reason_code="governor", directive=PlacementDirective.ALLOW)
+    governor.calls = 0
+
+    monkeypatch.setattr(session_composition, "compose_normal_strength_assignments", compose)
+    _with_athlete(brief, lambda: reconcile_relocated_strength(
+        role_map, candidate_pools=brief["candidate_pools"], replace_callback=governor))
+    final_day = role_d_day(week, role)
+    assert final_day != composed_for
+    assert governor.calls == 1 and calls == [True, False]
+    assert stale_strength_roles(role_map) == set()
+    assert role["strength_composition_policy"]["composed_for_d_day"] == final_day
 
 
 @pytest.mark.parametrize("key", _NORMAL)

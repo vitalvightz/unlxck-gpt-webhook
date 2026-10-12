@@ -70,7 +70,7 @@ from .session_composition import (
     compose_normal_conditioning_assignments,
     compose_normal_rehab_assignments,
     compose_normal_strength_assignments,
-    strength_role_days,
+    reconcile_relocated_strength,
 )
 from .normal_calendar_placement import fill_missing_session_days
 from .late_fight_phase_eligibility import (
@@ -1501,25 +1501,20 @@ def _build_planning_brief(
     compose_normal_strength_assignments(
         weekly_role_map=weekly_role_map, candidate_pools=candidate_pools,
     )
-    composed_days = strength_role_days(weekly_role_map)
     # Late-camp role morph: hard fight-pace/glycolytic conditioning scheduled at
     # D-13 or closer softens to a low-cost rhythm touch. Runs last so no quota
     # or protected-slot rule can preserve hard glycolytic work inside D-13; the
     # D-21→D-18 combat-pressure floor is untouched by construction.
     apply_late_camp_role_morph(weekly_role_map, athlete_model)
     # Composition runs first because its own recovery mover's relocations must
-    # be morphed and verified by the governor. A role the governor then moved was
-    # composed for a day it no longer occupies (phase, cut strain, neighbours), so
-    # it is recomposed by the same owner; if that recomposition relocates, the
-    # morph and governor run once more. Bounded, never iterated to convergence.
-    placed_days = strength_role_days(weekly_role_map)
-    moved = {key for key, day in placed_days.items() if composed_days.get(key) != day}
-    if moved:
-        compose_normal_strength_assignments(
-            weekly_role_map=weekly_role_map, candidate_pools=candidate_pools, only_roles=moved,
-        )
-        if strength_role_days(weekly_role_map) != placed_days:
-            apply_late_camp_role_morph(weekly_role_map, athlete_model)
+    # be morphed and verified by the governor. Any role moved after its
+    # membership was chosen -- by that mover or by the governor -- is recomposed
+    # for the day it is on, through the same owners and with a fixed bound.
+    reconcile_relocated_strength(
+        weekly_role_map,
+        candidate_pools=candidate_pools,
+        replace_callback=lambda role_map: apply_late_camp_role_morph(role_map, athlete_model),
+    )
     compose_normal_conditioning_assignments(
         weekly_role_map=weekly_role_map, candidate_pools=candidate_pools,
     )
@@ -1566,10 +1561,13 @@ def _build_planning_brief(
         )
 
     def _recompose_strength(role_map: dict, only_roles: set) -> dict:
+        # The revalidation owns placement here; composition only fills the
+        # destination day.
         return compose_normal_strength_assignments(
             weekly_role_map=role_map,
             candidate_pools=candidate_pools,
             only_roles=only_roles,
+            allow_relocation=False,
         )
 
     # A proposed extra standalone-strength exercise is kept only when the
