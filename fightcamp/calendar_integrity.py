@@ -172,7 +172,7 @@ def _best_destination(
     *, excluded_d_days: set[int] | None = None,
 ) -> tuple[str, int, PlacementDecision] | None:
     events = _build_events(weekly_role_map, exclude_role=ref.role)
-    ranked: list[tuple[tuple[int, int, int, int], str, int, PlacementDecision]] = []
+    ranked: list[tuple[tuple[bool, int, int, int, int], str, int, PlacementDecision]] = []
     for weekday, d_day in _available_destination_days(ref):
         if excluded_d_days and d_day in excluded_d_days:
             continue
@@ -184,11 +184,18 @@ def _best_destination(
         )
         if decision.directive is PlacementDirective.FORBID:
             continue
+        occupancy = _destination_occupancy_rank(events, d_day)
         ranked.append(
             (
                 (
+                    # Moving a role to relieve a cross-day conflict must not
+                    # stack it onto a day already holding a physical session:
+                    # that concentrates the load being spread out. Such a day is
+                    # the last resort, below any legal free day -- the rule the
+                    # realised-load mover already applies by exclusion.
+                    occupancy == 2,
                     0 if decision.directive is PlacementDirective.ALLOW else 1,
-                    _destination_occupancy_rank(events, d_day),
+                    occupancy,
                     abs(d_day - ref.d_day),
                     -d_day,
                 ),
