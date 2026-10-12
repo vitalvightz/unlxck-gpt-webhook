@@ -38,6 +38,7 @@ export function doseSummary(d: CustomDose) {
   if (d.load_or_intensity) parts.push(d.load_or_intensity);
   if (d.rest_seconds != null) parts.push(`rest ${d.rest_seconds}s`);
   if (d.rpe) parts.push(`RPE ${d.rpe}`);
+  if (d.tempo) parts.push(`tempo ${d.tempo}`);
   if (d.per_side) parts.push("per side");
   return parts.join(" · ");
 }

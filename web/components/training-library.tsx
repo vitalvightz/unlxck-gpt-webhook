@@ -34,7 +34,7 @@ const readable = (value: string) => value.replaceAll("_", " ").replaceAll("-", "
 
 export function DrillPreview({ entry, token, onClose, onAdd, selfDirected = false }: {
   entry: LibraryEntry; token: string; onClose: () => void;
-  onAdd?: (entry: LibraryEntry) => void; selfDirected?: boolean;
+  onAdd?: (entry: LibraryPreview) => void; selfDirected?: boolean;
 }) {
   const [detail, setDetail] = useState<LibraryPreview | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -91,7 +91,7 @@ export function DrillPreview({ entry, token, onClose, onAdd, selfDirected = fals
 }
 
 export function TrainingLibrary({ accessToken, onSelect, onBack, onSelectCommunity }: {
-  accessToken: string; onSelect?: (entry: LibraryEntry) => void; onBack?: () => void; onSelectCommunity?: (entry: CommunityEntry) => void;
+  accessToken: string; onSelect?: (entry: LibraryPreview) => void; onBack?: () => void; onSelectCommunity?: (entry: CommunityEntry) => void;
 }) {
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState<Category>("training");

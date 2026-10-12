@@ -7,7 +7,7 @@ import type { MeResponse, StructuredBlock } from "@/lib/types";
 import { ExerciseRow } from "./structured-plan-renderer";
 import { DotsIcon } from "./exercise-customisation";
 import { ExerciseMediaProvider } from "./exercise-demo";
-import { customSchedulePrefill, customScheduleIssues, prepareCustomSession, customPlanError } from "@/lib/custom-plan-schedule";
+import { customSchedulePrefill, customScheduleIssues, prepareCustomSession, customPlanError, sessionNames } from "@/lib/custom-plan-schedule";
 import type {
   CommunityEntry,
   CustomDoseSuggestion,
@@ -47,15 +47,19 @@ function draftBlock(exercise: Exercise, session: Session): StructuredBlock {
   const dose = exercise.dose;
   const snapshot = exercise.origin === "catalogue" ? exercise.snapshot : null;
   const type = snapshot?.content_type;
+  const blockType = ({ conditioning: "conditioning", skill: "skill", strength: "strength", power: "plyometric_power", speed: "speed" } as Record<string, string>)[type ?? ""]
+    ?? ({ strength_power: "strength", conditioning: "conditioning", skill: "skill", sparring: "sparring", recovery: "cooldown_recovery" } as Record<string, string>)[session.session_type ?? "mixed"]
+    ?? "accessory";
   const weight = dose.load_or_intensity?.trim().match(/^(\d+(?:\.\d+)?)\s*(kg|lb|lbs)$/i);
   return {
     block_id: exercise.id, display_name: nameOf(exercise), prescription_source: "athlete",
-    block_type: type === "conditioning" || session.session_type === "conditioning" ? "conditioning"
-      : type === "power" ? "plyometric_power" : session.session_type === "skill" ? "skill" : "strength",
+    block_type: blockType,
     exercise_key: snapshot?.exercise_key, catalogue_id: exercise.origin === "catalogue" ? exercise.catalogue_id : null,
     private_media_id: exercise.origin === "manual" ? exercise.media_id : null,
     community_revision_id: exercise.origin === "manual" ? exercise.community_revision_id : null,
     athlete_dose: dose, prescription_text: doseSummary(dose),
+    notes: exercise.origin === "manual" ? exercise.notes : null,
+    intensity: dose.load_or_intensity,
     sets: dose.sets, reps: dose.reps, rounds: dose.rounds,
     duration: dose.duration_seconds ? { value: dose.duration_seconds, unit: "seconds" } : null,
     work: dose.work_seconds ? { value: dose.work_seconds, unit: "seconds" } : null,
@@ -291,11 +295,11 @@ export function CustomPlanBuilder({ accessToken, planId, onboarding = null }: { 
   function renderSession(s: Session) {
     const i = draft.sessions.indexOf(s);
     return (
-      <section key={s.id} className={styles.session} aria-label={`Session ${i + 1}`}>
-        <div className={styles.row}>
+      <section key={s.id} className={`sp-session ${styles.session}`} aria-label={`Session ${i + 1}`}>
+        <div className="sp-session-head">
           <div>
             <small className={styles.weekday}>{s.weekday ?? "Unassigned"}</small>
-            <h2>{s.name}</h2>
+            <h2 className="sp-session-title">{s.name}</h2>
           </div>
           <div className={styles.sessionActions}>
             <button type="button" className={styles.editButton} aria-label={`Edit session ${i + 1}`} title="Edit session"
@@ -310,15 +314,17 @@ export function CustomPlanBuilder({ accessToken, planId, onboarding = null }: { 
             ) : null}
           </div>
         </div>
+        <div className="sp-session-meta"><span className="sp-tag">{sessionNames[s.session_type ?? "mixed"]}</span></div>
         {s.session_type !== "rest" ? <PrivateExerciseMediaProvider token={accessToken}>
           <ExerciseMediaProvider media={Object.fromEntries(s.exercises.flatMap(e => e.origin === "catalogue" && e.snapshot.media && e.snapshot.exercise_key
             ? [[`exercise:${e.snapshot.exercise_key}`, e.snapshot.media]] : []))}>
-            <ol className={styles.exercises}>
+            <ol className={`sp-blocks ex-rows ${styles.exercises}`}>
               {s.exercises.map((e) => (
                 <li key={e.id}>
                   <ExerciseRow block={draftBlock(e, s)} open={openExercise === e.id}
                     onToggle={() => setOpenExercise(current => current === e.id ? null : e.id)} actions={
                       <button type="button" className={`${styles.editButton} ${styles.cardAction}`}
+                        data-exercise-actions
                         aria-label={`Edit dose for ${nameOf(e)}`} title="Edit exercise" onClick={() => edit(s.id, e)}>
                         <DotsIcon />
                       </button>
@@ -454,7 +460,7 @@ export function CustomPlanBuilder({ accessToken, planId, onboarding = null }: { 
                 catalogue_id: entry.catalogue_id,
                 snapshot: entry,
                 incomplete: true,
-                coaching_cues: null, stop_rules: null,
+                coaching_cues: entry.guidance.Cues ?? null, stop_rules: entry.guidance.Stop ?? null,
                 dose: blankDose(),
               },
             ],

@@ -356,7 +356,8 @@ function useBlockPrescription(block: StructuredBlock, sourceCountdown?: string |
   const sourceOverrides = getSourcePrescriptionRangeOverrides(sourceText, title, sourceCountdown);
   // Loads are authored lower-case ("bodyweight", "easy angle"); they sit as a
   // value beside "RPE 4", so read them sentence-case like the other values.
-  const loadText = formatBlockLoad(block.load);
+  const loadText = formatBlockLoad(block.load)
+    || (block.prescription_source === "athlete" ? cleanText(block.intensity) : null);
   const load = loadText ? loadText.charAt(0).toUpperCase() + loadText.slice(1) : null;
   // Times read short ("2 min", "90 sec") so a row of stats fits a phone; the
   // value itself never changes (see compactTimeUnits).
@@ -447,6 +448,10 @@ export function BlockCard({
 
   const tagLabel = blockType ? blockTagLabel(block, rehabLabelPolicy) : null;
   const statCount = metrics.length + [load, rest, effort].filter(Boolean).length;
+  const hasAthleteMetrics = block.prescription_source === "athlete"
+    && typeof block.athlete_dose?.mode === "string"
+    && ["reps", "duration", "intervals", "distance"].includes(block.athlete_dose.mode);
+  const showMetricTiles = statCount > 0 && (!block.prescription_text || hasAthleteMetrics);
   const asides = [
     ...(substitutions.length > 0 ? [{ label: "Swaps", text: substitutions.join(", "), glossary: false }] : []),
     ...(regressions.length > 0 ? [{ label: "Easier", text: regressions.join(", "), glossary: false }] : []),
@@ -470,9 +475,11 @@ export function BlockCard({
           ) : null}
         </div>
       )}
-      {block.prescription_text ? <p className="sp-block-purpose">{block.prescription_text}</p> : null}
-      {block.notes ? <p className="sp-block-purpose">{block.notes}</p> : null}
-      {statCount > 0 && !block.prescription_text ? (
+      {block.prescription_text && !showMetricTiles ? <p className="sp-block-purpose">{block.prescription_text}</p> : null}
+      {block.notes && !hasAthleteMetrics ? <p className="sp-block-purpose">{block.notes}</p> : null}
+      {/* Athlete entries retain their exact text (tempo, side, free-form load)
+          alongside the same metric tiles used by generated sessions. */}
+      {showMetricTiles ? (
         <div className="sp-block-stats" data-count={statCount}>
           {metrics.map((metric) => (
             <span key={metric.label} className="sp-stat">
@@ -513,6 +520,8 @@ export function BlockCard({
           ) : null}
         </div>
       ) : null}
+      {block.prescription_text && showMetricTiles ? <p className="sp-block-purpose">{block.prescription_text}</p> : null}
+      {block.notes && hasAthleteMetrics ? <p className="sp-block-purpose">{block.notes}</p> : null}
       {weekDirective ? (
         <p className="sp-block-aside sp-week-directive">
           <span className="sp-stat-label">{weekDirective.label}</span>
