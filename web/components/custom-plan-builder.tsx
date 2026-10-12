@@ -354,11 +354,18 @@ export function CustomPlanBuilder({ accessToken, planId, onboarding = null }: { 
   useEffect(() => {
     const bar = saveBar.current;
     if (!bar || typeof ResizeObserver === "undefined") return;
+    // The root copy drives scroll-padding, so focus and scroll-into-view stop
+    // above the fixed save bar instead of underneath it.
+    const root = document.documentElement;
     const observer = new ResizeObserver(() => {
       bar.closest<HTMLElement>(`.${styles.builder}`)?.style.setProperty("--custom-save-height", `${bar.offsetHeight}px`);
+      root.style.setProperty("--custom-save-height", `${bar.offsetHeight}px`);
     });
     observer.observe(bar);
-    return () => observer.disconnect();
+    return () => {
+      observer.disconnect();
+      root.style.removeProperty("--custom-save-height");
+    };
   }, [loading, selecting]);
   async function save(viewPlan = false) {
     if (!draftValid || (viewPlan && !publishable)) return;
