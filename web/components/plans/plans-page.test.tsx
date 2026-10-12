@@ -115,7 +115,7 @@ test("the current camp shows once: one status, the fight date once, a countdown 
   const view = await mountPlans([active, plan("old-1"), plan("old-2", { created_at: "2026-10-07T01:25:00Z" })], "active-1");
   try {
     const text = view.host.textContent ?? "";
-    assert.equal(view.host.querySelector("h1")?.textContent, "Training plan");
+    assert.equal(view.host.querySelector("h1")?.textContent, "Fight camp");
     assert.match(text, /Current camp/);
     assert.match(text, /Fight camp/);
     assert.match(text, /D-(29|30|31)/);
@@ -128,7 +128,7 @@ test("the current camp shows once: one status, the fight date once, a countdown 
     assert.equal(card?.textContent?.match(/Active/g)?.length, 1);
     // One primary action; the rest are quiet.
     assert.equal(view.host.querySelectorAll("article .cta").length, 1);
-    assert.match(text, /Previous plans/);
+    assert.match(text, /Plan history/);
     assert.match(text, /2 saved/);
     assert.equal(view.host.querySelectorAll('ul button[aria-haspopup="dialog"]').length, 2);
   } finally {
