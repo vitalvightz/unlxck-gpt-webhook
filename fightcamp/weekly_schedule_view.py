@@ -298,6 +298,8 @@ def _open_ongoing_weekly_schedule(
     for day in days:
         weekday = day["weekday"]
         if weekday not in training_days:
+            if planning_brief.get("custom_plan") and (template.get("session_types_by_day") or {}).get(weekday) == "recovery":
+                day.update(title="Recovery day", reason="No workout required.")
             continue
         if weekday in coach_led_days:
             is_hard = weekday in hard_sparring_days

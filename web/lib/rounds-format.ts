@@ -17,7 +17,7 @@ export type ParsedRoundsFormat = {
   roundDuration: string;
 };
 
-const ROUNDS_FORMAT_PATTERN = /^(\d+)\s*[xX]\s*(\d+)$/;
+const ROUNDS_FORMAT_PATTERN = /^(\d+)\s*[xX×]\s*(\d+)$/;
 
 export function parseRoundsFormat(value: string | null | undefined): ParsedRoundsFormat {
   const raw = (value ?? "").trim();

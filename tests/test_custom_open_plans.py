@@ -1,5 +1,6 @@
 """Custom prescriptions use the shared Open Plan execution and history paths."""
 import copy
+import json
 from datetime import date, timedelta
 from uuid import uuid4
 
@@ -253,7 +254,7 @@ def test_edits_keep_original_logs_and_cannot_replace_a_started_day(api):
     client, store = api
     draft, row, day = current_plan(api)
     old = copy.deepcopy(row)
-    session = row["structured_plan"]["weeks"][0]["days"][0]["sessions"][0]
+    session = _structured_day_for_training_day(row, day)[0]["sessions"][0]
     checkin(client, row["id"])
     complete(client, row["id"], session["session_id"])
     saved_completions = copy.deepcopy(store.session_completions)
@@ -366,8 +367,8 @@ def test_generated_cards_cannot_claim_athlete_authority_or_private_media(api):
 
 def test_readiness_and_severe_injury_still_gate_execution(api):
     client, store = api
-    _, row, _ = current_plan(api)
-    session_id = row["structured_plan"]["weeks"][0]["days"][0]["sessions"][0]["session_id"]
+    _, row, day = current_plan(api)
+    session_id = _structured_day_for_training_day(row, day)[0]["sessions"][0]["session_id"]
     checkin(client, row["id"])
     store.create_injury_flag("athlete-1", {"body_area": "Left knee", "description": "Severe knee pain",
                                          "severity": "severe", "status": "open", "plan_id": row["id"]})
@@ -398,3 +399,226 @@ def test_coach_sessions_without_exercises_use_shared_today_actions(api, session_
     complete(client, plan_id, session_id)
     complete(client, plan_id, session_id, "done")
     assert client.get("/api/today", headers=AUTH).json()["today"]["completion_status"] == "done"
+
+
+def calendar_body():
+    value = {"name": "Demo", "sessions": []}
+    for day in ["Monday", "Wednesday", "Thursday", "Saturday"]:
+        value["sessions"].append(body(day)["sessions"][0])
+    value["sessions"] += [
+        {"id": str(uuid4()), "name": "Training", "weekday": "Tuesday", "session_type": "recovery", "exercises": []},
+        {"id": str(uuid4()), "name": "Training", "weekday": "Friday", "session_type": "sparring", "exercises": []},
+    ]
+    return value
+
+
+@pytest.mark.parametrize("recovery_work", [False, True], ids=["empty-recovery", "optional-recovery-work"])
+def test_json_text_custom_calendar_preserves_off_days_across_renewal(api, recovery_work):
+    _, store = api
+    value = calendar_body()
+    if recovery_work:
+        value["sessions"][-2]["exercises"] = body()["sessions"][0]["exercises"]
+    profile = _map_profile_row(store.profiles["athlete-1"])
+    result = custom_open_plan_result({**value, "id": str(uuid4())}, profile, training_day="2026-10-12")
+    row = {"id": result["plan_id"], "created_at": "2026-10-12T12:00:00Z", **result}
+    # Supabase can return the persisted brief as JSON text rather than a mapping.
+    text_row = {**row, "planning_brief": json.dumps(row["planning_brief"])}
+    original = copy.deepcopy(text_row)
+    template_days = row["structured_plan"]["weeks"][0]["days"]
+
+    for elapsed_week in (0, 3, 4, 7, 8):
+        current_day = date(2026, 10, 12) + timedelta(weeks=elapsed_week)
+        projected, context = project_open_structured_plan(
+            text_row, text_row["structured_plan"], current_training_day=current_day.isoformat(),
+        )
+        assert context["projection_status"] == "projected"
+        assert context["block_number"] == elapsed_week // 4 + 1
+        assert context["current_week_number"] == elapsed_week % 4 + 1
+        assert len(projected["weeks"]) == 4
+        block_start = date(2026, 10, 12) + timedelta(weeks=(elapsed_week // 4) * 4)
+        for week_position, week in enumerate(projected["weeks"]):
+            assert [d["weekday"] for d in week["days"]] == [day[:3] for day in WEEKDAYS]
+            for day_position, day in enumerate(week["days"]):
+                assert day["date"] == (block_start + timedelta(weeks=week_position, days=day_position)).isoformat()
+                # Exact session IDs, doses, notes and optional flags survive renewal.
+                assert day["sessions"] == template_days[day_position]["sessions"]
+            recovery, rest = week["days"][1], week["days"][6]
+            assert rest["day_type"] == "rest" and rest["sessions"] == []
+            assert recovery["day_type"] == "recovery"
+            if recovery_work:
+                assert len(recovery["sessions"]) == 1
+                assert recovery["sessions"][0]["optional"] is True
+                assert recovery["sessions"][0]["blocks"][0]["athlete_dose"]["load_or_intensity"] == "80 kg"
+            else:
+                assert recovery["sessions"] == []
+        mapping_projection, mapping_context = project_open_structured_plan(
+            row, row["structured_plan"], current_training_day=current_day.isoformat(),
+        )
+        assert projected == mapping_projection and context == mapping_context
+    assert text_row == original
+
+
+def test_demo_calendar_publishes_recovery_and_implicit_rest_without_data_loss(api):
+    from api.services.today_service import _structured_today
+    client, store = api
+    value = calendar_body()
+    draft, plan_id = publish(client, value)
+    assert not draft["incomplete"]
+    assert [s["name"] for s in draft["sessions"] if s["session_type"] == "sparring"] == ["Hard Sparring"]
+    assert client.get(f"/api/custom-plans/{draft['id']}", headers=AUTH).json() == draft
+    row = store.plans[plan_id]
+    row["created_at"] = "2026-10-12T12:00:00Z"
+    row["planning_brief"]["athlete_snapshot"]["plan_creation_weekday"] = "Mon"
+    template = row["planning_brief"]["open_plan_spec"]["weekly_template"]
+    assert template["training_days"] == ["Mon", "Wed", "Thu", "Fri", "Sat"]
+    assert client.post(f"/api/plans/{plan_id}/set-active", headers=AUTH).status_code == 200
+    detail = _map_plan_detail(row, include_admin=False, current_training_day=date(2026, 10, 12))
+    for offset, kind in enumerate(["moderate", "recovery", "moderate", "moderate", "moderate", "moderate", "rest"]):
+        day = (date(2026, 10, 12) + timedelta(days=offset)).isoformat()
+        matched = _structured_day_for_training_day(row, day)[0]
+        shown = next(d for d in detail.outputs.structured_plan.weeks[0].days if d.date == day)
+        assert shown.day_type == matched["day_type"] == kind
+        assert shown.model_dump(mode="json")["sessions"] == matched["sessions"]
+        assert _structured_today(row, day).is_rest_day == (kind in {"recovery", "rest"})
+        if kind in {"recovery", "rest"}:
+            assert matched["sessions"] == []
+    _, weekly = resolve_current_week(row, today=date(2026, 10, 13))
+    assert weekly.days[1].title == "Recovery day" and weekly.days[1].effective_load == "none"
+    assert weekly.days[6].effective_load == "none"
+    for session in value["sessions"][:4]:
+        saved = next(s for s in draft["sessions"] if s["id"] == session["id"])
+        assert saved["exercises"][0]["notes"] == "Use my rack"
+        assert saved["exercises"][0]["dose"]["load_or_intensity"] == "80 kg"
+
+
+def test_saved_demo_with_stale_incomplete_flag_can_publish_and_saves_remain_idempotent(api):
+    client, store = api
+    value = calendar_body()
+    saved = client.post("/api/custom-plans", headers=AUTH, json=value).json()
+    store.custom_plans[saved["id"]]["incomplete"] = True
+    for _ in range(3):
+        response = client.post(f"/api/custom-plans/{saved['id']}/open-plan", headers=AUTH)
+        assert response.status_code == 200, response.text
+    assert len(store.plans) == 1
+    assert store.custom_plans[saved["id"]]["sessions"] == saved["sessions"]
+    assert not store.session_completions and not store.exercise_logs
+
+
+@pytest.mark.parametrize("kind,with_work", [("rest", False), ("recovery", False), ("recovery", True)])
+def test_off_days_cannot_create_workout_completions_or_xp(api, kind, with_work):
+    client, store = api
+    day = resolve_training_day(None)
+    weekday = WEEKDAYS[date.fromisoformat(day).weekday()]
+    value = body(WEEKDAYS[(date.fromisoformat(day).weekday() + 1) % 7])
+    off = {"id": str(uuid4()), "name": "My downtime", "weekday": weekday, "session_type": kind,
+           "exercises": body()["sessions"][0]["exercises"] if with_work else []}
+    value["sessions"].append(off)
+    _, plan_id = publish(client, value)
+    row = store.plans[plan_id]
+    monday = date.fromisoformat(day) - timedelta(days=date.fromisoformat(day).weekday())
+    row["created_at"] = f"{monday}T12:00:00Z"
+    row["planning_brief"]["athlete_snapshot"]["plan_creation_weekday"] = "Mon"
+    assert client.post(f"/api/plans/{plan_id}/set-active", headers=AUTH).status_code == 200
+    checkin(client, plan_id)
+    matched, _ = _structured_day_for_training_day(row, day)
+    if with_work:
+        assert matched["sessions"][0]["optional"] is True
+        detail = client.get(f"/api/plans/{plan_id}", headers=AUTH).json()
+        shown = next(d for w in detail["outputs"]["structured_plan"]["weeks"] for d in w["days"] if d["date"] == day)
+        assert shown["sessions"] == matched["sessions"]
+    today = client.get("/api/today", headers=AUTH).json()["today"]
+    assert today["next_session"].get("calendar_date") != day
+    before = copy.deepcopy(store.xp_awards)
+    for status in ["started", "done", "done"]:
+        response = client.post("/api/today/session-completion", headers=AUTH, json={
+            "plan_id": plan_id, "session_id": matched["sessions"][0]["session_id"] if with_work else off["id"], "status": status,
+        })
+        assert response.status_code == 409, response.text
+    assert not store.session_completions.get("athlete-1")
+    assert store.xp_awards == before
+    qualified, _ = qualifying_training_days(store, athlete_id="athlete-1", today=date.fromisoformat(day))
+    assert date.fromisoformat(day) not in qualified
+
+
+def test_empty_strength_is_a_specific_publish_error_not_a_rest_day(api):
+    client, store = api
+    value = calendar_body()
+    value["sessions"][1]["exercises"] = []
+    saved = client.post("/api/custom-plans", headers=AUTH, json=value).json()
+    assert saved["incomplete"]
+    response = client.post(f"/api/custom-plans/{saved['id']}/open-plan", headers=AUTH)
+    assert response.status_code == 422
+    assert "Wednesday's Strength & Power session has no exercises" in response.json()["detail"]
+    assert not store.plans
+
+
+
+def test_round_doses_custom_names_and_occurrences_survive_repeated_saves(api):
+    client, store = api
+    value = calendar_body()
+    sparring = value["sessions"][-1]
+    sparring["name"] = "Friday gym rounds"
+    sparring["exercises"] = [{"id": str(uuid4()), "origin": "manual", "name": "My rounds", "notes": "Coach's dose",
+                              "dose": {"mode": "intervals", "rounds": 6, "work_seconds": 120, "rest_seconds": 45}}]
+    draft, plan_id = publish(client, value)
+    before = copy.deepcopy(draft["sessions"])
+    for _ in range(3):
+        saved = client.put(f"/api/custom-plans/{draft['id']}", headers=AUTH, json=value)
+        assert saved.status_code == 200
+        assert saved.json()["sessions"] == before
+        assert client.post(f"/api/custom-plans/{draft['id']}/open-plan", headers=AUTH).json()["plan_id"] == plan_id
+    assert len(store.plans) == 1
+    block = next(d for d in store.plans[plan_id]["structured_plan"]["weeks"][0]["days"] if d["weekday"] == "Fri")["sessions"][0]["blocks"][0]
+    assert block["rounds"] == 6 and block["work"]["value"] == 120 and block["rest"]["value"] == 45
+    assert block["effort"] is None and block["intensity"] is None
+
+
+def test_type_change_renames_only_defaults_on_save(api):
+    client, _ = api
+    value = calendar_body()
+    value["sessions"][0]["name"] = "Lower Body"
+    draft = client.post("/api/custom-plans", headers=AUTH, json=value).json()
+    value["sessions"][0]["session_type"] = "conditioning"
+    recovery = value["sessions"][-2]
+    recovery.update(name="Recovery", session_type="strength_power", exercises=body()["sessions"][0]["exercises"])
+    saved = client.put(f"/api/custom-plans/{draft['id']}", headers=AUTH, json=value).json()
+    assert next(s for s in saved["sessions"] if s["id"] == value["sessions"][0]["id"])["name"] == "Lower Body"
+    assert next(s for s in saved["sessions"] if s["id"] == recovery["id"])["name"] == "Strength & Power"
+
+
+def test_switching_programmed_day_off_retains_work_without_prescribing_it(api):
+    client, store = api
+    value = calendar_body()
+    original = copy.deepcopy(value["sessions"][0])
+    value["sessions"][0]["session_type"] = "rest"
+    draft, plan_id = publish(client, value)
+    saved = next(s for s in draft["sessions"] if s["id"] == original["id"])
+    assert saved["exercises"][0]["id"] == original["exercises"][0]["id"]
+    assert saved["exercises"][0]["notes"] == original["exercises"][0]["notes"]
+    monday = store.plans[plan_id]["structured_plan"]["weeks"][0]["days"][0]
+    assert monday["day_type"] == "rest" and monday["sessions"] == []
+    value["sessions"][0]["session_type"] = "strength_power"
+    restored = client.put(f"/api/custom-plans/{draft['id']}", headers=AUTH, json=value).json()
+    assert next(s for s in restored["sessions"] if s["id"] == original["id"])["exercises"] == saved["exercises"]
+
+
+
+def test_recovery_work_cannot_be_retro_logged_for_xp(api):
+    from datetime import datetime, timezone
+    from fastapi import HTTPException
+    from api.services.today_service import upsert_session_completion
+    client, store = api
+    value = calendar_body()
+    value["sessions"][-2]["exercises"] = body()["sessions"][0]["exercises"]
+    _, plan_id = publish(client, value)
+    row = store.plans[plan_id]
+    row["created_at"] = "2026-10-12T12:00:00Z"
+    row["planning_brief"]["athlete_snapshot"]["plan_creation_weekday"] = "Mon"
+    recovery = _structured_day_for_training_day(row, "2026-10-13")[0]["sessions"][0]
+    before = copy.deepcopy(store.xp_awards)
+    with pytest.raises(HTTPException) as rejected:
+        upsert_session_completion(store, athlete_id="athlete-1", athlete_timezone="UTC",
+            payload={"plan_id": plan_id, "session_id": recovery["session_id"], "status": "done", "training_day": "2026-10-13"},
+            now=datetime(2026, 10, 14, 12, tzinfo=timezone.utc))
+    assert rejected.value.status_code == 422
+    assert not store.session_completions.get("athlete-1") and store.xp_awards == before

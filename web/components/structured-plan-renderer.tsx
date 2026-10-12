@@ -1736,7 +1736,7 @@ export function CampDayCard({
   const dayIso = storedDate ? storedDate.slice(0, 10) : null;
 
   const completionInfoFor = (session: StructuredSession): SessionCompletionInfo | undefined => {
-    if (!completionIndex) {
+    if (!completionIndex || session.optional === true) {
       return undefined;
     }
     const record = completionForSession(completionIndex, day, session);

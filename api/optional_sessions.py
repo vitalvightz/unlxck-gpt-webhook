@@ -1,8 +1,9 @@
 """Which structured sessions the athlete may skip without missing anything.
 
-The optional camp Fight Visualisation is offered, never required. A session is
+The camp Fight Visualisation and athlete-added custom recovery are offered,
+never required. A session is
 optional only when the server says so: ``structured_plan_locked_merge`` sets
-``optional: True`` on it and clears the field everywhere else, so the model
+``optional: True`` on these trusted sessions and clears the field elsewhere, so the model
 cannot make real training skippable.
 
 Everything that decides what a day owes the athlete reads this one rule: the

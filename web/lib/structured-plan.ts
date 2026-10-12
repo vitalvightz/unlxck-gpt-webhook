@@ -706,7 +706,7 @@ export function isZeroLoadSupportSession(
 export function getPhysicalSessions(
   day: StructuredDay | null | undefined,
 ): StructuredSession[] {
-  return getSessions(day).filter((session) => !isZeroLoadSupportSession(session));
+  return getSessions(day).filter((session) => session.optional !== true && !isZeroLoadSupportSession(session));
 }
 
 /** Coach-owned contact kinds that are real physical work the athlete performs. */

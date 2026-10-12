@@ -725,6 +725,12 @@ def reconcile_coach_led_sparring_days(
 def _reconcile(structured_plan: Any, planning_brief: Any) -> list[str]:
     if not isinstance(structured_plan, dict) or not isinstance(planning_brief, dict):
         return []
+    # Custom publication already owns the session identities and exact doses.
+    # Converter repair must not discard empty coach sessions or rename an
+    # athlete's programmed rounds. Live readiness/injury guards still apply.
+    if (planning_brief.get("custom_plan")
+            and (structured_plan.get("plan_metadata") or {}).get("prescription_source") == "athlete"):
+        return []
     weeks = structured_plan.get("weeks")
     if not isinstance(weeks, list) or not weeks:
         return []

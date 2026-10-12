@@ -485,12 +485,17 @@ def merge_locked_structured_content(
     """
     plan = copy.deepcopy(structured_plan)
     result = LockedMergeResult(plan=plan)
-    # ``optional`` is server-owned: only a locked optional role below may set
-    # it, so a model-supplied value can never make real training skippable.
+    # ``optional`` is server-owned: a locked optional role or trusted custom
+    # recovery can set it; a model cannot make real training skippable.
     for day in _days(plan):
         for session in day.get("sessions") or []:
             if isinstance(session, dict):
-                session.pop("optional", None)
+                if (isinstance(planning_brief, Mapping) and planning_brief.get("custom_plan")
+                        and session.get("prescription_source") == "athlete"
+                        and session.get("session_type") == "recovery"):
+                    session["optional"] = True
+                else:
+                    session.pop("optional", None)
     if not isinstance(planning_brief, Mapping):
         return result
 

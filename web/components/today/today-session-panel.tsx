@@ -665,6 +665,10 @@ export function TodaySessionPanel({
   // modified or skipped) its contact is over, even while the card has moved on
   // to the next session, so its rounds are no longer offered or re-loggable.
   const todayLogged = status === "done" || status === "modified" || status === "skipped";
+  const customOffDayCopy = structuredPlan?.plan_metadata?.prescription_source === "athlete"
+    ? todayResolved.day?.day_type === "recovery" ? "Recovery day — No workout completion required."
+      : todayResolved.day?.day_type === "rest" ? "Rest day — Nothing scheduled." : null
+    : null;
   const contactTarget: ContactTimerTarget | null = todayLogged ? null :
     (todayResolved.inRange ? contactTimerTarget(todayResolved.day) : null) ??
     (resolvedDecision.sessionIsToday && session.coach_led_contact
@@ -1130,6 +1134,7 @@ export function TodaySessionPanel({
         data-tone={cardTone}
         aria-labelledby="today-session-heading"
       >
+        {customOffDayCopy ? <p className="muted">{customOffDayCopy}</p> : null}
         <div className="today-card-head">
           <div>
             <p className="kicker">Today&apos;s session</p>
@@ -1241,6 +1246,7 @@ export function TodaySessionPanel({
       data-tone={cardTone}
       aria-labelledby="today-session-heading"
     >
+      {customOffDayCopy ? <p className="muted">{customOffDayCopy}</p> : null}
       <div className="today-card-head today-session-head">
         <div>
           <div className="today-session-eyebrow">
