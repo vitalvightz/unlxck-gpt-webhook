@@ -38,7 +38,6 @@ from .contracts.rehab_stage import (
     REHAB_STAGES as _REHAB_STAGES,
 )
 from .json_limits import MAX_CLIENT_JSON_BYTES, MAX_JSON_DEPTH, validate_json_field
-from .performance_focus import get_performance_focus_cap
 from .state_machine import GenerationJobStatus
 from .structured_plan_models import StructuredTrainingPlan
 from .xp import XpAction
@@ -82,7 +81,6 @@ _GUIDED_INJURY_SEVERITY_ALIASES = {
     "severe": "high",
 }
 _HARD_SPARRING_DAY_CAP = 4
-_HARD_SPARRING_STRENGTH_BLOCK_DAYS_OUT = 20
 
 # Upper bound on a manually submitted Stage 2 plan body (admin-only path).
 MANUAL_STAGE2_MAX_CHARS = 80_000
@@ -147,10 +145,6 @@ _PLAN_TEXT_LIMITS = {
 
 def _clean_list(values: list[str] | None) -> list[str]:
     return [str(value).strip() for value in values or [] if str(value).strip()]
-
-
-def _without_strength_focus(values: list[str]) -> list[str]:
-    return [value for value in values if str(value).strip().lower() != "strength"]
 
 
 def _clean_optional_text(value: Any) -> str | None:
@@ -1037,31 +1031,6 @@ class PlanRequest(BaseModel):
         the raw field.
         """
         return "" if self.no_scheduled_fight else self.fight_date
-
-    @model_validator(mode="after")
-    def normalize_strength_focus_for_hard_sparring(self) -> "PlanRequest":
-        if not self.hard_sparring_days:
-            return self
-
-        cap = get_performance_focus_cap(
-            self.effective_fight_date,
-            time_zone=self.athlete.athlete_timezone,
-        )
-        if cap is None or cap.days_until_fight > _HARD_SPARRING_STRENGTH_BLOCK_DAYS_OUT:
-            return self
-
-        key_goals = _without_strength_focus(self.key_goals)
-        weak_areas = _without_strength_focus(self.weak_areas)
-        if len(key_goals) == len(self.key_goals) and len(weak_areas) == len(self.weak_areas):
-            return self
-
-        self.key_goals = key_goals
-        self.weak_areas = weak_areas
-        if self.primary_goal and self.primary_goal.strip().lower() == "strength":
-            self.primary_goal = ""
-        if self.primary_weak_area and self.primary_weak_area.strip().lower() == "strength":
-            self.primary_weak_area = ""
-        return self
 
     def to_payload(self) -> dict[str, Any]:
         def _guided_injury_payload(guided: GuidedInjuryInput) -> dict[str, Any]:

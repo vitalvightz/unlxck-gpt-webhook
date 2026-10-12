@@ -60,6 +60,12 @@ _COMPRESSION_REASONS = {
 # weakness genuinely compete for the only safe capacity the goal takes it and
 # the weakness records that it found none.
 _BUILD_PRIORITIES = {"primary", "primary_weakness"}
+# A strength selection inside this window with declared hard sparring is kept
+# (never erased at intake) but carried as maintenance and, when no qualifying
+# exposure fits, deferred with this cited reason. Same 20-day threshold the
+# intake form already applies when it disables a new strength selection.
+HARD_SPARRING_STRENGTH_LIMIT_DAYS = 20
+_HARD_SPARRING_STRENGTH_LIMIT = "hard_sparring_strength_limit"
 _PRIORITY_REASON_CODES = {
     "primary": "primary_goal",
     "primary_weakness": "primary_weakness",
@@ -188,6 +194,12 @@ def selected_goals(athlete: dict, focus: dict | None = None) -> list[tuple[str, 
     return [*selections[:1], (weakness, "primary_weakness"), *selections[1:]]
 
 
+def _hard_sparring_strength_limited(athlete: dict, goal: str) -> bool:
+    days = athlete.get("days_until_fight")
+    return (goal == "strength" and bool(athlete.get("hard_sparring_days"))
+            and isinstance(days, int) and days <= HARD_SPARRING_STRENGTH_LIMIT_DAYS)
+
+
 def classify_goal_preservation(athlete: dict, focus: dict | None = None) -> list[dict]:
     """Initial obligations, never a claim that the schedule satisfied them."""
     days = athlete.get("days_until_fight")
@@ -205,13 +217,16 @@ def classify_goal_preservation(athlete: dict, focus: dict | None = None) -> list
     # qualifying exposure.
     if cut_justifies_goal_deferral(athlete.get("cut_severity_bucket")):
         limits.append("weight_cut_pressure")
+    def _limits(goal: str) -> list[str]:
+        return [*limits, _HARD_SPARRING_STRENGTH_LIMIT] if _hard_sparring_strength_limited(athlete, goal) else limits
+
     return [
         {"goal": goal, "priority": priority,
          # Primary goal and primary weakness are both build obligations: each
          # earns one meaningful exposure per build week. Secondaries stay
          # opportunistic maintenance.
-         "state": "build" if priority in _BUILD_PRIORITIES and not limits else "maintain",
-         "reason_codes": [_PRIORITY_REASON_CODES[priority], *limits],
+         "state": "build" if priority in _BUILD_PRIORITIES and not _limits(goal) else "maintain",
+         "reason_codes": [_PRIORITY_REASON_CODES[priority], *_limits(goal)],
          "required_intent": INTENTS.get(goal, f"selected_goal:{goal}"),
          "evidence": []}
         for goal, priority in selected_goals(athlete, focus)
@@ -1078,6 +1093,9 @@ def _deferral_constraints(entry: dict, brief: dict, missing: list[dict]) -> list
     if not missing:
         return []
     days = _athlete(brief).get("days_until_fight")
+    if _hard_sparring_strength_limited(_athlete(brief), entry["goal"]):
+        return [{"reason_code": _HARD_SPARRING_STRENGTH_LIMIT, "authority": "hard_sparring_strength_policy",
+                 "days_until_fight": days, "hard_sparring_days": list(_athlete(brief).get("hard_sparring_days") or [])}]
     if isinstance(days, int) and (days <= 1 or (entry["goal"] == "strength" and days <= 7)):
         return [{"reason_code": "fight_proximity", "authority": "late_fight_strength_dose_cap" if entry["goal"] == "strength" else "fight_day_protocol", "days_until_fight": days}]
     reasons = []

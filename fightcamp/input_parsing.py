@@ -31,13 +31,6 @@ def _normalize_list(field: str | None) -> list[str]:
     return [w.strip().lower() for w in field.split(",") if w.strip()] if field else []
 
 
-_HARD_SPARRING_STRENGTH_BLOCK_DAYS_OUT = 20
-
-
-def _without_strength_focus(values: list[str]) -> list[str]:
-    return [value for value in values if value.strip().lower() != "strength"]
-
-
 _EMPTY_INJURY_MARKERS = {
     "none",
     "no",
@@ -1127,25 +1120,6 @@ class PlanInput:
         open_camp_weeks = _coerce_open_camp_weeks(open_camp_weeks_raw)
 
         camp_timeline_type: CampTimelineType = "open_camp" if no_scheduled_fight else "scheduled_fight"
-
-        if (
-            hard_sparring_days
-            and not no_scheduled_fight
-            and isinstance(days_until_fight, int)
-            and days_until_fight <= _HARD_SPARRING_STRENGTH_BLOCK_DAYS_OUT
-        ):
-            primary_goal_was_strength = primary_goal.strip().lower() == "strength"
-            primary_weak_area_was_strength = primary_weak_area.strip().lower() == "strength"
-            key_goals_list = _without_strength_focus(key_goals_list)
-            weak_areas_list = _without_strength_focus(weak_areas_list)
-            if primary_goal_was_strength:
-                primary_goal = ""
-            elif primary_goal and primary_goal not in key_goals_list:
-                primary_goal = key_goals_list[0] if key_goals_list else ""
-            if primary_weak_area_was_strength:
-                primary_weak_area = ""
-            elif primary_weak_area and primary_weak_area not in weak_areas_list:
-                primary_weak_area = weak_areas_list[0] if weak_areas_list else ""
 
         normalized_values = {
             **values,
