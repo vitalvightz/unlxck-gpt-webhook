@@ -99,6 +99,27 @@ def test_verified_filters(index, field, value):
             assert set(summary["equipment"]) <= {"none", "bodyweight"}
 
 
+@pytest.mark.parametrize("sport", ["bjj", "boxing", "kickboxing", "mma", "muay_thai", "wrestling"])
+def test_sport_filter_never_excludes_universal_drills(index, sport):
+    universal = {r["entry"]["catalogue_id"] for r in index.records
+                 if r["summary"]["category"] == "training" and "universal" in r["facets"]["sport"]}
+    assert universal
+    result = lib.search(index, filters={"sport": sport}, limit=3000)
+    assert universal <= {e["catalogue_id"] for e in result["entries"]}
+    # The sport option's count is what selecting it returns, universals included.
+    counts = {f["value"]: f["count"] for f in lib.search(index, limit=1)["facets"]["sport"]}
+    assert counts[sport] == result["total"]
+
+
+def test_universal_drills_suit_every_athlete():
+    from api.services.exercise_customisation import AthleteContext, _sport_allows
+
+    universal = [r for r in lib.cache.get().records if "universal" in r["facets"]["sport"]]
+    for styles in ([], ["boxing"], ["bjj"], ["wrestling"], ["muay_thai"], ["mma"]):
+        athlete = AthleteContext({"athlete": {"technical_style": styles}})
+        assert all(_sport_allows(r, athlete) for r in universal), styles
+
+
 def test_query_and_filters_combine_and_reset(index):
     params = dict(q="punching power", filters=dict(type="strength_power", equipment="medicine_ball", goal="Punching power"))
     result = lib.search(index, **params)

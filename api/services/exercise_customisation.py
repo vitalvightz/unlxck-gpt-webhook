@@ -459,7 +459,11 @@ def _sport_allows(record: Mapping[str, Any], athlete: AthleteContext) -> bool:
         compatible.add("grappling")
     if "mma" in compatible:
         compatible |= set(SUPPORTED_SPORTS) | {"grappling"}
-    if sports and "universal" not in sports and not sports & compatible:
+    # Universal drills suit every sport (and athletes with none declared), so
+    # sport identity never excludes them.
+    if "universal" in sports:
+        return True
+    if sports and not sports & compatible:
         return False
     if tagged and not tagged & compatible:
         return False

@@ -6,6 +6,7 @@ import { InjuryDetailSheet } from './today/injury-detail-sheet';
 import { PrivateExerciseVideo, PrivateExerciseVideoSheet, PrivateVideoPlayer } from './private-exercise-video';
 import { blankDose } from '@/lib/custom-plan-dose';
 import { ExerciseGlyphIcon } from './exercise-glyph';
+import { EQUIPMENT_ACCESS_GROUPS, EQUIPMENT_ACCESS_OPTIONS } from '@/lib/intake-options';
 import library from './training-library.module.css';
 import fields from './custom-plan-builder.module.css';
 import layout from './community-exercises.module.css';
@@ -18,6 +19,36 @@ export function Contributor({ entry }: { entry: CommunityEntry }) {
     <span>Community{entry.contributor ? ` · Added by @${entry.contributor.username}` : ''}</span>
   </span>;
 }
+const EQUIPMENT_LIMIT = 120;
+const equipmentItems = (equipment: string | null | undefined) => (equipment ?? '').split(',').map(item => item.trim()).filter(Boolean);
+const equipmentOption = (item: string) => EQUIPMENT_ACCESS_OPTIONS.find(option => option.label.toLowerCase() === item.toLowerCase());
+/** Public exercises pick from the same equipment list athletes declare, so the
+ * library vocabulary stays consistent. Free-text items the athlete typed stay. */
+function CommunityEquipmentPicker({ equipment, onChange }: { equipment: string | null | undefined; onChange: (equipment: string | null) => void }) {
+  const [full, setFull] = useState(false);
+  const items = equipmentItems(equipment);
+  const selected = items.map(item => equipmentOption(item)?.value).filter((value): value is string => Boolean(value));
+  function toggle(value: string) {
+    const option = EQUIPMENT_ACCESS_OPTIONS.find(candidate => candidate.value === value)!;
+    const next = selected.includes(value) ? items.filter(item => equipmentOption(item)?.value !== value) : [...items, option.label];
+    const text = next.join(', ');
+    if (text.length > EQUIPMENT_LIMIT) { setFull(true); return; }
+    setFull(false); onChange(text || null);
+  }
+  return <details className={layout.equipment}><summary>Equipment · {items.length ? items.join(', ') : 'None selected'}</summary>
+    <div className="equipment-groups" role="group" aria-label="Exercise equipment">
+      {EQUIPMENT_ACCESS_GROUPS.map(group => <fieldset className="equipment-group" key={group.label}><legend>{group.label}</legend>
+        <div className="equipment-grid">{group.options.map(option => {
+          const checked = selected.includes(option.value);
+          return <label key={option.value} className={`equipment-tile${checked ? ' equipment-tile-checked' : ''}`}>
+            <input type="checkbox" checked={checked} onChange={() => toggle(option.value)} /><span>{option.label}</span>
+          </label>;
+        })}</div>
+      </fieldset>)}
+    </div>
+    {full ? <p role="status" className={layout.notice}>Equipment list is full. Remove an item to add another.</p> : null}
+  </details>;
+}
 /** The private exercise and immutable submitted revision must never be conflated. */
 export function communityDetailsChanged(entry: CommunityEntry, exercise: ManualExercise): boolean {
   return entry.name !== exercise.name ||
@@ -25,8 +56,8 @@ export function communityDetailsChanged(entry: CommunityEntry, exercise: ManualE
     (entry.notes ?? '') !== (exercise.notes ?? '') ||
     (entry.media_id ?? null) !== (exercise.media_id ?? null);
 }
-export function CommunityContributionSheet({ token, exercise, onClose, onIdentity, standalone = false }: {
-  token: string; exercise: ManualExercise; onClose: () => void; onIdentity: (id: string) => void; standalone?: boolean;
+export function CommunityContributionSheet({ token, exercise, onClose, onIdentity, onEquipment, standalone = false }: {
+  token: string; exercise: ManualExercise; onClose: () => void; onIdentity: (id: string) => void; onEquipment?: (equipment: string | null) => void; standalone?: boolean;
 }) {
   const [workingExercise, setWorkingExercise] = useState(exercise);
   const [editVideoOpen, setEditVideoOpen] = useState(false);
@@ -75,6 +106,8 @@ export function CommunityContributionSheet({ token, exercise, onClose, onIdentit
         <p className="muted">No video attached to this community submission.</p>}
       {videoChanged && candidate.media_id ? <><p className="muted">New video in your private exercise</p><PrivateExerciseVideo token={token} id={candidate.media_id} name={candidate.name} /></> : null}
       {canSubmit ? <>
+        <CommunityEquipmentPicker equipment={candidate.equipment} onChange={equipment => standalone
+          ? setWorkingExercise(current => ({ ...current, equipment })) : onEquipment?.(equipment)} />
         <p className="muted">{changed ? 'A new revision will require fresh admin approval. Your previous publication stays unchanged until then.' : 'Approval makes this exercise public.'}</p>
         <label className={layout.check}><input type="checkbox" checked={rights} disabled={busy} onChange={e => setRights(e.target.checked)} /><span>I have permission to share this exercise and any video.</span></label>
         <label className={layout.check}><input type="checkbox" checked={consent} disabled={busy} onChange={e => setConsent(e.target.checked)} /><span>I agree to show my username and profile picture publicly.</span></label>
