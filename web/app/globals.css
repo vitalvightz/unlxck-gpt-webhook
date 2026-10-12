@@ -9984,6 +9984,19 @@ html[data-theme="light"] .today-injury-other-warning {
     transition: transform var(--transition-base), opacity var(--transition-base);
   }
 
+  /* With viewport-fit=cover and a translucent status bar, scrolled content ran
+     under the clock and battery. An opaque band the height of the inset keeps
+     the status bar legible; it is zero-height where there is no inset. */
+  html::before {
+    content: "";
+    position: fixed;
+    inset: 0 0 auto 0;
+    height: var(--safe-area-top);
+    background: var(--bg-app);
+    z-index: 69;
+    pointer-events: none;
+  }
+
   /* Once scrolled, the toggle shrinks to an icon-only square to cover as little
      content as possible. It stays fully visible and tappable at all times. */
   .mobile-nav-toggle[data-condensed="true"] {

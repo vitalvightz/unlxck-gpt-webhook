@@ -37,7 +37,7 @@ for(const width of [320,390,1280]) {
   await page.setViewportSize({width,height:900});const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
   const {saved}=await setup(page,baseURL!);const actions=await mockCommunity(page,entry('private'));
   await page.goto('/plans/custom');await page.getByRole('button',{name:'+ Add Session',exact:true}).click();
-  await page.getByRole('button',{name:'Create my exercise',exact:true}).click();await page.getByLabel('Exercise name',{exact:true}).fill('My defensive drill');
+  await page.getByRole('button',{name:'Add exercise to Training',exact:true}).click();await page.getByRole('button',{name:'Create my exercise',exact:true}).click();await page.getByLabel('Exercise name',{exact:true}).fill('My defensive drill');
   await page.getByRole('button',{name:'Community · Private',exact:true}).click();
   const consent=page.getByRole('dialog',{name:'Community exercise',exact:true});
   await expect(consent.getByRole('button',{name:'Submit for review'})).toBeDisabled();
@@ -47,7 +47,7 @@ for(const width of [320,390,1280]) {
   await page.getByRole('button',{name:'Save Plan',exact:true}).click();await expect(page).toHaveURL(/custom\?plan=/);
   expect([...saved.values()][0].sessions[0].exercises[0]).toMatchObject({origin:'manual',community_id:id});
   await mockCommunity(page,{...entry('published'),verified:true,confirmed:true});
-  await page.getByRole('button',{name:'Add from library',exact:true}).click();await page.getByText('Community exercises',{exact:true}).click();
+  await page.getByRole('button',{name:'Add exercise to Training',exact:true}).click();await page.getByRole('button',{name:'Add from library',exact:true}).click();await page.getByText('Community exercises',{exact:true}).click();
   await page.getByRole('list',{name:'Community drill results'}).getByRole('button').click();
   const preview=page.getByRole('dialog',{name:'My defensive drill',exact:true});await expect(preview.getByText('Community · Added by @fighter')).toBeVisible();
   await preview.getByRole('button',{name:'Add to Session',exact:true}).click();
@@ -94,7 +94,7 @@ test('Video added after submission requires a new reviewed revision',async({page
   });
   await page.goto('/plans/custom');
   await page.getByRole('button',{name:'+ Add Session',exact:true}).click();
-  await page.getByRole('button',{name:'Create my exercise',exact:true}).click();
+  await page.getByRole('button',{name:'Add exercise to Training',exact:true}).click();await page.getByRole('button',{name:'Create my exercise',exact:true}).click();
   await page.getByLabel('Exercise name',{exact:true}).fill('My defensive drill');
   await page.getByRole('button',{name:'Community · Private',exact:true}).click();
   let sheet=page.getByRole('dialog',{name:'Community exercise',exact:true});

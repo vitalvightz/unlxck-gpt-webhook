@@ -9,6 +9,7 @@
   display: grid;
   gap: 12px;
 }
+.header h1:focus { outline: none; }
 .header h1 {
   font-size: clamp(24px, 5vw, 34px);
   margin: 0;
@@ -128,24 +129,28 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
+  gap: 8px 12px;
   width: min(880px, calc(100% - 32px));
-  padding: 12px;
+  padding: 10px 12px;
   background: var(--bg-panel);
   border: 1px solid var(--border-default);
   border-radius: var(--radius-card);
   box-sizing: border-box;
 }
-.saveBar span {
-  flex: 1 1 100%;
-  font-size: 12px;
+/* One status line instead of a paragraph: the first blocking issue, or ready. */
+.saveStatus {
+  flex: 1 1 0;
+  min-width: 0;
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.35;
   color: var(--text-secondary);
 }
-.saveBar :global(.cta) {
-  width: auto;
-  min-width: 112px;
-}
+.saveStatus[data-attention="true"] { color: var(--progress-gold); }
+.fixButton { width: auto; min-height: 36px; padding: 4px 10px; font-size: 13px; flex-shrink: 0; }
+.saveActions { flex: 1 1 100%; display: flex; gap: 8px; }
+.saveActions :global(.cta) { flex: 1 1 auto; width: auto; min-height: 48px; }
+.saveActions :global(.ghost-button) { flex: 0 0 auto; width: auto; min-height: 48px; padding: 0 14px; font-size: 14px; }
 @media (max-width: 767px) {
   .saveBar {
     bottom: calc(var(--mobile-tab-bar-clearance) + 8px);
@@ -167,8 +172,7 @@
 
 /* Match Today's desktop two-column rhythm without stretching a single session. */
 @media (min-width: 1024px) {
-  .editor:has(.session + .session) { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }
-  .editor > :not(.session) { grid-column: 1 / -1; }
+  .dayView:has(.session + .session) { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }
   .saveBar { position: sticky; width: 100%; left: auto; transform: none; }
   .builder { padding-bottom: 32px; }
 }
@@ -207,12 +211,95 @@
   padding-left: 10px;
 }
 
-.calendar { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 8px; }
-.calendar button { display: grid; gap: 6px; padding: 10px 6px; white-space: normal; overflow-wrap: anywhere; }
-.calendar small { font-size: 11px; line-height: 1.4; }
-.issues { margin: 0; padding-left: 16px; width: 100%; max-height: min(25vh, 180px); overflow-y: auto; font-size: 12px; }
+/* Seven tiles on one row at every width; the selected day drives the single-day view below. */
+.calendar { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
+.dayTile {
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  gap: 4px;
+  min-width: 0;
+  min-height: 64px;
+  padding: 8px 2px;
+  border: 1px solid var(--border-default);
+  border-radius: 12px;
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  font: inherit;
+  cursor: pointer;
+}
+.dayTile strong { font-size: 14px; }
+.dayTile small {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 10px;
+  color: var(--text-secondary);
+}
+.dayTile[aria-pressed="true"] { background: var(--brand-red); border-color: var(--brand-red); }
+.dayTile[aria-pressed="true"] small { color: rgba(255, 255, 255, 0.88); }
+.dayDot { width: 6px; height: 6px; border-radius: 50%; box-sizing: border-box; background: var(--text-secondary); }
+.dayDot[data-type="none"], .dayDot[data-type="rest"] { background: transparent; }
+.dayDot[data-type="recovery"] { background: transparent; border: 1px solid var(--text-secondary); }
+.dayDot[data-type="strength_power"] { background: #7aa2ff; }
+.dayDot[data-type="conditioning"] { background: var(--progress-gold); }
+.dayDot[data-type="sparring"] { background: var(--danger-ink); }
+.dayDot[data-type="skill"] { background: var(--success-ink); }
+.dayTile[aria-pressed="true"] .dayDot:not([data-type="none"]):not([data-type="rest"]) { background: #fff; border-color: #fff; }
+.dayDot[data-attention="true"] { background: transparent; border: 1.5px solid var(--progress-gold); }
+.dayView { display: grid; gap: 12px; min-width: 0; }
+.emptyDay {
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  padding: 28px 16px;
+  border: 1px dashed var(--border-default);
+  border-radius: var(--radius-card);
+  text-align: center;
+}
+.emptyDay h2 { margin: 0; font-size: 18px; }
+.emptyDay p { margin: 0 0 8px; font-size: 14px; }
+.emptyDay :global(.ghost-button) { width: auto; min-height: 44px; padding: 0 18px; }
+/* The single add action replaces the paired library/custom buttons on every card. */
+.addExercise {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 48px;
+  border: 1px dashed var(--border-default);
+  border-radius: var(--radius-btn);
+  background: transparent;
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.addExercise:hover:not(:disabled) { border-color: var(--border-strong); }
+.addExercise:disabled { opacity: 0.5; cursor: not-allowed; }
+.addChoice {
+  display: grid;
+  gap: 4px;
+  width: 100%;
+  min-height: 64px;
+  padding: 14px 16px;
+  text-align: left;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-btn);
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  font: inherit;
+  cursor: pointer;
+}
+.addChoice strong { font-size: 16px; }
+.addChoice small { font-size: 13px; color: var(--text-secondary); }
+.issues { flex: 1 1 100%; font-size: 12px; color: var(--text-secondary); }
+.issues summary { cursor: pointer; min-height: 32px; display: flex; align-items: center; }
+.issues ul { margin: 4px 0 0; padding-left: 16px; max-height: min(25vh, 180px); overflow-y: auto; }
 .issues button { padding: 4px 8px; min-height: 32px; font-size: 12px; width: auto; }
-@media (max-width: 767px) { .calendar { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
 .cardAction {
   position: relative;
   z-index: 1;

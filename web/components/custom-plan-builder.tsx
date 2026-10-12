@@ -7,7 +7,7 @@ import type { MeResponse, StructuredBlock } from "@/lib/types";
 import { ExerciseRow } from "./structured-plan-renderer";
 import { DotsIcon } from "./exercise-customisation";
 import { ExerciseMediaProvider } from "./exercise-demo";
-import { customSchedulePrefill, customScheduleIssues, prepareCustomSession, sessionNames, customPlanError } from "@/lib/custom-plan-schedule";
+import { customSchedulePrefill, customScheduleIssues, prepareCustomSession, customPlanError } from "@/lib/custom-plan-schedule";
 import type {
   CommunityEntry,
   CustomDoseSuggestion,
@@ -27,6 +27,16 @@ type Exercise = (Omit<CustomExercise, "snapshot"> & { snapshot: LibraryEntry }) 
 type Session = Omit<CustomSession, "exercises" | "session_type"> & { exercises: Exercise[]; session_type?: CustomSession["session_type"] };
 type Draft = { id?: string; name: string; sessions: Session[]; incomplete?: boolean };
 const weekdays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"] as const;
+type Weekday = (typeof weekdays)[number];
+/** The day strip shows one dot per day, coloured by the day's first non-rest session type. */
+function dayType(sessions: Session[]) {
+  const working = sessions.find(s => s.session_type !== "rest");
+  return working ? working.session_type ?? "mixed" : "rest";
+}
+/** Opens on the first scheduled day so a reopened plan always lands on real content. */
+function firstScheduledDay(sessions: Session[]): Weekday {
+  return weekdays.find(day => sessions.some(s => s.weekday === day)) ?? "Monday";
+}
 function orderedDraft(draft: Draft): Draft {
   const day = (session: Session) => session.weekday ? weekdays.indexOf(session.weekday) : 7;
   return { ...draft, sessions: [...draft.sessions].sort((a, b) => day(a) - day(b)) };
@@ -74,6 +84,8 @@ export function CustomPlanBuilder({ accessToken, planId, onboarding = null }: { 
     [pending, setPending] = useState(false),
     [dirty, setDirty] = useState(false);
   const [opened, setOpened] = useState(!planId);
+  const [chosenDay, setChosenDay] = useState<Weekday>();
+  const [adding, setAdding] = useState<string>();
   const [openExercise, setOpenExercise] = useState<string | null>(null);
   const [error, setError] = useState<string>(),
     [message, setMessage] = useState<string>();
@@ -245,7 +257,64 @@ export function CustomPlanBuilder({ accessToken, planId, onboarding = null }: { 
   const issues = customScheduleIssues(draft.sessions);
   const draftValid = Boolean(draft.name.trim()) && draft.sessions.every(s => s.name.trim() && s.exercises.every(e => nameOf(e).trim()));
   const publishable = draftValid && issues.length === 0;
-  const emptyWorkouts = new Set(issues.filter(issue => issue.message.includes("no exercises")).map(issue => issue.sessionId)).size;
+  const selectedDay = chosenDay ?? firstScheduledDay(draft.sessions);
+  const daySessions = draft.sessions.filter(s => s.weekday === selectedDay);
+  const unassigned = draft.sessions.filter(s => !s.weekday);
+  const issueSessions = new Set(issues.map(issue => issue.sessionId).filter(Boolean));
+  function fixIssue(sessionId: string) {
+    const session = draft.sessions.find(s => s.id === sessionId)!;
+    if (session.weekday) setChosenDay(session.weekday);
+    const exercise = session.exercises.find(e => doseIncomplete(e.dose));
+    if (exercise) edit(session.id, exercise); else setSessionEdit(session);
+  }
+  function createManual(sessionId: string) {
+    edit(sessionId, {
+      id: crypto.randomUUID(), origin: "manual", name: "", equipment: null, notes: null, media_id: null,
+      community_id: null, community_revision_id: null, dose: blankDose(), incomplete: true,
+      coaching_cues: null, stop_rules: null,
+    }, true);
+  }
+  function renderSession(s: Session) {
+    const i = draft.sessions.indexOf(s);
+    return (
+      <section key={s.id} className={styles.session} aria-label={`Session ${i + 1}`}>
+        <div className={styles.row}>
+          <div>
+            <small className={styles.weekday}>{s.weekday ?? "Unassigned"}</small>
+            <h2>{s.name}</h2>
+          </div>
+          <button type="button" className={styles.editButton} aria-label={`Edit session ${i + 1}`} title="Edit session"
+            onClick={() => setSessionEdit(s)}>
+            <PencilIcon />
+          </button>
+        </div>
+        {s.session_type !== "rest" ? <PrivateExerciseMediaProvider token={accessToken}>
+          <ExerciseMediaProvider media={Object.fromEntries(s.exercises.flatMap(e => e.origin === "catalogue" && e.snapshot.media && e.snapshot.exercise_key
+            ? [[`exercise:${e.snapshot.exercise_key}`, e.snapshot.media]] : []))}>
+            <ol className={styles.exercises}>
+              {s.exercises.map((e) => (
+                <li key={e.id}>
+                  <ExerciseRow block={draftBlock(e, s)} open={openExercise === e.id}
+                    onToggle={() => setOpenExercise(current => current === e.id ? null : e.id)} actions={
+                      <button type="button" className={`${styles.editButton} ${styles.cardAction}`}
+                        aria-label={`Edit dose for ${nameOf(e)}`} title="Edit exercise" onClick={() => edit(s.id, e)}>
+                        <DotsIcon />
+                      </button>
+                    } />
+                </li>
+              ))}
+            </ol></ExerciseMediaProvider></PrivateExerciseMediaProvider> : <p className="muted">Rest day</p>}
+        {!s.exercises.length && s.session_type !== "rest" ? <p className="muted">{s.session_type === "recovery" ? "Recovery day — No exercises required." : ["sparring", "skill"].includes(s.session_type ?? "mixed") ? "Coach-led day — Add editable rounds if useful." : "Workout needs exercises."}</p> : null}
+        {s.session_type === "recovery" && s.exercises.length ? <p className="muted">Optional recovery work — No workout completion required.</p> : null}
+        {s.session_type !== "rest" ? (
+          <button type="button" className={styles.addExercise} aria-label={`Add exercise to ${s.name}`}
+            disabled={s.exercises.length >= 100} onClick={() => setAdding(s.id)}>
+            <span aria-hidden="true">+</span> Add exercise
+          </button>
+        ) : null}
+      </section>
+    );
+  }
   const saveBar = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const bar = saveBar.current;
@@ -419,100 +488,40 @@ export function CustomPlanBuilder({ accessToken, planId, onboarding = null }: { 
               onChange={(e) => change({ ...draft, name: e.target.value })}
             />
           </label>
-          <div className={styles.calendar} aria-label="Weekly training calendar">
+          <div className={styles.calendar} role="group" aria-label="Weekly training calendar">
             {weekdays.map(day => {
               const sessions = draft.sessions.filter(s => s.weekday === day);
-              return <button key={day} type="button" className="ghost-button" aria-label={`Schedule ${day}`}
-                disabled={!sessions.length && draft.sessions.length >= 28}
-                onClick={() => {
-                  if (sessions.length) { setSessionEdit(sessions[0]); return; }
-                  const session: Session = { id: crypto.randomUUID(), name: "Training", weekday: day, session_type: "mixed", exercises: [] };
-                  change({ ...draft, sessions: [...draft.sessions, session] });
-                  setSessionEdit(session);
-                }}>
+              const label = sessions.length ? sessions.map(s => s.name).join(" / ") : "Rest";
+              return <button key={day} type="button" className={styles.dayTile} aria-label={`${day}, ${label}`}
+                aria-pressed={day === selectedDay} onClick={() => setChosenDay(day)}>
                 <strong>{day.slice(0, 3)}</strong>
-                <small>{sessions.length ? sessions.map(s => sessionNames[s.session_type ?? "mixed"]).join(" / ") : "Rest day"}</small>
+                <small>{label}</small>
+                <span className={styles.dayDot} data-type={sessions.length ? dayType(sessions) : "none"}
+                  data-attention={sessions.some(s => issueSessions.has(s.id)) ? "true" : undefined} aria-hidden="true" />
               </button>;
             })}
           </div>
-          {draft.sessions.map((s, i) => (
-            <section key={s.id} className={styles.session} aria-label={`Session ${i + 1}`}>
-              <div className={styles.row}>
-                <div>
-                  <small className={styles.weekday}>{s.weekday ?? "Unassigned"}</small>
-                  <h2>{s.name}</h2>
-                </div>
-                <button
-                  type="button"
-                  className={styles.editButton}
-                  aria-label={`Edit session ${i + 1}`}
-                  title="Edit session"
-                  onClick={() => setSessionEdit(s)}
-                >
-                  <PencilIcon />
+          <div className={styles.dayView}>
+            {daySessions.length ? daySessions.map(renderSession) : (
+              <div className={styles.emptyDay}>
+                <small className={styles.weekday}>{selectedDay}</small>
+                <h2>Rest day</h2>
+                <p className="muted">Nothing scheduled.</p>
+                <button type="button" className="ghost-button" aria-label={`Add session on ${selectedDay}`}
+                  disabled={draft.sessions.length >= 28}
+                  onClick={() => {
+                    const session: Session = { id: crypto.randomUUID(), name: "Training", weekday: selectedDay, session_type: "mixed", exercises: [] };
+                    change({ ...draft, sessions: [...draft.sessions, session] });
+                    setSessionEdit(session);
+                  }}>
+                  Add session
                 </button>
               </div>
-              {s.session_type !== "rest" ? <PrivateExerciseMediaProvider token={accessToken}>
-                <ExerciseMediaProvider media={Object.fromEntries(s.exercises.flatMap(e => e.origin === "catalogue" && e.snapshot.media && e.snapshot.exercise_key
-                  ? [[`exercise:${e.snapshot.exercise_key}`, e.snapshot.media]] : []))}>
-                <ol className={styles.exercises}>
-                {s.exercises.map((e) => (
-                  <li key={e.id}>
-                    <ExerciseRow block={draftBlock(e, s)} open={openExercise === e.id}
-                      onToggle={() => setOpenExercise(current => current === e.id ? null : e.id)} actions={
-                      <button
-                        type="button"
-                        className={`${styles.editButton} ${styles.cardAction}`}
-                        aria-label={`Edit dose for ${nameOf(e)}`}
-                        title="Edit exercise"
-                        onClick={() => edit(s.id, e)}
-                      >
-                        <DotsIcon />
-                      </button>
-                    } />
-                  </li>
-                ))}
-              </ol></ExerciseMediaProvider></PrivateExerciseMediaProvider> : <p className="muted">Rest day</p>}
-              {!s.exercises.length && s.session_type !== "rest" ? <p className="muted">{s.session_type === "recovery" ? "Recovery day — No exercises required." : ["sparring", "skill"].includes(s.session_type ?? "mixed") ? "Coach-led day — Add editable rounds if useful." : "Workout needs exercises."}</p> : null}
-              {s.session_type === "recovery" && s.exercises.length ? <p className="muted">Optional recovery work — No workout completion required.</p> : null}
-              {s.session_type !== "rest" ? <div className={styles.row}>
-                <button
-                  type="button"
-                  className="ghost-button"
-                  disabled={s.exercises.length >= 100}
-                  onClick={() => setSelecting(s.id)}
-                >
-                  Add from library
-                </button>
-                <button
-                  type="button"
-                  className="ghost-button"
-                  disabled={s.exercises.length >= 100}
-                  onClick={() =>
-                    edit(
-                      s.id,
-                      {
-                        id: crypto.randomUUID(),
-                        origin: "manual",
-                        name: "",
-                        equipment: null,
-                        notes: null,
-                        media_id: null,
-                        community_id: null,
-                        community_revision_id: null,
-                        dose: blankDose(),
-                        incomplete: true,
-                        coaching_cues: null, stop_rules: null,
-                      },
-                      true,
-                    )
-                  }
-                >
-                  Create my exercise
-                </button>
-              </div> : null}
-            </section>
-          ))}
+            )}
+          </div>
+          {unassigned.length ? <div className={styles.dayView} role="group" aria-label="Unassigned sessions">
+            {unassigned.map(renderSession)}
+          </div> : null}
           <button
             type="button"
             className="secondary-button"
@@ -535,25 +544,30 @@ export function CustomPlanBuilder({ accessToken, planId, onboarding = null }: { 
             + Add Session
           </button>
           <div className={styles.saveBar} ref={saveBar}>
-            <span role="status">
-              {publishable ? "Ready to activate — Your weekly training plan is complete."
-                : emptyWorkouts ? `${emptyWorkouts} ${emptyWorkouts === 1 ? "workout needs" : "workouts need"} exercises`
-                  : "Your weekly plan needs attention"}
+            <p className={styles.saveStatus} role="status" data-attention={issues.length ? "true" : undefined}>
+              {issues.length ? issues[0].message : "Ready to activate"}
               {dirty ? " · Unsaved changes" : ""}
-            </span>
-            {issues.length ? <ul className={styles.issues}>{issues.map((issue, index) => <li key={index}>
-              {issue.message} {issue.sessionId ? <button type="button" className="ghost-button" onClick={() => {
-                const session = draft.sessions.find(s => s.id === issue.sessionId)!;
-                const exercise = session.exercises.find(e => doseIncomplete(e.dose));
-                if (exercise) edit(session.id, exercise); else setSessionEdit(session);
-              }}>Edit {draft.sessions.find(s => s.id === issue.sessionId)?.weekday ?? "session"}</button> : null}
-            </li>)}</ul> : <span>View your plan, then activate it from Plan Detail.</span>}
-            <button type="submit" className="cta" disabled={!draftValid}>
-              {pending ? "Saving…" : "Save draft"}
-            </button>
-            <button type="button" className="cta" disabled={!publishable} onClick={() => void save(true)}>
-              Save &amp; view plan
-            </button>
+            </p>
+            {issues[0]?.sessionId ? <button type="button" className={`ghost-button ${styles.fixButton}`} onClick={() => fixIssue(issues[0].sessionId!)}>
+              Edit {draft.sessions.find(s => s.id === issues[0].sessionId)?.weekday ?? "session"}
+            </button> : null}
+            {issues.length > 1 ? <details className={styles.issues}>
+              <summary>{issues.length - 1} more to fix</summary>
+              <ul>{issues.slice(1).map((issue, index) => <li key={index}>
+                {issue.message} {issue.sessionId ? <button type="button" className="ghost-button" onClick={() => fixIssue(issue.sessionId!)}>
+                  Edit {draft.sessions.find(s => s.id === issue.sessionId)?.weekday ?? "session"}
+                </button> : null}
+              </li>)}</ul>
+            </details> : null}
+            <div className={styles.saveActions}>
+              {/* One primary at a time: Save draft until the plan can be published, then Save & view plan. */}
+              <button type="submit" className={publishable ? "ghost-button" : "cta"} disabled={!draftValid}>
+                {pending ? "Saving…" : "Save draft"}
+              </button>
+              <button type="button" className={publishable ? "cta" : "ghost-button"} disabled={!publishable} onClick={() => void save(true)}>
+                Save &amp; view plan
+              </button>
+            </div>
           </div>
         </fieldset>
       </form>
@@ -593,6 +607,8 @@ export function CustomPlanBuilder({ accessToken, planId, onboarding = null }: { 
             onSubmit={(e) => {
               e.preventDefault();
               sessionChange(sessionEdit.id, () => sessionEdit);
+              // Follow the session to its day so it never disappears from view.
+              if (sessionEdit.weekday) setChosenDay(sessionEdit.weekday);
               setSessionEdit(undefined);
             }}
           >
@@ -653,6 +669,22 @@ export function CustomPlanBuilder({ accessToken, planId, onboarding = null }: { 
               Remove session
             </button>
           </form>
+        </InjuryDetailSheet>
+      ) : null}
+      {adding ? (
+        <InjuryDetailSheet title="Add exercise" onClose={() => setAdding(undefined)}>
+          <div className={styles.sheet}>
+            <button type="button" className={styles.addChoice} aria-label="Add from library" aria-describedby="add-choice-library"
+              onClick={() => { setSelecting(adding); setAdding(undefined); }}>
+              <strong>Add from library</strong>
+              <small id="add-choice-library">Search drills and exercises.</small>
+            </button>
+            <button type="button" className={styles.addChoice} aria-label="Create my exercise" aria-describedby="add-choice-manual"
+              onClick={() => { createManual(adding); setAdding(undefined); }}>
+              <strong>Create my exercise</strong>
+              <small id="add-choice-manual">Name it, set the dose, attach a video.</small>
+            </button>
+          </div>
         </InjuryDetailSheet>
       ) : null}
       {editing ? (

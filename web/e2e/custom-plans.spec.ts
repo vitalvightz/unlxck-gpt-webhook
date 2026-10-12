@@ -17,6 +17,7 @@ for (const width of [320, 390, 1280]) {
     await page.getByLabel("Session name", { exact: true }).fill("Strength");
     await page.getByLabel("Day", { exact: true }).selectOption("Monday");
     await page.getByRole("button", { name: "Done", exact: true }).click();
+    await page.getByRole("button", { name: "Add exercise to Strength", exact: true }).click();
     await page.getByRole("button", { name: "Add from library", exact: true }).click();
     await page.getByLabel("Search drills", { exact: true }).fill(entries[0].name);
     await page
@@ -48,6 +49,7 @@ for (const width of [320, 390, 1280]) {
     await page.getByLabel("Rest (sec)", { exact: true }).fill("120");
     await page.getByLabel("Load or intensity", { exact: true }).fill("80 kg");
     await page.getByRole("button", { name: "Done", exact: true }).click();
+    await page.getByRole("button", { name: "Add exercise to Strength", exact: true }).click();
     await page.getByRole("button", { name: "Create my exercise", exact: true }).click();
     await page.getByLabel("Exercise name", { exact: true }).fill("My bag rounds");
     await page.getByLabel("equipment (optional)", { exact: true }).fill("Heavy bag");
@@ -156,6 +158,7 @@ for (const width of [320, 390, 1280]) {
     ` }));
     await page.goto("/plans/custom");
     await page.getByRole("button", { name: "+ Add Session", exact: true }).click();
+    await page.getByRole("button", { name: "Add exercise to Training", exact: true }).click();
     await page.getByRole("button", { name: "Create my exercise", exact: true }).click();
     await page.getByLabel("Exercise name", { exact: true }).fill("My defensive drill");
     await page.getByRole("button", { name: "Add video (optional)", exact: true }).click();
@@ -275,13 +278,20 @@ for (const width of [390, 1280]) {
       await page.getByRole('button', { name: 'Done', exact: true }).click();
     }
     const expected = ['Day 2', 'Day 7', 'Day 4', 'Day 3', 'Day 5', 'Day 1', 'Day 6', 'Day 0', 'Day 8'];
-    const names = page.getByRole('region', { name: /^Session \d+$/ }).getByRole('heading', { level: 2 });
-    await expect(names).toHaveText(expected);
+    // One day is shown at a time, so check the week through the day strip plus the unassigned group.
+    const tiles = ['Monday, Day 2 / Day 7', 'Tuesday, Day 4', 'Wednesday, Day 3', 'Thursday, Day 5', 'Friday, Day 1', 'Saturday, Day 6', 'Sunday, Day 0'];
+    const week = page.getByRole('group', { name: 'Weekly training calendar' }).getByRole('button');
+    const unassigned = page.getByRole('group', { name: 'Unassigned sessions' }).getByRole('heading', { level: 2 });
+    const checkWeek = async () => {
+      for (const [index, name] of tiles.entries()) await expect(week.nth(index)).toHaveAccessibleName(name);
+      await expect(unassigned).toHaveText(['Day 8']);
+    };
+    await checkWeek();
     await page.getByRole('button', { name: 'Save draft', exact: true }).click();
     await expect(page).toHaveURL(/custom\?plan=/);
     expect([...saved.values()][0].sessions.map(session => session.name)).toEqual(expected);
     await page.reload();
-    await expect(names).toHaveText(expected);
+    await checkWeek();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   });
 }
