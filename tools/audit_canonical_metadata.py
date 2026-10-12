@@ -259,6 +259,12 @@ def preservation(baseline):
     if not set(changed) <= ALLOWED_CHANGED | EQUIPMENT_CHANGED | FALLBACK_CHANGED | DISCOVERY_CHANGED | CUSTOM_PLAN_CHANGED | PRIVATE_MEDIA_CHANGED | COMMUNITY_CHANGED | {"fightcamp/strength.py"} or not set(added) <= ALLOWED_ADDED | EQUIPMENT_ADDED | CUSTOM_PLAN_ADDED | PRIVATE_MEDIA_ADDED | COMMUNITY_ADDED:
         raise ValueError("Unapproved production diff: " + str((changed, added)))
     for p, h in original["configuration_files"].items():
+        if p == "data/tag_vocabulary.json" and current["configuration_files"].get(p) != h:
+            from tools.check_tag_retirement import original_vocabulary_source
+
+            if source_hash(original_vocabulary_source((ROOT / p).read_bytes())) != h:
+                raise ValueError("Original vocabulary receipt changed")
+            continue
         if current["configuration_files"].get(p) != h and p not in {"shared/equipment-aliases.json", "data/training_catalogue_ids.json"}:
             raise ValueError("Programming/clinical configuration drift: " + p)
     if set(current["configuration_files"]) - set(original["configuration_files"]) - {"shared/training-metadata.json", "shared/equipment-requirements.json"}:

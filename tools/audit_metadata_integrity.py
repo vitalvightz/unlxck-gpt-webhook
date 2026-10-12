@@ -758,6 +758,12 @@ def original_equipment_source(relative):
     Unknown edits still fail the existing historical digest checks.
     """
     data = reverse_mechanical_source(relative, (ROOT / relative).read_bytes().replace(b"\r\n", b"\n"))
+    if relative == "data/tag_vocabulary.json":
+        from tools.check_tag_retirement import original_vocabulary_source
+
+        # Exact reviewed retirement only; historical_sources still verifies the
+        # reconstructed bytes against PR 1's immutable vocabulary digest.
+        return original_vocabulary_source(data)
     if relative == "fightcamp/strength.py":
         fallback_gate = '''            if not ignore_restrictions and not evaluate_restriction_impact(
                 restrictions,
