@@ -1299,27 +1299,27 @@
         ],
         "sport": [
           {
-            "count": 57,
+            "count": 69,
             "label": "BJJ",
             "value": "bjj"
           },
           {
-            "count": 138,
+            "count": 150,
             "label": "Boxing",
             "value": "boxing"
           },
           {
-            "count": 139,
+            "count": 151,
             "label": "Kickboxing",
             "value": "kickboxing"
           },
           {
-            "count": 260,
+            "count": 272,
             "label": "MMA",
             "value": "mma"
           },
           {
-            "count": 153,
+            "count": 165,
             "label": "Muay Thai",
             "value": "muay_thai"
           },
@@ -1329,7 +1329,7 @@
             "value": "universal"
           },
           {
-            "count": 34,
+            "count": 46,
             "label": "Wrestling",
             "value": "wrestling"
           }
