@@ -19,34 +19,74 @@ from api.services.exercise_media import load_media_index
 from api.services.training_library import cache, preview
 
 
+SESSION_NAMES = {
+    "mixed": "Training", "strength_power": "Strength & Power", "conditioning": "Conditioning",
+    "skill": "Light Technical", "sparring": "Hard Sparring", "recovery": "Recovery", "rest": "Rest",
+}
+
+
+def default_session_name(name: str, previous_type: str = "mixed") -> bool:
+    return name.strip().casefold() in {
+        "training", "workout", "session", SESSION_NAMES.get(previous_type, "Training").casefold(),
+        *({"light technical / skill"} if previous_type == "skill" else set()),
+    }
+
+
+def schedule_issues(sessions: list[dict]) -> list[str]:
+    """Publishability comes from explicit session types and current doses, never stored flags."""
+    issues = []
+    for session in sessions:
+        kind = session.get("session_type", "mixed")
+        label = f"{session['weekday']}'s {SESSION_NAMES[kind]}" if session.get("weekday") else session["name"]
+        if not session.get("weekday"):
+            issues.append(f"Choose a day for {session['name']}.")
+        if kind == "rest":
+            # Retain saved work if the athlete temporarily switches a day off.
+            # It is neither prescribed nor validated as a workout on a rest day.
+            continue
+        if not session.get("exercises") and kind not in {"recovery", "skill", "sparring"}:
+            issues.append(f"{label} session has no exercises.")
+        for exercise in session.get("exercises", []):
+            if dose_incomplete(exercise["dose"]):
+                name = exercise.get("name") or exercise.get("snapshot", {}).get("name") or "an exercise"
+                issues.append(f"Finish the dose for {name} in {label}.")
+    if not any(s.get("session_type", "mixed") not in {"recovery", "rest"} for s in sessions):
+        issues.append("Add at least one training day to your weekly plan.")
+    return issues
+
+
 def custom_open_plan_result(draft: dict, profile, *, training_day: str) -> dict:
     """Compile exactly the saved prescription, with no exercise selection."""
     from api.structured_plan_models import SCHEMA_VERSION, StructuredTrainingPlan
 
     sessions = draft.get("sessions") or []
-    if (not sessions or draft.get("incomplete")
-            or any(not s.get("weekday") or (not s.get("exercises") and
-                   s.get("session_type", "mixed") not in {"skill", "sparring"}) for s in sessions)):
-        raise HTTPException(422, "Assign every session to a day and complete its exercise doses before using this plan.")
+    issues = schedule_issues(sessions)
+    if issues:
+        raise HTTPException(422, " ".join(issues))
     revision = hashlib.sha256(json.dumps(
         {k: draft[k] for k in ("name", "sessions")}, sort_keys=True, separators=(",", ":")
     ).encode()).hexdigest()
     plan_id = str(uuid5(UUID(draft["id"]), revision))
     anchor = {"intent": "", "focus_cue": "", "reset_cue": ""}
     days = []
-    hard, technical = [], []
+    hard, technical, training, recovery = [], [], [], []
     from api.contracts.custom_plans import WEEKDAYS
     for weekday in WEEKDAYS:
         daily = [s for s in sessions if s["weekday"] == weekday]
-        if not daily:
-            continue
         short = weekday[:3]
+        workouts = [s for s in daily if s.get("session_type", "mixed") not in {"recovery", "rest"}]
+        if workouts:
+            training.append(short)
+        elif any(s.get("session_type") == "recovery" for s in daily):
+            recovery.append(short)
         if any(s.get("session_type") == "sparring" for s in daily):
             hard.append(short)
         if any(s.get("session_type") == "skill" for s in daily):
             technical.append(short)
         rendered = []
         for position, session in enumerate(daily, 1):
+            if session.get("session_type") == "rest" or (session.get("session_type") == "recovery" and not session["exercises"]):
+                continue
             session_id = str(uuid5(UUID(plan_id), session["id"]))
             blocks = []
             for order, exercise in enumerate(session["exercises"], 1):
@@ -108,13 +148,14 @@ def custom_open_plan_result(draft: dict, profile, *, training_day: str) -> dict:
             rendered.append({
                 "session_id": session_id, "session_type": session.get("session_type", "mixed"),
                 "prescription_source": "athlete",
+                "optional": True if session.get("session_type") == "recovery" else None,
                 "title": session["name"], "objective": "", "mindset_anchor": anchor,
                 "execution_order": position, "blocks": blocks,
             })
         days.append({
-            "date": "", "weekday": short, "day_type": "moderate", "countdown_label": "",
+            "date": "", "weekday": short, "day_type": "moderate" if workouts else "recovery" if short in recovery else "rest", "countdown_label": "",
             "phase_label": "GPP", "sessions": rendered,
-            "today_card": {"headline": " / ".join(s["name"] for s in daily),
+            "today_card": {"headline": " / ".join(s["name"] for s in workouts) if workouts else "Recovery day" if short in recovery else "Rest day",
                            "readiness_status": "train_as_planned", "mindset_anchor": anchor,
                            "coach_led_contact": "Hard sparring" if short in hard else None},
         })
@@ -157,7 +198,8 @@ def custom_open_plan_result(draft: dict, profile, *, training_day: str) -> dict:
             "open_plan_spec": {
                 "plan_type": "open_ongoing_system",
                 "weekly_template": {
-                    "training_days": [d["weekday"] for d in days], "hard_sparring_days": hard,
+                    "training_days": training, "hard_sparring_days": hard,
+                    "session_types_by_day": {d: "recovery" for d in recovery},
                     "coach_owned_days": {"hard_sparring_days": hard, "technical_skill_days": technical},
                 },
                 "development_block": {
@@ -314,13 +356,13 @@ def plan_fields(store, body: CustomPlanInput, previous: dict | None = None, *, a
                 422,
                 "Exercise is no longer available. Choose another Training exercise.",
             )
-    fields["incomplete"] = (
-        not fields["sessions"]
-        or any(not session.get("weekday") for session in fields["sessions"])
-        or any(not session["exercises"] and session.get("session_type") not in {"skill", "sparring"}
-               for session in fields["sessions"])
-        or any(exercise["incomplete"] for exercise in exercises)
-    )
+    old_sessions = {s["id"]: s for s in (previous or {}).get("sessions", [])}
+    for session in fields["sessions"]:
+        prior = old_sessions.get(session["id"], {})
+        previous_type = prior.get("session_type", "mixed")
+        if default_session_name(session["name"], previous_type):
+            session["name"] = SESSION_NAMES[session["session_type"]]
+    fields["incomplete"] = bool(schedule_issues(fields["sessions"]))
     return fields
 
 

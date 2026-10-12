@@ -3,7 +3,7 @@
   margin: auto;
   display: grid;
   gap: 20px;
-  padding-bottom: 100px;
+  padding-bottom: calc(var(--custom-save-height, 160px) + 32px);
 }
 .header {
   display: grid;
@@ -151,7 +151,7 @@
     bottom: calc(var(--mobile-tab-bar-clearance) + 8px);
   }
   .builder {
-    padding-bottom: 110px;
+    padding-bottom: calc(var(--custom-save-height, 160px) + var(--mobile-tab-bar-clearance) + 32px);
   }
   .session {
     padding: 12px;
@@ -206,3 +206,10 @@
   border-left: 2px solid var(--border-default);
   padding-left: 10px;
 }
+
+.calendar { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 8px; }
+.calendar button { display: grid; gap: 6px; padding: 10px 6px; white-space: normal; overflow-wrap: anywhere; }
+.calendar small { font-size: 11px; line-height: 1.4; }
+.issues { margin: 0; padding-left: 16px; width: 100%; max-height: min(25vh, 180px); overflow-y: auto; font-size: 12px; }
+.issues button { padding: 4px 8px; min-height: 32px; font-size: 12px; width: auto; }
+@media (max-width: 767px) { .calendar { grid-template-columns: repeat(4, minmax(0, 1fr)); } }

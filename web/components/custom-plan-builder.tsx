@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { deleteCustomPlan, getCommunityExercise, getCustomDoseSuggestion, getCustomPlan, publishCustomPlan, saveCustomPlan } from "@/lib/api";
 import type { MeResponse } from "@/lib/types";
-import { customSchedulePrefill } from "@/lib/custom-plan-schedule";
+import { customSchedulePrefill, customScheduleIssues, prepareCustomSession, sessionNames, customPlanError } from "@/lib/custom-plan-schedule";
 import type {
   CommunityEntry,
   CustomDoseSuggestion,
@@ -18,7 +18,7 @@ import { DrillPreview, TrainingLibrary } from "./training-library";
 import { CustomDoseEditor } from "./custom-dose-editor";
 import { CommunityContributionSheet, CommunityExercisePreview, communityDetailsChanged } from "./community-exercises";
 import { PrivateExerciseVideo, PrivateExerciseVideoSheet } from "./private-exercise-video";
-import { blankDose, doseSummary } from "@/lib/custom-plan-dose";
+import { blankDose, doseSummary, doseIncomplete } from "@/lib/custom-plan-dose";
 import styles from "./custom-plan-builder.module.css";
 type Exercise = (Omit<CustomExercise, "snapshot"> & { snapshot: LibraryEntry }) | ManualExercise;
 type Session = Omit<CustomSession, "exercises" | "session_type"> & { exercises: Exercise[]; session_type?: CustomSession["session_type"] };
@@ -108,13 +108,14 @@ export function CustomPlanBuilder({ accessToken, planId, onboarding = null }: { 
           loaded.current = true;
           setOpened(true);
           setError(undefined);
-          setDraft(orderedDraft(plan));
-          setDirty(false);
+          const repaired = orderedDraft({ ...plan, sessions: plan.sessions.map(s => prepareCustomSession(s, onboarding)) });
+          setDraft(repaired);
+          setDirty(JSON.stringify(repaired.sessions) !== JSON.stringify(plan.sessions));
           window.scrollTo(0, 0);
         }
       })
       .catch((reason) => {
-        if (active) setError(reason instanceof Error ? reason.message : "Unable to open plan.");
+        if (active) setError(customPlanError(reason, "Unable to open plan."));
       })
       .finally(() => {
         if (active) setLoading(false);
@@ -122,7 +123,7 @@ export function CustomPlanBuilder({ accessToken, planId, onboarding = null }: { 
     return () => {
       active = false;
     };
-  }, [accessToken, planId, retry]);
+  }, [accessToken, planId, retry, onboarding]);
   useEffect(() => {
     if (!loading && loaded.current) heading.current?.focus({ preventScroll: true });
   }, [loading]);
@@ -214,7 +215,22 @@ export function CustomPlanBuilder({ accessToken, planId, onboarding = null }: { 
       if (request === suggestionRequest.current) setSuggesting(false);
     }
   }
+  const issues = customScheduleIssues(draft.sessions);
+  const draftValid = Boolean(draft.name.trim()) && draft.sessions.every(s => s.name.trim() && s.exercises.every(e => nameOf(e).trim()));
+  const publishable = draftValid && issues.length === 0;
+  const emptyWorkouts = new Set(issues.filter(issue => issue.message.includes("no exercises")).map(issue => issue.sessionId)).size;
+  const saveBar = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const bar = saveBar.current;
+    if (!bar || typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(() => {
+      bar.closest<HTMLElement>(`.${styles.builder}`)?.style.setProperty("--custom-save-height", `${bar.offsetHeight}px`);
+    });
+    observer.observe(bar);
+    return () => observer.disconnect();
+  }, [loading, selecting]);
   async function save(viewPlan = false) {
+    if (!draftValid || (viewPlan && !publishable)) return;
     setPending(true);
     setError(undefined);
     try {
@@ -256,7 +272,7 @@ export function CustomPlanBuilder({ accessToken, planId, onboarding = null }: { 
       setDraft(orderedDraft(saved));
       setOpened(true);
       setDirty(false);
-      setMessage(saved.incomplete ? "Draft saved. Assign sessions and finish doses when ready." : "Plan saved.");
+      setMessage(saved.incomplete ? "Draft saved. Finish the workouts listed below when ready." : "Plan saved. View your plan to activate it.");
       window.history.replaceState(window.history.state, "", `/plans/custom?plan=${saved.id}`);
       loaded.current = true;
       if (viewPlan) {
@@ -264,7 +280,7 @@ export function CustomPlanBuilder({ accessToken, planId, onboarding = null }: { 
         router.push(`/plans/${published.plan_id}`);
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Unable to save plan.");
+      setError(customPlanError(e, "Unable to save plan."));
     } finally {
       setPending(false);
     }
@@ -333,7 +349,7 @@ export function CustomPlanBuilder({ accessToken, planId, onboarding = null }: { 
           </h1>
           <span className={styles.badge}>{dirty ? "Unsaved" : draft.id ? "Saved" : "New"}</span>
         </div>
-        <p className="muted">Choose your exercises. Train with your usual readiness and safety checks.</p>
+        <p className="muted">Choose what happens each day. Unselected days are rest days.</p>
       </header>
       {error ? (
         <p className="error-banner" role="alert">
@@ -361,9 +377,22 @@ export function CustomPlanBuilder({ accessToken, planId, onboarding = null }: { 
               onChange={(e) => change({ ...draft, name: e.target.value })}
             />
           </label>
-          {!draft.sessions.length ? (
-            <p className="muted">Start with a session. Add library exercises or create your own.</p>
-          ) : null}
+          <div className={styles.calendar} aria-label="Weekly training calendar">
+            {weekdays.map(day => {
+              const sessions = draft.sessions.filter(s => s.weekday === day);
+              return <button key={day} type="button" className="ghost-button" aria-label={`Schedule ${day}`}
+                disabled={!sessions.length && draft.sessions.length >= 28}
+                onClick={() => {
+                  if (sessions.length) { setSessionEdit(sessions[0]); return; }
+                  const session: Session = { id: crypto.randomUUID(), name: "Training", weekday: day, session_type: "mixed", exercises: [] };
+                  change({ ...draft, sessions: [...draft.sessions, session] });
+                  setSessionEdit(session);
+                }}>
+                <strong>{day.slice(0, 3)}</strong>
+                <small>{sessions.length ? sessions.map(s => sessionNames[s.session_type ?? "mixed"]).join(" / ") : "Rest day — Nothing scheduled"}</small>
+              </button>;
+            })}
+          </div>
           {draft.sessions.map((s, i) => (
             <section key={s.id} className={styles.session} aria-label={`Session ${i + 1}`}>
               <div className={styles.row}>
@@ -381,7 +410,7 @@ export function CustomPlanBuilder({ accessToken, planId, onboarding = null }: { 
                   <PencilIcon />
                 </button>
               </div>
-              <ol className={styles.exercises}>
+              {s.session_type !== "rest" ? <ol className={styles.exercises}>
                 {s.exercises.map((e) => (
                   <li key={e.id} className={styles.exercise}>
                     <div className={styles.row}>
@@ -391,6 +420,7 @@ export function CustomPlanBuilder({ accessToken, planId, onboarding = null }: { 
                           {e.origin === "manual" ? "My exercise · " : ""}
                           {doseSummary(e.dose)}
                         </small>
+                        {e.origin === "manual" && e.notes?.startsWith("Editable suggestion only:") ? <small>{e.notes}</small> : null}
                       </div>
                       <button
                         type="button"
@@ -404,9 +434,10 @@ export function CustomPlanBuilder({ accessToken, planId, onboarding = null }: { 
                     </div>
                   </li>
                 ))}
-              </ol>
-              {!s.exercises.length ? <p className="muted">No exercises yet. This session saves as a draft.</p> : null}
-              <div className={styles.row}>
+              </ol> : <p className="muted">Rest day — Nothing scheduled. {s.exercises.length ? "Saved exercises are kept if you switch back to training." : ""}</p>}
+              {!s.exercises.length && s.session_type !== "rest" ? <p className="muted">{s.session_type === "recovery" ? "Recovery day — No exercises required." : ["sparring", "skill"].includes(s.session_type ?? "mixed") ? "Coach-led day — Add editable rounds if useful." : "Workout needs exercises."}</p> : null}
+              {s.session_type === "recovery" && s.exercises.length ? <p className="muted">Optional recovery work — No workout completion required.</p> : null}
+              {s.session_type !== "rest" ? <div className={styles.row}>
                 <button
                   type="button"
                   className="ghost-button"
@@ -440,7 +471,7 @@ export function CustomPlanBuilder({ accessToken, planId, onboarding = null }: { 
                 >
                   Create my exercise
                 </button>
-              </div>
+              </div> : null}
             </section>
           ))}
           <button
@@ -464,20 +495,24 @@ export function CustomPlanBuilder({ accessToken, planId, onboarding = null }: { 
           >
             + Add Session
           </button>
-          <div className={styles.saveBar}>
+          <div className={styles.saveBar} ref={saveBar}>
             <span role="status">
-              {dirty
-                ? "Unsaved changes"
-                : draft.id
-                  ? draft.incomplete
-                    ? "Draft saved"
-                    : "Plan saved"
-                  : "New custom plan"}
+              {publishable ? "Ready to activate — Your weekly training plan is complete."
+                : emptyWorkouts ? `${emptyWorkouts} ${emptyWorkouts === 1 ? "workout needs" : "workouts need"} exercises`
+                  : "Your weekly plan needs attention"}
+              {dirty ? " · Unsaved changes" : ""}
             </span>
-            <button type="submit" className="cta">
+            {issues.length ? <ul className={styles.issues}>{issues.map((issue, index) => <li key={index}>
+              {issue.message} {issue.sessionId ? <button type="button" className="ghost-button" onClick={() => {
+                const session = draft.sessions.find(s => s.id === issue.sessionId)!;
+                const exercise = session.exercises.find(e => doseIncomplete(e.dose));
+                if (exercise) edit(session.id, exercise); else setSessionEdit(session);
+              }}>Edit {draft.sessions.find(s => s.id === issue.sessionId)?.weekday ?? "session"}</button> : null}
+            </li>)}</ul> : <span>View your plan, then activate it from Plan Detail.</span>}
+            <button type="submit" className="cta" disabled={!draftValid}>
               {pending ? "Saving…" : "Save draft"}
             </button>
-            <button type="button" className="cta" onClick={() => void save(true)}>
+            <button type="button" className="cta" disabled={!publishable} onClick={() => void save(true)}>
               Save &amp; view plan
             </button>
           </div>
@@ -495,7 +530,7 @@ export function CustomPlanBuilder({ accessToken, planId, onboarding = null }: { 
               setDirty(false);
               router.push("/plans#custom-plans");
             } catch (e) {
-              setError(e instanceof Error ? e.message : "Unable to delete plan.");
+              setError(customPlanError(e, "Unable to delete plan."));
               setPending(false);
             }
           }}
@@ -552,13 +587,14 @@ export function CustomPlanBuilder({ accessToken, planId, onboarding = null }: { 
             <label>
               <span>Session type</span>
               <select aria-label="Session type" value={sessionEdit.session_type ?? "mixed"}
-                onChange={(e) => setSessionEdit({ ...sessionEdit, session_type: e.target.value as CustomSession["session_type"] })}>
+                onChange={(e) => setSessionEdit(prepareCustomSession({ ...sessionEdit, session_type: e.target.value as CustomSession["session_type"] }, onboarding, sessionEdit.session_type ?? "mixed"))}>
                 <option value="mixed">Workout</option>
                 <option value="strength_power">Strength / power</option>
                 <option value="conditioning">Conditioning</option>
                 <option value="skill">Light technical / skill</option>
                 <option value="sparring">Hard sparring</option>
                 <option value="recovery">Recovery</option>
+                <option value="rest">Off / Rest</option>
               </select>
             </label>
             <button className="cta">Done</button>

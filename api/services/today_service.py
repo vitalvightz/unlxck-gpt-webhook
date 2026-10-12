@@ -1271,7 +1271,10 @@ def _validate_retro_log_day(
             explicit_ids = {
                 _clean_text(candidate.get("session_id"))
                 for candidate in _iter_mapping_items(day.get("sessions"))
-                if _clean_text(candidate.get("session_id"))
+                if _clean_text(candidate.get("session_id")) and not (
+                    is_optional_session(candidate) and candidate.get("prescription_source") == "athlete"
+                    and candidate.get("session_type") == "recovery"
+                )
             }
             entry = _structured_session_entry_for_day(day, week=week)
             entry_id = _clean_text(entry.get("session_id")) if entry else ""
@@ -1892,7 +1895,15 @@ def _structured_session_entry_for_day(
     day_date = _clean_text(day.get("date"))[:10]
     if not day_date:
         return None
+    if (session_override is not None and is_optional_session(session_override)
+            and session_override.get("prescription_source") == "athlete"
+            and session_override.get("session_type") == "recovery"):
+        return None
     sessions = _iter_mapping_items(day.get("sessions"))
+    if (sessions and str(day.get("day_type")) in {"rest", "recovery"}
+            and all(s.get("prescription_source") == "athlete" for s in sessions)
+            and not any(not is_optional_session(s) for s in sessions)):
+        return None
     today_card = day.get("today_card") if isinstance(day.get("today_card"), Mapping) else {}
     coach_led_contact = _clean_text(today_card.get("coach_led_contact"))
     if not coach_led_contact:

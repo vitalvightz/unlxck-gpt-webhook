@@ -578,7 +578,7 @@ export type CustomSession = {
   id: string;
   name: string;
   weekday: "Friday" | "Monday" | "Saturday" | "Sunday" | "Thursday" | "Tuesday" | "Wednesday" | null;
-  session_type: "conditioning" | "mixed" | "recovery" | "skill" | "sparring" | "strength_power";
+  session_type: "conditioning" | "mixed" | "recovery" | "rest" | "skill" | "sparring" | "strength_power";
   exercises: (CustomExercise | ManualExercise)[];
 };
 
@@ -586,7 +586,7 @@ export type CustomSessionInput = {
   id: string;
   name: string;
   weekday?: "Friday" | "Monday" | "Saturday" | "Sunday" | "Thursday" | "Tuesday" | "Wednesday" | null;
-  session_type?: "conditioning" | "mixed" | "recovery" | "skill" | "sparring" | "strength_power";
+  session_type?: "conditioning" | "mixed" | "recovery" | "rest" | "skill" | "sparring" | "strength_power";
   exercises?: (CustomExerciseInput | ManualExerciseInput)[];
 };
 

@@ -352,15 +352,23 @@ def project_open_structured_plan(
         block_number = elapsed // 28 + 1
         current_week_number = (elapsed % 28) // 7 + 1
 
+    # Athlete calendars include explicit rest/recovery rows. The actual training
+    # weekdays remain separate, so neither the fallback schedule nor streaks
+    # manufacture work on the other days.
+    brief = plan_row.get("planning_brief")
+    custom_calendar = isinstance(brief, Mapping) and bool(brief.get("custom_plan"))
+    calendar_days = list(WEEKDAYS) if custom_calendar else training_days
     # Validate every week before applying any dates so projection is atomic.
     resolved_weeks: list[dict[str, Any]] = []
     for week in weeks:
         if not isinstance(week, Mapping):
             return _unavailable(PROJECTION_REASON_MALFORMED_WEEK)
-        resolved_days = _resolve_template_days(week.get("days"), training_days)
+        week_days = week.get("days")
+        expected_days = calendar_days if custom_calendar and isinstance(week_days, list) and len(week_days) == 7 else training_days
+        resolved_days = _resolve_template_days(week_days, expected_days)
         if resolved_days is None:
             return _unavailable(PROJECTION_REASON_DAY_SHAPE_UNRESOLVED)
-        for day, expected_weekday in zip(resolved_days, training_days, strict=True):
+        for day, expected_weekday in zip(resolved_days, expected_days, strict=True):
             is_coach_led = _is_coach_led_day(day)
             # A coach-led card may only land on a declared coach-owned day, and
             # a declared hard-sparring day must remain coach-led. Technical days
@@ -387,7 +395,8 @@ def project_open_structured_plan(
         week["end_date"] = (week_start + timedelta(days=6)).isoformat()
         week["countdown_start"] = None
         week["countdown_end"] = None
-        for day, weekday in zip(week["days"], training_days, strict=True):
+        for day in week["days"]:
+            weekday = day["weekday"]
             projected_date = week_start + timedelta(days=WEEKDAYS.index(weekday))
             day["weekday"] = weekday
             day["date"] = projected_date.isoformat()

@@ -4,7 +4,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { ExerciseRow, StructuredPlanRenderer } from "./structured-plan-renderer";
 import { ExerciseMediaProvider } from "./exercise-demo";
 import { PrivateExerciseMediaProvider } from "./private-exercise-video";
-import type { StructuredBlock, StructuredPlan } from "../lib/types";
+import type { StructuredBlock, StructuredPlan, StructuredDay } from "../lib/types";
 
 const block: StructuredBlock = {
   block_id: "my-squat", block_type: "strength", display_name: "My squat",
@@ -72,3 +72,18 @@ test("custom Open Plans retain the shared weekly navigation and multiple session
   assert.match(html, /saved prescription/);
   assert.doesNotMatch(html, /Cut working volume/);
 });
+
+
+test("optional athlete recovery stays visible without completion counts or retro-log controls", () => {
+  const day: StructuredDay = { weekday: "Tue", date: "2026-10-13", day_type: "recovery", today_card: { headline: "Recovery day" },
+    sessions: [{ session_id: "recovery", session_type: "recovery", title: "My recovery", prescription_source: "athlete", optional: true,
+      blocks: [{ ...block, block_id: "recovery-work", block_type: "cooldown_recovery", display_name: "My mobility" }] }] };
+  assert.deepEqual(dayCompletion(day), { done: 0, total: 0 });
+  const plan: StructuredPlan = { plan_metadata: { title: "My week", plan_type: "open_ongoing_system", prescription_source: "athlete" },
+    weeks: [{ week_index: 1, phase_label: "GPP", days: [day] }] };
+  const html = renderToStaticMarkup(<StructuredPlanRenderer plan={plan} openOngoing today={new Date("2026-10-14T12:00:00")}
+    completions={[]} currentTrainingDayIso="2026-10-14" onLogSession={() => { throw new Error("Recovery cannot log a workout"); }} />);
+  assert.match(html, /My recovery/);
+  assert.doesNotMatch(html, /Log session|Missed/);
+});
+import { dayCompletion } from "../lib/camp-map";

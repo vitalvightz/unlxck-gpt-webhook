@@ -1,5 +1,6 @@
 import { expect, type Page } from "@playwright/test";
 import { blankDose } from "../lib/custom-plan-dose";
+import { customScheduleIssues } from "../lib/custom-plan-schedule";
 import { isolateFromNetwork } from "./support";
 import type { CustomPlan, CustomPlanInput, LibraryEntry } from "../lib/api-schema.generated";
 
@@ -70,6 +71,13 @@ export async function setup(page: Page, baseURL: string, role = "athlete") {
         body: JSON.stringify(body),
       });
     if (request.method() !== "GET") mutations.push(url.pathname);
+    if (process.env.CUSTOM_PLAN_TEST_API && /\/api\/(me$|plans(?:\/|$)|today(?:\/|$))/.test(url.pathname)) {
+      const response = await page.request.fetch(`${process.env.CUSTOM_PLAN_TEST_API}${url.pathname}${url.search}`, {
+        method: request.method(), headers: { Authorization: "Bearer athlete-token", "Content-Type": "application/json" },
+        data: request.postData() ?? undefined,
+      });
+      return route.fulfill({ status: response.status(), contentType: "application/json", body: await response.body() });
+    }
     if (url.pathname === "/api/xp/activity") {
       expect(request.postData()).toBeNull();
     }
@@ -176,11 +184,7 @@ export async function setup(page: Page, baseURL: string, role = "athlete") {
         name: body.name,
         sessions,
         kind: "self_directed",
-        incomplete:
-          !sessions.length ||
-          sessions.some(
-            (session) => !session.exercises.length || session.exercises.some((exercise) => exercise.incomplete),
-          ),
+        incomplete: customScheduleIssues(sessions).length > 0,
         created_at: "2026-10-11T12:00:00Z",
         updated_at: "2026-10-11T12:00:00Z",
       };
