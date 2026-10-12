@@ -219,7 +219,7 @@ test("the profile uses the saved photo, falls back on image failure, and opens p
     assert.equal(row?.querySelector("img"), null);
     assert.equal(row?.querySelector('[aria-hidden="true"]')?.textContent, "K");
     await view.click(row);
-    assert.equal(openDialog()?.querySelector('a[href="/profile"]')?.textContent, "Edit profile & photo");
+    assert.equal(openDialog()?.querySelector('a[href="/settings#account"]')?.textContent, "Edit profile & photo");
   } finally { await view.cleanup(); }
 });
 

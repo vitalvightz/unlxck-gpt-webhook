@@ -620,7 +620,7 @@ export function AthleteProfileRow({ me }: { me: MeResponse | null }) {
             ) : (
               <p className="muted">No plan source details saved yet.</p>
             )}
-            <Link href="/profile" className="secondary-button">Edit profile & photo</Link>
+            <Link href="/settings#account" className="secondary-button">Edit profile & photo</Link>
             <Link href="/onboarding" className="secondary-button">
               {hasIntake ? "Review & edit intake" : "Complete Advanced Intake"}
             </Link>
