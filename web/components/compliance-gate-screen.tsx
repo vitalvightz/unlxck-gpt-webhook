@@ -7,7 +7,7 @@ import { useEffect, useId, useState } from "react";
 import { RequireAuth } from "@/components/auth-guard";
 import { useAppSession } from "@/components/auth-provider";
 import { recordCompliance } from "@/lib/api";
-import { getAuthenticatedLandingHref } from "@/lib/auth-routing";
+import { getAthleteWorkspaceHref, getAuthenticatedLandingHref } from "@/lib/auth-routing";
 import {
   hasHealthDataConsent,
   requiresComplianceAcceptance,
@@ -87,7 +87,7 @@ function ComplianceAcceptance() {
         ...(needsHealthConsent && healthDataConsent ? { health_data_consent: true } : {}),
       });
       await refreshMe();
-      router.replace("/onboarding");
+      router.replace(getAthleteWorkspaceHref(me));
     } catch (submitError) {
       setError(
         submitError instanceof Error

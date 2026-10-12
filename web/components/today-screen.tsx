@@ -50,8 +50,8 @@ function NoActivePlanState() {
         <p className="muted">{TODAY_EMPTY_TEXT}</p>
       </div>
       <div className="today-action-row">
-        <Link href="/onboarding" className="cta">
-          Complete Intake
+        <Link href="/quick-build" className="cta">
+          Build my plan
         </Link>
         <Link href="/timer" className="secondary-button">
           Round timer

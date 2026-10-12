@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import uuid
+from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING, Any
 
 from api.contracts.clinical_review_capture import (
@@ -40,6 +41,7 @@ from ..models import (
     AdminAthleteRecord,
     AdminLatestIntakeUpdateRequest,
     AdminPlanSummary,
+    AdminTimeToFirstPlanSummary,
     GenerationJobResponse,
     ManualStage2SubmissionRequest,
     PlanBulkPermanentDeleteRequest,
@@ -91,6 +93,7 @@ from ..generation_job_helpers import (
     _triage_job_has_resume_approval as _triage_job_has_resume_approval,
     _triage_plan_has_resume_approval as _triage_plan_has_resume_approval,
 )
+from ..services.onboarding_metrics import summarize_time_to_first_usable_plan
 from ..services.plan_intake_injuries import admin_intake_injuries
 from ..settings import env_flag
 
@@ -578,6 +581,18 @@ def build_admin_router() -> APIRouter:
             for row in store.list_admin_athletes(limit=limit, offset=offset, q=q)
         ]
 
+    @router.get("/api/admin/metrics/time-to-first-plan", response_model=AdminTimeToFirstPlanSummary)
+    def get_admin_time_to_first_plan(
+        _: ProfileRecord = Depends(require_admin),
+        days: int = Query(30, ge=1, le=365),
+        store: AppStore = Depends(get_store),
+    ) -> AdminTimeToFirstPlanSummary:
+        since = datetime.now(timezone.utc) - timedelta(days=days)
+        rows = store.list_admin_signup_activation(since=since.isoformat())
+        return AdminTimeToFirstPlanSummary(
+            **summarize_time_to_first_usable_plan(rows, window_days=days, since=since)
+        )
+
     @router.get("/api/admin/athletes/{athlete_id}", response_model=AdminAthleteRecord)
     def get_admin_athlete(
         athlete_id: str,
@@ -589,15 +604,6 @@ def build_admin_router() -> APIRouter:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="athlete not found")
         latest_intake = store.get_latest_intake(athlete_id)
         return _map_admin_athlete(row, latest_intake=latest_intake)
-
-    @router.post("/api/admin/athletes/{athlete_id}/approve", response_model=AdminAthleteRecord)
-    def approve_admin_athlete(
-        athlete_id: str,
-        _: ProfileRecord = Depends(require_admin),
-        store: AppStore = Depends(get_store),
-    ) -> AdminAthleteRecord:
-        row = store.approve_profile_access(athlete_id)
-        return _map_admin_athlete(row, latest_intake=store.get_latest_intake(athlete_id))
 
     @router.get("/api/admin/athletes/{athlete_id}/generation-jobs", response_model=list[AdminGenerationJobDiagnostic])
     def list_admin_athlete_generation_jobs(

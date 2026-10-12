@@ -13,11 +13,11 @@ import { formatAppDate, formatAppDateTime } from "@/lib/date-format";
 import {
   adminArchivePlan,
   rejectAdminGenerationJob,
-  approveAdminAthlete,
   approveAndResumeGenerationFromJob,
   backfillStructuredPlans,
   bulkPermanentlyDeleteArchivedPlans,
   cancelAdminGenerationJob,
+  getAdminTimeToFirstPlan,
   listAdminActiveGenerationJobs,
   listAdminAthletes,
   listAdminPlans,
@@ -37,8 +37,10 @@ import {
   nonProfileSectionError,
   summarizeProfileWarning,
 } from "@/lib/admin-profile-warning";
+import { describeFirstPlanConversion, formatWaitDuration } from "@/lib/onboarding-metrics";
 import type {
   AdminAthleteRecord,
+  AdminTimeToFirstPlanSummary,
   AdminGenerationJobDiagnostic,
   AdminPlanSummary,
   AdminReviewRecord,
@@ -150,6 +152,7 @@ const SEARCH_DEBOUNCE_MS = 300;
 export default function AdminPage() {
   const { isReady, isMeHydrated, session, me } = useAppSession();
   const [athletes, setAthletes] = useState<AdminAthleteRecord[]>([]);
+  const [firstPlanSummary, setFirstPlanSummary] = useState<AdminTimeToFirstPlanSummary | null>(null);
   const [plans, setPlans] = useState<AdminPlanSummary[]>([]);
   const [activeJobs, setActiveJobs] = useState<AdminGenerationJobDiagnostic[]>([]);
   const [triageJobs, setTriageJobs] = useState<AdminGenerationJobDiagnostic[]>([]);
@@ -158,7 +161,6 @@ export default function AdminPage() {
   const [attentionReviews, setAttentionReviews] = useState<AdminReviewRecord[]>([]);
   const [attentionWarning, setAttentionWarning] = useState<string | null>(null);
   const [resolvingReviewId, setResolvingReviewId] = useState<string | null>(null);
-  const [approvingAthleteId, setApprovingAthleteId] = useState<string | null>(null);
   const [isDirectoryLoading, setIsDirectoryLoading] = useState(true);
   const [isJobsLoading, setIsJobsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -258,6 +260,23 @@ export default function AdminPage() {
     : isJobsLoading
       ? "Checking live generation jobs"
       : "Not checked yet";
+
+  // Signup → first usable plan: the onboarding metric. Loaded on its own so a
+  // slow or failed read never holds up the queues above it.
+  useEffect(() => {
+    if (!isAdminReady || !token) return;
+    let active = true;
+    getAdminTimeToFirstPlan(token)
+      .then((summary) => {
+        if (active) setFirstPlanSummary(summary);
+      })
+      .catch(() => {
+        if (active) setFirstPlanSummary(null);
+      });
+    return () => {
+      active = false;
+    };
+  }, [isAdminReady, token]);
 
   // Directory data (athletes + plans). Filtering and pagination happen on the
   // server so the dashboard scales past a few dozen records: the search term
@@ -447,24 +466,6 @@ export default function AdminPage() {
       setError(resolveError instanceof Error ? resolveError.message : "Failed to resolve review.");
     } finally {
       setResolvingReviewId(null);
-    }
-  }
-
-  async function handleApproveAthlete(athleteId: string) {
-    if (!session?.access_token || approvingAthleteId) return;
-    setApprovingAthleteId(athleteId);
-    setError(null);
-    setMessage(null);
-    try {
-      const approved = await approveAdminAthlete(session.access_token, athleteId);
-      setAthletes((current) =>
-        current.map((athlete) => athlete.athlete_id === athleteId ? approved : athlete),
-      );
-      setMessage(`${approved.full_name || approved.email} approved.`);
-    } catch (approveError) {
-      setError(approveError instanceof Error ? approveError.message : "Failed to approve account.");
-    } finally {
-      setApprovingAthleteId(null);
     }
   }
 
@@ -666,6 +667,13 @@ export default function AdminPage() {
                 {isJobsLoading ? "-" : attentionReviews.length}
               </h2>
               <p className="muted">{isJobsLoading ? "Checking reviews." : attentionReviews.length ? "Athlete flags open." : "No flags open."}</p>
+            </article>
+            <article className="status-card admin-summary-card" data-tone="neutral">
+              <p className="status-label">Time to first plan</p>
+              <h2 className="plan-summary-title">{formatWaitDuration(firstPlanSummary?.median_seconds)}</h2>
+              <p className="muted">
+                {firstPlanSummary ? describeFirstPlanConversion(firstPlanSummary) : "Median, signup to usable plan."}
+              </p>
             </article>
             <article className="status-card admin-summary-card" data-tone="neutral">
               <p className="status-label">Athletes</p>
@@ -1121,23 +1129,16 @@ export default function AdminPage() {
                           <p className="muted">{athlete.email}</p>
                         </div>
                         <span className="badge">
-                          {athlete.access_status === "pending"
-                            ? "Approval needed"
-                            : `${athlete.plan_count} plan${athlete.plan_count === 1 ? "" : "s"}`}
+                          {`${athlete.plan_count} plan${athlete.plan_count === 1 ? "" : "s"}`}
                         </span>
                       </div>
-                      <p className="muted">Created {formatDateTime(athlete.created_at)}</p>
+                      <p className="muted">
+                        Created {formatDateTime(athlete.created_at)}
+                        {athlete.time_to_first_usable_plan_seconds != null
+                          ? ` · First plan in ${formatWaitDuration(athlete.time_to_first_usable_plan_seconds)}`
+                          : ""}
+                      </p>
                       <div className="plan-card-actions">
-                        {athlete.access_status === "pending" ? (
-                          <button
-                            type="button"
-                            className="cta"
-                            onClick={() => void handleApproveAthlete(athlete.athlete_id)}
-                            disabled={approvingAthleteId !== null}
-                          >
-                            {approvingAthleteId === athlete.athlete_id ? "Approving…" : "Approve access"}
-                          </button>
-                        ) : null}
                         <Link href={`/admin/athletes/${athlete.athlete_id}`} className="ghost-button">
                           View profile
                         </Link>

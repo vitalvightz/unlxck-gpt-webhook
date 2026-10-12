@@ -19,7 +19,7 @@ import { isTurnstileConfigured, TurnstileChallenge } from "@/components/turnstil
 import { getMe } from "@/lib/api";
 import { AUTH_FEEDBACK, getLoginErrorMessage, getMagicLinkErrorMessage } from "@/lib/auth-feedback";
 import { clearAuthLinkParams, readAuthLinkStatus } from "@/lib/auth-link";
-import { getAuthenticatedLandingHref } from "@/lib/auth-routing";
+import { FIRST_PLAN_HREF, getAuthenticatedLandingHref } from "@/lib/auth-routing";
 import {
   TERMS_CONSENT_LEAD,
   TERMS_LINK_LABEL,
@@ -38,22 +38,14 @@ import type { UserRole } from "@/lib/types";
 /** How long Turnstile gets to pass on its own before the hint explains the disabled button. */
 const CAPTCHA_HINT_DELAY_MS = 2500;
 
-const SIGNUP_ROLE_LABELS: Partial<Record<UserRole, string>> = {
-  athlete: "Athlete",
-};
-
 const CAPTCHA_REQUIRED_MESSAGE = "Complete the security check, then try again.";
 const CAPTCHA_UNAVAILABLE_MESSAGE = "The security check could not load. Refresh the page and try again.";
 
 export function AuthForm({
   mode,
-  role,
-  onChangeRole,
   footerSlot,
 }: {
   mode: "signup" | "login";
-  role?: UserRole;
-  onChangeRole?: () => void;
   footerSlot?: ReactNode;
 }) {
   const t = useTranslations("Auth");
@@ -172,7 +164,9 @@ export function AuthForm({
       }
 
       if (mode === "signup") {
-        const selectedRole: UserRole = role ?? "athlete";
+        // Athlete is the only live role, so signup does not ask. Coach and gym
+        // owner accounts are assigned by an admin when those workspaces ship.
+        const selectedRole: UserRole = "athlete";
         let signUpResult;
         try {
           signUpResult = await client.auth.signUp({
@@ -231,7 +225,7 @@ export function AuthForm({
             );
             return;
           }
-          router.replace("/onboarding");
+          router.replace(FIRST_PLAN_HREF);
           return;
         }
         resetCaptcha();
@@ -330,19 +324,6 @@ export function AuthForm({
           <div>
             <p className="kicker">{mode === "signup" ? t("createAccount") : t("welcomeBack")}</p>
             <h2>{mode === "signup" ? t("startIntake") : t("continueCamp")}</h2>
-            {mode === "signup" && role ? (
-              <p className="auth-selected-role muted">
-                {t("signingUpAs", { role: role === "athlete" ? t("athlete") : SIGNUP_ROLE_LABELS[role] ?? role })}
-                {onChangeRole ? (
-                  <>
-                    {" · "}
-                    <button type="button" className="auth-text-link auth-inline-link" onClick={onChangeRole}>
-                      {t("change")}
-                    </button>
-                  </>
-                ) : null}
-              </p>
-            ) : null}
           </div>
           {mode === "signup" ? <span className="badge status-badge-neutral">{t("beta")}</span> : null}
         </div>

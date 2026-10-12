@@ -894,6 +894,16 @@ export type AdminAthleteRecord = {
   updated_at: string;
   plan_count: number;
   latest_plan_created_at?: string | null;
+  first_usable_plan_at?: string | null;
+  time_to_first_usable_plan_seconds?: number | null;
+};
+
+export type AdminTimeToFirstPlanSummary = {
+  window_days: number;
+  signups: number;
+  with_usable_plan: number;
+  median_seconds?: number | null;
+  p75_seconds?: number | null;
 };
 
 export type AdminLatestIntakeUpdateRequest = {

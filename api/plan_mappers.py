@@ -53,6 +53,7 @@ from .structured_plan_generation import (
 )
 from .structured_plan_locked_merge import merge_planner_owned_structured_content
 from .services.effective_structured_plan import resolve_effective_structured_plan
+from .services.onboarding_metrics import time_to_first_usable_plan_seconds
 from .services.exercise_overrides import apply_exercise_overrides
 from .services.open_plan_timeline import project_open_structured_plan
 from .services.active_plan import get_plan_activation_state
@@ -122,7 +123,7 @@ def _map_profile_row(row: dict[str, Any]) -> ProfileRecord:
         username=str(raw_username) if raw_username else None,
         username_change_history=username_history,
         role=str(row.get("role") or "athlete"),
-        access_status=str(row.get("access_status") or "pending"),
+        access_status=str(row.get("access_status") or "approved"),
         full_name=str(row.get("full_name") or ""),
         technical_style=list(row.get("technical_style") or []),
         tactical_style=list(row.get("tactical_style") or []),
@@ -799,7 +800,7 @@ def _map_admin_athlete(row: dict[str, Any], latest_intake: dict[str, Any] | None
         athlete_id=str(row["id"]),
         email=str(row.get("email") or ""),
         role=str(row.get("role") or "athlete"),
-        access_status=str(row.get("access_status") or "pending"),
+        access_status=str(row.get("access_status") or "approved"),
         full_name=str(row.get("full_name") or ""),
         technical_style=list(row.get("technical_style") or []),
         tactical_style=list(row.get("tactical_style") or []),
@@ -816,4 +817,6 @@ def _map_admin_athlete(row: dict[str, Any], latest_intake: dict[str, Any] | None
         updated_at=str(row.get("updated_at") or ""),
         plan_count=int(row.get("plan_count") or 0),
         latest_plan_created_at=row.get("latest_plan_created_at"),
+        first_usable_plan_at=row.get("first_usable_plan_at"),
+        time_to_first_usable_plan_seconds=time_to_first_usable_plan_seconds(row),
     )

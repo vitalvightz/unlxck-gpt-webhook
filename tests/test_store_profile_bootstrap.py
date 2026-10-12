@@ -113,7 +113,8 @@ def test_ensure_profile_new_user_gets_athlete_role():
     call_args = store.client.table.return_value.upsert.call_args
     payload = call_args[0][0]
     assert payload["role"] == "athlete"
-    assert payload["access_status"] == "pending"
+    # No admin approval queue: a new athlete can use the app immediately.
+    assert payload["access_status"] == "approved"
     assert result["role"] == "athlete"
 
 

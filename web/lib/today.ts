@@ -815,7 +815,7 @@ export function getOverviewPrimaryAction(params: {
   if (!hasActivePlan) {
     return planCount > 0
       ? { href: "/plans", label: "Select active plan" }
-      : { href: "/onboarding", label: "Build your plan" };
+      : { href: "/quick-build", label: "Build your plan" };
   }
   if (hasInjuryOverride) {
     return { href: "/today#today-injury", label: "Open injury check-in" };

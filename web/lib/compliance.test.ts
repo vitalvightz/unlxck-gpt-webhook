@@ -103,17 +103,18 @@ test("the landing resolver sends an unaccepted athlete to the consent gate", () 
   assert.equal(getAuthenticatedLandingHref(meFixture({ terms_accepted: false })), "/consent");
 });
 
-test("consent comes before the private-trial briefing", () => {
-  const unbriefed = meFixture({ terms_accepted: false, private_trial_ack_at: null });
-  assert.equal(getAuthenticatedLandingHref(unbriefed), "/consent");
+test("consent is the only gate before the first plan", () => {
+  const unaccepted = meFixture({ terms_accepted: false, private_trial_ack_at: null });
+  assert.equal(getAuthenticatedLandingHref(unaccepted), "/consent");
 
-  const accepted = meFixture({ private_trial_ack_at: null });
-  assert.equal(getAuthenticatedLandingHref(accepted), "/private-trial");
+  // The private trial briefing no longer sits between signup and the first plan.
+  const unbriefed = meFixture({ private_trial_ack_at: null });
+  assert.equal(getAuthenticatedLandingHref(unbriefed), "/quick-build");
 });
 
-test("an accepted, briefed athlete still lands in their workspace", () => {
+test("an accepted athlete with no plan lands on Quick Build", () => {
   const ready = meFixture({ private_trial_ack_at: "2026-08-01T00:00:00+00:00" });
-  assert.equal(getAuthenticatedLandingHref(ready), "/onboarding");
+  assert.equal(getAuthenticatedLandingHref(ready), "/quick-build");
 });
 
 test("health consent is read from the server verdict, not recomputed", () => {

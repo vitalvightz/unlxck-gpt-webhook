@@ -74,11 +74,8 @@ export default function DemoPlanPage() {
             When you build your own, the planner uses your fight date, training days, restrictions, and goals to shape every week.
           </p>
           <div className="hero-actions welcome-actions">
-            <Link href="/onboarding" className="cta">
-              Start Advanced Intake
-            </Link>
-            <Link href="/quick-build" className="secondary-button">
-              Use Quick Build
+            <Link href="/quick-build" className="cta">
+              Build my plan
             </Link>
             <Link href="/" className="ghost-button">
               Back to dashboard
@@ -140,11 +137,8 @@ export default function DemoPlanPage() {
           ))}
         </ul>
         <div className="hero-actions welcome-actions">
-          <Link href="/onboarding" className="cta">
-            Start Advanced Intake
-          </Link>
-          <Link href="/quick-build" className="secondary-button">
-            Use Quick Build
+          <Link href="/quick-build" className="cta">
+            Build my plan
           </Link>
         </div>
       </section>

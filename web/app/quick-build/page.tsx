@@ -1,10 +1,10 @@
-import { RequirePrivateTrialAck } from "@/components/private-trial-guard";
+import { RequireComplianceAcceptance } from "@/components/compliance-guard";
 import { QuickBuildForm } from "@/components/quick-build-form";
 
 export default function QuickBuildPage() {
   return (
-    <RequirePrivateTrialAck>
+    <RequireComplianceAcceptance>
       <QuickBuildForm />
-    </RequirePrivateTrialAck>
+    </RequireComplianceAcceptance>
   );
 }

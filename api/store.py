@@ -1319,9 +1319,9 @@ class SupabaseAppStore(CommunityStoreMixin, PrivateMediaStoreMixin, CompactGener
             "username_change_history": existing.get("username_change_history") or [],
             "full_name": existing.get("full_name") or user.full_name,
             "role": existing.get("role") or self._default_role_for(user),
-            "access_status": existing.get("access_status") or (
-                "approved" if self.is_admin_email(user.email) else "pending"
-            ),
+            # New accounts get in straight away: there is no admin approval
+            # queue between signing up and building a first plan.
+            "access_status": "approved",
             "technical_style": existing.get("technical_style") or [],
             "tactical_style": existing.get("tactical_style") or [],
             "stance": existing.get("stance") or "",
@@ -4248,6 +4248,18 @@ class SupabaseAppStore(CommunityStoreMixin, PrivateMediaStoreMixin, CompactGener
         )
         return getattr(response, "data", None) or []
 
+    def list_admin_signup_activation(self, *, since: str, limit: int = 5000) -> list[dict[str, Any]]:
+        """Signup and first-usable-plan timestamps for accounts created since ``since``."""
+        response = (
+            self.client.table("admin_athlete_rollups")
+            .select("id,role,created_at,first_usable_plan_at")
+            .gte("created_at", since)
+            .order("created_at", desc=True)
+            .limit(limit)
+            .execute()
+        )
+        return getattr(response, "data", None) or []
+
     def record_injury_episode_event(self, athlete_id: str, event: dict[str, Any]) -> dict[str, Any]:
         try:
             response = self.client.rpc("record_injury_episode_event", {"p_athlete_id": athlete_id, "p_event": event}).execute()
@@ -4310,23 +4322,6 @@ class SupabaseAppStore(CommunityStoreMixin, PrivateMediaStoreMixin, CompactGener
         return self._select_first(
             self.client.table("admin_athlete_rollups").select("*").eq("id", athlete_id)
         )
-
-    @_invalidates_profile_cache()
-    def approve_profile_access(self, athlete_id: str) -> dict[str, Any]:
-        response = (
-            self.client.table("profiles")
-            .update({"access_status": "approved"})
-            .eq("id", athlete_id)
-            .execute()
-        )
-        rows = getattr(response, "data", None) or []
-        if not rows:
-            # Supabase may omit updated rows depending on representation settings.
-            profile = self._get_profile_by_id(athlete_id)
-            if not profile:
-                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="athlete not found")
-            return profile
-        return rows[0]
 
     def list_admin_athletes_by_ids(self, athlete_ids: list[str]) -> list[dict[str, Any]]:
         if not athlete_ids:
