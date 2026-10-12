@@ -257,12 +257,56 @@ def resolve_session_exercise_media(session: Mapping[str, Any], index: Mapping[st
     return resolved
 
 
+def _field(block: Any, name: str) -> Any:
+    return block.get(name) if isinstance(block, Mapping) else getattr(block, name, None)
+
+
+def athlete_change_media(blocks: Iterable[Any], index: Mapping[str, ExerciseMedia]) -> dict[str, ExerciseMedia]:
+    """Media for exercises an athlete swapped in or added after publishing.
+
+    A custom plan serves the media snapshot taken when it was published; those
+    blocks (marked ``athlete_change``) came later and so are never in it.
+    Exact catalogue identity only.
+    """
+    resolved: dict[str, ExerciseMedia] = {}
+    for block in blocks:
+        if not _field(block, "athlete_change") or _field(block, "block_type") in NON_PHYSICAL_BLOCK_TYPES:
+            continue
+        key = normalize_exercise_key(_field(block, "exercise_key"))
+        if key and (media := index.get(key)) is not None:
+            resolved[f"{EXERCISE_KEY_MEDIA_PREFIX}{key}"] = media
+    return resolved
+
+
+def with_athlete_change_media(
+    snapshot: Mapping[str, ExerciseMedia] | None, blocks: Iterable[Any], store: Any
+) -> dict[str, ExerciseMedia]:
+    """A custom plan's published snapshot plus media for later athlete changes."""
+    snapshot = dict(snapshot or {})
+    try:
+        blocks = list(blocks)
+        if not any(_field(block, "athlete_change") for block in blocks):
+            return snapshot
+        # The snapshot wins: it is the published prescription's own media.
+        return {**athlete_change_media(blocks, load_media_index(store)), **snapshot}
+    except Exception:  # noqa: BLE001 - media is decoration
+        logger.warning("athlete change media resolve failed", exc_info=True)
+        return snapshot
+
+
 def attach_exercise_media(detail: Any, store: Any) -> Any:
     """Populate ``detail.outputs.exercise_media`` in place. Never raises."""
     try:
         outputs = getattr(detail, "outputs", None)
         if getattr(detail, "custom_plan_id", None):
-            # The published athlete prescription owns its catalogue snapshot.
+            # The published athlete prescription owns its catalogue snapshot;
+            # only exercises added or swapped in since are resolved live.
+            if outputs is not None:
+                outputs.exercise_media = with_athlete_change_media(
+                    outputs.exercise_media,
+                    _iter_blocks(getattr(outputs, "structured_plan", None)),
+                    store,
+                )
             return detail
         structured_plan = getattr(outputs, "structured_plan", None)
         if outputs is None or structured_plan is None:
