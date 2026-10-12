@@ -735,6 +735,42 @@ def test_future_change_applies_forward_and_restore_keeps_history():
     assert day_blocks(store, OPEN_PLAN_ID, today + timedelta(days=7))[1][0]["display_name"] == "Back Squat"
 
 
+def test_future_edit_applies_on_the_same_weekday_and_reverts_forward():
+    client, store, _ = _build_client()
+    today = seed_open(store)
+    session_id, block_id = _open_ids(store, today)
+
+    def squat(day):
+        return next(b for b in day_blocks(store, OPEN_PLAN_ID, day)[1] if b["display_name"] == "Back Squat")
+
+    first, _ = change(client, OPEN_PLAN_ID, action="edit", scope="future", date=today.isoformat(),
+                      session_id=session_id, block_id=block_id, dose={"mode": "reps", "sets": 3, "reps": 5},
+                      coaching_cues=["Drive the floor away"])
+    assert first.status_code == 200, first.text
+    for weeks in (0, 1, 3):
+        block = squat(today + timedelta(days=7 * weeks))
+        assert (block["sets"], block["reps"], block["coaching_cues"]) == (3, 5, ["Drive the floor away"]), weeks
+    # The other training day is a different workout: untouched.
+    assert [b["display_name"] for b in day_blocks(store, OPEN_PLAN_ID, today + timedelta(days=1))[1]] == ["Front Plank"]
+    # A second recurring edit stacks on the first; a one-off wins on its own day.
+    second, _ = change(client, OPEN_PLAN_ID, action="edit", scope="future", date=today.isoformat(),
+                       session_id=session_id, block_id=squat(today)["block_id"], dose={"mode": "reps", "sets": 2, "reps": 8})
+    assert second.status_code == 200, second.text
+    next_week = today + timedelta(days=7)
+    one_off, _ = change(client, OPEN_PLAN_ID, action="edit", date=next_week.isoformat(),
+                        session_id=day_blocks(store, OPEN_PLAN_ID, next_week)[0]["session_id"],
+                        block_id=squat(next_week)["block_id"], dose={"mode": "reps", "sets": 5, "reps": 1})
+    assert one_off.status_code == 200, one_off.text
+    assert [(squat(today + timedelta(days=7 * w))["sets"], squat(today + timedelta(days=7 * w))["reps"])
+            for w in (0, 1, 2)] == [(2, 8), (5, 1), (2, 8)]
+    # Reverting the latest recurring edit from next week keeps it today and falls back to the first.
+    undo = client.post(f"/api/plans/{OPEN_PLAN_ID}/exercise-changes/{second.json()['id']}/undo",
+                       headers=AUTH, json={"date": (today + timedelta(days=14)).isoformat()})
+    assert undo.status_code == 200, undo.text
+    assert (squat(today)["sets"], squat(today)["reps"]) == (2, 8)
+    assert (squat(today + timedelta(days=14))["sets"], squat(today + timedelta(days=14))["reps"]) == (3, 5)
+
+
 def test_open_plan_detail_and_today_show_the_same_effective_workout():
     client, store, _ = _build_client()
     today = seed_open(store)
