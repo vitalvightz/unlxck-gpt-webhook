@@ -1009,3 +1009,49 @@ def test_contraindications_only_count_for_an_injured_region():
     assert safety.contraindicated({"contraindications": ["skip if shoulder symptoms are active"]})
     safety.has_injuries = False
     assert not safety.contraindicated({"contraindications": ["skip if front-knee irritation increases"]})
+
+
+def test_switching_to_free_text_is_never_a_deload():
+    from api.services.exercise_customisation import _dose_not_heavier, _edited_dose
+
+    squat = back_squat()
+    text = _edited_dose(copy.deepcopy(squat), {"mode": "text", "prescription": "max-effort jumps"})
+    assert not _dose_not_heavier(squat, text)
+    assert not _dose_not_heavier(squat, {**squat, "sets": 3, "athlete_dose": {"mode": "duration"}})
+    same_text = {"display_name": "Shadowbox", "prescription_text": "3 easy rounds"}
+    assert _dose_not_heavier(same_text, dict(same_text))
+    assert not _dose_not_heavier(same_text, {**same_text, "prescription_text": "max-effort rounds"})
+
+
+def test_free_text_edit_is_checked_against_injury_guidance():
+    client, store, _ = _build_client()
+    today = seed_dated(store)
+    store.create_injury_flag("athlete-1", {"body_area": "knee", "description": "knee pain on squats"})
+    response, _ = change(client, PLAN_ID, action="edit", date=today.isoformat(), session_id=SESSION_ID,
+                         block_id=squat_id(today), dose={"mode": "text", "prescription": "max-effort jumps"})
+    assert response.status_code == 409, response.text
+    assert store.plans[PLAN_ID]["exercise_overrides"] == []
+
+
+def test_shorter_rest_tempo_or_per_side_is_not_a_deload():
+    from api.services.exercise_customisation import _dose_not_heavier
+
+    squat = back_squat(rest={"value": 120, "unit": "seconds"})
+    assert not _dose_not_heavier(squat, back_squat(sets=3, rest={"value": 30, "unit": "seconds"}))
+    assert _dose_not_heavier(squat, back_squat(sets=3, rest={"value": 3, "unit": "minutes"}))
+    assert _dose_not_heavier(squat, back_squat(sets=3, rest={"value": 2, "unit": "minutes"}))
+    assert not _dose_not_heavier(back_squat(rest=None), back_squat(sets=3, rest={"value": 30, "unit": "seconds"}))
+    assert not _dose_not_heavier(squat, back_squat(sets=3, rest={"value": 120, "unit": "seconds"}, tempo="5-2-1-0"))
+    assert _dose_not_heavier(back_squat(tempo="3-1-X-0"), back_squat(sets=3, tempo="3-1-X-0"))
+    assert not _dose_not_heavier(squat, back_squat(sets=2, rest={"value": 120, "unit": "seconds"},
+                                                   athlete_dose={"mode": "reps", "per_side": True}))
+
+
+def test_shorter_rest_edit_is_checked_against_injury_guidance():
+    client, store, _ = _build_client()
+    today = seed_dated(store)
+    store.create_injury_flag("athlete-1", {"body_area": "knee", "description": "knee pain on squats"})
+    response, _ = change(client, PLAN_ID, action="edit", date=today.isoformat(), session_id=SESSION_ID,
+                         block_id=squat_id(today), dose={"mode": "reps", "sets": 3, "reps": 5,
+                                                        "load_or_intensity": "100 kg", "rest_seconds": 30})
+    assert response.status_code == 409, response.text

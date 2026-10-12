@@ -1273,13 +1273,18 @@ def apply_change(
     return result
 
 
+def _dose_mode(block: Mapping[str, Any]) -> str:
+    saved = block.get("athlete_dose") if isinstance(block.get("athlete_dose"), Mapping) else {}
+    return saved.get("mode") or (
+        "intervals" if block.get("rounds") and block.get("work") else
+        "distance" if block.get("distance") else "duration" if block.get("duration") else
+        "reps" if block.get("sets") and block.get("reps") else "text")
+
+
 def _edited_dose(original: dict, dose: dict) -> dict:
     """Keep prescription metadata that the editor cannot represent unchanged."""
     old_dose = original.get("athlete_dose") or {}
-    old_mode = old_dose.get("mode") or (
-        "intervals" if original.get("rounds") and original.get("work") else
-        "distance" if original.get("distance") else "duration" if original.get("duration") else
-        "reps" if original.get("sets") and original.get("reps") else "text")
+    old_mode = _dose_mode(original)
     fields = _dose_fields(dose)
     result = deepcopy(original)
     for field in ("sets", "reps", "rounds", "duration", "distance", "work", "prescription_text", "athlete_dose"):
@@ -1331,10 +1336,8 @@ def _dose_magnitudes(block: Mapping[str, Any]) -> dict[str, float]:
         if (value := _magnitude(block.get(field))) is not None:
             out[field] = value
     for field in ("duration", "work"):
-        spec = block.get(field)
-        if isinstance(spec, Mapping) and (value := _magnitude(spec.get("value"))) is not None:
-            unit = str(spec.get("unit", "")).lower()
-            out[field] = value * (3600 if unit.startswith("h") else 60 if unit.startswith("min") else 1)
+        if (value := _seconds(block.get(field))) is not None:
+            out[field] = value
     spec = block.get("distance")
     if isinstance(spec, Mapping) and (value := _magnitude(spec.get("value"))) is not None:
         factor = _DISTANCE_METRES.get(str(spec.get("unit", "")).lower())
@@ -1360,13 +1363,39 @@ def _intensity(block: Mapping[str, Any]) -> str:
     return "" if text in _NO_ADDED_LOAD else text
 
 
+def _seconds(spec: Any) -> float | None:
+    if not isinstance(spec, Mapping) or (value := _magnitude(spec.get("value"))) is None:
+        return None
+    unit = str(spec.get("unit", "")).lower()
+    return value * (3600 if unit.startswith("h") else 60 if unit.startswith("min") else 1)
+
+
+def _dose_extra(block: Mapping[str, Any], field: str) -> Any:
+    saved = block.get("athlete_dose") if isinstance(block.get("athlete_dose"), Mapping) else {}
+    value = block.get(field)
+    return saved.get(field) if value is None else value
+
+
 def _dose_not_heavier(original: Mapping[str, Any], edited: Mapping[str, Any]) -> bool:
     """True when the edit only keeps or lowers the dose of the same exercise.
 
-    Every quantity the edit states must be comparable to the original and no
-    higher. A new dimension, or a changed effort/intensity that cannot be
-    compared numerically, is not provably lighter.
+    The prescription mode must be unchanged and every quantity the edit states
+    comparable to the original and no higher. Free text, a new dimension, a
+    changed effort/intensity that cannot be compared numerically, shorter rest,
+    a changed tempo or a switch to per-side work is not provably lighter.
     """
+    mode = _dose_mode(edited)
+    if mode != _dose_mode(original):
+        return False
+    if mode == "text" and _clean(edited.get("prescription_text")) != _clean(original.get("prescription_text")):
+        return False
+    rest_before, rest_after = _seconds(original.get("rest")), _seconds(edited.get("rest"))
+    if rest_after is not None and (rest_before is None or rest_after < rest_before):
+        return False
+    if _dose_extra(edited, "tempo") and _dose_extra(edited, "tempo") != _dose_extra(original, "tempo"):
+        return False
+    if _dose_extra(edited, "per_side") and not _dose_extra(original, "per_side"):
+        return False
     before, after = _dose_magnitudes(original), _dose_magnitudes(edited)
     if any(field not in before or value > before[field] for field, value in after.items()):
         return False
