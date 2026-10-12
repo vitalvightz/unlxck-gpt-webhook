@@ -349,7 +349,31 @@ class SafetyContext:
                              if (text := " ".join(_clean(injury.get(k)) for k in ("body_area", "description")).strip())]
         self.has_injuries = bool(flags)
 
-    def allows(self, block: Mapping[str, Any], raw: Mapping[str, Any] | None = None) -> bool:
+    def contraindicated(self, raw: Mapping[str, Any]) -> bool:
+        """A contraindication counts only when it names a currently injured region.
+
+        Region-less notes ("skip when pins are unavailable", blood pressure
+        during a cut) are not injury evidence. When no injured region could be
+        resolved, any contraindication still counts: unknown never clears.
+        """
+        from api.contracts.readiness_message import _injury_text_regions
+
+        notes = _strings(raw.get("contraindications"))
+        if not self.has_injuries or not notes:
+            return False
+        if not self.injured_regions:
+            return True
+        return any(_injury_text_regions(note) & self.injured_regions for note in notes)
+
+    def allows(self, block: Mapping[str, Any], raw: Mapping[str, Any] | None = None, *,
+               prescribed: bool = False) -> bool:
+        """Whether ``block`` fits today's injury guidance.
+
+        ``prescribed`` marks the athlete's own planned exercise with a new dose:
+        the planner already cleared it, so missing mechanical metadata is not a
+        reason to refuse it. Region overlap, the planner's exclusions and the
+        live policy still apply.
+        """
         from api.contracts.readiness_message import _session_mechanical_load_regions
         from fightcamp.injury_filtering import injury_flag_reasons, injury_violation_reasons
 
@@ -360,7 +384,7 @@ class SafetyContext:
             if injury_violation_reasons(item, self.injury_texts) or injury_flag_reasons(item, self.injury_texts):
                 return False
         loaded_regions = _session_mechanical_load_regions({"blocks": [block]})
-        if self.has_injuries and not loaded_regions:
+        if self.has_injuries and not loaded_regions and not prescribed:
             return False
         if loaded_regions & self.injured_regions:
             return False
@@ -737,7 +761,7 @@ def swap_candidates(
         stress_ceiling = ceiling if safety.has_injuries or reduced else {k: v for k, v in ceiling.items() if raw.get(k) is not None}
         if not _no_more_stress(raw, stress_ceiling):
             continue
-        if safety.has_injuries and _strings(raw.get("contraindications")):
+        if safety.contraindicated(raw):
             continue
         evidence = _purpose_evidence(original_raw, {**raw, "name": entry["name"]}, source)
         if evidence is None:
@@ -830,7 +854,7 @@ def add_candidates(
             continue
         if reduced and _total_cost(raw) > _COST_RANK["low"] * 3:
             continue
-        if safety.has_injuries and _strings(raw.get("contraindications")):
+        if safety.contraindicated(raw):
             continue
         block_type = "skill" if family == "skill" else "conditioning" if family == "conditioning" else "plyometric_power" if family == "power" else (
             "strength" if "compound" in _tags(raw) else "accessory")
@@ -900,7 +924,7 @@ def _library_candidate(
         return None
     if entry["exercise_key"] in taken or slug(entry["name"]) in taken:
         return None
-    if safety.has_injuries and _strings(raw.get("contraindications")):
+    if safety.contraindicated(raw):
         return "held"
     block_type = _added_block_type(record)
     if not safety.allows(_base_block(record, block_type=block_type), raw):
@@ -1182,14 +1206,18 @@ def apply_change(
         if payload.get("dose") is not None:
             dumped = _validated_dose(payload["dose"])
             new_block = _edited_dose(new_block, dumped)
-            # Validate the final requested prescription against today's injury
-            # guidance, not only the original exercise's catalogue identity.
-            safety = SafetyContext(store, athlete_id=athlete_id, occurrence=occurrence,
-                                   equipment=sorted(athlete.equipment))
-            record = _record_for_block(_library_index(), new_block)
-            raw = record["entry"]["raw"] if record else new_block
-            if (safety.has_injuries and _strings(raw.get("contraindications"))) or not safety.allows(new_block, raw):
-                raise HTTPException(409, "That prescription doesn't fit your current injury guidance.")
+            # A deload (same exercise, nothing raised) never needs clearance.
+            # Anything heavier or not comparable is validated against today's
+            # injury guidance, scoped to the regions the exercise loads.
+            if not _dose_not_heavier(occurrence.block or {}, new_block):
+                safety = SafetyContext(store, athlete_id=athlete_id, occurrence=occurrence,
+                                       equipment=sorted(athlete.equipment))
+                record = _record_for_block(_library_index(), new_block)
+                raw = record["entry"]["raw"] if record else new_block
+                probe = {**{field: deepcopy(raw[field]) for field in ("mechanical_load_regions", "mechanical_risk_tags")
+                            if raw.get(field) is not None and new_block.get(field) is None}, **new_block}
+                if safety.contraindicated(raw) or not safety.allows(probe, raw, prescribed=True):
+                    raise HTTPException(409, "That prescription doesn't fit your current injury guidance.")
         for field in ("coaching_cues", "stop_rules", "regression_options"):
             if payload.get(field) is not None:
                 values = payload[field]
@@ -1248,13 +1276,18 @@ def apply_change(
     return result
 
 
+def _dose_mode(block: Mapping[str, Any]) -> str:
+    saved = block.get("athlete_dose") if isinstance(block.get("athlete_dose"), Mapping) else {}
+    return saved.get("mode") or (
+        "intervals" if block.get("rounds") and block.get("work") else
+        "distance" if block.get("distance") else "duration" if block.get("duration") else
+        "reps" if block.get("sets") and block.get("reps") else "text")
+
+
 def _edited_dose(original: dict, dose: dict) -> dict:
     """Keep prescription metadata that the editor cannot represent unchanged."""
     old_dose = original.get("athlete_dose") or {}
-    old_mode = old_dose.get("mode") or (
-        "intervals" if original.get("rounds") and original.get("work") else
-        "distance" if original.get("distance") else "duration" if original.get("duration") else
-        "reps" if original.get("sets") and original.get("reps") else "text")
+    old_mode = _dose_mode(original)
     fields = _dose_fields(dose)
     result = deepcopy(original)
     for field in ("sets", "reps", "rounds", "duration", "distance", "work", "prescription_text", "athlete_dose"):
@@ -1284,6 +1317,96 @@ def _edited_dose(original: dict, dose: dict) -> dict:
                 fields[field] = deepcopy(old)
     result.update(fields)
     return result
+
+
+_DISTANCE_METRES = {"m": 1.0, "km": 1000.0, "mi": 1609.344, "yd": 0.9144}
+
+
+def _magnitude(value: Any) -> float | None:
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, (int, float)):
+        return float(value)
+    numbers = re.findall(r"\d+(?:\.\d+)?", value) if isinstance(value, str) else []
+    # A range such as "8-10" is as heavy as its top end.
+    return max(float(n) for n in numbers) if numbers else None
+
+
+def _dose_magnitudes(block: Mapping[str, Any]) -> dict[str, float]:
+    """Comparable dose quantities, normalised to one unit each."""
+    out: dict[str, float] = {}
+    for field in ("sets", "reps", "rounds"):
+        if (value := _magnitude(block.get(field))) is not None:
+            out[field] = value
+    for field in ("duration", "work"):
+        if (value := _seconds(block.get(field))) is not None:
+            out[field] = value
+    spec = block.get("distance")
+    if isinstance(spec, Mapping) and (value := _magnitude(spec.get("value"))) is not None:
+        factor = _DISTANCE_METRES.get(str(spec.get("unit", "")).lower())
+        if factor:
+            out["distance"] = value * factor
+    load = block.get("load")
+    if isinstance(load, Mapping) and load.get("method") == "absolute" and (value := _magnitude(load.get("value"))) is not None:
+        unit = str(load.get("unit", "")).lower()
+        if unit in {"kg", "lb", "lbs"}:
+            out["load"] = value * (0.45359237 if unit.startswith("lb") else 1)
+    effort = block.get("effort")
+    if isinstance(effort, Mapping) and effort.get("method") == "RPE" and (value := _magnitude(effort.get("value"))) is not None:
+        out["rpe"] = value
+    return out
+
+
+_NO_ADDED_LOAD = {"", "bodyweight", "body weight", "bw", "unloaded", "no load", "none"}
+
+
+def _intensity(block: Mapping[str, Any]) -> str:
+    text = _clean(block.get("intensity")).lower()
+    # Bodyweight adds nothing, so it reads the same as no stated intensity.
+    return "" if text in _NO_ADDED_LOAD else text
+
+
+def _seconds(spec: Any) -> float | None:
+    if not isinstance(spec, Mapping) or (value := _magnitude(spec.get("value"))) is None:
+        return None
+    unit = str(spec.get("unit", "")).lower()
+    return value * (3600 if unit.startswith("h") else 60 if unit.startswith("min") else 1)
+
+
+def _dose_extra(block: Mapping[str, Any], field: str) -> Any:
+    saved = block.get("athlete_dose") if isinstance(block.get("athlete_dose"), Mapping) else {}
+    value = block.get(field)
+    return saved.get(field) if value is None else value
+
+
+def _dose_not_heavier(original: Mapping[str, Any], edited: Mapping[str, Any]) -> bool:
+    """True when the edit only keeps or lowers the dose of the same exercise.
+
+    The prescription mode must be unchanged and every quantity the edit states
+    comparable to the original and no higher. Free text, a new dimension, a
+    changed effort/intensity that cannot be compared numerically, shorter rest,
+    a changed tempo or a switch to per-side work is not provably lighter.
+    """
+    mode = _dose_mode(edited)
+    if mode != _dose_mode(original):
+        return False
+    if mode == "text" and _clean(edited.get("prescription_text")) != _clean(original.get("prescription_text")):
+        return False
+    rest_before, rest_after = _seconds(original.get("rest")), _seconds(edited.get("rest"))
+    if rest_after is not None and (rest_before is None or rest_after < rest_before):
+        return False
+    if _dose_extra(edited, "tempo") and _dose_extra(edited, "tempo") != _dose_extra(original, "tempo"):
+        return False
+    if _dose_extra(edited, "per_side") and not _dose_extra(original, "per_side"):
+        return False
+    before, after = _dose_magnitudes(original), _dose_magnitudes(edited)
+    if any(field not in before or value > before[field] for field, value in after.items()):
+        return False
+    if _intensity(edited) != _intensity(original) and "load" not in after:
+        return False
+    if edited.get("effort") != original.get("effort") and "rpe" not in after:
+        return False
+    return True
 
 
 def _validated_dose(dose: Mapping[str, Any]) -> dict:
