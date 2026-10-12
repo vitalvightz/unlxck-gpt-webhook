@@ -85,7 +85,7 @@ import { GlossaryTooltip } from "@/components/glossary-tooltip";
 import { glossaryEntry } from "@/lib/glossary";
 import { WhyTooltip } from "@/components/why-tooltip";
 import { ExerciseDemo, ExerciseMediaProvider, useExerciseMedia } from "@/components/exercise-demo";
-import { PrivateExerciseMediaProvider, PrescribedPrivateVideo } from "@/components/private-exercise-video";
+import { PrivateExerciseMediaProvider, PrescribedPrivateVideo, PrescribedPrivateVideoThumbnail } from "@/components/private-exercise-video";
 import { ExerciseLogBadge, ExerciseLogPanel, ExerciseLogTick, useExerciseLoggingActive } from "@/components/exercise-log";
 import { demoThumbnailUrl } from "@/lib/exercise-demo";
 import { SafetyNote } from "@/components/safety-note";
@@ -651,7 +651,7 @@ export function ExerciseRow({
             onClick={onToggle}
           >
             <span className="ex-row-title">{title}</span>
-            {media ? <span className="sr-only"> Has demo video.</span> : null}
+            {media || block.private_media_id || block.community_revision_id ? <span className="sr-only"> Has demo video.</span> : null}
           </button>
           {tagLabel || summary ? (
             <span className="ex-row-meta">
@@ -690,7 +690,9 @@ export function ExerciseRow({
         </span>
         {/* Collapsed rows show which exercises have a demo; open, the demo
             itself is right below. On the right so every title lines up. */}
-        {media && rowCollapsed ? (
+        {rowCollapsed && (block.private_media_id || block.community_revision_id) ? (
+          <PrescribedPrivateVideoThumbnail id={block.private_media_id || block.community_revision_id!} community={!block.private_media_id} />
+        ) : media && rowCollapsed ? (
           <span className="ex-row-thumb" aria-hidden="true">
             {/* eslint-disable-next-line @next/next/no-img-element -- remote YouTube thumbnail, not a local asset */}
             <img

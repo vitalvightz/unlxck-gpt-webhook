@@ -2701,7 +2701,7 @@ export function PlanViewer({
           </div>
         ) : null}
 
-        <div className="plan-summary-actions plan-detail-actions">
+        <div className={`plan-summary-actions plan-detail-actions${plan.custom_plan_id && plan.athlete_id === viewerProfileId ? " plan-detail-actions-custom" : ""}`}>
           {canManagePlan && !completedFightCamp && !activePlanStateResolved ? (
             <button type="button" className="cta" disabled>
               Checking plan state…
