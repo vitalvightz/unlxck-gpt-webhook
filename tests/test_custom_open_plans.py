@@ -1,5 +1,6 @@
 """Custom prescriptions use the shared Open Plan execution and history paths."""
 import copy
+import json
 from datetime import date, timedelta
 from uuid import uuid4
 
@@ -409,6 +410,52 @@ def calendar_body():
         {"id": str(uuid4()), "name": "Training", "weekday": "Friday", "session_type": "sparring", "exercises": []},
     ]
     return value
+
+
+@pytest.mark.parametrize("recovery_work", [False, True], ids=["empty-recovery", "optional-recovery-work"])
+def test_json_text_custom_calendar_preserves_off_days_across_renewal(api, recovery_work):
+    _, store = api
+    value = calendar_body()
+    if recovery_work:
+        value["sessions"][-2]["exercises"] = body()["sessions"][0]["exercises"]
+    profile = _map_profile_row(store.profiles["athlete-1"])
+    result = custom_open_plan_result({**value, "id": str(uuid4())}, profile, training_day="2026-10-12")
+    row = {"id": result["plan_id"], "created_at": "2026-10-12T12:00:00Z", **result}
+    # Supabase can return the persisted brief as JSON text rather than a mapping.
+    text_row = {**row, "planning_brief": json.dumps(row["planning_brief"])}
+    original = copy.deepcopy(text_row)
+    template_days = row["structured_plan"]["weeks"][0]["days"]
+
+    for elapsed_week in (0, 3, 4, 7, 8):
+        current_day = date(2026, 10, 12) + timedelta(weeks=elapsed_week)
+        projected, context = project_open_structured_plan(
+            text_row, text_row["structured_plan"], current_training_day=current_day.isoformat(),
+        )
+        assert context["projection_status"] == "projected"
+        assert context["block_number"] == elapsed_week // 4 + 1
+        assert context["current_week_number"] == elapsed_week % 4 + 1
+        assert len(projected["weeks"]) == 4
+        block_start = date(2026, 10, 12) + timedelta(weeks=(elapsed_week // 4) * 4)
+        for week_position, week in enumerate(projected["weeks"]):
+            assert [d["weekday"] for d in week["days"]] == [day[:3] for day in WEEKDAYS]
+            for day_position, day in enumerate(week["days"]):
+                assert day["date"] == (block_start + timedelta(weeks=week_position, days=day_position)).isoformat()
+                # Exact session IDs, doses, notes and optional flags survive renewal.
+                assert day["sessions"] == template_days[day_position]["sessions"]
+            recovery, rest = week["days"][1], week["days"][6]
+            assert rest["day_type"] == "rest" and rest["sessions"] == []
+            assert recovery["day_type"] == "recovery"
+            if recovery_work:
+                assert len(recovery["sessions"]) == 1
+                assert recovery["sessions"][0]["optional"] is True
+                assert recovery["sessions"][0]["blocks"][0]["athlete_dose"]["load_or_intensity"] == "80 kg"
+            else:
+                assert recovery["sessions"] == []
+        mapping_projection, mapping_context = project_open_structured_plan(
+            row, row["structured_plan"], current_training_day=current_day.isoformat(),
+        )
+        assert projected == mapping_projection and context == mapping_context
+    assert text_row == original
 
 
 def test_demo_calendar_publishes_recovery_and_implicit_rest_without_data_loss(api):

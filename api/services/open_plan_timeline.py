@@ -355,8 +355,8 @@ def project_open_structured_plan(
     # Athlete calendars include explicit rest/recovery rows. The actual training
     # weekdays remain separate, so neither the fallback schedule nor streaks
     # manufacture work on the other days.
-    brief = plan_row.get("planning_brief")
-    custom_calendar = isinstance(brief, Mapping) and bool(brief.get("custom_plan"))
+    brief = _mapping(plan_row.get("planning_brief"))
+    custom_calendar = bool(brief.get("custom_plan"))
     calendar_days = list(WEEKDAYS) if custom_calendar else training_days
     # Validate every week before applying any dates so projection is atomic.
     resolved_weeks: list[dict[str, Any]] = []
