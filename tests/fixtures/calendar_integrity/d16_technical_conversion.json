@@ -2,7 +2,6 @@
   "generator_mode": "deterministic_planner_plus_ai_finalizer",
   "payload_variant": null,
   "roles": [
-    [1, "SPP", "alactic_speed_day", "conditioning", "thursday", 15, false, false, false, "", ""],
     [1, "SPP", "breathing_reset", "support_insert", "friday", 14, false, false, false, "support", "low"],
     [1, "SPP", "fight_visualization", "support_insert", "monday", 11, true, false, false, "support", "low"],
     [1, "SPP", "fight_visualization", "support_insert", "sunday", 12, true, false, false, "support", "low"],
@@ -31,6 +30,7 @@
     [2, "tuesday", "convert_to_technical_suggested", "technical"]
   ],
   "suppressed": [
+    [1, "alactic_speed_day", "conditioning", "", []],
     [1, "neural_plus_strength_day", "strength", "", ["proximity_to_fight", "two_hard_spar_days"]],
     [1, "recovery_reset_day", "recovery", "", ["proximity_to_fight", "two_hard_spar_days"]],
     [1, "strength_touch_day", "strength", "", ["proximity_to_fight", "two_hard_spar_days"]],
@@ -40,5 +40,10 @@
     [2, "hard_sparring_day", "sparring", "no_hard_sparring_day", []],
     [2, "neural_primer_day", "strength", "", ["proximity_to_fight", "two_hard_spar_days"]]
   ],
-  "tail_handoff": {"active": true, "normal_planner_through_d": 14, "late_fight_planner_from_d": 13, "source": "finished_existing_late_fight_path"}
+  "tail_handoff": {
+    "active": true,
+    "normal_planner_through_d": 14,
+    "late_fight_planner_from_d": 13,
+    "source": "finished_existing_late_fight_path"
+  }
 }

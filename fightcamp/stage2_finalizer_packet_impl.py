@@ -539,6 +539,8 @@ def _session_count_summary(week: dict[str, Any], athlete_model: dict[str, Any]) 
         reasons.append("fight_week_override")
     if isinstance(compression, dict) and compression.get("active"):
         reasons.append("intentional_compression")
+    if "no_eligible_exercise_membership" in reason_codes:
+        reasons.append("no_eligible_exercise")
 
     reason_labels = {
         "taper": "Taper trims volume while preserving sharpness.",
@@ -549,6 +551,7 @@ def _session_count_summary(week: dict[str, Any], athlete_model: dict[str, Any]) 
         "coach_led_contact_load": "Hard sparring / contact work owns part of the weekly load.",
         "fight_week_override": "Fight-week override caps app-owned work.",
         "intentional_compression": "Planner marked this as intentional compression.",
+        "no_eligible_exercise": "A session with no eligible exercise was removed rather than filled.",
     }
 
     summary = {
