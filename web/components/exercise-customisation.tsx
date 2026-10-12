@@ -4,6 +4,8 @@ import { createContext, useCallback, useContext, useEffect, useId, useMemo, useS
 import Link from "next/link";
 
 import { ExerciseDemo } from "@/components/exercise-demo";
+import { ExercisePrescriptionEditor } from "@/components/exercise-prescription-editor";
+import { doseFromBlock, type DoseDraft } from "@/lib/exercise-dose";
 import { useToast } from "@/components/toast-provider";
 import { InjuryDetailSheet } from "@/components/today/injury-detail-sheet";
 import {
@@ -43,6 +45,7 @@ export type ExerciseCustomisation = {
   planId: string;
   /** The athlete-local training day. Earlier days are never offered. */
   today: string;
+  canRepeat?: boolean;
   /** Workouts already started or logged keep their prescription. */
   isLocked?: (date: string, sessionId: string) => boolean;
   /** Apply the server's effective session at once, then reload quietly. */
@@ -156,7 +159,7 @@ function useExerciseChange(scope: SessionScope | null) {
   return { apply, restore };
 }
 
-function DotsIcon() {
+export function DotsIcon() {
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true">
       <circle cx="5" cy="12" r="1.6" />
@@ -166,7 +169,7 @@ function DotsIcon() {
   );
 }
 
-type Panel = "menu" | "swap" | null;
+type Panel = "menu" | "swap" | "edit" | null;
 
 /** The discreet three-dot control on an exercise row. */
 export function ExerciseActions({ block, title }: { block: StructuredBlock; title: string }) {
@@ -175,6 +178,7 @@ export function ExerciseActions({ block, title }: { block: StructuredBlock; titl
   const [busy, setBusy] = useState(false);
   const [confirm, setConfirm] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [editScope, setEditScope] = useState<"occurrence" | "future">("occurrence");
   const { apply, restore } = useExerciseChange(scope);
   if (!scope || !isCustomisableBlock(block)) return null;
   const change = block.athlete_change;
@@ -238,6 +242,9 @@ export function ExerciseActions({ block, title }: { block: StructuredBlock; titl
               </div>
             ) : (
               <div className={styles.actionBar} role="group" aria-label={`Change ${title}`}>
+                <button type="button" className={styles.action} onClick={() => setPanel("edit")} disabled={busy}>
+                  <span>Edit</span>
+                </button>
                 <button type="button" className={styles.action} onClick={() => setPanel("swap")} disabled={busy}>
                   <SwapIcon />
                   <span>Swap</span>
@@ -291,6 +298,29 @@ export function ExerciseActions({ block, title }: { block: StructuredBlock; titl
           }
         />
       ) : null}
+      {panel === "edit" ? <InjuryDetailSheet title={`Edit ${title}`} onClose={close} busy={busy} panelClassName={styles.sheet}>
+        <div className={styles.editCard}>
+          <div className="ex-row" data-open="true">
+            <div className="ex-row-head"><span className="ex-row-text">
+              <span className="ex-row-title">{title}</span>
+              <span className="ex-row-meta">{block.block_type?.replaceAll("_", " ")}</span>
+            </span></div>
+            <ExercisePrescriptionEditor initial={doseFromBlock(block)} busy={busy} action="Save changes"
+              cues={block.coaching_cues ?? []} stopRules={block.stop_rules ?? []}
+              onSubmit={(dose, coaching_cues, stop_rules) => {
+                setBusy(true); setError(null);
+                void apply({ action: "edit", block_id: blockId, dose, coaching_cues, stop_rules, scope: editScope }, `Updated ${title}`)
+                  .then(close).catch(caught => setError(messageOf(caught, "Couldn't save. Try again.")))
+                  .finally(() => setBusy(false));
+              }} />
+          </div>
+          {scope.customisation.canRepeat ? <div className={styles.scopes} role="radiogroup" aria-label="Apply edits to">
+            <button type="button" className={styles.scope} role="radio" aria-checked={editScope === "occurrence"} onClick={() => setEditScope("occurrence")}>Just this workout</button>
+            <button type="button" className={styles.scope} role="radio" aria-checked={editScope === "future"} onClick={() => setEditScope("future")}>Future workouts</button>
+          </div> : null}
+          {error ? <p className={styles.error} role="alert">{error}</p> : null}
+        </div>
+      </InjuryDetailSheet> : null}
     </>
   );
 }
@@ -545,11 +575,10 @@ function ExerciseOptionsSheet({
                   </div>
                 ) : null}
                 {dosing === option.catalogue_id ? (
-                  <DoseControl
-                    option={option}
+                  <ExercisePrescriptionEditor
+                    initial={{ ...option.suggested_dose, mode: option.dose_mode ?? "text" } as DoseDraft}
                     busy={pending === option.catalogue_id}
                     action={mode === "swap" ? "Swap" : "Add"}
-                    onCancel={() => setDosing(null)}
                     onSubmit={(dose) => void choose(option, dose)}
                   />
                 ) : null}
@@ -573,87 +602,6 @@ function ExerciseOptionsSheet({
         ) : null}
       </div>
     </InjuryDetailSheet>
-  );
-}
-
-function numberOr(value: unknown, fallback: string): string {
-  return typeof value === "number" && Number.isFinite(value) ? String(value) : fallback;
-}
-
-/** A compact dose before applying, only when no reliable dose exists. */
-function DoseControl({
-  option,
-  busy,
-  action,
-  onCancel,
-  onSubmit,
-}: {
-  option: ExerciseAlternative;
-  busy: boolean;
-  action: string;
-  onCancel: () => void;
-  onSubmit: (dose: ExerciseChangeDose) => void;
-}) {
-  const doseMode = option.dose_mode ?? "reps";
-  const suggested = option.suggested_dose ?? {};
-  const [first, setFirst] = useState(numberOr(doseMode === "intervals" ? suggested.rounds : suggested.sets, ""));
-  const [second, setSecond] = useState(
-    numberOr(doseMode === "reps" ? suggested.reps : doseMode === "duration" ? suggested.duration_seconds : suggested.work_seconds, ""),
-  );
-  const [rest, setRest] = useState(numberOr(suggested.rest_seconds, ""));
-  const labels = doseMode === "reps" ? ["Sets", "Reps"] : doseMode === "duration" ? ["Sets", "Secs"] : ["Rounds", "Work s"];
-  const firstValue = Number.parseInt(first, 10);
-  const secondValue = Number.parseInt(second, 10);
-  const restValue = rest.trim() === "" ? null : Number.parseInt(rest, 10);
-  const valid =
-    secondValue > 0
-    && (doseMode === "duration" ? !first || firstValue > 0 : firstValue > 0)
-    && (doseMode !== "intervals" || (restValue !== null && restValue >= 0));
-
-  function submit() {
-    if (!valid) return;
-    if (doseMode === "reps") {
-      onSubmit({ mode: "reps", sets: firstValue, reps: secondValue, rest_seconds: restValue });
-    } else if (doseMode === "duration") {
-      onSubmit({ mode: "duration", duration_seconds: secondValue, sets: first ? firstValue : null, rest_seconds: restValue });
-    } else {
-      onSubmit({ mode: "intervals", rounds: firstValue, work_seconds: secondValue, rest_seconds: restValue ?? 0 });
-    }
-  }
-
-  return (
-    <form
-      className={styles.dose}
-      onSubmit={(event) => {
-        event.preventDefault();
-        submit();
-      }}
-      onKeyDown={(event) => {
-        if (event.key === "Escape") {
-          event.stopPropagation();
-          onCancel();
-        }
-      }}
-    >
-      {[
-        [labels[0], first, setFirst],
-        [labels[1], second, setSecond],
-        ["Rest s", rest, setRest],
-      ].map(([label, value, setter]) => (
-        <label key={label as string} className={styles.doseField}>
-          <span>{label as string}</span>
-          <input
-            inputMode="numeric"
-            pattern="[0-9]*"
-            value={value as string}
-            onChange={(event) => (setter as (next: string) => void)(event.target.value.replace(/[^0-9]/g, "").slice(0, 4))}
-          />
-        </label>
-      ))}
-      <button type="submit" className={styles.primary} disabled={!valid || busy}>
-        {busy ? "…" : action}
-      </button>
-    </form>
   );
 }
 

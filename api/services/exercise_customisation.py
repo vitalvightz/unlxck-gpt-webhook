@@ -1,4 +1,4 @@
-"""Swap, add and remove exercises on an app-generated plan, deterministically.
+"""Edit, swap, add and remove exercises on generated or custom training plans.
 
 This is personalisation of an existing prescription, not a workout builder:
 
@@ -22,6 +22,7 @@ treated as safe. Exercises with no reviewed bank evidence are not offered.
 from __future__ import annotations
 
 import logging
+import re
 from collections.abc import Mapping, Sequence
 from copy import deepcopy
 from datetime import date, datetime, timedelta, timezone
@@ -31,7 +32,8 @@ from fastapi import HTTPException
 
 from api.contracts.custom_plans import CustomDose
 from api.contracts.injury_policy import reconcile_session_prescription
-from api.services.custom_plans import dose_block_fields, dose_text, source_suggestion
+from api.services.custom_plans import dose_block_fields, dose_text
+from api.services.exercise_dose import dose_guidance
 from api.services.exercise_media import load_media_index
 from api.services.exercise_overrides import (
     PROTECTED_BLOCK_TYPES,
@@ -40,12 +42,14 @@ from api.services.exercise_overrides import (
     session_slot,
     slug,
     stored_overrides,
+    editable_day_sessions,
     weekday_token,
 )
 from api.services.open_plan_timeline import open_plan_spec
 from api.services.training_library import cache, preview
 from fightcamp.tag_maps import GOAL_NORMALIZER, GOAL_TAG_MAP, STYLE_TAG_MAP, WEAKNESS_NORMALIZER, WEAKNESS_TAG_MAP
 from fightcamp.training_context import normalize_athlete_equipment_list, normalize_equipment_list
+from fightcamp.sports import SUPPORTED_SPORTS, normalize_sport
 
 logger = logging.getLogger(__name__)
 
@@ -177,6 +181,7 @@ class AthleteContext:
                               for tag in WEAKNESS_TAG_MAP.get(weakness, [weakness])}
         styles = [*_strings(athlete.get("technical_style")), *_strings(athlete.get("tactical_style"))]
         self.styles = {style.strip().lower() for style in styles}
+        self.sports = {normalize_sport(style) for style in _strings(athlete.get("technical_style"))}
         self.style_tags = {tag for style in self.styles
                            for tag in STYLE_TAG_MAP.get(style, STYLE_TAG_MAP.get(style.replace(" ", "_"), []))}
 
@@ -233,8 +238,6 @@ def locate_occurrence(
     plan_row = store.get_training_plan_for_athlete(plan_id, athlete_id)
     if plan_row is None:
         raise HTTPException(404, "plan not found")
-    if is_custom_plan(plan_row):
-        raise HTTPException(409, "Change your own plan's exercises in the plan builder.")
     training_day = resolve_training_day(athlete_timezone, now=now)
     target = _parse_day(day)
     if target < date.fromisoformat(training_day):
@@ -246,6 +249,7 @@ def locate_occurrence(
         for plan_day in _iter_mapping_items(week.get("days")):
             if _clean(plan_day.get("date"))[:10] != target.isoformat():
                 continue
+            plan_day = {**plan_day, "sessions": editable_day_sessions(plan_day)}
             session = next((s for s in _iter_mapping_items(plan_day.get("sessions"))
                             if _clean(s.get("session_id")) == session_id), None)
             if session is None:
@@ -280,10 +284,20 @@ def block_is_editable(block: Mapping[str, Any]) -> bool:
     if block_type in PROTECTED_BLOCK_TYPES:
         return False
     # Anything the athlete added is theirs to change, whatever its type.
-    if block_type not in EDITABLE_BLOCK_TYPES and change.get("action") != "add":
+    if block_type not in EDITABLE_BLOCK_TYPES and change.get("action") not in {"add", "edit"} and block.get("prescription_source") != "athlete":
         return False
     # Anything carrying injury-policy ownership is clinical, whatever its type.
     return not any(block.get(field) for field in ("injury_id", "policy_id", "rehab_drill_id", "clinical_review_pin"))
+
+
+def session_can_add(session: Mapping[str, Any]) -> bool:
+    kind = _clean(session.get("session_type"))
+    if kind in ADDABLE_SESSION_TYPES:
+        return True
+    if kind == "sparring":
+        from api.contracts.readiness_message import _is_hard_live_contact
+        return not _is_hard_live_contact(session, "high")
+    return False
 
 
 # ---------------------------------------------------------------------------
@@ -406,6 +420,44 @@ def _phase_allows(raw: Mapping[str, Any], phase: str) -> bool:
     return not phases or phase in phases
 
 
+def _sport_allows(record: Mapping[str, Any], athlete: AthleteContext) -> bool:
+    """Sport identity is eligibility, not just a ranking bonus (also on write)."""
+    from fightcamp.conditioning import is_banned_drill
+
+    entry, raw = record["entry"], record["entry"]["raw"]
+    sports = {normalize_sport(s) for s in _strings(raw.get("sports"))}
+    tagged = {normalize_sport(t) for t in _tags(raw)} & set(SUPPORTED_SPORTS)
+    declared = athlete.sports
+    compatible = set(declared)
+    if compatible & {"muay_thai", "kickboxing", "karate"}:
+        compatible |= {"muay_thai", "kickboxing"}
+    if compatible & {"bjj", "wrestling", "grappling"}:
+        compatible.add("grappling")
+    if "mma" in compatible:
+        compatible |= set(SUPPORTED_SPORTS) | {"grappling"}
+    if sports and "universal" not in sports and not sports & compatible:
+        return False
+    if tagged and not tagged & compatible:
+        return False
+    sport_specific = bool(sports or tagged or entry.get("content_class") == "technical_coordination")
+    if not sport_specific:
+        return True
+    if not declared:
+        return False
+    # Audience tags are not techniques. A jab drill shared by boxing and Muay
+    # Thai remains valid for a boxer; "keep elbows tucked" is also a cue, not
+    # an elbow-strike prescription.
+    technique_tags = [tag for tag in _strings(raw.get("tags")) if normalize_sport(tag) not in SUPPORTED_SPORTS]
+    details = str(raw.get("modality") or "")
+    return any(
+        sport not in {"boxing", "kickboxing"} or not is_banned_drill(
+            entry["name"], technique_tags, sport, details=details,
+            technical_styles=sorted(declared),
+        )
+        for sport in declared
+    )
+
+
 def _no_more_stress(candidate: Mapping[str, Any], ceiling: Mapping[str, int | None]) -> bool:
     """No cost field rises above the ceiling; unknown never passes a known ceiling."""
     for field, limit in ceiling.items():
@@ -436,20 +488,8 @@ def _block_mode(block: Mapping[str, Any]) -> str | None:
 
 
 def _candidate_mode(record: Mapping[str, Any]) -> tuple[str | None, dict | None]:
-    """``(mode, reliable bank dose)``: strength rows are rep work unless isometric."""
-    entry = record["entry"]
-    if entry["source"] in _STRENGTH_SOURCES:
-        raw = entry["raw"]
-        isometric = _clean(raw.get("movement")).lower() in _ISOMETRIC_MOVEMENTS
-        return ("duration" if isometric else "reps"), None
-    try:
-        suggestion = source_suggestion(entry["catalogue_id"])
-    except HTTPException:
-        return None, None
-    dose = suggestion.dose
-    if dose is None or dose.mode == "text":
-        return None, None
-    return dose.mode, dose.model_dump(mode="json", exclude_none=True)
+    mode, reliable, _ = dose_guidance(record)
+    return mode, reliable
 
 
 def _carry_dose(original: Mapping[str, Any], mode: str) -> dict[str, Any]:
@@ -460,7 +500,8 @@ def _carry_dose(original: Mapping[str, Any], mode: str) -> dict[str, Any]:
     RPE/RIR/intent target, which does not raise the session's stress.
     """
     fields = {"reps": ("sets", "reps", "rest", "tempo"), "intervals": ("rounds", "work", "rest"),
-              "duration": ("sets", "duration", "rest")}[mode]
+              "duration": ("sets", "duration", "rest"), "distance": ("sets", "distance", "rest"),
+              "text": ()}[mode]
     carried = {field: deepcopy(original[field]) for field in fields if original.get(field) not in (None, "", {})}
     effort = _carried_effort(original.get("effort"))
     if effort:
@@ -490,6 +531,12 @@ def prescription_summary(fields: Mapping[str, Any]) -> str | None:
     elif fields.get("duration"):
         duration = _measured_seconds(fields["duration"])
         parts.append(f"{fields['sets']} × {duration}" if fields.get("sets") else duration)
+    elif fields.get("distance"):
+        distance = fields["distance"]
+        amount = f"{distance['value']:g} {distance['unit']}"
+        parts.append(f"{fields['sets']} × {amount}" if fields.get("sets") else amount)
+    elif fields.get("prescription_text"):
+        return str(fields["prescription_text"])
     effort = fields.get("effort")
     if isinstance(effort, Mapping) and effort.get("value") is not None and effort.get("method") in {"RPE", "RIR"}:
         value = effort["value"]
@@ -580,13 +627,13 @@ def _relevance(raw: Mapping[str, Any], athlete: AthleteContext) -> tuple[int, li
 def _purpose_evidence(original: Mapping[str, Any], candidate: Mapping[str, Any], source: str) -> tuple[int, list[str]] | None:
     """Score how far the candidate preserves the original's training purpose.
 
-    ``None`` means no trustworthy equivalence: names never count, and a shared
-    generic label (compound, dynamic) is not a shared adaptation.
+    Metadata matches rank first. A useful exercise word can also establish a
+    related movement, even when the bank uses different pattern/category labels.
     """
     if source in _CONDITIONING_SOURCES:
         same_system = _clean(original.get("system")).lower() == _clean(candidate.get("system")).lower() != ""
         if not same_system:
-            return None
+            return _name_evidence(original, candidate)
         score, reasons = 40, [f"Same {_clean(candidate.get('system'))} energy system"]
         if _clean(original.get("modality")).lower() == _clean(candidate.get("modality")).lower() != "":
             score += 10
@@ -601,7 +648,7 @@ def _purpose_evidence(original: Mapping[str, Any], candidate: Mapping[str, Any],
     # A shared pattern label is only evidence within the same body region; across
     # regions ("rotational" core twist vs lateral lunge) it is a coincidence.
     if not ((same_movement and same_category) or (same_category and same_method and len(overlap) >= 2)):
-        return None
+        return _name_evidence(original, candidate)
     score, reasons = 0, []
     category = _CATEGORY_LABELS.get(_clean(candidate.get("category")).lower())
     if same_movement:
@@ -619,6 +666,20 @@ def _purpose_evidence(original: Mapping[str, Any], candidate: Mapping[str, Any],
     mech = {t for t in _tags(original) if t.startswith("mech_")} & {t for t in _tags(candidate) if t.startswith("mech_")}
     score += min(5, len(mech))
     return score, reasons
+
+
+def _name_evidence(original: Mapping[str, Any], candidate: Mapping[str, Any]) -> tuple[int, list[str]] | None:
+    # Avoid treating shared adjectives (heavy, alternating, bodyweight) as an
+    # exercise match, or matching "lunge" inside an unrelated word.
+    words = {"lunge", "squat", "deadlift", "hinge", "press", "push", "pull", "row", "run", "sprint",
+             "carry", "slam", "throw", "rope", "plank", "jump", "hop", "curl", "raise", "crunch",
+             "bridge", "rollout", "rotation", "punch", "shadowboxing", "bike", "cycle"}
+    def tokens(raw):
+        names = str(raw.get("name") or raw.get("display_name") or "").lower()
+        found = set(re.findall(r"[a-z]+", names))
+        return found | {t[:-1] for t in found if t.endswith("s")} | ({"run"} if "running" in found else set())
+    shared = sorted(tokens(original) & tokens(candidate) & words)
+    return (25 + len(shared), [f"Related {shared[0]} movement"]) if shared else None
 
 
 def _taken_identities(occurrence: Occurrence) -> set[str]:
@@ -647,13 +708,12 @@ def swap_candidates(
     index = _library_index()
     original = _record_for_block(index, block)
     sources = _SOURCES_BY_BLOCK_TYPE.get(_clean(block.get("block_type")), ())
-    if original is None or original["entry"]["source"] not in sources:
-        return [], "There's no verified match for this exercise yet. Search the library instead."
     athlete = AthleteContext(_intake_for_plan(store, occurrence.plan_row, athlete_id))
     safety = safety or SafetyContext(store, athlete_id=athlete_id, occurrence=occurrence,
                                      equipment=sorted(athlete.equipment))
-    original_raw = original["entry"]["raw"]
-    source = original["entry"]["source"]
+    original_raw = {**(original["entry"]["raw"] if original else block),
+                    "name": original["entry"]["name"] if original else block.get("display_name")}
+    source = original["entry"]["source"] if original else next(iter(sources), "")
     family = _family(original_raw, source)
     ceiling = {field: _cost(original_raw, field) for field in _COST_FIELDS}
     reduced = _readiness_reduced(store, athlete_id, occurrence)
@@ -665,20 +725,21 @@ def swap_candidates(
     for record in index.records:
         entry = record["entry"]
         raw = entry["raw"]
-        if (record["summary"]["category"] != "training" or entry["source"] != source
-                or not entry["exercise_key"] or entry["catalogue_id"] == original["entry"]["catalogue_id"]):
+        if (record["summary"]["category"] != "training" or entry["source"] not in sources
+                or not entry["exercise_key"] or (original and entry["catalogue_id"] == original["entry"]["catalogue_id"])):
             continue
         if entry["exercise_key"] in taken or slug(entry["name"]) in taken or entry["exercise_key"] == block_identity(block):
             continue
-        if _family(raw, entry["source"]) != family:
+        if family and _family(raw, entry["source"]) != family:
             continue
-        if not _phase_allows(raw, occurrence.phase) or not _equipment_available(record, athlete):
+        if not _sport_allows(record, athlete) or not _phase_allows(raw, occurrence.phase) or not _equipment_available(record, athlete):
             continue
-        if not _no_more_stress(raw, ceiling):
+        stress_ceiling = ceiling if safety.has_injuries or reduced else {k: v for k, v in ceiling.items() if raw.get(k) is not None}
+        if not _no_more_stress(raw, stress_ceiling):
             continue
         if safety.has_injuries and _strings(raw.get("contraindications")):
             continue
-        evidence = _purpose_evidence(original_raw, raw, source)
+        evidence = _purpose_evidence(original_raw, {**raw, "name": entry["name"]}, source)
         if evidence is None:
             continue
         candidate_block = _base_block(record, block_type=_clean(block.get("block_type")))
@@ -711,8 +772,8 @@ def swap_candidates(
             dose_required = True
         if not dose_required and not prescription_summary(fields):
             dose_required = True
-        if dose_required and suggested is None and mode:
-            suggested = {"mode": mode}
+        if dose_required and suggested is None:
+            suggested = dose_guidance(record)[2]
         candidates.append(Candidate(record, score, reasons, fields, dose_required, mode or "reps", suggested))
     candidates.sort(key=lambda c: (-c.score, c.record["entry"]["name"], c.record["entry"]["catalogue_id"]))
     notice = None
@@ -730,6 +791,9 @@ def add_candidates(
 
     session_type = _clean(occurrence.session.get("session_type"))
     sources = _SOURCES_BY_SESSION_TYPE.get(session_type)
+    if session_type in {"skill", "sparring"} and session_can_add(occurrence.session):
+        sources = tuple({r["entry"]["source"] for r in _library_index().records
+                         if r["entry"].get("content_class") == "technical_coordination"})
     if not sources:
         # No ranked suggestions for this kind of work; the library search is open.
         return [], "Search the library to add an exercise."
@@ -757,10 +821,10 @@ def add_candidates(
             continue
         if entry["exercise_key"] in taken or slug(entry["name"]) in taken:
             continue
-        family = _family(raw, entry["source"])
+        family = "skill" if entry.get("content_class") == "technical_coordination" else _family(raw, entry["source"])
         if family is None:
             continue
-        if not _phase_allows(raw, occurrence.phase) or not _equipment_available(record, athlete):
+        if not _sport_allows(record, athlete) or not _phase_allows(raw, occurrence.phase) or not _equipment_available(record, athlete):
             continue
         if not _no_more_stress(raw, {k: v for k, v in ceiling.items() if v is not None and raw.get(k) is not None}):
             continue
@@ -768,7 +832,7 @@ def add_candidates(
             continue
         if safety.has_injuries and _strings(raw.get("contraindications")):
             continue
-        block_type = "conditioning" if family == "conditioning" else "plyometric_power" if family == "power" else (
+        block_type = "skill" if family == "skill" else "conditioning" if family == "conditioning" else "plyometric_power" if family == "power" else (
             "strength" if "compound" in _tags(raw) else "accessory")
         candidate_block = _base_block(record, block_type=block_type)
         if not safety.allows(candidate_block, raw):
@@ -796,7 +860,7 @@ def add_candidates(
             if role_match:
                 fields, dose_required = role_match, False
         if dose_required:
-            suggested = {"mode": mode or "reps"}
+            suggested = dose_guidance(record)[2]
         candidates.append(Candidate(record, score, reasons, fields, dose_required, mode or "reps", suggested,
                                     block_type=block_type))
     candidates.sort(key=lambda c: (-c.score, c.record["entry"]["name"], c.record["entry"]["catalogue_id"]))
@@ -832,7 +896,7 @@ def _library_candidate(
     """
     entry = record["entry"]
     raw = entry["raw"]
-    if record["summary"]["category"] != "training" or not entry["exercise_key"]:
+    if record["summary"]["category"] != "training" or not entry["exercise_key"] or not _sport_allows(record, athlete):
         return None
     if entry["exercise_key"] in taken or slug(entry["name"]) in taken:
         return None
@@ -853,7 +917,7 @@ def _library_candidate(
     elif (role_match := _role_dose(record, existing, mode)):
         fields, dose_required = role_match, False
     if dose_required:
-        suggested = {"mode": mode or "reps"}
+        suggested = dose_guidance(record)[2]
     return Candidate(record, 0, reasons, fields, dose_required, mode or "reps", suggested, block_type=block_type)
 
 
@@ -970,7 +1034,7 @@ def addition_options(
     occurrence = locate_occurrence(store, athlete_id=athlete_id, athlete_timezone=athlete_timezone,
                                    plan_id=plan_id, day=day, session_id=session_id, now=now)
     require_editable_day(store, occurrence, athlete_id)
-    if _clean(occurrence.session.get("session_type")) not in ADDABLE_SESSION_TYPES:
+    if not session_can_add(occurrence.session):
         raise HTTPException(409, "Exercises can't be added to this session.")
     if query.strip():
         candidates, notice = library_add_candidates(store, athlete_id=athlete_id, occurrence=occurrence,
@@ -1095,7 +1159,7 @@ def apply_change(
         "session_slot": session_slot(occurrence.session, position=occurrence.day["sessions"].index(occurrence.session)),
         "created_at": now_iso, "revoked_at": None,
     }
-    if action in {"swap", "remove"}:
+    if action in {"swap", "remove", "edit"}:
         block = occurrence.block or {}
         if not block_is_editable(block):
             raise HTTPException(409, "This exercise stays as prescribed.")
@@ -1106,18 +1170,36 @@ def apply_change(
 
         remaining = [b for b in _iter_mapping_items(occurrence.session.get("blocks"))
                      if _clean(b.get("block_id")) != _clean((occurrence.block or {}).get("block_id"))]
-        if not remaining:
+        technical = _clean(occurrence.session.get("session_type")) in {"skill", "sparring"} and session_can_add(occurrence.session)
+        if not remaining and not technical:
             raise HTTPException(409, "Keep at least one exercise. Swap it, or skip the session instead.")
         if not payload.get("confirmed"):
             notice = _removal_notice(occurrence, athlete)
             if notice:
                 raise HTTPException(409, {"code": "confirm_remove", "message": notice})
+    elif action == "edit":
+        new_block = deepcopy(dict(occurrence.block or {}))
+        if payload.get("dose") is not None:
+            dumped = _validated_dose(payload["dose"])
+            # Changing format removes the old prescription's fields; a timed
+            # drill cannot keep stale reps or a previous exercise's weight.
+            for field in ("sets", "reps", "rounds", "duration", "distance", "work", "rest", "effort", "load",
+                          "intensity", "tempo", "prescription_text", "athlete_dose"):
+                new_block.pop(field, None)
+            new_block.update(_dose_fields(dumped))
+        for field in ("coaching_cues", "stop_rules"):
+            if payload.get(field) is not None:
+                values = payload[field]
+                if any(not isinstance(value, str) or len(value.strip()) > 500 for value in values):
+                    raise HTTPException(422, "Keep each cue and stop rule under 500 characters.")
+                new_block[field] = [value.strip() for value in values if value.strip()]
+        entry["block"] = new_block
     else:
         safety = SafetyContext(store, athlete_id=athlete_id, occurrence=occurrence, equipment=sorted(athlete.equipment))
         if action == "swap":
             candidates, _ = swap_candidates(store, athlete_id=athlete_id, occurrence=occurrence, safety=safety)
         else:
-            if _clean(occurrence.session.get("session_type")) not in ADDABLE_SESSION_TYPES:
+            if not session_can_add(occurrence.session):
                 raise HTTPException(409, "Exercises can't be added to this session.")
             candidates, _ = add_candidates(store, athlete_id=athlete_id, occurrence=occurrence, safety=safety)
         catalogue_id = _clean(payload.get("catalogue_id"))
@@ -1132,24 +1214,16 @@ def apply_change(
         fields = chosen.fields
         dose = payload.get("dose")
         if dose is not None:
-            try:
-                parsed = CustomDose.model_validate(dose)
-            except ValueError:
-                raise HTTPException(422, "Check the sets, reps or time.") from None
-            if parsed.mode not in {"reps", "duration", "intervals"} or parsed.load_or_intensity:
-                raise HTTPException(422, "Choose sets and reps, a time, or rounds.")
-            from api.services.custom_plans import dose_incomplete
-
-            dumped = parsed.model_dump(mode="json", exclude_none=True)
-            if dose_incomplete(dumped):
-                raise HTTPException(422, "Finish the dose before adding it.")
-            fields = dose_block_fields(dumped)
-            fields["prescription_text"] = dose_text(dumped)
+            dumped = _validated_dose(dose)
+            fields = _dose_fields(dumped)
         elif chosen.dose_required:
             raise HTTPException(422, "Set a dose for this exercise first.")
         block_type = (_clean((occurrence.block or {}).get("block_type")) if action == "swap"
                       else chosen.block_type or "accessory")
         new_block = {**_base_block(chosen.record, block_type=block_type), **deepcopy(fields)}
+        if is_custom_plan(plan_row):
+            new_block["prescription_source"] = "athlete"
+            new_block["source_session_id"] = entry["session_id"]
         if action == "add":
             entry.update(block_id=None, target_key=None, original=None)
         entry["block"] = new_block
@@ -1166,6 +1240,24 @@ def apply_change(
                                           plan_id=plan_id, day=occurrence.date.isoformat(),
                                           session_id=entry["session_id"], now=now)
     return result
+
+
+def _validated_dose(dose: Mapping[str, Any]) -> dict:
+    from api.services.custom_plans import dose_incomplete
+
+    try:
+        dumped = CustomDose.model_validate(dose).model_dump(mode="json", exclude_none=True)
+    except ValueError:
+        raise HTTPException(422, "Check the dose, weight, rest and effort.") from None
+    if dose_incomplete(dumped):
+        raise HTTPException(422, "Finish the dose before saving it.")
+    return dumped
+
+
+def _dose_fields(dose: dict) -> dict:
+    fields = dose_block_fields(dose)
+    fields.update(prescription_source="athlete", athlete_dose=deepcopy(dose), prescription_text=dose_text(dose))
+    return fields
 
 
 def effective_session(

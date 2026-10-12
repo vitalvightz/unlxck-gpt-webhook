@@ -44,6 +44,7 @@ export function prepareCustomSession<T extends EditableSession>(session: T, me: 
     notes: format ? "From your saved round format. Rest is an editable suggestion; adjust with your coach."
       : "Editable suggestion only: no saved round format. Set your rounds, duration and rest with your coach.",
     incomplete: false,
+    coaching_cues: null, stop_rules: null,
     dose: { ...blankDose("intervals"), ...(format ?? { rounds: 3, work_seconds: 180 }), rest_seconds: 60 },
   }] };
 }

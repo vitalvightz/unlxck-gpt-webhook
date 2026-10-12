@@ -120,6 +120,7 @@ export function TrainingLibrary({ accessToken, onSelect, onBack, onSelectCommuni
     pageRequest.current?.abort();
     const timer = setTimeout(() => {
       const params = new URLSearchParams({ q: query, category });
+      if (onSelect) params.set("for_plan", "true");
       Object.entries(filters).forEach(([key, value]) => { if (value) params.set(key, value); });
       void searchTrainingLibrary(accessToken, params, controller.signal).then(value => {
         if (!controller.signal.aborted && generation.current === requestGeneration) setResult(value);
@@ -128,7 +129,7 @@ export function TrainingLibrary({ accessToken, onSelect, onBack, onSelectCommuni
       }).finally(() => { if (!controller.signal.aborted && generation.current === requestGeneration) setLoading(false); });
     }, query ? 200 : 0);
     return () => { clearTimeout(timer); controller.abort(); pageRequest.current?.abort(); };
-  }, [accessToken, query, category, filters, retry]);
+  }, [accessToken, query, category, filters, retry, onSelect]);
 
   useEffect(() => {
     if (filterOpen && picker) pickerBack.current?.focus({ preventScroll: true });
@@ -151,6 +152,7 @@ export function TrainingLibrary({ accessToken, onSelect, onBack, onSelectCommuni
     pageRequest.current = controller;
     setPaging(true); setError(null);
     const params = new URLSearchParams({ q: query, category, offset: String(result.next_offset), revision: result.revision });
+    if (onSelect) params.set("for_plan", "true");
     Object.entries(filters).forEach(([key, value]) => { if (value) params.set(key, value); });
     try {
       const next = await searchTrainingLibrary(accessToken, params, controller.signal);

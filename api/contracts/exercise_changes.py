@@ -22,7 +22,7 @@ class ExerciseAlternative(BaseModel):
     media: ExerciseMedia | None = None
     prescription: str | None = None
     dose_required: bool = False
-    dose_mode: Literal["reps", "duration", "intervals"] = "reps"
+    dose_mode: Literal["reps", "duration", "intervals", "distance", "text"] = "reps"
     suggested_dose: dict[str, Any] | None = None
 
 
@@ -37,13 +37,15 @@ class ExerciseChangeRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     client_request_id: UUID
-    action: Literal["swap", "add", "remove"]
+    action: Literal["swap", "add", "remove", "edit"]
     scope: Literal["occurrence", "future"] = "occurrence"
     date: str = Field(min_length=10, max_length=10)
     session_id: str = Field(min_length=1, max_length=200)
     block_id: str | None = Field(None, min_length=1, max_length=200)
     catalogue_id: str | None = Field(None, min_length=1, max_length=250)
     dose: CustomDose | None = None
+    coaching_cues: list[str] | None = Field(None, max_length=10)
+    stop_rules: list[str] | None = Field(None, max_length=10)
     confirmed: bool = False
 
 
@@ -55,7 +57,7 @@ class ExerciseUndoRequest(BaseModel):
 
 class ExerciseChangeResult(BaseModel):
     id: str
-    action: Literal["swap", "add", "remove"]
+    action: Literal["swap", "add", "remove", "edit"]
     scope: Literal["occurrence", "future"]
     date: str
     name: str | None = None

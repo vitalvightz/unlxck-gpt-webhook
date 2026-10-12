@@ -36,7 +36,7 @@ def build_exercise_changes_router(*, require_profile, get_store):
 
     @router.post("", response_model=ExerciseChangeResult)
     def apply(plan_id: str, body: ExerciseChangeRequest, profile=Depends(require_profile), store=Depends(get_store)):
-        if body.action in {"swap", "remove"} and not body.block_id:
+        if body.action in {"swap", "remove", "edit"} and not body.block_id:
             raise HTTPException(422, "Choose the exercise to change.")
         if body.action in {"swap", "add"} and not body.catalogue_id:
             raise HTTPException(422, "Choose an exercise.")

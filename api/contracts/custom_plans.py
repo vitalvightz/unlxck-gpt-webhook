@@ -27,7 +27,7 @@ class DraftModel(BaseModel):
 
 
 class CustomDose(DraftModel):
-    mode: Literal["reps", "duration", "intervals", "text"] = "reps"
+    mode: Literal["reps", "duration", "intervals", "distance", "text"] = "reps"
     sets: int | None = Field(None, strict=True, ge=1, le=100)
     reps: int | None = Field(None, strict=True, ge=1, le=1000)
     duration_seconds: int | None = Field(None, strict=True, ge=1, le=36000)
@@ -63,6 +63,7 @@ class CustomDose(DraftModel):
                 "distance_unit",
                 "prescription",
             ),
+            "distance": ("reps", "rounds", "work_seconds", "duration_seconds", "prescription"),
             "text": (
                 "sets",
                 "reps",
@@ -83,6 +84,8 @@ class CustomExerciseInput(DraftModel):
     origin: Literal["catalogue"] = "catalogue"
     catalogue_id: str = Field(min_length=1, max_length=250)
     dose: CustomDose = Field(default_factory=CustomDose)
+    coaching_cues: list[Annotated[str, StringConstraints(max_length=500)]] | None = Field(None, max_length=10)
+    stop_rules: list[Annotated[str, StringConstraints(max_length=500)]] | None = Field(None, max_length=10)
 
 
 class ManualExerciseInput(DraftModel):
@@ -95,6 +98,8 @@ class ManualExerciseInput(DraftModel):
     community_id: UUID | None = None
     community_revision_id: UUID | None = None
     dose: CustomDose = Field(default_factory=CustomDose)
+    coaching_cues: list[Annotated[str, StringConstraints(max_length=500)]] | None = Field(None, max_length=10)
+    stop_rules: list[Annotated[str, StringConstraints(max_length=500)]] | None = Field(None, max_length=10)
 
 
 ExerciseInput = Annotated[
@@ -181,6 +186,7 @@ class CustomPlan(BaseModel):
 
 class CustomDoseSuggestion(BaseModel):
     dose: CustomDose | None = None
+    format_dose: CustomDose | None = None
     original: str
     source: str
     source_revision: str

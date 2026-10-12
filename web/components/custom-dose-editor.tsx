@@ -76,6 +76,7 @@ export function CustomDoseEditor({ dose, onChange }: { dose: CustomDose; onChang
           <option value="reps">Sets × reps</option>
           <option value="duration">Continuous</option>
           <option value="intervals">Intervals / rounds</option>
+          <option value="distance">Distance / carries</option>
           <option value="text">Text prescription</option>
         </select>
       </label>
@@ -85,13 +86,14 @@ export function CustomDoseEditor({ dose, onChange }: { dose: CustomDose; onChang
           {number("reps", "Reps", 1, 1000)}
           {number("rest_seconds", "Rest (sec)", 0, 3600)}
         </>
-      ) : dose.mode === "duration" ? (
+      ) : dose.mode === "duration" || dose.mode === "distance" ? (
         <>
-          <DurationField
+          {dose.mode === "duration" ? <DurationField
             value={dose.duration_seconds}
             label="Duration"
             onChange={(value) => onChange({ ...dose, duration_seconds: value })}
-          />
+          /> : null}
+          {number("sets", "Sets (optional)", 1, 100)}
           {number("distance", "Distance (optional)", 0.001, 100000, 0.001)}
           <label>
             <span>Distance unit</span>
@@ -111,6 +113,7 @@ export function CustomDoseEditor({ dose, onChange }: { dose: CustomDose; onChang
               ))}
             </select>
           </label>
+          {number("rest_seconds", "Rest (sec)", 0, 3600)}
         </>
       ) : dose.mode === "intervals" ? (
         <>

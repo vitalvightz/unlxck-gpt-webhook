@@ -529,7 +529,7 @@ export function TodaySessionPanel({
   const customisationDay = state.today.training_day;
   const exerciseCustomisation: ExerciseCustomisation | null =
     token && activePlanId && onPlanSessionChanged && !commandUnavailable && !sessionUnderway
-      ? { token, planId: activePlanId, today: customisationDay, onSessionChanged: onPlanSessionChanged }
+      ? { token, planId: activePlanId, today: customisationDay, canRepeat: !state.active_plan.fight_date, onSessionChanged: onPlanSessionChanged }
       : null;
   const exerciseLogging = useTodayExerciseLogs({
     token,
@@ -700,7 +700,7 @@ export function TodaySessionPanel({
   const todayLogged = status === "done" || status === "modified" || status === "skipped";
   const customOffDayCopy = structuredPlan?.plan_metadata?.prescription_source === "athlete"
     ? todayResolved.day?.day_type === "recovery" ? "Recovery day — No workout completion required."
-      : todayResolved.day?.day_type === "rest" ? "Rest day — Nothing scheduled." : null
+      : todayResolved.day?.day_type === "rest" ? "Rest day" : null
     : null;
   const contactTarget: ContactTimerTarget | null = todayLogged ? null :
     (todayResolved.inRange ? contactTimerTarget(todayResolved.day) : null) ??
