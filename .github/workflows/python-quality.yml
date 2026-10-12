@@ -3,7 +3,7 @@ name: Python Quality
 on:
   push:
     branches:
-      - "**"
+      - Main
   pull_request:
     branches:
       - "**"
