@@ -306,18 +306,23 @@ export function ExerciseActions({ block, title }: { block: StructuredBlock; titl
               <span className="ex-row-meta">{block.block_type?.replaceAll("_", " ")}</span>
             </span></div>
             <ExercisePrescriptionEditor initial={doseFromBlock(block)} busy={busy} action="Save changes"
-              cues={block.coaching_cues ?? []} stopRules={block.stop_rules ?? []}
-              onSubmit={(dose, coaching_cues, stop_rules) => {
+              coaching={{
+                coaching_cues: block.coaching_cues ?? [], regression_options: block.regression_options ?? [],
+                progression_rule: block.progression_rule ?? null, stop_rules: block.stop_rules ?? [],
+              }}
+              onSubmit={(dose, coaching) => {
                 setBusy(true); setError(null);
-                void apply({ action: "edit", block_id: blockId, dose: JSON.stringify(dose) === JSON.stringify(finishedDose(doseFromBlock(block))) ? undefined : dose, coaching_cues, stop_rules, scope: editScope }, `Updated ${title}`)
+                void apply({ action: "edit", block_id: blockId, dose: JSON.stringify(dose) === JSON.stringify(finishedDose(doseFromBlock(block))) ? undefined : dose, ...coaching, scope: editScope }, `Updated ${title}`)
                   .then(close).catch(caught => setError(messageOf(caught, "Couldn't save. Try again.")))
                   .finally(() => setBusy(false));
-              }} />
+              }}>
+              {/* Where the edit applies is chosen before saving, not after. */}
+              {scope.customisation.canRepeat ? <div className={styles.scopes} role="radiogroup" aria-label="Apply edits to">
+                <button type="button" className={styles.scope} role="radio" aria-checked={editScope === "occurrence"} onClick={() => setEditScope("occurrence")}>Just this workout</button>
+                <button type="button" className={styles.scope} role="radio" aria-checked={editScope === "future"} onClick={() => setEditScope("future")}>Future workouts</button>
+              </div> : null}
+            </ExercisePrescriptionEditor>
           </div>
-          {scope.customisation.canRepeat ? <div className={styles.scopes} role="radiogroup" aria-label="Apply edits to">
-            <button type="button" className={styles.scope} role="radio" aria-checked={editScope === "occurrence"} onClick={() => setEditScope("occurrence")}>Just this workout</button>
-            <button type="button" className={styles.scope} role="radio" aria-checked={editScope === "future"} onClick={() => setEditScope("future")}>Future workouts</button>
-          </div> : null}
           {error ? <p className={styles.error} role="alert">{error}</p> : null}
         </div>
       </InjuryDetailSheet> : null}

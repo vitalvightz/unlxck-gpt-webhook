@@ -681,6 +681,8 @@ export type ExerciseChangeRequest = {
   dose?: CustomDoseRequest | null;
   coaching_cues?: string[] | null;
   stop_rules?: string[] | null;
+  regression_options?: string[] | null;
+  progression_rule?: string | null;
   confirmed?: boolean;
 };
 

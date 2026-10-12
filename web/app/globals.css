@@ -20449,6 +20449,10 @@ html[data-theme="light"] .loading-operational-item {
   height: 100%;
   border: 0;
 }
+/* An uploaded clip is shown whole, letterboxed if its shape differs. */
+video.ex-demo-player {
+  object-fit: contain;
+}
 .ex-demo-play-glyph {
   position: relative;
   display: inline-block;
