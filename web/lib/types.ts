@@ -315,6 +315,7 @@ export type UsernameChangeRequest = {
 export type PlanActivationState = "eligible" | "fight_date_passed" | "status_ineligible";
 
 export type PlanSummary = {
+  custom_plan_id?: string | null;
   plan_id: string;
   plan_name?: string | null;
   athlete_id: string;
@@ -389,6 +390,7 @@ export type StructuredBlock = {
   athlete_dose?: Record<string, unknown> | null;
   catalogue_id?: string | null;
   private_media_id?: string | null;
+  community_revision_id?: string | null;
   source_session_id?: string | null;
   notes?: string | null;
   block_id?: string | null;
@@ -718,7 +720,6 @@ export type PlanScheduleContext = {
 };
 
 export type PlanDetail = PlanSummary & {
-  custom_plan_id?: string | null;
   outputs: PlanOutputs;
   advisories: PlanAdvisory[];
   admin_outputs?: AdminPlanOutputs | null;

@@ -104,6 +104,8 @@ def test_publication_validates_exact_doses_and_uses_shared_detail(api):
     assert detail.status_code == 200, detail.text
     detail = detail.json()
     assert detail["custom_plan_id"] == draft["id"]
+    summaries = client.get("/api/plans", headers=AUTH).json()
+    assert summaries[0]["custom_plan_id"] == draft["id"]
     assert detail["structured_card_state"]["state"] == "live"
     assert detail["schedule_context"]["projection_status"] == "projected"
     assert len(detail["outputs"]["structured_plan"]["weeks"]) == 4
@@ -306,6 +308,21 @@ def test_activation_refuses_corrupt_custom_structured_contract(api):
     assert store.get_active_plan_id("athlete-1") is None
 
 
+def test_generated_cards_cannot_claim_athlete_authority_or_private_media(api):
+    from api.services.effective_structured_plan import resolve_effective_structured_plan
+    client, store = api
+    _, plan_id = publish(client, body())
+    row = copy.deepcopy(store.plans[plan_id])
+    row["planning_brief"].pop("custom_plan")
+    block = row["structured_plan"]["weeks"][0]["days"][0]["sessions"][0]["blocks"][0]
+    block["private_media_id"] = str(uuid4())
+    resolved = resolve_effective_structured_plan(row)
+    block = resolved["weeks"][0]["days"][0]["sessions"][0]["blocks"][0]
+    assert "prescription_source" not in resolved["plan_metadata"]
+    assert "prescription_source" not in block and "private_media_id" not in block
+    assert block["sets"] == 3 and block["load"]["value"] == 80
+
+
 def test_readiness_and_severe_injury_still_gate_execution(api):
     client, store = api
     _, row, _ = current_plan(api)
@@ -318,3 +335,25 @@ def test_readiness_and_severe_injury_still_gate_execution(api):
     })
     assert response.status_code == 409
     assert not store.session_completions.get("athlete-1")
+
+
+@pytest.mark.parametrize("session_type", ["skill", "sparring"])
+def test_coach_sessions_without_exercises_use_shared_today_actions(api, session_type):
+    client, store = api
+    day = resolve_training_day(None)
+    value = body(WEEKDAYS[date.fromisoformat(day).weekday()])
+    value["sessions"] = [{**value["sessions"][0], "name": "Coach session",
+                          "session_type": session_type, "exercises": []}]
+    _, plan_id = publish(client, value)
+    row = store.plans[plan_id]
+    monday = date.fromisoformat(day) - timedelta(days=date.fromisoformat(day).weekday())
+    row["created_at"] = f"{monday}T12:00:00+00:00"
+    row["planning_brief"]["athlete_snapshot"]["plan_creation_weekday"] = "Mon"
+    assert client.post(f"/api/plans/{plan_id}/set-active", headers=AUTH).status_code == 200
+    checkin(client, plan_id)
+    today = client.get("/api/today", headers=AUTH).json()
+    assert today["today"]["next_session"]["title"] == "Coach session"
+    session_id = today["today"]["next_session"]["session_id"]
+    complete(client, plan_id, session_id)
+    complete(client, plan_id, session_id, "done")
+    assert client.get("/api/today", headers=AUTH).json()["today"]["completion_status"] == "done"

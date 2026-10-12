@@ -67,6 +67,7 @@ def custom_open_plan_result(draft: dict, profile, *, training_day: str) -> dict:
                     "order_index": order, "exercise_key": snapshot.get("exercise_key"),
                     "catalogue_id": exercise.get("catalogue_id"),
                     "private_media_id": exercise.get("media_id"), "notes": exercise.get("notes"),
+                    "community_revision_id": exercise.get("community_revision_id"),
                     "source_session_id": session_id,
                     "prescription_source": "athlete", "athlete_dose": deepcopy(dose),
                     "prescription_text": _dose_text(dose),
@@ -138,7 +139,10 @@ def custom_open_plan_result(draft: dict, profile, *, training_day: str) -> dict:
         "plan_id": plan_id, "status": "ready", "plan_name": draft["name"],
         "plan_text": "", "structured_plan": structured, "schema_version": SCHEMA_VERSION,
         "stage2_status": "not_required",
-        "stage2_validator_report": {"structured_plan": {"status": "valid", "schema_version": SCHEMA_VERSION}},
+        "stage2_validator_report": {
+            "custom_plan": {"id": draft["id"]},
+            "structured_plan": {"status": "valid", "schema_version": SCHEMA_VERSION},
+        },
         "planning_brief": {
             "custom_plan": {
                 "id": draft["id"], "revision": revision,
@@ -309,6 +313,7 @@ def plan_fields(store, body: CustomPlanInput, previous: dict | None = None, *, a
             )
     fields["incomplete"] = (
         not fields["sessions"]
+        or any(not session.get("weekday") for session in fields["sessions"])
         or any(not session["exercises"] and session.get("session_type") not in {"skill", "sparring"}
                for session in fields["sessions"])
         or any(exercise["incomplete"] for exercise in exercises)

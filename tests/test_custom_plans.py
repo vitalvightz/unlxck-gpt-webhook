@@ -120,6 +120,9 @@ def test_incomplete_drafts_and_unassigned_days_persist(api, identities):
     assert saved["sessions"][0]["weekday"] is None
     exercise["dose"] = {"mode": "duration", "duration_seconds": 45}
     complete = client.put(f"{URL}/{saved['id']}", headers=AUTH, json=body).json()
+    assert complete["incomplete"]  # A finished dose still needs a calendar day.
+    body["sessions"][0]["weekday"] = "Monday"
+    complete = client.put(f"{URL}/{saved['id']}", headers=AUTH, json=body).json()
     assert not complete["incomplete"]
 
 

@@ -722,7 +722,8 @@ export function ExerciseRow({
         </InjuryDetailSheet>
       ) : open ? (
         <div id={bodyId} className="ex-row-body">
-          {block.private_media_id ? <PrescribedPrivateVideo id={block.private_media_id} name={title} /> : null}
+          {block.private_media_id || block.community_revision_id ? <PrescribedPrivateVideo
+            id={block.private_media_id || block.community_revision_id!} community={!block.private_media_id} name={title} /> : null}
           {media ? (
             <ExerciseDemo
               media={media}
@@ -812,10 +813,10 @@ function ExerciseDetail({
           <ExerciseDemo media={media} exerciseName={title} />
         </details>
       ) : null}
-      {block.private_media_id ? (
+      {block.private_media_id || block.community_revision_id ? (
         <details className="ex-detail-section" open={!sessionRunning}>
           <summary>Demo video</summary>
-          <PrescribedPrivateVideo id={block.private_media_id} name={title} />
+          <PrescribedPrivateVideo id={block.private_media_id || block.community_revision_id!} community={!block.private_media_id} name={title} />
         </details>
       ) : null}
       {builds || whyToday ? (

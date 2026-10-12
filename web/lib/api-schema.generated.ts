@@ -187,6 +187,7 @@ export type AdminPlanOutputs = {
 };
 
 export type AdminPlanSummary = {
+  custom_plan_id: string | null;
   plan_id: string;
   plan_name: string | null;
   athlete_id: string;
@@ -1556,6 +1557,7 @@ export type PlanCompletionsResponse = {
 };
 
 export type PlanDetail = {
+  custom_plan_id: string | null;
   plan_id: string;
   plan_name: string | null;
   athlete_id: string;
@@ -1567,7 +1569,6 @@ export type PlanDetail = {
   activation_state: "eligible" | "fight_date_passed" | "status_ineligible";
   pdf_url: string | null;
   review_reason: string | null;
-  custom_plan_id: string | null;
   outputs: PlanOutputs;
   safety_state: PlanSafetyState;
   structured_card_state: StructuredCardState;
@@ -1684,6 +1685,7 @@ export type PlanScheduleContext = {
 };
 
 export type PlanSummary = {
+  custom_plan_id: string | null;
   plan_id: string;
   plan_name: string | null;
   athlete_id: string;
@@ -2087,6 +2089,7 @@ export type SessionBlock = {
   athlete_dose: Record<string, unknown> | null;
   catalogue_id: string | null;
   private_media_id: string | null;
+  community_revision_id: string | null;
   source_session_id: string | null;
   notes: string | null;
 };

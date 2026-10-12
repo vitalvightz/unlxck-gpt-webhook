@@ -260,7 +260,9 @@ def _map_plan_summary(
                 normalized_status = "publishable_with_flags"
             else:
                 normalized_status = "ready"
+    custom = report.get("custom_plan")
     return PlanSummary(
+        custom_plan_id=custom.get("id") if isinstance(custom, dict) else None,
         plan_id=str(row["id"]),
         plan_name=(str(row["plan_name"]).strip() if row.get("plan_name") is not None else None) or None,
         athlete_id=str(row["athlete_id"]),
@@ -685,9 +687,8 @@ def _map_plan_detail(
     structured_debug = structured_debug if isinstance(structured_debug, dict) else {}
     return PlanDetail(
         **summary.model_dump(mode="json"),
-        custom_plan_id=(planning_brief or {}).get("custom_plan", {}).get("id"),
         outputs=PlanOutputs(
-            exercise_media=(planning_brief or {}).get("custom_plan", {}).get("exercise_media"),
+            exercise_media=(planning_brief or {}).get("custom_plan", {}).get("exercise_media") or {},
             plan_text=display_plan_text,
             pdf_url=row.get("pdf_url"),
             structured_plan=structured_plan,

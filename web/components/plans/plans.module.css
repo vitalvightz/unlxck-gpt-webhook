@@ -262,7 +262,10 @@
   gap: 3px;
 }
 
+.rowHeading { display: flex; align-items: baseline; flex-wrap: wrap; gap: 6px 10px; }
+.customPill { flex: 0 0 auto; padding: 2px 7px; border: 1px solid var(--border-default); border-radius: 5px; color: var(--text-secondary); font-family: var(--font-mono); font-size: 10px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; }
 .rowTitle {
+  overflow-wrap: anywhere;
   font-size: var(--type-body-lg);
   font-weight: 600;
 }

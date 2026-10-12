@@ -452,6 +452,7 @@ export function withLastLoad<T extends Omit<ExerciseLogRequest, "plan_id" | "blo
   recentLoads: readonly ExerciseRecentLoad[] | undefined,
   history?: readonly ExerciseLogRecord[],
 ): T {
+  if (block.prescription_source === "athlete") return request;
   const previous = lastPerformanceFor(block, history);
   if (previous?.status === "skipped" || previous?.reason === "pain") return request;
   if (request.status === "skipped" || request.actual?.load) return request;

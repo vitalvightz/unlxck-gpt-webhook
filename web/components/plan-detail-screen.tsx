@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import Link from "next/link";
 
 import { RequireAuth } from "@/components/auth-guard";
 import { useAppSession } from "@/components/auth-provider";
@@ -145,9 +144,6 @@ export function PlanDetailScreen({ planId }: { planId: string }) {
   return (
     <RequireAuth>
       <div className={actionStyles.actions}>
-        {plan?.custom_plan_id && plan.athlete_id === me?.profile.athlete_id ? (
-          <Link className="ghost-button" href={`/plans/custom?plan=${plan.custom_plan_id}`}>Edit Plan</Link>
-        ) : null}
         {(!plan || plan.athlete_id === me?.profile.athlete_id) ? <LogTraining accessToken={session?.access_token ?? null} variant="tile" /> : null}
         <TrainingLibraryLink variant="tile" />
       </div>

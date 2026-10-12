@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import {
-  createPrivateYouTubeClip, getPrivateMedia, getPrivateMediaSettings, getPrivateUpload, reservePrivateUpload,
+  createPrivateYouTubeClip, getCommunityExercise, getPrivateMedia, getPrivateMediaSettings, getPrivateUpload, reservePrivateUpload,
 } from "@/lib/api";
 import type { PrivateMediaPreview, PrivateMediaSettings } from "@/lib/api-schema.generated";
 import { getSupabaseBrowserClient } from "@/lib/supabase";
@@ -15,9 +15,9 @@ const PrivateMediaToken = createContext<string | null>(null);
 export function PrivateExerciseMediaProvider({ token, children }: { token?: string | null; children: ReactNode }) {
   return <PrivateMediaToken.Provider value={token ?? null}>{children}</PrivateMediaToken.Provider>;
 }
-export function PrescribedPrivateVideo({ id, name }: { id: string; name: string }) {
+export function PrescribedPrivateVideo({ id, name, community = false }: { id: string; name: string; community?: boolean }) {
   const token = useContext(PrivateMediaToken);
-  return token ? <PrivateExerciseVideo token={token} id={id} name={name} /> : null;
+  return token ? <PrivateExerciseVideo token={token} id={id} name={name} community={community} /> : null;
 }
 
 export function PrivateVideoPlayer({ media, name, visibility = "private" }: { media: PrivateMediaPreview; name: string; visibility?: "private" | "community" }) {
@@ -56,18 +56,21 @@ export function PrivateVideoPlayer({ media, name, visibility = "private" }: { me
   );
 }
 
-export function PrivateExerciseVideo({ token, id, name }: { token: string; id: string; name: string }) {
+export function PrivateExerciseVideo({ token, id, name, community = false }: { token: string; id: string; name: string; community?: boolean }) {
   const [loaded, setLoaded] = useState<{ token: string; id: string; media?: PrivateMediaPreview; error?: boolean }>();
   const media = loaded?.token === token && loaded.id === id ? loaded.media : undefined;
   const error = loaded?.token === token && loaded.id === id && loaded.error;
   useEffect(() => {
     const request = new AbortController();
-    void getPrivateMedia(token, id, request.signal).then(media => {
-      if (!request.signal.aborted) setLoaded({ token, id, media });
+    const preview = community
+      ? getCommunityExercise(token, id, "revisions", request.signal).then(entry => entry.media ?? undefined)
+      : getPrivateMedia(token, id, request.signal);
+    void preview.then(media => {
+      if (!request.signal.aborted) setLoaded({ token, id, media, error: !media });
     }).catch(() => { if (!request.signal.aborted) setLoaded({ token, id, error: true }); });
     return () => request.abort();
-  }, [token, id]);
-  return <div className={layout.preview}>{media ? <PrivateVideoPlayer key={media.url ?? media.id} media={media} name={name} />
+  }, [token, id, community]);
+  return <div className={layout.preview}>{media ? <PrivateVideoPlayer key={media.url ?? media.id} media={media} name={name} visibility={community ? "community" : "private"} />
     : <p role="status">{error ? "Video unavailable. You can keep using your exercise." : "Opening video…"}</p>}</div>;
 }
 

@@ -256,7 +256,7 @@ export function CustomPlanBuilder({ accessToken, planId, onboarding = null }: { 
       setDraft(orderedDraft(saved));
       setOpened(true);
       setDirty(false);
-      setMessage(saved.incomplete ? "Draft saved. Complete any unfinished doses when ready." : "Plan saved.");
+      setMessage(saved.incomplete ? "Draft saved. Assign sessions and finish doses when ready." : "Plan saved.");
       window.history.replaceState(window.history.state, "", `/plans/custom?plan=${saved.id}`);
       loaded.current = true;
       if (viewPlan) {
@@ -278,7 +278,7 @@ export function CustomPlanBuilder({ accessToken, planId, onboarding = null }: { 
   if (planId && !opened)
     return (
       <section className={styles.builder}>
-        <Link href="/plans#custom-plans">← Saved custom plans</Link>
+        <Link href="/plans#custom-plans">← Saved plans</Link>
         <p role="alert">{error}</p>
         <button
           className="ghost-button"
@@ -326,7 +326,7 @@ export function CustomPlanBuilder({ accessToken, planId, onboarding = null }: { 
   return (
     <section className={styles.builder} aria-label="Custom training plan builder">
       <header className={styles.header}>
-        <Link href="/plans#custom-plans">← Saved custom plans</Link>
+        <Link href="/plans#custom-plans">← Saved plans</Link>
         <div className={styles.row}>
           <h1 ref={heading} tabIndex={-1}>
             {draft.name}

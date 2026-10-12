@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { customSchedulePrefill } from "./custom-plan-schedule";
 import { openBlockWeekIntent } from "./open-block";
+import { withLastLoad } from "./exercise-log";
 import type { MeResponse } from "./types";
 
 const onboarding = {
@@ -38,10 +39,27 @@ test("missing onboarding does not invent sessions", () => {
   assert.deepEqual(customSchedulePrefill(null), []);
 });
 
+test("an explicit hard-sparring day type prefills even before its derived day list is saved", () => {
+  const me = structuredClone(onboarding);
+  me.profile.onboarding_draft = {
+    ...(me.profile.onboarding_draft ?? {}), hard_sparring_days: [], session_types_by_day: { Monday: "hard_spar" },
+  };
+  assert.deepEqual(customSchedulePrefill(me).map(s => [s.weekday, s.session_type]), [["Monday", "sparring"]]);
+});
+
 test("custom week overlay does not prescribe automatic progression or deload", () => {
   for (let week = 1; week <= 4; week++) {
     assert.match(openBlockWeekIntent(week, true)!.summary, /saved prescription/);
     assert.doesNotMatch(openBlockWeekIntent(week, true)!.summary, /halve|half|cut|Progress again/);
   }
   assert.match(openBlockWeekIntent(4)!.summary, /half/); // existing AI presentation
+});
+
+test("as-prescribed logging never replaces an athlete's dose with a remembered load", () => {
+  const request = { status: "as_prescribed" as const };
+  const result = withLastLoad(
+    { prescription_source: "athlete", display_name: "My squat", sets: 3, reps: 5 },
+    request, [{ exercise_key: null, display_name: "My squat", training_day: "2026-10-05", load: { value: 100, unit: "kg" } }],
+  );
+  assert.deepEqual(result, request);
 });

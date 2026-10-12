@@ -328,6 +328,7 @@ class SessionBlock(BaseModel):
     athlete_dose: dict[str, Any] | None = None
     catalogue_id: str | None = None
     private_media_id: str | None = None
+    community_revision_id: str | None = None
     source_session_id: str | None = None
     notes: str | None = None
 

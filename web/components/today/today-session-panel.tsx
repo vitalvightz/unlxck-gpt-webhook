@@ -1341,7 +1341,7 @@ export function TodaySessionPanel({
                   rehabLabelPolicy={rehabLabelPolicy}
                   exerciseMedia={exerciseMedia}
                   exerciseLogging={exerciseLogging}
-            accessToken={token}
+                  accessToken={token}
                 />
                 <p className="today-pending-line">
                   <span className="today-pending-pill">Pending</span>
@@ -1566,7 +1566,7 @@ export function TodaySessionPanel({
                 rehabLabelPolicy={rehabLabelPolicy}
                 exerciseMedia={exerciseMedia}
                 exerciseLogging={exerciseLogging}
-            accessToken={token}
+                accessToken={token}
               />
             ) : null
           }

@@ -442,6 +442,9 @@ def is_support_session(session: Mapping[str, Any] | None) -> bool:
     """
     if not isinstance(session, Mapping) or not session:
         return False
+    if session.get("prescription_source") == "athlete":
+        # An athlete-authored label is not evidence of verified low-load work.
+        return False
 
     blocks = session.get("blocks") or []
     if any(isinstance(block, Mapping) and _clean(block.get("block_type")).lower() == "mindset"

@@ -324,12 +324,12 @@ def set_active_plan(
         from api.services.open_plan_timeline import project_open_structured_plan
         parsed = safe_parse_structured_plan(plan.get("structured_plan"))
         if not parsed.ok or parsed.plan is None:
-            raise HTTPException(409, "This custom plan's prescription is invalid. Save it again before activating.")
+            raise HTTPException(409, "This custom plan's prescription is invalid. Edit the plan before activating.")
         _, context = project_open_structured_plan(
             plan, parsed.plan.model_dump(mode="json"), current_training_day=current_training_day or date.today()
         )
         if context["projection_status"] != "projected":
-            raise HTTPException(409, "This custom plan's schedule is invalid. Save it again before activating.")
+            raise HTTPException(409, "This custom plan's schedule is invalid. Edit the plan before activating.")
     activation_state = get_plan_activation_state(
         plan,
         current_training_day=current_training_day,

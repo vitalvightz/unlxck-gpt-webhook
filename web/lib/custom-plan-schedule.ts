@@ -13,7 +13,8 @@ export function customSchedulePrefill(me: MeResponse | null): CustomSession[] {
   const types = draft?.session_types_by_day ?? latest?.session_types_by_day ?? {};
   const sameDay = (a: string, b: string) => a.toLowerCase().slice(0, 3) === b.toLowerCase().slice(0, 3);
   return weekdays.flatMap((weekday) => {
-    const hard = intake.hard_sparring_days.some((day) => sameDay(day, weekday));
+    const hard = intake.hard_sparring_days.some((day) => sameDay(day, weekday))
+      || Object.entries(types).some(([day, type]) => sameDay(day, weekday) && type === "hard_spar");
     const technical = Object.entries(types).some(([day, type]) => sameDay(day, weekday) && type === "technical");
     return [
       ...(hard ? [{ name: "Hard sparring", session_type: "sparring" as const }] : []),
