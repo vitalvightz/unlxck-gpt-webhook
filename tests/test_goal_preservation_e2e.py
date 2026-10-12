@@ -43,13 +43,19 @@ def _run(monkeypatch, **fixture_overrides):
 
 def test_sheyi_like_full_planner_never_credits_a_power_touch_as_strength(monkeypatch):
     payload, brief, handoff = _run(monkeypatch)
-    # The primary weak area is a build obligation beside the primary goal, and
-    # the fixture's footwork weakness is already covered by real technical work:
-    # the floor recognises existing exposure rather than adding anything.
+    # The primary weak area is a build obligation beside the primary goal. It
+    # was previously "satisfied" only by an invented Reactive Footwork
+    # Walkthrough; the floor no longer authors exercises, so without real
+    # footwork work the gap is recorded honestly and reported, never filled.
     assert {entry["goal"] for entry in brief["goal_preservation"]} == {"speed", "strength", "footwork"}
     footwork = next(entry for entry in brief["goal_preservation"] if entry["goal"] == "footwork")
     assert (footwork["priority"], footwork["state"]) == ("primary_weakness", "build")
-    assert footwork["satisfied"] and footwork["evidence"]
+    if footwork["satisfied"]:
+        assert footwork["evidence"]
+        assert all(e.get("dose_authority") != "weekly_priority_exposure_floor" for e in footwork["evidence"])
+    else:
+        assert any(a.get("result") == "floor_no_safe_candidate" for a in footwork["repair_attempts"])
+        assert any(e["goal"] == "footwork" for e in validate_goal_preservation(brief))
     strength = next(entry for entry in brief["goal_preservation"] if entry["goal"] == "strength")
     # It must be an honest, independently revalidated state, even if current
     # safety/compression policy makes this particular camp impossible to cover.

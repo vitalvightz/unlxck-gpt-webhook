@@ -1,10 +1,12 @@
-"""Host preference and athlete-facing propagation for the weekly microdose.
+"""Host eligibility and athlete-facing propagation for the weekly microdose.
 
 Two separate concerns:
 
-* Host preference - an existing S&C session absorbs quality work most cleanly,
-  then technical work; a conditioning session is the last resort because the
-  added sets compete with its energy-system purpose.
+* Host eligibility - only an existing strength session with composed
+  membership can host: the microdose is an already-selected strength-pool
+  exercise and only the strength dose resolver can price it. A technical or
+  conditioning day (declared light combat included) is never filled with
+  strength work by goal preservation.
 * Propagation - when Stage 2 fails there is no structured_plan, so the
   deterministic fallback IS the athlete-facing plan. A renderer that reads only
   `selected_exercise_assignments` drops a microdose that lives on the role.
@@ -20,7 +22,7 @@ from fightcamp.goal_preservation import _attach_goal_microdose, _microdose_host_
 
 
 # ---------------------------------------------------------------------------
-# Host preference
+# Host eligibility
 # ---------------------------------------------------------------------------
 
 
@@ -37,6 +39,9 @@ def _conditioning(day="Tuesday"):
         "preferred_system": "glycolytic",
         "scheduled_day_hint": day,
         "session_index": 2,
+        "selected_exercise_assignments": [
+            {"name": "Double-End Bag Circuit", "slot_group": "conditioning_slots"}
+        ],
     }
 
 
@@ -45,8 +50,21 @@ def _strength(day="Wednesday"):
         "category": "strength",
         "role_key": "primary_strength_day",
         "scheduled_day_hint": day,
+        "scheduled_countdown_label": "D-24",
         "session_index": 3,
+        "strength_session_index": 1,
+        "strength_composition_policy": {"effective_exercise_cap": 3},
+        "selected_exercise_assignments": [
+            {"slot_id": "spp_a", "name": "DB Bench Press", "slot_group": "strength_slots",
+             "source_phase": "SPP", "base_prescription": "3x5 @ RPE 7"}
+        ],
     }
+
+
+def _pool_slot(slot_id, name, quality_class, prescription, tags, session_index):
+    return {"slot_id": slot_id, "session_index": session_index, "quality_class": quality_class,
+            "selected": {"name": name, "prescription": prescription, "quality_class": quality_class,
+                         "tags": tags, "mechanical_risk_tags": []}}
 
 
 def _week(*roles):
@@ -75,7 +93,11 @@ def _brief(week):
             "primary_weak_area": "footwork",
         },
         "weekly_role_map": {"weeks": [week]},
-        "candidate_pools": {},
+        "candidate_pools": {"SPP": {"strength_slots": [
+            _pool_slot("spp_a", "DB Bench Press", "anchor_loaded", "3x5 @ RPE 7", ["strength"], 1),
+            _pool_slot("spp_b", "Med Ball Scoop Toss", "anchor_power", "4x3 @ RPE 7, full rest",
+                       ["power", "explosive"], 2),
+        ]}},
     }
 
 
@@ -101,44 +123,27 @@ def _winner(week):
     )
 
 
-def test_technical_beats_conditioning():
-    """The live complaint: a declared light-combat technical day must win over a
-    glycolytic fight-pace conditioning day."""
-    assert _winner(_week(_conditioning(), _light_combat())) == "light_combat_day"
-
-
-def test_strength_beats_technical_and_conditioning():
+def test_the_strength_session_hosts_even_beside_technical_and_conditioning():
     assert _winner(_week(_conditioning(), _light_combat(), _strength())) == "primary_strength_day"
 
 
-def test_conditioning_wins_only_when_it_is_the_only_legal_host():
-    assert _winner(_week(_conditioning())) == "fight_pace_repeatability_day"
+def test_light_combat_and_conditioning_alone_get_no_strength_work():
+    """F06: goal preservation no longer hangs an invented touch on a coach-owned
+    technical day or a conditioning session."""
+    assert _winner(_week(_conditioning(), _light_combat())) is None
 
 
-def test_the_canonical_light_combat_role_is_an_eligible_host():
-    """It is `category: technical`, coach-owned, and carries no hard-sparring
-    provenance, so nothing in host filtering may reject it."""
-    hosts = _microdose_host_roles(_week(_conditioning(), _light_combat()))
-    assert [role["role_key"] for role in hosts] == [
-        "light_combat_day",
-        "fight_pace_repeatability_day",
-    ]
+def test_the_canonical_light_combat_role_is_not_an_eligible_host():
+    hosts = _microdose_host_roles(_week(_conditioning(), _light_combat(), _strength()))
+    assert [role["role_key"] for role in hosts] == ["primary_strength_day"]
 
 
-def test_ordering_is_independent_of_role_list_order():
-    """Host preference must come from category, not from however the week
-    happens to have appended its roles."""
+def test_host_choice_is_independent_of_role_list_order():
     for week in (
-        _week(_light_combat(), _conditioning()),
-        _week(_conditioning(), _light_combat()),
+        _week(_strength(), _light_combat(), _conditioning()),
+        _week(_conditioning(), _light_combat(), _strength()),
     ):
-        assert _winner(week) == "light_combat_day"
-
-
-def test_ordering_is_independent_of_d_day():
-    """The nearer conditioning day must not win on calendar proximity."""
-    week = _week(_conditioning("Monday"), _light_combat("tuesday"))
-    assert _winner(week) == "light_combat_day"
+        assert _winner(week) == "primary_strength_day"
 
 
 # ---------------------------------------------------------------------------
