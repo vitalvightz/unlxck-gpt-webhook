@@ -210,7 +210,7 @@ export function CustomPlanBuilder({ accessToken, planId, onboarding = null }: { 
       if (request === suggestionRequest.current) setSuggestion(result);
     } catch (e) {
       if (request === suggestionRequest.current)
-        setSuggestionError(e instanceof Error ? e.message : "Unable to load source suggestion.");
+        setSuggestionError(customPlanError(e, "Unable to load source suggestion."));
     } finally {
       if (request === suggestionRequest.current) setSuggesting(false);
     }
