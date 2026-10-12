@@ -7,10 +7,11 @@ import pytest
 
 from api.contracts.injury_policy import reconcile_session_prescription
 from api.models import PlanRequest
-from api.plan_mappers import _map_profile_row
+from api.plan_mappers import _map_plan_detail, _map_profile_row
 from api.services.active_plan import set_active_plan
 from api.services.custom_plans import custom_open_plan_result
 from api.services.open_plan_timeline import project_open_structured_plan
+from api.services.plan_schedule import resolve_current_week
 from api.services.streaks import qualifying_training_days
 from api.services.today_service import _structured_day_for_training_day, resolve_training_day
 from api.services.training_library import cache
@@ -163,6 +164,14 @@ def test_shared_today_completion_logging_and_history(api):
     today = client.get("/api/today", headers=AUTH)
     assert today.status_code == 200, today.text
     assert today.json()["today"]["next_session"]["session_id"] == sessions[0]["session_id"]
+    assert today.json()["today"]["next_session"]["title"] == "Strength / Rounds"
+    # Both Enhanced Card prescriptions belong to this combined day.
+    detail = client.get(f"/api/plans/{plan_id}", headers=AUTH).json()
+    detail_sessions = next(
+        d["sessions"] for w in detail["outputs"]["structured_plan"]["weeks"] for d in w["days"]
+        if d["date"] == day
+    )
+    assert detail_sessions == sessions
     complete(client, plan_id, sessions[0]["session_id"])
     for session in sessions:
         for block in session["blocks"]:
@@ -173,6 +182,13 @@ def test_shared_today_completion_logging_and_history(api):
             assert logged.json()["log"]["prescribed"]["athlete_dose"] == block["athlete_dose"]
             assert logged.json()["log"]["session_id"] == session["session_id"]
     complete(client, plan_id, sessions[0]["session_id"], "done")
+    after = client.get("/api/today", headers=AUTH).json()
+    assert after["today"]["completion_status"] == "done"
+    assert after["today"]["next_session"]["calendar_date"] != day
+    detail_completions = client.get(f"/api/plans/{plan_id}/completions", headers=AUTH).json()["completions"]
+    assert {c["session_id"] for c in detail_completions if c["status"] == "done"} == {
+        s["session_id"] for s in sessions
+    }
     before = copy.deepcopy(store.xp_awards)
     complete(client, plan_id, sessions[1]["session_id"], "done")
     complete(client, plan_id, sessions[0]["session_id"], "done")
@@ -182,6 +198,31 @@ def test_shared_today_completion_logging_and_history(api):
     assert store.xp_awards == before
     history = client.get("/api/today/session-completions", headers=AUTH).json()
     assert {c["session_title"] for c in history} == {"Strength", "Rounds"}
+
+
+@pytest.mark.parametrize("elapsed_week", range(5))
+@pytest.mark.parametrize("legacy_empty_block", [False, True])
+def test_today_weekly_schedule_and_detail_share_four_week_cycle(api, elapsed_week, legacy_empty_block):
+    client, store = api
+    _, plan_id = publish(client, body())
+    row = store.plans[plan_id]
+    row["created_at"] = "2026-10-12T12:00:00Z"
+    row["planning_brief"]["athlete_snapshot"]["plan_creation_weekday"] = "Mon"
+    if legacy_empty_block:
+        row["planning_brief"]["open_plan_spec"]["development_block"] = {}
+    day = date(2026, 10, 12) + timedelta(weeks=elapsed_week)
+    index, weekly = resolve_current_week(row, today=day)
+    detail = _map_plan_detail(row, include_admin=False, current_training_day=day)
+    context = detail.schedule_context
+    assert weekly.week_count == 4
+    assert index == weekly.week_index == elapsed_week % 4
+    assert context.current_week_number == index + 1
+    assert context.block_number == elapsed_week // 4 + 1
+    assert weekly.day_label == f"Development week {context.current_week_number}"
+    matched, structured_week = _structured_day_for_training_day(row, day.isoformat())
+    assert structured_week["week_index"] == context.current_week_number
+    assert matched["date"] == day.isoformat()
+    assert matched["sessions"] == row["structured_plan"]["weeks"][0]["days"][0]["sessions"]
 
 
 def test_renewal_preserves_weekdays_doses_ids_and_training_history(api):

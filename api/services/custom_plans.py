@@ -160,7 +160,10 @@ def custom_open_plan_result(draft: dict, profile, *, training_day: str) -> dict:
                     "training_days": [d["weekday"] for d in days], "hard_sparring_days": hard,
                     "coach_owned_days": {"hard_sparring_days": hard, "technical_skill_days": technical},
                 },
-                "development_block": {},
+                "development_block": {
+                    f"week_{week}": "Maintain the saved athlete prescription"
+                    for week in range(1, 5)
+                },
             },
         },
     }

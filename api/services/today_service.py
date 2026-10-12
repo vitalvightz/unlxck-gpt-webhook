@@ -2968,6 +2968,19 @@ def _build_today_command_view(
     today_session_entry = (
         today_candidates[0] if today_candidates and today_logged_entry is None else None
     )
+    # Custom days execute as one combined workout through the existing
+    # completion fan-out. Name every required session so the summary describes
+    # the same unit as the Enhanced Cards and the completion action.
+    from api.plan_mappers import _decode_structured_text
+    is_custom_plan = bool((_decode_structured_text(plan_row.get("planning_brief")) or {}).get("custom_plan"))
+    if is_custom_plan and today_session_entry is not None and len(today_candidates) > 1:
+        today_session_entry = {
+            **_entry_mapping_for_readiness(today_session_entry),
+            "title": " / ".join(
+                str(_entry_mapping_for_readiness(entry).get("title") or "Session")
+                for entry in today_candidates
+            ),
+        }
     has_today_session = has_scheduled_day_content(today_session_entry)
     today_session_id = _session_id_for_entry(today_session_entry) if has_today_session else None
     rehab_occurrence = completions.rehab_completion(plan_id, training_day)
