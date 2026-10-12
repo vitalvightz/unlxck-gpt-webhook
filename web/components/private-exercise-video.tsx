@@ -1,19 +1,74 @@
 "use client";
 
-import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   createPrivateYouTubeClip, getCommunityExercise, getPrivateMedia, getPrivateMediaSettings, getPrivateUpload, reservePrivateUpload,
 } from "@/lib/api";
 import type { PrivateMediaPreview, PrivateMediaSettings } from "@/lib/api-schema.generated";
 import { getSupabaseBrowserClient } from "@/lib/supabase";
 import { ExerciseDemo } from "./exercise-demo";
+import { demoThumbnailUrl } from "@/lib/exercise-demo";
 import { InjuryDetailSheet } from "./today/injury-detail-sheet";
 import styles from "./custom-plan-builder.module.css";
 import layout from "./private-exercise-video.module.css";
 
 const PrivateMediaToken = createContext<string | null>(null);
+type MediaRequest = { preview: Promise<PrivateMediaPreview | undefined>; expiresAt: number };
+const PrivateMediaRequests = createContext<{
+  token: string | null;
+  requests: Map<string, MediaRequest>;
+} | null>(null);
 export function PrivateExerciseMediaProvider({ token, children }: { token?: string | null; children: ReactNode }) {
-  return <PrivateMediaToken.Provider value={token ?? null}>{children}</PrivateMediaToken.Provider>;
+  // Scoped to this signed-in view: previews and expanded players share a read,
+  // while token changes discard every cached private/signed URL.
+  const scope = useMemo(() => ({ token: token ?? null, requests: new Map<string, MediaRequest>() }), [token]);
+  return <PrivateMediaToken.Provider value={token ?? null}>
+    <PrivateMediaRequests.Provider value={scope}>{children}</PrivateMediaRequests.Provider>
+  </PrivateMediaToken.Provider>;
+}
+
+function usePrivateVideoPreview(token: string | null, id: string | undefined, community: boolean) {
+  const scope = useContext(PrivateMediaRequests);
+  const [loaded, setLoaded] = useState<{ token: string; id: string; community: boolean; media?: PrivateMediaPreview; error?: boolean }>();
+  useEffect(() => {
+    if (!token || !id) return;
+    let active = true;
+    const controller = new AbortController();
+    const cache = scope?.token === token ? scope.requests : undefined;
+    const key = `${community ? "community" : "private"}:${id}`;
+    const cached = cache?.get(key);
+    let preview = cached && cached.expiresAt > Date.now() ? cached.preview : undefined;
+    if (!preview) {
+      preview = community
+        ? getCommunityExercise(token, id, "revisions", cache ? undefined : controller.signal).then(entry => entry.media ?? undefined)
+        : getPrivateMedia(token, id, cache ? undefined : controller.signal);
+      // Uploaded renditions are signed for 60 seconds. Refresh before expiry
+      // when a row/player remounts instead of reusing an expired private URL.
+      cache?.set(key, { preview, expiresAt: Date.now() + 45_000 });
+      // Unavailable media can be retried by reopening; don't retain a failure.
+      void preview.then(media => { if (!media) cache?.delete(key); }, () => cache?.delete(key));
+    }
+    void preview.then(media => { if (active) setLoaded({ token, id, community, media, error: !media }); })
+      .catch(() => { if (active) setLoaded({ token, id, community, error: true }); });
+    return () => { active = false; controller.abort(); };
+  }, [token, id, community, scope]);
+  return loaded?.token === token && loaded.id === id && loaded.community === community ? loaded : undefined;
+}
+
+export function PrescribedPrivateVideoThumbnail({ id, community = false }: { id: string; community?: boolean }) {
+  const token = useContext(PrivateMediaToken);
+  const media = usePrivateVideoPreview(token, id, community)?.media;
+  if (!token) return null;
+  return <span className="ex-row-thumb" aria-hidden="true">
+    {media?.provider === "youtube" && media.video_id ? (
+      // eslint-disable-next-line @next/next/no-img-element -- remote YouTube thumbnail
+      <img src={demoThumbnailUrl(media.video_id, "mq")} alt="" loading="lazy"
+        onError={event => { event.currentTarget.style.display = "none"; }} />
+    ) : media?.url ? (
+      <video src={`${media.url}#t=0.1`} muted playsInline preload="metadata" tabIndex={-1} />
+    ) : null}
+    <span className="ex-demo-play-glyph ex-demo-play-glyph-sm" />
+  </span>;
 }
 export function PrescribedPrivateVideo({ id, name, community = false }: { id: string; name: string; community?: boolean }) {
   const token = useContext(PrivateMediaToken);
@@ -57,19 +112,7 @@ export function PrivateVideoPlayer({ media, name, visibility = "private" }: { me
 }
 
 export function PrivateExerciseVideo({ token, id, name, community = false }: { token: string; id: string; name: string; community?: boolean }) {
-  const [loaded, setLoaded] = useState<{ token: string; id: string; media?: PrivateMediaPreview; error?: boolean }>();
-  const media = loaded?.token === token && loaded.id === id ? loaded.media : undefined;
-  const error = loaded?.token === token && loaded.id === id && loaded.error;
-  useEffect(() => {
-    const request = new AbortController();
-    const preview = community
-      ? getCommunityExercise(token, id, "revisions", request.signal).then(entry => entry.media ?? undefined)
-      : getPrivateMedia(token, id, request.signal);
-    void preview.then(media => {
-      if (!request.signal.aborted) setLoaded({ token, id, media, error: !media });
-    }).catch(() => { if (!request.signal.aborted) setLoaded({ token, id, error: true }); });
-    return () => request.abort();
-  }, [token, id, community]);
+  const { media, error } = usePrivateVideoPreview(token, id, community) ?? {};
   return <div className={layout.preview}>{media ? <PrivateVideoPlayer key={media.url ?? media.id} media={media} name={name} visibility={community ? "community" : "private"} />
     : <p role="status">{error ? "Video unavailable. You can keep using your exercise." : "Opening video…"}</p>}</div>;
 }
