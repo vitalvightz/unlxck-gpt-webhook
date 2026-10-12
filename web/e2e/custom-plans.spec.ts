@@ -35,6 +35,8 @@ for (const width of [320, 390, 1280]) {
     if (!process.env.CUSTOM_PLAN_TEST_API) {
       await page.getByRole("button", { name: "Suggested format", exact: true }).click();
       await expect(page.getByRole("button", { name: "Use source suggestion", exact: true })).toBeVisible();
+      await expect(page.getByText("Source: conditioning_bank.json", { exact: true })).toHaveCount(0);
+      await expect(page.getByText("5x5min, 30s rest", { exact: true })).toBeVisible();
       await expect(page.getByLabel("Sets", { exact: true })).toHaveValue("");
       await page.getByRole("button", { name: "Use source suggestion", exact: true }).click();
       await expect(page.getByLabel("Rounds", { exact: true })).toHaveValue("5");
