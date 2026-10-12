@@ -1,0 +1,818 @@
+### S01_boxer21_noinj
+mode=deterministic_planner_plus_ai_finalizer triage=full_plan
+ W1 SPP D20..D14 hard decl=['Thursday'] eff=['Thursday'] phys=3 days=[15, 19, 20]
+    D-20 transfer_strength_day [strength] ['Box Jump', 'Band-Resisted Jab-Cross Primer', 'Reactive Start Burst']
+    D-19 neural_plus_strength_day [strength] ['Overcoming Split-Squat Isometric', 'Mobility Reset Flow']
+    D-15 fight_pace_repeatability_day [conditioning] []
+    D-17 hard_sparring_day [sparring] None
+    suppressed=[('recovery_reset_day', ['active_weight_cut'])]
+    EMPTY_CLOSED=[('fight_pace_repeatability_day', 15)]
+ W2 SPP D13..D7 hard decl=['Thursday'] eff=[] phys=3 days=[7, 10, 13]
+    D-13 strength_touch_day [strength] TAIL ['Pocket Frame-Burst Touch']
+    D-11 hard_sparring_day [sparring] TAIL []
+    D-10 light_fight_pace_touch_day [conditioning] TAIL ['Tempo Shadowboxing']
+    D-7 neural_primer_day [strength] TAIL ['Pull-Counter-Reset']
+    suppressed=[('recovery_reset_day', ['active_weight_cut'])]
+ W3 TAPER D6..D0 hard decl=['Thursday'] eff=[] phys=2 days=[2, 5]
+    D-5 alactic_sharpness_day [conditioning] TAIL ['Pocket Frame-Burst Touch']
+    D-4 hard_sparring_day [sparring] TAIL []
+    D-2 fight_week_freshness_day [recovery] TAIL ['Light Heavy-Bag Technical Tempo']
+    D-0 fight_day_protocol [fight_day] None
+    suppressed=[('fight_week_freshness_day', ['active_weight_cut'])]
+ goals=[('speed', 'primary', 'build', True, [], 1), ('conditioning', 'secondary', 'maintain', True, [], 1)]
+ weakness={'weakness': 'trunk_strength', 'selected_label': 'trunk_strength', 'resolution': 'delegated', 'subsystem': 'session_composition.trunk_support'}
+ gp_findings=[] authority=[]
+ trunk_members=[]
+ lower_impact=[('Box Jump', 20, ['mech_landing_impact', 'mech_lower_jump'])]
+### S02_boxer21_foot_low
+mode=deterministic_planner_plus_ai_finalizer triage=full_plan
+ W1 SPP D20..D14 hard decl=['Thursday'] eff=['Thursday'] phys=2 days=[15, 20]
+    D-20 neural_plus_strength_day [strength] ['Punch-Specific Max Isometric Hold', 'Jump Squat', 'Reactive Start Burst']
+    D-15 fight_pace_repeatability_day [conditioning] []
+    D-17 hard_sparring_day [sparring] None
+    suppressed=[('transfer_strength_day', ['active_weight_cut', 'injury_management']), ('tissue_recovery_day', ['active_weight_cut', 'injury_management'])]
+    EMPTY_CLOSED=[('fight_pace_repeatability_day', 15)]
+ W2 SPP D13..D7 hard decl=['Thursday'] eff=[] phys=3 days=[7, 10, 13]
+    D-13 strength_touch_day [strength] TAIL ['Pocket Frame-Burst Touch']
+    D-11 hard_sparring_day [sparring] TAIL []
+    D-10 light_fight_pace_touch_day [conditioning] TAIL ['Tempo Shadowboxing']
+    D-7 neural_primer_day [strength] TAIL ['Pull-Counter-Reset']
+    suppressed=[('strength_touch_day', ['active_weight_cut', 'injury_management']), ('tissue_recovery_day', ['active_weight_cut', 'injury_management'])]
+ W3 TAPER D6..D0 hard decl=['Thursday'] eff=[] phys=2 days=[2, 5]
+    D-5 alactic_sharpness_day [conditioning] TAIL ['Pocket Frame-Burst Touch']
+    D-4 hard_sparring_day [sparring] TAIL []
+    D-2 fight_week_freshness_day [recovery] TAIL ['Light Heavy-Bag Technical Tempo']
+    D-0 fight_day_protocol [fight_day] None
+    suppressed=[('neural_primer_day', None), ('alactic_sharpness_day', None)]
+ goals=[('speed', 'primary', 'build', True, [], 1), ('conditioning', 'secondary', 'maintain', True, [], 1)]
+ weakness={'weakness': 'trunk_strength', 'selected_label': 'trunk_strength', 'resolution': 'delegated', 'subsystem': 'session_composition.trunk_support'}
+ gp_findings=[] authority=[]
+ trunk_members=[]
+ lower_impact=[('Jump Squat', 20, ['mech_landing_impact', 'mech_lower_jump'])]
+### S03_boxer21_foot_mod_worse
+ERROR/blocked: {'error': None, 'status': 'triage_blocked', 'keys': ['status', 'ok', 'pdf_url', 'why_log', 'coach_notes', 'plan_text', 'stage2_payload', 'planning_brief', 'stage2_handoff_text', 'parsing_metadata']}
+### S04_boxer21_avail4
+mode=deterministic_planner_plus_ai_finalizer triage=full_plan
+ W1 SPP D20..D14 hard decl=['Thursday'] eff=['Thursday'] phys=3 days=[15, 19, 20]
+    D-20 transfer_strength_day [strength] ['Box Jump', 'Band-Resisted Jab-Cross Primer', 'Reactive Start Burst']
+    D-19 neural_plus_strength_day [strength] ['Overcoming Split-Squat Isometric', 'Mobility Reset Flow']
+    D-15 fight_pace_repeatability_day [conditioning] []
+    D-17 hard_sparring_day [sparring] None
+    suppressed=[('recovery_reset_day', ['active_weight_cut'])]
+    EMPTY_CLOSED=[('fight_pace_repeatability_day', 15)]
+ W2 SPP D13..D7 hard decl=['Thursday'] eff=[] phys=3 days=[7, 9, 13]
+    D-13 strength_touch_day [strength] TAIL ['Pocket Frame-Burst Touch']
+    D-11 hard_sparring_day [sparring] TAIL []
+    D-9 light_fight_pace_touch_day [conditioning] TAIL ['Tempo Shadowboxing']
+    D-7 neural_primer_day [strength] TAIL ['Pull-Counter-Reset']
+    suppressed=[('recovery_reset_day', ['active_weight_cut'])]
+ W3 TAPER D6..D0 hard decl=['Thursday'] eff=[] phys=2 days=[2, 6]
+    D-6 alactic_sharpness_day [conditioning] TAIL ['Pocket Frame-Burst Touch']
+    D-4 hard_sparring_day [sparring] TAIL []
+    D-2 fight_week_freshness_day [recovery] TAIL ['Light Heavy-Bag Technical Tempo']
+    D-0 fight_day_protocol [fight_day] None
+    suppressed=[('fight_week_freshness_day', ['active_weight_cut'])]
+ goals=[('speed', 'primary', 'build', True, [], 1), ('conditioning', 'secondary', 'maintain', True, [], 1)]
+ weakness={'weakness': 'trunk_strength', 'selected_label': 'trunk_strength', 'resolution': 'delegated', 'subsystem': 'session_composition.trunk_support'}
+ gp_findings=[] authority=[]
+ trunk_members=[]
+ lower_impact=[('Box Jump', 20, ['mech_landing_impact', 'mech_lower_jump'])]
+### S05_boxer21_nocut
+mode=deterministic_planner_plus_ai_finalizer triage=full_plan
+ W1 SPP D20..D14 hard decl=['Thursday'] eff=['Thursday'] phys=3 days=[15, 19, 20]
+    D-20 transfer_strength_day [strength] ['Box Jump', 'Band Row Speed Focus', 'Band-Resisted Jab-Cross Primer', '90/90 hip switches', 'Reactive Start Burst']
+    D-19 neural_plus_strength_day [strength] ['Overcoming Split-Squat Isometric', 'Mobility Reset Flow', 'Adductor rock-back']
+    D-15 fight_pace_repeatability_day [conditioning] []
+    D-17 hard_sparring_day [sparring] None
+    suppressed=[('recovery_reset_day', ['spar_first_cap'])]
+    EMPTY_CLOSED=[('fight_pace_repeatability_day', 15)]
+ W2 SPP D13..D7 hard decl=['Thursday'] eff=[] phys=3 days=[7, 10, 13]
+    D-13 strength_touch_day [strength] TAIL ['Pocket Frame-Burst Touch']
+    D-11 hard_sparring_day [sparring] TAIL []
+    D-10 light_fight_pace_touch_day [conditioning] TAIL ['Tempo Shadowboxing']
+    D-7 neural_primer_day [strength] TAIL ['Pull-Counter-Reset']
+    suppressed=[('recovery_reset_day', ['spar_first_cap'])]
+ W3 TAPER D6..D0 hard decl=['Thursday'] eff=[] phys=2 days=[2, 5]
+    D-5 alactic_sharpness_day [conditioning] TAIL ['Pocket Frame-Burst Touch']
+    D-4 hard_sparring_day [sparring] TAIL []
+    D-2 fight_week_freshness_day [recovery] TAIL ['Light Heavy-Bag Technical Tempo']
+    D-0 fight_day_protocol [fight_day] None
+    suppressed=[('fight_week_freshness_day', ['spar_first_cap'])]
+ goals=[('speed', 'primary', 'build', True, [], 1), ('conditioning', 'secondary', 'maintain', True, [], 1)]
+ weakness={'weakness': 'trunk_strength', 'selected_label': 'trunk_strength', 'resolution': 'delegated', 'subsystem': 'session_composition.trunk_support'}
+ gp_findings=[] authority=[]
+ trunk_members=[]
+ lower_impact=[('Box Jump', 20, ['mech_landing_impact', 'mech_lower_jump'])]
+### S06_boxer21_highfatigue
+mode=deterministic_planner_plus_ai_finalizer triage=full_plan
+ W1 SPP D20..D14 hard decl=['Thursday'] eff=[] phys=2 days=[16, 19]
+    D-16 recovery_aerobic_gas_tank_day [conditioning] ['Tempo Shadowboxing']
+    D-19 neural_plus_strength_day [strength] ['Punch-Specific Max Isometric Hold', 'Jump Squat']
+    D-17 hard_sparring_day [sparring] None
+    suppressed=[('transfer_strength_day', ['meaningful_weight_cut', 'high_fatigue', 'high_fatigue_active_cut']), ('fight_pace_repeatability_day', ['meaningful_weight_cut', 'high_fatigue', 'high_fatigue_active_cut'])]
+ W2 SPP D13..D7 hard decl=['Thursday'] eff=[] phys=2 days=[7, 13]
+    D-13 strength_touch_day [strength] TAIL ['Pocket Frame-Burst Touch']
+    D-11 hard_sparring_day [sparring] TAIL []
+    D-7 neural_primer_day [strength] TAIL ['Pull-Counter-Reset']
+    suppressed=[('strength_touch_day', ['meaningful_weight_cut', 'high_fatigue', 'high_fatigue_active_cut']), ('fight_pace_repeatability_day', ['meaningful_weight_cut', 'high_fatigue', 'high_fatigue_active_cut'])]
+ W3 TAPER D6..D0 hard decl=['Thursday'] eff=[] phys=2 days=[2, 5]
+    D-5 alactic_sharpness_day [conditioning] TAIL ['Pocket Frame-Burst Touch']
+    D-4 hard_sparring_day [sparring] TAIL []
+    D-2 fight_week_freshness_day [recovery] TAIL ['Light Heavy-Bag Technical Tempo']
+    D-0 fight_day_protocol [fight_day] None
+    suppressed=[('alactic_sharpness_day', ['meaningful_weight_cut', 'high_fatigue', 'high_fatigue_active_cut']), ('fight_week_freshness_day', ['meaningful_weight_cut', 'high_fatigue', 'high_fatigue_active_cut'])]
+ goals=[('speed', 'primary', 'defer', False, ['high_fatigue', 'high_fatigue', 'planner_compression', 'planner_compression', 'high_fatigue', 'high_fatigue', 'planner_compression', 'planner_compression', 'high_fatigue', 'planner_compression', 'planner_compression', 'high_fatigue', 'high_fatigue', 'planner_compression', 'planner_compression'], 0), ('conditioning', 'secondary', 'maintain', True, [], 1)]
+ weakness={'weakness': 'trunk_strength', 'selected_label': 'trunk_strength', 'resolution': 'delegated', 'subsystem': 'session_composition.trunk_support'}
+ gp_findings=[] authority=[]
+ trunk_members=[]
+ lower_impact=[('Jump Squat', 19, ['mech_landing_impact', 'mech_lower_jump'])]
+### S07_boxer21_freq6
+mode=deterministic_planner_plus_ai_finalizer triage=full_plan
+ W1 SPP D20..D14 hard decl=['Thursday'] eff=['Thursday'] phys=5 days=[15, 18, 19, 20]
+    D-20 transfer_strength_day [strength] ['Box Jump', 'Band-Resisted Jab-Cross Primer', 'Reactive Start Burst']
+    D-18 repeatability_support_day [conditioning] ['Tempo Shadowboxing']
+    D-19 neural_plus_strength_day [strength] ['Punch-Specific Max Isometric Hold', 'Jump Squat']
+    D-15 alactic_speed_day [conditioning] []
+    D-15 fight_pace_repeatability_day [conditioning] []
+    D-17 hard_sparring_day [sparring] None
+    suppressed=[('recovery_reset_day', ['active_weight_cut'])]
+    EMPTY_CLOSED=[('alactic_speed_day', 15), ('fight_pace_repeatability_day', 15)]
+ W2 SPP D13..D7 hard decl=['Thursday'] eff=[] phys=3 days=[7, 10, 13]
+    D-13 strength_touch_day [strength] TAIL ['Pocket Frame-Burst Touch']
+    D-11 hard_sparring_day [sparring] TAIL []
+    D-10 light_fight_pace_touch_day [conditioning] TAIL ['Tempo Shadowboxing']
+    D-7 neural_primer_day [strength] TAIL ['Pull-Counter-Reset']
+    suppressed=[('recovery_reset_day', ['active_weight_cut'])]
+ W3 TAPER D6..D0 hard decl=['Thursday'] eff=[] phys=2 days=[2, 5]
+    D-5 alactic_sharpness_day [conditioning] TAIL ['Pocket Frame-Burst Touch']
+    D-4 hard_sparring_day [sparring] TAIL []
+    D-2 fight_week_freshness_day [recovery] TAIL ['Light Heavy-Bag Technical Tempo']
+    D-0 fight_day_protocol [fight_day] None
+    suppressed=[('light_fight_pace_touch_day', None), ('light_fight_pace_touch_day', None)]
+ goals=[('speed', 'primary', 'build', True, [], 1), ('conditioning', 'secondary', 'maintain', True, [], 1)]
+ weakness={'weakness': 'trunk_strength', 'selected_label': 'trunk_strength', 'resolution': 'delegated', 'subsystem': 'session_composition.trunk_support'}
+ gp_findings=[] authority=[]
+ trunk_members=[]
+ lower_impact=[('Box Jump', 20, ['mech_landing_impact', 'mech_lower_jump']), ('Jump Squat', 19, ['mech_landing_impact', 'mech_lower_jump'])]
+### S08_boxer21_bodyweight
+mode=deterministic_planner_plus_ai_finalizer triage=full_plan
+ W1 SPP D20..D14 hard decl=['Thursday'] eff=['Thursday'] phys=3 days=[15, 19, 20]
+    D-20 transfer_strength_day [strength] ['Jump Squat', 'Band face pull light', 'Reactive Start Burst']
+    D-19 neural_plus_strength_day [strength] ['Mobility Reset Flow', 'Adductor rock-back']
+    D-15 fight_pace_repeatability_day [conditioning] []
+    D-17 hard_sparring_day [sparring] None
+    suppressed=[('recovery_reset_day', ['active_weight_cut'])]
+    EMPTY_CLOSED=[('fight_pace_repeatability_day', 15)]
+ W2 SPP D13..D7 hard decl=['Thursday'] eff=[] phys=3 days=[7, 10, 13]
+    D-13 strength_touch_day [strength] TAIL ['Pocket Frame-Burst Touch']
+    D-11 hard_sparring_day [sparring] TAIL []
+    D-10 light_fight_pace_touch_day [conditioning] TAIL ['Tempo Shadowboxing']
+    D-7 neural_primer_day [strength] TAIL ['Pull-Counter-Reset']
+    suppressed=[('recovery_reset_day', ['active_weight_cut'])]
+ W3 TAPER D6..D0 hard decl=['Thursday'] eff=[] phys=2 days=[2, 5]
+    D-5 alactic_sharpness_day [conditioning] TAIL ['Pocket Frame-Burst Touch']
+    D-4 hard_sparring_day [sparring] TAIL []
+    D-2 fight_week_freshness_day [recovery] TAIL ['Technical Shadowboxing Tempo']
+    D-0 fight_day_protocol [fight_day] None
+    suppressed=[('fight_week_freshness_day', ['active_weight_cut'])]
+ goals=[('speed', 'primary', 'build', True, [], 1), ('conditioning', 'secondary', 'maintain', True, [], 1)]
+ weakness={'weakness': 'trunk_strength', 'selected_label': 'trunk_strength', 'resolution': 'delegated', 'subsystem': 'session_composition.trunk_support'}
+ gp_findings=[] authority=[]
+ trunk_members=[]
+ lower_impact=[('Jump Squat', 20, ['mech_landing_impact', 'mech_lower_jump'])]
+### S09_boxer56_trunk
+mode=deterministic_planner_plus_ai_finalizer triage=full_plan
+ W1 GPP D55..D49 hard decl=['Thursday'] eff=['Thursday'] phys=3 days=[50, 53, 55]
+    D-55 secondary_strength_day [strength] ['DB Alternating Incline Press (30-45°)', 'Romanian Deadlift (DB)', 'Reactive Start Burst']
+    D-53 aerobic_base_day [conditioning] ['Heavy Bag Aerobic Pace']
+    D-50 primary_strength_day [strength] ['Kettlebell Swing']
+    D-52 hard_sparring_day [sparring] None
+    suppressed=[('recovery_reset_day', ['spar_first_cap'])]
+ W2 GPP D48..D42 hard decl=['Thursday'] eff=['Thursday'] phys=3 days=[43, 46, 48]
+    D-48 secondary_strength_day [strength] ['DB Alternating Incline Press (30-45°)', 'Romanian Deadlift (DB)', 'Reactive Start Burst']
+    D-46 aerobic_base_day [conditioning] ['Heavy Bag Aerobic Pace']
+    D-43 primary_strength_day [strength] ['Kettlebell Swing']
+    D-45 hard_sparring_day [sparring] None
+    suppressed=[('recovery_reset_day', ['spar_first_cap'])]
+ W3 GPP D41..D35 hard decl=['Thursday'] eff=['Thursday'] phys=3 days=[36, 39, 41]
+    D-41 secondary_strength_day [strength] ['DB Alternating Incline Press (30-45°)', 'Romanian Deadlift (DB)', 'Reactive Start Burst']
+    D-39 aerobic_base_day [conditioning] ['Heavy Bag Aerobic Pace']
+    D-36 primary_strength_day [strength] ['Kettlebell Swing']
+    D-38 hard_sparring_day [sparring] None
+    suppressed=[('recovery_reset_day', ['spar_first_cap'])]
+ W4 SPP D34..D28 hard decl=['Thursday'] eff=['Thursday'] phys=3 days=[29, 34]
+    D-34 transfer_strength_day [strength] ['Banded Row (Speed Focus)', 'Pivot-and-Strike (Rotation Focus)', 'Reactive Start Burst']
+    D-29 neural_plus_strength_day [strength] ['Heavy RDL → Broad Jump', 'Med-Ball Rotational Slam']
+    D-29 fight_pace_repeatability_day [conditioning] ['Punch-Slide Repeatability']
+    D-31 hard_sparring_day [sparring] None
+    suppressed=[('recovery_reset_day', ['spar_first_cap'])]
+ W5 SPP D27..D21 hard decl=['Thursday'] eff=['Thursday'] phys=3 days=[22, 27]
+    D-27 transfer_strength_day [strength] ['Banded Row (Speed Focus)', 'Pivot-and-Strike (Rotation Focus)', 'Reactive Start Burst']
+    D-22 neural_plus_strength_day [strength] ['Heavy RDL → Broad Jump', 'Med-Ball Rotational Slam']
+    D-22 fight_pace_repeatability_day [conditioning] ['Punch-Slide Repeatability']
+    D-24 hard_sparring_day [sparring] None
+    suppressed=[('recovery_reset_day', ['spar_first_cap'])]
+ W6 SPP D20..D14 hard decl=['Thursday'] eff=['Thursday'] phys=3 days=[15, 20]
+    D-20 strength_touch_day [strength] ['Banded Row (Speed Focus)', 'Pivot-and-Strike (Rotation Focus)']
+    D-15 neural_plus_strength_day [strength] ['Heavy RDL → Broad Jump', 'Med-Ball Rotational Slam', 'Reactive Start Burst']
+    D-15 fight_pace_repeatability_day [conditioning] ['Punch-Slide Repeatability']
+    D-17 hard_sparring_day [sparring] None
+    suppressed=[('recovery_reset_day', ['spar_first_cap'])]
+ W7 TAPER D13..D7 hard decl=['Thursday'] eff=[] phys=3 days=[7, 10, 13]
+    D-13 strength_touch_day [strength] TAIL ['Pocket Frame-Burst Touch']
+    D-11 hard_sparring_day [sparring] TAIL []
+    D-10 light_fight_pace_touch_day [conditioning] TAIL ['Tempo Shadowboxing']
+    D-7 neural_primer_day [strength] TAIL ['Pull-Counter-Reset']
+    suppressed=[('hard_sparring_day', None), ('fight_week_freshness_day', ['spar_first_cap'])]
+ W8 TAPER D6..D0 hard decl=['Thursday'] eff=[] phys=2 days=[2, 5]
+    D-5 alactic_sharpness_day [conditioning] TAIL ['Pocket Frame-Burst Touch']
+    D-4 hard_sparring_day [sparring] TAIL []
+    D-2 fight_week_freshness_day [recovery] TAIL []
+    D-0 fight_day_protocol [fight_day] None
+    suppressed=[('hard_sparring_day', None), ('fight_week_freshness_day', ['spar_first_cap'])]
+ goals=[('speed', 'primary', 'build', True, [], 6), ('conditioning', 'secondary', 'maintain', True, [], 3)]
+ weakness={'weakness': 'trunk_strength', 'selected_label': 'trunk_strength', 'resolution': 'delegated', 'subsystem': 'session_composition.trunk_support'}
+ gp_findings=[] authority=[]
+ trunk_members=[]
+ lower_impact=[('Heavy RDL → Broad Jump', 29, ['mech_landing_impact', 'mech_lower_jump']), ('Punch-Slide Repeatability', 29, ['mech_change_of_direction']), ('Heavy RDL → Broad Jump', 22, ['mech_landing_impact', 'mech_lower_jump']), ('Punch-Slide Repeatability', 22, ['mech_change_of_direction']), ('Heavy RDL → Broad Jump', 15, ['mech_landing_impact', 'mech_lower_jump']), ('Punch-Slide Repeatability', 15, ['mech_change_of_direction'])]
+### S10_boxer56_novice_f3_nocut
+mode=deterministic_planner_plus_ai_finalizer triage=full_plan
+ W1 GPP D55..D49 hard decl=['Thursday'] eff=['Thursday'] phys=2 days=[50, 55]
+    D-50 secondary_strength_day [strength] ['DB Alternating Incline Press (30-45°)', 'Romanian Deadlift (DB)', 'Slow-Lowered Pull-Up']
+    D-55 primary_strength_day [strength] ['Cossack Squat', 'Single-Leg Forward Hops']
+    D-52 hard_sparring_day [sparring] None
+    suppressed=[('recovery_reset_day', ['spar_first_cap'])]
+ W2 GPP D48..D42 hard decl=['Thursday'] eff=['Thursday'] phys=2 days=[43, 48]
+    D-43 secondary_strength_day [strength] ['DB Alternating Incline Press (30-45°)', 'Romanian Deadlift (DB)', 'Slow-Lowered Pull-Up']
+    D-48 primary_strength_day [strength] ['Cossack Squat', 'Single-Leg Forward Hops']
+    D-45 hard_sparring_day [sparring] None
+    suppressed=[('recovery_reset_day', ['spar_first_cap'])]
+ W3 GPP D41..D35 hard decl=['Thursday'] eff=['Thursday'] phys=2 days=[36, 41]
+    D-36 secondary_strength_day [strength] ['DB Alternating Incline Press (30-45°)', 'Romanian Deadlift (DB)', 'Slow-Lowered Pull-Up']
+    D-41 primary_strength_day [strength] ['Cossack Squat', 'Single-Leg Forward Hops']
+    D-38 hard_sparring_day [sparring] None
+    suppressed=[('recovery_reset_day', ['spar_first_cap'])]
+ W4 SPP D34..D28 hard decl=['Thursday'] eff=['Thursday'] phys=2 days=[29, 34]
+    D-34 neural_plus_strength_day [strength] ['Heavy RDL → Broad Jump', 'Barbell Thruster', 'Med-Ball Rotational Slam', 'Ballistic Box Jump (Min Ground Contact)', 'Loaded Carry Touch']
+    D-29 fight_pace_repeatability_day [conditioning] ['Boxing Punishment Drill (Bad Position Rounds)']
+    D-31 hard_sparring_day [sparring] None
+    suppressed=[('recovery_reset_day', ['spar_first_cap'])]
+ W5 SPP D27..D21 hard decl=['Thursday'] eff=['Thursday'] phys=2 days=[22, 27]
+    D-27 neural_plus_strength_day [strength] ['Heavy RDL → Broad Jump', 'Barbell Thruster', 'Med-Ball Rotational Slam', 'Ballistic Box Jump (Min Ground Contact)', 'Loaded Carry Touch']
+    D-22 fight_pace_repeatability_day [conditioning] ['Boxing Punishment Drill (Bad Position Rounds)']
+    D-24 hard_sparring_day [sparring] None
+    suppressed=[('recovery_reset_day', ['spar_first_cap'])]
+ W6 SPP D20..D14 hard decl=['Thursday'] eff=['Thursday'] phys=2 days=[15, 20]
+    D-20 neural_plus_strength_day [strength] ['Heavy RDL → Broad Jump', 'Barbell Thruster', 'Med-Ball Rotational Slam', 'Ballistic Box Jump (Min Ground Contact)', 'Loaded Carry Touch']
+    D-15 fight_pace_repeatability_day [conditioning] ['Boxing Punishment Drill (Bad Position Rounds)']
+    D-17 hard_sparring_day [sparring] None
+    suppressed=[('recovery_reset_day', ['spar_first_cap'])]
+ W7 TAPER D13..D7 hard decl=['Thursday'] eff=[] phys=3 days=[7, 10, 13]
+    D-13 strength_touch_day [strength] TAIL ['Explosive Straight Burst']
+    D-11 hard_sparring_day [sparring] TAIL []
+    D-10 light_fight_pace_touch_day [conditioning] TAIL ['Tempo Shadowboxing']
+    D-7 neural_primer_day [strength] TAIL ['Explosive First-Step Cue']
+    suppressed=[('hard_sparring_day', None), ('fight_week_freshness_day', ['spar_first_cap'])]
+ W8 TAPER D6..D0 hard decl=['Thursday'] eff=[] phys=2 days=[2, 5]
+    D-5 alactic_sharpness_day [conditioning] TAIL ['Explosive Straight Burst']
+    D-4 hard_sparring_day [sparring] TAIL []
+    D-2 fight_week_freshness_day [recovery] TAIL []
+    D-0 fight_day_protocol [fight_day] None
+    suppressed=[('hard_sparring_day', None), ('fight_week_freshness_day', ['spar_first_cap'])]
+ goals=[('strength', 'primary', 'build', True, [], 6), ('conditioning', 'secondary', 'maintain', True, [], 3)]
+ weakness={'weakness': 'trunk_strength', 'selected_label': 'trunk_strength', 'resolution': 'delegated', 'subsystem': 'session_composition.trunk_support'}
+ gp_findings=[] authority=[]
+ trunk_members=['Loaded Carry Touch']
+ lower_impact=[('Single-Leg Forward Hops', 55, ['mech_landing_impact', 'mech_lower_jump']), ('Single-Leg Forward Hops', 48, ['mech_landing_impact', 'mech_lower_jump']), ('Single-Leg Forward Hops', 41, ['mech_landing_impact', 'mech_lower_jump']), ('Heavy RDL → Broad Jump', 34, ['mech_landing_impact', 'mech_lower_jump']), ('Ballistic Box Jump (Min Ground Contact)', 34, ['mech_landing_impact', 'mech_lower_jump']), ('Heavy RDL → Broad Jump', 27, ['mech_landing_impact', 'mech_lower_jump']), ('Ballistic Box Jump (Min Ground Contact)', 27, ['mech_landing_impact', 'mech_lower_jump']), ('Heavy RDL → Broad Jump', 20, ['mech_landing_impact', 'mech_lower_jump'])]
+### S11_boxer70_gpp_trunk_strength
+mode=deterministic_planner_plus_ai_finalizer triage=full_plan
+ W1 GPP D69..D63 hard decl=['Thursday'] eff=['Thursday'] phys=3 days=[64, 67, 69]
+    D-69 secondary_strength_day [strength] ['Lat Pulldown', 'DB Plyometric Push-Up (Hands on Dumbbells)', 'Sled Push (Board)', 'Single-Leg Farmer Carry Hold']
+    D-67 aerobic_base_day [conditioning] ['Aerobic power circuits', 'Sled Push (Incline)']
+    D-64 primary_strength_day [strength] ['Kettlebell Swing', 'DB Alternating Incline Press (30-45°)', 'Romanian Deadlift (DB)', 'Sled Push (Incline)']
+    D-66 hard_sparring_day [sparring] None
+    suppressed=[('recovery_reset_day', ['spar_first_cap'])]
+ W2 GPP D62..D56 hard decl=['Thursday'] eff=['Thursday'] phys=3 days=[57, 60, 62]
+    D-62 secondary_strength_day [strength] ['Lat Pulldown', 'DB Plyometric Push-Up (Hands on Dumbbells)', 'Sled Push (Board)', 'Single-Leg Farmer Carry Hold']
+    D-60 aerobic_base_day [conditioning] ['Aerobic power circuits', 'Sled Push (Incline)']
+    D-57 primary_strength_day [strength] ['Kettlebell Swing', 'DB Alternating Incline Press (30-45°)', 'Romanian Deadlift (DB)', 'Sled Push (Incline)']
+    D-59 hard_sparring_day [sparring] None
+    suppressed=[('recovery_reset_day', ['spar_first_cap'])]
+ W3 GPP D55..D49 hard decl=['Thursday'] eff=['Thursday'] phys=3 days=[50, 53, 55]
+    D-55 secondary_strength_day [strength] ['Lat Pulldown', 'DB Plyometric Push-Up (Hands on Dumbbells)', 'Sled Push (Board)', 'Single-Leg Farmer Carry Hold']
+    D-53 aerobic_base_day [conditioning] ['Aerobic power circuits', 'Sled Push (Incline)']
+    D-50 primary_strength_day [strength] ['Kettlebell Swing', 'DB Alternating Incline Press (30-45°)', 'Romanian Deadlift (DB)', 'Sled Push (Incline)']
+    D-52 hard_sparring_day [sparring] None
+    suppressed=[('recovery_reset_day', ['spar_first_cap'])]
+ W4 GPP D48..D42 hard decl=['Thursday'] eff=['Thursday'] phys=3 days=[43, 46, 48]
+    D-48 secondary_strength_day [strength] ['Lat Pulldown', 'DB Plyometric Push-Up (Hands on Dumbbells)', 'Sled Push (Board)', 'Single-Leg Farmer Carry Hold']
+    D-46 aerobic_base_day [conditioning] ['Aerobic power circuits', 'Sled Push (Incline)']
+    D-43 primary_strength_day [strength] ['Kettlebell Swing', 'DB Alternating Incline Press (30-45°)', 'Romanian Deadlift (DB)', 'Sled Push (Incline)']
+    D-45 hard_sparring_day [sparring] None
+    suppressed=[('recovery_reset_day', ['spar_first_cap'])]
+ W5 SPP D41..D35 hard decl=['Thursday'] eff=['Thursday'] phys=3 days=[36, 41]
+    D-41 transfer_strength_day [strength] ['DB Bench Press → Plyo Push-Up', 'Med-Ball Rotational Slam', 'Back Squat → Box Jump', 'Med Ball Scoop Toss', 'Loaded Carry Touch']
+    D-36 neural_plus_strength_day [strength] ['Barbell Thruster', 'Banded Row (Speed Focus)', 'Woodchopper (Cable)']
+    D-36 fight_pace_repeatability_day [conditioning] ['Double-End Bag Circuit']
+    D-38 hard_sparring_day [sparring] None
+    suppressed=[('recovery_reset_day', ['spar_first_cap'])]
+ W6 SPP D34..D28 hard decl=['Thursday'] eff=['Thursday'] phys=3 days=[29, 34]
+    D-34 transfer_strength_day [strength] ['DB Bench Press → Plyo Push-Up', 'Med-Ball Rotational Slam', 'Back Squat → Box Jump', 'Med Ball Scoop Toss', 'Loaded Carry Touch']
+    D-29 neural_plus_strength_day [strength] ['Barbell Thruster', 'Banded Row (Speed Focus)', 'Woodchopper (Cable)']
+    D-29 fight_pace_repeatability_day [conditioning] ['Double-End Bag Circuit']
+    D-31 hard_sparring_day [sparring] None
+    suppressed=[('recovery_reset_day', ['spar_first_cap'])]
+ W7 SPP D27..D21 hard decl=['Thursday'] eff=['Thursday'] phys=3 days=[22, 27]
+    D-27 transfer_strength_day [strength] ['DB Bench Press → Plyo Push-Up', 'Med-Ball Rotational Slam', 'Back Squat → Box Jump', 'Med Ball Scoop Toss', 'Loaded Carry Touch']
+    D-22 neural_plus_strength_day [strength] ['Barbell Thruster', 'Banded Row (Speed Focus)', 'Woodchopper (Cable)']
+    D-22 fight_pace_repeatability_day [conditioning] ['Double-End Bag Circuit']
+    D-24 hard_sparring_day [sparring] None
+    suppressed=[('recovery_reset_day', ['spar_first_cap'])]
+ W8 SPP D20..D14 hard decl=['Thursday'] eff=['Thursday'] phys=3 days=[15, 20]
+    D-20 strength_touch_day [strength] ['DB Bench Press → Plyo Push-Up', 'Med-Ball Rotational Slam']
+    D-15 neural_plus_strength_day [strength] ['Barbell Thruster', 'Banded Row (Speed Focus)', 'Woodchopper (Cable)', 'Loaded Carry Touch']
+    D-15 fight_pace_repeatability_day [conditioning] ['Double-End Bag Circuit']
+    D-17 hard_sparring_day [sparring] None
+    suppressed=[('recovery_reset_day', ['spar_first_cap'])]
+ W9 TAPER D13..D7 hard decl=['Thursday'] eff=[] phys=3 days=[7, 10, 13]
+    D-13 strength_touch_day [strength] TAIL ['Explosive Straight Burst']
+    D-11 hard_sparring_day [sparring] TAIL []
+    D-10 light_fight_pace_touch_day [conditioning] TAIL ['Tempo Shadowboxing']
+    D-7 neural_primer_day [strength] TAIL ['Explosive First-Step Cue']
+    suppressed=[('hard_sparring_day', None), ('fight_week_freshness_day', ['spar_first_cap'])]
+ W10 TAPER D6..D0 hard decl=['Thursday'] eff=[] phys=2 days=[2, 5]
+    D-5 alactic_sharpness_day [conditioning] TAIL ['Explosive Straight Burst']
+    D-4 hard_sparring_day [sparring] TAIL []
+    D-2 fight_week_freshness_day [recovery] TAIL []
+    D-0 fight_day_protocol [fight_day] None
+    suppressed=[('hard_sparring_day', None), ('fight_week_freshness_day', ['spar_first_cap'])]
+ goals=[('strength', 'primary', 'build', True, [], 8), ('power', 'secondary', 'maintain', True, [], 4)]
+ weakness={'weakness': 'trunk_strength', 'selected_label': 'trunk_strength', 'resolution': 'delegated', 'subsystem': 'session_composition.trunk_support'}
+ gp_findings=[] authority=[('selected_loaded_exercise_forbidden', 'neural_plus_strength_day'), ('selected_loaded_exercise_forbidden', 'neural_plus_strength_day')]
+ trunk_members=['Loaded Carry Touch', 'Single-Leg Farmer Carry Hold']
+ lower_impact=[('DB Plyometric Push-Up (Hands on Dumbbells)', 69, ['mech_landing_impact']), ('DB Plyometric Push-Up (Hands on Dumbbells)', 62, ['mech_landing_impact']), ('DB Plyometric Push-Up (Hands on Dumbbells)', 55, ['mech_landing_impact']), ('DB Plyometric Push-Up (Hands on Dumbbells)', 48, ['mech_landing_impact']), ('DB Bench Press → Plyo Push-Up', 41, ['mech_landing_impact']), ('Back Squat → Box Jump', 41, ['mech_landing_impact', 'mech_lower_jump']), ('DB Bench Press → Plyo Push-Up', 34, ['mech_landing_impact']), ('Back Squat → Box Jump', 34, ['mech_landing_impact', 'mech_lower_jump'])]
+### S12_mma42_pro_strength_power
+mode=deterministic_planner_plus_ai_finalizer triage=full_plan
+ W1 GPP D41..D35 hard decl=['Tuesday', 'Friday'] eff=['Tuesday', 'Friday'] phys=2 days=[39, 41]
+    D-40 hard_sparring_day [sparring] None
+    D-37 hard_sparring_day [sparring] None
+    D-39 aerobic_base_day [conditioning] ['Heavy Bag Aerobic Pace']
+    D-41 primary_strength_day [strength] ['Single-Leg Farmer Carry Hold', 'Loaded Carry Touch']
+    suppressed=[('controlled_repeatability_day', ['two_hard_spar_days']), ('recovery_reset_day', ['two_hard_spar_days']), ('secondary_strength_day', ['pre_hard_contact_strength_exposure_cap'])]
+ W2 GPP D34..D28 hard decl=['Tuesday', 'Friday'] eff=['Tuesday', 'Friday'] phys=2 days=[32, 34]
+    D-33 hard_sparring_day [sparring] None
+    D-30 hard_sparring_day [sparring] None
+    D-32 aerobic_base_day [conditioning] ['Heavy Bag Aerobic Pace']
+    D-34 primary_strength_day [strength] ['Single-Leg Farmer Carry Hold', 'Loaded Carry Touch']
+    suppressed=[('controlled_repeatability_day', ['two_hard_spar_days']), ('recovery_reset_day', ['two_hard_spar_days']), ('secondary_strength_day', ['pre_hard_contact_strength_exposure_cap'])]
+ W3 SPP D27..D21 hard decl=['Tuesday', 'Friday'] eff=['Tuesday', 'Friday'] phys=3 days=[22, 25, 27]
+    D-26 hard_sparring_day [sparring] None
+    D-23 hard_sparring_day [sparring] None
+    D-22 fight_pace_repeatability_day [conditioning] ['Double-End Bag Circuit']
+    D-27 alactic_speed_day [conditioning] ['Broad Jump (Stick Landing)']
+    D-25 neural_plus_strength_day [strength] ['High Pull', 'Loaded Carry Touch']
+    suppressed=[('transfer_strength_day', ['two_hard_spar_days']), ('recovery_reset_day', ['two_hard_spar_days'])]
+ W4 SPP D20..D14 hard decl=['Tuesday', 'Friday'] eff=['Tuesday', 'Friday'] phys=3 days=[15, 18, 20]
+    D-19 hard_sparring_day [sparring] None
+    D-16 hard_sparring_day [sparring] None
+    D-15 fight_pace_repeatability_day [conditioning] ['Double-End Bag Circuit']
+    D-20 alactic_speed_day [conditioning] ['Broad Jump (Stick Landing)']
+    D-18 neural_plus_strength_day [strength] ['High Pull', 'Loaded Carry Touch']
+    suppressed=[('transfer_strength_day', ['two_hard_spar_days']), ('recovery_reset_day', ['two_hard_spar_days'])]
+ W5 SPP D13..D7 hard decl=['Tuesday', 'Friday'] eff=[] phys=3 days=[7, 9, 12]
+    D-13 hard_sparring_day [sparring] TAIL []
+    D-12 strength_touch_day [strength] TAIL ['Solo Frame-Turn Exit Cue']
+    D-10 hard_sparring_day [sparring] TAIL []
+    D-9 light_fight_pace_touch_day [conditioning] TAIL ['Tempo Shadowboxing']
+    D-7 neural_primer_day [strength] TAIL ['Explosive Straight Burst']
+    suppressed=[('strength_touch_day', ['two_hard_spar_days']), ('recovery_reset_day', ['two_hard_spar_days'])]
+ W6 TAPER D6..D0 hard decl=['Tuesday', 'Friday'] eff=[] phys=2 days=[2, 4]
+    D-6 hard_sparring_day [sparring] TAIL []
+    D-4 alactic_sharpness_day [conditioning] TAIL ['Standing Stance-Set Cue']
+    D-3 hard_sparring_day [sparring] TAIL []
+    D-2 fight_week_freshness_day [recovery] TAIL []
+    D-0 fight_day_protocol [fight_day] None
+    suppressed=[('light_fight_pace_touch_day', None), ('hard_sparring_day', None), ('fight_week_freshness_day', ['two_hard_spar_days'])]
+ goals=[('strength', 'primary', 'build', True, [], 4), ('conditioning', 'primary_weakness', 'build', True, [], 4), ('power', 'secondary', 'defer', False, ['planner_compression'], 1)]
+ weakness={'weakness': 'gas_tank', 'selected_label': 'gas_tank', 'resolution': 'weekly_floor', 'target': 'conditioning', 'required_intent': 'energy_system_training'}
+ gp_findings=[] authority=[]
+ trunk_members=['Loaded Carry Touch', 'Single-Leg Farmer Carry Hold']
+ lower_impact=[('Broad Jump (Stick Landing)', 27, ['mech_landing_impact', 'mech_lower_jump']), ('Broad Jump (Stick Landing)', 20, ['mech_landing_impact', 'mech_lower_jump'])]
+### S13_muaythai28_ankle_cut7
+ERROR/blocked: {'error': None, 'status': 'triage_blocked', 'keys': ['status', 'ok', 'pdf_url', 'why_log', 'coach_notes', 'plan_text', 'stage2_payload', 'planning_brief', 'stage2_handoff_text', 'parsing_metadata']}
+### S14_kick10_late_trunk
+mode=deterministic_late_fight_planner_plus_ai_finalizer triage=full_plan
+ W1 TAPER DNone..DNone hard decl=['Thursday'] eff=[] phys=1 days=[10]
+    D-10 strength_touch_day [strength] None
+    suppressed=[('technical_touch_day', None)]
+ W2 TAPER DNone..DNone hard decl=['Thursday'] eff=[] phys=0 days=[]
+    D-7 hard_sparring_day [sparring] None
+    suppressed=[('technical_touch_day', None)]
+ W3 TAPER DNone..DNone hard decl=[] eff=[] phys=1 days=[6]
+    D-6 alactic_sharpness_day [conditioning] None
+ W4 TAPER DNone..DNone hard decl=[] eff=[] phys=1 days=[3]
+    D-3 fight_week_freshness_day [recovery] None
+ W5 TAPER DNone..DNone hard decl=['Thursday'] eff=[] phys=1 days=[1]
+    D-1 neural_primer_day [strength] None
+    suppressed=[('technical_touch_day', None)]
+ W6 TAPER DNone..DNone hard decl=['Thursday'] eff=[] phys=0 days=[]
+ goals=[('speed', 'primary', 'maintain', False, [], 0)]
+ weakness={'weakness': 'trunk_strength', 'selected_label': 'trunk_strength', 'resolution': 'delegated', 'subsystem': 'session_composition.trunk_support'}
+ gp_findings=[('goal_preservation_failed', 'speed')] authority=[]
+ trunk_members=[]
+ lower_impact=[]
+### S15_openbox8w
+mode=deterministic_open_ongoing_planner_plus_ai_finalizer triage=full_plan
+ goals=[]
+ weakness=None
+ gp_findings=[] authority=[]
+ trunk_members=[]
+ lower_impact=[]
+### S16_bjj35_shoulder
+mode=deterministic_planner_plus_ai_finalizer triage=full_plan
+ W1 GPP D34..D28 hard decl=['Tuesday', 'Thursday'] eff=['Tuesday', 'Thursday'] phys=3 days=[30, 32, 34]
+    D-33 hard_sparring_day [sparring] None
+    D-31 hard_sparring_day [sparring] None
+    D-32 aerobic_base_day [conditioning] ['Loaded Carry Touch']
+    D-34 converted_mobility_support_day [conditioning] []
+    D-30 converted_mobility_support_day [conditioning] []
+    suppressed=[('primary_strength_day', ['two_hard_spar_days', 'injury_management']), ('secondary_strength_day', ['two_hard_spar_days', 'injury_management']), ('tissue_recovery_day', ['two_hard_spar_days', 'injury_management'])]
+    EMPTY_CLOSED=[('converted_mobility_support_day', 34), ('converted_mobility_support_day', 30)]
+ W2 SPP D27..D21 hard decl=['Tuesday', 'Thursday'] eff=['Tuesday', 'Thursday'] phys=3 days=[22, 23, 25]
+    D-26 hard_sparring_day [sparring] None
+    D-24 hard_sparring_day [sparring] None
+    D-22 fight_pace_repeatability_day [conditioning] ['Loaded Carry Touch']
+    D-25 converted_mobility_support_day [conditioning] ['Kettlebell Swings (EMOM Aerobic)']
+    D-23 converted_mobility_support_day [conditioning] ['Kettlebell Swings (EMOM Aerobic)']
+    suppressed=[('neural_plus_strength_day', ['two_hard_spar_days', 'injury_management']), ('transfer_strength_day', ['two_hard_spar_days', 'injury_management']), ('tissue_recovery_day', ['two_hard_spar_days', 'injury_management'])]
+ W3 SPP D20..D14 hard decl=['Tuesday', 'Thursday'] eff=['Tuesday', 'Thursday'] phys=3 days=[15, 16, 18]
+    D-19 hard_sparring_day [sparring] None
+    D-17 hard_sparring_day [sparring] None
+    D-15 fight_pace_repeatability_day [conditioning] ['Loaded Carry Touch']
+    D-18 converted_mobility_support_day [conditioning] ['Kettlebell Swings (EMOM Aerobic)']
+    D-16 converted_mobility_support_day [conditioning] ['Kettlebell Swings (EMOM Aerobic)']
+    suppressed=[('neural_plus_strength_day', ['two_hard_spar_days', 'injury_management']), ('strength_touch_day', ['two_hard_spar_days', 'injury_management']), ('tissue_recovery_day', ['two_hard_spar_days', 'injury_management'])]
+ W4 TAPER D13..D7 hard decl=['Tuesday', 'Thursday'] eff=[] phys=2 days=[7, 12]
+    D-13 hard_sparring_day [sparring] TAIL []
+    D-12 strength_touch_day [strength] TAIL []
+    D-11 hard_sparring_day [sparring] TAIL []
+    D-7 neural_primer_day [strength] TAIL []
+    suppressed=[('neural_primer_day', None), ('alactic_sharpness_day', None), ('hard_sparring_day', None), ('hard_sparring_day', None), ('fight_week_freshness_day', ['two_hard_spar_days', 'injury_management'])]
+    EMPTY_CLOSED=[('strength_touch_day', 12), ('neural_primer_day', 7)]
+ W5 TAPER D6..D0 hard decl=['Tuesday', 'Thursday'] eff=[] phys=2 days=[2, 5]
+    D-6 hard_sparring_day [sparring] TAIL []
+    D-5 alactic_sharpness_day [conditioning] TAIL []
+    D-4 hard_sparring_day [sparring] TAIL []
+    D-2 fight_week_freshness_day [recovery] TAIL ['YTW Raise Sequence (Light DBs)']
+    D-0 fight_day_protocol [fight_day] None
+    suppressed=[('neural_primer_day', None), ('alactic_sharpness_day', None), ('hard_sparring_day', None), ('hard_sparring_day', None), ('fight_week_freshness_day', ['two_hard_spar_days', 'injury_management'])]
+    EMPTY_CLOSED=[('alactic_sharpness_day', 5)]
+ goals=[('strength', 'primary', 'build', True, [], 3), ('mobility', 'secondary', 'maintain', True, [], 2)]
+ weakness={'weakness': 'trunk_strength', 'selected_label': 'trunk_strength', 'resolution': 'delegated', 'subsystem': 'session_composition.trunk_support'}
+ gp_findings=[] authority=[('late_physical_role_missing_assignment', 'strength_touch_day'), ('late_physical_role_missing_assignment', 'neural_primer_day'), ('late_physical_role_missing_assignment', 'alactic_sharpness_day')]
+ trunk_members=['Loaded Carry Touch']
+ lower_impact=[]
+### S17_boxer21_threehard_pro
+mode=deterministic_planner_plus_ai_finalizer triage=full_plan
+ W1 SPP D20..D14 hard decl=['Monday', 'Wednesday', 'Friday'] eff=['Monday', 'Wednesday', 'Friday'] phys=2 days=[15, 19]
+    D-19 repeatability_support_day [conditioning] ['Tempo Shadowboxing']
+    D-15 neural_plus_strength_day [strength] ['Punch-Specific Max Isometric Hold', 'Jump Squat', 'Reactive Start Burst']
+    D-20 hard_sparring_day [sparring] None
+    D-18 hard_sparring_day [sparring] None
+    D-16 hard_sparring_day [sparring] None
+    suppressed=[('transfer_strength_day', ['meaningful_weight_cut', 'high_spar_load']), ('recovery_reset_day', ['meaningful_weight_cut', 'high_spar_load']), ('fight_pace_repeatability_day', ['meaningful_weight_cut', 'high_spar_load'])]
+ W2 SPP D13..D7 hard decl=['Monday', 'Wednesday', 'Friday'] eff=[] phys=2 days=[11, 13]
+    D-13 strength_touch_day [strength] TAIL ['Pocket Frame-Burst Touch']
+    D-12 hard_sparring_day [sparring] TAIL []
+    D-11 light_fight_pace_touch_day [conditioning] TAIL ['Tempo Shadowboxing']
+    D-10 hard_sparring_day [sparring] TAIL []
+    D-7 hard_sparring_day [sparring] TAIL []
+    suppressed=[('strength_touch_day', ['meaningful_weight_cut', 'high_spar_load']), ('recovery_reset_day', ['meaningful_weight_cut', 'high_spar_load']), ('fight_pace_repeatability_day', ['meaningful_weight_cut', 'high_spar_load'])]
+ W3 TAPER D6..D0 hard decl=['Monday', 'Wednesday', 'Friday'] eff=[] phys=2 days=[2, 4]
+    D-5 hard_sparring_day [sparring] TAIL []
+    D-4 alactic_sharpness_day [conditioning] TAIL ['Pull-Counter-Reset']
+    D-3 hard_sparring_day [sparring] TAIL []
+    D-2 fight_week_freshness_day [recovery] TAIL ['Light Heavy-Bag Technical Tempo']
+    D-0 fight_day_protocol [fight_day] None
+    suppressed=[('light_fight_pace_touch_day', None), ('hard_sparring_day', None), ('hard_sparring_day', None), ('alactic_sharpness_day', ['meaningful_weight_cut', 'high_spar_load']), ('fight_week_freshness_day', ['meaningful_weight_cut', 'high_spar_load'])]
+ goals=[('speed', 'primary', 'build', True, [], 1), ('conditioning', 'secondary', 'maintain', True, [], 1)]
+ weakness={'weakness': 'trunk_strength', 'selected_label': 'trunk_strength', 'resolution': 'delegated', 'subsystem': 'session_composition.trunk_support'}
+ gp_findings=[] authority=[]
+ trunk_members=[]
+ lower_impact=[('Jump Squat', 15, ['mech_landing_impact', 'mech_lower_jump'])]
+### S18_wrestling14
+mode=deterministic_planner_plus_ai_finalizer triage=full_plan
+ W1 SPP D13..D7 hard decl=['Thursday'] eff=[] phys=3 days=[7, 10, 13]
+    D-13 strength_touch_day [strength] TAIL ['Explosive First-Step Cue']
+    D-11 hard_sparring_day [sparring] TAIL []
+    D-10 light_fight_pace_touch_day [conditioning] TAIL ['Tempo Shadowboxing']
+    D-7 neural_primer_day [strength] TAIL ['Explosive First-Step Cue']
+    suppressed=[('hard_sparring_day', None), ('strength_touch_day', ['active_weight_cut', 'proximity_to_fight']), ('recovery_reset_day', ['active_weight_cut', 'proximity_to_fight'])]
+ W2 TAPER D6..D0 hard decl=['Thursday'] eff=[] phys=2 days=[2, 5]
+    D-5 alactic_sharpness_day [conditioning] TAIL ['Explosive First-Step Cue']
+    D-4 hard_sparring_day [sparring] TAIL []
+    D-2 fight_week_freshness_day [recovery] TAIL ['Band Row Speed Focus']
+    D-0 fight_day_protocol [fight_day] None
+    suppressed=[('hard_sparring_day', None), ('neural_primer_day', ['active_weight_cut', 'proximity_to_fight']), ('fight_week_freshness_day', ['active_weight_cut', 'proximity_to_fight'])]
+ goals=[('conditioning', 'primary', 'build', False, [], 0)]
+ weakness={'weakness': 'gas_tank', 'selected_label': 'gas_tank', 'resolution': 'weekly_floor', 'target': 'conditioning', 'required_intent': 'energy_system_training'}
+ gp_findings=[('goal_preservation_failed', 'conditioning')] authority=[]
+ trunk_members=[]
+ lower_impact=[]
+### S19_boxer3d
+mode=deterministic_late_fight_planner_plus_ai_finalizer triage=full_plan
+ W1 TAPER DNone..DNone hard decl=['Thursday'] eff=[] phys=1 days=[3]
+    D-3 fight_week_freshness_day [recovery] None
+    suppressed=[('technical_touch_day', None)]
+ W2 TAPER DNone..DNone hard decl=['Thursday'] eff=[] phys=1 days=[1]
+    D-1 neural_primer_day [strength] None
+    suppressed=[('technical_touch_day', None)]
+ W3 TAPER DNone..DNone hard decl=['Thursday'] eff=[] phys=0 days=[]
+ goals=[('speed', 'primary', 'maintain', False, [], 0), ('conditioning', 'secondary', 'maintain', True, [], 1)]
+ weakness={'weakness': 'trunk_strength', 'selected_label': 'trunk_strength', 'resolution': 'delegated', 'subsystem': 'session_composition.trunk_support'}
+ gp_findings=[('goal_preservation_failed', 'speed')] authority=[]
+ trunk_members=[]
+ lower_impact=[]
+### S20_boxer21_knee_high
+ERROR/blocked: {'error': None, 'status': 'triage_blocked', 'keys': ['status', 'ok', 'pdf_url', 'why_log', 'coach_notes', 'plan_text', 'stage2_payload', 'planning_brief', 'stage2_handoff_text', 'parsing_metadata']}
+### S21_boxer35_lowback
+mode=deterministic_planner_plus_ai_finalizer triage=full_plan
+ W1 GPP D34..D28 hard decl=['Thursday'] eff=['Thursday'] phys=4 days=[29, 30, 32, 34]
+    D-32 aerobic_base_day [conditioning] ['Counter Shadow Flow']
+    D-29 primary_strength_day [strength] ['Incline DB Press', 'Cossack Squat (Dynamic)', 'Med-Ball Rotational Throw']
+    D-34 converted_recovery_flush_day [conditioning] ['Counter Shadow Flow']
+    D-30 converted_recovery_flush_day [conditioning] ['Counter Shadow Flow']
+    D-31 hard_sparring_day [sparring] None
+    suppressed=[('secondary_strength_day', ['injury_management']), ('tissue_recovery_day', ['injury_management'])]
+ W2 SPP D27..D21 hard decl=['Thursday'] eff=['Thursday'] phys=4 days=[22, 25, 26, 27]
+    D-27 converted_recovery_flush_day [conditioning] ['Tempo Shadowboxing']
+    D-26 neural_plus_strength_day [strength] ['DB Bench Press → Plyo Push-Up', 'Lateral Lunge (Plyometric)']
+    D-22 fight_pace_repeatability_day [conditioning] ['Punch-Slide Repeatability']
+    D-25 converted_recovery_flush_day [conditioning] ['Tempo Shadowboxing']
+    D-24 hard_sparring_day [sparring] None
+    suppressed=[('transfer_strength_day', ['injury_management']), ('tissue_recovery_day', ['injury_management'])]
+ W3 SPP D20..D14 hard decl=['Thursday'] eff=['Thursday'] phys=4 days=[15, 18, 19, 20]
+    D-20 converted_recovery_flush_day [conditioning] ['Tempo Shadowboxing']
+    D-19 neural_plus_strength_day [strength] ['DB Bench Press → Plyo Push-Up', 'Lateral Lunge (Plyometric)']
+    D-15 fight_pace_repeatability_day [conditioning] ['Punch-Slide Repeatability']
+    D-18 converted_recovery_flush_day [conditioning] ['Tempo Shadowboxing']
+    D-17 hard_sparring_day [sparring] None
+    suppressed=[('strength_touch_day', ['injury_management']), ('tissue_recovery_day', ['injury_management'])]
+ W4 TAPER D13..D7 hard decl=['Thursday'] eff=[] phys=2 days=[7, 13]
+    D-13 strength_touch_day [strength] TAIL ['Pocket Frame-Burst Touch']
+    D-11 hard_sparring_day [sparring] TAIL []
+    D-7 neural_primer_day [strength] TAIL ['Pull-Counter-Reset']
+    suppressed=[('neural_primer_day', None), ('alactic_sharpness_day', None), ('hard_sparring_day', None)]
+ W5 TAPER D6..D0 hard decl=['Thursday'] eff=[] phys=2 days=[2, 5]
+    D-5 alactic_sharpness_day [conditioning] TAIL ['Pocket Frame-Burst Touch']
+    D-4 hard_sparring_day [sparring] TAIL []
+    D-2 fight_week_freshness_day [recovery] TAIL ['Supine March with Band']
+    D-0 fight_day_protocol [fight_day] None
+    suppressed=[('neural_primer_day', None), ('alactic_sharpness_day', None), ('hard_sparring_day', None)]
+ goals=[('power', 'primary', 'build', True, [], 3), ('speed', 'secondary', 'defer', False, ['injury_constraint', 'injury_constraint', 'injury_constraint', 'injury_constraint', 'injury_constraint', 'injury_constraint'], 1)]
+ weakness={'weakness': 'trunk_strength', 'selected_label': 'trunk_strength', 'resolution': 'delegated', 'subsystem': 'session_composition.trunk_support'}
+ gp_findings=[] authority=[]
+ trunk_members=['Dead Bug Isometric Hold (Knees at 90°)', 'Front Plank with Posterior Pelvic Tilt', 'Standing Anti-Rotation Press']
+ lower_impact=[('Counter Shadow Flow', 32, ['mech_change_of_direction', 'mech_deceleration']), ('Counter Shadow Flow', 34, ['mech_change_of_direction', 'mech_deceleration']), ('Counter Shadow Flow', 30, ['mech_change_of_direction', 'mech_deceleration']), ('DB Bench Press → Plyo Push-Up', 26, ['mech_landing_impact']), ('Lateral Lunge (Plyometric)', 26, ['mech_landing_impact', 'mech_lower_jump']), ('Punch-Slide Repeatability', 22, ['mech_change_of_direction']), ('DB Bench Press → Plyo Push-Up', 19, ['mech_landing_impact']), ('Lateral Lunge (Plyometric)', 19, ['mech_landing_impact', 'mech_lower_jump'])]
+### S22_boxer28_nohard
+mode=deterministic_planner_plus_ai_finalizer triage=full_plan
+ W1 GPP D27..D21 hard decl=[] eff=[] phys=4 days=[22, 24, 26, 27]
+    D-27 secondary_strength_day [strength] ['DB Alternating Incline Press (30-45°)', 'Romanian Deadlift (DB)', 'Slow-Lowered Pull-Up']
+    D-22 controlled_repeatability_day [conditioning] ['Heavy Bag Power Intervals', 'Med Ball Slams', 'Lateral Bound Intervals']
+    D-26 primary_strength_day [strength] ['Cossack Squat', 'Single-Leg Forward Hops']
+    D-24 recovery_aerobic_gas_tank_day [conditioning] ['Heavy Bag Aerobic Pace']
+ W2 SPP D20..D14 hard decl=[] eff=[] phys=5 days=[15, 17, 18, 19, 20]
+    D-20 transfer_strength_day [strength] ['Barbell Thruster', 'Med-Ball Rotational Slam', 'Ballistic Box Jump (Min Ground Contact)', 'Depth Jump to Sprint']
+    D-18 recovery_aerobic_gas_tank_day [conditioning] ['Tempo Shadowboxing']
+    D-17 neural_plus_strength_day [strength] ['DB Bench Press → Plyo Push-Up', 'Banded Row (Speed Focus)', 'Back Squat → Box Jump']
+    D-15 fight_pace_repeatability_day [conditioning] ['Striking Combos Under Fatigue']
+    D-19 converted_low_aerobic_gas_tank_day [conditioning] ['Tempo Shadowboxing']
+ W3 SPP D13..D7 hard decl=[] eff=[] phys=3 days=[7, 11, 13]
+    D-13 strength_touch_day [strength] TAIL ['Pocket Frame-Burst Touch']
+    D-11 light_fight_pace_touch_day [conditioning] TAIL ['Tempo Shadowboxing']
+    D-7 neural_primer_day [strength] TAIL ['Pull-Counter-Reset']
+ W4 TAPER D6..D0 hard decl=[] eff=[] phys=2 days=[2, 4]
+    D-4 alactic_sharpness_day [conditioning] TAIL ['Pocket Frame-Burst Touch']
+    D-2 fight_week_freshness_day [recovery] TAIL []
+    D-0 fight_day_protocol [fight_day] None
+ goals=[('conditioning', 'primary', 'build', True, [], 2), ('speed', 'secondary', 'maintain', True, [], 1)]
+ weakness={'weakness': 'trunk_strength', 'selected_label': 'trunk_strength', 'resolution': 'delegated', 'subsystem': 'session_composition.trunk_support'}
+ gp_findings=[] authority=[]
+ trunk_members=[]
+ lower_impact=[('Lateral Bound Intervals', 22, ['mech_landing_impact', 'mech_lower_jump']), ('Single-Leg Forward Hops', 26, ['mech_landing_impact', 'mech_lower_jump']), ('Ballistic Box Jump (Min Ground Contact)', 20, ['mech_landing_impact', 'mech_lower_jump']), ('Depth Jump to Sprint', 20, ['mech_deceleration', 'mech_landing_impact', 'mech_lower_jump', 'mech_max_velocity']), ('DB Bench Press → Plyo Push-Up', 17, ['mech_landing_impact']), ('Back Squat → Box Jump', 17, ['mech_landing_impact', 'mech_lower_jump'])]
+### S23_boxer21_seed99
+mode=deterministic_planner_plus_ai_finalizer triage=full_plan
+ W1 SPP D20..D14 hard decl=['Thursday'] eff=['Thursday'] phys=3 days=[15, 19, 20]
+    D-20 transfer_strength_day [strength] ['Box Jump', 'Band-Resisted Jab-Cross Primer', 'Reactive Start Burst']
+    D-19 neural_plus_strength_day [strength] ['Overcoming Split-Squat Isometric', 'Mobility Reset Flow']
+    D-15 fight_pace_repeatability_day [conditioning] []
+    D-17 hard_sparring_day [sparring] None
+    suppressed=[('recovery_reset_day', ['active_weight_cut'])]
+    EMPTY_CLOSED=[('fight_pace_repeatability_day', 15)]
+ W2 SPP D13..D7 hard decl=['Thursday'] eff=[] phys=3 days=[7, 10, 13]
+    D-13 strength_touch_day [strength] TAIL ['Pocket Frame-Burst Touch']
+    D-11 hard_sparring_day [sparring] TAIL []
+    D-10 light_fight_pace_touch_day [conditioning] TAIL ['Tempo Shadowboxing']
+    D-7 neural_primer_day [strength] TAIL ['Pull-Counter-Reset']
+    suppressed=[('recovery_reset_day', ['active_weight_cut'])]
+ W3 TAPER D6..D0 hard decl=['Thursday'] eff=[] phys=2 days=[2, 5]
+    D-5 alactic_sharpness_day [conditioning] TAIL ['Pocket Frame-Burst Touch']
+    D-4 hard_sparring_day [sparring] TAIL []
+    D-2 fight_week_freshness_day [recovery] TAIL ['Light Heavy-Bag Technical Tempo']
+    D-0 fight_day_protocol [fight_day] None
+    suppressed=[('fight_week_freshness_day', ['active_weight_cut'])]
+ goals=[('speed', 'primary', 'build', True, [], 1), ('conditioning', 'secondary', 'maintain', True, [], 1)]
+ weakness={'weakness': 'trunk_strength', 'selected_label': 'trunk_strength', 'resolution': 'delegated', 'subsystem': 'session_composition.trunk_support'}
+ gp_findings=[] authority=[]
+ trunk_members=[]
+ lower_impact=[('Box Jump', 20, ['mech_landing_impact', 'mech_lower_jump'])]
+### S24_boxer21_foot_low_seed99
+mode=deterministic_planner_plus_ai_finalizer triage=full_plan
+ W1 SPP D20..D14 hard decl=['Thursday'] eff=['Thursday'] phys=2 days=[15, 20]
+    D-20 neural_plus_strength_day [strength] ['Punch-Specific Max Isometric Hold', 'Jump Squat', 'Reactive Start Burst']
+    D-15 fight_pace_repeatability_day [conditioning] []
+    D-17 hard_sparring_day [sparring] None
+    suppressed=[('transfer_strength_day', ['active_weight_cut', 'injury_management']), ('tissue_recovery_day', ['active_weight_cut', 'injury_management'])]
+    EMPTY_CLOSED=[('fight_pace_repeatability_day', 15)]
+ W2 SPP D13..D7 hard decl=['Thursday'] eff=[] phys=3 days=[7, 10, 13]
+    D-13 strength_touch_day [strength] TAIL ['Pocket Frame-Burst Touch']
+    D-11 hard_sparring_day [sparring] TAIL []
+    D-10 light_fight_pace_touch_day [conditioning] TAIL ['Tempo Shadowboxing']
+    D-7 neural_primer_day [strength] TAIL ['Pull-Counter-Reset']
+    suppressed=[('strength_touch_day', ['active_weight_cut', 'injury_management']), ('tissue_recovery_day', ['active_weight_cut', 'injury_management'])]
+ W3 TAPER D6..D0 hard decl=['Thursday'] eff=[] phys=2 days=[2, 5]
+    D-5 alactic_sharpness_day [conditioning] TAIL ['Pocket Frame-Burst Touch']
+    D-4 hard_sparring_day [sparring] TAIL []
+    D-2 fight_week_freshness_day [recovery] TAIL ['Light Heavy-Bag Technical Tempo']
+    D-0 fight_day_protocol [fight_day] None
+    suppressed=[('neural_primer_day', None), ('alactic_sharpness_day', None)]
+ goals=[('speed', 'primary', 'build', True, [], 1), ('conditioning', 'secondary', 'maintain', True, [], 1)]
+ weakness={'weakness': 'trunk_strength', 'selected_label': 'trunk_strength', 'resolution': 'delegated', 'subsystem': 'session_composition.trunk_support'}
+ gp_findings=[] authority=[]
+ trunk_members=[]
+ lower_impact=[('Jump Squat', 20, ['mech_landing_impact', 'mech_lower_jump'])]
+### S25_mma21_trunk_primary_strength
+mode=deterministic_planner_plus_ai_finalizer triage=full_plan
+ W1 SPP D20..D14 hard decl=['Tuesday'] eff=['Tuesday'] phys=3 days=[15, 17]
+    D-19 hard_sparring_day [sparring] None
+    D-15 fight_pace_repeatability_day [conditioning] []
+    D-17 neural_plus_strength_day [strength] ['Punch-Specific Max Isometric Hold', 'Overcoming Split-Squat Isometric', 'Jump Squat', 'Mobility Reset Flow']
+    D-17 transfer_strength_day [strength] ['Band Row Speed Focus', 'Scapular Pull-Up Hold', '90/90 hip switches']
+    suppressed=[('recovery_reset_day', ['spar_first_cap'])]
+    EMPTY_CLOSED=[('fight_pace_repeatability_day', 15)]
+ W2 SPP D13..D7 hard decl=['Tuesday'] eff=[] phys=2 days=[7, 12]
+    D-13 hard_sparring_day [sparring] TAIL []
+    D-12 strength_touch_day [strength] TAIL ['Pocket Frame-Burst Touch']
+    D-7 neural_primer_day [strength] TAIL ['Pull-Counter-Reset']
+    suppressed=[('recovery_reset_day', ['spar_first_cap'])]
+ W3 TAPER D6..D0 hard decl=['Tuesday'] eff=[] phys=2 days=[2, 4]
+    D-6 hard_sparring_day [sparring] TAIL []
+    D-4 alactic_sharpness_day [conditioning] TAIL ['Standing Stance-Set Cue']
+    D-2 fight_week_freshness_day [recovery] TAIL ['Band Row Speed Focus']
+    D-0 fight_day_protocol [fight_day] None
+    suppressed=[('fight_week_freshness_day', ['spar_first_cap'])]
+ goals=[('strength', 'primary', 'build', True, [], 1), ('speed', 'secondary', 'maintain', False, [], 0)]
+ weakness={'weakness': 'trunk_strength', 'selected_label': 'trunk_strength', 'resolution': 'delegated', 'subsystem': 'session_composition.trunk_support'}
+ gp_findings=[('goal_preservation_failed', 'speed')] authority=[]
+ trunk_members=[]
+ lower_impact=[('Jump Squat', 17, ['mech_landing_impact', 'mech_lower_jump'])]
+### S26_boxer49_freq2
+mode=deterministic_planner_plus_ai_finalizer triage=full_plan
+ W1 GPP D48..D42 hard decl=['Thursday'] eff=['Thursday'] phys=1 days=[48]
+    D-48 primary_strength_day [strength] ['Kettlebell Swing', 'DB Alternating Incline Press (30-45°)', 'Romanian Deadlift (DB)', 'Single-Leg Forward Hops']
+    D-45 hard_sparring_day [sparring] None
+    suppressed=[('recovery_reset_day', ['spar_first_cap'])]
+ W2 GPP D41..D35 hard decl=['Thursday'] eff=['Thursday'] phys=1 days=[41]
+    D-41 primary_strength_day [strength] ['Kettlebell Swing', 'DB Alternating Incline Press (30-45°)', 'Romanian Deadlift (DB)', 'Single-Leg Forward Hops']
+    D-38 hard_sparring_day [sparring] None
+    suppressed=[('recovery_reset_day', ['spar_first_cap'])]
+ W3 SPP D34..D28 hard decl=['Thursday'] eff=['Thursday'] phys=2 days=[29, 33]
+    D-33 converted_low_aerobic_gas_tank_day [conditioning] ['Tempo Shadowboxing']
+    D-29 fight_pace_repeatability_day [conditioning] ['Punch-Slide Repeatability', 'Reactive Start Burst']
+    D-31 hard_sparring_day [sparring] None
+    suppressed=[('neural_plus_strength_day', ['spar_first_cap'])]
+ W4 SPP D27..D21 hard decl=['Thursday'] eff=['Thursday'] phys=2 days=[22, 26]
+    D-26 converted_low_aerobic_gas_tank_day [conditioning] ['Tempo Shadowboxing']
+    D-22 fight_pace_repeatability_day [conditioning] ['Punch-Slide Repeatability', 'Reactive Start Burst']
+    D-24 hard_sparring_day [sparring] None
+    suppressed=[('neural_plus_strength_day', ['spar_first_cap'])]
+ W5 SPP D20..D14 hard decl=['Thursday'] eff=['Thursday'] phys=2 days=[15, 19]
+    D-19 converted_low_aerobic_gas_tank_day [conditioning] ['Tempo Shadowboxing']
+    D-15 fight_pace_repeatability_day [conditioning] ['Punch-Slide Repeatability', 'Reactive Start Burst']
+    D-17 hard_sparring_day [sparring] None
+    suppressed=[('neural_plus_strength_day', ['spar_first_cap'])]
+ W6 TAPER D13..D7 hard decl=['Thursday'] eff=[] phys=3 days=[7, 10, 13]
+    D-13 strength_touch_day [strength] TAIL ['Pocket Frame-Burst Touch']
+    D-11 hard_sparring_day [sparring] TAIL []
+    D-10 light_fight_pace_touch_day [conditioning] TAIL ['Tempo Shadowboxing']
+    D-7 neural_primer_day [strength] TAIL ['Pull-Counter-Reset']
+    suppressed=[('hard_sparring_day', None), ('fight_week_freshness_day', ['spar_first_cap'])]
+ W7 TAPER D6..D0 hard decl=['Thursday'] eff=[] phys=2 days=[2, 5]
+    D-5 alactic_sharpness_day [conditioning] TAIL ['Pocket Frame-Burst Touch']
+    D-4 hard_sparring_day [sparring] TAIL []
+    D-2 fight_week_freshness_day [recovery] TAIL []
+    D-0 fight_day_protocol [fight_day] None
+    suppressed=[('hard_sparring_day', None), ('fight_week_freshness_day', ['spar_first_cap'])]
+ goals=[('speed', 'primary', 'build', True, [], 5), ('conditioning', 'secondary', 'maintain', True, [], 3)]
+ weakness={'weakness': 'trunk_strength', 'selected_label': 'trunk_strength', 'resolution': 'delegated', 'subsystem': 'session_composition.trunk_support'}
+ gp_findings=[] authority=[]
+ trunk_members=[]
+ lower_impact=[('Single-Leg Forward Hops', 48, ['mech_landing_impact', 'mech_lower_jump']), ('Single-Leg Forward Hops', 41, ['mech_landing_impact', 'mech_lower_jump']), ('Punch-Slide Repeatability', 29, ['mech_change_of_direction']), ('Punch-Slide Repeatability', 22, ['mech_change_of_direction']), ('Punch-Slide Repeatability', 15, ['mech_change_of_direction'])]
+### S29_ankle_low_speed21
+mode=deterministic_planner_plus_ai_finalizer triage=full_plan
+ W1 SPP D20..D14 hard decl=['Thursday'] eff=['Thursday'] phys=2 days=[15, 20]
+    D-20 neural_plus_strength_day [strength] ['Mobility Reset Flow', 'Pressure-Fighter Staggered Body-Shot Med-Ball Throw', 'Reactive Start Burst']
+    D-15 fight_pace_repeatability_day [conditioning] []
+    D-17 hard_sparring_day [sparring] None
+    suppressed=[('transfer_strength_day', ['active_weight_cut', 'injury_management']), ('tissue_recovery_day', ['active_weight_cut', 'injury_management'])]
+    EMPTY_CLOSED=[('fight_pace_repeatability_day', 15)]
+ W2 SPP D13..D7 hard decl=['Thursday'] eff=[] phys=3 days=[7, 10, 13]
+    D-13 strength_touch_day [strength] TAIL ['Pocket Frame-Burst Touch']
+    D-11 hard_sparring_day [sparring] TAIL []
+    D-10 light_fight_pace_touch_day [conditioning] TAIL ['Tempo Shadowboxing']
+    D-7 neural_primer_day [strength] TAIL ['Pull-Counter-Reset']
+    suppressed=[('strength_touch_day', ['active_weight_cut', 'injury_management']), ('tissue_recovery_day', ['active_weight_cut', 'injury_management'])]
+ W3 TAPER D6..D0 hard decl=['Thursday'] eff=[] phys=2 days=[2, 5]
+    D-5 alactic_sharpness_day [conditioning] TAIL ['Pocket Frame-Burst Touch']
+    D-4 hard_sparring_day [sparring] TAIL []
+    D-2 fight_week_freshness_day [recovery] TAIL ['Scapular Pull-Up Hold']
+    D-0 fight_day_protocol [fight_day] None
+    suppressed=[('neural_primer_day', None), ('alactic_sharpness_day', None)]
+ goals=[('speed', 'primary', 'build', True, [], 1), ('conditioning', 'secondary', 'maintain', True, [], 1)]
+ weakness={'weakness': 'trunk_strength', 'selected_label': 'trunk_strength', 'resolution': 'delegated', 'subsystem': 'session_composition.trunk_support'}
+ gp_findings=[] authority=[]
+ trunk_members=[]
+ lower_impact=[]
+### S30_muaythai28_noinj_cut7
+mode=deterministic_planner_plus_ai_finalizer triage=full_plan
+ W1 GPP D27..D21 hard decl=['Wednesday', 'Saturday'] eff=['Wednesday'] phys=3 days=[23, 27]
+    D-25 hard_sparring_day [sparring] None
+    D-22 hard_sparring_day [sparring] None
+    D-27 aerobic_coordination_day [conditioning] ['Teep Range Reset']
+    D-23 primary_strength_day [strength] ['Single-Leg Romanian Deadlift Hold', 'Half-Kneeling Anti-Rotation Hold', 'Med-Ball Rotational Throw']
+    D-27 secondary_strength_day [strength] ['Slow-Lowered Pull-Up', 'Staggered Stance Hold']
+    suppressed=[('alactic_coordination_day', ['two_hard_spar_days', 'active_weight_cut']), ('recovery_reset_day', ['two_hard_spar_days', 'active_weight_cut'])]
+ W2 SPP D20..D14 hard decl=['Wednesday', 'Saturday'] eff=['Wednesday'] phys=3 days=[16, 19, 20]
+    D-18 hard_sparring_day [sparring] None
+    D-15 hard_sparring_day [sparring] None
+    D-20 alactic_speed_day [conditioning] ['Single-Leg Hop (Stabilize)']
+    D-16 neural_plus_strength_day [strength] ['Med-Ball Rotational Slam', 'Kettlebell Swing']
+    D-19 aerobic_support_day [conditioning] ['Light Heavy Bag (Pacing Drill)']
+    suppressed=[('transfer_strength_day', ['two_hard_spar_days', 'active_weight_cut']), ('recovery_reset_day', ['two_hard_spar_days', 'active_weight_cut'])]
+ W3 SPP D13..D7 hard decl=['Wednesday', 'Saturday'] eff=[] phys=3 days=[7, 11, 13]
+    D-13 strength_touch_day [strength] TAIL ['Pocket Frame-Burst Touch']
+    D-12 hard_sparring_day [sparring] TAIL []
+    D-11 light_fight_pace_touch_day [conditioning] TAIL ['Tempo Shadowboxing']
+    D-9 hard_sparring_day [sparring] TAIL []
+    D-7 neural_primer_day [strength] TAIL ['Step-Jab-Cutoff Cue']
+    suppressed=[('strength_touch_day', ['two_hard_spar_days', 'active_weight_cut']), ('recovery_reset_day', ['two_hard_spar_days', 'active_weight_cut'])]
+ W4 TAPER D6..D0 hard decl=['Wednesday', 'Saturday'] eff=[] phys=2 days=[3, 4]
+    D-5 hard_sparring_day [sparring] TAIL []
+    D-4 alactic_sharpness_day [conditioning] TAIL ['Standing Stance-Set Cue']
+    D-3 fight_week_freshness_day [recovery] TAIL []
+    D-2 hard_sparring_day [sparring] TAIL []
+    D-0 fight_day_protocol [fight_day] None
+    suppressed=[('light_fight_pace_touch_day', None), ('hard_sparring_day', None), ('fight_week_freshness_day', ['two_hard_spar_days', 'active_weight_cut'])]
+ goals=[('power', 'primary', 'build', True, [], 2), ('conditioning', 'secondary', 'maintain', True, [], 1)]
+ weakness={'weakness': 'balance', 'selected_label': 'balance', 'resolution': 'delegated', 'subsystem': 'coordination_support_library'}
+ gp_findings=[] authority=[('selected_loaded_exercise_forbidden', 'neural_plus_strength_day')]
+ trunk_members=['Half-Kneeling Anti-Rotation Hold']
+ lower_impact=[('Single-Leg Hop (Stabilize)', 20, ['mech_landing_impact', 'mech_lower_jump'])]
+### S31_wrestling42
+ERROR/blocked: {'error': 'EXC TacticalWatchBankExhausted("no unused Tactical Watch for style=\'generic\' phase=\'TAPER\'")', 'tb': 'ls=candidate_pools, omission_ledger=omission_ledger,\n        rewrite_guidance=rewrite_guidance, plan_input=plan_input, computed_support=computed_support,\n    )\n  File "fightcamp/stage2_payload.py", line 1491, in _build_planning_brief\n    apply_camp_week_fillers(weekly_role_map, athlete_model)\n    ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File "fightcamp/camp_week_fillers.py", line 486, in apply_camp_week_fillers\n    _ensure_tactical_watch(\n    ~~~~~~~~~~~~~~~~~~~~~~^\n        week,\n        ^^^^^\n    ...<3 lines>...\n        usage_ledger,\n        ^^^^^^^^^^^^^\n    )\n    ^\n  File "fightcamp/camp_week_fillers.py", line 95, in _ensure_tactical_watch\n    return _impl._ensure_tactical_watch(\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^\n        week,\n        ^^^^^\n    ...<3 lines>...\n        usage_ledger,\n        ^^^^^^^^^^^^^\n    )\n    ^\n  File "fightcamp/camp_week_fillers_impl.py", line 471, in _ensure_tactical_watch\n    watch = select_tactical_watch(extract_tactical_style(athlete_model), phase, used_watch_keys)\n  File "fightcamp/tactical_watch_library.py", line 373, in select_tactical_watch\n    raise TacticalWatchBankExhausted(\n        f"no unused Tactical Watch for style={style!r} phase={phase!r}"\n    )\nfightcamp.tactical_watch_library.TacticalWatchBankExhausted: no unused Tactical Watch for style=\'generic\' phase=\'TAPER\'\n'}
+### S32_kick35_trunk
+mode=deterministic_planner_plus_ai_finalizer triage=full_plan
+ W1 GPP D34..D28 hard decl=['Thursday'] eff=['Thursday'] phys=3 days=[29, 33, 34]
+    D-31 hard_sparring_day [sparring] None
+    D-34 aerobic_base_day [conditioning] ['Long-Range Movement Flow']
+    D-33 primary_strength_day [strength] ['Kettlebell Swing', 'DB Plyometric Push-Up (Hands on Dumbbells)', 'Back Squat', 'Single-Leg Forward Hops']
+    D-29 secondary_strength_day [strength] ['DB Alternating Incline Press (30-45°)', 'Romanian Deadlift (DB)', 'Slow-Lowered Pull-Up', 'Single-Leg Farmer Carry Hold']
+    suppressed=[('recovery_reset_day', ['spar_first_cap'])]
+ W2 SPP D27..D21 hard decl=['Thursday'] eff=['Thursday'] phys=3 days=[22, 27]
+    D-24 hard_sparring_day [sparring] None
+    D-22 fight_pace_repeatability_day [conditioning] ['Med Ball Reaction Drill']
+    D-27 neural_plus_strength_day [strength] ['Barbell Thruster', 'Banded Row (Speed Focus)', 'Ballistic Box Jump (Min Ground Contact)', 'Reactive Start Burst']
+    D-22 transfer_strength_day [strength] ['Heavy RDL → Broad Jump', 'Med-Ball Rotational Slam', 'High Pull']
+    suppressed=[('recovery_reset_day', ['spar_first_cap'])]
+ W3 SPP D20..D14 hard decl=['Thursday'] eff=['Thursday'] phys=3 days=[15, 19, 20]
+    D-17 hard_sparring_day [sparring] None
+    D-15 fight_pace_repeatability_day [conditioning] ['Med Ball Reaction Drill']
+    D-20 neural_plus_strength_day [strength] ['Barbell Thruster', 'Banded Row (Speed Focus)', 'Ballistic Box Jump (Min Ground Contact)', 'Reactive Start Burst']
+    D-19 strength_touch_day [strength] ['Heavy RDL → Broad Jump', 'Med-Ball Rotational Slam']
+    suppressed=[('recovery_reset_day', ['spar_first_cap'])]
+ W4 TAPER D13..D7 hard decl=['Thursday'] eff=[] phys=2 days=[7, 13]
+    D-13 strength_touch_day [strength] TAIL ['Pocket Frame-Burst Touch']
+    D-11 hard_sparring_day [sparring] TAIL []
+    D-7 neural_primer_day [strength] TAIL ['Pull-Counter-Reset']
+    suppressed=[('hard_sparring_day', None), ('fight_week_freshness_day', ['spar_first_cap'])]
+ W5 TAPER D6..D0 hard decl=['Thursday'] eff=[] phys=2 days=[2, 5]
+    D-5 alactic_sharpness_day [conditioning] TAIL ['Pocket Frame-Burst Touch']
+    D-4 hard_sparring_day [sparring] TAIL []
+    D-2 fight_week_freshness_day [recovery] TAIL []
+    D-0 fight_day_protocol [fight_day] None
+    suppressed=[('hard_sparring_day', None), ('fight_week_freshness_day', ['spar_first_cap'])]
+ goals=[('speed', 'primary', 'build', True, [], 3), ('power', 'secondary', 'maintain', False, [], 1)]
+ weakness={'weakness': 'trunk_strength', 'selected_label': 'trunk_strength', 'resolution': 'delegated', 'subsystem': 'session_composition.trunk_support'}
+ gp_findings=[('goal_preservation_failed', 'power')] authority=[]
+ trunk_members=['Single-Leg Farmer Carry Hold']
+ lower_impact=[('DB Plyometric Push-Up (Hands on Dumbbells)', 33, ['mech_landing_impact']), ('Single-Leg Forward Hops', 33, ['mech_landing_impact', 'mech_lower_jump']), ('Ballistic Box Jump (Min Ground Contact)', 27, ['mech_landing_impact', 'mech_lower_jump']), ('Heavy RDL → Broad Jump', 22, ['mech_landing_impact', 'mech_lower_jump']), ('Ballistic Box Jump (Min Ground Contact)', 20, ['mech_landing_impact', 'mech_lower_jump']), ('Heavy RDL → Broad Jump', 19, ['mech_landing_impact', 'mech_lower_jump'])]
