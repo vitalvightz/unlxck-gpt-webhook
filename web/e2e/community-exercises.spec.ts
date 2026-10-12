@@ -44,14 +44,14 @@ for(const width of [320,390,1280]) {
   await consent.getByRole('checkbox').nth(0).check();await consent.getByRole('checkbox').nth(1).check();
   await consent.getByRole('button',{name:'Submit for review'}).click();await expect(consent.getByText('In review',{exact:true})).toBeVisible();expect(actions).toEqual(['draft','submit']);
   await consent.getByRole('button',{name:'Close',exact:true}).click();await page.getByRole('button',{name:'Add exercise',exact:true}).click();
-  await page.getByRole('button',{name:'Save Plan',exact:true}).click();await expect(page).toHaveURL(/custom\?plan=/);
+  await page.getByRole('button',{name:'Save draft',exact:true}).click();await expect(page).toHaveURL(/custom\?plan=/);
   expect([...saved.values()][0].sessions[0].exercises[0]).toMatchObject({origin:'manual',community_id:id});
   await mockCommunity(page,{...entry('published'),verified:true,confirmed:true});
   await page.getByRole('button',{name:'Add exercise to Training',exact:true}).click();await page.getByRole('button',{name:'Add from library',exact:true}).click();await page.getByText('Community exercises',{exact:true}).click();
   await page.getByRole('list',{name:'Community drill results'}).getByRole('button').click();
   const preview=page.getByRole('dialog',{name:'My defensive drill',exact:true});await expect(preview.getByText('Community · Added by @fighter')).toBeVisible();
   await preview.getByRole('button',{name:'Add to Session',exact:true}).click();
-  await page.getByRole('button',{name:'Save Plan',exact:true}).click();
+  await page.getByRole('button',{name:'Save draft',exact:true}).click();
   await expect.poll(()=>[...saved.values()][0].sessions[0].exercises.length).toBe(2);
   expect([...saved.values()][0].sessions[0].exercises[1]).toMatchObject({origin:'manual',community_revision_id:revision,media_id:null});
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);expect(errors).toEqual([]);
@@ -62,7 +62,7 @@ for(const width of [320,390,1280]) {
   const sheet=page.getByRole('dialog',{name:'My defensive drill',exact:true});await sheet.getByText('Edit exercise',{exact:true}).click();
   await sheet.getByLabel('Exercise name',{exact:true}).fill('Corrected drill');await sheet.getByRole('button',{name:'Save revision',exact:true}).click();
   const edited=page.getByRole('dialog',{name:'Corrected drill',exact:true});await expect(edited.getByRole('button',{name:'Verify without video',exact:true})).toBeVisible();
-  await edited.getByRole('button',{name:'Verify exercise',exact:true}).click();await expect(edited.getByRole('button',{name:'Confirm final revision'})).toBeDisabled();
+  await edited.getByRole('button',{name:'Verify without video',exact:true}).click();await expect(edited.getByRole('button',{name:'Confirm final revision'})).toBeDisabled();
   await edited.getByRole('checkbox').check();await edited.getByRole('button',{name:'Confirm final revision'}).click();
   await expect(edited.getByRole('button',{name:'Approve and publish'})).toBeDisabled();await edited.getByRole('checkbox').check();await edited.getByRole('button',{name:'Approve and publish'}).click();
   await expect(edited.getByText(/Published/)).toBeVisible();expect(actions).toEqual(['edit','verify','confirm','approve']);
@@ -120,7 +120,7 @@ test('Video added after submission requires a new reviewed revision',async({page
   expect(actions).toEqual(['draft','submit','draft','submit']);
   await sheet.getByRole('button',{name:'Close'}).click();
   await page.getByRole('button',{name:'Add exercise',exact:true}).click();
-  await page.getByRole('button',{name:'Save Plan',exact:true}).click();
+  await page.getByRole('button',{name:'Save draft',exact:true}).click();
   expect([...saved.values()][0].sessions[0].exercises[0]).toMatchObject({media_id:mediaId,community_id:id});
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
 });
@@ -139,7 +139,7 @@ test('Reject and request changes use visible, reason-gated confirmation sheets',
   await expect(confirmation.getByRole('button',{name:'Confirm rejection'})).toBeDisabled();
   await confirmation.getByLabel('Moderation reason').fill('Demonstration does not match the exercise');
   await confirmation.getByRole('button',{name:'Confirm rejection'}).click();
-  await expect(review.getByText('Rejected',{exact:true})).toBeVisible();
+  await expect(review.getByText(/^Rejected · /)).toBeVisible();
   expect(actions).toContain('reject');
   expect(await review.evaluate(el=>el.scrollWidth<=el.clientWidth)).toBe(true);
 });

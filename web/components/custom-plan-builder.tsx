@@ -66,6 +66,13 @@ function draftBlock(exercise: Exercise, session: Session): StructuredBlock {
     coaching_cues: exercise.coaching_cues ?? [], stop_rules: exercise.stop_rules ?? [],
   };
 }
+function PlusIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M12 5v14M5 12h14" />
+    </svg>
+  );
+}
 function PencilIcon() {
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -305,7 +312,7 @@ export function CustomPlanBuilder({ accessToken, planId, onboarding = null }: { 
             {s.weekday && ["rest", "recovery"].includes(s.session_type ?? "mixed") ? (
               <button type="button" className={styles.editButton} aria-label={`Add session on ${s.weekday}`} title="Add session"
                 disabled={draft.sessions.length >= 28} onClick={() => addSessionOnDay(s.weekday)}>
-                <PencilIcon />
+                <PlusIcon />
               </button>
             ) : null}
           </div>
@@ -532,7 +539,7 @@ export function CustomPlanBuilder({ accessToken, planId, onboarding = null }: { 
                 <button type="button" className={styles.emptyDayEditButton} aria-label={`Add session on ${selectedDay}`} title="Add session"
                   disabled={draft.sessions.length >= 28}
                   onClick={() => addSessionOnDay(selectedDay)}>
-                  <PencilIcon />
+                  <PlusIcon />
                 </button>
               </div>
             )}

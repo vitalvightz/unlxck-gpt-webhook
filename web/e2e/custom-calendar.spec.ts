@@ -35,7 +35,7 @@ for (const width of [320, 390, 1280]) {
     // The builder opens on the first scheduled day and shows one day at a time.
     await expect(page.getByRole("button", { name: "Monday, Lower Body", exact: true })).toHaveAttribute("aria-pressed", "true");
     await page.getByRole("button", { name: "Tuesday, Recovery", exact: true }).click();
-    await expect(page.getByText("Recovery day — No exercises required.", { exact: true })).toBeVisible();
+    await expect(page.getByText("Keep this day for recovery.", { exact: true })).toBeVisible();
     await expect(page.getByRole("button", { name: "Sunday, Rest", exact: true })).toBeVisible();
     await expect(page.getByRole("button", { name: "Save & view plan", exact: true })).toBeEnabled();
     await page.getByRole("button", { name: "Friday, Hard Sparring", exact: true }).click();

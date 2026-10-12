@@ -293,16 +293,18 @@ export default function PlansPage() {
     <RequireAuth>
       <section className={styles.page}>
         <header className={styles.pageHeader}>
-          <Link href="/history" className={styles.historyLink}>
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19v-5m5 5V9m5 10V5m5 14V2" /></svg>
-            View History <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7" /></svg>
-          </Link>
           <h1 className={`athlete-motion-slot athlete-motion-header ${styles.pageTitle}`}>{activePlan?.fight_date ? t("fightCampHeading") : t("planWorkspace")}</h1>
           <p className={styles.pageSubtitle}>Build, manage and add to your training.</p>
-          <Link href="/plans/custom" className={`ghost-button ${styles.buildLink}`}>
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
-            Build My Own Plan
-          </Link>
+          <div className={styles.headerActions}>
+            <Link href="/plans/custom" className={`ghost-button ${styles.headerLink}`}>
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
+              Build My Own Plan
+            </Link>
+            <Link href="/history" className={`ghost-button ${styles.headerLink}`}>
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19v-5m5 5V9m5 10V5m5 14V2" /></svg>
+              View History
+            </Link>
+          </div>
         </header>
         <div className={actionStyles.actions}>
           <LogTraining accessToken={session?.access_token ?? null} variant="tile" />

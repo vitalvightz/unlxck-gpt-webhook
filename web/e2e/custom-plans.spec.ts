@@ -27,6 +27,10 @@ for (const width of [320, 390, 1280]) {
       .click();
     await page.getByRole("button", { name: "Add to Session", exact: true }).click();
     await expect(page.getByLabel("Sets", { exact: true })).toHaveCount(0);
+    if (!process.env.CUSTOM_PLAN_TEST_API) {
+      // Adding from the library applies the source's format in the background; wait for it before editing.
+      await expect(page.getByRole("region", { name: "Session 1", exact: true })).toContainText("5 × 5 min");
+    }
     await page
       .getByRole("button", {
         name: `Edit dose for ${entries[0].name}`,
@@ -38,8 +42,6 @@ for (const width of [320, 390, 1280]) {
       await expect(page.getByRole("button", { name: "Use source suggestion", exact: true })).toBeVisible();
       await expect(page.getByText("Source: conditioning_bank.json", { exact: true })).toHaveCount(0);
       await expect(page.getByText("5x5min, 30s rest", { exact: true })).toBeVisible();
-      await expect(page.getByLabel("Sets", { exact: true })).toHaveValue("");
-      await page.getByRole("button", { name: "Use source suggestion", exact: true }).click();
       await expect(page.getByLabel("Rounds", { exact: true })).toHaveValue("5");
       await expect(page.getByLabel("Work duration", { exact: true })).toHaveValue("5");
       await page.getByLabel("Dose format").selectOption("reps");
