@@ -36,6 +36,7 @@ from api.services.exercise_media import load_media_index
 from api.services.exercise_overrides import (
     PROTECTED_BLOCK_TYPES,
     block_identity,
+    is_custom_plan,
     session_slot,
     slug,
     stored_overrides,
@@ -215,11 +216,6 @@ class Occurrence:
         return open_plan_spec(self.plan_row) is not None and not _clean(self.plan_row.get("fight_date"))
 
 
-def _is_custom(plan_row: Mapping[str, Any]) -> bool:
-    brief = plan_row.get("planning_brief")
-    return isinstance(brief, Mapping) and bool(brief.get("custom_plan"))
-
-
 def locate_occurrence(
     store: Any, *, athlete_id: str, athlete_timezone: str | None, plan_id: str,
     day: str, session_id: str, block_id: str | None = None, now: datetime | None = None,
@@ -237,7 +233,7 @@ def locate_occurrence(
     plan_row = store.get_training_plan_for_athlete(plan_id, athlete_id)
     if plan_row is None:
         raise HTTPException(404, "plan not found")
-    if _is_custom(plan_row):
+    if is_custom_plan(plan_row):
         raise HTTPException(409, "Change your own plan's exercises in the plan builder.")
     training_day = resolve_training_day(athlete_timezone, now=now)
     target = _parse_day(day)
@@ -349,7 +345,10 @@ class SafetyContext:
             item = dict(raw)
             if injury_violation_reasons(item, self.injury_texts) or injury_flag_reasons(item, self.injury_texts):
                 return False
-        if self.injured_regions and _session_mechanical_load_regions({"blocks": [block]}) & self.injured_regions:
+        loaded_regions = _session_mechanical_load_regions({"blocks": [block]})
+        if self.has_injuries and not loaded_regions:
+            return False
+        if loaded_regions & self.injured_regions:
             return False
         probe = {**deepcopy(dict(block)), "block_id": "candidate-probe"}
         snapshot = reconcile_session_prescription(
@@ -1093,7 +1092,8 @@ def apply_change(
     entry: dict[str, Any] = {
         "id": change_id, "action": action, "scope": scope, "date": occurrence.date.isoformat(),
         "weekday": weekday_token(occurrence.date), "session_id": _clean(occurrence.session.get("session_id")),
-        "session_slot": session_slot(occurrence.session), "created_at": now_iso, "revoked_at": None,
+        "session_slot": session_slot(occurrence.session, position=occurrence.day["sessions"].index(occurrence.session)),
+        "created_at": now_iso, "revoked_at": None,
     }
     if action in {"swap", "remove"}:
         block = occurrence.block or {}

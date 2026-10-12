@@ -8,6 +8,7 @@ logging all see the same effective workout.
 from __future__ import annotations
 
 import copy
+import json
 from datetime import date, timedelta
 from uuid import uuid4
 
@@ -660,3 +661,106 @@ def test_generated_cards_cannot_claim_athlete_changes():
     resolved = resolve_effective_structured_plan(row)
     session = resolved["weeks"][0]["days"][0]["sessions"][0]
     assert "athlete_removed" not in session and "athlete_change" not in session["blocks"][0]
+
+
+@pytest.mark.parametrize("as_text", [False, True])
+def test_custom_plan_api_rejects_options_and_writes(as_text):
+    client, store, _ = _build_client()
+    today = seed_dated(store)
+    brief = {"custom_plan": {"id": "athlete-built"}}
+    store.plans[PLAN_ID]["planning_brief"] = json.dumps(brief) if as_text else brief
+    assert options(client, PLAN_ID, today, SESSION_ID, squat_id(today)).status_code == 409
+    assert additions(client, today).status_code == 409
+    for action in ("swap", "add", "remove"):
+        response, _ = change(client, PLAN_ID, action=action, date=today.isoformat(),
+                             session_id=SESSION_ID, block_id=squat_id(today),
+                             catalogue_id="exercise_bank.json:not-real", confirmed=True)
+        assert response.status_code == 409, response.text
+        assert "plan builder" in response.json()["detail"]
+    assert store.plans[PLAN_ID]["exercise_overrides"] == []
+    assert store.plans[PLAN_ID]["exercise_overrides_revision"] == 0
+
+
+def test_active_injury_with_unknown_candidate_loading_is_not_cleared(monkeypatch):
+    from api.services import exercise_customisation as service
+
+    client, store, _ = _build_client()
+    today = seed_dated(store)
+    store.create_injury_flag("athlete-1", {"body_area": "shoulder", "description": "shoulder pain"})
+    known = options(client, PLAN_ID, today, SESSION_ID, squat_id(today), all=True)
+    assert known.status_code == 200, known.text
+    assert known.json()["alternatives"]
+    pick = known.json()["alternatives"][0]
+    original = service._base_block
+
+    def missing_metadata(record, *, block_type):
+        block = original(record, block_type=block_type)
+        if record["entry"]["catalogue_id"] == pick["catalogue_id"]:
+            block.pop("mechanical_load_regions", None)
+            block.pop("mechanical_risk_tags", None)
+        return block
+
+    # Select an option already cleared for this injury, so the missing
+    # mechanical evidence is the only new reason to refuse it.
+    flag = store.list_injury_flags("athlete-1")[0]
+    store.update_injury_flag(flag["id"], {"status": "resolved"})
+    monkeypatch.setattr(service, "_base_block", missing_metadata)
+    # Metadata uncertainty does not bar a healthy athlete's choices.
+    assert pick["catalogue_id"] in {a["catalogue_id"] for a in
+                                    options(client, PLAN_ID, today, SESSION_ID, squat_id(today), all=True).json()["alternatives"]}
+    store.create_injury_flag("athlete-1", {"body_area": "shoulder", "description": "shoulder pain"})
+    response = options(client, PLAN_ID, today, SESSION_ID, squat_id(today), all=True)
+    assert response.status_code == 200, response.text
+    assert pick["catalogue_id"] not in {a["catalogue_id"] for a in response.json()["alternatives"]}
+    response, _ = change(client, PLAN_ID, action="swap", date=today.isoformat(), session_id=SESSION_ID,
+                         block_id=squat_id(today), catalogue_id=pick["catalogue_id"])
+    assert response.status_code == 409, response.text
+    assert store.plans[PLAN_ID]["exercise_overrides"] == []
+
+
+@pytest.mark.parametrize("target_position", [0, 1])
+def test_recurring_change_targets_the_same_day_slot_with_duplicate_titles(target_position):
+    client, store, _ = _build_client()
+    today = seed_open(store)
+    row = store.plans[OPEN_PLAN_ID]
+    template_day = next(d for d in row["structured_plan"]["weeks"][0]["days"]
+                        if d["weekday"] == WEEKDAYS[today.weekday()])
+    template_day["sessions"] = [
+        {**copy.deepcopy(template_day["sessions"][0]), "session_id": f"week-1-slot-{i}"} for i in range(2)
+    ]
+    # Four template weeks have identical titles/exercises but different ids.
+    for week_index in range(2, 5):
+        week = copy.deepcopy(row["structured_plan"]["weeks"][0])
+        week["week_index"] = week_index
+        for day in week["days"]:
+            for i, session in enumerate(day["sessions"]):
+                session["session_id"] = f"week-{week_index}-{day['weekday']}-slot-{i}"
+        row["structured_plan"]["weeks"].append(week)
+    original = copy.deepcopy(row["structured_plan"])
+    matched = _structured_day_for_training_day(row, today.isoformat())[0]
+    target = matched["sessions"][target_position]
+    block_id = next(b["block_id"] for b in target["blocks"] if b["display_name"] == "Back Squat")
+    pick = _cossack(client, today, OPEN_PLAN_ID, target["session_id"], block_id)
+    response, _ = change(client, OPEN_PLAN_ID, action="swap", scope="future", date=today.isoformat(),
+                         session_id=target["session_id"], block_id=block_id, catalogue_id=pick["catalogue_id"])
+    assert response.status_code == 200, response.text
+    for weeks in (0, 1, 2, 3, 5):
+        day = today + timedelta(days=7 * weeks)
+        sessions = _structured_day_for_training_day(row, day.isoformat())[0]["sessions"]
+        assert len(sessions) == 2
+        assert sessions[target_position]["blocks"][0]["display_name"] == "Cossack Squat"
+        assert sessions[1 - target_position]["blocks"][0]["display_name"] == "Back Squat"
+    assert row["structured_plan"] == original
+
+
+def test_legacy_recurring_title_match_refuses_ambiguous_sessions():
+    entry = {"id": "a", "action": "remove", "scope": "future", "date": "2026-10-12",
+             "weekday": "Mon", "session_id": "old-week-id", "session_slot": "strength",
+             "block_id": "old-block", "target_key": "back-squat"}
+    card = {"weeks": [{"days": [{"date": "2026-10-19", "sessions": [
+        {"session_id": f"new-{i}", "title": "Strength", "blocks": [back_squat(block_id=f"b-{i}")]} for i in range(2)
+    ]}]}]}
+    assert apply_exercise_overrides({"exercise_overrides": [entry]}, card) is card
+    card["weeks"][0]["days"][0]["sessions"].pop()
+    resolved = apply_exercise_overrides({"exercise_overrides": [entry]}, card)
+    assert resolved["weeks"][0]["days"][0]["sessions"][0]["blocks"] == []

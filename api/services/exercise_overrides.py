@@ -54,9 +54,17 @@ def block_identity(block: Mapping[str, Any]) -> str:
     return slug(block.get("exercise_key")) or slug(block.get("display_name"))
 
 
-def session_slot(session: Mapping[str, Any]) -> str:
-    """Which recurring workout a session is, independent of its template week."""
-    return slug(session.get("title")) or slug(session.get("session_type"))
+def session_slot(session: Mapping[str, Any], *, position: int | None = None) -> str:
+    """A recurring day slot, independent of week-specific session ids.
+
+    The projected template preserves day membership/order. Include that position
+    and the workout identity so two same-name sessions cannot share a slot.
+    Without a position, retain the legacy identity for existing stored changes.
+    """
+    name = slug(session.get("title")) or slug(session.get("session_type"))
+    if position is None:
+        return name
+    return f"v2:{position}:{slug(session.get('session_type'))}:{name}"
 
 
 def override_block_id(override_id: str) -> str:
@@ -86,7 +94,7 @@ def stored_overrides(plan_row: Mapping[str, Any]) -> list[dict[str, Any]]:
 
 def active_overrides(plan_row: Mapping[str, Any]) -> list[dict[str, Any]]:
     """Unrevoked, well-formed entries in the order they were made."""
-    if _is_custom_plan(plan_row):
+    if is_custom_plan(plan_row):
         return []
     entries = []
     for entry in stored_overrides(plan_row):
@@ -100,7 +108,7 @@ def active_overrides(plan_row: Mapping[str, Any]) -> list[dict[str, Any]]:
     return entries
 
 
-def _is_custom_plan(plan_row: Mapping[str, Any]) -> bool:
+def is_custom_plan(plan_row: Mapping[str, Any]) -> bool:
     brief = plan_row.get("planning_brief")
     if isinstance(brief, str):
         try:
@@ -130,7 +138,10 @@ def _matching_session(sessions: list[Any], entry: Mapping[str, Any]) -> dict[str
     if by_id is not None or entry.get("scope") != "future":
         return by_id
     slot = entry.get("session_slot")
-    return next((s for s in sessions if isinstance(s, dict) and slot and session_slot(s) == slot), None)
+    matches = [s for position, s in enumerate(sessions) if isinstance(s, dict) and slot
+               and (session_slot(s, position=position) == slot or session_slot(s) == slot)]
+    # Old title-only changes are safe only when that title identifies one session.
+    return matches[0] if len(matches) == 1 else None
 
 
 def _matching_block_index(blocks: list[Any], entry: Mapping[str, Any]) -> int | None:
@@ -256,6 +267,7 @@ __all__ = [
     "apply_exercise_overrides",
     "block_identity",
     "entry_applies_on",
+    "is_custom_plan",
     "override_block_id",
     "session_slot",
     "slug",
