@@ -41,6 +41,8 @@ import {
 import { QuickBuildRefinementBanner } from "@/components/quick-build-refinement-banner";
 import { ContextualFeedback } from "@/components/feedback/contextual-feedback";
 import { StructuredPlanRenderer } from "@/components/structured-plan-renderer";
+import { ExerciseCustomisationProvider, type ExerciseCustomisation } from "@/components/exercise-customisation";
+import { patchPlanSession } from "@/lib/exercise-customisation";
 import { WhyTooltip } from "@/components/why-tooltip";
 import { useGenerationController } from "@/lib/generation-controller";
 import { canUseAdminPlanControls, isAdminRole } from "@/lib/plan-admin-controls";
@@ -2298,6 +2300,35 @@ export function PlanViewer({
     }
   }, [generationController.error]);
 
+  // Swap / add / remove for the plan's owner, once their completion rows are
+  // known: a started or logged workout keeps its prescription.
+  const planId = plan.plan_id;
+  const exerciseCustomisation = useMemo<ExerciseCustomisation | null>(() => {
+    const trainingDay = planCompletions?.current_training_day || plan.schedule_context?.current_training_day;
+    if (!accessToken || !planCompletions || !trainingDay || plan.status === "archived") return null;
+    const locked = new Set(
+      planCompletions.completions
+        .filter((row) => row.status !== "not_started")
+        .map((row) => `${row.training_day.slice(0, 10)}|${row.session_id}`),
+    );
+    return {
+      token: accessToken,
+      planId,
+      today: trainingDay,
+      isLocked: (date, sessionId) => locked.has(`${date}|${sessionId}`),
+      onSessionChanged: (date, session) => {
+        if (session && plan.outputs.structured_plan) {
+          const patched = patchPlanSession(plan.outputs.structured_plan, date, session);
+          if (patched && patched !== plan.outputs.structured_plan) {
+            onPlanUpdated?.({ ...plan, outputs: { ...plan.outputs, structured_plan: patched } });
+          }
+        }
+        // Then the server's full plan, so recurring changes show on every date.
+        void getPlan(accessToken, planId).then((fresh) => onPlanUpdated?.(fresh)).catch(() => undefined);
+      },
+    };
+  }, [accessToken, planCompletions, plan, planId, onPlanUpdated]);
+
   if (generationController.isGenerating || generationController.hasPendingGeneration) {
     return (
       <PremiumLoadingScreen
@@ -2968,6 +2999,7 @@ export function PlanViewer({
                 </div>
               ) : null}
               {useSavedStructuredPlan && plan.outputs.structured_plan ? (
+                <ExerciseCustomisationProvider value={exerciseCustomisation}>
                 <StructuredPlanRenderer
                   plan={plan.outputs.structured_plan}
                   openOngoing={openOngoing}
@@ -2983,6 +3015,7 @@ export function PlanViewer({
                   exerciseMedia={plan.outputs.exercise_media}
                   accessToken={accessToken}
                 />
+                </ExerciseCustomisationProvider>
               ) : holdPlanForEnhancedCard ? (
                 <EnhancedCardLockInCard accessToken={accessToken} />
               ) : (

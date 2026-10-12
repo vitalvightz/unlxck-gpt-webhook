@@ -26,7 +26,7 @@ from __future__ import annotations
 import copy
 from typing import Any, Literal
 
-from pydantic import BaseModel, Field, ValidationError
+from pydantic import BaseModel, Field, ValidationError, model_serializer
 
 # Bump this whenever the structured shape changes in a backward-incompatible
 # way. Stored plans keep the version they were generated with so the renderer
@@ -268,6 +268,14 @@ class CountdownLabel(BaseModel):
 # ---------------------------------------------------------------------------
 
 
+def _omit_none(data: Any, field: str) -> Any:
+    """Override provenance exists only where a change applies; elsewhere every
+    serialized card keeps exactly the shape it had before the field existed."""
+    if isinstance(data, dict) and data.get(field) is None:
+        data.pop(field, None)
+    return data
+
+
 class SessionBlock(BaseModel):
     """An executable unit inside a session (Section N)."""
 
@@ -331,6 +339,14 @@ class SessionBlock(BaseModel):
     community_revision_id: str | None = None
     source_session_id: str | None = None
     notes: str | None = None
+    # Server-owned provenance of an athlete's swap or added exercise, applied
+    # from plans.exercise_overrides on read (api/services/exercise_overrides.py).
+    # Never accepted from a generated card: the resolver strips it.
+    athlete_change: dict[str, Any] | None = None
+
+    @model_serializer(mode="wrap")
+    def _omit_absent_athlete_change(self, handler):
+        return _omit_none(handler(self), "athlete_change")
 
 
 class Completion(BaseModel):
@@ -372,6 +388,13 @@ class Session(BaseModel):
     # camp Fight Visualisation). Set by structured_plan_locked_merge, which clears
     # any model-supplied value; read through api.optional_sessions.
     optional: bool | None = None
+    # Server-owned: exercises the athlete removed from this occurrence, so the
+    # card can offer to restore them. Applied on read, like athlete_change.
+    athlete_removed: list[dict[str, Any]] | None = None
+
+    @model_serializer(mode="wrap")
+    def _omit_absent_athlete_removed(self, handler):
+        return _omit_none(handler(self), "athlete_removed")
 
 
 class TodayCard(BaseModel):

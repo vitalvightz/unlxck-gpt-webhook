@@ -652,6 +652,47 @@ export type EventContext = {
   ruleset: string | null;
 };
 
+export type ExerciseAlternative = {
+  catalogue_id: string;
+  exercise_key: string;
+  name: string;
+  reason: string | null;
+  equipment: string[] | null;
+  media: ExerciseMedia | null;
+  prescription: string | null;
+  dose_required: boolean;
+  dose_mode: "duration" | "intervals" | "reps";
+  suggested_dose: Record<string, unknown> | null;
+};
+
+export type ExerciseChangeRequest = {
+  client_request_id: string;
+  action: "add" | "remove" | "swap";
+  scope?: "future" | "occurrence";
+  date: string;
+  session_id: string;
+  block_id?: string | null;
+  catalogue_id?: string | null;
+  dose?: CustomDoseRequest | null;
+  confirmed?: boolean;
+};
+
+export type ExerciseChangeResult = {
+  id: string;
+  action: "add" | "remove" | "swap";
+  scope: "future" | "occurrence";
+  date: string;
+  name: string | null;
+  original_name: string | null;
+  revoked: boolean;
+  session: Record<string, unknown> | null;
+};
+
+export type ExerciseChangeScope = {
+  value: "future" | "occurrence";
+  label: string;
+};
+
 export type ExerciseDetail = {
   value: string;
   label: string;
@@ -811,12 +852,23 @@ export type ExerciseMedia = {
   orientation: "landscape" | "portrait" | null;
 };
 
+export type ExerciseOptionsResponse = {
+  alternatives: ExerciseAlternative[];
+  more_available: boolean;
+  notice: string | null;
+  scopes: ExerciseChangeScope[];
+};
+
 /** The weight last logged for an exercise, carried into the next log. */
 export type ExerciseRecentLoad = {
   exercise_key: string | null;
   display_name: string;
   load: ExerciseLogMeasure;
   training_day: string;
+};
+
+export type ExerciseUndoRequest = {
+  date?: string | null;
 };
 
 export type ExposureDemand = {
@@ -2048,6 +2100,7 @@ export type Session = {
   completion: Completion | null;
   execution_order: number | null;
   optional: boolean | null;
+  athlete_removed: Record<string, unknown>[] | null;
 };
 
 /** An executable unit inside a session (Section N). */
@@ -2092,6 +2145,7 @@ export type SessionBlock = {
   community_revision_id: string | null;
   source_session_id: string | null;
   notes: string | null;
+  athlete_change: Record<string, unknown> | null;
 };
 
 export type SessionCompletionHistoryResponse = {

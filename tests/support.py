@@ -850,6 +850,16 @@ class FakeStore(InMemoryNotificationLedger, FullRowStatusReads):
         # Exercise the actual production projection, including absent fields.
         return {key: row[key] for key in TRAINING_PLAN_SELECT.split(",") if key in row} if row else None
 
+    def compare_and_set_plan_exercise_overrides(
+        self, plan_id: str, athlete_id: str, *, expected_revision: int, overrides: list[dict],
+    ) -> dict | None:
+        row = self.get_plan_for_athlete(plan_id, athlete_id)
+        if row is None or int(row.get("exercise_overrides_revision") or 0) != expected_revision:
+            return None
+        row["exercise_overrides"] = copy.deepcopy(overrides)
+        row["exercise_overrides_revision"] = expected_revision + 1
+        return row
+
     def get_active_plan_id(self, athlete_id: str) -> str | None:
         return self.active_plan_ids.get(athlete_id)
 

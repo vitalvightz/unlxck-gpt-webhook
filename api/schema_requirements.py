@@ -124,6 +124,10 @@ REQUIRED_PLANS_COLUMNS: tuple[str, ...] = (
     "technical_style",
     "full_name",
     "plan_name",
+    # Athlete-directed exercise swaps/adds/removals beside the generated card
+    # (api/services/exercise_overrides.py). Read on every training-plan read.
+    "exercise_overrides",
+    "exercise_overrides_revision",
     "coach_notes",
     "pdf_url",
     "why_log",

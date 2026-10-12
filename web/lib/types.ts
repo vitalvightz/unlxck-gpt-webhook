@@ -427,10 +427,78 @@ export type StructuredBlock = {
   /** Rehab blocks only: server-frozen drill metadata. */
   is_loading?: boolean | null;
   drill_snapshot?: { rehab_stage?: string | null; function?: string | null; dose?: Record<string, unknown> | null } | null;
+  /** Server-owned: present only on an athlete's swap or added exercise. */
+  athlete_change?: AthleteExerciseChange | null;
+};
+
+export type AthleteExerciseChange = {
+  override_id?: string | null;
+  action?: "swap" | "add" | "remove" | null;
+  scope?: "occurrence" | "future" | null;
+  from_date?: string | null;
+  original_name?: string | null;
+};
+
+export type AthleteRemovedExercise = {
+  override_id?: string | null;
+  display_name?: string | null;
+  scope?: "occurrence" | "future" | null;
+};
+
+export type ExerciseChangeScope = { value: "occurrence" | "future"; label: string };
+
+export type ExerciseAlternative = {
+  catalogue_id: string;
+  exercise_key: string;
+  name: string;
+  reason?: string | null;
+  equipment?: string[] | null;
+  media?: ExerciseMedia | null;
+  prescription?: string | null;
+  dose_required?: boolean;
+  dose_mode?: "reps" | "duration" | "intervals";
+  suggested_dose?: Record<string, unknown> | null;
+};
+
+export type ExerciseOptionsResponse = {
+  alternatives: ExerciseAlternative[];
+  more_available?: boolean;
+  notice?: string | null;
+  scopes: ExerciseChangeScope[];
+};
+
+export type ExerciseChangeDose =
+  | { mode: "reps"; sets: number; reps: number; rest_seconds?: number | null; rpe?: number | null }
+  | { mode: "duration"; duration_seconds: number; sets?: number | null; rest_seconds?: number | null }
+  | { mode: "intervals"; rounds: number; work_seconds: number; rest_seconds: number };
+
+export type ExerciseChangeRequest = {
+  client_request_id: string;
+  action: "swap" | "add" | "remove";
+  scope?: "occurrence" | "future";
+  date: string;
+  session_id: string;
+  block_id?: string | null;
+  catalogue_id?: string | null;
+  dose?: ExerciseChangeDose | null;
+  confirmed?: boolean;
+};
+
+export type ExerciseChangeResult = {
+  id: string;
+  action: "swap" | "add" | "remove";
+  scope: "occurrence" | "future";
+  date: string;
+  name?: string | null;
+  original_name?: string | null;
+  revoked?: boolean;
+  session?: StructuredSession | null;
 };
 
 export type StructuredSession = {
   prescription_source?: "athlete" | null;
+  /** Server-owned: exercises the athlete removed from this occurrence. */
+  athlete_removed?: AthleteRemovedExercise[] | null;
   session_id?: string | null;
   session_type?: string | null;
   title?: string | null;

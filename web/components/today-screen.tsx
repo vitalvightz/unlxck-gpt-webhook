@@ -201,6 +201,7 @@ export function TodayScreen() {
     isLoading,
     error,
     refresh,
+    patchSession,
   } = useTodayCommand(token);
 
   const activePlan = state?.active_plan ?? {};
@@ -287,6 +288,7 @@ export function TodayScreen() {
       onRefresh={refresh}
       athleteFullName={me?.profile.full_name}
       commandUnavailable={Boolean(error)}
+      onPlanSessionChanged={patchSession}
       professionalStatus={me?.profile.professional_status}
     />
   );

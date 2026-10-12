@@ -127,7 +127,8 @@ PLAN_SUMMARY_SELECT = (
 TRAINING_PLAN_SELECT = (
     "id,athlete_id,intake_id,fight_date,technical_style,full_name,status,"
     "plan_text,planning_brief,created_at,plan_name,parsing_metadata,"
-    "structured_plan,schema_version,stage2_status,stage2_attempt_count"
+    "structured_plan,schema_version,stage2_status,stage2_attempt_count,"
+    "exercise_overrides,exercise_overrides_revision"
 )
 GENERATION_JOB_SELECT = "*"
 # Admin job-list endpoints never read stage1_result (the largest intermediate
@@ -3737,6 +3738,30 @@ class SupabaseAppStore(CommunityStoreMixin, PrivateMediaStoreMixin, CompactGener
                 detail="failed to rename plan",
                 exc=exc,
             )
+
+    def compare_and_set_plan_exercise_overrides(
+        self, plan_id: str, athlete_id: str, *, expected_revision: int, overrides: list[dict[str, Any]],
+    ) -> dict[str, Any] | None:
+        """Replace the athlete's exercise overrides only if nobody else wrote first.
+
+        Owner-scoped and conditional on ``exercise_overrides_revision``: the
+        update matches no row when another write landed since the caller read
+        the plan, and ``None`` tells the caller to re-read and decide. The
+        generated card itself is never part of this write.
+        """
+        operation = f"compare_and_set_plan_exercise_overrides plan_id={plan_id} athlete_id={athlete_id}"
+        try:
+            response = (
+                self.client.table("plans")
+                .update({"exercise_overrides": overrides, "exercise_overrides_revision": expected_revision + 1})
+                .eq("id", plan_id).eq("athlete_id", athlete_id)
+                .eq("exercise_overrides_revision", expected_revision)
+                .execute()
+            )
+        except _STORE_CLIENT_ERRORS as exc:
+            self._raise_operation_http_error(operation=operation, detail="failed to save exercise change", exc=exc)
+        rows = getattr(response, "data", None) or []
+        return rows[0] if rows else None
 
     def archive_plan(self, plan_id: str) -> dict[str, Any]:
         try:

@@ -42,6 +42,9 @@ import type {
   TodayCheckinRequest,
   TodayCheckinResponse,
   TodayCommandView,
+  ExerciseChangeRequest,
+  ExerciseChangeResult,
+  ExerciseOptionsResponse,
   TodayInjuryCheckinRequest,
   TodayInjuryCheckinResponse,
   TodaySessionCompletionRecord,
@@ -438,7 +441,7 @@ async function executeRequest(path: string, init?: ApiRequestInit): Promise<Exec
         errorCode = errorCode ?? detailCode;
         if (detailMessage) {
           throw new ApiError(
-            detailCode === "health_data_consent_required"
+            detailCode === "health_data_consent_required" || detailCode === "confirm_remove"
               ? detailMessage
               : bodyRequestId ? `${detailMessage} (request id: ${String(bodyRequestId)})` : detailMessage,
             response.status,
@@ -1221,6 +1224,69 @@ export function updateAdminInjuryFlag(
     token,
     body: JSON.stringify({ status }),
   });
+}
+
+function exerciseChangeQuery(params: Record<string, string | boolean | null | undefined>): string {
+  const query = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    if (value !== null && value !== undefined && value !== false) query.set(key, String(value));
+  }
+  return query.toString();
+}
+
+/** The best replacements for one exercise of one dated workout. */
+export function getExerciseAlternatives(
+  token: string,
+  planId: string,
+  params: { date: string; sessionId: string; blockId: string; all?: boolean },
+  signal?: AbortSignal,
+): Promise<ExerciseOptionsResponse> {
+  const query = exerciseChangeQuery({
+    date: params.date, session_id: params.sessionId, block_id: params.blockId, all: params.all,
+  });
+  return withTransientRetries(() => readJson<ExerciseOptionsResponse>(
+    `/api/plans/${encodeURIComponent(planId)}/exercise-changes/alternatives?${query}`, { token, signal },
+  ), { signal });
+}
+
+/** Exercises to add to one dated workout: ranked picks, or any library match for `q`. */
+export function getExerciseAdditions(
+  token: string,
+  planId: string,
+  params: { date: string; sessionId: string; all?: boolean; q?: string },
+  signal?: AbortSignal,
+): Promise<ExerciseOptionsResponse> {
+  const query = exerciseChangeQuery({
+    date: params.date, session_id: params.sessionId, all: params.all, q: params.q?.trim() || null,
+  });
+  return withTransientRetries(() => readJson<ExerciseOptionsResponse>(
+    `/api/plans/${encodeURIComponent(planId)}/exercise-changes/additions?${query}`, { token, signal },
+  ), { signal });
+}
+
+/** Swap, add or remove one exercise. Retry-safe on its client_request_id. */
+export function applyExerciseChange(
+  token: string,
+  planId: string,
+  body: ExerciseChangeRequest,
+): Promise<ExerciseChangeResult> {
+  return withTransientRetries(() => readJson<ExerciseChangeResult>(
+    `/api/plans/${encodeURIComponent(planId)}/exercise-changes`,
+    { method: "POST", token, body: JSON.stringify(body) },
+  ));
+}
+
+/** Undo (or restore from ``date``) one change. Idempotent. */
+export function undoExerciseChange(
+  token: string,
+  planId: string,
+  changeId: string,
+  date?: string | null,
+): Promise<ExerciseChangeResult> {
+  return withTransientRetries(() => readJson<ExerciseChangeResult>(
+    `/api/plans/${encodeURIComponent(planId)}/exercise-changes/${encodeURIComponent(changeId)}/undo`,
+    { method: "POST", token, body: JSON.stringify(date ? { date } : {}) },
+  ));
 }
 
 export function getToday(token: string): Promise<TodayCommandView> {

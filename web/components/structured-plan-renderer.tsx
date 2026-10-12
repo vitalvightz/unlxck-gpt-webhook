@@ -87,6 +87,7 @@ import { WhyTooltip } from "@/components/why-tooltip";
 import { ExerciseDemo, ExerciseMediaProvider, useExerciseMedia } from "@/components/exercise-demo";
 import { PrivateExerciseMediaProvider, PrescribedPrivateVideo, PrescribedPrivateVideoThumbnail } from "@/components/private-exercise-video";
 import { ExerciseLogBadge, ExerciseLogPanel, ExerciseLogTick, useExerciseLoggingActive } from "@/components/exercise-log";
+import { ExerciseActions, ExerciseSessionScope, SessionChangesFoot } from "@/components/exercise-customisation";
 import { demoThumbnailUrl } from "@/lib/exercise-demo";
 import { SafetyNote } from "@/components/safety-note";
 import { InjuryDetailSheet } from "@/components/today/injury-detail-sheet";
@@ -714,6 +715,8 @@ export function ExerciseRow({
             <ExerciseGlyph block={block} />
           </span>
         ) : null}
+        {/* Swap / remove: only where the owning surface allows a change. */}
+        <ExerciseActions block={block} title={title} />
         <span className="ex-row-chevron" aria-hidden="true" />
       </div>
       {open && detail === "sheet" ? (
@@ -909,7 +912,11 @@ export function SessionCard({
   openWeekIntent,
   layout = "card",
   sectionIndex = 0,
+  occurrenceDate,
 }: {
+  /** Calendar date of this session's occurrence, for athlete exercise changes
+   * (a session after the first one in a day is rendered without its day). */
+  occurrenceDate?: string | null;
   /** "section" is Today's numbered session part: every exercise row in view,
    * the rationale and coaching cues behind one disclosure. */
   layout?: "card" | "section";
@@ -1053,21 +1060,24 @@ export function SessionCard({
             </div>
           </details>
         ) : null}
-        {blocks.length > 0 ? (
-          <div className="sp-blocks ex-rows">
-            {blocks.map((block, index) => (
-              <ExerciseRow
-                key={cleanText(block.block_id) || `block-${index}`}
-                block={block}
-                open={openBlockIndex === index}
-                onToggle={() => setOpenBlockIndex((current) => (current === index ? null : index))}
-                openWeekIntent={openWeekIntent}
-                sourceCountdown={sourceCountdown}
-                detail="sheet"
-              />
-            ))}
-          </div>
-        ) : null}
+        <ExerciseSessionScope date={occurrenceDate ?? day?.date} session={session}>
+          {blocks.length > 0 ? (
+            <div className="sp-blocks ex-rows">
+              {blocks.map((block, index) => (
+                <ExerciseRow
+                  key={cleanText(block.block_id) || `block-${index}`}
+                  block={block}
+                  open={openBlockIndex === index}
+                  onToggle={() => setOpenBlockIndex((current) => (current === index ? null : index))}
+                  openWeekIntent={openWeekIntent}
+                  sourceCountdown={sourceCountdown}
+                  detail="sheet"
+                />
+              ))}
+            </div>
+          ) : null}
+          <SessionChangesFoot session={session} canAdd={blocks.length > 0} />
+        </ExerciseSessionScope>
       </article>
     );
   }
@@ -1193,18 +1203,21 @@ export function SessionCard({
           </button>
 
           {showDetails ? (
-            <div id={detailsId} className="sp-blocks ex-rows">
-              {blocks.map((block, index) => (
-                <ExerciseRow
-                  key={cleanText(block.block_id) || `block-${index}`}
-                  block={block}
-                  open={openBlockIndex === index}
-                  onToggle={() => setOpenBlockIndex((current) => (current === index ? null : index))}
-                  openWeekIntent={openWeekIntent}
-                  sourceCountdown={sourceCountdown}
-                />
-              ))}
-            </div>
+            <ExerciseSessionScope date={occurrenceDate ?? day?.date} session={session}>
+              <div id={detailsId} className="sp-blocks ex-rows">
+                {blocks.map((block, index) => (
+                  <ExerciseRow
+                    key={cleanText(block.block_id) || `block-${index}`}
+                    block={block}
+                    open={openBlockIndex === index}
+                    onToggle={() => setOpenBlockIndex((current) => (current === index ? null : index))}
+                    openWeekIntent={openWeekIntent}
+                    sourceCountdown={sourceCountdown}
+                  />
+                ))}
+                <SessionChangesFoot session={session} />
+              </div>
+            </ExerciseSessionScope>
           ) : null}
         </>
       ) : null}
@@ -1816,6 +1829,7 @@ export function CampDayCard({
                 showDayLabels={false}
                 completionInfo={completionInfoFor(session)}
                 openWeekIntent={weekIntent}
+                occurrenceDate={day.date}
               />
             ))}
           </div>

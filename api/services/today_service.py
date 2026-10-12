@@ -71,6 +71,7 @@ from api.contracts.training_day import resolve_training_day_str
 from api.store import AppStore
 from api.services.active_plan import ActivePlanResolution, resolve_active_plan
 from api.services.effective_structured_plan import resolve_effective_structured_plan
+from api.services.exercise_overrides import apply_exercise_overrides
 from api.services.plan_schedule import (
     has_scheduled_day_content,
     parse_iso_date,
@@ -1850,6 +1851,10 @@ def _projected_structured_plan(
             structured_plan,
             current_training_day=training_day,
         )
+        # The athlete's swaps/adds/removals, on dated days only. Every Today,
+        # start and logging read goes through here, so all of them see the same
+        # effective workout as Plan Detail.
+        projected = apply_exercise_overrides(plan_row, projected) or projected
         return _iter_mapping_items(projected.get("weeks")), context
 
     return _memoized(("projection", id(plan_row), training_day), plan_row, _project)
