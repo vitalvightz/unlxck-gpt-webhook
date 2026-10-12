@@ -19,14 +19,10 @@ import {
   UpNextCard,
 } from "@/components/home/home-dashboard";
 import homeStyles from "@/components/home/home.module.css";
-import { resolveCurrentDay, resolveOpenPlanWeekNumber } from "@/lib/camp-map";
+import { resolveOpenPlanWeekNumber } from "@/lib/camp-map";
+import { resolveUpNextSummary } from "@/lib/home-up-next";
 import { formatAppDate } from "@/lib/date-format";
-import {
-  dayPartsSubtitle,
-  dayPartsTitle,
-  namedDayParts,
-  sessionSummaryChips,
-} from "@/lib/session-summary";
+import { isAthletePrescribed } from "@/lib/session-summary";
 import { useTrainingDay } from "@/lib/use-training-day";
 import { getPlan, getToday } from "@/lib/api";
 import { getFightCountdown } from "@/lib/fight-countdown";
@@ -41,8 +37,6 @@ import { humanizeIfRawEnum } from "@/lib/plan-labels";
 import { formatPlanFightDate, formatPlanTimestamp, getPlanDisplayName, isOpenOngoingPlan } from "@/lib/plan-format";
 import {
   getOverviewPrimaryAction,
-  getSessionTitle,
-  resolveSessionFocusDate,
   resolveTodayDecision,
 } from "@/lib/today";
 import type { PlanDetail, PlanSummary, StructuredPlan, TodayActivePlan, TodayCommandView } from "@/lib/types";
@@ -180,13 +174,6 @@ function WorkspaceOverviewSkeleton() {
       </section>
     </>
   );
-}
-
-/** "Keep it controlled: skip sparring, …" → "Keep it controlled." for one line. */
-function directiveLead(action: string | undefined): string {
-  const text = (action ?? "").trim();
-  const match = /^([^:]{3,40}):\s/.exec(text);
-  return match ? `${match[1]}.` : text;
 }
 
 function enrichConfirmedActivePlan(
@@ -496,25 +483,16 @@ export default function HomePage() {
       anchorDate: planDetail?.schedule_context?.anchor_date,
       createdAt: planDetail?.created_at,
     };
-    const focusDate = resolveSessionFocusDate(trainingDay, nextSession);
-    const focusDay = resolveCurrentDay(structuredPlan, focusDate, {
-      openWeekNumber: resolveOpenPlanWeekNumber(structuredPlan, focusDate, scheduleHints),
-      allowDatedWeekdayMatch: openOngoing,
-    });
-    const livePrescription = commandState?.live_prescription;
-    const daySessions = livePrescription ? [livePrescription.session] : focusDay.inRange ? focusDay.sessions : [];
-    const dayParts = namedDayParts(daySessions);
     const rehabPolicy = planDetail?.rehab_label_policy ?? null;
-    const upNextTitle =
-      dayPartsTitle(dayParts, nextSession?.session_id, rehabPolicy) ||
-      (nextSession ? getSessionTitle(nextSession) : "") ||
-      "Rest day";
-    const upNextSubtitle = dayPartsSubtitle(dayParts, upNextTitle);
-    const estimatedDuration =
-      typeof nextSession?.estimated_duration === "number"
-        ? `${nextSession.estimated_duration} min`
-        : nextSession?.estimated_duration || null;
-    const upNextChips = sessionSummaryChips(daySessions, estimatedDuration ?? null, nextSession?.effective_load);
+    const upNext = resolveUpNextSummary({
+      state: commandState,
+      structuredPlan,
+      trainingDay,
+      openOngoing,
+      scheduleHints,
+      policy: rehabPolicy,
+    });
+    const daySessions = upNext.sessions;
     const upNextDateLabel = sessionIsToday
       ? "Today"
       : nextSession?.calendar_date
@@ -531,7 +509,9 @@ export default function HomePage() {
               ? "Check in to unlock today's session."
               : decisionTier === "preview"
                 ? "Check in on the day to unlock it."
-                : directiveLead(decisionBanner.action) || decisionBanner.title,
+                // The whole instruction: shortening "Keep it controlled: skip
+                // sparring, …" would drop the restriction the athlete must follow.
+                : decisionBanner.action || decisionBanner.title,
         }
       : null;
     const currentBlockWeek = openOngoing
@@ -554,6 +534,7 @@ export default function HomePage() {
                     weekNumber={currentBlockWeek}
                     trainingDay={trainingDay}
                     policy={rehabPolicy}
+                    athletePrescribed={isAthletePrescribed(daySessions)}
                   />
                 ) : planSettledFor === activePlanId ? (
                   <FightCountdown
@@ -567,9 +548,9 @@ export default function HomePage() {
                 ) : null}
                 <UpNextCard
                   dateLabel={upNextDateLabel}
-                  title={upNextTitle}
-                  subtitle={upNextSubtitle}
-                  chips={upNextChips}
+                  title={upNext.title}
+                  subtitle={upNext.subtitle}
+                  chips={upNext.chips}
                   decision={upNextDecision}
                   action={primaryAction}
                 />

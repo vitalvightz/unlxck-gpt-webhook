@@ -48,7 +48,10 @@ import { cleanText } from "@/lib/structured-plan";
 import {
   dayPartsSubtitle,
   dayPartsTitle,
+  getSessionDurationLabel,
+  isAthletePrescribed,
   namedDayParts,
+  resolveLiveDaySessions,
   sameTitle,
   sessionSummaryChips,
 } from "@/lib/session-summary";
@@ -103,25 +106,6 @@ function formatSessionDate(session: TodaySession): string {
   const hasCountdownInDayPart = Boolean(dayPart && countdown && dayPart.includes(countdown));
   const parts = [dayPart, hasCountdownInDayPart ? null : countdown].filter(Boolean);
   return parts.length ? parts.join(" / ") : "Athlete-local training day";
-}
-
-function getSessionDuration(session: TodaySession): string | null {
-  if (typeof session.estimated_duration === "string" && session.estimated_duration.trim()) {
-    return session.estimated_duration.trim();
-  }
-  if (typeof session.estimated_duration === "number" && Number.isFinite(session.estimated_duration)) {
-    return `${session.estimated_duration} min`;
-  }
-  if (typeof session.duration_minutes === "number" && Number.isFinite(session.duration_minutes)) {
-    return `${session.duration_minutes} min`;
-  }
-  if (session.planned_duration?.display) {
-    return session.planned_duration.display;
-  }
-  if (typeof session.planned_duration?.value === "number") {
-    return `${session.planned_duration.value} ${session.planned_duration.unit || "min"}`;
-  }
-  return null;
 }
 
 /** "Right achilles tendonitis + Chest strain": what today's work is built around. */
@@ -425,7 +409,7 @@ export function TodaySessionPanel({
   const [previewOpen, setPreviewOpen] = useState(false);
   const session = state.today.next_session;
   const status = state.today.completion_status;
-  const duration = getSessionDuration(session);
+  const duration = getSessionDurationLabel(session);
   const resolvedDecision = resolveTodayDecision(state);
   const hasSession = resolvedDecision.hasSession;
   // Resolve today's day/session from the structured plan through the shared
@@ -490,11 +474,7 @@ export function TodaySessionPanel({
   const guidanceOnlyRehab = sessionHasGuidanceRehab && !sessionHasRehab;
   // A rehab-only day of guidance has nothing to start: it is checked off.
   const guidanceOnlyRehabDay = rehabOnlyPrescription && guidanceOnlyRehab;
-  const liveSessions = livePrescription?.session.prescription_source === "athlete" && storedCurrent.sessions.length
-    ? storedCurrent.sessions.map(s => ({
-        ...s, blocks: (livePrescription.session.blocks ?? []).filter(b => b.source_session_id === s.session_id),
-      }))
-    : livePrescription ? [livePrescription.session] : [];
+  const liveSessions = resolveLiveDaySessions(storedCurrent.sessions, livePrescription);
   const current: CurrentDayResolution = livePrescription ? {
     ...storedCurrent, inRange: true,
     day: {
@@ -515,7 +495,7 @@ export function TodaySessionPanel({
   // anchor-derived number so the note always matches the blocks shown below.
   // Dated camps stay null and render unchanged.
   const openWeekIntent = openOngoing && !rehabOnlyPrescription
-    ? openBlockWeekIntent(current.weekPos != null ? current.weekPos + 1 : openWeekNumber, current.sessions.some(s => s.prescription_source === "athlete"))
+    ? openBlockWeekIntent(current.weekPos != null ? current.weekPos + 1 : openWeekNumber, isAthletePrescribed(current.sessions))
     : null;
   const showStructuredBlocks = current.inRange && Boolean(current.day);
   // The day's blocks by id, to put each timer log back against its block.
@@ -553,7 +533,7 @@ export function TodaySessionPanel({
   // session in place of the real blocks so Today never displays hard combat as
   // available under a stop. Future sessions stay visible but read as pending.
   const safeSession =
-    resolvedDecision.useSafeReplacement && !livePrescription && !current.sessions.some(s => s.prescription_source === "athlete")
+    resolvedDecision.useSafeReplacement && !livePrescription && !isAthletePrescribed(current.sessions)
       ? getSafeSessionView(getSessionTitle(session), state.open_injuries)
       : null;
   const nextIsHardCombat = isHardCombatSession(session);

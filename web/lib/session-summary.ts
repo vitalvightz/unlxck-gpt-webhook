@@ -6,7 +6,7 @@
 import { athleteFacingSessionTitle, formatPlanLabel } from "@/lib/plan-labels";
 import { resolveSessionTypeLabel } from "@/lib/rehab-label";
 import { getBlocks, isZeroLoadSupportSession } from "@/lib/structured-plan";
-import type { RehabLabelPolicy, StructuredSession } from "@/lib/types";
+import type { RehabLabelPolicy, StructuredSession, TodaySession } from "@/lib/types";
 
 /** `estimate` marks a figure the plan states but nothing measured: shown "~". */
 export type SummaryChip = { icon: "clock" | "load" | "exercises"; label: string; estimate?: boolean };
@@ -97,4 +97,54 @@ export function dayPartsSubtitle(parts: StructuredSession[], shownTitle: string)
     .map((item) => athleteFacingSessionTitle(textValue(item.title)))
     .filter((title) => title && !sameTitle(title, shownTitle))
     .join(" · ");
+}
+
+/** Whether the athlete prescribed this work themselves (a saved custom plan):
+ * the app's generic week guidance must not override their doses. */
+export function isAthletePrescribed(sessions: StructuredSession[]): boolean {
+  return sessions.some((session) => session.prescription_source === "athlete");
+}
+
+/**
+ * The sessions a day really holds once the live prescription applies. The
+ * server sends an athlete-owned day as one combined session; it is split back
+ * into the athlete's saved sessions (each keeping its own blocks) so every
+ * surface shows the same parts, exercise count and duration. A generated
+ * live prescription stays one session.
+ */
+export function resolveLiveDaySessions(
+  storedSessions: StructuredSession[],
+  livePrescription: { session: StructuredSession } | null | undefined,
+): StructuredSession[] {
+  if (!livePrescription) return storedSessions;
+  const live = livePrescription.session;
+  if (live.prescription_source === "athlete" && storedSessions.length) {
+    return storedSessions.map((session) => ({
+      ...session,
+      blocks: (live.blocks ?? []).filter((block) => block.source_session_id === session.session_id),
+    }));
+  }
+  return [live];
+}
+
+/** The backend's stated time for a session card, when the plan sessions don't
+ * state their own minutes. */
+export function getSessionDurationLabel(session: TodaySession | null | undefined): string | null {
+  if (!session) return null;
+  if (typeof session.estimated_duration === "string" && session.estimated_duration.trim()) {
+    return session.estimated_duration.trim();
+  }
+  if (typeof session.estimated_duration === "number" && Number.isFinite(session.estimated_duration)) {
+    return `${session.estimated_duration} min`;
+  }
+  if (typeof session.duration_minutes === "number" && Number.isFinite(session.duration_minutes)) {
+    return `${session.duration_minutes} min`;
+  }
+  if (session.planned_duration?.display) {
+    return session.planned_duration.display;
+  }
+  if (typeof session.planned_duration?.value === "number") {
+    return `${session.planned_duration.value} ${session.planned_duration.unit || "min"}`;
+  }
+  return null;
 }

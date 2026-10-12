@@ -7,7 +7,7 @@ import { SummaryChipList } from "@/components/today/summary-chips";
 import { useXp } from "@/components/xp-provider";
 import { getDays, getSessions, getWeeks } from "@/lib/structured-plan";
 import { openBlockWeekIntent } from "@/lib/open-block";
-import { shortSessionType, type SummaryChip } from "@/lib/session-summary";
+import { isAthletePrescribed, shortSessionType, type SummaryChip } from "@/lib/session-summary";
 import type { RehabLabelPolicy, StructuredPlan, TodayCommandView } from "@/lib/types";
 
 // Home: where the athlete is (fight countdown or current block), what comes
@@ -20,16 +20,22 @@ export function CurrentBlockCard({
   weekNumber,
   trainingDay,
   policy,
+  athletePrescribed = false,
 }: {
   plan: StructuredPlan | null;
   weekNumber: number | null;
   trainingDay: Date | null;
   policy?: RehabLabelPolicy | null;
+  /** Today's resolved sessions are the athlete's own (a saved custom plan). */
+  athletePrescribed?: boolean;
 }) {
   const weeks = getWeeks(plan);
   const weekCount = weeks.length || 4;
-  const intent = weekNumber ? openBlockWeekIntent(weekNumber) : null;
   const week = weekNumber ? weeks[weekNumber - 1] : null;
+  // Same rule as Today: an athlete's own prescription is never overridden by
+  // the generic week guidance ("Cut working volume roughly in half").
+  const ownsDoses = athletePrescribed || isAthletePrescribed(getDays(week).flatMap((day) => getSessions(day)));
+  const intent = weekNumber ? openBlockWeekIntent(weekNumber, ownsDoses) : null;
   const focus = Array.from(
     new Set(
       getDays(week)
