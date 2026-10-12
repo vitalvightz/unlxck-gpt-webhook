@@ -180,7 +180,8 @@ def test_plan_request_rejects_overlap_between_hard_sparring_and_support_work_day
         )
 
 
-def test_plan_request_removes_strength_focus_with_hard_sparring_at_d20():
+def test_plan_request_keeps_strength_focus_with_hard_sparring_at_d20():
+    """Intake never erases a selected goal; goal preservation records the deferral."""
     fight_date = (datetime.now(timezone.utc).date() + timedelta(days=20)).isoformat()
 
     request = PlanRequest(
@@ -197,10 +198,10 @@ def test_plan_request_removes_strength_focus_with_hard_sparring_at_d20():
         primary_weak_area="strength",
     )
 
-    assert request.key_goals == ["mobility"]
-    assert request.primary_goal == ""
-    assert request.weak_areas == ["footwork"]
-    assert request.primary_weak_area == ""
+    assert request.key_goals == ["strength", "mobility"]
+    assert request.primary_goal == "strength"
+    assert request.weak_areas == ["strength", "footwork"]
+    assert request.primary_weak_area == "strength"
 
 
 def test_plan_request_keeps_strength_focus_for_open_camp_with_hard_sparring():
@@ -225,7 +226,7 @@ def test_plan_request_keeps_strength_focus_for_open_camp_with_hard_sparring():
     assert request.primary_weak_area == "strength"
 
 
-def test_plan_input_removes_strength_focus_with_hard_sparring_at_d20_for_direct_payloads():
+def test_plan_input_keeps_strength_focus_with_hard_sparring_at_d20_for_direct_payloads():
     fight_date = (datetime.now(timezone.utc).date() + timedelta(days=20)).isoformat()
 
     parsed = PlanInput.from_payload(
@@ -247,10 +248,10 @@ def test_plan_input_removes_strength_focus_with_hard_sparring_at_d20_for_direct_
         }
     )
 
-    assert parsed.key_goals == "mobility"
-    assert parsed.primary_goal == ""
-    assert parsed.weak_areas == "footwork"
-    assert parsed.primary_weak_area == ""
+    assert parsed.key_goals == "strength, mobility"
+    assert parsed.primary_goal == "strength"
+    assert parsed.weak_areas == "strength, footwork"
+    assert parsed.primary_weak_area == "strength"
 
 
 def test_plan_input_keeps_strength_focus_for_direct_open_camp_payloads_with_hard_sparring():

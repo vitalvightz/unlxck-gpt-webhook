@@ -34,6 +34,7 @@ from .normalization import WEEKDAY_ORDER, clean_list
 from .tactical_watch_library import (
     build_watch_display_text,
     extract_tactical_style,
+    TacticalWatchBankExhausted,
     select_tactical_watch,
     watch_metadata,
 )
@@ -468,7 +469,15 @@ def _ensure_tactical_watch(
         return False
     day, d_day = slot
 
-    watch = select_tactical_watch(extract_tactical_style(athlete_model), phase, used_watch_keys)
+    try:
+        watch = select_tactical_watch(
+            extract_tactical_style(athlete_model), phase, used_watch_keys, allow_reuse=True
+        )
+    except TacticalWatchBankExhausted:
+        # No eligible watch at all for this sport/style/phase: a zero-load
+        # insert is skipped and recorded, never a generation failure.
+        week["tactical_watch_skipped"] = {"reason_code": "tactical_watch_bank_empty", "phase": phase}
+        return False
     metadata = watch_metadata(watch)
     watch_governance = dict(metadata.pop("governance"))
     role = existing if existing is not None else {

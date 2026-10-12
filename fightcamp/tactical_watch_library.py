@@ -348,31 +348,51 @@ def ordered_phase_bank(style: Any, phase: Any, sport: Any = None) -> tuple[Tacti
     return tuple(watches)
 
 
+_REUSE_MARK = "reuse::"
+
+
 def select_tactical_watch(
     style: Any,
     phase: Any,
     used_keys: Iterable[str] | None = None,
+    *,
+    allow_reuse: bool = False,
 ) -> TacticalWatch:
+    """Next unused watch in bank order.
+
+    With ``allow_reuse`` a camp longer than its phase bank cycles the same
+    eligible bank deterministically instead of failing: once every key is used,
+    reuse runs in bank order, so the least recently used watch comes back first.
+    The reuse count lives in ``used_keys`` itself as ``reuse::<PHASE>:<n>``
+    marks (never a real key), so the caller's existing ledger stays the only
+    state. An empty bank still raises; there is nothing legal to reuse.
+    """
     used = {str(key) for key in (used_keys or ())}
     display_style = str(getattr(style, "display_label", "") or "").strip()
     competitive_maturity = _competitive_maturity(getattr(style, "competitive_maturity", ""))
-    for watch in ordered_phase_bank(style, phase):
-        if watch.key not in used:
-            visible_style = (
-                ""
-                if watch.fallback_reason == "sport_incompatible_tactical_style"
-                else display_style
-            )
-            if (visible_style and watch.style != "generic") or competitive_maturity:
-                return replace(
-                    watch,
-                    display_style=visible_style if watch.style != "generic" else "",
-                    competitive_maturity=competitive_maturity,
-                )
-            return watch
-    raise TacticalWatchBankExhausted(
-        f"no unused Tactical Watch for style={style!r} phase={phase!r}"
+    bank = ordered_phase_bank(style, phase)
+    watch = next((candidate for candidate in bank if candidate.key not in used), None)
+    if watch is None and allow_reuse and bank and isinstance(used_keys, set):
+        phase_mark = f"{_REUSE_MARK}{str(phase or 'GPP').strip().upper()}:"
+        reuses = sum(1 for key in used if key.startswith(phase_mark))
+        watch = bank[reuses % len(bank)]
+        used_keys.add(f"{phase_mark}{reuses}")
+    if watch is None:
+        raise TacticalWatchBankExhausted(
+            f"no unused Tactical Watch for style={style!r} phase={phase!r}"
+        )
+    visible_style = (
+        ""
+        if watch.fallback_reason == "sport_incompatible_tactical_style"
+        else display_style
     )
+    if (visible_style and watch.style != "generic") or competitive_maturity:
+        return replace(
+            watch,
+            display_style=visible_style if watch.style != "generic" else "",
+            competitive_maturity=competitive_maturity,
+        )
+    return watch
 
 
 def _athlete_visible_watch_text(watch: TacticalWatch, text: str) -> str:

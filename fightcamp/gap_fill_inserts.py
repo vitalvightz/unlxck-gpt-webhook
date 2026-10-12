@@ -979,6 +979,7 @@ def _apply_bank_watch(
         extract_tactical_style(athlete_model),
         phase,
         used_watch_keys,
+        allow_reuse=True,
     )
     metadata = watch_metadata(watch)
     watch_governance = dict(metadata.pop("governance", {}) or {})
