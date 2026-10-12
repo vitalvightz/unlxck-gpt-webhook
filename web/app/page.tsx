@@ -12,6 +12,18 @@ import { FightCountdown, FightCountdownSkeleton } from "@/components/fight-count
 import { InstallUnlxck } from "@/components/install-unlxck";
 import { PlansFeaturedSkeleton, Skeleton } from "@/components/skeleton";
 import { XpProgressCard, XpProgressCardSkeleton } from "@/components/xp-progress-card";
+import {
+  CurrentBlockCard,
+  ThisWeekCard,
+  TrainingAlertsRow,
+  UpNextCard,
+} from "@/components/home/home-dashboard";
+import homeStyles from "@/components/home/home.module.css";
+import { resolveOpenPlanWeekNumber } from "@/lib/camp-map";
+import { resolveUpNextSummary } from "@/lib/home-up-next";
+import { formatAppDate } from "@/lib/date-format";
+import { isAthletePrescribed } from "@/lib/session-summary";
+import { useTrainingDay } from "@/lib/use-training-day";
 import { getPlan, getToday } from "@/lib/api";
 import { getFightCountdown } from "@/lib/fight-countdown";
 import {
@@ -24,14 +36,10 @@ import {
 import { humanizeIfRawEnum } from "@/lib/plan-labels";
 import { formatPlanFightDate, formatPlanTimestamp, getPlanDisplayName, isOpenOngoingPlan } from "@/lib/plan-format";
 import {
-  getCampDayLabel,
-  getOverviewCommandEyebrow,
   getOverviewPrimaryAction,
-  getRiskTimeframeLabel,
-  getTierMeta,
   resolveTodayDecision,
 } from "@/lib/today";
-import type { PlanSummary, StructuredPlan, TodayActivePlan, TodayCommandView } from "@/lib/types";
+import type { PlanDetail, PlanSummary, StructuredPlan, TodayActivePlan, TodayCommandView } from "@/lib/types";
 
 function formatPlanCount(value: number): string {
   return `${value} saved plan${value === 1 ? "" : "s"}`;
@@ -194,44 +202,6 @@ function enrichConfirmedActivePlan(
  * this card names only the two highest-priority signals and routes overflow to
  * that actionable surface.
  */
-function OverviewRiskWatch({ risks = [] }: { risks?: TodayCommandView["risk_watch"] }) {
-  if (!risks.length) {
-    return (
-      <article className="status-card overview-command-card overview-risk-card">
-        <p className="status-label">Training alerts</p>
-        <p className="muted">No active warnings.</p>
-      </article>
-    );
-  }
-
-  const safeRisks = risks ?? [];
-  const visible = safeRisks.slice(0, 2);
-  const overflow = safeRisks.length - visible.length;
-
-  return (
-    <article className="status-card overview-command-card overview-risk-card">
-      <p className="status-label">Training alerts</p>
-      <div className="overview-risk-list">
-        {visible.map((risk, index) => {
-          const timeframe = getRiskTimeframeLabel(risk.timeframe);
-          const riskLabel = humanizeIfRawEnum(risk.label) || risk.label;
-          return (
-            <div key={`${risk.category}-${risk.label}-${index}`} className="overview-risk-row" data-tone={risk.tone}>
-              <span className="overview-risk-row-label">{timeframe || riskLabel}</span>
-              {timeframe ? <span className="overview-risk-row-text">{riskLabel}</span> : null}
-            </div>
-          );
-        })}
-      </div>
-      {overflow > 0 ? (
-        <Link href="/today" className="overview-risk-more">
-          Review {overflow} more on Today
-        </Link>
-      ) : null}
-    </article>
-  );
-}
-
 export default function HomePage() {
   const publicT = useTranslations("PublicHome");
   const landingOutcomePoints = [1, 2, 3].map((index) => ({
@@ -258,7 +228,10 @@ export default function HomePage() {
   const router = useRouter();
   const [commandState, setCommandState] = useState<TodayCommandView | null>(null);
   const [commandError, setCommandError] = useState<string | null>(null);
-  const [structuredPlan, setStructuredPlan] = useState<StructuredPlan | null>(null);
+  const [planDetail, setPlanDetail] = useState<PlanDetail | null>(null);
+  const structuredPlan: StructuredPlan | null = planDetail?.outputs?.structured_plan ?? null;
+  // The athlete-local training day: places Up Next and the current block.
+  const trainingDay = useTrainingDay();
   // Which active plan's structured_plan request has finished (loaded or
   // failed). The fight countdown waits for it so it appears once, already
   // animating, instead of showing today's count and then replaying.
@@ -335,20 +308,20 @@ export default function HomePage() {
   useEffect(() => {
     const token = session?.access_token;
     if (!token || !activePlanId) {
-      setStructuredPlan(null);
+      setPlanDetail(null);
       return;
     }
     let cancelled = false;
     getPlan(token, activePlanId)
       .then((detail) => {
         if (!cancelled) {
-          setStructuredPlan(detail.outputs?.structured_plan ?? null);
+          setPlanDetail(detail);
           setPlanSettledFor(activePlanId);
         }
       })
       .catch(() => {
         if (!cancelled) {
-          setStructuredPlan(null);
+          setPlanDetail(null);
           setPlanSettledFor(activePlanId);
         }
       });
@@ -466,48 +439,20 @@ export default function HomePage() {
     // on: saved plans exist (pick one) vs no plans at all (build the first).
     const hasSavedPlans = (me.plan_count ?? 0) > 0;
     const resolvedDecision = commandState ? resolveTodayDecision(commandState) : null;
-    const risks = commandState?.risk_watch ?? [];
     const recommendation = commandState?.today?.recommendation_state ?? "not_checked_in";
-    // Overview consumes the same authoritative resolver as Today. The backend
-    // tier controls safety; structured severe-injury data only supplies truthful
-    // STOP presentation and the injury check-in action.
+    // Home consumes the same authoritative resolver as Today. The backend tier
+    // controls safety; Up Next carries its call in one line.
     const decisionBanner = resolvedDecision?.banner ?? null;
     const decisionTier = resolvedDecision?.displayTier ?? "not_checked_in";
-    const tierMeta = getTierMeta(decisionTier);
     const safetyNoticeLeads = resolvedDecision?.primaryMessageKind === "safety_notice";
-    const decisionTitle = safetyNoticeLeads
-      ? decisionBanner?.title ?? "Current safety"
-      : tierMeta.label;
-    const overviewEyebrow = safetyNoticeLeads
-      ? "Current safety"
-      : getOverviewCommandEyebrow(decisionTier);
-    const decisionLines = decisionBanner
-      ? (safetyNoticeLeads
-          ? [decisionBanner.action, decisionBanner.detail]
-          : [decisionBanner.detail, decisionBanner.action]
-        ).filter((line): line is string => Boolean(line))
-      : ["Submit today's fast check-in to unlock your training decision."];
-    const decisionSafety = decisionBanner?.safety;
-    // With no active plan there is no training decision to render, so the whole
-    // primary area (headline + body) is overridden to match the CTA instead of
-    // showing a stale "CHECK IN REQUIRED" that the athlete cannot act on.
-    const overviewTitle = !hasActivePlan
-      ? hasSavedPlans
-        ? "Select active plan"
-        : "Build your plan"
-      : decisionTitle;
-    const overviewLines = !hasActivePlan
-      ? [
-          hasSavedPlans
-            ? "Choose which saved plan should control Today, check-ins and session tracking."
-            : "Create your first plan to unlock Today and session tracking.",
-        ]
-      : decisionLines;
-    // Safety copy only belongs to a real decision — never on the no-plan states.
-    const overviewSafety = hasActivePlan ? decisionSafety : undefined;
-    // Today's countdown to the fight, and whether the scheduled session is today
-    // (vs a future planned day that must read as pending, not cleared).
-    const campDay = getCampDayLabel(commandState?.today?.training_day, String(activePlan.fight_date || ""));
+    // With no active plan there is no training decision: the card says what to
+    // do instead, matching its button.
+    const overviewTitle = hasSavedPlans ? "Select active plan" : "Build your plan";
+    const overviewLines = [
+      hasSavedPlans
+        ? "Choose which saved plan should control Today, check-ins and session tracking."
+        : "Create your first plan to unlock Today and session tracking.",
+    ];
     const openOngoing = hasActivePlan && isOpenOngoingPlan(activePlan.fight_date);
     const sessionIsToday = resolvedDecision?.sessionIsToday ?? false;
     // Decision tone drives the colour accents on the decision card (matches
@@ -530,75 +475,120 @@ export default function HomePage() {
       hasSafeSession: Boolean(resolvedDecision?.useSafeReplacement),
       sessionIsToday,
     });
-    const primaryHref = primaryAction.href;
-    const primaryLabel = primaryAction.label;
+    // Up Next: the day the command view points at (today's, or the next one
+    // once today is logged), resolved exactly as Today resolves it.
+    const nextSession = commandState?.today?.next_session ?? null;
+    const scheduleHints = {
+      currentWeekNumber: planDetail?.schedule_context?.current_week_number,
+      anchorDate: planDetail?.schedule_context?.anchor_date,
+      createdAt: planDetail?.created_at,
+    };
+    const rehabPolicy = planDetail?.rehab_label_policy ?? null;
+    const upNext = resolveUpNextSummary({
+      state: commandState,
+      structuredPlan,
+      trainingDay,
+      openOngoing,
+      scheduleHints,
+      policy: rehabPolicy,
+    });
+    const daySessions = upNext.sessions;
+    const upNextDateLabel = sessionIsToday
+      ? "Today"
+      : nextSession?.calendar_date
+        ? formatAppDate(nextSession.calendar_date).replace(/\s\d{4}$/, "")
+        : "";
+    const upNextDecision = decisionBanner
+      ? {
+          chip: decisionBanner.chip,
+          tone: decisionTone,
+          line:
+            safetyNoticeLeads
+              ? decisionBanner.title
+              : recommendation === "not_checked_in" && sessionIsToday
+              ? "Check in to unlock today's session."
+              : decisionTier === "preview"
+                ? "Check in on the day to unlock it."
+                // The whole instruction: shortening "Keep it controlled: skip
+                // sparring, …" would drop the restriction the athlete must follow.
+                : decisionBanner.action || decisionBanner.title,
+        }
+      : null;
+    const currentBlockWeek = openOngoing
+      ? resolveOpenPlanWeekNumber(structuredPlan, trainingDay, scheduleHints)
+      : null;
 
     return (
-      <>
-        {/* Primary command area — today's decision, the session it affects, and
-            one dominant action lead the first viewport. */}
+      <div className={homeStyles.page}>
+        <h1 className={`athlete-motion-slot athlete-motion-header ${homeStyles.title}`}>Home</h1>
+
+        {/* Where the athlete is and what comes next, in the original command
+            panel: its deep-red wash, status cards and gold countdown. */}
         <section className="hero-panel overview-command-shell overview-command-primary athlete-motion-slot athlete-motion-header">
-          <div className="overview-primary-grid">
-            <div className="status-card overview-command-card overview-decision-lead" data-tone={decisionTone}>
-              <p className="eyebrow">{overviewEyebrow}</p>
-              <h1 className="hero-title overview-decision-headline">{overviewTitle}</h1>
-              <div className="overview-decision-copy">
+          <div className={homeStyles.shellBody}>
+            {hasActivePlan ? (
+              <>
+                {openOngoing ? (
+                  <CurrentBlockCard
+                    plan={structuredPlan}
+                    weekNumber={currentBlockWeek}
+                    trainingDay={trainingDay}
+                    policy={rehabPolicy}
+                    athletePrescribed={isAthletePrescribed(daySessions)}
+                  />
+                ) : planSettledFor === activePlanId ? (
+                  <FightCountdown
+                    fightDate={activePlan.fight_date ? String(activePlan.fight_date) : null}
+                    trainingDay={commandState?.today?.training_day}
+                    phase={activePlan.phase ? String(activePlan.phase) : null}
+                    plan={structuredPlan}
+                  />
+                ) : getFightCountdown({ fightDate: activePlan.fight_date, trainingDay: commandState?.today?.training_day }) ? (
+                  <FightCountdownSkeleton />
+                ) : null}
+                <UpNextCard
+                  dateLabel={upNextDateLabel}
+                  title={upNext.title}
+                  subtitle={upNext.subtitle}
+                  chips={upNext.chips}
+                  decision={upNextDecision}
+                  action={primaryAction}
+                />
+              </>
+            ) : (
+              <div className="status-card overview-command-card overview-decision-lead">
+                <h2 className="hero-title overview-decision-headline">{overviewTitle}</h2>
                 {overviewLines.map((line, index) => (
                   <p key={index} className="muted">{line}</p>
                 ))}
-                {overviewSafety ? <p className="muted overview-decision-safety">{overviewSafety}</p> : null}
-              </div>
-              <div className="plan-summary-actions overview-primary-actions">
-                <Link href={primaryHref} className="cta overview-primary-action">{primaryLabel}</Link>
-                {hasActivePlan ? (
-                  <Link href={`/plans/${activePlan.id}`} className="secondary-button">{openOngoing ? "Training plan" : "Fight camp"}</Link>
-                ) : (
+                <div className="plan-summary-actions overview-primary-actions">
+                  <Link href={primaryAction.href} className="cta overview-primary-action">{primaryAction.label}</Link>
                   <Link href="/quick-build" className="secondary-button">Quick Build</Link>
-                )}
+                </div>
               </div>
-            </div>
-            <div className="overview-primary-session">
-              <XpProgressCard />
-            </div>
+            )}
+            {commandError ? (
+              <div className="error-banner" role="alert">
+                <span>{commandError}</span>
+                <button
+                  type="button"
+                  className="error-banner-retry"
+                  onClick={() => void loadCommandState()}
+                  disabled={isReloadingCommand}
+                >
+                  {isReloadingCommand ? "Retrying..." : "Retry"}
+                </button>
+              </div>
+            ) : null}
           </div>
-          {commandError ? (
-            <div className="error-banner" role="alert">
-              <span>{commandError}</span>
-              <button
-                type="button"
-                className="error-banner-retry"
-                onClick={() => void loadCommandState()}
-                disabled={isReloadingCommand}
-              >
-                {isReloadingCommand ? "Retrying..." : "Retry"}
-              </button>
-            </div>
-          ) : null}
         </section>
 
-        {/* Secondary — camp context, progress, full risk watch, disclaimer.
-            Available but visually reduced so it never competes with the command. */}
         <section className="panel overview-secondary athlete-motion-slot athlete-motion-status">
-          <p className="kicker overview-secondary-eyebrow">{openOngoing ? "Block progress" : "Camp progress"}</p>
-          <div className="overview-operational-strip" aria-label={openOngoing ? "Training status" : "Camp status"}>
-            <div className="overview-operational-item"><span className="overview-operational-label">Plan</span><span className="overview-operational-value">{String(activePlan.name || "No active plan")}</span></div>
-            <div className="overview-operational-item"><span className="overview-operational-label">{openOngoing ? "Cycle" : "Camp day"}</span><span className="overview-operational-value">{openOngoing ? "Renewable 4-week block" : campDay || "Not set"}</span></div>
-            <div className="overview-operational-item"><span className="overview-operational-label">{openOngoing ? "Mode" : "Phase"}</span><span className="overview-operational-value">{openOngoing ? "Ongoing" : humanizeIfRawEnum(activePlan.phase) || "Not set"}</span></div>
-            <div className="overview-operational-item"><span className="overview-operational-label">Fight date</span><span className="overview-operational-value">{openOngoing ? "Not scheduled" : formatPlanFightDate(String(activePlan.fight_date || ""))}</span></div>
-          </div>
-          {planSettledFor === activePlanId ? (
-            <FightCountdown
-              fightDate={activePlan.fight_date ? String(activePlan.fight_date) : null}
-              trainingDay={commandState?.today?.training_day}
-              phase={activePlan.phase ? String(activePlan.phase) : null}
-              plan={structuredPlan}
-            />
-          ) : getFightCountdown({ fightDate: activePlan.fight_date, trainingDay: commandState?.today?.training_day }) ? (
-            <FightCountdownSkeleton />
-          ) : null}
-          <OverviewRiskWatch risks={risks} />
+          {hasActivePlan ? <ThisWeekCard /> : null}
+          <XpProgressCard />
+          <TrainingAlertsRow state={commandState} />
         </section>
-      </>
+      </div>
     );
   }
 

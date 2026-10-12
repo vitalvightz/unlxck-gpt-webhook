@@ -828,10 +828,10 @@ export function getOverviewPrimaryAction(params: {
       ? { href: "/today#today-session", label: "View safe session" }
       : { href: "/today#today-session", label: "Review stop guidance" };
   }
-  return {
-    href: "/today#today-session",
-    label: sessionIsToday ? "Today's session" : "Next session",
-  };
+  // A session due today is started on Today; a future one opens its preview.
+  return sessionIsToday
+    ? { href: "/today#today-session", label: "Start session" }
+    : { href: "/today?preview=1", label: "Preview session" };
 }
 
 /**
