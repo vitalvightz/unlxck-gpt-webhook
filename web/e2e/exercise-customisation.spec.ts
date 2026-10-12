@@ -21,6 +21,7 @@ async function setup(page: Page, baseURL: string) {
   })]);
   const writes: { path: string; body: unknown }[] = [];
   await page.route("**/api/**", async (route) => {
+    try {
     const request = route.request();
     const url = new URL(request.url());
     const response = await page.request.fetch(`${api}${url.pathname}${url.search}`, {
@@ -39,9 +40,15 @@ async function setup(page: Page, baseURL: string) {
         athlete_timezone: "UTC", technical_style: ["boxing"], date_of_birth: "1995-01-01", meets_minimum_age: true,
         is_minor: false, terms_accepted: true, health_consent_granted: true, private_trial_ack_at: "2026-01-01T12:00:00Z",
       });
-      return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(me) });
+      return await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(me) });
     }
-    return route.fulfill({ status: response.status(), contentType: "application/json", body: await response.body() });
+    return await route.fulfill({ status: response.status(), contentType: "application/json", body: await response.body() });
+    } catch (error) {
+      // Navigating/reloading cancels superseded app reads while the real API
+      // response is in flight. Only that already-handled route is ignored.
+      if (error instanceof Error && /Route is already handled/.test(error.message)) return;
+      throw error;
+    }
   });
   return writes;
 }
@@ -52,6 +59,9 @@ async function settle(page: Page) {
 }
 
 test.describe.configure({ mode: "serial" });
+test.afterEach(async ({ page }) => {
+  await page.unrouteAll({ behavior: "ignoreErrors" });
+});
 
 for (const width of [320, 390, 1280]) {
   test(`Today: swap, undo, remove and add without leaving Today (${width}px)`, async ({ page, baseURL }) => {
@@ -145,3 +155,185 @@ for (const width of [320, 390, 1280]) {
     expect(errors).toEqual([]);
   });
 }
+
+for (const width of [390, 1280]) {
+  test(`Sport-aware hill runs can be added, edited and retained after reload (${width}px)`, async ({ page, baseURL }) => {
+    test.skip(!api, "Run with EXERCISE_TEST_API pointing at the real seeded API");
+    await page.request.post(`${api}/__e2e/reset`);
+    await page.setViewportSize({ width, height: 844 });
+    const errors: string[] = [];
+    page.on("pageerror", error => errors.push(error.message));
+    const writes = await setup(page, baseURL!);
+    await page.goto("/today");
+    await page.getByRole("button", { name: "Add exercise", exact: true }).click();
+    const add = page.getByRole("dialog", { name: "Add exercise" });
+    const search = add.getByRole("searchbox", { name: "Search the exercise library" });
+    await search.fill("teep");
+    await expect(add.getByText("No library exercise matches that search.")).toBeVisible();
+    await expect(add.locator("ul:not([data-refreshing='true']) > li")).toHaveCount(0);
+    await search.fill("Tempo Hill Runs");
+    const option = add.locator("ul:not([data-refreshing='true']) > li").filter({ hasText: "Tempo Hill Runs" }).first();
+    await option.locator("button").first().click();
+    await expect(option.getByLabel("Dose format")).toHaveValue("intervals");
+    await expect(option.getByLabel("Rounds", { exact: true })).toHaveValue("6");
+    await expect(option.getByLabel("Work", { exact: true })).toHaveValue("20");
+    await expect(option.getByLabel("Reps", { exact: true })).toHaveCount(0);
+    await option.getByLabel("Rest", { exact: true }).fill("60");
+    if (shots) await settle(page), await page.screenshot({ path: `${shots}/hill-dose-${width}.png` });
+    await option.getByRole("button", { name: "Add", exact: true }).click();
+    await expect(add).toHaveCount(0);
+    await page.getByRole("button", { name: "Change Tempo Hill Runs", exact: true }).click();
+    await page.getByRole("dialog", { name: "Tempo Hill Runs", exact: true }).getByRole("button", { name: "Edit", exact: true }).click();
+    const edit = page.getByRole("dialog", { name: "Edit Tempo Hill Runs", exact: true });
+    await edit.getByLabel("Rounds", { exact: true }).fill("5");
+    await edit.getByLabel("Work", { exact: true }).fill("25");
+    await edit.getByLabel("Rest", { exact: true }).fill("75");
+    await expect(edit.locator("details")).not.toHaveAttribute("open");
+    await edit.locator("summary").click();
+    await edit.getByLabel("Weight or intensity").fill("Easy uphill pace");
+    await edit.getByLabel("RPE (optional)", { exact: true }).fill("6.5");
+    await edit.getByLabel("Cues", { exact: true }).fill("Run tall; keep the shoulders relaxed.");
+    await edit.getByLabel("Stop rules", { exact: true }).fill("Stop for sharp pain.");
+    expect(await edit.evaluate(panel => panel.scrollWidth <= panel.clientWidth)).toBe(true);
+    if (shots) await settle(page), await page.screenshot({ path: `${shots}/hill-edit-${width}.png` });
+    await edit.getByRole("button", { name: "Save changes" }).click();
+    await expect(edit).toHaveCount(0);
+    await page.reload();
+    const changed = page.locator(".ex-row").filter({ has: page.getByRole("button", { name: "Change Tempo Hill Runs", exact: true }) });
+    await expect(changed).toContainText("RPE 6.5");
+    await changed.getByRole("button", { name: "Tempo Hill Runs", exact: true }).click();
+    await page.getByRole("dialog", { name: "Tempo Hill Runs", exact: true }).locator("summary").filter({ hasText: "Coaching cues" }).click();
+    await expect(page.getByText("Run tall; keep the shoulders relaxed.", { exact: true })).toBeVisible();
+    await expect(page.getByText(/sharp pain\./).first()).toBeVisible();
+    if (shots) await settle(page), await page.screenshot({ path: `${shots}/hill-rendered-${width}.png` });
+    expect(writes.filter(write => write.path.endsWith("/exercise-changes"))).toHaveLength(2);
+    expect(errors).toEqual([]);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  });
+}
+
+for (const technical of ["session", "sessionless"]) {
+  test(`Technical day supports adding and editing its first drill (${technical})`, async ({ page, baseURL }) => {
+    test.skip(!api, "Run with the seeded API");
+    await page.request.post(`${api}/__e2e/reset?technical=${technical}`);
+    await page.setViewportSize({ width: 390, height: 844 });
+    await setup(page, baseURL!);
+    await page.goto("/plans/44444444-4444-4444-4444-444444444444");
+    const addButton = page.getByRole("button", { name: "Add exercise", exact: true }).first();
+    await expect(addButton).toBeVisible();
+    await addButton.click();
+    const add = page.getByRole("dialog", { name: "Add exercise" });
+    await add.getByRole("searchbox").fill("parry cross pivot");
+    const option = add.locator("ul:not([data-refreshing='true']) > li").filter({ hasText: "Parry-Cross-Pivot" }).first();
+    await option.locator("button").first().click();
+    await expect(option.getByLabel("Dose format")).toHaveValue("duration");
+    await option.getByLabel("Duration", { exact: true }).fill("120");
+    await option.getByRole("button", { name: "Add", exact: true }).click();
+    await expect(add).toHaveCount(0);
+    const expand = page.getByRole("button", { name: /Show more session detail/ }).first();
+    if (await expand.isVisible()) await expand.click();
+    await page.getByRole("button", { name: "Change Parry-Cross-Pivot", exact: true }).first().click();
+    await page.getByRole("dialog", { name: "Parry-Cross-Pivot", exact: true }).getByRole("button", { name: "Edit", exact: true }).click();
+    const edit = page.getByRole("dialog", { name: "Edit Parry-Cross-Pivot" });
+    await edit.getByLabel("Duration unit").selectOption("60");
+    await edit.getByLabel("Duration", { exact: true }).fill("3");
+    await edit.locator("summary").click();
+    await edit.getByLabel("Cues", { exact: true }).fill("Light feet, relaxed shoulders.");
+    await edit.getByRole("button", { name: "Save changes" }).click();
+    await expect(edit).toHaveCount(0);
+    if (shots) await page.screenshot({ path: `${shots}/technical-${technical}-390.png` });
+    await page.reload();
+    await expect(page.getByText("3 min").first()).toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  });
+}
+
+test("Custom drafts and published plans use the same editable exercise cards", async ({ page, baseURL }) => {
+  test.skip(!api, "Run with the seeded API");
+  await page.request.post(`${api}/__e2e/reset`);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await setup(page, baseURL!);
+  const headers = { Authorization: "Bearer athlete-token" };
+  const state = await (await page.request.get(`${api}/api/today`, { headers })).json();
+  const day = state.today.training_day;
+  const weekday = new Intl.DateTimeFormat("en", { weekday: "long", timeZone: "UTC" }).format(new Date(`${day}T12:00:00Z`));
+  const create = await page.request.post(`${api}/api/custom-plans`, { headers, data: {
+    name: "My boxing plan", sessions: [{ id: crypto.randomUUID(), name: "Conditioning", weekday,
+      session_type: "conditioning", exercises: [{ id: crypto.randomUUID(), origin: "manual", name: "My shadowboxing",
+        dose: { mode: "duration", duration_seconds: 600, rpe: 4 },
+        coaching_cues: ["Stay relaxed"], stop_rules: ["Stop for sharp pain"] }],
+    }],
+  } });
+  expect(create.ok()).toBe(true);
+  const draft = await create.json();
+  await page.goto(`/plans/custom?plan=${draft.id}`);
+  await expect(page.locator(".ex-row")).toContainText("My shadowboxing");
+  await page.getByRole("button", { name: "Edit dose for My shadowboxing", exact: true }).click();
+  const editor = page.getByRole("dialog", { name: "My shadowboxing", exact: true });
+  await editor.getByLabel("RPE (optional)", { exact: true }).fill("5");
+  await editor.getByLabel("Cues", { exact: true }).fill("Light feet, steady breathing.");
+  await editor.getByRole("button", { name: "Done", exact: true }).click();
+  await expect(page.locator(".ex-row")).toContainText("RPE 5");
+  const saved = page.waitForResponse(r => r.url().endsWith(`/api/custom-plans/${draft.id}`) && r.request().method() === "PUT");
+  await page.getByRole("button", { name: "Save draft", exact: true }).click();
+  const savedResponse = await saved;
+  expect(savedResponse.ok()).toBe(true);
+  const savedDraft = await savedResponse.json();
+  expect(savedDraft.sessions[0].exercises[0].coaching_cues).toEqual(["Light feet, steady breathing."]);
+  expect(savedDraft.sessions[0].exercises[0].stop_rules).toEqual(["Stop for sharp pain"]);
+  const draftCard = page.locator(".ex-row").filter({ hasText: "My shadowboxing" });
+  await draftCard.getByRole("button", { name: "My shadowboxing", exact: true }).click();
+  await expect(draftCard).toContainText("Light feet, steady breathing.");
+  await draftCard.scrollIntoViewIfNeeded();
+  if (shots) await page.screenshot({ path: `${shots}/custom-draft-390.png` });
+  const publish = await page.request.post(`${api}/api/custom-plans/${draft.id}/open-plan`, { headers });
+  expect(publish.ok()).toBe(true);
+  const published = await publish.json();
+  await page.goto(`/plans/${published.plan_id}`);
+  const showMore = page.getByRole("button", { name: /Show more session detail/ }).first();
+  if (await showMore.isVisible()) await showMore.click();
+  await page.getByRole("button", { name: "Change My shadowboxing", exact: true }).first().click();
+  await page.getByRole("dialog", { name: "My shadowboxing", exact: true }).getByRole("button", { name: "Edit", exact: true }).click();
+  const edit = page.getByRole("dialog", { name: "Edit My shadowboxing" });
+  await edit.getByLabel("Duration", { exact: true }).fill("15");
+  await edit.getByLabel("Rest", { exact: true }).fill("45");
+  await edit.getByRole("button", { name: "Save changes" }).click();
+  await expect(edit).toHaveCount(0);
+  await page.reload();
+  await expect(page.getByText("15 min").first()).toBeVisible();
+  const publishedCard = page.locator(".ex-row").filter({ hasText: "My shadowboxing" }).first();
+  await publishedCard.getByRole("button", { name: "My shadowboxing", exact: true }).click();
+  await publishedCard.scrollIntoViewIfNeeded();
+  if (shots) await page.screenshot({ path: `${shots}/custom-published-390.png` });
+});
+
+
+test("Cue-only editing preserves an existing RIR prescription after reload", async ({ page, baseURL }) => {
+  test.skip(!api, "Run with the seeded API");
+  await page.request.post(`${api}/__e2e/reset?rir=true`);
+  await page.setViewportSize({ width: 390, height: 844 });
+  const writes = await setup(page, baseURL!);
+  await page.goto("/today");
+  await page.getByRole("button", { name: "Change Back Squat", exact: true }).click();
+  await page.getByRole("dialog", { name: "Back Squat", exact: true }).getByRole("button", { name: "Edit", exact: true }).click();
+  const edit = page.getByRole("dialog", { name: "Edit Back Squat", exact: true });
+  await expect(edit.locator("details")).not.toHaveAttribute("open");
+  await edit.locator("summary").click();
+  await edit.getByLabel("Cues", { exact: true }).fill("Brace before moving");
+  await edit.getByRole("button", { name: "Save changes" }).click();
+  await expect(edit).toHaveCount(0);
+  const change = writes.at(-1)!.body as { action: string; dose?: unknown };
+  expect(change.action).toBe("edit");
+  expect(change.dose).toBeUndefined();
+  const headers = { Authorization: "Bearer athlete-token" };
+  const state = await (await page.request.get(`${api}/api/today`, { headers })).json();
+  const squat = state.today.next_session.blocks.find((block: { exercise_key: string }) => block.exercise_key === "back-squat");
+  expect(squat.effort).toMatchObject({ method: "RIR", value: 3 });
+  expect(squat.coaching_cues).toEqual(["Brace before moving"]);
+  await page.reload();
+  await expect(page.locator(".ex-row").filter({ hasText: "Back Squat" })).toContainText("RIR 3");
+  await page.getByRole("button", { name: "Change Back Squat", exact: true }).click();
+  await page.getByRole("dialog", { name: "Back Squat", exact: true }).getByRole("button", { name: "Edit", exact: true }).click();
+  await edit.locator("summary").click();
+  await expect(edit.getByLabel("Cues", { exact: true })).toHaveValue("Brace before moving");
+});

@@ -164,7 +164,7 @@ export function MyCommunitySubmissions({ token }: { token: string }) {
   const exercise = selected ? {
     id: selected.id, origin: 'manual' as const, name: selected.name,
     equipment: selected.equipment, notes: selected.notes, media_id: selected.media_id,
-    community_id: selected.id, community_revision_id: null, dose: blankDose(), incomplete: true,
+    community_id: selected.id, community_revision_id: null, dose: blankDose(), incomplete: true, coaching_cues: null, stop_rules: null,
   } : null;
   return <div className={layout.submissions}>
     <button type="button" className="ghost-button" aria-expanded={open} onClick={() => { setOpen(value => !value); if (!open) reload(); }}>My submissions</button>

@@ -480,7 +480,7 @@ export type CountdownLabel = {
 };
 
 export type CustomDose = {
-  mode: "duration" | "intervals" | "reps" | "text";
+  mode: "distance" | "duration" | "intervals" | "reps" | "text";
   sets: number | null;
   reps: number | null;
   duration_seconds: number | null;
@@ -497,7 +497,7 @@ export type CustomDose = {
 };
 
 export type CustomDoseRequest = {
-  mode?: "duration" | "intervals" | "reps" | "text";
+  mode?: "distance" | "duration" | "intervals" | "reps" | "text";
   sets?: number | null;
   reps?: number | null;
   duration_seconds?: number | null;
@@ -515,6 +515,7 @@ export type CustomDoseRequest = {
 
 export type CustomDoseSuggestion = {
   dose: CustomDose | null;
+  format_dose: CustomDose | null;
   original: string;
   source: string;
   source_revision: string;
@@ -526,6 +527,8 @@ export type CustomExercise = {
   origin: "catalogue";
   catalogue_id: string;
   dose: CustomDose;
+  coaching_cues: string[] | null;
+  stop_rules: string[] | null;
   snapshot: CustomExerciseSnapshot;
   incomplete: boolean;
 };
@@ -535,6 +538,8 @@ export type CustomExerciseInput = {
   origin?: "catalogue";
   catalogue_id: string;
   dose?: CustomDoseRequest;
+  coaching_cues?: string[] | null;
+  stop_rules?: string[] | null;
 };
 
 export type CustomExerciseSnapshot = {
@@ -661,25 +666,27 @@ export type ExerciseAlternative = {
   media: ExerciseMedia | null;
   prescription: string | null;
   dose_required: boolean;
-  dose_mode: "duration" | "intervals" | "reps";
+  dose_mode: "distance" | "duration" | "intervals" | "reps" | "text";
   suggested_dose: Record<string, unknown> | null;
 };
 
 export type ExerciseChangeRequest = {
   client_request_id: string;
-  action: "add" | "remove" | "swap";
+  action: "add" | "edit" | "remove" | "swap";
   scope?: "future" | "occurrence";
   date: string;
   session_id: string;
   block_id?: string | null;
   catalogue_id?: string | null;
   dose?: CustomDoseRequest | null;
+  coaching_cues?: string[] | null;
+  stop_rules?: string[] | null;
   confirmed?: boolean;
 };
 
 export type ExerciseChangeResult = {
   id: string;
-  action: "add" | "remove" | "swap";
+  action: "add" | "edit" | "remove" | "swap";
   scope: "future" | "occurrence";
   date: string;
   name: string | null;
@@ -1262,6 +1269,8 @@ export type ManualExercise = {
   community_id: string | null;
   community_revision_id: string | null;
   dose: CustomDose;
+  coaching_cues: string[] | null;
+  stop_rules: string[] | null;
   incomplete: boolean;
 };
 
@@ -1275,6 +1284,8 @@ export type ManualExerciseInput = {
   community_id?: string | null;
   community_revision_id?: string | null;
   dose?: CustomDoseRequest;
+  coaching_cues?: string[] | null;
+  stop_rules?: string[] | null;
 };
 
 export type ManualStage2SubmissionRequest = {

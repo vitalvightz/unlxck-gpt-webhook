@@ -456,7 +456,7 @@ export type ExerciseAlternative = {
   media?: ExerciseMedia | null;
   prescription?: string | null;
   dose_required?: boolean;
-  dose_mode?: "reps" | "duration" | "intervals";
+  dose_mode?: "reps" | "duration" | "intervals" | "distance" | "text";
   suggested_dose?: Record<string, unknown> | null;
 };
 
@@ -467,26 +467,36 @@ export type ExerciseOptionsResponse = {
   scopes: ExerciseChangeScope[];
 };
 
-export type ExerciseChangeDose =
+type ExerciseDoseExtras = {
+  load_or_intensity?: string | null;
+  rpe?: number | null;
+  tempo?: string | null;
+  per_side?: boolean | null;
+};
+export type ExerciseChangeDose = ExerciseDoseExtras & (
   | { mode: "reps"; sets: number; reps: number; rest_seconds?: number | null; rpe?: number | null }
   | { mode: "duration"; duration_seconds: number; sets?: number | null; rest_seconds?: number | null }
-  | { mode: "intervals"; rounds: number; work_seconds: number; rest_seconds: number };
+  | { mode: "intervals"; rounds: number; work_seconds: number; rest_seconds: number }
+  | { mode: "distance"; distance: number; distance_unit: "m" | "km" | "mi" | "yd"; sets?: number | null; rest_seconds?: number | null }
+  | { mode: "text"; prescription: string; rest_seconds?: number | null });
 
 export type ExerciseChangeRequest = {
   client_request_id: string;
-  action: "swap" | "add" | "remove";
+  action: "swap" | "add" | "remove" | "edit";
   scope?: "occurrence" | "future";
   date: string;
   session_id: string;
   block_id?: string | null;
   catalogue_id?: string | null;
   dose?: ExerciseChangeDose | null;
+  coaching_cues?: string[] | null;
+  stop_rules?: string[] | null;
   confirmed?: boolean;
 };
 
 export type ExerciseChangeResult = {
   id: string;
-  action: "swap" | "add" | "remove";
+  action: "swap" | "add" | "remove" | "edit";
   scope: "occurrence" | "future";
   date: string;
   name?: string | null;

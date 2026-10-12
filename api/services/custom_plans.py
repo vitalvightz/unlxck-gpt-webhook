@@ -127,6 +127,9 @@ def custom_open_plan_result(draft: dict, profile, *, training_day: str) -> dict:
                         if guidance.get(source):
                             block[target] = "\n".join(guidance[source])
                 block.update(dose_block_fields(dose))
+                for field in ("coaching_cues", "stop_rules"):
+                    if exercise.get(field) is not None:
+                        block[field] = list(exercise[field])
                 blocks.append(block)
             rendered.append({
                 "session_id": session_id, "session_type": session.get("session_type", "mixed"),
@@ -226,14 +229,19 @@ def _dose_text(dose: dict) -> str:
     if dose["mode"] == "reps":
         parts = [f'{dose["sets"]} × {dose["reps"]}']
     elif dose["mode"] == "duration":
-        parts = [f'{dose["duration_seconds"]}s']
+        seconds = dose["duration_seconds"]
+        parts = [f'{seconds // 60} min' if seconds % 60 == 0 else f'{seconds}s']
         if dose.get("sets"):
             parts[0] = f'{dose["sets"]} × {parts[0]}'
     elif dose["mode"] == "intervals":
         parts = [f'{dose["rounds"]} × {dose["work_seconds"]}s']
+    elif dose["mode"] == "distance":
+        parts = [f'{dose["distance"]:g} {dose["distance_unit"]}']
+        if dose.get("sets"):
+            parts[0] = f'{dose["sets"]} × {parts[0]}'
     else:
         parts = [dose["prescription"]]
-    if dose.get("distance"):
+    if dose.get("distance") and dose["mode"] != "distance":
         parts.append(f'{dose["distance"]} {dose["distance_unit"]}')
     if dose.get("load_or_intensity"):
         parts.append(dose["load_or_intensity"])
@@ -379,6 +387,8 @@ def plan_fields(store, body: CustomPlanInput, previous: dict | None = None, *, a
 
 def dose_incomplete(dose):
     mode = dose["mode"]
+    if mode == "distance":
+        return not (dose.get("distance") and dose.get("distance_unit"))
     if mode == "reps":
         return not (dose.get("sets") and dose.get("reps"))
     if mode == "duration":

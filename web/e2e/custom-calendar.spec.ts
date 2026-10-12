@@ -12,6 +12,7 @@ function demo(): CustomPlan {
         id: crypto.randomUUID(), name: "Lower Body", weekday: weekday as CustomSession["weekday"], session_type: "strength_power" as const,
         exercises: [{ id: crypto.randomUUID(), origin: "manual" as const, name: "My squat", equipment: "Rack", notes: "Keep my dose",
           media_id: null, community_id: null, community_revision_id: null, incomplete: false,
+          coaching_cues: null, stop_rules: null,
           dose: { ...blankDose(), sets: 3, reps: 5, load_or_intensity: "80 kg" } }],
       })),
       { id: crypto.randomUUID(), name: "Training", weekday: "Tuesday", session_type: "recovery", exercises: [] },
@@ -32,7 +33,7 @@ for (const width of [320, 390, 1280]) {
     await page.goto(`/plans/custom?plan=${original.id}`);
     await expect(page.getByRole("heading", { name: "Demo", exact: true })).toBeVisible();
     await expect(page.getByText("Recovery day — No exercises required.", { exact: true })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Schedule Sunday" })).toContainText("Rest day — Nothing scheduled");
+    await expect(page.getByRole("button", { name: "Schedule Sunday" })).toContainText("Rest day");
     await expect(page.getByRole("button", { name: "Save & view plan", exact: true })).toBeEnabled();
     await page.getByRole("button", { name: "Edit dose for Hard Sparring rounds", exact: true }).click();
     await expect(page.getByLabel("Rounds", { exact: true })).toHaveValue("3");

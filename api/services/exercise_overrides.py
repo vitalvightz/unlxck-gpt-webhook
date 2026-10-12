@@ -36,7 +36,7 @@ from copy import deepcopy
 from datetime import date
 from typing import Any
 
-OVERRIDE_ACTIONS = frozenset({"swap", "remove", "add"})
+OVERRIDE_ACTIONS = frozenset({"swap", "remove", "add", "edit"})
 OVERRIDE_SCOPES = frozenset({"occurrence", "future"})
 OVERRIDE_BLOCK_PREFIX = "ovr-"
 WEEKDAY_TOKENS = ("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
@@ -94,8 +94,6 @@ def stored_overrides(plan_row: Mapping[str, Any]) -> list[dict[str, Any]]:
 
 def active_overrides(plan_row: Mapping[str, Any]) -> list[dict[str, Any]]:
     """Unrevoked, well-formed entries in the order they were made."""
-    if is_custom_plan(plan_row):
-        return []
     entries = []
     for entry in stored_overrides(plan_row):
         if entry.get("revoked_at") or entry.get("action") not in OVERRIDE_ACTIONS:
@@ -142,6 +140,25 @@ def _matching_session(sessions: list[Any], entry: Mapping[str, Any]) -> dict[str
                and (session_slot(s, position=position) == slot or session_slot(s) == slot)]
     # Old title-only changes are safe only when that title identifies one session.
     return matches[0] if len(matches) == 1 else None
+
+
+def editable_day_sessions(day: Mapping[str, Any]) -> list[dict[str, Any]]:
+    """Address the existing headline-only technical session by its dated id.
+
+    Today already logs a sessionless training day against its calendar date.
+    Materialise that same owner only when an exercise change needs a slot; the
+    original persisted day remains untouched.
+    """
+    sessions = day.get("sessions")
+    if isinstance(sessions, list) and sessions:
+        return sessions
+    card = day.get("today_card") if isinstance(day.get("today_card"), Mapping) else {}
+    title = str(card.get("headline") or "").strip()
+    if not _parse_date(day.get("date")) or not re.search(r"\b(?:technical|light combat|controlled.*(?:rounds|combat))\b", title, re.I):
+        return []
+    return [{"session_id": str(day["date"])[:10], "session_type": "skill", "title": title,
+             "objective": "", "mindset_anchor": deepcopy(card.get("mindset_anchor") or
+                 {"intent": "", "focus_cue": "", "reset_cue": ""}), "blocks": []}]
 
 
 def _matching_block_index(blocks: list[Any], entry: Mapping[str, Any]) -> int | None:
@@ -236,7 +253,8 @@ def apply_exercise_overrides(
             if not applicable:
                 continue
             new_day = deepcopy(dict(day))
-            sessions = new_day.get("sessions") if isinstance(new_day.get("sessions"), list) else []
+            sessions = editable_day_sessions(new_day)
+            new_day["sessions"] = sessions
             changed = False
             # Recurring changes first, then the one-off changes for this date,
             # so "just this workout" wins over "future workouts" on its day.

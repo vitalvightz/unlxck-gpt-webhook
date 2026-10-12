@@ -3,7 +3,10 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { deleteCustomPlan, getCommunityExercise, getCustomDoseSuggestion, getCustomPlan, publishCustomPlan, saveCustomPlan } from "@/lib/api";
-import type { MeResponse } from "@/lib/types";
+import type { MeResponse, StructuredBlock } from "@/lib/types";
+import { ExerciseRow } from "./structured-plan-renderer";
+import { DotsIcon } from "./exercise-customisation";
+import { ExerciseMediaProvider } from "./exercise-demo";
 import { customSchedulePrefill, customScheduleIssues, prepareCustomSession, sessionNames, customPlanError } from "@/lib/custom-plan-schedule";
 import type {
   CommunityEntry,
@@ -17,7 +20,7 @@ import { InjuryDetailSheet } from "./today/injury-detail-sheet";
 import { DrillPreview, TrainingLibrary } from "./training-library";
 import { CustomDoseEditor } from "./custom-dose-editor";
 import { CommunityContributionSheet, CommunityExercisePreview, communityDetailsChanged } from "./community-exercises";
-import { PrivateExerciseVideo, PrivateExerciseVideoSheet } from "./private-exercise-video";
+import { PrivateExerciseMediaProvider, PrivateExerciseVideo, PrivateExerciseVideoSheet } from "./private-exercise-video";
 import { blankDose, doseSummary, doseIncomplete } from "@/lib/custom-plan-dose";
 import styles from "./custom-plan-builder.module.css";
 type Exercise = (Omit<CustomExercise, "snapshot"> & { snapshot: LibraryEntry }) | ManualExercise;
@@ -29,6 +32,29 @@ function orderedDraft(draft: Draft): Draft {
   return { ...draft, sessions: [...draft.sessions].sort((a, b) => day(a) - day(b)) };
 }
 const nameOf = (e: Exercise) => (e.origin === "manual" ? e.name : e.snapshot.name);
+function draftBlock(exercise: Exercise, session: Session): StructuredBlock {
+  const dose = exercise.dose;
+  const snapshot = exercise.origin === "catalogue" ? exercise.snapshot : null;
+  const type = snapshot?.content_type;
+  const weight = dose.load_or_intensity?.trim().match(/^(\d+(?:\.\d+)?)\s*(kg|lb|lbs)$/i);
+  return {
+    block_id: exercise.id, display_name: nameOf(exercise), prescription_source: "athlete",
+    block_type: type === "conditioning" || session.session_type === "conditioning" ? "conditioning"
+      : type === "power" ? "plyometric_power" : session.session_type === "skill" ? "skill" : "strength",
+    exercise_key: snapshot?.exercise_key, catalogue_id: exercise.origin === "catalogue" ? exercise.catalogue_id : null,
+    private_media_id: exercise.origin === "manual" ? exercise.media_id : null,
+    community_revision_id: exercise.origin === "manual" ? exercise.community_revision_id : null,
+    athlete_dose: dose, prescription_text: doseSummary(dose),
+    sets: dose.sets, reps: dose.reps, rounds: dose.rounds,
+    duration: dose.duration_seconds ? { value: dose.duration_seconds, unit: "seconds" } : null,
+    work: dose.work_seconds ? { value: dose.work_seconds, unit: "seconds" } : null,
+    rest: dose.rest_seconds != null ? { value: dose.rest_seconds, unit: "seconds" } : null,
+    distance: dose.distance && dose.distance_unit ? { value: dose.distance, unit: dose.distance_unit } : null,
+    effort: dose.rpe ? { method: "RPE", value: dose.rpe } : null,
+    load: weight ? { method: "absolute", value: Number(weight[1]), unit: weight[2].toLowerCase() === "kg" ? "kg" : "lb", display: dose.load_or_intensity } : null,
+    coaching_cues: exercise.coaching_cues ?? [], stop_rules: exercise.stop_rules ?? [],
+  };
+}
 function PencilIcon() {
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -48,6 +74,7 @@ export function CustomPlanBuilder({ accessToken, planId, onboarding = null }: { 
     [pending, setPending] = useState(false),
     [dirty, setDirty] = useState(false);
   const [opened, setOpened] = useState(!planId);
+  const [openExercise, setOpenExercise] = useState<string | null>(null);
   const [error, setError] = useState<string>(),
     [message, setMessage] = useState<string>();
   const [selecting, setSelecting] = useState<string>(),
@@ -255,12 +282,16 @@ export function CustomPlanBuilder({ accessToken, planId, onboarding = null }: { 
                     community_id: e.community_id,
                     community_revision_id: e.community_revision_id,
                     dose: e.dose,
+                    coaching_cues: e.coaching_cues,
+                    stop_rules: e.stop_rules,
                   }
                 : {
                     id: e.id,
                     origin: "catalogue" as const,
                     catalogue_id: e.catalogue_id,
                     dose: e.dose,
+                    coaching_cues: e.coaching_cues,
+                    stop_rules: e.stop_rules,
                   },
             ),
           })),
@@ -316,26 +347,37 @@ export function CustomPlanBuilder({ accessToken, planId, onboarding = null }: { 
         onSelectCommunity={(entry) => {
           sessionChange(selecting, s => ({ ...s, exercises: [...s.exercises, { id: crypto.randomUUID(), origin: 'manual', name: entry.name,
             equipment: entry.equipment, notes: entry.notes, media_id: null, community_id: null, community_revision_id: entry.revision_id,
-            incomplete: true, dose: blankDose() }] }));
+            incomplete: true, dose: blankDose(), coaching_cues: null, stop_rules: null }] }));
           setSelecting(undefined);
         }}
         onSelect={(entry) => {
           if (entry.category !== "training") return;
+          const exerciseId = crypto.randomUUID();
           sessionChange(selecting, (s) => ({
             ...s,
             exercises: [
               ...s.exercises,
               {
-                id: crypto.randomUUID(),
+                id: exerciseId,
                 origin: "catalogue",
                 catalogue_id: entry.catalogue_id,
                 snapshot: entry,
                 incomplete: true,
+                coaching_cues: null, stop_rules: null,
                 dose: blankDose(),
               },
             ],
           }));
           setSelecting(undefined);
+          void getCustomDoseSuggestion(accessToken, entry.catalogue_id).then(result => {
+            const suggested = result.dose?.mode !== "text" && result.dose ? result.dose : result.format_dose;
+            if (!suggested) return;
+            setDraft(current => ({ ...current, sessions: current.sessions.map(session => ({ ...session,
+              exercises: session.exercises.map(exercise => exercise.id === exerciseId && doseIncomplete(exercise.dose)
+                && JSON.stringify(exercise.dose) === JSON.stringify(blankDose())
+                ? { ...exercise, dose: suggested, incomplete: doseIncomplete(suggested) } : exercise),
+            })) }));
+          }).catch(() => undefined);
         }}
       />
     );
@@ -389,7 +431,7 @@ export function CustomPlanBuilder({ accessToken, planId, onboarding = null }: { 
                   setSessionEdit(session);
                 }}>
                 <strong>{day.slice(0, 3)}</strong>
-                <small>{sessions.length ? sessions.map(s => sessionNames[s.session_type ?? "mixed"]).join(" / ") : "Rest day — Nothing scheduled"}</small>
+                <small>{sessions.length ? sessions.map(s => sessionNames[s.session_type ?? "mixed"]).join(" / ") : "Rest day"}</small>
               </button>;
             })}
           </div>
@@ -410,31 +452,27 @@ export function CustomPlanBuilder({ accessToken, planId, onboarding = null }: { 
                   <PencilIcon />
                 </button>
               </div>
-              {s.session_type !== "rest" ? <ol className={styles.exercises}>
+              {s.session_type !== "rest" ? <PrivateExerciseMediaProvider token={accessToken}>
+                <ExerciseMediaProvider media={Object.fromEntries(s.exercises.flatMap(e => e.origin === "catalogue" && e.snapshot.media && e.snapshot.exercise_key
+                  ? [[`exercise:${e.snapshot.exercise_key}`, e.snapshot.media]] : []))}>
+                <ol className={styles.exercises}>
                 {s.exercises.map((e) => (
-                  <li key={e.id} className={styles.exercise}>
-                    <div className={styles.row}>
-                      <div className={styles.exerciseText}>
-                        <strong>{nameOf(e)}</strong>
-                        <small>
-                          {e.origin === "manual" ? "My exercise · " : ""}
-                          {doseSummary(e.dose)}
-                        </small>
-                        {e.origin === "manual" && e.notes?.startsWith("Editable suggestion only:") ? <small>{e.notes}</small> : null}
-                      </div>
+                  <li key={e.id}>
+                    <ExerciseRow block={draftBlock(e, s)} open={openExercise === e.id}
+                      onToggle={() => setOpenExercise(current => current === e.id ? null : e.id)} actions={
                       <button
                         type="button"
-                        className={styles.editButton}
+                        className={`${styles.editButton} ${styles.cardAction}`}
                         aria-label={`Edit dose for ${nameOf(e)}`}
-                        title="Edit dose"
+                        title="Edit exercise"
                         onClick={() => edit(s.id, e)}
                       >
-                        <PencilIcon />
+                        <DotsIcon />
                       </button>
-                    </div>
+                    } />
                   </li>
                 ))}
-              </ol> : <p className="muted">Rest day — Nothing scheduled. {s.exercises.length ? "Saved exercises are kept if you switch back to training." : ""}</p>}
+              </ol></ExerciseMediaProvider></PrivateExerciseMediaProvider> : <p className="muted">Rest day</p>}
               {!s.exercises.length && s.session_type !== "rest" ? <p className="muted">{s.session_type === "recovery" ? "Recovery day — No exercises required." : ["sparring", "skill"].includes(s.session_type ?? "mixed") ? "Coach-led day — Add editable rounds if useful." : "Workout needs exercises."}</p> : null}
               {s.session_type === "recovery" && s.exercises.length ? <p className="muted">Optional recovery work — No workout completion required.</p> : null}
               {s.session_type !== "rest" ? <div className={styles.row}>
@@ -464,6 +502,7 @@ export function CustomPlanBuilder({ accessToken, planId, onboarding = null }: { 
                         community_revision_id: null,
                         dose: blankDose(),
                         incomplete: true,
+                        coaching_cues: null, stop_rules: null,
                       },
                       true,
                     )
@@ -755,6 +794,14 @@ export function CustomPlanBuilder({ accessToken, planId, onboarding = null }: { 
                 })
               }
             />
+            {(["coaching_cues", "stop_rules"] as const).map(field => <label key={field}>
+              <span>{field === "coaching_cues" ? "Cues" : "Stop rules"}</span>
+              <textarea aria-label={field === "coaching_cues" ? "Cues" : "Stop rules"} rows={2} maxLength={2000}
+                value={(editing.exercise[field] ?? []).join("\n")}
+                onChange={event => setEditing({ ...editing, exercise: {
+                  ...editing.exercise, [field]: event.target.value.split("\n"),
+                } })} />
+            </label>)}
             <button className="cta">{editing.fresh ? "Add exercise" : "Done"}</button>
             {!editing.fresh ? (
               <>

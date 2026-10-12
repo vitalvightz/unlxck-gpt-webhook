@@ -16,6 +16,7 @@ export const blankDose = (mode: CustomDose["mode"] = "reps"): CustomDose => ({
   prescription: null,
 });
 export function doseSummary(d: CustomDose) {
+  const time = (seconds: number) => seconds % 60 === 0 ? `${seconds / 60} min` : `${seconds}s`;
   const parts = [
     d.mode === "reps"
       ? d.sets && d.reps
@@ -23,15 +24,17 @@ export function doseSummary(d: CustomDose) {
         : "Set dose"
       : d.mode === "duration"
         ? d.duration_seconds
-          ? `${d.duration_seconds / 60} min`
+          ? `${d.sets ? `${d.sets} × ` : ""}${time(d.duration_seconds)}`
           : "Set duration"
         : d.mode === "intervals"
           ? d.rounds && d.work_seconds
-            ? `${d.rounds} × ${d.work_seconds / 60} min`
+            ? `${d.rounds} × ${time(d.work_seconds)}`
             : "Set intervals"
-          : d.prescription || "Set prescription",
+          : d.mode === "distance"
+            ? d.distance ? `${d.sets ? `${d.sets} × ` : ""}${d.distance} ${d.distance_unit ?? ""}` : "Set distance"
+            : d.prescription || "Set prescription",
   ];
-  if (d.distance) parts.push(`${d.distance} ${d.distance_unit ?? ""}`);
+  if (d.distance && d.mode !== "distance") parts.push(`${d.distance} ${d.distance_unit ?? ""}`);
   if (d.load_or_intensity) parts.push(d.load_or_intensity);
   if (d.rest_seconds != null) parts.push(`rest ${d.rest_seconds}s`);
   if (d.rpe) parts.push(`RPE ${d.rpe}`);
@@ -40,6 +43,7 @@ export function doseSummary(d: CustomDose) {
 }
 
 export function doseIncomplete(d: CustomDose): boolean {
+  if (d.mode === "distance") return !(d.distance && d.distance_unit);
   if (d.mode === "reps") return !(d.sets && d.reps);
   if (d.mode === "duration") return !d.duration_seconds || Boolean(d.distance) !== Boolean(d.distance_unit);
   if (d.mode === "intervals") return !(d.rounds && d.work_seconds) || d.rest_seconds == null;

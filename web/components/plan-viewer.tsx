@@ -2314,6 +2314,7 @@ export function PlanViewer({
     return {
       token: accessToken,
       planId,
+      canRepeat: !plan.fight_date,
       today: trainingDay,
       isLocked: (date, sessionId) => locked.has(`${date}|${sessionId}`),
       onSessionChanged: (date, session) => {

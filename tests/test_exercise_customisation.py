@@ -194,6 +194,124 @@ def test_alternatives_preserve_purpose_and_respect_equipment_and_metadata():
     assert body["scopes"] == [{"value": "occurrence", "label": "Just this workout"}]
 
 
+def test_boxing_suggestions_and_explicit_library_writes_exclude_teep_drills():
+    from api.services.training_library import cache
+
+    client, store, _ = _build_client()
+    today = seed_dated(store)
+    assert additions(client, today, q="teep").json()["alternatives"] == []
+    teep = next(r for r in cache.get().records if "Teep" in r["entry"]["name"] and r["summary"]["category"] == "training")
+    response, _ = change(client, PLAN_ID, action="add", date=today.isoformat(), session_id=SESSION_ID,
+                         catalogue_id=teep["entry"]["catalogue_id"], dose={"mode": "duration", "duration_seconds": 60})
+    assert response.status_code == 409
+    # A kickboxing athlete keeps kick drills; aliases use the same sport ontology.
+    store.intakes["athlete-1"][-1]["intake"]["athlete"]["technical_style"] = ["Muay Thai"]
+    assert additions(client, today, q="teep").json()["alternatives"]
+
+
+def test_custom_plan_library_picker_is_sport_aware_and_keeps_general_training():
+    client, store, _ = _build_client()
+    store.profiles["athlete-1"]["technical_style"] = ["boxing"]
+    assert not client.get("/api/training/library", headers=AUTH, params={"for_plan": True, "q": "teep"}).json()["entries"]
+    assert client.get("/api/training/library", headers=AUTH, params={"for_plan": True, "q": "lunge"}).json()["entries"]
+
+
+def test_name_word_matches_supply_options_for_a_legacy_lunge_without_catalogue_metadata():
+    client, store, _ = _build_client()
+    today = seed_dated(store, blocks=[back_squat(display_name="Reverse Lunge", exercise_key=None), plank()])
+    _, blocks = day_blocks(store, PLAN_ID, today)
+    response = options(client, PLAN_ID, today, SESSION_ID, blocks[0]["block_id"], all=True)
+    assert response.status_code == 200, response.text
+    matches = response.json()["alternatives"]
+    assert matches and all("lunge" in a["name"].lower() for a in matches)
+    assert all("Related lunge" in a["reason"] for a in matches)
+
+
+@pytest.mark.parametrize("query,expected_mode", [("Tempo Hill Runs", "intervals"), ("plank", "duration"), ("sled push", "distance")])
+def test_library_dose_fields_follow_the_drill(query, expected_mode):
+    client, store, _ = _build_client()
+    today = seed_dated(store)
+    alternatives = additions(client, today, q=query).json()["alternatives"]
+    assert any(a["dose_mode"] == expected_mode for a in alternatives), alternatives
+    if query == "Tempo Hill Runs":
+        pick = next(a for a in alternatives if a["name"] == query)
+        assert pick["suggested_dose"] == {"mode": "intervals", "work_seconds": 20, "rounds": 6}
+        assert pick["dose_required"] is True  # Rest is not stated in the source.
+
+
+def test_added_exercise_can_be_edited_and_logged_with_its_updated_dose():
+    client, store, _ = _build_client()
+    today = seed_dated(store)
+    original = copy.deepcopy(store.plans[PLAN_ID]["structured_plan"])
+    pick = next(a for a in additions(client, today, q="lunge").json()["alternatives"] if a["dose_mode"] == "reps")
+    added, _ = change(client, PLAN_ID, action="add", date=today.isoformat(), session_id=SESSION_ID,
+                      catalogue_id=pick["catalogue_id"], dose={"mode": "reps", "sets": 2, "reps": 6})
+    block_id = added.json()["session"]["blocks"][-1]["block_id"]
+    edited, _ = change(client, PLAN_ID, action="edit", date=today.isoformat(), session_id=SESSION_ID,
+                       block_id=block_id, dose={"mode": "reps", "sets": 3, "reps": 8, "rest_seconds": 75,
+                       "load_or_intensity": "12.5 kg", "rpe": 6.5, "per_side": True},
+                       coaching_cues=["Keep the front foot planted"], stop_rules=["Stop for sharp pain"])
+    assert edited.status_code == 200, edited.text
+    block = edited.json()["session"]["blocks"][-1]
+    detail = detail_day(client, PLAN_ID, today)["sessions"][0]["blocks"][-1]
+    assert detail == block
+    assert block["sets"] == 3 and block["reps"] == 8 and block["load"]["value"] == 12.5
+    assert block["rest"]["value"] == 75 and block["effort"]["value"] == 6.5
+    assert store.plans[PLAN_ID]["structured_plan"] == original
+    checkin = client.post("/api/today/checkin", headers=AUTH, json={"plan_id": PLAN_ID, "sleep": "good", "body": "normal", "pain": "none", "phase": "GPP"})
+    assert checkin.status_code == 201
+    assert client.post("/api/today/session-completion", headers=AUTH, json={"plan_id": PLAN_ID, "session_id": SESSION_ID, "status": "started"}).status_code == 201
+    log = client.post("/api/today/exercise-log", headers=AUTH, json={"plan_id": PLAN_ID, "block_id": block["block_id"], "status": "as_prescribed"})
+    assert log.status_code == 201, log.text
+    assert log.json()["log"]["prescribed"]["load"]["value"] == 12.5
+    locked, _ = change(client, PLAN_ID, action="edit", date=today.isoformat(), session_id=SESSION_ID,
+                       block_id=block["block_id"], dose={"mode": "reps", "sets": 5, "reps": 10})
+    assert locked.status_code == 409
+
+
+def test_changing_format_removes_old_rep_and_weight_fields():
+    client, store, _ = _build_client()
+    today = seed_dated(store)
+    edited, _ = change(client, PLAN_ID, action="edit", date=today.isoformat(), session_id=SESSION_ID,
+                       block_id=squat_id(today), dose={"mode": "distance", "sets": 4, "distance": 20, "distance_unit": "m", "rest_seconds": 60})
+    assert edited.status_code == 200, edited.text
+    block = edited.json()["session"]["blocks"][0]
+    assert block["distance"] == {"value": 20, "unit": "m"}
+    assert not block.get("reps") and not block.get("load")
+
+
+@pytest.mark.parametrize("kind,title", [("skill", "Technical Combat"), ("sparring", "Controlled fight-speed technical rounds"), (None, "Technical-only combat")])
+def test_empty_technical_days_allow_sport_appropriate_additions(kind, title):
+    client, store, _ = _build_client()
+    today = seed_dated(store)
+    original_day = store.plans[PLAN_ID]["structured_plan"]["weeks"][0]["days"][0]
+    original_day["today_card"]["headline"] = title
+    if kind:
+        original_day["sessions"][0].update(session_type=kind, title=title, blocks=[])
+        session_id = SESSION_ID
+    else:
+        original_day["sessions"] = []
+        session_id = today.isoformat()
+    original = copy.deepcopy(store.plans[PLAN_ID]["structured_plan"])
+    found = client.get(f"/api/plans/{PLAN_ID}/exercise-changes/additions", headers=AUTH,
+                       params={"date": today.isoformat(), "session_id": session_id})
+    assert found.status_code == 200, found.text
+    assert found.json()["alternatives"], found.text
+    pick = found.json()["alternatives"][0]
+    assert "teep" not in pick["name"].lower() and "kick" not in pick["name"].lower()
+    response, _ = change(client, PLAN_ID, action="add", date=today.isoformat(), session_id=session_id,
+                         catalogue_id=pick["catalogue_id"], dose={"mode": "duration", "duration_seconds": 120, "rpe": 4})
+    assert response.status_code == 200, response.text
+    added = response.json()["session"]["blocks"][0]
+    assert added["display_name"] == pick["name"]
+    assert detail_day(client, PLAN_ID, today)["sessions"][0]["blocks"][0] == added
+    edited, _ = change(client, PLAN_ID, action="edit", date=today.isoformat(), session_id=session_id,
+                       block_id=added["block_id"], dose={"mode": "duration", "duration_seconds": 180, "rpe": 5})
+    assert edited.status_code == 200, edited.text
+    assert edited.json()["session"]["blocks"][0]["duration"]["value"] == 180
+    assert store.plans[PLAN_ID]["structured_plan"] == original
+
+
 def test_equipment_mismatch_is_excluded():
     client, store, _ = _build_client()
     today = seed_dated(store)
@@ -643,12 +761,15 @@ def test_future_scope_is_refused_on_dated_camps():
     assert response.status_code == 422
 
 
-def test_custom_plans_are_not_customised_here():
+def test_custom_plans_share_the_same_override_reader():
     plan_row = {"planning_brief": {"custom_plan": {"id": "x"}}, "exercise_overrides": [{
-        "id": "a", "action": "remove", "scope": "occurrence", "date": "2026-10-12", "session_id": "s", "block_id": "b"}]}
+        "id": "a", "action": "edit", "scope": "occurrence", "date": "2026-10-12", "session_id": "s", "block_id": "b",
+        "block": {"block_type": "strength", "display_name": "X", "sets": 3, "reps": 8}}]}
     card = {"weeks": [{"days": [{"date": "2026-10-12", "sessions": [
         {"session_id": "s", "blocks": [{"block_id": "b", "block_type": "strength", "display_name": "X"}]}]}]}]}
-    assert apply_exercise_overrides(plan_row, card) is card
+    edited = apply_exercise_overrides(plan_row, card)
+    assert edited["weeks"][0]["days"][0]["sessions"][0]["blocks"][0]["reps"] == 8
+    assert "reps" not in card["weeks"][0]["days"][0]["sessions"][0]["blocks"][0]
 
 
 def test_generated_cards_cannot_claim_athlete_changes():
@@ -664,21 +785,23 @@ def test_generated_cards_cannot_claim_athlete_changes():
 
 
 @pytest.mark.parametrize("as_text", [False, True])
-def test_custom_plan_api_rejects_options_and_writes(as_text):
+def test_custom_plan_api_allows_edits_without_mutating_the_original(as_text):
     client, store, _ = _build_client()
     today = seed_dated(store)
     brief = {"custom_plan": {"id": "athlete-built"}}
     store.plans[PLAN_ID]["planning_brief"] = json.dumps(brief) if as_text else brief
-    assert options(client, PLAN_ID, today, SESSION_ID, squat_id(today)).status_code == 409
-    assert additions(client, today).status_code == 409
-    for action in ("swap", "add", "remove"):
-        response, _ = change(client, PLAN_ID, action=action, date=today.isoformat(),
-                             session_id=SESSION_ID, block_id=squat_id(today),
-                             catalogue_id="exercise_bank.json:not-real", confirmed=True)
-        assert response.status_code == 409, response.text
-        assert "plan builder" in response.json()["detail"]
-    assert store.plans[PLAN_ID]["exercise_overrides"] == []
-    assert store.plans[PLAN_ID]["exercise_overrides_revision"] == 0
+    original = copy.deepcopy(store.plans[PLAN_ID]["structured_plan"])
+    assert options(client, PLAN_ID, today, SESSION_ID, squat_id(today)).status_code == 200
+    assert additions(client, today).status_code == 200
+    response, _ = change(client, PLAN_ID, action="edit", date=today.isoformat(), session_id=SESSION_ID,
+                         block_id=squat_id(today), dose={"mode": "reps", "sets": 3, "reps": 8, "load_or_intensity": "85 kg"},
+                         coaching_cues=["Brace before the rep"], stop_rules=["Stop if sharp pain"])
+    assert response.status_code == 200, response.text
+    edited = response.json()["session"]["blocks"][0]
+    assert edited["load"]["value"] == 85 and edited["reps"] == 8
+    assert edited["coaching_cues"] == ["Brace before the rep"]
+    assert edited["stop_rules"] == ["Stop if sharp pain"]
+    assert store.plans[PLAN_ID]["structured_plan"] == original
 
 
 def test_active_injury_with_unknown_candidate_loading_is_not_cleared(monkeypatch):
@@ -764,3 +887,63 @@ def test_legacy_recurring_title_match_refuses_ambiguous_sessions():
     card["weeks"][0]["days"][0]["sessions"].pop()
     resolved = apply_exercise_overrides({"exercise_overrides": [entry]}, card)
     assert resolved["weeks"][0]["days"][0]["sessions"][0]["blocks"] == []
+
+
+@pytest.mark.parametrize("dose", [None, {"mode": "reps", "sets": 4, "reps": 6, "load_or_intensity": "100 kg", "rest_seconds": 180}])
+def test_edit_preserves_rir_and_unrepresented_prescription_metadata(dose):
+    client, store, _ = _build_client()
+    prescribed = back_squat(effort={"method": "RIR", "value": 3},
+                           tempo={"eccentric": 3, "pause_bottom": 1, "concentric": "X"})
+    today = seed_dated(store, blocks=[prescribed, plank()])
+    before = detail_day(client, PLAN_ID, today)["sessions"][0]["blocks"][0]
+    response, _ = change(client, PLAN_ID, action="edit", date=today.isoformat(), session_id=SESSION_ID,
+                         block_id=squat_id(today), dose=dose, coaching_cues=["Brace before moving"])
+    assert response.status_code == 200, response.text
+    after = response.json()["session"]["blocks"][0]
+    for field in ("effort", "tempo", "load", "rest"):
+        assert after[field] == before[field]
+    assert after["reps"] == (6 if dose else before["reps"])
+    assert after["coaching_cues"] == ["Brace before moving"]
+
+
+def test_edit_rechecks_new_injury_before_writing_load():
+    client, store, _ = _build_client()
+    today = seed_dated(store)
+    store.create_injury_flag("athlete-1", {"body_area": "knee", "description": "knee pain on squats"})
+    response, _ = change(client, PLAN_ID, action="edit", date=today.isoformat(), session_id=SESSION_ID,
+                         block_id=squat_id(today), dose={"mode": "reps", "sets": 4, "reps": 5, "load_or_intensity": "120 kg"})
+    assert response.status_code == 409, response.text
+    assert store.plans[PLAN_ID]["exercise_overrides"] == []
+
+
+def test_edit_fails_closed_when_current_injury_guidance_is_unavailable():
+    client, store, _ = _build_client()
+    today = seed_dated(store)
+
+    def unavailable(*args, **kwargs):
+        raise RuntimeError("injury guidance unavailable")
+
+    store.list_injury_flags = unavailable
+    response, _ = change(client, PLAN_ID, action="edit", date=today.isoformat(), session_id=SESSION_ID,
+                         block_id=squat_id(today), dose={"mode": "reps", "sets": 4, "reps": 5, "load_or_intensity": "120 kg"})
+    assert response.status_code == 503, response.text
+    assert store.plans[PLAN_ID]["exercise_overrides"] == []
+
+
+def test_edit_checks_requested_load_against_live_policy(monkeypatch):
+    client, store, _ = _build_client()
+    today = seed_dated(store)
+
+    def load_ceiling(session, **kwargs):
+        block = session["blocks"][0]
+        return {"safety_hold": block.get("load", {}).get("value", 0) > 100,
+                "session": session}
+
+    monkeypatch.setattr("api.services.exercise_customisation.reconcile_session_prescription", load_ceiling)
+    for weight, expected in [(120, 409), (95, 200)]:
+        response, _ = change(client, PLAN_ID, action="edit", date=today.isoformat(), session_id=SESSION_ID,
+                             block_id=squat_id(today), dose={"mode": "reps", "sets": 4, "reps": 5,
+                                                            "load_or_intensity": f"{weight} kg"})
+        assert response.status_code == expected, response.text
+        if expected == 409:
+            assert store.plans[PLAN_ID]["exercise_overrides"] == []

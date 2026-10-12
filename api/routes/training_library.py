@@ -1,5 +1,6 @@
 """Authenticated, read-only discovery. No planner or scheduling operations."""
 import logging
+from dataclasses import replace
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 
@@ -44,9 +45,15 @@ def build_training_library_router(*, require_profile, get_store):
         physical_focus: str | None = Query(None, max_length=100),
         offset: int = Query(0, ge=0, le=10000), limit: int = Query(24, ge=1, le=50),
         revision: str | None = Query(None, max_length=64),
+        for_plan: bool = False,
         profile=Depends(require_profile), store=Depends(get_store),
     ):
         index = _index()
+        if for_plan and category == "training":
+            from api.services.exercise_customisation import AthleteContext, _sport_allows
+
+            athlete = AthleteContext({"athlete": {"technical_style": profile.technical_style}})
+            index = replace(index, records=[record for record in index.records if _sport_allows(record, athlete)])
         if revision and revision != index.revision:
             raise HTTPException(409, "Library changed. Refresh your search.")
         result = library.search(index, q=q, category=category, offset=offset, limit=limit,

@@ -28,7 +28,14 @@ def build_custom_plans_router(*, require_profile, get_store):
 
     @router.get("/source-suggestion", response_model=CustomDoseSuggestion)
     def suggest(catalogue_id: str, profile=Depends(require_profile)):
-        return source_suggestion(catalogue_id)
+        from api.contracts.custom_plans import CustomDose
+        from api.services.exercise_dose import dose_guidance
+        from api.services.training_library import cache
+
+        suggestion = source_suggestion(catalogue_id)
+        record = cache.get().by_id[catalogue_id]
+        suggestion.format_dose = CustomDose.model_validate(dose_guidance(record)[2])
+        return suggestion
 
     @router.get("/{plan_id}", response_model=CustomPlan)
     def read_custom_plan(plan_id: UUID, profile=Depends(require_profile), store=Depends(get_store)):

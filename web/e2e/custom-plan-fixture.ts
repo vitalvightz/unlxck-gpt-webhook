@@ -154,6 +154,7 @@ export async function setup(page: Page, baseURL: string, role = "athlete") {
           if (exercise.origin === "manual")
             return {
               ...exercise,
+              coaching_cues: exercise.coaching_cues ?? null, stop_rules: exercise.stop_rules ?? null,
               equipment: exercise.equipment ?? null,
               notes: exercise.notes ?? null,
               media_id: exercise.media_id ?? null,
@@ -167,6 +168,7 @@ export async function setup(page: Page, baseURL: string, role = "athlete") {
           return {
             ...exercise,
             origin: "catalogue" as const,
+            coaching_cues: exercise.coaching_cues ?? null, stop_rules: exercise.stop_rules ?? null,
             dose,
             incomplete,
             snapshot: {

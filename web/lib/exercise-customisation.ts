@@ -2,7 +2,7 @@ import { cleanText } from "@/lib/structured-plan";
 import type { StructuredBlock, StructuredPlan, StructuredSession } from "@/lib/types";
 
 /**
- * Athlete swaps / additions / removals on an app-generated plan.
+ * Athlete edits / swaps / additions / removals on generated and custom plans.
  *
  * The server decides what may change and re-checks every write; these helpers
  * only decide when to OFFER the controls, so a card never shows a menu the
@@ -26,25 +26,27 @@ type ClinicalBlock = StructuredBlock & {
   injury_id?: string | null;
   policy_id?: string | null;
   rehab_drill_id?: string | null;
+  clinical_review_pin?: unknown;
 };
 
 export function isCustomisableBlock(block: StructuredBlock): boolean {
   const blockType = cleanText(block.block_type) ?? "";
   if (blockType === "rehab" || !cleanText(block.block_id)) return false;
   // Anything the athlete added is theirs to change, whatever its type.
-  if (!EDITABLE_BLOCK_TYPES.has(blockType) && block.athlete_change?.action !== "add") return false;
-  // Athlete-authored custom plans have their own builder.
-  if (block.prescription_source === "athlete") return false;
+  if (!EDITABLE_BLOCK_TYPES.has(blockType) && !block.athlete_change && block.prescription_source !== "athlete") return false;
   const clinical = block as ClinicalBlock;
-  return !(clinical.injury_id || clinical.policy_id || clinical.rehab_drill_id);
+  return !(clinical.injury_id || clinical.policy_id || clinical.rehab_drill_id || clinical.clinical_review_pin);
 }
 
 export function isCustomisableSession(session: StructuredSession): boolean {
-  return Boolean(cleanText(session.session_id)) && session.prescription_source !== "athlete";
+  return Boolean(cleanText(session.session_id));
 }
 
 export function canAddToSession(session: StructuredSession): boolean {
-  return isCustomisableSession(session) && ADDABLE_SESSION_TYPES.has(cleanText(session.session_type) ?? "");
+  const kind = cleanText(session.session_type) ?? "";
+  const title = cleanText(session.title) ?? "";
+  return isCustomisableSession(session) && (ADDABLE_SESSION_TYPES.has(kind)
+    || (kind === "sparring" && /technical|controlled|light|reduced/i.test(title) && !/hard|full contact/i.test(title)));
 }
 
 /** ISO day comparison; an unknown date is never editable. */

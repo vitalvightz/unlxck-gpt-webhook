@@ -356,6 +356,9 @@ async function executeRequest(path: string, init?: ApiRequestInit): Promise<Exec
       signal: abortController.signal,
     });
   } catch (networkError) {
+    // Search and sheet unmounts cancel superseded reads deliberately. Preserve
+    // AbortError instead of reporting a network failure or opening a dev overlay.
+    if (init?.signal?.aborted) throw networkError;
     const durationMs = Date.now() - startedAt;
     if (shouldLogApiDetails()) {
       console.error("[api] request:network_error", {

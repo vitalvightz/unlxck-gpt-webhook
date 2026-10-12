@@ -605,12 +605,14 @@ export function ExerciseRow({
   openWeekIntent,
   sourceCountdown,
   detail = "inline",
+  actions,
 }: {
   block: StructuredBlock;
   open: boolean;
   onToggle: () => void;
   /** "sheet" opens the exercise in its own sheet (Today) instead of in place. */
   detail?: "inline" | "sheet";
+  actions?: ReactNode;
   openWeekIntent?: OpenBlockWeekIntent | null;
   sourceCountdown?: string | null;
 }) {
@@ -716,7 +718,7 @@ export function ExerciseRow({
           </span>
         ) : null}
         {/* Swap / remove: only where the owning surface allows a change. */}
-        <ExerciseActions block={block} title={title} />
+        {actions ?? <ExerciseActions block={block} title={title} />}
         <span className="ex-row-chevron" aria-hidden="true" />
       </div>
       {open && detail === "sheet" ? (
@@ -809,7 +811,7 @@ function ExerciseDetail({
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" />
           </svg>
-          <span>Stop if {compactStopRule.replace(/^(?:if|when)\s+/i, "")}</span>
+          <span>Stop if {compactStopRule.replace(/^(?:(?:stop\s+)?(?:if|when|for))\s+/i, "")}</span>
         </p>
       ) : null}
       {media ? (
@@ -1076,7 +1078,7 @@ export function SessionCard({
               ))}
             </div>
           ) : null}
-          <SessionChangesFoot session={session} canAdd={blocks.length > 0} />
+          <SessionChangesFoot session={session} />
         </ExerciseSessionScope>
       </article>
     );
@@ -1220,7 +1222,9 @@ export function SessionCard({
             </ExerciseSessionScope>
           ) : null}
         </>
-      ) : null}
+      ) : <ExerciseSessionScope date={occurrenceDate ?? day?.date} session={session}>
+        <SessionChangesFoot session={session} />
+      </ExerciseSessionScope>}
     </article>
   );
 }
@@ -1330,6 +1334,9 @@ export function SessionlessDayCard({
         dedupeContext={[cleanText(card?.headline), displayTitle]}
       />
       {isRest ? <p className="sp-muted">Rest day.</p> : null}
+      {date && (kind === "technical" || kind === "light_combat") ? <ExerciseSessionScope date={date} session={{
+        session_id: date, session_type: "skill", title: cleanText(card?.headline) ?? displayTitle, blocks: [],
+      }}><SessionChangesFoot session={{ session_id: date, session_type: "skill", blocks: [] }} /></ExerciseSessionScope> : null}
     </article>
   );
 }
