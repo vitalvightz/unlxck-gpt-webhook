@@ -96,6 +96,18 @@ _STRENGTH_DOSE_BANDS = (
 )
 
 
+def loaded_work_permitted(role: dict[str, Any]) -> bool:
+    """Whether ``role``'s scheduled day still permits loaded strength work.
+
+    The countdown cap is the single source of truth; every consumer (dose
+    envelope, release check, Stage 2 instruction, goal evidence) reads it here
+    rather than re-deriving it from session contents. A role with no cap is a
+    normal-camp day outside every countdown band, where loaded work is allowed.
+    """
+    cap = role.get("strength_dose_cap")
+    return not (isinstance(cap, dict) and cap.get("loaded_allowed") is False)
+
+
 def late_fight_strength_dose_cap(d_day):
     """Return the deterministic strength-lift dose cap for ``d_day``."""
     try:

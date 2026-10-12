@@ -40,6 +40,7 @@ from .late_camp_role_morph import (
     FULL_STRENGTH_ROLE_KEYS,
     STRENGTH_NEURAL_MORPH_MAX_D,
     late_fight_strength_dose_cap,
+    loaded_work_permitted,
 )
 from .strength_session_quality import (
     ANCHOR_CAPABLE_CLASSES,
@@ -851,12 +852,15 @@ def _build_role_envelope(
     resolved: list[dict[str, Any]],
 ) -> dict[str, Any] | None:
     """Summarise the loaded-strength ceiling for the finalizer/validator."""
-    cap = role.get("strength_dose_cap") if isinstance(role.get("strength_dose_cap"), dict) else {}
     loaded_entries = [item for item in resolved if item.get("dose_role_kind") in {"anchor", "secondary"}]
     loaded_names = [item.get("name") for item in loaded_entries if item.get("name")]
-    loaded_allowed = cap.get("loaded_allowed") is not False and any(
-        item.get("effective_loaded") for item in loaded_entries
-    )
+    # Whether the DAY permits loaded work is the countdown cap's decision alone.
+    # Which lifts in this session are loaded is a separate fact, carried per
+    # exercise as ``effective_loaded`` and in ``loaded_exercise_names``. Folding
+    # the second into this flag made a session of power/support work read as
+    # "no loaded work allowed" on a day that allows it, which the release check
+    # then held.
+    loaded_allowed = loaded_work_permitted(role)
 
     max_sets = None
     max_reps = None
@@ -976,6 +980,10 @@ def apply_effective_strength_prescriptions(
                 allowed_exercise_names=list(dict.fromkeys(selected_names)),
                 complete_exercise_allow_list=True,
             )
+            if isinstance(role.get("strength_dose_cap"), dict):
+                # A capped day states its permission even when no strength lift
+                # resolved a dose; a missing flag read as "allowed" on a no-load day.
+                envelope["loaded_allowed"] = loaded_work_permitted(role)
             scheduled_d_day = role_d_day(week, role)
             if scheduled_d_day is not None:
                 role["scheduled_d_day"] = scheduled_d_day

@@ -4,6 +4,7 @@ from functools import wraps
 from typing import Any, Iterable
 
 from .bank_authority import original_bank_entries
+from .late_camp_role_morph import loaded_work_permitted
 from .late_selector_windows import late_window_allowed
 
 
@@ -231,14 +232,6 @@ def _scheduled_phase(
     return _normalise_phase(week_phase) or _normalise_phase(role.get("phase"))
 
 
-def _role_envelope(role: dict[str, Any]) -> dict[str, Any]:
-    envelope = role.get("effective_strength_envelope")
-    if isinstance(envelope, dict):
-        return envelope
-    cap = role.get("strength_dose_cap")
-    return cap if isinstance(cap, dict) else {}
-
-
 def _is_clearly_loaded_strength_item(
     item: dict[str, Any],
     *,
@@ -333,8 +326,12 @@ def planner_authority_findings(planning_brief: dict[str, Any]) -> list[dict[str,
             athlete_model=athlete_model,
             week_phase=week_phase,
         )
-        envelope = _role_envelope(role)
-        loaded_allowed = envelope.get("loaded_allowed") is not False
+        # The cap is the authority; a stored or hand-built envelope that forbids
+        # loading is still honoured, so missing evidence never reads as allowed.
+        envelope = role.get("effective_strength_envelope")
+        loaded_allowed = loaded_work_permitted(role) and not (
+            isinstance(envelope, dict) and envelope.get("loaded_allowed") is False
+        )
         countdown_label = str(
             role.get("scheduled_countdown_label")
             or role.get("countdown_label")
@@ -350,7 +347,20 @@ def planner_authority_findings(planning_brief: dict[str, Any]) -> list[dict[str,
 
             entries = original_bank_entries(assignment)
             if not entries:
-                # Only original-bank-backed physical assignments are in scope.
+                # Only original-bank-backed physical assignments are in scope,
+                # except that a strength member with no load evidence on a day
+                # that forbids loaded work is held: unknown load is not zero load.
+                if not loaded_allowed and assignment.get("slot_group") == "strength_slots":
+                    findings.append(
+                        {
+                            "code": "selected_loaded_exercise_forbidden",
+                            "severity": "blocker",
+                            "message": "A strength exercise with no bank load metadata was selected while the scheduled strength envelope forbids loaded work.",
+                            "exercise": name,
+                            "countdown_label": countdown_label,
+                            "role_key": role.get("role_key"),
+                        }
+                    )
                 continue
 
             identity = (

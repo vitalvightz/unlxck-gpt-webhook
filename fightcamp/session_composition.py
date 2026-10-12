@@ -1049,7 +1049,7 @@ def _apply_adjacent_strength_recovery(
 
     for index, current in enumerate(scheduled):
         current_d_day = role_d_day(current["week"], current["role"])
-        if current_d_day is None:
+        if current_d_day is None or current.get("context_only"):
             continue
         previous = [
             entry
@@ -1161,7 +1161,10 @@ def _apply_adjacent_strength_recovery(
 
 
 def compose_normal_strength_assignments(
-    *, weekly_role_map: dict[str, Any], candidate_pools: dict[str, Any]
+    *,
+    weekly_role_map: dict[str, Any],
+    candidate_pools: dict[str, Any],
+    only_roles: set[int] | None = None,
 ) -> dict[str, Any]:
     """Carry bounded Stage 1 strength composition onto normal planner roles.
 
@@ -1174,6 +1177,13 @@ def compose_normal_strength_assignments(
     strength role handled here. Persistent injury state remains active, while
     weight-cut severity is recalculated from each role's D-day when the cut
     percentage is available.
+
+    ``only_roles`` (addressed by ``id()``) recomposes just those roles, for a
+    caller that moved them after composition: membership is a function of the
+    scheduled day (its phase, per-day cut strain and neighbours), so a moved
+    role's membership is stale. Every other strength role takes part only as
+    context -- its current membership informs the adjacency check -- and is
+    never rewritten.
     """
     athlete_model = get_planner_athlete_model()
     pressure_context = (
@@ -1257,6 +1267,22 @@ def compose_normal_strength_assignments(
             records = _candidate_records(owned_slots)
             role_key = str(role.get("role_key") or "").strip()
             base_cap, effective_cap = _effective_role_cap(role_key, pressure)
+            if only_roles is not None and id(role) not in only_roles:
+                held = {
+                    str(item.get("name") or "")
+                    for item in role.get("selected_exercise_assignments") or []
+                    if isinstance(item, dict)
+                }
+                composed_roles.append(
+                    {
+                        "week": week,
+                        "role": role,
+                        "records": records,
+                        "selected_records": [r for r in records if r["name"] in held],
+                        "context_only": True,
+                    }
+                )
+                continue
             prior_policy = role.get("strength_composition_policy")
             prior_standalone_minimum = (
                 prior_policy.get("standalone_minimum")
@@ -1316,6 +1342,19 @@ def compose_normal_strength_assignments(
     return weekly_role_map
 
 
+def strength_role_days(weekly_role_map: dict[str, Any]) -> dict[int, int | None]:
+    """Scheduled D-day of every normal strength role, keyed by ``id()``."""
+    return {
+        id(role): role_d_day(week, role)
+        for week in weekly_role_map.get("weeks", []) or []
+        if isinstance(week, dict)
+        for role in week.get("session_roles", []) or []
+        if isinstance(role, dict)
+        and not role.get("late_fight_tail_owned")
+        and str(role.get("category") or "").lower() == "strength"
+    }
+
+
 def _propose_standalone_strength_minimum(
     weekly_role_map: dict[str, Any], entries: list[dict[str, Any]]
 ) -> None:
@@ -1332,7 +1371,7 @@ def _propose_standalone_strength_minimum(
         role = entry["role"]
         week = entry["week"]
         policy = role.get("strength_composition_policy")
-        if not entry.get("standalone_eligible") or not isinstance(policy, dict):
+        if entry.get("context_only") or not entry.get("standalone_eligible") or not isinstance(policy, dict):
             continue
         if role not in (week.get("session_roles") or []):
             continue
@@ -1454,6 +1493,7 @@ def apply_standalone_strength_minimum(
     candidate_pools: dict[str, Any],
     redose_callback: Callable[[dict[str, Any]], Any],
     recompose_conditioning_callback: Callable[[dict[str, Any], set[int]], Any] | None = None,
+    recompose_strength_callback: Callable[[dict[str, Any], set[int]], Any] | None = None,
 ) -> dict[str, Any]:
     """Confirm or reject each proposed standalone-strength extra exercise.
 
@@ -1514,6 +1554,7 @@ def apply_standalone_strength_minimum(
             role_map,
             redose_callback=redose_callback,
             recompose_conditioning_callback=recompose_conditioning_callback,
+            recompose_strength_callback=recompose_strength_callback,
         )
         return (
             _placement_signature(role_map),
@@ -2277,6 +2318,7 @@ def apply_realised_load_calendar_revalidation(
     *,
     redose_callback: Callable[[dict[str, Any]], Any] | None = None,
     recompose_conditioning_callback: Callable[[dict[str, Any], set[int]], Any] | None = None,
+    recompose_strength_callback: Callable[[dict[str, Any], set[int]], Any] | None = None,
 ) -> dict[str, Any]:
     """Re-judge composed sessions on their realised load, not their planned role.
 
@@ -2305,8 +2347,9 @@ def apply_realised_load_calendar_revalidation(
     written the role's ``effective_strength_prescriptions``. Measuring before
     that scores a capped primer at its uncapped bank dose.
 
-    Relocation invalidates the countdown morph and the resolved dose for the role
-    that moved, so both owners are re-run and the destination is then re-judged
+    Relocation invalidates the countdown morph, the membership of a moved
+    strength role and the resolved dose, so all three owners are re-run and the
+    destination is then re-judged
     against the *refreshed* load. That verification is bounded at
     ``_MAX_REVALIDATION_ROUNDS``; a conflict surviving the bound is recorded in
     ``residual_conflicts`` and the role is left where it is, never chased.
@@ -2388,7 +2431,7 @@ def apply_realised_load_calendar_revalidation(
             note["action"] = "recomposed" if membership else "membership_cleared"
         return notes
 
-    def _remorph_and_redose() -> None:
+    def _remorph_and_redose(moved_strength: set[int]) -> None:
         # The morph and the strength dose were both resolved for the day the role
         # has just left (strength morphs through D-17, so a D-20 -> D-16 move
         # changes the applicable cap). Both canonical owners are re-run, exactly
@@ -2400,6 +2443,8 @@ def apply_realised_load_calendar_revalidation(
         # Membership before dose: the resolver and the next stress refresh must
         # both see the session the role actually is now.
         reconciliations.extend(_reconcile_changed_conditioning(identities_before))
+        if moved_strength and recompose_strength_callback is not None:
+            recompose_strength_callback(weekly_role_map, moved_strength)
         if redose_callback is not None:
             redose_callback(weekly_role_map)
 
@@ -2416,6 +2461,7 @@ def apply_realised_load_calendar_revalidation(
         # actually is, not as it was before the previous round's re-dose.
         stamped = _refresh_stress_stamps(weekly_role_map)
         round_actions: list[dict[str, Any]] = []
+        moved_strength: set[int] = set()
         for role, _ref, decision in _realised_load_conflicts(weekly_role_map, stamped):
             action = relocate_or_suppress_role_for_recovery(
                 weekly_role_map,
@@ -2431,13 +2477,15 @@ def apply_realised_load_calendar_revalidation(
                 continue
             if action.get("from_d_day") is not None:
                 vacated.setdefault(id(role), set()).add(int(action["from_d_day"]))
+            if action.get("action") == "relocated" and str(role.get("category") or "").lower() == "strength":
+                moved_strength.add(id(role))
             round_actions.append(
                 {"round": rounds_run, "role_key": role.get("role_key"), **action}
             )
         if not round_actions:
             break
         actions.extend(round_actions)
-        _remorph_and_redose()
+        _remorph_and_redose(moved_strength)
 
     # The last round may have re-dosed after its final stamp, so refresh once more:
     # the stamp that persists must describe the dose the role actually ends with.
