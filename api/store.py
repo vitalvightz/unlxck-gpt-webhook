@@ -944,18 +944,30 @@ class SupabaseAppStore(CommunityStoreMixin, PrivateMediaStoreMixin, CompactGener
         )
 
     def _is_plan_schema_column_error(self, exc: Exception) -> bool:
+        return self._missing_plan_column(exc) in _PLAN_RUNTIME_REQUIRED_COLUMNS_SET
+
+    @staticmethod
+    def _missing_plan_column(exc: Exception) -> str | None:
+        # Constraint/payload errors can mention both a runtime column and plans.
+        # Only undefined-column codes and the actual column in the message count;
+        # details/hints may contain athlete data or merely suggest another column.
         if not isinstance(exc, PostgrestAPIError):
-            return False
-        text = " ".join(
-            str(part)
-            for part in (exc.code, exc.message, exc.hint, exc.details)
-            if part
-        ).lower()
-        if "plans" not in text:
-            return False
-        if not any(snippet in text for snippet in _PLAN_RUNTIME_SCHEMA_ERROR_SNIPPETS):
-            return False
-        return any(column in text for column in _PLAN_RUNTIME_REQUIRED_COLUMNS_SET)
+            return None
+        code = str(exc.code or "").upper()
+        message = str(exc.message or "")
+        if code == "PGRST204":
+            match = re.search(
+                r"Could not find the '([^']+)' column of '(?:public\.)?plans' in the schema cache",
+                message, re.IGNORECASE,
+            )
+        elif code == "42703":
+            match = re.search(
+                r'column (?:["\']([^"\']+)["\'] of relation "plans"|(?:public\.)?plans\."?(\w+)"?) does not exist',
+                message, re.IGNORECASE,
+            )
+        else:
+            return None
+        return next((part.lower() for part in match.groups() if part), None) if match else None
 
     def _legacy_plan_schema_fallback_enabled(self) -> bool:
         flag_set = env_flag("UNLXCK_ALLOW_LEGACY_PLAN_SCHEMA_FALLBACK")
@@ -988,24 +1000,22 @@ class SupabaseAppStore(CommunityStoreMixin, PrivateMediaStoreMixin, CompactGener
             intake_id,
             type(exc).__name__,
             getattr(exc, "code", None),
-            getattr(exc, "message", None),
-            getattr(exc, "details", None),
-            getattr(exc, "hint", None),
+            sanitize_error_text(exc.message or ""),
+            # PostgreSQL constraint details include the complete failing row or
+            # foreign-key values. Preserve presence, never log those values.
+            "[redacted database detail]" if exc.details else None,
+            sanitize_error_text(exc.hint) if self._missing_plan_column(exc) and exc.hint else (
+                "[redacted database hint]" if exc.hint else None
+            ),
             sorted(payload.keys()),
         )
 
     def _create_plan_error_detail(self, exc: PostgrestAPIError) -> str:
-        message = str(getattr(exc, "message", "") or "").lower()
-        details = str(getattr(exc, "details", "") or "").lower()
-        hint = str(getattr(exc, "hint", "") or "").lower()
         code = str(getattr(exc, "code", "") or "").lower()
-        text = " ".join(part for part in (message, details, hint, code) if part)
-        if "could not find the" in text and "column" in text and "plans" in text:
+        if self._missing_plan_column(exc):
             return "missing plans column; apply latest Supabase schema and redeploy"
-        if "invalid input" in text or "invalid json" in text or code in {"22p02", "22023"}:
+        if code.startswith("22") or code == "pgrst102":
             return _PLAN_INVALID_PAYLOAD_DETAIL
-        if "plans" in text and any(snippet in text for snippet in _PLAN_RUNTIME_SCHEMA_ERROR_SNIPPETS):
-            return _PLAN_SCHEMA_MISMATCH_DETAIL
         return "plan persistence failed"
 
     def _validate_generation_job_active_lock(self) -> None:
@@ -1847,7 +1857,9 @@ class SupabaseAppStore(CommunityStoreMixin, PrivateMediaStoreMixin, CompactGener
             "stage2_validator_report": result.get("stage2_validator_report", {}),
             "stage2_status": result.get("stage2_status", ""),
             "stage2_attempt_count": result.get("stage2_attempt_count", 0),
-            "parsing_metadata": result.get("parsing_metadata"),
+            # Custom plans have no intake parsing result. Explicit NULL bypasses
+            # the database's {} default and violates its NOT NULL constraint.
+            "parsing_metadata": result.get("parsing_metadata") if result.get("parsing_metadata") is not None else {},
             # Structured plan is written only when structured generation produced
             # a validated object; otherwise it stays NULL and the raw plan_text is
             # the fallback. schema_version mirrors the stored structured plan.
@@ -1909,8 +1921,11 @@ class SupabaseAppStore(CommunityStoreMixin, PrivateMediaStoreMixin, CompactGener
             except PostgrestAPIError as exc:
                 if not self._is_plan_schema_column_error(exc):
                     raise
+                self._log_create_plan_postgrest_error(
+                    athlete_id=athlete_id, intake_id=intake_id, payload=payload, exc=exc,
+                )
                 if not self._legacy_plan_schema_fallback_enabled():
-                    logger.exception(
+                    logger.error(
                         "[store] create_plan:schema_mismatch athlete_id=%s intake_id=%s",
                         athlete_id,
                         intake_id,
