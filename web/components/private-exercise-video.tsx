@@ -72,13 +72,18 @@ export function PrescribedPrivateVideoThumbnail({ id, community = false }: { id:
 }
 export function PrescribedPrivateVideo({ id, name, community = false }: { id: string; name: string; community?: boolean }) {
   const token = useContext(PrivateMediaToken);
-  return token ? <PrivateExerciseVideo token={token} id={id} name={name} community={community} /> : null;
+  // On a plan card the athlete's video sits exactly where a library demo
+  // would: full row width, and a portrait clip takes the same side column.
+  return token ? <PrivateExerciseVideo token={token} id={id} name={name} community={community} inline /> : null;
 }
 
 export function PrivateVideoPlayer({ media, name, visibility = "private" }: { media: PrivateMediaPreview; name: string; visibility?: "private" | "community" }) {
   const video = useRef<HTMLVideoElement>(null);
   const [playing, setPlaying] = useState(false), [slow, setSlow] = useState(false);
   const [failed, setFailed] = useState(false);
+  // Uploads without a stored orientation are read from the file itself.
+  const [measured, setMeasured] = useState<"portrait" | "landscape">();
+  const orientation = media.orientation ?? measured;
   if (media.provider === "youtube" && media.video_id) return (
     <ExerciseDemo key={`${media.video_id}:${media.start_s}:${media.end_s}`} exerciseName={name} preview media={{
       provider: "youtube", video_id: media.video_id, start_s: media.start_s, end_s: media.end_s,
@@ -87,10 +92,14 @@ export function PrivateVideoPlayer({ media, name, visibility = "private" }: { me
   );
   if (!media.url || failed) return <p role="status">Video unavailable. Reopen the preview to try again.</p>;
   return (
-    <div className="ex-demo" data-orientation={media.orientation === "portrait" ? "portrait" : undefined}>
+    <div className="ex-demo" data-orientation={orientation === "portrait" ? "portrait" : undefined}>
       <div className="ex-demo-frame">
         <video ref={video} className="ex-demo-player" src={media.url} playsInline muted loop preload="metadata"
           aria-label={`${name} demonstration`} onPlay={() => setPlaying(true)} onPause={() => setPlaying(false)}
+          onLoadedMetadata={(e) => {
+            const { videoWidth, videoHeight } = e.currentTarget;
+            if (videoWidth && videoHeight) setMeasured(videoHeight > videoWidth ? "portrait" : "landscape");
+          }}
           onError={() => setFailed(true)} />
       </div>
       <div className="ex-demo-caption"><span className="ex-demo-meta">Demo · {visibility === "community" ? "Community" : "Private"}</span></div>
@@ -105,16 +114,27 @@ export function PrivateVideoPlayer({ media, name, visibility = "private" }: { me
           if (video.current) video.current.playbackRate = slow ? 1 : 0.5;
           setSlow(!slow);
         }}>0.5×</button>
+        <button type="button" className="ex-demo-control" onClick={() => {
+          const element = video.current as (HTMLVideoElement & { webkitEnterFullscreen?: () => void }) | null;
+          // iPhone Safari only fullscreens a <video> through its own API.
+          if (element?.requestFullscreen) void element.requestFullscreen().catch(() => element.webkitEnterFullscreen?.());
+          else element?.webkitEnterFullscreen?.();
+        }}>Full screen</button>
       </div>
       {/* Renditions intentionally strip audio and all embedded metadata. */}
     </div>
   );
 }
 
-export function PrivateExerciseVideo({ token, id, name, community = false }: { token: string; id: string; name: string; community?: boolean }) {
+export function PrivateExerciseVideo({ token, id, name, community = false, inline = false }: {
+  token: string; id: string; name: string; community?: boolean;
+  /** Render unwrapped at full width (plan cards) instead of the compact preview. */
+  inline?: boolean;
+}) {
   const { media, error } = usePrivateVideoPreview(token, id, community) ?? {};
-  return <div className={layout.preview}>{media ? <PrivateVideoPlayer key={media.url ?? media.id} media={media} name={name} visibility={community ? "community" : "private"} />
-    : <p role="status">{error ? "Video unavailable. You can keep using your exercise." : "Opening video…"}</p>}</div>;
+  const content = media ? <PrivateVideoPlayer key={media.url ?? media.id} media={media} name={name} visibility={community ? "community" : "private"} />
+    : <p role="status">{error ? "Video unavailable. You can keep using your exercise." : "Opening video…"}</p>;
+  return inline ? content : <div className={layout.preview}>{content}</div>;
 }
 
 export function PrivateExerciseVideoSheet({ token, name, onClose, onAttach, initialMedia }: {

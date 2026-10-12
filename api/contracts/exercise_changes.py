@@ -46,6 +46,8 @@ class ExerciseChangeRequest(BaseModel):
     dose: CustomDose | None = None
     coaching_cues: list[str] | None = Field(None, max_length=10)
     stop_rules: list[str] | None = Field(None, max_length=10)
+    regression_options: list[str] | None = Field(None, max_length=10)
+    progression_rule: str | None = Field(None, max_length=500)
     confirmed: bool = False
 
 

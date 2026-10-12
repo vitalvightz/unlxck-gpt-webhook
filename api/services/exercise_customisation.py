@@ -1190,12 +1190,15 @@ def apply_change(
             raw = record["entry"]["raw"] if record else new_block
             if (safety.has_injuries and _strings(raw.get("contraindications"))) or not safety.allows(new_block, raw):
                 raise HTTPException(409, "That prescription doesn't fit your current injury guidance.")
-        for field in ("coaching_cues", "stop_rules"):
+        for field in ("coaching_cues", "stop_rules", "regression_options"):
             if payload.get(field) is not None:
                 values = payload[field]
                 if any(not isinstance(value, str) or len(value.strip()) > 500 for value in values):
                     raise HTTPException(422, "Keep each cue and stop rule under 500 characters.")
                 new_block[field] = [value.strip() for value in values if value.strip()]
+        if payload.get("progression_rule") is not None:
+            # An empty rule clears it, like an emptied cue list.
+            new_block["progression_rule"] = _clean(payload["progression_rule"]) or None
         entry["block"] = new_block
     else:
         safety = SafetyContext(store, athlete_id=athlete_id, occurrence=occurrence, equipment=sorted(athlete.equipment))

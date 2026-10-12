@@ -804,6 +804,23 @@ def test_custom_plan_api_allows_edits_without_mutating_the_original(as_text):
     assert store.plans[PLAN_ID]["structured_plan"] == original
 
 
+def test_edit_sets_and_clears_easier_and_progress():
+    client, store, _ = _build_client()
+    today = seed_dated(store)
+    response, _ = change(client, PLAN_ID, action="edit", date=today.isoformat(), session_id=SESSION_ID,
+                         block_id=squat_id(today), regression_options=[" Box squat ", ""],
+                         progression_rule=" Add 2.5 kg when every rep is clean ")
+    assert response.status_code == 200, response.text
+    edited = response.json()["session"]["blocks"][0]
+    assert edited["regression_options"] == ["Box squat"]
+    assert edited["progression_rule"] == "Add 2.5 kg when every rep is clean"
+    cleared, _ = change(client, PLAN_ID, action="edit", date=today.isoformat(), session_id=SESSION_ID,
+                        block_id=edited["block_id"], regression_options=[], progression_rule="")
+    assert cleared.status_code == 200, cleared.text
+    block = cleared.json()["session"]["blocks"][0]
+    assert block["regression_options"] == [] and not block.get("progression_rule")
+
+
 def test_active_injury_with_unknown_candidate_loading_is_not_cleared(monkeypatch):
     from api.services import exercise_customisation as service
 

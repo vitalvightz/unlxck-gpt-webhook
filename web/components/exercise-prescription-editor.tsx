@@ -1,9 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import type { ExerciseChangeDose } from "@/lib/types";
 import { finishedDose, validDose, type DoseDraft } from "@/lib/exercise-dose";
 import styles from "./exercise-customisation.module.css";
+
+/** The coaching copy a rendered card shows: cues, Easier, Progress and the stop rule. */
+export type ExerciseCoaching = {
+  coaching_cues: string[];
+  regression_options: string[];
+  progression_rule: string | null;
+  stop_rules: string[];
+};
 
 function TimeField({ label, value, onChange, rest = false }: {
   label: string; value?: number | null; onChange: (value: number | null) => void; rest?: boolean;
@@ -19,15 +27,20 @@ function TimeField({ label, value, onChange, rest = false }: {
   </div></label>;
 }
 
+const lines = (text: string) => text.split("\n").map(s => s.trim()).filter(Boolean);
+
 /** The same prescription editor for Add, Swap and an existing rendered card. */
-export function ExercisePrescriptionEditor({ initial, action, busy, cues, stopRules, onSubmit }: {
-  initial: DoseDraft; action: string; busy: boolean; cues?: string[]; stopRules?: string[];
-  onSubmit: (dose: ExerciseChangeDose, cues?: string[], stopRules?: string[]) => void;
+export function ExercisePrescriptionEditor({ initial, action, busy, coaching, onSubmit, children }: {
+  initial: DoseDraft; action: string; busy: boolean; coaching?: ExerciseCoaching;
+  onSubmit: (dose: ExerciseChangeDose, coaching?: ExerciseCoaching) => void;
+  /** Rendered just above the submit button (e.g. which workouts to apply to). */
+  children?: ReactNode;
 }) {
   const [dose, setDose] = useState(initial);
-  const [cueText, setCueText] = useState((cues ?? []).join("\n"));
-  const [stopText, setStopText] = useState((stopRules ?? []).join("\n"));
-  const coaching = cues !== undefined || stopRules !== undefined;
+  const [cueText, setCueText] = useState((coaching?.coaching_cues ?? []).join("\n"));
+  const [easierText, setEasierText] = useState((coaching?.regression_options ?? []).join("\n"));
+  const [progressText, setProgressText] = useState(coaching?.progression_rule ?? "");
+  const [stopText, setStopText] = useState((coaching?.stop_rules ?? []).join("\n"));
   const update = (field: keyof DoseDraft, value: DoseDraft[keyof DoseDraft]) => setDose(current => ({ ...current, [field]: value }));
   function number(field: "sets" | "reps" | "rounds" | "rpe", label: string, max: number, optional = false) {
     return <label className={styles.doseField}><span>{label}</span><input aria-label={label}
@@ -35,10 +48,19 @@ export function ExercisePrescriptionEditor({ initial, action, busy, cues, stopRu
       required={!optional} value={dose[field] ?? ""}
       onChange={e => update(field, e.target.value === "" ? null : Number(e.target.value))} /></label>;
   }
+  // What is set inside each collapsed group, so nothing hides behind a fold.
+  const effortSummary = [dose.load_or_intensity?.trim(), dose.rpe != null ? `RPE ${dose.rpe}` : null,
+    dose.mode === "reps" && dose.tempo?.trim() ? `Tempo ${dose.tempo.trim()}` : null].filter(Boolean).join(" · ");
+  const coachingSummary = [lines(cueText).length ? `${lines(cueText).length} cue${lines(cueText).length === 1 ? "" : "s"}` : null,
+    lines(easierText).length ? "Easier" : null, progressText.trim() ? "Progress" : null,
+    lines(stopText).length ? "Stop rule" : null].filter(Boolean).join(" · ");
   return <form className={styles.prescriptionEditor} onSubmit={e => {
     e.preventDefault();
-    if (validDose(dose)) onSubmit(finishedDose(dose), coaching ? cueText.split("\n").filter(s => s.trim()) : undefined,
-      coaching ? stopText.split("\n").filter(s => s.trim()) : undefined);
+    if (validDose(dose)) onSubmit(finishedDose(dose), coaching ? {
+      coaching_cues: lines(cueText), regression_options: lines(easierText),
+      // "" clears a rule the athlete emptied; null would leave it unchanged.
+      progression_rule: progressText.trim(), stop_rules: lines(stopText),
+    } : undefined);
   }}>
     <label className={styles.formatField}><span className="sr-only">Dose format</span>
       <select aria-label="Dose format" value={dose.mode} onChange={e => setDose({
@@ -65,19 +87,39 @@ export function ExercisePrescriptionEditor({ initial, action, busy, cues, stopRu
         </label>}
       <TimeField label="Rest" rest value={dose.rest_seconds} onChange={v => update("rest_seconds", v)} />
     </div>
+    {/* Per side changes how the reps read, so it sits with them, not behind a fold. */}
+    {dose.mode === "reps" ? <label className={styles.toggleRow}>
+      <span><strong>Per side</strong><small>Reps are done on each side</small></span>
+      <input aria-label="Per side" type="checkbox" role="switch" className={styles.switch}
+        checked={dose.per_side ?? false} onChange={e => update("per_side", e.target.checked)} />
+    </label> : null}
     <details className={styles.advanced}>
-      <summary>Weight, effort{coaching ? " & coaching" : " & tempo"}</summary>
-      <div className={styles.doseGrid}>
-        <label className={`${styles.doseField} ${styles.wideField}`}><span>Weight / intensity</span>
-          <input aria-label="Weight or intensity" maxLength={80} placeholder="e.g. 20 kg" value={dose.load_or_intensity ?? ""} onChange={e => update("load_or_intensity", e.target.value)} />
+      <summary><span>Load &amp; effort</span>{effortSummary ? <small>{effortSummary}</small> : null}</summary>
+      <div className={styles.groupBody}>
+        <label className={`${styles.doseField} ${styles.textField}`}><span>Weight / intensity</span>
+          <input aria-label="Weight or intensity" maxLength={80} placeholder="e.g. 20 kg, light band" value={dose.load_or_intensity ?? ""} onChange={e => update("load_or_intensity", e.target.value)} />
         </label>
-        {number("rpe", "RPE (optional)", 10, true)}
-        {dose.mode === "reps" ? <><label className={styles.doseField}><span>Tempo</span><input aria-label="Tempo" maxLength={40} value={dose.tempo ?? ""} onChange={e => update("tempo", e.target.value)} /></label>
-          <label className={styles.perSide}><input aria-label="Per side" type="checkbox" checked={dose.per_side ?? false} onChange={e => update("per_side", e.target.checked)} />Per side</label></> : null}
+        <div className={styles.pairGrid}>
+          {number("rpe", "RPE (optional)", 10, true)}
+          {dose.mode === "reps" ? <label className={`${styles.doseField} ${styles.textField}`}><span>Tempo</span>
+            <input aria-label="Tempo" maxLength={40} placeholder="e.g. 3-1-1" value={dose.tempo ?? ""} onChange={e => update("tempo", e.target.value)} /></label> : null}
+        </div>
       </div>
-      {coaching ? <><label className={styles.coachingField}><span>Cues</span><textarea aria-label="Cues" maxLength={2000} rows={2} value={cueText} onChange={e => setCueText(e.target.value)} /></label>
-        <label className={styles.coachingField}><span className="ex-row-stop">Stop rules</span><textarea aria-label="Stop rules" maxLength={2000} rows={2} value={stopText} onChange={e => setStopText(e.target.value)} /></label></> : null}
     </details>
+    {coaching ? <details className={styles.advanced}>
+      <summary><span>Coaching</span>{coachingSummary ? <small>{coachingSummary}</small> : null}</summary>
+      <div className={styles.groupBody}>
+        <label className={styles.coachingField}><span>Cues</span>
+          <textarea aria-label="Cues" maxLength={2000} rows={2} placeholder="One cue per line" value={cueText} onChange={e => setCueText(e.target.value)} /></label>
+        <label className={styles.coachingField}><span>Easier</span>
+          <textarea aria-label="Easier" maxLength={2000} rows={2} placeholder="A lighter option, one per line" value={easierText} onChange={e => setEasierText(e.target.value)} /></label>
+        <label className={styles.coachingField}><span>Progress</span>
+          <textarea aria-label="Progress" maxLength={500} rows={2} placeholder="When and how to make it harder" value={progressText} onChange={e => setProgressText(e.target.value)} /></label>
+        <label className={styles.coachingField}><span className={styles.stopLabel}>Stop rules</span>
+          <textarea aria-label="Stop rules" maxLength={2000} rows={2} placeholder="One rule per line" value={stopText} onChange={e => setStopText(e.target.value)} /></label>
+      </div>
+    </details> : null}
+    {children}
     <button type="submit" className={styles.primary} disabled={!validDose(dose) || busy}>{busy ? "Saving…" : action}</button>
   </form>;
 }
