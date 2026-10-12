@@ -240,7 +240,7 @@ def _dose_text(dose: dict) -> str:
     if dose.get("rest_seconds") is not None:
         parts.append(f'rest {dose["rest_seconds"]}s')
     if dose.get("rpe"):
-        parts.append(f'RPE {dose["rpe"]}')
+        parts.append(f'RPE {float(dose["rpe"]):g}')
     if dose.get("tempo"):
         parts.append(f'tempo {dose["tempo"]}')
     if dose.get("per_side"):
@@ -420,10 +420,24 @@ def source_suggestion(catalogue_id: str):
         if raw.get(key) is not None
     }
     if evidence:
+        # Keep all source evidence visible, including ambiguous prescriptions,
+        # but never expose bank field names in athlete-facing or saved text.
+        labels = {
+            "rounds": ("Rounds", ""),
+            "work_sec": ("Work", " sec"),
+            "rest_sec": ("Rest", " sec"),
+            "total_minutes": ("Total time", " min"),
+            "rpe": ("RPE", ""),
+            "sets": ("Sets", ""),
+            "reps": ("Reps", ""),
+        }
+        details = []
+        for key, value in evidence.items():
+            label, unit = labels[key]
+            display = f"{value:g}" if isinstance(value, (int, float)) and not isinstance(value, bool) else str(value)
+            details.append(f"{label}: {display}{unit}")
         original = " · ".join(
-            filter(
-                None, [original, ", ".join(f"{k}: {v}" for k, v in evidence.items())]
-            )
+            filter(None, [original, " · ".join(details)])
         )
     dose = None
     try:
@@ -513,6 +527,10 @@ def source_suggestion(catalogue_id: str):
             )
     except (ValueError, TypeError):
         dose = None
+    if dose is not None:
+        original = _dose_text(dose.model_dump())
+        if number("total_minutes") is not None:
+            original += f' · Total time: {number("total_minutes"):g} min'
     if dose is None and original:
         dose = CustomDose(mode="text", prescription=original[:500])
     return CustomDoseSuggestion(

@@ -7,6 +7,8 @@ from uuid import uuid4
 import pytest
 
 from api.services.training_library import cache
+from api.services.custom_plans import _dose_text
+from api.contracts.custom_plans import CustomDose
 from api.services.exercise_media import reset_media_index_cache
 from api.store import SupabaseAppStore
 from tests.support import _build_client
@@ -14,6 +16,35 @@ from tests.support import _build_client
 AUTH = {"Authorization": "Bearer athlete-token"}
 OTHER = {"Authorization": "Bearer admin-token"}
 URL = "/api/custom-plans"
+
+
+@pytest.mark.parametrize("rpe, expected", [(7.0, "RPE 7"), (7.5, "RPE 7.5")])
+def test_custom_plan_rpe_display(rpe, expected):
+    dose = CustomDose(mode="reps", sets=3, reps=8, rpe=rpe)
+    assert _dose_text(dose.model_dump()) == f"3 × 8 · {expected}"
+
+
+def test_source_suggestion_uses_athlete_labels(api, identities, monkeypatch):
+    client, _ = api
+    identity = identities["training"][0]
+    record = copy.deepcopy(cache.get().by_id[identity])
+    record["entry"]["raw"] = {
+        "duration": "2x120s with 60s rest", "rounds": 2, "work_sec": 120,
+        "rest_sec": 60, "total_minutes": 5.0, "rpe": 7.0,
+    }
+    monkeypatch.setattr(cache, "get", lambda: SimpleNamespace(by_id={identity: record}))
+    response = client.get(
+        f"{URL}/source-suggestion", params={"catalogue_id": identity}, headers=AUTH,
+    )
+    assert response.status_code == 200, response.text
+    suggestion = response.json()
+    assert suggestion["original"] == (
+        "2x120s with 60s rest · Rounds: 2 · Work: 120 sec · Rest: 60 sec · Total time: 5 min · RPE: 7"
+    )
+    assert suggestion["dose"]["prescription"] == suggestion["original"]
+    assert "work_sec" not in suggestion["original"]
+    assert "rest_sec" not in suggestion["original"]
+    assert "total_minutes" not in suggestion["original"]
 
 
 @pytest.fixture(scope="module")

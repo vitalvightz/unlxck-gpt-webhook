@@ -702,7 +702,6 @@ export function CustomPlanBuilder({ accessToken, planId, onboarding = null }: { 
                 {suggestion ? (
                   <div>
                     <p>{suggestion.original || "No explicit dosage in this source."}</p>
-                    <small className="muted">Source: {suggestion.source}</small>
                     {suggestion.dose ? (
                       <button
                         type="button"
