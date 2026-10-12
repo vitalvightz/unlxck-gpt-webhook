@@ -154,6 +154,15 @@
     padding-bottom: calc(var(--custom-save-height, 160px) + var(--mobile-tab-bar-clearance) + 32px);
   }
 }
+/* Keep focused and scrolled-to controls clear of the fixed save bar. */
+@media (max-width: 1023px) {
+  :global(html):has(.saveBar) { scroll-padding-bottom: calc(var(--custom-save-height, 160px) + 32px); }
+}
+@media (max-width: 767px) {
+  :global(html):has(.saveBar) {
+    scroll-padding-bottom: calc(var(--custom-save-height, 160px) + var(--mobile-tab-bar-clearance) + 16px);
+  }
+}
 .weekday {
   color: var(--text-secondary);
   font-family: var(--font-mono);

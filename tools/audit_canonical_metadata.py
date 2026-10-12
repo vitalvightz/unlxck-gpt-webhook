@@ -65,6 +65,35 @@ COMMUNITY_ADDED = frozenset({"api/community_store.py", "api/contracts/community_
     "api/routes/community_exercises.py", "api/services/community_exercises.py",
     "web/components/community-exercises.tsx", "web/e2e/custom-plan-fixture.ts", "web/components/admin-community-queue.tsx"})
 
+# Open plans, custom-workout integration, Today/plan exercise editing, naming
+# and home changes (#2839-#2855) touch planner-adjacent runtime and UI only, not
+# catalogue or prescription authority. Pre-change bytes are hash-verified
+# receipts in tools/metadata_integrity_original_sources.json.
+OPEN_PLAN_CHANGED = frozenset({"api/contracts/injury_policy.py", "api/contracts/readiness_message.py",
+                               "api/exercise_identity.py", "api/models.py", "api/optional_sessions.py",
+                               "api/plan_mappers.py", "api/services/active_plan.py",
+                               "api/services/admin_stage2_service.py", "api/services/effective_structured_plan.py",
+                               "api/services/exercise_log_service.py", "api/services/open_plan_timeline.py",
+                               "api/services/progress_notifications.py", "api/services/streaks.py",
+                               "api/services/today_service.py", "api/structured_plan_locked_merge.py",
+                               "api/structured_plan_models.py", "api/structured_plan_sparring_reconcile.py",
+                               "fightcamp/weekly_schedule_view.py", "web/app/demo-plan/page.tsx", "web/app/page.tsx",
+                               "web/components/fight-countdown.tsx", "web/components/plan-viewer.tsx",
+                               "web/components/plans/plan-dashboard.tsx",
+                               "web/components/structured-plan-renderer.tsx", "web/components/today-screen.tsx",
+                               "web/components/today/today-injury-manager.tsx",
+                               "web/components/today/today-session-panel.tsx",
+                               "web/components/today/use-today-command.ts", "web/components/xp-progress-card.tsx",
+                               "web/lib/api-contract.ts", "web/lib/exercise-log.ts", "web/lib/open-block.ts",
+                               "web/lib/rounds-format.ts", "web/lib/structured-plan.ts", "web/lib/today.ts",
+                               "web/lib/types.ts", "web/messages/en.json", "web/messages/es.json",
+                               "web/messages/fr.json", "web/messages/it.json", "web/messages/pt-BR.json"})
+OPEN_PLAN_ADDED = frozenset({"api/contracts/exercise_changes.py", "api/routes/exercise_changes.py",
+                             "api/services/exercise_customisation.py", "api/services/exercise_dose.py",
+                             "api/services/exercise_overrides.py", "web/components/exercise-customisation.tsx",
+                             "web/components/exercise-prescription-editor.tsx", "web/lib/custom-plan-schedule.ts",
+                             "web/lib/exercise-customisation.ts", "web/lib/exercise-dose.ts"})
+
 
 def dumps(value):
     return json.dumps(value, ensure_ascii=True, indent=2, sort_keys=True) + "\n"
@@ -256,7 +285,7 @@ def preservation(baseline):
         raise ValueError("PR 1 evidence changed")
     changed = sorted(p for p, h in original["production_files"].items() if current["production_files"].get(p) != h)
     added = sorted(set(current["production_files"]) - set(original["production_files"]))
-    if not set(changed) <= ALLOWED_CHANGED | EQUIPMENT_CHANGED | FALLBACK_CHANGED | DISCOVERY_CHANGED | CUSTOM_PLAN_CHANGED | PRIVATE_MEDIA_CHANGED | COMMUNITY_CHANGED | {"fightcamp/strength.py"} or not set(added) <= ALLOWED_ADDED | EQUIPMENT_ADDED | CUSTOM_PLAN_ADDED | PRIVATE_MEDIA_ADDED | COMMUNITY_ADDED:
+    if not set(changed) <= ALLOWED_CHANGED | EQUIPMENT_CHANGED | FALLBACK_CHANGED | DISCOVERY_CHANGED | CUSTOM_PLAN_CHANGED | PRIVATE_MEDIA_CHANGED | COMMUNITY_CHANGED | OPEN_PLAN_CHANGED | {"fightcamp/strength.py"} or not set(added) <= ALLOWED_ADDED | EQUIPMENT_ADDED | CUSTOM_PLAN_ADDED | PRIVATE_MEDIA_ADDED | COMMUNITY_ADDED | OPEN_PLAN_ADDED:
         raise ValueError("Unapproved production diff: " + str((changed, added)))
     for p, h in original["configuration_files"].items():
         if p == "data/tag_vocabulary.json" and current["configuration_files"].get(p) != h:
@@ -270,7 +299,8 @@ def preservation(baseline):
     if set(current["configuration_files"]) - set(original["configuration_files"]) - {"shared/training-metadata.json", "shared/equipment-requirements.json"}:
         raise ValueError("Unapproved configuration added")
     originals = json.loads((ROOT / "tools/metadata_integrity_original_sources.json").read_bytes())
-    if set(originals) != ALLOWED_CHANGED | EQUIPMENT_CHANGED | FALLBACK_CHANGED | DISCOVERY_CHANGED | CUSTOM_PLAN_CHANGED | PRIVATE_MEDIA_CHANGED | COMMUNITY_CHANGED:
+    if set(originals) != (ALLOWED_CHANGED | EQUIPMENT_CHANGED | FALLBACK_CHANGED | DISCOVERY_CHANGED | CUSTOM_PLAN_CHANGED
+                          | PRIVATE_MEDIA_CHANGED | COMMUNITY_CHANGED | OPEN_PLAN_CHANGED):
         raise ValueError("Unexpected historical source receipts")
     for p, text in originals.items():
         if source_hash(text.encode()) != original["production_files"][p]:
@@ -281,8 +311,8 @@ def preservation(baseline):
             "source_hash_parity": True, "catalogue_identity_and_media_key_parity": True,
             "pr1_evidence_hash_parity": True, "planner_clinical_configuration_parity": True,
             "persisted_equipment_alias_contract_parity": True,
-            "allowed_changed_production": sorted(set(changed) - EQUIPMENT_CHANGED - FALLBACK_CHANGED - DISCOVERY_CHANGED - CUSTOM_PLAN_CHANGED - PRIVATE_MEDIA_CHANGED - COMMUNITY_CHANGED - {"fightcamp/strength.py"}),
-            "added_projection_sources": sorted(set(added) - EQUIPMENT_ADDED - CUSTOM_PLAN_ADDED - PRIVATE_MEDIA_ADDED - COMMUNITY_ADDED)}
+            "allowed_changed_production": sorted(set(changed) - EQUIPMENT_CHANGED - FALLBACK_CHANGED - DISCOVERY_CHANGED - CUSTOM_PLAN_CHANGED - PRIVATE_MEDIA_CHANGED - COMMUNITY_CHANGED - OPEN_PLAN_CHANGED - {"fightcamp/strength.py"}),
+            "added_projection_sources": sorted(set(added) - EQUIPMENT_ADDED - CUSTOM_PLAN_ADDED - PRIVATE_MEDIA_ADDED - COMMUNITY_ADDED - OPEN_PLAN_ADDED)}
 
 
 def build_report(*, verified_plans=None):
