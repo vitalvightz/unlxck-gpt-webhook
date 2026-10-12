@@ -3,10 +3,14 @@ name: Validate JSON Banks
 on:
   push:
     branches:
-      - '**'
+      - Main
   pull_request:
     branches:
       - '**'
+
+concurrency:
+  group: validate-banks-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   validate:
