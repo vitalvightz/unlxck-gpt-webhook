@@ -297,7 +297,7 @@ export default function PlansPage() {
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19v-5m5 5V9m5 10V5m5 14V2" /></svg>
             View History <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7" /></svg>
           </Link>
-          <h1 className={`athlete-motion-slot athlete-motion-header ${styles.pageTitle}`}>{t("planWorkspace")}</h1>
+          <h1 className={`athlete-motion-slot athlete-motion-header ${styles.pageTitle}`}>{activePlan?.fight_date ? t("fightCampHeading") : t("planWorkspace")}</h1>
           <p className={styles.pageSubtitle}>Build, manage and add to your training.</p>
           <Link href="/plans/custom" className="ghost-button">Build My Own Plan</Link>
         </header>

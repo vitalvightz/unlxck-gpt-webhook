@@ -620,7 +620,7 @@ export function TodayInjuryManager({
       <div className="today-card-head">
         <div>
           <p className="kicker">Injury check-in</p>
-          <h2 id="today-injury-heading">Injury management</h2>
+          <h2 id="today-injury-heading">Injury status</h2>
         </div>
       </div>
       {/* Omit only a duplicate single-injury summary. Unclear or different
