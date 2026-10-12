@@ -224,7 +224,7 @@ for (const width of [390, 1280]) {
     await expect(log).toBeFocused();
     const profile = page.getByRole("button", { name: /^Athlete profile:/ });
     await profile.click();
-    await expect(page.getByRole("link", { name: "Edit profile & photo" })).toHaveAttribute("href", "/profile");
+    await expect(page.getByRole("link", { name: "Edit profile & photo" })).toHaveAttribute("href", "/settings#account");
     await page.keyboard.press("Escape");
     const featured = page.getByRole("region", { name: "Featured drill", exact: true });
     await expect(featured).toContainText("Editor’s pick");
