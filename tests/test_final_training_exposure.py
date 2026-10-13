@@ -183,9 +183,10 @@ def test_king_cut_week_speed_gap_is_reported_unresolved_not_satisfied():
     refused at the composed cap. It must stay a visible, unsatisfied build."""
     speed = _entry(_brief("king"), "speed")
     assert speed["state"] == "build"
-    if any(w["min_d_day"] <= 20 and w["max_d_day"] >= 14 for w in speed["missing_coverage"]):
-        assert not speed["satisfied"]
-    assert not any("sled" in e["name"].lower() for e in speed["evidence"])
+    assert [(w["min_d_day"], w["max_d_day"]) for w in speed["missing_coverage"]] == [(14, 20)]
+    assert speed["satisfied"] is False
+    assert speed["constraints"] == []  # no invented deferral reason
+    assert [(e["d_day"], e["name"]) for e in speed["evidence"]] == [(26, "Single-Leg Forward Hops")]
 
 
 # ---------------------------------------------------------------------------
