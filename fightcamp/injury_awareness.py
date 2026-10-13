@@ -97,7 +97,7 @@ def awareness_red_flags(records: list[dict[str, str]]) -> list[dict[str, Any]]:
         area = record["area"]
         rules.append(
             {
-                "rule_id": f"{_RULE_ID_PREFIX}_{_slug(area)}",
+                "rule_id": _rule_id(area),
                 "metric": "pain",
                 "metric_group": "injury",
                 "when": "during_session",
@@ -135,12 +135,24 @@ def _normalize(text: Any) -> str:
     return re.sub(r"[^a-z0-9]+", " ", str(text or "").lower()).strip()
 
 
+def _mentions(text: str, area: str) -> bool:
+    """Whole-phrase match of a normalized area inside normalized text."""
+    area_norm = _normalize(area)
+    return bool(area_norm) and re.search(rf"\b{re.escape(area_norm)}\b", text) is not None
+
+
+def _rule_id(area: str) -> str:
+    return f"{_RULE_ID_PREFIX}_{_slug(area)}"
+
+
 def merge_injury_awareness(plan: dict[str, Any], awareness: dict[str, Any] | None) -> dict[str, Any]:
     """Add the awareness note / re-injury rules to a structured plan dict.
 
-    Never removes or rewrites existing content. Skips an injury note when the
-    plan already carries an injury note naming the same area, and skips a rule
-    when one with the same id or an injury rule naming the area already exists.
+    Never removes or rewrites existing content. Coverage is decided per
+    injury: the added note names only injuries no existing injury note already
+    names, and a re-injury rule is added only for an area with no existing
+    rule of the same id and no existing stop/report rule naming that area.
+    Idempotent: merging twice adds nothing the second time.
     """
     if not isinstance(plan, dict) or not isinstance(awareness, dict):
         return plan
@@ -149,32 +161,34 @@ def merge_injury_awareness(plan: dict[str, Any], awareness: dict[str, Any] | Non
         return plan
 
     notes = [n for n in plan.get("plan_notes") or [] if isinstance(n, dict)]
-    injury_note_text = " ".join(
+    injury_note_texts = [
         _normalize(n.get("text")) for n in notes if n.get("category") == "injury"
-    )
-    note = awareness.get("plan_note")
-    if isinstance(note, dict) and not all(
-        _normalize(r["area"]) in injury_note_text for r in records
-    ):
-        notes = [*notes, dict(note)]
+    ]
+    uncovered_notes = [
+        r for r in records if not any(_mentions(text, r["area"]) for text in injury_note_texts)
+    ]
+    note = awareness_plan_note(uncovered_notes)
+    if note is not None:
+        notes = [*notes, note]
 
     rules = [r for r in plan.get("red_flag_rules") or [] if isinstance(r, dict)]
     existing_ids = {str(r.get("rule_id") or "") for r in rules}
-    existing_texts = [_normalize(r.get("display_text")) for r in rules]
-    for rule in awareness.get("red_flag_rules") or []:
-        if not isinstance(rule, dict):
+    stop_texts = [
+        text
+        for text in (_normalize(r.get("display_text")) for r in rules)
+        if re.search(r"\b(stop|report)\b", text)
+    ]
+    supplied = {
+        str(rule.get("rule_id")): rule
+        for rule in awareness.get("red_flag_rules") or []
+        if isinstance(rule, dict) and rule.get("rule_id")
+    }
+    for record in records:
+        rule_id = _rule_id(record["area"])
+        if rule_id in existing_ids or any(_mentions(text, record["area"]) for text in stop_texts):
             continue
-        if rule.get("rule_id") in existing_ids:
-            continue
-        area = next(
-            (r["area"] for r in records if str(rule.get("rule_id", "")).endswith(_slug(r["area"]))),
-            "",
-        )
-        area_norm = _normalize(area)
-        if area_norm and any(
-            area_norm in text and re.search(r"\b(stop|report)\b", text) for text in existing_texts
-        ):
-            continue
+        rule = supplied.get(rule_id) or awareness_red_flags([record])[0]
         rules.append(dict(rule))
+        existing_ids.add(rule_id)
 
     return {**plan, "plan_notes": notes, "red_flag_rules": rules}
