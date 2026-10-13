@@ -1,97 +1,63 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import {
-  LANDING_OUTCOME_POINTS,
-  LANDING_PRODUCT_PROOF_POINTS,
-  LANDING_TODAY_PREVIEW,
-  LANDING_WORKFLOW_STEPS,
-  LANDING_WORKSPACE_ROWS,
-  PUBLIC_HERO_LEAD,
-  PUBLIC_HERO_SUMMARY,
-} from "./public-landing-copy";
+import { messages } from "@/i18n/messages";
 
-test("the hero lead names the product category in one read", () => {
-  const lead = PUBLIC_HERO_LEAD.toLowerCase();
-  assert.ok(lead.includes("fight camp"), "hero lead should name fight camps");
-  assert.ok(lead.includes("adapt"), "hero lead should promise adaptation");
+// Public landing (logged-out homepage) copy guards. The copy itself lives in
+// the `PublicHome` message namespace; these tests hold the positioning and the
+// safety rules (see also lib/safety-copy.ts) against the English source:
+// - Unlxck is a flexible combat-sports training platform, not camps only.
+// - No medical overpromise: never imply diagnosis, injury prevention, medical
+//   clearance, or guaranteed performance.
+const copy = messages.en.PublicHome;
+
+test("the hero lead names camps, ongoing training and custom plans", () => {
+  const lead = copy.lead.toLowerCase();
+  assert.ok(lead.includes("without a fight"), "hero lead should cover training with no fight booked");
+  assert.ok(lead.includes("fight camps"), "hero lead should name fight camps");
+  assert.ok(lead.includes("ongoing training"), "hero lead should name ongoing training");
+  assert.ok(lead.includes("custom plans"), "hero lead should name custom plans");
 });
 
-test("the today preview shows a concrete adapted session with a reason", () => {
-  assert.equal(LANDING_TODAY_PREVIEW.status, "Modified session");
-  assert.ok(LANDING_TODAY_PREVIEW.reason.length > 0, "preview should give a reason");
-  const directions = LANDING_TODAY_PREVIEW.changes.map((change) => change.direction);
-  assert.ok(directions.includes("down"), "preview should show a reduced element");
-  assert.ok(directions.includes("up"), "preview should show an increased element");
+test("the headline is no longer fight-camp only", () => {
+  assert.ok(!copy.heroTitle.toLowerCase().includes("fight camp"));
+  assert.equal(copy.heroTitle, `${copy.heroLine1} ${copy.heroLine2}`);
 });
 
-test("the hero summary leads with an athlete outcome, not a feature list", () => {
-  const summary = PUBLIC_HERO_SUMMARY.toLowerCase();
-  assert.ok(summary.includes("know what to train"), "hero should promise knowing what to train");
-  assert.ok(
-    summary.includes("adjust before fatigue"),
-    "hero should promise adjusting before fatigue",
-  );
-  // The old copy was a bare feature enumeration; make sure it is gone.
-  assert.ok(
-    !summary.includes("intake, readiness, camp plan, and saved history"),
-    "hero should no longer be a feature list",
-  );
+test("the product preview shows a concrete adapted session with a reason", () => {
+  assert.ok(copy.tagReduced.length > 0, "preview should show a reduced block");
+  assert.ok(copy.tagAdded.length > 0, "preview should show an added block");
+  assert.ok(copy.reasonText.length > 0, "preview should give a reason");
+  assert.ok(copy.example.length > 0, "preview must be labelled as an example");
 });
 
-test("the hero proof strip stays to three concise outcome points", () => {
-  assert.ok(
-    LANDING_OUTCOME_POINTS.length <= 3,
-    `expected at most 3 outcome points, got ${LANDING_OUTCOME_POINTS.length}`,
-  );
-  const values = LANDING_OUTCOME_POINTS.map((point) => point.value.toLowerCase());
-  assert.ok(values.some((value) => value.includes("know what to train")));
-  assert.ok(values.some((value) => value.includes("decisions, not guesses")));
+test("the flexibility section covers the six ways the app supports training", () => {
+  const titles = [1, 2, 3, 4, 5, 6].map((index) => copy[`flex${index}Title` as keyof typeof copy]);
+  assert.deepEqual(titles, [
+    "Fight camps",
+    "Ongoing training",
+    "Custom plans",
+    "Workout editing",
+    "Exercise library",
+    "Training log",
+  ]);
+  assert.ok(copy.flex2Body.toLowerCase().includes("renewable"), "ongoing training is renewable blocks");
 });
 
-test("the proof grid trims to three distinct, outcome-led headlines", () => {
-  // Cut from four to three: the standalone "Decisions" card repeated the
-  // readiness/full-camp promise, so it was folded away.
-  assert.equal(LANDING_PRODUCT_PROOF_POINTS.length, 3, "proof grid should be three cards");
-  const titles: string[] = LANDING_PRODUCT_PROOF_POINTS.map((point) => point.title);
-  const outcomeSignals = [
-    "know today's session",
-    "adapt before you break down",
-    "keep the camp aligned",
-  ];
-  for (const signal of outcomeSignals) {
-    assert.ok(
-      titles.some((title) => title.toLowerCase().includes(signal)),
-      `expected a proof headline for: ${signal}`,
-    );
-  }
-  // No section should simply restate a stored-feature title.
-  assert.equal(new Set(titles).size, titles.length, "proof headlines must be unique");
-  assert.ok(!titles.includes("Context before output."));
-  assert.ok(!titles.includes("The plan is structured."));
-});
-
-test("no proof-grid body overpromises medical safety or guaranteed performance", () => {
-  const forbidden = ["injury-free", "keeps you safe", "prevent injury", "guarantee", "diagnos"];
-  for (const point of LANDING_PRODUCT_PROOF_POINTS) {
-    const body = point.body.toLowerCase();
+test("no landing copy overpromises medical safety or guaranteed performance", () => {
+  const forbidden = ["injury-free", "keeps you safe", "prevent injur", "guarantee", "diagnos"];
+  for (const [key, value] of Object.entries(copy)) {
+    const text = value.toLowerCase();
     for (const term of forbidden) {
-      assert.ok(!body.includes(term), `proof body must not claim "${term}": ${point.body}`);
+      assert.ok(!text.includes(term), `PublicHome.${key} must not claim "${term}": ${value}`);
     }
   }
 });
 
-test("the workspace preview remains the single place the pipeline is enumerated", () => {
-  const labels = LANDING_WORKSPACE_ROWS.map((row) => row.label);
-  assert.ok(labels.includes("Intake"));
-  assert.ok(labels.includes("Readiness"));
-  assert.ok(labels.includes("Camp plan"));
-});
-
-test("the how-it-works steps stay a four-step setup flow", () => {
-  assert.equal(LANDING_WORKFLOW_STEPS.length, 4);
-  assert.deepEqual(
-    LANDING_WORKFLOW_STEPS.map((step) => step.label),
-    ["Step 1", "Step 2", "Step 3", "Step 4"],
-  );
+test("every locale translates the headline and the two-line split matches it", () => {
+  for (const [locale, catalog] of Object.entries(messages)) {
+    const home = catalog.PublicHome;
+    assert.equal(home.heroTitle, `${home.heroLine1} ${home.heroLine2}`, `${locale} headline split`);
+    if (locale !== "en") assert.notEqual(home.heroTitle, copy.heroTitle, `${locale} headline is untranslated`);
+  }
 });

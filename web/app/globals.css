@@ -1106,6 +1106,21 @@ html[data-theme="light"] .cta:disabled {
   margin-left: 28px;
 }
 
+/* Signup one-time-code step: the code reads as a single wide token. */
+.auth-verify-help,
+.auth-verify-hint {
+  margin: 0;
+  font-size: var(--type-body-sm);
+  line-height: 1.45;
+}
+
+.auth-verify-code {
+  font-family: var(--font-mono);
+  font-size: 22px;
+  letter-spacing: 0.32em;
+  text-align: center;
+}
+
 /* Legal documents render as long-form prose, so they get a reading measure
    rather than the app's dense panel rhythm. */
 .legal-document {
@@ -9725,10 +9740,6 @@ html[data-theme="light"] .today-injury-other-warning {
   line-height: 1;
 }
 
-.brand-topbar {
-  display: none;
-}
-
 @media (min-width: 961px) {
   .auth-layout > .auth-rail {
     grid-column: 1;
@@ -9778,121 +9789,102 @@ html[data-theme="light"] .today-injury-other-warning {
   html[data-app-surface="brand"] .app-main {
     padding-top: 98px;
   }
+}
 
-  .brand-topbar {
-    position: fixed;
-    top: 24px;
-    left: 0;
-    right: 0;
-    z-index: 70;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 18px;
-    width: min(calc(100% - 56px), var(--content-width));
-    margin: 0 auto;
-    padding: 10px 12px 10px 18px;
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 16px;
-    background: rgba(10, 11, 13, 0.88);
-    box-shadow: 0 18px 42px rgba(0, 0, 0, 0.28);
-    backdrop-filter: blur(18px);
-  }
-
-  .brand-topbar-mark {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    min-width: 0;
-  }
-
-  .brand-topbar-mark span:last-child {
-    color: var(--text-primary);
-    font-size: 20px;
-    line-height: 1;
-    font-weight: 700;
-    letter-spacing: -0.03em;
-  }
-
-  .brand-topbar-actions {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    flex-shrink: 0;
-  }
-
-  .brand-topbar-actions .cta,
-  .brand-topbar-actions .ghost-button {
-    min-height: 40px;
-    padding-right: 16px;
-    padding-left: 16px;
-  }
+/* Public landing top bar. Full-bleed and flush with the top edge (safe area
+   included) with an opaque backdrop, so scrolled content can never show
+   through above or around it. Its row is aligned to the page content width.
+   Auth routes don't render it (see shouldShowBrandTopbar). */
+.brand-topbar {
+  position: fixed;
+  top: 0;
+  right: 0;
+  left: 0;
+  z-index: 70;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding:
+    calc(var(--safe-area-top) + 12px)
+    max(calc(28px + var(--safe-area-right)), calc((100% - var(--content-width)) / 2))
+    12px
+    max(calc(28px + var(--safe-area-left)), calc((100% - var(--content-width)) / 2));
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(10, 11, 13, 0.94);
+  backdrop-filter: blur(18px);
 }
 
 .brand-topbar-mark {
   display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 10px;
+  min-width: 0;
 }
 
-/* On mobile the public brand surface has no floating Menu control (it is
-   suppressed in AppNav), so the brand top bar is the sole navigation. Render it
-   as a slim fixed bar; the existing --mobile-nav-clearance on .app-main already
-   keeps page content below it, so it never overlaps headings or cards. */
+.brand-topbar-wordmark {
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.24em;
+}
+
+.brand-topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+/* Discreet sign-in for returning athletes: text weight, full 40px target. */
+.brand-topbar-login {
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+  padding: 0 8px;
+  border-radius: var(--radius-btn);
+  color: var(--text-primary);
+  font-size: var(--type-body);
+  font-weight: 600;
+  white-space: nowrap;
+  text-decoration: underline;
+  text-decoration-color: rgba(255, 255, 255, 0.28);
+  text-underline-offset: 4px;
+  transition: text-decoration-color var(--transition-fast);
+}
+
+.brand-topbar-login:hover {
+  text-decoration-color: var(--brand-red);
+}
+
+.brand-topbar-login:focus-visible {
+  outline: 2px solid var(--brand-red);
+  outline-offset: 2px;
+}
+
+/* Clear the bar on the landing only; auth routes keep their own spacing. */
+.app-shell:has(> .brand-topbar) .app-main {
+  padding-top: calc(var(--safe-area-top) + 64px + var(--space-5));
+}
+
 @media (max-width: 960px) {
   .brand-topbar {
-    position: fixed;
-    top: calc(var(--safe-area-top) + var(--space-2));
-    left: calc(var(--safe-area-left) + var(--space-2));
-    right: calc(var(--safe-area-right) + var(--space-2));
-    z-index: 70;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
     gap: var(--space-2);
-    padding: var(--space-1) var(--space-1) var(--space-1) var(--space-3);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: var(--radius-stat);
-    background: rgba(10, 11, 13, 0.9);
-    box-shadow: 0 14px 34px rgba(0, 0, 0, 0.28);
-    backdrop-filter: blur(16px);
-  }
-
-  .brand-topbar-mark {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    min-width: 0;
-  }
-
-  .brand-topbar-mark .eyebrow {
-    font-size: var(--type-label-xs);
-  }
-
-  .brand-topbar-mark span:last-child {
-    color: var(--text-primary);
-    font-size: var(--type-body-lg);
-    line-height: 1;
-    font-weight: 700;
-    letter-spacing: -0.02em;
+    padding:
+      calc(var(--safe-area-top) + 8px)
+      calc(18px + var(--safe-area-right))
+      8px
+      calc(18px + var(--safe-area-left));
   }
 
   .brand-topbar-actions {
-    display: flex;
-    align-items: center;
     gap: var(--space-1);
-    flex-shrink: 0;
   }
 
-  /* Same 40px control height as the desktop bar; only the horizontal padding
-     and label size step down, and the label never wraps. */
-  .brand-topbar-actions .cta,
-  .brand-topbar-actions .ghost-button {
-    min-height: 40px;
-    padding-right: var(--space-2);
-    padding-left: var(--space-2);
-    font-size: var(--type-body-sm);
-    white-space: nowrap;
+  .app-shell:has(> .brand-topbar) .app-main {
+    padding-top: calc(var(--safe-area-top) + 56px + var(--space-3));
   }
 }
 
@@ -16616,206 +16608,11 @@ html[data-theme="light"] .nutrition-log-row:first-child {
   }
 }
 
-.public-hero-panel {
-  gap: 0;
-  padding: 38px;
-  overflow: hidden;
-  border-color: rgba(255, 255, 255, 0.1);
-  background:
-    linear-gradient(135deg, rgba(181, 18, 43, 0.22), transparent 24%),
-    linear-gradient(315deg, rgba(181, 18, 43, 0.12), transparent 26%),
-    repeating-linear-gradient(135deg, rgba(255, 255, 255, 0.028) 0 1px, transparent 1px 16px),
-    linear-gradient(180deg, rgba(17, 19, 23, 0.98), rgba(9, 10, 12, 0.98));
-}
-
-.public-hero-grid {
-  display: grid;
-  grid-template-columns: minmax(0, 0.92fr) minmax(420px, 1.08fr);
-  gap: 42px;
-  align-items: center;
-}
-
-.public-hero-copy {
-  gap: 18px;
-  max-width: 680px;
-}
-
-.public-hero-motto {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  width: fit-content;
-  margin: 0;
-  font-family: var(--font-mono);
-  font-size: var(--type-label-sm);
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  line-height: 1.2;
-}
-
-.public-hero-motto span:first-child {
-  color: var(--brand-red);
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
-}
-
-.public-hero-motto span:last-child {
-  color: var(--text-muted);
-  letter-spacing: 0.04em;
-}
-
-.public-hero-motto::after {
-  content: "";
-  width: 34px;
-  height: 1px;
-  background: rgba(181, 18, 43, 0.68);
-}
-
-.public-hero-copy .hero-title {
-  max-width: 16ch;
-  font-size: 56px;
-  line-height: 0.92;
-  letter-spacing: 0;
-}
-
-.public-hero-title {
-  display: grid;
-  gap: 4px;
-}
-
-.public-hero-title span {
-  white-space: nowrap;
-}
-
-.public-hero-lead {
-  max-width: 48ch;
-  color: var(--text-primary);
-  font-size: var(--type-body-lg);
-  font-weight: 500;
-  line-height: 1.5;
-}
-
-.public-hero-summary {
-  max-width: 52ch;
-  color: var(--text-muted);
-  font-size: var(--type-body-sm);
-  line-height: 1.5;
-}
-
-.public-hero-cta-note {
-  margin: 0;
-  color: var(--text-muted);
-  font-family: var(--font-mono);
-  font-size: var(--type-label-sm);
-  letter-spacing: 0.04em;
-}
-
-.public-proof-strip {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 12px;
-  margin-top: 4px;
-  padding-top: 20px;
-  border-top: 1px solid rgba(255, 255, 255, 0.075);
-}
-
-.public-proof-pill {
-  display: grid;
-  gap: 7px;
-  padding-left: 12px;
-  border-left: 1px solid rgba(181, 18, 43, 0.9);
-}
-
-.public-proof-value {
-  color: var(--text-primary);
-  font-size: var(--type-body-sm);
-  line-height: 1.45;
-  font-weight: 600;
-}
-
-.public-preview-panel {
-  gap: 18px;
-  padding: 20px;
-  border-color: rgba(255, 255, 255, 0.09);
-  background:
-    linear-gradient(180deg, rgba(18, 20, 24, 0.9), rgba(8, 9, 11, 0.95)),
-    radial-gradient(circle at 100% 0%, rgba(181, 18, 43, 0.1), transparent 34%);
-}
-
-.public-preview-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.public-preview-window {
-  display: grid;
-  gap: 12px;
-  padding: 14px;
-  border-radius: 14px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background:
-    linear-gradient(180deg, rgba(15, 17, 20, 0.96), rgba(6, 7, 9, 0.98)),
-    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.022) 0 1px, transparent 1px 28px);
-}
-
-.public-preview-toolbar {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-height: 34px;
-  padding: 0 12px;
-  border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  background: rgba(255, 255, 255, 0.03);
-}
-
-.public-preview-dot {
-  appearance: none;
-  display: inline-block;
-  padding: 0;
-  border: 0;
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.22);
-  cursor: default;
-  transition:
-    width 180ms ease,
-    background 180ms ease,
-    box-shadow 180ms ease;
-}
-
-.public-preview-dot-active {
-  width: 12px;
-  border-radius: 999px;
-  background: var(--brand-red);
-  box-shadow: 0 0 18px rgba(181, 18, 43, 0.38);
-}
-
-.public-preview-toolbar-label {
-  margin-left: auto;
-  color: var(--text-muted);
-  font-family: var(--font-mono);
-  font-size: var(--type-label-sm);
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-}
-
-.public-preview-carousel {
-  position: relative;
-  min-height: 224px;
-  overflow: hidden;
-  border-radius: 18px;
-}
-
 .auth-preview-stack {
   display: grid;
   gap: 12px;
 }
 
-.public-preview-card,
 .auth-preview-item {
   display: grid;
   gap: 10px;
@@ -16825,502 +16622,8 @@ html[data-theme="light"] .nutrition-log-row:first-child {
   background: linear-gradient(180deg, rgba(23, 26, 31, 0.88), rgba(16, 18, 22, 0.92));
 }
 
-.public-preview-carousel .public-preview-card {
-  min-height: 224px;
-  animation: publicPreviewSlideIn 360ms cubic-bezier(0.22, 1, 0.36, 1);
-}
-
-@keyframes publicPreviewSlideIn {
-  from {
-    opacity: 0.18;
-    transform: translateX(18px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .public-preview-carousel .public-preview-card {
-    animation: none;
-  }
-}
-
-.public-preview-card-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.public-preview-card-title {
-  margin: 4px 0 0;
-  color: var(--text-primary);
-  font-size: var(--type-title-sm);
-  line-height: 1.2;
-  font-weight: 600;
-}
-
-.public-preview-shell {
-  display: grid;
-  grid-template-columns: 112px minmax(0, 1fr);
-  gap: 12px;
-}
-
-.public-preview-sidebar {
-  display: grid;
-  align-content: start;
-  gap: 6px;
-  padding: 10px;
-  border-right: 1px solid rgba(255, 255, 255, 0.06);
-}
-
-.public-preview-sidebar span {
-  display: block;
-  padding: 8px 9px;
-  border-radius: 8px;
-  color: var(--text-muted);
-  font-size: 12px;
-  line-height: 1.2;
-}
-
-.public-preview-sidebar .public-preview-section-label {
-  padding: 2px 9px 6px;
-  color: var(--text-secondary);
-  font-family: var(--font-mono);
-  font-size: var(--type-label-xs);
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-}
-
-.public-preview-sidebar .public-preview-nav-active {
-  background: rgba(255, 255, 255, 0.06);
-  color: var(--text-primary);
-}
-
-.public-workspace-list {
-  display: grid;
-  gap: 9px;
-}
-
-/* Featured "Today — modified session" state that leads the preview, so a
-   visitor sees a live adaptation (not just a static pipeline) at a glance. */
-.public-today-preview {
-  display: grid;
-  gap: var(--space-2);
-  padding: 13px;
-  border-radius: 12px;
-  border: 1px solid rgba(181, 18, 43, 0.32);
-  background:
-    linear-gradient(180deg, rgba(30, 20, 24, 0.9), rgba(16, 12, 14, 0.94)),
-    radial-gradient(circle at 100% 0%, rgba(181, 18, 43, 0.16), transparent 42%);
-}
-
-.public-today-preview-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-1);
-}
-
-.public-today-preview-eyebrow {
-  color: var(--text-muted);
-  font-family: var(--font-mono);
-  font-size: var(--type-label-xs);
-  font-weight: 700;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-}
-
-.public-today-preview-status {
-  padding: 4px 8px;
-  border-radius: var(--radius-pill);
-  border: 1px solid rgba(240, 180, 100, 0.3);
-  background: rgba(240, 170, 90, 0.12);
-  color: #f4c48a;
-  font-family: var(--font-mono);
-  font-size: var(--type-label-xs);
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.public-today-changes {
-  display: grid;
-  gap: var(--space-1);
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.public-today-change {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  color: var(--text-primary);
-  font-size: var(--type-body);
-  line-height: 1.3;
-}
-
-.public-today-change-glyph {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 24px;
-  flex-shrink: 0;
-  border-radius: var(--space-1);
-  font-family: var(--font-mono);
-  font-size: var(--type-body-sm);
-  font-weight: 700;
-}
-
-.public-today-change[data-direction="down"] .public-today-change-glyph {
-  border: 1px solid rgba(240, 170, 90, 0.32);
-  background: rgba(240, 170, 90, 0.12);
-  color: #f4c48a;
-}
-
-.public-today-change[data-direction="up"] .public-today-change-glyph {
-  border: 1px solid rgba(125, 226, 168, 0.28);
-  background: rgba(39, 174, 96, 0.12);
-  color: #7de2a8;
-}
-
-.public-today-reason {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-1);
-  margin: 0;
-  padding-top: var(--space-1);
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
-  color: var(--text-secondary);
-  font-size: var(--type-meta);
-  line-height: 1.35;
-}
-
-.public-today-reason-label {
-  color: var(--text-muted);
-  font-family: var(--font-mono);
-  font-size: var(--type-label-xs);
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-}
-
-.public-workspace-row {
-  display: grid;
-  grid-template-columns: 38px minmax(0, 1fr) auto;
-  gap: 12px;
-  align-items: start;
-  padding: 13px;
-  border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.075);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.025));
-}
-
-.public-workspace-step {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
-  border: 1px solid rgba(181, 18, 43, 0.4);
-  background: var(--brand-red-soft);
-  color: #ffd5db;
-  font-family: var(--font-mono);
-  font-size: var(--type-label-sm);
-  font-weight: 700;
-}
-
-.public-workspace-status {
-  align-self: start;
-  padding: 4px 8px;
-  border-radius: 999px;
-  border: 1px solid rgba(125, 226, 168, 0.22);
-  background: rgba(39, 174, 96, 0.1);
-  color: #7de2a8;
-  font-family: var(--font-mono);
-  font-size: var(--type-label-xs);
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  line-height: 1.2;
-  text-transform: uppercase;
-}
-
-.public-preview-chip-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.public-preview-chip {
-  display: inline-flex;
-  align-items: center;
-  min-height: 28px;
-  padding: 0 10px;
-  border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  background: rgba(255, 255, 255, 0.04);
-  color: var(--text-secondary);
-  font-size: 12px;
-}
-
-.public-preview-controls {
-  display: grid;
-  grid-template-columns: 36px 1fr 36px;
-  align-items: center;
-  gap: 10px;
-}
-
-.public-preview-control {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(255, 255, 255, 0.04);
-  color: var(--text-primary);
-  cursor: pointer;
-  transition:
-    border-color 180ms ease,
-    background 180ms ease,
-    transform 180ms ease;
-}
-
-.public-preview-control:hover {
-  border-color: rgba(255, 255, 255, 0.16);
-  background: rgba(255, 255, 255, 0.08);
-  transform: translateY(-1px);
-}
-
-.public-preview-control:active {
-  transform: scale(0.96);
-}
-
-.public-preview-control svg {
-  width: 18px;
-  height: 18px;
-}
-
-.public-preview-control path {
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 2;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-
-.public-preview-progress {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 6px;
-}
-
-.public-preview-progress-segment {
-  height: 4px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.1);
-  overflow: hidden;
-}
-
-.public-preview-progress-segment-active {
-  background: linear-gradient(90deg, rgba(181, 18, 43, 0.95), rgba(255, 122, 144, 0.92));
-  box-shadow: 0 0 16px rgba(181, 18, 43, 0.24);
-}
-
-.public-proof-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: var(--space-2);
-}
-
-.public-proof-card,
 .auth-preview-panel {
   align-content: start;
-}
-
-.public-proof-card {
-  gap: var(--space-2);
-  padding: var(--space-3);
-  border-radius: 14px;
-  border-color: rgba(255, 255, 255, 0.08);
-  background:
-    linear-gradient(180deg, rgba(18, 20, 24, 0.94), rgba(9, 10, 12, 0.96)),
-    linear-gradient(135deg, rgba(181, 18, 43, 0.08), transparent 34%);
-}
-
-.public-proof-card::after {
-  content: "";
-  width: 42px;
-  height: 1px;
-  margin-top: var(--space-1);
-  background: var(--brand-red);
-}
-
-.public-section-break {
-  position: relative;
-  display: grid;
-  grid-template-columns: 1fr auto;
-  align-items: end;
-  gap: var(--space-3);
-  margin: var(--space-1) 0 -2px;
-  padding: var(--space-4) 0 var(--space-1);
-}
-
-.public-section-break::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 92px;
-  height: 1px;
-  background: linear-gradient(90deg, rgba(181, 18, 43, 0.95), rgba(255, 122, 144, 0));
-  box-shadow: 0 0 20px rgba(181, 18, 43, 0.28);
-}
-
-.public-section-break-line {
-  grid-column: 1 / -1;
-  height: 1px;
-  background: linear-gradient(90deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.03), transparent);
-}
-
-.public-section-break-copy {
-  display: grid;
-  gap: 8px;
-}
-
-.public-section-break-copy h2 {
-  margin: 0;
-  color: var(--text-primary);
-  font-size: 40px;
-  line-height: 1;
-  font-weight: 700;
-  letter-spacing: 0;
-}
-
-.public-section-break-logo {
-  width: 72px;
-  height: 72px;
-  justify-self: end;
-  object-fit: contain;
-  opacity: 0.82;
-  filter: drop-shadow(0 0 18px rgba(255, 255, 255, 0.08));
-}
-
-.public-journey-grid {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: var(--space-2);
-}
-
-.public-journey-grid .support-panel {
-  gap: var(--space-1);
-  padding: var(--space-3);
-  border-radius: 14px;
-  border-color: rgba(255, 255, 255, 0.08);
-  background: linear-gradient(180deg, rgba(16, 18, 22, 0.88), rgba(10, 11, 13, 0.92));
-}
-
-.public-final-cta {
-  position: relative;
-  isolation: isolate;
-  overflow: hidden;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 24px;
-  padding: 26px;
-  border-radius: var(--radius-panel);
-  border: 1px solid rgba(181, 18, 43, 0.32);
-  background:
-    repeating-linear-gradient(135deg, rgba(255, 255, 255, 0.025) 0 1px, transparent 1px 18px),
-    linear-gradient(90deg, rgba(181, 18, 43, 0.22), rgba(255, 255, 255, 0.035)),
-    linear-gradient(180deg, rgba(18, 20, 24, 0.98), rgba(13, 14, 17, 0.98));
-  box-shadow: var(--shadow-support);
-}
-
-.public-final-cta::before {
-  content: "";
-  position: absolute;
-  inset: -80% -24%;
-  z-index: 0;
-  pointer-events: none;
-  background:
-    linear-gradient(115deg, transparent 35%, rgba(255, 255, 255, 0.11) 46%, rgba(181, 18, 43, 0.28) 50%, transparent 62%),
-    radial-gradient(circle at 50% 50%, rgba(181, 18, 43, 0.22), transparent 34%);
-  opacity: 0.7;
-  transform: translateX(-54%) rotate(0.001deg);
-  animation: publicCtaSweep 8s ease-in-out infinite;
-}
-
-.public-final-cta::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-  border-radius: inherit;
-  background:
-    linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.08), transparent),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.06), transparent 42%);
-  opacity: 0.45;
-  animation: publicCtaBreath 4.8s ease-in-out infinite;
-}
-
-.public-final-cta > div:first-child {
-  position: relative;
-  z-index: 1;
-  display: grid;
-  gap: 8px;
-}
-
-.public-final-cta .hero-actions {
-  position: relative;
-  z-index: 1;
-}
-
-.public-final-cta h2 {
-  margin: 0;
-  color: var(--text-primary);
-  font-size: 32px;
-  line-height: 1;
-  letter-spacing: 0;
-}
-
-@keyframes publicCtaSweep {
-  0%,
-  22% {
-    transform: translateX(-58%) rotate(0.001deg);
-  }
-
-  58%,
-  100% {
-    transform: translateX(58%) rotate(0.001deg);
-  }
-}
-
-@keyframes publicCtaBreath {
-  0%,
-  100% {
-    opacity: 0.32;
-  }
-
-  50% {
-    opacity: 0.58;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .public-final-cta::before,
-  .public-final-cta::after {
-    animation: none;
-  }
 }
 
 .plan-dialog-backdrop {
@@ -17550,220 +16853,7 @@ html[data-app-surface="workspace"][data-theme="dark"] .desktop-nav-toggle {
   box-shadow: 0 10px 22px rgba(0, 0, 0, 0.2);
 }
 
-@media (max-width: 1024px) {
-  .public-hero-grid,
-  .public-proof-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .public-hero-panel {
-    padding: 30px;
-  }
-
-  .public-hero-copy {
-    max-width: none;
-  }
-
-  .public-hero-copy .hero-title {
-    max-width: 18ch;
-    font-size: 46px;
-    line-height: 1;
-  }
-
-  .public-hero-lead {
-    max-width: none;
-  }
-
-  .public-hero-summary {
-    max-width: 46ch;
-    font-size: var(--type-body);
-  }
-
-  .public-proof-strip {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    width: 100%;
-    max-width: none;
-    gap: 12px 18px;
-    padding-top: 18px;
-  }
-
-  .public-proof-pill {
-    min-width: 0;
-  }
-
-  .public-journey-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
 @media (max-width: 720px) {
-  /* Mobile is recomposed, not just scaled down.
-   *
-   * On desktop the hero is one card holding the copy on the left and the
-   * workspace preview on the right. Stacked on a phone that reads as the
-   * preview being embedded inside — and cut off by — the hero. So here the
-   * outer panel drops its card chrome and each child becomes its own block:
-   * the hero ends after the CTA helper line, and the preview follows as a
-   * separate full-width card. */
-  .public-hero-panel {
-    padding: 0;
-    border: 0;
-    border-radius: 0;
-    background: none;
-    box-shadow: none;
-  }
-
-  .public-hero-grid {
-    gap: var(--space-4);
-  }
-
-  /* Takes over the padding, radius, border and shadow the stripped panel was
-     providing, so the hero reads as the same card it does elsewhere. The wash
-     is handed over in brand-surface.css. */
-  .public-hero-copy {
-    gap: var(--space-2);
-    padding: 20px;
-    border-radius: 22px;
-    border: 1px solid var(--border-default);
-    box-shadow: var(--shadow-standard);
-  }
-
-  .public-hero-copy .hero-title {
-    max-width: none;
-    font-size: clamp(28px, 8vw, 36px);
-    line-height: 0.95;
-  }
-
-  .public-hero-lead {
-    max-width: none;
-    font-size: var(--type-body);
-    line-height: 1.45;
-  }
-
-  .public-hero-summary {
-    max-width: 40ch;
-    font-size: var(--type-body-sm);
-    line-height: 1.45;
-  }
-
-  .public-hero-actions {
-    gap: var(--space-2);
-  }
-
-  /* Plain sans, no tracking: the mono treatment wrapped this to two lines and
-     orphaned the last word. */
-  .public-hero-cta-note {
-    font-family: inherit;
-    font-size: var(--type-meta);
-    letter-spacing: normal;
-    text-align: center;
-  }
-
-  /* These three micro-benefits restate the benefit cards further down the
-     page, and inside the hero they make it read like a dashboard. */
-  .public-proof-strip {
-    display: none;
-  }
-
-  .public-preview-panel {
-    gap: var(--space-2);
-    padding: var(--space-3);
-  }
-
-  .public-preview-window {
-    gap: 12px;
-    padding: 12px;
-    border-radius: 18px;
-  }
-
-  .public-preview-shell {
-    grid-template-columns: 1fr;
-  }
-
-  .public-preview-sidebar {
-    display: none;
-  }
-
-  .public-workspace-row {
-    grid-template-columns: 32px minmax(0, 1fr) auto;
-    gap: 10px;
-    align-items: center;
-    padding: 12px;
-  }
-
-  .public-workspace-row .label,
-  .public-workspace-row .muted {
-    display: none;
-  }
-
-  .public-workspace-step {
-    width: 30px;
-    height: 30px;
-  }
-
-  .public-workspace-status {
-    padding: 3px 7px;
-    font-size: 9px;
-  }
-
-  .public-preview-card-title {
-    margin: 0;
-    font-size: 15px;
-    line-height: 1.15;
-  }
-
-  .public-preview-toolbar-label {
-    display: none;
-  }
-
-  .public-section-break {
-    grid-template-columns: 1fr;
-  }
-
-  .public-section-break-copy h2 {
-    font-size: 30px;
-    line-height: 1;
-  }
-
-  .public-section-break-logo {
-    width: 52px;
-    height: 52px;
-    justify-self: start;
-    opacity: 0.76;
-  }
-
-  .public-journey-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .public-final-cta {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr);
-    justify-items: stretch;
-    padding: 20px;
-    text-align: center;
-  }
-
-  .public-final-cta > * {
-    min-width: 0;
-  }
-
-  .public-final-cta .hero-actions {
-    display: grid;
-    justify-items: center;
-    justify-self: center;
-    width: min(100%, 344px);
-  }
-
-  .public-final-cta .cta,
-  .public-final-cta .secondary-button {
-    width: 100%;
-  }
-
-  .public-final-cta h2 {
-    font-size: 28px;
-  }
-
   .plan-dialog-backdrop {
     padding: 16px;
   }

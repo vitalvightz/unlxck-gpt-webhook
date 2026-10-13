@@ -128,6 +128,29 @@ Suggested subject lines:
   once as visible copy-paste text — so a client that mangles the button still
   leaves a usable link.
 
+### Signup confirmation code
+
+Signup confirms the email with a one-time code typed into the signup screen,
+so a new athlete never has to leave the page, follow a link and log in again.
+When `signUp` returns no session (email confirmation is on), `AuthForm`
+switches to a code step and calls `verifyOtp({ email, token, type: "email" })`;
+the returned session records the signup consents and opens the first-plan flow,
+exactly like a signup that returns a session straight away.
+
+- `confirm-signup.html` shows `{{ .Token }}` as the primary path and keeps the
+  `{{ .ConfirmationURL }}` button as the fallback for opening the email on
+  another device. **Until the updated template is pasted into the dashboard,
+  the email carries only the link** — the code step says so ("You can also tap
+  the link in the email"), so nobody is stranded.
+- The code input accepts 6–10 digits to match **Authentication → Providers →
+  Email → Email OTP length**.
+- "Resend code" calls `auth.resend({ type: "signup" })` with a fresh Turnstile
+  token and a 60 s cooldown, matching Supabase's per-address email limit.
+- Keep **Confirm email** on. Turning it off would let anyone register an
+  address they do not own; the owner signing in later by email link would then
+  share an account whose password the other person knows, on a product that
+  stores health data.
+
 ## Verifying a change
 
 1. Request a reset from production and confirm the link host is the production
@@ -136,7 +159,9 @@ Suggested subject lines:
 3. Open the same link a second time. It must show "This link has expired or has
    already been used" on the UNLXCK page rather than a blank form.
 4. Repeat 1–3 for the email sign-in link, which lands on `/login`, and for the
-   signup confirmation link.
+   signup confirmation link. Then sign up with a fresh address, enter the
+   emailed code on the signup screen, and confirm it lands on the first-plan
+   flow without a separate log in.
 5. While signed in, open `/reset-password` directly, and again with
    `?code=arbitrary`. Both must refuse the form and offer Settings.
 

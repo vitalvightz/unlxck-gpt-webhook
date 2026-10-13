@@ -321,24 +321,22 @@ export function AppNav() {
     <>
       {showBrandTopbar ? (
         <header className="brand-topbar" aria-label={t("entryNavigation")}>
-          <Link href="/" className="brand-topbar-mark">
+          <Link href="/" className="brand-topbar-mark" aria-label="UNLXCK">
             <img
               className="brand-topbar-logo"
               src="/brand/unlxck-one-angle-48.png"
-              alt="UNLXCK"
+              alt=""
               width={48}
               height={48}
             />
-            <span>{t("fightCamp")}</span>
+            <span className="brand-topbar-wordmark" aria-hidden="true">UNLXCK</span>
           </Link>
           <nav className="brand-topbar-actions" aria-label={t("accountAccess")}>
-            {pathname !== "/login" ? (
-              <Link href="/login" className="ghost-button">
-                {t("login")}
-              </Link>
-            ) : null}
-            <Link href="/signup" className="cta">
-              {t("createAccount")}
+            <LanguageSwitcher placement="header" />
+            {/* The page's one primary action is "Get started" in the hero and
+                closing CTA; returning athletes get a quiet Log in link here. */}
+            <Link href="/login" className="brand-topbar-login">
+              {t("login")}
             </Link>
           </nav>
         </header>

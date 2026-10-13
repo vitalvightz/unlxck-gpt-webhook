@@ -1,41 +1,410 @@
 /* Public landing components only.
  *
- * Keep the existing colour washes, depth gradients and CTA sheen while
- * removing the repeated 135deg stripe layers that rendered as diagonal lines.
- * These classes are not used by the signed-in workspace or auth forms, so the
- * global body::before grid, borders and workspace dividers remain untouched.
- * The selectors do not depend on the client-set app-surface attribute, which
- * prevents the original stripe layers from flashing during hydration on `/`.
+ * Four sections — hero, product preview, training flexibility, CTA — laid out
+ * mobile first in one column, with the hero and the preview side by side from
+ * 1024px. These classes are not used by the signed-in workspace or auth forms,
+ * so the global body::before grid, borders and workspace dividers remain
+ * untouched. The selectors do not depend on the client-set app-surface
+ * attribute, so nothing restyles during hydration on `/`.
  */
-/* The hero wash is defined once and applied to whichever element carries the
- * hero's card chrome: the outer panel on desktop, and the copy block on mobile
- * (where the panel is stripped so the workspace preview reads as its own card
- * — see the max-width: 720px landing rules in globals.css). */
 :root {
   --public-hero-wash:
-    linear-gradient(135deg, rgba(181, 18, 43, 0.22), transparent 24%),
-    linear-gradient(315deg, rgba(181, 18, 43, 0.12), transparent 26%),
+    linear-gradient(135deg, rgba(181, 18, 43, 0.22), transparent 32%),
+    linear-gradient(315deg, rgba(181, 18, 43, 0.1), transparent 30%),
     linear-gradient(180deg, rgba(17, 19, 23, 0.98), rgba(9, 10, 12, 0.98));
+  --public-card-bg: linear-gradient(180deg, rgba(18, 20, 24, 0.94), rgba(10, 11, 13, 0.96));
+  --public-card-border: rgba(255, 255, 255, 0.08);
 }
 
-.public-hero-panel {
-  background-image: var(--public-hero-wash);
+.public-landing {
+  display: grid;
+  gap: var(--space-3);
 }
 
-@media (max-width: 720px) {
-  .public-hero-panel {
-    background-image: none;
-  }
-
-  .public-hero-copy {
-    background-image: var(--public-hero-wash);
-  }
+.public-hero,
+.public-preview,
+.public-flex,
+.public-final-cta {
+  display: grid;
+  align-content: start;
+  min-width: 0;
+  padding: 20px;
+  border: 1px solid var(--public-card-border);
+  border-radius: 20px;
+  background: var(--public-card-bg);
 }
+
+/* Hero */
+
+.public-hero {
+  gap: var(--space-2);
+  background: var(--public-hero-wash);
+}
+
+.public-hero-motto {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: var(--type-label-sm);
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.public-hero-motto span:first-child {
+  color: var(--brand-red);
+  letter-spacing: 0.22em;
+}
+
+.public-hero-motto span:last-child {
+  color: var(--text-muted);
+  letter-spacing: 0.04em;
+}
+
+.public-hero-motto::after {
+  content: "";
+  width: 28px;
+  height: 1px;
+  background: rgba(181, 18, 43, 0.68);
+}
+
+.public-hero .public-hero-title {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  font-size: clamp(32px, 9.5vw, 56px);
+  line-height: 0.96;
+  letter-spacing: -0.035em;
+  text-wrap: balance;
+}
+
+.public-hero-lead {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: var(--type-body-lg);
+  font-weight: 500;
+  line-height: 1.45;
+}
+
+.public-hero-summary {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: var(--type-body);
+  line-height: 1.5;
+}
+
+.public-hero-cta {
+  width: 100%;
+  min-height: 48px;
+  margin-top: var(--space-1);
+}
+
+.public-cta-note {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: var(--type-meta);
+  line-height: 1.4;
+  text-align: center;
+}
+
+/* Section headings shared by preview and flexibility */
+
+.public-section-head {
+  display: grid;
+  gap: 6px;
+}
+
+.public-section-head h2,
+.public-final-cta h2 {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: clamp(22px, 6vw, 28px);
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+
+/* Product preview: one realistic Today card */
+
+.public-preview {
+  gap: var(--space-3);
+}
+
+.public-today-card {
+  display: grid;
+  gap: var(--space-2);
+  padding: 14px;
+  border: 1px solid rgba(181, 18, 43, 0.3);
+  border-radius: 14px;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(181, 18, 43, 0.14), transparent 46%),
+    linear-gradient(180deg, rgba(26, 19, 22, 0.92), rgba(14, 12, 14, 0.96));
+}
+
+.public-today-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.public-today-eyebrow {
+  margin: 0;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: var(--type-label-xs);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.public-today-example {
+  flex-shrink: 0;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: var(--type-label-xs);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.public-today-title {
+  margin: -4px 0 0;
+  color: var(--text-primary);
+  font-size: var(--type-title-sm);
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.public-today-meta {
+  margin: -6px 0 0;
+  color: var(--text-secondary);
+  font-size: var(--type-meta);
+  line-height: 1.4;
+}
+
+/* Readiness decision on one line: tier badge, then the reason as plain text. */
+.public-today-decision-row {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-1);
+  margin: 0;
+  padding-top: var(--space-2);
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.public-today-decision {
+  flex-shrink: 0;
+  color: #f4c48a;
+  font-family: var(--font-mono);
+  font-size: var(--type-label-xs);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.public-today-reason {
+  min-width: 0;
+  color: var(--text-secondary);
+  font-size: var(--type-meta);
+  line-height: 1.4;
+}
+
+/* Session blocks: one line each — change glyph, name, dose. */
+.public-today-blocks {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.public-today-block-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.public-today-block-glyph {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: var(--type-meta);
+  font-weight: 700;
+}
+
+.public-today-block-row[data-change="down"] .public-today-block-glyph {
+  background: rgba(240, 170, 90, 0.12);
+  color: #f4c48a;
+}
+
+.public-today-block-row[data-change="up"] .public-today-block-glyph {
+  background: rgba(39, 174, 96, 0.12);
+  color: #7de2a8;
+}
+
+.public-today-block-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text-primary);
+  font-size: var(--type-body);
+  font-weight: 500;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.public-today-block-dose {
+  flex-shrink: 0;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: var(--type-meta);
+  white-space: nowrap;
+}
+
+/* Training flexibility: a compact list, not a wall of cards */
+
+.public-flex {
+  gap: var(--space-3);
+}
+
+.public-flex-list {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.public-flex-item {
+  display: grid;
+  align-content: start;
+  gap: 4px;
+  padding-left: var(--space-2);
+  border-left: 2px solid var(--brand-red);
+}
+
+.public-flex-item h3 {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: var(--type-body-lg);
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.public-flex-item p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: var(--type-body-sm);
+  line-height: 1.5;
+}
+
+/* Conversion CTA */
 
 .public-final-cta {
-  background-image:
-    linear-gradient(90deg, rgba(181, 18, 43, 0.22), rgba(255, 255, 255, 0.035)),
+  gap: var(--space-2);
+  justify-items: center;
+  border-color: rgba(181, 18, 43, 0.32);
+  background:
+    linear-gradient(90deg, rgba(181, 18, 43, 0.2), rgba(255, 255, 255, 0.03)),
     linear-gradient(180deg, rgba(18, 20, 24, 0.98), rgba(13, 14, 17, 0.98));
+  text-align: center;
+}
+
+.public-final-cta .public-hero-cta {
+  max-width: 360px;
+  margin-top: 0;
+}
+
+/* Tablet: roomier padding, flexibility list in two columns */
+@media (min-width: 640px) {
+  .public-landing {
+    gap: var(--space-4);
+  }
+
+  .public-hero,
+  .public-preview,
+  .public-flex,
+  .public-final-cta {
+    padding: 28px;
+    border-radius: var(--radius-panel);
+  }
+
+  .public-today-card {
+    padding: var(--space-3);
+  }
+
+  .public-hero-cta {
+    width: auto;
+    min-width: 220px;
+    justify-self: start;
+  }
+
+  .public-hero .public-cta-note {
+    text-align: left;
+  }
+
+  .public-final-cta .public-hero-cta {
+    justify-self: center;
+  }
+
+  .public-flex-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-4) var(--space-5);
+  }
+}
+
+/* Desktop: hero and preview side by side; flexibility and CTA span both */
+@media (min-width: 1024px) {
+  .public-landing {
+    grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+  }
+
+  .public-hero {
+    align-content: center;
+    gap: var(--space-3);
+    padding: 40px;
+  }
+
+  .public-hero-lead {
+    font-size: 18px;
+  }
+
+  .public-flex,
+  .public-final-cta {
+    grid-column: 1 / -1;
+  }
+
+  .public-flex-list {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .public-final-cta {
+    grid-template-columns: minmax(0, 1fr) auto;
+    justify-items: start;
+    align-items: center;
+    column-gap: var(--space-5);
+    text-align: left;
+  }
+
+  .public-final-cta h2 {
+    grid-row: 1 / span 2;
+  }
+
+  .public-final-cta .public-hero-cta {
+    justify-self: end;
+  }
+
+  .public-final-cta .public-cta-note {
+    justify-self: end;
+  }
 }
 
 /* `/` is session-dependent, but starts on the brand surface server-side. Hide

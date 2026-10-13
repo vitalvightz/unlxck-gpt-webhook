@@ -98,11 +98,22 @@ html[data-app-surface="brand"] .app-safety-footer {
   padding-left: 96px;
 }
 
+.app-shell:has(> .brand-topbar) .app-safety-footer {
+  padding-right: var(--space-4);
+  padding-left: var(--space-4);
+}
+
 @media (max-width: 720px) {
   html[data-app-surface="brand"] .app-safety-footer {
     padding-right: var(--space-4);
     padding-bottom: 72px;
     padding-left: var(--space-4);
+  }
+
+  /* The landing carries its language switcher in the top bar, so the room
+     reserved for the floating chip is not needed there. */
+  .app-shell:has(> .brand-topbar) .app-safety-footer {
+    padding-bottom: calc(var(--space-4) + var(--safe-area-bottom));
   }
 
   /* 6. Auth card: the sticky action tray is a square, full-bleed gradient, so

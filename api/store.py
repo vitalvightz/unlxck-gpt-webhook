@@ -289,6 +289,23 @@ def _signup_date_of_birth(user: AuthenticatedUser) -> str | None:
     return parsed.isoformat()
 
 
+def _signup_full_name(user: AuthenticatedUser) -> str:
+    """The name to seed a new profile with, or ``""`` when signup gave none.
+
+    ``AuthenticatedUser.full_name`` falls back to the email address when the
+    auth metadata carries no name (see ``api/auth.py``). That fallback is fine
+    for display, but seeding a profile with it prefills the intake's name field
+    with the athlete's email. Signup no longer asks for a name — intake does —
+    so the email fallback seeds an empty name instead. Like the date of birth,
+    this is only ever a seed: :meth:`AppStore._build_profile_payload` prefers a
+    stored value.
+    """
+    name = (user.full_name or "").strip()
+    if not name or name.lower() == (user.email or "").strip().lower():
+        return ""
+    return name
+
+
 def _raise_client_request_payload_mismatch_if_known(job: dict[str, Any], payload_hash: str) -> None:
     existing_hash = job.get("payload_hash")
     if existing_hash and existing_hash != payload_hash:
@@ -1317,7 +1334,7 @@ class SupabaseAppStore(CommunityStoreMixin, PrivateMediaStoreMixin, CompactGener
             "email": user.email,
             "username": existing.get("username"),
             "username_change_history": existing.get("username_change_history") or [],
-            "full_name": existing.get("full_name") or user.full_name,
+            "full_name": existing.get("full_name") or _signup_full_name(user),
             "role": existing.get("role") or self._default_role_for(user),
             # New accounts get in straight away: there is no admin approval
             # queue between signing up and building a first plan.

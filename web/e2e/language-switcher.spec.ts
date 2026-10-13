@@ -14,9 +14,9 @@ async function chooseLanguage(page: Page, label: string) {
 }
 
 for (const locale of [
-  { code: "es", label: "Español", heading: "Tu campamento. Totalmente enfocado." },
-  { code: "fr", label: "Français", heading: "Ton camp de combat. Connecté." },
-  { code: "it", label: "Italiano", heading: "Il tuo camp. Bloccato dentro." },
+  { code: "es", label: "Español", heading: "Tu entrenamiento. Totalmente enfocado." },
+  { code: "fr", label: "Français", heading: "Ton entraînement. Connecté." },
+  { code: "it", label: "Italiano", heading: "Il tuo allenamento. Bloccato dentro." },
 ]) {
   test(`switching to ${locale.label} persists through a reload`, async ({ page, baseURL, context }) => {
     await isolateFromNetwork(page, baseURL ?? BASE_URL);
@@ -43,5 +43,5 @@ test("the mobile language sheet switches to Brazilian Portuguese", async ({ page
   await chooseLanguage(page, "Português (Brasil)");
 
   await expect(page.locator("html")).toHaveAttribute("lang", "pt-BR");
-  await expect(page.getByRole("heading", { level: 1 })).toHaveAttribute("aria-label", "Seu camp. Foco total.");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveAttribute("aria-label", "Seu treino. Foco total.");
 });

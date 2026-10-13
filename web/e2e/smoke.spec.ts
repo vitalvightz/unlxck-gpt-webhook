@@ -46,6 +46,12 @@ test("public entry stays on the brand shell while the anonymous session resolves
   await expect(page.getByLabel("UNLXCK entry navigation")).toBeVisible();
   await expect(page.getByLabel("Account access").getByRole("link", { name: /log in/i })).toBeVisible();
   await expect(page.locator("html")).toHaveAttribute("data-app-surface", "brand");
+
+  // Log in lives only in the top bar, and the language selector sits beside it
+  // instead of floating over the page.
+  await expect(page.getByRole("link", { name: /log in/i })).toHaveCount(1);
+  await expect(page.getByLabel("Account access").locator(".unlxck-language-switcher-trigger")).toBeVisible();
+  await expect(page.locator(".unlxck-language-switcher-trigger")).toHaveCount(1);
 });
 
 test("protected route redirects unauthenticated users to login", async ({ page, baseURL }) => {
