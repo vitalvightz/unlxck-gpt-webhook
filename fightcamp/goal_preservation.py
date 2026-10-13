@@ -824,6 +824,9 @@ def _requirements(entry: dict, brief: dict) -> list[dict]:
     if not isinstance(days, int):
         return [{"min_d_day": None, "max_d_day": None}]
     cutoff = 14 if entry["state"] == "build" else (8 if entry["goal"] == "strength" else 2)
+    # An open development block is planned clear of any fight: its calendar
+    # starts at the horizon, so nothing nearer than that is a plannable window.
+    cutoff = max(cutoff, int(_athlete(brief).get("open_block_horizon_days") or 0))
     width = 7 if entry["state"] == "build" else 14
     span = max(1, days - cutoff + 1)
     # Windows are anchored at the cutoff and counted outward, so any remainder

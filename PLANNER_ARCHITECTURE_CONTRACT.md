@@ -307,6 +307,25 @@ finished calendar is still governor-verified.
 
 Changes must be reviewed against this whole chain, not only `stage2_role_map.py`.
 
+## 4.1 Open (undated) plans
+
+An open plan has no fight and no periodisation, but its sessions are decided by
+the same owners as a dated camp. `stage2_payload._attach_open_development_block`
+builds one four-week development block through the normal chain above (role
+budget and placement through shared legality, composition, the morph, the
+governor, dose resolution, realised-load revalidation, goal preservation and
+empty-session suppression). Its calendar is placed `OPEN_BLOCK_HORIZON_DAYS`
+clear of any fight (`stage2_role_map` honours `open_block_horizon_days`), so no
+countdown band, late path, fight-week rule or fight-day override can reach it.
+It draws on Stage 1's general and specific selections together, ordered by
+their shared Stage 1 score; taper work is countdown-only and excluded.
+
+Only the block's weekday projection reaches the open payload, as
+`open_plan_spec.weekly_session_plan` (closed membership with authoritative
+doses) and `open_plan_spec.goal_coverage`. No D-day, phase or countdown concept
+does. The finalizer renders Session Cards from that projection and may not add,
+replace or substitute an exercise in it.
+
 ## 5. Current late-fight execution ownership
 
 D-13 inward is treated as a distinct planning path.
