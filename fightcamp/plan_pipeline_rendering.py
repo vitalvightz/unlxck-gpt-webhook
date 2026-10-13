@@ -667,7 +667,7 @@ def build_stage2_outputs(
         rounds_format=context.plan_input.rounds_format,
         camp_len=context.camp_len,
         short_notice=context.short_notice,
-        restrictions=context.plan_input.restrictions,
+        restrictions=context.training_context.injury_restrictions,
         phase_weeks=context.phase_weeks,
         strength_blocks=blocks.strength_blocks,
         conditioning_blocks=blocks.conditioning_blocks,

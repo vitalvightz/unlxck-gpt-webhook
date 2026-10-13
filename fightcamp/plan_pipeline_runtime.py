@@ -271,9 +271,30 @@ def build_runtime_context(
             "sensitive_area": guided_entry.sensitive_area,
         }
 
+    parsed_injuries = [dict(entry) for entry in plan_input.parsed_injuries]
+    injury_restrictions = [dict(entry) for entry in plan_input.restrictions]
+    triage_mode = str((triage_summary or {}).get("mode") or "").strip().lower()
+    neutralize_non_limiting_injuries = is_approved_triage_resume or triage_mode == "full_plan"
+    if neutralize_non_limiting_injuries:
+        # Triage runs against the untouched intake first. Once it has either
+        # cleared normal planning or an admin has approved a resumable hold, a
+        # non-limiting injury cannot influence selection, rehab, copy, or Stage
+        # 2 through parsed/raw intake paths. Medical holds and every other
+        # non-full-plan triage outcome remain unchanged.
+        parsed_injuries = [
+            entry
+            for entry in parsed_injuries
+            if entry.get("training_impact") != "not_limiting"
+        ]
+        injury_restrictions = [
+            entry
+            for entry in injury_restrictions
+            if entry.get("training_impact") != "not_limiting"
+        ]
+
     parsed_injury_phrases = [
         entry.get("original_phrase")
-        for entry in plan_input.parsed_injuries
+        for entry in parsed_injuries
         if entry.get("original_phrase")
     ]
     injuries_display = "; ".join(parsed_injury_phrases) if parsed_injury_phrases else "None"
@@ -346,7 +367,20 @@ def build_runtime_context(
 
     injuries_only_text = "; ".join(parsed_injury_phrases)
     raw_injury_list = [phrase.strip().lower() for phrase in parsed_injury_phrases if phrase.strip()]
-    guided_injury = None if is_approved_triage_resume else plan_input.guided_injury
+    source_guided_injuries = list(plan_input.guided_injuries or [])
+    if not source_guided_injuries and plan_input.guided_injury is not None:
+        source_guided_injuries = [plan_input.guided_injury]
+    effective_guided_injuries = source_guided_injuries
+    if neutralize_non_limiting_injuries:
+        effective_guided_injuries = [
+            item
+            for item in source_guided_injuries
+            if "[training_impact:not_limiting]" not in item.notes.lower()
+        ]
+
+    guided_injury = None if is_approved_triage_resume else (
+        effective_guided_injuries[0] if effective_guided_injuries else None
+    )
     guided_injury_dict = (
         _serialize_guided_injury(guided_injury)
         if guided_injury is not None
@@ -355,7 +389,7 @@ def build_runtime_context(
     guided_injuries_list = (
         []
         if is_approved_triage_resume
-        else [_serialize_guided_injury(item) for item in (plan_input.guided_injuries or [])]
+        else [_serialize_guided_injury(item) for item in effective_guided_injuries]
     )
 
     runtime_triage_summary = dict(triage_summary or {})
@@ -408,11 +442,11 @@ def build_runtime_context(
         technical_skill_days=getattr(plan_input, "technical_skill_days", []),
         athlete_timezone=plan_input.athlete_timezone,
         next_fight_date=plan_input.next_fight_date or "",
-        injuries_raw_text=plan_input.injuries,
-        parsed_injuries=[dict(entry) for entry in plan_input.parsed_injuries],
+        injuries_raw_text=injuries_only_text,
+        parsed_injuries=parsed_injuries,
         guided_injury=guided_injury_dict,
         guided_injuries=guided_injuries_list,
-        injury_restrictions=[dict(entry) for entry in plan_input.restrictions],
+        injury_restrictions=injury_restrictions,
         triage_summary=runtime_triage_summary,
     )
 
