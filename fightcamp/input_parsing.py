@@ -571,6 +571,7 @@ def _extract_guided_injuries(data: dict) -> list[GuidedInjury]:
 def _parse_guided_injury(guided_injury: GuidedInjury) -> tuple[list[dict[str, str | None]], list[ParsedRestriction]]:
     injuries: list[dict[str, str | None]] = []
     restrictions: list[ParsedRestriction] = []
+    is_not_limiting = "[training_impact:not_limiting]" in guided_injury.notes.lower()
 
     if guided_injury.area:
         injury_entry = parse_injury_entry(guided_injury.area)
@@ -616,6 +617,12 @@ def _parse_guided_injury(guided_injury: GuidedInjury) -> tuple[list[dict[str, st
 
         if guided_injury.notes:
             injury_entry["notes"] = guided_injury.notes
+            if is_not_limiting:
+                # Keep the athlete's explicit onboarding impact choice attached
+                # to the parsed record.  The approved-resume runtime can then
+                # remove only this non-limiting injury from planning without
+                # changing the preserved intake used by Today.
+                injury_entry["training_impact"] = "not_limiting"
             if _GUIDED_STRUCTURAL_NOTE_PATTERN.search(guided_injury.notes):
                 injury_entry["original_phrase"] = f"{guided_injury.area}. Notes: {guided_injury.notes}"
         _apply_rehab_generation_context(injury_entry, guided_injury.rehab_generation_context)
@@ -644,6 +651,8 @@ def _parse_guided_injury(guided_injury: GuidedInjury) -> tuple[list[dict[str, st
         if restriction is not None:
             if restriction.get("region") is None and injuries:
                 restriction["region"] = injuries[0].get("canonical_location")
+            if is_not_limiting:
+                restriction["training_impact"] = "not_limiting"
             restrictions.append(restriction)
 
     return injuries, restrictions

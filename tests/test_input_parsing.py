@@ -7,7 +7,7 @@ import pytest
 from fightcamp import input_parsing
 from fightcamp.fight_date_utils import parse_fight_date
 from fightcamp.injury_formatting import format_injury_summary
-from fightcamp.input_parsing import PlanInput
+from fightcamp.input_parsing import GuidedInjury, PlanInput
 from fightcamp.plan_pipeline_runtime import build_runtime_context
 
 
@@ -821,6 +821,110 @@ def test_approved_resume_runtime_context_keeps_structured_injury_truth():
     assert context.training_context.triage_summary["triage_resume_approved"] is True
     assert context.training_context.triage_summary["red_flags"] == ["instability"]
     assert context.training_context.triage_summary["sparring_risk_band"] == "red"
+
+
+def test_approved_resume_excludes_non_limiting_injury_from_generation_context():
+    payload = _payload(
+        [
+            {"label": "Full name", "value": "Test Athlete"},
+            {"label": "Fighting Style (Technical)", "value": "Boxing"},
+            {"label": "Any injuries or areas you need to work around?", "value": "hip flexor"},
+        ]
+    )
+    payload["guided_injury"] = {
+        "area": "hip flexor",
+        "severity": "low",
+        "trend": "stable",
+        "avoid": "deep hip flexion",
+        "notes": "mild tightness [training_impact:not_limiting]",
+    }
+
+    parsed = PlanInput.from_payload(payload)
+    context = build_runtime_context(
+        plan_input=parsed,
+        random_seed=None,
+        logger=logging.getLogger(__name__),
+        is_approved_triage_resume=True,
+    )
+
+    assert parsed.parsed_injuries[0]["training_impact"] == "not_limiting"
+    assert context.parsed_injury_phrases == []
+    assert context.injuries_display == "None"
+    assert context.injuries_only_text == ""
+    assert context.training_context.injuries == []
+    assert context.training_context.injuries_raw_text == ""
+    assert context.training_context.parsed_injuries == []
+    assert context.training_context.injury_restrictions == []
+    # The intake itself is unchanged for persistence/Today, but generation only
+    # reads the neutralized runtime context.
+    assert parsed.parsed_injuries[0]["original_phrase"] == "hip flexor"
+
+
+def test_guided_non_limiting_avoidance_without_an_area_does_not_crash():
+    injuries, restrictions = input_parsing._parse_guided_injury(
+        GuidedInjury(
+            avoid="heavy overhead pressing",
+            notes="minor discomfort [training_impact:not_limiting]",
+        )
+    )
+
+    assert injuries == []
+    assert restrictions
+    assert restrictions[0]["training_impact"] == "not_limiting"
+
+
+def test_full_plan_triage_excludes_non_limiting_injury_from_generation_context():
+    payload = _payload(
+        [
+            {"label": "Full name", "value": "Test Athlete"},
+            {"label": "Fighting Style (Technical)", "value": "Boxing"},
+            {"label": "Any injuries or areas you need to work around?", "value": "hip flexor"},
+        ]
+    )
+    payload["guided_injury"] = {
+        "area": "hip flexor",
+        "severity": "low",
+        "trend": "stable",
+        "avoid": "deep hip flexion",
+        "notes": "mild tightness [training_impact:not_limiting]",
+    }
+
+    context = build_runtime_context(
+        plan_input=PlanInput.from_payload(payload),
+        random_seed=None,
+        logger=logging.getLogger(__name__),
+        triage_summary={"mode": "full_plan", "should_block_stage2": False},
+    )
+
+    assert context.training_context.injuries == []
+    assert context.training_context.parsed_injuries == []
+    assert context.training_context.injury_restrictions == []
+    assert context.training_context.guided_injury is None
+    assert context.training_context.guided_injuries == []
+
+
+def test_full_plan_triage_keeps_limiting_guided_cards():
+    payload = _payload(
+        [
+            {"label": "Full name", "value": "Test Athlete"},
+            {"label": "Fighting Style (Technical)", "value": "Boxing"},
+            {"label": "Any injuries or areas you need to work around?", "value": "hip flexor, knee"},
+        ]
+    )
+    payload["guided_injuries"] = [
+        {"area": "hip flexor", "notes": "mild tightness [training_impact:not_limiting]"},
+        {"area": "knee", "notes": "pain when squatting [training_impact:limiting]"},
+    ]
+
+    context = build_runtime_context(
+        plan_input=PlanInput.from_payload(payload),
+        random_seed=None,
+        logger=logging.getLogger(__name__),
+        triage_summary={"mode": "full_plan", "should_block_stage2": False},
+    )
+
+    assert context.training_context.guided_injury["area"] == "knee"
+    assert [item["area"] for item in context.training_context.guided_injuries] == ["knee"]
 
 
 def test_guided_injury_structural_notes_are_retained_in_original_phrase():
