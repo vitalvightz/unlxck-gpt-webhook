@@ -14799,6 +14799,12 @@ html[data-theme="light"] .sidebar-footer {
   border-color: rgba(68, 69, 72, 0.08);
 }
 
+/* The shared brand asset is flat white. In the light workspace sidebar, invert
+   only the mark so it retains the same contrast as the previous red wordmark. */
+html[data-theme="light"] .sidebar-brand-logo {
+  filter: invert(1);
+}
+
 html[data-theme="light"] .sidebar-admin-divider {
   background: linear-gradient(90deg, rgba(189, 16, 32, 0.18), rgba(68, 69, 72, 0.08), transparent);
 }

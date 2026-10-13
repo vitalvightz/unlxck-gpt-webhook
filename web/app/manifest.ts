@@ -3,8 +3,8 @@ import type { MetadataRoute } from "next";
 const APP_DESCRIPTION =
   "Athlete-first fight camp planning, daily training intelligence, and coach review.";
 
-const APP_ICON_192 = "/brand/unlxck-one-angle-192.png";
-const APP_ICON_512 = "/brand/unlxck-one-angle-512.png";
+const APP_ICON_192 = "/icons/icon-192x192.png";
+const APP_ICON_512 = "/icons/icon-512x512.png";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
