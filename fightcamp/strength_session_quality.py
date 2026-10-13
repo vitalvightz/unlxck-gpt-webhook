@@ -228,12 +228,30 @@ def classify_strength_item(item: dict[str, Any]) -> dict[str, Any]:
     governed_support = item.get("support_only") is True or item.get("meaningful_stress") is False
     if governed_support and quality_class in ANCHOR_CAPABLE_CLASSES:
         quality_class = "support_isometric" if is_isometric else "support_accessory"
+    # The same authority works in the other direction. A heavy sled push, yoke
+    # walk or sledgehammer can land in a support class only because a "core" or
+    # "carry" token matched; its authored meaningful stress says the session pays
+    # for it, so it is never low-cost core/balance support.
+    governed_meaningful_stress = item.get("meaningful_stress") is True or item.get("support_only") is False
 
     core_balance_support = (
         quality_class in SUPPORT_ONLY_CLASSES
         and quality_class != "rehab_support"
         and core_balance_signal
+        and not governed_meaningful_stress
     )
+
+    # Region hints come from words such as "pull" and "press", so a sled pull or
+    # a rack-pull isometric reads as upper-body pulling. When the authored body
+    # category contradicts the hint, the loaded family follows the authored
+    # region, and a core-category drill holds no limb strength family.
+    authored_category = str(item.get("category") or "").strip().lower()
+    if authored_category == "lower_body" and upper_body_push_pull and not lower_body_loaded:
+        upper_body_push_pull, lower_body_loaded = False, True
+    elif authored_category == "upper_body" and lower_body_loaded and not upper_body_push_pull:
+        upper_body_push_pull, lower_body_loaded = True, False
+    elif authored_category == "core":
+        upper_body_push_pull = lower_body_loaded = False
 
     base_categories: set[str] = set()
     if lower_body_loaded:
@@ -269,6 +287,72 @@ def classify_strength_item(item: dict[str, Any]) -> dict[str, Any]:
         "core_balance_support": core_balance_support,
         "base_categories": sorted(base_categories),
     }
+
+
+# --- Adaptation relevance -----------------------------------------------------
+#
+# Three facts are kept apart:
+#   * anatomical involvement - which body parts an exercise uses (``upper_body``,
+#     ``core``, ``posterior_chain`` tags);
+#   * adaptation relevance - which quality the exercise's training method can
+#     develop, answered here;
+#   * delivered adaptation - whether the scheduled, resolved dose actually does,
+#     owned by ``goal_preservation``.
+# Relevance is read from programming evidence the bank already authors: method,
+# the classified quality and loaded pattern, authored body category and trunk
+# function tags. A body-part tag never establishes an adaptation on its own, so
+# a sled push tagged ``core`` is not trunk training and swimming tagged
+# ``upper_body`` is not strength training.
+STRENGTH_DEVELOPMENT_METHODS = frozenset({"strength", "contrast"})
+POWER_DEVELOPMENT_METHODS = frozenset({"power", "plyometric", "contrast"})
+_POWER_QUALITY_TAGS = frozenset(
+    {"explosive", "rate_of_force", "plyometric", "ballistic", "elastic", "triple_extension", "horizontal_power"}
+)
+_SPEED_QUALITY_TAGS = frozenset({"speed", "reactive", "reaction", "acceleration", "max_velocity"})
+_TRUNK_FUNCTION_TAGS = frozenset(
+    {"anti_rotation", "anti_extension", "anti_lateral_flexion", "trunk_strength", "core_stability", "core_strength"}
+)
+_LIMB_CATEGORIES = frozenset({"upper_body", "lower_body"})
+
+
+def strength_adaptation_relevance(item: dict[str, Any]) -> frozenset[str]:
+    """Adaptations this strength-bank item's training method can develop.
+
+    ``strength``: a strength/contrast method on a loaded or force-isometric
+    pattern. Sled drags and carries (``strength_conditioning``), heavy implements
+    classified as support, and power-method sled sprints do not qualify.
+    ``power``: a classified power pattern with a power method or explosive
+    quality tags; ``speed`` additionally needs a speed-quality tag.
+    ``trunk_strength``: trunk-targeted work - an authored core category or
+    movement, or an anti-rotation/extension/lateral-flexion function.
+    Relevance is not delivery: the resolved dose still decides that.
+    """
+    profile = classify_strength_item(item)
+    tags = _collect_tags(item)
+    method = str(item.get("method") or "").strip().lower()
+    quality = profile["quality_class"]
+    loaded_categories = set(profile["base_categories"]) & {"lower_body_loaded", "upper_body_push_pull"}
+    adaptations: set[str] = set()
+    if method in STRENGTH_DEVELOPMENT_METHODS and (
+        quality in {"anchor_loaded", "anchor_force_isometric"}
+        or (quality == "anchor_power" and loaded_categories)
+    ):
+        adaptations.add("strength")
+    if quality == "anchor_power" and (method in POWER_DEVELOPMENT_METHODS or tags & _POWER_QUALITY_TAGS):
+        adaptations.add("power")
+        if tags & _SPEED_QUALITY_TAGS:
+            adaptations.add("speed")
+    authored_category = str(item.get("category") or "").strip().lower()
+    # An anti-rotation tag on a single-arm press records the trunk's involvement
+    # in a limb exercise. Outside an authored core category, trunk targeting
+    # needs a trunk-function tag on an item that is not a limb exercise. The
+    # ``movement`` field is not read: Stage 1 overwrites it with a detected
+    # pattern, so an adductor hold tagged "core" would arrive as movement "core".
+    if authored_category == "core" or (
+        authored_category not in _LIMB_CATEGORIES and tags & _TRUNK_FUNCTION_TAGS
+    ):
+        adaptations.add("trunk_strength")
+    return frozenset(adaptations)
 
 
 def infer_strength_sessions(exercises: list[dict[str, Any]], num_sessions: int) -> list[dict[str, Any]]:

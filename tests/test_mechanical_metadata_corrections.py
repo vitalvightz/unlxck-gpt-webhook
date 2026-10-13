@@ -93,7 +93,9 @@ def test_real_generator_phase_fatigue_capacity_and_fight_windows(monkeypatch, ch
             reasons['reason_codes'].remove('late_strength_boost_crisp_ballistic')
             reasons['final_score'] -= 0.25
             reasons['late_window_adjustment'] -= 0.25
-            reasons['base_categories'] = ['upper_body_push_pull']
+            # Both rows are authored lower_body: once the ballistic tag goes,
+            # the region is the authored one, not the 'pull' in the name.
+            reasons['base_categories'] = ['lower_body_loaded']
         _same_reasons(b['reasons'], reasons)
     if new['name'] in before[1] & after[1]:
         # Text contains the actual prescribed work, not a score-only helper.

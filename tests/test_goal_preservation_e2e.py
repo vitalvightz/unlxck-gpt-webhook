@@ -130,7 +130,7 @@ def test_a_gas_tank_weakness_enters_the_obligation_set_through_the_full_planner(
     assert not any(e["goal"] == "conditioning" for e in validate_goal_preservation(brief))
 
 
-@pytest.mark.parametrize("weak_area", ["balance", "coordination", "trunk_strength"])
+@pytest.mark.parametrize("weak_area", ["balance", "coordination"])
 def test_a_delegated_weakness_is_recorded_rather_than_silently_dropped(monkeypatch, weak_area):
     _, brief, _ = _run(monkeypatch, weaknesses=[weak_area], primary_weak_area=weak_area)
     disposition = brief["primary_weakness_disposition"]
@@ -138,3 +138,20 @@ def test_a_delegated_weakness_is_recorded_rather_than_silently_dropped(monkeypat
     assert disposition["subsystem"]
     # A delegated weak area adds no obligation to this contract, by design.
     assert not any(e.get("priority") == "primary_weakness" for e in brief["goal_preservation"])
+
+
+def test_a_delegated_trunk_weakness_is_checked_against_delivery(monkeypatch):
+    """Delegation names who delivers trunk work; it is not proof it was delivered."""
+    _, brief, _ = _run(monkeypatch, weaknesses=["trunk_strength"], primary_weak_area="trunk_strength")
+    disposition = brief["primary_weakness_disposition"]
+    assert (disposition["resolution"], disposition["subsystem"]) == ("delegated", "session_composition.trunk_support")
+    assert (disposition["target"], disposition["required_intent"]) == ("trunk_strength", "trunk_training")
+    entry = next(e for e in brief["goal_preservation"] if e["goal"] == "trunk_strength")
+    assert entry["priority"] == "primary_weakness"
+    assert entry["required_intent"] == "trunk_training"
+    if entry["satisfied"]:
+        assert entry["evidence"] and all("trunk_training" in e["intents"] for e in entry["evidence"])
+    elif entry["state"] == "defer":
+        assert entry["constraints"]
+    else:
+        assert any(e["goal"] == "trunk_strength" for e in validate_goal_preservation(brief))

@@ -42,6 +42,7 @@ INTENTS = {
     "mobility": "mobility_dose",
     "recovery": "recovery_support",
     "weight_cut": "weight_cut_support",
+    "trunk_strength": "trunk_training",
 }
 _ALIASES = {"explosive_power": "power", "conditioning_endurance": "conditioning",
             "endurance": "conditioning", "speed_reaction": "speed"}
@@ -107,6 +108,17 @@ _WEAKNESS_DELEGATED_SUBSYSTEMS = {
     "core_/_trunk_strength": "session_composition.trunk_support",
     "core_trunk_strength": "session_composition.trunk_support",
 }
+# Delegation names WHO delivers, never that delivery happened. Trunk work now has
+# an evidence path (trunk-targeted members at their resolved dose, see
+# ``collect_goal_evidence``), so a delegated trunk weakness carries an obligation
+# that is checked against the finished schedule like any other. Balance and
+# coordination stay delegated without one: support inserts are not session
+# capacity and the ledger still has no path to observe them.
+_DELEGATED_DELIVERY_OBLIGATIONS = {
+    "trunk_strength": "trunk_strength",
+    "core_/_trunk_strength": "trunk_strength",
+    "core_trunk_strength": "trunk_strength",
+}
 _SPEED_TAGS = {"speed", "reactive", "reaction", "acceleration", "max_velocity", "speed_reaction"}
 _TECHNICAL_TAGS = {"technical", "skill_refinement", "technical_footwork", "footwork", "coordination"}
 
@@ -153,8 +165,13 @@ def primary_weakness_disposition(athlete: dict, focus: dict | None = None) -> di
         return {"weakness": "", "resolution": "none"}
     record = {"weakness": raw, "selected_label": selected.strip()}
     if raw in _WEAKNESS_DELEGATED_SUBSYSTEMS:
-        return {**record, "resolution": "delegated",
-                "subsystem": _WEAKNESS_DELEGATED_SUBSYSTEMS[raw]}
+        record = {**record, "resolution": "delegated",
+                  "subsystem": _WEAKNESS_DELEGATED_SUBSYSTEMS[raw]}
+        obligation = _DELEGATED_DELIVERY_OBLIGATIONS.get(raw)
+        if obligation:
+            record.update(target=obligation, required_intent=INTENTS[obligation],
+                          delivery_verified_by=VERSION)
+        return record
     target = _WEAKNESS_FLOOR_TARGETS.get(raw) or _goal(_SELECTED_PRIORITY_TARGET_ALIASES.get(raw, raw))
     if target in INTENTS:
         return {**record, "resolution": "weekly_floor", "target": target,
@@ -165,7 +182,7 @@ def primary_weakness_disposition(athlete: dict, focus: dict | None = None) -> di
 def _primary_weakness(athlete: dict, focus: dict | None = None) -> str:
     """The primary weak area as a floor obligation target, or "" when it is none."""
     disposition = primary_weakness_disposition(athlete, focus)
-    return disposition.get("target", "") if disposition["resolution"] == "weekly_floor" else ""
+    return disposition.get("target", "") if disposition["resolution"] in {"weekly_floor", "delegated"} else ""
 
 
 def selected_goals(athlete: dict, focus: dict | None = None) -> list[tuple[str, str]]:
@@ -315,7 +332,12 @@ def _number(value: Any) -> float:
 
 def _sets_reps(text: str) -> tuple[int, int]:
     # Bank dose syntax only. Never inspect rendered plan prose for semantics.
-    match = re.search(r"(\d+)(?:\s*[-–]\s*\d+)?\s*(?:(?:sets?|holds?)\s*)?[x×]\s*(\d+)", text, re.I)
+    # One descriptive word may sit before the unit ("1-2 controlled sets x 15").
+    match = re.search(r"(\d+)(?:\s*[-–]\s*\d+)?\s*(?:(?:[a-z]+\s+)?(?:sets?|holds?)\s*)?[x×]\s*(\d+)", text, re.I)
+    if match is None:
+        # A contrast complex is dosed in rounds: "3-4 rounds: heavy movement
+        # 2-3 reps @ 85-92% 1RM -> ...". Each round is one working set.
+        match = re.search(r"(\d+)(?:\s*[-–]\s*\d+)?\s*rounds?\b[:;]?[^;]*?\b(\d+)(?:\s*[-–]\s*\d+)?\s*reps?\b", text, re.I)
     return (int(match[1]), int(match[2])) if match else (0, 0)
 
 
@@ -361,6 +383,8 @@ def _slot_allowed(slot: dict, role: dict, brief: dict) -> bool:
 
 
 def _strength_stimuli(role: dict, slots: list[dict], brief: dict) -> list[dict]:
+    from .session_composition import slot_adaptations
+
     stimuli = []
     capped = isinstance(role.get("strength_dose_cap"), dict)
     prescriptions = role.get("effective_strength_prescriptions") or []
@@ -400,6 +424,10 @@ def _strength_stimuli(role: dict, slots: list[dict], brief: dict) -> list[dict]:
             intents.append("ballistic_power")
             if _tags(selected) & _SPEED_TAGS:
                 intents.append("speed_quality")
+        # Trunk training is a trunk-TARGETED member at its resolved dose. Trunk
+        # involvement (a squat's bracing, a sled push's posture) is not.
+        if "trunk_strength" in slot_adaptations(slot):
+            intents.append("trunk_training")
         if not intents:
             continue
         stimuli.append({"slot_id": slot.get("slot_id"), "name": selected.get("name"),
@@ -435,6 +463,7 @@ _MICRODOSE_GOAL_INTENTS: dict[str, str] = {
     "power": "ballistic_power",
     "speed": "speed_quality",
     "strength": "meaningful_strength",
+    "trunk_strength": "trunk_training",
 }
 
 # A microdose attaches only to an existing strength session that already has
@@ -619,6 +648,7 @@ def _other_stimuli(role: dict, pool: dict, brief: dict) -> list[dict]:
                             "work_sec": work, "rounds": rounds, "total_minutes": minutes,
                             "rest_sec": _number(dose_source.get("rest_sec")),
                             "effective_prescription": selected.get("prescription") or ""})
+    stimuli += _embedded_trunk_stimuli(role, pool)
     # Locked technical / mobility inserts have an actual deterministic duration.
     duration = _number(role.get("duration_min"))
     support = role.get("support_insert_category") or role.get("support_kind")
@@ -640,6 +670,38 @@ def _other_stimuli(role: dict, pool: dict, brief: dict) -> list[dict]:
                             "effective_prescription": f"{duration:g} minutes",
                             "development_capable": support != "conditioning_maintenance",
                             "dose_authority": "scheduled_support_dose"})
+    return stimuli
+
+
+def _embedded_trunk_stimuli(role: dict, pool: dict) -> list[dict]:
+    """Low-load trunk support composed into a conditioning session.
+
+    It is real trunk exposure, but at a support dose by construction, so it can
+    maintain a trunk priority and never counts as development. The member must
+    still resolve to a trunk-targeted pool slot: a legacy membership that
+    embedded a heavy sled push as "trunk support" earns nothing.
+    """
+    from .session_composition import slot_adaptations
+
+    if role.get("category") != "conditioning":
+        return []
+    slots = [slot for slot in pool.get("strength_slots") or [] if isinstance(slot, dict)]
+    stimuli = []
+    for member in role.get("selected_exercise_assignments") or []:
+        if not isinstance(member, dict) or member.get("support_dose_category") != "low_load_trunk":
+            continue
+        slot = next((slot for slot in slots if slot.get("slot_id") == member.get("slot_id")
+                     and (slot.get("selected") or {}).get("name") == member.get("name")), None)
+        if slot is None or "trunk_strength" not in slot_adaptations(slot):
+            continue
+        prescription = str(member.get("effective_prescription") or "")
+        sets, reps = _sets_reps(prescription)
+        if sets < 1 or reps < 1:
+            continue
+        stimuli.append({"slot_id": member.get("slot_id"), "name": member.get("name"),
+                        "intents": ["trunk_training"], "effective_prescription": prescription,
+                        "dose_authority": "embedded_trunk_support", "sets": sets, "reps": reps,
+                        "development_capable": False})
     return stimuli
 
 
@@ -741,7 +803,7 @@ def _coverage(entry: dict, brief: dict, evidence: list[dict]) -> tuple[list[dict
 
 def _role_matches_goal(role: dict, goal: str) -> bool:
     category = role.get("category")
-    if goal in {"strength", "power"}:
+    if goal in {"strength", "power", "trunk_strength"}:
         return category == "strength"
     if goal == "speed":
         return category == "strength" or role.get("preferred_system") in {"alactic", "atp_pcr"}
@@ -1088,6 +1150,32 @@ def _repair_refusal_reasons(week: dict, goal: str, window: dict) -> list[dict]:
     return reasons
 
 
+def _trunk_capacity_reasons(weeks: list[dict], window: dict) -> list[dict]:
+    """Readiness that composition proved kept trunk work out of this window.
+
+    Each strength session in the window must carry composition's own causal
+    finding (``trunk_support.skip_reason == "readiness_capacity"``): trunk work
+    would have fitted at pressure 0. One readiness-limited session does not
+    excuse another that simply held no trunk work.
+    """
+    sessions = []
+    for week in weeks:
+        for role in week.get("session_roles") or []:
+            day = role_d_day(week, role)
+            if role.get("category") != "strength" or not isinstance(day, int):
+                continue
+            if window["min_d_day"] is not None and not window["min_d_day"] <= day <= window["max_d_day"]:
+                continue
+            outcome = (role.get("strength_composition_policy") or {}).get("trunk_support") or {}
+            sessions.append((week, day, role, outcome))
+    if not sessions or any(outcome.get("skip_reason") != "readiness_capacity" for *_, outcome in sessions):
+        return []
+    return [{"reason_code": code, "authority": "session_composition.trunk_support",
+             "week_index": week.get("week_index"), "role_key": role.get("role_key"), "d_day": day,
+             "coverage_window": window}
+            for week, day, role, outcome in sessions for code in outcome.get("pressure_sources") or []]
+
+
 def _deferral_constraints(entry: dict, brief: dict, missing: list[dict]) -> list[dict]:
     """Every uncovered window needs a live, causal higher-authority reason."""
     if not missing:
@@ -1138,6 +1226,8 @@ def _deferral_constraints(entry: dict, brief: dict, missing: list[dict]) -> list
                             if readiness.get(flag):
                                 window_reasons.append({"reason_code": code, "authority": "effective_strength_prescriptions",
                                     "week_index": week.get("week_index"), "role_key": role.get("role_key"), "coverage_window": window})
+        if entry["goal"] == "trunk_strength":
+            window_reasons.extend(_trunk_capacity_reasons(_effective_map(brief).get("weeks") or [], window))
         if not window_reasons:
             return []  # One explained gap must not conceal another unexplained gap.
         reasons.extend(window_reasons)
