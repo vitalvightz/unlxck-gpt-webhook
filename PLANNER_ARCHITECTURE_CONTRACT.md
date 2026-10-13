@@ -68,7 +68,7 @@ No lower layer may silently override a higher layer's ownership.
 | Candidate exercise/drill selection pool | `plan_pipeline_blocks.py`, `strength.py`, `conditioning.py`, rehab modules | Stage 1 content-selection layer | Composition draws final membership from this pool; the finalizer may choose a stronger compliant same-role candidate **only for a role with no `selected_exercise_assignments`** | Candidate-selection modules deciding calendar placement; treating the pool itself as session membership |
 | Closed session membership (which selected exercises a scheduled role actually renders) | `session_composition.py` (normal camp), `stage2_payload_late_fight.py` + `late_fight_tail.py` assignment attach (countdown) | `session_composition.py` for normal camp; the late-fight assignment builder for D-13 inward | Dose owners may reduce a member's dose; the finalizer renders every member exactly once; an illegal member may be dropped or held | Adding, restoring, replacing or substituting a member downstream; collapsing multi-member membership into one "primary" plus fallbacks |
 | Effective render prescription (authoritative dose per selected exercise) | `prescription_resolver.py` | `prescription_resolver.py` | Renderer/finalizer render `effective_prescription` verbatim; readiness/cut/injury state may only reduce it further | Reconciling `base_prescription` against role caps downstream; re-deriving a countdown band (that stays with `late_camp_role_morph.py`) |
-| Goal preservation: coverage verdict and bounded role restore | `goal_preservation.py` | `goal_preservation.py` | Restore a role **only** from that week's retained `goal_repair_candidates`, within the original category budget, onto a day the shared legality policy allows, at D-14 or earlier, re-running the morph/governor/composition/dose chain on a trial copy before committing | Inventing a new role, exercise, dose or session slot; overriding intentional compression, a hard suppression reason, a finished tail, or the late-fight path; restoring inside D-13 |
+| Goal preservation: coverage verdict, bounded role restore and weekly exposure floor | `goal_preservation.py` | `goal_preservation.py` | Read evidence only from a role's final `selected_exercise_assignments`, at the member's effective dose and in its own units (reps, seconds, metres); restore a role **only** from that week's retained `goal_repair_candidates`, within the original category budget, onto a day the shared legality policy allows, at D-14 or earlier, re-running the morph/governor/composition/dose chain on a trial copy before committing; attach at most one already-selected phase-pool strength slot to an existing strength session below its composed cap, dosed by `prescription_resolver` | Crediting a pool candidate that was not assigned to the session; inventing a new role, exercise, dose or session slot; overriding intentional compression, a hard suppression reason, a finished tail, or the late-fight path; restoring inside D-13 |
 | Athlete priorities / limiter | `stage2_planning_brief.py`, `priority_profile.py`, goal-priority helpers | `stage2_planning_brief.py` + priority profile | Calendar allocator consumes priorities | Renderer/filler re-ranking athlete goals independently |
 | Weekly stress intent | `stage2_planning_brief.py` | `stage2_planning_brief.py` | Role allocator converts intent to role slots | Fillers adding new meaningful stress because a week looks sparse |
 | Declared contact ownership | `sparring_dose_planner.py`, `stage2_role_map.py`, `stage2_payload_late_fight.py` | `sparring_dose_planner.py` | Calendar allocator consumes resolved contact state | Other layers inferring hard-vs-technical from raw declared weekday alone |
@@ -221,13 +221,18 @@ build athlete model / candidate pools
   -> apply_camp_week_fillers            (support inserts, gated by shared legality;
                                          this is also where the finished D-13 tail
                                          is spliced, via _splice_late_fight_tail)
+  -> session_composition.compose_normal_strength_assignments
+       (provisional strength membership; its own adjacent-recovery relocations
+        are morphed and verified by the governor below)
   -> apply_late_camp_role_morph
        (countdown dose, then apply_final_calendar_integrity — the governor fixes
         the final calendar and re-runs dose-only morph if it relocates a role;
         only after that does the subordinate pre-hard-contact helper apply the
         normal role-budget consequence on D-14+ days, followed by one last
         dose/metadata-only morph pass over the surviving roles)
-  -> session_composition.compose_normal_strength_assignments
+  -> session_composition.reconcile_relocated_strength
+       (recomposes only strength roles the morph/governor moved; a further
+        relocation re-runs the morph and governor once, never to convergence)
      session_composition.compose_normal_conditioning_assignments
        (closed session membership; reduce-only from Stage 1's selected slots)
   -> attach late-fight assignments to any spliced tail roles
@@ -270,6 +275,9 @@ build athlete model / candidate pools
         PERFORM -> DEVELOP -> FATIGUE -> RESTORE -> REFLECT. Reads the finished
         calendar and writes only `execution_order`; never membership, day,
         list order or `session_index`)
+  -> session_composition.suppress_unfilled_physical_roles
+       (in build_stage2_outputs, after the brief: a strength/conditioning role
+        left with no member is removed and recorded, never filled)
   -> [late-fight only] _render_late_fight_stage1_draft replaces the draft text
   -> render_lead_summary inserted after the plan title
   -> build_stage2_handoff_text (LLM-boundary projection + finalizer packet)
@@ -398,7 +406,7 @@ These invariants apply to every future planner change.
 8. **The AI cannot repair deterministic architecture.** If the deterministic calendar is invalid, fix the deterministic planner.
 9. **Validator findings do not authorize hidden planner changes.** Validator/release policy remains QA/release logic.
 10. **No compatibility facade becomes a second source of truth.** Backward-compatible exports may delegate; they should not host divergent implementations of the same planning decision.
-11. **Closed membership is closed.** Once a role carries `selected_exercise_assignments`, no downstream layer — repair prompt, finalizer, card conversion — may add, restore, replace or substitute an exercise in it. An illegal member is dropped or held and the gap is left for deterministic planning.
+11. **Closed membership is closed.** Once a role carries `selected_exercise_assignments`, no downstream layer — repair prompt, finalizer, card conversion — may add, restore, replace or substitute an exercise in it. An illegal member is dropped or held and the gap is left for deterministic planning. The one bounded writer is goal preservation's weekly exposure floor, which runs in Stage 1 before release: it may append one already-selected phase-pool strength slot, dosed by the resolver on a trial copy and refused if it raises realised load. Goal evidence is read only from this final membership.
 12. **A deterministic hold is a planner bug, not a release decision.** The four holds in section 3.1 exist because the deterministic plan is unusable, and in production the plan still ships (persistence releases it with flags). The hold is therefore a signal to fix the planner — never a reason to add another model call, tweak the prompt, or relax a policy so the broken plan validates.
 13. **The structured card cannot hold a plan.** Card conversion is downstream of release. A missing, invalid or rejected card degrades to the `plan_text` fallback and is recorded for admin audit.
 

@@ -652,6 +652,7 @@ def _select_bounded_records(
     cap: int,
     pressure: int,
     preserve_trunk_support: bool = False,
+    preserve_adaptation: str = "",
 ) -> tuple[list[dict[str, Any]], dict[str, str]]:
     family_limit = 2 if pressure == 0 else 1
     selected: list[dict[str, Any]] = []
@@ -699,6 +700,21 @@ def _select_bounded_records(
         unsatisfied_groups = [
             group for group in unsatisfied_groups if not _covers(record, group)
         ]
+
+    # The athlete's primary goal keeps one member that develops it when this
+    # session's own candidates hold one. A weakness may be trained alongside the
+    # primary goal; under a tight cap it must not silently take its place.
+    if (preserve_adaptation and len(selected) < cap
+            and not any(preserve_adaptation in record.get("adaptations", ()) for record in selected)):
+        primary_options = [
+            record
+            for record in records
+            if record not in selected
+            and preserve_adaptation in record.get("adaptations", ())
+            and not _would_exceed_family_limit(record["families"], family_counts, family_limit)
+        ]
+        if primary_options:
+            _add_record(primary_options[0], selected, family_counts)
 
     # An explicitly selected trunk-strength limiter belongs inside the retained
     # maintenance session when the conditioning priority shift leaves only one
@@ -766,6 +782,7 @@ def _trunk_support_outcome(
     *,
     role_key: str,
     pressure_state: dict[str, Any],
+    preserve_adaptation: str = "",
 ) -> dict[str, Any]:
     """Whether this session carries the selected trunk weakness, and if not why.
 
@@ -785,7 +802,8 @@ def _trunk_support_outcome(
     ]
     base_cap, _ = _effective_role_cap(role_key, 0)
     unpressured, _ = _select_bounded_records(
-        available, role_key=role_key, cap=base_cap, pressure=0, preserve_trunk_support=True
+        available, role_key=role_key, cap=base_cap, pressure=0, preserve_trunk_support=True,
+        preserve_adaptation=preserve_adaptation,
     )
     if sources and any(record.get("trunk_targeted") for record in unpressured):
         return {"delivered": False, "skip_reason": "readiness_capacity", "pressure_sources": sources}
@@ -803,6 +821,18 @@ def _pressure_context_from_map(weekly_role_map: dict[str, Any]) -> dict[str, Any
     if pressure not in {0, 1, 2, 3}:
         return None
     return dict(state)
+
+
+def _primary_goal_adaptation(athlete_model: dict[str, Any] | None) -> str:
+    """The trained adaptation the athlete's primary goal names, if composition
+    can deliver it from strength members (strength, power or speed)."""
+    if not isinstance(athlete_model, dict):
+        return ""
+    from .priority_profile import build_priority_profile
+    from .tag_maps import priority_adaptation
+
+    adaptation = priority_adaptation(build_priority_profile(athlete_model).primary_goal)
+    return adaptation if adaptation in {"strength", "power", "speed"} else ""
 
 
 def _trunk_strength_selected(athlete_model: dict[str, Any] | None) -> bool:
@@ -870,19 +900,13 @@ def _embedded_trunk_support_prescription(record: dict[str, Any]) -> str:
 
 
 def _role_days_until_fight(role: dict[str, Any]) -> int | None:
-    for key in ("countdown_offset", "scheduled_countdown_offset"):
-        value = _int_or_none(role.get(key))
-        if value is not None:
-            return max(0, value)
-
-    for key in ("scheduled_countdown_label", "countdown_label"):
-        label = str(role.get(key) or "").strip().upper()
-        if not label.startswith("D-"):
-            continue
-        value = _int_or_none(label[2:])
-        if value is not None:
-            return max(0, value)
-    return None
+    # The canonical resolver reads final placement (scheduled label, then
+    # scheduled_d_day) before any planning-time offset, so a relocated role is
+    # judged on the day it is actually trained.
+    value = role_d_day({}, role)
+    if value is None:
+        value = _int_or_none(role.get("scheduled_countdown_offset"))
+    return max(0, value) if value is not None else None
 
 
 def _role_pressure_state(
@@ -1218,6 +1242,7 @@ def _apply_adjacent_strength_recovery(
             cap=current["effective_cap"],
             pressure=current["pressure"],
             preserve_trunk_support=current["preserve_trunk_support"],
+            preserve_adaptation=current.get("preserve_adaptation", ""),
         )
         if selected_records:
             _assign_selected_records(current, selected_records)
@@ -1226,6 +1251,7 @@ def _apply_adjacent_strength_recovery(
                 policy["trunk_support"] = _trunk_support_outcome(
                     current["records"], safe_records, selected_records,
                     role_key=current["role_key"], pressure_state=policy,
+                    preserve_adaptation=current.get("preserve_adaptation", ""),
                 )
             existing_dropped = {
                 str(item.get("name") or ""): str(item.get("reason") or "")
@@ -1315,6 +1341,7 @@ def compose_normal_strength_assignments(
     if pressure_context is None:
         pressure_context = _composition_context_from_model(None)
     trunk_strength_selected = _trunk_strength_selected(athlete_model)
+    primary_adaptation = _primary_goal_adaptation(athlete_model)
 
     weekly_role_map["strength_composition_context"] = dict(pressure_context)
     composed_roles: list[dict[str, Any]] = []
@@ -1416,6 +1443,7 @@ def compose_normal_strength_assignments(
                 cap=effective_cap,
                 pressure=pressure,
                 preserve_trunk_support=trunk_strength_selected,
+                preserve_adaptation=primary_adaptation,
             )
 
             assignments: list[dict[str, Any]] = []
@@ -1443,7 +1471,8 @@ def compose_normal_strength_assignments(
             }
             if trunk_strength_selected:
                 role["strength_composition_policy"]["trunk_support"] = _trunk_support_outcome(
-                    records, records, selected_records, role_key=role_key, pressure_state=pressure_state
+                    records, records, selected_records, role_key=role_key, pressure_state=pressure_state,
+                    preserve_adaptation=primary_adaptation,
                 )
             composed_roles.append(
                 {
@@ -1456,6 +1485,7 @@ def compose_normal_strength_assignments(
                     "effective_cap": effective_cap,
                     "pressure": pressure,
                     "preserve_trunk_support": trunk_strength_selected,
+                    "preserve_adaptation": primary_adaptation,
                     "week_ordinal": week_position + 1,
                     "standalone_eligible": (
                         pressure <= _STANDALONE_STRENGTH_MAX_PRESSURE

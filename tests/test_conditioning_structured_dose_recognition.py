@@ -17,7 +17,7 @@ from __future__ import annotations
 
 import pytest
 
-from fightcamp.goal_preservation import _assignment_for_slot, _other_stimuli
+from fightcamp.goal_preservation import _member_slot, _other_stimuli
 from fightcamp.session_composition import _conditioning_effective_dose
 
 
@@ -95,12 +95,12 @@ def _compacted_pool():
 
 def test_without_the_structured_dose_speed_work_is_invisible():
     """The regression this fix closes."""
-    stimuli = _other_stimuli(_role(structured=False), _compacted_pool(), {})
+    stimuli = _other_stimuli(_role(structured=False), {"SPP": _compacted_pool()}, "SPP", {})
     assert stimuli == []
 
 
 def test_the_propagated_dose_restores_speed_recognition():
-    stimuli = _other_stimuli(_role(structured=True), _compacted_pool(), {})
+    stimuli = _other_stimuli(_role(structured=True), {"SPP": _compacted_pool()}, "SPP", {})
     assert len(stimuli) == 1
     assert "speed_quality" in stimuli[0]["intents"]
 
@@ -112,7 +112,7 @@ def test_recognition_does_not_parse_the_prescription_text():
         role["selected_exercise_assignments"][0].pop(key)
     pool = _compacted_pool()
     pool["conditioning_slots"][0]["selected"].pop("prescription")
-    stimuli = _other_stimuli(role, pool, {})
+    stimuli = _other_stimuli(role, {"SPP": pool}, "SPP", {})
     assert "speed_quality" in stimuli[0]["intents"]
 
 
@@ -125,27 +125,40 @@ def test_pool_metadata_still_wins_when_present():
         "rest_sec": 60,
         "rounds": 8,
     }
-    assert "speed_quality" in _other_stimuli(role, pool, {})[0]["intents"]
+    assert "speed_quality" in _other_stimuli(role, {"SPP": pool}, "SPP", {})[0]["intents"]
 
 
 # ---------------------------------------------------------------------------
-# The assignment lookup
+# The member lookup: exact final identity, never a compatible candidate
 # ---------------------------------------------------------------------------
 
 
-def test_assignment_is_matched_by_slot_id():
-    role = _role(structured=True)
-    slot = _compacted_pool()["conditioning_slots"][0]
-    assert _assignment_for_slot(role, slot, slot["selected"])["work_sec"] == 5.0
+def test_member_is_matched_by_slot_id_and_name():
+    member = _role(structured=True)["selected_exercise_assignments"][0]
+    slot = _member_slot(member, {"SPP": _compacted_pool()}, "SPP", "conditioning_slots")
+    assert slot["selected"]["name"] == "Backstep Counter Reset"
 
 
-def test_assignment_is_matched_by_name_when_slot_ids_differ():
-    role = _role(structured=True)
-    slot = {"slot_id": "other-id", "selected": {"name": "Backstep Counter Reset"}}
-    assert _assignment_for_slot(role, slot, slot["selected"])["work_sec"] == 5.0
+def test_a_same_named_candidate_in_another_slot_is_not_the_member():
+    """A name alone once let a pool candidate borrow a member's dose."""
+    member = _role(structured=True)["selected_exercise_assignments"][0]
+    pool = {"conditioning_slots": [{"slot_id": "other-id", "selected": {"name": "Backstep Counter Reset"}}]}
+    assert _member_slot(member, {"SPP": pool}, "SPP", "conditioning_slots") is None
 
 
-def test_an_unrelated_slot_matches_nothing():
-    role = _role(structured=True)
-    slot = {"slot_id": "x", "selected": {"name": "Assault Bike Rhythm Primer"}}
-    assert _assignment_for_slot(role, slot, slot["selected"]) == {}
+def test_an_unassigned_candidate_never_becomes_evidence():
+    """Swimming on the day is not the bike drill left in the pool."""
+    role = {
+        "category": "conditioning", "role_key": "aerobic_base_day", "preferred_system": "aerobic",
+        "scheduled_day_hint": "Monday",
+        "selected_exercise_assignments": [{"slot_id": "swim", "name": "Swimming (Freestyle Laps)",
+                                           "slot_group": "conditioning_slots", "source_phase": "GPP"}],
+    }
+    pool = {"conditioning_slots": [
+        {"slot_id": "bike", "role": "aerobic",
+         "selected": {"name": "Easy Assault Bike", "system": "aerobic", "selection_metadata": {"total_minutes": 30}}},
+        {"slot_id": "swim", "role": "aerobic",
+         "selected": {"name": "Swimming (Freestyle Laps)", "system": "aerobic", "selection_metadata": {"total_minutes": 25}}},
+    ]}
+    names = [s["name"] for s in _other_stimuli(role, {"GPP": pool}, "GPP", {})]
+    assert names == ["Swimming (Freestyle Laps)"]

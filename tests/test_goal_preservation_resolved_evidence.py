@@ -55,6 +55,11 @@ def _speed_brief(*, late_windows: list[str] | None = None) -> dict:
                             "session_index": 3,
                             "scheduled_day_hint": "Monday",
                             "scheduled_countdown_label": "D-16",
+                            # Evidence comes from final membership only.
+                            "selected_exercise_assignments": [{
+                                "slot_id": "spp_alactic_1", "name": "Short Burst Repeat",
+                                "slot_group": "conditioning_slots", "source_phase": "SPP",
+                            }],
                         }
                     ],
                 }
@@ -124,6 +129,10 @@ def _hybrid_slot() -> dict:
         "anchor_capable": True,
         "selected": {
             "name": "Heavy RDL → Broad Jump",
+            "method": "contrast",
+            "category": "lower_body",
+            "equipment": "barbell",
+            "tags": ["contrast", "explosive", "posterior_chain", "mech_lower_hip_hinge"],
             "quality_class": "anchor_power",
             "anchor_capable": True,
             "support_only": False,
@@ -147,6 +156,7 @@ def _pure_power_slot() -> dict:
         "anchor_capable": True,
         "selected": {
             "name": "Ballistic Box Jump",
+            "method": "plyometric",
             "quality_class": "anchor_power",
             "anchor_capable": True,
             "support_only": False,
@@ -286,6 +296,7 @@ def test_production_shape_satisfies_speed_build_and_strength_maintenance_contrac
             "anchor_capable": True,
             "selected": {
                 "name": "Romanian Deadlift",
+                "method": "strength",
                 "quality_class": "anchor_loaded",
                 "anchor_capable": True,
                 "support_only": False,
@@ -301,6 +312,7 @@ def test_production_shape_satisfies_speed_build_and_strength_maintenance_contrac
             "anchor_capable": True,
             "selected": {
                 "name": "Single-Leg Forward Hops",
+                "method": "plyometric",
                 "quality_class": "anchor_power",
                 "anchor_capable": True,
                 "support_only": False,
@@ -396,3 +408,11 @@ def test_production_shape_satisfies_speed_build_and_strength_maintenance_contrac
     assert goals["strength"]["satisfied"] is True
     assert {row["d_day"] for row in goals["strength"]["evidence"]} == {23}
     assert validate_goal_preservation(brief) == []
+
+
+def test_an_open_role_without_membership_earns_no_evidence():
+    """A candidate that could fill a session is not training the athlete did."""
+    brief = _speed_brief(late_windows=["d21_to_d14"])
+    brief["weekly_role_map"]["weeks"][0]["session_roles"][0].pop("selected_exercise_assignments")
+
+    assert not any("speed_quality" in row["intents"] for row in collect_goal_evidence(brief))

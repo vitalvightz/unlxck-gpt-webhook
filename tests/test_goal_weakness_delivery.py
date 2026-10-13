@@ -17,7 +17,7 @@ import pytest
 
 from api.models import PlanRequest
 from fightcamp.calendar_context import role_d_day
-from fightcamp.goal_preservation import _sets_reps, collect_goal_evidence, validate_goal_preservation
+from fightcamp.goal_preservation import _sets_reps, collect_goal_evidence, dose_volume, validate_goal_preservation
 from fightcamp.main import generate_plan_sync
 from fightcamp.prescription_resolver import _pre_hard_verified_low_cost
 from fightcamp.session_composition import _candidate_records, _select_bounded_records, slot_adaptations
@@ -98,6 +98,13 @@ _FORMS = {
     "muaythai28_power_trunk": {"sport": "muay thai", "goals": ("power", "conditioning"), "weak": ("trunk_strength", "balance"),
                                "frequency": 5, "hard": ("Wednesday", "Saturday"), "equipment": _FULL_GYM + ("sled", "pool")},
 }
+# PR6 exposure scenarios: generated on demand only, never in the ``_ALL`` sweeps.
+_EXPOSURE_FORMS = {
+    "boxer28_trunk_fullgym": {"goals": ("speed", "conditioning"), "weak": ("trunk_strength",)},
+    "boxer14_speed": {"days": 14, "goals": ("speed", "conditioning"), "weak": ("power",)},
+    "boxer10_speed": {"days": 10, "goals": ("speed", "conditioning"), "weak": ("power",)},
+    "boxer3_speed": {"days": 3, "goals": ("speed", "conditioning"), "weak": ("power",)},
+}
 
 
 def _saved_payload(intake: dict, *, override: bool) -> dict:
@@ -111,7 +118,7 @@ def _saved_payload(intake: dict, *, override: bool) -> dict:
 def _form_payload(key: str) -> dict:
     kw = {"days": 28, "sport": "boxing", "goals": ("strength", "conditioning"), "weak": ("strength",), "frequency": 4,
           "equipment": _FULL_GYM, "hard": ("Thursday",), "weight": "70", "target": "", "fatigue": "low", "guided": None,
-          **_FORMS[key]}
+          **{**_FORMS, **_EXPOSURE_FORMS}[key]}
     fields = {
         "Full name": "Delivery", "Age": "24", "Weight (kg)": kw["weight"], "Target Weight (kg)": kw["target"],
         "Height (cm)": "175", "Stance": "Orthodox", "Fighting Style (Technical)": kw["sport"],
@@ -439,16 +446,13 @@ def test_a_short_camp_keeps_its_trunk_weakness_through_the_late_tail():
     assert not any(e["goal"] == "trunk_strength" for e in validate_goal_preservation(brief))
 
 
-@pytest.mark.parametrize("key", [key for key in _ALL if key != "boxer10_trunk_short"])
-def test_strength_and_trunk_evidence_names_only_final_members_at_their_final_day(key):
-    """Candidates, dropped records and unused alternates never evidence the
-    obligations this change owns. (Conditioning, mobility and late-tail
-    evidence can already name a non-member on Main; that is tracked apart.)"""
+@pytest.mark.parametrize("key", _ALL)
+def test_goal_evidence_names_only_final_members_at_their_final_day(key):
+    """Candidates, dropped records and unused alternates never evidence any
+    goal: every witness is a member of its role on the day it is cited."""
     brief = _brief(key)
     final = {(role_d_day(week, role), m["name"]) for week, role in _roles(brief) for m in _members(role)}
     for entry in brief["goal_preservation"]:
-        if entry["goal"] not in {"strength", "trunk_strength"}:
-            continue
         for evidence in entry["evidence"]:
             if evidence.get("d_day") is not None and evidence.get("name"):
                 assert (evidence["d_day"], evidence["name"]) in final, (entry["goal"], evidence["name"])
@@ -474,7 +478,10 @@ def test_swimming_remains_available_on_its_aerobic_merit():
 def test_contrast_rounds_are_read_as_working_sets():
     assert _sets_reps("3–4 rounds: heavy movement 2–3 reps @ 85–92% 1RM → explosive movement") == (3, 2)
     assert _sets_reps("3 rounds; heavy RDL 2 reps @ 85% 1RM") == (3, 2)
-    assert _sets_reps("1-2 controlled sets x 15-20 sec hold; stop before fatigue") == (1, 15)
+    # A hold is timed and a carry is a distance: neither is a rep count.
+    assert _sets_reps("1-2 controlled sets x 15-20 sec hold; stop before fatigue") == (1, 0)
+    assert dose_volume("1-2 controlled sets x 15-20 sec hold") == {"sets": 1, "amount": 15, "unit": "sec"}
+    assert dose_volume("2 x 20 m carry") == {"sets": 2, "amount": 20, "unit": "m"}
     assert _sets_reps("5 rounds x 3 min") == (0, 0)
 
 

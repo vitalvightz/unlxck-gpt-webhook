@@ -785,7 +785,6 @@ def _bridge_baseline(state: str, days_until_fight: Any) -> dict[str, Any]:
             "strength_touch_max": 2,
             "glycolytic_touch_max": 2,
             "max_consecutive_hard_days": 2,
-            "double_stress_day_allowed": True,
             "freshness_mandatory": False,
         }
     if state == TIMING_STATE_BRIDGE:
@@ -798,7 +797,6 @@ def _bridge_baseline(state: str, days_until_fight: Any) -> dict[str, Any]:
             "strength_touch_max": 1,
             "glycolytic_touch_max": 1 if (days is not None and 18 <= days <= 21) else 0,
             "max_consecutive_hard_days": 1,
-            "double_stress_day_allowed": False,
             "freshness_mandatory": True,
             "hard_sparring_cutoff_d_day": 14,
         }
@@ -815,7 +813,6 @@ def _bridge_baseline(state: str, days_until_fight: Any) -> dict[str, Any]:
             "strength_touch_max": 1,
             "glycolytic_touch_max": 0,
             "max_consecutive_hard_days": 0,
-            "double_stress_day_allowed": False,
             "freshness_mandatory": True,
         }
     return {
@@ -825,7 +822,6 @@ def _bridge_baseline(state: str, days_until_fight: Any) -> dict[str, Any]:
         "strength_touch_max": 1,
         "glycolytic_touch_max": 0,
         "max_consecutive_hard_days": 0,
-        "double_stress_day_allowed": False,
         "freshness_mandatory": True,
     }
 
@@ -913,7 +909,6 @@ def _bridge_apply_fatigue(rules: dict[str, Any], fatigue: str) -> dict[str, Any]
         rules["strength_touch_max"] = min(rules.get("strength_touch_max", 1), 1)
         rules["max_active_roles"] = min(rules.get("max_active_roles", 2), 2)
         rules["freshness_mandatory"] = True
-        rules["double_stress_day_allowed"] = False
         if rules["timing_state"] == TIMING_STATE_NORMAL:
             bridge = _bridge_baseline(TIMING_STATE_BRIDGE, rules.get("days_until_fight"))
             rules["max_meaningful_stress_exposures"] = min(
@@ -932,7 +927,6 @@ def _bridge_apply_fatigue(rules: dict[str, Any], fatigue: str) -> dict[str, Any]
         )
         rules["strength_touch_max"] = min(rules.get("strength_touch_max", 1), 1)
         rules["freshness_mandatory"] = True
-        rules["double_stress_day_allowed"] = False
         if (
             rules.get("timing_state") == TIMING_STATE_BRIDGE
             and isinstance(rules.get("days_until_fight"), int)
@@ -977,7 +971,6 @@ def _bridge_apply_weight_cut(
         rules["glycolytic_touch_max"] = 0
         rules["strength_touch_max"] = min(rules.get("strength_touch_max", 1), 1)
         rules["freshness_mandatory"] = True
-        rules["double_stress_day_allowed"] = False
         rules["reason_codes"].append("weight_cut_unsafe_block")
         return rules
     if bucket == "high":
@@ -985,7 +978,6 @@ def _bridge_apply_weight_cut(
         rules["glycolytic_touch_max"] = 0
         rules["strength_touch_max"] = min(rules.get("strength_touch_max", 1), 1)
         rules["freshness_mandatory"] = True
-        rules["double_stress_day_allowed"] = False
         rules["reason_codes"].append("weight_cut_high_suppress_hard_work")
         return rules
     if bucket == "moderate":
@@ -1105,7 +1097,6 @@ def compute_bridge_rules(
         "strength_touch_max": baseline["strength_touch_max"],
         "glycolytic_touch_max": baseline["glycolytic_touch_max"],
         "max_consecutive_hard_days": baseline["max_consecutive_hard_days"],
-        "double_stress_day_allowed": baseline["double_stress_day_allowed"],
         "freshness_mandatory": baseline["freshness_mandatory"],
         "plan_mode": "full_plan",
         "block_full_plan": False,

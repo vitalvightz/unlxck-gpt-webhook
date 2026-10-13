@@ -114,7 +114,9 @@ def test_a_legacy_spec_microdose_still_reads_as_evidence():
         "sets": 2, "intents": ["ballistic_power"]})
     stimulus = _microdose_stimuli(role)[0]
     assert stimulus["intents"] == ["ballistic_power"]
-    assert stimulus["development_capable"] is True
+    # A spec-authored touch never passed the bank, resolver or load checks
+    # (F07): it can keep a goal warm, never certify development.
+    assert stimulus["development_capable"] is False
 
 
 def test_a_single_set_legacy_touch_is_not_development():

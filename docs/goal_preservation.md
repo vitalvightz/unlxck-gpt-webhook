@@ -60,9 +60,12 @@ Reconciliation runs after calendar allocation, compression, fillers, finished
 late-fight tails, scheduled-day morphing and effective strength resolution.
 Direct countdown plans use their final visible session sequence, never their
 earlier weekly mirror. Normal camps require evidence on a day present in the
-resolved calendar. Strength slots keep an explicit `strength_session_index`,
-so removing an earlier strength role cannot reassign its candidate group to a
-different role accidentally.
+resolved calendar. Evidence is read only from a role's final
+`selected_exercise_assignments`: each witness is resolved to the exact slot it
+was assigned from (slot id, source phase and name, or a late-fight
+`<slot_id>:alternate:<n>`) and judged at the member's own effective dose. A
+pool candidate that could have filled the session, but was not assigned to it,
+is never evidence: a swimming day cannot cite the bike drill left in the pool.
 
 Primary goals default to `build`; secondary goals default to `maintain`.
 Fight proximity (D-13 inward), high fatigue and aggressive cut pressure reduce
@@ -74,10 +77,17 @@ individual physiological response:
 - Build: a development-quality exposure in each seven-day window through D-14.
 - Maintain: a qualifying exposure in each fourteen-day window through D-8 for
   strength and D-2 for other physical goals. Shorter windows still need evidence.
+- Windows end at the final calendar's first trainable day: a camp created at
+  D-14 trains from D-13, so its D-14 window is marked `unplannable`.
 - Recovery and weight-cut support use their deterministic daily support plans.
 - Strength requires at least two working sets, positive reps/hold duration,
-  meaningful working intensity (RPE 6+ or 60%+ loading), and a loaded anchor
-  class. Force isometrics additionally need `real_strength_maintenance=true`.
+  meaningful working intensity (RPE 6+ or 60%+ loading), a loaded anchor
+  class, and a member whose own adaptation relevance includes strength. Force
+  isometrics additionally need `real_strength_maintenance=true`.
+- Dose units are not interchangeable. Repetitions, seconds and metres are read
+  separately and witnesses carry their unit: a `2 x 20 m` carry is two short
+  carries, never forty reps and never a strength-development dose. The Stage 2
+  render check compares a timed or distance witness in its own unit.
 - Effective no-loading flags, insufficient effective sets, support/rehab classes,
   and pure power classes cannot pay for meaningful strength.
 - Speed and conditioning use actual structured work/rest/duration metadata and
@@ -111,7 +121,10 @@ An unresolved goal can become `defer` only with a live constraint for **every**
 uncovered window. The structured constraint cites its authority, original reason
 code, affected week and role where applicable. Supported causes include existing
 calendar/compression decisions, fight proximity, and effective dose reductions
-caused by readiness. A missing candidate, an unexplained empty schedule or an
+caused by readiness. Fight proximity is cited per window: an `unplannable`
+window (authority `plan_calendar`), or a maintenance window lying wholly inside
+D-13..D-1, which the late-fight tail owns and goal repair may not reopen
+(authority `late_fight_tail_ownership`). A build window is never excused this way. A missing candidate, an unexplained empty schedule or an
 arbitrary injury flag alone is not a deferral reason: it remains an unsatisfied
 planner obligation and is reported as such.
 
