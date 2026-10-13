@@ -350,8 +350,10 @@ def test_vito_b_strength_weakness_is_trained_by_real_lifts():
 def test_a_stable_blister_is_not_global_strength_pressure():
     """A covered not-limiting blister cost every strength session one exercise."""
     brief, healthy = _brief("vito_b"), _brief("vito_b_healthy")
-    assert brief["athlete_snapshot"]["surface_injury_only"] is True
-    assert brief["athlete_snapshot"]["has_active_injury"] is True  # still noted and guarded
+    # Main (#2867) drops an approved not-limiting injury from planning; when an
+    # injury survives it must be the surface-only kind. Either way: no pressure.
+    snapshot = brief["athlete_snapshot"]
+    assert snapshot.get("surface_injury_only") is True or not snapshot.get("has_active_injury")
     for d_day, role in _development_strength_sessions(brief):
         policy = role["strength_composition_policy"]
         assert (policy["injury_pressure"], policy["pressure"]) == (0, 0), d_day
