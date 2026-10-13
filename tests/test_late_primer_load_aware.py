@@ -188,3 +188,55 @@ def test_when_every_lead_dominates_the_best_is_kept_alone():
         _primer("Volume Hop", family="technical_neural", tags=("mech_reactive",), prescription="2x40 reps fast", index=1),
     ])
     assert _names(members) == ["Volume Burst"]
+
+
+def test_a_complement_with_an_unmeasurable_dose_is_refused():
+    role = _role()
+    unknown = _primer("Feel Drill", family="technical_neural", tags=(), prescription="as feels right")
+    unknown["selected"]["selection_metadata"]["lactate_load"] = ""
+    members = _compose(role, strength=[_strength("Jump In Place")], conditioning=[unknown])
+    assert _names(members) == ["Jump In Place"]
+
+
+def test_an_unmeasurable_lead_takes_no_complements():
+    role = _role("neural_primer_day", d_day=7)
+    unknown = _primer("Feel Drill", tags=(), prescription="as feels right")
+    unknown["selected"]["selection_metadata"]["lactate_load"] = ""
+    members = _compose(role, conditioning=[unknown, _primer("Counter Reset", family="technical_neural", index=1)])
+    # The measurable primer leads instead; the unknown one is never a complement.
+    assert _names(members) == ["Counter Reset"]
+
+
+def test_durations_are_not_counted_as_repetitions():
+    from fightcamp.session_composition import _prescription_total_reps, prescription_dose_known
+
+    assert _prescription_total_reps("2x5s with 120s rest") == 0
+    assert _prescription_total_reps("4–6 x 6–10 sec fast bursts") == 0
+    assert _prescription_total_reps("4x4 reps, 60s rest") == 16
+    assert prescription_dose_known("2x5s with 120s rest")
+    assert not prescription_dose_known("as feels right")
+
+
+def _light_combat(d_day):
+    return {"role_key": "light_combat_day", "category": "technical", "coach_owned": True,
+            "declared_day_locked": True, "scheduled_countdown_label": f"D-{d_day}", "countdown_offset": d_day}
+
+
+def test_a_forbidden_fixed_day_reduces_the_primer_to_a_coexisting_microdose():
+    role = _role("neural_primer_day", d_day=7)
+    quiet = _primer("Stance Cue", family="technical_neural", tags=(), prescription="2x3s with 120s rest", index=1)
+    members = _compose(role, conditioning=[_primer("Counter Reset"), quiet],
+                       sequence=[role, _light_combat(7)])
+    assert _names(members) == ["Stance Cue"]
+    assert members[0]["effective_prescription"] == "1x3s with 120s rest"
+    resolution = role["late_load_resolution"]
+    assert resolution["action"] == "reduced_to_coexisting_microdose"
+    assert resolution["conflict_reason_code"] == "exclusive_physical_slot_conflict"
+    assert resolution["composed_members"] == ["Counter Reset", "Stance Cue"]
+
+
+def test_a_forbidden_fixed_day_with_no_safe_microdose_removes_the_session():
+    role = _role("neural_primer_day", d_day=7)
+    members = _compose(role, conditioning=[_primer("Counter Reset")], sequence=[role, _light_combat(7)])
+    assert members == []
+    assert role["late_load_resolution"]["action"] == "suppressed_no_safe_prescription"

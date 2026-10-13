@@ -137,10 +137,15 @@ def _assert_primer_invariants(brief: dict) -> None:
         for item in role.get("effective_strength_prescriptions") or []:
             if item["name"] in complements and isinstance(item.get("effective_max_sets"), int):
                 assert item["effective_max_sets"] == 1, item
-        # The whole session's realised load is stamped and never above moderate.
+        # A measured session is stamped and never above moderate. A session the
+        # measurement cannot see keeps its planned vector and takes no
+        # complement: unknown is never evidence that more work fits.
         stamp = role.get("calendar_stress")
-        assert stamp and stamp["authority"] == "realised_session_composition", d_day
-        assert stamp["neural_mechanical"] <= 2, (d_day, stamp)
+        if stamp:
+            assert stamp["authority"] == "realised_session_composition", d_day
+            assert stamp["neural_mechanical"] <= 2, (d_day, stamp)
+        else:
+            assert len(members) == 1, (d_day, names)
         # Nothing heavy reaches the last two days.
         assert d_day >= 2, (d_day, names)
 
@@ -168,9 +173,37 @@ def test_vito_b_d13_session_leads_with_meaningful_goal_relevant_power(days_out):
 @pytest.mark.parametrize("days_out", [14, 13])
 def test_vito_b_no_primer_day_repeats_one_drill_alone(days_out):
     primers = _primers(_brief("vito_b", days_out))
-    assert {7, 5} <= set(primers)
-    for d_day in (13, 7, 5):
+    assert {13, 5} <= set(primers)
+    for d_day in (13, 5):
         assert [m["name"] for m in _members(primers[d_day])] != ["Pull-Counter-Reset"], d_day
+
+
+def _suppressed(brief: dict) -> list[dict]:
+    if "late_fight_session_sequence" in brief:
+        return list((brief.get("late_fight_plan_spec") or {}).get("suppressed_roles") or [])
+    return [r for week in brief["weekly_role_map"]["weeks"] for r in week.get("suppressed_roles") or []]
+
+
+@pytest.mark.parametrize("days_out", [21, 14, 13])
+def test_vito_b_d7_primer_on_the_light_combat_day_is_resolved_not_just_detected(days_out):
+    """D-7 places the neural primer on Monday's declared light combat.
+
+    The policy forbids an exclusive stressor on that day and late placement is
+    immutable, so the session is either reduced to a coexisting microdose or
+    removed with an explicit reason. It never ships as an unresolved conflict.
+    """
+    brief = _brief("vito_b", days_out)
+    primer = _primers(brief).get(7)
+    if primer is not None:
+        assert primer["late_load_resolution"]["action"] == "reduced_to_coexisting_microdose"
+        assert len(_members(primer)) == 1
+        assert primer["calendar_stress"]["neural_mechanical"] <= 1
+    else:
+        removed = [r for r in _suppressed(brief)
+                   if r.get("role_key") == "neural_primer_day" and r.get("original_d_day") == 7]
+        assert removed and removed[0]["reason_code"] == "late_load_conflict_no_safe_prescription"
+    revalidation = (brief.get("weekly_role_map") or {}).get("realised_load_revalidation") or {}
+    assert not [c for c in revalidation.get("residual_conflicts") or [] if c["d_day"] <= 13]
 
 
 @pytest.mark.parametrize("days_out", [14, 13])

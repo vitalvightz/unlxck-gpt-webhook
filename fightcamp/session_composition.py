@@ -995,6 +995,23 @@ def _assignment_mechanical_tags(assignment: dict[str, Any]) -> set[str]:
     }
 
 
+# A count followed by a time unit (optionally as a range) is a duration.
+_DURATION_UNIT_TAIL = re.compile(
+    r"\s*(?:[-\u2013]\s*\d+\s*)?(?:s|secs?|seconds?|mins?|minutes?)\b", re.I
+)
+_DURATION_DOSE = re.compile(r"\d+\s*(?:s|secs?|seconds?|mins?|minutes?)\b", re.I)
+
+
+def prescription_dose_known(text: str) -> bool:
+    """Whether a rendered dose states a measurable amount of work.
+
+    Reps (``4x5``) or a work duration (``2x5s``, ``20 min``). A dose stating
+    neither cannot be measured, and an unmeasured dose is never evidence that
+    further work fits.
+    """
+    return _prescription_total_reps(text) > 0 or bool(_DURATION_DOSE.search(str(text or "")))
+
+
 def _prescription_total_reps(text: str) -> float:
     """Total reps a rendered prescription commits to, ``0.0`` when it states none.
 
@@ -1007,6 +1024,10 @@ def _prescription_total_reps(text: str) -> float:
     for match in re.finditer(
         r"(?<![\d.])(\d+)\s*(?:sets?\s*)?[x\u00d7]\s*(\d+)", str(text or ""), re.I
     ):
+        # ``2x5s`` and ``4-6 x 6-10 sec`` are work durations, not repetitions;
+        # counting them as reps scored a 10-second primer as a 10-rep set.
+        if _DURATION_UNIT_TAIL.match(text[match.end():]):
+            continue
         reps = float(match.group(1)) * float(match.group(2))
         tail = text[match.end():match.end() + 12].lower()
         if "side" in tail or "/s" in tail or "each" in tail:
@@ -2712,17 +2733,24 @@ def apply_realised_load_calendar_revalidation(
     # The last round may have re-dosed after its final stamp, so refresh once more:
     # the stamp that persists must describe the dose the role actually ends with.
     final_roles = _refresh_stress_stamps(weekly_role_map)
-    residual = [
-        {
+    residual: list[dict[str, Any]] = []
+    owner_resolved: list[dict[str, Any]] = []
+    for role, ref, decision in _realised_load_conflicts(weekly_role_map, final_roles):
+        entry = {
             "role_key": role.get("role_key"),
             "d_day": ref.d_day,
             "reason_code": decision.reason_code,
             "directive": decision.directive.value,
         }
-        for role, ref, decision in _realised_load_conflicts(weekly_role_map, final_roles)
-    ]
+        resolution = role.get("late_load_resolution")
+        if isinstance(resolution, dict) and resolution.get("action"):
+            # An immutable late-fight session whose owner already reduced its
+            # prescription for exactly this conflict: resolved, not ignored.
+            owner_resolved.append({**entry, "resolution": dict(resolution)})
+        else:
+            residual.append(entry)
 
-    if actions or residual or reconciliations:
+    if actions or residual or reconciliations or owner_resolved:
         weekly_role_map["realised_load_revalidation"] = {
             "schema_version": "realised_load_revalidation.v3",
             "rounds_run": rounds_run,
@@ -2735,6 +2763,9 @@ def apply_realised_load_calendar_revalidation(
             # Legal but not ideal, and deliberately not chased further. Present
             # so a residual conflict is visible rather than silently accepted.
             "residual_conflicts": residual,
+            # Conflicts on immutable late-fight sessions that their membership
+            # owner resolved by reducing the prescription.
+            "owner_resolved_conflicts": owner_resolved,
         }
     return weekly_role_map
 
@@ -2818,7 +2849,27 @@ def _is_unfilled_physical_role(role: Any) -> bool:
     )
 
 
+LATE_LOAD_CONFLICT_REASON = "late_load_conflict_no_safe_prescription"
+
+
 def _unfilled_role_suppression(role: dict[str, Any], d_day: int | None) -> dict[str, Any]:
+    resolution = role.get("late_load_resolution")
+    if isinstance(resolution, dict) and resolution.get("action") == "suppressed_no_safe_prescription":
+        # The membership owner emptied this session on purpose: its fixed day is
+        # forbidden at any composed load and no coexisting microdose was legal.
+        return {
+            "category": role.get("category"),
+            "role_key": role.get("role_key"),
+            "preferred_system": role.get("preferred_system", ""),
+            "strength_session_index": role.get("strength_session_index"),
+            "scheduled_day_hint": role.get("scheduled_day_hint"),
+            "original_d_day": d_day,
+            "reason_code": LATE_LOAD_CONFLICT_REASON,
+            "reason_codes": [LATE_LOAD_CONFLICT_REASON, str(resolution.get("conflict_reason_code") or "")],
+            "reason": "The scheduled day forbids this session at any composed load and no coexisting "
+                      "microdose was legal, so it is removed rather than shipped unsafe.",
+            "authority": "late_fight_assignment_builder",
+        }
     return {
         "category": role.get("category"),
         "role_key": role.get("role_key"),

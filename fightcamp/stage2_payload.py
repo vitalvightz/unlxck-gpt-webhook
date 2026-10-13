@@ -64,8 +64,10 @@ from .prescription_resolver import apply_effective_strength_prescriptions
 from .session_composition import (
     _conditioning_prescription,
     _refresh_stress_stamps,
+    _prescription_total_reps,
     _stress_stamp,
     option_mechanical_risk_tags,
+    prescription_dose_known,
     realised_session_stress,
     _selected_coaching_notes,
     attach_late_fight_assignments,
@@ -1135,25 +1137,50 @@ def _late_primer_member_dose(
     return dose
 
 
+def _late_primer_member_stress(
+    role: dict[str, Any], slot_group: str, slot: dict[str, Any], *, complement: bool
+) -> tuple[bool, list[dict[str, Any]]]:
+    """``(known, measurement_input)`` for one member at its real dose.
+
+    A member is measurable when its dose states an amount of work and it
+    carries cost evidence: authored mechanical tags, a rep count, or -- for a
+    tagless timed drill -- an authored low/no lactate load. Anything else is
+    unknown, and unknown is never evidence that more work fits.
+    """
+    option = _slot_selected_option(slot)
+    tags = sorted(option_mechanical_risk_tags(option))
+    dose = _late_primer_member_dose(role, slot_group, slot, complement=complement)
+    metadata = option.get("selection_metadata") if isinstance(option.get("selection_metadata"), dict) else {}
+    lactate = str(metadata.get("lactate_load") or option.get("lactate_load") or "").strip().lower()
+    known = prescription_dose_known(dose) and bool(
+        tags or _prescription_total_reps(dose) or lactate in {"low", "none"}
+    )
+    return known, [{"mechanical_risk_tags": tags, "effective_prescription": dose}]
+
+
 def _late_primer_session_stress(
     role: dict[str, Any],
     matches: list[tuple[str, str, dict[str, Any]]],
     complements: set[int],
 ):
-    """Realised cross-day cost of the whole composed session, not one exercise."""
-    return realised_session_stress(
-        [
-            {
-                "mechanical_risk_tags": sorted(
-                    option_mechanical_risk_tags(_slot_selected_option(slot))
-                ),
-                "effective_prescription": _late_primer_member_dose(
-                    role, slot_group, slot, complement=index in complements
-                ),
-            }
-            for index, (_phase, slot_group, slot) in enumerate(matches)
-        ]
-    )
+    """Realised cross-day cost of the whole composed session, or ``None`` if unknown.
+
+    ``None`` means some member could not be measured. A fully measured session
+    whose members author no mechanical or metabolic cost is a known low-load
+    session, not an unknown one.
+    """
+    from .combat_load_policy import SessionStress, StressLevel
+
+    measured: list[dict[str, Any]] = []
+    for index, (_phase, slot_group, slot) in enumerate(matches):
+        known, item = _late_primer_member_stress(
+            role, slot_group, slot, complement=index in complements
+        )
+        if not known:
+            return None
+        measured.extend(item)
+    stress = realised_session_stress(measured)
+    return stress if stress is not None else SessionStress(neural_mechanical=StressLevel.LOW)
 
 
 def _late_primer_planned_profile(role: dict[str, Any]):
@@ -1183,8 +1210,8 @@ def _late_primer_within_envelope(role: dict[str, Any], lead_stress, combined) ->
     """
     from .combat_load_policy import session_stress
 
-    if combined is None:
-        return True
+    if combined is None or lead_stress is None:
+        return False
     if _late_primer_dominating(combined):
         return False
     profile = _late_primer_planned_profile(role)
@@ -1200,24 +1227,63 @@ def _late_primer_within_envelope(role: dict[str, Any], lead_stress, combined) ->
     )
 
 
-def _late_primer_neighbour_rank(role: dict[str, Any], stress, sequence: list[dict[str, Any]]) -> int:
-    """Canonical cross-day legality tier of this session at ``stress``."""
+def _late_primer_decision(role: dict[str, Any], stress, sequence: list[dict[str, Any]]):
+    """Canonical legality of this session at ``stress`` on its scheduled day."""
     from dataclasses import replace
 
     from .calendar_context import LATE_FIGHT_SCOPE, sequence_events, sequence_role_offset
-    from .combat_load_policy import evaluate_candidate_at_position, placement_rank
+    from .combat_load_policy import evaluate_candidate_at_position
 
     offset = sequence_role_offset(role)
     profile = _late_primer_planned_profile(role)
-    if offset is None or profile is None or stress is None:
-        return 0
-    decision = evaluate_candidate_at_position(
-        replace(profile, stress=stress),
+    if offset is None or profile is None:
+        return None
+    if stress is not None:
+        profile = replace(profile, stress=stress)
+    return evaluate_candidate_at_position(
+        profile,
         candidate_position=-offset,
         events=sequence_events([item for item in sequence if item is not role]),
         candidate_scope=LATE_FIGHT_SCOPE,
     )
-    return placement_rank(decision)
+
+
+def _late_primer_neighbour_rank(role: dict[str, Any], stress, sequence: list[dict[str, Any]]) -> int:
+    """Canonical legality tier of this session at ``stress``."""
+    from .combat_load_policy import placement_rank
+
+    decision = _late_primer_decision(role, stress, sequence)
+    return placement_rank(decision) if decision is not None else 0
+
+
+def _late_primer_coexisting_microdose(
+    role: dict[str, Any],
+    ordered: list[tuple[str, str, dict[str, Any]]],
+) -> tuple[str, str, dict[str, Any]] | None:
+    """The single support member that can share a day the policy will not give up.
+
+    Late-fight placement is immutable, so a primer whose day the policy forbids
+    (an exclusive stressor stacked on declared light combat, say) cannot move.
+    Its prescription is reduced instead: one support-only drill, one round,
+    measured no higher than the policy's own neural-microdose vector -- the
+    load class the policy lets coexist with declared light combat.
+    """
+    from .combat_load_policy import (
+        CalendarLoadProfile, DayOccupancy, LoadClass, session_stress,
+    )
+
+    ceiling = session_stress(CalendarLoadProfile(LoadClass.NEURAL_MICRODOSE, DayOccupancy.PHYSICAL))
+    for match in ordered:
+        if not _slot_support_only(match[2]) or _late_primer_is_loaded(match):
+            continue
+        stress = _late_primer_session_stress(role, [match], {0})
+        if (
+            stress is not None
+            and stress.systemic <= ceiling.systemic
+            and stress.neural_mechanical <= ceiling.neural_mechanical
+        ):
+            return match
+    return None
 
 
 def _late_primer_member_limit() -> int:
@@ -1256,12 +1322,11 @@ def _select_late_primer_members(
         return [], set()
     # The lead is the best candidate whose own session stays below the
     # policy's dominating tier; only when none does is the best one kept as is.
-    lead = next(
-        (match for match in ordered if not _late_primer_dominating(
-            _late_primer_session_stress(role, [match], set())
-        )),
-        ordered[0],
-    )
+    def fits(match) -> bool:
+        stress = _late_primer_session_stress(role, [match], set())
+        return stress is not None and not _late_primer_dominating(stress)
+
+    lead = next((match for match in ordered if fits(match)), ordered[0])
     ordered = [lead, *(match for match in ordered if match is not lead)]
     member_limit = _late_primer_member_limit()
     chosen = [ordered[0]]
@@ -1269,7 +1334,7 @@ def _select_late_primer_members(
     loaded_used = _late_primer_is_loaded(ordered[0])
     lead_stress = _late_primer_session_stress(role, chosen, set())
     lead_rank = _late_primer_neighbour_rank(role, lead_stress, sequence)
-    for match in ordered[1:]:
+    for match in ordered[1:] if lead_stress is not None else ():
         if len(chosen) >= member_limit:
             break
         stimulus = _late_primer_stimulus(match)
@@ -1285,7 +1350,28 @@ def _select_late_primer_members(
         chosen.append(match)
         stimuli.add(stimulus)
         loaded_used = loaded_used or loaded
-    return chosen, set(range(1, len(chosen)))
+    complements = set(range(1, len(chosen)))
+
+    from .combat_load_policy import PlacementDirective
+
+    decision = _late_primer_decision(
+        role, _late_primer_session_stress(role, chosen, complements), sequence
+    )
+    if decision is None or decision.directive is not PlacementDirective.FORBID:
+        return chosen, complements
+    # The policy forbids this session on its day and the day cannot change.
+    # Reduce the prescription to a coexisting microdose, or remove the session
+    # when no safe prescription exists. Either way the outcome is recorded.
+    reduced = _late_primer_coexisting_microdose(role, ordered)
+    role["late_load_resolution"] = {
+        "authority": "late_fight_assignment_builder",
+        "conflict_reason_code": decision.reason_code,
+        "composed_members": [_slot_exercise_name(match[2]) for match in chosen],
+        "action": "reduced_to_coexisting_microdose" if reduced else "suppressed_no_safe_prescription",
+    }
+    if reduced is None:
+        return [], set()
+    return [reduced], {0}
 
 
 def _build_late_fight_allowed_exercises_by_day(

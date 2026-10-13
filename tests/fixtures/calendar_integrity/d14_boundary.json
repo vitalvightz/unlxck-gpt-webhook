@@ -32,11 +32,10 @@
   ],
   "suppressed": [
     [1, "hard_sparring_day", "sparring", "no_hard_sparring_day", []],
-    [1, "recovery_reset_day", "recovery", "", ["proximity_to_fight"]],
-    [1, "strength_touch_day", "strength", "", ["proximity_to_fight"]],
-    [2, "fight_week_freshness_day", "recovery", "", ["proximity_to_fight"]],
+    [1, "recovery_reset_day", "recovery", "", ["spar_first_cap"]],
+    [2, "fight_week_freshness_day", "recovery", "", ["spar_first_cap"]],
     [2, "hard_sparring_day", "sparring", "no_hard_sparring_day", []],
-    [2, "neural_primer_day", "strength", "", ["proximity_to_fight"]]
+    [2, "neural_primer_day", "strength", "fight_day_protocol", []]
   ],
   "tail_handoff": {"active": true, "normal_planner_through_d": 14, "late_fight_planner_from_d": 13, "source": "finished_existing_late_fight_path"}
 }

@@ -81,7 +81,7 @@ def test_production_cut_removes_no_weekly_capacity():
     assert _cut_severity_compression_points(_production_athlete()) == 0
 
 
-def test_production_case_keeps_three_of_four_non_spar_slots():
+def test_production_case_keeps_all_four_non_spar_slots():
     """The reported collapse was 4 non-spar slots -> 1. Only taper may trim now."""
     model = _production_athlete()
     compression = _compute_readiness_compression(model)
@@ -89,9 +89,10 @@ def test_production_case_keeps_three_of_four_non_spar_slots():
 
     # 5 weekly sessions, Sunday locked to hard sparring -> 4 non-spar slots.
     non_spar_cap = 4
-    assert non_spar_cap - floor == 3
-    # The single remaining charge is generic taper proximity, not the cut.
-    assert floor == 1
+    # Neither the moderate cut nor fight proximity on its own removes a slot;
+    # proximity is charged by the taper and countdown dose owners instead.
+    assert floor == 0
+    assert non_spar_cap - floor == 4
 
 
 def test_production_cut_is_not_flagged_aggressive():
@@ -132,8 +133,8 @@ def test_fight_proximity_is_not_charged_twice_for_a_cutting_athlete():
     )
 
 
-def test_non_cutting_athlete_keeps_generic_proximity_compression():
-    """Taper behaviour for a non-cutting athlete is unchanged."""
+def test_proximity_alone_no_longer_compresses_a_non_cutting_athlete():
+    """Proximity only amplifies a genuine readiness signal; alone it removes nothing."""
     model = {
         "fatigue": "low",
         "injuries": [],
@@ -142,7 +143,8 @@ def test_non_cutting_athlete_keeps_generic_proximity_compression():
         "weight_cut_pct": 0.0,
         "readiness_flags": [],
     }
-    assert _compute_readiness_compression(model) == 1
+    assert _compute_readiness_compression(model) == 0
+    assert _compute_readiness_compression({**model, "fatigue": "high"}) == 2
 
 
 def test_no_second_late_camp_cut_overlay_exists():
