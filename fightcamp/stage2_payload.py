@@ -1227,19 +1227,25 @@ def _late_primer_within_envelope(role: dict[str, Any], lead_stress, combined) ->
     )
 
 
-def _late_primer_decision(role: dict[str, Any], stress, sequence: list[dict[str, Any]]):
-    """Canonical legality of this session at ``stress`` on its scheduled day."""
-    from dataclasses import replace
+def _late_primer_decision(
+    role: dict[str, Any], stress, sequence: list[dict[str, Any]], *, offset: int | None = None
+):
+    """Canonical legality of this session, composed at ``stress``, on a day.
 
-    from .calendar_context import LATE_FIGHT_SCOPE, sequence_events, sequence_role_offset
+    The role is classified as it would be stamped, so the policy judges the
+    session it actually is (a measured microdose is classified as one).
+    ``offset`` asks about another countdown day without moving the role.
+    """
+    from .calendar_context import LATE_FIGHT_SCOPE, classify_role, sequence_events, sequence_role_offset
     from .combat_load_policy import evaluate_candidate_at_position
 
-    offset = sequence_role_offset(role)
-    profile = _late_primer_planned_profile(role)
+    probe = {k: v for k, v in role.items() if k != "calendar_stress"}
+    if stress is not None:
+        probe["calendar_stress"] = _stress_stamp(stress)
+    offset = offset if offset is not None else sequence_role_offset(role)
+    profile = classify_role(probe)
     if offset is None or profile is None:
         return None
-    if stress is not None:
-        profile = replace(profile, stress=stress)
     return evaluate_candidate_at_position(
         profile,
         candidate_position=-offset,
@@ -1284,6 +1290,117 @@ def _late_primer_coexisting_microdose(
         ):
             return match
     return None
+
+
+def sequence_role_offset_of(role: dict[str, Any]) -> int | None:
+    from .calendar_context import sequence_role_offset
+
+    return sequence_role_offset(role)
+
+
+def _is_displaceable_occupancy_filler(role: dict[str, Any]) -> bool:
+    """A gap-fill insert that only occupies an otherwise empty day.
+
+    Fillers are subordinate to planner roles: one placed to occupy a free day
+    yields that day to a real session the calendar needs to move there.
+    """
+    governance = role.get("governance") if isinstance(role.get("governance"), dict) else {}
+    return bool(
+        role.get("physical_occupancy_fill")
+        and str(role.get("category") or "").strip().lower() == "support_insert"
+        and governance.get("meaningful_stress") is not True
+    )
+
+
+def drop_displaced_occupancy_fillers(roles: list[Any]) -> None:
+    """Remove, in place, fillers a relocated late primer took the day from."""
+    roles[:] = [
+        role for role in roles
+        if not (isinstance(role, dict) and role.get("displaced_by_late_primer"))
+    ]
+
+
+_WEEKDAYS = ("monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday")
+
+
+def _late_primer_relocate(
+    role: dict[str, Any],
+    chosen: list[tuple[str, str, dict[str, Any]]],
+    complements: set[int],
+    sequence: list[dict[str, Any]],
+) -> tuple[list[tuple[str, str, dict[str, Any]]], set[int], int] | None:
+    """Move a forbidden primer to an adjacent day the policy allows, if one exists.
+
+    A primer is a small stimulus; a conflict with one day's other work is not
+    a reason it cannot happen at all. Only the days either side are tried, only
+    a declared training day inside D-13..D-2, only members still bank-legal for
+    that day's late window and day safety, and only where the policy's verdict
+    for the composed session is not FORBID (ALLOW first, then the earlier
+    day). Nothing else moves.
+    """
+    from .combat_load_policy import PlacementDirective, placement_rank
+    from .planner_context import get_planner_athlete_model
+
+    offset = sequence_role_offset_of(role)
+    weekday = str(role.get("scheduled_day_hint") or role.get("real_weekday") or "").strip().lower()
+    if offset is None or weekday not in _WEEKDAYS:
+        return None
+    athlete = get_planner_athlete_model() or {}
+    training_days = {str(day).strip().lower() for day in athlete.get("training_days") or []}
+    options = []
+    for target in (offset + 1, offset - 1):
+        if not 2 <= target <= 13:
+            continue
+        target_weekday = _WEEKDAYS[(_WEEKDAYS.index(weekday) + (offset - target)) % 7]
+        if training_days and target_weekday not in training_days:
+            continue
+        label = f"D-{target}"
+        kept = [
+            (index, match)
+            for index, match in enumerate(chosen)
+            if _slot_late_window_allowed(match[0], match[1], match[2], offset=target)
+            and not _late_fight_assignment_is_unsafe(label, _slot_exercise_name(match[2]))
+        ]
+        if not kept:
+            continue
+        members = [match for _index, match in kept]
+        kept_complements = set(range(1, len(members)))
+        stress = _late_primer_session_stress(role, members, kept_complements)
+        fillers = [
+            item for item in sequence
+            if item is not role and sequence_role_offset_of(item) == target
+            and _is_displaceable_occupancy_filler(item)
+        ]
+        verdict = _late_primer_decision(
+            role, stress, [item for item in sequence if not any(item is f for f in fillers)],
+            offset=target,
+        )
+        if verdict is None or verdict.directive is PlacementDirective.FORBID:
+            continue
+        options.append(
+            (placement_rank(verdict), -target, target, target_weekday, members, kept_complements, fillers)
+        )
+    if not options:
+        return None
+    _rank, _order, target, target_weekday, members, kept_complements, fillers = min(
+        options, key=lambda option: option[:2]
+    )
+    for filler in fillers:
+        filler["displaced_by_late_primer"] = str(role.get("role_key") or "")
+    label = f"D-{target}"
+    for key in ("scheduled_countdown_label", "countdown_label"):
+        role[key] = label
+    role["countdown_offset"] = target
+    role["scheduled_d_day"] = target
+    for key in ("scheduled_day_hint", "real_weekday", "countdown_weekday"):
+        if key in role or key == "scheduled_day_hint":
+            role[key] = target_weekday
+    role["countdown_display_label"] = f"{label} ({target_weekday.title()})"
+    role["day_assignment_reason"] = (
+        f"Moved from D-{offset} to {label}: the composed primer was forbidden on its original day "
+        "and this adjacent training day is legal for it."
+    )
+    return members, kept_complements, target
 
 
 def _late_primer_member_limit() -> int:
@@ -1359,19 +1476,39 @@ def _select_late_primer_members(
     )
     if decision is None or decision.directive is not PlacementDirective.FORBID:
         return chosen, complements
-    # The policy forbids this session on its day and the day cannot change.
-    # Reduce the prescription to a coexisting microdose, or remove the session
-    # when no safe prescription exists. Either way the outcome is recorded.
-    reduced = _late_primer_coexisting_microdose(role, ordered)
-    role["late_load_resolution"] = {
+    # The policy forbids this session on its day. Resolve it, in order: move the
+    # composed session to an adjacent training day the policy allows; reduce it
+    # to a coexisting microdose the policy re-verifies; only then remove it.
+    resolution = {
         "authority": "late_fight_assignment_builder",
         "conflict_reason_code": decision.reason_code,
+        "from_d_day": sequence_role_offset_of(role),
         "composed_members": [_slot_exercise_name(match[2]) for match in chosen],
-        "action": "reduced_to_coexisting_microdose" if reduced else "suppressed_no_safe_prescription",
     }
-    if reduced is None:
-        return [], set()
-    return [reduced], {0}
+    moved = _late_primer_relocate(role, chosen, complements, sequence)
+    if moved is not None:
+        members, kept, offset = moved
+        role["late_load_resolution"] = {
+            **resolution, "action": "relocated_to_adjacent_day", "to_d_day": offset,
+            "displaced_fillers": [
+                str(item.get("role_key") or "") for item in sequence
+                if item.get("displaced_by_late_primer") and sequence_role_offset_of(item) == offset
+            ],
+        }
+        return members, kept
+    reduced = _late_primer_coexisting_microdose(role, ordered)
+    if reduced is not None:
+        verdict = _late_primer_decision(
+            role, _late_primer_session_stress(role, [reduced], {0}), sequence
+        )
+        if verdict is not None and verdict.directive is not PlacementDirective.FORBID:
+            role["late_load_resolution"] = {
+                **resolution, "action": "reduced_to_coexisting_microdose",
+                "verified_directive": verdict.directive.value,
+            }
+            return [reduced], {0}
+    role["late_load_resolution"] = {**resolution, "action": "suppressed_no_safe_prescription"}
+    return [], set()
 
 
 def _build_late_fight_allowed_exercises_by_day(
@@ -1441,6 +1578,10 @@ def _build_late_fight_allowed_exercises_by_day(
                 style_taper_usage,
                 sequence=list(spec.get("calendar_sequence") or _scheduled_late_fight_roles(spec)),
             )
+            # A forbidden primer may have been moved to an adjacent legal day.
+            day_label = str(role.get("scheduled_countdown_label") or day_label)
+            allowed_by_day.setdefault(day_label, [])
+            assignments_by_day.setdefault(day_label, [])
             # Record what was legal, so a support-only session is visibly
             # justified by the absence of a legal meaningful candidate.
             candidates = _late_primer_candidate_order(
@@ -1559,6 +1700,7 @@ def _with_late_fight_allowed_exercises(
     for day in _late_fight_countdown_days_from_spec(days_until_fight, spec):
         allowed_by_day.setdefault(f"D-{day}", [])
     roles = spec.get("visible_session_sequence") or spec.get("session_sequence") or []
+    drop_displaced_occupancy_fillers(roles)
     attach_late_fight_assignments(roles, assignments_by_day)
     return {
         **spec,
@@ -1900,6 +2042,8 @@ def _build_planning_brief(
         _, tail_assignments = _build_late_fight_allowed_exercises_by_day(
             spec={"visible_session_sequence": tail_roles}, candidate_pools=candidate_pools,
         )
+        for week in weekly_role_map.get("weeks", []) or []:
+            drop_displaced_occupancy_fillers(week.get("session_roles") or [])
         attach_late_fight_assignments(tail_roles, tail_assignments)
     # Deterministic prescription resolution: now that every strength role has its
     # scheduled D-day and final countdown dose envelope, resolve the single

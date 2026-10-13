@@ -2733,24 +2733,20 @@ def apply_realised_load_calendar_revalidation(
     # The last round may have re-dosed after its final stamp, so refresh once more:
     # the stamp that persists must describe the dose the role actually ends with.
     final_roles = _refresh_stress_stamps(weekly_role_map)
-    residual: list[dict[str, Any]] = []
-    owner_resolved: list[dict[str, Any]] = []
-    for role, ref, decision in _realised_load_conflicts(weekly_role_map, final_roles):
-        entry = {
+    # Every conflict still present on the final calendar is residual. A late
+    # session's owner resolves its conflict before this point (relocation or a
+    # policy-verified reduction); an attempted fix is never counted as resolved.
+    residual = [
+        {
             "role_key": role.get("role_key"),
             "d_day": ref.d_day,
             "reason_code": decision.reason_code,
             "directive": decision.directive.value,
         }
-        resolution = role.get("late_load_resolution")
-        if isinstance(resolution, dict) and resolution.get("action"):
-            # An immutable late-fight session whose owner already reduced its
-            # prescription for exactly this conflict: resolved, not ignored.
-            owner_resolved.append({**entry, "resolution": dict(resolution)})
-        else:
-            residual.append(entry)
+        for role, ref, decision in _realised_load_conflicts(weekly_role_map, final_roles)
+    ]
 
-    if actions or residual or reconciliations or owner_resolved:
+    if actions or residual or reconciliations:
         weekly_role_map["realised_load_revalidation"] = {
             "schema_version": "realised_load_revalidation.v3",
             "rounds_run": rounds_run,
@@ -2763,9 +2759,6 @@ def apply_realised_load_calendar_revalidation(
             # Legal but not ideal, and deliberately not chased further. Present
             # so a residual conflict is visible rather than silently accepted.
             "residual_conflicts": residual,
-            # Conflicts on immutable late-fight sessions that their membership
-            # owner resolved by reducing the prescription.
-            "owner_resolved_conflicts": owner_resolved,
         }
     return weekly_role_map
 

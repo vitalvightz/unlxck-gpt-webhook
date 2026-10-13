@@ -660,7 +660,38 @@ def role_load_profile(role: Mapping[str, Any] | None) -> CalendarLoadProfile | N
             raise ValueError("Technical contact role has conflicting day occupancy.")
         return canonical
 
-    return _with_role_stress(role, _reconcile_role_stamp(role, _derived_role_profile(role)))
+    profile = _reconcile_role_stamp(role, _derived_role_profile(role))
+    return _with_role_stress(role, _realised_microdose_profile(role_key, role, profile))
+
+
+def _realised_microdose_profile(
+    role_key: str, role: Mapping[str, Any], profile: CalendarLoadProfile | None
+) -> CalendarLoadProfile | None:
+    """A day-exclusive stressor that measured as a microdose is a microdose.
+
+    ``DAY_EXCLUSIVE_STRESSOR_ROLE_KEYS`` own their whole day because their key
+    promises meaningful neural or metabolic stress. When composition measured
+    the realised session (a ``realised_session_composition`` stamp) and it sits
+    at or below the neural-microdose vector on both axes, that promise no longer
+    holds: the session is classified as what it is, ``NEURAL_MICRODOSE`` with
+    ordinary physical occupancy, and every existing rule -- including the
+    declared light-combat coexistence exception -- judges it as such. An
+    unstamped, unmeasured or heavier session keeps its exclusive ownership.
+    """
+    if profile is None or role_key not in DAY_EXCLUSIVE_STRESSOR_ROLE_KEYS:
+        return profile
+    stamp = role.get("calendar_stress")
+    if not isinstance(stamp, Mapping) or stamp.get("authority") != "realised_session_composition":
+        return profile
+    realised = _parse_stress_stamp(stamp)
+    ceiling = _LOAD_CLASS_STRESS[LoadClass.NEURAL_MICRODOSE]
+    if (
+        realised is None
+        or realised.systemic > ceiling.systemic
+        or realised.neural_mechanical > ceiling.neural_mechanical
+    ):
+        return profile
+    return _profile(LoadClass.NEURAL_MICRODOSE)
 
 
 def role_load_class(role: Mapping[str, Any] | None) -> LoadClass | None:

@@ -173,8 +173,8 @@ def test_vito_b_d13_session_leads_with_meaningful_goal_relevant_power(days_out):
 @pytest.mark.parametrize("days_out", [14, 13])
 def test_vito_b_no_primer_day_repeats_one_drill_alone(days_out):
     primers = _primers(_brief("vito_b", days_out))
-    assert {13, 5} <= set(primers)
-    for d_day in (13, 5):
+    assert {13, 6, 5} <= set(primers)
+    for d_day in (13, 6, 5):
         assert [m["name"] for m in _members(primers[d_day])] != ["Pull-Counter-Reset"], d_day
 
 
@@ -184,26 +184,31 @@ def _suppressed(brief: dict) -> list[dict]:
     return [r for week in brief["weekly_role_map"]["weeks"] for r in week.get("suppressed_roles") or []]
 
 
-@pytest.mark.parametrize("days_out", [21, 14, 13])
-def test_vito_b_d7_primer_on_the_light_combat_day_is_resolved_not_just_detected(days_out):
-    """D-7 places the neural primer on Monday's declared light combat.
+@pytest.mark.parametrize("days_out", [21, 17, 14, 13, 10])
+def test_vito_b_d7_primer_moves_off_the_light_combat_day_instead_of_disappearing(days_out):
+    """The neural primer was placed on Monday's declared light combat (D-7).
 
-    The policy forbids an exclusive stressor on that day and late placement is
-    immutable, so the session is either reduced to a coexisting microdose or
-    removed with an explicit reason. It never ships as an unresolved conflict.
+    The policy forbids that stack and the primer is a small stimulus, so it moves
+    to the adjacent training day the policy allows (Tuesday, D-6), taking the
+    day from a subordinate occupancy filler. It is neither shipped forbidden nor
+    silently dropped, and no conflict is left on the final calendar.
     """
     brief = _brief("vito_b", days_out)
-    primer = _primers(brief).get(7)
-    if primer is not None:
-        assert primer["late_load_resolution"]["action"] == "reduced_to_coexisting_microdose"
-        assert len(_members(primer)) == 1
-        assert primer["calendar_stress"]["neural_mechanical"] <= 1
-    else:
-        removed = [r for r in _suppressed(brief)
-                   if r.get("role_key") == "neural_primer_day" and r.get("original_d_day") == 7]
-        assert removed and removed[0]["reason_code"] == "late_load_conflict_no_safe_prescription"
+    primers = _primers(brief)
+    assert 7 not in primers
+    primer = primers[6]
+    assert primer["role_key"] == "neural_primer_day"
+    resolution = primer["late_load_resolution"]
+    assert resolution["action"] == "relocated_to_adjacent_day"
+    assert resolution["from_d_day"] == 7 and resolution["to_d_day"] == 6
+    assert resolution["conflict_reason_code"] == "exclusive_physical_slot_conflict"
+    assert str(primer["scheduled_day_hint"]).lower() == "tuesday"
+    # The filler it displaced is gone from D-6; light combat still owns D-7.
+    roles = _roles(brief)
+    assert not [r for r in roles if r.get("role_key") == "joint_prep" and r.get("scheduled_countdown_label") == "D-6"]
+    assert [r for r in roles if r.get("role_key") == "light_combat_day" and r.get("scheduled_countdown_label") == "D-7"]
     revalidation = (brief.get("weekly_role_map") or {}).get("realised_load_revalidation") or {}
-    assert not [c for c in revalidation.get("residual_conflicts") or [] if c["d_day"] <= 13]
+    assert not revalidation.get("residual_conflicts")
 
 
 @pytest.mark.parametrize("days_out", [14, 13])

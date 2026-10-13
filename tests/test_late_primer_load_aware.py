@@ -222,7 +222,41 @@ def _light_combat(d_day):
             "declared_day_locked": True, "scheduled_countdown_label": f"D-{d_day}", "countdown_offset": d_day}
 
 
-def test_a_forbidden_fixed_day_reduces_the_primer_to_a_coexisting_microdose():
+def test_a_forbidden_day_moves_the_composed_primer_to_an_adjacent_legal_day():
+    role = _role("neural_primer_day", d_day=7, scheduled_day_hint="monday")
+    members = _compose(role, conditioning=[_primer("Counter Reset")], sequence=[role, _light_combat(7)])
+    assert _names(members) == ["Counter Reset"]
+    resolution = role["late_load_resolution"]
+    assert resolution["action"] == "relocated_to_adjacent_day"
+    assert resolution["from_d_day"] == 7 and resolution["to_d_day"] == 8
+    assert role["scheduled_countdown_label"] == "D-8" and role["scheduled_day_hint"] == "sunday"
+    assert members[0]["scheduled_countdown_label"] == "D-8"
+
+
+def _occupancy_filler(d_day):
+    return {"role_key": "joint_prep", "category": "support_insert", "physical_occupancy_fill": True,
+            "governance": {"authority": "gap_fill_support_insert", "meaningful_stress": False},
+            "stress_class": "support", "cost_class": "low", "scheduled_countdown_label": f"D-{d_day}",
+            "countdown_offset": d_day}
+
+
+def test_a_relocated_primer_takes_the_day_from_an_occupancy_filler():
+    from fightcamp.stage2_payload import drop_displaced_occupancy_fillers
+
+    role = _role("neural_primer_day", d_day=7, scheduled_day_hint="monday")
+    filler = _occupancy_filler(6)
+    blocked = _role("strength_touch_day", d_day=8)
+    sequence = [role, _light_combat(7), filler, blocked]
+    _compose(role, conditioning=[_primer("Counter Reset")], sequence=sequence)
+    assert role["late_load_resolution"]["to_d_day"] == 6
+    assert role["late_load_resolution"]["displaced_fillers"] == ["joint_prep"]
+    drop_displaced_occupancy_fillers(sequence)
+    assert filler not in sequence
+
+
+def test_a_forbidden_fixed_day_reduces_the_primer_to_a_verified_coexisting_microdose():
+    # No weekday: the primer cannot move, so it is reduced, and the reduction
+    # is only accepted because the policy re-judges it as a coexisting microdose.
     role = _role("neural_primer_day", d_day=7)
     quiet = _primer("Stance Cue", family="technical_neural", tags=(), prescription="2x3s with 120s rest", index=1)
     members = _compose(role, conditioning=[_primer("Counter Reset"), quiet],
@@ -231,12 +265,38 @@ def test_a_forbidden_fixed_day_reduces_the_primer_to_a_coexisting_microdose():
     assert members[0]["effective_prescription"] == "1x3s with 120s rest"
     resolution = role["late_load_resolution"]
     assert resolution["action"] == "reduced_to_coexisting_microdose"
+    assert resolution["verified_directive"] != "forbid"
     assert resolution["conflict_reason_code"] == "exclusive_physical_slot_conflict"
-    assert resolution["composed_members"] == ["Counter Reset", "Stance Cue"]
 
 
-def test_a_forbidden_fixed_day_with_no_safe_microdose_removes_the_session():
+def test_a_reduction_the_policy_still_forbids_is_never_accepted():
+    # The day belongs to another exclusive stressor: even a microdose may not share it.
+    role = _role("neural_primer_day", d_day=7)
+    quiet = _primer("Stance Cue", family="technical_neural", tags=(), prescription="2x3s with 120s rest", index=1)
+    owner = _role("strength_touch_day", d_day=7)
+    members = _compose(role, conditioning=[_primer("Counter Reset"), quiet], sequence=[role, owner])
+    assert members == []
+    assert role["late_load_resolution"]["action"] == "suppressed_no_safe_prescription"
+
+
+def test_a_forbidden_fixed_day_with_no_safe_option_removes_the_session():
     role = _role("neural_primer_day", d_day=7)
     members = _compose(role, conditioning=[_primer("Counter Reset")], sequence=[role, _light_combat(7)])
     assert members == []
     assert role["late_load_resolution"]["action"] == "suppressed_no_safe_prescription"
+
+
+def test_policy_classifies_a_measured_microdose_primer_as_a_microdose():
+    from fightcamp.combat_load_policy import DayOccupancy, LoadClass, role_load_profile
+
+    role = _role("neural_primer_day", d_day=7)
+    assert role_load_profile(role).occupancy is DayOccupancy.EXCLUSIVE_PHYSICAL
+    micro = {**role, "calendar_stress": {"systemic": 0, "neural_mechanical": 1, "regions": [],
+                                         "authority": "realised_session_composition"}}
+    profile = role_load_profile(micro)
+    assert profile.load_class is LoadClass.NEURAL_MICRODOSE
+    assert profile.occupancy is DayOccupancy.PHYSICAL
+    heavier = {**micro, "calendar_stress": {**micro["calendar_stress"], "neural_mechanical": 2}}
+    assert role_load_profile(heavier).occupancy is DayOccupancy.EXCLUSIVE_PHYSICAL
+    unattributed = {**micro, "calendar_stress": {**micro["calendar_stress"], "authority": "hand_written"}}
+    assert role_load_profile(unattributed).occupancy is DayOccupancy.EXCLUSIVE_PHYSICAL
