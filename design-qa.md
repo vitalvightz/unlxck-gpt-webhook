@@ -1,6 +1,6 @@
 source visual reference: local product-led concept image generated during design QA; temporary artifact not committed
 implementation evidence: in-app browser screenshots and DOM checks captured during QA; temporary screenshots not committed
-committed visual asset: web/public/unlxck-icon.jpg
+committed visual asset: web/public/brand/unlxck-logo.png
 latest mobile hero check: in-app browser viewport 390x844
 latest tablet proof/CTA check: in-app browser viewport 842x698
 viewport: desktop 1440x1000, mobile 390x844
