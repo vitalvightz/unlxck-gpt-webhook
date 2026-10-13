@@ -52,6 +52,7 @@ import {
   completionSessionId,
   dayCompletion,
   getSessionDisplayStatus,
+  planStartDayIso,
   resolveNextPlanFocusDay,
   resolveOpenPlanWeekNumber,
   resolvePlanProgress,
@@ -80,6 +81,7 @@ import {
   DECLARED_LIGHT_COMBAT_TITLE,
   formatPlanLabel,
   isDeclaredLightCombatTitle,
+  stripLeadingWeekday,
 } from "@/lib/plan-labels";
 import { GlossaryTooltip } from "@/components/glossary-tooltip";
 import { glossaryEntry } from "@/lib/glossary";
@@ -972,10 +974,11 @@ export function SessionCard({
   }, [defaultOpenBlocks]);
 
   const card = day?.today_card;
-  const title =
+  const title = stripLeadingWeekday(
     cleanText(session.title) ||
     cleanText(card?.headline) ||
-    titleize(cleanText(session.session_type) || "Session");
+    titleize(cleanText(session.session_type) || "Session"),
+  );
   const isDeclaredLightCombat = isDeclaredLightCombatTitle(title);
   const isTechnicalSession = title === "Technical-only combat";
   const sessionType = cleanText(session.session_type);
@@ -1719,6 +1722,7 @@ export function CampDayCard({
   defaultOpen,
   completionIndex,
   currentTrainingDayIso,
+  planStartIso,
   onLogSession,
 }: {
   day: StructuredDay;
@@ -1738,6 +1742,8 @@ export function CampDayCard({
   completionIndex?: CompletionIndex;
   /** Server-authoritative athlete-local day (drives Missed + the retro window). */
   currentTrainingDayIso?: string | null;
+  /** Local day the plan was created; earlier sessions are never Missed. */
+  planStartIso?: string | null;
   /** Opens the retro-log form for a past, still-loggable session. */
   onLogSession?: (day: StructuredDay, session: StructuredSession, sessionId: string) => void;
 }) {
@@ -1776,10 +1782,10 @@ export function CampDayCard({
     if (!sessionId) {
       return undefined;
     }
-    const display = getSessionDisplayStatus(record, dayIso, currentTrainingDayIso ?? null);
+    const display = getSessionDisplayStatus(record, dayIso, currentTrainingDayIso ?? null, planStartIso ?? null);
     const terminal = display.state === "done" || display.state === "modified" || display.state === "skipped";
     const canLog =
-      Boolean(onLogSession) && !terminal && canRetroLog(dayIso, currentTrainingDayIso ?? null);
+      Boolean(onLogSession) && !terminal && canRetroLog(dayIso, currentTrainingDayIso ?? null, planStartIso ?? null);
     return {
       display,
       completion: record,
@@ -2615,6 +2621,8 @@ export function StructuredPlanRenderer({
     () => (completions ? buildCompletionIndex(completions) : undefined),
     [completions],
   );
+  // Sessions dated before the plan existed were never available to train.
+  const planStartIso = useMemo(() => planStartDayIso(createdAt), [createdAt]);
 
   // Resolve "today" through the shared 03:00 training-day rollover so Plan Detail
   // and the Today tab can never disagree on the current day.
@@ -2889,6 +2897,7 @@ export function StructuredPlanRenderer({
                     defaultOpen={isCurrent || (focusProgress.currentWeekPos == null && index === 0)}
                     completionIndex={completionIndex}
                     currentTrainingDayIso={currentTrainingDayIso}
+                    planStartIso={planStartIso}
                     onLogSession={onLogSession}
                   />
                 );

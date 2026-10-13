@@ -74,7 +74,7 @@ export const XP_ACTIONS: Record<XpAction, XpActionConfig> = {
   recommended_fighter_content_watched: { label: "Recommended fighter content watched", xp: 10 },
   full_training_week_completed: { label: "Full training week completed", xp: 100 },
   profile_completed: { label: "Profile completed", xp: 25 },
-  first_intake_completed: { label: "First intake completed", xp: 50 },
+  first_intake_completed: { label: "Camp Setup completed", xp: 50 },
   first_plan_ready: { label: "First plan ready", xp: 100 },
   first_checkin_completed: { label: "First check-in completed", xp: 25 },
   readiness_checkin_completed: { label: "Readiness check-in completed", xp: 10 },

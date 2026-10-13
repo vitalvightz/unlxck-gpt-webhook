@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { formatPlanLabel, isRawEnumLabel } from "./plan-labels.ts";
+import { athleteFacingSessionTitle, formatPlanLabel, isRawEnumLabel, stripLeadingWeekday } from "./plan-labels.ts";
 
 test("formatPlanLabel maps readiness/decision enums to readable labels", () => {
   assert.equal(formatPlanLabel("stop_and_report"), "Stop and report");
@@ -64,4 +64,15 @@ test("isRawEnumLabel detects machine tokens but not human sentences", () => {
   assert.equal(isRawEnumLabel("Red"), false);
   assert.equal(isRawEnumLabel(""), false);
   assert.equal(isRawEnumLabel(null), false);
+});
+
+test("a generated title that opens with its weekday drops it", () => {
+  assert.equal(stripLeadingWeekday("Monday. Strength anchor"), "Strength anchor");
+  assert.equal(stripLeadingWeekday("Tuesday. Fight-pace conditioning"), "Fight-pace conditioning");
+  assert.equal(stripLeadingWeekday("Wed - light flush"), "Light flush");
+  assert.equal(athleteFacingSessionTitle("Friday: Neural primer"), "Neural primer");
+  // Not a weekday prefix, or nothing would be left: unchanged.
+  assert.equal(stripLeadingWeekday("Sunday"), "Sunday");
+  assert.equal(stripLeadingWeekday("Mondays off"), "Mondays off");
+  assert.equal(stripLeadingWeekday("Strength anchor"), "Strength anchor");
 });

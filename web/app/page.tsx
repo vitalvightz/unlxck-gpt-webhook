@@ -427,7 +427,7 @@ export default function HomePage() {
               </Link>
             </div>
             <p className="muted welcome-context">
-              Want more control? <Link href="/onboarding" className="auth-text-link">Use Advanced Intake</Link>.
+              Want more control? <Link href="/onboarding" className="auth-text-link">Use Camp Setup</Link>.
             </p>
             <InstallUnlxck variant="inline" />
           </div>

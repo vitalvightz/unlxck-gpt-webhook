@@ -296,7 +296,7 @@ def _opportunities(
         choices.append(
             _opportunity(
                 code="complete_first_intake",
-                label="Complete your first intake",
+                label="Complete Camp Setup",
                 xp=50,
                 href="/onboarding",
                 priority=60,

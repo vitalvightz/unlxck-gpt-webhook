@@ -126,7 +126,7 @@ function normalizeTrainingSelections(
 
 function formatNumber(value: number | null | undefined, unit?: string): string {
   if (value == null) {
-    return "Missing in Advanced Intake";
+    return "Missing in Camp Setup";
   }
   return unit ? `${value} ${unit}` : String(value);
 }
@@ -134,11 +134,11 @@ function formatNumber(value: number | null | undefined, unit?: string): string {
 function formatSex(value: NutritionProfileInput["sex"] | null | undefined): string {
   if (value === "male") return "Male";
   if (value === "female") return "Female";
-  return "Missing in Advanced Intake";
+  return "Missing in Camp Setup";
 }
 
 function formatRestrictionsSummary(value: string | null | undefined): string {
-  return value?.trim() ? value.trim() : "No restrictions reported in Advanced Intake.";
+  return value?.trim() ? value.trim() : "No restrictions reported in Camp Setup.";
 }
 
 function formatEnumLabel(value: string | null | undefined, fallback: string): string {
@@ -332,14 +332,14 @@ export function NutritionWorkspaceScreen() {
                       </div>
                     ))}
                   </div>
-                  <p className="muted">These details come from Advanced Intake so you only have to enter them once.</p>
+                  <p className="muted">These details come from Camp Setup so you only have to enter them once.</p>
                   {coreMissingFields.length ? (
                     <p className="muted">
-                      Still missing in Advanced Intake: {coreMissingFields.map((field) => CORE_FIELD_LABELS[field]).join(", ")}.
+                      Still missing in Camp Setup: {coreMissingFields.map((field) => CORE_FIELD_LABELS[field]).join(", ")}.
                     </p>
                   ) : null}
                   <div className="plan-summary-actions">
-                    <Link href="/onboarding" className="ghost-button">Edit in Advanced Intake</Link>
+                    <Link href="/onboarding" className="ghost-button">Edit in Camp Setup</Link>
                   </div>
                 </article>
 
@@ -359,9 +359,9 @@ export function NutritionWorkspaceScreen() {
                       </div>
                     ))}
                   </div>
-                  <p className="muted">Restrictions are set in Advanced Intake.</p>
+                  <p className="muted">Restrictions are set in Camp Setup.</p>
                   <div className="plan-summary-actions">
-                    <Link href="/onboarding" className="ghost-button">Edit in Advanced Intake</Link>
+                    <Link href="/onboarding" className="ghost-button">Edit in Camp Setup</Link>
                   </div>
                 </article>
               </div>
