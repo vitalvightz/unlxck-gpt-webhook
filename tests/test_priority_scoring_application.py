@@ -233,8 +233,8 @@ def test_collision_safe_helpers_respect_caps():
 
 
 def test_conditioning_collision_reason_code_is_not_athlete_facing(monkeypatch):
-    monkeypatch.setitem(conditioning.GOAL_TAG_MAP, "power", ["power"])
-    monkeypatch.setitem(conditioning.WEAKNESS_TAG_MAP, "power", ["power"])
+    monkeypatch.setitem(conditioning.GOAL_PRIORITY_TAG_MAP, "power", ["power"])
+    monkeypatch.setitem(conditioning.WEAKNESS_PRIORITY_TAG_MAP, "power", ["power"])
     monkeypatch.setattr(
         conditioning,
         "get_conditioning_bank",

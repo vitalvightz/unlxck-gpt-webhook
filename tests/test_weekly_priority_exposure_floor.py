@@ -96,6 +96,7 @@ def test_only_goals_the_strength_pool_can_evidence_are_floor_goals():
         "power": "ballistic_power",
         "speed": "speed_quality",
         "strength": "meaningful_strength",
+        "trunk_strength": "trunk_training",
     }
     for goal in ("conditioning", "recovery", "weight_cut", "footwork", "mobility"):
         assert goal not in _MICRODOSE_GOAL_INTENTS

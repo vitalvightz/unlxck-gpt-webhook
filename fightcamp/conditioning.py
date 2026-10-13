@@ -37,7 +37,7 @@ from .bout_format import (
 )
 from .diagnostics import format_missing_system_block
 from .tagging import normalize_item_tags, normalize_tags
-from .tag_maps import GOAL_TAG_MAP, STYLE_TAG_MAP, WEAKNESS_TAG_MAP
+from .tag_maps import GOAL_PRIORITY_TAG_MAP, STYLE_TAG_MAP, WEAKNESS_PRIORITY_TAG_MAP
 from .config import (
     PHASE_SYSTEM_RATIOS,
     athlete_round_seconds,
@@ -159,20 +159,20 @@ def _conditioning_priority_tag_tiers(priority_profile):
     cached = _PRIORITY_TAG_TIER_CACHE.get(key)
     if cached is None:
         primary_goal = frozenset(
-            expand_tags([priority_profile.primary_goal], GOAL_TAG_MAP)
+            expand_tags([priority_profile.primary_goal], GOAL_PRIORITY_TAG_MAP)
             if priority_profile.primary_goal
             else []
         )
         secondary_goal = frozenset(
-            expand_tags(priority_profile.secondary_goals, GOAL_TAG_MAP)
+            expand_tags(priority_profile.secondary_goals, GOAL_PRIORITY_TAG_MAP)
         ) - primary_goal
         primary_weak = frozenset(
-            expand_tags([priority_profile.primary_weak_area], WEAKNESS_TAG_MAP)
+            expand_tags([priority_profile.primary_weak_area], WEAKNESS_PRIORITY_TAG_MAP)
             if priority_profile.primary_weak_area
             else []
         )
         secondary_weak = frozenset(
-            expand_tags(priority_profile.secondary_weak_areas, WEAKNESS_TAG_MAP)
+            expand_tags(priority_profile.secondary_weak_areas, WEAKNESS_PRIORITY_TAG_MAP)
         ) - primary_weak
         cached = (primary_goal, secondary_goal, primary_weak, secondary_weak)
         if len(_PRIORITY_TAG_TIER_CACHE) >= _PRIORITY_TAG_TIER_CACHE_MAXSIZE:
@@ -3150,10 +3150,10 @@ def generate_conditioning_block(flags):
     style_tags = [s.lower() for s in style] if isinstance(style, list) else [style.lower()]
     style_tags = normalize_tags([t for s in style_tags for t in STYLE_TAG_MAP.get(s, [])])
 
-    goal_tags = expand_tags(goals, GOAL_TAG_MAP)
+    goal_tags = expand_tags(goals, GOAL_PRIORITY_TAG_MAP)
     goal_list = [g.lower() for g in goals]
     weak_list = [w.lower() for w in weaknesses]
-    weak_tags = expand_tags(weaknesses, WEAKNESS_TAG_MAP)
+    weak_tags = expand_tags(weaknesses, WEAKNESS_PRIORITY_TAG_MAP)
     raw_goal_tokens = _normalize_focus_tokens(goal_list)
     raw_weak_tokens = _normalize_focus_tokens(weak_list)
     goal_tag_tokens = _normalize_focus_tokens(goal_tags)

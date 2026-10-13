@@ -461,6 +461,13 @@ def athlete_dose_state(athlete_model: dict[str, Any] | None) -> dict[str, bool]:
     fatigue = str(athlete_model.get("fatigue") or "").strip().lower()
     cut_bucket = str(athlete_model.get("cut_severity_bucket") or "").strip().lower()
     injuries = athlete_model.get("injuries") or athlete_model.get("parsed_injuries") or []
+    # ``surface_injury_only`` is the athlete model's canonical verdict that the
+    # whole injury picture is stable train-through skin (a blister or graze).
+    # That verdict already withholds ``injury_management``; reading the raw list
+    # here would turn a covered blister back into global strength pressure.
+    # Local wound precautions stay with the exercise-level injury filters.
+    if athlete_model.get("surface_injury_only") is True:
+        injuries = []
     return {
         "high_fatigue": fatigue == "high" or "high_fatigue" in readiness_flags,
         # Consume the resolved cut state; never re-derive severity from a raw
@@ -559,7 +566,17 @@ def has_verified_low_cost(
 
 
 def _pre_hard_verified_low_cost(slot: dict[str, Any]) -> bool:
-    """Require affirmative low/none cost metadata for the optional second item."""
+    """Require affirmative low/none cost metadata for the optional second item.
+
+    Low impact and little eccentric loading do not make a heavy implement low
+    cost. A support-classified item whose authored governance states meaningful
+    stress (a heavy sled push, yoke walk or loaded carry) is refused here.
+    """
+    selected = _slot_selected(slot)
+    if _role_kind(slot) == "support" and (
+        selected.get("meaningful_stress") is True or selected.get("support_only") is False
+    ):
+        return False
     return has_verified_low_cost(slot, fields=_PRE_HARD_COST_FIELDS)
 
 

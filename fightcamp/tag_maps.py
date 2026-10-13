@@ -253,3 +253,94 @@ WEAKNESS_TAG_MAP = {
     "adductor groin": ["adductors", "balance", "lateral_power"],
     "adductor_groin": ["adductors", "balance", "lateral_power"],
 }
+
+
+# --- Anatomical involvement versus adaptation --------------------------------
+#
+# The maps above describe which bank tags an intake term touches. Some of those
+# tags only say which body parts an exercise uses: swimming carries
+# ``upper_body`` and a sled push carries ``core``. That is anatomical
+# involvement, not evidence that the exercise's training method develops
+# strength, power, speed, conditioning or trunk strength. When the athlete's
+# selected priority names an adaptation, such a tag may describe the exercise
+# but never earns the priority match. Regional priorities (shoulders, posterior
+# chain, grip, adductors, ...) keep their anatomical tags: there the region is
+# the point.
+ANATOMICAL_INVOLVEMENT_TAGS = frozenset(
+    {
+        "upper_body",
+        "lower_body",
+        "core",
+        "posterior_chain",
+        "quad_dominant",
+        "hamstring",
+        "hip_dominant",
+        "glute_load_high",
+        "shoulders",
+        "adductors",
+        "pull",
+        "push",
+    }
+)
+
+# Selected priority wording -> the adaptation it names. Strength-bank items
+# evidence these through ``strength_session_quality.strength_adaptation_relevance``.
+PRIORITY_ADAPTATIONS = {
+    "strength": "strength",
+    "maximal_strength_maintenance": "strength",
+    "power": "power",
+    "explosive": "power",
+    "explosiveness": "power",
+    "explosive_power": "power",
+    "speed": "speed",
+    "reactive": "speed",
+    "speed / reaction": "speed",
+    "speed_reaction": "speed",
+    "trunk_strength": "trunk_strength",
+    "core stability": "trunk_strength",
+    "core_stability": "trunk_strength",
+    "core_strength": "trunk_strength",
+}
+
+ADAPTATION_PRIORITY_KEYS = frozenset(
+    {
+        *PRIORITY_ADAPTATIONS,
+        "conditioning",
+        "endurance",
+        "gas_tank",
+        "mobility",
+    }
+)
+
+
+# Strength is a method-and-load adaptation. No single bank tag establishes it:
+# ``compound`` or ``isometric`` describe a plank as well as a heavy squat, and
+# ``low_eccentric``/``cns_freshness`` describe low cost. A strength priority is
+# therefore matched only by the item's own adaptation evidence.
+_EVIDENCE_ONLY_PRIORITIES = frozenset({"strength"})
+
+
+def _priority_match_map(tag_map: dict[str, list[str]]) -> dict[str, list[str]]:
+    return {
+        key: []
+        if key in _EVIDENCE_ONLY_PRIORITIES
+        else [
+            tag
+            for tag in tags
+            if key not in ADAPTATION_PRIORITY_KEYS or tag not in ANATOMICAL_INVOLVEMENT_TAGS
+        ]
+        for key, tags in tag_map.items()
+    }
+
+
+# The maps scoring uses to decide whether a bank tag MATCHES a selected
+# priority. Identical to the maps above except that adaptation priorities do not
+# match on anatomical involvement, and strength matches on evidence only.
+GOAL_PRIORITY_TAG_MAP = _priority_match_map(GOAL_TAG_MAP)
+WEAKNESS_PRIORITY_TAG_MAP = _priority_match_map(WEAKNESS_TAG_MAP)
+
+
+def priority_adaptation(value: str) -> str:
+    """The adaptation a selected goal/weakness names, or "" for a regional one."""
+    key = str(value or "").strip().lower()
+    return PRIORITY_ADAPTATIONS.get(key) or PRIORITY_ADAPTATIONS.get(key.replace(" ", "_"), "")

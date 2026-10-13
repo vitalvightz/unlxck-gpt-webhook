@@ -109,7 +109,11 @@ from .stage2_render_guards import (  # noqa: F401  (re-exported for backwards co
     _meaningful_injury_values,
     _render_guard_flags,
 )
-from .strength_session_quality import classify_strength_item, infer_strength_sessions
+from .strength_session_quality import (
+    classify_strength_item,
+    infer_strength_sessions,
+    strength_adaptation_relevance,
+)
 from .training_context import TrainingContext, allocate_sessions
 from .nutrition import compute_nutrition_targets
 from .recovery import compute_recovery_plan
@@ -1641,6 +1645,9 @@ def _why_log_score_evidence(why_entry: dict) -> dict:
     return build_score_evidence(reasons=reasons, explanation=explanation)
 
 
+_ADAPTATION_ORDER = ("strength", "power", "speed", "trunk_strength")
+
+
 def _serialize_strength_option(exercise: dict, why: str, score_evidence: dict | None = None, *, phase: str | None = None) -> dict:
     movement = str(exercise.get("movement", "")).strip().lower().replace(" ", "_")
     movement_patterns = [movement] if movement else []
@@ -1653,6 +1660,20 @@ def _serialize_strength_option(exercise: dict, why: str, score_evidence: dict | 
         allow_legacy_unstamped=True,
     )
     required_equipment = clean_list(exercise.get("required_equipment") or exercise.get("equipment", []))
+    # The serialized slot keeps no method or authored category, so the item's
+    # adaptation relevance travels in the existing selection-metadata fields.
+    # Nothing found stays "unknown": unreviewed is not negative evidence.
+    adaptations = [
+        adaptation
+        for adaptation in _ADAPTATION_ORDER
+        if adaptation in strength_adaptation_relevance(exercise)
+    ]
+    if adaptations:
+        exercise = {
+            **exercise,
+            "primary_adaptation": adaptations[0],
+            "secondary_adaptations": adaptations[1:],
+        }
     prescription = exercise.get("prescription") or ""
     if not prescription and phase:
         # Carry the same actual bank-template dose that Stage 1 renders. A method

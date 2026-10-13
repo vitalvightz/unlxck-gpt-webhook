@@ -2,7 +2,7 @@
   "generator_mode": "deterministic_planner_plus_ai_finalizer",
   "payload_variant": null,
   "roles": [
-    [1, "GPP", "aerobic_coordination_day", "conditioning", "wednesday", 23, false, false, false, "", ""],
+    [1, "GPP", "aerobic_coordination_day", "conditioning", "thursday", 22, false, false, false, "", ""],
     [1, "GPP", "breathing_reset", "support_insert", "wednesday", 23, false, false, false, "support", "low"],
     [1, "GPP", "converted_recovery_flush_day", "conditioning", "friday", 21, false, false, false, "", ""],
     [1, "GPP", "converted_recovery_flush_day", "conditioning", "sunday", 19, false, false, false, "", ""],
@@ -12,7 +12,7 @@
     [1, "GPP", "light_combat_day", "technical", "monday", 18, false, false, false, "support", "low"],
     [1, "GPP", "primary_strength_day", "strength", "tuesday", 17, false, false, true, "", ""],
     [1, "GPP", "recovery_reset_day", "recovery", "monday", 18, false, false, false, "", ""],
-    [1, "GPP", "secondary_strength_day", "strength", "wednesday", 23, false, false, true, "", ""],
+    [1, "GPP", "secondary_strength_day", "strength", "wednesday", 23, false, false, false, "", ""],
     [1, "GPP", "tactical_watch", "support_insert", "wednesday", 23, false, false, false, "support", "low"],
     [2, "SPP", "alactic_speed_day", "conditioning", "thursday", 15, false, false, false, "", ""],
     [2, "SPP", "breathing_reset", "support_insert", "thursday", 15, false, false, false, "support", "low"],

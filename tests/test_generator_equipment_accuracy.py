@@ -6,7 +6,8 @@ from fightcamp import conditioning, strength
 from fightcamp.training_catalogue import build_catalogue, content_hash, SOURCE_CLASSES, DATA_DIR
 from fightcamp.training_context import normalize_equipment_list, normalize_athlete_equipment_list
 from api.services import training_library as library
-from tools.audit_metadata_integrity import historical_sources, mechanical_baseline_sources, reviewed_mechanical_changes
+from tools.audit_metadata_integrity import (
+    historical_sources, mechanical_baseline_sources, original_equipment_source, reviewed_mechanical_changes)
 
 NAMES = ('Rope Climb + Short Sprint', 'Rope Climb Sprints', 'Towel Pull-Up Sprints',
          'Slow-Lowered Pull-Up', 'Towel-assisted lateral neck isometric')
@@ -186,7 +187,13 @@ def test_complete_fixed_clock_plans_have_only_explained_changes(tmp_path):
     from tools.audit_canonical_metadata import ROOT, BASELINE
 
     outputs = []
-    with historical_sources() as before_root, mechanical_baseline_sources() as main_root:
+    # Both snapshots run today's planner code. "before" reverses only #2825's
+    # planner inputs (its equipment rows, their catalogue bindings and the
+    # strength fallback gate), so later planner changes cannot pose as #2825's.
+    with mechanical_baseline_sources() as before_root, mechanical_baseline_sources() as main_root:
+        for relative in ('data/exercise_bank.json', 'data/conditioning_bank.json',
+                         'data/training_catalogue_ids.json', 'fightcamp/strength.py'):
+            (before_root / relative).write_bytes(original_equipment_source(relative))
         for label, root in (('before', before_root), ('after', main_root)):
             destination = tmp_path / (label + '.json')
             subprocess.run([sys.executable, str(ROOT / 'tools/canonical_metadata_plan_probe.py'),

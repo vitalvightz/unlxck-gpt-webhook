@@ -25,8 +25,8 @@ from .late_fight_phase_eligibility import scheduled_phase_for_role
 from .calendar_context import role_d_day
 from .calendar_integrity import relocate_or_suppress_role_for_recovery
 from .combat_load_policy import BodyRegion, SessionStress, StressLevel
-from .prescription_resolver import has_verified_low_cost
-from .strength_session_quality import classify_strength_item
+from .prescription_resolver import athlete_dose_state, has_verified_low_cost
+from .strength_session_quality import classify_strength_item, strength_adaptation_relevance
 from .training_context import normalize_equipment_list
 from .config import (
     athlete_round_seconds,
@@ -240,13 +240,9 @@ def _resolved_cut_bucket(athlete_model: dict[str, Any]) -> str:
 
 
 def _injury_restricted(athlete_model: dict[str, Any]) -> bool:
-    flags = {
-        str(flag).strip().lower()
-        for flag in (athlete_model.get("readiness_flags") or [])
-        if str(flag).strip()
-    }
-    injuries = athlete_model.get("injuries") or athlete_model.get("parsed_injuries") or []
-    return bool(injuries) or "injury_management" in flags
+    # One readiness authority for composition and dose resolution, so a stable
+    # surface-only injury never tightens one while the other stays open.
+    return bool(athlete_dose_state(athlete_model).get("injury_restricted"))
 
 
 def _pressure_state_from_components(
@@ -411,17 +407,21 @@ def _composition_families(slot: dict[str, Any]) -> tuple[set[str], dict[str, Any
 
     Stage 1 already serializes ``base_categories`` and ``support_only`` from the
     exercise classifier. Those fields are preferred as authoritative evidence;
-    reclassification is only a fallback/union for older or hand-built slots.
+    reclassification is only a fallback for older or hand-built slots. It is not
+    unioned in: the serialized slot no longer carries the authored body
+    category, so reclassifying it would re-add the "pull"/"press" word hint the
+    Stage 1 classification already corrected.
     """
     item = _slot_selected_item(slot)
     profile = classify_strength_item(item)
+    serialized = [
+        *(slot.get("base_categories") or []),
+        *(item.get("base_categories") or []),
+    ]
+    has_serialized = "base_categories" in slot or "base_categories" in item
     categories = {
         str(value).strip()
-        for value in [
-            *(slot.get("base_categories") or []),
-            *(item.get("base_categories") or []),
-            *(profile.get("base_categories") or []),
-        ]
+        for value in (serialized if has_serialized else profile.get("base_categories") or [])
         if str(value).strip()
     }
     support_only = bool(
@@ -549,6 +549,23 @@ def _slot_mechanical_risk_tags(slot: dict[str, Any]) -> set[str]:
     } | option_mechanical_risk_tags(_slot_selected_item(slot))
 
 
+def slot_adaptations(slot: dict[str, Any]) -> frozenset[str]:
+    """The adaptation relevance Stage 1 stamped on this slot's selected item.
+
+    Serialized slots carry no method or authored category, so Stage 1 records
+    ``strength_adaptation_relevance`` in the selection metadata. A hand-built
+    slot without that stamp is classified directly.
+    """
+    item = _slot_selected_item(slot)
+    metadata = item.get("selection_metadata") if isinstance(item.get("selection_metadata"), dict) else {}
+    stamped = {
+        str(value).strip()
+        for value in [metadata.get("primary_adaptation"), *(metadata.get("secondary_adaptations") or [])]
+        if str(value or "").strip() and str(value).strip() != "unknown"
+    }
+    return frozenset(stamped) if stamped else strength_adaptation_relevance(item)
+
+
 def _candidate_records(slots: list[dict[str, Any]]) -> list[dict[str, Any]]:
     records: list[dict[str, Any]] = []
     for index, slot in enumerate(slots):
@@ -560,6 +577,11 @@ def _candidate_records(slots: list[dict[str, Any]]) -> list[dict[str, Any]]:
         serialized_support_only = serialized_quality_class in {"support_accessory", "support_isometric", "rehab_support"}
         has_major_family = bool(families - {"support"})
         support_only = bool(serialized_support_only or (profile.get("support_only") and not has_major_family))
+        item = _slot_selected_item(slot)
+        # Authored meaningful stress (a heavy sled, yoke or carry) is never
+        # low-cost support, whatever class its name or tags produced.
+        governed_meaningful_stress = item.get("meaningful_stress") is True or item.get("support_only") is False
+        adaptations = slot_adaptations(slot)
         records.append(
             {
                 "slot": slot,
@@ -568,8 +590,14 @@ def _candidate_records(slots: list[dict[str, Any]]) -> list[dict[str, Any]]:
                 "support_only": support_only,
                 "core_balance_support": bool(
                     profile.get("core_balance_support")
-                    or (serialized_support_only and _slot_has_core_balance_signal(slot))
+                    or (
+                        serialized_support_only
+                        and _slot_has_core_balance_signal(slot)
+                        and not governed_meaningful_stress
+                    )
                 ),
+                "adaptations": adaptations,
+                "trunk_targeted": "trunk_strength" in adaptations,
                 "loaded_pattern": bool(profile.get("loaded_pattern") and (not serialized_support_only or _slot_uses_loaded_equipment(slot))),
                 "force_isometric": bool(profile.get("force_isometric")),
                 "power_pattern": bool(profile.get("power_pattern")),
@@ -609,6 +637,14 @@ def _add_record(
         family_counts[family] = family_counts.get(family, 0) + 1
 
 
+_GROUP_ADAPTATIONS = {_STRENGTH_FAMILIES: "strength", _POWER_FAMILIES: "power"}
+
+
+def _backs_required_group(record: dict[str, Any], group: frozenset[str]) -> bool:
+    adaptation = _GROUP_ADAPTATIONS.get(group)
+    return bool(record["families"] & group) and adaptation in record.get("adaptations", ())
+
+
 def _select_bounded_records(
     records: list[dict[str, Any]],
     *,
@@ -622,6 +658,22 @@ def _select_bounded_records(
     family_counts: dict[str, int] = {}
     dropped: dict[str, str] = {}
 
+    # A family says which region and pattern a lift loads; it does not say the
+    # lift develops strength. A plyometric push-up sits in the upper-strength
+    # family by its push pattern. When the session's candidates include a record
+    # whose own adaptation evidence backs a required group, only such a record
+    # satisfies it; otherwise the family match stands, as before.
+    backed_groups = {
+        group
+        for group in _ROLE_REQUIRED_FAMILY_GROUPS.get(role_key, ())
+        if any(_backs_required_group(record, group) for record in records)
+    }
+
+    def _covers(record: dict[str, Any], group: frozenset[str]) -> bool:
+        if not record["families"] & group:
+            return False
+        return group not in backed_groups or _backs_required_group(record, group)
+
     unsatisfied_groups = list(_ROLE_REQUIRED_FAMILY_GROUPS.get(role_key, ()))
     while unsatisfied_groups:
         if len(selected) >= cap:
@@ -630,7 +682,7 @@ def _select_bounded_records(
             record
             for record in records
             if record not in selected
-            and any(record["families"] & group for group in unsatisfied_groups)
+            and any(_covers(record, group) for group in unsatisfied_groups)
             and not _would_exceed_family_limit(
                 record["families"], family_counts, family_limit
             )
@@ -640,23 +692,25 @@ def _select_bounded_records(
         record = max(
             eligible,
             key=lambda item: sum(
-                bool(item["families"] & group) for group in unsatisfied_groups
+                _covers(item, group) for group in unsatisfied_groups
             ),
         )
         _add_record(record, selected, family_counts)
         unsatisfied_groups = [
-            group for group in unsatisfied_groups if not (record["families"] & group)
+            group for group in unsatisfied_groups if not _covers(record, group)
         ]
 
     # An explicitly selected trunk-strength limiter belongs inside the retained
     # maintenance session when the conditioning priority shift leaves only one
-    # strength slot. Keep it inside the existing cap and bank membership.
+    # strength slot. Keep it inside the existing cap and bank membership. Only
+    # trunk-targeted work qualifies: a balance drill, or a sled push that merely
+    # involves the trunk, is not trunk training.
     if preserve_trunk_support and len(selected) < cap:
         trunk_options = [
             record
             for record in records
             if record not in selected
-            and record.get("core_balance_support")
+            and record.get("trunk_targeted")
             and not _would_exceed_family_limit(
                 record["families"], family_counts, family_limit
             )
@@ -698,6 +752,46 @@ def _select_bounded_records(
     return selected, dropped
 
 
+_PRESSURE_SOURCE_REASONS = (
+    ("fatigue_pressure", "high_fatigue"),
+    ("cut_pressure", "weight_cut_pressure"),
+    ("injury_pressure", "injury_constraint"),
+)
+
+
+def _trunk_support_outcome(
+    records: list[dict[str, Any]],
+    available: list[dict[str, Any]],
+    selected: list[dict[str, Any]],
+    *,
+    role_key: str,
+    pressure_state: dict[str, Any],
+) -> dict[str, Any]:
+    """Whether this session carries the selected trunk weakness, and if not why.
+
+    Readiness pressure is cited only when it is causal: the same selector, run
+    on the same candidates at pressure 0 and the role's base cap, would have
+    kept trunk-targeted work. A gap with no such cause stays uncited, so goal
+    preservation reports it rather than excusing it.
+    """
+    if any(record.get("trunk_targeted") for record in selected):
+        return {"delivered": True}
+    if not any(record.get("trunk_targeted") for record in records):
+        return {"delivered": False, "skip_reason": "no_trunk_candidate_in_session_pool"}
+    if not any(record.get("trunk_targeted") for record in available):
+        return {"delivered": False, "skip_reason": "adjacent_strength_recovery"}
+    sources = [
+        reason for key, reason in _PRESSURE_SOURCE_REASONS if int(pressure_state.get(key) or 0) > 0
+    ]
+    base_cap, _ = _effective_role_cap(role_key, 0)
+    unpressured, _ = _select_bounded_records(
+        available, role_key=role_key, cap=base_cap, pressure=0, preserve_trunk_support=True
+    )
+    if sources and any(record.get("trunk_targeted") for record in unpressured):
+        return {"delivered": False, "skip_reason": "readiness_capacity", "pressure_sources": sources}
+    return {"delivered": False, "skip_reason": "session_capacity"}
+
+
 def _pressure_context_from_map(weekly_role_map: dict[str, Any]) -> dict[str, Any] | None:
     state = weekly_role_map.get("strength_composition_context")
     if not isinstance(state, dict):
@@ -732,6 +826,7 @@ def _low_load_trunk_support_records(slots: list[dict[str, Any]]) -> list[dict[st
         if (
             record.get("support_only")
             and record.get("core_balance_support")
+            and record.get("trunk_targeted")
             and not record.get("loaded_pattern")
             and not record.get("force_isometric")
             and not record.get("power_pattern")
@@ -745,7 +840,11 @@ _EMBEDDED_TRUNK_HOLD_PRESCRIPTION = "1-2 controlled sets x 15-20 sec hold; stop 
 _EMBEDDED_TRUNK_REP_PRESCRIPTION = (
     "1-2 controlled sets x 3-5 slow reps (each side if one-sided); stop before fatigue"
 )
+_EMBEDDED_TRUNK_CARRY_PRESCRIPTION = (
+    "1-2 controlled sets x 15-20 m carry (each side if one-sided); light load, stop before fatigue"
+)
 _HOLD_NAME_RE = re.compile(r"\b(?:hold|holds|plank|isometric|iso)\b", re.IGNORECASE)
+_CARRY_RE = re.compile(r"\b(?:carry|carries|walk)\b", re.IGNORECASE)
 
 
 def _embedded_trunk_support_prescription(record: dict[str, Any]) -> str:
@@ -753,11 +852,15 @@ def _embedded_trunk_support_prescription(record: dict[str, Any]) -> str:
 
     A set count alone ("1-2 controlled sets") leaves the athlete with no hold
     time or rep count, so the card renders a hold with nothing to hold for.
-    Holds get a hold time; everything else gets a small rep count.
+    Holds get a hold time, carries a short distance, everything else a small
+    rep count: "3-5 slow reps" of a carry is not a dose.
     """
     slot = record.get("slot") if isinstance(record.get("slot"), dict) else {}
     selected = slot.get("selected") if isinstance(slot.get("selected"), dict) else {}
     movement = str(selected.get("movement") or "").strip().lower()
+    patterns = [str(value).strip().lower() for value in selected.get("movement_patterns") or []]
+    if movement == "carry" or "carry" in patterns[:1] or _CARRY_RE.search(str(record.get("name") or "")):
+        return _EMBEDDED_TRUNK_CARRY_PRESCRIPTION
     is_hold = (
         record.get("quality_class") == "support_isometric"
         or movement == "isometric"
@@ -1119,6 +1222,11 @@ def _apply_adjacent_strength_recovery(
         if selected_records:
             _assign_selected_records(current, selected_records)
             policy = current["role"]["strength_composition_policy"]
+            if current["preserve_trunk_support"]:
+                policy["trunk_support"] = _trunk_support_outcome(
+                    current["records"], safe_records, selected_records,
+                    role_key=current["role_key"], pressure_state=policy,
+                )
             existing_dropped = {
                 str(item.get("name") or ""): str(item.get("reason") or "")
                 for item in policy.get("dropped") or []
@@ -1333,6 +1441,10 @@ def compose_normal_strength_assignments(
                     for name, reason in dropped.items()
                 ],
             }
+            if trunk_strength_selected:
+                role["strength_composition_policy"]["trunk_support"] = _trunk_support_outcome(
+                    records, records, selected_records, role_key=role_key, pressure_state=pressure_state
+                )
             composed_roles.append(
                 {
                     "week": week,
@@ -2202,6 +2314,7 @@ def compose_normal_conditioning_assignments(
                 workload_met
                 and trunk_strength_selected
                 and not adjacent_hard_spar
+                and not low_load_only
                 and int(pressure_state["pressure"]) < 2
             ):
                 trunk_options = [
@@ -2211,7 +2324,11 @@ def compose_normal_conditioning_assignments(
                 ]
                 if embedded_trunk_support_count >= 2:
                     trunk_support_skip_reason = "weekly_trunk_support_cap"
-                elif trunk_options:
+                elif not trunk_options:
+                    # The phase's Stage 1 pool holds no low-load trunk drill to
+                    # embed; say so rather than leave an unexplained gap.
+                    trunk_support_skip_reason = "no_low_load_trunk_candidate"
+                else:
                     record = trunk_options[0]
                     assignment = assignment_from_slot(phase, "strength_slots", record["slot"])
                     if assignment:
@@ -2227,9 +2344,14 @@ def compose_normal_conditioning_assignments(
                         embedded_trunk_support_count += 1
                         trunk_support_added = True
             elif trunk_strength_selected:
+                # A day upgraded to low-load support keeps that contract: its
+                # membership is the conditioning drill that met it, not added
+                # S&C work.
                 trunk_support_skip_reason = (
                     "hard_sparring_adjacent"
                     if adjacent_hard_spar
+                    else "low_load_support_day"
+                    if low_load_only
                     else "conditioning_workload_unmet"
                     if not workload_met
                     else "readiness_pressure"

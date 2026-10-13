@@ -14,7 +14,7 @@ from .training_context import (
 )
 from .bank_schema import NON_EQUIPMENT_TOKENS, is_late_fight_metadata_safe, validate_training_item
 from .tagging import normalize_item_tags, normalize_tag, normalize_tags
-from .tag_maps import GOAL_TAG_MAP, STYLE_TAG_MAP
+from .tag_maps import GOAL_PRIORITY_TAG_MAP, STYLE_TAG_MAP, priority_adaptation
 # Refactored: Import centralized constants from config
 from .config import PHASE_EQUIPMENT_BOOST, PHASE_TAG_BOOST, DATA_DIR, INJURY_GUARD_SHORTLIST
 from .injury_filtering import (
@@ -33,6 +33,7 @@ from .strength_session_quality import (
     support_budget_cost,
     session_starts_with_support_only,
     session_support_count_before_anchor,
+    strength_adaptation_relevance,
     strength_quality_adjustment,
 )
 from .session_restraint import NEAR_EQUAL_SCORE_BAND, sort_weighted_candidates
@@ -1202,8 +1203,15 @@ def score_exercise(
     priority_profile=None,
     must_have_bonus_multiplier: float = 1.0,
     derived_clarification_tags=None,
+    adaptation_tags=(),
 ):
-    """Return a weighted score and breakdown for a candidate exercise."""
+    """Return a weighted score and breakdown for a candidate exercise.
+
+    ``adaptation_tags`` is the item's ``strength_adaptation_relevance``. A
+    selected priority that names an adaptation (strength, power, speed, trunk
+    strength) matches through that evidence; bank tags still match regional
+    priorities, but never stand in for an adaptation.
+    """
     exercise_tags = normalize_tags(exercise_tags or [])
     weakness_tags = normalize_tags(weakness_tags or [])
     goal_tags = normalize_tags(goal_tags or [])
@@ -1228,8 +1236,23 @@ def score_exercise(
     }
 
     matched_weakness_tags = sorted(set(exercise_tags) & set(weakness_tags))
-    weakness_matches = len(matched_weakness_tags)
     matched_goal_tags = sorted(set(exercise_tags) & set(goal_tags))
+    if priority_profile is not None and adaptation_tags:
+        # The athlete's own priority wording carries the canonical weight, so a
+        # match is recorded under that wording.
+        matched_goal_tags = sorted(
+            set(matched_goal_tags)
+            | {goal for goal in priority_profile.all_goals if priority_adaptation(goal) in adaptation_tags}
+        )
+        matched_weakness_tags = sorted(
+            set(matched_weakness_tags)
+            | {
+                weakness
+                for weakness in priority_profile.all_weak_areas
+                if priority_adaptation(weakness) in adaptation_tags
+            }
+        )
+    weakness_matches = len(matched_weakness_tags)
     goal_matches = len(matched_goal_tags)
     priority_bonus = (
         total_strength_collision_safe_priority_bonus(
@@ -1989,6 +2012,10 @@ def generate_strength_block(*, flags: dict, weaknesses=None):
             primary_weak_area=flags.get("primary_weak_area", ""),
         )
     )
+    strength_priority_selected = any(
+        priority_adaptation(value) == "strength"
+        for value in [*priority_profile.all_goals, *priority_profile.all_weak_areas]
+    )
     training_days = flags.get("training_days", [])
     training_frequency = flags.get(
         "training_frequency", flags.get("days_available", len(training_days))
@@ -2023,7 +2050,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None):
         rng.shuffle(exercise_bank)
 
     style_tags = [t for s in style_list for t in STYLE_TAG_MAP.get(s, [])]
-    goal_tags = [tag for g in goals for tag in GOAL_TAG_MAP.get(g, [])]
+    goal_tags = [tag for g in goals for tag in GOAL_PRIORITY_TAG_MAP.get(g, [])]
     must_have_by_phase = {
         "GPP": ["compound", "posterior_chain", "unilateral", "push", "pull"],
         "SPP": ["compound", "posterior_chain", "unilateral", "explosive", "rate_of_force"],
@@ -2322,6 +2349,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None):
             priority_profile=priority_profile,
             must_have_bonus_multiplier=must_have_bonus_multiplier,
             derived_clarification_tags=derived_clarification_tags,
+            adaptation_tags=strength_adaptation_relevance(ex),
         )
         if score == -999:
             continue
@@ -2908,6 +2936,37 @@ def generate_strength_block(*, flags: dict, weaknesses=None):
                 first_position = positions[0]
                 anchor_position = positions[anchor_local_index]
                 updated[first_position], updated[anchor_position] = updated[anchor_position], updated[first_position]
+
+        # Sessions are dealt round-robin by position, so where a scarce strength
+        # lift lands is otherwise an accident of rank. When strength is a
+        # selected priority, the phase's first weekly session (primary /
+        # neural-plus) holds one if any selected exercise develops strength.
+        # Positions are swapped; membership is unchanged.
+        if strength_priority_selected and len(sessions := infer_strength_sessions(updated, num_strength_sessions)) > 1:
+            first = sessions[0]
+            if not any("strength" in strength_adaptation_relevance(ex) for ex in first.get("items", [])):
+                donor_position = next(
+                    (
+                        position
+                        for session in sessions[1:]
+                        for exercise, position in zip(session.get("items", []), session.get("positions", []))
+                        if "strength" in strength_adaptation_relevance(exercise)
+                    ),
+                    None,
+                )
+                # The donor receives an anchor in return, so it keeps the
+                # anchor the pass above guaranteed every session.
+                swap_local = next(
+                    (
+                        idx
+                        for idx, exercise in reversed(list(enumerate(first.get("items", []))))
+                        if _cached_classify(exercise)["anchor_capable"]
+                    ),
+                    None,
+                )
+                if donor_position is not None and swap_local is not None:
+                    first_position = first["positions"][swap_local]
+                    updated[first_position], updated[donor_position] = updated[donor_position], updated[first_position]
         return updated
 
     strength_maintenance_intent = _has_strength_maintenance_intent(

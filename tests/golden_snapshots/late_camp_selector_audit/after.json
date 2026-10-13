@@ -147,21 +147,10 @@
           ]
         },
         {
-          "name": "Trap Bar Deadlift",
-          "score": 4.22,
-          "reason_codes": [
-            "priority_secondary_goal_match:maximal_strength_maintenance",
-            "late_strength_boost_window_fit",
-            "late_strength_boost_cut_survivable",
-            "late_strength_boost_explicit_late_touch",
-            "late_strength_boost_low_impact",
-            "late_strength_penalty_compound_eccentric"
-          ]
-        },
-        {
           "name": "Jump Squat",
-          "score": 3.57,
+          "score": 4.37,
           "reason_codes": [
+            "priority_primary_goal_match:power",
             "late_penalty_missing_metadata",
             "late_strength_boost_window_fit",
             "late_strength_boost_cut_survivable",
@@ -172,13 +161,26 @@
         },
         {
           "name": "Box Jump",
-          "score": 3.2825,
+          "score": 4.0825,
           "reason_codes": [
+            "priority_primary_goal_match:power",
             "late_penalty_missing_metadata",
             "late_strength_boost_window_fit",
             "late_strength_boost_cut_survivable",
             "late_strength_boost_low_eccentric",
             "late_strength_boost_low_soreness"
+          ]
+        },
+        {
+          "name": "Trap Bar Deadlift",
+          "score": 4.02,
+          "reason_codes": [
+            "priority_secondary_goal_match:maximal_strength_maintenance",
+            "late_strength_boost_window_fit",
+            "late_strength_boost_cut_survivable",
+            "late_strength_boost_explicit_late_touch",
+            "late_strength_boost_low_impact",
+            "late_strength_penalty_compound_eccentric"
           ]
         },
         {
@@ -291,63 +293,63 @@
         },
         {
           "name": "Alternating Skater Hops",
-          "score": 2.05,
+          "score": 2.85,
           "reason_codes": [
             "late_block_missing_late_windows"
           ]
         },
         {
           "name": "Anti-Rotation Med Ball Slam",
-          "score": 1.95,
+          "score": 2.75,
           "reason_codes": [
             "late_block_missing_late_windows"
           ]
         },
         {
           "name": "Ballistic Box Jump (Min Ground Contact)",
-          "score": 2.05,
+          "score": 2.85,
           "reason_codes": [
             "late_block_missing_late_windows"
           ]
         },
         {
           "name": "Band-Resisted Push Press",
-          "score": 2.05,
+          "score": 2.85,
           "reason_codes": [
             "late_block_missing_late_windows"
           ]
         },
         {
           "name": "Band-Resisted Reaction Hop",
-          "score": 1.45,
+          "score": 2.25,
           "reason_codes": [
             "late_block_missing_late_windows"
           ]
         },
         {
           "name": "Banded Row (Speed Focus)",
-          "score": 2.55,
+          "score": 3.35,
           "reason_codes": [
             "late_block_missing_late_windows"
           ]
         },
         {
           "name": "Burpee-to-Punch (Tabata)",
-          "score": 2.05,
+          "score": 2.85,
           "reason_codes": [
             "late_block_missing_late_windows"
           ]
         },
         {
           "name": "Clap Push-Up",
-          "score": 2.05,
+          "score": 2.85,
           "reason_codes": [
             "late_block_missing_late_windows"
           ]
         },
         {
           "name": "Cluster Set Trap Bar Deadlift",
-          "score": 1.65,
+          "score": 2.05,
           "reason_codes": [
             "late_block_missing_late_windows"
           ]
@@ -361,7 +363,7 @@
         },
         {
           "name": "Cossack Squat (Dynamic)",
-          "score": 1.25,
+          "score": 1.65,
           "reason_codes": [
             "late_block_missing_late_windows"
           ]
@@ -382,28 +384,28 @@
         },
         {
           "name": "Depth Jump (Stick Landing)",
-          "score": 1.45,
+          "score": 2.25,
           "reason_codes": [
             "late_block_missing_late_windows"
           ]
         },
         {
           "name": "Depth Jump to Sprint",
-          "score": 2.05,
+          "score": 2.85,
           "reason_codes": [
             "late_block_missing_late_windows"
           ]
         },
         {
           "name": "Drop-Step Lateral Bound",
-          "score": 1.45,
+          "score": 2.25,
           "reason_codes": [
             "late_block_missing_late_windows"
           ]
         },
         {
           "name": "Explosive Push-Up (Clap-to-Tap)",
-          "score": 1.65,
+          "score": 2.45,
           "reason_codes": [
             "late_block_missing_late_windows"
           ]
@@ -417,98 +419,98 @@
         },
         {
           "name": "Judo Throw Simulation (Band-Resisted)",
-          "score": 1.45,
+          "score": 2.25,
           "reason_codes": [
             "late_block_missing_late_windows"
           ]
         },
         {
           "name": "Jump Lunge (Alternating)",
-          "score": 2.35,
+          "score": 3.15,
           "reason_codes": [
             "late_block_missing_late_windows"
           ]
         },
         {
           "name": "Lateral Bound-to-Slip",
-          "score": 2.35,
+          "score": 3.15,
           "reason_codes": [
             "late_block_missing_late_windows"
           ]
         },
         {
           "name": "Lateral Box Push-Off",
-          "score": 2.05,
+          "score": 2.85,
           "reason_codes": [
             "late_block_missing_late_windows"
           ]
         },
         {
           "name": "Lateral Lunge (Plyometric)",
-          "score": 2.05,
+          "score": 2.85,
           "reason_codes": [
             "late_block_missing_late_windows"
           ]
         },
         {
           "name": "Lateral Med Ball Slam",
-          "score": 1.15,
-          "reason_codes": [
-            "late_block_missing_late_windows"
-          ]
-        },
-        {
-          "name": "Med Ball Scoop Toss",
-          "score": 1.65,
-          "reason_codes": [
-            "late_block_missing_late_windows"
-          ]
-        },
-        {
-          "name": "Med-Ball Rotational Slam",
-          "score": 2.35,
-          "reason_codes": [
-            "late_block_missing_late_windows"
-          ]
-        },
-        {
-          "name": "Medicine Ball Hook Throw",
-          "score": 1.15,
-          "reason_codes": [
-            "late_block_missing_late_windows"
-          ]
-        },
-        {
-          "name": "Medicine-Ball Chest Toss",
-          "score": 2.05,
-          "reason_codes": [
-            "late_block_missing_late_windows"
-          ]
-        },
-        {
-          "name": "Overhead Slam (Rotational)",
-          "score": 1.45,
-          "reason_codes": [
-            "late_block_missing_late_windows"
-          ]
-        },
-        {
-          "name": "Pivot-and-Strike (Rotation Focus)",
-          "score": 1.65,
-          "reason_codes": [
-            "late_block_missing_late_windows"
-          ]
-        },
-        {
-          "name": "Plank Punch Reach",
           "score": 1.95,
           "reason_codes": [
             "late_block_missing_late_windows"
           ]
         },
         {
+          "name": "Med Ball Scoop Toss",
+          "score": 2.45,
+          "reason_codes": [
+            "late_block_missing_late_windows"
+          ]
+        },
+        {
+          "name": "Med-Ball Rotational Slam",
+          "score": 3.15,
+          "reason_codes": [
+            "late_block_missing_late_windows"
+          ]
+        },
+        {
+          "name": "Medicine Ball Hook Throw",
+          "score": 1.95,
+          "reason_codes": [
+            "late_block_missing_late_windows"
+          ]
+        },
+        {
+          "name": "Medicine-Ball Chest Toss",
+          "score": 2.85,
+          "reason_codes": [
+            "late_block_missing_late_windows"
+          ]
+        },
+        {
+          "name": "Overhead Slam (Rotational)",
+          "score": 2.25,
+          "reason_codes": [
+            "late_block_missing_late_windows"
+          ]
+        },
+        {
+          "name": "Pivot-and-Strike (Rotation Focus)",
+          "score": 2.45,
+          "reason_codes": [
+            "late_block_missing_late_windows"
+          ]
+        },
+        {
+          "name": "Plank Punch Reach",
+          "score": 2.75,
+          "reason_codes": [
+            "late_block_missing_late_windows"
+          ]
+        },
+        {
           "name": "Plyometric Shadow Boxing",
-          "score": 1.65,
+          "score": 2.45,
           "reason_codes": [
             "late_block_missing_late_windows"
           ]
@@ -543,56 +545,56 @@
         },
         {
           "name": "Single-Leg 45\u00b0 Bound",
-          "score": 1.15,
+          "score": 1.95,
           "reason_codes": [
             "late_block_missing_late_windows"
           ]
         },
         {
           "name": "Single-Leg Box Jump",
-          "score": 1.15,
+          "score": 1.95,
           "reason_codes": [
             "late_block_missing_late_windows"
           ]
         },
         {
           "name": "Single-Leg Depth Drop (Stick Landing)",
-          "score": 1.45,
+          "score": 2.25,
           "reason_codes": [
             "late_block_missing_late_windows"
           ]
         },
         {
           "name": "Single-Leg Forward Hops",
-          "score": 1.15,
+          "score": 1.95,
           "reason_codes": [
             "late_block_missing_late_windows"
           ]
         },
         {
           "name": "Single-Leg Medicine Ball Chest Push Jump",
-          "score": 1.15,
+          "score": 1.95,
           "reason_codes": [
             "late_block_missing_late_windows"
           ]
         },
         {
           "name": "Single-Leg Reactive Shuffle",
-          "score": 1.15,
+          "score": 1.95,
           "reason_codes": [
             "late_block_missing_late_windows"
           ]
         },
         {
           "name": "Single-Leg Rotational Hop to Balance",
-          "score": 1.45,
+          "score": 2.25,
           "reason_codes": [
             "late_block_missing_late_windows"
           ]
         },
         {
           "name": "Slow-Lowered Pull-Up",
-          "score": 1.25,
+          "score": 1.65,
           "reason_codes": [
             "late_block_missing_late_windows"
           ]
@@ -606,28 +608,28 @@
         },
         {
           "name": "Staggered-Stance Reactive Jumps",
-          "score": 1.45,
+          "score": 2.25,
           "reason_codes": [
             "late_block_missing_late_windows"
           ]
         },
         {
           "name": "Tempo Chin-Up (5-0-1)",
-          "score": 1.25,
+          "score": 1.65,
           "reason_codes": [
             "late_block_missing_late_windows"
           ]
         },
         {
           "name": "Towel Pull-Up",
-          "score": 1.25,
+          "score": 1.65,
           "reason_codes": [
             "late_block_missing_late_windows"
           ]
         },
         {
           "name": "Trap Bar Jump",
-          "score": 2.75,
+          "score": 3.55,
           "reason_codes": [
             "late_block_missing_late_windows"
           ]
@@ -1081,8 +1083,9 @@
         },
         {
           "name": "Box Jump",
-          "score": 3.32,
+          "score": 4.12,
           "reason_codes": [
+            "priority_primary_goal_match:power",
             "late_penalty_missing_metadata",
             "late_strength_boost_window_fit",
             "late_strength_boost_cut_survivable",
@@ -1092,8 +1095,9 @@
         },
         {
           "name": "Jump Squat",
-          "score": 3.42,
+          "score": 4.22,
           "reason_codes": [
+            "priority_primary_goal_match:power",
             "late_penalty_missing_metadata",
             "late_strength_boost_window_fit",
             "late_strength_boost_cut_survivable",
@@ -1213,21 +1217,21 @@
         },
         {
           "name": "Alternating Skater Hops",
-          "score": 2.05,
+          "score": 2.85,
           "reason_codes": [
             "late_block_missing_late_windows"
           ]
         },
         {
           "name": "Anti-Rotation Med Ball Slam",
-          "score": 1.95,
+          "score": 2.75,
           "reason_codes": [
             "late_block_missing_late_windows"
           ]
         },
         {
           "name": "Ballistic Box Jump (Min Ground Contact)",
-          "score": 2.05,
+          "score": 2.85,
           "reason_codes": [
             "late_block_missing_late_windows",
             "late_block_high_movement_cost"
@@ -1235,28 +1239,28 @@
         },
         {
           "name": "Band-Resisted Push Press",
-          "score": 2.05,
+          "score": 2.85,
           "reason_codes": [
             "late_block_missing_late_windows"
           ]
         },
         {
           "name": "Band-Resisted Reaction Hop",
-          "score": 1.45,
+          "score": 2.25,
           "reason_codes": [
             "late_block_missing_late_windows"
           ]
         },
         {
           "name": "Banded Row (Speed Focus)",
-          "score": 2.55,
+          "score": 3.35,
           "reason_codes": [
             "late_block_missing_late_windows"
           ]
         },
         {
           "name": "Burpee-to-Punch (Tabata)",
-          "score": 2.05,
+          "score": 2.85,
           "reason_codes": [
             "late_block_missing_late_windows",
             "late_block_high_movement_cost"
@@ -1264,14 +1268,14 @@
         },
         {
           "name": "Clap Push-Up",
-          "score": 2.05,
+          "score": 2.85,
           "reason_codes": [
             "late_block_missing_late_windows"
           ]
         },
         {
           "name": "Cluster Set Trap Bar Deadlift",
-          "score": 1.65,
+          "score": 2.05,
           "reason_codes": [
             "late_block_missing_late_windows",
             "late_block_high_movement_cost"
@@ -1286,7 +1290,7 @@
         },
         {
           "name": "Cossack Squat (Dynamic)",
-          "score": 1.25,
+          "score": 1.65,
           "reason_codes": [
             "late_block_missing_late_windows"
           ]
@@ -1307,28 +1311,28 @@
         },
         {
           "name": "Depth Jump (Stick Landing)",
-          "score": 1.45,
+          "score": 2.25,
           "reason_codes": [
             "late_block_missing_late_windows"
           ]
         },
         {
           "name": "Depth Jump to Sprint",
-          "score": 2.05,
+          "score": 2.85,
           "reason_codes": [
             "late_block_missing_late_windows"
           ]
         },
         {
           "name": "Drop-Step Lateral Bound",
-          "score": 1.45,
+          "score": 2.25,
           "reason_codes": [
             "late_block_missing_late_windows"
           ]
         },
         {
           "name": "Explosive Push-Up (Clap-to-Tap)",
-          "score": 1.65,
+          "score": 2.45,
           "reason_codes": [
             "late_block_missing_late_windows"
           ]
@@ -1357,98 +1361,98 @@
         },
         {
           "name": "Judo Throw Simulation (Band-Resisted)",
-          "score": 1.45,
+          "score": 2.25,
           "reason_codes": [
             "late_block_missing_late_windows"
           ]
         },
         {
           "name": "Jump Lunge (Alternating)",
-          "score": 2.35,
+          "score": 3.15,
           "reason_codes": [
             "late_block_missing_late_windows"
           ]
         },
         {
           "name": "Lateral Bound-to-Slip",
-          "score": 2.35,
+          "score": 3.15,
           "reason_codes": [
             "late_block_missing_late_windows"
           ]
         },
         {
           "name": "Lateral Box Push-Off",
-          "score": 2.05,
+          "score": 2.85,
           "reason_codes": [
             "late_block_missing_late_windows"
           ]
         },
         {
           "name": "Lateral Lunge (Plyometric)",
-          "score": 2.05,
+          "score": 2.85,
           "reason_codes": [
             "late_block_missing_late_windows"
           ]
         },
         {
           "name": "Lateral Med Ball Slam",
-          "score": 1.15,
-          "reason_codes": [
-            "late_block_missing_late_windows"
-          ]
-        },
-        {
-          "name": "Med Ball Scoop Toss",
-          "score": 1.65,
-          "reason_codes": [
-            "late_block_missing_late_windows"
-          ]
-        },
-        {
-          "name": "Med-Ball Rotational Slam",
-          "score": 2.35,
-          "reason_codes": [
-            "late_block_missing_late_windows"
-          ]
-        },
-        {
-          "name": "Medicine Ball Hook Throw",
-          "score": 1.15,
-          "reason_codes": [
-            "late_block_missing_late_windows"
-          ]
-        },
-        {
-          "name": "Medicine-Ball Chest Toss",
-          "score": 2.05,
-          "reason_codes": [
-            "late_block_missing_late_windows"
-          ]
-        },
-        {
-          "name": "Overhead Slam (Rotational)",
-          "score": 1.45,
-          "reason_codes": [
-            "late_block_missing_late_windows"
-          ]
-        },
-        {
-          "name": "Pivot-and-Strike (Rotation Focus)",
-          "score": 1.65,
-          "reason_codes": [
-            "late_block_missing_late_windows"
-          ]
-        },
-        {
-          "name": "Plank Punch Reach",
           "score": 1.95,
           "reason_codes": [
             "late_block_missing_late_windows"
           ]
         },
         {
+          "name": "Med Ball Scoop Toss",
+          "score": 2.45,
+          "reason_codes": [
+            "late_block_missing_late_windows"
+          ]
+        },
+        {
+          "name": "Med-Ball Rotational Slam",
+          "score": 3.15,
+          "reason_codes": [
+            "late_block_missing_late_windows"
+          ]
+        },
+        {
+          "name": "Medicine Ball Hook Throw",
+          "score": 1.95,
+          "reason_codes": [
+            "late_block_missing_late_windows"
+          ]
+        },
+        {
+          "name": "Medicine-Ball Chest Toss",
+          "score": 2.85,
+          "reason_codes": [
+            "late_block_missing_late_windows"
+          ]
+        },
+        {
+          "name": "Overhead Slam (Rotational)",
+          "score": 2.25,
+          "reason_codes": [
+            "late_block_missing_late_windows"
+          ]
+        },
+        {
+          "name": "Pivot-and-Strike (Rotation Focus)",
+          "score": 2.45,
+          "reason_codes": [
+            "late_block_missing_late_windows"
+          ]
+        },
+        {
+          "name": "Plank Punch Reach",
+          "score": 2.75,
+          "reason_codes": [
+            "late_block_missing_late_windows"
+          ]
+        },
+        {
           "name": "Plyometric Shadow Boxing",
-          "score": 1.65,
+          "score": 2.45,
           "reason_codes": [
             "late_block_missing_late_windows"
           ]
@@ -1476,63 +1480,63 @@
         },
         {
           "name": "Single-Leg 45\u00b0 Bound",
-          "score": 1.15,
+          "score": 1.95,
           "reason_codes": [
             "late_block_missing_late_windows"
           ]
         },
         {
           "name": "Single-Leg Box Jump",
-          "score": 1.15,
+          "score": 1.95,
           "reason_codes": [
             "late_block_missing_late_windows"
           ]
         },
         {
           "name": "Single-Leg Depth Drop (Stick Landing)",
-          "score": 1.45,
+          "score": 2.25,
           "reason_codes": [
             "late_block_missing_late_windows"
           ]
         },
         {
           "name": "Single-Leg Forward Hops",
-          "score": 1.15,
+          "score": 1.95,
           "reason_codes": [
             "late_block_missing_late_windows"
           ]
         },
         {
           "name": "Single-Leg Medicine Ball Chest Push Jump",
-          "score": 1.15,
+          "score": 1.95,
           "reason_codes": [
             "late_block_missing_late_windows"
           ]
         },
         {
           "name": "Single-Leg Reactive Shuffle",
-          "score": 1.15,
+          "score": 1.95,
           "reason_codes": [
             "late_block_missing_late_windows"
           ]
         },
         {
           "name": "Single-Leg Rotational Hop to Balance",
-          "score": 1.45,
+          "score": 2.25,
           "reason_codes": [
             "late_block_missing_late_windows"
           ]
         },
         {
           "name": "Slow-Lowered Pull-Up",
-          "score": 1.25,
+          "score": 1.65,
           "reason_codes": [
             "late_block_missing_late_windows"
           ]
         },
         {
           "name": "Staggered-Stance Reactive Jumps",
-          "score": 1.45,
+          "score": 2.25,
           "reason_codes": [
             "late_block_missing_late_windows"
           ]
@@ -1553,14 +1557,14 @@
         },
         {
           "name": "Tempo Chin-Up (5-0-1)",
-          "score": 1.25,
+          "score": 1.65,
           "reason_codes": [
             "late_block_missing_late_windows"
           ]
         },
         {
           "name": "Towel Pull-Up",
-          "score": 1.25,
+          "score": 1.65,
           "reason_codes": [
             "late_block_missing_late_windows"
           ]
@@ -1574,14 +1578,14 @@
         },
         {
           "name": "Trap Bar Deadlift",
-          "score": 2.85,
+          "score": 2.65,
           "reason_codes": [
             "late_strength_block_familiarity_required_late"
           ]
         },
         {
           "name": "Trap Bar Jump",
-          "score": 2.75,
+          "score": 3.55,
           "reason_codes": [
             "late_block_missing_late_windows"
           ]
@@ -1838,14 +1842,14 @@
         },
         {
           "name": "Band-Resisted Punch",
-          "score": 1.15,
+          "score": 1.95,
           "reason_codes": [
             "late_strength_block_band_work_lockout"
           ]
         },
         {
           "name": "Band-Resisted Straight Punch",
-          "score": 1.15,
+          "score": 1.95,
           "reason_codes": [
             "late_strength_block_band_work_lockout"
           ]
@@ -1956,7 +1960,7 @@
         },
         {
           "name": "Trap Bar Deadlift",
-          "score": 3.4,
+          "score": 3.2,
           "reason_codes": [
             "late_strength_block_eccentric_lower",
             "late_strength_block_familiarity_required_late",
@@ -2330,14 +2334,14 @@
         },
         {
           "name": "Band-Resisted Punch",
-          "score": 1.15,
+          "score": 1.95,
           "reason_codes": [
             "late_strength_block_band_work_lockout"
           ]
         },
         {
           "name": "Band-Resisted Straight Punch",
-          "score": 1.15,
+          "score": 1.95,
           "reason_codes": [
             "late_strength_block_band_work_lockout"
           ]
@@ -2455,7 +2459,7 @@
         },
         {
           "name": "Trap Bar Deadlift",
-          "score": 3.4,
+          "score": 3.2,
           "reason_codes": [
             "late_strength_block_eccentric_lower",
             "late_strength_block_familiarity_required_late",
@@ -2834,7 +2838,7 @@
         },
         {
           "name": "Band-Resisted Punch",
-          "score": 1.15,
+          "score": 1.95,
           "reason_codes": [
             "late_strength_block_band_work_lockout",
             "late_strength_block_window_mismatch"
@@ -2842,7 +2846,7 @@
         },
         {
           "name": "Band-Resisted Straight Punch",
-          "score": 1.15,
+          "score": 1.95,
           "reason_codes": [
             "late_strength_block_band_work_lockout",
             "late_strength_block_window_mismatch"
@@ -3028,7 +3032,7 @@
         },
         {
           "name": "Trap Bar Deadlift",
-          "score": 3.4,
+          "score": 3.2,
           "reason_codes": [
             "late_strength_block_eccentric_lower",
             "late_strength_block_familiarity_required_late",
@@ -3443,7 +3447,7 @@
         },
         {
           "name": "Band-Resisted Punch",
-          "score": 1.15,
+          "score": 1.95,
           "reason_codes": [
             "late_block_d1_forbidden_modality",
             "late_block_d1_equipment"
@@ -3451,7 +3455,7 @@
         },
         {
           "name": "Band-Resisted Straight Punch",
-          "score": 1.15,
+          "score": 1.95,
           "reason_codes": [
             "late_block_d1_forbidden_modality",
             "late_block_d1_equipment"
@@ -3467,7 +3471,7 @@
         },
         {
           "name": "Banded Lateral Walk",
-          "score": -0.65,
+          "score": -0.85,
           "reason_codes": [
             "late_block_d1_forbidden_modality",
             "late_block_d1_equipment"
@@ -3780,7 +3784,7 @@
         },
         {
           "name": "Trap Bar Deadlift",
-          "score": 3.4,
+          "score": 3.2,
           "reason_codes": [
             "late_block_d1_forbidden_modality",
             "late_block_d1_equipment"
