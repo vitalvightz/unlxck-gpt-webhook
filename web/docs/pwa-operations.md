@@ -15,7 +15,7 @@ UNLXCK remains one Next.js web application. The PWA layer adds installation, sta
 
 ## Updating icons
 
-The approved source is `public/unlxck-icon.jpg` (a transparent PNG despite its extension). Keep the existing white unlocked-lock mark; do not substitute the legacy `app/icon.svg` monogram or invent a new mark.
+The transparent navigation mark is `public/brand/unlxck-logo.png`. The installed app uses the black-background icon files in `public/icons/`; keep the supplied silver/white monogram and red diagonal light intact.
 
 Export these exact PNGs:
 

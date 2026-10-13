@@ -108,7 +108,7 @@ def _generate_strength_blocks(
             **base_flags,
             "phase": phase,
             "random_seed": context.random_seed,
-            "restrictions": context.plan_input.restrictions,
+            "restrictions": context.training_context.injury_restrictions,
             "ignore_restrictions": context.selection_ignore_restrictions,
             "strength_substep_callback": _emit_strength_substep,
         }
@@ -207,7 +207,7 @@ def _generate_conditioning_blocks(context: PlanRuntimeContext, *, progress_callb
                 "random_seed": context.random_seed,
                 "time_to_fight_days": context.plan_input.days_until_fight,
                 "weeks_out": context.plan_input.weeks_out,
-                "restrictions": context.plan_input.restrictions,
+                "restrictions": context.training_context.injury_restrictions,
                 "ignore_restrictions": context.selection_ignore_restrictions,
                 "conditioning_substep_callback": lambda code, label: _emit_progress(progress_callback, code, label),
             }
@@ -311,7 +311,7 @@ def _guided_area_matches_location(area: str, canonical_location: str) -> bool:
 
 
 def _build_rehab_injury_string(context: PlanRuntimeContext) -> str:
-    parsed_entries = context.plan_input.parsed_injuries or []
+    parsed_entries = context.training_context.parsed_injuries or []
     if not parsed_entries:
         return context.injuries_only_text
 
@@ -409,7 +409,7 @@ def _generate_rehab_support_bundle(
             injury_string=rehab_injury_string,
             exercise_data=context.exercise_bank,
             current_phase="GPP",
-            parsed_entries=context.plan_input.parsed_injuries,
+            parsed_entries=context.training_context.parsed_injuries,
             day_type=_infer_rehab_day_type(phase="GPP"),
         )
         if rehab_blocks["GPP"].strip().startswith("**Red Flag Detected**"):
@@ -423,23 +423,23 @@ def _generate_rehab_support_bundle(
                     injury_string=rehab_injury_string,
                     exercise_data=context.exercise_bank,
                     current_phase=phase,
-                    parsed_entries=context.plan_input.parsed_injuries,
+                    parsed_entries=context.training_context.parsed_injuries,
                     day_type=_infer_rehab_day_type(phase=phase),
                 )
 
     guardrails = {
         phase: format_injury_guardrails(
             phase,
-            context.plan_input.injuries,
-            context.plan_input.restrictions,
-            parsed_entries=context.plan_input.parsed_injuries,
+            context.training_context.injuries_raw_text,
+            context.training_context.injury_restrictions,
+            parsed_entries=context.training_context.parsed_injuries,
         )
         for phase in PHASES
     }
     has_injuries = bool(
         context.injuries_only_text
-        or context.plan_input.parsed_injuries
-        or context.plan_input.restrictions
+        or context.training_context.parsed_injuries
+        or context.training_context.injury_restrictions
     )
     current_phase = _first_active_phase(context.phase_weeks)
     # Compute once; captured as a default argument by each builder lambda so
@@ -524,8 +524,8 @@ def generate_plan_blocks(
     logger.info(
         "[stage] selection_ignore_restrictions=%s restrictions_present=%s restrictions_count=%d",
         context.selection_ignore_restrictions,
-        bool(context.plan_input.restrictions),
-        len(context.plan_input.restrictions or []),
+        bool(context.training_context.injury_restrictions),
+        len(context.training_context.injury_restrictions or []),
     )
 
     strength_blocks, strength_reason_log = _run_stage1_module(
@@ -628,7 +628,7 @@ def generate_plan_blocks(
             injury_string=rehab_injury_string,
             phase=current_phase,
             training_context=context.training_context.to_flags(),
-            parsed_injury_entries=context.plan_input.parsed_injuries,
+            parsed_injury_entries=context.training_context.parsed_injuries,
             exercise_bank=context.exercise_bank,
             conditioning_banks=[context.conditioning_bank, context.style_conditioning_bank],
             strength_blocks=strength_blocks,

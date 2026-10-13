@@ -718,7 +718,7 @@ export default function HomePage() {
         </div>
         <Image
           className="public-section-break-logo"
-          src="/brand/unlxck-codex-icon-upgrade/assets/brand/unlxck-mark-120.png"
+          src="/brand/unlxck-one-angle-120.png"
           alt=""
           width={72}
           height={72}
