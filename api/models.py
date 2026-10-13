@@ -1596,6 +1596,9 @@ class PlanScheduleContext(BaseModel):
     projection_reason: str | None = None
     anchor_date: str | None = None
     current_training_day: str | None = None
+    # Athlete-local creation day of the plan (YYYY-MM-DD), from the same
+    # athlete-local basis as ``current_training_day``.
+    plan_start_day: str | None = None
     block_number: int | None = None
     current_week_number: int | None = None
 

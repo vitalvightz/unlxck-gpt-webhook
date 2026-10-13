@@ -1213,17 +1213,3 @@ export function getReadinessStrip(
   return { focus, risk, load };
 }
 
-/**
- * The athlete-local calendar day a plan was created on (YYYY-MM-DD), read in
- * the viewer's own time zone. Sessions dated before it were never available.
- */
-export function planStartDayIso(createdAt: string | null | undefined): string | null {
-  const parsed = Date.parse(createdAt || "");
-  if (Number.isNaN(parsed)) {
-    return null;
-  }
-  const local = new Date(parsed);
-  const month = String(local.getMonth() + 1).padStart(2, "0");
-  const day = String(local.getDate()).padStart(2, "0");
-  return `${local.getFullYear()}-${month}-${day}`;
-}

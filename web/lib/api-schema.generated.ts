@@ -1756,6 +1756,7 @@ export type PlanScheduleContext = {
   projection_reason: string | null;
   anchor_date: string | null;
   current_training_day: string | null;
+  plan_start_day: string | null;
   block_number: number | null;
   current_week_number: number | null;
 };

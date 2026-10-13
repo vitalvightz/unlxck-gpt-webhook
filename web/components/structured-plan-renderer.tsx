@@ -52,7 +52,6 @@ import {
   completionSessionId,
   dayCompletion,
   getSessionDisplayStatus,
-  planStartDayIso,
   resolveNextPlanFocusDay,
   resolveOpenPlanWeekNumber,
   resolvePlanProgress,
@@ -2621,8 +2620,10 @@ export function StructuredPlanRenderer({
     () => (completions ? buildCompletionIndex(completions) : undefined),
     [completions],
   );
-  // Sessions dated before the plan existed were never available to train.
-  const planStartIso = useMemo(() => planStartDayIso(createdAt), [createdAt]);
+  // Sessions dated before the plan existed were never available to train. The
+  // day is resolved server-side in the athlete's timezone (same basis as the
+  // current training day), never from the viewer's device clock.
+  const planStartIso = cleanText(scheduleContext?.plan_start_day)?.slice(0, 10) ?? null;
 
   // Resolve "today" through the shared 03:00 training-day rollover so Plan Detail
   // and the Today tab can never disagree on the current day.
