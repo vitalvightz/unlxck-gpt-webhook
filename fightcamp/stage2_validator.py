@@ -809,6 +809,32 @@ def _matching_option_records(line: str, option_records: list[dict]) -> list[dict
     ]
 
 
+def _scheduled_closed_member_names(planning_brief: dict) -> set[str] | None:
+    """Names the deterministic planner scheduled as closed session membership.
+
+    ``None`` when no scheduled role carries closed membership, so a legacy
+    open-membership plan keeps the pool-based check. Closed membership already
+    encodes the final scheduled role, phase, countdown window, day safety and
+    effective-dose legality, so an anchor the planner could not legally schedule
+    is not an anchor the render failed to show.
+    """
+    roles = list(planning_brief.get("late_fight_session_sequence") or [])
+    for week in (planning_brief.get("weekly_role_map") or {}).get("weeks") or []:
+        if isinstance(week, dict):
+            roles.extend(week.get("session_roles") or [])
+    names: set[str] | None = None
+    for role in roles:
+        if not isinstance(role, dict) or "selected_exercise_assignments" not in role:
+            continue
+        names = names if names is not None else set()
+        names.update(
+            str(member.get("name") or "").strip().lower()
+            for member in role.get("selected_exercise_assignments") or []
+            if isinstance(member, dict) and str(member.get("name") or "").strip()
+        )
+    return names
+
+
 def _strength_session_quality_warnings(
     planning_brief: dict,
     phase_sections: dict[str, list[str]],
@@ -816,6 +842,7 @@ def _strength_session_quality_warnings(
 ) -> list[dict]:
     warnings: list[dict] = []
     candidate_pools = planning_brief.get("candidate_pools", {}) or {}
+    scheduled_names = _scheduled_closed_member_names(planning_brief)
     phase_strategy = planning_brief.get("phase_strategy", {}) or {}
     multi_phase_expected = len(phase_strategy) > 1
 
@@ -846,6 +873,11 @@ def _strength_session_quality_warnings(
                 )
             anchor_names = dedupe_preserve_order(anchor_names)
             support_names = dedupe_preserve_order(support_names)
+            if scheduled_names is not None:
+                # Only an anchor the planner actually scheduled can be missing
+                # from the render; one the countdown made illegal (a heavy lift
+                # at D-2) is a correct omission, not a weak session.
+                anchor_names = [name for name in anchor_names if name.lower() in scheduled_names]
             if not anchor_names:
                 continue
             matched_lines = [

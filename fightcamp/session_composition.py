@@ -995,6 +995,23 @@ def _assignment_mechanical_tags(assignment: dict[str, Any]) -> set[str]:
     }
 
 
+# A count followed by a time unit (optionally as a range) is a duration.
+_DURATION_UNIT_TAIL = re.compile(
+    r"\s*(?:[-\u2013]\s*\d+\s*)?(?:s|secs?|seconds?|mins?|minutes?)\b", re.I
+)
+_DURATION_DOSE = re.compile(r"\d+\s*(?:s|secs?|seconds?|mins?|minutes?)\b", re.I)
+
+
+def prescription_dose_known(text: str) -> bool:
+    """Whether a rendered dose states a measurable amount of work.
+
+    Reps (``4x5``) or a work duration (``2x5s``, ``20 min``). A dose stating
+    neither cannot be measured, and an unmeasured dose is never evidence that
+    further work fits.
+    """
+    return _prescription_total_reps(text) > 0 or bool(_DURATION_DOSE.search(str(text or "")))
+
+
 def _prescription_total_reps(text: str) -> float:
     """Total reps a rendered prescription commits to, ``0.0`` when it states none.
 
@@ -1007,6 +1024,10 @@ def _prescription_total_reps(text: str) -> float:
     for match in re.finditer(
         r"(?<![\d.])(\d+)\s*(?:sets?\s*)?[x\u00d7]\s*(\d+)", str(text or ""), re.I
     ):
+        # ``2x5s`` and ``4-6 x 6-10 sec`` are work durations, not repetitions;
+        # counting them as reps scored a 10-second primer as a 10-rep set.
+        if _DURATION_UNIT_TAIL.match(text[match.end():]):
+            continue
         reps = float(match.group(1)) * float(match.group(2))
         tail = text[match.end():match.end() + 12].lower()
         if "side" in tail or "/s" in tail or "each" in tail:
@@ -2433,13 +2454,20 @@ def _refresh_stress_stamps(weekly_role_map: dict[str, Any]) -> list[dict[str, An
     Neighbours are re-stamped too, not only the relocated role: a move changes
     which days sit next to which, and the morph owner may re-dose more than the
     role that moved.
+
+    Late-fight tail roles are stamped and judged like every other composed
+    session, so a D-14 session is measured against the tail's real load and a
+    tail conflict is visible. Their placement stays immutable: the canonical
+    mover refuses to relocate a tail role, so a conflict on one is recorded in
+    ``residual_conflicts`` rather than moved. The tail's membership owner keeps
+    its sessions inside their envelope when it composes them.
     """
     stamped: list[dict[str, Any]] = []
     for week in weekly_role_map.get("weeks", []) or []:
         if not isinstance(week, dict):
             continue
         for role in week.get("session_roles", []) or []:
-            if not isinstance(role, dict) or role.get("late_fight_tail_owned"):
+            if not isinstance(role, dict):
                 continue
             stress = realised_role_stress(role)
             if stress is None:
@@ -2705,6 +2733,9 @@ def apply_realised_load_calendar_revalidation(
     # The last round may have re-dosed after its final stamp, so refresh once more:
     # the stamp that persists must describe the dose the role actually ends with.
     final_roles = _refresh_stress_stamps(weekly_role_map)
+    # Every conflict still present on the final calendar is residual. A late
+    # session's owner resolves its conflict before this point (relocation or a
+    # policy-verified reduction); an attempted fix is never counted as resolved.
     residual = [
         {
             "role_key": role.get("role_key"),
@@ -2811,7 +2842,27 @@ def _is_unfilled_physical_role(role: Any) -> bool:
     )
 
 
+LATE_LOAD_CONFLICT_REASON = "late_load_conflict_no_safe_prescription"
+
+
 def _unfilled_role_suppression(role: dict[str, Any], d_day: int | None) -> dict[str, Any]:
+    resolution = role.get("late_load_resolution")
+    if isinstance(resolution, dict) and resolution.get("action") == "suppressed_no_safe_prescription":
+        # The membership owner emptied this session on purpose: its fixed day is
+        # forbidden at any composed load and no coexisting microdose was legal.
+        return {
+            "category": role.get("category"),
+            "role_key": role.get("role_key"),
+            "preferred_system": role.get("preferred_system", ""),
+            "strength_session_index": role.get("strength_session_index"),
+            "scheduled_day_hint": role.get("scheduled_day_hint"),
+            "original_d_day": d_day,
+            "reason_code": LATE_LOAD_CONFLICT_REASON,
+            "reason_codes": [LATE_LOAD_CONFLICT_REASON, str(resolution.get("conflict_reason_code") or "")],
+            "reason": "The scheduled day forbids this session at any composed load and no coexisting "
+                      "microdose was legal, so it is removed rather than shipped unsafe.",
+            "authority": "late_fight_assignment_builder",
+        }
     return {
         "category": role.get("category"),
         "role_key": role.get("role_key"),

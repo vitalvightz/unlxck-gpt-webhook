@@ -236,6 +236,17 @@ build athlete model / candidate pools
      session_composition.compose_normal_conditioning_assignments
        (closed session membership; reduce-only from Stage 1's selected slots)
   -> attach late-fight assignments to any spliced tail roles
+       (the late-fight assignment builder composes each countdown primer --
+        strength_touch_day / neural_primer_day / alactic_sharpness_day -- of up
+        to three legal Stage 1 candidates: meaningful work leads, a support-only
+        Style Taper primer only complements it, at most one loaded lift,
+        complements dosed at one set/round, and each complement admitted only
+        if the session's realised_session_stress stays inside the role's
+        planned vector (or the lead-only session), below the policy's
+        dominating tier, and no worse on combat_load_policy cross-day legality
+        than the lead alone. The resolver's single readiness step removes one
+        complement for an at-risk athlete. The session is stamped with its
+        realised calendar_stress)
   -> prescription_resolver.apply_effective_strength_prescriptions
        (authoritative effective_prescription per selected strength exercise)
   -> session_composition.apply_realised_load_calendar_revalidation
@@ -265,7 +276,10 @@ build athlete model / candidate pools
         session it used to be, so exactly those roles are reconciled through
         compose_normal_conditioning_assignments(only_roles=...). Every other
         closed membership is left untouched: a move that changes only the day
-        has no authority to reselect exercises)
+        has no authority to reselect exercises. Late-fight tail roles are
+        stamped and judged like every composed session, so a D-14 neighbour is
+        measured against the tail's real load; the mover refuses to relocate a
+        tail role, so a conflict on one is recorded in residual_conflicts)
   -> stamp labels
   -> goal_preservation.reconcile_goal_preservation
        (coverage verdict; a bounded restore re-runs morph + governor +

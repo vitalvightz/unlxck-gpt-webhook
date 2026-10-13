@@ -63,6 +63,12 @@ from .late_camp_role_morph import apply_late_camp_role_morph
 from .prescription_resolver import apply_effective_strength_prescriptions
 from .session_composition import (
     _conditioning_prescription,
+    _refresh_stress_stamps,
+    _prescription_total_reps,
+    _stress_stamp,
+    option_mechanical_risk_tags,
+    prescription_dose_known,
+    realised_session_stress,
     _selected_coaching_notes,
     attach_late_fight_assignments,
     apply_realised_load_calendar_revalidation,
@@ -694,12 +700,19 @@ def _slot_is_low_load_reset(slot: dict[str, Any]) -> bool:
 def _slot_is_style_taper_neural_primer(
     slot: dict[str, Any], role: dict[str, Any], *, source_phase: str = ""
 ) -> bool:
-    """Return whether a conditioning slot is the narrow Style Taper primer exception."""
+    """Return whether a conditioning slot is the narrow Style Taper primer exception.
+
+    Only the late-fight selector asks this, for a scheduled countdown role, so a
+    direct D-13 countdown and a long camp's spliced tail are treated alike: both
+    are the same late-fight membership owner. (The exception used to require
+    ``late_fight_tail_owned``, which left a direct countdown's neural primer with
+    no legal member and removed the session even though the same primers were
+    legal for it.)
+    """
     selected = _slot_selected_option(slot)
     metadata = selected.get("selection_metadata") if isinstance(selected, dict) else {}
     return bool(
-        role.get("late_fight_tail_owned")
-        and str(source_phase or role.get("phase") or "").upper() in {"SPP", "TAPER"}
+        str(source_phase or role.get("phase") or "").upper() in {"SPP", "TAPER"}
         and _candidate_system(slot) == "alactic"
         and selected.get("source") == "style_taper"
         and isinstance(metadata, dict)
@@ -1039,6 +1052,508 @@ def _rank_style_taper_primer_matches(
     ]
 
 
+# The countdown neural / speed / power sessions. Each is one session composed
+# from Stage 1's legal candidates for its scheduled day.
+LATE_PRIMER_ROLE_KEYS = frozenset(
+    {"strength_touch_day", "neural_primer_day", "alactic_sharpness_day"}
+)
+# Product rule: a neural primer holds at most three exercises. Fewer is normal;
+# this is a ceiling, never a target, and never permission to triple the work.
+LATE_PRIMER_MAX_MEMBERS = 3
+
+
+def _late_primer_candidate_order(
+    matches: list[tuple[str, str, dict[str, Any]]],
+    usage: "StyleTaperLateTailUsage",
+) -> list[tuple[str, str, dict[str, Any]]]:
+    """Order a primer day's legal candidates: meaningful work leads.
+
+    Every candidate here already passed the hard gates (phase, late window,
+    sport, day safety). Meaningful Stage 1 work comes first in Stage 1's own
+    order, then Stage 1 support work, then Style Taper primers in their existing
+    relevance/novelty order. A support-only primer therefore complements a
+    meaningful anchor; it no longer displaces one merely because it was the
+    preferred fallback.
+    """
+    unique: list[tuple[str, str, dict[str, Any]]] = []
+    seen: set[str] = set()
+    for match in matches:
+        name = _slot_exercise_name(match[2]).casefold()
+        if name and name not in seen:
+            seen.add(name)
+            unique.append(match)
+
+    def is_style_taper(match: tuple[str, str, dict[str, Any]]) -> bool:
+        return _slot_selected_option(match[2]).get("source") == "style_taper"
+
+    meaningful = [m for m in unique if not is_style_taper(m) and not _slot_support_only(m[2])]
+    support = [m for m in unique if not is_style_taper(m) and _slot_support_only(m[2])]
+    style_taper = _rank_style_taper_primer_matches(
+        [m for m in unique if is_style_taper(m)], usage
+    )
+    # Relevance scoring has no sport-specificity term, so drills tagged for
+    # every striking sport outrank the athlete's own weapons (kicks, knees,
+    # clinch) everywhere. The least-used sport-specific drill therefore leads
+    # the Style Taper primers, ahead of the generic relevance leader, so a
+    # kickboxer's primer is not a boxer's primer.
+    specific = [m for m in style_taper if _style_taper_sport_specific(_slot_selected_option(m[2]))]
+    if specific:
+        promoted = min(
+            specific,
+            key=lambda m: (usage.name_uses.get(_style_taper_usage_name(_slot_selected_option(m[2])), 0),
+                           style_taper.index(m)),
+        )
+        style_taper = [promoted, *(m for m in style_taper if m is not promoted)]
+    return meaningful + support + style_taper
+
+
+def _style_taper_sport_specific(option: dict[str, Any]) -> bool:
+    """Whether a Style Taper drill trains a weapon specific to the athlete's sport.
+
+    Tagged for the athlete's sport but not for boxing: the drill works what a
+    boxer does not have (kicks, knees, clinch, takedowns). A boxer's drills are
+    all boxing drills, so nothing is promoted for a boxer.
+    """
+    from .planner_context import get_planner_athlete_model
+
+    athlete = get_planner_athlete_model() or {}
+    sport = str(athlete.get("sport") or athlete.get("fight_format") or "").strip().lower().replace(" ", "_")
+    if not sport or sport == "boxing":
+        return False
+    metadata = option.get("selection_metadata") if isinstance(option.get("selection_metadata"), dict) else {}
+    tags = {str(tag).strip().lower() for tag in metadata.get("tags") or option.get("movement_patterns") or []}
+    return sport in tags and "boxing" not in tags
+
+
+def _late_primer_stimulus(match: tuple[str, str, dict[str, Any]]) -> tuple[str, str]:
+    """The kind of stimulus a candidate adds, so a session is not one drill thrice."""
+    _phase, slot_group, slot = match
+    option = _slot_selected_option(slot)
+    if option.get("source") == "style_taper":
+        # A sport-specific weapon drill is a different stimulus from a generic
+        # hand drill of the same primer family.
+        family = _style_taper_option_family(option)
+        return ("style_taper", f"{family}:sport_specific" if _style_taper_sport_specific(option) else family)
+    if slot_group == "strength_slots":
+        return ("strength", str(slot.get("quality_class") or option.get("quality_class") or "").lower())
+    metadata = option.get("selection_metadata") if isinstance(option.get("selection_metadata"), dict) else {}
+    return ("conditioning", str(metadata.get("modality") or _candidate_system(slot)).lower())
+
+
+def _late_primer_is_loaded(match: tuple[str, str, dict[str, Any]]) -> bool:
+    from .prescription_resolver import _role_kind
+
+    return match[1] == "strength_slots" and _role_kind(match[2]) in {"anchor", "secondary", "hybrid"}
+
+
+def _late_primer_member_dose(
+    role: dict[str, Any], slot_group: str, slot: dict[str, Any], *, complement: bool
+) -> str:
+    """The dose a member will be performed at, from the canonical dose owners.
+
+    Strength comes from ``prescription_resolver`` at the role's scheduled-day
+    cap; athlete readiness state can only lower it further later, so this is an
+    upper bound. A complementary member is a single set (or round): it adds a
+    different stimulus, not more volume.
+    """
+    if slot_group == "strength_slots":
+        from .prescription_resolver import resolve_strength_slot_prescription
+
+        target = {**slot, "primer_complement": True} if complement else slot
+        return str(
+            resolve_strength_slot_prescription(role=role, slot=target).get("effective_prescription") or ""
+        )
+    dose = _conditioning_prescription(_slot_selected_option(slot))
+    if complement and dose:
+        from .prescription_resolver import _reduce_leading_count
+
+        dose = _reduce_leading_count(dose, 1)
+    return dose
+
+
+def _late_primer_member_stress(
+    role: dict[str, Any], slot_group: str, slot: dict[str, Any], *, complement: bool
+) -> tuple[bool, list[dict[str, Any]]]:
+    """``(known, measurement_input)`` for one member at its real dose.
+
+    A member is measurable when its dose states an amount of work and it
+    carries cost evidence: authored mechanical tags, a rep count, or -- for a
+    tagless timed drill -- an authored low/no lactate load. Anything else is
+    unknown, and unknown is never evidence that more work fits.
+    """
+    option = _slot_selected_option(slot)
+    tags = sorted(option_mechanical_risk_tags(option))
+    dose = _late_primer_member_dose(role, slot_group, slot, complement=complement)
+    metadata = option.get("selection_metadata") if isinstance(option.get("selection_metadata"), dict) else {}
+    lactate = str(metadata.get("lactate_load") or option.get("lactate_load") or "").strip().lower()
+    known = prescription_dose_known(dose) and bool(
+        tags or _prescription_total_reps(dose) or lactate in {"low", "none"}
+    )
+    return known, [{"mechanical_risk_tags": tags, "effective_prescription": dose}]
+
+
+def _late_primer_session_stress(
+    role: dict[str, Any],
+    matches: list[tuple[str, str, dict[str, Any]]],
+    complements: set[int],
+):
+    """Realised cross-day cost of the whole composed session, or ``None`` if unknown.
+
+    ``None`` means some member could not be measured. A fully measured session
+    whose members author no mechanical or metabolic cost is a known low-load
+    session, not an unknown one.
+    """
+    from .combat_load_policy import SessionStress, StressLevel
+
+    measured: list[dict[str, Any]] = []
+    for index, (_phase, slot_group, slot) in enumerate(matches):
+        known, item = _late_primer_member_stress(
+            role, slot_group, slot, complement=index in complements
+        )
+        if not known:
+            return None
+        measured.extend(item)
+    stress = realised_session_stress(measured)
+    return stress if stress is not None else SessionStress(neural_mechanical=StressLevel.LOW)
+
+
+def _late_primer_planned_profile(role: dict[str, Any]):
+    """The load profile placement judged this role by (its planned promise)."""
+    from .calendar_context import classify_role
+
+    return classify_role({k: v for k, v in role.items() if k != "calendar_stress"})
+
+
+def _late_primer_dominating(stress) -> bool:
+    from .combat_load_policy import _DOMINATING_STRESS
+
+    return stress is not None and (
+        stress.systemic >= _DOMINATING_STRESS or stress.neural_mechanical >= _DOMINATING_STRESS
+    )
+
+
+def _late_primer_within_envelope(role: dict[str, Any], lead_stress, combined) -> bool:
+    """A complement may not raise the session above its own load envelope.
+
+    The envelope is the role's planned vector (what placement and legality
+    already cleared) or, where the lead exercise alone already measures above
+    it, that single-exercise session. Measured on both canonical axes. A
+    complement never produces, or adds to, a session at the policy's dominating
+    tier. No new score: the measurement is ``realised_session_stress`` and the
+    ceilings are ``combat_load_policy``'s own planned vector and tiers.
+    """
+    from .combat_load_policy import session_stress
+
+    if combined is None or lead_stress is None:
+        return False
+    if _late_primer_dominating(combined):
+        return False
+    from .combat_load_policy import _MEANINGFUL_STRESS, SessionStress
+
+    profile = _late_primer_planned_profile(role)
+    ceilings = [
+        stress
+        for stress in (session_stress(profile) if profile is not None else None, lead_stress)
+        if stress is not None
+    ]
+    if str(role.get("stress_class") or "").strip().lower() == "meaningful_stress":
+        # A role that promises meaningful stress may carry meaningful (never
+        # dominating) neural load whatever its class default says -- an alactic
+        # conditioning day's planned vector names only its systemic cost. The
+        # systemic axis stays capped by the plan; cross-day legality is
+        # checked separately.
+        ceilings.append(SessionStress(neural_mechanical=_MEANINGFUL_STRESS))
+    if not ceilings:
+        return False
+    return combined.systemic <= max(s.systemic for s in ceilings) and (
+        combined.neural_mechanical <= max(s.neural_mechanical for s in ceilings)
+    )
+
+
+def _late_primer_decision(
+    role: dict[str, Any], stress, sequence: list[dict[str, Any]], *, offset: int | None = None
+):
+    """Canonical legality of this session, composed at ``stress``, on a day.
+
+    The role is classified as it would be stamped, so the policy judges the
+    session it actually is (a measured microdose is classified as one).
+    ``offset`` asks about another countdown day without moving the role.
+    """
+    from .calendar_context import LATE_FIGHT_SCOPE, classify_role, sequence_events, sequence_role_offset
+    from .combat_load_policy import evaluate_candidate_at_position
+
+    probe = {k: v for k, v in role.items() if k != "calendar_stress"}
+    if stress is not None:
+        probe["calendar_stress"] = _stress_stamp(stress)
+    offset = offset if offset is not None else sequence_role_offset(role)
+    profile = classify_role(probe)
+    if offset is None or profile is None:
+        return None
+    return evaluate_candidate_at_position(
+        profile,
+        candidate_position=-offset,
+        events=sequence_events([item for item in sequence if item is not role]),
+        candidate_scope=LATE_FIGHT_SCOPE,
+    )
+
+
+def _late_primer_neighbour_rank(role: dict[str, Any], stress, sequence: list[dict[str, Any]]) -> int:
+    """Canonical legality tier of this session at ``stress``."""
+    from .combat_load_policy import placement_rank
+
+    decision = _late_primer_decision(role, stress, sequence)
+    return placement_rank(decision) if decision is not None else 0
+
+
+def _late_primer_coexisting_microdose(
+    role: dict[str, Any],
+    ordered: list[tuple[str, str, dict[str, Any]]],
+) -> tuple[str, str, dict[str, Any]] | None:
+    """The single support member that can share a day the policy will not give up.
+
+    Late-fight placement is immutable, so a primer whose day the policy forbids
+    (an exclusive stressor stacked on declared light combat, say) cannot move.
+    Its prescription is reduced instead: one support-only drill, one round,
+    measured no higher than the policy's own neural-microdose vector -- the
+    load class the policy lets coexist with declared light combat.
+    """
+    from .combat_load_policy import (
+        CalendarLoadProfile, DayOccupancy, LoadClass, session_stress,
+    )
+
+    ceiling = session_stress(CalendarLoadProfile(LoadClass.NEURAL_MICRODOSE, DayOccupancy.PHYSICAL))
+    for match in ordered:
+        if not _slot_support_only(match[2]) or _late_primer_is_loaded(match):
+            continue
+        stress = _late_primer_session_stress(role, [match], {0})
+        if (
+            stress is not None
+            and stress.systemic <= ceiling.systemic
+            and stress.neural_mechanical <= ceiling.neural_mechanical
+        ):
+            return match
+    return None
+
+
+def sequence_role_offset_of(role: dict[str, Any]) -> int | None:
+    from .calendar_context import sequence_role_offset
+
+    return sequence_role_offset(role)
+
+
+def _is_displaceable_occupancy_filler(role: dict[str, Any]) -> bool:
+    """A gap-fill insert that only occupies an otherwise empty day.
+
+    Fillers are subordinate to planner roles: one placed to occupy a free day
+    yields that day to a real session the calendar needs to move there.
+    """
+    governance = role.get("governance") if isinstance(role.get("governance"), dict) else {}
+    return bool(
+        role.get("physical_occupancy_fill")
+        and str(role.get("category") or "").strip().lower() == "support_insert"
+        and governance.get("meaningful_stress") is not True
+    )
+
+
+def drop_displaced_occupancy_fillers(roles: list[Any]) -> None:
+    """Remove, in place, fillers a relocated late primer took the day from."""
+    roles[:] = [
+        role for role in roles
+        if not (isinstance(role, dict) and role.get("displaced_by_late_primer"))
+    ]
+
+
+_WEEKDAYS = ("monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday")
+
+
+def _late_primer_relocate(
+    role: dict[str, Any],
+    chosen: list[tuple[str, str, dict[str, Any]]],
+    complements: set[int],
+    sequence: list[dict[str, Any]],
+) -> tuple[list[tuple[str, str, dict[str, Any]]], set[int], int] | None:
+    """Move a forbidden primer to an adjacent day the policy allows, if one exists.
+
+    A primer is a small stimulus; a conflict with one day's other work is not
+    a reason it cannot happen at all. Only the days either side are tried, only
+    a declared training day inside D-13..D-2, only members still bank-legal for
+    that day's late window and day safety, and only where the policy's verdict
+    for the composed session is not FORBID (ALLOW first, then the earlier
+    day). Nothing else moves.
+    """
+    from .combat_load_policy import PlacementDirective, placement_rank
+    from .planner_context import get_planner_athlete_model
+
+    offset = sequence_role_offset_of(role)
+    weekday = str(role.get("scheduled_day_hint") or role.get("real_weekday") or "").strip().lower()
+    if offset is None or weekday not in _WEEKDAYS:
+        return None
+    athlete = get_planner_athlete_model() or {}
+    training_days = {str(day).strip().lower() for day in athlete.get("training_days") or []}
+    options = []
+    for target in (offset + 1, offset - 1):
+        if not 2 <= target <= 13:
+            continue
+        target_weekday = _WEEKDAYS[(_WEEKDAYS.index(weekday) + (offset - target)) % 7]
+        if training_days and target_weekday not in training_days:
+            continue
+        label = f"D-{target}"
+        kept = [
+            (index, match)
+            for index, match in enumerate(chosen)
+            if _slot_late_window_allowed(match[0], match[1], match[2], offset=target)
+            and not _late_fight_assignment_is_unsafe(label, _slot_exercise_name(match[2]))
+        ]
+        if not kept:
+            continue
+        members = [match for _index, match in kept]
+        kept_complements = set(range(1, len(members)))
+        stress = _late_primer_session_stress(role, members, kept_complements)
+        fillers = [
+            item for item in sequence
+            if item is not role and sequence_role_offset_of(item) == target
+            and _is_displaceable_occupancy_filler(item)
+        ]
+        verdict = _late_primer_decision(
+            role, stress, [item for item in sequence if not any(item is f for f in fillers)],
+            offset=target,
+        )
+        if verdict is None or verdict.directive is PlacementDirective.FORBID:
+            continue
+        options.append(
+            (placement_rank(verdict), -target, target, target_weekday, members, kept_complements, fillers)
+        )
+    if not options:
+        return None
+    _rank, _order, target, target_weekday, members, kept_complements, fillers = min(
+        options, key=lambda option: option[:2]
+    )
+    for filler in fillers:
+        filler["displaced_by_late_primer"] = str(role.get("role_key") or "")
+    label = f"D-{target}"
+    for key in ("scheduled_countdown_label", "countdown_label"):
+        role[key] = label
+    role["countdown_offset"] = target
+    role["scheduled_d_day"] = target
+    for key in ("scheduled_day_hint", "real_weekday", "countdown_weekday"):
+        if key in role or key == "scheduled_day_hint":
+            role[key] = target_weekday
+    role["countdown_display_label"] = f"{label} ({target_weekday.title()})"
+    role["day_assignment_reason"] = (
+        f"Moved from D-{offset} to {label}: the composed primer was forbidden on its original day "
+        "and this adjacent training day is legal for it."
+    )
+    return members, kept_complements, target
+
+
+def _late_primer_member_limit() -> int:
+    """Members this athlete's primer may hold.
+
+    Readiness reduces through the dose owner's existing single bounded step
+    (``prescription_resolver``: high fatigue, a capacity-restricting cut or an
+    injury restriction each reduce by one). Applied to a primer it removes one
+    complement, so a higher-risk athlete never receives a larger session than a
+    lower-risk one from the same candidates.
+    """
+    from .planner_context import get_planner_athlete_model
+    from .prescription_resolver import _athlete_dose_reduction, athlete_dose_state
+
+    reduction = _athlete_dose_reduction(athlete_dose_state(get_planner_athlete_model()))
+    return max(1, LATE_PRIMER_MAX_MEMBERS - reduction)
+
+
+def _select_late_primer_members(
+    matches: list[tuple[str, str, dict[str, Any]]],
+    role: dict[str, Any],
+    usage: "StyleTaperLateTailUsage",
+    *,
+    sequence: list[dict[str, Any]],
+) -> tuple[list[tuple[str, str, dict[str, Any]]], set[int]]:
+    """Compose a primer session of up to ``LATE_PRIMER_MAX_MEMBERS`` exercises.
+
+    The lead is the best legal candidate. Each further candidate is admitted
+    only when it adds a different stimulus, keeps at most one loaded lift in the
+    session, keeps the combined session inside its load envelope, and does not
+    make the session's cross-day legality worse than the lead alone. Returns the
+    members and the indices of the complementary (single-set) ones.
+    """
+    ordered = _late_primer_candidate_order(matches, usage)
+    if not ordered:
+        return [], set()
+    # The lead is the best candidate whose own session stays below the
+    # policy's dominating tier; only when none does is the best one kept as is.
+    def fits(match) -> bool:
+        stress = _late_primer_session_stress(role, [match], set())
+        return stress is not None and not _late_primer_dominating(stress)
+
+    lead = next((match for match in ordered if fits(match)), ordered[0])
+    ordered = [lead, *(match for match in ordered if match is not lead)]
+    member_limit = _late_primer_member_limit()
+    chosen = [ordered[0]]
+    stimuli = {_late_primer_stimulus(ordered[0])}
+    loaded_used = _late_primer_is_loaded(ordered[0])
+    lead_stress = _late_primer_session_stress(role, chosen, set())
+    lead_rank = _late_primer_neighbour_rank(role, lead_stress, sequence)
+    for match in ordered[1:] if lead_stress is not None else ():
+        if len(chosen) >= member_limit:
+            break
+        stimulus = _late_primer_stimulus(match)
+        loaded = _late_primer_is_loaded(match)
+        if stimulus in stimuli or (loaded and loaded_used):
+            continue
+        trial = [*chosen, match]
+        stress = _late_primer_session_stress(role, trial, set(range(1, len(trial))))
+        if not _late_primer_within_envelope(role, lead_stress, stress):
+            continue
+        if _late_primer_neighbour_rank(role, stress, sequence) > lead_rank:
+            continue
+        chosen.append(match)
+        stimuli.add(stimulus)
+        loaded_used = loaded_used or loaded
+    complements = set(range(1, len(chosen)))
+
+    from .combat_load_policy import PlacementDirective
+
+    decision = _late_primer_decision(
+        role, _late_primer_session_stress(role, chosen, complements), sequence
+    )
+    if decision is None or decision.directive is not PlacementDirective.FORBID:
+        return chosen, complements
+    # The policy forbids this session on its day. Resolve it, in order: move the
+    # composed session to an adjacent training day the policy allows; reduce it
+    # to a coexisting microdose the policy re-verifies; only then remove it.
+    resolution = {
+        "authority": "late_fight_assignment_builder",
+        "conflict_reason_code": decision.reason_code,
+        "from_d_day": sequence_role_offset_of(role),
+        "composed_members": [_slot_exercise_name(match[2]) for match in chosen],
+    }
+    moved = _late_primer_relocate(role, chosen, complements, sequence)
+    if moved is not None:
+        members, kept, offset = moved
+        role["late_load_resolution"] = {
+            **resolution, "action": "relocated_to_adjacent_day", "to_d_day": offset,
+            "displaced_fillers": [
+                str(item.get("role_key") or "") for item in sequence
+                if item.get("displaced_by_late_primer") and sequence_role_offset_of(item) == offset
+            ],
+        }
+        return members, kept
+    reduced = _late_primer_coexisting_microdose(role, ordered)
+    if reduced is not None:
+        verdict = _late_primer_decision(
+            role, _late_primer_session_stress(role, [reduced], {0}), sequence
+        )
+        if verdict is not None and verdict.directive is not PlacementDirective.FORBID:
+            role["late_load_resolution"] = {
+                **resolution, "action": "reduced_to_coexisting_microdose",
+                "verified_directive": verdict.directive.value,
+            }
+            return [reduced], {0}
+    role["late_load_resolution"] = {**resolution, "action": "suppressed_no_safe_prescription"}
+    return [], set()
+
+
 def _build_late_fight_allowed_exercises_by_day(
     *,
     spec: dict[str, Any],
@@ -1096,37 +1611,43 @@ def _build_late_fight_allowed_exercises_by_day(
             if slot_id not in consumed_slot_ids or _slot_selected_option(slot).get("source") == "style_taper":
                 fallback_matches.append((phase, slot_group, slot))
 
-        selected_matches = explicit_matches
-        if not selected_matches and str(role.get("role_key") or "") in {
-            "strength_touch_day", "neural_primer_day", "alactic_sharpness_day"
-        }:
-            # Keep explicit day authority. For unlabelled fallbacks only, let a
-            # safe TAPER-owned sport primer beat the legacy generic strength
-            # primer without globally reordering candidate pool families.
-            selected_matches = [
-                match
-                for match in fallback_matches
-                if match[1] == "conditioning_slots"
-                and _slot_is_style_taper_neural_primer(match[2], role, source_phase=match[0])
-            ]
-            # A style-taper primer is admitted here *as support* only: it is
-            # stamped support_only=true / meaningful_stress=false by
-            # _slot_is_style_taper_neural_primer. Filling the day is not the
-            # same as discharging the strength/power obligation the role
-            # represents, so record that the role's meaningful exposure is
-            # still outstanding rather than letting the role read as covered.
-            if selected_matches:
+        complements: set[int] = set()
+        if str(role.get("role_key") or "") in LATE_PRIMER_ROLE_KEYS:
+            # Explicit day labels keep their authority over the candidate set;
+            # the session itself is composed the same way either way.
+            selected_matches, complements = _select_late_primer_members(
+                explicit_matches or fallback_matches,
+                role,
+                style_taper_usage,
+                sequence=list(spec.get("calendar_sequence") or _scheduled_late_fight_roles(spec)),
+            )
+            # A forbidden primer may have been moved to an adjacent legal day.
+            day_label = str(role.get("scheduled_countdown_label") or day_label)
+            allowed_by_day.setdefault(day_label, [])
+            assignments_by_day.setdefault(day_label, [])
+            # Record what was legal, so a support-only session is visibly
+            # justified by the absence of a legal meaningful candidate.
+            candidates = _late_primer_candidate_order(
+                explicit_matches or fallback_matches, StyleTaperLateTailUsage()
+            )
+            diagnostics["legal_candidates"] = len(candidates)
+            diagnostics["meaningful_legal_candidates"] = sum(
+                1
+                for match in candidates
+                if not _slot_support_only(match[2])
+                and _slot_selected_option(match[2]).get("source") != "style_taper"
+            )
+            # A support-only session fills the day but does not discharge the
+            # strength/power obligation the role represents, so record that the
+            # role's meaningful exposure is still outstanding.
+            if selected_matches and all(
+                _slot_support_only(match[2]) for match in selected_matches
+            ):
                 role["support_only_fill"] = True
                 role["meaningful_stress_fulfilled"] = False
-            # Relevance still leads; among comparably appropriate, no-more-
-            # expensive primers an unused drill is preferred to repeating the
-            # one this tail already used.
-            selected_matches = _rank_style_taper_primer_matches(
-                selected_matches, style_taper_usage
-            )[:1]
-        if not selected_matches:
-            selected_matches = fallback_matches[:1]
-        for phase, slot_group, slot in selected_matches:
+        else:
+            selected_matches = explicit_matches or fallback_matches[:1]
+        for index, (phase, slot_group, slot) in enumerate(selected_matches):
             name = _slot_exercise_name(slot)
             if not name:
                 continue
@@ -1147,6 +1668,13 @@ def _build_late_fight_allowed_exercises_by_day(
                 "slot_group": slot_group,
                 "phase": phase,
             }
+            # The assignment is the only surviving record of the authored
+            # mechanical vocabulary, which realised-load measurement reads.
+            mechanical_tags = sorted(option_mechanical_risk_tags(option))
+            if mechanical_tags:
+                assignment["mechanical_risk_tags"] = mechanical_tags
+            if index in complements:
+                assignment["primer_complement"] = True
             stamp_exercise_key(assignment)
             # Carry the selected bank dose forward for conditioning tail work so
             # Stage 2 renders it directly, mirroring normal conditioning.  Loaded
@@ -1156,7 +1684,9 @@ def _build_late_fight_allowed_exercises_by_day(
                 prescription = _conditioning_prescription(option)
                 if prescription:
                     assignment["base_prescription"] = prescription
-                    assignment["effective_prescription"] = prescription
+                    assignment["effective_prescription"] = _late_primer_member_dose(
+                        role, slot_group, slot, complement=index in complements
+                    ) or prescription
                 assignment.update(
                     {
                         "support_only": option.get("support_only") is True,
@@ -1168,6 +1698,13 @@ def _build_late_fight_allowed_exercises_by_day(
             if notes:
                 assignment["coaching_notes"] = notes
             assignments_by_day[day_label].append(assignment)
+        if str(role.get("role_key") or "") in LATE_PRIMER_ROLE_KEYS and selected_matches:
+            # Stamp the composed session's realised load in the canonical
+            # vocabulary so the days after it are judged against what was
+            # actually composed here, not the promise of its role key.
+            stress = _late_primer_session_stress(role, selected_matches, complements)
+            if stress is not None:
+                role["calendar_stress"] = _stress_stamp(stress)
 
     return (
         {day: dedupe_preserve_order(names) for day, names in allowed_by_day.items()},
@@ -1206,6 +1743,7 @@ def _with_late_fight_allowed_exercises(
     for day in _late_fight_countdown_days_from_spec(days_until_fight, spec):
         allowed_by_day.setdefault(f"D-{day}", [])
     roles = spec.get("visible_session_sequence") or spec.get("session_sequence") or []
+    drop_displaced_occupancy_fillers(roles)
     attach_late_fight_assignments(roles, assignments_by_day)
     return {
         **spec,
@@ -1315,6 +1853,9 @@ def build_planning_brief(
         apply_effective_strength_prescriptions(
             weekly_role_map=role_map, candidate_pools=candidate_pools, athlete_model=athlete_model,
         )
+        # Re-stamp each composed countdown session from its resolved dose, the
+        # same realised-load measurement the long-camp path applies.
+        _refresh_stress_stamps(role_map)
     # Within-day execution order is decided once the calendar and membership are
     # final; it reads the finished days and writes only ``execution_order``.
     return stamp_role_execution_order(reconcile_goal_preservation(brief))
@@ -1544,6 +2085,8 @@ def _build_planning_brief(
         _, tail_assignments = _build_late_fight_allowed_exercises_by_day(
             spec={"visible_session_sequence": tail_roles}, candidate_pools=candidate_pools,
         )
+        for week in weekly_role_map.get("weeks", []) or []:
+            drop_displaced_occupancy_fillers(week.get("session_roles") or [])
         attach_late_fight_assignments(tail_roles, tail_assignments)
     # Deterministic prescription resolution: now that every strength role has its
     # scheduled D-day and final countdown dose envelope, resolve the single

@@ -257,13 +257,24 @@ def test_production_boxing_tail_stops_repeating_one_primer_on_d12_d7_d5():
         candidate_pools=brief["candidate_pools"])
     attach_late_fight_assignments(roles, assignments)
 
-    names = [role["selected_exercise_assignments"][0]["name"] for role in roles]
-    assert len(set(names)) == 3, names
+    # Meaningful Stage 1 work leads the primer; it is no longer displaced by
+    # the support-only Style Taper fallback.
+    assert roles[0]["selected_exercise_assignments"][0]["slot_group"] == "strength_slots"
+    names = [
+        item["name"]
+        for role in roles
+        for item in role["selected_exercise_assignments"]
+        if item["name"] in BANK
+    ]
+    # No Style Taper primer repeats across D-12, D-7 and D-5.
+    assert len(set(names)) == len(names) >= 3, names
     # The relevance leader is preserved, not demoted, and still opens the tail.
     assert names[0] == "Explosive First-Step Cue"
     for role in roles:
-        assert_assignment(brief, role, "boxing")
-    # No later day buys variety with a costlier session than the leader's.
+        members = role["selected_exercise_assignments"]
+        assert 1 <= len(members) <= 3
+        assert len({item["name"] for item in members}) == len(members)
+    # No later primer buys variety with a costlier session than the leader's.
     leader = BANK[names[0]]
     for name in names[1:]:
         item = BANK[name]
@@ -276,4 +287,6 @@ def test_production_boxing_tail_stops_repeating_one_primer_on_d12_d7_d5():
     _, repeat = _build_late_fight_allowed_exercises_by_day(
         spec={"visible_session_sequence": roles, "athlete_model": brief["athlete_snapshot"]},
         candidate_pools=brief["candidate_pools"])
-    assert [item["name"] for day in ("D-12", "D-7", "D-5") for item in repeat[day]] == names
+    assert [
+        item["name"] for day in ("D-12", "D-7", "D-5") for item in repeat[day] if item["name"] in BANK
+    ] == names

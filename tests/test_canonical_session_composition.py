@@ -569,7 +569,7 @@ def test_late_selector_does_not_masquerade_aerobic_alternate_as_alactic_on_d2():
     "sport_primer",
     ["Single-Kick Recoil Primer", "Circle-Re-shot Cue"],
 )
-def test_neural_primer_allocator_prefers_safe_style_taper_over_generic_strength(
+def test_neural_primer_allocator_leads_with_meaningful_work_and_complements_with_style_taper(
     sport_primer,
 ):
     role = {
@@ -588,6 +588,7 @@ def test_neural_primer_allocator_prefers_safe_style_taper_over_generic_strength(
     style_taper["selected"].update(
         {
             "source": "style_taper",
+            "prescription": "2x5s with 120s rest",
             "selection_metadata": {
                 "late_windows": ["d13_to_d8", "d7", "d6_to_d5"],
                 "support_only": True,
@@ -613,8 +614,12 @@ def test_neural_primer_allocator_prefers_safe_style_taper_over_generic_strength(
         },
     )
 
-    assert assignments["D-7"][0]["name"] == sport_primer
-    assert assignments["D-7"][0]["slot_group"] == "conditioning_slots"
+    # The meaningful Stage 1 candidate leads; the support-only sport primer
+    # complements it instead of displacing it.
+    assert [item["name"] for item in assignments["D-7"]] == [
+        "Technical Shadowboxing Tempo", sport_primer]
+    assert assignments["D-7"][1]["slot_group"] == "conditioning_slots"
+    assert assignments["D-7"][1]["primer_complement"] is True
 
 
 def test_neural_primer_keeps_explicit_day_assignment_ahead_of_style_taper():

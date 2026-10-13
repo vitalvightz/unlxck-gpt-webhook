@@ -2317,7 +2317,8 @@ def _compute_readiness_compression(athlete_model: dict) -> int:
     - High fatigue (+1)
     - Active cut severity (+0/+1/+2)
     - Active injury/restriction at moderate or greater severity (+1)
-    - Proximity to fight (≤17 days) (+1)
+    - Proximity to fight (≤17 days) (+1), only as an amplifier of another
+      generic readiness signal — never on its own
     """
     return _readiness_compression_components(athlete_model).total
 
@@ -2348,17 +2349,26 @@ def _readiness_compression_components(athlete_model: dict) -> _CompressionCompon
     cut_points = _cut_severity_compression_points(athlete_model)
     if _active_injury_is_moderate_plus(athlete_model):
         compression += 1
-    # Fight proximity is only an *independent* compression signal when the cut
-    # system has not already charged for it. ``compute_cut_severity_score``
-    # folds days-out into the severity score via its exp(-days/15) term, and the
-    # phase/taper architecture accounts for proximity again on its own, so
-    # adding a proximity point on top of a cut-driven point charges the same
-    # countdown two or three times. An athlete who is not cutting still gets the
-    # generic late-camp proximity compression unchanged.
-    days_to_fight = athlete_model.get("days_until_fight")
-    if cut_points == 0 and isinstance(days_to_fight, int) and 0 <= days_to_fight <= 17:
+    if compression and _proximity_amplifies_compression(athlete_model, cut_points=cut_points):
         compression += 1
     return _CompressionComponents(generic=compression, cut=cut_points)
+
+
+def _proximity_amplifies_compression(athlete_model: dict, *, cut_points: int) -> bool:
+    """Whether fight proximity adds a readiness-compression point.
+
+    Proximity is never a session-removal signal on its own. It is already
+    charged where it belongs: the phase/taper allocation, the scheduled-day
+    countdown dose bands (``late_camp_role_morph``, D-17 inward), the late-fight
+    budget (D-13 inward) and the shared calendar legality. Removing a whole
+    session for a fresh, uninjured, non-cutting athlete because the fight is
+    17 days away charged the same countdown a second time, so proximity only
+    amplifies a genuine generic readiness signal (high fatigue, a moderate or
+    worse injury). The cut authority already folds days-out into its severity
+    score (exp(-days/15)), so proximity never stacks on a cut point either.
+    """
+    days_to_fight = athlete_model.get("days_until_fight")
+    return cut_points == 0 and isinstance(days_to_fight, int) and 0 <= days_to_fight <= 17
 
 
 def _compression_floor_value(compression: int) -> int:
@@ -2579,8 +2589,11 @@ def _build_spar_allocation_reason_codes(
         reason_codes.append("active_weight_cut")
     if _active_injury_is_moderate_plus(athlete_model):
         reason_codes.append("injury_management")
-    days_to_fight = athlete_model.get("days_until_fight")
-    if isinstance(days_to_fight, int) and 0 <= days_to_fight <= 17:
+    if (fatigue == "high" or _active_injury_is_moderate_plus(athlete_model)) and (
+        _proximity_amplifies_compression(
+            athlete_model, cut_points=_cut_severity_compression_points(athlete_model)
+        )
+    ):
         reason_codes.append("proximity_to_fight")
     return reason_codes
 

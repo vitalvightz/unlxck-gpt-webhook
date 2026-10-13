@@ -643,6 +643,11 @@ def resolve_strength_slot_prescription(
     reduction = _athlete_dose_reduction(athlete_state)
     if reduction and loaded and isinstance(sets, int) and sets > 1:
         sets = max(1, sets - reduction)
+    # A complementary member of a countdown primer session adds a different
+    # stimulus, not more volume: it is held to a single set so a three-exercise
+    # primer never multiplies the session's work.
+    if slot.get("primer_complement") and isinstance(sets, int) and sets > 1:
+        sets = 1
 
     rpe_cap = str(role.get("rpe_cap") or "").strip() or None
     effective = _format_effective_prescription(
@@ -689,6 +694,31 @@ def _strength_slots_for_phase(candidate_pools: dict[str, Any], phase: str) -> li
     return [slot for slot in slots if isinstance(slot, dict)]
 
 
+def _assignment_strength_slot(
+    candidate_pools: dict[str, Any], source_phase: str, assignment: dict[str, Any]
+) -> dict[str, Any] | None:
+    """The exact Stage 1 slot (or alternate) a strength assignment came from.
+
+    The late-fight selector may assign a slot's alternate under the identity
+    ``<slot_id>:alternate:<n>``; that alternate is dosed as its own slot rather
+    than left without an effective prescription.
+    """
+    slot_id = str(assignment.get("slot_id") or "")
+    name = str(assignment.get("name") or "")
+    base_id, _, alternate = slot_id.partition(":alternate:")
+    for slot in _strength_slots_for_phase(candidate_pools, source_phase):
+        if str(slot.get("slot_id") or "") != base_id:
+            continue
+        if not alternate:
+            return slot if str(_slot_selected(slot).get("name") or "") == name else None
+        alternates = slot.get("alternates") or []
+        option = alternates[int(alternate)] if alternate.isdigit() and int(alternate) < len(alternates) else None
+        if isinstance(option, dict) and str(option.get("name") or "") == name:
+            return {"slot_id": slot_id, "selected": option, "alternates": []}
+        return None
+    return None
+
+
 def _is_strength_role(role: dict[str, Any]) -> bool:
     role_key = str(role.get("role_key") or "").strip().lower()
     return (
@@ -723,17 +753,10 @@ def _strength_role_slot_groups(
                     source_phase = str(assignment.get("source_phase") or "").strip().upper()
                     if not source_phase:
                         continue
-                    slot_id = str(assignment.get("slot_id") or "")
-                    name = str(assignment.get("name") or "")
-                    match = next(
-                        (
-                            slot for slot in _strength_slots_for_phase(candidate_pools, source_phase)
-                            if str(slot.get("slot_id") or "") == slot_id
-                            and str(_slot_selected(slot).get("name") or "") == name
-                        ),
-                        None,
-                    )
+                    match = _assignment_strength_slot(candidate_pools, source_phase, assignment)
                     if match is not None:
+                        if assignment.get("primer_complement"):
+                            match = {**match, "primer_complement": True}
                         owned_slots.append(match)
             else:
                 # Candidate grouping is retained for diagnostics only.  It must
