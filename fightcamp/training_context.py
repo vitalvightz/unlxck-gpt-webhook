@@ -213,6 +213,11 @@ class TrainingContext:
     guided_injuries: list[dict[str, Any]] = field(default_factory=list)
     injury_restrictions: list[dict[str, Any]] = field(default_factory=list)
     triage_summary: dict[str, Any] = field(default_factory=dict)
+    # Display-only: parsed injuries the athlete marked as not limiting and that
+    # were removed from every planning path above. Read only by
+    # ``fightcamp.injury_awareness`` to keep the injury note and re-injury stop
+    # rule on the plan; never consulted for selection, loading or scoring.
+    non_limiting_injuries: list[dict[str, Any]] = field(default_factory=list)
 
     def to_flags(self) -> dict:
         return asdict(self)

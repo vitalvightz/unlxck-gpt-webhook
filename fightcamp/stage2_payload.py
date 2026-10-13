@@ -118,6 +118,7 @@ from .training_context import TrainingContext, allocate_sessions
 from .nutrition import compute_nutrition_targets
 from .recovery import compute_recovery_plan
 from .mindset_module import compute_mindset_plan
+from .injury_awareness import build_injury_awareness_support
 from .weight_cut import (  # noqa: F401  (re-exported for back-compat)
     compute_cut_severity_score,
     cut_severity_bucket,
@@ -1262,7 +1263,7 @@ def build_computed_support(*, flags: dict, phases: list[str] | None = None) -> d
         phase: compute_recovery_plan({**flags, "phase": phase})
         for phase in ordered_phases
     }
-    return {
+    support = {
         "schema_version": "computed_support.v1",
         "source": "stage1_deterministic",
         "athlete_facing_note": (
@@ -1279,6 +1280,13 @@ def build_computed_support(*, flags: dict, phases: list[str] | None = None) -> d
         # rather than merely asserted.
         "safeguards": {"is_minor": bool(flags.get("is_minor", False))},
     }
+    # Display-only reminder for injuries marked not limiting. Merged onto the
+    # finished structured plan after the safety audit; stripped from the
+    # conversion prompt so it can never become a restriction.
+    awareness = build_injury_awareness_support(flags.get("non_limiting_injuries"))
+    if awareness:
+        support["injury_awareness"] = awareness
+    return support
 
 
 def build_planning_brief(
