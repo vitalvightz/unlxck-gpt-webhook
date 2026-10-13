@@ -250,7 +250,7 @@
     "shared/performance-focus-policy.json": "cf4bfec2aca4ee5151e9e13d5468a0f123c0bfc61bfc08393cac13b2c93e4ab4",
     "shared/stage2-policy.json": "3c02e3e9a964cdec1f661300905986ddadfced75ebdcf2ab89173153bc7962e5",
     "shared/training-calendar.json": "bd78901a004fc0b51cd1e29276d7f58fc8c02fa2da3676265f5cc5fd1e6dfe65",
-    "shared/training-metadata.json": "46686ce1ef36d411608b454d352e5d3a9dd0ed6e19bdad1edc9636bf37627c3b",
+    "shared/training-metadata.json": "224d5ea5b3975fbed1070f718591f7350f6d34bdee40f28f31cceb6d0176ab49",
     "shared/xp-levels.json": "6bada1577ea34583824d1d7b0805af29ae1646d70a17acd7502f8f21c7b2bcc9"
   },
   "expected_behaviour_change": "Only the vocabulary allowlist shrinks from 355 to 339. Existing selection, conditioning doses, rehab progression, personalization, search, plans and legacy normalization must be identical.",
