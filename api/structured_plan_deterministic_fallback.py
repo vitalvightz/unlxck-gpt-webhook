@@ -33,6 +33,7 @@ import re
 from dataclasses import dataclass, field
 from typing import Any
 
+from fightcamp.injury_awareness import merge_injury_awareness
 from fightcamp.role_labels import athlete_facing_label_for
 from fightcamp.session_sequencing import sequence_structured_plan
 
@@ -952,6 +953,14 @@ def _build(planning_brief: Any, plan_text: str | None = None) -> dict[str, Any] 
     if not isinstance(weeks_out, list) or not weeks_out:
         return None
     plan.update(_plan_envelope(planning_brief))
+    # Non-limiting injuries never shape the fallback either, but the athlete
+    # still gets the same injury note and re-injury stop rule a converted card
+    # carries (fightcamp.injury_awareness).
+    support = planning_brief.get("computed_support")
+    plan = merge_injury_awareness(
+        plan,
+        support.get("injury_awareness") if isinstance(support, dict) else None,
+    )
     return plan
 
 

@@ -220,3 +220,41 @@ def test_fallback_invents_no_nutrition_guidance(fallback):
         "fight_week_guidance",
     }
     assert not any(str(value).strip() for value in nutrition.values())
+
+
+def test_fallback_carries_non_limiting_injury_note_and_reinjury_rule(camp_brief):
+    """A failed conversion must not cost the athlete the injury reminder."""
+    import copy
+
+    from fightcamp.injury_awareness import build_injury_awareness_support
+
+    brief = copy.deepcopy(camp_brief)
+    brief.setdefault("computed_support", {})["injury_awareness"] = build_injury_awareness_support(
+        [
+            {
+                "canonical_location": "hip",
+                "guided_area": "hip flexor",
+                "injury_type": "strain",
+                "training_impact": "not_limiting",
+            }
+        ]
+    )
+    plan = build_deterministic_structured_plan(brief)
+
+    assert plan is not None
+    assert any(
+        note["category"] == "injury" and "Hip flexor strain" in note["text"]
+        for note in plan["plan_notes"]
+    )
+    assert [rule["rule_id"] for rule in plan["red_flag_rules"]] == [
+        "non_limiting_injury_reinjury_hip_flexor"
+    ]
+    assert safe_parse_structured_plan(plan).ok
+
+
+def test_fallback_without_awareness_adds_no_injury_copy(fallback):
+    assert not any(note.get("category") == "injury" for note in fallback.get("plan_notes") or [])
+    assert not any(
+        str(rule.get("rule_id") or "").startswith("non_limiting_injury")
+        for rule in fallback.get("red_flag_rules") or []
+    )
