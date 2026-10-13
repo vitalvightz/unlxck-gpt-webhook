@@ -243,3 +243,27 @@ def test_risk_signals_take_one_complement_off_every_primer(variant, days_out):
     """
     for d_day, role in _primers(_brief(variant, days_out)).items():
         assert len(_members(role)) <= LATE_PRIMER_MAX_MEMBERS - 1, (d_day, [m["name"] for m in _members(role)])
+
+
+_SPORT_OF = {"vito_b": "kickboxing", "muay_thai": "muay_thai", "mma": "mma"}
+
+
+@pytest.mark.parametrize("variant", sorted(_SPORT_OF))
+@pytest.mark.parametrize("days_out", [14, 13])
+def test_non_boxing_strikers_get_their_own_weapons_in_the_tail(variant, days_out):
+    """A kickboxer's primers are not a boxer's: kick / clinch work is represented."""
+    from fightcamp.style_taper_governance import SPORT_TAGS  # noqa: F401  (bank vocabulary)
+    import json
+    from pathlib import Path
+
+    bank = {item["name"]: item for item in json.loads(
+        (Path(__file__).resolve().parents[1] / "data/style_taper_conditioning.json").read_text())}
+    sport = _SPORT_OF[variant]
+    specific = [
+        member["name"]
+        for role in _primers(_brief(variant, days_out)).values()
+        for member in _members(role)
+        if member["name"] in bank and sport in bank[member["name"]]["tags"]
+        and "boxing" not in bank[member["name"]]["tags"]
+    ]
+    assert specific, variant

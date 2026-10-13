@@ -300,3 +300,26 @@ def test_policy_classifies_a_measured_microdose_primer_as_a_microdose():
     assert role_load_profile(heavier).occupancy is DayOccupancy.EXCLUSIVE_PHYSICAL
     unattributed = {**micro, "calendar_stress": {**micro["calendar_stress"], "authority": "hand_written"}}
     assert role_load_profile(unattributed).occupancy is DayOccupancy.EXCLUSIVE_PHYSICAL
+
+
+def test_a_sport_specific_primer_leads_the_style_taper_group_for_a_non_boxer():
+    from fightcamp.planner_context import planner_athlete_model_context
+
+    generic = _primer("Hand Burst", family="pure_neural", index=0)
+    generic["selected"]["selection_metadata"]["tags"] = ["boxing", "kickboxing", "muay_thai"]
+    generic["selected"]["relevance"] = {"style_hits": 2, "goal_hits": 2}
+    kick = _primer("Kick Reset", family="pure_neural", index=1)
+    kick["selected"]["selection_metadata"]["tags"] = ["kickboxing", "muay_thai"]
+    kick["selected"]["relevance"] = {"style_hits": 0, "goal_hits": 0}
+
+    for sport, expected in (("kickboxing", ["Kick Reset", "Hand Burst"]), ("boxing", ["Hand Burst"])):
+        token = planner_athlete_model_context.set(
+            {"sport": sport, "phase_weeks": {"days": {"GPP": 0, "SPP": 14, "TAPER": 0}}})
+        try:
+            role = _role("neural_primer_day", d_day=7)
+            members = _compose(role, conditioning=[generic, kick])
+        finally:
+            planner_athlete_model_context.reset(token)
+        # A boxer cannot use the kick drill (sport gate); a kickboxer leads with it,
+        # and it is a different stimulus from the same-family hand drill.
+        assert _names(members) == expected, sport

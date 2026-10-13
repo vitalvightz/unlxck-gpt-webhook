@@ -1091,7 +1091,38 @@ def _late_primer_candidate_order(
     style_taper = _rank_style_taper_primer_matches(
         [m for m in unique if is_style_taper(m)], usage
     )
+    # Relevance scoring has no sport-specificity term, so drills tagged for
+    # every striking sport outrank the athlete's own weapons (kicks, knees,
+    # clinch) everywhere. The least-used sport-specific drill therefore leads
+    # the Style Taper primers, ahead of the generic relevance leader, so a
+    # kickboxer's primer is not a boxer's primer.
+    specific = [m for m in style_taper if _style_taper_sport_specific(_slot_selected_option(m[2]))]
+    if specific:
+        promoted = min(
+            specific,
+            key=lambda m: (usage.name_uses.get(_style_taper_usage_name(_slot_selected_option(m[2])), 0),
+                           style_taper.index(m)),
+        )
+        style_taper = [promoted, *(m for m in style_taper if m is not promoted)]
     return meaningful + support + style_taper
+
+
+def _style_taper_sport_specific(option: dict[str, Any]) -> bool:
+    """Whether a Style Taper drill trains a weapon specific to the athlete's sport.
+
+    Tagged for the athlete's sport but not for boxing: the drill works what a
+    boxer does not have (kicks, knees, clinch, takedowns). A boxer's drills are
+    all boxing drills, so nothing is promoted for a boxer.
+    """
+    from .planner_context import get_planner_athlete_model
+
+    athlete = get_planner_athlete_model() or {}
+    sport = str(athlete.get("sport") or athlete.get("fight_format") or "").strip().lower().replace(" ", "_")
+    if not sport or sport == "boxing":
+        return False
+    metadata = option.get("selection_metadata") if isinstance(option.get("selection_metadata"), dict) else {}
+    tags = {str(tag).strip().lower() for tag in metadata.get("tags") or option.get("movement_patterns") or []}
+    return sport in tags and "boxing" not in tags
 
 
 def _late_primer_stimulus(match: tuple[str, str, dict[str, Any]]) -> tuple[str, str]:
@@ -1099,7 +1130,10 @@ def _late_primer_stimulus(match: tuple[str, str, dict[str, Any]]) -> tuple[str, 
     _phase, slot_group, slot = match
     option = _slot_selected_option(slot)
     if option.get("source") == "style_taper":
-        return ("style_taper", _style_taper_option_family(option))
+        # A sport-specific weapon drill is a different stimulus from a generic
+        # hand drill of the same primer family.
+        family = _style_taper_option_family(option)
+        return ("style_taper", f"{family}:sport_specific" if _style_taper_sport_specific(option) else family)
     if slot_group == "strength_slots":
         return ("strength", str(slot.get("quality_class") or option.get("quality_class") or "").lower())
     metadata = option.get("selection_metadata") if isinstance(option.get("selection_metadata"), dict) else {}
@@ -1214,12 +1248,21 @@ def _late_primer_within_envelope(role: dict[str, Any], lead_stress, combined) ->
         return False
     if _late_primer_dominating(combined):
         return False
+    from .combat_load_policy import _MEANINGFUL_STRESS, SessionStress
+
     profile = _late_primer_planned_profile(role)
     ceilings = [
         stress
         for stress in (session_stress(profile) if profile is not None else None, lead_stress)
         if stress is not None
     ]
+    if str(role.get("stress_class") or "").strip().lower() == "meaningful_stress":
+        # A role that promises meaningful stress may carry meaningful (never
+        # dominating) neural load whatever its class default says -- an alactic
+        # conditioning day's planned vector names only its systemic cost. The
+        # systemic axis stays capped by the plan; cross-day legality is
+        # checked separately.
+        ceilings.append(SessionStress(neural_mechanical=_MEANINGFUL_STRESS))
     if not ceilings:
         return False
     return combined.systemic <= max(s.systemic for s in ceilings) and (
