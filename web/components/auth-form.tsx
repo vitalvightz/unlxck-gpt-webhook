@@ -17,7 +17,13 @@ import { useAppSession } from "@/components/auth-provider";
 import { PasswordStrengthMeter } from "@/components/password-strength-meter";
 import { isTurnstileConfigured, TurnstileChallenge } from "@/components/turnstile-challenge";
 import { getMe } from "@/lib/api";
-import { AUTH_FEEDBACK, getLoginErrorMessage, getMagicLinkErrorMessage } from "@/lib/auth-feedback";
+import {
+  AUTH_FEEDBACK,
+  getLoginErrorMessage,
+  getMagicLinkErrorMessage,
+  getSignupCodeErrorMessage,
+  getSignupCodeResendErrorMessage,
+} from "@/lib/auth-feedback";
 import { clearAuthLinkParams, readAuthLinkStatus } from "@/lib/auth-link";
 import { FIRST_PLAN_HREF, getAuthenticatedLandingHref } from "@/lib/auth-routing";
 import {
@@ -30,9 +36,10 @@ import {
 import { PRIVACY_HREF, TERMS_HREF } from "@/lib/legal-documents";
 import { recordCompliance } from "@/lib/api";
 import { evaluatePasswordStrength } from "@/lib/password-strength";
-import { ATHLETE_FULL_NAME_MAX } from "@/lib/input-limits";
 import { buildAuthRedirectUrl } from "@/lib/site-url";
 import { getSupabaseBrowserClient } from "@/lib/supabase";
+import type { Session } from "@supabase/supabase-js";
+
 import type { UserRole } from "@/lib/types";
 
 /** How long Turnstile gets to pass on its own before the hint explains the disabled button. */
@@ -40,6 +47,12 @@ const CAPTCHA_HINT_DELAY_MS = 2500;
 
 const CAPTCHA_REQUIRED_MESSAGE = "Complete the security check, then try again.";
 const CAPTCHA_UNAVAILABLE_MESSAGE = "The security check could not load. Refresh the page and try again.";
+
+/** Supabase allows one confirmation email per address per minute. */
+const SIGNUP_CODE_RESEND_COOLDOWN_S = 60;
+/** Supabase's email OTP length is configurable from 6 to 10 digits. */
+const SIGNUP_CODE_MIN_LENGTH = 6;
+const SIGNUP_CODE_MAX_LENGTH = 10;
 
 export function AuthForm({
   mode,
@@ -52,20 +65,27 @@ export function AuthForm({
   const router = useRouter();
   const { isReady, session, me } = useAppSession();
   const emailInputRef = useRef<HTMLInputElement | null>(null);
-  const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [dateOfBirth, setDateOfBirth] = useState("");
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [healthDataConsent, setHealthDataConsent] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  // Set once signup succeeds without a session (email confirmation is on): the
+  // form swaps to a one-time-code step so the athlete never has to leave the
+  // page, follow a link and log in again. The emailed link still works too.
+  const [verificationEmail, setVerificationEmail] = useState<string | null>(null);
+  const [verificationCode, setVerificationCode] = useState("");
+  const [resendCooldown, setResendCooldown] = useState(0);
+  const [isVerifyPending, startVerifyTransition] = useTransition();
+  const [isResendPending, startResendTransition] = useTransition();
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
   const [captchaResetKey, setCaptchaResetKey] = useState(0);
   const [isPending, startTransition] = useTransition();
   const [isMagicLinkPending, startMagicLinkTransition] = useTransition();
-  const passwordStrength = evaluatePasswordStrength(password, { fullName, email });
+  const passwordStrength = evaluatePasswordStrength(password, { email });
   const requiresCaptcha = isTurnstileConfigured();
   const isSignupPasswordBlocked = mode === "signup" && !passwordStrength.isAcceptable;
   const isCaptchaBlocked = requiresCaptcha && !captchaToken;
@@ -94,6 +114,12 @@ export function AuthForm({
   // explanation matches the reader before the profile exists; the server
   // re-derives it from the stored date and owns every actual consequence.
   const consentCopy = consentCopyForBand(provisionalAgeBand(dateOfBirth));
+
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+    const timer = window.setTimeout(() => setResendCooldown((seconds) => seconds - 1), 1000);
+    return () => window.clearTimeout(timer);
+  }, [resendCooldown]);
 
   const handleCaptchaUnavailable = useCallback(() => {
     setError(CAPTCHA_UNAVAILABLE_MESSAGE);
@@ -132,6 +158,34 @@ export function AuthForm({
       clearAuthLinkParams();
     }
   }, []);
+
+  /**
+   * Records the signup acceptances against the new session so the evidence is
+   * server-stamped and versioned, then opens the first-plan flow. Shared by the
+   * immediate-session signup and the one-time-code step. If recording fails the
+   * account still exists but is not consented, and the compliance gate catches
+   * it on the next screen — so a failure here is surfaced, not swallowed.
+   */
+  async function finishSignup(newSession: Session) {
+    try {
+      await recordCompliance(newSession.access_token, {
+        date_of_birth: dateOfBirth,
+        accept_terms: true,
+        // Only sent when ticked. Sending `false` would record a
+        // withdrawal, and someone who never consented has not withdrawn —
+        // those are different facts and the audit trail keeps them apart.
+        ...(healthDataConsent ? { health_data_consent: true } : {}),
+      });
+    } catch (complianceError) {
+      setError(
+        complianceError instanceof Error
+          ? complianceError.message
+          : "Your account was created but your consent could not be saved. Sign in to finish setup.",
+      );
+      return;
+    }
+    router.replace(FIRST_PLAN_HREF);
+  }
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -176,7 +230,6 @@ export function AuthForm({
               captchaToken: captchaTokenForRequest,
               emailRedirectTo: buildAuthRedirectUrl("/login"),
               data: {
-                full_name: fullName,
                 // Seeds the profile's date of birth on first sign-in and lets a
                 // Postgres trigger reject an under-13 signup even when the
                 // caller bypasses this form. The server re-reads and re-derives
@@ -204,32 +257,13 @@ export function AuthForm({
         // resetting there re-runs the human check on screen while the redirect
         // is still in flight.
         if (data.session) {
-          // Record the acceptances against the new session so the evidence is
-          // server-stamped and versioned. If this call fails the account still
-          // exists but is not consented, and the compliance gate catches it on
-          // the next screen — so a failure here is surfaced, not swallowed.
-          try {
-            await recordCompliance(data.session.access_token, {
-              date_of_birth: dateOfBirth,
-              accept_terms: true,
-              // Only sent when ticked. Sending `false` would record a
-              // withdrawal, and someone who never consented has not withdrawn —
-              // those are different facts and the audit trail keeps them apart.
-              ...(healthDataConsent ? { health_data_consent: true } : {}),
-            });
-          } catch (complianceError) {
-            setError(
-              complianceError instanceof Error
-                ? complianceError.message
-                : "Your account was created but your consent could not be saved. Sign in to finish setup.",
-            );
-            return;
-          }
-          router.replace(FIRST_PLAN_HREF);
+          await finishSignup(data.session);
           return;
         }
         resetCaptcha();
-        setMessage("Check your email to confirm your account, then log in.");
+        setVerificationCode("");
+        setVerificationEmail(email.trim());
+        setResendCooldown(SIGNUP_CODE_RESEND_COOLDOWN_S);
         return;
       }
 
@@ -265,6 +299,78 @@ export function AuthForm({
       const nextMe = await getMe(accessToken).catch(() => null);
       router.replace(nextMe ? getAuthenticatedLandingHref(nextMe) : "/plans");
     });
+  }
+
+  function handleVerifyCode(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!verificationEmail) return;
+    setMessage(null);
+    setError(null);
+    const token = verificationCode.trim();
+
+    startVerifyTransition(async () => {
+      let result;
+      try {
+        result = await getSupabaseBrowserClient().auth.verifyOtp({
+          email: verificationEmail,
+          token,
+          type: "email",
+        });
+      } catch {
+        setError(AUTH_FEEDBACK.connectionFailure);
+        return;
+      }
+      const { data, error: verifyError } = result;
+      if (verifyError || !data.session) {
+        setError(verifyError ? getSignupCodeErrorMessage(verifyError, t("invalidCode")) : t("invalidCode"));
+        return;
+      }
+      await finishSignup(data.session);
+    });
+  }
+
+  function handleResendCode() {
+    if (!verificationEmail) return;
+    setMessage(null);
+    setError(null);
+    const captchaTokenForRequest = requiresCaptcha ? captchaToken ?? undefined : undefined;
+    if (requiresCaptcha && !captchaTokenForRequest) {
+      setError(CAPTCHA_REQUIRED_MESSAGE);
+      return;
+    }
+
+    startResendTransition(async () => {
+      let result;
+      try {
+        result = await getSupabaseBrowserClient().auth.resend({
+          type: "signup",
+          email: verificationEmail,
+          options: {
+            captchaToken: captchaTokenForRequest,
+            emailRedirectTo: buildAuthRedirectUrl("/login"),
+          },
+        });
+      } catch {
+        resetCaptcha();
+        setError(AUTH_FEEDBACK.connectionFailure);
+        return;
+      }
+      resetCaptcha();
+      if (result.error) {
+        setError(getSignupCodeResendErrorMessage(result.error));
+        return;
+      }
+      setResendCooldown(SIGNUP_CODE_RESEND_COOLDOWN_S);
+      setMessage(t("codeResent"));
+    });
+  }
+
+  function handleUseDifferentEmail() {
+    setVerificationEmail(null);
+    setVerificationCode("");
+    setResendCooldown(0);
+    setMessage(null);
+    setError(null);
   }
 
   function handleMagicLink() {
@@ -323,7 +429,7 @@ export function AuthForm({
         <div className="auth-header">
           <div>
             <p className="kicker">{mode === "signup" ? t("createAccount") : t("welcomeBack")}</p>
-            <h2>{mode === "signup" ? t("startIntake") : t("continueCamp")}</h2>
+            <h2>{verificationEmail ? t("verifyTitle") : mode === "signup" ? t("startIntake") : t("continueCamp")}</h2>
           </div>
           {mode === "signup" ? <span className="badge status-badge-neutral">{t("beta")}</span> : null}
         </div>
@@ -339,21 +445,66 @@ export function AuthForm({
           </div>
         ) : null}
 
-        <form onSubmit={handleSubmit} className="auth-form-grid">
-          {mode === "signup" ? (
+        {verificationEmail ? (
+          <form onSubmit={handleVerifyCode} className="auth-form-grid" aria-describedby="verificationHelp">
+            <p id="verificationHelp" className="muted auth-verify-help">
+              {t("verifyBody", { email: verificationEmail })}
+            </p>
             <div className="field">
-              <label htmlFor="fullName">{t("fullName")}</label>
+              <label htmlFor="verificationCode">{t("codeLabel")}</label>
               <input
-                id="fullName"
-                name="name"
-                autoComplete="name"
-                value={fullName}
-                onChange={(event) => setFullName(event.target.value)}
-                maxLength={ATHLETE_FULL_NAME_MAX}
+                id="verificationCode"
+                name="code"
+                type="text"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                pattern={`[0-9]{${SIGNUP_CODE_MIN_LENGTH},${SIGNUP_CODE_MAX_LENGTH}}`}
+                maxLength={SIGNUP_CODE_MAX_LENGTH}
+                className="auth-verify-code"
+                value={verificationCode}
+                onChange={(event) => setVerificationCode(event.target.value.replace(/\D/g, ""))}
+                autoFocus
                 required
               />
+              <p className="muted auth-verify-hint">{t("linkFallback")}</p>
             </div>
-          ) : null}
+
+            <TurnstileChallenge
+              action="signup"
+              onTokenChange={setCaptchaToken}
+              onUnavailable={handleCaptchaUnavailable}
+              resetKey={captchaResetKey}
+            />
+
+            <div className="form-actions auth-form-actions">
+              <button
+                type="submit"
+                className="cta"
+                disabled={isVerifyPending || verificationCode.length < SIGNUP_CODE_MIN_LENGTH}
+              >
+                {isVerifyPending ? t("verifying") : t("verifyAction")}
+              </button>
+              <div className="auth-secondary-links">
+                <button
+                  type="button"
+                  className="auth-text-link auth-magic-link-action"
+                  onClick={handleResendCode}
+                  disabled={isResendPending || resendCooldown > 0 || isCaptchaBlocked}
+                >
+                  {resendCooldown > 0 ? t("resendIn", { seconds: resendCooldown }) : t("resendCode")}
+                </button>
+                <button
+                  type="button"
+                  className="auth-text-link auth-magic-link-action"
+                  onClick={handleUseDifferentEmail}
+                >
+                  {t("differentEmail")}
+                </button>
+              </div>
+            </div>
+          </form>
+        ) : (
+        <form onSubmit={handleSubmit} className="auth-form-grid">
           <div className="field">
             <label htmlFor="email">{t("email")}</label>
             <input
@@ -394,7 +545,9 @@ export function AuthForm({
                 {showPassword ? t("hide") : t("show")}
               </button>
             </div>
-            {mode === "signup" ? <PasswordStrengthMeter strength={passwordStrength} /> : null}
+            {/* Shown once typing starts, so an empty form doesn't open on a
+                "Too weak" verdict. */}
+            {mode === "signup" && password ? <PasswordStrengthMeter strength={passwordStrength} /> : null}
           </div>
 
           {mode === "signup" ? (
@@ -511,6 +664,7 @@ export function AuthForm({
             </div>
           </div>
         </form>
+        )}
 
         {footerSlot}
       </div>
@@ -523,17 +677,7 @@ export function AuthForm({
             <p>{t("signupSummary")}</p>
           ) : null}
         </div>
-        {mode === "signup" ? (
-          <div className="auth-signup-proof">
-            <p className="kicker">{t("whatYouGet")}</p>
-            <ul className="summary-list">
-              <li>{t("benefit1")}</li>
-              <li>{t("benefit2")}</li>
-              <li>{t("benefit3")}</li>
-            </ul>
-            <p className="muted auth-signup-note">{t("noPayment")}</p>
-          </div>
-        ) : null}
+        {mode === "signup" ? <p className="muted auth-signup-note">{t("noPayment")}</p> : null}
       </div>
     </section>
   );

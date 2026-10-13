@@ -10,6 +10,7 @@ export const AUTH_FEEDBACK = {
   incorrectCredentials: "Email or password is incorrect.",
   magicLinkFailure: "UNLXCK could not send a sign-in link. Try again.",
   magicLinkSent: "Sign-in link sent. Check your inbox.",
+  codeResendFailure: "UNLXCK could not send a new code. Try again.",
   passwordResetFailure: "UNLXCK could not send a reset link. Try again.",
   signInFailure: "UNLXCK could not sign you in. Try again.",
   tooManyAttempts: "Too many attempts. Try again shortly.",
@@ -67,4 +68,16 @@ export function getMagicLinkErrorMessage(error: AuthErrorLike): string {
 
 export function getPasswordResetErrorMessage(error: AuthErrorLike): string {
   return getEmailSendErrorMessage(error, AUTH_FEEDBACK.passwordResetFailure);
+}
+
+export function getSignupCodeResendErrorMessage(error: AuthErrorLike): string {
+  return getEmailSendErrorMessage(error, AUTH_FEEDBACK.codeResendFailure);
+}
+
+/**
+ * A rejected signup code is almost always a typo or an expired code, so that
+ * is the fallback; the caller passes it in already localised.
+ */
+export function getSignupCodeErrorMessage(error: AuthErrorLike, invalidCodeMessage: string): string {
+  return getEmailSendErrorMessage(error, invalidCodeMessage);
 }

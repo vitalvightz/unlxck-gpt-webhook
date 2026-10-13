@@ -1,11 +1,12 @@
 "use client";
 
 import { useLocale, useTranslations } from "next-intl";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { useAppSession } from "@/components/auth-provider";
 import { useToast } from "@/components/toast-provider";
 import { LOCALE_COOKIE_NAME, LOCALE_OPTIONS, profileLocaleToRestore, resolveLocale, shouldPersistLocale, type AppLocale } from "@/i18n/config";
+import { shouldShowBrandTopbar } from "@/lib/app-surface";
 import { updateMe } from "@/lib/api";
 
 function writeLocaleCookie(locale: AppLocale) {
@@ -19,10 +20,13 @@ function readLocaleCookie() {
  * `floating` (default) is the fixed corner chip for the public/auth pages; it
  * also owns the one-time profile-locale restore. Signed in, the chip sat behind
  * the mobile tab bar and over the safety footer on desktop, so the workspace
- * renders the `inline` variant inside the navigation drawer instead.
+ * renders the `inline` variant inside the navigation drawer instead. The public
+ * landing carries the `header` variant in its top bar, so the floating chip
+ * stays hidden there (it still mounts, to keep the restore effect running).
  */
-export function LanguageSwitcher({ placement = "floating" }: Readonly<{ placement?: "floating" | "inline" }> = {}) {
+export function LanguageSwitcher({ placement = "floating" }: Readonly<{ placement?: "floating" | "inline" | "header" }> = {}) {
   const router = useRouter();
+  const pathname = usePathname();
   const t = useTranslations("LanguageSwitcher");
   const locale = resolveLocale(useLocale());
   const { session, me, replaceMe } = useAppSession();
@@ -59,9 +63,9 @@ export function LanguageSwitcher({ placement = "floating" }: Readonly<{ placemen
     }
     router.refresh(); setPending(null);
   }
-  if (placement === "floating" && session) return null;
+  if (placement === "floating" && (session || shouldShowBrandTopbar(pathname, false))) return null;
 
-  return <div ref={rootRef} className={placement === "inline" ? "unlxck-language-switcher unlxck-language-switcher-inline" : "unlxck-language-switcher"}>
+  return <div ref={rootRef} className={placement === "floating" ? "unlxck-language-switcher" : `unlxck-language-switcher unlxck-language-switcher-${placement}`}>
     <button type="button" className="unlxck-language-switcher-trigger" aria-label={t("current", { language: current.label })} aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen((value) => !value)} disabled={pending !== null}>
       <span aria-hidden="true">◎</span><span>{current.shortLabel}</span><span aria-hidden="true">⌄</span>
     </button>

@@ -46,7 +46,7 @@ from api.state_machine import (
 )
 from api.generation_config import generation_worker_id
 from api.schema_requirements import GENERATION_JOB_STAGE2_COST_COLUMNS
-from api.store import _signup_date_of_birth, _generation_hard_max_runtime_seconds, _generation_startup_max_attempts, is_job_loaded_stalled_generation_job, is_stage1_planner_stalled_generation_job, is_startup_stale_generation_job
+from api.store import _signup_date_of_birth, _signup_full_name, _generation_hard_max_runtime_seconds, _generation_startup_max_attempts, is_job_loaded_stalled_generation_job, is_stage1_planner_stalled_generation_job, is_startup_stale_generation_job
 from api.store import RehabExposureWindow, TRAINING_PLAN_SELECT
 from api.xp import XP_CALENDAR_SCOPED_ACTIONS, XP_REWARD_AMOUNTS, XpAction
 from api.services.xp_awards import XP_ABUSE_HARDENING_VERSION
@@ -622,7 +622,9 @@ class FakeStore(InMemoryNotificationLedger, FullRowStatusReads):
             "username_change_history": [],
             "role": role,
             "access_status": "approved",
-            "full_name": user.full_name,
+            # Mirrors AppStore._build_profile_payload: only a name declared at
+            # signup seeds the profile, never the email fallback.
+            "full_name": _signup_full_name(user),
             "technical_style": [],
             "tactical_style": [],
             "stance": "",

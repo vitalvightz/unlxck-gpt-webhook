@@ -1,9 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 
 import { useAppSession } from "@/components/auth-provider";
@@ -234,25 +233,19 @@ function OverviewRiskWatch({ risks = [] }: { risks?: TodayCommandView["risk_watc
 
 export default function HomePage() {
   const publicT = useTranslations("PublicHome");
-  const landingOutcomePoints = [1, 2, 3].map((index) => ({
-    label: publicT(`outcome${index}Label`),
-    value: publicT(`outcome${index}Value`),
-  }));
-  const landingWorkspaceRows = [
-    { step: "01", label: publicT("intake"), status: publicT("row1Status"), title: publicT("intake"), body: publicT("row1Body") },
-    { step: "02", label: publicT("row2Label"), status: publicT("row2Status"), title: publicT("row2Label"), body: publicT("row2Body") },
-    { step: "03", label: publicT("row3Label"), status: publicT("row3Status"), title: publicT("row3Label"), body: publicT("row3Body") },
-    { step: "04", label: publicT("today"), status: publicT("row4Status"), title: publicT("today"), body: publicT("row4Body") },
+  const locale = useLocale();
+  // Minutes are formatted by Intl, so the example session reads naturally in
+  // every locale without a translated "min" string per dose.
+  const formatMinutes = (minutes: number) =>
+    new Intl.NumberFormat(locale, { style: "unit", unit: "minute", unitDisplay: "short" }).format(minutes);
+  const landingPreviewBlocks = [
+    { name: publicT("exHeavyBag"), sets: 4, minutes: 3, change: "down" as const, tag: publicT("tagReduced") },
+    { name: publicT("exReaction"), sets: 3, minutes: 2, change: "up" as const, tag: publicT("tagAdded") },
+    { name: publicT("exShadow"), sets: 3, minutes: 3, change: null, tag: null },
   ];
-  const landingProductProofPoints = [
-    { label: publicT("today"), title: publicT("proof1Title"), body: publicT("proof1Body") },
-    { label: publicT("row2Label"), title: publicT("proof2Title"), body: publicT("proof2Body") },
-    { label: publicT("proof3Label"), title: publicT("proof3Title"), body: publicT("proof3Body") },
-  ];
-  const landingWorkflowSteps = [1, 2, 3, 4].map((index) => ({
-    label: publicT(`step${index}Label`),
-    title: publicT(`step${index}Title`),
-    body: publicT(`step${index}Body`),
+  const landingFlexibilityItems = [1, 2, 3, 4, 5, 6].map((index) => ({
+    title: publicT(`flex${index}Title`),
+    body: publicT(`flex${index}Body`),
   }));
   const { isReady, isMeHydrated, hasTransientMeError, session, me, signOut, refreshMe } = useAppSession();
   const router = useRouter();
@@ -600,158 +593,82 @@ export default function HomePage() {
   }
 
   return (
-    <>
-      <section className="hero-panel public-hero-panel">
-        <div className="public-hero-grid">
-          <div className="hero-panel-copy public-hero-copy">
-            <p className="public-hero-motto" aria-label={publicT("motto")}>
-              <span>UNLXCK</span>
-              <span>{publicT("motto").replace(/^UNLXCK\s+/i, "")}</span>
-            </p>
-            <h1 className="hero-title public-hero-title" aria-label={publicT("heroTitle")}>
-              <span>{publicT("heroLine1")}</span>
-              <span>{publicT("heroLine2")}</span>
-            </h1>
-            <p className="public-hero-lead">{publicT("lead")}</p>
-            <p className="public-hero-summary">{publicT("summary")}</p>
-            <div className="hero-actions public-hero-actions">
-              <Link href="/signup" className="cta">
-                {publicT("getStarted")}
-              </Link>
-              <Link href="/login" className="ghost-button">
-                {publicT("login")}
-              </Link>
-            </div>
-            <p className="public-hero-cta-note">{publicT("betaNote")}</p>
-            <div className="public-proof-strip" aria-label={publicT("productOutcomes")}>
-              {landingOutcomePoints.map((point) => (
-                <div key={point.label} className="public-proof-pill">
-                  <span className="label">{point.label}</span>
-                  <span className="public-proof-value">{point.value}</span>
-                </div>
-              ))}
-            </div>
-          </div>
+    <div className="public-landing">
+      <section className="public-hero" aria-labelledby="public-hero-heading">
+        <p className="public-hero-motto">
+          <span>UNLXCK</span>
+          <span>{publicT("mottoTagline")}</span>
+        </p>
+        <h1 id="public-hero-heading" className="hero-title public-hero-title" aria-label={publicT("heroTitle")}>
+          <span>{publicT("heroLine1")}</span>
+          <span>{publicT("heroLine2")}</span>
+        </h1>
+        <p className="public-hero-lead">{publicT("lead")}</p>
+        <p className="public-hero-summary">{publicT("summary")}</p>
+        <Link href="/signup" className="cta public-hero-cta">
+          {publicT("getStarted")}
+        </Link>
+      </section>
 
-          <article className="support-panel public-preview-panel">
-            <div className="public-preview-header">
-              <div>
-                <p className="kicker">{publicT("workspacePreview")}</p>
-                <h2 className="form-section-title">{publicT("previewTitle")}</h2>
-              </div>
-              <span className="badge status-badge-neutral">{publicT("beta")}</span>
-            </div>
-            <div className="public-preview-window">
-              <div className="public-preview-toolbar">
-                <span className="public-preview-dot public-preview-dot-active" aria-hidden="true" />
-                <span className="public-preview-toolbar-label">{publicT("workspaceLabel")}</span>
-              </div>
-              <div className="public-preview-shell">
-                <aside className="public-preview-sidebar" aria-label={publicT("previewNavigation")}>
-                  <span className="public-preview-section-label">{publicT("workspace")}</span>
-                  <span className="public-preview-nav-active">{publicT("overview")}</span>
-                  <span>{publicT("today")}</span>
-                  <span>{publicT("plan")}</span>
-                  <span>{publicT("intake")}</span>
-                </aside>
-              <div className="public-workspace-list">
-                <article className="public-today-preview" aria-label="Today, modified session">
-                  <div className="public-today-preview-head">
-                      <span className="public-today-preview-eyebrow">{publicT("today")}</span>
-                      <span className="public-today-preview-status">{publicT("modifiedSession")}</span>
-                  </div>
-                  <ul className="public-today-changes">
-                    {([
-                      { direction: "down" as const, text: publicT("heavyBagReduced") },
-                      { direction: "up" as const, text: publicT("reactionDrillsIncreased") },
-                    ]).map((change) => (
-                      <li
-                        key={change.text}
-                        className="public-today-change"
-                        data-direction={change.direction}
-                      >
-                        <span className="public-today-change-glyph" aria-hidden="true">
-                          {change.direction === "up" ? "↑" : "↓"}
-                        </span>
-                        <span className="public-today-change-text">{change.text}</span>
-                      </li>
-                    ))}
-                  </ul>
-                  <p className="public-today-reason">
-                    <span className="public-today-reason-label">{publicT("reason")}</span>
-                    <span>{publicT("highFatigue")}</span>
-                  </p>
-                </article>
-                {landingWorkspaceRows.map((row) => (
-                  <article key={row.step} className="public-workspace-row">
-                    <span className="public-workspace-step">{row.step}</span>
-                    <div>
-                      <p className="label">{row.label}</p>
-                      <h3 className="public-preview-card-title">{row.title}</h3>
-                      <p className="muted">{row.body}</p>
-                    </div>
-                    <span className="public-workspace-status">{row.status}</span>
-                  </article>
-                ))}
-              </div>
-              </div>
-            </div>
-          </article>
+      <section className="public-preview" aria-labelledby="public-preview-heading">
+        <div className="public-section-head">
+          <p className="kicker">{publicT("previewKicker")}</p>
+          <h2 id="public-preview-heading">{publicT("previewTitle")}</h2>
         </div>
+        <article className="public-today-card" aria-label={publicT("previewCardLabel")}>
+          <header className="public-today-head">
+            <p className="public-today-eyebrow">{publicT("todaySession")}</p>
+            <span className="public-today-example">{publicT("example")}</span>
+          </header>
+          <p className="public-today-title">{publicT("sessionTitle")}</p>
+          <p className="public-today-meta">
+            {publicT("sessionSport")} · ~{formatMinutes(50)} · {publicT("previewPlan")}
+          </p>
+          <p className="public-today-decision-row">
+            <span className="public-today-decision">{publicT("decision")}</span>
+            <span className="public-today-reason">{publicT("reasonText")}</span>
+          </p>
+          <ol className="public-today-blocks">
+            {landingPreviewBlocks.map((block) => (
+              <li key={block.name} className="public-today-block-row" data-change={block.change ?? undefined}>
+                <span className="public-today-block-glyph" aria-hidden="true">
+                  {block.change === "up" ? "↑" : block.change === "down" ? "↓" : "·"}
+                </span>
+                <span className="public-today-block-name">
+                  {block.name}
+                  {block.tag ? <span className="sr-only"> ({block.tag})</span> : null}
+                </span>
+                <span className="public-today-block-dose">
+                  {block.sets} × {formatMinutes(block.minutes)}
+                </span>
+              </li>
+            ))}
+          </ol>
+        </article>
       </section>
 
-      <section className="public-proof-grid" aria-label={publicT("productProof")}>
-        {landingProductProofPoints.map((section) => (
-          <article key={section.title} className="support-panel public-proof-card">
-            <p className="kicker">{section.label}</p>
-            <h2 className="form-section-title">{section.title}</h2>
-            <p className="muted">{section.body}</p>
-          </article>
-        ))}
-      </section>
-
-      <section className="public-section-break" aria-labelledby="public-journey-heading">
-        <div className="public-section-break-line" aria-hidden="true" />
-        <div className="public-section-break-copy">
-          <p className="kicker">{publicT("howItWorks")}</p>
-          <h2 id="public-journey-heading">{publicT("journeyTitle")}</h2>
+      <section className="public-flex" aria-labelledby="public-flex-heading">
+        <div className="public-section-head">
+          <p className="kicker">{publicT("flexKicker")}</p>
+          <h2 id="public-flex-heading">{publicT("flexTitle")}</h2>
         </div>
-        <Image
-          className="public-section-break-logo"
-          src="/brand/unlxck-one-angle-120.png"
-          alt=""
-          width={72}
-          height={72}
-          aria-hidden="true"
-        />
-      </section>
-
-      <section className="metric-grid public-journey-grid">
-        {landingWorkflowSteps.map((step) => (
-          <article key={step.title} className="support-panel">
-            <div className="form-section-header">
-              <p className="kicker">{step.label}</p>
-              <h2 className="form-section-title">{step.title}</h2>
-            </div>
-            <p className="muted">{step.body}</p>
-          </article>
-        ))}
+        <ul className="public-flex-list">
+          {landingFlexibilityItems.map((item) => (
+            <li key={item.title} className="public-flex-item">
+              <h3>{item.title}</h3>
+              <p>{item.body}</p>
+            </li>
+          ))}
+        </ul>
       </section>
 
       <section className="public-final-cta" aria-labelledby="public-final-cta-heading">
-        <div>
-          <p className="kicker">{publicT("potential")}</p>
-          <h2 id="public-final-cta-heading">{publicT("finalTitle")}</h2>
-        </div>
-        <div className="hero-actions">
-          <Link href="/signup" className="cta">
-            {publicT("getStarted")}
-          </Link>
-          <Link href="/login" className="secondary-button">
-            {publicT("login")}
-          </Link>
-        </div>
+        <h2 id="public-final-cta-heading">{publicT("finalTitle")}</h2>
+        <Link href="/signup" className="cta public-hero-cta">
+          {publicT("getStarted")}
+        </Link>
+        <p className="public-cta-note">{publicT("finalNote")}</p>
       </section>
-    </>
+    </div>
   );
 }
