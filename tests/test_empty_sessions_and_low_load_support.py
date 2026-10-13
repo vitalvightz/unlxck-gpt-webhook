@@ -6,6 +6,7 @@ fixed seed; they make no model call.
 """
 from __future__ import annotations
 
+import copy
 import datetime as dt
 import json
 from pathlib import Path
@@ -210,7 +211,14 @@ def test_every_day_emptied_by_suppression_is_explained(key):
 
 
 def test_late_fight_counts_and_caps_match_the_sequence_after_suppression():
-    brief = _plan("kick10_late")
+    # This kickboxing countdown used to lose a primer to empty membership on its
+    # own; the late selector now fills it, so the removal is created explicitly
+    # and run through the real suppression pass.
+    brief = copy.deepcopy(_plan("kick10_late"))
+    target = next(r for r in brief["late_fight_session_sequence"]
+                  if r.get("category") in {"strength", "conditioning"} and r.get("selected_exercise_assignments"))
+    target["selected_exercise_assignments"] = []
+    suppress_unfilled_physical_roles(brief)
     spec = brief["late_fight_plan_spec"]
     assert _empty_suppressions(brief), "scenario must remove a late-fight session"
     expected = late_fight_sequence_budget(brief["late_fight_session_sequence"], spec["role_budget"])

@@ -494,7 +494,7 @@ export function CurrentCampCard({
             ? "No active plan is selected. Make one of your saved plans active."
             : "Set your goals and get a plan in about two minutes."}
         </p>
-        {hasSavedIntake ? <Link href="/onboarding" className="cta">Resume Advanced Intake</Link> :
+        {hasSavedIntake ? <Link href="/onboarding" className="cta">Resume Camp Setup</Link> :
           <div className={styles.campActions}>
             <Link href="/quick-build" className={`cta ${styles.buildAction}`}>
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m13 2-8 12h6l-1 8 9-13h-7z" /></svg>
@@ -502,7 +502,7 @@ export function CurrentCampCard({
             </Link>
             <Link href="/onboarding" className={`ghost-button ${styles.buildAction}`}>
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4H5v17h14V4h-4M9 2h6v5H9zM8 11h8m-8 4h8" /></svg>
-              Advanced Intake
+              Camp Setup
             </Link>
           </div>}
       </article>
@@ -622,7 +622,7 @@ export function AthleteProfileRow({ me }: { me: MeResponse | null }) {
             )}
             <Link href="/settings#account" className="secondary-button">Edit profile & photo</Link>
             <Link href="/onboarding" className="secondary-button">
-              {hasIntake ? "Review & edit intake" : "Complete Advanced Intake"}
+              {hasIntake ? "Review & edit intake" : "Complete Camp Setup"}
             </Link>
           </div>
         </InjuryDetailSheet>

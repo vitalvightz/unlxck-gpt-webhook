@@ -200,8 +200,12 @@ def _constraint(entry, code):
 def test_a_fourteen_day_camp_cannot_owe_its_creation_day():
     brief = _brief("boxer14_speed")
     power = _entry(brief, "power")
-    assert power["state"] == "defer"
+    # The creation day still cannot be owed (the constraint is still cited),
+    # but power is no longer deferred: the D-13 primer now carries a legal power
+    # member, so the goal is maintained from final membership.
     assert any(c.get("authority") == "plan_calendar" for c in _constraint(power, "fight_proximity"))
+    assert (power["state"], power["satisfied"]) == ("maintain", True)
+    assert all(item["d_day"] <= 13 for item in power["evidence"])
     speed = _entry(brief, "speed")
     assert (speed["state"], speed["satisfied"]) == ("maintain", True)
 

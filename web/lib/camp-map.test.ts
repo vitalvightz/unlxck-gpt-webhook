@@ -894,3 +894,17 @@ test("athleteTrainingDayISO uses the athlete's timezone and the 03:00 rollover",
   // An unknown zone falls back to the device day instead of throwing.
   assert.match(athleteTrainingDayISO(now, "Not/AZone"), /^\d{4}-\d{2}-\d{2}$/);
 });
+
+test("a day before the plan existed is never Missed or retro-loggable", () => {
+  // Plan generated on Tuesday 13 Oct: Monday's session was never available.
+  assert.deepEqual(getSessionDisplayStatus(undefined, "2026-10-12", "2026-10-14", "2026-10-13"), {
+    state: "before_plan",
+    tone: "neutral",
+    label: "",
+  });
+  assert.equal(getSessionDisplayStatus(undefined, "2026-10-13", "2026-10-14", "2026-10-13").state, "missed");
+  assert.equal(canRetroLog("2026-10-12", "2026-10-14", "2026-10-13"), false);
+  assert.equal(canRetroLog("2026-10-13", "2026-10-14", "2026-10-13"), true);
+  // A logged session keeps its real status whatever the plan start.
+  assert.equal(getSessionDisplayStatus(completionRow(), "2026-10-12", "2026-10-14", "2026-10-13").state, "done");
+});

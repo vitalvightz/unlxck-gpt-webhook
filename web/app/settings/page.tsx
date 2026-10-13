@@ -168,7 +168,7 @@ const DEFAULT_PROGRAMME_CONTROLS: ProgrammeControls = {
 };
 
 const DEFAULT_ADMIN_TEMPLATES: AdminTemplateDraft = {
-  welcomeMessage: "Welcome to camp. Complete Advanced Intake so your plan starts with the right context.",
+  welcomeMessage: "Welcome to camp. Complete Camp Setup so your plan starts with the right context.",
   planEmail: "Your updated training plan is ready.",
   coachNotes: "Keep review notes short, specific, and tied to athlete risk.",
 };

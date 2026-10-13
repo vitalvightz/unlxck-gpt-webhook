@@ -25,7 +25,7 @@
     [2, "SPP", "neural_plus_strength_day", "strength", "thursday", 15, false, false, true, "", ""],
     [2, "SPP", "strength_touch_day", "strength", "sunday", 12, true, false, true, "meaningful_stress", "medium"],
     [2, "SPP", "tactical_watch", "support_insert", "tuesday", 10, true, false, false, "support", "low"],
-    [3, "TAPER", "alactic_sharpness_day", "conditioning", "monday", 4, true, false, false, "meaningful_stress", "medium"],
+    [3, "TAPER", "alactic_sharpness_day", "conditioning", "sunday", 5, true, false, false, "meaningful_stress", "medium"],
     [3, "TAPER", "breathing_reset", "support_insert", "tuesday", 3, true, false, false, "support", "low"],
     [3, "TAPER", "fight_visualization", "support_insert", "friday", 7, true, false, false, "support", "low"],
     [3, "TAPER", "fight_visualization", "support_insert", "sunday", 5, true, false, false, "support", "low"],

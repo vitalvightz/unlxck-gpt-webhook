@@ -37,7 +37,7 @@
     [3, "SPP", "tactical_cue_card", "support_insert", "wednesday", 9, true, false, false, "support", "low"],
     [3, "SPP", "tactical_watch", "support_insert", "friday", 7, true, false, false, "support", "low"],
     [3, "SPP", "tactical_watch", "support_insert", "thursday", 8, true, false, false, "support", "low"],
-    [4, "TAPER", "alactic_sharpness_day", "conditioning", "monday", 4, true, false, false, "meaningful_stress", "medium"],
+    [4, "TAPER", "alactic_sharpness_day", "conditioning", "sunday", 5, true, false, false, "meaningful_stress", "medium"],
     [4, "TAPER", "breathing_reset", "support_insert", "sunday", 5, true, false, false, "support", "low"],
     [4, "TAPER", "fight_day_protocol", "fight_day", "friday", 0, false, false, false, "", ""],
     [4, "TAPER", "fight_visualization", "support_insert", "sunday", 5, true, false, false, "support", "low"],
@@ -45,7 +45,6 @@
     [4, "TAPER", "fight_visualization", "support_insert", "tuesday", 3, true, false, false, "support", "low"],
     [4, "TAPER", "fight_week_freshness_day", "recovery", "wednesday", 2, true, false, false, "support", "low"],
     [4, "TAPER", "hard_sparring_day", "sparring", "thursday", 1, true, false, false, "support", "low"],
-    [4, "TAPER", "joint_prep", "support_insert", "sunday", 5, true, false, false, "support", "low"],
     [4, "TAPER", "light_combat_day", "technical", "monday", 4, true, false, false, "support", "low"],
     [4, "TAPER", "tactical_cue_card", "support_insert", "thursday", 1, true, false, false, "support", "low"],
     [4, "TAPER", "tactical_watch", "support_insert", "sunday", 5, false, false, false, "support", "low"]

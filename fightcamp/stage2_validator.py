@@ -3026,6 +3026,12 @@ def _late_fight_warnings(planning_brief: dict, final_plan_text: str) -> list[dic
                     }
                 )
             preferred_terms = window_rules.get("preferred", [])
+            # Where the planner already assigned this day's closed membership,
+            # that membership -- sport, phase, window and load legal -- is what
+            # the day should show; a generic preferred-name list is not.
+            assigned_today = (spec.get("allowed_exercises_by_day") or {}).get(day_label) if isinstance(spec, dict) else None
+            if assigned_today:
+                preferred_terms = []
             preferred_present = any(
                 phrase_in_text(line.lower(), term.lower())
                 for line in section_lines

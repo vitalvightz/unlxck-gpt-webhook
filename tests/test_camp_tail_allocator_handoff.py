@@ -577,7 +577,11 @@ def test_production_d16_plan_has_no_dayless_normal_ghost():
         for row in week.get("suppressed_roles") or []
         if row.get("reason_code") == "late_fight_tail_handoff_unplaced_normal_role"
     ]
-    assert {row["role_key"] for row in handoff_rows} == {"alactic_speed_day"}
+    # Proximity alone no longer compresses the week away, so the neural
+    # strength session that used to be suppressed for proximity now survives
+    # role budget; it has no legal day before the handoff either, and is
+    # accounted for here the same way instead of shipping dayless.
+    assert {row["role_key"] for row in handoff_rows} == {"alactic_speed_day", "neural_plus_strength_day"}
 
     # 2. The finished tail still carries its own alactic/sharpness exposure, so
     #    the removed ghost was not the sole owner of that adaptation.

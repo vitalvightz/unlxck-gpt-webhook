@@ -635,7 +635,7 @@ function MobileOnboardingHeader({
   return (
     <div className="onboarding-heading-mobile">
       <div className="onboarding-mobile-header-copy">
-        <p className="kicker">Advanced Intake</p>
+        <p className="kicker">Camp Setup</p>
         <p className="onboarding-mobile-title">Build your camp profile.</p>
         <p className="muted">Saved, resumable athlete intake.</p>
         <Link href="/quick-build" className="ghost-button onboarding-quick-build-link">

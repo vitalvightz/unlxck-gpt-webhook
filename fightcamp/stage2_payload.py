@@ -1827,6 +1827,185 @@ def build_computed_support(*, flags: dict, phases: list[str] | None = None) -> d
     return support
 
 
+# An open plan is a renewable four-week development block. Its calendar is
+# placed this far from any fight so that no countdown band (D-17 inward), late
+# path (D-13 inward), fight-week rule or fight-day override can reach it.
+OPEN_BLOCK_WEEKS = 4
+OPEN_BLOCK_HORIZON_DAYS = 84
+# The block is planned as one development phase. Without periodisation it
+# trains both general and specific qualities, so it draws on Stage 1's general
+# (GPP) and specific (SPP) selections together; taper work is countdown-only.
+OPEN_BLOCK_PHASE = "GPP"
+_OPEN_BLOCK_SOURCE_PHASES = ("GPP", "SPP")
+_OPEN_BLOCK_SLOT_GROUPS = ("strength_slots", "conditioning_slots", "rehab_slots")
+_OPEN_BLOCK_SERVER_OWNED = frozenset({"tactical_watch", "fight_visualization"})
+_WEEKDAY_ORDER = ("monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday")
+
+
+def _open_block_athlete_view(athlete_model: dict) -> dict:
+    days = 7 * OPEN_BLOCK_WEEKS
+    return {
+        **athlete_model,
+        "days_until_fight": OPEN_BLOCK_HORIZON_DAYS + days,
+        "open_block_horizon_days": OPEN_BLOCK_HORIZON_DAYS,
+        "short_notice": False,
+        "phase_weeks": {
+            OPEN_BLOCK_PHASE: OPEN_BLOCK_WEEKS,
+            "days": {phase: (days if phase == OPEN_BLOCK_PHASE else 0) for phase in ("GPP", "SPP", "TAPER")},
+        },
+    }
+
+
+def _open_block_session(role: dict[str, Any]) -> dict[str, Any] | None:
+    role_key = str(role.get("role_key") or "").strip().lower()
+    if role_key in _OPEN_BLOCK_SERVER_OWNED:
+        return None
+    weekday = str(role.get("scheduled_day_hint") or role.get("real_weekday") or "").strip().lower()
+    if weekday not in _WEEKDAY_ORDER:
+        return None
+    doses = {
+        str(item.get("name") or ""): str(item.get("effective_prescription") or "")
+        for item in role.get("effective_strength_prescriptions") or []
+        if isinstance(item, dict)
+    }
+    exercises = [
+        {
+            "name": str(member.get("name") or ""),
+            "prescription": doses.get(str(member.get("name") or ""))
+            or str(member.get("effective_prescription") or member.get("base_prescription") or ""),
+        }
+        for member in role.get("selected_exercise_assignments") or []
+        if isinstance(member, dict) and member.get("name")
+    ]
+    session = {
+        "weekday": weekday.title(),
+        "role_key": role_key,
+        "label": role.get("athlete_facing_label") or role_key.replace("_", " ").capitalize(),
+        "category": role.get("category"),
+        "execution_order": role.get("execution_order"),
+        "coach_owned": bool(role.get("coach_owned")),
+        "exercises": exercises,
+    }
+    return {key: value for key, value in session.items() if value not in (None, "", [])}
+
+
+def _project_open_development_block(block: dict[str, Any]) -> dict[str, Any]:
+    """The block's final sessions by week and weekday -- no D-days, no phases."""
+    weeks = []
+    for week in (block.get("weekly_role_map") or {}).get("weeks") or []:
+        if not isinstance(week, dict):
+            continue
+        sessions = [
+            session
+            for role in week.get("session_roles") or []
+            if isinstance(role, dict) and (session := _open_block_session(role))
+        ]
+        sessions.sort(key=lambda item: (
+            _WEEKDAY_ORDER.index(item["weekday"].lower()), item.get("execution_order") or 0,
+        ))
+        weeks.append({
+            "week": len(weeks) + 1,
+            "focus": week.get("stage_label") or "",
+            "sessions": sessions,
+            "removed_sessions": [
+                {"role_key": row.get("role_key"), "reason_code": row.get("reason_code")
+                 or (row.get("reason_codes") or ["role_budget"])[0]}
+                for row in week.get("suppressed_roles") or []
+                if isinstance(row, dict) and row.get("role_key") not in _OPEN_BLOCK_SERVER_OWNED
+            ],
+        })
+    return {"authority": "deterministic_open_development_block", "weeks": weeks}
+
+
+def _project_open_goal_coverage(block: dict[str, Any]) -> list[dict[str, Any]]:
+    """Goal coverage from the block's final membership, by week and weekday."""
+    weekday_by_d_day = {
+        day.get("d_day"): str(day.get("weekday") or "").title()
+        for week in (block.get("weekly_role_map") or {}).get("weeks") or []
+        for day in week.get("calendar_days") or []
+        if isinstance(day, dict)
+    }
+    week_by_d_day = {
+        day.get("d_day"): index + 1
+        for index, week in enumerate((block.get("weekly_role_map") or {}).get("weeks") or [])
+        for day in week.get("calendar_days") or []
+        if isinstance(day, dict)
+    }
+    coverage = []
+    for entry in block.get("goal_preservation") or []:
+        if not isinstance(entry, dict):
+            continue
+        coverage.append({
+            "goal": entry.get("goal"),
+            "priority": entry.get("priority"),
+            "state": entry.get("state"),
+            "satisfied": entry.get("satisfied"),
+            "evidence": [
+                {"name": item.get("name"), "week": week_by_d_day.get(item.get("d_day")),
+                 "weekday": weekday_by_d_day.get(item.get("d_day"))}
+                for item in entry.get("evidence") or []
+                if isinstance(item, dict) and item.get("name")
+            ],
+        })
+    return coverage
+
+
+_OPEN_BLOCK_RENDER_RULES = [
+    "open_plan_spec.weekly_session_plan is the deterministic planner's session plan. Build the Weekly Rhythm and Session Cards from it: each session's weekday, purpose and order are fixed.",
+    "Each session's exercises list is closed membership with its authoritative prescription: render every listed exercise with that dose (one exact value inside any range), and never add, replace or substitute an exercise. A session with no exercises is coach-owned or support work: keep it as written in its label.",
+    "Use weekly_session_plan weeks 2-4 for the 4-Week Development Block: describe what changes week to week from those sessions, never by inventing new ones.",
+    "open_plan_spec.goal_coverage is the planner's verdict on the athlete's goals: explain it faithfully and never claim a goal is trained by an exercise not listed in its evidence.",
+]
+
+
+def _attach_open_development_block(
+    brief: dict, *, athlete_model: dict, restrictions: list[dict], phase_briefs: dict[str, dict],
+    candidate_pools: dict[str, dict], omission_ledger: dict[str, dict], rewrite_guidance: dict,
+    plan_input: Any | None, computed_support: dict | None,
+) -> dict:
+    """Give an open plan the dated planner's intelligence without its periodisation.
+
+    One four-week development block runs through the canonical owners -- role
+    budget, placement and legality, closed membership, effective dose,
+    realised-load revalidation, goal preservation and empty-session suppression
+    -- on a calendar placed far from any fight. Only its weekday projection
+    reaches the open payload; no D-day, phase or countdown concept does.
+    """
+    from .goal_preservation import reconcile_goal_preservation
+    from .session_composition import suppress_unfilled_physical_roles
+    from .session_sequencing import stamp_role_execution_order
+
+    phase_brief = phase_briefs.get(OPEN_BLOCK_PHASE)
+    sources = [candidate_pools.get(phase) for phase in _OPEN_BLOCK_SOURCE_PHASES]
+    sources = [pool for pool in sources if isinstance(pool, dict)]
+    if not sources or not isinstance(phase_brief, dict):
+        return brief
+    def merged(group: str) -> list[dict[str, Any]]:
+        # Both pools were scored by the same Stage 1 function, so the merged
+        # list follows that score; otherwise every general slot would outrank
+        # every specific one purely by concatenation order.
+        slots = [slot for pool in sources for slot in pool.get(group) or [] if isinstance(slot, dict)]
+        return sorted(slots, key=lambda slot: -float(_slot_selected_option(slot).get("score") or 0))
+
+    block_pools = {OPEN_BLOCK_PHASE: {group: merged(group) for group in _OPEN_BLOCK_SLOT_GROUPS}}
+    block = _build_planning_brief(
+        athlete_model=_open_block_athlete_view(athlete_model),
+        restrictions=restrictions,
+        phase_briefs={OPEN_BLOCK_PHASE: {**phase_brief, "days": 7 * OPEN_BLOCK_WEEKS, "weeks": OPEN_BLOCK_WEEKS}},
+        candidate_pools=block_pools, omission_ledger=omission_ledger,
+        rewrite_guidance=rewrite_guidance, plan_input=plan_input, computed_support=computed_support,
+    )
+    if "weekly_role_map" not in block:
+        return brief
+    block = stamp_role_execution_order(reconcile_goal_preservation(block))
+    suppress_unfilled_physical_roles(block)
+    spec = dict(brief.get("open_plan_spec") or {})
+    spec["weekly_session_plan"] = _project_open_development_block(block)
+    spec["goal_coverage"] = _project_open_goal_coverage(block)
+    spec["render_rules"] = [*(spec.get("render_rules") or []), *_OPEN_BLOCK_RENDER_RULES]
+    return {**brief, "open_plan_spec": spec, "candidate_pools": block_pools}
+
+
 def build_planning_brief(
     *, athlete_model: dict, restrictions: list[dict], phase_briefs: dict[str, dict],
     candidate_pools: dict[str, dict], omission_ledger: dict[str, dict],
@@ -1841,11 +2020,16 @@ def build_planning_brief(
         candidate_pools=candidate_pools, omission_ledger=omission_ledger,
         rewrite_guidance=rewrite_guidance, plan_input=plan_input, computed_support=computed_support,
     )
-    # Open ongoing systems do not yet have a deterministic executable calendar.
-    # The universal selection classification still lives in compressed_priorities;
-    # the resolved-camp contract applies to all dated camps, including D-0.
+    # An open (undated) plan has no fight and no periodisation, but its sessions
+    # are still decided by the deterministic planner: one development block is
+    # built through the same owners as a dated camp and projected by weekday.
     if brief.get("payload_variant") == "open_ongoing_stage2_payload":
-        return brief
+        return _attach_open_development_block(
+            brief,
+            athlete_model=athlete_model, restrictions=restrictions, phase_briefs=phase_briefs,
+            candidate_pools=candidate_pools, omission_ledger=omission_ledger,
+            rewrite_guidance=rewrite_guidance, plan_input=plan_input, computed_support=computed_support,
+        )
     if "late_fight_session_sequence" in brief:
         from .goal_preservation import _effective_map
         # Resolve the actual final sequence, not the earlier weekly mirror.

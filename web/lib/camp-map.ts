@@ -633,6 +633,7 @@ export type SessionDisplayState =
   | "modified"
   | "skipped"
   | "missed"
+  | "before_plan"
   | "pending"
   | "upcoming";
 
@@ -646,12 +647,15 @@ export type SessionDisplayStatus = {
 /**
  * Resolve what a plan card should show for a session given its live completion
  * row (if any) and the server-authoritative current training day. A past day
- * with no terminal log — including one only ever `started` — reads as Missed.
+ * with no terminal log — including one only ever `started` — reads as Missed,
+ * unless the day came before the plan existed (`planStartIso`): a session the
+ * athlete was never given cannot have been missed.
  */
 export function getSessionDisplayStatus(
   completion: TodaySessionCompletionRecord | undefined,
   dayIso: string | null,
   currentDayIso: string | null,
+  planStartIso: string | null = null,
 ): SessionDisplayStatus {
   const status = completion?.status;
   if (status === "done") {
@@ -662,6 +666,9 @@ export function getSessionDisplayStatus(
   }
   if (status === "skipped") {
     return { state: "skipped", tone: "red", label: "Skipped" };
+  }
+  if (dayIso && planStartIso && dayIso < planStartIso) {
+    return { state: "before_plan", tone: "neutral", label: "" };
   }
   const isPast = Boolean(dayIso && currentDayIso && dayIso < currentDayIso);
   if (isPast) {
@@ -676,8 +683,15 @@ export function getSessionDisplayStatus(
 export const RETRO_LOG_WINDOW_DAYS = 7;
 
 /** True when a past day is still inside the retro-log back-fill window. */
-export function canRetroLog(dayIso: string | null, currentDayIso: string | null): boolean {
+export function canRetroLog(
+  dayIso: string | null,
+  currentDayIso: string | null,
+  planStartIso: string | null = null,
+): boolean {
   if (!dayIso || !currentDayIso || dayIso >= currentDayIso) {
+    return false;
+  }
+  if (planStartIso && dayIso < planStartIso) {
     return false;
   }
   const day = new Date(`${dayIso}T12:00:00`);
@@ -1198,3 +1212,4 @@ export function getReadinessStrip(
 
   return { focus, risk, load };
 }
+

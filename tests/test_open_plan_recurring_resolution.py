@@ -206,6 +206,7 @@ def test_open_plan_projects_weekdays_and_dates_from_the_block_anchor():
         "projection_reason": None,
         "anchor_date": "2026-07-13",
         "current_training_day": "2026-07-13",
+        "plan_start_day": "2026-07-12",
         "block_number": 1,
         "current_week_number": 1,
     }
@@ -686,3 +687,29 @@ def test_projection_reason_is_none_when_projection_succeeds():
     assert context["projection_status"] == "projected"
     assert context["projection_reason"] is None
     assert projected["weeks"][0]["days"][0]["date"] == _ANCHORED_TRAINING_DAY
+
+
+def test_schedule_context_reports_the_athlete_local_plan_start_day():
+    """A plan created just before midnight UTC starts on the athlete's own day.
+
+    The plan view decides "before the plan existed" from this server-resolved
+    day, never from the viewer's device timezone.
+    """
+    from api.services.open_plan_timeline import project_open_structured_plan
+
+    row = {
+        "created_at": "2026-10-12T23:30:00+00:00",  # Monday in UTC...
+        "planning_brief": {
+            "athlete_snapshot": {
+                # ...but already Tuesday for an athlete at UTC+2.
+                "plan_creation_weekday": "tuesday",
+                "plan_creation_weekday_basis": "athlete_local_weekday",
+            }
+        },
+    }
+    _, context = project_open_structured_plan(row, None, current_training_day="2026-10-14")
+    assert context["plan_start_day"] == "2026-10-13"
+
+    legacy = {"created_at": "2026-10-12T23:30:00+00:00", "planning_brief": {}}
+    _, context = project_open_structured_plan(legacy, None, current_training_day="2026-10-14")
+    assert context["plan_start_day"] == "2026-10-12"

@@ -525,6 +525,25 @@ _DISTANCE_UNIT_ALIASES = {
 _TIME_UNITS = frozenset({"seconds", "minutes", "hours"})
 
 
+_LEADING_WEEKDAY_RE = re.compile(
+    r"^\s*(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday|mon|tue|tues|wed|thu|thur|thurs|fri|sat|sun)"
+    r"\b\s*[.:,\-\u2013\u2014|]\s*",
+    re.IGNORECASE,
+)
+
+
+def _strip_leading_weekday(title: str) -> str:
+    """Drop a weekday the converter wrote into a session title.
+
+    The day card already names the day ("Monday. Strength anchor" repeats it).
+    Only a weekday followed by a separator is removed, never the whole title.
+    """
+    stripped = _LEADING_WEEKDAY_RE.sub("", title or "", count=1)
+    if not stripped.strip():
+        return title
+    return stripped[:1].upper() + stripped[1:]
+
+
 def _coerce_str(value: Any) -> str:
     if isinstance(value, str):
         return value
@@ -1442,7 +1461,7 @@ def _normalize_session(value: Any) -> dict[str, Any]:
         if normalized_session_type == "mixed" and _raw_session_type_is_rehab(raw_session_type)
         else normalized_session_type
     )
-    out["title"] = _coerce_str(out.get("title"))
+    out["title"] = _strip_leading_weekday(_coerce_str(out.get("title")))
     out["objective"] = _coerce_str(out.get("objective"))
     out["mindset_anchor"] = _normalize_mindset(out.get("mindset_anchor"))
     if "completion_status" in out:

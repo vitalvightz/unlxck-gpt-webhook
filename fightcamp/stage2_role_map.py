@@ -3517,7 +3517,10 @@ def _build_weekly_role_map(
     projected_days_until_fight_start: list[int] = [0] * len(progression_weeks)
     projected_days_until_fight_end: list[int] = [0] * len(progression_weeks)
     week_span_days: list[int] = [0] * len(progression_weeks)
-    running_days = 0
+    # An open (undated) development block never ends on a fight: its calendar is
+    # placed this many days clear of one, so no countdown band, fight-week rule
+    # or fight-day override can ever apply to it. Dated camps carry 0.
+    running_days = max(0, int(athlete_model.get("open_block_horizon_days") or 0))
     for idx in range(len(progression_weeks) - 1, -1, -1):
         span = max(0, int(progression_weeks[idx].get("span_days") or 0))
         week_span_days[idx] = span

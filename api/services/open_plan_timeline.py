@@ -296,6 +296,9 @@ def _base_context(
         "projection_reason": None,
         "anchor_date": None,
         "current_training_day": current_training_day.isoformat() if current_training_day else None,
+        # The athlete-local day the plan was created. Sessions dated before it
+        # were never available to the athlete, so the app never calls them missed.
+        "plan_start_day": (created.isoformat() if (created := _athlete_local_creation_date(plan_row)) else None),
         "block_number": None,
         "current_week_number": None,
     }

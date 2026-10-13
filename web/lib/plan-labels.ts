@@ -109,7 +109,23 @@ export function isDeclaredLightCombatTitle(title: string): boolean {
   return /\blight\s+(?:technical\s+)?combat\b/i.test(title);
 }
 
+const LEADING_WEEKDAY =
+  /^\s*(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday|mon|tue|tues|wed|thu|thur|thurs|fri|sat|sun)\b\s*[.:,\-\u2013\u2014|]\s*/i;
+
+/**
+ * The day card already names the day, so a generated title that opens with its
+ * weekday ("Monday. Strength anchor") repeats it. Only a weekday followed by a
+ * separator is removed, and never when nothing would be left.
+ */
+export function stripLeadingWeekday(title: string): string {
+  const stripped = title.replace(LEADING_WEEKDAY, "");
+  if (!stripped.trim()) {
+    return title;
+  }
+  return stripped.charAt(0).toUpperCase() + stripped.slice(1);
+}
+
 /** A session or day title as the athlete sees it. */
 export function athleteFacingSessionTitle(title: string): string {
-  return isDeclaredLightCombatTitle(title) ? DECLARED_LIGHT_COMBAT_TITLE : title;
+  return isDeclaredLightCombatTitle(title) ? DECLARED_LIGHT_COMBAT_TITLE : stripLeadingWeekday(title);
 }

@@ -202,7 +202,7 @@ test("the athlete profile is one line that opens its details", async () => {
     await view.click(row);
     const sheet = openDialog();
     assert.match(sheet?.textContent ?? "", /Tactical style/);
-    assert.match(sheet?.textContent ?? "", /Complete Advanced Intake/);
+    assert.match(sheet?.textContent ?? "", /Complete Camp Setup/);
   } finally {
     await view.cleanup();
   }
