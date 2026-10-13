@@ -616,6 +616,9 @@ def _parse_guided_injury(guided_injury: GuidedInjury) -> tuple[list[dict[str, st
                 # remove only this non-limiting injury from planning without
                 # changing the preserved intake used by Today.
                 injury_entry["training_impact"] = "not_limiting"
+                # The athlete's own area wording, used only for the
+                # awareness note (fightcamp.injury_awareness).
+                injury_entry["guided_area"] = guided_injury.area
             if _GUIDED_STRUCTURAL_NOTE_PATTERN.search(guided_injury.notes):
                 injury_entry["original_phrase"] = f"{guided_injury.area}. Notes: {guided_injury.notes}"
         _apply_rehab_generation_context(injury_entry, guided_injury.rehab_generation_context)

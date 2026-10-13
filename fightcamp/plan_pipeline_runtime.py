@@ -275,7 +275,13 @@ def build_runtime_context(
     injury_restrictions = [dict(entry) for entry in plan_input.restrictions]
     triage_mode = str((triage_summary or {}).get("mode") or "").strip().lower()
     neutralize_non_limiting_injuries = is_approved_triage_resume or triage_mode == "full_plan"
+    non_limiting_injuries: list[dict] = []
     if neutralize_non_limiting_injuries:
+        non_limiting_injuries = [
+            entry
+            for entry in parsed_injuries
+            if entry.get("training_impact") == "not_limiting"
+        ]
         # Triage runs against the untouched intake first. Once it has either
         # cleared normal planning or an admin has approved a resumable hold, a
         # non-limiting injury cannot influence selection, rehab, copy, or Stage
@@ -448,6 +454,7 @@ def build_runtime_context(
         guided_injuries=guided_injuries_list,
         injury_restrictions=injury_restrictions,
         triage_summary=runtime_triage_summary,
+        non_limiting_injuries=non_limiting_injuries,
     )
 
     return PlanRuntimeContext(

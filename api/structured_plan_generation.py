@@ -26,6 +26,7 @@ from dataclasses import dataclass, field
 from collections.abc import Mapping
 from typing import Any, Callable, Literal, get_args
 
+from fightcamp.injury_awareness import merge_injury_awareness
 from fightcamp.session_sequencing import sequence_structured_plan
 from fightcamp.fight_date_utils import parse_fight_date
 from fightcamp.structured_session_identity import match_sessions_to_roles
@@ -3312,6 +3313,13 @@ def build_structured_plan_outcome(
             )
         if is_minor_support(computed_support):
             plan_dict = _with_minor_weight_cut_note(plan_dict)
+        # Non-limiting injuries are removed from planning; their note and
+        # re-injury stop rule are added back verbatim, in code, after the audit
+        # (the conversion prompt never carries them).
+        plan_dict = merge_injury_awareness(
+            plan_dict,
+            computed_support.get("injury_awareness") if isinstance(computed_support, dict) else None,
+        )
         return StructuredPlanOutcome(
             status=status,
             structured_plan=plan_dict,
@@ -4093,6 +4101,12 @@ def build_structured_plan_prompt(
         computed_support = None
         if isinstance(planning_brief, dict) and "computed_support" in planning_brief:
             computed_support = planning_brief.get("computed_support")
+            if isinstance(computed_support, dict) and "injury_awareness" in computed_support:
+                computed_support = {
+                    key: value
+                    for key, value in computed_support.items()
+                    if key != "injury_awareness"
+                }
             if is_minor:
                 computed_support = _minor_conversion_support(computed_support)
 

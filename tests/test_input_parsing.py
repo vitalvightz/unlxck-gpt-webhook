@@ -901,6 +901,12 @@ def test_full_plan_triage_excludes_non_limiting_injury_from_generation_context()
     assert context.training_context.injury_restrictions == []
     assert context.training_context.guided_injury is None
     assert context.training_context.guided_injuries == []
+    # Kept display-only so the plan still carries the injury note and the
+    # re-injury stop rule.
+    assert [
+        entry.get("guided_area")
+        for entry in context.training_context.non_limiting_injuries
+    ] == ["hip flexor"]
 
 
 def test_full_plan_triage_keeps_limiting_guided_cards():
