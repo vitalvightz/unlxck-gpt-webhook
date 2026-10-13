@@ -246,6 +246,14 @@ select:focus-visible {
   gap: 12px;
 }
 
+.sidebar-brand-logo,
+.brand-topbar-logo {
+  display: block;
+  width: 30px;
+  height: 30px;
+  object-fit: contain;
+}
+
 .sidebar-drawer-close {
   display: inline-flex;
   align-items: center;
@@ -9867,8 +9875,9 @@ html[data-theme="light"] .today-injury-other-warning {
   }
 
   .brand-topbar-mark {
-    display: inline-grid;
-    gap: 4px;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
     min-width: 0;
   }
 
@@ -9895,6 +9904,12 @@ html[data-theme="light"] .today-injury-other-warning {
   }
 }
 
+.brand-topbar-mark {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
 /* On mobile the public brand surface has no floating Menu control (it is
    suppressed in AppNav), so the brand top bar is the sole navigation. Render it
    as a slim fixed bar; the existing --mobile-nav-clearance on .app-main already
@@ -9919,8 +9934,9 @@ html[data-theme="light"] .today-injury-other-warning {
   }
 
   .brand-topbar-mark {
-    display: inline-grid;
-    gap: 4px;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
     min-width: 0;
   }
 

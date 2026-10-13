@@ -322,7 +322,13 @@ export function AppNav() {
       {showBrandTopbar ? (
         <header className="brand-topbar" aria-label={t("entryNavigation")}>
           <Link href="/" className="brand-topbar-mark">
-            <span className="eyebrow">UNLXCK</span>
+            <img
+              className="brand-topbar-logo"
+              src="/brand/unlxck-one-angle-48.png"
+              alt="UNLXCK"
+              width={48}
+              height={48}
+            />
             <span>{t("fightCamp")}</span>
           </Link>
           <nav className="brand-topbar-actions" aria-label={t("accountAccess")}>
@@ -391,7 +397,13 @@ export function AppNav() {
         <div className="sidebar-shell">
           <div className="sidebar-brand">
             <div className="sidebar-brand-header">
-              <p className="eyebrow">UNLXCK</p>
+              <img
+                className="sidebar-brand-logo"
+                src="/brand/unlxck-one-angle-48.png"
+                alt="UNLXCK"
+                width={48}
+                height={48}
+              />
               <button
                 type="button"
                 className="sidebar-drawer-close"
