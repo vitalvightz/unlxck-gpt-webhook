@@ -172,6 +172,9 @@ def governed_late_fight_allowed_exercises_by_day(original_allocate, *, payload):
                 **spec,
                 "visible_session_sequence": group_roles,
                 "session_sequence": group_roles,
+                # Phase scoping limits which pool a role may draw from, not which
+                # days sit next to it: cross-day load is judged on the whole tail.
+                "calendar_sequence": roles,
             }
             scoped_pools = phase_scoped_candidate_pools(candidate_pools, group_key)
             group_allowed, group_assignments = original_allocate(

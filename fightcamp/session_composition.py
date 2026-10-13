@@ -2433,13 +2433,20 @@ def _refresh_stress_stamps(weekly_role_map: dict[str, Any]) -> list[dict[str, An
     Neighbours are re-stamped too, not only the relocated role: a move changes
     which days sit next to which, and the morph owner may re-dose more than the
     role that moved.
+
+    Late-fight tail roles are stamped and judged like every other composed
+    session, so a D-14 session is measured against the tail's real load and a
+    tail conflict is visible. Their placement stays immutable: the canonical
+    mover refuses to relocate a tail role, so a conflict on one is recorded in
+    ``residual_conflicts`` rather than moved. The tail's membership owner keeps
+    its sessions inside their envelope when it composes them.
     """
     stamped: list[dict[str, Any]] = []
     for week in weekly_role_map.get("weeks", []) or []:
         if not isinstance(week, dict):
             continue
         for role in week.get("session_roles", []) or []:
-            if not isinstance(role, dict) or role.get("late_fight_tail_owned"):
+            if not isinstance(role, dict):
                 continue
             stress = realised_role_stress(role)
             if stress is None:

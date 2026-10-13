@@ -4520,7 +4520,11 @@ def _soften_late_strength_touches(session_sequence: list[dict[str, Any]]) -> Non
     for entry in session_sequence:
         if not isinstance(entry, dict):
             continue
-        if str(entry.get("role_key") or "").strip().lower() != "strength_touch_day":
+        role_key = str(entry.get("role_key") or "").strip().lower()
+        # A neural primer is the same countdown strength exposure and takes the
+        # same scheduled-day cap; without it a strength member would render at
+        # its uncapped bank dose.
+        if role_key not in {"strength_touch_day", "neural_primer_day"}:
             continue
         offset = entry.get("countdown_offset")
         if not isinstance(offset, int):
@@ -4547,8 +4551,15 @@ def _soften_late_strength_touches(session_sequence: list[dict[str, Any]]) -> Non
         entry["rpe_cap"] = cap["rpe_cap"]
         entry["set_cap"] = cap["set_cap"]
         entry["rep_cap"] = cap["rep_cap"]
-        entry["strength_dose_cap"] = {"max_sets": cap["max_sets"], "max_reps": cap["max_reps"]}
-        entry["selection_rule"] = _strength_touch_cap_rule(cap)
+        entry["strength_dose_cap"] = {
+            "max_sets": cap["max_sets"],
+            "max_reps": cap["max_reps"],
+            # The band's own verdict, as the morph path carries it: a missing
+            # flag reads as "loaded allowed" downstream.
+            "loaded_allowed": cap["loaded_allowed"],
+        }
+        if role_key == "strength_touch_day":
+            entry["selection_rule"] = _strength_touch_cap_rule(cap)
 
 
 def _build_late_fight_plan_spec(days_until_fight: Any, athlete_model: dict) -> dict[str, Any]:
