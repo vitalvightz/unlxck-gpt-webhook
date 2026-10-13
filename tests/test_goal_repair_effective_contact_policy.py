@@ -146,6 +146,7 @@ def test_reconcile_restores_strength_after_two_declared_hard_days_resolve_techni
                         "anchor_capable": True,
                         "selected": {
                             "name": "Romanian Deadlift",
+                            "method": "strength",
                             "quality_class": "anchor_loaded",
                             "prescription": "3 x 5 @ RPE 7",
                             "movement_patterns": ["hinge"],

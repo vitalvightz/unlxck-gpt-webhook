@@ -24,6 +24,9 @@ def _slot(name="Deadlift", quality="anchor_loaded", **changes):
     return {"slot_id": name, "session_index": 1, "role": "hinge",
             "quality_class": quality, "anchor_capable": True,
             "selected": {"name": name, "quality_class": quality, "prescription": "3 x 3 @ RPE 7",
+                         # Bank rows carry their training method; adaptation
+                         # relevance (strength vs power) is read from it.
+                         "method": "power" if quality == "anchor_power" else "strength",
                          "movement_patterns": ["speed"] if quality == "anchor_power" else ["hinge"], **changes}}
 
 

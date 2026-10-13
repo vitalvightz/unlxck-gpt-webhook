@@ -3732,7 +3732,16 @@ def _authored_rep_dose(dose: object) -> tuple[int, int] | None:
 
 
 def _goal_witness_dose_matches(witness: dict, dose: str) -> bool:
-    from .goal_preservation import _sets_reps, strength_intensity
+    from .goal_preservation import _sets_reps, dose_volume, strength_intensity
+    if witness.get("sets") and witness.get("volume_unit"):
+        # A timed hold or a carry distance is checked in its own unit: rendering
+        # "2 x 10 m" for a 2 x 20 m witness, or reps for seconds, is a mismatch.
+        rendered = dose_volume(dose)
+        return (rendered["unit"] == witness["volume_unit"]
+                and rendered["sets"] >= witness["sets"]
+                and rendered["amount"] >= witness["volume_amount"]
+                and all(strength_intensity(dose).get(key, 0) >= witness[key]
+                        for key in ("minimum_rpe", "minimum_load_percent") if key in witness))
     if witness.get("sets"):
         sets, reps, _ = _parse_rendered_strength_dose(dose)
         # A rendered set range such as "2-3 x 3" must satisfy the witness on its

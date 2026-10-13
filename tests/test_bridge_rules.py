@@ -153,7 +153,7 @@ class TestSpecUnitCases:
         assert result["hard_sparring_cap"] == 1
         assert result["strength_touch_max"] == 1
         assert result["freshness_mandatory"] is True
-        assert result["double_stress_day_allowed"] is False
+        assert "double_stress_day_allowed" not in result
 
     def test_bridge_d15_kickboxer_already_used_hard_slot(self):
         result = compute_bridge_rules(
@@ -356,7 +356,7 @@ class TestModifierOrdering:
         # Only moderate fatigue trims one stress exposure (3 -> 2). A moderate
         # cut is note-only and no longer stacks a second reduction.
         assert result["max_meaningful_stress_exposures"] == 2
-        assert result["double_stress_day_allowed"] is False
+        assert "double_stress_day_allowed" not in result
 
     def test_sport_style_never_raises_caps_beyond_baseline(self):
         result = compute_bridge_rules(
@@ -421,7 +421,8 @@ class TestBaselineNormalCamp:
         assert result["strength_touch_max"] == 2
         assert result["glycolytic_touch_max"] == 2
         assert result["max_consecutive_hard_days"] == 2
-        assert result["double_stress_day_allowed"] is True
+        # No owner ever read a "double stress day" flag; it was dead rule state.
+        assert "double_stress_day_allowed" not in result
         assert result["freshness_mandatory"] is False
 
 
