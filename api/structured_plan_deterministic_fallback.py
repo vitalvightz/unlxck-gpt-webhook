@@ -351,7 +351,10 @@ def _lift_dose_fields(dose: str) -> tuple[dict[str, Any], str]:
     if reps:
         fields.update(sets=int(reps[1]), reps=int(reps[2]))
     elif timed:
-        fields.update(sets=int(timed[1]), duration=_measured(timed))
+        if re.search(r"\brounds?\b", dose, re.I):
+            fields.update(rounds=int(timed[1]), work=_measured(timed))
+        else:
+            fields.update(sets=int(timed[1]), duration=_measured(timed))
     elif interval:
         fields.update(rounds=int(interval[5]),
                       work={"value": _number(interval[1]), "unit": _UNIT_NAMES[interval[2].lower()]},
@@ -364,10 +367,10 @@ def _lift_dose_fields(dose: str) -> tuple[dict[str, Any], str]:
         rest = next(
             (m for pattern in _REST_CLAUSE_RES if (m := pattern.fullmatch(clause))), None
         )
-        if "rest" not in fields and rest:
+        if rest:
             fields["rest"] = _measured(rest)
             continue
-        if "duration" not in fields and (match := _DURATION_CLAUSE_RE.fullmatch(clause)):
+        if match := _DURATION_CLAUSE_RE.fullmatch(clause):
             fields["duration"] = _measured(match)
             continue
         if "effort" not in fields and (match := _EFFORT_CLAUSE_RE.fullmatch(clause)):
@@ -378,14 +381,12 @@ def _lift_dose_fields(dose: str) -> tuple[dict[str, Any], str]:
                 "scale": "1-10" if match.group("method").upper() == "RPE" else None,
             }
             continue
-        if "sets" not in fields and (match := _SETS_REPS_CLAUSE_RE.fullmatch(clause)):
+        if match := _SETS_REPS_CLAUSE_RE.fullmatch(clause):
             fields["sets"] = int(match.group("sets"))
             fields["reps"] = int(match.group("reps"))
             continue
         if (
-            "sets" not in fields
-            and "duration" not in fields
-            and (match := _SETS_TIME_CLAUSE_RE.fullmatch(clause))
+            match := _SETS_TIME_CLAUSE_RE.fullmatch(clause)
         ):
             fields["sets"] = int(match.group("sets"))
             fields["duration"] = _measured(match)

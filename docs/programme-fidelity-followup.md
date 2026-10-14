@@ -204,3 +204,33 @@ only the whole-module hash changed. Calendar fixture contacts are unchanged; the
 observed changes retain allowed goal/recovery appointments within the requested
 budget. These snapshots are preserved for review, not silently rewritten to make
 CI green. Updated CI and regression results will be recorded before merge advice.
+
+### Latest card verification and CI
+
+Commit `b45b4191` adds an anonymised backend-derived card fixture and tests the
+existing React renderer, expanded exercise details and timer adapter. All 31
+component/interaction/timer tests and TypeScript pass. The four sparring dates
+render on Saturday, D-40/D-26 on Monday, and bag rounds retain 5-second work,
+60-second recovery and their stop cue. This is DOM/component verification;
+an authenticated live app/browser run has not been performed.
+
+Full Python CI on backend commit `50c38a7f` completed with 48 failed tests and
+13 setup errors. Web build, backend checks, lint, runtime surfaces, dependency
+audit and schema validation passed. The setup errors report historical
+`xp_progress.py` drift; this PR does not change that file. Four additional
+source-dose cases exposed duplicated numeric clauses in coaching cues and a
+timed-round extraction expectation. The converter now removes wholly extracted
+quantity clauses, retains mixed coaching wording, and represents explicitly
+named timed rounds as rounds/work rather than strength sets. All 19 tests across
+the three affected source-dose modules pass without changing their coaching
+expectations; the support test now also verifies the actual three 2-minute
+rounds. Fresh CI is required for this correction. Frozen snapshots remain
+untouched, and #2876 remains draft and unmerged.
+
+After the final converter correction, local verification passes all 23 production
+replays, 245 structured faithfulness/conversion/salvage/fallback/API-resolution
+tests, the 19 affected source-dose tests, and all 31 frontend checks. Ruff,
+import compilation and TypeScript pass. These suites overlap. The fresh remote
+run has not completed; the previous full run remains red. The outstanding
+baseline failures and 12 frozen hash/calendar expectations require review before
+merge advice.
