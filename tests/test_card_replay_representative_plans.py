@@ -106,11 +106,13 @@ def _card_days(card: dict) -> dict[int, dict]:
 
 
 def _scheduled_roles(brief: dict):
-    for week in brief["weekly_role_map"]["weeks"]:
-        for role in week.get("session_roles") or []:
-            d_day = _label_dday(role.get("scheduled_countdown_label") or role.get("countdown_label"))
-            if d_day is not None:
-                yield d_day, role
+    roles = brief.get("late_fight_session_sequence")
+    if not isinstance(roles, list):
+        roles = [role for week in brief["weekly_role_map"]["weeks"] for role in week.get("session_roles") or []]
+    for role in roles:
+        d_day = _label_dday(role.get("scheduled_countdown_label") or role.get("countdown_label"))
+        if d_day is not None:
+            yield d_day, role
 
 
 def _blocks(day: dict) -> list[dict]:

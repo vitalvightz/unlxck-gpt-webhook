@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { renderToStaticMarkup } from "react-dom/server";
 import { SessionCard } from "./structured-plan-renderer";
-import { mentalSessionCategory } from "../lib/structured-plan";
+import { mentalSessionCategory, mentalSessionSummary } from "../lib/structured-plan";
 import type { StructuredSession } from "../lib/types";
 
 for (const [title, category] of [["Fight Visualisation", "Visualise"], ["Neural Visualisation", "Visualise"],
@@ -64,4 +64,15 @@ test("a legacy mental title cannot hide bundled physical exercises", () => {
   assert.equal(mentalSessionCategory({ title: "Fight Visualisation", session_type: "skill",
     blocks: [{ block_type: "mindset", display_name: "Quiet rehearsal" },
       { block_type: "preparation", display_name: "Hip CARs" }] }), null);
+});
+
+test("mental preview uses selected authored instructions and keeps smart truncation lossless in details", () => {
+  const first = { title: "Fight Visualisation", blocks: [{ coaching_cues: ["Enter behind your jab and cut off the exit."] }] };
+  const second = { title: "Fight Visualisation", blocks: [{ coaching_cues: ["Draw the entry and counter as they reset."] }] };
+  assert.equal(mentalSessionSummary(first), "Enter behind your jab and cut off the exit.");
+  assert.notEqual(mentalSessionSummary(first), mentalSessionSummary(second));
+  assert.equal(mentalSessionSummary({ blocks: [{ coaching_cues: ["2 minutes, RPE 1 max.", "Review the last clean technical work."] }] }), "Review the last clean technical work.");
+  const long = "Keep the exit in view. " + "Follow the selected authored instruction without changing it. ".repeat(5);
+  assert.equal(mentalSessionSummary({ blocks: [{ coaching_cues: [long] }] }), "Keep the exit in view.");
+  assert.ok((mentalSessionSummary({ objective: "Move through the familiar sequence ".repeat(12) })?.length ?? 0) <= 180);
 });

@@ -24,8 +24,9 @@ Self-Review. The shared governor filters proposed roles without adding work.
   physical frequency and workload.
 
 The compact React card is shared by plan and Today session layouts. Category,
-duration and one short instruction stay visible; the original selected exercise,
-bank instructions and cues sit in a native disclosure. Existing completion
+duration and the selected activity’s authored instruction stay visible, shortened
+at a sentence or word boundary. The original selected exercise, full bank
+instructions and cues sit in a native disclosure. Existing completion
 callbacks and exercise controls retain their identities. Contact visibility and
 contact timers still use #2877's independent contact field.
 
@@ -72,7 +73,11 @@ The later technical contact appointments keep their downgraded identity.
 boxer plus boxing, kickboxing, Muay Thai and MMA, each with 49-, 18- and 6-day
 camps and explicit mental priority on/off. Run the same script in a clean Main
 checkout for the baseline. Outputs contain dates, counts and full physical roles
-for comparison; no live database or model is needed.
+for comparison; no live database or model is needed. Direct fight-week camps
+are measured from the final countdown sequence, rather than the earlier weekly
+allocation. The deterministic card fallback now reads that same final sequence
+while preserving weekly contact-safety metadata, preventing stale exercise
+selections from replacing the actual countdown appointments.
 
 The representative-card tests check schema, exact selected doses, contact
 visibility and every scheduled zero-load companion. The production-response
@@ -92,7 +97,11 @@ failed independently before this branch's changes: 45 distinct failed cases and
 `api/services/xp_progress.py`, API type-contract drift, old calendar/conditioning
 snapshots and incomplete SimpleNamespace fixtures. Physical safety and fidelity
 expectations in those tests are not weakened here. The complete inherited test
-ID comparison is recorded with the final branch run below.
+ID comparison is recorded with the final branch run below. Branch run
+[38645063541](https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38645063541)
+has exactly the same 45 failed IDs and 13 error IDs; neither set has additions
+or omissions. Ruff, runtime surfaces, dependency audit and the coaching release
+gate pass.
 
 The original draft's Web Build failed in smoke/accessibility, while current
 Main's [38640493836](https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38640493836)

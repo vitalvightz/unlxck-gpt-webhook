@@ -8,6 +8,7 @@ import {
   classifySessionlessDay,
   isZeroLoadSupportSession,
   mentalSessionCategory,
+  mentalSessionSummary,
   normalizeForDedupe,
   cleanText,
   formatBlockLoad,
@@ -1011,11 +1012,11 @@ export function SessionCard({
   const mentalCategory = mentalSessionCategory(session);
   if (mentalCategory) {
     const mentalDuration = duration || formatMeasured(blocks.find((block) => block.duration)?.duration);
-    const summary = mentalCategory === "Reflect"
+    const summary = mentalSessionSummary(session) || (mentalCategory === "Reflect"
       ? "What worked? What needs adjusting next time?"
       : mentalCategory === "Analyse"
         ? "Review one tactical issue from sparring or available footage. Identify one adjustment for the next session."
-        : "Rehearse one familiar fight situation and reset calmly. Follow your selected scenario below.";
+        : "Rehearse one familiar fight situation and reset calmly.");
     return (
       <article className="sp-session sp-mental-task" data-mental-category={mentalCategory.toLowerCase()}>
         <header className="sp-mental-head">

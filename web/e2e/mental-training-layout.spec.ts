@@ -16,12 +16,15 @@ for (const width of [375, 1280]) {
     await expect(page.getByText("Hard sparring", { exact: true })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Visualise · 5 min" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Analyse · 7 min" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Reflect · 2 min" })).toBeVisible();
+    await expect(page.locator('[data-mental-category="reflect"] > .sp-session-instruction')).toContainText("Review the last clean technical work.");
     const task = page.locator('[data-mental-category="visualise"]');
     await expect(task.locator("details")).not.toHaveAttribute("open");
-    await expect(task.getByText("Enter behind your jab, cut off the exit and reset calmly.", { exact: true })).not.toBeVisible();
+    await expect(task.locator(":scope > .sp-session-instruction")).toHaveText("Enter behind your jab, cut off the exit and reset calmly.");
+    await expect(task.locator("details .sp-session-objective").filter({ hasText: "Follow the selected scenario. Keep the picture familiar and calm." })).not.toBeVisible();
     await task.locator("summary").click();
     await expect(task.locator("details")).toHaveAttribute("open");
-    await expect(task.getByText("Enter behind your jab, cut off the exit and reset calmly.", { exact: true })).toBeVisible();
+    await expect(task.locator("details .sp-session-objective").filter({ hasText: "Follow the selected scenario. Keep the picture familiar and calm." })).toBeVisible();
     await task.locator("summary").focus();
     await page.keyboard.press("Enter");
     await expect(task.locator("details")).not.toHaveAttribute("open");

@@ -47,8 +47,10 @@ def scenarios():
 def audit(payload):
     with patch.object(input_parsing, '_utc_now', lambda: NOW), patch.object(stage2_planning_brief, '_utc_now', lambda: NOW):
         brief = generate_plan_sync(payload)['planning_brief']
-    roles = [r for w in brief['weekly_role_map']['weeks'] for r in w.get('session_roles', [])
-             if role_countdown_offset(r) is not None]
+    scheduled = brief.get('late_fight_session_sequence')
+    if not isinstance(scheduled, list):
+        scheduled = [r for w in brief['weekly_role_map']['weeks'] for r in w.get('session_roles', [])]
+    roles = [r for r in scheduled if role_countdown_offset(r) is not None]
     mental = [r for r in roles if r.get('role_key') in MENTAL]
     physical = [r for r in roles if is_physical_session_role(r)]
     counts = Counter(role_countdown_offset(r) for r in mental)
@@ -80,6 +82,8 @@ def main():
     output = Path(sys.argv[1])
     results = {}
     for name, payload in scenarios():
+        if len(sys.argv) > 2 and sys.argv[2] not in name:
+            continue
         results[name] = audit(payload)
         output.write_text(json.dumps(results, indent=2, default=str))
         print(name, json.dumps({k: v for k, v in results[name].items() if k != 'physical'}), flush=True)

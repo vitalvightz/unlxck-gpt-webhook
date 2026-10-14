@@ -722,6 +722,22 @@ export function mentalSessionCategory(session: StructuredSession): "Visualise" |
   return null;
 }
 
+/** Preview the selected activity's authored instruction, preserving its full
+ * copy in the disclosure. Prefer a complete sentence, then a word boundary. */
+export function mentalSessionSummary(session: StructuredSession): string | null {
+  const instructions = getBlocks(session).flatMap(block => getStringList(block.coaching_cues));
+  const selected = instructions.map(line => line.replace(/^\s*(?:instructions?:|\d+[.)])\s*/i, "").trim())
+    .find(line => line && !/^(?:cue|pre-bout|progress|stop|rest)\s*:/i.test(line) &&
+      !/^\d+(?:[–-]\d+)?\s*(?:min(?:ute)?s?|sec(?:ond)?s?)\b/i.test(line));
+  const full = selected || formatSessionObjective(session.objective);
+  if (!full || full.toLowerCase() === cleanText(session.title)?.toLowerCase()) return null;
+  if (full.length <= 180) return full;
+  const sentence = full.slice(0, 181).match(/^(.+?[.!?])(?:\s|$)/)?.[1];
+  if (sentence) return sentence;
+  const words = full.slice(0, 177).replace(/\s+\S*$/, "").trimEnd();
+  return `${words}…`;
+}
+
 /** Sessions on this day that count toward physical training frequency. */
 export function getPhysicalSessions(
   day: StructuredDay | null | undefined,
