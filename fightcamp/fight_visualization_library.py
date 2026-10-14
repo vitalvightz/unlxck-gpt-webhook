@@ -30,25 +30,30 @@ from .tactical_watch_library import (
     normalize_tactical_style,
 )
 
-# The mandatory countdown interventions. These are protocol, not gap filler:
-# they stay in the plan whatever else the day carries and whatever the athlete's
-# physical load is.
+# The bank's countdown-day vocabulary. Every entry is authored for one of these
+# days and the bank must cover all five. *Scheduling* is a separate question,
+# owned by ``mental_training_policy``: by default only D-7/D-1/D-0 run as the
+# countdown protocol, and the D-7/D-5/D-3 scenario entries are what the camp
+# block rotates through.
 FIGHT_VISUALIZATION_COUNTDOWN_DAYS = (7, 5, 3, 1, 0)
 
 ROLE_KEY = "fight_visualization"
 ATHLETE_FACING_LABEL = "Fight Visualisation"
 
-# Optional camp block. Imagery builds skill through repetition over weeks
-# (about three ~12-15 minute sessions a week for four-plus weeks in the
-# dose-response work), so the countdown alone starts too late to train anything.
-# The camp block runs from six weeks out up to the countdown, reuses the
-# style-owned situational entries (D-7 picture -> D-5 read -> D-3 reset, in
-# rotation) and is offered, never required: it rides on a Tactical Focus or
-# low-load day and the athlete may skip it.
+# Optional camp block. Imagery builds skill through repetition over weeks, so
+# the countdown alone starts too late to train anything. The camp block runs
+# from six weeks out up to the countdown and reuses the style-owned situational
+# entries (picture -> read -> reset, in rotation). It is offered, never
+# required, rides on an existing training day and the athlete may skip it.
+#
+# Frequency is the mental-training policy's: one short session a week by
+# default, two when mental preparation is explicitly prioritised. It used to be
+# three 12-minute sessions a week, which on top of the countdown and weekly
+# Tactical Focus put a mental card on most days of the camp.
 CAMP_VISUALIZATION_FIRST_DAY = 42
 CAMP_VISUALIZATION_LAST_DAY = 8
-CAMP_VISUALIZATIONS_PER_WEEK = 3
-CAMP_VISUALIZATION_DURATION_MIN = 12
+CAMP_VISUALIZATIONS_PER_WEEK = 1
+CAMP_VISUALIZATION_DURATION_MIN = 6
 CAMP_VISUALIZATION_SOURCE_DAYS = (7, 5, 3)
 OPTIONAL_FLAG = "optional_fight_visualization"
 

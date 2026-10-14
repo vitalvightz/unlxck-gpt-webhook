@@ -550,6 +550,12 @@ def apply_camp_week_fillers(
         for week in weekly_role_map.get("weeks", []) or []:
             if isinstance(week, dict):
                 _complete_week_physical_occupancy(week, athlete_model, usage_ledger)
-        # Optional camp Fight Visualisation, D-42..D-14 (the tail places its own).
+        # Mental-training frequency is one shared policy. Settle Tactical Focus
+        # and reflections first so the optional camp Fight Visualisation
+        # (D-42..D-14; the tail places its own) lands on a day with no other
+        # mental task, then govern the finished calendar so no placer above
+        # can outlive the policy.
+        _impl.govern_weekly_mental_training(weekly_role_map, athlete_model)
         _place_camp_visualizations(weekly_role_map, athlete_model)
+        _impl.govern_weekly_mental_training(weekly_role_map, athlete_model)
     return weekly_role_map
