@@ -207,7 +207,8 @@ def _stage1_phase_for_offset(athlete_model: dict[str, Any], offset: int) -> str:
     if not any(normalised_days.values()):
         return ""
 
-    remaining = max(1, int(offset))
+    # Calendar spans include D-0: N taper days own offsets 0 through N-1.
+    remaining = int(offset) + 1
     for phase in ("TAPER", "SPP", "GPP"):
         days = normalised_days[phase]
         if days <= 0:

@@ -49,7 +49,9 @@ def _stage1_phase_for_offset(athlete_model: dict[str, Any], offset: int) -> str:
     if not any(normalized_days.values()):
         return ""
 
-    remaining = max(1, int(offset))
+    # The calendar allocation includes fight day (D-0). A 15-day taper
+    # therefore owns D-14..D-0, with D-15 still in the preceding phase.
+    remaining = int(offset) + 1
     for phase in ("TAPER", "SPP", "GPP"):
         days = normalized_days[phase]
         if days <= 0:

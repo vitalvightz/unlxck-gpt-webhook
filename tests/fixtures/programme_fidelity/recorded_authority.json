@@ -1,0 +1,3221 @@
+{
+  "athlete_snapshot": {
+    "has_active_injury": false,
+    "surface_injury_only": false,
+    "sport": "boxing",
+    "status": "",
+    "record": "",
+    "wins": null,
+    "losses": null,
+    "draws": null,
+    "total_bouts": null,
+    "competitive_maturity": "unknown_competitive_maturity",
+    "rounds_format": "10 x 3",
+    "camp_length_weeks": 7,
+    "phase_weeks": {
+      "GPP": 2,
+      "SPP": 3,
+      "TAPER": 2,
+      "days": {
+        "GPP": 15,
+        "SPP": 22,
+        "TAPER": 15
+      }
+    },
+    "days_until_fight": 52,
+    "include_generation_day": false,
+    "fight_date": "2026-12-05",
+    "next_fight_date": "2026-12-05",
+    "fatigue": "",
+    "stance": "",
+    "age": 30,
+    "weight_cut_risk": false,
+    "weight_cut_pct": 0.0,
+    "weight_cut_status": "missing_both_weights",
+    "cut_severity_score": 0.0,
+    "cut_severity_bucket": "none",
+    "cut_health_bucket": "none",
+    "technical_styles": [
+      "boxing"
+    ],
+    "tactical_styles": [
+      "pressure_fighter"
+    ],
+    "weaknesses": [
+      "balance",
+      "gas_tank"
+    ],
+    "key_goals": [
+      "speed",
+      "power",
+      "conditioning"
+    ],
+    "mental_blocks": [
+      "composure"
+    ],
+    "equipment": [
+      "dumbbells",
+      "kettlebell",
+      "barbell",
+      "trap_bar",
+      "bench",
+      "landmine",
+      "assault_bike",
+      "rower",
+      "step_mill",
+      "pool",
+      "sled",
+      "battle_ropes",
+      "tire",
+      "sledgehammer",
+      "weight_vest",
+      "heavy_bag",
+      "pads",
+      "box",
+      "agility_ladder",
+      "jump_rope",
+      "medicine_ball",
+      "sandbag",
+      "bands",
+      "trx",
+      "pullup_bar",
+      "bosu_ball",
+      "neck_harness",
+      "weight_belt",
+      "water_jug",
+      "foam_roller",
+      "towel",
+      "treadmill"
+    ],
+    "training_frequency": 6,
+    "training_workload_context": {
+      "reported_weekly_sessions": {
+        "minimum": 8,
+        "maximum": 9,
+        "source": "training_notes"
+      },
+      "double_days_reported": true,
+      "structured_frequency_conflict": true,
+      "frequency_source": "user_supplied"
+    },
+    "training_days": [
+      "Monday",
+      "Tuesday",
+      "Thursday",
+      "Friday",
+      "Saturday",
+      "Wednesday"
+    ],
+    "hard_sparring_days": [
+      "Tuesday",
+      "Saturday"
+    ],
+    "support_work_days": [
+      "Thursday",
+      "Friday"
+    ],
+    "technical_skill_days": [],
+    "training_preference": "",
+    "injuries": [],
+    "injuries_raw_text": "",
+    "parsed_injuries": [],
+    "guided_injury": null,
+    "injury_restrictions": [],
+    "short_notice": false,
+    "plan_creation_weekday": "wednesday",
+    "plan_creation_weekday_basis": "athlete_local_weekday",
+    "readiness_flags": [
+      "baseline"
+    ],
+    "triage_summary": {
+      "mode": "full_plan",
+      "reasons": [
+        "No pre-planning medical hold signals detected."
+      ],
+      "clinician_clearance_required": false,
+      "red_flags": [],
+      "matched_high_risk_categories": [],
+      "routing_reasons": [],
+      "should_block_stage2": false,
+      "urgent_flags": [],
+      "sparring_risk_band": "green"
+    },
+    "primary_goal": "speed",
+    "compressed_priorities": {
+      "timeline_days": 52,
+      "is_short_camp": false,
+      "is_ultra_short_camp": false,
+      "primary_targets": [],
+      "maintenance_targets": [],
+      "embedded_support": [],
+      "deferred": [],
+      "goal_preservation": [
+        {
+          "goal": "speed",
+          "priority": "primary",
+          "state": "defer",
+          "reason_codes": [
+            "primary_goal",
+            "planner_compression"
+          ],
+          "required_intent": "speed_quality",
+          "evidence": [
+            {
+              "week_index": 2,
+              "phase": "GPP",
+              "session_index": 4,
+              "role_key": "alactic_coordination_day",
+              "d_day": 38,
+              "development_quality": true,
+              "slot_id": "gpp_alactic_1_depth_drop_no_rebound",
+              "name": "Depth Drop (No Rebound)",
+              "intents": [
+                "speed_quality"
+              ],
+              "system": "alactic",
+              "dose_authority": "structured_conditioning_dose",
+              "work_sec": 3.0,
+              "rounds": 6.0,
+              "total_minutes": 0.3,
+              "rest_sec": 90.0,
+              "effective_prescription": "6x3 reps, 90s rest"
+            },
+            {
+              "week_index": 1,
+              "phase": "GPP",
+              "session_index": 4,
+              "role_key": "alactic_coordination_day",
+              "d_day": 45,
+              "development_quality": true,
+              "slot_id": "gpp_alactic_1_depth_drop_no_rebound",
+              "name": "Depth Drop (No Rebound)",
+              "intents": [
+                "speed_quality"
+              ],
+              "system": "alactic",
+              "dose_authority": "structured_conditioning_dose",
+              "work_sec": 3.0,
+              "rounds": 6.0,
+              "total_minutes": 0.3,
+              "rest_sec": 90.0,
+              "effective_prescription": "6x3 reps, 90s rest"
+            }
+          ],
+          "initial_state": "build",
+          "constraints": [
+            {
+              "reason_code": "planner_compression",
+              "authority": "planner_compression",
+              "source_reason_code": "total_session_budget",
+              "week_index": 5,
+              "role_key": "alactic_speed_day",
+              "coverage_window": {
+                "min_d_day": 14,
+                "max_d_day": 20
+              }
+            },
+            {
+              "reason_code": "planner_compression",
+              "authority": "planner_compression",
+              "source_reason_code": "total_session_budget",
+              "week_index": 4,
+              "role_key": "alactic_speed_day",
+              "coverage_window": {
+                "min_d_day": 21,
+                "max_d_day": 27
+              }
+            },
+            {
+              "reason_code": "planner_compression",
+              "authority": "planner_compression",
+              "source_reason_code": "total_session_budget",
+              "week_index": 5,
+              "role_key": "alactic_speed_day",
+              "coverage_window": {
+                "min_d_day": 21,
+                "max_d_day": 27
+              }
+            },
+            {
+              "reason_code": "planner_compression",
+              "authority": "planner_compression",
+              "source_reason_code": "total_session_budget",
+              "week_index": 3,
+              "role_key": "alactic_speed_day",
+              "coverage_window": {
+                "min_d_day": 28,
+                "max_d_day": 34
+              }
+            },
+            {
+              "reason_code": "planner_compression",
+              "authority": "planner_compression",
+              "source_reason_code": "total_session_budget",
+              "week_index": 4,
+              "role_key": "alactic_speed_day",
+              "coverage_window": {
+                "min_d_day": 28,
+                "max_d_day": 34
+              }
+            }
+          ],
+          "repair_attempts": [
+            {
+              "week_index": 3,
+              "d_day": 33,
+              "result": "calendar_forbidden",
+              "reason_codes": [
+                "combined_daily_stress_exceeded"
+              ]
+            },
+            {
+              "week_index": 3,
+              "d_day": 32,
+              "result": "calendar_forbidden",
+              "reason_codes": [
+                "contact_day_extra_physical_conflict"
+              ]
+            },
+            {
+              "week_index": 3,
+              "d_day": 30,
+              "result": "trial_rejected",
+              "reason_codes": [
+                "no_coverage_gain_or_existing_stimulus_changed"
+              ]
+            },
+            {
+              "week_index": 3,
+              "role_key": "alactic_speed_day",
+              "result": "authority_preserved",
+              "reason_codes": [
+                "total_session_budget"
+              ]
+            },
+            {
+              "week_index": 3,
+              "goal": "speed",
+              "result": "floor_no_safe_candidate",
+              "reason_codes": [
+                "host_at_composed_exercise_cap"
+              ]
+            },
+            {
+              "week_index": 4,
+              "d_day": 28,
+              "result": "session_cap",
+              "reason_codes": [
+                "calendar_capacity"
+              ]
+            },
+            {
+              "week_index": 4,
+              "d_day": 26,
+              "result": "session_cap",
+              "reason_codes": [
+                "calendar_capacity"
+              ]
+            },
+            {
+              "week_index": 4,
+              "d_day": 25,
+              "result": "session_cap",
+              "reason_codes": [
+                "calendar_capacity"
+              ]
+            },
+            {
+              "week_index": 4,
+              "d_day": 23,
+              "result": "session_cap",
+              "reason_codes": [
+                "calendar_capacity"
+              ]
+            },
+            {
+              "week_index": 4,
+              "d_day": 22,
+              "result": "session_cap",
+              "reason_codes": [
+                "calendar_capacity"
+              ]
+            },
+            {
+              "week_index": 4,
+              "role_key": "alactic_speed_day",
+              "result": "authority_preserved",
+              "reason_codes": [
+                "total_session_budget"
+              ]
+            },
+            {
+              "week_index": 4,
+              "goal": "speed",
+              "result": "floor_no_safe_candidate",
+              "reason_codes": [
+                "host_at_composed_exercise_cap"
+              ]
+            },
+            {
+              "week_index": 5,
+              "d_day": 21,
+              "result": "session_cap",
+              "reason_codes": [
+                "calendar_capacity"
+              ]
+            },
+            {
+              "week_index": 5,
+              "d_day": 19,
+              "result": "session_cap",
+              "reason_codes": [
+                "calendar_capacity"
+              ]
+            },
+            {
+              "week_index": 5,
+              "d_day": 18,
+              "result": "session_cap",
+              "reason_codes": [
+                "calendar_capacity"
+              ]
+            },
+            {
+              "week_index": 5,
+              "d_day": 16,
+              "result": "session_cap",
+              "reason_codes": [
+                "calendar_capacity"
+              ]
+            },
+            {
+              "week_index": 5,
+              "d_day": 15,
+              "result": "session_cap",
+              "reason_codes": [
+                "calendar_capacity"
+              ]
+            },
+            {
+              "week_index": 5,
+              "role_key": "alactic_speed_day",
+              "result": "authority_preserved",
+              "reason_codes": [
+                "total_session_budget"
+              ]
+            },
+            {
+              "week_index": 5,
+              "goal": "speed",
+              "result": "floor_no_safe_candidate",
+              "reason_codes": [
+                "host_at_composed_exercise_cap"
+              ]
+            },
+            {
+              "week_index": 6,
+              "result": "floor_not_applied",
+              "reason_codes": [
+                "taper_no_developmental_floor"
+              ]
+            }
+          ],
+          "coverage_requirements": [
+            {
+              "min_d_day": 14,
+              "max_d_day": 20
+            },
+            {
+              "min_d_day": 21,
+              "max_d_day": 27
+            },
+            {
+              "min_d_day": 28,
+              "max_d_day": 34
+            },
+            {
+              "min_d_day": 35,
+              "max_d_day": 41
+            },
+            {
+              "min_d_day": 42,
+              "max_d_day": 51
+            }
+          ],
+          "missing_coverage": [
+            {
+              "min_d_day": 14,
+              "max_d_day": 20
+            },
+            {
+              "min_d_day": 21,
+              "max_d_day": 27
+            },
+            {
+              "min_d_day": 28,
+              "max_d_day": 34
+            }
+          ],
+          "satisfied": false
+        },
+        {
+          "goal": "power",
+          "priority": "secondary",
+          "state": "maintain",
+          "reason_codes": [
+            "secondary_goal"
+          ],
+          "required_intent": "ballistic_power",
+          "evidence": [
+            {
+              "week_index": 4,
+              "phase": "SPP",
+              "session_index": 2,
+              "role_key": "neural_plus_strength_day",
+              "d_day": 23,
+              "development_quality": true,
+              "slot_id": "spp_strength_1_barbell_thruster",
+              "name": "Barbell Thruster",
+              "intents": [
+                "ballistic_power"
+              ],
+              "quality_class": "anchor_power",
+              "effective_prescription": "4–6x2–5 reps at max speed; full rest 60–120s.",
+              "dose_authority": "exercise_bank",
+              "sets": 4,
+              "reps": 2,
+              "development_capable": true
+            },
+            {
+              "week_index": 2,
+              "phase": "GPP",
+              "session_index": 3,
+              "role_key": "primary_strength_day",
+              "d_day": 37,
+              "development_quality": true,
+              "slot_id": "spp_strength_1_barbell_thruster",
+              "name": "Barbell Thruster",
+              "intents": [
+                "ballistic_power"
+              ],
+              "quality_class": "anchor_power",
+              "effective_prescription": "4–6x2–5 reps at max speed; full rest 60–120s.",
+              "dose_authority": "exercise_bank",
+              "sets": 4,
+              "reps": 2,
+              "development_capable": true
+            }
+          ],
+          "initial_state": "maintain",
+          "constraints": [],
+          "repair_attempts": [
+            {
+              "week_index": 5,
+              "d_day": 15,
+              "result": "trial_rejected",
+              "reason_codes": [
+                "no_coverage_gain_or_existing_stimulus_changed"
+              ]
+            },
+            {
+              "week_index": 5,
+              "d_day": 15,
+              "result": "session_cap",
+              "reason_codes": [
+                "calendar_capacity"
+              ]
+            },
+            {
+              "week_index": 7,
+              "result": "session_cap",
+              "reason_codes": [
+                "calendar_capacity"
+              ]
+            }
+          ],
+          "coverage_requirements": [
+            {
+              "min_d_day": 2,
+              "max_d_day": 15
+            },
+            {
+              "min_d_day": 16,
+              "max_d_day": 29
+            },
+            {
+              "min_d_day": 30,
+              "max_d_day": 51
+            }
+          ],
+          "missing_coverage": [
+            {
+              "min_d_day": 2,
+              "max_d_day": 15
+            }
+          ],
+          "satisfied": false
+        },
+        {
+          "goal": "conditioning",
+          "priority": "secondary",
+          "state": "maintain",
+          "reason_codes": [
+            "secondary_goal"
+          ],
+          "required_intent": "energy_system_training",
+          "evidence": [
+            {
+              "week_index": 6,
+              "phase": "TAPER",
+              "session_index": 5,
+              "role_key": "light_fight_pace_touch_day",
+              "d_day": 10,
+              "development_quality": false,
+              "slot_id": "taper_late_tempo_shadowboxing",
+              "name": "Tempo Shadowboxing",
+              "intents": [
+                "energy_system_training",
+                "technical_practice",
+                "footwork_practice"
+              ],
+              "system": "aerobic",
+              "dose_authority": "structured_conditioning_dose",
+              "work_sec": 0,
+              "rounds": 0,
+              "total_minutes": 30.0,
+              "rest_sec": 0,
+              "effective_prescription": "20-30min continuous"
+            },
+            {
+              "week_index": 4,
+              "phase": "SPP",
+              "session_index": 1,
+              "role_key": "aerobic_support_day",
+              "d_day": 24,
+              "development_quality": true,
+              "slot_id": "spp_aerobic_1_swimming_freestyle_laps",
+              "name": "Swimming (Freestyle Laps)",
+              "intents": [
+                "energy_system_training"
+              ],
+              "system": "aerobic",
+              "dose_authority": "structured_conditioning_dose",
+              "work_sec": 0,
+              "rounds": 0,
+              "total_minutes": 35.0,
+              "rest_sec": 1800.0,
+              "effective_prescription": "25-35min continuous"
+            },
+            {
+              "week_index": 1,
+              "phase": "GPP",
+              "session_index": 2,
+              "role_key": "aerobic_coordination_day",
+              "d_day": 50,
+              "development_quality": true,
+              "slot_id": "gpp_aerobic_1_easy_assault_bike",
+              "name": "Easy Assault Bike",
+              "intents": [
+                "energy_system_training"
+              ],
+              "system": "aerobic",
+              "dose_authority": "structured_conditioning_dose",
+              "work_sec": 0,
+              "rounds": 0,
+              "total_minutes": 30.0,
+              "rest_sec": 0,
+              "effective_prescription": "25-30min continuous"
+            }
+          ],
+          "initial_state": "maintain",
+          "constraints": [],
+          "repair_attempts": [],
+          "coverage_requirements": [
+            {
+              "min_d_day": 2,
+              "max_d_day": 15
+            },
+            {
+              "min_d_day": 16,
+              "max_d_day": 29
+            },
+            {
+              "min_d_day": 30,
+              "max_d_day": 51
+            }
+          ],
+          "missing_coverage": [],
+          "satisfied": true
+        }
+      ]
+    },
+    "full_name": "Programme Fidelity Regression"
+  },
+  "weekly_role_map": {
+    "model": "session_role_overlay.v1",
+    "source_of_truth": [
+      "Session roles inherit week-by-week progression rather than replacing phase logic.",
+      "Session counts come from existing deterministic phase session allocation.",
+      "Anchors inherit the weekly stress map so phase guardrails, safety, and sport-load rules keep priority.",
+      "Weekly roles are an execution layer only and cannot overrule the planning hierarchy."
+    ],
+    "fight_week_override": {
+      "active": false
+    },
+    "weeks": [
+      {
+        "week_index": 1,
+        "phase": "GPP",
+        "calendar_days": [
+          {
+            "weekday": "thursday",
+            "d_day": 51,
+            "is_fight_day": false,
+            "is_after_fight_day": false
+          },
+          {
+            "weekday": "friday",
+            "d_day": 50,
+            "is_fight_day": false,
+            "is_after_fight_day": false
+          },
+          {
+            "weekday": "saturday",
+            "d_day": 49,
+            "is_fight_day": false,
+            "is_after_fight_day": false
+          },
+          {
+            "weekday": "sunday",
+            "d_day": 48,
+            "is_fight_day": false,
+            "is_after_fight_day": false
+          },
+          {
+            "weekday": "monday",
+            "d_day": 47,
+            "is_fight_day": false,
+            "is_after_fight_day": false
+          },
+          {
+            "weekday": "tuesday",
+            "d_day": 46,
+            "is_fight_day": false,
+            "is_after_fight_day": false
+          },
+          {
+            "weekday": "wednesday",
+            "d_day": 45,
+            "is_fight_day": false,
+            "is_after_fight_day": false
+          },
+          {
+            "weekday": "thursday",
+            "d_day": 44,
+            "is_fight_day": false,
+            "is_after_fight_day": false
+          }
+        ],
+        "session_roles": [
+          {
+            "session_index": 2,
+            "category": "conditioning",
+            "role_key": "aerobic_coordination_day",
+            "preferred_pool": "conditioning_slots",
+            "preferred_system": "aerobic",
+            "governance": {
+              "authority": "execution_layer_only"
+            },
+            "scheduled_day_hint": "Friday",
+            "scheduled_countdown_label": "D-50",
+            "countdown_label": "D-50",
+            "athlete_facing_label": "Aerobic support",
+            "selected_exercise_assignments": [
+              {
+                "slot_id": "gpp_aerobic_1_easy_assault_bike",
+                "name": "Easy Assault Bike",
+                "source_phase": "GPP",
+                "slot_group": "conditioning_slots",
+                "effective_prescription": "25-30min continuous",
+                "rpe": 6
+              }
+            ],
+            "execution_order": 2
+          },
+          {
+            "session_index": 3,
+            "category": "strength",
+            "role_key": "primary_strength_day",
+            "preferred_pool": "strength_slots",
+            "governance": {
+              "authority": "execution_layer_only"
+            },
+            "scheduled_day_hint": "Thursday",
+            "scheduled_countdown_label": "D-44",
+            "countdown_label": "D-44",
+            "athlete_facing_label": "Strength",
+            "selected_exercise_assignments": [
+              {
+                "slot_id": "gpp_strength_11_sled_pull_forward_harness",
+                "name": "Sled Pull Forward (Harness)",
+                "source_phase": "GPP",
+                "slot_group": "strength_slots"
+              },
+              {
+                "slot_id": "gpp_strength_15_cossack_squat",
+                "name": "Cossack Squat",
+                "source_phase": "GPP",
+                "slot_group": "strength_slots"
+              },
+              {
+                "slot_id": "gpp_strength_17_staggered_stance_hold",
+                "name": "Staggered Stance Hold",
+                "source_phase": "GPP",
+                "slot_group": "strength_slots"
+              },
+              {
+                "slot_id": "gpp_strength_19_single_leg_trx_suspension_hold",
+                "name": "Single-Leg TRX Suspension Hold",
+                "source_phase": "GPP",
+                "slot_group": "strength_slots"
+              }
+            ],
+            "scheduled_d_day": 44,
+            "effective_strength_prescriptions": [
+              {
+                "slot_id": "gpp_strength_11_sled_pull_forward_harness",
+                "name": "Sled Pull Forward (Harness)",
+                "effective_prescription": "3–5 carries over 20–40 m (or 20–40s), heavy but unbroken; rest 60–90s."
+              },
+              {
+                "slot_id": "gpp_strength_15_cossack_squat",
+                "name": "Cossack Squat",
+                "effective_prescription": "2–3x6–10 @ RPE 6–7, keep reps crisp."
+              },
+              {
+                "slot_id": "gpp_strength_17_staggered_stance_hold",
+                "name": "Staggered Stance Hold",
+                "effective_prescription": "2-4 sets x 6-10 reps or 20-40s tempo (3-1-3), RPE 6-8."
+              },
+              {
+                "slot_id": "gpp_strength_19_single_leg_trx_suspension_hold",
+                "name": "Single-Leg TRX Suspension Hold",
+                "effective_prescription": "3–5 holds x 10–20s @ 7–9/10 effort; full rest between holds."
+              }
+            ],
+            "execution_order": 2
+          },
+          {
+            "session_index": 4,
+            "category": "conditioning",
+            "role_key": "alactic_coordination_day",
+            "preferred_pool": "conditioning_slots",
+            "preferred_system": "alactic",
+            "governance": {
+              "authority": "execution_layer_only"
+            },
+            "scheduled_day_hint": "Wednesday",
+            "scheduled_countdown_label": "D-45",
+            "countdown_label": "D-47",
+            "athlete_facing_label": "Alactic sharpness",
+            "scheduled_d_day": 45,
+            "selected_exercise_assignments": [
+              {
+                "slot_id": "gpp_alactic_1_depth_drop_no_rebound",
+                "name": "Depth Drop (No Rebound)",
+                "source_phase": "GPP",
+                "slot_group": "conditioning_slots",
+                "effective_prescription": "6x3 reps, 90s rest",
+                "rpe": 9
+              }
+            ],
+            "execution_order": 1
+          },
+          {
+            "category": "sparring",
+            "role_key": "hard_sparring_day",
+            "preferred_pool": "declared_hard_sparring_days",
+            "governance": {
+              "authority": "declared_schedule_lock"
+            },
+            "scheduled_day_hint": "Tuesday",
+            "hard_sparring_status": "hard_as_planned",
+            "hard_sparring_class": "primary_hard",
+            "hard_sparring_reason_codes": [],
+            "session_index": 5,
+            "scheduled_countdown_label": "D-46",
+            "countdown_label": "D-46",
+            "athlete_facing_label": "Hard sparring",
+            "execution_order": 1
+          },
+          {
+            "category": "sparring",
+            "role_key": "hard_sparring_day",
+            "preferred_pool": "declared_hard_sparring_days",
+            "governance": {
+              "authority": "declared_schedule_lock"
+            },
+            "scheduled_day_hint": "Saturday",
+            "hard_sparring_status": "hard_as_planned",
+            "hard_sparring_class": "secondary_hard",
+            "hard_sparring_reason_codes": [],
+            "session_index": 6,
+            "scheduled_countdown_label": "D-49",
+            "countdown_label": "D-49",
+            "athlete_facing_label": "Hard sparring",
+            "execution_order": 1
+          },
+          {
+            "category": "technical",
+            "role_key": "light_combat_day",
+            "preferred_pool": "declared_support_work_days",
+            "scheduled_day_hint": "thursday",
+            "coach_owned": true,
+            "governance": {
+              "authority": "declared_schedule_lock"
+            },
+            "session_index": 7,
+            "scheduled_countdown_label": "D-44",
+            "countdown_label": "D-44",
+            "athlete_facing_label": "Light technical combat",
+            "execution_order": 1
+          },
+          {
+            "category": "technical",
+            "role_key": "light_combat_day",
+            "preferred_pool": "declared_support_work_days",
+            "scheduled_day_hint": "friday",
+            "coach_owned": true,
+            "governance": {
+              "authority": "declared_schedule_lock"
+            },
+            "session_index": 8,
+            "scheduled_countdown_label": "D-50",
+            "countdown_label": "D-50",
+            "athlete_facing_label": "Light technical combat",
+            "execution_order": 1
+          },
+          {
+            "category": "technical",
+            "role_key": "light_combat_day",
+            "preferred_pool": "declared_support_work_days",
+            "scheduled_day_hint": "thursday",
+            "coach_owned": true,
+            "governance": {
+              "authority": "declared_schedule_lock"
+            },
+            "scheduled_d_day": 51,
+            "countdown_offset": 51,
+            "countdown_label": "D-51",
+            "scheduled_countdown_label": "D-51",
+            "athlete_facing_label": "Light technical combat",
+            "execution_order": 1
+          },
+          {
+            "category": "support_insert",
+            "role_key": "tactical_watch",
+            "athlete_facing_label": "Tactical Focus",
+            "support_insert_category": "tactical",
+            "support_insert_cost_category": "zero_cost",
+            "countdown_offset": 45,
+            "countdown_label": "D-45",
+            "scheduled_countdown_label": "D-45",
+            "governance": {
+              "authority": "camp_week_support_insert",
+              "selected_drill_locked": true,
+              "render_selected_drill_exactly": true,
+              "meaningful_stress": false
+            },
+            "preferred_exercise_names": [
+              "Pressure Route Scan"
+            ],
+            "display_text": "Why: Learn where opponents naturally retreat so pressure can steer instead of chase.\n- Pressure Route Scan: 10 minutes, tactical review only. No physical load.\n  Step 1: Identify the opponent's preferred retreat direction.\n  Step 2: Choose the direction you should step to cut that route.\n  Step 3: Identify the cue that tells you pressure should start.\n  Step 4: Choose the area of the ring you want to trap them in.\n  Intent: Guide the opponent toward the space you want.\n  Focus: Watch the first direction they choose when space disappears.\n  Reset: If you start following, pause and rebuild the angle.\n  Anchor: Cut the ring, do not chase it.\n  Purpose: Early-camp pressure route study for a pressure fighter.\n  Progress: Use one technical round to steer toward the chosen trap instead of following.",
+            "duration_min": [
+              10,
+              10
+            ],
+            "session_index": 0,
+            "scheduled_day_hint": "Wednesday",
+            "execution_order": 2
+          },
+          {
+            "session_index": 0,
+            "category": "support_insert",
+            "role_key": "self_review",
+            "scheduled_day_hint": "Saturday",
+            "athlete_facing_label": "Self-Review Cues",
+            "display_text": "Review the last clean technical work. Write three cues only: one entry, one defensive reset, one composure cue.",
+            "duration_min": [
+              8,
+              12
+            ],
+            "support_insert_category": "tactical",
+            "support_insert_cost_category": "zero_cost",
+            "countdown_offset": 49,
+            "countdown_label": "D-49",
+            "scheduled_countdown_label": "D-49",
+            "governance": {
+              "authority": "gap_fill_support_insert",
+              "meaningful_stress": false
+            },
+            "execution_order": 2
+          }
+        ]
+      },
+      {
+        "week_index": 2,
+        "phase": "GPP",
+        "calendar_days": [
+          {
+            "weekday": "friday",
+            "d_day": 43,
+            "is_fight_day": false,
+            "is_after_fight_day": false
+          },
+          {
+            "weekday": "saturday",
+            "d_day": 42,
+            "is_fight_day": false,
+            "is_after_fight_day": false
+          },
+          {
+            "weekday": "sunday",
+            "d_day": 41,
+            "is_fight_day": false,
+            "is_after_fight_day": false
+          },
+          {
+            "weekday": "monday",
+            "d_day": 40,
+            "is_fight_day": false,
+            "is_after_fight_day": false
+          },
+          {
+            "weekday": "tuesday",
+            "d_day": 39,
+            "is_fight_day": false,
+            "is_after_fight_day": false
+          },
+          {
+            "weekday": "wednesday",
+            "d_day": 38,
+            "is_fight_day": false,
+            "is_after_fight_day": false
+          },
+          {
+            "weekday": "thursday",
+            "d_day": 37,
+            "is_fight_day": false,
+            "is_after_fight_day": false
+          }
+        ],
+        "session_roles": [
+          {
+            "session_index": 3,
+            "category": "strength",
+            "role_key": "primary_strength_day",
+            "preferred_pool": "strength_slots",
+            "governance": {
+              "authority": "execution_layer_only"
+            },
+            "scheduled_day_hint": "Thursday",
+            "scheduled_countdown_label": "D-37",
+            "countdown_label": "D-37",
+            "athlete_facing_label": "Strength",
+            "selected_exercise_assignments": [
+              {
+                "slot_id": "spp_strength_1_barbell_thruster",
+                "name": "Barbell Thruster",
+                "source_phase": "SPP",
+                "slot_group": "strength_slots"
+              },
+              {
+                "slot_id": "spp_strength_3_lateral_bound_to_slip",
+                "name": "Lateral Bound-to-Slip",
+                "source_phase": "SPP",
+                "slot_group": "strength_slots"
+              },
+              {
+                "slot_id": "spp_strength_5_landmine_push_press",
+                "name": "Landmine Push Press",
+                "source_phase": "SPP",
+                "slot_group": "strength_slots"
+              }
+            ],
+            "scheduled_d_day": 37,
+            "effective_strength_prescriptions": [
+              {
+                "slot_id": "spp_strength_1_barbell_thruster",
+                "name": "Barbell Thruster",
+                "effective_prescription": "4–6x2–5 reps at max speed; full rest 60–120s."
+              },
+              {
+                "slot_id": "spp_strength_3_lateral_bound_to_slip",
+                "name": "Lateral Bound-to-Slip",
+                "effective_prescription": "4–6x2–5 reps at max speed; full rest 60–120s."
+              },
+              {
+                "slot_id": "spp_strength_5_landmine_push_press",
+                "name": "Landmine Push Press",
+                "effective_prescription": "2-4 sets x 6-10 reps or 20-40s tempo (3-1-3), RPE 6-8."
+              }
+            ],
+            "execution_order": 3
+          },
+          {
+            "session_index": 4,
+            "category": "conditioning",
+            "role_key": "alactic_coordination_day",
+            "preferred_pool": "conditioning_slots",
+            "preferred_system": "alactic",
+            "governance": {
+              "authority": "execution_layer_only"
+            },
+            "scheduled_day_hint": "Wednesday",
+            "scheduled_countdown_label": "D-38",
+            "countdown_label": "D-40",
+            "athlete_facing_label": "Alactic sharpness",
+            "scheduled_d_day": 38,
+            "selected_exercise_assignments": [
+              {
+                "slot_id": "gpp_alactic_1_depth_drop_no_rebound",
+                "name": "Depth Drop (No Rebound)",
+                "source_phase": "GPP",
+                "slot_group": "conditioning_slots",
+                "effective_prescription": "6x3 reps, 90s rest",
+                "rpe": 9
+              }
+            ],
+            "execution_order": 2
+          },
+          {
+            "category": "sparring",
+            "role_key": "hard_sparring_day",
+            "preferred_pool": "declared_hard_sparring_days",
+            "governance": {
+              "authority": "declared_schedule_lock"
+            },
+            "scheduled_day_hint": "Tuesday",
+            "hard_sparring_status": "hard_as_planned",
+            "hard_sparring_class": "primary_hard",
+            "hard_sparring_reason_codes": [],
+            "session_index": 5,
+            "scheduled_countdown_label": "D-39",
+            "countdown_label": "D-39",
+            "athlete_facing_label": "Hard sparring",
+            "execution_order": 1
+          },
+          {
+            "category": "sparring",
+            "role_key": "hard_sparring_day",
+            "preferred_pool": "declared_hard_sparring_days",
+            "governance": {
+              "authority": "declared_schedule_lock"
+            },
+            "scheduled_day_hint": "Saturday",
+            "hard_sparring_status": "hard_as_planned",
+            "hard_sparring_class": "secondary_hard",
+            "hard_sparring_reason_codes": [],
+            "session_index": 6,
+            "scheduled_countdown_label": "D-42",
+            "countdown_label": "D-42",
+            "athlete_facing_label": "Hard sparring",
+            "execution_order": 1
+          },
+          {
+            "category": "technical",
+            "role_key": "light_combat_day",
+            "preferred_pool": "declared_support_work_days",
+            "scheduled_day_hint": "thursday",
+            "coach_owned": true,
+            "governance": {
+              "authority": "declared_schedule_lock"
+            },
+            "session_index": 7,
+            "scheduled_countdown_label": "D-37",
+            "countdown_label": "D-37",
+            "athlete_facing_label": "Light technical combat",
+            "execution_order": 2
+          },
+          {
+            "category": "technical",
+            "role_key": "light_combat_day",
+            "preferred_pool": "declared_support_work_days",
+            "scheduled_day_hint": "friday",
+            "coach_owned": true,
+            "governance": {
+              "authority": "declared_schedule_lock"
+            },
+            "session_index": 8,
+            "scheduled_countdown_label": "D-43",
+            "countdown_label": "D-43",
+            "athlete_facing_label": "Light technical combat",
+            "execution_order": 1
+          },
+          {
+            "category": "support_insert",
+            "role_key": "tactical_watch",
+            "athlete_facing_label": "Tactical Focus",
+            "support_insert_category": "tactical",
+            "support_insert_cost_category": "zero_cost",
+            "countdown_offset": 38,
+            "countdown_label": "D-38",
+            "scheduled_countdown_label": "D-38",
+            "governance": {
+              "authority": "camp_week_support_insert",
+              "selected_drill_locked": true,
+              "render_selected_drill_exactly": true,
+              "meaningful_stress": false
+            },
+            "preferred_exercise_names": [
+              "Safe Entry Builder"
+            ],
+            "display_text": "Why: Build a repeatable way into the pocket without walking onto clean shots.\n- Safe Entry Builder: 10 minutes, tactical review only. No physical load.\n  Step 1: Choose the setup that hides your forward step.\n  Step 2: Choose the guard position you need while crossing range.\n  Step 3: Choose the first punch that establishes the pocket.\n  Step 4: Define where your head should finish after the entry.\n  Intent: Arrive protected before trying to win the exchange.\n  Focus: Watch what the opponent throws as someone closes distance.\n  Reset: If the entry is naked, leave and rebuild the setup.\n  Anchor: Earn the pocket.\n  Purpose: Early-camp entry quality for a pressure fighter.\n  Progress: Rehearse the same setup and head position before adding longer combinations.",
+            "duration_min": [
+              10,
+              10
+            ],
+            "session_index": 0,
+            "scheduled_day_hint": "Wednesday",
+            "execution_order": 3
+          },
+          {
+            "session_index": 0,
+            "category": "support_insert",
+            "role_key": "breathing_reset",
+            "scheduled_day_hint": "Saturday",
+            "athlete_facing_label": "Breathing Reset",
+            "display_text": "Nasal breathing if comfortable. Use a 4 second inhale and 6 second exhale. Finish calmer than you started.",
+            "duration_min": [
+              3,
+              6
+            ],
+            "support_insert_category": "recovery",
+            "support_insert_cost_category": "low_cost_recovery",
+            "countdown_offset": 42,
+            "countdown_label": "D-42",
+            "scheduled_countdown_label": "D-42",
+            "governance": {
+              "authority": "gap_fill_support_insert",
+              "meaningful_stress": false
+            },
+            "execution_order": 2
+          },
+          {
+            "category": "support_insert",
+            "role_key": "fight_visualization",
+            "athlete_facing_label": "Fight Visualisation",
+            "support_insert_category": "mental",
+            "support_insert_cost_category": "zero_cost",
+            "countdown_offset": 40,
+            "countdown_label": "D-40",
+            "scheduled_countdown_label": "D-40",
+            "preferred_exercise_names": [
+              "Tactical Picture"
+            ],
+            "governance": {
+              "authority": "fight_visualization_library",
+              "selected_drill_locked": true,
+              "render_selected_drill_exactly": true,
+              "meaningful_stress": false
+            },
+            "display_text": "Why: Rehearse taking space and finishing exchanges in position rather than chasing.\n- Tactical Picture: 12 minutes, optional mental rehearsal. No physical load.\n  Step 1: Visualise them giving ground.\n  Step 2: See yourself taking space without following them blindly.\n  Step 3: Cut their preferred exit, enter behind your trained setup and finish the exchange balanced.\n  Step 4: Run it again with them changing direction and adjust instead of chasing.\n  Cue: Take the space, do not chase it.",
+            "duration_min": [
+              12,
+              12
+            ],
+            "scheduled_day_hint": "Monday",
+            "session_index": 0,
+            "execution_order": 1
+          },
+          {
+            "category": "support_insert",
+            "role_key": "fight_visualization",
+            "athlete_facing_label": "Fight Visualisation",
+            "support_insert_category": "mental",
+            "support_insert_cost_category": "zero_cost",
+            "countdown_offset": 38,
+            "countdown_label": "D-38",
+            "scheduled_countdown_label": "D-38",
+            "preferred_exercise_names": [
+              "Read → React"
+            ],
+            "governance": {
+              "authority": "fight_visualization_library",
+              "selected_drill_locked": true,
+              "render_selected_drill_exactly": true,
+              "meaningful_stress": false
+            },
+            "display_text": "Why: Recognise how the opponent reacts to pressure before committing to the next attack.\n- Read → React: 12 minutes, optional mental rehearsal. No physical load.\n  Step 1: Picture the opponent retreating straight, covering high or planting to counter.\n  Step 2: Recognise the reaction before choosing your response.\n  Step 3: Use only responses already trained in camp.\n  Step 4: Finish each exchange balanced and reset your pressure.\n  Cue: Read before you chase.",
+            "duration_min": [
+              12,
+              12
+            ],
+            "scheduled_day_hint": "Wednesday",
+            "session_index": 0,
+            "execution_order": 1
+          },
+          {
+            "category": "support_insert",
+            "role_key": "fight_visualization",
+            "athlete_facing_label": "Fight Visualisation",
+            "support_insert_category": "mental",
+            "support_insert_cost_category": "zero_cost",
+            "countdown_offset": 37,
+            "countdown_label": "D-37",
+            "scheduled_countdown_label": "D-37",
+            "preferred_exercise_names": [
+              "Pressure → Reset"
+            ],
+            "governance": {
+              "authority": "fight_visualization_library",
+              "selected_drill_locked": true,
+              "render_selected_drill_exactly": true,
+              "meaningful_stress": false
+            },
+            "display_text": "Why: Rehearse restarting pressure from position after being caught or escaped.\n- Pressure → Reset: 12 minutes, optional mental rehearsal. No physical load.\n  Step 1: Picture getting caught while entering.\n  Step 2: Do not rush back in. Exhale, rebuild your stance and restart your pressure from position.\n  Step 3: Then picture the opponent escaping your trap.\n  Step 4: Reset the angle instead of chasing.\n  Cue: Reset the angle, not the pace.",
+            "duration_min": [
+              12,
+              12
+            ],
+            "scheduled_day_hint": "Thursday",
+            "session_index": 0,
+            "execution_order": 1
+          }
+        ]
+      },
+      {
+        "week_index": 3,
+        "phase": "SPP",
+        "calendar_days": [
+          {
+            "weekday": "friday",
+            "d_day": 36,
+            "is_fight_day": false,
+            "is_after_fight_day": false
+          },
+          {
+            "weekday": "saturday",
+            "d_day": 35,
+            "is_fight_day": false,
+            "is_after_fight_day": false
+          },
+          {
+            "weekday": "sunday",
+            "d_day": 34,
+            "is_fight_day": false,
+            "is_after_fight_day": false
+          },
+          {
+            "weekday": "monday",
+            "d_day": 33,
+            "is_fight_day": false,
+            "is_after_fight_day": false
+          },
+          {
+            "weekday": "tuesday",
+            "d_day": 32,
+            "is_fight_day": false,
+            "is_after_fight_day": false
+          },
+          {
+            "weekday": "wednesday",
+            "d_day": 31,
+            "is_fight_day": false,
+            "is_after_fight_day": false
+          },
+          {
+            "weekday": "thursday",
+            "d_day": 30,
+            "is_fight_day": false,
+            "is_after_fight_day": false
+          },
+          {
+            "weekday": "friday",
+            "d_day": 29,
+            "is_fight_day": false,
+            "is_after_fight_day": false
+          }
+        ],
+        "session_roles": [
+          {
+            "session_index": 2,
+            "category": "strength",
+            "role_key": "neural_plus_strength_day",
+            "preferred_pool": "strength_slots",
+            "governance": {
+              "authority": "execution_layer_only"
+            },
+            "scheduled_day_hint": "Monday",
+            "scheduled_countdown_label": "D-33",
+            "countdown_label": "D-33",
+            "athlete_facing_label": "Strength",
+            "selected_exercise_assignments": [
+              {
+                "slot_id": "spp_strength_1_barbell_thruster",
+                "name": "Barbell Thruster",
+                "source_phase": "SPP",
+                "slot_group": "strength_slots"
+              },
+              {
+                "slot_id": "spp_strength_3_lateral_bound_to_slip",
+                "name": "Lateral Bound-to-Slip",
+                "source_phase": "SPP",
+                "slot_group": "strength_slots"
+              },
+              {
+                "slot_id": "spp_strength_5_landmine_push_press",
+                "name": "Landmine Push Press",
+                "source_phase": "SPP",
+                "slot_group": "strength_slots"
+              }
+            ],
+            "scheduled_d_day": 33,
+            "effective_strength_prescriptions": [
+              {
+                "slot_id": "spp_strength_1_barbell_thruster",
+                "name": "Barbell Thruster",
+                "effective_prescription": "4–6x2–5 reps at max speed; full rest 60–120s."
+              },
+              {
+                "slot_id": "spp_strength_3_lateral_bound_to_slip",
+                "name": "Lateral Bound-to-Slip",
+                "effective_prescription": "4–6x2–5 reps at max speed; full rest 60–120s."
+              },
+              {
+                "slot_id": "spp_strength_5_landmine_push_press",
+                "name": "Landmine Push Press",
+                "effective_prescription": "2-4 sets x 6-10 reps or 20-40s tempo (3-1-3), RPE 6-8."
+              }
+            ],
+            "execution_order": 2
+          },
+          {
+            "category": "sparring",
+            "role_key": "hard_sparring_day",
+            "preferred_pool": "declared_hard_sparring_days",
+            "governance": {
+              "authority": "declared_schedule_lock"
+            },
+            "scheduled_day_hint": "Tuesday",
+            "hard_sparring_status": "hard_as_planned",
+            "hard_sparring_class": "primary_hard",
+            "hard_sparring_reason_codes": [],
+            "session_index": 5,
+            "scheduled_countdown_label": "D-32",
+            "countdown_label": "D-32",
+            "athlete_facing_label": "Hard sparring",
+            "execution_order": 1
+          },
+          {
+            "category": "sparring",
+            "role_key": "hard_sparring_day",
+            "preferred_pool": "declared_hard_sparring_days",
+            "governance": {
+              "authority": "declared_schedule_lock"
+            },
+            "scheduled_day_hint": "Saturday",
+            "hard_sparring_status": "hard_as_planned",
+            "hard_sparring_class": "secondary_hard",
+            "hard_sparring_reason_codes": [],
+            "session_index": 6,
+            "scheduled_countdown_label": "D-35",
+            "countdown_label": "D-35",
+            "athlete_facing_label": "Hard sparring",
+            "execution_order": 1
+          },
+          {
+            "category": "technical",
+            "role_key": "light_combat_day",
+            "preferred_pool": "declared_support_work_days",
+            "scheduled_day_hint": "thursday",
+            "coach_owned": true,
+            "governance": {
+              "authority": "declared_schedule_lock"
+            },
+            "session_index": 7,
+            "scheduled_countdown_label": "D-30",
+            "countdown_label": "D-30",
+            "athlete_facing_label": "Light technical combat",
+            "execution_order": 1
+          },
+          {
+            "category": "technical",
+            "role_key": "light_combat_day",
+            "preferred_pool": "declared_support_work_days",
+            "scheduled_day_hint": "friday",
+            "coach_owned": true,
+            "governance": {
+              "authority": "declared_schedule_lock"
+            },
+            "session_index": 8,
+            "scheduled_countdown_label": "D-29",
+            "countdown_label": "D-29",
+            "athlete_facing_label": "Light technical combat",
+            "execution_order": 1
+          },
+          {
+            "category": "technical",
+            "role_key": "light_combat_day",
+            "preferred_pool": "declared_support_work_days",
+            "scheduled_day_hint": "friday",
+            "coach_owned": true,
+            "governance": {
+              "authority": "declared_schedule_lock"
+            },
+            "scheduled_d_day": 36,
+            "countdown_offset": 36,
+            "countdown_label": "D-36",
+            "scheduled_countdown_label": "D-36",
+            "athlete_facing_label": "Light technical combat",
+            "execution_order": 2
+          },
+          {
+            "category": "support_insert",
+            "role_key": "tactical_watch",
+            "athlete_facing_label": "Tactical Focus",
+            "support_insert_category": "tactical",
+            "support_insert_cost_category": "zero_cost",
+            "countdown_offset": 31,
+            "countdown_label": "D-31",
+            "scheduled_countdown_label": "D-31",
+            "governance": {
+              "authority": "camp_week_support_insert",
+              "selected_drill_locked": true,
+              "render_selected_drill_exactly": true,
+              "meaningful_stress": false
+            },
+            "preferred_exercise_names": [
+              "Pocket Exchange Map"
+            ],
+            "display_text": "Why: Know what happens after the first punches so pocket exchanges stay planned rather than chaotic.\n- Pocket Exchange Map: 10 minutes, tactical review only. No physical load.\n  Step 1: Identify the opponent's most common pocket sequence.\n  Step 2: Choose your answer to that sequence.\n  Step 3: Choose the finishing shot that best fits the opening.\n  Step 4: Decide whether that exchange should end with an exit or a smother.\n  Intent: Win the second decision inside the pocket.\n  Focus: Watch the opponent's response after the first two punches.\n  Reset: If the exchange loses shape, smother or leave instead of trading blindly.\n  Anchor: Know the next beat.\n  Purpose: SPP pocket planning for a pressure fighter.\n  Progress: Rehearse the chosen exchange ending, not just the opening combination.",
+            "duration_min": [
+              10,
+              10
+            ],
+            "session_index": 0,
+            "scheduled_day_hint": "Wednesday",
+            "execution_order": 2
+          },
+          {
+            "session_index": 0,
+            "category": "support_insert",
+            "role_key": "self_review",
+            "scheduled_day_hint": "Saturday",
+            "athlete_facing_label": "Self-Review Cues",
+            "display_text": "Review the last clean technical work. Write three cues only: one entry, one defensive reset, one composure cue.",
+            "duration_min": [
+              8,
+              12
+            ],
+            "support_insert_category": "tactical",
+            "support_insert_cost_category": "zero_cost",
+            "countdown_offset": 35,
+            "countdown_label": "D-35",
+            "scheduled_countdown_label": "D-35",
+            "governance": {
+              "authority": "gap_fill_support_insert",
+              "meaningful_stress": false
+            },
+            "execution_order": 2
+          },
+          {
+            "category": "support_insert",
+            "role_key": "fight_visualization",
+            "athlete_facing_label": "Fight Visualisation",
+            "support_insert_category": "mental",
+            "support_insert_cost_category": "zero_cost",
+            "countdown_offset": 36,
+            "countdown_label": "D-36",
+            "scheduled_countdown_label": "D-36",
+            "preferred_exercise_names": [
+              "Tactical Picture"
+            ],
+            "governance": {
+              "authority": "fight_visualization_library",
+              "selected_drill_locked": true,
+              "render_selected_drill_exactly": true,
+              "meaningful_stress": false
+            },
+            "display_text": "Why: Rehearse taking space and finishing exchanges in position rather than chasing.\n- Tactical Picture: 12 minutes, optional mental rehearsal. No physical load.\n  Step 1: Visualise them giving ground.\n  Step 2: See yourself taking space without following them blindly.\n  Step 3: Cut their preferred exit, enter behind your trained setup and finish the exchange balanced.\n  Step 4: Run it again with them changing direction and adjust instead of chasing.\n  Cue: Take the space, do not chase it.",
+            "duration_min": [
+              12,
+              12
+            ],
+            "scheduled_day_hint": "Friday",
+            "session_index": 0,
+            "execution_order": 1
+          },
+          {
+            "category": "support_insert",
+            "role_key": "fight_visualization",
+            "athlete_facing_label": "Fight Visualisation",
+            "support_insert_category": "mental",
+            "support_insert_cost_category": "zero_cost",
+            "countdown_offset": 33,
+            "countdown_label": "D-33",
+            "scheduled_countdown_label": "D-33",
+            "preferred_exercise_names": [
+              "Read → React"
+            ],
+            "governance": {
+              "authority": "fight_visualization_library",
+              "selected_drill_locked": true,
+              "render_selected_drill_exactly": true,
+              "meaningful_stress": false
+            },
+            "display_text": "Why: Recognise how the opponent reacts to pressure before committing to the next attack.\n- Read → React: 12 minutes, optional mental rehearsal. No physical load.\n  Step 1: Picture the opponent retreating straight, covering high or planting to counter.\n  Step 2: Recognise the reaction before choosing your response.\n  Step 3: Use only responses already trained in camp.\n  Step 4: Finish each exchange balanced and reset your pressure.\n  Cue: Read before you chase.",
+            "duration_min": [
+              12,
+              12
+            ],
+            "scheduled_day_hint": "Monday",
+            "session_index": 0,
+            "execution_order": 1
+          },
+          {
+            "category": "support_insert",
+            "role_key": "fight_visualization",
+            "athlete_facing_label": "Fight Visualisation",
+            "support_insert_category": "mental",
+            "support_insert_cost_category": "zero_cost",
+            "countdown_offset": 31,
+            "countdown_label": "D-31",
+            "scheduled_countdown_label": "D-31",
+            "preferred_exercise_names": [
+              "Pressure → Reset"
+            ],
+            "governance": {
+              "authority": "fight_visualization_library",
+              "selected_drill_locked": true,
+              "render_selected_drill_exactly": true,
+              "meaningful_stress": false
+            },
+            "display_text": "Why: Rehearse restarting pressure from position after being caught or escaped.\n- Pressure → Reset: 12 minutes, optional mental rehearsal. No physical load.\n  Step 1: Picture getting caught while entering.\n  Step 2: Do not rush back in. Exhale, rebuild your stance and restart your pressure from position.\n  Step 3: Then picture the opponent escaping your trap.\n  Step 4: Reset the angle instead of chasing.\n  Cue: Reset the angle, not the pace.",
+            "duration_min": [
+              12,
+              12
+            ],
+            "scheduled_day_hint": "Wednesday",
+            "session_index": 0,
+            "execution_order": 1
+          }
+        ]
+      },
+      {
+        "week_index": 4,
+        "phase": "SPP",
+        "calendar_days": [
+          {
+            "weekday": "saturday",
+            "d_day": 28,
+            "is_fight_day": false,
+            "is_after_fight_day": false
+          },
+          {
+            "weekday": "sunday",
+            "d_day": 27,
+            "is_fight_day": false,
+            "is_after_fight_day": false
+          },
+          {
+            "weekday": "monday",
+            "d_day": 26,
+            "is_fight_day": false,
+            "is_after_fight_day": false
+          },
+          {
+            "weekday": "tuesday",
+            "d_day": 25,
+            "is_fight_day": false,
+            "is_after_fight_day": false
+          },
+          {
+            "weekday": "wednesday",
+            "d_day": 24,
+            "is_fight_day": false,
+            "is_after_fight_day": false
+          },
+          {
+            "weekday": "thursday",
+            "d_day": 23,
+            "is_fight_day": false,
+            "is_after_fight_day": false
+          },
+          {
+            "weekday": "friday",
+            "d_day": 22,
+            "is_fight_day": false,
+            "is_after_fight_day": false
+          }
+        ],
+        "session_roles": [
+          {
+            "session_index": 1,
+            "category": "conditioning",
+            "role_key": "aerobic_support_day",
+            "preferred_pool": "conditioning_slots",
+            "preferred_system": "aerobic",
+            "governance": {
+              "authority": "execution_layer_only"
+            },
+            "scheduled_day_hint": "Wednesday",
+            "scheduled_countdown_label": "D-24",
+            "countdown_label": "D-24",
+            "athlete_facing_label": "Aerobic support",
+            "selected_exercise_assignments": [
+              {
+                "slot_id": "spp_aerobic_1_swimming_freestyle_laps",
+                "name": "Swimming (Freestyle Laps)",
+                "source_phase": "SPP",
+                "slot_group": "conditioning_slots",
+                "effective_prescription": "25-35min continuous",
+                "rpe": 5
+              }
+            ],
+            "execution_order": 3
+          },
+          {
+            "session_index": 2,
+            "category": "strength",
+            "role_key": "neural_plus_strength_day",
+            "preferred_pool": "strength_slots",
+            "governance": {
+              "authority": "execution_layer_only"
+            },
+            "scheduled_day_hint": "Thursday",
+            "scheduled_countdown_label": "D-23",
+            "countdown_label": "D-26",
+            "athlete_facing_label": "Strength",
+            "selected_exercise_assignments": [
+              {
+                "slot_id": "spp_strength_1_barbell_thruster",
+                "name": "Barbell Thruster",
+                "source_phase": "SPP",
+                "slot_group": "strength_slots"
+              },
+              {
+                "slot_id": "spp_strength_3_lateral_bound_to_slip",
+                "name": "Lateral Bound-to-Slip",
+                "source_phase": "SPP",
+                "slot_group": "strength_slots"
+              },
+              {
+                "slot_id": "spp_strength_5_landmine_push_press",
+                "name": "Landmine Push Press",
+                "source_phase": "SPP",
+                "slot_group": "strength_slots"
+              }
+            ],
+            "scheduled_d_day": 23,
+            "effective_strength_prescriptions": [
+              {
+                "slot_id": "spp_strength_1_barbell_thruster",
+                "name": "Barbell Thruster",
+                "effective_prescription": "4–6x2–5 reps at max speed; full rest 60–120s."
+              },
+              {
+                "slot_id": "spp_strength_3_lateral_bound_to_slip",
+                "name": "Lateral Bound-to-Slip",
+                "effective_prescription": "4–6x2–5 reps at max speed; full rest 60–120s."
+              },
+              {
+                "slot_id": "spp_strength_5_landmine_push_press",
+                "name": "Landmine Push Press",
+                "effective_prescription": "2-4 sets x 6-10 reps or 20-40s tempo (3-1-3), RPE 6-8."
+              }
+            ],
+            "execution_order": 2
+          },
+          {
+            "category": "sparring",
+            "role_key": "hard_sparring_day",
+            "preferred_pool": "declared_hard_sparring_days",
+            "governance": {
+              "authority": "declared_schedule_lock"
+            },
+            "scheduled_day_hint": "Tuesday",
+            "hard_sparring_status": "hard_as_planned",
+            "hard_sparring_class": "primary_hard",
+            "hard_sparring_reason_codes": [],
+            "session_index": 5,
+            "scheduled_countdown_label": "D-25",
+            "countdown_label": "D-25",
+            "athlete_facing_label": "Hard sparring",
+            "execution_order": 1
+          },
+          {
+            "category": "sparring",
+            "role_key": "hard_sparring_day",
+            "preferred_pool": "declared_hard_sparring_days",
+            "governance": {
+              "authority": "declared_schedule_lock"
+            },
+            "scheduled_day_hint": "Saturday",
+            "hard_sparring_status": "hard_as_planned",
+            "hard_sparring_class": "secondary_hard",
+            "hard_sparring_reason_codes": [],
+            "session_index": 6,
+            "scheduled_countdown_label": "D-28",
+            "countdown_label": "D-28",
+            "athlete_facing_label": "Hard sparring",
+            "execution_order": 1
+          },
+          {
+            "category": "technical",
+            "role_key": "light_combat_day",
+            "preferred_pool": "declared_support_work_days",
+            "scheduled_day_hint": "thursday",
+            "coach_owned": true,
+            "governance": {
+              "authority": "declared_schedule_lock"
+            },
+            "session_index": 7,
+            "scheduled_countdown_label": "D-23",
+            "countdown_label": "D-23",
+            "athlete_facing_label": "Light technical combat",
+            "execution_order": 1
+          },
+          {
+            "category": "technical",
+            "role_key": "light_combat_day",
+            "preferred_pool": "declared_support_work_days",
+            "scheduled_day_hint": "friday",
+            "coach_owned": true,
+            "governance": {
+              "authority": "declared_schedule_lock"
+            },
+            "session_index": 8,
+            "scheduled_countdown_label": "D-22",
+            "countdown_label": "D-22",
+            "athlete_facing_label": "Light technical combat",
+            "execution_order": 2
+          },
+          {
+            "category": "support_insert",
+            "role_key": "tactical_watch",
+            "athlete_facing_label": "Tactical Focus",
+            "support_insert_category": "tactical",
+            "support_insert_cost_category": "zero_cost",
+            "countdown_offset": 24,
+            "countdown_label": "D-24",
+            "scheduled_countdown_label": "D-24",
+            "governance": {
+              "authority": "camp_week_support_insert",
+              "selected_drill_locked": true,
+              "render_selected_drill_exactly": true,
+              "meaningful_stress": false
+            },
+            "preferred_exercise_names": [
+              "Body Attack Opportunity"
+            ],
+            "display_text": "Why: Find safe body attacks that reward pressure without making the entry predictable.\n- Body Attack Opportunity: 10 minutes, tactical review only. No physical load.\n  Step 1: Identify the clearest body opening the opponent gives away.\n  Step 2: Choose the punch or feint that creates that opening.\n  Step 3: Choose the body target you will attack.\n  Step 4: Choose the head follow-up that punishes their reaction.\n  Intent: Attack the body when the position earns it.\n  Focus: Watch for high guards, separated elbows and upright posture.\n  Reset: If the body line closes, go back upstairs rather than forcing it.\n  Anchor: Open it before you take it.\n  Purpose: SPP body-attack selection for a pressure fighter.\n  Progress: Use the body attack only after the chosen setup appears in technical work.",
+            "duration_min": [
+              10,
+              10
+            ],
+            "session_index": 0,
+            "scheduled_day_hint": "Wednesday",
+            "execution_order": 2
+          },
+          {
+            "session_index": 0,
+            "category": "support_insert",
+            "role_key": "breathing_reset",
+            "scheduled_day_hint": "Saturday",
+            "athlete_facing_label": "Breathing Reset",
+            "display_text": "Nasal breathing if comfortable. Use a 4 second inhale and 6 second exhale. Finish calmer than you started.",
+            "duration_min": [
+              3,
+              6
+            ],
+            "support_insert_category": "recovery",
+            "support_insert_cost_category": "low_cost_recovery",
+            "countdown_offset": 28,
+            "countdown_label": "D-28",
+            "scheduled_countdown_label": "D-28",
+            "governance": {
+              "authority": "gap_fill_support_insert",
+              "meaningful_stress": false
+            },
+            "execution_order": 2
+          },
+          {
+            "category": "support_insert",
+            "role_key": "fight_visualization",
+            "athlete_facing_label": "Fight Visualisation",
+            "support_insert_category": "mental",
+            "support_insert_cost_category": "zero_cost",
+            "countdown_offset": 26,
+            "countdown_label": "D-26",
+            "scheduled_countdown_label": "D-26",
+            "preferred_exercise_names": [
+              "Tactical Picture"
+            ],
+            "governance": {
+              "authority": "fight_visualization_library",
+              "selected_drill_locked": true,
+              "render_selected_drill_exactly": true,
+              "meaningful_stress": false
+            },
+            "display_text": "Why: Rehearse taking space and finishing exchanges in position rather than chasing.\n- Tactical Picture: 12 minutes, optional mental rehearsal. No physical load.\n  Step 1: Visualise them giving ground.\n  Step 2: See yourself taking space without following them blindly.\n  Step 3: Cut their preferred exit, enter behind your trained setup and finish the exchange balanced.\n  Step 4: Run it again with them changing direction and adjust instead of chasing.\n  Cue: Take the space, do not chase it.",
+            "duration_min": [
+              12,
+              12
+            ],
+            "scheduled_day_hint": "Monday",
+            "session_index": 0,
+            "execution_order": 1
+          },
+          {
+            "category": "support_insert",
+            "role_key": "fight_visualization",
+            "athlete_facing_label": "Fight Visualisation",
+            "support_insert_category": "mental",
+            "support_insert_cost_category": "zero_cost",
+            "countdown_offset": 24,
+            "countdown_label": "D-24",
+            "scheduled_countdown_label": "D-24",
+            "preferred_exercise_names": [
+              "Read → React"
+            ],
+            "governance": {
+              "authority": "fight_visualization_library",
+              "selected_drill_locked": true,
+              "render_selected_drill_exactly": true,
+              "meaningful_stress": false
+            },
+            "display_text": "Why: Recognise how the opponent reacts to pressure before committing to the next attack.\n- Read → React: 12 minutes, optional mental rehearsal. No physical load.\n  Step 1: Picture the opponent retreating straight, covering high or planting to counter.\n  Step 2: Recognise the reaction before choosing your response.\n  Step 3: Use only responses already trained in camp.\n  Step 4: Finish each exchange balanced and reset your pressure.\n  Cue: Read before you chase.",
+            "duration_min": [
+              12,
+              12
+            ],
+            "scheduled_day_hint": "Wednesday",
+            "session_index": 0,
+            "execution_order": 1
+          },
+          {
+            "category": "support_insert",
+            "role_key": "fight_visualization",
+            "athlete_facing_label": "Fight Visualisation",
+            "support_insert_category": "mental",
+            "support_insert_cost_category": "zero_cost",
+            "countdown_offset": 22,
+            "countdown_label": "D-22",
+            "scheduled_countdown_label": "D-22",
+            "preferred_exercise_names": [
+              "Pressure → Reset"
+            ],
+            "governance": {
+              "authority": "fight_visualization_library",
+              "selected_drill_locked": true,
+              "render_selected_drill_exactly": true,
+              "meaningful_stress": false
+            },
+            "display_text": "Why: Rehearse restarting pressure from position after being caught or escaped.\n- Pressure → Reset: 12 minutes, optional mental rehearsal. No physical load.\n  Step 1: Picture getting caught while entering.\n  Step 2: Do not rush back in. Exhale, rebuild your stance and restart your pressure from position.\n  Step 3: Then picture the opponent escaping your trap.\n  Step 4: Reset the angle instead of chasing.\n  Cue: Reset the angle, not the pace.",
+            "duration_min": [
+              12,
+              12
+            ],
+            "scheduled_day_hint": "Friday",
+            "session_index": 0,
+            "execution_order": 1
+          }
+        ]
+      },
+      {
+        "week_index": 5,
+        "phase": "SPP",
+        "calendar_days": [
+          {
+            "weekday": "saturday",
+            "d_day": 21,
+            "is_fight_day": false,
+            "is_after_fight_day": false
+          },
+          {
+            "weekday": "sunday",
+            "d_day": 20,
+            "is_fight_day": false,
+            "is_after_fight_day": false
+          },
+          {
+            "weekday": "monday",
+            "d_day": 19,
+            "is_fight_day": false,
+            "is_after_fight_day": false
+          },
+          {
+            "weekday": "tuesday",
+            "d_day": 18,
+            "is_fight_day": false,
+            "is_after_fight_day": false
+          },
+          {
+            "weekday": "wednesday",
+            "d_day": 17,
+            "is_fight_day": false,
+            "is_after_fight_day": false
+          },
+          {
+            "weekday": "thursday",
+            "d_day": 16,
+            "is_fight_day": false,
+            "is_after_fight_day": false
+          },
+          {
+            "weekday": "friday",
+            "d_day": 15,
+            "is_fight_day": false,
+            "is_after_fight_day": false
+          }
+        ],
+        "session_roles": [
+          {
+            "session_index": 1,
+            "category": "conditioning",
+            "role_key": "aerobic_support_day",
+            "preferred_pool": "conditioning_slots",
+            "preferred_system": "aerobic",
+            "governance": {
+              "authority": "execution_layer_only"
+            },
+            "scheduled_day_hint": "Wednesday",
+            "scheduled_countdown_label": "D-17",
+            "countdown_label": "D-17",
+            "athlete_facing_label": "Aerobic support",
+            "selected_exercise_assignments": [
+              {
+                "slot_id": "spp_aerobic_1_swimming_freestyle_laps",
+                "name": "Swimming (Freestyle Laps)",
+                "source_phase": "SPP",
+                "slot_group": "conditioning_slots",
+                "effective_prescription": "25-35min continuous",
+                "rpe": 5
+              }
+            ],
+            "execution_order": 3
+          },
+          {
+            "session_index": 2,
+            "category": "strength",
+            "role_key": "neural_plus_strength_day",
+            "preferred_pool": "strength_slots",
+            "governance": {
+              "authority": "execution_layer_only"
+            },
+            "scheduled_day_hint": "Thursday",
+            "scheduled_countdown_label": "D-16",
+            "countdown_label": "D-19",
+            "athlete_facing_label": "Strength",
+            "selected_exercise_assignments": [
+              {
+                "slot_id": "spp_strength_1_barbell_thruster",
+                "name": "Barbell Thruster",
+                "source_phase": "SPP",
+                "slot_group": "strength_slots"
+              },
+              {
+                "slot_id": "spp_strength_3_lateral_bound_to_slip",
+                "name": "Lateral Bound-to-Slip",
+                "source_phase": "SPP",
+                "slot_group": "strength_slots"
+              },
+              {
+                "slot_id": "spp_strength_5_landmine_push_press",
+                "name": "Landmine Push Press",
+                "source_phase": "SPP",
+                "slot_group": "strength_slots"
+              }
+            ],
+            "scheduled_d_day": 16,
+            "effective_strength_prescriptions": [
+              {
+                "slot_id": "spp_strength_1_barbell_thruster",
+                "name": "Barbell Thruster",
+                "effective_prescription": "3 x 2 at max speed; rest 120s"
+              },
+              {
+                "slot_id": "spp_strength_3_lateral_bound_to_slip",
+                "name": "Lateral Bound-to-Slip",
+                "effective_prescription": "3 x 2 at max speed; rest 120s"
+              },
+              {
+                "slot_id": "spp_strength_5_landmine_push_press",
+                "name": "Landmine Push Press",
+                "effective_prescription": "2–3 sets x 6-10 reps or 20-40s tempo (3-1-3), RPE 6-7 max."
+              }
+            ],
+            "execution_order": 2
+          },
+          {
+            "category": "sparring",
+            "role_key": "hard_sparring_day",
+            "preferred_pool": "declared_hard_sparring_days",
+            "governance": {
+              "authority": "declared_schedule_lock"
+            },
+            "scheduled_day_hint": "Tuesday",
+            "hard_sparring_status": "hard_as_planned",
+            "hard_sparring_class": "primary_hard",
+            "hard_sparring_reason_codes": [],
+            "session_index": 5,
+            "scheduled_countdown_label": "D-18",
+            "countdown_label": "D-18",
+            "athlete_facing_label": "Hard sparring",
+            "execution_order": 1
+          },
+          {
+            "category": "sparring",
+            "role_key": "hard_sparring_day",
+            "preferred_pool": "declared_hard_sparring_days",
+            "governance": {
+              "authority": "declared_schedule_lock"
+            },
+            "scheduled_day_hint": "Saturday",
+            "hard_sparring_status": "hard_as_planned",
+            "hard_sparring_class": "secondary_hard",
+            "hard_sparring_reason_codes": [],
+            "session_index": 6,
+            "scheduled_countdown_label": "D-21",
+            "countdown_label": "D-21",
+            "athlete_facing_label": "Hard sparring",
+            "execution_order": 1
+          },
+          {
+            "category": "technical",
+            "role_key": "light_combat_day",
+            "preferred_pool": "declared_support_work_days",
+            "scheduled_day_hint": "thursday",
+            "coach_owned": true,
+            "governance": {
+              "authority": "declared_schedule_lock"
+            },
+            "session_index": 7,
+            "scheduled_countdown_label": "D-16",
+            "countdown_label": "D-16",
+            "athlete_facing_label": "Light technical combat",
+            "execution_order": 1
+          },
+          {
+            "category": "technical",
+            "role_key": "light_combat_day",
+            "preferred_pool": "declared_support_work_days",
+            "scheduled_day_hint": "friday",
+            "coach_owned": true,
+            "governance": {
+              "authority": "declared_schedule_lock"
+            },
+            "session_index": 8,
+            "scheduled_countdown_label": "D-15",
+            "countdown_label": "D-15",
+            "athlete_facing_label": "Light technical combat",
+            "execution_order": 2
+          },
+          {
+            "category": "support_insert",
+            "role_key": "tactical_watch",
+            "athlete_facing_label": "Tactical Focus",
+            "support_insert_category": "tactical",
+            "support_insert_cost_category": "zero_cost",
+            "countdown_offset": 17,
+            "countdown_label": "D-17",
+            "scheduled_countdown_label": "D-17",
+            "governance": {
+              "authority": "camp_week_support_insert",
+              "selected_drill_locked": true,
+              "render_selected_drill_exactly": true,
+              "meaningful_stress": false
+            },
+            "preferred_exercise_names": [
+              "Smother and Reset"
+            ],
+            "display_text": "Why: Stop the opponent firing back immediately after your pressure combination lands.\n- Smother and Reset: 10 minutes, tactical review only. No physical load.\n  Step 1: Choose where your body should finish after the combination.\n  Step 2: Choose your response if the opponent fires back immediately.\n  Step 3: Define the smother or control position you can reach safely.\n  Step 4: Choose the action that resets you for the next pressure sequence.\n  Intent: Own the space after your combination as well as during it.\n  Focus: Watch when the opponent begins their return fire.\n  Reset: Close the return, then rebuild before attacking again.\n  Anchor: Finish safe before restarting.\n  Purpose: SPP post-combination control for a pressure fighter.\n  Progress: Finish every rehearsed combination with the same smother-or-reset decision.",
+            "duration_min": [
+              10,
+              10
+            ],
+            "session_index": 0,
+            "scheduled_day_hint": "Wednesday",
+            "execution_order": 2
+          },
+          {
+            "session_index": 0,
+            "category": "support_insert",
+            "role_key": "self_review",
+            "scheduled_day_hint": "Saturday",
+            "athlete_facing_label": "Self-Review Cues",
+            "display_text": "Review the last clean technical work. Write three cues only: one entry, one defensive reset, one composure cue.",
+            "duration_min": [
+              8,
+              12
+            ],
+            "support_insert_category": "tactical",
+            "support_insert_cost_category": "zero_cost",
+            "countdown_offset": 21,
+            "countdown_label": "D-21",
+            "scheduled_countdown_label": "D-21",
+            "governance": {
+              "authority": "gap_fill_support_insert",
+              "meaningful_stress": false
+            },
+            "execution_order": 2
+          },
+          {
+            "category": "support_insert",
+            "role_key": "fight_visualization",
+            "athlete_facing_label": "Fight Visualisation",
+            "support_insert_category": "mental",
+            "support_insert_cost_category": "zero_cost",
+            "countdown_offset": 19,
+            "countdown_label": "D-19",
+            "scheduled_countdown_label": "D-19",
+            "preferred_exercise_names": [
+              "Tactical Picture"
+            ],
+            "governance": {
+              "authority": "fight_visualization_library",
+              "selected_drill_locked": true,
+              "render_selected_drill_exactly": true,
+              "meaningful_stress": false
+            },
+            "display_text": "Why: Rehearse taking space and finishing exchanges in position rather than chasing.\n- Tactical Picture: 12 minutes, optional mental rehearsal. No physical load.\n  Step 1: Visualise them giving ground.\n  Step 2: See yourself taking space without following them blindly.\n  Step 3: Cut their preferred exit, enter behind your trained setup and finish the exchange balanced.\n  Step 4: Run it again with them changing direction and adjust instead of chasing.\n  Cue: Take the space, do not chase it.",
+            "duration_min": [
+              12,
+              12
+            ],
+            "scheduled_day_hint": "Monday",
+            "session_index": 0,
+            "execution_order": 1
+          },
+          {
+            "category": "support_insert",
+            "role_key": "fight_visualization",
+            "athlete_facing_label": "Fight Visualisation",
+            "support_insert_category": "mental",
+            "support_insert_cost_category": "zero_cost",
+            "countdown_offset": 17,
+            "countdown_label": "D-17",
+            "scheduled_countdown_label": "D-17",
+            "preferred_exercise_names": [
+              "Read → React"
+            ],
+            "governance": {
+              "authority": "fight_visualization_library",
+              "selected_drill_locked": true,
+              "render_selected_drill_exactly": true,
+              "meaningful_stress": false
+            },
+            "display_text": "Why: Recognise how the opponent reacts to pressure before committing to the next attack.\n- Read → React: 12 minutes, optional mental rehearsal. No physical load.\n  Step 1: Picture the opponent retreating straight, covering high or planting to counter.\n  Step 2: Recognise the reaction before choosing your response.\n  Step 3: Use only responses already trained in camp.\n  Step 4: Finish each exchange balanced and reset your pressure.\n  Cue: Read before you chase.",
+            "duration_min": [
+              12,
+              12
+            ],
+            "scheduled_day_hint": "Wednesday",
+            "session_index": 0,
+            "execution_order": 1
+          },
+          {
+            "category": "support_insert",
+            "role_key": "fight_visualization",
+            "athlete_facing_label": "Fight Visualisation",
+            "support_insert_category": "mental",
+            "support_insert_cost_category": "zero_cost",
+            "countdown_offset": 15,
+            "countdown_label": "D-15",
+            "scheduled_countdown_label": "D-15",
+            "preferred_exercise_names": [
+              "Pressure → Reset"
+            ],
+            "governance": {
+              "authority": "fight_visualization_library",
+              "selected_drill_locked": true,
+              "render_selected_drill_exactly": true,
+              "meaningful_stress": false
+            },
+            "display_text": "Why: Rehearse restarting pressure from position after being caught or escaped.\n- Pressure → Reset: 12 minutes, optional mental rehearsal. No physical load.\n  Step 1: Picture getting caught while entering.\n  Step 2: Do not rush back in. Exhale, rebuild your stance and restart your pressure from position.\n  Step 3: Then picture the opponent escaping your trap.\n  Step 4: Reset the angle instead of chasing.\n  Cue: Reset the angle, not the pace.",
+            "duration_min": [
+              12,
+              12
+            ],
+            "scheduled_day_hint": "Friday",
+            "session_index": 0,
+            "execution_order": 1
+          }
+        ]
+      },
+      {
+        "week_index": 6,
+        "phase": "TAPER",
+        "calendar_days": [
+          {
+            "weekday": "saturday",
+            "d_day": 14,
+            "is_fight_day": false,
+            "is_after_fight_day": false
+          },
+          {
+            "weekday": "sunday",
+            "d_day": 13,
+            "is_fight_day": false,
+            "is_after_fight_day": false
+          },
+          {
+            "weekday": "monday",
+            "d_day": 12,
+            "is_fight_day": false,
+            "is_after_fight_day": false
+          },
+          {
+            "weekday": "tuesday",
+            "d_day": 11,
+            "is_fight_day": false,
+            "is_after_fight_day": false
+          },
+          {
+            "weekday": "wednesday",
+            "d_day": 10,
+            "is_fight_day": false,
+            "is_after_fight_day": false
+          },
+          {
+            "weekday": "thursday",
+            "d_day": 9,
+            "is_fight_day": false,
+            "is_after_fight_day": false
+          },
+          {
+            "weekday": "friday",
+            "d_day": 8,
+            "is_fight_day": false,
+            "is_after_fight_day": false
+          },
+          {
+            "weekday": "saturday",
+            "d_day": 7,
+            "is_fight_day": false,
+            "is_after_fight_day": false
+          }
+        ],
+        "session_roles": [
+          {
+            "category": "sparring",
+            "role_key": "hard_sparring_day",
+            "preferred_pool": "declared_hard_sparring_days",
+            "governance": {
+              "authority": "declared_schedule_lock"
+            },
+            "scheduled_day_hint": "Saturday",
+            "hard_sparring_status": "convert_to_technical_suggested",
+            "hard_sparring_class": "managed_hard",
+            "hard_sparring_reason_codes": [
+              "fight_week_taper",
+              "high_week_pressure",
+              "two_hard_days",
+              "final_week_sparring_cap",
+              "d14_hard_sparring_ban"
+            ],
+            "scheduled_d_day": 14,
+            "countdown_offset": 14,
+            "countdown_label": "D-14",
+            "scheduled_countdown_label": "D-14",
+            "athlete_facing_label": "Hard sparring",
+            "execution_order": 1
+          },
+          {
+            "category": "support_insert",
+            "role_key": "fight_visualization",
+            "athlete_facing_label": "Fight Visualisation",
+            "support_insert_category": "mental",
+            "support_insert_cost_category": "zero_cost",
+            "countdown_offset": 12,
+            "countdown_label": "D-12",
+            "scheduled_countdown_label": "D-12",
+            "preferred_exercise_names": [
+              "Tactical Picture"
+            ],
+            "governance": {
+              "authority": "finished_late_fight_tail",
+              "selected_drill_locked": true,
+              "render_selected_drill_exactly": true,
+              "meaningful_stress": false
+            },
+            "display_text": "Why: Rehearse taking space and finishing exchanges in position rather than chasing.\n- Tactical Picture: 12 minutes, optional mental rehearsal. No physical load.\n  Step 1: Visualise them giving ground.\n  Step 2: See yourself taking space without following them blindly.\n  Step 3: Cut their preferred exit, enter behind your trained setup and finish the exchange balanced.\n  Step 4: Run it again with them changing direction and adjust instead of chasing.\n  Cue: Take the space, do not chase it.",
+            "duration_min": [
+              12,
+              12
+            ],
+            "scheduled_day_hint": "Monday",
+            "session_index": 2,
+            "selected_exercise_assignments": [],
+            "execution_order": 1
+          },
+          {
+            "session_index": 3,
+            "category": "sparring",
+            "role_key": "hard_sparring_day",
+            "preferred_pool": "declared_hard_sparring_days",
+            "governance": {
+              "authority": "finished_late_fight_tail"
+            },
+            "scheduled_day_hint": "tuesday",
+            "scheduled_countdown_label": "D-11",
+            "countdown_label": "D-11",
+            "countdown_offset": 11,
+            "coach_owned": true,
+            "downgraded": true,
+            "downgraded_to_role_key": "technical_touch_day",
+            "athlete_facing_label": "Technical-only combat",
+            "display_text": "Technical-only contact today — no hard sparring and no extra S&C. Keep freshness priority.",
+            "selected_exercise_assignments": [],
+            "execution_order": 2
+          },
+          {
+            "session_index": 4,
+            "category": "support_insert",
+            "role_key": "tactical_watch",
+            "scheduled_day_hint": "tuesday",
+            "athlete_facing_label": "Tactical Focus",
+            "display_text": "Why: Confirm controlled opening pressure without turning fight-night energy into a reckless start.\n- First-Round Pressure Script: 8 minutes, tactical review only. No physical load.\n  Step 1: Choose the opening pressure action you already trust.\n  Step 2: Choose the first ring cut you want to establish.\n  Step 3: Choose the first familiar combination you will show.\n  Step 4: Write one reset cue that prevents chasing.\n  Intent: Take space calmly before increasing the exchange rate.\n  Focus: Use only the pressure actions already rehearsed in camp.\n  Reset: If you rush, rebuild the ring cut before throwing again.\n  Anchor: Close calmly.\n  Purpose: Fight-week opening script for a pressure fighter.\n  Progress: Rehearse the script once at low intensity and keep it unchanged.",
+            "duration_min": [
+              8,
+              8
+            ],
+            "support_insert_category": "tactical",
+            "support_insert_cost_category": "zero_cost",
+            "countdown_offset": 11,
+            "countdown_label": "D-11",
+            "scheduled_countdown_label": "D-11",
+            "governance": {
+              "authority": "finished_late_fight_tail",
+              "meaningful_stress": false,
+              "selected_drill_locked": true,
+              "render_selected_drill_exactly": true
+            },
+            "preferred_exercise_names": [
+              "First-Round Pressure Script"
+            ],
+            "selected_exercise_assignments": [],
+            "execution_order": 1
+          },
+          {
+            "category": "conditioning",
+            "role_key": "light_fight_pace_touch_day",
+            "preferred_pool": "conditioning_slots",
+            "governance": {
+              "authority": "finished_late_fight_tail"
+            },
+            "preferred_system": "aerobic",
+            "scheduled_countdown_label": "D-10",
+            "countdown_label": "D-10",
+            "countdown_offset": 10,
+            "scheduled_day_hint": "wednesday",
+            "session_index": 5,
+            "selected_exercise_assignments": [
+              {
+                "name": "Tempo Shadowboxing",
+                "slot_id": "taper_late_tempo_shadowboxing",
+                "slot_group": "conditioning_slots",
+                "effective_prescription": "20-30min continuous",
+                "source_phase": "TAPER"
+              }
+            ],
+            "athlete_facing_label": "Rhythm flush",
+            "execution_order": 1
+          },
+          {
+            "category": "technical",
+            "role_key": "light_combat_day",
+            "preferred_pool": "declared_support_work_days",
+            "scheduled_day_hint": "thursday",
+            "coach_owned": true,
+            "governance": {
+              "authority": "finished_late_fight_tail"
+            },
+            "session_index": 6,
+            "scheduled_countdown_label": "D-9",
+            "countdown_label": "D-9",
+            "countdown_offset": 9,
+            "athlete_facing_label": "Light Combat / Technical",
+            "display_text": "Your declared light-combat / technical session. Keep it as scheduled.",
+            "selected_exercise_assignments": [],
+            "execution_order": 2
+          },
+          {
+            "category": "support_insert",
+            "role_key": "fight_visualization",
+            "athlete_facing_label": "Fight Visualisation",
+            "support_insert_category": "mental",
+            "support_insert_cost_category": "zero_cost",
+            "countdown_offset": 9,
+            "countdown_label": "D-9",
+            "scheduled_countdown_label": "D-9",
+            "preferred_exercise_names": [
+              "Read → React"
+            ],
+            "governance": {
+              "authority": "finished_late_fight_tail",
+              "selected_drill_locked": true,
+              "render_selected_drill_exactly": true,
+              "meaningful_stress": false
+            },
+            "display_text": "Why: Recognise how the opponent reacts to pressure before committing to the next attack.\n- Read → React: 12 minutes, optional mental rehearsal. No physical load.\n  Step 1: Picture the opponent retreating straight, covering high or planting to counter.\n  Step 2: Recognise the reaction before choosing your response.\n  Step 3: Use only responses already trained in camp.\n  Step 4: Finish each exchange balanced and reset your pressure.\n  Cue: Read before you chase.",
+            "duration_min": [
+              12,
+              12
+            ],
+            "scheduled_day_hint": "Thursday",
+            "session_index": 7,
+            "selected_exercise_assignments": [],
+            "execution_order": 1
+          },
+          {
+            "category": "technical",
+            "role_key": "light_combat_day",
+            "preferred_pool": "declared_support_work_days",
+            "scheduled_day_hint": "friday",
+            "coach_owned": true,
+            "governance": {
+              "authority": "finished_late_fight_tail"
+            },
+            "session_index": 8,
+            "scheduled_countdown_label": "D-8",
+            "countdown_label": "D-8",
+            "countdown_offset": 8,
+            "athlete_facing_label": "Light Combat / Technical",
+            "display_text": "Your declared light-combat / technical session. Keep it as scheduled.",
+            "selected_exercise_assignments": [],
+            "execution_order": 2
+          },
+          {
+            "category": "support_insert",
+            "role_key": "fight_visualization",
+            "athlete_facing_label": "Fight Visualisation",
+            "support_insert_category": "mental",
+            "support_insert_cost_category": "zero_cost",
+            "countdown_offset": 8,
+            "countdown_label": "D-8",
+            "scheduled_countdown_label": "D-8",
+            "preferred_exercise_names": [
+              "Pressure → Reset"
+            ],
+            "governance": {
+              "authority": "finished_late_fight_tail",
+              "selected_drill_locked": true,
+              "render_selected_drill_exactly": true,
+              "meaningful_stress": false
+            },
+            "display_text": "Why: Rehearse restarting pressure from position after being caught or escaped.\n- Pressure → Reset: 12 minutes, optional mental rehearsal. No physical load.\n  Step 1: Picture getting caught while entering.\n  Step 2: Do not rush back in. Exhale, rebuild your stance and restart your pressure from position.\n  Step 3: Then picture the opponent escaping your trap.\n  Step 4: Reset the angle instead of chasing.\n  Cue: Reset the angle, not the pace.",
+            "duration_min": [
+              12,
+              12
+            ],
+            "scheduled_day_hint": "Friday",
+            "session_index": 9,
+            "selected_exercise_assignments": [],
+            "execution_order": 1
+          },
+          {
+            "session_index": 10,
+            "category": "sparring",
+            "role_key": "hard_sparring_day",
+            "preferred_pool": "declared_hard_sparring_days",
+            "governance": {
+              "authority": "finished_late_fight_tail"
+            },
+            "scheduled_day_hint": "saturday",
+            "scheduled_countdown_label": "D-7",
+            "countdown_label": "D-7",
+            "countdown_offset": 7,
+            "coach_owned": true,
+            "downgraded": true,
+            "downgraded_to_role_key": "technical_touch_day",
+            "athlete_facing_label": "Technical-only combat",
+            "display_text": "Technical-only contact today — no hard sparring and no extra S&C. Keep freshness priority.",
+            "selected_exercise_assignments": [],
+            "execution_order": 3
+          },
+          {
+            "session_index": 11,
+            "category": "support_insert",
+            "role_key": "fight_visualization",
+            "scheduled_day_hint": "saturday",
+            "athlete_facing_label": "Fight Visualisation",
+            "display_text": "Why: Rehearse taking space and finishing exchanges in position rather than chasing.\n- Tactical Picture: 12 minutes, mental rehearsal only. No physical load.\n  Step 1: Visualise them giving ground.\n  Step 2: See yourself taking space without following them blindly.\n  Step 3: Cut their preferred exit, enter behind your trained setup and finish the exchange balanced.\n  Step 4: Run it again with them changing direction and adjust instead of chasing.\n  Cue: Take the space, do not chase it.",
+            "duration_min": [
+              12,
+              12
+            ],
+            "support_insert_category": "mental",
+            "support_insert_cost_category": "zero_cost",
+            "countdown_offset": 7,
+            "countdown_label": "D-7",
+            "scheduled_countdown_label": "D-7",
+            "governance": {
+              "authority": "finished_late_fight_tail",
+              "meaningful_stress": false,
+              "selected_drill_locked": true,
+              "render_selected_drill_exactly": true
+            },
+            "preferred_exercise_names": [
+              "Tactical Picture"
+            ],
+            "selected_exercise_assignments": [],
+            "execution_order": 1
+          },
+          {
+            "session_index": 12,
+            "category": "support_insert",
+            "role_key": "tactical_watch",
+            "scheduled_day_hint": "saturday",
+            "athlete_facing_label": "Tactical Focus",
+            "display_text": "Why: Reduce your pressure plan to one familiar instruction that keeps aggression organised.\n- Final Pressure Cue: 6 minutes, tactical review only. No physical load.\n  Step 1: Review one successful pressure sequence from camp.\n  Step 2: Choose the behaviour that made the pressure work.\n  Step 3: Turn it into one cue of no more than six words.\n  Intent: Carry controlled forward pressure into the fight.\n  Focus: Keep the cue tied to positioning, not emotion.\n  Reset: Return to the same cue whenever the pace becomes messy.\n  Anchor: Position before volume.\n  Purpose: Final taper compression for a pressure fighter.\n  Progress: Use the same cue in the final light rehearsal and do not add another.",
+            "duration_min": [
+              6,
+              6
+            ],
+            "support_insert_category": "tactical",
+            "support_insert_cost_category": "zero_cost",
+            "countdown_offset": 7,
+            "countdown_label": "D-7",
+            "scheduled_countdown_label": "D-7",
+            "governance": {
+              "authority": "finished_late_fight_tail",
+              "meaningful_stress": false,
+              "selected_drill_locked": true,
+              "render_selected_drill_exactly": true
+            },
+            "preferred_exercise_names": [
+              "Final Pressure Cue"
+            ],
+            "selected_exercise_assignments": [],
+            "execution_order": 2
+          }
+        ]
+      },
+      {
+        "week_index": 7,
+        "phase": "TAPER",
+        "calendar_days": [
+          {
+            "weekday": "sunday",
+            "d_day": 6,
+            "is_fight_day": false,
+            "is_after_fight_day": false
+          },
+          {
+            "weekday": "monday",
+            "d_day": 5,
+            "is_fight_day": false,
+            "is_after_fight_day": false
+          },
+          {
+            "weekday": "tuesday",
+            "d_day": 4,
+            "is_fight_day": false,
+            "is_after_fight_day": false
+          },
+          {
+            "weekday": "wednesday",
+            "d_day": 3,
+            "is_fight_day": false,
+            "is_after_fight_day": false
+          },
+          {
+            "weekday": "thursday",
+            "d_day": 2,
+            "is_fight_day": false,
+            "is_after_fight_day": false
+          },
+          {
+            "weekday": "friday",
+            "d_day": 1,
+            "is_fight_day": false,
+            "is_after_fight_day": false
+          },
+          {
+            "weekday": "saturday",
+            "d_day": 0,
+            "is_fight_day": true,
+            "is_after_fight_day": false
+          }
+        ],
+        "session_roles": [
+          {
+            "category": "conditioning",
+            "role_key": "alactic_sharpness_day",
+            "preferred_pool": "declared_support_work_days_or_conditioning_slots",
+            "governance": {
+              "authority": "finished_late_fight_tail"
+            },
+            "preferred_system": "alactic",
+            "scheduled_countdown_label": "D-5",
+            "countdown_label": "D-5",
+            "countdown_offset": 5,
+            "scheduled_day_hint": "monday",
+            "session_index": 13,
+            "selected_exercise_assignments": [
+              {
+                "name": "Explosive First-Step Cue",
+                "slot_id": "taper_late_explosive_first_step_cue",
+                "slot_group": "conditioning_slots",
+                "effective_prescription": "2x5s with 120s rest",
+                "source_phase": "TAPER"
+              },
+              {
+                "name": "Pocket Frame-Burst Touch",
+                "slot_id": "taper_late_pocket_frame_burst_touch",
+                "slot_group": "conditioning_slots",
+                "effective_prescription": "1x5s with 120s rest",
+                "source_phase": "TAPER"
+              },
+              {
+                "name": "Pull-Counter-Reset",
+                "slot_id": "taper_late_pull_counter_reset",
+                "slot_group": "conditioning_slots",
+                "effective_prescription": "1x5s with 120s rest",
+                "source_phase": "TAPER"
+              }
+            ],
+            "athlete_facing_label": "Freshness primer",
+            "execution_order": 2
+          },
+          {
+            "session_index": 14,
+            "category": "support_insert",
+            "role_key": "fight_visualization",
+            "scheduled_day_hint": "monday",
+            "athlete_facing_label": "Fight Visualisation",
+            "display_text": "Why: Recognise how the opponent reacts to pressure before committing to the next attack.\n- Read → React: 10 minutes, mental rehearsal only. No physical load.\n  Step 1: Picture the opponent retreating straight, covering high or planting to counter.\n  Step 2: Recognise the reaction before choosing your response.\n  Step 3: Use only responses already trained in camp.\n  Step 4: Finish each exchange balanced and reset your pressure.\n  Cue: Read before you chase.",
+            "duration_min": [
+              10,
+              10
+            ],
+            "support_insert_category": "mental",
+            "support_insert_cost_category": "zero_cost",
+            "countdown_offset": 5,
+            "countdown_label": "D-5",
+            "scheduled_countdown_label": "D-5",
+            "governance": {
+              "authority": "finished_late_fight_tail",
+              "meaningful_stress": false,
+              "selected_drill_locked": true,
+              "render_selected_drill_exactly": true
+            },
+            "preferred_exercise_names": [
+              "Read → React"
+            ],
+            "selected_exercise_assignments": [],
+            "execution_order": 1
+          },
+          {
+            "session_index": 15,
+            "category": "sparring",
+            "role_key": "hard_sparring_day",
+            "preferred_pool": "declared_hard_sparring_days",
+            "governance": {
+              "authority": "finished_late_fight_tail"
+            },
+            "scheduled_day_hint": "tuesday",
+            "scheduled_countdown_label": "D-4",
+            "countdown_label": "D-4",
+            "countdown_offset": 4,
+            "coach_owned": true,
+            "downgraded": true,
+            "downgraded_to_role_key": "technical_touch_day",
+            "athlete_facing_label": "Technical-only combat",
+            "display_text": "Technical-only contact today — no hard sparring and no extra S&C. Keep freshness priority.",
+            "selected_exercise_assignments": [],
+            "execution_order": 2
+          },
+          {
+            "session_index": 16,
+            "category": "support_insert",
+            "role_key": "neural_visualization",
+            "scheduled_day_hint": "tuesday",
+            "athlete_facing_label": "Neural Visualization",
+            "display_text": "Quiet visualization only. Rehearse first exchange, best entry, exit/reset, and final-round composure.",
+            "duration_min": [
+              5,
+              8
+            ],
+            "support_insert_category": "mental",
+            "support_insert_cost_category": "zero_cost",
+            "countdown_offset": 4,
+            "countdown_label": "D-4",
+            "scheduled_countdown_label": "D-4",
+            "governance": {
+              "authority": "finished_late_fight_tail",
+              "meaningful_stress": false
+            },
+            "selected_exercise_assignments": [],
+            "execution_order": 1
+          },
+          {
+            "category": "recovery",
+            "role_key": "fight_week_freshness_day",
+            "preferred_pool": "rehab_slots_or_recovery_only",
+            "governance": {
+              "authority": "finished_late_fight_tail"
+            },
+            "scheduled_countdown_label": "D-3",
+            "countdown_label": "D-3",
+            "countdown_offset": 3,
+            "scheduled_day_hint": "wednesday",
+            "session_index": 17,
+            "selected_exercise_assignments": [],
+            "athlete_facing_label": "Fight-week freshness",
+            "execution_order": 2
+          },
+          {
+            "session_index": 18,
+            "category": "support_insert",
+            "role_key": "fight_visualization",
+            "scheduled_day_hint": "wednesday",
+            "athlete_facing_label": "Fight Visualisation",
+            "display_text": "Why: Rehearse restarting pressure from position after being caught or escaped.\n- Pressure → Reset: 8 minutes, mental rehearsal only. No physical load.\n  Step 1: Picture getting caught while entering.\n  Step 2: Do not rush back in. Exhale, rebuild your stance and restart your pressure from position.\n  Step 3: Then picture the opponent escaping your trap.\n  Step 4: Reset the angle instead of chasing.\n  Cue: Reset the angle, not the pace.",
+            "duration_min": [
+              8,
+              8
+            ],
+            "support_insert_category": "mental",
+            "support_insert_cost_category": "zero_cost",
+            "countdown_offset": 3,
+            "countdown_label": "D-3",
+            "scheduled_countdown_label": "D-3",
+            "governance": {
+              "authority": "finished_late_fight_tail",
+              "meaningful_stress": false,
+              "selected_drill_locked": true,
+              "render_selected_drill_exactly": true
+            },
+            "preferred_exercise_names": [
+              "Pressure → Reset"
+            ],
+            "selected_exercise_assignments": [],
+            "execution_order": 1
+          },
+          {
+            "category": "technical",
+            "role_key": "light_combat_day",
+            "preferred_pool": "declared_support_work_days",
+            "scheduled_day_hint": "thursday",
+            "coach_owned": true,
+            "governance": {
+              "authority": "finished_late_fight_tail"
+            },
+            "session_index": 19,
+            "scheduled_countdown_label": "D-2",
+            "countdown_label": "D-2",
+            "countdown_offset": 2,
+            "athlete_facing_label": "Light Combat / Technical",
+            "display_text": "Your declared light-combat / technical session. Keep it as scheduled.",
+            "selected_exercise_assignments": [],
+            "execution_order": 1
+          },
+          {
+            "category": "strength",
+            "role_key": "neural_primer_day",
+            "preferred_pool": "strength_slots",
+            "governance": {
+              "authority": "finished_late_fight_tail"
+            },
+            "scheduled_countdown_label": "D-1",
+            "countdown_label": "D-1",
+            "countdown_offset": 1,
+            "scheduled_day_hint": "friday",
+            "session_index": 20,
+            "scheduled_d_day": 1,
+            "athlete_facing_label": "Neural speed touch",
+            "selected_exercise_assignments": [
+              {
+                "name": "Standing Stance-Set Cue",
+                "slot_id": "taper_late_standing_stance_set_cue",
+                "slot_group": "conditioning_slots",
+                "effective_prescription": "1x3s with 120s rest",
+                "source_phase": "TAPER"
+              }
+            ],
+            "execution_order": 2
+          },
+          {
+            "category": "technical",
+            "role_key": "light_combat_day",
+            "preferred_pool": "declared_support_work_days",
+            "scheduled_day_hint": "friday",
+            "coach_owned": true,
+            "governance": {
+              "authority": "finished_late_fight_tail"
+            },
+            "session_index": 21,
+            "scheduled_countdown_label": "D-1",
+            "countdown_label": "D-1",
+            "countdown_offset": 1,
+            "athlete_facing_label": "Light Combat / Technical",
+            "display_text": "Your declared light-combat / technical session. Keep it as scheduled.",
+            "selected_exercise_assignments": [],
+            "execution_order": 3
+          },
+          {
+            "session_index": 22,
+            "category": "support_insert",
+            "role_key": "fight_visualization",
+            "scheduled_day_hint": "friday",
+            "athlete_facing_label": "Fight Visualisation",
+            "display_text": "Why: Make tomorrow familiar without adding new information.\n- Familiar & Ready: 5 minutes, mental rehearsal only. No physical load.\n  Step 1: Picture arriving, wrapping up and warming up.\n  Step 2: Hear the room and your corner.\n  Step 3: Feel yourself getting sharper as the warm-up progresses.\n  Step 4: See the opening bell and settle into your normal stance.\n  Step 5: Use the same cue you have trusted in camp, then leave it there.\n  Cue: Same routine, same stance.",
+            "duration_min": [
+              5,
+              5
+            ],
+            "support_insert_category": "mental",
+            "support_insert_cost_category": "zero_cost",
+            "countdown_offset": 1,
+            "countdown_label": "D-1",
+            "scheduled_countdown_label": "D-1",
+            "governance": {
+              "authority": "finished_late_fight_tail",
+              "meaningful_stress": false,
+              "selected_drill_locked": true,
+              "render_selected_drill_exactly": true
+            },
+            "preferred_exercise_names": [
+              "Familiar & Ready"
+            ],
+            "selected_exercise_assignments": [],
+            "execution_order": 1
+          },
+          {
+            "category": "fight_day",
+            "role_key": "fight_day_protocol",
+            "preferred_pool": "none",
+            "scheduled_day_hint": "saturday",
+            "coach_owned": true,
+            "display_text": "Fight day protocol: follow coach warm-up and fight protocol; no additional S&C.",
+            "athlete_facing_label": "Fight day protocol: follow coach warm-up and fight protocol; no additional S&C.",
+            "governance": {
+              "authority": "fight_day_protocol_lock"
+            },
+            "session_index": 7,
+            "execution_order": 1
+          },
+          {
+            "category": "support_insert",
+            "role_key": "tactical_watch",
+            "athlete_facing_label": "Tactical Focus",
+            "support_insert_category": "tactical",
+            "support_insert_cost_category": "zero_cost",
+            "countdown_offset": 5,
+            "countdown_label": "D-5",
+            "scheduled_countdown_label": "D-5",
+            "governance": {
+              "authority": "camp_week_support_insert",
+              "selected_drill_locked": true,
+              "render_selected_drill_exactly": true,
+              "meaningful_stress": false
+            },
+            "preferred_exercise_names": [
+              "Familiar Round-One Rehearsal"
+            ],
+            "display_text": "Why: Confirm a familiar opening sequence without adding new decisions during taper.\n- Familiar Round-One Rehearsal: 7 minutes, tactical review only. No physical load.\n  Step 1: Choose the first familiar action you will show.\n  Step 2: Choose the response you already trust if the opponent disrupts it.\n  Step 3: Choose the position you want after the opening exchange.\n  Step 4: Say the sequence once in plain language.\n  Intent: Start with what has already worked in camp.\n  Focus: Use only confirmed actions and responses.\n  Reset: If the opening changes, return to the safest familiar action.\n  Anchor: Familiar first.\n  Purpose: General fight-week opening rehearsal.\n  Progress: Rehearse the sequence once at low intensity, then stop analysing it.",
+            "duration_min": [
+              7,
+              7
+            ],
+            "session_index": 0,
+            "scheduled_day_hint": "Monday",
+            "execution_order": 3
+          }
+        ]
+      }
+    ],
+    "fight_day_override": {
+      "active": true,
+      "fight_weekday": "saturday",
+      "fight_day_text": "Fight day protocol: follow coach warm-up and fight protocol; no additional S&C.",
+      "applied_to_week_index": 7
+    },
+    "late_fight_tail_handoff": {
+      "active": true,
+      "normal_planner_through_d": 14,
+      "late_fight_planner_from_d": 13,
+      "source": "finished_existing_late_fight_path"
+    },
+    "strength_composition_context": {
+      "pressure": 0,
+      "fatigue": "low",
+      "fatigue_pressure": 0,
+      "cut_severity_bucket": "none",
+      "cut_pressure": 0,
+      "injury_restricted": false,
+      "injury_pressure": 0,
+      "active_stressors": 0,
+      "generation_days_until_fight": 52,
+      "weight_cut_pct": null,
+      "active_weight_cut": false
+    },
+    "post_morph_intent_validation": {
+      "checked": 6,
+      "satisfied": 1,
+      "unsatisfied": 5,
+      "unsatisfied_roles": [
+        {
+          "role_key": "primary_strength_day",
+          "intent": "meaningful_strength",
+          "scheduled_d_day": 37,
+          "reason_code": "effective_stimulus_lost"
+        },
+        {
+          "role_key": "neural_plus_strength_day",
+          "intent": "meaningful_strength",
+          "scheduled_d_day": 33,
+          "reason_code": "effective_stimulus_lost"
+        },
+        {
+          "role_key": "neural_plus_strength_day",
+          "intent": "meaningful_strength",
+          "scheduled_d_day": 23,
+          "reason_code": "effective_stimulus_lost"
+        },
+        {
+          "role_key": "neural_plus_strength_day",
+          "intent": "meaningful_strength",
+          "scheduled_d_day": 16,
+          "reason_code": "effective_stimulus_lost"
+        },
+        {
+          "role_key": "neural_primer_day",
+          "intent": "meaningful_strength",
+          "scheduled_d_day": 1,
+          "reason_code": "effective_stimulus_lost"
+        }
+      ]
+    },
+    "physical_session_frequency_audit": {
+      "schema_version": "physical_session_frequency_audit.v1",
+      "warnings": [
+        {
+          "reason_code": "physical_session_frequency_unmet",
+          "week_index": 1,
+          "phase": "GPP",
+          "cadence_window": [
+            51,
+            45
+          ],
+          "requested_physical_target": 6,
+          "viable_declared_days": [
+            51,
+            50,
+            49,
+            47,
+            46,
+            45
+          ],
+          "actual_physical_sessions": 5,
+          "unexplained_empty_days": [
+            47
+          ]
+        },
+        {
+          "reason_code": "physical_session_frequency_unmet",
+          "week_index": 2,
+          "phase": "GPP",
+          "cadence_window": [
+            43,
+            37
+          ],
+          "requested_physical_target": 6,
+          "viable_declared_days": [
+            43,
+            42,
+            40,
+            39,
+            38,
+            37
+          ],
+          "actual_physical_sessions": 5,
+          "unexplained_empty_days": [
+            40
+          ]
+        },
+        {
+          "reason_code": "physical_session_frequency_unmet",
+          "week_index": 4,
+          "phase": "SPP",
+          "cadence_window": [
+            28,
+            22
+          ],
+          "requested_physical_target": 6,
+          "viable_declared_days": [
+            28,
+            26,
+            25,
+            24,
+            23,
+            22
+          ],
+          "actual_physical_sessions": 5,
+          "unexplained_empty_days": [
+            26
+          ]
+        },
+        {
+          "reason_code": "physical_session_frequency_unmet",
+          "week_index": 5,
+          "phase": "SPP",
+          "cadence_window": [
+            21,
+            15
+          ],
+          "requested_physical_target": 6,
+          "viable_declared_days": [
+            21,
+            19,
+            18,
+            17,
+            16,
+            15
+          ],
+          "actual_physical_sessions": 5,
+          "unexplained_empty_days": [
+            19
+          ]
+        },
+        {
+          "reason_code": "physical_session_frequency_unmet",
+          "week_index": 6,
+          "phase": "TAPER",
+          "cadence_window": [
+            14,
+            8
+          ],
+          "requested_physical_target": 6,
+          "viable_declared_days": [
+            14,
+            12,
+            11,
+            10,
+            9,
+            8
+          ],
+          "actual_physical_sessions": 5,
+          "unexplained_empty_days": [
+            12
+          ]
+        }
+      ]
+    },
+    "calendar_integrity": {
+      "schema_version": "calendar_integrity.v1",
+      "checked_roles": 88,
+      "relocated_roles": 5,
+      "suppressed_roles": 0,
+      "deprioritized_kept": 5,
+      "unresolved_forbidden": 0,
+      "late_fight_tail_replanned": false,
+      "actions": [
+        {
+          "role_key": "alactic_coordination_day",
+          "action": "relocated",
+          "from_day": "Monday",
+          "from_d_day": 47,
+          "to_day": "Wednesday",
+          "to_d_day": 45,
+          "reason_code": "between_hard_contacts_low_load_physical",
+          "destination_directive": "allow"
+        },
+        {
+          "role_key": "alactic_coordination_day",
+          "action": "relocated",
+          "from_day": "Monday",
+          "from_d_day": 40,
+          "to_day": "Wednesday",
+          "to_d_day": 38,
+          "reason_code": "between_hard_contacts_low_load_physical",
+          "destination_directive": "allow"
+        },
+        {
+          "role_key": "fight_pace_repeatability_day",
+          "action": "relocated",
+          "from_day": "Friday",
+          "from_d_day": 29,
+          "to_day": "Thursday",
+          "to_d_day": 30,
+          "reason_code": "pre_hard_contact_managed_stress",
+          "destination_directive": "allow"
+        },
+        {
+          "role_key": "fight_pace_repeatability_day",
+          "action": "relocated",
+          "from_day": "Friday",
+          "from_d_day": 22,
+          "to_day": "Thursday",
+          "to_d_day": 23,
+          "reason_code": "pre_hard_contact_managed_stress",
+          "destination_directive": "allow"
+        },
+        {
+          "role_key": "primary_strength_day",
+          "action": "relocated",
+          "from_day": "Monday",
+          "from_d_day": 40,
+          "to_day": "Thursday",
+          "to_d_day": 37,
+          "reason_code": "between_hard_contacts_managed_strength",
+          "destination_directive": "allow"
+        }
+      ],
+      "violations": []
+    },
+    "realised_load_revalidation": {
+      "schema_version": "realised_load_revalidation.v3",
+      "rounds_run": 2,
+      "max_rounds": 2,
+      "actions": [
+        {
+          "round": 1,
+          "role_key": "neural_plus_strength_day",
+          "action": "relocated",
+          "from_day": "Monday",
+          "from_d_day": 26,
+          "to_day": "Thursday",
+          "to_d_day": 23,
+          "reason_code": "between_hard_contacts_managed_strength",
+          "destination_directive": "allow"
+        },
+        {
+          "round": 1,
+          "role_key": "neural_plus_strength_day",
+          "action": "relocated",
+          "from_day": "Monday",
+          "from_d_day": 19,
+          "to_day": "Thursday",
+          "to_d_day": 16,
+          "reason_code": "between_hard_contacts_managed_strength",
+          "destination_directive": "allow"
+        }
+      ],
+      "membership_reconciliations": [],
+      "residual_conflicts": [
+        {
+          "role_key": "primary_strength_day",
+          "d_day": 44,
+          "reason_code": "adjacent_day_repeat_regional_mechanical_load",
+          "directive": "deprioritize"
+        },
+        {
+          "role_key": "primary_strength_day",
+          "d_day": 37,
+          "reason_code": "adjacent_day_systemic_then_mechanical",
+          "directive": "deprioritize"
+        },
+        {
+          "role_key": "neural_plus_strength_day",
+          "d_day": 33,
+          "reason_code": "between_hard_contacts_managed_strength",
+          "directive": "deprioritize"
+        }
+      ]
+    }
+  }
+}

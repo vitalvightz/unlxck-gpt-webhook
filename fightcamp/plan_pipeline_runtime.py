@@ -410,6 +410,8 @@ def build_runtime_context(
         fatigue=plan_input.fatigue.lower(),
         sparring_readiness=dict(plan_input.sparring_readiness),
         training_frequency=plan_input.training_frequency,
+        primary_goal=plan_input.primary_goal,
+        primary_weak_area=plan_input.primary_weak_area,
         training_workload_context=dict(plan_input.training_workload_context),
         days_available=len(plan_input.training_days),
         training_days=plan_input.training_days,

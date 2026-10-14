@@ -180,6 +180,8 @@ class TrainingContext:
     recent_exercises: list[str]
     phase_weeks: dict
     days_until_fight: int | None
+    primary_goal: str = field(default="", kw_only=True)
+    primary_weak_area: str = field(default="", kw_only=True)
     # Existing intake/profile stance identity. Optional for backward-compatible
     # callers; technical footwork falls back to bilateral/neutral cueing when it
     # is unavailable.

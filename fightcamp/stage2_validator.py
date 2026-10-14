@@ -448,6 +448,8 @@ def _is_session_heading(line: str) -> bool:
     normalized = _normalize_render_line(line)
     if not normalized:
         return False
+    if re.match(r"^(?:#{1,6}\s*)?d-\d+\s*\(\w+\)\s*[—–-]\s*\S", normalized):
+        return True
     if normalized in _SESSION_TITLE_HINTS:
         return True
     if _WEEKDAY_HEADING.match(normalized):
@@ -1194,7 +1196,9 @@ def _week_completeness_warnings(planning_brief: dict, plan_text: str) -> list[di
         week_index = int(week.get("week_index", 0) or 0)
         if week_index <= 0:
             continue
-        expected_roles = list(week.get("session_roles") or [])
+        expected_roles = [role for role in week.get("session_roles") or []
+                          if role.get("render_mandatory") is not False
+                          and (not week.get("calendar_days") or role_d_day(week, role) is not None)]
         expected_role_days = [
             {
                 "role_key": role.get("role_key"),
@@ -1959,6 +1963,16 @@ def _calendar_spine_warnings(planning_brief: dict, final_plan_text: str) -> list
                 continue
 
             calendar_day = allowed_days.get(heading_day)
+            # Progression weeks can contain eight dates and repeat a weekday.
+            # Resolve the explicit appointment date against the full calendar,
+            # rather than silently retaining the last occurrence of that day.
+            heading_offset = re.search(r"\bd-(\d+)\b", heading_line)
+            if heading_offset:
+                matched_day = next((day for day in week.get("calendar_days") or []
+                    if day.get("d_day") == int(heading_offset[1])
+                    and _calendar_weekday_key(day.get("weekday")) == heading_day), None)
+                if matched_day is not None:
+                    calendar_day = matched_day
             if not calendar_day:
                 continue
 
@@ -3818,10 +3832,16 @@ def _goal_witness_dose_matches(witness: dict, dose: str) -> bool:
             re.I,
         )
         if not timed:
-            return False
+            # The canonical conditioning owner emits work first, then rest,
+            # then rounds ("5s work, 60s rest x 8 rounds").
+            timed = re.search(r"\b(?P<duration>\d+(?:\.\d+)?)\s*(?P<unit>seconds?|secs?|s|minutes?|mins?|m)\s+work\b.*?\bx\s*(?P<rounds>\d+)\s+rounds?\b", dose, re.I)
+            if not timed:
+                return False
         rounds = int(timed["rounds"])
         seconds = float(timed["duration"]) * (60 if timed["unit"].lower().startswith("m") else 1)
         rest = re.search(r"rest\s*[:=]?\s*(\d+)(?:\s*[-–]\s*\d+)?\s*(?:sec(?:onds?)?|s)\b", dose, re.I)
+        if not rest:
+            rest = re.search(r"\b(\d+)\s*(?:sec(?:onds?)?|s)\s+rest\b", dose, re.I)
         # If the witness declares rest_sec, the rendered rest must meet it.
         rest_ok = witness.get("rest_sec") is None or bool(rest and int(rest[1]) >= witness["rest_sec"])
         return bool(rounds >= witness["rounds"] and seconds >= witness["work_sec"] and rest_ok)
@@ -3993,8 +4013,11 @@ def validate_stage2_output(*, planning_brief: dict, final_plan_text: str) -> dic
     countdown_blocks = _countdown_blocks(final_plan_text)
 
     errors: list[dict[str, Any]] = validate_goal_preservation(planning_brief)
+    goal_contract_valid = not errors
+    from .programme_fidelity import programme_fidelity_findings
+    errors.extend(programme_fidelity_findings(planning_brief, final_plan_text))
     errors.extend(_total_session_budget_errors(planning_brief))
-    if not errors:
+    if goal_contract_valid:
         errors.extend(_goal_preservation_render_errors(planning_brief, final_plan_text))
     errors.extend(_priority_microdose_render_errors(planning_brief, final_plan_text))
     errors.extend(_underfilled_conditioning_errors(planning_brief))

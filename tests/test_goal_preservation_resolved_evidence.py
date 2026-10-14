@@ -201,7 +201,7 @@ def test_loaded_contrast_power_keeps_loaded_authority_without_new_persisted_kind
     assert resolved["effective_loaded"] is True
     assert resolved["effective_max_sets"] == 2
     assert resolved["effective_max_reps"] == 3
-    assert resolved["effective_prescription"] == "2 x 3 @ RPE 6-7 max"
+    assert resolved["effective_prescription"] == "2 x 3 @ RPE 6 max"
 
 
 def test_pure_ballistic_power_remains_non_loaded():

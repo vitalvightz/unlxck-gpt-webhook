@@ -34,6 +34,8 @@ from typing import Any
 
 from .normalization import clean_list
 from .strength import _classify_prescription_type, _prescription_templates
+from .calendar_context import role_d_day
+from .render_authority import authoritative_render_for_role
 
 # Clause in a phase dose that introduces contrast/explosive pairing — a secondary
 # stressor the crowded-week governance forbids on a single-job anchor day.
@@ -288,6 +290,13 @@ def _session_body(
     is_primary_strength: bool,
 ) -> list[str]:
     category = str(role.get("category") or "").strip().lower()
+    authoritative = authoritative_render_for_role(role)
+    if authoritative:
+        return authoritative["body_lines"]
+    if "selected_exercise_assignments" in role and category in {"strength", "conditioning"}:
+        # A partially priced/empty closed session is a planner defect, not
+        # permission to substitute exercises from a phase pool or template.
+        return []
     if category == "support_insert":
         # Gap-fill/camp filler roles carry their exact athlete-facing content;
         # render it verbatim instead of guessing a body from a category template.
@@ -330,12 +339,13 @@ def _phase_grouped_drills(blocks: Any, phase: str) -> dict[str, list[dict[str, A
     return normalized
 
 
-def _render_week(week: dict[str, Any], blocks: Any) -> list[str]:
+def _render_week(week: dict[str, Any], blocks: Any, athlete_snapshot: dict | None = None) -> list[str]:
     week_index = int(week.get("week_index", 0) or 0)
     if week_index <= 0:
         return []
     phase = str(week.get("phase") or "").strip().upper()
     session_roles = [role for role in (week.get("session_roles") or []) if isinstance(role, dict)]
+    session_roles = [r for r in session_roles if role_d_day(week, r) is not None and r.get("render_mandatory") is not False]
     if not session_roles:
         return []
 
@@ -343,7 +353,8 @@ def _render_week(week: dict[str, Any], blocks: Any) -> list[str]:
     strength_exercises = _phase_strength_exercises(blocks, phase)
     grouped_drills = _phase_grouped_drills(blocks, phase)
 
-    countdown = _countdown_label(d_to_day)
+    offsets = [d["d_day"] for d in week.get("calendar_days") or [] if isinstance(d.get("d_day"), int)]
+    countdown = f"D-{max(offsets)} → D-{min(offsets)}" if offsets else _countdown_label(d_to_day)
     header = f"## Week {week_index} — {phase}" + (f" ({countdown})" if countdown else "")
 
     role_weekday = _resolve_role_weekdays(session_roles)
@@ -353,7 +364,7 @@ def _render_week(week: dict[str, Any], blocks: Any) -> list[str]:
     def _sort_key(item: tuple[int, dict[str, Any]]) -> tuple[int, int, int]:
         idx, role = item
         weekday = role_weekday.get(idx, "")
-        d_day = d_to_day.get(weekday)
+        d_day = role_d_day(week, role)
         execution_order = role.get("execution_order")
         within_day = execution_order if isinstance(execution_order, int) else 0
         if isinstance(d_day, int):
@@ -365,7 +376,12 @@ def _render_week(week: dict[str, Any], blocks: Any) -> list[str]:
     lines: list[str] = [header, ""]
     for idx, role in sorted(enumerate(session_roles), key=_sort_key):
         weekday = role_weekday.get(idx, "")
-        heading, _d_day = _session_heading(role, weekday, d_to_day)
+        d_day = role_d_day(week, role)
+        weekday = next((str(d["weekday"]).lower() for d in week.get("calendar_days") or []
+                        if d.get("d_day") == d_day), weekday)
+        authority = authoritative_render_for_role(role, week=week, d_day=d_day, athlete_snapshot=athlete_snapshot)
+        label = (authority or {}).get("athlete_facing_label") or role.get("athlete_facing_label") or "Session"
+        heading = f"### D-{d_day} ({weekday.title()}) — {label}"
         is_primary_strength = False
         if str(role.get("category") or "").lower() == "strength":
             is_primary_strength = _is_primary_strength_role(role) or not seen_primary_strength
@@ -378,6 +394,8 @@ def _render_week(week: dict[str, Any], blocks: Any) -> list[str]:
             grouped_drills,
             is_primary_strength=is_primary_strength,
         )
+        if authority:
+            body = authority["body_lines"]
         lines.append(heading)
         lines.extend(body)
         lines.append("")
@@ -401,12 +419,12 @@ def render_weekly_schedule_section(*, planning_brief: dict[str, Any], blocks: An
     if not isinstance(weekly_role_map, dict):
         return ""
     weeks = [week for week in (weekly_role_map.get("weeks") or []) if isinstance(week, dict)]
-    if len(weeks) <= 1:
+    if not weeks:
         return ""
 
     body: list[str] = []
     for week in weeks:
-        body.extend(_render_week(week, blocks))
+        body.extend(_render_week(week, blocks, planning_brief.get("athlete_snapshot")))
     rendered = [line for line in body]
     if not any(line.startswith("## Week ") for line in rendered):
         return ""

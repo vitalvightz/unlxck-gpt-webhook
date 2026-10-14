@@ -189,7 +189,13 @@ def test_both_saved_lead_constraints_retain_real_normal_power_and_explain_taper(
     # must satisfy its actual fourteen-day windows, not add a GPP appointment
     # merely to satisfy a phase-label expectation.
     assert power
-    assert all(e["sets"] >= 1 and e["reps"] >= 1 and e["effective_prescription"] for e in power)
+    # Power may be authored as repetitions or genuine full-rest timed bursts;
+    # metres/seconds must not be relabelled as reps to satisfy the witness.
+    assert all(e["effective_prescription"] and (
+        (e.get("sets", 0) >= 1 and e.get("volume_amount", e.get("reps", 0)) >= 1
+         and e.get("volume_unit", "reps") in {"reps", "sec"})
+        or (e.get("rounds", 0) >= 2 and 0 < e.get("work_sec", 0) <= 10 and e.get("rest_sec", 0) >= 60)
+    ) for e in power)
     assert any("energy_system_training" in e["intents"] for e in evidence)
     power_goal = next(e for e in brief["goal_preservation"] if e["goal"] == "power")
     assert power_goal["satisfied"], power_goal

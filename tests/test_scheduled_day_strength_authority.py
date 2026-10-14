@@ -185,7 +185,7 @@ def test_production_like_d16_relocated_primary_strength_reaches_stage2_with_auth
     assert role["effective_strength_envelope"]["scheduled_d_day"] == 16
     assert role["effective_strength_envelope"]["loaded_allowed"] is True
     assert role["effective_strength_prescriptions"][0]["effective_prescription"] == (
-        "3 x 3 @ RPE 6-7 max"
+        "3 x 3 @ RPE 6 max"
     )
 
     packet = build_stage2_finalizer_packet(
@@ -213,7 +213,7 @@ def test_final_scheduled_d16_authority_is_generation_route_independent(generatio
     effective = role["effective_strength_prescriptions"][0]
     assert role["scheduled_d_day"] == 16
     assert role["strength_dose_cap"]["max_reps"] == 3
-    assert effective["effective_prescription"] == "3 x 3 @ RPE 6-7 max"
+    assert effective["effective_prescription"] == "3 x 3 @ RPE 6 max"
 
 
 @pytest.mark.parametrize(
@@ -273,7 +273,7 @@ def test_d16_effective_resolution_is_exercise_family_agnostic(
     effective = role["effective_strength_prescriptions"][0]
     assert effective["name"] == exercise
     assert effective["dose_role_kind"] == "anchor"
-    assert effective["effective_prescription"] == "3 x 3 @ RPE 6-7 max"
+    assert effective["effective_prescription"] == "3 x 3 @ RPE 6 max"
     assert effective["effective_loaded"] is True
 
 

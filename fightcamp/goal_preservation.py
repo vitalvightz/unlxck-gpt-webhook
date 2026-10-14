@@ -17,7 +17,9 @@ from .combat_load_policy import StressLevel
 from .conditioning import _conditioning_structured_profile
 from .camp_week_fillers import HANDOFF_UNPLACED_REASON_CODE
 from .goal_repair_effective_contact_policy import effective_goal_repair_compression_state
-from .physical_session_frequency import cadence_windows, physical_appointments, appointment_budget_exceeded
+from .physical_session_frequency import appointment_budget_exceeded
+from .late_fight_phase_eligibility import scheduled_phase_for_role
+from .planner_context import planner_athlete_model_context
 from .prescription_resolver import (
     _role_kind,
     _slot_quality_class_effective,
@@ -672,7 +674,7 @@ def _other_stimuli(role: dict, pools: dict, phase: str, brief: dict) -> list[dic
                 dose_source[field] = metadata[field]
         # The member's own effective dose wins over the bank dose: composition
         # may partition high-load rounds, and the persisted pool is compacted.
-        for field in ("work_sec", "rest_sec", "rounds"):
+        for field in ("work_sec", "rest_sec", "rounds", "rpe"):
             if member.get(field) is not None:
                 dose_source[field] = member[field]
         if member.get("effective_rounds") is not None:
@@ -695,8 +697,14 @@ def _other_stimuli(role: dict, pools: dict, phase: str, brief: dict) -> list[dic
         if system in {"aerobic", "glycolytic"} and (minutes >= 6 or work * rounds >= 180):
             intents.append("energy_system_training")
         profile = _conditioning_structured_profile(dose_source, system=system)
-        if system in {"alactic", "atp_pcr", "atp-pcr"} and work > 0 and rounds >= 2 and profile["alactic_structure"]:
+        if system in {"alactic", "atp_pcr", "atp-pcr"} and work > 0 and rounds >= 2 and profile["speed_development"]:
             intents.append("speed_quality")
+            # Maximal propulsive bursts can maintain ballistic power regardless
+            # of the module that selected them. Require real short work/full
+            # rest, multiple efforts, high effort and explosive mechanics;
+            # a technical cue or a braking drill cannot earn this intent.
+            if profile["rpe"] is not None and profile["rpe"] >= 8 and {"explosive", "mech_ballistic"}.issubset(_tags(selected)):
+                intents.append("ballistic_power")
         if _tags(selected) & _TECHNICAL_TAGS:
             intents.append("technical_practice")
         if "footwork" in _tags(selected) or system == "technical_footwork":
@@ -707,11 +715,15 @@ def _other_stimuli(role: dict, pools: dict, phase: str, brief: dict) -> list[dic
                             "dose_authority": "structured_conditioning_dose",
                             "work_sec": work, "rounds": rounds, "total_minutes": minutes,
                             "rest_sec": _number(dose_source.get("rest_sec")),
+                            # Full-rest speed work need not create high session
+                            # exertion. Easy recovery work still cannot develop
+                            # speed, and power keeps its separate maximal-effort gate.
+                            "development_capable": "speed_quality" not in intents or bool(profile["rpe"] is not None and profile["rpe"] >= 6),
                             "effective_prescription": member.get("effective_prescription")
                             or selected.get("prescription") or ""})
     stimuli += _embedded_trunk_stimuli(role, pools, phase)
     # Locked technical / mobility inserts have an actual deterministic duration.
-    duration = _number(role.get("duration_min"))
+    duration = _number(role.get("prescribed_duration_min") or role.get("duration_min"))
     support = role.get("support_insert_category") or role.get("support_kind")
     if duration > 0:
         intents = []
@@ -783,8 +795,9 @@ def collect_goal_evidence(brief: dict) -> list[dict]:
                 continue
             if (role.get("governance") or {}).get("hard_suppression_reasons"):
                 continue
+            phase = scheduled_phase_for_role(role, athlete_model=_athlete(brief), spec_phase=week.get("phase")) or week.get("phase")
             stimuli = _strength_stimuli(role, strength.get(id(role), []), brief)
-            stimuli += _other_stimuli(role, pools, week.get("phase"), brief)
+            stimuli += _other_stimuli(role, pools, phase, brief)
             stimuli += _microdose_stimuli(role)
             for stimulus in stimuli:
                 # D-1 protocol can support readiness; never training adaptations.
@@ -792,10 +805,10 @@ def collect_goal_evidence(brief: dict) -> list[dict]:
                     stimulus["intents"] = [v for v in stimulus["intents"] if v in {"recovery_support", "mobility_dose"}]
                 if not stimulus["intents"]:
                     continue
-                evidence.append({"week_index": week.get("week_index"), "phase": week.get("phase"),
+                evidence.append({"week_index": week.get("week_index"), "phase": phase,
                                  "session_index": role.get("session_index", index),
                                  "role_key": role.get("role_key"), "d_day": day,
-                                 "development_quality": day > 13 and week.get("phase") != "TAPER" and stimulus.get("development_capable", True),
+                                 "development_quality": day > 13 and phase != "TAPER" and stimulus.get("development_capable", True),
                                  **stimulus})
     # These selected goals are serviced by deterministic daily support, not S&C
     # slots. Do not count these records toward conditioning or strength.
@@ -1111,7 +1124,8 @@ def _restore_goal_roles(brief: dict, entry: dict) -> list[dict]:
     Intentional compression and finished tails are immutable. No new exercise,
     role family, dose, extra session capacity or contact rule is invented here.
     """
-    from .late_camp_role_morph import apply_late_camp_role_morph
+    from .late_camp_role_morph import _apply_late_camp_role_morph_once
+    from .pre_hard_contact_strength import apply_pre_hard_contact_strength_exposure_cap
     from .prescription_resolver import apply_effective_strength_prescriptions
     from .session_composition import (
         apply_realised_load_calendar_revalidation,
@@ -1137,7 +1151,13 @@ def _restore_goal_roles(brief: dict, entry: dict) -> list[dict]:
         candidates = week.get("goal_repair_candidates") or []
         for candidate in candidates:
             identity = (candidate.get("role_key"), candidate.get("strength_session_index"))
-            if not _role_matches_goal(candidate, entry["goal"]):
+            # A closed conditioning role can carry genuine ballistic power.
+            # Judge its live effective evidence, not its module/category label.
+            live_intent = any(e.get("week_index") == week.get("week_index")
+                              and e.get("role_key") == candidate.get("role_key")
+                              and entry["required_intent"] in e["intents"]
+                              for e in collect_goal_evidence(brief))
+            if not _role_matches_goal(candidate, entry["goal"]) and not live_intent:
                 continue
             live = next((r for r in week.get("session_roles") or []
                          if (r.get("role_key"), r.get("strength_session_index")) == identity
@@ -1191,14 +1211,6 @@ def _restore_goal_roles(brief: dict, entry: dict) -> list[dict]:
             view = (CalendarLegalityView(events=tuple(build_events(role_map, exclude_role=live)),
                     scope=week_scope(week, ordinal)) if live is not None
                     else weekly_role_map_legality(role_map, week, ordinal))
-            appointments = physical_appointments([
-                {**r, "countdown_offset": role_d_day(week, r), "_source_role": r} for r in roles
-                if role_d_day(week, r) is not None
-            ])
-            cadence = [{offset for offset, _ in days} for days in cadence_windows([
-                (day["d_day"], str(day.get("weekday") or ""))
-                for day in week.get("calendar_days") or [] if isinstance(day.get("d_day"), int)
-            ])]
             for day in week.get("calendar_days") or []:
                 d_day = day.get("d_day")
                 if (not isinstance(d_day, int) or d_day <= 13 or str(day.get("weekday")).lower() not in declared
@@ -1209,13 +1221,8 @@ def _restore_goal_roles(brief: dict, entry: dict) -> list[dict]:
                 # A standalone double-day block consumes another appointment.
                 # Relocation retains its slot; embedded microdose repair below
                 # can still preserve a goal when the standalone budget is full.
-                window_days = next((days for days in cadence if d_day in days), set())
-                occupied = [r for r in appointments if r["countdown_offset"] in window_days
-                            and r["_source_role"] is not live]
-                if frequency and len(occupied) >= frequency:
-                    audit.append({"week_index": week.get("week_index"), "d_day": d_day,
-                                  "result": "session_cap", "reason_codes": ["calendar_capacity"]})
-                    continue
+                # The completed trial below faces the whole-calendar session
+                # budget. A progression week must not reset its cadence anchor.
                 decision = view.decision_for_role(repair_source, d_day)
                 swap = None
                 if live is not None and decision is not None and not decision.allowed:
@@ -1246,21 +1253,30 @@ def _restore_goal_roles(brief: dict, entry: dict) -> list[dict]:
                         if (r.get("role_key"), r.get("strength_session_index")) == swap_identity)
                     source_day = role_d_day(week, live)
                     source_weekday = next(d["weekday"] for d in week["calendar_days"] if d.get("d_day") == source_day)
-                    trial_swap.update(scheduled_day_hint=str(source_weekday).title(), scheduled_countdown_label=f"D-{source_day}")
+                    trial_swap.update(scheduled_day_hint=str(source_weekday).title(), scheduled_countdown_label=f"D-{source_day}",
+                                      scheduled_d_day=source_day, countdown_offset=source_day, countdown_label=f"D-{source_day}")
                 restored = deepcopy(repair_source)
                 restored.update(scheduled_day_hint=str(day["weekday"]).title(), scheduled_countdown_label=f"D-{d_day}",
+                                scheduled_d_day=d_day, countdown_offset=d_day, countdown_label=f"D-{d_day}",
                                 session_index=max((r.get("session_index", 0) for r in roles), default=0) + 1)
                 restored["goal_preservation_repair"] = {"goal": entry["goal"], "authority": VERSION,
                     "mode": "maintenance" if entry["state"] == "maintain" else "build"}
                 trial_week["session_roles"].append(restored)
+                changed_roles = {id(restored)} | ({id(trial_swap)} if swap is not None else set())
                 compose_normal_strength_assignments(
                     weekly_role_map=trial["weekly_role_map"],
                     candidate_pools=trial.get("candidate_pools") or {},
+                    only_roles=changed_roles, allow_relocation=False,
                 )
-                apply_late_camp_role_morph(trial["weekly_role_map"], _athlete(trial))
+                # The finished calendar already passed the placement governor.
+                # Reprice the trial without reopening unrelated graded searches;
+                # the realised-load governor below judges its changed sessions.
+                _apply_late_camp_role_morph_once(trial["weekly_role_map"])
+                apply_pre_hard_contact_strength_exposure_cap(trial["weekly_role_map"])
                 compose_normal_conditioning_assignments(
                     weekly_role_map=trial["weekly_role_map"],
                     candidate_pools=trial.get("candidate_pools") or {},
+                    only_roles=changed_roles,
                 )
                 apply_effective_strength_prescriptions(weekly_role_map=trial["weekly_role_map"],
                                                       candidate_pools=trial.get("candidate_pools") or {}, athlete_model=_athlete(trial))
@@ -1268,6 +1284,11 @@ def _restore_goal_roles(brief: dict, entry: dict) -> list[dict]:
                 # pipeline, after membership and effective doses are knowable.
                 apply_realised_load_calendar_revalidation(
                     trial["weekly_role_map"],
+                    only_roles={id(role)
+                        for nearby_week in trial["weekly_role_map"]["weeks"]
+                        for role in nearby_week.get("session_roles") or []
+                        if role_d_day(nearby_week, role) is not None
+                        and abs(role_d_day(nearby_week, role) - d_day) <= 7},
                     redose_callback=lambda role_map: apply_effective_strength_prescriptions(
                         weekly_role_map=role_map, candidate_pools=trial.get("candidate_pools") or {},
                         athlete_model=_athlete(trial)),
@@ -1279,10 +1300,7 @@ def _restore_goal_roles(brief: dict, entry: dict) -> list[dict]:
                 )
                 if not any(role is restored for role in trial_week["session_roles"]):
                     continue
-                if frequency and (appointment_budget_exceeded(trial["weekly_role_map"], int(frequency)) or any(len(physical_appointments([
-                    {**r, "countdown_offset": role_d_day(trial_week, r)}
-                    for r in trial_week["session_roles"] if role_d_day(trial_week, r) in days
-                ])) > frequency for days in cadence)):
+                if frequency and appointment_budget_exceeded(trial["weekly_role_map"], int(frequency)):
                     audit.append({"week_index": week.get("week_index"), "result": "session_cap",
                                   "reason_codes": ["calendar_capacity"]})
                     continue
@@ -1309,13 +1327,12 @@ def _restore_goal_roles(brief: dict, entry: dict) -> list[dict]:
                     continue
                 _, missing_before = _coverage(entry, brief, collect_goal_evidence(brief))
                 _, missing_after = _coverage(entry, trial, collect_goal_evidence(trial))
-                # A repair may not pay for this goal by erasing another stimulus.
-                retained = {(e.get("name"), tuple(e["intents"]), e.get("development_quality")) for e in collect_goal_evidence(trial)}
-                if len(missing_after) >= len(missing_before) or any(
-                    (e.get("name"), tuple(e["intents"]), e.get("development_quality")) not in retained for e in collect_goal_evidence(brief)
-                ):
+                # Protect actual selected-goal coverage below, rather than every
+                # incidental exercise identity. Day-specific recomposition and
+                # maintenance reductions can legitimately change those members.
+                if len(missing_after) >= len(missing_before):
                     audit.append({"week_index": week.get("week_index"), "d_day": final_day,
-                                  "result": "trial_rejected", "reason_codes": ["no_coverage_gain_or_existing_stimulus_changed"]})
+                                  "result": "trial_rejected", "reason_codes": ["no_coverage_gain"]})
                     continue
                 if any(set(tuple(sorted(w.items())) for w in _coverage(goal, trial, collect_goal_evidence(trial))[1])
                        - set(tuple(sorted(w.items())) for w in _coverage(goal, brief, collect_goal_evidence(brief))[1])
@@ -1486,6 +1503,16 @@ def _constraint_key(reason: dict):
 
 
 def reconcile_goal_preservation(brief: dict) -> dict:
+    # Repair runs after the Stage 1 builder's context has closed. Its existing
+    # composition/phase owners still need the same athlete priorities and state.
+    token = planner_athlete_model_context.set(_athlete(brief) if isinstance(brief, dict) else None)
+    try:
+        return _reconcile_goal_preservation(brief)
+    finally:
+        planner_athlete_model_context.reset(token)
+
+
+def _reconcile_goal_preservation(brief: dict) -> dict:
     """Repair, then decide; unresolved obligations remain blocking obligations."""
     entries = classify_goal_preservation(_athlete(brief), brief.get("priority_focus"))
     for entry in entries:

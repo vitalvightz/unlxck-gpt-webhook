@@ -1657,6 +1657,8 @@ def _classify_prescription_type(exercise: dict) -> str:
     if "isometric" in tags or "isometric" in name or "iso hold" in name:
         return "isometric"
 
+    if "sled" in name and "speed" in name:
+        return "speed_sled"
     if tags & _CARRY_TAGS or _CARRY_NAME_PATTERN.search(name):
         return "carry"
 
@@ -1675,6 +1677,9 @@ def _classify_prescription_type(exercise: dict) -> str:
     if _LOADED_CYCLE_NAME_PATTERN.search(name):
         return "quality_cycle"
 
+    if method == "isometric" or re.search(r"\b(?:hold|holds|plank|isometric)\b", name):
+        return "support_isometric"
+
     # Jumps, hops and bounds are ballistic power work and must not inherit the
     # barbell %1RM strength template just because they use a loaded implement
     # (e.g. a trap-bar jump).
@@ -1691,9 +1696,7 @@ def _classify_prescription_type(exercise: dict) -> str:
     # hypertrophy-and-slow-eccentrics barbell one. Gated on the bank's
     # authoritative ``method: "power"``, NOT on tags: heavy strength lifts such
     # as "Cluster Set Trap Bar Deadlift" also carry ``mech_ballistic``.
-    if equipment & _LOADED_BAR_EQUIPMENT and (
-        method == "power" or _POWER_LIFT_NAME_PATTERN.search(name)
-    ):
+    if method == "power" or _POWER_LIFT_NAME_PATTERN.search(name):
         return "ballistic"
 
     if equipment.intersection({"barbell", "trap_bar"}):
@@ -1722,6 +1725,11 @@ def _prescription_templates(phase: str) -> dict[str, str]:
         "GPP": "3–5x4–6 reps (or 6–10 throws) at crisp intent; rest 60–90s.",
         "SPP": "4–6x2–5 reps at max speed; full rest 60–120s.",
         "TAPER": "3–5x2–4 reps/throws at max speed; full rest 60–120s.",
+    }
+    speed_sled = {
+        "GPP": "4 x 5s acceleration with a light sled; full rest 90s; stop if speed drops.",
+        "SPP": "6 x 5s acceleration with a light sled; full rest 90s; stop if speed drops.",
+        "TAPER": "2 x 3s familiar light-sled acceleration; full rest 90s; stop if speed drops.",
     }
     # A contrast pair keeps BOTH components. Written without a bare "NxM" token
     # so the countdown overlay in ``prescription_resolver`` preserves the pair
@@ -1789,11 +1797,13 @@ def _prescription_templates(phase: str) -> dict[str, str]:
         "ballistic": ballistic.get(phase, ballistic["GPP"]),
         "quality_cycle": quality_cycle.get(phase, quality_cycle["GPP"]),
         "carry": carry.get(phase, carry["GPP"]),
+        "speed_sled": speed_sled.get(phase, speed_sled["GPP"]),
         "max_isometric": (
             "3–5 efforts of 3–6s all-out against pins or an immovable load; "
             "2–3 min rest. Maximal intent, never dosed as reps."
         ),
         "isometric": "3–5 holds x 10–20s @ 7–9/10 effort; full rest between holds.",
+        "support_isometric": "2 x 20s hold @ RPE 6; rest 60s." if phase != "TAPER" else "1 x 10s hold @ RPE 5; rest 60s.",
         "core": "2-4 sets x 6-10 reps or 20-40s tempo (3-1-3), RPE 6-8.",
         "general": "2–3x6–10 @ RPE 6–7, keep reps crisp.",
     }

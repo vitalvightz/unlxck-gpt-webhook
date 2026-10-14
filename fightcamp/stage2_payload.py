@@ -2285,7 +2285,8 @@ def _build_planning_brief(
             athlete_model=athlete_model,
         )
 
-    enforce_total_session_budget(weekly_role_map, athlete_model)
+    _resolve_strength_doses(weekly_role_map)
+    enforce_total_session_budget(weekly_role_map, athlete_model, candidate_pools)
     _resolve_strength_doses(weekly_role_map)
     # Composition plus dose resolution is the first point at which a session's
     # real cross-day cost is knowable. Until here the calendar has only judged
@@ -2326,7 +2327,7 @@ def _build_planning_brief(
         recompose_conditioning_callback=_recompose_conditioning,
         recompose_strength_callback=_recompose_strength,
     )
-    enforce_total_session_budget(weekly_role_map, athlete_model)
+    enforce_total_session_budget(weekly_role_map, athlete_model, candidate_pools)
     _resolve_strength_doses(weekly_role_map)
     weekly_role_map = stamp_weekly_role_map_labels(weekly_role_map)
     return {

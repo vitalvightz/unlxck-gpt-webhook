@@ -706,6 +706,9 @@ def _conditioning_structured_profile(drill: dict, *, system: str | None = None) 
         and work_sec <= ALACTIC_MAX_WORK_SEC
         and rest_sec >= ALACTIC_MIN_REST_SEC
     )
+    # Timed work/rest metadata does not turn landing/braking into speed work.
+    # This bank entry explicitly ends at the landing without propulsion.
+    speed_development = alactic_structure and "no rebound" not in str(drill.get("name") or "").lower()
     freshness = _has_freshness_profile(
         lactate_load=lactate_load,
         impact_cost=impact_cost,
@@ -727,6 +730,7 @@ def _conditioning_structured_profile(drill: dict, *, system: str | None = None) 
         "multi_round": multi_round,
         "glycolytic_density": glycolytic_density,
         "alactic_structure": alactic_structure,
+        "speed_development": speed_development,
         "freshness": freshness,
         "high_impact": _high_level(impact_cost),
         "high_lactate": lactate_load == "high" or (system == "glycolytic" and glycolytic_density),
@@ -3421,8 +3425,13 @@ def generate_conditioning_block(flags):
                 base_score += 1.0 * min(num_format, 1)
 
                 energy_multiplier = energy_weights.get(system, 1.0)
+                if system == "alactic" and speed_goal_requested and "no rebound" in str(d.get("name") or "").lower():
+                    # Landing-only work cannot serve the speed goal.
+                    continue
                 system_score = round(energy_multiplier * 1.0, 2)
                 total_score = base_score + system_score
+                if system == "alactic" and str(flags.get("primary_goal") or "").lower() == "speed" and "speed" in tags and _cached_structured_profile(d, system)["speed_development"]:
+                    total_score += 3.0
                 heavy_bag_bonus = striking_heavy_bag_preference(
                     d, phase=phase, system=system, fatigue=fatigue,
                     days_until_fight=days_until_fight, equipment_access_set=equipment_access_set,
@@ -3681,6 +3690,8 @@ def generate_conditioning_block(flags):
                 weak_matches = len(matched_weak_tags)
                 goal_matches = len(matched_goal_tags)
                 top_system = preferred_order[0]
+                if system == "alactic" and speed_goal_requested and "no rebound" in str(d.get("name") or "").lower():
+                    continue
                 if system != top_system and not weak_matches and not goal_matches:
                     continue
 
@@ -3697,6 +3708,8 @@ def generate_conditioning_block(flags):
                     sport=primary_tech or flags.get("sport") or selection_format,
                 )
                 score += heavy_bag_bonus
+                if system == "alactic" and str(flags.get("primary_goal") or "").lower() == "speed" and "speed" in tags and _cached_structured_profile(d, system)["speed_development"]:
+                    score += 3.0
                 score += sport_specificity_bonus
                 if sport_specificity_bonus:
                     style_conditioning_diagnostics["entries_exact_sport_bonus_applied"] += 1
@@ -4149,6 +4162,9 @@ def generate_conditioning_block(flags):
 
         name = name.strip()
 
+        if system == "alactic" and speed_goal_requested and "no rebound" in str(drill.get("name") or "").lower():
+            return False
+
         if name in selected_drill_names:
             return False
 
@@ -4430,6 +4446,18 @@ def generate_conditioning_block(flags):
                 style_remaining -= 1
                 return drill, reasons
         if general_remaining > 0:
+            # Style quota is a blend target, not an eligibility restriction.
+            # Once it is spent, a better scored sport-specific primary dose
+            # must still compete for the same remaining system slot.
+            style_head = _next_unselected(item for st in sorted(style_counts, key=style_counts.get)
+                                          for item in style_drills_by_style.get(st, {}).get(system, [])
+                                          if _has_primary_conditioning_authority(item[0]))
+            base_head = _next_unselected(system_drills.get(system, []))
+            if system in {"alactic", "glycolytic"} and style_head and _target_hits(style_head) and (not base_head or style_head[1] > base_head[1]):
+                drill, reasons = pop_style_drill(system)
+                if drill:
+                    general_remaining -= 1
+                    return drill, reasons
             drill, reasons = pop_drill(system_drills, system)
             if drill:
                 general_remaining -= 1
