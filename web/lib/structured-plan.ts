@@ -706,6 +706,15 @@ export function isZeroLoadSupportSession(
  * Physical sessions and passive breathing/sleep support keep their own UI. */
 export function mentalSessionCategory(session: StructuredSession): "Visualise" | "Analyse" | "Reflect" | null {
   if (!isZeroLoadSupportSession(session)) return null;
+  // Older converter cards sometimes bundle physical exercises under a mental
+  // title. Keep that whole card in the normal layout so no movement is hidden.
+  const type = cleanText(session.session_type)?.toLowerCase();
+  if (type && PHYSICAL_SESSION_TYPES.has(type)) return null;
+  if (getBlocks(session).some(block => {
+    const blockType = cleanText(block.block_type);
+    return blockType && blockType !== "mindset" &&
+      !(blockType === "skill" && ZERO_LOAD_CONTENT_RE.test(cleanText(block.display_name) || ""));
+  })) return null;
   const identity = `${session.session_id ?? ""} ${session.title ?? ""}`;
   if (/fight[_ -]visuali[sz]|neural[_ -]visuali[sz]/i.test(identity)) return "Visualise";
   if (/tactical[_ -](?:watch|focus|cue[_ -]card)/i.test(identity)) return "Analyse";

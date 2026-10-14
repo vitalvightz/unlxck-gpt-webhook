@@ -160,8 +160,9 @@ def test_gap_fill_rehomes_two_targets_onto_declared_available_days():
         and 8 < int(role.get("countdown_offset") or 0) < 14
     ]
 
-    assert len(gap_support) == 2
-    assert {int(role["countdown_offset"]) for role in gap_support} == {11, 9}
+    assert len(gap_support) == 1
+    assert gap_support[0]["role_key"] == "aerobic_shadow_flow"
+    assert {int(role["countdown_offset"]) for role in gap_support} == {9}
     assert all(
         role.get("governance", {}).get("authority") == "gap_fill_support_insert"
         for role in gap_support

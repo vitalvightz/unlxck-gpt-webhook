@@ -106,7 +106,7 @@ def test_post_finalization_drift_is_still_rejected(production_replay, mutation):
     _, stage1, final, _ = production_replay
     text = final["final_plan_text"]
     changes = {
-        "weekday": lambda t: t.replace("D-40 (Monday)", "D-40 (Wednesday)"),
+        "weekday": lambda t: t.replace("D-42 (Saturday)", "D-42 (Wednesday)"),
         "missing": lambda t: re.sub(r"### D-42 .*?(?=\n### |\n## Week )", "", t, flags=re.S),
         "exercise": lambda t: t.replace("Max-Power Bag Burst", "Assault Bike Sprint"),
         "rest": lambda t: t.replace("5s work, 60s rest x 8 rounds", "5s work, 20s rest x 8 rounds"),

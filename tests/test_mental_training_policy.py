@@ -79,3 +79,18 @@ def test_empty_and_d0_only_gap_fill_cannot_restore_countdown_tasks():
     for days, sequence in [(0, []), (6, []), (None, [role(0, "fight_visualization")])]:
         kept = apply_gap_fill_inserts(sequence, {"sport": "boxing", "days_until_fight": days})
         assert not any(r.get("role_key") == "fight_visualization" for r in kept)
+
+
+def test_calendar_week_cap_spans_phase_rows():
+    from fightcamp.camp_week_fillers_impl import govern_weekly_mental_training
+    weeks = []
+    for day, weekday, phase in [(12, 'monday', 'SPP'), (10, 'wednesday', 'TAPER')]:
+        weeks.append({'phase': phase, 'calendar_days': [{'d_day': day, 'weekday': weekday}],
+                      'session_roles': [
+                          dict(role_key='primary_strength_day', category='strength', countdown_offset=day),
+                          role(day, 'fight_visualization', optional_fight_visualization=True),
+                      ]})
+    model = {'fight_date': '2026-12-05'}  # Both rows fall in the same Monday-based week.
+    govern_weekly_mental_training({'weeks': weeks}, model)
+    assert sum(r['role_key'] == 'fight_visualization' for w in weeks for r in w['session_roles']) == 1
+    assert sum(r['role_key'] == 'primary_strength_day' for w in weeks for r in w['session_roles']) == 2

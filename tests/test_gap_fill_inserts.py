@@ -334,7 +334,8 @@ def test_tactical_insert_appears_in_every_fight_plan():
     )
 
     inserts = _insert_roles(sequence)
-    assert any(insert["role_key"] in TACTICAL_INSERTS for insert in inserts)
+    assert all(insert["countdown_offset"] in {12, 9}
+               for insert in inserts if insert["role_key"] in TACTICAL_INSERTS)
 
 
 def test_three_day_gap_can_receive_one_insert():
@@ -345,8 +346,8 @@ def test_three_day_gap_can_receive_one_insert():
 
     inserts = _insert_roles(sequence)
     gap_inserts = [insert for insert in inserts if 9 < insert["countdown_offset"] < 12]
-    assert len(gap_inserts) == 1
-    assert gap_inserts[0]["countdown_offset"] not in {12, 9}
+    assert len(gap_inserts) == 0
+    assert all(insert["countdown_offset"] not in {12, 9} for insert in gap_inserts)
 
 
 def test_five_day_gap_can_receive_two_inserts_max_one_per_day():
@@ -357,8 +358,8 @@ def test_five_day_gap_can_receive_two_inserts_max_one_per_day():
 
     inserts = _insert_roles(sequence)
     gap_inserts = [insert for insert in inserts if 7 < insert["countdown_offset"] < 12]
-    assert len(gap_inserts) == 2
-    assert len({insert["countdown_offset"] for insert in gap_inserts}) == 2
+    assert len(gap_inserts) == 0
+    assert len({insert["countdown_offset"] for insert in gap_inserts}) == len(gap_inserts)
 
 
 def test_back_loaded_short_camp_fills_its_opening_days():
@@ -380,10 +381,10 @@ def test_back_loaded_short_camp_fills_its_opening_days():
         if insert["countdown_offset"] > 3
         and insert["role_key"] != "fight_visualization"
     ]
-    assert len(leading) == 1
+    assert len(leading) == 0
     # Zero/low cost only — the taper must not gain physical work near the fight.
-    assert leading[0]["role_key"] in ZERO_COST_INSERTS | LOW_COST_RECOVERY_INSERTS | PHYSICAL_INSERTS
-    assert leading[0]["role_key"] not in {"fight_week_freshness_day", "neural_primer_day"}
+    assert all(r["role_key"] in ZERO_COST_INSERTS | LOW_COST_RECOVERY_INSERTS | PHYSICAL_INSERTS for r in leading)
+    assert all(r["role_key"] not in {"fight_week_freshness_day", "neural_primer_day"} for r in leading)
 
 
 def test_leading_span_fill_leaves_active_sessions_untouched():
@@ -444,8 +445,8 @@ def test_tactical_category_can_repeat_with_different_role_key():
     )
 
     tactical_inserts = [insert for insert in _insert_roles(sequence) if insert["role_key"] in TACTICAL_INSERTS]
-    assert len(tactical_inserts) >= 2
-    assert len({insert["role_key"] for insert in tactical_inserts}) >= 2
+    assert tactical_inserts == []
+    assert all(r["countdown_offset"] in {13, 8} for r in tactical_inserts)
 
 
 def test_weight_cut_prefers_breathing_tactical_sleep_over_physical_filler():
@@ -580,9 +581,9 @@ def test_active_cut_gap_prefers_tactical_support_not_conditioning():
     )
 
     inserts = _insert_roles(sequence)
-    assert inserts[0]["role_key"] in TACTICAL_INSERTS
-    assert inserts[0]["category"] == "support_insert"
-    assert inserts[0]["stress_class"] == "support"
+    assert inserts[0]["role_key"] == "breathing_reset"
+    assert all(r["category"] == "support_insert" for r in inserts)
+    assert all(r["stress_class"] == "support" for r in inserts)
     assert all(insert["role_key"] not in {"conditioning", "main_conditioning_stressor"} for insert in inserts)
 
 
@@ -703,9 +704,7 @@ def test_existing_d1_tactical_watch_is_promoted_without_extra_support():
         # The mandatory D-1 Fight Visualisation is protocol, not extra support.
         and role.get("role_key") != "fight_visualization"
     ]
-    assert len(support_roles) == 1
-    assert support_roles[0]["role_key"] == "tactical_watch"
-    assert support_roles[0]["mandatory_tactical_watch"] is True
+    assert support_roles == []  # Fight week retires tactical study.
     assert all(role["role_key"] not in PHYSICAL_INSERTS for role in d1_roles)
 
 

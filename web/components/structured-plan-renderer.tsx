@@ -1030,7 +1030,12 @@ export function SessionCard({
         <details className="sp-section-details">
           <summary>Instructions · {title}</summary>
           <div className="sp-section-details-body">
-            {objective && !objectiveRepeatsTitle ? <p>{objective}</p> : null}
+            {objective && !objectiveRepeatsTitle ? (
+              <p className="sp-session-objective">
+                {blocks.length > 0 ? <span className="sp-session-why-label">Why</span> : null}
+                {objective}
+              </p>
+            ) : null}
             <MindsetAnchorCard anchor={sessionMindset} dedupeContext={objective} />
             <ExerciseSessionScope date={occurrenceDate ?? day?.date} session={session}>
               {blocks.map((block, index) => (

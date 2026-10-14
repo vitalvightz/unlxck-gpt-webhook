@@ -34,3 +34,34 @@ test("physical coaching and passive resets keep their normal presentation", () =
   assert.equal(mentalSessionCategory({ title: "Strength", session_type: "strength_power",
     blocks: [{ display_name: "Neural Visualisation" }] }), null);
 });
+
+
+test("compact mental card keeps completion callback and selected instruction", async () => {
+  await import("./test-dom");
+  const { act } = await import("react");
+  const { createRoot } = await import("react-dom/client");
+  const host = document.createElement("div");
+  document.body.appendChild(host);
+  const root = createRoot(host);
+  let logged = 0;
+  try {
+    await act(async () => root.render(<SessionCard session={{ session_id: "existing-review", title: "Self-Review Cues",
+      objective: "Keep the coach's existing instruction.", session_type: "skill" }}
+      completionInfo={{ display: { state: "pending", tone: "neutral", label: "" }, onLog: () => logged++ }} />));
+    const button = Array.from(host.querySelectorAll("button")).find(button => button.textContent === "Log this session");
+    assert.ok(button);
+    await act(async () => button.click());
+    assert.equal(logged, 1);
+    assert.match(host.textContent ?? "", /Keep the coach's existing instruction/);
+  } finally {
+    await act(async () => root.unmount());
+    host.remove();
+  }
+});
+
+
+test("a legacy mental title cannot hide bundled physical exercises", () => {
+  assert.equal(mentalSessionCategory({ title: "Fight Visualisation", session_type: "skill",
+    blocks: [{ block_type: "mindset", display_name: "Quiet rehearsal" },
+      { block_type: "preparation", display_name: "Hip CARs" }] }), null);
+});

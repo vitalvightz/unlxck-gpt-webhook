@@ -10,7 +10,7 @@ for (const width of [375, 1280]) {
     const errors: string[] = [];
     page.on("pageerror", error => errors.push(error.message));
     await page.setViewportSize({ width, height: 850 });
-    await page.setContent(`<html lang="en" data-theme="dark"><head><title>Mental training QA</title></head><body><main style="max-width:800px;margin:auto;padding:16px"><h1>Training</h1>${markup}</main></body></html>`);
+    await page.setContent(`<html lang="en" data-theme="dark"><head><title>Mental training QA</title></head><body><main style="max-width:800px;margin:auto;padding:16px"><h1>Training</h1><h2>Today</h2>${markup}</main></body></html>`);
     await page.addStyleTag({ content: css });
     await expect(page).toHaveTitle("Mental training QA");
     await expect(page.getByText("Hard sparring", { exact: true })).toBeVisible();

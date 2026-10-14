@@ -29,7 +29,7 @@ from .gap_fill_inserts import (
     filler_target_capabilities,
     select_gap_fill_insert,
 )
-from .mental_training_policy import govern_mental_roles, mental_training_policy
+from .mental_training_policy import calendar_week_bucket, govern_mental_roles, mental_training_policy
 from .normalization import WEEKDAY_ORDER, clean_list
 from .tactical_watch_library import (
     build_watch_display_text,
@@ -1177,11 +1177,19 @@ def govern_weekly_mental_training(
             offsets[id(role)] = d_day
             roles.append(role)
 
+    # Phase/progression weeks can split a Monday-based calendar week. The
+    # frequency cap belongs to the athlete's calendar, not those internal rows.
+    from datetime import date
+    try:
+        fight_weekday = date.fromisoformat(str(athlete_model.get("fight_date"))[:10]).weekday()
+    except ValueError:
+        fight_day = (weekday_by_offset.get(0) or (None, ""))[1].lower()
+        fight_weekday = {name: i for i, name in enumerate(
+            ("monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday")
+        )}.get(fight_day)
+
     def bucket_of(role: dict[str, Any], offset: int) -> Any:
-        if id(role) in owner:
-            return owner[id(role)][0]
-        slot = weekday_by_offset.get(offset)
-        return slot[0] if slot else None
+        return calendar_week_bucket(offset, fight_weekday)
 
     def relocate(role: dict[str, Any], offset: int) -> None:
         day_title = str((weekday_by_offset.get(offset) or (None, ""))[1]).strip().title()
@@ -1192,6 +1200,13 @@ def govern_weekly_mental_training(
         role["countdown_offset"] = offset
         role["countdown_label"] = f"D-{offset}"
         role["scheduled_countdown_label"] = f"D-{offset}"
+        target = weekday_by_offset.get(offset)
+        original = owner.get(id(role))
+        if target and original and target[0] != original[0]:
+            original[1]["session_roles"] = [item for item in original[1]["session_roles"] if item is not role]
+            destination = weeks[target[0] - 1]
+            destination.setdefault("session_roles", []).append(role)
+            owner[id(role)] = (target[0], destination)
         offsets[id(role)] = offset
 
     removed = govern_mental_roles(

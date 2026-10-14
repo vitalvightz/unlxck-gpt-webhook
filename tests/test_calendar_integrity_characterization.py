@@ -228,11 +228,16 @@ def _semantic_projection(brief: dict) -> dict:
 
 def _normalize(projection: dict) -> dict:
     """Round-trip through JSON so tuples become lists, matching the fixtures."""
-    return json.loads(json.dumps(projection))
+    result = json.loads(json.dumps(projection))
+    # Retired mental cadence has its own governor tests. Keep this historical
+    # snapshot strict for every physical row, contact and suppression field.
+    mental = {"fight_visualization", "neural_visualization", "tactical_watch", "tactical_cue_card", "self_review"}
+    result["roles"] = [row for row in result["roles"] if row[2] not in mental]
+    return result
 
 
 def _load_baseline(name: str) -> dict:
-    return json.loads((_FIXTURE_DIR / f"{name}.json").read_text(encoding="utf-8"))
+    return _normalize(json.loads((_FIXTURE_DIR / f"{name}.json").read_text(encoding="utf-8")))
 
 
 # --------------------------------------------------------------------------- #

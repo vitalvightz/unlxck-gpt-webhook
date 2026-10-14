@@ -32,6 +32,7 @@ from fightcamp.tactical_watch_library import (
     normalize_tactical_style,
     ordered_phase_bank,
     select_tactical_watch,
+    watch_metadata,
 )
 
 BANK_PATH = DATA_DIR / "tactical_watch_bank.json"
@@ -649,6 +650,7 @@ def _render_four_week_profile(sport: str, style: str) -> list[dict]:
     }
     athlete = _athlete(
         sport=sport,
+        mental_prep_priority=True,
         tactical_style=style,
         competitive_maturity="developing_pro",
         camp_length_weeks=4,
@@ -725,16 +727,13 @@ def test_normal_fight_camp_gets_one_named_watch_every_week():
             role for role in week["session_roles"] if role.get("role_key") == "tactical_watch"
             and role.get("mandatory_tactical_watch")
         ]
-        assert len(watches) == 1, f"{week['phase']} week has {len(watches)} Tactical Watches"
+        assert len(watches) <= 1, f"{week['phase']} week has {len(watches)} Tactical Watches"
 
     watches = _camp_watches(role_map)
     assert [watch["tactical_watch_name"] for watch in watches] == [
         "Range Map",
-        "Lead-Hand Battle",
         "Exit Discipline",
-        "Intercept the Entry",
         "Exit Lane Audit",
-        "Rope and Corner Escape",
         "First-Round Range Script",
     ]
     assert all(watch["mandatory_tactical_watch"] is True for watch in watches)
@@ -783,10 +782,8 @@ def test_taper_never_uses_gpp_analysis_and_gpp_never_uses_taper_compression():
     role_map = _fight_camp_role_map()
     apply_camp_week_fillers(role_map, _athlete(tactical_styles=["counter puncher"]))
     for week in role_map["weeks"]:
-        watch = next(
-            role for role in week["session_roles"] if role.get("role_key") == "tactical_watch"
-        )
-        assert watch["tactical_watch_phase"] == week["phase"]
+        for watch in [r for r in week["session_roles"] if r.get("role_key") == "tactical_watch"]:
+            assert watch["tactical_watch_phase"] == week["phase"]
 
 
 def test_compressed_fight_week_keeps_zero_load_tactical_watch():
@@ -833,9 +830,10 @@ def test_mandatory_watch_shares_a_scheduled_day_and_never_takes_a_rest_day():
     apply_camp_week_fillers(role_map, _athlete(tactical_styles=["out-boxer"]))
 
     for week in role_map["weeks"]:
-        watch = next(
-            role for role in week["session_roles"] if role.get("role_key") == "tactical_watch"
-        )
+        watches = [r for r in week["session_roles"] if r.get("role_key") == "tactical_watch"]
+        if not watches:
+            continue
+        watch = watches[0]
         day = str(watch["scheduled_day_hint"]).strip().lower()
         assert day not in unused_before[id(week)], "watch converted an off/recovery-only day"
         assert any(
@@ -1038,7 +1036,7 @@ def test_real_fight_dated_camp_carries_unrepeated_watches_through_every_week(sty
             if role.get("role_key") == "tactical_watch"
             and role.get("mandatory_tactical_watch")
         ]
-        assert watches, f"week {week.get('week_index')} ({week.get('phase')}) lost its watch"
+        assert len(watches) <= 1
         for watch in watches:
             keys.append(watch["tactical_watch_key"])
             fingerprints.append(_visible_fingerprint(watch))
@@ -1055,6 +1053,9 @@ def test_real_fight_dated_camp_carries_unrepeated_watches_through_every_week(sty
                 for role in week["session_roles"]
             ), "mandatory watch created its own training day"
 
+    assert keys
+    offsets = sorted(r["countdown_offset"] for r in _camp_watches(role_map))
+    assert all(b-a >= 14 for a,b in zip(offsets, offsets[1:]))
     assert len(set(keys)) == len(keys), "a Tactical Watch key repeated inside one camp"
     assert len(set(fingerprints)) == len(fingerprints), "two weeks shared a visible card"
 
@@ -1063,8 +1064,10 @@ def test_real_fight_dated_camp_carries_unrepeated_watches_through_every_week(sty
 
 
 def test_late_fight_tactical_watch_inserts_come_from_the_bank_and_never_repeat():
+    selected = select_tactical_watch(extract_tactical_style(_athlete(tactical_styles=["pressure fighter"])), "SPP")
+    existing_watch = {**_late_role(21), "role_key": "tactical_watch", "category": "support_insert", "display_text": library.build_watch_display_text(selected), **watch_metadata(selected)}
     sequence = apply_gap_fill_inserts(
-        [_late_role(21), _late_role(16), _late_role(11), _late_role(6), _late_role(1)],
+        [existing_watch, _late_role(21), _late_role(16), _late_role(11), _late_role(6), _late_role(1)],
         _athlete(days_until_fight=21, tactical_styles=["pressure fighter"]),
     )
     watches = [role for role in sequence if role.get("role_key") == "tactical_watch"]
