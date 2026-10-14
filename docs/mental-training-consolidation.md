@@ -83,7 +83,9 @@ The representative-card tests check schema, exact selected doses, contact
 visibility and every scheduled zero-load companion. The production-response
 replay checks finalizer reconciliation, persistence/effective fallback, coaching
 and retirement of unscheduled mental cards. Negative physical prescription and
-missing-exercise controls remain active.
+missing-exercise controls remain active. The coaching release test no longer
+skips direct fight-week cards: the final selected primer receives the same
+coaching, fixed-dose and no-progression checks as every other physical row.
 
 Frequency tests change only the retired three-per-week/five-day countdown and
 weekly-watch assumptions. Bank content, safety, physical and fidelity
@@ -105,7 +107,12 @@ gate pass.
 
 The original draft's Web Build failed in smoke/accessibility, while current
 Main's [38640493836](https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38640493836)
-passes. The inherited SegmentGroup ARIA annotation was a warning; the invalid
+passes after retries: its attempt-1 log contains the same custom-plan Back
+navigation failures at `custom-plans.spec.ts:101` (320px and 390px). Branch
+[38646910183](https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38646910183)
+passes its build/browser job with the same retrying navigation cases and all
+1,928 unit tests. Clean Main’s production build and targeted custom-plan cases
+also pass locally. The inherited SegmentGroup ARIA annotation was a warning; the invalid
 attribute is now attached to the control rather than its group. New renderer
 failures from the first branch push were fixed in code: objectives keep their
 Why label and mixed mental/physical cards retain the normal presentation.
