@@ -109,3 +109,51 @@ def test_conversion_prompt_never_sees_non_limiting_injuries():
     )
     assert "injury_awareness" not in prompt
     assert "left shoulder" not in prompt.lower()
+
+
+def test_partial_note_coverage_adds_only_uncovered_injuries():
+    support = build_injury_awareness_support(
+        [_entry(), _entry(location="knee", side="right", injury_type="sprain")]
+    )
+    plan = {
+        "plan_notes": [{"category": "injury", "text": "Left shoulder: keep it warm."}],
+        "red_flag_rules": [],
+    }
+    merged = merge_injury_awareness(plan, support)
+    added = [n for n in merged["plan_notes"] if n.get("label") == "Injury - not limiting"]
+    assert len(added) == 1
+    assert "Right knee sprain" in added[0]["text"]
+    assert "shoulder" not in added[0]["text"].lower()
+    # Both areas still get their own re-injury rule (none existed).
+    assert len(merged["red_flag_rules"]) == 2
+    assert merge_injury_awareness(merged, support) == merged
+
+
+def test_partial_rule_coverage_adds_only_uncovered_rules():
+    support = build_injury_awareness_support(
+        [_entry(), _entry(location="knee", side="right", injury_type="sprain")]
+    )
+    plan = {
+        "plan_notes": [],
+        "red_flag_rules": [{"display_text": "Stop if your right knee gives way."}],
+    }
+    merged = merge_injury_awareness(plan, support)
+    ids = [r.get("rule_id") for r in merged["red_flag_rules"]]
+    assert ids == [None, "non_limiting_injury_reinjury_left_shoulder"]
+
+
+def test_left_and_right_same_area_do_not_cover_each_other():
+    support = build_injury_awareness_support(
+        [_entry(side="left"), _entry(side="right", injury_type="")]
+    )
+    plan = {
+        "plan_notes": [{"category": "injury", "text": "Left shoulder is fine."}],
+        "red_flag_rules": [{"display_text": "Stop if the left shoulder flares."}],
+    }
+    merged = merge_injury_awareness(plan, support)
+    assert [r.get("rule_id") for r in merged["red_flag_rules"]][1:] == [
+        "non_limiting_injury_reinjury_right_shoulder"
+    ]
+    added = merged["plan_notes"][1]["text"]
+    assert added.startswith("Right shoulder") and "left" not in added.lower()
+
