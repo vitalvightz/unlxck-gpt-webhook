@@ -1,0 +1,330 @@
+[
+ {
+  "date": "2026-10-24",
+  "weekday": "Sat",
+  "day_type": "high",
+  "sessions": [
+   {
+    "title": "Breathing Reset",
+    "blocks": [
+     {
+      "load": null,
+      "reps": null,
+      "rest": null,
+      "sets": null,
+      "tags": null,
+      "work": null,
+      "notes": null,
+      "tempo": null,
+      "effort": {
+       "scale": "1-10",
+       "value": 1,
+       "method": "RPE"
+      },
+      "rounds": null,
+      "purpose": "Lower stress and recover breathing patterns",
+      "block_id": "blk-2026-10-24-breathing-reset",
+      "category": null,
+      "distance": null,
+      "duration": {
+       "unit": "minutes",
+       "value": 6
+      },
+      "intensity": null,
+      "red_flags": [],
+      "why_today": "Help recovery after hard contact",
+      "block_type": "mindset",
+      "stop_rules": [],
+      "deload_rule": null,
+      "order_index": null,
+      "athlete_dose": null,
+      "catalogue_id": null,
+      "display_name": "Breathing Reset",
+      "exercise_key": null,
+      "impact_level": null,
+      "coaching_cues": [
+       "Nasal breathing if comfortable; 4s inhale, 6s exhale"
+      ],
+      "contact_level": null,
+      "energy_system": null,
+      "substitutions": [],
+      "rehab_drill_id": null,
+      "private_media_id": null,
+      "progression_rule": null,
+      "prescription_text": null,
+      "source_session_id": null,
+      "regression_options": [],
+      "prescription_source": null,
+      "community_revision_id": null,
+      "mechanical_load_regions": null
+     }
+    ],
+    "objective": "Use breathwork to finish calmer than you started.",
+    "cns_demand": null,
+    "completion": null,
+    "session_id": "ses-replay00-2026-10-24-breathing-reset",
+    "impact_level": null,
+    "session_type": "recovery",
+    "mindset_anchor": {
+     "intent": "calm",
+     "context": "Short breathing reset after training",
+     "focus_cue": "4s inhale, 6s exhale",
+     "reset_cue": "Finish calmer than you started",
+     "confidence_anchor": "Breath controls composure"
+    },
+    "execution_order": 1,
+    "planned_duration": null,
+    "primary_stressor": null,
+    "completion_status": "not_started",
+    "prescription_source": null
+   }
+  ],
+  "today_card": {
+   "headline": "Hard sparring",
+   "mindset_anchor": {
+    "intent": "controlled aggression",
+    "context": "Hard controlled contact today; keep freshness priority",
+    "focus_cue": "Stick to game plan",
+    "reset_cue": "Reset composure between rounds",
+    "confidence_anchor": "Trust your work"
+   },
+   "primary_warning": null,
+   "readiness_status": "train_as_planned",
+   "coach_led_contact": "Hard sparring",
+   "nutrition_summary": null,
+   "weight_cut_warning": null
+  },
+  "phase_label": "GPP",
+  "countdown_label": "D-42",
+  "planning_week_index": 2,
+  "planning_week_phase": "GPP",
+  "planning_day_role_keys": [
+   "hard_sparring_day",
+   "breathing_reset"
+  ]
+ },
+ {
+  "date": "2026-10-31",
+  "weekday": "Sat",
+  "day_type": "high",
+  "sessions": [
+   {
+    "title": "Self-Review Cues",
+    "blocks": [
+     {
+      "purpose": null,
+      "block_id": "deterministic-35-self_review-display",
+      "why_today": null,
+      "block_type": "mindset",
+      "stop_rules": [],
+      "order_index": 0,
+      "display_name": "Self-Review Cues",
+      "coaching_cues": [
+       "12 minutes, RPE 1 max.",
+       "Review the last clean technical work. Write three cues only: one entry, one defensive reset, one composure cue."
+      ],
+      "substitutions": [],
+      "progression_rule": null,
+      "regression_options": []
+     }
+    ],
+    "objective": "Self-Review Cues",
+    "session_id": "deterministic-35-self_review-0",
+    "session_type": "skill",
+    "mindset_anchor": {
+     "intent": "",
+     "focus_cue": "",
+     "reset_cue": ""
+    },
+    "completion_status": "not_started"
+   }
+  ],
+  "today_card": {
+   "headline": "Hard sparring",
+   "mindset_anchor": {
+    "intent": "apply pressure",
+    "context": "Hard sparring day; freshness priority",
+    "focus_cue": "Keep entries simple",
+    "reset_cue": "Finish balanced",
+    "confidence_anchor": "Trust the drill"
+   },
+   "primary_warning": null,
+   "readiness_status": "train_as_planned",
+   "coach_led_contact": null,
+   "nutrition_summary": null,
+   "weight_cut_warning": null
+  },
+  "phase_label": "SPP",
+  "countdown_label": "D-35",
+  "planning_week_index": 3,
+  "planning_week_phase": "SPP",
+  "planning_day_role_keys": [
+   "hard_sparring_day",
+   "self_review"
+  ]
+ },
+ {
+  "date": "2026-11-07",
+  "weekday": "Sat",
+  "day_type": "high",
+  "sessions": [
+   {
+    "title": "Breathing Reset",
+    "blocks": [
+     {
+      "load": null,
+      "reps": null,
+      "rest": null,
+      "sets": null,
+      "tags": null,
+      "work": null,
+      "notes": null,
+      "tempo": null,
+      "effort": {
+       "scale": "1-10",
+       "value": 1,
+       "method": "RPE"
+      },
+      "rounds": null,
+      "purpose": "Lower arousal and improve recovery",
+      "block_id": "blk-2026-11-07-breathing-reset",
+      "category": null,
+      "distance": null,
+      "duration": {
+       "unit": "minutes",
+       "value": 6
+      },
+      "intensity": null,
+      "red_flags": [],
+      "why_today": "Calm down and aid recovery after hard contact",
+      "block_type": "mindset",
+      "stop_rules": [],
+      "deload_rule": null,
+      "order_index": null,
+      "athlete_dose": null,
+      "catalogue_id": null,
+      "display_name": "Breathing Reset",
+      "exercise_key": null,
+      "impact_level": null,
+      "coaching_cues": [
+       "Nasal breathing if comfortable; 4s inhale, 6s exhale"
+      ],
+      "contact_level": null,
+      "energy_system": null,
+      "substitutions": [],
+      "rehab_drill_id": null,
+      "private_media_id": null,
+      "progression_rule": null,
+      "prescription_text": null,
+      "source_session_id": null,
+      "regression_options": [],
+      "prescription_source": null,
+      "community_revision_id": null,
+      "mechanical_load_regions": null
+     }
+    ],
+    "objective": "Use breathwork to finish calmer than you started.",
+    "cns_demand": null,
+    "completion": null,
+    "session_id": "ses-replay00-2026-11-07-breathing-reset",
+    "impact_level": null,
+    "session_type": "recovery",
+    "mindset_anchor": {
+     "intent": "calm",
+     "context": "Short breathing reset after sparring",
+     "focus_cue": "4s inhale, 6s exhale",
+     "reset_cue": "Finish calmer than you started",
+     "confidence_anchor": "Breath controls composure"
+    },
+    "execution_order": 1,
+    "planned_duration": null,
+    "primary_stressor": null,
+    "completion_status": "not_started",
+    "prescription_source": null
+   }
+  ],
+  "today_card": {
+   "headline": "Hard sparring",
+   "mindset_anchor": {
+    "intent": "controlled contact",
+    "context": "Hard controlled sparring",
+    "focus_cue": "Execute pressure sequences",
+    "reset_cue": "Reset composure between rounds",
+    "confidence_anchor": "Trust your timing"
+   },
+   "primary_warning": null,
+   "readiness_status": "train_as_planned",
+   "coach_led_contact": "Hard sparring",
+   "nutrition_summary": null,
+   "weight_cut_warning": null
+  },
+  "phase_label": "SPP",
+  "countdown_label": "D-28",
+  "planning_week_index": 4,
+  "planning_week_phase": "SPP",
+  "planning_day_role_keys": [
+   "hard_sparring_day",
+   "breathing_reset"
+  ]
+ },
+ {
+  "date": "2026-11-14",
+  "weekday": "Sat",
+  "day_type": "high",
+  "sessions": [
+   {
+    "title": "Self-Review Cues",
+    "blocks": [
+     {
+      "purpose": null,
+      "block_id": "deterministic-21-self_review-display",
+      "why_today": null,
+      "block_type": "mindset",
+      "stop_rules": [],
+      "order_index": 0,
+      "display_name": "Self-Review Cues",
+      "coaching_cues": [
+       "12 minutes, RPE 1 max.",
+       "Review the last clean technical work. Write three cues only: one entry, one defensive reset, one composure cue."
+      ],
+      "substitutions": [],
+      "progression_rule": null,
+      "regression_options": []
+     }
+    ],
+    "objective": "Self-Review Cues",
+    "session_id": "deterministic-21-self_review-0",
+    "session_type": "skill",
+    "mindset_anchor": {
+     "intent": "",
+     "focus_cue": "",
+     "reset_cue": ""
+    },
+    "completion_status": "not_started"
+   }
+  ],
+  "today_card": {
+   "headline": "Hard sparring",
+   "mindset_anchor": {
+    "intent": "apply pressure",
+    "context": "Hard controlled sparring",
+    "focus_cue": "Use your entry cues",
+    "reset_cue": "One breath and reset",
+    "confidence_anchor": "Trust your timing"
+   },
+   "primary_warning": null,
+   "readiness_status": "train_as_planned",
+   "coach_led_contact": null,
+   "nutrition_summary": null,
+   "weight_cut_warning": null
+  },
+  "phase_label": "SPP",
+  "countdown_label": "D-21",
+  "planning_week_index": 5,
+  "planning_week_phase": "SPP",
+  "planning_day_role_keys": [
+   "hard_sparring_day",
+   "self_review"
+  ]
+ }
+]

@@ -37,6 +37,8 @@ from __future__ import annotations
 import re
 from typing import Any
 
+from fightcamp.combat_load_policy import LoadClass, role_load_class
+from fightcamp.structured_session_identity import match_sessions_to_roles
 from fightcamp.weekly_schedule_view import extract_weekly_schedule
 from fightcamp.sparring_dose_planner import hard_sparring_cutoff, contact_safety_reasons
 from fightcamp.declared_combat_ownership import is_declared_light_combat_role
@@ -258,6 +260,34 @@ def _is_allowed_nontechnical_contact_filler(session: Any) -> bool:
     if _BLOCKED_CONTACT_FILLER_RE.search(text) or _HIGH_RPE_RE.search(text):
         return False
     return bool(_ALLOWED_HARD_DAY_FILLER_RE.search(text))
+
+
+def _scheduled_zero_load_roles(planning_brief: dict[str, Any]) -> dict[int, list[dict[str, Any]]]:
+    """Planner-scheduled zero-load roles (Self-Review, Breathing Reset...) by D-day.
+
+    These are the planner's own same-day companions of a contact day. The
+    contact guard below must never remove one: the calendar spine restores any
+    scheduled role a day lacks, so removing it here only made the spine put it
+    back AFTER the contact had been written onto the headline, leaving a
+    session day with no ``coach_led_contact`` and the sparring hidden.
+    Classification is the planner's (``role_load_class``), not a label regex.
+    """
+    role_map = planning_brief.get("weekly_role_map")
+    weeks = role_map.get("weeks") if isinstance(role_map, dict) else None
+    by_dday: dict[int, list[dict[str, Any]]] = {}
+    for week in weeks if isinstance(weeks, list) else []:
+        if not isinstance(week, dict):
+            continue
+        for role in week.get("session_roles") or []:
+            if not isinstance(role, dict) or role_load_class(role) is not LoadClass.ZERO_LOAD:
+                continue
+            raw_offset = role.get("countdown_offset")
+            d_day = raw_offset if isinstance(raw_offset, int) and raw_offset >= 0 else None
+            if d_day is None:
+                d_day = _parse_dday(role.get("scheduled_countdown_label") or role.get("countdown_label"))
+            if d_day is not None:
+                by_dday.setdefault(d_day, []).append(role)
+    return by_dday
 
 
 def _ban_clamped_load(load: str, d_day: int | None, athlete_snapshot: dict[str, Any] | None = None) -> str:
@@ -737,6 +767,7 @@ def _reconcile(structured_plan: Any, planning_brief: Any) -> list[str]:
     contact_days = _deterministic_contact_days(planning_brief)
     if not contact_days:
         return []
+    zero_load_roles = _scheduled_zero_load_roles(planning_brief)
 
     notes: list[str] = []
     present_dates: set[str] = set()
@@ -812,10 +843,15 @@ def _reconcile(structured_plan: Any, planning_brief: Any) -> list[str]:
             if day.get("sessions"):
                 sessions = day.get("sessions")
                 if contact.load != "technical" and isinstance(sessions, list):
+                    scheduled = (
+                        match_sessions_to_roles(sessions, zero_load_roles.get(contact.d_day, []), contact.d_day)
+                        if contact.d_day is not None
+                        else {}
+                    )
                     compatible_sessions = [
                         session
-                        for session in sessions
-                        if _is_allowed_nontechnical_contact_filler(session)
+                        for index, session in enumerate(sessions)
+                        if index in scheduled or _is_allowed_nontechnical_contact_filler(session)
                     ]
                     if len(compatible_sessions) != len(sessions):
                         day["sessions"] = compatible_sessions
@@ -923,4 +959,78 @@ def _reconcile(structured_plan: Any, planning_brief: Any) -> list[str]:
             f"{_contact_identity(contact)} ({contact.headline!r})"
         )
 
+    return notes
+
+
+def surface_coach_led_contact(structured_plan: Any, planning_brief: Any) -> list[str]:
+    """Write ``today_card.coach_led_contact`` on every contact day with sessions.
+
+    The end-to-end invariant, applied where a card is read: a declared contact
+    day that also carries app sessions renders its contact only through
+    ``coach_led_contact`` (the headline is shadowed by the session cards), so a
+    stored card missing it hides the sparring and the day reads as zero load.
+
+    Surface-only: unlike :func:`reconcile_coach_led_sparring_days` this never
+    removes or adds a session, never rewrites a headline, and never sets a
+    contact the deterministic resolver downgraded or banned (the contact load
+    comes from the same resolver, so a taper day stays technical-only). Mutates
+    in place, returns change notes, never raises.
+    """
+    try:
+        return _surface(structured_plan, planning_brief)
+    except Exception:  # never block a read on reconciliation
+        return []
+
+
+def _surface(structured_plan: Any, planning_brief: Any) -> list[str]:
+    if not isinstance(structured_plan, dict) or not isinstance(planning_brief, dict):
+        return []
+    if planning_brief.get("custom_plan"):
+        return []
+    weeks = structured_plan.get("weeks")
+    if not isinstance(weeks, list) or not weeks:
+        return []
+    contact_days = _deterministic_contact_days(planning_brief)
+    if not contact_days:
+        return []
+    contact_by_date = {c.date: c for c in contact_days if c.date}
+    contact_by_dday = {c.d_day: c for c in contact_days if c.d_day is not None}
+    contact_by_open_day = {(c.week_index, c.weekday): c for c in contact_days if c.weekday}
+    notes: list[str] = []
+    for week_position, week in enumerate(weeks, start=1):
+        if not isinstance(week, dict):
+            continue
+        week_index = week.get("week_index")
+        if not isinstance(week_index, int):
+            week_index = week_position
+        for day in week.get("days") or []:
+            if not isinstance(day, dict) or not day.get("sessions"):
+                continue
+            date = str(day.get("date") or "").strip()
+            dday = _parse_dday(day.get("countdown_label"))
+            weekday = _normalize_weekday(day.get("weekday"))
+            contact = (
+                contact_by_date.get(date)
+                if date and date in contact_by_date
+                else contact_by_dday.get(dday)
+                if dday is not None and dday in contact_by_dday
+                else contact_by_open_day.get((week_index, weekday))
+                if weekday
+                else None
+            )
+            if contact is None:
+                continue
+            card = day.get("today_card")
+            if not isinstance(card, dict):
+                continue
+            if str(card.get("coach_led_contact") or "").strip():
+                continue
+            if _session_already_shows_light_combat(day, contact):
+                continue
+            card["coach_led_contact"] = contact.headline
+            _apply_contact_day_type(day, contact)
+            notes.append(
+                f"surfaced coach-led contact alongside sessions on "
+                f"{_contact_identity(contact)} ({contact.headline!r})"
+            )
     return notes
