@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import re
 from typing import Any
+from .conditioning_preferences import striking_heavy_bag_preference as _boxing_heavy_bag_preference  # noqa: F401
 
 
 

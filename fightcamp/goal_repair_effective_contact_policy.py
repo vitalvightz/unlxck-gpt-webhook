@@ -34,6 +34,11 @@ def effective_goal_repair_compression_state(
 
     effective_hard_count = _resolved_effective_hard_count(week)
     stale_codes: set[str] = set()
+    # Routine candidate-budget trimming is not an intentional safety veto.
+    # Repair must test the remaining session budget and resolved calendar rather
+    # than let two contacts alone prohibit every strength/power alternative.
+    if not compression.get("active") and not any(row.get("intentional_compression") for row in suppressed):
+        stale_codes.update(_STALE_BELOW_TWO | _STALE_AT_ZERO)
     if effective_hard_count is not None and effective_hard_count < 2:
         stale_codes.update(_STALE_BELOW_TWO)
     if effective_hard_count == 0:

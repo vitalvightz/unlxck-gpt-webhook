@@ -14,7 +14,51 @@ from fightcamp.combat_load_policy import (
     is_effective_hard_contact,
     role_load_class,
     role_load_profile,
+    SessionStress,
+    StressLevel,
 )
+
+
+def test_hard_sc_can_share_known_light_technical_but_not_unknown_contact():
+    technical = role_load_profile({"role_key": "light_combat_day"})
+    hard_sc = CalendarLoadProfile(LoadClass.MEANINGFUL_STRENGTH, DayOccupancy.EXCLUSIVE_PHYSICAL,
+                                 stress=SessionStress(StressLevel.LOW, StressLevel.HIGH))
+    assert evaluate_candidate_at_position(hard_sc, candidate_position=20, events=[CalendarEvent(20, technical)]).allowed
+    unknown = contact_load_profile({"effective_load": "technical"})
+    assert not evaluate_candidate_at_position(hard_sc, candidate_position=20, events=[CalendarEvent(20, unknown)]).allowed
+
+
+def test_combined_daily_stress_does_not_permit_two_hard_sc_sessions_on_light_boxing():
+    technical = role_load_profile({"role_key": "light_combat_day"})
+    strength = CalendarLoadProfile(LoadClass.MEANINGFUL_STRENGTH, DayOccupancy.PHYSICAL,
+                                  stress=SessionStress(StressLevel.LOW, StressLevel.HIGH))
+    conditioning = CalendarLoadProfile(LoadClass.MEANINGFUL_CONDITIONING, DayOccupancy.PHYSICAL,
+                                      stress=SessionStress(StressLevel.HIGH, StressLevel.LOW))
+    decision = evaluate_candidate_at_position(conditioning, candidate_position=20,
+        events=[CalendarEvent(20, technical), CalendarEvent(20, strength)])
+    assert decision.directive is PlacementDirective.FORBID
+    assert decision.reason_code == "combined_daily_stress_exceeded"
+
+
+@pytest.mark.parametrize("position", [19, 21])
+def test_technical_double_days_retain_shared_hard_contact_deprioritization(position):
+    technical = role_load_profile({"role_key": "light_combat_day"})
+    conditioning = CalendarLoadProfile(LoadClass.MEANINGFUL_CONDITIONING, DayOccupancy.EXCLUSIVE_PHYSICAL,
+                                      stress=SessionStress(StressLevel.HIGH, StressLevel.MODERATE))
+    decision = evaluate_candidate_at_position(conditioning, candidate_position=position,
+        events=[CalendarEvent(position, technical), _event(20, LoadClass.HARD_CONTACT)])
+    assert decision.directive is PlacementDirective.DEPRIORITIZE
+    assert decision.reason_code in {"pre_hard_contact_managed_stress", "post_hard_contact_managed_stress"}
+
+
+def test_reported_more_demanding_technical_work_does_not_inherit_light_boxing_permission():
+    technical = role_load_profile({"role_key": "light_combat_day", "calendar_stress": {"systemic": 2, "neural_mechanical": 2}})
+    strength = CalendarLoadProfile(LoadClass.MEANINGFUL_STRENGTH, DayOccupancy.EXCLUSIVE_PHYSICAL,
+                                  stress=SessionStress(StressLevel.LOW, StressLevel.HIGH))
+    assert not evaluate_candidate_at_position(strength, candidate_position=20, events=[CalendarEvent(20, technical)]).allowed
+    heavy_neural = CalendarLoadProfile(LoadClass.NEURAL_MICRODOSE, DayOccupancy.PHYSICAL,
+                                      stress=SessionStress(StressLevel.LOW, StressLevel.HIGH))
+    assert not evaluate_candidate_at_position(heavy_neural, candidate_position=20, events=[CalendarEvent(20, technical)]).allowed
 
 
 def _profile(

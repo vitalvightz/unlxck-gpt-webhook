@@ -32,6 +32,18 @@ function formatDateOffsetFrom(baseIsoDate: string, offsetDays: number): string {
   return base.toISOString().slice(0, 10);
 }
 
+test("double-day frequency survives validation and quick-build round trip", () => {
+  const input = {...buildValidInput(), weekly_training_frequency: 9,
+    training_availability: ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday"]};
+  const errors = validateQuickBuildInput(input);
+  assert.equal(errors.weekly_training_frequency, undefined);
+  assert.equal(errors.training_availability, undefined);
+  const plan = quickBuildToPlanRequest(input);
+  assert.equal(plan.weekly_training_frequency, 9);
+  assert.equal(planRequestToQuickBuildInput(plan).weekly_training_frequency, 9);
+  assert.ok(validateQuickBuildInput({...input, weekly_training_frequency: 13}).training_availability);
+});
+
 test("validateQuickBuildInput rejects multiple technical styles", () => {
   const input = buildValidInput();
   input.technical_style = ["boxing", "muay_thai"];

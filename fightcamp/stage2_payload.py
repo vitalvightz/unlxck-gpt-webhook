@@ -176,6 +176,7 @@ from .stage2_planning_brief import (  # noqa: F401
     _strength_slot_priority,
 )
 from .stage2_role_map import (  # noqa: F401
+    enforce_total_session_budget,
     _append_day_hint,
     _athlete_sport_key,
     _apply_short_camp_role_compression,
@@ -2284,6 +2285,7 @@ def _build_planning_brief(
             athlete_model=athlete_model,
         )
 
+    enforce_total_session_budget(weekly_role_map, athlete_model)
     _resolve_strength_doses(weekly_role_map)
     # Composition plus dose resolution is the first point at which a session's
     # real cross-day cost is knowable. Until here the calendar has only judged
@@ -2324,6 +2326,8 @@ def _build_planning_brief(
         recompose_conditioning_callback=_recompose_conditioning,
         recompose_strength_callback=_recompose_strength,
     )
+    enforce_total_session_budget(weekly_role_map, athlete_model)
+    _resolve_strength_doses(weekly_role_map)
     weekly_role_map = stamp_weekly_role_map_labels(weekly_role_map)
     return {
         "schema_version": "planning_brief.v1",

@@ -213,7 +213,7 @@ def test_zero_load_support_stacks_on_light_combat_day():
     assert wednesday == {LIGHT_COMBAT_ROLE_KEY, "tactical_cue_card"}
 
 
-def test_illegal_meaningful_sc_yields_and_light_combat_remains():
+def test_meaningful_sc_can_share_compatible_light_combat_without_displacing_it():
     week_entry, athlete = _lock_week()
     session_roles = [
         {
@@ -228,14 +228,8 @@ def test_illegal_meaningful_sc_yields_and_light_combat_remains():
     )
 
     wednesday = {r["role_key"] for r in roles if r.get("scheduled_day_hint") == "wednesday"}
-    # Meaningful strength cannot share a light-combat day; it yields, the light
-    # slot remains, and nothing is relocated to a fresh training day.
-    assert wednesday == {LIGHT_COMBAT_ROLE_KEY}
-    assert any(
-        s.get("replacement_role_key") == LIGHT_COMBAT_ROLE_KEY
-        and s.get("role_key") == "strength_touch_day"
-        for s in suppressed
-    )
+    assert wednesday == {LIGHT_COMBAT_ROLE_KEY, "strength_touch_day"}
+    assert not suppressed
 
 
 # ---------------------------------------------------------------------------

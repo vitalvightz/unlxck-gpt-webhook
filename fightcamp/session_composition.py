@@ -1083,6 +1083,11 @@ def realised_role_stress(role: dict[str, Any]) -> SessionStress | None:
     return realised_session_stress(
         role.get("selected_exercise_assignments"),
         resolved_strength=_resolved_strength_doses(role),
+        resolved_strength_effort={
+            (str(p.get("slot_id") or ""), str(p.get("name") or "")): p.get("effective_rpe_cap")
+            for p in role.get("effective_strength_prescriptions") or []
+            if p.get("dose_authority") == "scheduled_countdown_overlay"
+        },
     )
 
 
@@ -1090,6 +1095,7 @@ def realised_session_stress(
     assignments: list[dict[str, Any]] | None,
     *,
     resolved_strength: dict[tuple[str, str], str] | None = None,
+    resolved_strength_effort: dict[tuple[str, str], Any] | None = None,
 ) -> SessionStress | None:
     """Measure a composed session's cross-day cost, or ``None`` if unmeasurable.
 
@@ -1098,38 +1104,66 @@ def realised_session_stress(
     """
     assignments = [item for item in assignments or [] if isinstance(item, dict)]
     resolved_strength = resolved_strength or {}
+    resolved_strength_effort = resolved_strength_effort or {}
     if not assignments:
         return None
 
     tags: set[str] = set()
     regions: set[BodyRegion] = set()
     total_reps = 0.0
+    mechanical_reps = 0.0
+    systemic = StressLevel.NONE
     for assignment in assignments:
         # An embedded support item is explicitly dose-capped to stay below the
         # session's own cost and must not inflate it.
         if assignment.get("embedded_support"):
             continue
         item_tags = _assignment_mechanical_tags(assignment)
+        dose = _authoritative_dose(assignment, resolved_strength)
+        item_reps = _prescription_total_reps(dose)
+        if item_tags & (_HIGH_MECHANICAL_TAGS | _HIGH_NEURAL_TAGS):
+            mechanical_reps += item_reps
         tags |= item_tags
+        if item_tags & _HIGH_SYSTEMIC_TAGS:
+            # Conditioning carries authored effort alongside its resolved dose.
+            # A fatigue tag alone does not turn easy aerobic work into a hard
+            # metabolic session. Unknown effort retains the conservative cost.
+            rpe = _float_or_none(assignment.get("rpe"))
+            lactate = str(assignment.get("lactate_load") or "").strip().lower()
+            intensity = str(assignment.get("intensity") or "").strip().lower()
+            easy_effort = ((rpe is not None and rpe <= 5)
+                           or (intensity in {"zone 2", "zone2", "easy", "recovery"}
+                               and (rpe is None or rpe <= 6)))
+            easy = (assignment.get("slot_group") == "conditioning_slots"
+                    and easy_effort
+                    and lactate in {"none", "low"})
+            effort = re.search(r"\bRPE\s*[:=]?\s*(\d+(?:\.\d+)?)(?:\s*[-–]\s*(\d+(?:\.\d+)?))?", dose, re.I)
+            effort_ceiling = _float_or_none(resolved_strength_effort.get((str(assignment.get("slot_id") or ""), str(assignment.get("name") or ""))))
+            if effort is not None:
+                effort_ceiling = float(effort[2] or effort[1])
+            managed_strength = (assignment.get("slot_group") == "strength_slots"
+                                and effort_ceiling is not None and effort_ceiling <= 7
+                                and item_reps <= _MICRODOSE_REP_CEILING
+                                and dose != str(assignment.get("base_prescription") or "")
+                                and bool(resolved_strength))
+            systemic = max(systemic, StressLevel.LOW if easy else
+                           StressLevel.MODERATE if managed_strength else StressLevel.HIGH)
         for prefix, region in _REGION_TAG_PREFIXES:
             if any(tag.startswith(prefix) for tag in item_tags):
                 regions.add(region)
-        total_reps += _prescription_total_reps(
-            _authoritative_dose(assignment, resolved_strength)
-        )
+        total_reps += item_reps
 
     if not tags and not total_reps:
         return None
 
     high_mechanical = bool(tags & _HIGH_MECHANICAL_TAGS)
-    if high_mechanical and total_reps > _MICRODOSE_REP_CEILING:
+    if high_mechanical and mechanical_reps > _MICRODOSE_REP_CEILING:
         neural_mechanical = StressLevel.HIGH
     elif high_mechanical or tags & _HIGH_NEURAL_TAGS or total_reps > _MICRODOSE_REP_CEILING:
         neural_mechanical = StressLevel.MODERATE
     else:
         neural_mechanical = StressLevel.LOW
 
-    systemic = StressLevel.HIGH if tags & _HIGH_SYSTEMIC_TAGS else StressLevel.NONE
     return SessionStress(
         systemic=systemic, neural_mechanical=neural_mechanical, regions=frozenset(regions)
     )
@@ -2016,7 +2050,7 @@ def _conditioning_partition_high_load(
             additional_elapsed = work_sec + rest_sec
             if (
                 allocated[name] >= max_rounds
-                or active_work + work_sec > target_active_work
+                or active_work >= target_active_work
                 or elapsed_work + additional_elapsed > elapsed_cap_seconds
             ):
                 continue
@@ -2340,6 +2374,10 @@ def compose_normal_conditioning_assignments(
                 # Structured recognition must never depend on parsing the
                 # human-readable prescription back out.
                 effective_dose = _conditioning_effective_dose(option)
+                metadata = option.get("selection_metadata") or {}
+                for field in ("rpe", "lactate_load", "intensity"):
+                    if metadata.get(field) is not None:
+                        assignment[field] = metadata[field]
                 for field in ("work_sec", "rest_sec", "rounds"):
                     value = _float_or_none(effective_dose.get(field))
                     if value is not None:
@@ -2496,10 +2534,15 @@ def _physically_occupied_d_days(
     from .calendar_context import role_refs
     from .combat_load_policy import DayOccupancy
 
+    compatible_technical_days = {
+        ref.d_day for ref in role_refs(weekly_role_map)
+        if ref.profile.allows_light_combat_stack
+    }
     return {
         ref.d_day
         for ref in role_refs(weekly_role_map)
         if ref.role is not mover
+        and ref.d_day not in compatible_technical_days
         and ref.profile.occupancy
         in {DayOccupancy.PHYSICAL, DayOccupancy.EXCLUSIVE_PHYSICAL}
     }
@@ -2581,9 +2624,9 @@ def apply_realised_load_calendar_revalidation(
     ``calendar_integrity.relocate_or_suppress_role_for_recovery`` — the same
     canonical mover the adjacent-strength-recovery pass already uses.
 
-    A conflict here is ``DEPRIORITIZE``, never ``FORBID``: the role moves only
-    when a genuinely cleaner slot exists, and otherwise stays put. There is no
-    mandatory rest day.
+    A graded conflict moves only to a genuinely cleaner slot. A forbidden
+    realised dose must relocate or be suppressed through the canonical mover;
+    it cannot stay merely because no cleaner destination exists.
 
     Ordering requirement: this must run after ``prescription_resolver``, because
     a strength assignment carries only the raw bank dose until the resolver has
@@ -2601,6 +2644,7 @@ def apply_realised_load_calendar_revalidation(
         return weekly_role_map
 
     from .late_camp_role_morph import _apply_late_camp_role_morph_once
+    from .combat_load_policy import PlacementDirective
 
     def _reconcile_changed_conditioning(before: dict[int, tuple[str, ...]]) -> list[dict[str, Any]]:
         """Re-reconcile membership for any conditioning role the morph rewrote.
@@ -2705,7 +2749,13 @@ def apply_realised_load_calendar_revalidation(
         stamped = _refresh_stress_stamps(weekly_role_map)
         round_actions: list[dict[str, Any]] = []
         moved_strength: set[int] = set()
-        for role, _ref, decision in _realised_load_conflicts(weekly_role_map, stamped):
+        for role, _ref, _initial_decision in _realised_load_conflicts(weekly_role_map, stamped):
+            # A preceding move/suppression may have cleared this role's conflict.
+            # Never act on a same-day collision captured before that mutation.
+            live_conflicts = _realised_load_conflicts(weekly_role_map, [role])
+            if not live_conflicts:
+                continue
+            _, _, decision = live_conflicts[0]
             action = relocate_or_suppress_role_for_recovery(
                 weekly_role_map,
                 role,
@@ -2714,7 +2764,7 @@ def apply_realised_load_calendar_revalidation(
                     | _physically_occupied_d_days(weekly_role_map, role)
                 ),
                 reason_code=decision.reason_code,
-                require_clean_destination=True,
+                require_clean_destination=decision.directive is PlacementDirective.DEPRIORITIZE,
             )
             if not isinstance(action, dict):
                 continue
@@ -2722,6 +2772,17 @@ def apply_realised_load_calendar_revalidation(
                 vacated.setdefault(id(role), set()).add(int(action["from_d_day"]))
             if action.get("action") == "relocated" and str(role.get("category") or "").lower() == "strength":
                 moved_strength.add(id(role))
+            # Moving or removing a session changes the neighbouring strength
+            # composition context too. Rebuild affected survivors so pruning
+            # against a vacated neighbour does not become a permanent restriction.
+            changed_days = {int(action[key]) for key in ("from_d_day", "to_d_day", "original_d_day")
+                            if action.get(key) is not None}
+            adjacent_days = {day + offset for day in changed_days for offset in (-1, 0, 1)}
+            moved_strength.update(id(neighbour)
+                for week in weekly_role_map.get("weeks") or []
+                for neighbour in week.get("session_roles") or []
+                if neighbour.get("category") == "strength" and not neighbour.get("late_fight_tail_owned")
+                and role_d_day(week, neighbour) in adjacent_days)
             round_actions.append(
                 {"round": rounds_run, "role_key": role.get("role_key"), **action}
             )
@@ -2732,6 +2793,26 @@ def apply_realised_load_calendar_revalidation(
 
     # The last round may have re-dosed after its final stamp, so refresh once more:
     # the stamp that persists must describe the dose the role actually ends with.
+    final_roles = _refresh_stress_stamps(weekly_role_map)
+    # The bounded search may end immediately after a destination is re-dosed.
+    # A surviving graded conflict remains visible, but a normal FORBID verdict
+    # cannot remain scheduled. Use the canonical suppression path without
+    # starting another relocation/recomposition round; finished tails stay owned.
+    for role, ref, decision in _realised_load_conflicts(weekly_role_map, final_roles):
+        live_conflicts = _realised_load_conflicts(weekly_role_map, [role])
+        if not live_conflicts:
+            continue
+        _, ref, decision = live_conflicts[0]
+        if decision.directive is not PlacementDirective.FORBID or ref.d_day <= 13:
+            continue
+        excluded = {day.get("d_day") for day in ref.week.get("calendar_days") or []
+                    if isinstance(day.get("d_day"), int)}
+        action = relocate_or_suppress_role_for_recovery(
+            weekly_role_map, role, excluded_d_days=excluded,
+            reason_code=decision.reason_code,
+        )
+        if isinstance(action, dict):
+            actions.append({"round": rounds_run, "role_key": role.get("role_key"), "bound_reached": True, **action})
     final_roles = _refresh_stress_stamps(weekly_role_map)
     # Every conflict still present on the final calendar is residual. A late
     # session's owner resolves its conflict before this point (relocation or a

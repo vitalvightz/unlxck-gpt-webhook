@@ -326,9 +326,56 @@ def test_embedded_support_does_not_inflate_realised_stress():
     assert stress.regions == frozenset({BodyRegion.LOWER})
 
 
+def test_ordinary_lifting_reps_do_not_become_plyometric_contacts():
+    stress = realised_session_stress([
+        {"name": "Jump", "effective_prescription": "2 x 5", "mechanical_risk_tags": ["mech_ballistic", "mech_lower_jump"]},
+        {"name": "Row", "effective_prescription": "4 x 8", "mechanical_risk_tags": ["mech_upper_pull"]},
+    ])
+    assert stress.neural_mechanical is StressLevel.MODERATE
+
+
+def test_resolved_low_volume_strength_cost_uses_authoritative_effort_when_speed_dose_omits_rpe():
+    role = {"selected_exercise_assignments": [{"slot_id": "power", "name": "Bank Power", "slot_group": "strength_slots",
+        "base_prescription": "5 x 5 at max speed", "mechanical_risk_tags": ["mech_ballistic", "mech_systemic_fatigue"]}],
+        "effective_strength_prescriptions": [{"slot_id": "power", "name": "Bank Power",
+        "effective_prescription": "2 x 2 at max speed; full rest", "effective_rpe_cap": 7,
+        "dose_authority": "scheduled_countdown_overlay"}]}
+    assert realised_role_stress(role).systemic is StressLevel.MODERATE
+    assert realised_session_stress(role["selected_exercise_assignments"]).systemic is StressLevel.HIGH
+
+
 def test_unmeasurable_session_leaves_the_planned_vector_alone():
     assert realised_session_stress([]) is None
     assert realised_session_stress([{"name": "Unknown", "effective_prescription": ""}]) is None
+
+
+@pytest.mark.parametrize("rpe,intensity,lactate,expected", [
+    (6, "zone 2", "low", StressLevel.LOW),
+    (4, "", "low", StressLevel.LOW),
+    (8, "zone 2", "low", StressLevel.HIGH),
+    (4, "", "high", StressLevel.HIGH),
+    (None, "", "low", StressLevel.HIGH),
+])
+def test_conditioning_systemic_stress_uses_known_effort_without_guessing(rpe, intensity, lactate, expected):
+    assignment = {"name": "Bank Conditioning", "slot_group": "conditioning_slots",
+        "effective_prescription": "30 min", "mechanical_risk_tags": ["mech_systemic_fatigue"],
+        "rpe": rpe, "intensity": intensity, "lactate_load": lactate}
+    assert realised_session_stress([assignment]).systemic is expected
+
+
+def test_revalidation_does_not_suppress_both_roles_from_a_stale_daily_conflict():
+    week = _spp_week()
+    week["declared_training_days"] = ["monday"]
+    first = _plyometric_role()
+    second = _plyometric_role()
+    second["role_key"] = "primary_strength_day"
+    second["category"] = "strength"
+    week["session_roles"] = [first, second]
+    role_map = {"weeks": [week]}
+    apply_realised_load_calendar_revalidation(role_map)
+    assert len(week["session_roles"]) == 1
+    assert role_map["realised_load_revalidation"]["actions"][0]["action"] == "suppressed"
+    assert not role_map["realised_load_revalidation"]["residual_conflicts"]
 
 
 # --- the composed-plan seam --------------------------------------------------

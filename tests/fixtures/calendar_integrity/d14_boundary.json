@@ -19,7 +19,6 @@
     [2, "TAPER", "fight_visualization", "support_insert", "sunday", 5, true, false, false, "support", "low"],
     [2, "TAPER", "fight_visualization", "support_insert", "thursday", 1, true, false, false, "support", "low"],
     [2, "TAPER", "fight_visualization", "support_insert", "tuesday", 3, true, false, false, "support", "low"],
-    [2, "TAPER", "fight_week_freshness_day", "recovery", "wednesday", 2, true, false, false, "support", "low"],
     [2, "TAPER", "hard_sparring_day", "sparring", "thursday", 1, true, false, false, "support", "low"],
     [2, "TAPER", "joint_prep", "support_insert", "sunday", 5, true, false, false, "support", "low"],
     [2, "TAPER", "light_combat_day", "technical", "monday", 4, true, false, false, "support", "low"],
@@ -33,9 +32,10 @@
   "suppressed": [
     [1, "hard_sparring_day", "sparring", "no_hard_sparring_day", []],
     [1, "recovery_reset_day", "recovery", "", ["spar_first_cap"]],
+    [2, "aerobic_flush_day", "conditioning", "fight_day_protocol", []],
     [2, "fight_week_freshness_day", "recovery", "", ["spar_first_cap"]],
-    [2, "hard_sparring_day", "sparring", "no_hard_sparring_day", []],
-    [2, "neural_primer_day", "strength", "fight_day_protocol", []]
+    [2, "fight_week_freshness_day", "recovery", "", ["total_session_budget"]],
+    [2, "hard_sparring_day", "sparring", "no_hard_sparring_day", []]
   ],
   "tail_handoff": {"active": true, "normal_planner_through_d": 14, "late_fight_planner_from_d": 13, "source": "finished_existing_late_fight_path"}
 }

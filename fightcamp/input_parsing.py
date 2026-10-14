@@ -5,7 +5,7 @@ from datetime import datetime, timedelta, timezone
 import json
 import math
 import re
-from typing import Literal
+from typing import Any, Literal
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 try:
     from dateutil.tz import gettz
@@ -921,6 +921,33 @@ def _coerce_open_camp_weeks(value: object) -> int:
     return DEFAULT_OPEN_CAMP_WEEKS
 
 
+def _training_workload_from_notes(notes: str) -> dict[str, Any]:
+    """Extract explicit current cadence only; numbers never imply intensity.
+
+    This is intake-owned context. A structured requested frequency wins over a
+    conflicting description of existing training; the conflict stays inspectable.
+    """
+    text = str(notes or "").lower()
+    pattern = r"\b(\d{1,2})(?:\s*[-–—/]\s*(\d{1,2}))?\s*(?:sessions?|times|workouts?)\s*(?:a|per|each|every)?\s*(?:week(?:ly)?|/\s*week)\b"
+    reports = []
+    for match in re.finditer(pattern, text):
+        prefix = text[max(0, match.start() - 45):match.start()]
+        if re.search(r"\b(?:used to|want to|would like|hope to|cannot|can't|don't|do not)\b[^.!?]*$", prefix):
+            continue
+        low, high = int(match[1]), int(match[2] or match[1])
+        if 1 <= low <= high <= 14:
+            reports.append((low, high))
+    context: dict[str, Any] = {}
+    if len(set(reports)) == 1:
+        low, high = reports[0]
+        context["reported_weekly_sessions"] = {"minimum": low, "maximum": high, "source": "training_notes"}
+    double = re.search(r"\b(?:double (?:days|sessions)|two[- ]a[- ]days|twice (?:a|per) day)\b", text)
+    if double and not re.search(r"\b(?:no|not|without|never|can't|cannot)\s+(?:do\s+)?$", text[max(0, double.start() - 20):double.start()]):
+        context["double_days_reported"] = True
+    # Neither a weekday, duration nor intensity is supplied by these statements.
+    return context
+
+
 @dataclass(frozen=True)
 class PlanInput:
     full_name: str
@@ -965,6 +992,7 @@ class PlanInput:
     goal_weakness_collision_details: list[dict[str, str]] = field(default_factory=list)
     guided_injuries: list[GuidedInjury] = field(default_factory=list)
     parsing_metadata: dict[str, dict[str, str]] = field(default_factory=dict)
+    training_workload_context: dict[str, Any] = field(default_factory=dict)
     # Explicit camp-timeline plumbing. ``no_scheduled_fight`` is the external API
     # flag (mirrors the frontend ``noScheduledFight`` checkbox); the internal
     # ``camp_timeline_type`` token is derived in ``from_payload`` so downstream
@@ -995,6 +1023,7 @@ class PlanInput:
 
         raw_available_days = values["available_days"]
         raw_frequency = values["frequency_raw"]
+        training_workload_context = _training_workload_from_notes(values["notes"])
         raw_athlete_timezone = values["athlete_timezone"].strip()
 
         # Normalization step (safe, non-planning transforms only).
@@ -1057,19 +1086,34 @@ class PlanInput:
                 raise ValueError(
                     f"invalid Weekly Training Frequency: expected integer >= 1, got {training_frequency}"
                 )
-            if training_days and training_frequency > len(training_days):
+            # Frequency counts sessions, availability counts days. A declared
+            # double day is valid input; placement still owns whether it fits.
+            if training_days and training_frequency > 2 * len(training_days):
                 raise ValueError(
-                    "invalid Weekly Training Frequency: cannot exceed selected Training Availability days "
+                    "invalid Weekly Training Frequency: cannot exceed two sessions per selected Training Availability day "
                     f"({len(training_days)}), got {training_frequency}"
                 )
             training_frequency_metadata = _metadata("user_supplied")
         else:
-            # Explicit inference step.
-            training_frequency = len(training_days)
-            training_frequency_metadata = _metadata(
-                "system_inferred",
-                "weekly_training_frequency_missing_inferred_from_training_availability",
+            reported = training_workload_context.get("reported_weekly_sessions") or {}
+            if reported and reported["minimum"] <= 2 * len(training_days):
+                training_frequency = reported["minimum"]
+                training_frequency_metadata = _metadata(
+                    "user_supplied", "weekly_training_frequency_from_explicit_training_notes",
+                )
+            else:
+                # Availability is a fallback estimate, never a reported count.
+                training_frequency = len(training_days)
+                training_frequency_metadata = _metadata(
+                    "system_inferred",
+                    "weekly_training_frequency_missing_inferred_from_training_availability",
+                )
+        reported = training_workload_context.get("reported_weekly_sessions") or {}
+        if raw_frequency.strip() and reported:
+            training_workload_context["structured_frequency_conflict"] = not (
+                reported["minimum"] <= training_frequency <= reported["maximum"]
             )
+        training_workload_context["frequency_source"] = training_frequency_metadata["source"]
 
         available_days_metadata = (
             _metadata("user_supplied")
@@ -1161,6 +1205,7 @@ class PlanInput:
             hard_sparring_days=hard_sparring_days,
             support_work_days=support_work_days,
             training_frequency=training_frequency,
+            training_workload_context=training_workload_context,
             weeks_out=weeks_out,
             days_until_fight=days_until_fight,
             no_scheduled_fight=no_scheduled_fight,

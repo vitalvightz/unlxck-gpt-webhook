@@ -428,7 +428,7 @@ def test_contradictory_frequency_and_availability_raise_value_error():
 
     with pytest.raises(
         ValueError,
-        match="invalid Weekly Training Frequency: cannot exceed selected Training Availability days",
+        match="invalid Weekly Training Frequency: cannot exceed two sessions per selected Training Availability day",
     ):
         PlanInput.from_payload(data)
 

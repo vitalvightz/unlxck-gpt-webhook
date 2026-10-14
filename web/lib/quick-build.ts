@@ -69,7 +69,7 @@ export function planRequestToQuickBuildInput(plan: PlanRequest): QuickBuildInput
   const weeklyFrequencyRaw = plan.weekly_training_frequency ?? 4;
   const weeklyFrequency = Math.min(
     Math.max(Number.isFinite(weeklyFrequencyRaw) ? weeklyFrequencyRaw : 4, 1),
-    6,
+    14,
   );
   return {
     full_name: plan.athlete?.full_name ?? "",
@@ -172,13 +172,13 @@ export function validateQuickBuildInput(
   if (!ROUNDS_FORMAT_PATTERN.test(input.rounds_format)) {
     errors.rounds_format = "Pick a rounds format.";
   }
-  if (!Number.isInteger(input.weekly_training_frequency) || input.weekly_training_frequency < 1 || input.weekly_training_frequency > 6) {
-    errors.weekly_training_frequency = "Sessions per week must be between 1 and 6.";
+  if (!Number.isInteger(input.weekly_training_frequency) || input.weekly_training_frequency < 1 || input.weekly_training_frequency > 14) {
+    errors.weekly_training_frequency = "Sessions per week must be between 1 and 14.";
   }
   if (input.training_availability.length === 0) {
     errors.training_availability = "Choose at least one training day.";
-  } else if (input.weekly_training_frequency > input.training_availability.length) {
-    errors.training_availability = "Sessions per week cannot exceed selected training days.";
+  } else if (input.weekly_training_frequency > input.training_availability.length * 2) {
+    errors.training_availability = "Allow up to two sessions per selected training day.";
   }
   const combatSchedule = getSparringConsistency(
     input.training_availability,

@@ -757,7 +757,8 @@ def original_equipment_source(relative):
     This is audit replay, never a planner input or an identity authority.
     Unknown edits still fail the existing historical digest checks.
     """
-    data = reverse_mechanical_source(relative, (ROOT / relative).read_bytes().replace(b"\r\n", b"\n"))
+    from tools.replay_combat_round_metadata import pre_combat_round_source
+    data = reverse_mechanical_source(relative, pre_combat_round_source(relative, (ROOT / relative).read_bytes()))
     if relative == "data/tag_vocabulary.json":
         from tools.check_tag_retirement import original_vocabulary_source
 

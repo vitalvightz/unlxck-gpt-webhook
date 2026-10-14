@@ -7,11 +7,16 @@ import {
   getSparringConsistency,
 } from "./training-schedule.ts";
 
-test("flags sessions above the available training days", () => {
+test("accepts double days without equating availability with sessions", () => {
+  assert.equal(getAvailabilityConsistency(["Monday", "Wednesday"], 3).hardError, null);
+  assert.equal(getAvailabilityConsistency(["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"], 9).hardError, null);
+});
+
+test("flags sessions exceeding double-day capacity", () => {
   assert.deepStrictEqual(
-    getAvailabilityConsistency(["Monday", "Wednesday"], 3),
+    getAvailabilityConsistency(["Monday", "Wednesday"], 5),
     {
-      hardError: "You selected 2 available days but planned 3 weekly sessions.",
+      hardError: "You selected 2 available days but planned 5 weekly sessions. Allow up to two sessions per available day.",
       softWarning: null,
     },
   );

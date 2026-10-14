@@ -64,6 +64,9 @@ def test_approved_names_replace_only_the_legacy_slice():
             and {"boxing", "kickboxing", "muay_thai", "mma"}.isdisjoint(item.get("tags", []))
         )
     ]
+    from tools.replay_combat_round_metadata import pre_combat_round_source
+    historical = json.loads(pre_combat_round_source("data/style_conditioning_bank.json", BANK_PATH.read_bytes()))
+    unrelated = [next(r for r in historical if r["name"] == item["name"]) for item in unrelated]
     canonical = json.dumps(unrelated, sort_keys=True, separators=(",", ":")).encode()
     assert hashlib.sha256(canonical).hexdigest() == "b4b5a47097a1ab94dc33742b57dfbfb455a6cf418d15ff84a4fe190eaefe4b3b"
 

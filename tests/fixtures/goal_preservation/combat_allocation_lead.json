@@ -1,0 +1,70 @@
+{
+  "training_days": [
+    "Monday",
+    "Tuesday",
+    "Thursday",
+    "Friday",
+    "Saturday",
+    "Wednesday"
+  ],
+  "hard_sparring_days": [
+    "Tuesday",
+    "Saturday"
+  ],
+  "support_work_days": [
+    "Thursday",
+    "Friday"
+  ],
+  "key_goals": [
+    "speed",
+    "power",
+    "conditioning"
+  ],
+  "primary_goal": "",
+  "weaknesses": [
+    "balance",
+    "gas_tank"
+  ],
+  "primary_weak_area": "balance",
+  "equipment": [
+    "dumbbells",
+    "kettlebells",
+    "barbell",
+    "trap_bar",
+    "bench",
+    "landmine",
+    "assault_bike",
+    "rower",
+    "step_mill",
+    "pool",
+    "sled",
+    "battle_ropes",
+    "tire",
+    "sledgehammer",
+    "weight_vest",
+    "heavy_bag",
+    "pads",
+    "box",
+    "agility_ladder",
+    "jump_rope",
+    "medicine_ball",
+    "sandbag",
+    "bands",
+    "trx",
+    "pullup_bar",
+    "bosu_ball",
+    "neck_harness",
+    "weight_belt",
+    "water_jug",
+    "foam_roller",
+    "towel",
+    "treadmill"
+  ],
+  "fatigue": "",
+  "status": "",
+  "fight_date": "2026-12-05",
+  "plan_date": "2026-10-13",
+  "notes": "I work full time I do about 8/ 9 sessions a week some are double days I train before work then train after",
+  "training_frequency": 6,
+  "rounds_format": "10 x 3"
+}

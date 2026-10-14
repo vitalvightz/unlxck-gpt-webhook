@@ -390,12 +390,12 @@ def test_king_trunk_weakness_is_checked_against_delivered_trunk_work():
     assert disposition["resolution"] == "delegated" and disposition["required_intent"] == "trunk_training"
     entry = _entry(brief, "trunk_strength")
     assert entry["initial_state"] == "build"
-    # Week 2 has one readiness-capped SPP strength session; trunk work would
-    # have fitted at pressure 0, so the cut is the cited cause and the weakness
-    # is maintained, not silently "delegated".
-    assert (entry["state"], entry["satisfied"]) == ("maintain", True)
-    assert {c["reason_code"] for c in entry["constraints"]} == {"weight_cut_pressure"}
-    assert {c["authority"] for c in entry["constraints"]} == {"session_composition.trunk_support"}
+    # Recomposition after a conflicting neighbour is removed restores safe
+    # trunk work inside the existing readiness cap. The cut no longer supplies
+    # a causal reason to demote this achievable build obligation.
+    assert (entry["state"], entry["satisfied"]) == ("build", True)
+    assert entry["constraints"] == []
+    assert entry["missing_coverage"] == []
     for evidence in entry["evidence"]:
         assert "trunk_strength" in strength_adaptation_relevance(_BANK[evidence["name"]])
         assert "sled" not in evidence["name"].lower()
@@ -413,7 +413,7 @@ def test_every_conditioning_day_says_why_it_carries_no_trunk_support(key):
     if key == "king":
         # Week 2's SPP pool holds no low-load trunk drill: its core-pattern
         # slots went to trunk-matched power drills under the movement cap.
-        assert {reason for d_day, reason in skipped if 14 <= d_day <= 20} == {"no_low_load_trunk_candidate"}
+        assert {reason for d_day, reason in skipped if isinstance(d_day, int) and 14 <= d_day <= 20} == {"no_low_load_trunk_candidate"}
 
 
 def test_without_the_cut_king_builds_trunk_strength_every_week():

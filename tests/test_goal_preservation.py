@@ -216,7 +216,10 @@ def test_two_day_contact_gap_exposes_managed_strength_repair_slot():
         events=build_events(brief["weekly_role_map"], exclude_role=ref.role),
         candidate_scope=ref.scope,
     )
-    assert decision.reason_code == "between_hard_contacts_managed_strength"
+    # The repair now runs realised-load classification after effective doses.
+    # This tiny synthetic 3x3 session is a neural microdose on that authority.
+    assert decision.reason_code == "between_hard_contacts_neural_microdose"
+    assert roles[0]["calendar_stress"]["authority"] == "realised_session_composition"
     assert _goal(brief, "strength")["satisfied"] is True
 
 

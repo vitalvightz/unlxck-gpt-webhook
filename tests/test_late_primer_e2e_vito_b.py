@@ -173,8 +173,8 @@ def test_vito_b_d13_session_leads_with_meaningful_goal_relevant_power(days_out):
 @pytest.mark.parametrize("days_out", [14, 13])
 def test_vito_b_no_primer_day_repeats_one_drill_alone(days_out):
     primers = _primers(_brief("vito_b", days_out))
-    assert {13, 6, 5} <= set(primers)
-    for d_day in (13, 6, 5):
+    assert {13, 7, 5} <= set(primers)
+    for d_day in (13, 7, 5):
         assert [m["name"] for m in _members(primers[d_day])] != ["Pull-Counter-Reset"], d_day
 
 
@@ -185,28 +185,25 @@ def _suppressed(brief: dict) -> list[dict]:
 
 
 @pytest.mark.parametrize("days_out", [21, 17, 14, 13, 10])
-def test_vito_b_d7_primer_moves_off_the_light_combat_day_instead_of_disappearing(days_out):
-    """The neural primer was placed on Monday's declared light combat (D-7).
-
-    The policy forbids that stack and the primer is a small stimulus, so it moves
-    to the adjacent training day the policy allows (Tuesday, D-6), taking the
-    day from a subordinate occupancy filler. It is neither shipped forbidden nor
-    silently dropped, and no conflict is left on the final calendar.
-    """
+def test_vito_b_d7_primer_legally_shares_declared_light_combat(days_out):
+    """Measured, bounded primer work fits a declared compatible technical day."""
+    from fightcamp.calendar_context import classify_role
+    from fightcamp.combat_load_policy import CalendarEvent, evaluate_candidate_at_position, StressLevel
     brief = _brief("vito_b", days_out)
     primers = _primers(brief)
-    assert 7 not in primers
-    primer = primers[6]
+    primer = primers[7]
     assert primer["role_key"] == "neural_primer_day"
-    resolution = primer["late_load_resolution"]
-    assert resolution["action"] == "relocated_to_adjacent_day"
-    assert resolution["from_d_day"] == 7 and resolution["to_d_day"] == 6
-    assert resolution["conflict_reason_code"] == "exclusive_physical_slot_conflict"
-    assert str(primer["scheduled_day_hint"]).lower() == "tuesday"
-    # The filler it displaced is gone from D-6; light combat still owns D-7.
+    assert str(primer["scheduled_day_hint"]).lower() == "monday"
     roles = _roles(brief)
-    assert not [r for r in roles if r.get("role_key") == "joint_prep" and r.get("scheduled_countdown_label") == "D-6"]
-    assert [r for r in roles if r.get("role_key") == "light_combat_day" and r.get("scheduled_countdown_label") == "D-7"]
+    coach = next(r for r in roles if r.get("role_key") == "light_combat_day"
+                 and r.get("scheduled_countdown_label") == "D-7")
+    assert coach["coach_owned"]
+    profile = classify_role(primer)
+    assert profile.stress.neural_mechanical <= StressLevel.MODERATE
+    assert profile.stress.systemic <= StressLevel.LOW
+    assert evaluate_candidate_at_position(profile, candidate_position=-7,
+        events=[CalendarEvent(position=-7, profile=classify_role(coach))]).allowed
+    _assert_primer_invariants(brief)
     revalidation = (brief.get("weekly_role_map") or {}).get("realised_load_revalidation") or {}
     assert not revalidation.get("residual_conflicts")
 

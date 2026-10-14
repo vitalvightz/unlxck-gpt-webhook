@@ -178,6 +178,7 @@ def build_score_evidence(
         "load_adjustments",
         "equipment_boost",
         "boxing_aerobic_preference",
+        "boxing_heavy_bag_preference",
         "deterministic_scoring",
     ):
         if key in reasons and key not in evidence:

@@ -2454,12 +2454,15 @@ def test_boxing_crowded_week_keeps_one_anchor_and_one_support_day_max():
         training_days=["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
         hard_sparring_days=["Tuesday", "Thursday", "Saturday"],
         weight_cut_risk=True,
-        weight_cut_pct=4.2,
+        weight_cut_pct=8.2,
         readiness_flags=["moderate_fatigue", "active_weight_cut"],
     )
-    week = _spp_week_role_map(athlete)
+    athlete["plan_creation_weekday"] = "tuesday"
+    week = _spp_week_role_map(athlete, span_days=28)
+    assert len(week["effective_hard_sparring_days"]) == 2
 
-    non_spar_roles = [role for role in week["session_roles"] if role["role_key"] != "hard_sparring_day"]
+    non_spar_roles = [role for role in week["session_roles"]
+                      if role.get("category") in {"strength", "conditioning", "recovery"}]
     anchor_roles = [role for role in non_spar_roles if role["governance"]["main_job"] == "anchor"]
     support_roles = [role for role in non_spar_roles if role["governance"]["main_job"] == "support_recovery"]
 
@@ -2916,6 +2919,7 @@ def _spp_week_role_map(
     spar_days: list[str] | None = None,
     training_days: list[str] | None = None,
     session_counts: dict | None = None,
+    span_days: int = 7,
 ) -> dict:
     """Helper that builds a single SPP week's session_roles via the planning brief."""
     if training_days is not None:
@@ -2936,8 +2940,8 @@ def _spp_week_role_map(
                     "must_keep_if_present": ["primary_strength"],
                     "conditioning_drop_order_if_thin": ["aerobic"],
                 },
-                "weeks": 1,
-                "days": 7,
+                "weeks": max(1, span_days // 7),
+                "days": span_days,
             },
         },
     )
@@ -3034,13 +3038,15 @@ def test_spar_first_compression_applies_only_to_non_spar_slots():
         training_days=["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
         hard_sparring_days=["Tuesday", "Thursday", "Saturday"],
         weight_cut_risk=True,
-        weight_cut_pct=4.1,
+        weight_cut_pct=8.1,
         readiness_flags=["moderate_fatigue", "active_weight_cut"],
     )
-    week = _spp_week_role_map(athlete)
+    athlete["plan_creation_weekday"] = "tuesday"
+    week = _spp_week_role_map(athlete, span_days=28)
+    assert len(week["effective_hard_sparring_days"]) == 2
 
     spar_roles = [r for r in week["session_roles"] if r["role_key"] == "hard_sparring_day"]
-    non_spar_roles = [r for r in week["session_roles"] if r["role_key"] != "hard_sparring_day"]
+    non_spar_roles = [r for r in week["session_roles"] if r.get("category") in {"strength", "conditioning", "recovery"}]
     suppressed_compression = [s for s in week["suppressed_roles"] if s.get("intentional_compression")]
 
     assert len(spar_roles) == 3

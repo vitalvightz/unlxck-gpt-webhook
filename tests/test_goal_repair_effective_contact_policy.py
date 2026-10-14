@@ -41,6 +41,24 @@ def test_true_two_effective_hard_days_keep_two_hard_spar_authority():
     assert codes == ["two_hard_spar_days", "two_hard_spar_days"]
 
 
+def test_routine_budget_trimming_does_not_veto_legal_supplementary_goal_repair():
+    week = _compression_brief(effective_days=["Tuesday", "Saturday"], compression_codes=["two_hard_spar_days", "spar_first_cap"])
+    week["intentional_compression"]["active"] = False
+    compression, codes = _live_state(week)
+    assert compression["active"] is False
+    assert codes == []
+
+
+def test_readiness_and_policy_suppressions_remain_authoritative_with_two_contacts():
+    week = _compression_brief(effective_days=["Tuesday", "Saturday"], compression_codes=["high_fatigue", "two_hard_spar_days"])
+    week["intentional_compression"]["active"] = False
+    _, codes = _live_state(week)
+    assert codes == ["high_fatigue", "high_fatigue"]
+    week["suppressed_roles"][0]["intentional_compression"] = True
+    _, codes = _live_state(week)
+    assert "two_hard_spar_days" in codes
+
+
 def test_one_effective_hard_day_clears_stale_two_hard_spar_authority():
     week = _compression_brief(
         effective_days=["Friday"],

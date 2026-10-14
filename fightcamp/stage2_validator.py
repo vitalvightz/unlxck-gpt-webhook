@@ -3971,6 +3971,20 @@ def _underfilled_conditioning_errors(planning_brief: dict) -> list[dict]:
     return errors
 
 
+def _total_session_budget_errors(planning_brief: dict) -> list[dict]:
+    from .goal_preservation import _effective_map
+    from .physical_session_frequency import appointment_budget_exceeded, requested_training_frequency
+    # This fix closes normal allocation and goal repair. The separate direct
+    # countdown owner retains its existing occupancy contract.
+    if "late_fight_session_sequence" in planning_brief:
+        return []
+    frequency = requested_training_frequency(planning_brief.get("athlete_snapshot"))
+    if frequency and appointment_budget_exceeded(_effective_map(planning_brief), frequency):
+        return [_issue(code="total_session_budget_exceeded", severity="blocker", confidence="high",
+                       message="Scheduled standalone sessions exceed the requested weekly total, including coach sessions and double days.")]
+    return []
+
+
 def validate_stage2_output(*, planning_brief: dict, final_plan_text: str) -> dict:
     from .goal_preservation import validate_goal_preservation
     plan_lines = _extract_plan_lines(final_plan_text)
@@ -3979,6 +3993,7 @@ def validate_stage2_output(*, planning_brief: dict, final_plan_text: str) -> dic
     countdown_blocks = _countdown_blocks(final_plan_text)
 
     errors: list[dict[str, Any]] = validate_goal_preservation(planning_brief)
+    errors.extend(_total_session_budget_errors(planning_brief))
     if not errors:
         errors.extend(_goal_preservation_render_errors(planning_brief, final_plan_text))
     errors.extend(_priority_microdose_render_errors(planning_brief, final_plan_text))

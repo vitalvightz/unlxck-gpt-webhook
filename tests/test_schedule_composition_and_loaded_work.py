@@ -266,12 +266,18 @@ def test_the_d17_stack_is_resolved_onto_a_free_day():
 
 
 def test_the_revalidation_move_is_recomposed():
-    """The realised-load pass moved this role a day; its membership is the
-    composer's answer for the day it now occupies (checked in the general test),
-    and the move itself is recorded."""
+    """The corrected primary placement leaves the secondary needing relocation.
+    Membership and effective doses must describe its actual destination."""
     brief = _plan("boxer56_novice_revalidation_move")
     actions = (brief["weekly_role_map"].get("realised_load_revalidation") or {}).get("actions") or []
-    assert any(a["role_key"] == "primary_strength_day" and a["action"] == "relocated" for a in actions)
+    moves = [a for a in actions if a["action"] == "relocated" and a["role_key"] == "secondary_strength_day"]
+    assert moves
+    for move in moves:
+        role = next(r for w in brief["weekly_role_map"]["weeks"] for r in _normal_strength(w)
+                    if r["role_key"] == move["role_key"] and role_d_day(w, r) == move["to_d_day"])
+        assert role["strength_composition_policy"]["composed_for_d_day"] == move["to_d_day"]
+        assert role.get("effective_strength_prescriptions")
+    assert not brief["weekly_role_map"]["realised_load_revalidation"]["residual_conflicts"]
 
 
 def test_strength_no_longer_lands_on_the_glycolytic_day_week_after_week():

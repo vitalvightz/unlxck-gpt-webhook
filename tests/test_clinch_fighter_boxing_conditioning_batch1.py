@@ -123,8 +123,13 @@ def test_existing_selector_does_not_promote_support_to_clinch_fulfillment():
     }
 
 
-def test_rebuilt_boxing_archetype_blocks_remain_byte_for_byte_equivalent():
+def test_rebuilt_boxing_archetype_blocks_preserve_reviewed_bank_content():
     for style, expected_hash in PRESERVED_BOXING_SLICE_HASHES.items():
         entries = list(_slice(style).values())
+        if style == "pressure_fighter":
+            # The one reviewed addition aligns combination rounds to the
+            # athlete's format; every other authored field keeps its baseline.
+            rounds = next(item for item in entries if item["name"] == "Pressure Combination Rounds")
+            assert rounds.pop("round_based") is True
         payload = json.dumps(entries, sort_keys=True, separators=(",", ":")).encode()
         assert hashlib.sha256(payload).hexdigest() == expected_hash

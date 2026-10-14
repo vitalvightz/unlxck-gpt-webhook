@@ -53,7 +53,12 @@ def conditioning_phase_workload_envelope(
     """
     phase = str(phase or "").upper()
     system = str(system or "").strip().lower()
-    if system == "glycolytic" and phase == GPP:
+    if system == "alactic" and phase in {GPP, SPP}:
+        # A neural burst session is not eight minutes of glycolytic work.
+        # Match existing bank protocols (6/8 crisp five-second bursts), keeping
+        # full recovery and the phase elapsed cap; never lengthen the bursts.
+        target_active_work, elapsed_cap = (30.0, 30.0) if phase == GPP else (40.0, 25.0)
+    elif system == "glycolytic" and phase == GPP:
         # Existing GPP combat-pressure floor: 6-8 x 60 sec hard.
         target_active_work, elapsed_cap = 6 * 60.0, 30.0
     elif phase == GPP:

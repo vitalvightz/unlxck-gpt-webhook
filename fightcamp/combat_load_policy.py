@@ -649,6 +649,11 @@ def role_load_profile(role: Mapping[str, Any] | None) -> CalendarLoadProfile | N
         canonical = _profile(
             LoadClass.TECHNICAL_CONTACT,
             allows_light_combat_stack=is_declared_light_combat,
+            # Only the declared Light Combat / S&C-compatible appointment has
+            # this low-load intent. Generic/resolved technical contact stays
+            # unknown and exclusive. Explicit measured stress overrides intent.
+            stress=(_parse_stress_stamp(role.get("calendar_stress"))
+                    or SessionStress(StressLevel.LOW, StressLevel.LOW)) if is_declared_light_combat else None,
         )
         explicit_load = _explicit_enum(role, "calendar_load_class", LoadClass)
         explicit_occupancy = _explicit_enum(
@@ -802,12 +807,30 @@ def _same_day_decision(
             and not p.allows_light_combat_stack
             for p in existing
         )
-        and not any(
-            p.occupancy is DayOccupancy.EXCLUSIVE_PHYSICAL
-            and p.load_class not in CONTACT_LOAD_CLASSES
-            for p in existing
-        )
     )
+    compatible_technical = existing_light_combat_only and all(
+        p.stress is not None
+        and p.stress.systemic <= StressLevel.LOW
+        and p.stress.neural_mechanical <= StressLevel.LOW
+        for p in existing if p.allows_light_combat_stack
+    )
+    if existing_physical and candidate.occupancy is not DayOccupancy.COEXISTABLE and candidate.load_class not in CONTACT_LOAD_CLASSES:
+        stresses = [session_stress(p) for p in (*existing, candidate)]
+        stresses = [s for s in stresses if s is not None]
+        # These levels are ordinal, not additive workload units. One hard S&C
+        # exposure may coexist with declared light technique and truly cheap
+        # support; two moderate exposures may share a compatible double day.
+        # Multiple hard exposures or a dominating hard+moderate pairing do not.
+        hard_count = sum(max(s.systemic, s.neural_mechanical) >= StressLevel.HIGH for s in stresses)
+        meaningful_count = sum(max(s.systemic, s.neural_mechanical) >= StressLevel.MODERATE for s in stresses)
+        dominating_pair = any(
+            (first.systemic >= StressLevel.HIGH and max(second.systemic, second.neural_mechanical) >= StressLevel.MODERATE)
+            or (first.neural_mechanical >= StressLevel.HIGH and second.neural_mechanical >= StressLevel.MODERATE)
+            for idx, first in enumerate(stresses) for other_idx, second in enumerate(stresses) if idx != other_idx
+        )
+        if hard_count > 1 or meaningful_count > 2 or dominating_pair:
+            return _decision(PlacementDirective.FORBID, "combined_daily_stress_exceeded",
+                             "The technical appointment and supplementary work exceed the shared daily stress budget.")
 
     if candidate.load_class in CONTACT_LOAD_CLASSES and existing_physical:
         return _decision(
@@ -815,7 +838,9 @@ def _same_day_decision(
             "contact_candidate_physical_conflict",
             "Do not add contact to a day that already contains a physical/contact session.",
         )
-    if candidate.occupancy is DayOccupancy.EXCLUSIVE_PHYSICAL and existing_physical:
+    if candidate.occupancy is DayOccupancy.EXCLUSIVE_PHYSICAL and existing_physical and not (
+        compatible_technical and candidate.load_class in _MEANINGFUL_LOADS | {LoadClass.NEURAL_MICRODOSE}
+    ):
         return _decision(
             PlacementDirective.FORBID,
             "exclusive_physical_slot_conflict",
@@ -827,7 +852,8 @@ def _same_day_decision(
         # contact remains strict even if its effective load is TECHNICAL_CONTACT.
         if not (
             existing_light_combat_only
-            and candidate.load_class in _LIGHT_COMBAT_COEXIST_LOADS
+            and (candidate.load_class in _LIGHT_COMBAT_COEXIST_LOADS
+                 or (compatible_technical and candidate.load_class in _MEANINGFUL_LOADS))
         ):
             return _decision(
                 PlacementDirective.FORBID,
