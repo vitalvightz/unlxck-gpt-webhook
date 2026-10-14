@@ -1,7 +1,7 @@
 {
   "baseline_ref": "eadb97d2",
   "random_seed": 1,
-  "note": "Anonymised intake replays; exercises and effective doses are checked by test_combat_training_allocation.py. This is a deterministic comparison, not an exact replay of an unknown saved-generation seed. Day lists count witnesses, not separate appointments or total load. Follow-up: normal session ceilings count standalone appointments rather than occupied days; original six-session goal claims were corrected after removing over-budget work. Direct-countdown frequency expansion was deferred. Follow-up: normal session ceilings count standalone appointments rather than occupied days; original six-session goal claims were corrected after removing over-budget work. Direct-countdown frequency expansion was deferred.",
+  "note": "Anonymised intake replays; exercises and effective doses are checked by test_combat_training_allocation.py. This is a deterministic comparison, not an exact replay of an unknown saved-generation seed. Day lists count witnesses, not separate appointments or total load. Follow-up: normal session ceilings count standalone appointments rather than occupied days; six-session goal claims were corrected after removing over-budget work. Further direct-countdown frequency expansion was deferred.",
   "cases": [
     {
       "case": "earlier",

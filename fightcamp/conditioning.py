@@ -28,6 +28,7 @@ from .injury_filtering import injury_match_details, _log_exclusion, _log_replace
 from .injury_guard import Decision, choose_injury_replacement, injury_decision, make_guarded_decision_factory
 from .coordination_support_library import extract_coordination_style
 from .sports import normalize_sport, planning_format
+from .conditioning_preferences import striking_heavy_bag_preference
 from .restriction_filtering import evaluate_restriction_impact
 from .bout_format import (
     bout_energy_modifiers,
@@ -554,7 +555,6 @@ from .conditioning_boxing import (  # noqa: E402
     _boxing_aerobic_context_flags,
     _boxing_aerobic_preference_rank,
     _boxing_aerobic_priority_adjustment,
-    _boxing_heavy_bag_preference,
     _is_pool_treading_drill,
     _normalize_conditioning_name,
     _sanitize_sport_language,
@@ -3423,11 +3423,12 @@ def generate_conditioning_block(flags):
                 energy_multiplier = energy_weights.get(system, 1.0)
                 system_score = round(energy_multiplier * 1.0, 2)
                 total_score = base_score + system_score
-                heavy_bag_bonus = _boxing_heavy_bag_preference(
+                heavy_bag_bonus = striking_heavy_bag_preference(
                     d, phase=phase, system=system, fatigue=fatigue,
                     days_until_fight=days_until_fight, equipment_access_set=equipment_access_set,
                     injuries=injuries, hard_sparring_days=flags.get("effective_hard_sparring_days", flags.get("hard_sparring_days")) or [],
-                ) if selection_format == "boxing" else 0.0
+                    sport=primary_tech or flags.get("sport") or selection_format,
+                )
                 total_score += heavy_bag_bonus
 
                 preferred_name_match = str(d.get("name", "")).strip().lower() in preferred_exercise_names
@@ -3484,7 +3485,8 @@ def generate_conditioning_block(flags):
                     "penalties": penalty,
                     "restriction_hits": len(matched_restrictions),
                     "boxing_aerobic_preference": round(boxer_aerobic_adjustment, 4),
-                    "boxing_heavy_bag_preference": heavy_bag_bonus,
+                    "boxing_heavy_bag_preference": heavy_bag_bonus if selection_format == "boxing" else 0.0,
+                    "striking_heavy_bag_preference": heavy_bag_bonus,
                     "clarification_tag_hits": clarification_hits,
                     "clarification_bonus": round(clarification_bonus, 4),
                     "reason_codes": list(late_eval["reason_codes"]),
@@ -3688,11 +3690,12 @@ def generate_conditioning_block(flags):
                 if system == top_system:
                     score += 0.75
                 score += equip_bonus
-                heavy_bag_bonus = _boxing_heavy_bag_preference(
+                heavy_bag_bonus = striking_heavy_bag_preference(
                     d, phase=phase, system=system, fatigue=fatigue,
                     days_until_fight=days_until_fight, equipment_access_set=equipment_access_set,
                     injuries=injuries, hard_sparring_days=flags.get("effective_hard_sparring_days", flags.get("hard_sparring_days")) or [],
-                ) if selection_format == "boxing" else 0.0
+                    sport=primary_tech or flags.get("sport") or selection_format,
+                )
                 score += heavy_bag_bonus
                 score += sport_specificity_bonus
                 if sport_specificity_bonus:
@@ -3757,7 +3760,8 @@ def generate_conditioning_block(flags):
                     "load_adjustments": 0.75 if system == top_system else 0.0,
                     "equipment_boost": equip_bonus,
                     "sport_specificity_bonus": sport_specificity_bonus,
-                    "boxing_heavy_bag_preference": heavy_bag_bonus,
+                    "boxing_heavy_bag_preference": heavy_bag_bonus if selection_format == "boxing" else 0.0,
+                    "striking_heavy_bag_preference": heavy_bag_bonus,
                     "exact_sport_match": bool(sport_specificity_bonus),
                     "preferred_exercise_name_match": PREFERRED_EXERCISE_NAME_BOOST if preferred_name_match else 0.0,
                     "penalties": penalty,

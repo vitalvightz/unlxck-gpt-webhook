@@ -29,7 +29,7 @@ def run_lead(monkeypatch, *, earlier=False, **overrides):
     fields = {
         "Full name": "Combat Allocation Regression", "Age": "28", "Weight (kg)": "77",
         "Target Weight (kg)": "77", "Height (cm)": "180", "Stance": "Orthodox",
-        "Fighting Style (Technical)": "Boxing", "Fighting Style (Tactical)": "Pressure Fighter",
+        "Fighting Style (Technical)": fixture.get("sport", "Boxing"), "Fighting Style (Tactical)": "Pressure Fighter",
         "Professional Status": fixture["status"], "Rounds x Minutes": fixture.get("rounds_format", "10x3"),
         "Weekly Training Frequency": str(fixture["training_frequency"] or ""),
         "Fatigue Level": fixture["fatigue"], "Equipment Access": ", ".join(fixture["equipment"]),
@@ -68,8 +68,8 @@ def allocation_summary(brief):
 
 
 @pytest.mark.parametrize("frequency", [6, 8, 9])
-def test_final_pipeline_honours_total_sessions_including_double_days(monkeypatch, frequency):
-    parsed, brief = run_lead(monkeypatch, training_frequency=frequency)
+def test_final_pipeline_honours_total_sessions_including_double_days(monkeypatch, frequency, sport="boxing"):
+    parsed, brief = run_lead(monkeypatch, training_frequency=frequency, sport=sport)
     assert parsed.training_frequency == frequency
     double_days = []
     appointment_days = []
@@ -97,6 +97,11 @@ def test_final_pipeline_honours_total_sessions_including_double_days(monkeypatch
         assert sum(day in {d for d, _ in days} for day in appointment_days) <= frequency
     assert double_days  # The cap must allow legal double days, including at six.
     assert_scheduled_doses_and_contact_safety(brief)
+
+
+@pytest.mark.parametrize("sport", ["kickboxing", "muay_thai", "mma", "wrestling", "bjj"])
+def test_total_session_and_shared_load_governance_are_universal(monkeypatch, sport):
+    test_final_pipeline_honours_total_sessions_including_double_days(monkeypatch, 6, sport=sport)
 
 
 def test_appointment_counter_distinguishes_double_days_from_embedded_support():
