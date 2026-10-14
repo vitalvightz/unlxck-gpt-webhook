@@ -8,7 +8,7 @@ budget, and not a count of anything the athlete merely reads or watches.
 
 Three concepts that used to be conflated live apart here:
 
-``physical_session_target``
+``physical_session_target`` (legacy occupancy target)
     How many physical training days should appear in a week. Derived from the
     requested frequency and the *viable* declared training days remaining on the
     calendar (fight day is not a training opportunity), then reduced only by an
@@ -26,6 +26,10 @@ Three concepts that used to be conflated live apart here:
 Classification is deterministic and role-key first. ``stress_class`` alone is
 never sufficient: a Breathing Reset and a programmed mobility session are both
 ``support``, but only one of them is a training session.
+
+``physical_appointments`` separately counts standalone sessions for the total
+weekly ceiling. Double days consume two appointments even though they occupy
+one available day. Occupancy targets must never be used as that ceiling.
 """
 
 from __future__ import annotations
@@ -187,6 +191,43 @@ def count_physical_sessions(roles: Iterable[Any]) -> int:
     session.
     """
     return len(physical_session_offsets(roles))
+
+
+def physical_appointments(roles: Iterable[Any]) -> list[dict]:
+    """Scheduled standalone sessions, including both appointments on double days.
+
+    Movement inserts co-located with a full session are embedded support. Multiple
+    standalone strength/conditioning or coach sessions are never collapsed by day.
+    Keep occupancy counting separate: it is still useful for filling empty days.
+    """
+    scheduled = [r for r in roles if is_physical_session_role(r)
+                 and (role_countdown_offset(r) or 0) > 0]
+    full = [r for r in scheduled if _normalize(r.get("role_key")) not in PHYSICAL_SUPPORT_ROLE_KEYS]
+    occupied = physical_session_offsets(full)
+    inserts = {}
+    for role in scheduled:
+        offset = role_countdown_offset(role)
+        if offset not in occupied:
+            inserts.setdefault(offset, role)
+    return full + list(inserts.values())
+
+
+def dated_appointments(role_map: dict) -> list[dict]:
+    """Full-calendar appointment view retaining each role's budget owner."""
+    from .calendar_context import role_d_day
+    return physical_appointments([
+        {**r, "countdown_offset": role_d_day(w, r), "_source_role": r, "_source_week": w}
+        for w in role_map.get("weeks") or [] for r in w.get("session_roles") or []
+    ])
+
+
+def appointment_budget_exceeded(role_map: dict, frequency: int) -> bool:
+    """Check actual seven-day buckets across phase/progression boundaries."""
+    appointments = dated_appointments(role_map)
+    slots = [(d["d_day"], d.get("weekday", ""))
+             for w in role_map.get("weeks") or [] for d in w.get("calendar_days") or []]
+    return any(sum(r["countdown_offset"] in {d for d, _ in days} for r in appointments) > frequency
+               for days in cadence_windows(slots))
 
 
 # --- Target resolution -------------------------------------------------------

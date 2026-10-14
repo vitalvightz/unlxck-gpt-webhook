@@ -17,7 +17,7 @@ from .combat_load_policy import StressLevel
 from .conditioning import _conditioning_structured_profile
 from .camp_week_fillers import HANDOFF_UNPLACED_REASON_CODE
 from .goal_repair_effective_contact_policy import effective_goal_repair_compression_state
-from .physical_session_frequency import cadence_windows, physical_session_offsets
+from .physical_session_frequency import cadence_windows, physical_appointments, appointment_budget_exceeded
 from .prescription_resolver import (
     _role_kind,
     _slot_quality_class_effective,
@@ -1191,8 +1191,8 @@ def _restore_goal_roles(brief: dict, entry: dict) -> list[dict]:
             view = (CalendarLegalityView(events=tuple(build_events(role_map, exclude_role=live)),
                     scope=week_scope(week, ordinal)) if live is not None
                     else weekly_role_map_legality(role_map, week, ordinal))
-            offsets = physical_session_offsets([
-                {**r, "countdown_offset": role_d_day(week, r)} for r in roles
+            appointments = physical_appointments([
+                {**r, "countdown_offset": role_d_day(week, r), "_source_role": r} for r in roles
                 if role_d_day(week, r) is not None
             ])
             cadence = [{offset for offset, _ in days} for days in cadence_windows([
@@ -1206,12 +1206,13 @@ def _restore_goal_roles(brief: dict, entry: dict) -> list[dict]:
                     continue
                 if not any(window["min_d_day"] is None or window["min_d_day"] <= d_day <= window["max_d_day"] for window in uncovered):
                     continue
-                # The canonical frequency owner counts physical appointments by
-                # occupied day. Coach-owned technical practice may carry a legal
-                # supplementary block without consuming another training day;
-                # zero-load support and dayless candidates are not appointments.
-                occupied = offsets & next((days for days in cadence if d_day in days), set())
-                if frequency and d_day not in occupied and len(occupied) >= frequency:
+                # A standalone double-day block consumes another appointment.
+                # Relocation retains its slot; embedded microdose repair below
+                # can still preserve a goal when the standalone budget is full.
+                window_days = next((days for days in cadence if d_day in days), set())
+                occupied = [r for r in appointments if r["countdown_offset"] in window_days
+                            and r["_source_role"] is not live]
+                if frequency and len(occupied) >= frequency:
                     audit.append({"week_index": week.get("week_index"), "d_day": d_day,
                                   "result": "session_cap", "reason_codes": ["calendar_capacity"]})
                     continue
@@ -1277,6 +1278,13 @@ def _restore_goal_roles(brief: dict, entry: dict) -> list[dict]:
                         only_roles=only_roles, allow_relocation=False),
                 )
                 if not any(role is restored for role in trial_week["session_roles"]):
+                    continue
+                if frequency and (appointment_budget_exceeded(trial["weekly_role_map"], int(frequency)) or any(len(physical_appointments([
+                    {**r, "countdown_offset": role_d_day(trial_week, r)}
+                    for r in trial_week["session_roles"] if role_d_day(trial_week, r) in days
+                ])) > frequency for days in cadence)):
+                    audit.append({"week_index": week.get("week_index"), "result": "session_cap",
+                                  "reason_codes": ["calendar_capacity"]})
                     continue
                 final_day = role_d_day(trial_week, restored)
                 final_profile = classify_role(restored)

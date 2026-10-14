@@ -1,7 +1,7 @@
 {
   "baseline_ref": "eadb97d2",
   "random_seed": 1,
-  "note": "Anonymised intake replays; exercises and effective doses are checked by test_combat_training_allocation.py. This is a deterministic comparison, not an exact replay of an unknown saved-generation seed. Day lists count witnesses, not separate appointments or total load.",
+  "note": "Anonymised intake replays; exercises and effective doses are checked by test_combat_training_allocation.py. This is a deterministic comparison, not an exact replay of an unknown saved-generation seed. Day lists count witnesses, not separate appointments or total load. Follow-up: normal session ceilings count standalone appointments rather than occupied days; original six-session goal claims were corrected after removing over-budget work. Direct-countdown frequency expansion was deferred. Follow-up: normal session ceilings count standalone appointments rather than occupied days; original six-session goal claims were corrected after removing over-budget work. Direct-countdown frequency expansion was deferred.",
   "cases": [
     {
       "case": "earlier",
@@ -59,34 +59,48 @@
       },
       "after": {
         "frequency": 6,
-        "power_days": [
-          15,
-          19,
-          26,
-          33,
-          37,
-          44,
-          50
+        "appointment_counts": [
+          {
+            "max_d_day": 52,
+            "min_d_day": 46,
+            "count": 6
+          },
+          {
+            "max_d_day": 45,
+            "min_d_day": 39,
+            "count": 6
+          },
+          {
+            "max_d_day": 38,
+            "min_d_day": 32,
+            "count": 6
+          },
+          {
+            "max_d_day": 31,
+            "min_d_day": 25,
+            "count": 6
+          },
+          {
+            "max_d_day": 24,
+            "min_d_day": 18,
+            "count": 6
+          },
+          {
+            "max_d_day": 17,
+            "min_d_day": 11,
+            "count": 6
+          },
+          {
+            "max_d_day": 10,
+            "min_d_day": 4,
+            "count": 6
+          },
+          {
+            "max_d_day": 3,
+            "min_d_day": 0,
+            "count": 4
+          }
         ],
-        "strength_days": [
-          33,
-          37,
-          40,
-          44,
-          47,
-          50
-        ],
-        "conditioning_days": [
-          16,
-          22,
-          24,
-          29,
-          31,
-          36,
-          43,
-          50
-        ],
-        "underfilled": 2,
         "goals": [
           {
             "goal": "recovery",
@@ -96,9 +110,18 @@
           },
           {
             "goal": "speed",
-            "state": "maintain",
-            "satisfied": true,
-            "missing": []
+            "state": "defer",
+            "satisfied": false,
+            "missing": [
+              {
+                "min_d_day": 16,
+                "max_d_day": 29
+              },
+              {
+                "min_d_day": 30,
+                "max_d_day": 52
+              }
+            ]
           },
           {
             "goal": "power",
@@ -106,7 +129,29 @@
             "satisfied": true,
             "missing": []
           }
-        ]
+        ],
+        "power_days": [
+          15,
+          23,
+          30,
+          37,
+          44,
+          51
+        ],
+        "strength_days": [
+          37,
+          44,
+          51
+        ],
+        "conditioning_days": [
+          16,
+          24,
+          31,
+          36,
+          43,
+          50
+        ],
+        "underfilled": 0
       }
     },
     {
@@ -163,31 +208,67 @@
       },
       "after": {
         "frequency": 6,
-        "power_days": [
-          15,
-          19,
-          26,
-          52
+        "appointment_counts": [
+          {
+            "max_d_day": 52,
+            "min_d_day": 46,
+            "count": 6
+          },
+          {
+            "max_d_day": 45,
+            "min_d_day": 39,
+            "count": 6
+          },
+          {
+            "max_d_day": 38,
+            "min_d_day": 32,
+            "count": 6
+          },
+          {
+            "max_d_day": 31,
+            "min_d_day": 25,
+            "count": 6
+          },
+          {
+            "max_d_day": 24,
+            "min_d_day": 18,
+            "count": 6
+          },
+          {
+            "max_d_day": 17,
+            "min_d_day": 11,
+            "count": 6
+          },
+          {
+            "max_d_day": 10,
+            "min_d_day": 4,
+            "count": 6
+          },
+          {
+            "max_d_day": 3,
+            "min_d_day": 0,
+            "count": 4
+          }
         ],
-        "strength_days": [
-          51,
-          52
-        ],
-        "conditioning_days": [
-          17,
-          23,
-          30,
-          36,
-          43,
-          50
-        ],
-        "underfilled": 1,
         "goals": [
           {
             "goal": "speed",
-            "state": "build",
-            "satisfied": true,
-            "missing": []
+            "state": "defer",
+            "satisfied": false,
+            "missing": [
+              {
+                "min_d_day": 14,
+                "max_d_day": 20
+              },
+              {
+                "min_d_day": 21,
+                "max_d_day": 27
+              },
+              {
+                "min_d_day": 28,
+                "max_d_day": 34
+              }
+            ]
           },
           {
             "goal": "power",
@@ -197,11 +278,26 @@
           },
           {
             "goal": "conditioning",
-            "state": "maintain",
-            "satisfied": true,
-            "missing": []
+            "state": "defer",
+            "satisfied": false,
+            "missing": [
+              {
+                "min_d_day": 30,
+                "max_d_day": 52
+              }
+            ]
           }
-        ]
+        ],
+        "power_days": [
+          15,
+          23,
+          30
+        ],
+        "strength_days": [],
+        "conditioning_days": [
+          17
+        ],
+        "underfilled": 0
       }
     },
     {
@@ -211,6 +307,68 @@
       },
       "after": {
         "frequency": 8,
+        "appointment_counts": [
+          {
+            "max_d_day": 52,
+            "min_d_day": 46,
+            "count": 8
+          },
+          {
+            "max_d_day": 45,
+            "min_d_day": 39,
+            "count": 8
+          },
+          {
+            "max_d_day": 38,
+            "min_d_day": 32,
+            "count": 8
+          },
+          {
+            "max_d_day": 31,
+            "min_d_day": 25,
+            "count": 8
+          },
+          {
+            "max_d_day": 24,
+            "min_d_day": 18,
+            "count": 8
+          },
+          {
+            "max_d_day": 17,
+            "min_d_day": 11,
+            "count": 8
+          },
+          {
+            "max_d_day": 10,
+            "min_d_day": 4,
+            "count": 6
+          },
+          {
+            "max_d_day": 3,
+            "min_d_day": 0,
+            "count": 4
+          }
+        ],
+        "goals": [
+          {
+            "goal": "speed",
+            "state": "build",
+            "satisfied": true,
+            "missing": []
+          },
+          {
+            "goal": "power",
+            "state": "maintain",
+            "satisfied": true,
+            "missing": []
+          },
+          {
+            "goal": "conditioning",
+            "state": "maintain",
+            "satisfied": true,
+            "missing": []
+          }
+        ],
         "power_days": [
           15,
           19,
@@ -232,27 +390,7 @@
           43,
           50
         ],
-        "underfilled": 3,
-        "goals": [
-          {
-            "goal": "speed",
-            "state": "build",
-            "satisfied": true,
-            "missing": []
-          },
-          {
-            "goal": "power",
-            "state": "maintain",
-            "satisfied": true,
-            "missing": []
-          },
-          {
-            "goal": "conditioning",
-            "state": "maintain",
-            "satisfied": true,
-            "missing": []
-          }
-        ]
+        "underfilled": 3
       }
     },
     {
@@ -262,6 +400,68 @@
       },
       "after": {
         "frequency": 9,
+        "appointment_counts": [
+          {
+            "max_d_day": 52,
+            "min_d_day": 46,
+            "count": 8
+          },
+          {
+            "max_d_day": 45,
+            "min_d_day": 39,
+            "count": 8
+          },
+          {
+            "max_d_day": 38,
+            "min_d_day": 32,
+            "count": 8
+          },
+          {
+            "max_d_day": 31,
+            "min_d_day": 25,
+            "count": 8
+          },
+          {
+            "max_d_day": 24,
+            "min_d_day": 18,
+            "count": 8
+          },
+          {
+            "max_d_day": 17,
+            "min_d_day": 11,
+            "count": 8
+          },
+          {
+            "max_d_day": 10,
+            "min_d_day": 4,
+            "count": 6
+          },
+          {
+            "max_d_day": 3,
+            "min_d_day": 0,
+            "count": 4
+          }
+        ],
+        "goals": [
+          {
+            "goal": "speed",
+            "state": "build",
+            "satisfied": true,
+            "missing": []
+          },
+          {
+            "goal": "power",
+            "state": "maintain",
+            "satisfied": true,
+            "missing": []
+          },
+          {
+            "goal": "conditioning",
+            "state": "maintain",
+            "satisfied": true,
+            "missing": []
+          }
+        ],
         "power_days": [
           15,
           19,
@@ -283,27 +483,7 @@
           43,
           50
         ],
-        "underfilled": 3,
-        "goals": [
-          {
-            "goal": "speed",
-            "state": "build",
-            "satisfied": true,
-            "missing": []
-          },
-          {
-            "goal": "power",
-            "state": "maintain",
-            "satisfied": true,
-            "missing": []
-          },
-          {
-            "goal": "conditioning",
-            "state": "maintain",
-            "satisfied": true,
-            "missing": []
-          }
-        ]
+        "underfilled": 3
       }
     },
     {
@@ -360,6 +540,73 @@
       },
       "after": {
         "frequency": 6,
+        "appointment_counts": [
+          {
+            "max_d_day": 52,
+            "min_d_day": 46,
+            "count": 6
+          },
+          {
+            "max_d_day": 45,
+            "min_d_day": 39,
+            "count": 6
+          },
+          {
+            "max_d_day": 38,
+            "min_d_day": 32,
+            "count": 6
+          },
+          {
+            "max_d_day": 31,
+            "min_d_day": 25,
+            "count": 6
+          },
+          {
+            "max_d_day": 24,
+            "min_d_day": 18,
+            "count": 6
+          },
+          {
+            "max_d_day": 17,
+            "min_d_day": 11,
+            "count": 6
+          },
+          {
+            "max_d_day": 10,
+            "min_d_day": 4,
+            "count": 6
+          },
+          {
+            "max_d_day": 3,
+            "min_d_day": 0,
+            "count": 4
+          }
+        ],
+        "goals": [
+          {
+            "goal": "speed",
+            "state": "defer",
+            "satisfied": false,
+            "missing": [
+              {
+                "min_d_day": 16,
+                "max_d_day": 29
+              }
+            ]
+          },
+          {
+            "goal": "power",
+            "state": "maintain",
+            "satisfied": true,
+            "missing": []
+          },
+          {
+            "goal": "conditioning",
+            "state": "maintain",
+            "satisfied": true,
+            "missing": []
+          }
+        ],
         "power_days": [
           15,
           22,
@@ -374,38 +621,10 @@
         ],
         "conditioning_days": [
           17,
-          19,
           24,
-          26,
-          31,
-          36,
-          38,
-          43,
-          45,
-          50,
-          52
+          31
         ],
-        "underfilled": 0,
-        "goals": [
-          {
-            "goal": "speed",
-            "state": "maintain",
-            "satisfied": true,
-            "missing": []
-          },
-          {
-            "goal": "power",
-            "state": "maintain",
-            "satisfied": true,
-            "missing": []
-          },
-          {
-            "goal": "conditioning",
-            "state": "maintain",
-            "satisfied": true,
-            "missing": []
-          }
-        ]
+        "underfilled": 0
       }
     },
     {
@@ -488,24 +707,48 @@
       },
       "after": {
         "frequency": 6,
-        "power_days": [],
-        "strength_days": [
-          15,
-          23,
-          30,
-          37,
-          44,
-          51
+        "appointment_counts": [
+          {
+            "max_d_day": 52,
+            "min_d_day": 46,
+            "count": 5
+          },
+          {
+            "max_d_day": 45,
+            "min_d_day": 39,
+            "count": 5
+          },
+          {
+            "max_d_day": 38,
+            "min_d_day": 32,
+            "count": 5
+          },
+          {
+            "max_d_day": 31,
+            "min_d_day": 25,
+            "count": 6
+          },
+          {
+            "max_d_day": 24,
+            "min_d_day": 18,
+            "count": 6
+          },
+          {
+            "max_d_day": 17,
+            "min_d_day": 11,
+            "count": 5
+          },
+          {
+            "max_d_day": 10,
+            "min_d_day": 4,
+            "count": 6
+          },
+          {
+            "max_d_day": 3,
+            "min_d_day": 0,
+            "count": 4
+          }
         ],
-        "conditioning_days": [
-          16,
-          23,
-          30,
-          36,
-          43,
-          50
-        ],
-        "underfilled": 0,
         "goals": [
           {
             "goal": "speed",
@@ -555,11 +798,31 @@
           },
           {
             "goal": "conditioning",
-            "state": "maintain",
-            "satisfied": true,
-            "missing": []
+            "state": "defer",
+            "satisfied": false,
+            "missing": [
+              {
+                "min_d_day": 16,
+                "max_d_day": 29
+              },
+              {
+                "min_d_day": 30,
+                "max_d_day": 52
+              }
+            ]
           }
-        ]
+        ],
+        "power_days": [],
+        "strength_days": [
+          15,
+          23,
+          30,
+          37,
+          44,
+          51
+        ],
+        "conditioning_days": [],
+        "underfilled": 0
       }
     },
     {
@@ -615,19 +878,161 @@
       },
       "after": {
         "frequency": 6,
+        "appointment_counts": [
+          {
+            "max_d_day": 52,
+            "min_d_day": 46,
+            "count": 6
+          },
+          {
+            "max_d_day": 45,
+            "min_d_day": 39,
+            "count": 6
+          },
+          {
+            "max_d_day": 38,
+            "min_d_day": 32,
+            "count": 6
+          },
+          {
+            "max_d_day": 31,
+            "min_d_day": 25,
+            "count": 6
+          },
+          {
+            "max_d_day": 24,
+            "min_d_day": 18,
+            "count": 6
+          },
+          {
+            "max_d_day": 17,
+            "min_d_day": 11,
+            "count": 6
+          },
+          {
+            "max_d_day": 10,
+            "min_d_day": 4,
+            "count": 6
+          },
+          {
+            "max_d_day": 3,
+            "min_d_day": 0,
+            "count": 4
+          }
+        ],
+        "goals": [
+          {
+            "goal": "speed",
+            "state": "defer",
+            "satisfied": false,
+            "missing": [
+              {
+                "min_d_day": 14,
+                "max_d_day": 20
+              },
+              {
+                "min_d_day": 21,
+                "max_d_day": 27
+              },
+              {
+                "min_d_day": 28,
+                "max_d_day": 34
+              },
+              {
+                "min_d_day": 35,
+                "max_d_day": 41
+              },
+              {
+                "min_d_day": 42,
+                "max_d_day": 52
+              }
+            ]
+          },
+          {
+            "goal": "power",
+            "state": "maintain",
+            "satisfied": true,
+            "missing": []
+          },
+          {
+            "goal": "conditioning",
+            "state": "defer",
+            "satisfied": false,
+            "missing": [
+              {
+                "min_d_day": 2,
+                "max_d_day": 15
+              },
+              {
+                "min_d_day": 16,
+                "max_d_day": 29
+              },
+              {
+                "min_d_day": 30,
+                "max_d_day": 52
+              }
+            ]
+          }
+        ],
         "power_days": [
           15,
           23,
           30
         ],
         "strength_days": [],
-        "conditioning_days": [
-          29,
-          36,
-          43,
-          50
+        "conditioning_days": [],
+        "underfilled": 0
+      }
+    },
+    {
+      "case": "pro-low-load",
+      "before": {
+        "input_rejected": true
+      },
+      "after": {
+        "frequency": 9,
+        "appointment_counts": [
+          {
+            "max_d_day": 52,
+            "min_d_day": 46,
+            "count": 9
+          },
+          {
+            "max_d_day": 45,
+            "min_d_day": 39,
+            "count": 9
+          },
+          {
+            "max_d_day": 38,
+            "min_d_day": 32,
+            "count": 9
+          },
+          {
+            "max_d_day": 31,
+            "min_d_day": 25,
+            "count": 9
+          },
+          {
+            "max_d_day": 24,
+            "min_d_day": 18,
+            "count": 9
+          },
+          {
+            "max_d_day": 17,
+            "min_d_day": 11,
+            "count": 8
+          },
+          {
+            "max_d_day": 10,
+            "min_d_day": 4,
+            "count": 6
+          },
+          {
+            "max_d_day": 3,
+            "min_d_day": 0,
+            "count": 4
+          }
         ],
-        "underfilled": 0,
         "goals": [
           {
             "goal": "speed",
@@ -647,16 +1052,7 @@
             "satisfied": true,
             "missing": []
           }
-        ]
-      }
-    },
-    {
-      "case": "pro-low-load",
-      "before": {
-        "input_rejected": true
-      },
-      "after": {
-        "frequency": 9,
+        ],
         "power_days": [
           14,
           22,
@@ -689,27 +1085,7 @@
           47,
           51
         ],
-        "underfilled": 7,
-        "goals": [
-          {
-            "goal": "speed",
-            "state": "build",
-            "satisfied": true,
-            "missing": []
-          },
-          {
-            "goal": "power",
-            "state": "maintain",
-            "satisfied": true,
-            "missing": []
-          },
-          {
-            "goal": "conditioning",
-            "state": "maintain",
-            "satisfied": true,
-            "missing": []
-          }
-        ]
+        "underfilled": 7
       }
     },
     {
@@ -758,10 +1134,13 @@
       },
       "after": {
         "frequency": 6,
-        "power_days": [],
-        "strength_days": [],
-        "conditioning_days": [],
-        "underfilled": 0,
+        "appointment_counts": [
+          {
+            "max_d_day": 5,
+            "min_d_day": 0,
+            "count": 5
+          }
+        ],
         "goals": [
           {
             "goal": "speed",
@@ -796,7 +1175,11 @@
               }
             ]
           }
-        ]
+        ],
+        "power_days": [],
+        "strength_days": [],
+        "conditioning_days": [],
+        "underfilled": 0
       }
     }
   ]

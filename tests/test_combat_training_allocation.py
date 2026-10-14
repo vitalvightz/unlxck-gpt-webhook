@@ -16,6 +16,7 @@ from fightcamp.stage2_role_map import _boxing_crowded_week_policy_state
 from fightcamp.plan_pipeline_blocks import generate_plan_blocks
 from fightcamp.plan_pipeline_rendering import build_stage2_outputs
 from fightcamp.plan_pipeline_runtime import RenderedPlanBundle, build_runtime_context
+from fightcamp.physical_session_frequency import cadence_windows, physical_appointments, PHYSICAL_SUPPORT_ROLE_KEYS
 
 
 def run_lead(monkeypatch, *, earlier=False, **overrides):
@@ -66,6 +67,87 @@ def allocation_summary(brief):
     }
 
 
+@pytest.mark.parametrize("frequency", [6, 8, 9])
+def test_final_pipeline_honours_total_sessions_including_double_days(monkeypatch, frequency):
+    parsed, brief = run_lead(monkeypatch, training_frequency=frequency)
+    assert parsed.training_frequency == frequency
+    double_days = []
+    appointment_days = []
+    for week in brief["weekly_role_map"]["weeks"]:
+        for days in cadence_windows([(d["d_day"], d["weekday"]) for d in week["calendar_days"]]):
+            offsets = {d for d, _ in days}
+            # Count rendered standalone appointments independently of the cap
+            # helper. A strength card and a coach card on Thursday count twice.
+            full = [r for r in week["session_roles"] if role_d_day(week, r) in offsets
+                    and r.get("category") in {"strength", "conditioning", "combat", "sparring", "technical", "recovery", "rehab"}
+                    and r.get("role_key") not in PHYSICAL_SUPPORT_ROLE_KEYS
+                    and not r.get("execution_only") and not r.get("nonphysical")]
+            occupied = {role_d_day(week, r) for r in full}
+            standalone_support = {role_d_day(week, r) for r in week["session_roles"]
+                                  if r.get("role_key") in PHYSICAL_SUPPORT_ROLE_KEYS
+                                  and role_d_day(week, r) in offsets - occupied}
+            assert len(full) + len(standalone_support) <= frequency, (week["week_index"], full)
+            appointment_days.extend(role_d_day(week, r) for r in full)
+            appointment_days.extend(standalone_support)
+            for day in occupied:
+                if sum(role_d_day(week, r) == day for r in full) >= 2:
+                    double_days.append(day)
+    slots = [(d["d_day"], d["weekday"]) for w in brief["weekly_role_map"]["weeks"] for d in w["calendar_days"]]
+    for days in cadence_windows(slots):
+        assert sum(day in {d for d, _ in days} for day in appointment_days) <= frequency
+    assert double_days  # The cap must allow legal double days, including at six.
+    assert_scheduled_doses_and_contact_safety(brief)
+
+
+def test_appointment_counter_distinguishes_double_days_from_embedded_support():
+    roles = [
+        {"role_key": "light_combat_day", "category": "combat", "countdown_offset": 20},
+        {"role_key": "primary_strength_day", "category": "strength", "countdown_offset": 20},
+        {"role_key": "footwork_walkthrough", "category": "recovery", "countdown_offset": 20},
+        {"role_key": "mobility_rehab", "category": "rehab", "countdown_offset": 19},
+        {"role_key": "tactical_watch", "category": "tactical", "countdown_offset": 19},
+    ]
+    assert len(physical_appointments(roles)) == 3
+
+
+def test_budget_recounts_support_when_its_host_is_removed():
+    from fightcamp.stage2_role_map import enforce_total_session_budget
+    coach = {"role_key": "light_combat_day", "category": "technical", "coach_owned": True,
+             "scheduled_countdown_label": "D-20"}
+    roles = [coach, {"role_key": "secondary_strength_day", "category": "strength", "scheduled_countdown_label": "D-19"},
+             {"role_key": "footwork_walkthrough", "category": "support_insert", "scheduled_countdown_label": "D-19"}]
+    role_map = {"weeks": [{"phase": "GPP", "session_roles": roles,
+                           "calendar_days": [{"d_day": 20, "weekday": "Monday"}, {"d_day": 19, "weekday": "Tuesday"}]}]}
+    enforce_total_session_budget(role_map, {"training_frequency": 1})
+    assert roles == [coach]
+    assert len(physical_appointments([{**r, "countdown_offset": role_d_day({}, r)} for r in roles])) == 1
+
+
+def test_impossible_coach_schedule_is_flagged_without_deleting_coach_sessions():
+    from fightcamp.stage2_role_map import enforce_total_session_budget
+    from fightcamp.stage2_validator import _total_session_budget_errors
+    roles = [{"role_key": "light_combat_day", "category": "technical", "coach_owned": True,
+              "scheduled_countdown_label": f"D-{d}"} for d in range(20, 13, -1)]
+    role_map = {"weeks": [{"phase": "SPP", "session_roles": roles,
+                           "calendar_days": [{"d_day": d} for d in range(20, 13, -1)]}]}
+    enforce_total_session_budget(role_map, {"training_frequency": 6})
+    assert len(roles) == 7
+    errors = _total_session_budget_errors({"athlete_snapshot": {"training_frequency": 6}, "weekly_role_map": role_map})
+    assert errors[0]["code"] == "total_session_budget_exceeded"
+    assert errors[0]["severity"] == "blocker"
+
+
+def test_historical_bank_replay_accepts_only_the_reviewed_round_edit():
+    from tools.replay_combat_round_metadata import pre_combat_round_source
+    source = (Path(__file__).resolve().parents[1] / "data/style_conditioning_bank.json").read_bytes()
+    original = json.loads(pre_combat_round_source("data/style_conditioning_bank.json", source))
+    pressure = next(r for r in original if r["name"] == "Pressure Combination Rounds")
+    assert "round_based" not in pressure
+    assert (pressure["rounds"], pressure["work_sec"], pressure["rest_sec"]) == (4, 120, 60)
+    with pytest.raises(ValueError, match="Unreviewed"):
+        pre_combat_round_source("data/style_conditioning_bank.json", source.replace(b'"round_based": true', b'"round_based": false'))
+
+
 def assert_scheduled_doses_and_contact_safety(brief):
     role_map = brief["weekly_role_map"]
     for ordinal, week in enumerate(role_map["weeks"]):
@@ -98,7 +180,10 @@ def test_both_saved_lead_constraints_retain_real_normal_power_and_explain_taper(
     assert brief["athlete_snapshot"]["plan_creation_weekday"] == "tuesday"
     evidence = collect_goal_evidence(brief)
     power = [e for e in evidence if "ballistic_power" in e["intents"] and e["d_day"] >= 14]
-    assert {e["phase"] for e in power} >= {"GPP", "SPP"}
+    # The six-session budget includes four coach appointments. Maintenance
+    # must satisfy its actual fourteen-day windows, not add a GPP appointment
+    # merely to satisfy a phase-label expectation.
+    assert power
     assert all(e["sets"] >= 1 and e["reps"] >= 1 and e["effective_prescription"] for e in power)
     assert any("energy_system_training" in e["intents"] for e in evidence)
     power_goal = next(e for e in brief["goal_preservation"] if e["goal"] == "power")

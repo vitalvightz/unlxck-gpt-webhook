@@ -51,6 +51,7 @@ from .stage2_planning_brief import (
 from .gap_fill_inserts import LOW_COST_AEROBIC_INSERTS
 from .goal_priority import goal_priority_scores
 from .priority_profile import build_priority_profile
+from .physical_session_frequency import cadence_windows, requested_training_frequency, dated_appointments
 from .weight_cut import (
     compute_cut_severity_score,
     cut_severity_bucket,
@@ -2562,6 +2563,10 @@ def _non_spar_role_priority_rank(
         # GPP priority (highest → lowest): primary_strength > aerobic > secondary_strength > recovery
         if role_key in {"primary_strength_day", "structural_strength_day"}:
             return 4
+        if category == "conditioning" and (preferred_system == "alactic" or "alactic" in role_key) and goal_priority_scores(athlete_model)["speed"] >= 30:
+            # Match placement's existing primary-speed reservation when the
+            # total appointment budget is tighter than the available days.
+            return 3
         if category == "conditioning" and preferred_system == "aerobic":
             return 3
         if role_key in {"aerobic_support_day", "aerobic_base_day", "aerobic_coordination_day"}:
@@ -2601,6 +2606,56 @@ def _non_spar_role_priority_rank(
     if category == "recovery":
         return 1
     return 2
+
+
+def enforce_total_session_budget(role_map: dict, athlete_model: dict) -> dict:
+    """Close the requested appointment budget after locks and fillers are present.
+
+    Use the allocator's existing priority ordering. Contact locks remain owned
+    by the coach; an impossible coach schedule is reported rather than removed.
+    """
+    frequency = requested_training_frequency(athlete_model)
+    if not frequency:
+        return role_map
+    windows = []
+    for week in role_map.get("weeks") or []:
+        windows.extend(cadence_windows([(d["d_day"], d.get("weekday", ""))
+                                       for d in week.get("calendar_days") or []]))
+    # A phase change can split a real calendar week into two progression weeks.
+    # Neither partial object gets a fresh allowance of standalone appointments.
+    slots = [(d["d_day"], d.get("weekday", ""))
+             for w in role_map.get("weeks") or [] for d in w.get("calendar_days") or []]
+    windows.extend(cadence_windows(slots))
+    def rank(role):
+        owner = role["_source_week"]
+        return allocation_sort_key(base_rank=_non_spar_role_priority_rank(
+            role, str(owner.get("phase", "")), len(owner.get("effective_hard_sparring_days") or []) >= 2,
+            _active_weight_cut_is_meaningful(athlete_model),
+            set(clean_list((owner.get("resolved_rule_state") or {}).get("must_keep", owner.get("must_keep", [])))),
+            athlete_model), role=role, athlete_model=athlete_model,
+            dedicated_recovery=role.get("is_dedicated_recovery_mobility_day") is True)
+    for days in windows:
+        offsets = {d for d, _ in days}
+        while True:
+            # Recount after each removal: an embedded movement insert can
+            # become standalone when its host is removed and still costs a slot.
+            appointments = [r for r in dated_appointments(role_map) if r["countdown_offset"] in offsets]
+            if len(appointments) <= frequency:
+                break
+            removable = [r for r in appointments if not r.get("coach_owned")
+                         and r.get("category") not in {"combat", "sparring", "technical"}]
+            if not removable:
+                _append_week_coach_note_flag(appointments[0]["_source_week"], "coach sessions exceed requested total session count")
+                break
+            role = min(removable, key=rank)
+            owner = role["_source_week"]
+            owner["session_roles"][:] = [r for r in owner["session_roles"] if r is not role["_source_role"]]
+            owner.setdefault("suppressed_roles", []).append({
+                "category": role.get("category"), "role_key": role.get("role_key"),
+                "reason_code": "total_session_budget", "compression_reason_codes": ["total_session_budget"],
+                "reasons": ["Standalone session exceeds the requested weekly total, including coach sessions and double days."],
+            })
+    return role_map
 
 
 def _build_spar_allocation_reason_codes(
