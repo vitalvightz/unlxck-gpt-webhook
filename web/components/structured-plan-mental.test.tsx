@@ -71,8 +71,9 @@ test("mental preview uses selected authored instructions and keeps smart truncat
   const second = { title: "Fight Visualisation", blocks: [{ coaching_cues: ["Draw the entry and counter as they reset."] }] };
   assert.equal(mentalSessionSummary(first), "Enter behind your jab and cut off the exit.");
   assert.notEqual(mentalSessionSummary(first), mentalSessionSummary(second));
-  assert.equal(mentalSessionSummary({ blocks: [{ coaching_cues: ["2 minutes, RPE 1 max.", "Review the last clean technical work."] }] }), "Review the last clean technical work.");
+  assert.equal(mentalSessionSummary({ blocks: [{ coaching_cues: ["2 minutes, RPE 1 max.", "Visualise them giving ground.", "Take space without following blindly.", "Cue: calm"] }] }), "Visualise them giving ground. Take space without following blindly.");
   const long = "Keep the exit in view. " + "Follow the selected authored instruction without changing it. ".repeat(5);
-  assert.equal(mentalSessionSummary({ blocks: [{ coaching_cues: [long] }] }), "Keep the exit in view.");
+  assert.equal(mentalSessionSummary({ blocks: [{ coaching_cues: [long] }] }),
+    "Keep the exit in view. " + "Follow the selected authored instruction without changing it. ".repeat(2).trimEnd());
   assert.ok((mentalSessionSummary({ objective: "Move through the familiar sequence ".repeat(12) })?.length ?? 0) <= 180);
 });
