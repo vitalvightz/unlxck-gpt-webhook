@@ -36,8 +36,7 @@
   ],
   "contacts": [],
   "suppressed": [
-    [3, "converted_recovery_flush_day", "conditioning", "fight_day_protocol", []],
-    [3, "fight_week_freshness_day", "recovery", "light_combat_day", []]
+    [3, "converted_recovery_flush_day", "conditioning", "fight_day_protocol", []]
   ],
   "tail_handoff": {"active": true, "normal_planner_through_d": 14, "late_fight_planner_from_d": 13, "source": "finished_existing_late_fight_path"}
 }

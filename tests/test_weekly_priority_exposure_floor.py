@@ -631,7 +631,7 @@ def test_the_blocked_week_repair_is_idempotent():
     brief = _blocked_fixture()
     _repair(brief)
     second = _repair(brief)
-    assert "floor_already_met" in _results(second)
+    assert second == []  # A satisfied cadence window needs no further trials.
     roles = brief["weekly_role_map"]["weeks"][0]["session_roles"]
     assert sum(1 for role in roles if role.get("priority_microdose")) == 1
 

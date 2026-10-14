@@ -737,7 +737,7 @@ class NutritionSharedCampContext(BaseModel):
             except ValueError:
                 raise ValueError("weekly_training_frequency must be numeric") from None
         if isinstance(value, (int, float)):
-            return max(1, min(int(round(float(value))), 6))
+            return max(1, min(int(round(float(value))), 14))
         return value
 
     @field_validator("session_types_by_day", mode="before")
@@ -887,12 +887,11 @@ class PlanRequest(BaseModel):
         if isinstance(value, bool):
             raise ValueError("weekly_training_frequency must be numeric")
         if isinstance(value, (int, float)):
-            # Reject out-of-range rather than silently clamping (e.g. 999 -> 6),
-            # which would mask a malformed payload. The intake UI already enforces
-            # 1-6, so a clean 422 only surfaces non-UI/abnormal callers.
+            # Accept a requested double-day cadence. This is intake capacity,
+            # not permission to add work: calendar/readiness policies still gate it.
             parsed = int(round(float(value)))
-            if parsed < 1 or parsed > 6:
-                raise ValueError("weekly_training_frequency must be between 1 and 6")
+            if parsed < 1 or parsed > 14:
+                raise ValueError("weekly_training_frequency must be between 1 and 14")
             return parsed
         return value
 

@@ -25,6 +25,14 @@ def test_anchor_strength_is_capped_by_scheduled_day_envelope():
     assert result["dose_authority"] == "scheduled_countdown_overlay"
 
 
+def test_unit_preserving_support_dose_honours_its_actual_effort_cap():
+    result = resolve_strength_slot_prescription(role=_role(2, 3),
+        slot=_slot("3 sets x 6-10 reps or 20-40s tempo (3-1-3), RPE 6-8.", role="strength_support"))
+    assert "20-40s" in result["effective_prescription"]
+    assert "RPE 6-8" not in result["effective_prescription"]
+    assert "RPE 6-7 max" in result["effective_prescription"]
+
+
 def test_secondary_strength_loses_more_volume_than_anchor():
     result = resolve_strength_slot_prescription(
         role=_role(3, 3),

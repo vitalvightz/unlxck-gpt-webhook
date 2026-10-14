@@ -1,3 +1,5 @@
+import pytest
+
 from fightcamp.stage2_role_map import (
     _assign_declared_day_hints,
     _build_weekly_role_map,
@@ -319,7 +321,8 @@ def test_build_planning_brief_uses_stage2_role_map_builder(monkeypatch):
     )
     assert called["builder"] is True
 
-def test_sandwiched_days_prefer_low_load_support_and_post_hard_is_fallback():
+@pytest.mark.parametrize("technical_saturday", [False, True])
+def test_sandwiched_days_prefer_low_load_support_and_post_hard_is_fallback(technical_saturday):
     # Alternating spar/S&C week: sparring Mon/Wed/Fri, S&C on the off days
     # Tue/Thu/Sat. Low-load aerobic/recovery support belongs on the between-hard
     # days (ALLOW). Primary strength does NOT: Tue and Thu are between two hard
@@ -329,7 +332,7 @@ def test_sandwiched_days_prefer_low_load_support_and_post_hard_is_fallback():
     # it in a complete dense-week plan; this placement helper does not own that rule.
     athlete_model = {
         "training_days": ["tuesday", "thursday", "saturday"],
-        "support_work_days": ["tuesday", "thursday", "saturday"],
+        "support_work_days": ["tuesday", "thursday"] + (["saturday"] if technical_saturday else []),
         "hard_sparring_days": ["monday", "wednesday", "friday"],
     }
     roles = _assign_declared_day_hints(
@@ -351,5 +354,6 @@ def test_sandwiched_days_prefer_low_load_support_and_post_hard_is_fallback():
 
     # Low-load support still lands on the between-hard (ALLOW) days...
     assert aerobic.get("scheduled_day_hint") in {"tuesday", "thursday"}
-    # ...and the only legal strength fallback is the post-hard Saturday slot.
+    # Declared compatible light boxing can share this fallback. The shared
+    # contact policy still marks immediately post-hard work as deprioritized.
     assert primary.get("scheduled_day_hint") == "saturday"

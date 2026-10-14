@@ -594,6 +594,7 @@ def normal_week_legality(
     declared_hard_days: Iterable[Any] | None = None,
     *,
     scope: Hashable | None,
+    declared_light_days: Iterable[Any] | None = None,
 ) -> CalendarLegalityView:
     """Legality view for a normal-camp placement owner choosing a weekday.
 
@@ -604,12 +605,18 @@ def normal_week_legality(
     and selects among the legal candidates with its own preference/anchor/tie-break
     logic. ``combat_load_policy`` remains the rule authority.
     """
+    events = normal_week_contact_events(hard_sparring_plan, declared_hard_days, scope=scope)
+    # Include coach-owned technical practice before S&C chooses its days.
+    # Its canonical profile alone decides which supplementary loads may stack.
+    from .declared_combat_ownership import build_declared_light_combat_role
+
+    for day in declared_light_days or []:
+        position = weekday_position(day)
+        profile = classify_role(build_declared_light_combat_role(str(day)))
+        if position is not None and profile is not None:
+            events.append(CalendarEvent(position, profile, scope))
     return CalendarLegalityView(
-        events=tuple(
-            normal_week_contact_events(
-                hard_sparring_plan, declared_hard_days, scope=scope
-            )
-        ),
+        events=tuple(events),
         scope=scope,
     )
 

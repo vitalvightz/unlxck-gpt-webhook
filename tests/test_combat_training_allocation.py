@@ -1,0 +1,220 @@
+"""Intake through effective scheduled doses for a coach-owned combat week."""
+import datetime as dt
+import json
+import logging
+from pathlib import Path
+
+import pytest
+
+from fightcamp import input_parsing
+from fightcamp.input_parsing import PlanInput
+from fightcamp.calendar_context import CalendarLegalityView, build_events, classify_role, role_d_day, week_scope
+from fightcamp.combat_load_policy import LoadClass
+from fightcamp.goal_preservation import _deferral_constraints, collect_goal_evidence, validate_goal_preservation
+from fightcamp.declared_combat_ownership import build_declared_light_combat_role
+from fightcamp.stage2_role_map import _boxing_crowded_week_policy_state
+from fightcamp.plan_pipeline_blocks import generate_plan_blocks
+from fightcamp.plan_pipeline_rendering import build_stage2_outputs
+from fightcamp.plan_pipeline_runtime import RenderedPlanBundle, build_runtime_context
+
+
+def run_lead(monkeypatch, *, earlier=False, **overrides):
+    name = "combat_allocation_earlier.json" if earlier else "combat_allocation_lead.json"
+    fixture = json.loads((Path(__file__).parent / "fixtures/goal_preservation" / name).read_text())
+    fixture.update(overrides)
+    monkeypatch.setattr(input_parsing, "_utc_now", lambda: dt.datetime.fromisoformat(fixture["plan_date"]))
+    from fightcamp import stage2_planning_brief
+    monkeypatch.setattr(stage2_planning_brief, "_utc_now", lambda: dt.datetime.fromisoformat(fixture["plan_date"]))
+    fields = {
+        "Full name": "Combat Allocation Regression", "Age": "28", "Weight (kg)": "77",
+        "Target Weight (kg)": "77", "Height (cm)": "180", "Stance": "Orthodox",
+        "Fighting Style (Technical)": "Boxing", "Fighting Style (Tactical)": "Pressure Fighter",
+        "Professional Status": fixture["status"], "Rounds x Minutes": fixture.get("rounds_format", "10x3"),
+        "Weekly Training Frequency": str(fixture["training_frequency"] or ""),
+        "Fatigue Level": fixture["fatigue"], "Equipment Access": ", ".join(fixture["equipment"]),
+        "Training Availability": ", ".join(fixture["training_days"]),
+        "Hard Sparring Days": ", ".join(fixture["hard_sparring_days"]),
+        "Support Work Days": ", ".join(fixture["support_work_days"]),
+        "What are your key performance goals?": ", ".join(fixture["key_goals"]),
+        "Primary goal": fixture["primary_goal"],
+        "Where do you feel weakest right now?": ", ".join(fixture["weaknesses"]),
+        "Primary weak area": fixture["primary_weak_area"],
+        "When is your next fight?": fixture["fight_date"],
+        "Are there any parts of your previous plan you hated or loved?": fixture["notes"],
+        "Any injuries or areas you need to work around?": fixture.get("injuries", "none"),
+    }
+    parsed = PlanInput.from_payload({"data": {"fields": [{"label": k, "value": v} for k, v in fields.items()]}})
+    logger = logging.getLogger(__name__)
+    context = build_runtime_context(plan_input=parsed, random_seed=1, logger=logger)
+    blocks = generate_plan_blocks(context=context, logger=logger, record_timing=lambda *args, **kwargs: None)
+    rendered = RenderedPlanBundle(fight_plan_text="", coach_notes="", reason_log={}, html="")
+    _, brief, _ = build_stage2_outputs(context=context, blocks=blocks, rendered=rendered)
+    return parsed, brief
+
+
+def allocation_summary(brief):
+    return {
+        "goals": [{k: entry[k] for k in ("goal", "state", "satisfied", "constraints", "missing_windows", "repair_attempts") if k in entry}
+                  for entry in brief["goal_preservation"]],
+        "weeks": [{
+            "week": week["week_index"], "phase": week["phase"],
+            "hard_days": week.get("effective_hard_sparring_days"),
+            "compression": week.get("intentional_compression"),
+            "roles": [{k: role[k] for k in ("role_key", "scheduled_day_hint", "scheduled_d_day", "selected_exercise_assignments", "effective_strength_prescriptions") if k in role}
+                      for role in week["session_roles"]],
+        } for week in brief["weekly_role_map"]["weeks"]],
+    }
+
+
+def assert_scheduled_doses_and_contact_safety(brief):
+    role_map = brief["weekly_role_map"]
+    for ordinal, week in enumerate(role_map["weeks"]):
+        for role in week["session_roles"]:
+            day = role_d_day(week, role)
+            if role.get("category") not in {"strength", "conditioning"} or day is None:
+                continue
+            events = build_events(role_map, exclude_role=role)
+            if day <= 13:
+                # This PR changes normal allocation only. Finished-tail occupancy
+                # stays with its owner; check its effective hard-contact protection
+                # here and its actual doses below, alongside the existing tail suite.
+                events = [event for event in events if event.profile.load_class == LoadClass.HARD_CONTACT]
+            view = CalendarLegalityView(events=tuple(events), scope=week_scope(week, ordinal))
+            profile = classify_role(role)
+            assert profile is not None
+            assert view.decision_for_profile(profile, day).allowed
+            for member in role.get("selected_exercise_assignments") or []:
+                assert member.get("slot_id") and member.get("source_phase")
+                assert member.get("effective_prescription") or any(
+                    dose.get("slot_id") == member["slot_id"] and dose.get("effective_prescription")
+                    for dose in role.get("effective_strength_prescriptions") or []
+                )
+
+
+@pytest.mark.parametrize("earlier", [False, True], ids=["newer-lead", "earlier-lead"])
+def test_both_saved_lead_constraints_retain_real_normal_power_and_explain_taper(monkeypatch, earlier):
+    parsed, brief = run_lead(monkeypatch, earlier=earlier)
+    assert parsed.training_frequency == 6  # Both saved intakes actually supplied six.
+    assert brief["athlete_snapshot"]["plan_creation_weekday"] == "tuesday"
+    evidence = collect_goal_evidence(brief)
+    power = [e for e in evidence if "ballistic_power" in e["intents"] and e["d_day"] >= 14]
+    assert {e["phase"] for e in power} >= {"GPP", "SPP"}
+    assert all(e["sets"] >= 1 and e["reps"] >= 1 and e["effective_prescription"] for e in power)
+    assert any("energy_system_training" in e["intents"] for e in evidence)
+    power_goal = next(e for e in brief["goal_preservation"] if e["goal"] == "power")
+    assert power_goal["satisfied"], power_goal
+    assert power_goal["missing_coverage"] == []
+    assert any(2 <= e["d_day"] <= 15 for e in power_goal["evidence"])
+    assert validate_goal_preservation(brief) == []
+    if not earlier:
+        workload = brief["athlete_snapshot"]["training_workload_context"]
+        assert workload["reported_weekly_sessions"] == {"minimum": 8, "maximum": 9, "source": "training_notes"}
+        assert workload["double_days_reported"] and workload["structured_frequency_conflict"]
+    assert_scheduled_doses_and_contact_safety(brief)
+    for week in brief["weekly_role_map"]["weeks"]:
+        normal_days = {d["weekday"] for d in week["calendar_days"] if d["d_day"] > 13}
+        for day in {"thursday", "friday"} & normal_days:
+            assert any(r["role_key"] == "light_combat_day" and r["scheduled_day_hint"].lower() == day
+                       and r["coach_owned"] for r in week["session_roles"])
+
+
+@pytest.mark.parametrize("frequency,expected", [(8, 8), (9, 9), (None, 8)])
+def test_known_high_frequency_retains_legal_double_day_work_at_effective_doses(monkeypatch, frequency, expected):
+    parsed, brief = run_lead(monkeypatch, training_frequency=frequency)
+    assert parsed.training_frequency == expected
+    assert_scheduled_doses_and_contact_safety(brief)
+    evidence = collect_goal_evidence(brief)
+    assert any("ballistic_power" in e["intents"] and e["d_day"] >= 14 for e in evidence)
+    assert any("energy_system_training" in e["intents"] and e["d_day"] >= 14 for e in evidence)
+    speed = next(e for e in brief["goal_preservation"] if e["goal"] == "speed")
+    assert speed["satisfied"], speed
+    assert validate_goal_preservation(brief) == []
+    assert any(
+        role_d_day(week, app) == role_d_day(week, coach)
+        for week in brief["weekly_role_map"]["weeks"]
+        for coach in week["session_roles"] if coach["role_key"] == "light_combat_day"
+        for app in week["session_roles"] if app.get("category") == "conditioning"
+        and app.get("selected_exercise_assignments")
+    )
+
+
+@pytest.mark.parametrize("case,overrides", [
+    ("high-fatigue", {"fatigue": "high"}),
+    ("injury", {"injuries": "moderate right knee pain, avoid jumping"}),
+    ("three-contacts", {"hard_sparring_days": ["Monday", "Wednesday", "Saturday"]}),
+    ("professional-low-load", {"status": "professional", "training_frequency": 9, "fatigue": "low",
+                               "hard_sparring_days": [], "support_work_days": ["Tuesday", "Thursday", "Friday"]}),
+    ("fight-week", {"plan_date": "2026-11-30"}),
+])
+def test_realistic_readiness_and_taper_restrictions_still_govern_the_schedule(monkeypatch, case, overrides):
+    _, brief = run_lead(monkeypatch, **overrides)
+    assert_scheduled_doses_and_contact_safety(brief)
+    weeks = brief["weekly_role_map"]["weeks"]
+    if case == "high-fatigue":
+        assert any("high_fatigue" in (w.get("intentional_compression") or {}).get("reason_codes", []) for w in weeks)
+    elif case == "injury":
+        assert brief["restrictions"]
+        assert brief["athlete_snapshot"]["injuries"]
+        assert not any("jump" in member["name"].lower() or "bound" in member["name"].lower()
+                       for w in weeks for r in w["session_roles"] for member in r.get("selected_exercise_assignments") or [])
+    elif case == "three-contacts":
+        assert any(len(w.get("effective_hard_sparring_days") or []) >= 3 for w in weeks)
+        assert any(w.get("suppressed_roles") for w in weeks)
+    elif case == "professional-low-load":
+        assert all(not w.get("effective_hard_sparring_days") for w in weeks)
+        assert any("ballistic_power" in e["intents"] for e in collect_goal_evidence(brief))
+        assert validate_goal_preservation(brief) == []
+    else:
+        assert all(not w.get("effective_hard_sparring_days") for w in weeks)
+        assert not any(e.get("development_quality") for e in collect_goal_evidence(brief) if e.get("d_day"))
+        for w in weeks:
+            for r in w["session_roles"]:
+                for dose in r.get("effective_strength_prescriptions") or []:
+                    assert dose.get("effective_max_sets", 1) <= 2
+
+
+@pytest.mark.parametrize("notes,frequency,expected,reported,double", [
+    ("I do about 8/ 9 sessions a week some are double days", None, 8, (8, 9), True),
+    ("I train 8–9 times weekly, including double days", None, 8, (8, 9), True),
+    ("I train 9 sessions per week", 6, 6, (9, 9), False),
+    ("I work 8-9 hours. No double days", None, 6, None, False),
+    ("I used to do 9 sessions per week", None, 6, None, False),
+    ("I want to do 9 sessions per week", None, 6, None, False),
+    ("", None, 6, None, False),
+])
+def test_note_cadence_is_explicit_and_availability_remains_a_distinct_fact(notes, frequency, expected, reported, double):
+    fields = {"Training Availability": "Monday,Tuesday,Wednesday,Thursday,Friday,Saturday",
+              "Weekly Training Frequency": str(frequency or ""),
+              "Are there any parts of your previous plan you hated or loved?": notes}
+    parsed = PlanInput.from_payload({"data": {"fields": [{"label": k, "value": v} for k, v in fields.items()]}})
+    assert parsed.training_frequency == expected
+    assert len(parsed.training_days) == 6
+    context = parsed.training_workload_context
+    assert bool(context.get("double_days_reported")) == double
+    if reported:
+        assert (context["reported_weekly_sessions"]["minimum"], context["reported_weekly_sessions"]["maximum"]) == reported
+    else:
+        assert "reported_weekly_sessions" not in context
+        assert parsed.parsing_metadata["training_frequency"]["source"] == "system_inferred"
+
+
+@pytest.mark.parametrize("effective_count,active", [(0, False), (1, False), (2, False), (3, True)])
+def test_crowded_policy_uses_resolved_contacts_after_declared_three_are_reduced(effective_count, active):
+    athlete = {"sport": "boxing", "days_until_fight": 35, "fatigue": "moderate",
+               "training_days": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
+               "hard_sparring_days": ["Monday", "Wednesday", "Saturday"]}
+    state = _boxing_crowded_week_policy_state({"effective_hard_sparring_days": athlete["hard_sparring_days"][:effective_count]}, athlete)
+    assert state["hard_spar_count"] == effective_count
+    assert state["active"] == active
+
+
+@pytest.mark.parametrize("technical_friday", [False, True])
+def test_mixed_taper_window_never_uses_tail_ownership_to_excuse_missing_normal_work(technical_friday):
+    week = {"week_index": 1, "phase": "SPP", "declared_training_days": ["Friday", "Saturday"],
+            "calendar_days": [{"weekday": "friday", "d_day": 15}, {"weekday": "saturday", "d_day": 14}],
+            "hard_sparring_plan": [{"day": "Saturday", "status": "convert_to_technical_suggested", "effective_load": "technical"}],
+            "session_roles": [build_declared_light_combat_role("Friday", calendar_stress={"systemic": 2, "neural_mechanical": 2})] if technical_friday else [],
+            "goal_repair_candidates": [{"category": "strength", "role_key": "primary_strength_day", "strength_session_index": 1}]}
+    brief = {"athlete_snapshot": {"days_until_fight": 35}, "weekly_role_map": {"weeks": [week]}}
+    constraints = _deferral_constraints({"goal": "power", "state": "maintain"}, brief, [{"min_d_day": 2, "max_d_day": 15}])
+    assert not constraints  # D-14/15 are still owned by normal planning.

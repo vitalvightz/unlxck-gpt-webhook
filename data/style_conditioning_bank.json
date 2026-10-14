@@ -7266,6 +7266,7 @@
     ],
     "system": "glycolytic",
     "modality": "pressure combination rounds",
+    "round_based": true,
     "duration": "120s work, 60s rest x 4 rounds",
     "intensity": "high",
     "tags": [

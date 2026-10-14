@@ -786,7 +786,7 @@ function getReviewStepBlockingIssue(
   if (!options.noScheduledFight && isFightDateInPast(nextForm.fight_date)) return { message: FIGHT_DATE_IN_PAST_MESSAGE, step: 1, fieldId: "fightDate" };
   if (!nextForm.training_availability.length) return { message: "Pick at least one training availability option before continuing to review.", step: 2, fieldId: "trainingAvailabilityGroup" };
   if (!nextForm.weekly_training_frequency || nextForm.weekly_training_frequency < 1) return { message: "Planned sessions per week must be at least 1.", step: 1, fieldId: "sessionsPerWeek" };
-  if (nextForm.weekly_training_frequency > 6) return { message: "Planned sessions per week cannot exceed 6.", step: 1, fieldId: "sessionsPerWeek" };
+  if (nextForm.weekly_training_frequency > 14) return { message: "Planned sessions per week cannot exceed 14.", step: 1, fieldId: "sessionsPerWeek" };
   const parsedRounds = parseRoundsFormat(nextForm.rounds_format);
   if (!parsedRounds.roundCount) return { message: "Choose both round count and round duration before continuing to review.", step: 1, fieldId: "roundCount" };
   if (!parsedRounds.roundDuration) return { message: "Choose both round count and round duration before continuing to review.", step: 1, fieldId: "roundDuration" };
@@ -1007,7 +1007,7 @@ export function PlanIntakeForm() {
         case "sessionsPerWeek":
           return Boolean(form.weekly_training_frequency)
             && (form.weekly_training_frequency ?? 0) >= 1
-            && (form.weekly_training_frequency ?? 0) <= 6;
+            && (form.weekly_training_frequency ?? 0) <= 14;
         case "trainingAvailabilityGroup":
           return form.training_availability.length > 0;
         case "keyGoalsGroup":
@@ -1771,9 +1771,9 @@ export function PlanIntakeForm() {
         step: 1,
       });
     }
-    if (nextForm.weekly_training_frequency > 6) {
+    if (nextForm.weekly_training_frequency > 14) {
       return reportInvalidField({
-        message: "Planned sessions per week cannot exceed 6.",
+        message: "Planned sessions per week cannot exceed 14.",
         fieldId: "sessionsPerWeek",
         step: 1,
       });
@@ -2191,11 +2191,11 @@ export function PlanIntakeForm() {
     },
     {
       label:
-        form.weekly_training_frequency && form.weekly_training_frequency >= 1 && form.weekly_training_frequency <= 6
+        form.weekly_training_frequency && form.weekly_training_frequency >= 1 && form.weekly_training_frequency <= 14
           ? "Planned sessions per week are in range."
-          : "Planned sessions per week must stay between 1 and 6.",
+          : "Planned sessions per week must stay between 1 and 14.",
       status:
-        form.weekly_training_frequency && form.weekly_training_frequency >= 1 && form.weekly_training_frequency <= 6
+        form.weekly_training_frequency && form.weekly_training_frequency >= 1 && form.weekly_training_frequency <= 14
           ? "done"
           : "pending",
     },
@@ -2264,11 +2264,11 @@ export function PlanIntakeForm() {
             },
             {
               label:
-                form.weekly_training_frequency && form.weekly_training_frequency >= 1 && form.weekly_training_frequency <= 6
+                form.weekly_training_frequency && form.weekly_training_frequency >= 1 && form.weekly_training_frequency <= 14
                   ? "Planned sessions per week are in range."
-                  : "Keep planned sessions per week between 1 and 6.",
+                  : "Keep planned sessions per week between 1 and 14.",
               status:
-                form.weekly_training_frequency && form.weekly_training_frequency >= 1 && form.weekly_training_frequency <= 6
+                form.weekly_training_frequency && form.weekly_training_frequency >= 1 && form.weekly_training_frequency <= 14
                   ? "done"
                   : "pending",
             },
@@ -2681,7 +2681,7 @@ export function PlanIntakeForm() {
                         id="sessionsPerWeek"
                         type="number"
                         min="1"
-                        max="6"
+                        max="14"
                         inputMode="numeric"
                         disabled={shouldDisableField(daysOutCtx, "weekly_training_frequency")}
                         value={form.weekly_training_frequency ?? ""}
@@ -2689,7 +2689,7 @@ export function PlanIntakeForm() {
                           const nextValue = numberOrNull(event.target.value);
                           updateField(
                             "weekly_training_frequency",
-                            nextValue === null ? null : Math.min(Math.max(nextValue, 1), 6),
+                            nextValue === null ? null : Math.min(Math.max(nextValue, 1), 14),
                           );
                         }}
                         aria-invalid={invalidFieldId === "sessionsPerWeek" ? true : undefined}
@@ -2697,7 +2697,7 @@ export function PlanIntakeForm() {
                       />
                       <p className="muted">
                         {getFieldHelperText(daysOutCtx, "weekly_training_frequency") ||
-                          "Total sessions per week. Hard sparring and Light Combat days count toward this, not on top of it."}
+                          "Total sessions per week, including boxing and double days. Availability is the days you can train; the planner manages compatible S&C around combat work."}
                       </p>
                       {invalidFieldId === "sessionsPerWeek" && error ? (
                         <p id="sessionsPerWeek-error" className="error-text" role="alert">{error}</p>

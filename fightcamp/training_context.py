@@ -197,6 +197,7 @@ class TrainingContext:
     include_generation_day: bool = False
     sparring_readiness: dict = field(default_factory=dict)
     training_split: dict[str, Any] = field(default_factory=dict)
+    training_workload_context: dict[str, Any] = field(default_factory=dict)
     hard_sparring_days: list[str] = field(default_factory=list)
     support_work_days: list[str] = field(default_factory=list)
     technical_skill_days: list[str] = field(default_factory=list)  # legacy fallback

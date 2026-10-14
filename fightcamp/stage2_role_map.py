@@ -50,6 +50,7 @@ from .stage2_planning_brief import (
 )
 from .gap_fill_inserts import LOW_COST_AEROBIC_INSERTS
 from .goal_priority import goal_priority_scores
+from .priority_profile import build_priority_profile
 from .weight_cut import (
     compute_cut_severity_score,
     cut_severity_bucket,
@@ -705,6 +706,7 @@ def _upgrade_recovery_days_to_gas_tank(
                 "category": "conditioning",
                 "role_key": "recovery_aerobic_gas_tank_day",
                 "original_role_key": role.get("role_key", ""),
+                "original_category": "recovery",
                 "athlete_facing_label": "Low aerobic gas-tank flush",
                 "preferred_system": "aerobic",
                 "preferred_pool": "conditioning_slots",
@@ -1624,7 +1626,10 @@ def _assign_declared_day_hints(
     # calendar_context adapter). Contact events use the resolved hard_sparring_plan
     # so a downgraded declared day is reduced/technical contact, not hard.
     scope = week_scope(week_entry) if isinstance(week_entry, dict) else ("normal_week", None)
-    _legality = normal_week_legality(hard_sparring_plan, hard_sparring_days, scope=scope)
+    _legality = normal_week_legality(
+        hard_sparring_plan, hard_sparring_days, scope=scope,
+        declared_light_days=declared_light_combat_weekdays(athlete_model, training_days=training_days),
+    )
     _profile_cache: dict[int, Any] = {}
 
     def _role_profile(idx: int):
@@ -1706,6 +1711,20 @@ def _assign_declared_day_hints(
         ),
         None,
     )
+    alactic_idx = next((idx for idx, role in enumerate(ordered)
+                        if role.get("category") == "conditioning" and role.get("preferred_system") == "alactic"), None)
+    priorities = goal_priority_scores(athlete_model)
+    strength_is_build_priority = build_priority_profile(athlete_model).primary_weak_area == "strength"
+    priority_conditioning_idx = (
+        alactic_idx if not strength_is_build_priority and priorities["speed"] >= 30 and priorities["speed"] > priorities["strength"]
+        else glycolytic_idx if not strength_is_build_priority and priorities["conditioning"] >= 30 and priorities["conditioning"] > priorities["strength"]
+        else None
+    )
+    if priority_conditioning_idx is not None:
+        priority_day = _pick_legal_day(priority_conditioning_idx, [day for day in training_days if day not in used_days], None)
+        if priority_day:
+            day_assignments[priority_conditioning_idx] = priority_day
+            used_days.add(priority_day)
     if recovery_idx is not None and primary_idx is not None and len(training_days) >= 2:
         middle = max(0, len(training_days) // 2)
         best_pair: tuple[int, int] | None = None
@@ -1718,6 +1737,8 @@ def _assign_declared_day_hints(
         for idx in range(len(training_days) - 1):
             recovery_day = training_days[idx]
             primary_day = training_days[idx + 1]
+            if recovery_day in used_days or primary_day in used_days:
+                continue
             primary_rank = _directive_rank(primary_idx, primary_day)
             recovery_rank = _directive_rank(recovery_idx, recovery_day)
             if primary_rank == 2 or recovery_rank == 2:
@@ -1755,7 +1776,16 @@ def _assign_declared_day_hints(
         # If neither anchor committed here, the per-role fallback below still runs
         # through the same canonical gate.
 
-    if glycolytic_idx is not None:
+    # A recovery slot may already have become a gas-tank flush. That conversion
+    # must not erase the primary strength anchor and let lower-priority support
+    # consume every compatible day before strength gets considered.
+    if primary_idx is not None and primary_idx not in day_assignments:
+        primary_day = _pick_legal_day(primary_idx, [day for day in training_days if day not in used_days], None)
+        if primary_day:
+            day_assignments[primary_idx] = primary_day
+            used_days.add(primary_day)
+
+    if glycolytic_idx is not None and glycolytic_idx not in day_assignments:
         # Owner preference: latest declared training day. Legality (same-day
         # contact / between-hard) is the policy's; the raw fallback preserves the
         # prior "latest non-spar, else latest" pick for the no-legal case (where
@@ -2616,9 +2646,11 @@ def _boxing_crowded_week_policy_state(week_entry: dict, athlete_model: dict) -> 
     This policy used to live in ``stage2_payload``. Step 10 moves it into the
     normal role-budget owner so payload post-processing can remain decoration-only.
     """
-    declared_hard_days = _ordered_weekdays(
-        clean_list(week_entry.get("declared_hard_sparring_days") or athlete_model.get("hard_sparring_days", []))
-    )
+    declared_hard_days = _ordered_weekdays(clean_list(
+        week_entry["effective_hard_sparring_days"]
+        if "effective_hard_sparring_days" in week_entry
+        else week_entry.get("declared_hard_sparring_days") or athlete_model.get("hard_sparring_days", [])
+    ))
     training_days = _ordered_weekdays(clean_list(athlete_model.get("training_days", [])))
     fatigue = normalize_fatigue_level(athlete_model)
     meaningful_cut = _active_weight_cut_is_meaningful(athlete_model)
@@ -2753,7 +2785,7 @@ def _apply_boxing_crowded_week_compression(
 
     training_days = _ordered_weekdays(clean_list(athlete_model.get("training_days", [])))
     sessions_per_week = int(athlete_model.get("training_frequency", len(training_days) or len(session_roles)))
-    weekly_cap = min(sessions_per_week, len(training_days)) if training_days else sessions_per_week
+    weekly_cap = sessions_per_week
 
     spar_roles = [role for role in session_roles if role.get("role_key") == "hard_sparring_day"]
     non_spar_roles = [role for role in session_roles if role.get("role_key") != "hard_sparring_day"]
@@ -2903,7 +2935,7 @@ def _apply_high_fatigue_week_compression(
     # Step 1: Count sparring against the weekly cap
     hard_sparring_days_set = set(_ordered_weekdays(clean_list(athlete_model.get("hard_sparring_days", []))))
     sessions_per_week = int(athlete_model.get("training_frequency") or len(training_days))
-    weekly_cap = min(sessions_per_week, len(training_days))
+    weekly_cap = sessions_per_week
     locked_spar_days = {day for day in training_days if day in hard_sparring_days_set}
     spar_count = len(locked_spar_days)
     non_spar_cap = max(0, weekly_cap - spar_count)
@@ -2959,7 +2991,7 @@ def _apply_high_fatigue_week_compression(
         return session_roles, suppressed_roles
 
     # Step 4: Pick only the highest-priority non-sparring roles
-    is_hard_spar_week = len(hard_sparring_days_set) >= 2
+    is_hard_spar_week = len(_effective_spar_days) >= 2
     is_meaningful_cut = _active_weight_cut_is_meaningful(athlete_model)
 
     resolved_rule_state = dict(week_entry.get("resolved_rule_state") or {})

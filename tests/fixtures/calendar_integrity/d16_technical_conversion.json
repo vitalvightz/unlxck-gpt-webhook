@@ -32,12 +32,12 @@
     [2, "tuesday", "convert_to_technical_suggested", "technical"]
   ],
   "suppressed": [
-    [1, "recovery_reset_day", "recovery", "", ["two_hard_spar_days"]],
-    [1, "strength_touch_day", "strength", "", ["two_hard_spar_days"]],
-    [2, "fight_week_freshness_day", "recovery", "", ["two_hard_spar_days"]],
+    [1, "recovery_reset_day", "recovery", "", ["spar_first_cap"]],
+    [1, "strength_touch_day", "strength", "", ["spar_first_cap"]],
+    [2, "fight_week_freshness_day", "recovery", "", ["spar_first_cap"]],
     [2, "hard_sparring_day", "sparring", "fight_day_protocol", []],
     [2, "hard_sparring_day", "sparring", "no_hard_sparring_day", []],
-    [2, "neural_primer_day", "strength", "", ["two_hard_spar_days"]]
+    [2, "neural_primer_day", "strength", "", ["spar_first_cap"]]
   ],
   "tail_handoff": {"active": true, "normal_planner_through_d": 14, "late_fight_planner_from_d": 13, "source": "finished_existing_late_fight_path"}
 }

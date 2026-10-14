@@ -65,6 +65,7 @@ def fill_missing_session_days(weekly_role_map: dict[str, Any]) -> dict[str, Any]
             week.get("hard_sparring_plan"),
             week.get("declared_hard_sparring_days"),
             scope=week_scope(week, ordinal),
+            declared_light_days=week.get("declared_support_work_days"),
         )
         for role in roles:
             if str(role.get("scheduled_day_hint") or "").strip():

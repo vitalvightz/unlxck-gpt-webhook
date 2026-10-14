@@ -68,7 +68,7 @@ import {
   type TrainingPresetKey,
 } from "@/lib/recommended-setup";
 
-const WEEKLY_FREQUENCY_OPTIONS: IntakeOption[] = Array.from({ length: 6 }, (_, index) => ({
+const WEEKLY_FREQUENCY_OPTIONS: IntakeOption[] = Array.from({ length: 14 }, (_, index) => ({
   label: String(index + 1),
   value: String(index + 1),
 }));
@@ -371,7 +371,7 @@ function QuickBuildFormInner() {
     }),
     [focusPresetLimits, input.fight_date, input.no_scheduled_fight],
   );
-  const maxWeeklySessions = input.training_availability.length;
+  const maxWeeklySessions = input.training_availability.length * 2;
   const sessionsSelectDisabled = maxWeeklySessions === 0;
   const weeklyFrequencyOptions = useMemo(
     () => (maxWeeklySessions > 0 ? WEEKLY_FREQUENCY_OPTIONS.slice(0, maxWeeklySessions) : []),
@@ -483,17 +483,8 @@ function QuickBuildFormInner() {
       const nextValues = toggleListValue(current[key], value);
       if (key === "training_availability") {
         const isRemoving = current.training_availability.includes(value) && !nextValues.includes(value);
-        // Sessions per week follows the day count (one session per training day)
-        // until the athlete overrides it, so most athletes never touch the field.
-        const trackedFrequency = (dayCount: number) =>
-          Math.max(1, Math.min(dayCount, WEEKLY_FREQUENCY_OPTIONS.length));
-        const currentFrequency = current.weekly_training_frequency ?? 1;
-        const wasTrackingDays =
-          current.training_availability.length === 0 ||
-          currentFrequency === trackedFrequency(current.training_availability.length);
-        const nextFrequency = wasTrackingDays
-          ? trackedFrequency(nextValues.length)
-          : Math.min(currentFrequency, Math.max(nextValues.length, 1));
+        // Availability is a set of days, independent of reported session count.
+        // Preserve the athlete's frequency; validation handles incompatible totals.
         return {
           ...current,
           training_availability: nextValues,
@@ -503,7 +494,6 @@ function QuickBuildFormInner() {
           support_work_days: isRemoving
             ? current.support_work_days.filter((day) => day !== value)
             : current.support_work_days,
-          weekly_training_frequency: nextFrequency,
         };
       }
       if (key === "hard_sparring_days" && !current.hard_sparring_days.includes(value)) {
@@ -1056,7 +1046,7 @@ function QuickBuildFormInner() {
             disabled={sessionsSelectDisabled}
             onChange={(value) => patch("weekly_training_frequency", Number(value) || 1)}
           />
-          <p className="muted">Matches your training days automatically. Lower it if some days should stay light.</p>
+          <p className="muted">Total weekly sessions, including boxing and double days. Available days and session count are separate.</p>
           <FieldError message={visibleError("weekly_training_frequency")} />
           <FieldError message={visibleError("training_availability")} />
         </div>

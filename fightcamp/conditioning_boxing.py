@@ -203,6 +203,38 @@ def _is_sled_drag_aerobic_drill(drill: dict) -> bool:
     return modality == "sled" or ("sled" in name and "drag" in name)
 
 
+def _boxing_heavy_bag_preference(
+    drill: dict, *, phase: str, system: str, fatigue: str,
+    days_until_fight: int | None, equipment_access_set: set[str],
+    injuries: list[str], hard_sparring_days: list[str],
+) -> float:
+    """Rank authorised bag work within its own energy system and phase.
+
+    Eligibility, injury filtering, dose and contact scheduling stay with their
+    existing owners. This is a preference, never permission to add hard work.
+    """
+    if "heavy_bag" not in equipment_access_set or "heavy_bag" not in drill.get("equipment", []):
+        return 0.0
+    if phase.upper() == "TAPER" or (isinstance(days_until_fight, int) and days_until_fight <= 13):
+        return 0.0
+    if fatigue == "high" or len(set(hard_sparring_days)) >= 3:
+        return 0.0
+    # Avoid steering an upper-limb-sensitive boxer toward repeated bag impacts;
+    # the injury authority still decides which candidates are actually legal.
+    injury_text = " ".join(str(item).lower() for item in injuries)
+    if any(area in injury_text for area in _UPPER_BODY_SWIM_SENSITIVITY_HINTS):
+        return 0.0
+    if system == "aerobic":
+        # Keep machine/recovery options competitive. Sustained bag pacing is a
+        # boxing-specific alternative, not a replacement for recovery work.
+        return 1.0 if phase.upper() == "SPP" and fatigue == "low" else 0.35
+    if system == "alactic":
+        return 2.5 if fatigue == "low" else 1.0
+    if system == "glycolytic":
+        return (3.0 if phase.upper() == "SPP" else 2.0) * (0.5 if fatigue == "moderate" else 1.0)
+    return 0.0
+
+
 def _boxing_aerobic_priority_adjustment(
     drill: dict,
     *,

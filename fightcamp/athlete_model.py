@@ -247,6 +247,7 @@ def _build_athlete_model(
         "mental_blocks": clean_list(training_context.mental_block),
         "equipment": training_context.equipment,
         "training_frequency": training_context.training_frequency,
+        "training_workload_context": dict(training_context.training_workload_context),
         "training_days": training_context.training_days,
         "hard_sparring_days": training_context.hard_sparring_days,
         "support_work_days": support_work_days,

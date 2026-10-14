@@ -32,9 +32,9 @@ export function getAvailabilityConsistency(
     return { hardError: null, softWarning: null };
   }
 
-  if (sessionsPerWeek > availableDays) {
+  if (sessionsPerWeek > availableDays * 2) {
     return {
-      hardError: `You selected ${availableDays} available day${availableDays === 1 ? "" : "s"} but planned ${sessionsPerWeek} weekly session${sessionsPerWeek === 1 ? "" : "s"}.`,
+      hardError: `You selected ${availableDays} available day${availableDays === 1 ? "" : "s"} but planned ${sessionsPerWeek} weekly sessions. Allow up to two sessions per available day.`,
       softWarning: null,
     };
   }

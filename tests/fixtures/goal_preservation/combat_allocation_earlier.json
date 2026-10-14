@@ -1,0 +1,77 @@
+{
+  "training_days": [
+    "Monday",
+    "Tuesday",
+    "Thursday",
+    "Friday",
+    "Saturday",
+    "Wednesday"
+  ],
+  "hard_sparring_days": [
+    "Tuesday",
+    "Saturday"
+  ],
+  "support_work_days": [
+    "Thursday",
+    "Friday"
+  ],
+  "key_goals": [
+    "recovery",
+    "speed",
+    "power"
+  ],
+  "primary_goal": "recovery",
+  "weaknesses": [
+    "balance",
+    "gas_tank"
+  ],
+  "primary_weak_area": "balance",
+  "equipment": [
+    "dumbbells",
+    "kettlebells",
+    "barbell",
+    "trap_bar",
+    "plate",
+    "bench",
+    "cable",
+    "landmine",
+    "log",
+    "atlas_stone",
+    "assault_bike",
+    "rower",
+    "treadmill",
+    "step_mill",
+    "pool",
+    "sled",
+    "battle_ropes",
+    "tire",
+    "sledgehammer",
+    "weight_vest",
+    "heavy_bag",
+    "pads",
+    "box",
+    "agility_ladder",
+    "hurdles",
+    "jump_rope",
+    "medicine_ball",
+    "sandbag",
+    "bulgarian_bag",
+    "bands",
+    "trx",
+    "pullup_bar",
+    "swiss_ball",
+    "bosu_ball",
+    "neck_harness",
+    "weight_belt",
+    "water_jug",
+    "foam_roller",
+    "towel"
+  ],
+  "fatigue": "",
+  "status": "",
+  "fight_date": "2026-12-05",
+  "plan_date": "2026-10-13",
+  "notes": "",
+  "training_frequency": 6,
+  "rounds_format": "10 x 3"
+}
