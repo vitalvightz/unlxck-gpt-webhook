@@ -1,0 +1,841 @@
+{
+  "weeks": [
+    {
+      "week_id": "wk-2",
+      "week_index": 2,
+      "phase_label": "GPP",
+      "week_goal": "build aerobic base and general force capacity",
+      "start_date": "2026-10-19",
+      "end_date": "2026-10-25",
+      "countdown_start": "D-47",
+      "countdown_end": "D-41",
+      "display_week_kind": "calendar_week",
+      "planning_week_indices": [
+        1,
+        2
+      ],
+      "phase_coverage": [
+        "GPP"
+      ],
+      "load_focus": {
+        "volume": "moderate",
+        "intensity": "moderate",
+        "specificity": "moderate",
+        "fatigue_target": "moderate"
+      },
+      "progression": {
+        "week_type": "build",
+        "planned_change_from_previous": ""
+      },
+      "days": [
+        {
+          "date": "2026-10-22",
+          "weekday": "Thu",
+          "day_type": "moderate",
+          "countdown_label": "D-44",
+          "phase_label": "GPP",
+          "planning_week_phase": "GPP",
+          "planning_week_index": 1,
+          "planning_day_role_keys": [
+            "primary_strength_day",
+            "light_combat_day"
+          ],
+          "today_card": {
+            "headline": "",
+            "readiness_status": "train_as_planned",
+            "mindset_anchor": {
+              "intent": "",
+              "focus_cue": "",
+              "reset_cue": ""
+            },
+            "coach_led_contact": "Light Combat / Technical"
+          },
+          "sessions": [
+            {
+              "session_id": "deterministic-44-primary_strength_day-3",
+              "session_type": "strength_power",
+              "title": "Strength",
+              "objective": "Strength",
+              "completion_status": "not_started",
+              "mindset_anchor": {
+                "intent": "",
+                "focus_cue": "",
+                "reset_cue": ""
+              },
+              "blocks": [
+                {
+                  "block_id": "deterministic-44-primary_strength_day-0",
+                  "block_type": "strength",
+                  "display_name": "Sled Pull Forward (Harness)",
+                  "exercise_key": "sled-pull-forward-harness",
+                  "order_index": 0,
+                  "regression_options": [],
+                  "substitutions": [],
+                  "rest": {
+                    "value": 90,
+                    "unit": "seconds"
+                  },
+                  "sets": 3,
+                  "distance": {
+                    "value": 20,
+                    "unit": "meters"
+                  },
+                  "coaching_cues": [
+                    "3 carries over 20 m, heavy but unbroken"
+                  ]
+                },
+                {
+                  "block_id": "deterministic-44-primary_strength_day-1",
+                  "block_type": "strength",
+                  "display_name": "Cossack Squat",
+                  "exercise_key": "cossack-squat",
+                  "order_index": 1,
+                  "regression_options": [],
+                  "substitutions": [],
+                  "sets": 2,
+                  "reps": 6,
+                  "effort": {
+                    "method": "RPE",
+                    "value": 6,
+                    "scale": "1-10"
+                  },
+                  "coaching_cues": [
+                    "2x6 @ RPE 6, keep reps crisp"
+                  ]
+                },
+                {
+                  "block_id": "deterministic-44-primary_strength_day-2",
+                  "block_type": "strength",
+                  "display_name": "Staggered Stance Hold",
+                  "exercise_key": "staggered-stance-hold",
+                  "order_index": 2,
+                  "regression_options": [],
+                  "substitutions": [],
+                  "sets": 2,
+                  "duration": {
+                    "value": 20,
+                    "unit": "seconds"
+                  },
+                  "rest": {
+                    "value": 60,
+                    "unit": "seconds"
+                  },
+                  "effort": {
+                    "method": "RPE",
+                    "value": 6,
+                    "scale": "1-10"
+                  },
+                  "coaching_cues": [
+                    "2 x 20s hold @ RPE 6"
+                  ]
+                },
+                {
+                  "block_id": "deterministic-44-primary_strength_day-3",
+                  "block_type": "strength",
+                  "display_name": "Single-Leg TRX Suspension Hold",
+                  "exercise_key": "single-leg-trx-suspension-hold",
+                  "order_index": 3,
+                  "regression_options": [],
+                  "substitutions": [],
+                  "sets": 3,
+                  "duration": {
+                    "value": 10,
+                    "unit": "seconds"
+                  },
+                  "coaching_cues": [
+                    "3 holds x 10s @ 7/10 effort; full rest between holds"
+                  ]
+                }
+              ],
+              "execution_order": 1
+            }
+          ]
+        },
+        {
+          "date": "2026-10-24",
+          "weekday": "Sat",
+          "day_type": "high",
+          "countdown_label": "D-42",
+          "phase_label": "GPP",
+          "planning_week_phase": "GPP",
+          "planning_week_index": 2,
+          "planning_day_role_keys": [
+            "hard_sparring_day",
+            "breathing_reset"
+          ],
+          "today_card": {
+            "headline": "",
+            "readiness_status": "train_as_planned",
+            "mindset_anchor": {
+              "intent": "",
+              "focus_cue": "",
+              "reset_cue": ""
+            },
+            "coach_led_contact": "Hard sparring"
+          },
+          "sessions": [
+            {
+              "session_id": "deterministic-42-breathing_reset-0",
+              "session_type": "recovery",
+              "title": "Breathing Reset",
+              "objective": "Breathing Reset",
+              "completion_status": "not_started",
+              "mindset_anchor": {
+                "intent": "",
+                "focus_cue": "",
+                "reset_cue": ""
+              },
+              "blocks": [
+                {
+                  "block_id": "deterministic-42-breathing_reset-display",
+                  "block_type": "cooldown_recovery",
+                  "display_name": "Breathing Reset",
+                  "order_index": 0,
+                  "purpose": null,
+                  "why_today": null,
+                  "coaching_cues": [
+                    "6 minutes, RPE 1 max.",
+                    "Nasal breathing if comfortable. Use a 4 second inhale and 6 second exhale. Finish calmer than you started."
+                  ],
+                  "regression_options": [],
+                  "substitutions": [],
+                  "progression_rule": null,
+                  "stop_rules": []
+                }
+              ],
+              "execution_order": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "week_id": "wk-3",
+      "week_index": 3,
+      "phase_label": "GPP",
+      "week_goal": "build aerobic base and general force capacity",
+      "start_date": "2026-10-26",
+      "end_date": "2026-11-01",
+      "countdown_start": "D-40",
+      "countdown_end": "D-34",
+      "display_week_kind": "calendar_week",
+      "planning_week_indices": [
+        2,
+        3
+      ],
+      "phase_coverage": [
+        "GPP",
+        "SPP"
+      ],
+      "load_focus": {
+        "volume": "moderate",
+        "intensity": "moderate",
+        "specificity": "moderate",
+        "fatigue_target": "moderate"
+      },
+      "progression": {
+        "week_type": "build",
+        "planned_change_from_previous": ""
+      },
+      "days": [
+        {
+          "date": "2026-10-26",
+          "weekday": "Mon",
+          "day_type": "rest",
+          "countdown_label": "D-40",
+          "phase_label": "GPP",
+          "planning_week_phase": "GPP",
+          "planning_week_index": 2,
+          "planning_day_role_keys": [
+            "fight_visualization"
+          ],
+          "today_card": {
+            "headline": "",
+            "readiness_status": "train_as_planned",
+            "mindset_anchor": {
+              "intent": "",
+              "focus_cue": "",
+              "reset_cue": ""
+            }
+          },
+          "sessions": [
+            {
+              "session_id": "locked-d-40-fight-visualization",
+              "session_type": "skill",
+              "title": "Fight Visualisation",
+              "objective": "Optional. Rehearse taking space and finishing exchanges in position rather than chasing.",
+              "completion_status": "not_started",
+              "mindset_anchor": {
+                "intent": "Take the space, do not chase it.",
+                "focus_cue": "",
+                "reset_cue": "",
+                "confidence_anchor": null
+              },
+              "blocks": [
+                {
+                  "block_id": "locked-d-40-tactical-picture",
+                  "block_type": "mindset",
+                  "display_name": "Tactical Picture",
+                  "duration": {
+                    "value": 12,
+                    "unit": "minutes"
+                  },
+                  "coaching_cues": [
+                    "Visualise them giving ground.",
+                    "See yourself taking space without following them blindly.",
+                    "Cut their preferred exit, enter behind your trained setup and finish the exchange balanced.",
+                    "Run it again with them changing direction and adjust instead of chasing.",
+                    "Cue: Take the space, do not chase it."
+                  ],
+                  "regression_options": [],
+                  "substitutions": [],
+                  "purpose": "Rehearse taking space and finishing exchanges in position rather than chasing."
+                }
+              ],
+              "optional": true,
+              "execution_order": 1
+            }
+          ]
+        },
+        {
+          "date": "2026-10-31",
+          "weekday": "Sat",
+          "day_type": "high",
+          "countdown_label": "D-35",
+          "phase_label": "SPP",
+          "planning_week_phase": "SPP",
+          "planning_week_index": 3,
+          "planning_day_role_keys": [
+            "hard_sparring_day",
+            "self_review"
+          ],
+          "today_card": {
+            "headline": "Hard sparring",
+            "readiness_status": "train_as_planned",
+            "mindset_anchor": {
+              "intent": "",
+              "focus_cue": "",
+              "reset_cue": ""
+            }
+          },
+          "sessions": []
+        }
+      ]
+    },
+    {
+      "week_id": "wk-4",
+      "week_index": 4,
+      "phase_label": "SPP",
+      "week_goal": "increase fight-specific repeatability and power transfer",
+      "start_date": "2026-11-02",
+      "end_date": "2026-11-08",
+      "countdown_start": "D-33",
+      "countdown_end": "D-27",
+      "display_week_kind": "calendar_week",
+      "planning_week_indices": [
+        3,
+        4
+      ],
+      "phase_coverage": [
+        "SPP"
+      ],
+      "load_focus": {
+        "volume": "moderate",
+        "intensity": "moderate",
+        "specificity": "moderate",
+        "fatigue_target": "moderate"
+      },
+      "progression": {
+        "week_type": "build",
+        "planned_change_from_previous": ""
+      },
+      "days": [
+        {
+          "date": "2026-11-02",
+          "weekday": "Mon",
+          "day_type": "moderate",
+          "countdown_label": "D-33",
+          "phase_label": "SPP",
+          "planning_week_phase": "SPP",
+          "planning_week_index": 3,
+          "planning_day_role_keys": [
+            "neural_plus_strength_day",
+            "fight_visualization"
+          ],
+          "today_card": {
+            "headline": "",
+            "readiness_status": "train_as_planned",
+            "mindset_anchor": {
+              "intent": "",
+              "focus_cue": "",
+              "reset_cue": ""
+            }
+          },
+          "sessions": [
+            {
+              "session_id": "locked-d-33-fight-visualization",
+              "session_type": "skill",
+              "title": "Fight Visualisation",
+              "objective": "Optional. Recognise how the opponent reacts to pressure before committing to the next attack.",
+              "completion_status": "not_started",
+              "mindset_anchor": {
+                "intent": "Read before you chase.",
+                "focus_cue": "",
+                "reset_cue": "",
+                "confidence_anchor": null
+              },
+              "blocks": [
+                {
+                  "block_id": "locked-d-33-read-react",
+                  "block_type": "mindset",
+                  "display_name": "Read \u2192 React",
+                  "duration": {
+                    "value": 12,
+                    "unit": "minutes"
+                  },
+                  "coaching_cues": [
+                    "Picture the opponent retreating straight, covering high or planting to counter.",
+                    "Recognise the reaction before choosing your response.",
+                    "Use only responses already trained in camp.",
+                    "Finish each exchange balanced and reset your pressure.",
+                    "Cue: Read before you chase."
+                  ],
+                  "regression_options": [],
+                  "substitutions": [],
+                  "purpose": "Recognise how the opponent reacts to pressure before committing to the next attack."
+                }
+              ],
+              "optional": true,
+              "execution_order": 1
+            },
+            {
+              "session_id": "deterministic-33-neural_plus_strength_day-2",
+              "session_type": "strength_power",
+              "title": "Strength",
+              "objective": "Strength",
+              "completion_status": "not_started",
+              "mindset_anchor": {
+                "intent": "",
+                "focus_cue": "",
+                "reset_cue": ""
+              },
+              "blocks": [
+                {
+                  "block_id": "deterministic-33-neural_plus_strength_day-0",
+                  "block_type": "strength",
+                  "display_name": "Barbell Thruster",
+                  "exercise_key": "barbell-thruster",
+                  "order_index": 0,
+                  "regression_options": [],
+                  "substitutions": [],
+                  "sets": 4,
+                  "reps": 2,
+                  "rest": {
+                    "value": 120,
+                    "unit": "seconds"
+                  },
+                  "coaching_cues": [
+                    "4x2 reps at max speed"
+                  ]
+                },
+                {
+                  "block_id": "deterministic-33-neural_plus_strength_day-1",
+                  "block_type": "strength",
+                  "display_name": "Lateral Bound-to-Slip",
+                  "exercise_key": "lateral-bound-to-slip",
+                  "order_index": 1,
+                  "regression_options": [],
+                  "substitutions": [],
+                  "sets": 4,
+                  "reps": 2,
+                  "rest": {
+                    "value": 120,
+                    "unit": "seconds"
+                  },
+                  "coaching_cues": [
+                    "4x2 reps at max speed"
+                  ]
+                },
+                {
+                  "block_id": "deterministic-33-neural_plus_strength_day-2",
+                  "block_type": "strength",
+                  "display_name": "Sled Push (Speed)",
+                  "exercise_key": "sled-push-speed",
+                  "order_index": 2,
+                  "regression_options": [],
+                  "substitutions": [],
+                  "sets": 6,
+                  "duration": {
+                    "value": 5,
+                    "unit": "seconds"
+                  },
+                  "rest": {
+                    "value": 90,
+                    "unit": "seconds"
+                  },
+                  "coaching_cues": [
+                    "6 x 5s acceleration with a light sled; stop if speed drops"
+                  ]
+                }
+              ],
+              "execution_order": 2
+            }
+          ]
+        },
+        {
+          "date": "2026-11-07",
+          "weekday": "Sat",
+          "day_type": "high",
+          "countdown_label": "D-28",
+          "phase_label": "SPP",
+          "planning_week_phase": "SPP",
+          "planning_week_index": 4,
+          "planning_day_role_keys": [
+            "hard_sparring_day",
+            "breathing_reset"
+          ],
+          "today_card": {
+            "headline": "",
+            "readiness_status": "train_as_planned",
+            "mindset_anchor": {
+              "intent": "",
+              "focus_cue": "",
+              "reset_cue": ""
+            },
+            "coach_led_contact": "Hard sparring"
+          },
+          "sessions": [
+            {
+              "session_id": "deterministic-28-breathing_reset-0",
+              "session_type": "recovery",
+              "title": "Breathing Reset",
+              "objective": "Breathing Reset",
+              "completion_status": "not_started",
+              "mindset_anchor": {
+                "intent": "",
+                "focus_cue": "",
+                "reset_cue": ""
+              },
+              "blocks": [
+                {
+                  "block_id": "deterministic-28-breathing_reset-display",
+                  "block_type": "cooldown_recovery",
+                  "display_name": "Breathing Reset",
+                  "order_index": 0,
+                  "purpose": null,
+                  "why_today": null,
+                  "coaching_cues": [
+                    "6 minutes, RPE 1 max.",
+                    "Nasal breathing if comfortable. Use a 4 second inhale and 6 second exhale. Finish calmer than you started."
+                  ],
+                  "regression_options": [],
+                  "substitutions": [],
+                  "progression_rule": null,
+                  "stop_rules": []
+                }
+              ],
+              "execution_order": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "week_id": "wk-5",
+      "week_index": 5,
+      "phase_label": "SPP",
+      "week_goal": "increase fight-specific repeatability and power transfer",
+      "start_date": "2026-11-09",
+      "end_date": "2026-11-15",
+      "countdown_start": "D-26",
+      "countdown_end": "D-20",
+      "display_week_kind": "calendar_week",
+      "planning_week_indices": [
+        4,
+        5
+      ],
+      "phase_coverage": [
+        "SPP"
+      ],
+      "load_focus": {
+        "volume": "moderate",
+        "intensity": "moderate",
+        "specificity": "moderate",
+        "fatigue_target": "moderate"
+      },
+      "progression": {
+        "week_type": "build",
+        "planned_change_from_previous": ""
+      },
+      "days": [
+        {
+          "date": "2026-11-09",
+          "weekday": "Mon",
+          "day_type": "rest",
+          "countdown_label": "D-26",
+          "phase_label": "SPP",
+          "planning_week_phase": "SPP",
+          "planning_week_index": 4,
+          "planning_day_role_keys": [
+            "fight_visualization"
+          ],
+          "today_card": {
+            "headline": "",
+            "readiness_status": "train_as_planned",
+            "mindset_anchor": {
+              "intent": "",
+              "focus_cue": "",
+              "reset_cue": ""
+            }
+          },
+          "sessions": [
+            {
+              "session_id": "locked-d-26-fight-visualization",
+              "session_type": "skill",
+              "title": "Fight Visualisation",
+              "objective": "Optional. Rehearse taking space and finishing exchanges in position rather than chasing.",
+              "completion_status": "not_started",
+              "mindset_anchor": {
+                "intent": "Take the space, do not chase it.",
+                "focus_cue": "",
+                "reset_cue": "",
+                "confidence_anchor": null
+              },
+              "blocks": [
+                {
+                  "block_id": "locked-d-26-tactical-picture",
+                  "block_type": "mindset",
+                  "display_name": "Tactical Picture",
+                  "duration": {
+                    "value": 12,
+                    "unit": "minutes"
+                  },
+                  "coaching_cues": [
+                    "Visualise them giving ground.",
+                    "See yourself taking space without following them blindly.",
+                    "Cut their preferred exit, enter behind your trained setup and finish the exchange balanced.",
+                    "Run it again with them changing direction and adjust instead of chasing.",
+                    "Cue: Take the space, do not chase it."
+                  ],
+                  "regression_options": [],
+                  "substitutions": [],
+                  "purpose": "Rehearse taking space and finishing exchanges in position rather than chasing."
+                }
+              ],
+              "optional": true,
+              "execution_order": 1
+            }
+          ]
+        },
+        {
+          "date": "2026-11-14",
+          "weekday": "Sat",
+          "day_type": "high",
+          "countdown_label": "D-21",
+          "phase_label": "SPP",
+          "planning_week_phase": "SPP",
+          "planning_week_index": 5,
+          "planning_day_role_keys": [
+            "hard_sparring_day",
+            "self_review"
+          ],
+          "today_card": {
+            "headline": "Hard sparring",
+            "readiness_status": "train_as_planned",
+            "mindset_anchor": {
+              "intent": "",
+              "focus_cue": "",
+              "reset_cue": ""
+            }
+          },
+          "sessions": []
+        }
+      ]
+    },
+    {
+      "week_id": "wk-6",
+      "week_index": 6,
+      "phase_label": "SPP",
+      "week_goal": "increase fight-specific repeatability and power transfer",
+      "start_date": "2026-11-16",
+      "end_date": "2026-11-22",
+      "countdown_start": "D-19",
+      "countdown_end": "D-13",
+      "display_week_kind": "calendar_week",
+      "planning_week_indices": [
+        5,
+        6
+      ],
+      "phase_coverage": [
+        "SPP",
+        "TAPER"
+      ],
+      "load_focus": {
+        "volume": "moderate",
+        "intensity": "moderate",
+        "specificity": "moderate",
+        "fatigue_target": "moderate"
+      },
+      "progression": {
+        "week_type": "build",
+        "planned_change_from_previous": ""
+      },
+      "days": [
+        {
+          "date": "2026-11-20",
+          "weekday": "Fri",
+          "day_type": "moderate",
+          "countdown_label": "D-15",
+          "phase_label": "SPP",
+          "planning_week_phase": "SPP",
+          "planning_week_index": 5,
+          "planning_day_role_keys": [
+            "light_combat_day",
+            "fight_visualization",
+            "alactic_speed_day"
+          ],
+          "today_card": {
+            "headline": "",
+            "readiness_status": "train_as_planned",
+            "mindset_anchor": {
+              "intent": "",
+              "focus_cue": "",
+              "reset_cue": ""
+            },
+            "coach_led_contact": "Light Combat / Technical"
+          },
+          "sessions": [
+            {
+              "session_id": "locked-d-15-fight-visualization",
+              "session_type": "skill",
+              "title": "Fight Visualisation",
+              "objective": "Optional. Rehearse restarting pressure from position after being caught or escaped.",
+              "completion_status": "not_started",
+              "mindset_anchor": {
+                "intent": "Reset the angle, not the pace.",
+                "focus_cue": "",
+                "reset_cue": "",
+                "confidence_anchor": null
+              },
+              "blocks": [
+                {
+                  "block_id": "locked-d-15-pressure-reset",
+                  "block_type": "mindset",
+                  "display_name": "Pressure \u2192 Reset",
+                  "duration": {
+                    "value": 12,
+                    "unit": "minutes"
+                  },
+                  "coaching_cues": [
+                    "Picture getting caught while entering.",
+                    "Do not rush back in. Exhale, rebuild your stance and restart your pressure from position.",
+                    "Then picture the opponent escaping your trap.",
+                    "Reset the angle instead of chasing.",
+                    "Cue: Reset the angle, not the pace."
+                  ],
+                  "regression_options": [],
+                  "substitutions": [],
+                  "purpose": "Rehearse restarting pressure from position after being caught or escaped."
+                }
+              ],
+              "optional": true,
+              "execution_order": 1
+            },
+            {
+              "session_id": "deterministic-15-alactic_speed_day-9",
+              "session_type": "conditioning",
+              "title": "Alactic sharpness",
+              "objective": "Alactic sharpness",
+              "completion_status": "not_started",
+              "mindset_anchor": {
+                "intent": "",
+                "focus_cue": "",
+                "reset_cue": ""
+              },
+              "blocks": [
+                {
+                  "block_id": "deterministic-15-alactic_speed_day-0",
+                  "block_type": "conditioning",
+                  "display_name": "Max-Power Bag Burst",
+                  "exercise_key": "max-power-bag-burst",
+                  "order_index": 0,
+                  "regression_options": [],
+                  "substitutions": [],
+                  "rounds": 8,
+                  "work": {
+                    "value": 5,
+                    "unit": "seconds"
+                  },
+                  "rest": {
+                    "value": 60,
+                    "unit": "seconds"
+                  },
+                  "effort": {
+                    "method": "RPE",
+                    "value": 8,
+                    "scale": "1-10"
+                  },
+                  "coaching_cues": [
+                    "5s work, 60s rest x 8 rounds",
+                    "Cue: Deliver a five-second maximal-quality burst, then recover fully. Stop the burst if punch speed, shape or head position drops."
+                  ]
+                }
+              ],
+              "execution_order": 2
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "plan_metadata": {
+    "title": "Fight camp plan",
+    "sport": "boxing",
+    "plan_type": "fight_camp",
+    "timezone": "Europe/London",
+    "status": "active"
+  },
+  "athlete_context": {
+    "sport_profile": "boxing",
+    "equipment_access": [
+      "dumbbells",
+      "kettlebell",
+      "barbell",
+      "trap_bar",
+      "bench",
+      "landmine",
+      "assault_bike",
+      "rower",
+      "step_mill",
+      "pool",
+      "sled",
+      "battle_ropes",
+      "tire",
+      "sledgehammer",
+      "weight_vest",
+      "heavy_bag",
+      "pads",
+      "box",
+      "agility_ladder",
+      "jump_rope",
+      "medicine_ball",
+      "sandbag",
+      "bands",
+      "trx",
+      "pullup_bar",
+      "bosu_ball",
+      "neck_harness",
+      "weight_belt",
+      "water_jug",
+      "foam_roller",
+      "towel",
+      "treadmill"
+    ]
+  },
+  "nutrition": {
+    "summary": "",
+    "daily_focus": "",
+    "training_day_guidance": "",
+    "fight_week_guidance": ""
+  }
+}

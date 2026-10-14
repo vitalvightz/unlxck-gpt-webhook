@@ -705,10 +705,12 @@ def _validator_report_with_required_countdown_sessions(
     *,
     planning_brief: dict,
     final_plan_text: str,
+    final_programme: bool = True,
 ) -> dict:
     validator_report = validate_stage2_output(
         planning_brief=planning_brief,
         final_plan_text=final_plan_text,
+        **({"final_programme": False} if not final_programme else {}),
     )
     validator_report = postprocess_stage2_validator_report(
         planning_brief=planning_brief,
@@ -905,13 +907,14 @@ def build_stage2_package(*, stage1_result: dict) -> dict:
     }
 
 
-def review_stage2_output(*, planning_brief: dict, final_plan_text: str) -> dict:
+def review_stage2_output(*, planning_brief: dict, final_plan_text: str, final_programme: bool = True) -> dict:
     planning_brief = _require_dict(planning_brief, name="planning_brief")
     validator_report = apply_stage2_release_policy(
         _enrich_validator_report(
             _validator_report_with_required_countdown_sessions(
                 planning_brief=planning_brief,
                 final_plan_text=final_plan_text,
+                **({"final_programme": False} if not final_programme else {}),
             )
         )
     )

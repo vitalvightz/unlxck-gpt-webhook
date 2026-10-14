@@ -238,10 +238,12 @@ def test_no_isometric_tagged_entry_is_routed_to_a_rep_based_template():
     assert not offenders, offenders
 
 
-def test_isometric_routing_does_not_key_off_a_bare_hold_in_the_name():
-    """No bare-"hold" fallback: these hold-named entries keep their own class."""
+def test_static_holds_receive_hold_doses_without_reclassifying_dynamic_plank_work():
     for name in ("Bird Dog Hold", "Hollow-Body Hold", "Staggered Stance Hold"):
-        assert _classify_prescription_type(BY_NAME[name]) == "core", name
+        assert _classify_prescription_type(BY_NAME[name]) == "support_isometric", name
+        for dose in _doses(name).values():
+            assert "hold" in dose and "tempo" not in dose
+    assert _classify_prescription_type({"name": "Side Plank Row", "tags": ["core"]}) == "core"
 
 
 # --------------------------------------------------------------------------- #
@@ -379,8 +381,8 @@ def test_barbell_thruster_is_not_prescribed_as_a_heavy_strength_lift():
         assert "1RM" not in dose, (phase, dose)
 
 
-def test_thruster_exception_does_not_reclassify_non_bar_push_presses():
-    assert _classify_prescription_type(BY_NAME["Landmine Push Press"]) == "core"
+def test_push_press_intent_is_explosive_across_implements():
+    assert _classify_prescription_type(BY_NAME["Landmine Push Press"]) == "ballistic"
     assert _classify_prescription_type(BY_NAME["Band-Resisted Push Press"]) == "ballistic"
 
 

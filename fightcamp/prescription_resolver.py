@@ -647,12 +647,13 @@ def resolve_strength_slot_prescription(
     erasing the slot's original semantic class.
     """
     selected = _slot_selected(slot)
+    from .working_dose import working_dose
     base_prescription = str(selected.get("prescription") or "").strip()
     cap = role.get("strength_dose_cap") if isinstance(role.get("strength_dose_cap"), dict) else None
     if not cap or not base_prescription:
         return {
             "base_prescription": base_prescription,
-            "effective_prescription": base_prescription,
+            "effective_prescription": working_dose(base_prescription),
             "dose_authority": "exercise_bank",
         }
 
@@ -695,7 +696,7 @@ def resolve_strength_slot_prescription(
     persisted_kind = "anchor" if semantic_kind == "hybrid" and kind == "hybrid" else kind
     result = {
         "base_prescription": base_prescription,
-        "effective_prescription": effective,
+        "effective_prescription": working_dose(effective),
         "dose_authority": "scheduled_countdown_overlay",
         "dose_role_kind": persisted_kind,
         "dose_adjustment_reason": role.get("dose_adjustment_reason"),

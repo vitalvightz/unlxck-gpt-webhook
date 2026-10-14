@@ -2608,7 +2608,7 @@ def _non_spar_role_priority_rank(
     return 2
 
 
-def enforce_total_session_budget(role_map: dict, athlete_model: dict) -> dict:
+def enforce_total_session_budget(role_map: dict, athlete_model: dict, candidate_pools: dict | None = None) -> dict:
     """Close the requested appointment budget after locks and fillers are present.
 
     Use the allocator's existing priority ordering. Contact locks remain owned
@@ -2617,15 +2617,14 @@ def enforce_total_session_budget(role_map: dict, athlete_model: dict) -> dict:
     frequency = requested_training_frequency(athlete_model)
     if not frequency:
         return role_map
-    windows = []
-    for week in role_map.get("weeks") or []:
-        windows.extend(cadence_windows([(d["d_day"], d.get("weekday", ""))
-                                       for d in week.get("calendar_days") or []]))
     # A phase change can split a real calendar week into two progression weeks.
     # Neither partial object gets a fresh allowance of standalone appointments.
     slots = [(d["d_day"], d.get("weekday", ""))
              for w in role_map.get("weeks") or [] for d in w.get("calendar_days") or []]
-    windows.extend(cadence_windows(slots))
+    windows = cadence_windows(slots)
+    from .goal_preservation import classify_goal_preservation, collect_goal_evidence, _coverage
+    goals = classify_goal_preservation(athlete_model) if candidate_pools else []
+    brief = {"athlete_snapshot": athlete_model, "weekly_role_map": role_map, "candidate_pools": candidate_pools or {}}
     def rank(role):
         owner = role["_source_week"]
         return allocation_sort_key(base_rank=_non_spar_role_priority_rank(
@@ -2647,7 +2646,21 @@ def enforce_total_session_budget(role_map: dict, athlete_model: dict) -> dict:
             if not removable:
                 _append_week_coach_note_flag(appointments[0]["_source_week"], "coach sessions exceed requested total session count")
                 break
-            role = min(removable, key=rank)
+            before = collect_goal_evidence(brief) if goals else []
+            missing_before = [_coverage(goal, brief, before)[1] for goal in goals]
+            def loss_rank(appointment):
+                # These appointments already passed placement/safety. Preserve
+                # their actual goal doses before using soft category priorities
+                # to choose which redundant appointment the budget removes.
+                source = appointment["_source_role"]
+                trial_map = {**role_map, "weeks": [{**w, "session_roles": [r for r in w.get("session_roles") or [] if r is not source]}
+                                                  for w in role_map.get("weeks") or []]}
+                trial = {**brief, "weekly_role_map": trial_map}
+                after = collect_goal_evidence(trial) if goals else []
+                losses = [max(0, len(_coverage(g, trial, after)[1]) - len(old)) for g, old in zip(goals, missing_before)]
+                base = rank(appointment)
+                return (base[0] == 100, sum(n for g, n in zip(goals, losses) if g.get("priority") == "primary"), sum(losses), base)
+            role = min(removable, key=loss_rank)
             owner = role["_source_week"]
             owner["session_roles"][:] = [r for r in owner["session_roles"] if r is not role["_source_role"]]
             owner.setdefault("suppressed_roles", []).append({

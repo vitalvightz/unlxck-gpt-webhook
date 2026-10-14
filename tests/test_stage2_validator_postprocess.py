@@ -449,7 +449,7 @@ def test_closed_strength_membership_ignores_legal_conditioning_card_on_same_day(
         ]
     )
 
-    raw = validate_stage2_output(planning_brief=brief, final_plan_text=rendered)
+    raw = validate_stage2_output(planning_brief=brief, final_plan_text=rendered, final_programme=False)
     assert any(item.get("rendered_exercise") == "Assault Bike" for item in _membership_errors(raw))
 
     report = postprocess_stage2_validator_report(
@@ -479,7 +479,7 @@ def test_closed_strength_membership_ignores_declared_light_combat_card_on_same_d
         ]
     )
 
-    raw = validate_stage2_output(planning_brief=brief, final_plan_text=rendered)
+    raw = validate_stage2_output(planning_brief=brief, final_plan_text=rendered, final_programme=False)
     assert any(item.get("rendered_exercise") == "Technical pummelling" for item in _membership_errors(raw))
 
     report = postprocess_stage2_validator_report(
@@ -510,7 +510,7 @@ def test_role_scoping_does_not_union_other_role_permission_into_strength_card():
         ]
     )
 
-    raw = validate_stage2_output(planning_brief=brief, final_plan_text=rendered)
+    raw = validate_stage2_output(planning_brief=brief, final_plan_text=rendered, final_programme=False)
     report = postprocess_stage2_validator_report(
         planning_brief=brief,
         final_plan_text=rendered,

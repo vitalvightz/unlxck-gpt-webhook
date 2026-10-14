@@ -1256,6 +1256,9 @@ class OpenAIStage2Automator:
             source=source,
             log_context=log_context,
         )
+        from fightcamp.programme_fidelity import reconcile_authoritative_programme
+        programme_reconciliation = reconcile_authoritative_programme(package["planning_brief"], first_pass_text)
+        first_pass_text = programme_reconciliation["text"]
         first_review = review_stage2_output(
             planning_brief=package["planning_brief"],
             final_plan_text=first_pass_text,
@@ -1263,6 +1266,7 @@ class OpenAIStage2Automator:
 
         def reviewed_report(review):
             report = dict(review["validator_report"])
+            report["programme_reconciliation"] = {key: value for key, value in programme_reconciliation.items() if key != "text"}
             errors = report.get("errors")
             if isinstance(errors, list):
                 errors = list(errors)

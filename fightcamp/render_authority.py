@@ -129,9 +129,22 @@ def _closed_membership_lines(role: dict[str, Any]) -> list[str] | None:
             ).strip()
         else:
             display = str(prescription or "").strip()
+        if assignment.get("slot_group") == "strength_slots":
+            resolved = next((p for p in role.get("effective_strength_prescriptions") or []
+                             if p.get("slot_id") == assignment.get("slot_id") and p.get("name") == name), None)
+            if resolved:
+                display = str(resolved.get("effective_prescription") or "").strip()
         if not name or not display:
             return None
+        if assignment.get("slot_group") == "conditioning_slots" and assignment.get("rpe") is not None and "rpe" not in display.lower():
+            display += f"; RPE {assignment['rpe']:g}"
         lines.append(f"- {name} — {display}")
+        notes = str(assignment.get("coaching_notes") or "").strip()
+        if notes:
+            lines.extend(f"  Cue: {line.strip()}" for line in notes.splitlines() if line.strip())
+        purpose = str(assignment.get("purpose") or "").strip()
+        if purpose:
+            lines.append(f"  Purpose: {purpose}")
     return lines or None
 
 

@@ -159,7 +159,7 @@ def test_one_day_before_effective_hard_contact_marks_strength_and_reuses_retenti
         "loaded_allowed": True,
     }
     assert role["rpe_cap"] == "6-7"
-    assert role["effective_strength_prescriptions"][0]["effective_prescription"] == "3 x 3 @ RPE 6-7 max"
+    assert role["effective_strength_prescriptions"][0]["effective_prescription"] == "3 x 3 @ RPE 6 max"
 
 
 def test_two_days_before_effective_hard_contact_does_not_trigger() -> None:
@@ -217,7 +217,7 @@ def test_pre_hard_retention_cap_stacks_with_existing_high_fatigue_reduction() ->
         candidate_pools=_selected_candidate_pools(weekly, _anchor_slot()),
         athlete_model={"fatigue": "high"},
     )
-    assert _role(weekly)["effective_strength_prescriptions"][0]["effective_prescription"] == "2 x 3 @ RPE 6-7 max"
+    assert _role(weekly)["effective_strength_prescriptions"][0]["effective_prescription"] == "2 x 3 @ RPE 6 max"
 
 
 def test_stricter_existing_countdown_cap_wins_over_pre_hard_retention_cap() -> None:
@@ -236,7 +236,7 @@ def test_stricter_existing_countdown_cap_wins_over_pre_hard_retention_cap() -> N
         candidate_pools=_selected_candidate_pools(weekly, _anchor_slot()),
         athlete_model={"fatigue": "low"},
     )
-    assert _role(weekly)["effective_strength_prescriptions"][0]["effective_prescription"] == "2 x 3 @ RPE 6-7 max"
+    assert _role(weekly)["effective_strength_prescriptions"][0]["effective_prescription"] == "2 x 3 @ RPE 6 max"
     assert _role(weekly)["dose_adjustment_reason"] == "late_camp_reduced_strength_maintenance"
 
 

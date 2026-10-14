@@ -130,7 +130,7 @@ def test_all_sports_real_bank(sport, mma_brief):
     print(sport, [(r["scheduled_countdown_label"], [a["name"] for a in r["selected_exercise_assignments"]]) for r in physical])
 
 
-def test_empty_membership_still_renders_stage2(mma_brief):
+def test_empty_membership_still_renders_stage2(mma_brief, monkeypatch):
     """A missing exposure is admin-review material, not a reason to skip Stage 2.
 
     Only AUTHORITY_RELEASE_HOLD_CODES (genuinely unsafe scheduled output) may
@@ -138,6 +138,7 @@ def test_empty_membership_still_renders_stage2(mma_brief):
     stage2_pass with no Stage 2 attempt and no Stage 2 text.
     """
     from api.stage2_automation import OpenAIStage2Automator
+    monkeypatch.setenv("UNLXCK_STAGE2_STRUCTURED_PLAN", "0")
     brief = deepcopy(mma_brief)
     role = next(role for role in late_roles(brief) if role["role_key"] == "alactic_sharpness_day")
     role["selected_exercise_assignments"] = []
@@ -149,7 +150,8 @@ def test_empty_membership_still_renders_stage2(mma_brief):
     }))
     automator._generate_text.assert_called_once()
     assert result["stage2_attempt_count"] == 1
-    assert result["final_plan_text"] == "# Stage 2 plan"
+    assert result["stage2_validator_report"]["programme_reconciliation"]["applied"]
+    assert "# Weekly Schedule" in result["final_plan_text"]
     assert result["draft_plan_text"] == "draft"
     codes = {
         str(item.get("code"))

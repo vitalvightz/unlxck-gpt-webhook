@@ -153,6 +153,10 @@ def test_fallback_carries_authoritative_doses_not_invented_ones(camp_brief, fall
     assignments: dict[str, str] = {}
     for week in (camp_brief.get("weekly_role_map") or {}).get("weeks") or []:
         for role in week.get("session_roles") or []:
+            if role.get("category") == "support_insert" and role.get("display_text"):
+                # Instruction-only inserts have their own selected display and
+                # duration authority, rather than an exercise-bank assignment.
+                assignments[str(role.get("athlete_facing_label"))] = str(role["display_text"])
             for item in role.get("selected_exercise_assignments") or []:
                 if isinstance(item, dict) and item.get("name"):
                     assignments[str(item["name"])] = str(item.get("base_prescription") or "")

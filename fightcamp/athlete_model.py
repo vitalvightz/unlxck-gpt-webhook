@@ -223,6 +223,7 @@ def _build_athlete_model(
         "include_generation_day": bool(getattr(training_context, "include_generation_day", False)),
         "fight_date": getattr(training_context, "next_fight_date", "") or "",
         "next_fight_date": getattr(training_context, "next_fight_date", "") or "",
+        "athlete_timezone": training_context.athlete_timezone,
         "fatigue": training_context.fatigue,
         "stance": training_context.stance,
         "age": training_context.age,

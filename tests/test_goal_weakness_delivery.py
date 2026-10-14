@@ -411,9 +411,13 @@ def test_every_conditioning_day_says_why_it_carries_no_trunk_support(key):
     ]
     assert all(reason for _, reason in skipped), skipped
     if key == "king":
-        # Week 2's SPP pool holds no low-load trunk drill: its core-pattern
-        # slots went to trunk-matched power drills under the movement cap.
-        assert {reason for d_day, reason in skipped if isinstance(d_day, int) and 14 <= d_day <= 20} == {"no_low_load_trunk_candidate"}
+        # The total-session budget leaves instruction-only aerobic support in
+        # this window, not a bank conditioning session to embed trunk work in.
+        # Never add another conditioning appointment merely to clear this audit.
+        assert not any(r.get("category") == "conditioning" and _members(r)
+                       for week, r in _roles(_brief(key))
+                       if isinstance(role_d_day(week, r), int) and 14 <= role_d_day(week, r) <= 20)
+        assert {reason for d_day, reason in skipped if isinstance(d_day, int) and 14 <= d_day <= 20} == set()
 
 
 def test_without_the_cut_king_builds_trunk_strength_every_week():
@@ -455,6 +459,14 @@ def test_goal_evidence_names_only_final_members_at_their_final_day(key):
     for entry in brief["goal_preservation"]:
         for evidence in entry["evidence"]:
             if evidence.get("d_day") is not None and evidence.get("name"):
+                if evidence.get("dose_authority") == "scheduled_support_dose":
+                    from fightcamp.render_authority import authoritative_render_for_role
+                    role = next(r for week, r in _roles(brief)
+                                if role_d_day(week, r) == evidence["d_day"] and r["role_key"] == evidence["role_key"])
+                    render = authoritative_render_for_role(role)
+                    assert render and any(evidence["name"] in line for line in render["body_lines"])
+                    assert role["prescribed_duration_min"] == evidence["duration_min"]
+                    continue
                 assert (evidence["d_day"], evidence["name"]) in final, (entry["goal"], evidence["name"])
 
 

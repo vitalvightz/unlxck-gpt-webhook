@@ -811,7 +811,7 @@ def test_relocation_across_a_morph_boundary_restamps_from_the_new_days_dose():
 
     # The authoritative dose is the new day's, not the day it left.
     resolved = strength["effective_strength_prescriptions"][0]["effective_prescription"]
-    assert resolved == "3 x 3 @ RPE 6-7 max"
+    assert resolved == "3 x 3 @ RPE 6 max"
     assert "5 sets x 8 reps" not in resolved
 
     # And the persisted stamp reflects that smaller dose rather than the old one.

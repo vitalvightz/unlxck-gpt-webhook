@@ -128,7 +128,7 @@ def test_case_b_d17_anchor_effective_dose_is_authoritative():
     role = _resolve(17, [_anchor_slot()])
     anchor = _by_name(role, "Trap Bar Deadlift")
     assert anchor["base_prescription"] == "4 x 3 @ RPE 7"
-    assert anchor["effective_prescription"] == "3 x 3 @ RPE 6-7 max"
+    assert anchor["effective_prescription"] == "3 x 3 @ RPE 6 max"
     assert anchor["dose_authority"] == "scheduled_countdown_overlay"
     assert anchor["dose_role_kind"] == "anchor"
     assert anchor["effective_loaded"] is True
@@ -162,7 +162,7 @@ def test_case_b_d17_effective_reaches_stage2_packet_and_base_not_authoritative()
     )
     compact_role = packet["selected_plan"]["weekly_role_map"]["weeks"][0]["session_roles"][0]
     presc = compact_role["effective_strength_prescriptions"][0]
-    assert presc["effective_prescription"] == "3 x 3 @ RPE 6-7 max"
+    assert presc["effective_prescription"] == "3 x 3 @ RPE 6 max"
     # base is preserved for provenance but is NOT the authoritative render dose.
     assert presc["base_prescription"] == "4 x 3 @ RPE 7"
     assert compact_role["effective_strength_envelope"]["max_sets"] == 3
@@ -181,7 +181,7 @@ def test_case_c_d17_secondary_loses_more_volume_than_anchor():
     secondary = _by_name(role, "Barbell Overhead Press")
     assert anchor["dose_role_kind"] == "anchor"
     assert secondary["dose_role_kind"] == "secondary"
-    assert secondary["effective_prescription"] == "2 x 5 @ RPE 6-7 max"
+    assert secondary["effective_prescription"] == "2 x 5 @ RPE 6 max"
     # Secondary loses a set relative to the anchor.
     assert secondary["effective_max_sets"] < anchor["effective_max_sets"]
 
@@ -194,7 +194,7 @@ def test_case_d_d17_support_reduces_sets_keeps_reps():
     role = _resolve(17, [_anchor_slot(), _support_slot()])
     support = _by_name(role, "Pallof Press")
     assert support["dose_role_kind"] == "support"
-    assert support["effective_prescription"] == "2 x 8 @ RPE 6-7 max"
+    assert support["effective_prescription"] == "2 x 8 @ RPE 6 max"
     # Reps stay at 8 — never squeezed into a 2-3 rep strength prescription.
     assert support["effective_max_reps"] == 8
     assert support["effective_loaded"] is False
@@ -208,7 +208,7 @@ def test_case_e_d10_full_strength_is_neural_maintenance():
     role = _resolve(10, [_anchor_slot()])
     anchor = _by_name(role, "Trap Bar Deadlift")
     # Band caps to 2 x 3; loaded work is still permitted this far out.
-    assert anchor["effective_prescription"] == "2 x 3 @ RPE 6-7 max"
+    assert anchor["effective_prescription"] == "2 x 3 @ RPE 6 max"
     assert anchor["effective_loaded"] is True
     assert anchor["dose_adjustment_reason"] == "late_camp_reduced_strength_maintenance"
     assert "neural maintenance" in role["selection_rule"].lower()
@@ -271,7 +271,7 @@ def test_case_h_high_risk_state_never_raises_dose():
 def test_case_h_moderate_cut_does_not_reduce_below_countdown_band():
     # The K profile's ~3.4% cut is not aggressive, so it must not shave the dose.
     role = _resolve(17, [_anchor_slot()], athlete_model={"fatigue": "low", "weight_cut_pct": 3.4})
-    assert _by_name(role, "Trap Bar Deadlift")["effective_prescription"] == "3 x 3 @ RPE 6-7 max"
+    assert _by_name(role, "Trap Bar Deadlift")["effective_prescription"] == "3 x 3 @ RPE 6 max"
 
 
 # --------------------------------------------------------------------------- #
@@ -428,7 +428,7 @@ def test_case_k_production_regression_d17_strength_is_meaningful_but_reduced():
 
     # Meaningful but reduced: NOT the untouched 4 x 3 bank dose ...
     assert anchor["base_prescription"] == "4 x 3 @ RPE 7"
-    assert anchor["effective_prescription"] == "3 x 3 @ RPE 6-7 max"
+    assert anchor["effective_prescription"] == "3 x 3 @ RPE 6 max"
     # Authority is Stage 1 bookkeeping: present on the rich role, not sent to the
     # finalizer, which only needs the authorised dose.
     assert "dose_authority" not in anchor

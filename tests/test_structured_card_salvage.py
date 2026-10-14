@@ -40,6 +40,15 @@ BACKED = [
     "Medicine Ball Scoop Toss",
     "Split Squat Isometric",
 ]
+BACKED_DOSES = {
+    "Barbell Back Squat": {"sets": 3, "reps": 3, "rest": {"value": 180, "unit": "seconds"},
+                          "load": {"method": "percentage", "value": 80, "unit": "percent", "ref": "1RM"}},
+    "Pallof Press": {"sets": 2, "reps": 10, "rest": {"value": 60, "unit": "seconds"}},
+    "Box Jump": {"sets": 3, "reps": 2, "rest": {"value": 120, "unit": "seconds"}},
+    "Medicine Ball Scoop Toss": {"sets": 3, "reps": 3, "rest": {"value": 90, "unit": "seconds"}},
+    "Split Squat Isometric": {"sets": 2, "duration": {"value": 20, "unit": "seconds"},
+                             "rest": {"value": 60, "unit": "seconds"}},
+}
 
 
 def _card(*extra_names: str) -> dict:
@@ -53,6 +62,12 @@ def _card(*extra_names: str) -> dict:
         block["block_id"] = f"b{index}"
         block["display_name"] = name
         block["order_index"] = index
+        if name in BACKED_DOSES:
+            # This fixture isolates name/placement salvage. Its retained doses
+            # must match SOURCE, rather than inherit another lift's 4 x 4-6.
+            for key in ("sets", "reps", "load", "effort", "tempo", "duration", "rest"):
+                block.pop(key, None)
+            block.update(BACKED_DOSES[name])
         session["blocks"].append(block)
     return plan
 

@@ -676,6 +676,12 @@ def _select_bounded_records(
         return group not in backed_groups or _backs_required_group(record, group)
 
     unsatisfied_groups = list(_ROLE_REQUIRED_FAMILY_GROUPS.get(role_key, ()))
+    # Reserve the primary adaptation before family filling spends the cap.
+    # Family balance cannot substitute for the athlete's actual goal.
+    primary = next((r for r in records if preserve_adaptation in r.get("adaptations", ())), None) if preserve_adaptation else None
+    if primary is not None and cap > 0:
+        _add_record(primary, selected, family_counts)
+        unsatisfied_groups = [group for group in unsatisfied_groups if not _covers(primary, group)]
     while unsatisfied_groups:
         if len(selected) >= cap:
             break
@@ -1468,9 +1474,30 @@ def compose_normal_strength_assignments(
                 if isinstance(slot, dict) and (slot.get("session_index") or 1) == session_index
             ]
             records = _candidate_records(owned_slots)
+            if primary_adaptation and not any(primary_adaptation in r["adaptations"] for r in records):
+                # Slot distribution precedes calendar suppression. When another
+                # strength session has been removed, its already-filtered goal
+                # candidate must remain available to the surviving session.
+                active_indices = {r.get("strength_session_index") or 1 for r in week.get("session_roles") or []
+                                  if r is not role and r.get("category") == "strength" and role_d_day(week, r) is not None}
+                records.extend(r for r in _candidate_records(slots)
+                               if primary_adaptation in r["adaptations"]
+                               and (r["slot"].get("session_index") or 1) not in active_indices
+                               and r["slot"] not in owned_slots)
             role_key = str(role.get("role_key") or "").strip()
             base_cap, effective_cap = _effective_role_cap(role_key, pressure)
-            if only_roles is not None and id(role) not in only_roles:
+            prior_policy = role.get("strength_composition_policy") or {}
+            priced_names = {p.get("name") for p in role.get("effective_strength_prescriptions") or []
+                            if p.get("effective_prescription")}
+            members = role.get("selected_exercise_assignments") or []
+            closed_current = (only_roles is None and bool(members)
+                and prior_policy.get("composed_for_d_day") == role_d_day(week, role)
+                and all(m.get("name") in priced_names and m.get("source_phase") == phase for m in members))
+            if closed_current or (only_roles is not None and id(role) not in only_roles):
+                # Already composed and priced for this calendar date is closed
+                # work, not another chance to pick a different session. Movers
+                # and changed-neighbour callbacks explicitly target only_roles;
+                # stale dates/phases still recompose through the same owner.
                 held = {
                     str(item.get("name") or "")
                     for item in role.get("selected_exercise_assignments") or []
@@ -1978,7 +2005,8 @@ def _conditioning_prescription(option: dict[str, Any], *, rounds: int | None = N
             return rendered
     base = str(option.get("prescription") or metadata.get("timing") or metadata.get("duration") or "").strip()
     if base:
-        return base
+        from .working_dose import working_dose
+        return working_dose(base, duration_max=True)
     total_minutes = _float_or_none(metadata.get("total_minutes"))
     return f"{total_minutes:g} min" if total_minutes is not None and total_minutes > 0 else ""
 
@@ -2605,6 +2633,7 @@ def apply_realised_load_calendar_revalidation(
     redose_callback: Callable[[dict[str, Any]], Any] | None = None,
     recompose_conditioning_callback: Callable[[dict[str, Any], set[int]], Any] | None = None,
     recompose_strength_callback: Callable[[dict[str, Any], set[int]], Any] | None = None,
+    only_roles: set[int] | None = None,
 ) -> dict[str, Any]:
     """Re-judge composed sessions on their realised load, not their planned role.
 
@@ -2750,6 +2779,11 @@ def apply_realised_load_calendar_revalidation(
         round_actions: list[dict[str, Any]] = []
         moved_strength: set[int] = set()
         for role, _ref, _initial_decision in _realised_load_conflicts(weekly_role_map, stamped):
+            # A local repair must not restart bounded searches for unrelated
+            # graded conflicts that the completed calendar already recorded.
+            # Final forbidden-load checks and residual reporting remain global.
+            if only_roles is not None and id(role) not in only_roles:
+                continue
             # A preceding move/suppression may have cleared this role's conflict.
             # Never act on a same-day collision captured before that mutation.
             live_conflicts = _realised_load_conflicts(weekly_role_map, [role])

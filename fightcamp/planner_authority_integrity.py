@@ -207,7 +207,11 @@ def _stage1_phase_for_offset(athlete_model: dict[str, Any], offset: int) -> str:
     if not any(normalised_days.values()):
         return ""
 
-    remaining = max(1, int(offset))
+    # Normal dated calendars include D-0 in their allocation; direct short
+    # timelines and legacy phase-only records retain countdown-interval units.
+    horizon = athlete_model.get("days_until_fight")
+    inclusive = isinstance(horizon, (int, float)) and horizon > 13
+    remaining = int(offset) + 1 if inclusive else max(1, int(offset))
     for phase in ("TAPER", "SPP", "GPP"):
         days = normalised_days[phase]
         if days <= 0:
@@ -528,10 +532,11 @@ def governed_validator_report_builder(original_report_builder):
     """Validator reports carry planner-authority findings as errors."""
 
     @wraps(original_report_builder)
-    def authority_report_builder(*, planning_brief: dict, final_plan_text: str):
+    def authority_report_builder(*, planning_brief: dict, final_plan_text: str, final_programme: bool = True):
         report = original_report_builder(
             planning_brief=planning_brief,
             final_plan_text=final_plan_text,
+            **({"final_programme": False} if not final_programme else {}),
         )
         findings = planner_authority_findings(planning_brief)
         if not findings:

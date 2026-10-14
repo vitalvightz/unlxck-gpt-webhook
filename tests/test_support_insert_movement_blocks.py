@@ -67,7 +67,9 @@ def test_the_banked_dose_is_kept_verbatim_and_only_exact_quantities_lift():
 
     # "60 sec rest" is a whole quantity clause -> a stat; nothing is invented.
     assert block["rest"] == {"value": 60, "unit": "seconds"}
-    assert "sets" not in block and "rounds" not in block
+    assert "sets" not in block
+    assert block["rounds"] == 3
+    assert block["work"] == {"value": 2, "unit": "minutes"}
     # Every other word of the copy is still on the card, in order.
     assert block["coaching_cues"] == [
         "3 x 2 min easy solo movement rounds",

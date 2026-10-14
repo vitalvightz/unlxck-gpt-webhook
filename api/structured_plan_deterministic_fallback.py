@@ -342,6 +342,23 @@ def _lift_dose_fields(dose: str) -> tuple[dict[str, Any], str]:
     becomes ``sets`` and its time ``duration``.
     """
     fields: dict[str, Any] = {}
+    # The deterministic programme uses compact lifting and interval notation.
+    # Lift its exact numbers without discarding the accompanying intent/cues.
+    reps = re.match(r"\s*(\d+)\s*(?:sets?\s*)?[x×]\s*(\d+)\b(?!\s*(?:s|secs?|seconds?|mins?|minutes?)\b)", dose, re.I)
+    timed = re.match(r"\s*(\d+)\s*(?:sets?|holds?)?\s*[x×]\s*" + _NUMBER + r"\s*" + _TIME_UNIT + r"\b", dose, re.I)
+    interval = re.match(r"\s*(\d+(?:\.\d+)?)\s*(s|secs?|seconds?|mins?|minutes?)\s+work,\s*"
+                        r"(\d+(?:\.\d+)?)\s*(s|secs?|seconds?|mins?|minutes?)\s+rest\s*[x×]\s*(\d+)\s+rounds?", dose, re.I)
+    if reps:
+        fields.update(sets=int(reps[1]), reps=int(reps[2]))
+    elif timed:
+        if re.search(r"\brounds?\b", dose, re.I):
+            fields.update(rounds=int(timed[1]), work=_measured(timed))
+        else:
+            fields.update(sets=int(timed[1]), duration=_measured(timed))
+    elif interval:
+        fields.update(rounds=int(interval[5]),
+                      work={"value": _number(interval[1]), "unit": _UNIT_NAMES[interval[2].lower()]},
+                      rest={"value": _number(interval[3]), "unit": _UNIT_NAMES[interval[4].lower()]})
     kept: list[str] = []
     for raw_clause in re.split(r"\s*;\s*", dose.strip().rstrip(".").strip()):
         clause = raw_clause.strip().rstrip(".").strip()
@@ -350,10 +367,10 @@ def _lift_dose_fields(dose: str) -> tuple[dict[str, Any], str]:
         rest = next(
             (m for pattern in _REST_CLAUSE_RES if (m := pattern.fullmatch(clause))), None
         )
-        if "rest" not in fields and rest:
+        if rest:
             fields["rest"] = _measured(rest)
             continue
-        if "duration" not in fields and (match := _DURATION_CLAUSE_RE.fullmatch(clause)):
+        if match := _DURATION_CLAUSE_RE.fullmatch(clause):
             fields["duration"] = _measured(match)
             continue
         if "effort" not in fields and (match := _EFFORT_CLAUSE_RE.fullmatch(clause)):
@@ -364,19 +381,28 @@ def _lift_dose_fields(dose: str) -> tuple[dict[str, Any], str]:
                 "scale": "1-10" if match.group("method").upper() == "RPE" else None,
             }
             continue
-        if "sets" not in fields and (match := _SETS_REPS_CLAUSE_RE.fullmatch(clause)):
+        if match := _SETS_REPS_CLAUSE_RE.fullmatch(clause):
             fields["sets"] = int(match.group("sets"))
             fields["reps"] = int(match.group("reps"))
             continue
         if (
-            "sets" not in fields
-            and "duration" not in fields
-            and (match := _SETS_TIME_CLAUSE_RE.fullmatch(clause))
+            match := _SETS_TIME_CLAUSE_RE.fullmatch(clause)
         ):
             fields["sets"] = int(match.group("sets"))
             fields["duration"] = _measured(match)
             continue
         kept.append(clause)
+    if "effort" not in fields and (effort := _EFFORT_CLAUSE_RE.search(dose)):
+        value = re.sub(r"\s*[-–—]\s*", "-", effort.group("value"))
+        fields["effort"] = {"method": effort.group("method").upper(),
+                            "value": _number(value) if "-" not in value else value,
+                            "scale": "1-10" if effort.group("method").upper() == "RPE" else None}
+    carry = re.match(r"\s*(\d+)\s+carries\s+over\s+(\d+(?:\.\d+)?)\s*m\b", dose, re.I)
+    if carry:
+        fields.update(sets=int(carry[1]), distance={"value": _number(carry[2]), "unit": "meters"})
+    percent = re.search(r"(\d+(?:\.\d+)?)\s*%\s*1rm\b", dose, re.I)
+    if percent:
+        fields["load"] = {"method": "percentage", "value": _number(percent[1]), "unit": "percent", "ref": "1RM"}
     return fields, "; ".join(kept)
 
 
@@ -931,6 +957,12 @@ def _build(planning_brief: Any, plan_text: str | None = None) -> dict[str, Any] 
         sessions = sessions_by_dday.get(d_day) if d_day is not None else None
         if sessions:
             day["sessions"] = sessions
+            if day.get("day_type") == "rest" and any(
+                session.get("session_type") in {"strength_power", "conditioning", "primer"} for session in sessions
+            ):
+                # The spine created an empty rest shell before selected work
+                # existed. Attaching that work must also clear the rest marker.
+                day["day_type"] = "moderate"
 
     # Assemble every locked session first, then reconcile contact against the
     # finished day. A Tactical Watch can be merged onto a declared contact day;
@@ -951,6 +983,10 @@ def _build(planning_brief: Any, plan_text: str | None = None) -> dict[str, Any] 
     weeks_out = plan.get("weeks") if isinstance(plan, dict) else None
     if not isinstance(weeks_out, list) or not weeks_out:
         return None
+    strategy = planning_brief.get("phase_strategy") or {}
+    for week in weeks_out:
+        if not week.get("week_goal"):
+            week["week_goal"] = str((strategy.get(week.get("phase_label")) or {}).get("visible_objective") or "")
     plan.update(_plan_envelope(planning_brief))
     return plan
 
@@ -974,6 +1010,8 @@ def _plan_envelope(planning_brief: dict[str, Any]) -> dict[str, Any]:
     on ``deterministic_support``, and this fallback must not author guidance.
     """
     athlete = planning_brief.get("athlete_model")
+    if not isinstance(athlete, dict) or not athlete:
+        athlete = planning_brief.get("athlete_snapshot")
     athlete = athlete if isinstance(athlete, dict) else {}
     sport = str(athlete.get("sport") or athlete.get("sport_profile") or "").strip()
     return {
