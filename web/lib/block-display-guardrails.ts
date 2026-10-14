@@ -303,11 +303,12 @@ function sourceBlockLine(
   // exact line exists stops a "Short sprint bounds or low box jumps" line that
   // happens to appear first from handing its ranges to a separate "Short sprint
   // bounds" block with its own dose.
-  return (
-    lines.find((line) => isExactBlockLine(line, name) && carriesPrescription(line)) ||
-    lines.find((line) => isChoiceBlockLine(line, name) && carriesPrescription(line)) ||
-    null
-  );
+  const exact = lines.filter((line) => isExactBlockLine(line, name) && carriesPrescription(line));
+  if (exact.length) return exact.length === 1 ? exact[0] : null;
+  const choices = lines.filter((line) => isChoiceBlockLine(line, name) && carriesPrescription(line));
+  // Day + exercise name cannot identify a same-day duplicate's session.
+  // Keep its own structured dose and stop rule instead of using the first.
+  return choices.length === 1 ? choices[0] : null;
 }
 
 export type SourcePrescriptionRangeOverrides = {

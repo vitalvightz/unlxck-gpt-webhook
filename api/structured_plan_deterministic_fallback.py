@@ -308,6 +308,10 @@ _REST_CLAUSE_RES = (
     re.compile(rf"(?:full\s+)?rest\s*:?\s*{_NUMBER}\s*{_TIME_UNIT}", re.IGNORECASE),
     re.compile(rf"{_NUMBER}\s*{_TIME_UNIT}\s+rest", re.IGNORECASE),
 )
+_SUBCLAUSE_REST_RES = (
+    re.compile(rf"(?:,|\bwith)\s*{_NUMBER}\s*{_TIME_UNIT}\s+rest\b", re.IGNORECASE),
+    re.compile(rf"(?:,|\bwith)\s*rest\s*:?\s*{_NUMBER}\s*{_TIME_UNIT}\b", re.IGNORECASE),
+)
 _EFFORT_CLAUSE_RE = re.compile(
     r"(?P<method>RPE|RIR)\s*(?P<value>\d+(?:\.\d+)?(?:\s*[-–—]\s*\d+(?:\.\d+)?)?)",
     re.IGNORECASE,
@@ -346,7 +350,7 @@ def _lift_dose_fields(dose: str) -> tuple[dict[str, Any], str]:
     # Lift its exact numbers without discarding the accompanying intent/cues.
     reps = re.match(r"\s*(\d+)\s*(?:sets?\s*)?[x×]\s*(\d+)\b(?!\s*(?:s|secs?|seconds?|mins?|minutes?)\b)", dose, re.I)
     timed = re.match(r"\s*(\d+)\s*(?:sets?|holds?)?\s*[x×]\s*" + _NUMBER + r"\s*" + _TIME_UNIT + r"\b", dose, re.I)
-    interval = re.match(r"\s*(\d+(?:\.\d+)?)\s*(s|secs?|seconds?|mins?|minutes?)\s+work,\s*"
+    interval = re.match(r"\s*(\d+(?:\.\d+)?)\s*(s|secs?|seconds?|mins?|minutes?)\s+(?:work|effort)\s*[,/]\s*"
                         r"(\d+(?:\.\d+)?)\s*(s|secs?|seconds?|mins?|minutes?)\s+rest\s*[x×]\s*(\d+)\s+rounds?", dose, re.I)
     if reps:
         fields.update(sets=int(reps[1]), reps=int(reps[2]))
@@ -392,6 +396,13 @@ def _lift_dose_fields(dose: str) -> tuple[dict[str, Any], str]:
             fields["duration"] = _measured(match)
             continue
         kept.append(clause)
+    if "rest" not in fields:
+        # Compact planner notation writes rest as a sub-clause of the work:
+        # "6x3 reps, 2min rest", "1x5s with 120s rest". Lift it only when the
+        # dose states exactly one rest, so the card never guesses between two.
+        rests = [match for pattern in _SUBCLAUSE_REST_RES for match in pattern.finditer(dose)]
+        if len(rests) == 1 and len(re.findall(r"\brest\b", dose, re.IGNORECASE)) == 1:
+            fields["rest"] = _measured(rests[0])
     if "effort" not in fields and (effort := _EFFORT_CLAUSE_RE.search(dose)):
         value = re.sub(r"\s*[-–—]\s*", "-", effort.group("value"))
         fields["effort"] = {"method": effort.group("method").upper(),
@@ -507,6 +518,9 @@ def _microdose_block(role: dict[str, Any], d_day: int, role_key: str) -> dict[st
     goal = str(microdose.get("goal") or "").strip().lower()
     prescription = str(microdose.get("prescription") or "").strip()
     label = f"{goal.replace('_', ' ').title()} microdose" if goal else "Priority microdose"
+    from fightcamp.exercise_coaching import exercise_coaching
+    coaching = exercise_coaching({"name": name, "slot_group": "priority_microdose",
+                                  "coaching_notes": microdose.get("coaching_notes")}, role, d_day=d_day)
     return {
         "block_id": f"deterministic-{d_day}-{role_key}-microdose",
         "block_type": _MICRODOSE_BLOCK_TYPE_BY_GOAL.get(goal, "accessory"),
@@ -515,9 +529,9 @@ def _microdose_block(role: dict[str, Any], d_day: int, role_key: str) -> dict[st
         "display_name": name,
         "exercise_key": block_exercise_key_for_name(name),
         "order_index": 0,
-        "coaching_cues": [prescription] if prescription else [],
+        **coaching,
+        "coaching_cues": ([prescription] if prescription else []) + coaching["coaching_cues"],
         "purpose": label,
-        "regression_options": [],
         "substitutions": [],
     }
 
@@ -527,6 +541,8 @@ def _blocks(
     d_day: int,
     role_key: str,
     source_lines: list[str] | None = None,
+    athlete: dict[str, Any] | None = None,
+    phase: str = "",
 ) -> list[dict[str, Any]]:
     block_type = _block_type(role)
     blocks: list[dict[str, Any]] = []
@@ -575,6 +591,15 @@ def _blocks(
             # resolved to one exact working value.
             prescription = _exact_working_dose(_effective_prescription(role, assignment))
             block["coaching_cues"] = [prescription] if prescription else []
+            if prescription:
+                # The same exact numbers as stats, so timers and logging run
+                # on the planner's dose; the verbatim cue stays alongside.
+                fields, _ = _lift_dose_fields(prescription)
+                block.update(fields)
+            from fightcamp.exercise_coaching import exercise_coaching
+            coaching = exercise_coaching(assignment, role, phase=phase, d_day=d_day, athlete=athlete)
+            block["coaching_cues"].extend(coaching.pop("coaching_cues"))
+            block.update(coaching)
         blocks.append(block)
     # Only ever attached to a host that already renders. A role with no selected
     # exercise renders no session at all here, and a microdose must not be the
@@ -807,11 +832,30 @@ def _insert_movement_block(
     }
 
 
+def _source_lines_for_session(
+    lines: list[str] | None, title: str,
+) -> list[str] | None:
+    """Scope repeated D-day exercise names to their own source session."""
+    if not lines:
+        return lines
+    from fightcamp.structured_session_identity import identity_tokens
+    starts = [i for i, line in enumerate(lines) if _day_header_dday(line) is not None]
+    if len(starts) <= 1:
+        return lines
+    sections = [lines[start:end] for start, end in zip(starts, [*starts[1:], len(lines)])]
+    wanted = identity_tokens(title)
+    matched = [section for section in sections
+               if wanted and identity_tokens(re.split(r"[—–]|\s-\s", section[0], maxsplit=1)[-1]) == wanted]
+    return matched[0] if len(matched) == 1 else None
+
+
 def _session(
-    role: dict[str, Any], d_day: int, source_lines: list[str] | None = None
+    role: dict[str, Any], d_day: int, source_lines: list[str] | None = None,
+    athlete: dict[str, Any] | None = None, phase: str = "",
 ) -> dict[str, Any] | None:
     role_key = str(role.get("role_key") or "").strip()
-    blocks = _blocks(role, d_day, role_key or "role", source_lines)
+    source_lines = _source_lines_for_session(source_lines, str(role.get("athlete_facing_label") or ""))
+    blocks = _blocks(role, d_day, role_key or "role", source_lines, athlete, phase)
     instruction = _support_instruction(role)
     parsed = _parse_display_text(instruction) if instruction and not blocks else None
     if parsed is not None:
@@ -931,7 +975,9 @@ def _build(planning_brief: Any, plan_text: str | None = None) -> dict[str, Any] 
             identity = (d_day, role_key, role.get("session_index"))
             if identity in seen:
                 continue
-            session = _session(role, d_day, source_days.get(d_day))
+            session = _session(role, d_day, source_days.get(d_day),
+                               planning_brief.get("athlete_snapshot"),
+                               str(week.get("phase") or week.get("phase_label") or ""))
             if session is None:
                 continue
             seen.add(identity)

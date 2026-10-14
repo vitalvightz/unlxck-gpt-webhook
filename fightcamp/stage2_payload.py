@@ -70,6 +70,7 @@ from .session_composition import (
     prescription_dose_known,
     realised_session_stress,
     _selected_coaching_notes,
+    _selected_coaching_fields,
     attach_late_fight_assignments,
     apply_realised_load_calendar_revalidation,
     apply_standalone_strength_minimum,
@@ -1698,6 +1699,7 @@ def _build_late_fight_allowed_exercises_by_day(
             notes = _selected_coaching_notes(option)
             if notes:
                 assignment["coaching_notes"] = notes
+            assignment.update(_selected_coaching_fields(option))
             assignments_by_day[day_label].append(assignment)
         if str(role.get("role_key") or "") in LATE_PRIMER_ROLE_KEYS and selected_matches:
             # Stamp the composed session's realised load in the canonical

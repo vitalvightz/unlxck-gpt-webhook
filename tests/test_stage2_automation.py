@@ -1284,3 +1284,71 @@ def test_blocking_preflight_finding_still_prevents_stage2(monkeypatch):
     assert result["final_plan_text"] == ""
     assert result["plan_text"] == ""
     assert result["stage2_validator_report"]["planner_preflight_failed"] is True
+
+
+def test_cost_records_reasoning_tokens_elapsed_time_and_call_breakdown(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(stage2_module, "review_stage2_output", lambda **_: _review("PASS"))
+    response = SimpleNamespace(
+        id="resp_reasoning",
+        output_text="# final plan",
+        usage=SimpleNamespace(
+            input_tokens=100,
+            output_tokens=900,
+            total_tokens=1000,
+            output_tokens_details=SimpleNamespace(reasoning_tokens=700),
+        ),
+    )
+    client = FakeClient([response])
+    automator = OpenAIStage2Automator(client=client, model="gpt-5-mini")
+
+    result = asyncio.run(automator.finalize(stage1_result=_stage1_result()))
+
+    cost = result["stage2_cost"]
+    assert cost["stage2_reasoning_tokens"] == 700
+    assert cost["stage2_elapsed_seconds"] is not None
+    assert cost["stage2_elapsed_seconds"] >= 0
+    assert cost["stage2_calls"] == [
+        {
+            "label": "first_pass",
+            "elapsed_seconds": cost["stage2_elapsed_seconds"],
+            "input_tokens": 100,
+            "output_tokens": 900,
+            "reasoning_tokens": 700,
+            "source": "unknown",
+            "prompt_chars": len(_stage1_result()["stage2_handoff_text"]),
+            "response_chars": len("# final plan"),
+            "outcome": result["stage2_validator_report"]["release_decision"],
+        }
+    ]
+    assert result["stage2_validator_report"]["stage2_model_calls"] == cost["stage2_calls"]
+
+
+def test_merged_cost_sums_reasoning_and_elapsed_and_concatenates_calls() -> None:
+    first = {
+        "stage2_input_tokens": 10,
+        "stage2_output_tokens": 20,
+        "stage2_total_tokens": 30,
+        "stage2_reasoning_tokens": 15,
+        "stage2_elapsed_seconds": 1.5,
+        "stage2_calls": [{"label": "first_pass"}],
+    }
+    second = {
+        "stage2_input_tokens": 1,
+        "stage2_output_tokens": 2,
+        "stage2_total_tokens": 3,
+        "stage2_reasoning_tokens": None,
+        "stage2_elapsed_seconds": 2.25,
+        "stage2_calls": [{"label": "structured_first"}],
+    }
+
+    merged = stage2_module._merge_stage2_costs(first, second)
+
+    assert merged["stage2_reasoning_tokens"] == 15
+    assert merged["stage2_elapsed_seconds"] == 3.75
+    assert merged["stage2_calls"] == [{"label": "first_pass"}, {"label": "structured_first"}]
+    unknown = stage2_module._merge_stage2_costs(
+        {"stage2_reasoning_tokens": None}, {"stage2_reasoning_tokens": None}
+    )
+    assert unknown["stage2_reasoning_tokens"] is None

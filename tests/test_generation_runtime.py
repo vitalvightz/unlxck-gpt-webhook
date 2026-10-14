@@ -1793,11 +1793,13 @@ def test_worker_keeps_an_age_that_already_matches_the_profile():
 
 
 # ---------------------------------------------------------------------------
-# A failed inline enhanced card is retried before the job completes.
+# The enhanced card is attempted before the job completes, at most once per text.
 #
 # The job completing is what moves the athlete off the generation screen, so
-# the retry must finish first. Retrying after release showed the text fallback
-# while the card was still being built.
+# a card Stage 2 never attempted (held plan) or could not attempt (converter
+# crash) is built first. A card the validators already rejected is not
+# re-converted: the same text would roll the same dice for 4-7 more minutes,
+# and the athlete is served the validated deterministic card instead.
 # ---------------------------------------------------------------------------
 
 
@@ -1812,16 +1814,27 @@ _FAILED_INLINE_CARD_REPORT = {
     },
 }
 
+_CRASHED_INLINE_CARD_REPORT = {
+    "errors": [],
+    "warnings": [],
+    "structured_plan": {
+        "status": "not_attempted",
+        "errors": ["structured generation error (see server logs)"],
+        "warnings": [],
+        "schema_version": None,
+    },
+}
+
 
 class _CardConvertingStage2(FakeStage2Automator):
-    """Finalizes with a failed inline card; the retry returns ``retry_outcome``."""
+    """Finalizes with ``inline_report``; the pre-release attempt returns ``retry_outcome``."""
 
     def __init__(self, *, inline_report=None, retry_outcome=None, retry_error=None):
         super().__init__(
             result_factory=lambda: finalized_result(
                 structured_plan=None,
                 schema_version=None,
-                stage2_validator_report=dict(inline_report or _FAILED_INLINE_CARD_REPORT),
+                stage2_validator_report=dict(inline_report or _CRASHED_INLINE_CARD_REPORT),
             )
         )
         self.retry_outcome = retry_outcome
@@ -1832,14 +1845,18 @@ class _CardConvertingStage2(FakeStage2Automator):
         self.conversions.append(source)
         if self.retry_error is not None:
             raise self.retry_error
-        return self.retry_outcome, [{"stage2_total_tokens": 10, "stage2_estimated_cost_usd": 0.01}]
+        return self.retry_outcome, [{
+            "stage2_total_tokens": 10,
+            "stage2_estimated_cost_usd": 0.01,
+            "stage2_calls": [{"label": "structured_first", "source": source}],
+        }]
 
 
 def _milestone_codes(job):
     return [milestone["code"] for milestone in job["progress_milestones"]]
 
 
-def test_failed_inline_card_is_retried_and_saved_before_the_job_completes():
+def test_crashed_inline_card_is_built_and_saved_before_the_job_completes():
     from api.stage2_automation import StructuredPlanOutcome
 
     store = FakeStore()
@@ -1856,7 +1873,10 @@ def test_failed_inline_card_is_retried_and_saved_before_the_job_completes():
     assert stage2.conversions == ["generation_card_retry"]
     plan = store.plans[job["plan_id"]]
     assert plan["structured_plan"] == {"weeks": [{"days": []}]}
-    assert plan["stage2_validator_report"]["structured_plan"]["status"] == "valid"
+    report = plan["stage2_validator_report"]
+    assert report["structured_plan"]["status"] == "valid"
+    # The extra conversion records why it ran.
+    assert report["stage2_model_calls"][-1]["retry_reason"] == "not_attempted"
     codes = _milestone_codes(job)
     assert codes.index("structured_card_retry_started") < codes.index("structured_card_retry_finished")
 
@@ -1888,8 +1908,30 @@ def test_card_retry_crash_releases_on_the_inline_outcome():
 
     assert job["status"] == "completed"
     plan = store.plans[job["plan_id"]]
-    assert plan["stage2_validator_report"]["structured_plan"]["status"] == "invalid_fallback_used"
+    assert plan["stage2_validator_report"]["structured_plan"]["status"] == "not_attempted"
     assert "structured_card_retry_finished" in _milestone_codes(job)
+
+
+@pytest.mark.parametrize("rejected_status", ["invalid_fallback_used", "blocked_by_safety_audit"])
+def test_card_the_validators_rejected_is_not_converted_again(rejected_status):
+    # Production job ec326d04: the inline card was rejected inside finalize and
+    # the identical conversion ran again for 4m34s before release.
+    store = FakeStore()
+    seed_default_profiles(store)
+    report = {
+        **_FAILED_INLINE_CARD_REPORT,
+        "structured_plan": {**_FAILED_INLINE_CARD_REPORT["structured_plan"], "status": rejected_status},
+    }
+    stage2 = _CardConvertingStage2(inline_report=report)
+
+    job = _run_stage2_failure_job(store, stage2, client_request_id=f"card-rejected-{rejected_status}")
+
+    assert job["status"] == "completed"
+    assert stage2.conversions == []
+    assert "structured_card_retry_started" not in _milestone_codes(job)
+    plan = store.plans[job["plan_id"]]
+    assert plan.get("structured_plan") is None
+    assert plan["stage2_validator_report"]["structured_plan"]["status"] == rejected_status
 
 
 def test_clean_inline_card_is_not_retried():

@@ -188,7 +188,9 @@ def test_microdose_retains_selected_name_dose_and_single_representation():
     session = _session(role, 50)
     blocks = session["blocks"]
     assert [block["display_name"] for block in blocks] == [name, "Back Squat"]
-    assert blocks[0]["coaching_cues"] == [dose]
+    assert blocks[0]["coaching_cues"][0] == dose
+    assert blocks[0]["stop_rules"] and blocks[0]["regression_options"]
+    assert not blocks[0].get("progression_rule")
     assert blocks[0]["purpose"] == "Power microdose"
     assert blocks[0]["exercise_key"] == "med-ball-rotational-throw"
     assert blocks[0]["block_type"] == "plyometric_power"

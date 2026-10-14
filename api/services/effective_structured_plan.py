@@ -14,6 +14,7 @@ from typing import Any
 from api.structured_block_identity import ensure_structured_block_ids
 from api.structured_plan_deterministic_fallback import build_deterministic_structured_plan
 from api.structured_plan_models import safe_parse_structured_plan
+from api.structured_plan_sparring_reconcile import surface_coach_led_contact
 
 logger = logging.getLogger(__name__)
 
@@ -186,6 +187,8 @@ def resolve_effective_structured_plan(
     # These fields are server-owned by custom publication, never by a model.
     # A generated card cannot claim athlete authority or private attachments.
     brief = _mapping(plan_row.get("planning_brief")) or {}
+    from api.structured_plan_coaching import recover_selected_coaching
+    resolved = recover_selected_coaching(resolved, dict(brief))
     if not brief.get("custom_plan"):
         fields = ("prescription_source", "prescription_text", "athlete_dose",
                   "private_media_id", "community_revision_id", "source_session_id", "catalogue_id")
@@ -211,8 +214,22 @@ def resolve_effective_structured_plan(
                             for field in fields:
                                 block.pop(field, None)
     resolved = _without_athlete_change_claims(resolved)
+    resolved = _with_coach_led_contact(resolved, brief)
     resolved = ensure_structured_session_ids(resolved, plan_id=plan_row.get("id"))
     return ensure_structured_block_ids(resolved)
+
+
+def _with_coach_led_contact(plan: dict[str, Any], brief: Mapping[str, Any]) -> dict[str, Any]:
+    """Every surface reads a contact day's sparring from ``coach_led_contact``.
+
+    Cards saved before the contact invariant held can carry hard sparring only
+    in a headline their own sessions shadow; Today, progress and the plan view
+    would then show the day as zero load. Surfaced on a copy, never in place.
+    """
+    if not isinstance(brief, dict) or not brief.get("weekly_role_map"):
+        return plan
+    candidate = deepcopy(plan)
+    return candidate if surface_coach_led_contact(candidate, brief) else plan
 
 
 def _without_athlete_change_claims(plan: dict[str, Any]) -> dict[str, Any]:

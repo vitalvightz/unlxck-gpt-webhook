@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 import os
 import re
+import time
 from dataclasses import dataclass
 from typing import Any, Protocol
 
@@ -201,10 +202,18 @@ def _extract_response_usage(response: Any) -> dict[str, int | None]:
     usage = getattr(response, "usage", None)
     if hasattr(usage, "model_dump"):
         usage = usage.model_dump(mode="python")
+    output_details = None
+    if isinstance(usage, dict):
+        output_details = usage.get("output_tokens_details") or usage.get("completion_tokens_details")
+    elif usage is not None:
+        output_details = getattr(usage, "output_tokens_details", None) or getattr(
+            usage, "completion_tokens_details", None
+        )
     return {
         "input_tokens": _get_usage_value(usage, "input_tokens") or _get_usage_value(usage, "prompt_tokens"),
         "output_tokens": _get_usage_value(usage, "output_tokens") or _get_usage_value(usage, "completion_tokens"),
         "total_tokens": _get_usage_value(usage, "total_tokens"),
+        "reasoning_tokens": _get_usage_value(output_details, "reasoning_tokens"),
     }
 
 
@@ -215,6 +224,9 @@ def _build_stage2_cost(
     response: Any = None,
     text: str | None = None,
     attempt_count: int = 1,
+    attempt_label: str | None = None,
+    elapsed_seconds: float | None = None,
+    source: str | None = None,
 ) -> dict[str, Any]:
     """Build the Stage 2 token/cost telemetry row persisted to generation_jobs.
 
@@ -230,7 +242,7 @@ def _build_stage2_cost(
     usage = (
         _extract_response_usage(response)
         if response is not None
-        else {"input_tokens": None, "output_tokens": None, "total_tokens": None}
+        else {"input_tokens": None, "output_tokens": None, "total_tokens": None, "reasoning_tokens": None}
     )
 
     input_tokens = usage["input_tokens"]
@@ -249,7 +261,8 @@ def _build_stage2_cost(
     if not response_id or response_id == "unknown":
         response_id = None
 
-    return {
+    elapsed = round(elapsed_seconds, 2) if elapsed_seconds is not None else None
+    cost = {
         "stage2_model": model,
         "stage2_input_tokens": input_tokens,
         "stage2_output_tokens": output_tokens,
@@ -258,7 +271,26 @@ def _build_stage2_cost(
         "stage2_attempt_count": attempt_count,
         "stage2_response_id": response_id,
         "stage2_cost_recorded_at": _utc_now_iso(),
+        "stage2_reasoning_tokens": usage["reasoning_tokens"],
+        "stage2_elapsed_seconds": elapsed,
     }
+    if attempt_label is not None:
+        # Per-call breakdown so a slow job shows which call (plan text vs
+        # structured card vs repair) spent the time and the hidden reasoning.
+        cost["stage2_calls"] = [
+            {
+                "label": attempt_label,
+                "elapsed_seconds": elapsed,
+                "input_tokens": input_tokens,
+                "output_tokens": output_tokens,
+                "reasoning_tokens": usage["reasoning_tokens"],
+                "source": source,
+                # Sizes only: no prompt or response content is ever recorded.
+                "prompt_chars": len(prompt or ""),
+                "response_chars": len(text) if text is not None else None,
+            }
+        ]
+    return cost
 
 
 def _merge_stage2_costs(*costs: dict[str, Any] | None) -> dict[str, Any]:
@@ -271,7 +303,12 @@ def _merge_stage2_costs(*costs: dict[str, Any] | None) -> dict[str, Any]:
     taken from the last call. ``None``/empty entries are ignored.
     """
 
-    token_keys = ("stage2_input_tokens", "stage2_output_tokens", "stage2_total_tokens")
+    token_keys = (
+        "stage2_input_tokens",
+        "stage2_output_tokens",
+        "stage2_total_tokens",
+        "stage2_reasoning_tokens",
+    )
     merged: dict[str, Any] = {}
     for cost in costs:
         if not cost:
@@ -281,21 +318,60 @@ def _merge_stage2_costs(*costs: dict[str, Any] | None) -> dict[str, Any]:
         running_tokens = {
             key: (merged.get(key) or 0) + (cost.get(key) or 0) for key in token_keys
         }
+        if merged.get("stage2_reasoning_tokens") is None and cost.get("stage2_reasoning_tokens") is None:
+            # Unknown stays unknown: a provider that reports no reasoning
+            # breakdown must not read as zero reasoning.
+            running_tokens["stage2_reasoning_tokens"] = None
         running_usd = (merged.get("stage2_estimated_cost_usd") or 0.0) + (
             cost.get("stage2_estimated_cost_usd") or 0.0
         )
+        # The calls run sequentially, so summed elapsed time is the Stage 2
+        # model wall-clock spend.
+        running_elapsed = round(
+            (merged.get("stage2_elapsed_seconds") or 0.0) + (cost.get("stage2_elapsed_seconds") or 0.0),
+            2,
+        )
+        running_calls = [*(merged.get("stage2_calls") or []), *(cost.get("stage2_calls") or [])]
         incomplete_response_seen = bool(merged.get("stage2_incomplete_response")) or bool(
             cost.get("stage2_incomplete_response")
         )
         merged = dict(cost)
         merged.update(running_tokens)
         merged["stage2_estimated_cost_usd"] = running_usd
+        merged["stage2_elapsed_seconds"] = running_elapsed
+        if running_calls:
+            merged["stage2_calls"] = running_calls
         if incomplete_response_seen:
             # Incomplete-response audit is sticky across repair/structured calls.
             # A later successful call must not erase that an earlier Stage 2
             # response was provider-truncated.
             merged["stage2_incomplete_response"] = True
     return merged
+
+
+def _annotate_call(cost: dict[str, Any] | None, **fields: Any) -> None:
+    """Attach a validation outcome / retry reason to a cost row's own call."""
+    calls = (cost or {}).get("stage2_calls")
+    if isinstance(calls, list) and calls and isinstance(calls[-1], dict):
+        calls[-1].update({key: value for key, value in fields.items() if value is not None})
+
+
+def record_stage2_model_calls(result: dict[str, Any]) -> None:
+    """Persist the per-call breakdown on the validator report.
+
+    The job's ``final_result`` is compacted to the release fields before it is
+    stored, but the validator report survives on both the job and the plan, so
+    each model call (operation, tokens, time, sizes, outcome) stays auditable.
+    Counts and labels only: never prompt or response content.
+    """
+    cost = result.get("stage2_cost")
+    report = result.get("stage2_validator_report")
+    calls = cost.get("stage2_calls") if isinstance(cost, dict) else None
+    if isinstance(report, dict) and isinstance(calls, list):
+        result["stage2_validator_report"] = {
+            **report,
+            "stage2_model_calls": [dict(call) for call in calls if isinstance(call, dict)],
+        }
 
 
 def _is_quota_or_rate_limit_error(exc: Exception) -> bool:
@@ -328,18 +404,18 @@ def _structured_plan_enabled() -> bool:
 def _structured_repair_enabled() -> bool:
     """Whether a failed first structured pass gets one repair retry.
 
-    On by default. The repair retry is the second sequential model call and so is
-    the main lever on worst-case structured-card latency. The
-    ``[stage2] structured_repair`` telemetry logged in
-    :meth:`_generate_structured_outcome` records how often it actually rescues a
-    card; if the data shows it rarely helps, set
-    ``UNLXCK_STAGE2_STRUCTURED_REPAIR`` to a falsey value to drop it (halving the
-    worst case) without a code change. The first-pass outcome then stands as-is.
+    Off by default. Production telemetry (40 completed jobs, 2026-10-05 to
+    2026-10-14) showed the repair rescuing 1 card in ~12 failed first passes
+    while each attempt cost 150-200 s of a 5-7 minute generation. A rejected
+    card is not lost work for the athlete: the validated deterministic card is
+    served instead (``resolve_effective_structured_plan``), and the first pass
+    may still be salvaged by pruning content its source does not back. Set
+    ``UNLXCK_STAGE2_STRUCTURED_REPAIR`` truthy to restore the repair call.
     """
 
     raw = os.getenv("UNLXCK_STAGE2_STRUCTURED_REPAIR")
     if raw is None:
-        return True  # unset → default on
+        return False  # unset → default off
     return raw.strip().lower() in {"1", "true", "yes", "on"}
 
 
@@ -1122,6 +1198,8 @@ class OpenAIStage2Automator:
             timeout if timeout is not None else "client_default",
             (response_format or {}).get("type", "text"),
         )
+        call_cost: dict[str, Any] = {"attempt_label": attempt_label, "source": source}
+        started = time.monotonic()
         try:
             # Stream instead of a single blocking create: the HTTP read timeout
             # then applies to the gap between events, not the whole generation,
@@ -1133,7 +1211,13 @@ class OpenAIStage2Automator:
         except Exception as exc:  # pragma: no cover - provider failure surfaces via integration
             # No response means no actual usage; record the estimated input cost
             # so a failed attempt still leaves an auditable cost row.
-            failure_cost = _build_stage2_cost(self.model, prompt=prompt, response=None)
+            failure_cost = _build_stage2_cost(
+                self.model,
+                prompt=prompt,
+                response=None,
+                elapsed_seconds=time.monotonic() - started,
+                **call_cost,
+            )
             if _is_quota_or_rate_limit_error(exc):
                 raise _with_stage2_cost(
                     Stage2AutomationError(
@@ -1149,6 +1233,7 @@ class OpenAIStage2Automator:
                 Stage2AutomationError("Stage 2 model request failed. Check server logs."),
                 failure_cost,
             ) from exc
+        call_cost["elapsed_seconds"] = time.monotonic() - started
         response_id = getattr(response, "id", None) or "unknown"
         response_incomplete = _response_is_incomplete(response)
         try:
@@ -1162,9 +1247,9 @@ class OpenAIStage2Automator:
                 else extraction_error
             )
             raise _with_stage2_cost(
-                error, _build_stage2_cost(self.model, prompt=prompt, response=response)
+                error, _build_stage2_cost(self.model, prompt=prompt, response=response, **call_cost)
             )
-        cost = _build_stage2_cost(self.model, prompt=prompt, response=response, text=text)
+        cost = _build_stage2_cost(self.model, prompt=prompt, response=response, text=text, **call_cost)
         if response_incomplete:
             # Preserve the Stage 2 body instead of silently replacing it with the
             # deterministic Stage 1 draft. The finalizer forces this result onto
@@ -1181,7 +1266,8 @@ class OpenAIStage2Automator:
         context = log_context or {}
         logger.info(
             "[stage2] received %s response id=%s job_id=%s athlete_id=%s chars=%s "
-            "actual_input_tokens=%s actual_output_tokens=%s total_tokens=%s estimated_cost_usd=%s",
+            "actual_input_tokens=%s actual_output_tokens=%s reasoning_tokens=%s total_tokens=%s "
+            "estimated_cost_usd=%s elapsed_seconds=%s",
             attempt_label,
             response_id,
             context.get("job_id") or "unknown",
@@ -1189,8 +1275,10 @@ class OpenAIStage2Automator:
             len(text),
             cost["stage2_input_tokens"],
             cost["stage2_output_tokens"],
+            cost["stage2_reasoning_tokens"],
             cost["stage2_total_tokens"],
             cost["stage2_estimated_cost_usd"],
+            cost["stage2_elapsed_seconds"],
         )
         return text, cost
 
@@ -1513,9 +1601,11 @@ class OpenAIStage2Automator:
                 _structured_attempt_status(result) or "unknown",
             )
 
+        _annotate_call(plan_text_cost, outcome=release_decision)
         # Roll the structured calls' tokens into the persisted cost row so it
         # reflects total Stage 2 spend, not just the plan-text pass.
         result["stage2_cost"] = _merge_stage2_costs(plan_text_cost, *structured_costs)
+        record_stage2_model_calls(result)
         return result
 
     async def _attempt_structured_plan(
@@ -1603,9 +1693,18 @@ class OpenAIStage2Automator:
     def _reconcile_structured_calendar(
         cls, outcome: StructuredPlanOutcome, planning_brief: Any
     ) -> StructuredPlanOutcome:
-        """Coach-led contact reconcile, then continuous-calendar-spine reconcile."""
-        return cls._reconcile_calendar_spine(
-            cls._reconcile_coach_led(outcome, planning_brief), planning_brief
+        """Coach-led contact reconcile, calendar-spine reconcile, then contact again.
+
+        The spine restores scheduled roles a day lacks, which can turn a
+        sessionless contact day into a session day. The contact must then be
+        written to ``coach_led_contact`` against that final membership, or the
+        renderer hides the sparring behind the restored session.
+        """
+        return cls._reconcile_coach_led(
+            cls._reconcile_calendar_spine(
+                cls._reconcile_coach_led(outcome, planning_brief), planning_brief
+            ),
+            planning_brief,
         )
 
     async def _generate_structured_outcome(
@@ -1641,6 +1740,8 @@ class OpenAIStage2Automator:
         costs.append(first_cost)
         first_json = parse_structured_json(first_text)
         if first_json is None:
+            _annotate_call(first_cost, outcome="invalid_fallback_used")
+        if first_json is None:
             return (
                 StructuredPlanOutcome(
                     status="invalid_fallback_used",
@@ -1664,6 +1765,7 @@ class OpenAIStage2Automator:
             planning_brief=planning_brief,
             allow_salvage=not _structured_repair_enabled(),
         )
+        _annotate_call(first_cost, outcome=first_outcome.status)
         # A safety-blocked card is terminal: it was schema-valid, so the repair
         # path would re-validate the same JSON and hit the same blocking
         # findings — never spend the repair call on it.
@@ -1706,6 +1808,7 @@ class OpenAIStage2Automator:
             computed_support=computed_support,
             planning_brief=planning_brief,
         )
+        _annotate_call(repair_cost, outcome=repaired_outcome.status, reason=first_outcome.status)
         # Telemetry for the repair lever: did the second call actually rescue a
         # card the first pass could not produce? Aggregated over time this tells
         # us whether the retry is worth its latency (see _structured_repair_enabled).

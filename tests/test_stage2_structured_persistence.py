@@ -803,8 +803,9 @@ def test_finalize_soft_blocker_released_when_structured_disabled(monkeypatch: py
     assert len(client.responses.calls) == 1
 
 
-def test_finalize_uses_one_repair_retry(monkeypatch: pytest.MonkeyPatch):
+def test_finalize_uses_one_repair_retry_when_opted_in(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setenv("UNLXCK_STAGE2_STRUCTURED_PLAN", "1")
+    monkeypatch.setenv("UNLXCK_STAGE2_STRUCTURED_REPAIR", "1")
     monkeypatch.setattr(stage2_module, "review_stage2_output", _pass_review)
     client = _FakeClient(
         [
@@ -830,6 +831,7 @@ def test_finalize_keeps_raw_plan_when_structured_invalid_after_repair(
     monkeypatch: pytest.MonkeyPatch,
 ):
     monkeypatch.setenv("UNLXCK_STAGE2_STRUCTURED_PLAN", "1")
+    monkeypatch.setenv("UNLXCK_STAGE2_STRUCTURED_REPAIR", "1")
     monkeypatch.setattr(stage2_module, "review_stage2_output", _pass_review)
     client = _FakeClient(
         [
@@ -851,6 +853,36 @@ def test_finalize_keeps_raw_plan_when_structured_invalid_after_repair(
     debug = result["stage2_validator_report"]["structured_plan"]
     assert debug["status"] == "invalid_fallback_used"
     assert debug["errors"]
+
+
+def test_finalize_makes_one_card_call_and_no_repair_by_default(monkeypatch: pytest.MonkeyPatch):
+    # The repair rescued ~1 in 12 failed cards in production at 150-200 s
+    # each; a rejected card is served as the validated deterministic card.
+    monkeypatch.setenv("UNLXCK_STAGE2_STRUCTURED_PLAN", "1")
+    monkeypatch.delenv("UNLXCK_STAGE2_STRUCTURED_REPAIR", raising=False)
+    monkeypatch.setattr(stage2_module, "review_stage2_output", _pass_review)
+    client = _FakeClient(
+        [_response("# final plan"), _response(json.dumps(["not", "a", "plan"]))]
+    )
+    automator = OpenAIStage2Automator(client=client, model="test-model")
+
+    result = asyncio.run(automator.finalize(stage1_result=_stage1_result()))
+
+    assert len(client.responses.calls) == 2  # plan + one card conversion
+    assert result["status"] == "ready"
+    assert result["structured_plan"] is None
+    report = result["stage2_validator_report"]
+    assert report["structured_plan"]["status"] == "invalid_fallback_used"
+    calls = report["stage2_model_calls"]
+    assert [call["label"] for call in calls] == ["first_pass", "structured_first"]
+    assert calls[0]["outcome"] == report["release_decision"]
+    assert calls[1]["outcome"] == "invalid_fallback_used"
+    for call in calls:
+        assert call["prompt_chars"] > 0 and call["response_chars"] > 0
+        assert set(call) <= {
+            "label", "elapsed_seconds", "input_tokens", "output_tokens", "reasoning_tokens",
+            "source", "prompt_chars", "response_chars", "outcome", "reason", "retry_reason",
+        }
 
 
 def test_finalize_releases_plan_when_card_blocked_by_safety_audit(
@@ -887,6 +919,7 @@ def test_finalize_releases_plan_when_card_blocked_by_safety_audit(
 
 def test_finalize_accumulates_structured_call_costs(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setenv("UNLXCK_STAGE2_STRUCTURED_PLAN", "1")
+    monkeypatch.setenv("UNLXCK_STAGE2_STRUCTURED_REPAIR", "1")
     monkeypatch.setattr(stage2_module, "review_stage2_output", _pass_review)
     # plan pass (10/5) + structured first (10/5) + structured repair (10/5).
     client = _FakeClient(
@@ -905,6 +938,12 @@ def test_finalize_accumulates_structured_call_costs(monkeypatch: pytest.MonkeyPa
     assert cost["stage2_input_tokens"] == 30
     assert cost["stage2_output_tokens"] == 15
     assert cost["stage2_total_tokens"] == 45
+    calls = result["stage2_validator_report"]["stage2_model_calls"]
+    assert [call["label"] for call in calls] == ["first_pass", "structured_first", "structured_repair"]
+    # The repair records why it ran and what it achieved.
+    assert calls[1]["outcome"] == "invalid_fallback_used"
+    assert calls[2]["reason"] == "invalid_fallback_used"
+    assert calls[2]["outcome"] == result["stage2_validator_report"]["structured_plan"]["status"]
 
 
 def test_finalize_cost_unchanged_when_structured_disabled(monkeypatch: pytest.MonkeyPatch):
