@@ -1603,9 +1603,18 @@ class OpenAIStage2Automator:
     def _reconcile_structured_calendar(
         cls, outcome: StructuredPlanOutcome, planning_brief: Any
     ) -> StructuredPlanOutcome:
-        """Coach-led contact reconcile, then continuous-calendar-spine reconcile."""
-        return cls._reconcile_calendar_spine(
-            cls._reconcile_coach_led(outcome, planning_brief), planning_brief
+        """Coach-led contact reconcile, calendar-spine reconcile, then contact again.
+
+        The spine restores scheduled roles a day lacks, which can turn a
+        sessionless contact day into a session day. The contact must then be
+        written to ``coach_led_contact`` against that final membership, or the
+        renderer hides the sparring behind the restored session.
+        """
+        return cls._reconcile_coach_led(
+            cls._reconcile_calendar_spine(
+                cls._reconcile_coach_led(outcome, planning_brief), planning_brief
+            ),
+            planning_brief,
         )
 
     async def _generate_structured_outcome(

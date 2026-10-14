@@ -1,6 +1,7 @@
 """Profile/plan response mappers extracted from api.app (PR2: pure helpers)."""
 from __future__ import annotations
 
+import copy
 import json
 import logging
 from datetime import date, datetime, timedelta, timezone
@@ -47,6 +48,7 @@ from .structured_card_lifecycle import (
 from .exercise_identity import reconcile_exercise_keys
 from .structured_plan_models import StructuredTrainingPlan, safe_parse_structured_plan
 from .structured_plan_calendar_spine import reconcile_calendar_spine
+from .structured_plan_sparring_reconcile import surface_coach_led_contact
 from .structured_plan_generation import (
     reconcile_late_fight_week_context,
     reconcile_rehab_drill_ids,
@@ -659,6 +661,18 @@ def _map_plan_detail(
         if spine_result.ok and spine_result.plan is not None:
             structured_plan = spine_result.plan
             structured_payload = spine_payload
+    # The spine can restore a scheduled session onto a contact day; the
+    # contact must then live on coach_led_contact or the session hides it.
+    if structured_plan is not None:
+        contact_payload = copy.deepcopy(structured_payload)
+        if surface_coach_led_contact(contact_payload, planning_brief):
+            contact_result = safe_parse_structured_plan(
+                contact_payload,
+                raw_markdown=display_plan_text or None,
+            )
+            if contact_result.ok and contact_result.plan is not None:
+                structured_plan = contact_result.plan
+                structured_payload = contact_payload
     projected_payload, raw_schedule_context = project_open_structured_plan(
         row,
         structured_payload,
