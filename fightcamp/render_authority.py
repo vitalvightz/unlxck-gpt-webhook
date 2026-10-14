@@ -41,6 +41,7 @@ from typing import Any
 
 from .combat_render_authority import canonical_combat_render, is_declared_combat_role
 from .fight_day_override import FIGHT_DAY_PROTOCOL_TEXT
+from .exercise_coaching import coaching_lines, exercise_coaching
 
 
 AUTHORITY_FIGHT_DAY_PROTOCOL = "fight_day_protocol"
@@ -104,7 +105,10 @@ def has_deterministic_display_text_authority(role: dict[str, Any]) -> bool:
     return False
 
 
-def _closed_membership_lines(role: dict[str, Any]) -> list[str] | None:
+def _closed_membership_lines(
+    role: dict[str, Any], *, week: dict[str, Any] | None = None,
+    d_day: int | None = None, athlete_snapshot: dict[str, Any] | None = None,
+) -> list[str] | None:
     """Exact lines for closed membership, or ``None`` when not fully resolved.
 
     A single member missing its name or its approved effective prescription makes
@@ -139,9 +143,10 @@ def _closed_membership_lines(role: dict[str, Any]) -> list[str] | None:
         if assignment.get("slot_group") == "conditioning_slots" and assignment.get("rpe") is not None and "rpe" not in display.lower():
             display += f"; RPE {assignment['rpe']:g}"
         lines.append(f"- {name} — {display}")
-        notes = str(assignment.get("coaching_notes") or "").strip()
-        if notes:
-            lines.extend(f"  Cue: {line.strip()}" for line in notes.splitlines() if line.strip())
+        lines.extend(coaching_lines(exercise_coaching(
+            assignment, role, phase=str((week or {}).get("phase") or (week or {}).get("phase_label") or ""),
+            d_day=d_day if d_day is not None else _week_d_day(week, role), athlete=athlete_snapshot,
+        )))
         purpose = str(assignment.get("purpose") or "").strip()
         if purpose:
             lines.append(f"  Purpose: {purpose}")
@@ -277,7 +282,7 @@ def authoritative_render_for_role(
             ),
         }
 
-    lines = _closed_membership_lines(role)
+    lines = _closed_membership_lines(role, week=week, d_day=d_day, athlete_snapshot=athlete_snapshot)
     if lines:
         return {
             "authority": AUTHORITY_CLOSED_SELECTED_ASSIGNMENTS,

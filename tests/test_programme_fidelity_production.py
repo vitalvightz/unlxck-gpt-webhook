@@ -201,7 +201,7 @@ def test_interactive_fallback_preserves_calendar_doses_and_coaching(production_r
     bag = blocks[15, "Max-Power Bag Burst"]
     assert bag["rounds"] == 8 and bag["work"] == {"value": 5, "unit": "seconds"}
     assert bag["rest"] == {"value": 60, "unit": "seconds"} and bag["effort"]["value"] == 8
-    assert any("Stop the burst if punch speed" in cue for cue in bag["coaching_cues"])
+    assert any("Stop the burst if punch speed" in rule for rule in bag["stop_rules"])
     for offset in (33, 23, 19):
         assert days[offset]["day_type"] != "rest"
         thruster = blocks[offset, "Barbell Thruster"]
