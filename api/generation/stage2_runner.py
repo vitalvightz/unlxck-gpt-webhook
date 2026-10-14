@@ -16,6 +16,8 @@ logger = logging.getLogger(__name__)
 
 _OPENAI_QUOTA_ADMIN_ERROR = "OpenAI quota exceeded. Check API billing, credits, project budget, or organization limits."
 _OPENAI_QUOTA_ATHLETE_ERROR = "Generation is temporarily unavailable. Please try again later."
+# A model conversion of the final text already ran and validation rejected it.
+_MODEL_CARD_REJECTED_STATUSES = frozenset({"invalid_fallback_used", "blocked_by_safety_audit"})
 
 
 async def finalize_stage2_with_timeout(
@@ -72,9 +74,10 @@ async def retry_structured_card_before_release(
     """Make sure the enhanced card has been attempted before the job completes.
 
     The athlete stays on the generation screen until the job completes, so the
-    card must be built here, never after release. This covers both a failed
-    inline card and one Stage 2 never attempted because the plan was held at
-    that point and only released with flags on save. Runs the canonical
+    card must be built here, never after release. This covers a card Stage 2
+    never attempted because the plan was held at that point and only released
+    with flags on save, and an inline attempt that could not run. A card the
+    validators already rejected is not re-converted. Runs the canonical
     conversion (``attempt_structured_plan_for_result``) against the status the
     plan will be released with. Never raises: on any failure or timeout the
     plan releases on the text fallback.
@@ -84,10 +87,25 @@ async def retry_structured_card_before_release(
         _structured_plan_enabled,
         attempt_structured_plan_for_result,
         has_clean_structured_card,
+        record_stage2_model_calls,
         should_attempt_structured_plan,
     )
 
     if has_clean_structured_card(final_result):
+        return final_result
+    prior_report = final_result.get("stage2_validator_report")
+    prior_card = prior_report.get("structured_plan") if isinstance(prior_report, dict) else None
+    prior_status = str((prior_card or {}).get("status") or "not_attempted")
+    if prior_status in _MODEL_CARD_REJECTED_STATUSES:
+        # Stage 2 already converted this exact text and the validators rejected
+        # the card. Repeating the identical conversion is not a recovery, it is
+        # a second roll of the dice that cost 4-7 minutes in production; the
+        # athlete is served the validated deterministic card instead.
+        logger.info(
+            "[jobs] generation:structured_card_retry_skipped prior_status=%s context=%s",
+            prior_status,
+            log_context or {},
+        )
         return final_result
     # Without a converter an attempt can only record "unavailable" again.
     if getattr(stage2, "_attempt_structured_plan", None) is None:
@@ -132,7 +150,14 @@ async def retry_structured_card_before_release(
     # Only the card is decided here. The release status stays persistence's call.
     retried["status"] = final_result.get("status")
     if costs:
+        for cost in costs:
+            for call in cost.get("stage2_calls") or []:
+                if isinstance(call, dict):
+                    # Why this conversion ran: Stage 2 held the plan (no inline
+                    # attempt) or the inline attempt could not run.
+                    call.setdefault("retry_reason", prior_status)
         retried["stage2_cost"] = _merge_stage2_costs(final_result.get("stage2_cost"), *costs)
+        record_stage2_model_calls(retried)
     emit_milestone(
         "structured_card_retry_finished",
         "Enhanced card attempt finished",

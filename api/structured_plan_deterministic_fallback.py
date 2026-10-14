@@ -308,6 +308,10 @@ _REST_CLAUSE_RES = (
     re.compile(rf"(?:full\s+)?rest\s*:?\s*{_NUMBER}\s*{_TIME_UNIT}", re.IGNORECASE),
     re.compile(rf"{_NUMBER}\s*{_TIME_UNIT}\s+rest", re.IGNORECASE),
 )
+_SUBCLAUSE_REST_RES = (
+    re.compile(rf"(?:,|\bwith)\s*{_NUMBER}\s*{_TIME_UNIT}\s+rest\b", re.IGNORECASE),
+    re.compile(rf"(?:,|\bwith)\s*rest\s*:?\s*{_NUMBER}\s*{_TIME_UNIT}\b", re.IGNORECASE),
+)
 _EFFORT_CLAUSE_RE = re.compile(
     r"(?P<method>RPE|RIR)\s*(?P<value>\d+(?:\.\d+)?(?:\s*[-–—]\s*\d+(?:\.\d+)?)?)",
     re.IGNORECASE,
@@ -346,7 +350,7 @@ def _lift_dose_fields(dose: str) -> tuple[dict[str, Any], str]:
     # Lift its exact numbers without discarding the accompanying intent/cues.
     reps = re.match(r"\s*(\d+)\s*(?:sets?\s*)?[x×]\s*(\d+)\b(?!\s*(?:s|secs?|seconds?|mins?|minutes?)\b)", dose, re.I)
     timed = re.match(r"\s*(\d+)\s*(?:sets?|holds?)?\s*[x×]\s*" + _NUMBER + r"\s*" + _TIME_UNIT + r"\b", dose, re.I)
-    interval = re.match(r"\s*(\d+(?:\.\d+)?)\s*(s|secs?|seconds?|mins?|minutes?)\s+work,\s*"
+    interval = re.match(r"\s*(\d+(?:\.\d+)?)\s*(s|secs?|seconds?|mins?|minutes?)\s+(?:work|effort)\s*[,/]\s*"
                         r"(\d+(?:\.\d+)?)\s*(s|secs?|seconds?|mins?|minutes?)\s+rest\s*[x×]\s*(\d+)\s+rounds?", dose, re.I)
     if reps:
         fields.update(sets=int(reps[1]), reps=int(reps[2]))
@@ -392,6 +396,13 @@ def _lift_dose_fields(dose: str) -> tuple[dict[str, Any], str]:
             fields["duration"] = _measured(match)
             continue
         kept.append(clause)
+    if "rest" not in fields:
+        # Compact planner notation writes rest as a sub-clause of the work:
+        # "6x3 reps, 2min rest", "1x5s with 120s rest". Lift it only when the
+        # dose states exactly one rest, so the card never guesses between two.
+        rests = [match for pattern in _SUBCLAUSE_REST_RES for match in pattern.finditer(dose)]
+        if len(rests) == 1 and len(re.findall(r"\brest\b", dose, re.IGNORECASE)) == 1:
+            fields["rest"] = _measured(rests[0])
     if "effort" not in fields and (effort := _EFFORT_CLAUSE_RE.search(dose)):
         value = re.sub(r"\s*[-–—]\s*", "-", effort.group("value"))
         fields["effort"] = {"method": effort.group("method").upper(),
@@ -575,6 +586,11 @@ def _blocks(
             # resolved to one exact working value.
             prescription = _exact_working_dose(_effective_prescription(role, assignment))
             block["coaching_cues"] = [prescription] if prescription else []
+            if prescription:
+                # The same exact numbers as stats, so timers and logging run
+                # on the planner's dose; the verbatim cue stays alongside.
+                fields, _ = _lift_dose_fields(prescription)
+                block.update(fields)
         blocks.append(block)
     # Only ever attached to a host that already renders. A role with no selected
     # exercise renders no session at all here, and a microdose must not be the

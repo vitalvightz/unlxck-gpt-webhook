@@ -129,22 +129,28 @@ to* the legacy flow and never replaces it:
   archived plans are excluded, so nothing is published merely to derive a card.
 - The finalizer asks the model to convert the markdown plan into a
   `StructuredTrainingPlan` JSON object (`build_structured_plan_prompt`), then
-  validates it (`validate → one repair retry → raw-markdown fallback`, via
-  `api/structured_plan_generation.py`).
+  validates it (`validate → salvage → raw-markdown fallback`, via
+  `api/structured_plan_generation.py`). A rejected card is served to the athlete
+  as the validated deterministic card (`resolve_effective_structured_plan`).
 - A valid (or repaired) plan is saved to `plans.structured_plan` with its
   `plans.schema_version`. An invalid result is dropped, `plan_text` stays the
   fallback, and generation is never blocked.
 
-Model-call budget: the plan-text pass is one call plus **at most one** repair
-call; the card conversion adds one call plus at most one repair call. So Stage 2
-makes between one and four model calls, and the `max_model_calls=2` in the
-`[stage2] package ready` log line counts the plan-text pass only.
+Model-call budget: one plan-text call plus **at most one** card conversion per
+generation. The card is converted inline when Stage 2 releases the plan, or
+before the job completes when Stage 2 held it (released with flags on save) or
+the inline attempt could not run. A card the validators already rejected is
+never converted again for the same text, and the card repair call is opt-in
+(below). Each call is recorded on `stage2_validator_report.stage2_model_calls`
+with its operation, tokens (input/output/reasoning), wall-clock seconds, prompt
+and response sizes, validation outcome, and retry reason. These are counts only,
+never content.
 
 Structured-card call behaviour is controlled by three further flags:
 
 | Env var | Default | Effect |
 |---|---|---|
-| `UNLXCK_STAGE2_STRUCTURED_REPAIR` | on | One repair retry after a failed first structured pass. The main lever on worst-case card latency. |
+| `UNLXCK_STAGE2_STRUCTURED_REPAIR` | **off** (opt-in) | One repair call after a failed first structured pass. Off because production telemetry (40 jobs, 2026-10-05 to 2026-10-14) showed it rescuing about 1 in 12 failed cards at 150–200 s each. |
 | `UNLXCK_STAGE2_STRUCTURED_JSON_MODE` | on | Request `json_object` output mode, removing the "not valid JSON" failure class. |
 | `UNLXCK_STAGE2_STRUCTURED_SCHEMA_MODE` | **off** (opt-in) | Send the strict `json_schema` built from `StructuredTrainingPlan` instead. Validated in-repo for structural compliance only; confirm against the live endpoint in staging before enabling, then the repair retry can be dropped. |
 
