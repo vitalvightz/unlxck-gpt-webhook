@@ -187,6 +187,8 @@ def resolve_effective_structured_plan(
     # These fields are server-owned by custom publication, never by a model.
     # A generated card cannot claim athlete authority or private attachments.
     brief = _mapping(plan_row.get("planning_brief")) or {}
+    from api.structured_plan_coaching import recover_selected_coaching
+    resolved = recover_selected_coaching(resolved, dict(brief))
     if not brief.get("custom_plan"):
         fields = ("prescription_source", "prescription_text", "athlete_dose",
                   "private_media_id", "community_revision_id", "source_session_id", "catalogue_id")

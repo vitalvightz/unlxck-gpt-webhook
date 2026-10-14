@@ -13,6 +13,30 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  coaching-release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11.15"
+          cache: pip
+          cache-dependency-path: requirements-dev-fast.txt
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: web/.nvmrc
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: pip install -r requirements-dev-fast.txt
+      - run: npm ci --prefix web
+      - name: Verify the persisted athlete-visible coaching cards
+        run: |
+          test -d web/node_modules/tsx
+          python -m pytest tests/test_exercise_coaching_release.py tests/test_exercise_coaching_context.py -q
+
   build:
     runs-on: ubuntu-latest
     permissions:

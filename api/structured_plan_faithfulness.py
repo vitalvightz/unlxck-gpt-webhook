@@ -24,6 +24,9 @@ Design rules (mirrors ``structured_plan_safety`` conventions):
     exact source exercise was omitted by the structured conversion. This is an
     advisory consumed by the source-backed renderer, not grounds to discard an
     otherwise valid card; the other finding types remain blocking.
+  - COACHING_DROPPED: an exact exercise on its source D-day lost an explicit
+    coaching, progression, regression or stop field. This is blocking; the
+    deterministic card retains the source-backed guidance without another call.
   A reworded exercise that keeps any meaningful token (``Back Squat`` ->
   ``Barbell Back Squat``) passes. Generic/contextual blocks (mindset, nutrition,
   recovery, mobility, preparation, cooldown) are wording the conversion owns, not
@@ -53,6 +56,7 @@ INTERNAL = "INTERNAL"
 LOCKED_CONTENT = "LOCKED_CONTENT"
 PRESCRIPTION = "PRESCRIPTION"
 PRESCRIPTION_CHANGED = "PRESCRIPTION_CHANGED"
+COACHING_DROPPED = "COACHING_DROPPED"
 LOCKED_TACTICAL_WATCH_MISSING = "locked_tactical_watch_missing_from_stage2"
 
 # ``block_type`` values that name a specific, app-owned exercise we can hold to
@@ -155,7 +159,7 @@ def _explicit_prescription_violations(plan: dict[str, Any], source: str) -> list
     rendering recovery while exposing the omission in diagnostics.
     """
     violations: list[str] = []
-    from .structured_plan_deterministic_fallback import _source_block
+    from .structured_plan_deterministic_fallback import _source_block, _source_lines_for_session
     source_days = _source_day_section_lines(source)
     for week in plan.get("weeks") or []:
         if not isinstance(week, dict):
@@ -169,15 +173,25 @@ def _explicit_prescription_violations(plan: dict[str, Any], source: str) -> list
                 for block in session.get("blocks") or []:
                     if not isinstance(block, dict):
                         continue
-                    if str(block.get("block_type")) not in _EXERCISE_BLOCK_TYPES:
-                        continue
                     name = str(block.get("display_name") or "").strip()
-                    segment = _source_block_segment(source, name)
+                    day_lines = source_days.get(_dday_num(day.get("countdown_label")), [])
+                    scoped = _source_lines_for_session(day_lines, str(session.get("title") or ""))
+                    if day_lines and scoped is None:
+                        continue  # A same-day source session cannot be identified.
+                    segment = _source_block_segment("\n".join(scoped) if scoped else source, name)
                     if not segment:
                         continue
-                    day_lines = source_days.get(_dday_num(day.get("countdown_label")), [])
-                    expected = _source_block(day_lines, name) if day_lines else None
+                    expected = _source_block(scoped, name) if scoped else None
                     if expected:
+                        for key in ("coaching_cues", "regression_options", "progression_rule", "stop_rules"):
+                            if key == "coaching_cues" and not _SOURCE_CUE_RE.search(
+                                segment
+                            ):
+                                continue  # Dose remainder is not a labelled execution cue.
+                            if expected.get(key) and not block.get(key):
+                                violations.append(f"{COACHING_DROPPED}: {name!r} dropped source {key}")
+                        if str(block.get("block_type")) not in _EXERCISE_BLOCK_TYPES:
+                            continue
                         for key in ("sets", "reps", "rounds", "duration", "work", "rest", "distance", "effort", "load"):
                             if key in expected and key in block and block[key] is not None:
                                 if _prescription_value(expected[key]) != _prescription_value(block[key]):
@@ -188,6 +202,8 @@ def _explicit_prescription_violations(plan: dict[str, Any], source: str) -> list
                                 violations.append(f"{PRESCRIPTION_CHANGED}: {name!r} replaced explosive execution with slow tempo")
                             if expected.get("duration") and re.search(r"\bholds?\b", segment, re.I):
                                 violations.append(f"{PRESCRIPTION_CHANGED}: {name!r} added movement tempo to a hold")
+                    if str(block.get("block_type")) not in _EXERCISE_BLOCK_TYPES:
+                        continue
                     checks = (
                         (_SOURCE_REST_RE.search(segment), bool(block.get("rest")), "rest"),
                         (_SOURCE_EFFORT_RE.search(segment), bool(block.get("effort")), "effort"),

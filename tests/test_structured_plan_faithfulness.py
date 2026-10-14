@@ -632,7 +632,7 @@ def test_prescription_omission_warns_without_discarding_source_backed_card():
     block["reps"] = 4
     block.pop("rest")
     block.pop("effort")
-    block["coaching_cues"] = []
+    block["coaching_cues"] = ["Drive through your legs and hips, keep a tall chest."]
     source = """## Week 1 (D-19 to D-13)
 ### Tue (D-15) — Power Transfer Touch
 - Trap bar deadlift: 3 sets x 4 reps @ RPE 7. Rest 2-3 minutes.
@@ -646,7 +646,7 @@ def test_prescription_omission_warns_without_discarding_source_backed_card():
     assert outcome.errors == []
     assert any("dropped explicit source rest" in warning for warning in outcome.warnings)
     assert any("dropped explicit source effort" in warning for warning in outcome.warnings)
-    assert any("dropped explicit source cue" in warning for warning in outcome.warnings)
+    assert not any("dropped explicit source cue" in warning for warning in outcome.warnings)
 
 
 def test_prescription_gate_still_matches_after_choice_title_is_split():

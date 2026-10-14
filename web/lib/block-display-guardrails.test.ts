@@ -179,3 +179,17 @@ test("the choice line is still the source when no exact title exists", () => {
   assert.equal(overrides.sets, "2-3");
   assert.equal(overrides.effort, "RPE 6-7");
 });
+
+test("same-day duplicate exercises cannot borrow another session's source dose or stop rule", () => {
+  const source = [
+    "### D-32 (Tuesday) — Morning strength",
+    "- Barbell Thruster — 4 sets x 2 reps, RPE 8, rest 120 sec",
+    "  Stop: End the heavy set if the overhead finish loses control.",
+    "### D-32 (Tuesday) — Evening primer",
+    "- Barbell Thruster — 1 set x 2 reps, RPE 5, rest 180 sec",
+    "  Stop: End the primer if rep speed drops.",
+  ].join("\n");
+  assert.deepEqual(getSourcePrescriptionRangeOverrides(source, "Barbell Thruster", "D-32"),
+    { sets: null, effort: null, rest: null });
+  assert.equal(getSourceStopRuleOverride(source, "Barbell Thruster", "D-32"), null);
+});
