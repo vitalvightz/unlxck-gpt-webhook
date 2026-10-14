@@ -8,7 +8,7 @@ import type { StructuredBlock, StructuredPlan } from "../lib/types";
 
 const { plan, expected } = JSON.parse(readFileSync(0, "utf8")) as {
   plan: StructuredPlan;
-  expected: Array<{ id: string; fields: StructuredBlock }>;
+  expected: Array<{ id: string; fields: StructuredBlock; forbidden?: string[] }>;
 };
 const blocks = (plan.weeks ?? []).flatMap(w => (w.days ?? []).flatMap(d =>
   (d.sessions ?? []).flatMap(s => s.blocks ?? [])));
@@ -20,6 +20,9 @@ for (const row of expected) {
   assert.ok(block, row.id);
   const html = renderToStaticMarkup(<ExerciseRow block={block} open onToggle={() => {}} />);
   const visible = text(html);
+  for (const copy of row.forbidden ?? []) {
+    assert.ok(!visible.includes(copy), `${row.id}: borrowed another session's instruction: ${copy}`);
+  }
   for (const [field, label] of [
     ["coaching_cues", "Coaching cues"], ["regression_options", "Easier"],
     ["stop_rules", "Stop rule"], ["progression_rule", "Progress"],

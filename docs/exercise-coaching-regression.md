@@ -67,6 +67,21 @@ already saved generated cards, matched to the selected exercise on its D-day.
 It preserves existing coaching, dose fields, calendar, identity and the
 stored object. Custom plans are excluded. No production rows were changed.
 
+Authored coaching is authoritative field by field. Structured bank cues,
+Easier, Progress and Stop fields survive selection and take precedence over
+movement profiles; labelled bank notes are routed to those same fields.
+Profiles only fill missing fields. Bank cues are not truncated to two
+sentences, and existing saved coach instructions are never overwritten.
+The context guards still prevent adding Progress in maintenance/taper.
+
+Same-day duplicate exercise recovery uses the full deterministic session
+identity, a unique exact session title, or a unique role key in the session
+ID. There is no last-write-wins day/name map. Ambiguous legacy duplicates
+keep their existing coaching without borrowing from another appointment.
+Source-text fallback and validation scope repeated names to the session.
+React's day/name source overrides fail closed on duplicate names, retaining
+each card's own structured prescription and stop guidance.
+
 For the **same latest saved athlete and exact selected programme**, counting
 all 27 selected S&C exercises (three are labelled `skill` by the converter):
 
@@ -98,6 +113,13 @@ rejected. No-text fallback checks include the affected boxer, novice,
 high-frequency athlete, fatigue/injury, short camp and fight week.
 Saved-card recovery verifies dose identity and read-only behaviour.
 
+`tests/test_exercise_coaching_context.py` additionally checks authored bank
+fields/notes, selection metadata, existing coach precedence, same-role-key
+duplicates with different session indices, reversed role/session order,
+converter session titles, name-only cards, ambiguous duplicates, distinct
+source doses and stop guidance, and expanded React rows that must not contain
+the other session's cues. Web guardrail tests cover duplicated source overrides.
+
 The `coaching-release` job in Web Build installs both runtimes and executes
 this gate for PRs and Main. Backend-only pytest runs skip only the three
 React subprocess cases when frontend dependencies are absent; the dedicated
@@ -109,3 +131,8 @@ source-dose, faithfulness, fallback, Stage 2 pipeline/validator/conversion and
 persistence suites; **105 React tests passed**. TypeScript typecheck, Ruff and
 diff checks passed. No live model calls, deployment or production writes were
 performed.
+
+Follow-up verification for authored precedence and same-day duplicates:
+578 broader Python tests passed, then all 16 focused coaching-context cases
+passed after adding the unknown-movement taper guard; 121 React tests passed.
+Typecheck, targeted ESLint, Ruff and diff checks passed.

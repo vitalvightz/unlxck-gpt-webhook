@@ -159,7 +159,7 @@ def _explicit_prescription_violations(plan: dict[str, Any], source: str) -> list
     rendering recovery while exposing the omission in diagnostics.
     """
     violations: list[str] = []
-    from .structured_plan_deterministic_fallback import _source_block
+    from .structured_plan_deterministic_fallback import _source_block, _source_lines_for_session
     source_days = _source_day_section_lines(source)
     for week in plan.get("weeks") or []:
         if not isinstance(week, dict):
@@ -174,15 +174,18 @@ def _explicit_prescription_violations(plan: dict[str, Any], source: str) -> list
                     if not isinstance(block, dict):
                         continue
                     name = str(block.get("display_name") or "").strip()
-                    segment = _source_block_segment(source, name)
+                    day_lines = source_days.get(_dday_num(day.get("countdown_label")), [])
+                    scoped = _source_lines_for_session(day_lines, str(session.get("title") or ""))
+                    if day_lines and scoped is None:
+                        continue  # A same-day source session cannot be identified.
+                    segment = _source_block_segment("\n".join(scoped) if scoped else source, name)
                     if not segment:
                         continue
-                    day_lines = source_days.get(_dday_num(day.get("countdown_label")), [])
-                    expected = _source_block(day_lines, name) if day_lines else None
+                    expected = _source_block(scoped, name) if scoped else None
                     if expected:
                         for key in ("coaching_cues", "regression_options", "progression_rule", "stop_rules"):
                             if key == "coaching_cues" and not _SOURCE_CUE_RE.search(
-                                _source_block_segment("\n".join(day_lines), name)
+                                segment
                             ):
                                 continue  # Dose remainder is not a labelled execution cue.
                             if expected.get(key) and not block.get(key):

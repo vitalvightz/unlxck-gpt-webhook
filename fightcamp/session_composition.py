@@ -130,6 +130,7 @@ def assignment_from_slot(phase: str, slot_group: str, slot: dict[str, Any]) -> d
     notes = _selected_coaching_notes(selected)
     if notes:
         assignment["coaching_notes"] = notes
+    assignment.update(_selected_coaching_fields(selected))
     return assignment
 
 
@@ -148,6 +149,19 @@ def _selected_coaching_notes(option: dict[str, Any] | None) -> str:
         if isinstance(metadata, dict):
             note = metadata.get("notes")
     return str(note or "").strip()
+
+
+def _selected_coaching_fields(option: dict[str, Any]) -> dict[str, Any]:
+    """Keep explicit authored instructions on the selected assignment."""
+    metadata = option.get("selection_metadata") or {}
+    fields = {}
+    for key in ("coaching_cues", "regression_options", "progression_rule", "stop_rules"):
+        value = option.get(key) or metadata.get(key)
+        if isinstance(value, list):
+            fields[key] = list(value)
+        elif isinstance(value, str) and value.strip():
+            fields[key] = value
+    return fields
 
 
 def _rehab_assignment_from_slot(phase: str, slot: dict[str, Any]) -> dict[str, Any] | None:
@@ -2418,6 +2432,7 @@ def compose_normal_conditioning_assignments(
                 notes = _selected_coaching_notes(option)
                 if notes:
                     assignment["coaching_notes"] = notes
+                assignment.update(_selected_coaching_fields(option))
                 assignments.append(assignment)
 
             trunk_support_added = False

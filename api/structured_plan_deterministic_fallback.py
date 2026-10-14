@@ -832,11 +832,29 @@ def _insert_movement_block(
     }
 
 
+def _source_lines_for_session(
+    lines: list[str] | None, title: str,
+) -> list[str] | None:
+    """Scope repeated D-day exercise names to their own source session."""
+    if not lines:
+        return lines
+    from fightcamp.structured_session_identity import identity_tokens
+    starts = [i for i, line in enumerate(lines) if _day_header_dday(line) is not None]
+    if len(starts) <= 1:
+        return lines
+    sections = [lines[start:end] for start, end in zip(starts, [*starts[1:], len(lines)])]
+    wanted = identity_tokens(title)
+    matched = [section for section in sections
+               if wanted and identity_tokens(re.split(r"[—–]|\s-\s", section[0], maxsplit=1)[-1]) == wanted]
+    return matched[0] if len(matched) == 1 else None
+
+
 def _session(
     role: dict[str, Any], d_day: int, source_lines: list[str] | None = None,
     athlete: dict[str, Any] | None = None, phase: str = "",
 ) -> dict[str, Any] | None:
     role_key = str(role.get("role_key") or "").strip()
+    source_lines = _source_lines_for_session(source_lines, str(role.get("athlete_facing_label") or ""))
     blocks = _blocks(role, d_day, role_key or "role", source_lines, athlete, phase)
     instruction = _support_instruction(role)
     parsed = _parse_display_text(instruction) if instruction and not blocks else None

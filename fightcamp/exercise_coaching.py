@@ -114,29 +114,36 @@ def exercise_coaching(
     """
     athlete = athlete or {}
     name = str(assignment.get("name") or "")
-    fields: dict[str, Any] = {
-        "coaching_cues": [], "regression_options": [], "stop_rules": [],
-    }
+    fields: dict[str, Any] = {}
+    for key in ("coaching_cues", "regression_options", "stop_rules"):
+        value = assignment.get(key)
+        fields[key] = ([value] if isinstance(value, str) and value.strip() else
+                       list(value) if isinstance(value, list) else [])
+    if isinstance(assignment.get("progression_rule"), str) and assignment["progression_rule"].strip():
+        fields["progression_rule"] = assignment["progression_rule"]
     # Keep authored safety criteria in the safety field, rather than burying
     # "Stop..." halfway through a cue. Notes remain evidence, never a new dose.
     notes = str(assignment.get("coaching_notes") or "").strip()
-    for sentence in re.split(r"(?<=[.!?])\s+|\n+", notes):
-        if sentence:
-            key = "stop_rules" if re.match(r"stop\b|end\b", sentence, re.I) else "coaching_cues"
-            fields[key].append(sentence)
+    labels = {"cue": "coaching_cues", "coaching cues": "coaching_cues",
+              "easier": "regression_options", "regression": "regression_options",
+              "progress": "progression_rule", "progression": "progression_rule",
+              "stop": "stop_rules", "stop rule": "stop_rules"}
+    for line in notes.splitlines():
+        labelled = re.match(r"^\s*([A-Za-z ]+)\s*:\s*(.+)$", line)
+        if labelled and labelled[1].lower() in labels:
+            key = labels[labelled[1].lower()]
+            if key == "progression_rule":
+                fields.setdefault(key, labelled[2])
+            elif labelled[2] not in fields[key]:
+                fields[key].append(labelled[2])
+            continue
+        for sentence in re.split(r"(?<=[.!?])\s+", line.strip()):
+            if sentence:
+                key = "stop_rules" if re.match(r"stop\b|end\b", sentence, re.I) else "coaching_cues"
+                if sentence not in fields[key]:
+                    fields[key].append(sentence)
     if assignment.get("slot_group") not in {"strength_slots", "conditioning_slots", "priority_microdose"}:
         return fields
-    profile = next((p for pattern, p in _PROFILES if re.search(pattern, name, re.I)), None)
-    if profile is None:
-        return fields
-    cue, easier, progress, stop = profile
-    # An authored bank cue is more specific than the family cue.
-    if not fields["coaching_cues"]:
-        fields["coaching_cues"] = [cue]
-    fields["coaching_cues"] = fields["coaching_cues"][:2]
-    fields["regression_options"] = [easier]
-    if not fields["stop_rules"]:
-        fields["stop_rules"] = [stop]
     phase = str(phase or role.get("phase") or assignment.get("source_phase") or "").upper()
     constrained = (
         phase == "TAPER" or (d_day is not None and d_day <= 14)
@@ -145,9 +152,23 @@ def exercise_coaching(
         or bool(athlete.get("weight_cut_risk"))
         or str(athlete.get("cut_severity_bucket") or "none").lower() not in {"none", "low"}
         or assignment.get("slot_group") == "priority_microdose"
+        or assignment.get("support_only") is True
     )
-    if not constrained and assignment.get("support_only") is not True:
-        fields["progression_rule"] = progress
+    if constrained:
+        fields.pop("progression_rule", None)
+    profile = next((p for pattern, p in _PROFILES if re.search(pattern, name, re.I)), None)
+    if profile is None:
+        return fields
+    cue, easier, progress, stop = profile
+    # An authored bank cue is more specific than the family cue.
+    if not fields["coaching_cues"]:
+        fields["coaching_cues"] = [cue]
+    if not fields["regression_options"]:
+        fields["regression_options"] = [easier]
+    if not fields["stop_rules"]:
+        fields["stop_rules"] = [stop]
+    if not constrained:
+        fields.setdefault("progression_rule", progress)
     return fields
 
 

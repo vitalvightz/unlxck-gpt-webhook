@@ -4,6 +4,25 @@ from typing import Any
 
 from fightcamp.calendar_context import role_d_day
 from fightcamp.exercise_coaching import exercise_coaching
+from fightcamp.structured_session_identity import deterministic_session_id, identity_tokens
+
+
+def _matching_assignment(candidates, session, day):
+    """Never borrow context from a second occurrence of the same exercise."""
+    if len(candidates) == 1:
+        return candidates[0]
+    session_id = str(session.get("session_id") or "").lower()
+    exact = [c for c in candidates if session_id == deterministic_session_id(c[0], day)]
+    if len(exact) == 1:
+        return exact[0]
+    title = identity_tokens(session.get("title"))
+    exact = [c for c in candidates if title and title == identity_tokens(c[0].get("athlete_facing_label"))]
+    if len(exact) == 1:
+        return exact[0]
+    # Converter ids sometimes retain the role key; use it only when unique.
+    exact = [c for c in candidates if c[0].get("role_key")
+             and str(c[0]["role_key"]).lower() in session_id]
+    return exact[0] if len(exact) == 1 else None
 
 
 def recover_selected_coaching(plan: dict[str, Any], brief: dict[str, Any]) -> dict[str, Any]:
@@ -16,15 +35,11 @@ def recover_selected_coaching(plan: dict[str, Any], brief: dict[str, Any]) -> di
             if day is None:
                 continue
             for assignment in role.get("selected_exercise_assignments") or []:
-                fields = exercise_coaching(
-                    assignment, role, phase=str(week.get("phase") or week.get("phase_label") or ""),
-                    d_day=day, athlete=brief.get("athlete_snapshot"),
-                )
                 name = str(assignment.get("name") or "").casefold()
                 key = str(assignment.get("exercise_key") or "")
-                selected[day, name] = fields
-                if key:
-                    selected[day, key] = fields
+                candidate = (role, week, assignment)
+                for identity in {name, key} - {""}:
+                    selected.setdefault((day, identity), []).append(candidate)
     if not selected:
         return plan
     # Never mutate the persisted object, which other services may still hold.
@@ -37,8 +52,17 @@ def recover_selected_coaching(plan: dict[str, Any], brief: dict[str, Any]) -> di
             offset = int(label[2:])
             for session in day.get("sessions") or []:
                 for block in session.get("blocks") or []:
-                    fields = selected.get((offset, str(block.get("exercise_key") or ""))) or selected.get(
+                    candidates = selected.get((offset, str(block.get("exercise_key") or ""))) or selected.get(
                         (offset, str(block.get("display_name") or "").casefold())
+                    )
+                    match = _matching_assignment(candidates or [], session, offset)
+                    if match is None:
+                        continue  # Ambiguous legacy duplicate: preserve its existing coaching.
+                    role, source_week, assignment = match
+                    fields = exercise_coaching(
+                        assignment, role,
+                        phase=str(source_week.get("phase") or source_week.get("phase_label") or ""),
+                        d_day=offset, athlete=brief.get("athlete_snapshot"),
                     )
                     for field, value in (fields or {}).items():
                         if value and not block.get(field):
