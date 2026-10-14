@@ -221,3 +221,10 @@ def test_earlier_saved_intakes_and_recorded_responses_have_the_same_fidelity_con
     assert final["stage2_validator_report"]["errors"] == []
     assert all(g["satisfied"] for g in brief["goal_preservation"])
     assert "Max-Power Bag Burst" in final["final_plan_text"]
+    if name == "earlier_with_notes":
+        # The real pipeline must preserve both sustained combination rounds
+        # and short full-rest bursts, rather than one repeated modality.
+        bag = [e for e in collect_goal_evidence(brief) if "bag" in e.get("name", "").lower()]
+        assert {e["name"] for e in bag} == {"Heavy Bag Power Rounds", "Max-Power Bag Burst"}
+        assert any(e["work_sec"] == 180 and e["rounds"] == 5 for e in bag)
+        assert any(e["work_sec"] == 5 and e["rest_sec"] == 60 for e in bag)

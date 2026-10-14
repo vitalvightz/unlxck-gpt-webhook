@@ -91,6 +91,12 @@ as physical standalone appointments. Optional mental rehearsal is not a session.
 
 All three recorded-response finalizer replays have zero validator errors, exact
 appointment/date/prescription fidelity and satisfied selected-goal contracts.
+Their full-camp standalone totals are 44, 46 and 46; S&C totals are 13, 14 and
+15 respectively. Each retains 30 coach appointments. Advisory warning counts
+are 1, 1 and 2, with zero blocking warnings. The remaining warnings compare
+phase-pool examples with rendered selections (taper primary strength in all
+three, plus GPP aerobic in the last comparison); they do not establish missing
+authoritative appointments. No extra work was added to satisfy these warnings.
 The existing release decision is `publish_with_flags`; advisory requirements
 remain visible. Persistence regression verifies the corrected text is saved
 unchanged. Visibility and release overrides are deliberately unchanged at the
@@ -108,6 +114,16 @@ Existing range expectations are changed only where working-dose resolution now
 produces a concrete value inside the original permitted range. No snapshots were
 refreshed. The existing timed-power assertion now checks actual short efforts,
 rounds and full rest rather than requiring a conditioning burst to have lifting reps.
+Synthetic phase fixtures now explicitly count D-0: D-5 through D-0 is six dates,
+and D-7 through D-0 is eight. Their exercise-selection assertions are retained.
+
+Local verification: 19 production regressions pass; 311 tests across finalizer,
+validator, workload and safety suites pass (including production regressions); 140 additional goal, frequency,
+conditioning and coach-ownership tests pass. The combined goal/production
+recheck passes 73 tests. Ruff and `compileall` pass. CI backend pytest,
+rehab concurrency, lint, dependency audit and schema checks have passed;
+full-suite shards and remaining builds are still being reviewed on
+[PR #2876](https://github.com/vitalvightz/unlxck-gpt-webhook/pull/2876).
 
 Direct late-fight and open/ongoing programmes keep their separate existing owners;
 this strict reconciliation applies to normal dated calendars. Supporting nutrition,
