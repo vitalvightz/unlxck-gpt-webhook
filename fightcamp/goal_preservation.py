@@ -718,14 +718,14 @@ def _other_stimuli(role: dict, pools: dict, phase: str, brief: dict) -> list[dic
                             # Full-rest speed work need not create high session
                             # exertion. Easy recovery work still cannot develop
                             # speed, and power keeps its separate maximal-effort gate.
-                            "development_capable": "speed_quality" not in intents or bool(profile["rpe"] is not None and profile["rpe"] >= 6),
+                            "development_capable": "speed_quality" not in intents or profile["rpe"] is None or profile["rpe"] >= 6,
                             "effective_prescription": member.get("effective_prescription")
                             or selected.get("prescription") or ""})
     stimuli += _embedded_trunk_stimuli(role, pools, phase)
     # Locked technical / mobility inserts have an actual deterministic duration.
     duration = _number(role.get("prescribed_duration_min") or role.get("duration_min"))
     support = role.get("support_insert_category") or role.get("support_kind")
-    if duration > 0:
+    if duration > 0 and not role.get("selected_exercise_assignments"):
         intents = []
         if category == "mobility" or support == "mobility":
             intents.append("mobility_dose")

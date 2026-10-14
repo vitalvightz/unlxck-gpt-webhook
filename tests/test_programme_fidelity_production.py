@@ -13,6 +13,8 @@ import pytest
 from api.models import PlanRequest
 from api.stage2_automation import OpenAIStage2Automator
 from api.generation.persistence import persist_plan_and_finalize
+from api.services.effective_structured_plan import resolve_effective_structured_plan
+from api.structured_plan_models import safe_parse_structured_plan
 from fightcamp import input_parsing, stage2_planning_brief
 from fightcamp.conditioning import _conditioning_structured_profile, get_conditioning_bank
 from fightcamp.goal_preservation import collect_goal_evidence
@@ -77,6 +79,9 @@ def test_intake_through_finalizer_preserves_real_goals_and_all_appointments(prod
     assert any(e.get("name") == "Easy Assault Bike" for e in evidence)
     assert "Depth Drop (No Rebound)" not in final["final_plan_text"]
     assert "Weight information is incomplete" in final["final_plan_text"]
+    assert "increase fight-specific repeatability and power transfer" in final["final_plan_text"]
+    assert "Nasal breathing only; excellent recovery modality" in final["final_plan_text"]
+    assert "Stop the burst if punch speed, shape or head position drops" in final["final_plan_text"]
     for day in (42, 35, 28, 21):
         assert re.search(rf"D-{day} \(Saturday\).*Hard Sparring", final["final_plan_text"], re.I)
 
@@ -114,8 +119,7 @@ def test_post_finalization_drift_is_still_rejected(production_replay, mutation):
     assert programme_fidelity_findings(stage1["planning_brief"], changed)
 
 
-def test_persistence_saves_corrected_programme_without_changing_visibility_policy(production_replay):
-    intake, stage1, final, _ = production_replay
+def _persist_final(intake, final):
     request = PlanRequest(**intake)
     store = FakeStore()
     store.profiles["athlete-1"] = {"id": "athlete-1", "full_name": "Programme Fidelity Regression"}
@@ -130,12 +134,18 @@ def test_persistence_saves_corrected_programme_without_changing_visibility_polic
         emit_milestone=lambda *_args, **_kwargs: None, to_thread_with_heartbeat=direct, t_start=perf_counter()))
     assert len(store.plans) == 1
     saved = next(iter(store.plans.values()))
+    return saved
+
+
+def test_persistence_saves_corrected_programme_without_changing_visibility_policy(production_replay):
+    intake, stage1, final, _ = production_replay
+    saved = _persist_final(intake, final)
     assert saved["plan_text"] == final["final_plan_text"]
     assert programme_fidelity_findings(stage1["planning_brief"], saved["plan_text"]) == []
 
 
 def test_inclusive_phase_allocation_matches_calendar_length():
-    model = {"phase_weeks": {"days": {"GPP": 15, "SPP": 22, "TAPER": 15}}}
+    model = {"days_until_fight": 52, "phase_weeks": {"days": {"GPP": 15, "SPP": 22, "TAPER": 15}}}
     phases = [_stage1_phase_for_offset(model, d) for d in range(52)]
     assert {phase: phases.count(phase) for phase in ("GPP", "SPP", "TAPER")} == model["phase_weeks"]["days"]
     assert phases[14] == "TAPER" and phases[15] == "SPP"
@@ -150,6 +160,95 @@ def test_unpriced_closed_session_is_a_fidelity_failure(production_replay):
     role["effective_strength_prescriptions"] = []
     findings = programme_fidelity_findings(brief, final["final_plan_text"])
     assert any(f["code"] == "authoritative_programme_unpriced_session" for f in findings)
+
+
+def test_interactive_fallback_preserves_calendar_doses_and_coaching(production_replay):
+    _, stage1, final, _ = production_replay
+    brief = stage1["planning_brief"]
+    card = resolve_effective_structured_plan({"planning_brief": brief, "plan_text": final["final_plan_text"]})
+    assert card and safe_parse_structured_plan(card).ok
+    assert card["plan_metadata"]["sport"] == "boxing"
+    assert card["plan_metadata"]["timezone"] == "Europe/London"
+    assert "heavy_bag" in card["athlete_context"]["equipment_access"]
+    assert all(week["week_goal"] == brief["phase_strategy"][week["phase_label"]]["visible_objective"]
+               for week in card["weeks"])
+    days = {int(day["countdown_label"][2:]): day for week in card["weeks"] for day in week["days"]}
+    for week in brief["weekly_role_map"]["weeks"]:
+        for date in week["calendar_days"]:
+            day = days[date["d_day"]]
+            assert day["weekday"].lower() == date["weekday"][:3].lower()
+            assert day["planning_week_phase"] == week["phase"]
+            from datetime import timedelta
+            assert day["date"] == (datetime.fromisoformat(brief["athlete_snapshot"]["fight_date"]).date()
+                                   - timedelta(days=date["d_day"])).isoformat()
+    for offset in (42, 35, 28, 21):
+        today = days[offset]["today_card"]
+        assert "hard sparring" in f"{today.get('headline', '')} {today.get('coach_led_contact', '')}".lower()
+    blocks = {(offset, b["display_name"]): b for offset, day in days.items()
+              for session in day["sessions"] for b in session["blocks"]}
+    from fightcamp.calendar_context import role_d_day
+    for week in brief["weekly_role_map"]["weeks"]:
+        for role in week["session_roles"]:
+            offset = role_d_day(week, role)
+            if offset is not None:
+                for member in role.get("selected_exercise_assignments") or []:
+                    assert (offset, member["name"]) in blocks
+    carry = blocks[44, "Sled Pull Forward (Harness)"]
+    assert carry["sets"] == 3 and carry["distance"] == {"value": 20, "unit": "meters"}
+    hold = blocks[44, "Staggered Stance Hold"]
+    assert hold["sets"] == 2 and hold["duration"] == {"value": 20, "unit": "seconds"}
+    assert hold["effort"]["value"] == 6 and hold["rest"]["value"] == 60
+    bag = blocks[15, "Max-Power Bag Burst"]
+    assert bag["rounds"] == 8 and bag["work"] == {"value": 5, "unit": "seconds"}
+    assert bag["rest"] == {"value": 60, "unit": "seconds"} and bag["effort"]["value"] == 8
+    assert any("Stop the burst if punch speed" in cue for cue in bag["coaching_cues"])
+    for offset in (33, 23, 19):
+        assert days[offset]["day_type"] != "rest"
+        thruster = blocks[offset, "Barbell Thruster"]
+        assert thruster["sets"] == 4 and thruster["reps"] == 2 and thruster["rest"]["value"] == 120
+        sled = blocks[offset, "Sled Push (Speed)"]
+        assert sled["sets"] == 6 and sled["duration"] == {"value": 5, "unit": "seconds"}
+        assert sled["rest"]["value"] == 90 and any("light sled" in cue for cue in sled["coaching_cues"])
+    # A saved card must expose the same interactive values as reconstruction.
+    stored = resolve_effective_structured_plan({"structured_plan": card, "planning_brief": brief,
+                                                "plan_text": final["final_plan_text"]})
+    assert stored == card
+
+
+@pytest.mark.parametrize("tamper", [False, "rest", "missing_exercise"])
+def test_provider_card_conversion_uses_the_reconciled_programme(production_replay, monkeypatch, tamper):
+    intake, stage1, final, _ = production_replay
+    card = resolve_effective_structured_plan({"planning_brief": stage1["planning_brief"],
+                                              "plan_text": final["final_plan_text"]})
+    if tamper == "rest":
+        bag = next(b for w in card["weeks"] for d in w["days"] for s in d["sessions"] for b in s["blocks"]
+                   if b["display_name"] == "Max-Power Bag Burst")
+        bag["rest"]["value"] = 20
+    elif tamper == "missing_exercise":
+        session = next(s for w in card["weeks"] for d in w["days"] for s in d["sessions"]
+                       if any(b["display_name"] == "Sled Push (Speed)" for b in s["blocks"]))
+        session["blocks"] = [b for b in session["blocks"] if b["display_name"] != "Sled Push (Speed)"]
+    monkeypatch.setenv("UNLXCK_STAGE2_STRUCTURED_PLAN", "1")
+    client = FakeOpenAIClient([SimpleNamespace(id="recorded_text", output_text=(FIXTURES / "production_render.txt").read_text(encoding="utf8"),
+        usage=SimpleNamespace(input_tokens=1, output_tokens=1, total_tokens=2)),
+        SimpleNamespace(id="card_conversion", output_text=json.dumps(card),
+        usage=SimpleNamespace(input_tokens=1, output_tokens=1, total_tokens=2)),
+        SimpleNamespace(id="card_retry", output_text=json.dumps(card),
+        usage=SimpleNamespace(input_tokens=1, output_tokens=1, total_tokens=2))])
+    converted = asyncio.run(OpenAIStage2Automator(client=client, model="recorded").finalize(stage1_result=stage1))
+    if not tamper:
+        assert converted.get("structured_plan") is not None, converted["stage2_validator_report"].get("structured_plan")
+        assert safe_parse_structured_plan(converted["structured_plan"]).ok
+        assert len(client.responses.calls) == 2
+    saved = _persist_final(intake, converted)
+    effective = resolve_effective_structured_plan(saved)
+    assert effective and safe_parse_structured_plan(effective).ok
+    bag = next(b for w in effective["weeks"] for d in w["days"] for s in d["sessions"] for b in s["blocks"]
+               if b["display_name"] == "Max-Power Bag Burst")
+    assert bag["rest"] == {"value": 60, "unit": "seconds"}
+    assert sum(b["display_name"] == "Sled Push (Speed)" for w in effective["weeks"] for d in w["days"]
+               for s in d["sessions"] for b in s["blocks"]) == 3
+    assert programme_fidelity_findings(stage1["planning_brief"], converted["final_plan_text"]) == []
 
 
 def test_late_goal_repair_retains_earlier_speed_appointments(monkeypatch):

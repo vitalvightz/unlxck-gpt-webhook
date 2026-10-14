@@ -62,7 +62,9 @@ def review_stage1_self_output(stage1_result: dict[str, Any]) -> dict[str, Any]:
             f"stage1_result has no planning_brief to self-validate (status={status!r})"
         )
     plan_text = str(stage1_result.get("plan_text") or "")
-    return review_stage2_output(planning_brief=planning_brief, final_plan_text=plan_text)
+    # Stage 1's draft deliberately has no final weekly programme. Continue
+    # measuring its existing parity gaps without asserting a final-text contract.
+    return review_stage2_output(planning_brief=planning_brief, final_plan_text=plan_text, final_programme=False)
 
 
 def parity_breakdown(review: dict[str, Any]) -> dict[str, Any]:

@@ -1677,7 +1677,7 @@ def _classify_prescription_type(exercise: dict) -> str:
     if _LOADED_CYCLE_NAME_PATTERN.search(name):
         return "quality_cycle"
 
-    if method == "isometric" or re.search(r"\b(?:hold|holds|plank|isometric)\b", name):
+    if method == "isometric" or re.search(r"\b(?:hold|holds|plank)(?:\s*\([^)]*\))?$", name):
         return "support_isometric"
 
     # Jumps, hops and bounds are ballistic power work and must not inherit the

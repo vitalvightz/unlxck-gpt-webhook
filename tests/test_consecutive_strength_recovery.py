@@ -198,9 +198,9 @@ def test_reproduction_consecutive_strength_days_remain_eligible_and_render_close
     d20 = next(item for item in manifest if item["scheduled_countdown_label"] == "D-20")
     assert d20["unresolved"] == []
     assert d20["exercise_lines"] == [
-        "- Farmer Walk Hold (Static): 3-5 x 10-20 sec @ 7-9/10 effort",
-        "- DB Alternating Incline Press (30-45°): 2-3 x 6-10 @ RPE 6-7",
-        "- Single-Leg Spanish Squat Hold: 3-5 x 10-20 sec @ 7-9/10 effort",
+        "- Farmer Walk Hold (Static): 3 x 10 sec @ 7/10 effort",
+        "- DB Alternating Incline Press (30-45°): 2 x 6 @ RPE 6",
+        "- Single-Leg Spanish Squat Hold: 3 x 10 sec @ 7/10 effort",
     ]
 
 

@@ -3192,6 +3192,11 @@ def _ambiguous_working_dose_errors(final_plan_text: str) -> list[dict[str, Any]]
             content = _BULLET_PREFIX.sub("", line).strip()
             if _OPTIONAL_DOSE_LINE.match(content):
                 continue
+            # Authored aerobic-zone explanations are coaching context; the
+            # exercise's exact work order is checked separately. Do not ignore
+            # ranges in sets, reps, durations, rest or RPE on a cue line.
+            if content.lower().startswith("cue:"):
+                content = re.sub(r"\d+\s*[-–]\s*\d+\s*%\s*effort", "effort", content, flags=re.I)
             if _AMBIGUOUS_WORKING_DOSE.search(content):
                 errors.append(_issue(
                     code="ambiguous_working_dose",
@@ -4005,7 +4010,7 @@ def _total_session_budget_errors(planning_brief: dict) -> list[dict]:
     return []
 
 
-def validate_stage2_output(*, planning_brief: dict, final_plan_text: str) -> dict:
+def validate_stage2_output(*, planning_brief: dict, final_plan_text: str, final_programme: bool = True) -> dict:
     from .goal_preservation import validate_goal_preservation
     plan_lines = _extract_plan_lines(final_plan_text)
     phase_sections = _phase_sections(final_plan_text)
@@ -4015,7 +4020,8 @@ def validate_stage2_output(*, planning_brief: dict, final_plan_text: str) -> dic
     errors: list[dict[str, Any]] = validate_goal_preservation(planning_brief)
     goal_contract_valid = not errors
     from .programme_fidelity import programme_fidelity_findings
-    errors.extend(programme_fidelity_findings(planning_brief, final_plan_text))
+    if final_programme:
+        errors.extend(programme_fidelity_findings(planning_brief, final_plan_text))
     errors.extend(_total_session_budget_errors(planning_brief))
     if goal_contract_valid:
         errors.extend(_goal_preservation_render_errors(planning_brief, final_plan_text))

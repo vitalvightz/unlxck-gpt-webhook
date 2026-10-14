@@ -194,10 +194,9 @@ def test_late_fight_selector_selects_one_fallback_candidate_for_reduced_touch():
 
 
 def test_stage1_phase_days_map_d7_to_spp_before_d5_taper():
-    # D-5 through D-0 contains six calendar dates, including fight day.
     athlete_model = {
         "phase_weeks": {
-            "days": {"GPP": 19, "SPP": 2, "TAPER": 6},
+            "days": {"GPP": 19, "SPP": 2, "TAPER": 5},
         }
     }
     assert scheduled_phase_for_role(
@@ -223,7 +222,7 @@ def test_phase_scope_fails_closed_when_phase_is_unresolved():
 def test_late_fight_selector_stays_inside_authoritative_stage1_phase():
     athlete_model = {
         "phase_weeks": {
-            "days": {"GPP": 14, "SPP": 7, "TAPER": 6},
+            "days": {"GPP": 14, "SPP": 7, "TAPER": 5},
         }
     }
     pools = {
@@ -256,7 +255,7 @@ def test_late_fight_selector_stays_inside_authoritative_stage1_phase():
 def test_d7_neural_assignment_cannot_reach_gpp_hang_power_clean():
     athlete_model = {
         "phase_weeks": {
-            "days": {"GPP": 19, "SPP": 2, "TAPER": 6},
+            "days": {"GPP": 19, "SPP": 2, "TAPER": 5},
         }
     }
     pools = {
@@ -286,7 +285,7 @@ def test_d7_neural_assignment_cannot_reach_gpp_hang_power_clean():
 def test_d2_alactic_assignment_cannot_reach_gpp_broad_jump_repeats():
     athlete_model = {
         "phase_weeks": {
-            "days": {"GPP": 19, "SPP": 2, "TAPER": 6},
+            "days": {"GPP": 19, "SPP": 2, "TAPER": 5},
         }
     }
     pools = {
@@ -604,7 +603,7 @@ def test_neural_primer_allocator_leads_with_meaningful_work_and_complements_with
             "visible_session_sequence": [role],
             "phase": "TAPER",
             "athlete_model": {
-                "phase_weeks": {"days": {"GPP": 0, "SPP": 0, "TAPER": 8}}  # D-7 through D-0.
+                "phase_weeks": {"days": {"GPP": 0, "SPP": 0, "TAPER": 7}}
             },
         },
         candidate_pools={
@@ -651,7 +650,7 @@ def test_neural_primer_keeps_explicit_day_assignment_ahead_of_style_taper():
             "visible_session_sequence": [role],
             "phase": "TAPER",
             "athlete_model": {
-                "phase_weeks": {"days": {"GPP": 0, "SPP": 0, "TAPER": 8}}  # D-7 through D-0.
+                "phase_weeks": {"days": {"GPP": 0, "SPP": 0, "TAPER": 7}}
             },
         },
         candidate_pools={

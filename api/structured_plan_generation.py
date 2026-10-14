@@ -3012,6 +3012,17 @@ def planner_sc_coverage_losses(
             if any(name and name in source for name in names):
                 required.append(role)
         on_card = exercises_by_dday.get(d_day, set())
+        # Role/type coverage is insufficient: one retained exercise cannot stand
+        # in for the other closed assignments on the same session card.
+        for role in required:
+            missing = [str(assignment.get("name") or "")
+                for assignment in role.get("selected_exercise_assignments") or []
+                if isinstance(assignment, dict) and str(assignment.get("name") or "").casefold() in source
+                and (normalize_exercise_key(assignment.get("exercise_key"))
+                     or normalize_exercise_key(assignment.get("name"))) not in on_card]
+            if missing:
+                losses.append(f"planner_coverage: D-{d_day} {str(role.get('role_key') or 'role')!r} "
+                              f"selected exercises {missing!r} are missing from the structured card")
         required = [
             role
             for role in required

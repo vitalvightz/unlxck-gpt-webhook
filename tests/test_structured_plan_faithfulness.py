@@ -627,6 +627,9 @@ def test_prescription_omission_warns_without_discarding_source_backed_card():
     plan = _valid_plan()
     block = plan["weeks"][0]["days"][0]["sessions"][0]["blocks"][0]
     block["display_name"] = "Trap bar deadlift"
+    # Only omissions are under test; retained dose fields must match the source.
+    block["sets"] = 3
+    block["reps"] = 4
     block.pop("rest")
     block.pop("effort")
     block["coaching_cues"] = []

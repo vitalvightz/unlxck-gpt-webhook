@@ -52,7 +52,10 @@ def test_every_static_gap_fill_insert_is_server_authoritative(role_key):
     assert render is not None, role_key
     assert render["authority"] == AUTHORITY_DETERMINISTIC_DISPLAY_TEXT
     assert render["athlete_facing_label"] == role["athlete_facing_label"]
-    assert render["body_lines"] == [_INSERT_META[role_key]["display_text"]]
+    assert render["body_lines"][-1] == _INSERT_META[role_key]["display_text"]
+    assert len(render["body_lines"]) == 2
+    assert f"{role["prescribed_duration_min"]} minutes" in render["body_lines"][0]
+    assert role["athlete_facing_label"] in render["body_lines"][0]
 
 
 def test_tactical_watch_copy_comes_from_the_selected_bank_item():

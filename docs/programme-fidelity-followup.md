@@ -57,8 +57,10 @@ save its seed. No live provider request or production generation was performed.
    speed appointment. Repair retains athlete context, recomposes changed roles and
    does not restart unrelated bounded placement searches. Realised-load checks run
    around the repair; forbidden-load checks and residual reporting remain global.
-8. Inclusive D-0 phase mapping was off by one. Both the phase owner and independent
-   authority check now use inclusive calendar length. The affected 52-day camp
+8. Normal dated-calendar D-0 phase mapping was off by one. Both the phase owner and independent
+   authority check now use its inclusive calendar length. Direct short-camp
+   timelines and legacy phase-only records retain their countdown-interval
+   convention, so D-13 primers remain available. The affected 52-day camp
    has 15 GPP, 22 SPP and 15 taper dates.
 
 ## Before and after
@@ -114,8 +116,8 @@ Existing range expectations are changed only where working-dose resolution now
 produces a concrete value inside the original permitted range. No snapshots were
 refreshed. The existing timed-power assertion now checks actual short efforts,
 rounds and full rest rather than requiring a conditioning burst to have lifting reps.
-Synthetic phase fixtures now explicitly count D-0: D-5 through D-0 is six dates,
-and D-7 through D-0 is eight. Their exercise-selection assertions are retained.
+Legacy synthetic phase fixtures retain their original interval convention. The
+new production regression checks the inclusive normal-calendar count separately.
 
 Local verification: 19 production regressions pass; 311 tests across finalizer,
 validator, workload and safety suites pass (including production regressions); 140 additional goal, frequency,
@@ -128,5 +130,77 @@ full-suite shards and remaining builds are still being reviewed on
 Direct late-fight and open/ongoing programmes keep their separate existing owners;
 this strict reconciliation applies to normal dated calendars. Supporting nutrition,
 recovery and mindset text still comes from the provider and is subject to existing
-validators. Structured-card provider generation and a fresh live model run have
-not been replayed here. CI results must be checked before recommending merge.
+validators. No fresh live provider run has been made. CI results must be checked
+before recommending merge.
+
+## Full-suite follow-up and interactive verification
+
+PR #2875 remains merged; #2876 remains open and must not be merged yet. The
+completed CI run on `c8de1e67` passed web build, backend checks, runtime surfaces,
+lint, dependency audit and schema checks, but failed all six full-suite shards.
+There were 96 failing test cases. Running those exact cases on merged #2875
+(`792a1670`) reproduced 32 failures and passed the other 64. The baseline failures
+include historical metadata/source drift, generated API type checks, incomplete
+injury mocks and several existing late-camp/goal fixtures. They are not attributed
+to this patch. No frozen snapshots have been refreshed.
+
+The follow-up repairs actual regressions:
+
+- Selected bank coaching cues and purposes now accompany the authoritative doses.
+  Phase objectives remain in readable text and interactive week goals. Banked
+  tactical/visualisation instructions and their progressions retain their existing owners.
+- Stage 1 draft parity explicitly excludes the finished-programme contract;
+  finalization still applies strict reconciliation and validation by default.
+- Closed, fully priced membership is stable at its approved date and phase.
+  Explicit changed-role callbacks and stale-date/phase checks still recompose.
+- Goal evidence cannot use an old preferred support name to credit a different
+  selected conditioning exercise. Instruction-only support is checked against its
+  own rendered name and prescribed duration, rather than a nonexistent bank slot.
+- Interactive conversion now extracts compact sets/reps, timed holds, carries,
+  rounds, work/rest and RPE into numeric fields while retaining the original
+  execution wording. Attaching actual S&C clears an empty calendar's rest marker.
+  The fallback reads the actual athlete snapshot and preserves sport, equipment
+  and timezone, instead of defaulting real boxing plans to generic metadata.
+
+The production regression now checks the same programme through reconstructed
+cards, stored-card resolution and the provider conversion/finalizer path. It
+verifies every selected assignment is represented, all dates/weekdays/phases,
+the four required hard-sparring appointments, numeric bag/strength/sled/hold/carry
+doses, phase goals and execution cues. These are recorded-response tests without
+paid model calls. Existing dose and safety gates remain active.
+
+Negative provider/card replays found and now cover two additional defects: a
+converter could replace the bag's 60-second rest with 20 seconds, and role-level
+coverage could pass a strength card after its sled exercise disappeared.
+Structured faithfulness now rejects changed numeric doses, and existing planner
+coverage checks require every selected source exercise. The persistence/API
+resolver regression proves that either a faithful stored card or the existing
+deterministic fallback reaches the athlete with the original 60-second recovery
+and all three sled exposures. Failure visibility and publication policy remain
+unchanged. Omission-only advisory handling is retained; changed values are
+distinct from an absent field that the source-backed renderer can recover.
+
+Follow-up local results: the three-module parity/goal/membership recheck passes
+196 tests with two failures also present on merged #2875. Structured conversion,
+faithfulness and salvage checks pass 225 tests; focused render/dose/recovery
+checks pass 174; phase/late-primer checks pass 211; card/closure checks pass 95.
+These groups overlap and are not a claimed unique-test total. The three negative
+and positive provider-card persistence cases pass. Ruff and import compilation
+pass. Full CI must be rerun on the follow-up commit.
+
+Test expectation changes have concrete evidence: range doses resolve inside the
+original bounds, static holds and push presses retain their actual intent, and
+unplaced guidance is not rendered as an appointment. Instruction-only inserts
+retain their original coaching copy plus the already prescribed duration. The
+three-session novice scenario now has no calendar collision after surplus roles
+are removed; it checks all surviving doses against the shared legality policy,
+frequency and goal coverage rather than forcing an unnecessary relocation.
+
+Remaining historical checks need separate review: seven reviewed-goal fixtures
+pin the entire `strength.py` hash, and five frozen calendar fixtures expect the
+old overlapping budget/placement outcomes. The seven reviewed exercise archetypes
+and their recorded phase doses were independently checked and remain identical;
+only the whole-module hash changed. Calendar fixture contacts are unchanged; the
+observed changes retain allowed goal/recovery appointments within the requested
+budget. These snapshots are preserved for review, not silently rewritten to make
+CI green. Updated CI and regression results will be recorded before merge advice.

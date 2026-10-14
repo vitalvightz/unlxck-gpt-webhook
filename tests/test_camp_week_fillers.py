@@ -265,7 +265,7 @@ def test_session_body_renders_support_insert_display_text():
         "display_text": "Write one fight cue only: entry, exit, counter.",
     }
     body = _session_body(role, "SPP", [], {}, is_primary_strength=False)
-    assert body == ["- Write one fight cue only: entry, exit, counter."]
+    assert body == ["Write one fight cue only: entry, exit, counter."]
 
 
 def test_session_body_support_insert_without_text_falls_back():

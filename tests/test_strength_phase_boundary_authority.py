@@ -17,7 +17,7 @@ from fightcamp.planner_context import planner_athlete_model_context
 from fightcamp.session_composition import compose_normal_strength_assignments
 
 # TAPER 6 + SPP 14 + GPP 7, counted back from the fight:
-#   D-0..D-5 TAPER, D-6..D-19 SPP, D-20+ GPP.
+#   D-1..D-6 TAPER, D-7..D-20 SPP, D-21+ GPP.
 ATHLETE_MODEL = {"phase_weeks": {"days": {"TAPER": 6, "SPP": 14, "GPP": 7}}}
 
 GPP_ONLY = "Single-Leg Romanian Deadlift Hold"
@@ -88,7 +88,7 @@ POOLS = {
 
 def test_week_straddling_a_phase_boundary_doses_each_day_from_its_own_phase():
     gpp_role = _role("monday", 21)   # canonically GPP
-    spp_role = _role("tuesday", 19)  # canonically SPP, inside a GPP-labelled week
+    spp_role = _role("tuesday", 20)  # canonically SPP, inside a GPP-labelled week
     _compose("GPP", [gpp_role, spp_role], POOLS)
 
     assert _names(gpp_role) == [GPP_ONLY]
@@ -96,8 +96,8 @@ def test_week_straddling_a_phase_boundary_doses_each_day_from_its_own_phase():
     assert GPP_ONLY not in _names(spp_role)
 
 
-def test_d19_role_records_the_spp_phase_on_its_assignment():
-    spp_role = _role("tuesday", 19)
+def test_d20_role_records_the_spp_phase_on_its_assignment():
+    spp_role = _role("tuesday", 20)
     _compose("GPP", [spp_role], POOLS)
     assignment = spp_role["selected_exercise_assignments"][0]
     assert assignment["source_phase"] == "SPP", assignment
@@ -119,11 +119,11 @@ def test_weeks_wholly_inside_one_phase_are_unchanged(week_phase, d_day, expected
 def test_resolved_phase_with_no_pool_fails_closed_instead_of_borrowing():
     """No cross-phase substitution: that is how the bug happened in the first place.
 
-    D-19 resolves to SPP. If no SPP pool exists, falling back to the GPP pool
+    D-20 resolves to SPP. If no SPP pool exists, falling back to the GPP pool
     would hand this SPP day a GPP-only exercise again, so composition yields no
     candidates instead -- the same contract as ``phase_scoped_candidate_pools``.
     """
-    role = _role("tuesday", 19)
+    role = _role("tuesday", 20)
     _compose("GPP", [role], {"GPP": {"strength_slots": [_slot(GPP_ONLY, 1)]}})
     assert _names(role) == []
     assert GPP_ONLY not in _names(role)
@@ -160,7 +160,7 @@ def test_d_day_outside_the_camp_allocation_falls_back_to_the_week_label():
 
 
 def test_late_fight_owned_roles_are_still_skipped_entirely():
-    role = _role("tuesday", 19)
+    role = _role("tuesday", 20)
     role["late_fight_tail_owned"] = True
     _compose("GPP", [role], POOLS)
     assert "selected_exercise_assignments" not in role

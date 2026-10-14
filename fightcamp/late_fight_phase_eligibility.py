@@ -49,9 +49,13 @@ def _stage1_phase_for_offset(athlete_model: dict[str, Any], offset: int) -> str:
     if not any(normalized_days.values()):
         return ""
 
-    # The calendar allocation includes fight day (D-0). A 15-day taper
-    # therefore owns D-14..D-0, with D-15 still in the preceding phase.
-    remaining = int(offset) + 1
+    # Normal calendars start tomorrow and include D-0 in their allocation.
+    # Direct short-camp timelines include today; their phase counts describe
+    # countdown intervals. Keep that existing contract (and legacy records
+    # without a horizon) instead of dropping their first primer as out of range.
+    horizon = athlete_model.get("days_until_fight")
+    inclusive = isinstance(horizon, (int, float)) and horizon > 13
+    remaining = int(offset) + 1 if inclusive else max(1, int(offset))
     for phase in ("TAPER", "SPP", "GPP"):
         days = normalized_days[phase]
         if days <= 0:

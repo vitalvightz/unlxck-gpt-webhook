@@ -52,6 +52,7 @@ COUNTDOWN = "COUNTDOWN"
 INTERNAL = "INTERNAL"
 LOCKED_CONTENT = "LOCKED_CONTENT"
 PRESCRIPTION = "PRESCRIPTION"
+PRESCRIPTION_CHANGED = "PRESCRIPTION_CHANGED"
 LOCKED_TACTICAL_WATCH_MISSING = "locked_tactical_watch_missing_from_stage2"
 
 # ``block_type`` values that name a specific, app-owned exercise we can hold to
@@ -154,6 +155,8 @@ def _explicit_prescription_violations(plan: dict[str, Any], source: str) -> list
     rendering recovery while exposing the omission in diagnostics.
     """
     violations: list[str] = []
+    from .structured_plan_deterministic_fallback import _source_block
+    source_days = _source_day_section_lines(source)
     for week in plan.get("weeks") or []:
         if not isinstance(week, dict):
             continue
@@ -172,6 +175,19 @@ def _explicit_prescription_violations(plan: dict[str, Any], source: str) -> list
                     segment = _source_block_segment(source, name)
                     if not segment:
                         continue
+                    day_lines = source_days.get(_dday_num(day.get("countdown_label")), [])
+                    expected = _source_block(day_lines, name) if day_lines else None
+                    if expected:
+                        for key in ("sets", "reps", "rounds", "duration", "work", "rest", "distance", "effort", "load"):
+                            if key in expected and key in block and block[key] is not None:
+                                if _prescription_value(expected[key]) != _prescription_value(block[key]):
+                                    violations.append(f"{PRESCRIPTION_CHANGED}: {name!r} changed source {key}")
+                        tempo = block.get("tempo")
+                        if isinstance(tempo, dict):
+                            if "max speed" in segment.lower() and str(tempo.get("concentric") or "").lower() not in {"x", "0", "fast", "explosive"}:
+                                violations.append(f"{PRESCRIPTION_CHANGED}: {name!r} replaced explosive execution with slow tempo")
+                            if expected.get("duration") and re.search(r"\bholds?\b", segment, re.I):
+                                violations.append(f"{PRESCRIPTION_CHANGED}: {name!r} added movement tempo to a hold")
                     checks = (
                         (_SOURCE_REST_RE.search(segment), bool(block.get("rest")), "rest"),
                         (_SOURCE_EFFORT_RE.search(segment), bool(block.get("effort")), "effort"),
@@ -183,6 +199,25 @@ def _explicit_prescription_violations(plan: dict[str, Any], source: str) -> list
                                 f"{PRESCRIPTION}: {name!r} dropped explicit source {field_name}"
                             )
     return violations
+
+
+def _prescription_value(value: Any) -> Any:
+    if isinstance(value, dict):
+        if "method" in value:
+            return (str(value.get("method") or "").upper(), _prescription_value(value.get("value")))
+        number = value.get("value")
+        unit = str(value.get("unit") or "").lower()
+        if isinstance(number, (int, float)):
+            if unit in {"s", "sec", "seconds"}:
+                return ("time", round(float(number), 6))
+            if unit in {"min", "minutes"}:
+                return ("time", round(float(number) * 60, 6))
+            if unit in {"m", "meters", "metres"}:
+                return ("distance", float(number))
+        return value
+    if isinstance(value, (int, float)) or re.fullmatch(r"\d+(?:\.\d+)?", str(value)):
+        return float(value)
+    return str(value)
 
 
 def _day_header_dday(line: str) -> int | None:

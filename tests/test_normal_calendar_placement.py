@@ -189,7 +189,7 @@ def test_rendering_places_dayless_role_only_after_upstream_completion() -> None:
         planning_brief=brief, blocks=_render_blocks()
     )
     # Renderer alone: the dayless role stays dayless (label only, no weekday heading).
-    assert "### Aerobic support" in rendered_without_placement
+    assert "### Aerobic support" not in rendered_without_placement
     assert "### Monday" not in rendered_without_placement
 
     placed = _render_brief_with_one_dayless_role()
@@ -198,4 +198,4 @@ def test_rendering_places_dayless_role_only_after_upstream_completion() -> None:
         planning_brief=placed, blocks=_render_blocks()
     )
     # After the placement owner assigns the free training day, the renderer reads it.
-    assert "### Monday (D-56) — Aerobic support" in rendered_after_placement
+    assert "### D-56 (Monday) — Aerobic support" in rendered_after_placement

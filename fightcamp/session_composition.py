@@ -1486,7 +1486,18 @@ def compose_normal_strength_assignments(
                                and r["slot"] not in owned_slots)
             role_key = str(role.get("role_key") or "").strip()
             base_cap, effective_cap = _effective_role_cap(role_key, pressure)
-            if only_roles is not None and id(role) not in only_roles:
+            prior_policy = role.get("strength_composition_policy") or {}
+            priced_names = {p.get("name") for p in role.get("effective_strength_prescriptions") or []
+                            if p.get("effective_prescription")}
+            members = role.get("selected_exercise_assignments") or []
+            closed_current = (only_roles is None and bool(members)
+                and prior_policy.get("composed_for_d_day") == role_d_day(week, role)
+                and all(m.get("name") in priced_names and m.get("source_phase") == phase for m in members))
+            if closed_current or (only_roles is not None and id(role) not in only_roles):
+                # Already composed and priced for this calendar date is closed
+                # work, not another chance to pick a different session. Movers
+                # and changed-neighbour callbacks explicitly target only_roles;
+                # stale dates/phases still recompose through the same owner.
                 held = {
                     str(item.get("name") or "")
                     for item in role.get("selected_exercise_assignments") or []

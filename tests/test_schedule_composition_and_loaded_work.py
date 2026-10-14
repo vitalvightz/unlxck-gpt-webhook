@@ -265,19 +265,26 @@ def test_the_d17_stack_is_resolved_onto_a_free_day():
     assert len(strength_days) == len(set(strength_days)) == 2
 
 
-def test_the_revalidation_move_is_recomposed():
-    """The corrected primary placement leaves the secondary needing relocation.
-    Membership and effective doses must describe its actual destination."""
+def test_revalidation_does_not_force_a_move_when_final_doses_are_legal():
+    """With the requested three-session budget, surplus secondary SPP sessions
+    are absent. Every surviving dose is legal; do not manufacture a relocation.
+    Actual mover/recomposition paths are exercised by the preceding tests.
+    """
+    from fightcamp.calendar_context import CalendarLegalityView, build_events, week_scope
+    from fightcamp.physical_session_frequency import appointment_budget_exceeded
     brief = _plan("boxer56_novice_revalidation_move")
     actions = (brief["weekly_role_map"].get("realised_load_revalidation") or {}).get("actions") or []
-    moves = [a for a in actions if a["action"] == "relocated" and a["role_key"] == "secondary_strength_day"]
-    assert moves
-    for move in moves:
-        role = next(r for w in brief["weekly_role_map"]["weeks"] for r in _normal_strength(w)
-                    if r["role_key"] == move["role_key"] and role_d_day(w, r) == move["to_d_day"])
-        assert role["strength_composition_policy"]["composed_for_d_day"] == move["to_d_day"]
-        assert role.get("effective_strength_prescriptions")
-    assert not brief["weekly_role_map"]["realised_load_revalidation"]["residual_conflicts"]
+    assert actions == []
+    assert not appointment_budget_exceeded(brief["weekly_role_map"], 3)
+    assert all(g["satisfied"] for g in brief["goal_preservation"])
+    for index, week in enumerate(brief["weekly_role_map"]["weeks"]):
+        for role in _normal_strength(week):
+            day = role_d_day(week, role)
+            view = CalendarLegalityView(events=tuple(build_events(brief["weekly_role_map"], exclude_role=role)),
+                                        scope=week_scope(week, index))
+            assert view.decision_for_role(role, day).directive is PlacementDirective.ALLOW
+            assert role["strength_composition_policy"]["composed_for_d_day"] == day
+            assert role.get("effective_strength_prescriptions")
 
 
 def test_strength_no_longer_lands_on_the_glycolytic_day_week_after_week():
