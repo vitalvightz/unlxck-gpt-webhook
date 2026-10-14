@@ -25,8 +25,11 @@ placers run unchanged and these roles never occupy a physical-session slot
 """
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from typing import Any, Callable, Iterable
+
+from .physical_session_frequency import is_physical_session_role
 
 VISUALISE = "visualise"
 ANALYSE = "analyse"
@@ -156,7 +159,6 @@ class _Entry:
     offset: int
     bucket: Any
     category: str
-    fixed: bool = False
 
 
 def _visualise_rank(entry: _Entry) -> tuple[int, int]:
@@ -227,14 +229,26 @@ def _pick_analyse(
 
 def _clamp_duration(role: dict[str, Any], maximum: int) -> None:
     prescribed = role.get("prescribed_duration_min")
-    if isinstance(prescribed, int) and prescribed > maximum:
+    if isinstance(prescribed, (int, float)) and prescribed > maximum:
         role["prescribed_duration_min"] = maximum
-        nested = role.get("fight_visualization")
-        if isinstance(nested, dict):
-            nested["prescribed_duration_min"] = maximum
     duration = role.get("duration_min")
-    if isinstance(duration, list) and duration and all(isinstance(v, int) for v in duration):
+    if isinstance(duration, (list, tuple)) and duration:
         role["duration_min"] = [min(value, maximum) for value in duration]
+    elif isinstance(duration, (int, float)):
+        role["duration_min"] = min(duration, maximum)
+    nested = role.get("fight_visualization")
+    if isinstance(nested, dict):
+        _clamp_duration(nested, maximum)
+    # Display text is consumed by both the readable plan and deterministic card.
+    # Change only minute doses; authored instructions and selected keys survive.
+    display = role.get("display_text")
+    if isinstance(display, str):
+        role["display_text"] = re.sub(
+            r"\b(\d+)(?:[-–](\d+))?\s*(min(?:ute)?s?)\b",
+            lambda m: f"{min(int(m[1]), maximum)}"
+            + (f"–{min(int(m[2]), maximum)}" if m[2] else "") + f" {m[3]}",
+            display,
+        )
 
 
 def _stamp(role: dict[str, Any], category: str, policy: MentalTrainingPolicy) -> None:
@@ -256,7 +270,6 @@ def govern_mental_roles(
     bucket_of: Callable[[dict[str, Any], int], Any],
     contact_offsets: Iterable[int] = (),
     relocate: Callable[[dict[str, Any], int], None] | None = None,
-    is_fixed: Callable[[dict[str, Any]], bool] | None = None,
 ) -> set[int]:
     """Decide which proposed mental tasks survive. Returns ``id()`` of removals.
 
@@ -264,14 +277,12 @@ def govern_mental_roles(
     training. ``bucket_of`` groups offsets into the calendar weeks the athlete
     sees. ``relocate``, when given, moves a kept reflection onto a contact day of
     the same week (a reflection belongs after the sparring it reviews); without
-    it, a reflection off a contact day is dropped. ``is_fixed`` marks roles an
-    upstream owner already governed (the finished late-fight tail): they are
-    always kept and count toward every allowance and spacing rule.
+    it, a reflection off a contact day is dropped. Every pathway, including the
+    late-fight tail, is governed again against the final physical calendar.
     """
     policy = mental_training_policy(athlete_model)
     contacts = {int(offset) for offset in contact_offsets if int(offset) > 0}
     roles = [role for role in roles if isinstance(role, dict)]
-    fixed_check = is_fixed or (lambda _role: False)
 
     # Days that hold real training. Mental work attaches to these; it never
     # turns an otherwise empty day into a "session" day.
@@ -283,36 +294,35 @@ def govern_mental_roles(
             continue
         category = mental_category(role)
         if category is None:
-            training_offsets.add(int(offset))
+            if is_physical_session_role(role):
+                training_offsets.add(int(offset))
             continue
         entries.append(
-            _Entry(role, int(offset), bucket_of(role, int(offset)), category, bool(fixed_check(role)))
+            _Entry(role, int(offset), bucket_of(role, int(offset)), category)
         )
 
-    keep: list[_Entry] = [entry for entry in entries if entry.fixed]
-    free = [entry for entry in entries if not entry.fixed]
+    keep: list[_Entry] = []
     countdown_days = set(policy.countdown_visualization_days)
 
     def is_protocol(entry: _Entry) -> bool:
         return is_countdown_visualization(entry.role) and entry.offset in countdown_days
 
-    # Visualise. Fight week: the countdown protocol only, on its policy days.
-    keep.extend(
-        entry
-        for entry in free
-        if entry.category == VISUALISE
-        and entry.offset <= FIGHT_WEEK_LAST_OFFSET
-        and is_protocol(entry)
-    )
+    # Fight week has at most one brief familiar rehearsal (two when explicitly
+    # prioritised), attached to physical training. Countdown days never create
+    # a training appointment on an otherwise empty day.
+    fight_week = [entry for entry in entries
+                  if entry.category == VISUALISE
+                  and 0 <= entry.offset <= FIGHT_WEEK_LAST_OFFSET
+                  and entry.offset in training_offsets and is_protocol(entry)]
+    keep.extend(_spread_pick(fight_week, policy.visualisations_per_week))
     by_bucket: dict[Any, list[_Entry]] = {}
     for entry in entries:
         if entry.category == VISUALISE and entry.offset > FIGHT_WEEK_LAST_OFFSET:
             by_bucket.setdefault(entry.bucket, []).append(entry)
     for bucket_entries in by_bucket.values():
-        # The D-7 countdown rehearsal is protocol: always kept, and it uses
-        # that week's allowance, as do already-governed fixed sessions.
-        held = [entry for entry in bucket_entries if entry.fixed or is_protocol(entry)]
-        keep.extend(entry for entry in held if not entry.fixed)
+        # D-7 uses the same weekly allowance as camp visualisation.
+        held = [entry for entry in bucket_entries if is_protocol(entry) and entry.offset in training_offsets]
+        keep.extend(held)
         candidates = [
             entry
             for entry in bucket_entries
@@ -323,15 +333,14 @@ def govern_mental_roles(
 
     # Analyse: never in fight week, never on a day with no real training, and
     # one assignment every ``analyse_spacing_days``.
-    fixed_analyse = [entry.offset for entry in entries if entry.fixed and entry.category == ANALYSE]
     analyse = [
         entry
-        for entry in free
+        for entry in entries
         if entry.category == ANALYSE
         and entry.offset > FIGHT_WEEK_LAST_OFFSET
         and entry.offset in training_offsets
     ]
-    keep.extend(_pick_analyse(analyse, policy.analyse_spacing_days, contacts, fixed_analyse))
+    keep.extend(_pick_analyse(analyse, policy.analyse_spacing_days, contacts))
 
     # Reflect: attached to sparring, at most once a week, never in fight week.
     reflect_by_bucket: dict[Any, list[_Entry]] = {}
@@ -339,7 +348,7 @@ def govern_mental_roles(
         if entry.category == REFLECT and entry.offset > FIGHT_WEEK_LAST_OFFSET:
             reflect_by_bucket.setdefault(entry.bucket, []).append(entry)
     for bucket, bucket_entries in reflect_by_bucket.items():
-        room = policy.reflections_per_week - sum(1 for entry in bucket_entries if entry.fixed)
+        room = policy.reflections_per_week
         bucket_contacts = [
             offset
             for offset in contacts
@@ -348,7 +357,7 @@ def govern_mental_roles(
         if room <= 0 or not bucket_contacts:
             continue
         for entry in sorted(
-            (entry for entry in bucket_entries if not entry.fixed), key=lambda item: -item.offset
+            bucket_entries, key=lambda item: -item.offset
         )[:room]:
             if entry.offset not in bucket_contacts:
                 if relocate is None:
@@ -358,13 +367,11 @@ def govern_mental_roles(
                 entry.offset = target
             keep.append(entry)
 
-    # One clear mental task per day: fixed and protocol work first, then the
+    # One clear mental task per day: countdown work first, then the
     # rarer categories (a fortnightly tactical task beats a weekly rehearsal).
     precedence = {ANALYSE: 1, REFLECT: 2, VISUALISE: 3}
 
     def day_rank(entry: _Entry) -> tuple[int, int, int]:
-        if entry.fixed:
-            return (0, 0, 0)
         if is_countdown_visualization(entry.role):
             return (0, 1, 0)
         return (precedence[entry.category], _visualise_rank(entry)[0], 0)
@@ -376,13 +383,14 @@ def govern_mental_roles(
     for day_entries in by_day.values():
         ranked = sorted(day_entries, key=day_rank)
         final.append(ranked[0])
-        # Fixed roles belong to another owner and are never removed here.
-        final.extend(entry for entry in ranked[1:] if entry.fixed)
 
     kept_ids = {id(entry.role) for entry in final}
     for entry in final:
-        if not entry.fixed:
-            _stamp(entry.role, entry.category, policy)
+        _stamp(entry.role, entry.category, policy)
+        if entry.category == VISUALISE and entry.offset <= FIGHT_WEEK_LAST_OFFSET:
+            _clamp_duration(entry.role, 3)
+        elif entry.category == REFLECT:
+            _clamp_duration(entry.role, REFLECTION_DURATION_MIN)
     return {id(entry.role) for entry in entries if id(entry.role) not in kept_ids}
 
 

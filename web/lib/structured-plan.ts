@@ -702,6 +702,17 @@ export function isZeroLoadSupportSession(
   return ZERO_LOAD_CONTENT_RE.test(blockNames);
 }
 
+/** Only the five established mental identities receive the compact treatment.
+ * Physical sessions and passive breathing/sleep support keep their own UI. */
+export function mentalSessionCategory(session: StructuredSession): "Visualise" | "Analyse" | "Reflect" | null {
+  if (!isZeroLoadSupportSession(session)) return null;
+  const identity = `${session.session_id ?? ""} ${session.title ?? ""}`;
+  if (/fight[_ -]visuali[sz]|neural[_ -]visuali[sz]/i.test(identity)) return "Visualise";
+  if (/tactical[_ -](?:watch|focus|cue[_ -]card)/i.test(identity)) return "Analyse";
+  if (/self[_ -]?review/i.test(identity)) return "Reflect";
+  return null;
+}
+
 /** Sessions on this day that count toward physical training frequency. */
 export function getPhysicalSessions(
   day: StructuredDay | null | undefined,

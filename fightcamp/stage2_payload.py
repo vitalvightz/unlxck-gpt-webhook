@@ -2331,6 +2331,10 @@ def _build_planning_brief(
     )
     enforce_total_session_budget(weekly_role_map, athlete_model, candidate_pools)
     _resolve_strength_doses(weekly_role_map)
+    # Physical placement and budgets are final: mental support must still be
+    # attached to a surviving appointment, including across the tail splice.
+    from .camp_week_fillers_impl import govern_weekly_mental_training
+    govern_weekly_mental_training(weekly_role_map, athlete_model)
     weekly_role_map = stamp_weekly_role_map_labels(weekly_role_map)
     return {
         "schema_version": "planning_brief.v1",

@@ -70,6 +70,10 @@ SCENARIOS = {
         fatigue_level="high",
         injuries="right knee patellar tendon pain, worse on jumping",
     ),
+    "kickboxing": lambda: _request(athlete={"technical_style": ["kickboxing"]}, fight_date=_days_out(49)),
+    "muay_thai": lambda: _request(athlete={"technical_style": ["muay_thai"]}, fight_date=_days_out(49)),
+    "mma": lambda: _request(athlete={"technical_style": ["mma"]}, fight_date=_days_out(49)),
+    "mental_priority": lambda: _request(key_goals=["mental preparation"], fight_date=_days_out(49)),
     "short_camp": lambda: _request(fight_date=_days_out(18)),
     "fight_week": lambda: _request(fight_date=_days_out(6)),
 }
@@ -262,3 +266,38 @@ def test_converter_dropping_a_selected_sled_exercise_is_rejected(boxer_card_and_
 
     assert outcome.structured_plan is None
     assert any("Sled Pull Forward (Harness)" in error and "missing" in error for error in outcome.errors)
+
+
+def test_final_mental_calendar_is_compact_attached_and_within_frequency(replay):
+    from collections import Counter
+    from fightcamp.mental_training_policy import mental_category, mental_training_policy, calendar_week_bucket
+    from fightcamp.physical_session_frequency import is_physical_session_role
+
+    name, brief, card = replay
+    model = brief["athlete_snapshot"]
+    policy = mental_training_policy(model)
+    scheduled = list(_scheduled_roles(brief))
+    mental = [(d, r) for d, r in scheduled if mental_category(r)]
+    physical_days = {d for d, r in scheduled if is_physical_session_role(r)}
+    assert all(d in physical_days for d, _ in mental), name
+    assert all(n == 1 for n in Counter(d for d, _ in mental).values()), name
+    fight_date = dt.date.fromisoformat(str(model["fight_date"])[:10]) if model.get("fight_date") else None
+    weekday = fight_date.weekday() if fight_date else None
+    visual = [(d, r) for d, r in mental if mental_category(r) == "visualise"]
+    assert all(n <= policy.visualisations_per_week for n in Counter(
+        calendar_week_bucket(d, weekday) for d, _ in visual).values()), name
+    analyses = sorted(d for d, r in mental if mental_category(r) == "analyse")
+    assert all(b-a >= policy.analyse_spacing_days for a, b in zip(analyses, analyses[1:])), name
+    contacts = {d for d, r in scheduled if r.get("category") == "sparring" or r.get("role_key") == "hard_sparring_day"}
+    reflections = [d for d, r in mental if mental_category(r) == "reflect"]
+    assert set(reflections) <= contacts, name
+    assert all(n <= 1 for n in Counter(calendar_week_bucket(d, weekday) for d in reflections).values()), name
+    for d, r in mental:
+        if d <= 6:
+            assert mental_category(r) == "visualise", name
+            assert r.get("prescribed_duration_min", 0) <= 3, name
+    assert sum(d <= 6 for d, _ in mental) <= policy.visualisations_per_week, name
+    # The served deterministic card cannot restore old mental-only appointments.
+    days = _card_days(card)
+    for d, r in mental:
+        assert days[d].get("sessions"), (name, d, r["role_key"])

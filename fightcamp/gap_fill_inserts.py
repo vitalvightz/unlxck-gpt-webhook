@@ -2012,7 +2012,9 @@ def apply_gap_fill_inserts(
     if days_until_fight is None:
         # Nothing anchors a countdown, so neither the protocol nor the gap fill
         # has a day to place anything on.
-        return ordered
+        return _finalize_sequence(govern_sequence_mental_training(
+            ordered, athlete_model, countdown_map={},
+        ))
 
     creation_weekday = _resolve_plan_creation_weekday(days_until_fight, athlete_model)
     countdown_map = _countdown_weekday_map(creation_weekday, days_until_fight)
@@ -2033,7 +2035,9 @@ def apply_gap_fill_inserts(
     # Now the ordinary gap fill may bail out: it needs real sessions with real
     # positive offsets to find gaps between.
     if not ordered or not offsets:
-        return _finalize_sequence(ordered + mandatory_inserts)
+        return _finalize_sequence(govern_sequence_mental_training(
+            ordered + mandatory_inserts, athlete_model, countdown_map=countdown_map,
+        ))
 
     training_days = clean_list(athlete_model.get("training_days", []))
     # Resolved contact truth (hard vs technical) is OWNED by the late-fight

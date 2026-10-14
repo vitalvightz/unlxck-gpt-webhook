@@ -1201,9 +1201,6 @@ def govern_weekly_mental_training(
         bucket_of=bucket_of,
         contact_offsets=contact_offsets,
         relocate=relocate,
-        # The finished late-fight tail governed its own mental work on the same
-        # policy; it is kept as-is and counts toward spacing across D-14.
-        is_fixed=lambda role: bool(role.get("late_fight_tail_owned")),
     )
     if not removed:
         return

@@ -915,7 +915,16 @@ def _session(
             if isinstance(assignment, dict)
         ]
         objective = _source_session_why(source_lines, [n for n in names if n]) or objective
+    from fightcamp.mental_training_policy import mental_category
+    duration = role.get("prescribed_duration_min") or role.get("duration_min")
+    if isinstance(duration, (list, tuple)):
+        duration = duration[-1] if duration else None
+    mental_duration = (
+        {"planned_duration": {"value": duration, "unit": "minutes"}}
+        if mental_category(role) and isinstance(duration, (int, float)) else {}
+    )
     return {
+        **mental_duration,
         "session_id": f"deterministic-{d_day}-{role_key}-{suffix}",
         "session_type": _session_type(role),
         "title": title or "Session",

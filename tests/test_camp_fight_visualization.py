@@ -1,4 +1,4 @@
-"""Optional camp Fight Visualisation: D-42 -> D-8, up to three a week."""
+"""Optional camp Fight Visualisation: D-42 -> D-8, once weekly by default."""
 from __future__ import annotations
 
 from api.structured_plan_locked_merge import merge_locked_structured_content
@@ -51,7 +51,7 @@ def _camp(sequence):
 
 
 def test_day_tiers_prefer_tactical_focus_then_low_load_and_skip_contact_and_rest():
-    assert camp_visualization_day_tier([_role(10, "tactical_watch")]) == 0
+    assert camp_visualization_day_tier([_role(10, "tactical_watch")]) is None
     assert camp_visualization_day_tier([_support(10)]) == 1
     assert camp_visualization_day_tier([_role(10, "primary_strength_day", category="strength")]) == 2
     assert camp_visualization_day_tier([_role(10, "hard_sparring_day")]) is None
@@ -62,9 +62,9 @@ def test_day_tiers_prefer_tactical_focus_then_low_load_and_skip_contact_and_rest
 def test_three_days_are_spread_out_and_ranked():
     # Tactical Focus on 12, low load on 11 and 9, strength on 10 and 8.
     # 12 and 9 are spaced; 11 comes in last only because nothing spaced is left.
-    assert choose_camp_visualization_days({12: 0, 11: 1, 9: 1, 10: 2, 8: 2}) == [12, 11, 9]
-    assert choose_camp_visualization_days({14: 1, 13: 1, 11: 2, 9: 2}) == [14, 11, 9]
-    assert choose_camp_visualization_days({13: 2, 12: 2}) == [13, 12]
+    assert choose_camp_visualization_days({12: 0, 11: 1, 9: 1, 10: 2, 8: 2}) == [12]
+    assert choose_camp_visualization_days({14: 1, 13: 1, 11: 2, 9: 2}) == [14]
+    assert choose_camp_visualization_days({13: 2, 12: 2}) == [13]
     assert choose_camp_visualization_days({}) == []
 
 
@@ -81,7 +81,7 @@ def test_late_path_offers_camp_sessions_before_the_countdown():
     )
     camp = _camp(sequence)
     assert camp, "expected optional camp sessions on D-13..D-8"
-    assert len(camp) <= 3
+    assert len(camp) <= 1
     assert all(8 <= offset <= 13 for offset in camp)
     # Never on a hard-contact day.
     assert not {12, 9} & set(camp)
@@ -98,7 +98,7 @@ def test_late_path_offers_camp_sessions_before_the_countdown():
         for role in sequence
         if role.get("role_key") == "fight_visualization" and role.get("mandatory_fight_visualization")
     }
-    assert countdown == {7, 5, 3, 1, 0}
+    assert countdown == set()  # No physical appointments on countdown days.
 
 
 def test_camp_sessions_spend_no_insert_budget():
@@ -145,17 +145,17 @@ def test_camp_week_pairs_with_tactical_focus_and_low_load_days():
             "sunday": (21, []),
         }
     )
-    assert _ensure_camp_visualizations(week, _athlete(days_until_fight=30)) == 3
+    assert _ensure_camp_visualizations(week, _athlete(days_until_fight=30)) == 1
     placed = {
         role["scheduled_day_hint"]: role
         for role in week["session_roles"]
         if role.get("optional_fight_visualization")
     }
-    assert "Wednesday" in placed and "Friday" in placed
+    assert "Wednesday" not in placed and "Friday" in placed
     assert not {"Tuesday", "Saturday", "Sunday"} & set(placed)
     # Each week runs picture -> read -> reset.
     names = [role["fight_visualization"]["name"] for role in sorted(placed.values(), key=lambda r: -r["countdown_offset"])]
-    assert len(set(names)) == 3
+    assert len(set(names)) == 1
 
 
 def test_camp_week_stays_inside_the_window():
@@ -176,7 +176,7 @@ def test_card_marks_the_camp_session_optional():
     session = result.plan["weeks"][0]["days"][0]["sessions"][0]
     assert session["title"] == "Fight Visualisation"
     assert session["objective"].startswith("Optional. ")
-    assert session["blocks"][0]["duration"] == {"value": 12, "unit": "minutes"}
+    assert session["blocks"][0]["duration"] == {"value": CAMP_VISUALIZATION_DURATION_MIN, "unit": "minutes"}
 
 
 def test_compressed_week_gets_no_camp_session_and_none_is_a_discretionary_filler():
