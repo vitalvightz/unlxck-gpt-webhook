@@ -60,20 +60,13 @@ def test_mandatory_weekly_watches_do_not_spend_the_insert_budget():
     generated = [role for role in sequence if role.get("category") == "support_insert"]
 
     assert budgeted_insert_count(generated) <= MAX_INSERTS_TOTAL_D21_TO_D0
-    for low, high in ((1, 7), (8, 14), (15, 21)):
-        segment = [
-            role
-            for role in sequence
-            if isinstance(role.get("countdown_offset"), int)
-            and low <= int(role["countdown_offset"]) <= high
-        ]
-        watches = [
-            role
-            for role in segment
-            if role.get("role_key") == "tactical_watch"
-            and role.get("mandatory_tactical_watch") is True
-        ]
-        assert len(watches) == 1
+    watches = sorted(int(role["countdown_offset"]) for role in sequence
+                     if role.get("role_key") == "tactical_watch")
+    assert all(day > 6 for day in watches)
+    assert all(b - a >= 14 for a, b in zip(watches, watches[1:]))
+    assert budgeted_insert_count([r for r in generated if r.get("role_key") == "tactical_watch"]) == 0
+    # Reducing the reading cadence must not remove the existing physical work.
+    assert {21, 15, 8, 1} <= {r["countdown_offset"] for r in sequence if r["role_key"] == "strength_touch_day"}
 
 
 def test_zero_cost_inserts_are_not_charged_to_the_allowance():

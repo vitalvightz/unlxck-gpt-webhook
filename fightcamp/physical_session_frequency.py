@@ -52,6 +52,7 @@ NON_PHYSICAL_ROLE_KEYS: frozenset[str] = frozenset(
         "tactical_cue_card",
         "self_review",
         "neural_visualization",
+        "fight_visualization",
         "mindset_reset",
         "mindset_review",
         "video_review",

@@ -7,6 +7,8 @@ import {
   compactTimeUnits,
   classifySessionlessDay,
   isZeroLoadSupportSession,
+  mentalSessionCategory,
+  mentalSessionSummary,
   normalizeForDedupe,
   cleanText,
   formatBlockLoad,
@@ -1006,6 +1008,61 @@ export function SessionCard({
       : showDayContext
         ? card?.mindset_anchor
         : undefined;
+
+  const mentalCategory = mentalSessionCategory(session);
+  if (mentalCategory) {
+    const mentalDuration = duration || formatMeasured(blocks.find((block) => block.duration)?.duration);
+    const summary = mentalSessionSummary(session) || (mentalCategory === "Reflect"
+      ? "What worked? What needs adjusting next time?"
+      : mentalCategory === "Analyse"
+        ? "Review one tactical issue from sparring or available footage. Identify one adjustment for the next session."
+        : "Rehearse one familiar fight situation and reset calmly.");
+    return (
+      <article className="sp-session sp-mental-task" data-mental-category={mentalCategory.toLowerCase()}>
+        <header className="sp-mental-head">
+          <h3 className="sp-session-title">{mentalCategory}{mentalDuration ? ` · ${compactTimeUnits(mentalDuration)}` : ""}</h3>
+          {completionInfo?.display.label ? (
+            <span className="sp-tag sp-status-tag" data-tone={completionInfo.display.tone}>
+              {completionInfo.display.label}
+            </span>
+          ) : null}
+        </header>
+        <p className="sp-session-instruction">{summary}</p>
+        <details className="sp-section-details">
+          <summary>Instructions · {title}</summary>
+          <div className="sp-section-details-body">
+            {objective && !objectiveRepeatsTitle ? (
+              <p className="sp-session-objective">
+                {blocks.length > 0 ? <span className="sp-session-why-label">Why</span> : null}
+                {objective}
+              </p>
+            ) : null}
+            <MindsetAnchorCard anchor={sessionMindset} dedupeContext={objective} />
+            <ExerciseSessionScope date={occurrenceDate ?? day?.date} session={session}>
+              {blocks.map((block, index) => (
+                <ExerciseRow
+                  key={cleanText(block.block_id) || `block-${index}`}
+                  block={block}
+                  open={openBlockIndex === index}
+                  onToggle={() => setOpenBlockIndex((current) => current === index ? null : index)}
+                  openWeekIntent={openWeekIntent}
+                  sourceCountdown={sourceCountdown}
+                />
+              ))}
+              <SessionChangesFoot session={session} />
+            </ExerciseSessionScope>
+          </div>
+        </details>
+        {completionInfo?.onLog ? (
+          <button type="button" className="secondary-button sp-log-session" onClick={completionInfo.onLog}>
+            Log this session
+          </button>
+        ) : null}
+        {warning ? <p className="sp-warning">{warning}</p> : null}
+        {weightCut ? <p className="sp-warning">{weightCut}</p> : null}
+      </article>
+    );
+  }
 
   if (layout === "section") {
     const sectionTitle = isDeclaredLightCombat

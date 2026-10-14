@@ -28,6 +28,7 @@ reads their verdict rather than re-deciding it.
 
 from __future__ import annotations
 
+import copy
 import logging
 import re
 from dataclasses import dataclass, field
@@ -915,7 +916,16 @@ def _session(
             if isinstance(assignment, dict)
         ]
         objective = _source_session_why(source_lines, [n for n in names if n]) or objective
+    from fightcamp.mental_training_policy import mental_category
+    duration = role.get("prescribed_duration_min") or role.get("duration_min")
+    if isinstance(duration, (list, tuple)):
+        duration = duration[-1] if duration else None
+    mental_duration = (
+        {"planned_duration": {"value": duration, "unit": "minutes"}}
+        if mental_category(role) and isinstance(duration, (int, float)) else {}
+    )
     return {
+        **mental_duration,
         "session_id": f"deterministic-{d_day}-{role_key}-{suffix}",
         "session_type": _session_type(role),
         "title": title or "Session",
@@ -954,6 +964,22 @@ def _build(planning_brief: Any, plan_text: str | None = None) -> dict[str, Any] 
     weeks = role_map.get("weeks")
     if not isinstance(weeks, list) or not weeks:
         return None
+    sequence = planning_brief.get("late_fight_session_sequence")
+    if isinstance(sequence, list):
+        # Direct countdowns finish composition after their weekly allocation.
+        # Use that final membership/dose while preserving the calendar spans and
+        # contact safety metadata owned by the earlier allocation.
+        role_map = copy.deepcopy(role_map)
+        weeks = role_map["weeks"]
+        for week in weeks:
+            span = week.get("countdown_span") or {}
+            start, end = span.get("start_day"), span.get("end_day")
+            if isinstance(start, int) and isinstance(end, int):
+                week["session_roles"] = [copy.deepcopy(role) for role in sequence
+                                         if (day := _dday(role)) is not None and end <= day <= start]
+            elif len(weeks) == 1:
+                week["session_roles"] = copy.deepcopy(sequence)
+        planning_brief = {**planning_brief, "weekly_role_map": role_map}
 
     # Identity is (d_day, role_key, session_index): two distinct roles on one day
     # are two sessions, and the same role is never emitted twice.

@@ -170,9 +170,8 @@ def test_custom_plans_are_not_given_generated_coaching():
 def test_representative_fallback_retains_execution_safety_at_fixed_doses(replay):
     name, brief, card = replay
     physical = blocks(card)
-    if name == "fight_week":
-        assert not physical
-        return  # This athlete has only skill/zero-load work; do not invent S&C.
+    # Direct countdown cards now retain their final selected primer too.
+    # Validate its coaching and taper safety rather than skipping fight week.
     assert physical, name
     for week, block in physical:
         if block.get("regression_options"):

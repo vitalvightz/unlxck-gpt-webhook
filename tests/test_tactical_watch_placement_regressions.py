@@ -17,7 +17,7 @@ def _athlete(days_until_fight: int) -> dict:
     }
 
 
-def test_mandatory_watch_uses_declared_day_when_week_has_no_existing_session():
+def test_watch_does_not_create_a_mental_only_day_on_an_empty_week():
     week = {
         "phase": "GPP",
         "session_roles": [],
@@ -34,10 +34,7 @@ def test_mandatory_watch_uses_declared_day_when_week_has_no_existing_session():
     apply_camp_week_fillers({"weeks": [week]}, _athlete(21))
 
     watches = [role for role in week["session_roles"] if role.get("role_key") == "tactical_watch"]
-    assert len(watches) == 1
-    assert watches[0]["scheduled_day_hint"] == "Monday"
-    assert watches[0]["mandatory_tactical_watch"] is True
-    assert watches[0]["countdown_offset"] == 21
+    assert watches == []
 
 
 def test_invalid_existing_watch_is_removed_before_valid_replacement():

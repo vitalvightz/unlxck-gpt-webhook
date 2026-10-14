@@ -68,7 +68,7 @@ def test_pressure_fighter_watch_phase_matches_real_phase_engine():
     assert _watch_phase_for_offset(athlete, 7) == "TAPER"
 
 
-def test_final_visible_fight_week_gets_mandatory_watch_after_gap_fill():
+def test_final_visible_fight_week_does_not_restore_retired_watch_after_gap_fill():
     phase_weeks = calculate_phase_weeks(
         2,
         "boxing",
@@ -78,10 +78,9 @@ def test_final_visible_fight_week_gets_mandatory_watch_after_gap_fill():
     )
     athlete = _athlete(days_until_fight=14, phase_weeks=phase_weeks)
 
-    # The incoming sequence represents only D-14..D-8. Ordinary gap filling
-    # creates visible work inside D-7..D-1; the mandatory pass must run after
-    # that so the newly represented final window cannot miss its watch.
-    sequence = apply_gap_fill_inserts([_role(14), _role(8)], athlete)
+    # Physical work in fight week survives; the old weekly watch quota must
+    # not add tactical study beside it.
+    sequence = apply_gap_fill_inserts([_role(14), _role(8), _role(3)], athlete)
 
     final_week_roles = [
         role
@@ -97,18 +96,9 @@ def test_final_visible_fight_week_gets_mandatory_watch_after_gap_fill():
         if role.get("role_key") == "tactical_watch"
         and role.get("mandatory_tactical_watch") is True
     ]
-    assert len(watches) == 1
-    watch = watches[0]
-    assert watch["tactical_watch_phase"] == "TAPER"
-    assert int(watch["countdown_offset"]) > 0
-
-    # Mandatory placement shares a day already present in the final sequence;
-    # it must not invent a standalone training day just to satisfy the rule.
-    watch_offset = int(watch["countdown_offset"])
-    assert any(
-        role is not watch and int(role.get("countdown_offset") or 0) == watch_offset
-        for role in sequence
-    )
+    assert watches == []  # No tactical study is required in the final week.
+    assert all(int(role.get("countdown_offset") or 0) > 6
+               for role in sequence if role.get("role_key") == "tactical_watch")
 
     keys = [
         role["tactical_watch_key"]

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from .mental_training_policy import mental_training_policy
 from .tactical_watch_library import (
     TacticalWatchBankExhausted,
     build_watch_display_text,
@@ -115,18 +116,13 @@ def _open_plan_watch_entry(watch: Any, week: int) -> dict[str, Any]:
 
 
 def build_open_plan_tactical_watches(athlete_model: dict[str, Any]) -> list[dict[str, Any]]:
-    """Select one distinct Tactical Watch per week of the renewable 4-week block.
-
-    Open plans previously carried no tactical work at all: the watch is stamped
-    by the camp-week fillers, which only run for a dated countdown. An athlete
-    with no fight date still needs the weekly zero-load tactical review, so the
-    same bank is selected here, deduplicated across the block.
-    """
+    """Select distinct bank watches at the shared default/prioritised cadence."""
     model = athlete_model if isinstance(athlete_model, dict) else {}
     style = extract_tactical_style(model)
     used_keys: set[str] = set()
     entries: list[dict[str, Any]] = []
-    for week in range(1, _OPEN_PLAN_WATCH_WEEKS + 1):
+    step = mental_training_policy(model).analyse_spacing_days // 7
+    for week in range(1, _OPEN_PLAN_WATCH_WEEKS + 1, step):
         try:
             watch = select_tactical_watch(style, _OPEN_PLAN_WATCH_PHASE, used_keys)
         except TacticalWatchBankExhausted:
@@ -150,7 +146,8 @@ def _build_open_plan_tactical_watch_spec(athlete_model: dict[str, Any]) -> dict[
     return {
         "label": _TACTICAL_WATCH_LABEL,
         "placement": "session_cards",
-        "cadence": "one per week of the 4-week development block",
+        "cadence": f"one every {mental_training_policy(athlete_model).analyse_spacing_days} days of the 4-week development block",
+        "attach_to_existing_training": True,
         "zero_physical_load": True,
         "weeks_covered": len(rotation),
         "weekly_rotation": rotation,
@@ -180,6 +177,7 @@ def build_open_ongoing_payload(*, athlete_model: dict[str, Any]) -> dict[str, An
                 "tactical_watch.weekly_rotation is the complete Tactical Watch set for this plan. Render only the entries it contains and never invent, repeat or fill a week it does not cover.",
                 "Render the first weekly_rotation entry as its own session card inside Session Cards, reproducing its display_text exactly.",
                 "Name each remaining weekly_rotation entry against its own week inside the 4-Week Development Block so the athlete can see what changes each week.",
+                "Attach each Tactical Watch to an existing physical training day in its selected week; never create a standalone mental day or fill calendar space. Maximum one mental task per day.",
                 "A Tactical Watch is zero physical load: it never replaces a training session and never counts toward weekly training frequency.",
                 "Never print Tactical Watch keys, style families, phase tokens, or sport ownership.",
             ],

@@ -35,7 +35,6 @@ export function SegmentGroup<T extends string>({
         className={columns === 2 ? "today-segment-row today-segment-row-2col" : "today-segment-row"}
         role="group"
         aria-label={label}
-        aria-invalid={invalid || undefined}
         data-invalid={invalid || undefined}
       >
         {options.map((option) => (
@@ -43,6 +42,7 @@ export function SegmentGroup<T extends string>({
             key={option.value}
             type="button"
             className={option.value === value ? "today-segment today-segment-active" : "today-segment"}
+            aria-invalid={invalid || undefined}
             aria-pressed={option.value === value}
             onClick={() => onChange(option.value)}
           >

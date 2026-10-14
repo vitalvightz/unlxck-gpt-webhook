@@ -579,7 +579,6 @@ class TestPlanningBriefBranching:
         # D-3 carries its mandatory Tactical Watch and the alactic sharpness touch
         # lands on D-2; the Fight Visualisation protocol is excluded above.
         assert [entry["role_key"] for entry in app_sequence] == [
-            "tactical_watch",
             "alactic_sharpness_day",
         ]
         assert any(entry["role_key"] == "hard_sparring_day" for entry in brief["late_fight_session_sequence"])
@@ -600,7 +599,7 @@ class TestPlanningBriefBranching:
             for entry in _without_protocol(brief["late_fight_session_sequence"])
             if _is_app_owned_visible_role(entry.get("role_key"))
         ]
-        assert [entry["role_key"] for entry in app_sequence] == ["tactical_watch"]
+        assert [entry["role_key"] for entry in app_sequence] == []
         assert any(entry["role_key"] == "hard_sparring_day" for entry in brief["late_fight_session_sequence"])
 
     def test_d7_planning_brief_uses_sharpness_week_labels(self):
@@ -713,7 +712,6 @@ class TestStage2PayloadBranching:
         sequence = _without_protocol(payload["late_fight_session_sequence"])
         assert [entry["role_key"] for entry in sequence] == [
             "fight_week_freshness_day",
-            "tactical_watch",
             "neural_primer_day",
         ]
         assert _composite_stage_keys(sequence) == ["d4_to_d2", "d1"]
@@ -729,7 +727,6 @@ class TestStage2PayloadBranching:
             for entry in _without_protocol(payload["late_fight_session_sequence"])
         ] == [
             "neural_primer_day",
-            "tactical_watch",
         ]
 
     def test_d7_plan_spec_exposes_caps_and_forbidden_blocks(self):

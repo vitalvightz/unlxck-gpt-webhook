@@ -15,7 +15,6 @@ from .coordination_support_library import (
 from .physical_occupancy_fill import fill_physical_occupancy
 from .fight_visualization_library import (
     CAMP_VISUALIZATION_FIRST_DAY,
-    CAMP_VISUALIZATIONS_PER_WEEK,
     OPTIONAL_FLAG,
     camp_visualization_role,
     choose_camp_visualization_days,
@@ -30,6 +29,7 @@ from .gap_fill_inserts import (
     filler_target_capabilities,
     select_gap_fill_insert,
 )
+from .mental_training_policy import calendar_week_bucket, govern_mental_roles, mental_training_policy
 from .normalization import WEEKDAY_ORDER, clean_list
 from .tactical_watch_library import (
     build_watch_display_text,
@@ -1005,12 +1005,14 @@ def _complete_week_physical_occupancy(
 
 
 def _ensure_camp_visualizations(week: dict[str, Any], athlete_model: dict[str, Any]) -> int:
-    """Offer up to three optional Fight Visualisations in a camp week.
+    """Offer the week's optional Fight Visualisation(s).
 
-    Only D-42..D-14: the late-fight tail owns D-13 onward and places its own.
-    Those tail sessions still count toward this calendar week's three.
-    Days are ranked by ``camp_visualization_day_tier`` (Tactical Focus day, then
-    low-load days, then other non-contact days); rest days are never used.
+    One a week by default, two when mental preparation is prioritised (see
+    ``mental_training_policy``). Only D-42..D-14: the late-fight tail owns D-13
+    onward and places its own, and those tail sessions still count toward this
+    calendar week's allowance. Days are ranked by ``camp_visualization_day_tier``
+    (low-load days, then other non-contact days); rest days and days already
+    holding a mental task are never used.
     """
     session_roles = week.get("session_roles")
     if not isinstance(session_roles, list):
@@ -1035,7 +1037,7 @@ def _ensure_camp_visualizations(week: dict[str, Any], athlete_model: dict[str, A
     added = 0
     chosen = choose_camp_visualization_days(
         candidates,
-        limit=max(0, CAMP_VISUALIZATIONS_PER_WEEK - len(existing)),
+        limit=max(0, mental_training_policy(athlete_model).visualisations_per_week - len(existing)),
         taken=tuple(existing),
     )
     for ordinal, d_day in enumerate(chosen, start=len(existing)):
@@ -1135,5 +1137,91 @@ def apply_camp_week_fillers(
         for week in weekly_role_map.get("weeks", []) or []:
             if isinstance(week, dict):
                 _complete_week_physical_occupancy(week, athlete_model, usage_ledger)
+        # Settle Tactical Focus / reflection first so the camp visualisations
+        # land on days that keep no other mental task, then govern the finished
+        # calendar: nothing placed above can outlive the shared policy.
+        govern_weekly_mental_training(weekly_role_map, athlete_model)
         _place_camp_visualizations(weekly_role_map, athlete_model)
+        govern_weekly_mental_training(weekly_role_map, athlete_model)
     return weekly_role_map
+
+
+def govern_weekly_mental_training(
+    weekly_role_map: dict[str, Any], athlete_model: dict[str, Any]
+) -> None:
+    """Apply the shared mental-training frequency policy across the whole map.
+
+    Covers the normal-camp weeks and the spliced late-fight tail together, so
+    spacing (one Tactical Focus every two weeks, say) holds across the D-14
+    boundary as well as inside each planner.
+    """
+    weeks = [week for week in weekly_role_map.get("weeks", []) or [] if isinstance(week, dict)]
+    if not weeks:
+        return
+    owner: dict[int, tuple[int, dict[str, Any]]] = {}
+    roles: list[dict[str, Any]] = []
+    offsets: dict[int, int] = {}
+    contact_offsets: set[int] = set()
+    weekday_by_offset: dict[int, tuple[int, str]] = {}
+    for ordinal, week in enumerate(weeks, start=1):
+        for d_day, weekday in _week_day_slots(week):
+            weekday_by_offset[d_day] = (ordinal, weekday)
+        contact_offsets |= weekly_role_map_legality(weekly_role_map, week, ordinal).contact_offsets()
+        for role in week.get("session_roles") or []:
+            if not isinstance(role, dict):
+                continue
+            d_day = _role_d_day(week, role)
+            if d_day is None:
+                continue
+            owner[id(role)] = (ordinal, week)
+            offsets[id(role)] = d_day
+            roles.append(role)
+
+    # Phase/progression weeks can split a Monday-based calendar week. The
+    # frequency cap belongs to the athlete's calendar, not those internal rows.
+    from datetime import date
+    try:
+        fight_weekday = date.fromisoformat(str(athlete_model.get("fight_date"))[:10]).weekday()
+    except ValueError:
+        fight_day = (weekday_by_offset.get(0) or (None, ""))[1].lower()
+        fight_weekday = {name: i for i, name in enumerate(
+            ("monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday")
+        )}.get(fight_day)
+
+    def bucket_of(role: dict[str, Any], offset: int) -> Any:
+        return calendar_week_bucket(offset, fight_weekday)
+
+    def relocate(role: dict[str, Any], offset: int) -> None:
+        day_title = str((weekday_by_offset.get(offset) or (None, ""))[1]).strip().title()
+        if day_title:
+            role["scheduled_day_hint"] = day_title
+            role["real_weekday"] = day_title
+            role["countdown_display_label"] = f"D-{offset} ({day_title})"
+        role["countdown_offset"] = offset
+        role["countdown_label"] = f"D-{offset}"
+        role["scheduled_countdown_label"] = f"D-{offset}"
+        target = weekday_by_offset.get(offset)
+        original = owner.get(id(role))
+        if target and original and target[0] != original[0]:
+            original[1]["session_roles"] = [item for item in original[1]["session_roles"] if item is not role]
+            destination = weeks[target[0] - 1]
+            destination.setdefault("session_roles", []).append(role)
+            owner[id(role)] = (target[0], destination)
+        offsets[id(role)] = offset
+
+    removed = govern_mental_roles(
+        roles,
+        athlete_model,
+        offset_of=lambda role: offsets.get(id(role)),
+        bucket_of=bucket_of,
+        contact_offsets=contact_offsets,
+        relocate=relocate,
+    )
+    if not removed:
+        return
+    for week in weeks:
+        week["session_roles"] = [
+            role
+            for role in week.get("session_roles") or []
+            if not (isinstance(role, dict) and id(role) in removed)
+        ]

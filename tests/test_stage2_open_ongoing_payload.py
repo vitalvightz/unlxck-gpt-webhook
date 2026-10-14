@@ -72,9 +72,9 @@ def test_open_plan_carries_weekly_tactical_watch_rotation():
     assert watch_spec["zero_physical_load"] is True
 
     rotation = watch_spec["weekly_rotation"]
-    assert [entry["week"] for entry in rotation] == [1, 2, 3, 4]
+    assert [entry["week"] for entry in rotation] == [1, 3]
     # One distinct watch per week of the renewable block.
-    assert len({entry["tactical_watch_key"] for entry in rotation}) == 4
+    assert len({entry["tactical_watch_key"] for entry in rotation}) == 2
     for entry in rotation:
         assert entry["zero_physical_load"] is True
         assert entry["duration_min"] > 0
@@ -146,7 +146,7 @@ def test_open_plan_tactical_watch_stops_at_bank_exhaustion(monkeypatch):
 
     rotation = spec["weekly_rotation"]
     # Short bank: fewer weeks, never a repeated or invented watch to pad to four.
-    assert [entry["week"] for entry in rotation] == [1, 2]
+    assert [entry["week"] for entry in rotation] == [1, 3]
     assert spec["weeks_covered"] == 2
     assert len({entry["tactical_watch_key"] for entry in rotation}) == 2
 
@@ -209,3 +209,9 @@ def test_open_plan_render_contract_demands_one_exercise_and_a_progress_line():
         assert "none this block" in text
     # The swap/safety split must stay explicit in the authoring prompt.
     assert 'belongs on `Easier:` or `Stop:`, never on `Progress:`' in prompt
+
+
+def test_prioritised_open_plan_uses_weekly_cadence():
+    spec = build_open_ongoing_payload(athlete_model={"mental_prep_priority": True})["open_plan_spec"]["tactical_watch"]
+    assert [entry["week"] for entry in spec["weekly_rotation"]] == [1, 2, 3, 4]
+    assert spec["attach_to_existing_training"] is True

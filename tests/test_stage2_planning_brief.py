@@ -1679,8 +1679,6 @@ def test_short_camp_weekly_role_map_only_keeps_roles_that_map_to_compressed_prio
     # tactical_cue_card so that day still reads as an intentional plan
     # (availability is permission, not obligation).
     assert roles_from_seq == [
-        "tactical_watch",
-        "tactical_cue_card",
         "fight_week_freshness_day",
         "neural_primer_day",
     ]
@@ -1689,10 +1687,7 @@ def test_short_camp_weekly_role_map_only_keeps_roles_that_map_to_compressed_prio
         for entry in brief["late_fight_session_sequence"]
         if entry["role_key"] in {"tactical_watch", "tactical_cue_card"}
     ]
-    assert [entry["category"] for entry in support_entries] == [
-        "support_insert",
-        "support_insert",
-    ]
+    assert [entry["category"] for entry in support_entries] == []
     # The active-session budget is untouched: the insert is support, not a
     # session, so the visible session roles and cap are exactly as before.
     assert brief["late_fight_plan_spec"]["session_roles"] == [
@@ -1803,7 +1798,6 @@ def test_fight_week_override_2_to_3_days_limits_to_micro_taper_roles():
         if entry["role_key"] != "fight_visualization"
     ] == [
         "fight_week_freshness_day",
-        "tactical_watch",
         "neural_primer_day",
     ]
     assert brief["late_fight_plan_spec"]["session_roles"] == [

@@ -204,10 +204,10 @@ def test_non_countdown_day_returns_nothing():
 
 def test_exact_countdown_placement():
     sequence = apply_gap_fill_inserts(
-        [_role(12, "hard_sparring_day"), _role(9, "strength_day", category="strength")],
+        [_role(12, "hard_sparring_day"), _role(9, "strength_day", category="strength"), _role(7, "technical_touch_day", category="technical"), _role(1, "technical_touch_day", category="technical")],
         _athlete(),
     )
-    assert set(_visualizations(sequence)) == {7, 5, 3, 1, 0}
+    assert set(_visualizations(sequence)) == {7, 1}
 
 
 def test_persists_on_hard_sparring_and_technical_combat_days():
@@ -219,19 +219,19 @@ def test_persists_on_hard_sparring_and_technical_combat_days():
         _athlete(),
     )
     placed = _visualizations(sequence)
-    assert set(placed) == {7, 5, 3, 1, 0}
+    assert set(placed) == {7}
     day_keys = {
         role["role_key"] for role in sequence if role["countdown_offset"] == 7
     }
     assert {"hard_sparring_day", "fight_visualization"} <= day_keys
 
 
-def test_persists_with_zero_physical_load_and_no_training_days():
+def test_no_countdown_cards_without_physical_anchors():
     sequence = apply_gap_fill_inserts(
         [_role(10, "technical_touch_day", category="technical")],
         _athlete(training_days=[]),
     )
-    assert set(_visualizations(sequence)) == {7, 5, 3, 1, 0}
+    assert set(_visualizations(sequence)) == set()
 
 
 def test_persists_on_a_crowded_day_without_displacing_existing_work():
@@ -239,7 +239,7 @@ def test_persists_on_a_crowded_day_without_displacing_existing_work():
         _role(3, "hard_sparring_day"),
         _role(3, "neural_primer_day", category="strength"),
     ]
-    sequence = apply_gap_fill_inserts(crowded, _athlete())
+    sequence = apply_gap_fill_inserts(crowded, _athlete(mental_prep_priority=True))
     day3 = [role["role_key"] for role in sequence if role["countdown_offset"] == 3]
     assert "hard_sparring_day" in day3
     assert "neural_primer_day" in day3
@@ -247,7 +247,7 @@ def test_persists_on_a_crowded_day_without_displacing_existing_work():
 
 
 def test_carries_zero_physical_load():
-    sequence = apply_gap_fill_inserts([_role(12, "hard_sparring_day")], _athlete())
+    sequence = apply_gap_fill_inserts([_role(7, "hard_sparring_day")], _athlete())
     for role in _visualizations(sequence).values():
         assert role["rpe_max"] == 1
         assert role["stress_class"] == "support"
@@ -279,14 +279,14 @@ def test_never_shares_a_day_with_neural_visualization():
         assert not {"fight_visualization", "neural_visualization"} <= keys, offset
 
 
-def test_d0_coexists_with_the_fight_day_protocol():
+def test_d0_protocol_is_preserved_without_a_standalone_mental_card():
     sequence = apply_gap_fill_inserts(
         [_role(12, "hard_sparring_day"), _role(0, "fight_day_protocol", category="fight_day")],
         _athlete(),
     )
     day0 = [role["role_key"] for role in sequence if role["countdown_offset"] == 0]
     assert "fight_day_protocol" in day0
-    assert "fight_visualization" in day0
+    assert "fight_visualization" not in day0
 
 
 def test_short_notice_camp_only_places_days_inside_the_window():
@@ -294,7 +294,7 @@ def test_short_notice_camp_only_places_days_inside_the_window():
         [_role(4, "technical_touch_day", category="technical")],
         _athlete(days_until_fight=4),
     )
-    assert set(_visualizations(sequence)) == {3, 1, 0}
+    assert set(_visualizations(sequence)) == set()
 
 
 def test_never_selected_as_an_ordinary_gap_filler():
@@ -303,7 +303,7 @@ def test_never_selected_as_an_ordinary_gap_filler():
         _athlete(days_until_fight=21),
     )
     # Only the mandatory countdown days carry it; no D-15 gap-filler copy.
-    assert set(_visualizations(sequence)) == {7, 5, 3, 1, 0}
+    assert set(_visualizations(sequence)) == set()
 
 
 # --------------------------------------------------------------------------
@@ -312,7 +312,7 @@ def test_never_selected_as_an_ordinary_gap_filler():
 
 
 def test_stage1_owns_locked_governance():
-    sequence = apply_gap_fill_inserts([_role(12, "hard_sparring_day")], _athlete())
+    sequence = apply_gap_fill_inserts([_role(7, "hard_sparring_day")], _athlete())
     role = _visualizations(sequence)[7]
     assert role["role_key"] == "fight_visualization"
     assert role["athlete_facing_label"] == "Fight Visualisation"
@@ -327,10 +327,10 @@ def test_stage1_owns_locked_governance():
 
 
 # Zero-load rehearsal: physical fatigue does not shorten it.
-@pytest.mark.parametrize("fatigue,expected_duration", [("low", 12), ("high", 12)])
+@pytest.mark.parametrize("fatigue,expected_duration", [("low", 8), ("high", 8)])
 def test_visualization_uses_one_duration_from_source_through_card(fatigue, expected_duration):
     sequence = apply_gap_fill_inserts(
-        [_role(12, "hard_sparring_day")], _athlete(fatigue=fatigue)
+        [_role(7, "hard_sparring_day")], _athlete(fatigue=fatigue)
     )
     role = _visualizations(sequence)[7]
     entry = select_fight_visualization("boxing", "pressure_fighter", 7)
@@ -721,28 +721,28 @@ def test_tactical_watch_still_selected_alongside_fight_visualization():
 # --------------------------------------------------------------------------
 
 
-def test_d0_only_plan_still_gets_its_protocol():
+def test_d0_only_plan_preserves_protocol_without_mental_session():
     # The gap fill has nothing to do here (no positive countdown offset), which
     # is precisely where an early return used to drop the mandatory D-0 card.
     sequence = apply_gap_fill_inserts(
         [_role(0, "fight_day_protocol", category="fight_day")],
         _athlete(days_until_fight=0),
     )
-    assert set(_visualizations(sequence)) == {0}
-    assert _visualizations(sequence)[0]["fight_visualization_key"]
+    assert set(_visualizations(sequence)) == set()
+    assert any(r["role_key"] == "fight_day_protocol" for r in sequence)
 
 
-def test_empty_stage1_sequence_still_gets_the_protocol():
+def test_empty_stage1_sequence_gets_no_standalone_mental_protocol():
     sequence = apply_gap_fill_inserts([], _athlete(days_until_fight=7))
-    assert set(_visualizations(sequence)) == {7, 5, 3, 1, 0}
+    assert set(_visualizations(sequence)) == set()
 
 
-def test_sequence_with_no_positive_offsets_still_gets_the_protocol():
+def test_sequence_with_no_positive_offsets_gets_no_mental_session():
     sequence = apply_gap_fill_inserts(
         [_role(0, "fight_day_protocol", category="fight_day")],
         _athlete(days_until_fight=5),
     )
-    assert set(_visualizations(sequence)) == {5, 3, 1, 0}
+    assert set(_visualizations(sequence)) == set()
 
 
 def test_early_return_path_is_still_ordered_and_indexed():
@@ -781,8 +781,8 @@ def test_existing_visualization_is_restamped_from_the_current_athlete():
     )
     # The athlete has since become an MMA grappler.
     sequence = apply_gap_fill_inserts(
-        [_role(9, "hard_sparring_day"), stale],
-        _athlete(sport="mma", style_tactical=["grappler"]),
+        [_role(3, "technical_touch_day", category="technical"), stale],
+        _athlete(mental_prep_priority=True, sport="mma", style_tactical=["grappler"]),
     )
     restamped = _visualizations(sequence)[3]
     assert restamped["fight_visualization_key"] == "mma.grappler.d3.pressure_reset"
@@ -792,14 +792,14 @@ def test_existing_visualization_is_restamped_from_the_current_athlete():
 
 
 def test_restamp_does_not_duplicate_the_day():
-    existing = _role(5, "fight_visualization", category="support_insert")
+    existing = _role(1, "fight_visualization", category="support_insert")
     sequence = apply_gap_fill_inserts(
-        [_role(9, "hard_sparring_day"), existing], _athlete()
+        [_role(1, "technical_touch_day", category="technical"), existing], _athlete()
     )
     on_d5 = [
         role
         for role in sequence
-        if role["countdown_offset"] == 5 and role["role_key"] == "fight_visualization"
+        if role["countdown_offset"] == 1 and role["role_key"] == "fight_visualization"
     ]
     assert len(on_d5) == 1
 

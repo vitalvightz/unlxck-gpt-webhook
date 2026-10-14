@@ -21642,3 +21642,13 @@ button.injury-progress:hover > svg { color: var(--text-primary); }
 .history-session-delete:hover:not(:disabled) { color: var(--danger-ink); }
 .history-session-delete:disabled { opacity: 0.45; cursor: not-allowed; }
 .history-session-delete:focus-visible { outline: 2px solid var(--brand-red); outline-offset: 2px; }
+
+/* Mental support stays compact beside the physical appointment. */
+.sp-mental-task { padding: 14px 16px; min-width: 0; }
+.sp-mental-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.sp-mental-task .sp-session-title { font-size: 15px; margin: 0; }
+.sp-mental-task > .sp-session-instruction { margin: 8px 0; font-size: 14px; line-height: 1.5; }
+.sp-mental-task summary { min-height: 44px; display: flex; align-items: center; cursor: pointer; font-size: 13px; overflow-wrap: anywhere; }
+.sp-mental-task .sp-section-details-body { min-width: 0; }
+
+.cm-day-context-contact .sp-tag.sp-accent { color: var(--danger-ink); }

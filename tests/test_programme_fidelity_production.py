@@ -106,7 +106,7 @@ def test_post_finalization_drift_is_still_rejected(production_replay, mutation):
     _, stage1, final, _ = production_replay
     text = final["final_plan_text"]
     changes = {
-        "weekday": lambda t: t.replace("D-40 (Monday)", "D-40 (Wednesday)"),
+        "weekday": lambda t: t.replace("D-42 (Saturday)", "D-42 (Wednesday)"),
         "missing": lambda t: re.sub(r"### D-42 .*?(?=\n### |\n## Week )", "", t, flags=re.S),
         "exercise": lambda t: t.replace("Max-Power Bag Burst", "Assault Bike Sprint"),
         "rest": lambda t: t.replace("5s work, 60s rest x 8 rounds", "5s work, 20s rest x 8 rounds"),
@@ -327,3 +327,31 @@ def test_earlier_saved_intakes_and_recorded_responses_have_the_same_fidelity_con
         assert {e["name"] for e in bag} == {"Heavy Bag Power Rounds", "Max-Power Bag Burst"}
         assert any(e["work_sec"] == 180 and e["rounds"] == 5 for e in bag)
         assert any(e["work_sec"] == 5 and e["rest_sec"] == 60 for e in bag)
+
+
+def test_recorded_finalizer_and_served_fallback_do_not_restore_retired_mental_tasks(production_replay):
+    from collections import Counter
+    from fightcamp.calendar_context import role_d_day
+    from fightcamp.mental_training_policy import mental_category
+
+    _, stage1, final, client = production_replay
+    brief = stage1['planning_brief']
+    card = resolve_effective_structured_plan({'planning_brief': brief, 'plan_text': final['final_plan_text']})
+    expected = Counter(
+        (role_d_day(week, role), mental_category(role))
+        for week in brief['weekly_role_map']['weeks'] for role in week.get('session_roles', [])
+        if mental_category(role)
+    )
+    actual = Counter()
+    for week in card['weeks']:
+        for day in week['days']:
+            offset = int(day['countdown_label'][2:])
+            for session in day.get('sessions') or []:
+                title = str(session.get('title') or '').lower()
+                category = ('visualise' if 'visualis' in title or 'visualiz' in title else
+                            'analyse' if 'tactical' in title else 'reflect' if 'self-review' in title else None)
+                if category:
+                    actual[offset, category] += 1
+    assert actual == expected
+    assert max(actual.values()) == 1
+    assert len(actual) < 16  # The previous partial audit omitted the final governor.

@@ -11,7 +11,7 @@ from .calendar_context import (
 )
 from .camp_phases import calculate_phase_weeks
 from .combat_load_policy import PlacementDirective, role_load_profile
-from .normalization import clean_list, normalize_fatigue_level
+from .normalization import WEEKDAY_ORDER, clean_list, normalize_fatigue_level
 from .priority_profile import selected_priority_targets
 from .conditioning import (
     TECHNICAL_FOOTWORK_GROUP,
@@ -36,13 +36,19 @@ from .fight_visualization_library import (
     ATHLETE_FACING_LABEL as FIGHT_VISUALIZATION_LABEL,
     CAMP_VISUALIZATION_FIRST_DAY,
     CAMP_VISUALIZATION_LAST_DAY,
-    FIGHT_VISUALIZATION_COUNTDOWN_DAYS,
     ROLE_KEY as FIGHT_VISUALIZATION_ROLE_KEY,
     build_visualization_display_text,
     camp_visualization_role,
     choose_camp_visualization_days,
     select_for_athlete,
     visualization_metadata,
+)
+from .mental_training_policy import (
+    MENTAL_ROLE_KEYS,
+    VISUALISATION_MAX_DURATION_MIN,
+    calendar_week_bucket,
+    govern_mental_roles,
+    mental_training_policy,
 )
 from .tactical_watch_library import (
     TacticalWatchBankExhausted,
@@ -1015,8 +1021,9 @@ def _apply_bank_visualization(
         return False
     # The selected bank entry already reflects sport, style and countdown day.
     # The rehearsal carries no physical load, so physical fatigue is no reason
-    # to cut it short: the prescribed dose is the bank's.
-    prescribed_duration = entry.duration_min[1]
+    # to cut it short. The dose is the bank's, capped at the mental-training
+    # policy's 8 minutes (the D-7 scenario used to run 12).
+    prescribed_duration = min(entry.duration_min[1], VISUALISATION_MAX_DURATION_MIN)
     metadata = visualization_metadata(entry, prescribed_duration_min=prescribed_duration)
     governance = dict(metadata.pop("governance", {}) or {})
     role.update(metadata)
@@ -1024,7 +1031,9 @@ def _apply_bank_visualization(
     role["display_text"] = build_visualization_display_text(
         entry, prescribed_duration_min=prescribed_duration
     )
-    role["duration_min"] = list(entry.duration_min)
+    role["duration_min"] = [
+        min(value, VISUALISATION_MAX_DURATION_MIN) for value in entry.duration_min
+    ]
     role["prescribed_duration_min"] = prescribed_duration
     role["athlete_facing_label"] = FIGHT_VISUALIZATION_LABEL
     role["mandatory_fight_visualization"] = True
@@ -1039,7 +1048,12 @@ def _ensure_fight_visualization_days(
     days_until_fight: int,
     usage_ledger: dict[str, Any],
 ) -> list[dict[str, Any]]:
-    """Place the mandatory Fight Visualisation protocol on D-7/5/3/1/0.
+    """Place the Fight Visualisation countdown protocol.
+
+    The days come from :mod:`fightcamp.mental_training_policy`: D-7/D-1/D-0 by
+    default (D-7/D-3/D-1/D-0 when mental preparation is prioritised). D-5 and
+    D-3 used to be mandatory too; their style-owned scenarios now run in the
+    camp block instead of crowding fight week.
 
     These are countdown interventions, not gap fillers: they are not scored, not
     budgeted and not subject to day-eligibility, calendar legality or training-day
@@ -1052,7 +1066,7 @@ def _ensure_fight_visualization_days(
         return []
 
     additions: list[dict[str, Any]] = []
-    for countdown_day in FIGHT_VISUALIZATION_COUNTDOWN_DAYS:
+    for countdown_day in mental_training_policy(athlete_model).countdown_visualization_days:
         if countdown_day > days_until_fight:
             continue
         existing = next(
@@ -1097,16 +1111,14 @@ def _ensure_fight_visualization_days(
 def camp_visualization_day_tier(day_roles: list[dict[str, Any]]) -> int | None:
     """How well a day suits an optional camp Fight Visualisation.
 
-    0 = it already carries Tactical Focus (watch the picture, then rehearse it),
     1 = everything on it is low-load support, 2 = any other non-contact day.
-    None = unsuitable: no scheduled work (a rest day stays a rest day), hard
-    contact, or a visualisation already there.
+    None = unsuitable: no real training on it (a rest day stays a rest day, and
+    a day holding only mental work is not a training day), hard contact, or any
+    mental task already there -- the athlete gets one clear mental task a day.
     """
     keys = {str(role.get("role_key") or "") for role in day_roles}
-    if not keys or FIGHT_VISUALIZATION_ROLE_KEY in keys or "hard_sparring_day" in keys:
+    if not keys or "hard_sparring_day" in keys or keys & MENTAL_ROLE_KEYS:
         return None
-    if "tactical_watch" in keys:
-        return 0
     if all(is_low_cost_coexistable_filler(role) for role in day_roles):
         return 1
     return 2
@@ -1138,7 +1150,8 @@ def _ensure_late_camp_visualizations(
         if (tier := camp_visualization_day_tier(roles)) is not None
     }
     additions: list[dict[str, Any]] = []
-    for ordinal, offset in enumerate(choose_camp_visualization_days(candidates)):
+    limit = mental_training_policy(athlete_model).visualisations_per_week
+    for ordinal, offset in enumerate(choose_camp_visualization_days(candidates, limit=limit)):
         weekday = str(countdown_map.get(f"D-{offset}") or "").strip() or None
         # Each week runs picture -> read -> reset, the same order as the camp weeks.
         role = camp_visualization_role(
@@ -1999,7 +2012,9 @@ def apply_gap_fill_inserts(
     if days_until_fight is None:
         # Nothing anchors a countdown, so neither the protocol nor the gap fill
         # has a day to place anything on.
-        return ordered
+        return _finalize_sequence(govern_sequence_mental_training(
+            ordered, athlete_model, countdown_map={},
+        ))
 
     creation_weekday = _resolve_plan_creation_weekday(days_until_fight, athlete_model)
     countdown_map = _countdown_weekday_map(creation_weekday, days_until_fight)
@@ -2020,7 +2035,9 @@ def apply_gap_fill_inserts(
     # Now the ordinary gap fill may bail out: it needs real sessions with real
     # positive offsets to find gaps between.
     if not ordered or not offsets:
-        return _finalize_sequence(ordered + mandatory_inserts)
+        return _finalize_sequence(govern_sequence_mental_training(
+            ordered + mandatory_inserts, athlete_model, countdown_map=countdown_map,
+        ))
 
     training_days = clean_list(athlete_model.get("training_days", []))
     # Resolved contact truth (hard vs technical) is OWNED by the late-fight
@@ -2206,7 +2223,55 @@ def apply_gap_fill_inserts(
             usage_ledger,
         )
     )
-    return _finalize_sequence(ordered + inserts)
+    combined = govern_sequence_mental_training(
+        ordered + inserts,
+        athlete_model,
+        countdown_map=countdown_map,
+        contact_offsets=contact_offsets,
+    )
+    return _finalize_sequence(combined)
+
+
+def govern_sequence_mental_training(
+    sequence: list[dict[str, Any]],
+    athlete_model: dict[str, Any],
+    *,
+    countdown_map: dict[str, str],
+    contact_offsets: set[int] | None = None,
+) -> list[dict[str, Any]]:
+    """Apply the shared mental-training frequency policy to a flat sequence.
+
+    Runs after every placer in this module (weekly watches, late camp
+    visualisations, the countdown protocol and the gap fill), so none of them
+    can restore a task the policy removed.
+    """
+    fight_weekday = WEEKDAY_ORDER.get(str(countdown_map.get("D-0") or "").strip().lower())
+
+    def relocate(role: dict[str, Any], offset: int) -> None:
+        _move_role_to_offset(role, offset, countdown_map.get(f"D-{offset}"))
+
+    removed = govern_mental_roles(
+        sequence,
+        athlete_model,
+        offset_of=_role_offset,
+        bucket_of=lambda _role, offset: calendar_week_bucket(offset, fight_weekday),
+        contact_offsets=contact_offsets or (),
+        relocate=relocate,
+    )
+    return [role for role in sequence if id(role) not in removed]
+
+
+def _move_role_to_offset(role: dict[str, Any], offset: int, weekday: Any) -> None:
+    role["countdown_offset"] = offset
+    role["countdown_label"] = f"D-{offset}"
+    role["scheduled_countdown_label"] = f"D-{offset}"
+    day = str(weekday or "").strip()
+    if day:
+        role["scheduled_day_hint"] = day
+        role["real_weekday"] = day
+        role["countdown_display_label"] = f"D-{offset} ({day.title()})"
+    else:
+        role.pop("countdown_display_label", None)
 
 
 # --- Physical-occupancy completion -------------------------------------------
