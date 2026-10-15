@@ -3050,28 +3050,14 @@ def consolidate_compatible_alactic_sessions(weekly_role_map: dict[str, Any]) -> 
     """
     from copy import deepcopy
 
-    from .calendar_context import build_events, role_d_day, role_refs
-    from .combat_load_policy import (
-        PlacementDirective, evaluate_candidate_at_position, placement_rank,
+    from .calendar_context import (
+        build_events, classify_role, contact_d_day, role_d_day, week_scope,
     )
+    from .combat_load_policy import evaluate_candidate_at_position, placement_rank
     from .physical_session_frequency import is_physical_session_role
 
     if not isinstance(weekly_role_map, dict):
         return weekly_role_map
-
-    def _legality(map_: dict[str, Any]) -> dict[tuple[int, int], int]:
-        events = build_events(map_)
-        grades = {}
-        for ref in role_refs(map_):
-            if ref.d_day <= 13 or ref.role.get("late_fight_tail_owned"):
-                continue
-            decision = evaluate_candidate_at_position(
-                ref.profile, candidate_position=-ref.d_day,
-                events=build_events(map_, exclude_role=ref.role),
-                candidate_scope=ref.scope,
-            )
-            grades[(ref.week_ordinal, id(ref.role))] = placement_rank(decision)
-        return grades
 
     # Compare role identities in each trial rather than Python ids (deepcopies
     # deliberately change ids). Each week has planner-assigned session indices.
@@ -3095,8 +3081,6 @@ def consolidate_compatible_alactic_sessions(weekly_role_map: dict[str, Any]) -> 
                 grades[(ordinal, int(role.get("session_index") or 0),
                         str(role.get("role_key") or ""))] = placement_rank(decision)
         return grades
-
-    from .calendar_context import classify_role, week_scope
 
     for week_index, week in enumerate(weekly_role_map.get("weeks") or []):
         if str(week.get("phase") or "").upper() not in {"GPP", "SPP"}:
@@ -3148,7 +3132,6 @@ def consolidate_compatible_alactic_sessions(weekly_role_map: dict[str, Any]) -> 
                     continue
                 # Never move speed onto the day immediately before or after
                 # hard sparring. Keep the resolved contact state authoritative.
-                from .calendar_context import contact_d_day
                 hard_days = [
                     contact_d_day(week, item)
                     for item in week.get("hard_sparring_plan") or []
