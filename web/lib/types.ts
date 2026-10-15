@@ -418,6 +418,8 @@ export type StructuredBlock = {
   purpose?: string | null;
   why_today?: string | null;
   coaching_cues?: string[] | null;
+  /** Drill setup and sequence; separate from the single short coach cue. */
+  execution_instructions?: string | null;
   regression_options?: string[] | null;
   substitutions?: string[] | null;
   progression_rule?: string | null;

@@ -86,10 +86,10 @@ test("structured renderer uses one session card and hides detail blocks until ex
   assert.equal(html.includes("Show more (1 block)"), true);
   assert.equal(html.includes("Context"), true);
   assert.equal(html.includes("Taper freshness day"), true);
-  // The compact coaching card keeps execution cues and folds mental framing
-  // into one Coach cue instead of separate Mindset / Intent / Anchor rows.
-  assert.equal(html.includes("Breathe and reset"), true);
-  assert.equal(html.includes("Rounds are banked"), true);
+  // A session without exercise cues gets one specific coaching instruction.
+  assert.equal(html.includes("Clean rhythm"), true);
+  assert.equal(html.includes("Breathe and reset"), false);
+  assert.equal(html.includes("Rounds are banked"), false);
   assert.equal(html.includes(">Mindset<"), false);
   assert.equal(html.includes(">Intent</span>"), false);
   assert.equal(html.includes(">Anchor</span>"), false);
@@ -444,7 +444,7 @@ test("mindset scenario 1: day mindset is the fallback when sessions have none", 
   );
 
   assert.equal(mindsetCardCount(html), 1);
-  assert.equal(countOccurrences(html, "Day-only intent"), 1);
+  assert.equal(countOccurrences(html, "Day-only intent"), 0);
   assert.equal(html.includes("Day-only focus"), true);
 });
 
@@ -458,7 +458,7 @@ test("mindset scenario 2: session mindset only renders on its session card", () 
   );
 
   assert.equal(mindsetCardCount(html), 1);
-  assert.equal(html.includes("Session-only intent"), true);
+  assert.equal(html.includes("Session-only intent"), false);
   assert.equal(html.includes("Session-only focus"), true);
 });
 
@@ -477,8 +477,8 @@ test("mindset scenario 3: session mindsets suppress the day fallback", () => {
 
   assert.equal(mindsetCardCount(html), 2);
   assert.equal(html.includes("Day intent"), false);
-  assert.equal(html.includes("Session A intent"), true);
-  assert.equal(html.includes("Session B intent"), true);
+  assert.equal(html.includes("Session A intent"), false);
+  assert.equal(html.includes("Session B intent"), false);
 });
 
 test("mindset scenario 4: any session mindset suppresses the day fallback", () => {
@@ -497,7 +497,7 @@ test("mindset scenario 4: any session mindset suppresses the day fallback", () =
   // Keep the specific anchor; the session without one does not repeat the day.
   assert.equal(mindsetCardCount(html), 1);
   assert.equal(html.includes("Day intent"), false);
-  assert.equal(html.includes("Owning session intent"), true);
+  assert.equal(html.includes("Owning session intent"), false);
 });
 
 test("mindset scenario 5: no mindset anywhere renders no mindset block", () => {
@@ -721,9 +721,9 @@ test("drops a mindset Context line that only restates the session objective", ()
     countOccurrences(html, "Timing and coordination rehearsal without physiological cost"),
     1,
   );
-  // The duplicate Context row is gone, but Intent/Focus remain.
+  // The duplicate Context row is gone; only the specific focus remains.
   assert.equal(html.includes("Context"), false);
-  assert.equal(html.includes("Reinforce entries/exits and rhythm"), true);
+  assert.equal(html.includes("Reinforce entries/exits and rhythm"), false);
   assert.equal(html.includes("Continuous smooth rounds"), true);
 });
 
@@ -2852,4 +2852,20 @@ test("recovery items render one per line instead of a semicolon run-on", () => {
   assert.equal(html.includes("<li>Optional contrast shower (comfort-based; avoid if it disrupts sleep)</li>"), true);
   assert.equal(html.includes("disrupts sleep); "), false);
   assert.equal(countOccurrences(html, '<ul class="sp-kv-items">'), 1);
+});
+
+
+test("technical drills explain their sequence separately from the one coach cue", () => {
+  const instruction = "One feint at range, one rapid entry, one shot, then clean exit - no second entry.";
+  const html = renderToStaticMarkup(<ExerciseRow block={{
+    display_name: "Range Feint-Entry-Exit", block_type: "skill",
+    execution_instructions: instruction,
+    coaching_cues: ["Keep punches balanced; return to guard"],
+    rounds: 1, work: {value: 5, unit: "sec"}, rest: {value: 120, unit: "sec"},
+  }} open onToggle={() => {}} />);
+  assert.equal(countOccurrences(html, instruction), 1);
+  assert.equal(countOccurrences(html, "Keep punches balanced; return to guard"), 1);
+  assert.equal(html.includes(">How</span>"), true);
+  assert.equal(html.includes("View steps"), false);
+  assert.equal(html.includes(">Progress</span>"), false);
 });

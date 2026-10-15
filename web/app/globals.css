@@ -18730,6 +18730,11 @@ html[data-theme="light"] .loading-operational-item {
   font-size: 0.86rem;
   color: var(--text-primary);
 }
+.ex-execution-instructions > .sp-stat-label {
+  display: block;
+  margin-bottom: 0.35rem;
+}
+
 .sp-block-purpose {
   margin: 8px 0 0;
   color: var(--text-secondary);

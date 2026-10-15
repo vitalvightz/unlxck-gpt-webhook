@@ -156,6 +156,10 @@ def _selected_coaching_fields(option: dict[str, Any]) -> dict[str, Any]:
     """Keep explicit authored instructions on the selected assignment."""
     metadata = option.get("selection_metadata") or {}
     fields = {}
+    explanation = (option.get("execution_instructions") or metadata.get("execution_instructions")
+                   or option.get("description") or metadata.get("description"))
+    if isinstance(explanation, str) and explanation.strip():
+        fields["execution_instructions"] = explanation.strip()
     for key in ("coaching_cues", "regression_options", "progression_rule", "stop_rules"):
         value = option.get(key) or metadata.get(key)
         if isinstance(value, list):

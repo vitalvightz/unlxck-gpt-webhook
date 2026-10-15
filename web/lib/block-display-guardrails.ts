@@ -215,7 +215,10 @@ export function stripSafetyOwnedStopRules(
   // its sibling criteria so it matches the same injury the safety copy owns.
   const subjectContext = cleaned.join(" ");
   return cleaned.filter(
-    (rule) => !isOwnedSafetyClause(rule, safetyPriorityTexts, subjectContext),
+    // A shared symptom must not swallow a compound execution stop. The live
+    // swing rule "speed slows or pain develops" disappeared as a pain duplicate.
+    (rule) => /\b(?:speed|form|technique|control|balance|landing|landings|guard|braking|quality|pace|rhythm)\b/i.test(rule)
+      || !isOwnedSafetyClause(rule, safetyPriorityTexts, subjectContext),
   );
 }
 

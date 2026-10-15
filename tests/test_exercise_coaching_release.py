@@ -61,8 +61,9 @@ def test_final_persisted_physical_rows_keep_coaching_in_react(production_replay,
     reference = build_deterministic_structured_plan(brief, plan_text=source)
     assert reference
     expected = blocks(reference)
-    # The affected programme repeats fixed doses. Quality text is not Progress.
-    assert not any(b.get("progression_rule") for _, b in expected)
+    # Missing notes receive one short numerical step, never quality filler.
+    rules = [b["progression_rule"] for _, b in expected if b.get("progression_rule")]
+    assert rules and all(re.search(r"\d", rule) and len(rule.split()) <= 9 for rule in rules)
     assert sum(bool(b.get("regression_options")) for _, b in expected) >= 20
     assert sum(bool(b.get("stop_rules")) for _, b in expected) >= 20
     for week, block in expected:

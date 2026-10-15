@@ -2,12 +2,61 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { renderToStaticMarkup } from "react-dom/server";
 
-import { StructuredPlanRenderer } from "./structured-plan-renderer";
+import { ExerciseRow, StructuredPlanRenderer } from "./structured-plan-renderer";
 import type { StructuredPlan } from "@/lib/types";
 
 function countOccurrences(text: string, needle: string): number {
   return text.split(needle).length - 1;
 }
+
+// Anonymous reproduction of the linked D-31 stored plan. The root safety owner
+// matters: rendering an isolated exercise did not reproduce this regression.
+test("live swing keeps stop without stacked coaching or an empty Progress line", () => {
+  const plan = {
+    schema_version: "1.0",
+    raw_markdown_fallback: `D-31 (Tuesday): Strength
+- Kettlebell Swing — 3 x 4 reps, rest 90 sec, explosive.
+  Stop: slower speed, lost trunk control or pain.`,
+    red_flag_rules: [{ rule_id: "pain", severity: "red", when: "during_session",
+      display_text: "Stop training if pain develops.", action: "Stop training." }],
+    weeks: [{week_index: 1, days: [{date: "2026-10-20", countdown_label: "D-31",
+      sessions: [{session_id: "strength", session_type: "strength_power", title: "Strength",
+        objective: "Build general strength and ballistic power with crisp reps",
+        mindset_anchor: {focus_cue: "Explosive intent on swings and hops",
+          reset_cue: "Full brace and reset between sets",
+          intent: "Quality strength and speed on reps",
+          confidence_anchor: "Quality reps matter more than load",
+          context: "Keep trunk control and stop if pain"},
+        blocks: [{block_id: "swing", display_name: "Kettlebell Swing", sets: 3, reps: 4,
+          rest: {value: 90, unit: "sec"},
+          coaching_cues: ["Explosive hip hinge, snap at top"],
+          regression_options: ["Reduce sets to 2."],
+          stop_rules: ["Stop if speed slows or pain develops."]}],
+      }],
+    }]}],
+  } as StructuredPlan;
+  const html = renderToStaticMarkup(
+    <StructuredPlanRenderer plan={plan} today={new Date(2026, 9, 20)} />,
+  );
+  const expanded = renderToStaticMarkup(<ExerciseRow
+    block={plan.weeks![0].days![0].sessions![0].blocks![0]} open onToggle={() => {}} />);
+  assert.equal(countOccurrences(expanded, "Explosive hip hinge, snap at top"), 1);
+  for (const removed of ["Explosive intent on swings and hops", "Full brace and reset",
+    "Quality strength and speed", "Quality reps matter more", "sp-coaching-list"]) {
+    assert.equal(html.includes(removed), false, removed);
+  }
+  assert.equal(html.includes("Keep trunk control and stop if pain"), true);
+  assert.equal(html.includes("slower speed, lost trunk control or pain"), true);
+  assert.equal(expanded.includes(">Progress</span>"), false);
+  const block = plan.weeks![0].days![0].sessions![0].blocks![0];
+  const withProgress = renderToStaticMarkup(<ExerciseRow
+    block={{...block, progression_rule: "Add +5kg."}} open onToggle={() => {}} />);
+  assert.equal(countOccurrences(withProgress, ">Progress</span>"), 1);
+  assert.equal(withProgress.includes("Add +5kg."), true);
+  assert.equal(expanded.includes("Reduce sets to 2."), true);
+  assert.equal(html.includes("3 × 4"), true);
+  assert.equal(expanded.includes("90 sec"), true);
+});
 
 test("reported D-13 band primer keeps exact dose and one non-duplicated stop rule", () => {
   const raw = `Left shoulder surface abrasion. No open wound or infection reported. Keep the area clean and covered during training; stop and seek care if bleeding, spreading redness, or increased pain.
@@ -88,8 +137,9 @@ D-13 (Monday): Neural speed touch
   assert.equal(html.includes("RPE 6.5"), false);
 
   assert.equal(countOccurrences(html, ">Stop rule</span>"), 1);
-  assert.equal(html.includes("If speed degrades and form breaks"), true);
-  assert.equal(html.includes("Any sharp pain at the left shoulder"), false);
+  assert.equal(html.includes("if speed degrades and form breaks"), true);
+  // A compound source rule must retain its execution limit and symptoms.
+  assert.equal(html.includes("any sharp pain at the left shoulder"), true);
   assert.equal(html.includes(">Wound irritation<"), false);
 
   // Active Notes keeps condition/management while Safety Priority owns escalation.

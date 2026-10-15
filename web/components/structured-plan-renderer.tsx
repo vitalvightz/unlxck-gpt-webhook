@@ -270,14 +270,23 @@ function TechnicalCombatWhyTooltip() {
 export function MindsetAnchorCard({
   anchor,
   dedupeContext,
+  contextOnly = false,
 }: {
   anchor?: MindsetAnchor | null;
+  contextOnly?: boolean;
   /** Text already shown next to this card (the session objective or day
    * description). A Context line that only restates it is dropped so the same
    * sentence never prints twice on one card. */
   dedupeContext?: string | (string | null | undefined)[] | null;
 }) {
-  const lines = getSessionCoachingLines(anchor).flatMap((line) => {
+  const sourceLines = getSessionCoachingLines(anchor);
+  const lead = sourceLines.find(line => line.label === "Focus")
+    || sourceLines.find(line => line.label === "Coach cue")
+    || sourceLines.find(line => line.label === "Reset");
+  const lines = [
+    ...(!contextOnly && lead ? [{ label: "Coach cue", value: lead.value }] : []),
+    ...sourceLines.filter(line => line.label === "Context"),
+  ].flatMap(line => {
     const value = line.label === "Context" ? athleteFacingRationale(line.value) : line.value;
     return value ? [{ ...line, value }] : [];
   });
@@ -294,6 +303,9 @@ export function MindsetAnchorCard({
         );
   if (shown.length === 0) {
     return null;
+  }
+  if (contextOnly) {
+    return <>{shown.map(line => <p key={line.label} className="sp-muted sp-session-constraint">{line.value}</p>)}</>;
   }
   const renderLine = (line: { label: string; value: string }) => (
     <li key={line.label}>
@@ -404,6 +416,7 @@ export function BlockCard({
   hideCues = false,
   hideStopRule = false,
   hideAdjustments = false,
+  hideInstructions = false,
 }: {
   block: StructuredBlock;
   /** Development-block week intent of an open (renewable) plan. Adds the
@@ -420,6 +433,7 @@ export function BlockCard({
   hideStopRule?: boolean;
   /** The detail sheet already displays Easier/Progress/Stop. */
   hideAdjustments?: boolean;
+  hideInstructions?: boolean;
 }) {
   const rehabLabelPolicy = useContext(RehabLabelContext);
   const { title, load, metrics, rest, effort, compactStopRule } = useBlockPrescription(
@@ -486,6 +500,7 @@ export function BlockCard({
           ) : null}
         </div>
       )}
+      {!hideInstructions ? <ExecutionInstructions block={block} /> : null}
       {prescriptionText && !showMetricTiles ? <p className="sp-block-purpose">{prescriptionText}</p> : null}
       {block.notes && !hasAthleteMetrics ? <p className="sp-block-purpose">{block.notes}</p> : null}
       {/* Athlete entries retain their exact text (tempo, side, free-form load)
@@ -585,6 +600,15 @@ function compactCoachLine(value: string): string {
 
 function compactProgressLine(value: string): string {
   return compactCoachLine(value);
+}
+
+function ExecutionInstructions({ block }: { block: StructuredBlock }) {
+  const instructions = cleanText(block.execution_instructions);
+  return instructions ? (
+    <p className="sp-block-purpose ex-execution-instructions">
+      <span className="sp-stat-label">How</span>{instructions}
+    </p>
+  ) : null;
 }
 
 function sameCopy(a: string | null, b: string | null): boolean {
@@ -876,6 +900,7 @@ function ExerciseDetail({
           ) : null}
         </details>
       ) : null}
+      <ExecutionInstructions block={block} />
       {/* The useful coaching fits in four plain lines. Never make users open
           two nested accordions to find a single cue or their next dose. */}
       {cue ? <p className="sp-block-aside"><span className="sp-stat-label">Cue</span>{cue}</p> : null}
@@ -886,7 +911,7 @@ function ExerciseDetail({
       <details className="ex-detail-section">
         <summary>Full prescription</summary>
         <BlockCard block={block} openWeekIntent={openWeekIntent}
-          sourceCountdown={sourceCountdown} embedded hideCues hideStopRule hideAdjustments />
+          sourceCountdown={sourceCountdown} embedded hideCues hideStopRule hideAdjustments hideInstructions />
       </details>
       {/* Renders only where a started session provides logging (Today). */}
       <ExerciseLogPanel block={block} />
@@ -1133,6 +1158,7 @@ export function SessionCard({
               {whyText ? <p className="sp-session-objective">{whyText}</p> : null}
               <MindsetAnchorCard
                 anchor={sessionMindset}
+                contextOnly={blocks.some(block => getBlockExecutionDisplay(block).cues.length > 0)}
                 dedupeContext={isTechnicalSession ? TECHNICAL_COMBAT_RATIONALE : whyText ?? objective}
               />
             </div>
@@ -1250,6 +1276,7 @@ export function SessionCard({
 
       <MindsetAnchorCard
         anchor={sessionMindset}
+        contextOnly={blocks.some(block => getBlockExecutionDisplay(block).cues.length > 0)}
         dedupeContext={
           isDeclaredLightCombat
             ? DECLARED_LIGHT_COMBAT_DESCRIPTION

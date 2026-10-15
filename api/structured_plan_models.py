@@ -305,6 +305,7 @@ class SessionBlock(BaseModel):
     purpose: str | None = None
     why_today: str | None = None
     coaching_cues: list[str] = Field(default_factory=list)
+    execution_instructions: str | None = None
     regression_options: list[str] = Field(default_factory=list)
     progression_rule: str | None = None
     # Open/ongoing plans only: the block's own week-4 deload or reassessment

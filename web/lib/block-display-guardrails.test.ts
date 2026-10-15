@@ -6,6 +6,7 @@ import {
   getSourcePrescriptionRangeOverrides,
   getSourceStopRuleOverride,
   stripSafetyOwnedClause,
+  stripSafetyOwnedStopRules,
 } from "./block-display-guardrails";
 
 
@@ -192,4 +193,13 @@ test("same-day duplicate exercises cannot borrow another session's source dose o
   assert.deepEqual(getSourcePrescriptionRangeOverrides(source, "Barbell Thruster", "D-32"),
     { sets: null, effort: null, rest: null });
   assert.equal(getSourceStopRuleOverride(source, "Barbell Thruster", "D-32"), null);
+});
+
+// Observed on the linked live plan: the global pain warning previously
+// swallowed the entire compound swing rule, including its speed limit.
+test("shared pain safety never removes a compound execution stop", () => {
+  const safety = ["Stop training if pain develops."];
+  assert.deepEqual(stripSafetyOwnedStopRules(["slower speed, lost trunk control or pain"], safety),
+    ["slower speed, lost trunk control or pain"]);
+  assert.deepEqual(stripSafetyOwnedStopRules(["pain"], safety), []);
 });

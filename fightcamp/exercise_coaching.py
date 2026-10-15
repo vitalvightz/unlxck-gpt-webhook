@@ -8,10 +8,12 @@ from __future__ import annotations
 
 import re
 from typing import Any
+from .exercise_instructions import exercise_instructions
 from .coaching_copy import concise_coaching
 from .exercise_progression import (
     authored_progression_matches, effective_exercise_prescription, measured_dose,
     numerical_easier, numerical_guidance, progression_prohibited, normalise_measures,
+    missing_progression, existing_optional_progression,
 )
 
 
@@ -121,6 +123,9 @@ def exercise_coaching(
     athlete = athlete or {}
     name = str(assignment.get("name") or "")
     fields: dict[str, Any] = {}
+    explanation = exercise_instructions(assignment)
+    if explanation:
+        fields["execution_instructions"] = explanation
     for key in ("coaching_cues", "regression_options", "stop_rules"):
         value = assignment.get(key)
         fields[key] = ([value] if isinstance(value, str) and value.strip() else
@@ -131,6 +136,7 @@ def exercise_coaching(
     # "Stop..." halfway through a cue. Notes remain evidence, never a new dose.
     notes = str(assignment.get("coaching_notes") or "").strip()
     labels = {"cue": "coaching_cues", "coaching cues": "coaching_cues",
+              "how": "execution_instructions",
               "easier": "regression_options", "regression": "regression_options",
               "progress": "progression_rule", "progression": "progression_rule",
               "stop": "stop_rules", "stop rule": "stop_rules"}
@@ -138,7 +144,7 @@ def exercise_coaching(
         labelled = re.match(r"^\s*([A-Za-z ]+)\s*:\s*(.+)$", line)
         if labelled and labelled[1].lower() in labels:
             key = labels[labelled[1].lower()]
-            if key == "progression_rule":
+            if key in {"progression_rule", "execution_instructions"}:
                 fields.setdefault(key, labelled[2])
             elif labelled[2] not in fields[key]:
                 fields[key].append(labelled[2])
@@ -186,6 +192,13 @@ def exercise_coaching(
             )
         elif guidance.get("maintenance_cue"):
             fields["coaching_cues"].append(guidance["maintenance_cue"])
+        if not fields.get("progression_rule"):
+            if authored_progress and existing_optional_progression(authored_progress, progression_context, dose, prescription):
+                fields["progression_rule"] = authored_progress
+            elif not authored_progress and profile is not None:
+                suggestion = missing_progression(progression_context, dose, prescription)
+                if suggestion:
+                    fields["progression_rule"] = suggestion
     if authored_progress and is_execution_quality_instruction(authored_progress) and not is_profile_progression(authored_progress):
         if authored_progress not in fields["coaching_cues"]:
             fields["coaching_cues"].append(authored_progress)
@@ -216,7 +229,8 @@ def is_execution_quality_instruction(text: str) -> bool:
 
 
 def coaching_lines(fields: dict[str, Any]) -> list[str]:
-    lines = [f"  Cue: {cue}" for cue in fields.get("coaching_cues") or []]
+    lines = [f"  How: {fields['execution_instructions']}"] if fields.get("execution_instructions") else []
+    lines.extend(f"  Cue: {cue}" for cue in fields.get("coaching_cues") or [])
     lines.extend(f"  Easier: {text}" for text in fields.get("regression_options") or [])
     if fields.get("progression_rule"):
         lines.append(f"  Progress: {fields['progression_rule']}")
