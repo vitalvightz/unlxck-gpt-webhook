@@ -71,59 +71,6 @@ def readable_stop(rules):
     return ["Stop if " + joined + "."]
 
 
-
-def compact_instruction(text: str) -> str:
-    """One ≤9-word cue without chopping conditional or negated instructions."""
-    value = re.sub(r"^(?:Cue|Easier|Progress|Stop):\s*", "", _text(text), flags=re.I)
-    if len(value.split()) <= 9:
-        return value
-    if re.search(r"\b(?:unless|only if|do not|never|without)\b", value, re.I):
-        return value  # A qualifier is safer than a misleading clipped command.
-    clauses = [part.strip(" .;,") for part in re.split(r";|(?<=[.!?])\s+|,\s+| and ", value)]
-    return next((part for part in clauses if 2 <= len(part.split()) <= 9), value)
-
-
-def compact_stop(text: str) -> str:
-    """Shorten standard stop criteria, never removing a medical escalation."""
-    value = _text(text)
-    if len(value.split()) <= 9:
-        return value
-    if re.search(r"\b(?:medical|emergency|clinician|seek|call|faint|chest pain)\b", value, re.I):
-        return value
-    value = re.sub(r"^(?:End|Stop) (?:the |this )?(?:set|effort|work|hold|drill|session)\s+", "Stop ", value, flags=re.I)
-    for original, concise in (
-        (r"\bpain appears\b", "pain"),
-        (r"\bjump quality drops\b", "jumps slow"),
-        (r"\byou cannot stick the landing\b", "landings fail"),
-        (r"\bpunch speed, guard return or balance deteriorates\b", "speed, guard or balance fail"),
-        (r"\bthe trunk collapses\b", "trunk fails"),
-        (r"\bbraking becomes uncontrolled\b", "braking fails"),
-        (r"\bjoint control\b", "control"),
-        (r"\bform breaks down\b", "form breaks"),
-        (r"\bor if\b", "or"),
-        (r"\bor when\b", "or"),
-    ):
-        value = re.sub(original, concise, value, flags=re.I)
-    if len(value.split()) <= 9:
-        return value
-    # Preserve uncompressible medical/compound safety triggers; never
-    # truncate away a reason the athlete must stop.
-    return value
-
-
-def compact_progress(text: str) -> str:
-    """Show an authorised one-variable numerical advance without prose."""
-    value = _text(text)
-    # numerical_guidance generated this form from exact next-exposure doses.
-    match = re.search(r"\badd\s+(\d+(?:\.\d+)?)\s*(kg|lb|reps?|sets?|rounds?|m|min|sec)\b", value, re.I)
-    if match and "Next D-" in value:
-        unit = match[2].lower()
-        suffix = "" if unit in {"kg", "lb", "m"} else " "
-        return f"Add +{match[1]}{suffix}{unit}"
-    if len(value.split()) <= 9:
-        return value
-    return compact_instruction(value)
-
 def concise_coaching(fields):
     """One Easier, one readable Stop, short lead cue plus intact source detail.
 
@@ -135,15 +82,9 @@ def concise_coaching(fields):
     cues = _unique([re.sub(r"^Cue:\s*", "", _text(cue), flags=re.I)
                     for cue in result.get("coaching_cues") or []])
     if cues:
-        # One athlete-visible instruction. The old [short, original] projection
-        # produced two near-identical cues, plus a "Coaching cues" accordion.
-        result["coaching_cues"] = [compact_instruction(short_cue(cues[0]))]
-    else:
-        result["coaching_cues"] = []
+        lead = short_cue(cues[0])
+        result["coaching_cues"] = _unique([lead, *cues])
     options = _unique(result.get("regression_options"))
-    result["regression_options"] = [compact_instruction(options[0])] if options else []
-    stops = readable_stop(result.get("stop_rules"))
-    result["stop_rules"] = [compact_stop(stops[0])] if stops else []
-    if result.get("progression_rule"):
-        result["progression_rule"] = compact_progress(result["progression_rule"])
+    result["regression_options"] = options[:1]
+    result["stop_rules"] = readable_stop(result.get("stop_rules"))
     return result
