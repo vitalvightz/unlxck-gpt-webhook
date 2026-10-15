@@ -1,21 +1,11 @@
-"""The developmental workload envelope belongs to gas-tank athletes only.
-
-`_resolve_conditioning_sessions` keeps extra primaries until the shared
-`conditioning_phase_workload_envelope` active-work target is met. That target is
-a conditioning *development* dose, so it may only be spent for an athlete whose
-primary goal or primary weak area is conditioning / gas tank. Every other
-athlete keeps the ordinary one-primary maintenance selection, preserving
-Power / Speed / Strength capacity.
-
-The gate reuses `_conditioning_priority_is_primary_gas_tank`, i.e. the same
-primary/secondary tiering the rest of conditioning scoring already reads.
-"""
+"""Secondary conditioning priorities retain candidates without earning sessions."""
 
 from types import SimpleNamespace
 
 import pytest
 
 from fightcamp.conditioning import (
+    _conditioning_development_requested,
     _conditioning_priority_is_primary_gas_tank,
     _resolve_conditioning_sessions,
 )
@@ -90,6 +80,16 @@ def test_other_profiles_do_not_open_the_envelope(profile):
     preference — the same doctrine `_conditioning_priority_is_primary_gas_tank`
     already documents — rather than earning developmental volume."""
     assert _conditioning_priority_is_primary_gas_tank(profile) is False
+
+
+@pytest.mark.parametrize("profile", [CONDITIONING_PRIMARY, GAS_TANK_WEAKNESS, SECONDARY_CONDITIONING])
+def test_primary_and_secondary_limiters_retain_development_candidates(profile):
+    assert _conditioning_development_requested(profile)
+
+
+@pytest.mark.parametrize("profile", [POWER_FOOTWORK_SPEED, STRENGTH_PRIMARY])
+def test_unrequested_conditioning_does_not_expand(profile):
+    assert not _conditioning_development_requested(profile)
 
 
 # ---------------------------------------------------------------------------

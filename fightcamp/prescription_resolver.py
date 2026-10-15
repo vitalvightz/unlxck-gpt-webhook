@@ -1,4 +1,8 @@
-"""Resolve effective strength prescriptions from scheduled-day/context dose envelopes.
+"""Resolve effective physical prescriptions from scheduled-day/context envelopes.
+
+Conditioning consumes closed composition ceilings in the same owner: verified
+intervals may repeat, reduce, or restore one withheld round after contact relief.
+It never creates calendar capacity or changes work/rest/effort together.
 
 Exercise-bank prescriptions remain useful as the base dose, but scheduled-day
 countdown and managed-contact rules are authoritative once a role has been placed
@@ -491,6 +495,123 @@ def athlete_dose_state(athlete_model: dict[str, Any] | None) -> dict[str, bool]:
         # not masquerade as readiness state.
         "recent_contact_load": False,
     }
+
+
+def apply_effective_conditioning_prescriptions(
+    *, weekly_role_map: dict, athlete_model: dict,
+) -> dict:
+    """Resolve repeat/reduce/rebuild decisions inside closed membership.
+
+    The composition dose is the ceiling, never a starting point for an
+    unbounded weekly ramp. Only known timed intervals can change, only rounds
+    change, and a rebuild requires an observed reduction in resolved contact
+    load plus explicitly low fatigue. No completion/adaptation data is assumed.
+    Fixed coach sessions, countdown membership and rest/effort stay with their
+    existing owners. Repeated calls resolve from the same ceiling (idempotent).
+    """
+    from .conditioning_boxing import conditioning_load_context
+    from .config import conditioning_work_is_timed
+    from .exercise_progression import measured_dose
+
+    state = athlete_dose_state(athlete_model)
+    fatigue = str(athlete_model.get("fatigue") or "").lower()
+    restricted = any(state.values()) or bool(athlete_model.get("injury_restrictions"))
+    cut = str(athlete_model.get("cut_severity_bucket") or "none").lower()
+    history: dict[tuple, dict] = {}
+    exposures = []
+    for week in weekly_role_map.get("weeks") or []:
+        load = conditioning_load_context(athlete_model, week)
+        week["conditioning_load_context"] = load
+        for role in week.get("session_roles") or []:
+            if (role.get("category") != "conditioning" or role.get("coach_owned")
+                    or role.get("late_fight_tail_owned")):
+                continue
+            day = role_d_day(week, role)
+            if day is not None:
+                exposures.append((day, week, role, load))
+    for day, week, role, load in sorted(exposures, key=lambda e: -e[0]):
+        phase = str(week.get("phase") or "").upper()
+        policy = role.get("conditioning_composition_policy") or {}
+        total_work = 0.0
+        changed = False
+        for member in role.get("selected_exercise_assignments") or []:
+            if member.get("slot_group") != "conditioning_slots":
+                continue
+            ceiling = member.setdefault("conditioning_dose_ceiling", {
+                key: member.get(key) for key in
+                ("effective_prescription", "effective_rounds", "rounds", "work_sec", "rest_sec")
+            })
+            text = str(ceiling.get("effective_prescription") or "")
+            rounds = _int_or_none(ceiling.get("effective_rounds") or ceiling.get("rounds"))
+            work = ceiling.get("work_sec")
+            rest = ceiling.get("rest_sec")
+            key = (phase, role.get("role_key"), member.get("exercise_key") or member.get("name"))
+            previous = history.get(key)
+            if previous and previous['day'] <= day:
+                previous = None
+            decision, reason = "maintain", "repeat_authorised_dose"
+            selected_rounds = rounds
+            # Match only the round count, leaving every other character of the
+            # authorised prescription (pace, rest, effort, technique) intact.
+            leading = re.match(r"^(\d+)\s*x\s*\d+(?:\.\d+)?\s*(?:s|sec|seconds|min|minutes)\b", text, re.I)
+            trailing = re.search(r"\bx\s*(\d+)\s+rounds?\b", text, re.I)
+            count = leading or trailing
+            measured = measured_dose(text, member)
+            timed = (count and rounds and int(count[1]) == rounds
+                     and isinstance(work, (int, float)) and work > 0
+                     and isinstance(rest, (int, float)) and rest >= 0
+                     and measured.get('work', measured.get('duration')) == work
+                     and measured.get('rest') == rest
+                     and conditioning_work_is_timed({"duration": text})
+                     and not re.search(r"\bor\b|\+|\(|→", text))
+            locked = (phase == "TAPER" or day <= 14 or role.get("late_camp_role_morph")
+                      or member.get("support_only") or role.get("allowed_on_recovery_day"))
+            hard = (role.get("preferred_system") == "glycolytic"
+                    or (member.get("rpe") or 0) >= 8)
+            pressure = restricted or fatigue == "moderate" or cut not in {"none", "low"}
+            contact_pressure = hard and (load["hard_exposures"] >= 2 or policy.get("hard_sparring_adjacent"))
+            if timed and not locked:
+                if pressure or contact_pressure:
+                    selected_rounds = max(1, rounds - 1)
+                    decision, reason = "reduce", "recovery_pressure" if pressure else "sparring_load"
+                    if selected_rounds == rounds:
+                        decision, reason = "maintain", "minimum_authorised_round_count"
+                elif previous and previous["rounds"] < rounds:
+                    selected_rounds = previous["rounds"]
+                    # A planned load reduction is evidence for restoring ONE
+                    # previously withheld round, not evidence of adaptation.
+                    if (fatigue == "low" and load["hard_exposures"] < previous["hard_exposures"]
+                            and load["coach_conditioning_intensity"] != "unknown"
+                            and previous["work"] == work and previous["rest"] == rest
+                            and previous["rpe"] == member.get("rpe")):
+                        selected_rounds += 1
+                        decision, reason = "increase", "restore_one_round_after_contact_relief"
+                    else:
+                        reason = "hold_until_recovery_and_load_justify_change"
+                if selected_rounds != rounds:
+                    start, end = count.span(1)
+                    member["effective_prescription"] = text[:start] + str(selected_rounds) + text[end:]
+                    member["effective_rounds"] = selected_rounds
+                    member["rounds"] = selected_rounds
+                    changed = True
+                else:
+                    member.update(ceiling)
+                history[key] = {"rounds": selected_rounds, "work": work, "rest": rest,
+                                "rpe": member.get("rpe"), "hard_exposures": load["hard_exposures"], 'day': day}
+                total_work += work * selected_rounds
+            else:
+                reason = "countdown_or_support_dose" if locked else "unverified_interval_units_or_structure"
+                if timed:
+                    total_work += work * rounds
+            member["conditioning_decision"] = {"action": decision, "reason": reason, "variable": "rounds" if decision in {"increase", "reduce"} else None}
+        # A safe reduction deliberately lowers the composition obligation.
+        # Never conceal a pre-existing underfill or credit unknown work.
+        if changed and policy.get("conditioning_workload_met") is True:
+            base_target = policy.setdefault("unadjusted_target_active_work_seconds", policy.get("conditioning_target_active_work_seconds"))
+            policy["conditioning_target_active_work_seconds"] = min(base_target, total_work)
+            policy["conditioning_active_work_seconds"] = total_work
+            policy["dose_adjustment_reason"] = "authorised_conditioning_reduction"
+    return weekly_role_map
 
 
 def _merge_numeric_cap(existing: Any, incoming: Any) -> int | None:

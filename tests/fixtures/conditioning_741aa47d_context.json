@@ -1,0 +1,251 @@
+{
+  "athlete_model": {
+    "has_active_injury": false,
+    "surface_injury_only": false,
+    "sport": "boxing",
+    "status": "",
+    "competitive_maturity": "unknown_competitive_maturity",
+    "rounds_format": "10 x 3",
+    "camp_length_weeks": 7,
+    "phase_weeks": {
+      "GPP": 2,
+      "SPP": 3,
+      "TAPER": 2,
+      "days": {
+        "GPP": 15,
+        "SPP": 22,
+        "TAPER": 15
+      }
+    },
+    "days_until_fight": 52,
+    "include_generation_day": false,
+    "fatigue": "",
+    "stance": "",
+    "weight_cut_risk": false,
+    "weight_cut_pct": 0,
+    "weight_cut_status": "missing_both_weights",
+    "cut_severity_score": 0,
+    "cut_severity_bucket": "none",
+    "cut_health_bucket": "none",
+    "technical_styles": [
+      "boxing"
+    ],
+    "tactical_styles": [
+      "pressure_fighter"
+    ],
+    "weaknesses": [
+      "balance",
+      "gas_tank"
+    ],
+    "key_goals": [
+      "speed",
+      "power",
+      "conditioning"
+    ],
+    "mental_blocks": [
+      "composure"
+    ],
+    "equipment": [
+      "dumbbells",
+      "kettlebell",
+      "barbell",
+      "trap_bar",
+      "bench",
+      "landmine",
+      "assault_bike",
+      "rower",
+      "step_mill",
+      "pool",
+      "sled",
+      "battle_ropes",
+      "tire",
+      "sledgehammer",
+      "weight_vest",
+      "heavy_bag",
+      "pads",
+      "box",
+      "agility_ladder",
+      "jump_rope",
+      "medicine_ball",
+      "sandbag",
+      "bands",
+      "trx",
+      "pullup_bar",
+      "bosu_ball",
+      "neck_harness",
+      "weight_belt",
+      "water_jug",
+      "foam_roller",
+      "towel",
+      "treadmill"
+    ],
+    "training_frequency": 6,
+    "training_workload_context": {
+      "reported_weekly_sessions": {
+        "minimum": 8,
+        "maximum": 9,
+        "source": "training_notes"
+      },
+      "double_days_reported": true,
+      "structured_frequency_conflict": true,
+      "frequency_source": "user_supplied"
+    },
+    "training_days": [
+      "Monday",
+      "Tuesday",
+      "Thursday",
+      "Friday",
+      "Saturday",
+      "Wednesday"
+    ],
+    "hard_sparring_days": [
+      "Tuesday",
+      "Saturday"
+    ],
+    "support_work_days": [
+      "Thursday",
+      "Friday"
+    ],
+    "technical_skill_days": [],
+    "training_preference": "",
+    "injuries": [],
+    "parsed_injuries": [],
+    "guided_injury": null,
+    "injury_restrictions": [],
+    "short_notice": false,
+    "plan_creation_weekday": "wednesday",
+    "plan_creation_weekday_basis": "athlete_local_weekday",
+    "readiness_flags": [
+      "baseline"
+    ],
+    "primary_goal": "speed"
+  },
+  "phase_briefs": {
+    "GPP": {
+      "days": 15,
+      "weeks": 2,
+      "emphasize": [
+        "aerobic repeatability",
+        "general force",
+        "structural strength foundation"
+      ],
+      "objective": "build aerobic base and general force capacity",
+      "risk_flags": [],
+      "deprioritize": [
+        "fight-week intensity",
+        "excessive reactive fatigue"
+      ],
+      "session_counts": {
+        "recovery": 1,
+        "strength": 2,
+        "conditioning": 3
+      },
+      "selection_guardrails": {
+        "notes": [
+          "Preserve at least one low-damage aerobic slot before trimming other conditioning work.",
+          "If strength must be trimmed, keep the first strength slot before accessories."
+        ],
+        "must_keep_if_present": [
+          "rehab",
+          "aerobic",
+          "primary_strength"
+        ],
+        "conditioning_minimums": {
+          "aerobic": 1,
+          "alactic": 0,
+          "glycolytic": 0
+        },
+        "must_keep_rehab_if_present": false,
+        "conditioning_drop_order_if_thin": [
+          "alactic",
+          "glycolytic"
+        ]
+      }
+    },
+    "SPP": {
+      "days": 22,
+      "weeks": 3,
+      "emphasize": [
+        "glycolytic repeatability",
+        "rotational intent",
+        "sport speed"
+      ],
+      "objective": "increase fight-specific repeatability and power transfer",
+      "risk_flags": [],
+      "deprioritize": [
+        "excessive eccentric damage",
+        "non-specific conditioning volume"
+      ],
+      "session_counts": {
+        "recovery": 1,
+        "strength": 2,
+        "conditioning": 3
+      },
+      "selection_guardrails": {
+        "notes": [
+          "Preserve fight-pace repeatability first, then speed/sharpness support.",
+          "Do not let compliance filtering remove both glycolytic and alactic work if compliant options remain."
+        ],
+        "must_keep_if_present": [
+          "rehab",
+          "glycolytic",
+          "alactic",
+          "primary_strength"
+        ],
+        "conditioning_minimums": {
+          "aerobic": 0,
+          "alactic": 1,
+          "glycolytic": 1
+        },
+        "must_keep_rehab_if_present": false,
+        "conditioning_drop_order_if_thin": [
+          "aerobic",
+          "extra_strength_accessory"
+        ]
+      }
+    },
+    "TAPER": {
+      "days": 15,
+      "weeks": 2,
+      "emphasize": [
+        "alactic sharpness",
+        "confidence",
+        "low soreness"
+      ],
+      "objective": "maintain sharpness and freshness",
+      "risk_flags": [],
+      "deprioritize": [
+        "new drills",
+        "high lactate exposure",
+        "soreness-heavy loading"
+      ],
+      "session_counts": {
+        "recovery": 1,
+        "strength": 1,
+        "conditioning": 4
+      },
+      "selection_guardrails": {
+        "notes": [
+          "Preserve neural sharpness before optional conditioning density.",
+          "If a slot becomes thin, drop soreness-heavy or lactate-heavy work before sharpness work."
+        ],
+        "must_keep_if_present": [
+          "rehab",
+          "alactic",
+          "primary_strength"
+        ],
+        "conditioning_minimums": {
+          "aerobic": 0,
+          "alactic": 1,
+          "glycolytic": 0
+        },
+        "must_keep_rehab_if_present": false,
+        "conditioning_drop_order_if_thin": [
+          "glycolytic",
+          "aerobic",
+          "extra_strength_accessory"
+        ]
+      }
+    }
+  }
+}

@@ -479,10 +479,11 @@ def requires_equipment(item: dict) -> bool:
 
 
 def _has_dense_glycolytic_profile(item: dict, *, normalized_system: str) -> bool:
+    from .config import conditioning_dose_active_work_seconds
     work_sec = _number_or_none(item.get("work_sec"))
     rest_sec = _number_or_none(item.get("rest_sec"))
     rounds = _number_or_none(item.get("rounds"))
-    total_minutes = _number_or_none(item.get("total_minutes"))
+    active_minutes = (conditioning_dose_active_work_seconds(item) or 0) / 60
     rpe_values = [value for value in (_number_or_none(item.get("rpe")), _number_or_none(item.get("rpe_max"))) if value is not None]
     rpe = max(rpe_values, default=None)
     lactate_load = _clean_string(item.get("lactate_load"))
@@ -499,8 +500,7 @@ def _has_dense_glycolytic_profile(item: dict, *, normalized_system: str) -> bool
             and rounds >= 3
         )
         or (
-            total_minutes is not None
-            and total_minutes >= 12
+            active_minutes >= 12
             and rpe is not None
             and rpe >= 7
         )

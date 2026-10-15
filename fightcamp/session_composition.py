@@ -31,6 +31,7 @@ from .training_context import normalize_equipment_list
 from .config import (
     athlete_round_seconds,
     conditioning_effective_dose,
+    conditioning_work_is_timed,
     conditioning_round_prescription,
     conditioning_dose_active_work_seconds,
     conditioning_dose_minutes,
@@ -2300,6 +2301,22 @@ def compose_normal_conditioning_assignments(
                 system=preferred_system,
                 rounds_format=rounds_format,
             )
+            if options and _option_metadata(options[0][1]).get("standalone_protocol"):
+                # Full protocols have their own stimulus/dose. In particular,
+                # four 30s maximal sprints are not an underfilled eight-minute
+                # circuit that needs more exercises added to it.
+                options = options[:1]
+                target_active_work = _conditioning_active_work_seconds(options[0][1])
+            unit_based_alactic = bool(
+                preferred_system == "alactic" and options
+                and not conditioning_work_is_timed(_option_metadata(options[0][1]))
+            )
+            if unit_based_alactic:
+                # A selected rep/distance speed dose stays in its own units.
+                # Neither pad it with drills to reach fictitious seconds nor
+                # fail release for being below a time-only conditioning target.
+                options = options[:1]
+                target_active_work = None
             if not options:
                 role["selected_exercise_assignments"] = []
                 # A targeted recomposition can follow a countdown morph that
@@ -2358,7 +2375,7 @@ def compose_normal_conditioning_assignments(
                     selected, high_load_rounds
                 )
                 underfill_reason = partition_reason or underfill_reason
-                if adjacent_hard_spar:
+                if adjacent_hard_spar or unit_based_alactic:
                     break
                 if target_active_work is not None and active_work_seconds >= target_active_work:
                     underfill_reason = None
@@ -2377,7 +2394,7 @@ def compose_normal_conditioning_assignments(
                     selected, high_load_rounds
                 )
             long_aerobic = preferred_system == "aerobic" and total_minutes >= 25
-            workload_met = (
+            workload_met = None if unit_based_alactic else (
                 target_active_work is not None and active_work_seconds >= target_active_work
             )
             if adjacent_hard_spar:
@@ -2502,10 +2519,10 @@ def compose_normal_conditioning_assignments(
                 "conditioning_workload_met": None if adjacent_hard_spar else workload_met,
                 "underfill_reason": (
                     None
-                    if adjacent_hard_spar or workload_met
+                    if adjacent_hard_spar or workload_met or unit_based_alactic
                     else underfill_reason or "phase_system_workload_unmet"
                 ),
-                "workload_limited": not adjacent_hard_spar and not workload_met,
+                "workload_limited": not adjacent_hard_spar and not workload_met and not unit_based_alactic,
                 "embedded_trunk_support": trunk_support_added,
                 "embedded_trunk_support_count": 1 if trunk_support_added else 0,
                 "embedded_trunk_support_skip_reason": trunk_support_skip_reason,
