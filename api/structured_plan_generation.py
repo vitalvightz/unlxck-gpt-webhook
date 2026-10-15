@@ -3803,11 +3803,19 @@ The JSON object MUST conform to the StructuredTrainingPlan schema:
   but NEVER copy those explanations into coaching_cues.
 - Keep every planner-selected exercise on its assigned day with its exact dose
   and complete contrast-pair name. Do not split, drop or rename members.
-- Emit one Cue and one Easier instruction, each at most 9 words. Use one
-  Progress instruction only when supported by the prescribed progression;
-  preserve its quantity, units, per-set/per-side scope and conditions. Do not
-  duplicate the cue in subtitles or a separate Coaching cues section. Locked
-  tactical/visualisation steps retain their exact bank wording and membership.
+- Emit one Cue, at most 9 words. You own the Progress and Easier notes for
+  the FINAL session in the plan below. Read its complete exercise prescription,
+  session totals, purpose, phase, athlete context and restrictions before choosing
+  an adjustment. Keep an existing appropriate note; create one only if missing.
+  Choose a meaningful exercise-specific next step or easier version yourself.
+  Do not mechanically add one minute, one rep or one set to every exercise.
+  Keep each adjustment as short as the current UI: usually 2-5 words, maximum 9.
+  Preserve per-set/per-side scope and any essential condition. Do not rewrite
+  today's dose, rest, effort, exercise membership or schedule. Omit Progress for
+  taper, final-fortnight, injury/fatigue/cut restrictions or work that should not
+  advance. Omit either field when no useful adjustment is appropriate. No em dashes.
+  Do not duplicate the cue in subtitles or a separate Coaching cues section.
+  Locked tactical/visualisation steps retain exact bank wording and membership.
 - Preserve a technical drill's setup and movement sequence in
   execution_instructions, separate from its single short coaching_cues item.
   Route a source "How:" line here verbatim. A drill name or generic form cue
@@ -3825,8 +3833,8 @@ The JSON object MUST conform to the StructuredTrainingPlan schema:
   coaching_cues. An explicit source volume, rest, effort/RPE, or Cue must never be
   omitted or simplified away in the structured block. Ignore a
   bare separator label such as "Regression /" rather than rendering it as athlete
-  guidance. progression_rule may be omitted when the source gives no genuine
-  exercise progression. Do NOT put taper/week dose restrictions, injury
+  guidance. If Progress or Easier is absent, author a useful short note from the
+  final session context when appropriate; it need not already exist in the source. Do NOT put taper/week dose restrictions, injury
   restrictions, session-programming constraints, or stop criteria into it, and
   never put a conditional swap there: "Switch to X if the joints feel sore" is
   a regression/substitution, not a progression.
