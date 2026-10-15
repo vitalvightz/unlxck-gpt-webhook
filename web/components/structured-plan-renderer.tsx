@@ -1005,6 +1005,14 @@ export function SessionCard({
       : mentalCategory === "Analyse"
         ? "Review one tactical issue from sparring or available footage. Identify one adjustment for the next session."
         : "Rehearse one familiar fight situation and reset calmly.");
+    // Mental cards should read like one short task, not a chain of dropdowns.
+    // Banked instructions remain unchanged in the saved plan.
+    const mentalSteps = blocks
+      .flatMap((block) => getBlockExecutionDisplay(block).cues)
+      .map((line) => line.replace(/^\\s*(?:Step\\s+\\d+\\s*:\\s*|\\d+[.)]\\s*)/i, "").trim())
+      .filter((line, index, all) => Boolean(line) && all.indexOf(line) === index)
+      .filter((line) => line !== summary)
+      .slice(0, 3);
     return (
       <article className="sp-session sp-mental-task" data-mental-category={mentalCategory.toLowerCase()}>
         <header className="sp-mental-head">
@@ -1016,31 +1024,11 @@ export function SessionCard({
           ) : null}
         </header>
         <p className="sp-session-instruction">{summary}</p>
-        <details className="sp-section-details">
-          <summary>Instructions · {title}</summary>
-          <div className="sp-section-details-body">
-            {objective && !objectiveRepeatsTitle ? (
-              <p className="sp-session-objective">
-                {blocks.length > 0 ? <span className="sp-session-why-label">Why</span> : null}
-                {objective}
-              </p>
-            ) : null}
-            <MindsetAnchorCard anchor={sessionMindset} dedupeContext={objective} />
-            <ExerciseSessionScope date={occurrenceDate ?? day?.date} session={session}>
-              {blocks.map((block, index) => (
-                <ExerciseRow
-                  key={cleanText(block.block_id) || `block-${index}`}
-                  block={block}
-                  open={openBlockIndex === index}
-                  onToggle={() => setOpenBlockIndex((current) => current === index ? null : index)}
-                  openWeekIntent={openWeekIntent}
-                  sourceCountdown={sourceCountdown}
-                />
-              ))}
-              <SessionChangesFoot session={session} />
-            </ExerciseSessionScope>
-          </div>
-        </details>
+        {mentalSteps.length > 0 ? (
+          <ol className="sp-cues sp-mental-steps">
+            {mentalSteps.map((step, index) => <li key={index}>{step}</li>)}
+          </ol>
+        ) : null}
         {completionInfo?.onLog ? (
           <button type="button" className="secondary-button sp-log-session" onClick={completionInfo.onLog}>
             Log this session
