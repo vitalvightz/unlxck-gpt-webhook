@@ -3090,6 +3090,7 @@ def consolidate_compatible_alactic_sessions(
         for source in list(week.get("session_roles") or []):
             if (source.get("category") != "conditioning"
                     or source.get("preferred_system") != "alactic"
+                    or source.get("coach_owned")
                     or source.get("late_fight_tail_owned")
                     or source.get("goal_preservation_repair")):
                 continue
@@ -3100,7 +3101,10 @@ def consolidate_compatible_alactic_sessions(
             member = members[0]
             if not isinstance(member, dict) or member.get("slot_group") != "conditioning_slots":
                 continue
-            work, rounds, rest = member.get("work_sec"), member.get("effective_rounds", member.get("rounds")), member.get("rest_sec")
+            work, rounds, rest = (
+                member.get("work_sec"), member.get("effective_rounds") or member.get("rounds"),
+                member.get("rest_sec"),
+            )
             try:
                 work, rounds, rest = float(work), int(rounds), float(rest)
             except (TypeError, ValueError):
@@ -3114,7 +3118,8 @@ def consolidate_compatible_alactic_sessions(
 
             hosts = []
             for host in week.get("session_roles") or []:
-                if host is source or host.get("category") != "strength" or host.get("late_fight_tail_owned"):
+                if (host is source or host.get("category") != "strength"
+                        or host.get("coach_owned") or host.get("late_fight_tail_owned")):
                     continue
                 host_day = role_d_day(week, host)
                 policy = host.get("strength_composition_policy")
