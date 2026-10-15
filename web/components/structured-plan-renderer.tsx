@@ -1009,7 +1009,7 @@ export function SessionCard({
     // Banked instructions remain unchanged in the saved plan.
     const mentalSteps = blocks
       .flatMap((block) => getBlockExecutionDisplay(block).cues)
-      .map((line) => line.replace(/^\\s*(?:Step\\s+\\d+\\s*:\\s*|\\d+[.)]\\s*)/i, "").trim())
+      .map((line) => line.replace(/^\s*(?:Step\s+\d+\s*:\s*|\d+[.)]\s*)/i, "").trim())
       .filter((line, index, all) => Boolean(line) && all.indexOf(line) === index)
       .filter((line) => line !== summary)
       .slice(0, 3);
