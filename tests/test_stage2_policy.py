@@ -153,12 +153,14 @@ def test_low_risk_quality_code_releases_with_flags(code: str) -> None:
     assert report["quality_review_flags"] == [{"code": code}]
 
 
-def test_ambiguous_primary_dose_is_not_released():
+def test_ambiguous_primary_dose_releases_with_a_visible_flag():
     report = stage2_policy.apply_stage2_release_policy(
         {"errors": [{"code": "ambiguous_working_dose", "line": "20-30 min"}]}
     )
-    assert report["release_decision"] == "hold"
-    assert report["is_athlete_releasable"] is False
+    assert report["release_decision"] == "publish_with_flags"
+    assert report["is_athlete_releasable"] is True
+    assert report["is_publishable"] is True
+    assert report["errors"][0]["code"] == "ambiguous_working_dose"
 
 
 @pytest.mark.parametrize("code", sorted(stage2_policy.ADMIN_REVIEW_BLOCKING_CODES))
@@ -318,11 +320,12 @@ def test_required_athlete_context_failures_are_admin_blocking() -> None:
 @pytest.mark.parametrize("code", [
     "duplicate_meaningful_strength_day", "duplicate_physical_exercise_day",
 ])
-def test_invalid_physical_calendar_is_held_instead_of_published_with_flags(code):
+def test_invalid_physical_calendar_is_published_with_visible_warnings(code):
     report = stage2_policy.apply_stage2_release_policy({
-        "errors": [{"code": code, "severity": "blocker"}],
-        "warnings": [],
+        "errors": [],
+        "warnings": [{"code": code, "severity": "warning"}],
     })
-    assert report["release_decision"] == "hold"
-    assert report["is_athlete_releasable"] is False
-    assert report["is_publishable"] is False
+    assert report["release_decision"] == "publish_with_flags"
+    assert report["is_athlete_releasable"] is True
+    assert report["is_publishable"] is True
+    assert report["quality_review_flags"][0]["code"] == code
