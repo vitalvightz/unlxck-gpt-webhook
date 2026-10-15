@@ -1058,7 +1058,7 @@ export function SessionCard({
     return (
       <article className="sp-session sp-mental-task" data-mental-category={mentalCategory.toLowerCase()}>
         <header className="sp-mental-head">
-          <h3 className="sp-session-title">{mentalCategory}{mentalDuration ? ` · ${compactTimeUnits(mentalDuration)}` : ""}</h3>
+          <h3 className="sp-session-title">{title || mentalCategory}{mentalDuration ? ` · ${compactTimeUnits(mentalDuration)}` : ""}</h3>
           {completionInfo?.display.label ? (
             <span className="sp-tag sp-status-tag" data-tone={completionInfo.display.tone}>
               {completionInfo.display.label}
