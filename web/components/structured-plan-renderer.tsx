@@ -812,7 +812,6 @@ function ExerciseDetail({
   const builds = athleteFacingRationale(block.purpose);
   const whyTodayRaw = athleteFacingRationale(block.why_today);
   const whyToday = sameCopy(builds, whyTodayRaw) ? null : whyTodayRaw;
-  const cues = getBlockExecutionDisplay(block).cues;
   const sessionRunning = useExerciseLoggingActive();
 
   return (
