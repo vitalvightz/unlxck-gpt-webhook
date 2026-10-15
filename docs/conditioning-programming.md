@@ -42,9 +42,12 @@ facts. Names, contact details and athlete identifiers are not added to the fixtu
 | Primary-only developmental gate | Secondary conditioning/gas-tank priorities lost candidates needed to complete an existing role | Retain enough candidates for secondary priorities too; no additional role or session allowance |
 | Secondary gas-tank weakness | Could disappear if conditioning was not also selected as a goal | One merged secondary conditioning obligation, using existing maintenance/deferral coverage |
 | Generic weekly advice | “Add volume weekly” / “increase density or intensity weekly” was independent of future doses | Remove those instructions; the next resolved prescription authorises advancement |
+| Taper complement evidence | Goal evidence could fall back to bank rounds after the countdown owner prescribed a single effort | Persist the authorised work/rest/rounds on the existing tail assignment; no taper dose changes |
 
 Names, existing IDs/keys, order and media references are preserved. No entries are
 deleted or renamed. The rower's original name is retained deliberately.
+The snappy overhead-slam note now describes a light ball and crisp execution
+without offering an unresolved kilogram range as an athlete-facing working dose.
 
 ## Eligibility and intentional distinctions
 
@@ -221,12 +224,13 @@ final check results are recorded in the PR.
 
 Measured locally over three builds: baseline median **603ms**, changed median
 **571ms**; first cold builds 3.10s and 2.68s respectively. The difference is within
-local run variability; no material increase was observed. The broad local run
-passed 1,145 tests with six skips before two follow-ups: a display-name-specific
-equipment assertion now checks the actual kit, and a subprocess timeout test
-passed in isolation (the concurrent run exhausted its ten-second import budget).
-Focused final dose/composition/goal coverage passed 115 tests, and the explicit
-scenario/combat-pressure/bout suites passed 159 tests. See the final PR CI runs
+local run variability; no material increase was observed. A broad local run
+passed 1,145 relevant tests; final production regeneration, saved-plan/API and
+rendered React coaching release coverage passed **180 tests with no skips**.
+The bank/unit correction suite passed 131 tests, and the explicit scenario/
+combat-pressure/bout suites passed 159 tests. A subprocess timeout check also
+passed in isolation after exhausting its ten-second import budget under local
+concurrent load. See the final PR CI runs
 for verification on the project's pinned Python 3.11 environment; local Python
 is 3.12 with the fast development dependencies.
 

@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 
 from fightcamp.conditioning import (
-    _conditioning_development_requested, _conditioning_structured_profile,
+    _alactic_structure_ok, _conditioning_development_requested, _conditioning_structured_profile,
     _resolve_conditioning_sessions, generate_conditioning_block, get_conditioning_bank,
 )
 from fightcamp.conditioning_boxing import conditioning_load_context
@@ -299,6 +299,7 @@ def test_fixed_coach_conditioning_is_immutable_and_bout_demand_does_not_add_sess
 
 def test_rep_based_alactic_membership_keeps_its_own_dose_without_a_seconds_floor():
     drill = BANK['Box Jump (Max Height)']
+    assert _alactic_structure_ok(drill)  # Rep units must not evict valid speed work.
     slot = {'slot_id': 'jump', 'role': 'alactic', 'selected': _serialize_conditioning_option(drill, 'alactic', '')}
     roles = {'weeks': [{'phase': 'GPP', 'session_roles': [
         {'category': 'conditioning', 'preferred_system': 'alactic', 'role_key': 'alactic_coordination_day'}]}]}

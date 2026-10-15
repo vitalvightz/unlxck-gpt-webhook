@@ -726,7 +726,6 @@ def _conditioning_structured_profile(drill: dict, *, system: str | None = None) 
     rep_dose = re.match(r"\s*(\d+)\s*x\s*(\d+)\s*reps?\b", str(drill.get("duration") or ""), re.I)
     rep_speed = bool(
         rep_dose and int(rep_dose[1]) >= 2 and 1 <= int(rep_dose[2]) <= 5
-        and str(drill.get("modality") or "").lower() == "plyo"
         and "mech_ballistic" in (drill.get("tags") or [])
         and (rest_sec or 0) >= ALACTIC_MIN_REST_SEC and (rpe or 0) >= 8
     )
@@ -762,7 +761,7 @@ def _conditioning_structured_profile(drill: dict, *, system: str | None = None) 
 def _alactic_structure_ok(drill: dict) -> bool:
     structured = _conditioning_structured_profile(drill)
     if structured["has_dose_metadata"]:
-        return bool(structured["alactic_structure"])
+        return bool(structured["alactic_structure"] or structured["speed_development"])
 
     timing = drill.get("timing") or ""
     duration = drill.get("duration") or ""

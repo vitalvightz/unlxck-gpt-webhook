@@ -1689,6 +1689,18 @@ def _build_late_fight_allowed_exercises_by_day(
                     assignment["effective_prescription"] = _late_primer_member_dose(
                         role, slot_group, slot, complement=index in complements
                     ) or prescription
+                    # Persist the dose the countdown owner actually authorised,
+                    # including a one-effort complement. Otherwise goal evidence
+                    # falls back to the bank's unreduced two/three efforts.
+                    from .exercise_progression import measured_dose
+                    from .config import conditioning_work_is_timed
+                    measured = measured_dose(assignment["effective_prescription"])
+                    count = measured.get("rounds") or measured.get("sets")
+                    work = measured.get("work", measured.get("duration"))
+                    if (count and work and measured.get("rest") is not None
+                            and conditioning_work_is_timed({"duration": assignment["effective_prescription"]})):
+                        assignment.update(rounds=count, effective_rounds=count,
+                                          work_sec=work, rest_sec=measured["rest"])
                 assignment.update(
                     {
                         "support_only": option.get("support_only") is True,
