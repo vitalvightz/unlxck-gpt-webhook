@@ -78,7 +78,7 @@ _PROFILES = (
         "Once all reps stay crisp, aim for more consistent rep speed at the same load and dose.",
         "End the set if speed drops, trunk control fails or pain appears.",
     )),
-    (r"bag burst|pocket frame|pull-counter|entry.*exit|punch|shadowbox", (
+    (r"bag burst|heavy bag|boxing.*burst|pocket frame|pull-counter|entry.*exit|punch|shadowbox", (
         "Keep punches balanced, return to guard and reset the stance between exchanges.",
         "Ease punch force and simplify the exchange until balance and guard return are clean.",
         "Once each exchange stays balanced, aim for a cleaner guard return at the same effort ceiling and dose.",

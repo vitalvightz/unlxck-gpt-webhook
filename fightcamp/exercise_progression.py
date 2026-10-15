@@ -173,11 +173,18 @@ def numerical_guidance(context: dict | None, dose: dict, prescription: str) -> d
         limit = 5 if dose.get("load_unit") == "% 1RM" else dose[variable] * 0.05
         if target[variable] - dose[variable] > limit + 1e-9:
             return fields
-    fields["progression_rule"] = (
+    if context["current"]["role"].get("category") == "conditioning":
+        label = "rounds" if variable == "sets" else _label(variable, dose)
+        fields["progression_rule"] = (
+            f"If recovered, next D-{future['day']}: increase {label} only "
+            f"from {_value(variable, dose)} to {_value(variable, target)}; keep rest and effort unchanged."
+        )
+    else:
+        fields["progression_rule"] = (
         f"If all prescribed work is controlled and recovery is normal, at D-{future['day']} "
         f"use {future['prescription']} (increase {_label(variable, dose)} only from "
         f"{_value(variable, dose)} to {_value(variable, target)})."
-    )
+        )
     fields["variable"] = variable
     fields["from"] = dose[variable]
     fields["to"] = target[variable]

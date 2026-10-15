@@ -215,7 +215,9 @@ def test_no_timed_interval_leaves_a_stated_rest_unencoded():
 
 
 def test_corrected_entries_retain_energy_system_labels():
-    assert _BANK["Hill Sprint Repeats"]["system"] == "glycolytic"
+    # The subsequent programming audit corrected this 8s/120s protocol to
+    # alactic speed, preserving its original work and recovery.
+    assert _BANK["Hill Sprint Repeats"]["system"] == "ATP-PCr"
     assert _BANK["Pad Round Triples"]["system"] == "glycolytic"
     assert _BANK["Sled Push Aerobic Intervals"]["system"] == "aerobic"
 

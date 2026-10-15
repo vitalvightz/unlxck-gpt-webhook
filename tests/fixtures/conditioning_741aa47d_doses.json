@@ -1,0 +1,41 @@
+{
+  "gpp_aerobic_1_easy_assault_bike": {
+    "preferred_system": "aerobic",
+    "late_fight_tail_owned": false
+  },
+  "gpp_alactic_1_broad_jump_repeats": {
+    "work_sec": 3,
+    "rest_sec": 120,
+    "rounds": 6,
+    "preferred_system": "alactic",
+    "late_fight_tail_owned": false
+  },
+  "spp_aerobic_1_swimming_freestyle_laps": {
+    "rest_sec": 1800,
+    "preferred_system": "aerobic",
+    "late_fight_tail_owned": false
+  },
+  "spp_alactic_1_max_power_bag_burst": {
+    "work_sec": 5,
+    "rest_sec": 60,
+    "rounds": 8,
+    "preferred_system": "alactic",
+    "late_fight_tail_owned": false
+  },
+  "taper_late_tempo_shadowboxing": {
+    "preferred_system": "aerobic",
+    "late_fight_tail_owned": true
+  },
+  "taper_late_explosive_first_step_cue": {
+    "preferred_system": "alactic",
+    "late_fight_tail_owned": true
+  },
+  "taper_late_pocket_frame_burst_touch": {
+    "preferred_system": "alactic",
+    "late_fight_tail_owned": true
+  },
+  "taper_late_pull_counter_reset": {
+    "preferred_system": "alactic",
+    "late_fight_tail_owned": true
+  }
+}

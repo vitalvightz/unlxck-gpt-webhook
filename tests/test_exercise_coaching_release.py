@@ -8,6 +8,7 @@ import asyncio
 from copy import deepcopy
 import json
 import os
+import re
 from pathlib import Path
 import subprocess
 from types import SimpleNamespace
@@ -20,6 +21,7 @@ from api.stage2_automation import OpenAIStage2Automator
 from api.structured_plan_deterministic_fallback import build_deterministic_structured_plan
 from api.structured_plan_generation import build_structured_plan_outcome
 from fightcamp.exercise_coaching import exercise_coaching
+from fightcamp.exercise_progression import build_progression_context
 from fightcamp.programme_fidelity import reconcile_authoritative_programme
 from test_programme_fidelity_production import FIXTURES, _persist_final, production_replay as _production_replay
 from support import FakeOpenAIClient
@@ -121,12 +123,23 @@ def test_a_converter_cannot_drop_any_applicable_coaching_field(production_replay
     source = final["final_plan_text"]
     if field == "progression_rule":
         # A controlled fixture with an explicitly authorised future rep increase.
-        role = next(r for w in brief["weekly_role_map"]["weeks"] for r in w["session_roles"]
-                    if r.get("scheduled_countdown_label") == "D-23"
-                    and r.get("role_key") == "neural_plus_strength_day")
-        future = next(p for p in role["effective_strength_prescriptions"] if p["name"] == "Barbell Thruster")
-        assert "4x2" in future["effective_prescription"]
-        future["effective_prescription"] = future["effective_prescription"].replace("4x2", "4x3")
+        # Candidate/budget changes may move the appointment or select another
+        # lift. Exercise the release contract using a real comparable pair,
+        # without hard-coding the old programme's date or thruster selection.
+        pair = next(c for c in build_progression_context(brief).values()
+                    if c['next'] and c['current']['role'].get('category') == 'strength'
+                    and not c['current']['blocked'] and not c['next']['blocked']
+                    and c['current']['phase'] == c['next']['phase']
+                    and c['current']['dose'] == c['next']['dose']
+                    and c['next']['dose'].get('reps'))
+        role = pair['next']['role']
+        member = pair['next']['assignment']
+        future = next(p for p in role['effective_strength_prescriptions']
+                      if p['name'] == member['name'] and p.get('slot_id') == member.get('slot_id'))
+        future['effective_prescription'] = re.sub(
+            r'(\b\d+\s*x\s*)(\d+)', lambda m: m[1] + str(int(m[2]) + 1),
+            future['effective_prescription'], count=1,
+        )
         source = reconcile_authoritative_programme(brief, source)["text"]
     candidate = build_deterministic_structured_plan(brief, plan_text=source)
     target = next(b for _, b in blocks(candidate) if b.get(field))

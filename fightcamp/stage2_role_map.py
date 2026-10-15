@@ -3537,6 +3537,10 @@ def _enforce_combat_pressure_floor(
 ) -> list[dict]:
     """Guarantee one controlled hard combat-pressure exposure in safe build weeks."""
     phase = str(week_entry.get("phase", "")).upper()
+    from .conditioning_boxing import conditioning_load_context
+    week_entry["conditioning_load_context"] = conditioning_load_context(
+        athlete_model, {**week_entry, "session_roles": session_roles}
+    )
     blockers = _combat_pressure_floor_blockers(week_entry, athlete_model)
     if blockers:
         week_entry["combat_pressure_floor"] = {"active": False, "reason_codes": blockers}
