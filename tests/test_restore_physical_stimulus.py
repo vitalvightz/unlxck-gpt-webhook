@@ -156,3 +156,49 @@ def test_maintenance_repair_uses_the_same_canonical_dose_as_existing_work(progra
                                           athlete_model=brief["athlete_snapshot"])
     assert role["effective_strength_prescriptions"] == before
     assert role["dose_adjustment_reason"] != "goal_preservation_reduced_maintenance"
+
+
+@pytest.mark.parametrize("name", ["saved_plan", "boxing_28_day", "boxing_56_day"])
+def test_goal_repair_never_stacks_two_meaningful_strength_sessions(programmes, name):
+    from fightcamp.combat_load_policy import role_load_profile, LoadClass
+    from fightcamp.stage2_validator import _same_day_strength_ownership_errors
+
+    brief, _ = programmes[name]
+    assert not _same_day_strength_ownership_errors(brief)
+    for week in brief["weekly_role_map"]["weeks"]:
+        by_day = {}
+        for role in week.get("session_roles") or []:
+            profile = role_load_profile(role)
+            if (profile is not None and profile.load_class is LoadClass.MEANINGFUL_STRENGTH
+                    and (day := role_d_day(week, role)) is not None):
+                by_day.setdefault(day, []).append(role)
+        assert all(len(roles) == 1 for roles in by_day.values())
+    goals = {item["goal"]: item for item in brief["goal_preservation"]}
+    assert goals["speed"]["satisfied"]
+    assert goals["footwork"]["satisfied"]
+
+
+def test_validator_detects_exact_d26_double_strength_and_repeated_footwork():
+    from fightcamp.stage2_validator import _same_day_strength_ownership_errors
+
+    roles = [
+        {"role_key": "primary_strength_day", "category": "strength",
+         "scheduled_countdown_label": "D-26",
+         "selected_exercise_assignments": [
+             {"name": "Sled Push (Board)", "exercise_key": "sled-push-board"},
+             {"name": "Step-Back Pivot Reset", "exercise_key": "step-back-pivot-reset"},
+         ]},
+        {"role_key": "secondary_strength_day", "category": "strength",
+         "scheduled_countdown_label": "D-26",
+         "selected_exercise_assignments": [
+             {"name": "Step-Back Pivot Reset", "exercise_key": "step-back-pivot-reset"},
+             {"name": "Back Squat", "exercise_key": "back-squat"},
+         ]},
+    ]
+    brief = {"weekly_role_map": {"weeks": [{"session_roles": roles}]}}
+    errors = _same_day_strength_ownership_errors(brief)
+    assert {error["code"] for error in errors} == {
+        "duplicate_meaningful_strength_day", "duplicate_physical_exercise_day",
+    }
+    roles[1]["scheduled_countdown_label"] = "D-19"
+    assert _same_day_strength_ownership_errors(brief) == []

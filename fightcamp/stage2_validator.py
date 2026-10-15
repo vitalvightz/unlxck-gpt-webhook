@@ -3997,6 +3997,60 @@ def _underfilled_conditioning_errors(planning_brief: dict) -> list[dict]:
     return errors
 
 
+def _same_day_strength_ownership_errors(planning_brief: dict) -> list[dict]:
+    """Prevent separately composed strength sessions and repeated bank drills.
+
+    These are planner-calendar defects, not missing coach prose: both the
+    selected membership and its canonical dates are already known before Stage 2.
+    Technical + S&C, strength + conditioning, and embedded zero-load support
+    remain subject to their existing shared calendar rules.
+    """
+    from .goal_preservation import _effective_map
+    from .calendar_context import role_d_day
+    from .combat_load_policy import LoadClass, role_load_profile
+
+    days: dict[int, list[dict]] = {}
+    for week in _effective_map(planning_brief).get("weeks") or []:
+        for role in week.get("session_roles") or []:
+            day = role_d_day(week, role)
+            if isinstance(day, int) and day > 0:
+                days.setdefault(day, []).append(role)
+
+    errors = []
+    for day, roles in sorted(days.items(), reverse=True):
+        meaningful_strength = [role for role in roles
+                               if (profile := role_load_profile(role)) is not None
+                               and profile.load_class is LoadClass.MEANINGFUL_STRENGTH]
+        if len(meaningful_strength) > 1:
+            errors.append(_issue(
+                code="duplicate_meaningful_strength_day", severity="blocker", confidence="high",
+                message=f"D-{day}: multiple meaningful Strength appointments own the same day.",
+                scheduled_d_day=day,
+                role_keys=[role.get("role_key") for role in meaningful_strength],
+            ))
+        seen: dict[str, str] = {}
+        duplicated = set()
+        for role in roles:
+            if role.get("category") not in {"strength", "conditioning"}:
+                continue
+            for member in role.get("selected_exercise_assignments") or []:
+                name = str(member.get("name") or "").strip()
+                key = str(member.get("exercise_key") or name).strip().lower()
+                if not key:
+                    continue
+                if key in seen:
+                    duplicated.add((key, name or seen[key]))
+                else:
+                    seen[key] = name
+        for _, name in sorted(duplicated):
+            errors.append(_issue(
+                code="duplicate_physical_exercise_day", severity="blocker", confidence="high",
+                message=f"D-{day}: {name} is prescribed more than once across physical sessions.",
+                scheduled_d_day=day, exercise=name,
+            ))
+    return errors
+
+
 def _total_session_budget_warnings(planning_brief: dict) -> list[dict]:
     """Keep requested-count overruns explicit without rejecting valid training."""
     from .goal_preservation import _effective_map
@@ -4029,6 +4083,7 @@ def validate_stage2_output(*, planning_brief: dict, final_plan_text: str, final_
     countdown_blocks = _countdown_blocks(final_plan_text)
 
     errors: list[dict[str, Any]] = validate_goal_preservation(planning_brief)
+    errors.extend(_same_day_strength_ownership_errors(planning_brief))
     goal_contract_valid = not errors
     from .programme_fidelity import programme_fidelity_findings
     if final_programme:

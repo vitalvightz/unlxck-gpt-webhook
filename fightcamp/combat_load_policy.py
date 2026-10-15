@@ -783,6 +783,18 @@ def _same_day_decision(
     if not existing:
         return None
 
+    # Two independent strength appointments cannot own the same date. This is
+    # not a general ban on technical + strength or conditioning + strength:
+    # those combinations retain their existing resolved-contact permissions.
+    # Goal repair and final calendar verification use this same symmetric rule.
+    if (candidate.load_class is LoadClass.MEANINGFUL_STRENGTH
+            and any(p.load_class is LoadClass.MEANINGFUL_STRENGTH for p in existing)):
+        return _decision(
+            PlacementDirective.FORBID,
+            "duplicate_meaningful_strength_day",
+            "Only one meaningful strength appointment may own a calendar day.",
+        )
+
     existing_contact = any(p.load_class in CONTACT_LOAD_CLASSES for p in existing)
     existing_exclusive = any(
         p.occupancy is DayOccupancy.EXCLUSIVE_PHYSICAL for p in existing

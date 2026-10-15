@@ -17,6 +17,13 @@ _REPAIR_PROMPT_EXCLUDED_CODES = frozenset(
         "true_internal_system_leak",
     }
 )
+# These defects invalidate the actual scheduled workload, not just its prose.
+# Unlike observational coaching-quality findings they must not reach athletes.
+_UNSAFE_CALENDAR_ERROR_CODES = frozenset({
+    "duplicate_meaningful_strength_day",
+    "duplicate_physical_exercise_day",
+})
+
 _RELEASE_COLLECTION_FIELDS = (
     "errors",
     "warnings",
@@ -183,6 +190,7 @@ def apply_stage2_release_policy(validator_report: dict) -> dict:
     admin_findings = admin_review_blocking_findings(collections)
     dose_or_workload_unresolved = any(
         item.get("code") in {"conditioning_role_workload_underfilled", "ambiguous_working_dose"}
+        or item.get("code") in _UNSAFE_CALENDAR_ERROR_CODES
         for item in collections["errors"]
     )
     release_decision = "publish_with_flags" if quality_findings else "publish"

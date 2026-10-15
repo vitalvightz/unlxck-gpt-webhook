@@ -893,3 +893,18 @@ def test_non_contact_unrelated_day_is_allowed():
 
     assert decision.directive is PlacementDirective.ALLOW
     assert decision.reason_code == "no_calendar_collision"
+
+
+def test_two_meaningful_strength_appointments_cannot_share_a_day_in_either_order():
+    first = role_load_profile({"role_key": "primary_strength_day", "category": "strength"})
+    second = role_load_profile({"role_key": "secondary_strength_day", "category": "strength"})
+    for incoming, occupied in ((first, second), (second, first)):
+        decision = evaluate_candidate_at_position(
+            incoming, candidate_position=26, events=[CalendarEvent(26, occupied)]
+        )
+        assert not decision.allowed
+        assert decision.reason_code == "duplicate_meaningful_strength_day"
+    # Keep the legitimate pairing from #2884: technical boxing + suitable S&C.
+    technical = role_load_profile({"role_key": "light_combat_day"})
+    assert evaluate_candidate_at_position(first, candidate_position=26,
+        events=[CalendarEvent(26, technical)]).allowed
