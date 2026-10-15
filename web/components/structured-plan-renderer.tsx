@@ -431,6 +431,8 @@ export function BlockCard({
   const effortMethod = cleanText(block.effort?.method);
   const { cues: allCues, regressions, substitutions } = getBlockExecutionDisplay(block);
   const cues = hideCues ? [] : hideLeadCue ? allCues.slice(1) : allCues;
+  const visibleCues = embedded ? (hideLeadCue ? [] : cues.slice(0, 1)) : cues;
+  const coachingDetail = embedded ? (hideLeadCue ? cues : cues.slice(1)) : [];
   const { progression } = getBlockAdjustmentDisplay(block);
   const weekDirective = openBlockWeekDirective(openWeekIntent, block);
   // A week directive owns progression/deload programming for open plans, while
@@ -531,12 +533,20 @@ export function BlockCard({
           {weekDirective.text}
         </p>
       ) : null}
-      {cues.length > 0 ? (
+      {visibleCues.length > 0 ? (
         <ul className="sp-cues">
-          {cues.map((cue, index) => (
+          {visibleCues.map((cue, index) => (
             <li key={`${cue}-${index}`}>{cue}</li>
           ))}
         </ul>
+      ) : null}
+      {coachingDetail.length > 0 ? (
+        <details className="ex-detail-section">
+          <summary>Coaching cues</summary>
+          <ul className="sp-cues">
+            {coachingDetail.map((cue, index) => <li key={`${cue}-${index}`}>{cue}</li>)}
+          </ul>
+        </details>
       ) : null}
       {asides.length > 0 ? (
         <div className="sp-block-asides">

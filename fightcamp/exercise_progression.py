@@ -101,7 +101,7 @@ def build_progression_context(brief: dict) -> dict[tuple, dict]:
             if day is None or role.get("render_mandatory") is False:
                 continue
             for assignment in role.get("selected_exercise_assignments") or []:
-                if assignment.get("slot_group") not in {"strength_slots", "conditioning_slots"}:
+                if assignment.get("slot_group") not in {"strength_slots", "conditioning_slots", "priority_microdose"}:
                     continue
                 identity = assignment.get("exercise_key") or str(assignment.get("name") or "").casefold()
                 # Different same-day appointments keep different programming purposes.
@@ -180,10 +180,15 @@ def numerical_guidance(context: dict | None, dose: dict, prescription: str) -> d
             f"from {_value(variable, dose)} to {_value(variable, target)}; keep rest and effort unchanged."
         )
     else:
+        delta = {**dose, variable: target[variable] - dose[variable]}
+        noun = {"reps": " reps per side" if dose.get("per_side") else " reps per set",
+                "sets": " sets", "rounds": " rounds"}.get(variable, "")
+        amount = _value(variable, delta)
+        if delta[variable] == 1:
+            noun = noun.replace(" reps", " rep").replace(" sets", " set").replace(" rounds", " round")
         fields["progression_rule"] = (
-        f"If all prescribed work is controlled and recovery is normal, at D-{future['day']} "
-        f"use {future['prescription']} (increase {_label(variable, dose)} only from "
-        f"{_value(variable, dose)} to {_value(variable, target)})."
+            f"Next D-{future['day']}: add {amount}{noun} ({future['prescription'].rstrip('.')}); "
+            "only if controlled and recovered."
         )
     fields["variable"] = variable
     fields["from"] = dose[variable]
@@ -225,7 +230,7 @@ def numerical_easier(dose: dict) -> str | None:
         reduced = value - 1 if variable in {"sets", "rounds", "reps"} else max(1, math.floor(value * 0.8))
         target = {**dose, variable: reduced}
         return (f"Reduce {_label(variable, dose)} to {_value(variable, target)} "
-                f"instead of {_value(variable, dose)}; keep other work, the effort ceiling and rests unchanged.")
+                f"instead of {_value(variable, dose)}; keep effort and rests unchanged.")
     return None
 
 

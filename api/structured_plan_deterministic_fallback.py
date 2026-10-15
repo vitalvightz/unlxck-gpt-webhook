@@ -484,7 +484,7 @@ def _source_block(
     return {
         **fields,
         "purpose": parsed.purpose or None,
-        "coaching_cues": ([remainder] if remainder else []) + list(parsed.cues),
+        "coaching_cues": list(parsed.cues) + ([remainder] if remainder else []),
         "regression_options": list(parsed.regressions),
         "progression_rule": parsed.progression or None,
         "stop_rules": list(parsed.stop_rules),
@@ -532,7 +532,7 @@ def _microdose_block(role: dict[str, Any], d_day: int, role_key: str) -> dict[st
         "exercise_key": block_exercise_key_for_name(name),
         "order_index": 0,
         **coaching,
-        "coaching_cues": ([prescription] if prescription else []) + coaching["coaching_cues"],
+        "coaching_cues": coaching["coaching_cues"] + ([prescription] if prescription else []),
         "purpose": label,
         "substitutions": [],
     }
@@ -589,11 +589,10 @@ def _blocks(
             block.update({key: value for key, value in source.items() if value not in (None, [])})
             block.setdefault("coaching_cues", [])
         else:
-            # No text line for this exercise: the planner's dose, surfaced
-            # verbatim as the leading cue except that authorised bounds are
-            # resolved to one exact working value.
+            # Keep the exact dose in statistics and coaching detail, with the
+            # execution cue first rather than repeating numbers as Key cue.
             prescription = _exact_working_dose(_effective_prescription(role, assignment))
-            block["coaching_cues"] = [prescription] if prescription else []
+            block["coaching_cues"] = []
             if prescription:
                 # The same exact numbers as stats, so timers and logging run
                 # on the planner's dose; the verbatim cue stays alongside.
@@ -605,6 +604,8 @@ def _blocks(
                                          progression_context=(progression_context or {}).get(
                                              occurrence_key(role, assignment, d_day)))
             block["coaching_cues"].extend(coaching.pop("coaching_cues"))
+            if prescription:
+                block["coaching_cues"].append(prescription)
             block.update(coaching)
         blocks.append(block)
     # Only ever attached to a host that already renders. A role with no selected
