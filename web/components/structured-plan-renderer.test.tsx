@@ -693,7 +693,8 @@ test("labels the session objective as the Why and sentence-cases it", () => {
 
   assert.equal(html.includes("Refine motor plan and composure without physical load"), true);
   assert.equal(html.includes("refine motor plan and composure"), false);
-  assert.equal(html.includes(">Why<"), true);
+  // Mental instructions are directly visible, without nested disclosures.
+  assert.equal(html.includes("View steps"), false);
 });
 
 test("drops a mindset Context line that only restates the session objective", () => {

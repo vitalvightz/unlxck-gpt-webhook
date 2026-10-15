@@ -9,6 +9,7 @@ import {
   isZeroLoadSupportSession,
   mentalSessionCategory,
   mentalSessionSummary,
+  mentalTaskSteps,
   normalizeForDedupe,
   cleanText,
   formatBlockLoad,
@@ -402,6 +403,7 @@ export function BlockCard({
   hideLeadCue = false,
   hideCues = false,
   hideStopRule = false,
+  hideAdjustments = false,
 }: {
   block: StructuredBlock;
   /** Development-block week intent of an open (renewable) plan. Adds the
@@ -416,6 +418,8 @@ export function BlockCard({
   /** The exercise sheet shows cues and the stop rule in their own places. */
   hideCues?: boolean;
   hideStopRule?: boolean;
+  /** The detail sheet already displays Easier/Progress/Stop. */
+  hideAdjustments?: boolean;
 }) {
   const rehabLabelPolicy = useContext(RehabLabelContext);
   const { title, load, metrics, rest, effort, compactStopRule } = useBlockPrescription(
@@ -429,10 +433,13 @@ export function BlockCard({
   // as a 1-10 perceived-exertion score. An unrecognised or missing method falls
   // through to no tooltip rather than to a guess.
   const effortMethod = cleanText(block.effort?.method);
-  const { cues: allCues, regressions, substitutions } = getBlockExecutionDisplay(block);
-  const cues = hideCues ? [] : hideLeadCue ? allCues.slice(1) : allCues;
-  const visibleCues = embedded ? (hideLeadCue ? [] : cues.slice(0, 1)) : cues;
-  const coachingDetail = embedded ? (hideLeadCue ? cues : cues.slice(1)) : [];
+  const execution = getBlockExecutionDisplay(block);
+  const { cues: allCues, regressions, substitutions } = execution;
+  const prescriptionText = cleanText(block.prescription_text)
+    || (metrics.length === 0 ? execution.prescription : null);
+  // A single execution cue is enough. The earlier split into lead cue plus
+  // "Coaching cues" detail repeated the same instruction on enhanced cards.
+  const visibleCues = hideCues || hideLeadCue ? [] : allCues.slice(0, 1).map(compactCoachLine);
   const { progression } = getBlockAdjustmentDisplay(block);
   const weekDirective = openBlockWeekDirective(openWeekIntent, block);
   // A week directive owns progression/deload programming for open plans, while
@@ -444,7 +451,7 @@ export function BlockCard({
   );
   const adjustmentRules = [
     ...(showProgressionAside && progression
-      ? [{ label: "Progress" as const, text: progression }]
+      ? [{ label: "Progress" as const, text: compactProgressLine(progression) }]
       : []),
     ...(compactStopRule && !hideStopRule
       ? [{ label: "Stop rule" as const, text: compactStopRule }]
@@ -457,10 +464,9 @@ export function BlockCard({
     && typeof block.athlete_dose?.mode === "string"
     && ["reps", "duration", "intervals", "distance"].includes(block.athlete_dose.mode);
   const showMetricTiles = statCount > 0 && (!block.prescription_text || hasAthleteMetrics);
-  const asides = [
-    ...(substitutions.length > 0 ? [{ label: "Swaps", text: substitutions.join(", "), glossary: false }] : []),
-    ...(regressions.length > 0 ? [{ label: "Easier", text: regressions.join(", "), glossary: false }] : []),
-    // "Stop rule" is glossed; "Progress" reads plainly on its own.
+  const asides = hideAdjustments ? [] : [
+    ...(substitutions.length > 0 ? [{ label: "Swaps", text: substitutions[0], glossary: false }] : []),
+    ...(regressions.length > 0 ? [{ label: "Easier", text: compactCoachLine(regressions[0]), glossary: false }] : []),
     ...adjustmentRules.map((rule) => ({ ...rule, glossary: true })),
   ];
 
@@ -480,7 +486,7 @@ export function BlockCard({
           ) : null}
         </div>
       )}
-      {block.prescription_text && !showMetricTiles ? <p className="sp-block-purpose">{block.prescription_text}</p> : null}
+      {prescriptionText && !showMetricTiles ? <p className="sp-block-purpose">{prescriptionText}</p> : null}
       {block.notes && !hasAthleteMetrics ? <p className="sp-block-purpose">{block.notes}</p> : null}
       {/* Athlete entries retain their exact text (tempo, side, free-form load)
           alongside the same metric tiles used by generated sessions. */}
@@ -525,7 +531,7 @@ export function BlockCard({
           ) : null}
         </div>
       ) : null}
-      {block.prescription_text && showMetricTiles ? <p className="sp-block-purpose">{block.prescription_text}</p> : null}
+      {prescriptionText && showMetricTiles ? <p className="sp-block-purpose">{prescriptionText}</p> : null}
       {block.notes && hasAthleteMetrics ? <p className="sp-block-purpose">{block.notes}</p> : null}
       {weekDirective ? (
         <p className="sp-block-aside sp-week-directive">
@@ -539,14 +545,6 @@ export function BlockCard({
             <li key={`${cue}-${index}`}>{cue}</li>
           ))}
         </ul>
-      ) : null}
-      {coachingDetail.length > 0 ? (
-        <details className="ex-detail-section">
-          <summary>Coaching cues</summary>
-          <ul className="sp-cues">
-            {coachingDetail.map((cue, index) => <li key={`${cue}-${index}`}>{cue}</li>)}
-          </ul>
-        </details>
       ) : null}
       {asides.length > 0 ? (
         <div className="sp-block-asides">
@@ -574,9 +572,19 @@ function exerciseRowSummary(
 ): string | null {
   if (block.prescription_text) return block.prescription_text;
   const headline =
-    prescription.metrics[0]?.value || prescription.load || formatMeasured(block.duration);
+    prescription.metrics[0]?.value || getBlockExecutionDisplay(block).prescription
+    || prescription.load || formatMeasured(block.duration);
   const parts = [headline, prescription.effort].filter((part): part is string => Boolean(part));
   return parts.length > 0 ? Array.from(new Set(parts)).join(" · ") : null;
+}
+
+/** Saved copy may be long. Never drop a condition to hit a word count. */
+function compactCoachLine(value: string): string {
+  return value.trim().replace(/^(?:Cue|Easier|Progress|Stop):\s*/i, "");
+}
+
+function compactProgressLine(value: string): string {
+  return compactCoachLine(value);
 }
 
 function sameCopy(a: string | null, b: string | null): boolean {
@@ -819,7 +827,10 @@ function ExerciseDetail({
   const builds = athleteFacingRationale(block.purpose);
   const whyTodayRaw = athleteFacingRationale(block.why_today);
   const whyToday = sameCopy(builds, whyTodayRaw) ? null : whyTodayRaw;
-  const cues = getBlockExecutionDisplay(block).cues;
+  const execution = getBlockExecutionDisplay(block);
+  const cue = execution.cues[0] ? compactCoachLine(execution.cues[0]) : null;
+  const easier = execution.regressions[0] ? compactCoachLine(execution.regressions[0]) : null;
+  const { progression } = getBlockAdjustmentDisplay(block);
   const sessionRunning = useExerciseLoggingActive();
 
   return (
@@ -865,26 +876,17 @@ function ExerciseDetail({
           ) : null}
         </details>
       ) : null}
-      {cues.length > 0 ? (
-        <details className="ex-detail-section">
-          <summary>Coaching cues</summary>
-          <ul className="sp-cues">
-            {cues.map((cue, index) => (
-              <li key={`${cue}-${index}`}>{cue}</li>
-            ))}
-          </ul>
-        </details>
+      {/* The useful coaching fits in four plain lines. Never make users open
+          two nested accordions to find a single cue or their next dose. */}
+      {cue ? <p className="sp-block-aside"><span className="sp-stat-label">Cue</span>{cue}</p> : null}
+      {easier ? <p className="sp-block-aside"><span className="sp-stat-label">Easier</span>{easier}</p> : null}
+      {progression && !openBlockWeekDirective(openWeekIntent, block) && openWeekIntent?.key !== "deload" ? (
+        <p className="sp-block-aside"><span className="sp-stat-label">Progress</span>{compactProgressLine(progression)}</p>
       ) : null}
       <details className="ex-detail-section">
         <summary>Full prescription</summary>
-        <BlockCard
-          block={block}
-          openWeekIntent={openWeekIntent}
-          sourceCountdown={sourceCountdown}
-          embedded
-          hideCues
-          hideStopRule
-        />
+        <BlockCard block={block} openWeekIntent={openWeekIntent}
+          sourceCountdown={sourceCountdown} embedded hideCues hideStopRule hideAdjustments />
       </details>
       {/* Renders only where a started session provides logging (Today). */}
       <ExerciseLogPanel block={block} />
@@ -1027,42 +1029,38 @@ export function SessionCard({
       : mentalCategory === "Analyse"
         ? "Review one tactical issue from sparring or available footage. Identify one adjustment for the next session."
         : "Rehearse one familiar fight situation and reset calmly.");
+    const authored = blocks.flatMap(block => [
+      ...getStringList(block.coaching_cues),
+      ...(block.notes ? block.notes.split(/\n+/) : []),
+    ]);
+    const steps = mentalTaskSteps(authored);
+    const mentalStops = Array.from(new Set(blocks.flatMap(block => getBlockAdjustmentDisplay(block).stopRules)));
+    const mentalDrill = blocks.map(block => cleanText(block.display_name))
+      .find(name => name && !sameCopy(name, title));
+    const mentalCue = cleanText(sessionMindset?.focus_cue || sessionMindset?.intent
+      || sessionMindset?.confidence_anchor);
     return (
       <article className="sp-session sp-mental-task" data-mental-category={mentalCategory.toLowerCase()}>
         <header className="sp-mental-head">
-          <h3 className="sp-session-title">{mentalCategory}{mentalDuration ? ` · ${compactTimeUnits(mentalDuration)}` : ""}</h3>
+          <h3 className="sp-session-title">{title || mentalCategory}{mentalDuration ? ` · ${compactTimeUnits(mentalDuration)}` : ""}</h3>
           {completionInfo?.display.label ? (
             <span className="sp-tag sp-status-tag" data-tone={completionInfo.display.tone}>
               {completionInfo.display.label}
             </span>
           ) : null}
         </header>
-        <p className="sp-session-instruction">{summary}</p>
-        <details className="sp-section-details">
-          <summary>Instructions · {title}</summary>
-          <div className="sp-section-details-body">
-            {objective && !objectiveRepeatsTitle ? (
-              <p className="sp-session-objective">
-                {blocks.length > 0 ? <span className="sp-session-why-label">Why</span> : null}
-                {objective}
-              </p>
-            ) : null}
-            <MindsetAnchorCard anchor={sessionMindset} dedupeContext={objective} />
-            <ExerciseSessionScope date={occurrenceDate ?? day?.date} session={session}>
-              {blocks.map((block, index) => (
-                <ExerciseRow
-                  key={cleanText(block.block_id) || `block-${index}`}
-                  block={block}
-                  open={openBlockIndex === index}
-                  onToggle={() => setOpenBlockIndex((current) => current === index ? null : index)}
-                  openWeekIntent={openWeekIntent}
-                  sourceCountdown={sourceCountdown}
-                />
-              ))}
-              <SessionChangesFoot session={session} />
-            </ExerciseSessionScope>
-          </div>
-        </details>
+        {mentalDrill ? <p className="sp-session-instruction">{mentalDrill}</p> : null}
+        {steps.length > 0 ? (
+          <ol className="sp-cues sp-mental-steps">
+            {steps.map((instruction, index) => <li key={`${index}-${instruction}`}>{instruction}</li>)}
+          </ol>
+        ) : <p className="sp-session-instruction">{summary}</p>}
+        {mentalCue && !steps.some(step => sameCopy(step, mentalCue)) && !sameCopy(mentalCue, summary) ? (
+          <p className="sp-block-aside"><span className="sp-stat-label">Cue</span>{mentalCue}</p>
+        ) : null}
+        {mentalStops.length > 0 ? (
+          <p className="sp-block-aside" data-kind="stop"><span className="sp-stat-label">Stop rule</span>{mentalStops.join("; ")}</p>
+        ) : null}
         {completionInfo?.onLog ? (
           <button type="button" className="secondary-button sp-log-session" onClick={completionInfo.onLog}>
             Log this session

@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { renderToStaticMarkup } from "react-dom/server";
 import { ExerciseRow } from "../components/structured-plan-renderer";
+import { getBlockExecutionDisplay } from "../lib/structured-plan";
 import type { StructuredBlock, StructuredPlan } from "../lib/types";
 
 const { plan, expected } = JSON.parse(readFileSync(0, "utf8")) as {
@@ -27,10 +28,13 @@ for (const row of expected) {
     ["coaching_cues", "Coaching cues"], ["regression_options", "Easier"],
     ["stop_rules", "Stop rule"], ["progression_rule", "Progress"],
   ] as const) {
-    const value = row.fields[field];
+    const value = field === "coaching_cues" ? getBlockExecutionDisplay(row.fields).cues.slice(0, 1) : row.fields[field];
     const values = typeof value === "string" ? [value] : value ?? [];
     if (values.length && field !== "coaching_cues") assert.ok(visible.includes(label), `${row.id}: missing ${label}`);
-    for (const copy of values) assert.ok(visible.includes(copy), `${row.id}: lost ${field}: ${copy}`);
+    for (const copy of values) {
+      const expectedCopy = field === "stop_rules" ? copy.replace(/^Stop(?: rule)?:\s*/i, "") : copy;
+      assert.ok(visible.includes(expectedCopy), `${row.id}: lost ${field}: ${copy}`);
+    }
   }
   if (!row.fields.progression_rule) assert.ok(!/>Progress<\/span>/.test(html), row.id);
   if (row.fields.progression_rule) progress++;

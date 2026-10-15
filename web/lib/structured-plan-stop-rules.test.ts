@@ -71,6 +71,7 @@ test("legacy labelled planning prose is hidden from execution cues", () => {
       regressions: ["Reduce band tension"],
       substitutions: [],
       progressions: [],
+      prescription: null,
     },
   );
 });
@@ -86,6 +87,21 @@ test("a labelled cue keeps its execution text without showing the label", () => 
       regressions: [],
       substitutions: [],
       progressions: [],
+      prescription: null,
     },
   );
+});
+
+test("legacy dose-first coaching keeps real cue and embedded Stop distinct", () => {
+  const block = {
+    coaching_cues: [
+      "5s work, 60s rest x 8 rounds",
+      "Cue: Deliver a five-second maximal-quality burst, then recover fully. Stop the burst if punch speed, shape or head position drops.",
+    ],
+  };
+  const execution = getBlockExecutionDisplay(block);
+  assert.deepEqual(execution.cues, ["Deliver a five-second maximal-quality burst, then recover fully"]);
+  assert.deepEqual(getBlockAdjustmentDisplay(block).stopRules,
+    ["Stop the burst if punch speed, shape or head position drops."]);
+  assert.ok(!execution.cues.some(value => value.includes("5s work")));
 });

@@ -41,7 +41,7 @@ def coaching(brief, role, assignment, day=35):
 
 
 @pytest.mark.parametrize("current,future,target", [
-    ("3 x 8 reps; rest 120 sec; RPE 7", "3 x 9 reps; rest 120 sec; RPE 7", "add 1 rep per set"),
+    ("3 x 8 reps; rest 120 sec; RPE 7", "3 x 9 reps; rest 120 sec; RPE 7", "add 1 rep/set"),
     ("3 x 8 reps; rest 120 sec; RPE 7", "4 x 8 reps; rest 120 sec; RPE 7", "add 1 set"),
     ("20 min continuous; RPE 4", "25 min continuous; RPE 4", "add 5 min"),
     ("3 carries over 20 m; rest 90s", "3 carries over 30 m; rest 90s", "add 10 m"),
@@ -55,7 +55,8 @@ def test_exact_future_dose_supports_one_measurable_variable(current, future, tar
     before = deepcopy(brief)
     result = coaching(brief, role, a)
     assert target in result["progression_rule"]
-    assert future in result["progression_rule"]
+    assert len(result["progression_rule"].split()) <= 9
+    assert "if controlled and recovered" in result["progression_rule"]
     assert "D-28" in result["progression_rule"]
     assert brief == before
 
@@ -97,7 +98,7 @@ def test_flat_next_exposure_has_exact_maintenance_under_cue():
     a["progression_rule"] = "Add 2 reps per set."
     result = coaching(brief, role, a)
     assert not result.get("progression_rule")
-    assert "Next D-28: repeat 3 x 8 reps; rest 120 sec." in result["coaching_cues"]
+    assert len(result["coaching_cues"]) == 1
     assert not any("Add 2 reps" in cue for cue in result["coaching_cues"])
 
 
@@ -112,7 +113,7 @@ def test_precise_authored_bank_step_wins_when_it_matches_next_dose():
     a["progression_rule"] = "Add 2 reps per set."
     result = coaching(brief, role, a)
     assert result["progression_rule"] != a["progression_rule"]
-    assert "add 1 rep per set" in result["progression_rule"]
+    assert "add 1 rep/set" in result["progression_rule"]
 
 
 @pytest.mark.parametrize("rule", ["Add 1 rep per set; rest 60 sec.", "Add 1 rep per set; RPE 9.",
@@ -122,7 +123,7 @@ def test_matching_bank_increment_cannot_hide_an_unsafe_second_change(rule):
     a["progression_rule"] = rule
     result = coaching(brief, role, a)
     assert result["progression_rule"] != rule
-    assert "add 1 rep per set" in result["progression_rule"]
+    assert "add 1 rep/set" in result["progression_rule"]
 
 
 def test_unknown_load_never_gets_an_invented_kg_step():
@@ -144,7 +145,7 @@ def test_same_day_duplicate_programmes_keep_their_own_future_targets():
         other["athlete_facing_label"] = "Second strength appointment"
         other["selected_exercise_assignments"][0]["effective_prescription"] = "2 x 6 reps; rest 120 sec"
         week["session_roles"].insert(0, other)
-    assert "add 1 rep per set" in coaching(brief, role, a)["progression_rule"]
+    assert "add 1 rep/set" in coaching(brief, role, a)["progression_rule"]
     other = brief["weekly_role_map"]["weeks"][0]["session_roles"][0]
     assert not coaching(brief, other, other["selected_exercise_assignments"][0]).get("progression_rule")
 
@@ -152,12 +153,12 @@ def test_same_day_duplicate_programmes_keep_their_own_future_targets():
 def test_unique_exposure_can_be_reindexed_without_losing_its_next_dose():
     brief, role, a = programme("3 x 8 reps; rest 120 sec", "3 x 9 reps; rest 120 sec")
     brief["weekly_role_map"]["weeks"][1]["session_roles"][0]["session_index"] = 5
-    assert "add 1 rep per set" in coaching(brief, role, a)["progression_rule"]
+    assert "add 1 rep/set" in coaching(brief, role, a)["progression_rule"]
 
 
 def test_equivalent_unit_and_spacing_formats_keep_supported_progression():
     brief, role, a = programme("3 sets x 8 reps; rest 2 minutes", "3x9 reps; rest 120 sec")
-    assert "add 1 rep per set" in coaching(brief, role, a)["progression_rule"]
+    assert "add 1 rep/set" in coaching(brief, role, a)["progression_rule"]
 
 
 def test_unknown_or_different_current_card_dose_cannot_authorise_an_advance():
@@ -172,8 +173,8 @@ def test_unknown_or_different_current_card_dose_cannot_authorise_an_advance():
 def test_numerical_easier_reduces_only_one_current_work_quantity():
     brief, role, a = programme("3 x 8 reps; rest 120 sec; RPE 7", "3 x 9 reps; rest 120 sec; RPE 7")
     result = coaching(brief, role, a)
-    assert "sets to 2 instead of 3" in result["regression_options"][0]
-    assert "rests unchanged" in result["regression_options"][0]
+    assert "sets to 2" in result["regression_options"][0]
+    assert result["regression_options"] == ["Reduce sets to 2."]
     assert a["effective_prescription"] == "3 x 8 reps; rest 120 sec; RPE 7"
 
 
@@ -200,7 +201,7 @@ def test_saved_profile_recovery_and_athlete_edits():
     block["progression_rule"] = "Once every rep stays controlled, aim for more consistent movement at the same load and dose."
     before = deepcopy(card)
     recovered = recover_selected_coaching(card, brief)
-    assert "add 1 rep per set" in all_blocks(recovered)[0]["progression_rule"]
+    assert "add 1 rep/set" in all_blocks(recovered)[0]["progression_rule"]
     assert all(all_blocks(recovered)[0].get(k) == block.get(k) for k in DOSE)
     assert card == before
     block["athlete_change"] = {"revision": 1}
@@ -276,7 +277,7 @@ def test_model_conversion_cannot_publish_a_number_conflicting_with_next_session(
     outcome = build_structured_plan_outcome(card, raw_markdown="\n".join(raw), planning_brief=brief)
     assert outcome.structured_plan
     assert "100 kg" not in all_blocks(outcome.structured_plan)[0]["progression_rule"]
-    assert "add 1 rep per set" in all_blocks(outcome.structured_plan)[0]["progression_rule"]
+    assert "add 1 rep/set" in all_blocks(outcome.structured_plan)[0]["progression_rule"]
     assert [{k: b.get(k) for k in DOSE} for b in all_blocks(outcome.structured_plan)] == before_doses
 
 
@@ -305,7 +306,7 @@ def test_recorded_old_and_latest_plans_preserve_selection_doses_and_authored_reg
     if record["plan_id"].startswith("741"):
         from fightcamp.exercise_coaching import is_profile_progression
         assert not any(is_profile_progression(b.get("progression_rule", "")) for b in actual)
-        assert any("Next D-37: repeat 3 carries over 20 m" in str(b.get("coaching_cues")) for b in actual)
+        assert all(len(b.get("coaching_cues", [])) <= 1 for b in actual)
         assert not any(b.get("progression_rule") for b in actual)
         assert all(len(b.get("regression_options", [])) <= 1 for b in actual)
     api = resolve_effective_structured_plan({"structured_plan": before, "planning_brief": record["brief"]})

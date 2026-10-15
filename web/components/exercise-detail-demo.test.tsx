@@ -23,7 +23,7 @@ const demo: ExerciseMedia = { provider: "youtube", video_id: "dQw4w9WgXcQ", star
 const logging: ExerciseLogging = { logs: {}, save: async () => {}, painReasonAllowed: false };
 
 /** Opens the treadmill exercise in its sheet and returns the sheet's sections. */
-async function openSheet(sessionRunning: boolean) {
+async function openSheet(sessionRunning: boolean, block: StructuredBlock = treadmill) {
   const container = domWindow.document.createElement("div");
   domWindow.document.body.append(container);
   const root = createRoot(container);
@@ -31,7 +31,7 @@ async function openSheet(sessionRunning: boolean) {
     root.render(
       <ExerciseMediaProvider media={{ [treadmill.display_name!]: demo }}>
         <ExerciseLogProvider logging={sessionRunning ? logging : null}>
-          <ExerciseRow block={treadmill} open detail="sheet" onToggle={() => {}} />
+          <ExerciseRow block={block} open detail="sheet" onToggle={() => {}} />
         </ExerciseLogProvider>
       </ExerciseMediaProvider>,
     );
@@ -77,7 +77,7 @@ test("once the session is running the demo section starts collapsed like the res
   }
 });
 
-test("October 15 punch keeps its short cue, full expandable detail, video and exact statistics", async () => {
+test("October 15 punch keeps its single cue, no duplicate coaching detail, video and exact statistics", async () => {
   const records = JSON.parse(readFileSync("../tests/fixtures/concise_coaching/october_11_15.json", "utf8"));
   const saved = records[1].card.weeks.flatMap((w: { days: { sessions: { blocks: StructuredBlock[] }[] }[] }) =>
     w.days.flatMap(d => d.sessions.flatMap(s => s.blocks)))
@@ -97,12 +97,8 @@ test("October 15 punch keeps its short cue, full expandable detail, video and ex
     ));
     assert.equal(container.querySelector(".ex-demo-lead-cue")?.textContent,
       "Key cueKeep punches balanced; return to guard");
-    const detail = container.querySelector<HTMLDetailsElement>("details.ex-detail-section")!;
-    assert.equal(detail.querySelector("summary")?.textContent, "Coaching cues");
-    assert.equal(detail.open, false);
-    await act(async () => detail.querySelector("summary")!.click());
-    assert.equal(detail.open, true);
-    assert.ok(detail.textContent?.includes(saved.coaching_cues![0]));
+    assert.equal(container.querySelector("details.ex-detail-section"), null);
+    assert.equal(container.textContent?.split("Keep punches balanced; return to guard").length, 2);
     assert.ok(container.querySelector('button[aria-label="Play Band-Resisted Punch demo"]'));
     assert.ok(container.textContent?.includes("1 × 2"));
     assert.ok(container.textContent?.includes("2 min")); // same 120-second rest
@@ -114,4 +110,25 @@ test("October 15 punch keeps its short cue, full expandable detail, video and ex
     await act(async () => root.unmount());
     container.remove();
   }
+});
+
+
+test("sheet shows progress and easier once, outside the prescription disclosure", async () => {
+  const { sheet, byTitle, cleanup } = await openSheet(false, { ...treadmill,
+    coaching_cues: ["Stay tall, no rail.", "Stay tall, no rail."],
+    regression_options: ["Reduce rounds to 3."],
+    progression_rule: "Next D-28: add 1 round if recovered.",
+    stop_rules: ["Stop for dizziness."],
+  });
+  try {
+    assert.equal(byTitle("Coaching cues"), undefined);
+    const lines = [...sheet.querySelectorAll(".sp-block-aside")];
+    for (const label of ["Cue", "Easier", "Progress"]) {
+      const matching = lines.filter(line => line.querySelector(".sp-stat-label")?.textContent === label);
+      assert.equal(matching.length, 1, label);
+      assert.equal(matching[0].closest("details"), null, label);
+    }
+    assert.equal(sheet.textContent?.split("Stay tall, no rail.").length, 2);
+    assert.match(sheet.textContent ?? "", /Next D-28: add 1 round if recovered/);
+  } finally { await cleanup(); }
 });

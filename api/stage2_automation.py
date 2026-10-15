@@ -527,6 +527,58 @@ def _record_structured_outcome(
     return result
 
 
+def _recover_coverage_failed_card(
+    outcome: StructuredPlanOutcome, *, planning_brief: Any,
+    plan_text: str, computed_support: Any = None,
+) -> StructuredPlanOutcome:
+    """Recover exact planner sessions without trusting a misplaced model card.
+
+    A converted block on the wrong countdown must never be silently accepted.
+    Rebuild directly from Stage 1's closed session membership plus the actual
+    athlete-facing text, then run the same schema, faithfulness, coverage and
+    safety checks before writing a persisted enhanced card.
+    """
+    if (
+        outcome.status != "invalid_fallback_used"
+        or not outcome.errors
+        or not all(str(error).startswith("planner_coverage:") for error in outcome.errors)
+        or not isinstance(planning_brief, dict)
+        or not plan_text.strip()
+    ):
+        return outcome
+    from .structured_plan_deterministic_fallback import build_deterministic_structured_plan
+    from .structured_plan_faithfulness import check_structured_faithfulness, PRESCRIPTION
+    from .structured_plan_generation import planner_sc_coverage_losses
+    from .structured_plan_models import safe_parse_structured_plan, SCHEMA_VERSION
+    from .structured_plan_safety import audit_structured_plan, split_findings
+
+    candidate = build_deterministic_structured_plan(planning_brief, plan_text)
+    if not isinstance(candidate, dict):
+        return outcome
+    parsed = safe_parse_structured_plan(candidate, raw_markdown=plan_text)
+    if not parsed.ok:
+        return outcome
+    if planner_sc_coverage_losses(candidate, planning_brief, plan_text):
+        return outcome
+    unfaithful = check_structured_faithfulness(candidate, plan_text, planning_brief)
+    if any(not str(finding).startswith(f"{PRESCRIPTION}:") for finding in unfaithful):
+        return outcome
+    blocking, advisory = split_findings(audit_structured_plan(candidate, computed_support))
+    if blocking:
+        return outcome
+    return StructuredPlanOutcome(
+        status="valid",
+        structured_plan=candidate,
+        schema_version=SCHEMA_VERSION,
+        warnings=[
+            "deterministic_source_recovery: repaired converter countdown/coverage loss",
+            *[str(item) for item in outcome.warnings],
+            *[f"faithfulness: {item}" for item in unfaithful],
+            *[str(item) for item in advisory],
+        ],
+    )
+
+
 async def attempt_structured_plan_for_result(
     result: dict[str, Any],
     *,
@@ -589,6 +641,16 @@ async def attempt_structured_plan_for_result(
         source=source,
         log_context=log_context,
     )
+    try:
+        outcome = _recover_coverage_failed_card(
+            outcome,
+            planning_brief=planning_brief,
+            plan_text=str(result.get("final_plan_text") or result.get("plan_text") or ""),
+            computed_support=result.get("computed_support"),
+        )
+    except Exception:
+        # A failed optional reconstruction must retain the rejected outcome.
+        logger.exception("[stage2] source-backed card recovery failed")
     _record_structured_outcome(result, outcome)
     report_structured_card_outcome(outcome, source=source, log_context=log_context)
     return result, costs

@@ -183,7 +183,12 @@ def test_existing_saved_card_recovers_missing_guidance_without_rewriting_doses(p
         assert all(before.get(k) == after.get(k) for k in DOSE)
         assert before.get("regression_options") == after.get("regression_options")
         assert before.get("progression_rule") == after.get("progression_rule")
-        assert after.get("stop_rules")
+        # This read has no source text. Recover available authored/profile
+        # guidance; an unknown movement must not gain a fabricated stop rule.
+        if before.get("stop_rules"):
+            assert after.get("stop_rules")
+        else:
+            assert not after.get("stop_rules")
 
 
 def test_custom_plans_are_not_given_generated_coaching():

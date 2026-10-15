@@ -21650,5 +21650,9 @@ button.injury-progress:hover > svg { color: var(--text-primary); }
 .sp-mental-task > .sp-session-instruction { margin: 8px 0; font-size: 14px; line-height: 1.5; }
 .sp-mental-task summary { min-height: 44px; display: flex; align-items: center; cursor: pointer; font-size: 13px; overflow-wrap: anywhere; }
 .sp-mental-task .sp-section-details-body { min-width: 0; }
+.sp-mental-steps { counter-reset: mental-step; margin: 12px 0; }
+.sp-mental-steps li { counter-increment: mental-step; padding-left: 24px; line-height: 1.5; overflow-wrap: anywhere; }
+.sp-mental-steps li + li { margin-top: 8px; }
+.sp-mental-steps li::before { content: counter(mental-step, decimal-leading-zero); font-size: 10px; font-weight: 700; top: 3px; }
 
 .cm-day-context-contact .sp-tag.sp-accent { color: var(--danger-ink); }

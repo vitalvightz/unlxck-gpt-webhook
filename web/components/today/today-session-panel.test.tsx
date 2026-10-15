@@ -444,7 +444,7 @@ test("a previewed multi-part day is named by its parts and opens on its own prev
     const sections = [...sheet.querySelectorAll<HTMLDetailsElement>("details.ex-detail-section")];
     assert.deepEqual(
       sections.map((section) => section.querySelector("summary")?.textContent),
-      ["Why it's here", "Coaching cues", "Full prescription"],
+      ["Why it's here", "Full prescription"],
     );
     assert.ok(sections.every((section) => !section.open));
 
