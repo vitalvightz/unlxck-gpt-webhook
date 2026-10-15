@@ -1,7 +1,7 @@
 """Exercise execution guidance, independent of dose and calendar authority.
 
-Movement profiles supply execution and stop guidance only. Numerical Progress
-comes from a resolved future exposure; Easier reduces one known work quantity.
+Movement profiles supply execution and stop guidance only. The final-session
+LLM owns Progress and Easier; recovery never synthesizes those adjustments.
 Unknown movements keep their authored guidance without invented load targets.
 """
 from __future__ import annotations
@@ -11,9 +11,7 @@ from typing import Any
 from .exercise_instructions import exercise_instructions
 from .coaching_copy import concise_coaching
 from .exercise_progression import (
-    authored_progression_matches, effective_exercise_prescription, measured_dose,
-    numerical_easier, numerical_guidance, progression_prohibited, normalise_measures,
-    missing_progression, existing_optional_progression,
+    progression_prohibited, normalise_measures,
 )
 
 
@@ -174,34 +172,10 @@ def exercise_coaching(
             fields["coaching_cues"] = [cue]
         if not fields["stop_rules"]:
             fields["stop_rules"] = [stop]
-    prescription = effective_exercise_prescription(role, assignment)
-    dose = measured_dose(prescription, assignment)
-    if not fields["regression_options"]:
-        option = numerical_easier(dose) if fields["stop_rules"] else None
-        if option:
-            fields["regression_options"] = [option]
-        elif profile is not None:
-            fields["regression_options"] = [easier]
-    if not constrained:
-        guidance = numerical_guidance(progression_context, dose, prescription)
-        if guidance.get("progression_rule"):
-            target = progression_context["next"]["dose"]
-            fields["progression_rule"] = (
-                authored_progress if authored_progress and authored_progression_matches(authored_progress, guidance, target)
-                else guidance["progression_rule"]
-            )
-        elif guidance.get("maintenance_cue"):
-            fields["coaching_cues"].append(guidance["maintenance_cue"])
-        if not fields.get("progression_rule"):
-            if authored_progress and existing_optional_progression(authored_progress, progression_context, dose, prescription):
-                fields["progression_rule"] = authored_progress
-            elif not authored_progress and profile is not None:
-                suggestion = missing_progression(progression_context, dose, prescription)
-                if suggestion:
-                    fields["progression_rule"] = suggestion
-    if authored_progress and is_execution_quality_instruction(authored_progress) and not is_profile_progression(authored_progress):
-        if authored_progress not in fields["coaching_cues"]:
-            fields["coaching_cues"].append(authored_progress)
+    # Progress and Easier belong to the final-session LLM. Carry explicit source
+    # instructions, but never manufacture an increment or a reduced duration.
+    if not constrained and authored_progress and not is_profile_progression(authored_progress):
+        fields["progression_rule"] = authored_progress
     return concise_coaching(fields)
 
 
