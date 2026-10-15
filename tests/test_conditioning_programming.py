@@ -192,6 +192,7 @@ def test_elapsed_recovery_does_not_become_active_work_or_sustained_density():
     assert conditioning_dose_active_work_seconds(dose) == 120
     assert not _conditioning_structured_profile(dose)['glycolytic_density']
     assert conditioning_dose_active_work_seconds({'duration': '3x4min, 2min recovery', 'total_minutes': 16}) is None
+    assert all(e.get('rest_sec') is None for e in BANK.values() if 'continuous' in e.get('duration', '').lower())
 
 
 def test_actual_741aa47d_prescriptions_respect_load_without_adding_intervals():

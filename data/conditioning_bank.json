@@ -4964,7 +4964,6 @@
       "mech_shoulder_overhead"
     ],
     "notes": "Ideal for shoulder recovery post-sparring",
-    "rest_sec": 1800,
     "total_minutes": 35,
     "rpe": 5,
     "impact_cost": "low",
@@ -5086,7 +5085,6 @@
       "mech_lower_lunge"
     ],
     "notes": "No rest; focus on smooth transitions (low-moderate)",
-    "rest_sec": 600,
     "total_minutes": 10,
     "rpe": 7,
     "impact_cost": "low",
@@ -5791,7 +5789,6 @@
       "mech_trunk_stability"
     ],
     "notes": "No resistance; technique only",
-    "rest_sec": 900,
     "total_minutes": 15,
     "rpe": 5,
     "impact_cost": "low",

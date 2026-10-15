@@ -48,6 +48,8 @@ def audit(ref: str | None = None) -> list[dict]:
                     flags.append('elapsed_total_disagrees_with_interval_arithmetic')
             if rounds and rounds > 1 and rest is None:
                 flags.append('recovery_not_structured')
+            if 'continuous' in dose.lower() and rest is not None:
+                flags.append('continuous_work_misuses_recovery_field')
             if timed and work and work <= 12 and rest and rest >= 60 and system == 'glycolytic':
                 flags.append('short_full_recovery_misclassified_glycolytic')
             if e.get('manual_review_required'):
