@@ -1051,6 +1051,10 @@ export function SessionCard({
       ),
     ));
     const mentalDrill = mentalDrills[0] ?? null;
+    const mentalCue = cleanText(
+      sessionMindset?.focus_cue || sessionMindset?.intent || sessionMindset?.confidence_anchor,
+    );
+    const mentalWhy = objective && !sameCopy(objective, summary) ? objective : null;
     return (
       <article className="sp-session sp-mental-task" data-mental-category={mentalCategory.toLowerCase()}>
         <header className="sp-mental-head">
@@ -1065,9 +1069,13 @@ export function SessionCard({
         {mentalDrill && summary && !sameCopy(mentalDrill, summary) ? (
           <p className="sp-muted">{summary}</p>
         ) : null}
-        {mentalInstructions.length > 0 || mentalDrills.length > 1 ? (
+        {mentalCue && !sameCopy(mentalCue, summary) ? (
+          <p className="sp-block-aside"><span className="sp-stat-label">Cue</span>{compactCoachLine(mentalCue)}</p>
+        ) : null}
+        {mentalInstructions.length > 0 || mentalDrills.length > 1 || mentalWhy ? (
           <details className="sp-section-details">
             <summary>View steps</summary>
+            {mentalWhy ? <p className="sp-session-objective">{mentalWhy}</p> : null}
             {mentalDrills.length > 1 ? (
               <ul className="sp-cues">
                 {mentalDrills.map((name) => <li key={name}>{name}</li>)}
