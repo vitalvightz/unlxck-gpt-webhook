@@ -142,6 +142,76 @@ def test_deprioritized_relocation_stamp_is_not_called_forbidden():
     assert "was deprioritize: post_hard_contact_managed_stress" in strength["day_assignment_reason"]
 
 
+def test_louie_spp_prefers_separate_legal_days_over_crowded_technical_double():
+    """D-30/D-23 regression: managed work must not pile into Thursday.
+
+    With Tuesday and Saturday hard sparring, Monday strength and Friday fight
+    pace are legal but DEPRIORITIZE. Thursday already has coach-owned technique
+    plus alactic speed. Their moving to Thursday would change four separate
+    physical appointments into a single overloaded calendar day without
+    reducing the number of appointments at all.
+    """
+    strength = _strength("Monday", key="neural_plus_strength_day")
+    fight_pace = {
+        "role_key": "fight_pace_repeatability_day",
+        "category": "conditioning",
+        "preferred_system": "glycolytic",
+        "scheduled_day_hint": "Friday",
+    }
+    alactic = {
+        "role_key": "alactic_speed_day",
+        "category": "conditioning",
+        "preferred_system": "alactic",
+        "scheduled_day_hint": "Thursday",
+    }
+    technical = {
+        "role_key": "light_combat_day",
+        "category": "technical",
+        "scheduled_day_hint": "Thursday",
+        "coach_owned": True,
+        "declared_day_locked": True,
+    }
+    week = _week(
+        roles=[strength, fight_pace, alactic, technical],
+        contacts=[_hard("Tuesday"), _hard("Saturday")],
+    )
+    week["calendar_days"] = [
+        {"weekday": day, "d_day": 33 - offset}
+        for offset, day in enumerate(
+            ("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday")
+        )
+    ]
+    week["declared_training_days"] = [
+        "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday",
+    ]
+    weekly = _map(week)
+
+    apply_final_calendar_integrity(weekly)
+
+    assert strength["scheduled_day_hint"] == "Monday"
+    assert fight_pace["scheduled_day_hint"] == "Friday"
+    assert alactic["scheduled_day_hint"] == "Thursday"
+    assert technical["scheduled_day_hint"] == "Thursday"
+    assert weekly["calendar_integrity"]["relocated_roles"] == 0
+    assert weekly["calendar_integrity"]["suppressed_roles"] == 0
+    assert weekly["calendar_integrity"]["unresolved_forbidden"] == 0
+
+
+def test_deprioritized_role_can_move_to_an_allow_day_with_only_tactical_support():
+    strength = _strength("Wednesday")
+    watch = {
+        "role_key": "tactical_watch",
+        "scheduled_day_hint": "Thursday",
+    }
+    weekly = _map(_week(roles=[strength, watch], contacts=[_hard("Tuesday")]))
+
+    apply_final_calendar_integrity(weekly)
+
+    assert strength["scheduled_day_hint"] == "Thursday"
+    assert watch["scheduled_day_hint"] == "Thursday"
+    assert weekly["calendar_integrity"]["relocated_roles"] == 1
+
+
 def test_two_day_gap_keeps_managed_strength_between_contacts():
     strength = _strength("Wednesday")
     weekly = _map(
