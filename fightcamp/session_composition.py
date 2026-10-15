@@ -3244,6 +3244,10 @@ def consolidate_compatible_physical_sessions(
                         audit_physical_session_frequency(weekly_role_map, athlete_model or {})
                     )
                 break
+            # The accepted trial replaced this week's object. Do not iterate
+            # stale role identities; a later consolidation gets a fresh map.
+            if weekly_role_map["weeks"][week_index] is not week:
+                break
     return weekly_role_map
 
 
