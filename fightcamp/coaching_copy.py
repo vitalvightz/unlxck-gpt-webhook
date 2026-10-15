@@ -91,12 +91,24 @@ def compact_stop(text: str) -> str:
     if re.search(r"\b(?:medical|emergency|clinician|seek|call|faint|chest pain)\b", value, re.I):
         return value
     value = re.sub(r"^(?:End|Stop) (?:the |this )?(?:set|effort|work|hold|drill|session)\s+", "Stop ", value, flags=re.I)
-    value = re.sub(r"\b(?:appears|develops|occurs|is present)\b", "starts", value, flags=re.I)
-    value = re.sub(r"\b(?:you cannot|you can no longer)\b", "you can't", value, flags=re.I)
-    value = re.sub(r"\b(?:or if|or when)\b", "or", value, flags=re.I)
+    for original, concise in (
+        (r"\bpain appears\b", "pain"),
+        (r"\bjump quality drops\b", "jumps slow"),
+        (r"\byou cannot stick the landing\b", "landings fail"),
+        (r"\bpunch speed, guard return or balance deteriorates\b", "speed, guard or balance fail"),
+        (r"\bthe trunk collapses\b", "trunk fails"),
+        (r"\bbraking becomes uncontrolled\b", "braking fails"),
+        (r"\bjoint control\b", "control"),
+        (r"\bform breaks down\b", "form breaks"),
+        (r"\bor if\b", "or"),
+        (r"\bor when\b", "or"),
+    ):
+        value = re.sub(original, concise, value, flags=re.I)
     if len(value.split()) <= 9:
         return value
-    return value  # Preserve all stop triggers rather than hide a hazard.
+    # Preserve uncompressible medical/compound safety triggers; never
+    # truncate away a reason the athlete must stop.
+    return value
 
 
 def compact_progress(text: str) -> str:
