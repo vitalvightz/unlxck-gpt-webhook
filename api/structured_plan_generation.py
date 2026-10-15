@@ -3322,6 +3322,10 @@ def build_structured_plan_outcome(
         # and regrouping (which matches the model's names to the text).
         plan_dict = reconcile_canonical_names(plan_dict, planning_brief)
         plan_dict = sequence_structured_plan(plan_dict, planning_brief)
+        # Conversion cannot turn a quality cue or an ungrounded number into a
+        # programming instruction. Use the same deterministic recovery as reads.
+        from .structured_plan_coaching import recover_selected_coaching
+        plan_dict = recover_selected_coaching(plan_dict, planning_brief or {})
         # Hard invariant for every candidate that can ship (first pass,
         # schema-salvaged, faithfulness-pruned or model-repaired): conversion
         # never costs Stage 1 strength/conditioning the source rendered. A card

@@ -340,7 +340,7 @@ def _phase_grouped_drills(blocks: Any, phase: str) -> dict[str, list[dict[str, A
 
 
 def _render_week(week: dict[str, Any], blocks: Any, athlete_snapshot: dict | None = None,
-                 phase_strategy: dict | None = None) -> list[str]:
+                 phase_strategy: dict | None = None, progression_context: dict | None = None) -> list[str]:
     week_index = int(week.get("week_index", 0) or 0)
     if week_index <= 0:
         return []
@@ -383,7 +383,8 @@ def _render_week(week: dict[str, Any], blocks: Any, athlete_snapshot: dict | Non
         d_day = role_d_day(week, role)
         weekday = next((str(d["weekday"]).lower() for d in week.get("calendar_days") or []
                         if d.get("d_day") == d_day), weekday)
-        authority = authoritative_render_for_role(role, week=week, d_day=d_day, athlete_snapshot=athlete_snapshot)
+        authority = authoritative_render_for_role(role, week=week, d_day=d_day, athlete_snapshot=athlete_snapshot,
+                                                  progression_context=progression_context)
         label = (authority or {}).get("athlete_facing_label") or role.get("athlete_facing_label") or "Session"
         heading = f"### D-{d_day} ({weekday.title()}) — {label}"
         is_primary_strength = False
@@ -426,9 +427,12 @@ def render_weekly_schedule_section(*, planning_brief: dict[str, Any], blocks: An
     if not weeks:
         return ""
 
+    from .exercise_progression import build_progression_context
+    progression_context = build_progression_context(planning_brief)
     body: list[str] = []
     for week in weeks:
-        body.extend(_render_week(week, blocks, planning_brief.get("athlete_snapshot"), planning_brief.get("phase_strategy")))
+        body.extend(_render_week(week, blocks, planning_brief.get("athlete_snapshot"),
+                                 planning_brief.get("phase_strategy"), progression_context))
     rendered = [line for line in body]
     if not any(line.startswith("## Week ") for line in rendered):
         return ""

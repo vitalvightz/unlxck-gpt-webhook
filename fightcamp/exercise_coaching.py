@@ -1,18 +1,22 @@
 """Exercise execution guidance, independent of dose and calendar authority.
 
-These conservative profiles coach the selected movement at its existing dose.
-Progress means a specific improvement in execution, never permission to add
-load, repetitions, duration, impact or complexity. Unknown movements get their
-authored bank notes only. No exercise substitutions are selected here.
+Movement profiles supply execution and stop guidance only. Numerical Progress
+comes from a resolved future exposure; Easier reduces one known work quantity.
+Unknown movements keep their authored guidance without invented load targets.
 """
 from __future__ import annotations
 
 import re
 from typing import Any
+from .exercise_progression import (
+    authored_progression_matches, effective_exercise_prescription, measured_dose,
+    numerical_easier, numerical_guidance, progression_prohibited, normalise_measures,
+)
 
 
-# cue, easier execution, quality target, stop criterion. More specific matches
-# precede movement families; no medical/rehab progression is authored here.
+# Cue, easier execution, legacy quality rule, stop criterion. The third value
+# only identifies #2880's persisted wording for migration; it is never emitted
+# as Progress. More specific matches precede movement families.
 _PROFILES = (
     (r"swimming|freestyle", (
         "Keep the stroke relaxed and breathe regularly; avoid breath holds.",
@@ -105,6 +109,7 @@ def exercise_coaching(
     assignment: dict[str, Any], role: dict[str, Any], *,
     phase: str = "", d_day: int | None = None,
     athlete: dict[str, Any] | None = None,
+    progression_context: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Return concise coaching for this selected exercise and athlete context.
 
@@ -139,37 +144,70 @@ def exercise_coaching(
             continue
         for sentence in re.split(r"(?<=[.!?])\s+", line.strip()):
             if sentence:
+                embedded_stop = re.search(r"\bstop\s+(?:the\b|if\b|on\b|when\b|for\b|immediately\b).*$", sentence, re.I)
+                if embedded_stop:
+                    stop = embedded_stop[0]
+                    if stop not in fields["stop_rules"]:
+                        fields["stop_rules"].append(stop)
+                    sentence = sentence[:embedded_stop.start()].strip(" ;,:")
+                    if not sentence:
+                        continue
                 key = "stop_rules" if re.match(r"stop\b|end\b", sentence, re.I) else "coaching_cues"
                 if sentence not in fields[key]:
                     fields[key].append(sentence)
     if assignment.get("slot_group") not in {"strength_slots", "conditioning_slots", "priority_microdose"}:
         return fields
     phase = str(phase or role.get("phase") or assignment.get("source_phase") or "").upper()
-    constrained = (
-        phase == "TAPER" or (d_day is not None and d_day <= 14)
-        or str(athlete.get("fatigue") or "").lower() == "high"
-        or bool(athlete.get("has_active_injury") or athlete.get("injuries") or athlete.get("injury_restrictions"))
-        or bool(athlete.get("weight_cut_risk"))
-        or str(athlete.get("cut_severity_bucket") or "none").lower() not in {"none", "low"}
-        or assignment.get("slot_group") == "priority_microdose"
-        or assignment.get("support_only") is True
-    )
-    if constrained:
-        fields.pop("progression_rule", None)
+    constrained = progression_prohibited(role, assignment, phase, d_day, athlete)
+    authored_progress = fields.pop("progression_rule", None)
     profile = next((p for pattern, p in _PROFILES if re.search(pattern, name, re.I)), None)
-    if profile is None:
-        return fields
-    cue, easier, progress, stop = profile
-    # An authored bank cue is more specific than the family cue.
-    if not fields["coaching_cues"]:
-        fields["coaching_cues"] = [cue]
+    if profile is not None:
+        cue, easier, _, stop = profile
+        if not fields["coaching_cues"]:
+            fields["coaching_cues"] = [cue]
+        if not fields["stop_rules"]:
+            fields["stop_rules"] = [stop]
+    prescription = effective_exercise_prescription(role, assignment)
+    dose = measured_dose(prescription, assignment)
     if not fields["regression_options"]:
-        fields["regression_options"] = [easier]
-    if not fields["stop_rules"]:
-        fields["stop_rules"] = [stop]
+        option = numerical_easier(dose) if fields["stop_rules"] else None
+        if option:
+            fields["regression_options"] = [option]
+        elif profile is not None:
+            fields["regression_options"] = [easier]
     if not constrained:
-        fields.setdefault("progression_rule", progress)
+        guidance = numerical_guidance(progression_context, dose, prescription)
+        if guidance.get("progression_rule"):
+            target = progression_context["next"]["dose"]
+            fields["progression_rule"] = (
+                authored_progress if authored_progress and authored_progression_matches(authored_progress, guidance, target)
+                else guidance["progression_rule"]
+            )
+        elif guidance.get("maintenance_cue"):
+            fields["coaching_cues"].append(guidance["maintenance_cue"])
+    if authored_progress and is_execution_quality_instruction(authored_progress) and not is_profile_progression(authored_progress):
+        if authored_progress not in fields["coaching_cues"]:
+            fields["coaching_cues"].append(authored_progress)
     return fields
+
+
+def is_profile_progression(text: str) -> bool:
+    """Identify only #2880's exact generated quality rules, never athlete prose."""
+    return text.strip() in {profile[2] for _, profile in _PROFILES}
+
+
+def is_profile_regression(text: str) -> bool:
+    return text.strip() in {profile[1] for _, profile in _PROFILES}
+
+
+def has_measurable_step(text: str) -> bool:
+    return bool(re.search(r"\d\s*(?:kg\b|lb\b|%|[x×]\s*\d|sets?\b|reps?\b|rounds?\b|m\b|min\b|minutes?\b|sec\b|seconds?\b)|RPE\s*\d", normalise_measures(text), re.I))
+
+
+def is_execution_quality_instruction(text: str) -> bool:
+    return not has_measurable_step(text) and not re.search(
+        r"\b(?:add|extend|heavier|stronger)\b|\bincrease\s+(?:load|weight|volume|reps|sets|rounds|speed|effort|intensity)|"
+        r"\b(?:advance|progress)\s+to\b|\bshorten\s+(?:the\s+)?rest", text, re.I)
 
 
 def coaching_lines(fields: dict[str, Any]) -> list[str]:
