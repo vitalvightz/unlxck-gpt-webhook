@@ -83,7 +83,7 @@ def concise_coaching(fields):
                     for cue in result.get("coaching_cues") or []])
     if cues:
         lead = short_cue(cues[0])
-        result["coaching_cues"] = _unique([lead, *cues])
+        result["coaching_cues"] = [lead]  # Exactly one actionable cue; original stays in bank.
     options = _unique(result.get("regression_options"))
     result["regression_options"] = options[:1]
     result["stop_rules"] = readable_stop(result.get("stop_rules"))
