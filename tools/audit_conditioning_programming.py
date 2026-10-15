@@ -83,7 +83,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
     records = audit(args.ref)
     with args.out.open('w') as stream:
-        writer = csv.DictWriter(stream, fieldnames=list(records[0]))
+        writer = csv.DictWriter(stream, fieldnames=list(records[0]), lineterminator='\n')
         writer.writeheader()
         writer.writerows(records)
     print(json.dumps({'records': len(records), 'sources': Counter(r['source'] for r in records),
