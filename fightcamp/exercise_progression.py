@@ -176,7 +176,8 @@ def numerical_guidance(context: dict | None, dose: dict, prescription: str) -> d
     if context["current"]["role"].get("category") == "conditioning":
         label = "rounds" if variable == "sets" else _label(variable, dose)
         fields["progression_rule"] = (
-            f"Next D-{future['day']}: {label} {_value(variable, dose)} → {_value(variable, target)}."
+            f"If recovered, next D-{future['day']}: increase {label} only "
+            f"from {_value(variable, dose)} to {_value(variable, target)}; keep rest and effort unchanged."
         )
     else:
         delta = {**dose, variable: target[variable] - dose[variable]}
@@ -186,7 +187,8 @@ def numerical_guidance(context: dict | None, dose: dict, prescription: str) -> d
         if delta[variable] == 1:
             noun = noun.replace(" reps", " rep").replace(" sets", " set").replace(" rounds", " round")
         fields["progression_rule"] = (
-            f"Next D-{future['day']}: add {amount}{noun}."
+            f"Next D-{future['day']}: add {amount}{noun} ({future['prescription'].rstrip('.')}); "
+            "only if controlled and recovered."
         )
     fields["variable"] = variable
     fields["from"] = dose[variable]
@@ -227,7 +229,8 @@ def numerical_easier(dose: dict) -> str | None:
             continue
         reduced = value - 1 if variable in {"sets", "rounds", "reps"} else max(1, math.floor(value * 0.8))
         target = {**dose, variable: reduced}
-        return f"Reduce {_label(variable, dose)} to {_value(variable, target)}."
+        return (f"Reduce {_label(variable, dose)} to {_value(variable, target)} "
+                f"instead of {_value(variable, dose)}; keep effort and rests unchanged.")
     return None
 
 
