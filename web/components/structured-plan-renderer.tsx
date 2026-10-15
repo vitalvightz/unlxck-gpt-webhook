@@ -430,9 +430,10 @@ export function BlockCard({
   // through to no tooltip rather than to a guess.
   const effortMethod = cleanText(block.effort?.method);
   const { cues: allCues, regressions, substitutions } = getBlockExecutionDisplay(block);
-  const cues = hideCues ? [] : hideLeadCue ? allCues.slice(1) : allCues;
-  const visibleCues = embedded ? (hideLeadCue ? [] : cues.slice(0, 1)) : cues;
-  const coachingDetail = embedded ? (hideLeadCue ? cues : cues.slice(1)) : [];
+  // One clear coach cue. Older saved cards can still carry a lead/long-copy
+  // duplicate; their second cue must not reappear behind another disclosure.
+  const cues = hideCues || hideLeadCue ? [] : allCues.slice(0, 1);
+  const visibleCues = cues;
   const { progression } = getBlockAdjustmentDisplay(block);
   const weekDirective = openBlockWeekDirective(openWeekIntent, block);
   // A week directive owns progression/deload programming for open plans, while
@@ -539,14 +540,6 @@ export function BlockCard({
             <li key={`${cue}-${index}`}>{cue}</li>
           ))}
         </ul>
-      ) : null}
-      {coachingDetail.length > 0 ? (
-        <details className="ex-detail-section">
-          <summary>Coaching cues</summary>
-          <ul className="sp-cues">
-            {coachingDetail.map((cue, index) => <li key={`${cue}-${index}`}>{cue}</li>)}
-          </ul>
-        </details>
       ) : null}
       {asides.length > 0 ? (
         <div className="sp-block-asides">
@@ -865,27 +858,13 @@ function ExerciseDetail({
           ) : null}
         </details>
       ) : null}
-      {cues.length > 0 ? (
-        <details className="ex-detail-section">
-          <summary>Coaching cues</summary>
-          <ul className="sp-cues">
-            {cues.map((cue, index) => (
-              <li key={`${cue}-${index}`}>{cue}</li>
-            ))}
-          </ul>
-        </details>
-      ) : null}
-      <details className="ex-detail-section">
-        <summary>Full prescription</summary>
-        <BlockCard
-          block={block}
-          openWeekIntent={openWeekIntent}
-          sourceCountdown={sourceCountdown}
-          embedded
-          hideCues
-          hideStopRule
-        />
-      </details>
+      <BlockCard
+        block={block}
+        openWeekIntent={openWeekIntent}
+        sourceCountdown={sourceCountdown}
+        embedded
+        hideStopRule
+      />
       {/* Renders only where a started session provides logging (Today). */}
       <ExerciseLogPanel block={block} />
     </div>
