@@ -1,0 +1,146 @@
+{
+  "source_plan_id": "da5b9dc9-ca7d-4866-a84b-b82fefede4d3",
+  "source_started_at": "2026-10-15 12:36:40.280508+00",
+  "anonymisation": "Only athlete.full_name is replaced. Programming inputs are the exact saved request; production random seed was not persisted.",
+  "intake": {
+    "notes": "",
+    "athlete": {
+      "age": 23,
+      "sex": "male",
+      "record": "16-10",
+      "stance": "Orthodox",
+      "full_name": "Physical Stimulus Regression",
+      "height_cm": 175,
+      "weight_kg": 75,
+      "athlete_locale": "",
+      "tactical_style": [
+        "distance_striker"
+      ],
+      "technical_style": [
+        "boxing"
+      ],
+      "athlete_timezone": "Europe/London",
+      "target_weight_kg": 73,
+      "professional_status": "amateur"
+    },
+    "injuries": "Left bicep (low, stable). Type: surface_injury. Surface: cut. Open wound: no. Bleeding: none. Infection: none. Sensitive area: no. Avoid: friction. Notes: [training_impact:not_limiting]",
+    "intake_id": null,
+    "key_goals": [
+      "speed",
+      "power"
+    ],
+    "fight_date": "2026-11-01",
+    "weak_areas": [
+      "footwork"
+    ],
+    "random_seed": null,
+    "primary_goal": "speed",
+    "fatigue_level": "low",
+    "guided_injury": {
+      "area": "Left bicep",
+      "zone": "l_bicep",
+      "avoid": "friction",
+      "notes": "[training_impact:not_limiting]",
+      "trend": "stable",
+      "cleared": "",
+      "severity": "low",
+      "timeframe": "",
+      "open_wound": "no",
+      "injury_type": "surface_injury",
+      "surface_type": "cut",
+      "impact_related": "",
+      "sensitive_area": "no",
+      "bleeding_status": "none",
+      "infection_signs": [
+        "none"
+      ],
+      "injury_subtypes": [
+        "surface_injury:cut"
+      ]
+    },
+    "rounds_format": "3 x 3",
+    "guided_injuries": [
+      {
+        "area": "Left bicep",
+        "zone": "l_bicep",
+        "avoid": "friction",
+        "notes": "[training_impact:not_limiting]",
+        "trend": "stable",
+        "cleared": "",
+        "severity": "low",
+        "timeframe": "",
+        "open_wound": "no",
+        "injury_type": "surface_injury",
+        "surface_type": "cut",
+        "impact_related": "",
+        "sensitive_area": "no",
+        "bleeding_status": "none",
+        "infection_signs": [
+          "none"
+        ],
+        "injury_subtypes": [
+          "surface_injury:cut"
+        ]
+      }
+    ],
+    "open_camp_weeks": 12,
+    "equipment_access": [
+      "plate",
+      "box",
+      "treadmill",
+      "weight_vest",
+      "bench",
+      "hurdles",
+      "pads",
+      "bosu_ball",
+      "kettlebells",
+      "partner",
+      "bulgarian_bag",
+      "barbell",
+      "trap_bar",
+      "assault_bike",
+      "sled",
+      "pool",
+      "heavy_bag",
+      "medicine_ball",
+      "weight_belt",
+      "sandbag",
+      "bands",
+      "stable_support",
+      "chair",
+      "table",
+      "towel",
+      "landmine",
+      "agility_ladder",
+      "foam_roller",
+      "water_jug"
+    ],
+    "primary_weak_area": "footwork",
+    "support_work_days": [
+      "Monday"
+    ],
+    "hard_sparring_days": [
+      "Thursday",
+      "Tuesday"
+    ],
+    "mindset_challenges": "",
+    "no_scheduled_fight": false,
+    "training_preference": "",
+    "training_availability": [
+      "Monday",
+      "Tuesday",
+      "Saturday",
+      "Wednesday",
+      "Thursday",
+      "Friday"
+    ],
+    "reduced_contact_requested": true,
+    "weekly_training_frequency": 4,
+    "goal_weakness_collision_tags": [],
+    "goal_weakness_collision_detail": "",
+    "goal_weakness_collision_details": []
+  },
+  "planner_context": {
+    "include_generation_day": true
+  }
+}

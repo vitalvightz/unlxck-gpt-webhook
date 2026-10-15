@@ -224,7 +224,7 @@ def _light_combat(d_day):
 
 def test_a_forbidden_day_moves_the_composed_primer_to_an_adjacent_legal_day():
     role = _role("neural_primer_day", d_day=7, scheduled_day_hint="monday")
-    members = _compose(role, conditioning=[_primer("Counter Reset")], sequence=[role, _light_combat(7)])
+    members = _compose(role, conditioning=[_primer("Counter Reset")], sequence=[role, _role("strength_touch_day", d_day=7)])
     assert _names(members) == ["Counter Reset"]
     resolution = role["late_load_resolution"]
     assert resolution["action"] == "relocated_to_adjacent_day"
@@ -246,7 +246,7 @@ def test_a_relocated_primer_takes_the_day_from_an_occupancy_filler():
     role = _role("neural_primer_day", d_day=7, scheduled_day_hint="monday")
     filler = _occupancy_filler(6)
     blocked = _role("strength_touch_day", d_day=8)
-    sequence = [role, _light_combat(7), filler, blocked]
+    sequence = [role, _role("strength_touch_day", d_day=7), filler, blocked]
     _compose(role, conditioning=[_primer("Counter Reset")], sequence=sequence)
     assert role["late_load_resolution"]["to_d_day"] == 6
     assert role["late_load_resolution"]["displaced_fillers"] == ["joint_prep"]
@@ -254,19 +254,13 @@ def test_a_relocated_primer_takes_the_day_from_an_occupancy_filler():
     assert filler not in sequence
 
 
-def test_a_forbidden_fixed_day_reduces_the_primer_to_a_verified_coexisting_microdose():
-    # No weekday: the primer cannot move, so it is reduced, and the reduction
-    # is only accepted because the policy re-judges it as a coexisting microdose.
+def test_compatible_technical_day_keeps_the_composed_primer_without_duplicate_reduction():
     role = _role("neural_primer_day", d_day=7)
     quiet = _primer("Stance Cue", family="technical_neural", tags=(), prescription="2x3s with 120s rest", index=1)
     members = _compose(role, conditioning=[_primer("Counter Reset"), quiet],
                        sequence=[role, _light_combat(7)])
-    assert _names(members) == ["Stance Cue"]
-    assert members[0]["effective_prescription"] == "1x3s with 120s rest"
-    resolution = role["late_load_resolution"]
-    assert resolution["action"] == "reduced_to_coexisting_microdose"
-    assert resolution["verified_directive"] != "forbid"
-    assert resolution["conflict_reason_code"] == "exclusive_physical_slot_conflict"
+    assert _names(members) == ["Counter Reset", "Stance Cue"]
+    assert "late_load_resolution" not in role
 
 
 def test_a_reduction_the_policy_still_forbids_is_never_accepted():
@@ -281,7 +275,7 @@ def test_a_reduction_the_policy_still_forbids_is_never_accepted():
 
 def test_a_forbidden_fixed_day_with_no_safe_option_removes_the_session():
     role = _role("neural_primer_day", d_day=7)
-    members = _compose(role, conditioning=[_primer("Counter Reset")], sequence=[role, _light_combat(7)])
+    members = _compose(role, conditioning=[_primer("Counter Reset")], sequence=[role, _role("strength_touch_day", d_day=7)])
     assert members == []
     assert role["late_load_resolution"]["action"] == "suppressed_no_safe_prescription"
 

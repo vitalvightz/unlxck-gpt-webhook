@@ -173,8 +173,9 @@ def test_vito_b_d13_session_leads_with_meaningful_goal_relevant_power(days_out):
 @pytest.mark.parametrize("days_out", [14, 13])
 def test_vito_b_no_primer_day_repeats_one_drill_alone(days_out):
     primers = _primers(_brief("vito_b", days_out))
-    assert {13, 7, 5} <= set(primers)
-    for d_day in (13, 7, 5):
+    assert {13, 7} <= set(primers)
+    assert len(primers) >= 3 and set(primers) & {4, 5}
+    for d_day in primers:
         assert [m["name"] for m in _members(primers[d_day])] != ["Pull-Counter-Reset"], d_day
 
 
@@ -232,14 +233,16 @@ def test_safety_sweep_keeps_primer_invariants(variant, days_out):
 
 @pytest.mark.parametrize("variant", ["high_fatigue", "aggressive_cut", "limiting_knee"])
 @pytest.mark.parametrize("days_out", [14, 10])
-def test_risk_signals_take_one_complement_off_every_primer(variant, days_out):
-    """Relaxing redundant restrictions must not make a riskier athlete's tail heavier.
-
-    The dose owner's single readiness step removes one complement, so an
-    at-risk athlete's primer holds at most two exercises.
-    """
-    for d_day, role in _primers(_brief(variant, days_out)).items():
-        assert len(_members(role)) <= LATE_PRIMER_MAX_MEMBERS - 1, (d_day, [m["name"] for m in _members(role)])
+def test_risk_signals_keep_per_exercise_controls_without_duplicate_member_penalty(variant, days_out):
+    """Readiness keeps effective-dose and envelope controls, without a second count penalty."""
+    brief = _brief(variant, days_out)
+    _assert_primer_invariants(brief)
+    for d_day, role in _primers(brief).items():
+        assert len(_members(role)) <= LATE_PRIMER_MAX_MEMBERS, (d_day, _members(role))
+        for dose in role.get("effective_strength_prescriptions") or []:
+            cap = role.get("strength_dose_cap") or {}
+            if cap.get("max_sets") is not None:
+                assert dose.get("effective_max_sets", 0) <= cap["max_sets"]
 
 
 _SPORT_OF = {"vito_b": "kickboxing", "muay_thai": "muay_thai", "mma": "mma"}

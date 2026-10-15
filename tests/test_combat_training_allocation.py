@@ -68,7 +68,7 @@ def allocation_summary(brief):
 
 
 @pytest.mark.parametrize("frequency", [6, 8, 9])
-def test_final_pipeline_honours_total_sessions_including_double_days(monkeypatch, frequency, sport="boxing"):
+def test_final_pipeline_reports_totals_without_trimming_compatible_work(monkeypatch, frequency, sport="boxing"):
     parsed, brief = run_lead(monkeypatch, training_frequency=frequency, sport=sport)
     assert parsed.training_frequency == frequency
     double_days = []
@@ -86,22 +86,23 @@ def test_final_pipeline_honours_total_sessions_including_double_days(monkeypatch
             standalone_support = {role_d_day(week, r) for r in week["session_roles"]
                                   if r.get("role_key") in PHYSICAL_SUPPORT_ROLE_KEYS
                                   and role_d_day(week, r) in offsets - occupied}
-            assert len(full) + len(standalone_support) <= frequency, (week["week_index"], full)
             appointment_days.extend(role_d_day(week, r) for r in full)
             appointment_days.extend(standalone_support)
             for day in occupied:
                 if sum(role_d_day(week, r) == day for r in full) >= 2:
                     double_days.append(day)
     slots = [(d["d_day"], d["weekday"]) for w in brief["weekly_role_map"]["weeks"] for d in w["calendar_days"]]
-    for days in cadence_windows(slots):
-        assert sum(day in {d for d, _ in days} for day in appointment_days) <= frequency
+    exceeded = any(sum(day in {d for d, _ in days} for day in appointment_days) > frequency
+                   for days in cadence_windows(slots))
+    from fightcamp.stage2_validator import _total_session_budget_warnings
+    assert bool(_total_session_budget_warnings(brief)) is exceeded
     assert double_days  # The cap must allow legal double days, including at six.
     assert_scheduled_doses_and_contact_safety(brief)
 
 
 @pytest.mark.parametrize("sport", ["kickboxing", "muay_thai", "mma", "wrestling", "bjj"])
-def test_total_session_and_shared_load_governance_are_universal(monkeypatch, sport):
-    test_final_pipeline_honours_total_sessions_including_double_days(monkeypatch, 6, sport=sport)
+def test_session_reporting_and_shared_load_governance_are_universal(monkeypatch, sport):
+    test_final_pipeline_reports_totals_without_trimming_compatible_work(monkeypatch, 6, sport=sport)
 
 
 def test_appointment_counter_distinguishes_double_days_from_embedded_support():
@@ -115,7 +116,7 @@ def test_appointment_counter_distinguishes_double_days_from_embedded_support():
     assert len(physical_appointments(roles)) == 3
 
 
-def test_budget_recounts_support_when_its_host_is_removed():
+def test_budget_retains_host_and_embedded_support_and_reports_overrun():
     from fightcamp.stage2_role_map import enforce_total_session_budget
     coach = {"role_key": "light_combat_day", "category": "technical", "coach_owned": True,
              "scheduled_countdown_label": "D-20"}
@@ -124,22 +125,23 @@ def test_budget_recounts_support_when_its_host_is_removed():
     role_map = {"weeks": [{"phase": "GPP", "session_roles": roles,
                            "calendar_days": [{"d_day": 20, "weekday": "Monday"}, {"d_day": 19, "weekday": "Tuesday"}]}]}
     enforce_total_session_budget(role_map, {"training_frequency": 1})
-    assert roles == [coach]
-    assert len(physical_appointments([{**r, "countdown_offset": role_d_day({}, r)} for r in roles])) == 1
+    assert len(roles) == 3
+    assert len(physical_appointments([{**r, "countdown_offset": role_d_day({}, r)} for r in roles])) == 2
+    assert any("requested count exceeded" in flag for flag in role_map["weeks"][0]["coach_note_flags"])
 
 
 def test_impossible_coach_schedule_is_flagged_without_deleting_coach_sessions():
     from fightcamp.stage2_role_map import enforce_total_session_budget
-    from fightcamp.stage2_validator import _total_session_budget_errors
+    from fightcamp.stage2_validator import _total_session_budget_warnings
     roles = [{"role_key": "light_combat_day", "category": "technical", "coach_owned": True,
               "scheduled_countdown_label": f"D-{d}"} for d in range(20, 13, -1)]
     role_map = {"weeks": [{"phase": "SPP", "session_roles": roles,
                            "calendar_days": [{"d_day": d} for d in range(20, 13, -1)]}]}
     enforce_total_session_budget(role_map, {"training_frequency": 6})
     assert len(roles) == 7
-    errors = _total_session_budget_errors({"athlete_snapshot": {"training_frequency": 6}, "weekly_role_map": role_map})
+    errors = _total_session_budget_warnings({"athlete_snapshot": {"training_frequency": 6}, "weekly_role_map": role_map})
     assert errors[0]["code"] == "total_session_budget_exceeded"
-    assert errors[0]["severity"] == "blocker"
+    assert errors[0]["severity"] == "warning"
 
 
 def test_historical_bank_replay_accepts_only_the_reviewed_round_edit():

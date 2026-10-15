@@ -57,3 +57,26 @@ desired behaviour.
 If Stage 3B legitimately changes one of these calendars, update the affected
 baseline in the same PR and explain in review exactly which rows changed and
 why the shared calendar policy required it.
+
+## Physical-stimulus restoration review
+
+The restoration PR refreezes these eight scenarios after removing appointment
+trimming, declaration-based technical-day exclusions and duplicate primer
+penalties. Each proposed contact projection was compared with both the old
+snapshot and a fresh Main (`a76fd0ef`) run: **all contact rows are unchanged**.
+Every scheduled normal physical role passes the shared calendar policy, and
+every selected normal S&C member retains an effective prescription.
+
+Physical differences against live Main include retained coordination/flush
+appointments, strength at D-23/D-19/D-17 and touches at D-12, and primers moving
+onto compatible converted technical dates. The direct/boundary cases retain
+sharpness at D-5, freshness at D-3 and neural work at D-1. The high-fatigue case
+still uses its existing fatigue and dose controls; no raw weekday exclusion or
+post-allocation count ceiling is restored. See
+[the replay report](../../../docs/restore-physical-stimulus.md) for actual
+appointment totals and explicit over-target counts; snapshot role-row counts
+are not appointment counts.
+
+The old snapshots also differed from live Main's mental/support cadence before
+this change. Those existing Main rows are reflected in the refreshed fixtures;
+this PR changes no mental preparation implementation or coaching UI.

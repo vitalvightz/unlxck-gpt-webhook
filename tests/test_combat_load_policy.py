@@ -19,16 +19,16 @@ from fightcamp.combat_load_policy import (
 )
 
 
-def test_hard_sc_can_share_known_light_technical_but_not_unknown_contact():
+def test_hard_sc_can_share_declared_or_resolved_technical_contact():
     technical = role_load_profile({"role_key": "light_combat_day"})
     hard_sc = CalendarLoadProfile(LoadClass.MEANINGFUL_STRENGTH, DayOccupancy.EXCLUSIVE_PHYSICAL,
                                  stress=SessionStress(StressLevel.LOW, StressLevel.HIGH))
     assert evaluate_candidate_at_position(hard_sc, candidate_position=20, events=[CalendarEvent(20, technical)]).allowed
     unknown = contact_load_profile({"effective_load": "technical"})
-    assert not evaluate_candidate_at_position(hard_sc, candidate_position=20, events=[CalendarEvent(20, unknown)]).allowed
+    assert evaluate_candidate_at_position(hard_sc, candidate_position=20, events=[CalendarEvent(20, unknown)]).allowed
 
 
-def test_combined_daily_stress_does_not_permit_two_hard_sc_sessions_on_light_boxing():
+def test_removed_aggregate_veto_does_not_override_legal_nonexclusive_doubles():
     technical = role_load_profile({"role_key": "light_combat_day"})
     strength = CalendarLoadProfile(LoadClass.MEANINGFUL_STRENGTH, DayOccupancy.PHYSICAL,
                                   stress=SessionStress(StressLevel.LOW, StressLevel.HIGH))
@@ -36,8 +36,8 @@ def test_combined_daily_stress_does_not_permit_two_hard_sc_sessions_on_light_box
                                       stress=SessionStress(StressLevel.HIGH, StressLevel.LOW))
     decision = evaluate_candidate_at_position(conditioning, candidate_position=20,
         events=[CalendarEvent(20, technical), CalendarEvent(20, strength)])
-    assert decision.directive is PlacementDirective.FORBID
-    assert decision.reason_code == "combined_daily_stress_exceeded"
+    assert decision.allowed
+    assert decision.reason_code != "combined_daily_stress_exceeded"
 
 
 @pytest.mark.parametrize("position", [19, 21])

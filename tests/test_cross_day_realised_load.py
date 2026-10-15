@@ -363,7 +363,7 @@ def test_conditioning_systemic_stress_uses_known_effort_without_guessing(rpe, in
     assert realised_session_stress([assignment]).systemic is expected
 
 
-def test_revalidation_does_not_suppress_both_roles_from_a_stale_daily_conflict():
+def test_revalidation_keeps_nonexclusive_work_after_aggregate_veto_is_removed():
     week = _spp_week()
     week["declared_training_days"] = ["monday"]
     first = _plyometric_role()
@@ -373,9 +373,9 @@ def test_revalidation_does_not_suppress_both_roles_from_a_stale_daily_conflict()
     week["session_roles"] = [first, second]
     role_map = {"weeks": [week]}
     apply_realised_load_calendar_revalidation(role_map)
-    assert len(week["session_roles"]) == 1
-    assert role_map["realised_load_revalidation"]["actions"][0]["action"] == "suppressed"
-    assert not role_map["realised_load_revalidation"]["residual_conflicts"]
+    assert len(week["session_roles"]) == 2
+    assert not (role_map.get("realised_load_revalidation") or {}).get("actions")
+    assert not (role_map.get("realised_load_revalidation") or {}).get("residual_conflicts")
 
 
 # --- the composed-plan seam --------------------------------------------------

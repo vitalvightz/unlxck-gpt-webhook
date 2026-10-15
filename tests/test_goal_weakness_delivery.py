@@ -349,9 +349,10 @@ def test_vito_b_strength_weakness_is_trained_by_real_lifts():
     lifted = {e["name"] for e in entry["evidence"]}
     assert lifted and all("strength" in strength_adaptation_relevance(_BANK[name]) for name in lifted)
     assert not any(e["goal"] == "strength" for e in validate_goal_preservation(brief))
-    # Every development strength session holds a strength-developing lift.
+    # Every development session holds real strength, power or speed work;
+    # the weakness contract above still requires strength in each owed window.
     for d_day, role in _development_strength_sessions(brief):
-        assert any("strength" in strength_adaptation_relevance(_BANK[m["name"]]) for m in _members(role)), d_day
+        assert any({"strength", "power", "speed"} & strength_adaptation_relevance(_BANK[m["name"]]) for m in _members(role)), d_day
 
 
 def test_a_stable_blister_is_not_global_strength_pressure():
@@ -411,13 +412,10 @@ def test_every_conditioning_day_says_why_it_carries_no_trunk_support(key):
     ]
     assert all(reason for _, reason in skipped), skipped
     if key == "king":
-        # The total-session budget leaves instruction-only aerobic support in
-        # this window, not a bank conditioning session to embed trunk work in.
-        # Never add another conditioning appointment merely to clear this audit.
-        assert not any(r.get("category") == "conditioning" and _members(r)
-                       for week, r in _roles(_brief(key))
-                       if isinstance(role_d_day(week, r), int) and 14 <= role_d_day(week, r) <= 20)
-        assert {reason for d_day, reason in skipped if isinstance(d_day, int) and 14 <= d_day <= 20} == set()
+        assert any(r.get("category") == "conditioning" and _members(r)
+                   for week, r in _roles(_brief(key))
+                   if isinstance(role_d_day(week, r), int) and 14 <= role_d_day(week, r) <= 20)
+
 
 
 def test_without_the_cut_king_builds_trunk_strength_every_week():
@@ -483,8 +481,17 @@ def test_no_selected_goal_newly_loses_its_contract(key):
 
 def test_swimming_remains_available_on_its_aerobic_merit():
     """No blacklist: with a pool, swimming may still own an aerobic slot."""
-    swims = [m["name"] for _, r in _roles(_brief("vito_b")) for m in _members(r) if "swim" in m["name"].lower()]
+    from fightcamp.session_composition import compose_normal_conditioning_assignments
+    brief = _brief("vito_b")
+    swims = [s for s in brief["candidate_pools"]["GPP"]["conditioning_slots"]
+             if "swim" in s["selected"]["name"].lower()]
     assert swims
+    role = {"role_key": "aerobic_support_day", "category": "conditioning", "preferred_system": "aerobic",
+            "scheduled_countdown_label": "D-56", "scheduled_day_hint": "Monday"}
+    compose_normal_conditioning_assignments(weekly_role_map={"weeks": [{"phase": "GPP", "session_roles": [role]}]},
+        candidate_pools={"GPP": {"conditioning_slots": swims}})
+    assert any("swim" in m["name"].lower() for m in _members(role))
+
 
 
 def test_contrast_rounds_are_read_as_working_sets():
