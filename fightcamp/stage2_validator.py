@@ -3997,8 +3997,8 @@ def _underfilled_conditioning_errors(planning_brief: dict) -> list[dict]:
     return errors
 
 
-def _same_day_strength_ownership_errors(planning_brief: dict) -> list[dict]:
-    """Prevent separately composed strength sessions and repeated bank drills.
+def _same_day_strength_ownership_warnings(planning_brief: dict) -> list[dict]:
+    """Report separately composed strength sessions and repeated bank drills.
 
     These are planner-calendar defects, not missing coach prose: both the
     selected membership and its canonical dates are already known before Stage 2.
@@ -4016,14 +4016,14 @@ def _same_day_strength_ownership_errors(planning_brief: dict) -> list[dict]:
             if isinstance(day, int) and day > 0:
                 days.setdefault(day, []).append(role)
 
-    errors = []
+    warnings = []
     for day, roles in sorted(days.items(), reverse=True):
         meaningful_strength = [role for role in roles
                                if (profile := role_load_profile(role)) is not None
                                and profile.load_class is LoadClass.MEANINGFUL_STRENGTH]
         if len(meaningful_strength) > 1:
-            errors.append(_issue(
-                code="duplicate_meaningful_strength_day", severity="blocker", confidence="high",
+            warnings.append(_issue(
+                code="duplicate_meaningful_strength_day", severity="warning", confidence="high",
                 message=f"D-{day}: multiple meaningful Strength appointments own the same day.",
                 scheduled_d_day=day,
                 role_keys=[role.get("role_key") for role in meaningful_strength],
@@ -4043,12 +4043,12 @@ def _same_day_strength_ownership_errors(planning_brief: dict) -> list[dict]:
                 else:
                     seen[key] = name
         for _, name in sorted(duplicated):
-            errors.append(_issue(
-                code="duplicate_physical_exercise_day", severity="blocker", confidence="high",
+            warnings.append(_issue(
+                code="duplicate_physical_exercise_day", severity="warning", confidence="high",
                 message=f"D-{day}: {name} is prescribed more than once across physical sessions.",
                 scheduled_d_day=day, exercise=name,
             ))
-    return errors
+    return warnings
 
 
 def _total_session_budget_warnings(planning_brief: dict) -> list[dict]:
@@ -4083,7 +4083,6 @@ def validate_stage2_output(*, planning_brief: dict, final_plan_text: str, final_
     countdown_blocks = _countdown_blocks(final_plan_text)
 
     errors: list[dict[str, Any]] = validate_goal_preservation(planning_brief)
-    errors.extend(_same_day_strength_ownership_errors(planning_brief))
     goal_contract_valid = not errors
     from .programme_fidelity import programme_fidelity_findings
     if final_programme:
@@ -4093,6 +4092,7 @@ def validate_stage2_output(*, planning_brief: dict, final_plan_text: str, final_
     errors.extend(_priority_microdose_render_errors(planning_brief, final_plan_text))
     errors.extend(_underfilled_conditioning_errors(planning_brief))
     warnings: list[dict[str, Any]] = _total_session_budget_warnings(planning_brief)
+    warnings.extend(_same_day_strength_ownership_warnings(planning_brief))
     if not plan_lines:
         errors.append(_issue(code="stage2_output_empty", message="Stage 2 output is empty.", severity="blocker", confidence="high"))
     errors.extend(_stage2_output_incomplete_errors(final_plan_text))

@@ -17,13 +17,6 @@ _REPAIR_PROMPT_EXCLUDED_CODES = frozenset(
         "true_internal_system_leak",
     }
 )
-# These defects invalidate the actual scheduled workload, not just its prose.
-# Unlike observational coaching-quality findings they must not reach athletes.
-_UNSAFE_CALENDAR_ERROR_CODES = frozenset({
-    "duplicate_meaningful_strength_day",
-    "duplicate_physical_exercise_day",
-})
-
 _RELEASE_COLLECTION_FIELDS = (
     "errors",
     "warnings",
@@ -150,9 +143,11 @@ def _normalised_collection(validator_report: dict, key: str) -> list[dict]:
 
 
 def apply_stage2_release_policy(validator_report: dict) -> dict:
-    """Release usable plans while holding unresolved workload or primary-dose gaps.
+    """Report all Stage 2 validator findings without blocking publication.
 
-    Other validator findings remain observational for telemetry and admin review.
+    Plan-quality diagnostics (including dose, workload and scheduling defects)
+    are visible to athletes/admins as flags, never release gates. Medical/triage
+    restrictions are owned outside this policy.
     """
 
     report = validator_report if isinstance(validator_report, dict) else {}
@@ -188,11 +183,6 @@ def apply_stage2_release_policy(validator_report: dict) -> dict:
     ]
     quality_findings = _dedupe_findings([*all_findings, *malformed_findings])
     admin_findings = admin_review_blocking_findings(collections)
-    dose_or_workload_unresolved = any(
-        item.get("code") in {"conditioning_role_workload_underfilled", "ambiguous_working_dose"}
-        or item.get("code") in _UNSAFE_CALENDAR_ERROR_CODES
-        for item in collections["errors"]
-    )
     release_decision = "publish_with_flags" if quality_findings else "publish"
 
     return {
@@ -205,9 +195,9 @@ def apply_stage2_release_policy(validator_report: dict) -> dict:
         "admin_review_blocking_flag_count": len(admin_findings),
         "release_policy_malformed_fields": malformed_fields,
         "validator_findings_observational": True,
-        "release_decision": "hold" if dose_or_workload_unresolved else release_decision,
-        "is_athlete_releasable": not dose_or_workload_unresolved,
-        "is_publishable": not dose_or_workload_unresolved,
+        "release_decision": release_decision,
+        "is_athlete_releasable": True,
+        "is_publishable": True,
     }
 
 
