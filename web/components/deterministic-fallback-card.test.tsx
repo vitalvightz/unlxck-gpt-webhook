@@ -113,7 +113,7 @@ test("a single bank cue prints once, not as Focus + Reset + Coach cue", () => {
 
   assert.equal(markup.split("Take the space, do not chase it").length - 1, 1);
   // …and it occupies exactly one labelled coaching line, whichever slot held it.
-  assert.equal(markup.split("sp-coaching-label").length - 1, 1);
+  assert.equal(markup.split("sp-stat-label">Cue").length - 1, 1);
 });
 
 test("a bank cue emitted by the server fills only the coach-cue slot", () => {
@@ -135,7 +135,7 @@ test("a bank cue emitted by the server fills only the coach-cue slot", () => {
     ]),
   );
 
-  assert.match(markup, />Coach cue</);
+  assert.match(markup, />Cue</);
   assert.equal(markup.includes(">Focus</span>"), false);
   assert.equal(markup.includes(">Reset</span>"), false);
 });
@@ -219,8 +219,8 @@ test("a parsed drill card keeps Why, prescription, cues and its stop rule", () =
   );
   assert.match(expanded, /2 sets x 4 clean reactions each direction/);
   assert.match(expanded, /Rest: 75 sec between sets/);
-  assert.match(expanded, /Cue Method:/);
-  assert.match(expanded, /Side \/ Stance:/);
+  assert.match(expanded, /Cue/);
+  assert.doesNotMatch(expanded, /Coaching cues/);
   // Quality Stop renders under the stop-rule label, never as "Progress".
   assert.match(expanded, /Stop rule/);
   assert.equal(markup.includes("Quality Stop"), false);
