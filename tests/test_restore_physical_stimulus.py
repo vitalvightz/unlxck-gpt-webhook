@@ -161,10 +161,10 @@ def test_maintenance_repair_uses_the_same_canonical_dose_as_existing_work(progra
 @pytest.mark.parametrize("name", ["saved_plan", "boxing_28_day", "boxing_56_day"])
 def test_goal_repair_never_stacks_two_meaningful_strength_sessions(programmes, name):
     from fightcamp.combat_load_policy import role_load_profile, LoadClass
-    from fightcamp.stage2_validator import _same_day_strength_ownership_errors
+    from fightcamp.stage2_validator import _same_day_strength_ownership_warnings
 
     brief, _ = programmes[name]
-    assert not _same_day_strength_ownership_errors(brief)
+    assert not _same_day_strength_ownership_warnings(brief)
     for week in brief["weekly_role_map"]["weeks"]:
         by_day = {}
         for role in week.get("session_roles") or []:
@@ -179,7 +179,7 @@ def test_goal_repair_never_stacks_two_meaningful_strength_sessions(programmes, n
 
 
 def test_validator_detects_exact_d26_double_strength_and_repeated_footwork():
-    from fightcamp.stage2_validator import _same_day_strength_ownership_errors
+    from fightcamp.stage2_validator import _same_day_strength_ownership_warnings
 
     roles = [
         {"role_key": "primary_strength_day", "category": "strength",
@@ -196,9 +196,10 @@ def test_validator_detects_exact_d26_double_strength_and_repeated_footwork():
          ]},
     ]
     brief = {"weekly_role_map": {"weeks": [{"session_roles": roles}]}}
-    errors = _same_day_strength_ownership_errors(brief)
-    assert {error["code"] for error in errors} == {
+    warnings = _same_day_strength_ownership_warnings(brief)
+    assert all(warning["severity"] == "warning" for warning in warnings)
+    assert {warning["code"] for warning in warnings} == {
         "duplicate_meaningful_strength_day", "duplicate_physical_exercise_day",
     }
     roles[1]["scheduled_countdown_label"] = "D-19"
-    assert _same_day_strength_ownership_errors(brief) == []
+    assert _same_day_strength_ownership_warnings(brief) == []
