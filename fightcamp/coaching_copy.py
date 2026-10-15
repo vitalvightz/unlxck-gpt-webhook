@@ -71,49 +71,6 @@ def readable_stop(rules):
     return ["Stop if " + joined + "."]
 
 
-
-def compact_coaching_line(value):
-    """Make an actionable coaching line short without changing prescribed work."""
-    text = _text(value).rstrip(".")
-    text = re.sub(r";\s*keep (?:effort|rest|rests).*$", "", text, flags=re.I)
-    text = re.sub(
-        r"\s+instead of\s+[\d.]+\s*(?:min|sec|m|reps?|sets?|rounds?)\b.*$",
-        "", text, flags=re.I,
-    )
-    if len(text.split()) <= 9:
-        return text
-    # Prefer complete clauses over clipping a sentence mid-instruction.
-    for clause in re.split(r"\s*;\s*|(?<=\.)\s+", text):
-        if 2 <= len(clause.split()) <= 9:
-            return clause.rstrip(".")
-    return text  # Preserve any unbreakable dose or safety instruction.
-
-
-def compact_stop(value):
-    """Compress known stop triggers, never drop an unrecognised safety signal."""
-    text = _text(value).rstrip(".")
-    text = re.sub(
-        r"^(?:End|Stop) (?:the|this) (?:set|effort|work|hold|swim)\s+",
-        "Stop ", text, flags=re.I,
-    )
-    if len(text.split()) <= 9:
-        return text
-    trigger_patterns = (
-        ("chest discomfort", r"chest (?:discomfort|pain)"),
-        ("dizziness", r"dizz(?:y|iness)"),
-        ("breathlessness", r"(?:breathlessness|breathing difficulty|unusual breath)"),
-        ("pain", r"\bpain\b"),
-        ("balance loss", r"(?:balance|unstable|instability|landings?)"),
-        ("speed loss", r"(?:speed drops?|slows?|slower|speed deteriorates)"),
-        ("form loss", r"(?:form|control|technique|quality|posture|trunk|guard return|shape)"),
-    )
-    triggered = [label for label, pattern in trigger_patterns if re.search(pattern, text, re.I)]
-    if 0 < len(triggered) <= 3:
-        short = "Stop for " + ", ".join(triggered)
-        if len(short.split()) <= 9:
-            return short
-    return text  # Medical safety criteria take priority over a word count.
-
 def concise_coaching(fields):
     """One Easier, one readable Stop, short lead cue plus intact source detail.
 
@@ -126,12 +83,8 @@ def concise_coaching(fields):
                     for cue in result.get("coaching_cues") or []])
     if cues:
         lead = short_cue(cues[0])
-        result["coaching_cues"] = [lead]  # Exactly one actionable cue; original stays in bank.
+        result["coaching_cues"] = _unique([lead, *cues])
     options = _unique(result.get("regression_options"))
-    result["regression_options"] = [compact_coaching_line(options[0])] if options else []
-    progress = _text(result.get("progression_rule"))
-    if progress:
-        result["progression_rule"] = compact_coaching_line(progress)
-    stop = readable_stop(result.get("stop_rules"))
-    result["stop_rules"] = [compact_stop(stop[0])] if stop else []
+    result["regression_options"] = options[:1]
+    result["stop_rules"] = readable_stop(result.get("stop_rules"))
     return result
