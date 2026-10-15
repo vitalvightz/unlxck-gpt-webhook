@@ -1,9 +1,17 @@
 """Recover missing coaching on saved generated cards without changing doses."""
 from copy import deepcopy
 from typing import Any
+import re
 
 from fightcamp.calendar_context import role_d_day
-from fightcamp.exercise_coaching import exercise_coaching
+from fightcamp.exercise_coaching import (
+    exercise_coaching, is_profile_progression, is_profile_regression, has_measurable_step,
+    is_execution_quality_instruction,
+)
+from fightcamp.exercise_progression import (
+    authored_progression_matches, build_progression_context, numerical_easier,
+    numerical_guidance, occurrence_key,
+)
 from fightcamp.structured_session_identity import deterministic_session_id, identity_tokens
 
 
@@ -25,7 +33,79 @@ def _matching_assignment(candidates, session, day):
     return exact[0] if len(exact) == 1 else None
 
 
-def recover_selected_coaching(plan: dict[str, Any], brief: dict[str, Any]) -> dict[str, Any]:
+def _visible_dose(block: dict, authority: dict) -> dict:
+    """Current card quantities are unchanged; never assume an unknown range/load."""
+    dose = dict(authority)
+    for key in ("sets", "reps", "rounds", "duration", "work", "distance", "rest"):
+        value = block.get(key)
+        if value is None:
+            continue
+        if isinstance(value, dict):
+            number, unit = value.get("value"), str(value.get("unit") or "")
+            if isinstance(number, (int, float)):
+                dose[key] = number * (60 if unit.startswith("min") else 1)
+        elif isinstance(value, (int, float)) and not isinstance(value, bool):
+            dose[key] = value
+        else:
+            dose.pop(key, None)
+    load = block.get("load")
+    if isinstance(load, dict) and isinstance(load.get("value"), (int, float)):
+        unit = load.get("unit")
+        if unit in {"kg", "lb"}:
+            dose.update(load=load["value"], load_unit=unit)
+        elif load.get("method") == "percentage" and load.get("ref") == "1RM":
+            dose.update(load=load["value"], load_unit="% 1RM")
+    effort = block.get("effort")
+    if isinstance(effort, dict) and effort.get("method") == "RPE":
+        dose["rpe"] = effort.get("value")
+    return dose
+
+
+def _recover_programming(block: dict, assignment: dict, context: dict | None, fields: dict) -> None:
+    if context is None:
+        return
+    dose = _visible_dose(block, context["current"]["dose"])
+    block["coaching_cues"] = block.get("coaching_cues") or []
+    guidance = numerical_guidance(context, dose, context["current"]["prescription"])
+    existing = str(block.get("progression_rule") or "")
+    if existing and is_execution_quality_instruction(existing) and not is_profile_progression(existing):
+        if not _has_cue(block, existing):
+            block["coaching_cues"].append(existing)
+    block.pop("progression_rule", None)
+    if guidance.get("progression_rule"):
+        bank = str(assignment.get("progression_rule") or "")
+        if not bank and (m := re.search(r"^\s*Progress(?:ion)?\s*:\s*(.+)$",
+                                        str(assignment.get("coaching_notes") or ""), re.I | re.M)):
+            bank = m[1]
+        approved = next((rule for rule in (bank, existing) if rule
+                         and authored_progression_matches(rule, guidance, context["next"]["dose"])), None)
+        block["progression_rule"] = approved or guidance["progression_rule"]
+    maintenance = guidance.get("maintenance_cue")
+    if maintenance and not _has_cue(block, maintenance):
+        block["coaching_cues"].append(maintenance)
+    # Replace only recognised #2880 fallback regressions; keep all authored ones.
+    regressions = block.get("regression_options") or []
+    authored = assignment.get("regression_options") or re.search(
+        r"^\s*(?:Easier|Regression)\s*:", str(assignment.get("coaching_notes") or ""), re.I | re.M)
+    easier = numerical_easier(dose) if block.get("stop_rules") else None
+    if easier and not authored:
+        if (not regressions or all(is_profile_regression(option) for option in regressions)
+                or regressions == fields.get("regression_options")):
+            block["regression_options"] = [easier]
+        elif not any(has_measurable_step(option) for option in regressions):
+            # Keep the coach's movement-specific option and offer a numeric alternative.
+            alternative = "Or: " + easier
+            if alternative not in regressions:
+                block["regression_options"] = [*regressions, alternative]
+
+
+def _has_cue(block: dict, text: str) -> bool:
+    return any(re.sub(r"^Cue:\s*", "", cue, flags=re.I) == text
+               for cue in block.get("coaching_cues") or [])
+
+
+def recover_selected_coaching(plan: dict[str, Any], brief: dict[str, Any],
+                              progression_context: dict | None = None) -> dict[str, Any]:
     if not brief or brief.get("custom_plan"):
         return plan
     selected = {}
@@ -42,6 +122,8 @@ def recover_selected_coaching(plan: dict[str, Any], brief: dict[str, Any]) -> di
                     selected.setdefault((day, identity), []).append(candidate)
     if not selected:
         return plan
+    if progression_context is None:
+        progression_context = build_progression_context(brief)
     # Never mutate the persisted object, which other services may still hold.
     recovered = deepcopy(plan)
     for week in recovered.get("weeks") or []:
@@ -52,6 +134,8 @@ def recover_selected_coaching(plan: dict[str, Any], brief: dict[str, Any]) -> di
             offset = int(label[2:])
             for session in day.get("sessions") or []:
                 for block in session.get("blocks") or []:
+                    if block.get("athlete_change") or block.get("prescription_source") == "athlete":
+                        continue
                     candidates = selected.get((offset, str(block.get("exercise_key") or ""))) or selected.get(
                         (offset, str(block.get("display_name") or "").casefold())
                     )
@@ -67,4 +151,6 @@ def recover_selected_coaching(plan: dict[str, Any], brief: dict[str, Any]) -> di
                     for field, value in (fields or {}).items():
                         if value and not block.get(field):
                             block[field] = deepcopy(value)
+                    _recover_programming(block, assignment, progression_context.get(
+                        occurrence_key(role, assignment, offset)), fields)
     return recovered

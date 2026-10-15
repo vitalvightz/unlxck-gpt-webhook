@@ -20,6 +20,7 @@ from api.stage2_automation import OpenAIStage2Automator
 from api.structured_plan_deterministic_fallback import build_deterministic_structured_plan
 from api.structured_plan_generation import build_structured_plan_outcome
 from fightcamp.exercise_coaching import exercise_coaching
+from fightcamp.programme_fidelity import reconcile_authoritative_programme
 from test_programme_fidelity_production import FIXTURES, _persist_final, production_replay as _production_replay
 from support import FakeOpenAIClient
 from test_card_replay_representative_plans import replay as _representative_replay
@@ -58,7 +59,8 @@ def test_final_persisted_physical_rows_keep_coaching_in_react(production_replay,
     reference = build_deterministic_structured_plan(brief, plan_text=source)
     assert reference
     expected = blocks(reference)
-    assert sum(bool(b.get("progression_rule")) for _, b in expected) >= 10
+    # The affected programme repeats fixed doses. Quality text is not Progress.
+    assert not any(b.get("progression_rule") for _, b in expected)
     assert sum(bool(b.get("regression_options")) for _, b in expected) >= 20
     assert sum(bool(b.get("stop_rules")) for _, b in expected) >= 20
     for week, block in expected:
@@ -115,12 +117,22 @@ def test_final_persisted_physical_rows_keep_coaching_in_react(production_replay,
 @pytest.mark.parametrize("field", FIELDS)
 def test_a_converter_cannot_drop_any_applicable_coaching_field(production_replay, field):
     _, stage1, final, _ = production_replay
+    brief = deepcopy(stage1["planning_brief"])
     source = final["final_plan_text"]
-    candidate = build_deterministic_structured_plan(stage1["planning_brief"], plan_text=source)
+    if field == "progression_rule":
+        # A controlled fixture with an explicitly authorised future rep increase.
+        role = next(r for w in brief["weekly_role_map"]["weeks"] for r in w["session_roles"]
+                    if r.get("scheduled_countdown_label") == "D-23"
+                    and r.get("role_key") == "neural_plus_strength_day")
+        future = next(p for p in role["effective_strength_prescriptions"] if p["name"] == "Barbell Thruster")
+        assert "4x2" in future["effective_prescription"]
+        future["effective_prescription"] = future["effective_prescription"].replace("4x2", "4x3")
+        source = reconcile_authoritative_programme(brief, source)["text"]
+    candidate = build_deterministic_structured_plan(brief, plan_text=source)
     target = next(b for _, b in blocks(candidate) if b.get(field))
     target.pop(field)
     outcome = build_structured_plan_outcome(candidate, raw_markdown=source,
-                                           planning_brief=stage1["planning_brief"])
+                                           planning_brief=brief)
     assert outcome.structured_plan is None
     assert any("COACHING_DROPPED" in e and field in e for e in outcome.errors)
 

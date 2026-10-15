@@ -521,7 +521,8 @@ def _microdose_block(role: dict[str, Any], d_day: int, role_key: str) -> dict[st
     label = f"{goal.replace('_', ' ').title()} microdose" if goal else "Priority microdose"
     from fightcamp.exercise_coaching import exercise_coaching
     coaching = exercise_coaching({"name": name, "slot_group": "priority_microdose",
-                                  "coaching_notes": microdose.get("coaching_notes")}, role, d_day=d_day)
+                                  "coaching_notes": microdose.get("coaching_notes"),
+                                  "effective_prescription": prescription}, role, d_day=d_day)
     return {
         "block_id": f"deterministic-{d_day}-{role_key}-microdose",
         "block_type": _MICRODOSE_BLOCK_TYPE_BY_GOAL.get(goal, "accessory"),
@@ -544,6 +545,7 @@ def _blocks(
     source_lines: list[str] | None = None,
     athlete: dict[str, Any] | None = None,
     phase: str = "",
+    progression_context: dict | None = None,
 ) -> list[dict[str, Any]]:
     block_type = _block_type(role)
     blocks: list[dict[str, Any]] = []
@@ -598,7 +600,10 @@ def _blocks(
                 fields, _ = _lift_dose_fields(prescription)
                 block.update(fields)
             from fightcamp.exercise_coaching import exercise_coaching
-            coaching = exercise_coaching(assignment, role, phase=phase, d_day=d_day, athlete=athlete)
+            from fightcamp.exercise_progression import occurrence_key
+            coaching = exercise_coaching(assignment, role, phase=phase, d_day=d_day, athlete=athlete,
+                                         progression_context=(progression_context or {}).get(
+                                             occurrence_key(role, assignment, d_day)))
             block["coaching_cues"].extend(coaching.pop("coaching_cues"))
             block.update(coaching)
         blocks.append(block)
@@ -853,10 +858,11 @@ def _source_lines_for_session(
 def _session(
     role: dict[str, Any], d_day: int, source_lines: list[str] | None = None,
     athlete: dict[str, Any] | None = None, phase: str = "",
+    progression_context: dict | None = None,
 ) -> dict[str, Any] | None:
     role_key = str(role.get("role_key") or "").strip()
     source_lines = _source_lines_for_session(source_lines, str(role.get("athlete_facing_label") or ""))
-    blocks = _blocks(role, d_day, role_key or "role", source_lines, athlete, phase)
+    blocks = _blocks(role, d_day, role_key or "role", source_lines, athlete, phase, progression_context)
     instruction = _support_instruction(role)
     parsed = _parse_display_text(instruction) if instruction and not blocks else None
     if parsed is not None:
@@ -986,6 +992,8 @@ def _build(planning_brief: Any, plan_text: str | None = None) -> dict[str, Any] 
     sessions_by_dday: dict[int, list[dict[str, Any]]] = {}
     seen: set[tuple[int, str, Any]] = set()
     source_days = _source_day_section_lines(plan_text) if isinstance(plan_text, str) else {}
+    from fightcamp.exercise_progression import build_progression_context
+    progression_context = build_progression_context(planning_brief)
     for week in weeks:
         if not isinstance(week, dict):
             continue
@@ -1003,7 +1011,7 @@ def _build(planning_brief: Any, plan_text: str | None = None) -> dict[str, Any] 
                 continue
             session = _session(role, d_day, source_days.get(d_day),
                                planning_brief.get("athlete_snapshot"),
-                               str(week.get("phase") or week.get("phase_label") or ""))
+                               str(week.get("phase") or week.get("phase_label") or ""), progression_context)
             if session is None:
                 continue
             seen.add(identity)
@@ -1060,7 +1068,8 @@ def _build(planning_brief: Any, plan_text: str | None = None) -> dict[str, Any] 
         if not week.get("week_goal"):
             week["week_goal"] = str((strategy.get(week.get("phase_label")) or {}).get("visible_objective") or "")
     plan.update(_plan_envelope(planning_brief))
-    return plan
+    from .structured_plan_coaching import recover_selected_coaching
+    return recover_selected_coaching(plan, planning_brief, progression_context)
 
 
 def _label_dday(label: Any) -> int | None:

@@ -42,6 +42,7 @@ from typing import Any
 from .combat_render_authority import canonical_combat_render, is_declared_combat_role
 from .fight_day_override import FIGHT_DAY_PROTOCOL_TEXT
 from .exercise_coaching import coaching_lines, exercise_coaching
+from .exercise_progression import occurrence_key
 
 
 AUTHORITY_FIGHT_DAY_PROTOCOL = "fight_day_protocol"
@@ -108,6 +109,7 @@ def has_deterministic_display_text_authority(role: dict[str, Any]) -> bool:
 def _closed_membership_lines(
     role: dict[str, Any], *, week: dict[str, Any] | None = None,
     d_day: int | None = None, athlete_snapshot: dict[str, Any] | None = None,
+    progression_context: dict | None = None,
 ) -> list[str] | None:
     """Exact lines for closed membership, or ``None`` when not fully resolved.
 
@@ -146,6 +148,8 @@ def _closed_membership_lines(
         lines.extend(coaching_lines(exercise_coaching(
             assignment, role, phase=str((week or {}).get("phase") or (week or {}).get("phase_label") or ""),
             d_day=d_day if d_day is not None else _week_d_day(week, role), athlete=athlete_snapshot,
+            progression_context=(progression_context or {}).get(occurrence_key(
+                role, assignment, d_day if d_day is not None else _week_d_day(week, role))),
         )))
         purpose = str(assignment.get("purpose") or "").strip()
         if purpose:
@@ -213,6 +217,7 @@ def authoritative_render_for_role(
     athlete_snapshot: dict[str, Any] | None = None,
     d_day: int | None = None,
     display_text_fallback: str | None = None,
+    progression_context: dict | None = None,
 ) -> dict[str, Any] | None:
     """Return the server-owned render for ``role``, or ``None``.
 
@@ -282,7 +287,8 @@ def authoritative_render_for_role(
             ),
         }
 
-    lines = _closed_membership_lines(role, week=week, d_day=d_day, athlete_snapshot=athlete_snapshot)
+    lines = _closed_membership_lines(role, week=week, d_day=d_day, athlete_snapshot=athlete_snapshot,
+                                     progression_context=progression_context)
     if lines:
         return {
             "authority": AUTHORITY_CLOSED_SELECTED_ASSIGNMENTS,

@@ -28,6 +28,13 @@ def authored(prefix):
     }
 
 
+def execution_fields(prefix):
+    """Technical quality instructions are retained under Cue, never Progress."""
+    fields = authored(prefix)
+    fields["coaching_cues"].append(fields.pop("progression_rule"))
+    return fields
+
+
 def role(index, support=False):
     assignment = {"name": "Barbell Thruster", "exercise_key": "barbell-thruster",
                   "slot_group": "strength_slots", "slot_id": f"thruster-{index}",
@@ -59,9 +66,9 @@ def sessions(card):
 
 def test_profiles_fill_gaps_without_replacing_structured_bank_instructions():
     assignment = role(1)["selected_exercise_assignments"][0]
-    assert exercise_coaching(assignment, {}, d_day=32) == authored("Session 1")
+    assert exercise_coaching(assignment, {}, d_day=32) == execution_fields("Session 1")
     rendered = authoritative_render_for_role(role(1), d_day=32)
-    for key, value in authored("Session 1").items():
+    for key, value in execution_fields("Session 1").items():
         for text in [value] if isinstance(value, str) else value:
             assert any(text in line for line in rendered["body_lines"]), key
 
@@ -69,10 +76,10 @@ def test_profiles_fill_gaps_without_replacing_structured_bank_instructions():
 def test_authored_unknown_movement_progress_is_not_added_during_taper():
     assignment = {"name": "Uncatalogued coach movement", "slot_group": "strength_slots",
                   **authored("Coach")}
-    assert exercise_coaching(assignment, {}, phase="GPP", d_day=32) == authored("Coach")
+    assert exercise_coaching(assignment, {}, phase="GPP", d_day=32) == execution_fields("Coach")
     maintenance = exercise_coaching(assignment, {}, phase="TAPER", d_day=6)
     assert not maintenance.get("progression_rule")
-    assert all(maintenance[k] == authored("Coach")[k] for k in FIELDS if k != "progression_rule")
+    assert maintenance == execution_fields("Coach")
 
 
 def test_all_bank_note_sentences_and_labelled_adjustments_survive():
@@ -83,7 +90,7 @@ def test_all_bank_note_sentences_and_labelled_adjustments_survive():
     ])
     actual = exercise_coaching({"name": "Barbell Thruster", "slot_group": "strength_slots",
                                 "coaching_notes": notes}, {}, d_day=32)
-    assert actual == fields
+    assert actual == execution_fields("Bank")
 
 
 @pytest.mark.parametrize("metadata", [False, True])
@@ -114,11 +121,9 @@ def test_duplicate_recovery_keeps_each_sessions_coaching_and_dose(identity, reve
     for session in sessions(recovered):
         i = int(session["title"][-1])
         block = session["blocks"][0]
-        expected = authored(f"Session {i}")
-        if i == 2:  # This occurrence is support-only, unlike the first.
-            expected.pop("progression_rule")
+        expected = execution_fields(f"Session {i}")
         assert all(block.get(key) == value for key, value in expected.items())
-        assert bool(block.get("progression_rule")) == (i == 1)
+        assert not block.get("progression_rule")  # Neither has an authorised future increase.
         assert block["sets"] == i and block["reps"] == 2 and block["rest"]["value"] == 120
         assert not any("Session " + str(3-i) in str(block.get(key)) for key in FIELDS)
 
@@ -135,7 +140,11 @@ def test_existing_coach_fields_always_win_over_bank_and_profiles():
     brief, card = duplicate_card()
     for i, session in enumerate(sessions(card)):
         session["blocks"][0].update(authored(f"Existing coach {i}"))
-    assert recover_selected_coaching(card, brief) == card
+    recovered = recover_selected_coaching(card, brief)
+    for i, session in enumerate(sessions(recovered)):
+        block = session["blocks"][0]
+        assert all(block.get(k) == v for k, v in execution_fields(f"Existing coach {i}").items())
+        assert not block.get("progression_rule")
 
 
 def test_source_fallback_reads_duplicate_exercises_from_their_own_session():
@@ -153,9 +162,9 @@ def test_source_fallback_reads_duplicate_exercises_from_their_own_session():
         block = session["blocks"][0]
         i = r["session_index"]
         assert block["sets"] == i
-        assert [cue.removeprefix("Cue: ") for cue in block["coaching_cues"]] == authored(f"Session {i}")["coaching_cues"]
+        assert [cue.removeprefix("Cue: ") for cue in block["coaching_cues"]] == execution_fields(f"Session {i}")["coaching_cues"]
         for field in FIELDS[1:]:
-            assert block[field] == authored(f"Session {i}")[field]
+            assert block.get(field) == execution_fields(f"Session {i}").get(field)
     card = {"weeks": [{"days": [{"countdown_label": "D-32", "sessions": converted}]}]}
     assert _explicit_prescription_violations(card, "\n".join(raw)) == []
     converted[0]["blocks"][0].pop("regression_options")
