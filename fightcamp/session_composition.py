@@ -3130,6 +3130,11 @@ def consolidate_compatible_alactic_sessions(weekly_role_map: dict[str, Any]) -> 
                     continue
                 if any((m.get("exercise_key") or m.get("name")) == (member.get("exercise_key") or member.get("name")) for m in host_members):
                     continue
+                # The host's explicit exercise allow-list must not hide the
+                # transferred source member from final goal evidence.
+                preferred = host.get("preferred_exercise_names") or []
+                if preferred and member.get("name") not in preferred:
+                    continue
                 # Never move speed onto the day immediately before or after
                 # hard sparring. Keep the resolved contact state authoritative.
                 hard_days = [
@@ -3157,6 +3162,11 @@ def consolidate_compatible_alactic_sessions(weekly_role_map: dict[str, Any]) -> 
                 # Alactic priming first, Strength exercises follow at unchanged doses.
                 trial_host["selected_exercise_assignments"] = [
                     carried, *trial_host["selected_exercise_assignments"]
+                ]
+                composition = trial_host["strength_composition_policy"]
+                composition["selected_count"] = len(trial_host["selected_exercise_assignments"])
+                composition["selected_names"] = [
+                    item["name"] for item in trial_host["selected_exercise_assignments"]
                 ]
                 trial_host["athlete_facing_label"] = "Strength + speed"
                 trial_host.setdefault("consolidated_session_roles", []).append({
