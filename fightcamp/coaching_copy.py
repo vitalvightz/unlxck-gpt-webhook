@@ -104,7 +104,7 @@ def compact_progress(text: str) -> str:
     value = _text(text)
     # numerical_guidance generated this form from exact next-exposure doses.
     match = re.search(r"\badd\s+(\d+(?:\.\d+)?)\s*(kg|lb|reps?|sets?|rounds?|m|min|sec)\b", value, re.I)
-    if match and re.search(r"\b(?:Next D-\\d+|only if controlled and recovered)\b", value, re.I):
+    if match and "Next D-" in value:
         unit = match[2].lower()
         suffix = "" if unit in {"kg", "lb", "m"} else " "
         return f"Add +{match[1]}{suffix}{unit}"
