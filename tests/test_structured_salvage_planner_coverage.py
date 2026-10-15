@@ -541,3 +541,39 @@ def test_role_whose_exercises_left_the_day_is_still_a_loss():
 
     assert outcome.status == "invalid_fallback_used"
     assert any("D-23 'primary_strength_day'" in e for e in outcome.errors)
+
+
+
+def test_source_backed_recovery_restores_missing_planner_card_without_model_retry():
+    from api.stage2_automation import _recover_coverage_failed_card
+    from api.structured_plan_generation import StructuredPlanOutcome
+
+    failed = StructuredPlanOutcome(
+        status="invalid_fallback_used",
+        errors=["planner_coverage: D-23 'primary_strength_day' missing closed members"],
+        warnings=["salvaged: MISPLACED: converter put a lift on D-22"],
+    )
+    recovered = _recover_coverage_failed_card(
+        failed, planning_brief=_brief(), plan_text=_source_text(),
+    )
+
+    assert recovered.status == "valid", recovered.errors
+    assert recovered.structured_plan is not None
+    assert not recovered.errors
+    assert any("deterministic_source_recovery:" in warning for warning in recovered.warnings)
+    assert _sc_counts(recovered.structured_plan) == _SC_COUNT
+
+
+def test_source_backed_recovery_refuses_non_coverage_failures_and_unsupported_sources():
+    from api.stage2_automation import _recover_coverage_failed_card
+    from api.structured_plan_generation import StructuredPlanOutcome
+
+    for errors, text in [
+        (["faithfulness: INTRODUCED: invented exercise"], _source_text()),
+        (["planner_coverage: D-23 missing exercise"], "# blank"),
+        (["planner_coverage: D-23 missing exercise"], ""),
+    ]:
+        failed = StructuredPlanOutcome(status="invalid_fallback_used", errors=errors)
+        assert _recover_coverage_failed_card(
+            failed, planning_brief=_brief(), plan_text=text,
+        ) is failed
