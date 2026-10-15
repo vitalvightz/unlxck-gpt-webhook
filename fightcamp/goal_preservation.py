@@ -1258,7 +1258,10 @@ def _restore_goal_roles(brief: dict, entry: dict) -> list[dict]:
         return audit
     recomposed = _recompose_existing_strength_for_goal(brief, entry)
     if recomposed is not None:
-        return [recomposed]
+        # A long camp can require more than one development window. Repair the
+        # next uncovered window too; do not stop after the first valid host.
+        _, remaining = _coverage(entry, brief, collect_goal_evidence(brief))
+        return [recomposed, *_restore_goal_roles(brief, entry)] if remaining else [recomposed]
     for ordinal, week in enumerate(role_map.get("weeks") or []):
         # A repair belongs to an uncovered cadence window. Re-composing weeks
         # that already met the goal adds no coverage and wastes bounded trials.
