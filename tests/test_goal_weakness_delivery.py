@@ -376,13 +376,14 @@ def test_a_significant_injury_still_reduces_strength_capacity():
 
 
 @pytest.mark.parametrize("key", ["vito_b", "boxer28_strength_fullgym", "boxer28_pool_bike"])
-def test_a_fresh_standalone_primary_strength_day_carries_four_complementary_lifts(key):
+def test_a_fresh_standalone_primary_strength_day_can_carry_up_to_six_complementary_lifts(key):
     days = [(d, r) for d, r in _development_strength_sessions(_brief(key)) if r["role_key"] == "primary_strength_day"]
     assert days
     for d_day, role in days:
         names = [m["name"] for m in _members(role)]
-        assert len(names) == 4 and len(set(names)) == 4, (d_day, names)
+        assert 4 <= len(names) <= 6 and len(set(names)) == len(names), (d_day, names)
         assert role["strength_composition_policy"]["pressure"] == 0
+        assert role["strength_composition_policy"]["base_exercise_cap"] == 6
 
 
 def test_king_trunk_weakness_is_checked_against_delivered_trunk_work():

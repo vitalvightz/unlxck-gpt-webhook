@@ -143,7 +143,7 @@ def test_composition_pressure_uses_existing_buckets_and_interactions(athlete, ex
 @pytest.mark.parametrize(
     ("athlete", "expected_cap"),
     [
-        ({"fatigue": "low", "cut_severity_bucket": "none"}, 4),
+        ({"fatigue": "low", "cut_severity_bucket": "none"}, 6),
         ({"fatigue": "moderate", "cut_severity_bucket": "none"}, 3),
         ({"fatigue": "high", "cut_severity_bucket": "none"}, 2),
         ({"fatigue": "high", "cut_severity_bucket": "moderate"}, 2),
@@ -152,9 +152,34 @@ def test_composition_pressure_uses_existing_buckets_and_interactions(athlete, ex
 def test_primary_strength_cap_scales_with_composition_pressure(athlete, expected_cap):
     _, role = _compose(athlete)
     policy = role["strength_composition_policy"]
-    assert policy["base_exercise_cap"] == 4
+    assert policy["base_exercise_cap"] == 6
     assert policy["effective_exercise_cap"] == expected_cap
     assert len(role["selected_exercise_assignments"]) <= expected_cap
+
+
+def test_full_primary_strength_can_use_six_diverse_exercises_without_forcing_six():
+    _, role = _compose({"fatigue": "low", "cut_severity_bucket": "none"})
+    names = [member["name"] for member in role["selected_exercise_assignments"]]
+    assert role["strength_composition_policy"]["effective_exercise_cap"] == 6
+    assert len(names) == len(set(names)) == 6
+
+    _, short = _compose({"fatigue": "low", "cut_severity_bucket": "none"},
+                        slots=_diverse_slots()[:3])
+    assert len(short["selected_exercise_assignments"]) == 3
+
+
+@pytest.mark.parametrize("role_key", ["primary_strength_day", "structural_strength_day"])
+def test_full_strength_six_ceiling_preserves_pressure_reductions(role_key):
+    for athlete, expected in [
+        ({"fatigue": "low", "cut_severity_bucket": "none"}, 6),
+        ({"fatigue": "moderate", "cut_severity_bucket": "none"}, 3),
+        ({"fatigue": "high", "cut_severity_bucket": "none"}, 2),
+    ]:
+        _, role = _compose(athlete, role_key=role_key)
+        policy = role["strength_composition_policy"]
+        assert policy["base_exercise_cap"] == 6
+        assert policy["effective_exercise_cap"] == expected
+        assert len(role["selected_exercise_assignments"]) <= expected
 
 
 def test_normal_state_allows_two_same_family_exposures_but_not_three():
@@ -260,7 +285,7 @@ def test_current_fatigue_only_tightens_first_active_week():
     assert future_policy["fatigue_applied"] is False
     assert future_policy["fatigue_pressure"] == 0
     assert future_policy["pressure"] == 0
-    assert future_policy["effective_exercise_cap"] == 4
+    assert future_policy["effective_exercise_cap"] == 6
 
 
 def test_weight_cut_pressure_recalculates_from_each_roles_d_day():
@@ -393,7 +418,7 @@ def test_current_fatigue_applies_to_first_week_with_normal_strength():
     assert first["fatigue_applied"] is True
     assert first["effective_exercise_cap"] == 2
     assert later["fatigue_applied"] is False
-    assert later["effective_exercise_cap"] == 4
+    assert later["effective_exercise_cap"] == 6
 
 
 @pytest.mark.parametrize(
