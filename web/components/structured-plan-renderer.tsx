@@ -1025,7 +1025,12 @@ export function SessionCard({
     )).filter((line) => line.toLowerCase() !== summary.toLowerCase()).slice(0, 3);
     // Never replace the selected Tactical Watch drill with a generic
     // "Analyse" instruction. The athlete should recognise their actual task.
-    const mentalDrill = blocks.map((block) => cleanText(block.display_name)).find(Boolean);
+    const mentalDrills = Array.from(new Set(
+      blocks.map((block) => cleanText(block.display_name)).filter(
+        (name): name is string => Boolean(name),
+      ),
+    ));
+    const mentalDrill = mentalDrills[0] ?? null;
     return (
       <article className="sp-session sp-mental-task" data-mental-category={mentalCategory.toLowerCase()}>
         <header className="sp-mental-head">
@@ -1040,9 +1045,14 @@ export function SessionCard({
         {mentalDrill && summary && !sameCopy(mentalDrill, summary) ? (
           <p className="sp-muted">{summary}</p>
         ) : null}
-        {mentalInstructions.length > 0 ? (
+        {mentalInstructions.length > 0 || mentalDrills.length > 1 ? (
           <details className="sp-section-details">
             <summary>View steps</summary>
+            {mentalDrills.length > 1 ? (
+              <ul className="sp-cues">
+                {mentalDrills.map((name) => <li key={name}>{name}</li>)}
+              </ul>
+            ) : null}
             <ol className="sp-cues">
               {mentalInstructions.map((instruction, index) => (
                 <li key={`${index}-${instruction}`}>{instruction}</li>
