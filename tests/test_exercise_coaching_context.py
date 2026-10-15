@@ -10,6 +10,7 @@ from api.structured_plan_coaching import recover_selected_coaching
 from api.structured_plan_deterministic_fallback import _session
 from api.structured_plan_faithfulness import _explicit_prescription_violations
 from fightcamp.exercise_coaching import exercise_coaching
+from fightcamp.coaching_copy import concise_coaching
 from fightcamp.render_authority import authoritative_render_for_role
 from fightcamp.session_composition import assignment_from_slot
 
@@ -29,10 +30,10 @@ def authored(prefix):
 
 
 def execution_fields(prefix):
-    """Technical quality instructions are retained under Cue, never Progress."""
+    """The first authored execution cue owns the compact card."""
     fields = authored(prefix)
     fields["coaching_cues"].append(fields.pop("progression_rule"))
-    return fields
+    return concise_coaching(fields)
 
 
 def role(index, support=False):
@@ -82,7 +83,7 @@ def test_authored_unknown_movement_progress_is_not_added_during_taper():
     assert maintenance == execution_fields("Coach")
 
 
-def test_all_bank_note_sentences_and_labelled_adjustments_survive():
+def test_bank_keeps_one_cue_and_its_labelled_adjustments():
     fields = authored("Bank")
     notes = "\n".join([
         *fields["coaching_cues"], f"Easier: {fields['regression_options'][0]}",

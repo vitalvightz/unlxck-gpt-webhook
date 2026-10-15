@@ -93,11 +93,11 @@ def test_final_fortnight_and_taper_do_not_offer_advancement(phase, next_day):
     assert not coaching(brief, role, a).get("progression_rule")
 
 
-def test_flat_next_exposure_has_exact_maintenance_under_cue():
+def test_flat_next_exposure_keeps_an_existing_modest_progress_note():
     brief, role, a = programme("3 x 8 reps; rest 120 sec", "3 x 8 reps; rest 120 sec")
     a["progression_rule"] = "Add 2 reps per set."
     result = coaching(brief, role, a)
-    assert not result.get("progression_rule")
+    assert result["progression_rule"] == "Add 2 reps per set."
     assert len(result["coaching_cues"]) == 1
     assert not any("Add 2 reps" in cue for cue in result["coaching_cues"])
 
@@ -147,7 +147,7 @@ def test_same_day_duplicate_programmes_keep_their_own_future_targets():
         week["session_roles"].insert(0, other)
     assert "add 1 rep/set" in coaching(brief, role, a)["progression_rule"]
     other = brief["weekly_role_map"]["weeks"][0]["session_roles"][0]
-    assert not coaching(brief, other, other["selected_exercise_assignments"][0]).get("progression_rule")
+    assert coaching(brief, other, other["selected_exercise_assignments"][0])["progression_rule"] == "Add 1 rep/set."
 
 
 def test_unique_exposure_can_be_reindexed_without_losing_its_next_dose():
@@ -307,7 +307,8 @@ def test_recorded_old_and_latest_plans_preserve_selection_doses_and_authored_reg
         from fightcamp.exercise_coaching import is_profile_progression
         assert not any(is_profile_progression(b.get("progression_rule", "")) for b in actual)
         assert all(len(b.get("coaching_cues", [])) <= 1 for b in actual)
-        assert not any(b.get("progression_rule") for b in actual)
+        rules = [b["progression_rule"] for b in actual if b.get("progression_rule")]
+        assert rules and all(rule.startswith("Add ") and len(rule.split()) <= 4 for rule in rules)
         assert all(len(b.get("regression_options", [])) <= 1 for b in actual)
     api = resolve_effective_structured_plan({"structured_plan": before, "planning_brief": record["brief"]})
     assert api is not None
@@ -326,3 +327,40 @@ def test_recorded_athlete_instructions_survive_react(record):
         "test/assert-exercise-coaching-release.tsx"], cwd=ROOT / "web",
         input=json.dumps({"plan": card, "expected": expected}), text=True, capture_output=True)
     assert result.returncode == 0, result.stderr
+
+
+@pytest.mark.parametrize("name,dose,note", [
+    ("Back Squat", "3 x 8 reps @ 50 kg; rest 120 sec; RPE 7", "Add 2.5kg."),
+    ("Kettlebell Swing", "3 x 4 reps; rest 90 sec; explosive", "Add 1 rep/set."),
+    ("Farmer Carry", "3 carries over 20 m; rest 90 sec", "Add 2m."),
+    ("Easy Assault Bike", "20 min continuous; RPE 4", "Add 1 min."),
+    ("Back Squat", "3 x 8 reps; RPE 9", None),
+    ("Back Squat", "3-5 x 8 reps", None),
+    ("Unknown coach movement", "3 x 8 reps", None),
+])
+def test_missing_note_gets_one_short_step_without_changing_work(name, dose, note):
+    brief, role, assignment = programme(dose, dose, name=name)
+    brief["weekly_role_map"]["weeks"] = brief["weekly_role_map"]["weeks"][:1]
+    before = deepcopy(brief)
+    result = coaching(brief, role, assignment)
+    assert result.get("progression_rule") == note
+    if note:
+        assert len(note.split()) <= 4
+    assert brief == before
+
+
+@pytest.mark.parametrize("athlete,phase,day", [({}, "TAPER", 35), ({}, "GPP", 14),
+    ({"fatigue": "high"}, "GPP", 35), ({"injuries": ["knee"]}, "GPP", 35)])
+def test_missing_progress_stays_hidden_in_restricted_contexts(athlete, phase, day):
+    brief, role, assignment = programme("3 x 8 reps", "3 x 8 reps", athlete=athlete, phase=phase)
+    brief["weekly_role_map"]["weeks"] = brief["weekly_role_map"]["weeks"][:1]
+    assert not coaching(brief, role, assignment, day).get("progression_rule")
+
+
+def test_existing_short_note_is_not_replaced_on_saved_card():
+    brief, role, assignment = programme("3 x 8 reps @ 100 kg", "3 x 8 reps @ 100 kg")
+    card = card_for(brief)
+    all_blocks(card)[0]["progression_rule"] = "Add +5kg."
+    result = recover_selected_coaching(card, brief)
+    assert all_blocks(result)[0]["progression_rule"] == "Add +5kg."
+    assert recover_selected_coaching(result, brief) == result

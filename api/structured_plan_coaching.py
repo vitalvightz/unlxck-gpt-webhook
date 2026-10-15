@@ -4,6 +4,7 @@ from typing import Any
 import re
 
 from fightcamp.calendar_context import role_d_day
+from fightcamp.exercise_instructions import recover_execution_instructions
 from fightcamp.coaching_copy import concise_coaching
 from fightcamp.exercise_coaching import (
     exercise_coaching, is_profile_progression, is_profile_regression, is_profile_cue,
@@ -12,6 +13,7 @@ from fightcamp.exercise_coaching import (
 from fightcamp.exercise_progression import (
     authored_progression_matches, build_progression_context,
     numerical_guidance, occurrence_key,
+    missing_progression, existing_optional_progression,
 )
 from fightcamp.structured_session_identity import deterministic_session_id, identity_tokens
 
@@ -69,6 +71,9 @@ def _recover_programming(block: dict, assignment: dict, context: dict | None, fi
     block["coaching_cues"] = block.get("coaching_cues") or []
     guidance = numerical_guidance(context, dose, context["current"]["prescription"])
     existing = str(block.get("progression_rule") or "")
+    # Existing instructions belong to the saved card. Fill gaps only.
+    if existing and existing_optional_progression(existing, context, dose, context["current"]["prescription"]):
+        return
     if existing and is_execution_quality_instruction(existing) and not is_profile_progression(existing):
         if not _has_cue(block, existing):
             block["coaching_cues"].append(existing)
@@ -81,6 +86,9 @@ def _recover_programming(block: dict, assignment: dict, context: dict | None, fi
         approved = next((rule for rule in (bank, existing) if rule
                          and authored_progression_matches(rule, guidance, context["next"]["dose"])), None)
         block["progression_rule"] = approved or guidance["progression_rule"]
+    elif fields.get("progression_rule") and missing_progression(
+            context, dose, context["current"]["prescription"]):
+        block["progression_rule"] = fields["progression_rule"]
     maintenance = guidance.get("maintenance_cue")
     if maintenance and not _has_cue(block, maintenance):
         block["coaching_cues"].append(maintenance)
@@ -99,7 +107,10 @@ def _has_cue(block: dict, text: str) -> bool:
 
 def recover_selected_coaching(plan: dict[str, Any], brief: dict[str, Any],
                               progression_context: dict | None = None) -> dict[str, Any]:
-    if not brief or brief.get("custom_plan"):
+    if brief.get("custom_plan"):
+        return plan
+    plan = recover_execution_instructions(plan)
+    if not brief:
         return plan
     selected = {}
     for week in (brief.get("weekly_role_map") or {}).get("weeks") or []:
@@ -136,8 +147,10 @@ def recover_selected_coaching(plan: dict[str, Any], brief: dict[str, Any],
                     if match is None:
                         continue  # Ambiguous legacy duplicate: preserve its existing coaching.
                     role, source_week, assignment = match
+                    programming_context = progression_context.get(occurrence_key(role, assignment, offset))
                     fields = exercise_coaching(
                         assignment, role,
+                        progression_context=programming_context,
                         phase=str(source_week.get("phase") or source_week.get("phase_label") or ""),
                         d_day=offset, athlete=brief.get("athlete_snapshot"),
                     )
@@ -146,6 +159,8 @@ def recover_selected_coaching(plan: dict[str, Any], brief: dict[str, Any],
                     if authored_cue and all(is_profile_cue(cue) for cue in block.get("coaching_cues") or []):
                         block["coaching_cues"] = deepcopy(fields["coaching_cues"])
                     for field, value in (fields or {}).items():
+                        if field == "progression_rule":
+                            continue  # Recover only after checking the visible dose below.
                         if value and not block.get(field):
                             block[field] = deepcopy(value)
                     _recover_programming(block, assignment, progression_context.get(

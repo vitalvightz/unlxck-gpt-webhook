@@ -206,6 +206,67 @@ def _prescription_signature(text: str) -> tuple[str, tuple]:
     return re.sub(r"[\s,;:.@]", "", shape), numbers
 
 
+def missing_progression(context: dict | None, dose: dict, prescription: str) -> str | None:
+    """One optional next-session step for otherwise unprogressed normal work.
+
+    Explicit future changes keep their existing authority. Only an unambiguous
+    one-off or repeated dose can receive a suggestion; today's dose stays put.
+    """
+    if (not context or context["current"]["blocked"] or not dose
+            or dose != context["current"]["dose"]
+            or re.search(r"\d\s*[-–/]\s*\d", str(
+                context["current"]["assignment"].get("effective_prescription") or ""))
+            or re.search(r"\d\s*[-–/]\s*\d|\b(?:hold|maintain|deload|recovery|rehab|maximum|maximal|all.out)\b",
+                         prescription, re.I)
+            or dose.get("rpe", 0) >= 8):
+        return None
+    future = context.get("next")
+    if future and not numerical_guidance(context, dose, prescription).get("maintenance_cue"):
+        return None
+    load = dose.get("load", 0)
+    if load > 0 and dose.get("load_unit") in {"kg", "lb"}:
+        step = 2.5 if dose["load_unit"] == "kg" else 5
+        if step <= load * 0.05:
+            return f"Add {step:g}{dose['load_unit']}."
+    if 4 <= dose.get("reps", 0) <= 12:
+        return "Add 1 rep/side." if dose.get("per_side") else "Add 1 rep/set."
+    if dose.get("distance", 0) >= 10:
+        return f"Add {math.floor(dose['distance'] * 0.1):g}m."
+    if dose.get("duration", 0) >= 600:
+        return "Add 1 min."
+    if 30 <= dose.get("duration", 0) <= 60:
+        return "Add 5 sec."
+    if 4 <= dose.get("rounds", 0) <= 10:
+        return "Add 1 round."
+    return None
+
+
+def existing_optional_progression(rule: str, context: dict | None, dose: dict, prescription: str) -> bool:
+    """Retain an existing modest step rather than replace it with a suggestion."""
+    if not context or context["current"]["blocked"] or dose != context["current"]["dose"]:
+        return False
+    if context.get("next") and not numerical_guidance(context, dose, prescription).get("maintenance_cue"):
+        return False
+    text = re.sub(r"\badd\s*\+\s*", "add ", normalise_measures(rule), flags=re.I)
+    match = re.search(r"\badd\s+(\d+(?:\.\d+)?)\s*(kg|lb|reps?|sets?|rounds?|m|min|sec)\b", text, re.I)
+    if not match:
+        return False
+    unit, amount = match[2].lower(), float(match[1])
+    variable = {"kg": "load", "lb": "load", "rep": "reps", "reps": "reps",
+                "set": "sets", "sets": "sets", "round": "rounds", "rounds": "rounds",
+                "m": "distance", "min": "duration", "sec": "duration"}[unit]
+    amount *= 60 if unit == "min" else 1
+    current = dose.get(variable, 0)
+    limit = {"load": current * 0.05, "reps": min(2, current * 0.5),
+             "sets": 1, "rounds": 1, "distance": current * 0.1,
+             "duration": min(60, current * 0.2)}[variable]
+    if current <= 0 or not 0 < amount <= limit or (variable == "load" and unit != dose.get("load_unit")):
+        return False
+    target = {**dose, variable: current + amount}
+    return authored_progression_matches(text, {"variable": variable, "from": current,
+                                               "to": target[variable]}, target)
+
+
 def _label(variable: str, dose: dict) -> str:
     return {"duration": "duration", "work": "work time", "distance": "distance per carry",
             "reps": "reps per side" if dose.get("per_side") else "reps per set"}.get(variable, variable)
@@ -250,8 +311,13 @@ def authored_progression_matches(rule: str, guidance: dict, target: dict) -> boo
         if unit.lower().startswith(("min", "sec")):
             field = variable if variable in {"duration", "work"} else None
             amount = str(float(amount) * (60 if unit.lower().startswith("min") else 1))
+        # "Add 5kg" is a delta, not a new 5kg absolute load. Still inspect any
+        # separate absolute prescription so a second change cannot hide in it.
+        remaining = re.sub(r"\badd\s+\d+(?:\.\d+)?\s*(?:kg|lb|reps?|sets?|rounds?|m|min(?:utes?)?|sec(?:onds?)?)\b",
+                           "", rule, count=1, flags=re.I)
+        additional = measured_dose(remaining)
         return (field == variable and float(amount) == guidance["to"] - guidance["from"]
-                and all(proposed[key] == target.get(key) for key in _WORK if key in proposed))
+                and all(additional[key] == target.get(key) for key in (*_WORK, "rest", "rpe", "load_unit") if key in additional))
     if variable not in proposed:
         if variable in {"duration", "work"} and (m := re.search(r"\bto\s+(\d+(?:\.\d+)?)\s*" + _TIME, rule, re.I)):
             proposed[variable] = _seconds(m[1], m[2])

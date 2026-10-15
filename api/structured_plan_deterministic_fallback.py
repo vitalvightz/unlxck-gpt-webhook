@@ -484,6 +484,7 @@ def _source_block(
     return {
         **fields,
         "purpose": parsed.purpose or None,
+        "execution_instructions": parsed.execution_instructions or None,
         "coaching_cues": list(parsed.cues) + ([remainder] if remainder else []),
         "regression_options": list(parsed.regressions),
         "progression_rule": parsed.progression or None,
@@ -670,7 +671,7 @@ _WHY_LABELS = {"why", "why today"}
 #: boundary, start a new detail line, so ordinary prose containing a colon is
 #: never split.
 _INLINE_DETAIL_LABELS = sorted(
-    {"cue", *_STOP_LABELS, *_REGRESSION_LABELS, *_PROGRESSION_LABELS, *_PURPOSE_LABELS},
+    {"cue", "how", *_STOP_LABELS, *_REGRESSION_LABELS, *_PROGRESSION_LABELS, *_PURPOSE_LABELS},
     key=len,
     reverse=True,
 )
@@ -694,6 +695,7 @@ class _ParsedDisplayText:
     activity_name: str = ""
     activity_dose: str = ""
     purpose: str = ""
+    execution_instructions: str = ""
     cues: list[str] = field(default_factory=list)
     stop_rules: list[str] = field(default_factory=list)
     regressions: list[str] = field(default_factory=list)
@@ -735,7 +737,9 @@ def _parse_display_text(display_text: str) -> _ParsedDisplayText:
         if seen_activity and detail:
             label = detail.group("label").strip().lower()
             text = detail.group("text").strip()
-            if label in _STOP_LABELS:
+            if label == "how":
+                parsed.execution_instructions = text
+            elif label in _STOP_LABELS:
                 parsed.stop_rules.append(text)
             elif label in _REGRESSION_LABELS:
                 parsed.regressions.append(text)
@@ -777,6 +781,7 @@ def _parsed_block(
         "display_name": parsed.activity_name,
         "order_index": 0,
         "purpose": parsed.purpose or None,
+        "execution_instructions": parsed.execution_instructions or None,
         "why_today": parsed.why or None,
         "coaching_cues": cues,
         "regression_options": list(parsed.regressions),

@@ -99,6 +99,8 @@ function normalizePlanTextForCards(rawText: string): string {
 // flattening them into one wall of prose. Longest variants must come first so
 // "Progress/regress/stop" wins over "Progress".
 const SESSION_DETAIL_LABELS: { match: RegExp; label: string }[] = [
+  { match: /^how$/i, label: "How" },
+  { match: /^cue$/i, label: "Cue" },
   { match: /^purpose$/i, label: "Purpose" },
   { match: /^purpose\s*&\s*why$/i, label: "Purpose" },
   { match: /^why today$/i, label: "Why" },
@@ -127,7 +129,7 @@ const SESSION_DETAIL_LABELS: { match: RegExp; label: string }[] = [
 ];
 
 const SESSION_LABEL_SPLIT_RE =
-  /\b(Purpose\s*&\s*why|Purpose|Why today|Why|Duration|Prescription|Output|Intensity|Coach call|Week note|Final coach call(?:\s*\(one line\))?|Progression\/regression\/stop|Progress\/regress\/stop|Progression\/regression|Progress\/regress|Progression|Progress|Regression|Regress|Stop rule|Stop|Easier|Swaps?|Rest|Note)\s*:/gi;
+  /\b(How|Cue|Purpose\s*&\s*why|Purpose|Why today|Why|Duration|Prescription|Output|Intensity|Coach call|Week note|Final coach call(?:\s*\(one line\))?|Progression\/regression\/stop|Progress\/regress\/stop|Progression\/regression|Progress\/regress|Progression|Progress|Regression|Regress|Stop rule|Stop|Easier|Swaps?|Rest|Note)\s*:/gi;
 
 function normalizeSessionLabel(raw: string): string {
   const trimmed = raw.trim();
@@ -260,7 +262,7 @@ function normalizePhaseToken(value: string): string {
 // coach phrase, so ordinary title words ("Stop-and-go", a leading "Coach-led
 // boxing session") are never split.
 const SESSION_TITLE_BODY_MARKER =
-  /\s(?=(?:Why|Purpose|Progress\/regress\/stop|Progress\/regress|Progression|Progress|Regress|Stop rule|Stop|Easier|Swaps?|Rest|Note)\s*:|No (?:extra|app) S\s?&?\s?C|Coach owns this session|Train with your coach)/i;
+  /\s(?=(?:How|Why|Purpose|Progress\/regress\/stop|Progress\/regress|Progression|Progress|Regress|Stop rule|Stop|Easier|Swaps?|Rest|Note)\s*:|No (?:extra|app) S\s?&?\s?C|Coach owns this session|Train with your coach)/i;
 
 function splitSessionTitle(title: string): { title: string; remainder: string | null } {
   const markerIndex = title.search(SESSION_TITLE_BODY_MARKER);
@@ -717,6 +719,7 @@ function toStructuredBlock(
   const substitutions = detailText(block, ["Swap", "Swaps"]);
   const mappedLabels = new Set([
     "purpose",
+    "how",
     "why",
     "progress",
     "regress",
@@ -739,6 +742,7 @@ function toStructuredBlock(
     order_index: index,
     load: block.dose ? { display: block.dose } : null,
     purpose: null,
+    execution_instructions: detailText(block, ["How"]).join(" ") || null,
     coaching_cues: coachingCues,
     regression_options: regressions,
     substitutions,

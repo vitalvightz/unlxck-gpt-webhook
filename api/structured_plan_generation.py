@@ -3808,6 +3808,11 @@ The JSON object MUST conform to the StructuredTrainingPlan schema:
   preserve its quantity, units, per-set/per-side scope and conditions. Do not
   duplicate the cue in subtitles or a separate Coaching cues section. Locked
   tactical/visualisation steps retain their exact bank wording and membership.
+- Preserve a technical drill's setup and movement sequence in
+  execution_instructions, separate from its single short coaching_cues item.
+  Route a source "How:" line here verbatim. A drill name or generic form cue
+  does not explain the exercise. Use one or two clear sentences, preserving
+  sequence and restrictions; the 9-word cue limit does not apply to this field.
 - coaching_cues MUST tell the athlete how to execute the exercise: position,
   movement, intent, brace, rhythm, guard, stance, reset, or other actionable form
   cues. Do NOT put Purpose, Why today, Easier/Regression, Progress/Progression,
