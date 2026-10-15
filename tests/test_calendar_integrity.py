@@ -203,7 +203,10 @@ def test_deprioritized_role_can_move_to_an_allow_day_with_only_tactical_support(
         "role_key": "tactical_watch",
         "scheduled_day_hint": "Thursday",
     }
-    weekly = _map(_week(roles=[strength, watch], contacts=[_hard("Tuesday")]))
+    weekly = _map(_week(
+        roles=[strength, watch], contacts=[_hard("Tuesday")],
+        declared=["Wednesday", "Thursday"],
+    ))
 
     apply_final_calendar_integrity(weekly)
 
