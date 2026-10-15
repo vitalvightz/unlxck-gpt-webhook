@@ -192,3 +192,106 @@ def test_preserves_technical_coach_session_while_merging_compatible_app_work():
     consolidate_compatible_physical_sessions(original)
     assert coach["role_key"] in [r["role_key"] for r in original["weeks"][0]["session_roles"]]
     assert len(dated_appointments(original)) == 2  # Strength + coach boxing.
+
+
+def _short_technical_footwork():
+    return {
+        "category": "conditioning",
+        "role_key": "technical_footwork_touch_day",
+        "preferred_system": "technical_footwork",
+        "session_index": 2,
+        "scheduled_day_hint": "Wednesday",
+        "selected_exercise_assignments": [{
+            "slot_id": "spp_technical_footwork_1_step_back_pivot_reset",
+            "name": "Step-Back Pivot Reset",
+            "exercise_key": "step-back-pivot-reset",
+            "slot_group": "conditioning_slots",
+            "source_phase": "SPP",
+            "work_sec": 75,
+            "rounds": 2,
+            "rest_sec": 60,
+            "rpe": 4,
+            "effective_prescription": "2 x 75 sec technical sets, 60 sec reset",
+        }],
+    }
+
+
+def test_short_technical_footwork_can_share_strength_without_losing_real_dose():
+    original = _map(_strength(), _short_technical_footwork())
+    before_member = deepcopy(original["weeks"][0]["session_roles"][1]["selected_exercise_assignments"][0])
+
+    consolidate_compatible_physical_sessions(original)
+
+    assert len(dated_appointments(original)) == 1
+    host = original["weeks"][0]["session_roles"][0]
+    assert host["athlete_facing_label"] == "Strength + footwork"
+    member = host["selected_exercise_assignments"][0]
+    assert member["slot_id"] == before_member["slot_id"]
+    assert member["effective_prescription"] == before_member["effective_prescription"]
+    render = authoritative_render_for_role(host, week=original["weeks"][0])
+    assert render is not None
+    assert any("Step-Back Pivot Reset" in line for line in render["body_lines"])
+    assert original["session_consolidation_audit"][0]["embedded_quality"] == "footwork"
+
+
+def test_technical_footwork_intent_is_preserved_as_footwork_not_aerobic():
+    source = _short_technical_footwork()
+    selected = {
+        "name": "Step-Back Pivot Reset",
+        "prescription": "2 x 75 sec technical sets, 60 sec reset",
+        "movement_patterns": ["footwork"],
+        "selection_metadata": {
+            "tags": ["footwork", "technical"],
+            "work_sec": 75, "rounds": 2, "rest_sec": 60,
+            "rpe": 4, "total_minutes": 2.5,
+            "duration": "2 x 75 sec technical sets, 60 sec reset",
+        },
+    }
+    pools = {"SPP": {"conditioning_slots": [{
+        "slot_id": "spp_technical_footwork_1_step_back_pivot_reset",
+        "role": "technical_footwork", "selected": selected,
+    }]}}
+    before = _other_stimuli(source, pools, "SPP", {})
+    assert any("footwork_practice" in s["intents"] for s in before)
+    original = _map(_strength(), source)
+    consolidate_compatible_physical_sessions(original)
+    merged = original["weeks"][0]["session_roles"][0]
+    after = _other_stimuli(merged, pools, "SPP", {})
+    assert after == before
+    assert not any("energy_system_training" in s["intents"] for s in after)
+
+
+def test_full_aerobic_footwork_session_remains_separate():
+    role = _short_technical_footwork()
+    role.update(role_key="aerobic_support_day", preferred_system="aerobic")
+    member = role["selected_exercise_assignments"][0]
+    member.update(
+        slot_id="spp_aerobic_1_pressure_footwork_flow",
+        name="Pressure Footwork Flow",
+        work_sec=180, rounds=3, rest_sec=45, rpe=6,
+        effective_prescription="180s work, 45s rest x 3 rounds",
+    )
+    plan = _map(_strength(), role)
+    consolidate_compatible_physical_sessions(plan)
+    assert len(dated_appointments(plan)) == 2
+    assert not plan.get("session_consolidation_audit")
+
+
+def test_short_reactive_coordination_alactic_block_uses_same_compatibility_path():
+    role = _alactic()
+    role["role_key"] = "alactic_coordination_day"
+    role["selected_exercise_assignments"][0]["name"] = "Reactive Angle Burst"
+    plan = _map(_strength(), role)
+    consolidate_compatible_physical_sessions(plan)
+    assert len(dated_appointments(plan)) == 1
+    assert plan["weeks"][0]["session_roles"][0]["selected_exercise_assignments"][0]["name"] == "Reactive Angle Burst"
+
+
+def test_strenuous_technical_footwork_is_not_embedded_as_a_warmup():
+    source = _short_technical_footwork()
+    source["selected_exercise_assignments"][0].update(
+        work_sec=90, rounds=4, rpe=8, rest_sec=30,
+    )
+    plan = _map(_strength(), source)
+    consolidate_compatible_physical_sessions(plan)
+    assert len(dated_appointments(plan)) == 2
