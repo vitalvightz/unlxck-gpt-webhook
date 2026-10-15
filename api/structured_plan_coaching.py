@@ -4,12 +4,13 @@ from typing import Any
 import re
 
 from fightcamp.calendar_context import role_d_day
+from fightcamp.coaching_copy import concise_coaching
 from fightcamp.exercise_coaching import (
-    exercise_coaching, is_profile_progression, is_profile_regression, has_measurable_step,
+    exercise_coaching, is_profile_progression, is_profile_regression, is_profile_cue,
     is_execution_quality_instruction,
 )
 from fightcamp.exercise_progression import (
-    authored_progression_matches, build_progression_context, numerical_easier,
+    authored_progression_matches, build_progression_context,
     numerical_guidance, occurrence_key,
 )
 from fightcamp.structured_session_identity import deterministic_session_id, identity_tokens
@@ -83,20 +84,12 @@ def _recover_programming(block: dict, assignment: dict, context: dict | None, fi
     maintenance = guidance.get("maintenance_cue")
     if maintenance and not _has_cue(block, maintenance):
         block["coaching_cues"].append(maintenance)
-    # Replace only recognised #2880 fallback regressions; keep all authored ones.
-    regressions = block.get("regression_options") or []
+    # Existing actionable Easier advice owns the card. Never append another
+    # description of the same reduction (including "reps per set to 1").
     authored = assignment.get("regression_options") or re.search(
         r"^\s*(?:Easier|Regression)\s*:", str(assignment.get("coaching_notes") or ""), re.I | re.M)
-    easier = numerical_easier(dose) if block.get("stop_rules") else None
-    if easier and not authored:
-        if (not regressions or all(is_profile_regression(option) for option in regressions)
-                or regressions == fields.get("regression_options")):
-            block["regression_options"] = [easier]
-        elif not any(has_measurable_step(option) for option in regressions):
-            # Keep the coach's movement-specific option and offer a numeric alternative.
-            alternative = "Or: " + easier
-            if alternative not in regressions:
-                block["regression_options"] = [*regressions, alternative]
+    if authored and all(is_profile_regression(x) for x in block.get("regression_options") or []):
+        block["regression_options"] = fields["regression_options"]
 
 
 def _has_cue(block: dict, text: str) -> bool:
@@ -148,9 +141,16 @@ def recover_selected_coaching(plan: dict[str, Any], brief: dict[str, Any],
                         phase=str(source_week.get("phase") or source_week.get("phase_label") or ""),
                         d_day=offset, athlete=brief.get("athlete_snapshot"),
                     )
+                    authored_cue = assignment.get("coaching_cues") or re.search(
+                        r"^\s*(?:Cue|Coaching cues)\s*:", str(assignment.get("coaching_notes") or ""), re.I | re.M)
+                    if authored_cue and all(is_profile_cue(cue) for cue in block.get("coaching_cues") or []):
+                        block["coaching_cues"] = deepcopy(fields["coaching_cues"])
                     for field, value in (fields or {}).items():
                         if value and not block.get(field):
                             block[field] = deepcopy(value)
                     _recover_programming(block, assignment, progression_context.get(
                         occurrence_key(role, assignment, offset)), fields)
+                    compact = concise_coaching({k: block.get(k) for k in (
+                        "coaching_cues", "regression_options", "stop_rules")})
+                    block.update(compact)
     return recovered

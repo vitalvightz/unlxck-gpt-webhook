@@ -35,7 +35,7 @@ jobs:
       - name: Verify the persisted athlete-visible coaching cards
         run: |
           test -d web/node_modules/tsx
-          python -m pytest tests/test_exercise_coaching_release.py tests/test_exercise_coaching_context.py tests/test_measurable_exercise_coaching.py -q
+          python -m pytest tests/test_exercise_coaching_release.py tests/test_exercise_coaching_context.py tests/test_measurable_exercise_coaching.py tests/test_concise_exercise_coaching.py -q
 
   build:
     runs-on: ubuntu-latest

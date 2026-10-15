@@ -1,0 +1,1723 @@
+[
+  {
+    "plan_id": "1546de75-2c10-4dde-9063-0d7db1f48249",
+    "card": {
+      "schema_version": "1.0",
+      "plan_metadata": {
+        "title": "Recorded exercise coaching"
+      },
+      "weeks": [
+        {
+          "week_id": "wk-2",
+          "week_index": 2,
+          "phase_label": "SPP",
+          "days": [
+            {
+              "date": "2026-10-13",
+              "countdown_label": "D-18",
+              "sessions": [
+                {
+                  "session_id": "ses-1546de75-2026-10-13-strength",
+                  "session_type": "strength_power",
+                  "title": "Strength",
+                  "blocks": [
+                    {
+                      "progression_rule": "Next time add one set to make 4 x 4 sec.",
+                      "sets": 3,
+                      "load": {
+                        "ref": null,
+                        "unit": "bodyweight",
+                        "value": 0,
+                        "method": "bodyweight",
+                        "display": "bodyweight"
+                      },
+                      "coaching_cues": [
+                        "Set up like fight stance and explode on the first beat."
+                      ],
+                      "category": null,
+                      "effort": {
+                        "scale": "1-10",
+                        "value": 7,
+                        "method": "RPE"
+                      },
+                      "duration": {
+                        "unit": "seconds",
+                        "value": 4
+                      },
+                      "work": null,
+                      "distance": null,
+                      "block_id": "blk-2026-10-13-reactive-start-burst",
+                      "regression_options": [
+                        "Single 4 sec burst, 2 repeats"
+                      ],
+                      "rest": {
+                        "unit": "seconds",
+                        "value": 180
+                      },
+                      "block_type": "speed",
+                      "display_name": "Reactive Start Burst",
+                      "rounds": null,
+                      "stop_rules": [
+                        "Loss of balance",
+                        "Positioning breaks down"
+                      ],
+                      "exercise_key": "reactive-start-burst",
+                      "reps": null,
+                      "intensity": null
+                    },
+                    {
+                      "progression_rule": "Next time add one rep per set (4 x 4).",
+                      "sets": 4,
+                      "load": {
+                        "ref": null,
+                        "unit": "bodyweight",
+                        "value": 0,
+                        "method": "bodyweight",
+                        "display": "bodyweight"
+                      },
+                      "coaching_cues": [
+                        "Drive with hips, extend through the toes and land quietly."
+                      ],
+                      "category": null,
+                      "effort": {
+                        "scale": null,
+                        "value": "max speed",
+                        "method": "intent"
+                      },
+                      "duration": null,
+                      "work": null,
+                      "distance": null,
+                      "block_id": "blk-2026-10-13-jump-squat",
+                      "regression_options": [
+                        "Bodyweight squat jumps 3 x 3"
+                      ],
+                      "rest": {
+                        "unit": "seconds",
+                        "value": 90
+                      },
+                      "block_type": "plyometric_power",
+                      "display_name": "Jump Squat",
+                      "rounds": null,
+                      "stop_rules": [
+                        "Big drop in jump height",
+                        "Painful landing"
+                      ],
+                      "exercise_key": "jump-squat",
+                      "reps": 3,
+                      "intensity": null
+                    },
+                    {
+                      "progression_rule": "Next time add one hold to make 4 holds x 12 sec.",
+                      "sets": 3,
+                      "load": {
+                        "ref": null,
+                        "unit": "bodyweight",
+                        "value": 0,
+                        "method": "bodyweight",
+                        "display": "bodyweight"
+                      },
+                      "coaching_cues": [
+                        "Get in boxing stance, brace your middle, rotate and hold the punch end position."
+                      ],
+                      "category": null,
+                      "effort": {
+                        "scale": "1-10",
+                        "value": 8,
+                        "method": "RPE"
+                      },
+                      "duration": {
+                        "unit": "seconds",
+                        "value": 12
+                      },
+                      "work": null,
+                      "distance": null,
+                      "block_id": "blk-2026-10-13-punch-specific-max-isometric-hold",
+                      "regression_options": [
+                        "2 holds x 8 sec"
+                      ],
+                      "rest": {
+                        "unit": "seconds",
+                        "value": 180
+                      },
+                      "block_type": "strength",
+                      "display_name": "Punch-Specific Max Isometric Hold",
+                      "rounds": null,
+                      "stop_rules": [
+                        "Sharp shoulder pain",
+                        "Sharp elbow pain"
+                      ],
+                      "exercise_key": "punch-specific-max-isometric-hold",
+                      "reps": null,
+                      "intensity": null
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "date": "2026-10-16",
+              "countdown_label": "D-15",
+              "sessions": [
+                {
+                  "session_id": "ses-1546de75-2026-10-16-low-aerobic-gas-tank-flush",
+                  "session_type": "conditioning",
+                  "title": "Low aerobic gas-tank flush",
+                  "blocks": [
+                    {
+                      "progression_rule": "Next time add a second set.",
+                      "sets": 1,
+                      "load": null,
+                      "coaching_cues": [
+                        "Brace your middle, use hips to lift and place bag on shoulder smoothly."
+                      ],
+                      "category": null,
+                      "effort": {
+                        "scale": "1-10",
+                        "value": 5,
+                        "method": "RPE"
+                      },
+                      "duration": null,
+                      "work": null,
+                      "distance": null,
+                      "block_id": "blk-2026-10-16-sandbag-shouldering",
+                      "regression_options": [
+                        "1 set x 2 reps each side"
+                      ],
+                      "rest": {
+                        "unit": "seconds",
+                        "value": 120
+                      },
+                      "block_type": "accessory",
+                      "display_name": "Sandbag Shouldering",
+                      "rounds": null,
+                      "stop_rules": [
+                        "Low back pain",
+                        "Sharp shoulder pain"
+                      ],
+                      "exercise_key": "sandbag-shouldering",
+                      "reps": "3 per side",
+                      "intensity": null
+                    },
+                    {
+                      "progression_rule": "Next time add 5 minutes to make 30 min.",
+                      "sets": null,
+                      "load": null,
+                      "coaching_cues": [
+                        "Move and breathe steady; avoid heavy punching."
+                      ],
+                      "category": null,
+                      "effort": {
+                        "scale": "1-10",
+                        "value": 4,
+                        "method": "RPE"
+                      },
+                      "duration": {
+                        "unit": "minutes",
+                        "value": 25
+                      },
+                      "work": null,
+                      "distance": null,
+                      "block_id": "blk-2026-10-16-tempo-shadowboxing",
+                      "regression_options": [
+                        "Reduce to 15 min continuous"
+                      ],
+                      "rest": null,
+                      "block_type": "conditioning",
+                      "display_name": "Tempo Shadowboxing",
+                      "rounds": null,
+                      "stop_rules": [
+                        "Dizziness",
+                        "Uncontrolled heavy breathing"
+                      ],
+                      "exercise_key": "tempo-shadowboxing",
+                      "reps": null,
+                      "intensity": null
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "week_id": "wk-3",
+          "week_index": 3,
+          "phase_label": "SPP",
+          "days": [
+            {
+              "date": "2026-10-19",
+              "countdown_label": "D-12",
+              "sessions": [
+                {
+                  "session_id": "ses-1546de75-2026-10-19-neural-speed-touch",
+                  "session_type": "mixed",
+                  "title": "Neural speed touch",
+                  "blocks": [
+                    {
+                      "progression_rule": "Next time add one set to make 3 x 6 sec.",
+                      "sets": 2,
+                      "load": {
+                        "ref": null,
+                        "unit": "bodyweight",
+                        "value": 0,
+                        "method": "bodyweight",
+                        "display": "bodyweight"
+                      },
+                      "coaching_cues": [
+                        "Step to create an angle and explode back to guard, finish quickly."
+                      ],
+                      "category": null,
+                      "effort": {
+                        "scale": "1-10",
+                        "value": 6,
+                        "method": "RPE"
+                      },
+                      "duration": {
+                        "unit": "seconds",
+                        "value": 6
+                      },
+                      "work": null,
+                      "distance": null,
+                      "block_id": "blk-2026-10-19-cut-off-step-score",
+                      "regression_options": [
+                        "Shorten to 1 x 6 sec effort"
+                      ],
+                      "rest": {
+                        "unit": "seconds",
+                        "value": 120
+                      },
+                      "block_type": "speed",
+                      "display_name": "Cut-Off-Step-Score",
+                      "rounds": null,
+                      "stop_rules": [
+                        "Loss of balance",
+                        "Sharp ankle or knee pain"
+                      ],
+                      "exercise_key": "cut-off-step-score",
+                      "reps": null,
+                      "intensity": null
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "date": "2026-10-21",
+              "countdown_label": "D-10",
+              "sessions": [
+                {
+                  "session_id": "ses-1546de75-2026-10-21-rhythm-flush",
+                  "session_type": "conditioning",
+                  "title": "Rhythm flush",
+                  "blocks": [
+                    {
+                      "progression_rule": null,
+                      "sets": null,
+                      "load": null,
+                      "coaching_cues": [
+                        "Keep range, control breathing and practise footwork reads."
+                      ],
+                      "category": null,
+                      "effort": {
+                        "scale": "1-10",
+                        "value": 4,
+                        "method": "RPE"
+                      },
+                      "duration": {
+                        "unit": "minutes",
+                        "value": 20
+                      },
+                      "work": null,
+                      "distance": null,
+                      "block_id": "blk-2026-10-21-tempo-shadowboxing",
+                      "regression_options": [
+                        "Reduce to 12 minutes"
+                      ],
+                      "rest": null,
+                      "block_type": "conditioning",
+                      "display_name": "Tempo Shadowboxing",
+                      "rounds": null,
+                      "stop_rules": [
+                        "Marked breathlessness",
+                        "Technical collapse"
+                      ],
+                      "exercise_key": "tempo-shadowboxing",
+                      "reps": null,
+                      "intensity": null
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "week_id": "wk-4",
+          "week_index": 4,
+          "phase_label": "TAPER",
+          "days": [
+            {
+              "date": "2026-10-26",
+              "countdown_label": "D-5",
+              "sessions": [
+                {
+                  "session_id": "ses-1546de75-2026-10-26-freshness-primer",
+                  "session_type": "mixed",
+                  "title": "Freshness primer",
+                  "blocks": [
+                    {
+                      "progression_rule": null,
+                      "sets": 3,
+                      "load": {
+                        "ref": null,
+                        "unit": "bodyweight",
+                        "value": 0,
+                        "method": "bodyweight",
+                        "display": "bodyweight"
+                      },
+                      "coaching_cues": [
+                        "Small, fast bursts from guard; reset to stance between reps."
+                      ],
+                      "category": null,
+                      "effort": {
+                        "scale": "1-10",
+                        "value": 6,
+                        "method": "RPE"
+                      },
+                      "duration": {
+                        "unit": "seconds",
+                        "value": 6
+                      },
+                      "work": null,
+                      "distance": null,
+                      "block_id": "blk-2026-10-26-herd-corner-burst-reset",
+                      "regression_options": [
+                        "2 x 6 sec efforts"
+                      ],
+                      "rest": {
+                        "unit": "seconds",
+                        "value": 120
+                      },
+                      "block_type": "speed",
+                      "display_name": "Herd-Corner-Burst-Reset",
+                      "rounds": null,
+                      "stop_rules": [
+                        "Loss of form",
+                        "Painful joint feedback"
+                      ],
+                      "exercise_key": "herd-corner-burst-reset",
+                      "reps": null,
+                      "intensity": null
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "date": "2026-10-28",
+              "countdown_label": "D-3",
+              "sessions": [
+                {
+                  "session_id": "ses-1546de75-2026-10-28-fight-week-freshness",
+                  "session_type": "conditioning",
+                  "title": "Fight-week freshness",
+                  "blocks": [
+                    {
+                      "progression_rule": null,
+                      "sets": null,
+                      "load": null,
+                      "coaching_cues": [
+                        "Touch-speed only; practise angles and guard recovery, no heavy power."
+                      ],
+                      "category": null,
+                      "effort": {
+                        "scale": "1-10",
+                        "value": 4,
+                        "method": "RPE"
+                      },
+                      "duration": {
+                        "unit": "minutes",
+                        "value": 4
+                      },
+                      "work": null,
+                      "distance": null,
+                      "block_id": "blk-2026-10-28-light-heavy-bag-technical-tempo",
+                      "regression_options": [
+                        "Light shadowboxing for 2 min"
+                      ],
+                      "rest": null,
+                      "block_type": "conditioning",
+                      "display_name": "Light Heavy-Bag Technical Tempo",
+                      "rounds": null,
+                      "stop_rules": [
+                        "Sharp pain",
+                        "Heavy fatigue"
+                      ],
+                      "exercise_key": "light-heavy-bag-technical-tempo",
+                      "reps": null,
+                      "intensity": null
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "date": "2026-10-29",
+              "countdown_label": "D-2",
+              "sessions": [
+                {
+                  "session_id": "ses-1546de75-2026-10-29-tactical-cue-card",
+                  "session_type": "skill",
+                  "title": "Tactical Cue Card",
+                  "blocks": [
+                    {
+                      "progression_rule": null,
+                      "sets": null,
+                      "load": null,
+                      "coaching_cues": [
+                        "Write one short cue: entry, exit, counter, foot, or guard reaction."
+                      ],
+                      "category": null,
+                      "effort": null,
+                      "duration": null,
+                      "work": null,
+                      "distance": null,
+                      "block_id": "blk-2026-10-29-tactical-cue-card",
+                      "regression_options": [],
+                      "rest": null,
+                      "block_type": "skill",
+                      "display_name": "Tactical Cue Card",
+                      "rounds": null,
+                      "stop_rules": [],
+                      "exercise_key": null,
+                      "reps": null,
+                      "intensity": null
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "date": "2026-10-30",
+              "countdown_label": "D-1",
+              "sessions": [
+                {
+                  "session_id": "ses-1546de75-2026-10-30-neural-speed-touch",
+                  "session_type": "mixed",
+                  "title": "Neural speed touch",
+                  "blocks": [
+                    {
+                      "progression_rule": null,
+                      "sets": 2,
+                      "load": {
+                        "ref": null,
+                        "unit": "bodyweight",
+                        "value": 0,
+                        "method": "bodyweight",
+                        "display": "bodyweight"
+                      },
+                      "coaching_cues": [
+                        "Short aggressive step and immediate guard reset; keep shoulders relaxed."
+                      ],
+                      "category": null,
+                      "effort": {
+                        "scale": "1-10",
+                        "value": 4,
+                        "method": "RPE"
+                      },
+                      "duration": {
+                        "unit": "seconds",
+                        "value": 4
+                      },
+                      "work": null,
+                      "distance": null,
+                      "block_id": "blk-2026-10-30-cutoff-step-set-cue",
+                      "regression_options": [
+                        "1 x 4 sec efforts only"
+                      ],
+                      "rest": {
+                        "unit": "seconds",
+                        "value": 120
+                      },
+                      "block_type": "speed",
+                      "display_name": "Cutoff Step-Set Cue",
+                      "rounds": null,
+                      "stop_rules": [
+                        "Sharp joint pain",
+                        "Heavy fatigue"
+                      ],
+                      "exercise_key": "cutoff-step-set-cue",
+                      "reps": null,
+                      "intensity": null
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "brief": {
+      "athlete_snapshot": {
+        "fatigue": "low",
+        "injuries": [],
+        "readiness_flags": [
+          "active_weight_cut",
+          "moderate_injury",
+          "reduced_contact_requested",
+          "sparring_history_unavailable"
+        ],
+        "weight_cut_risk": true,
+        "has_active_injury": false,
+        "cut_severity_bucket": "moderate",
+        "injury_restrictions": [],
+        "surface_injury_only": false
+      },
+      "weekly_role_map": {
+        "weeks": [
+          {
+            "week_index": 1,
+            "phase": "SPP",
+            "session_roles": [
+              {
+                "athlete_facing_label": "Low aerobic gas-tank flush",
+                "category": "conditioning",
+                "session_index": 1,
+                "selected_exercise_assignments": [
+                  {
+                    "slot_id": "spp_aerobic_1_tempo_shadowboxing",
+                    "support_only": false,
+                    "base_prescription": "20-30min continuous",
+                    "effective_prescription": "20-30min continuous",
+                    "slot_group": "conditioning_slots",
+                    "coaching_notes": "Focus on breathing/technique; no power output (zone 2 (50-60% effort))",
+                    "exercise_key": "tempo-shadowboxing",
+                    "source_phase": "SPP",
+                    "name": "Tempo Shadowboxing"
+                  },
+                  {
+                    "slot_id": "spp_strength_10_sandbag_shouldering",
+                    "support_only": false,
+                    "base_prescription": "2-4 sets x 6-10 reps or 20-40s tempo (3-1-3), RPE 6-8.",
+                    "effective_prescription": "1-2 controlled sets x 3-5 slow reps (each side if one-sided); stop before fatigue",
+                    "slot_group": "strength_slots",
+                    "exercise_key": "sandbag-shouldering",
+                    "source_phase": "SPP",
+                    "name": "Sandbag Shouldering"
+                  }
+                ],
+                "scheduled_countdown_label": "D-15",
+                "role_key": "recovery_aerobic_gas_tank_day"
+              },
+              {
+                "athlete_facing_label": "Strength",
+                "category": "strength",
+                "strength_composition_policy": {
+                  "dropped": [
+                    {
+                      "name": "Overcoming Split-Squat Isometric",
+                      "reason": "redundant_major_family"
+                    },
+                    {
+                      "name": "Pressure-Fighter Staggered Body-Shot Med-Ball Throw",
+                      "reason": "role_or_readiness_cap"
+                    },
+                    {
+                      "name": "Box Jump",
+                      "reason": "role_or_readiness_cap"
+                    },
+                    {
+                      "name": "Mobility Reset Flow",
+                      "reason": "role_or_readiness_cap"
+                    },
+                    {
+                      "name": "Adductor rock-back",
+                      "reason": "role_or_readiness_cap"
+                    },
+                    {
+                      "name": "Boxer stance weight-shift hold",
+                      "reason": "role_or_readiness_cap"
+                    }
+                  ],
+                  "fatigue": "low",
+                  "pressure": 1,
+                  "role_key": "neural_plus_strength_day",
+                  "cut_pressure": 1,
+                  "selected_count": 2,
+                  "selected_names": [
+                    "Punch-Specific Max Isometric Hold",
+                    "Jump Squat"
+                  ],
+                  "fatigue_applied": true,
+                  "injury_pressure": 0,
+                  "active_stressors": 1,
+                  "fatigue_pressure": 0,
+                  "base_exercise_cap": 3,
+                  "injury_restricted": false,
+                  "major_family_limit": 1,
+                  "cut_severity_bucket": "moderate",
+                  "role_days_until_fight": 18,
+                  "effective_exercise_cap": 2,
+                  "standalone_minimum_applied": false
+                },
+                "session_index": 2,
+                "effective_strength_prescriptions": [
+                  {
+                    "name": "Punch-Specific Max Isometric Hold",
+                    "slot_id": "spp_strength_1_punch_specific_max_isometric_hold",
+                    "dose_authority": "exercise_bank",
+                    "base_prescription": "3\u20135 holds x 10\u201320s @ 7\u20139/10 effort; full rest between holds.",
+                    "effective_prescription": "3\u20135 holds x 10\u201320s @ 7\u20139/10 effort; full rest between holds."
+                  },
+                  {
+                    "name": "Jump Squat",
+                    "slot_id": "spp_strength_7_jump_squat",
+                    "dose_authority": "exercise_bank",
+                    "base_prescription": "4\u20136x2\u20135 reps at max speed; full rest 60\u2013120s.",
+                    "effective_prescription": "4\u20136x2\u20135 reps at max speed; full rest 60\u2013120s."
+                  },
+                  {
+                    "name": "Reactive Start Burst",
+                    "slot_id": "priority_microdose::speed",
+                    "dose_authority": "weekly_priority_exposure_floor",
+                    "dose_role_kind": "support",
+                    "effective_loaded": false,
+                    "effective_prescription": "3 x 4 sec @ RPE 7, full rest"
+                  }
+                ],
+                "selected_exercise_assignments": [
+                  {
+                    "slot_id": "spp_strength_1_punch_specific_max_isometric_hold",
+                    "support_only": false,
+                    "base_prescription": "3\u20135 holds x 10\u201320s @ 7\u20139/10 effort; full rest between holds.",
+                    "slot_group": "strength_slots",
+                    "coaching_notes": "Maximal-strength maintenance / neural work: no eccentric, no landing, low soreness. D-13 to D-8: 2-3 x 3-5s per side with full rest; shrink to 1-2 short holds per side through D-7 and D-6/D-5. Keep out of D-4 to D-1. Not for D-1: requires equipment.",
+                    "exercise_key": "punch-specific-max-isometric-hold",
+                    "source_phase": "SPP",
+                    "name": "Punch-Specific Max Isometric Hold"
+                  },
+                  {
+                    "slot_id": "spp_strength_7_jump_squat",
+                    "support_only": false,
+                    "base_prescription": "4\u20136x2\u20135 reps at max speed; full rest 60\u2013120s.",
+                    "slot_group": "strength_slots",
+                    "coaching_notes": "Use bodyweight or a very light load for 3-5 sets of 3 reps with full rest; stop when jump height drops.",
+                    "exercise_key": "jump-squat",
+                    "source_phase": "SPP",
+                    "name": "Jump Squat"
+                  },
+                  {
+                    "slot_id": "priority_microdose::speed",
+                    "base_prescription": "3 x 4 sec @ RPE 7, full rest",
+                    "effective_prescription": "3 x 4 sec @ RPE 7, full rest",
+                    "slot_group": "priority_microdose",
+                    "exercise_key": "reactive-start-burst",
+                    "name": "Reactive Start Burst"
+                  }
+                ],
+                "scheduled_countdown_label": "D-18",
+                "role_key": "neural_plus_strength_day"
+              },
+              {
+                "athlete_facing_label": "Hard sparring",
+                "category": "sparring",
+                "session_index": 3,
+                "scheduled_countdown_label": "D-16",
+                "role_key": "hard_sparring_day",
+                "selected_exercise_assignments": []
+              },
+              {
+                "athlete_facing_label": "Light technical combat",
+                "category": "technical",
+                "session_index": 4,
+                "scheduled_countdown_label": "D-19",
+                "role_key": "light_combat_day",
+                "selected_exercise_assignments": []
+              },
+              {
+                "athlete_facing_label": "Light technical combat",
+                "category": "technical",
+                "session_index": 5,
+                "scheduled_countdown_label": "D-15",
+                "role_key": "light_combat_day",
+                "selected_exercise_assignments": []
+              },
+              {
+                "athlete_facing_label": "Tactical Focus",
+                "category": "support_insert",
+                "session_index": 0,
+                "scheduled_countdown_label": "D-15",
+                "role_key": "tactical_watch",
+                "selected_exercise_assignments": []
+              }
+            ]
+          },
+          {
+            "week_index": 2,
+            "phase": "SPP",
+            "session_roles": [
+              {
+                "athlete_facing_label": "Neural speed touch",
+                "category": "strength",
+                "session_index": 1,
+                "selected_exercise_assignments": [
+                  {
+                    "slot_id": "spp_late_cut_off_step_score",
+                    "support_only": true,
+                    "base_prescription": "3x6s with 120s rest",
+                    "effective_prescription": "3x6s with 120s rest",
+                    "slot_group": "conditioning_slots",
+                    "exercise_key": "cut-off-step-score",
+                    "source_phase": "SPP",
+                    "name": "Cut-Off-Step-Score"
+                  }
+                ],
+                "scheduled_countdown_label": "D-12",
+                "role_key": "strength_touch_day",
+                "strength_dose_cap": {
+                  "max_reps": 3,
+                  "max_sets": 2,
+                  "loaded_allowed": true
+                }
+              },
+              {
+                "athlete_facing_label": "Light Combat / Technical",
+                "category": "technical",
+                "session_index": 2,
+                "selected_exercise_assignments": [],
+                "scheduled_countdown_label": "D-12",
+                "role_key": "light_combat_day"
+              },
+              {
+                "athlete_facing_label": "Fight Visualisation",
+                "category": "support_insert",
+                "session_index": 3,
+                "selected_exercise_assignments": [],
+                "scheduled_countdown_label": "D-12",
+                "role_key": "fight_visualization"
+              },
+              {
+                "athlete_facing_label": "Rhythm flush",
+                "category": "conditioning",
+                "session_index": 4,
+                "selected_exercise_assignments": [
+                  {
+                    "slot_id": "spp_aerobic_1_tempo_shadowboxing",
+                    "support_only": false,
+                    "base_prescription": "20-30min continuous",
+                    "effective_prescription": "20-30min continuous",
+                    "slot_group": "conditioning_slots",
+                    "coaching_notes": "Focus on breathing/technique; no power output (zone 2 (50-60% effort))",
+                    "exercise_key": "tempo-shadowboxing",
+                    "source_phase": "SPP",
+                    "name": "Tempo Shadowboxing"
+                  }
+                ],
+                "scheduled_countdown_label": "D-10",
+                "role_key": "light_fight_pace_touch_day"
+              },
+              {
+                "athlete_facing_label": "Fight Visualisation",
+                "category": "support_insert",
+                "session_index": 5,
+                "selected_exercise_assignments": [],
+                "scheduled_countdown_label": "D-10",
+                "role_key": "fight_visualization"
+              },
+              {
+                "athlete_facing_label": "Technical-only combat",
+                "category": "sparring",
+                "session_index": 6,
+                "selected_exercise_assignments": [],
+                "scheduled_countdown_label": "D-9",
+                "role_key": "hard_sparring_day"
+              },
+              {
+                "athlete_facing_label": "Tactical Focus",
+                "category": "support_insert",
+                "session_index": 7,
+                "selected_exercise_assignments": [],
+                "scheduled_countdown_label": "D-9",
+                "role_key": "tactical_watch"
+              },
+              {
+                "athlete_facing_label": "Light Combat / Technical",
+                "category": "technical",
+                "session_index": 8,
+                "selected_exercise_assignments": [],
+                "scheduled_countdown_label": "D-8",
+                "role_key": "light_combat_day"
+              },
+              {
+                "athlete_facing_label": "Fight Visualisation",
+                "category": "support_insert",
+                "session_index": 9,
+                "selected_exercise_assignments": [],
+                "scheduled_countdown_label": "D-8",
+                "role_key": "fight_visualization"
+              },
+              {
+                "athlete_facing_label": "Fight Visualisation",
+                "category": "support_insert",
+                "session_index": 10,
+                "selected_exercise_assignments": [],
+                "scheduled_countdown_label": "D-7",
+                "role_key": "fight_visualization"
+              },
+              {
+                "athlete_facing_label": "Breathing Reset",
+                "category": "support_insert",
+                "session_index": 11,
+                "selected_exercise_assignments": [],
+                "scheduled_countdown_label": "D-7",
+                "role_key": "breathing_reset"
+              },
+              {
+                "athlete_facing_label": "Tactical Focus",
+                "category": "support_insert",
+                "session_index": 12,
+                "selected_exercise_assignments": [],
+                "scheduled_countdown_label": "D-7",
+                "role_key": "tactical_watch"
+              }
+            ]
+          },
+          {
+            "week_index": 3,
+            "phase": "TAPER",
+            "session_roles": [
+              {
+                "athlete_facing_label": "Freshness primer",
+                "category": "conditioning",
+                "session_index": 13,
+                "selected_exercise_assignments": [
+                  {
+                    "slot_id": "taper_late_herd_corner_burst_reset",
+                    "support_only": true,
+                    "base_prescription": "3x6s with 120s rest",
+                    "effective_prescription": "3x6s with 120s rest",
+                    "slot_group": "conditioning_slots",
+                    "exercise_key": "herd-corner-burst-reset",
+                    "source_phase": "TAPER",
+                    "name": "Herd-Corner-Burst-Reset"
+                  }
+                ],
+                "scheduled_countdown_label": "D-5",
+                "role_key": "alactic_sharpness_day"
+              },
+              {
+                "athlete_facing_label": "Light Combat / Technical",
+                "category": "technical",
+                "session_index": 14,
+                "selected_exercise_assignments": [],
+                "scheduled_countdown_label": "D-5",
+                "role_key": "light_combat_day"
+              },
+              {
+                "athlete_facing_label": "Fight Visualisation",
+                "category": "support_insert",
+                "session_index": 15,
+                "selected_exercise_assignments": [],
+                "scheduled_countdown_label": "D-5",
+                "role_key": "fight_visualization"
+              },
+              {
+                "athlete_facing_label": "Fight-week freshness",
+                "category": "recovery",
+                "session_index": 16,
+                "selected_exercise_assignments": [
+                  {
+                    "slot_id": "taper_strength_1_punch_specific_max_isometric_hold:alternate:0",
+                    "slot_group": "strength_slots",
+                    "coaching_notes": "Touch-speed bag rhythm only; no hard rounds or volume accumulation.",
+                    "exercise_key": "light-heavy-bag-technical-tempo",
+                    "source_phase": "TAPER",
+                    "name": "Light Heavy-Bag Technical Tempo"
+                  }
+                ],
+                "scheduled_countdown_label": "D-3",
+                "role_key": "fight_week_freshness_day"
+              },
+              {
+                "athlete_facing_label": "Fight Visualisation",
+                "category": "support_insert",
+                "session_index": 17,
+                "selected_exercise_assignments": [],
+                "scheduled_countdown_label": "D-3",
+                "role_key": "fight_visualization"
+              },
+              {
+                "athlete_facing_label": "Technical-only combat",
+                "category": "sparring",
+                "session_index": 18,
+                "selected_exercise_assignments": [],
+                "scheduled_countdown_label": "D-2",
+                "role_key": "hard_sparring_day"
+              },
+              {
+                "athlete_facing_label": "Tactical Cue Card",
+                "category": "support_insert",
+                "session_index": 19,
+                "selected_exercise_assignments": [],
+                "scheduled_countdown_label": "D-2",
+                "role_key": "tactical_cue_card"
+              },
+              {
+                "athlete_facing_label": "Neural speed touch",
+                "category": "strength",
+                "session_index": 20,
+                "selected_exercise_assignments": [
+                  {
+                    "slot_id": "taper_late_cutoff_step_set_cue",
+                    "support_only": true,
+                    "base_prescription": "2x4s with 120s rest",
+                    "effective_prescription": "2x4s with 120s rest",
+                    "slot_group": "conditioning_slots",
+                    "exercise_key": "cutoff-step-set-cue",
+                    "source_phase": "TAPER",
+                    "name": "Cutoff Step-Set Cue"
+                  }
+                ],
+                "scheduled_countdown_label": "D-1",
+                "role_key": "neural_primer_day",
+                "strength_dose_cap": {
+                  "max_reps": 0,
+                  "max_sets": 0,
+                  "loaded_allowed": false
+                }
+              },
+              {
+                "athlete_facing_label": "Light Combat / Technical",
+                "category": "technical",
+                "session_index": 21,
+                "selected_exercise_assignments": [],
+                "scheduled_countdown_label": "D-1",
+                "role_key": "light_combat_day"
+              },
+              {
+                "athlete_facing_label": "Fight Visualisation",
+                "category": "support_insert",
+                "session_index": 22,
+                "selected_exercise_assignments": [],
+                "scheduled_countdown_label": "D-1",
+                "role_key": "fight_visualization"
+              },
+              {
+                "athlete_facing_label": "Fight day protocol: follow coach warm-up and fight protocol; no additional S&C.",
+                "category": "fight_day",
+                "session_index": 6,
+                "role_key": "fight_day_protocol",
+                "selected_exercise_assignments": []
+              },
+              {
+                "athlete_facing_label": "Tactical Focus",
+                "category": "support_insert",
+                "session_index": 0,
+                "scheduled_countdown_label": "D-5",
+                "role_key": "tactical_watch",
+                "selected_exercise_assignments": []
+              }
+            ]
+          }
+        ]
+      }
+    }
+  },
+  {
+    "plan_id": "7e101abd-5627-4ebb-8ac9-1d3723c36e17",
+    "card": {
+      "schema_version": "1.0",
+      "plan_metadata": {
+        "title": "Recorded exercise coaching"
+      },
+      "weeks": [
+        {
+          "week_id": "wk-2",
+          "week_index": 2,
+          "phase_label": "SPP",
+          "days": [
+            {
+              "date": "2026-10-19",
+              "countdown_label": "D-13",
+              "sessions": [
+                {
+                  "session_id": "ses-7e101abd-2026-10-19-neural-speed-touch",
+                  "session_type": "strength_power",
+                  "title": "Neural speed touch",
+                  "blocks": [
+                    {
+                      "sets": 1,
+                      "load": null,
+                      "coaching_cues": [
+                        "Keep punches balanced; return to guard and reset stance between exchanges"
+                      ],
+                      "category": null,
+                      "effort": null,
+                      "duration": null,
+                      "work": null,
+                      "distance": null,
+                      "block_id": "blk-2026-10-19-band-resisted-punch",
+                      "regression_options": [
+                        "Reduce reps per set to 1",
+                        "Or: Reduce reps per set to 1 instead of 2; keep other work, the effort ceiling and rests unchanged."
+                      ],
+                      "rest": {
+                        "unit": "seconds",
+                        "value": 120
+                      },
+                      "block_type": "plyometric_power",
+                      "display_name": "Band-Resisted Punch",
+                      "rounds": null,
+                      "stop_rules": [
+                        "If punch speed worsens",
+                        "If guard return fails",
+                        "If balance deteriorates",
+                        "If pain appears"
+                      ],
+                      "exercise_key": "band-resisted-punch",
+                      "reps": 2,
+                      "intensity": null
+                    },
+                    {
+                      "sets": null,
+                      "load": null,
+                      "coaching_cues": [
+                        "Control range, score quickly, then exit the pocket"
+                      ],
+                      "category": null,
+                      "effort": null,
+                      "duration": null,
+                      "work": {
+                        "unit": "seconds",
+                        "value": 6
+                      },
+                      "distance": null,
+                      "block_id": "blk-2026-10-19-range-gate-score-exit",
+                      "regression_options": [],
+                      "rest": {
+                        "unit": "seconds",
+                        "value": 120
+                      },
+                      "block_type": "skill",
+                      "display_name": "Range Gate-Score-Exit",
+                      "rounds": 1,
+                      "stop_rules": [],
+                      "exercise_key": "range-gate-score-exit",
+                      "reps": null,
+                      "intensity": null
+                    },
+                    {
+                      "sets": 2,
+                      "load": null,
+                      "coaching_cues": [
+                        "No eccentric lowering; hold the punch position and return to guard",
+                        "Use equipment only if available; keep low soreness intent"
+                      ],
+                      "category": null,
+                      "effort": null,
+                      "duration": {
+                        "unit": "seconds",
+                        "value": 10
+                      },
+                      "work": null,
+                      "distance": null,
+                      "block_id": "blk-2026-10-19-punch-specific-max-isometric-hold",
+                      "regression_options": [
+                        "Reduce sets to 1",
+                        "Or: Reduce sets to 1 instead of 2; keep other work, the effort ceiling and rests unchanged."
+                      ],
+                      "rest": {
+                        "unit": "seconds",
+                        "value": 180
+                      },
+                      "block_type": "strength",
+                      "display_name": "Punch-Specific Max Isometric Hold",
+                      "rounds": null,
+                      "stop_rules": [
+                        "If punch speed worsens",
+                        "If guard return fails",
+                        "If balance deteriorates",
+                        "If pain appears"
+                      ],
+                      "exercise_key": "punch-specific-max-isometric-hold",
+                      "reps": null,
+                      "intensity": null
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "week_id": "wk-3",
+          "week_index": 3,
+          "phase_label": "TAPER",
+          "days": [
+            {
+              "date": "2026-10-26",
+              "countdown_label": "D-6",
+              "sessions": [
+                {
+                  "session_id": "ses-7e101abd-2026-10-26-freshness-primer",
+                  "session_type": "skill",
+                  "title": "Freshness primer",
+                  "blocks": [
+                    {
+                      "sets": 2,
+                      "load": null,
+                      "coaching_cues": [
+                        "Keep punches balanced; return to guard and reset stance"
+                      ],
+                      "category": null,
+                      "effort": null,
+                      "duration": {
+                        "unit": "seconds",
+                        "value": 5
+                      },
+                      "work": null,
+                      "distance": null,
+                      "block_id": "blk-2026-10-26-pull-counter-reset",
+                      "regression_options": [
+                        "Reduce sets to 1",
+                        "Or: Reduce sets to 1 instead of 2; keep other work, the effort ceiling and rests unchanged."
+                      ],
+                      "rest": {
+                        "unit": "seconds",
+                        "value": 120
+                      },
+                      "block_type": "skill",
+                      "display_name": "Pull-Counter-Reset",
+                      "rounds": null,
+                      "stop_rules": [
+                        "If punch speed worsens",
+                        "If guard return fails",
+                        "If balance deteriorates",
+                        "If pain appears"
+                      ],
+                      "exercise_key": "pull-counter-reset",
+                      "reps": null,
+                      "intensity": null
+                    },
+                    {
+                      "sets": 1,
+                      "load": null,
+                      "coaching_cues": [
+                        "Push off a stable stance and regain balance quickly"
+                      ],
+                      "category": null,
+                      "effort": null,
+                      "duration": {
+                        "unit": "seconds",
+                        "value": 5
+                      },
+                      "work": null,
+                      "distance": null,
+                      "block_id": "blk-2026-10-26-explosive-first-step-cue",
+                      "regression_options": [
+                        "Reduce duration to 4 seconds"
+                      ],
+                      "rest": {
+                        "unit": "seconds",
+                        "value": 120
+                      },
+                      "block_type": "skill",
+                      "display_name": "Explosive First-Step Cue",
+                      "rounds": null,
+                      "stop_rules": [
+                        "If speed drops",
+                        "If braking is uncontrolled",
+                        "If pain appears"
+                      ],
+                      "exercise_key": "explosive-first-step-cue",
+                      "reps": null,
+                      "intensity": null
+                    },
+                    {
+                      "sets": 1,
+                      "load": null,
+                      "coaching_cues": [
+                        "Keep punches balanced; return to guard and reset stance"
+                      ],
+                      "category": null,
+                      "effort": null,
+                      "duration": {
+                        "unit": "seconds",
+                        "value": 5
+                      },
+                      "work": null,
+                      "distance": null,
+                      "block_id": "blk-2026-10-26-pocket-frame-burst-touch",
+                      "regression_options": [
+                        "Reduce duration to 4 seconds"
+                      ],
+                      "rest": {
+                        "unit": "seconds",
+                        "value": 120
+                      },
+                      "block_type": "skill",
+                      "display_name": "Pocket Frame-Burst Touch",
+                      "rounds": null,
+                      "stop_rules": [
+                        "If punch speed worsens",
+                        "If guard return fails",
+                        "If balance deteriorates",
+                        "If pain appears"
+                      ],
+                      "exercise_key": "pocket-frame-burst-touch",
+                      "reps": null,
+                      "intensity": null
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "date": "2026-10-31",
+              "countdown_label": "D-1",
+              "sessions": [
+                {
+                  "session_id": "ses-7e101abd-2026-10-31-neural-speed-touch",
+                  "session_type": "skill",
+                  "title": "Neural speed touch",
+                  "blocks": [
+                    {
+                      "sets": 2,
+                      "load": null,
+                      "coaching_cues": [
+                        "Set a balanced stance with soft knees and ribs stacked over pelvis"
+                      ],
+                      "category": null,
+                      "effort": null,
+                      "duration": {
+                        "unit": "seconds",
+                        "value": 3
+                      },
+                      "work": null,
+                      "distance": null,
+                      "block_id": "blk-2026-10-31-standing-stance-set-cue",
+                      "regression_options": [
+                        "Reduce sets to 1",
+                        "Or: Reduce sets to 1 instead of 2; keep other work, the effort ceiling and rests unchanged."
+                      ],
+                      "rest": {
+                        "unit": "seconds",
+                        "value": 120
+                      },
+                      "block_type": "skill",
+                      "display_name": "Standing Stance-Set Cue",
+                      "rounds": null,
+                      "stop_rules": [
+                        "If pain appears",
+                        "If you cannot keep a balanced stance"
+                      ],
+                      "exercise_key": "standing-stance-set-cue",
+                      "reps": null,
+                      "intensity": null
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "brief": {
+      "athlete_snapshot": {
+        "fatigue": "low",
+        "injuries": [],
+        "readiness_flags": [
+          "baseline",
+          "moderate_injury",
+          "reduced_contact_requested",
+          "sparring_history_unavailable"
+        ],
+        "weight_cut_risk": false,
+        "has_active_injury": false,
+        "cut_severity_bucket": "low",
+        "injury_restrictions": [],
+        "surface_injury_only": false
+      },
+      "weekly_role_map": {
+        "weeks": [
+          {
+            "week_index": 1,
+            "phase": "SPP",
+            "session_roles": [
+              {
+                "athlete_facing_label": "Hard sparring",
+                "category": "sparring",
+                "session_index": 4,
+                "scheduled_countdown_label": "D-17",
+                "role_key": "hard_sparring_day",
+                "selected_exercise_assignments": []
+              },
+              {
+                "athlete_facing_label": "Neural speed touch",
+                "category": "strength",
+                "session_index": 1,
+                "effective_strength_prescriptions": [
+                  {
+                    "name": "Punch-Specific Max Isometric Hold",
+                    "slot_id": "spp_strength_1_punch_specific_max_isometric_hold",
+                    "dose_authority": "scheduled_countdown_overlay",
+                    "dose_role_kind": "anchor",
+                    "effective_loaded": true,
+                    "base_prescription": "3\u20135 holds x 10\u201320s @ 7\u20139/10 effort; full rest between holds.",
+                    "effective_rpe_cap": 7,
+                    "strength_dose_cap": {
+                      "max_reps": 3,
+                      "max_sets": 2,
+                      "loaded_allowed": true
+                    },
+                    "effective_max_sets": 2,
+                    "dose_adjustment_reason": "late_camp_reduced_strength_maintenance",
+                    "effective_prescription": "2 holds x 10s @ 7/10 effort; full rest between holds."
+                  },
+                  {
+                    "name": "Band-Resisted Punch",
+                    "slot_id": "spp_strength_1_punch_specific_max_isometric_hold:alternate:0",
+                    "dose_authority": "scheduled_countdown_overlay",
+                    "dose_role_kind": "power",
+                    "effective_loaded": false,
+                    "base_prescription": "4\u20136x2\u20135 reps at max speed; full rest 60\u2013120s.",
+                    "effective_rpe_cap": 7,
+                    "strength_dose_cap": {
+                      "max_reps": 3,
+                      "max_sets": 2,
+                      "loaded_allowed": true
+                    },
+                    "effective_max_reps": 2,
+                    "effective_max_sets": 1,
+                    "dose_adjustment_reason": "late_camp_reduced_strength_maintenance",
+                    "effective_prescription": "1 x 2 at max speed; rest 120s"
+                  }
+                ],
+                "selected_exercise_assignments": [
+                  {
+                    "slot_id": "spp_strength_1_punch_specific_max_isometric_hold",
+                    "slot_group": "strength_slots",
+                    "coaching_notes": "Maximal-strength maintenance / neural work: no eccentric, no landing, low soreness. D-13 to D-8: 2-3 x 3-5s per side with full rest; shrink to 1-2 short holds per side through D-7 and D-6/D-5. Keep out of D-4 to D-1. Not for D-1: requires equipment.",
+                    "exercise_key": "punch-specific-max-isometric-hold",
+                    "source_phase": "SPP",
+                    "name": "Punch-Specific Max Isometric Hold"
+                  },
+                  {
+                    "slot_id": "spp_strength_1_punch_specific_max_isometric_hold:alternate:0",
+                    "slot_group": "strength_slots",
+                    "exercise_key": "band-resisted-punch",
+                    "source_phase": "SPP",
+                    "name": "Band-Resisted Punch"
+                  },
+                  {
+                    "slot_id": "spp_late_range_gate_score_exit",
+                    "support_only": true,
+                    "base_prescription": "3x6s with 120s rest",
+                    "effective_prescription": "1x6s with 120s rest",
+                    "slot_group": "conditioning_slots",
+                    "exercise_key": "range-gate-score-exit",
+                    "source_phase": "SPP",
+                    "name": "Range Gate-Score-Exit"
+                  }
+                ],
+                "scheduled_countdown_label": "D-13",
+                "role_key": "strength_touch_day",
+                "strength_dose_cap": {
+                  "max_reps": 3,
+                  "max_sets": 2,
+                  "loaded_allowed": true
+                }
+              },
+              {
+                "athlete_facing_label": "Light Combat / Technical",
+                "category": "technical",
+                "session_index": 2,
+                "selected_exercise_assignments": [],
+                "scheduled_countdown_label": "D-13",
+                "role_key": "light_combat_day"
+              },
+              {
+                "athlete_facing_label": "Technical-only combat",
+                "category": "sparring",
+                "session_index": 3,
+                "selected_exercise_assignments": [],
+                "scheduled_countdown_label": "D-12",
+                "role_key": "hard_sparring_day"
+              },
+              {
+                "athlete_facing_label": "Tactical Focus",
+                "category": "support_insert",
+                "session_index": 4,
+                "selected_exercise_assignments": [],
+                "scheduled_countdown_label": "D-12",
+                "role_key": "tactical_watch"
+              },
+              {
+                "athlete_facing_label": "Strength",
+                "category": "strength",
+                "strength_composition_policy": {
+                  "dropped": [
+                    {
+                      "name": "Punch-Specific Max Isometric Hold",
+                      "reason": "role_or_readiness_cap"
+                    },
+                    {
+                      "name": "Band Row Speed Focus",
+                      "reason": "role_or_readiness_cap"
+                    },
+                    {
+                      "name": "Sled Push Isometric Hold",
+                      "reason": "role_or_readiness_cap"
+                    },
+                    {
+                      "name": "Sandbag Shouldering",
+                      "reason": "role_or_readiness_cap"
+                    },
+                    {
+                      "name": "Lateral step-and-stick boxer reset",
+                      "reason": "role_or_readiness_cap"
+                    },
+                    {
+                      "name": "Lead-leg single-leg stance with guard",
+                      "reason": "role_or_readiness_cap"
+                    }
+                  ],
+                  "fatigue": "low",
+                  "pressure": 1,
+                  "role_key": "neural_plus_strength_day",
+                  "cut_pressure": 1,
+                  "selected_count": 2,
+                  "selected_names": [
+                    "Pressure-Fighter Staggered Body-Shot Med-Ball Throw",
+                    "Jump Squat"
+                  ],
+                  "fatigue_applied": true,
+                  "injury_pressure": 0,
+                  "active_stressors": 1,
+                  "fatigue_pressure": 0,
+                  "base_exercise_cap": 3,
+                  "injury_restricted": false,
+                  "composed_for_d_day": null,
+                  "major_family_limit": 1,
+                  "cut_severity_bucket": "moderate",
+                  "role_days_until_fight": null,
+                  "effective_exercise_cap": 2,
+                  "standalone_minimum_applied": false
+                },
+                "session_index": 1,
+                "effective_strength_prescriptions": [
+                  {
+                    "name": "Pressure-Fighter Staggered Body-Shot Med-Ball Throw",
+                    "slot_id": "spp_strength_3_pressure_fighter_staggered_body_shot_med_ball_throw",
+                    "dose_authority": "exercise_bank",
+                    "base_prescription": "4\u20136x2\u20135 reps at max speed; full rest 60\u2013120s.",
+                    "effective_prescription": "4x2 reps at max speed; full rest 120s."
+                  },
+                  {
+                    "name": "Jump Squat",
+                    "slot_id": "spp_strength_7_jump_squat",
+                    "dose_authority": "exercise_bank",
+                    "base_prescription": "4\u20136x2\u20135 reps at max speed; full rest 60\u2013120s.",
+                    "effective_prescription": "4x2 reps at max speed; full rest 120s."
+                  }
+                ],
+                "selected_exercise_assignments": [
+                  {
+                    "slot_id": "spp_strength_3_pressure_fighter_staggered_body_shot_med_ball_throw",
+                    "support_only": true,
+                    "base_prescription": "4\u20136x2\u20135 reps at max speed; full rest 60\u2013120s.",
+                    "slot_group": "strength_slots",
+                    "exercise_key": "pressure-fighter-staggered-body-shot-med-ball-throw",
+                    "source_phase": "SPP",
+                    "name": "Pressure-Fighter Staggered Body-Shot Med-Ball Throw"
+                  },
+                  {
+                    "slot_id": "spp_strength_7_jump_squat",
+                    "support_only": false,
+                    "base_prescription": "4\u20136x2\u20135 reps at max speed; full rest 60\u2013120s.",
+                    "slot_group": "strength_slots",
+                    "coaching_notes": "Use bodyweight or a very light load for 3-5 sets of 3 reps with full rest; stop when jump height drops.",
+                    "exercise_key": "jump-squat",
+                    "source_phase": "SPP",
+                    "name": "Jump Squat"
+                  }
+                ],
+                "role_key": "neural_plus_strength_day"
+              },
+              {
+                "athlete_facing_label": "Breathing Reset",
+                "category": "support_insert",
+                "session_index": 0,
+                "scheduled_countdown_label": "D-16",
+                "role_key": "breathing_reset",
+                "selected_exercise_assignments": []
+              }
+            ]
+          },
+          {
+            "week_index": 2,
+            "phase": "SPP",
+            "session_roles": [
+              {
+                "athlete_facing_label": "Technical-only combat",
+                "category": "sparring",
+                "session_index": 5,
+                "selected_exercise_assignments": [],
+                "scheduled_countdown_label": "D-10",
+                "role_key": "hard_sparring_day"
+              },
+              {
+                "athlete_facing_label": "Sleep Downshift",
+                "category": "support_insert",
+                "session_index": 6,
+                "selected_exercise_assignments": [],
+                "scheduled_countdown_label": "D-8",
+                "role_key": "sleep_downshift"
+              },
+              {
+                "athlete_facing_label": "Freshness primer",
+                "category": "conditioning",
+                "session_index": 7,
+                "selected_exercise_assignments": [
+                  {
+                    "slot_id": "spp_late_pull_counter_reset",
+                    "support_only": true,
+                    "base_prescription": "2x5s with 120s rest",
+                    "effective_prescription": "2x5s with 120s rest",
+                    "slot_group": "conditioning_slots",
+                    "exercise_key": "pull-counter-reset",
+                    "source_phase": "SPP",
+                    "name": "Pull-Counter-Reset"
+                  },
+                  {
+                    "slot_id": "spp_late_explosive_first_step_cue",
+                    "support_only": true,
+                    "base_prescription": "2x5s with 120s rest",
+                    "effective_prescription": "1x5s with 120s rest",
+                    "slot_group": "conditioning_slots",
+                    "exercise_key": "explosive-first-step-cue",
+                    "source_phase": "SPP",
+                    "name": "Explosive First-Step Cue"
+                  },
+                  {
+                    "slot_id": "spp_late_pocket_frame_burst_touch",
+                    "support_only": true,
+                    "base_prescription": "2x5s with 120s rest",
+                    "effective_prescription": "1x5s with 120s rest",
+                    "slot_group": "conditioning_slots",
+                    "exercise_key": "pocket-frame-burst-touch",
+                    "source_phase": "SPP",
+                    "name": "Pocket Frame-Burst Touch"
+                  }
+                ],
+                "scheduled_countdown_label": "D-6",
+                "role_key": "alactic_sharpness_day"
+              },
+              {
+                "athlete_facing_label": "Light Combat / Technical",
+                "category": "technical",
+                "session_index": 8,
+                "selected_exercise_assignments": [],
+                "scheduled_countdown_label": "D-6",
+                "role_key": "light_combat_day"
+              },
+              {
+                "athlete_facing_label": "Hard sparring",
+                "category": "sparring",
+                "session_index": 3,
+                "role_key": "hard_sparring_day",
+                "selected_exercise_assignments": []
+              }
+            ]
+          },
+          {
+            "week_index": 3,
+            "phase": "TAPER",
+            "session_roles": [
+              {
+                "athlete_facing_label": "Technical-only combat",
+                "category": "sparring",
+                "session_index": 9,
+                "selected_exercise_assignments": [],
+                "scheduled_countdown_label": "D-5",
+                "role_key": "hard_sparring_day"
+              },
+              {
+                "athlete_facing_label": "Breathing Reset",
+                "category": "support_insert",
+                "session_index": 10,
+                "selected_exercise_assignments": [],
+                "scheduled_countdown_label": "D-5",
+                "role_key": "breathing_reset"
+              },
+              {
+                "athlete_facing_label": "Technical-only combat",
+                "category": "sparring",
+                "session_index": 12,
+                "selected_exercise_assignments": [],
+                "scheduled_countdown_label": "D-3",
+                "role_key": "hard_sparring_day"
+              },
+              {
+                "athlete_facing_label": "Recovery Reset",
+                "category": "support_insert",
+                "session_index": 13,
+                "selected_exercise_assignments": [],
+                "scheduled_countdown_label": "D-3",
+                "role_key": "recovery_reset"
+              },
+              {
+                "athlete_facing_label": "Neural speed touch",
+                "category": "strength",
+                "session_index": 14,
+                "selected_exercise_assignments": [
+                  {
+                    "slot_id": "taper_late_standing_stance_set_cue",
+                    "support_only": true,
+                    "base_prescription": "2x3s with 120s rest",
+                    "effective_prescription": "2x3s with 120s rest",
+                    "slot_group": "conditioning_slots",
+                    "exercise_key": "standing-stance-set-cue",
+                    "source_phase": "TAPER",
+                    "name": "Standing Stance-Set Cue"
+                  }
+                ],
+                "scheduled_countdown_label": "D-1",
+                "role_key": "neural_primer_day",
+                "strength_dose_cap": {
+                  "max_reps": 0,
+                  "max_sets": 0,
+                  "loaded_allowed": false
+                }
+              },
+              {
+                "athlete_facing_label": "Fight Visualisation",
+                "category": "support_insert",
+                "session_index": 15,
+                "selected_exercise_assignments": [],
+                "scheduled_countdown_label": "D-1",
+                "role_key": "fight_visualization"
+              },
+              {
+                "athlete_facing_label": "Fight day protocol: follow coach warm-up and fight protocol; no additional S&C.",
+                "category": "fight_day",
+                "session_index": 5,
+                "role_key": "fight_day_protocol",
+                "selected_exercise_assignments": []
+              },
+              {
+                "athlete_facing_label": "Light technical combat",
+                "category": "technical",
+                "session_index": 4,
+                "role_key": "light_combat_day",
+                "selected_exercise_assignments": []
+              }
+            ]
+          }
+        ]
+      }
+    }
+  }
+]

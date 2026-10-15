@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import re
 from typing import Any
+from .coaching_copy import concise_coaching
 from .exercise_progression import (
     authored_progression_matches, effective_exercise_prescription, measured_dose,
     numerical_easier, numerical_guidance, progression_prohibited, normalise_measures,
@@ -115,7 +116,7 @@ def exercise_coaching(
 
     Taper, final fortnight, active injury, high fatigue and weight-cut risk are
     maintenance contexts: no Progress instruction. Easier never asks the athlete
-    to push through a stop criterion. It changes execution, not the exact dose.
+    to push through a stop criterion. It never rewrites the prescribed dose.
     """
     athlete = athlete or {}
     name = str(assignment.get("name") or "")
@@ -156,7 +157,7 @@ def exercise_coaching(
                 if sentence not in fields[key]:
                     fields[key].append(sentence)
     if assignment.get("slot_group") not in {"strength_slots", "conditioning_slots", "priority_microdose"}:
-        return fields
+        return concise_coaching(fields)
     phase = str(phase or role.get("phase") or assignment.get("source_phase") or "").upper()
     constrained = progression_prohibited(role, assignment, phase, d_day, athlete)
     authored_progress = fields.pop("progression_rule", None)
@@ -188,7 +189,7 @@ def exercise_coaching(
     if authored_progress and is_execution_quality_instruction(authored_progress) and not is_profile_progression(authored_progress):
         if authored_progress not in fields["coaching_cues"]:
             fields["coaching_cues"].append(authored_progress)
-    return fields
+    return concise_coaching(fields)
 
 
 def is_profile_progression(text: str) -> bool:
@@ -198,6 +199,10 @@ def is_profile_progression(text: str) -> bool:
 
 def is_profile_regression(text: str) -> bool:
     return text.strip() in {profile[1] for _, profile in _PROFILES}
+
+
+def is_profile_cue(text: str) -> bool:
+    return text.removeprefix("Cue: ").strip() in {profile[0] for _, profile in _PROFILES}
 
 
 def has_measurable_step(text: str) -> bool:
