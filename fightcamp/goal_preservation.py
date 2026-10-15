@@ -1143,6 +1143,95 @@ def _attach_goal_microdose(brief: dict, ordinal: int, entry: dict) -> dict | Non
             "reason_codes": ["no_compatible_existing_session"]}
 
 
+def _recompose_existing_strength_for_goal(brief: dict, entry: dict) -> dict | None:
+    """Try an existing dated strength appointment before inventing a second one.
+
+    Selection remains owned by the exercise composer and dose resolver. Reuse
+    already-filtered pools within the existing exercise cap, then accept the
+    trial only when it meets a missing goal window without losing another goal,
+    relocating sessions or violating the shared calendar.
+    """
+    if entry.get("state") != "build" or entry.get("goal") not in {"speed", "power", "strength"}:
+        return None
+    from .prescription_resolver import apply_effective_strength_prescriptions
+    from .session_composition import (
+        apply_realised_load_calendar_revalidation,
+        compose_normal_strength_assignments,
+        compose_normal_conditioning_assignments,
+    )
+    role_map = brief.get("weekly_role_map") or {}
+    _, missing = _coverage(entry, brief, collect_goal_evidence(brief))
+    if not missing:
+        return None
+    for ordinal, week in enumerate(role_map.get("weeks") or []):
+        for index, host in enumerate(week.get("session_roles") or []):
+            day = role_d_day(week, host)
+            if (host.get("category") != "strength" or not isinstance(day, int) or day <= 13
+                    or not any(w["min_d_day"] is None or w["min_d_day"] <= day <= w["max_d_day"] for w in missing)
+                    or (host.get("governance") or {}).get("hard_suppression_reasons")):
+                continue
+            trial = deepcopy(brief)
+            trial_map = trial["weekly_role_map"]
+            trial_week = trial_map["weeks"][ordinal]
+            trial_host = trial_week["session_roles"][index]
+            original_members = [(m.get("slot_id"), m.get("name"))
+                                for m in trial_host.get("selected_exercise_assignments") or []]
+            compose_normal_strength_assignments(
+                weekly_role_map=trial_map,
+                candidate_pools=trial.get("candidate_pools") or {},
+                only_roles={id(trial_host)}, allow_relocation=False,
+            )
+            next_members = [(m.get("slot_id"), m.get("name"))
+                            for m in trial_host.get("selected_exercise_assignments") or []]
+            if original_members == next_members:
+                continue
+            apply_effective_strength_prescriptions(
+                weekly_role_map=trial_map, candidate_pools=trial.get("candidate_pools") or {},
+                athlete_model=_athlete(trial),
+            )
+            # Re-evaluate realised cost, not just the pre-selection role label.
+            apply_realised_load_calendar_revalidation(
+                trial_map, only_roles={id(trial_host)},
+                redose_callback=lambda rm: apply_effective_strength_prescriptions(
+                    weekly_role_map=rm, candidate_pools=trial.get("candidate_pools") or {},
+                    athlete_model=_athlete(trial)),
+                recompose_strength_callback=lambda rm, only_roles: compose_normal_strength_assignments(
+                    weekly_role_map=rm, candidate_pools=trial.get("candidate_pools") or {},
+                    only_roles=only_roles, allow_relocation=False),
+                recompose_conditioning_callback=lambda rm, only_roles: compose_normal_conditioning_assignments(
+                    weekly_role_map=rm, candidate_pools=trial.get("candidate_pools") or {},
+                    only_roles=only_roles),
+            )
+            if (not any(role is trial_host for role in trial_week.get("session_roles") or [])
+                    or role_d_day(trial_week, trial_host) != day):
+                continue
+            profile = classify_role(trial_host)
+            view = CalendarLegalityView(
+                events=tuple(build_events(trial_map, exclude_role=trial_host)),
+                scope=week_scope(trial_week, ordinal),
+            )
+            verdict = view.decision_for_profile(profile, day) if profile is not None else None
+            if verdict is None or not verdict.allowed:
+                continue
+            trial_evidence = collect_goal_evidence(trial)
+            _, still_missing = _coverage(entry, trial, trial_evidence)
+            if len(still_missing) >= len(missing):
+                continue
+            previous_evidence = collect_goal_evidence(brief)
+            if any(len(_coverage(goal, trial, trial_evidence)[1]) >
+                   len(_coverage(goal, brief, previous_evidence)[1])
+                   for goal in classify_goal_preservation(_athlete(brief), brief.get("priority_focus"))):
+                continue
+            brief["weekly_role_map"] = trial_map
+            return {"week_index": week.get("week_index"), "d_day": day,
+                    "role_key": host.get("role_key"), "goal": entry["goal"],
+                    "result": "recomposed_existing_strength",
+                    "reason_codes": ["use_existing_session_before_extra_appointment"],
+                    "original_exercises": [name for _, name in original_members],
+                    "selected_exercises": [name for _, name in next_members]}
+    return None
+
+
 def _restore_goal_roles(brief: dict, entry: dict) -> list[dict]:
     """Try retained planner candidates within their original week and budget.
 
@@ -1167,6 +1256,9 @@ def _restore_goal_roles(brief: dict, entry: dict) -> list[dict]:
     _, uncovered = _coverage(entry, brief, collect_goal_evidence(brief))
     if not uncovered:
         return audit
+    recomposed = _recompose_existing_strength_for_goal(brief, entry)
+    if recomposed is not None:
+        return [recomposed]
     for ordinal, week in enumerate(role_map.get("weeks") or []):
         # A repair belongs to an uncovered cadence window. Re-composing weeks
         # that already met the goal adds no coverage and wastes bounded trials.
