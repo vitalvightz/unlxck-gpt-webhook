@@ -3039,12 +3039,12 @@ def attach_late_fight_assignments(
         ]
 
 
-def consolidate_compatible_alactic_sessions(
+def consolidate_compatible_physical_sessions(
     weekly_role_map: dict[str, Any], *, athlete_model: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """Compose a short alactic exposure into a genuine, already-dosed Strength workout.
+    """Compose eligible short speed or footwork doses into an existing Strength workout.
 
-    Works on closed, fully prescribed normal-camp sessions only. The alactic
+    Works on closed, fully prescribed normal-camp sessions only. Each source
     member retains its exact Stage 1 identity and dose; its original standalone
     role is removed only when a trial of the combined calendar is no worse
     under the canonical combat-load policy. This is not appointment relabelling,
@@ -3099,7 +3099,6 @@ def consolidate_compatible_alactic_sessions(
             continue
         for source in list(week.get("session_roles") or []):
             if (source.get("category") != "conditioning"
-                    or source.get("preferred_system") != "alactic"
                     or source.get("coach_owned")
                     or source.get("late_fight_tail_owned")
                     or source.get("goal_preservation_repair")):
@@ -3119,9 +3118,30 @@ def consolidate_compatible_alactic_sessions(
                 work, rounds, rest = float(work), int(rounds), float(rest)
             except (TypeError, ValueError):
                 continue
-            # Genuine short full-rest speed exposure, not rounds of hard bag
-            # conditioning or a substantial plyometric session.
-            if not (0 < work <= 6 and 2 <= rounds <= 8 and work * rounds <= 40 and rest >= 60):
+            slot_id = str(member.get("slot_id") or "").lower()
+            source_system = str(source.get("preferred_system") or "").lower()
+            try:
+                effort = float(member.get("rpe") or 0)
+            except (TypeError, ValueError):
+                effort = 0
+            if source_system == "alactic":
+                # Short full-rest speed / reactive-power / coordination work.
+                # Never treat long fight-pace rounds as an accessory.
+                kind = "speed"
+                if not (0 < work <= 6 and 2 <= rounds <= 8
+                        and work * rounds <= 40 and rest >= 60):
+                    continue
+            elif ("_technical_footwork_" in slot_id
+                  or source_system == "technical_footwork"):
+                # The dedicated technical bank is distinct from aerobic
+                # footwork conditioning. Require a truly small, low-effort
+                # prescribed technical exposure before embedding it.
+                kind = "footwork"
+                if not (0 < work <= 90 and 1 <= rounds <= 3
+                        and work * rounds <= 270 and 30 <= rest <= 120
+                        and 0 < effort <= 5):
+                    continue
+            else:
                 continue
             if not str(member.get("effective_prescription") or "").strip():
                 continue
@@ -3153,8 +3173,8 @@ def consolidate_compatible_alactic_sessions(
                 preferred = host.get("preferred_exercise_names") or []
                 if preferred and member.get("name") not in preferred:
                     continue
-                # Never move speed onto the day immediately before or after
-                # hard sparring. Keep the resolved contact state authoritative.
+                # Never move a physical addition onto the day immediately
+                # before or after hard sparring. Resolved contact stays authoritative.
                 hard_days = [
                     contact_d_day(week, item)
                     for item in week.get("hard_sparring_plan") or []
@@ -3176,8 +3196,10 @@ def consolidate_compatible_alactic_sessions(
                 trial_source, trial_host = roles[original_index], roles[host_index]
                 carried = deepcopy(trial_source["selected_exercise_assignments"][0])
                 carried["consolidated_from_role_key"] = trial_source.get("role_key")
-                carried["consolidated_from_system"] = "alactic"
-                # Alactic priming first, Strength exercises follow at unchanged doses.
+                carried["consolidated_from_system"] = (
+                    "technical_footwork" if kind == "footwork" else "alactic"
+                )
+                # Technical footwork / speed primer first; unchanged Strength doses follow.
                 trial_host["selected_exercise_assignments"] = [
                     carried, *trial_host["selected_exercise_assignments"]
                 ]
@@ -3186,7 +3208,9 @@ def consolidate_compatible_alactic_sessions(
                 composition["selected_names"] = [
                     item["name"] for item in trial_host["selected_exercise_assignments"]
                 ]
-                trial_host["athlete_facing_label"] = "Strength + speed"
+                trial_host["athlete_facing_label"] = (
+                    "Strength + footwork" if kind == "footwork" else "Strength + speed"
+                )
                 trial_host.setdefault("consolidated_session_roles", []).append({
                     "role_key": trial_source.get("role_key"),
                     "source_d_day": source_day,
@@ -3212,6 +3236,7 @@ def consolidate_compatible_alactic_sessions(
                     "source_role_key": source.get("role_key"),
                     "host_role_key": host.get("role_key"),
                     "exercise": carried.get("name"),
+                    "embedded_quality": kind,
                     "decision": "combined_preserving_dose",
                 })
                 if isinstance(weekly_role_map.get("physical_session_frequency_audit"), dict):
