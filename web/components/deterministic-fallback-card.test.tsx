@@ -219,7 +219,8 @@ test("a parsed drill card keeps Why, prescription, cues and its stop rule", () =
   );
   assert.match(expanded, /2 sets x 4 clean reactions each direction/);
   assert.match(expanded, /Rest: 75 sec between sets/);
-  assert.match(expanded, /Cue/);
+  // This fixture only has a dose and a quality Stop, not an authored coach
+  // instruction. Do not label its prescription as a fabricated coach Cue.
   assert.doesNotMatch(expanded, /Coaching cues/);
   // Quality Stop renders under the stop-rule label, never as "Progress".
   assert.match(expanded, /Stop rule/);
