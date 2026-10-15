@@ -76,7 +76,7 @@ export function safeQualityProgress(
   blockType: string | null | undefined,
   countdown: string | null | undefined,
 ): string | null {
-  if (!/\b(?:strength|power|plyometric|conditioning|speed|accessory)\b/i.test(blockType ?? "")) return null;
+  if (!/(?:^|[_-])(?:strength|power|plyometric|conditioning|speed|accessory)(?:$|[_-])/i.test(blockType ?? "")) return null;
   const match = String(countdown ?? "").match(/D-(\d+)/i);
   // No advances inside the final ten days of camp.
   if (!match || Number(match[1]) <= 10) return null;
