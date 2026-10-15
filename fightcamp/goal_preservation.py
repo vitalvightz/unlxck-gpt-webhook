@@ -670,7 +670,10 @@ def _other_stimuli(role: dict, pools: dict, phase: str, brief: dict) -> list[dic
         member_system = str(slot.get("role") or system or "").lower()
         # A bank-prescribed moving footwork drill may complement a strength
         # session; coach instructions and mental preparation earn no exposure.
-        if category != "conditioning" and member_system != "technical_footwork":
+        if (category != "conditioning" and member_system != "technical_footwork"
+                and not (member_system == "alactic"
+                         and member.get("consolidated_from_system") == "alactic"
+                         and member.get("consolidated_from_role_key"))):
             continue
         system = member_system
         # Serialized conditioning dose/cost authority lives under
@@ -1619,6 +1622,31 @@ def _deferral_constraints(entry: dict, brief: dict, missing: list[dict]) -> list
 
 def _constraint_key(reason: dict):
     return repr(sorted(reason.items()))
+
+
+
+def refresh_goal_evidence_after_composition(brief: dict) -> dict:
+    """Refresh recorded witnesses after a dose-preserving, post-repair consolidation.
+
+    This reads actual delivered exercise membership. It never repairs goals,
+    changes selected exercises, redoses work or changes the original goal state.
+    """
+    entries = brief.get("goal_preservation") or []
+    if not entries:
+        return brief
+    evidence = collect_goal_evidence(brief)
+    for entry in entries:
+        effective_entry = (
+            {**entry, "state": entry.get("initial_state", entry.get("state"))}
+            if entry.get("state") == "defer" else entry
+        )
+        matching, missing = _coverage(effective_entry, brief, evidence)
+        entry.update(evidence=matching, missing_coverage=missing,
+                     coverage_requirements=_requirements(effective_entry, brief),
+                     satisfied=not missing and entry.get("state") != "defer")
+    brief["compressed_priorities"]["goal_preservation"] = entries
+    _athlete(brief)["compressed_priorities"]["goal_preservation"] = entries
+    return brief
 
 
 def reconcile_goal_preservation(brief: dict) -> dict:

@@ -2077,8 +2077,13 @@ def build_planning_brief(
     # Within-day execution order is decided once the calendar and membership are
     # final; it reads the finished days and writes only ``execution_order``.
     brief = reconcile_goal_preservation(brief)
-    from .goal_preservation import _effective_map
-    enforce_total_session_budget(_effective_map(brief), athlete_model, candidate_pools)
+    from .goal_preservation import _effective_map, refresh_goal_evidence_after_composition
+    from .session_composition import consolidate_compatible_physical_sessions
+    role_map = _effective_map(brief)
+    consolidate_compatible_physical_sessions(role_map, athlete_model=athlete_model)
+    if role_map.get("session_consolidation_audit"):
+        refresh_goal_evidence_after_composition(brief)
+    enforce_total_session_budget(role_map, athlete_model, candidate_pools)
     return stamp_role_execution_order(brief)
 
 

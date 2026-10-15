@@ -3039,6 +3039,218 @@ def attach_late_fight_assignments(
         ]
 
 
+def consolidate_compatible_physical_sessions(
+    weekly_role_map: dict[str, Any], *, athlete_model: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Compose eligible short speed or footwork doses into an existing Strength workout.
+
+    Works on closed, fully prescribed normal-camp sessions only. Each source
+    member retains its exact Stage 1 identity and dose; its original standalone
+    role is removed only when a trial of the combined calendar is no worse
+    under the canonical combat-load policy. This is not appointment relabelling,
+    a new role selector, or a workout-frequency veto.
+    """
+    from copy import deepcopy
+
+    from .calendar_context import (
+        build_events, classify_role, contact_d_day, role_d_day, week_scope,
+    )
+    from .combat_load_policy import evaluate_candidate_at_position, placement_rank
+    from .physical_session_frequency import (
+        audit_physical_session_frequency, cadence_windows, is_physical_session_role,
+    )
+
+    if not isinstance(weekly_role_map, dict):
+        return weekly_role_map
+
+    # Compare role identities in each trial rather than Python ids (deepcopies
+    # deliberately change ids). Each week has planner-assigned session indices.
+    def _grades(map_: dict[str, Any]) -> dict[tuple[int, int, str], int]:
+        grades = {}
+        for ordinal, week in enumerate(map_.get("weeks") or []):
+            for role in week.get("session_roles") or []:
+                if not is_physical_session_role(role):
+                    continue
+                d_day = role_d_day(week, role)
+                if not isinstance(d_day, int) or d_day <= 13 or role.get("late_fight_tail_owned"):
+                    continue
+                profile = classify_role(role)
+                if profile is None:
+                    continue
+                decision = evaluate_candidate_at_position(
+                    profile, candidate_position=-d_day,
+                    events=build_events(map_, exclude_role=role),
+                    candidate_scope=week_scope(week, ordinal + 1),
+                )
+                grades[(ordinal, int(role.get("session_index") or 0),
+                        str(role.get("role_key") or ""))] = placement_rank(decision)
+        return grades
+
+    slots = [
+        (day["d_day"], day.get("weekday", ""))
+        for week in weekly_role_map.get("weeks") or []
+        for day in week.get("calendar_days") or []
+        if isinstance(day, dict) and isinstance(day.get("d_day"), int)
+    ]
+    cadence_sets = [{day for day, _ in days} for days in cadence_windows(slots)]
+
+    for week_index, week in enumerate(weekly_role_map.get("weeks") or []):
+        if str(week.get("phase") or "").upper() not in {"GPP", "SPP"}:
+            continue
+        for source in list(week.get("session_roles") or []):
+            if (source.get("category") != "conditioning"
+                    or source.get("coach_owned")
+                    or source.get("late_fight_tail_owned")
+                    or source.get("goal_preservation_repair")):
+                continue
+            source_day = role_d_day(week, source)
+            members = source.get("selected_exercise_assignments")
+            if not isinstance(source_day, int) or source_day <= 13 or not isinstance(members, list) or len(members) != 1:
+                continue
+            member = members[0]
+            if not isinstance(member, dict) or member.get("slot_group") != "conditioning_slots":
+                continue
+            work, rounds, rest = (
+                member.get("work_sec"), member.get("effective_rounds") or member.get("rounds"),
+                member.get("rest_sec"),
+            )
+            try:
+                work, rounds, rest = float(work), int(rounds), float(rest)
+            except (TypeError, ValueError):
+                continue
+            slot_id = str(member.get("slot_id") or "").lower()
+            source_system = str(source.get("preferred_system") or "").lower()
+            try:
+                effort = float(member.get("rpe") or 0)
+            except (TypeError, ValueError):
+                effort = 0
+            if source_system == "alactic":
+                # Short full-rest speed / reactive-power / coordination work.
+                # Never treat long fight-pace rounds as an accessory.
+                kind = "speed"
+                if not (0 < work <= 6 and 2 <= rounds <= 8
+                        and work * rounds <= 40 and rest >= 60):
+                    continue
+            elif ("_technical_footwork_" in slot_id
+                  or source_system == "technical_footwork"):
+                # The dedicated technical bank is distinct from aerobic
+                # footwork conditioning. Require a truly small, low-effort
+                # prescribed technical exposure before embedding it.
+                kind = "footwork"
+                if not (0 < work <= 90 and 1 <= rounds <= 3
+                        and work * rounds <= 270 and 30 <= rest <= 120
+                        and 0 < effort <= 5):
+                    continue
+            else:
+                continue
+            if not str(member.get("effective_prescription") or "").strip():
+                continue
+
+            hosts = []
+            for host in week.get("session_roles") or []:
+                if (host is source or host.get("category") != "strength"
+                        or host.get("coach_owned") or host.get("late_fight_tail_owned")):
+                    continue
+                host_day = role_d_day(week, host)
+                policy = host.get("strength_composition_policy")
+                host_members = host.get("selected_exercise_assignments")
+                if (not isinstance(host_day, int) or host_day <= 13
+                        or abs(host_day - source_day) > 3
+                        or not any(source_day in days and host_day in days for days in cadence_sets)
+                        or not isinstance(policy, dict) or int(policy.get("pressure") or 0) != 0
+                        or not isinstance(host_members, list) or not host_members
+                        or not host.get("effective_strength_prescriptions")):
+                    continue
+                cap = policy.get("effective_exercise_cap")
+                if not isinstance(cap, int) or len(host_members) + 1 > cap:
+                    continue
+                if any(m.get("slot_group") != "strength_slots" for m in host_members):
+                    continue
+                if any((m.get("exercise_key") or m.get("name")) == (member.get("exercise_key") or member.get("name")) for m in host_members):
+                    continue
+                # The host's explicit exercise allow-list must not hide the
+                # transferred source member from final goal evidence.
+                preferred = host.get("preferred_exercise_names") or []
+                if preferred and member.get("name") not in preferred:
+                    continue
+                # Never move a physical addition onto the day immediately
+                # before or after hard sparring. Resolved contact stays authoritative.
+                hard_days = [
+                    contact_d_day(week, item)
+                    for item in week.get("hard_sparring_plan") or []
+                    if str(item.get("effective_load") or "").lower() == "hard"
+                ]
+                if any(isinstance(day, int) and abs(day - host_day) <= 1 for day in hard_days):
+                    continue
+                hosts.append((host_day != source_day, abs(host_day - source_day), len(host_members), host))
+            hosts.sort(key=lambda item: item[:3])
+
+            for _different_day, _distance, _size, host in hosts:
+                trial = deepcopy(weekly_role_map)
+                trial_week = trial["weeks"][week_index]
+                roles = trial_week["session_roles"]
+                original_index = next((i for i, r in enumerate(week["session_roles"]) if r is source), None)
+                host_index = next((i for i, r in enumerate(week["session_roles"]) if r is host), None)
+                if original_index is None or host_index is None:
+                    continue
+                trial_source, trial_host = roles[original_index], roles[host_index]
+                carried = deepcopy(trial_source["selected_exercise_assignments"][0])
+                carried["consolidated_from_role_key"] = trial_source.get("role_key")
+                carried["consolidated_from_system"] = (
+                    "technical_footwork" if kind == "footwork" else "alactic"
+                )
+                # Technical footwork / speed primer first; unchanged Strength doses follow.
+                trial_host["selected_exercise_assignments"] = [
+                    carried, *trial_host["selected_exercise_assignments"]
+                ]
+                composition = trial_host["strength_composition_policy"]
+                composition["selected_count"] = len(trial_host["selected_exercise_assignments"])
+                composition["selected_names"] = [
+                    item["name"] for item in trial_host["selected_exercise_assignments"]
+                ]
+                trial_host["athlete_facing_label"] = (
+                    "Strength + footwork" if kind == "footwork" else "Strength + speed"
+                )
+                trial_host.setdefault("consolidated_session_roles", []).append({
+                    "role_key": trial_source.get("role_key"),
+                    "source_d_day": source_day,
+                    "slot_id": carried.get("slot_id"),
+                })
+                roles.pop(original_index)
+                stamp = realised_role_stress(trial_host)
+                if stamp is None:
+                    continue
+                trial_host["calendar_stress"] = _stress_stamp(stamp)
+                baseline_grades = _grades(weekly_role_map)
+                proposed_grades = _grades(trial)
+                # No new policy forbids, and no previously retained physical
+                # appointment becomes more deprioritized due to consolidation.
+                if any(grade == 2 or grade > baseline_grades.get(key, grade)
+                       for key, grade in proposed_grades.items()):
+                    continue
+                weekly_role_map["weeks"] = trial["weeks"]
+                weekly_role_map.setdefault("session_consolidation_audit", []).append({
+                    "week_index": week.get("week_index"),
+                    "source_d_day": source_day,
+                    "host_d_day": role_d_day(trial_week, trial_host),
+                    "source_role_key": source.get("role_key"),
+                    "host_role_key": host.get("role_key"),
+                    "exercise": carried.get("name"),
+                    "embedded_quality": kind,
+                    "decision": "combined_preserving_dose",
+                })
+                if isinstance(weekly_role_map.get("physical_session_frequency_audit"), dict):
+                    weekly_role_map["physical_session_frequency_audit"]["warnings"] = (
+                        audit_physical_session_frequency(weekly_role_map, athlete_model or {})
+                    )
+                break
+            # The accepted trial replaced this week's object. Do not iterate
+            # stale role identities; a later consolidation gets a fresh map.
+            if weekly_role_map["weeks"][week_index] is not week:
+                break
+    return weekly_role_map
+
+
 EMPTY_PHYSICAL_SESSION_REASON = "no_eligible_exercise_membership"
 _MEMBERSHIP_REQUIRED_CATEGORIES = frozenset({"strength", "conditioning"})
 
