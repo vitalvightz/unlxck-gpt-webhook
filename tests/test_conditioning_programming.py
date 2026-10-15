@@ -113,6 +113,14 @@ def test_final_fortnight_and_taper_keep_countdown_dose_authority(phase, day):
     assert _members(roles)[0]['conditioning_decision']['reason'] == 'countdown_or_support_dose'
 
 
+def test_scheduled_member_phase_wins_when_a_week_straddles_taper():
+    athlete, roles = _camp(contacts=(2,), phase='TAPER', day=15)
+    roles['weeks'][0]['phase'] = 'SPP'
+    apply_effective_conditioning_prescriptions(weekly_role_map=roles, athlete_model=athlete)
+    assert _members(roles)[0]['rounds'] == 4
+    assert _members(roles)[0]['conditioning_decision']['reason'] == 'countdown_or_support_dose'
+
+
 def test_secondary_gas_tank_weakness_is_considered_and_merged_with_goal():
     athlete = {'key_goals': ['speed'], 'weaknesses': ['balance', 'gas_tank']}
     assert ('conditioning', 'secondary') in selected_goals(athlete)

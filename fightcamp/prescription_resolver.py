@@ -530,13 +530,15 @@ def apply_effective_conditioning_prescriptions(
             if day is not None:
                 exposures.append((day, week, role, load))
     for day, week, role, load in sorted(exposures, key=lambda e: -e[0]):
-        phase = str(week.get("phase") or "").upper()
         policy = role.get("conditioning_composition_policy") or {}
         total_work = 0.0
         changed = False
         for member in role.get("selected_exercise_assignments") or []:
             if member.get("slot_group") != "conditioning_slots":
                 continue
+            # A calendar week may straddle a phase boundary. Composition has
+            # already resolved this member's scheduled-day phase.
+            phase = str(member.get("source_phase") or role.get("phase") or week.get("phase") or "").upper()
             ceiling = member.setdefault("conditioning_dose_ceiling", {
                 key: member.get(key) for key in
                 ("effective_prescription", "effective_rounds", "rounds", "work_sec", "rest_sec")
