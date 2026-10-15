@@ -590,6 +590,10 @@ def apply_effective_conditioning_prescriptions(
                         decision, reason = "increase", "restore_one_round_after_contact_relief"
                     else:
                         reason = "hold_until_recovery_and_load_justify_change"
+                if (previous and decision == "reduce" and selected_rounds == previous["rounds"]
+                        and previous["work"] == work and previous["rest"] == rest
+                        and previous["rpe"] == member.get("rpe")):
+                    decision, reason = "maintain", "repeat_reduced_dose_for_recovery"
                 if selected_rounds != rounds:
                     start, end = count.span(1)
                     member["effective_prescription"] = text[:start] + str(selected_rounds) + text[end:]

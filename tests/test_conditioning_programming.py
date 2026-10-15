@@ -91,7 +91,7 @@ def test_recovery_pressure_reduces_without_changing_rest_or_effort(changes):
     athlete, roles = _camp(contacts=(0, 0), **changes)
     apply_effective_conditioning_prescriptions(weekly_role_map=roles, athlete_model=athlete)
     assert [m['rounds'] for m in _members(roles)] == [3, 3]
-    assert all(m['conditioning_decision']['action'] == 'reduce' for m in _members(roles))
+    assert [m['conditioning_decision']['action'] for m in _members(roles)] == ['reduce', 'maintain']
 
 
 def test_unknown_boxing_intensity_or_fatigue_holds_a_reduced_dose():
