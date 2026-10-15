@@ -9657,7 +9657,9 @@
       "conditioning",
       "aerobic",
       "low_impact",
-      "mech_systemic_fatigue"
+      "mech_systemic_fatigue",
+      "work_capacity",
+      "endurance"
     ],
     "mechanical_risk_tags": [
       "mech_systemic_fatigue"
@@ -9700,7 +9702,8 @@
       "conditioning",
       "glycolytic",
       "low_impact",
-      "mech_systemic_fatigue"
+      "mech_systemic_fatigue",
+      "work_capacity"
     ],
     "mechanical_risk_tags": [
       "mech_systemic_fatigue"
@@ -9743,7 +9746,9 @@
       "conditioning",
       "glycolytic",
       "low_impact",
-      "mech_systemic_fatigue"
+      "mech_systemic_fatigue",
+      "work_capacity",
+      "endurance"
     ],
     "mechanical_risk_tags": [
       "mech_systemic_fatigue"
