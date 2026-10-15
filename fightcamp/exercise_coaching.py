@@ -184,8 +184,11 @@ def exercise_coaching(
                 authored_progress if authored_progress and authored_progression_matches(authored_progress, guidance, target)
                 else guidance["progression_rule"]
             )
-        elif guidance.get("maintenance_cue"):
-            fields["coaching_cues"].append(guidance["maintenance_cue"])
+        else:
+            # A missing authorised next dose must never become an invented
+            # load increase, but ordinary development exercises still get a
+            # visible, actionable quality progression.
+            fields["progression_rule"] = "Improve execution; keep prescribed dose."
     if authored_progress and is_execution_quality_instruction(authored_progress) and not is_profile_progression(authored_progress):
         if authored_progress not in fields["coaching_cues"]:
             fields["coaching_cues"].append(authored_progress)
