@@ -97,8 +97,9 @@ test("October 15 punch keeps its short cue, full expandable detail, video and ex
     ));
     assert.equal(container.querySelector(".ex-demo-lead-cue")?.textContent,
       "Key cueKeep punches balanced; return to guard");
-    const detail = container.querySelector<HTMLDetailsElement>("details.ex-detail-section")!;
-    assert.equal(detail.querySelector("summary")?.textContent, "Full prescription");
+    const detail = [...container.querySelectorAll<HTMLDetailsElement>("details.ex-detail-section")]
+      .find((item) => item.querySelector("summary")?.textContent === "Full prescription")!;
+    assert.ok(detail);
     assert.equal(detail.open, false);
     await act(async () => detail.querySelector("summary")!.click());
     assert.equal(detail.open, true);
