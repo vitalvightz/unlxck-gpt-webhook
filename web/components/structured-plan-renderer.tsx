@@ -92,6 +92,7 @@ import { PrivateExerciseMediaProvider, PrescribedPrivateVideo, PrescribedPrivate
 import { ExerciseLogBadge, ExerciseLogPanel, ExerciseLogTick, useExerciseLoggingActive } from "@/components/exercise-log";
 import { ExerciseActions, ExerciseSessionScope, SessionChangesFoot } from "@/components/exercise-customisation";
 import { demoThumbnailUrl } from "@/lib/exercise-demo";
+import { compactCue, compactEasier, compactProgress, compactStopText, safeQualityProgress } from "@/lib/exercise-card-copy";
 import { SafetyNote } from "@/components/safety-note";
 import { InjuryDetailSheet } from "@/components/today/injury-detail-sheet";
 import { PLAN_SAFETY_NOTE } from "@/lib/safety-copy";
@@ -386,11 +387,7 @@ function useBlockPrescription(block: StructuredBlock, sourceCountdown?: string |
     sourceStopRules.length > 0
       ? sourceStopRules
       : stripSafetyOwnedStopRules(stopRules, planSafetyTexts);
-  const compactStopRule =
-    blockStopRules
-      .map((rule) => rule.trim().replace(/^stop(?:\s+rule)?\s*:\s*/i, "").trim())
-      .filter(Boolean)
-      .join("; ") || null;
+  const compactStopRule = compactStopText(blockStopRules);
   return { title, load, metrics, rest, effort, compactStopRule };
 }
 
@@ -432,20 +429,24 @@ export function BlockCard({
   const { cues: allCues, regressions, substitutions } = getBlockExecutionDisplay(block);
   // One clear coach cue. Older saved cards can still carry a lead/long-copy
   // duplicate; their second cue must not reappear behind another disclosure.
-  const cues = hideCues || hideLeadCue ? [] : allCues.slice(0, 1);
+  const cues = hideCues || hideLeadCue || !allCues.length ? [] : [compactCue(allCues[0])];
   const visibleCues = cues;
   const { progression } = getBlockAdjustmentDisplay(block);
+  const progressText = progression
+    ? compactProgress(progression)
+    : block.prescription_source === "athlete"
+      ? null : safeQualityProgress(block.block_type, sourceCountdown);
   const weekDirective = openBlockWeekDirective(openWeekIntent, block);
   // A week directive owns progression/deload programming for open plans, while
   // block stop criteria are safety instructions and must always remain visible.
   // The deload week additionally hides the progression aside: a block with no
   // deload rule of its own is simply left as written, never told to advance.
   const showProgressionAside = Boolean(
-    progression && !weekDirective && openWeekIntent?.key !== "deload",
+    progressText && !weekDirective && openWeekIntent?.key !== "deload",
   );
   const adjustmentRules = [
-    ...(showProgressionAside && progression
-      ? [{ label: "Progress" as const, text: progression }]
+    ...(showProgressionAside && progressText
+      ? [{ label: "Progress" as const, text: progressText }]
       : []),
     ...(compactStopRule && !hideStopRule
       ? [{ label: "Stop rule" as const, text: compactStopRule }]
@@ -460,7 +461,7 @@ export function BlockCard({
   const showMetricTiles = statCount > 0 && (!block.prescription_text || hasAthleteMetrics);
   const asides = [
     ...(substitutions.length > 0 ? [{ label: "Swaps", text: substitutions.join(", "), glossary: false }] : []),
-    ...(regressions.length > 0 ? [{ label: "Easier", text: regressions.join(", "), glossary: false }] : []),
+    ...(regressions.length > 0 ? [{ label: "Easier", text: compactEasier(regressions[0]), glossary: false }] : []),
     // "Stop rule" is glossed; "Progress" reads plainly on its own.
     ...adjustmentRules.map((rule) => ({ ...rule, glossary: true })),
   ];
