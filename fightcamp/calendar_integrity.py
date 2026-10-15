@@ -170,7 +170,14 @@ def _destination_occupancy_rank(events: list[CalendarEvent], d_day: int) -> int:
 def _best_destination(
     weekly_role_map: dict[str, Any], ref: _RoleRef,
     *, excluded_d_days: set[int] | None = None,
+    avoid_occupied_physical: bool = False,
 ) -> tuple[str, int, PlacementDecision] | None:
+    """Rank legal destinations while optionally avoiding extra physical appointments.
+
+    A legal DEPRIORITIZE placement stays put when the only ALLOW destination
+    would pile another workout onto an already occupied physical day. This is
+    a preference, not a prohibition: FORBID repairs still use all legal homes.
+    """
     events = _build_events(weekly_role_map, exclude_role=ref.role)
     ranked: list[tuple[tuple[bool, int, int, int, int], str, int, PlacementDecision]] = []
     for weekday, d_day in _available_destination_days(ref):
@@ -185,6 +192,8 @@ def _best_destination(
         if decision.directive is PlacementDirective.FORBID:
             continue
         occupancy = _destination_occupancy_rank(events, d_day)
+        if avoid_occupied_physical and occupancy == 2:
+            continue
         ranked.append(
             (
                 (
@@ -234,6 +243,7 @@ def relocate_or_suppress_role_for_recovery(
         weekly_role_map,
         ref,
         excluded_d_days=excluded_d_days,
+        avoid_occupied_physical=require_clean_destination,
     )
     if require_clean_destination and (
         best is None or best[2].directive is not PlacementDirective.ALLOW
@@ -350,7 +360,12 @@ def _repair_forbidden_roles(
         if decision.directive is PlacementDirective.ALLOW:
             continue
         if decision.directive is PlacementDirective.DEPRIORITIZE:
-            best = _best_destination(weekly_role_map, ref)
+            # The current DEPRIORITIZE day is still legal. An ALLOW label on
+            # a crowded physical day is not an upgrade: preserve the legal
+            # original instead of moving distinct sessions onto one date.
+            best = _best_destination(
+                weekly_role_map, ref, avoid_occupied_physical=True,
+            )
             if best is None or best[2].directive is not PlacementDirective.ALLOW:
                 deprioritized_kept += 1
                 continue
