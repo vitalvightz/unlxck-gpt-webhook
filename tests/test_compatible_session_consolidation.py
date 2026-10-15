@@ -7,7 +7,7 @@ from copy import deepcopy
 from fightcamp.goal_preservation import _other_stimuli
 from fightcamp.physical_session_frequency import dated_appointments
 from fightcamp.render_authority import authoritative_render_for_role
-from fightcamp.session_composition import consolidate_compatible_alactic_sessions
+from fightcamp.session_composition import consolidate_compatible_physical_sessions
 
 
 def _strength(*, day="Monday", cap=6, pressure=0):
@@ -100,7 +100,7 @@ def test_eligible_speed_and_strength_really_become_one_workout_with_all_doses():
     before = deepcopy(original)
     assert len(dated_appointments(original)) == 2
 
-    result = consolidate_compatible_alactic_sessions(original)
+    result = consolidate_compatible_physical_sessions(original)
 
     week = result["weeks"][0]
     assert len(dated_appointments(result)) == 1
@@ -145,7 +145,7 @@ def test_consolidated_alactic_member_keeps_conditioning_speed_goal_evidence():
     assert any("speed_quality" in item["intents"] for item in original_stimuli)
 
     result = _map(_strength(), source)
-    consolidate_compatible_alactic_sessions(result)
+    consolidate_compatible_physical_sessions(result)
     combined = result["weeks"][0]["session_roles"][0]
     combined_stimuli = _other_stimuli(combined, pools, "SPP", {})
     assert combined_stimuli == original_stimuli
@@ -153,7 +153,7 @@ def test_consolidated_alactic_member_keeps_conditioning_speed_goal_evidence():
 
 def test_fight_pace_rounds_are_not_misclassified_as_alactic_micro_work():
     original = _map(_strength(), _alactic(work=180, rounds=4))
-    consolidate_compatible_alactic_sessions(original)
+    consolidate_compatible_physical_sessions(original)
     assert len(dated_appointments(original)) == 2
     assert not original.get("session_consolidation_audit")
 
@@ -163,21 +163,21 @@ def test_never_move_speed_to_strength_day_next_to_hard_sparring():
         _strength(), _alactic(),
         contacts=[{"day": "Tuesday", "effective_load": "hard", "status": "hard_as_planned"}],
     )
-    consolidate_compatible_alactic_sessions(original)
+    consolidate_compatible_physical_sessions(original)
     assert len(dated_appointments(original)) == 2
     assert not original.get("session_consolidation_audit")
 
 
 def test_combination_does_not_exceed_existing_strength_exercise_capacity():
     original = _map(_strength(cap=2), _alactic())
-    consolidate_compatible_alactic_sessions(original)
+    consolidate_compatible_physical_sessions(original)
     assert len(dated_appointments(original)) == 2
     assert not original.get("session_consolidation_audit")
 
 
 def test_combination_does_not_bypass_readiness_pressure():
     original = _map(_strength(pressure=1), _alactic())
-    consolidate_compatible_alactic_sessions(original)
+    consolidate_compatible_physical_sessions(original)
     assert len(dated_appointments(original)) == 2
     assert not original.get("session_consolidation_audit")
 
@@ -189,6 +189,6 @@ def test_preserves_technical_coach_session_while_merging_compatible_app_work():
         "declared_day_locked": True,
     }
     original = _map(_strength(), _alactic(), coach)
-    consolidate_compatible_alactic_sessions(original)
+    consolidate_compatible_physical_sessions(original)
     assert coach["role_key"] in [r["role_key"] for r in original["weeks"][0]["session_roles"]]
     assert len(dated_appointments(original)) == 2  # Strength + coach boxing.
