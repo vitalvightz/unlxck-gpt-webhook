@@ -81,9 +81,8 @@ def _recover_programming(block: dict, assignment: dict, context: dict | None, fi
         approved = next((rule for rule in (bank, existing) if rule
                          and authored_progression_matches(rule, guidance, context["next"]["dose"])), None)
         block["progression_rule"] = approved or guidance["progression_rule"]
-    maintenance = guidance.get("maintenance_cue")
-    if maintenance and not _has_cue(block, maintenance):
-        block["coaching_cues"].append(maintenance)
+    if not block.get("progression_rule") and not context["current"]["blocked"]:
+        block["progression_rule"] = "Improve execution; keep prescribed dose."
     # Existing actionable Easier advice owns the card. Never append another
     # description of the same reduction (including "reps per set to 1").
     authored = assignment.get("regression_options") or re.search(
