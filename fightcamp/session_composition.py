@@ -46,8 +46,8 @@ from .weight_cut import (
 
 
 _NORMAL_STRENGTH_ROLE_CAPS: dict[str, int] = {
-    "primary_strength_day": 4,
-    "structural_strength_day": 4,
+    "primary_strength_day": 6,
+    "structural_strength_day": 6,
     "secondary_strength_day": 3,
     "neural_plus_strength_day": 3,
     "transfer_strength_day": 3,
@@ -359,6 +359,11 @@ def _effective_role_cap(role_key: str, pressure: int) -> tuple[int, int]:
     base_cap = _NORMAL_STRENGTH_ROLE_CAPS.get(role_key, _DEFAULT_NORMAL_STRENGTH_CAP)
     if pressure <= 0:
         return base_cap, base_cap
+    if role_key in {"primary_strength_day", "structural_strength_day"}:
+        # Raise the unrestricted exercise ceiling, NOT the number of exercises
+        # allowed under fatigue, injury or weight-cut pressure. Those limits
+        # remain exactly as they were when the base ceiling was four.
+        return base_cap, max(2, 4 - pressure)
     if pressure == 1:
         return base_cap, max(2, base_cap - 1)
     if pressure == 2:
