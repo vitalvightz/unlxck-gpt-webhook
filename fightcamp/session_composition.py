@@ -3039,7 +3039,9 @@ def attach_late_fight_assignments(
         ]
 
 
-def consolidate_compatible_alactic_sessions(weekly_role_map: dict[str, Any]) -> dict[str, Any]:
+def consolidate_compatible_alactic_sessions(
+    weekly_role_map: dict[str, Any], *, athlete_model: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     """Compose a short alactic exposure into a genuine, already-dosed Strength workout.
 
     Works on closed, fully prescribed normal-camp sessions only. The alactic
@@ -3054,7 +3056,7 @@ def consolidate_compatible_alactic_sessions(weekly_role_map: dict[str, Any]) -> 
         build_events, classify_role, contact_d_day, role_d_day, week_scope,
     )
     from .combat_load_policy import evaluate_candidate_at_position, placement_rank
-    from .physical_session_frequency import is_physical_session_role
+    from .physical_session_frequency import audit_physical_session_frequency, is_physical_session_role
 
     if not isinstance(weekly_role_map, dict):
         return weekly_role_map
@@ -3196,6 +3198,10 @@ def consolidate_compatible_alactic_sessions(weekly_role_map: dict[str, Any]) -> 
                     "exercise": carried.get("name"),
                     "decision": "combined_preserving_dose",
                 })
+                if isinstance(weekly_role_map.get("physical_session_frequency_audit"), dict):
+                    weekly_role_map["physical_session_frequency_audit"]["warnings"] = (
+                        audit_physical_session_frequency(weekly_role_map, athlete_model or {})
+                    )
                 break
     return weekly_role_map
 
