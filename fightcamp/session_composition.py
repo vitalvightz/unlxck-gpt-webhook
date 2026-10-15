@@ -3056,7 +3056,9 @@ def consolidate_compatible_alactic_sessions(
         build_events, classify_role, contact_d_day, role_d_day, week_scope,
     )
     from .combat_load_policy import evaluate_candidate_at_position, placement_rank
-    from .physical_session_frequency import audit_physical_session_frequency, is_physical_session_role
+    from .physical_session_frequency import (
+        audit_physical_session_frequency, cadence_windows, is_physical_session_role,
+    )
 
     if not isinstance(weekly_role_map, dict):
         return weekly_role_map
@@ -3083,6 +3085,14 @@ def consolidate_compatible_alactic_sessions(
                 grades[(ordinal, int(role.get("session_index") or 0),
                         str(role.get("role_key") or ""))] = placement_rank(decision)
         return grades
+
+    slots = [
+        (day["d_day"], day.get("weekday", ""))
+        for week in weekly_role_map.get("weeks") or []
+        for day in week.get("calendar_days") or []
+        if isinstance(day, dict) and isinstance(day.get("d_day"), int)
+    ]
+    cadence_sets = [{day for day, _ in days} for days in cadence_windows(slots)]
 
     for week_index, week in enumerate(weekly_role_map.get("weeks") or []):
         if str(week.get("phase") or "").upper() not in {"GPP", "SPP"}:
@@ -3126,6 +3136,7 @@ def consolidate_compatible_alactic_sessions(
                 host_members = host.get("selected_exercise_assignments")
                 if (not isinstance(host_day, int) or host_day <= 13
                         or abs(host_day - source_day) > 3
+                        or not any(source_day in days and host_day in days for days in cadence_sets)
                         or not isinstance(policy, dict) or int(policy.get("pressure") or 0) != 0
                         or not isinstance(host_members, list) or not host_members
                         or not host.get("effective_strength_prescriptions")):
