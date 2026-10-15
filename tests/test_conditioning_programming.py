@@ -151,6 +151,15 @@ def test_effective_sparring_is_counted_once_and_empty_resolver_result_wins():
     assert conditioning_load_context(athlete, week)['hard_exposures'] == 0
 
 
+def test_free_text_session_estimates_do_not_change_load_evidence_or_doses():
+    athlete, roles = _camp()
+    expected = deepcopy(roles)
+    apply_effective_conditioning_prescriptions(weekly_role_map=expected, athlete_model=athlete)
+    athlete['training_workload_context'] = {'reported_weekly_sessions': {'minimum': 8, 'maximum': 9}}
+    apply_effective_conditioning_prescriptions(weekly_role_map=roles, athlete_model=athlete)
+    assert roles == expected
+
+
 @pytest.mark.parametrize('name', ['Air Bike Aerobic HIIT', 'Air Bike Sprint Interval Training', 'Air Bike Muscle Buffer Intervals'])
 def test_complete_protocols_are_not_padded_to_generic_phase_workload(name):
     drill = BANK[name]

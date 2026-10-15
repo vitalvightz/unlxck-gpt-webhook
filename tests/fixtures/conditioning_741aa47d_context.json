@@ -80,16 +80,6 @@
       "treadmill"
     ],
     "training_frequency": 6,
-    "training_workload_context": {
-      "reported_weekly_sessions": {
-        "minimum": 8,
-        "maximum": 9,
-        "source": "training_notes"
-      },
-      "double_days_reported": true,
-      "structured_frequency_conflict": true,
-      "frequency_source": "user_supplied"
-    },
     "training_days": [
       "Monday",
       "Tuesday",

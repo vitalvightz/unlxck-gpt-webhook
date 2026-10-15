@@ -135,7 +135,7 @@ recovery is not an invitation to replace easy work with HIIT.
 `stage2_role_map` retains calendar/contact/session-budget ownership.
 `conditioning_boxing.conditioning_load_context` reads the resolver's effective
 hard days, including an explicitly empty result; duplicate weekday labels count
-once. Reported total sessions describe congestion, not measured intensity.
+once. The calendar's structured session budget remains authoritative.
 Ordinary coach-led boxing/padwork remains **unknown** in the evidence. It is not
 credited as a known aerobic, buffering or SIT dose, and is not counted again as
 app conditioning. Two effective hard days defer an additional hard exposure.
@@ -169,11 +169,12 @@ No simultaneous work increase/rest decrease is authorised.
 ## Actual programme 741aa47d: before and after
 
 The live intake has speed primary, conditioning secondary, balance primary
-weakness and gas tank secondary, 10 × 3min. It reports 8–9 weekly sessions in
-notes but **six** in the structured frequency field. Tuesday/Saturday hard
+weakness and gas tank secondary, 10 × 3min, and **six** weekly sessions in the
+structured frequency field. Tuesday/Saturday hard
 sparring and Thursday/Friday coach-owned sessions compete with app S&C for that
-six-session allowance. The planner does not silently resolve the conflict by
-promoting the cap to nine or editing fixed coach sessions.
+six-session allowance. The structured intake owns the session budget, and fixed
+coach sessions remain unchanged. Free-text session estimates are excluded from
+the workload evidence and programming assessment.
 
 The recorded Stage-2 payload was replayed through the actual
 `build_planning_brief` on baseline and changed code, with the same selected pools.

@@ -17,7 +17,7 @@ def conditioning_load_context(athlete: dict, week: dict) -> dict:
     """Read load evidence without turning unmeasured boxing into hard intervals.
 
     The contact resolver wins, including an explicitly empty hard-day result.
-    Reported total sessions describe congestion, not intensity or adaptation.
+    Structured session budgets remain with the calendar owner.
     """
     if "effective_hard_sparring_days" in week:
         hard_days = week.get("effective_hard_sparring_days") or []
@@ -34,11 +34,9 @@ def conditioning_load_context(athlete: dict, week: dict) -> dict:
     # We have no measured duration/RPE for ordinary padwork or boxing. A
     # weekday, role label or technical designation cannot supply that evidence.
     unmeasured = any(r.get("role_key") != "hard_sparring_day" for r in coach_roles)
-    reported = (athlete.get("training_workload_context") or {}).get("reported_weekly_sessions") or {}
     return {
         "effective_hard_sparring_days": hard_days,
         "hard_exposures": len(hard_days),
-        "reported_weekly_sessions": reported,
         "coach_conditioning_intensity": "unknown" if unmeasured else "no_additional_coach_load_recorded",
         "additional_hard_conditioning": "defer" if len(hard_days) >= 2 else "subject_to_existing_budget_and_legality",
     }
