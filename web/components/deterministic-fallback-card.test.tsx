@@ -113,7 +113,7 @@ test("a single bank cue prints once, not as Focus + Reset + Coach cue", () => {
 
   assert.equal(markup.split("Take the space, do not chase it").length - 1, 1);
   // …and it occupies exactly one labelled coaching line, whichever slot held it.
-  assert.equal(markup.split("sp-stat-label">Cue").length - 1, 1);
+  assert.equal(markup.split('sp-stat-label">Cue').length - 1, 1);
 });
 
 test("a bank cue emitted by the server fills only the coach-cue slot", () => {
