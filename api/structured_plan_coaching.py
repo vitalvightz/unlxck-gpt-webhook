@@ -72,9 +72,6 @@ def _recover_programming(block: dict, assignment: dict, context: dict | None, fi
     if existing and is_execution_quality_instruction(existing) and not is_profile_progression(existing):
         if not _has_cue(block, existing):
             block["coaching_cues"].append(existing)
-    # Reconcile a numeric next-step only when it is in the planner schedule.
-    # Otherwise keep a computed non-increasing maintenance line from
-    # exercise_coaching, never the converter's invented load progression.
     block.pop("progression_rule", None)
     if guidance.get("progression_rule"):
         bank = str(assignment.get("progression_rule") or "")
@@ -84,8 +81,9 @@ def _recover_programming(block: dict, assignment: dict, context: dict | None, fi
         approved = next((rule for rule in (bank, existing) if rule
                          and authored_progression_matches(rule, guidance, context["next"]["dose"])), None)
         block["progression_rule"] = approved or guidance["progression_rule"]
-    if not block.get("progression_rule") and fields.get("progression_rule"):
-        block["progression_rule"] = fields["progression_rule"]
+    maintenance = guidance.get("maintenance_cue")
+    if maintenance and not _has_cue(block, maintenance):
+        block["coaching_cues"].append(maintenance)
     # Existing actionable Easier advice owns the card. Never append another
     # description of the same reduction (including "reps per set to 1").
     authored = assignment.get("regression_options") or re.search(
