@@ -35,8 +35,9 @@ def test_saved_examples_are_idempotent_preserve_dose_and_retain_every_warning(re
         assert {k: current.get(k) for k in DOSE} == {k: before.get(k) for k in DOSE}
         assert len(current.get("regression_options", [])) <= 1
         assert len(current.get("stop_rules", [])) <= 1
-        for cue in before.get("coaching_cues", []):
-            assert cue in current["coaching_cues"]  # full original detail survives
+        assert len(current.get("coaching_cues", [])) <= 1
+        if before.get("coaching_cues"):
+            assert current["coaching_cues"][0] in {before["coaching_cues"][0], short_cue(before["coaching_cues"][0])}
         for warning in before.get("stop_rules", []):
             condition = re.sub(r"^(?:stop\s+)?(?:if|when|for)\s+", "", warning, flags=re.I).rstrip(".")
             assert condition.casefold() in " ".join(current["stop_rules"]).casefold()
@@ -102,6 +103,26 @@ def test_labelled_and_unlabelled_versions_of_one_cue_do_not_multiply():
     assert concise_coaching(fields) == fields
 
 
+def test_standard_movement_profiles_emit_one_cue_and_nine_word_guidance():
+    from fightcamp.exercise_coaching import _PROFILES
+    for _, (cue, easier, _, stop) in _PROFILES:
+        fields = concise_coaching({"coaching_cues": [cue, cue],
+                                   "regression_options": [easier], "stop_rules": [stop]})
+        for key in ("coaching_cues", "regression_options", "stop_rules"):
+            assert len(fields[key]) == 1
+            assert len(fields[key][0].split()) <= 9, fields[key]
+        assert concise_coaching(fields) == fields
+
+
+def test_secondary_and_embedded_safety_cues_survive_single_cue_selection():
+    fields = concise_coaching({"coaching_cues": [
+        "Brace first. Stop if dizzy.", "Stop for sharp pain.", "Brace first."]})
+    assert fields["coaching_cues"] == ["Brace first"]
+    assert "dizzy" in " ".join(fields["stop_rules"])
+    assert "sharp pain" in " ".join(fields["stop_rules"])
+    assert concise_coaching(fields) == fields
+
+
 def test_coach_fields_win_over_fallback_and_keep_full_technical_detail():
     assignment = {"name": "Band-Resisted Punch", "slot_group": "strength_slots",
                   "effective_prescription": "1 x 2 reps; rest 120 sec",
@@ -110,7 +131,7 @@ def test_coach_fields_win_over_fallback_and_keep_full_technical_detail():
                   "stop_rules": ["Stop for shoulder pain."]}
     actual = exercise_coaching(assignment, {}, phase="TAPER", d_day=13)
     assert actual["coaching_cues"][0] == "Keep the elbow below shoulder height"
-    assert assignment["coaching_cues"][0] in actual["coaching_cues"]
+    assert actual["coaching_cues"] == [short_cue(assignment["coaching_cues"][0])]
     assert actual["regression_options"] == assignment["regression_options"]
     assert actual["stop_rules"] == assignment["stop_rules"]
     assert not actual.get("progression_rule")
@@ -139,7 +160,7 @@ def test_october_11_style_progress_requires_an_actual_authorised_future_exposure
     context = build_progression_context(brief)[occurrence_key(role, assignment, 18)]
     current = exercise_coaching(assignment, role, phase="SPP", d_day=18, progression_context=context)
     assert current["progression_rule"] == (
-        "Next D-15: add 1 rep per set (4 x 4 reps at max speed; rest 90 sec); only if controlled and recovered.")
+        "Next D-15: add 1 rep/set if controlled and recovered.")
     # The saved coach wording survives unchanged when this future dose supports it.
     recovered = recover_selected_coaching(record["card"], brief)
     jump = next(b for b in blocks(recovered) if b["display_name"] == "Jump Squat")
@@ -160,3 +181,10 @@ def test_actual_saved_instructions_survive_expanded_react_cards(record):
         "test/assert-exercise-coaching-release.tsx"], cwd=ROOT / "web",
         input=json.dumps({"plan": card, "expected": expected}), text=True, capture_output=True)
     assert result.returncode == 0, result.stderr
+
+
+def test_dose_first_legacy_coaching_does_not_displace_execution():
+    fields = concise_coaching({"coaching_cues": [
+        "5s work, 60s rest x 8 rounds", "Cue: Return to guard.", "Stop for pain."]})
+    assert fields["coaching_cues"] == ["Return to guard."]
+    assert "pain" in " ".join(fields["stop_rules"])

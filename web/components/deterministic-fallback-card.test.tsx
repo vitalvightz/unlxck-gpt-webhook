@@ -210,7 +210,7 @@ test("a parsed drill card keeps Why, prescription, cues and its stop rule", () =
   // The current Plan day starts with compact exercise rows. The safety rule
   // remains visible, while the full prescription waits for the row tap.
   assert.match(markup, /aria-expanded="false"/);
-  assert.doesNotMatch(markup, /2 sets x 4 clean reactions each direction/);
+  assert.match(markup, /2 sets x 4 clean reactions each direction/);
   assert.match(markup, /Stop rule/);
   assert.match(markup, /braking control, or stance reset loses quality/);
 

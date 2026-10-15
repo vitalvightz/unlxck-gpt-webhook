@@ -3798,11 +3798,16 @@ The JSON object MUST conform to the StructuredTrainingPlan schema:
   "regression_options"/"substitutions" (safer or alternative exercises),
   "progression_rule" (exercise-level advancement only), and "stop_rules"
   (stop/safety criteria). Each stop_rules item MUST be athlete-facing, contain one
-  trigger only, and use no more than 9 words when clinically safe. Preserve the source meaning and never
+  trigger only, and use no more than 9 words. Preserve the source meaning and never
   invent a new safety criterion. Preserve purpose/why_today as structured backend context,
   but NEVER copy those explanations into coaching_cues.
-- Never omit a planner-selected exercise. Contrast pairs (e.g. "Back Squat → Box Jump") are ONE named prescribed block; preserve the full name, D-day and exact dose. Do not split the pair into unrelated exercises or skip it. Each source exercise appears exactly once.
-- Use ONE coaching_cues entry per exercise, at most nine words. Use ONE Easier, ONE Progress and ONE Stop instruction, each ideally at most nine words. Do not add a separate Coach Cues header or repeat the same advice elsewhere.
+- Keep every planner-selected exercise on its assigned day with its exact dose
+  and complete contrast-pair name. Do not split, drop or rename members.
+- Emit one Cue and one Easier instruction, each at most 9 words. Use one
+  Progress instruction only when supported by the prescribed progression;
+  preserve its quantity, units, per-set/per-side scope and conditions. Do not
+  duplicate the cue in subtitles or a separate Coaching cues section. Locked
+  tactical/visualisation steps retain their exact bank wording and membership.
 - coaching_cues MUST tell the athlete how to execute the exercise: position,
   movement, intent, brace, rhythm, guard, stance, reset, or other actionable form
   cues. Do NOT put Purpose, Why today, Easier/Regression, Progress/Progression,

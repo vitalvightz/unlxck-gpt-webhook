@@ -9,6 +9,7 @@ import {
   isZeroLoadSupportSession,
   mentalSessionCategory,
   mentalSessionSummary,
+  mentalTaskSteps,
   normalizeForDedupe,
   cleanText,
   formatBlockLoad,
@@ -432,7 +433,10 @@ export function BlockCard({
   // as a 1-10 perceived-exertion score. An unrecognised or missing method falls
   // through to no tooltip rather than to a guess.
   const effortMethod = cleanText(block.effort?.method);
-  const { cues: allCues, regressions, substitutions } = getBlockExecutionDisplay(block);
+  const execution = getBlockExecutionDisplay(block);
+  const { cues: allCues, regressions, substitutions } = execution;
+  const prescriptionText = cleanText(block.prescription_text)
+    || (metrics.length === 0 ? execution.prescription : null);
   // A single execution cue is enough. The earlier split into lead cue plus
   // "Coaching cues" detail repeated the same instruction on enhanced cards.
   const visibleCues = hideCues || hideLeadCue ? [] : allCues.slice(0, 1).map(compactCoachLine);
@@ -482,7 +486,7 @@ export function BlockCard({
           ) : null}
         </div>
       )}
-      {block.prescription_text && !showMetricTiles ? <p className="sp-block-purpose">{block.prescription_text}</p> : null}
+      {prescriptionText && !showMetricTiles ? <p className="sp-block-purpose">{prescriptionText}</p> : null}
       {block.notes && !hasAthleteMetrics ? <p className="sp-block-purpose">{block.notes}</p> : null}
       {/* Athlete entries retain their exact text (tempo, side, free-form load)
           alongside the same metric tiles used by generated sessions. */}
@@ -527,7 +531,7 @@ export function BlockCard({
           ) : null}
         </div>
       ) : null}
-      {block.prescription_text && showMetricTiles ? <p className="sp-block-purpose">{block.prescription_text}</p> : null}
+      {prescriptionText && showMetricTiles ? <p className="sp-block-purpose">{prescriptionText}</p> : null}
       {block.notes && hasAthleteMetrics ? <p className="sp-block-purpose">{block.notes}</p> : null}
       {weekDirective ? (
         <p className="sp-block-aside sp-week-directive">
@@ -568,29 +572,19 @@ function exerciseRowSummary(
 ): string | null {
   if (block.prescription_text) return block.prescription_text;
   const headline =
-    prescription.metrics[0]?.value || prescription.load || formatMeasured(block.duration);
+    prescription.metrics[0]?.value || getBlockExecutionDisplay(block).prescription
+    || prescription.load || formatMeasured(block.duration);
   const parts = [headline, prescription.effort].filter((part): part is string => Boolean(part));
   return parts.length > 0 ? Array.from(new Set(parts)).join(" · ") : null;
 }
 
-/** Presentation-only coaching reduction; stored instructions stay intact. */
+/** Saved copy may be long. Never drop a condition to hit a word count. */
 function compactCoachLine(value: string): string {
-  const clean = value.trim().replace(/^(?:Cue|Easier|Progress|Stop):\s*/i, "");
-  if (clean.split(/\s+/).length <= 9) return clean;
-  const clauses = clean.split(/\s*;\s*/).filter(Boolean);
-  if (clauses[0]?.split(/\s+/).length <= 9) return clauses[0];
-  return clean; // Never truncate medical or negated instructions.
+  return value.trim().replace(/^(?:Cue|Easier|Progress|Stop):\s*/i, "");
 }
 
-function compactProgressLine(text: string): string {
-  const clean = text.trim();
-  const add = clean.match(/\badd\s+(\d+(?:\.\d+)?)\s*(kg|lb|reps?|sets?|rounds?|m)\b/i);
-  if (/^Next D-\d+:/i.test(clean) && add) {
-    const unit = add[2].toLowerCase();
-    const suffix = ["kg", "lb", "m"].includes(unit) ? "" : " ";
-    return "Add +" + add[1] + suffix + unit;
-  }
-  return compactCoachLine(clean);
+function compactProgressLine(value: string): string {
+  return compactCoachLine(value);
 }
 
 function sameCopy(a: string | null, b: string | null): boolean {
@@ -886,7 +880,7 @@ function ExerciseDetail({
           two nested accordions to find a single cue or their next dose. */}
       {cue ? <p className="sp-block-aside"><span className="sp-stat-label">Cue</span>{cue}</p> : null}
       {easier ? <p className="sp-block-aside"><span className="sp-stat-label">Easier</span>{easier}</p> : null}
-      {progression && openWeekIntent?.key !== "deload" ? (
+      {progression && !openBlockWeekDirective(openWeekIntent, block) && openWeekIntent?.key !== "deload" ? (
         <p className="sp-block-aside"><span className="sp-stat-label">Progress</span>{compactProgressLine(progression)}</p>
       ) : null}
       <details className="ex-detail-section">
@@ -1035,26 +1029,16 @@ export function SessionCard({
       : mentalCategory === "Analyse"
         ? "Review one tactical issue from sparring or available footage. Identify one adjustment for the next session."
         : "Rehearse one familiar fight situation and reset calmly.");
-    const mentalInstructions = Array.from(new Set(
-      blocks.flatMap((block) => [
-        ...getBlockExecutionDisplay(block).cues,
-        ...(block.notes ? [block.notes] : []),
-      ])
-        .map((line) => line.replace(/^\s*(?:Step\s*\d+|Cue|Intent|Focus|Reset|Anchor|Purpose|Progress)\s*:\s*/i, "").trim())
-        .filter(Boolean),
-    )).filter((line) => line.toLowerCase() !== summary.toLowerCase()).slice(0, 3);
-    // Never replace the selected Tactical Watch drill with a generic
-    // "Analyse" instruction. The athlete should recognise their actual task.
-    const mentalDrills = Array.from(new Set(
-      blocks.map((block) => cleanText(block.display_name)).filter(
-        (name): name is string => Boolean(name),
-      ),
-    ));
-    const mentalDrill = mentalDrills[0] ?? null;
-    const mentalCue = cleanText(
-      sessionMindset?.focus_cue || sessionMindset?.intent || sessionMindset?.confidence_anchor,
-    );
-    const mentalWhy = objective && !sameCopy(objective, summary) ? objective : null;
+    const authored = blocks.flatMap(block => [
+      ...getStringList(block.coaching_cues),
+      ...(block.notes ? block.notes.split(/\n+/) : []),
+    ]);
+    const steps = mentalTaskSteps(authored);
+    const mentalStops = Array.from(new Set(blocks.flatMap(block => getBlockAdjustmentDisplay(block).stopRules)));
+    const mentalDrill = blocks.map(block => cleanText(block.display_name))
+      .find(name => name && !sameCopy(name, title));
+    const mentalCue = cleanText(sessionMindset?.focus_cue || sessionMindset?.intent
+      || sessionMindset?.confidence_anchor);
     return (
       <article className="sp-session sp-mental-task" data-mental-category={mentalCategory.toLowerCase()}>
         <header className="sp-mental-head">
@@ -1065,28 +1049,17 @@ export function SessionCard({
             </span>
           ) : null}
         </header>
-        <p className="sp-session-instruction">{mentalDrill || summary}</p>
-        {mentalDrill && summary && !sameCopy(mentalDrill, summary) ? (
-          <p className="sp-muted">{summary}</p>
+        {mentalDrill ? <p className="sp-session-instruction">{mentalDrill}</p> : null}
+        {steps.length > 0 ? (
+          <ol className="sp-cues sp-mental-steps">
+            {steps.map((instruction, index) => <li key={`${index}-${instruction}`}>{instruction}</li>)}
+          </ol>
+        ) : <p className="sp-session-instruction">{summary}</p>}
+        {mentalCue && !steps.some(step => sameCopy(step, mentalCue)) && !sameCopy(mentalCue, summary) ? (
+          <p className="sp-block-aside"><span className="sp-stat-label">Cue</span>{mentalCue}</p>
         ) : null}
-        {mentalCue && !sameCopy(mentalCue, summary) ? (
-          <p className="sp-block-aside"><span className="sp-stat-label">Cue</span>{compactCoachLine(mentalCue)}</p>
-        ) : null}
-        {mentalInstructions.length > 0 || mentalDrills.length > 1 || mentalWhy ? (
-          <details className="sp-section-details">
-            <summary>View steps</summary>
-            {mentalWhy ? <p className="sp-session-objective">{mentalWhy}</p> : null}
-            {mentalDrills.length > 1 ? (
-              <ul className="sp-cues">
-                {mentalDrills.map((name) => <li key={name}>{name}</li>)}
-              </ul>
-            ) : null}
-            <ol className="sp-cues">
-              {mentalInstructions.map((instruction, index) => (
-                <li key={`${index}-${instruction}`}>{instruction}</li>
-              ))}
-            </ol>
-          </details>
+        {mentalStops.length > 0 ? (
+          <p className="sp-block-aside" data-kind="stop"><span className="sp-stat-label">Stop rule</span>{mentalStops.join("; ")}</p>
         ) : null}
         {completionInfo?.onLog ? (
           <button type="button" className="secondary-button sp-log-session" onClick={completionInfo.onLog}>

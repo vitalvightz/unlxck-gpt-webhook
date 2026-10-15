@@ -97,45 +97,14 @@ async def retry_structured_card_before_release(
     prior_card = prior_report.get("structured_plan") if isinstance(prior_report, dict) else None
     prior_status = str((prior_card or {}).get("status") or "not_attempted")
     if prior_status in _MODEL_CARD_REJECTED_STATUSES:
-        # The AI converter omitted planner-selected exercises on actual
-        # published fights (Louis D-5, Yami D-17/D-24). Never ask it to guess
-        # again and never persist its incomplete payload. Use the deterministic
-        # planner-owned card, then pass it through the SAME schema, faithfulness
-        # and safety audit used for model cards before allowing persistence.
-        from ..structured_plan_deterministic_fallback import build_deterministic_structured_plan
-        from ..structured_plan_generation import build_structured_plan_outcome
-        brief = _planning_brief(final_result.get("planning_brief"))
-        source_text = str(final_result.get("final_plan_text") or final_result.get("plan_text") or "")
-        if brief and source_text:
-            fallback = build_deterministic_structured_plan(brief, plan_text=source_text)
-            if fallback:
-                outcome = build_structured_plan_outcome(
-                    fallback, raw_markdown=source_text, planning_brief=brief,
-                    repair_fn=None,
-                )
-                if outcome.structured_plan and outcome.status == "valid":
-                    outcome.warnings.append(
-                        "deterministic_recovery: rejected model card omitted planner-selected content"
-                    )
-                    recovered = dict(final_result)
-                    recovered["structured_plan"] = outcome.structured_plan
-                    recovered["schema_version"] = outcome.schema_version
-                    report = dict(recovered.get("stage2_validator_report") or {})
-                    report["structured_plan"] = outcome.as_debug()
-                    recovered["stage2_validator_report"] = report
-                    logger.info(
-                        "[jobs] generation:structured_card_deterministic_recovery_success context=%s",
-                        log_context or {},
-                    )
-                    emit_milestone(
-                        "structured_card_retry_finished",
-                        "Enhanced card restored",
-                        "Planner-selected exercises restored into the enhanced card.",
-                    )
-                    return recovered
-        logger.warning(
-            "[jobs] generation:structured_card_recovery_unavailable prior_status=%s context=%s",
-            prior_status, log_context or {},
+        # Stage 2 already converted this exact text and the validators rejected
+        # the card. Repeating the identical conversion is not a recovery, it is
+        # a second roll of the dice that cost 4-7 minutes in production; the
+        # athlete is served the validated deterministic card instead.
+        logger.info(
+            "[jobs] generation:structured_card_retry_skipped prior_status=%s context=%s",
+            prior_status,
+            log_context or {},
         )
         return final_result
     # Without a converter an attempt can only record "unavailable" again.

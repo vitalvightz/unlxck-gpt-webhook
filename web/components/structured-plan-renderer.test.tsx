@@ -693,9 +693,8 @@ test("labels the session objective as the Why and sentence-cases it", () => {
 
   assert.equal(html.includes("Refine motor plan and composure without physical load"), true);
   assert.equal(html.includes("refine motor plan and composure"), false);
-  // Mental sessions now have one short View steps disclosure, not another
-  // nested Why panel or dense mental breakdown.
-  assert.equal(html.includes("View steps"), true);
+  // Mental instructions are directly visible, without nested disclosures.
+  assert.equal(html.includes("View steps"), false);
 });
 
 test("drops a mindset Context line that only restates the session objective", () => {

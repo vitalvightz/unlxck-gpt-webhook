@@ -2,12 +2,12 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { renderToStaticMarkup } from "react-dom/server";
 import { SessionCard } from "./structured-plan-renderer";
-import { mentalSessionCategory, mentalSessionSummary } from "../lib/structured-plan";
+import { mentalSessionCategory, mentalSessionSummary, mentalTaskSteps } from "../lib/structured-plan";
 import type { StructuredSession } from "../lib/types";
 
 for (const [title, category] of [["Fight Visualisation", "Visualise"], ["Neural Visualisation", "Visualise"],
   ["Tactical Watch", "Analyse"], ["Tactical Focus", "Analyse"], ["Self-Review Cues", "Reflect"]]) {
-  test(`${title} keeps instructions collapsed in both layouts`, () => {
+  test(`${title} shows instructions without dropdowns in both layouts`, () => {
     const session: StructuredSession = { session_id: `saved-${title}`, title, session_type: "skill",
       planned_duration: { value: 5, unit: "minutes" }, objective: "Original selected scenario instruction.",
       blocks: [{ block_id: "original-block", display_name: title, coaching_cues: ["Keep the original bank cue."],
@@ -17,9 +17,9 @@ for (const [title, category] of [["Fight Visualisation", "Visualise"], ["Neural 
       const html = renderToStaticMarkup(<SessionCard session={session} layout={layout} defaultOpenBlocks
         completionInfo={{ onLog: () => {}, display: { state: "done", label: "Done", tone: "green" } }} />);
       assert.match(html, new RegExp(`${title} · 5 min`));
-      assert.match(html, /<details class="sp-section-details"><summary>/);
+      assert.doesNotMatch(html, /<details/);
       assert.doesNotMatch(html, /<details[^>]* open/);
-      assert.match(html, /Original selected scenario instruction/);
+
       assert.match(html, /Keep the original bank cue/);
       assert.match(html, /Log this session/);
       assert.doesNotMatch(html, /Zero load/);
@@ -66,6 +66,14 @@ test("a legacy mental title cannot hide bundled physical exercises", () => {
       { block_type: "preparation", display_name: "Hip CARs" }] }), null);
 });
 
+test("three mental actions keep the final takeaway and exclude framing", () => {
+  assert.deepEqual(mentalTaskSteps([
+    "5 minutes, RPE 1.", "Step 1: Find safe scoring range.",
+    "Step 2: Find their danger range.", "Step 3: Choose a strike.",
+    "Step 4: Write one rule to test.", "Focus: Stay calm.", "Progress: Test it later.",
+  ]), ["Find safe scoring range.", "Find their danger range.", "Write one rule to test."]);
+});
+
 test("mental preview uses selected authored instructions and keeps smart truncation lossless in details", () => {
   const first = { title: "Fight Visualisation", blocks: [{ coaching_cues: ["Enter behind your jab and cut off the exit."] }] };
   const second = { title: "Fight Visualisation", blocks: [{ coaching_cues: ["Draw the entry and counter as they reset."] }] };
@@ -75,4 +83,13 @@ test("mental preview uses selected authored instructions and keeps smart truncat
   const long = "Keep the exit in view. " + "Follow the selected authored instruction without changing it. ".repeat(5);
   assert.equal(mentalSessionSummary({ blocks: [{ coaching_cues: [long] }] }), "Keep the exit in view.");
   assert.ok((mentalSessionSummary({ objective: "Move through the familiar sequence ".repeat(12) })?.length ?? 0) <= 180);
+});
+
+
+test("mental safety remains visible outside disclosures", () => {
+  const html = renderToStaticMarkup(<SessionCard session={{title:"Fight Visualisation", session_type:"mindset",
+    blocks:[{block_type:"mindset", display_name:"Calm rehearsal", coaching_cues:["Picture a familiar exchange."],
+      stop_rules:["Stop if distress increases."]}]}}/>);
+  assert.match(html, /Stop if distress increases/);
+  assert.doesNotMatch(html, /<details/);
 });

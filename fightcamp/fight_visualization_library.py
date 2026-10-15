@@ -364,7 +364,7 @@ def build_visualization_display_text(
         f"- {entry.name}: {dose} minutes, {kind}. No physical load.",
         *(
             f"  Step {index}: {instruction}"
-            for index, instruction in enumerate(entry.instructions[:3], start=1)
+            for index, instruction in enumerate(entry.instructions, start=1)
         ),
         f"  Cue: {entry.cue}",
     ]

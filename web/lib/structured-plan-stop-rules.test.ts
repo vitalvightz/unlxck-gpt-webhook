@@ -71,6 +71,7 @@ test("legacy labelled planning prose is hidden from execution cues", () => {
       regressions: ["Reduce band tension"],
       substitutions: [],
       progressions: [],
+      prescription: null,
     },
   );
 });
@@ -86,6 +87,7 @@ test("a labelled cue keeps its execution text without showing the label", () => 
       regressions: [],
       substitutions: [],
       progressions: [],
+      prescription: null,
     },
   );
 });

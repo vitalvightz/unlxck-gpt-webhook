@@ -738,6 +738,16 @@ export function mentalSessionSummary(session: StructuredSession): string | null 
   return `${words}…`;
 }
 
+/** Three authored actions: keep the observation and final practical takeaway. */
+export function mentalTaskSteps(lines: string[]): string[] {
+  const numbered = lines.filter(line => /^\s*Step\s*\d+\s*:/i.test(line));
+  const source = numbered.length ? numbered : lines.filter(line =>
+    !/^\s*(?:Cue|Intent|Focus|Reset|Anchor|Purpose|Progress|Stop|Pre-bout)\s*:/i.test(line) &&
+    !/^\s*\d+(?:[–-]\d+)?\s*(?:min|sec|minutes|seconds)\b/i.test(line));
+  const steps = dedupeBlockText(source.map(line => line.replace(/^\s*Step\s*\d+\s*:\s*/i, "")));
+  return steps.length <= 3 ? steps : [steps[0], steps[1], steps[steps.length - 1]];
+}
+
 /** Sessions on this day that count toward physical training frequency. */
 export function getPhysicalSessions(
   day: StructuredDay | null | undefined,
@@ -888,12 +898,14 @@ export function getBlockExecutionDisplay(
   regressions: string[];
   substitutions: string[];
   progressions: string[];
+  prescription: string | null;
 } {
   const cues: string[] = [];
   const stopRules: string[] = [];
   const regressions = getStringList(block?.regression_options);
   const substitutions = getStringList(block?.substitutions);
   const progressions: string[] = [];
+  const prescriptions: string[] = [];
 
   // Legacy deterministic cards can put a dose before "Cue: ... Stop ...".
   // Keep one true execution cue and separate the embedded safety stop.
@@ -902,13 +914,15 @@ export function getBlockExecutionDisplay(
     if (!text) return;
     const embeddedStop = text.match(/^(.*?)\.\s*(Stop\b.+)$/i);
     if (embeddedStop) {
-      if (embeddedStop[1].trim()) cues.push(embeddedStop[1].trim());
+      if (embeddedStop[1].trim()) registerCue(embeddedStop[1].trim());
       stopRules.push(embeddedStop[2].trim());
       return;
     }
-    if (/^\d+(?:\.\d+)?\s*(?:s|sec|seconds)\s+work\b.*\brest\b/i.test(text)) return;
+    if (/^\d+(?:[–-]\d+|\.\d+)?\s*(?:sets?\s*[x×]|[x×]\s*\d|(?:s|sec|seconds)\s+work\b|(?:min|minutes)\b)/i.test(text)) {
+      prescriptions.push(text);
+      return;
+    }
     if (/^Next D-\d+:\s*repeat\b/i.test(text)) {
-      progressions.push(text);
       return;
     }
     cues.push(text);
@@ -950,6 +964,7 @@ export function getBlockExecutionDisplay(
     regressions: dedupeBlockText(regressions),
     substitutions: dedupeBlockText(substitutions),
     progressions: dedupeBlockText(progressions),
+    prescription: dedupeBlockText(prescriptions).join(" ") || null,
   };
 }
 
