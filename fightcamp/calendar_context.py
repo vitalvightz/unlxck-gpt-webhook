@@ -561,8 +561,7 @@ def normal_week_contact_events(
       events come only from it, and a declared hard day is *never* resurrected as a
       hard contact. Each entry resolves through the shared
       :func:`combat_load_policy.contact_load_profile`, so a downgraded day surfaces
-      as reduced/technical contact (still exclusive-physical, so same-day stacking
-      stays illegal) while only ``hard_as_planned`` days become ``HARD_CONTACT``
+      as reduced/technical contact (technical-only permits compatible S&C) while only ``hard_as_planned`` days become ``HARD_CONTACT``
       (which alone drives between-hard and adjacency protection).
 
     Positions are weekday indices; ``scope`` is the week's collision scope.

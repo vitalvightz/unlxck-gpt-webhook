@@ -2609,65 +2609,26 @@ def _non_spar_role_priority_rank(
 
 
 def enforce_total_session_budget(role_map: dict, athlete_model: dict, candidate_pools: dict | None = None) -> dict:
-    """Close the requested appointment budget after locks and fillers are present.
+    """Report appointment discrepancies without deleting selected physical work.
 
-    Use the allocator's existing priority ordering. Contact locks remain owned
-    by the coach; an impossible coach schedule is reported rather than removed.
+    Selection, calendar compatibility and prescription owners have already
+    judged this work. A requested appointment count is not a medical dose cap.
+    The independent validator also keeps over-target totals visible.
     """
     frequency = requested_training_frequency(athlete_model)
     if not frequency:
         return role_map
-    # A phase change can split a real calendar week into two progression weeks.
-    # Neither partial object gets a fresh allowance of standalone appointments.
     slots = [(d["d_day"], d.get("weekday", ""))
              for w in role_map.get("weeks") or [] for d in w.get("calendar_days") or []]
-    windows = cadence_windows(slots)
-    from .goal_preservation import classify_goal_preservation, collect_goal_evidence, _coverage
-    goals = classify_goal_preservation(athlete_model) if candidate_pools else []
-    brief = {"athlete_snapshot": athlete_model, "weekly_role_map": role_map, "candidate_pools": candidate_pools or {}}
-    def rank(role):
-        owner = role["_source_week"]
-        return allocation_sort_key(base_rank=_non_spar_role_priority_rank(
-            role, str(owner.get("phase", "")), len(owner.get("effective_hard_sparring_days") or []) >= 2,
-            _active_weight_cut_is_meaningful(athlete_model),
-            set(clean_list((owner.get("resolved_rule_state") or {}).get("must_keep", owner.get("must_keep", [])))),
-            athlete_model), role=role, athlete_model=athlete_model,
-            dedicated_recovery=role.get("is_dedicated_recovery_mobility_day") is True)
-    for days in windows:
+    appointments = dated_appointments(role_map)
+    for days in cadence_windows(slots):
         offsets = {d for d, _ in days}
-        while True:
-            # Recount after each removal: an embedded movement insert can
-            # become standalone when its host is removed and still costs a slot.
-            appointments = [r for r in dated_appointments(role_map) if r["countdown_offset"] in offsets]
-            if len(appointments) <= frequency:
-                break
-            removable = [r for r in appointments if not r.get("coach_owned")
-                         and r.get("category") not in {"combat", "sparring", "technical"}]
-            if not removable:
-                _append_week_coach_note_flag(appointments[0]["_source_week"], "coach sessions exceed requested total session count")
-                break
-            before = collect_goal_evidence(brief) if goals else []
-            missing_before = [_coverage(goal, brief, before)[1] for goal in goals]
-            def loss_rank(appointment):
-                # These appointments already passed placement/safety. Preserve
-                # their actual goal doses before using soft category priorities
-                # to choose which redundant appointment the budget removes.
-                source = appointment["_source_role"]
-                trial_map = {**role_map, "weeks": [{**w, "session_roles": [r for r in w.get("session_roles") or [] if r is not source]}
-                                                  for w in role_map.get("weeks") or []]}
-                trial = {**brief, "weekly_role_map": trial_map}
-                after = collect_goal_evidence(trial) if goals else []
-                losses = [max(0, len(_coverage(g, trial, after)[1]) - len(old)) for g, old in zip(goals, missing_before)]
-                base = rank(appointment)
-                return (base[0] == 100, sum(n for g, n in zip(goals, losses) if g.get("priority") == "primary"), sum(losses), base)
-            role = min(removable, key=loss_rank)
-            owner = role["_source_week"]
-            owner["session_roles"][:] = [r for r in owner["session_roles"] if r is not role["_source_role"]]
-            owner.setdefault("suppressed_roles", []).append({
-                "category": role.get("category"), "role_key": role.get("role_key"),
-                "reason_code": "total_session_budget", "compression_reason_codes": ["total_session_budget"],
-                "reasons": ["Standalone session exceeds the requested weekly total, including coach sessions and double days."],
-            })
+        scheduled = [r for r in appointments if r["countdown_offset"] in offsets]
+        if len(scheduled) > frequency:
+            _append_week_coach_note_flag(scheduled[0]["_source_week"],
+                f"Session count discrepancy D-{max(offsets)}..D-{min(offsets)}: "
+                f"{len(scheduled)} standalone physical appointments versus {frequency} requested; "
+                "compatible selected work retained, requested count exceeded.")
     return role_map
 
 

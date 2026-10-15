@@ -42,11 +42,10 @@ from .sparring_dose_planner import contact_safety_reasons, hard_sparring_cutoff
 CANONICAL_HARD_SPARRING_LABEL = "Hard sparring — controlled hard contact"
 CANONICAL_HARD_SPARRING_BAN_LABEL = "Technical-only combat"
 # Two distinct notes: a hard-sparring day and a converted technical-only day must never
-# share wording, or a technical-only card would tell the athlete to spar hard. Both
-# keep the "no extra S&C" + "freshness priority" tokens the validator's minimal
-# coach-owned render check looks for.
+# share wording, or a technical-only appointment would instruct hard contact.
+# Compatible S&C is rendered separately from this coach-owned appointment.
 CANONICAL_HARD_SPARRING_NOTE = "Your declared hard-sparring/contact session — no extra S&C. Keep freshness priority."
-CANONICAL_TECHNICAL_ONLY_NOTE = "Technical-only contact today — no hard sparring and no extra S&C. Keep freshness priority."
+CANONICAL_TECHNICAL_ONLY_NOTE = "Technical-only contact today — no hard sparring. Keep freshness priority."
 
 CANONICAL_LIGHT_COMBAT_LABEL = LIGHT_COMBAT_ATHLETE_FACING_LABEL
 CANONICAL_LIGHT_COMBAT_NOTE = (

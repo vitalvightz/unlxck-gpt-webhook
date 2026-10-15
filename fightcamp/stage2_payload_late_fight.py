@@ -2360,7 +2360,8 @@ def ensure_declared_coach_combat_spine(
         if safety_hold and (coach_context or role_key == "light_combat_day"):
             continue
         allowed_filler = is_low_cost_coexistable_filler(role_copy) or role_key == "fight_week_freshness_day"
-        if label in hard_labels and _is_app_owned_visible_role(role_key) and not coach_context and not allowed_filler:
+        if (resolved_contacts.get(_countdown_offset(label)) in {"hard", "reduced"}
+                and _is_app_owned_visible_role(role_key) and not coach_context and not allowed_filler):
             continue
         sequence.append(role_copy)
 
@@ -3022,7 +3023,6 @@ def _late_fight_best_assignment(
     label_to_weekday: dict[str, str],
     label_to_display_weekday: dict[str, str] | None = None,
     label_to_resolved_training_weekday: dict[str, str] | None = None,
-    hard_weekdays: set[str] | None = None,
     resolved_contacts: Sequence[tuple[int, str]] = (),
 ) -> tuple[tuple[int, int, int], list[dict[str, Any]]] | None:
     locked_labels: dict[int, str] = {}
@@ -3060,12 +3060,7 @@ def _late_fight_best_assignment(
             for label in legal_countdown_labels
             if not role_consumes_day_slot or label not in occupied_labels
         ]
-        label_options = _prefer_non_hard_weekday_labels(
-            base_labels,
-            role,
-            label_to_weekday,
-            hard_weekdays,
-        )
+        label_options = base_labels
         for label in label_options:
             if role_consumes_day_slot and label in used_unlocked:
                 continue
@@ -3121,18 +3116,6 @@ def _late_fight_best_assignment(
             scored_roles.append(role_copy)
 
         owner_score = _late_fight_assignment_score(scored_roles, legal_countdown_labels, label_to_weekday)
-        if hard_weekdays:
-            # Coach-owned combat lock: keep programmed S&C off declared spar
-            # weekdays whenever any other legal day can host it. Low-cost
-            # fillers are allowed to attach under the coach-owned combat day.
-            for scored_role in scored_roles:
-                if not _is_app_owned_visible_role(scored_role.get("role_key")):
-                    continue
-                if str(scored_role.get("role_key") or "").strip().lower() not in DAY_EXCLUSIVE_STRESSOR_ROLE_KEYS:
-                    continue
-                assigned_weekday = str(scored_role.get("real_weekday") or "").strip().lower()
-                if assigned_weekday in hard_weekdays:
-                    owner_score -= 100000
         # Lexicographic: canonical legality outranks every owner preference.
         forbid_count, deprioritize_count = _late_fight_legality_cost(scored_roles, resolved_contacts)
         score = (-forbid_count, -deprioritize_count, owner_score)
@@ -3255,7 +3238,6 @@ def _late_fight_allocation_plan(days_until_fight: Any, athlete_model: dict[str, 
                 label_to_weekday,
                 label_to_display_weekday,
                 label_to_resolved_training_weekday,
-                hard_weekdays=_declared_hard_weekdays(athlete_model),
                 resolved_contacts=resolved_contacts,
             )
             if assignment is None:
@@ -3418,45 +3400,6 @@ def _full_countdown_weekday_map(days_until_fight: Any, athlete_model: dict[str, 
     )
 
 
-def _declared_hard_weekdays(athlete_model: dict[str, Any]) -> set[str]:
-    return {
-        str(day).strip().lower()
-        for day in _ordered_weekdays(clean_list(athlete_model.get("hard_sparring_days", [])))
-        if str(day).strip()
-    }
-
-
-def _role_has_non_hard_weekday_option(
-    role: dict[str, Any],
-    label_to_weekday: dict[str, str],
-    hard_weekdays: set[str],
-) -> bool:
-    return any(
-        str(label_to_weekday.get(str(label)) or "").strip().lower() not in hard_weekdays
-        for label in role.get("legal_countdown_labels", [])
-    )
-
-
-def _prefer_non_hard_weekday_labels(
-    labels: list[str],
-    role: dict[str, Any],
-    label_to_weekday: dict[str, str],
-    hard_weekdays: set[str] | None,
-) -> list[str]:
-    if not hard_weekdays or not _is_app_owned_visible_role(role.get("role_key")):
-        return labels
-    if str(role.get("role_key") or "").strip().lower() not in DAY_EXCLUSIVE_STRESSOR_ROLE_KEYS:
-        return labels
-    if is_low_cost_coexistable_filler(role):
-        return labels
-    non_hard_labels = [
-        label
-        for label in labels
-        if str(label_to_weekday.get(label) or "").strip().lower() not in hard_weekdays
-    ]
-    return non_hard_labels or labels
-
-
 def _assign_role_to_countdown_label(
     role: dict[str, Any],
     label: str,
@@ -3563,7 +3506,6 @@ def _composite_role_key_cap(role_key: str, days_until_fight: Any) -> int | None:
 def _score_composite_practical_assignment(
     assigned_roles: list[dict[str, Any]],
     label_to_weekday: dict[str, str],
-    hard_weekdays: set[str],
 ) -> int:
     score = 0
     visible_roles = [
@@ -3589,17 +3531,6 @@ def _score_composite_practical_assignment(
                 score -= abs(offset - min(legal_offsets)) * 45
         if original_offset is not None:
             score -= abs(offset - original_offset) * 8
-        if _is_app_owned_visible_role(role.get("role_key")):
-            # Declared spar weekdays are coach-owned combat days. Keep app-owned
-            # stressors off them, but allow low-cost fillers to attach under the
-            # coach-owned combat role.
-            weekday = str(label_to_weekday.get(str(role.get("scheduled_countdown_label") or "")) or "").strip().lower()
-            if (
-                str(role.get("role_key") or "").strip().lower() in DAY_EXCLUSIVE_STRESSOR_ROLE_KEYS
-                and weekday in hard_weekdays
-                and _role_has_non_hard_weekday_option(role, label_to_weekday, hard_weekdays)
-            ):
-                score -= 8000
 
     ordered_visible = sorted(visible_roles, key=lambda role: int(role.get("countdown_offset") or 0), reverse=True)
     for first_role, second_role in zip(ordered_visible, ordered_visible[1:]):
@@ -3661,7 +3592,6 @@ def _space_bridge_countdown_roles(
     hard_spar_cap = _declared_hard_spar_cap(days_until_fight, athlete_model)
     label_to_weekday = _full_countdown_weekday_map(days_until_fight, athlete_model)
     label_to_display_weekday = dict(label_to_weekday)
-    hard_weekdays = _declared_hard_weekdays(athlete_model)
     # Authoritative resolved contact truth for the whole bridge window (full
     # hard/reduced/technical/off vocabulary), consumed by the shared-legality
     # scorer — never re-resolved from role labels + offsets.
@@ -3720,7 +3650,7 @@ def _space_bridge_countdown_roles(
         if isinstance(hard_spar_cap, int) and hard_spar_count > hard_spar_cap:
             return
         if index >= len(ordered_roles):
-            owner_score = _score_composite_practical_assignment(assigned, label_to_weekday, hard_weekdays)
+            owner_score = _score_composite_practical_assignment(assigned, label_to_weekday)
             owner_score += _composite_role_selection_score(assigned, days_until_fight)
             # Lexicographic: canonical legality outranks every owner preference.
             forbid_count, deprioritize_count = _late_fight_legality_cost(assigned, resolved_contacts)
@@ -3752,12 +3682,6 @@ def _space_bridge_countdown_roles(
             role,
             label_to_weekday=label_to_weekday,
             training_days=training_days,
-        )
-        labels = _prefer_non_hard_weekday_labels(
-            labels,
-            role,
-            label_to_weekday,
-            hard_weekdays,
         )
         if not labels:
             if role_is_visible:
@@ -3992,15 +3916,13 @@ def _append_declared_hard_spar_context(
                 "selection_rule": (
                     "Declared hard-sparring/contact day converted to technical-only combat "
                     "under the resolved hard-sparring restriction; render it as a hard-sparring/contact "
-                    "label, never as a programmed S&C session. The athlete owns the "
-                    "whole day — do not stack any programmed S&C on it."
+                    "label. Compatible planner-selected S&C remains a separate appointment."
                 ),
                 "anchor": _role_anchor("hard_sparring_day"),
                 "placement_rule": (
                     "Keep this declared contact day fixed on the athlete's stated weekday. "
-                    "Always surface the hard-sparring/contact label on that day and keep the day "
-                    "clean: no programmed S&C session is scheduled on a declared hard-sparring/"
-                    "contact day."
+                    "Surface its resolved technical-only label; retain any compatible "
+                    "S&C already selected by the planner."
                 ),
                 "cost_class": "low",
                 "stress_class": "support",
@@ -4157,7 +4079,6 @@ def _ensure_compressed_freshness_role(
         return allocation
     roles = list(allocation.get("session_roles", []))
     countdown_map = dict((allocation.get("allocator", {}) or {}).get("countdown_weekday_map", {}))
-    hard_weekdays = _declared_hard_weekdays(athlete_model)
     if any(
         str(role.get("role_key") or "") == "fight_week_freshness_day"
         and _is_app_owned_visible_role(role.get("role_key"))
@@ -4174,12 +4095,7 @@ def _ensure_compressed_freshness_role(
     ]
     if not labels_with_offsets:
         return allocation
-    non_hard_labels = [
-        item
-        for item in labels_with_offsets
-        if str(countdown_map.get(str(item[0])) or "").strip().lower() not in hard_weekdays
-    ]
-    label = str(min(non_hard_labels or labels_with_offsets, key=lambda item: int(item[1] or 0))[0])
+    label = str(min(labels_with_offsets, key=lambda item: int(item[1] or 0))[0])
     role = _late_fight_role_entry(
         category="recovery",
         role_key="fight_week_freshness_day",
@@ -4740,7 +4656,7 @@ def _handoff_mode_instructions(payload_mode: str) -> str:
         "If late_fight_plan_spec.surviving_hard_spar_days / late_fight_plan_spec.downgraded_declared_spar_days are present, use those fields as source of truth and add one short deterministic sentence (hard days first, downgraded days second).\n"
         "Add one short rationale only when placement/compression would otherwise make day choice look arbitrary.\n"
         "One hard-spar doctrine per output. No split schedule realities.\n"
-"Hard sparring days are the athlete's own combat locks (run in their gym, with or without a coach). The app must not prescribe the sparring and must respect resolved safety, readiness, and calendar restrictions. Only for a resolved hard-as-planned day render the label \"" + CANONICAL_HARD_SPARRING_LABEL + "\" (or sport-equivalent like \"MMA — hard sparring / controlled hard contact\") followed by exactly one note: \"" + CANONICAL_HARD_SPARRING_NOTE + "\" From D-14 normally, or D-17 with elevated risk, hard sparring is converted to technical work: render \"" + CANONICAL_HARD_SPARRING_BAN_LABEL + "\" (or sport-equivalent) followed by exactly one note: \"" + CANONICAL_TECHNICAL_ONLY_NOTE + "\" — a technical-only day must never carry the hard-sparring note. No round counts, no time-x-rounds, no intensity targets, no dose, no RPE, no work:rest, no sparring template wording. Nothing else — never schedule or list programmed S&C on a declared hard-sparring/contact day."
+"Hard sparring days are the athlete's own combat locks (run in their gym, with or without a coach). The app must not prescribe the sparring and must respect resolved safety, readiness, and calendar restrictions. Only for a resolved hard-as-planned day render the label \"" + CANONICAL_HARD_SPARRING_LABEL + "\" (or sport-equivalent like \"MMA — hard sparring / controlled hard contact\") followed by exactly one note: \"" + CANONICAL_HARD_SPARRING_NOTE + "\" From D-14 normally, or D-17 with elevated risk, hard sparring is converted to technical work: render \"" + CANONICAL_HARD_SPARRING_BAN_LABEL + "\" (or sport-equivalent) followed by exactly one note: \"" + CANONICAL_TECHNICAL_ONLY_NOTE + "\" — a technical-only day must never carry the hard-sparring note. No round counts, no time-x-rounds, no intensity targets, no dose, no RPE, no work:rest, no sparring template wording. Keep the coach appointment minimal. Render any compatible planner-selected S&C separately; effective hard or reduced contact still forbids extra physical work."
     )
     if payload_mode == "fight_day_protocol_payload":
         return (

@@ -668,6 +668,7 @@ def _select_bounded_records(
     pressure: int,
     preserve_trunk_support: bool = False,
     preserve_adaptation: str = "",
+    preserve_weakness: str = "",
 ) -> tuple[list[dict[str, Any]], dict[str, str]]:
     family_limit = 2 if pressure == 0 else 1
     selected: list[dict[str, Any]] = []
@@ -697,6 +698,11 @@ def _select_bounded_records(
     if primary is not None and cap > 0:
         _add_record(primary, selected, family_counts)
         unsatisfied_groups = [group for group in unsatisfied_groups if not _covers(primary, group)]
+    # Complement the primary goal inside the same established exercise cap.
+    weakness = next((r for r in records if preserve_weakness in r.get("adaptations", ())), None) if preserve_weakness else None
+    if weakness is not None and weakness not in selected and len(selected) < cap:
+        _add_record(weakness, selected, family_counts)
+        unsatisfied_groups = [group for group in unsatisfied_groups if not _covers(weakness, group)]
     while unsatisfied_groups:
         if len(selected) >= cap:
             break
@@ -1224,9 +1230,9 @@ def _assign_selected_records(
 ) -> None:
     assignments = []
     for record in selected_records:
-        assignment = assignment_from_slot(
-            entry["phase"], "strength_slots", record["slot"]
-        )
+        assignment = (conditioning_assignment_from_slot(entry["phase"], record["slot"], record["slot"]["selected"])
+                      if record.get("slot_group") == "conditioning_slots"
+                      else assignment_from_slot(entry["phase"], "strength_slots", record["slot"]))
         if assignment:
             assignments.append(assignment)
     entry["role"]["selected_exercise_assignments"] = assignments
@@ -1319,6 +1325,7 @@ def _apply_adjacent_strength_recovery(
             pressure=current["pressure"],
             preserve_trunk_support=current["preserve_trunk_support"],
             preserve_adaptation=current.get("preserve_adaptation", ""),
+            preserve_weakness=current.get("preserve_weakness", ""),
         )
         if selected_records:
             _assign_selected_records(current, selected_records)
@@ -1418,6 +1425,10 @@ def compose_normal_strength_assignments(
         pressure_context = _composition_context_from_model(None)
     trunk_strength_selected = _trunk_strength_selected(athlete_model)
     primary_adaptation = _primary_goal_adaptation(athlete_model)
+    from .priority_profile import build_priority_profile
+    # Other weakness families retain their existing composition owners (for
+    # example trunk support); the selected moving-footwork bank is complementary.
+    primary_weakness = "footwork" if build_priority_profile(athlete_model or {}).primary_weak_area == "footwork" else ""
 
     weekly_role_map["strength_composition_context"] = dict(pressure_context)
     composed_roles: list[dict[str, Any]] = []
@@ -1489,20 +1500,48 @@ def compose_normal_strength_assignments(
                 if isinstance(slot, dict) and (slot.get("session_index") or 1) == session_index
             ]
             records = _candidate_records(owned_slots)
+            # Selection distributes slots before calendar suppression. The
+            # surviving session can use eligible complementary pool members;
+            # an alternate remains one substitution for its original slot.
+            active_indices = {r.get("strength_session_index") or 1 for r in week.get("session_roles") or []
+                              if r is not role and r.get("category") == "strength" and role_d_day(week, r) is not None}
+            available_slots = [slot for slot in slots if slot in owned_slots
+                               or (slot.get("session_index") or 1) not in active_indices]
+            priorities = {primary_adaptation, primary_weakness} - {""}
+            records.extend(r for r in _candidate_records(available_slots)
+                           if priorities.intersection(r["adaptations"]) and r["slot"] not in owned_slots)
+            if primary_weakness == "footwork":
+                for slot in (pool or {}).get("conditioning_slots") or []:
+                    if slot.get("role") != "technical_footwork":
+                        continue
+                    # The conditioning selector already chose and filtered this
+                    # physical movement drill. Use its own dose within this
+                    # session's cap rather than substituting stance/prep cues.
+                    for record in _candidate_records([slot]):
+                        record.update(adaptations=frozenset({"footwork"}), slot_group="conditioning_slots")
+                        records.append(record)
             if primary_adaptation and not any(primary_adaptation in r["adaptations"] for r in records):
-                # Slot distribution precedes calendar suppression. When another
-                # strength session has been removed, its already-filtered goal
-                # candidate must remain available to the surviving session.
-                active_indices = {r.get("strength_session_index") or 1 for r in week.get("session_roles") or []
-                                  if r is not role and r.get("category") == "strength" and role_d_day(week, r) is not None}
-                records.extend(r for r in _candidate_records(slots)
-                               if primary_adaptation in r["adaptations"]
-                               and (r["slot"].get("session_index") or 1) not in active_indices
-                               and r["slot"] not in owned_slots)
+                promoted = False
+                for slot in available_slots:
+                    for index, alternate in enumerate(slot.get("alternates") or []):
+                        alternate_slot = {**slot, "slot_id": f"{slot['slot_id']}:alternate:{index}",
+                                          "selected": alternate, "alternates": []}
+                        matches = [r for r in _candidate_records([alternate_slot])
+                                   if primary_adaptation in r["adaptations"]]
+                        if matches:
+                            # One substitute for this slot, never the selected
+                            # exercise plus its backups as extra circuit members.
+                            records = [r for r in records if r["slot"].get("slot_id") != slot.get("slot_id")]
+                            records.extend(matches)
+                            promoted = True
+                            break
+                    if promoted:
+                        break
             role_key = str(role.get("role_key") or "").strip()
             base_cap, effective_cap = _effective_role_cap(role_key, pressure)
             prior_policy = role.get("strength_composition_policy") or {}
-            priced_names = {p.get("name") for p in role.get("effective_strength_prescriptions") or []
+            priced_names = {p.get("name") for p in [*(role.get("effective_strength_prescriptions") or []),
+                                                    *(role.get("selected_exercise_assignments") or [])]
                             if p.get("effective_prescription")}
             members = role.get("selected_exercise_assignments") or []
             closed_current = (only_roles is None and bool(members)
@@ -1541,11 +1580,14 @@ def compose_normal_strength_assignments(
                 pressure=pressure,
                 preserve_trunk_support=trunk_strength_selected,
                 preserve_adaptation=primary_adaptation,
+                preserve_weakness=primary_weakness,
             )
 
             assignments: list[dict[str, Any]] = []
             for record in selected_records:
-                assignment = assignment_from_slot(phase, "strength_slots", record["slot"])
+                assignment = (conditioning_assignment_from_slot(phase, record["slot"], record["slot"]["selected"])
+                              if record.get("slot_group") == "conditioning_slots"
+                              else assignment_from_slot(phase, "strength_slots", record["slot"]))
                 if assignment:
                     assignments.append(assignment)
             role["selected_exercise_assignments"] = assignments
@@ -1583,6 +1625,7 @@ def compose_normal_strength_assignments(
                     "pressure": pressure,
                     "preserve_trunk_support": trunk_strength_selected,
                     "preserve_adaptation": primary_adaptation,
+                    "preserve_weakness": primary_weakness,
                     "week_ordinal": week_position + 1,
                     "standalone_eligible": (
                         pressure <= _STANDALONE_STRENGTH_MAX_PRESSURE
@@ -2214,6 +2257,54 @@ def _meets_low_load_support_contract(role: dict[str, Any], metadata: dict[str, A
     )
 
 
+def conditioning_assignment_from_slot(
+    phase: str, slot: dict[str, Any], option: dict[str, Any],
+    *, is_selected: bool = True, allocated_rounds: int | None = None,
+) -> dict[str, Any]:
+    """Existing conditioning membership and dose authority, also for complements."""
+    name = str(option.get("name") or "")
+    assignment = {
+        "slot_id": slot.get("slot_id"),
+        "name": name,
+        "source_phase": phase,
+        "slot_group": "conditioning_slots",
+        "selected_option": is_selected,
+        "base_prescription": _conditioning_prescription(option),
+        "effective_prescription": _conditioning_prescription(option, rounds=allocated_rounds),
+        "effective_rounds": allocated_rounds,
+        "support_only": option.get("support_only") is True,
+        "meaningful_stress": option.get("meaningful_stress") is True,
+        "fulfillment_authority": option.get("fulfillment_authority") is True,
+    }
+    stamp_exercise_key(assignment)
+    # Carry the canonical structured dose alongside the rendered
+    # text. The assignment is what persists; the candidate pool it
+    # was resolved from is compacted, so a downstream reader that
+    # only sees the assignment had no numeric dose at all and could
+    # not tell 8 x 5 sec / 60 sec alactic work from anything else.
+    # Structured recognition must never depend on parsing the
+    # human-readable prescription back out.
+    effective_dose = _conditioning_effective_dose(option)
+    metadata = option.get("selection_metadata") or {}
+    for field in ("rpe", "lactate_load", "intensity"):
+        if metadata.get(field) is not None:
+            assignment[field] = metadata[field]
+    for field in ("work_sec", "rest_sec", "rounds"):
+        value = _float_or_none(effective_dose.get(field))
+        if value is not None:
+            assignment[field] = value
+    # Same reason as the strength path: the realised mechanical
+    # identity of the session must survive onto the assignment.
+    conditioning_tags = option_mechanical_risk_tags(option)
+    if conditioning_tags:
+        assignment["mechanical_risk_tags"] = sorted(conditioning_tags)
+    notes = _selected_coaching_notes(option)
+    if notes:
+        assignment["coaching_notes"] = notes
+    assignment.update(_selected_coaching_fields(option))
+    return assignment
+
+
 def compose_normal_conditioning_assignments(
     *,
     weekly_role_map: dict[str, Any],
@@ -2411,45 +2502,9 @@ def compose_normal_conditioning_assignments(
                 if name:
                     selected_names.add(name)
                 allocated_rounds = high_load_rounds.get(name)
-                assignment = {
-                    "slot_id": slot.get("slot_id"),
-                    "name": name,
-                    "source_phase": phase,
-                    "slot_group": "conditioning_slots",
-                    "selected_option": is_selected,
-                    "base_prescription": _conditioning_prescription(option),
-                    "effective_prescription": _conditioning_prescription(option, rounds=allocated_rounds),
-                    "effective_rounds": allocated_rounds,
-                    "support_only": option.get("support_only") is True,
-                    "meaningful_stress": option.get("meaningful_stress") is True,
-                    "fulfillment_authority": option.get("fulfillment_authority") is True,
-                }
-                stamp_exercise_key(assignment)
-                # Carry the canonical structured dose alongside the rendered
-                # text. The assignment is what persists; the candidate pool it
-                # was resolved from is compacted, so a downstream reader that
-                # only sees the assignment had no numeric dose at all and could
-                # not tell 8 x 5 sec / 60 sec alactic work from anything else.
-                # Structured recognition must never depend on parsing the
-                # human-readable prescription back out.
-                effective_dose = _conditioning_effective_dose(option)
-                metadata = option.get("selection_metadata") or {}
-                for field in ("rpe", "lactate_load", "intensity"):
-                    if metadata.get(field) is not None:
-                        assignment[field] = metadata[field]
-                for field in ("work_sec", "rest_sec", "rounds"):
-                    value = _float_or_none(effective_dose.get(field))
-                    if value is not None:
-                        assignment[field] = value
-                # Same reason as the strength path: the realised mechanical
-                # identity of the session must survive onto the assignment.
-                conditioning_tags = option_mechanical_risk_tags(option)
-                if conditioning_tags:
-                    assignment["mechanical_risk_tags"] = sorted(conditioning_tags)
-                notes = _selected_coaching_notes(option)
-                if notes:
-                    assignment["coaching_notes"] = notes
-                assignment.update(_selected_coaching_fields(option))
+                assignment = conditioning_assignment_from_slot(
+                    phase, slot, option, is_selected=is_selected, allocated_rounds=allocated_rounds,
+                )
                 assignments.append(assignment)
 
             trunk_support_added = False
@@ -2569,9 +2624,11 @@ def _refresh_stress_stamps(weekly_role_map: dict[str, Any]) -> list[dict[str, An
                 continue
             stress = realised_role_stress(role)
             if stress is None:
-                # No longer measurable: drop any stamp from an earlier round
-                # rather than leave one describing a dose that no longer exists.
-                role.pop("calendar_stress", None)
+                # Drop only our stale derived measurement. Explicit technical
+                # stress remains authoritative even without app-owned exercises.
+                stamp = role.get("calendar_stress")
+                if isinstance(stamp, dict) and stamp.get("authority") == "realised_session_composition":
+                    role.pop("calendar_stress", None)
                 continue
             role["calendar_stress"] = _stress_stamp(stress)
             stamped.append(role)

@@ -15,7 +15,7 @@ from fightcamp.stage2_role_map import _build_weekly_role_map
 TRAINING_DAYS = ["monday", "tuesday", "wednesday", "thursday", "friday"]
 
 
-def test_downgraded_hard_sparring_technical_remains_strict():
+def test_downgraded_hard_sparring_technical_uses_resolved_compatibility():
     low_aerobic = role_load_profile(
         {
             "category": "conditioning",
@@ -34,7 +34,7 @@ def test_downgraded_hard_sparring_technical_remains_strict():
     )
     assert resolved_hard_day is not None
     assert resolved_hard_day.load_class is LoadClass.TECHNICAL_CONTACT
-    assert resolved_hard_day.allows_light_combat_stack is False
+    assert resolved_hard_day.allows_light_combat_stack is True
 
     strict = evaluate_candidate_at_position(
         low_aerobic,
@@ -42,7 +42,7 @@ def test_downgraded_hard_sparring_technical_remains_strict():
         events=[CalendarEvent(2, resolved_hard_day, ("normal_week", 1))],
         candidate_scope=("normal_week", 1),
     )
-    assert strict.directive is PlacementDirective.FORBID
+    assert strict.directive is not PlacementDirective.FORBID
 
     declared_light = role_load_profile({"role_key": LIGHT_COMBAT_ROLE_KEY})
     assert declared_light is not None

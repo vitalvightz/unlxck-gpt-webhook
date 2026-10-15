@@ -1640,6 +1640,7 @@ def _coach_led_body_line_is_minimal(line: str) -> bool:
         phrase_in_text(normalized, "coach-owned combat session")
         or phrase_in_text(normalized, "coach owned combat session")
         or phrase_in_text(normalized, "no extra s&c")
+        or phrase_in_text(normalized, "technical-only contact today — no hard sparring")
         or phrase_in_text(normalized, "no app s&c")
     ) and phrase_in_text(normalized, "freshness priority")
 
@@ -3996,18 +3997,28 @@ def _underfilled_conditioning_errors(planning_brief: dict) -> list[dict]:
     return errors
 
 
-def _total_session_budget_errors(planning_brief: dict) -> list[dict]:
+def _total_session_budget_warnings(planning_brief: dict) -> list[dict]:
+    """Keep requested-count overruns explicit without rejecting valid training."""
     from .goal_preservation import _effective_map
-    from .physical_session_frequency import appointment_budget_exceeded, requested_training_frequency
-    # This fix closes normal allocation and goal repair. The separate direct
-    # countdown owner retains its existing occupancy contract.
-    if "late_fight_session_sequence" in planning_brief:
-        return []
+    from .physical_session_frequency import cadence_windows, dated_appointments, requested_training_frequency
     frequency = requested_training_frequency(planning_brief.get("athlete_snapshot"))
-    if frequency and appointment_budget_exceeded(_effective_map(planning_brief), frequency):
-        return [_issue(code="total_session_budget_exceeded", severity="blocker", confidence="high",
-                       message="Scheduled standalone sessions exceed the requested weekly total, including coach sessions and double days.")]
-    return []
+    if not frequency:
+        return []
+    role_map = _effective_map(planning_brief)
+    appointments = dated_appointments(role_map)
+    slots = [(d["d_day"], d.get("weekday", ""))
+             for w in role_map.get("weeks") or [] for d in w.get("calendar_days") or []]
+    warnings = []
+    for days in cadence_windows(slots):
+        offsets = {d for d, _ in days}
+        count = sum(r["countdown_offset"] in offsets for r in appointments)
+        if count > frequency:
+            warnings.append(_issue(code="total_session_budget_exceeded", severity="warning", confidence="high",
+                message=f"D-{max(offsets)}..D-{min(offsets)} schedules {count} standalone physical appointments "
+                        f"versus {frequency} requested. Compatible selected work retained; requested count exceeded.",
+                requested_sessions=frequency, scheduled_sessions=count,
+                max_d_day=max(offsets), min_d_day=min(offsets)))
+    return warnings
 
 
 def validate_stage2_output(*, planning_brief: dict, final_plan_text: str, final_programme: bool = True) -> dict:
@@ -4022,12 +4033,11 @@ def validate_stage2_output(*, planning_brief: dict, final_plan_text: str, final_
     from .programme_fidelity import programme_fidelity_findings
     if final_programme:
         errors.extend(programme_fidelity_findings(planning_brief, final_plan_text))
-    errors.extend(_total_session_budget_errors(planning_brief))
     if goal_contract_valid:
         errors.extend(_goal_preservation_render_errors(planning_brief, final_plan_text))
     errors.extend(_priority_microdose_render_errors(planning_brief, final_plan_text))
     errors.extend(_underfilled_conditioning_errors(planning_brief))
-    warnings: list[dict[str, Any]] = []
+    warnings: list[dict[str, Any]] = _total_session_budget_warnings(planning_brief)
     if not plan_lines:
         errors.append(_issue(code="stage2_output_empty", message="Stage 2 output is empty.", severity="blocker", confidence="high"))
     errors.extend(_stage2_output_incomplete_errors(final_plan_text))

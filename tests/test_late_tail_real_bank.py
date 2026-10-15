@@ -237,13 +237,13 @@ def test_original_bank_authority_checks_style_taper_phase(mma_brief):
     assert "selected_exercise_phase_ineligible" in {f["code"] for f in late_physical_planner_preflight(brief)}
 
 
-def test_production_boxing_tail_stops_repeating_one_primer_on_d12_d7_d5():
+def test_production_boxing_tail_preserves_real_primers_on_d12_d7_d5():
     """Observed production regression: one primer on D-12, D-7 and D-5.
 
     Boxing pressure fighter, D-16 at generation, power + skill refinement,
     footwork weakness, low fatigue, no injury, active cut, 5 sessions/week. The
-    top-ranked primer is legitimate and still opens the tail; the later days now
-    take equally appropriate, no-more-expensive primers the tail has not used.
+    Real selected work leads each session. Variety remains a preference within
+    the existing countdown/contact envelopes, rather than a dose reduction.
     """
     brief = real_brief(
         "boxing", days_until_fight=16,
@@ -268,22 +268,27 @@ def test_production_boxing_tail_stops_repeating_one_primer_on_d12_d7_d5():
         for item in role["selected_exercise_assignments"]
         if item["name"] in BANK
     ]
-    # No Style Taper primer repeats across D-12, D-7 and D-5.
-    assert len(set(names)) == len(names) >= 3, names
+    # Familiar speed work may recur rather than losing a real full-rest dose
+    # to enforce novelty. The sessions still carry several distinct drills.
+    assert len(set(names)) >= 3 and len(names) >= 3, names
     # The relevance leader is preserved, not demoted, and still opens the tail.
     assert names[0] == "Explosive First-Step Cue"
     for role in roles:
         members = role["selected_exercise_assignments"]
         assert 1 <= len(members) <= 3
         assert len({item["name"] for item in members}) == len(members)
-    # No later primer buys variety with a costlier session than the leader's.
-    leader = BANK[names[0]]
-    for name in names[1:]:
-        item = BANK[name]
-        assert item["contact_level"] == leader["contact_level"]
-        assert item["rpe_max"] <= leader["rpe_max"]
-        assert item["rounds"] <= leader["rounds"]
-        assert item["rounds"] * item["work_sec"] <= leader["rounds"] * leader["work_sec"]
+    # Actual countdown limits remain binding. Another drill's raw bank dose
+    # is not an additional session envelope or contact prohibition.
+    from fightcamp.style_taper_governance import ALLOWED_CONTACT_BY_WINDOW, RPE_MAX_BY_WINDOW
+    for role in roles:
+        window = style_taper_window_for_days(int(role["scheduled_countdown_label"][2:]))
+        for member in role["selected_exercise_assignments"]:
+            if member["name"] not in BANK:
+                continue
+            item = BANK[member["name"]]
+            assert window in item["late_windows"]
+            assert item["contact_level"] in ALLOWED_CONTACT_BY_WINDOW[window]
+            assert item["rpe_max"] <= RPE_MAX_BY_WINDOW[window]
 
     # Deterministic: the same inputs reproduce the same tail.
     _, repeat = _build_late_fight_allowed_exercises_by_day(

@@ -1089,7 +1089,10 @@ def _late_primer_candidate_order(
         return _slot_selected_option(match[2]).get("source") == "style_taper"
 
     meaningful = [m for m in unique if not is_style_taper(m) and not _slot_support_only(m[2])]
-    support = [m for m in unique if not is_style_taper(m) and _slot_support_only(m[2])]
+    support = [m for m in unique if not is_style_taper(m) and _slot_support_only(m[2])
+               and not _slot_selected_option(m[2]).get("generic_fallback")]
+    fallback = [m for m in unique if not is_style_taper(m) and _slot_support_only(m[2])
+                and _slot_selected_option(m[2]).get("generic_fallback")]
     style_taper = _rank_style_taper_primer_matches(
         [m for m in unique if is_style_taper(m)], usage
     )
@@ -1106,7 +1109,9 @@ def _late_primer_candidate_order(
                            style_taper.index(m)),
         )
         style_taper = [promoted, *(m for m in style_taper if m is not promoted)]
-    return meaningful + support + style_taper
+    # A generic, non-fulfilling maintenance fallback must not displace an
+    # eligible bank drill with an actual full-rest physical prescription.
+    return meaningful + support + style_taper + fallback
 
 
 def _style_taper_sport_specific(option: dict[str, Any]) -> bool:
@@ -1448,22 +1453,6 @@ def _late_primer_relocate(
     return members, kept_complements, target
 
 
-def _late_primer_member_limit() -> int:
-    """Members this athlete's primer may hold.
-
-    Readiness reduces through the dose owner's existing single bounded step
-    (``prescription_resolver``: high fatigue, a capacity-restricting cut or an
-    injury restriction each reduce by one). Applied to a primer it removes one
-    complement, so a higher-risk athlete never receives a larger session than a
-    lower-risk one from the same candidates.
-    """
-    from .planner_context import get_planner_athlete_model
-    from .prescription_resolver import _athlete_dose_reduction, athlete_dose_state
-
-    reduction = _athlete_dose_reduction(athlete_dose_state(get_planner_athlete_model()))
-    return max(1, LATE_PRIMER_MAX_MEMBERS - reduction)
-
-
 def _select_late_primer_members(
     matches: list[tuple[str, str, dict[str, Any]]],
     role: dict[str, Any],
@@ -1480,6 +1469,18 @@ def _select_late_primer_members(
     members and the indices of the complementary (single-set) ones.
     """
     ordered = _late_primer_candidate_order(matches, usage)
+    if role.get("role_key") == "alactic_sharpness_day":
+        # Select the alactic appointment from actual full-rest speed doses.
+        # A support label/priority must not put a short-rest accessory ahead
+        # of an eligible bank speed drill, then reduce that drill to one round.
+        from .conditioning import _conditioning_structured_profile
+        speed = [match for match in ordered if match[1] == "conditioning_slots"
+                 and _conditioning_structured_profile(
+                     _slot_selected_option(match[2]).get("selection_metadata") or _slot_selected_option(match[2]),
+                     system="alactic")["speed_development"]
+                 and not _slot_selected_option(match[2]).get("generic_fallback")]
+        speed.sort(key=lambda match: usage.name_uses.get(_style_taper_usage_name(_slot_selected_option(match[2])), 0))
+        ordered = speed + [match for match in ordered if match not in speed]
     if not ordered:
         return [], set()
     # The lead is the best candidate whose own session stays below the
@@ -1490,7 +1491,8 @@ def _select_late_primer_members(
 
     lead = next((match for match in ordered if fits(match)), ordered[0])
     ordered = [lead, *(match for match in ordered if match is not lead)]
-    member_limit = _late_primer_member_limit()
+    # Countdown and readiness already limit each member through the dose owner.
+    member_limit = LATE_PRIMER_MAX_MEMBERS
     chosen = [ordered[0]]
     stimuli = {_late_primer_stimulus(ordered[0])}
     loaded_used = _late_primer_is_loaded(ordered[0])
@@ -1682,6 +1684,23 @@ def _build_late_fight_allowed_exercises_by_day(
             # Stage 2 renders it directly, mirroring normal conditioning.  Loaded
             # strength tail doses stay owned by the scheduled-day resolver
             # (effective_strength_prescriptions) so a taper cap is never bypassed.
+            if slot_group == "strength_slots" and role.get("category") != "strength":
+                # A retained recovery/support appointment may contain an eligible
+                # bank strength-support member. Price it with the same scheduled
+                # countdown and readiness owner instead of leaving an AI-dose gap.
+                from .late_camp_role_morph import late_fight_strength_dose_cap
+                from .prescription_resolver import resolve_strength_slot_prescription, athlete_dose_state
+                from .planner_context import get_planner_athlete_model
+                probe = dict(role)
+                cap = late_fight_strength_dose_cap(scheduled_offset)
+                if cap:
+                    probe.update(strength_dose_cap={key: cap[key] for key in ("max_sets", "max_reps", "loaded_allowed")},
+                                 rpe_cap=cap.get("rpe_cap"))
+                resolved = resolve_strength_slot_prescription(
+                    role=probe, slot=slot, athlete_state=athlete_dose_state(get_planner_athlete_model()),
+                )
+                assignment.update(base_prescription=option.get("prescription"),
+                                  effective_prescription=resolved.get("effective_prescription"))
             if slot_group == "conditioning_slots":
                 prescription = _conditioning_prescription(option)
                 if prescription:
@@ -2057,7 +2076,10 @@ def build_planning_brief(
         _refresh_stress_stamps(role_map)
     # Within-day execution order is decided once the calendar and membership are
     # final; it reads the finished days and writes only ``execution_order``.
-    return stamp_role_execution_order(reconcile_goal_preservation(brief))
+    brief = reconcile_goal_preservation(brief)
+    from .goal_preservation import _effective_map
+    enforce_total_session_budget(_effective_map(brief), athlete_model, candidate_pools)
+    return stamp_role_execution_order(brief)
 
 
 def _build_planning_brief(
@@ -2300,8 +2322,6 @@ def _build_planning_brief(
         )
 
     _resolve_strength_doses(weekly_role_map)
-    enforce_total_session_budget(weekly_role_map, athlete_model, candidate_pools)
-    _resolve_strength_doses(weekly_role_map)
     # Composition plus dose resolution is the first point at which a session's
     # real cross-day cost is knowable. Until here the calendar has only judged
     # roles by the promise their role key makes, and a strength assignment
@@ -2341,7 +2361,6 @@ def _build_planning_brief(
         recompose_conditioning_callback=_recompose_conditioning,
         recompose_strength_callback=_recompose_strength,
     )
-    enforce_total_session_budget(weekly_role_map, athlete_model, candidate_pools)
     _resolve_strength_doses(weekly_role_map)
     # Physical placement and budgets are final: mental support must still be
     # attached to a surviving appointment, including across the tail splice.
@@ -3118,7 +3137,7 @@ def build_stage2_payload(
             "If the athlete's declared equipment already resolves the choice, do not show a fallback branch.",
             "If declared hard sparring or support work days exist, use them to make the weekly rhythm more concrete instead of writing generic sparring caveats.",
             "Treat declared hard sparring days in weekly_role_map as immutable hard_sparring_day slots except when final_week_sparring_cap.active is true. In final taper weeks, final_week_sparring_cap overrides the coach-declared hard-day lock: render at most one effective hard sparring day, and do not present capped_declared_hard_sparring_days as sparring.",
-"Hard sparring days are the athlete's own combat locks (run in their gym, with or without a coach). The app does not prescribe or lead the sparring itself, and it must respect resolved safety, readiness, and calendar restrictions on every declared hard sparring day. Only for a resolved hard-as-planned day render the label '" + CANONICAL_HARD_SPARRING_LABEL + "' (or the equivalent sport-specific label such as 'MMA — hard sparring / controlled hard contact') followed by exactly one short note: '" + CANONICAL_HARD_SPARRING_NOTE + "' From D-14 normally, or D-17 with elevated risk, hard sparring is converted to technical work: render '" + CANONICAL_HARD_SPARRING_BAN_LABEL + "' (or sport-equivalent) — the same applies whenever the day carries reason code 'd14_hard_sparring_ban' or 'd17_hard_sparring_ban' — followed by exactly one short note: '" + CANONICAL_TECHNICAL_ONLY_NOTE + "' A technical-only day must never carry the hard-sparring note. A blocked/none contact status overrides all declarations and dates: no contact or sparring; surface medical evaluation/clearance guidance and do not restore contact. Do not output round counts, time-x-rounds formulas, intensity targets, dose, RPE, work:rest, or any sparring template wording (e.g. never '6-8 x 3-min rounds at set intensity', 'X rounds technical sparring', 'live rounds at moderate intensity'). Do not narrate intent, do not add a 'why today' line, do not list focus areas, do not suggest pad/bag/clinch volume — the athlete owns that contact work. Never schedule programmed S&C on a declared hard-sparring/contact day. Anything more than the label plus that one note is a violation of this rule.",
+"Hard sparring days are the athlete's own combat locks (run in their gym, with or without a coach). The app does not prescribe or lead the sparring itself, and it must respect resolved safety, readiness, and calendar restrictions on every declared hard sparring day. Only for a resolved hard-as-planned day render the label '" + CANONICAL_HARD_SPARRING_LABEL + "' (or the equivalent sport-specific label such as 'MMA — hard sparring / controlled hard contact') followed by exactly one short note: '" + CANONICAL_HARD_SPARRING_NOTE + "' From D-14 normally, or D-17 with elevated risk, hard sparring is converted to technical work: render '" + CANONICAL_HARD_SPARRING_BAN_LABEL + "' (or sport-equivalent) — the same applies whenever the day carries reason code 'd14_hard_sparring_ban' or 'd17_hard_sparring_ban' — followed by exactly one short note: '" + CANONICAL_TECHNICAL_ONLY_NOTE + "' A technical-only day must never carry the hard-sparring note. A blocked/none contact status overrides all declarations and dates: no contact or sparring; surface medical evaluation/clearance guidance and do not restore contact. Do not output round counts, time-x-rounds formulas, intensity targets, dose, RPE, work:rest, or any sparring template wording (e.g. never '6-8 x 3-min rounds at set intensity', 'X rounds technical sparring', 'live rounds at moderate intensity'). Do not narrate intent, do not add a 'why today' line, do not list focus areas, do not suggest pad/bag/clinch volume — the athlete owns that contact work. Never schedule programmed S&C alongside effective hard or reduced contact. Technical-only days may carry compatible S&C already selected by the planner. Anything more than the label plus that one note is a violation of this rule.",
             "Respect the weekly session count implied by weekly_role_map; do not turn extra available days into extra active training days.",
             "If the athlete has more available days than planned sessions, leave the spare days off or clearly optional rather than rendering another full session.",
             "If weekly_role_map marks intentional_compression.active, keep that smaller week on purpose and do not restore the suppressed standalone role.",
@@ -3372,7 +3391,7 @@ Resolve templates into one final prescription per exercise whenever the athlete 
 Do not repeat Primary, Fallback, Drill, or menu-style labels across most session lines.
 Only open roles may contain an explicit fallback, at most one when absolutely necessary. A closed selected assignment is never a fallback.
 Treat declared hard sparring days in selected_plan.weekly_role_map as immutable hard_sparring_day slots except when final_week_sparring_cap.active is true. In final taper weeks, final_week_sparring_cap overrides the coach-declared hard-day lock: render at most one effective hard sparring day, and do not present capped_declared_hard_sparring_days as sparring.
-Hard sparring days are the athlete's own combat locks (run in their gym, with or without a coach). The app must not prescribe or lead the sparring itself, and it must respect resolved safety, readiness, and calendar restrictions on every declared hard sparring day. Only for a resolved hard-as-planned day render the label "Hard sparring — controlled hard contact" (or the equivalent sport-specific label such as "MMA — hard sparring / controlled hard contact") followed by exactly one short note: "Your declared hard-sparring/contact session — no extra S&C. Keep freshness priority." From D-14 normally, or D-17 with elevated risk, hard sparring is converted to technical work: render "Technical-only combat" (or sport-equivalent) — the same applies whenever the day carries reason code "d14_hard_sparring_ban" or "d17_hard_sparring_ban" — followed by exactly one short note: "Technical-only contact today — no hard sparring and no extra S&C. Keep freshness priority." A technical-only day must never carry the hard-sparring note. A blocked/none contact status overrides all declarations and dates: no contact or sparring; surface medical evaluation/clearance guidance and do not restore contact. Do not output round counts, time-x-rounds formulas, intensity targets, dose, RPE, work:rest, or any sparring template wording. Do not narrate intent, do not add a "why today" line, do not list focus areas, do not suggest pad/bag/clinch volume — the athlete owns that contact work. Never schedule programmed S&C on a declared hard-sparring/contact day. Anything more than the label plus that one note is a violation of this rule.
+Hard sparring days are the athlete's own combat locks (run in their gym, with or without a coach). The app must not prescribe or lead the sparring itself, and it must respect resolved safety, readiness, and calendar restrictions on every declared hard sparring day. Only for a resolved hard-as-planned day render the label "Hard sparring — controlled hard contact" (or the equivalent sport-specific label such as "MMA — hard sparring / controlled hard contact") followed by exactly one short note: "Your declared hard-sparring/contact session — no extra S&C. Keep freshness priority." From D-14 normally, or D-17 with elevated risk, hard sparring is converted to technical work: render "Technical-only combat" (or sport-equivalent) — the same applies whenever the day carries reason code "d14_hard_sparring_ban" or "d17_hard_sparring_ban" — followed by exactly one short note: "Technical-only contact today — no hard sparring. Keep freshness priority." A technical-only day must never carry the hard-sparring note. A blocked/none contact status overrides all declarations and dates: no contact or sparring; surface medical evaluation/clearance guidance and do not restore contact. Do not output round counts, time-x-rounds formulas, intensity targets, dose, RPE, work:rest, or any sparring template wording. Do not narrate intent, do not add a "why today" line, do not list focus areas, do not suggest pad/bag/clinch volume — the athlete owns that contact work. Never schedule programmed S&C alongside effective hard or reduced contact. Technical-only days may carry compatible S&C already selected by the planner. Anything more than the label plus that one note is a violation of this rule.
 Do not exceed the weekly session count implied by selected_plan.weekly_role_map. If the athlete has extra available days, leave them off or clearly optional instead of turning them into extra active sessions.
 Keep every active week present and structurally complete, including late-camp weeks.
 If selected_plan.weekly_role_map or selected_plan.week_by_week_progression marks intentional_compression.active, keep that smaller week on purpose and do not restore the suppressed standalone role.
@@ -3566,7 +3585,7 @@ Non-negotiable output contract:
    - coach call when needed
 5A. For every closed role, preserve every selected exercise as a separate line with its authoritative effective prescription. One prescription per exercise is not one exercise per session. A selected_option=false provenance flag does not make the assignment optional. The LOCKED SESSION RENDER MANIFEST is a copy of the selected membership; never use a draft, generic writing rule, candidate menu or shared slot_id to reduce its count. If a hard restriction makes an exercise illegal, leave the gap and retain the safety conflict; never substitute downstream.
 6. If session_count_summary.reduced_from_planned is true for a week, include one short reason tied to taper, weight cut, risk-adjusted hard-sparring cutoff, injury/cut management, hard sparring / contact load, fight-week override, or intentional compression.
-7. Hard sparring / technical-only combat days must stay minimal: the hard-sparring/contact label plus one freshness note only — no programmed S&C stacked on the day.
+7. Contact appointments must stay minimal: the contact label plus one freshness note. Render compatible planner-selected S&C separately on technical-only days; effective hard or reduced contact forbids extra physical work.
 8. D-0 must be fight day protocol only.
 9. Active injury or active cut context must appear as a short lead summary before the training detail.
 10. Do not expose scaffold labels such as "Anchor —", "role_key", "taper_micro_support", "candidate pool", "validator", or "planning brief".

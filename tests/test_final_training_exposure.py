@@ -177,16 +177,12 @@ def test_a_primary_speed_goal_is_built_beside_a_weakness(key):
     assert weakness["satisfied"]
 
 
-def test_king_cut_week_speed_gap_is_reported_unresolved_not_satisfied():
-    """Known limitation: under King's cut the D-20..D-14 week holds no speed
-    member at an evidencing dose (its Sled Push is a heavy carry) and repair is
-    refused at the composed cap. It must stay a visible, unsatisfied build."""
+def test_king_cut_week_retains_speed_at_a_real_resolved_dose():
     speed = _entry(_brief("king"), "speed")
-    assert speed["state"] == "build"
-    assert [(w["min_d_day"], w["max_d_day"]) for w in speed["missing_coverage"]] == [(14, 20)]
-    assert speed["satisfied"] is False
-    assert speed["constraints"] == []  # no invented deferral reason
-    assert [(e["d_day"], e["name"]) for e in speed["evidence"]] == [(26, "Single-Leg Forward Hops")]
+    assert speed["state"] == "build" and speed["satisfied"]
+    assert speed["missing_coverage"] == []
+    assert any(14 <= e["d_day"] <= 20 and e["effective_prescription"] for e in speed["evidence"])
+    assert speed["constraints"] == []
 
 
 # ---------------------------------------------------------------------------

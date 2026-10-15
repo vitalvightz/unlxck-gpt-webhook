@@ -107,9 +107,8 @@ class SessionStress:
 class CalendarLoadProfile:
     load_class: LoadClass
     occupancy: DayOccupancy
-    # Provenance-sensitive exception: only the canonical coach-owned
-    # ``light_combat_day`` role may set this. Resolved hard-sparring contact stays
-    # strict even when its effective load is downgraded to technical-only.
+    # Resolved technical-only appointments may share compatible physical work.
+    # Their original declared role does not restore effective hard contact.
     allows_light_combat_stack: bool = False
     # Cross-day S&C cost. ``None`` means the owner supplied no vector and every
     # stress rule abstains. A role stamp supplies the planned vector; composition
@@ -188,10 +187,9 @@ _SANDWICH_ALLOW_LOADS = frozenset(
         LoadClass.LOW_LOAD_AEROBIC,
     }
 )
-# Loads that may legally *share* a declared light-combat day. The permissive
-# exception is provenance-gated by ``CalendarLoadProfile.allows_light_combat_stack``;
-# a resolved hard-sparring day that becomes TECHNICAL_CONTACT never receives that
-# flag and therefore remains strict.
+# Low-cost loads that may share a resolved technical-only appointment.
+# Hard/reduced contact retains exclusive ownership; declared origin does not
+# turn a technical-only appointment back into effective hard contact.
 _LIGHT_COMBAT_COEXIST_LOADS = frozenset(
     {
         LoadClass.OFF,
@@ -199,7 +197,6 @@ _LIGHT_COMBAT_COEXIST_LOADS = frozenset(
         LoadClass.RECOVERY_ONLY,
         LoadClass.LOW_LOAD_AEROBIC,
         LoadClass.LOW_LOAD_PHYSICAL,
-        LoadClass.NEURAL_MICRODOSE,
     }
 )
 
@@ -454,9 +451,14 @@ def contact_load_profile(entry: Mapping[str, Any] | None) -> CalendarLoadProfile
             raise ValueError("calendar_day_occupancy requires resolved contact/load class.")
         return None
 
-    # Resolved sparring/contact provenance is always strict. A declared hard day
-    # downgraded to technical-only must not inherit the light-combat stack exception.
-    canonical = _profile(load_class)
+    # The contact resolver owns the cutoff and medical restrictions. Judge its
+    # resolved training, including D-14 / elevated-risk D-17 conversions.
+    technical = load_class is LoadClass.TECHNICAL_CONTACT
+    canonical = _profile(
+        load_class, allows_light_combat_stack=technical,
+        stress=(_parse_stress_stamp(entry.get("calendar_stress"))
+                or SessionStress(StressLevel.LOW, StressLevel.LOW)) if technical else None,
+    )
     if explicit_occupancy is not None and explicit_occupancy is not canonical.occupancy:
         raise ValueError("calendar_day_occupancy conflicts with contact ownership semantics.")
     return canonical
@@ -641,19 +643,11 @@ def role_load_profile(role: Mapping[str, Any] | None) -> CalendarLoadProfile | N
         return contact_load_profile(role)
 
     if role_key in _TECHNICAL_CONTACT_ROLE_KEYS:
-        # Provenance is carried by the role-vs-resolved-contact path: canonical
-        # declared light combat is the only role key that gets this exception;
-        # downgraded hard sparring is classified through ``contact_load_profile``
-        # and therefore never receives it.
-        is_declared_light_combat = role_key == "light_combat_day"
         canonical = _profile(
             LoadClass.TECHNICAL_CONTACT,
-            allows_light_combat_stack=is_declared_light_combat,
-            # Only the declared Light Combat / S&C-compatible appointment has
-            # this low-load intent. Generic/resolved technical contact stays
-            # unknown and exclusive. Explicit measured stress overrides intent.
+            allows_light_combat_stack=True,
             stress=(_parse_stress_stamp(role.get("calendar_stress"))
-                    or SessionStress(StressLevel.LOW, StressLevel.LOW)) if is_declared_light_combat else None,
+                    or SessionStress(StressLevel.LOW, StressLevel.LOW)),
         )
         explicit_load = _explicit_enum(role, "calendar_load_class", LoadClass)
         explicit_occupancy = _explicit_enum(
@@ -797,9 +791,7 @@ def _same_day_decision(
         p.occupancy in {DayOccupancy.PHYSICAL, DayOccupancy.EXCLUSIVE_PHYSICAL}
         for p in existing
     )
-    # The permissive exception belongs to a declared light-combat role, not to
-    # TECHNICAL_CONTACT as a generic load class. A hard-sparring appointment that
-    # resolves down to technical remains strict because its profile carries no flag.
+    # Compatibility follows resolved technical load, including converted hard days.
     existing_light_combat_only = (
         any(p.allows_light_combat_stack for p in existing)
         and not any(
@@ -807,6 +799,8 @@ def _same_day_decision(
             and not p.allows_light_combat_stack
             for p in existing
         )
+        and not any(p.occupancy is DayOccupancy.EXCLUSIVE_PHYSICAL
+                    and p.load_class not in CONTACT_LOAD_CLASSES for p in existing)
     )
     compatible_technical = existing_light_combat_only and all(
         p.stress is not None
@@ -814,25 +808,18 @@ def _same_day_decision(
         and p.stress.neural_mechanical <= StressLevel.LOW
         for p in existing if p.allows_light_combat_stack
     )
-    if existing_physical and candidate.occupancy is not DayOccupancy.COEXISTABLE and candidate.load_class not in CONTACT_LOAD_CLASSES:
-        stresses = [session_stress(p) for p in (*existing, candidate)]
-        stresses = [s for s in stresses if s is not None]
-        # These levels are ordinal, not additive workload units. One hard S&C
-        # exposure may coexist with declared light technique and truly cheap
-        # support; two moderate exposures may share a compatible double day.
-        # Multiple hard exposures or a dominating hard+moderate pairing do not.
-        hard_count = sum(max(s.systemic, s.neural_mechanical) >= StressLevel.HIGH for s in stresses)
-        meaningful_count = sum(max(s.systemic, s.neural_mechanical) >= StressLevel.MODERATE for s in stresses)
-        dominating_pair = any(
-            (first.systemic >= StressLevel.HIGH and max(second.systemic, second.neural_mechanical) >= StressLevel.MODERATE)
-            or (first.neural_mechanical >= StressLevel.HIGH and second.neural_mechanical >= StressLevel.MODERATE)
-            for idx, first in enumerate(stresses) for other_idx, second in enumerate(stresses) if idx != other_idx
-        )
-        if hard_count > 1 or meaningful_count > 2 or dominating_pair:
-            return _decision(PlacementDirective.FORBID, "combined_daily_stress_exceeded",
-                             "The technical appointment and supplementary work exceed the shared daily stress budget.")
-
     if candidate.load_class in CONTACT_LOAD_CLASSES and existing_physical:
+        if candidate.allows_light_combat_stack and not existing_contact:
+            # Verification also visits the technical appointment as candidate.
+            # Ask the same S&C/technical compatibility rule in that direction;
+            # otherwise an allowed pair fails purely on iteration order.
+            for index, occupant in enumerate(existing):
+                if occupant.occupancy is DayOccupancy.COEXISTABLE:
+                    continue
+                decision = _same_day_decision(occupant, (candidate, *existing[:index], *existing[index + 1:]))
+                if decision is not None:
+                    return decision
+            return None
         return _decision(
             PlacementDirective.FORBID,
             "contact_candidate_physical_conflict",
@@ -847,13 +834,11 @@ def _same_day_decision(
             "This candidate owns an exclusive physical slot and the day is already physically occupied.",
         )
     if existing_exclusive and candidate.occupancy is not DayOccupancy.COEXISTABLE:
-        # Only an explicitly provenance-stamped declared light-combat appointment
-        # gets the low-load/microdose coexistence exception. Resolved hard/reduced
-        # contact remains strict even if its effective load is TECHNICAL_CONTACT.
+        # Explicit technical stress remains authoritative for meaningful work.
         if not (
             existing_light_combat_only
             and (candidate.load_class in _LIGHT_COMBAT_COEXIST_LOADS
-                 or (compatible_technical and candidate.load_class in _MEANINGFUL_LOADS))
+                 or (compatible_technical and candidate.load_class in _MEANINGFUL_LOADS | {LoadClass.NEURAL_MICRODOSE}))
         ):
             return _decision(
                 PlacementDirective.FORBID,

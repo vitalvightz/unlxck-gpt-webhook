@@ -652,12 +652,11 @@ def test_a_blocked_week_with_no_compatible_host_records_an_honest_reason():
 
 
 def test_neural_microdose_already_coexists_with_declared_light_combat():
-    """The canonical collision policy is unchanged by this work."""
-    from fightcamp.combat_load_policy import _LIGHT_COMBAT_COEXIST_LOADS, LoadClass
-
-    assert LoadClass.NEURAL_MICRODOSE in _LIGHT_COMBAT_COEXIST_LOADS
-    assert LoadClass.MEANINGFUL_STRENGTH not in _LIGHT_COMBAT_COEXIST_LOADS
-    assert LoadClass.HARD_CONTACT not in _LIGHT_COMBAT_COEXIST_LOADS
+    """Compatibility comes from the resolved technical stress, not a private set."""
+    from fightcamp.combat_load_policy import CalendarEvent, role_load_profile, evaluate_candidate_at_position
+    technical = role_load_profile({"role_key": "light_combat_day"})
+    microdose = role_load_profile({"role_key": "small_strength_touch_day", "category": "strength"})
+    assert evaluate_candidate_at_position(microdose, candidate_position=0, events=[CalendarEvent(0, technical)]).allowed
 
 
 # ---------------------------------------------------------------------------

@@ -668,27 +668,6 @@ def _apply_pre_hard_contact_cap(role: dict[str, Any]) -> None:
     role["pre_hard_contact_dose_adjustment"] = True
 
 
-def _apply_goal_maintenance_cap(role: dict[str, Any]) -> None:
-    """Reuse the authored reduced maintenance envelope for bounded goal repair.
-
-    This is a reduce-only context, not a new countdown band. A finished-tail
-    session cannot opt into normal goal repair, and readiness still tightens it.
-    """
-    repair = role.get("goal_preservation_repair") or {}
-    day = role_d_day({}, role)
-    if repair.get("mode") != "maintenance" or day is None or day <= 13:
-        return
-    maintenance = late_fight_strength_dose_cap(10) or {}
-    existing = role.get("strength_dose_cap") or {}
-    role["strength_dose_cap"] = {
-        "max_sets": _merge_numeric_cap(existing.get("max_sets"), maintenance.get("max_sets")),
-        "max_reps": _merge_numeric_cap(existing.get("max_reps"), maintenance.get("max_reps")),
-        "loaded_allowed": existing.get("loaded_allowed") is not False and maintenance.get("loaded_allowed") is not False,
-    }
-    role["rpe_cap"] = _merge_rpe_cap(role.get("rpe_cap"), maintenance.get("rpe_cap"))
-    role["dose_adjustment_reason"] = "goal_preservation_reduced_maintenance"
-
-
 def _selection_metadata(slot: dict[str, Any]) -> dict[str, Any]:
     selected = _slot_selected(slot)
     metadata = selected.get("selection_metadata")
@@ -1133,7 +1112,6 @@ def apply_effective_strength_prescriptions(
         candidate_pools=candidate_pools,
     ):
         _apply_pre_hard_contact_cap(role)
-        _apply_goal_maintenance_cap(role)
         assignments = role.get("selected_exercise_assignments")
         slots_for_resolution = owned_slots
         if isinstance(assignments, list) and role.get("pre_hard_contact_managed_stress") is True:
