@@ -71,6 +71,47 @@ def readable_stop(rules):
     return ["Stop if " + joined + "."]
 
 
+
+def compact_instruction(text: str) -> str:
+    """One ≤9-word cue without chopping conditional or negated instructions."""
+    value = re.sub(r"^(?:Cue|Easier|Progress|Stop):\s*", "", _text(text), flags=re.I)
+    if len(value.split()) <= 9:
+        return value
+    if re.search(r"\b(?:unless|only if|do not|never|without)\b", value, re.I):
+        return value  # A qualifier is safer than a misleading clipped command.
+    clauses = [part.strip(" .;,") for part in re.split(r";|(?<=[.!?])\s+|,\s+| and ", value)]
+    return next((part for part in clauses if 2 <= len(part.split()) <= 9), value)
+
+
+def compact_stop(text: str) -> str:
+    """Shorten standard stop criteria, never removing a medical escalation."""
+    value = _text(text)
+    if len(value.split()) <= 9:
+        return value
+    if re.search(r"\b(?:medical|emergency|clinician|seek|call|faint|chest pain)\b", value, re.I):
+        return value
+    value = re.sub(r"^(?:End|Stop) (?:the |this )?(?:set|effort|work|hold|drill|session)\s+", "Stop ", value, flags=re.I)
+    value = re.sub(r"\b(?:appears|develops|occurs|is present)\b", "starts", value, flags=re.I)
+    value = re.sub(r"\b(?:you cannot|you can no longer)\b", "you can't", value, flags=re.I)
+    value = re.sub(r"\b(?:or if|or when)\b", "or", value, flags=re.I)
+    if len(value.split()) <= 9:
+        return value
+    return value  # Preserve all stop triggers rather than hide a hazard.
+
+
+def compact_progress(text: str) -> str:
+    """Show an authorised one-variable numerical advance without prose."""
+    value = _text(text)
+    # numerical_guidance generated this form from exact next-exposure doses.
+    match = re.search(r"\badd\s+(\d+(?:\.\d+)?)\s*(kg|lb|reps?|sets?|rounds?|m|min|sec)\b", value, re.I)
+    if match and re.search(r"\b(?:Next D-\\d+|only if controlled and recovered)\b", value, re.I):
+        unit = match[2].lower()
+        suffix = "" if unit in {"kg", "lb", "m"} else " "
+        return f"Add +{match[1]}{suffix}{unit}"
+    if len(value.split()) <= 9:
+        return value
+    return compact_instruction(value)
+
 def concise_coaching(fields):
     """One Easier, one readable Stop, short lead cue plus intact source detail.
 
@@ -82,9 +123,15 @@ def concise_coaching(fields):
     cues = _unique([re.sub(r"^Cue:\s*", "", _text(cue), flags=re.I)
                     for cue in result.get("coaching_cues") or []])
     if cues:
-        lead = short_cue(cues[0])
-        result["coaching_cues"] = _unique([lead, *cues])
+        # One athlete-visible instruction. The old [short, original] projection
+        # produced two near-identical cues, plus a "Coaching cues" accordion.
+        result["coaching_cues"] = [compact_instruction(short_cue(cues[0]))]
+    else:
+        result["coaching_cues"] = []
     options = _unique(result.get("regression_options"))
-    result["regression_options"] = options[:1]
-    result["stop_rules"] = readable_stop(result.get("stop_rules"))
+    result["regression_options"] = [compact_instruction(options[0])] if options else []
+    stops = readable_stop(result.get("stop_rules"))
+    result["stop_rules"] = [compact_stop(stops[0])] if stops else []
+    if result.get("progression_rule"):
+        result["progression_rule"] = compact_progress(result["progression_rule"])
     return result
