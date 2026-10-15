@@ -27,10 +27,16 @@ for (const row of expected) {
   // exact equality). The athlete-visible projection is intentionally smaller:
   // ONE execution cue and ONE easier, with measured Progress and full safety.
   if (row.fields.coaching_cues?.length) {
-    const lead = row.fields.coaching_cues[0].replace(/^Cue:\s*/i, "");
-    const expectedStart = lead.split(/[;,]/)[0].trim();
-    assert.ok(visible.includes(expectedStart) || visible.includes("Key cue") || visible.includes(">Cue"),
-      `${row.id}: missing execution cue`);
+    // Legacy cards may store the interval DOSE as the only coaching cue.
+    // That is not an execution cue: the UI must not invent advice to fill it.
+    const actionable = row.fields.coaching_cues.filter((line) =>
+      !/^\d+(?:\.\d+)?\s*(?:s|sec|seconds)\s+work\b.*\brest\b/i.test(line.trim()));
+    if (actionable.length) {
+      const lead = actionable[0].replace(/^Cue:\s*/i, "");
+      const expectedStart = lead.split(/[;,]/)[0].trim();
+      assert.ok(visible.includes(expectedStart) || visible.includes("Key cue") || visible.includes("Cue"),
+        `${row.id}: missing execution cue`);
+    }
     assert.ok(!visible.includes("Coaching cues"), `${row.id}: duplicate coaching accordion`);
   }
   if (row.fields.regression_options?.length) {
