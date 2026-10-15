@@ -670,7 +670,10 @@ def _other_stimuli(role: dict, pools: dict, phase: str, brief: dict) -> list[dic
         member_system = str(slot.get("role") or system or "").lower()
         # A bank-prescribed moving footwork drill may complement a strength
         # session; coach instructions and mental preparation earn no exposure.
-        if category != "conditioning" and member_system != "technical_footwork":
+        if (category != "conditioning" and member_system != "technical_footwork"
+                and not (member_system == "alactic"
+                         and member.get("consolidated_from_system") == "alactic"
+                         and member.get("consolidated_from_role_key"))):
             continue
         system = member_system
         # Serialized conditioning dose/cost authority lives under
