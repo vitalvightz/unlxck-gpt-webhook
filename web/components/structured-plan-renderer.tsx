@@ -402,6 +402,7 @@ export function BlockCard({
   hideLeadCue = false,
   hideCues = false,
   hideStopRule = false,
+  hideAdjustments = false,
 }: {
   block: StructuredBlock;
   /** Development-block week intent of an open (renewable) plan. Adds the
@@ -416,6 +417,8 @@ export function BlockCard({
   /** The exercise sheet shows cues and the stop rule in their own places. */
   hideCues?: boolean;
   hideStopRule?: boolean;
+  /** The detail sheet already displays Easier/Progress/Stop. */
+  hideAdjustments?: boolean;
 }) {
   const rehabLabelPolicy = useContext(RehabLabelContext);
   const { title, load, metrics, rest, effort, compactStopRule } = useBlockPrescription(
@@ -430,9 +433,9 @@ export function BlockCard({
   // through to no tooltip rather than to a guess.
   const effortMethod = cleanText(block.effort?.method);
   const { cues: allCues, regressions, substitutions } = getBlockExecutionDisplay(block);
-  const cues = hideCues ? [] : hideLeadCue ? allCues.slice(1) : allCues;
-  const visibleCues = embedded ? (hideLeadCue ? [] : cues.slice(0, 1)) : cues;
-  const coachingDetail = embedded ? (hideLeadCue ? cues : cues.slice(1)) : [];
+  // A single execution cue is enough. The earlier split into lead cue plus
+  // "Coaching cues" detail repeated the same instruction on enhanced cards.
+  const visibleCues = hideCues || hideLeadCue ? [] : allCues.slice(0, 1);
   const { progression } = getBlockAdjustmentDisplay(block);
   const weekDirective = openBlockWeekDirective(openWeekIntent, block);
   // A week directive owns progression/deload programming for open plans, while
@@ -457,10 +460,9 @@ export function BlockCard({
     && typeof block.athlete_dose?.mode === "string"
     && ["reps", "duration", "intervals", "distance"].includes(block.athlete_dose.mode);
   const showMetricTiles = statCount > 0 && (!block.prescription_text || hasAthleteMetrics);
-  const asides = [
-    ...(substitutions.length > 0 ? [{ label: "Swaps", text: substitutions.join(", "), glossary: false }] : []),
-    ...(regressions.length > 0 ? [{ label: "Easier", text: regressions.join(", "), glossary: false }] : []),
-    // "Stop rule" is glossed; "Progress" reads plainly on its own.
+  const asides = hideAdjustments ? [] : [
+    ...(substitutions.length > 0 ? [{ label: "Swaps", text: substitutions[0], glossary: false }] : []),
+    ...(regressions.length > 0 ? [{ label: "Easier", text: regressions[0], glossary: false }] : []),
     ...adjustmentRules.map((rule) => ({ ...rule, glossary: true })),
   ];
 
@@ -539,14 +541,6 @@ export function BlockCard({
             <li key={`${cue}-${index}`}>{cue}</li>
           ))}
         </ul>
-      ) : null}
-      {coachingDetail.length > 0 ? (
-        <details className="ex-detail-section">
-          <summary>Coaching cues</summary>
-          <ul className="sp-cues">
-            {coachingDetail.map((cue, index) => <li key={`${cue}-${index}`}>{cue}</li>)}
-          </ul>
-        </details>
       ) : null}
       {asides.length > 0 ? (
         <div className="sp-block-asides">
@@ -819,7 +813,10 @@ function ExerciseDetail({
   const builds = athleteFacingRationale(block.purpose);
   const whyTodayRaw = athleteFacingRationale(block.why_today);
   const whyToday = sameCopy(builds, whyTodayRaw) ? null : whyTodayRaw;
-  const cues = getBlockExecutionDisplay(block).cues;
+  const execution = getBlockExecutionDisplay(block);
+  const cue = execution.cues[0] ?? null;
+  const easier = execution.regressions[0] ?? null;
+  const { progression } = getBlockAdjustmentDisplay(block);
   const sessionRunning = useExerciseLoggingActive();
 
   return (
@@ -865,26 +862,17 @@ function ExerciseDetail({
           ) : null}
         </details>
       ) : null}
-      {cues.length > 0 ? (
-        <details className="ex-detail-section">
-          <summary>Coaching cues</summary>
-          <ul className="sp-cues">
-            {cues.map((cue, index) => (
-              <li key={`${cue}-${index}`}>{cue}</li>
-            ))}
-          </ul>
-        </details>
+      {/* The useful coaching fits in four plain lines. Never make users open
+          two nested accordions to find a single cue or their next dose. */}
+      {cue ? <p className="sp-block-aside"><span className="sp-stat-label">Cue</span>{cue}</p> : null}
+      {easier ? <p className="sp-block-aside"><span className="sp-stat-label">Easier</span>{easier}</p> : null}
+      {progression && openWeekIntent?.key !== "deload" ? (
+        <p className="sp-block-aside"><span className="sp-stat-label">Progress</span>{progression}</p>
       ) : null}
       <details className="ex-detail-section">
         <summary>Full prescription</summary>
-        <BlockCard
-          block={block}
-          openWeekIntent={openWeekIntent}
-          sourceCountdown={sourceCountdown}
-          embedded
-          hideCues
-          hideStopRule
-        />
+        <BlockCard block={block} openWeekIntent={openWeekIntent}
+          sourceCountdown={sourceCountdown} embedded hideCues hideStopRule hideAdjustments />
       </details>
       {/* Renders only where a started session provides logging (Today). */}
       <ExerciseLogPanel block={block} />
