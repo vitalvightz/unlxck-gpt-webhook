@@ -1016,10 +1016,16 @@ export function SessionCard({
         ? "Review one tactical issue from sparring or available footage. Identify one adjustment for the next session."
         : "Rehearse one familiar fight situation and reset calmly.");
     const mentalInstructions = Array.from(new Set(
-      blocks.flatMap((block) => getBlockExecutionDisplay(block).cues)
+      blocks.flatMap((block) => [
+        ...getBlockExecutionDisplay(block).cues,
+        ...(block.notes ? [block.notes] : []),
+      ])
         .map((line) => line.replace(/^\s*(?:Step\s*\d+|Cue|Intent|Focus|Reset|Anchor|Purpose|Progress)\s*:\s*/i, "").trim())
         .filter(Boolean),
     )).filter((line) => line.toLowerCase() !== summary.toLowerCase()).slice(0, 3);
+    // Never replace the selected Tactical Watch drill with a generic
+    // "Analyse" instruction. The athlete should recognise their actual task.
+    const mentalDrill = blocks.map((block) => cleanText(block.display_name)).find(Boolean);
     return (
       <article className="sp-session sp-mental-task" data-mental-category={mentalCategory.toLowerCase()}>
         <header className="sp-mental-head">
@@ -1030,7 +1036,10 @@ export function SessionCard({
             </span>
           ) : null}
         </header>
-        <p className="sp-session-instruction">{summary}</p>
+        <p className="sp-session-instruction">{mentalDrill || summary}</p>
+        {mentalDrill && summary && !sameCopy(mentalDrill, summary) ? (
+          <p className="sp-muted">{summary}</p>
+        ) : null}
         {mentalInstructions.length > 0 ? (
           <details className="sp-section-details">
             <summary>View steps</summary>
