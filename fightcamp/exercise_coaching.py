@@ -185,12 +185,7 @@ def exercise_coaching(
                 else guidance["progression_rule"]
             )
         elif guidance.get("maintenance_cue"):
-            # A repeated dose is not a second execution cue. Show a genuine
-            # maintenance step in the same Progress slot instead.
-            fields["progression_rule"] = "Repeat current dose."
-        elif prescription and dose:
-            # Unknown future loads must not produce fabricated +kg claims.
-            fields["progression_rule"] = "Repeat prescribed dose."
+            fields["coaching_cues"].append(guidance["maintenance_cue"])
     if authored_progress and is_execution_quality_instruction(authored_progress) and not is_profile_progression(authored_progress):
         if authored_progress not in fields["coaching_cues"]:
             fields["coaching_cues"].append(authored_progress)
