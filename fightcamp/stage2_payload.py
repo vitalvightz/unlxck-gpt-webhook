@@ -2080,7 +2080,7 @@ def build_planning_brief(
     from .goal_preservation import _effective_map, refresh_goal_evidence_after_composition
     from .session_composition import consolidate_compatible_alactic_sessions
     role_map = _effective_map(brief)
-    consolidate_compatible_alactic_sessions(role_map)
+    consolidate_compatible_alactic_sessions(role_map, athlete_model=athlete_model)
     if role_map.get("session_consolidation_audit"):
         refresh_goal_evidence_after_composition(brief)
     enforce_total_session_budget(role_map, athlete_model, candidate_pools)
