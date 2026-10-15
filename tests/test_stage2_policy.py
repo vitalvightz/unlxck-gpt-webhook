@@ -313,3 +313,16 @@ def test_required_athlete_context_failures_are_admin_blocking() -> None:
 
     assert required_blockers.issubset(stage2_policy.ADMIN_REVIEW_BLOCKING_CODES)
     assert not required_blockers & stage2_policy.ATHLETE_RELEASE_WITH_FLAGS_CODES
+
+
+@pytest.mark.parametrize("code", [
+    "duplicate_meaningful_strength_day", "duplicate_physical_exercise_day",
+])
+def test_invalid_physical_calendar_is_held_instead_of_published_with_flags(code):
+    report = stage2_policy.apply_stage2_release_policy({
+        "errors": [{"code": code, "severity": "blocker"}],
+        "warnings": [],
+    })
+    assert report["release_decision"] == "hold"
+    assert report["is_athlete_releasable"] is False
+    assert report["is_publishable"] is False
