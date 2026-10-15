@@ -98,11 +98,12 @@ test("October 15 punch keeps its short cue, full expandable detail, video and ex
     assert.equal(container.querySelector(".ex-demo-lead-cue")?.textContent,
       "Key cueKeep punches balanced; return to guard");
     const detail = container.querySelector<HTMLDetailsElement>("details.ex-detail-section")!;
-    assert.equal(detail.querySelector("summary")?.textContent, "Coaching cues");
+    assert.equal(detail.querySelector("summary")?.textContent, "Full prescription");
     assert.equal(detail.open, false);
     await act(async () => detail.querySelector("summary")!.click());
     assert.equal(detail.open, true);
-    assert.ok(detail.textContent?.includes(saved.coaching_cues![0]));
+    assert.ok(container.textContent?.includes("Keep punches balanced; return to guard"));
+    assert.equal(container.textContent?.includes("Coaching cues"), false);
     assert.ok(container.querySelector('button[aria-label="Play Band-Resisted Punch demo"]'));
     assert.ok(container.textContent?.includes("1 × 2"));
     assert.ok(container.textContent?.includes("2 min")); // same 120-second rest
