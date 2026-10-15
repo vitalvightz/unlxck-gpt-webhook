@@ -435,7 +435,7 @@ export function BlockCard({
   const { cues: allCues, regressions, substitutions } = getBlockExecutionDisplay(block);
   // A single execution cue is enough. The earlier split into lead cue plus
   // "Coaching cues" detail repeated the same instruction on enhanced cards.
-  const visibleCues = hideCues || hideLeadCue ? [] : allCues.slice(0, 1);
+  const visibleCues = hideCues || hideLeadCue ? [] : allCues.slice(0, 1).map(compactCoachLine);
   const { progression } = getBlockAdjustmentDisplay(block);
   const weekDirective = openBlockWeekDirective(openWeekIntent, block);
   // A week directive owns progression/deload programming for open plans, while
@@ -447,7 +447,7 @@ export function BlockCard({
   );
   const adjustmentRules = [
     ...(showProgressionAside && progression
-      ? [{ label: "Progress" as const, text: progression }]
+      ? [{ label: "Progress" as const, text: compactProgressLine(progression) }]
       : []),
     ...(compactStopRule && !hideStopRule
       ? [{ label: "Stop rule" as const, text: compactStopRule }]
@@ -462,7 +462,7 @@ export function BlockCard({
   const showMetricTiles = statCount > 0 && (!block.prescription_text || hasAthleteMetrics);
   const asides = hideAdjustments ? [] : [
     ...(substitutions.length > 0 ? [{ label: "Swaps", text: substitutions[0], glossary: false }] : []),
-    ...(regressions.length > 0 ? [{ label: "Easier", text: regressions[0], glossary: false }] : []),
+    ...(regressions.length > 0 ? [{ label: "Easier", text: compactCoachLine(regressions[0]), glossary: false }] : []),
     ...adjustmentRules.map((rule) => ({ ...rule, glossary: true })),
   ];
 
@@ -571,6 +571,26 @@ function exerciseRowSummary(
     prescription.metrics[0]?.value || prescription.load || formatMeasured(block.duration);
   const parts = [headline, prescription.effort].filter((part): part is string => Boolean(part));
   return parts.length > 0 ? Array.from(new Set(parts)).join(" · ") : null;
+}
+
+/** Presentation-only coaching reduction; stored instructions stay intact. */
+function compactCoachLine(value: string): string {
+  const clean = value.trim().replace(/^(?:Cue|Easier|Progress|Stop):\s*/i, "");
+  if (clean.split(/\s+/).length <= 9) return clean;
+  const clauses = clean.split(/\s*;\s*/).filter(Boolean);
+  if (clauses[0]?.split(/\s+/).length <= 9) return clauses[0];
+  return clean; // Never truncate medical or negated instructions.
+}
+
+function compactProgressLine(text: string): string {
+  const clean = text.trim();
+  const add = clean.match(/\badd\s+(\d+(?:\.\d+)?)\s*(kg|lb|reps?|sets?|rounds?|m)\b/i);
+  if (/^Next D-\d+:/i.test(clean) && add) {
+    const unit = add[2].toLowerCase();
+    const suffix = ["kg", "lb", "m"].includes(unit) ? "" : " ";
+    return "Add +" + add[1] + suffix + unit;
+  }
+  return compactCoachLine(clean);
 }
 
 function sameCopy(a: string | null, b: string | null): boolean {
@@ -814,8 +834,8 @@ function ExerciseDetail({
   const whyTodayRaw = athleteFacingRationale(block.why_today);
   const whyToday = sameCopy(builds, whyTodayRaw) ? null : whyTodayRaw;
   const execution = getBlockExecutionDisplay(block);
-  const cue = execution.cues[0] ?? null;
-  const easier = execution.regressions[0] ?? null;
+  const cue = execution.cues[0] ? compactCoachLine(execution.cues[0]) : null;
+  const easier = execution.regressions[0] ? compactCoachLine(execution.regressions[0]) : null;
   const { progression } = getBlockAdjustmentDisplay(block);
   const sessionRunning = useExerciseLoggingActive();
 
@@ -867,7 +887,7 @@ function ExerciseDetail({
       {cue ? <p className="sp-block-aside"><span className="sp-stat-label">Cue</span>{cue}</p> : null}
       {easier ? <p className="sp-block-aside"><span className="sp-stat-label">Easier</span>{easier}</p> : null}
       {progression && openWeekIntent?.key !== "deload" ? (
-        <p className="sp-block-aside"><span className="sp-stat-label">Progress</span>{progression}</p>
+        <p className="sp-block-aside"><span className="sp-stat-label">Progress</span>{compactProgressLine(progression)}</p>
       ) : null}
       <details className="ex-detail-section">
         <summary>Full prescription</summary>
