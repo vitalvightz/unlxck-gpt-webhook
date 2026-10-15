@@ -511,14 +511,9 @@ def build_watch_display_text(watch: TacticalWatch) -> str:
         f"- {watch.name}: {watch.duration_minutes} minutes, tactical review only. No physical load.",
         *(
             f"  Step {index}: {instruction}"
-            for index, instruction in enumerate(_watch_visible_instructions(watch), start=1)
+            for index, instruction in enumerate(_watch_visible_instructions(watch)[:3], start=1)
         ),
-        f"  Intent: {_athlete_visible_watch_text(watch, watch.intent)}",
-        f"  Focus: {_athlete_visible_watch_text(watch, watch.focus)}",
-        f"  Reset: {_athlete_visible_watch_text(watch, watch.reset)}",
-        f"  Anchor: {_athlete_visible_watch_text(watch, watch.anchor)}",
-        f"  Purpose: {_athlete_visible_watch_text(watch, watch.context)}",
-        f"  Progress: {_athlete_visible_watch_text(watch, watch.progress)}",
+        f"  Cue: {_athlete_visible_watch_text(watch, watch.anchor)}",
     ]
     return "\n".join(lines)
 

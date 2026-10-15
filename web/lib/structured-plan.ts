@@ -895,6 +895,25 @@ export function getBlockExecutionDisplay(
   const substitutions = getStringList(block?.substitutions);
   const progressions: string[] = [];
 
+  // Legacy deterministic cards can put a dose before "Cue: ... Stop ...".
+  // Keep one true execution cue and separate the embedded safety stop.
+  const registerCue = (value: string) => {
+    const text = cleanText(value);
+    if (!text) return;
+    const embeddedStop = text.match(/^(.*?)\.\s*(Stop\b.+)$/i);
+    if (embeddedStop) {
+      if (embeddedStop[1].trim()) cues.push(embeddedStop[1].trim());
+      stopRules.push(embeddedStop[2].trim());
+      return;
+    }
+    if (/^\d+(?:\.\d+)?\s*(?:s|sec|seconds)\s+work\b.*\brest\b/i.test(text)) return;
+    if (/^Next D-\d+:\s*repeat\b/i.test(text)) {
+      progressions.push(text);
+      return;
+    }
+    cues.push(text);
+  };
+
   for (const cue of getCoachingCues(block)) {
     if (BARE_ADJUSTMENT_LABEL_RE.test(cue)) continue;
     const labelled = BLOCK_DETAIL_LABEL_RE.exec(cue);
@@ -904,7 +923,7 @@ export function getBlockExecutionDisplay(
       if (!detail) continue;
       if (label === "purpose" || label === "why today") continue;
       if (label === "cue") {
-        cues.push(detail);
+        registerCue(detail);
         continue;
       }
       if (label === "easier" || label === "regress" || label === "regression") {
@@ -922,7 +941,7 @@ export function getBlockExecutionDisplay(
       stopRules.push(cue);
       continue;
     }
-    cues.push(cue);
+    registerCue(cue);
   }
 
   return {

@@ -402,6 +402,7 @@ export function BlockCard({
   hideLeadCue = false,
   hideCues = false,
   hideStopRule = false,
+  hideAdjustments = false,
 }: {
   block: StructuredBlock;
   /** Development-block week intent of an open (renewable) plan. Adds the
@@ -416,6 +417,8 @@ export function BlockCard({
   /** The exercise sheet shows cues and the stop rule in their own places. */
   hideCues?: boolean;
   hideStopRule?: boolean;
+  /** The detail sheet already displays Easier/Progress/Stop. */
+  hideAdjustments?: boolean;
 }) {
   const rehabLabelPolicy = useContext(RehabLabelContext);
   const { title, load, metrics, rest, effort, compactStopRule } = useBlockPrescription(
@@ -430,9 +433,9 @@ export function BlockCard({
   // through to no tooltip rather than to a guess.
   const effortMethod = cleanText(block.effort?.method);
   const { cues: allCues, regressions, substitutions } = getBlockExecutionDisplay(block);
-  const cues = hideCues ? [] : hideLeadCue ? allCues.slice(1) : allCues;
-  const visibleCues = embedded ? (hideLeadCue ? [] : cues.slice(0, 1)) : cues;
-  const coachingDetail = embedded ? (hideLeadCue ? cues : cues.slice(1)) : [];
+  // A single execution cue is enough. The earlier split into lead cue plus
+  // "Coaching cues" detail repeated the same instruction on enhanced cards.
+  const visibleCues = hideCues || hideLeadCue ? [] : allCues.slice(0, 1).map(compactCoachLine);
   const { progression } = getBlockAdjustmentDisplay(block);
   const weekDirective = openBlockWeekDirective(openWeekIntent, block);
   // A week directive owns progression/deload programming for open plans, while
@@ -444,7 +447,7 @@ export function BlockCard({
   );
   const adjustmentRules = [
     ...(showProgressionAside && progression
-      ? [{ label: "Progress" as const, text: progression }]
+      ? [{ label: "Progress" as const, text: compactProgressLine(progression) }]
       : []),
     ...(compactStopRule && !hideStopRule
       ? [{ label: "Stop rule" as const, text: compactStopRule }]
@@ -457,10 +460,9 @@ export function BlockCard({
     && typeof block.athlete_dose?.mode === "string"
     && ["reps", "duration", "intervals", "distance"].includes(block.athlete_dose.mode);
   const showMetricTiles = statCount > 0 && (!block.prescription_text || hasAthleteMetrics);
-  const asides = [
-    ...(substitutions.length > 0 ? [{ label: "Swaps", text: substitutions.join(", "), glossary: false }] : []),
-    ...(regressions.length > 0 ? [{ label: "Easier", text: regressions.join(", "), glossary: false }] : []),
-    // "Stop rule" is glossed; "Progress" reads plainly on its own.
+  const asides = hideAdjustments ? [] : [
+    ...(substitutions.length > 0 ? [{ label: "Swaps", text: substitutions[0], glossary: false }] : []),
+    ...(regressions.length > 0 ? [{ label: "Easier", text: compactCoachLine(regressions[0]), glossary: false }] : []),
     ...adjustmentRules.map((rule) => ({ ...rule, glossary: true })),
   ];
 
@@ -540,14 +542,6 @@ export function BlockCard({
           ))}
         </ul>
       ) : null}
-      {coachingDetail.length > 0 ? (
-        <details className="ex-detail-section">
-          <summary>Coaching cues</summary>
-          <ul className="sp-cues">
-            {coachingDetail.map((cue, index) => <li key={`${cue}-${index}`}>{cue}</li>)}
-          </ul>
-        </details>
-      ) : null}
       {asides.length > 0 ? (
         <div className="sp-block-asides">
           {asides.map((aside) => (
@@ -577,6 +571,26 @@ function exerciseRowSummary(
     prescription.metrics[0]?.value || prescription.load || formatMeasured(block.duration);
   const parts = [headline, prescription.effort].filter((part): part is string => Boolean(part));
   return parts.length > 0 ? Array.from(new Set(parts)).join(" · ") : null;
+}
+
+/** Presentation-only coaching reduction; stored instructions stay intact. */
+function compactCoachLine(value: string): string {
+  const clean = value.trim().replace(/^(?:Cue|Easier|Progress|Stop):\s*/i, "");
+  if (clean.split(/\s+/).length <= 9) return clean;
+  const clauses = clean.split(/\s*;\s*/).filter(Boolean);
+  if (clauses[0]?.split(/\s+/).length <= 9) return clauses[0];
+  return clean; // Never truncate medical or negated instructions.
+}
+
+function compactProgressLine(text: string): string {
+  const clean = text.trim();
+  const add = clean.match(/\badd\s+(\d+(?:\.\d+)?)\s*(kg|lb|reps?|sets?|rounds?|m)\b/i);
+  if (/^Next D-\d+:/i.test(clean) && add) {
+    const unit = add[2].toLowerCase();
+    const suffix = ["kg", "lb", "m"].includes(unit) ? "" : " ";
+    return "Add +" + add[1] + suffix + unit;
+  }
+  return compactCoachLine(clean);
 }
 
 function sameCopy(a: string | null, b: string | null): boolean {
@@ -819,7 +833,10 @@ function ExerciseDetail({
   const builds = athleteFacingRationale(block.purpose);
   const whyTodayRaw = athleteFacingRationale(block.why_today);
   const whyToday = sameCopy(builds, whyTodayRaw) ? null : whyTodayRaw;
-  const cues = getBlockExecutionDisplay(block).cues;
+  const execution = getBlockExecutionDisplay(block);
+  const cue = execution.cues[0] ? compactCoachLine(execution.cues[0]) : null;
+  const easier = execution.regressions[0] ? compactCoachLine(execution.regressions[0]) : null;
+  const { progression } = getBlockAdjustmentDisplay(block);
   const sessionRunning = useExerciseLoggingActive();
 
   return (
@@ -865,26 +882,17 @@ function ExerciseDetail({
           ) : null}
         </details>
       ) : null}
-      {cues.length > 0 ? (
-        <details className="ex-detail-section">
-          <summary>Coaching cues</summary>
-          <ul className="sp-cues">
-            {cues.map((cue, index) => (
-              <li key={`${cue}-${index}`}>{cue}</li>
-            ))}
-          </ul>
-        </details>
+      {/* The useful coaching fits in four plain lines. Never make users open
+          two nested accordions to find a single cue or their next dose. */}
+      {cue ? <p className="sp-block-aside"><span className="sp-stat-label">Cue</span>{cue}</p> : null}
+      {easier ? <p className="sp-block-aside"><span className="sp-stat-label">Easier</span>{easier}</p> : null}
+      {progression && openWeekIntent?.key !== "deload" ? (
+        <p className="sp-block-aside"><span className="sp-stat-label">Progress</span>{compactProgressLine(progression)}</p>
       ) : null}
       <details className="ex-detail-section">
         <summary>Full prescription</summary>
-        <BlockCard
-          block={block}
-          openWeekIntent={openWeekIntent}
-          sourceCountdown={sourceCountdown}
-          embedded
-          hideCues
-          hideStopRule
-        />
+        <BlockCard block={block} openWeekIntent={openWeekIntent}
+          sourceCountdown={sourceCountdown} embedded hideCues hideStopRule hideAdjustments />
       </details>
       {/* Renders only where a started session provides logging (Today). */}
       <ExerciseLogPanel block={block} />
@@ -1027,42 +1035,59 @@ export function SessionCard({
       : mentalCategory === "Analyse"
         ? "Review one tactical issue from sparring or available footage. Identify one adjustment for the next session."
         : "Rehearse one familiar fight situation and reset calmly.");
+    const mentalInstructions = Array.from(new Set(
+      blocks.flatMap((block) => [
+        ...getBlockExecutionDisplay(block).cues,
+        ...(block.notes ? [block.notes] : []),
+      ])
+        .map((line) => line.replace(/^\s*(?:Step\s*\d+|Cue|Intent|Focus|Reset|Anchor|Purpose|Progress)\s*:\s*/i, "").trim())
+        .filter(Boolean),
+    )).filter((line) => line.toLowerCase() !== summary.toLowerCase()).slice(0, 3);
+    // Never replace the selected Tactical Watch drill with a generic
+    // "Analyse" instruction. The athlete should recognise their actual task.
+    const mentalDrills = Array.from(new Set(
+      blocks.map((block) => cleanText(block.display_name)).filter(
+        (name): name is string => Boolean(name),
+      ),
+    ));
+    const mentalDrill = mentalDrills[0] ?? null;
+    const mentalCue = cleanText(
+      sessionMindset?.focus_cue || sessionMindset?.intent || sessionMindset?.confidence_anchor,
+    );
+    const mentalWhy = objective && !sameCopy(objective, summary) ? objective : null;
     return (
       <article className="sp-session sp-mental-task" data-mental-category={mentalCategory.toLowerCase()}>
         <header className="sp-mental-head">
-          <h3 className="sp-session-title">{mentalCategory}{mentalDuration ? ` · ${compactTimeUnits(mentalDuration)}` : ""}</h3>
+          <h3 className="sp-session-title">{title || mentalCategory}{mentalDuration ? ` · ${compactTimeUnits(mentalDuration)}` : ""}</h3>
           {completionInfo?.display.label ? (
             <span className="sp-tag sp-status-tag" data-tone={completionInfo.display.tone}>
               {completionInfo.display.label}
             </span>
           ) : null}
         </header>
-        <p className="sp-session-instruction">{summary}</p>
-        <details className="sp-section-details">
-          <summary>Instructions · {title}</summary>
-          <div className="sp-section-details-body">
-            {objective && !objectiveRepeatsTitle ? (
-              <p className="sp-session-objective">
-                {blocks.length > 0 ? <span className="sp-session-why-label">Why</span> : null}
-                {objective}
-              </p>
+        <p className="sp-session-instruction">{mentalDrill || summary}</p>
+        {mentalDrill && summary && !sameCopy(mentalDrill, summary) ? (
+          <p className="sp-muted">{summary}</p>
+        ) : null}
+        {mentalCue && !sameCopy(mentalCue, summary) ? (
+          <p className="sp-block-aside"><span className="sp-stat-label">Cue</span>{compactCoachLine(mentalCue)}</p>
+        ) : null}
+        {mentalInstructions.length > 0 || mentalDrills.length > 1 || mentalWhy ? (
+          <details className="sp-section-details">
+            <summary>View steps</summary>
+            {mentalWhy ? <p className="sp-session-objective">{mentalWhy}</p> : null}
+            {mentalDrills.length > 1 ? (
+              <ul className="sp-cues">
+                {mentalDrills.map((name) => <li key={name}>{name}</li>)}
+              </ul>
             ) : null}
-            <MindsetAnchorCard anchor={sessionMindset} dedupeContext={objective} />
-            <ExerciseSessionScope date={occurrenceDate ?? day?.date} session={session}>
-              {blocks.map((block, index) => (
-                <ExerciseRow
-                  key={cleanText(block.block_id) || `block-${index}`}
-                  block={block}
-                  open={openBlockIndex === index}
-                  onToggle={() => setOpenBlockIndex((current) => current === index ? null : index)}
-                  openWeekIntent={openWeekIntent}
-                  sourceCountdown={sourceCountdown}
-                />
+            <ol className="sp-cues">
+              {mentalInstructions.map((instruction, index) => (
+                <li key={`${index}-${instruction}`}>{instruction}</li>
               ))}
-              <SessionChangesFoot session={session} />
-            </ExerciseSessionScope>
-          </div>
-        </details>
+            </ol>
+          </details>
+        ) : null}
         {completionInfo?.onLog ? (
           <button type="button" className="secondary-button sp-log-session" onClick={completionInfo.onLog}>
             Log this session

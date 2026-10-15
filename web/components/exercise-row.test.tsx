@@ -136,7 +136,7 @@ test("with media the open row leads with a tap-to-play demo and pins the key cue
   // Key cue sits under the video and is not repeated in the cue list.
   assert.equal(html.includes(">Key cue</span>"), true);
   assert.equal(countOccurrences(html, "Hinge at the hips and keep the bar close to legs."), 1);
-  assert.equal(html.includes("Lower on a 3-1-1 tempo."), true);
+  assert.equal(html.includes("Lower on a 3-1-1 tempo."), false); // one coach cue only
 });
 
 test("only a portrait video marks the demo; landscape and undetected render the same markup", () => {
