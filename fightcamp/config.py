@@ -138,15 +138,39 @@ _DOSE_MINUTES_PATTERN = re.compile(
 )
 
 
+def conditioning_work_is_timed(dose: dict) -> bool:
+    """Legacy rep/metre values in work_sec are not elapsed seconds.
+
+    Keep those records and their written prescriptions; abstain from time-based
+    arithmetic until their units have been reviewed. Missing prose retains the
+    structured-only assignment contract.
+    """
+    text = str(dose.get("duration") or dose.get("timing") or "").lower()
+    if re.search(
+        r"\breps?\b|/side|per side|\d\s*(?:m|yds?|yards?|metres?|meters?|ft|feet)\b", text
+    ):
+        return False
+    count = re.match(r"\s*\d+\s*[x×]\s*\d+(?:\.\d+)?\s*(.*)", text)
+    if count and not re.match(r"(?:s|secs?|seconds?|mins?|minutes?)\b", count[1]):
+        return False  # e.g. 6x3 jumps is a rep dose, even without the word reps.
+    if re.match(r"\s*\d+\s+rounds?\s*:", text):
+        return False  # A mixed rep circuit does not state seconds per round.
+    return True
+
+
 def conditioning_dose_minutes(dose: dict) -> float | None:
     """Elapsed minutes a conditioning dose states, from its own bank fields."""
     if not isinstance(dose, dict):
         return None
+    if not conditioning_work_is_timed(dose):
+        return None  # Historical totals used rep/metre work_sec as seconds too.
     for key in ("total_minutes", "duration_min"):
         value = dose.get(key)
         if isinstance(value, (int, float)) and not isinstance(value, bool):
             return max(0.0, float(value))
     text = str(dose.get("duration") or dose.get("timing") or "").lower()
+    if re.search(r"\d\s*[x×]|\brounds?\b|\brest\b|\brecovery\b", text):
+        return None  # A per-round minute token is not an elapsed block duration.
     match = _DOSE_MINUTES_PATTERN.search(text)
     return float(match.group(1)) if match else None
 
@@ -161,6 +185,8 @@ def conditioning_dose_active_work_seconds(dose: dict) -> float | None:
     """
     if not isinstance(dose, dict):
         return None
+    if not conditioning_work_is_timed(dose):
+        return None
     try:
         work_sec = float(dose.get("work_sec"))
         rounds = float(dose.get("rounds"))
@@ -168,6 +194,9 @@ def conditioning_dose_active_work_seconds(dose: dict) -> float | None:
         work_sec = rounds = 0.0
     if work_sec > 0 and rounds > 0:
         return work_sec * rounds
+    text = str(dose.get("duration") or dose.get("timing") or "").lower()
+    if re.search(r"\d\s*[x×]|\brounds?\b|\brest\b|\brecovery\b|\bemom\b", text):
+        return None  # Unknown interval work must not fall back to elapsed time.
     minutes = conditioning_dose_minutes(dose)
     return minutes * 60.0 if minutes is not None else None
 

@@ -208,6 +208,14 @@ def selected_goals(athlete: dict, focus: dict | None = None) -> list[tuple[str, 
               *normalize_priority_values(focus.get("secondary_goals"))]
     goals = list(dict.fromkeys(_goal(value) for value in values if _goal(value)))
     selections = [(goal, "primary" if goal == primary else "secondary") for goal in goals]
+    # Gas tank remains a real secondary selection even when the athlete did
+    # not also tick the conditioning goal. One merged obligation, never an
+    # automatic additional hard session or a primary weekly floor.
+    if ("conditioning" not in goals and any(
+        _WEAKNESS_FLOOR_TARGETS.get(normalize_tag(value)) == "conditioning"
+        for value in profile.secondary_weak_areas
+    )):
+        selections.append(("conditioning", "secondary"))
     weakness = _primary_weakness(athlete, focus)
     if not weakness or weakness == primary:
         # Merged: one exposure discharges the goal and the weakness together.
@@ -668,7 +676,7 @@ def _other_stimuli(role: dict, pools: dict, phase: str, brief: dict) -> list[dic
         dose_source = dict(selected)
         for field in (
             "work_sec", "rest_sec", "rounds", "total_minutes", "rpe", "rpe_max",
-            "impact_cost", "lactate_load", "movement_cost",
+            "impact_cost", "lactate_load", "movement_cost", "duration", "timing", "modality", "tags",
         ):
             if metadata.get(field) is not None:
                 dose_source[field] = metadata[field]
@@ -694,7 +702,11 @@ def _other_stimuli(role: dict, pools: dict, phase: str, brief: dict) -> list[dic
         if "round_cap" in role:
             rounds = min(rounds, _number(role["round_cap"]))
         intents = []
-        if system in {"aerobic", "glycolytic"} and (minutes >= 6 or work * rounds >= 180):
+        from .config import conditioning_dose_active_work_seconds
+        active_work = conditioning_dose_active_work_seconds(dose_source) or 0
+        if system in {"aerobic", "glycolytic"} and (
+            active_work >= 180 or (metadata.get("standalone_protocol") and active_work > 0)
+        ):
             intents.append("energy_system_training")
         profile = _conditioning_structured_profile(dose_source, system=system)
         if system in {"alactic", "atp_pcr", "atp-pcr"} and work > 0 and rounds >= 2 and profile["speed_development"]:
@@ -710,7 +722,7 @@ def _other_stimuli(role: dict, pools: dict, phase: str, brief: dict) -> list[dic
         if "footwork" in _tags(selected) or system == "technical_footwork":
             intents.append("footwork_practice")
         if intents:
-            stimuli.append({"slot_id": member.get("slot_id"), "name": member.get("name"),
+            stimulus = {"slot_id": member.get("slot_id"), "name": member.get("name"),
                             "intents": intents, "system": system,
                             "dose_authority": "structured_conditioning_dose",
                             "work_sec": work, "rounds": rounds, "total_minutes": minutes,
@@ -720,7 +732,16 @@ def _other_stimuli(role: dict, pools: dict, phase: str, brief: dict) -> list[dic
                             # speed, and power keeps its separate maximal-effort gate.
                             "development_capable": "speed_quality" not in intents or profile["rpe"] is None or profile["rpe"] >= 6,
                             "effective_prescription": member.get("effective_prescription")
-                            or selected.get("prescription") or ""})
+                            or selected.get("prescription") or ""}
+            from .config import conditioning_work_is_timed
+            if not conditioning_work_is_timed(dose_source):
+                # Existing rep-dose witnesses/validator already speak sets and
+                # reps. Preserve ballistic speed evidence without fake seconds.
+                rep = dose_volume(stimulus['effective_prescription'])
+                stimulus.update(sets=rep['sets'], reps=rep['amount'])
+                for field in ('work_sec', 'rounds', 'total_minutes'):
+                    stimulus.pop(field, None)
+            stimuli.append(stimulus)
     stimuli += _embedded_trunk_stimuli(role, pools, phase)
     # Locked technical / mobility inserts have an actual deterministic duration.
     duration = _number(role.get("prescribed_duration_min") or role.get("duration_min"))
@@ -1514,11 +1535,19 @@ def reconcile_goal_preservation(brief: dict) -> dict:
 
 def _reconcile_goal_preservation(brief: dict) -> dict:
     """Repair, then decide; unresolved obligations remain blocking obligations."""
+    from .prescription_resolver import apply_effective_conditioning_prescriptions
+    apply_effective_conditioning_prescriptions(
+        weekly_role_map=brief.get("weekly_role_map") or {}, athlete_model=_athlete(brief),
+    )
     entries = classify_goal_preservation(_athlete(brief), brief.get("priority_focus"))
     for entry in entries:
         initial_state = entry["state"]
         matching, missing = _coverage(entry, brief, collect_goal_evidence(brief))
         audit = _restore_goal_roles(brief, entry) if missing else []
+        if audit:
+            apply_effective_conditioning_prescriptions(
+                weekly_role_map=brief.get("weekly_role_map") or {}, athlete_model=_athlete(brief),
+            )
         matching, missing = _coverage(entry, brief, collect_goal_evidence(brief))
         constraints = _deferral_constraints(entry, brief, missing) if missing else []
         if missing and constraints:

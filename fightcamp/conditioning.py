@@ -45,6 +45,7 @@ from .config import (
     conditioning_round_prescription,
     conditioning_dose_active_work_seconds,
     conditioning_effective_dose,
+    conditioning_work_is_timed,
     conditioning_phase_workload_envelope,
     STYLE_CONDITIONING_RATIO,
     DATA_DIR,
@@ -401,6 +402,16 @@ def _conditioning_priority_is_primary_gas_tank(priority_profile) -> bool:
     )
 
 
+def _conditioning_development_requested(priority_profile) -> bool:
+    """Retain developmental candidates for primary AND secondary limiters.
+
+    This never earns another calendar appointment. Role budgets, effective
+    contact and recovery constraints still own whether an exposure survives.
+    """
+    return any(tier & _CONDITIONING_PRIORITY_SYSTEM_TAGS
+               for tier in _conditioning_priority_tag_tiers(priority_profile))
+
+
 def _conditioning_fight_format_priority_bonus(drill: dict, priority_profile) -> float:
     """Dominant preference for fight-format round work on a primary gas-tank limiter.
 
@@ -694,13 +705,15 @@ def _conditioning_structured_profile(drill: dict, *, system: str | None = None) 
     multi_round = bool(rounds is not None and rounds >= CONDITIONING_MULTI_ROUND_MIN_ROUNDS)
     glycolytic_density = _has_structured_glycolytic_density(
         lactate_load=lactate_load,
-        work_sec=work_sec,
+        work_sec=work_sec if conditioning_work_is_timed(drill) else None,
         rest_sec=rest_sec,
         rounds=rounds,
-        total_minutes=total_minutes,
+        total_minutes=(conditioning_dose_active_work_seconds(drill) or 0) / 60,
         rpe=rpe,
     )
     alactic_structure = bool(
+        conditioning_work_is_timed(drill)
+        and
         work_sec is not None
         and rest_sec is not None
         and work_sec <= ALACTIC_MAX_WORK_SEC
@@ -708,7 +721,15 @@ def _conditioning_structured_profile(drill: dict, *, system: str | None = None) 
     )
     # Timed work/rest metadata does not turn landing/braking into speed work.
     # This bank entry explicitly ends at the landing without propulsion.
-    speed_development = alactic_structure and "no rebound" not in str(drill.get("name") or "").lower()
+    # Full-rest ballistic jump sets can train speed/power in REP units. That
+    # does not turn their legacy work_sec rep count into seconds of conditioning.
+    rep_dose = re.match(r"\s*(\d+)\s*x\s*(\d+)\s*reps?\b", str(drill.get("duration") or ""), re.I)
+    rep_speed = bool(
+        rep_dose and int(rep_dose[1]) >= 2 and 1 <= int(rep_dose[2]) <= 5
+        and "mech_ballistic" in (drill.get("tags") or [])
+        and (rest_sec or 0) >= ALACTIC_MIN_REST_SEC and (rpe or 0) >= 8
+    )
+    speed_development = (alactic_structure or rep_speed) and "no rebound" not in str(drill.get("name") or "").lower()
     freshness = _has_freshness_profile(
         lactate_load=lactate_load,
         impact_cost=impact_cost,
@@ -740,7 +761,7 @@ def _conditioning_structured_profile(drill: dict, *, system: str | None = None) 
 def _alactic_structure_ok(drill: dict) -> bool:
     structured = _conditioning_structured_profile(drill)
     if structured["has_dose_metadata"]:
-        return bool(structured["alactic_structure"])
+        return bool(structured["alactic_structure"] or structured["speed_development"])
 
     timing = drill.get("timing") or ""
     duration = drill.get("duration") or ""
@@ -876,6 +897,8 @@ def athlete_facing_system_label(drill: dict, *, late_window: str | None = None) 
         return "technical footwork"
 
     system = str(drill.get("system") or "").strip().lower()
+    if system == "aerobic" and drill.get("primary_adaptation") == "aerobic_capacity":
+        return "aerobic"  # Demanding aerobic HIIT is not a glycolytic adaptation label.
     tags = set(normalize_tags(drill.get("tags", [])))
     text = _conditioning_text_blob(drill)
     structured = _conditioning_structured_profile(drill, system=system)
@@ -1258,6 +1281,10 @@ def _sanitize_conditioning_bank(bank, *, source: str):
     def normalize_items(items: list[dict]) -> list[dict]:
         cleaned: list[dict] = []
         for item in items:
+            # Preserve records/identity/media for review; never prescribe an
+            # unresolved safety protocol through a fallback selection path.
+            if item.get("manual_review_required") is True:
+                continue
             placement = item.get("placement", "conditioning").lower()
             validate_training_item(
                 item,
@@ -1714,6 +1741,8 @@ def _conditioning_workload_primary_cap(
     actually reaches, leaving composition to detect the shortfall with no
     remaining slot to spend.
     """
+    if drills and drills[0].get("standalone_protocol"):
+        return 1  # A complete HIIT/SIT/buffering workout is not a short circuit.
     target_active_work, _ = conditioning_phase_workload_envelope(
         phase=phase, system=system, rounds_format=rounds_format
     )
@@ -1766,11 +1795,9 @@ def _resolve_conditioning_sessions(
     and where no drill states a dose (or no phase guidance applies) the historical
     one-primary behaviour holds.
 
-    ``workload_expansion_allowed`` carries the athlete's conditioning priority:
-    the developmental envelope is a gas-tank *development* target, so an athlete
-    whose primary goal or primary weak area is not conditioning keeps the normal
-    one-primary maintenance dose rather than spending Power/Speed/Strength
-    capacity closing an envelope they never asked for.
+    ``workload_expansion_allowed`` includes secondary conditioning priorities.
+    It preserves enough candidates for an already-authorised role, without
+    increasing the calendar's session budget or hard-exposure allowance.
     """
 
     ordered_keys = ["aerobic", "glycolytic", "alactic"]
@@ -2685,8 +2712,8 @@ def render_conditioning_block(
         "TAPER": _taper_dosage,
     }
     weekly_progression = {
-        "GPP": "Add 1 round or ~5–10% volume weekly; deload final week by ~20%.",
-        "SPP": "Increase density or intensity weekly; keep volume flat; deload final week by ~20%.",
+        "GPP": "Repeat the authorised dose; advance one variable only when the next prescription permits it. Reduce or defer when recovery or boxing load requires it.",
+        "SPP": "Protect boxing quality. Repeat, reduce or defer according to workload; advance only to the next authorised dose, keeping recovery intact.",
         "TAPER": "Reduce volume 40–60%; keep speed sharp; last 3–5 days very light.",
     }
     time_short = {
@@ -3289,6 +3316,14 @@ def generate_conditioning_block(flags):
             nonlocal restriction_candidates, restriction_blocked
             for drill in base_conditioning_bank:
                 d = drill.copy()
+                if d.get("standalone_protocol"):
+                    from .conditioning_boxing import conditioning_load_context
+                    # New complete high-cost protocols need explicit recovery
+                    # headroom. Do not replace easy aerobic support with HIIT
+                    # in a crowded/uncertain camp merely because it scores well.
+                    load = conditioning_load_context(flags, {})
+                    if str(flags.get("fatigue") or "").lower() != "low" or load["hard_exposures"] >= 2:
+                        continue
                 if d.get("placement", "conditioning").lower() != "conditioning":
                     continue
                 if selection_format == "boxing":
@@ -5168,7 +5203,7 @@ def generate_conditioning_block(flags):
         alactic_primary_cap=alactic_primary_cap,
         round_seconds=athlete_round_seconds(flags.get("rounds_format")),
         rounds_format=flags.get("rounds_format"),
-        workload_expansion_allowed=_conditioning_priority_is_primary_gas_tank(
+        workload_expansion_allowed=_conditioning_development_requested(
             priority_profile
         ),
     )

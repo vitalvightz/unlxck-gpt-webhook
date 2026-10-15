@@ -13,6 +13,35 @@ from typing import Any
 from .conditioning_preferences import striking_heavy_bag_preference as _boxing_heavy_bag_preference  # noqa: F401
 
 
+def conditioning_load_context(athlete: dict, week: dict) -> dict:
+    """Read load evidence without turning unmeasured boxing into hard intervals.
+
+    The contact resolver wins, including an explicitly empty hard-day result.
+    Structured session budgets remain with the calendar owner.
+    """
+    if "effective_hard_sparring_days" in week:
+        hard_days = week.get("effective_hard_sparring_days") or []
+    elif "hard_sparring_plan" in week:
+        from .sparring_dose_planner import effective_hard_days
+        hard_days = effective_hard_days(week.get("hard_sparring_plan") or [])
+    elif "effective_hard_sparring_days" in athlete:
+        hard_days = athlete.get("effective_hard_sparring_days") or []
+    else:
+        hard_days = athlete.get("hard_sparring_days") or []
+    hard_days = sorted({str(d).strip().lower() for d in hard_days if str(d).strip()})
+    coach_roles = [r for r in week.get("session_roles") or []
+                   if r.get("coach_owned") or r.get("category") in {"combat", "sparring", "technical"}]
+    # We have no measured duration/RPE for ordinary padwork or boxing. A
+    # weekday, role label or technical designation cannot supply that evidence.
+    unmeasured = any(r.get("role_key") != "hard_sparring_day" for r in coach_roles)
+    return {
+        "effective_hard_sparring_days": hard_days,
+        "hard_exposures": len(hard_days),
+        "coach_conditioning_intensity": "unknown" if unmeasured else "no_additional_coach_load_recorded",
+        "additional_hard_conditioning": "defer" if len(hard_days) >= 2 else "subject_to_existing_budget_and_legality",
+    }
+
+
 
 # ── Hint constants (only used by boxing aerobic logic) ───────────────────────
 _LOWER_LIMB_UNLOAD_HINTS = {

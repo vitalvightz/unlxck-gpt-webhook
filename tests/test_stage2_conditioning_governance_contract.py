@@ -55,7 +55,9 @@ def test_production_gpp_aerobic_regression_keeps_support_out_of_fulfillment():
             (candidate.get("drill") or {}).get("name") == "Nasal Jog"
             for candidate in reservoir["aerobic"]
         )
-        assert any("assault bike" in item["name"].lower() for item in aerobic)
+        # The complete Air Bike HIIT option uses the same authorised kit.
+        # Equipment eligibility must not depend on its display-name spelling.
+        assert any("assault_bike" in item.get("equipment", []) for item in aerobic)
 
         support_option = _serialize_conditioning_option(ladder, "aerobic", "optional recovery support")
         assert support_option["fulfillment_authority"] is False

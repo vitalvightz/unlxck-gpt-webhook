@@ -2407,7 +2407,7 @@
     "phases": [
       "SPP"
     ],
-    "system": "glycolytic",
+    "system": "ATP-PCr",
     "duration": "8x8sec max effort, 2min rest",
     "tags": [
       "posterior_chain",
@@ -2420,13 +2420,13 @@
       "mech_landing_impact",
       "mech_reactive"
     ],
-    "notes": "HAMSTRING ALERT: Replace with bike sprints if tight. GRADE: 15-20% incline",
+    "notes": "Maximal-quality short hill efforts with full recovery. Stop for hamstring tightness or loss of speed; use a non-impact modality when running is restricted.",
     "work_sec": 8,
     "rest_sec": 120,
     "rounds": 8,
     "total_minutes": 15.07,
     "impact_cost": "high",
-    "lactate_load": "high",
+    "lactate_load": "low",
     "movement_cost": "high",
     "mechanical_risk_tags": [
       "mech_acceleration",
@@ -2442,7 +2442,8 @@
     "stress_class": "anchor",
     "cost_class": "high",
     "support_only": false,
-    "meaningful_stress": true
+    "meaningful_stress": true,
+    "primary_adaptation": "alactic_speed"
   },
   {
     "name": "Wrestler Shot Series",
@@ -3637,7 +3638,7 @@
       "work_capacity",
       "mech_systemic_fatigue"
     ],
-    "notes": "TEMPERATURE: 90–95°F. HYDRATION: +20% fluid intake pre/post",
+    "notes": "Not eligible for automated prescription: heat exposure needs individual supervision, environmental monitoring and hydration assessment, especially during a weight cut. Retain for specialist review only.",
     "work_sec": 300,
     "rounds": 3,
     "total_minutes": 15.0,
@@ -3649,10 +3650,11 @@
     ],
     "rpe": 6,
     "intensity": "zone 2",
-    "stress_class": "anchor",
+    "stress_class": "support",
     "cost_class": "low",
-    "support_only": false,
-    "meaningful_stress": true
+    "support_only": true,
+    "meaningful_stress": false,
+    "manual_review_required": true
   },
   {
     "name": "Water Jug Carries (No Sled)",
@@ -4962,7 +4964,6 @@
       "mech_shoulder_overhead"
     ],
     "notes": "Ideal for shoulder recovery post-sparring",
-    "rest_sec": 1800,
     "total_minutes": 35,
     "rpe": 5,
     "impact_cost": "low",
@@ -5084,7 +5085,6 @@
       "mech_lower_lunge"
     ],
     "notes": "No rest; focus on smooth transitions (low-moderate)",
-    "rest_sec": 600,
     "total_minutes": 10,
     "rpe": 7,
     "impact_cost": "low",
@@ -5547,7 +5547,7 @@
       "mech_trunk_rotation",
       "mech_systemic_fatigue"
     ],
-    "notes": "Exhale fully before rounds; recover between (50% effort)",
+    "notes": "Not eligible for automated prescription: exercise breath-holding can cause dizziness or syncope. Use normal breathing during shadowboxing; retain this record for specialist review only.",
     "work_sec": 180,
     "rounds": 5,
     "total_minutes": 15,
@@ -5564,7 +5564,8 @@
     "stress_class": "support",
     "cost_class": "low",
     "support_only": true,
-    "meaningful_stress": false
+    "meaningful_stress": false,
+    "manual_review_required": true
   },
   {
     "name": "Kettlebell Swings (EMOM Aerobic)",
@@ -5788,7 +5789,6 @@
       "mech_trunk_stability"
     ],
     "notes": "No resistance; technique only",
-    "rest_sec": 900,
     "total_minutes": 15,
     "rpe": 5,
     "impact_cost": "low",
@@ -6666,7 +6666,7 @@
       "mech_trunk_rotation",
       "mech_cns_high"
     ],
-    "notes": "Use 2–4kg ball. Minimize effort, maximize intent and speed.",
+    "notes": "Use a light ball that allows crisp, controlled slams without straining. Maximize intent and speed.",
     "work_sec": 3,
     "rounds": 6,
     "total_minutes": 0.3,
@@ -6796,7 +6796,7 @@
       "eccentric",
       "mech_trunk_stability"
     ],
-    "notes": "Builds structural neck strength to reduce KO risk - use 5-10lb weight",
+    "notes": "Structural neck-strength support, not conditioning. Use conservative loading with qualified coaching; do not claim protection from concussion or knockout.",
     "work_sec": 15,
     "rounds": 4,
     "total_minutes": 1,
@@ -6982,7 +6982,7 @@
     "phases": [
       "SPP"
     ],
-    "system": "glycolytic",
+    "system": "aerobic",
     "modality": "row",
     "duration": "3x4min @ zone 3, 2min easy",
     "intensity": "moderate",
@@ -6994,13 +6994,13 @@
       "mech_systemic_fatigue",
       "mech_lower_hip_hinge"
     ],
-    "notes": "Full-body conditioning; safe for most injuries",
+    "notes": "Controlled zone-3 aerobic intervals, not maximal sprints or a prescribed red-zone HIIT target. Keep the 2-minute easy recovery; rowing still requires compatible back and shoulder tolerance.",
     "work_sec": 240,
     "rounds": 3,
     "total_minutes": 16.0,
     "rpe": 7,
     "impact_cost": "low",
-    "lactate_load": "high",
+    "lactate_load": "moderate",
     "movement_cost": "high",
     "mechanical_risk_tags": [
       "mech_lower_hip_hinge",
@@ -7011,7 +7011,8 @@
     "stress_class": "anchor",
     "cost_class": "high",
     "support_only": false,
-    "meaningful_stress": true
+    "meaningful_stress": true,
+    "primary_adaptation": "aerobic_capacity"
   },
   {
     "name": "Rower Pyramid (1-5-1min)",
@@ -9630,5 +9631,140 @@
     "cost_class": "high",
     "support_only": false,
     "meaningful_stress": true
+  },
+  {
+    "name": "Air Bike Aerobic HIIT",
+    "equipment": [
+      "assault_bike"
+    ],
+    "phases": [
+      "GPP",
+      "SPP"
+    ],
+    "system": "aerobic",
+    "modality": "bike",
+    "duration": "3x240s work, 120s rest",
+    "work_sec": 240,
+    "rest_sec": 120,
+    "rounds": 3,
+    "total_minutes": 16.0,
+    "rpe": 8,
+    "intensity": "hard but controlled",
+    "impact_cost": "low",
+    "movement_cost": "high",
+    "lactate_load": "high",
+    "tags": [
+      "conditioning",
+      "aerobic",
+      "low_impact",
+      "mech_systemic_fatigue",
+      "work_capacity",
+      "endurance"
+    ],
+    "mechanical_risk_tags": [
+      "mech_systemic_fatigue"
+    ],
+    "notes": "Sustain repeatable output across each four-minute interval; recover easily for two minutes. Record average watts on the same bike. Stop if technique or output collapses; this is not a maximal sprint.",
+    "primary_adaptation": "aerobic_capacity",
+    "standalone_protocol": true,
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true,
+    "coaching_cues": [
+      "Keep the hips stable and drive the handles smoothly; record output on the same bike."
+    ],
+    "stop_rules": [
+      "Stop for dizziness, chest discomfort, loss of control or marked output decay."
+    ]
+  },
+  {
+    "name": "Air Bike Sprint Interval Training",
+    "equipment": [
+      "assault_bike"
+    ],
+    "phases": [
+      "GPP"
+    ],
+    "system": "glycolytic",
+    "modality": "bike",
+    "duration": "4x30s work, 180s rest",
+    "work_sec": 30,
+    "rest_sec": 180,
+    "rounds": 4,
+    "total_minutes": 11.0,
+    "rpe": 9,
+    "intensity": "max",
+    "impact_cost": "low",
+    "movement_cost": "high",
+    "lactate_load": "high",
+    "tags": [
+      "conditioning",
+      "glycolytic",
+      "low_impact",
+      "mech_systemic_fatigue",
+      "work_capacity"
+    ],
+    "mechanical_risk_tags": [
+      "mech_systemic_fatigue"
+    ],
+    "notes": "Maximal thirty-second efforts with three minutes complete recovery. Record output; stop for marked output loss or dizziness. High fatigue cost despite only two minutes active work; never add rounds merely to meet a generic phase duration.",
+    "primary_adaptation": "sprint_interval_training",
+    "standalone_protocol": true,
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true,
+    "coaching_cues": [
+      "Keep the hips stable and drive the handles smoothly; record output on the same bike."
+    ],
+    "stop_rules": [
+      "Stop for dizziness, chest discomfort, loss of control or marked output decay."
+    ]
+  },
+  {
+    "name": "Air Bike Muscle Buffer Intervals",
+    "equipment": [
+      "assault_bike"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "glycolytic",
+    "modality": "bike",
+    "duration": "4x120s work, 180s rest",
+    "work_sec": 120,
+    "rest_sec": 180,
+    "rounds": 4,
+    "total_minutes": 17.0,
+    "rpe": 8,
+    "intensity": "high",
+    "impact_cost": "low",
+    "movement_cost": "high",
+    "lactate_load": "high",
+    "tags": [
+      "conditioning",
+      "glycolytic",
+      "low_impact",
+      "mech_systemic_fatigue",
+      "work_capacity",
+      "endurance"
+    ],
+    "mechanical_risk_tags": [
+      "mech_systemic_fatigue"
+    ],
+    "notes": "Demanding two-minute efforts with three minutes recovery. Maintain controlled mechanics and repeatable output; stop for substantial output decay. Introductory dose, not an instruction to copy an elite six-to-eight-interval protocol.",
+    "primary_adaptation": "muscle_buffering",
+    "standalone_protocol": true,
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true,
+    "coaching_cues": [
+      "Keep the hips stable and drive the handles smoothly; record output on the same bike."
+    ],
+    "stop_rules": [
+      "Stop for dizziness, chest discomfort, loss of control or marked output decay."
+    ]
   }
 ]
