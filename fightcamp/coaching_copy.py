@@ -128,6 +128,10 @@ def concise_coaching(fields):
         lead = short_cue(cues[0])
         result["coaching_cues"] = [lead]  # Exactly one actionable cue; original stays in bank.
     options = _unique(result.get("regression_options"))
-    result["regression_options"] = options[:1]
-    result["stop_rules"] = readable_stop(result.get("stop_rules"))
+    result["regression_options"] = [compact_coaching_line(options[0])] if options else []
+    progress = _text(result.get("progression_rule"))
+    if progress:
+        result["progression_rule"] = compact_coaching_line(progress)
+    stop = readable_stop(result.get("stop_rules"))
+    result["stop_rules"] = [compact_stop(stop[0])] if stop else []
     return result
