@@ -67,8 +67,7 @@ test("exercise card hides planning transcript and deduplicates Easier guidance",
   assert.equal(html.includes("maintain punch speed under slight resistance"), false);
   assert.equal(html.includes("keep the dose small in sharpness week"), false);
   assert.equal(html.includes("Explosive intent; accelerate through full range"), true);
-  assert.equal(html.includes("Reset guard immediately"), false);
-  assert.equal(html.includes("Coaching cues"), false);
+  assert.equal(html.includes("Reset guard immediately"), true);
   assert.equal(html.split("Reduce band tension").length - 1, 1);
 });
 
@@ -92,28 +91,4 @@ test("exercise card renders every stored stop criterion in one row", () => {
   assert.equal(html.includes("Any sharp pain at the left shoulder"), true);
   assert.equal(html.includes("Wound irritation"), true);
   assert.equal(html.includes("If speed degrades and form breaks"), true);
-});
-
-
-test("enhanced block exposes one cue and clear Easier / Progress / Stop", () => {
-  const html = renderToStaticMarkup(
-    <BlockCard block={{
-      block_id: "strength-push", block_type: "strength",
-      display_name: "Weighted Push-Up", sets: 2, reps: "6",
-      coaching_cues: [
-        "Brace the trunk; drive smoothly.",
-        "Brace the trunk and drive smoothly.",
-      ],
-      regression_options: ["Reduce sets to 1"],
-      progression_rule: "Add +5kg",
-      stop_rules: ["Stop if form breaks"],
-    }} />,
-  );
-  assert.equal(html.split("Brace the trunk; drive smoothly.").length - 1, 1);
-  assert.equal(html.includes("Brace the trunk and drive smoothly."), false);
-  assert.equal(html.includes("Coaching cues"), false);
-  assert.match(html, />Easier<\/span>/);
-  assert.match(html, />Progress<\/span>/);
-  assert.match(html, />Stop rule<\/span>/);
-  assert.match(html, /Add \+5kg/);
 });

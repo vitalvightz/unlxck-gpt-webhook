@@ -23,35 +23,14 @@ for (const row of expected) {
   for (const copy of row.forbidden ?? []) {
     assert.ok(!visible.includes(copy), `${row.id}: borrowed another session's instruction: ${copy}`);
   }
-  // Full source fields stay intact in the stored API payload (Python asserts
-  // exact equality). The athlete-visible projection is intentionally smaller:
-  // ONE execution cue and ONE easier, with measured Progress and full safety.
-  if (row.fields.coaching_cues?.length) {
-    // Legacy cards may store the interval DOSE as the only coaching cue.
-    // That is not an execution cue: the UI must not invent advice to fill it.
-    const actionable = row.fields.coaching_cues.filter((line) =>
-      !/^\d+(?:\.\d+)?\s*(?:s|sec|seconds)\s+work\b.*\brest\b/i.test(line.trim()));
-    if (actionable.length) {
-      const lead = actionable[0].replace(/^Cue:\s*/i, "");
-      const expectedStart = lead.split(/[;,]/)[0].trim();
-      assert.ok(visible.includes(expectedStart) || visible.includes("Key cue") || visible.includes("Cue"),
-        `${row.id}: missing execution cue`);
-    }
-    assert.ok(!visible.includes("Coaching cues"), `${row.id}: duplicate coaching accordion`);
-  }
-  if (row.fields.regression_options?.length) {
-    assert.ok(visible.includes("Easier"), `${row.id}: missing Easier`);
-  }
-  if (row.fields.stop_rules?.length) {
-    assert.ok(visible.includes("Stop"), `${row.id}: missing Stop`);
-    for (const criterion of row.fields.stop_rules) {
-      assert.ok(visible.includes(criterion), `${row.id}: missing stop trigger: ${criterion}`);
-    }
-  }
-  if (row.fields.progression_rule) {
-    assert.ok(visible.includes("Progress"), `${row.id}: missing Progress`);
-    const m = row.fields.progression_rule.match(/\badd\s+(\d+(?:\.\d+)?)\s*(kg|lb|reps?|sets?|rounds?|m)\b/i);
-    if (m) assert.ok(visible.includes(m[1]), `${row.id}: lost numeric progression amount`);
+  for (const [field, label] of [
+    ["coaching_cues", "Coaching cues"], ["regression_options", "Easier"],
+    ["stop_rules", "Stop rule"], ["progression_rule", "Progress"],
+  ] as const) {
+    const value = row.fields[field];
+    const values = typeof value === "string" ? [value] : value ?? [];
+    if (values.length && field !== "coaching_cues") assert.ok(visible.includes(label), `${row.id}: missing ${label}`);
+    for (const copy of values) assert.ok(visible.includes(copy), `${row.id}: lost ${field}: ${copy}`);
   }
   if (!row.fields.progression_rule) assert.ok(!/>Progress<\/span>/.test(html), row.id);
   if (row.fields.progression_rule) progress++;

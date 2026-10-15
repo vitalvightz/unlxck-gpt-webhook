@@ -16,7 +16,7 @@ for (const [title, category] of [["Fight Visualisation", "Visualise"], ["Neural 
     for (const layout of ["card", "section"] as const) {
       const html = renderToStaticMarkup(<SessionCard session={session} layout={layout} defaultOpenBlocks
         completionInfo={{ onLog: () => {}, display: { state: "done", label: "Done", tone: "green" } }} />);
-      assert.match(html, new RegExp(`${title} · 5 min`));
+      assert.match(html, new RegExp(`${category} · 5 min`));
       assert.match(html, /<details class="sp-section-details"><summary>/);
       assert.doesNotMatch(html, /<details[^>]* open/);
       assert.match(html, /Original selected scenario instruction/);
