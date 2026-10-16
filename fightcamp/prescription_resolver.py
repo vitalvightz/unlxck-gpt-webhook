@@ -722,8 +722,15 @@ def _pre_hard_verified_low_cost(slot: dict[str, Any]) -> bool:
     return has_verified_low_cost(slot, fields=_PRE_HARD_COST_FIELDS)
 
 
-def _pre_hard_allowed_slots(owned_slots: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    """One loaded anchor plus at most one genuinely low-cost support/power item."""
+def _pre_hard_allowed_slots(
+    owned_slots: list[dict[str, Any]], *, microdose_only: bool = False
+) -> list[dict[str, Any]]:
+    """One loaded anchor and low-cost support, or one pure power microdose."""
+    if microdose_only:
+        return [
+            slot for slot in sorted(owned_slots, key=_slot_priority)
+            if _role_kind(slot) == "power" and _pre_hard_verified_low_cost(slot)
+        ][:1]
     allowed: list[dict[str, Any]] = []
     loaded_anchor_used = False
     additional_used = False
@@ -1080,7 +1087,8 @@ def _build_role_envelope(
                 "pre_hard_contact_managed_stress": True,
                 "pre_hard_contact_reason_code": role.get("pre_hard_contact_reason_code") or _PRE_HARD_CONTACT_REASON,
                 "max_meaningful_strength_exposures": 1,
-                "max_loaded_anchors": 1,
+                "pre_hard_contact_microdose_only": role.get("pre_hard_contact_microdose_only") is True,
+                "max_loaded_anchors": 0 if role.get("pre_hard_contact_microdose_only") is True else 1,
                 "max_additional_low_cost_items": 1,
                 # The pre-contact policy may reduce dose/volume, but it must not
                 # reopen or independently redefine selected membership.
@@ -1127,7 +1135,10 @@ def apply_effective_strength_prescriptions(
             # filter. Once it removes a high-cost secondary/power item, that item
             # must also disappear from the authoritative selected membership so
             # PR2 cannot re-authorise it via the closed allow-list.
-            slots_for_resolution = _pre_hard_allowed_slots(owned_slots)
+            slots_for_resolution = _pre_hard_allowed_slots(
+                owned_slots,
+                microdose_only=role.get("pre_hard_contact_microdose_only") is True,
+            )
             surviving_strength_keys = {
                 (str(slot.get("slot_id") or ""), str(_slot_selected(slot).get("name") or ""))
                 for slot in slots_for_resolution
