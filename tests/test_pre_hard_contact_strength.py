@@ -11,7 +11,7 @@ from fightcamp.pre_hard_contact_strength import (
 from fightcamp.prescription_resolver import apply_effective_strength_prescriptions
 from fightcamp.late_camp_role_morph import apply_late_camp_role_morph
 from fightcamp.stage2_validator import _late_camp_effective_prescription_warnings
-from fightcamp.session_composition import compose_normal_strength_assignments
+from fightcamp.session_composition import compose_normal_strength_assignments, assignment_from_slot, redistribute_pre_hard_power_from_main
 
 
 def _calendar(*pairs: tuple[str, int]) -> list[dict]:
@@ -481,37 +481,55 @@ def _power_slot(*, cost: str = "low", with_cost: bool = True) -> dict:
     }
 
 
-def test_clean_main_and_pre_contact_power_microdose_can_coexist() -> None:
+def _transfer_slots(cost: str = "low", with_cost: bool = True) -> tuple[dict, ...]:
+    donor = _power_slot(cost=cost, with_cost=with_cost)
+    donor["session_index"] = 1
+    return _anchor_slot(), _high_cost_power_slot(), _low_cost_support_slot(), donor
+
+
+def _seed_main(weekly: dict, *slots: dict) -> None:
+    main = weekly["weeks"][0]["session_roles"][0]
+    main["selected_exercise_assignments"] = [
+        assignment_from_slot("GPP", "strength_slots", slot) for slot in slots
+    ]
+
+
+def test_clean_main_and_pre_contact_power_microdose_share_existing_work() -> None:
     weekly = _secondary_power_geometry()
     athlete = {"primary_goal": "power", "fatigue": "low", "cut_severity_bucket": "none"}
+    slots = _transfer_slots()
+    _seed_main(weekly, *slots)
     apply_pre_hard_contact_strength_exposure_cap(weekly, athlete)
     roles = weekly["weeks"][0]["session_roles"]
     assert len(roles) == 2
     assert roles[0]["scheduled_day_hint"] == "Saturday"
     assert roles[1]["scheduled_day_hint"] == "Monday"
     assert roles[1]["pre_hard_contact_microdose_only"] is True
-    assert roles[0].get("pre_hard_contact_managed_stress") is not True
-    assert weekly["weeks"][0]["pre_hard_contact_strength_policy"]["max_meaningful_strength_exposures"] == 1
 
-    compose_normal_strength_assignments(
+    before = [a["name"] for a in roles[0]["selected_exercise_assignments"]]
+    redistribute_pre_hard_power_from_main(
         weekly_role_map=weekly,
-        candidate_pools=_candidate_pools(_power_slot()),
-        allow_relocation=False,
-    )
-    microdose = roles[1]
-    assert [member["name"] for member in microdose["selected_exercise_assignments"]] == [
-        "Med-Ball Rotational Slam"
-    ]
-    apply_effective_strength_prescriptions(
-        weekly_role_map=weekly,
-        candidate_pools=_candidate_pools(_power_slot()),
+        candidate_pools=_candidate_pools(*slots),
         athlete_model=athlete,
     )
-    resolved = microdose["effective_strength_prescriptions"]
+    main, monday = roles
+    after = [a["name"] for a in main["selected_exercise_assignments"]]
+    transferred = [a["name"] for a in monday["selected_exercise_assignments"]]
+    assert transferred == ["Med-Ball Rotational Slam"]
+    assert sorted(before) == sorted(after + transferred)
+    assert len(after) == len(before) - 1
+    assert weekly["weeks"][0]["pre_hard_power_redistribution"]["weekly_exercise_count_delta"] == 0
+
+    apply_effective_strength_prescriptions(
+        weekly_role_map=weekly, candidate_pools=_candidate_pools(*slots),
+        athlete_model=athlete,
+    )
+    resolved = monday["effective_strength_prescriptions"]
     assert len(resolved) == 1
     assert resolved[0]["effective_prescription"].startswith("2 x 2")
     assert resolved[0]["effective_loaded"] is False
-    assert microdose["strength_dose_cap"]["loaded_allowed"] is False
+    assert monday["strength_dose_cap"]["loaded_allowed"] is False
+    assert all(p.get("name") != "Med-Ball Rotational Slam" for p in main["effective_strength_prescriptions"])
 
 
 @pytest.mark.parametrize(
@@ -531,17 +549,23 @@ def test_pre_contact_second_strength_remains_suppressed_when_constrained(athlete
     assert not any(role.get("pre_hard_contact_microdose_only") for role in weekly["weeks"][0]["session_roles"])
 
 
-@pytest.mark.parametrize("slot", [_power_slot(cost="high"), _power_slot(with_cost=False)])
-def test_power_microdose_rejects_high_or_unknown_recovery_cost(slot) -> None:
+@pytest.mark.parametrize("cost,with_cost", [("high", True), ("low", False)])
+def test_no_safe_transfer_keeps_all_main_work_and_suppresses_monday(cost, with_cost) -> None:
     weekly = _secondary_power_geometry()
-    apply_pre_hard_contact_strength_exposure_cap(weekly, {"primary_goal": "power"})
-    compose_normal_strength_assignments(
+    slots = _transfer_slots(cost=cost, with_cost=with_cost)
+    _seed_main(weekly, *slots)
+    main = weekly["weeks"][0]["session_roles"][0]
+    before = [m["name"] for m in main["selected_exercise_assignments"]]
+    athlete = {"primary_goal": "power", "fatigue": "low"}
+    apply_pre_hard_contact_strength_exposure_cap(weekly, athlete)
+    redistribute_pre_hard_power_from_main(
         weekly_role_map=weekly,
-        candidate_pools=_candidate_pools(slot),
-        allow_relocation=False,
+        candidate_pools=_candidate_pools(*slots),
+        athlete_model=athlete,
     )
-    microdose = weekly["weeks"][0]["session_roles"][1]
-    assert microdose["selected_exercise_assignments"] == []
+    assert [r["scheduled_day_hint"] for r in weekly["weeks"][0]["session_roles"]] == ["Saturday"]
+    assert [m["name"] for m in main["selected_exercise_assignments"]] == before
+    assert weekly["weeks"][0]["pre_hard_power_redistribution"]["status"] == "skipped"
 
 
 def test_power_microdose_does_not_override_weekly_role_budget() -> None:
