@@ -178,6 +178,39 @@ def _power_microdose_eligible(athlete_model: dict[str, Any]) -> bool:
     )
 
 
+def suppress_unfunded_power_microdose(
+    week: dict[str, Any], role: dict[str, Any], *,
+    athlete_model: dict[str, Any], reason_code: str,
+) -> None:
+    """Role-budget owner withdraws a proposed receiver when no main work moves.
+
+    This is not another session-allocation pass. The pre-contact exception
+    remains conditional on a genuine bank-backed transfer; without one, restore
+    the original one-meaningful-strength-exposure boundary and the off day.
+    """
+    current = week.get("session_roles") or []
+    if not any(item is role for item in current):
+        return
+    week["session_roles"] = [item for item in current if item is not role]
+    suppressed = _suppression_record(role)
+    suppressed["compression_reason_codes"] = [reason_code]
+    suppressed["reasons"] = ["No verified low-cost power stimulus could be moved from the main session."]
+    week.setdefault("suppressed_roles", []).append(suppressed)
+    for index, surviving in enumerate(week["session_roles"], start=1):
+        surviving["session_index"] = index
+    _refresh_unused_days(week, athlete_model)
+    policy = week.get("pre_hard_contact_strength_policy")
+    if isinstance(policy, dict):
+        policy["microdose_role_key"] = None
+        policy["microdose_day"] = None
+        policy["suppressed_strength_roles"] = int(policy.get("suppressed_strength_roles") or 0) + 1
+    week["pre_hard_power_redistribution"] = {
+        "status": "skipped",
+        "reason_code": reason_code,
+        "weekly_exercise_count_delta": 0,
+    }
+
+
 def apply_pre_hard_contact_strength_exposure_cap(
     weekly_role_map: dict[str, Any],
     athlete_model: dict[str, Any] | None = None,
