@@ -712,8 +712,17 @@ export function mentalSessionCategory(session: StructuredSession): "Visualise" |
   if (type && PHYSICAL_SESSION_TYPES.has(type)) return null;
   if (getBlocks(session).some(block => {
     const blockType = cleanText(block.block_type);
-    return blockType && blockType !== "mindset" &&
-      !(blockType === "skill" && ZERO_LOAD_CONTENT_RE.test(cleanText(block.display_name) || ""));
+    const name = cleanText(block.display_name) || "";
+    // Older valid converter cards tag banked mental rehearsal as "skill" and
+    // name it "Tactical Picture". It has no executable exercise key. Treat it
+    // as the same zero-load visualisation as today's locked mindset version,
+    // without hiding real skill drills or conditioning inside a mental title.
+    const mentalSkill = blockType === "skill" && (
+      ZERO_LOAD_CONTENT_RE.test(name) ||
+      (/^(?:Tactical Picture|Pressure Route Scan|Pocket Exchange Map|First-Round Pressure Script)$/i.test(name)
+        && !cleanText(block.exercise_key))
+    );
+    return blockType && blockType !== "mindset" && !mentalSkill;
   })) return null;
   const identity = `${session.session_id ?? ""} ${session.title ?? ""}`;
   if (/fight[_ -]visuali[sz]|neural[_ -]visuali[sz]/i.test(identity)) return "Visualise";
