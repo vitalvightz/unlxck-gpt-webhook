@@ -29,6 +29,17 @@ _VARIANTS = {
     "limiting_knee": {"injuries": "", "guided_injury": None, "guided_injuries": [
         {"area": "Left knee", "severity": "moderate", "trend": "stable", "injury_type": "pain", "timeframe": "last_month"}]},
     "no_sparring": {"hard_sparring_days": [], "support_work_days": []},
+    "mma_two_hard_power": {
+        "athlete": {"technical_style": ["mma"]},
+        "injuries": "", "guided_injury": None, "guided_injuries": [],
+        "key_goals": ["power", "speed", "strength"],
+        "primary_goal": "power", "weak_areas": ["power", "trunk_strength"],
+        "primary_weak_area": "power", "goal_weakness_collision_tags": ["power"],
+        "hard_sparring_days": ["Tuesday", "Thursday"],
+        "support_work_days": ["Friday"],
+        "training_availability": ["Monday", "Tuesday", "Thursday", "Friday", "Saturday"],
+        "weekly_training_frequency": 6,
+    },
     "three_days": {"training_availability": ["Monday", "Wednesday", "Friday"], "weekly_training_frequency": 3,
                    "hard_sparring_days": ["Wednesday"], "support_work_days": []},
 }
@@ -187,3 +198,31 @@ def test_open_goal_evidence_names_the_final_projected_membership():
     for goal in spec["goal_coverage"]:
         assert goal["satisfied"]
         assert all((item["week"], item["weekday"], item["name"]) in members for item in goal["evidence"])
+
+
+def test_two_hard_power_open_block_never_turns_a_microdose_into_full_strength():
+    """Production-like MMA schedule across all four weeks, no model calls."""
+    spec = _spec("mma_two_hard_power")
+    assert len(spec["weekly_session_plan"]["weeks"]) == 4
+    for week in spec["weekly_session_plan"]["weeks"]:
+        sessions = week["sessions"]
+        assert {"Tuesday", "Thursday"} <= {
+            item["weekday"] for item in sessions if item["role_key"] == "hard_sparring_day"
+        }
+        assert all(
+            item["weekday"] in {"Monday", "Tuesday", "Thursday", "Friday", "Saturday"}
+            for item in sessions
+        )
+        meaningful_strength = [
+            item for item in sessions if item.get("category") == "strength"
+        ]
+        assert meaningful_strength, week
+        for session in meaningful_strength:
+            if session.get("weekday") != "Monday":
+                continue
+            # A pre-hard Monday power touch must never contain the full bank
+            # strength circuit, independent of whether this seed selected one.
+            assert len(session.get("exercises") or []) <= 1
+            for exercise in session.get("exercises") or []:
+                dose = str(exercise.get("prescription") or "")
+                assert dose.startswith(("1 x 1", "1 x 2", "2 x 1", "2 x 2")), exercise
