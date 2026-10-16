@@ -256,15 +256,21 @@ function TechnicalCombatRationale({ title }: { title?: string }) {
   return <p className="sp-today-note">{rationale}</p>;
 }
 
-function TechnicalCombatWhyTooltip() {
-  return (
-    <WhyTooltip
-      className="info-tooltip"
-      title={TECHNICAL_COMBAT_TITLE}
-      body={TECHNICAL_COMBAT_HELP}
-      triggerLabel="i"
-    />
-  );
+function TechnicalCombatWhyTooltip({ day, declared = false }: {
+  day?: StructuredDay;
+  declared?: boolean;
+}) {
+  const anchor = day?.today_card?.mindset_anchor;
+  const focus = cleanText(anchor?.focus_cue);
+  const reset = cleanText(anchor?.reset_cue);
+  const body = [
+    declared ? DECLARED_LIGHT_COMBAT_DESCRIPTION : TECHNICAL_COMBAT_HELP,
+    focus ? `Focus: ${focus}` : null,
+    reset ? `Reset: ${reset}` : null,
+  ].filter(Boolean).join("\n");
+  return <WhyTooltip className="info-tooltip"
+    title={declared ? DECLARED_LIGHT_COMBAT_TITLE : TECHNICAL_COMBAT_TITLE}
+    body={body} triggerLabel="i" />;
 }
 
 export function MindsetAnchorCard({
@@ -580,12 +586,21 @@ export function BlockCard({
   );
 }
 
-/** Collapsed-row stat line: the headline metric plus effort, e.g. "3 × 8–12 · RPE 7". */
+/** One compact exercise-list stat line, not a full prescription paragraph. */
 function exerciseRowSummary(
   block: StructuredBlock,
   prescription: { metrics: { value: string }[]; load: string | null; effort: string | null },
 ): string | null {
-  if (block.prescription_text) return block.prescription_text;
+  if (block.prescription_text) {
+    const full = block.prescription_text.trim();
+    if (full.length <= 72) return full;
+    const duration = full.match(/\b\d+(?:\.\d+)?\s*(?:minutes?|mins?|seconds?|secs?)\b/i)?.[0];
+    const effort = full.match(/\bRPE\s*\d+(?:\.\d+)?\b/i)?.[0];
+    // The full instructions remain in the expanded card; never use a whole
+    // paragraph as a tiny exercise-list subtitle.
+    return [duration ? compactTimeUnits(duration) : null, effort]
+      .filter(Boolean).join(" · ") || "See prescription";
+  }
   const headline =
     prescription.metrics[0]?.value || getBlockExecutionDisplay(block).prescription
     || prescription.load || formatMeasured(block.duration);
@@ -824,13 +839,7 @@ export function ExerciseRow({
   );
 }
 
-/**
- * One exercise in its own sheet (Today). What to do and when to stop are
- * always in view; the reasons, the coaching cues and the full prescription
- * each open on their own. In a preview the demo starts open (paused on its
- * tap-to-play frame, nothing loads until tapped); once the session is running
- * it is collapsed like the rest and logging sits at the foot.
- */
+/** Exercise detail for Today. Safety remains visible outside disclosures. */
 function ExerciseDetail({
   block,
   openWeekIntent,
@@ -1202,7 +1211,7 @@ export function SessionCard({
               : isTechnicalSession
                 ? TECHNICAL_COMBAT_TITLE
                 : title}
-            {isTechnicalSession ? <TechnicalCombatWhyTooltip /> : null}
+            {(isTechnicalSession || isDeclaredLightCombat) ? <TechnicalCombatWhyTooltip day={day} declared={isDeclaredLightCombat} /> : null}
           </h3>}
           {/* The objective is the plan's "Why:" line, not a description of the
               work — the blocks below already carry that. Labelling it says so
@@ -1386,8 +1395,7 @@ export function SessionlessDayCard({
   const nutrition = cleanText(card?.nutrition_summary);
   const weightCut = cleanText(card?.weight_cut_warning);
   const { kind, title, tag, coachLed, converted } = classifySessionlessDay(day);
-  // Only a converted hard-sparring day gets the "hard sparring is reduced"
-  // treatment; a technical day the athlete declared keeps its own wording.
+  // Keep declared and converted contact distinct.
   const isConverted = kind === "technical" && converted;
   const displayTitle =
     kind === "light_combat"
@@ -1411,7 +1419,7 @@ export function SessionlessDayCard({
           ) : null}
           <h3 className="sp-session-title">
             {displayTitle}
-            {isConverted ? <TechnicalCombatWhyTooltip /> : null}
+            {(kind === "light_combat" || kind === "technical") ? <TechnicalCombatWhyTooltip day={day} declared={!isConverted} /> : null}
           </h3>
         </div>
         <div className="sp-session-meta">
@@ -1445,15 +1453,16 @@ export function SessionlessDayCard({
 }
 
 function LightTechnicalDayContext({
-  tag,
+  tag, day,
 }: {
   tag: string | null;
+  day?: StructuredDay;
 }) {
   return (
     <div className="cm-light-technical">
       <div className="cm-light-technical-head">
         {tag ? <span className="sp-tag sp-accent">{tag}</span> : null}
-        <p className="sp-today-headline">{DECLARED_LIGHT_COMBAT_TITLE}</p>
+        <p className="sp-today-headline">{DECLARED_LIGHT_COMBAT_TITLE}<TechnicalCombatWhyTooltip day={day} declared /></p>
       </div>
       <p className="sp-today-note">{DECLARED_LIGHT_COMBAT_DESCRIPTION}</p>
     </div>
@@ -1472,6 +1481,7 @@ function CoachLedDayContext({
   converted,
   headline,
   reducedReason,
+  day,
 }: {
   title: string;
   tag: string | null;
@@ -1479,10 +1489,10 @@ function CoachLedDayContext({
   converted: boolean;
   headline?: string;
   reducedReason?: string | null;
+  day?: StructuredDay;
 }) {
   const isLightCombat = kind === "light_combat";
-  // Only a converted hard-sparring day reads as "Technical Combat"; a technical
-  // day the athlete declared keeps its own wording and the light-combat note.
+  // Preserve declared versus converted day labels.
   const isTechnical = kind === "technical" && converted;
   const isDeclaredTechnical = kind === "technical" && !converted;
   const displayTitle = isLightCombat
@@ -1503,11 +1513,11 @@ function CoachLedDayContext({
       <div className="cm-light-technical-head">
         {displayTag ? <span className="sp-tag sp-accent">{displayTag}</span> : null}
         {repeatsHeadline ? (
-          isTechnical ? <TechnicalCombatWhyTooltip /> : null
+          isTechnical || isLightCombat || isDeclaredTechnical ? <TechnicalCombatWhyTooltip day={day} declared={!isTechnical} /> : null
         ) : (
           <p className="sp-today-headline">
             {displayTitle}
-            {isTechnical ? <TechnicalCombatWhyTooltip /> : null}
+            {isTechnical || isLightCombat || isDeclaredTechnical ? <TechnicalCombatWhyTooltip day={day} declared={!isTechnical} /> : null}
           </p>
         )}
       </div>
@@ -1572,7 +1582,7 @@ export function DaySessionContext({ day, headline }: { day: StructuredDay; headl
   return (
     <div className={`cm-day-context${coachLedContact ? " cm-day-context-contact" : ""}`}>
       {showLightTechnicalContext ? (
-        <LightTechnicalDayContext tag={sessionlessDay.tag} />
+        <LightTechnicalDayContext tag={sessionlessDay.tag} day={day} />
       ) : null}
       {coachLedContact ? (
         <CoachLedDayContext
@@ -1582,6 +1592,7 @@ export function DaySessionContext({ day, headline }: { day: StructuredDay; headl
           converted={coachLedContact.converted}
           headline={headline}
           reducedReason={getReducedContactReason(day)}
+          day={day}
         />
       ) : null}
       {priorityMicrodose ? <PriorityMicrodoseCard day={day} /> : null}

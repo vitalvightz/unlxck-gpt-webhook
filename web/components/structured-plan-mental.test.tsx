@@ -93,3 +93,16 @@ test("mental safety remains visible outside disclosures", () => {
   assert.match(html, /Stop if distress increases/);
   assert.doesNotMatch(html, /<details/);
 });
+
+test("old D-40 mixed Tactical Picture gets mental layout", () => {
+  const session = {
+    title: "Fight Visualisation", session_type: "mixed",
+    blocks: [{ block_type: "skill", display_name: "Tactical Picture",
+      coaching_cues: ["Visualise them giving ground.", "Take space without chasing.",
+        "Cut their exit.", "Rehearse them changing direction."] }],
+  } as StructuredSession;
+  assert.equal(mentalSessionCategory(session), "Visualise");
+  const html = renderToStaticMarkup(<SessionCard session={session} />);
+  assert.match(html, /sp-mental-steps/);
+  assert.doesNotMatch(html, /Show less/);
+});
