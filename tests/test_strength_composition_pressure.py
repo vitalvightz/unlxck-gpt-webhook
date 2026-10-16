@@ -70,12 +70,12 @@ def _diverse_slots() -> list[dict]:
             prescription="4 x 3/side, full recovery",
         ),
         _slot(
-            "Plyometric Push-Up",
+            "Split Squat",
             5,
-            movement="push",
-            tags=["explosive", "upper_body", "mech_upper_press"],
-            movement_patterns=["explosive", "upper_body", "mech_upper_press"],
-            prescription="3 x 4, full recovery",
+            movement="lunge",
+            tags=["compound", "lower_body", "mech_lower_lunge"],
+            movement_patterns=["lunge", "lower_body", "mech_lower_lunge"],
+            equipment=["dumbbells"],
         ),
         _slot(
             "Pallof Hold",

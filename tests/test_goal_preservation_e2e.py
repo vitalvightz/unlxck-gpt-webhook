@@ -47,7 +47,7 @@ def test_sheyi_like_full_planner_never_credits_a_power_touch_as_strength(monkeyp
     # was previously "satisfied" only by an invented Reactive Footwork
     # Walkthrough; the floor no longer authors exercises, so without real
     # footwork work the gap is recorded honestly and reported, never filled.
-    assert {entry["goal"] for entry in brief["goal_preservation"]} == {"speed", "strength", "footwork"}
+    assert {entry["goal"] for entry in brief["goal_preservation"]} == {"speed", "strength", "footwork", "power"}
     footwork = next(entry for entry in brief["goal_preservation"] if entry["goal"] == "footwork")
     assert (footwork["priority"], footwork["state"]) == ("primary_weakness", "build")
     if footwork["satisfied"]:
@@ -64,7 +64,9 @@ def test_sheyi_like_full_planner_never_credits_a_power_touch_as_strength(monkeyp
         assert not any(e["goal"] == "strength" for e in validate_goal_preservation(brief))
     elif strength["satisfied"]:
         assert strength["evidence"]
-        assert all(e["quality_class"] in {"anchor_loaded", "anchor_force_isometric"} for e in strength["evidence"])
+        # A loaded contrast pair can deliver both strength and power. Its
+        # loaded intensity, not a pure jump/throw's class label, is the proof.
+        assert all(e.get("minimum_rpe", 0) >= 6 or e.get("minimum_load_percent", 0) >= 60 for e in strength["evidence"])
     else:
         assert any(e["goal"] == "strength" for e in validate_goal_preservation(brief))
     evidence = collect_goal_evidence(brief)

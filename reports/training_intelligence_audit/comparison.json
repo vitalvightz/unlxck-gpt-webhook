@@ -1,0 +1,4398 @@
+{
+  "baseline_commit": "3dc625d8",
+  "frozen_utc": "2026-10-16T12:00:00",
+  "seed": 1,
+  "bank_priming": "production prime_plan_banks",
+  "source": "Synthetic deterministic intake-to-card pipeline and finalizer packet. No live model call.",
+  "scenarios": [
+    {
+      "name": "mma_27d",
+      "days": 27,
+      "before": {
+        "strength_d_days": [
+          26,
+          20
+        ],
+        "goals": [
+          {
+            "goal": "power",
+            "state": "build",
+            "satisfied": true,
+            "windows": [
+              {
+                "min_d_day": 14,
+                "max_d_day": 20
+              },
+              {
+                "min_d_day": 21,
+                "max_d_day": 26
+              }
+            ],
+            "missing": [],
+            "constraints": [],
+            "witnesses": [
+              {
+                "day": 20,
+                "name": "Kneeling Single-Arm Medicine Ball Slam",
+                "dose": "3x4 reps at crisp intent; rest 90s."
+              },
+              {
+                "day": 26,
+                "name": "Kettlebell Swing",
+                "dose": "3x4 reps at crisp intent; rest 90s."
+              }
+            ]
+          },
+          {
+            "goal": "strength",
+            "state": "maintain",
+            "satisfied": true,
+            "windows": [
+              {
+                "min_d_day": 8,
+                "max_d_day": 26
+              }
+            ],
+            "missing": [],
+            "constraints": [],
+            "witnesses": [
+              {
+                "day": 26,
+                "name": "Lat Pulldown",
+                "dose": "2x6 @ RPE 6, keep reps crisp."
+              }
+            ]
+          }
+        ],
+        "goal_findings": [],
+        "fidelity_findings": [],
+        "validator_error_codes": [
+          "conditioning_role_workload_underfilled",
+          "late_camp_effective_prescription_exceeded"
+        ],
+        "validator_warning_codes": [
+          "internal_render_contract_leak",
+          "missing_required_element",
+          "total_session_budget_exceeded"
+        ],
+        "week_counts": [
+          {
+            "week": 1,
+            "counts": null
+          },
+          {
+            "week": 2,
+            "counts": null
+          },
+          {
+            "week": 3,
+            "counts": null
+          },
+          {
+            "week": 4,
+            "counts": null
+          }
+        ]
+      },
+      "after": {
+        "strength_d_days": [
+          26,
+          20,
+          14
+        ],
+        "goals": [
+          {
+            "goal": "power",
+            "state": "build",
+            "satisfied": true,
+            "windows": [
+              {
+                "min_d_day": 20,
+                "max_d_day": 26
+              },
+              {
+                "min_d_day": 14,
+                "max_d_day": 19
+              }
+            ],
+            "missing": [],
+            "constraints": [],
+            "witnesses": [
+              {
+                "day": 26,
+                "name": "Kettlebell Swing",
+                "dose": "3x4 reps at crisp intent; rest 90s."
+              },
+              {
+                "day": 14,
+                "name": "Heavy RDL \u2192 Broad Jump",
+                "dose": "3 rounds: heavy movement 2 reps @ 85% 1RM \u2192 explosive movement 2 reps at max intent; rest 4 min per round."
+              }
+            ]
+          },
+          {
+            "goal": "strength",
+            "state": "maintain",
+            "satisfied": true,
+            "windows": [
+              {
+                "min_d_day": 20,
+                "max_d_day": 26
+              },
+              {
+                "min_d_day": 14,
+                "max_d_day": 19
+              }
+            ],
+            "missing": [],
+            "constraints": [],
+            "witnesses": [
+              {
+                "day": 26,
+                "name": "Lat Pulldown",
+                "dose": "2x6 @ RPE 6, keep reps crisp."
+              },
+              {
+                "day": 14,
+                "name": "Heavy RDL \u2192 Broad Jump",
+                "dose": "3 rounds: heavy movement 2 reps @ 85% 1RM \u2192 explosive movement 2 reps at max intent; rest 4 min per round."
+              }
+            ]
+          },
+          {
+            "goal": "trunk_strength",
+            "state": "maintain",
+            "satisfied": true,
+            "windows": [
+              {
+                "min_d_day": 14,
+                "max_d_day": 26
+              }
+            ],
+            "missing": [],
+            "constraints": [],
+            "witnesses": [
+              {
+                "day": 26,
+                "name": "Plank",
+                "dose": "2 x 20s hold @ RPE 6; rest 60s."
+              }
+            ]
+          }
+        ],
+        "goal_findings": [],
+        "fidelity_findings": [],
+        "validator_error_codes": [
+          "conditioning_role_workload_underfilled"
+        ],
+        "validator_warning_codes": [
+          "internal_render_contract_leak",
+          "missing_required_element",
+          "total_session_budget_exceeded"
+        ],
+        "week_counts": [
+          {
+            "week": 1,
+            "counts": null
+          },
+          {
+            "week": 2,
+            "counts": null
+          },
+          {
+            "week": 3,
+            "counts": null
+          },
+          {
+            "week": 4,
+            "counts": null
+          }
+        ]
+      }
+    },
+    {
+      "name": "mma_monday_capacity",
+      "days": 27,
+      "before": {
+        "strength_d_days": [
+          26,
+          19
+        ],
+        "goals": [
+          {
+            "goal": "power",
+            "state": "build",
+            "satisfied": true,
+            "windows": [
+              {
+                "min_d_day": 14,
+                "max_d_day": 20
+              },
+              {
+                "min_d_day": 21,
+                "max_d_day": 26
+              }
+            ],
+            "missing": [],
+            "constraints": [],
+            "witnesses": [
+              {
+                "day": 19,
+                "name": "Barbell Thruster",
+                "dose": "4x2 reps at max speed; full rest 120s."
+              },
+              {
+                "day": 26,
+                "name": "Kettlebell Swing",
+                "dose": "3x4 reps at crisp intent; rest 90s."
+              }
+            ]
+          },
+          {
+            "goal": "strength",
+            "state": "maintain",
+            "satisfied": true,
+            "windows": [
+              {
+                "min_d_day": 8,
+                "max_d_day": 26
+              }
+            ],
+            "missing": [],
+            "constraints": [],
+            "witnesses": [
+              {
+                "day": 26,
+                "name": "Lat Pulldown",
+                "dose": "2x6 @ RPE 6, keep reps crisp."
+              }
+            ]
+          }
+        ],
+        "goal_findings": [],
+        "fidelity_findings": [],
+        "validator_error_codes": [
+          "conditioning_role_workload_underfilled",
+          "late_camp_effective_prescription_exceeded"
+        ],
+        "validator_warning_codes": [
+          "internal_render_contract_leak",
+          "missing_required_element"
+        ],
+        "week_counts": [
+          {
+            "week": 1,
+            "counts": null
+          },
+          {
+            "week": 2,
+            "counts": null
+          },
+          {
+            "week": 3,
+            "counts": null
+          },
+          {
+            "week": 4,
+            "counts": null
+          }
+        ]
+      },
+      "after": {
+        "strength_d_days": [
+          26,
+          19
+        ],
+        "goals": [
+          {
+            "goal": "power",
+            "state": "build",
+            "satisfied": true,
+            "windows": [
+              {
+                "min_d_day": 20,
+                "max_d_day": 26
+              },
+              {
+                "min_d_day": 14,
+                "max_d_day": 19
+              }
+            ],
+            "missing": [],
+            "constraints": [],
+            "witnesses": [
+              {
+                "day": 26,
+                "name": "Kettlebell Swing",
+                "dose": "3x4 reps at crisp intent; rest 90s."
+              },
+              {
+                "day": 19,
+                "name": "Heavy RDL \u2192 Broad Jump",
+                "dose": "3 rounds: heavy movement 2 reps @ 85% 1RM \u2192 explosive movement 2 reps at max intent; rest 4 min per round."
+              }
+            ]
+          },
+          {
+            "goal": "strength",
+            "state": "maintain",
+            "satisfied": true,
+            "windows": [
+              {
+                "min_d_day": 20,
+                "max_d_day": 26
+              },
+              {
+                "min_d_day": 14,
+                "max_d_day": 19
+              }
+            ],
+            "missing": [],
+            "constraints": [],
+            "witnesses": [
+              {
+                "day": 26,
+                "name": "Lat Pulldown",
+                "dose": "2x6 @ RPE 6, keep reps crisp."
+              },
+              {
+                "day": 19,
+                "name": "Heavy RDL \u2192 Broad Jump",
+                "dose": "3 rounds: heavy movement 2 reps @ 85% 1RM \u2192 explosive movement 2 reps at max intent; rest 4 min per round."
+              }
+            ]
+          },
+          {
+            "goal": "trunk_strength",
+            "state": "maintain",
+            "satisfied": true,
+            "windows": [
+              {
+                "min_d_day": 14,
+                "max_d_day": 26
+              }
+            ],
+            "missing": [],
+            "constraints": [],
+            "witnesses": [
+              {
+                "day": 19,
+                "name": "Med-Ball Rotational Slam",
+                "dose": "4x2 reps at max speed; full rest 120s."
+              }
+            ]
+          }
+        ],
+        "goal_findings": [],
+        "fidelity_findings": [],
+        "validator_error_codes": [
+          "conditioning_role_workload_underfilled"
+        ],
+        "validator_warning_codes": [
+          "internal_render_contract_leak",
+          "missing_required_element"
+        ],
+        "week_counts": [
+          {
+            "week": 1,
+            "counts": null
+          },
+          {
+            "week": 2,
+            "counts": null
+          },
+          {
+            "week": 3,
+            "counts": null
+          },
+          {
+            "week": 4,
+            "counts": null
+          }
+        ]
+      }
+    },
+    {
+      "name": "strength_primary",
+      "days": 27,
+      "before": {
+        "strength_d_days": [
+          26,
+          20
+        ],
+        "goals": [
+          {
+            "goal": "strength",
+            "state": "build",
+            "satisfied": true,
+            "windows": [
+              {
+                "min_d_day": 14,
+                "max_d_day": 20
+              },
+              {
+                "min_d_day": 21,
+                "max_d_day": 26
+              }
+            ],
+            "missing": [],
+            "constraints": [],
+            "witnesses": [
+              {
+                "day": 20,
+                "name": "Lat Pulldown",
+                "dose": "2x6 @ RPE 6, keep reps crisp."
+              },
+              {
+                "day": 26,
+                "name": "Romanian Deadlift (DB)",
+                "dose": "2x6 @ RPE 6, keep reps crisp."
+              }
+            ]
+          },
+          {
+            "goal": "power",
+            "state": "build",
+            "satisfied": true,
+            "windows": [
+              {
+                "min_d_day": 14,
+                "max_d_day": 20
+              },
+              {
+                "min_d_day": 21,
+                "max_d_day": 26
+              }
+            ],
+            "missing": [],
+            "constraints": [],
+            "witnesses": [
+              {
+                "day": 20,
+                "name": "Single-Leg Forward Hops",
+                "dose": "3x4 reps at crisp intent; rest 90s."
+              },
+              {
+                "day": 26,
+                "name": "Kettlebell Swing",
+                "dose": "3x4 reps at crisp intent; rest 90s."
+              }
+            ]
+          }
+        ],
+        "goal_findings": [],
+        "fidelity_findings": [],
+        "validator_error_codes": [
+          "late_camp_effective_prescription_exceeded"
+        ],
+        "validator_warning_codes": [
+          "internal_render_contract_leak",
+          "missing_required_element",
+          "total_session_budget_exceeded"
+        ],
+        "week_counts": [
+          {
+            "week": 1,
+            "counts": null
+          },
+          {
+            "week": 2,
+            "counts": null
+          },
+          {
+            "week": 3,
+            "counts": null
+          },
+          {
+            "week": 4,
+            "counts": null
+          }
+        ]
+      },
+      "after": {
+        "strength_d_days": [
+          26,
+          20,
+          19
+        ],
+        "goals": [
+          {
+            "goal": "strength",
+            "state": "build",
+            "satisfied": true,
+            "windows": [
+              {
+                "min_d_day": 20,
+                "max_d_day": 26
+              },
+              {
+                "min_d_day": 14,
+                "max_d_day": 19
+              }
+            ],
+            "missing": [],
+            "constraints": [],
+            "witnesses": [
+              {
+                "day": 26,
+                "name": "Romanian Deadlift (DB)",
+                "dose": "2x6 @ RPE 6, keep reps crisp."
+              },
+              {
+                "day": 19,
+                "name": "Heavy RDL \u2192 Broad Jump",
+                "dose": "3 rounds: heavy movement 2 reps @ 85% 1RM \u2192 explosive movement 2 reps at max intent; rest 4 min per round."
+              }
+            ]
+          },
+          {
+            "goal": "power",
+            "state": "build",
+            "satisfied": true,
+            "windows": [
+              {
+                "min_d_day": 20,
+                "max_d_day": 26
+              },
+              {
+                "min_d_day": 14,
+                "max_d_day": 19
+              }
+            ],
+            "missing": [],
+            "constraints": [],
+            "witnesses": [
+              {
+                "day": 26,
+                "name": "Kettlebell Swing",
+                "dose": "3x4 reps at crisp intent; rest 90s."
+              },
+              {
+                "day": 19,
+                "name": "Heavy RDL \u2192 Broad Jump",
+                "dose": "3 rounds: heavy movement 2 reps @ 85% 1RM \u2192 explosive movement 2 reps at max intent; rest 4 min per round."
+              }
+            ]
+          },
+          {
+            "goal": "trunk_strength",
+            "state": "maintain",
+            "satisfied": true,
+            "windows": [
+              {
+                "min_d_day": 14,
+                "max_d_day": 26
+              }
+            ],
+            "missing": [],
+            "constraints": [],
+            "witnesses": [
+              {
+                "day": 20,
+                "name": "Cable Pallof Press",
+                "dose": "2 sets x 6 reps or 20s tempo (3-1-3), RPE 6."
+              }
+            ]
+          }
+        ],
+        "goal_findings": [],
+        "fidelity_findings": [],
+        "validator_error_codes": [],
+        "validator_warning_codes": [
+          "internal_render_contract_leak",
+          "missing_required_element",
+          "total_session_budget_exceeded"
+        ],
+        "week_counts": [
+          {
+            "week": 1,
+            "counts": null
+          },
+          {
+            "week": 2,
+            "counts": null
+          },
+          {
+            "week": 3,
+            "counts": null
+          },
+          {
+            "week": 4,
+            "counts": null
+          }
+        ]
+      }
+    },
+    {
+      "name": "speed_primary",
+      "days": 27,
+      "before": {
+        "strength_d_days": [
+          26,
+          20,
+          17
+        ],
+        "goals": [
+          {
+            "goal": "speed",
+            "state": "maintain",
+            "satisfied": true,
+            "windows": [
+              {
+                "min_d_day": 2,
+                "max_d_day": 26
+              }
+            ],
+            "missing": [],
+            "constraints": [
+              {
+                "reason_code": "pre_hard_contact_managed_stress",
+                "authority": "planner_compression",
+                "source_reason_code": "pre_hard_contact_strength_exposure_cap",
+                "week_index": 2,
+                "role_key": "strength_touch_day",
+                "coverage_window": {
+                  "min_d_day": 14,
+                  "max_d_day": 20
+                }
+              },
+              {
+                "reason_code": "pre_hard_contact_managed_stress",
+                "authority": "planner_compression",
+                "source_reason_code": "pre_hard_contact_strength_exposure_cap",
+                "week_index": 2,
+                "role_key": "neural_plus_strength_day",
+                "coverage_window": {
+                  "min_d_day": 14,
+                  "max_d_day": 20
+                }
+              },
+              {
+                "reason_code": "planner_compression",
+                "authority": "planner_compression",
+                "source_reason_code": "spar_first_cap",
+                "week_index": 2,
+                "role_key": "neural_plus_strength_day",
+                "coverage_window": {
+                  "min_d_day": 14,
+                  "max_d_day": 20
+                }
+              },
+              {
+                "reason_code": "pre_hard_contact_managed_stress",
+                "authority": "planner_compression",
+                "source_reason_code": "pre_hard_contact_strength_exposure_cap",
+                "week_index": 2,
+                "role_key": "alactic_speed_day",
+                "coverage_window": {
+                  "min_d_day": 14,
+                  "max_d_day": 20
+                }
+              },
+              {
+                "reason_code": "planner_compression",
+                "authority": "planner_compression",
+                "source_reason_code": "spar_first_cap",
+                "week_index": 2,
+                "role_key": "alactic_speed_day",
+                "coverage_window": {
+                  "min_d_day": 14,
+                  "max_d_day": 20
+                }
+              }
+            ],
+            "witnesses": [
+              {
+                "day": 26,
+                "name": "Single-Leg Forward Hops",
+                "dose": "3x4 reps at crisp intent; rest 90s."
+              }
+            ]
+          },
+          {
+            "goal": "power",
+            "state": "build",
+            "satisfied": true,
+            "windows": [
+              {
+                "min_d_day": 14,
+                "max_d_day": 20
+              },
+              {
+                "min_d_day": 21,
+                "max_d_day": 26
+              }
+            ],
+            "missing": [],
+            "constraints": [],
+            "witnesses": [
+              {
+                "day": 20,
+                "name": "Kneeling Single-Arm Medicine Ball Slam",
+                "dose": "3x4 reps at crisp intent; rest 90s."
+              },
+              {
+                "day": 26,
+                "name": "Kettlebell Swing",
+                "dose": "3x4 reps at crisp intent; rest 90s."
+              }
+            ]
+          },
+          {
+            "goal": "strength",
+            "state": "maintain",
+            "satisfied": true,
+            "windows": [
+              {
+                "min_d_day": 8,
+                "max_d_day": 26
+              }
+            ],
+            "missing": [],
+            "constraints": [],
+            "witnesses": [
+              {
+                "day": 26,
+                "name": "DB Alternating Incline Press (30-45\u00b0)",
+                "dose": "2x6 @ RPE 6, keep reps crisp."
+              }
+            ]
+          }
+        ],
+        "goal_findings": [],
+        "fidelity_findings": [],
+        "validator_error_codes": [
+          "late_camp_effective_prescription_exceeded"
+        ],
+        "validator_warning_codes": [
+          "internal_render_contract_leak",
+          "missing_required_element",
+          "total_session_budget_exceeded"
+        ],
+        "week_counts": [
+          {
+            "week": 1,
+            "counts": null
+          },
+          {
+            "week": 2,
+            "counts": null
+          },
+          {
+            "week": 3,
+            "counts": null
+          },
+          {
+            "week": 4,
+            "counts": null
+          }
+        ]
+      },
+      "after": {
+        "strength_d_days": [
+          26,
+          20,
+          17
+        ],
+        "goals": [
+          {
+            "goal": "speed",
+            "state": "maintain",
+            "satisfied": true,
+            "windows": [
+              {
+                "min_d_day": 14,
+                "max_d_day": 26
+              }
+            ],
+            "missing": [],
+            "constraints": [
+              {
+                "reason_code": "pre_hard_contact_managed_stress",
+                "authority": "planner_compression",
+                "source_reason_code": "pre_hard_contact_strength_exposure_cap",
+                "week_index": 2,
+                "role_key": "strength_touch_day",
+                "coverage_window": {
+                  "min_d_day": 14,
+                  "max_d_day": 19
+                }
+              },
+              {
+                "reason_code": "pre_hard_contact_managed_stress",
+                "authority": "planner_compression",
+                "source_reason_code": "pre_hard_contact_strength_exposure_cap",
+                "week_index": 2,
+                "role_key": "neural_plus_strength_day",
+                "coverage_window": {
+                  "min_d_day": 14,
+                  "max_d_day": 19
+                }
+              },
+              {
+                "reason_code": "planner_compression",
+                "authority": "planner_compression",
+                "source_reason_code": "spar_first_cap",
+                "week_index": 2,
+                "role_key": "neural_plus_strength_day",
+                "coverage_window": {
+                  "min_d_day": 14,
+                  "max_d_day": 19
+                }
+              },
+              {
+                "reason_code": "pre_hard_contact_managed_stress",
+                "authority": "planner_compression",
+                "source_reason_code": "pre_hard_contact_strength_exposure_cap",
+                "week_index": 2,
+                "role_key": "alactic_speed_day",
+                "coverage_window": {
+                  "min_d_day": 14,
+                  "max_d_day": 19
+                }
+              },
+              {
+                "reason_code": "planner_compression",
+                "authority": "planner_compression",
+                "source_reason_code": "spar_first_cap",
+                "week_index": 2,
+                "role_key": "alactic_speed_day",
+                "coverage_window": {
+                  "min_d_day": 14,
+                  "max_d_day": 19
+                }
+              }
+            ],
+            "witnesses": [
+              {
+                "day": 26,
+                "name": "Single-Leg Forward Hops",
+                "dose": "3x4 reps at crisp intent; rest 90s."
+              }
+            ]
+          },
+          {
+            "goal": "power",
+            "state": "build",
+            "satisfied": true,
+            "windows": [
+              {
+                "min_d_day": 20,
+                "max_d_day": 26
+              },
+              {
+                "min_d_day": 14,
+                "max_d_day": 19
+              }
+            ],
+            "missing": [],
+            "constraints": [],
+            "witnesses": [
+              {
+                "day": 26,
+                "name": "Kettlebell Swing",
+                "dose": "3x4 reps at crisp intent; rest 90s."
+              },
+              {
+                "day": 17,
+                "name": "Back Squat \u2192 Box Jump",
+                "dose": "3 rounds: heavy movement 2 reps @ 85% 1RM \u2192 explosive movement 2 reps at max intent; rest 4 min per round."
+              }
+            ]
+          },
+          {
+            "goal": "strength",
+            "state": "maintain",
+            "satisfied": true,
+            "windows": [
+              {
+                "min_d_day": 20,
+                "max_d_day": 26
+              },
+              {
+                "min_d_day": 14,
+                "max_d_day": 19
+              }
+            ],
+            "missing": [],
+            "constraints": [],
+            "witnesses": [
+              {
+                "day": 26,
+                "name": "DB Alternating Incline Press (30-45\u00b0)",
+                "dose": "2x6 @ RPE 6, keep reps crisp."
+              },
+              {
+                "day": 17,
+                "name": "Back Squat \u2192 Box Jump",
+                "dose": "3 rounds: heavy movement 2 reps @ 85% 1RM \u2192 explosive movement 2 reps at max intent; rest 4 min per round."
+              }
+            ]
+          },
+          {
+            "goal": "trunk_strength",
+            "state": "maintain",
+            "satisfied": true,
+            "windows": [
+              {
+                "min_d_day": 14,
+                "max_d_day": 26
+              }
+            ],
+            "missing": [],
+            "constraints": [],
+            "witnesses": [
+              {
+                "day": 20,
+                "name": "Cable Pallof Press",
+                "dose": "2 sets x 6 reps or 20s tempo (3-1-3), RPE 6."
+              }
+            ]
+          }
+        ],
+        "goal_findings": [],
+        "fidelity_findings": [],
+        "validator_error_codes": [],
+        "validator_warning_codes": [
+          "internal_render_contract_leak",
+          "missing_required_element",
+          "total_session_budget_exceeded"
+        ],
+        "week_counts": [
+          {
+            "week": 1,
+            "counts": null
+          },
+          {
+            "week": 2,
+            "counts": null
+          },
+          {
+            "week": 3,
+            "counts": null
+          },
+          {
+            "week": 4,
+            "counts": null
+          }
+        ]
+      }
+    },
+    {
+      "name": "power_trunk",
+      "days": 27,
+      "before": {
+        "strength_d_days": [
+          26,
+          20
+        ],
+        "goals": [
+          {
+            "goal": "power",
+            "state": "build",
+            "satisfied": true,
+            "windows": [
+              {
+                "min_d_day": 14,
+                "max_d_day": 20
+              },
+              {
+                "min_d_day": 21,
+                "max_d_day": 26
+              }
+            ],
+            "missing": [],
+            "constraints": [],
+            "witnesses": [
+              {
+                "day": 20,
+                "name": "Kneeling Single-Arm Medicine Ball Slam",
+                "dose": "3x4 reps at crisp intent; rest 90s."
+              },
+              {
+                "day": 26,
+                "name": "Kettlebell Swing",
+                "dose": "3x4 reps at crisp intent; rest 90s."
+              }
+            ]
+          },
+          {
+            "goal": "trunk_strength",
+            "state": "build",
+            "satisfied": false,
+            "windows": [
+              {
+                "min_d_day": 14,
+                "max_d_day": 20
+              },
+              {
+                "min_d_day": 21,
+                "max_d_day": 26
+              }
+            ],
+            "missing": [
+              {
+                "min_d_day": 21,
+                "max_d_day": 26
+              }
+            ],
+            "constraints": [],
+            "witnesses": [
+              {
+                "day": 20,
+                "name": "Cable Pallof Press",
+                "dose": "2 sets x 6 reps or 20s tempo (3-1-3), RPE 6."
+              }
+            ]
+          },
+          {
+            "goal": "strength",
+            "state": "maintain",
+            "satisfied": true,
+            "windows": [
+              {
+                "min_d_day": 8,
+                "max_d_day": 26
+              }
+            ],
+            "missing": [],
+            "constraints": [],
+            "witnesses": [
+              {
+                "day": 26,
+                "name": "Lat Pulldown",
+                "dose": "2x6 @ RPE 6, keep reps crisp."
+              }
+            ]
+          }
+        ],
+        "goal_findings": [
+          {
+            "code": "goal_preservation_failed",
+            "goal": "trunk_strength",
+            "requirement": "trunk_strength",
+            "message": "Selected goal has no qualifying effective coverage; deterministic repair or justified deferral is required.",
+            "severity": "blocker",
+            "confidence": "high"
+          }
+        ],
+        "fidelity_findings": [],
+        "validator_error_codes": [
+          "goal_preservation_failed",
+          "late_camp_effective_prescription_exceeded"
+        ],
+        "validator_warning_codes": [
+          "internal_render_contract_leak",
+          "missing_required_element",
+          "total_session_budget_exceeded"
+        ],
+        "week_counts": [
+          {
+            "week": 1,
+            "counts": null
+          },
+          {
+            "week": 2,
+            "counts": null
+          },
+          {
+            "week": 3,
+            "counts": null
+          },
+          {
+            "week": 4,
+            "counts": null
+          }
+        ]
+      },
+      "after": {
+        "strength_d_days": [
+          26,
+          20,
+          14
+        ],
+        "goals": [
+          {
+            "goal": "power",
+            "state": "build",
+            "satisfied": true,
+            "windows": [
+              {
+                "min_d_day": 20,
+                "max_d_day": 26
+              },
+              {
+                "min_d_day": 14,
+                "max_d_day": 19
+              }
+            ],
+            "missing": [],
+            "constraints": [],
+            "witnesses": [
+              {
+                "day": 26,
+                "name": "Kettlebell Swing",
+                "dose": "3x4 reps at crisp intent; rest 90s."
+              },
+              {
+                "day": 14,
+                "name": "Med-Ball Rotational Slam",
+                "dose": "3 x 2 at max speed; rest 120s"
+              }
+            ]
+          },
+          {
+            "goal": "trunk_strength",
+            "state": "build",
+            "satisfied": true,
+            "windows": [
+              {
+                "min_d_day": 20,
+                "max_d_day": 26
+              },
+              {
+                "min_d_day": 14,
+                "max_d_day": 19
+              }
+            ],
+            "missing": [],
+            "constraints": [],
+            "witnesses": [
+              {
+                "day": 20,
+                "name": "Cable Pallof Press",
+                "dose": "2 sets x 6 reps or 20s tempo (3-1-3), RPE 6."
+              },
+              {
+                "day": 14,
+                "name": "Med-Ball Rotational Slam",
+                "dose": "3 x 2 at max speed; rest 120s"
+              }
+            ]
+          },
+          {
+            "goal": "strength",
+            "state": "maintain",
+            "satisfied": true,
+            "windows": [
+              {
+                "min_d_day": 20,
+                "max_d_day": 26
+              },
+              {
+                "min_d_day": 14,
+                "max_d_day": 19
+              }
+            ],
+            "missing": [],
+            "constraints": [],
+            "witnesses": [
+              {
+                "day": 26,
+                "name": "Lat Pulldown",
+                "dose": "2x6 @ RPE 6, keep reps crisp."
+              },
+              {
+                "day": 14,
+                "name": "Heavy RDL \u2192 Broad Jump",
+                "dose": "3 rounds: heavy movement 2 reps @ 85% 1RM \u2192 explosive movement 2 reps at max intent; rest 4 min per round."
+              }
+            ]
+          }
+        ],
+        "goal_findings": [],
+        "fidelity_findings": [],
+        "validator_error_codes": [],
+        "validator_warning_codes": [
+          "internal_render_contract_leak",
+          "missing_required_element",
+          "total_session_budget_exceeded"
+        ],
+        "week_counts": [
+          {
+            "week": 1,
+            "counts": null
+          },
+          {
+            "week": 2,
+            "counts": null
+          },
+          {
+            "week": 3,
+            "counts": null
+          },
+          {
+            "week": 4,
+            "counts": null
+          }
+        ]
+      }
+    },
+    {
+      "name": "high_fatigue",
+      "days": 27,
+      "before": {
+        "strength_d_days": [],
+        "goals": [
+          {
+            "goal": "power",
+            "state": "maintain",
+            "satisfied": true,
+            "windows": [
+              {
+                "min_d_day": 2,
+                "max_d_day": 26
+              }
+            ],
+            "missing": [],
+            "constraints": [],
+            "witnesses": [
+              {
+                "day": 26,
+                "name": "Kneeling Single-Arm Medicine Ball Slam",
+                "dose": "3x4 reps at crisp intent; rest 90s."
+              }
+            ]
+          },
+          {
+            "goal": "strength",
+            "state": "defer",
+            "satisfied": false,
+            "windows": [
+              {
+                "min_d_day": 8,
+                "max_d_day": 26
+              }
+            ],
+            "missing": [
+              {
+                "min_d_day": 8,
+                "max_d_day": 26
+              }
+            ],
+            "constraints": [
+              {
+                "reason_code": "high_fatigue",
+                "authority": "planner_compression",
+                "source_reason_code": "high_fatigue",
+                "week_index": 1,
+                "role_key": "secondary_strength_day",
+                "coverage_window": {
+                  "min_d_day": 8,
+                  "max_d_day": 26
+                }
+              },
+              {
+                "reason_code": "high_fatigue",
+                "authority": "planner_compression",
+                "source_reason_code": "high_fatigue",
+                "week_index": 2,
+                "role_key": "transfer_strength_day",
+                "coverage_window": {
+                  "min_d_day": 8,
+                  "max_d_day": 26
+                }
+              },
+              {
+                "reason_code": "high_fatigue",
+                "authority": "planner_compression",
+                "source_reason_code": "high_fatigue",
+                "week_index": 2,
+                "role_key": "neural_plus_strength_day",
+                "coverage_window": {
+                  "min_d_day": 8,
+                  "max_d_day": 26
+                }
+              },
+              {
+                "reason_code": "high_fatigue",
+                "authority": "planner_compression",
+                "source_reason_code": "high_fatigue",
+                "week_index": 3,
+                "role_key": "strength_touch_day",
+                "coverage_window": {
+                  "min_d_day": 8,
+                  "max_d_day": 26
+                }
+              },
+              {
+                "reason_code": "high_fatigue",
+                "authority": "planner_compression",
+                "source_reason_code": "high_fatigue",
+                "week_index": 3,
+                "role_key": "neural_plus_strength_day",
+                "coverage_window": {
+                  "min_d_day": 8,
+                  "max_d_day": 26
+                }
+              }
+            ],
+            "witnesses": []
+          }
+        ],
+        "goal_findings": [],
+        "fidelity_findings": [],
+        "validator_error_codes": [
+          "conditioning_role_workload_underfilled"
+        ],
+        "validator_warning_codes": [
+          "internal_render_contract_leak",
+          "missing_required_element"
+        ],
+        "week_counts": [
+          {
+            "week": 1,
+            "counts": null
+          },
+          {
+            "week": 2,
+            "counts": null
+          },
+          {
+            "week": 3,
+            "counts": null
+          },
+          {
+            "week": 4,
+            "counts": null
+          }
+        ]
+      },
+      "after": {
+        "strength_d_days": [
+          26
+        ],
+        "goals": [
+          {
+            "goal": "power",
+            "state": "maintain",
+            "satisfied": true,
+            "windows": [
+              {
+                "min_d_day": 14,
+                "max_d_day": 26
+              }
+            ],
+            "missing": [],
+            "constraints": [],
+            "witnesses": [
+              {
+                "day": 26,
+                "name": "Kneeling Single-Arm Medicine Ball Slam",
+                "dose": "3x4 reps at crisp intent; rest 90s."
+              }
+            ]
+          },
+          {
+            "goal": "strength",
+            "state": "defer",
+            "satisfied": false,
+            "windows": [
+              {
+                "min_d_day": 20,
+                "max_d_day": 26
+              },
+              {
+                "min_d_day": 14,
+                "max_d_day": 19
+              }
+            ],
+            "missing": [
+              {
+                "min_d_day": 14,
+                "max_d_day": 19
+              }
+            ],
+            "constraints": [
+              {
+                "reason_code": "high_fatigue",
+                "authority": "planner_compression",
+                "source_reason_code": "high_fatigue",
+                "week_index": 2,
+                "role_key": "transfer_strength_day",
+                "coverage_window": {
+                  "min_d_day": 14,
+                  "max_d_day": 19
+                }
+              },
+              {
+                "reason_code": "high_fatigue",
+                "authority": "planner_compression",
+                "source_reason_code": "high_fatigue",
+                "week_index": 2,
+                "role_key": "neural_plus_strength_day",
+                "coverage_window": {
+                  "min_d_day": 14,
+                  "max_d_day": 19
+                }
+              }
+            ],
+            "witnesses": [
+              {
+                "day": 26,
+                "name": "Cossack Squat (Dynamic)",
+                "dose": "2x6 @ RPE 6, keep reps crisp."
+              }
+            ]
+          },
+          {
+            "goal": "trunk_strength",
+            "state": "defer",
+            "satisfied": false,
+            "windows": [
+              {
+                "min_d_day": 14,
+                "max_d_day": 26
+              }
+            ],
+            "missing": [
+              {
+                "min_d_day": 14,
+                "max_d_day": 26
+              }
+            ],
+            "constraints": [
+              {
+                "reason_code": "high_fatigue",
+                "authority": "planner_compression",
+                "source_reason_code": "high_fatigue",
+                "week_index": 1,
+                "role_key": "secondary_strength_day",
+                "coverage_window": {
+                  "min_d_day": 14,
+                  "max_d_day": 26
+                }
+              },
+              {
+                "reason_code": "high_fatigue",
+                "authority": "planner_compression",
+                "source_reason_code": "high_fatigue",
+                "week_index": 2,
+                "role_key": "transfer_strength_day",
+                "coverage_window": {
+                  "min_d_day": 14,
+                  "max_d_day": 26
+                }
+              },
+              {
+                "reason_code": "high_fatigue",
+                "authority": "planner_compression",
+                "source_reason_code": "high_fatigue",
+                "week_index": 2,
+                "role_key": "neural_plus_strength_day",
+                "coverage_window": {
+                  "min_d_day": 14,
+                  "max_d_day": 26
+                }
+              },
+              {
+                "reason_code": "high_fatigue",
+                "authority": "session_composition.trunk_support",
+                "week_index": 1,
+                "role_key": "primary_strength_day",
+                "d_day": 26,
+                "coverage_window": {
+                  "min_d_day": 14,
+                  "max_d_day": 26
+                }
+              }
+            ],
+            "witnesses": []
+          }
+        ],
+        "goal_findings": [],
+        "fidelity_findings": [],
+        "validator_error_codes": [
+          "conditioning_role_workload_underfilled"
+        ],
+        "validator_warning_codes": [
+          "internal_render_contract_leak",
+          "missing_required_element"
+        ],
+        "week_counts": [
+          {
+            "week": 1,
+            "counts": null
+          },
+          {
+            "week": 2,
+            "counts": null
+          },
+          {
+            "week": 3,
+            "counts": null
+          },
+          {
+            "week": 4,
+            "counts": null
+          }
+        ]
+      }
+    },
+    {
+      "name": "short_notice",
+      "days": 10,
+      "before": {
+        "strength_d_days": [],
+        "goals": [
+          {
+            "goal": "power",
+            "state": "maintain",
+            "satisfied": true,
+            "windows": [
+              {
+                "min_d_day": 2,
+                "max_d_day": 10
+              }
+            ],
+            "missing": [],
+            "constraints": [],
+            "witnesses": [
+              {
+                "day": 10,
+                "name": "Jump Squat",
+                "dose": "2 x 2 at max speed; rest 120s"
+              }
+            ]
+          },
+          {
+            "goal": "strength",
+            "state": "defer",
+            "satisfied": false,
+            "windows": [
+              {
+                "min_d_day": 8,
+                "max_d_day": 10
+              }
+            ],
+            "missing": [
+              {
+                "min_d_day": 8,
+                "max_d_day": 10
+              }
+            ],
+            "constraints": [
+              {
+                "reason_code": "hard_sparring_strength_limit",
+                "authority": "hard_sparring_strength_policy",
+                "days_until_fight": 10,
+                "hard_sparring_days": [
+                  "Tuesday",
+                  "Thursday"
+                ]
+              }
+            ],
+            "witnesses": []
+          }
+        ],
+        "goal_findings": [],
+        "fidelity_findings": [],
+        "validator_error_codes": [
+          "goal_preservation_render_mismatch"
+        ],
+        "validator_warning_codes": [
+          "late_camp_session_incomplete",
+          "late_fight_forbidden_content",
+          "missing_week_session_role",
+          "total_session_budget_exceeded"
+        ],
+        "week_counts": [
+          {
+            "week": 1,
+            "counts": null
+          },
+          {
+            "week": 2,
+            "counts": null
+          },
+          {
+            "week": 3,
+            "counts": null
+          },
+          {
+            "week": 4,
+            "counts": null
+          },
+          {
+            "week": 5,
+            "counts": null
+          },
+          {
+            "week": 6,
+            "counts": null
+          }
+        ]
+      },
+      "after": {
+        "strength_d_days": [],
+        "goals": [
+          {
+            "goal": "power",
+            "state": "maintain",
+            "satisfied": true,
+            "windows": [
+              {
+                "min_d_day": 2,
+                "max_d_day": 10
+              }
+            ],
+            "missing": [],
+            "constraints": [],
+            "witnesses": [
+              {
+                "day": 10,
+                "name": "Jump Squat",
+                "dose": "2 x 2 at max speed; rest 120s"
+              }
+            ]
+          },
+          {
+            "goal": "strength",
+            "state": "defer",
+            "satisfied": false,
+            "windows": [
+              {
+                "min_d_day": 8,
+                "max_d_day": 10
+              }
+            ],
+            "missing": [
+              {
+                "min_d_day": 8,
+                "max_d_day": 10
+              }
+            ],
+            "constraints": [
+              {
+                "reason_code": "hard_sparring_strength_limit",
+                "authority": "hard_sparring_strength_policy",
+                "days_until_fight": 10,
+                "hard_sparring_days": [
+                  "Tuesday",
+                  "Thursday"
+                ]
+              }
+            ],
+            "witnesses": []
+          },
+          {
+            "goal": "trunk_strength",
+            "state": "defer",
+            "satisfied": false,
+            "windows": [
+              {
+                "min_d_day": 2,
+                "max_d_day": 10
+              }
+            ],
+            "missing": [
+              {
+                "min_d_day": 2,
+                "max_d_day": 10
+              }
+            ],
+            "constraints": [
+              {
+                "reason_code": "fight_proximity",
+                "authority": "late_fight_tail_ownership",
+                "days_until_fight": 10,
+                "coverage_window": {
+                  "min_d_day": 2,
+                  "max_d_day": 10
+                }
+              }
+            ],
+            "witnesses": []
+          }
+        ],
+        "goal_findings": [],
+        "fidelity_findings": [],
+        "validator_error_codes": [],
+        "validator_warning_codes": [
+          "late_camp_session_incomplete",
+          "late_fight_block_overage",
+          "late_fight_forbidden_content",
+          "late_fight_unapproved_exercise_rendered",
+          "late_fight_window_preferred_missing",
+          "missing_week_session_role",
+          "total_session_budget_exceeded"
+        ],
+        "week_counts": [
+          {
+            "week": 1,
+            "counts": null
+          },
+          {
+            "week": 2,
+            "counts": null
+          },
+          {
+            "week": 3,
+            "counts": null
+          },
+          {
+            "week": 4,
+            "counts": null
+          },
+          {
+            "week": 5,
+            "counts": null
+          },
+          {
+            "week": 6,
+            "counts": null
+          }
+        ]
+      }
+    },
+    {
+      "name": "eight_weeks",
+      "days": 56,
+      "before": {
+        "strength_d_days": [
+          55,
+          49,
+          48,
+          42,
+          41,
+          35,
+          27,
+          20
+        ],
+        "goals": [
+          {
+            "goal": "power",
+            "state": "build",
+            "satisfied": true,
+            "windows": [
+              {
+                "min_d_day": 14,
+                "max_d_day": 20
+              },
+              {
+                "min_d_day": 21,
+                "max_d_day": 27
+              },
+              {
+                "min_d_day": 28,
+                "max_d_day": 34
+              },
+              {
+                "min_d_day": 35,
+                "max_d_day": 41
+              },
+              {
+                "min_d_day": 42,
+                "max_d_day": 48
+              },
+              {
+                "min_d_day": 49,
+                "max_d_day": 55
+              }
+            ],
+            "missing": [],
+            "constraints": [],
+            "witnesses": [
+              {
+                "day": 20,
+                "name": "Barbell Thruster",
+                "dose": "4x2 reps at max speed; full rest 120s."
+              },
+              {
+                "day": 27,
+                "name": "Barbell Thruster",
+                "dose": "4x2 reps at max speed; full rest 120s."
+              },
+              {
+                "day": 34,
+                "name": "Single-Leg 45\u00b0 Bound",
+                "dose": "4x2 reps at max speed; full rest 120s."
+              },
+              {
+                "day": 41,
+                "name": "Single-Leg Forward Hops",
+                "dose": "3x4 reps at crisp intent; rest 90s."
+              },
+              {
+                "day": 48,
+                "name": "Single-Leg Forward Hops",
+                "dose": "3x4 reps at crisp intent; rest 90s."
+              },
+              {
+                "day": 55,
+                "name": "Kettlebell Swing",
+                "dose": "3x4 reps at crisp intent; rest 90s."
+              }
+            ]
+          },
+          {
+            "goal": "strength",
+            "state": "maintain",
+            "satisfied": true,
+            "windows": [
+              {
+                "min_d_day": 8,
+                "max_d_day": 21
+              },
+              {
+                "min_d_day": 22,
+                "max_d_day": 35
+              },
+              {
+                "min_d_day": 36,
+                "max_d_day": 55
+              }
+            ],
+            "missing": [],
+            "constraints": [],
+            "witnesses": [
+              {
+                "day": 20,
+                "name": "Heavy RDL \u2192 Broad Jump",
+                "dose": "3 rounds: heavy movement 2 reps @ 85% 1RM \u2192 explosive movement 2 reps at max intent; rest 4 min per round."
+              },
+              {
+                "day": 35,
+                "name": "Romanian Deadlift (DB)",
+                "dose": "2x6 @ RPE 6, keep reps crisp."
+              },
+              {
+                "day": 55,
+                "name": "Lat Pulldown",
+                "dose": "2x6 @ RPE 6, keep reps crisp."
+              }
+            ]
+          }
+        ],
+        "goal_findings": [],
+        "fidelity_findings": [],
+        "validator_error_codes": [
+          "goal_preservation_render_mismatch",
+          "late_camp_effective_prescription_exceeded"
+        ],
+        "validator_warning_codes": [
+          "internal_render_contract_leak",
+          "missing_required_element"
+        ],
+        "week_counts": [
+          {
+            "week": 1,
+            "counts": null
+          },
+          {
+            "week": 2,
+            "counts": null
+          },
+          {
+            "week": 3,
+            "counts": null
+          },
+          {
+            "week": 4,
+            "counts": null
+          },
+          {
+            "week": 5,
+            "counts": null
+          },
+          {
+            "week": 6,
+            "counts": null
+          },
+          {
+            "week": 7,
+            "counts": null
+          },
+          {
+            "week": 8,
+            "counts": null
+          }
+        ]
+      },
+      "after": {
+        "strength_d_days": [
+          55,
+          49,
+          48,
+          42,
+          41,
+          35,
+          32,
+          27,
+          20
+        ],
+        "goals": [
+          {
+            "goal": "power",
+            "state": "build",
+            "satisfied": true,
+            "windows": [
+              {
+                "min_d_day": 49,
+                "max_d_day": 55
+              },
+              {
+                "min_d_day": 42,
+                "max_d_day": 48
+              },
+              {
+                "min_d_day": 35,
+                "max_d_day": 41
+              },
+              {
+                "min_d_day": 28,
+                "max_d_day": 34
+              },
+              {
+                "min_d_day": 21,
+                "max_d_day": 27
+              },
+              {
+                "min_d_day": 14,
+                "max_d_day": 20
+              }
+            ],
+            "missing": [],
+            "constraints": [],
+            "witnesses": [
+              {
+                "day": 55,
+                "name": "Kettlebell Swing",
+                "dose": "3x4 reps at crisp intent; rest 90s."
+              },
+              {
+                "day": 48,
+                "name": "Single-Leg Forward Hops",
+                "dose": "3x4 reps at crisp intent; rest 90s."
+              },
+              {
+                "day": 41,
+                "name": "Single-Leg Forward Hops",
+                "dose": "3x4 reps at crisp intent; rest 90s."
+              },
+              {
+                "day": 32,
+                "name": "Heavy RDL \u2192 Broad Jump",
+                "dose": "3 rounds: heavy movement 2 reps @ 85% 1RM \u2192 explosive movement 2 reps at max intent; rest 4 min per round."
+              },
+              {
+                "day": 27,
+                "name": "Heavy RDL \u2192 Broad Jump",
+                "dose": "3 rounds: heavy movement 2 reps @ 85% 1RM \u2192 explosive movement 2 reps at max intent; rest 4 min per round."
+              },
+              {
+                "day": 20,
+                "name": "Heavy RDL \u2192 Broad Jump",
+                "dose": "3 rounds: heavy movement 2 reps @ 85% 1RM \u2192 explosive movement 2 reps at max intent; rest 4 min per round."
+              }
+            ]
+          },
+          {
+            "goal": "strength",
+            "state": "maintain",
+            "satisfied": true,
+            "windows": [
+              {
+                "min_d_day": 49,
+                "max_d_day": 55
+              },
+              {
+                "min_d_day": 42,
+                "max_d_day": 48
+              },
+              {
+                "min_d_day": 35,
+                "max_d_day": 41
+              },
+              {
+                "min_d_day": 28,
+                "max_d_day": 34
+              },
+              {
+                "min_d_day": 21,
+                "max_d_day": 27
+              },
+              {
+                "min_d_day": 14,
+                "max_d_day": 20
+              }
+            ],
+            "missing": [],
+            "constraints": [],
+            "witnesses": [
+              {
+                "day": 55,
+                "name": "Lat Pulldown",
+                "dose": "2x6 @ RPE 6, keep reps crisp."
+              },
+              {
+                "day": 48,
+                "name": "Lat Pulldown",
+                "dose": "2x6 @ RPE 6, keep reps crisp."
+              },
+              {
+                "day": 41,
+                "name": "Lat Pulldown",
+                "dose": "2x6 @ RPE 6, keep reps crisp."
+              },
+              {
+                "day": 32,
+                "name": "Heavy RDL \u2192 Broad Jump",
+                "dose": "3 rounds: heavy movement 2 reps @ 85% 1RM \u2192 explosive movement 2 reps at max intent; rest 4 min per round."
+              },
+              {
+                "day": 27,
+                "name": "Heavy RDL \u2192 Broad Jump",
+                "dose": "3 rounds: heavy movement 2 reps @ 85% 1RM \u2192 explosive movement 2 reps at max intent; rest 4 min per round."
+              },
+              {
+                "day": 20,
+                "name": "Heavy RDL \u2192 Broad Jump",
+                "dose": "3 rounds: heavy movement 2 reps @ 85% 1RM \u2192 explosive movement 2 reps at max intent; rest 4 min per round."
+              }
+            ]
+          },
+          {
+            "goal": "trunk_strength",
+            "state": "maintain",
+            "satisfied": true,
+            "windows": [
+              {
+                "min_d_day": 14,
+                "max_d_day": 27
+              },
+              {
+                "min_d_day": 28,
+                "max_d_day": 41
+              },
+              {
+                "min_d_day": 42,
+                "max_d_day": 55
+              }
+            ],
+            "missing": [],
+            "constraints": [],
+            "witnesses": [
+              {
+                "day": 27,
+                "name": "Med-Ball Rotational Slam",
+                "dose": "4x2 reps at max speed; full rest 120s."
+              },
+              {
+                "day": 41,
+                "name": "Plank",
+                "dose": "2 x 20s hold @ RPE 6; rest 60s."
+              },
+              {
+                "day": 55,
+                "name": "Plank",
+                "dose": "2 x 20s hold @ RPE 6; rest 60s."
+              }
+            ]
+          }
+        ],
+        "goal_findings": [],
+        "fidelity_findings": [],
+        "validator_error_codes": [],
+        "validator_warning_codes": [
+          "internal_render_contract_leak",
+          "missing_required_element"
+        ],
+        "week_counts": [
+          {
+            "week": 1,
+            "counts": null
+          },
+          {
+            "week": 2,
+            "counts": null
+          },
+          {
+            "week": 3,
+            "counts": null
+          },
+          {
+            "week": 4,
+            "counts": null
+          },
+          {
+            "week": 5,
+            "counts": null
+          },
+          {
+            "week": 6,
+            "counts": null
+          },
+          {
+            "week": 7,
+            "counts": null
+          },
+          {
+            "week": 8,
+            "counts": null
+          }
+        ]
+      }
+    },
+    {
+      "name": "twelve_weeks",
+      "days": 84,
+      "before": {
+        "strength_d_days": [
+          83,
+          77,
+          76,
+          70,
+          69,
+          63,
+          62,
+          56,
+          55,
+          49,
+          41,
+          34,
+          27,
+          20
+        ],
+        "goals": [
+          {
+            "goal": "power",
+            "state": "build",
+            "satisfied": true,
+            "windows": [
+              {
+                "min_d_day": 14,
+                "max_d_day": 20
+              },
+              {
+                "min_d_day": 21,
+                "max_d_day": 27
+              },
+              {
+                "min_d_day": 28,
+                "max_d_day": 34
+              },
+              {
+                "min_d_day": 35,
+                "max_d_day": 41
+              },
+              {
+                "min_d_day": 42,
+                "max_d_day": 48
+              },
+              {
+                "min_d_day": 49,
+                "max_d_day": 55
+              },
+              {
+                "min_d_day": 56,
+                "max_d_day": 62
+              },
+              {
+                "min_d_day": 63,
+                "max_d_day": 69
+              },
+              {
+                "min_d_day": 70,
+                "max_d_day": 76
+              },
+              {
+                "min_d_day": 77,
+                "max_d_day": 83
+              }
+            ],
+            "missing": [],
+            "constraints": [],
+            "witnesses": [
+              {
+                "day": 20,
+                "name": "Barbell Thruster",
+                "dose": "4x2 reps at max speed; full rest 120s."
+              },
+              {
+                "day": 27,
+                "name": "Barbell Thruster",
+                "dose": "4x2 reps at max speed; full rest 120s."
+              },
+              {
+                "day": 34,
+                "name": "Barbell Thruster",
+                "dose": "4x2 reps at max speed; full rest 120s."
+              },
+              {
+                "day": 41,
+                "name": "Barbell Thruster",
+                "dose": "4x2 reps at max speed; full rest 120s."
+              },
+              {
+                "day": 48,
+                "name": "Single-Leg 45\u00b0 Bound",
+                "dose": "4x2 reps at max speed; full rest 120s."
+              },
+              {
+                "day": 55,
+                "name": "Single-Leg Forward Hops",
+                "dose": "3x4 reps at crisp intent; rest 90s."
+              },
+              {
+                "day": 62,
+                "name": "Single-Leg Forward Hops",
+                "dose": "3x4 reps at crisp intent; rest 90s."
+              },
+              {
+                "day": 69,
+                "name": "Single-Leg Forward Hops",
+                "dose": "3x4 reps at crisp intent; rest 90s."
+              },
+              {
+                "day": 76,
+                "name": "Single-Leg Forward Hops",
+                "dose": "3x4 reps at crisp intent; rest 90s."
+              },
+              {
+                "day": 83,
+                "name": "Kettlebell Swing",
+                "dose": "3x4 reps at crisp intent; rest 90s."
+              }
+            ]
+          },
+          {
+            "goal": "strength",
+            "state": "maintain",
+            "satisfied": true,
+            "windows": [
+              {
+                "min_d_day": 8,
+                "max_d_day": 21
+              },
+              {
+                "min_d_day": 22,
+                "max_d_day": 35
+              },
+              {
+                "min_d_day": 36,
+                "max_d_day": 49
+              },
+              {
+                "min_d_day": 50,
+                "max_d_day": 63
+              },
+              {
+                "min_d_day": 64,
+                "max_d_day": 83
+              }
+            ],
+            "missing": [],
+            "constraints": [],
+            "witnesses": [
+              {
+                "day": 20,
+                "name": "Heavy RDL \u2192 Broad Jump",
+                "dose": "3 rounds: heavy movement 2 reps @ 85% 1RM \u2192 explosive movement 2 reps at max intent; rest 4 min per round."
+              },
+              {
+                "day": 34,
+                "name": "Heavy RDL \u2192 Broad Jump",
+                "dose": "3 rounds: heavy movement 2 reps @ 85% 1RM \u2192 explosive movement 2 reps at max intent; rest 4 min per round."
+              },
+              {
+                "day": 49,
+                "name": "Romanian Deadlift (DB)",
+                "dose": "2x6 @ RPE 6, keep reps crisp."
+              },
+              {
+                "day": 63,
+                "name": "Romanian Deadlift (DB)",
+                "dose": "2x6 @ RPE 6, keep reps crisp."
+              },
+              {
+                "day": 83,
+                "name": "Lat Pulldown",
+                "dose": "2x6 @ RPE 6, keep reps crisp."
+              }
+            ]
+          }
+        ],
+        "goal_findings": [],
+        "fidelity_findings": [],
+        "validator_error_codes": [
+          "goal_preservation_render_mismatch",
+          "late_camp_effective_prescription_exceeded"
+        ],
+        "validator_warning_codes": [
+          "internal_render_contract_leak",
+          "missing_required_element"
+        ],
+        "week_counts": [
+          {
+            "week": 1,
+            "counts": null
+          },
+          {
+            "week": 2,
+            "counts": null
+          },
+          {
+            "week": 3,
+            "counts": null
+          },
+          {
+            "week": 4,
+            "counts": null
+          },
+          {
+            "week": 5,
+            "counts": null
+          },
+          {
+            "week": 6,
+            "counts": null
+          },
+          {
+            "week": 7,
+            "counts": null
+          },
+          {
+            "week": 8,
+            "counts": null
+          },
+          {
+            "week": 9,
+            "counts": null
+          },
+          {
+            "week": 10,
+            "counts": null
+          },
+          {
+            "week": 11,
+            "counts": null
+          },
+          {
+            "week": 12,
+            "counts": null
+          }
+        ]
+      },
+      "after": {
+        "strength_d_days": [
+          83,
+          77,
+          76,
+          70,
+          69,
+          63,
+          62,
+          56,
+          55,
+          49,
+          46,
+          41,
+          34,
+          27,
+          20
+        ],
+        "goals": [
+          {
+            "goal": "power",
+            "state": "build",
+            "satisfied": true,
+            "windows": [
+              {
+                "min_d_day": 77,
+                "max_d_day": 83
+              },
+              {
+                "min_d_day": 70,
+                "max_d_day": 76
+              },
+              {
+                "min_d_day": 63,
+                "max_d_day": 69
+              },
+              {
+                "min_d_day": 56,
+                "max_d_day": 62
+              },
+              {
+                "min_d_day": 49,
+                "max_d_day": 55
+              },
+              {
+                "min_d_day": 42,
+                "max_d_day": 48
+              },
+              {
+                "min_d_day": 35,
+                "max_d_day": 41
+              },
+              {
+                "min_d_day": 28,
+                "max_d_day": 34
+              },
+              {
+                "min_d_day": 21,
+                "max_d_day": 27
+              },
+              {
+                "min_d_day": 14,
+                "max_d_day": 20
+              }
+            ],
+            "missing": [],
+            "constraints": [],
+            "witnesses": [
+              {
+                "day": 83,
+                "name": "Kettlebell Swing",
+                "dose": "3x4 reps at crisp intent; rest 90s."
+              },
+              {
+                "day": 76,
+                "name": "Single-Leg Forward Hops",
+                "dose": "3x4 reps at crisp intent; rest 90s."
+              },
+              {
+                "day": 69,
+                "name": "Single-Leg Forward Hops",
+                "dose": "3x4 reps at crisp intent; rest 90s."
+              },
+              {
+                "day": 62,
+                "name": "Single-Leg Forward Hops",
+                "dose": "3x4 reps at crisp intent; rest 90s."
+              },
+              {
+                "day": 55,
+                "name": "Single-Leg Forward Hops",
+                "dose": "3x4 reps at crisp intent; rest 90s."
+              },
+              {
+                "day": 46,
+                "name": "Heavy RDL \u2192 Broad Jump",
+                "dose": "3 rounds: heavy movement 2 reps @ 85% 1RM \u2192 explosive movement 2 reps at max intent; rest 4 min per round."
+              },
+              {
+                "day": 41,
+                "name": "Heavy RDL \u2192 Broad Jump",
+                "dose": "3 rounds: heavy movement 2 reps @ 85% 1RM \u2192 explosive movement 2 reps at max intent; rest 4 min per round."
+              },
+              {
+                "day": 34,
+                "name": "Heavy RDL \u2192 Broad Jump",
+                "dose": "3 rounds: heavy movement 2 reps @ 85% 1RM \u2192 explosive movement 2 reps at max intent; rest 4 min per round."
+              },
+              {
+                "day": 27,
+                "name": "Heavy RDL \u2192 Broad Jump",
+                "dose": "3 rounds: heavy movement 2 reps @ 85% 1RM \u2192 explosive movement 2 reps at max intent; rest 4 min per round."
+              },
+              {
+                "day": 20,
+                "name": "Heavy RDL \u2192 Broad Jump",
+                "dose": "3 rounds: heavy movement 2 reps @ 85% 1RM \u2192 explosive movement 2 reps at max intent; rest 4 min per round."
+              }
+            ]
+          },
+          {
+            "goal": "strength",
+            "state": "maintain",
+            "satisfied": true,
+            "windows": [
+              {
+                "min_d_day": 77,
+                "max_d_day": 83
+              },
+              {
+                "min_d_day": 70,
+                "max_d_day": 76
+              },
+              {
+                "min_d_day": 63,
+                "max_d_day": 69
+              },
+              {
+                "min_d_day": 56,
+                "max_d_day": 62
+              },
+              {
+                "min_d_day": 49,
+                "max_d_day": 55
+              },
+              {
+                "min_d_day": 42,
+                "max_d_day": 48
+              },
+              {
+                "min_d_day": 35,
+                "max_d_day": 41
+              },
+              {
+                "min_d_day": 28,
+                "max_d_day": 34
+              },
+              {
+                "min_d_day": 21,
+                "max_d_day": 27
+              },
+              {
+                "min_d_day": 14,
+                "max_d_day": 20
+              }
+            ],
+            "missing": [],
+            "constraints": [],
+            "witnesses": [
+              {
+                "day": 83,
+                "name": "Lat Pulldown",
+                "dose": "2x6 @ RPE 6, keep reps crisp."
+              },
+              {
+                "day": 76,
+                "name": "Lat Pulldown",
+                "dose": "2x6 @ RPE 6, keep reps crisp."
+              },
+              {
+                "day": 69,
+                "name": "Lat Pulldown",
+                "dose": "2x6 @ RPE 6, keep reps crisp."
+              },
+              {
+                "day": 62,
+                "name": "Lat Pulldown",
+                "dose": "2x6 @ RPE 6, keep reps crisp."
+              },
+              {
+                "day": 55,
+                "name": "Lat Pulldown",
+                "dose": "2x6 @ RPE 6, keep reps crisp."
+              },
+              {
+                "day": 46,
+                "name": "Heavy RDL \u2192 Broad Jump",
+                "dose": "3 rounds: heavy movement 2 reps @ 85% 1RM \u2192 explosive movement 2 reps at max intent; rest 4 min per round."
+              },
+              {
+                "day": 41,
+                "name": "Heavy RDL \u2192 Broad Jump",
+                "dose": "3 rounds: heavy movement 2 reps @ 85% 1RM \u2192 explosive movement 2 reps at max intent; rest 4 min per round."
+              },
+              {
+                "day": 34,
+                "name": "Heavy RDL \u2192 Broad Jump",
+                "dose": "3 rounds: heavy movement 2 reps @ 85% 1RM \u2192 explosive movement 2 reps at max intent; rest 4 min per round."
+              },
+              {
+                "day": 27,
+                "name": "Heavy RDL \u2192 Broad Jump",
+                "dose": "3 rounds: heavy movement 2 reps @ 85% 1RM \u2192 explosive movement 2 reps at max intent; rest 4 min per round."
+              },
+              {
+                "day": 20,
+                "name": "Heavy RDL \u2192 Broad Jump",
+                "dose": "3 rounds: heavy movement 2 reps @ 85% 1RM \u2192 explosive movement 2 reps at max intent; rest 4 min per round."
+              }
+            ]
+          },
+          {
+            "goal": "trunk_strength",
+            "state": "maintain",
+            "satisfied": true,
+            "windows": [
+              {
+                "min_d_day": 14,
+                "max_d_day": 27
+              },
+              {
+                "min_d_day": 28,
+                "max_d_day": 41
+              },
+              {
+                "min_d_day": 42,
+                "max_d_day": 55
+              },
+              {
+                "min_d_day": 56,
+                "max_d_day": 69
+              },
+              {
+                "min_d_day": 70,
+                "max_d_day": 83
+              }
+            ],
+            "missing": [],
+            "constraints": [],
+            "witnesses": [
+              {
+                "day": 27,
+                "name": "Med-Ball Rotational Slam",
+                "dose": "4x2 reps at max speed; full rest 120s."
+              },
+              {
+                "day": 41,
+                "name": "Med-Ball Rotational Slam",
+                "dose": "4x2 reps at max speed; full rest 120s."
+              },
+              {
+                "day": 55,
+                "name": "Plank",
+                "dose": "2 x 20s hold @ RPE 6; rest 60s."
+              },
+              {
+                "day": 69,
+                "name": "Plank",
+                "dose": "2 x 20s hold @ RPE 6; rest 60s."
+              },
+              {
+                "day": 83,
+                "name": "Plank",
+                "dose": "2 x 20s hold @ RPE 6; rest 60s."
+              }
+            ]
+          }
+        ],
+        "goal_findings": [],
+        "fidelity_findings": [],
+        "validator_error_codes": [],
+        "validator_warning_codes": [
+          "internal_render_contract_leak",
+          "missing_required_element"
+        ],
+        "week_counts": [
+          {
+            "week": 1,
+            "counts": null
+          },
+          {
+            "week": 2,
+            "counts": null
+          },
+          {
+            "week": 3,
+            "counts": null
+          },
+          {
+            "week": 4,
+            "counts": null
+          },
+          {
+            "week": 5,
+            "counts": null
+          },
+          {
+            "week": 6,
+            "counts": null
+          },
+          {
+            "week": 7,
+            "counts": null
+          },
+          {
+            "week": 8,
+            "counts": null
+          },
+          {
+            "week": 9,
+            "counts": null
+          },
+          {
+            "week": 10,
+            "counts": null
+          },
+          {
+            "week": 11,
+            "counts": null
+          },
+          {
+            "week": 12,
+            "counts": null
+          }
+        ]
+      }
+    },
+    {
+      "name": "injury_restricted",
+      "days": 27,
+      "before": {
+        "strength_d_days": [
+          26
+        ],
+        "goals": [
+          {
+            "goal": "power",
+            "state": "maintain",
+            "satisfied": true,
+            "windows": [
+              {
+                "min_d_day": 2,
+                "max_d_day": 26
+              }
+            ],
+            "missing": [],
+            "constraints": [
+              {
+                "reason_code": "injury_constraint",
+                "authority": "planner_compression",
+                "source_reason_code": "injury_management",
+                "week_index": 1,
+                "role_key": "secondary_strength_day",
+                "coverage_window": {
+                  "min_d_day": 14,
+                  "max_d_day": 20
+                }
+              },
+              {
+                "reason_code": "injury_constraint",
+                "authority": "planner_compression",
+                "source_reason_code": "injury_management",
+                "week_index": 2,
+                "role_key": "transfer_strength_day",
+                "coverage_window": {
+                  "min_d_day": 14,
+                  "max_d_day": 20
+                }
+              },
+              {
+                "reason_code": "injury_constraint",
+                "authority": "planner_compression",
+                "source_reason_code": "injury_management",
+                "week_index": 2,
+                "role_key": "neural_plus_strength_day",
+                "coverage_window": {
+                  "min_d_day": 14,
+                  "max_d_day": 20
+                }
+              }
+            ],
+            "witnesses": [
+              {
+                "day": 26,
+                "name": "Single-Leg Forward Hops",
+                "dose": "3x4 reps at crisp intent; rest 90s."
+              }
+            ]
+          },
+          {
+            "goal": "strength",
+            "state": "maintain",
+            "satisfied": true,
+            "windows": [
+              {
+                "min_d_day": 8,
+                "max_d_day": 26
+              }
+            ],
+            "missing": [],
+            "constraints": [],
+            "witnesses": [
+              {
+                "day": 26,
+                "name": "Romanian Deadlift (RDL)",
+                "dose": "3x8 @ 60% 1RM with slow eccentrics, tempo 3-1-1."
+              }
+            ]
+          }
+        ],
+        "goal_findings": [],
+        "fidelity_findings": [],
+        "validator_error_codes": [
+          "conditioning_role_workload_underfilled",
+          "late_camp_effective_prescription_exceeded"
+        ],
+        "validator_warning_codes": [
+          "internal_render_contract_leak",
+          "missing_required_element",
+          "total_session_budget_exceeded"
+        ],
+        "week_counts": [
+          {
+            "week": 1,
+            "counts": null
+          },
+          {
+            "week": 2,
+            "counts": null
+          },
+          {
+            "week": 3,
+            "counts": null
+          },
+          {
+            "week": 4,
+            "counts": null
+          }
+        ]
+      },
+      "after": {
+        "strength_d_days": [
+          26
+        ],
+        "goals": [
+          {
+            "goal": "power",
+            "state": "maintain",
+            "satisfied": true,
+            "windows": [
+              {
+                "min_d_day": 14,
+                "max_d_day": 26
+              }
+            ],
+            "missing": [],
+            "constraints": [
+              {
+                "reason_code": "injury_constraint",
+                "authority": "planner_compression",
+                "source_reason_code": "injury_management",
+                "week_index": 2,
+                "role_key": "transfer_strength_day",
+                "coverage_window": {
+                  "min_d_day": 14,
+                  "max_d_day": 19
+                }
+              },
+              {
+                "reason_code": "injury_constraint",
+                "authority": "planner_compression",
+                "source_reason_code": "injury_management",
+                "week_index": 2,
+                "role_key": "neural_plus_strength_day",
+                "coverage_window": {
+                  "min_d_day": 14,
+                  "max_d_day": 19
+                }
+              }
+            ],
+            "witnesses": [
+              {
+                "day": 26,
+                "name": "Single-Leg Forward Hops",
+                "dose": "3x4 reps at crisp intent; rest 90s."
+              }
+            ]
+          },
+          {
+            "goal": "strength",
+            "state": "defer",
+            "satisfied": false,
+            "windows": [
+              {
+                "min_d_day": 20,
+                "max_d_day": 26
+              },
+              {
+                "min_d_day": 14,
+                "max_d_day": 19
+              }
+            ],
+            "missing": [
+              {
+                "min_d_day": 14,
+                "max_d_day": 19
+              }
+            ],
+            "constraints": [
+              {
+                "reason_code": "injury_constraint",
+                "authority": "planner_compression",
+                "source_reason_code": "injury_management",
+                "week_index": 2,
+                "role_key": "transfer_strength_day",
+                "coverage_window": {
+                  "min_d_day": 14,
+                  "max_d_day": 19
+                }
+              },
+              {
+                "reason_code": "injury_constraint",
+                "authority": "planner_compression",
+                "source_reason_code": "injury_management",
+                "week_index": 2,
+                "role_key": "neural_plus_strength_day",
+                "coverage_window": {
+                  "min_d_day": 14,
+                  "max_d_day": 19
+                }
+              }
+            ],
+            "witnesses": [
+              {
+                "day": 26,
+                "name": "Romanian Deadlift (RDL)",
+                "dose": "3x8 @ 60% 1RM with slow eccentrics, tempo 3-1-1."
+              }
+            ]
+          },
+          {
+            "goal": "trunk_strength",
+            "state": "defer",
+            "satisfied": false,
+            "windows": [
+              {
+                "min_d_day": 14,
+                "max_d_day": 26
+              }
+            ],
+            "missing": [
+              {
+                "min_d_day": 14,
+                "max_d_day": 26
+              }
+            ],
+            "constraints": [
+              {
+                "reason_code": "injury_constraint",
+                "authority": "planner_compression",
+                "source_reason_code": "injury_management",
+                "week_index": 1,
+                "role_key": "secondary_strength_day",
+                "coverage_window": {
+                  "min_d_day": 14,
+                  "max_d_day": 26
+                }
+              },
+              {
+                "reason_code": "injury_constraint",
+                "authority": "planner_compression",
+                "source_reason_code": "injury_management",
+                "week_index": 2,
+                "role_key": "transfer_strength_day",
+                "coverage_window": {
+                  "min_d_day": 14,
+                  "max_d_day": 26
+                }
+              },
+              {
+                "reason_code": "injury_constraint",
+                "authority": "planner_compression",
+                "source_reason_code": "injury_management",
+                "week_index": 2,
+                "role_key": "neural_plus_strength_day",
+                "coverage_window": {
+                  "min_d_day": 14,
+                  "max_d_day": 26
+                }
+              }
+            ],
+            "witnesses": []
+          }
+        ],
+        "goal_findings": [],
+        "fidelity_findings": [],
+        "validator_error_codes": [
+          "conditioning_role_workload_underfilled"
+        ],
+        "validator_warning_codes": [
+          "internal_render_contract_leak",
+          "missing_required_element",
+          "total_session_budget_exceeded"
+        ],
+        "week_counts": [
+          {
+            "week": 1,
+            "counts": null
+          },
+          {
+            "week": 2,
+            "counts": null
+          },
+          {
+            "week": 3,
+            "counts": null
+          },
+          {
+            "week": 4,
+            "counts": null
+          }
+        ]
+      }
+    },
+    {
+      "name": "weight_cut",
+      "days": 27,
+      "before": {
+        "strength_d_days": [
+          26
+        ],
+        "goals": [
+          {
+            "goal": "power",
+            "state": "maintain",
+            "satisfied": true,
+            "windows": [
+              {
+                "min_d_day": 2,
+                "max_d_day": 26
+              }
+            ],
+            "missing": [],
+            "constraints": [
+              {
+                "reason_code": "weight_cut_pressure",
+                "authority": "planner_compression",
+                "source_reason_code": "active_weight_cut",
+                "week_index": 1,
+                "role_key": "secondary_strength_day",
+                "coverage_window": {
+                  "min_d_day": 14,
+                  "max_d_day": 20
+                }
+              },
+              {
+                "reason_code": "weight_cut_pressure",
+                "authority": "planner_compression",
+                "source_reason_code": "active_weight_cut",
+                "week_index": 2,
+                "role_key": "transfer_strength_day",
+                "coverage_window": {
+                  "min_d_day": 14,
+                  "max_d_day": 20
+                }
+              },
+              {
+                "reason_code": "weight_cut_pressure",
+                "authority": "planner_compression",
+                "source_reason_code": "active_weight_cut",
+                "week_index": 2,
+                "role_key": "neural_plus_strength_day",
+                "coverage_window": {
+                  "min_d_day": 14,
+                  "max_d_day": 20
+                }
+              }
+            ],
+            "witnesses": [
+              {
+                "day": 26,
+                "name": "Hang Power Clean",
+                "dose": "3x4 reps at crisp intent; rest 90s."
+              }
+            ]
+          },
+          {
+            "goal": "strength",
+            "state": "maintain",
+            "satisfied": true,
+            "windows": [
+              {
+                "min_d_day": 8,
+                "max_d_day": 26
+              }
+            ],
+            "missing": [],
+            "constraints": [],
+            "witnesses": [
+              {
+                "day": 26,
+                "name": "Slow-Lowered Pull-Up",
+                "dose": "2x6 @ RPE 6, keep reps crisp."
+              }
+            ]
+          }
+        ],
+        "goal_findings": [],
+        "fidelity_findings": [],
+        "validator_error_codes": [
+          "conditioning_role_workload_underfilled",
+          "late_camp_effective_prescription_exceeded"
+        ],
+        "validator_warning_codes": [
+          "internal_render_contract_leak",
+          "missing_required_element",
+          "total_session_budget_exceeded"
+        ],
+        "week_counts": [
+          {
+            "week": 1,
+            "counts": null
+          },
+          {
+            "week": 2,
+            "counts": null
+          },
+          {
+            "week": 3,
+            "counts": null
+          },
+          {
+            "week": 4,
+            "counts": null
+          }
+        ]
+      },
+      "after": {
+        "strength_d_days": [
+          26
+        ],
+        "goals": [
+          {
+            "goal": "power",
+            "state": "maintain",
+            "satisfied": true,
+            "windows": [
+              {
+                "min_d_day": 14,
+                "max_d_day": 26
+              }
+            ],
+            "missing": [],
+            "constraints": [
+              {
+                "reason_code": "weight_cut_pressure",
+                "authority": "planner_compression",
+                "source_reason_code": "active_weight_cut",
+                "week_index": 2,
+                "role_key": "transfer_strength_day",
+                "coverage_window": {
+                  "min_d_day": 14,
+                  "max_d_day": 19
+                }
+              },
+              {
+                "reason_code": "weight_cut_pressure",
+                "authority": "planner_compression",
+                "source_reason_code": "active_weight_cut",
+                "week_index": 2,
+                "role_key": "neural_plus_strength_day",
+                "coverage_window": {
+                  "min_d_day": 14,
+                  "max_d_day": 19
+                }
+              }
+            ],
+            "witnesses": [
+              {
+                "day": 26,
+                "name": "Hang Power Clean",
+                "dose": "3x4 reps at crisp intent; rest 90s."
+              }
+            ]
+          },
+          {
+            "goal": "strength",
+            "state": "defer",
+            "satisfied": false,
+            "windows": [
+              {
+                "min_d_day": 20,
+                "max_d_day": 26
+              },
+              {
+                "min_d_day": 14,
+                "max_d_day": 19
+              }
+            ],
+            "missing": [
+              {
+                "min_d_day": 14,
+                "max_d_day": 19
+              }
+            ],
+            "constraints": [
+              {
+                "reason_code": "weight_cut_pressure",
+                "authority": "planner_compression",
+                "source_reason_code": "active_weight_cut",
+                "week_index": 2,
+                "role_key": "transfer_strength_day",
+                "coverage_window": {
+                  "min_d_day": 14,
+                  "max_d_day": 19
+                }
+              },
+              {
+                "reason_code": "weight_cut_pressure",
+                "authority": "planner_compression",
+                "source_reason_code": "active_weight_cut",
+                "week_index": 2,
+                "role_key": "neural_plus_strength_day",
+                "coverage_window": {
+                  "min_d_day": 14,
+                  "max_d_day": 19
+                }
+              }
+            ],
+            "witnesses": [
+              {
+                "day": 26,
+                "name": "Slow-Lowered Pull-Up",
+                "dose": "2x6 @ RPE 6, keep reps crisp."
+              }
+            ]
+          },
+          {
+            "goal": "trunk_strength",
+            "state": "defer",
+            "satisfied": false,
+            "windows": [
+              {
+                "min_d_day": 14,
+                "max_d_day": 26
+              }
+            ],
+            "missing": [
+              {
+                "min_d_day": 14,
+                "max_d_day": 26
+              }
+            ],
+            "constraints": [
+              {
+                "reason_code": "weight_cut_pressure",
+                "authority": "planner_compression",
+                "source_reason_code": "active_weight_cut",
+                "week_index": 1,
+                "role_key": "secondary_strength_day",
+                "coverage_window": {
+                  "min_d_day": 14,
+                  "max_d_day": 26
+                }
+              },
+              {
+                "reason_code": "weight_cut_pressure",
+                "authority": "planner_compression",
+                "source_reason_code": "active_weight_cut",
+                "week_index": 2,
+                "role_key": "transfer_strength_day",
+                "coverage_window": {
+                  "min_d_day": 14,
+                  "max_d_day": 26
+                }
+              },
+              {
+                "reason_code": "weight_cut_pressure",
+                "authority": "planner_compression",
+                "source_reason_code": "active_weight_cut",
+                "week_index": 2,
+                "role_key": "neural_plus_strength_day",
+                "coverage_window": {
+                  "min_d_day": 14,
+                  "max_d_day": 26
+                }
+              },
+              {
+                "reason_code": "weight_cut_pressure",
+                "authority": "session_composition.trunk_support",
+                "week_index": 1,
+                "role_key": "primary_strength_day",
+                "d_day": 26,
+                "coverage_window": {
+                  "min_d_day": 14,
+                  "max_d_day": 26
+                }
+              }
+            ],
+            "witnesses": []
+          }
+        ],
+        "goal_findings": [],
+        "fidelity_findings": [],
+        "validator_error_codes": [
+          "conditioning_role_workload_underfilled"
+        ],
+        "validator_warning_codes": [
+          "internal_render_contract_leak",
+          "missing_required_element",
+          "total_session_budget_exceeded"
+        ],
+        "week_counts": [
+          {
+            "week": 1,
+            "counts": null
+          },
+          {
+            "week": 2,
+            "counts": null
+          },
+          {
+            "week": 3,
+            "counts": null
+          },
+          {
+            "week": 4,
+            "counts": null
+          }
+        ]
+      }
+    },
+    {
+      "name": "limited_capacity",
+      "days": 27,
+      "before": {
+        "strength_d_days": [
+          26,
+          24
+        ],
+        "goals": [
+          {
+            "goal": "power",
+            "state": "build",
+            "satisfied": true,
+            "windows": [
+              {
+                "min_d_day": 14,
+                "max_d_day": 20
+              },
+              {
+                "min_d_day": 21,
+                "max_d_day": 26
+              }
+            ],
+            "missing": [],
+            "constraints": [],
+            "witnesses": [
+              {
+                "day": 19,
+                "name": "Single-Leg 45\u00b0 Bound",
+                "dose": "4x2 reps at max speed; full rest 120s."
+              },
+              {
+                "day": 24,
+                "name": "Single-Leg Forward Hops",
+                "dose": "3x4 reps at crisp intent; rest 90s."
+              }
+            ]
+          },
+          {
+            "goal": "strength",
+            "state": "maintain",
+            "satisfied": true,
+            "windows": [
+              {
+                "min_d_day": 8,
+                "max_d_day": 26
+              }
+            ],
+            "missing": [],
+            "constraints": [],
+            "witnesses": [
+              {
+                "day": 24,
+                "name": "Cossack Squat (Dynamic)",
+                "dose": "2x6 @ RPE 6, keep reps crisp."
+              }
+            ]
+          }
+        ],
+        "goal_findings": [],
+        "fidelity_findings": [],
+        "validator_error_codes": [
+          "conditioning_role_workload_underfilled",
+          "late_camp_effective_prescription_exceeded"
+        ],
+        "validator_warning_codes": [
+          "internal_render_contract_leak",
+          "missing_required_element",
+          "total_session_budget_exceeded"
+        ],
+        "week_counts": [
+          {
+            "week": 1,
+            "counts": null
+          },
+          {
+            "week": 2,
+            "counts": null
+          },
+          {
+            "week": 3,
+            "counts": null
+          },
+          {
+            "week": 4,
+            "counts": null
+          }
+        ]
+      },
+      "after": {
+        "strength_d_days": [
+          26,
+          24,
+          19
+        ],
+        "goals": [
+          {
+            "goal": "power",
+            "state": "build",
+            "satisfied": true,
+            "windows": [
+              {
+                "min_d_day": 20,
+                "max_d_day": 26
+              },
+              {
+                "min_d_day": 14,
+                "max_d_day": 19
+              }
+            ],
+            "missing": [],
+            "constraints": [],
+            "witnesses": [
+              {
+                "day": 24,
+                "name": "Single-Leg Forward Hops",
+                "dose": "3x4 reps at crisp intent; rest 90s."
+              },
+              {
+                "day": 19,
+                "name": "Ballistic Box Jump (Min Ground Contact)",
+                "dose": "4x2 reps at max speed; full rest 120s."
+              }
+            ]
+          },
+          {
+            "goal": "strength",
+            "state": "maintain",
+            "satisfied": true,
+            "windows": [
+              {
+                "min_d_day": 20,
+                "max_d_day": 26
+              },
+              {
+                "min_d_day": 14,
+                "max_d_day": 19
+              }
+            ],
+            "missing": [],
+            "constraints": [],
+            "witnesses": [
+              {
+                "day": 24,
+                "name": "Cossack Squat (Dynamic)",
+                "dose": "2x6 @ RPE 6, keep reps crisp."
+              },
+              {
+                "day": 19,
+                "name": "Cossack Squat (Dynamic)",
+                "dose": "2x6 @ RPE 6, keep reps crisp."
+              }
+            ]
+          },
+          {
+            "goal": "trunk_strength",
+            "state": "maintain",
+            "satisfied": true,
+            "windows": [
+              {
+                "min_d_day": 14,
+                "max_d_day": 26
+              }
+            ],
+            "missing": [],
+            "constraints": [],
+            "witnesses": [
+              {
+                "day": 24,
+                "name": "Side Plank (Long Duration)",
+                "dose": "3 holds x 10s @ 7/10 effort; full rest between holds."
+              }
+            ]
+          }
+        ],
+        "goal_findings": [],
+        "fidelity_findings": [],
+        "validator_error_codes": [
+          "conditioning_role_workload_underfilled"
+        ],
+        "validator_warning_codes": [
+          "internal_render_contract_leak",
+          "missing_required_element",
+          "total_session_budget_exceeded"
+        ],
+        "week_counts": [
+          {
+            "week": 1,
+            "counts": null
+          },
+          {
+            "week": 2,
+            "counts": null
+          },
+          {
+            "week": 3,
+            "counts": null
+          },
+          {
+            "week": 4,
+            "counts": null
+          }
+        ]
+      }
+    },
+    {
+      "name": "competing_goals",
+      "days": 27,
+      "before": {
+        "strength_d_days": [
+          26,
+          20
+        ],
+        "goals": [
+          {
+            "goal": "power",
+            "state": "build",
+            "satisfied": true,
+            "windows": [
+              {
+                "min_d_day": 14,
+                "max_d_day": 20
+              },
+              {
+                "min_d_day": 21,
+                "max_d_day": 26
+              }
+            ],
+            "missing": [],
+            "constraints": [],
+            "witnesses": [
+              {
+                "day": 20,
+                "name": "Kneeling Single-Arm Medicine Ball Slam",
+                "dose": "3x4 reps at crisp intent; rest 90s."
+              },
+              {
+                "day": 26,
+                "name": "Kettlebell Swing",
+                "dose": "3x4 reps at crisp intent; rest 90s."
+              }
+            ]
+          },
+          {
+            "goal": "strength",
+            "state": "maintain",
+            "satisfied": true,
+            "windows": [
+              {
+                "min_d_day": 8,
+                "max_d_day": 26
+              }
+            ],
+            "missing": [],
+            "constraints": [],
+            "witnesses": [
+              {
+                "day": 26,
+                "name": "Lat Pulldown",
+                "dose": "2x6 @ RPE 6, keep reps crisp."
+              }
+            ]
+          },
+          {
+            "goal": "conditioning",
+            "state": "maintain",
+            "satisfied": true,
+            "windows": [
+              {
+                "min_d_day": 2,
+                "max_d_day": 26
+              }
+            ],
+            "missing": [],
+            "constraints": [],
+            "witnesses": [
+              {
+                "day": 24,
+                "name": "Heavy Bag Aerobic Pace",
+                "dose": "10min continuous steady pace"
+              }
+            ]
+          },
+          {
+            "goal": "speed",
+            "state": "maintain",
+            "satisfied": true,
+            "windows": [
+              {
+                "min_d_day": 2,
+                "max_d_day": 26
+              }
+            ],
+            "missing": [],
+            "constraints": [],
+            "witnesses": [
+              {
+                "day": 17,
+                "name": "Wall Ball Shot (Max Height)",
+                "dose": "8x3 reps, 90s rest"
+              }
+            ]
+          }
+        ],
+        "goal_findings": [],
+        "fidelity_findings": [],
+        "validator_error_codes": [
+          "late_camp_effective_prescription_exceeded"
+        ],
+        "validator_warning_codes": [
+          "internal_render_contract_leak",
+          "missing_required_element",
+          "total_session_budget_exceeded"
+        ],
+        "week_counts": [
+          {
+            "week": 1,
+            "counts": null
+          },
+          {
+            "week": 2,
+            "counts": null
+          },
+          {
+            "week": 3,
+            "counts": null
+          },
+          {
+            "week": 4,
+            "counts": null
+          }
+        ]
+      },
+      "after": {
+        "strength_d_days": [
+          26,
+          20,
+          19
+        ],
+        "goals": [
+          {
+            "goal": "power",
+            "state": "build",
+            "satisfied": true,
+            "windows": [
+              {
+                "min_d_day": 20,
+                "max_d_day": 26
+              },
+              {
+                "min_d_day": 14,
+                "max_d_day": 19
+              }
+            ],
+            "missing": [],
+            "constraints": [],
+            "witnesses": [
+              {
+                "day": 26,
+                "name": "Kettlebell Swing",
+                "dose": "3x4 reps at crisp intent; rest 90s."
+              },
+              {
+                "day": 19,
+                "name": "Plank Punch Reach",
+                "dose": "4x2 reps at max speed; full rest 120s."
+              }
+            ]
+          },
+          {
+            "goal": "strength",
+            "state": "maintain",
+            "satisfied": true,
+            "windows": [
+              {
+                "min_d_day": 20,
+                "max_d_day": 26
+              },
+              {
+                "min_d_day": 14,
+                "max_d_day": 19
+              }
+            ],
+            "missing": [],
+            "constraints": [],
+            "witnesses": [
+              {
+                "day": 26,
+                "name": "Lat Pulldown",
+                "dose": "2x6 @ RPE 6, keep reps crisp."
+              },
+              {
+                "day": 19,
+                "name": "DB Bench Press \u2192 Plyo Push-Up",
+                "dose": "3 rounds: heavy movement 2 reps @ 85% 1RM \u2192 explosive movement 2 reps at max intent; rest 4 min per round."
+              }
+            ]
+          },
+          {
+            "goal": "conditioning",
+            "state": "maintain",
+            "satisfied": true,
+            "windows": [
+              {
+                "min_d_day": 14,
+                "max_d_day": 26
+              }
+            ],
+            "missing": [],
+            "constraints": [],
+            "witnesses": [
+              {
+                "day": 24,
+                "name": "Heavy Bag Aerobic Pace",
+                "dose": "10min continuous steady pace"
+              }
+            ]
+          },
+          {
+            "goal": "speed",
+            "state": "maintain",
+            "satisfied": true,
+            "windows": [
+              {
+                "min_d_day": 14,
+                "max_d_day": 26
+              }
+            ],
+            "missing": [],
+            "constraints": [],
+            "witnesses": [
+              {
+                "day": 17,
+                "name": "Wall Ball Shot (Max Height)",
+                "dose": "8x3 reps, 90s rest"
+              }
+            ]
+          },
+          {
+            "goal": "trunk_strength",
+            "state": "maintain",
+            "satisfied": true,
+            "windows": [
+              {
+                "min_d_day": 14,
+                "max_d_day": 26
+              }
+            ],
+            "missing": [],
+            "constraints": [],
+            "witnesses": [
+              {
+                "day": 20,
+                "name": "Cable Pallof Press",
+                "dose": "2 sets x 6 reps or 20s tempo (3-1-3), RPE 6."
+              }
+            ]
+          }
+        ],
+        "goal_findings": [],
+        "fidelity_findings": [],
+        "validator_error_codes": [],
+        "validator_warning_codes": [
+          "internal_render_contract_leak",
+          "missing_required_element",
+          "total_session_budget_exceeded"
+        ],
+        "week_counts": [
+          {
+            "week": 1,
+            "counts": null
+          },
+          {
+            "week": 2,
+            "counts": null
+          },
+          {
+            "week": 3,
+            "counts": null
+          },
+          {
+            "week": 4,
+            "counts": null
+          }
+        ]
+      }
+    },
+    {
+      "name": "late_transition",
+      "days": 18,
+      "before": {
+        "strength_d_days": [],
+        "goals": [
+          {
+            "goal": "power",
+            "state": "build",
+            "satisfied": true,
+            "windows": [
+              {
+                "min_d_day": 14,
+                "max_d_day": 17
+              }
+            ],
+            "missing": [],
+            "constraints": [],
+            "witnesses": [
+              {
+                "day": 15,
+                "name": "Jump Squat",
+                "dose": "3 x 2 at max speed; rest 120s"
+              }
+            ]
+          },
+          {
+            "goal": "strength",
+            "state": "defer",
+            "satisfied": false,
+            "windows": [
+              {
+                "min_d_day": 8,
+                "max_d_day": 17
+              }
+            ],
+            "missing": [
+              {
+                "min_d_day": 8,
+                "max_d_day": 17
+              }
+            ],
+            "constraints": [
+              {
+                "reason_code": "hard_sparring_strength_limit",
+                "authority": "hard_sparring_strength_policy",
+                "days_until_fight": 18,
+                "hard_sparring_days": [
+                  "Tuesday",
+                  "Thursday"
+                ]
+              }
+            ],
+            "witnesses": []
+          }
+        ],
+        "goal_findings": [],
+        "fidelity_findings": [],
+        "validator_error_codes": [
+          "ambiguous_working_dose"
+        ],
+        "validator_warning_codes": [
+          "internal_render_contract_leak",
+          "missing_required_element",
+          "total_session_budget_exceeded"
+        ],
+        "week_counts": [
+          {
+            "week": 1,
+            "counts": null
+          },
+          {
+            "week": 2,
+            "counts": null
+          },
+          {
+            "week": 3,
+            "counts": null
+          }
+        ]
+      },
+      "after": {
+        "strength_d_days": [],
+        "goals": [
+          {
+            "goal": "power",
+            "state": "build",
+            "satisfied": true,
+            "windows": [
+              {
+                "min_d_day": 14,
+                "max_d_day": 17
+              }
+            ],
+            "missing": [],
+            "constraints": [],
+            "witnesses": [
+              {
+                "day": 15,
+                "name": "Jump Squat",
+                "dose": "3 x 2 at max speed; rest 120s"
+              }
+            ]
+          },
+          {
+            "goal": "strength",
+            "state": "defer",
+            "satisfied": false,
+            "windows": [
+              {
+                "min_d_day": 14,
+                "max_d_day": 17
+              }
+            ],
+            "missing": [
+              {
+                "min_d_day": 14,
+                "max_d_day": 17
+              }
+            ],
+            "constraints": [
+              {
+                "reason_code": "hard_sparring_strength_limit",
+                "authority": "hard_sparring_strength_policy",
+                "days_until_fight": 18,
+                "hard_sparring_days": [
+                  "Tuesday",
+                  "Thursday"
+                ]
+              }
+            ],
+            "witnesses": []
+          },
+          {
+            "goal": "trunk_strength",
+            "state": "maintain",
+            "satisfied": true,
+            "windows": [
+              {
+                "min_d_day": 14,
+                "max_d_day": 17
+              }
+            ],
+            "missing": [],
+            "constraints": [],
+            "witnesses": [
+              {
+                "day": 15,
+                "name": "Dead-bug breathing",
+                "dose": "2 x 6 @ RPE 6 max"
+              }
+            ]
+          }
+        ],
+        "goal_findings": [],
+        "fidelity_findings": [],
+        "validator_error_codes": [],
+        "validator_warning_codes": [
+          "internal_render_contract_leak",
+          "missing_required_element",
+          "total_session_budget_exceeded"
+        ],
+        "week_counts": [
+          {
+            "week": 1,
+            "counts": null
+          },
+          {
+            "week": 2,
+            "counts": null
+          },
+          {
+            "week": 3,
+            "counts": null
+          }
+        ]
+      }
+    },
+    {
+      "name": "boxing",
+      "days": 27,
+      "before": {
+        "strength_d_days": [
+          26,
+          19
+        ],
+        "goals": [
+          {
+            "goal": "power",
+            "state": "build",
+            "satisfied": true,
+            "windows": [
+              {
+                "min_d_day": 14,
+                "max_d_day": 20
+              },
+              {
+                "min_d_day": 21,
+                "max_d_day": 26
+              }
+            ],
+            "missing": [],
+            "constraints": [],
+            "witnesses": [
+              {
+                "day": 19,
+                "name": "Barbell Thruster",
+                "dose": "4x2 reps at max speed; full rest 120s."
+              },
+              {
+                "day": 26,
+                "name": "Kettlebell Swing",
+                "dose": "3x4 reps at crisp intent; rest 90s."
+              }
+            ]
+          },
+          {
+            "goal": "strength",
+            "state": "maintain",
+            "satisfied": true,
+            "windows": [
+              {
+                "min_d_day": 8,
+                "max_d_day": 26
+              }
+            ],
+            "missing": [],
+            "constraints": [],
+            "witnesses": [
+              {
+                "day": 26,
+                "name": "DB Alternating Incline Press (30-45\u00b0)",
+                "dose": "2x6 @ RPE 6, keep reps crisp."
+              }
+            ]
+          }
+        ],
+        "goal_findings": [],
+        "fidelity_findings": [
+          {
+            "code": "authoritative_programme_unpriced_session",
+            "severity": "blocker",
+            "confidence": "high",
+            "scheduled_d_day": 24,
+            "message": "Scheduled S&C has no complete selected membership and effective dose."
+          }
+        ],
+        "validator_error_codes": [
+          "authoritative_programme_unpriced_session",
+          "late_camp_effective_prescription_exceeded"
+        ],
+        "validator_warning_codes": [
+          "internal_render_contract_leak",
+          "missing_required_element",
+          "total_session_budget_exceeded"
+        ],
+        "week_counts": [
+          {
+            "week": 1,
+            "counts": null
+          },
+          {
+            "week": 2,
+            "counts": null
+          },
+          {
+            "week": 3,
+            "counts": null
+          },
+          {
+            "week": 4,
+            "counts": null
+          }
+        ]
+      },
+      "after": {
+        "strength_d_days": [
+          26,
+          19
+        ],
+        "goals": [
+          {
+            "goal": "power",
+            "state": "build",
+            "satisfied": true,
+            "windows": [
+              {
+                "min_d_day": 20,
+                "max_d_day": 26
+              },
+              {
+                "min_d_day": 14,
+                "max_d_day": 19
+              }
+            ],
+            "missing": [],
+            "constraints": [],
+            "witnesses": [
+              {
+                "day": 26,
+                "name": "Kettlebell Swing",
+                "dose": "3x4 reps at crisp intent; rest 90s."
+              },
+              {
+                "day": 19,
+                "name": "Heavy RDL \u2192 Broad Jump",
+                "dose": "3 rounds: heavy movement 2 reps @ 85% 1RM \u2192 explosive movement 2 reps at max intent; rest 4 min per round."
+              }
+            ]
+          },
+          {
+            "goal": "strength",
+            "state": "maintain",
+            "satisfied": true,
+            "windows": [
+              {
+                "min_d_day": 20,
+                "max_d_day": 26
+              },
+              {
+                "min_d_day": 14,
+                "max_d_day": 19
+              }
+            ],
+            "missing": [],
+            "constraints": [],
+            "witnesses": [
+              {
+                "day": 26,
+                "name": "DB Alternating Incline Press (30-45\u00b0)",
+                "dose": "2x6 @ RPE 6, keep reps crisp."
+              },
+              {
+                "day": 19,
+                "name": "Heavy RDL \u2192 Broad Jump",
+                "dose": "3 rounds: heavy movement 2 reps @ 85% 1RM \u2192 explosive movement 2 reps at max intent; rest 4 min per round."
+              }
+            ]
+          },
+          {
+            "goal": "trunk_strength",
+            "state": "maintain",
+            "satisfied": true,
+            "windows": [
+              {
+                "min_d_day": 14,
+                "max_d_day": 26
+              }
+            ],
+            "missing": [],
+            "constraints": [],
+            "witnesses": [
+              {
+                "day": 19,
+                "name": "Med-Ball Rotational Slam",
+                "dose": "4x2 reps at max speed; full rest 120s."
+              }
+            ]
+          }
+        ],
+        "goal_findings": [],
+        "fidelity_findings": [],
+        "validator_error_codes": [],
+        "validator_warning_codes": [
+          "internal_render_contract_leak",
+          "missing_required_element",
+          "total_session_budget_exceeded"
+        ],
+        "week_counts": [
+          {
+            "week": 1,
+            "counts": null
+          },
+          {
+            "week": 2,
+            "counts": null
+          },
+          {
+            "week": 3,
+            "counts": null
+          },
+          {
+            "week": 4,
+            "counts": null
+          }
+        ]
+      }
+    },
+    {
+      "name": "bjj",
+      "days": 27,
+      "before": {
+        "strength_d_days": [
+          26,
+          20
+        ],
+        "goals": [
+          {
+            "goal": "power",
+            "state": "build",
+            "satisfied": true,
+            "windows": [
+              {
+                "min_d_day": 14,
+                "max_d_day": 20
+              },
+              {
+                "min_d_day": 21,
+                "max_d_day": 26
+              }
+            ],
+            "missing": [],
+            "constraints": [],
+            "witnesses": [
+              {
+                "day": 20,
+                "name": "Kneeling Single-Arm Medicine Ball Slam",
+                "dose": "3x4 reps at crisp intent; rest 90s."
+              },
+              {
+                "day": 26,
+                "name": "Kettlebell Swing",
+                "dose": "3x4 reps at crisp intent; rest 90s."
+              }
+            ]
+          },
+          {
+            "goal": "strength",
+            "state": "maintain",
+            "satisfied": true,
+            "windows": [
+              {
+                "min_d_day": 8,
+                "max_d_day": 26
+              }
+            ],
+            "missing": [],
+            "constraints": [],
+            "witnesses": [
+              {
+                "day": 26,
+                "name": "Lat Pulldown",
+                "dose": "2x6 @ RPE 6, keep reps crisp."
+              }
+            ]
+          }
+        ],
+        "goal_findings": [],
+        "fidelity_findings": [],
+        "validator_error_codes": [
+          "conditioning_role_workload_underfilled",
+          "late_camp_effective_prescription_exceeded"
+        ],
+        "validator_warning_codes": [
+          "internal_render_contract_leak",
+          "missing_required_element"
+        ],
+        "week_counts": [
+          {
+            "week": 1,
+            "counts": null
+          },
+          {
+            "week": 2,
+            "counts": null
+          },
+          {
+            "week": 3,
+            "counts": null
+          },
+          {
+            "week": 4,
+            "counts": null
+          }
+        ]
+      },
+      "after": {
+        "strength_d_days": [
+          26,
+          20,
+          14
+        ],
+        "goals": [
+          {
+            "goal": "power",
+            "state": "build",
+            "satisfied": true,
+            "windows": [
+              {
+                "min_d_day": 20,
+                "max_d_day": 26
+              },
+              {
+                "min_d_day": 14,
+                "max_d_day": 19
+              }
+            ],
+            "missing": [],
+            "constraints": [],
+            "witnesses": [
+              {
+                "day": 26,
+                "name": "Kettlebell Swing",
+                "dose": "3x4 reps at crisp intent; rest 90s."
+              },
+              {
+                "day": 14,
+                "name": "Heavy RDL \u2192 Broad Jump",
+                "dose": "3 rounds: heavy movement 2 reps @ 85% 1RM \u2192 explosive movement 2 reps at max intent; rest 4 min per round."
+              }
+            ]
+          },
+          {
+            "goal": "strength",
+            "state": "maintain",
+            "satisfied": true,
+            "windows": [
+              {
+                "min_d_day": 20,
+                "max_d_day": 26
+              },
+              {
+                "min_d_day": 14,
+                "max_d_day": 19
+              }
+            ],
+            "missing": [],
+            "constraints": [],
+            "witnesses": [
+              {
+                "day": 26,
+                "name": "Lat Pulldown",
+                "dose": "2x6 @ RPE 6, keep reps crisp."
+              },
+              {
+                "day": 14,
+                "name": "Heavy RDL \u2192 Broad Jump",
+                "dose": "3 rounds: heavy movement 2 reps @ 85% 1RM \u2192 explosive movement 2 reps at max intent; rest 4 min per round."
+              }
+            ]
+          },
+          {
+            "goal": "trunk_strength",
+            "state": "maintain",
+            "satisfied": true,
+            "windows": [
+              {
+                "min_d_day": 14,
+                "max_d_day": 26
+              }
+            ],
+            "missing": [],
+            "constraints": [],
+            "witnesses": [
+              {
+                "day": 26,
+                "name": "Plank",
+                "dose": "2 x 20s hold @ RPE 6; rest 60s."
+              }
+            ]
+          }
+        ],
+        "goal_findings": [],
+        "fidelity_findings": [],
+        "validator_error_codes": [
+          "conditioning_role_workload_underfilled"
+        ],
+        "validator_warning_codes": [
+          "internal_render_contract_leak",
+          "missing_required_element"
+        ],
+        "week_counts": [
+          {
+            "week": 1,
+            "counts": null
+          },
+          {
+            "week": 2,
+            "counts": null
+          },
+          {
+            "week": 3,
+            "counts": null
+          },
+          {
+            "week": 4,
+            "counts": null
+          }
+        ]
+      }
+    }
+  ]
+}

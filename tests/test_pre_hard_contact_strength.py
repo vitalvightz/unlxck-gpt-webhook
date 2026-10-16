@@ -964,6 +964,9 @@ def test_any_declared_pre_hard_weekday_can_receive_not_only_monday() -> None:
     weekly, slots = _composed_dense_week_without_secondary()
     week = weekly["weeks"][0]
     week["calendar_days"].append({"weekday": "Wednesday", "d_day": 21})
+    # The resolved Tuesday is technical, leaving Wednesday eligible before
+    # Thursday. Two effective hard contacts still protect the narrow gap.
+    week["hard_sparring_plan"][0] = _hard("Tuesday", load="technical", status="convert_to_technical_suggested")
     week["declared_training_days"] = ["Wednesday", "Tuesday", "Thursday", "Saturday"]
     athlete = {
         "training_days": ["Wednesday", "Tuesday", "Thursday", "Saturday"],

@@ -2359,7 +2359,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None):
             priority_profile=priority_profile,
             must_have_bonus_multiplier=must_have_bonus_multiplier,
             derived_clarification_tags=derived_clarification_tags,
-            adaptation_tags=strength_adaptation_relevance(ex),
+            adaptation_tags=strength_adaptation_relevance(ex, prescription_type=_classify_prescription_type(ex)),
         )
         if score == -999:
             continue
@@ -2954,13 +2954,13 @@ def generate_strength_block(*, flags: dict, weaknesses=None):
         # Positions are swapped; membership is unchanged.
         if strength_priority_selected and len(sessions := infer_strength_sessions(updated, num_strength_sessions)) > 1:
             first = sessions[0]
-            if not any("strength" in strength_adaptation_relevance(ex) for ex in first.get("items", [])):
+            if not any("strength" in strength_adaptation_relevance(ex, prescription_type=_classify_prescription_type(ex)) for ex in first.get("items", [])):
                 donor_position = next(
                     (
                         position
                         for session in sessions[1:]
                         for exercise, position in zip(session.get("items", []), session.get("positions", []))
-                        if "strength" in strength_adaptation_relevance(exercise)
+                        if "strength" in strength_adaptation_relevance(exercise, prescription_type=_classify_prescription_type(exercise))
                     ),
                     None,
                 )
@@ -2985,23 +2985,24 @@ def generate_strength_block(*, flags: dict, weaknesses=None):
         flags=flags,
     )
 
-    def _ensure_early_taper_strength_maintenance_touch(exercises: list[dict]) -> list[dict]:
-        if not (
-            phase == "TAPER"
-            and late_window in EARLY_TAPER_STRENGTH_WINDOWS
-            and strength_maintenance_intent
-            and exercises
-        ):
+    def _ensure_selected_strength_exposure(exercises: list[dict]) -> list[dict]:
+        normal_strength = (phase in {"GPP", "SPP"} and strength_priority_selected
+                           and (not isinstance(days_until_fight, int) or days_until_fight > 13))
+        early_taper = (phase == "TAPER" and late_window in EARLY_TAPER_STRENGTH_WINDOWS
+                       and strength_maintenance_intent)
+        if not exercises or not (normal_strength or early_taper):
             return exercises
-        if any(
-            _is_real_strength_maintenance_touch(exercise, _cached_classify(exercise))
-            for exercise in exercises
-        ):
+
+        def qualifies(exercise: dict) -> bool:
+            return ("strength" in strength_adaptation_relevance(exercise, prescription_type=_classify_prescription_type(exercise)) if normal_strength
+                    else _is_real_strength_maintenance_touch(exercise, _cached_classify(exercise)))
+
+        if any(qualifies(exercise) for exercise in exercises):
             return exercises
 
         selected_names = _selected_names(exercises)
         replacement_entry = _best_candidate(
-            lambda cand, _score, _reasons, profile: _is_real_strength_maintenance_touch(cand, profile)
+            lambda cand, _score, _reasons, profile: qualifies(cand)
             and _cached_guarded_decision(cand).action != "exclude",
             exclude_names=selected_names,
         )
@@ -3020,6 +3021,17 @@ def generate_strength_block(*, flags: dict, weaknesses=None):
             if _is_primer_only_strength_touch(exercise, _cached_classify(exercise))
         ]
         candidate_indices = primer_only_indices or list(range(len(updated)))
+        if normal_strength:
+            # Preserve other actual selected stimuli; trade a redundant or
+            # unrequested member, never the only primary power/speed witness.
+            targets = {priority_adaptation(value) for value in
+                       [*priority_profile.all_goals, *priority_profile.all_weak_areas]} - {""}
+            current = set().union(*(strength_adaptation_relevance(ex, prescription_type=_classify_prescription_type(ex)) for ex in updated)) & targets
+            candidate_indices = [i for i in candidate_indices
+                if current <= set().union(strength_adaptation_relevance(replacement, prescription_type=_classify_prescription_type(replacement)),
+                    *(strength_adaptation_relevance(ex, prescription_type=_classify_prescription_type(ex)) for j, ex in enumerate(updated) if j != i))]
+            if not candidate_indices:
+                return exercises
         replace_index = min(
             candidate_indices,
             key=lambda idx: (
@@ -3036,7 +3048,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None):
         replacement_reasons["reason_codes"] = list(
             dict.fromkeys(
                 list(replacement_reasons.get("reason_codes", []))
-                + ["early_taper_strength_maintenance_selected"]
+                + ["selected_strength_exposure_retained" if normal_strength else "early_taper_strength_maintenance_selected"]
             )
         )
         _replace_exercise(
@@ -3345,8 +3357,8 @@ def generate_strength_block(*, flags: dict, weaknesses=None):
     base_exercises = _run_real_poststep("injury_safe_finalize_2", lambda: _finalize_injury_safe_exercises(base_exercises))
     base_exercises = _run_real_poststep("keyword_guard", lambda: _final_keyword_guard(base_exercises))
     base_exercises = _run_real_poststep(
-        "early_taper_strength_maintenance_final",
-        lambda: _ensure_early_taper_strength_maintenance_touch(base_exercises),
+        "selected_strength_exposure_final",
+        lambda: _ensure_selected_strength_exposure(base_exercises),
     )
     base_exercises = _run_real_poststep(
         "core_balance_low_cost_bonus",

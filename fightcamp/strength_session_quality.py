@@ -315,7 +315,7 @@ _TRUNK_FUNCTION_TAGS = frozenset(
 _LIMB_CATEGORIES = frozenset({"upper_body", "lower_body"})
 
 
-def strength_adaptation_relevance(item: dict[str, Any]) -> frozenset[str]:
+def strength_adaptation_relevance(item: dict[str, Any], *, prescription_type: str | None = None) -> frozenset[str]:
     """Adaptations this strength-bank item's training method can develop.
 
     ``strength``: a strength/contrast method on a loaded or force-isometric
@@ -325,7 +325,9 @@ def strength_adaptation_relevance(item: dict[str, Any]) -> frozenset[str]:
     quality tags; ``speed`` additionally needs a speed-quality tag.
     ``trunk_strength``: trunk-targeted work - an authored core category or
     movement, or an anti-rotation/extension/lateral-flexion function.
-    Relevance is not delivery: the resolved dose still decides that.
+    Raw relevance is capability. When the selector supplies its actual bank
+    prescription type, a power-only/timed-conditioning dose cannot back strength.
+    The resolved scheduled-day dose still decides final delivery.
     """
     profile = classify_strength_item(item)
     tags = _collect_tags(item)
@@ -338,6 +340,10 @@ def strength_adaptation_relevance(item: dict[str, Any]) -> frozenset[str]:
         or (quality == "anchor_power" and loaded_categories)
     ):
         adaptations.add("strength")
+    if prescription_type is not None and prescription_type not in {
+        "barbell", "general", "core", "contrast", "max_isometric", "isometric",
+    }:
+        adaptations.discard("strength")
     if quality == "anchor_power" and (method in POWER_DEVELOPMENT_METHODS or tags & _POWER_QUALITY_TAGS):
         adaptations.add("power")
         if tags & _SPEED_QUALITY_TAGS:

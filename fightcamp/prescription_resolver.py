@@ -1330,9 +1330,21 @@ def apply_effective_strength_prescriptions(
             }
             resolved.append(entry)
 
-        if not resolved:
-            continue
+        # A rejected effective dose is a rejected member, not permission to
+        # leave an unpriced bank prescription in the closed session. In
+        # particular an ambiguous pre-contact hold must never survive on its
+        # unrestricted base dose. Empty sessions are removed by composition's
+        # existing final suppression pass.
+        priced_keys = {(p.get("slot_id"), p.get("name")) for p in resolved}
+        role["selected_exercise_assignments"] = [a for a in assignments
+            if isinstance(a, dict) and (a.get("slot_group") != "strength_slots"
+                                       or (a.get("slot_id"), a.get("name")) in priced_keys)]
         role["effective_strength_prescriptions"] = resolved
+        names = [a.get("name") for a in role["selected_exercise_assignments"] if a.get("name")]
+        role["effective_strength_envelope"]["allowed_exercise_names"] = list(dict.fromkeys(names))
+        policy = role.get("strength_composition_policy")
+        if isinstance(policy, dict):
+            policy.update(selected_count=len(names), selected_names=names)
         # The numeric loaded-strength ceiling envelope is a scheduled-day cap
         # artefact.  A normal-camp role has no cap to summarise and keeps the
         # complete-allow-list envelope already built above.

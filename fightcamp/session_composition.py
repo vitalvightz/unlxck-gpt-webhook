@@ -684,6 +684,7 @@ def _select_bounded_records(
     preserve_trunk_support: bool = False,
     preserve_adaptation: str = "",
     preserve_weakness: str = "",
+    preserve_strength: bool = False,
 ) -> tuple[list[dict[str, Any]], dict[str, str]]:
     family_limit = 2 if pressure == 0 else 1
     selected: list[dict[str, Any]] = []
@@ -718,6 +719,18 @@ def _select_bounded_records(
     if weakness is not None and weakness not in selected and len(selected) < cap:
         _add_record(weakness, selected, family_counts)
         unsatisfied_groups = [group for group in unsatisfied_groups if not _covers(weakness, group)]
+    # Spend the existing cap on selected stimuli before filling generic movement
+    # families. Power work may share a squat/push family without maintaining
+    # strength; bracing during that work is not dedicated trunk training either.
+    for adaptation, required in (("strength", preserve_strength), ("trunk_strength", preserve_trunk_support)):
+        if not required or len(selected) >= cap or any(adaptation in r["adaptations"] for r in selected):
+            continue
+        candidate = next((r for r in records if r not in selected
+                          and adaptation in r["adaptations"]
+                          and not _would_exceed_family_limit(r["families"], family_counts, family_limit)), None)
+        if candidate is not None:
+            _add_record(candidate, selected, family_counts)
+            unsatisfied_groups = [group for group in unsatisfied_groups if not _covers(candidate, group)]
     while unsatisfied_groups:
         if len(selected) >= cap:
             break
@@ -742,39 +755,6 @@ def _select_bounded_records(
         unsatisfied_groups = [
             group for group in unsatisfied_groups if not _covers(record, group)
         ]
-
-    # The athlete's primary goal keeps one member that develops it when this
-    # session's own candidates hold one. A weakness may be trained alongside the
-    # primary goal; under a tight cap it must not silently take its place.
-    if (preserve_adaptation and len(selected) < cap
-            and not any(preserve_adaptation in record.get("adaptations", ()) for record in selected)):
-        primary_options = [
-            record
-            for record in records
-            if record not in selected
-            and preserve_adaptation in record.get("adaptations", ())
-            and not _would_exceed_family_limit(record["families"], family_counts, family_limit)
-        ]
-        if primary_options:
-            _add_record(primary_options[0], selected, family_counts)
-
-    # An explicitly selected trunk-strength limiter belongs inside the retained
-    # maintenance session when the conditioning priority shift leaves only one
-    # strength slot. Keep it inside the existing cap and bank membership. Only
-    # trunk-targeted work qualifies: a balance drill, or a sled push that merely
-    # involves the trunk, is not trunk training.
-    if preserve_trunk_support and len(selected) < cap:
-        trunk_options = [
-            record
-            for record in records
-            if record not in selected
-            and record.get("trunk_targeted")
-            and not _would_exceed_family_limit(
-                record["families"], family_counts, family_limit
-            )
-        ]
-        if trunk_options:
-            _add_record(trunk_options[0], selected, family_counts)
 
     # Preserve Stage 1 ranking as the authority. Support/accessory status is only
     # a drop preference when the session actually has to shrink; it is never a
@@ -1341,6 +1321,7 @@ def _apply_adjacent_strength_recovery(
             preserve_trunk_support=current["preserve_trunk_support"],
             preserve_adaptation=current.get("preserve_adaptation", ""),
             preserve_weakness=current.get("preserve_weakness", ""),
+            preserve_strength=current.get("preserve_strength", False),
         )
         if selected_records:
             _assign_selected_records(current, selected_records)
@@ -1440,10 +1421,12 @@ def compose_normal_strength_assignments(
         pressure_context = _composition_context_from_model(None)
     trunk_strength_selected = _trunk_strength_selected(athlete_model)
     primary_adaptation = _primary_goal_adaptation(athlete_model)
-    from .priority_profile import build_priority_profile
+    from .priority_profile import build_priority_profile, selected_priority_targets
     # Other weakness families retain their existing composition owners (for
     # example trunk support); the selected moving-footwork bank is complementary.
     primary_weakness = "footwork" if build_priority_profile(athlete_model or {}).primary_weak_area == "footwork" else ""
+    selected_adaptations = {p.target for p in selected_priority_targets(athlete_model or {})}
+    strength_selected = "strength" in selected_adaptations
 
     weekly_role_map["strength_composition_context"] = dict(pressure_context)
     composed_roles: list[dict[str, Any]] = []
@@ -1519,10 +1502,12 @@ def compose_normal_strength_assignments(
             # surviving session can use eligible complementary pool members;
             # an alternate remains one substitution for its original slot.
             active_indices = {r.get("strength_session_index") or 1 for r in week.get("session_roles") or []
-                              if r is not role and r.get("category") == "strength" and role_d_day(week, r) is not None}
+                              if r is not role and r.get("category") == "strength" and role_d_day(week, r) is not None
+                              and not r.get("late_fight_tail_owned")}
             available_slots = [slot for slot in slots if slot in owned_slots
                                or (slot.get("session_index") or 1) not in active_indices]
-            priorities = {primary_adaptation, primary_weakness} - {""}
+            priorities = ({primary_adaptation, primary_weakness}
+                          | (selected_adaptations & {"strength", "trunk_strength"})) - {""}
             records.extend(r for r in _candidate_records(available_slots)
                            if priorities.intersection(r["adaptations"]) and r["slot"] not in owned_slots)
             if primary_weakness == "footwork":
@@ -1597,6 +1582,7 @@ def compose_normal_strength_assignments(
                 preserve_trunk_support=trunk_strength_selected,
                 preserve_adaptation=primary_adaptation,
                 preserve_weakness=primary_weakness,
+                preserve_strength=strength_selected,
             )
 
             assignments: list[dict[str, Any]] = []
@@ -1643,6 +1629,7 @@ def compose_normal_strength_assignments(
                     "preserve_trunk_support": trunk_strength_selected,
                     "preserve_adaptation": primary_adaptation,
                     "preserve_weakness": primary_weakness,
+                    "preserve_strength": strength_selected,
                     "week_ordinal": week_position + 1,
                     "standalone_eligible": (
                         not microdose_only

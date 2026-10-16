@@ -22,6 +22,7 @@ from .plan_pipeline_runtime import (
 )
 from .lead_summary import render_lead_summary
 from .plan_rendering_utils import sanitize_phase_text, sanitize_stage_output
+from .render_authority import authoritative_render_for_role
 from .session_sequencing import in_stamped_execution_order
 from .session_composition import suppress_unfilled_physical_roles
 from .stage2_payload import (
@@ -246,11 +247,19 @@ def _render_late_fight_stage1_draft(
             continue
         seen.add(identity)
         display_label = _late_fight_role_display_label(role, countdown_label)
+        authority = authoritative_render_for_role(
+            role,
+            d_day=int(countdown_label.removeprefix("D-")),
+            athlete_snapshot=planning_brief.get("athlete_snapshot"),
+        )
+        body = authority.get("body_lines") if authority else [
+            f"Cue: {_late_fight_preferred_cue(role)}.",
+            "Purpose: hold the assigned taper job, protect freshness, and stop if sharpness drops.",
+        ]
         lines.extend(
             [
                 f"### {display_label} - {_late_fight_role_display(role)}",
-                f"Cue: {_late_fight_preferred_cue(role)}.",
-                "Purpose: hold the assigned taper job, protect freshness, and stop if sharpness drops.",
+                *body,
                 "",
             ]
         )

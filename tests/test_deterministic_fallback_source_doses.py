@@ -81,7 +81,7 @@ def test_card_takes_the_exact_dose_the_plan_text_gave():
 
     assert block["duration"] == {"value": 20, "unit": "minutes"}
     assert not any("20-30" in cue or "20–30" in cue for cue in block["coaching_cues"])
-    assert block["coaching_cues"][0] == "continuous"
+    assert block["execution_instructions"] == "continuous"
     # The text's own coaching lines, not the title repeated as a rationale.
     assert session["objective"] == "clear legs and keep breathing steady after weekend work."
     assert block["purpose"] == "move blood, protect recovery, keep technical rhythm."
@@ -134,7 +134,7 @@ def test_whole_quantity_clauses_become_stats_and_the_rest_stays_verbatim():
     ]
 
     assert deadlift["rest"] == {"value": 180, "unit": "seconds"}
-    assert deadlift["coaching_cues"][0] == "3 sets x 3 reps @ 80% 1RM (established max only)"
+    assert deadlift["execution_instructions"] == "3 sets x 3 reps @ 80% 1RM (established max only)"
     assert deadlift["stop_rules"] == ["if bar speed slows or back position changes."]
 
 
@@ -156,7 +156,7 @@ def test_second_session_on_the_same_day_does_not_borrow_the_first_why():
     assert block["sets"] == 2 and block["reps"] == 2
     assert block["rest"] == {"value": 120, "unit": "seconds"}
     assert block["effort"] == {"method": "RPE", "value": 6, "scale": "1-10"}
-    assert block["coaching_cues"][0] == "max speed"
+    assert block["execution_instructions"] == "max speed"
 
 
 def test_exact_working_dose_rule():
@@ -188,8 +188,11 @@ def test_microdose_retains_selected_name_dose_and_single_representation():
     session = _session(role, 50)
     blocks = session["blocks"]
     assert [block["display_name"] for block in blocks] == [name, "Back Squat"]
-    assert blocks[0]["coaching_cues"][0] == dose
-    assert blocks[0]["stop_rules"] and blocks[0]["regression_options"]
+    assert dose in blocks[0]["coaching_cues"]
+    assert blocks[0]["stop_rules"]
+    # Easier/Progress are authored by the final-session model. With no source
+    # copy, deterministic recovery does not invent an adjustment.
+    assert blocks[0]["regression_options"] == []
     assert not blocks[0].get("progression_rule")
     assert blocks[0]["purpose"] == "Power microdose"
     assert blocks[0]["exercise_key"] == "med-ball-rotational-throw"

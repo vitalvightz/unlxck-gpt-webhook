@@ -266,7 +266,7 @@ def test_goal_evidence_counts_loaded_hybrid_as_strength_and_power():
     assert all("power_hybrid" not in row for row in role["effective_strength_prescriptions"])
 
 
-def test_production_shape_satisfies_speed_build_and_strength_maintenance_contract():
+def test_production_shape_cannot_pay_for_spp_strength_with_only_a_gpp_lift():
     gpp_role = {
         "role_key": "primary_strength_day",
         "category": "strength",
@@ -405,9 +405,9 @@ def test_production_shape_satisfies_speed_build_and_strength_maintenance_contrac
     assert goals["speed"]["satisfied"] is True
     assert {row["d_day"] for row in goals["speed"]["evidence"]} == {16, 23}
     assert goals["strength"]["state"] == "maintain"
-    assert goals["strength"]["satisfied"] is True
+    assert goals["strength"]["satisfied"] is False
     assert {row["d_day"] for row in goals["strength"]["evidence"]} == {23}
-    assert validate_goal_preservation(brief) == []
+    assert any(e.get("goal") == "strength" for e in validate_goal_preservation(brief))
 
 
 def test_an_open_role_without_membership_earns_no_evidence():

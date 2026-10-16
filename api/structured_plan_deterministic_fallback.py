@@ -318,7 +318,7 @@ _EFFORT_CLAUSE_RE = re.compile(
     re.IGNORECASE,
 )
 _SETS_REPS_CLAUSE_RE = re.compile(
-    r"(?P<sets>\d+)\s*sets?\s*[x×]\s*(?P<reps>\d+)\s*reps?", re.IGNORECASE
+    r"(?P<sets>\d+)\s*(?:sets?\s*)?[x×]\s*(?P<reps>\d+)\s*(?:reps?)?", re.IGNORECASE
 )
 _SETS_TIME_CLAUSE_RE = re.compile(
     rf"(?P<sets>\d+)\s*(?:sets?|holds?)\s*[x×]\s*{_NUMBER}\s*{_TIME_UNIT}", re.IGNORECASE
@@ -342,7 +342,7 @@ def _lift_dose_fields(dose: str) -> tuple[dict[str, Any], str]:
 
     Only a clause that is *entirely* one quantity is lifted ("duration 20 min",
     "rest 120 sec", "RPE 6", "2 sets x 2 reps"); every other clause keeps the
-    text's own wording and stays on the card as the leading cue. A value the
+    text's own wording for execution instructions. A value the
     text wrote is never changed. "3 holds x 10 sec" is timed work: its count
     becomes ``sets`` and its time ``duration``.
     """
@@ -480,16 +480,30 @@ def _source_block(
         return None
     dose = first[title.end() :].strip()
     parsed = _parse_display_text(f"- {name}: {dose}\n{details}")
-    fields, remainder = _lift_dose_fields(parsed.activity_dose)
+    fields, _ = _lift_dose_fields(parsed.activity_dose)
     return {
         **fields,
         "purpose": parsed.purpose or None,
-        "execution_instructions": parsed.execution_instructions or None,
-        "coaching_cues": list(parsed.cues) + ([remainder] if remainder else []),
+        "execution_instructions": _preserve_unrepresented_dose(parsed.activity_dose, parsed.execution_instructions),
+        "coaching_cues": list(parsed.cues),
         "regression_options": list(parsed.regressions),
         "progression_rule": parsed.progression or None,
         "stop_rules": list(parsed.stop_rules),
     }
+
+
+def _preserve_unrepresented_dose(dose: str, instructions: str | None) -> str | None:
+    """Keep compound working quantities outside disposable coaching cues.
+
+    A heavy lift -> jump pair is not one repetition statistic. The original
+    sequence, loading and rest must survive cue compaction without inventing
+    a single set/rep interpretation for its different components.
+    """
+    _, remainder = _lift_dose_fields(dose)
+    working = dose if "→" in dose or re.search(r"\brounds?\s*:", dose, re.I) else remainder
+    if working and working not in str(instructions or ""):
+        return "\n".join(part for part in (working, instructions) if part)
+    return instructions or None
 
 
 # The weekly priority exposure floor carries the same microdose both as planner
@@ -608,6 +622,8 @@ def _blocks(
             if prescription:
                 block["coaching_cues"].append(prescription)
             block.update(coaching)
+            block["execution_instructions"] = _preserve_unrepresented_dose(
+                prescription, block.get("execution_instructions"))
         blocks.append(block)
     # Only ever attached to a host that already renders. A role with no selected
     # exercise renders no session at all here, and a microdose must not be the

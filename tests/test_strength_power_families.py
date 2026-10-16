@@ -212,7 +212,7 @@ def test_camp_gap_stays_open_until_a_rotational_anchor_is_selected(monkeypatch):
         plan_pipeline_blocks, "generate_strength_block", fake_generate_strength_block
     )
     context = SimpleNamespace(
-        training_context=SimpleNamespace(to_flags=lambda: {}, weaknesses=[]),
+        training_context=SimpleNamespace(to_flags=lambda: {}, weaknesses=[], injury_restrictions=[]),
         random_seed=None,
         selection_ignore_restrictions=False,
         plan_input=SimpleNamespace(restrictions=None),

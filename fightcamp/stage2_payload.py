@@ -2482,10 +2482,11 @@ def _serialize_strength_option(exercise: dict, why: str, score_evidence: dict | 
     # The serialized slot keeps no method or authored category, so the item's
     # adaptation relevance travels in the existing selection-metadata fields.
     # Nothing found stays "unknown": unreviewed is not negative evidence.
+    from .strength import _classify_prescription_type, _prescription_templates
     adaptations = [
         adaptation
         for adaptation in _ADAPTATION_ORDER
-        if adaptation in strength_adaptation_relevance(exercise)
+        if adaptation in strength_adaptation_relevance(exercise, prescription_type=_classify_prescription_type(exercise))
     ]
     if adaptations:
         exercise = {
@@ -2497,7 +2498,6 @@ def _serialize_strength_option(exercise: dict, why: str, score_evidence: dict | 
     if not prescription and phase:
         # Carry the same actual bank-template dose that Stage 1 renders. A method
         # token such as "strength" or "power" is not an effective prescription.
-        from .strength import _classify_prescription_type, _prescription_templates
         prescription = _prescription_templates(phase)[_classify_prescription_type(exercise)]
     return _with_selection_evidence({
         "name": exercise.get("name", "Unnamed"),
