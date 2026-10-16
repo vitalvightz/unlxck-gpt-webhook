@@ -520,6 +520,16 @@ def test_clean_main_and_pre_contact_power_microdose_share_existing_work() -> Non
     assert len(after) == len(before) - 1
     assert weekly["weeks"][0]["pre_hard_power_redistribution"]["weekly_exercise_count_delta"] == 0
 
+    # Repeated execution never silently transfers another member or withdraws
+    # the already-funded receiver.
+    redistribute_pre_hard_power_from_main(
+        weekly_role_map=weekly,
+        candidate_pools=_candidate_pools(*slots),
+        athlete_model=athlete,
+    )
+    assert [a["name"] for a in main["selected_exercise_assignments"]] == after
+    assert [a["name"] for a in monday["selected_exercise_assignments"]] == transferred
+
     apply_effective_strength_prescriptions(
         weekly_role_map=weekly, candidate_pools=_candidate_pools(*slots),
         athlete_model=athlete,
