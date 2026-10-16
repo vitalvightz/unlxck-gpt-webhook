@@ -26,6 +26,20 @@ import {
 } from "./camp-map.ts";
 import type { StructuredPlan, TodaySessionCompletionRecord } from "@/lib/types";
 
+test("next focus needs no Today response and skips neutral days and live completed sessions", () => {
+  const plan: StructuredPlan = { weeks: [{ days: [
+    { date: "2026-10-26", day_type: "rest", sessions: [] },
+    { date: "2026-10-27", sessions: [{ session_id: "done", title: "Strength" }] },
+    { date: "2026-10-28", day_type: "rest", sessions: [], today_card: { headline: "Unavailable" } },
+    { date: "2026-10-29", sessions: [], today_card: { headline: "Hard sparring", coach_led_contact: "Hard sparring" } },
+    { date: "2026-10-30", sessions: [{ session_id: "later", title: "Conditioning" }] },
+  ] }] };
+  const completionIndex = buildCompletionIndex([{ session_id: "done", training_day: "2026-10-27", status: "done" } as TodaySessionCompletionRecord]);
+  assert.equal(toISODate(resolveNextPlanFocusDay(plan, new Date(2026, 9, 26), undefined, { completionIndex })!), "2026-10-29");
+  assert.equal(toISODate(resolveNextPlanFocusDay(plan, new Date(2026, 9, 25), undefined)!), "2026-10-27");
+  assert.equal(resolveNextPlanFocusDay(plan, new Date(2026, 10, 1), undefined), undefined);
+});
+
 function campPlan(): StructuredPlan {
   return {
     schema_version: "1.0",

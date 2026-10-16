@@ -425,9 +425,8 @@ export function BlockCard({
   hideInstructions = false,
 }: {
   block: StructuredBlock;
-  /** Development-block week intent of an open (renewable) plan. Adds the
-   * week-directed instruction (progress / deload) to the card; dated camps
-   * never pass it. */
+  /** Development-block intent for an explicitly prescribed deload instruction.
+   * Exercise progression stays hidden; dated camps never pass this intent. */
   openWeekIntent?: OpenBlockWeekIntent | null;
   sourceCountdown?: string | null;
   /** Rendered inside an ExerciseRow, whose header already names the exercise. */
@@ -437,7 +436,7 @@ export function BlockCard({
   /** The exercise sheet shows cues and the stop rule in their own places. */
   hideCues?: boolean;
   hideStopRule?: boolean;
-  /** The detail sheet already displays Easier/Progress/Stop. */
+  /** The detail sheet already displays Swaps/Easier/Stop. */
   hideAdjustments?: boolean;
   hideInstructions?: boolean;
 }) {
@@ -460,19 +459,11 @@ export function BlockCard({
   // A single execution cue is enough. The earlier split into lead cue plus
   // "Coaching cues" detail repeated the same instruction on enhanced cards.
   const visibleCues = hideCues || hideLeadCue ? [] : allCues.slice(0, 1).map(compactCoachLine);
-  const { progression } = getBlockAdjustmentDisplay(block);
-  const weekDirective = openBlockWeekDirective(openWeekIntent, block);
-  // A week directive owns progression/deload programming for open plans, while
-  // block stop criteria are safety instructions and must always remain visible.
-  // The deload week additionally hides the progression aside: a block with no
-  // deload rule of its own is simply left as written, never told to advance.
-  const showProgressionAside = Boolean(
-    progression && !weekDirective && openWeekIntent?.key !== "deload",
-  );
+  const directive = openBlockWeekDirective(openWeekIntent, block);
+  // Exercise progression is saved guidance, not a visible card adjustment.
+  // Keep an explicitly prescribed deload and all stop criteria visible.
+  const weekDirective = directive?.usesProgressionRule ? null : directive;
   const adjustmentRules = [
-    ...(showProgressionAside && progression
-      ? [{ label: "Progress" as const, text: compactProgressLine(progression) }]
-      : []),
     ...(compactStopRule && !hideStopRule
       ? [{ label: "Stop rule" as const, text: compactStopRule }]
       : []),
@@ -611,10 +602,6 @@ function exerciseRowSummary(
 /** Saved copy may be long. Never drop a condition to hit a word count. */
 function compactCoachLine(value: string): string {
   return value.trim().replace(/^(?:Cue|Easier|Progress|Stop):\s*/i, "");
-}
-
-function compactProgressLine(value: string): string {
-  return compactCoachLine(value);
 }
 
 function ExecutionInstructions({ block }: { block: StructuredBlock }) {
@@ -863,7 +850,7 @@ function ExerciseDetail({
   const execution = getBlockExecutionDisplay(block);
   const cue = execution.cues[0] ? compactCoachLine(execution.cues[0]) : null;
   const easier = execution.regressions[0] ? compactCoachLine(execution.regressions[0]) : null;
-  const { progression } = getBlockAdjustmentDisplay(block);
+  const swap = execution.substitutions[0] ?? null;
   const sessionRunning = useExerciseLoggingActive();
 
   return (
@@ -910,13 +897,10 @@ function ExerciseDetail({
         </details>
       ) : null}
       <ExecutionInstructions block={block} />
-      {/* The useful coaching fits in four plain lines. Never make users open
-          two nested accordions to find a single cue or their next dose. */}
+      {/* Keep the cue and available adjustments outside nested disclosures. */}
       {cue ? <p className="sp-block-aside"><span className="sp-stat-label">Cue</span>{cue}</p> : null}
+      {swap ? <p className="sp-block-aside"><span className="sp-stat-label">Swaps</span>{swap}</p> : null}
       {easier ? <p className="sp-block-aside"><span className="sp-stat-label">Easier</span>{easier}</p> : null}
-      {progression && !openBlockWeekDirective(openWeekIntent, block) && openWeekIntent?.key !== "deload" ? (
-        <p className="sp-block-aside"><span className="sp-stat-label">Progress</span>{compactProgressLine(progression)}</p>
-      ) : null}
       <details className="ex-detail-section">
         <summary>Full prescription</summary>
         <BlockCard block={block} openWeekIntent={openWeekIntent}
@@ -1712,12 +1696,17 @@ function isPlainRestDay(day: StructuredDay): boolean {
     return false;
   }
   const card = day.today_card;
+  // Neutral calendar placeholders use the same compact row as a camp gap.
+  // A prescribed recovery day or coach-owned contact keeps its full context.
+  const neutral = day.day_type === "rest"
+    && /^(?:unavailable|no (?:planned session|session planned))$/i.test(cleanText(card?.headline) ?? "")
+    && !cleanText(card?.coach_led_contact);
   return !(
-    cleanText(card?.headline) ||
+    (!neutral && cleanText(card?.headline)) ||
     cleanText(card?.primary_warning) ||
     cleanText(card?.nutrition_summary) ||
     cleanText(card?.weight_cut_warning) ||
-    getSessionCoachingLines(card?.mindset_anchor).length > 0
+    (!neutral && getSessionCoachingLines(card?.mindset_anchor).length > 0)
   );
 }
 
@@ -1784,7 +1773,7 @@ function RestDayRow({
         {isCurrent ? <span className="cm-day-now">{currentLabel}</span> : null}
         {reason ? <span className="cm-rest-reason">{reason}</span> : null}
       </span>
-      <span className="cm-rest-label">{label}</span>
+      <span className="cm-rest-label" data-neutral={/^(?:unavailable|no session planned)$/i.test(label) || undefined}>{label}</span>
     </div>
   );
 }
@@ -2757,12 +2746,20 @@ export function StructuredPlanRenderer({
     openWeekNumber,
     allowDatedWeekdayMatch: openOngoing,
   });
-  const resolvedFocusDay = focusDay
+  const calendarPlanDay = calendarProgress.currentWeekPos != null && calendarProgress.currentDayPos != null
+    ? getDays(weeks[calendarProgress.currentWeekPos])[calendarProgress.currentDayPos]
+    : null;
+  const hasCalendarTraining = getSessions(calendarPlanDay).length > 0
+    || Boolean(getCoachLedContactView(calendarPlanDay)) || classifySessionlessDay(calendarPlanDay).coachLed;
+  const resolvedFocusDay = focusDay || (openOngoing && !hasCalendarTraining)
     ? resolveNextPlanFocusDay(plan, calendarDay, focusDay, {
         openWeekNumber,
         allowDatedWeekdayMatch: openOngoing,
+        completionIndex,
       })
     : undefined;
+  const focusLabel = resolvedFocusDay && calendarDay && toLocalIsoDay(resolvedFocusDay) > toLocalIsoDay(calendarDay)
+    ? "Next session" : currentDayLabel;
   const focusProgress = resolvedFocusDay
     ? resolvePlanProgress(plan, resolvedFocusDay, {
         openWeekNumber,
@@ -2840,7 +2837,7 @@ export function StructuredPlanRenderer({
   // future "Next session" (focusDay set), that future session card owns the
   // marker, so gap rows stay plain instead of stamping today with a label that
   // belongs to a different day.
-  const restCurrentIso = focusDay
+  const restCurrentIso = resolvedFocusDay
     ? null
     : (cleanText(currentTrainingDayIso)?.slice(0, 10) ??
       cleanText(scheduleContext?.current_training_day)?.slice(0, 10) ??
@@ -2858,7 +2855,7 @@ export function StructuredPlanRenderer({
   // "starts Thu 06 Aug" would contradict the week it is shown above. The
   // earliest scheduled day is only a fallback for a payload with no anchor.
   const blockStartsOn = useMemo(() => {
-    if (!openOngoing || activeWeekPos !== null) {
+    if (!openOngoing || calendarProgress.currentWeekPos !== null) {
       return null;
     }
     const todayIso =
@@ -2882,7 +2879,7 @@ export function StructuredPlanRenderer({
       : null;
   }, [
     openOngoing,
-    activeWeekPos,
+    calendarProgress.currentWeekPos,
     currentTrainingDayIso,
     scheduleContext?.current_training_day,
     scheduleContext?.anchor_date,
@@ -2952,7 +2949,7 @@ export function StructuredPlanRenderer({
                       label={gapLabel.label}
                       reason={gapLabel.reason}
                       isCurrent={entry.dateIso === restCurrentIso}
-                      currentLabel={currentDayLabel}
+                      currentLabel={focusLabel}
                     />
                   );
                 }
@@ -2970,16 +2967,18 @@ export function StructuredPlanRenderer({
 
                 // A pure rest day renders identically to a synthesized gap row,
                 // so real and filled-in rest days read as one continuous line.
-                if (!openOngoing && isPlainRestDay(day)) {
+                if (isPlainRestDay(day)) {
                   const restDate = cleanText(day.date);
+                  const displayDay = isCurrent && focusProgress.matchType === "weekday"
+                    ? { ...day, date: focusProgress.trainingDayISO } : day;
                   return (
                     <RestDayRow
                       key={restDate || `day-${index}`}
                       countdown={formatCountdownLabel(day.countdown_label)}
-                      weekday={weekdayLabel(restDate)}
-                      label="Rest"
+                      weekday={openOngoing ? openTimelineDayLabel(displayDay, safePos + 1, `Training day ${index + 1}`) : weekdayLabel(restDate)}
+                      label={cleanText(day.today_card?.headline) || "Rest"}
                       isCurrent={isCurrent}
-                      currentLabel={currentDayLabel}
+                      currentLabel={focusLabel}
                     />
                   );
                 }
@@ -2997,7 +2996,7 @@ export function StructuredPlanRenderer({
                     openOngoing={openOngoing}
                     weekNumber={safePos + 1}
                     isCurrent={isCurrent}
-                    currentLabel={currentDayLabel}
+                    currentLabel={focusLabel}
                     defaultOpen={isCurrent || (focusProgress.currentWeekPos == null && index === 0)}
                     completionIndex={completionIndex}
                     currentTrainingDayIso={currentTrainingDayIso}
