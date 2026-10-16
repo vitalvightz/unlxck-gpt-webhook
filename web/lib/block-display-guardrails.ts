@@ -217,7 +217,9 @@ export function stripSafetyOwnedStopRules(
   return cleaned.filter(
     // A shared symptom must not swallow a compound execution stop. The live
     // swing rule "speed slows or pain develops" disappeared as a pain duplicate.
-    (rule) => /\b(?:speed|form|technique|control|balance|landing|landings|guard|braking|quality|pace|rhythm)\b/i.test(rule)
+    // A single "pain or pelvis dropping" sentence contains TWO independent
+    // reasons to stop; centralised pain messaging must not hide pelvis control.
+    (rule) => /\b(?:speed|form|technique|control|balance|landing|landings|guard|braking|quality|pace|rhythm|pelvis|heel|dropping|drops|collapse|collapses)\b/i.test(rule)
       || !isOwnedSafetyClause(rule, safetyPriorityTexts, subjectContext),
   );
 }
