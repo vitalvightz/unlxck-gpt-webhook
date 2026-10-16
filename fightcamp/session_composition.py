@@ -3153,6 +3153,7 @@ def redistribute_pre_hard_power_from_main(
                 continue
 
             moved = {id(item["member"]) for item in chosen}
+            original_source_assignments = [dict(item) for item in memberships]
             source["selected_exercise_assignments"] = [
                 item for item in memberships if id(item) not in moved
             ]
@@ -3189,8 +3190,85 @@ def redistribute_pre_hard_power_from_main(
                 "recipient_members": len(chosen),
                 "weekly_exercise_count_delta": 0,
                 "dose_ceiling_sets": 2,
+                # Snapshot for conservation if final realised-load revalidation
+                # relocates or suppresses the proposed receiving appointment.
+                "source_strength_session_index": source.get("strength_session_index"),
+                "receiver_strength_session_index": receiver.get("strength_session_index"),
+                "receiver_original_d_day": receiver.get("scheduled_d_day"),
+                "original_source_assignments": original_source_assignments,
             }
     return weekly_role_map
+
+
+def rollback_invalid_dense_day_redistributions(
+    weekly_role_map: dict[str, Any],
+    *, athlete_model: dict[str, Any],
+) -> bool:
+    """Restore donor work if canonical calendar verification rejects its receiver.
+
+    This checks membership conservation *after* the existing realised-load
+    governor. It does not add any new placement or load-veto policy.
+    """
+    from .calendar_context import role_d_day
+    from .pre_hard_contact_strength import suppress_unfunded_power_microdose
+
+    restored = False
+    for week in weekly_role_map.get("weeks") or []:
+        if not isinstance(week, dict):
+            continue
+        audit = week.get("pre_hard_power_redistribution") or {}
+        if audit.get("status") != "transferred":
+            continue
+        roles = week.get("session_roles") or []
+        source = next((
+            role for role in roles
+            if role.get("category") == "strength"
+            and role.get("strength_session_index") == audit.get("source_strength_session_index")
+        ), None)
+        receiver = next((
+            role for role in roles
+            if role.get("category") == "strength"
+            and role.get("strength_session_index") == audit.get("receiver_strength_session_index")
+            and role.get("dense_day_receiver_provisional")
+        ), None)
+        expected_names = set(audit.get("exercise_names") or [])
+        received_names = {
+            str(item.get("name") or "")
+            for item in (receiver or {}).get("selected_exercise_assignments") or []
+            if isinstance(item, dict)
+        }
+        valid = (
+            source is not None and receiver is not None
+            and role_d_day(week, receiver) == audit.get("receiver_original_d_day")
+            and received_names == expected_names
+            and 2 <= len(receiver.get("selected_exercise_assignments") or []) <= 3
+        )
+        if valid:
+            continue
+        if source is not None:
+            source["selected_exercise_assignments"] = [
+                dict(item) for item in audit.get("original_source_assignments") or []
+            ]
+            policy = source.get("strength_composition_policy")
+            if isinstance(policy, dict):
+                policy["selected_count"] = len(source["selected_exercise_assignments"])
+                policy["selected_names"] = [
+                    item.get("name") for item in source["selected_exercise_assignments"]
+                ]
+            source.pop("effective_strength_prescriptions", None)
+            source.pop("effective_strength_envelope", None)
+        if receiver is not None:
+            suppress_unfunded_power_microdose(
+                week, receiver, athlete_model=athlete_model,
+                reason_code="redistribution_failed_final_calendar_review",
+            )
+        audit.update({
+            "status": "rolled_back",
+            "reason_code": "redistribution_failed_final_calendar_review",
+            "weekly_exercise_count_delta": 0,
+        })
+        restored = True
+    return restored
 
 
 def compose_normal_rehab_assignments(
