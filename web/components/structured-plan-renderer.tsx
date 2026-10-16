@@ -830,13 +830,7 @@ export function ExerciseRow({
   );
 }
 
-/**
- * One exercise in its own sheet (Today). What to do and when to stop are
- * always in view; the reasons, the coaching cues and the full prescription
- * each open on their own. In a preview the demo starts open (paused on its
- * tap-to-play frame, nothing loads until tapped); once the session is running
- * it is collapsed like the rest and logging sits at the foot.
- */
+/** Exercise detail for Today. Safety remains visible outside disclosures. */
 function ExerciseDetail({
   block,
   openWeekIntent,
@@ -1478,6 +1472,7 @@ function CoachLedDayContext({
   converted,
   headline,
   reducedReason,
+  day,
 }: {
   title: string;
   tag: string | null;
@@ -1485,6 +1480,7 @@ function CoachLedDayContext({
   converted: boolean;
   headline?: string;
   reducedReason?: string | null;
+  day?: StructuredDay;
 }) {
   const isLightCombat = kind === "light_combat";
   // Preserve declared versus converted day labels.
@@ -1508,11 +1504,11 @@ function CoachLedDayContext({
       <div className="cm-light-technical-head">
         {displayTag ? <span className="sp-tag sp-accent">{displayTag}</span> : null}
         {repeatsHeadline ? (
-          isTechnical ? <TechnicalCombatWhyTooltip /> : null
+          isTechnical || isLightCombat || isDeclaredTechnical ? <TechnicalCombatWhyTooltip day={day} declared={!isTechnical} /> : null
         ) : (
           <p className="sp-today-headline">
             {displayTitle}
-            {isTechnical ? <TechnicalCombatWhyTooltip /> : null}
+            {isTechnical || isLightCombat || isDeclaredTechnical ? <TechnicalCombatWhyTooltip day={day} declared={!isTechnical} /> : null}
           </p>
         )}
       </div>
@@ -1587,6 +1583,7 @@ export function DaySessionContext({ day, headline }: { day: StructuredDay; headl
           converted={coachLedContact.converted}
           headline={headline}
           reducedReason={getReducedContactReason(day)}
+          day={day}
         />
       ) : null}
       {priorityMicrodose ? <PriorityMicrodoseCard day={day} /> : null}
