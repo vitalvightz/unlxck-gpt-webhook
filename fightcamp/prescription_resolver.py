@@ -666,6 +666,14 @@ def _apply_pre_hard_contact_cap(role: dict[str, Any]) -> None:
     if not str(role.get("dose_adjustment_reason") or "").strip():
         role["dose_adjustment_reason"] = _PRE_HARD_CONTACT_DOSE_REASON
     role["pre_hard_contact_dose_adjustment"] = True
+    if role.get("pre_hard_contact_microdose_only") is True:
+        role["strength_dose_cap"] = {
+            "max_sets": _merge_numeric_cap(role["strength_dose_cap"].get("max_sets"), 2),
+            "max_reps": _merge_numeric_cap(role["strength_dose_cap"].get("max_reps"), 6),
+            "loaded_allowed": False,
+        }
+        role["rpe_cap"] = _merge_rpe_cap(role.get("rpe_cap"), "6")
+        role["dose_adjustment_reason"] = "pre_hard_contact_redistributed_low_cost_work"
 
 
 def _selection_metadata(slot: dict[str, Any]) -> dict[str, Any]:
@@ -714,8 +722,18 @@ def _pre_hard_verified_low_cost(slot: dict[str, Any]) -> bool:
     return has_verified_low_cost(slot, fields=_PRE_HARD_COST_FIELDS)
 
 
-def _pre_hard_allowed_slots(owned_slots: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    """One loaded anchor plus at most one genuinely low-cost support/power item."""
+def _pre_hard_allowed_slots(
+    owned_slots: list[dict[str, Any]], *, microdose_only: bool = False
+) -> list[dict[str, Any]]:
+    """One loaded anchor and low-cost support, or 2-3 moved low-cost items."""
+    if microdose_only:
+        # Membership is fixed by the composition owner; accept only that
+        # owner's verified power/support members without inventing a new one.
+        return [
+            slot for slot in sorted(owned_slots, key=_slot_priority)
+            if _role_kind(slot) in {"power", "support"}
+            and _pre_hard_verified_low_cost(slot)
+        ][:3]
     allowed: list[dict[str, Any]] = []
     loaded_anchor_used = False
     additional_used = False
@@ -765,14 +783,31 @@ def resolve_strength_slot_prescription(
 
     semantic_kind = _role_kind(slot)
     kind = force_kind or semantic_kind
-    base_sets, base_reps = _parse_sets_reps(base_prescription)
+    microdose_only = role.get("pre_hard_contact_microdose_only") is True
+    priced_base = working_dose(base_prescription) if microdose_only else base_prescription
+    base_sets, base_reps = _parse_sets_reps(priced_base)
     sets, reps, loaded = _effective_counts(
         base_sets=base_sets,
         base_reps=base_reps,
         role_kind=kind,
         strength_cap=cap,
-        base_prescription=base_prescription,
+        base_prescription=priced_base,
     )
+    if microdose_only:
+        # An unpriceable or loaded member cannot fall back to its
+        # unrestricted bank prescription before protected hard sparring.
+        if kind not in {"power", "support"} or not isinstance(sets, int) or not isinstance(reps, int):
+            return {
+                "base_prescription": base_prescription,
+                "effective_prescription": "",
+                "dose_authority": "scheduled_countdown_overlay",
+                "dose_adjustment_reason": "pre_hard_contact_unpriceable_microdose",
+                "effective_loaded": False,
+                "strength_dose_cap": dict(cap),
+            }
+        sets = min(sets, 2)
+        reps = min(reps, 2 if kind == "power" else 6)
+        loaded = False
 
     # Readiness / cut / injury state can only pull the dose down further.
     reduction = _athlete_dose_reduction(athlete_state)
@@ -786,7 +821,7 @@ def resolve_strength_slot_prescription(
 
     rpe_cap = str(role.get("rpe_cap") or "").strip() or None
     effective = _format_effective_prescription(
-        base_prescription=base_prescription,
+        base_prescription=priced_base,
         sets=sets,
         reps=reps,
         rpe_cap=rpe_cap,
@@ -1072,8 +1107,9 @@ def _build_role_envelope(
                 "pre_hard_contact_managed_stress": True,
                 "pre_hard_contact_reason_code": role.get("pre_hard_contact_reason_code") or _PRE_HARD_CONTACT_REASON,
                 "max_meaningful_strength_exposures": 1,
-                "max_loaded_anchors": 1,
-                "max_additional_low_cost_items": 1,
+                "pre_hard_contact_microdose_only": role.get("pre_hard_contact_microdose_only") is True,
+                "max_loaded_anchors": 0 if role.get("pre_hard_contact_microdose_only") is True else 1,
+                "max_additional_low_cost_items": 3 if role.get("pre_hard_contact_microdose_only") is True else 1,
                 # The pre-contact policy may reduce dose/volume, but it must not
                 # reopen or independently redefine selected membership.
                 "allowed_exercise_names": list(dict.fromkeys(selected_names)),
@@ -1119,7 +1155,10 @@ def apply_effective_strength_prescriptions(
             # filter. Once it removes a high-cost secondary/power item, that item
             # must also disappear from the authoritative selected membership so
             # PR2 cannot re-authorise it via the closed allow-list.
-            slots_for_resolution = _pre_hard_allowed_slots(owned_slots)
+            slots_for_resolution = _pre_hard_allowed_slots(
+                owned_slots,
+                microdose_only=role.get("pre_hard_contact_microdose_only") is True,
+            )
             surviving_strength_keys = {
                 (str(slot.get("slot_id") or ""), str(_slot_selected(slot).get("name") or ""))
                 for slot in slots_for_resolution

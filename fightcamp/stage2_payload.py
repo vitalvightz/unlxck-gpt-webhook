@@ -78,6 +78,8 @@ from .session_composition import (
     compose_normal_rehab_assignments,
     compose_normal_strength_assignments,
     reconcile_relocated_strength,
+    redistribute_pre_hard_power_from_main,
+    rollback_invalid_dense_day_redistributions,
 )
 from .normal_calendar_placement import fill_missing_session_days
 from .late_fight_phase_eligibility import (
@@ -2302,6 +2304,16 @@ def _build_planning_brief(
         candidate_pools=candidate_pools,
         replace_callback=lambda role_map: apply_late_camp_role_morph(role_map, athlete_model),
     )
+    # The initial role budget ran before selected exercise density was known.
+    # Its own post-composition reservation offers an unused pre-contact day
+    # only when a surviving main strength session is genuinely crowded; this
+    # cannot displace conditioning, increase appointment capacity, or create a
+    # second strength role without a real >=2-member transfer later.
+    stage2_role_map_module.reserve_dense_day_receiver(
+        weekly_role_map, athlete_model
+    )
+    from .pre_hard_contact_strength import apply_pre_hard_contact_strength_exposure_cap
+    apply_pre_hard_contact_strength_exposure_cap(weekly_role_map, athlete_model)
     compose_normal_conditioning_assignments(
         weekly_role_map=weekly_role_map, candidate_pools=candidate_pools,
     )
@@ -2322,6 +2334,14 @@ def _build_planning_brief(
         for week in weekly_role_map.get("weeks", []) or []:
             drop_displaced_occupancy_fillers(week.get("session_roles") or [])
         attach_late_fight_assignments(tail_roles, tail_assignments)
+    # A provisional receiver is legal only when existing source exercises
+    # actually move. If the selected bank cannot fund at least two low-cost
+    # members, the role-budget owner cancels the receiver without adding work.
+    redistribute_pre_hard_power_from_main(
+        weekly_role_map=weekly_role_map,
+        candidate_pools=candidate_pools,
+        athlete_model=athlete_model,
+    )
     # Deterministic prescription resolution: now that every strength role has its
     # scheduled D-day and final countdown dose envelope, resolve the single
     # authoritative effective prescription per selected strength exercise so
@@ -2374,7 +2394,16 @@ def _build_planning_brief(
         recompose_conditioning_callback=_recompose_conditioning,
         recompose_strength_callback=_recompose_strength,
     )
-    _resolve_strength_doses(weekly_role_map)
+    # Do not leave the source session partially stripped if canonical calendar
+    # governance relocates/suppresses the receiving day or replaces its members.
+    # Restore exact original selected work and re-dose through the same owner.
+    if rollback_invalid_dense_day_redistributions(
+        weekly_role_map, athlete_model=athlete_model
+    ):
+        _resolve_strength_doses(weekly_role_map)
+        _refresh_stress_stamps(weekly_role_map)
+    else:
+        _resolve_strength_doses(weekly_role_map)
     # Physical placement and budgets are final: mental support must still be
     # attached to a surviving appointment, including across the tail splice.
     from .camp_week_fillers_impl import govern_weekly_mental_training

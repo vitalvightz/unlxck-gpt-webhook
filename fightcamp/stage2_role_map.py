@@ -2608,6 +2608,135 @@ def _non_spar_role_priority_rank(
     return 2
 
 
+def reserve_dense_day_receiver(
+    role_map: dict[str, Any], athlete_model: dict[str, Any]
+) -> dict[str, Any]:
+    """Offer a *provisional* free pre-contact appointment after main composition.
+
+    Role survival initially happens before exercise selection. The post-selection
+    budget owner may now see an actually dense strength day and offer a receiving
+    slot it could not justify earlier. It never resurrects a suppressed role,
+    increases the weekly appointment cap, or displaces another session.
+    Composition must fund it with >=2 moved exercises or withdraw it.
+    """
+    from .calendar_context import contact_refs, role_d_day, build_events
+    from .combat_load_policy import LoadClass
+    from .physical_session_frequency import (
+        dated_appointments, requested_training_frequency,
+    )
+    from .pre_hard_contact_strength import _power_microdose_eligible
+
+    if not isinstance(role_map, dict) or not _power_microdose_eligible(athlete_model):
+        return role_map
+    if athlete_model.get("short_notice") or (
+        athlete_model.get("compressed_priorities") or {}
+    ).get("is_short_camp"):
+        return role_map
+    frequency = requested_training_frequency(athlete_model)
+    if not frequency:
+        return role_map
+    allowed = {d.lower() for d in clean_list(athlete_model.get("training_days"))}
+    if not allowed:
+        return role_map
+    contact_days = {
+        ref.d_day for ref in contact_refs(role_map)
+        if ref.profile.load_class is LoadClass.HARD_CONTACT
+    }
+    if not contact_days:
+        return role_map
+
+    for ordinal, week in enumerate(role_map.get("weeks") or [], start=1):
+        if not isinstance(week, dict):
+            continue
+        if str(week.get("phase") or "").upper() not in {"GPP", "SPP"}:
+            continue
+        roles = week.get("session_roles") or []
+        # No third strength exposure, no receiver if another strength appointment
+        # survived the first role budget, and no overlapping proposed receivers.
+        strengths = [r for r in roles if r.get("category") == "strength"]
+        if len(strengths) != 1 or strengths[0].get("pre_hard_contact_managed_stress"):
+            continue
+        donor = strengths[0]
+        if donor.get("late_fight_tail_owned"):
+            continue
+        members = donor.get("selected_exercise_assignments") or []
+        if len(members) < 5:
+            continue
+        source_d = role_d_day(week, donor)
+        if source_d is None or source_d < 14:
+            continue
+        days = {
+            d["d_day"] for d in week.get("calendar_days") or []
+            if isinstance(d, dict) and isinstance(d.get("d_day"), int)
+        }
+        scheduled = [
+            row for row in dated_appointments(role_map)
+            if row["countdown_offset"] in days
+        ]
+        if len(scheduled) >= frequency:
+            continue
+        occupied = {
+            role_d_day(week, role) for role in roles
+            if role_d_day(week, role) is not None
+        }
+        occupied.update(
+            ref.d_day for ref in contact_refs(role_map) if ref.d_day in days
+        )
+        for entry in sorted(
+            (d for d in week.get("calendar_days") or [] if isinstance(d, dict)),
+            key=lambda d: -int(d.get("d_day") or 0),
+        ):
+            d_day = entry.get("d_day")
+            day = str(entry.get("weekday") or "").strip()
+            if (
+                not isinstance(d_day, int) or d_day < 14
+                or day.lower() not in allowed or d_day in occupied
+                or d_day - 1 not in contact_days or d_day == source_d
+            ):
+                continue
+            receiver = {
+                "category": "strength",
+                "role_key": "secondary_strength_day",
+                "preferred_pool": "strength_slots",
+                "strength_session_index": 2,
+                "session_index": max(
+                    (int(role.get("session_index") or 0) for role in roles), default=0
+                ) + 1,
+                "scheduled_day_hint": day,
+                "scheduled_d_day": d_day,
+                "scheduled_countdown_label": f"D-{d_day}",
+                "countdown_label": f"D-{d_day}",
+                "selected_exercise_assignments": [],
+                "dense_day_receiver_provisional": True,
+                "dense_day_receiver_token": f"{week.get('week_index')}:{d_day}",
+            }
+            # Shared policy owns the collision veto; the day-before-hard
+            # DEPRIORITIZE tier remains conditional on the actual low-cost
+            # composition and final realised-load revalidation.
+            decision = evaluate_candidate_at_position(
+                role_load_profile(receiver),
+                candidate_position=-d_day,
+                events=build_events(role_map),
+                candidate_scope=week_scope(week, ordinal),
+            )
+            if decision.directive is PlacementDirective.FORBID:
+                continue
+            roles.append(receiver)
+            week["intentionally_unused_days"] = [
+                item for item in week.get("intentionally_unused_days") or []
+                if str(item.get("day") or "").strip().lower() != day.lower()
+            ]
+            week["dense_day_receiver_proposal"] = {
+                "source_day": donor.get("scheduled_day_hint"),
+                "target_day": day,
+                "source_selected_exercise_count": len(members),
+                "collision_directive": decision.directive.value,
+                "reason_code": "selected_main_session_density",
+            }
+            break
+    return role_map
+
+
 def enforce_total_session_budget(role_map: dict, athlete_model: dict, candidate_pools: dict | None = None) -> dict:
     """Report appointment discrepancies without deleting selected physical work.
 

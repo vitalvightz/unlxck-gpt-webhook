@@ -25,7 +25,13 @@ from .late_fight_phase_eligibility import scheduled_phase_for_role
 from .calendar_context import role_d_day
 from .calendar_integrity import relocate_or_suppress_role_for_recovery
 from .combat_load_policy import BodyRegion, SessionStress, StressLevel
-from .prescription_resolver import athlete_dose_state, has_verified_low_cost
+from .prescription_resolver import (
+    _parse_sets_reps,
+    _role_kind,
+    athlete_dose_state,
+    has_verified_low_cost,
+)
+from .working_dose import working_dose
 from .strength_session_quality import classify_strength_item, strength_adaptation_relevance
 from .training_context import normalize_equipment_list
 from .config import (
@@ -1582,6 +1588,7 @@ def compose_normal_strength_assignments(
                 if isinstance(prior_policy, dict)
                 else None
             )
+            microdose_only = role.get("pre_hard_contact_microdose_only") is True
             selected_records, dropped = _select_bounded_records(
                 records,
                 role_key=role_key,
@@ -1605,6 +1612,7 @@ def compose_normal_strength_assignments(
                 "role_key": role_key,
                 "base_exercise_cap": base_cap,
                 "effective_exercise_cap": effective_cap,
+                "pre_hard_contact_microdose_only": microdose_only,
                 "standalone_minimum_applied": False,
                 # The day this membership was chosen for. Any later move must
                 # recompose the role; the final calendar is checked against it.
@@ -1637,7 +1645,8 @@ def compose_normal_strength_assignments(
                     "preserve_weakness": primary_weakness,
                     "week_ordinal": week_position + 1,
                     "standalone_eligible": (
-                        pressure <= _STANDALONE_STRENGTH_MAX_PRESSURE
+                        not microdose_only
+                        and pressure <= _STANDALONE_STRENGTH_MAX_PRESSURE
                         and phase in {"GPP", "SPP"}
                         and role_key in _STANDALONE_STRENGTH_MINIMUM_ROLE_KEYS
                     ),
@@ -2974,6 +2983,305 @@ def apply_realised_load_calendar_revalidation(
             "residual_conflicts": residual,
         }
     return weekly_role_map
+
+
+def redistribute_pre_hard_power_from_main(
+    *, weekly_role_map: dict[str, Any], candidate_pools: dict[str, Any],
+    athlete_model: dict[str, Any],
+) -> dict[str, Any]:
+    """Split a genuinely dense session into 2-3 lower-cost exercises.
+
+    Only EXISTING, selected bank assignments move. Both the source and
+    receiving appointments preserve the closed exercise identity/phase.
+    This owner never adds weekly exercises or sets; if fewer than two
+    compatible moves can be proved, leave the dense day as composed.
+    """
+    from itertools import combinations
+    from .prescription_resolver import _assignment_strength_slot
+    from .pre_hard_contact_strength import suppress_unfunded_power_microdose
+
+    if not isinstance(weekly_role_map, dict):
+        return weekly_role_map
+    for week in weekly_role_map.get("weeks") or []:
+        if not isinstance(week, dict):
+            continue
+        if (week.get("pre_hard_power_redistribution") or {}).get("status") == "transferred":
+            continue
+        roles = week.get("session_roles") or []
+        receivers = [
+            role for role in roles if isinstance(role, dict)
+            and role.get("pre_hard_contact_microdose_only") is True
+            # An already-composed independent second session is not a
+            # receiving slot: replacing its exercises would silently lose its
+            # own training. Only an empty/provisional receiver is fundable.
+            and not role.get("selected_exercise_assignments")
+        ]
+        for receiver in receivers:
+            receiver["dense_day_receiver_provisional"] = True
+            receiver.setdefault(
+                "dense_day_receiver_token",
+                f"{week.get('week_index')}:{receiver.get('scheduled_d_day')}",
+            )
+            sources = [
+                role for role in roles
+                if isinstance(role, dict)
+                and role is not receiver
+                and role.get("category") == "strength"
+                and role.get("pre_hard_contact_managed_stress") is not True
+                and role.get("strength_session_index") == 1
+                and role.get("scheduled_day_hint") != receiver.get("scheduled_day_hint")
+            ]
+            source = sources[0] if len(sources) == 1 else None
+            memberships = [
+                item for item in (source or {}).get("selected_exercise_assignments", [])
+                if isinstance(item, dict)
+            ]
+            # Density is the trigger, not the athlete's goal or the name of the
+            # weekday. Splitting fewer than five exercises creates needless
+            # appointments, and the main session must retain >=3 exercises.
+            candidates: list[dict[str, Any]] = []
+            if source is not None and len(memberships) >= 5:
+                for index, member in enumerate(memberships):
+                    if member.get("slot_group") != "strength_slots":
+                        continue
+                    phase = str(member.get("source_phase") or "").strip().upper()
+                    slot = _assignment_strength_slot(candidate_pools, phase, member)
+                    if slot is None or _role_kind(slot) not in {"power", "support"}:
+                        continue
+                    selected = slot.get("selected") or {}
+                    kind = _role_kind(slot)
+                    if selected.get("meaningful_stress") is True or (
+                        kind == "support" and selected.get("support_only") is False
+                    ):
+                        continue
+                    if not has_verified_low_cost(
+                        slot,
+                        fields=("impact_cost", "landing_cost", "eccentric_cost", "soreness_risk"),
+                    ):
+                        continue
+                    dose = working_dose(str(selected.get("prescription") or ""))
+                    sets, reps = _parse_sets_reps(dose)
+                    if not isinstance(sets, int) or not isinstance(reps, int):
+                        continue
+                    if sets < 1 or reps < 1:
+                        continue
+                    kind = _role_kind(slot)
+                    transfer_sets = min(sets, 2)
+                    transfer_reps = min(reps, 2 if kind == "power" else 6)
+                    tags = _slot_mechanical_risk_tags(slot)
+                    # Repeated fatigue-tagged movement is never proof of
+                    # low-cost work just because its impact metadata is low.
+                    if tags & _HIGH_SYSTEMIC_TAGS:
+                        continue
+                    regions = {
+                        region.value for prefix, region in _REGION_TAG_PREFIXES
+                        if any(tag.startswith(prefix) for tag in tags)
+                    }
+                    candidates.append({
+                        "member": member, "slot": slot, "index": index,
+                        "kind": kind, "regions": regions,
+                        "dose": f"{transfer_sets} x {transfer_reps}",
+                        "reps": transfer_sets * transfer_reps,
+                    })
+
+            chosen = None
+            candidate_score = None
+            primary_goal = str(athlete_model.get("primary_goal") or "").strip().lower()
+            # Prefer three only when enough main work remains, otherwise a
+            # paired transfer. Shared region is a preference, never permission
+            # to stack high-risk lower-body loading.
+            for n in (3, 2):
+                if len(memberships) - n < 3:
+                    continue
+                for group in combinations(candidates, n):
+                    moved_ids = {id(item["member"]) for item in group}
+                    remaining = [m for m in memberships if id(m) not in moved_ids]
+                    if not any(
+                        _role_kind(
+                            _assignment_strength_slot(
+                                candidate_pools,
+                                str(m.get("source_phase") or "").strip().upper(),
+                                m,
+                            ) or {}
+                        ) in {"anchor", "hybrid"}
+                        for m in remaining if m.get("slot_group") == "strength_slots"
+                    ):
+                        continue
+                    if primary_goal:
+                        original_goal = [
+                            m for m in memberships if m.get("slot_group") == "strength_slots"
+                            and primary_goal in slot_adaptations(
+                                _assignment_strength_slot(
+                                    candidate_pools,
+                                    str(m.get("source_phase") or "").strip().upper(), m,
+                                ) or {}
+                            )
+                        ]
+                        if original_goal and not any(id(m) not in moved_ids for m in original_goal):
+                            continue
+                    # Multiple exercises consume one shared recovery envelope,
+                    # not an independent two-set allowance each.
+                    if sum(item["reps"] for item in group) > 24:
+                        continue
+                    simulated = []
+                    doses = {}
+                    effort = {}
+                    for item in group:
+                        m = dict(item["member"])
+                        simulated.append(m)
+                        key = (str(m.get("slot_id") or ""), str(m.get("name") or ""))
+                        doses[key] = item["dose"]
+                        effort[key] = 6
+                    stress = realised_session_stress(
+                        simulated, resolved_strength=doses, resolved_strength_effort=effort
+                    )
+                    if (
+                        stress is None
+                        or stress.systemic > StressLevel.LOW
+                        or stress.neural_mechanical > StressLevel.MODERATE
+                    ):
+                        continue
+                    shared = max((
+                        sum(region in item["regions"] for item in group)
+                        for region in {"lower", "upper", "trunk"}
+                    ), default=0)
+                    score = (
+                        shared if shared >= 2 else 0,
+                        n,
+                        -sum(item["reps"] for item in group),
+                        -sum(item["index"] for item in group),
+                    )
+                    if chosen is None or score > candidate_score:
+                        chosen, candidate_score = list(group), score
+
+            if chosen is None:
+                suppress_unfunded_power_microdose(
+                    week, receiver, athlete_model=athlete_model,
+                    reason_code="no_safe_two_exercise_redistribution",
+                )
+                continue
+
+            moved = {id(item["member"]) for item in chosen}
+            original_source_assignments = [dict(item) for item in memberships]
+            source["selected_exercise_assignments"] = [
+                item for item in memberships if id(item) not in moved
+            ]
+            receiver["selected_exercise_assignments"] = [
+                {
+                    **item["member"],
+                    "redistributed_from_role_key": source.get("role_key"),
+                    "redistribution_reason": "pre_hard_session_rebalance",
+                }
+                for item in chosen
+            ]
+            # The exact bounded doses evaluated above are authoritative inputs
+            # to the existing prescription resolver. No extra membership is
+            # generated and no full bank prescription leaks into Monday.
+            for assignment, item in zip(receiver["selected_exercise_assignments"], chosen):
+                assignment["redistributed_dose_ceiling"] = item["dose"]
+            for role in (source, receiver):
+                policy = role.get("strength_composition_policy")
+                if isinstance(policy, dict):
+                    selected = role["selected_exercise_assignments"]
+                    policy["selected_count"] = len(selected)
+                    policy["selected_names"] = [item.get("name") for item in selected]
+                role.pop("effective_strength_prescriptions", None)
+                role.pop("effective_strength_envelope", None)
+
+            week["pre_hard_power_redistribution"] = {
+                "status": "transferred",
+                "reason_code": "dense_day_rebalanced_with_low_cost_work",
+                "source_day": source.get("scheduled_day_hint"),
+                "target_day": receiver.get("scheduled_day_hint"),
+                "exercise_names": [item["member"].get("name") for item in chosen],
+                "source_members_before": len(memberships),
+                "source_members_after": len(source["selected_exercise_assignments"]),
+                "recipient_members": len(chosen),
+                "weekly_exercise_count_delta": 0,
+                "dose_ceiling_sets": 2,
+                # Snapshot for conservation if final realised-load revalidation
+                # relocates or suppresses the proposed receiving appointment.
+                "source_strength_session_index": source.get("strength_session_index"),
+                "receiver_strength_session_index": receiver.get("strength_session_index"),
+                "receiver_original_d_day": receiver.get("scheduled_d_day"),
+                "receiver_token": receiver.get("dense_day_receiver_token"),
+                "original_source_assignments": original_source_assignments,
+            }
+    return weekly_role_map
+
+
+def rollback_invalid_dense_day_redistributions(
+    weekly_role_map: dict[str, Any],
+    *, athlete_model: dict[str, Any],
+) -> bool:
+    """Restore donor work if canonical calendar verification rejects its receiver.
+
+    This checks membership conservation *after* the existing realised-load
+    governor. It does not add any new placement or load-veto policy.
+    """
+    from .calendar_context import role_d_day
+    from .pre_hard_contact_strength import suppress_unfunded_power_microdose
+
+    restored = False
+    for week in weekly_role_map.get("weeks") or []:
+        if not isinstance(week, dict):
+            continue
+        audit = week.get("pre_hard_power_redistribution") or {}
+        if audit.get("status") != "transferred":
+            continue
+        roles = week.get("session_roles") or []
+        source = next((
+            role for role in roles
+            if role.get("category") == "strength"
+            and role.get("strength_session_index") == audit.get("source_strength_session_index")
+        ), None)
+        receiver_location = next((
+            (located_week, role)
+            for located_week in weekly_role_map.get("weeks") or []
+            for role in located_week.get("session_roles") or []
+            if role.get("dense_day_receiver_provisional")
+            and role.get("dense_day_receiver_token") == audit.get("receiver_token")
+        ), None)
+        receiver_week, receiver = receiver_location if receiver_location else (None, None)
+        expected_names = set(audit.get("exercise_names") or [])
+        received_names = {
+            str(item.get("name") or "")
+            for item in (receiver or {}).get("selected_exercise_assignments") or []
+            if isinstance(item, dict)
+        }
+        valid = (
+            source is not None and receiver is not None
+            and receiver_week is week
+            and role_d_day(receiver_week, receiver) == audit.get("receiver_original_d_day")
+            and received_names == expected_names
+            and 2 <= len(receiver.get("selected_exercise_assignments") or []) <= 3
+        )
+        if valid:
+            continue
+        if source is not None:
+            source["selected_exercise_assignments"] = [
+                dict(item) for item in audit.get("original_source_assignments") or []
+            ]
+            policy = source.get("strength_composition_policy")
+            if isinstance(policy, dict):
+                policy["selected_count"] = len(source["selected_exercise_assignments"])
+                policy["selected_names"] = [
+                    item.get("name") for item in source["selected_exercise_assignments"]
+                ]
+            source.pop("effective_strength_prescriptions", None)
+            source.pop("effective_strength_envelope", None)
+        if receiver is not None and receiver_week is not None:
+            suppress_unfunded_power_microdose(
+                receiver_week, receiver, athlete_model=athlete_model,
+                reason_code="redistribution_failed_final_calendar_review",
+            )
+        week["pre_hard_power_redistribution"] = {
+            "status": "rolled_back",
+            "reason_code": "redistribution_failed_final_calendar_review",
+            "weekly_exercise_count_delta": 0,
+        }
+        restored = True
+    return restored
 
 
 def compose_normal_rehab_assignments(

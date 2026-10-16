@@ -29,6 +29,7 @@ from .calendar_context import (
     week_scope,
 )
 from .normalization import clean_list, ordered_weekdays
+from .planner_context import get_planner_athlete_model
 
 
 PRE_HARD_CONTACT_REASON = "pre_hard_contact_managed_stress"
@@ -152,6 +153,63 @@ def _refresh_unused_days(week: dict[str, Any], athlete_model: dict[str, Any]) ->
     ]
 
 
+def _power_microdose_eligible(athlete_model: dict[str, Any]) -> bool:
+    """A split receiver is eligible only under unconstrained contact-week readiness.
+
+    This checks athlete context, not exercise cost: composition and prescription
+    resolution are the existing authorities for selected membership and doses.
+    Unknown / constrained readiness never earns an extra pre-contact exposure.
+    """
+    fatigue = str(athlete_model.get("fatigue") or "").strip().lower()
+    readiness = {str(flag).strip().lower() for flag in clean_list(athlete_model.get("readiness_flags"))}
+    cut_bucket = str(athlete_model.get("cut_severity_bucket") or "none").strip().lower()
+    return (
+        fatigue in {"", "low"}
+        and cut_bucket in {"none", "low"}
+        and not athlete_model.get("weight_cut_risk")
+        and not athlete_model.get("injuries")
+        and not athlete_model.get("parsed_injuries")
+        and str(athlete_model.get("injury_mode") or "full_plan").strip().lower() == "full_plan"
+        and not readiness.intersection({
+            "high_fatigue", "injury_management", "aggressive_weight_cut",
+            "severe_injury", "red_flag_injury", "needs_review",
+        })
+    )
+
+
+def suppress_unfunded_power_microdose(
+    week: dict[str, Any], role: dict[str, Any], *,
+    athlete_model: dict[str, Any], reason_code: str,
+) -> None:
+    """Role-budget owner withdraws a proposed receiver when no main work moves.
+
+    This is not another session-allocation pass. The pre-contact exception
+    remains conditional on a genuine bank-backed transfer; without one, restore
+    the original one-meaningful-strength-exposure boundary and the off day.
+    """
+    current = week.get("session_roles") or []
+    if not any(item is role for item in current):
+        return
+    week["session_roles"] = [item for item in current if item is not role]
+    suppressed = _suppression_record(role)
+    suppressed["compression_reason_codes"] = [reason_code]
+    suppressed["reasons"] = ["No verified low-cost power stimulus could be moved from the main session."]
+    week.setdefault("suppressed_roles", []).append(suppressed)
+    for index, surviving in enumerate(week["session_roles"], start=1):
+        surviving["session_index"] = index
+    _refresh_unused_days(week, athlete_model)
+    policy = week.get("pre_hard_contact_strength_policy")
+    if isinstance(policy, dict):
+        policy["microdose_role_key"] = None
+        policy["microdose_day"] = None
+        policy["suppressed_strength_roles"] = int(policy.get("suppressed_strength_roles") or 0) + 1
+    week["pre_hard_power_redistribution"] = {
+        "status": "skipped",
+        "reason_code": reason_code,
+        "weekly_exercise_count_delta": 0,
+    }
+
+
 def apply_pre_hard_contact_strength_exposure_cap(
     weekly_role_map: dict[str, Any],
     athlete_model: dict[str, Any] | None = None,
@@ -164,7 +222,7 @@ def apply_pre_hard_contact_strength_exposure_cap(
     """
     if not isinstance(weekly_role_map, dict):
         return weekly_role_map
-    athlete_model = athlete_model or {}
+    athlete_model = athlete_model or get_planner_athlete_model() or {}
 
     for ordinal, week in enumerate(weekly_role_map.get("weeks", []) or [], start=1):
         if not isinstance(week, dict):
@@ -184,6 +242,7 @@ def apply_pre_hard_contact_strength_exposure_cap(
                 "pre_hard_contact_effective_hard_distance",
                 "pre_hard_contact_reason_code",
                 "pre_hard_contact_dose_adjustment",
+                "pre_hard_contact_microdose_only",
             ):
                 role.pop(field, None)
 
@@ -196,16 +255,40 @@ def apply_pre_hard_contact_strength_exposure_cap(
         if not affected:
             continue
 
-        # Preserve the planner's highest-priority strength exposure. A lower
-        # priority role does not replace it merely because that lower role happens
-        # to occupy a cleaner day.
+        # Keep the primary strength appointment. A *single* pre-contact
+        # secondary role can coexist only as a tightly limited power microdose:
+        # the primary must have a cleaner day, the athlete must be unconstrained,
+        # and the exercise composer must later find verified low-cost power work.
+        # The additional role is NOT a second meaningful strength exposure.
         keeper = min(strength_roles, key=_strength_priority)
         if keeper in affected:
             keeper["pre_hard_contact_managed_stress"] = True
             keeper["pre_hard_contact_effective_hard_distance"] = 1
             keeper["pre_hard_contact_reason_code"] = PRE_HARD_CONTACT_REASON
 
-        dropped = [role for role in strength_roles if role is not keeper]
+        microdose = None
+        secondary_candidates = [
+            role for role in affected
+            if role is not keeper
+            and role.get("role_key") == "secondary_strength_day"
+            and _int_or_large(role.get("strength_session_index")) == 2
+        ]
+        if (
+            keeper not in affected
+            and len(strength_roles) == 2
+            and len(secondary_candidates) == 1
+            and _power_microdose_eligible(athlete_model)
+        ):
+            microdose = secondary_candidates[0]
+            microdose["pre_hard_contact_managed_stress"] = True
+            microdose["pre_hard_contact_microdose_only"] = True
+            microdose["pre_hard_contact_effective_hard_distance"] = 1
+            microdose["pre_hard_contact_reason_code"] = PRE_HARD_CONTACT_REASON
+
+        dropped = [
+            role for role in strength_roles
+            if role is not keeper and role is not microdose
+        ]
         if dropped:
             dropped_ids = {id(role) for role in dropped}
             week["session_roles"] = [role for role in roles if id(role) not in dropped_ids]
@@ -224,6 +307,8 @@ def apply_pre_hard_contact_strength_exposure_cap(
             "keeper_role_key": keeper.get("role_key"),
             "keeper_strength_session_index": keeper.get("strength_session_index"),
             "keeper_is_pre_hard_contact": keeper in affected,
+            "microdose_role_key": microdose.get("role_key") if microdose else None,
+            "microdose_day": microdose.get("scheduled_day_hint") if microdose else None,
             "suppressed_strength_roles": len(dropped),
         }
 
