@@ -3040,7 +3040,10 @@ def redistribute_pre_hard_power_from_main(
                     if slot is None or _role_kind(slot) not in {"power", "support"}:
                         continue
                     selected = slot.get("selected") or {}
-                    if selected.get("meaningful_stress") is True or selected.get("support_only") is False:
+                    kind = _role_kind(slot)
+                    if selected.get("meaningful_stress") is True or (
+                        kind == "support" and selected.get("support_only") is False
+                    ):
                         continue
                     if not has_verified_low_cost(
                         slot,
