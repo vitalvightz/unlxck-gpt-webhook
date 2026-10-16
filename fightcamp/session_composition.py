@@ -3195,6 +3195,7 @@ def redistribute_pre_hard_power_from_main(
                 "source_strength_session_index": source.get("strength_session_index"),
                 "receiver_strength_session_index": receiver.get("strength_session_index"),
                 "receiver_original_d_day": receiver.get("scheduled_d_day"),
+                "receiver_token": receiver.get("dense_day_receiver_token"),
                 "original_source_assignments": original_source_assignments,
             }
     return weekly_role_map
