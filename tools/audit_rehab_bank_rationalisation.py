@@ -676,6 +676,7 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--data-dir", type=Path, default=ROOT / "data")
     parser.add_argument("--output-dir", type=Path, default=ROOT / "docs")
+    parser.add_argument("--include-json", action="store_true", help="Also emit optional detailed JSON reports")
     parser.add_argument("--check", action="store_true", help="Verify deterministic committed reports without writing")
     args = parser.parse_args(argv)
     try:
@@ -687,11 +688,12 @@ def main(argv=None):
         if report["integrity_errors"]:
             print("\n".join(report["integrity_errors"]))
             return 1
-        outputs = {
-            "rehab-bank-rationalisation.json": json_text(report),
-            "rehab-bank-duplicate-clusters.json": json_text(duplicate_report),
-            "rehab-bank-rationalisation.md": markdown(report, duplicate_report),
-        }
+        outputs = {"rehab-bank-rationalisation.md": markdown(report, duplicate_report)}
+        if args.include_json:
+            outputs.update({
+                "rehab-bank-rationalisation.json": json_text(report),
+                "rehab-bank-duplicate-clusters.json": json_text(duplicate_report),
+            })
         if args.check:
             stale = [name for name, value in outputs.items() if not (args.output_dir / name).exists() or (args.output_dir / name).read_text(encoding="utf-8") != value]
             if stale:

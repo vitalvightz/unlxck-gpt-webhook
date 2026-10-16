@@ -1752,7 +1752,7 @@ export function weekLabel(week: StructuredWeek | null | undefined): string {
 // day (or a truly empty day) falls through to "Rest day.".
 
 const REST_DAY_TYPES = new Set(["rest", "recovery"]);
-const REST_HEADLINE_RE = /\b(rest|recovery|off|no planned session)\b/i;
+const REST_HEADLINE_RE = /\b(rest|recovery|off|unavailable|no planned session|no session planned)\b/i;
 // `technical` is checked before `sparring` so a "technical only / no hard
 // sparring" headline is not mislabelled as a sparring day by the stray
 // "sparring" token, and `coach_led` is the catch-all for coach-owned contact.

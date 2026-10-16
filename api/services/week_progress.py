@@ -7,7 +7,7 @@ from collections.abc import Mapping, Sequence
 from datetime import date, datetime, timezone
 from typing import Any
 
-from api.services.open_plan_timeline import project_open_structured_plan
+from api.services.open_plan_timeline import open_plan_anchor_date, open_plan_spec, project_open_structured_plan
 from api.services.effective_structured_plan import resolve_effective_structured_plan
 from api.services.progress_notifications import dispatch_progress_award_notification  # noqa: F401
 from api.services.xp_awards import ensure_xp_abuse_hardening
@@ -311,6 +311,11 @@ def award_completed_week(
         return None
 
     source_key = f"{plan_id}:{week_id}"
+    anchor = open_plan_anchor_date(plan) if open_plan_spec(plan) is not None else None
+    if anchor is not None and (target - anchor).days >= 28:
+        # Preserve already-awarded first-block keys. Later renewable blocks
+        # need their actual week date so a prior block cannot consume the bonus.
+        source_key = f"{source_key}:{start_date}"
     normalized: dict[str, Any] | None = None
     try:
         award = store.award_xp(

@@ -56,6 +56,15 @@ import {
   weekLabel,
 } from "./structured-plan.ts";
 
+test("empty calendar days retain neutral availability labels", () => {
+  for (const headline of ["Unavailable", "No session planned"]) {
+    const view = classifySessionlessDay({ day_type: "rest", today_card: { headline }, sessions: [] });
+    assert.equal(view.kind, "rest");
+    assert.equal(view.title, headline);
+    assert.equal(view.coachLed, false);
+  }
+});
+
 test("formatCountdownLabel normalizes legacy event-day labels for display", () => {
   assert.equal(formatCountdownLabel("D0"), "D-0");
   assert.equal(formatCountdownLabel("d0"), "D-0");

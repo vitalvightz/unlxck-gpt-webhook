@@ -1918,6 +1918,9 @@ def _open_block_session(role: dict[str, Any]) -> dict[str, Any] | None:
         "category": role.get("category"),
         "execution_order": role.get("execution_order"),
         "coach_owned": bool(role.get("coach_owned")),
+        "display_text": role.get("display_text"),
+        "support_insert_category": role.get("support_insert_category"),
+        "support_insert_cost_category": role.get("support_insert_cost_category"),
         "exercises": exercises,
     }
     return {key: value for key, value in session.items() if value not in (None, "", [])}
@@ -2005,8 +2008,8 @@ def _attach_open_development_block(
     -- on a calendar placed far from any fight. Only its weekday projection
     reaches the open payload; no D-day, phase or countdown concept does.
     """
-    from .goal_preservation import reconcile_goal_preservation
-    from .session_composition import suppress_unfilled_physical_roles
+    from .goal_preservation import reconcile_goal_preservation, refresh_goal_evidence_after_composition
+    from .session_composition import consolidate_compatible_physical_sessions, suppress_unfilled_physical_roles
     from .session_sequencing import stamp_role_execution_order
 
     phase_brief = phase_briefs.get(OPEN_BLOCK_PHASE)
@@ -2031,7 +2034,12 @@ def _attach_open_development_block(
     )
     if "weekly_role_map" not in block:
         return brief
-    block = stamp_role_execution_order(reconcile_goal_preservation(block))
+    block = reconcile_goal_preservation(block)
+    role_map = block["weekly_role_map"]
+    consolidate_compatible_physical_sessions(role_map, athlete_model=_open_block_athlete_view(athlete_model))
+    if role_map.get("session_consolidation_audit"):
+        refresh_goal_evidence_after_composition(block)
+    block = stamp_role_execution_order(block)
     suppress_unfilled_physical_roles(block)
     spec = dict(brief.get("open_plan_spec") or {})
     spec["weekly_session_plan"] = _project_open_development_block(block)

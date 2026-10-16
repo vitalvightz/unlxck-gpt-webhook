@@ -137,3 +137,53 @@ def test_dated_camps_never_carry_the_open_block_horizon():
     assert view["days_until_fight"] - 7 * OPEN_BLOCK_WEEKS == view["open_block_horizon_days"] == OPEN_BLOCK_HORIZON_DAYS
     # The horizon is far beyond every countdown band (D-17 inward).
     assert OPEN_BLOCK_HORIZON_DAYS > 17
+
+
+def test_open_block_consolidates_with_the_existing_owner_before_projection(monkeypatch):
+    from collections import Counter
+    import fightcamp.goal_preservation as goals
+    import fightcamp.stage2_payload as payload
+    from test_compatible_session_consolidation import _alactic, _map, _strength
+
+    role_map = _map(_strength(), _alactic())
+    block = {"weekly_role_map": role_map, "goal_preservation": []}
+    before = [payload._open_block_session(role) for role in role_map["weeks"][0]["session_roles"]]
+    monkeypatch.setattr(payload, "_build_planning_brief", lambda **kwargs: block)
+    monkeypatch.setattr(goals, "reconcile_goal_preservation", lambda brief: brief)
+    refresh = goals.refresh_goal_evidence_after_composition
+    refreshed = []
+
+    def observe_refresh(brief):
+        # The source role is already gone when the existing evidence mechanism runs.
+        refreshed.append(copy.deepcopy(brief["weekly_role_map"]))
+        return refresh(brief)
+
+    monkeypatch.setattr(goals, "refresh_goal_evidence_after_composition", observe_refresh)
+    result = payload._attach_open_development_block(
+        {"open_plan_spec": {"plan_type": "open_ongoing_system"}},
+        athlete_model={}, restrictions=[], phase_briefs={"GPP": {}},
+        candidate_pools={"GPP": {"strength_slots": []}}, omission_ledger={},
+        rewrite_guidance={}, plan_input=None, computed_support=None,
+    )
+    sessions = result["open_plan_spec"]["weekly_session_plan"]["weeks"][0]["sessions"]
+    assert len(sessions) == 1
+    assert sessions[0]["weekday"] == "Monday"
+    assert sessions[0]["role_key"] == "primary_strength_day"
+    assert Counter((e["name"], e["prescription"]) for s in before for e in s["exercises"]) == Counter(
+        (e["name"], e["prescription"]) for e in sessions[0]["exercises"]
+    )
+    assert len(refreshed) == 1
+    assert refreshed[0]["session_consolidation_audit"]
+    assert len(refreshed[0]["weeks"][0]["session_roles"]) == 1
+
+
+def test_open_goal_evidence_names_the_final_projected_membership():
+    spec = _spec("kickboxing")
+    members = {
+        (week["week"], session["weekday"], exercise["name"])
+        for week in spec["weekly_session_plan"]["weeks"] for session in week["sessions"]
+        for exercise in session.get("exercises") or []
+    }
+    for goal in spec["goal_coverage"]:
+        assert goal["satisfied"]
+        assert all((item["week"], item["weekday"], item["name"]) in members for item in goal["evidence"])

@@ -75,6 +75,7 @@ OPEN_PLAN_CHANGED = frozenset({"api/contracts/injury_policy.py", "api/contracts/
                                "api/services/admin_stage2_service.py", "api/services/effective_structured_plan.py",
                                "api/services/exercise_log_service.py", "api/services/open_plan_timeline.py",
                                "api/services/progress_notifications.py", "api/services/streaks.py",
+                               "api/services/week_progress.py",
                                "api/services/today_service.py", "api/structured_plan_locked_merge.py",
                                "api/structured_plan_models.py", "api/structured_plan_sparring_reconcile.py",
                                "fightcamp/weekly_schedule_view.py", "web/app/demo-plan/page.tsx", "web/app/page.tsx",

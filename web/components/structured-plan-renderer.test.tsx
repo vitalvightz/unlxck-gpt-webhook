@@ -24,6 +24,25 @@ function countOccurrences(text: string, needle: string): number {
   return text.split(needle).length - 1;
 }
 
+test("open calendar shows all seven weekdays without turning availability into workouts", () => {
+  const weekdays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] as const;
+  const plan: StructuredPlan = {
+    plan_metadata: { title: "Open plan", plan_type: "open_ongoing_system" },
+    weeks: [{ week_index: 1, phase_label: "GPP", days: weekdays.map((weekday, index) => ({
+      weekday, date: `2026-10-${12 + index}`, day_type: "rest",
+      today_card: { headline: weekday === "Wed" || weekday === "Sun" ? "Unavailable" : "No session planned" },
+      sessions: [],
+    })) }],
+  };
+  const html = renderToStaticMarkup(<StructuredPlanRenderer plan={plan} openOngoing
+    today={new Date("2026-10-14T12:00:00")} currentTrainingDayIso="2026-10-14"
+    onLogSession={() => { throw new Error("An empty day cannot log a session"); }} />);
+  for (const weekday of weekdays) assert.ok(html.includes(weekday.toUpperCase()), `Missing ${weekday}`);
+  assert.equal(countOccurrences(html, '>Unavailable<'), 2);
+  assert.ok(html.includes("No session planned"));
+  assert.doesNotMatch(html, /Log session|Missed/);
+});
+
 test("structured renderer uses one session card and hides detail blocks until expanded", () => {
   const plan = {
     schema_version: "1.0",

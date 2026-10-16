@@ -187,6 +187,13 @@ def resolve_effective_structured_plan(
     # These fields are server-owned by custom publication, never by a model.
     # A generated card cannot claim athlete authority or private attachments.
     brief = _mapping(plan_row.get("planning_brief")) or {}
+    if not plan_row.get("fight_date") and (brief.get("open_plan_spec") or {}).get("weekly_session_plan"):
+        from api.structured_plan_locked_merge import merge_planner_owned_structured_content
+
+        # Preserve the ids older id-less templates already derived on read,
+        # before their one source week is expanded into four actual weeks.
+        resolved = ensure_structured_session_ids(resolved, plan_id=plan_row.get("id"))
+        resolved = merge_planner_owned_structured_content(resolved, dict(brief)).plan
     from api.structured_plan_coaching import recover_selected_coaching
     resolved = recover_selected_coaching(resolved, dict(brief))
     if not brief.get("custom_plan"):

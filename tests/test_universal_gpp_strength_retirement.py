@@ -19,7 +19,7 @@ ROOT = Path(__file__).resolve().parents[1]
 DATA_DIR = ROOT / "data"
 
 # Directories that hold live runtime code and data. Historical reports under
-# docs/notes (e.g. EXPANSION_REPORT.md) may still describe the old architecture
+# docs/notes may still describe historical architecture
 # and are intentionally excluded — they cannot be mistaken for current
 # behavior, and this contract only guards executable/loadable surfaces.
 _LIVE_DIRS = ("fightcamp", "tools", "data", "tests")
