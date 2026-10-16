@@ -722,17 +722,61 @@ def _pre_hard_verified_low_cost(slot: dict[str, Any]) -> bool:
     return has_verified_low_cost(slot, fields=_PRE_HARD_COST_FIELDS)
 
 
+def _pre_hard_transfer_eligible(slot: dict[str, Any]) -> bool:
+    """Allow light, controllable exercises before sparring; refuse high cost.
+
+    Unlike the independent meaningful-strength gate this evaluates only an
+    already selected EXERCISE to be moved, not a newly added exposure. An
+    anti-rotation anchor can move as capped light technique (never heavy force
+    work); a meaningful power exercise is not rejected solely for its label.
+    """
+    selected = _slot_selected(slot)
+    kind = _role_kind(slot)
+    tags = {
+        str(tag).strip().lower()
+        for tag in [*(slot.get("mechanical_risk_tags") or []),
+                    *(selected.get("mechanical_risk_tags") or [])]
+        if str(tag).strip()
+    }
+    controlled_trunk = (
+        kind == "anchor"
+        and "anti_rotation" in tags
+        and "mech_trunk_stability" in tags
+    )
+    if kind not in {"power", "support"} and not controlled_trunk:
+        return False
+    if tags & {"mech_cns_high", "mech_systemic_fatigue", "mech_axial_heavy"}:
+        return False
+    # Landing or impact must be low/none; moderate soreness/eccentric cost can
+    # survive a SMALL, dose-limited transfer. High or unverified costs cannot.
+    costs = {field: _cost_value(slot, field) for field in _PRE_HARD_COST_FIELDS}
+    if any(not value for value in costs.values()):
+        return False
+    if costs["impact_cost"] not in {"none", "low"}:
+        return False
+    if costs["landing_cost"] not in {"none", "low"}:
+        return False
+    if any(value not in {"none", "low", "moderate"} for value in costs.values()):
+        return False
+    # Ensure a loaded trunk exercise has a parseable, non-maximal dose and can
+    # genuinely be downscaled to RPE 6 technique before hard contact.
+    if controlled_trunk:
+        dose = str(selected.get("prescription") or "")
+        if "%" in dose or not re.search(r"\bRPE\b", dose, re.I):
+            return False
+    return True
+
+
 def _pre_hard_allowed_slots(
     owned_slots: list[dict[str, Any]], *, microdose_only: bool = False
 ) -> list[dict[str, Any]]:
-    """One loaded anchor and low-cost support, or 2-3 moved low-cost items."""
+    """One loaded anchor and low-cost support, or 2-3 transferred items."""
     if microdose_only:
-        # Membership is fixed by the composition owner; accept only that
-        # owner's verified power/support members without inventing a new one.
+        # Composition has already chosen 2-3 existing exercise identities.
+        # Re-check the same eligibility before the dose resolver may publish.
         return [
             slot for slot in sorted(owned_slots, key=_slot_priority)
-            if _role_kind(slot) in {"power", "support"}
-            and _pre_hard_verified_low_cost(slot)
+            if _pre_hard_transfer_eligible(slot)
         ][:3]
     allowed: list[dict[str, Any]] = []
     loaded_anchor_used = False
@@ -1227,7 +1271,14 @@ def apply_effective_strength_prescriptions(
         for slot in sorted(slots_for_resolution, key=_slot_priority):
             kind = _role_kind(slot)
             force_kind = None
-            if kind in {"anchor", "hybrid"} and _slot_quality_class_effective(slot) != "anchor_force_isometric":
+            if (
+                role.get("pre_hard_contact_microdose_only") is True
+                and kind == "anchor"
+                and _pre_hard_transfer_eligible(slot)
+            ):
+                # Capped trunk-control technique, not a second loaded anchor.
+                force_kind = "support"
+            if force_kind is None and kind in {"anchor", "hybrid"} and _slot_quality_class_effective(slot) != "anchor_force_isometric":
                 if anchor_loaded_used:
                     force_kind = "secondary"
                 else:
