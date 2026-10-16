@@ -1,7 +1,7 @@
 """Keep UNLXCK's editable Notion follow-up DM synced with its calculated copy.
 
-Run every two minutes using a single server-side timer. Set NOTION_TOKEN in
-/opt/unlxck/.env.production; grant that integration access to the pipeline.
+Run every two minutes using a single server-side timer. Reuse the existing
+server-side outreach qualification worker's Notion integration and credentials.
 """
 
 import json
@@ -16,12 +16,21 @@ from zoneinfo import ZoneInfo
 
 DATA_SOURCE_ID = os.getenv("NOTION_OUTREACH_DATA_SOURCE_ID", "08d8b476129a42b0b980102b08ce4bd8")
 BASE = "https://api.notion.com/v1"
+
+
+def notion_token():
+    # The existing outreach qualification worker may use a different env name.
+    # Reuse its token; do not create another integration or log the value.
+    return (os.getenv("NOTION_TOKEN") or os.getenv("NOTION_API_KEY")
+            or os.getenv("NOTION_INTEGRATION_TOKEN"))
+
+
 ACTIVE_STAGES = ("Contacted", "Replied", "Accepted", "Activated")
 
 
 def request(method, path, body=None):
     headers = {
-        "Authorization": f"Bearer {os.environ['NOTION_TOKEN']}",
+        "Authorization": f"Bearer {notion_token()}",
         "Notion-Version": "2025-09-03",
         "Content-Type": "application/json",
     }
@@ -99,7 +108,7 @@ def sync(today=None):
 
 
 if __name__ == "__main__":
-    if not os.getenv("NOTION_TOKEN"):
-        sys.exit("Set NOTION_TOKEN in the server environment (never commit it).")
+    if not notion_token():
+        sys.exit("Expose the existing qualification worker Notion token as NOTION_TOKEN or NOTION_API_KEY (never commit it).")
     total, changed = sync()
     print(f"Notion follow-ups: checked {total}, updated {changed}")
