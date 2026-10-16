@@ -3011,8 +3011,17 @@ def redistribute_pre_hard_power_from_main(
         receivers = [
             role for role in roles if isinstance(role, dict)
             and role.get("pre_hard_contact_microdose_only") is True
+            # An already-composed independent second session is not a
+            # receiving slot: replacing its exercises would silently lose its
+            # own training. Only an empty/provisional receiver is fundable.
+            and not role.get("selected_exercise_assignments")
         ]
         for receiver in receivers:
+            receiver["dense_day_receiver_provisional"] = True
+            receiver.setdefault(
+                "dense_day_receiver_token",
+                f"{week.get('week_index')}:{receiver.get('scheduled_d_day')}",
+            )
             sources = [
                 role for role in roles
                 if isinstance(role, dict)
