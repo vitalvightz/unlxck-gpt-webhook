@@ -3005,6 +3005,10 @@ def redistribute_pre_hard_power_from_main(
     for week in weekly_role_map.get("weeks") or []:
         if not isinstance(week, dict):
             continue
+        if (week.get("pre_hard_power_redistribution") or {}).get("status") == "transferred":
+            # The final membership is already conserved. Replaying this stage
+            # must not remove another main member or withdraw the recipient.
+            continue
         roles = week.get("session_roles") or []
         receivers = [
             r for r in roles if isinstance(r, dict)
