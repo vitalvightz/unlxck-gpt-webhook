@@ -214,15 +214,19 @@ def test_open_plan_projects_weekdays_and_dates_from_the_block_anchor():
         "Mon",
         "Tue",
         "Wed",
+        "Thu",
         "Fri",
         "Sat",
+        "Sun",
     ]
     assert [day["date"] for day in projected["weeks"][0]["days"]] == [
         "2026-07-13",
         "2026-07-14",
         "2026-07-15",
+        "2026-07-16",
         "2026-07-17",
         "2026-07-18",
+        "2026-07-19",
     ]
     assert all(not day["countdown_label"] for day in projected["weeks"][0]["days"])
 
@@ -413,8 +417,10 @@ def test_open_plan_recovers_one_full_calendar_legacy_week_and_expands_the_block(
         "Mon",
         "Tue",
         "Wed",
+        "Thu",
         "Fri",
         "Sat",
+        "Sun",
     ]
     assert [week["week_index"] for week in projected["weeks"]] == [1, 2, 3, 4]
     assert [week["week_goal"] for week in projected["weeks"]] == [

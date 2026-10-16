@@ -4049,8 +4049,9 @@ values in the generic root skeleton):
 - Set event_context.event_type to "none" and all event dates to null/empty.
 - Set countdown_labels to [] and every day countdown_label to "".
 - Keep week start/end/countdown fields empty; the server projects real dates.
-- Emit ONE reusable template week unless the source contains fully distinct
-  session prescriptions for all four weeks; in that case emit exactly four.
+- When weekly_session_plan provides four weeks, emit those four weeks with
+  their actual sessions. Identical baseline exercise prescriptions are valid.
+  Otherwise emit one reusable template week.
 - Every emitted week.days array MUST contain exactly these training weekdays in
   this order: {json.dumps(weekdays)}. Set each day.weekday to that exact short
   value. Do not emit OFF/rest-only weekdays and do not infer extra training days.

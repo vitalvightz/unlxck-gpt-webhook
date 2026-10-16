@@ -218,7 +218,7 @@ def _resolve_template_days(
                 return None
             if weekday not in training_days and not _is_safe_legacy_off_day(day):
                 return None
-        pairs = [(weekday, day) for weekday, day in calendar_pairs if weekday in training_days]
+        pairs = calendar_pairs
     else:
         return None
 
@@ -360,18 +360,18 @@ def project_open_structured_plan(
     # manufacture work on the other days.
     brief = _mapping(plan_row.get("planning_brief"))
     custom_calendar = bool(brief.get("custom_plan"))
-    calendar_days = list(WEEKDAYS) if custom_calendar else training_days
     # Validate every week before applying any dates so projection is atomic.
     resolved_weeks: list[dict[str, Any]] = []
     for week in weeks:
         if not isinstance(week, Mapping):
             return _unavailable(PROJECTION_REASON_MALFORMED_WEEK)
         week_days = week.get("days")
-        expected_days = calendar_days if custom_calendar and isinstance(week_days, list) and len(week_days) == 7 else training_days
+        expected_days = list(WEEKDAYS) if custom_calendar and isinstance(week_days, list) and len(week_days) == 7 else training_days
         resolved_days = _resolve_template_days(week_days, expected_days)
         if resolved_days is None:
             return _unavailable(PROJECTION_REASON_DAY_SHAPE_UNRESOLVED)
-        for day, expected_weekday in zip(resolved_days, expected_days, strict=True):
+        for day in resolved_days:
+            expected_weekday = day["weekday"]
             is_coach_led = _is_coach_led_day(day)
             # A coach-led card may only land on a declared coach-owned day, and
             # a declared hard-sparring day must remain coach-led. Technical days
@@ -398,6 +398,20 @@ def project_open_structured_plan(
         week["end_date"] = (week_start + timedelta(days=6)).isoformat()
         week["countdown_start"] = None
         week["countdown_end"] = None
+        by_weekday = {day["weekday"]: day for day in week["days"]}
+        for weekday in WEEKDAYS:
+            if weekday not in by_weekday:
+                by_weekday[weekday] = {
+                    "date": "", "weekday": weekday, "day_type": "rest",
+                    "countdown_label": "", "phase_label": week.get("phase_label") or "GPP",
+                    "today_card": {
+                        "headline": "No session planned" if weekday in training_days else "Unavailable",
+                        "readiness_status": "train_as_planned" if weekday in training_days else "unavailable",
+                        "mindset_anchor": {"intent": "", "focus_cue": "", "reset_cue": ""},
+                    },
+                    "sessions": [],
+                }
+        week["days"] = [by_weekday[weekday] for weekday in WEEKDAYS]
         for day in week["days"]:
             weekday = day["weekday"]
             projected_date = week_start + timedelta(days=WEEKDAYS.index(weekday))

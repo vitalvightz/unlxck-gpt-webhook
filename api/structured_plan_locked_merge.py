@@ -384,6 +384,7 @@ def _restore_open_plan_tactical_watches(
                 "coaching_cues": [
                     str(value) for value in watch.get("instructions") or []
                 ],
+                "execution_instructions": " ".join(str(value) for value in watch.get("instructions") or []) or None,
                 "purpose": watch.get("why"),
             }
         )
@@ -745,6 +746,9 @@ def merge_planner_owned_structured_content(
     adding Tactical Focus can turn a contact-only day into a session day while
     leaving its contact truth stranded in the now-hidden day headline.
     """
+    from .structured_plan_deterministic_fallback import reconcile_open_development_sessions
+
+    structured_plan = reconcile_open_development_sessions(structured_plan, planning_brief)
     result = merge_locked_structured_content(structured_plan, planning_brief)
 
     reconcile_coach_led_sparring_days(result.plan, planning_brief)

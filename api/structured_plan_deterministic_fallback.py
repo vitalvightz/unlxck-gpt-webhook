@@ -948,6 +948,135 @@ def _session(
     }
 
 
+def reconcile_open_development_sessions(
+    plan: dict[str, Any], planning_brief: Any,
+) -> dict[str, Any]:
+    """Project saved open-block membership through the existing role converter.
+
+    The structured week supplies presentation and stable ids; the deterministic
+    block supplies each week's membership, placement and dose. Legacy templates
+    without that block retain their existing projection path.
+    """
+    from .services.open_plan_timeline import (
+        WEEKDAYS, _expand_single_template_week, _ordered_weekdays, _resolve_template_days,
+    )
+    from fightcamp.weekly_schedule_view import normalize_weekday
+    from fightcamp.stage2_payload import OPEN_BLOCK_HORIZON_DAYS, OPEN_BLOCK_WEEKS
+
+    if not isinstance(planning_brief, dict) or planning_brief.get("custom_plan"):
+        return plan
+    spec = planning_brief.get("open_plan_spec") or {}
+    programmed = spec.get("weekly_session_plan") or {}
+    decisions = programmed.get("weeks")
+    if (spec.get("plan_type") != "open_ongoing_system"
+            or programmed.get("authority") != "deterministic_open_development_block"
+            or not isinstance(decisions, list) or len(decisions) != 4):
+        return plan
+    training_days = _ordered_weekdays((spec.get("weekly_template") or {}).get("training_days"))
+    weeks = copy.deepcopy(plan.get("weeks") or [])
+    for week in weeks:
+        days = _resolve_template_days(week.get("days"), training_days)
+        if days is None:
+            return plan
+        week["days"] = days
+    weeks = _expand_single_template_week(weeks, spec)
+    if weeks is None:
+        return plan
+
+    # Keep the existing tactical placement, but only in its prescribed rotation
+    # weeks. Its bank-owned content is restored by the existing locked merger.
+    rotation = (spec.get("tactical_watch") or {}).get("weekly_rotation") or []
+    watch_names = {entry.get("name") for entry in rotation}
+    watch_templates = [
+        (day["weekday"], session)
+        for week in weeks for day in week["days"] for session in day.get("sessions") or []
+        if any(block.get("display_name") in watch_names for block in session.get("blocks") or [])
+    ]
+    dose_fields = ("sets", "reps", "rounds", "work", "rest", "duration", "distance", "load", "tempo", "effort", "intensity")
+    for position, (week, decision) in enumerate(zip(weeks, decisions, strict=True), start=1):
+        if not isinstance(decision, dict) or not isinstance(decision.get("sessions"), list):
+            return plan
+        by_day = {day["weekday"]: day for day in week["days"]}
+        previous_by_day = {day["weekday"]: list(day.get("sessions") or []) for day in week["days"]}
+        previous = [session for day in week["days"] for session in day.get("sessions") or []]
+        blocks_by_name = {
+            block.get("display_name"): block
+            for session in previous for block in session.get("blocks") or []
+        }
+        for day in week["days"]:
+            day["sessions"] = []
+        for index, item in enumerate(decision["sessions"]):
+            weekday = normalize_weekday(item.get("weekday"))
+            if weekday not in training_days or weekday not in by_day:
+                return plan
+            # Coach-led combat is represented by the existing contact owner,
+            # never by an executable session with a fabricated exercise.
+            if item.get("coach_owned") or item.get("category") == "sparring":
+                continue
+            exercises = item.get("exercises") or []
+            names = [exercise["name"] for exercise in exercises]
+            old = next((session for session in previous_by_day[weekday] if (
+                bool(names) and [block.get("display_name") for block in session.get("blocks") or []] == names
+            ) or session.get("title") == item.get("label")), None)
+            if old is not None:
+                previous_by_day[weekday].remove(old)
+            role = {
+                **item, "athlete_facing_label": item.get("label"), "session_index": index,
+                "display_text": item.get("display_text") or (item.get("label") if not exercises else ""),
+                "selected_exercise_assignments": [
+                    {**exercise, "effective_prescription": exercise.get("prescription")}
+                    for exercise in exercises
+                ],
+            }
+            # Use the same far-from-fight context as the open planner; this
+            # converter argument also informs existing exercise coaching.
+            block_day = OPEN_BLOCK_HORIZON_DAYS + OPEN_BLOCK_WEEKS * 7 - (position - 1) * 7 - WEEKDAYS.index(weekday)
+            session = _session(role, block_day,
+                               athlete=planning_brief.get("athlete_snapshot"), phase="GPP")
+            if session is None:
+                continue
+            if old is not None:
+                session = {**copy.deepcopy(old), "blocks": session["blocks"]}
+            session["title"] = item.get("label") or session["title"]
+            session["execution_order"] = item.get("execution_order")
+            for block in session["blocks"]:
+                original = next((source for source in (old or {}).get("blocks") or []
+                                 if source.get("display_name") == block["display_name"]),
+                                blocks_by_name.get(block["display_name"]))
+                if original is not None:
+                    # Preserve exercise-specific Progress/Easier/Stop copy. Only
+                    # the prescribed dose comes from this week's decision.
+                    dose = {key: block.get(key) for key in dose_fields}
+                    block.update(copy.deepcopy(original))
+                    block.update(dose)
+                    prescription = next((exercise.get("prescription") for exercise in exercises
+                                         if exercise.get("name") == block["display_name"]), "")
+                    if prescription and prescription not in (block.get("coaching_cues") or []):
+                        block["coaching_cues"] = [*(block.get("coaching_cues") or []), prescription]
+            by_day[weekday]["sessions"].append(session)
+        for entry in rotation:
+            if entry.get("week") != position or not watch_templates:
+                continue
+            weekday, template = next(
+                ((day, session) for day, session in watch_templates if any(
+                    block.get("display_name") == entry.get("name") for block in session.get("blocks") or []
+                )), watch_templates[0],
+            )
+            watch = copy.deepcopy(template)
+            watch["title"] = entry.get("label") or watch["title"]
+            watch["blocks"][0]["display_name"] = entry["name"]
+            by_day[weekday]["sessions"].append(watch)
+        for day in week["days"]:
+            if day["sessions"]:
+                day["today_card"]["headline"] = day["sessions"][0]["title"]
+                if day.get("day_type") == "rest":
+                    day["day_type"] = "moderate"
+            elif day["weekday"] in training_days and day.get("day_type") != "recovery":
+                day["today_card"]["headline"] = "No session planned"
+                day["day_type"] = "rest"
+    return {**plan, "weeks": weeks}
+
+
 def build_deterministic_structured_plan(
     planning_brief: Any, plan_text: str | None = None
 ) -> dict[str, Any] | None:
