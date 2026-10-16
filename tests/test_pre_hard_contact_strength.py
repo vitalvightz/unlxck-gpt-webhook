@@ -949,3 +949,30 @@ def test_transfer_timed_isometric_cannot_be_invented_as_reps() -> None:
         for r in receivers
         for a in r.get("selected_exercise_assignments", [])
     )
+
+
+def test_any_declared_pre_hard_weekday_can_receive_not_only_monday() -> None:
+    from fightcamp.stage2_role_map import reserve_dense_day_receiver
+
+    weekly, slots = _composed_dense_week_without_secondary()
+    week = weekly["weeks"][0]
+    week["calendar_days"].append({"weekday": "Wednesday", "d_day": 21})
+    week["declared_training_days"] = ["Wednesday", "Tuesday", "Thursday", "Saturday"]
+    athlete = {
+        "training_days": ["Wednesday", "Tuesday", "Thursday", "Saturday"],
+        "hard_sparring_days": ["Tuesday", "Thursday"],
+        "training_frequency": 5,
+        "primary_goal": "power", "fatigue": "low", "cut_severity_bucket": "none",
+    }
+    reserve_dense_day_receiver(weekly, athlete)
+    assert [r["scheduled_day_hint"] for r in week["session_roles"]] == ["Saturday", "Wednesday"]
+    apply_pre_hard_contact_strength_exposure_cap(weekly, athlete)
+    redistribute_pre_hard_power_from_main(
+        weekly_role_map=weekly, candidate_pools=_candidate_pools(*slots),
+        athlete_model=athlete,
+    )
+    assert len(week["session_roles"]) == 2
+    main, wednesday = week["session_roles"]
+    assert len(main["selected_exercise_assignments"]) == 3
+    assert len(wednesday["selected_exercise_assignments"]) == 2
+    assert week["pre_hard_power_redistribution"]["status"] == "transferred"
