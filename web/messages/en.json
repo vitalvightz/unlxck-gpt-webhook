@@ -88,8 +88,7 @@
     "flex5Body": "Search strength, conditioning and technical drills.",
     "flex6Title": "Training log",
     "flex6Body": "Log sparring, roadwork and other sessions you train outside the plan.",
-    "finalTitle": "Build your first plan.",
-    "finalNote": "No payment required during the private beta."
+    "finalTitle": "Build your first plan."
   },
   "Auth": {
     "createAccount": "Create account",
@@ -122,7 +121,6 @@
     "signupTitle": "Train your way with UNLXCK.",
     "loginTitle": "Pick up where you left off.",
     "signupSummary": "Fight camps, ongoing training and custom plans that adapt to how you recover.",
-    "noPayment": "No payment required during the private beta.",
     "athlete": "Athlete",
     "chooseRole": "Choose your role",
     "roleIntro": "Unlxck is one app for everyone in the camp. Pick how you want to use it. Athlete access is open now. Coach and gym accounts arrive in public beta.",

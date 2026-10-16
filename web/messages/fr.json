@@ -88,8 +88,7 @@
     "flex5Body": "Cherche des exercices de force, de conditionnement et de technique.",
     "flex6Title": "Journal d’entraînement",
     "flex6Body": "Enregistre sparring, footing et autres séances faites en dehors du plan.",
-    "finalTitle": "Crée ton premier plan.",
-    "finalNote": "Aucun paiement n’est requis pendant la bêta privée."
+    "finalTitle": "Crée ton premier plan."
   },
   "Auth": {
     "createAccount": "Créer un compte",
@@ -122,7 +121,6 @@
     "signupTitle": "Entraîne-toi à ta façon avec UNLXCK.",
     "loginTitle": "Reprenez là où vous vous êtes arrêté.",
     "signupSummary": "Camps de combat, entraînement continu et plans personnalisés qui s’adaptent à ta récupération.",
-    "noPayment": "Aucun paiement n’est requis pendant la bêta privée.",
     "athlete": "Athlète",
     "chooseRole": "Choisissez votre rôle",
     "roleIntro": "Unlxck est une application pour tout le monde dans le camp. Choisissez comment vous voulez l’utiliser. L’accès des athlètes est désormais ouvert. Les comptes entraîneur et gymnase arrivent en bêta publique.",

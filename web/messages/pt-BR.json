@@ -88,8 +88,7 @@
     "flex5Body": "Busque exercícios de força, condicionamento e técnica.",
     "flex6Title": "Registro de treinos",
     "flex6Body": "Registre sparring, corrida e outras sessões feitas fora do plano.",
-    "finalTitle": "Crie seu primeiro plano.",
-    "finalNote": "Não é necessário pagamento durante a versão beta privada."
+    "finalTitle": "Crie seu primeiro plano."
   },
   "Auth": {
     "createAccount": "Criar conta",
@@ -122,7 +121,6 @@
     "signupTitle": "Treine do seu jeito com o UNLXCK.",
     "loginTitle": "Continue de onde parou.",
     "signupSummary": "Camps de luta, treino contínuo e planos personalizados que se adaptam à sua recuperação.",
-    "noPayment": "Não é necessário pagamento durante a versão beta privada.",
     "athlete": "Atleta",
     "chooseRole": "Escolha seu papel",
     "roleIntro": "Unlxck é um aplicativo para todos no acampamento. Escolha como quer usá-lo. O acesso para atletas está aberto agora. As contas de treinador e academia chegam na beta pública.",
