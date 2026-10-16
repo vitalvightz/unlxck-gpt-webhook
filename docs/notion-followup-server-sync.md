@@ -4,10 +4,10 @@ This job keeps the editable **Copy Follow-Up** text equal to the existing **Foll
 
 ## One-time server setup
 
-1. Give a Notion integration read/write access to the existing UNLXCK Beta Candidate Pipeline.
-2. On Hetzner add NOTION_TOKEN=your_notion_integration_token to /opt/unlxck/.env.production, privately. Do not commit or print the token. The script already defaults to the correct current data source ID; optionally set NOTION_OUTREACH_DATA_SOURCE_ID.
-3. Merge this pull request and wait until the usual Hetzner backend deployment has built the new worker image.
-4. Run once from /opt/unlxck to confirm permission and initial sync:
+1. **Reuse the existing outreach AI qualification integration.** The qualification worker already polls and writes the same UNLXCK Beta Candidate Pipeline every ~2 minutes, so do not make a new Notion integration or issue a second token. Check that its integration can update `Copy Follow-Up`, `Synced Follow-Ups Sent`, and `Last Follow-Up Sent`.
+2. Check where that existing secret is injected. This script recognises `NOTION_TOKEN`, `NOTION_API_KEY`, or `NOTION_INTEGRATION_TOKEN` in its own process. If the qualification worker and Unlxck Docker worker already share one of these environment variables, no credential change is needed. **If the qualification worker is a separate service, the Docker worker does not automatically inherit its environment**: securely expose the *existing* token to the Docker worker via `/opt/unlxck/.env.production` or invoke this script from the existing qualification worker instead. Never print or commit the secret. The data source ID already points at the current pipeline; optionally set `NOTION_OUTREACH_DATA_SOURCE_ID`.
+3. Merge this pull request only once checks have passed. Wait until the usual Hetzner backend deployment has built the new worker image. Prefer scheduling this job alongside the **existing outreach qualification poll** if its source/service is available, to avoid an unnecessary second Notion poll. Otherwise use the timer below.
+4. Run once from /opt/unlxck to confirm that the **existing token is accessible within this container** and that writes succeed. Stop if it fails; do not generate a second token as a workaround:
 
     docker compose exec -T worker python tools/sync_notion_followups.py
 
