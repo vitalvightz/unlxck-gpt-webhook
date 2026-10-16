@@ -669,11 +669,11 @@ def _apply_pre_hard_contact_cap(role: dict[str, Any]) -> None:
     if role.get("pre_hard_contact_microdose_only") is True:
         role["strength_dose_cap"] = {
             "max_sets": _merge_numeric_cap(role["strength_dose_cap"].get("max_sets"), 2),
-            "max_reps": _merge_numeric_cap(role["strength_dose_cap"].get("max_reps"), 2),
+            "max_reps": _merge_numeric_cap(role["strength_dose_cap"].get("max_reps"), 6),
             "loaded_allowed": False,
         }
         role["rpe_cap"] = _merge_rpe_cap(role.get("rpe_cap"), "6")
-        role["dose_adjustment_reason"] = "pre_hard_contact_power_microdose"
+        role["dose_adjustment_reason"] = "pre_hard_contact_redistributed_low_cost_work"
 
 
 def _selection_metadata(slot: dict[str, Any]) -> dict[str, Any]:
@@ -725,12 +725,15 @@ def _pre_hard_verified_low_cost(slot: dict[str, Any]) -> bool:
 def _pre_hard_allowed_slots(
     owned_slots: list[dict[str, Any]], *, microdose_only: bool = False
 ) -> list[dict[str, Any]]:
-    """One loaded anchor and low-cost support, or one pure power microdose."""
+    """One loaded anchor and low-cost support, or 2-3 moved low-cost items."""
     if microdose_only:
+        # Membership is fixed by the composition owner; accept only that
+        # owner's verified power/support members without inventing a new one.
         return [
             slot for slot in sorted(owned_slots, key=_slot_priority)
-            if _role_kind(slot) == "power" and _pre_hard_verified_low_cost(slot)
-        ][:1]
+            if _role_kind(slot) in {"power", "support"}
+            and _pre_hard_verified_low_cost(slot)
+        ][:3]
     allowed: list[dict[str, Any]] = []
     loaded_anchor_used = False
     additional_used = False
@@ -791,9 +794,9 @@ def resolve_strength_slot_prescription(
         base_prescription=priced_base,
     )
     if microdose_only:
-        # An unpriceable range or non-power member cannot fall back to its
-        # unrestricted bank prescription when Tuesday sparring is protected.
-        if kind != "power" or not isinstance(sets, int) or not isinstance(reps, int):
+        # An unpriceable or loaded member cannot fall back to its
+        # unrestricted bank prescription before protected hard sparring.
+        if kind not in {"power", "support"} or not isinstance(sets, int) or not isinstance(reps, int):
             return {
                 "base_prescription": base_prescription,
                 "effective_prescription": "",
@@ -803,7 +806,7 @@ def resolve_strength_slot_prescription(
                 "strength_dose_cap": dict(cap),
             }
         sets = min(sets, 2)
-        reps = min(reps, 2)
+        reps = min(reps, 2 if kind == "power" else 6)
         loaded = False
 
     # Readiness / cut / injury state can only pull the dose down further.
@@ -1106,7 +1109,7 @@ def _build_role_envelope(
                 "max_meaningful_strength_exposures": 1,
                 "pre_hard_contact_microdose_only": role.get("pre_hard_contact_microdose_only") is True,
                 "max_loaded_anchors": 0 if role.get("pre_hard_contact_microdose_only") is True else 1,
-                "max_additional_low_cost_items": 1,
+                "max_additional_low_cost_items": 3 if role.get("pre_hard_contact_microdose_only") is True else 1,
                 # The pre-contact policy may reduce dose/volume, but it must not
                 # reopen or independently redefine selected membership.
                 "allowed_exercise_names": list(dict.fromkeys(selected_names)),
