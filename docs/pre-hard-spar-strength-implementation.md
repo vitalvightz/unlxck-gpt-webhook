@@ -15,19 +15,23 @@
 
 `combat_load_policy` remains the collision authority. `calendar_integrity` remains final placement authority. `pre_hard_contact_strength.py` is a subordinate normal role-budget consequence only; `prescription_resolver.py` owns dose resolution.
 
-## Low-cost power microdose within the existing appointment budget
+## Whole-week redistribution before hard sparring
 
-A fresh athlete whose primary goal is power may keep one secondary strength role
-immediately before hard contact **only** when the main strength role occupies a
-cleaner day and the secondary role already survived normal weekly capacity.
-The secondary role is no longer a meaningful loaded-strength appointment: its
-composer selects at most one *already selected* pure-power bank exercise with
-affirmative low impact, landing, eccentric and soreness cost, and a priceable
-rep-based dose. The prescription owner caps it at 2 x 2 with no loaded lift.
-High fatigue, injury management, weight-cut pressure and unknown cost prevent
-this exception; an empty selection is not permission to add a filler.
+A fresh, unconstrained athlete pursuing power can use a second pre-contact
+appointment only if it already survives the weekly role budget **and**
+Saturday's clean main strength session holds a genuinely transferable power
+exercise. After the final contact/calendar decisions, the existing composition
+owner takes the *same selected bank assignment* out of the main session and
+places it into the pre-hard appointment. Its original identity, phase, and
+source-slot membership stay attached. The scheduled-day prescription owner then
+reduces the transferred work to at most two sets of two quality reps, no loaded
+strength. There is no new exercise, added weekly set, or extra Saturday work.
+A transferred session can lower weekly volume; it never increases it.
 
-This is not a relaxation of the one-meaningful-strength-exposure consequence.
-A clean primary session remains the meaningful strength stimulus. The additional
-microdose must not be counted as a second full strength exposure. No calendar
-decision or outside-of-budget insertion is made by the finalizer.
+The only eligible transferable work is pure power, with affirmative low impact,
+landing, eccentric and soreness metadata, a known rep-based dose, and additional
+power work remaining in the main session. Unknown/high-cost items are not
+transferable. If no candidate exists, the role-budget owner withdraws Monday's
+proposed appointment and retains every exercise on Saturday. The original
+one-meaningful-strength-exposure protection remains intact. This does not
+override the combat load collision authority or fight-week rules.
