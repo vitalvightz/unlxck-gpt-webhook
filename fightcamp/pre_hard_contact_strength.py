@@ -29,6 +29,7 @@ from .calendar_context import (
     week_scope,
 )
 from .normalization import clean_list, ordered_weekdays
+from .planner_context import get_planner_athlete_model
 
 
 PRE_HARD_CONTACT_REASON = "pre_hard_contact_managed_stress"
@@ -189,7 +190,7 @@ def apply_pre_hard_contact_strength_exposure_cap(
     """
     if not isinstance(weekly_role_map, dict):
         return weekly_role_map
-    athlete_model = athlete_model or {}
+    athlete_model = athlete_model or get_planner_athlete_model() or {}
 
     for ordinal, week in enumerate(weekly_role_map.get("weeks", []) or [], start=1):
         if not isinstance(week, dict):
