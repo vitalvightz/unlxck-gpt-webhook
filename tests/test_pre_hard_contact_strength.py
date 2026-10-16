@@ -624,3 +624,94 @@ def test_split_role_priority_respects_conditioning_and_fatigue() -> None:
     assert _non_spar_role_priority_rank(
         secondary, "GPP", True, False, athlete_model={**fresh, "fatigue": "high"}
     ) == 2
+
+
+def _composed_dense_week_without_secondary() -> tuple[dict, tuple[dict, ...]]:
+    """The early role-budget phase removed the secondary BEFORE composition."""
+    weekly = _secondary_power_geometry()
+    week = weekly["weeks"][0]
+    secondary = week["session_roles"].pop()
+    week["suppressed_roles"].append({
+        "category": "strength",
+        "role_key": secondary["role_key"],
+        "compression_reason_codes": ["spar_first_cap"],
+    })
+    slots = _transfer_slots()
+    _seed_main(weekly, *slots)
+    return weekly, slots
+
+
+def test_role_budget_can_reserve_pre_spar_receiver_after_secondary_was_dropped() -> None:
+    from fightcamp.stage2_role_map import reserve_dense_day_receiver
+
+    weekly, slots = _composed_dense_week_without_secondary()
+    athlete = {
+        "training_days": ["Monday", "Tuesday", "Thursday", "Saturday"],
+        "hard_sparring_days": ["Tuesday", "Thursday"],
+        "training_frequency": 4,
+        "primary_goal": "power",
+        "fatigue": "low",
+        "cut_severity_bucket": "none",
+    }
+    # The past compression decision no longer kills a possible transfer:
+    # composition made source density visible after budget selection.
+    reserve_dense_day_receiver(weekly, athlete)
+    assert len(weekly["weeks"][0]["session_roles"]) == 2
+    assert weekly["weeks"][0]["session_roles"][1]["scheduled_day_hint"] == "Monday"
+    apply_pre_hard_contact_strength_exposure_cap(weekly, athlete)
+    redistribute_pre_hard_power_from_main(
+        weekly_role_map=weekly, candidate_pools=_candidate_pools(*slots),
+        athlete_model=athlete,
+    )
+    main, monday = weekly["weeks"][0]["session_roles"]
+    assert len(main["selected_exercise_assignments"]) == 3
+    assert len(monday["selected_exercise_assignments"]) == 2
+    assert weekly["weeks"][0]["pre_hard_power_redistribution"]["status"] == "transferred"
+
+
+def test_post_composition_reservation_does_not_invent_capacity() -> None:
+    from fightcamp.stage2_role_map import reserve_dense_day_receiver
+
+    weekly, _ = _composed_dense_week_without_secondary()
+    athlete = {
+        "training_days": ["Monday", "Tuesday", "Thursday", "Saturday"],
+        "hard_sparring_days": ["Tuesday", "Thursday"],
+        "training_frequency": 1,
+        "primary_goal": "power",
+        "fatigue": "low",
+    }
+    reserve_dense_day_receiver(weekly, athlete)
+    assert len(weekly["weeks"][0]["session_roles"]) == 1
+    assert "dense_day_receiver_proposal" not in weekly["weeks"][0]
+
+
+def test_post_composition_reservation_requires_five_actual_selected_exercises() -> None:
+    from fightcamp.stage2_role_map import reserve_dense_day_receiver
+
+    weekly, _ = _composed_dense_week_without_secondary()
+    weekly["weeks"][0]["session_roles"][0]["selected_exercise_assignments"] = (
+        weekly["weeks"][0]["session_roles"][0]["selected_exercise_assignments"][:4]
+    )
+    athlete = {
+        "training_days": ["Monday", "Tuesday", "Thursday", "Saturday"],
+        "hard_sparring_days": ["Tuesday", "Thursday"],
+        "training_frequency": 4,
+        "fatigue": "low",
+    }
+    reserve_dense_day_receiver(weekly, athlete)
+    assert len(weekly["weeks"][0]["session_roles"]) == 1
+
+
+def test_post_composition_reservation_refuses_injury_management() -> None:
+    from fightcamp.stage2_role_map import reserve_dense_day_receiver
+
+    weekly, _ = _composed_dense_week_without_secondary()
+    athlete = {
+        "training_days": ["Monday", "Tuesday", "Thursday", "Saturday"],
+        "hard_sparring_days": ["Tuesday", "Thursday"],
+        "training_frequency": 4,
+        "fatigue": "low",
+        "injuries": ["Achilles pain"],
+    }
+    reserve_dense_day_receiver(weekly, athlete)
+    assert len(weekly["weeks"][0]["session_roles"]) == 1
