@@ -236,14 +236,17 @@ def test_two_hard_power_open_block_never_turns_a_microdose_into_full_strength():
                 or len(meaningful_strength) < 2
             ):
                 continue
-            # When Monday is an extra exposure alongside a separate main
-            # strength day, it must not inherit the full bank circuit.
-            assert len(session.get("exercises") or []) <= 1
+            # This is a true split, not a token one-exercise Monday session.
+            # Loaded / high-cost bank work must stay off the pre-spar day.
+            assert 2 <= len(session.get("exercises") or []) <= 3
             for exercise in session.get("exercises") or []:
                 dose = str(exercise.get("prescription") or "")
-                assert dose.startswith(("1 x 1", "1 x 2", "2 x 1", "2 x 2")), exercise
+                assert re.match(r"^[12] x [1-6]\\b", dose), exercise
     # This intake has an open Monday and usable low-cost power equipment. The
     # feature must produce an actual transfer, not merely pass when it does none.
-    assert moved_weeks >= 1, "No power workload transferred from main to Monday"
+    # A real transfer is required for this equipped, open-day replay; if its
+    # selected bank lacks two verified low-cost exercises, this test must be
+    # revisited with the eligibility evidence rather than inventing filler.
+    assert moved_weeks >= 1, "No safe two-exercise split was generated for the replay"
 
 
