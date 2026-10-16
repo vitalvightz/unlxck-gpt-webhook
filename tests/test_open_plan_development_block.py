@@ -218,7 +218,11 @@ def test_two_hard_power_open_block_never_turns_a_microdose_into_full_strength():
         ]
         assert meaningful_strength, week
         for session in meaningful_strength:
-            if session.get("weekday") != "Monday" or len(meaningful_strength) < 2:
+            if (
+                session.get("weekday") != "Monday"
+                or session.get("role_key") != "secondary_strength_day"
+                or len(meaningful_strength) < 2
+            ):
                 continue
             # When Monday is an extra exposure alongside a separate main
             # strength day, it must not inherit the full bank circuit.
