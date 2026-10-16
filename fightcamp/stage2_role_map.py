@@ -2572,6 +2572,24 @@ def _non_spar_role_priority_rank(
         if role_key in {"aerobic_support_day", "aerobic_base_day", "aerobic_coordination_day"}:
             return 3
         if category == "strength":
+            # A fresh athlete building power can use a second, reduced exposure
+            # in a hard-contact week. Give its existing role equal standing with
+            # aerobic work *inside* the appointment budget; the pre-contact
+            # owner and composer must still prove that a low-cost dose exists.
+            # Do not upgrade this role when readiness is already constrained.
+            if (
+                role_key == "secondary_strength_day"
+                and is_hard_spar_week
+                and str(athlete_model.get("primary_goal") or "").strip().lower() == "power"
+                and str(athlete_model.get("fatigue") or "").strip().lower() in {"", "low"}
+                and not is_meaningful_cut
+                and not athlete_model.get("weight_cut_risk")
+                and not athlete_model.get("injuries")
+                and not _active_injury_is_moderate_plus(athlete_model)
+                and not set(clean_list(athlete_model.get("readiness_flags") or []))
+                    .intersection({"high_fatigue", "injury_management", "aggressive_weight_cut"})
+            ):
+                return 3
             return 2
         if category == "recovery":
             return 1
