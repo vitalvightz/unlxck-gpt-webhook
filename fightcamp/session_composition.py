@@ -1523,6 +1523,8 @@ def compose_normal_strength_assignments(
             if primary_adaptation and not any(primary_adaptation in r["adaptations"] for r in records):
                 promoted = False
                 for slot in available_slots:
+                    if not slot.get("slot_id"):
+                        continue  # An alternate needs its original slot's stable identity.
                     for index, alternate in enumerate(slot.get("alternates") or []):
                         alternate_slot = {**slot, "slot_id": f"{slot['slot_id']}:alternate:{index}",
                                           "selected": alternate, "alternates": []}

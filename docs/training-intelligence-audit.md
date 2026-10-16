@@ -17,7 +17,7 @@ The confirmed failure crosses selection, composition, effective-dose authority a
 | Medium | `structured_plan_deterministic_fallback` left compound working doses and qualitative load instructions in disposable coaching cues. | Preserve unrepresented work in `execution_instructions`, using the existing unit parser. Contrast sequences retain both components. Numeric templates are unchanged. |
 | Medium | `_render_late_fight_stage1_draft` rendered a generic cue even for closed selected work. | Read the existing render authority when its body is resolved. Keep the fallback for open content. |
 | Medium | The validator misread compound rounds, separate locked support and `How:` annotations. | Reuse the compound parser and exact render authority. Changed rounds/intensity/support doses remain detectable. |
-| Medium | Bank cues could prescribe 3-5 sets after effective dosing prescribed two; model progression could invent an unsupported numerical increase. | Execution cues cannot introduce a second dose. Numerical advice must match the existing future-exposure authority; unsupported advice is removed without inventing another increment. |
+| Medium | Bank cues could prescribe 3-5 sets after effective dosing prescribed two. | Execution cues cannot introduce a second working dose. Existing model-written coaching preservation is unchanged; the broader numerical-progression issue remains a baseline finding. |
 
 ## Architectural simplification: evidence and limits
 
@@ -27,7 +27,7 @@ Net added lines are not evidence of simplification. Production code still grows.
 - Recomposition and restoration no longer carry different no-regression predicates. `_coverage_regresses` compares exact missing windows for recomposition, capacity trades and final acceptance. Gaining one week cannot conceal losing another. Evidence is collected once per verdict.
 - The gas-tank-only secondary exception is replaced by the existing shared weakness maps.
 - Effective-dose rejection no longer falls through to base-dose membership. Closed countdown rendering reads the shared render authority instead of a separate generic-body path.
-- Model wording and bank notes remain subordinate to resolved current work and already authorised future work. No new progression templates or automatic load increases were introduced.
+- Bank execution cues cannot introduce another working dose. The attempted model-progression recovery guard was withdrawn after it broke preservation of existing coach notes. No progression templates or automatic load increases were introduced.
 
 The capacity trade is **additional logic**, not simplification. It is retained because restoring the missing D-14 appointment otherwise raises the representative week above its requested five sessions. Inside the existing bounded repair transaction, one of at least two app-owned conditioning appointments may fund a priced candidate only while conditioning and all other selected-goal coverage survive. Coach roles, finished tails, compression and shared legality remain protected. The same realised-load governor verifies the trial.
 
@@ -46,7 +46,7 @@ No runtime module, planner manager, placement engine, collision doctrine or meta
 | Closed membership | `session_composition` | Retain selected stimuli within existing caps and neighbouring-load constraints. |
 | Effective dose / cost | `prescription_resolver`, countdown morph, load governor | Reject unpriced members; price trials before final acceptance. |
 | Coverage | `goal_preservation` | Final assignments, actual doses, exact windows, explicit causal deferral. |
-| Progression | `exercise_progression`; model authors wording | Reuse existing future-dose bounds; avoid invented numerical promises. |
+| Progression | `exercise_progression`; model authors wording | Existing recovery behaviour retained. Unsupported numerical model advice remains a separately reproduced Main finding. |
 | Finalizer / cards | Finalizer packet, render authority, programme reconciliation, structured converter | Preserve selected day, membership and executable dose. |
 | Nutrition / rehab / recovery / mindset | Existing module owners | Retain pressure signals, medical holds and compression. Their prescriptions are unchanged. |
 
@@ -101,7 +101,7 @@ Inspect full [before](../reports/training_intelligence_audit/mma_27d.before.md) 
 
 - **528 passed:** goal repair/windows, effective dosing, pre-hard support, phase boundaries, consecutive recovery, late windows, composition, architecture closure and placement ownership.
 - **243 passed:** 16 full intake-to-markdown/card scenarios, extra selection seeds, repeated seeded generation after another athlete, recorded production-response replay, source-dose/card fidelity, validator and execution-instruction checks.
-- **4 passed:** model progression retains supported numerical and qualitative guidance, rejects an unsupported load increase or extra rest reduction, and preserves current working quantities.
+- The four numerical-progression assertions from the earlier experiment are withdrawn with that runtime change. The original saved-note preservation assertion is retained and passes; the original unsupported-increment test remains unchanged and fails on untouched Main too.
 - Ruff, import compilation and whitespace checks passed. These totals overlap earlier runs and are not a sum of unique tests.
 - Goal/weakness delivery passed 96 tests in isolation earlier. A combined run returned 630 passed and one failing non-limiting-blister membership comparison; that comparison then passed alone. This order-dependent result remains unresolved and is not a clean full-suite result.
 - Historical metadata checks returned 336 passed, 14 failed and 13 errors. Frozen inventory expects 2,855 records; historical replay also rejects existing XP-source drift. Some source-freeze assertions conflict with intentional planner edits. Expected snapshots were not rewritten to hide failures.
@@ -119,3 +119,27 @@ python -m ruff check api fightcamp tests tools scripts/audit_training_intelligen
 ```
 
 The order-dependent test and unit-aware conditioning accounting need resolution before treating this as fully verified system-wide reliability. The evidence supports the targeted corrections and local consolidation; it does not establish that the whole generator is finished.
+
+
+## Follow-up verification: regressions against untouched Main
+
+The full comparison is in progress. Untouched remote Main is still `3dc625d8`.
+Its own completed CI runs provide direct baseline evidence. No merge is planned.
+
+Five PR-only failing cases identified so far were run unchanged against untouched
+Main: all five passed. Four still failed on the PR after its note guard had been
+removed; after the following corrections, those five original cases plus nine
+cross-owner contracts pass (**14 passed**):
+
+- Restore non-strength maintenance's original late-camp windows; the new weekly
+  normal-camp contract remains scoped to strength and development.
+- Keep supported secondary weaknesses in the existing `secondary` priority tier,
+  preserving the gas-tank contract while verifying the newly supported qualities.
+- Do not attempt an alternate substitution without the original slot's stable ID.
+- Withdraw the broad model-progression guard from saved-card recovery. Preserve
+  the original coach-note assertion instead of deleting or loosening it.
+
+The original CI snapshot and generated comparison artifacts describe `85447d55`;
+regeneration and the complete failed-test ledger are still pending. Existing Main
+failures are being separated from introduced regressions, including all web and
+PostgreSQL failures. Validator investigation is continuing before further changes.

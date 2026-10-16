@@ -76,7 +76,6 @@ _PRIORITY_REASON_CODES = {
     "primary": "primary_goal",
     "primary_weakness": "primary_weakness",
     "secondary": "secondary_goal",
-    "secondary_weakness": "secondary_weakness",
 }
 # Every official intake weak area resolves deliberately - never by falling off
 # the end of a lookup. `web/lib/intake-options.ts::WEAK_AREA_OPTIONS` is the
@@ -216,7 +215,7 @@ def selected_goals(athlete: dict, focus: dict | None = None) -> list[tuple[str, 
                   or _WEAKNESS_FLOOR_TARGETS.get(raw)
                   or _goal(_SELECTED_PRIORITY_TARGET_ALIASES.get(raw, raw)))
         if target in INTENTS and target not in {goal for goal, _ in selections}:
-            selections.append((target, "secondary_weakness"))
+            selections.append((target, "secondary"))
     weakness = _primary_weakness(athlete, focus)
     if not weakness or weakness == primary:
         # Merged: one exposure discharges the goal and the weakness together.
@@ -892,7 +891,7 @@ def _requirements(entry: dict, brief: dict) -> list[dict]:
     # Direct late-countdown plans retain their own maintenance window and
     # causal readiness evidence. Weekly reconciliation never reopens that tail.
     normal_camp = days > 13 and "late_fight_session_sequence" not in brief
-    cutoff = 14 if entry["state"] == "build" or normal_camp else (8 if entry["goal"] == "strength" else 2)
+    cutoff = 14 if entry["state"] == "build" or (normal_camp and entry["goal"] == "strength") else (8 if entry["goal"] == "strength" else 2)
     # An open development block is planned clear of any fight: its calendar
     # starts at the horizon, so nothing nearer than that is a plannable window.
     cutoff = max(cutoff, horizon_floor)

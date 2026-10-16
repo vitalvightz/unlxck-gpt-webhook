@@ -42,7 +42,7 @@ def test_secondary_physical_weaknesses_are_verified_once_at_their_priority():
     athlete = {"key_goals": ["power", "strength"], "primary_goal": "power",
                "weaknesses": ["power", "trunk_strength", "strength", "gas_tank"], "primary_weak_area": "power"}
     assert selected_goals(athlete) == [("power", "primary"), ("strength", "secondary"),
-                                      ("trunk_strength", "secondary_weakness"), ("conditioning", "secondary_weakness")]
+                                      ("trunk_strength", "secondary"), ("conditioning", "secondary")]
     duplicate = deepcopy(athlete)
     duplicate["weaknesses"] *= 2
     assert selected_goals(duplicate) == selected_goals(athlete)

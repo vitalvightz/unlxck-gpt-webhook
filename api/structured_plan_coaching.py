@@ -7,10 +7,10 @@ from fightcamp.calendar_context import role_d_day
 from fightcamp.exercise_instructions import recover_execution_instructions
 from fightcamp.coaching_copy import concise_coaching
 from fightcamp.exercise_coaching import (
-    exercise_coaching, has_measurable_step, is_profile_progression, is_profile_cue,
+    exercise_coaching, is_profile_progression, is_profile_cue,
 )
 from fightcamp.exercise_progression import (
-    authored_progression_matches, build_progression_context, numerical_guidance, occurrence_key,
+    build_progression_context, occurrence_key,
 )
 from fightcamp.structured_session_identity import deterministic_session_id, identity_tokens
 
@@ -40,15 +40,6 @@ def _recover_programming(block: dict, assignment: dict, context: dict | None, fi
     # than replacing them with a dose-difference or generic fallback algorithm.
     if context["current"]["blocked"] or is_profile_progression(str(block.get("progression_rule") or "")):
         block.pop("progression_rule", None)
-    elif has_measurable_step(str(block.get("progression_rule") or "")):
-        # Wording may come from the model; a numerical advance still belongs
-        # to the already planned future dose. Validate with the existing
-        # progression owner, without manufacturing a replacement increment.
-        current = context["current"]
-        guidance = numerical_guidance(context, current["dose"], current["prescription"])
-        target = (context.get("next") or {}).get("dose") or {}
-        if not authored_progression_matches(block["progression_rule"], guidance, target):
-            block.pop("progression_rule", None)
 
 
 def recover_selected_coaching(plan: dict[str, Any], brief: dict[str, Any],
