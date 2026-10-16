@@ -37,7 +37,7 @@ def _write(path, payload):
 def test_all_audited_entries_accounted_for_with_unique_source_scoped_ids(entries):
     baseline = audit(catalogue.DATA_DIR)
     assert tuple(catalogue.SOURCE_CLASSES) == SOURCES
-    assert len(entries) == baseline["total_entries"] == 2855
+    assert len(entries) == baseline["total_entries"] == 2858
     assert Counter(e["source"] for e in entries) == {
         bank["source"]: bank["entries"] for bank in baseline["banks"] if bank["entries"]
     }
@@ -145,7 +145,7 @@ def test_unknown_equipment_never_becomes_no_equipment(row, state):
 
 def test_classification_and_selection_boundaries(entries):
     assert Counter(e["content_class"] for e in entries) == {
-        "strength_power": 339, "conditioning": 588, "technical_coordination": 83,
+        "strength_power": 339, "conditioning": 591, "technical_coordination": 83,
         "rehabilitation": 1499, "care_instruction": 104,
         "tactical_educational": 183, "visualisation": 59,
     }
