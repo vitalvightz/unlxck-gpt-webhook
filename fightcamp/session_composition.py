@@ -25,7 +25,13 @@ from .late_fight_phase_eligibility import scheduled_phase_for_role
 from .calendar_context import role_d_day
 from .calendar_integrity import relocate_or_suppress_role_for_recovery
 from .combat_load_policy import BodyRegion, SessionStress, StressLevel
-from .prescription_resolver import athlete_dose_state, has_verified_low_cost
+from .prescription_resolver import (
+    _parse_sets_reps,
+    _role_kind,
+    athlete_dose_state,
+    has_verified_low_cost,
+)
+from .working_dose import working_dose
 from .strength_session_quality import classify_strength_item, strength_adaptation_relevance
 from .training_context import normalize_equipment_list
 from .config import (
@@ -1582,6 +1588,31 @@ def compose_normal_strength_assignments(
                 if isinstance(prior_policy, dict)
                 else None
             )
+            microdose_only = role.get("pre_hard_contact_microdose_only") is True
+            if microdose_only:
+                # This role survived the contact-week budget only as a low-fatigue
+                # power touch. Choose from the same selected bank slots, but never
+                # fill its cap with heavy lifts, high-impact jumps, missing-cost
+                # exercises or an unpriceable timed/contrast prescription.
+                # If no qualifying member exists, leave it empty for the
+                # existing unfilled-role suppression instead of inventing one.
+                records = [
+                    record for record in records
+                    if record.get("slot_group", "strength_slots") == "strength_slots"
+                    and "power" in record["adaptations"]
+                    and _role_kind(record["slot"]) == "power"
+                    and has_verified_low_cost(
+                        record["slot"],
+                        fields=("impact_cost", "landing_cost", "eccentric_cost", "soreness_risk"),
+                    )
+                    and all(
+                        value is not None and value >= 1
+                        for value in _parse_sets_reps(
+                            working_dose(str((record["slot"].get("selected") or {}).get("prescription") or ""))
+                        )
+                    )
+                ]
+                effective_cap = min(effective_cap, 1)
             selected_records, dropped = _select_bounded_records(
                 records,
                 role_key=role_key,
@@ -1605,6 +1636,7 @@ def compose_normal_strength_assignments(
                 "role_key": role_key,
                 "base_exercise_cap": base_cap,
                 "effective_exercise_cap": effective_cap,
+                "pre_hard_contact_microdose_only": microdose_only,
                 "standalone_minimum_applied": False,
                 # The day this membership was chosen for. Any later move must
                 # recompose the role; the final calendar is checked against it.
@@ -1637,7 +1669,8 @@ def compose_normal_strength_assignments(
                     "preserve_weakness": primary_weakness,
                     "week_ordinal": week_position + 1,
                     "standalone_eligible": (
-                        pressure <= _STANDALONE_STRENGTH_MAX_PRESSURE
+                        not microdose_only
+                        and pressure <= _STANDALONE_STRENGTH_MAX_PRESSURE
                         and phase in {"GPP", "SPP"}
                         and role_key in _STANDALONE_STRENGTH_MINIMUM_ROLE_KEYS
                     ),
