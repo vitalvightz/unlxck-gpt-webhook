@@ -614,12 +614,12 @@ def test_no_split_when_main_not_dense() -> None:
     assert len(weekly["weeks"][0]["session_roles"][0]["selected_exercise_assignments"]) == 4
 
 
-def test_split_role_priority_respects_conditioning_and_fatigue() -> None:
+def test_split_does_not_promote_unverified_secondary_before_composition() -> None:
     from fightcamp.stage2_role_map import _non_spar_role_priority_rank
 
     secondary = {"category": "strength", "role_key": "secondary_strength_day"}
     fresh = {"primary_goal": "strength", "fatigue": "low", "injuries": []}
-    assert _non_spar_role_priority_rank(secondary, "GPP", True, False, athlete_model=fresh) == 3
+    assert _non_spar_role_priority_rank(secondary, "GPP", True, False, athlete_model=fresh) == 2
     assert _non_spar_role_priority_rank(secondary, "GPP", False, False, athlete_model=fresh) == 2
     assert _non_spar_role_priority_rank(
         secondary, "GPP", True, False, athlete_model={**fresh, "fatigue": "high"}
