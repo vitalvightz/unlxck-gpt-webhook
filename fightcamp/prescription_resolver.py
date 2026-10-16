@@ -780,14 +780,31 @@ def resolve_strength_slot_prescription(
 
     semantic_kind = _role_kind(slot)
     kind = force_kind or semantic_kind
-    base_sets, base_reps = _parse_sets_reps(base_prescription)
+    microdose_only = role.get("pre_hard_contact_microdose_only") is True
+    priced_base = working_dose(base_prescription) if microdose_only else base_prescription
+    base_sets, base_reps = _parse_sets_reps(priced_base)
     sets, reps, loaded = _effective_counts(
         base_sets=base_sets,
         base_reps=base_reps,
         role_kind=kind,
         strength_cap=cap,
-        base_prescription=base_prescription,
+        base_prescription=priced_base,
     )
+    if microdose_only:
+        # An unpriceable range or non-power member cannot fall back to its
+        # unrestricted bank prescription when Tuesday sparring is protected.
+        if kind != "power" or not isinstance(sets, int) or not isinstance(reps, int):
+            return {
+                "base_prescription": base_prescription,
+                "effective_prescription": "",
+                "dose_authority": "scheduled_countdown_overlay",
+                "dose_adjustment_reason": "pre_hard_contact_unpriceable_microdose",
+                "effective_loaded": False,
+                "strength_dose_cap": dict(cap),
+            }
+        sets = min(sets, 2)
+        reps = min(reps, 2)
+        loaded = False
 
     # Readiness / cut / injury state can only pull the dose down further.
     reduction = _athlete_dose_reduction(athlete_state)
@@ -801,7 +818,7 @@ def resolve_strength_slot_prescription(
 
     rpe_cap = str(role.get("rpe_cap") or "").strip() or None
     effective = _format_effective_prescription(
-        base_prescription=base_prescription,
+        base_prescription=priced_base,
         sets=sets,
         reps=reps,
         rpe_cap=rpe_cap,
