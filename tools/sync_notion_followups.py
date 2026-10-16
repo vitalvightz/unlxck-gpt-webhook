@@ -9,7 +9,7 @@ import os
 import random
 import sys
 import time
-from datetime import date, datetime
+from datetime import datetime
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 from zoneinfo import ZoneInfo
