@@ -2708,6 +2708,7 @@ def reserve_dense_day_receiver(
                 "countdown_label": f"D-{d_day}",
                 "selected_exercise_assignments": [],
                 "dense_day_receiver_provisional": True,
+                "dense_day_receiver_token": f"{week.get('week_index')}:{d_day}",
             }
             # Shared policy owns the collision veto; the day-before-hard
             # DEPRIORITIZE tier remains conditional on the actual low-cost
