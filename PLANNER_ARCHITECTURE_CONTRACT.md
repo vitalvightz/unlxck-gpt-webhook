@@ -305,6 +305,16 @@ it may re-add a role the planner itself retained as a repair candidate, and it
 re-runs the morph and the governor on a trial copy before committing, so the
 finished calendar is still governor-verified.
 
+The October training-intelligence correction keeps that exception inside its
+existing owner. Strength maintenance and build coverage use eligible normal-camp
+calendar weeks; multiple opening-week lifts cannot pay for a later week. All
+bounded trial paths share `goal_preservation._coverage_regresses`, comparing
+actual missing windows rather than counts. A trial may exchange one redundant
+app-owned conditioning appointment for a retained goal candidate only while
+keeping conditioning present and preserving every other selected goal. Coach,
+tail, compression and shared legality authority remain higher priority. This is
+a bounded coverage repair, not a second general role allocator.
+
 Changes must be reviewed against this whole chain, not only `stage2_role_map.py`.
 
 ## 4.1 Open (undated) plans
@@ -371,9 +381,12 @@ bounded to the same discipline: it may stamp `scheduled_day_hint` /
 `scheduled_countdown_label` / `session_index` on a role the planner itself
 retained in that week's `goal_repair_candidates`, only on a declared training day
 at D-14 or earlier that the shared legality policy allows, only within the
-original category budget and the athlete's session cap, and only after a trial
+original category budget, with appointment counts checked against the athlete's
+requested frequency target, and only after a trial
 copy re-runs the morph, the governor, composition and dose resolution and proves
-no other stimulus was lost. It never invents a role, a day, a dose or capacity.
+no other selected-goal coverage was lost. The frequency owner retains its
+existing soft-target policy: compatible work above the target is explicitly
+reported. It never invents a role, a day or a dose.
 
 Renderers must be read-only.
 

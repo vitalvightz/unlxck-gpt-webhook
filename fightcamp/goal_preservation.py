@@ -904,7 +904,7 @@ def _requirements(entry: dict, brief: dict) -> list[dict]:
     # exposure from a sliver that can be a single day (a 21-day camp yields a
     # D-21..D-21 window). The earliest window absorbs the remainder instead, so
     # every requirement covers a real development week.
-    count = max(1, (span + width - 1) // width if entry["goal"] == "strength" else span // width)
+    count = max(1, span // width)
     windows = [
         {
             "min_d_day": cutoff + index * width,
@@ -1172,6 +1172,21 @@ def _attach_goal_microdose(brief: dict, ordinal: int, entry: dict) -> dict | Non
             "reason_codes": ["no_compatible_existing_session"]}
 
 
+def _coverage_regresses(before: dict, after: dict) -> bool:
+    """One no-regression verdict for every bounded goal-repair trial.
+
+    Compare the actual missing windows, not just their count: gaining one week
+    cannot pay for losing a different week. Read each trial's evidence once.
+    """
+    before_evidence, after_evidence = collect_goal_evidence(before), collect_goal_evidence(after)
+    for goal in classify_goal_preservation(_athlete(before), before.get("priority_focus")):
+        previous = {tuple(sorted(w.items())) for w in _coverage(goal, before, before_evidence)[1]}
+        current = {tuple(sorted(w.items())) for w in _coverage(goal, after, after_evidence)[1]}
+        if current - previous:
+            return True
+    return False
+
+
 def _recompose_existing_strength_for_goal(brief: dict, entry: dict) -> dict | None:
     """Try an existing dated strength appointment before inventing a second one.
 
@@ -1247,10 +1262,7 @@ def _recompose_existing_strength_for_goal(brief: dict, entry: dict) -> dict | No
             _, still_missing = _coverage(entry, trial, trial_evidence)
             if len(still_missing) >= len(missing):
                 continue
-            previous_evidence = collect_goal_evidence(brief)
-            if any(len(_coverage(goal, trial, trial_evidence)[1]) >
-                   len(_coverage(goal, brief, previous_evidence)[1])
-                   for goal in classify_goal_preservation(_athlete(brief), brief.get("priority_focus"))):
+            if _coverage_regresses(brief, trial):
                 continue
             brief["weekly_role_map"] = trial_map
             return {"week_index": week.get("week_index"), "d_day": day,
@@ -1454,16 +1466,12 @@ def _restore_goal_roles(brief: dict, entry: dict) -> list[dict]:
                         if r.get("category") == "conditioning" and not r.get("late_fight_tail_owned")
                         and not r.get("coach_owned") and not r.get("declared_combat_ownership")
                         and not (r.get("governance") or {}).get("hard_suppression_reasons")]
-                    previous = collect_goal_evidence(brief)
                     if len(conditioning) > 1:
                         for funding_role in reversed(conditioning):
                             funding_index = trial_week["session_roles"].index(funding_role)
                             trial_week["session_roles"].remove(funding_role)
-                            trial_evidence = collect_goal_evidence(trial)
                             if (not appointment_budget_exceeded({"weeks": [trial_week]}, frequency)
-                                    and not any(len(_coverage(g, trial, trial_evidence)[1]) > len(_coverage(g, brief, previous)[1])
-                                                for g in classify_goal_preservation(_athlete(brief), brief.get("priority_focus"))
-                                                if g["goal"] != entry["goal"])):
+                                    and not _coverage_regresses(brief, trial)):
                                 traded_role = funding_role
                                 break
                             trial_week["session_roles"].insert(funding_index, funding_role)
@@ -1515,9 +1523,7 @@ def _restore_goal_roles(brief: dict, entry: dict) -> list[dict]:
                     audit.append({"week_index": week.get("week_index"), "d_day": final_day,
                                   "result": "trial_rejected", "reason_codes": ["no_coverage_gain"]})
                     continue
-                if any(set(tuple(sorted(w.items())) for w in _coverage(goal, trial, collect_goal_evidence(trial))[1])
-                       - set(tuple(sorted(w.items())) for w in _coverage(goal, brief, collect_goal_evidence(brief))[1])
-                       for goal in classify_goal_preservation(_athlete(brief), brief.get("priority_focus"))):
+                if _coverage_regresses(brief, trial):
                     audit.append({"week_index": week.get("week_index"), "d_day": final_day,
                                   "result": "trial_rejected", "reason_codes": ["selected_goal_coverage_regressed"]})
                     continue

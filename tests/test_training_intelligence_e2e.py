@@ -59,3 +59,9 @@ def test_strength_continuity_and_capacity_survive_different_selection_seeds(seed
     assert {e["week_index"] for e in strength["evidence"]} == {1, 2}
     week = result["brief"]["weekly_role_map"]["weeks"][1]
     assert not appointment_budget_exceeded({"weeks": [week]}, 5)
+
+
+def test_another_athletes_generation_does_not_change_a_seeded_programme():
+    before = generate_scenario("mma_27d")["summary"]["weeks"]
+    generate_scenario("boxing", seed=17)
+    assert generate_scenario("mma_27d")["summary"]["weeks"] == before

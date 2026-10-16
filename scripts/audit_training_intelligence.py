@@ -10,6 +10,7 @@ import argparse
 import datetime as dt
 import json
 import logging
+from collections import Counter
 from pathlib import Path
 from unittest.mock import patch
 
@@ -20,10 +21,13 @@ from fightcamp.goal_preservation import collect_goal_evidence, validate_goal_pre
 from fightcamp.input_parsing import PlanInput
 from fightcamp.plan_pipeline_blocks import generate_plan_blocks
 from fightcamp.plan_pipeline_rendering import build_stage2_outputs, render_plan_bundle
-from fightcamp.plan_pipeline_runtime import build_runtime_context
+from fightcamp.plan_pipeline_runtime import build_runtime_context, prime_plan_banks
 from fightcamp.programme_fidelity import reconcile_authoritative_programme, programme_fidelity_findings
 from fightcamp.stage2_finalizer_packet import build_stage2_finalizer_packet
 from fightcamp.stage2_validator import validate_stage2_output
+from fightcamp.strength import get_exercise_bank, _classify_prescription_type
+from fightcamp.strength_session_quality import classify_strength_item, strength_adaptation_relevance
+from fightcamp.training_catalogue import build_catalogue
 
 
 NOW = dt.datetime(2026, 10, 16, 12)
@@ -68,6 +72,7 @@ def generate_scenario(name: str, *, seed: int = 1) -> dict:
     days = overrides.pop("days", 27)
     fields = {**BASE_FIELDS, **overrides, "When is your next fight?": (NOW.date() + dt.timedelta(days=days)).isoformat()}
     logger = logging.getLogger(__name__)
+    prime_plan_banks(logger=logger)
     with patch("fightcamp.input_parsing._utc_now", return_value=NOW):
         plan_input = PlanInput.from_payload({"data": {"fields": [{"label": k, "value": v} for k, v in fields.items()]}})
     assert plan_input.days_until_fight == days
@@ -117,6 +122,22 @@ def main():
     args = parser.parse_args()
     logging.basicConfig(level=logging.ERROR)
     args.output.mkdir(parents=True, exist_ok=True)
+    catalogue, strength = build_catalogue(), get_exercise_bank()
+    library = {
+        "records": len(catalogue),
+        "by_source": dict(Counter(r["source"] for r in catalogue)),
+        "by_class": dict(Counter(r["content_class"] for r in catalogue)),
+        "source_hashes": {r["source"]: r["source_sha256"] for r in catalogue},
+        "strength_records": len(strength),
+        "strength_quality_classes": dict(Counter(classify_strength_item(e)["quality_class"] for e in strength)),
+        "strength_prescription_types": dict(Counter(_classify_prescription_type(e) for e in strength)),
+        "capability_without_strength_dose": [
+            {"name": e["name"], "prescription_type": _classify_prescription_type(e)} for e in strength
+            if "strength" in strength_adaptation_relevance(e)
+            and "strength" not in strength_adaptation_relevance(e, prescription_type=_classify_prescription_type(e))
+        ],
+    }
+    (args.output / "library.json").write_text(json.dumps(library, indent=2), encoding="utf-8")
     summaries = []
     for name in args.scenario or SCENARIOS:
         result = generate_scenario(name, seed=args.seed)

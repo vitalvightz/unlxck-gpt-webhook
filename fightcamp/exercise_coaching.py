@@ -162,6 +162,11 @@ def exercise_coaching(
                     fields[key].append(sentence)
     if assignment.get("slot_group") not in {"strength_slots", "conditioning_slots", "priority_microdose"}:
         return concise_coaching(fields)
+    # Bank notes describe execution, not a second sets/reps/load authority.
+    # An old "3-5 sets" cue must not contradict a resolved two-set session.
+    # Keep movement cues and safety instructions; the existing profile below
+    # supplies execution guidance when a dose-only note was all the bank had.
+    fields["coaching_cues"] = [cue for cue in fields["coaching_cues"] if not has_measurable_step(cue)]
     phase = str(phase or role.get("phase") or assignment.get("source_phase") or "").upper()
     constrained = progression_prohibited(role, assignment, phase, d_day, athlete)
     authored_progress = fields.pop("progression_rule", None)

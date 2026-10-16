@@ -5,9 +5,13 @@ import pytest
 
 from api.structured_plan_deterministic_fallback import _source_block, _preserve_unrepresented_dose
 from fightcamp.goal_preservation import _requirements, selected_goals
+from fightcamp.exercise_coaching import exercise_coaching
 from fightcamp.strength_session_quality import strength_adaptation_relevance
 from fightcamp.strength import get_exercise_bank, _classify_prescription_type
-from fightcamp.stage2_validator import _goal_witness_dose_matches, _late_camp_effective_prescription_warnings
+from fightcamp.stage2_validator import (
+    _goal_witness_dose_matches, _late_camp_effective_prescription_warnings,
+    _late_fight_line_is_exercise_like,
+)
 
 
 def _calendar_brief():
@@ -58,8 +62,9 @@ def test_compound_working_dose_survives_both_card_conversion_paths():
     source = _source_block(["- Heavy RDL → Broad Jump: " + dose, "  Cue: Stick the landing."], "Heavy RDL → Broad Jump")
     assert source is not None
     assert dose.rstrip(".") in source["execution_instructions"]
-    assert dose in _preserve_unrepresented_dose(dose, {"load": {"value": 85}}, "Stick the landing.")
-    assert _preserve_unrepresented_dose("3 x 3 @ RPE 7", {"sets": 3, "reps": 3}, "Brace.") == "Brace."
+    assert dose in _preserve_unrepresented_dose(dose, "Stick the landing.")
+    assert _preserve_unrepresented_dose("3 sets x 3 reps; RPE 7", "Brace.") == "Brace."
+    assert "light sled" in _preserve_unrepresented_dose("6 x 5 sec with light sled; rest 90 sec", None)
     witness = {"sets": 3, "reps": 2, "minimum_load_percent": 85, "quality_class": "anchor_power"}
     assert _goal_witness_dose_matches(witness, dose)
     assert not _goal_witness_dose_matches(witness, dose.replace("3 rounds", "2 rounds"))
@@ -83,3 +88,18 @@ def test_separate_locked_support_is_not_an_extra_strength_member():
     changed = rendered.replace("Cage Circle: 2 x", "Cage Circle: 4 x")
     assert any("exercise_allow_list" in e["violation_dimensions"]
                for e in _late_camp_effective_prescription_warnings(brief, changed))
+
+
+def test_execution_annotation_is_not_an_additional_selected_exercise():
+    assert not _late_fight_line_is_exercise_like("How: One maximal-intent first step, then reset.")
+    assert _late_fight_line_is_exercise_like("- Extra jump squat: 3 x 5 reps")
+
+
+def test_bank_cue_cannot_reintroduce_a_second_working_dose():
+    coaching = exercise_coaching({"name": "Jump Squat", "slot_group": "strength_slots",
+        "effective_prescription": "2 x 2 at max speed; rest 120s",
+        "coaching_notes": "Use bodyweight for 3-5 sets of 3 reps. Stop if landings become unstable."},
+        {"role_key": "strength_touch_day"}, phase="SPP", d_day=10)
+    assert coaching["coaching_cues"]
+    assert not any("3-5" in cue for cue in coaching["coaching_cues"])
+    assert any("landings become unstable" in rule for rule in coaching["stop_rules"])

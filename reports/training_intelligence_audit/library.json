@@ -1,0 +1,77 @@
+{
+  "records": 2858,
+  "by_source": {
+    "conditioning_bank.json": 239,
+    "coordination/grappling.json": 7,
+    "coordination/kicks.json": 12,
+    "coordination/mma_transitions.json": 9,
+    "coordination/striking.json": 18,
+    "coordination/universal.json": 12,
+    "exercise_bank.json": 339,
+    "fight_visualization_bank.json": 59,
+    "rehab_bank.json": 1603,
+    "style_conditioning_bank.json": 277,
+    "style_taper_conditioning.json": 75,
+    "tactical_watch_bank.json": 183,
+    "technical_footwork_bank.json": 25
+  },
+  "by_class": {
+    "conditioning": 591,
+    "technical_coordination": 83,
+    "strength_power": 339,
+    "visualisation": 59,
+    "rehabilitation": 1499,
+    "care_instruction": 104,
+    "tactical_educational": 183
+  },
+  "source_hashes": {
+    "conditioning_bank.json": "96f858deb48bdce89c9154bc86c9faa1ccb0719f6d6d5a99bbe380784c616989",
+    "coordination/grappling.json": "655bfeb697845a93a8aa51353bc121a6fc6d8a07154e452eb1478d669c44964c",
+    "coordination/kicks.json": "ab258da761323d7a08be1aabeab75692d16ff289df90d1db8c453d3c27196399",
+    "coordination/mma_transitions.json": "3a8767a6083e1ae51f108dfaab85c4bcc798c9f090002a673746a2029a5e5edc",
+    "coordination/striking.json": "f658fa3113edf4bbe3cfbdec9a50788c5c908b4225f9767e0d15daf809f3bbff",
+    "coordination/universal.json": "7dace5870c80d79d724cd4360eded38bdb03f6c42cd9994768ae3cdaa98afeb2",
+    "exercise_bank.json": "84dd7c1fb7d68513896ccbc14c7cc3d0b8ff68751ae837d4611f9e803a8a36fa",
+    "fight_visualization_bank.json": "74ab5307eb3fff7df4e4b00cc68a8a7477191e542badf5aaad44bc2983bbea64",
+    "rehab_bank.json": "163436f5df81320746fad53ab66d20712a44d8f0a764ad70ff9137f77e9c89bf",
+    "style_conditioning_bank.json": "6b99234bdbbd44d18bc84a0200346d1105fcba183d94dffd4456ea58b2e97b97",
+    "style_taper_conditioning.json": "5b9aa72f2da66ba02424f847f786bb2d758c16b47ae422f64a0a98ff9bd62a4c",
+    "tactical_watch_bank.json": "a8acad21e369f7ef9f0d5eb706e5c177e6e825287cf197d6f2f05d35fb714be6",
+    "technical_footwork_bank.json": "ea8fdb6eebc9649bc63c3b03562023b43d1ffeb144be18bbcc9617a372d8cba3"
+  },
+  "strength_records": 339,
+  "strength_quality_classes": {
+    "anchor_loaded": 35,
+    "anchor_power": 86,
+    "anchor_force_isometric": 36,
+    "rehab_support": 78,
+    "support_accessory": 68,
+    "support_isometric": 36
+  },
+  "strength_prescription_types": {
+    "barbell": 9,
+    "general": 92,
+    "ballistic": 94,
+    "contrast": 5,
+    "isometric": 43,
+    "carry": 24,
+    "core": 27,
+    "support_isometric": 11,
+    "tabata": 2,
+    "combat_round": 2,
+    "timed_interval": 6,
+    "max_isometric": 22,
+    "speed_sled": 1,
+    "quality_cycle": 1
+  },
+  "capability_without_strength_dose": [
+    {
+      "name": "Single-Leg Romanian Deadlift Hold",
+      "prescription_type": "support_isometric"
+    },
+    {
+      "name": "Barbell Thruster",
+      "prescription_type": "ballistic"
+    }
+  ]
+}

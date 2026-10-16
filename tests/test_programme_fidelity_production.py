@@ -211,7 +211,7 @@ def test_interactive_fallback_preserves_calendar_doses_and_coaching(production_r
         assert thruster["sets"] == 4 and thruster["reps"] == 2 and thruster["rest"]["value"] == 120
     for sled in sleds:
         assert sled["sets"] == 6 and sled["duration"] == {"value": 5, "unit": "seconds"}
-        assert sled["rest"]["value"] == 90 and any("light sled" in cue for cue in sled["coaching_cues"])
+        assert sled["rest"]["value"] == 90 and "light sled" in sled["execution_instructions"]
     # A saved card must expose the same interactive values as reconstruction.
     stored = resolve_effective_structured_plan({"structured_plan": card, "planning_brief": brief,
                                                 "plan_text": final["final_plan_text"]})

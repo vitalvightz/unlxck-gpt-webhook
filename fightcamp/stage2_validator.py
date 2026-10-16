@@ -353,7 +353,7 @@ _LATE_FIGHT_ANNOTATION_LABEL = re.compile(
     # (e.g. "Progression/regression/stop:", "Regression/stop:", "Stop/regress -").
     r"(?:progress(?:ion)?s?|regress(?:ion)?s?|stop)"
     r"(?:\s*[\/\-]\s*(?:progress(?:ion)?s?|regress(?:ion)?s?|stop))*|"
-    r"setup|set[\s-]?up|tempo|load(?:ing)?|dose|dosage|rest|format|"
+    r"how|setup|set[\s-]?up|tempo|load(?:ing)?|dose|dosage|rest|format|"
     r"equipment|targets?|scaling|adjust(?:ment)s?|modif(?:y|ication)s?"
     # Tolerate a parenthetical qualifier before the label punctuation, e.g.
     # "Regression/stop (D-13+ rule — regressions/stop only): ...".
