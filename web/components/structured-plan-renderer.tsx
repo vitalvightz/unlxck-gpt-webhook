@@ -586,12 +586,21 @@ export function BlockCard({
   );
 }
 
-/** Collapsed-row stat line: the headline metric plus effort, e.g. "3 × 8–12 · RPE 7". */
+/** One compact exercise-list stat line, not a full prescription paragraph. */
 function exerciseRowSummary(
   block: StructuredBlock,
   prescription: { metrics: { value: string }[]; load: string | null; effort: string | null },
 ): string | null {
-  if (block.prescription_text) return block.prescription_text;
+  if (block.prescription_text) {
+    const full = block.prescription_text.trim();
+    if (full.length <= 72) return full;
+    const duration = full.match(/\b\d+(?:\.\d+)?\s*(?:minutes?|mins?|seconds?|secs?)\b/i)?.[0];
+    const effort = full.match(/\bRPE\s*\d+(?:\.\d+)?\b/i)?.[0];
+    // The full instructions remain in the expanded card; never use a whole
+    // paragraph as a tiny exercise-list subtitle.
+    return [duration ? compactTimeUnits(duration) : null, effort]
+      .filter(Boolean).join(" · ") || "See prescription";
+  }
   const headline =
     prescription.metrics[0]?.value || getBlockExecutionDisplay(block).prescription
     || prescription.load || formatMeasured(block.duration);
