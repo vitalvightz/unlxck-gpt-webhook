@@ -451,8 +451,8 @@ def _secondary_power_geometry() -> dict:
         "calendar_days": _calendar(
             ("Monday", 23), ("Tuesday", 22), ("Thursday", 20), ("Saturday", 18)
         ),
-        "hard_sparring_plan": [_hard("Tuesday")],
-        "effective_hard_sparring_days": ["Tuesday"],
+        "hard_sparring_plan": [_hard("Tuesday"), _hard("Thursday")],
+        "effective_hard_sparring_days": ["Tuesday", "Thursday"],
         "session_roles": [primary, secondary],
         "suppressed_roles": [],
     }
