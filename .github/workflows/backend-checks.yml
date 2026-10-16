@@ -79,6 +79,11 @@ jobs:
       - name: Run runtime schema checker tests
         run: pytest tests/test_supabase_runtime_schema_checker.py tests/test_supabase_schema.py
 
+      # The public Library and Edit/Swap share this strict source catalogue.
+      # Fail the fast backend check before stale manifest bindings can ship.
+      - name: Load the exact training catalogue used by Library and Edit/Swap
+        run: python -c "from api.services.training_library import cache; print('Catalogue entries:', len(cache.get().records))"
+
       # The service-role key is scoped to THIS step's env so the install/test
       # steps above never see it. The gate only permits missing credentials on
       # PRs or non-Main/main branch runs; Main/main pushes must run the live
