@@ -747,6 +747,12 @@ def _pre_hard_transfer_eligible(slot: dict[str, Any]) -> bool:
         return False
     if tags & {"mech_cns_high", "mech_systemic_fatigue", "mech_axial_heavy"}:
         return False
+    # Mechanical tags alone are not an exhaustive load classification.
+    # The bank's explicit CNS, systemic, contact and movement-cost fields are
+    # authoritative even if a corresponding mech_* tag is absent.
+    if any(_cost_value(slot, field) in {"high", "very_high", "very high", "extreme"}
+           for field in ("cns_load", "movement_cost", "contact_cost", "lactate_load")):
+        return False
     # Landing or impact must be low/none; moderate soreness/eccentric cost can
     # survive a SMALL, dose-limited transfer. High or unverified costs cannot.
     costs = {field: _cost_value(slot, field) for field in _PRE_HARD_COST_FIELDS}
@@ -828,7 +834,10 @@ def resolve_strength_slot_prescription(
     semantic_kind = _role_kind(slot)
     kind = force_kind or semantic_kind
     microdose_only = role.get("pre_hard_contact_microdose_only") is True
-    priced_base = working_dose(base_prescription) if microdose_only else base_prescription
+    priced_base = (
+        working_dose(str(slot.get("redistributed_dose_ceiling") or base_prescription))
+        if microdose_only else base_prescription
+    )
     base_sets, base_reps = _parse_sets_reps(priced_base)
     sets, reps, loaded = _effective_counts(
         base_sets=base_sets,
@@ -971,6 +980,13 @@ def _strength_role_slot_groups(
                     if match is not None:
                         if assignment.get("primer_complement"):
                             match = {**match, "primer_complement": True}
+                        # Composition approved a reduce-only rep variant for
+                        # this exact transferred exercise. Carry the bounded
+                        # selection through the existing dose owner rather
+                        # than reparsing an ambiguous bank text (e.g.
+                        # "2-4 sets x 6-10 reps or 20-40s tempo").
+                        if role.get("pre_hard_contact_microdose_only") is True and assignment.get("redistributed_dose_ceiling"):
+                            match = {**match, "redistributed_dose_ceiling": assignment["redistributed_dose_ceiling"]}
                         owned_slots.append(match)
             else:
                 # Candidate grouping is retained for diagnostics only.  It must
