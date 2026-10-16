@@ -39,6 +39,11 @@ _VARIANTS = {
         "support_work_days": ["Friday"],
         "training_availability": ["Monday", "Tuesday", "Thursday", "Friday", "Saturday"],
         "weekly_training_frequency": 6,
+        "equipment_access": [
+            "medicine_ball", "trap_bar", "landmine", "barbell", "dumbbells",
+            "bands", "cable", "sled", "heavy_bag", "assault_bike", "box",
+            "weight_vest",
+        ],
     },
     "three_days": {"training_availability": ["Monday", "Wednesday", "Friday"], "weekly_training_frequency": 3,
                    "hard_sparring_days": ["Wednesday"], "support_work_days": []},
@@ -204,6 +209,7 @@ def test_two_hard_power_open_block_never_turns_a_microdose_into_full_strength():
     """Production-like MMA schedule across all four weeks, no model calls."""
     spec = _spec("mma_two_hard_power")
     assert len(spec["weekly_session_plan"]["weeks"]) == 4
+    moved_weeks = 0
     for week in spec["weekly_session_plan"]["weeks"]:
         sessions = week["sessions"]
         assert {"Tuesday", "Thursday"} <= {
@@ -217,6 +223,12 @@ def test_two_hard_power_open_block_never_turns_a_microdose_into_full_strength():
             item for item in sessions if item.get("category") == "strength"
         ]
         assert meaningful_strength, week
+        if any(
+            session.get("weekday") == "Monday"
+            and session.get("role_key") == "secondary_strength_day"
+            for session in meaningful_strength
+        ):
+            moved_weeks += 1
         for session in meaningful_strength:
             if (
                 session.get("weekday") != "Monday"
@@ -230,3 +242,8 @@ def test_two_hard_power_open_block_never_turns_a_microdose_into_full_strength():
             for exercise in session.get("exercises") or []:
                 dose = str(exercise.get("prescription") or "")
                 assert dose.startswith(("1 x 1", "1 x 2", "2 x 1", "2 x 2")), exercise
+    # This intake has an open Monday and usable low-cost power equipment. The
+    # feature must produce an actual transfer, not merely pass when it does none.
+    assert moved_weeks >= 1, "No power workload transferred from main to Monday"
+
+
