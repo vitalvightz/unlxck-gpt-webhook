@@ -2721,6 +2721,10 @@ def reserve_dense_day_receiver(
             if decision.directive is PlacementDirective.FORBID:
                 continue
             roles.append(receiver)
+            week["intentionally_unused_days"] = [
+                item for item in week.get("intentionally_unused_days") or []
+                if str(item.get("day") or "").strip().lower() != day.lower()
+            ]
             week["dense_day_receiver_proposal"] = {
                 "source_day": donor.get("scheduled_day_hint"),
                 "target_day": day,
