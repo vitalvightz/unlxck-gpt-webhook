@@ -3056,6 +3056,17 @@ def redistribute_pre_hard_power_from_main(
                     kind = _role_kind(slot)
                     dose = working_dose(str(selected.get("prescription") or ""))
                     sets, reps = _parse_sets_reps(dose)
+                    if sets is None or reps is None:
+                        # An authorised rep alternative written as "2 sets x
+                        # 6 reps or 20s tempo" must not be mistaken for an
+                        # unpriceable exercise. This selects the bank's rep
+                        # variant; it does not invent a new dose.
+                        written = re.search(
+                            r"\b(\d+)\s+sets?\s*[xX×]\s*(\d+)\s+reps?\b",
+                            dose, re.I,
+                        )
+                        if written:
+                            sets, reps = int(written[1]), int(written[2])
                     if not isinstance(sets, int) or not isinstance(reps, int):
                         continue
                     if sets < 1 or reps < 1:
