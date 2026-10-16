@@ -154,7 +154,7 @@ def _refresh_unused_days(week: dict[str, Any], athlete_model: dict[str, Any]) ->
 
 
 def _power_microdose_eligible(athlete_model: dict[str, Any]) -> bool:
-    """A second pre-contact exposure may only be a verified low-cost power touch.
+    """A split receiver is eligible only under unconstrained contact-week readiness.
 
     This checks athlete context, not exercise cost: composition and prescription
     resolution are the existing authorities for selected membership and doses.
@@ -164,8 +164,7 @@ def _power_microdose_eligible(athlete_model: dict[str, Any]) -> bool:
     readiness = {str(flag).strip().lower() for flag in clean_list(athlete_model.get("readiness_flags"))}
     cut_bucket = str(athlete_model.get("cut_severity_bucket") or "none").strip().lower()
     return (
-        str(athlete_model.get("primary_goal") or "").strip().lower() == "power"
-        and fatigue in {"", "low"}
+        fatigue in {"", "low"}
         and cut_bucket in {"none", "low"}
         and not athlete_model.get("weight_cut_risk")
         and not athlete_model.get("injuries")
