@@ -26,4 +26,8 @@ output/playwright/
 # Generated artifacts (rebuild with tools/split_rehab_bank.py)
 data/rehab_bank_split.json
 
+# Read-only reports regenerated with tools/audit_rehab_bank_rationalisation.py
+docs/rehab-bank-rationalisation.json
+docs/rehab-bank-duplicate-clusters.json
+
 supabase/.temp/

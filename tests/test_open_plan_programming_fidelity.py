@@ -1,13 +1,11 @@
-"""Read-only, identity-free snapshot of plan be6c9e91 (16 October 2026).
+"""Minimal programming facts from read-only plan be6c9e91 (16 October 2026).
 
 Only programming and its saved template are retained, never athlete records.
 """
 from __future__ import annotations
 
 import copy
-import json
 from datetime import datetime, timezone
-from pathlib import Path
 
 import pytest
 from fastapi import HTTPException
@@ -21,21 +19,116 @@ from api.structured_plan_deterministic_fallback import _exact_working_dose, _lif
 from api.structured_plan_generation import _merge_locked_content, _open_plan_contract_errors
 from api.structured_plan_models import safe_parse_structured_plan
 from fightcamp.weekly_schedule_view import normalize_weekday
+from fightcamp.tactical_watch_library import all_watches, watch_metadata
 from test_structured_plan_models import _valid_plan
 from tests.support import FakeStore
 
 
 def _reference_row():
-    reference = json.loads((Path(__file__).parent / "fixtures/open_plan_development_reference.json").read_text(encoding="utf-8"))
+    # Keep the actual decisions/doses/identities, without copying an entire
+    # saved card or duplicating bank-owned tactical instructions in a snapshot.
     structured = _valid_plan()
-    structured["weeks"] = [reference["stored_week"]]
+    week = structured["weeks"][0]
+    day_template = copy.deepcopy(week["days"][0])
+    session_template = copy.deepcopy(day_template["sessions"][0])
+    names = ["Barbell Thruster", "Med-Ball Rotational Slam", "Trap Bar Jump",
+             "Single-Leg Depth Drop (Stick Landing)", "Landmine Anti-Rotation Press",
+             "Single-Leg Romanian Deadlift Hold"]
+    prescriptions = ["4x2 reps at max speed; full rest 120s."] * 4 + [
+        "2 sets x 6 reps or 20s tempo (3-1-3), RPE 6.", "2 x 20s hold @ RPE 6; rest 60s."]
+    exercises = [{"name": name, "prescription": dose} for name, dose in zip(names, prescriptions, strict=True)]
+    aerobic = {"label": "Aerobic support", "weekday": "Friday", "category": "conditioning",
+               "role_key": "aerobic_base_day", "execution_order": 2,
+               "exercises": [{"name": "Read & Counter Flow", "prescription": "3 x 180s work / 60s rest"}]}
+    strength = {"label": "Strength", "weekday": "Saturday", "category": "strength",
+                "role_key": "primary_strength_day", "execution_order": 2, "exercises": exercises}
+    decisions = []
+    for index, (label, role) in enumerate([
+        ("Shot-Line Circle-Off Reset", "footwork_walkthrough"), ("Joint Prep", "joint_prep"),
+        ("Fence Exit to Center Rebase", "footwork_walkthrough"), ("Easy Walk Flush", "walk_flush"),
+    ], start=1):
+        support = {"label": label, "weekday": "Saturday", "category": "support_insert",
+                   "role_key": role, "execution_order": 2 if index == 4 else 1}
+        lift = copy.deepcopy(strength)
+        lift["execution_order"] = 1 if index == 4 else 2
+        decisions.append({"week": index, "sessions": [
+            {"label": "Hard sparring", "weekday": "Tuesday", "category": "sparring",
+             "role_key": "hard_sparring_day", "execution_order": 2 if index in (1, 3) else 1},
+            {"label": "Hard sparring", "weekday": "Thursday", "category": "sparring",
+             "role_key": "hard_sparring_day", "execution_order": 1},
+            {"label": "Light technical combat", "weekday": "Friday", "category": "technical",
+             "role_key": "light_combat_day", "coach_owned": True, "execution_order": 1},
+            copy.deepcopy(aerobic), *([lift, support] if index == 4 else [support, lift]),
+        ]})
+    rotation = []
+    for index, key in [(1, "mma.counter_striker.gpp.attack_trigger_map"), (3, "mma.counter_striker.gpp.safe_counter_range")]:
+        watch = next(watch for watch in all_watches() if watch.key == key)
+        rotation.append({"week": index, "label": "Tactical Focus", "name": watch.name,
+                         "tactical_watch": watch_metadata(watch)["tactical_watch"]})
+    spec = {"plan_type": "open_ongoing_system", "weekly_template": {
+        "training_days": ["Monday", "Tuesday", "Thursday", "Friday", "Saturday"],
+        "hard_sparring_days": ["Tuesday", "Thursday"], "support_work_days": ["Friday"],
+        "coach_owned_days": {"hard_sparring_days": ["Tuesday", "Thursday"], "support_work_days": ["Friday"]}},
+        "weekly_session_plan": {"authority": "deterministic_open_development_block", "weeks": decisions},
+        "tactical_watch": {"weekly_rotation": rotation}}
+    easier_and_stop = [
+        (["3 sets x 2 reps"], ["Stop if balance or control lost."]),
+        (["3 sets x 2 reps"], ["Stop if low-back pain appears."]),
+        (["Bodyweight vertical jumps"], ["Stop if landing becomes stiff or uncontrolled."]),
+        (["Step down and perform controlled single-leg hops"], ["Stop if you cannot land quietly and hold."]),
+        (["Use lighter load", "Hold a Pallof press for 20 seconds"], ["Stop if twisting at the hips happens."]),
+        (["Two-leg RDL holds"], ["Stop if hip drops or sharp hamstring pain."]),
+    ]
+    source_blocks = []
+    for index, name in enumerate(names):
+        dose = {"sets": 4, "reps": 2, "rest": {"value": 120, "unit": "seconds"}}
+        if index == 4:
+            dose = {"sets": 2, "reps": 6, "rest": {"value": 90, "unit": "seconds"},
+                    "tempo": {"eccentric": 3, "pause_bottom": 1, "concentric": 3, "pause_top": 0}}
+        elif index == 5:
+            dose = {"sets": 2, "duration": {"value": 20, "unit": "seconds"}, "rest": {"value": 60, "unit": "seconds"}}
+        source_blocks.append({"block_id": f"saved-strength-{index}", "block_type": "strength", "display_name": name,
+                              "coaching_cues": [], **dose, "regression_options": easier_and_stop[index][0],
+                              "stop_rules": easier_and_stop[index][1], "progression_rule": (
+                                  "Add one set." if index < 3 else "Add one rep per set." if index < 5
+                                  else "Add five seconds per hold.")})
+    sessions = [
+        {**copy.deepcopy(session_template), "session_id": "ses-tw-1", "session_type": "skill",
+         "title": "Tactical Focus — Attack Trigger Map", "execution_order": 1,
+         "blocks": [{"block_id": "saved-watch", "block_type": "mindset", "display_name": rotation[0]["name"],
+                     "coaching_cues": [], "progression_rule": rotation[0]["tactical_watch"]["progress"]}]},
+        {**copy.deepcopy(session_template), "session_id": "ses-2", "session_type": "conditioning",
+         "title": "Aerobic support — Read & Counter Flow", "execution_order": 2,
+         "blocks": [{"block_id": "saved-aerobic", "block_type": "conditioning", "display_name": "Read & Counter Flow",
+                     "rounds": 3, "work": {"value": 180, "unit": "seconds"}, "rest": {"value": 60, "unit": "seconds"},
+                     "coaching_cues": [], "progression_rule": "Progress: none this block.",
+                     "regression_options": ["Shorten work to 120 seconds per set"],
+                     "stop_rules": ["Stop if breathing uncontrolled.", "Stop if form breaks."]}]},
+        {**copy.deepcopy(session_template), "session_id": "ses-footwork", "session_type": "mixed",
+         "title": "Shot-Line Circle-Off Reset", "execution_order": 1, "blocks": []},
+        {**copy.deepcopy(session_template), "session_id": "ses-strength", "title": "Strength",
+         "execution_order": 2, "blocks": source_blocks},
+    ]
+    week.update(start_date="", end_date="", countdown_start="", countdown_end="", days=[])
+    for weekday in ("Mon", "Tue", "Thu", "Fri", "Sat"):
+        day = copy.deepcopy(day_template)
+        day.update(date="", weekday=weekday, countdown_label="", sessions=[])
+        day["day_type"] = "rest" if weekday == "Mon" else "moderate" if weekday == "Fri" else "high"
+        if weekday in ("Tue", "Thu", "Fri"):
+            day["today_card"]["coach_led_contact"] = "Light technical combat" if weekday == "Fri" else "Hard sparring"
+            day["today_card"]["headline"] = day["today_card"]["coach_led_contact"]
+        if weekday == "Fri":
+            day["sessions"] = sessions[:2]
+        elif weekday == "Sat":
+            day["sessions"] = sessions[2:]
+        week["days"].append(day)
     structured["plan_metadata"]["plan_type"] = "open_ongoing_system"
     structured["event_context"] = {"event_type": "none"}
     structured["countdown_labels"] = []
     return {
         "id": "11111111-1111-1111-1111-111111111111",
         "created_at": "2026-10-13T09:00:00Z", "fight_date": None,
-        "planning_brief": {"open_plan_spec": reference["open_plan_spec"]},
+        "planning_brief": {"open_plan_spec": spec},
         "structured_plan": structured,
     }
 
@@ -55,7 +148,7 @@ def test_reference_keeps_each_weeks_actual_sessions_exercises_doses_and_flexible
     effective, projected = _project(row)
     decisions = row["planning_brief"]["open_plan_spec"]["weekly_session_plan"]["weeks"]
     original_guidance = {
-        block["display_name"]: block["progression_rule"]
+        block["display_name"]: {key: block.get(key) for key in ("progression_rule", "regression_options", "stop_rules")}
         for day in row["structured_plan"]["weeks"][0]["days"]
         for session in day["sessions"] for block in session["blocks"]
     }
@@ -76,7 +169,7 @@ def test_reference_keeps_each_weeks_actual_sessions_exercises_doses_and_flexible
                     for block, exercise in zip(session["blocks"], exercises, strict=True):
                         dose, _ = _lift_dose_fields(_exact_working_dose(exercise["prescription"]))
                         assert all(block.get(key) == value for key, value in dose.items())
-                        assert block["progression_rule"] == original_guidance[exercise["name"]]
+                        assert {key: block.get(key) for key in original_guidance[exercise["name"]]} == original_guidance[exercise["name"]]
             if day["weekday"] in {"Wed", "Sun"}:
                 assert day["sessions"] == []
                 assert day["today_card"]["headline"] == "Unavailable"
