@@ -1208,7 +1208,7 @@ export function SessionCard({
               : isTechnicalSession
                 ? TECHNICAL_COMBAT_TITLE
                 : title}
-            {isTechnicalSession ? <TechnicalCombatWhyTooltip /> : null}
+            {(isTechnicalSession || isDeclaredLightCombat) ? <TechnicalCombatWhyTooltip day={day} declared={isDeclaredLightCombat} /> : null}
           </h3>}
           {/* The objective is the plan's "Why:" line, not a description of the
               work — the blocks below already carry that. Labelling it says so
@@ -1392,8 +1392,7 @@ export function SessionlessDayCard({
   const nutrition = cleanText(card?.nutrition_summary);
   const weightCut = cleanText(card?.weight_cut_warning);
   const { kind, title, tag, coachLed, converted } = classifySessionlessDay(day);
-  // Only a converted hard-sparring day gets the "hard sparring is reduced"
-  // treatment; a technical day the athlete declared keeps its own wording.
+  // Keep declared and converted contact distinct.
   const isConverted = kind === "technical" && converted;
   const displayTitle =
     kind === "light_combat"
