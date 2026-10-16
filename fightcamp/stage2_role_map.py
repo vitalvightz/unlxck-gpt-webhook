@@ -2572,7 +2572,7 @@ def _non_spar_role_priority_rank(
         if role_key in {"aerobic_support_day", "aerobic_base_day", "aerobic_coordination_day"}:
             return 3
         if category == "strength":
-            # A fresh athlete building power can use a second, reduced exposure
+            # A fresh athlete with a dense main strength day can split existing work
             # in a hard-contact week. Give its existing role equal standing with
             # aerobic work *inside* the appointment budget; the pre-contact
             # owner and composer must still prove that a low-cost dose exists.
@@ -2580,7 +2580,7 @@ def _non_spar_role_priority_rank(
             if (
                 role_key == "secondary_strength_day"
                 and is_hard_spar_week
-                and str(athlete_model.get("primary_goal") or "").strip().lower() == "power"
+                and not _conditioning_limiter_signal(athlete_model)
                 and str(athlete_model.get("fatigue") or "").strip().lower() in {"", "low"}
                 and not is_meaningful_cut
                 and not athlete_model.get("weight_cut_risk")
