@@ -79,6 +79,7 @@ from .session_composition import (
     compose_normal_strength_assignments,
     reconcile_relocated_strength,
     redistribute_pre_hard_power_from_main,
+    rollback_invalid_dense_day_redistributions,
 )
 from .normal_calendar_placement import fill_missing_session_days
 from .late_fight_phase_eligibility import (
@@ -2393,7 +2394,16 @@ def _build_planning_brief(
         recompose_conditioning_callback=_recompose_conditioning,
         recompose_strength_callback=_recompose_strength,
     )
-    _resolve_strength_doses(weekly_role_map)
+    # Do not leave the source session partially stripped if canonical calendar
+    # governance relocates/suppresses the receiving day or replaces its members.
+    # Restore exact original selected work and re-dose through the same owner.
+    if rollback_invalid_dense_day_redistributions(
+        weekly_role_map, athlete_model=athlete_model
+    ):
+        _resolve_strength_doses(weekly_role_map)
+        _refresh_stress_stamps(weekly_role_map)
+    else:
+        _resolve_strength_doses(weekly_role_map)
     # Physical placement and budgets are final: mental support must still be
     # attached to a surviving appointment, including across the tail splice.
     from .camp_week_fillers_impl import govern_weekly_mental_training
