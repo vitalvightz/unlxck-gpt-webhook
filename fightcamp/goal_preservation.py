@@ -76,6 +76,7 @@ _PRIORITY_REASON_CODES = {
     "primary": "primary_goal",
     "primary_weakness": "primary_weakness",
     "secondary": "secondary_goal",
+    "secondary_weakness": "secondary_weakness",
 }
 # Every official intake weak area resolves deliberately - never by falling off
 # the end of a lookup. `web/lib/intake-options.ts::WEAK_AREA_OPTIONS` is the
@@ -206,14 +207,16 @@ def selected_goals(athlete: dict, focus: dict | None = None) -> list[tuple[str, 
               *normalize_priority_values(focus.get("secondary_goals"))]
     goals = list(dict.fromkeys(_goal(value) for value in values if _goal(value)))
     selections = [(goal, "primary" if goal == primary else "secondary") for goal in goals]
-    # Gas tank remains a real secondary selection even when the athlete did
-    # not also tick the conditioning goal. One merged obligation, never an
-    # automatic additional hard session or a primary weekly floor.
-    if ("conditioning" not in goals and any(
-        _WEAKNESS_FLOOR_TARGETS.get(normalize_tag(value)) == "conditioning"
-        for value in profile.secondary_weak_areas
-    )):
-        selections.append(("conditioning", "secondary"))
+    # Selection scoring and composition already consume secondary weaknesses.
+    # Verify delivery too, without promoting them to development obligations or
+    # spending another session when a selected goal covers the same quality.
+    for value in profile.secondary_weak_areas:
+        raw = normalize_tag(value) or ""
+        target = (_DELEGATED_DELIVERY_OBLIGATIONS.get(raw)
+                  or _WEAKNESS_FLOOR_TARGETS.get(raw)
+                  or _goal(_SELECTED_PRIORITY_TARGET_ALIASES.get(raw, raw)))
+        if target in INTENTS and target not in {goal for goal, _ in selections}:
+            selections.append((target, "secondary_weakness"))
     weakness = _primary_weakness(athlete, focus)
     if not weakness or weakness == primary:
         # Merged: one exposure discharges the goal and the weakness together.
@@ -855,7 +858,7 @@ def collect_goal_evidence(brief: dict) -> list[dict]:
 
 
 def _requirements(entry: dict, brief: dict) -> list[dict]:
-    """One build exposure per development week; maintenance every 14 days.
+    """Strength continuity in eligible weeks; other maintenance every 14 days.
 
     Partial development windows share the same requirement. Final fight-week
     strength is excluded by its canonical loaded-work cutoff. Multiple lifts on
@@ -866,11 +869,34 @@ def _requirements(entry: dict, brief: dict) -> list[dict]:
     days = _athlete(brief).get("days_until_fight")
     if not isinstance(days, int):
         return [{"min_d_day": None, "max_d_day": None}]
-    cutoff = 14 if entry["state"] == "build" else (8 if entry["goal"] == "strength" else 2)
+    # Recurring promises belong to the actual normal-camp weeks, not a
+    # camp-wide bucket. Two exposures in the opening week cannot discharge the
+    # next pre-tail week. D-13 inward remains the finished tail's maintenance
+    # / primer decision, and TAPER never creates a mandatory loaded exposure.
+    horizon_floor = int(_athlete(brief).get("open_block_horizon_days") or 0)
+    calendar = {d["d_day"] for week in _effective_map(brief).get("weeks") or []
+                for d in week.get("calendar_days") or [] if isinstance(d.get("d_day"), int)}
+    horizon = _plannable_horizon(brief, days)
+    complete_calendar = horizon is not None and set(range(max(14, horizon_floor), horizon + 1)) <= calendar
+    if complete_calendar and (entry["goal"] == "strength" or entry["state"] == "build"):
+        weekly_windows = []
+        for week in _effective_map(brief).get("weeks") or []:
+            eligible = [d["d_day"] for d in week.get("calendar_days") or []
+                        if isinstance(d.get("d_day"), int)
+                        and max(14, horizon_floor) <= d["d_day"] <= days
+                        and not d.get("is_fight_day") and not d.get("is_after_fight_day")]
+            if eligible and str(week.get("phase") or "").upper() != "TAPER":
+                weekly_windows.append({"min_d_day": min(eligible), "max_d_day": max(eligible)})
+        if weekly_windows:
+            return weekly_windows
+    # Direct late-countdown plans retain their own maintenance window and
+    # causal readiness evidence. Weekly reconciliation never reopens that tail.
+    normal_camp = days > 13 and "late_fight_session_sequence" not in brief
+    cutoff = 14 if entry["state"] == "build" or normal_camp else (8 if entry["goal"] == "strength" else 2)
     # An open development block is planned clear of any fight: its calendar
     # starts at the horizon, so nothing nearer than that is a plannable window.
-    cutoff = max(cutoff, int(_athlete(brief).get("open_block_horizon_days") or 0))
-    width = 7 if entry["state"] == "build" else 14
+    cutoff = max(cutoff, horizon_floor)
+    width = 7 if entry["state"] == "build" or entry["goal"] == "strength" else 14
     span = max(1, days - cutoff + 1)
     # Windows are anchored at the cutoff and counted outward, so any remainder
     # falls at the far end - the opening days of camp. Rounding up turned that
@@ -878,7 +904,7 @@ def _requirements(entry: dict, brief: dict) -> list[dict]:
     # exposure from a sliver that can be a single day (a 21-day camp yields a
     # D-21..D-21 window). The earliest window absorbs the remainder instead, so
     # every requirement covers a real development week.
-    count = max(1, span // width)
+    count = max(1, (span + width - 1) // width if entry["goal"] == "strength" else span // width)
     windows = [
         {
             "min_d_day": cutoff + index * width,
@@ -1154,7 +1180,8 @@ def _recompose_existing_strength_for_goal(brief: dict, entry: dict) -> dict | No
     trial only when it meets a missing goal window without losing another goal,
     relocating sessions or violating the shared calendar.
     """
-    if entry.get("state") != "build" or entry.get("goal") not in {"speed", "power", "strength"}:
+    if (entry.get("goal") not in {"speed", "power", "strength"}
+            or (entry.get("state") != "build" and entry.get("goal") != "strength")):
         return None
     from .prescription_resolver import apply_effective_strength_prescriptions
     from .session_composition import (
@@ -1243,6 +1270,7 @@ def _restore_goal_roles(brief: dict, entry: dict) -> list[dict]:
     """
     from .late_camp_role_morph import _apply_late_camp_role_morph_once
     from .pre_hard_contact_strength import apply_pre_hard_contact_strength_exposure_cap
+    from .physical_session_frequency import appointment_budget_exceeded, requested_training_frequency
     from .prescription_resolver import apply_effective_strength_prescriptions
     from .session_composition import (
         apply_realised_load_calendar_revalidation,
@@ -1287,7 +1315,12 @@ def _restore_goal_roles(brief: dict, entry: dict) -> list[dict]:
             live = next((r for r in week.get("session_roles") or []
                          if (r.get("role_key"), r.get("strength_session_index")) == identity
                          and role_d_day(week, r) is not None), None)
-            if live is not None and any(window["min_d_day"] is None or
+            live_qualifies = live is not None and any(
+                e.get("week_index") == week.get("week_index") and e.get("role_key") == live.get("role_key")
+                and e.get("d_day") == role_d_day(week, live) and entry["required_intent"] in e["intents"]
+                and (entry["state"] != "build" or e.get("development_quality"))
+                for e in collect_goal_evidence(brief))
+            if live_qualifies and any(window["min_d_day"] is None or
                     window["min_d_day"] <= role_d_day(week, live) <= window["max_d_day"] for window in uncovered):
                 continue
             suppressed = [r for r in week.get("suppressed_roles") or [] if r.get("role_key") == candidate.get("role_key")]
@@ -1410,6 +1443,33 @@ def _restore_goal_roles(brief: dict, entry: dict) -> list[dict]:
                 )
                 apply_effective_strength_prescriptions(weekly_role_map=trial["weekly_role_map"],
                                                       candidate_pools=trial.get("candidate_pools") or {}, athlete_model=_athlete(trial))
+                # Price the proposed work before checking whether a redundant
+                # appointment can fund it. The new session may meaningfully
+                # deliver another quality as well (e.g. strength AND power).
+                frequency = requested_training_frequency(_athlete(trial))
+                traded_role = None
+                over_target = frequency and appointment_budget_exceeded({"weeks": [trial_week]}, frequency)
+                if over_target:
+                    conditioning = [r for r in trial_week["session_roles"]
+                        if r.get("category") == "conditioning" and not r.get("late_fight_tail_owned")
+                        and not r.get("coach_owned") and not r.get("declared_combat_ownership")
+                        and not (r.get("governance") or {}).get("hard_suppression_reasons")]
+                    previous = collect_goal_evidence(brief)
+                    if len(conditioning) > 1:
+                        for funding_role in reversed(conditioning):
+                            funding_index = trial_week["session_roles"].index(funding_role)
+                            trial_week["session_roles"].remove(funding_role)
+                            trial_evidence = collect_goal_evidence(trial)
+                            if (not appointment_budget_exceeded({"weeks": [trial_week]}, frequency)
+                                    and not any(len(_coverage(g, trial, trial_evidence)[1]) > len(_coverage(g, brief, previous)[1])
+                                                for g in classify_goal_preservation(_athlete(brief), brief.get("priority_focus"))
+                                                if g["goal"] != entry["goal"])):
+                                traded_role = funding_role
+                                break
+                            trial_week["session_roles"].insert(funding_index, funding_role)
+                    # Keep one conditioning appointment and all coach/tail roles.
+                    # Frequency remains the allocator's target, not a medical
+                    # dose cap; accepted overages retain its explicit warning.
                 # A trial must face the same realised-load governor as the main
                 # pipeline, after membership and effective doses are knowable.
                 apply_realised_load_calendar_revalidation(
@@ -1462,6 +1522,9 @@ def _restore_goal_roles(brief: dict, entry: dict) -> list[dict]:
                                   "result": "trial_rejected", "reason_codes": ["selected_goal_coverage_regressed"]})
                     continue
                 trial_week["suppressed_roles"] = [r for r in trial_week.get("suppressed_roles") or [] if r.get("role_key") != candidate.get("role_key")]
+                if traded_role is not None:
+                    trial_week["suppressed_roles"].append({**traded_role,
+                        "reason_code": "selected_goal_capacity_trade", "replaced_by_goal": entry["goal"]})
                 brief["weekly_role_map"] = trial["weekly_role_map"]
                 # The goal_repair reservoir holds pre-finalization role copies, so
                 # a restored role reaches the finalizer without the athlete-facing
@@ -1471,7 +1534,9 @@ def _restore_goal_roles(brief: dict, entry: dict) -> list[dict]:
                 stamp_role_label(restored)
                 audit.append({"week_index": week.get("week_index"), "d_day": d_day,
                               "result": "relocated" if live is not None else "restored", "reason_codes": [],
-                              "displaced_fillers": [roles[i].get("role_key") for i in displaced]})
+                              "displaced_fillers": [roles[i].get("role_key") for i in displaced],
+                              **({"appointment_tradeoff": "compatible_work_above_requested_target"} if over_target and traded_role is None else {}),
+                              **({"capacity_trade": traded_role.get("role_key")} if traded_role else {})})
                 return audit + _restore_goal_roles(brief, entry) if missing_after else audit
         # Reaching here means no candidate could be restored into this week -
         # for ANY reason: no candidate matched the goal, the week held its

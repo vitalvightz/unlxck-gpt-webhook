@@ -3363,6 +3363,8 @@ def _late_camp_effective_prescription_warnings(
     # and a separate conditioning block on D-26). Their selected exercises are
     # owned and dose-checked by their own roles, not this strength allow-list.
     other_role_exercises_by_day: dict[int, list[tuple[int, str]]] = defaultdict(list)
+    other_role_lines_by_day: dict[int, list[tuple[int, str]]] = defaultdict(list)
+    from .render_authority import authoritative_render_for_role
     for week in weeks:
         for role in week.get("session_roles") or []:
             if not isinstance(role, dict):
@@ -3370,6 +3372,17 @@ def _late_camp_effective_prescription_warnings(
             role_day = _scheduled_role_d_day(week, role)
             if role_day is None:
                 continue
+            authority = authoritative_render_for_role(
+                role,
+                week=week,
+                d_day=role_day,
+                athlete_snapshot=planning_brief.get("athlete_snapshot"),
+            )
+            if authority:
+                other_role_lines_by_day[role_day].extend(
+                    (id(role), _normalize_render_line(line))
+                    for line in authority.get("body_lines") or []
+                )
             for assignment in role.get("selected_exercise_assignments") or []:
                 name = str((assignment or {}).get("name") or "").strip() if isinstance(assignment, dict) else ""
                 if name:
@@ -3417,6 +3430,11 @@ def _late_camp_effective_prescription_warnings(
                             for owner, name in other_role_exercises_by_day.get(d_day, [])
                         ):
                             continue
+                        if any(
+                            owner != id(role) and line == _normalize_render_line(rendered_line)
+                            for owner, line in other_role_lines_by_day.get(d_day, [])
+                        ):
+                            continue  # Exact locked support text belongs to its own appointment.
                         identity = (
                             d_day,
                             "exercise_allow_list",
@@ -3807,7 +3825,9 @@ def _goal_witness_dose_matches(witness: dict, dose: str) -> bool:
         set_range = re.search(r"\b(\d+)\s*[-–]\s*(\d+)\s*(?:sets?\s*(?:[x×]|of)|[x×])", dose, re.I)
         if set_range:
             sets = min(int(set_range.group(1)), int(set_range.group(2)))
-        if sets is None and witness.get("quality_class") == "anchor_force_isometric":
+        if sets is None:
+            # The evidence owner also understands compound rounds. A faithful
+            # "3 rounds: heavy 2 reps -> explosive 2 reps" is not a missing dose.
             sets, reps = _sets_reps(dose)
         return ((sets or 0) >= witness["sets"] and (reps or 0) >= witness["reps"]
                 and all(strength_intensity(dose).get(key, 0) >= witness[key]

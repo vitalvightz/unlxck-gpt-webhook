@@ -21,7 +21,7 @@ from fightcamp.goal_preservation import _sets_reps, collect_goal_evidence, dose_
 from fightcamp.main import generate_plan_sync
 from fightcamp.prescription_resolver import _pre_hard_verified_low_cost
 from fightcamp.session_composition import _candidate_records, _select_bounded_records, slot_adaptations
-from fightcamp.strength import get_exercise_bank, score_exercise
+from fightcamp.strength import get_exercise_bank, score_exercise, _classify_prescription_type
 from fightcamp.strength_session_quality import classify_strength_item, strength_adaptation_relevance
 from fightcamp.tag_maps import (
     ADAPTATION_PRIORITY_KEYS,
@@ -580,4 +580,5 @@ def test_stamped_adaptation_relevance_is_what_composition_reads():
     for pool in _brief("vito_b")["candidate_pools"].values():
         for slot in pool.get("strength_slots") or []:
             name = slot["selected"]["name"]
-            assert slot_adaptations(slot) == strength_adaptation_relevance(_BANK[name]) or not strength_adaptation_relevance(_BANK[name]), name
+            expected = strength_adaptation_relevance(_BANK[name], prescription_type=_classify_prescription_type(_BANK[name]))
+            assert slot_adaptations(slot) == expected or not expected, name

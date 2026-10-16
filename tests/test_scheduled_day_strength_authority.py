@@ -367,7 +367,7 @@ def test_missing_d16_loaded_strength_authority_blocks_finalizer_packet():
     }
 
 
-def test_d16_overage_still_uses_2412_validator_and_targeted_repair():
+def test_d16_overage_is_detected_and_deterministically_corrected():
     weekly_role_map, _candidate_pools, _role = _resolve_production_like_relocation_geometry()
     rendered = "D-16 (Thursday) — Strength\nBarbell Back Squat: 3 x 5 at RPE 6.5-7\n"
     brief = {"weekly_role_map": weekly_role_map}
@@ -384,8 +384,14 @@ def test_d16_overage_still_uses_2412_validator_and_targeted_repair():
         final_plan_text=rendered,
         validator_report=report,
     )
-    assert retry["needs_retry"] is True
-    assert "reduce_strength_dose_to_effective_prescription" in retry["repair_prompt"]
+    # The finalizer cannot become a second dose authority. Current release
+    # policy retains deterministic programme reconciliation, not an LLM retry.
+    assert retry["needs_retry"] is False
+    assert retry["repair_prompt"] is None
+    from fightcamp.programme_fidelity import reconcile_authoritative_programme
+    corrected = reconcile_authoritative_programme(brief, rendered)["text"]
+    report = validate_stage2_output(planning_brief=brief, final_plan_text=corrected)
+    assert not any(e["code"] == "late_camp_effective_prescription_exceeded" for e in report["errors"])
 
 
 def test_d16_compliant_render_passes_effective_dose_validation():

@@ -484,12 +484,27 @@ def _source_block(
     return {
         **fields,
         "purpose": parsed.purpose or None,
-        "execution_instructions": parsed.execution_instructions or None,
+        "execution_instructions": _preserve_unrepresented_dose(parsed.activity_dose, fields, parsed.execution_instructions),
         "coaching_cues": list(parsed.cues) + ([remainder] if remainder else []),
         "regression_options": list(parsed.regressions),
         "progression_rule": parsed.progression or None,
         "stop_rules": list(parsed.stop_rules),
     }
+
+
+def _preserve_unrepresented_dose(dose: str, fields: dict, instructions: str | None) -> str | None:
+    """Keep compound working quantities outside disposable coaching cues.
+
+    A heavy lift -> jump pair is not one repetition statistic. The original
+    sequence, loading and rest must survive cue compaction without inventing
+    a single set/rep interpretation for its different components.
+    """
+    compound = "→" in dose or bool(re.search(r"\brounds?\s*:", dose, re.I))
+    unpriced = bool(re.search(r"\d", dose)) and not any(
+        fields.get(key) for key in ("sets", "reps", "rounds", "duration", "work", "distance"))
+    if (compound or unpriced) and dose not in str(instructions or ""):
+        return "\n".join(part for part in (dose, instructions) if part)
+    return instructions or None
 
 
 # The weekly priority exposure floor carries the same microdose both as planner
@@ -608,6 +623,8 @@ def _blocks(
             if prescription:
                 block["coaching_cues"].append(prescription)
             block.update(coaching)
+            block["execution_instructions"] = _preserve_unrepresented_dose(
+                prescription, block, block.get("execution_instructions"))
         blocks.append(block)
     # Only ever attached to a host that already renders. A role with no selected
     # exercise renders no session at all here, and a microdose must not be the
