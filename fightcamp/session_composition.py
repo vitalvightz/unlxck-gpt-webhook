@@ -1589,30 +1589,6 @@ def compose_normal_strength_assignments(
                 else None
             )
             microdose_only = role.get("pre_hard_contact_microdose_only") is True
-            if microdose_only:
-                # This role survived the contact-week budget only as a low-fatigue
-                # power touch. Choose from the same selected bank slots, but never
-                # fill its cap with heavy lifts, high-impact jumps, missing-cost
-                # exercises or an unpriceable timed/contrast prescription.
-                # If no qualifying member exists, leave it empty for the
-                # existing unfilled-role suppression instead of inventing one.
-                records = [
-                    record for record in records
-                    if record.get("slot_group", "strength_slots") == "strength_slots"
-                    and "power" in record["adaptations"]
-                    and _role_kind(record["slot"]) == "power"
-                    and has_verified_low_cost(
-                        record["slot"],
-                        fields=("impact_cost", "landing_cost", "eccentric_cost", "soreness_risk"),
-                    )
-                    and all(
-                        value is not None and value >= 1
-                        for value in _parse_sets_reps(
-                            working_dose(str((record["slot"].get("selected") or {}).get("prescription") or ""))
-                        )
-                    )
-                ]
-                effective_cap = min(effective_cap, 1)
             selected_records, dropped = _select_bounded_records(
                 records,
                 role_key=role_key,
@@ -3006,6 +2982,126 @@ def apply_realised_load_calendar_revalidation(
             # so a residual conflict is visible rather than silently accepted.
             "residual_conflicts": residual,
         }
+    return weekly_role_map
+
+
+def redistribute_pre_hard_power_from_main(
+    *, weekly_role_map: dict[str, Any], candidate_pools: dict[str, Any],
+    athlete_model: dict[str, Any],
+) -> dict[str, Any]:
+    """Move, never add, one bank-verified low-cost power item to a pre-spar day.
+
+    Called once after the final calendar and normal-strength composition have
+    settled, and before authoritative strength doses are resolved. The source
+    selected membership is physically removed from the clean main strength day;
+    the receiving microdose gets that *same* assignment/identity, reduced by
+    prescription_resolver. A second exercise cannot be minted here.
+    """
+    from .prescription_resolver import _assignment_strength_slot
+    from .pre_hard_contact_strength import suppress_unfunded_power_microdose
+
+    if not isinstance(weekly_role_map, dict):
+        return weekly_role_map
+    for week in weekly_role_map.get("weeks") or []:
+        if not isinstance(week, dict):
+            continue
+        roles = week.get("session_roles") or []
+        receivers = [
+            r for r in roles if isinstance(r, dict)
+            and r.get("pre_hard_contact_microdose_only") is True
+        ]
+        for receiver in receivers:
+            sources = [
+                r for r in roles if isinstance(r, dict) and r is not receiver
+                and r.get("category") == "strength"
+                and r.get("pre_hard_contact_managed_stress") is not True
+                and r.get("strength_session_index") == 1
+                and r.get("scheduled_day_hint") != receiver.get("scheduled_day_hint")
+            ]
+            source = sources[0] if len(sources) == 1 else None
+            memberships = [
+                member for member in (source or {}).get("selected_exercise_assignments", [])
+                if isinstance(member, dict)
+            ]
+            candidate = None
+            if source is not None and len(memberships) >= 4:
+                for member in memberships:
+                    if member.get("slot_group") != "strength_slots":
+                        continue
+                    phase = str(member.get("source_phase") or "").strip().upper()
+                    slot = _assignment_strength_slot(candidate_pools, phase, member)
+                    if slot is None or _role_kind(slot) != "power":
+                        continue
+                    if "power" not in slot_adaptations(slot):
+                        continue
+                    if not has_verified_low_cost(
+                        slot,
+                        fields=("impact_cost", "landing_cost", "eccentric_cost", "soreness_risk"),
+                    ):
+                        continue
+                    dose = working_dose(str((slot.get("selected") or {}).get("prescription") or ""))
+                    sets, reps = _parse_sets_reps(dose)
+                    if not isinstance(sets, int) or not isinstance(reps, int) or sets < 2 or reps < 2:
+                        continue
+                    rest = [other for other in memberships if other is not member]
+                    # Never move the only goal-producing power exercise, or
+                    # leave a main session that no longer has a useful anchor.
+                    remaining_power = False
+                    for other in rest:
+                        if other.get("slot_group") != "strength_slots":
+                            continue
+                        other_slot = _assignment_strength_slot(
+                            candidate_pools,
+                            str(other.get("source_phase") or "").strip().upper(),
+                            other,
+                        )
+                        if other_slot is not None and "power" in slot_adaptations(other_slot):
+                            remaining_power = True
+                            break
+                    if not remaining_power:
+                        continue
+                    candidate = member
+                    break
+
+            if candidate is None:
+                suppress_unfunded_power_microdose(
+                    week, receiver, athlete_model=athlete_model,
+                    reason_code="no_verified_transferable_power_from_main",
+                )
+                continue
+
+            # Membership conservation: one named bank assignment is removed
+            # from Saturday and becomes the sole member of Monday. Never
+            # duplicate an item, invent a new one, or add an extra weekly set.
+            source["selected_exercise_assignments"] = [
+                member for member in memberships if member is not candidate
+            ]
+            receiver["selected_exercise_assignments"] = [dict(candidate)]
+            receiver["selected_exercise_assignments"][0]["redistributed_from_role_key"] = source.get("role_key")
+            receiver["selected_exercise_assignments"][0]["redistribution_reason"] = "pre_hard_power_transfer"
+            for role in (source, receiver):
+                policy = role.get("strength_composition_policy")
+                if isinstance(policy, dict):
+                    selected = role["selected_exercise_assignments"]
+                    policy["selected_count"] = len(selected)
+                    policy["selected_names"] = [item.get("name") for item in selected]
+            source.pop("effective_strength_prescriptions", None)
+            source.pop("effective_strength_envelope", None)
+            receiver.pop("effective_strength_prescriptions", None)
+            receiver.pop("effective_strength_envelope", None)
+            week["pre_hard_power_redistribution"] = {
+                "status": "transferred",
+                "reason_code": "low_cost_power_from_main",
+                "source_day": source.get("scheduled_day_hint"),
+                "target_day": receiver.get("scheduled_day_hint"),
+                "exercise_name": candidate.get("name"),
+                "source_members_before": len(memberships),
+                "source_members_after": len(source["selected_exercise_assignments"]),
+                "recipient_members": 1,
+                "weekly_exercise_count_delta": 0,
+                "dose_ceiling_sets": 2,
+                "dose_ceiling_reps": 2,
+            }
     return weekly_role_map
 
 
