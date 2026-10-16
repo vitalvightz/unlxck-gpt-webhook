@@ -1,6 +1,6 @@
 # UNLXCK Notion follow-up sync (Hetzner)
 
-This job keeps the editable **Copy Follow-Up** text equal to the existing **Follow-Up DM** formula. It never sends Instagram messages. It records **Last Follow-Up Sent** when it observes **Follow-Ups Sent** advance, which powers the existing **Actual Next Due** formula. No second set of DM scripts is hardcoded in Python.
+This job keeps the editable **Copy Follow-Up** text equal to the existing **Follow-Up DM** formula. It never sends Instagram messages. It records **Last Follow-Up Sent** when it observes **Follow-Ups Sent** advance, which powers the existing **Actual Next Due** formula. No second set of DM scripts is hardcoded in Python. The recurring job uses the already-running worker container, not a new container each time.
 
 ## One-time server setup
 
@@ -9,7 +9,7 @@ This job keeps the editable **Copy Follow-Up** text equal to the existing **Foll
 3. Merge this pull request and wait until the usual Hetzner backend deployment has built the new worker image.
 4. Run once from /opt/unlxck to confirm permission and initial sync:
 
-    docker compose run --rm -T --no-deps worker python tools/sync_notion_followups.py
+    docker compose exec -T worker python tools/sync_notion_followups.py
 
 5. Use a systemd timer to run every two minutes. Create /etc/systemd/system/unlxck-notion-followups.service:
 
@@ -18,7 +18,7 @@ This job keeps the editable **Copy Follow-Up** text equal to the existing **Foll
     [Service]
     Type=oneshot
     WorkingDirectory=/opt/unlxck
-    ExecStart=/usr/bin/docker compose run --rm -T --no-deps worker python tools/sync_notion_followups.py
+    ExecStart=/usr/bin/docker compose exec -T worker python tools/sync_notion_followups.py
 
 6. Create /etc/systemd/system/unlxck-notion-followups.timer:
 
@@ -38,7 +38,7 @@ This job keeps the editable **Copy Follow-Up** text equal to the existing **Foll
     systemctl list-timers unlxck-notion-followups.timer
     sudo journalctl -u unlxck-notion-followups.service -n 30 --no-pager
 
-The systemd timer lives on the host, independent of normal backend redeploys. Confirm Docker is installed at /usr/bin/docker; replace that path if necessary.
+The systemd timer lives on the host and calls the running worker. A run may fail while the worker restarts during backend deployment; the next scheduled run will retry. Confirm Docker is installed at /usr/bin/docker; replace that path if necessary.
 
 ## Behavior
 
@@ -51,4 +51,4 @@ The systemd timer lives on the host, independent of normal backend redeploys. Co
 - Once this server job runs successfully, disable the existing Notion copy-text-sync automation so two systems do not overwrite the same field.
 - Only one timer should run at a time. Errors are reported to the systemd journal and are retried at the next scheduled run.
 
-Important: this is polling rather than an instantaneous webhook. Date recorded is the day of observation (normally within two minutes), not a timestamp proven to be when the Instagram DM was sent. For exact timestamps, use a separate Mark Sent action.
+Important: this is polling rather than an instantaneous webhook. Date recorded uses Europe/London on the day of observation (normally within two minutes), not a timestamp proven to be when the Instagram DM was sent. If a lead's count changes just before midnight and is observed after midnight, the observed date may differ from the actual send date. For exact timestamps, use a separate Mark Sent action.
