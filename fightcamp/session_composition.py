@@ -3262,11 +3262,11 @@ def rollback_invalid_dense_day_redistributions(
                 week, receiver, athlete_model=athlete_model,
                 reason_code="redistribution_failed_final_calendar_review",
             )
-        audit.update({
+        week["pre_hard_power_redistribution"] = {
             "status": "rolled_back",
             "reason_code": "redistribution_failed_final_calendar_review",
             "weekly_exercise_count_delta": 0,
-        })
+        }
         restored = True
     return restored
 
