@@ -1416,7 +1416,7 @@ export function SessionlessDayCard({
           ) : null}
           <h3 className="sp-session-title">
             {displayTitle}
-            {isConverted ? <TechnicalCombatWhyTooltip /> : null}
+            {(kind === "light_combat" || kind === "technical") ? <TechnicalCombatWhyTooltip day={day} declared={!isConverted} /> : null}
           </h3>
         </div>
         <div className="sp-session-meta">
@@ -1450,15 +1450,16 @@ export function SessionlessDayCard({
 }
 
 function LightTechnicalDayContext({
-  tag,
+  tag, day,
 }: {
   tag: string | null;
+  day?: StructuredDay;
 }) {
   return (
     <div className="cm-light-technical">
       <div className="cm-light-technical-head">
         {tag ? <span className="sp-tag sp-accent">{tag}</span> : null}
-        <p className="sp-today-headline">{DECLARED_LIGHT_COMBAT_TITLE}</p>
+        <p className="sp-today-headline">{DECLARED_LIGHT_COMBAT_TITLE}<TechnicalCombatWhyTooltip day={day} declared /></p>
       </div>
       <p className="sp-today-note">{DECLARED_LIGHT_COMBAT_DESCRIPTION}</p>
     </div>
@@ -1486,8 +1487,7 @@ function CoachLedDayContext({
   reducedReason?: string | null;
 }) {
   const isLightCombat = kind === "light_combat";
-  // Only a converted hard-sparring day reads as "Technical Combat"; a technical
-  // day the athlete declared keeps its own wording and the light-combat note.
+  // Preserve declared versus converted day labels.
   const isTechnical = kind === "technical" && converted;
   const isDeclaredTechnical = kind === "technical" && !converted;
   const displayTitle = isLightCombat
@@ -1577,7 +1577,7 @@ export function DaySessionContext({ day, headline }: { day: StructuredDay; headl
   return (
     <div className={`cm-day-context${coachLedContact ? " cm-day-context-contact" : ""}`}>
       {showLightTechnicalContext ? (
-        <LightTechnicalDayContext tag={sessionlessDay.tag} />
+        <LightTechnicalDayContext tag={sessionlessDay.tag} day={day} />
       ) : null}
       {coachLedContact ? (
         <CoachLedDayContext
