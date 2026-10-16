@@ -112,3 +112,14 @@ def test_does_not_retry_failed_patch(monkeypatch):
     with pytest.raises(HTTPError):
         sync.request("PATCH", "/pages/example", {"properties": {}})
     assert len(attempts) == 1
+
+
+def test_reuses_existing_qualification_worker_token_names(monkeypatch):
+    monkeypatch.delenv("NOTION_TOKEN", raising=False)
+    monkeypatch.delenv("NOTION_API_KEY", raising=False)
+    monkeypatch.delenv("NOTION_INTEGRATION_TOKEN", raising=False)
+    assert sync.notion_token() is None
+    monkeypatch.setenv("NOTION_API_KEY", "existing-qualification-token")
+    assert sync.notion_token() == "existing-qualification-token"
+    monkeypatch.setenv("NOTION_TOKEN", "explicit-token")
+    assert sync.notion_token() == "explicit-token"
