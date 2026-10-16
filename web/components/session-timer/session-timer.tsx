@@ -749,8 +749,9 @@ function SettingsSheet({ timer, onClose }: { timer: SessionTimerController; onCl
         </div>
       </div>
       <p className="st-sheet-note">
-        Keep this screen open: the clock stays exact if your phone locks, but the bell can&apos;t ring
-        while the screen is off.
+        Round bells and warnings use an audio track for background playback. Voice and vibration
+        may stop in the background. Calls, battery saver or closing the browser can interrupt audio.
+        Keep the timer visible for the most reliable training setup.
       </p>
       <button type="button" className="st-link" onClick={onClose}>
         Close settings
@@ -1318,6 +1319,18 @@ export function SessionTimer({
             </>
           )}
           <Progress state={state} item={item} />
+          {item?.kind === "interval" ? (
+            <div className="st-audio-status" role="status">
+              {timer.roundAudioStatus === "preparing" ? "Preparing round audio… Keep this screen open." :
+                timer.roundAudioStatus === "unavailable" || timer.roundAudioStatus === "interrupted" ? (
+                  <>Round audio {timer.roundAudioStatus === "interrupted" ? "was interrupted" : "is unavailable"}. Keep this screen open.
+                    <button type="button" className="st-link" onClick={timer.restoreAudio}>Enable round audio</button>
+                  </>
+                ) : timer.roundAudioStatus === "playing" ? "Round audio playing. Calls or closing the browser can interrupt bells." :
+                  !timer.settings.sound || timer.settings.volume === 0 ? "Round sounds are off. Keep the timer in view." :
+                    "Keep the timer visible for reliable bells. Check your volume before training."}
+            </div>
+          ) : null}
         </main>
       )}
 

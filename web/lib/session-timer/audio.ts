@@ -112,9 +112,32 @@ type AudioSessionNavigator = Navigator & { audioSession?: { type: string } };
 type WebkitWindow = Window & { webkitAudioContext?: typeof AudioContext };
 
 class TimerAudio {
-  private context: AudioContext | null = null;
+  private context: AudioContext | OfflineAudioContext | null = null;
   private master: GainNode | null = null;
   private settings: TimerSoundSettings = DEFAULT_SOUND_SETTINGS;
+
+  private connect(context: AudioContext | OfflineAudioContext): void {
+    this.context = context;
+    const compressor = context.createDynamicsCompressor();
+    compressor.threshold.value = -14;
+    compressor.knee.value = 8;
+    compressor.ratio.value = 4;
+    this.master = context.createGain();
+    this.master.gain.value = this.settings.volume;
+    this.master.connect(compressor);
+    compressor.connect(context.destination);
+  }
+
+  /** Render the same gym sounds into reusable PCM clips for media playback. */
+  static async renderClip(sound: TimerSound, sampleRate: number): Promise<Float32Array> {
+    const context = new OfflineAudioContext(1, sampleRate * 4, sampleRate);
+    const audio = new TimerAudio();
+    audio.settings = { ...DEFAULT_SOUND_SETTINGS, volume: 1 };
+    audio.connect(context);
+    audio.soundAt(sound, 0.01);
+    const rendered = await context.startRendering();
+    return rendered.getChannelData(0).slice();
+  }
 
   configure(settings: TimerSoundSettings): void {
     this.settings = settings;
@@ -135,24 +158,17 @@ class TimerAudio {
     if (!this.context) {
       const Context = window.AudioContext ?? (window as WebkitWindow).webkitAudioContext;
       if (!Context) return;
-      this.context = new Context();
-      const compressor = this.context.createDynamicsCompressor();
-      compressor.threshold.value = -14;
-      compressor.knee.value = 8;
-      compressor.ratio.value = 4;
-      this.master = this.context.createGain();
-      this.master.gain.value = this.settings.volume;
-      this.master.connect(compressor);
-      compressor.connect(this.context.destination);
+      this.connect(new Context());
     }
-    if (this.context.state === "suspended") {
-      void this.context.resume();
+    const context = this.context!;
+    if (context.state !== "running" && context.state !== "closed") {
+      void context.resume().catch(() => undefined);
     }
     // A silent one-sample buffer fully unlocks playback on older WebKit.
-    const buffer = this.context.createBuffer(1, 1, 22050);
-    const source = this.context.createBufferSource();
+    const buffer = context.createBuffer(1, 1, 22050);
+    const source = context.createBufferSource();
     source.buffer = buffer;
-    source.connect(this.context.destination);
+    source.connect(context.destination);
     source.start(0);
   }
 
@@ -167,12 +183,19 @@ class TimerAudio {
   }
 
   play(sound: TimerSound): void {
-    const pattern = VIBRATION[sound];
-    if (pattern) this.buzz(pattern);
+    this.buzzSound(sound);
     const ctx = this.context;
     if (!this.settings.sound || !ctx || !this.master) return;
-    if (ctx.state === "suspended") void ctx.resume();
-    const t = ctx.currentTime + 0.01;
+    if (ctx.state !== "running" && ctx.state !== "closed") void ctx.resume().catch(() => undefined);
+    this.soundAt(sound, ctx.currentTime + 0.01);
+  }
+
+  buzzSound(sound: TimerSound): void {
+    const pattern = VIBRATION[sound];
+    if (pattern) this.buzz(pattern);
+  }
+
+  private soundAt(sound: TimerSound, t: number): void {
     switch (sound) {
       case "bell":
         this.bell(t, 1);
@@ -309,3 +332,5 @@ export function timerAudio(): TimerAudio {
   shared ??= new TimerAudio();
   return shared;
 }
+
+export const renderTimerClip = TimerAudio.renderClip;
