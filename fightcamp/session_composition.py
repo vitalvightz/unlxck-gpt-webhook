@@ -3226,12 +3226,14 @@ def rollback_invalid_dense_day_redistributions(
             if role.get("category") == "strength"
             and role.get("strength_session_index") == audit.get("source_strength_session_index")
         ), None)
-        receiver = next((
-            role for role in roles
-            if role.get("category") == "strength"
-            and role.get("strength_session_index") == audit.get("receiver_strength_session_index")
-            and role.get("dense_day_receiver_provisional")
+        receiver_location = next((
+            (located_week, role)
+            for located_week in weekly_role_map.get("weeks") or []
+            for role in located_week.get("session_roles") or []
+            if role.get("dense_day_receiver_provisional")
+            and role.get("dense_day_receiver_token") == audit.get("receiver_token")
         ), None)
+        receiver_week, receiver = receiver_location if receiver_location else (None, None)
         expected_names = set(audit.get("exercise_names") or [])
         received_names = {
             str(item.get("name") or "")
@@ -3240,7 +3242,8 @@ def rollback_invalid_dense_day_redistributions(
         }
         valid = (
             source is not None and receiver is not None
-            and role_d_day(week, receiver) == audit.get("receiver_original_d_day")
+            and receiver_week is week
+            and role_d_day(receiver_week, receiver) == audit.get("receiver_original_d_day")
             and received_names == expected_names
             and 2 <= len(receiver.get("selected_exercise_assignments") or []) <= 3
         )
@@ -3258,9 +3261,9 @@ def rollback_invalid_dense_day_redistributions(
                 ]
             source.pop("effective_strength_prescriptions", None)
             source.pop("effective_strength_envelope", None)
-        if receiver is not None:
+        if receiver is not None and receiver_week is not None:
             suppress_unfunded_power_microdose(
-                week, receiver, athlete_model=athlete_model,
+                receiver_week, receiver, athlete_model=athlete_model,
                 reason_code="redistribution_failed_final_calendar_review",
             )
         week["pre_hard_power_redistribution"] = {
