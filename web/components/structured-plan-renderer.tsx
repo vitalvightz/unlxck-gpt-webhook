@@ -256,15 +256,21 @@ function TechnicalCombatRationale({ title }: { title?: string }) {
   return <p className="sp-today-note">{rationale}</p>;
 }
 
-function TechnicalCombatWhyTooltip() {
-  return (
-    <WhyTooltip
-      className="info-tooltip"
-      title={TECHNICAL_COMBAT_TITLE}
-      body={TECHNICAL_COMBAT_HELP}
-      triggerLabel="i"
-    />
-  );
+function TechnicalCombatWhyTooltip({ day, declared = false }: {
+  day?: StructuredDay;
+  declared?: boolean;
+}) {
+  const anchor = day?.today_card?.mindset_anchor;
+  const focus = cleanText(anchor?.focus_cue);
+  const reset = cleanText(anchor?.reset_cue);
+  const body = [
+    declared ? DECLARED_LIGHT_COMBAT_DESCRIPTION : TECHNICAL_COMBAT_HELP,
+    focus ? `Focus: ${focus}` : null,
+    reset ? `Reset: ${reset}` : null,
+  ].filter(Boolean).join("\n");
+  return <WhyTooltip className="info-tooltip"
+    title={declared ? DECLARED_LIGHT_COMBAT_TITLE : TECHNICAL_COMBAT_TITLE}
+    body={body} triggerLabel="i" />;
 }
 
 export function MindsetAnchorCard({
