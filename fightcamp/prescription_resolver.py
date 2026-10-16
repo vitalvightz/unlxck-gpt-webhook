@@ -666,6 +666,14 @@ def _apply_pre_hard_contact_cap(role: dict[str, Any]) -> None:
     if not str(role.get("dose_adjustment_reason") or "").strip():
         role["dose_adjustment_reason"] = _PRE_HARD_CONTACT_DOSE_REASON
     role["pre_hard_contact_dose_adjustment"] = True
+    if role.get("pre_hard_contact_microdose_only") is True:
+        role["strength_dose_cap"] = {
+            "max_sets": _merge_numeric_cap(role["strength_dose_cap"].get("max_sets"), 2),
+            "max_reps": _merge_numeric_cap(role["strength_dose_cap"].get("max_reps"), 2),
+            "loaded_allowed": False,
+        }
+        role["rpe_cap"] = _merge_rpe_cap(role.get("rpe_cap"), "6")
+        role["dose_adjustment_reason"] = "pre_hard_contact_power_microdose"
 
 
 def _selection_metadata(slot: dict[str, Any]) -> dict[str, Any]:
