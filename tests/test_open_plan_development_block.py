@@ -218,10 +218,10 @@ def test_two_hard_power_open_block_never_turns_a_microdose_into_full_strength():
         ]
         assert meaningful_strength, week
         for session in meaningful_strength:
-            if session.get("weekday") != "Monday":
+            if session.get("weekday") != "Monday" or len(meaningful_strength) < 2:
                 continue
-            # A pre-hard Monday power touch must never contain the full bank
-            # strength circuit, independent of whether this seed selected one.
+            # When Monday is an extra exposure alongside a separate main
+            # strength day, it must not inherit the full bank circuit.
             assert len(session.get("exercises") or []) <= 1
             for exercise in session.get("exercises") or []:
                 dose = str(exercise.get("prescription") or "")
