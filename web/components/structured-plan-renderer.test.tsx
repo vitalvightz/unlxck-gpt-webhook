@@ -43,6 +43,49 @@ test("open calendar shows all seven weekdays without turning availability into w
   assert.doesNotMatch(html, /Log session|Missed/);
 });
 
+for (const openOngoing of [false, true]) {
+  test(`${openOngoing ? "open" : "fight-camp"} calendar uses compact neutral rows and preserves recovery/contact`, () => {
+    const plan: StructuredPlan = { weeks: [{ week_index: 1, days: [
+      { date: "2026-10-26", weekday: "Mon", day_type: "rest", sessions: [],
+        today_card: { headline: "No session planned", mindset_anchor: { focus_cue: "Recover well" } } },
+      { date: "2026-10-27", weekday: "Tue", day_type: "high", sessions: [],
+        today_card: { headline: "Hard sparring", coach_led_contact: "Hard sparring" } },
+      { date: "2026-10-28", weekday: "Wed", day_type: "rest", sessions: [], today_card: { headline: "Unavailable" } },
+      { date: "2026-10-29", weekday: "Thu", day_type: "recovery", sessions: [],
+        today_card: { headline: "Prescribed recovery", mindset_anchor: { focus_cue: "Keep the prescribed mobility dose" } } },
+      { date: "2026-10-30", weekday: "Fri", sessions: [{ session_id: "strength", title: "Strength", blocks: [] }] },
+      { date: "2026-10-31", weekday: "Sat", day_type: "rest", sessions: [], today_card: { headline: "No session planned" } },
+      { date: "2026-11-01", weekday: "Sun", day_type: "rest", sessions: [], today_card: { headline: "Unavailable" } },
+    ] }] };
+    const original = JSON.stringify(plan);
+    const html = renderToStaticMarkup(<StructuredPlanRenderer plan={plan} openOngoing={openOngoing}
+      today={new Date(2026, 9, 26)} focusDay={new Date(2026, 9, 27)} currentDayLabel="Next session" />);
+    assert.equal(countOccurrences(html, "cm-rest-day"), 4);
+    assert.equal(countOccurrences(html, ">Unavailable<"), 2);
+    assert.equal(countOccurrences(html, "cm-day-current"), 1);
+    assert.match(html, /Next session/);
+    assert.match(html, /Hard sparring/);
+    assert.match(html, /Keep the prescribed mobility dose/);
+    assert.doesNotMatch(html, /Recover well/);
+    assert.equal(JSON.stringify(plan), original);
+    if (openOngoing) {
+      const withoutTodayResponse = renderToStaticMarkup(<StructuredPlanRenderer plan={plan} openOngoing
+        today={new Date(2026, 9, 26)} />);
+      assert.equal(countOccurrences(withoutTodayResponse, "cm-day-current"), 1);
+      assert.match(withoutTodayResponse, /cm-day-now">Next session/);
+    }
+  });
+}
+
+test("legacy open neutral rows use the real training date on a recurring weekday match", () => {
+  const plan: StructuredPlan = { weeks: [{ days: [{ date: "2026-10-12", weekday: "Mon", day_type: "rest",
+    today_card: { headline: "No session planned" }, sessions: [] }] }] };
+  const html = renderToStaticMarkup(<StructuredPlanRenderer plan={plan} openOngoing today={new Date(2026, 9, 26)} />);
+  assert.match(html, /MON 26 OCT/);
+  assert.doesNotMatch(html, /MON 12 OCT/);
+  assert.match(html, /cm-day-now">Today/);
+});
+
 test("structured renderer uses one session card and hides detail blocks until expanded", () => {
   const plan = {
     schema_version: "1.0",
@@ -257,7 +300,8 @@ test("an open plan whose block starts next week marks no day as today", () => {
   assert.equal(html.includes("THU 06 AUG"), true);
   assert.equal(html.includes("SAT 08 AUG"), true);
   assert.equal(html.includes("SAT 01 AUG"), false);
-  assert.equal(html.includes("cm-day-now"), false);
+  assert.equal(html.includes('cm-day-now">Today'), false);
+  assert.equal(html.includes('cm-day-now">Next session'), true);
   // With no day markable as today, the plan says when it does start — the block
   // anchor (Monday), not the first day that happens to carry a session.
   assert.equal(html.includes("Plan starts Mon 03 Aug 2026"), true);
@@ -2119,9 +2163,8 @@ test("renders plan-level active notes as a standalone card", () => {
 
 // --- open-plan development-block wave ---------------------------------------
 //
-// An open plan's four weeks share one weekly rhythm, so the block cards carry a
-// week-directed instruction (progress / deload) instead of rendering as four
-// identical clones. Dated camps never receive the intent and stay unchanged.
+// Week intent may show an explicitly prescribed deload. Progression advice
+// stays hidden in both open-plan and dated-camp exercise cards.
 
 const waveSession = {
   session_id: "ses-wave",
@@ -2142,7 +2185,7 @@ const waveSession = {
   ],
 } satisfies StructuredSession;
 
-test("progression week: block cards surface their own rule once, stop rules stay", () => {
+test("progression week: block cards hide progression and retain stop rules", () => {
   const html = renderToStaticMarkup(
     <SessionCard
       session={waveSession}
@@ -2151,9 +2194,8 @@ test("progression week: block cards surface their own rule once, stop rules stay
     />,
   );
 
-  // The rule renders as the week directive, not duplicated in the Progress aside.
-  assert.equal(countOccurrences(html, "This week"), 1);
-  assert.equal(countOccurrences(html, "Add 2.5 kg when all sets feel crisp."), 1);
+  assert.equal(countOccurrences(html, "This week"), 0);
+  assert.equal(countOccurrences(html, "Add 2.5 kg when all sets feel crisp."), 0);
   assert.equal(html.includes(">Progress</span>"), false);
   // The stop-rule block keeps its safety aside and invents no generic bump.
   assert.equal(countOccurrences(html, "Stop when throw speed drops."), 1);
@@ -2182,14 +2224,14 @@ test("deload week: block cards use their own deload rule, never a progression", 
   assert.equal(html.includes(">Stop rule</span>"), true);
 });
 
-test("without an open week intent the block asides render as before", () => {
+test("dated camp block cards also hide progression", () => {
   const html = renderToStaticMarkup(
     <SessionCard session={waveSession} defaultOpenBlocks />,
   );
 
   assert.equal(html.includes("This week"), false);
-  assert.equal(html.includes(">Progress</span>"), true);
-  assert.equal(countOccurrences(html, "Add 2.5 kg when all sets feel crisp."), 1);
+  assert.equal(html.includes(">Progress</span>"), false);
+  assert.equal(countOccurrences(html, "Add 2.5 kg when all sets feel crisp."), 0);
 });
 
 test("open plan week overview headlines the block-week intent", () => {

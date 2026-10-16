@@ -719,32 +719,30 @@ function dateFromDay(day: StructuredDay | null | undefined): Date | null {
 }
 
 /**
- * Correct a backend-provided "next session" focus against the card order the
- * athlete can actually see. Once Today is logged, Plan Detail should advance to
- * the first future unfinished app-session card in rendered order; only when
- * there is no such app card do coach-led/sessionless days get the marker.
+ * Resolve the next scheduled day in visible card order, with or without a
+ * backend focus date. Neutral days and completed app work are skipped;
+ * coach-led contact remains training. Only existing dates or the supplied
+ * legacy fallback own the marker; this never schedules new work.
  */
 export function resolveNextPlanFocusDay(
   plan: StructuredPlan | null | undefined,
   trainingDay: Date | null,
   fallbackFocusDay: Date | null | undefined,
-  options?: { openWeekNumber?: number | null; allowDatedWeekdayMatch?: boolean },
+  options?: { openWeekNumber?: number | null; allowDatedWeekdayMatch?: boolean; completionIndex?: CompletionIndex },
 ): Date | undefined {
-  if (!trainingDay || !fallbackFocusDay) {
+  if (!trainingDay) {
     return fallbackFocusDay ?? undefined;
   }
   const current = resolveCurrentDay(plan, trainingDay, options);
-  if (current.weekPos == null || current.dayPos == null) {
-    return fallbackFocusDay;
-  }
-
   const weeks = getWeeks(plan);
   const futureDays: StructuredDay[] = [];
-  for (let weekPos = current.weekPos; weekPos < weeks.length; weekPos += 1) {
+  for (let weekPos = current.weekPos ?? 0; weekPos < weeks.length; weekPos += 1) {
     const days = getDays(weeks[weekPos]);
-    const startDayPos = weekPos === current.weekPos ? current.dayPos + 1 : 0;
+    const startDayPos = weekPos === current.weekPos && current.dayPos != null ? current.dayPos + 1 : 0;
     for (let dayPos = startDayPos; dayPos < days.length; dayPos += 1) {
-      futureDays.push(days[dayPos]!);
+      const day = days[dayPos]!;
+      const iso = dayISO(day);
+      if (!iso || iso > toISODate(trainingDay)) futureDays.push(day);
     }
   }
 
@@ -758,11 +756,14 @@ export function resolveNextPlanFocusDay(
   const nextTrainingDay = futureDays.find((day) => {
     const sessions = getSessions(day);
     if (sessions.length > 0) {
-      return sessions.some((session) => !isSessionTerminal(session));
+      return sessions.some((session) => {
+        const live = options?.completionIndex ? completionForSession(options.completionIndex, day, session) : undefined;
+        return live ? !TERMINAL_SESSION_COMPLETION_STATUSES.has(live.status ?? "") : !isSessionTerminal(session);
+      });
     }
-    return classifySessionlessDay(day).coachLed;
+    return Boolean(getCoachLedContactView(day)) || classifySessionlessDay(day).coachLed;
   });
-  return dateFromDay(nextTrainingDay) ?? fallbackFocusDay;
+  return dateFromDay(nextTrainingDay) ?? fallbackFocusDay ?? undefined;
 }
 
 export type WeekSessionSummary = {

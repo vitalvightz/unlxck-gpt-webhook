@@ -26,7 +26,7 @@ for (const row of expected) {
   }
   for (const [field, label] of [
     ["coaching_cues", "Coaching cues"], ["regression_options", "Easier"],
-    ["stop_rules", "Stop rule"], ["progression_rule", "Progress"],
+    ["stop_rules", "Stop rule"],
   ] as const) {
     const value = field === "coaching_cues" ? getBlockExecutionDisplay(row.fields).cues.slice(0, 1) : row.fields[field];
     const values = typeof value === "string" ? [value] : value ?? [];
@@ -36,7 +36,8 @@ for (const row of expected) {
       assert.ok(visible.includes(expectedCopy), `${row.id}: lost ${field}: ${copy}`);
     }
   }
-  if (!row.fields.progression_rule) assert.ok(!/>Progress<\/span>/.test(html), row.id);
+  assert.ok(!/>Progress<\/span>/.test(html), row.id);
+  assert.equal(block.progression_rule ?? null, row.fields.progression_rule ?? null, `${row.id}: saved guidance changed`);
   if (row.fields.progression_rule) progress++;
   if (row.fields.regression_options?.length) easier++;
   if (row.fields.coaching_cues?.length) cues++;

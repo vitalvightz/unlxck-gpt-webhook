@@ -24,6 +24,15 @@
   content: "No Planned Session";
 }
 
+/* Availability placeholders keep their truthful label in the shared row. */
+.cm-rest-label[data-neutral="true"] {
+  font-size: var(--type-label-xs);
+}
+
+.cm-rest-label[data-neutral="true"]::after {
+  content: none;
+}
+
 /* An instruction-only session card (Joint Prep, Breathing Reset, a blockless
    shadow-rhythm touch) carries its whole prescription in one line, with no
    block card under it to give the card body. Styled as the prescription it is —
