@@ -31,12 +31,12 @@ def copied_data(tmp_path):
 
 
 def test_inventory_categories_and_boundaries(index):
-    assert len(index.by_id) == 2855
-    assert Counter(r["summary"]["category"] for r in index.records) == dict(training=1010, rehab=1499, learn=346)
+    assert len(index.by_id) == 2858
+    assert Counter(r["summary"]["category"] for r in index.records) == dict(training=1013, rehab=1499, learn=346)
     assert all(not r["summary"]["prescription_allowed"] for r in index.records)
     for category, boundary in (("training", "training_validation_required"), ("rehab", "rehab_pathway_only"), ("learn", "excluded")):
         found = lib.search(index, category=category)
-        assert found["catalogue_total"] == 2855
+        assert found["catalogue_total"] == 2858
         assert {r["selection_boundary"] for r in found["entries"]} == {boundary}
 
 
