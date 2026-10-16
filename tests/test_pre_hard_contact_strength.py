@@ -921,6 +921,13 @@ def test_transfer_respects_explicit_cns_without_mechanical_tag() -> None:
     assert not _pre_hard_transfer_eligible(slot)
     slot["selected"]["selection_metadata"]["movement_cost"] = "moderate"
     assert _pre_hard_transfer_eligible(slot)
+    # A high-risk tag held only in Stage 1's provenance must still veto.
+    slot["selected"]["selection_metadata"]["mechanical_risk_tags"] = ["mech_cns_high"]
+    assert not _pre_hard_transfer_eligible(slot)
+    slot["selected"]["selection_metadata"]["mechanical_risk_tags"] = []
+    slot["selected"]["selection_metadata"]["impact_cost"] = "very_low"
+    slot["selected"]["selection_metadata"]["landing_cost"] = "not applicable"
+    assert _pre_hard_transfer_eligible(slot)
 
 
 def test_transfer_timed_isometric_cannot_be_invented_as_reps() -> None:
