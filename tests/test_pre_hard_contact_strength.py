@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from copy import deepcopy
 
+import pytest
+
 from fightcamp.pre_hard_contact_strength import (
     PRE_HARD_CONTACT_STRENGTH_CAP_REASON,
     apply_pre_hard_contact_strength_exposure_cap,
