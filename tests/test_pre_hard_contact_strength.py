@@ -715,3 +715,38 @@ def test_post_composition_reservation_refuses_injury_management() -> None:
     }
     reserve_dense_day_receiver(weekly, athlete)
     assert len(weekly["weeks"][0]["session_roles"]) == 1
+
+
+def test_split_restores_original_main_when_final_governor_moves_receiver() -> None:
+    from fightcamp.stage2_role_map import reserve_dense_day_receiver
+    from fightcamp.session_composition import rollback_invalid_dense_day_redistributions
+
+    weekly, slots = _composed_dense_week_without_secondary()
+    athlete = {
+        "training_days": ["Monday", "Tuesday", "Thursday", "Saturday"],
+        "hard_sparring_days": ["Tuesday", "Thursday"],
+        "training_frequency": 4,
+        "primary_goal": "power",
+        "fatigue": "low",
+    }
+    original = [
+        dict(item) for item in weekly["weeks"][0]["session_roles"][0]["selected_exercise_assignments"]
+    ]
+    reserve_dense_day_receiver(weekly, athlete)
+    apply_pre_hard_contact_strength_exposure_cap(weekly, athlete)
+    redistribute_pre_hard_power_from_main(
+        weekly_role_map=weekly, candidate_pools=_candidate_pools(*slots),
+        athlete_model=athlete,
+    )
+    week = weekly["weeks"][0]
+    assert week["pre_hard_power_redistribution"]["status"] == "transferred"
+    week["session_roles"][1]["scheduled_d_day"] = 21
+    week["session_roles"][1]["scheduled_countdown_label"] = "D-21"
+    assert rollback_invalid_dense_day_redistributions(
+        weekly, athlete_model=athlete
+    )
+    assert [item["name"] for item in week["session_roles"][0]["selected_exercise_assignments"]] == [
+        item["name"] for item in original
+    ]
+    assert len(week["session_roles"]) == 1
+    assert week["pre_hard_power_redistribution"]["status"] == "rolled_back"
