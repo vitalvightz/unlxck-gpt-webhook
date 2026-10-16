@@ -2989,7 +2989,7 @@ def redistribute_pre_hard_power_from_main(
     *, weekly_role_map: dict[str, Any], candidate_pools: dict[str, Any],
     athlete_model: dict[str, Any],
 ) -> dict[str, Any]:
-    """Split a genuinely dense session into 2-3 lower-cost exercises.
+    """Split a genuinely dense session into 2-3 bounded-cost exercises.
 
     Only EXISTING, selected bank assignments move. Both the source and
     receiving appointments preserve the closed exercise identity/phase.
@@ -2997,7 +2997,7 @@ def redistribute_pre_hard_power_from_main(
     compatible moves can be proved, leave the dense day as composed.
     """
     from itertools import combinations
-    from .prescription_resolver import _assignment_strength_slot
+    from .prescription_resolver import _assignment_strength_slot, _pre_hard_transfer_eligible
     from .pre_hard_contact_strength import suppress_unfunded_power_microdose
 
     if not isinstance(weekly_role_map, dict):
@@ -3046,19 +3046,14 @@ def redistribute_pre_hard_power_from_main(
                         continue
                     phase = str(member.get("source_phase") or "").strip().upper()
                     slot = _assignment_strength_slot(candidate_pools, phase, member)
-                    if slot is None or _role_kind(slot) not in {"power", "support"}:
+                    # A meaningful power label alone does not mean this
+                    # transferred, reduced exercise is unsuitable. Cost, dose
+                    # and actual high-load tags are checked by one shared
+                    # eligibility rule also used by the prescription resolver.
+                    if slot is None or not _pre_hard_transfer_eligible(slot):
                         continue
                     selected = slot.get("selected") or {}
                     kind = _role_kind(slot)
-                    if selected.get("meaningful_stress") is True or (
-                        kind == "support" and selected.get("support_only") is False
-                    ):
-                        continue
-                    if not has_verified_low_cost(
-                        slot,
-                        fields=("impact_cost", "landing_cost", "eccentric_cost", "soreness_risk"),
-                    ):
-                        continue
                     dose = working_dose(str(selected.get("prescription") or ""))
                     sets, reps = _parse_sets_reps(dose)
                     if not isinstance(sets, int) or not isinstance(reps, int):
@@ -3069,10 +3064,8 @@ def redistribute_pre_hard_power_from_main(
                     transfer_sets = min(sets, 2)
                     transfer_reps = min(reps, 2 if kind == "power" else 6)
                     tags = _slot_mechanical_risk_tags(slot)
-                    # Repeated fatigue-tagged movement is never proof of
-                    # low-cost work just because its impact metadata is low.
-                    if tags & _HIGH_SYSTEMIC_TAGS:
-                        continue
+                    # CNS-heavy and systemic-fatigue work is rejected in the
+                    # shared eligibility rule, even if one cost field says low.
                     regions = {
                         region.value for prefix, region in _REGION_TAG_PREFIXES
                         if any(tag.startswith(prefix) for tag in tags)
@@ -3190,7 +3183,7 @@ def redistribute_pre_hard_power_from_main(
 
             week["pre_hard_power_redistribution"] = {
                 "status": "transferred",
-                "reason_code": "dense_day_rebalanced_with_low_cost_work",
+                "reason_code": "dense_day_rebalanced_with_bounded_cost",
                 "source_day": source.get("scheduled_day_hint"),
                 "target_day": receiver.get("scheduled_day_hint"),
                 "exercise_names": [item["member"].get("name") for item in chosen],
