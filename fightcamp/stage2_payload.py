@@ -2303,6 +2303,16 @@ def _build_planning_brief(
         candidate_pools=candidate_pools,
         replace_callback=lambda role_map: apply_late_camp_role_morph(role_map, athlete_model),
     )
+    # The initial role budget ran before selected exercise density was known.
+    # Its own post-composition reservation offers an unused pre-contact day
+    # only when a surviving main strength session is genuinely crowded; this
+    # cannot displace conditioning, increase appointment capacity, or create a
+    # second strength role without a real >=2-member transfer later.
+    stage2_role_map_module.reserve_dense_day_receiver(
+        weekly_role_map, athlete_model
+    )
+    from .pre_hard_contact_strength import apply_pre_hard_contact_strength_exposure_cap
+    apply_pre_hard_contact_strength_exposure_cap(weekly_role_map, athlete_model)
     compose_normal_conditioning_assignments(
         weekly_role_map=weekly_role_map, candidate_pools=candidate_pools,
     )
@@ -2323,11 +2333,9 @@ def _build_planning_brief(
         for week in weekly_role_map.get("weeks", []) or []:
             drop_displaced_occupancy_fillers(week.get("session_roles") or [])
         attach_late_fight_assignments(tail_roles, tail_assignments)
-    # A pre-contact second strength appointment is legal only as a TRANSFER of
-    # existing Saturday membership. This composition-owner step removes the
-    # source assignment before authorising the receiving microdose. No extra
-    # exercises or sets are added to the week; if no safe bank-backed move
-    # exists, the role-budget owner withdraws the proposed receiver.
+    # A provisional receiver is legal only when existing source exercises
+    # actually move. If the selected bank cannot fund at least two low-cost
+    # members, the role-budget owner cancels the receiver without adding work.
     redistribute_pre_hard_power_from_main(
         weekly_role_map=weekly_role_map,
         candidate_pools=candidate_pools,
