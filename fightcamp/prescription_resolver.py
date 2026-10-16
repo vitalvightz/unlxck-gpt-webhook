@@ -732,10 +732,20 @@ def _pre_hard_transfer_eligible(slot: dict[str, Any]) -> bool:
     """
     selected = _slot_selected(slot)
     kind = _role_kind(slot)
+    metadata = _selection_metadata(slot)
+    # Stage 1 may stamp risk tags in the selected option, its provenance
+    # metadata, or the slot. Reading only one location misses some source
+    # flags. Semantic tags like anti_rotation are relevant for a controlled
+    # trunk exception, but cannot override any high-load veto.
     tags = {
         str(tag).strip().lower()
-        for tag in [*(slot.get("mechanical_risk_tags") or []),
-                    *(selected.get("mechanical_risk_tags") or [])]
+        for tag in (
+            *(slot.get("mechanical_risk_tags") or []),
+            *(slot.get("tags") or []),
+            *(selected.get("mechanical_risk_tags") or []),
+            *(selected.get("tags") or []),
+            *(metadata.get("mechanical_risk_tags") or []),
+        )
         if str(tag).strip()
     }
     controlled_trunk = (
@@ -755,14 +765,20 @@ def _pre_hard_transfer_eligible(slot: dict[str, Any]) -> bool:
         return False
     # Landing or impact must be low/none; moderate soreness/eccentric cost can
     # survive a SMALL, dose-limited transfer. High or unverified costs cannot.
-    costs = {field: _cost_value(slot, field) for field in _PRE_HARD_COST_FIELDS}
+    costs = {
+        field: _cost_value(slot, field).replace(" ", "_")
+        for field in _PRE_HARD_COST_FIELDS
+    }
+    verified_low = {
+        level.replace(" ", "_") for level in _VERIFIED_LOW_COST_LEVELS
+    }
     if any(not value for value in costs.values()):
         return False
-    if costs["impact_cost"] not in {"none", "low"}:
+    if costs["impact_cost"] not in verified_low:
         return False
-    if costs["landing_cost"] not in {"none", "low"}:
+    if costs["landing_cost"] not in verified_low:
         return False
-    if any(value not in {"none", "low", "moderate"} for value in costs.values()):
+    if any(value not in verified_low | {"moderate"} for value in costs.values()):
         return False
     # Ensure a loaded trunk exercise has a parseable, non-maximal dose and can
     # genuinely be downscaled to RPE 6 technique before hard contact.
