@@ -6,11 +6,13 @@ Run every two minutes using a single server-side timer. Set NOTION_TOKEN in
 
 import json
 import os
+import random
 import sys
 import time
-from datetime import date
+from datetime import date, datetime
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
+from zoneinfo import ZoneInfo
 
 DATA_SOURCE_ID = os.getenv("NOTION_OUTREACH_DATA_SOURCE_ID", "08d8b476129a42b0b980102b08ce4bd8")
 BASE = "https://api.notion.com/v1"
@@ -25,13 +27,17 @@ def request(method, path, body=None):
     }
     payload = json.dumps(body).encode() if body is not None else None
     for attempt in range(4):
+        time.sleep(0.35)  # Stay below Notion's average three requests/second.
         try:
             with urlopen(Request(BASE + path, data=payload, headers=headers, method=method), timeout=20) as response:
                 return json.load(response)
         except HTTPError as exc:
-            if exc.code not in (429, 500, 502, 503, 504) or attempt == 3:
+            read_only = method == "GET" or path.endswith("/query")
+            retryable = exc.code in (429, 529) or (read_only and exc.code in (500, 502, 503, 504))
+            if not retryable or attempt == 3:
                 raise
-            time.sleep(min(10, float(exc.headers.get("Retry-After", "2"))))
+            delay = float(exc.headers.get("Retry-After") or min(2 ** attempt, 10))
+            time.sleep(delay + random.uniform(0, 0.25))
 
 
 def pages():
@@ -71,7 +77,7 @@ def get_changes(page, today):
 
 
 def sync(today=None):
-    today = today or date.today()
+    today = today or datetime.now(ZoneInfo("Europe/London")).date()
     total = changed = 0
     for page in pages():
         total += 1
