@@ -241,7 +241,7 @@ def test_two_hard_power_open_block_never_turns_a_microdose_into_full_strength():
             assert 2 <= len(session.get("exercises") or []) <= 3
             for exercise in session.get("exercises") or []:
                 dose = str(exercise.get("prescription") or "")
-                assert re.match(r"^[12] x [1-6]\\b", dose), exercise
+                assert re.match(r"^[12] x [1-6]\b", dose), exercise
     # This intake has an open Monday and usable low-cost power equipment. The
     # feature must produce an actual transfer, not merely pass when it does none.
     # A real transfer is required for this equipped, open-day replay; if its
