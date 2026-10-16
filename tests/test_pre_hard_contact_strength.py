@@ -435,3 +435,120 @@ def test_complete_pre_hard_allow_list_blocks_removed_exercise_in_render() -> Non
     assert len(allow_list_findings) == 1
     assert allow_list_findings[0]["code"] == "late_camp_effective_prescription_exceeded"
     assert allow_list_findings[0]["rendered_exercise"] == "Single-Leg Forward Hops"
+
+
+# PR 2: the second pre-contact appointment is a reduced power exposure, not a
+# second full strength session. It never bypasses the original session budget.
+def _secondary_power_geometry() -> dict:
+    primary = _strength("Saturday", session_index=1, strength_session_index=1)
+    secondary = _strength("Monday", session_index=2, strength_session_index=2)
+    week = {
+        "week_index": 1,
+        "phase": "GPP",
+        "declared_training_days": ["Monday", "Tuesday", "Thursday", "Saturday"],
+        "calendar_days": _calendar(
+            ("Monday", 23), ("Tuesday", 22), ("Thursday", 20), ("Saturday", 18)
+        ),
+        "hard_sparring_plan": [_hard("Tuesday")],
+        "effective_hard_sparring_days": ["Tuesday"],
+        "session_roles": [primary, secondary],
+        "suppressed_roles": [],
+    }
+    return {"model": "session_role_overlay.v1", "weeks": [week]}
+
+
+def _power_slot(*, cost: str = "low", with_cost: bool = True) -> dict:
+    metadata = {"primary_adaptation": "power"}
+    if with_cost:
+        metadata.update(
+            impact_cost=cost, landing_cost="none",
+            eccentric_cost="low", soreness_risk="low",
+        )
+    return {
+        "slot_id": "microdose-rotational-slam",
+        "session_index": 2,
+        "role": "rotation",
+        "quality_class": "anchor_power",
+        "base_categories": ["rotational_power"],
+        "selected": {
+            "name": "Med-Ball Rotational Slam",
+            "quality_class": "anchor_power",
+            "prescription": "4 x 3 at max speed; full rest 120s",
+            "selection_metadata": metadata,
+        },
+    }
+
+
+def test_clean_main_and_pre_contact_power_microdose_can_coexist() -> None:
+    weekly = _secondary_power_geometry()
+    athlete = {"primary_goal": "power", "fatigue": "low", "cut_severity_bucket": "none"}
+    apply_pre_hard_contact_strength_exposure_cap(weekly, athlete)
+    roles = weekly["weeks"][0]["session_roles"]
+    assert len(roles) == 2
+    assert roles[0]["scheduled_day_hint"] == "Saturday"
+    assert roles[1]["scheduled_day_hint"] == "Monday"
+    assert roles[1]["pre_hard_contact_microdose_only"] is True
+    assert roles[0].get("pre_hard_contact_managed_stress") is not True
+    assert weekly["weeks"][0]["pre_hard_contact_strength_policy"]["max_meaningful_strength_exposures"] == 1
+
+    compose_normal_strength_assignments(
+        weekly_role_map=weekly,
+        candidate_pools=_candidate_pools(_power_slot()),
+        allow_relocation=False,
+    )
+    microdose = roles[1]
+    assert [member["name"] for member in microdose["selected_exercise_assignments"]] == [
+        "Med-Ball Rotational Slam"
+    ]
+    apply_effective_strength_prescriptions(
+        weekly_role_map=weekly,
+        candidate_pools=_candidate_pools(_power_slot()),
+        athlete_model=athlete,
+    )
+    resolved = microdose["effective_strength_prescriptions"]
+    assert len(resolved) == 1
+    assert resolved[0]["effective_prescription"].startswith("2 x 2")
+    assert resolved[0]["effective_loaded"] is False
+    assert microdose["strength_dose_cap"]["loaded_allowed"] is False
+
+
+@pytest.mark.parametrize(
+    "athlete",
+    [
+        {"primary_goal": "power", "fatigue": "high"},
+        {"primary_goal": "power", "cut_severity_bucket": "high"},
+        {"primary_goal": "power", "injuries": ["knee pain"]},
+        {"primary_goal": "power", "readiness_flags": ["injury_management"]},
+        {"primary_goal": "strength", "fatigue": "low"},
+    ],
+)
+def test_pre_contact_second_strength_remains_suppressed_when_constrained(athlete) -> None:
+    weekly = _secondary_power_geometry()
+    apply_pre_hard_contact_strength_exposure_cap(weekly, athlete)
+    assert [role["scheduled_day_hint"] for role in weekly["weeks"][0]["session_roles"]] == ["Saturday"]
+    assert not any(role.get("pre_hard_contact_microdose_only") for role in weekly["weeks"][0]["session_roles"])
+
+
+@pytest.mark.parametrize("slot", [_power_slot(cost="high"), _power_slot(with_cost=False)])
+def test_power_microdose_rejects_high_or_unknown_recovery_cost(slot) -> None:
+    weekly = _secondary_power_geometry()
+    apply_pre_hard_contact_strength_exposure_cap(weekly, {"primary_goal": "power"})
+    compose_normal_strength_assignments(
+        weekly_role_map=weekly,
+        candidate_pools=_candidate_pools(slot),
+        allow_relocation=False,
+    )
+    microdose = weekly["weeks"][0]["session_roles"][1]
+    assert microdose["selected_exercise_assignments"] == []
+
+
+def test_power_microdose_does_not_override_weekly_role_budget() -> None:
+    from fightcamp.stage2_role_map import _non_spar_role_priority_rank
+
+    secondary = {"category": "strength", "role_key": "secondary_strength_day"}
+    fresh = {"primary_goal": "power", "fatigue": "low", "injuries": []}
+    assert _non_spar_role_priority_rank(secondary, "GPP", True, False, athlete_model=fresh) == 3
+    assert _non_spar_role_priority_rank(secondary, "GPP", False, False, athlete_model=fresh) == 2
+    assert _non_spar_role_priority_rank(
+        secondary, "GPP", True, False, athlete_model={**fresh, "fatigue": "high"}
+    ) == 2
