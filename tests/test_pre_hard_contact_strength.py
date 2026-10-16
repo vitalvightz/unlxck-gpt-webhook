@@ -439,8 +439,8 @@ def test_complete_pre_hard_allow_list_blocks_removed_exercise_in_render() -> Non
     assert allow_list_findings[0]["rendered_exercise"] == "Single-Leg Forward Hops"
 
 
-# PR 2: the second pre-contact appointment is a reduced power exposure, not a
-# second full strength session. It never bypasses the original session budget.
+# PR 2: only split a dense main session when at least TWO safe exercises
+# can move. Exercise identities and aggregate weekly membership are conserved.
 def _secondary_power_geometry() -> dict:
     primary = _strength("Saturday", session_index=1, strength_session_index=1)
     secondary = _strength("Monday", session_index=2, strength_session_index=2)
@@ -459,32 +459,37 @@ def _secondary_power_geometry() -> dict:
     return {"model": "session_role_overlay.v1", "weeks": [week]}
 
 
-def _power_slot(*, cost: str = "low", with_cost: bool = True) -> dict:
+def _lower_power_slot(name: str, suffix: int, *, cost: str = "low", with_cost: bool = True) -> dict:
     metadata = {"primary_adaptation": "power"}
     if with_cost:
         metadata.update(
-            impact_cost=cost, landing_cost="none",
-            eccentric_cost="low", soreness_risk="low",
+            impact_cost=cost, landing_cost="none", eccentric_cost="low",
+            soreness_risk="low",
         )
     return {
-        "slot_id": "microdose-rotational-slam",
-        "session_index": 2,
-        "role": "rotation",
+        "slot_id": f"gpp-lower-power-{suffix}",
+        "session_index": 1,
+        "role": "lower_power",
         "quality_class": "anchor_power",
-        "base_categories": ["rotational_power"],
+        "base_categories": ["lower_body_power"],
         "selected": {
-            "name": "Med-Ball Rotational Slam",
+            "name": name,
             "quality_class": "anchor_power",
-            "prescription": "4 x 3 at max speed; full rest 120s",
+            "prescription": "4 x 3",
+            "mechanical_risk_tags": ["mech_lower_power", "mech_ballistic"],
             "selection_metadata": metadata,
         },
     }
 
 
 def _transfer_slots(cost: str = "low", with_cost: bool = True) -> tuple[dict, ...]:
-    donor = _power_slot(cost=cost, with_cost=with_cost)
-    donor["session_index"] = 1
-    return _anchor_slot(), _high_cost_power_slot(), _low_cost_support_slot(), donor
+    return (
+        _anchor_slot(),
+        _high_cost_power_slot(),
+        _low_cost_support_slot(),
+        _lower_power_slot("Low-Impact Band Drive", 1, cost=cost, with_cost=with_cost),
+        _lower_power_slot("Low-Impact Step Push", 2, cost=cost, with_cost=with_cost),
+    )
 
 
 def _seed_main(weekly: dict, *slots: dict) -> None:
@@ -494,19 +499,16 @@ def _seed_main(weekly: dict, *slots: dict) -> None:
     ]
 
 
-def test_clean_main_and_pre_contact_power_microdose_share_existing_work() -> None:
+def test_dense_main_rebalances_two_same_region_exercises_without_more_weekly_work() -> None:
     weekly = _secondary_power_geometry()
     athlete = {"primary_goal": "power", "fatigue": "low", "cut_severity_bucket": "none"}
     slots = _transfer_slots()
     _seed_main(weekly, *slots)
     apply_pre_hard_contact_strength_exposure_cap(weekly, athlete)
     roles = weekly["weeks"][0]["session_roles"]
-    assert len(roles) == 2
-    assert roles[0]["scheduled_day_hint"] == "Saturday"
-    assert roles[1]["scheduled_day_hint"] == "Monday"
-    assert roles[1]["pre_hard_contact_microdose_only"] is True
-
+    assert [r["scheduled_day_hint"] for r in roles] == ["Saturday", "Monday"]
     before = [a["name"] for a in roles[0]["selected_exercise_assignments"]]
+
     redistribute_pre_hard_power_from_main(
         weekly_role_map=weekly,
         candidate_pools=_candidate_pools(*slots),
@@ -515,13 +517,11 @@ def test_clean_main_and_pre_contact_power_microdose_share_existing_work() -> Non
     main, monday = roles
     after = [a["name"] for a in main["selected_exercise_assignments"]]
     transferred = [a["name"] for a in monday["selected_exercise_assignments"]]
-    assert transferred == ["Med-Ball Rotational Slam"]
+    assert set(transferred) == {"Low-Impact Band Drive", "Low-Impact Step Push"}
     assert sorted(before) == sorted(after + transferred)
-    assert len(after) == len(before) - 1
+    assert len(after) == 3
     assert weekly["weeks"][0]["pre_hard_power_redistribution"]["weekly_exercise_count_delta"] == 0
 
-    # Repeated execution never silently transfers another member or withdraws
-    # the already-funded receiver.
     redistribute_pre_hard_power_from_main(
         weekly_role_map=weekly,
         candidate_pools=_candidate_pools(*slots),
@@ -535,11 +535,34 @@ def test_clean_main_and_pre_contact_power_microdose_share_existing_work() -> Non
         athlete_model=athlete,
     )
     resolved = monday["effective_strength_prescriptions"]
-    assert len(resolved) == 1
-    assert resolved[0]["effective_prescription"].startswith("2 x 2")
-    assert resolved[0]["effective_loaded"] is False
+    assert len(resolved) == 2
+    assert all(item["effective_prescription"].startswith("2 x 2") for item in resolved)
+    assert all(item["effective_loaded"] is False for item in resolved)
     assert monday["strength_dose_cap"]["loaded_allowed"] is False
-    assert all(p.get("name") != "Med-Ball Rotational Slam" for p in main["effective_strength_prescriptions"])
+    assert not set(transferred) & {
+        item["name"] for item in main["effective_strength_prescriptions"]
+    }
+
+
+def test_six_exercise_day_can_split_three_but_never_four() -> None:
+    weekly = _secondary_power_geometry()
+    athlete = {"primary_goal": "power", "fatigue": "low"}
+    extra = _lower_power_slot("Low-Impact Band Acceleration", 3)
+    slots = (*_transfer_slots(), extra)
+    _seed_main(weekly, *slots)
+    apply_pre_hard_contact_strength_exposure_cap(weekly, athlete)
+    redistribute_pre_hard_power_from_main(
+        weekly_role_map=weekly,
+        candidate_pools=_candidate_pools(*slots),
+        athlete_model=athlete,
+    )
+    main, monday = weekly["weeks"][0]["session_roles"]
+    assert len(main["selected_exercise_assignments"]) == 3
+    assert len(monday["selected_exercise_assignments"]) == 3
+    assert all(
+        "Low-Impact" in item["name"]
+        for item in monday["selected_exercise_assignments"]
+    )
 
 
 @pytest.mark.parametrize(
@@ -549,18 +572,16 @@ def test_clean_main_and_pre_contact_power_microdose_share_existing_work() -> Non
         {"primary_goal": "power", "cut_severity_bucket": "high"},
         {"primary_goal": "power", "injuries": ["knee pain"]},
         {"primary_goal": "power", "readiness_flags": ["injury_management"]},
-        {"primary_goal": "strength", "fatigue": "low"},
     ],
 )
 def test_pre_contact_second_strength_remains_suppressed_when_constrained(athlete) -> None:
     weekly = _secondary_power_geometry()
     apply_pre_hard_contact_strength_exposure_cap(weekly, athlete)
-    assert [role["scheduled_day_hint"] for role in weekly["weeks"][0]["session_roles"]] == ["Saturday"]
-    assert not any(role.get("pre_hard_contact_microdose_only") for role in weekly["weeks"][0]["session_roles"])
+    assert [r["scheduled_day_hint"] for r in weekly["weeks"][0]["session_roles"]] == ["Saturday"]
 
 
 @pytest.mark.parametrize("cost,with_cost", [("high", True), ("low", False)])
-def test_no_safe_transfer_keeps_all_main_work_and_suppresses_monday(cost, with_cost) -> None:
+def test_fewer_than_two_safe_transfers_keeps_entire_main_and_no_monday(cost, with_cost) -> None:
     weekly = _secondary_power_geometry()
     slots = _transfer_slots(cost=cost, with_cost=with_cost)
     _seed_main(weekly, *slots)
@@ -578,11 +599,26 @@ def test_no_safe_transfer_keeps_all_main_work_and_suppresses_monday(cost, with_c
     assert weekly["weeks"][0]["pre_hard_power_redistribution"]["status"] == "skipped"
 
 
-def test_power_microdose_does_not_override_weekly_role_budget() -> None:
+def test_no_split_when_main_not_dense() -> None:
+    weekly = _secondary_power_geometry()
+    slots = _transfer_slots()[:4]
+    _seed_main(weekly, *slots)
+    athlete = {"fatigue": "low"}
+    apply_pre_hard_contact_strength_exposure_cap(weekly, athlete)
+    redistribute_pre_hard_power_from_main(
+        weekly_role_map=weekly,
+        candidate_pools=_candidate_pools(*slots),
+        athlete_model=athlete,
+    )
+    assert len(weekly["weeks"][0]["session_roles"]) == 1
+    assert len(weekly["weeks"][0]["session_roles"][0]["selected_exercise_assignments"]) == 4
+
+
+def test_split_role_priority_respects_conditioning_and_fatigue() -> None:
     from fightcamp.stage2_role_map import _non_spar_role_priority_rank
 
     secondary = {"category": "strength", "role_key": "secondary_strength_day"}
-    fresh = {"primary_goal": "power", "fatigue": "low", "injuries": []}
+    fresh = {"primary_goal": "strength", "fatigue": "low", "injuries": []}
     assert _non_spar_role_priority_rank(secondary, "GPP", True, False, athlete_model=fresh) == 3
     assert _non_spar_role_priority_rank(secondary, "GPP", False, False, athlete_model=fresh) == 2
     assert _non_spar_role_priority_rank(
