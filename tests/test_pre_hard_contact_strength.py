@@ -102,6 +102,11 @@ def _high_cost_power_slot() -> dict:
                 "landing_cost": "high",
                 "eccentric_cost": "moderate",
                 "soreness_risk": "moderate",
+                # A selected jump is a POWER goal witness even when it is
+                # unsuitable for transfer. Without this fixture metadata the
+                # test previously (incorrectly) forced the allocator to retain
+                # one low-cost power slot solely to witness that goal.
+                "primary_adaptation": "power",
             },
         },
     }
@@ -750,3 +755,231 @@ def test_split_restores_original_main_when_final_governor_moves_receiver() -> No
     ]
     assert len(week["session_roles"]) == 1
     assert week["pre_hard_power_redistribution"]["status"] == "rolled_back"
+
+def test_meaningful_power_and_capped_trunk_anchor_move_as_two_existing_exercises() -> None:
+    """Saved-plan regression: a meaningful med-ball exercise is movable.
+
+    A moderate-eccentric anti-rotation exercise can be reduced to technique,
+    but high-soreness/high-impact lower-body exercises stay on the main day.
+    The same rule applies to future plans; no athlete/weekday names are encoded
+    in the production allocator.
+    """
+    weekly = _secondary_power_geometry()
+    athlete = {"primary_goal": "power", "fatigue": "low"}
+    med_ball = {
+        "slot_id": "gpp-meaningful-medball",
+        "session_index": 1,
+        "role": "core",
+        "quality_class": "anchor_power",
+        "selected": {
+            "name": "Med-Ball Rotational Slam",
+            "quality_class": "anchor_power",
+            "prescription": "4 x 2 reps at max speed; full rest 120s.",
+            "meaningful_stress": True,
+            "support_only": False,
+            "mechanical_risk_tags": [
+                "mech_ballistic", "mech_trunk_rotation", "mech_trunk_stability",
+            ],
+            "selection_metadata": {
+                "impact_cost": "low", "landing_cost": "none",
+                "eccentric_cost": "low", "soreness_risk": "low",
+            },
+        },
+    }
+    anti_rotation = {
+        "slot_id": "gpp-meaningful-trunk-anchor",
+        "session_index": 1,
+        "role": "horizontal_push",
+        "quality_class": "anchor_loaded",
+        "selected": {
+            "name": "Landmine Anti-Rotation Press",
+            "quality_class": "anchor_loaded",
+            "prescription": "2-4 sets x 6-10 reps; RPE 6-8.",
+            "meaningful_stress": True,
+            "support_only": False,
+            "mechanical_risk_tags": [
+                "anti_rotation", "loaded_rotation",
+                "mech_trunk_stability", "mech_upper_press",
+            ],
+            "selection_metadata": {
+                "impact_cost": "low", "landing_cost": "none",
+                "eccentric_cost": "moderate", "soreness_risk": "low",
+            },
+        },
+    }
+    high = _high_cost_power_slot()
+    high2 = deepcopy(high)
+    high2["slot_id"] = "gpp-high-jump-2"
+    high2["selected"]["name"] = "Single-Leg Depth Drop"
+    high3 = deepcopy(high)
+    high3["slot_id"] = "gpp-high-jump-3"
+    high3["selected"]["name"] = "Trap Bar Jump"
+    slots = (_anchor_slot(), med_ball, high, high2, anti_rotation, high3)
+    _seed_main(weekly, *slots)
+    main = weekly["weeks"][0]["session_roles"][0]
+    before = [item["name"] for item in main["selected_exercise_assignments"]]
+    apply_pre_hard_contact_strength_exposure_cap(weekly, athlete)
+    redistribute_pre_hard_power_from_main(
+        weekly_role_map=weekly, candidate_pools=_candidate_pools(*slots),
+        athlete_model=athlete,
+    )
+    main, receiver = weekly["weeks"][0]["session_roles"]
+    moved = [item["name"] for item in receiver["selected_exercise_assignments"]]
+    kept = [item["name"] for item in main["selected_exercise_assignments"]]
+    assert set(moved) == {"Med-Ball Rotational Slam", "Landmine Anti-Rotation Press"}
+    assert sorted(before) == sorted(moved + kept)
+    assert len(kept) == 4 and len(moved) == 2
+    assert weekly["weeks"][0]["pre_hard_power_redistribution"]["weekly_exercise_count_delta"] == 0
+
+    apply_effective_strength_prescriptions(
+        weekly_role_map=weekly, candidate_pools=_candidate_pools(*slots),
+        athlete_model=athlete,
+    )
+    prescriptions = {
+        p["name"]: p for p in receiver["effective_strength_prescriptions"]
+    }
+    assert set(prescriptions) == set(moved)
+    assert prescriptions["Med-Ball Rotational Slam"]["effective_prescription"].startswith("2 x 2")
+    assert prescriptions["Landmine Anti-Rotation Press"]["effective_prescription"].startswith("2 x 6")
+    assert all(p["effective_loaded"] is False for p in prescriptions.values())
+
+
+def test_transfer_still_blocks_high_cost_and_cns_even_with_meaningful_power() -> None:
+    from fightcamp.prescription_resolver import _pre_hard_transfer_eligible
+
+    moderate = _lower_power_slot("Low-Cost Power", 9, cost="low")
+    moderate["selected"]["meaningful_stress"] = True
+    moderate["selected"]["selection_metadata"]["eccentric_cost"] = "moderate"
+    assert _pre_hard_transfer_eligible(moderate)
+    for field in ("impact_cost", "landing_cost", "eccentric_cost", "soreness_risk"):
+        bad = deepcopy(moderate)
+        bad["selected"]["selection_metadata"][field] = "high"
+        assert not _pre_hard_transfer_eligible(bad)
+    cns = deepcopy(moderate)
+    cns["selected"]["mechanical_risk_tags"] = ["mech_cns_high"]
+    assert not _pre_hard_transfer_eligible(cns)
+
+
+
+
+@pytest.mark.parametrize(
+    ("name", "expected"),
+    [
+        ("Med-Ball Rotational Slam", True),
+        ("Landmine Push Press", True),
+        ("Med Ball Scoop Toss", False),  # CNS high, even when landing is none
+        ("Anti-Rotation Med Ball Slam", False),  # CNS high
+        ("DB Clean & Press", False),  # CNS and movement cost high
+        ("Sled Push", False),  # movement_cost high but impact low
+        ("Battle Rope Slams", False),  # systemic fatigue and movement cost high
+        ("Trap Bar Jump", False),  # landing / soreness high
+        ("Speed Box Squat", False),  # cns high, missing mech_cns_high tag
+        ("Single-Leg Forward Hops", False),  # landing high
+        ("Slow-Lowered Pull-Up", False),  # unknown eccentric cost
+    ],
+)
+def test_bank_tag_audit_drives_shared_pre_contact_transfer_policy(
+    name: str, expected: bool,
+) -> None:
+    """Real exercise bank regression, not a hand-picked plan or mocked cost."""
+    import json
+    from pathlib import Path
+
+    from fightcamp.prescription_resolver import _pre_hard_transfer_eligible
+
+    path = Path(__file__).resolve().parents[1] / "data" / "exercise_bank.json"
+    bank = json.loads(path.read_text(encoding="utf-8"))
+    record = next(item for item in bank if item["name"] == name)
+    # Strength roles already arrive with Stage 1's classified source slot.
+    slot = {
+        "slot_id": "audited-" + name.lower().replace(" ", "-"),
+        "quality_class": "anchor_power",
+        "role": record.get("movement"),
+        "selected": {
+            **record,
+            "selection_metadata": {
+                field: record.get(field)
+                for field in (
+                    "impact_cost", "landing_cost", "eccentric_cost",
+                    "soreness_risk", "movement_cost", "cns_load",
+                    "contact_cost", "lactate_load",
+                )
+            },
+        },
+    }
+    assert _pre_hard_transfer_eligible(slot) is expected
+
+
+def test_transfer_respects_explicit_cns_without_mechanical_tag() -> None:
+    from fightcamp.prescription_resolver import _pre_hard_transfer_eligible
+
+    slot = _lower_power_slot("No CNS tag but high explicit load", 16)
+    slot["selected"]["selection_metadata"]["cns_load"] = "high"
+    assert not _pre_hard_transfer_eligible(slot)
+    slot["selected"]["selection_metadata"]["cns_load"] = "moderate"
+    slot["selected"]["selection_metadata"]["movement_cost"] = "high"
+    assert not _pre_hard_transfer_eligible(slot)
+    slot["selected"]["selection_metadata"]["movement_cost"] = "moderate"
+    assert _pre_hard_transfer_eligible(slot)
+    # A high-risk tag held only in Stage 1's provenance must still veto.
+    slot["selected"]["selection_metadata"]["mechanical_risk_tags"] = ["mech_cns_high"]
+    assert not _pre_hard_transfer_eligible(slot)
+    slot["selected"]["selection_metadata"]["mechanical_risk_tags"] = []
+    slot["selected"]["selection_metadata"]["impact_cost"] = "very_low"
+    slot["selected"]["selection_metadata"]["landing_cost"] = "not applicable"
+    assert _pre_hard_transfer_eligible(slot)
+
+
+def test_transfer_timed_isometric_cannot_be_invented_as_reps() -> None:
+    weekly = _secondary_power_geometry()
+    slots = list(_transfer_slots())
+    slots[-1] = deepcopy(slots[-1])
+    slots[-1]["selected"]["name"] = "Timed Trunk Brace"
+    slots[-1]["selected"]["prescription"] = "2 x 20s hold"
+    slots[-1]["slot_id"] = "timed-brace"
+    _seed_main(weekly, *slots)
+    athlete = {"primary_goal": "power", "fatigue": "low"}
+    apply_pre_hard_contact_strength_exposure_cap(weekly, athlete)
+    redistribute_pre_hard_power_from_main(
+        weekly_role_map=weekly,
+        candidate_pools=_candidate_pools(*slots), athlete_model=athlete,
+    )
+    # May still choose two OTHER eligible exercises, but a timed hold cannot
+    # be reinterpreted as twenty full repetitions by the transfer parser.
+    week = weekly["weeks"][0]
+    receivers = [
+        r for r in week["session_roles"]
+        if r.get("pre_hard_contact_microdose_only")
+    ]
+    assert all(
+        a["name"] != "Timed Trunk Brace"
+        for r in receivers
+        for a in r.get("selected_exercise_assignments", [])
+    )
+
+
+def test_any_declared_pre_hard_weekday_can_receive_not_only_monday() -> None:
+    from fightcamp.stage2_role_map import reserve_dense_day_receiver
+
+    weekly, slots = _composed_dense_week_without_secondary()
+    week = weekly["weeks"][0]
+    week["calendar_days"].append({"weekday": "Wednesday", "d_day": 21})
+    week["declared_training_days"] = ["Wednesday", "Tuesday", "Thursday", "Saturday"]
+    athlete = {
+        "training_days": ["Wednesday", "Tuesday", "Thursday", "Saturday"],
+        "hard_sparring_days": ["Tuesday", "Thursday"],
+        "training_frequency": 5,
+        "primary_goal": "power", "fatigue": "low", "cut_severity_bucket": "none",
+    }
+    reserve_dense_day_receiver(weekly, athlete)
+    assert [r["scheduled_day_hint"] for r in week["session_roles"]] == ["Saturday", "Wednesday"]
+    apply_pre_hard_contact_strength_exposure_cap(weekly, athlete)
+    redistribute_pre_hard_power_from_main(
+        weekly_role_map=weekly, candidate_pools=_candidate_pools(*slots),
+        athlete_model=athlete,
+    )
+    assert len(week["session_roles"]) == 2
+    main, wednesday = week["session_roles"]
+    assert len(main["selected_exercise_assignments"]) == 3
+    assert len(wednesday["selected_exercise_assignments"]) == 2
+    assert week["pre_hard_power_redistribution"]["status"] == "transferred"
