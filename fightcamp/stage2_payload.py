@@ -2293,6 +2293,23 @@ def _build_planning_brief(
     # or protected-slot rule can preserve hard glycolytic work inside D-13; the
     # D-21→D-18 combat-pressure floor is untouched by construction.
     apply_late_camp_role_morph(weekly_role_map, athlete_model)
+    # The final governor can retain a pre-hard strength role only as a power
+    # microdose. Its earlier exercise composition was chosen for a full role,
+    # so re-enter the SAME composition owner for just those changed roles;
+    # otherwise the downstream dose owner would have to drop unsafe members.
+    microdose_roles = {
+        id(role)
+        for week in weekly_role_map.get("weeks") or []
+        for role in week.get("session_roles") or []
+        if isinstance(role, dict) and role.get("pre_hard_contact_microdose_only") is True
+    }
+    if microdose_roles:
+        compose_normal_strength_assignments(
+            weekly_role_map=weekly_role_map,
+            candidate_pools=candidate_pools,
+            only_roles=microdose_roles,
+            allow_relocation=False,
+        )
     # Composition runs first because its own recovery mover's relocations must
     # be morphed and verified by the governor. Any role moved after its
     # membership was chosen -- by that mover or by the governor -- is recomposed
