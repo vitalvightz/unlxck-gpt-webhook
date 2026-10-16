@@ -2,6 +2,10 @@
 
 import importlib.util
 from datetime import date
+from io import BytesIO
+from urllib.error import HTTPError
+
+import pytest
 from pathlib import Path
 
 MODULE = Path(__file__).resolve().parents[1] / "tools" / "sync_notion_followups.py"
@@ -44,3 +48,67 @@ def test_final_followup_removes_stale_copy():
 
 def test_no_changes_when_already_synced():
     assert sync.get_changes(row(sent="1", synced=1, copied="next DM"), date(2026, 10, 16)) == {}
+
+
+def test_paginates_all_outreach_rows(monkeypatch):
+    calls = []
+
+    def fake_request(method, path, body=None):
+        calls.append(body)
+        return {"results": [row()], "has_more": len(calls) == 1, "next_cursor": "more" if len(calls) == 1 else None}
+
+    monkeypatch.setattr(sync, "request", fake_request)
+    assert len(list(sync.pages())) == 2
+    assert "start_cursor" not in calls[0]
+    assert calls[1]["start_cursor"] == "more"
+
+
+def test_changed_stage_before_update_skips_write(monkeypatch):
+    original = row(copied="old")
+    newer = row(stage="Contacted", copied="old")
+    actions = []
+
+    def fake_request(method, path, body=None):
+        actions.append(method)
+        if method == "GET":
+            return newer
+        pytest.fail("Should not overwrite a lead after their stage changes")
+
+    monkeypatch.setattr(sync, "pages", lambda: iter([original]))
+    monkeypatch.setattr(sync, "request", fake_request)
+    assert sync.sync(date(2026, 10, 16)) == (1, 0)
+    assert actions == ["GET"]
+
+
+def test_retries_rate_limit_529(monkeypatch):
+    calls = []
+    sleeps = []
+
+    def fake_urlopen(req, timeout):
+        calls.append(req)
+        if len(calls) == 1:
+            raise HTTPError(req.full_url, 529, "Overloaded", {"Retry-After": "1"}, None)
+        return BytesIO(b'{"ok": true}')
+
+    monkeypatch.setenv("NOTION_TOKEN", "fake-secret")
+    monkeypatch.setattr(sync, "urlopen", fake_urlopen)
+    monkeypatch.setattr(sync.time, "sleep", sleeps.append)
+    monkeypatch.setattr(sync.random, "uniform", lambda *_: 0)
+    assert sync.request("GET", "/pages/example") == {"ok": True}
+    assert len(calls) == 2
+    assert sleeps == [0.35, 1.0, 0.35]
+
+
+def test_does_not_retry_failed_patch(monkeypatch):
+    attempts = []
+
+    def fail(req, timeout):
+        attempts.append(req)
+        raise HTTPError(req.full_url, 500, "Server failure", {}, None)
+
+    monkeypatch.setenv("NOTION_TOKEN", "fake-secret")
+    monkeypatch.setattr(sync, "urlopen", fail)
+    monkeypatch.setattr(sync.time, "sleep", lambda _: None)
+    with pytest.raises(HTTPError):
+        sync.request("PATCH", "/pages/example", {"properties": {}})
+    assert len(attempts) == 1
