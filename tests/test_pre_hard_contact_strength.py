@@ -750,3 +750,108 @@ def test_split_restores_original_main_when_final_governor_moves_receiver() -> No
     ]
     assert len(week["session_roles"]) == 1
     assert week["pre_hard_power_redistribution"]["status"] == "rolled_back"
+
+def test_meaningful_power_and_capped_trunk_anchor_move_as_two_existing_exercises() -> None:
+    """Saved-plan regression: a meaningful med-ball exercise is movable.
+
+    A moderate-eccentric anti-rotation exercise can be reduced to technique,
+    but high-soreness/high-impact lower-body exercises stay on the main day.
+    The same rule applies to future plans; no athlete/weekday names are encoded
+    in the production allocator.
+    """
+    weekly = _secondary_power_geometry()
+    athlete = {"primary_goal": "power", "fatigue": "low"}
+    med_ball = {
+        "slot_id": "gpp-meaningful-medball",
+        "session_index": 1,
+        "role": "core",
+        "quality_class": "anchor_power",
+        "selected": {
+            "name": "Med-Ball Rotational Slam",
+            "quality_class": "anchor_power",
+            "prescription": "4 x 2 reps at max speed; full rest 120s.",
+            "meaningful_stress": True,
+            "support_only": False,
+            "mechanical_risk_tags": [
+                "mech_ballistic", "mech_trunk_rotation", "mech_trunk_stability",
+            ],
+            "selection_metadata": {
+                "impact_cost": "low", "landing_cost": "none",
+                "eccentric_cost": "low", "soreness_risk": "low",
+            },
+        },
+    }
+    anti_rotation = {
+        "slot_id": "gpp-meaningful-trunk-anchor",
+        "session_index": 1,
+        "role": "horizontal_push",
+        "quality_class": "anchor_loaded",
+        "selected": {
+            "name": "Landmine Anti-Rotation Press",
+            "quality_class": "anchor_loaded",
+            "prescription": "2-4 sets x 6-10 reps; RPE 6-8.",
+            "meaningful_stress": True,
+            "support_only": False,
+            "mechanical_risk_tags": [
+                "anti_rotation", "loaded_rotation",
+                "mech_trunk_stability", "mech_upper_press",
+            ],
+            "selection_metadata": {
+                "impact_cost": "low", "landing_cost": "none",
+                "eccentric_cost": "moderate", "soreness_risk": "low",
+            },
+        },
+    }
+    high = _high_cost_power_slot()
+    high2 = deepcopy(high)
+    high2["slot_id"] = "gpp-high-jump-2"
+    high2["selected"]["name"] = "Single-Leg Depth Drop"
+    high3 = deepcopy(high)
+    high3["slot_id"] = "gpp-high-jump-3"
+    high3["selected"]["name"] = "Trap Bar Jump"
+    slots = (_anchor_slot(), med_ball, high, high2, anti_rotation, high3)
+    _seed_main(weekly, *slots)
+    main = weekly["weeks"][0]["session_roles"][0]
+    before = [item["name"] for item in main["selected_exercise_assignments"]]
+    apply_pre_hard_contact_strength_exposure_cap(weekly, athlete)
+    redistribute_pre_hard_power_from_main(
+        weekly_role_map=weekly, candidate_pools=_candidate_pools(*slots),
+        athlete_model=athlete,
+    )
+    main, receiver = weekly["weeks"][0]["session_roles"]
+    moved = [item["name"] for item in receiver["selected_exercise_assignments"]]
+    kept = [item["name"] for item in main["selected_exercise_assignments"]]
+    assert set(moved) == {"Med-Ball Rotational Slam", "Landmine Anti-Rotation Press"}
+    assert sorted(before) == sorted(moved + kept)
+    assert len(kept) == 4 and len(moved) == 2
+    assert weekly["weeks"][0]["pre_hard_power_redistribution"]["weekly_exercise_count_delta"] == 0
+
+    apply_effective_strength_prescriptions(
+        weekly_role_map=weekly, candidate_pools=_candidate_pools(*slots),
+        athlete_model=athlete,
+    )
+    prescriptions = {
+        p["name"]: p for p in receiver["effective_strength_prescriptions"]
+    }
+    assert set(prescriptions) == set(moved)
+    assert prescriptions["Med-Ball Rotational Slam"]["effective_prescription"].startswith("2 x 2")
+    assert prescriptions["Landmine Anti-Rotation Press"]["effective_prescription"].startswith("2 x 6")
+    assert all(p["effective_loaded"] is False for p in prescriptions.values())
+
+
+def test_transfer_still_blocks_high_cost_and_cns_even_with_meaningful_power() -> None:
+    from fightcamp.prescription_resolver import _pre_hard_transfer_eligible
+
+    moderate = _power_slot(cost="low")
+    moderate["selected"]["meaningful_stress"] = True
+    moderate["selected"]["selection_metadata"]["eccentric_cost"] = "moderate"
+    assert _pre_hard_transfer_eligible(moderate)
+    for field in ("impact_cost", "landing_cost", "eccentric_cost", "soreness_risk"):
+        bad = deepcopy(moderate)
+        bad["selected"]["selection_metadata"][field] = "high"
+        assert not _pre_hard_transfer_eligible(bad)
+    cns = deepcopy(moderate)
+    cns["selected"]["mechanical_risk_tags"] = ["mech_cns_high"]
+    assert not _pre_hard_transfer_eligible(cns)
+
+
