@@ -565,6 +565,7 @@ REQUIRED_FUNCTIONS: tuple[str, ...] = (
     "public.community_list", "public.community_media_retained", "public.community_dismiss_report", "public.community_correction_window", "public.community_owned_revision",
     "public.community_revision_available", "public.community_creator_deleted",
     "public.award_athlete_xp",
+    "public.xp_open_plan_session_weeks",
     "public.claim_notification_delivery_v2",
     "public.record_notification_evaluation",
     "public.invalidate_notification_action",

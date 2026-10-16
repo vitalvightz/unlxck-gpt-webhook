@@ -13,6 +13,7 @@ import pytest
 from fastapi import HTTPException
 
 from api.services.effective_structured_plan import resolve_effective_structured_plan
+from api.plan_mappers import _map_plan_detail
 from api.services.open_plan_timeline import WEEKDAYS, project_open_structured_plan
 from api.services.today_service import _structured_day_for_training_day, _structured_today_session_entry, upsert_session_completion
 from api.services.week_progress import _planned_session_ids
@@ -205,3 +206,51 @@ def test_legacy_templates_preserve_recovery_and_never_invent_gap_sessions(four_w
         assert week["days"][0]["today_card"]["headline"] == "Prescribed recovery"
         assert week["days"][0]["day_type"] == "recovery"
         assert week["days"][2]["sessions"] == week["days"][6]["sessions"] == []
+
+
+@pytest.mark.parametrize("available", [
+    ["Mon", "Tue", "Thu", "Fri"],
+    ["Mon", "Tue", "Thu", "Fri", "Sat"],
+    ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
+    list(WEEKDAYS),
+])
+def test_plan_detail_calendar_is_complete_for_historical_availability_shapes(available):
+    row = {**_reference_row(), "athlete_id": "athlete-1", "status": "ready"}
+    spec = row["planning_brief"]["open_plan_spec"]
+    spec.pop("weekly_session_plan")
+    spec.pop("tactical_watch")
+    spec["weekly_template"] = {"training_days": available}
+    week = row["structured_plan"]["weeks"][0]
+    empty = copy.deepcopy(week["days"][0])
+    strength = copy.deepcopy(next(s for d in week["days"] for s in d["sessions"] if s["title"] == "Strength"))
+    week["days"] = [{**copy.deepcopy(empty), "weekday": weekday} for weekday in available]
+    week["days"][0].update(day_type="high", sessions=[strength])
+    original = copy.deepcopy(row)
+    detail = _map_plan_detail(row, include_admin=False, current_training_day="2026-10-13")
+    assert detail.schedule_context.projection_status == "projected"
+    for resolved in detail.outputs.structured_plan.weeks:
+        assert [day.weekday for day in resolved.days] == list(WEEKDAYS)
+        for day in resolved.days:
+            if day.weekday not in available:
+                assert day.sessions == []
+                assert day.today_card.headline == "Unavailable"
+        assert resolved.days[0].sessions[0].session_id == strength["session_id"]
+    assert row == original
+
+
+@pytest.mark.parametrize("saved_contact_flag", [True, False])
+def test_final_plan_detail_preserves_coach_led_sparring_headline_and_load(saved_contact_flag):
+    row = {**_reference_row(), "athlete_id": "athlete-1", "status": "ready"}
+    if not saved_contact_flag:
+        for day in row["structured_plan"]["weeks"][0]["days"]:
+            day["today_card"].pop("coach_led_contact", None)
+    detail = _map_plan_detail(row, include_admin=False, current_training_day="2026-10-13")
+    assert detail.schedule_context.projection_status == "projected"
+    for week in detail.outputs.structured_plan.weeks:
+        for day in week.days:
+            if day.weekday in {"Tue", "Thu"}:
+                assert day.day_type == "high"
+                assert day.today_card.headline == "Hard sparring"
+                if saved_contact_flag:
+                    assert day.today_card.coach_led_contact == "Hard sparring"
+                assert day.sessions == []

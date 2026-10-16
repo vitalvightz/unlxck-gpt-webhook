@@ -957,12 +957,6 @@ def reconcile_open_development_sessions(
     block supplies each week's membership, placement and dose. Legacy templates
     without that block retain their existing projection path.
     """
-    from .services.open_plan_timeline import (
-        WEEKDAYS, _expand_single_template_week, _ordered_weekdays, _resolve_template_days,
-    )
-    from fightcamp.weekly_schedule_view import normalize_weekday
-    from fightcamp.stage2_payload import OPEN_BLOCK_HORIZON_DAYS, OPEN_BLOCK_WEEKS
-
     if not isinstance(planning_brief, dict) or planning_brief.get("custom_plan"):
         return plan
     spec = planning_brief.get("open_plan_spec") or {}
@@ -972,7 +966,16 @@ def reconcile_open_development_sessions(
             or programmed.get("authority") != "deterministic_open_development_block"
             or not isinstance(decisions, list) or len(decisions) != 4):
         return plan
+    # Keep legacy and dated-camp reads outside the open planner's import graph,
+    # including historical source replays that intentionally load older owners.
+    from .services.open_plan_timeline import (
+        WEEKDAYS, _coach_owned_days, _expand_single_template_week, _ordered_weekdays, _resolve_template_days,
+    )
+    from fightcamp.weekly_schedule_view import normalize_weekday
+    from fightcamp.stage2_payload import OPEN_BLOCK_HORIZON_DAYS, OPEN_BLOCK_WEEKS
+
     training_days = _ordered_weekdays((spec.get("weekly_template") or {}).get("training_days"))
+    coach_days = set(_coach_owned_days(spec.get("weekly_template") or {}))
     weeks = copy.deepcopy(plan.get("weeks") or [])
     for week in weeks:
         days = _resolve_template_days(week.get("days"), training_days)
@@ -1071,7 +1074,9 @@ def reconcile_open_development_sessions(
                 day["today_card"]["headline"] = day["sessions"][0]["title"]
                 if day.get("day_type") == "rest":
                     day["day_type"] = "moderate"
-            elif day["weekday"] in training_days and day.get("day_type") != "recovery":
+            elif (day["weekday"] in training_days and day.get("day_type") != "recovery"
+                  and day["weekday"] not in coach_days
+                  and not day["today_card"].get("coach_led_contact")):
                 day["today_card"]["headline"] = "No session planned"
                 day["day_type"] = "rest"
     return {**plan, "weeks": weeks}
