@@ -842,7 +842,7 @@ def test_meaningful_power_and_capped_trunk_anchor_move_as_two_existing_exercises
 def test_transfer_still_blocks_high_cost_and_cns_even_with_meaningful_power() -> None:
     from fightcamp.prescription_resolver import _pre_hard_transfer_eligible
 
-    moderate = _power_slot(cost="low")
+    moderate = _lower_power_slot("Low-Cost Power", 9, cost="low")
     moderate["selected"]["meaningful_stress"] = True
     moderate["selected"]["selection_metadata"]["eccentric_cost"] = "moderate"
     assert _pre_hard_transfer_eligible(moderate)
