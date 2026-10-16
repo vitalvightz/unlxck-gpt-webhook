@@ -677,7 +677,6 @@ export function AuthForm({
             <p>{t("signupSummary")}</p>
           ) : null}
         </div>
-        {mode === "signup" ? <p className="muted auth-signup-note">{t("noPayment")}</p> : null}
       </div>
     </section>
   );

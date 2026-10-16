@@ -11,7 +11,7 @@ import {
   type PerformanceFocusGroup,
 } from "@/lib/days-out-policy";
 
-export type EquipmentPresetKey = "home" | "basic_gym" | "full_gym";
+export type EquipmentPresetKey = "home" | "basic_gym" | "combat_gym" | "performance_gym" | "full_gym";
 export type TrainingPresetKey = "three_days" | "four_days" | "five_days";
 export type FocusPresetKey =
   | "explosive_power"
@@ -61,28 +61,55 @@ export type FocusPresetSelections = {
 export const EQUIPMENT_PRESETS: EquipmentPreset[] = [
   {
     key: "home",
-    label: "Home fight kit",
-    description: "Bands, bag, partner, med ball",
-    equipment_access: ["bands", "heavy_bag", "partner", "medicine_ball"],
+    label: "Home kit",
+    description: "Bands, jump rope, bag, med ball, recovery basics",
+    equipment_access: ["bands", "jump_rope", "heavy_bag", "medicine_ball", "foam_roller", "towel"],
   },
   {
     key: "basic_gym",
     label: "Basic gym",
-    description: "Dumbbells, barbell, bag",
+    description: "Free weights, bench, pull-up bar, bag and pads",
     equipment_access: [
       "dumbbells",
       "kettlebells",
       "barbell",
+      "plate",
+      "bench",
       "pullup_bar",
       "bands",
       "heavy_bag",
       "pads",
+      "jump_rope",
+      "foam_roller",
+      "towel",
+    ],
+  },
+  {
+    key: "combat_gym",
+    label: "Combat gym",
+    description: "Bag, pads, partner, footwork and functional kit",
+    equipment_access: [
+      "heavy_bag", "pads", "partner", "jump_rope", "agility_ladder",
+      "medicine_ball", "sandbag", "bulgarian_bag", "bands", "kettlebells",
+      "pullup_bar", "foam_roller", "towel",
+    ],
+  },
+  {
+    key: "performance_gym",
+    label: "Performance gym",
+    description: "Strength, cardio, sled, ropes and plyometric kit",
+    equipment_access: [
+      "dumbbells", "kettlebells", "barbell", "trap_bar", "plate", "bench",
+      "cable", "landmine", "assault_bike", "rower", "treadmill", "sled",
+      "battle_ropes", "box", "agility_ladder", "hurdles", "jump_rope",
+      "medicine_ball", "sandbag", "bands", "trx", "pullup_bar", "swiss_ball",
+      "heavy_bag", "pads", "foam_roller", "towel",
     ],
   },
   {
     key: "full_gym",
-    label: "Full gym",
-    description: "Everything available",
+    label: "Full equipment access",
+    description: "All training kit, including pool and strongman equipment; partner and rehab supports separate",
     equipment_access: EQUIPMENT_ACCESS_OPTIONS
       .map((option) => option.value)
       .filter((value) => value !== "partner" && value !== "stable_support" && value !== "table" && value !== "chair"),

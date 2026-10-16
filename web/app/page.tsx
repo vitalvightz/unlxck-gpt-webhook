@@ -667,7 +667,6 @@ export default function HomePage() {
         <Link href="/signup" className="cta public-hero-cta">
           {publicT("getStarted")}
         </Link>
-        <p className="public-cta-note">{publicT("finalNote")}</p>
       </section>
     </div>
   );
