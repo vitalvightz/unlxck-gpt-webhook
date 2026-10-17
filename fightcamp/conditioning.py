@@ -566,6 +566,8 @@ from .conditioning_boxing import (  # noqa: E402
     _boxing_aerobic_context_flags,
     _boxing_aerobic_preference_rank,
     _boxing_aerobic_priority_adjustment,
+    can_add_hard_conditioning,
+    is_hard_metabolic_conditioning,
     _is_pool_treading_drill,
     _normalize_conditioning_name,
     _sanitize_sport_language,
@@ -3316,14 +3318,8 @@ def generate_conditioning_block(flags):
             nonlocal restriction_candidates, restriction_blocked
             for drill in base_conditioning_bank:
                 d = drill.copy()
-                if d.get("standalone_protocol"):
-                    from .conditioning_boxing import conditioning_load_context
-                    # New complete high-cost protocols need explicit recovery
-                    # headroom. Do not replace easy aerobic support with HIIT
-                    # in a crowded/uncertain camp merely because it scores well.
-                    load = conditioning_load_context(flags, {})
-                    if str(flags.get("fatigue") or "").lower() != "low" or load["hard_exposures"] >= 2:
-                        continue
+                if d.get("standalone_protocol") and not can_add_hard_conditioning(flags):
+                    continue
                 if d.get("placement", "conditioning").lower() != "conditioning":
                     continue
                 if selection_format == "boxing":
@@ -3340,6 +3336,10 @@ def generate_conditioning_block(flags):
                 if system is None:
                     continue
                 if system == "alactic" and not _alactic_structure_ok(d):
+                    continue
+                if (selection_format == "boxing"
+                        and not can_add_hard_conditioning(flags)
+                        and is_hard_metabolic_conditioning(d, system)):
                     continue
 
                 tags = _cached_tags(d)
@@ -3654,6 +3654,10 @@ def generate_conditioning_block(flags):
                     continue
                 if system == "alactic" and not _alactic_structure_ok(d):
                     style_conditioning_diagnostics["entries_blocked_by_alactic_structure"] += 1
+                    continue
+                if (selection_format == "boxing"
+                        and not can_add_hard_conditioning(flags)
+                        and is_hard_metabolic_conditioning(d, system)):
                     continue
 
                 # Apply same fatigue/CNS suppression rules
