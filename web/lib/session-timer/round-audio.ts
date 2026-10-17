@@ -87,8 +87,14 @@ export function roundAudioWav(timeline: RoundAudioTimeline, clips: ReadonlyMap<T
       const offset = Math.round(cue.atMs * SAMPLE_RATE / 1000) - start;
       for (let k = 0; k < clip.length && offset + k < mixed.length; k += 1) mixed[offset + k] += clip[k];
     }
+    // Overlapping strikes must not hard-clip into harsh distortion on Safari.
+    // Keep individual recorded/synthesised clips untouched; attenuate only mixes.
+    const peak = i - first > 1 ? mixed.reduce((max, sample) => Math.max(max, Math.abs(sample)), 0) : 0;
+    const headroom = peak > 0.95 ? 0.95 / peak : 1;
     const pcm = new DataView(new ArrayBuffer(mixed.length * 2));
-    for (let j = 0; j < mixed.length; j += 1) pcm.setInt16(j * 2, Math.round(Math.max(-1, Math.min(1, mixed[j])) * volume * 32767), true);
+    for (let j = 0; j < mixed.length; j += 1) {
+      pcm.setInt16(j * 2, Math.round(Math.max(-1, Math.min(1, mixed[j] * headroom * volume)) * 32767), true);
+    }
     parts.push(pcm.buffer);
     cursor = end;
   }
@@ -116,10 +122,14 @@ export class RoundAudioTrack {
   private origin = 0;
   private until = 0;
   private cues: RoundAudioCue[] = [];
+  private ready = false;
+  private timerPaused = false;
 
   constructor(
     private readonly status: (status: RoundAudioStatus) => void,
     private readonly clips: () => Promise<ReadonlyMap<TimerSound, Float32Array>> = loadClips,
+    private readonly onMediaPause?: () => void,
+    private readonly onMediaPlay?: () => void,
   ) {}
 
   covers(at: number): boolean {
@@ -128,12 +138,17 @@ export class RoundAudioTrack {
   }
 
   coversCue(sound: TimerSound, at: number): boolean {
-    return this.covers(at) && this.cues.some((cue) => cue.sound === sound &&
-      at - (this.origin + cue.atMs) >= 0 && at - (this.origin + cue.atMs) < 1500);
+    // A playing track owns its scheduled cue even if Safari's media clock drifts
+    // briefly from Date.now(). Do not layer a second live Web Audio bell over it.
+    return Boolean(this.ready && this.media && !this.media.paused && !this.media.ended &&
+      this.cues.some((cue) => cue.sound === sound &&
+        at - (this.origin + cue.atMs) >= -300 && at - (this.origin + cue.atMs) < 1500));
   }
 
   stop(): void {
     this.generation += 1;
+    this.ready = false;
+    this.timerPaused = false;
     if (this.media) {
       this.media.onpause = this.media.onerror = this.media.onended = this.media.onplaying = this.media.onloadedmetadata = null;
       this.media.pause();
@@ -149,13 +164,21 @@ export class RoundAudioTrack {
   }
 
   sync(state: TimerState, now: number, settings: TimerSoundSettings): void {
+    // Preserve a paused media element so Safari's Control Centre can issue Play.
+    // Only preserve a fully prepared track; cancel an in-flight render on pause.
+    if (state.pausedAt !== null && this.ready && this.media && settings.sound && settings.volume > 0) {
+      this.timerPaused = true;
+      this.media.pause();
+      this.status("idle");
+      return;
+    }
     this.stop();
-    const timeline = roundAudioTimeline(state, now, settings);
     if (!settings.sound || settings.volume === 0 || state.pausedAt !== null ||
         state.phase === "ready" || state.phase === "done" || state.items[state.index]?.kind !== "interval") {
       this.status("idle");
       return;
     }
+    const timeline = roundAudioTimeline(state, now, settings);
     if (!timeline || typeof OfflineAudioContext === "undefined" || typeof URL.createObjectURL !== "function") {
       this.status("unavailable");
       return;
@@ -186,14 +209,26 @@ export class RoundAudioTrack {
       const align = () => { media.currentTime = Math.max(0, (Date.now() - now) / 1000); };
       media.onloadedmetadata = align;
       media.onplaying = () => {
-        // A phone's media controls may resume audio after an interruption.
+        if (generation !== this.generation) return;
+        // Safari's own Play button must resume the workout, not only this WAV.
+        if (this.timerPaused) {
+          this.onMediaPlay?.();
+          return;
+        }
         if (Math.abs(media.currentTime * 1000 - (Date.now() - now)) >= 1500) align();
         this.status("playing");
       };
       media.src = this.url;
       await media.play();
       if (generation !== this.generation) return;
-      media.onpause = () => { if (!media.ended) this.status("interrupted"); };
+      this.ready = true;
+      media.onpause = () => {
+        if (generation !== this.generation || media.ended || this.timerPaused) return;
+        // Native media pause, interruption, or the lock-screen Pause control
+        // must freeze the actual workout clock too.
+        this.status("interrupted");
+        this.onMediaPause?.();
+      };
       media.onerror = () => this.status("interrupted");
       media.onended = () => { this.stop(); this.status("idle"); };
       this.status("playing");
