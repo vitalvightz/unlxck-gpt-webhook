@@ -2847,3 +2847,42 @@ def test_working_dose_ranges_are_blocked_but_easier_and_safety_bounds_are_allowe
     errors = _ambiguous_working_dose_errors(plan)
     assert len(errors) == 2
     assert all(error["code"] == "ambiguous_working_dose" for error in errors)
+
+
+@pytest.mark.parametrize(("dose", "rendered", "code"), [
+    ("6x3 reps, 1min rest", "6x3 reps, 1min rest", "late_primer_conditioning_dose_overage"),
+    ("3x3 reps, 1min rest", "6x3 reps, 1min rest", "selected_conditioning_effective_prescription_mismatch"),
+])
+def test_d6_conditioning_member_inside_strength_primer_is_capped(dose, rendered, code):
+    from fightcamp.stage2_validator import _missing_selected_conditioning_assignment_warnings
+
+    brief = {"weekly_role_map": {"weeks": [{"phase": "TAPER", "session_roles": [{
+        "role_key": "strength_touch_day", "category": "strength",
+        "scheduled_d_day": 6, "scheduled_countdown_label": "D-6",
+        "selected_exercise_assignments": [{
+            "name": "Overhead Med Ball Slam (Snappy)", "slot_group": "conditioning_slots",
+            "effective_prescription": dose,
+        }],
+    }]}]}}
+    report = _missing_selected_conditioning_assignment_warnings(
+        brief, "D-6 (Saturday) — Freshness primer\n"
+               f"- Overhead Med Ball Slam (Snappy): {rendered}",
+    )
+    assert code in {item["code"] for item in report}
+
+
+def test_d6_conditioning_primer_accepts_capped_dose():
+    from fightcamp.stage2_validator import _missing_selected_conditioning_assignment_warnings
+
+    brief = {"weekly_role_map": {"weeks": [{"phase": "TAPER", "session_roles": [{
+        "role_key": "alactic_sharpness_day", "category": "conditioning",
+        "scheduled_d_day": 6, "scheduled_countdown_label": "D-6",
+        "selected_exercise_assignments": [{
+            "name": "Overhead Med Ball Slam (Snappy)", "slot_group": "conditioning_slots",
+            "effective_prescription": "3x3 reps, 1min rest",
+        }],
+    }]}]}}
+    assert _missing_selected_conditioning_assignment_warnings(
+        brief, "D-6 (Saturday) — Freshness primer\n"
+               "- Overhead Med Ball Slam (Snappy): 3x3 reps, 1min rest",
+    ) == []
