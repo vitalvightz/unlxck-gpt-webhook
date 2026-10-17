@@ -22,7 +22,9 @@ DATAFORSEO_TRANSIENT_HTTP_STATUS_CODES = {408, 425, 500, 502, 503, 504}
 DATAFORSEO_EMPTY_RESULT_RETRIES = 3
 DATAFORSEO_EMPTY_RESULT_BACKOFF_SECONDS = 2.0
 YTDLP_SEARCH_SIZE = 5
-YTDLP_MAX_DURATION_SECONDS = 180
+# Discovery may return longer demonstrations; Gemini still selects only a short loop.
+# Keep a finite limit to avoid sending full-length workouts into video review.
+YTDLP_MAX_DURATION_SECONDS = 600
 YTDLP_TIMEOUT_SECONDS = 30
 YTDLP_RETRIES = 2
 YTDLP_RETRY_BACKOFF_SECONDS = 2.0
