@@ -449,7 +449,6 @@ def _primer_rpe_with_ceiling(
     def clamp(match: re.Match[str]) -> str:
         nonlocal found
         found = True
-        low = float(match.group("low"))
         high = float(match.group("high") or match.group("low"))
         if (high <= limit and match.group("high") is None
                 and re.fullmatch(r"RPE\s*\d+(?:\.\d+)?", match.group(0), re.I)):
