@@ -123,3 +123,70 @@ def test_reuses_existing_qualification_worker_token_names(monkeypatch):
     assert sync.notion_token() == "existing-qualification-token"
     monkeypatch.setenv("NOTION_TOKEN", "explicit-token")
     assert sync.notion_token() == "explicit-token"
+
+
+def test_scorecard_rows_include_all_contacted_stages_and_skip_counters(monkeypatch):
+    calls = []
+    def fake_request(method, path, body=None):
+        calls.append(body)
+        def item(stage, source=""):
+            return {"properties": {
+                "Stage (AI Fills First)": {"select": {"name": stage}},
+                "Source Detail": {"rich_text": [{"plain_text": source}] if source else []},
+            }}
+        if len(calls) == 1:
+            return {"results": [item("Contacted"), item("Rejected", "SYSTEM_COUNTER")],
+                    "has_more": True, "next_cursor": "page-2"}
+        return {"results": [item("Inactive"), item("Activated")], "has_more": False}
+    monkeypatch.setattr(sync, "request", fake_request)
+    rows = list(sync.scorecard_rows())
+    assert [r["properties"]["Stage (AI Fills First)"]["select"]["name"] for r in rows] == [
+        "Contacted", "Inactive", "Activated",
+    ]
+    assert calls[0]["filter"] == {"property": "Date Contacted",
+                                  "date": {"is_not_empty": True}}
+    assert calls[1]["start_cursor"] == "page-2"
+
+
+def test_scorecard_updates_three_rates_without_touching_other_blocks(monkeypatch):
+    def item(stage):
+        return {"properties": {"Stage (AI Fills First)": {"select": {"name": stage}}}}
+    monkeypatch.setattr(sync, "scorecard_rows", lambda: iter(
+        [item("Contacted")] * 48 + [item("Replied")] * 11 + [item("Accepted")] * 2
+    ))
+
+    def block(identifier, kind, value="", children=False):
+        return {"id": identifier, "type": kind, "has_children": children,
+                kind: {"rich_text": [{"plain_text": value}]}}
+    tree = {"page": [block("columns", "column_list", children=True)],
+            "columns": [block("column-" + str(i), "column", children=True) for i in range(3)]}
+    labels = ["REPLY RATE", "ACCEPT RATE", "ACTIVATION RATE"]
+    for i, label in enumerate(labels):
+        tree["column-" + str(i)] = [block("card-" + str(i), "callout", children=True)]
+        tree["card-" + str(i)] = [
+            block("headline-" + str(i), "heading_2", "0%"),
+            block("label-" + str(i), "paragraph", label),
+            block("count-" + str(i), "paragraph", "0 of 0 fighters"),
+        ]
+
+    monkeypatch.setattr(sync, "SCORECARD_PAGE_ID", "page")
+    monkeypatch.setattr(sync, "block_children", lambda identifier: iter(tree[identifier]))
+    writes = []
+    monkeypatch.setattr(sync, "request", lambda method, path, body=None: writes.append((method, path, body)))
+    assert sync.sync_scorecard() == (61, 5)
+    assert len(writes) == 5
+    assert all(method == "PATCH" and path.startswith("/blocks/") for method, path, _ in writes)
+    data = {path: body for _, path, body in writes}
+    assert data["/blocks/headline-0"]["heading_2"]["rich_text"][0]["text"]["content"] == "21.3%"
+    assert data["/blocks/headline-1"]["heading_2"]["rich_text"][0]["text"]["content"] == "3.3%"
+    assert data["/blocks/count-2"]["paragraph"]["rich_text"][0]["text"]["content"] == "0 of 61 fighters"
+    assert "/blocks/label-0" not in data
+
+
+def test_scorecard_fails_closed_when_card_missing(monkeypatch):
+    monkeypatch.setattr(sync, "scorecard_rows", lambda: iter([]))
+    monkeypatch.setattr(sync, "SCORECARD_PAGE_ID", "page")
+    monkeypatch.setattr(sync, "block_children", lambda identifier: iter([]))
+    monkeypatch.setattr(sync, "request", lambda *_: pytest.fail("No writes if cards are missing"))
+    with pytest.raises(ValueError, match="Missing scorecard cards"):
+        sync.sync_scorecard()
