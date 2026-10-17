@@ -3,7 +3,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { act } from "react";
 import { createRoot } from "react-dom/client";
-import { endSession, pause, resume, startItem } from "@/lib/session-timer/engine";
+import { addTime, endSession, pause, resume, startItem } from "@/lib/session-timer/engine";
 import { timerAudio } from "@/lib/session-timer/audio";
 import { freeRoundsItem } from "@/lib/session-timer/contact";
 import { useSessionTimer, type SessionTimerController } from "./use-session-timer";
@@ -49,6 +49,62 @@ test("a running minimised timer retains one wake lock, reacquires after hiding, 
     window.localStorage.clear();
   }
 });
+
+for (const scenario of [
+  { label: "halfway", before: 80_000, after: 100_000 },
+  { label: "30-second", before: 140_000, after: 160_000 },
+  { label: "10-second", before: 160_000, after: 177_000 },
+]) {
+  test(`waking in the same round does not replay a stale ${scenario.label} warning, voice or vibration`, async () => {
+    window.localStorage.clear();
+    window.localStorage.setItem("unlxck.session-timer.settings", JSON.stringify({
+      warnHalfway: true, warnThirty: true, warnTen: true, voice: true, prepSec: 0,
+    }));
+    const realNow = Date.now;
+    let now = 1000;
+    Date.now = () => now;
+    const audio = timerAudio();
+    const original = { play: audio.play, say: audio.say, buzzSound: audio.buzzSound };
+    const emitted: string[] = [];
+    audio.play = (sound) => { emitted.push(`sound:${sound}`); };
+    audio.say = (text) => { emitted.push(`voice:${text}`); };
+    audio.buzzSound = (sound) => { emitted.push(`vibrate:${sound}`); };
+    let controller: SessionTimerController;
+    function Probe() {
+      controller = useSessionTimer({ items: [{ ...freeRoundsItem(), rounds: 3, workSec: 180 }], storageKey: "stale-warning", audible: true });
+      return null;
+    }
+    const root = createRoot(document.createElement("div"));
+    const tickAt = async (elapsed: number) => {
+      now = 1000 + elapsed;
+      await act(async () => window.dispatchEvent(new Event("pageshow")));
+    };
+    try {
+      await act(async () => root.render(<Probe />));
+      await act(async () => controller.run(startItem));
+      await tickAt(scenario.before);
+      emitted.length = 0;
+      await tickAt(scenario.after);
+      assert.equal(controller!.state.phase, "work");
+      assert.equal(controller!.state.unit, 1);
+      assert.equal(emitted.length, 0, "a missed warning is stale even when playback is unavailable/interrupted");
+      // Later fresh cues must still work, rather than muting the whole round.
+      await tickAt(179_950);
+      emitted.length = 0;
+      await act(async () => controller.update((state, at) => addTime(state, 20, at)));
+      await tickAt(189_900);
+      emitted.length = 0;
+      await tickAt(190_050);
+      assert.ok(emitted.includes("sound:clapper"));
+      assert.ok(emitted.includes("voice:10 seconds"));
+    } finally {
+      await act(async () => root.unmount());
+      Date.now = realNow;
+      Object.assign(audio, original);
+      window.localStorage.clear();
+    }
+  });
+}
 
 test("returning after several suspended rounds catches up without ringing old bells", async () => {
   window.localStorage.clear();

@@ -32,7 +32,37 @@ npm run test:e2e -- e2e/round-timer.spec.ts --workers=1
 The Chromium test checks real PCM at each bell deadline, pauses the page's main
 JavaScript thread while media continues, verifies the clock catches up, and checks
 pause/resume, edits, interruptions, minimising, reloading and the final bell decay.
+It also checks same-round warning replay after suspension, denial of the second
+asynchronous playback attempt, and maximum-length track loading, seeking near the
+last bell and repeated source replacement. Over-limit sessions must fall back
+without retaining an audio blob.
 This is a desktop browser test, not a simulated proof of iOS/Android lock behaviour.
+
+For optional native browser memory measurements on Windows, set
+`$env:ROUND_TIMER_PROFILE_MEMORY='1'` before the browser run. The long-track test
+attaches startup timing, WAV size and combined Chromium process private/working-set
+bytes before load, after load/seek and after release. This includes native media
+allocations, rather than only JavaScript heap. It does not establish a phone memory
+budget or a full-duration playback soak result. Revoking a URL and dropping source
+references does not require the browser to return all reserved memory immediately.
+
+### Desktop resource snapshots, 17 October 2026
+
+One local Windows Chromium run per format, through Playwright 1.60.0. Values below
+use decimal MB. Native memory is summed across Chromium processes and includes
+other browser allocations; these are observations, not portable memory ceilings.
+
+| Track | WAV bytes | Start to playing | Private bytes added at load | Private bytes above baseline after three replacements and release |
+| --- | ---: | ---: | ---: | ---: |
+| Original 90-minute limit | 172,928,044 | 1,049 ms | 139,755,520 (~139.8 MB) | 222,236,672 (~222.2 MB) |
+| Current 50-minute limit | 96,128,044 | 248 ms | 63,123,456 (~63.1 MB) | 114,589,696 (~114.6 MB) |
+
+Both tracks loaded and decoded near the final bell; neither run waited through the
+full workout duration. The 90-minute source is now rejected. In the replacement
+test, increasing round length crosses the limit and drops the source; decreasing
+it builds a new one. Only the current object URL remains during playback and none
+remain after pause. Native reservations persisting after release are a reason to
+keep phone memory profiling on the device checklist, not evidence of mobile safety.
 
 ## Required physical-device checks before pro trials
 
@@ -66,7 +96,12 @@ to the home screen. Record phone, OS/browser versions, mode, date and actual res
 Also test low-power mode and iPhone silent mode. A failure is a release blocker for
 any claim that background playback works on that device/mode. Keep the timer visible
 as the recommended training setup until the target devices have passed.
+Profile memory through repeated edits on the target phones, especially lower-memory
+models; a passing desktop resource check does not remove this requirement.
 
-Tracks cover the current interval exercise only, up to 90 minutes remaining.
-Longer/unsupported tracks expose the foreground fallback rather than allocating
-unbounded audio. Untimed sets and holds keep their existing timer behaviour.
+Tracks cover the current interval exercise only, up to 50 minutes remaining,
+with a hard 96 MiB WAV limit. The maximum normal track is 96,128,044 bytes including
+four seconds of bell decay. Twelve three-minute boxing rounds with eleven
+one-minute rests take 47 minutes and fit this limit. Longer/unsupported tracks
+expose the foreground fallback; the clock still runs. A 90-minute track is rejected
+before source allocation. Untimed sets and holds keep their existing timer behaviour.

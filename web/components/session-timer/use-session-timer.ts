@@ -30,6 +30,7 @@ import { RoundAudioTrack, type RoundAudioStatus } from "@/lib/session-timer/roun
 // 2: ranged rest stays in rest until its maximum (readyAt replaced windowEndsAt).
 const RUN_VERSION = 2;
 const TICK_MS = 100;
+const MAX_CUE_DELAY_MS = 1500;
 /** The fight-ring bells still ring while the timer is minimised. */
 const MINIMIZED_SOUNDS: ReadonlySet<TimerSound> = new Set(["bell", "triple_bell", "finish"]);
 
@@ -175,6 +176,7 @@ export function useSessionTimer({
   const audibleRef = useRef(audible);
   const settingsRef = useRef(settings);
   const lastRemainingRef = useRef<number | null>(null);
+  const lastTickAtRef = useRef<number | null>(null);
 
   useEffect(() => {
     roundAudio.sync(stateRef.current, Date.now(), settingsRef.current);
@@ -255,20 +257,29 @@ export function useSessionTimer({
     if (!running) return;
     const tick = () => {
       const at = Date.now();
+      const delayed = lastTickAtRef.current !== null && at - lastTickAtRef.current > MAX_CUE_DELAY_MS;
+      lastTickAtRef.current = at;
       const current = stateRef.current;
       const { state: next, events } = advance(current, at);
       if (next !== current) {
         // Never play a batch of old bells/callouts after the browser wakes.
         const transitionAt = next.endedAt ?? next.phaseStartedAt;
-        if (transitionAt !== null && at - transitionAt < 1500) announce(events, next, true);
+        if (transitionAt !== null && at - transitionAt < MAX_CUE_DELAY_MS) announce(events, next, true);
         commit(next);
       } else {
         const remaining = cueRemainingMs(viewAt(current, at));
+        // A long callback gap must not replay old warnings, voice or vibration
+        // within the same round. Limit that catch-up window to recent marks;
+        // normal ticks still honour deliberate time edits that cross a mark.
+        const previous = lastRemainingRef.current;
+        const cueBaseline = delayed && previous !== null && remaining !== null
+          ? Math.min(previous, remaining + MAX_CUE_DELAY_MS)
+          : previous;
         const { warnTen, warnThirty, warnHalfway } = settingsRef.current;
         const cues = crossedCues(
           current.phase,
           current.phaseMs,
-          lastRemainingRef.current,
+          cueBaseline,
           remaining,
           { ten: warnTen, thirty: warnThirty, halfway: warnHalfway },
           warningLengthMs(current),

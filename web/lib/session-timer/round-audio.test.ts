@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { DEFAULT_SOUND_SETTINGS } from "./audio";
 import { addTime, advance, createTimerState, pause, resume, startItem } from "./engine";
-import { MAX_ROUND_TRACK_MS, roundAudioTimeline, roundAudioWav } from "./round-audio";
+import { MAX_ROUND_TRACK_BYTES, MAX_ROUND_TRACK_MS, roundAudioTimeline, roundAudioWav } from "./round-audio";
 import type { IntervalItem } from "./plan";
 
 const item: IntervalItem = {
@@ -64,6 +64,14 @@ test("unusually long schedules fail closed rather than allocate unbounded media"
   assert.equal(roundAudioTimeline(start({ rounds: 30, workSec: MAX_ROUND_TRACK_MS / 1000 }), 1000, settings), null);
   assert.equal(roundAudioTimeline(createTimerState([item]), 1000, settings), null);
   assert.equal(advance(start(), 661_000).state.phase, "done");
+});
+
+test("the memory budget fits 12 pro boxing rounds and rejects 90-minute WAVs before allocation", () => {
+  const proRounds = roundAudioTimeline(start({ rounds: 12 }), 1000, settings)!;
+  assert.equal(proRounds.durationMs, (47 * 60 + 4) * 1000);
+  assert.ok(roundAudioWav(proRounds, new Map()).size < MAX_ROUND_TRACK_BYTES);
+  assert.equal(roundAudioTimeline(start({ rounds: 30, restSec: 0 }), 1000, settings), null);
+  assert.throws(() => roundAudioWav({ durationMs: 90 * 60_000, cues: [] }, new Map()), RangeError);
 });
 
 test("WAV has correct size, format, silence, cue positions and overlapping clipped PCM", async () => {

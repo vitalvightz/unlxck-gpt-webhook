@@ -3,7 +3,9 @@ import { advance, crossedCues, cueSounds, phaseEndsAt, soundForEvents, warningLe
 
 const SAMPLE_RATE = 16_000;
 const CLIP_SECONDS = 4;
-export const MAX_ROUND_TRACK_MS = 90 * 60_000;
+// Covers 12 x 3-minute rounds / 1-minute rests (47 min) without 173 MB WAVs.
+export const MAX_ROUND_TRACK_MS = 50 * 60_000;
+export const MAX_ROUND_TRACK_BYTES = 96 * 1024 * 1024;
 export type RoundAudioCue = { atMs: number; sound: TimerSound };
 export type RoundAudioTimeline = { cues: RoundAudioCue[]; durationMs: number };
 export type RoundAudioStatus = "idle" | "preparing" | "playing" | "unavailable" | "interrupted";
@@ -43,6 +45,9 @@ export function roundAudioTimeline(state: TimerState, now: number, settings: Tim
 /** A standard PCM WAV. Reuse silence blobs rather than allocate a workout-sized array. */
 export function roundAudioWav(timeline: RoundAudioTimeline, clips: ReadonlyMap<TimerSound, Float32Array>, volume = 1): Blob {
   const frames = Math.ceil(timeline.durationMs * SAMPLE_RATE / 1000);
+  if (!Number.isFinite(frames) || frames <= 0 || 44 + frames * 2 > MAX_ROUND_TRACK_BYTES) {
+    throw new RangeError("Round audio exceeds its memory budget");
+  }
   const header = new ArrayBuffer(44);
   const view = new DataView(header);
   const label = (offset: number, value: string) => [...value].forEach((c, i) => view.setUint8(offset + i, c.charCodeAt(0)));
