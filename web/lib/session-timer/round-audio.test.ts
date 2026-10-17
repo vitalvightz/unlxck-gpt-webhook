@@ -93,6 +93,11 @@ test("WAV has correct size, format, silence, cue positions and overlap without h
   const quieter = new DataView(await roundAudioWav({ durationMs: 1000, cues: [{ atMs: 0, sound: "bell" }] },
     new Map([["bell", new Float32Array([1])]]), 0.25).arrayBuffer());
   assert.equal(quieter.getInt16(44, true), 8192, "volume must be encoded for iOS, which ignores media.volume");
+  const overdriven = new DataView(await roundAudioWav({ durationMs: 1000, cues: [{ atMs: 0, sound: "triple_bell" }] },
+    new Map([["triple_bell", new Float32Array([1.6, -1.6])]])).arrayBuffer());
+  assert.equal(overdriven.getInt16(44, true), 31129, "even one synthesised triple bell cannot hard-clip");
+  assert.equal(overdriven.getInt16(46, true), -31129);
+
 });
 
 test("a scheduled bell belongs to playing media even when Safari's playhead drifts", () => {
