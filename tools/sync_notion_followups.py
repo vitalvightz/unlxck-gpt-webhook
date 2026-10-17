@@ -107,8 +107,100 @@ def sync(today=None):
     return total, changed
 
 
+
+
+# Reuse the existing cron and integration for dashboard totals, too.
+SCORECARD_PAGE_ID = "3fcd6e718d27815f8509e69f573bcf27"
+
+
+def scorecard_rows():
+    cursor = None
+    while True:
+        body = {"page_size": 100, "filter": {
+            "property": "Date Contacted", "date": {"is_not_empty": True},
+        }}
+        if cursor:
+            body["start_cursor"] = cursor
+        result = request("POST", f"/data_sources/{DATA_SOURCE_ID}/query", body)
+        for page in result["results"]:
+            detail = "".join(part.get("plain_text", "") for part in
+                             page["properties"]["Source Detail"].get("rich_text", []))
+            if detail != "SYSTEM_COUNTER":
+                yield page
+        if not result.get("has_more"):
+            break
+        cursor = result["next_cursor"]
+
+
+def block_children(parent_id):
+    cursor = None
+    while True:
+        path = f"/blocks/{parent_id}/children?page_size=100"
+        if cursor:
+            path += f"&start_cursor={cursor}"
+        result = request("GET", path)
+        yield from result["results"]
+        if not result.get("has_more"):
+            break
+        cursor = result["next_cursor"]
+
+
+def block_text(block):
+    return "".join(item.get("plain_text", item.get("text", {}).get("content", ""))
+                   for item in block[block["type"]].get("rich_text", []))
+
+
+def sync_scorecard():
+    rows = list(scorecard_rows())
+    total = len(rows)
+    counts = {"REPLY RATE": 0, "ACCEPT RATE": 0, "ACTIVATION RATE": 0}
+    for page in rows:
+        stage = ((page["properties"]["Stage (AI Fills First)"].get("select") or {}).get("name"))
+        if stage in ("Replied", "Accepted", "Activated"):
+            counts["REPLY RATE"] += 1
+        if stage in ("Accepted", "Activated"):
+            counts["ACCEPT RATE"] += 1
+        if stage == "Activated":
+            counts["ACTIVATION RATE"] += 1
+
+    cards = {}
+    def inspect(parent_id):
+        for block in block_children(parent_id):
+            if block["type"] in ("column_list", "column"):
+                inspect(block["id"])
+            elif block["type"] == "callout":
+                parts = list(block_children(block["id"]))
+                names = [block_text(part) for part in parts if part["type"] == "paragraph"]
+                for name in counts:
+                    if name not in names:
+                        continue
+                    if name in cards:
+                        raise ValueError(f"Duplicate scorecard card: {name}")
+                    headline = [part for part in parts if part["type"].startswith("heading_")]
+                    detail = [part for part in parts if part["type"] == "paragraph"
+                              and " of " in block_text(part) and block_text(part).endswith(" fighters")]
+                    if len(headline) != 1 or len(detail) != 1:
+                        raise ValueError(f"Unexpected scorecard layout: {name}")
+                    cards[name] = (headline[0], detail[0])
+
+    inspect(SCORECARD_PAGE_ID)
+    if set(cards) != set(counts):
+        raise ValueError(f"Missing scorecard cards: {set(counts) - set(cards)}")
+
+    updated = 0
+    for name, (headline, detail) in cards.items():
+        percent = f"{100 * counts[name] / total:.1f}%" if total else "0%"
+        for block, value in ((headline, percent), (detail, f"{counts[name]} of {total} fighters")):
+            if block_text(block) != value:
+                request("PATCH", f"/blocks/{block['id']}",
+                        {block["type"]: {"rich_text": [{"type": "text", "text": {"content": value}}]}})
+                updated += 1
+    return total, updated
+
 if __name__ == "__main__":
     if not notion_token():
         sys.exit("Expose the existing qualification worker Notion token as NOTION_TOKEN or NOTION_API_KEY (never commit it).")
     total, changed = sync()
     print(f"Notion follow-ups: checked {total}, updated {changed}")
+    contacted, updated = sync_scorecard()
+    print(f"Notion conversion: contacted {contacted}, updated {updated} blocks")
