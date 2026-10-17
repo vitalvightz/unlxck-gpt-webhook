@@ -278,3 +278,20 @@ def test_short_distance_does_not_pretend_to_be_aerobic_development():
                 "source_phase": "GPP", "slot_id": "short", "name": "Short run"}]}
     pool = {"GPP": {"conditioning_slots": [{"slot_id": "short", "role": "aerobic", "selected": option}]}}
     assert not _other_stimuli(role, pool, "GPP", {})
+
+
+def test_short_hill_running_has_true_alactic_work_recovery_structure():
+    from fightcamp.conditioning import _alactic_structure_ok
+    drill = BANK["Short Hill Sprints (5x10s)"]
+    assert drill["work_sec"] == 10
+    assert drill["rest_sec"] >= 120
+    assert _alactic_structure_ok(drill)
+
+
+def test_distance_sprint_ladder_does_not_falsely_claim_timed_alactic_work():
+    from fightcamp.conditioning import _alactic_structure_ok
+    drill = BANK["Descending Sprint Ladder (80-60-40m)"]
+    assert drill["system"] == "glycolytic"
+    assert drill["distance_segments_m"] == [80, 80, 60, 60, 40, 40]
+    assert not _alactic_structure_ok(drill)
+    assert "work_sec" not in drill

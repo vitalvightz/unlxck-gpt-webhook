@@ -10012,7 +10012,7 @@
     ],
     "system": "ATP-PCr",
     "modality": "run",
-    "duration": "5x10s maximal uphill, full walk-back recovery",
+    "duration": "5x10s maximal uphill; 120s full recovery between efforts (walk back and wait)",
     "intensity": "high",
     "tags": [
       "speed",
@@ -10024,7 +10024,7 @@
       "mech_acceleration",
       "mech_cns_high"
     ],
-    "notes": "World Athletics short hill format. Full recovery between efforts; separate from the existing 8x8s Hill Sprint Repeats, which remains unchanged.",
+    "notes": "High-quality short uphill sprints with at least 120 seconds recovery including walk-back; stop if sprint speed drops. Avoid additional high-intensity workload when already overloaded.",
     "impact_cost": "high",
     "movement_cost": "high",
     "lactate_load": "low",
@@ -10043,7 +10043,8 @@
     "source_url": "https://worldathletics.org/personal-best/performance/hill-running-training-variety-speed-sessions",
     "work_sec": 10,
     "rounds": 5,
-    "recovery_mode": "walk_back"
+    "recovery_mode": "walk_back",
+    "rest_sec": 120
   },
   {
     "name": "Long Hill Intervals (12x2min)",
@@ -10088,7 +10089,7 @@
     "phases": [
       "SPP"
     ],
-    "system": "ATP-PCr",
+    "system": "glycolytic",
     "modality": "run",
     "duration": "2x80m, 2x60m, 2x40m; walk-back recovery",
     "intensity": "high",
@@ -10101,7 +10102,7 @@
       "mech_acceleration",
       "mech_cns_high"
     ],
-    "notes": "England Boxing sprint-ladder format. Distance_m is the total across six sprints; separate recovery is walking back to each start.",
+    "notes": "Six fast runs: 2x80m, 2x60m and 2x40m, walking back between sprints. Mixed anaerobic speed-endurance stimulus; no seconds inferred from distance.",
     "impact_cost": "high",
     "movement_cost": "high",
     "lactate_load": "low",
