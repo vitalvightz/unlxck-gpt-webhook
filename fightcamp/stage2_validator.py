@@ -3587,23 +3587,45 @@ def _missing_selected_conditioning_assignment_warnings(
             for assignment in assignments:
                 name = str(assignment["name"]).strip()
                 expected = str(assignment.get("effective_prescription") or "").strip()
-                if primer and assignment.get("slot_group") == "conditioning_slots":
+                # Only alactic primer members inherit explosive rest/RPE rules.
+                # Legacy selected primer packets predate the "system" field;
+                # explicit non-alactic members are never subject to this rule.
+                alactic_primer = (
+                    primer
+                    and assignment.get("slot_group") == "conditioning_slots"
+                    and str(assignment.get("system") or "alactic").lower()
+                    in {"alactic", "atp-pcr", "atp_pcr"}
+                )
+                if alactic_primer:
                     from .style_taper_governance import (
-                        ALACTIC_MAX_ROUNDS_BY_WINDOW, style_taper_window_for_days,
+                        ALACTIC_MAX_ROUNDS_BY_WINDOW,
+                        ALACTIC_MIN_REST_SEC_BY_WINDOW,
+                        RPE_MAX_BY_WINDOW,
+                        style_taper_window_for_days,
                     )
 
                     window = style_taper_window_for_days(d_day)
                     if window:
                         bounds = _conditioning_dose_bounds(expected)
                         efforts = [item["count"] for item in bounds["intervals"]] + bounds["sets"]
+                        violations = []
                         if efforts and max(efforts) > ALACTIC_MAX_ROUNDS_BY_WINDOW[window]:
+                            violations.append("efforts exceed scheduled-day cap")
+                        if not bounds["rest_sec"] or min(bounds["rest_sec"]) < ALACTIC_MIN_REST_SEC_BY_WINDOW[window]:
+                            violations.append("rest below scheduled-day minimum or missing")
+                        if not bounds["rpe"] or max(bounds["rpe"]) > RPE_MAX_BY_WINDOW[window]:
+                            violations.append("RPE above scheduled-day ceiling or missing")
+                        if violations:
                             warnings.append({
                                 "code": "late_primer_conditioning_dose_overage",
-                                "message": f"D-{d_day} primer '{name}' exceeds its scheduled-day effort cap.",
+                                "message": f"D-{d_day} primer '{name}' violates its scheduled-day dose limits.",
                                 "severity": "blocker", "confidence": "high",
                                 "scheduled_d_day": d_day, "exercise": name,
                                 "effective_prescription": expected,
                                 "max_efforts": ALACTIC_MAX_ROUNDS_BY_WINDOW[window],
+                                "min_rest_sec": ALACTIC_MIN_REST_SEC_BY_WINDOW[window],
+                                "max_rpe": RPE_MAX_BY_WINDOW[window],
+                                "dose_violations": violations,
                             })
                 matching_lines = [line for line in rendered_lines if _line_has_exercise(line, name)]
                 if not matching_lines:
