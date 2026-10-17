@@ -93,3 +93,20 @@ def test_hard_running_is_not_accidentally_taper_cleared(name):
 def test_tempo_has_no_fabricated_total_minutes():
     for name in ("5K Steady Run", "One-Mile Timed Run", "800m Running Repeats (8x)"):
         assert "total_minutes" not in BANK[name]
+
+
+def test_no_machine_boxer_keeps_an_outdoor_run_in_the_aerobic_shortlist():
+    from fightcamp.conditioning import generate_conditioning_block
+
+    flags = {
+        "phase": "GPP", "sport": "boxing", "style_technical": ["boxing"],
+        "style_tactical": ["counter_striker"], "key_goals": ["conditioning"],
+        "primary_goal": "conditioning", "weaknesses": ["endurance"],
+        "equipment": [], "injuries": [], "fatigue": "low",
+        "training_frequency": 4, "days_until_fight": 49,
+        "hard_sparring_days": [], "support_work_days": ["Wednesday"],
+        "rounds_format": "3 x 3",
+    }
+    *_, candidates = generate_conditioning_block(flags)
+    names = {item["drill"]["name"] for item in candidates.get("aerobic", [])}
+    assert names & {"Nasal Jog", "5K Steady Run", "Continuous Tempo Run"}, names
