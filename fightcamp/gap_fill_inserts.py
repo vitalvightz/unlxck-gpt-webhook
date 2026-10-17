@@ -1426,7 +1426,7 @@ def _build_insert_role(
     prescribed_duration = (
         8 if lower_dose else 11
     ) if role_key == "aerobic_shadow_flow" else int(meta["duration_min"][0 if lower_dose else 1])
-    if role_key not in {"tactical_watch", FIGHT_VISUALIZATION_ROLE_KEY}:
+    if role_key not in {"tactical_watch", FIGHT_VISUALIZATION_ROLE_KEY, "aerobic_shadow_flow"}:
         display_text = f"- {label}: {prescribed_duration} minutes, RPE {int(meta['rpe_max'])} max.\n{display_text}"
     role: dict[str, Any] = {
         "session_index": None,
