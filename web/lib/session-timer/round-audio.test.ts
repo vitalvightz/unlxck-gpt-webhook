@@ -98,9 +98,9 @@ test("WAV has correct size, format, silence, cue positions and overlap without h
 test("a scheduled bell belongs to playing media even when Safari's playhead drifts", () => {
   const statuses: string[] = [];
   const track = new RoundAudioTrack((status) => statuses.push(status));
-  const media = { paused: false, ended: false, currentTime: 1 } as HTMLAudioElement;
+  const media = { paused: false, ended: false, currentTime: 1 };
   Object.assign(track as unknown as object, {
-    media, ready: true, origin: 1000, until: 12_000,
+    media: media as HTMLAudioElement, ready: true, origin: 1000, until: 12_000,
     cues: [{ atMs: 5000, sound: "triple_bell" }],
   });
   assert.equal(track.covers(6000), false, "browser playhead is too far from wall-clock time");
