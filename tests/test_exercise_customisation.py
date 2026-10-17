@@ -235,8 +235,10 @@ def test_library_dose_fields_follow_the_drill(query, expected_mode):
     assert any(a["dose_mode"] == expected_mode for a in alternatives), alternatives
     if query == "Tempo Hill Runs":
         pick = next(a for a in alternatives if a["name"] == query)
-        assert pick["suggested_dose"] == {"mode": "intervals", "work_seconds": 20, "rounds": 6}
-        assert pick["dose_required"] is True  # Rest is not stated in the source.
+        assert pick["suggested_dose"] == {
+            "mode": "intervals", "work_seconds": 20, "rounds": 6, "rest_seconds": 60,
+        }
+        assert pick["dose_required"] is False  # Source now has a complete interval dose.
 
 
 def test_added_exercise_can_be_edited_and_logged_with_its_updated_dose():
