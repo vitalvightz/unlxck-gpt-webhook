@@ -173,8 +173,20 @@ export class RoundAudioTrack {
     // Preserve a paused media element so Safari's Control Centre can issue Play.
     // Only preserve a fully prepared track; cancel an in-flight render on pause.
     if (state.pausedAt !== null && this.ready && this.media && settings.sound && settings.volume > 0) {
-      this.timerPaused = true;
-      this.media.pause();
+      if (!this.timerPaused) {
+        this.timerPaused = true;
+        this.media.pause();
+        // Keep Safari's Now Playing controls alive without retaining the
+        // workout-sized WAV while paused. This silent, paused placeholder is
+        // never allowed to run a clock or emit a bell.
+        this.media.onloadedmetadata = null;
+        if (this.url) URL.revokeObjectURL(this.url);
+        this.url = URL.createObjectURL(roundAudioWav({ durationMs: 60_000, cues: [] }, new Map()));
+        this.media.src = this.url;
+        this.media.load();
+        this.cues = [];
+        this.until = 0;
+      }
       this.status("idle");
       return;
     }
