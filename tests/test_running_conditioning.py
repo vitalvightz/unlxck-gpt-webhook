@@ -174,9 +174,17 @@ def test_original_standalone_protocol_headroom_is_unchanged():
     )
 
 
-def test_two_hard_sparring_days_do_not_exclude_all_high_rpe_candidates():
-    from fightcamp.conditioning import generate_conditioning_block
+def test_two_hard_sparring_days_do_not_blanket_exclude_high_rpe(monkeypatch):
+    from fightcamp import conditioning
 
+    # Constrain the candidate bank so this checks the eligibility rule, not
+    # whether a specific entry happens to land in the top-five shortlist.
+    selected = [
+        BANK["5K Steady Run"],
+        BANK["Long Hill Intervals (12x2min)"],
+    ]
+    monkeypatch.setattr(conditioning, "get_conditioning_bank", lambda: selected)
+    monkeypatch.setattr(conditioning, "get_style_conditioning_bank", lambda: [])
     flags = {
         "phase": "GPP", "sport": "boxing", "style_technical": ["boxing"],
         "style_tactical": ["counter_striker"], "key_goals": ["conditioning"],
@@ -186,18 +194,9 @@ def test_two_hard_sparring_days_do_not_exclude_all_high_rpe_candidates():
         "hard_sparring_days": ["Monday", "Friday"],
         "support_work_days": ["Wednesday"], "rounds_format": "3 x 3",
     }
-    *_, reservoir = generate_conditioning_block(flags)
-    aerobic = [item["drill"] for item in reservoir.get("aerobic", [])]
-    assert any(
-        item.get("modality") == "run" and (item.get("rpe") or 0) <= 6
-        for item in aerobic
-    )
-    # Two hard contacts by themselves should never erase every useful
-    # demanding aerobic candidate. Scheduling and dose owners control load.
-    assert any(
-        (item.get("rpe") or 0) >= 8
-        for item in aerobic
-    )
+    *_, reservoir = conditioning.generate_conditioning_block(flags)
+    names = {item["drill"]["name"] for item in reservoir.get("aerobic", [])}
+    assert {"5K Steady Run", "Long Hill Intervals (12x2min)"} <= names
 
 
 def test_heavy_bag_preference_preserves_original_bonus_and_three_contact_limit():
