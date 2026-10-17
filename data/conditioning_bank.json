@@ -9651,6 +9651,7 @@
   },
   {
     "name": "Air Bike Aerobic HIIT",
+    "description": "Sit tall on the air bike with stable hips. Drive the pedals and moving handles smoothly at a hard but controlled, repeatable pace; avoid maximal sprinting.",
     "equipment": [
       "assault_bike"
     ],
@@ -9697,6 +9698,7 @@
   },
   {
     "name": "Air Bike Sprint Interval Training",
+    "description": "Drive the air bike pedals and moving handles as fast and powerfully as possible while keeping your torso stable and movements controlled. Recover fully before the next sprint.",
     "equipment": [
       "assault_bike"
     ],
@@ -9741,6 +9743,7 @@
   },
   {
     "name": "Air Bike Muscle Buffer Intervals",
+    "description": "Drive the air bike with both arms and legs at a demanding, sustained pace. Keep posture stable and aim for repeatable high output rather than an all-out opening sprint.",
     "equipment": [
       "assault_bike"
     ],
@@ -9786,6 +9789,7 @@
   },
   {
     "name": "5K Steady Run",
+    "description": "Run continuously on a clear route at a conversational pace. Hold a steady, comfortable rhythm instead of surging or sprinting, and record the distance covered.",
     "equipment": [],
     "phases": [
       "GPP",
@@ -9823,6 +9827,7 @@
   },
   {
     "name": "One-Mile Timed Run",
+    "description": "Warm up, then run one uninterrupted mile at a hard, controlled pace. Avoid sprinting off the start; maintain running form and record your completion time.",
     "equipment": [],
     "phases": [
       "GPP"
@@ -9857,6 +9862,7 @@
   },
   {
     "name": "Continuous Tempo Run",
+    "description": "After warming up, run continuously at a comfortably hard pace. Hold a consistent rhythm and controlled breathing rather than accelerating into a sprint.",
     "equipment": [],
     "phases": [
       "GPP",
@@ -9892,6 +9898,7 @@
   },
   {
     "name": "Running Fartlek (1:2)",
+    "description": "Alternate faster running with easy jogging. Change speed smoothly, keep each fast effort repeatable, and use the jog to recover without stopping.",
     "equipment": [],
     "phases": [
       "GPP",
@@ -9929,6 +9936,7 @@
   },
   {
     "name": "Running Aerobic Intervals (6x4min)",
+    "description": "Run each interval at a controlled aerobic pace you can repeat. Walk during the scheduled recovery, then restart smoothly without turning the intervals into maximal sprints.",
     "equipment": [],
     "phases": [
       "GPP",
@@ -9966,6 +9974,7 @@
   },
   {
     "name": "800m Running Repeats (8x)",
+    "description": "Run each 800-metre repetition at a hard but repeatable pace. Walk the recovery distance before starting the next repetition; avoid all-out sprinting on the first rep.",
     "equipment": [],
     "phases": [
       "SPP"
@@ -10006,6 +10015,7 @@
   },
   {
     "name": "Short Hill Sprints (5x10s)",
+    "description": "Choose a clear uphill slope and accelerate hard with strong arm drive and stable posture. Walk back and finish the full recovery before another maximal-quality sprint.",
     "equipment": [],
     "phases": [
       "SPP"
@@ -10048,6 +10058,7 @@
   },
   {
     "name": "Long Hill Intervals (12x2min)",
+    "description": "Run uphill for each interval at a strong, repeatable pace, maintaining upright posture and active arm drive. Walk downhill to recover before the next climb.",
     "equipment": [],
     "phases": [
       "GPP",
@@ -10085,6 +10096,7 @@
   },
   {
     "name": "Descending Sprint Ladder (80-60-40m)",
+    "description": "Sprint straight ahead over the prescribed distances, then walk back and reset. Keep the acceleration sharp and do not substitute shuttles or change-of-direction drills.",
     "equipment": [],
     "phases": [
       "SPP"
@@ -10132,6 +10144,7 @@
   },
   {
     "name": "Boxing Round Running Intervals (10-10-10)",
+    "description": "Cycle through walking, jogging and sprinting in that order, repeating the pattern throughout each round. Reset to walking after each sprint and take the prescribed between-round break.",
     "equipment": [],
     "phases": [
       "SPP"

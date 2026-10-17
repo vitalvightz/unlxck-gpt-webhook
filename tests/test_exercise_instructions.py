@@ -64,3 +64,22 @@ def test_raw_how_line_survives_fallback_without_becoming_a_second_cue():
         assert result["execution_instructions"] == explanation
         assert "Cue: Keep guard ready." in result["coaching_cues"]
         assert not any("How:" in cue or explanation in cue for cue in result["coaching_cues"])
+
+
+def test_video_review_conditioning_exercises_have_real_how_instructions():
+    """Missing video must not leave a conditioning card without execution copy."""
+    from fightcamp.conditioning import get_conditioning_bank
+
+    names = ["Air Bike Aerobic HIIT", "Air Bike Sprint Interval Training", "Air Bike Muscle Buffer Intervals", "5K Steady Run", "One-Mile Timed Run", "Continuous Tempo Run", "Running Fartlek (1:2)", "Running Aerobic Intervals (6x4min)", "800m Running Repeats (8x)", "Short Hill Sprints (5x10s)", "Long Hill Intervals (12x2min)", "Descending Sprint Ladder (80-60-40m)", "Boxing Round Running Intervals (10-10-10)"]
+    bank = {row["name"]: row for row in get_conditioning_bank()}
+    assert all(name in bank for name in names)
+    for name in names:
+        selected = bank[name]
+        description = selected.get("description")
+        assert isinstance(description, str) and len(description.strip()) >= 65, name
+        assert isinstance(selected.get("notes"), str) and selected["notes"], name
+        assert exercise_instructions({"name": name}) == description
+        assignment = assignment_from_slot("GPP", "conditioning_slots", {"selected": selected})
+        assert assignment["execution_instructions"] == description
+        assert assignment["coaching_notes"] == selected["notes"]
+        assert exercise_coaching(assignment, {}, d_day=30)["execution_instructions"] == description
