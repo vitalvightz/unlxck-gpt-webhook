@@ -101,6 +101,11 @@ test("pause, resume, edits and interrupted playback keep one correctly aligned t
   await page.waitForTimeout(1100);
   await expect(page.locator(".st-clock-digits")).toHaveText(nativePausedClock!);
   await expect(media).toHaveCount(1, { timeout: 2000 });
+  const pausedBytes = await media.evaluate((audio: HTMLAudioElement) => {
+    const blobs = (window as unknown as { __roundTimerAudioBlobs: Map<string, Blob> }).__roundTimerAudioBlobs;
+    return blobs.get(audio.src)!.size;
+  });
+  expect(pausedBytes).toBeLessThan(2_000_000);
   await page.getByRole("button", { name: "Resume timer", exact: true }).click();
   await expect(page.locator(".st-audio-status")).toContainText("Round audio playing");
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
@@ -278,6 +283,14 @@ test("a maximum-length track loads, seeks near its final bell, and releases repl
   await page.getByRole("button", { name: "Adjust timer", exact: true }).click();
   expect(await page.evaluate(() => (window as unknown as { __roundTimerAudioBlobs: Map<string, Blob> }).__roundTimerAudioBlobs.size)).toBe(1);
   await page.getByRole("button", { name: "Pause timer", exact: true }).click();
+  await expect(page.locator("audio[data-round-audio]")).toHaveCount(1);
+  const pausedTrack = await page.locator("audio[data-round-audio]").evaluate((audio: HTMLAudioElement) => {
+    const blobs = (window as unknown as { __roundTimerAudioBlobs: Map<string, Blob> }).__roundTimerAudioBlobs;
+    return { paused: audio.paused, count: blobs.size, size: blobs.get(audio.src)!.size };
+  });
+  expect(pausedTrack).toEqual({ paused: true, count: 1, size: 1_920_044 });
+  await page.getByRole("button", { name: "End session", exact: true }).click();
+  await page.getByRole("alertdialog", { name: "End session" }).getByRole("button", { name: "End", exact: true }).click();
   await expect(page.locator("audio[data-round-audio]")).toHaveCount(0);
   expect(await page.evaluate(() => (window as unknown as { __roundTimerAudioBlobs: Map<string, Blob> }).__roundTimerAudioBlobs.size)).toBe(0);
   const released = await nativeMemory();
