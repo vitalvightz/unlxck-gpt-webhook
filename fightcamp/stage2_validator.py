@@ -3566,12 +3566,17 @@ def _missing_selected_conditioning_assignment_warnings(
         if not isinstance(week, dict):
             continue
         for role in week.get("session_roles") or []:
-            if not isinstance(role, dict) or str(role.get("category") or "").lower() != "conditioning":
+            if not isinstance(role, dict):
+                continue
+            primer = role.get("role_key") in {"strength_touch_day", "neural_primer_day", "alactic_sharpness_day"}
+            conditioning = str(role.get("category") or "").lower() == "conditioning"
+            if not conditioning and not primer:
                 continue
             assignments = [
                 assignment
                 for assignment in (role.get("selected_exercise_assignments") or [])
                 if isinstance(assignment, dict) and str(assignment.get("name") or "").strip()
+                and (conditioning or assignment.get("slot_group") == "conditioning_slots")
             ]
             if not assignments:
                 continue
@@ -3581,6 +3586,25 @@ def _missing_selected_conditioning_assignment_warnings(
             rendered_lines = [line for block in blocks_by_day.get(d_day, []) for line in block.get("lines") or []]
             for assignment in assignments:
                 name = str(assignment["name"]).strip()
+                expected = str(assignment.get("effective_prescription") or "").strip()
+                if primer and assignment.get("slot_group") == "conditioning_slots":
+                    from .style_taper_governance import (
+                        ALACTIC_MAX_ROUNDS_BY_WINDOW, style_taper_window_for_days,
+                    )
+
+                    window = style_taper_window_for_days(d_day)
+                    if window:
+                        bounds = _conditioning_dose_bounds(expected)
+                        efforts = [item["count"] for item in bounds["intervals"]] + bounds["sets"]
+                        if efforts and max(efforts) > ALACTIC_MAX_ROUNDS_BY_WINDOW[window]:
+                            warnings.append({
+                                "code": "late_primer_conditioning_dose_overage",
+                                "message": f"D-{d_day} primer '{name}' exceeds its scheduled-day effort cap.",
+                                "severity": "blocker", "confidence": "high",
+                                "scheduled_d_day": d_day, "exercise": name,
+                                "effective_prescription": expected,
+                                "max_efforts": ALACTIC_MAX_ROUNDS_BY_WINDOW[window],
+                            })
                 matching_lines = [line for line in rendered_lines if _line_has_exercise(line, name)]
                 if not matching_lines:
                     warnings.append(
@@ -3596,7 +3620,6 @@ def _missing_selected_conditioning_assignment_warnings(
                         }
                     )
                     continue
-                expected = str(assignment.get("effective_prescription") or "").strip()
                 dose_ok, violations, expected_bounds, rendered_bounds = (
                     _conditioning_dose_within_bounds(expected, matching_lines[0])
                 )

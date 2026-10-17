@@ -1172,12 +1172,14 @@ def _late_primer_member_dose(
         return str(
             resolve_strength_slot_prescription(role=role, slot=target).get("effective_prescription") or ""
         )
-    dose = _conditioning_prescription(_slot_selected_option(slot))
-    if complement and dose:
-        from .prescription_resolver import _reduce_leading_count
+    from .prescription_resolver import resolve_late_primer_conditioning_dose
 
-        dose = _reduce_leading_count(dose, 1)
-    return dose
+    return resolve_late_primer_conditioning_dose(
+        _conditioning_prescription(_slot_selected_option(slot)),
+        d_day=sequence_role_offset_of(role),
+        alactic=_candidate_system(slot) == "alactic",
+        complement=complement,
+    )
 
 
 def _late_primer_member_stress(

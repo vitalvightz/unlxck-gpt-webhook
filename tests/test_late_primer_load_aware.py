@@ -317,3 +317,43 @@ def test_a_sport_specific_primer_leads_the_style_taper_group_for_a_non_boxer():
         # A boxer cannot use the kick drill (sport gate); a kickboxer leads with it,
         # and it is a different stimulus from the same-family hand drill.
         assert _names(members) == expected, sport
+
+
+@pytest.mark.parametrize(("d_day", "expected"), [
+    (13, "4x3 reps, 1min rest"),
+    (7, "4x3 reps, 1min rest"),
+    (6, "3x3 reps, 1min rest"),
+    (5, "3x3 reps, 1min rest"),
+    (3, "2x3 reps, 1min rest"),
+])
+def test_late_primer_caps_conditioning_bank_rep_sets(d_day, expected):
+    from fightcamp.stage2_payload import _late_primer_member_dose
+
+    role = _role("alactic_sharpness_day", d_day=d_day)
+    slot = {"role": "alactic", "selected": {
+        "name": "Overhead Med Ball Slam (Snappy)", "system": "ATP-PCr",
+        "prescription": "6x3 reps, 1min rest",
+    }}
+    assert _late_primer_member_dose(role, "conditioning_slots", slot, complement=False) == expected
+    assert _late_primer_member_dose(role, "conditioning_slots", slot, complement=True) == "1x3 reps, 1min rest"
+
+
+def test_late_primer_never_increases_a_smaller_conditioning_prescription():
+    from fightcamp.stage2_payload import _late_primer_member_dose
+
+    role = _role("alactic_sharpness_day", d_day=6)
+    slot = {"role": "alactic", "selected": {
+        "name": "Small throw", "system": "ATP-PCr", "prescription": "2x3 reps, 2min rest",
+    }}
+    assert _late_primer_member_dose(role, "conditioning_slots", slot, complement=False) == "2x3 reps, 2min rest"
+
+
+def test_late_primer_conditioning_dose_reduction_preserves_timed_units():
+    from fightcamp.stage2_payload import _late_primer_member_dose
+
+    role = _role("alactic_sharpness_day", d_day=6)
+    slot = {"role": "alactic", "selected": {
+        "name": "Shadow bursts", "system": "ATP-PCr",
+        "prescription": "6x5s with 120s rest",
+    }}
+    assert _late_primer_member_dose(role, "conditioning_slots", slot, complement=False) == "3x5s with 120s rest"
