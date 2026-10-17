@@ -402,12 +402,6 @@ _PRIMER_REST_BEFORE = re.compile(
     r"(?P<low>\d+(?:\.\d+)?)(?:\s*[-–]\s*(?P<high>\d+(?:\.\d+)?))?\s*"
     r"(?P<unit>seconds?|secs?|s|minutes?|mins?|m)\b", re.I,
 )
-_PRIMER_RPE = re.compile(
-    r"\bRPE\s*(?:[~≈@≤]|<=|max\s*)?\s*(?P<low>\d+(?:\.\d+)?)"
-    r"(?:\s*[-–]\s*(?P<high>\d+(?:\.\d+)?))?", re.I,
-)
-
-
 def _primer_rest_with_floor(prescription: str, minimum_sec: float) -> str:
     """Increase short rest; preserve longer bank recovery without changing work."""
     found = False
@@ -437,41 +431,15 @@ def _primer_rest_with_floor(prescription: str, minimum_sec: float) -> str:
     return result
 
 
-def _primer_rpe_with_ceiling(
-    prescription: str, ceiling: float, source_rpe: float | None,
-) -> str:
-    """Keep a lower authored intensity; otherwise make the cap explicit."""
-    found = False
-    # A lower bank RPE remains authoritative even when written only as
-    # metadata; the countdown cap can never increase that authored effort.
-    limit = min(source_rpe, ceiling) if source_rpe is not None and 0 < source_rpe <= 10 else ceiling
-
-    def clamp(match: re.Match[str]) -> str:
-        nonlocal found
-        found = True
-        high = float(match.group("high") or match.group("low"))
-        if (high <= limit and match.group("high") is None
-                and re.fullmatch(r"RPE\s*\d+(?:\.\d+)?", match.group(0), re.I)):
-            return match.group(0)
-        # Normalise ranges, "RPE <=5" and "RPE max 5" into an exact
-        # machine-readable ceiling so both the renderer and validator agree.
-        return f"RPE {min(high, limit):g} max"
-
-    result = _PRIMER_RPE.sub(clamp, prescription)
-    if not found:
-        result = f"{result.rstrip(' ;,')}; RPE {limit:g} max"
-    return result
-
-
 def resolve_late_primer_conditioning_dose(
     prescription: str, *, d_day: int | None, alactic: bool,
-    complement: bool = False, source_rpe: float | None = None,
+    complement: bool = False,
 ) -> str:
     """Price alactic primer work against its actual scheduled countdown window.
 
-    Effort count, recovery floor and RPE ceiling come from the same canonical
-    Style Taper policy. Rep-based throws retain reps, not fight-round units.
-    Technical, mobility and non-alactic work must not inherit these floors.
+    Effort count and recovery floor come from canonical Style Taper policy.
+    Rep-based throws retain reps, not fight-round units. Existing RPE remains
+    completely unchanged; technical and mobility work never inherit this floor.
     """
     dose = _reduce_leading_count(prescription, 1) if complement else prescription
     if not dose or not alactic:
@@ -479,7 +447,6 @@ def resolve_late_primer_conditioning_dose(
     from .style_taper_governance import (
         ALACTIC_MAX_ROUNDS_BY_WINDOW,
         ALACTIC_MIN_REST_SEC_BY_WINDOW,
-        RPE_MAX_BY_WINDOW,
         style_taper_window_for_days,
     )
 
@@ -487,8 +454,7 @@ def resolve_late_primer_conditioning_dose(
     if window is None:
         return dose
     dose = _reduce_leading_count(dose, ALACTIC_MAX_ROUNDS_BY_WINDOW[window])
-    dose = _primer_rest_with_floor(dose, ALACTIC_MIN_REST_SEC_BY_WINDOW[window])
-    return _primer_rpe_with_ceiling(dose, RPE_MAX_BY_WINDOW[window], source_rpe)
+    return _primer_rest_with_floor(dose, ALACTIC_MIN_REST_SEC_BY_WINDOW[window])
 
 
 
