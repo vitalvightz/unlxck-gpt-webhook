@@ -206,3 +206,64 @@ def test_bag_boost_respects_two_hard_sparring_days_without_blocking_easy_aerobic
         days_until_fight=35, equipment_access_set={"heavy_bag"}, injuries=[],
         hard_sparring_days=["Mon", "Fri"], sport="boxing",
     ) > 0
+
+
+def test_distance_run_survives_stage2_serialization_and_composition_without_fake_seconds():
+    from fightcamp.stage2_payload import _serialize_conditioning_option
+    from fightcamp.session_composition import compose_normal_conditioning_assignments
+
+    drill = BANK["5K Steady Run"]
+    option = _serialize_conditioning_option(drill, "aerobic", "easy base run")
+    assert option["selection_metadata"]["distance_m"] == 5000
+    role = {
+        "category": "conditioning", "role_key": "aerobic_support_day",
+        "preferred_system": "aerobic", "scheduled_day_hint": "Wednesday",
+    }
+    weekly = {"weeks": [{"phase": "GPP", "session_roles": [role]}]}
+    slot = {"slot_id": "gpp-running", "role": "aerobic", "selected": option, "alternates": []}
+    compose_normal_conditioning_assignments(
+        weekly_role_map=weekly, candidate_pools={"GPP": {"conditioning_slots": [slot]}}
+    )
+    policy = role["conditioning_composition_policy"]
+    assert policy["distance_dose_unmeasured"] is True
+    assert policy["conditioning_workload_met"] is None
+    assert policy["conditioning_active_work_seconds"] == 0
+    assert policy["workload_limited"] is False
+    assert role["selected_exercise_assignments"][0]["effective_prescription"] == drill["duration"]
+
+
+def test_actual_assigned_distance_work_evidences_conditioning_without_fake_duration():
+    from fightcamp.stage2_payload import _serialize_conditioning_option
+    from fightcamp.goal_preservation import _other_stimuli
+
+    for name in ("5K Steady Run", "800m Running Repeats (8x)"):
+        drill = BANK[name]
+        system = drill["system"]
+        option = _serialize_conditioning_option(drill, system, "conditioned running")
+        slot = {"slot_id": "running-dose", "role": system, "selected": option}
+        role = {
+            "category": "conditioning", "preferred_system": system,
+            "selected_exercise_assignments": [{
+                "slot_group": "conditioning_slots", "source_phase": "GPP",
+                "slot_id": "running-dose", "name": name,
+                "effective_prescription": drill["duration"],
+            }],
+        }
+        pools = {"GPP": {"conditioning_slots": [slot]}}
+        stimuli = _other_stimuli(role, pools, "GPP", {})
+        assert len(stimuli) == 1
+        assert "energy_system_training" in stimuli[0]["intents"]
+        assert stimuli[0]["distance_m"] == drill["distance_m"]
+        assert "total_minutes" not in stimuli[0]  # Unknown pace != zero duration.
+
+
+def test_short_distance_does_not_pretend_to_be_aerobic_development():
+    from fightcamp.stage2_payload import _serialize_conditioning_option
+    from fightcamp.goal_preservation import _other_stimuli
+    drill = dict(BANK["5K Steady Run"], name="Short run", distance_m=100)
+    option = _serialize_conditioning_option(drill, "aerobic", "")
+    role = {"category": "conditioning", "preferred_system": "aerobic",
+            "selected_exercise_assignments": [{"slot_group": "conditioning_slots",
+                "source_phase": "GPP", "slot_id": "short", "name": "Short run"}]}
+    pool = {"GPP": {"conditioning_slots": [{"slot_id": "short", "role": "aerobic", "selected": option}]}}
+    assert not _other_stimuli(role, pool, "GPP", {})
