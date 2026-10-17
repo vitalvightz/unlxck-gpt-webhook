@@ -1121,6 +1121,21 @@
   color: var(--st-on-ink);
 }
 
+.st-audio-status {
+  max-width: 34rem;
+  margin: 8px auto 0;
+  padding: 0 16px;
+  color: var(--st-note-ink);
+  font-size: 12px;
+  line-height: 1.5;
+  text-align: center;
+}
+
+.st-audio-status .st-link {
+  display: block;
+  margin: 4px auto 0;
+}
+
 .st-sheet-note {
   margin: 0;
   font-size: 13px;

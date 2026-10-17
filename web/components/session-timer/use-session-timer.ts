@@ -25,10 +25,12 @@ import {
   type TimerStep,
 } from "@/lib/session-timer/engine";
 import type { TimerItem } from "@/lib/session-timer/plan";
+import { RoundAudioTrack, type RoundAudioStatus } from "@/lib/session-timer/round-audio";
 
 // 2: ranged rest stays in rest until its maximum (readyAt replaced windowEndsAt).
 const RUN_VERSION = 2;
 const TICK_MS = 100;
+const MAX_CUE_DELAY_MS = 1500;
 /** The fight-ring bells still ring while the timer is minimised. */
 const MINIMIZED_SOUNDS: ReadonlySet<TimerSound> = new Set(["bell", "triple_bell", "finish"]);
 
@@ -89,7 +91,7 @@ function saveRun(storageKey: string, state: TimerState): void {
   }
 }
 
-type WakeLockSentinelLike = { release: () => Promise<void> };
+type WakeLockSentinelLike = { released?: boolean; release: () => Promise<void> };
 type WakeLockNavigator = Navigator & {
   wakeLock?: { request: (type: "screen") => Promise<WakeLockSentinelLike> };
 };
@@ -102,8 +104,10 @@ function useWakeLock(active: boolean): void {
     if (!nav.wakeLock) return;
     let sentinel: WakeLockSentinelLike | null = null;
     let cancelled = false;
+    let pending = false;
     const acquire = () => {
-      if (document.visibilityState !== "visible") return;
+      if (cancelled || pending || (sentinel && !sentinel.released) || document.visibilityState !== "visible") return;
+      pending = true;
       nav.wakeLock
         ?.request("screen")
         .then((lock) => {
@@ -115,7 +119,7 @@ function useWakeLock(active: boolean): void {
         })
         .catch(() => {
           // Denied (battery saver, unsupported): the timer still runs.
-        });
+        }).finally(() => { pending = false; });
     };
     acquire();
     document.addEventListener("visibilitychange", acquire);
@@ -132,6 +136,8 @@ export type SessionTimerController = {
   now: number;
   settings: TimerSoundSettings;
   setSettings: (settings: TimerSoundSettings) => void;
+  roundAudioStatus: RoundAudioStatus;
+  restoreAudio: () => void;
   /** Apply an engine action that may emit events (plays their sound). */
   run: (action: (state: TimerState, now: number) => TimerStep) => void;
   /** Apply a silent engine update. */
@@ -164,10 +170,18 @@ export function useSessionTimer({
   );
   const [now, setNow] = useState(() => Date.now());
   const [settings, setSettingsState] = useState<TimerSoundSettings>(() => loadSoundSettings());
+  const [roundAudioStatus, setRoundAudioStatus] = useState<RoundAudioStatus>("idle");
+  const [roundAudio] = useState(() => new RoundAudioTrack(setRoundAudioStatus));
   const stateRef = useRef(state);
   const audibleRef = useRef(audible);
   const settingsRef = useRef(settings);
   const lastRemainingRef = useRef<number | null>(null);
+  const lastTickAtRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    roundAudio.sync(stateRef.current, Date.now(), settingsRef.current);
+    return () => roundAudio.stop();
+  }, [roundAudio]);
 
   useEffect(() => {
     audibleRef.current = audible;
@@ -178,16 +192,19 @@ export function useSessionTimer({
     timerAudio().configure(settings);
   }, [settings]);
 
-  const announce = useCallback((events: TimerEvent[], next: TimerState) => {
+  const announce = useCallback((events: TimerEvent[], next: TimerState, scheduled = false) => {
     if (events.length === 0) return;
     const sound = soundForEvents(events);
     // Minimised, the round bells still ring and the voice (when it is on)
     // still calls the rounds, so the athlete never has to look; the other
     // beeps and chimes stay quiet.
-    if (sound && (audibleRef.current || MINIMIZED_SOUNDS.has(sound))) timerAudio().play(sound);
+    if (sound && (audibleRef.current || MINIMIZED_SOUNDS.has(sound))) {
+      if (scheduled && roundAudio.covers(Date.now())) timerAudio().buzzSound(sound);
+      else timerAudio().play(sound);
+    }
     const callout = calloutForEvents(events, next);
     if (callout) timerAudio().say(callout);
-  }, []);
+  }, [roundAudio]);
 
   const commit = useCallback(
     (next: TimerState) => {
@@ -215,9 +232,10 @@ export function useSessionTimer({
       if (next === stateRef.current) return;
       announce(events, next);
       commit(next);
+      roundAudio.sync(next, at, settingsRef.current);
       setNow(at);
     },
-    [announce, commit],
+    [announce, commit, roundAudio],
   );
 
   const update = useCallback(
@@ -226,9 +244,10 @@ export function useSessionTimer({
       const next = action(stateRef.current, at);
       if (next === stateRef.current) return;
       commit(next);
+      roundAudio.sync(next, at, settingsRef.current);
       setNow(at);
     },
-    [commit],
+    [commit, roundAudio],
   );
 
   const running =
@@ -238,18 +257,29 @@ export function useSessionTimer({
     if (!running) return;
     const tick = () => {
       const at = Date.now();
+      const delayed = lastTickAtRef.current !== null && at - lastTickAtRef.current > MAX_CUE_DELAY_MS;
+      lastTickAtRef.current = at;
       const current = stateRef.current;
       const { state: next, events } = advance(current, at);
       if (next !== current) {
-        announce(events, next);
+        // Never play a batch of old bells/callouts after the browser wakes.
+        const transitionAt = next.endedAt ?? next.phaseStartedAt;
+        if (transitionAt !== null && at - transitionAt < MAX_CUE_DELAY_MS) announce(events, next, true);
         commit(next);
       } else {
         const remaining = cueRemainingMs(viewAt(current, at));
+        // A long callback gap must not replay old warnings, voice or vibration
+        // within the same round. Limit that catch-up window to recent marks;
+        // normal ticks still honour deliberate time edits that cross a mark.
+        const previous = lastRemainingRef.current;
+        const cueBaseline = delayed && previous !== null && remaining !== null
+          ? Math.min(previous, remaining + MAX_CUE_DELAY_MS)
+          : previous;
         const { warnTen, warnThirty, warnHalfway } = settingsRef.current;
         const cues = crossedCues(
           current.phase,
           current.phaseMs,
-          lastRemainingRef.current,
+          cueBaseline,
           remaining,
           { ten: warnTen, thirty: warnThirty, halfway: warnHalfway },
           warningLengthMs(current),
@@ -259,7 +289,10 @@ export function useSessionTimer({
         // training, not looking at the phone. Only the 3-2-1 beeps stay on screen.
         const { sounds, callout } = cueSounds(cues, audibleRef.current);
         const audio = timerAudio();
-        for (const sound of sounds) audio.play(sound);
+        for (const sound of sounds) {
+          if (sound !== "beep" && roundAudio.coversCue(sound, at)) audio.buzzSound(sound);
+          else audio.play(sound);
+        }
         if (callout) audio.say(callout);
       }
       setNow(at);
@@ -268,18 +301,29 @@ export function useSessionTimer({
     const interval = window.setInterval(tick, TICK_MS);
     // A returning tab catches up at once instead of waiting for the next tick.
     document.addEventListener("visibilitychange", tick);
+    window.addEventListener("pageshow", tick);
     return () => {
       window.clearInterval(interval);
       document.removeEventListener("visibilitychange", tick);
+      window.removeEventListener("pageshow", tick);
     };
-  }, [running, announce, commit]);
+  }, [running, announce, commit, roundAudio]);
 
-  useWakeLock(audible && state.phase !== "done");
+  // In-app minimising must not let a running round's screen go to sleep.
+  useWakeLock(running || (audible && state.phase !== "done"));
 
   const setSettings = useCallback((next: TimerSoundSettings) => {
+    settingsRef.current = next;
+    timerAudio().configure(next);
     setSettingsState(next);
     saveSoundSettings(next);
-  }, []);
+    roundAudio.sync(stateRef.current, Date.now(), next);
+  }, [roundAudio]);
 
-  return { state, now, settings, setSettings, run, update };
+  const restoreAudio = useCallback(() => {
+    timerAudio().unlock();
+    roundAudio.sync(stateRef.current, Date.now(), settingsRef.current);
+  }, [roundAudio]);
+
+  return { state, now, settings, setSettings, roundAudioStatus, restoreAudio, run, update };
 }
