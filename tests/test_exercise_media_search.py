@@ -124,6 +124,18 @@ def test_ytdlp_rejects_long_and_unknown_duration_candidates():
     assert list(searcher.search(_row(), set())) == [URL_A]
 
 
+def test_ytdlp_accepts_bounded_long_form_demonstrations():
+    # Long-form tutorials should be available for Gemini to clip, not filtered
+    # before review simply because they exceed three minutes.
+    searcher = _ytdlp_searcher([[
+        {"id": "AAAAAAAAAAA", "duration": 480},
+        {"id": "BBBBBBBBBBB", "duration": 600},
+        {"id": "CCCCCCCCCCC", "duration": 601},
+        {"id": "DDDDDDDDDDD"},
+    ], [], []])
+    assert list(searcher.search(_row(), set())) == [URL_A, URL_B]
+
+
 def test_queries_use_exercise_metadata_without_private_cues():
     row = _row(example_name="Tempo Shadowboxing", sport="boxing", aliases="controlled-shadowboxing", plan_cue="private athlete injury", notes="private")
     queries = discovery.search_queries(row)
