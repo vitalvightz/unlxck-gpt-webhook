@@ -124,13 +124,18 @@ export class RoundAudioTrack {
   private cues: RoundAudioCue[] = [];
   private ready = false;
   private timerPaused = false;
+  private onMediaPause?: () => void;
+  private onMediaPlay?: () => void;
 
   constructor(
     private readonly status: (status: RoundAudioStatus) => void,
     private readonly clips: () => Promise<ReadonlyMap<TimerSound, Float32Array>> = loadClips,
-    private readonly onMediaPause?: () => void,
-    private readonly onMediaPlay?: () => void,
   ) {}
+
+  setMediaActions(onPause?: () => void, onPlay?: () => void): void {
+    this.onMediaPause = onPause;
+    this.onMediaPlay = onPlay;
+  }
 
   covers(at: number): boolean {
     return Boolean(this.media && !this.media.paused && !this.media.ended &&
