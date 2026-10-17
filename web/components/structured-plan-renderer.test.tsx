@@ -4,10 +4,12 @@ import { renderToStaticMarkup } from "react-dom/server";
 
 import {
   buildDayTimeline,
+  BlockCard,
   ExerciseRationaleProvider,
   ExerciseRow,
   RecoveryCard,
   SessionCard,
+  SessionlessDayCard,
   StructuredPlanRenderer,
   weekStripCenterOffset,
 } from "./structured-plan-renderer";
@@ -19,6 +21,24 @@ import type {
   StructuredPlan,
   StructuredSession,
 } from "@/lib/types";
+
+test("expanded footwork retains cue method and stance after a pinned lead cue", () => {
+  const html = renderToStaticMarkup(<BlockCard hideLeadCue block={{ display_name: "Footwork drill",
+    coaching_cues: ["Circle off the line.", "Cue Method: Partner feeds a random cue.",
+      "Side / Stance: Work both directions from your normal stance."],
+    stop_rules: ["Stop if the feet cross."],
+  }} />);
+  assert.doesNotMatch(html, /Circle off the line/);
+  assert.match(html, /Cue Method: Partner feeds a random cue/);
+  assert.match(html, /Side \/ Stance: Work both directions from your normal stance/);
+  assert.match(html, /Stop if the feet cross/);
+});
+
+test("the competition day retains the fight-day protocol instruction", () => {
+  const html = renderToStaticMarkup(<SessionlessDayCard day={{countdown_label: "D-0", day_type: "competition",
+    today_card: {headline: "Fight day"}, sessions: []}} />);
+  assert.match(html, /warm-up and fight protocol; no additional S&amp;C/);
+});
 
 function countOccurrences(text: string, needle: string): number {
   return text.split(needle).length - 1;

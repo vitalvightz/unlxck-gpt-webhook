@@ -41,7 +41,7 @@ test("progression is hidden while the separate stop rule remains visible", () =>
   assert.equal(html.includes("Sharp shoulder pain or a clear drop in punch mechanics."), true);
 });
 
-test("exercise card hides planning transcript and deduplicates Easier guidance", () => {
+test("exercise card keeps execution and reset while hiding planning transcript and deduplicating Easier", () => {
   const html = renderToStaticMarkup(
     <BlockCard
       block={{
@@ -67,7 +67,7 @@ test("exercise card hides planning transcript and deduplicates Easier guidance",
   assert.equal(html.includes("maintain punch speed under slight resistance"), false);
   assert.equal(html.includes("keep the dose small in sharpness week"), false);
   assert.equal(html.includes("Explosive intent; accelerate through full range"), true);
-  assert.equal(html.includes("Reset guard immediately"), false);
+  assert.equal(html.includes("Reset guard immediately"), true);
   assert.equal(html.includes("Coaching cues"), false);
   assert.equal(html.split("Reduce band tension").length - 1, 1);
 });

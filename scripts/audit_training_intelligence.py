@@ -25,6 +25,7 @@ from fightcamp.plan_pipeline_runtime import build_runtime_context, prime_plan_ba
 from fightcamp.programme_fidelity import reconcile_authoritative_programme, programme_fidelity_findings
 from fightcamp.stage2_finalizer_packet import build_stage2_finalizer_packet
 from fightcamp.stage2_validator import validate_stage2_output
+from fightcamp.stage2_pipeline import review_stage2_output
 from fightcamp.strength import get_exercise_bank, _classify_prescription_type
 from fightcamp.strength_session_quality import classify_strength_item, strength_adaptation_relevance
 from fightcamp.training_catalogue import build_catalogue
@@ -107,7 +108,8 @@ def generate_scenario(name: str, *, seed: int = 1) -> dict:
         "strength_exposures": [e for e in evidence if "meaningful_strength" in e["intents"]],
         "goal_findings": validate_goal_preservation(brief),
         "fidelity_findings": programme_fidelity_findings(brief, plan),
-        "validator": validate_stage2_output(planning_brief=brief, final_plan_text=plan),
+        "raw_validator": validate_stage2_output(planning_brief=brief, final_plan_text=plan),
+        "validator": review_stage2_output(planning_brief=brief, final_plan_text=plan)["validator_report"],
         "weeks": weeks,
     }
     return {"summary": summary, "brief": brief, "packet": packet, "plan": plan, "handoff": handoff,

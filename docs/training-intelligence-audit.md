@@ -17,7 +17,7 @@ The confirmed failure crosses selection, composition, effective-dose authority a
 | Medium | `structured_plan_deterministic_fallback` left compound working doses and qualitative load instructions in disposable coaching cues. | Preserve unrepresented work in `execution_instructions`, using the existing unit parser. Contrast sequences retain both components. Numeric templates are unchanged. |
 | Medium | `_render_late_fight_stage1_draft` rendered a generic cue even for closed selected work. | Read the existing render authority when its body is resolved. Keep the fallback for open content. |
 | Medium | The validator misread compound rounds, separate locked support and `How:` annotations. | Reuse the compound parser and exact render authority. Changed rounds/intensity/support doses remain detectable. |
-| Medium | Bank cues could prescribe 3-5 sets after effective dosing prescribed two; model progression could invent an unsupported numerical increase. | Execution cues cannot introduce a second dose. Numerical advice must match the existing future-exposure authority; unsupported advice is removed without inventing another increment. |
+| Medium | Bank cues could prescribe 3-5 sets after effective dosing prescribed two. | Execution cues cannot introduce a second working dose. Existing model-written coaching preservation is unchanged; the broader numerical-progression issue remains a baseline finding. |
 
 ## Architectural simplification: evidence and limits
 
@@ -27,7 +27,7 @@ Net added lines are not evidence of simplification. Production code still grows.
 - Recomposition and restoration no longer carry different no-regression predicates. `_coverage_regresses` compares exact missing windows for recomposition, capacity trades and final acceptance. Gaining one week cannot conceal losing another. Evidence is collected once per verdict.
 - The gas-tank-only secondary exception is replaced by the existing shared weakness maps.
 - Effective-dose rejection no longer falls through to base-dose membership. Closed countdown rendering reads the shared render authority instead of a separate generic-body path.
-- Model wording and bank notes remain subordinate to resolved current work and already authorised future work. No new progression templates or automatic load increases were introduced.
+- Bank execution cues cannot introduce another working dose. The attempted model-progression recovery guard was withdrawn after it broke preservation of existing coach notes. No progression templates or automatic load increases were introduced.
 
 The capacity trade is **additional logic**, not simplification. It is retained because restoring the missing D-14 appointment otherwise raises the representative week above its requested five sessions. Inside the existing bounded repair transaction, one of at least two app-owned conditioning appointments may fund a priced candidate only while conditioning and all other selected-goal coverage survive. Coach roles, finished tails, compression and shared legality remain protected. The same realised-load governor verifies the trial.
 
@@ -46,7 +46,7 @@ No runtime module, planner manager, placement engine, collision doctrine or meta
 | Closed membership | `session_composition` | Retain selected stimuli within existing caps and neighbouring-load constraints. |
 | Effective dose / cost | `prescription_resolver`, countdown morph, load governor | Reject unpriced members; price trials before final acceptance. |
 | Coverage | `goal_preservation` | Final assignments, actual doses, exact windows, explicit causal deferral. |
-| Progression | `exercise_progression`; model authors wording | Reuse existing future-dose bounds; avoid invented numerical promises. |
+| Progression | `exercise_progression`; model authors wording | Existing recovery behaviour retained. Unsupported numerical model advice remains a separately reproduced Main finding. |
 | Finalizer / cards | Finalizer packet, render authority, programme reconciliation, structured converter | Preserve selected day, membership and executable dose. |
 | Nutrition / rehab / recovery / mindset | Existing module owners | Retain pressure signals, medical holds and compression. Their prescriptions are unchanged. |
 
@@ -101,7 +101,7 @@ Inspect full [before](../reports/training_intelligence_audit/mma_27d.before.md) 
 
 - **528 passed:** goal repair/windows, effective dosing, pre-hard support, phase boundaries, consecutive recovery, late windows, composition, architecture closure and placement ownership.
 - **243 passed:** 16 full intake-to-markdown/card scenarios, extra selection seeds, repeated seeded generation after another athlete, recorded production-response replay, source-dose/card fidelity, validator and execution-instruction checks.
-- **4 passed:** model progression retains supported numerical and qualitative guidance, rejects an unsupported load increase or extra rest reduction, and preserves current working quantities.
+- The four numerical-progression assertions from the earlier experiment are withdrawn with that runtime change. The original saved-note preservation assertion is retained and passes; the original unsupported-increment test remains unchanged and fails on untouched Main too.
 - Ruff, import compilation and whitespace checks passed. These totals overlap earlier runs and are not a sum of unique tests.
 - Goal/weakness delivery passed 96 tests in isolation earlier. A combined run returned 630 passed and one failing non-limiting-blister membership comparison; that comparison then passed alone. This order-dependent result remains unresolved and is not a clean full-suite result.
 - Historical metadata checks returned 336 passed, 14 failed and 13 errors. Frozen inventory expects 2,855 records; historical replay also rejects existing XP-source drift. Some source-freeze assertions conflict with intentional planner edits. Expected snapshots were not rewritten to hide failures.
@@ -119,3 +119,70 @@ python -m ruff check api fightcamp tests tools scripts/audit_training_intelligen
 ```
 
 The order-dependent test and unit-aware conditioning accounting need resolution before treating this as fully verified system-wide reliability. The evidence supports the targeted corrections and local consolidation; it does not establish that the whole generator is finished.
+
+
+## Follow-up verification after #2904 merged
+
+#2904 merged on 16 October 2026. Follow-up changes are in draft #2906, based on
+`50571155`; the pre-merge baseline remains the untouched `3dc625d8` export.
+
+Every failure from the completed six Python shards, coaching-release job, web
+unit job and PostgreSQL job was compared by test identity. The sanitized
+[per-test ledger](../reports/training_intelligence_audit/ci_comparison.json)
+contains **149 entries**: 143 unique Python/PostgreSQL failures and six web
+failures. Of the 143 Python failures, 135 also failed Main and eight were new.
+Untouched Main had 148 unique Python failures overall. Existing failure identity
+does not imply identical internals: historical source-freeze failures also name
+intentionally changed planner modules.
+
+All **eight introduced CI cases pass unchanged** after correcting maintenance
+window scope, secondary priority, anonymous-slot substitution, saved-note recovery,
+and validator counting/ownership. All eight also pass on untouched Main.
+The original saved coach-note assertions were restored, not loosened.
+
+The six web failures were already present on Main. They now pass with a precise
+accessibility fix: declared technical sessions no longer describe themselves as
+changed contact. The PostgreSQL publication-label failure is identical in both
+CI runs and was not rerun locally; there is no local PostgreSQL service.
+
+The saved-card investigation found real loss after conversion: a four-step
+visualisation was reduced to steps 1, 2 and 4; expanded exercise cards hid all but
+the first cue; and a source-backed, instruction-only freshness role disappeared
+because it had no selected bank exercise. The same existing calendar-spine owner
+now restores that approved role from its exact source heading on its own D-day,
+including saved-card reads. The coverage gate checks instruction-only roles too.
+Existing sessions, completion state and IDs are retained. The actual competition
+card also shows its canonical warm-up / no-additional-S&C instruction.
+
+Four earlier renderer tests deliberately encoded truncation. Their expectations
+now require all four actions, complete reset and tempo instructions, while keeping the
+existing duplicate-cue, planning-transcript and stop-rule checks. This changes
+the faulty presentation contract; it does not waive a failed training assertion.
+Full private saved-plan material remains outside the repository. Only synthetic
+regression cases and aggregate audit evidence are committed.
+
+Latest checks: **1,948 frontend tests (complete unit suite)**, **183 card/calendar suites**, **19 full-pipeline end-to-end tests**,
+**113 goal-delivery/preservation/contract tests**, and focused card/validator
+checks pass. Counts overlap; they are not a sum of unique tests. Ruff, Python
+import compilation, TypeScript and production build pass. ESLint reports zero
+errors and 50 existing warnings. The build used the repository's localhost API
+base for that command only; no environment file or deployment was changed.
+
+The refreshed 16-scenario comparison uses each revision's production
+`review_stage2_output`, including its existing postprocessing and release policy;
+raw validator counts remain separate. All selected-goal and programme-fidelity
+findings are clear. The eight-/twelve-week trunk gaps cite the composition owner's
+actual contact-adjacency refusal and finished-tail ownership. An unexplained host
+still blocks deferral; no membership, dose or scheduling rule was added for this.
+
+**Seven conditioning workload findings remain across the matrix.** The selected
+Sprawl-Burpee Complex is a rep-based circuit without measured active seconds;
+the seconds-based target cannot establish that its workload is sufficient. No
+seconds were fabricated, target reduced or assertion waived. Some annotation,
+phase-pool, countdown-structure and soft-frequency warnings also remain.
+The current production release policy treats validator findings observationally;
+a PASS status therefore does not prove a findings-free plan. This follow-up does
+not change that policy or claim a clean complete CI run. Existing coaching,
+historical inventory/source-freeze, and other failures remain itemized in the
+ledger. The earlier large-suite order-dependent blister comparison has not been
+reproduced under its original full ordering; the goal suites pass together.

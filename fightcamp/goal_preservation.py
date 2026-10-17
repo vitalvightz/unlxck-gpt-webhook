@@ -76,7 +76,6 @@ _PRIORITY_REASON_CODES = {
     "primary": "primary_goal",
     "primary_weakness": "primary_weakness",
     "secondary": "secondary_goal",
-    "secondary_weakness": "secondary_weakness",
 }
 # Every official intake weak area resolves deliberately - never by falling off
 # the end of a lookup. `web/lib/intake-options.ts::WEAK_AREA_OPTIONS` is the
@@ -216,7 +215,7 @@ def selected_goals(athlete: dict, focus: dict | None = None) -> list[tuple[str, 
                   or _WEAKNESS_FLOOR_TARGETS.get(raw)
                   or _goal(_SELECTED_PRIORITY_TARGET_ALIASES.get(raw, raw)))
         if target in INTENTS and target not in {goal for goal, _ in selections}:
-            selections.append((target, "secondary_weakness"))
+            selections.append((target, "secondary"))
     weakness = _primary_weakness(athlete, focus)
     if not weakness or weakness == primary:
         # Merged: one exposure discharges the goal and the weakness together.
@@ -892,7 +891,7 @@ def _requirements(entry: dict, brief: dict) -> list[dict]:
     # Direct late-countdown plans retain their own maintenance window and
     # causal readiness evidence. Weekly reconciliation never reopens that tail.
     normal_camp = days > 13 and "late_fight_session_sequence" not in brief
-    cutoff = 14 if entry["state"] == "build" or normal_camp else (8 if entry["goal"] == "strength" else 2)
+    cutoff = 14 if entry["state"] == "build" or (normal_camp and entry["goal"] == "strength") else (8 if entry["goal"] == "strength" else 2)
     # An open development block is planned clear of any fight: its calendar
     # starts at the horizon, so nothing nearer than that is a plannable window.
     cutoff = max(cutoff, horizon_floor)
@@ -1589,26 +1588,43 @@ def _repair_refusal_reasons(week: dict, goal: str, window: dict) -> list[dict]:
 
 
 def _trunk_capacity_reasons(weeks: list[dict], window: dict) -> list[dict]:
-    """Readiness that composition proved kept trunk work out of this window.
+    """Live composition refusals that kept trunk work out of this window.
 
-    Each strength session in the window must carry composition's own causal
+    Each normal strength session in the window must carry composition's own causal
     finding (``trunk_support.skip_reason == "readiness_capacity"``): trunk work
     would have fitted at pressure 0. One readiness-limited session does not
-    excuse another that simply held no trunk work.
+    excuse another that simply held no trunk work. Conditioning's explicit
+    contact-adjacency refusal and finished-tail ownership remain their own
+    authorities; this reader never changes their membership.
     """
     sessions = []
+    protected = []
     for week in weeks:
         for role in week.get("session_roles") or []:
             day = role_d_day(week, role)
-            if role.get("category") != "strength" or not isinstance(day, int):
+            if role.get("category") not in {"strength", "conditioning"} or not isinstance(day, int):
                 continue
             if window["min_d_day"] is not None and not window["min_d_day"] <= day <= window["max_d_day"]:
                 continue
+            receipt = {"week_index": week.get("week_index"), "role_key": role.get("role_key"),
+                       "d_day": day, "coverage_window": window}
+            if role.get("late_fight_tail_owned") and day <= _LATE_TAIL_MAX_D_DAY:
+                protected.append({**receipt, "reason_code": "fight_proximity", "authority": "late_fight_tail_ownership"})
+                continue
+            if role.get("category") == "conditioning":
+                policy = role.get("conditioning_composition_policy") or {}
+                if (policy.get("embedded_trunk_support_skip_reason") == "hard_sparring_adjacent"
+                        and policy.get("hard_sparring_adjacent") is True):
+                    sessions.append((week, day, role, {"skip_reason": "readiness_capacity",
+                        "pressure_sources": ["hard_sparring_priority"],
+                        "authority": "session_composition.embedded_trunk_support"}))
+                    continue
+                return []  # An unexplained conditioning host cannot be hidden by another receipt.
             outcome = (role.get("strength_composition_policy") or {}).get("trunk_support") or {}
             sessions.append((week, day, role, outcome))
     if not sessions or any(outcome.get("skip_reason") != "readiness_capacity" for *_, outcome in sessions):
         return []
-    return [{"reason_code": code, "authority": "session_composition.trunk_support",
+    return protected + [{"reason_code": code, "authority": outcome.get("authority", "session_composition.trunk_support"),
              "week_index": week.get("week_index"), "role_key": role.get("role_key"), "d_day": day,
              "coverage_window": window}
             for week, day, role, outcome in sessions for code in outcome.get("pressure_sources") or []]

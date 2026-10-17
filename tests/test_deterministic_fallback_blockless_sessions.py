@@ -62,6 +62,32 @@ def test_a_role_with_nothing_athlete_facing_is_still_dropped():
     assert _session(_support_role(display_text="", selected_exercise_assignments=[]), 6) is None
 
 
+def test_approved_source_restores_an_open_freshness_role_without_inventing_a_dose():
+    role = {"role_key": "fight_week_freshness_day", "category": "recovery",
+            "athlete_facing_label": "Fight-week freshness", "session_index": 12}
+    source = ["D-3 (Monday) — Fight-week freshness",
+              "- Easy mobility, breathing, and tissue work. Keep it fully restorative."]
+    session = _session(role, 3, source)
+    assert session is not None
+    assert session["session_type"] == "recovery"
+    assert session["blocks"][0]["display_name"] == source[1][2:]
+    assert not any(session["blocks"][0].get(key) for key in ("sets", "reps", "duration"))
+    assert _session(role, 3, ["D-3 (Monday) — Unrelated work", source[1]]) is None
+
+
+def test_coverage_gate_catches_a_source_backed_role_without_selected_exercises():
+    from api.structured_plan_generation import planner_sc_coverage_losses
+
+    role = {"role_key": "fight_week_freshness_day", "category": "recovery",
+            "athlete_facing_label": "Fight-week freshness", "scheduled_countdown_label": "D-3"}
+    brief = {"weekly_role_map": {"weeks": [{"session_roles": [role]}]}}
+    source = "D-3 (Monday) — Fight-week freshness\n- Easy mobility and breathing."
+    empty = {"weeks": [{"days": [{"countdown_label": "D-3", "sessions": []}]}]}
+    assert planner_sc_coverage_losses(empty, brief, source)
+    empty["weeks"][0]["days"][0]["sessions"] = [_session(role, 3, source.splitlines())]
+    assert planner_sc_coverage_losses(empty, brief, source) == []
+
+
 def test_a_role_with_exercises_keeps_its_label_objective():
     session = _session(
         _support_role(

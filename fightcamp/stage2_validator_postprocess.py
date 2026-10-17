@@ -147,6 +147,9 @@ def _roles_on_day(planning_brief: dict[str, Any], d_day: int) -> list[dict[str, 
         for role in week.get("session_roles") or []:
             if isinstance(role, dict) and _role_d_day(week, role) == d_day:
                 roles.append(role)
+    for role in planning_brief.get("late_fight_session_sequence") or []:
+        if isinstance(role, dict) and _role_d_day({}, role) == d_day:
+            roles.append(role)
     return roles
 
 
@@ -411,6 +414,21 @@ def _filter_warning(
         return None
 
     code = str(warning.get("code") or "")
+    if code == "late_fight_window_preferred_missing":
+        from .combat_render_authority import canonical_combat_render
+
+        day_match = re.fullmatch(r"D-(\d+)", str(warning.get("days_out_bucket") or ""))
+        if day_match:
+            day = int(day_match[1])
+            for role in _roles_on_day(planning_brief, day):
+                canonical = canonical_combat_render(role, d_day=day, athlete_snapshot=planning_brief.get("athlete_snapshot"))
+                if not canonical or _norm(canonical["athlete_facing_label"]) not in _norm(warning.get("section_title")):
+                    continue
+                if any(block.get("d_day") == day
+                       and _norm(block.get("title")) == _norm(canonical["athlete_facing_label"])
+                       and any(_norm(line) == _norm(canonical["note"]) for line in block.get("lines") or [])
+                       for block in _session_blocks(final_plan_text)):
+                    return None  # Coach-owned contact has no app-authored preferred exercise.
     if code == "missing_required_element":
         survives = _requirement_survives_final_role_map(
             planning_brief,
