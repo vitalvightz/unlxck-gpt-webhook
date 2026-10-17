@@ -103,15 +103,18 @@ test("WAV has correct size, format, silence, cue positions and overlap without h
 test("a scheduled bell belongs to playing media even when Safari's playhead drifts", () => {
   const statuses: string[] = [];
   const track = new RoundAudioTrack((status) => statuses.push(status));
-  const media = { paused: false, ended: false, currentTime: 1 };
+  const media = { paused: false, ended: false, seeking: false, readyState: 4, currentTime: 4.6, pause() { this.paused = true; }, removeAttribute(_name: string) {}, load() {}, remove() {} };
   Object.assign(track as unknown as object, {
     media: media as HTMLAudioElement, ready: true, origin: 1000, until: 12_000,
     cues: [{ atMs: 5000, sound: "triple_bell" }],
   });
-  assert.equal(track.covers(6000), false, "browser playhead is too far from wall-clock time");
-  assert.equal(track.coversCue("triple_bell", 6000), true, "do not layer live audio over the scheduled bell");
+  assert.equal(track.coversCue("triple_bell", 6000), true, "small playhead drift should not double the bell");
+  media.currentTime = 1;
+  assert.equal(track.coversCue("triple_bell", 6000), false, "lagging media did not play the bell");
+  track.abandonStalledCue("triple_bell", 6000);
+  assert.deepEqual(statuses, ["unavailable"]);
+  assert.equal(media.paused, true);
   assert.equal(track.coversCue("bell", 6000), false);
   media.paused = true;
   assert.equal(track.coversCue("triple_bell", 6000), false);
-  assert.deepEqual(statuses, []);
 });
