@@ -940,7 +940,7 @@ function QuickBuildFormInner() {
 
         <div className="form-grid">
           <div className="field">
-            <label htmlFor="qb-round-count">Rounds</label>
+            <label htmlFor="qb-round-count">Fight rounds</label>
             <CustomSelect
               id="qb-round-count"
               value={parsedRounds.roundCount}
@@ -952,7 +952,7 @@ function QuickBuildFormInner() {
             />
           </div>
           <div className="field">
-            <label htmlFor="qb-round-duration">Round length</label>
+            <label htmlFor="qb-round-duration">Minutes per fight round</label>
             <CustomSelect
               id="qb-round-duration"
               value={parsedRounds.roundDuration}
