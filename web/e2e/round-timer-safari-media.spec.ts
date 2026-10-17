@@ -16,11 +16,8 @@ test("Safari native media Play resumes the real round after a paused placeholder
   const clock = await page.locator(".st-clock-digits").textContent();
   await page.waitForTimeout(1100);
   await expect(page.locator(".st-clock-digits")).toHaveText(clock!);
-  const paused = await media.evaluate((audio: HTMLAudioElement) => ({
-    paused: audio.paused, duration: audio.duration,
-  }));
-  expect(paused.paused).toBe(true);
-  expect(paused.duration).toBeCloseTo(60, 0);
+  await expect(media).toHaveJSProperty("paused", true);
+  await expect.poll(() => media.evaluate((audio: HTMLAudioElement) => audio.duration)).toBeCloseTo(60, 0);
   await media.evaluate((audio: HTMLAudioElement) => { void audio.play().catch(() => undefined); });
   await expect(page.getByRole("button", { name: "Pause timer", exact: true })).toBeVisible();
   await expect(page.locator(".st-audio-status")).toContainText("Round audio playing");
