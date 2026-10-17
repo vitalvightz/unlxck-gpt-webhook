@@ -88,9 +88,14 @@ to the home screen. Record phone, OS/browser versions, mode, date and actual res
 6. Add/remove 10 seconds, edit the format, end a round early and turn sounds off/on.
    Confirm only one track plays, old deadlines no longer sound and volume changes
    affect bells. Check Bluetooth/headphones if athletes use them.
-7. Interrupt audio with a call or other media. On return, confirm the interruption
-   message and “Enable round audio” recovery. The clock continues during an audio
-   interruption; recovery skips missed bells and aligns to the current round.
+7. Interrupt audio with a call or other media. Any browser media pause/error
+   must also pause the workout, even if it was caused by a call. Safari does not
+   reliably distinguish an intentional Control Centre Pause from an OS interruption.
+   On return, confirm the clock has stopped, and resume explicitly using Safari
+   Play or the on-screen Resume button. Old bells must not replay. Closing or
+   terminating the browser cannot be detected while suspended.
+   When a decoder stalls but still reports playback, a due cue must drop the
+   lagging stream and sound exactly once through the foreground fallback.
 8. Reload during a round, return from the back/forward cache, then close and reopen
    the app. Confirm the correct saved phase; if autoplay is denied, explicitly
    enable audio. Closing the browser must never be promised to keep bells playing.
