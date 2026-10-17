@@ -1,3 +1,5 @@
+import pytest
+
 from fightcamp.nutrition import generate_nutrition_block
 from fightcamp.recovery import generate_recovery_block
 from fightcamp.stage2_pipeline import review_stage2_output
