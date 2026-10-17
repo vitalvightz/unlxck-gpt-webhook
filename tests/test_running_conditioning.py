@@ -192,20 +192,24 @@ def test_two_hard_sparring_days_retain_easy_run_not_extra_hard_metabolic_options
         )
 
 
-def test_bag_boost_respects_two_hard_sparring_days_without_blocking_easy_aerobic():
+def test_heavy_bag_preference_preserves_original_bonus_and_three_contact_limit():
     from fightcamp.conditioning_preferences import striking_heavy_bag_preference
+
     bag = {"name": "Heavy Bag Rounds", "equipment": ["heavy_bag"], "rpe": 9}
-    kwargs = dict(phase="SPP", system="glycolytic", fatigue="low",
+    params = dict(phase="SPP", system="glycolytic", fatigue="low",
                   days_until_fight=35, equipment_access_set={"heavy_bag"},
                   injuries=[], sport="boxing")
-    assert striking_heavy_bag_preference(bag, hard_sparring_days=["Mon"], **kwargs) > 0
-    assert striking_heavy_bag_preference(bag, hard_sparring_days=["Mon", "Fri"], **kwargs) == 0
-    easy = {**bag, "rpe": 4}
+    assert striking_heavy_bag_preference(bag, hard_sparring_days=["Monday"], **params) == 3.0
     assert striking_heavy_bag_preference(
-        easy, phase="SPP", system="aerobic", fatigue="low",
-        days_until_fight=35, equipment_access_set={"heavy_bag"}, injuries=[],
-        hard_sparring_days=["Mon", "Fri"], sport="boxing",
-    ) > 0
+        bag, hard_sparring_days=["Monday", "Friday"], **params
+    ) == 3.0
+    assert striking_heavy_bag_preference(
+        bag, hard_sparring_days=["Monday", "Wednesday", "Friday"], **params
+    ) == 0.0
+    assert striking_heavy_bag_preference(
+        bag, hard_sparring_days=["Monday", "Friday"],
+        **{**params, "fatigue": "high"},
+    ) == 0.0
 
 
 def test_distance_run_survives_stage2_serialization_and_composition_without_fake_seconds():

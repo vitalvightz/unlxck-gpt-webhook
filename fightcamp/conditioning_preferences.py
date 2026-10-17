@@ -24,11 +24,6 @@ def striking_heavy_bag_preference(
         return 0.0
     if fatigue == "high" or len(set(hard_sparring_days)) >= 3:
         return 0.0
-    # Hard sparring supplies the demanding boxing exposure; aerobic touches remain legal.
-    if len(set(hard_sparring_days)) >= 2 and (
-        system != "aerobic" or (drill.get("rpe") or drill.get("rpe_max") or 0) > 6
-    ):
-        return 0.0
     if any(area in " ".join(str(item).lower() for item in injuries) for area in _BAG_IMPACT_SENSITIVITY):
         return 0.0
     if system == "aerobic":
