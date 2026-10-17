@@ -373,8 +373,6 @@ def _boxing_aerobic_preference_rank(
         return 5 if context["lower_limb_unload_desirable"] or context["impact_tolerance_reduced"] else 2
     if _is_shadowbox_aerobic_drill(drill):
         return 4 if context["lower_limb_unload_desirable"] or context["impact_tolerance_reduced"] else 2
-    if modality == "run":
-        return 5 if context["lower_limb_unload_desirable"] or context["impact_tolerance_reduced"] else 2
     if _is_sled_drag_aerobic_drill(drill):
         return 4 if context["lower_limb_unload_desirable"] else 3
     if modality == "swim":
