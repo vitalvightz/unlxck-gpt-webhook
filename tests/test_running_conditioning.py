@@ -295,3 +295,38 @@ def test_distance_sprint_ladder_does_not_falsely_claim_timed_alactic_work():
     assert drill["distance_segments_m"] == [80, 80, 60, 60, 40, 40]
     assert not _alactic_structure_ok(drill)
     assert "work_sec" not in drill
+
+
+def test_short_distance_sprints_can_be_alactic_without_invented_work_seconds():
+    from fightcamp.conditioning import _alactic_structure_ok, _conditioning_structured_profile
+    from fightcamp.config import conditioning_dose_active_work_seconds
+
+    sprint = {
+        "name": "Unloaded 40 m Accelerations", "system": "ATP-PCr",
+        "modality": "run", "distance_m": 160, "distance_segments_m": [40] * 4,
+        "recovery_mode": "full_recovery", "rpe": 9,
+        "tags": ["speed", "acceleration"], "duration": "4 x 40m; full recovery",
+    }
+    assert _alactic_structure_ok(sprint)
+    assert _conditioning_structured_profile(sprint)["speed_development"]
+    assert conditioning_dose_active_work_seconds(sprint) is None
+
+
+@pytest.mark.parametrize("override", [
+    {"distance_segments_m": [80, 80]},
+    {"distance_segments_m": [40]},
+    {"distance_segments_m": [40, 40, 40, 40], "recovery_mode": None},
+    {"distance_segments_m": [40, 40, 40, 40], "distance_m": 300},
+    {"distance_segments_m": [40, 40, 40, 40], "rpe": 5},
+    {"distance_segments_m": [40, 40, 40, 40], "tags": ["aerobic"]},
+    {"distance_segments_m": [40, 40, 40, 40], "modality": "bike"},
+])
+def test_distance_speed_exception_does_not_admit_undosed_or_unsuitable_work(override):
+    from fightcamp.conditioning import _alactic_structure_ok
+    sprint = {
+        "name": "Unloaded 40 m Accelerations", "system": "ATP-PCr",
+        "modality": "run", "distance_m": 160,
+        "distance_segments_m": [40] * 4, "recovery_mode": "walk_back",
+        "rpe": 9, "tags": ["speed", "acceleration"], "duration": "4 x 40m",
+    }
+    assert not _alactic_structure_ok({**sprint, **override})
