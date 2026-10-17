@@ -1173,12 +1173,17 @@ def _late_primer_member_dose(
             resolve_strength_slot_prescription(role=role, slot=target).get("effective_prescription") or ""
         )
     from .prescription_resolver import resolve_late_primer_conditioning_dose
+    from .style_taper_governance import _number
 
+    option = _slot_selected_option(slot)
+    metadata = option.get("selection_metadata") if isinstance(option.get("selection_metadata"), dict) else {}
+    source_rpe = option.get("rpe") if option.get("rpe") is not None else metadata.get("rpe")
     return resolve_late_primer_conditioning_dose(
-        _conditioning_prescription(_slot_selected_option(slot)),
+        _conditioning_prescription(option),
         d_day=sequence_role_offset_of(role),
         alactic=_candidate_system(slot) == "alactic",
         complement=complement,
+        source_rpe=_number(source_rpe),
     )
 
 
@@ -1706,6 +1711,7 @@ def _build_late_fight_allowed_exercises_by_day(
                 assignment.update(base_prescription=option.get("prescription"),
                                   effective_prescription=resolved.get("effective_prescription"))
             if slot_group == "conditioning_slots":
+                assignment["system"] = _candidate_system(slot)
                 prescription = _conditioning_prescription(option)
                 if prescription:
                     assignment["base_prescription"] = prescription
@@ -1718,6 +1724,13 @@ def _build_late_fight_allowed_exercises_by_day(
                     from .exercise_progression import measured_dose
                     from .config import conditioning_work_is_timed
                     measured = measured_dose(assignment["effective_prescription"])
+                    if assignment["system"] == "alactic":
+                        # Structured values must agree with the effective dose even
+                        # for rep-based throws (which are not timed fight rounds).
+                        if measured.get("rest") is not None:
+                            assignment["rest_sec"] = measured["rest"]
+                        if measured.get("rpe") is not None:
+                            assignment["rpe"] = measured["rpe"]
                     count = measured.get("rounds") or measured.get("sets")
                     work = measured.get("work", measured.get("duration"))
                     if (count and work and measured.get("rest") is not None
