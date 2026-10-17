@@ -2853,7 +2853,9 @@ def test_working_dose_ranges_are_blocked_but_easier_and_safety_bounds_are_allowe
 
 @pytest.mark.parametrize(("dose", "rendered", "code"), [
     ("6x3 reps, 1min rest", "6x3 reps, 1min rest", "late_primer_conditioning_dose_overage"),
-    ("3x3 reps, 1min rest", "6x3 reps, 1min rest", "selected_conditioning_effective_prescription_mismatch"),
+    ("3x3 reps, 120 sec rest", "6x3 reps, 120 sec rest", "selected_conditioning_effective_prescription_mismatch"),
+    ("3x3 reps, 60 sec rest", "3x3 reps, 60 sec rest", "late_primer_conditioning_dose_overage"),
+    ("3x3 reps, 120 sec rest", "3x3 reps, 60 sec rest", "selected_conditioning_effective_prescription_mismatch"),
 ])
 def test_d6_conditioning_member_inside_strength_primer_is_capped(dose, rendered, code):
     from fightcamp.stage2_validator import _missing_selected_conditioning_assignment_warnings
@@ -2881,10 +2883,64 @@ def test_d6_conditioning_primer_accepts_capped_dose():
         "scheduled_d_day": 6, "scheduled_countdown_label": "D-6",
         "selected_exercise_assignments": [{
             "name": "Overhead Med Ball Slam (Snappy)", "slot_group": "conditioning_slots",
-            "effective_prescription": "3x3 reps, 1min rest",
+            "effective_prescription": "3x3 reps, 120 sec rest",
+            "system": "alactic",
         }],
     }]}]}}
     assert _missing_selected_conditioning_assignment_warnings(
         brief, "D-6 (Saturday) — Freshness primer\n"
-               "- Overhead Med Ball Slam (Snappy): 3x3 reps, 1min rest",
+               "- Overhead Med Ball Slam (Snappy): 3x3 reps, 120 sec rest",
+    ) == []
+
+
+def test_d6_technical_conditioning_does_not_inherit_explosive_rest_floor():
+    from fightcamp.stage2_validator import _missing_selected_conditioning_assignment_warnings
+
+    brief = {"weekly_role_map": {"weeks": [{"phase": "TAPER", "session_roles": [{
+        "role_key": "neural_primer_day", "category": "conditioning",
+        "scheduled_countdown_label": "D-6", "countdown_offset": 6,
+        "selected_exercise_assignments": [{
+            "name": "Easy technical reset", "slot_group": "conditioning_slots",
+            "system": "technical", "effective_prescription": "2x30s with 30s rest; RPE 3",
+        }],
+    }]}]}}
+    assert _missing_selected_conditioning_assignment_warnings(
+        brief, "D-6 (Saturday) — Freshness primer\n"
+               "- Easy technical reset: 2x30s with 30s rest; RPE 3",
+    ) == []
+
+
+def test_d6_alactic_primer_requires_explicit_rest_even_if_sets_are_legal():
+    from fightcamp.stage2_validator import _missing_selected_conditioning_assignment_warnings
+
+    brief = {"weekly_role_map": {"weeks": [{"phase": "TAPER", "session_roles": [{
+        "role_key": "strength_touch_day", "category": "strength",
+        "scheduled_countdown_label": "D-6", "countdown_offset": 6,
+        "selected_exercise_assignments": [{
+            "name": "Sharp med ball", "slot_group": "conditioning_slots",
+            "system": "alactic", "effective_prescription": "2x3 reps",
+        }],
+    }]}]}}
+    warnings = _missing_selected_conditioning_assignment_warnings(
+        brief, "D-6 (Saturday) — Freshness primer\n- Sharp med ball: 2x3 reps",
+    )
+    issues = [item for item in warnings if item["code"] == "late_primer_conditioning_dose_overage"]
+    assert len(issues) == 1
+    assert issues[0]["dose_violations"] == ["rest below scheduled-day minimum or missing"]
+
+
+def test_d6_primer_accepts_authored_rpe_without_applying_a_new_ceiling():
+    from fightcamp.stage2_validator import _missing_selected_conditioning_assignment_warnings
+
+    brief = {"weekly_role_map": {"weeks": [{"phase": "TAPER", "session_roles": [{
+        "role_key": "alactic_sharpness_day", "category": "conditioning",
+        "scheduled_countdown_label": "D-6", "countdown_offset": 6,
+        "selected_exercise_assignments": [{
+            "name": "Explosive throw", "slot_group": "conditioning_slots",
+            "system": "alactic", "effective_prescription": "2x3 reps, 120 sec rest; RPE 8",
+        }],
+    }]}]}}
+    assert _missing_selected_conditioning_assignment_warnings(
+        brief, "D-6 (Saturday) — Primer\n"
+               "- Explosive throw: 2x3 reps, 120 sec rest; RPE 8",
     ) == []

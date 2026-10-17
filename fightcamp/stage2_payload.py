@@ -1706,6 +1706,7 @@ def _build_late_fight_allowed_exercises_by_day(
                 assignment.update(base_prescription=option.get("prescription"),
                                   effective_prescription=resolved.get("effective_prescription"))
             if slot_group == "conditioning_slots":
+                assignment["system"] = _candidate_system(slot)
                 prescription = _conditioning_prescription(option)
                 if prescription:
                     assignment["base_prescription"] = prescription
@@ -1718,6 +1719,11 @@ def _build_late_fight_allowed_exercises_by_day(
                     from .exercise_progression import measured_dose
                     from .config import conditioning_work_is_timed
                     measured = measured_dose(assignment["effective_prescription"])
+                    if assignment["system"] == "alactic":
+                        # Keep structured recovery aligned with the resolved rest,
+                        # including rep-based throws; do not alter source RPE.
+                        if measured.get("rest") is not None:
+                            assignment["rest_sec"] = measured["rest"]
                     count = measured.get("rounds") or measured.get("sets")
                     work = measured.get("work", measured.get("duration"))
                     if (count and work and measured.get("rest") is not None

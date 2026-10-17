@@ -320,11 +320,11 @@ def test_a_sport_specific_primer_leads_the_style_taper_group_for_a_non_boxer():
 
 
 @pytest.mark.parametrize(("d_day", "expected"), [
-    (13, "4x3 reps, 1min rest"),
-    (7, "4x3 reps, 1min rest"),
-    (6, "3x3 reps, 1min rest"),
-    (5, "3x3 reps, 1min rest"),
-    (3, "2x3 reps, 1min rest"),
+    (13, "4x3 reps, 90 sec rest"),
+    (7, "4x3 reps, 90 sec rest"),
+    (6, "3x3 reps, 120 sec rest"),
+    (5, "3x3 reps, 120 sec rest"),
+    (3, "2x3 reps, 120 sec rest"),
 ])
 def test_late_primer_caps_conditioning_bank_rep_sets(d_day, expected):
     from fightcamp.stage2_payload import _late_primer_member_dose
@@ -335,7 +335,7 @@ def test_late_primer_caps_conditioning_bank_rep_sets(d_day, expected):
         "prescription": "6x3 reps, 1min rest",
     }}
     assert _late_primer_member_dose(role, "conditioning_slots", slot, complement=False) == expected
-    assert _late_primer_member_dose(role, "conditioning_slots", slot, complement=True) == "1x3 reps, 1min rest"
+    assert _late_primer_member_dose(role, "conditioning_slots", slot, complement=True) == "1x3" + expected.split("x3", 1)[1]
 
 
 def test_late_primer_never_increases_a_smaller_conditioning_prescription():
@@ -357,3 +357,89 @@ def test_late_primer_conditioning_dose_reduction_preserves_timed_units():
         "prescription": "6x5s with 120s rest",
     }}
     assert _late_primer_member_dose(role, "conditioning_slots", slot, complement=False) == "3x5s with 120s rest"
+
+
+def test_d6_alactic_primer_clamps_rest_before_work_without_changing_rpe():
+    from fightcamp.stage2_payload import _late_primer_member_dose
+
+    role = _role("alactic_sharpness_day", d_day=6)
+    slot = {"role": "alactic", "selected": {
+        "name": "Reactive throwing", "system": "ATP-PCr",
+        "prescription": "6 x 3 reps; rest 45-90 sec; RPE 7-8",
+    }}
+    assert _late_primer_member_dose(role, "conditioning_slots", slot, complement=False) == (
+        "3 x 3 reps; rest 120 sec; RPE 7"
+    )
+
+
+def test_d6_alactic_primer_keeps_longer_recovery_without_adding_rpe():
+    from fightcamp.stage2_payload import _late_primer_member_dose
+
+    role = _role("alactic_sharpness_day", d_day=6)
+    slot = {"role": "alactic", "selected": {
+        "name": "Crisp reset", "system": "alactic",
+        "prescription": "2x5s with 150s rest",
+        "selection_metadata": {"rpe": 3},
+    }}
+    assert _late_primer_member_dose(role, "conditioning_slots", slot, complement=False) == (
+        "2x5s with 150s rest"
+    )
+
+
+def test_source_rpe_prescription_is_not_modified_by_rest_governor():
+    from fightcamp.stage2_payload import _late_primer_member_dose
+
+    role = _role("alactic_sharpness_day", d_day=6)
+    slot = {"role": "alactic", "selected": {
+        "name": "Lower-intensity fast cue", "system": "ATP-PCr",
+        "prescription": "4x3 reps, 60s rest; RPE 7",
+        "selection_metadata": {"rpe": 3},
+    }}
+    assert _late_primer_member_dose(role, "conditioning_slots", slot, complement=False) == (
+        "3x3 reps, 120 sec rest; RPE 7"
+    )
+
+
+def test_taper_rest_rules_do_not_affect_non_alactic_or_pre_window_work():
+    from fightcamp.stage2_payload import _late_primer_member_dose
+
+    role = _role("alactic_sharpness_day", d_day=6)
+    slot = {"role": "technical", "selected": {
+        "name": "Easy technical rehearsal", "system": "technical",
+        "prescription": "2x60s with 30s rest; RPE 3",
+    }}
+    assert _late_primer_member_dose(role, "conditioning_slots", slot, complement=False) == (
+        "2x60s with 30s rest; RPE 3"
+    )
+    earlier = _role("alactic_sharpness_day", d_day=15)
+    alactic = {"role": "alactic", "selected": {
+        "name": "Early sharpness", "system": "ATP-PCr",
+        "prescription": "4x3 reps, 1min rest",
+    }}
+    assert _late_primer_member_dose(earlier, "conditioning_slots", alactic, complement=False) == (
+        "4x3 reps, 1min rest"
+    )
+
+
+@pytest.mark.parametrize(("source", "expected"), [
+    ("2x3 reps, 120 sec rest; RPE <=5", "2x3 reps, 120 sec rest; RPE <=5"),
+    ("2x3 reps, 120 sec rest; RPE 3-4", "2x3 reps, 120 sec rest; RPE 3-4"),
+])
+def test_rest_governor_leaves_all_existing_rpe_text_unchanged(source, expected):
+    from fightcamp.prescription_resolver import resolve_late_primer_conditioning_dose
+
+    assert resolve_late_primer_conditioning_dose(
+        source, d_day=6, alactic=True,
+    ) == expected
+
+
+def test_selected_d6_alactic_primer_carries_governed_rest_without_new_rpe():
+    role = _role("alactic_sharpness_day", d_day=6)
+    members = _compose(role, conditioning=[_primer(
+        "Fast cue", prescription="6x3 reps, 1min rest",
+    )])
+    assert len(members) == 1
+    assert members[0]["effective_prescription"] == "3x3 reps, 120 sec rest"
+    assert members[0]["rest_sec"] == 120
+    assert "rpe" not in members[0]
+    assert members[0]["system"] == "alactic"
