@@ -87,8 +87,15 @@ export function roundAudioWav(timeline: RoundAudioTimeline, clips: ReadonlyMap<T
       const offset = Math.round(cue.atMs * SAMPLE_RATE / 1000) - start;
       for (let k = 0; k < clip.length && offset + k < mixed.length; k += 1) mixed[offset + k] += clip[k];
     }
+    // Safari's WAV playback must never hard-clip, even when an individual
+    // synthesised triple bell already exceeds full-scale PCM. Preserve clean
+    // samples unchanged; add headroom only when a peak would otherwise clip.
+    const peak = mixed.reduce((max, sample) => Math.max(max, Math.abs(sample)), 0);
+    const headroom = peak > 1 ? 0.95 / peak : 1;
     const pcm = new DataView(new ArrayBuffer(mixed.length * 2));
-    for (let j = 0; j < mixed.length; j += 1) pcm.setInt16(j * 2, Math.round(Math.max(-1, Math.min(1, mixed[j])) * volume * 32767), true);
+    for (let j = 0; j < mixed.length; j += 1) {
+      pcm.setInt16(j * 2, Math.round(Math.max(-1, Math.min(1, mixed[j] * headroom * volume)) * 32767), true);
+    }
     parts.push(pcm.buffer);
     cursor = end;
   }
@@ -116,24 +123,54 @@ export class RoundAudioTrack {
   private origin = 0;
   private until = 0;
   private cues: RoundAudioCue[] = [];
+  private ready = false;
+  private timerPaused = false;
+  private onMediaPause?: () => void;
+  private onMediaPlay?: () => void;
 
   constructor(
     private readonly status: (status: RoundAudioStatus) => void,
     private readonly clips: () => Promise<ReadonlyMap<TimerSound, Float32Array>> = loadClips,
   ) {}
 
+  setMediaActions(onPause?: () => void, onPlay?: () => void): void {
+    this.onMediaPause = onPause;
+    this.onMediaPlay = onPlay;
+  }
+
   covers(at: number): boolean {
     return Boolean(this.media && !this.media.paused && !this.media.ended &&
       at >= this.origin && at <= this.until && Math.abs(this.media.currentTime * 1000 - (at - this.origin)) < 1500);
   }
 
+  private dueCue(sound: TimerSound, at: number): RoundAudioCue | undefined {
+    return this.cues.find((cue) => cue.sound === sound &&
+      at - (this.origin + cue.atMs) >= -300 && at - (this.origin + cue.atMs) < 1500);
+  }
+
   coversCue(sound: TimerSound, at: number): boolean {
-    return this.covers(at) && this.cues.some((cue) => cue.sound === sound &&
-      at - (this.origin + cue.atMs) >= 0 && at - (this.origin + cue.atMs) < 1500);
+    const cue = this.dueCue(sound, at);
+    const media = this.media;
+    // A stalled decoder must not claim a bell it has not reached. Allow
+    // moderate Safari playhead drift without synthesising a doubled strike.
+    return Boolean(this.ready && cue && media && !media.paused && !media.ended &&
+      !media.seeking && media.readyState >= 2 &&
+      media.currentTime * 1000 >= cue.atMs - 750);
+  }
+
+  abandonStalledCue(sound: TimerSound, at: number): void {
+    // If a scheduled sound is late in the media stream, discard that stream
+    // before the foreground fallback rings. Otherwise its delayed bell may
+    // sound again when Safari recovers.
+    if (!this.ready || !this.media || !this.dueCue(sound, at) || this.coversCue(sound, at)) return;
+    this.stop();
+    this.status("unavailable");
   }
 
   stop(): void {
     this.generation += 1;
+    this.ready = false;
+    this.timerPaused = false;
     if (this.media) {
       this.media.onpause = this.media.onerror = this.media.onended = this.media.onplaying = this.media.onloadedmetadata = null;
       this.media.pause();
@@ -149,13 +186,33 @@ export class RoundAudioTrack {
   }
 
   sync(state: TimerState, now: number, settings: TimerSoundSettings): void {
+    // Preserve a paused media element so Safari's Control Centre can issue Play.
+    // Only preserve a fully prepared track; cancel an in-flight render on pause.
+    if (state.pausedAt !== null && this.ready && this.media && settings.sound && settings.volume > 0) {
+      if (!this.timerPaused) {
+        this.timerPaused = true;
+        this.media.pause();
+        // Keep Safari's Now Playing controls alive without retaining the
+        // workout-sized WAV while paused. This silent, paused placeholder is
+        // never allowed to run a clock or emit a bell.
+        this.media.onloadedmetadata = null;
+        if (this.url) URL.revokeObjectURL(this.url);
+        this.url = URL.createObjectURL(roundAudioWav({ durationMs: 60_000, cues: [] }, new Map()));
+        this.media.src = this.url;
+        this.media.load();
+        this.cues = [];
+        this.until = 0;
+      }
+      this.status("idle");
+      return;
+    }
     this.stop();
-    const timeline = roundAudioTimeline(state, now, settings);
     if (!settings.sound || settings.volume === 0 || state.pausedAt !== null ||
         state.phase === "ready" || state.phase === "done" || state.items[state.index]?.kind !== "interval") {
       this.status("idle");
       return;
     }
+    const timeline = roundAudioTimeline(state, now, settings);
     if (!timeline || typeof OfflineAudioContext === "undefined" || typeof URL.createObjectURL !== "function") {
       this.status("unavailable");
       return;
@@ -186,15 +243,34 @@ export class RoundAudioTrack {
       const align = () => { media.currentTime = Math.max(0, (Date.now() - now) / 1000); };
       media.onloadedmetadata = align;
       media.onplaying = () => {
-        // A phone's media controls may resume audio after an interruption.
+        if (generation !== this.generation) return;
+        // Safari's own Play button must resume the workout, not only this WAV.
+        if (this.timerPaused) {
+          this.onMediaPlay?.();
+          return;
+        }
         if (Math.abs(media.currentTime * 1000 - (Date.now() - now)) >= 1500) align();
         this.status("playing");
       };
       media.src = this.url;
       await media.play();
       if (generation !== this.generation) return;
-      media.onpause = () => { if (!media.ended) this.status("interrupted"); };
-      media.onerror = () => this.status("interrupted");
+      this.ready = true;
+      media.onpause = () => {
+        if (generation !== this.generation || media.ended || this.timerPaused) return;
+        // Native media pause, interruption, or the lock-screen Pause control
+        // must freeze the actual workout clock too.
+        this.status("interrupted");
+        this.onMediaPause?.();
+      };
+      media.onerror = () => {
+        if (generation !== this.generation) return;
+        this.status("interrupted");
+        // We cannot reliably distinguish a phone-call interruption from
+        // an intentional media pause. Without bells, freeze the workout until
+        // the athlete explicitly resumes it.
+        this.onMediaPause?.();
+      };
       media.onended = () => { this.stop(); this.status("idle"); };
       this.status("playing");
     }).catch(() => {

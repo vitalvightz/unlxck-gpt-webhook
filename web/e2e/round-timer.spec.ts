@@ -94,9 +94,19 @@ test("pause, resume, edits and interrupted playback keep one correctly aligned t
   await expect(page.locator(".st-audio-status")).toContainText("Round audio playing");
   await expect(media).toHaveCount(1);
   expect(await media.evaluate((audio: HTMLAudioElement) => audio.duration)).toBeGreaterThan(duration + 8);
+  // Safari's native media Pause must stop the actual round, not just mute bells.
   await media.evaluate((audio: HTMLAudioElement) => audio.pause());
-  await expect(page.locator(".st-audio-status")).toContainText("was interrupted");
-  await page.getByRole("button", { name: "Enable round audio", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Resume timer", exact: true })).toBeVisible();
+  const nativePausedClock = await page.locator(".st-clock-digits").textContent();
+  await page.waitForTimeout(1100);
+  await expect(page.locator(".st-clock-digits")).toHaveText(nativePausedClock!);
+  await expect(media).toHaveCount(1, { timeout: 2000 });
+  const pausedBytes = await media.evaluate((audio: HTMLAudioElement) => {
+    const blobs = (window as unknown as { __roundTimerAudioBlobs: Map<string, Blob> }).__roundTimerAudioBlobs;
+    return blobs.get(audio.src)!.size;
+  });
+  expect(pausedBytes).toBeLessThan(2_000_000);
+  await page.getByRole("button", { name: "Resume timer", exact: true }).click();
   await expect(page.locator(".st-audio-status")).toContainText("Round audio playing");
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   await page.screenshot({ path: testInfo.outputPath("round-timer-mobile.png") });
@@ -107,6 +117,39 @@ test("pause, resume, edits and interrupted playback keep one correctly aligned t
   await expect(page.locator(".st-root")).toBeVisible();
   // A reload either restores permitted playback or exposes a gesture to enable it.
   await expect(page.locator(".st-audio-status")).toHaveText(/Round audio playing|Round audio is unavailable/);
+});
+
+
+test("Safari Now Playing pause and play actions freeze and resume the real round", async ({ page }) => {
+  await page.addInitScript(() => {
+    localStorage.setItem("unlxck.session-timer.free-format", JSON.stringify({ rounds: 3, workSec: 30, restSec: 10 }));
+    const session = navigator.mediaSession;
+    const nativeHandler = session.setActionHandler.bind(session);
+    const actions: Record<string, MediaSessionActionHandler | null> = {};
+    Object.assign(window, { __unlxckMediaActions: actions });
+    session.setActionHandler = (action, handler) => {
+      if (action === "pause" || action === "play") actions[action] = handler;
+      return nativeHandler(action, handler);
+    };
+  });
+  await page.goto("/timer");
+  await page.getByRole("button", { name: "Start round 1", exact: true }).click();
+  await expect(page.locator(".st-audio-status")).toContainText("Round audio playing");
+  const action = (name: "pause" | "play") => page.evaluate((actionName) => {
+    const actions = (window as unknown as { __unlxckMediaActions: Record<string, MediaSessionActionHandler | null> }).__unlxckMediaActions;
+    const callback = actions[actionName];
+    if (!callback) throw new Error("Missing Safari media action " + actionName);
+    callback({ action: actionName });
+  }, name);
+  await action("pause");
+  await expect(page.getByRole("button", { name: "Resume timer", exact: true })).toBeVisible();
+  const time = await page.locator(".st-clock-digits").textContent();
+  await page.waitForTimeout(1100);
+  await expect(page.locator(".st-clock-digits")).toHaveText(time!);
+  await expect(page.locator("audio[data-round-audio]")).toHaveCount(1);
+  await action("play");
+  await expect(page.getByRole("button", { name: "Pause timer", exact: true })).toBeVisible();
+  await expect(page.locator(".st-audio-status")).toContainText("Round audio playing");
 });
 
 for (const replacementOnly of [false, true]) {
@@ -240,6 +283,14 @@ test("a maximum-length track loads, seeks near its final bell, and releases repl
   await page.getByRole("button", { name: "Adjust timer", exact: true }).click();
   expect(await page.evaluate(() => (window as unknown as { __roundTimerAudioBlobs: Map<string, Blob> }).__roundTimerAudioBlobs.size)).toBe(1);
   await page.getByRole("button", { name: "Pause timer", exact: true }).click();
+  await expect(page.locator("audio[data-round-audio]")).toHaveCount(1);
+  const pausedTrack = await page.locator("audio[data-round-audio]").evaluate((audio: HTMLAudioElement) => {
+    const blobs = (window as unknown as { __roundTimerAudioBlobs: Map<string, Blob> }).__roundTimerAudioBlobs;
+    return { paused: audio.paused, count: blobs.size, size: blobs.get(audio.src)!.size };
+  });
+  expect(pausedTrack).toEqual({ paused: true, count: 1, size: 1_920_044 });
+  await page.getByRole("button", { name: "End session", exact: true }).click();
+  await page.getByRole("alertdialog", { name: "End session" }).getByRole("button", { name: "End", exact: true }).click();
   await expect(page.locator("audio[data-round-audio]")).toHaveCount(0);
   expect(await page.evaluate(() => (window as unknown as { __roundTimerAudioBlobs: Map<string, Blob> }).__roundTimerAudioBlobs.size)).toBe(0);
   const released = await nativeMemory();

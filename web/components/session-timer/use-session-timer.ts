@@ -16,6 +16,8 @@ import {
   crossedCues,
   cueRemainingMs,
   cueSounds,
+  pause,
+  resume,
   samePhaseRun,
   warningLengthMs,
   soundForEvents,
@@ -199,8 +201,13 @@ export function useSessionTimer({
     // still calls the rounds, so the athlete never has to look; the other
     // beeps and chimes stay quiet.
     if (sound && (audibleRef.current || MINIMIZED_SOUNDS.has(sound))) {
-      if (scheduled && roundAudio.covers(Date.now())) timerAudio().buzzSound(sound);
-      else timerAudio().play(sound);
+      const at = Date.now();
+      if (scheduled && roundAudio.coversCue(sound, at)) {
+        timerAudio().buzzSound(sound);
+      } else {
+        if (scheduled) roundAudio.abandonStalledCue(sound, at);
+        timerAudio().play(sound);
+      }
     }
     const callout = calloutForEvents(events, next);
     if (callout) timerAudio().say(callout);
@@ -250,8 +257,43 @@ export function useSessionTimer({
     [commit, roundAudio],
   );
 
+  // Connect native audio pause/play events after render, without accessing a
+  // React ref in render or changing the timer during a React state update.
+  useEffect(() => {
+    roundAudio.setMediaActions(() => update(pause), () => update(resume));
+    return () => roundAudio.setMediaActions();
+  }, [roundAudio, update]);
+
   const running =
     (state.phase === "work" || state.phase === "rest") && state.pausedAt === null;
+
+  useEffect(() => {
+    if (!("mediaSession" in navigator) || (state.phase !== "work" && state.phase !== "rest")) return;
+    const mediaSession = navigator.mediaSession;
+    if (typeof MediaMetadata !== "undefined") {
+      mediaSession.metadata = new MediaMetadata({ title: "UNLXCK Round Timer", artist: "UNLXCK" });
+    }
+    const actions: Array<["pause" | "play", () => void]> = [
+      ["pause", () => update(pause)],
+      ["play", () => update(resume)],
+    ];
+    for (const [name, handler] of actions) {
+      try { mediaSession.setActionHandler(name, handler); } catch { /* Unsupported action */ }
+    }
+    return () => {
+      for (const [name] of actions) {
+        try { mediaSession.setActionHandler(name, null); } catch { /* Unsupported action */ }
+      }
+      mediaSession.playbackState = "none";
+    };
+  }, [state.phase, update]);
+
+  useEffect(() => {
+    if (!("mediaSession" in navigator)) return;
+    if (state.phase === "work" || state.phase === "rest") {
+      navigator.mediaSession.playbackState = state.pausedAt === null ? "playing" : "paused";
+    }
+  }, [state.phase, state.pausedAt]);
 
   useEffect(() => {
     if (!running) return;
@@ -290,8 +332,12 @@ export function useSessionTimer({
         const { sounds, callout } = cueSounds(cues, audibleRef.current);
         const audio = timerAudio();
         for (const sound of sounds) {
-          if (sound !== "beep" && roundAudio.coversCue(sound, at)) audio.buzzSound(sound);
-          else audio.play(sound);
+          if (sound !== "beep" && roundAudio.coversCue(sound, at)) {
+            audio.buzzSound(sound);
+          } else {
+            if (sound !== "beep") roundAudio.abandonStalledCue(sound, at);
+            audio.play(sound);
+          }
         }
         if (callout) audio.say(callout);
       }

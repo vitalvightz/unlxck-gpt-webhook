@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { DEFAULT_SOUND_SETTINGS } from "./audio";
 import { addTime, advance, createTimerState, pause, resume, startItem } from "./engine";
-import { MAX_ROUND_TRACK_BYTES, MAX_ROUND_TRACK_MS, roundAudioTimeline, roundAudioWav } from "./round-audio";
+import { MAX_ROUND_TRACK_BYTES, MAX_ROUND_TRACK_MS, RoundAudioTrack, roundAudioTimeline, roundAudioWav } from "./round-audio";
 import type { IntervalItem } from "./plan";
 
 const item: IntervalItem = {
@@ -74,7 +74,7 @@ test("the memory budget fits 12 pro boxing rounds and rejects 90-minute WAVs bef
   assert.throws(() => roundAudioWav({ durationMs: 90 * 60_000, cues: [] }, new Map()), RangeError);
 });
 
-test("WAV has correct size, format, silence, cue positions and overlapping clipped PCM", async () => {
+test("WAV has correct size, format, silence, cue positions and overlap without hard clipping", async () => {
   const wav = roundAudioWav({ durationMs: 2000, cues: [
     { atMs: 1000, sound: "bell" }, { atMs: 1000, sound: "clapper" },
   ] }, new Map([["bell", new Float32Array([0.75, -0.75])], ["clapper", new Float32Array([0.75, -0.75])]]));
@@ -87,10 +87,34 @@ test("WAV has correct size, format, silence, cue positions and overlapping clipp
   assert.equal(data.getUint16(34, true), 16);
   assert.equal(data.getUint32(40, true), bytes.byteLength - 44);
   assert.equal(data.getInt16(44 + 15999 * 2, true), 0);
-  assert.equal(data.getInt16(44 + 16000 * 2, true), 32767);
-  assert.equal(data.getInt16(44 + 16001 * 2, true), -32767);
+  assert.equal(data.getInt16(44 + 16000 * 2, true), 31129);
+  assert.equal(data.getInt16(44 + 16001 * 2, true), -31129);
   assert.equal(data.getInt16(44 + 16002 * 2, true), 0);
   const quieter = new DataView(await roundAudioWav({ durationMs: 1000, cues: [{ atMs: 0, sound: "bell" }] },
     new Map([["bell", new Float32Array([1])]]), 0.25).arrayBuffer());
   assert.equal(quieter.getInt16(44, true), 8192, "volume must be encoded for iOS, which ignores media.volume");
+  const overdriven = new DataView(await roundAudioWav({ durationMs: 1000, cues: [{ atMs: 0, sound: "triple_bell" }] },
+    new Map([["triple_bell", new Float32Array([1.6, -1.6])]])).arrayBuffer());
+  assert.equal(overdriven.getInt16(44, true), 31129, "even one synthesised triple bell cannot hard-clip");
+  assert.equal(overdriven.getInt16(46, true), -31129);
+
+});
+
+test("a scheduled bell belongs to playing media even when Safari's playhead drifts", () => {
+  const statuses: string[] = [];
+  const track = new RoundAudioTrack((status) => statuses.push(status));
+  const media = { paused: false, ended: false, seeking: false, readyState: 4, currentTime: 4.6, pause() { this.paused = true; }, removeAttribute(_name: string) {}, load() {}, remove() {} };
+  Object.assign(track as unknown as object, {
+    media: media as HTMLAudioElement, ready: true, origin: 1000, until: 12_000,
+    cues: [{ atMs: 5000, sound: "triple_bell" }],
+  });
+  assert.equal(track.coversCue("triple_bell", 6000), true, "small playhead drift should not double the bell");
+  media.currentTime = 1;
+  assert.equal(track.coversCue("triple_bell", 6000), false, "lagging media did not play the bell");
+  track.abandonStalledCue("triple_bell", 6000);
+  assert.deepEqual(statuses, ["unavailable"]);
+  assert.equal(media.paused, true);
+  assert.equal(track.coversCue("bell", 6000), false);
+  media.paused = true;
+  assert.equal(track.coversCue("triple_bell", 6000), false);
 });
