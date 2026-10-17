@@ -93,6 +93,9 @@ to the home screen. Record phone, OS/browser versions, mode, date and actual res
    the app. Confirm the correct saved phase; if autoplay is denied, explicitly
    enable audio. Closing the browser must never be promised to keep bells playing.
 
+9. In Safari's Now Playing / Control Centre ribbon, press Pause. The workout countdown, not just media audio, must stop. Press Play; the same round must resume with its original remaining time. Repeat by using the media element's native Pause/Play controls and the on-screen Pause/Resume buttons. No phantom bells should play during pause.
+10. On Safari tab and installed PWA, listen to an entire round-end triple bell and the final-session bell on the physical phone speaker and headphones. Verify there is no doubled strike, harsh clipping or electronic drop-out compared with the foreground sound. Chromium PCM tests alone cannot certify audio quality on iOS.
+
 Also test low-power mode and iPhone silent mode. A failure is a release blocker for
 any claim that background playback works on that device/mode. Keep the timer visible
 as the recommended training setup until the target devices have passed.
