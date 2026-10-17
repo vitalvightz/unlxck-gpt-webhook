@@ -968,14 +968,17 @@ export function getBlockExecutionDisplay(
   }
 
   const cueKeys = new Set<string>();
+  const cueKey = (cue: string) => cue.toLowerCase().replace(/\band\b/g, " ")
+    .replace(/[^\p{L}\p{N}]+/gu, " ").trim();
   const uniqueCues = dedupeBlockText(cues).filter(cue => {
-    const key = cue.toLowerCase().replace(/\band\b/g, " ").replace(/[^\p{L}\p{N}]+/gu, " ").trim();
+    const key = cueKey(cue);
     if (cueKeys.has(key)) return false;
     cueKeys.add(key);
     return true;
   });
   return {
-    cues: uniqueCues,
+    cues: uniqueCues.filter(cue => !uniqueCues.some(other =>
+      other !== cue && cueKey(other).startsWith(`${cueKey(cue)} `))),
     stopRules: dedupeBlockText(stopRules),
     regressions: dedupeBlockText(regressions),
     substitutions: dedupeBlockText(substitutions),

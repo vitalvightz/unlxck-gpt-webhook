@@ -154,14 +154,14 @@ including saved-card reads. The coverage gate checks instruction-only roles too.
 Existing sessions, completion state and IDs are retained. The actual competition
 card also shows its canonical warm-up / no-additional-S&C instruction.
 
-Two earlier renderer tests deliberately encoded truncation. Their expectations
-now require all four actions and the reset instruction, while keeping the
+Four earlier renderer tests deliberately encoded truncation. Their expectations
+now require all four actions, complete reset and tempo instructions, while keeping the
 existing duplicate-cue, planning-transcript and stop-rule checks. This changes
 the faulty presentation contract; it does not waive a failed training assertion.
 Full private saved-plan material remains outside the repository. Only synthetic
 regression cases and aggregate audit evidence are committed.
 
-Latest checks: **195 frontend tests**, **19 full-pipeline end-to-end tests**,
+Latest checks: **1,948 frontend tests (complete unit suite)**, **183 card/calendar suites**, **19 full-pipeline end-to-end tests**,
 **113 goal-delivery/preservation/contract tests**, and focused card/validator
 checks pass. Counts overlap; they are not a sum of unique tests. Ruff, Python
 import compilation, TypeScript and production build pass. ESLint reports zero

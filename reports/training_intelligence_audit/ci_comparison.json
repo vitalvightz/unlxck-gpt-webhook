@@ -2591,7 +2591,7 @@
       "pr_evidence": [
         "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748429/job/117154658398"
       ],
-      "current_status": "targeted_rerun_passed_195_frontend_tests"
+      "current_status": "passed_in_complete_frontend_unit_suite_1948_tests"
     },
     {
       "test": "renders declared light-combat contact above app work without hard-sparring copy",
@@ -2603,7 +2603,7 @@
       "pr_evidence": [
         "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748429/job/117154658398"
       ],
-      "current_status": "targeted_rerun_passed_195_frontend_tests"
+      "current_status": "passed_in_complete_frontend_unit_suite_1948_tests"
     },
     {
       "test": "normalizes standalone declared light-combat day and session titles",
@@ -2615,7 +2615,7 @@
       "pr_evidence": [
         "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748429/job/117154658398"
       ],
-      "current_status": "targeted_rerun_passed_195_frontend_tests"
+      "current_status": "passed_in_complete_frontend_unit_suite_1948_tests"
     },
     {
       "test": "a technical day the athlete declared never reads as converted hard sparring",
@@ -2627,7 +2627,7 @@
       "pr_evidence": [
         "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748429/job/117154658398"
       ],
-      "current_status": "targeted_rerun_passed_195_frontend_tests"
+      "current_status": "passed_in_complete_frontend_unit_suite_1948_tests"
     },
     {
       "test": "a declared light-combat day shows one Technical Combat block, not two",
@@ -2639,7 +2639,7 @@
       "pr_evidence": [
         "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748429/job/117154658398"
       ],
-      "current_status": "targeted_rerun_passed_195_frontend_tests"
+      "current_status": "passed_in_complete_frontend_unit_suite_1948_tests"
     },
     {
       "test": "Today blocks omit a coach title supplied by their parent but keep its context",
@@ -2651,7 +2651,7 @@
       "pr_evidence": [
         "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748429/job/117154658398"
       ],
-      "current_status": "targeted_rerun_passed_195_frontend_tests"
+      "current_status": "passed_in_complete_frontend_unit_suite_1948_tests"
     }
   ]
 }

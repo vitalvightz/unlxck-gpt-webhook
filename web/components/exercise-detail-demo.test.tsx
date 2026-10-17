@@ -77,7 +77,7 @@ test("once the session is running the demo section starts collapsed like the res
   }
 });
 
-test("October 15 punch keeps its single cue, no duplicate coaching detail, video and exact statistics", async () => {
+test("October 15 punch keeps its complete cue once, including reset, video and exact statistics", async () => {
   const records = JSON.parse(readFileSync("../tests/fixtures/concise_coaching/october_11_15.json", "utf8"));
   const saved = records[1].card.weeks.flatMap((w: { days: { sessions: { blocks: StructuredBlock[] }[] }[] }) =>
     w.days.flatMap(d => d.sessions.flatMap(s => s.blocks)))
@@ -96,9 +96,10 @@ test("October 15 punch keeps its single cue, no duplicate coaching detail, video
       </ExerciseMediaProvider>,
     ));
     assert.equal(container.querySelector(".ex-demo-lead-cue")?.textContent,
-      "Key cueKeep punches balanced; return to guard");
+      "Key cueKeep punches balanced; return to guard and reset stance between exchanges");
     assert.equal(container.querySelector("details.ex-detail-section"), null);
     assert.equal(container.textContent?.split("Keep punches balanced; return to guard").length, 2);
+    assert.equal(container.textContent?.split("reset stance between exchanges").length, 2);
     assert.ok(container.querySelector('button[aria-label="Play Band-Resisted Punch demo"]'));
     assert.ok(container.textContent?.includes("1 × 2"));
     assert.ok(container.textContent?.includes("2 min")); // same 120-second rest
