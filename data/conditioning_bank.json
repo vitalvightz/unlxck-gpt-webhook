@@ -9796,7 +9796,6 @@
     "duration": "5 km continuous, conversational pace",
     "intensity": "moderate",
     "tags": [
-      "running",
       "aerobic",
       "mech_systemic_fatigue",
       "mech_lower_lunge"
@@ -9831,7 +9830,6 @@
     "duration": "1 mile timed effort, record completion time",
     "intensity": "high",
     "tags": [
-      "running",
       "aerobic",
       "mech_systemic_fatigue",
       "mech_lower_lunge",
@@ -9869,7 +9867,6 @@
     "duration": "25min continuous at controlled comfortably-hard pace",
     "intensity": "hard",
     "tags": [
-      "running",
       "aerobic",
       "mech_systemic_fatigue",
       "mech_lower_lunge"
@@ -9903,7 +9900,6 @@
     "duration": "8x60s fast, 120s easy jog",
     "intensity": "hard",
     "tags": [
-      "running",
       "aerobic",
       "mech_systemic_fatigue",
       "mech_lower_lunge"
@@ -9939,7 +9935,6 @@
     "duration": "6x240s aerobic running, 60s walking recovery",
     "intensity": "hard",
     "tags": [
-      "running",
       "aerobic",
       "mech_systemic_fatigue",
       "mech_lower_lunge"
@@ -9974,7 +9969,6 @@
     "duration": "8x800m hard running, 100m walking recovery",
     "intensity": "high",
     "tags": [
-      "running",
       "conditioning",
       "mech_systemic_fatigue",
       "mech_lower_lunge",
@@ -10013,7 +10007,6 @@
     "duration": "5x10s maximal uphill, full walk-back recovery",
     "intensity": "high",
     "tags": [
-      "running",
       "conditioning",
       "mech_systemic_fatigue",
       "mech_lower_lunge",
@@ -10053,7 +10046,6 @@
     "duration": "12x120s hard uphill, walk-down recovery",
     "intensity": "high",
     "tags": [
-      "running",
       "aerobic",
       "mech_systemic_fatigue",
       "mech_lower_lunge",
@@ -10092,7 +10084,6 @@
     "duration": "2x80m, 2x60m, 2x40m; walk-back recovery",
     "intensity": "high",
     "tags": [
-      "running",
       "conditioning",
       "mech_systemic_fatigue",
       "mech_lower_lunge",
@@ -10138,7 +10129,6 @@
     "duration": "3x180s rounds: 10s walk, 10s jog, 10s sprint repeated; 60s rest between rounds",
     "intensity": "high",
     "tags": [
-      "running",
       "conditioning",
       "mech_systemic_fatigue",
       "mech_lower_lunge",
