@@ -38,7 +38,18 @@ def test_dictionary_is_field_scoped_descriptive_and_source_supported():
     sample["content_class"] = "rehabilitation"
     assert exercise_details(sample, index.projection) == []
     training = [r for r in index.records if r["summary"]["category"] == "training"]
-    assert sum(bool(r["facets"]["goal"]) for r in training) == 278
+    # Original catalogue goal coverage stays unchanged; the new running bank
+    # contributes seven reviewed goal-filterable workouts.
+    added_running = {
+        "5K Steady Run", "One-Mile Timed Run", "Continuous Tempo Run",
+        "Running Fartlek (1:2)", "Running Aerobic Intervals (6x4min)",
+        "800m Running Repeats (8x)", "Short Hill Sprints (5x10s)",
+        "Long Hill Intervals (12x2min)", "Descending Sprint Ladder (80-60-40m)",
+        "Boxing Round Running Intervals (10-10-10)",
+    }
+    assert sum(bool(r["facets"]["goal"]) for r in training
+               if r["entry"]["name"] not in added_running) == 278
+    assert sum(bool(r["facets"]["goal"]) for r in training) == 285
     assert sum(bool(r["summary"]["exercise_details"]) for r in training) > 483
     holds = lib.search(index, filters={"training_method": "static_holds"}, limit=3000)
     assert holds["total"] > 0

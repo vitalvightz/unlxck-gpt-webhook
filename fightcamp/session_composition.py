@@ -2415,6 +2415,16 @@ def compose_normal_conditioning_assignments(
                 # fail release for being below a time-only conditioning target.
                 options = options[:1]
                 target_active_work = None
+            distance_only_endurance = bool(
+                preferred_system in {"aerobic", "glycolytic"} and options
+                and (_float_or_none(_option_metadata(options[0][1]).get("distance_m")) or 0) > 0
+                and _conditioning_active_work_seconds(options[0][1]) is None
+            )
+            if distance_only_endurance:
+                # A 5K or measured track repeat has an exact distance but no
+                # known completion time. Keep one dose, never invent seconds.
+                options = options[:1]
+                target_active_work = None
             if not options:
                 role["selected_exercise_assignments"] = []
                 # A targeted recomposition can follow a countdown morph that
@@ -2473,7 +2483,7 @@ def compose_normal_conditioning_assignments(
                     selected, high_load_rounds
                 )
                 underfill_reason = partition_reason or underfill_reason
-                if adjacent_hard_spar or unit_based_alactic:
+                if adjacent_hard_spar or unit_based_alactic or distance_only_endurance:
                     break
                 if target_active_work is not None and active_work_seconds >= target_active_work:
                     underfill_reason = None
@@ -2492,7 +2502,7 @@ def compose_normal_conditioning_assignments(
                     selected, high_load_rounds
                 )
             long_aerobic = preferred_system == "aerobic" and total_minutes >= 25
-            workload_met = None if unit_based_alactic else (
+            workload_met = None if unit_based_alactic or distance_only_endurance else (
                 target_active_work is not None and active_work_seconds >= target_active_work
             )
             if adjacent_hard_spar:
@@ -2573,6 +2583,7 @@ def compose_normal_conditioning_assignments(
                 "minimum_exercise_count": minimum,
                 "selected_count": len(assignments),
                 "long_aerobic_session": long_aerobic,
+                "distance_dose_unmeasured": distance_only_endurance,
                 "hard_sparring_adjacent": adjacent_hard_spar,
                 "high_load_workload_envelope": high_load_budget,
                 "partitioned_high_load_rounds": high_load_rounds,
@@ -2581,10 +2592,10 @@ def compose_normal_conditioning_assignments(
                 "conditioning_workload_met": None if adjacent_hard_spar else workload_met,
                 "underfill_reason": (
                     None
-                    if adjacent_hard_spar or workload_met or unit_based_alactic
+                    if adjacent_hard_spar or workload_met or unit_based_alactic or distance_only_endurance
                     else underfill_reason or "phase_system_workload_unmet"
                 ),
-                "workload_limited": not adjacent_hard_spar and not workload_met and not unit_based_alactic,
+                "workload_limited": not adjacent_hard_spar and not workload_met and not unit_based_alactic and not distance_only_endurance,
                 "embedded_trunk_support": trunk_support_added,
                 "embedded_trunk_support_count": 1 if trunk_support_added else 0,
                 "embedded_trunk_support_skip_reason": trunk_support_skip_reason,

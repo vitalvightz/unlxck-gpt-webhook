@@ -686,6 +686,7 @@ def _other_stimuli(role: dict, pools: dict, phase: str, brief: dict) -> list[dic
         for field in (
             "work_sec", "rest_sec", "rounds", "total_minutes", "rpe", "rpe_max",
             "impact_cost", "lactate_load", "movement_cost", "duration", "timing", "modality", "tags",
+            "distance_m", "distance_segments_m", "recovery_mode",
         ):
             if metadata.get(field) is not None:
                 dose_source[field] = metadata[field]
@@ -704,7 +705,10 @@ def _other_stimuli(role: dict, pools: dict, phase: str, brief: dict) -> list[dic
         minutes = _number(dose_source.get("total_minutes"))
         work = _number(dose_source.get("work_sec"))
         rounds = _number(dose_source.get("rounds"))
-        if not (minutes > 0 or (work > 0 and rounds > 0)):
+        distance_m = _number(dose_source.get("distance_m"))
+        segments = dose_source.get("distance_segments_m") or []
+        has_distance_dose = distance_m > 0
+        if not (minutes > 0 or (work > 0 and rounds > 0) or has_distance_dose):
             continue
         if "duration_cap_minutes" in role:
             minutes = min(minutes, _number(role["duration_cap_minutes"]))
@@ -714,10 +718,21 @@ def _other_stimuli(role: dict, pools: dict, phase: str, brief: dict) -> list[dic
         from .config import conditioning_dose_active_work_seconds
         active_work = conditioning_dose_active_work_seconds(dose_source) or 0
         if system in {"aerobic", "glycolytic"} and (
-            active_work >= 180 or (metadata.get("standalone_protocol") and active_work > 0)
+            active_work >= 180
+            or (metadata.get("standalone_protocol") and active_work > 0)
+            # Distance is a genuine prescribed workload, not timed seconds.
+            # A short sprint alone is not sufficient aerobic development.
+            or (has_distance_dose and distance_m * max(rounds, 1) >= 1600)
         ):
             intents.append("energy_system_training")
         profile = _conditioning_structured_profile(dose_source, system=system)
+        if (system in {"alactic", "atp_pcr", "atp-pcr"}
+                and len(segments) >= 4
+                and all(isinstance(d, (int, float)) and 0 < d <= 100 for d in segments)
+                and dose_source.get("recovery_mode") == "walk_back"
+                and (profile["rpe"] or 0) >= 8
+                and profile["speed_development"]):
+            intents.append("speed_quality")
         if system in {"alactic", "atp_pcr", "atp-pcr"} and work > 0 and rounds >= 2 and profile["speed_development"]:
             intents.append("speed_quality")
             # Maximal propulsive bursts can maintain ballistic power regardless
@@ -750,6 +765,8 @@ def _other_stimuli(role: dict, pools: dict, phase: str, brief: dict) -> list[dic
                 stimulus.update(sets=rep['sets'], reps=rep['amount'])
                 for field in ('work_sec', 'rounds', 'total_minutes'):
                     stimulus.pop(field, None)
+                if has_distance_dose:
+                    stimulus["distance_m"] = distance_m
             stimuli.append(stimulus)
     stimuli += _embedded_trunk_stimuli(role, pools, phase)
     # Locked technical / mobility inserts have an actual deterministic duration.

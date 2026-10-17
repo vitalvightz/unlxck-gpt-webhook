@@ -42,6 +42,13 @@ def conditioning_load_context(athlete: dict, week: dict) -> dict:
     }
 
 
+def can_add_hard_conditioning(athlete: dict, week: dict | None = None) -> bool:
+    """Reuse observed sparring load; never infer unmeasured coach intensity."""
+    return (
+        str(athlete.get("fatigue") or "").strip().lower() == "low"
+        and conditioning_load_context(athlete, week or {})["hard_exposures"] < 2
+    )
+
 
 # ── Hint constants (only used by boxing aerobic logic) ───────────────────────
 _LOWER_LIMB_UNLOAD_HINTS = {
@@ -267,6 +274,9 @@ def _boxing_aerobic_priority_adjustment(
             bonus -= 0.6
         return bonus
 
+    if modality == "run":
+        return -0.75 if (context["impact_tolerance_reduced"] or context["lower_limb_unload_desirable"]) else 0.75
+
     if _is_shadowbox_aerobic_drill(drill):
         bonus = 0.9
         if context["lower_limb_unload_desirable"] or context["impact_tolerance_reduced"]:
@@ -359,6 +369,8 @@ def _boxing_aerobic_preference_rank(
         return 5
     if _is_continuous_swim_drill(drill):
         return 3 if context["upper_body_swim_sensitive"] else 1
+    if modality == "run":
+        return 5 if context["lower_limb_unload_desirable"] or context["impact_tolerance_reduced"] else 2
     if _is_shadowbox_aerobic_drill(drill):
         return 4 if context["lower_limb_unload_desirable"] or context["impact_tolerance_reduced"] else 2
     if _is_sled_drag_aerobic_drill(drill):

@@ -566,6 +566,7 @@ from .conditioning_boxing import (  # noqa: E402
     _boxing_aerobic_context_flags,
     _boxing_aerobic_preference_rank,
     _boxing_aerobic_priority_adjustment,
+    can_add_hard_conditioning,
     _is_pool_treading_drill,
     _normalize_conditioning_name,
     _sanitize_sport_language,
@@ -729,7 +730,21 @@ def _conditioning_structured_profile(drill: dict, *, system: str | None = None) 
         and "mech_ballistic" in (drill.get("tags") or [])
         and (rest_sec or 0) >= ALACTIC_MIN_REST_SEC and (rpe or 0) >= 8
     )
-    speed_development = (alactic_structure or rep_speed) and "no rebound" not in str(drill.get("name") or "").lower()
+    # Distance sprint prescriptions are meaningful without guessed seconds.
+    # A short, repeated sprint with authored recovery is different from an
+    # undosed drill or a longer speed-endurance interval.
+    segments = drill.get("distance_segments_m")
+    distance_speed = bool(
+        system in {"alactic", "atp-pcr"}
+        and str(drill.get("modality") or "").lower() in {"run", "sled"}
+        and drill.get("recovery_mode") in {"walk_back", "full_recovery"}
+        and isinstance(segments, list) and 2 <= len(segments) <= 12
+        and all(type(metres) in {int, float} and 0 < metres <= 60 for metres in segments)
+        and sum(segments) == drill.get("distance_m")
+        and (rpe or 0) >= 8
+        and bool(set(drill.get("tags") or []) & {"speed", "acceleration"})
+    )
+    speed_development = (alactic_structure or rep_speed or distance_speed) and "no rebound" not in str(drill.get("name") or "").lower()
     freshness = _has_freshness_profile(
         lactate_load=lactate_load,
         impact_cost=impact_cost,
@@ -3316,14 +3331,8 @@ def generate_conditioning_block(flags):
             nonlocal restriction_candidates, restriction_blocked
             for drill in base_conditioning_bank:
                 d = drill.copy()
-                if d.get("standalone_protocol"):
-                    from .conditioning_boxing import conditioning_load_context
-                    # New complete high-cost protocols need explicit recovery
-                    # headroom. Do not replace easy aerobic support with HIIT
-                    # in a crowded/uncertain camp merely because it scores well.
-                    load = conditioning_load_context(flags, {})
-                    if str(flags.get("fatigue") or "").lower() != "low" or load["hard_exposures"] >= 2:
-                        continue
+                if d.get("standalone_protocol") and not can_add_hard_conditioning(flags):
+                    continue
                 if d.get("placement", "conditioning").lower() != "conditioning":
                     continue
                 if selection_format == "boxing":

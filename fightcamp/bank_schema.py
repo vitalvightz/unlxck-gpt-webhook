@@ -376,8 +376,15 @@ def conditioning_dose_shape(item: dict, *, source: str = "") -> str | None:
         return None
     if _positive_number(item.get("total_minutes")):
         return "continuous"
+    if _positive_number(item.get("distance_m")) and (
+        item.get("rounds") is None or _positive_number(item.get("rounds"))
+    ):
+        return "distance"  # Do not invent a finish time or convert metres to seconds.
     rest = _number_or_none(item.get("rest_sec"))
-    if _positive_number(item.get("work_sec")) and _positive_number(item.get("rounds")) and rest is not None and rest >= 0:
+    if _positive_number(item.get("work_sec")) and _positive_number(item.get("rounds")) and (
+        (rest is not None and rest >= 0)
+        or item.get("recovery_mode") in {"walk_back", "walk_down"}
+    ):
         return "interval"
     return None
 
