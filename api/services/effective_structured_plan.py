@@ -273,6 +273,12 @@ def _resolve_effective_structured_plan(
     legacy_open_calendar: dict[str, Any] | None = None
     stored = _mapping(plan_row.get("structured_plan"))
     if stored:
+        from api.structured_plan_calendar_spine import reconcile_calendar_spine
+
+        brief = _mapping(plan_row.get("planning_brief")) or {}
+        if not brief.get("custom_plan"):
+            stored = reconcile_calendar_spine(dict(stored), dict(brief),
+                plan_text=raw_markdown or str(plan_row.get("plan_text") or ""))
         parsed = safe_parse_structured_plan(stored, raw_markdown=raw_markdown or None)
         if parsed.ok and parsed.plan is not None:
             return dict(stored)

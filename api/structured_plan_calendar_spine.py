@@ -559,7 +559,8 @@ def _claim_folded_block(
 
 
 def _restore_missing_scheduled_roles(
-    day: dict[str, Any], roles: list[dict[str, Any]], d_day: int
+    day: dict[str, Any], roles: list[dict[str, Any]], d_day: int,
+    source_lines: list[str] | None = None,
 ) -> dict[str, Any]:
     """Attach any authoritative scheduled role this day does not represent.
 
@@ -616,7 +617,7 @@ def _restore_missing_scheduled_roles(
             continue
         if _claim_folded_block(converted_sessions, role, claimed_blocks):
             continue
-        session = _session(role, d_day)
+        session = _session(role, d_day, source_lines)
         if session is None:
             continue
         sessions.append(session)
@@ -798,7 +799,7 @@ def _plan_signature(weeks: Any, fight_date: date) -> tuple:
     return tuple(signature)
 
 
-def reconcile_calendar_spine(structured_plan: Any, planning_brief: Any) -> Any:
+def reconcile_calendar_spine(structured_plan: Any, planning_brief: Any, *, plan_text: str | None = None) -> Any:
     """Rebuild a dated camp's structured calendar from the authoritative spine.
 
     Returns a new plan dict when the calendar drifted from the authoritative
@@ -807,12 +808,12 @@ def reconcile_calendar_spine(structured_plan: Any, planning_brief: Any) -> Any:
     the converter produced.
     """
     try:
-        return _reconcile(structured_plan, planning_brief)
+        return _reconcile(structured_plan, planning_brief, plan_text=plan_text)
     except Exception:  # never block the card pipeline on reconciliation
         return structured_plan
 
 
-def _reconcile(structured_plan: Any, planning_brief: Any) -> Any:
+def _reconcile(structured_plan: Any, planning_brief: Any, *, plan_text: str | None = None) -> Any:
     if not isinstance(structured_plan, dict) or not isinstance(planning_brief, dict):
         return structured_plan
     # Open / renewable plans have no fight date or countdown calendar — the spine
@@ -893,6 +894,8 @@ def _reconcile(structured_plan: Any, planning_brief: Any) -> Any:
     camp_start = max(camp_start, in_range_llm_max)
 
     # Build the continuous spine D-camp_start .. D-0, overlaying converter content.
+    from .structured_plan_faithfulness import _source_day_section_lines
+    source_days = _source_day_section_lines(plan_text) if plan_text else {}
     spine_days: list[dict[str, Any]] = []
     for d_day in range(camp_start, -1, -1):
         phase = _phase_for_dday(d_day, phase_by_dday, role_map_min, role_map_max)
@@ -915,7 +918,7 @@ def _reconcile(structured_plan: Any, planning_brief: Any) -> Any:
             day["planning_day_role_keys"] = list(role_keys)
         # A calendar day existing is not enough: its authoritative scheduled
         # contents must survive with it, or the renderer calls the day rest.
-        day = _restore_missing_scheduled_roles(day, day_roles, d_day)
+        day = _restore_missing_scheduled_roles(day, day_roles, d_day, source_days.get(d_day))
         spine_days.append(_attach_priority_microdose(day, priority_microdoses.get(d_day)))
 
     # Group into the Mon-Sun calendar weeks the web view renders.

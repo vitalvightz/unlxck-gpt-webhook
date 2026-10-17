@@ -66,12 +66,25 @@ test("a legacy mental title cannot hide bundled physical exercises", () => {
       { block_type: "preparation", display_name: "Hip CARs" }] }), null);
 });
 
-test("three mental actions keep the final takeaway and exclude framing", () => {
+test("all mental actions survive in order, including the middle decision", () => {
   assert.deepEqual(mentalTaskSteps([
     "5 minutes, RPE 1.", "Step 1: Find safe scoring range.",
     "Step 2: Find their danger range.", "Step 3: Choose a strike.",
     "Step 4: Write one rule to test.", "Focus: Stay calm.", "Progress: Test it later.",
-  ]), ["Find safe scoring range.", "Find their danger range.", "Write one rule to test."]);
+  ]), ["Find safe scoring range.", "Find their danger range.", "Choose a strike.", "Write one rule to test."]);
+});
+
+test("the rendered visualisation retains the response branch and reset", () => {
+  const html = renderToStaticMarkup(<SessionCard session={{ title: "Fight Visualisation", session_type: "mindset",
+    blocks: [{ block_type: "mindset", display_name: "Tactical Picture", coaching_cues: [
+      "Step 1: See the opponent commit to an entry.",
+      "Step 2: Read whether the head stays high or drops before you answer.",
+      "Step 3: Counter the high entry; meet the low entry with your frame and hips.",
+      "Step 4: Reset your stance and run both versions again.",
+    ] }] }} />);
+  assert.match(html, /Counter the high entry; meet the low entry with your frame and hips/);
+  assert.match(html, /Reset your stance and run both versions again/);
+  assert.equal((html.match(/<li(?: |>)/g) ?? []).length, 4);
 });
 
 test("mental preview uses selected authored instructions and keeps smart truncation lossless in details", () => {

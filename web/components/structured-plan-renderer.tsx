@@ -270,6 +270,7 @@ function TechnicalCombatWhyTooltip({ day, declared = false }: {
   ].filter(Boolean).join("\n");
   return <WhyTooltip className="info-tooltip"
     title={declared ? DECLARED_LIGHT_COMBAT_TITLE : TECHNICAL_COMBAT_TITLE}
+    ariaLabel={declared ? "About your declared technical session" : undefined}
     body={body} triggerLabel="i" />;
 }
 
@@ -456,9 +457,8 @@ export function BlockCard({
   const { cues: allCues, regressions, substitutions } = execution;
   const prescriptionText = cleanText(block.prescription_text)
     || (metrics.length === 0 ? execution.prescription : null);
-  // A single execution cue is enough. The earlier split into lead cue plus
-  // "Coaching cues" detail repeated the same instruction on enhanced cards.
-  const visibleCues = hideCues || hideLeadCue ? [] : allCues.slice(0, 1).map(compactCoachLine);
+  // The demo can pin the lead cue; every remaining authored detail still belongs here.
+  const visibleCues = hideCues ? [] : allCues.slice(hideLeadCue ? 1 : 0).map(compactCoachLine);
   const directive = openBlockWeekDirective(openWeekIntent, block);
   // Exercise progression is saved guidance, not a visible card adjustment.
   // Keep an explicitly prescribed deload and all stop criteria visible.
@@ -848,7 +848,7 @@ function ExerciseDetail({
   const whyTodayRaw = athleteFacingRationale(block.why_today);
   const whyToday = sameCopy(builds, whyTodayRaw) ? null : whyTodayRaw;
   const execution = getBlockExecutionDisplay(block);
-  const cue = execution.cues[0] ? compactCoachLine(execution.cues[0]) : null;
+  const cues = execution.cues.map(compactCoachLine);
   const easier = execution.regressions[0] ? compactCoachLine(execution.regressions[0]) : null;
   const swap = execution.substitutions[0] ?? null;
   const sessionRunning = useExerciseLoggingActive();
@@ -898,7 +898,7 @@ function ExerciseDetail({
       ) : null}
       <ExecutionInstructions block={block} />
       {/* Keep the cue and available adjustments outside nested disclosures. */}
-      {cue ? <p className="sp-block-aside"><span className="sp-stat-label">Cue</span>{cue}</p> : null}
+      {cues.map(cue => <p className="sp-block-aside" key={cue}><span className="sp-stat-label">Cue</span>{cue}</p>)}
       {swap ? <p className="sp-block-aside"><span className="sp-stat-label">Swaps</span>{swap}</p> : null}
       {easier ? <p className="sp-block-aside"><span className="sp-stat-label">Easier</span>{easier}</p> : null}
       <details className="ex-detail-section">
@@ -1057,6 +1057,8 @@ export function SessionCard({
       .find(name => name && !sameCopy(name, title));
     const mentalCue = cleanText(sessionMindset?.focus_cue || sessionMindset?.intent
       || sessionMindset?.confidence_anchor);
+    const context = getSessionCoachingLines(sessionMindset).filter(line =>
+      !sameCopy(line.value, mentalCue) && !steps.some(step => sameCopy(step, line.value)));
     return (
       <article className="sp-session sp-mental-task" data-mental-category={mentalCategory.toLowerCase()}>
         <header className="sp-mental-head">
@@ -1076,6 +1078,9 @@ export function SessionCard({
         {mentalCue && !steps.some(step => sameCopy(step, mentalCue)) && !sameCopy(mentalCue, summary) ? (
           <p className="sp-block-aside"><span className="sp-stat-label">Cue</span>{mentalCue}</p>
         ) : null}
+        {context.map(line => <p className="sp-block-aside" key={`${line.label}-${line.value}`}>
+          <span className="sp-stat-label">{line.label}</span>{line.value}
+        </p>)}
         {mentalStops.length > 0 ? (
           <p className="sp-block-aside" data-kind="stop"><span className="sp-stat-label">Stop rule</span>{mentalStops.join("; ")}</p>
         ) : null}
@@ -1410,6 +1415,9 @@ export function SessionlessDayCard({
           {displayTag ? <span className="sp-tag sp-accent">{displayTag}</span> : null}
         </div>
       </header>
+      {countdown === "D-0" && day.day_type === "competition" ? (
+        <p className="sp-today-note">Follow your coach&apos;s warm-up and fight protocol; no additional S&amp;C.</p>
+      ) : null}
       {kind === "light_combat" || (kind === "technical" && !isConverted) ? (
         <p className="sp-today-note">{DECLARED_LIGHT_COMBAT_DESCRIPTION}</p>
       ) : isConverted ? (

@@ -19,6 +19,33 @@ ATHLETE = "effective-plan-athlete"
 PLAN = "22222222-2222-2222-2222-222222222222"
 
 
+def test_saved_card_restores_approved_open_role_and_preserves_existing_session_ids():
+    from api.structured_plan_deterministic_fallback import build_deterministic_structured_plan
+
+    brief = {"fight_date": "2026-11-12", "athlete_snapshot": {"days_until_fight": 4},
+             "weekly_role_map": {"weeks": [{"week_index": 1, "phase": "TAPER",
+                 "calendar_days": [{"d_day": d} for d in range(3, -1, -1)],
+                 "session_roles": [{"role_key": "fight_week_freshness_day", "category": "recovery",
+                     "athlete_facing_label": "Fight-week freshness", "scheduled_countdown_label": "D-3",
+                     "session_index": 12}]}]}}
+    source = "D-3 (Monday) — Fight-week freshness\n- Easy mobility and breathing. Keep it restorative."
+    stored = build_deterministic_structured_plan(brief)
+    existing = {"session_id": "keep-completed-id", "session_type": "recovery", "title": "Existing recovery",
+                "completion_status": "completed", "blocks": []}
+    day = next(d for w in stored["weeks"] for d in w["days"] if d["countdown_label"] == "D-2")
+    day["sessions"] = [existing]
+    untouched = copy.deepcopy(stored)
+    result = resolve_effective_structured_plan({"id": PLAN, "planning_brief": brief,
+        "structured_plan": stored, "plan_text": source})
+    days = {d["countdown_label"]: d for w in result["weeks"] for d in w["days"]}
+    assert days["D-3"]["sessions"][0]["title"] == "Fight-week freshness"
+    assert days["D-2"]["sessions"][0] == existing
+    assert stored == untouched
+    again = resolve_effective_structured_plan({"id": PLAN, "planning_brief": brief,
+        "structured_plan": result, "plan_text": source})
+    assert sum(len(d["sessions"]) for w in again["weeks"] for d in w["days"] if d["countdown_label"] == "D-3") == 1
+
+
 def _production_calendar() -> dict:
     plan = _valid_plan()
     week = copy.deepcopy(plan["weeks"][0])

@@ -747,14 +747,14 @@ export function mentalSessionSummary(session: StructuredSession): string | null 
   return `${words}…`;
 }
 
-/** Three authored actions: keep the observation and final practical takeaway. */
+/** Preserve every authored action in its original order. */
 export function mentalTaskSteps(lines: string[]): string[] {
   const numbered = lines.filter(line => /^\s*Step\s*\d+\s*:/i.test(line));
   const source = numbered.length ? numbered : lines.filter(line =>
     !/^\s*(?:Cue|Intent|Focus|Reset|Anchor|Purpose|Progress|Stop|Pre-bout)\s*:/i.test(line) &&
     !/^\s*\d+(?:[–-]\d+)?\s*(?:min|sec|minutes|seconds)\b/i.test(line));
   const steps = dedupeBlockText(source.map(line => line.replace(/^\s*Step\s*\d+\s*:\s*/i, "")));
-  return steps.length <= 3 ? steps : [steps[0], steps[1], steps[steps.length - 1]];
+  return steps;
 }
 
 /** Sessions on this day that count toward physical training frequency. */
@@ -967,8 +967,15 @@ export function getBlockExecutionDisplay(
     registerCue(cue);
   }
 
+  const cueKeys = new Set<string>();
+  const uniqueCues = dedupeBlockText(cues).filter(cue => {
+    const key = cue.toLowerCase().replace(/\band\b/g, " ").replace(/[^\p{L}\p{N}]+/gu, " ").trim();
+    if (cueKeys.has(key)) return false;
+    cueKeys.add(key);
+    return true;
+  });
   return {
-    cues: dedupeBlockText(cues),
+    cues: uniqueCues,
     stopRules: dedupeBlockText(stopRules),
     regressions: dedupeBlockText(regressions),
     substitutions: dedupeBlockText(substitutions),

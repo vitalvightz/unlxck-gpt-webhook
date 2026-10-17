@@ -132,13 +132,13 @@ logger = logging.getLogger(__name__)
 
 
 def _merge_locked_content(
-    plan_dict: dict[str, Any], planning_brief: Any
+    plan_dict: dict[str, Any], planning_brief: Any, raw_markdown: str | None = None
 ) -> dict[str, Any]:
     """Apply Stage 1 locked truth and emit compact, profile-free diagnostics."""
     # The converter never sees server-owned sessions. A day containing only one
     # of them may therefore be absent from its JSON; restore the planner's day
     # spine before projecting the locked card onto its authoritative D-day.
-    plan_dict = reconcile_calendar_spine(plan_dict, planning_brief)
+    plan_dict = reconcile_calendar_spine(plan_dict, planning_brief, plan_text=raw_markdown)
     result = merge_planner_owned_structured_content(plan_dict, planning_brief)
     locked_roles = len(result.applied) + len(result.unresolved)
     if locked_roles:
@@ -2969,7 +2969,7 @@ def planner_sc_coverage_losses(
     session type, also represents it.
     """
     roles_by_dday = _planner_sc_roles_by_dday(planning_brief)
-    if not roles_by_dday or not isinstance(plan_dict, dict) or not raw_markdown.strip():
+    if not isinstance(plan_dict, dict) or not isinstance(planning_brief, dict) or not raw_markdown.strip():
         return []
     sections = _source_day_section_lines(raw_markdown)
     fight_date = parse_fight_date(spine_resolve_fight_date(planning_brief))
@@ -3061,6 +3061,23 @@ def planner_sc_coverage_losses(
                 f"({session_type}) is rendered in the source but missing from the "
                 "structured card"
             )
+    # Open, instruction-only roles are real scheduled work too. Exercise-only
+    # coverage missed an approved D-3 freshness session because it had no bank
+    # assignments. Require its exact source heading and its own card identity.
+    from .structured_plan_deterministic_fallback import _source_instruction_for_role
+    for week in (planning_brief.get("weekly_role_map") or {}).get("weeks") or []:
+        if not isinstance(week, dict):
+            continue
+        for role in week.get("session_roles") or []:
+            if (not isinstance(role, dict) or role.get("selected_exercise_assignments")
+                    or role.get("role_key") in ROLES_OWNED_ELSEWHERE):
+                continue
+            d_day = spine_role_dday(week, role)
+            if d_day is None or not _source_instruction_for_role(role, sections.get(d_day)):
+                continue
+            if not match_sessions_to_roles(sessions_by_dday.get(d_day, []), [role], d_day):
+                losses.append(f"planner_coverage: D-{d_day} {role.get('role_key')!r} "
+                              "instruction-only session is missing from the structured card")
     return losses
 
 
@@ -3422,7 +3439,7 @@ def build_structured_plan_outcome(
     first_errors = [*first.errors, *salvage_refusals]
     if first.ok and first.plan is not None:
         plan_dict = _with_deterministic_support(first.plan.model_dump(mode="json"), computed_support)
-        plan_dict = _merge_locked_content(plan_dict, planning_brief)
+        plan_dict = _merge_locked_content(plan_dict, planning_brief, raw_markdown)
         unfaithful = check_structured_faithfulness(plan_dict, raw_markdown, planning_brief)
         first_errors, first_warnings = _split_faithfulness(unfaithful)
         first_warnings = [*salvage_warnings, *first_warnings]
@@ -3468,7 +3485,7 @@ def build_structured_plan_outcome(
         )
     if repaired.ok and repaired.plan is not None:
         plan_dict = _with_deterministic_support(repaired.plan.model_dump(mode="json"), computed_support)
-        plan_dict = _merge_locked_content(plan_dict, planning_brief)
+        plan_dict = _merge_locked_content(plan_dict, planning_brief, raw_markdown)
         unfaithful = check_structured_faithfulness(plan_dict, raw_markdown, planning_brief)
         repaired_errors, repaired_warnings = _split_faithfulness(unfaithful)
         repaired_errors.extend(_open_plan_contract_errors(plan_dict, planning_brief))

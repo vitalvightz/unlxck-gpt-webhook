@@ -310,8 +310,8 @@ _REST_CLAUSE_RES = (
     re.compile(rf"{_NUMBER}\s*{_TIME_UNIT}\s+rest", re.IGNORECASE),
 )
 _SUBCLAUSE_REST_RES = (
-    re.compile(rf"(?:,|\bwith)\s*{_NUMBER}\s*{_TIME_UNIT}\s+rest\b", re.IGNORECASE),
-    re.compile(rf"(?:,|\bwith)\s*rest\s*:?\s*{_NUMBER}\s*{_TIME_UNIT}\b", re.IGNORECASE),
+    re.compile(rf"(?:[,;/]|\bwith)\s*{_NUMBER}\s*{_TIME_UNIT}\s+rest\b", re.IGNORECASE),
+    re.compile(rf"(?:[,;/]|\bwith)\s*rest\s*:?\s*{_NUMBER}\s*{_TIME_UNIT}\b", re.IGNORECASE),
 )
 _EFFORT_CLAUSE_RE = re.compile(
     r"(?P<method>RPE|RIR)\s*(?P<value>\d+(?:\.\d+)?(?:\s*[-–—]\s*\d+(?:\.\d+)?)?)",
@@ -861,14 +861,14 @@ def _insert_movement_block(
 
 
 def _source_lines_for_session(
-    lines: list[str] | None, title: str,
+    lines: list[str] | None, title: str, *, require_title: bool = False,
 ) -> list[str] | None:
     """Scope repeated D-day exercise names to their own source session."""
     if not lines:
         return lines
     from fightcamp.structured_session_identity import identity_tokens
     starts = [i for i, line in enumerate(lines) if _day_header_dday(line) is not None]
-    if len(starts) <= 1:
+    if len(starts) <= 1 and not require_title:
         return lines
     sections = [lines[start:end] for start, end in zip(starts, [*starts[1:], len(lines)])]
     wanted = identity_tokens(title)
@@ -877,15 +877,28 @@ def _source_lines_for_session(
     return matched[0] if len(matched) == 1 else None
 
 
+def _source_instruction_for_role(role: dict[str, Any], lines: list[str] | None) -> str:
+    title = athlete_facing_label_for(role.get("role_key"), fallback=role.get("athlete_facing_label"))
+    section = _source_lines_for_session(lines, str(title or ""), require_title=True)
+    return "\n".join(line for line in section or [] if _day_header_dday(line) is None).strip()
+
+
 def _session(
     role: dict[str, Any], d_day: int, source_lines: list[str] | None = None,
     athlete: dict[str, Any] | None = None, phase: str = "",
     progression_context: dict | None = None,
 ) -> dict[str, Any] | None:
     role_key = str(role.get("role_key") or "").strip()
-    source_lines = _source_lines_for_session(source_lines, str(role.get("athlete_facing_label") or ""))
+    title = athlete_facing_label_for(
+        role_key, fallback=str(role.get("athlete_facing_label") or "").strip() or None
+    )
+    source_lines = _source_lines_for_session(source_lines, str(title or ""))
     blocks = _blocks(role, d_day, role_key or "role", source_lines, athlete, phase, progression_context)
     instruction = _support_instruction(role)
+    if not blocks and not instruction and source_lines:
+        # An open role's approved text is its instruction; an exact source
+        # heading prevents borrowing another same-day card.
+        instruction = _source_instruction_for_role(role, source_lines)
     parsed = _parse_display_text(instruction) if instruction and not blocks else None
     if parsed is not None:
         display_block = _parsed_block(parsed, role, d_day, role_key)
@@ -898,9 +911,6 @@ def _session(
         return None
     session_index = role.get("session_index")
     suffix = session_index if isinstance(session_index, int) else 0
-    title = athlete_facing_label_for(
-        role_key, fallback=str(role.get("athlete_facing_label") or "").strip() or None
-    )
     if not blocks and parsed is not None and not parsed.activity_name:
         # One-sentence copy for a known movement: give it a block so the
         # planner's movement identity (and its demo) reaches the card.
