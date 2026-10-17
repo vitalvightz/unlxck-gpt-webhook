@@ -170,7 +170,8 @@
     "name": "Nasal Jog",
     "equipment": [],
     "phases": [
-      "GPP"
+      "GPP",
+      "SPP"
     ],
     "system": "aerobic",
     "modality": "run",
@@ -178,14 +179,13 @@
     "intensity": "zone 2",
     "tags": [
       "aerobic",
-      "low_impact",
       "recovery",
       "mech_systemic_fatigue",
       "mech_lower_lunge"
     ],
     "notes": "Low load; good for mental reset and recovery flush (low (zone 2))",
     "total_minutes": 40,
-    "impact_cost": "low",
+    "impact_cost": "moderate",
     "lactate_load": "low",
     "movement_cost": "low",
     "mechanical_risk_tags": [
@@ -196,7 +196,10 @@
     "stress_class": "anchor",
     "cost_class": "low",
     "support_only": false,
-    "meaningful_stress": true
+    "meaningful_stress": true,
+    "late_windows": [
+      "d21_to_d14"
+    ]
   },
   {
     "name": "Grapple Circuits (High Pace)",
@@ -327,7 +330,7 @@
     ],
     "system": "glycolytic",
     "modality": "run",
-    "duration": "20s uphill x 6 reps",
+    "duration": "6x20s uphill, 60s recovery",
     "intensity": "high",
     "tags": [
       "posterior_chain",
@@ -341,7 +344,7 @@
     "notes": "High intensity, not ideal with hamstring injuries (hard)",
     "work_sec": 20,
     "rpe": 9,
-    "impact_cost": "low",
+    "impact_cost": "moderate",
     "lactate_load": "high",
     "movement_cost": "high",
     "mechanical_risk_tags": [
@@ -353,7 +356,10 @@
     "stress_class": "anchor",
     "cost_class": "high",
     "support_only": false,
-    "meaningful_stress": true
+    "meaningful_stress": true,
+    "rounds": 6,
+    "rest_sec": 60,
+    "late_windows": []
   },
   {
     "name": "Shadowboxing Intervals",
@@ -1017,7 +1023,9 @@
   },
   {
     "name": "Agility Ladder (Recovery)",
-    "equipment": [],
+    "equipment": [
+      "agility_ladder"
+    ],
     "phases": [
       "GPP",
       "TAPER"
@@ -2443,7 +2451,9 @@
     "cost_class": "high",
     "support_only": false,
     "meaningful_stress": true,
-    "primary_adaptation": "alactic_speed"
+    "primary_adaptation": "alactic_speed",
+    "modality": "run",
+    "late_windows": []
   },
   {
     "name": "Wrestler Shot Series",
@@ -2508,7 +2518,7 @@
     "rest_sec": 45,
     "rounds": 12,
     "total_minutes": 11.25,
-    "impact_cost": "low",
+    "impact_cost": "high",
     "lactate_load": "high",
     "movement_cost": "high",
     "mechanical_risk_tags": [
@@ -2523,7 +2533,9 @@
     "stress_class": "anchor",
     "cost_class": "high",
     "support_only": false,
-    "meaningful_stress": true
+    "meaningful_stress": true,
+    "modality": "run",
+    "late_windows": []
   },
   {
     "name": "Heavy Bag Power Rounds",
@@ -3939,7 +3951,8 @@
     "stress_class": "anchor",
     "cost_class": "high",
     "support_only": false,
-    "meaningful_stress": true
+    "meaningful_stress": true,
+    "late_windows": []
   },
   {
     "name": "Battle Rope Waves",
@@ -4418,7 +4431,9 @@
   },
   {
     "name": "Agility Ladder Sprints",
-    "equipment": [],
+    "equipment": [
+      "agility_ladder"
+    ],
     "phases": [
       "GPP"
     ],
@@ -4457,7 +4472,8 @@
     "stress_class": "anchor",
     "cost_class": "high",
     "support_only": false,
-    "meaningful_stress": true
+    "meaningful_stress": true,
+    "late_windows": []
   },
   {
     "name": "Heavy Bag Power Intervals",
@@ -5374,7 +5390,7 @@
       "SPP"
     ],
     "system": "aerobic",
-    "modality": "run",
+    "modality": "pool_run",
     "duration": "20min",
     "intensity": "zone 2",
     "tags": [
@@ -7726,7 +7742,7 @@
       "SPP"
     ],
     "system": "glycolytic",
-    "modality": "swim",
+    "modality": "pool_run",
     "duration": "20min: 1min hard, 1min easy x10",
     "intensity": "high",
     "tags": [
@@ -7750,7 +7766,8 @@
     "stress_class": "anchor",
     "cost_class": "high",
     "support_only": false,
-    "meaningful_stress": true
+    "meaningful_stress": true,
+    "late_windows": []
   },
   {
     "name": "Easy Continuous Swimming",
@@ -9766,5 +9783,387 @@
     "stop_rules": [
       "Stop for dizziness, chest discomfort, loss of control or marked output decay."
     ]
+  },
+  {
+    "name": "5K Steady Run",
+    "equipment": [],
+    "phases": [
+      "GPP",
+      "SPP"
+    ],
+    "system": "aerobic",
+    "modality": "run",
+    "duration": "5 km continuous, conversational pace",
+    "intensity": "moderate",
+    "tags": [
+      "running",
+      "aerobic",
+      "mech_systemic_fatigue",
+      "mech_lower_lunge"
+    ],
+    "notes": "Conversational, controlled aerobic run. Distance is fixed; completion time depends on the runner. Keep easy around hard sparring.",
+    "impact_cost": "moderate",
+    "movement_cost": "moderate",
+    "lactate_load": "moderate",
+    "mechanical_risk_tags": [
+      "mech_lower_lunge",
+      "mech_systemic_fatigue"
+    ],
+    "rpe": 5,
+    "late_windows": [
+      "d21_to_d14"
+    ],
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true,
+    "source_url": "https://www.englandboxing.org/wp-content/uploads/2022/03/Level-2-Coaching-Handbook-compressed.pdf",
+    "distance_m": 5000
+  },
+  {
+    "name": "One-Mile Timed Run",
+    "equipment": [],
+    "phases": [
+      "GPP"
+    ],
+    "system": "aerobic",
+    "modality": "run",
+    "duration": "1 mile timed effort, record completion time",
+    "intensity": "high",
+    "tags": [
+      "running",
+      "aerobic",
+      "mech_systemic_fatigue",
+      "mech_lower_lunge",
+      "mech_acceleration",
+      "mech_cns_high"
+    ],
+    "notes": "Occasional fitness benchmark, not a weekly recovery run. Full warm-up; record time; avoid adjacent hard sparring.",
+    "impact_cost": "high",
+    "movement_cost": "high",
+    "lactate_load": "high",
+    "mechanical_risk_tags": [
+      "mech_lower_lunge",
+      "mech_systemic_fatigue",
+      "mech_acceleration",
+      "mech_cns_high"
+    ],
+    "rpe": 9,
+    "late_windows": [],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true,
+    "source_url": "https://www.englandboxing.org/news_articles/18890/",
+    "distance_m": 1609.344
+  },
+  {
+    "name": "Continuous Tempo Run",
+    "equipment": [],
+    "phases": [
+      "GPP",
+      "SPP"
+    ],
+    "system": "aerobic",
+    "modality": "run",
+    "duration": "25min continuous at controlled comfortably-hard pace",
+    "intensity": "hard",
+    "tags": [
+      "running",
+      "aerobic",
+      "mech_systemic_fatigue",
+      "mech_lower_lunge"
+    ],
+    "notes": "Maintain controlled threshold effort; not a maximal sprint. Use 20–30 minutes only when training load allows.",
+    "impact_cost": "moderate",
+    "movement_cost": "moderate",
+    "lactate_load": "moderate",
+    "mechanical_risk_tags": [
+      "mech_lower_lunge",
+      "mech_systemic_fatigue"
+    ],
+    "rpe": 7,
+    "late_windows": [],
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true,
+    "source_url": "https://worldathletics.org/competitions/world-athletics-road-running-championships/world-athletics-road-running-championships-7174065/for-participants/training",
+    "total_minutes": 25
+  },
+  {
+    "name": "Running Fartlek (1:2)",
+    "equipment": [],
+    "phases": [
+      "GPP",
+      "SPP"
+    ],
+    "system": "aerobic",
+    "modality": "run",
+    "duration": "8x60s fast, 120s easy jog",
+    "intensity": "hard",
+    "tags": [
+      "running",
+      "aerobic",
+      "mech_systemic_fatigue",
+      "mech_lower_lunge"
+    ],
+    "notes": "One minute fast running followed by two minutes easy jogging, repeated eight times. Jog recovery is still movement; active-work calculation counts fast minutes conservatively.",
+    "impact_cost": "moderate",
+    "movement_cost": "moderate",
+    "lactate_load": "moderate",
+    "mechanical_risk_tags": [
+      "mech_lower_lunge",
+      "mech_systemic_fatigue"
+    ],
+    "rpe": 7,
+    "late_windows": [],
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true,
+    "source_url": "https://www.englandboxing.org/wp-content/uploads/2022/03/Level-2-Coaching-Handbook-compressed.pdf",
+    "work_sec": 60,
+    "rest_sec": 120,
+    "rounds": 8
+  },
+  {
+    "name": "Running Aerobic Intervals (6x4min)",
+    "equipment": [],
+    "phases": [
+      "GPP",
+      "SPP"
+    ],
+    "system": "aerobic",
+    "modality": "run",
+    "duration": "6x240s aerobic running, 60s walking recovery",
+    "intensity": "hard",
+    "tags": [
+      "running",
+      "aerobic",
+      "mech_systemic_fatigue",
+      "mech_lower_lunge"
+    ],
+    "notes": "Controlled aerobic intervals. NSCA running road workout; do not turn these into maximal sprints.",
+    "impact_cost": "moderate",
+    "movement_cost": "moderate",
+    "lactate_load": "moderate",
+    "mechanical_risk_tags": [
+      "mech_lower_lunge",
+      "mech_systemic_fatigue"
+    ],
+    "rpe": 7,
+    "late_windows": [],
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true,
+    "source_url": "https://www.nsca.com/education/articles/kinetic-select/interval-workouts/",
+    "work_sec": 240,
+    "rest_sec": 60,
+    "rounds": 6
+  },
+  {
+    "name": "800m Running Repeats (8x)",
+    "equipment": [],
+    "phases": [
+      "SPP"
+    ],
+    "system": "glycolytic",
+    "modality": "run",
+    "duration": "8x800m hard running, 100m walking recovery",
+    "intensity": "high",
+    "tags": [
+      "running",
+      "conditioning",
+      "mech_systemic_fatigue",
+      "mech_lower_lunge",
+      "mech_acceleration",
+      "mech_cns_high"
+    ],
+    "notes": "Advanced track interval session; 100m walk between 800m repetitions. High workload: defer if contact sessions already fill the budget.",
+    "impact_cost": "high",
+    "movement_cost": "high",
+    "lactate_load": "high",
+    "mechanical_risk_tags": [
+      "mech_lower_lunge",
+      "mech_systemic_fatigue",
+      "mech_acceleration",
+      "mech_cns_high"
+    ],
+    "rpe": 8,
+    "late_windows": [],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true,
+    "source_url": "https://www.nsca.com/education/articles/kinetic-select/interval-workouts/",
+    "distance_m": 800,
+    "rounds": 8,
+    "recovery_distance_m": 100
+  },
+  {
+    "name": "Short Hill Sprints (5x10s)",
+    "equipment": [],
+    "phases": [
+      "SPP"
+    ],
+    "system": "ATP-PCr",
+    "modality": "run",
+    "duration": "5x10s maximal uphill, full walk-back recovery",
+    "intensity": "high",
+    "tags": [
+      "running",
+      "conditioning",
+      "mech_systemic_fatigue",
+      "mech_lower_lunge",
+      "mech_acceleration",
+      "mech_cns_high"
+    ],
+    "notes": "World Athletics short hill format. Full recovery between efforts; separate from the existing 8x8s Hill Sprint Repeats, which remains unchanged.",
+    "impact_cost": "high",
+    "movement_cost": "high",
+    "lactate_load": "low",
+    "mechanical_risk_tags": [
+      "mech_lower_lunge",
+      "mech_systemic_fatigue",
+      "mech_acceleration",
+      "mech_cns_high"
+    ],
+    "rpe": 9,
+    "late_windows": [],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true,
+    "source_url": "https://worldathletics.org/personal-best/performance/hill-running-training-variety-speed-sessions",
+    "work_sec": 10,
+    "rounds": 5,
+    "recovery_mode": "walk_back"
+  },
+  {
+    "name": "Long Hill Intervals (12x2min)",
+    "equipment": [],
+    "phases": [
+      "GPP",
+      "SPP"
+    ],
+    "system": "aerobic",
+    "modality": "run",
+    "duration": "12x120s hard uphill, walk-down recovery",
+    "intensity": "high",
+    "tags": [
+      "running",
+      "aerobic",
+      "mech_systemic_fatigue",
+      "mech_lower_lunge",
+      "mech_acceleration",
+      "mech_cns_high"
+    ],
+    "notes": "Advanced high-volume hill workout; walk down between repetitions until ready. With two hard sparring days, generally defer rather than add hard load.",
+    "impact_cost": "high",
+    "movement_cost": "high",
+    "lactate_load": "high",
+    "mechanical_risk_tags": [
+      "mech_lower_lunge",
+      "mech_systemic_fatigue",
+      "mech_acceleration",
+      "mech_cns_high"
+    ],
+    "rpe": 8,
+    "late_windows": [],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true,
+    "source_url": "https://www.nsca.com/education/articles/kinetic-select/interval-workouts/",
+    "work_sec": 120,
+    "rounds": 12,
+    "recovery_mode": "walk_down"
+  },
+  {
+    "name": "Descending Sprint Ladder (80-60-40m)",
+    "equipment": [],
+    "phases": [
+      "SPP"
+    ],
+    "system": "ATP-PCr",
+    "modality": "run",
+    "duration": "2x80m, 2x60m, 2x40m; walk-back recovery",
+    "intensity": "high",
+    "tags": [
+      "running",
+      "conditioning",
+      "mech_systemic_fatigue",
+      "mech_lower_lunge",
+      "mech_acceleration",
+      "mech_cns_high"
+    ],
+    "notes": "England Boxing sprint-ladder format. Distance_m is the total across six sprints; separate recovery is walking back to each start.",
+    "impact_cost": "high",
+    "movement_cost": "high",
+    "lactate_load": "low",
+    "mechanical_risk_tags": [
+      "mech_lower_lunge",
+      "mech_systemic_fatigue",
+      "mech_acceleration",
+      "mech_cns_high"
+    ],
+    "rpe": 9,
+    "late_windows": [],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true,
+    "source_url": "https://www.englandboxing.org/news_articles/18890/",
+    "distance_m": 360,
+    "distance_segments_m": [
+      80,
+      80,
+      60,
+      60,
+      40,
+      40
+    ],
+    "recovery_mode": "walk_back"
+  },
+  {
+    "name": "Boxing Round Running Intervals (10-10-10)",
+    "equipment": [],
+    "phases": [
+      "SPP"
+    ],
+    "system": "glycolytic",
+    "modality": "run",
+    "duration": "3x180s rounds: 10s walk, 10s jog, 10s sprint repeated; 60s rest between rounds",
+    "intensity": "high",
+    "tags": [
+      "running",
+      "conditioning",
+      "mech_systemic_fatigue",
+      "mech_lower_lunge",
+      "mech_acceleration",
+      "mech_cns_high"
+    ],
+    "notes": "England Boxing running drill: repeat 10s walk, 10s jog and 10s sprint throughout each 3-minute round; one-minute rest between rounds.",
+    "impact_cost": "high",
+    "movement_cost": "high",
+    "lactate_load": "high",
+    "mechanical_risk_tags": [
+      "mech_lower_lunge",
+      "mech_systemic_fatigue",
+      "mech_acceleration",
+      "mech_cns_high"
+    ],
+    "rpe": 8,
+    "late_windows": [],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true,
+    "source_url": "https://www.englandboxing.org/news_articles/18890/",
+    "work_sec": 180,
+    "rest_sec": 60,
+    "rounds": 3
   }
 ]
