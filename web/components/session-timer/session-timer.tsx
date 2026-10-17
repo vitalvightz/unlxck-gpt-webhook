@@ -1321,7 +1321,7 @@ export function SessionTimer({
           <Progress state={state} item={item} />
           {item?.kind === "interval" ? (
             <div className="st-audio-status" role="status">
-              {timer.roundAudioStatus === "preparing" ? "Preparing round audio… Keep this screen open." :
+              {view.paused ? "Round timer paused." : timer.roundAudioStatus === "preparing" ? "Preparing round audio… Keep this screen open." :
                 timer.roundAudioStatus === "unavailable" || timer.roundAudioStatus === "interrupted" ? (
                   <>Round audio {timer.roundAudioStatus === "interrupted" ? "was interrupted" : "is unavailable"}. Keep this screen open.
                     <button type="button" className="st-link" onClick={timer.restoreAudio}>Enable round audio</button>
