@@ -87,10 +87,11 @@ export function roundAudioWav(timeline: RoundAudioTimeline, clips: ReadonlyMap<T
       const offset = Math.round(cue.atMs * SAMPLE_RATE / 1000) - start;
       for (let k = 0; k < clip.length && offset + k < mixed.length; k += 1) mixed[offset + k] += clip[k];
     }
-    // Overlapping strikes must not hard-clip into harsh distortion on Safari.
-    // Keep individual recorded/synthesised clips untouched; attenuate only mixes.
-    const peak = i - first > 1 ? mixed.reduce((max, sample) => Math.max(max, Math.abs(sample)), 0) : 0;
-    const headroom = peak > 0.95 ? 0.95 / peak : 1;
+    // Safari's WAV playback must never hard-clip, even when an individual
+    // synthesised triple bell already exceeds full-scale PCM. Preserve clean
+    // samples unchanged; add headroom only when a peak would otherwise clip.
+    const peak = mixed.reduce((max, sample) => Math.max(max, Math.abs(sample)), 0);
+    const headroom = peak > 1 ? 0.95 / peak : 1;
     const pcm = new DataView(new ArrayBuffer(mixed.length * 2));
     for (let j = 0; j < mixed.length; j += 1) {
       pcm.setInt16(j * 2, Math.round(Math.max(-1, Math.min(1, mixed[j] * headroom * volume)) * 32767), true);
