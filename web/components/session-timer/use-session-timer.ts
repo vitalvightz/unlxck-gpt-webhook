@@ -173,12 +173,7 @@ export function useSessionTimer({
   const [now, setNow] = useState(() => Date.now());
   const [settings, setSettingsState] = useState<TimerSoundSettings>(() => loadSoundSettings());
   const [roundAudioStatus, setRoundAudioStatus] = useState<RoundAudioStatus>("idle");
-  const mediaActionsRef = useRef({ pause: () => {}, play: () => {} });
-  const [roundAudio] = useState(() => new RoundAudioTrack(
-    setRoundAudioStatus, undefined,
-    () => mediaActionsRef.current.pause(),
-    () => mediaActionsRef.current.play(),
-  ));
+  const [roundAudio] = useState(() => new RoundAudioTrack(setRoundAudioStatus));
   const stateRef = useRef(state);
   const audibleRef = useRef(audible);
   const settingsRef = useRef(settings);
@@ -257,10 +252,13 @@ export function useSessionTimer({
     [commit, roundAudio],
   );
 
-  // Both Safari's native audio pause/play events and the Now Playing ribbon
-  // operate on the same persisted timer engine as the on-screen controls.
-  mediaActionsRef.current.pause = () => update(pause);
-  mediaActionsRef.current.play = () => update(resume);
+  // Connect native audio pause/play events after render, without accessing a
+  // React ref in render or changing the timer during a React state update.
+  useEffect(() => {
+    roundAudio.setMediaActions(() => update(pause), () => update(resume));
+    return () => roundAudio.setMediaActions();
+  }, [roundAudio, update]);
+
   const running =
     (state.phase === "work" || state.phase === "rest") && state.pausedAt === null;
 
