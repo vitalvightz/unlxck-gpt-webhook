@@ -442,20 +442,22 @@ def _primer_rpe_with_ceiling(
 ) -> str:
     """Keep a lower authored intensity; otherwise make the cap explicit."""
     found = False
+    # A lower bank RPE remains authoritative even when written only as
+    # metadata; the countdown cap can never increase that authored effort.
+    limit = min(source_rpe, ceiling) if source_rpe is not None and 0 < source_rpe <= 10 else ceiling
 
     def clamp(match: re.Match[str]) -> str:
         nonlocal found
         found = True
         low = float(match.group("low"))
         high = float(match.group("high") or match.group("low"))
-        if high <= ceiling:
+        if high <= limit:
             return match.group(0)
-        return f"RPE {min(low, ceiling):g} max"
+        return f"RPE {min(low, limit):g} max"
 
     result = _PRIMER_RPE.sub(clamp, prescription)
     if not found:
-        cap = min(source_rpe, ceiling) if source_rpe is not None else ceiling
-        result = f"{result.rstrip(' ;,')}; RPE {cap:g} max"
+        result = f"{result.rstrip(' ;,')}; RPE {limit:g} max"
     return result
 
 
