@@ -16,6 +16,8 @@ import {
   crossedCues,
   cueRemainingMs,
   cueSounds,
+  pause,
+  resume,
   samePhaseRun,
   warningLengthMs,
   soundForEvents,
@@ -171,7 +173,12 @@ export function useSessionTimer({
   const [now, setNow] = useState(() => Date.now());
   const [settings, setSettingsState] = useState<TimerSoundSettings>(() => loadSoundSettings());
   const [roundAudioStatus, setRoundAudioStatus] = useState<RoundAudioStatus>("idle");
-  const [roundAudio] = useState(() => new RoundAudioTrack(setRoundAudioStatus));
+  const mediaActionsRef = useRef({ pause: () => {}, play: () => {} });
+  const [roundAudio] = useState(() => new RoundAudioTrack(
+    setRoundAudioStatus, undefined,
+    () => mediaActionsRef.current.pause(),
+    () => mediaActionsRef.current.play(),
+  ));
   const stateRef = useRef(state);
   const audibleRef = useRef(audible);
   const settingsRef = useRef(settings);
@@ -199,7 +206,7 @@ export function useSessionTimer({
     // still calls the rounds, so the athlete never has to look; the other
     // beeps and chimes stay quiet.
     if (sound && (audibleRef.current || MINIMIZED_SOUNDS.has(sound))) {
-      if (scheduled && roundAudio.covers(Date.now())) timerAudio().buzzSound(sound);
+      if (scheduled && roundAudio.coversCue(sound, Date.now())) timerAudio().buzzSound(sound);
       else timerAudio().play(sound);
     }
     const callout = calloutForEvents(events, next);
@@ -250,8 +257,40 @@ export function useSessionTimer({
     [commit, roundAudio],
   );
 
+  // Both Safari's native audio pause/play events and the Now Playing ribbon
+  // operate on the same persisted timer engine as the on-screen controls.
+  mediaActionsRef.current.pause = () => update(pause);
+  mediaActionsRef.current.play = () => update(resume);
   const running =
     (state.phase === "work" || state.phase === "rest") && state.pausedAt === null;
+
+  useEffect(() => {
+    if (!("mediaSession" in navigator) || (state.phase !== "work" && state.phase !== "rest")) return;
+    const mediaSession = navigator.mediaSession;
+    if (typeof MediaMetadata !== "undefined") {
+      mediaSession.metadata = new MediaMetadata({ title: "UNLXCK Round Timer", artist: "UNLXCK" });
+    }
+    const actions: Array<["pause" | "play", () => void]> = [
+      ["pause", () => update(pause)],
+      ["play", () => update(resume)],
+    ];
+    for (const [name, handler] of actions) {
+      try { mediaSession.setActionHandler(name, handler); } catch { /* Unsupported action */ }
+    }
+    return () => {
+      for (const [name] of actions) {
+        try { mediaSession.setActionHandler(name, null); } catch { /* Unsupported action */ }
+      }
+      mediaSession.playbackState = "none";
+    };
+  }, [state.phase, update]);
+
+  useEffect(() => {
+    if (!("mediaSession" in navigator)) return;
+    if (state.phase === "work" || state.phase === "rest") {
+      navigator.mediaSession.playbackState = state.pausedAt === null ? "playing" : "paused";
+    }
+  }, [state.phase, state.pausedAt]);
 
   useEffect(() => {
     if (!running) return;
