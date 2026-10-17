@@ -388,6 +388,27 @@ def _effective_counts(
     return sets, base_reps, False
 
 
+
+
+def resolve_late_primer_conditioning_dose(
+    prescription: str, *, d_day: int | None, alactic: bool, complement: bool = False,
+) -> str:
+    """Apply the scheduled-day alactic effort ceiling to a closed primer member.
+
+    A conditioning-bank rep prescription (6x3 reps) counts six efforts, not
+    three reps or eighteen fight rounds. Leave work units and reps unchanged.
+    """
+    dose = _reduce_leading_count(prescription, 1) if complement else prescription
+    if not alactic:
+        return dose
+    from .style_taper_governance import (
+        ALACTIC_MAX_ROUNDS_BY_WINDOW, style_taper_window_for_days,
+    )
+
+    window = style_taper_window_for_days(d_day)
+    return _reduce_leading_count(dose, ALACTIC_MAX_ROUNDS_BY_WINDOW[window]) if window else dose
+
+
 _NO_LOADED_LIFTING = "No loaded lifting: neural/primer, readiness or mobility only"
 
 
