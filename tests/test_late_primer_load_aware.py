@@ -386,6 +386,20 @@ def test_d6_alactic_primer_keeps_longer_recovery_and_lower_authored_effort():
     )
 
 
+def test_metadata_rpe_stricter_than_written_rpe_is_never_increased():
+    from fightcamp.stage2_payload import _late_primer_member_dose
+
+    role = _role("alactic_sharpness_day", d_day=6)
+    slot = {"role": "alactic", "selected": {
+        "name": "Lower-intensity fast cue", "system": "ATP-PCr",
+        "prescription": "4x3 reps, 60s rest; RPE 7",
+        "selection_metadata": {"rpe": 3},
+    }}
+    assert _late_primer_member_dose(role, "conditioning_slots", slot, complement=False) == (
+        "3x3 reps, 120 sec rest; RPE 3 max"
+    )
+
+
 def test_taper_rest_rules_do_not_affect_non_alactic_or_pre_window_work():
     from fightcamp.stage2_payload import _late_primer_member_dose
 
