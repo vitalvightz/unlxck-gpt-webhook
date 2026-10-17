@@ -121,25 +121,68 @@ python -m ruff check api fightcamp tests tools scripts/audit_training_intelligen
 The order-dependent test and unit-aware conditioning accounting need resolution before treating this as fully verified system-wide reliability. The evidence supports the targeted corrections and local consolidation; it does not establish that the whole generator is finished.
 
 
-## Follow-up verification: regressions against untouched Main
+## Follow-up verification after #2904 merged
 
-The full comparison is in progress. Untouched remote Main is still `3dc625d8`.
-Its own completed CI runs provide direct baseline evidence. No merge is planned.
+#2904 merged on 16 October 2026. Follow-up changes are in draft #2906, based on
+`50571155`; the pre-merge baseline remains the untouched `3dc625d8` export.
 
-Five PR-only failing cases identified so far were run unchanged against untouched
-Main: all five passed. Four still failed on the PR after its note guard had been
-removed; after the following corrections, those five original cases plus nine
-cross-owner contracts pass (**14 passed**):
+Every failure from the completed six Python shards, coaching-release job, web
+unit job and PostgreSQL job was compared by test identity. The sanitized
+[per-test ledger](../reports/training_intelligence_audit/ci_comparison.json)
+contains **149 entries**: 143 unique Python/PostgreSQL failures and six web
+failures. Of the 143 Python failures, 135 also failed Main and eight were new.
+Untouched Main had 148 unique Python failures overall. Existing failure identity
+does not imply identical internals: historical source-freeze failures also name
+intentionally changed planner modules.
 
-- Restore non-strength maintenance's original late-camp windows; the new weekly
-  normal-camp contract remains scoped to strength and development.
-- Keep supported secondary weaknesses in the existing `secondary` priority tier,
-  preserving the gas-tank contract while verifying the newly supported qualities.
-- Do not attempt an alternate substitution without the original slot's stable ID.
-- Withdraw the broad model-progression guard from saved-card recovery. Preserve
-  the original coach-note assertion instead of deleting or loosening it.
+All **eight introduced CI cases pass unchanged** after correcting maintenance
+window scope, secondary priority, anonymous-slot substitution, saved-note recovery,
+and validator counting/ownership. All eight also pass on untouched Main.
+The original saved coach-note assertions were restored, not loosened.
 
-The original CI snapshot and generated comparison artifacts describe `85447d55`;
-regeneration and the complete failed-test ledger are still pending. Existing Main
-failures are being separated from introduced regressions, including all web and
-PostgreSQL failures. Validator investigation is continuing before further changes.
+The six web failures were already present on Main. They now pass with a precise
+accessibility fix: declared technical sessions no longer describe themselves as
+changed contact. The PostgreSQL publication-label failure is identical in both
+CI runs and was not rerun locally; there is no local PostgreSQL service.
+
+The saved-card investigation found real loss after conversion: a four-step
+visualisation was reduced to steps 1, 2 and 4; expanded exercise cards hid all but
+the first cue; and a source-backed, instruction-only freshness role disappeared
+because it had no selected bank exercise. The same existing calendar-spine owner
+now restores that approved role from its exact source heading on its own D-day,
+including saved-card reads. The coverage gate checks instruction-only roles too.
+Existing sessions, completion state and IDs are retained. The actual competition
+card also shows its canonical warm-up / no-additional-S&C instruction.
+
+Two earlier renderer tests deliberately encoded truncation. Their expectations
+now require all four actions and the reset instruction, while keeping the
+existing duplicate-cue, planning-transcript and stop-rule checks. This changes
+the faulty presentation contract; it does not waive a failed training assertion.
+Full private saved-plan material remains outside the repository. Only synthetic
+regression cases and aggregate audit evidence are committed.
+
+Latest checks: **195 frontend tests**, **19 full-pipeline end-to-end tests**,
+**113 goal-delivery/preservation/contract tests**, and focused card/validator
+checks pass. Counts overlap; they are not a sum of unique tests. Ruff, Python
+import compilation, TypeScript and production build pass. ESLint reports zero
+errors and 50 existing warnings. The build used the repository's localhost API
+base for that command only; no environment file or deployment was changed.
+
+The refreshed 16-scenario comparison uses each revision's production
+`review_stage2_output`, including its existing postprocessing and release policy;
+raw validator counts remain separate. All selected-goal and programme-fidelity
+findings are clear. The eight-/twelve-week trunk gaps cite the composition owner's
+actual contact-adjacency refusal and finished-tail ownership. An unexplained host
+still blocks deferral; no membership, dose or scheduling rule was added for this.
+
+**Seven conditioning workload findings remain across the matrix.** The selected
+Sprawl-Burpee Complex is a rep-based circuit without measured active seconds;
+the seconds-based target cannot establish that its workload is sufficient. No
+seconds were fabricated, target reduced or assertion waived. Some annotation,
+phase-pool, countdown-structure and soft-frequency warnings also remain.
+The current production release policy treats validator findings observationally;
+a PASS status therefore does not prove a findings-free plan. This follow-up does
+not change that policy or claim a clean complete CI run. Existing coaching,
+historical inventory/source-freeze, and other failures remain itemized in the
+ledger. The earlier large-suite order-dependent blister comparison has not been
+reproduced under its original full ordering; the goal suites pass together.

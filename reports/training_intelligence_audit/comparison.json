@@ -66,30 +66,41 @@
         ],
         "goal_findings": [],
         "fidelity_findings": [],
-        "validator_error_codes": [
-          "conditioning_role_workload_underfilled",
-          "late_camp_effective_prescription_exceeded"
-        ],
-        "validator_warning_codes": [
-          "internal_render_contract_leak",
-          "missing_required_element",
-          "total_session_budget_exceeded"
-        ],
+        "validator_error_codes": {
+          "conditioning_role_workload_underfilled": 1
+        },
+        "validator_warning_codes": {
+          "total_session_budget_exceeded": 1
+        },
+        "raw_validator_error_codes": {
+          "conditioning_role_workload_underfilled": 1,
+          "late_camp_effective_prescription_exceeded": 1
+        },
+        "raw_validator_warning_codes": {
+          "total_session_budget_exceeded": 1,
+          "missing_required_element": 1,
+          "internal_render_contract_leak": 2
+        },
+        "release_decision": "publish_with_flags",
         "week_counts": [
           {
             "week": 1,
+            "phase": "GPP",
             "counts": null
           },
           {
             "week": 2,
+            "phase": "SPP",
             "counts": null
           },
           {
             "week": 3,
+            "phase": "SPP",
             "counts": null
           },
           {
             "week": 4,
+            "phase": "TAPER",
             "counts": null
           }
         ]
@@ -165,7 +176,7 @@
             "satisfied": true,
             "windows": [
               {
-                "min_d_day": 14,
+                "min_d_day": 2,
                 "max_d_day": 26
               }
             ],
@@ -182,29 +193,41 @@
         ],
         "goal_findings": [],
         "fidelity_findings": [],
-        "validator_error_codes": [
-          "conditioning_role_workload_underfilled"
-        ],
-        "validator_warning_codes": [
-          "internal_render_contract_leak",
-          "missing_required_element",
-          "total_session_budget_exceeded"
-        ],
+        "validator_error_codes": {
+          "conditioning_role_workload_underfilled": 1
+        },
+        "validator_warning_codes": {
+          "total_session_budget_exceeded": 1
+        },
+        "raw_validator_error_codes": {
+          "conditioning_role_workload_underfilled": 1,
+          "late_camp_effective_prescription_exceeded": 1
+        },
+        "raw_validator_warning_codes": {
+          "total_session_budget_exceeded": 1,
+          "missing_required_element": 1,
+          "internal_render_contract_leak": 2
+        },
+        "release_decision": "publish_with_flags",
         "week_counts": [
           {
             "week": 1,
+            "phase": "GPP",
             "counts": null
           },
           {
             "week": 2,
+            "phase": "SPP",
             "counts": null
           },
           {
             "week": 3,
+            "phase": "SPP",
             "counts": null
           },
           {
             "week": 4,
+            "phase": "TAPER",
             "counts": null
           }
         ]
@@ -271,29 +294,38 @@
         ],
         "goal_findings": [],
         "fidelity_findings": [],
-        "validator_error_codes": [
-          "conditioning_role_workload_underfilled",
-          "late_camp_effective_prescription_exceeded"
-        ],
-        "validator_warning_codes": [
-          "internal_render_contract_leak",
-          "missing_required_element"
-        ],
+        "validator_error_codes": {
+          "conditioning_role_workload_underfilled": 1
+        },
+        "validator_warning_codes": {},
+        "raw_validator_error_codes": {
+          "conditioning_role_workload_underfilled": 1,
+          "late_camp_effective_prescription_exceeded": 2
+        },
+        "raw_validator_warning_codes": {
+          "missing_required_element": 1,
+          "internal_render_contract_leak": 2
+        },
+        "release_decision": "publish_with_flags",
         "week_counts": [
           {
             "week": 1,
+            "phase": "GPP",
             "counts": null
           },
           {
             "week": 2,
+            "phase": "SPP",
             "counts": null
           },
           {
             "week": 3,
+            "phase": "SPP",
             "counts": null
           },
           {
             "week": 4,
+            "phase": "TAPER",
             "counts": null
           }
         ]
@@ -368,7 +400,7 @@
             "satisfied": true,
             "windows": [
               {
-                "min_d_day": 14,
+                "min_d_day": 2,
                 "max_d_day": 26
               }
             ],
@@ -385,28 +417,38 @@
         ],
         "goal_findings": [],
         "fidelity_findings": [],
-        "validator_error_codes": [
-          "conditioning_role_workload_underfilled"
-        ],
-        "validator_warning_codes": [
-          "internal_render_contract_leak",
-          "missing_required_element"
-        ],
+        "validator_error_codes": {
+          "conditioning_role_workload_underfilled": 1
+        },
+        "validator_warning_codes": {},
+        "raw_validator_error_codes": {
+          "conditioning_role_workload_underfilled": 1,
+          "late_camp_effective_prescription_exceeded": 2
+        },
+        "raw_validator_warning_codes": {
+          "missing_required_element": 1,
+          "internal_render_contract_leak": 2
+        },
+        "release_decision": "publish_with_flags",
         "week_counts": [
           {
             "week": 1,
+            "phase": "GPP",
             "counts": null
           },
           {
             "week": 2,
+            "phase": "SPP",
             "counts": null
           },
           {
             "week": 3,
+            "phase": "SPP",
             "counts": null
           },
           {
             "week": 4,
+            "phase": "TAPER",
             "counts": null
           }
         ]
@@ -482,29 +524,38 @@
         ],
         "goal_findings": [],
         "fidelity_findings": [],
-        "validator_error_codes": [
-          "late_camp_effective_prescription_exceeded"
-        ],
-        "validator_warning_codes": [
-          "internal_render_contract_leak",
-          "missing_required_element",
-          "total_session_budget_exceeded"
-        ],
+        "validator_error_codes": {},
+        "validator_warning_codes": {
+          "total_session_budget_exceeded": 1
+        },
+        "raw_validator_error_codes": {
+          "late_camp_effective_prescription_exceeded": 1
+        },
+        "raw_validator_warning_codes": {
+          "total_session_budget_exceeded": 1,
+          "missing_required_element": 1,
+          "internal_render_contract_leak": 2
+        },
+        "release_decision": "publish_with_flags",
         "week_counts": [
           {
             "week": 1,
+            "phase": "GPP",
             "counts": null
           },
           {
             "week": 2,
+            "phase": "SPP",
             "counts": null
           },
           {
             "week": 3,
+            "phase": "SPP",
             "counts": null
           },
           {
             "week": 4,
+            "phase": "TAPER",
             "counts": null
           }
         ]
@@ -580,7 +631,7 @@
             "satisfied": true,
             "windows": [
               {
-                "min_d_day": 14,
+                "min_d_day": 2,
                 "max_d_day": 26
               }
             ],
@@ -597,27 +648,38 @@
         ],
         "goal_findings": [],
         "fidelity_findings": [],
-        "validator_error_codes": [],
-        "validator_warning_codes": [
-          "internal_render_contract_leak",
-          "missing_required_element",
-          "total_session_budget_exceeded"
-        ],
+        "validator_error_codes": {},
+        "validator_warning_codes": {
+          "total_session_budget_exceeded": 1
+        },
+        "raw_validator_error_codes": {
+          "late_camp_effective_prescription_exceeded": 2
+        },
+        "raw_validator_warning_codes": {
+          "total_session_budget_exceeded": 1,
+          "missing_required_element": 1,
+          "internal_render_contract_leak": 2
+        },
+        "release_decision": "publish_with_flags",
         "week_counts": [
           {
             "week": 1,
+            "phase": "GPP",
             "counts": null
           },
           {
             "week": 2,
+            "phase": "SPP",
             "counts": null
           },
           {
             "week": 3,
+            "phase": "SPP",
             "counts": null
           },
           {
             "week": 4,
+            "phase": "TAPER",
             "counts": null
           }
         ]
@@ -761,29 +823,40 @@
         ],
         "goal_findings": [],
         "fidelity_findings": [],
-        "validator_error_codes": [
-          "late_camp_effective_prescription_exceeded"
-        ],
-        "validator_warning_codes": [
-          "internal_render_contract_leak",
-          "missing_required_element",
-          "total_session_budget_exceeded"
-        ],
+        "validator_error_codes": {
+          "late_camp_effective_prescription_exceeded": 1
+        },
+        "validator_warning_codes": {
+          "total_session_budget_exceeded": 1
+        },
+        "raw_validator_error_codes": {
+          "late_camp_effective_prescription_exceeded": 2
+        },
+        "raw_validator_warning_codes": {
+          "total_session_budget_exceeded": 1,
+          "missing_required_element": 1,
+          "internal_render_contract_leak": 2
+        },
+        "release_decision": "publish_with_flags",
         "week_counts": [
           {
             "week": 1,
+            "phase": "GPP",
             "counts": null
           },
           {
             "week": 2,
+            "phase": "SPP",
             "counts": null
           },
           {
             "week": 3,
+            "phase": "SPP",
             "counts": null
           },
           {
             "week": 4,
+            "phase": "TAPER",
             "counts": null
           }
         ]
@@ -801,7 +874,7 @@
             "satisfied": true,
             "windows": [
               {
-                "min_d_day": 14,
+                "min_d_day": 2,
                 "max_d_day": 26
               }
             ],
@@ -935,7 +1008,7 @@
             "satisfied": true,
             "windows": [
               {
-                "min_d_day": 14,
+                "min_d_day": 2,
                 "max_d_day": 26
               }
             ],
@@ -952,27 +1025,38 @@
         ],
         "goal_findings": [],
         "fidelity_findings": [],
-        "validator_error_codes": [],
-        "validator_warning_codes": [
-          "internal_render_contract_leak",
-          "missing_required_element",
-          "total_session_budget_exceeded"
-        ],
+        "validator_error_codes": {},
+        "validator_warning_codes": {
+          "total_session_budget_exceeded": 1
+        },
+        "raw_validator_error_codes": {
+          "late_camp_effective_prescription_exceeded": 1
+        },
+        "raw_validator_warning_codes": {
+          "total_session_budget_exceeded": 1,
+          "missing_required_element": 1,
+          "internal_render_contract_leak": 2
+        },
+        "release_decision": "publish_with_flags",
         "week_counts": [
           {
             "week": 1,
+            "phase": "GPP",
             "counts": null
           },
           {
             "week": 2,
+            "phase": "SPP",
             "counts": null
           },
           {
             "week": 3,
+            "phase": "SPP",
             "counts": null
           },
           {
             "week": 4,
+            "phase": "TAPER",
             "counts": null
           }
         ]
@@ -1077,30 +1161,41 @@
           }
         ],
         "fidelity_findings": [],
-        "validator_error_codes": [
-          "goal_preservation_failed",
-          "late_camp_effective_prescription_exceeded"
-        ],
-        "validator_warning_codes": [
-          "internal_render_contract_leak",
-          "missing_required_element",
-          "total_session_budget_exceeded"
-        ],
+        "validator_error_codes": {
+          "goal_preservation_failed": 1
+        },
+        "validator_warning_codes": {
+          "total_session_budget_exceeded": 1
+        },
+        "raw_validator_error_codes": {
+          "goal_preservation_failed": 1,
+          "late_camp_effective_prescription_exceeded": 1
+        },
+        "raw_validator_warning_codes": {
+          "total_session_budget_exceeded": 1,
+          "missing_required_element": 1,
+          "internal_render_contract_leak": 2
+        },
+        "release_decision": "publish_with_flags",
         "week_counts": [
           {
             "week": 1,
+            "phase": "GPP",
             "counts": null
           },
           {
             "week": 2,
+            "phase": "SPP",
             "counts": null
           },
           {
             "week": 3,
+            "phase": "SPP",
             "counts": null
           },
           {
             "week": 4,
+            "phase": "TAPER",
             "counts": null
           }
         ]
@@ -1202,27 +1297,38 @@
         ],
         "goal_findings": [],
         "fidelity_findings": [],
-        "validator_error_codes": [],
-        "validator_warning_codes": [
-          "internal_render_contract_leak",
-          "missing_required_element",
-          "total_session_budget_exceeded"
-        ],
+        "validator_error_codes": {},
+        "validator_warning_codes": {
+          "total_session_budget_exceeded": 1
+        },
+        "raw_validator_error_codes": {
+          "late_camp_effective_prescription_exceeded": 1
+        },
+        "raw_validator_warning_codes": {
+          "total_session_budget_exceeded": 1,
+          "missing_required_element": 1,
+          "internal_render_contract_leak": 2
+        },
+        "release_decision": "publish_with_flags",
         "week_counts": [
           {
             "week": 1,
+            "phase": "GPP",
             "counts": null
           },
           {
             "week": 2,
+            "phase": "SPP",
             "counts": null
           },
           {
             "week": 3,
+            "phase": "SPP",
             "counts": null
           },
           {
             "week": 4,
+            "phase": "TAPER",
             "counts": null
           }
         ]
@@ -1332,28 +1438,37 @@
         ],
         "goal_findings": [],
         "fidelity_findings": [],
-        "validator_error_codes": [
-          "conditioning_role_workload_underfilled"
-        ],
-        "validator_warning_codes": [
-          "internal_render_contract_leak",
-          "missing_required_element"
-        ],
+        "validator_error_codes": {
+          "conditioning_role_workload_underfilled": 1
+        },
+        "validator_warning_codes": {},
+        "raw_validator_error_codes": {
+          "conditioning_role_workload_underfilled": 1
+        },
+        "raw_validator_warning_codes": {
+          "missing_required_element": 1,
+          "internal_render_contract_leak": 2
+        },
+        "release_decision": "publish_with_flags",
         "week_counts": [
           {
             "week": 1,
+            "phase": "GPP",
             "counts": null
           },
           {
             "week": 2,
+            "phase": "SPP",
             "counts": null
           },
           {
             "week": 3,
+            "phase": "SPP",
             "counts": null
           },
           {
             "week": 4,
+            "phase": "TAPER",
             "counts": null
           }
         ]
@@ -1369,7 +1484,7 @@
             "satisfied": true,
             "windows": [
               {
-                "min_d_day": 14,
+                "min_d_day": 2,
                 "max_d_day": 26
               }
             ],
@@ -1441,13 +1556,13 @@
             "satisfied": false,
             "windows": [
               {
-                "min_d_day": 14,
+                "min_d_day": 2,
                 "max_d_day": 26
               }
             ],
             "missing": [
               {
-                "min_d_day": 14,
+                "min_d_day": 2,
                 "max_d_day": 26
               }
             ],
@@ -1459,7 +1574,7 @@
                 "week_index": 1,
                 "role_key": "secondary_strength_day",
                 "coverage_window": {
-                  "min_d_day": 14,
+                  "min_d_day": 2,
                   "max_d_day": 26
                 }
               },
@@ -1470,7 +1585,7 @@
                 "week_index": 2,
                 "role_key": "transfer_strength_day",
                 "coverage_window": {
-                  "min_d_day": 14,
+                  "min_d_day": 2,
                   "max_d_day": 26
                 }
               },
@@ -1481,18 +1596,40 @@
                 "week_index": 2,
                 "role_key": "neural_plus_strength_day",
                 "coverage_window": {
-                  "min_d_day": 14,
+                  "min_d_day": 2,
                   "max_d_day": 26
                 }
               },
               {
                 "reason_code": "high_fatigue",
-                "authority": "session_composition.trunk_support",
-                "week_index": 1,
-                "role_key": "primary_strength_day",
-                "d_day": 26,
+                "authority": "planner_compression",
+                "source_reason_code": "high_fatigue",
+                "week_index": 3,
+                "role_key": "strength_touch_day",
                 "coverage_window": {
-                  "min_d_day": 14,
+                  "min_d_day": 2,
+                  "max_d_day": 26
+                }
+              },
+              {
+                "reason_code": "high_fatigue",
+                "authority": "planner_compression",
+                "source_reason_code": "high_fatigue",
+                "week_index": 3,
+                "role_key": "neural_plus_strength_day",
+                "coverage_window": {
+                  "min_d_day": 2,
+                  "max_d_day": 26
+                }
+              },
+              {
+                "reason_code": "high_fatigue",
+                "authority": "planner_compression",
+                "source_reason_code": "high_fatigue",
+                "week_index": 4,
+                "role_key": "neural_primer_day",
+                "coverage_window": {
+                  "min_d_day": 2,
                   "max_d_day": 26
                 }
               }
@@ -1502,28 +1639,37 @@
         ],
         "goal_findings": [],
         "fidelity_findings": [],
-        "validator_error_codes": [
-          "conditioning_role_workload_underfilled"
-        ],
-        "validator_warning_codes": [
-          "internal_render_contract_leak",
-          "missing_required_element"
-        ],
+        "validator_error_codes": {
+          "conditioning_role_workload_underfilled": 1
+        },
+        "validator_warning_codes": {},
+        "raw_validator_error_codes": {
+          "conditioning_role_workload_underfilled": 1
+        },
+        "raw_validator_warning_codes": {
+          "missing_required_element": 1,
+          "internal_render_contract_leak": 2
+        },
+        "release_decision": "publish_with_flags",
         "week_counts": [
           {
             "week": 1,
+            "phase": "GPP",
             "counts": null
           },
           {
             "week": 2,
+            "phase": "SPP",
             "counts": null
           },
           {
             "week": 3,
+            "phase": "SPP",
             "counts": null
           },
           {
             "week": 4,
+            "phase": "TAPER",
             "counts": null
           }
         ]
@@ -1587,38 +1733,54 @@
         ],
         "goal_findings": [],
         "fidelity_findings": [],
-        "validator_error_codes": [
-          "goal_preservation_render_mismatch"
-        ],
-        "validator_warning_codes": [
-          "late_camp_session_incomplete",
-          "late_fight_forbidden_content",
-          "missing_week_session_role",
-          "total_session_budget_exceeded"
-        ],
+        "validator_error_codes": {
+          "goal_preservation_render_mismatch": 1
+        },
+        "validator_warning_codes": {
+          "total_session_budget_exceeded": 1,
+          "missing_week_session_role": 4,
+          "late_camp_session_incomplete": 2,
+          "late_fight_forbidden_content": 1
+        },
+        "raw_validator_error_codes": {
+          "goal_preservation_render_mismatch": 1
+        },
+        "raw_validator_warning_codes": {
+          "total_session_budget_exceeded": 1,
+          "missing_week_session_role": 4,
+          "late_camp_session_incomplete": 2,
+          "late_fight_forbidden_content": 1
+        },
+        "release_decision": "publish_with_flags",
         "week_counts": [
           {
             "week": 1,
+            "phase": "TAPER",
             "counts": null
           },
           {
             "week": 2,
+            "phase": "TAPER",
             "counts": null
           },
           {
             "week": 3,
+            "phase": "TAPER",
             "counts": null
           },
           {
             "week": 4,
+            "phase": "TAPER",
             "counts": null
           },
           {
             "week": 5,
+            "phase": "TAPER",
             "counts": null
           },
           {
             "week": 6,
+            "phase": "TAPER",
             "counts": null
           }
         ]
@@ -1707,39 +1869,56 @@
         ],
         "goal_findings": [],
         "fidelity_findings": [],
-        "validator_error_codes": [],
-        "validator_warning_codes": [
-          "late_camp_session_incomplete",
-          "late_fight_block_overage",
-          "late_fight_forbidden_content",
-          "late_fight_unapproved_exercise_rendered",
-          "late_fight_window_preferred_missing",
-          "missing_week_session_role",
-          "total_session_budget_exceeded"
-        ],
+        "validator_error_codes": {},
+        "validator_warning_codes": {
+          "total_session_budget_exceeded": 1,
+          "missing_week_session_role": 4,
+          "late_camp_session_incomplete": 2,
+          "late_fight_block_overage": 5,
+          "late_fight_forbidden_content": 1,
+          "late_fight_window_preferred_missing": 2,
+          "late_fight_unapproved_exercise_rendered": 1
+        },
+        "raw_validator_error_codes": {},
+        "raw_validator_warning_codes": {
+          "total_session_budget_exceeded": 1,
+          "missing_week_session_role": 4,
+          "late_camp_session_incomplete": 2,
+          "late_fight_block_overage": 5,
+          "late_fight_forbidden_content": 1,
+          "late_fight_window_preferred_missing": 2,
+          "late_fight_unapproved_exercise_rendered": 1
+        },
+        "release_decision": "publish_with_flags",
         "week_counts": [
           {
             "week": 1,
+            "phase": "TAPER",
             "counts": null
           },
           {
             "week": 2,
+            "phase": "TAPER",
             "counts": null
           },
           {
             "week": 3,
+            "phase": "TAPER",
             "counts": null
           },
           {
             "week": 4,
+            "phase": "TAPER",
             "counts": null
           },
           {
             "week": 5,
+            "phase": "TAPER",
             "counts": null
           },
           {
             "week": 6,
+            "phase": "TAPER",
             "counts": null
           }
         ]
@@ -1866,45 +2045,60 @@
         ],
         "goal_findings": [],
         "fidelity_findings": [],
-        "validator_error_codes": [
-          "goal_preservation_render_mismatch",
-          "late_camp_effective_prescription_exceeded"
-        ],
-        "validator_warning_codes": [
-          "internal_render_contract_leak",
-          "missing_required_element"
-        ],
+        "validator_error_codes": {
+          "goal_preservation_render_mismatch": 1
+        },
+        "validator_warning_codes": {
+          "missing_required_element": 1
+        },
+        "raw_validator_error_codes": {
+          "goal_preservation_render_mismatch": 1,
+          "late_camp_effective_prescription_exceeded": 7
+        },
+        "raw_validator_warning_codes": {
+          "missing_required_element": 1,
+          "internal_render_contract_leak": 4
+        },
+        "release_decision": "publish_with_flags",
         "week_counts": [
           {
             "week": 1,
+            "phase": "GPP",
             "counts": null
           },
           {
             "week": 2,
+            "phase": "GPP",
             "counts": null
           },
           {
             "week": 3,
+            "phase": "GPP",
             "counts": null
           },
           {
             "week": 4,
+            "phase": "SPP",
             "counts": null
           },
           {
             "week": 5,
+            "phase": "SPP",
             "counts": null
           },
           {
             "week": 6,
+            "phase": "SPP",
             "counts": null
           },
           {
             "week": 7,
+            "phase": "TAPER",
             "counts": null
           },
           {
             "week": 8,
+            "phase": "TAPER",
             "counts": null
           }
         ]
@@ -2054,34 +2248,68 @@
           },
           {
             "goal": "trunk_strength",
-            "state": "maintain",
-            "satisfied": true,
+            "state": "defer",
+            "satisfied": false,
             "windows": [
               {
-                "min_d_day": 14,
-                "max_d_day": 27
+                "min_d_day": 2,
+                "max_d_day": 15
               },
               {
-                "min_d_day": 28,
-                "max_d_day": 41
+                "min_d_day": 16,
+                "max_d_day": 29
               },
               {
-                "min_d_day": 42,
+                "min_d_day": 30,
                 "max_d_day": 55
               }
             ],
-            "missing": [],
-            "constraints": [],
+            "missing": [
+              {
+                "min_d_day": 2,
+                "max_d_day": 15
+              }
+            ],
+            "constraints": [
+              {
+                "week_index": 7,
+                "role_key": "strength_touch_day",
+                "d_day": 13,
+                "coverage_window": {
+                  "min_d_day": 2,
+                  "max_d_day": 15
+                },
+                "reason_code": "fight_proximity",
+                "authority": "late_fight_tail_ownership"
+              },
+              {
+                "week_index": 8,
+                "role_key": "alactic_sharpness_day",
+                "d_day": 6,
+                "coverage_window": {
+                  "min_d_day": 2,
+                  "max_d_day": 15
+                },
+                "reason_code": "fight_proximity",
+                "authority": "late_fight_tail_ownership"
+              },
+              {
+                "reason_code": "hard_sparring_priority",
+                "authority": "session_composition.embedded_trunk_support",
+                "week_index": 6,
+                "role_key": "fight_pace_repeatability_day",
+                "d_day": 14,
+                "coverage_window": {
+                  "min_d_day": 2,
+                  "max_d_day": 15
+                }
+              }
+            ],
             "witnesses": [
               {
                 "day": 27,
                 "name": "Med-Ball Rotational Slam",
                 "dose": "4x2 reps at max speed; full rest 120s."
-              },
-              {
-                "day": 41,
-                "name": "Plank",
-                "dose": "2 x 20s hold @ RPE 6; rest 60s."
               },
               {
                 "day": 55,
@@ -2093,42 +2321,57 @@
         ],
         "goal_findings": [],
         "fidelity_findings": [],
-        "validator_error_codes": [],
-        "validator_warning_codes": [
-          "internal_render_contract_leak",
-          "missing_required_element"
-        ],
+        "validator_error_codes": {},
+        "validator_warning_codes": {
+          "missing_required_element": 1
+        },
+        "raw_validator_error_codes": {
+          "late_camp_effective_prescription_exceeded": 6
+        },
+        "raw_validator_warning_codes": {
+          "missing_required_element": 1,
+          "internal_render_contract_leak": 4
+        },
+        "release_decision": "publish_with_flags",
         "week_counts": [
           {
             "week": 1,
+            "phase": "GPP",
             "counts": null
           },
           {
             "week": 2,
+            "phase": "GPP",
             "counts": null
           },
           {
             "week": 3,
+            "phase": "GPP",
             "counts": null
           },
           {
             "week": 4,
+            "phase": "SPP",
             "counts": null
           },
           {
             "week": 5,
+            "phase": "SPP",
             "counts": null
           },
           {
             "week": 6,
+            "phase": "SPP",
             "counts": null
           },
           {
             "week": 7,
+            "phase": "TAPER",
             "counts": null
           },
           {
             "week": 8,
+            "phase": "TAPER",
             "counts": null
           }
         ]
@@ -2315,61 +2558,80 @@
         ],
         "goal_findings": [],
         "fidelity_findings": [],
-        "validator_error_codes": [
-          "goal_preservation_render_mismatch",
-          "late_camp_effective_prescription_exceeded"
-        ],
-        "validator_warning_codes": [
-          "internal_render_contract_leak",
-          "missing_required_element"
-        ],
+        "validator_error_codes": {
+          "goal_preservation_render_mismatch": 2
+        },
+        "validator_warning_codes": {
+          "missing_required_element": 1
+        },
+        "raw_validator_error_codes": {
+          "goal_preservation_render_mismatch": 2,
+          "late_camp_effective_prescription_exceeded": 11
+        },
+        "raw_validator_warning_codes": {
+          "missing_required_element": 1,
+          "internal_render_contract_leak": 6
+        },
+        "release_decision": "publish_with_flags",
         "week_counts": [
           {
             "week": 1,
+            "phase": "GPP",
             "counts": null
           },
           {
             "week": 2,
+            "phase": "GPP",
             "counts": null
           },
           {
             "week": 3,
+            "phase": "GPP",
             "counts": null
           },
           {
             "week": 4,
+            "phase": "GPP",
             "counts": null
           },
           {
             "week": 5,
+            "phase": "GPP",
             "counts": null
           },
           {
             "week": 6,
+            "phase": "SPP",
             "counts": null
           },
           {
             "week": 7,
+            "phase": "SPP",
             "counts": null
           },
           {
             "week": 8,
+            "phase": "SPP",
             "counts": null
           },
           {
             "week": 9,
+            "phase": "SPP",
             "counts": null
           },
           {
             "week": 10,
+            "phase": "SPP",
             "counts": null
           },
           {
             "week": 11,
+            "phase": "TAPER",
             "counts": null
           },
           {
             "week": 12,
+            "phase": "TAPER",
             "counts": null
           }
         ]
@@ -2597,32 +2859,71 @@
           },
           {
             "goal": "trunk_strength",
-            "state": "maintain",
-            "satisfied": true,
+            "state": "defer",
+            "satisfied": false,
             "windows": [
               {
-                "min_d_day": 14,
-                "max_d_day": 27
+                "min_d_day": 2,
+                "max_d_day": 15
               },
               {
-                "min_d_day": 28,
-                "max_d_day": 41
+                "min_d_day": 16,
+                "max_d_day": 29
               },
               {
-                "min_d_day": 42,
-                "max_d_day": 55
+                "min_d_day": 30,
+                "max_d_day": 43
               },
               {
-                "min_d_day": 56,
-                "max_d_day": 69
+                "min_d_day": 44,
+                "max_d_day": 57
               },
               {
-                "min_d_day": 70,
+                "min_d_day": 58,
                 "max_d_day": 83
               }
             ],
-            "missing": [],
-            "constraints": [],
+            "missing": [
+              {
+                "min_d_day": 2,
+                "max_d_day": 15
+              }
+            ],
+            "constraints": [
+              {
+                "week_index": 11,
+                "role_key": "strength_touch_day",
+                "d_day": 13,
+                "coverage_window": {
+                  "min_d_day": 2,
+                  "max_d_day": 15
+                },
+                "reason_code": "fight_proximity",
+                "authority": "late_fight_tail_ownership"
+              },
+              {
+                "week_index": 12,
+                "role_key": "alactic_sharpness_day",
+                "d_day": 6,
+                "coverage_window": {
+                  "min_d_day": 2,
+                  "max_d_day": 15
+                },
+                "reason_code": "fight_proximity",
+                "authority": "late_fight_tail_ownership"
+              },
+              {
+                "reason_code": "hard_sparring_priority",
+                "authority": "session_composition.embedded_trunk_support",
+                "week_index": 10,
+                "role_key": "fight_pace_repeatability_day",
+                "d_day": 14,
+                "coverage_window": {
+                  "min_d_day": 2,
+                  "max_d_day": 15
+                }
+              }
+            ],
             "witnesses": [
               {
                 "day": 27,
@@ -2635,14 +2936,9 @@
                 "dose": "4x2 reps at max speed; full rest 120s."
               },
               {
-                "day": 55,
-                "name": "Plank",
-                "dose": "2 x 20s hold @ RPE 6; rest 60s."
-              },
-              {
-                "day": 69,
-                "name": "Plank",
-                "dose": "2 x 20s hold @ RPE 6; rest 60s."
+                "day": 56,
+                "name": "Cable Pallof Press",
+                "dose": "2 sets x 6 reps or 20s tempo (3-1-3), RPE 6."
               },
               {
                 "day": 83,
@@ -2654,58 +2950,77 @@
         ],
         "goal_findings": [],
         "fidelity_findings": [],
-        "validator_error_codes": [],
-        "validator_warning_codes": [
-          "internal_render_contract_leak",
-          "missing_required_element"
-        ],
+        "validator_error_codes": {},
+        "validator_warning_codes": {
+          "missing_required_element": 1
+        },
+        "raw_validator_error_codes": {
+          "late_camp_effective_prescription_exceeded": 10
+        },
+        "raw_validator_warning_codes": {
+          "missing_required_element": 1,
+          "internal_render_contract_leak": 6
+        },
+        "release_decision": "publish_with_flags",
         "week_counts": [
           {
             "week": 1,
+            "phase": "GPP",
             "counts": null
           },
           {
             "week": 2,
+            "phase": "GPP",
             "counts": null
           },
           {
             "week": 3,
+            "phase": "GPP",
             "counts": null
           },
           {
             "week": 4,
+            "phase": "GPP",
             "counts": null
           },
           {
             "week": 5,
+            "phase": "GPP",
             "counts": null
           },
           {
             "week": 6,
+            "phase": "SPP",
             "counts": null
           },
           {
             "week": 7,
+            "phase": "SPP",
             "counts": null
           },
           {
             "week": 8,
+            "phase": "SPP",
             "counts": null
           },
           {
             "week": 9,
+            "phase": "SPP",
             "counts": null
           },
           {
             "week": 10,
+            "phase": "SPP",
             "counts": null
           },
           {
             "week": 11,
+            "phase": "TAPER",
             "counts": null
           },
           {
             "week": 12,
+            "phase": "TAPER",
             "counts": null
           }
         ]
@@ -2796,30 +3111,42 @@
         ],
         "goal_findings": [],
         "fidelity_findings": [],
-        "validator_error_codes": [
-          "conditioning_role_workload_underfilled",
-          "late_camp_effective_prescription_exceeded"
-        ],
-        "validator_warning_codes": [
-          "internal_render_contract_leak",
-          "missing_required_element",
-          "total_session_budget_exceeded"
-        ],
+        "validator_error_codes": {
+          "conditioning_role_workload_underfilled": 1
+        },
+        "validator_warning_codes": {
+          "total_session_budget_exceeded": 1,
+          "missing_required_element": 1
+        },
+        "raw_validator_error_codes": {
+          "conditioning_role_workload_underfilled": 1,
+          "late_camp_effective_prescription_exceeded": 1
+        },
+        "raw_validator_warning_codes": {
+          "total_session_budget_exceeded": 1,
+          "missing_required_element": 2,
+          "internal_render_contract_leak": 2
+        },
+        "release_decision": "publish_with_flags",
         "week_counts": [
           {
             "week": 1,
+            "phase": "GPP",
             "counts": null
           },
           {
             "week": 2,
+            "phase": "SPP",
             "counts": null
           },
           {
             "week": 3,
+            "phase": "SPP",
             "counts": null
           },
           {
             "week": 4,
+            "phase": "TAPER",
             "counts": null
           }
         ]
@@ -2835,7 +3162,7 @@
             "satisfied": true,
             "windows": [
               {
-                "min_d_day": 14,
+                "min_d_day": 2,
                 "max_d_day": 26
               }
             ],
@@ -2930,13 +3257,13 @@
             "satisfied": false,
             "windows": [
               {
-                "min_d_day": 14,
+                "min_d_day": 2,
                 "max_d_day": 26
               }
             ],
             "missing": [
               {
-                "min_d_day": 14,
+                "min_d_day": 2,
                 "max_d_day": 26
               }
             ],
@@ -2948,7 +3275,7 @@
                 "week_index": 1,
                 "role_key": "secondary_strength_day",
                 "coverage_window": {
-                  "min_d_day": 14,
+                  "min_d_day": 2,
                   "max_d_day": 26
                 }
               },
@@ -2959,7 +3286,7 @@
                 "week_index": 2,
                 "role_key": "transfer_strength_day",
                 "coverage_window": {
-                  "min_d_day": 14,
+                  "min_d_day": 2,
                   "max_d_day": 26
                 }
               },
@@ -2970,7 +3297,29 @@
                 "week_index": 2,
                 "role_key": "neural_plus_strength_day",
                 "coverage_window": {
-                  "min_d_day": 14,
+                  "min_d_day": 2,
+                  "max_d_day": 26
+                }
+              },
+              {
+                "reason_code": "injury_constraint",
+                "authority": "planner_compression",
+                "source_reason_code": "injury_management",
+                "week_index": 3,
+                "role_key": "strength_touch_day",
+                "coverage_window": {
+                  "min_d_day": 2,
+                  "max_d_day": 26
+                }
+              },
+              {
+                "reason_code": "injury_constraint",
+                "authority": "planner_compression",
+                "source_reason_code": "injury_management",
+                "week_index": 3,
+                "role_key": "neural_plus_strength_day",
+                "coverage_window": {
+                  "min_d_day": 2,
                   "max_d_day": 26
                 }
               }
@@ -2980,29 +3329,42 @@
         ],
         "goal_findings": [],
         "fidelity_findings": [],
-        "validator_error_codes": [
-          "conditioning_role_workload_underfilled"
-        ],
-        "validator_warning_codes": [
-          "internal_render_contract_leak",
-          "missing_required_element",
-          "total_session_budget_exceeded"
-        ],
+        "validator_error_codes": {
+          "conditioning_role_workload_underfilled": 1
+        },
+        "validator_warning_codes": {
+          "total_session_budget_exceeded": 1,
+          "missing_required_element": 1
+        },
+        "raw_validator_error_codes": {
+          "conditioning_role_workload_underfilled": 1,
+          "late_camp_effective_prescription_exceeded": 1
+        },
+        "raw_validator_warning_codes": {
+          "total_session_budget_exceeded": 1,
+          "missing_required_element": 2,
+          "internal_render_contract_leak": 2
+        },
+        "release_decision": "publish_with_flags",
         "week_counts": [
           {
             "week": 1,
+            "phase": "GPP",
             "counts": null
           },
           {
             "week": 2,
+            "phase": "SPP",
             "counts": null
           },
           {
             "week": 3,
+            "phase": "SPP",
             "counts": null
           },
           {
             "week": 4,
+            "phase": "TAPER",
             "counts": null
           }
         ]
@@ -3093,30 +3455,41 @@
         ],
         "goal_findings": [],
         "fidelity_findings": [],
-        "validator_error_codes": [
-          "conditioning_role_workload_underfilled",
-          "late_camp_effective_prescription_exceeded"
-        ],
-        "validator_warning_codes": [
-          "internal_render_contract_leak",
-          "missing_required_element",
-          "total_session_budget_exceeded"
-        ],
+        "validator_error_codes": {
+          "conditioning_role_workload_underfilled": 1
+        },
+        "validator_warning_codes": {
+          "total_session_budget_exceeded": 1
+        },
+        "raw_validator_error_codes": {
+          "conditioning_role_workload_underfilled": 1,
+          "late_camp_effective_prescription_exceeded": 2
+        },
+        "raw_validator_warning_codes": {
+          "total_session_budget_exceeded": 1,
+          "missing_required_element": 1,
+          "internal_render_contract_leak": 2
+        },
+        "release_decision": "publish_with_flags",
         "week_counts": [
           {
             "week": 1,
+            "phase": "GPP",
             "counts": null
           },
           {
             "week": 2,
+            "phase": "SPP",
             "counts": null
           },
           {
             "week": 3,
+            "phase": "SPP",
             "counts": null
           },
           {
             "week": 4,
+            "phase": "TAPER",
             "counts": null
           }
         ]
@@ -3132,7 +3505,7 @@
             "satisfied": true,
             "windows": [
               {
-                "min_d_day": 14,
+                "min_d_day": 2,
                 "max_d_day": 26
               }
             ],
@@ -3227,13 +3600,13 @@
             "satisfied": false,
             "windows": [
               {
-                "min_d_day": 14,
+                "min_d_day": 2,
                 "max_d_day": 26
               }
             ],
             "missing": [
               {
-                "min_d_day": 14,
+                "min_d_day": 2,
                 "max_d_day": 26
               }
             ],
@@ -3245,7 +3618,7 @@
                 "week_index": 1,
                 "role_key": "secondary_strength_day",
                 "coverage_window": {
-                  "min_d_day": 14,
+                  "min_d_day": 2,
                   "max_d_day": 26
                 }
               },
@@ -3256,7 +3629,7 @@
                 "week_index": 2,
                 "role_key": "transfer_strength_day",
                 "coverage_window": {
-                  "min_d_day": 14,
+                  "min_d_day": 2,
                   "max_d_day": 26
                 }
               },
@@ -3267,18 +3640,40 @@
                 "week_index": 2,
                 "role_key": "neural_plus_strength_day",
                 "coverage_window": {
-                  "min_d_day": 14,
+                  "min_d_day": 2,
                   "max_d_day": 26
                 }
               },
               {
                 "reason_code": "weight_cut_pressure",
-                "authority": "session_composition.trunk_support",
-                "week_index": 1,
-                "role_key": "primary_strength_day",
-                "d_day": 26,
+                "authority": "planner_compression",
+                "source_reason_code": "active_weight_cut",
+                "week_index": 3,
+                "role_key": "strength_touch_day",
                 "coverage_window": {
-                  "min_d_day": 14,
+                  "min_d_day": 2,
+                  "max_d_day": 26
+                }
+              },
+              {
+                "reason_code": "weight_cut_pressure",
+                "authority": "planner_compression",
+                "source_reason_code": "active_weight_cut",
+                "week_index": 3,
+                "role_key": "neural_plus_strength_day",
+                "coverage_window": {
+                  "min_d_day": 2,
+                  "max_d_day": 26
+                }
+              },
+              {
+                "reason_code": "weight_cut_pressure",
+                "authority": "planner_compression",
+                "source_reason_code": "active_weight_cut",
+                "week_index": 4,
+                "role_key": "neural_primer_day",
+                "coverage_window": {
+                  "min_d_day": 2,
                   "max_d_day": 26
                 }
               }
@@ -3288,29 +3683,41 @@
         ],
         "goal_findings": [],
         "fidelity_findings": [],
-        "validator_error_codes": [
-          "conditioning_role_workload_underfilled"
-        ],
-        "validator_warning_codes": [
-          "internal_render_contract_leak",
-          "missing_required_element",
-          "total_session_budget_exceeded"
-        ],
+        "validator_error_codes": {
+          "conditioning_role_workload_underfilled": 1
+        },
+        "validator_warning_codes": {
+          "total_session_budget_exceeded": 1
+        },
+        "raw_validator_error_codes": {
+          "conditioning_role_workload_underfilled": 1,
+          "late_camp_effective_prescription_exceeded": 2
+        },
+        "raw_validator_warning_codes": {
+          "total_session_budget_exceeded": 1,
+          "missing_required_element": 1,
+          "internal_render_contract_leak": 2
+        },
+        "release_decision": "publish_with_flags",
         "week_counts": [
           {
             "week": 1,
+            "phase": "GPP",
             "counts": null
           },
           {
             "week": 2,
+            "phase": "SPP",
             "counts": null
           },
           {
             "week": 3,
+            "phase": "SPP",
             "counts": null
           },
           {
             "week": 4,
+            "phase": "TAPER",
             "counts": null
           }
         ]
@@ -3377,30 +3784,41 @@
         ],
         "goal_findings": [],
         "fidelity_findings": [],
-        "validator_error_codes": [
-          "conditioning_role_workload_underfilled",
-          "late_camp_effective_prescription_exceeded"
-        ],
-        "validator_warning_codes": [
-          "internal_render_contract_leak",
-          "missing_required_element",
-          "total_session_budget_exceeded"
-        ],
+        "validator_error_codes": {
+          "conditioning_role_workload_underfilled": 1
+        },
+        "validator_warning_codes": {
+          "total_session_budget_exceeded": 2
+        },
+        "raw_validator_error_codes": {
+          "conditioning_role_workload_underfilled": 1,
+          "late_camp_effective_prescription_exceeded": 2
+        },
+        "raw_validator_warning_codes": {
+          "total_session_budget_exceeded": 2,
+          "missing_required_element": 1,
+          "internal_render_contract_leak": 1
+        },
+        "release_decision": "publish_with_flags",
         "week_counts": [
           {
             "week": 1,
+            "phase": "GPP",
             "counts": null
           },
           {
             "week": 2,
+            "phase": "SPP",
             "counts": null
           },
           {
             "week": 3,
+            "phase": "SPP",
             "counts": null
           },
           {
             "week": 4,
+            "phase": "TAPER",
             "counts": null
           }
         ]
@@ -3476,7 +3894,7 @@
             "satisfied": true,
             "windows": [
               {
-                "min_d_day": 14,
+                "min_d_day": 2,
                 "max_d_day": 26
               }
             ],
@@ -3493,29 +3911,41 @@
         ],
         "goal_findings": [],
         "fidelity_findings": [],
-        "validator_error_codes": [
-          "conditioning_role_workload_underfilled"
-        ],
-        "validator_warning_codes": [
-          "internal_render_contract_leak",
-          "missing_required_element",
-          "total_session_budget_exceeded"
-        ],
+        "validator_error_codes": {
+          "conditioning_role_workload_underfilled": 1
+        },
+        "validator_warning_codes": {
+          "total_session_budget_exceeded": 2
+        },
+        "raw_validator_error_codes": {
+          "conditioning_role_workload_underfilled": 1,
+          "late_camp_effective_prescription_exceeded": 2
+        },
+        "raw_validator_warning_codes": {
+          "total_session_budget_exceeded": 2,
+          "missing_required_element": 1,
+          "internal_render_contract_leak": 1
+        },
+        "release_decision": "publish_with_flags",
         "week_counts": [
           {
             "week": 1,
+            "phase": "GPP",
             "counts": null
           },
           {
             "week": 2,
+            "phase": "SPP",
             "counts": null
           },
           {
             "week": 3,
+            "phase": "SPP",
             "counts": null
           },
           {
             "week": 4,
+            "phase": "TAPER",
             "counts": null
           }
         ]
@@ -3622,29 +4052,40 @@
         ],
         "goal_findings": [],
         "fidelity_findings": [],
-        "validator_error_codes": [
-          "late_camp_effective_prescription_exceeded"
-        ],
-        "validator_warning_codes": [
-          "internal_render_contract_leak",
-          "missing_required_element",
-          "total_session_budget_exceeded"
-        ],
+        "validator_error_codes": {
+          "late_camp_effective_prescription_exceeded": 2
+        },
+        "validator_warning_codes": {
+          "total_session_budget_exceeded": 1
+        },
+        "raw_validator_error_codes": {
+          "late_camp_effective_prescription_exceeded": 3
+        },
+        "raw_validator_warning_codes": {
+          "total_session_budget_exceeded": 1,
+          "missing_required_element": 1,
+          "internal_render_contract_leak": 2
+        },
+        "release_decision": "publish_with_flags",
         "week_counts": [
           {
             "week": 1,
+            "phase": "GPP",
             "counts": null
           },
           {
             "week": 2,
+            "phase": "SPP",
             "counts": null
           },
           {
             "week": 3,
+            "phase": "SPP",
             "counts": null
           },
           {
             "week": 4,
+            "phase": "TAPER",
             "counts": null
           }
         ]
@@ -3720,7 +4161,7 @@
             "satisfied": true,
             "windows": [
               {
-                "min_d_day": 14,
+                "min_d_day": 2,
                 "max_d_day": 26
               }
             ],
@@ -3740,7 +4181,7 @@
             "satisfied": true,
             "windows": [
               {
-                "min_d_day": 14,
+                "min_d_day": 2,
                 "max_d_day": 26
               }
             ],
@@ -3748,9 +4189,9 @@
             "constraints": [],
             "witnesses": [
               {
-                "day": 17,
-                "name": "Wall Ball Shot (Max Height)",
-                "dose": "8x3 reps, 90s rest"
+                "day": 5,
+                "name": "Overhead Med Ball Slam (Snappy)",
+                "dose": "6x3 reps, 1min rest"
               }
             ]
           },
@@ -3760,7 +4201,7 @@
             "satisfied": true,
             "windows": [
               {
-                "min_d_day": 14,
+                "min_d_day": 2,
                 "max_d_day": 26
               }
             ],
@@ -3777,27 +4218,38 @@
         ],
         "goal_findings": [],
         "fidelity_findings": [],
-        "validator_error_codes": [],
-        "validator_warning_codes": [
-          "internal_render_contract_leak",
-          "missing_required_element",
-          "total_session_budget_exceeded"
-        ],
+        "validator_error_codes": {},
+        "validator_warning_codes": {
+          "total_session_budget_exceeded": 1
+        },
+        "raw_validator_error_codes": {
+          "late_camp_effective_prescription_exceeded": 2
+        },
+        "raw_validator_warning_codes": {
+          "total_session_budget_exceeded": 1,
+          "missing_required_element": 1,
+          "internal_render_contract_leak": 2
+        },
+        "release_decision": "publish_with_flags",
         "week_counts": [
           {
             "week": 1,
+            "phase": "GPP",
             "counts": null
           },
           {
             "week": 2,
+            "phase": "SPP",
             "counts": null
           },
           {
             "week": 3,
+            "phase": "SPP",
             "counts": null
           },
           {
             "week": 4,
+            "phase": "TAPER",
             "counts": null
           }
         ]
@@ -3861,25 +4313,36 @@
         ],
         "goal_findings": [],
         "fidelity_findings": [],
-        "validator_error_codes": [
-          "ambiguous_working_dose"
-        ],
-        "validator_warning_codes": [
-          "internal_render_contract_leak",
-          "missing_required_element",
-          "total_session_budget_exceeded"
-        ],
+        "validator_error_codes": {
+          "ambiguous_working_dose": 2
+        },
+        "validator_warning_codes": {
+          "total_session_budget_exceeded": 2,
+          "missing_required_element": 1
+        },
+        "raw_validator_error_codes": {
+          "ambiguous_working_dose": 2
+        },
+        "raw_validator_warning_codes": {
+          "total_session_budget_exceeded": 2,
+          "missing_required_element": 1,
+          "internal_render_contract_leak": 1
+        },
+        "release_decision": "publish_with_flags",
         "week_counts": [
           {
             "week": 1,
+            "phase": "SPP",
             "counts": null
           },
           {
             "week": 2,
+            "phase": "SPP",
             "counts": null
           },
           {
             "week": 3,
+            "phase": "TAPER",
             "counts": null
           }
         ]
@@ -3942,7 +4405,7 @@
             "satisfied": true,
             "windows": [
               {
-                "min_d_day": 14,
+                "min_d_day": 2,
                 "max_d_day": 17
               }
             ],
@@ -3959,23 +4422,32 @@
         ],
         "goal_findings": [],
         "fidelity_findings": [],
-        "validator_error_codes": [],
-        "validator_warning_codes": [
-          "internal_render_contract_leak",
-          "missing_required_element",
-          "total_session_budget_exceeded"
-        ],
+        "validator_error_codes": {},
+        "validator_warning_codes": {
+          "total_session_budget_exceeded": 2,
+          "missing_required_element": 1
+        },
+        "raw_validator_error_codes": {},
+        "raw_validator_warning_codes": {
+          "total_session_budget_exceeded": 2,
+          "missing_required_element": 1,
+          "internal_render_contract_leak": 1
+        },
+        "release_decision": "publish_with_flags",
         "week_counts": [
           {
             "week": 1,
+            "phase": "SPP",
             "counts": null
           },
           {
             "week": 2,
+            "phase": "SPP",
             "counts": null
           },
           {
             "week": 3,
+            "phase": "TAPER",
             "counts": null
           }
         ]
@@ -4050,30 +4522,42 @@
             "message": "Scheduled S&C has no complete selected membership and effective dose."
           }
         ],
-        "validator_error_codes": [
-          "authoritative_programme_unpriced_session",
-          "late_camp_effective_prescription_exceeded"
-        ],
-        "validator_warning_codes": [
-          "internal_render_contract_leak",
-          "missing_required_element",
-          "total_session_budget_exceeded"
-        ],
+        "validator_error_codes": {
+          "authoritative_programme_unpriced_session": 1,
+          "late_camp_effective_prescription_exceeded": 2
+        },
+        "validator_warning_codes": {
+          "total_session_budget_exceeded": 2
+        },
+        "raw_validator_error_codes": {
+          "authoritative_programme_unpriced_session": 1,
+          "late_camp_effective_prescription_exceeded": 7
+        },
+        "raw_validator_warning_codes": {
+          "total_session_budget_exceeded": 2,
+          "missing_required_element": 1,
+          "internal_render_contract_leak": 2
+        },
+        "release_decision": "publish_with_flags",
         "week_counts": [
           {
             "week": 1,
+            "phase": "GPP",
             "counts": null
           },
           {
             "week": 2,
+            "phase": "SPP",
             "counts": null
           },
           {
             "week": 3,
+            "phase": "SPP",
             "counts": null
           },
           {
             "week": 4,
+            "phase": "TAPER",
             "counts": null
           }
         ]
@@ -4148,7 +4632,7 @@
             "satisfied": true,
             "windows": [
               {
-                "min_d_day": 14,
+                "min_d_day": 2,
                 "max_d_day": 26
               }
             ],
@@ -4165,27 +4649,38 @@
         ],
         "goal_findings": [],
         "fidelity_findings": [],
-        "validator_error_codes": [],
-        "validator_warning_codes": [
-          "internal_render_contract_leak",
-          "missing_required_element",
-          "total_session_budget_exceeded"
-        ],
+        "validator_error_codes": {},
+        "validator_warning_codes": {
+          "total_session_budget_exceeded": 1
+        },
+        "raw_validator_error_codes": {
+          "late_camp_effective_prescription_exceeded": 5
+        },
+        "raw_validator_warning_codes": {
+          "total_session_budget_exceeded": 1,
+          "missing_required_element": 1,
+          "internal_render_contract_leak": 2
+        },
+        "release_decision": "publish_with_flags",
         "week_counts": [
           {
             "week": 1,
+            "phase": "GPP",
             "counts": null
           },
           {
             "week": 2,
+            "phase": "SPP",
             "counts": null
           },
           {
             "week": 3,
+            "phase": "SPP",
             "counts": null
           },
           {
             "week": 4,
+            "phase": "TAPER",
             "counts": null
           }
         ]
@@ -4252,29 +4747,40 @@
         ],
         "goal_findings": [],
         "fidelity_findings": [],
-        "validator_error_codes": [
-          "conditioning_role_workload_underfilled",
-          "late_camp_effective_prescription_exceeded"
-        ],
-        "validator_warning_codes": [
-          "internal_render_contract_leak",
-          "missing_required_element"
-        ],
+        "validator_error_codes": {
+          "conditioning_role_workload_underfilled": 1
+        },
+        "validator_warning_codes": {
+          "missing_required_element": 1
+        },
+        "raw_validator_error_codes": {
+          "conditioning_role_workload_underfilled": 1,
+          "late_camp_effective_prescription_exceeded": 1
+        },
+        "raw_validator_warning_codes": {
+          "missing_required_element": 2,
+          "internal_render_contract_leak": 2
+        },
+        "release_decision": "publish_with_flags",
         "week_counts": [
           {
             "week": 1,
+            "phase": "GPP",
             "counts": null
           },
           {
             "week": 2,
+            "phase": "SPP",
             "counts": null
           },
           {
             "week": 3,
+            "phase": "SPP",
             "counts": null
           },
           {
             "week": 4,
+            "phase": "TAPER",
             "counts": null
           }
         ]
@@ -4350,7 +4856,7 @@
             "satisfied": true,
             "windows": [
               {
-                "min_d_day": 14,
+                "min_d_day": 2,
                 "max_d_day": 26
               }
             ],
@@ -4367,32 +4873,44 @@
         ],
         "goal_findings": [],
         "fidelity_findings": [],
-        "validator_error_codes": [
-          "conditioning_role_workload_underfilled"
-        ],
-        "validator_warning_codes": [
-          "internal_render_contract_leak",
-          "missing_required_element"
-        ],
+        "validator_error_codes": {
+          "conditioning_role_workload_underfilled": 1
+        },
+        "validator_warning_codes": {},
+        "raw_validator_error_codes": {
+          "conditioning_role_workload_underfilled": 1,
+          "late_camp_effective_prescription_exceeded": 1
+        },
+        "raw_validator_warning_codes": {
+          "missing_required_element": 1,
+          "internal_render_contract_leak": 2
+        },
+        "release_decision": "publish_with_flags",
         "week_counts": [
           {
             "week": 1,
+            "phase": "GPP",
             "counts": null
           },
           {
             "week": 2,
+            "phase": "SPP",
             "counts": null
           },
           {
             "week": 3,
+            "phase": "SPP",
             "counts": null
           },
           {
             "week": 4,
+            "phase": "TAPER",
             "counts": null
           }
         ]
       }
     }
-  ]
+  ],
+  "followup_base_commit": "50571155",
+  "validation_path": "Production review_stage2_output, including existing postprocessing and release policy, evaluated in each revision. Raw validator counts retained separately."
 }

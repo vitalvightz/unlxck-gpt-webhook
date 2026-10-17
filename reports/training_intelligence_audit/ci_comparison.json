@@ -1,0 +1,2657 @@
+{
+  "baseline_sha": "3dc625d83d8c0176187703ce702e63a9bbbbf03e",
+  "audited_pr_sha": "85447d55bd3dd27e64d936e1c92ae810eed0672e",
+  "unique_python_failures_main": 148,
+  "unique_python_failures_pr": 143,
+  "introduced_python_failures": 8,
+  "existing_python_failures": 135,
+  "node_failures": 6,
+  "notes": [
+    "Failure presence is compared across every completed full-suite shard, coaching release, web unit and PostgreSQL job.",
+    "Existing failure status does not prove identical internals: source-freeze failures additionally name intentionally modified planner modules.",
+    "Targeted passing reruns do not establish a clean complete CI run."
+  ],
+  "failures": [
+    {
+      "test": "tests/test_api_types_generated.py::test_every_shared_type_is_checked_in_the_right_direction",
+      "classification": "existing_main_failure",
+      "main_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063281/job/117118613799"
+      ],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748368/job/117154657957"
+      ],
+      "current_status": "baseline_failure_not_claimed_fixed",
+      "main_summary": [
+        "AssertionError: add these checks to web/lib/api-contract.ts: ['ReadAdminTimeToFirstPlanSummary', 'DeclaredAdminTimeToFirstPlanSummary']"
+      ],
+      "pr_summary": [
+        "AssertionError: add these checks to web/lib/api-contract.ts: ['ReadAdminTimeToFirstPlanSummary', 'DeclaredAdminTimeToFirstPlanSummary']"
+      ]
+    },
+    {
+      "test": "tests/test_api_types_generated.py::test_generated_types_match_the_api_schema",
+      "classification": "existing_main_failure",
+      "main_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063281/job/117118613799"
+      ],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748368/job/117154657957"
+      ],
+      "current_status": "baseline_failure_not_claimed_fixed",
+      "main_summary": [
+        "AssertionError: web/lib/api-schema.generated.ts is out of date: run python tools/generate_api_types.py"
+      ],
+      "pr_summary": [
+        "AssertionError: web/lib/api-schema.generated.ts is out of date: run python tools/generate_api_types.py"
+      ]
+    },
+    {
+      "test": "tests/test_bout_format.py::test_3x3_conditioning_plan_is_unchanged[GPP]",
+      "classification": "existing_main_failure",
+      "main_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063281/job/117118613917"
+      ],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748368/job/117154657885"
+      ],
+      "current_status": "baseline_failure_not_claimed_fixed",
+      "main_summary": [
+        "AssertionError: assert '\\n#### Condi...Flags: None\\n' == '\\n#### Condi...Flags: None\\n'"
+      ],
+      "pr_summary": [
+        "AssertionError: assert '\\n#### Condi...Flags: None\\n' == '\\n#### Condi...Flags: None\\n'"
+      ]
+    },
+    {
+      "test": "tests/test_bout_format.py::test_3x3_conditioning_plan_is_unchanged[SPP]",
+      "classification": "existing_main_failure",
+      "main_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063281/job/117118613917"
+      ],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748368/job/117154657885"
+      ],
+      "current_status": "baseline_failure_not_claimed_fixed",
+      "main_summary": [
+        "AssertionError: assert '\\n#### Condi...Flags: None\\n' == '\\n#### Condi...Flags: None\\n'"
+      ],
+      "pr_summary": [
+        "AssertionError: assert '\\n#### Condi...Flags: None\\n' == '\\n#### Condi...Flags: None\\n'"
+      ]
+    },
+    {
+      "test": "tests/test_calendar_integrity_characterization.py::test_baseline_d24_two_hard_contacts",
+      "classification": "existing_main_failure",
+      "main_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063281/job/117118613882"
+      ],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748368/job/117154658177"
+      ],
+      "current_status": "baseline_failure_not_claimed_fixed",
+      "main_summary": [
+        "AssertionError: assert {'contacts': ....], ...], ...} == {'contacts': ....], ...], ...}"
+      ],
+      "pr_summary": [
+        "AssertionError: assert {'contacts': ....], ...], ...} == {'contacts': ....], ...], ...}"
+      ]
+    },
+    {
+      "test": "tests/test_calendar_integrity_characterization.py::test_baseline_d28_finished_tail",
+      "classification": "existing_main_failure",
+      "main_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063281/job/117118613882"
+      ],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748368/job/117154658177"
+      ],
+      "current_status": "baseline_failure_not_claimed_fixed",
+      "main_summary": [
+        "AssertionError: assert {'contacts': ....], ...], ...} == {'contacts': ....], ...], ...}"
+      ],
+      "pr_summary": [
+        "AssertionError: assert {'contacts': ....], ...], ...} == {'contacts': ....], ...], ...}"
+      ]
+    },
+    {
+      "test": "tests/test_camp_tail_allocator_handoff.py::test_production_d16_plan_has_no_dayless_normal_ghost",
+      "classification": "existing_main_failure",
+      "main_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063281/job/117118613917"
+      ],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748368/job/117154657885"
+      ],
+      "current_status": "baseline_failure_not_claimed_fixed",
+      "main_summary": [
+        "AssertionError: assert {'alactic_speed_day'} == {'alactic_spe...strength_day'}"
+      ],
+      "pr_summary": [
+        "KeyError: 'slot_id'"
+      ]
+    },
+    {
+      "test": "tests/test_canonical_metadata.py::test_browser_contract_fixture_matches_real_library",
+      "classification": "existing_main_failure",
+      "main_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063281/job/117118613736"
+      ],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748368/job/117154657911"
+      ],
+      "current_status": "baseline_failure_not_claimed_fixed",
+      "main_summary": [
+        "ValueError: Historical source drift: api/services/xp_progress.py"
+      ],
+      "pr_summary": [
+        "ValueError: Historical source drift: api/services/xp_progress.py"
+      ]
+    },
+    {
+      "test": "tests/test_canonical_metadata.py::test_climbing_association_is_withheld_but_raw_evidence_and_identity_survive",
+      "classification": "existing_main_failure",
+      "main_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063281/job/117118613736"
+      ],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748368/job/117154657911"
+      ],
+      "current_status": "baseline_failure_not_claimed_fixed",
+      "main_summary": [
+        "ValueError: Historical source drift: api/services/xp_progress.py"
+      ],
+      "pr_summary": [
+        "ValueError: Historical source drift: api/services/xp_progress.py"
+      ]
+    },
+    {
+      "test": "tests/test_canonical_metadata.py::test_existing_query_orders_goals_and_unrelated_facets_are_identical",
+      "classification": "existing_main_failure",
+      "main_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063281/job/117118613736"
+      ],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748368/job/117154657911"
+      ],
+      "current_status": "baseline_failure_not_claimed_fixed",
+      "main_summary": [
+        "AssertionError: assert [{'discovery_...k', ...}, ...] == [{'discovery_...k', ...}, ...]"
+      ],
+      "pr_summary": [
+        "AssertionError: assert [{'discovery_...k', ...}, ...] == [{'discovery_...k', ...}, ...]"
+      ]
+    },
+    {
+      "test": "tests/test_canonical_metadata.py::test_frozen_fixed_seed_plans_and_prescription_doses_are_identical",
+      "classification": "existing_main_failure",
+      "main_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063281/job/117118613736"
+      ],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748368/job/117154657911"
+      ],
+      "current_status": "baseline_failure_not_claimed_fixed",
+      "main_summary": [
+        "ValueError: Historical source drift: api/services/xp_progress.py"
+      ],
+      "pr_summary": [
+        "ValueError: Historical source drift: api/services/xp_progress.py"
+      ]
+    },
+    {
+      "test": "tests/test_canonical_metadata.py::test_raw_banks_ids_media_keys_and_planner_sources_have_no_drift",
+      "classification": "existing_main_failure",
+      "main_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063281/job/117118613736"
+      ],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748368/job/117154657911"
+      ],
+      "current_status": "baseline_failure_not_claimed_fixed",
+      "main_summary": [
+        "ValueError: Historical source drift: api/services/xp_progress.py"
+      ],
+      "pr_summary": [
+        "ValueError: Historical source drift: api/services/xp_progress.py"
+      ]
+    },
+    {
+      "test": "tests/test_canonical_metadata.py::test_report_is_deterministic_and_matches_retained_evidence",
+      "classification": "existing_main_failure",
+      "main_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063281/job/117118613736"
+      ],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748368/job/117154657911"
+      ],
+      "current_status": "baseline_failure_not_claimed_fixed",
+      "main_summary": [
+        "ValueError: Historical source drift: api/services/xp_progress.py"
+      ],
+      "pr_summary": [
+        "ValueError: Historical source drift: api/services/xp_progress.py"
+      ]
+    },
+    {
+      "test": "tests/test_combat_training_allocation.py::test_both_saved_lead_constraints_retain_real_normal_power_and_explain_taper[earlier-lead]",
+      "classification": "introduced_by_2904",
+      "main_evidence": [],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748368/job/117154658127"
+      ],
+      "current_status": "targeted_rerun_passed",
+      "main_summary": [],
+      "pr_summary": [
+        "assert False"
+      ]
+    },
+    {
+      "test": "tests/test_combat_training_allocation.py::test_both_saved_lead_constraints_retain_real_normal_power_and_explain_taper[newer-lead]",
+      "classification": "introduced_by_2904",
+      "main_evidence": [],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748368/job/117154658127"
+      ],
+      "current_status": "targeted_rerun_passed",
+      "main_summary": [],
+      "pr_summary": [
+        "assert False"
+      ]
+    },
+    {
+      "test": "tests/test_concise_exercise_coaching.py::test_fast_fallback_keeps_execution_first_and_exact_dose_in_detail",
+      "classification": "existing_main_failure",
+      "main_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063281/job/117118613882",
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063275/job/117118613164"
+      ],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748429/job/117154658709",
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748368/job/117154658177"
+      ],
+      "current_status": "baseline_failure_not_claimed_fixed",
+      "main_summary": [
+        "assert 0 == 1",
+        "assert 0 == 1"
+      ],
+      "pr_summary": [
+        "assert 0 == 1",
+        "assert 0 == 1"
+      ]
+    },
+    {
+      "test": "tests/test_concise_exercise_coaching.py::test_october_11_style_progress_requires_an_actual_authorised_future_exposure",
+      "classification": "existing_main_failure",
+      "main_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063281/job/117118613882",
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063275/job/117118613164"
+      ],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748429/job/117154658709",
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748368/job/117154658177"
+      ],
+      "current_status": "baseline_failure_not_claimed_fixed",
+      "main_summary": [
+        "KeyError: 'progression_rule'",
+        "KeyError: 'progression_rule'"
+      ],
+      "pr_summary": [
+        "KeyError: 'progression_rule'",
+        "KeyError: 'progression_rule'"
+      ]
+    },
+    {
+      "test": "tests/test_conditioning_programming.py::test_reduce_increase_maintain_are_real_authorised_doses_and_idempotent",
+      "classification": "existing_main_failure",
+      "main_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063281/job/117118613820"
+      ],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748368/job/117154658127"
+      ],
+      "current_status": "baseline_failure_not_claimed_fixed",
+      "main_summary": [
+        "KeyError: 'progression_rule'"
+      ],
+      "pr_summary": [
+        "KeyError: 'progression_rule'"
+      ]
+    },
+    {
+      "test": "tests/test_conditioning_programming.py::test_secondary_gas_tank_weakness_is_considered_and_merged_with_goal",
+      "classification": "introduced_by_2904",
+      "main_evidence": [],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748368/job/117154658127"
+      ],
+      "current_status": "targeted_rerun_passed",
+      "main_summary": [],
+      "pr_summary": [
+        "AssertionError: assert ('conditioning', 'secondary') in [('speed', 'primary'), ('conditioning', 'secondary_weakness')]"
+      ]
+    },
+    {
+      "test": "tests/test_conditioning_session_minimum.py::test_underfilled_conditioning_holds_release_for_planner_regeneration",
+      "classification": "existing_main_failure",
+      "main_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063281/job/117118613882"
+      ],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748368/job/117154658177"
+      ],
+      "current_status": "baseline_failure_not_claimed_fixed",
+      "main_summary": [
+        "AssertionError: assert 'publish_with_flags' == 'hold'"
+      ],
+      "pr_summary": [
+        "AssertionError: assert 'publish_with_flags' == 'hold'"
+      ]
+    },
+    {
+      "test": "tests/test_countdown_calendar_spine.py::test_recovery_day_can_become_low_aerobic_gas_tank_when_gas_tank_is_limiter",
+      "classification": "existing_main_failure",
+      "main_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063281/job/117118613799"
+      ],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748368/job/117154657957"
+      ],
+      "current_status": "baseline_failure_not_claimed_fixed",
+      "main_summary": [
+        "assert []"
+      ],
+      "pr_summary": [
+        "assert []"
+      ]
+    },
+    {
+      "test": "tests/test_custom_plan_publication_postgres.py::test_saved_custom_plan_publish_view_activate_today_and_retries",
+      "classification": "existing_main_failure",
+      "main_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063394/job/117118613587"
+      ],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748379/job/117154658283"
+      ],
+      "current_status": "baseline_failure_not_claimed_fixed",
+      "main_summary": [
+        "AssertionError: assert 'Strength' == 'Strength / Rounds'"
+      ],
+      "pr_summary": [
+        "AssertionError: assert 'Strength' == 'Strength / Rounds'"
+      ]
+    },
+    {
+      "test": "tests/test_equipment_requirements.py::test_prechange_hashes_all_identities_queries_and_unrelated_facets_are_preserved",
+      "classification": "existing_main_failure",
+      "main_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063281/job/117118613799"
+      ],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748368/job/117154657957"
+      ],
+      "current_status": "baseline_failure_not_claimed_fixed",
+      "main_summary": [
+        "ValueError: Historical source drift: api/services/xp_progress.py"
+      ],
+      "pr_summary": [
+        "ValueError: Historical source drift: api/services/xp_progress.py"
+      ]
+    },
+    {
+      "test": "tests/test_exercise_coaching_context.py::test_authored_unknown_movement_progress_is_not_added_during_taper",
+      "classification": "existing_main_failure",
+      "main_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063281/job/117118613799",
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063275/job/117118613164"
+      ],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748429/job/117154658709",
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748368/job/117154657957"
+      ],
+      "current_status": "baseline_failure_not_claimed_fixed",
+      "main_summary": [
+        "AssertionError: assert {'coaching_cu...es control.']} == {'coaching_cu...es control.']}",
+        "AssertionError: assert {'coaching_cu...es control.']} == {'coaching_cu...es control.']}"
+      ],
+      "pr_summary": [
+        "AssertionError: assert {'coaching_cu...es control.']} == {'coaching_cu...es control.']}",
+        "AssertionError: assert {'coaching_cu...es control.']} == {'coaching_cu...es control.']}"
+      ]
+    },
+    {
+      "test": "tests/test_exercise_coaching_context.py::test_bank_keeps_one_cue_and_its_labelled_adjustments",
+      "classification": "existing_main_failure",
+      "main_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063281/job/117118613799",
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063275/job/117118613164"
+      ],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748429/job/117154658709",
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748368/job/117154657957"
+      ],
+      "current_status": "baseline_failure_not_claimed_fixed",
+      "main_summary": [
+        "AssertionError: assert {'coaching_cu...es control.']} == {'coaching_cu...es control.']}",
+        "AssertionError: assert {'coaching_cu...es control.']} == {'coaching_cu...es control.']}"
+      ],
+      "pr_summary": [
+        "AssertionError: assert {'coaching_cu...es control.']} == {'coaching_cu...es control.']}",
+        "AssertionError: assert {'coaching_cu...es control.']} == {'coaching_cu...es control.']}"
+      ]
+    },
+    {
+      "test": "tests/test_exercise_coaching_context.py::test_duplicate_recovery_keeps_each_sessions_coaching_and_dose[False-converted_title]",
+      "classification": "existing_main_failure",
+      "main_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063281/job/117118613799",
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063275/job/117118613164"
+      ],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748429/job/117154658709",
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748368/job/117154657957"
+      ],
+      "current_status": "baseline_failure_not_claimed_fixed",
+      "main_summary": [
+        "assert False",
+        "assert False"
+      ],
+      "pr_summary": [
+        "assert False",
+        "assert False"
+      ]
+    },
+    {
+      "test": "tests/test_exercise_coaching_context.py::test_duplicate_recovery_keeps_each_sessions_coaching_and_dose[False-deterministic]",
+      "classification": "existing_main_failure",
+      "main_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063281/job/117118613799",
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063275/job/117118613164"
+      ],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748429/job/117154658709",
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748368/job/117154657957"
+      ],
+      "current_status": "baseline_failure_not_claimed_fixed",
+      "main_summary": [
+        "assert False",
+        "assert False"
+      ],
+      "pr_summary": [
+        "assert False",
+        "assert False"
+      ]
+    },
+    {
+      "test": "tests/test_exercise_coaching_context.py::test_duplicate_recovery_keeps_each_sessions_coaching_and_dose[False-name_only]",
+      "classification": "existing_main_failure",
+      "main_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063281/job/117118613799",
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063275/job/117118613164"
+      ],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748429/job/117154658709",
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748368/job/117154657957"
+      ],
+      "current_status": "baseline_failure_not_claimed_fixed",
+      "main_summary": [
+        "assert False",
+        "assert False"
+      ],
+      "pr_summary": [
+        "assert False",
+        "assert False"
+      ]
+    },
+    {
+      "test": "tests/test_exercise_coaching_context.py::test_duplicate_recovery_keeps_each_sessions_coaching_and_dose[True-converted_title]",
+      "classification": "existing_main_failure",
+      "main_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063281/job/117118613799",
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063275/job/117118613164"
+      ],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748429/job/117154658709",
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748368/job/117154657957"
+      ],
+      "current_status": "baseline_failure_not_claimed_fixed",
+      "main_summary": [
+        "assert False",
+        "assert False"
+      ],
+      "pr_summary": [
+        "assert False",
+        "assert False"
+      ]
+    },
+    {
+      "test": "tests/test_exercise_coaching_context.py::test_duplicate_recovery_keeps_each_sessions_coaching_and_dose[True-deterministic]",
+      "classification": "existing_main_failure",
+      "main_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063281/job/117118613799",
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063275/job/117118613164"
+      ],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748429/job/117154658709",
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748368/job/117154657957"
+      ],
+      "current_status": "baseline_failure_not_claimed_fixed",
+      "main_summary": [
+        "assert False",
+        "assert False"
+      ],
+      "pr_summary": [
+        "assert False",
+        "assert False"
+      ]
+    },
+    {
+      "test": "tests/test_exercise_coaching_context.py::test_duplicate_recovery_keeps_each_sessions_coaching_and_dose[True-name_only]",
+      "classification": "existing_main_failure",
+      "main_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063281/job/117118613799",
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063275/job/117118613164"
+      ],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748429/job/117154658709",
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748368/job/117154657957"
+      ],
+      "current_status": "baseline_failure_not_claimed_fixed",
+      "main_summary": [
+        "assert False",
+        "assert False"
+      ],
+      "pr_summary": [
+        "assert False",
+        "assert False"
+      ]
+    },
+    {
+      "test": "tests/test_exercise_coaching_context.py::test_existing_coach_fields_always_win_over_bank_and_profiles",
+      "classification": "existing_main_failure",
+      "main_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063281/job/117118613799",
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063275/job/117118613164"
+      ],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748429/job/117154658709",
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748368/job/117154657957"
+      ],
+      "current_status": "baseline_failure_not_claimed_fixed",
+      "main_summary": [
+        "AssertionError: assert not 'Existing coach 0: once balanced, refine the drive into the overhead finish at the same dose.'",
+        "AssertionError: assert not 'Existing coach 0: once balanced, refine the drive into the overhead finish at the same dose.'"
+      ],
+      "pr_summary": [
+        "AssertionError: assert not 'Existing coach 0: once balanced, refine the drive into the overhead finish at the same dose.'",
+        "AssertionError: assert not 'Existing coach 0: once balanced, refine the drive into the overhead finish at the same dose.'"
+      ]
+    },
+    {
+      "test": "tests/test_exercise_coaching_context.py::test_profiles_fill_gaps_without_replacing_structured_bank_instructions",
+      "classification": "existing_main_failure",
+      "main_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063281/job/117118613799",
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063275/job/117118613164"
+      ],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748429/job/117154658709",
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748368/job/117154657957"
+      ],
+      "current_status": "baseline_failure_not_claimed_fixed",
+      "main_summary": [
+        "AssertionError: assert {'coaching_cu...es control.']} == {'coaching_cu...es control.']}",
+        "AssertionError: assert {'coaching_cu...es control.']} == {'coaching_cu...es control.']}"
+      ],
+      "pr_summary": [
+        "AssertionError: assert {'coaching_cu...es control.']} == {'coaching_cu...es control.']}",
+        "AssertionError: assert {'coaching_cu...es control.']} == {'coaching_cu...es control.']}"
+      ]
+    },
+    {
+      "test": "tests/test_exercise_coaching_context.py::test_source_fallback_reads_duplicate_exercises_from_their_own_session",
+      "classification": "existing_main_failure",
+      "main_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063281/job/117118613799",
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063275/job/117118613164"
+      ],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748429/job/117154658709",
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748368/job/117154657957"
+      ],
+      "current_status": "baseline_failure_not_claimed_fixed",
+      "main_summary": [
+        "AssertionError: assert 'Session 2: once balanced, refine the drive into the overhead finish at the same dose.' == None",
+        "AssertionError: assert 'Session 2: once balanced, refine the drive into the overhead finish at the same dose.' == None"
+      ],
+      "pr_summary": [
+        "AssertionError: assert 'Session 2: once balanced, refine the drive into the overhead finish at the same dose.' == None",
+        "AssertionError: assert 'Session 2: once balanced, refine the drive into the overhead finish at the same dose.' == None"
+      ]
+    },
+    {
+      "test": "tests/test_exercise_coaching_release.py::test_a_converter_cannot_drop_any_applicable_coaching_field[progression_rule]",
+      "classification": "existing_main_failure",
+      "main_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063281/job/117118613882",
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063275/job/117118613164"
+      ],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748429/job/117154658709",
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748368/job/117154658177"
+      ],
+      "current_status": "baseline_failure_not_claimed_fixed",
+      "main_summary": [
+        "StopIteration",
+        "StopIteration"
+      ],
+      "pr_summary": [
+        "StopIteration",
+        "StopIteration"
+      ]
+    },
+    {
+      "test": "tests/test_exercise_coaching_release.py::test_a_converter_cannot_drop_any_applicable_coaching_field[regression_options]",
+      "classification": "existing_main_failure",
+      "main_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063281/job/117118613882",
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063275/job/117118613164"
+      ],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748429/job/117154658709",
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748368/job/117154658177"
+      ],
+      "current_status": "baseline_failure_not_claimed_fixed",
+      "main_summary": [
+        "StopIteration",
+        "StopIteration"
+      ],
+      "pr_summary": [
+        "StopIteration",
+        "StopIteration"
+      ]
+    },
+    {
+      "test": "tests/test_exercise_coaching_release.py::test_final_persisted_physical_rows_keep_coaching_in_react[converted]",
+      "classification": "existing_main_failure",
+      "main_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063275/job/117118613164"
+      ],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748429/job/117154658709"
+      ],
+      "current_status": "baseline_failure_not_claimed_fixed",
+      "main_summary": [
+        "assert ([])"
+      ],
+      "pr_summary": [
+        "assert ([])"
+      ]
+    },
+    {
+      "test": "tests/test_exercise_coaching_release.py::test_final_persisted_physical_rows_keep_coaching_in_react[not_attempted_fallback]",
+      "classification": "existing_main_failure",
+      "main_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063275/job/117118613164"
+      ],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748429/job/117154658709"
+      ],
+      "current_status": "baseline_failure_not_claimed_fixed",
+      "main_summary": [
+        "assert ([])"
+      ],
+      "pr_summary": [
+        "assert ([])"
+      ]
+    },
+    {
+      "test": "tests/test_exercise_coaching_release.py::test_final_persisted_physical_rows_keep_coaching_in_react[rejected_fast_fallback]",
+      "classification": "existing_main_failure",
+      "main_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063275/job/117118613164"
+      ],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748429/job/117154658709"
+      ],
+      "current_status": "baseline_failure_not_claimed_fixed",
+      "main_summary": [
+        "assert ([])"
+      ],
+      "pr_summary": [
+        "assert ([])"
+      ]
+    },
+    {
+      "test": "tests/test_exercise_coaching_release.py::test_maintenance_contexts_have_easier_and_stop_without_progress[context0]",
+      "classification": "existing_main_failure",
+      "main_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063281/job/117118613882",
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063275/job/117118613164"
+      ],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748429/job/117154658709",
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748368/job/117154658177"
+      ],
+      "current_status": "baseline_failure_not_claimed_fixed",
+      "main_summary": [
+        "AssertionError: assert (['Drive through legs; brace your trunk, avoid grinding reps.'] and [])",
+        "AssertionError: assert (['Drive through legs; brace your trunk, avoid grinding reps.'] and [])"
+      ],
+      "pr_summary": [
+        "AssertionError: assert (['Drive through legs; brace your trunk, avoid grinding reps.'] and [])",
+        "AssertionError: assert (['Drive through legs; brace your trunk, avoid grinding reps.'] and [])"
+      ]
+    },
+    {
+      "test": "tests/test_exercise_coaching_release.py::test_maintenance_contexts_have_easier_and_stop_without_progress[context1]",
+      "classification": "existing_main_failure",
+      "main_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063281/job/117118613882",
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063275/job/117118613164"
+      ],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748429/job/117154658709",
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748368/job/117154658177"
+      ],
+      "current_status": "baseline_failure_not_claimed_fixed",
+      "main_summary": [
+        "AssertionError: assert (['Drive through legs; brace your trunk, avoid grinding reps.'] and [])",
+        "AssertionError: assert (['Drive through legs; brace your trunk, avoid grinding reps.'] and [])"
+      ],
+      "pr_summary": [
+        "AssertionError: assert (['Drive through legs; brace your trunk, avoid grinding reps.'] and [])",
+        "AssertionError: assert (['Drive through legs; brace your trunk, avoid grinding reps.'] and [])"
+      ]
+    },
+    {
+      "test": "tests/test_exercise_coaching_release.py::test_maintenance_contexts_have_easier_and_stop_without_progress[context2]",
+      "classification": "existing_main_failure",
+      "main_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063281/job/117118613882",
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063275/job/117118613164"
+      ],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748429/job/117154658709",
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748368/job/117154658177"
+      ],
+      "current_status": "baseline_failure_not_claimed_fixed",
+      "main_summary": [
+        "AssertionError: assert (['Drive through legs; brace your trunk, avoid grinding reps.'] and [])",
+        "AssertionError: assert (['Drive through legs; brace your trunk, avoid grinding reps.'] and [])"
+      ],
+      "pr_summary": [
+        "AssertionError: assert (['Drive through legs; brace your trunk, avoid grinding reps.'] and [])",
+        "AssertionError: assert (['Drive through legs; brace your trunk, avoid grinding reps.'] and [])"
+      ]
+    },
+    {
+      "test": "tests/test_exercise_coaching_release.py::test_maintenance_contexts_have_easier_and_stop_without_progress[context3]",
+      "classification": "existing_main_failure",
+      "main_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063281/job/117118613882",
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063275/job/117118613164"
+      ],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748429/job/117154658709",
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748368/job/117154658177"
+      ],
+      "current_status": "baseline_failure_not_claimed_fixed",
+      "main_summary": [
+        "AssertionError: assert (['Drive through legs; brace your trunk, avoid grinding reps.'] and [])",
+        "AssertionError: assert (['Drive through legs; brace your trunk, avoid grinding reps.'] and [])"
+      ],
+      "pr_summary": [
+        "AssertionError: assert (['Drive through legs; brace your trunk, avoid grinding reps.'] and [])",
+        "AssertionError: assert (['Drive through legs; brace your trunk, avoid grinding reps.'] and [])"
+      ]
+    },
+    {
+      "test": "tests/test_exercise_coaching_release.py::test_maintenance_contexts_have_easier_and_stop_without_progress[context4]",
+      "classification": "existing_main_failure",
+      "main_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063281/job/117118613882",
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063275/job/117118613164"
+      ],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748429/job/117154658709",
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748368/job/117154658177"
+      ],
+      "current_status": "baseline_failure_not_claimed_fixed",
+      "main_summary": [
+        "AssertionError: assert (['Drive through legs; brace your trunk, avoid grinding reps.'] and [])",
+        "AssertionError: assert (['Drive through legs; brace your trunk, avoid grinding reps.'] and [])"
+      ],
+      "pr_summary": [
+        "AssertionError: assert (['Drive through legs; brace your trunk, avoid grinding reps.'] and [])",
+        "AssertionError: assert (['Drive through legs; brace your trunk, avoid grinding reps.'] and [])"
+      ]
+    },
+    {
+      "test": "tests/test_final_training_exposure.py::test_a_fourteen_day_camp_cannot_owe_its_creation_day",
+      "classification": "introduced_by_2904",
+      "main_evidence": [],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748368/job/117154657911"
+      ],
+      "current_status": "targeted_rerun_passed",
+      "main_summary": [],
+      "pr_summary": [
+        "AssertionError: assert ('defer', False) == ('maintain', True)"
+      ]
+    },
+    {
+      "test": "tests/test_generator_equipment_accuracy.py::test_controlled_before_after_selection_and_doses[0]",
+      "classification": "existing_main_failure",
+      "main_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063281/job/117118613820"
+      ],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748368/job/117154658127"
+      ],
+      "current_status": "baseline_failure_not_claimed_fixed",
+      "main_summary": [
+        "AssertionError: assert ('Rope Climb + Short Sprint' not in set() and 'Rope Climb + Short Sprint' in set())"
+      ],
+      "pr_summary": [
+        "AssertionError: assert ('Rope Climb + Short Sprint' not in set() and 'Rope Climb + Short Sprint' in set())"
+      ]
+    },
+    {
+      "test": "tests/test_generator_equipment_accuracy.py::test_exact_five_edits_preserve_all_catalogue_media_and_history",
+      "classification": "existing_main_failure",
+      "main_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063281/job/117118613820"
+      ],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748368/job/117154658127"
+      ],
+      "current_status": "baseline_failure_not_claimed_fixed",
+      "main_summary": [
+        "ValueError: Historical source drift: api/services/xp_progress.py"
+      ],
+      "pr_summary": [
+        "ValueError: Historical source drift: api/services/xp_progress.py"
+      ]
+    },
+    {
+      "test": "tests/test_generator_equipment_accuracy.py::test_real_generator_equipment_candidates[equipment3-0]",
+      "classification": "existing_main_failure",
+      "main_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063281/job/117118613820"
+      ],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748368/job/117154658127"
+      ],
+      "current_status": "baseline_failure_not_claimed_fixed",
+      "main_summary": [
+        "AssertionError: assert ('Rope Climb + Short Sprint' in set()) is True"
+      ],
+      "pr_summary": [
+        "AssertionError: assert ('Rope Climb + Short Sprint' in set()) is True"
+      ]
+    },
+    {
+      "test": "tests/test_generator_equipment_accuracy.py::test_real_generator_equipment_candidates[equipment4-0]",
+      "classification": "existing_main_failure",
+      "main_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063281/job/117118613820"
+      ],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748368/job/117154658127"
+      ],
+      "current_status": "baseline_failure_not_claimed_fixed",
+      "main_summary": [
+        "AssertionError: assert ('Rope Climb + Short Sprint' in set()) is True"
+      ],
+      "pr_summary": [
+        "AssertionError: assert ('Rope Climb + Short Sprint' in set()) is True"
+      ]
+    },
+    {
+      "test": "tests/test_injury_pipeline.py::test_build_rehab_injury_string_falls_back_to_raw_when_no_parsed_entries",
+      "classification": "existing_main_failure",
+      "main_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063281/job/117118613736"
+      ],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748368/job/117154657911"
+      ],
+      "current_status": "baseline_failure_not_claimed_fixed",
+      "main_summary": [
+        "AttributeError: 'types.SimpleNamespace' object has no attribute 'training_context'"
+      ],
+      "pr_summary": [
+        "AttributeError: 'types.SimpleNamespace' object has no attribute 'training_context'"
+      ]
+    },
+    {
+      "test": "tests/test_injury_pipeline.py::test_build_rehab_injury_string_prefers_structured_knee_instability",
+      "classification": "existing_main_failure",
+      "main_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063281/job/117118613736"
+      ],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748368/job/117154657911"
+      ],
+      "current_status": "baseline_failure_not_claimed_fixed",
+      "main_summary": [
+        "AttributeError: 'types.SimpleNamespace' object has no attribute 'training_context'"
+      ],
+      "pr_summary": [
+        "AttributeError: 'types.SimpleNamespace' object has no attribute 'training_context'"
+      ]
+    },
+    {
+      "test": "tests/test_injury_pipeline.py::test_build_rehab_injury_string_uses_entry_level_guided_types_without_leakage",
+      "classification": "existing_main_failure",
+      "main_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063281/job/117118613736"
+      ],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748368/job/117154657911"
+      ],
+      "current_status": "baseline_failure_not_claimed_fixed",
+      "main_summary": [
+        "AttributeError: 'types.SimpleNamespace' object has no attribute 'training_context'"
+      ],
+      "pr_summary": [
+        "AttributeError: 'types.SimpleNamespace' object has no attribute 'training_context'"
+      ]
+    },
+    {
+      "test": "tests/test_injury_pipeline.py::test_generate_rehab_support_bundle_counts_guided_only_parsed_injury_as_injury",
+      "classification": "existing_main_failure",
+      "main_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063281/job/117118613736"
+      ],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748368/job/117154657911"
+      ],
+      "current_status": "baseline_failure_not_claimed_fixed",
+      "main_summary": [
+        "AttributeError: 'types.SimpleNamespace' object has no attribute 'parsed_injuries'"
+      ],
+      "pr_summary": [
+        "AttributeError: 'types.SimpleNamespace' object has no attribute 'parsed_injuries'"
+      ]
+    },
+    {
+      "test": "tests/test_late_camp_architecture_cliff.py::TestProductionCalendarCollision::test_no_app_owned_snc_stacked_on_declared_thursday_contact",
+      "classification": "existing_main_failure",
+      "main_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063281/job/117118613917"
+      ],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748368/job/117154657885"
+      ],
+      "current_status": "baseline_failure_not_claimed_fixed",
+      "main_summary": [
+        "AssertionError: D-21 stacked app S&C (neural_primer_day) on the Thursday contact day"
+      ],
+      "pr_summary": [
+        "AssertionError: D-21 stacked app S&C (neural_primer_day) on the Thursday contact day"
+      ]
+    },
+    {
+      "test": "tests/test_late_camp_fight_week_handoff.py::TestD24GeneratedFightWeek::test_d1_is_routed_to_the_equipment_banning_primer_contract",
+      "classification": "existing_main_failure",
+      "main_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063281/job/117118613820"
+      ],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748368/job/117154658127"
+      ],
+      "current_status": "baseline_failure_not_claimed_fixed",
+      "main_summary": [
+        "AssertionError: D-1 carried app-owned S&C role(s): ['neural_primer_day']"
+      ],
+      "pr_summary": [
+        "AssertionError: D-1 carried app-owned S&C role(s): ['neural_primer_day']"
+      ]
+    },
+    {
+      "test": "tests/test_late_camp_fight_week_handoff.py::TestHardSparringConversionPreserved::test_declared_hard_sparring_inside_d14_stays_technical_only[17]",
+      "classification": "existing_main_failure",
+      "main_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063281/job/117118613820"
+      ],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748368/job/117154658127"
+      ],
+      "current_status": "baseline_failure_not_claimed_fixed",
+      "main_summary": [
+        "AssertionError: D-1: extra S&C ('neural_primer_day') stacked on a technical-only day"
+      ],
+      "pr_summary": [
+        "AssertionError: D-1: extra S&C ('neural_primer_day') stacked on a technical-only day"
+      ]
+    },
+    {
+      "test": "tests/test_late_camp_fight_week_handoff.py::TestHardSparringConversionPreserved::test_declared_hard_sparring_inside_d14_stays_technical_only[20]",
+      "classification": "existing_main_failure",
+      "main_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063281/job/117118613820"
+      ],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748368/job/117154658127"
+      ],
+      "current_status": "baseline_failure_not_claimed_fixed",
+      "main_summary": [
+        "AssertionError: D-1: extra S&C ('neural_primer_day') stacked on a technical-only day"
+      ],
+      "pr_summary": [
+        "AssertionError: D-1: extra S&C ('neural_primer_day') stacked on a technical-only day"
+      ]
+    },
+    {
+      "test": "tests/test_late_camp_fight_week_handoff.py::TestHardSparringConversionPreserved::test_declared_hard_sparring_inside_d14_stays_technical_only[24]",
+      "classification": "existing_main_failure",
+      "main_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063281/job/117118613820"
+      ],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748368/job/117154658127"
+      ],
+      "current_status": "baseline_failure_not_claimed_fixed",
+      "main_summary": [
+        "AssertionError: D-1: extra S&C ('neural_primer_day') stacked on a technical-only day"
+      ],
+      "pr_summary": [
+        "AssertionError: D-1: extra S&C ('neural_primer_day') stacked on a technical-only day"
+      ]
+    },
+    {
+      "test": "tests/test_late_camp_selector_rebalance.py::test_audit_snapshot_matches_golden",
+      "classification": "existing_main_failure",
+      "main_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063281/job/117118613821"
+      ],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748368/job/117154658093"
+      ],
+      "current_status": "baseline_failure_not_claimed_fixed",
+      "main_summary": [
+        "AssertionError: assert {'control_d28..., ...]}}, ...} == {'control_d28..., ...]}}, ...}"
+      ],
+      "pr_summary": [
+        "AssertionError: assert {'control_d28..., ...]}}, ...} == {'control_d28..., ...]}}, ...}"
+      ]
+    },
+    {
+      "test": "tests/test_late_primer_e2e_vito_b.py::test_vito_b_power_is_retained_when_legal[14]",
+      "classification": "introduced_by_2904",
+      "main_evidence": [],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748368/job/117154657911"
+      ],
+      "current_status": "targeted_rerun_passed",
+      "main_summary": [],
+      "pr_summary": [
+        "assert False is True"
+      ]
+    },
+    {
+      "test": "tests/test_locked_content_server_ownership.py::test_locked_content_still_fails_when_the_payload_really_lacks_it",
+      "classification": "existing_main_failure",
+      "main_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063281/job/117118613821"
+      ],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748368/job/117154658093"
+      ],
+      "current_status": "baseline_failure_not_claimed_fixed",
+      "main_summary": [
+        "assert 6 == 5"
+      ],
+      "pr_summary": [
+        "assert 6 == 5"
+      ]
+    },
+    {
+      "test": "tests/test_measurable_exercise_coaching.py::test_backend_read_and_react_preserve_identical_measurable_instructions",
+      "classification": "existing_main_failure",
+      "main_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063275/job/117118613164"
+      ],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748429/job/117154658709"
+      ],
+      "current_status": "baseline_failure_not_claimed_fixed",
+      "main_summary": [
+        "KeyError: 'progression_rule'"
+      ],
+      "pr_summary": [
+        "KeyError: 'progression_rule'"
+      ]
+    },
+    {
+      "test": "tests/test_measurable_exercise_coaching.py::test_equivalent_unit_and_spacing_formats_keep_supported_progression",
+      "classification": "existing_main_failure",
+      "main_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063281/job/117118613820",
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063275/job/117118613164"
+      ],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748429/job/117154658709",
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748368/job/117154658127"
+      ],
+      "current_status": "baseline_failure_not_claimed_fixed",
+      "main_summary": [
+        "KeyError: 'progression_rule'",
+        "KeyError: 'progression_rule'"
+      ],
+      "pr_summary": [
+        "KeyError: 'progression_rule'",
+        "KeyError: 'progression_rule'"
+      ]
+    },
+    {
+      "test": "tests/test_measurable_exercise_coaching.py::test_exact_future_dose_supports_one_measurable_variable[20 min continuous; RPE 4-25 min continuous; RPE 4-add 5 min]",
+      "classification": "existing_main_failure",
+      "main_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063281/job/117118613820",
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063275/job/117118613164"
+      ],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748429/job/117154658709",
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748368/job/117154658127"
+      ],
+      "current_status": "baseline_failure_not_claimed_fixed",
+      "main_summary": [
+        "KeyError: 'progression_rule'",
+        "KeyError: 'progression_rule'"
+      ],
+      "pr_summary": [
+        "KeyError: 'progression_rule'",
+        "KeyError: 'progression_rule'"
+      ]
+    },
+    {
+      "test": "tests/test_measurable_exercise_coaching.py::test_exact_future_dose_supports_one_measurable_variable[3 carries over 20 m; rest 90s-3 carries over 30 m; rest 90s-add 10 m]",
+      "classification": "existing_main_failure",
+      "main_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063281/job/117118613820",
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063275/job/117118613164"
+      ],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748429/job/117154658709",
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748368/job/117154658127"
+      ],
+      "current_status": "baseline_failure_not_claimed_fixed",
+      "main_summary": [
+        "KeyError: 'progression_rule'",
+        "KeyError: 'progression_rule'"
+      ],
+      "pr_summary": [
+        "KeyError: 'progression_rule'",
+        "KeyError: 'progression_rule'"
+      ]
+    },
+    {
+      "test": "tests/test_measurable_exercise_coaching.py::test_exact_future_dose_supports_one_measurable_variable[3 x 30 sec; rest 90 sec-3 x 40 sec; rest 90 sec-add 10 sec]",
+      "classification": "existing_main_failure",
+      "main_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063281/job/117118613820",
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063275/job/117118613164"
+      ],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748429/job/117154658709",
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748368/job/117154658127"
+      ],
+      "current_status": "baseline_failure_not_claimed_fixed",
+      "main_summary": [
+        "KeyError: 'progression_rule'",
+        "KeyError: 'progression_rule'"
+      ],
+      "pr_summary": [
+        "KeyError: 'progression_rule'",
+        "KeyError: 'progression_rule'"
+      ]
+    },
+    {
+      "test": "tests/test_measurable_exercise_coaching.py::test_exact_future_dose_supports_one_measurable_variable[3 x 8 reps @ 50 kg; rest 120 sec; RPE 7-3 x 8 reps @ 52 kg; rest 120 sec; RPE 7-add 2 kg]",
+      "classification": "existing_main_failure",
+      "main_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063281/job/117118613820",
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063275/job/117118613164"
+      ],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748429/job/117154658709",
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748368/job/117154658127"
+      ],
+      "current_status": "baseline_failure_not_claimed_fixed",
+      "main_summary": [
+        "KeyError: 'progression_rule'",
+        "KeyError: 'progression_rule'"
+      ],
+      "pr_summary": [
+        "KeyError: 'progression_rule'",
+        "KeyError: 'progression_rule'"
+      ]
+    },
+    {
+      "test": "tests/test_measurable_exercise_coaching.py::test_exact_future_dose_supports_one_measurable_variable[3 x 8 reps; rest 120 sec; RPE 7-3 x 9 reps; rest 120 sec; RPE 7-add 1 rep/set]",
+      "classification": "existing_main_failure",
+      "main_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063281/job/117118613820",
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063275/job/117118613164"
+      ],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748429/job/117154658709",
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748368/job/117154658127"
+      ],
+      "current_status": "baseline_failure_not_claimed_fixed",
+      "main_summary": [
+        "KeyError: 'progression_rule'",
+        "KeyError: 'progression_rule'"
+      ],
+      "pr_summary": [
+        "KeyError: 'progression_rule'",
+        "KeyError: 'progression_rule'"
+      ]
+    },
+    {
+      "test": "tests/test_measurable_exercise_coaching.py::test_exact_future_dose_supports_one_measurable_variable[3 x 8 reps; rest 120 sec; RPE 7-4 x 8 reps; rest 120 sec; RPE 7-add 1 set]",
+      "classification": "existing_main_failure",
+      "main_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063281/job/117118613820",
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063275/job/117118613164"
+      ],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748429/job/117154658709",
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748368/job/117154658127"
+      ],
+      "current_status": "baseline_failure_not_claimed_fixed",
+      "main_summary": [
+        "KeyError: 'progression_rule'",
+        "KeyError: 'progression_rule'"
+      ],
+      "pr_summary": [
+        "KeyError: 'progression_rule'",
+        "KeyError: 'progression_rule'"
+      ]
+    },
+    {
+      "test": "tests/test_measurable_exercise_coaching.py::test_exact_future_dose_supports_one_measurable_variable[5s work, 60s rest x 8 rounds-5s work, 60s rest x 9 rounds-add 1 round]",
+      "classification": "existing_main_failure",
+      "main_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063281/job/117118613820",
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063275/job/117118613164"
+      ],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748429/job/117154658709",
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748368/job/117154658127"
+      ],
+      "current_status": "baseline_failure_not_claimed_fixed",
+      "main_summary": [
+        "KeyError: 'progression_rule'",
+        "KeyError: 'progression_rule'"
+      ],
+      "pr_summary": [
+        "KeyError: 'progression_rule'",
+        "KeyError: 'progression_rule'"
+      ]
+    },
+    {
+      "test": "tests/test_measurable_exercise_coaching.py::test_existing_short_note_is_not_replaced_on_saved_card",
+      "classification": "introduced_by_2904",
+      "main_evidence": [],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748429/job/117154658709",
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748368/job/117154658127"
+      ],
+      "current_status": "targeted_rerun_passed",
+      "main_summary": [],
+      "pr_summary": [
+        "KeyError: 'progression_rule'",
+        "KeyError: 'progression_rule'"
+      ]
+    },
+    {
+      "test": "tests/test_measurable_exercise_coaching.py::test_matching_bank_increment_cannot_hide_an_unsafe_second_change[Add 1 rep per set @ 80 kg.]",
+      "classification": "existing_main_failure",
+      "main_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063281/job/117118613820",
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063275/job/117118613164"
+      ],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748429/job/117154658709",
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748368/job/117154658127"
+      ],
+      "current_status": "baseline_failure_not_claimed_fixed",
+      "main_summary": [
+        "AssertionError: assert 'Add 1 rep per set @ 80 kg.' != 'Add 1 rep per set @ 80 kg.'",
+        "AssertionError: assert 'Add 1 rep per set @ 80 kg.' != 'Add 1 rep per set @ 80 kg.'"
+      ],
+      "pr_summary": [
+        "AssertionError: assert 'Add 1 rep per set @ 80 kg.' != 'Add 1 rep per set @ 80 kg.'",
+        "AssertionError: assert 'Add 1 rep per set @ 80 kg.' != 'Add 1 rep per set @ 80 kg.'"
+      ]
+    },
+    {
+      "test": "tests/test_measurable_exercise_coaching.py::test_matching_bank_increment_cannot_hide_an_unsafe_second_change[Add 1 rep per set; RPE 9.]",
+      "classification": "existing_main_failure",
+      "main_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063281/job/117118613820",
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063275/job/117118613164"
+      ],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748429/job/117154658709",
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748368/job/117154658127"
+      ],
+      "current_status": "baseline_failure_not_claimed_fixed",
+      "main_summary": [
+        "AssertionError: assert 'Add 1 rep per set; RPE 9.' != 'Add 1 rep per set; RPE 9.'",
+        "AssertionError: assert 'Add 1 rep per set; RPE 9.' != 'Add 1 rep per set; RPE 9.'"
+      ],
+      "pr_summary": [
+        "AssertionError: assert 'Add 1 rep per set; RPE 9.' != 'Add 1 rep per set; RPE 9.'",
+        "AssertionError: assert 'Add 1 rep per set; RPE 9.' != 'Add 1 rep per set; RPE 9.'"
+      ]
+    },
+    {
+      "test": "tests/test_measurable_exercise_coaching.py::test_matching_bank_increment_cannot_hide_an_unsafe_second_change[Add 1 rep per set; rest 60 sec.]",
+      "classification": "existing_main_failure",
+      "main_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063281/job/117118613820",
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063275/job/117118613164"
+      ],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748429/job/117154658709",
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748368/job/117154658127"
+      ],
+      "current_status": "baseline_failure_not_claimed_fixed",
+      "main_summary": [
+        "AssertionError: assert 'Add 1 rep per set; rest 60 sec.' != 'Add 1 rep per set; rest 60 sec.'",
+        "AssertionError: assert 'Add 1 rep per set; rest 60 sec.' != 'Add 1 rep per set; rest 60 sec.'"
+      ],
+      "pr_summary": [
+        "AssertionError: assert 'Add 1 rep per set; rest 60 sec.' != 'Add 1 rep per set; rest 60 sec.'",
+        "AssertionError: assert 'Add 1 rep per set; rest 60 sec.' != 'Add 1 rep per set; rest 60 sec.'"
+      ]
+    },
+    {
+      "test": "tests/test_measurable_exercise_coaching.py::test_missing_note_gets_one_short_step_without_changing_work[Back Squat-3 x 8 reps @ 50 kg; rest 120 sec; RPE 7-Add 2.5kg.]",
+      "classification": "existing_main_failure",
+      "main_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063281/job/117118613820",
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063275/job/117118613164"
+      ],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748429/job/117154658709",
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748368/job/117154658127"
+      ],
+      "current_status": "baseline_failure_not_claimed_fixed",
+      "main_summary": [
+        "AssertionError: assert None == 'Add 2.5kg.'",
+        "AssertionError: assert None == 'Add 2.5kg.'"
+      ],
+      "pr_summary": [
+        "AssertionError: assert None == 'Add 2.5kg.'",
+        "AssertionError: assert None == 'Add 2.5kg.'"
+      ]
+    },
+    {
+      "test": "tests/test_measurable_exercise_coaching.py::test_missing_note_gets_one_short_step_without_changing_work[Easy Assault Bike-20 min continuous; RPE 4-Add 1 min.]",
+      "classification": "existing_main_failure",
+      "main_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063281/job/117118613820",
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063275/job/117118613164"
+      ],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748429/job/117154658709",
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748368/job/117154658127"
+      ],
+      "current_status": "baseline_failure_not_claimed_fixed",
+      "main_summary": [
+        "AssertionError: assert None == 'Add 1 min.'",
+        "AssertionError: assert None == 'Add 1 min.'"
+      ],
+      "pr_summary": [
+        "AssertionError: assert None == 'Add 1 min.'",
+        "AssertionError: assert None == 'Add 1 min.'"
+      ]
+    },
+    {
+      "test": "tests/test_measurable_exercise_coaching.py::test_missing_note_gets_one_short_step_without_changing_work[Farmer Carry-3 carries over 20 m; rest 90 sec-Add 2m.]",
+      "classification": "existing_main_failure",
+      "main_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063281/job/117118613820",
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063275/job/117118613164"
+      ],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748429/job/117154658709",
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748368/job/117154658127"
+      ],
+      "current_status": "baseline_failure_not_claimed_fixed",
+      "main_summary": [
+        "AssertionError: assert None == 'Add 2m.'",
+        "AssertionError: assert None == 'Add 2m.'"
+      ],
+      "pr_summary": [
+        "AssertionError: assert None == 'Add 2m.'",
+        "AssertionError: assert None == 'Add 2m.'"
+      ]
+    },
+    {
+      "test": "tests/test_measurable_exercise_coaching.py::test_missing_note_gets_one_short_step_without_changing_work[Kettlebell Swing-3 x 4 reps; rest 90 sec; explosive-Add 1 rep/set.]",
+      "classification": "existing_main_failure",
+      "main_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063281/job/117118613820",
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063275/job/117118613164"
+      ],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748429/job/117154658709",
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748368/job/117154658127"
+      ],
+      "current_status": "baseline_failure_not_claimed_fixed",
+      "main_summary": [
+        "AssertionError: assert None == 'Add 1 rep/set.'",
+        "AssertionError: assert None == 'Add 1 rep/set.'"
+      ],
+      "pr_summary": [
+        "AssertionError: assert None == 'Add 1 rep/set.'",
+        "AssertionError: assert None == 'Add 1 rep/set.'"
+      ]
+    },
+    {
+      "test": "tests/test_measurable_exercise_coaching.py::test_numerical_easier_reduces_only_one_current_work_quantity",
+      "classification": "existing_main_failure",
+      "main_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063281/job/117118613820",
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063275/job/117118613164"
+      ],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748429/job/117154658709",
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748368/job/117154658127"
+      ],
+      "current_status": "baseline_failure_not_claimed_fixed",
+      "main_summary": [
+        "IndexError: list index out of range",
+        "IndexError: list index out of range"
+      ],
+      "pr_summary": [
+        "IndexError: list index out of range",
+        "IndexError: list index out of range"
+      ]
+    },
+    {
+      "test": "tests/test_measurable_exercise_coaching.py::test_precise_authored_bank_step_wins_when_it_matches_next_dose",
+      "classification": "existing_main_failure",
+      "main_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063281/job/117118613820",
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063275/job/117118613164"
+      ],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748429/job/117154658709",
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748368/job/117154658127"
+      ],
+      "current_status": "baseline_failure_not_claimed_fixed",
+      "main_summary": [
+        "AssertionError: assert 'Add 2 reps per set.' != 'Add 2 reps per set.'",
+        "AssertionError: assert 'Add 2 reps per set.' != 'Add 2 reps per set.'"
+      ],
+      "pr_summary": [
+        "AssertionError: assert 'Add 2 reps per set.' != 'Add 2 reps per set.'",
+        "AssertionError: assert 'Add 2 reps per set.' != 'Add 2 reps per set.'"
+      ]
+    },
+    {
+      "test": "tests/test_measurable_exercise_coaching.py::test_recorded_old_and_latest_plans_preserve_selection_doses_and_authored_regressions[741aa47d]",
+      "classification": "existing_main_failure",
+      "main_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063281/job/117118613820",
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063275/job/117118613164"
+      ],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748429/job/117154658709",
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748368/job/117154658127"
+      ],
+      "current_status": "baseline_failure_not_claimed_fixed",
+      "main_summary": [
+        "AssertionError: assert (['At same duration and effort, aim for steadier pace', 'Once landings are stable, increase repeatability at same dose'...ings are stable, aim for more repeatable take-offs', 'Aim for smoother unbroken rhythm at same load and distance', ...] and False)",
+        "AssertionError: assert (['At same duration and effort, aim for steadier pace', 'Once landings are stable, increase repeatability at same dose'...ings are stable, aim for more repeatable take-offs', 'Aim for smoother unbroken rhythm at same load and distance', ...] and False)"
+      ],
+      "pr_summary": [
+        "AssertionError: assert (['At same duration and effort, aim for steadier pace', 'Once landings are stable, increase repeatability at same dose'...ings are stable, aim for more repeatable take-offs', 'Aim for smoother unbroken rhythm at same load and distance', ...] and False)",
+        "AssertionError: assert (['At same duration and effort, aim for steadier pace', 'Once landings are stable, increase repeatability at same dose'...ings are stable, aim for more repeatable take-offs', 'Aim for smoother unbroken rhythm at same load and distance', ...] and False)"
+      ]
+    },
+    {
+      "test": "tests/test_measurable_exercise_coaching.py::test_same_day_duplicate_programmes_keep_their_own_future_targets",
+      "classification": "existing_main_failure",
+      "main_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063281/job/117118613820",
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063275/job/117118613164"
+      ],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748429/job/117154658709",
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748368/job/117154658127"
+      ],
+      "current_status": "baseline_failure_not_claimed_fixed",
+      "main_summary": [
+        "KeyError: 'progression_rule'",
+        "KeyError: 'progression_rule'"
+      ],
+      "pr_summary": [
+        "KeyError: 'progression_rule'",
+        "KeyError: 'progression_rule'"
+      ]
+    },
+    {
+      "test": "tests/test_measurable_exercise_coaching.py::test_saved_profile_recovery_and_athlete_edits",
+      "classification": "existing_main_failure",
+      "main_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063281/job/117118613820",
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063275/job/117118613164"
+      ],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748429/job/117154658709",
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748368/job/117154658127"
+      ],
+      "current_status": "baseline_failure_not_claimed_fixed",
+      "main_summary": [
+        "KeyError: 'progression_rule'",
+        "KeyError: 'progression_rule'"
+      ],
+      "pr_summary": [
+        "KeyError: 'progression_rule'",
+        "KeyError: 'progression_rule'"
+      ]
+    },
+    {
+      "test": "tests/test_measurable_exercise_coaching.py::test_unique_exposure_can_be_reindexed_without_losing_its_next_dose",
+      "classification": "existing_main_failure",
+      "main_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063281/job/117118613820",
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063275/job/117118613164"
+      ],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748429/job/117154658709",
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748368/job/117154658127"
+      ],
+      "current_status": "baseline_failure_not_claimed_fixed",
+      "main_summary": [
+        "KeyError: 'progression_rule'",
+        "KeyError: 'progression_rule'"
+      ],
+      "pr_summary": [
+        "KeyError: 'progression_rule'",
+        "KeyError: 'progression_rule'"
+      ]
+    },
+    {
+      "test": "tests/test_measurable_exercise_coaching.py::test_unknown_load_never_gets_an_invented_kg_step",
+      "classification": "existing_main_failure",
+      "main_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063281/job/117118613820",
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063275/job/117118613164"
+      ],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748429/job/117154658709",
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748368/job/117154658127"
+      ],
+      "current_status": "baseline_failure_not_claimed_fixed",
+      "main_summary": [
+        "AssertionError: assert not 'Add 2.5 kg when all reps are complete.'",
+        "AssertionError: assert not 'Add 2.5 kg when all reps are complete.'"
+      ],
+      "pr_summary": [
+        "AssertionError: assert not 'Add 2.5 kg when all reps are complete.'",
+        "AssertionError: assert not 'Add 2.5 kg when all reps are complete.'"
+      ]
+    },
+    {
+      "test": "tests/test_mechanical_metadata_corrections.py::test_exact_seven_source_deltas_preserve_every_identity_and_other_row",
+      "classification": "existing_main_failure",
+      "main_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063281/job/117118613799"
+      ],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748368/job/117154657957"
+      ],
+      "current_status": "baseline_failure_not_claimed_fixed",
+      "main_summary": [
+        "AssertionError: assert (2858 == 2855)"
+      ],
+      "pr_summary": [
+        "AssertionError: assert (2858 == 2855)"
+      ]
+    },
+    {
+      "test": "tests/test_metadata_integrity_audit.py::test_all_field_occurrences_have_exact_raw_value_type_and_identity",
+      "classification": "existing_main_failure",
+      "main_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063281/job/117118613736"
+      ],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748368/job/117154657911"
+      ],
+      "current_status": "baseline_failure_not_claimed_fixed",
+      "main_summary": [
+        "ValueError: Historical source drift: api/services/xp_progress.py"
+      ],
+      "pr_summary": [
+        "ValueError: Historical source drift: api/services/xp_progress.py"
+      ]
+    },
+    {
+      "test": "tests/test_metadata_integrity_audit.py::test_all_live_entries_and_zero_row_shim_are_accounted_for",
+      "classification": "existing_main_failure",
+      "main_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063281/job/117118613736"
+      ],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748368/job/117154657911"
+      ],
+      "current_status": "baseline_failure_not_claimed_fixed",
+      "main_summary": [
+        "ValueError: Historical source drift: api/services/xp_progress.py"
+      ],
+      "pr_summary": [
+        "ValueError: Historical source drift: api/services/xp_progress.py"
+      ]
+    },
+    {
+      "test": "tests/test_metadata_integrity_audit.py::test_configuration_case_collision_and_unestablished_restrictions_are_reported",
+      "classification": "existing_main_failure",
+      "main_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063281/job/117118613736"
+      ],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748368/job/117154657911"
+      ],
+      "current_status": "baseline_failure_not_claimed_fixed",
+      "main_summary": [
+        "ValueError: Historical source drift: api/services/xp_progress.py"
+      ],
+      "pr_summary": [
+        "ValueError: Historical source drift: api/services/xp_progress.py"
+      ]
+    },
+    {
+      "test": "tests/test_metadata_integrity_audit.py::test_custom_plan_boundary_does_not_allow_unrelated_production_changes",
+      "classification": "existing_main_failure",
+      "main_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063281/job/117118613736"
+      ],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748368/job/117154657911"
+      ],
+      "current_status": "baseline_failure_not_claimed_fixed",
+      "main_summary": [
+        "AssertionError: Regex pattern did not match."
+      ],
+      "pr_summary": [
+        "AssertionError: Regex pattern did not match."
+      ]
+    },
+    {
+      "test": "tests/test_metadata_integrity_audit.py::test_duplicate_screen_does_not_merge_different_concepts",
+      "classification": "existing_main_failure",
+      "main_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063281/job/117118613736"
+      ],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748368/job/117154657911"
+      ],
+      "current_status": "baseline_failure_not_claimed_fixed",
+      "main_summary": [
+        "ValueError: Historical source drift: api/services/xp_progress.py"
+      ],
+      "pr_summary": [
+        "ValueError: Historical source drift: api/services/xp_progress.py"
+      ]
+    },
+    {
+      "test": "tests/test_metadata_integrity_audit.py::test_every_field_and_configuration_has_dependency_status",
+      "classification": "existing_main_failure",
+      "main_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063281/job/117118613736"
+      ],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748368/job/117154657911"
+      ],
+      "current_status": "baseline_failure_not_claimed_fixed",
+      "main_summary": [
+        "ValueError: Historical source drift: api/services/xp_progress.py"
+      ],
+      "pr_summary": [
+        "ValueError: Historical source drift: api/services/xp_progress.py"
+      ]
+    },
+    {
+      "test": "tests/test_metadata_integrity_audit.py::test_frozen_bank_production_and_identity_baselines_are_unchanged",
+      "classification": "existing_main_failure",
+      "main_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063281/job/117118613736"
+      ],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748368/job/117154657911"
+      ],
+      "current_status": "baseline_failure_not_claimed_fixed",
+      "main_summary": [
+        "ValueError: Historical source drift: api/services/xp_progress.py"
+      ],
+      "pr_summary": [
+        "ValueError: Historical source drift: api/services/xp_progress.py"
+      ]
+    },
+    {
+      "test": "tests/test_metadata_integrity_audit.py::test_goal_coverage_is_observed_without_assignment",
+      "classification": "existing_main_failure",
+      "main_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063281/job/117118613736"
+      ],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748368/job/117154657911"
+      ],
+      "current_status": "baseline_failure_not_claimed_fixed",
+      "main_summary": [
+        "ValueError: Historical source drift: api/services/xp_progress.py"
+      ],
+      "pr_summary": [
+        "ValueError: Historical source drift: api/services/xp_progress.py"
+      ]
+    },
+    {
+      "test": "tests/test_metadata_integrity_audit.py::test_inventory_preserves_every_raw_source_row",
+      "classification": "existing_main_failure",
+      "main_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063281/job/117118613736"
+      ],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748368/job/117154657911"
+      ],
+      "current_status": "baseline_failure_not_claimed_fixed",
+      "main_summary": [
+        "ValueError: Historical source drift: api/services/xp_progress.py"
+      ],
+      "pr_summary": [
+        "ValueError: Historical source drift: api/services/xp_progress.py"
+      ]
+    },
+    {
+      "test": "tests/test_metadata_integrity_audit.py::test_real_compounds_have_not_been_silently_split",
+      "classification": "existing_main_failure",
+      "main_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063281/job/117118613736"
+      ],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748368/job/117154657911"
+      ],
+      "current_status": "baseline_failure_not_claimed_fixed",
+      "main_summary": [
+        "ValueError: Historical source drift: api/services/xp_progress.py"
+      ],
+      "pr_summary": [
+        "ValueError: Historical source drift: api/services/xp_progress.py"
+      ]
+    },
+    {
+      "test": "tests/test_metadata_integrity_audit.py::test_reports_are_deterministic_and_retained_reports_match",
+      "classification": "existing_main_failure",
+      "main_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063281/job/117118613736"
+      ],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748368/job/117154657911"
+      ],
+      "current_status": "baseline_failure_not_claimed_fixed",
+      "main_summary": [
+        "ValueError: Historical source drift: api/services/xp_progress.py"
+      ],
+      "pr_summary": [
+        "ValueError: Historical source drift: api/services/xp_progress.py"
+      ]
+    },
+    {
+      "test": "tests/test_metadata_integrity_audit.py::test_running_full_audit_preserves_deterministic_training_outputs",
+      "classification": "existing_main_failure",
+      "main_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063281/job/117118613736"
+      ],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748368/job/117154657911"
+      ],
+      "current_status": "baseline_failure_not_claimed_fixed",
+      "main_summary": [
+        "ValueError: Historical source drift: api/services/xp_progress.py"
+      ],
+      "pr_summary": [
+        "ValueError: Historical source drift: api/services/xp_progress.py"
+      ]
+    },
+    {
+      "test": "tests/test_microdose_host_priority_and_render.py::test_the_microdose_carries_its_dose_into_the_rendered_block",
+      "classification": "existing_main_failure",
+      "main_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063281/job/117118613917"
+      ],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748368/job/117154657885"
+      ],
+      "current_status": "baseline_failure_not_claimed_fixed",
+      "main_summary": [
+        "AssertionError: assert ['Drive throw...side @ RPE 7'] == ['2 x 3/side @ RPE 7']"
+      ],
+      "pr_summary": [
+        "AssertionError: assert ['Drive throw...side @ RPE 7'] == ['2 x 3/side @ RPE 7']"
+      ]
+    },
+    {
+      "test": "tests/test_open_plan_development_block.py::test_two_hard_power_open_block_never_turns_a_microdose_into_full_strength",
+      "classification": "existing_main_failure",
+      "main_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063281/job/117118613882"
+      ],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748368/job/117154658177"
+      ],
+      "current_status": "baseline_failure_not_claimed_fixed",
+      "main_summary": [
+        "AssertionError: assert 2 <= 1"
+      ],
+      "pr_summary": [
+        "AssertionError: assert 2 <= 1"
+      ]
+    },
+    {
+      "test": "tests/test_physical_session_frequency.py::test_taper_pressure_keeps_occupancy_and_still_caps_meaningful_stress",
+      "classification": "introduced_by_2904",
+      "main_evidence": [],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748368/job/117154658127"
+      ],
+      "current_status": "targeted_rerun_passed",
+      "main_summary": [],
+      "pr_summary": [
+        "KeyError: 'slot_id'"
+      ]
+    },
+    {
+      "test": "tests/test_pipeline_logic_regressions.py::test_rehab_injury_string_applies_guided_type_when_area_genuinely_matches",
+      "classification": "existing_main_failure",
+      "main_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063281/job/117118613799"
+      ],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748368/job/117154657957"
+      ],
+      "current_status": "baseline_failure_not_claimed_fixed",
+      "main_summary": [
+        "AttributeError: 'types.SimpleNamespace' object has no attribute 'training_context'"
+      ],
+      "pr_summary": [
+        "AttributeError: 'types.SimpleNamespace' object has no attribute 'training_context'"
+      ]
+    },
+    {
+      "test": "tests/test_pipeline_logic_regressions.py::test_rehab_injury_string_does_not_apply_first_card_instability_to_other_entries",
+      "classification": "existing_main_failure",
+      "main_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063281/job/117118613799"
+      ],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748368/job/117154657957"
+      ],
+      "current_status": "baseline_failure_not_claimed_fixed",
+      "main_summary": [
+        "AttributeError: 'types.SimpleNamespace' object has no attribute 'training_context'"
+      ],
+      "pr_summary": [
+        "AttributeError: 'types.SimpleNamespace' object has no attribute 'training_context'"
+      ]
+    },
+    {
+      "test": "tests/test_pipeline_logic_regressions.py::test_rehab_injury_string_does_not_apply_guided_type_when_area_only_substring_matches",
+      "classification": "existing_main_failure",
+      "main_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063281/job/117118613799"
+      ],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748368/job/117154657957"
+      ],
+      "current_status": "baseline_failure_not_claimed_fixed",
+      "main_summary": [
+        "AttributeError: 'types.SimpleNamespace' object has no attribute 'training_context'"
+      ],
+      "pr_summary": [
+        "AttributeError: 'types.SimpleNamespace' object has no attribute 'training_context'"
+      ]
+    },
+    {
+      "test": "tests/test_planner_product_suite.py::test_scenario_fresh_pro_kickboxer_without_injuries",
+      "classification": "existing_main_failure",
+      "main_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063281/job/117118613882"
+      ],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748368/job/117154658177"
+      ],
+      "current_status": "baseline_failure_not_claimed_fixed",
+      "main_summary": [
+        "KeyError: 'slot_id'"
+      ],
+      "pr_summary": [
+        "KeyError: 'slot_id'"
+      ]
+    },
+    {
+      "test": "tests/test_stage1_parity.py::test_stage1_soft_review_flags_stay_within_baseline[fight_week-overrides5]",
+      "classification": "introduced_by_2904",
+      "main_evidence": [],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748368/job/117154657885"
+      ],
+      "current_status": "targeted_rerun_passed",
+      "main_summary": [],
+      "pr_summary": [
+        "AssertionError: fight_week: Stage 1 draft emitted NEW review-flag codes ['late_fight_technical_round_overage', 'late_fight_window_preferred_missing']; the draft drifted further from live. Fix the renderer or update the baseline."
+      ]
+    },
+    {
+      "test": "tests/test_stage1_parity.py::test_stage1_soft_review_flags_stay_within_baseline[injury_knee-overrides3]",
+      "classification": "existing_main_failure",
+      "main_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063281/job/117118613917"
+      ],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748368/job/117154657885"
+      ],
+      "current_status": "baseline_failure_not_claimed_fixed",
+      "main_summary": [
+        "AssertionError: injury_knee: Stage 1 draft emitted NEW review-flag codes ['total_session_budget_exceeded']; the draft drifted further from live. Fix the renderer or update the baseline."
+      ],
+      "pr_summary": [
+        "AssertionError: injury_knee: Stage 1 draft emitted NEW review-flag codes ['total_session_budget_exceeded']; the draft drifted further from live. Fix the renderer or update the baseline."
+      ]
+    },
+    {
+      "test": "tests/test_stage1_parity.py::test_stage1_soft_review_flags_stay_within_baseline[late_fight_countdown-overrides4]",
+      "classification": "existing_main_failure",
+      "main_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063281/job/117118613917"
+      ],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748368/job/117154657885"
+      ],
+      "current_status": "baseline_failure_not_claimed_fixed",
+      "main_summary": [
+        "AssertionError: late_fight_countdown: Stage 1 draft emitted NEW review-flag codes ['total_session_budget_exceeded']; the draft drifted further from live. Fix the renderer or update the baseline."
+      ],
+      "pr_summary": [
+        "AssertionError: late_fight_countdown: Stage 1 draft emitted NEW review-flag codes ['late_fight_unapproved_exercise_rendered', 'late_fight_window_preferred_missing', 'total_session_budget_exceeded']; the draft drifted further from live. Fix the renderer or update the baseline."
+      ]
+    },
+    {
+      "test": "tests/test_stage1_parity.py::test_stage1_soft_review_flags_stay_within_baseline[long_camp_pro-overrides1]",
+      "classification": "existing_main_failure",
+      "main_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063281/job/117118613917"
+      ],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748368/job/117154657885"
+      ],
+      "current_status": "baseline_failure_not_claimed_fixed",
+      "main_summary": [
+        "AssertionError: long_camp_pro: Stage 1 draft emitted NEW review-flag codes ['total_session_budget_exceeded']; the draft drifted further from live. Fix the renderer or update the baseline."
+      ],
+      "pr_summary": [
+        "AssertionError: long_camp_pro: Stage 1 draft emitted NEW review-flag codes ['total_session_budget_exceeded']; the draft drifted further from live. Fix the renderer or update the baseline."
+      ]
+    },
+    {
+      "test": "tests/test_stage1_parity.py::test_stage1_soft_review_flags_stay_within_baseline[no_injury_clean-overrides6]",
+      "classification": "existing_main_failure",
+      "main_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063281/job/117118613917"
+      ],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748368/job/117154657885"
+      ],
+      "current_status": "baseline_failure_not_claimed_fixed",
+      "main_summary": [
+        "AssertionError: no_injury_clean: Stage 1 draft emitted NEW review-flag codes ['total_session_budget_exceeded']; the draft drifted further from live. Fix the renderer or update the baseline."
+      ],
+      "pr_summary": [
+        "AssertionError: no_injury_clean: Stage 1 draft emitted NEW review-flag codes ['total_session_budget_exceeded']; the draft drifted further from live. Fix the renderer or update the baseline."
+      ]
+    },
+    {
+      "test": "tests/test_stage1_parity.py::test_stage1_soft_review_flags_stay_within_baseline[standard_amateur_boxing-overrides0]",
+      "classification": "existing_main_failure",
+      "main_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063281/job/117118613917"
+      ],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748368/job/117154657885"
+      ],
+      "current_status": "baseline_failure_not_claimed_fixed",
+      "main_summary": [
+        "AssertionError: standard_amateur_boxing: Stage 1 draft emitted NEW review-flag codes ['total_session_budget_exceeded']; the draft drifted further from live. Fix the renderer or update the baseline."
+      ],
+      "pr_summary": [
+        "AssertionError: standard_amateur_boxing: Stage 1 draft emitted NEW review-flag codes ['total_session_budget_exceeded']; the draft drifted further from live. Fix the renderer or update the baseline."
+      ]
+    },
+    {
+      "test": "tests/test_stage1_parity.py::test_stage1_soft_review_flags_stay_within_baseline[weight_cut-overrides2]",
+      "classification": "existing_main_failure",
+      "main_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063281/job/117118613917"
+      ],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748368/job/117154657885"
+      ],
+      "current_status": "baseline_failure_not_claimed_fixed",
+      "main_summary": [
+        "AssertionError: weight_cut: Stage 1 draft emitted NEW review-flag codes ['total_session_budget_exceeded']; the draft drifted further from live. Fix the renderer or update the baseline."
+      ],
+      "pr_summary": [
+        "AssertionError: weight_cut: Stage 1 draft emitted NEW review-flag codes ['total_session_budget_exceeded']; the draft drifted further from live. Fix the renderer or update the baseline."
+      ]
+    },
+    {
+      "test": "tests/test_stage2_handoff_compaction.py::test_removed_progression_fields_are_still_present_via_the_role_map",
+      "classification": "existing_main_failure",
+      "main_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063281/job/117118613917"
+      ],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748368/job/117154657885"
+      ],
+      "current_status": "baseline_failure_not_claimed_fixed",
+      "main_summary": [
+        "AssertionError: week 1 intentional_compression was NOT a duplicate"
+      ],
+      "pr_summary": [
+        "AssertionError: week 1 intentional_compression was NOT a duplicate"
+      ]
+    },
+    {
+      "test": "tests/test_stage2_payload_late_fight_roles.py::test_coach_owned_context_sequence_downgraded_hard_spar_gets_ban_label",
+      "classification": "existing_main_failure",
+      "main_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063281/job/117118613736"
+      ],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748368/job/117154657911"
+      ],
+      "current_status": "baseline_failure_not_claimed_fixed",
+      "main_summary": [
+        "AssertionError: assert 'Technical-on...ess priority.' == 'Technical-on...ess priority.'"
+      ],
+      "pr_summary": [
+        "AssertionError: assert 'Technical-on...ess priority.' == 'Technical-on...ess priority.'"
+      ]
+    },
+    {
+      "test": "tests/test_stage2_payload_late_fight_roles.py::test_coach_owned_context_sequence_keeps_downgraded_declared_hard_day",
+      "classification": "existing_main_failure",
+      "main_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063281/job/117118613736"
+      ],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748368/job/117154657911"
+      ],
+      "current_status": "baseline_failure_not_claimed_fixed",
+      "main_summary": [
+        "AssertionError: assert 'Technical-on...ess priority.' == 'Technical-on...ess priority.'"
+      ],
+      "pr_summary": [
+        "AssertionError: assert 'Technical-on...ess priority.' == 'Technical-on...ess priority.'"
+      ]
+    },
+    {
+      "test": "tests/test_stage2_payload_late_fight_roles.py::test_declared_coach_combat_spine_removes_app_stressor_from_coach_day",
+      "classification": "existing_main_failure",
+      "main_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063281/job/117118613736"
+      ],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748368/job/117154657911"
+      ],
+      "current_status": "baseline_failure_not_claimed_fixed",
+      "main_summary": [
+        "AssertionError: assert 'strength_touch_day' not in ['strength_touch_day', 'hard_sparring_day']"
+      ],
+      "pr_summary": [
+        "AssertionError: assert 'strength_touch_day' not in ['strength_touch_day', 'hard_sparring_day']"
+      ]
+    },
+    {
+      "test": "tests/test_stage2_payload_late_fight_roles.py::test_low_cost_filler_can_share_locked_coach_combat_label",
+      "classification": "existing_main_failure",
+      "main_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063281/job/117118613736"
+      ],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748368/job/117154657911"
+      ],
+      "current_status": "baseline_failure_not_claimed_fixed",
+      "main_summary": [
+        "TypeError: _late_fight_best_assignment() got an unexpected keyword argument 'hard_weekdays'"
+      ],
+      "pr_summary": [
+        "TypeError: _late_fight_best_assignment() got an unexpected keyword argument 'hard_weekdays'"
+      ]
+    },
+    {
+      "test": "tests/test_stage2_payload_late_fight_roles.py::test_pre_fight_compressed_does_not_auto_collapse_to_two_visible_sessions_for_moderate_manageable_context",
+      "classification": "existing_main_failure",
+      "main_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063281/job/117118613736"
+      ],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748368/job/117154657911"
+      ],
+      "current_status": "baseline_failure_not_claimed_fixed",
+      "main_summary": [
+        "assert 4 == 3"
+      ],
+      "pr_summary": [
+        "assert 4 == 3"
+      ]
+    },
+    {
+      "test": "tests/test_stage2_payload_late_fight_roles.py::test_stressor_cannot_share_locked_coach_combat_label",
+      "classification": "existing_main_failure",
+      "main_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063281/job/117118613736"
+      ],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748368/job/117154657911"
+      ],
+      "current_status": "baseline_failure_not_claimed_fixed",
+      "main_summary": [
+        "TypeError: _late_fight_best_assignment() got an unexpected keyword argument 'hard_weekdays'"
+      ],
+      "pr_summary": [
+        "TypeError: _late_fight_best_assignment() got an unexpected keyword argument 'hard_weekdays'"
+      ]
+    },
+    {
+      "test": "tests/test_stage2_payload_modes.py::TestPlanningBriefBranching::test_d13_practical_behaviour_uses_countdown_continuation_until_d1",
+      "classification": "existing_main_failure",
+      "main_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063281/job/117118613917"
+      ],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748368/job/117154657885"
+      ],
+      "current_status": "baseline_failure_not_claimed_fixed",
+      "main_summary": [
+        "AssertionError: assert ['strength_to...l_primer_day'] == ['strength_to...reshness_day']"
+      ],
+      "pr_summary": [
+        "AssertionError: assert ['strength_to...l_primer_day'] == ['strength_to...reshness_day']"
+      ]
+    },
+    {
+      "test": "tests/test_stage2_payload_modes.py::TestPlanningBriefBranching::test_d1_planning_brief_has_no_week_structure",
+      "classification": "existing_main_failure",
+      "main_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063281/job/117118613917"
+      ],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748368/job/117154657885"
+      ],
+      "current_status": "baseline_failure_not_claimed_fixed",
+      "main_summary": [
+        "AssertionError: assert ['neural_primer_day'] == []"
+      ],
+      "pr_summary": [
+        "AssertionError: assert ['neural_primer_day'] == []"
+      ]
+    },
+    {
+      "test": "tests/test_stage2_payload_modes.py::TestPlanningBriefBranching::test_late_fight_uses_dedicated_planning_brief",
+      "classification": "existing_main_failure",
+      "main_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063281/job/117118613917"
+      ],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748368/job/117154657885"
+      ],
+      "current_status": "baseline_failure_not_claimed_fixed",
+      "main_summary": [
+        "AssertionError: assert ['fight_week_...l_primer_day'] == ['alactic_sharpness_day']"
+      ],
+      "pr_summary": [
+        "AssertionError: assert ['fight_week_...l_primer_day'] == ['alactic_sharpness_day']"
+      ]
+    },
+    {
+      "test": "tests/test_stage2_payload_modes.py::TestStage2PayloadBranching::test_plan_spec_exposes_allocator_metadata_and_source_of_truth_fields",
+      "classification": "existing_main_failure",
+      "main_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063281/job/117118613917"
+      ],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748368/job/117154657885"
+      ],
+      "current_status": "baseline_failure_not_claimed_fixed",
+      "main_summary": [
+        "AssertionError: assert ['D-4', 'D-3', 'D-2', 'D-1'] == ['D-4', 'D-3', 'D-2']"
+      ],
+      "pr_summary": [
+        "AssertionError: assert ['D-4', 'D-3', 'D-2', 'D-1'] == ['D-4', 'D-3', 'D-2']"
+      ]
+    },
+    {
+      "test": "tests/test_stage2_pipeline.py::test_review_stage2_output_still_blocks_d3_sandbag_shouldering_via_forbidden_window",
+      "classification": "existing_main_failure",
+      "main_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063281/job/117118613799"
+      ],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748368/job/117154657957"
+      ],
+      "current_status": "baseline_failure_not_claimed_fixed",
+      "main_summary": [
+        "assert True is False"
+      ],
+      "pr_summary": [
+        "assert True is False"
+      ]
+    },
+    {
+      "test": "tests/test_stage2_planning_brief.py::test_high_fatigue_compression_uses_declared_spar_count_for_cap_and_priority",
+      "classification": "existing_main_failure",
+      "main_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063281/job/117118613882"
+      ],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748368/job/117154658177"
+      ],
+      "current_status": "baseline_failure_not_claimed_fixed",
+      "main_summary": [
+        "AssertionError: assert ['Thursday', 'Tuesday'] == ['Tuesday', 'Thursday']"
+      ],
+      "pr_summary": [
+        "AssertionError: assert ['Thursday', 'Tuesday'] == ['Tuesday', 'Thursday']"
+      ]
+    },
+    {
+      "test": "tests/test_stage2_planning_brief.py::test_stage2_payload_carries_declared_sparring_days_into_athlete_model_and_priorities",
+      "classification": "existing_main_failure",
+      "main_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063281/job/117118613882"
+      ],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748368/job/117154658177"
+      ],
+      "current_status": "baseline_failure_not_claimed_fixed",
+      "main_summary": [
+        "AssertionError: assert 'repeatability_support_day' in ['transfer_strength_day', 'neural_plus_strength_day', 'fight_pace_repeatability_day', 'hard_sparring_day', 'hard_sparring_day', 'light_combat_day']"
+      ],
+      "pr_summary": [
+        "AssertionError: assert 'repeatability_support_day' in ['transfer_strength_day', 'neural_plus_strength_day', 'fight_pace_repeatability_day', 'hard_sparring_day', 'hard_sparring_day', 'light_combat_day']"
+      ]
+    },
+    {
+      "test": "tests/test_standalone_strength_minimum.py::test_session_already_at_four_is_unchanged",
+      "classification": "existing_main_failure",
+      "main_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063281/job/117118613917"
+      ],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748368/job/117154657885"
+      ],
+      "current_status": "baseline_failure_not_claimed_fixed",
+      "main_summary": [
+        "AssertionError: assert 5 == 4"
+      ],
+      "pr_summary": [
+        "AssertionError: assert 6 == 4"
+      ]
+    },
+    {
+      "test": "tests/test_structured_plan_stop_rules.py::test_converter_prompt_requires_compact_athlete_facing_stop_rules",
+      "classification": "existing_main_failure",
+      "main_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063281/job/117118613736"
+      ],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748368/job/117154657911"
+      ],
+      "current_status": "baseline_failure_not_claimed_fixed",
+      "main_summary": [
+        "assert 'no more than 10 words' in 'You are converting an already-written training plan into a strict, machine-readable JSON object. Output ONLY a single...markdown_fallback \u2014 leave that field \"\"): D-7 \u2014 Band-Resisted Punch Return the StructuredTrainingPlan JSON object now.'"
+      ],
+      "pr_summary": [
+        "assert 'no more than 10 words' in 'You are converting an already-written training plan into a strict, machine-readable JSON object. Output ONLY a single...markdown_fallback \u2014 leave that field \"\"): D-7 \u2014 Band-Resisted Punch Return the StructuredTrainingPlan JSON object now.'"
+      ]
+    },
+    {
+      "test": "tests/test_tag_retirement.py::test_all_banks_clinical_reviews_aliases_and_historical_identities_are_unchanged",
+      "classification": "existing_main_failure",
+      "main_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063281/job/117118613799"
+      ],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748368/job/117154657957"
+      ],
+      "current_status": "baseline_failure_not_claimed_fixed",
+      "main_summary": [
+        "AssertionError: data/conditioning_bank.json"
+      ],
+      "pr_summary": [
+        "AssertionError: data/conditioning_bank.json"
+      ]
+    },
+    {
+      "test": "tests/test_tag_retirement.py::test_complete_current_plans_match_pre_retirement_selection_dose_and_personalisation",
+      "classification": "existing_main_failure",
+      "main_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063281/job/117118613799"
+      ],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748368/job/117154657957"
+      ],
+      "current_status": "baseline_failure_not_claimed_fixed",
+      "main_summary": [
+        "AssertionError: boxing_gpp_power_conditioning"
+      ],
+      "pr_summary": [
+        "AssertionError: boxing_gpp_power_conditioning"
+      ]
+    },
+    {
+      "test": "tests/test_today_service.py::TestCommandView::test_malformed_structured_session_degrades_without_crashing",
+      "classification": "existing_main_failure",
+      "main_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063281/job/117118613736"
+      ],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748368/job/117154657911"
+      ],
+      "current_status": "baseline_failure_not_claimed_fixed",
+      "main_summary": [
+        "AttributeError: 'str' object has no attribute 'get'"
+      ],
+      "pr_summary": [
+        "AttributeError: 'str' object has no attribute 'get'"
+      ]
+    },
+    {
+      "test": "tests/test_training_catalogue.py::test_catalogue_is_non_mutating_and_does_not_change_bank_consumers",
+      "classification": "existing_main_failure",
+      "main_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063281/job/117118613917"
+      ],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748368/job/117154657885"
+      ],
+      "current_status": "baseline_failure_not_claimed_fixed",
+      "main_summary": [
+        "AssertionError: assert 'dfc6831990a2ad55723f6aab3640e5339844db460879987597595759de05e39f' in {'833401b1af4fccdb46675915744a7a79d7f0f7235f598d788bbac2d52ff7801f', 'b89bc4117d392f0b8d9557308fe7e59868a82fec99b75c4e26484b63c1e164cf'}"
+      ],
+      "pr_summary": [
+        "AssertionError: assert 'dfc6831990a2ad55723f6aab3640e5339844db460879987597595759de05e39f' in {'833401b1af4fccdb46675915744a7a79d7f0f7235f598d788bbac2d52ff7801f', 'b89bc4117d392f0b8d9557308fe7e59868a82fec99b75c4e26484b63c1e164cf'}"
+      ]
+    },
+    {
+      "test": "tests/test_training_catalogue.py::test_coverage_report_is_reproducible_and_every_exclusion_has_a_reason",
+      "classification": "existing_main_failure",
+      "main_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063281/job/117118613917"
+      ],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748368/job/117154657885"
+      ],
+      "current_status": "baseline_failure_not_claimed_fixed",
+      "main_summary": [
+        "ValueError: Historical source drift: api/services/xp_progress.py"
+      ],
+      "pr_summary": [
+        "ValueError: Historical source drift: api/services/xp_progress.py"
+      ]
+    },
+    {
+      "test": "tests/test_training_discovery_filters.py::test_dictionary_is_field_scoped_descriptive_and_source_supported",
+      "classification": "existing_main_failure",
+      "main_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063281/job/117118613799"
+      ],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748368/job/117154657957"
+      ],
+      "current_status": "baseline_failure_not_claimed_fixed",
+      "main_summary": [
+        "assert 279 == 278"
+      ],
+      "pr_summary": [
+        "assert 279 == 278"
+      ]
+    },
+    {
+      "test": "tests/test_training_goal_reviews.py::test_each_review_adds_a_supported_goal_filter_and_preview[exercise_bank.json:1090492c-7713-4845-89fc-f311b9088445]",
+      "classification": "existing_main_failure",
+      "main_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063281/job/117118613882"
+      ],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748368/job/117154658177"
+      ],
+      "current_status": "baseline_failure_not_claimed_fixed",
+      "main_summary": [
+        "AssertionError: assert '62e099e89c13...863b8fa131270' == 'e8ee990fe20a...7dc4d5baee4f1'"
+      ],
+      "pr_summary": [
+        "AssertionError: assert '62e099e89c13...863b8fa131270' == '3e5071db5a68...070440a3adbfb'"
+      ]
+    },
+    {
+      "test": "tests/test_training_goal_reviews.py::test_each_review_adds_a_supported_goal_filter_and_preview[exercise_bank.json:21c9e4b8-181f-4f8d-a5d9-6ad56668c05c]",
+      "classification": "existing_main_failure",
+      "main_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063281/job/117118613882"
+      ],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748368/job/117154658177"
+      ],
+      "current_status": "baseline_failure_not_claimed_fixed",
+      "main_summary": [
+        "AssertionError: assert '62e099e89c13...863b8fa131270' == 'e8ee990fe20a...7dc4d5baee4f1'"
+      ],
+      "pr_summary": [
+        "AssertionError: assert '62e099e89c13...863b8fa131270' == '3e5071db5a68...070440a3adbfb'"
+      ]
+    },
+    {
+      "test": "tests/test_training_goal_reviews.py::test_each_review_adds_a_supported_goal_filter_and_preview[exercise_bank.json:4cf92eb8-9a32-4521-955f-5e0e3ef3fb2f]",
+      "classification": "existing_main_failure",
+      "main_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063281/job/117118613882"
+      ],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748368/job/117154658177"
+      ],
+      "current_status": "baseline_failure_not_claimed_fixed",
+      "main_summary": [
+        "AssertionError: assert '62e099e89c13...863b8fa131270' == 'e8ee990fe20a...7dc4d5baee4f1'"
+      ],
+      "pr_summary": [
+        "AssertionError: assert '62e099e89c13...863b8fa131270' == '3e5071db5a68...070440a3adbfb'"
+      ]
+    },
+    {
+      "test": "tests/test_training_goal_reviews.py::test_each_review_adds_a_supported_goal_filter_and_preview[exercise_bank.json:a8de6b79-4ace-4600-8927-6cf645fbdb04]",
+      "classification": "existing_main_failure",
+      "main_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063281/job/117118613882"
+      ],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748368/job/117154658177"
+      ],
+      "current_status": "baseline_failure_not_claimed_fixed",
+      "main_summary": [
+        "AssertionError: assert '62e099e89c13...863b8fa131270' == 'e8ee990fe20a...7dc4d5baee4f1'"
+      ],
+      "pr_summary": [
+        "AssertionError: assert '62e099e89c13...863b8fa131270' == '3e5071db5a68...070440a3adbfb'"
+      ]
+    },
+    {
+      "test": "tests/test_training_goal_reviews.py::test_each_review_adds_a_supported_goal_filter_and_preview[exercise_bank.json:ab64c3ed-5f2d-48bb-b9d4-c391c8712e72]",
+      "classification": "existing_main_failure",
+      "main_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063281/job/117118613882"
+      ],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748368/job/117154658177"
+      ],
+      "current_status": "baseline_failure_not_claimed_fixed",
+      "main_summary": [
+        "AssertionError: assert '62e099e89c13...863b8fa131270' == 'e8ee990fe20a...7dc4d5baee4f1'"
+      ],
+      "pr_summary": [
+        "AssertionError: assert '62e099e89c13...863b8fa131270' == '3e5071db5a68...070440a3adbfb'"
+      ]
+    },
+    {
+      "test": "tests/test_training_goal_reviews.py::test_each_review_adds_a_supported_goal_filter_and_preview[exercise_bank.json:b83eb2e1-57a2-4c80-a80d-ac9cfc004047]",
+      "classification": "existing_main_failure",
+      "main_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063281/job/117118613882"
+      ],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748368/job/117154658177"
+      ],
+      "current_status": "baseline_failure_not_claimed_fixed",
+      "main_summary": [
+        "AssertionError: assert '62e099e89c13...863b8fa131270' == 'e8ee990fe20a...7dc4d5baee4f1'"
+      ],
+      "pr_summary": [
+        "AssertionError: assert '62e099e89c13...863b8fa131270' == '3e5071db5a68...070440a3adbfb'"
+      ]
+    },
+    {
+      "test": "tests/test_training_goal_reviews.py::test_each_review_adds_a_supported_goal_filter_and_preview[exercise_bank.json:bbcbe94f-27a1-484f-9ddc-c3565b29cdde]",
+      "classification": "existing_main_failure",
+      "main_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063281/job/117118613882"
+      ],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748368/job/117154658177"
+      ],
+      "current_status": "baseline_failure_not_claimed_fixed",
+      "main_summary": [
+        "AssertionError: assert '62e099e89c13...863b8fa131270' == 'e8ee990fe20a...7dc4d5baee4f1'"
+      ],
+      "pr_summary": [
+        "AssertionError: assert '62e099e89c13...863b8fa131270' == '3e5071db5a68...070440a3adbfb'"
+      ]
+    },
+    {
+      "test": "tests/test_training_goal_reviews.py::test_exact_new_coverage_and_no_other_facet_or_category_changes",
+      "classification": "existing_main_failure",
+      "main_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063281/job/117118613882"
+      ],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748368/job/117154658177"
+      ],
+      "current_status": "baseline_failure_not_claimed_fixed",
+      "main_summary": [
+        "KeyError: 'conditioning_bank.json:25bb882d-74d3-482a-8d86-026689189510'"
+      ],
+      "pr_summary": [
+        "KeyError: 'conditioning_bank.json:25bb882d-74d3-482a-8d86-026689189510'"
+      ]
+    },
+    {
+      "test": "tests/test_training_library.py::test_pagination_deterministic_and_complete",
+      "classification": "existing_main_failure",
+      "main_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063281/job/117118613821"
+      ],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748368/job/117154657885"
+      ],
+      "current_status": "baseline_failure_not_claimed_fixed",
+      "main_summary": [
+        "AssertionError: assert 1013 == 1010"
+      ],
+      "pr_summary": [
+        "AssertionError: assert 1013 == 1010"
+      ]
+    },
+    {
+      "test": "renders a planner microdose inside its sessionless technical-combat host day",
+      "location": "components/structured-plan-renderer.test.tsx:2:34087",
+      "classification": "existing_main_failure",
+      "main_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063275/job/117118613404"
+      ],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748429/job/117154658398"
+      ],
+      "current_status": "targeted_rerun_passed_195_frontend_tests"
+    },
+    {
+      "test": "renders declared light-combat contact above app work without hard-sparring copy",
+      "location": "components/structured-plan-renderer.test.tsx:2:41598",
+      "classification": "existing_main_failure",
+      "main_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063275/job/117118613404"
+      ],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748429/job/117154658398"
+      ],
+      "current_status": "targeted_rerun_passed_195_frontend_tests"
+    },
+    {
+      "test": "normalizes standalone declared light-combat day and session titles",
+      "location": "components/structured-plan-renderer.test.tsx:2:42890",
+      "classification": "existing_main_failure",
+      "main_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063275/job/117118613404"
+      ],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748429/job/117154658398"
+      ],
+      "current_status": "targeted_rerun_passed_195_frontend_tests"
+    },
+    {
+      "test": "a technical day the athlete declared never reads as converted hard sparring",
+      "location": "components/structured-plan-renderer.test.tsx:2:44178",
+      "classification": "existing_main_failure",
+      "main_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063275/job/117118613404"
+      ],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748429/job/117154658398"
+      ],
+      "current_status": "targeted_rerun_passed_195_frontend_tests"
+    },
+    {
+      "test": "a declared light-combat day shows one Technical Combat block, not two",
+      "location": "components/structured-plan-sparring-card.test.tsx:2:4537",
+      "classification": "existing_main_failure",
+      "main_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063275/job/117118613404"
+      ],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748429/job/117154658398"
+      ],
+      "current_status": "targeted_rerun_passed_195_frontend_tests"
+    },
+    {
+      "test": "Today blocks omit a coach title supplied by their parent but keep its context",
+      "location": "components/today/today-session-panel.test.tsx:2:7903",
+      "classification": "existing_main_failure",
+      "main_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38944063275/job/117118613404"
+      ],
+      "pr_evidence": [
+        "https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/38954748429/job/117154658398"
+      ],
+      "current_status": "targeted_rerun_passed_195_frontend_tests"
+    }
+  ]
+}
