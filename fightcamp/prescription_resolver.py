@@ -451,9 +451,12 @@ def _primer_rpe_with_ceiling(
         found = True
         low = float(match.group("low"))
         high = float(match.group("high") or match.group("low"))
-        if high <= limit:
+        if (high <= limit and match.group("high") is None
+                and re.fullmatch(r"RPE\s*\d+(?:\.\d+)?", match.group(0), re.I)):
             return match.group(0)
-        return f"RPE {min(low, limit):g} max"
+        # Normalise ranges, "RPE <=5" and "RPE max 5" into an exact
+        # machine-readable ceiling so both the renderer and validator agree.
+        return f"RPE {min(high, limit):g} max"
 
     result = _PRIMER_RPE.sub(clamp, prescription)
     if not found:
