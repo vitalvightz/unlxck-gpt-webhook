@@ -390,23 +390,102 @@ def _effective_counts(
 
 
 
-def resolve_late_primer_conditioning_dose(
-    prescription: str, *, d_day: int | None, alactic: bool, complement: bool = False,
-) -> str:
-    """Apply the scheduled-day alactic effort ceiling to a closed primer member.
+# These match concrete recovery durations, not work intervals or footwork cues.
+# Both "1min rest" and "rest 60 sec" occur in the conditioning bank.
+_PRIMER_REST_AFTER = re.compile(
+    r"(?P<low>\d+(?:\.\d+)?)(?:\s*[-–]\s*(?P<high>\d+(?:\.\d+)?))?\s*"
+    r"(?P<unit>seconds?|secs?|s|minutes?|mins?|m)\s+"
+    r"(?P<label>rest|recovery|off)\b", re.I,
+)
+_PRIMER_REST_BEFORE = re.compile(
+    r"\b(?P<label>rest|recovery|off)\s*[:=]?\s*"
+    r"(?P<low>\d+(?:\.\d+)?)(?:\s*[-–]\s*(?P<high>\d+(?:\.\d+)?))?\s*"
+    r"(?P<unit>seconds?|secs?|s|minutes?|mins?|m)\b", re.I,
+)
+_PRIMER_RPE = re.compile(
+    r"\bRPE\s*(?:[~≈@≤]|<=|max\s*)?\s*(?P<low>\d+(?:\.\d+)?)"
+    r"(?:\s*[-–]\s*(?P<high>\d+(?:\.\d+)?))?", re.I,
+)
 
-    A conditioning-bank rep prescription (6x3 reps) counts six efforts, not
-    three reps or eighteen fight rounds. Leave work units and reps unchanged.
+
+def _primer_rest_with_floor(prescription: str, minimum_sec: float) -> str:
+    """Increase short rest; preserve longer bank recovery without changing work."""
+    found = False
+
+    def rest_after(match: re.Match[str]) -> str:
+        nonlocal found
+        found = True
+        unit = match.group("unit").lower()
+        low = float(match.group("low")) * (60 if unit.startswith("m") else 1)
+        if low >= minimum_sec:
+            return match.group(0)
+        return f"{minimum_sec:g} sec {match.group('label')}"
+
+    def rest_before(match: re.Match[str]) -> str:
+        nonlocal found
+        found = True
+        unit = match.group("unit").lower()
+        low = float(match.group("low")) * (60 if unit.startswith("m") else 1)
+        if low >= minimum_sec:
+            return match.group(0)
+        return f"{match.group('label')} {minimum_sec:g} sec"
+
+    result = _PRIMER_REST_AFTER.sub(rest_after, prescription)
+    result = _PRIMER_REST_BEFORE.sub(rest_before, result)
+    if not found:
+        result = f"{result.rstrip(' ;,')}; rest {minimum_sec:g} sec"
+    return result
+
+
+def _primer_rpe_with_ceiling(
+    prescription: str, ceiling: float, source_rpe: float | None,
+) -> str:
+    """Keep a lower authored intensity; otherwise make the cap explicit."""
+    found = False
+
+    def clamp(match: re.Match[str]) -> str:
+        nonlocal found
+        found = True
+        low = float(match.group("low"))
+        high = float(match.group("high") or match.group("low"))
+        if high <= ceiling:
+            return match.group(0)
+        return f"RPE {min(low, ceiling):g} max"
+
+    result = _PRIMER_RPE.sub(clamp, prescription)
+    if not found:
+        cap = min(source_rpe, ceiling) if source_rpe is not None else ceiling
+        result = f"{result.rstrip(' ;,')}; RPE {cap:g} max"
+    return result
+
+
+def resolve_late_primer_conditioning_dose(
+    prescription: str, *, d_day: int | None, alactic: bool,
+    complement: bool = False, source_rpe: float | None = None,
+) -> str:
+    """Price alactic primer work against its actual scheduled countdown window.
+
+    Effort count, recovery floor and RPE ceiling come from the same canonical
+    Style Taper policy. Rep-based throws retain reps, not fight-round units.
+    Technical, mobility and non-alactic work must not inherit these floors.
     """
     dose = _reduce_leading_count(prescription, 1) if complement else prescription
-    if not alactic:
+    if not dose or not alactic:
         return dose
     from .style_taper_governance import (
-        ALACTIC_MAX_ROUNDS_BY_WINDOW, style_taper_window_for_days,
+        ALACTIC_MAX_ROUNDS_BY_WINDOW,
+        ALACTIC_MIN_REST_SEC_BY_WINDOW,
+        RPE_MAX_BY_WINDOW,
+        style_taper_window_for_days,
     )
 
     window = style_taper_window_for_days(d_day)
-    return _reduce_leading_count(dose, ALACTIC_MAX_ROUNDS_BY_WINDOW[window]) if window else dose
+    if window is None:
+        return dose
+    dose = _reduce_leading_count(dose, ALACTIC_MAX_ROUNDS_BY_WINDOW[window])
+    dose = _primer_rest_with_floor(dose, ALACTIC_MIN_REST_SEC_BY_WINDOW[window])
+    return _primer_rpe_with_ceiling(dose, RPE_MAX_BY_WINDOW[window], source_rpe)
+
 
 
 _NO_LOADED_LIFTING = "No loaded lifting: neural/primer, readiness or mobility only"
