@@ -2636,7 +2636,7 @@ export function PlanIntakeForm() {
                     ) : null}
                   </div>
                   <div className={`field${invalidFieldId === "roundCount" ? " field-invalid" : ""}`}>
-                    <label htmlFor="roundCount">Round count</label>
+                    <label htmlFor="roundCount">Fight rounds</label>
                     <CustomSelect
                       id="roundCount"
                       value={parsedRounds.roundCount}
@@ -2652,7 +2652,7 @@ export function PlanIntakeForm() {
                     ) : null}
                   </div>
                   <div className={`field${invalidFieldId === "roundDuration" ? " field-invalid" : ""}`}>
-                    <label htmlFor="roundDuration">Minutes per round</label>
+                    <label htmlFor="roundDuration">Minutes per fight round</label>
                     <CustomSelect
                       id="roundDuration"
                       value={parsedRounds.roundDuration}
