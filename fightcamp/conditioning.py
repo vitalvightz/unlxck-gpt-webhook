@@ -567,7 +567,6 @@ from .conditioning_boxing import (  # noqa: E402
     _boxing_aerobic_preference_rank,
     _boxing_aerobic_priority_adjustment,
     can_add_hard_conditioning,
-    is_hard_metabolic_conditioning,
     _is_pool_treading_drill,
     _normalize_conditioning_name,
     _sanitize_sport_language,
@@ -3337,10 +3336,6 @@ def generate_conditioning_block(flags):
                     continue
                 if system == "alactic" and not _alactic_structure_ok(d):
                     continue
-                if (selection_format == "boxing"
-                        and not can_add_hard_conditioning(flags)
-                        and is_hard_metabolic_conditioning(d, system)):
-                    continue
 
                 tags = _cached_tags(d)
                 details = " ".join(
@@ -3654,10 +3649,6 @@ def generate_conditioning_block(flags):
                     continue
                 if system == "alactic" and not _alactic_structure_ok(d):
                     style_conditioning_diagnostics["entries_blocked_by_alactic_structure"] += 1
-                    continue
-                if (selection_format == "boxing"
-                        and not can_add_hard_conditioning(flags)
-                        and is_hard_metabolic_conditioning(d, system)):
                     continue
 
                 # Apply same fatigue/CNS suppression rules

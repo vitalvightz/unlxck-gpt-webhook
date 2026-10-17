@@ -156,22 +156,26 @@ def test_short_running_sprints_score_for_speed_not_fake_endurance(name):
     ) >= 5.0
 
 
-def test_shared_high_intensity_headroom_and_energy_system_distinction():
-    from fightcamp.conditioning_boxing import can_add_hard_conditioning, is_hard_metabolic_conditioning
-    athlete = {"fatigue": "low", "hard_sparring_days": ["Monday", "Friday"]}
-    assert not can_add_hard_conditioning(athlete)
-    assert can_add_hard_conditioning({"fatigue": "low", "hard_sparring_days": ["Monday"]})
-    assert not can_add_hard_conditioning({"fatigue": "moderate", "hard_sparring_days": []})
-    assert can_add_hard_conditioning(athlete, {"effective_hard_sparring_days": []})
-    assert is_hard_metabolic_conditioning(BANK["Long Hill Intervals (12x2min)"], "aerobic")
-    assert is_hard_metabolic_conditioning(BANK["Boxing Round Running Intervals (10-10-10)"], "glycolytic")
-    assert not is_hard_metabolic_conditioning(BANK["5K Steady Run"], "aerobic")
-    assert not is_hard_metabolic_conditioning(BANK["Short Hill Sprints (5x10s)"], "alactic")
+def test_original_standalone_protocol_headroom_is_unchanged():
+    from fightcamp.conditioning_boxing import can_add_hard_conditioning
+
+    assert not can_add_hard_conditioning(
+        {"fatigue": "low", "hard_sparring_days": ["Monday", "Friday"]}
+    )
+    assert can_add_hard_conditioning(
+        {"fatigue": "low", "hard_sparring_days": ["Monday"]}
+    )
+    assert not can_add_hard_conditioning(
+        {"fatigue": "moderate", "hard_sparring_days": []}
+    )
+    assert can_add_hard_conditioning(
+        {"fatigue": "low", "hard_sparring_days": ["Monday", "Friday"]},
+        {"effective_hard_sparring_days": []},
+    )
 
 
-def test_two_hard_sparring_days_retain_easy_run_not_extra_hard_metabolic_options():
+def test_two_hard_sparring_days_do_not_exclude_all_high_rpe_candidates():
     from fightcamp.conditioning import generate_conditioning_block
-    from fightcamp.conditioning_boxing import is_hard_metabolic_conditioning
 
     flags = {
         "phase": "GPP", "sport": "boxing", "style_technical": ["boxing"],
@@ -179,17 +183,21 @@ def test_two_hard_sparring_days_retain_easy_run_not_extra_hard_metabolic_options
         "primary_goal": "conditioning", "weaknesses": ["endurance"],
         "equipment": [], "injuries": [], "fatigue": "low",
         "training_frequency": 4, "days_until_fight": 49,
-        "hard_sparring_days": ["Monday", "Friday"], "support_work_days": ["Wednesday"],
-        "rounds_format": "3 x 3",
+        "hard_sparring_days": ["Monday", "Friday"],
+        "support_work_days": ["Wednesday"], "rounds_format": "3 x 3",
     }
-    *_, pool = generate_conditioning_block(flags)
-    aerobic = [candidate["drill"] for candidate in pool.get("aerobic", [])]
-    assert any(item.get("modality") == "run" and (item.get("rpe") or 0) <= 6 for item in aerobic)
-    for system in ("aerobic", "glycolytic"):
-        assert not any(
-            is_hard_metabolic_conditioning(item["drill"], system)
-            for item in pool.get(system, [])
-        )
+    *_, reservoir = generate_conditioning_block(flags)
+    aerobic = [item["drill"] for item in reservoir.get("aerobic", [])]
+    assert any(
+        item.get("modality") == "run" and (item.get("rpe") or 0) <= 6
+        for item in aerobic
+    )
+    # Two hard contacts by themselves should never erase every useful
+    # demanding aerobic candidate. Scheduling and dose owners control load.
+    assert any(
+        (item.get("rpe") or 0) >= 8
+        for item in aerobic
+    )
 
 
 def test_heavy_bag_preference_preserves_original_bonus_and_three_contact_limit():

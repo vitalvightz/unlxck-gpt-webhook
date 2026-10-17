@@ -50,17 +50,6 @@ def can_add_hard_conditioning(athlete: dict, week: dict | None = None) -> bool:
     )
 
 
-def is_hard_metabolic_conditioning(drill: dict, system: str) -> bool:
-    """Protect aerobic and glycolytic RPE>=8; not short alactic speed touches."""
-    if str(system).strip().lower() not in {"aerobic", "glycolytic"}:
-        return False
-    try:
-        rpe = float(drill.get("rpe") or drill.get("rpe_max") or 0)
-    except (TypeError, ValueError):
-        rpe = 0.0
-    return rpe >= 8 or str(drill.get("intensity") or "").strip().lower() in {"high", "max", "very_high"}
-
-
 # ── Hint constants (only used by boxing aerobic logic) ───────────────────────
 _LOWER_LIMB_UNLOAD_HINTS = {
     "ankle",
