@@ -60,8 +60,10 @@ other browser allocations; these are observations, not portable memory ceilings.
 Both tracks loaded and decoded near the final bell; neither run waited through the
 full workout duration. The 90-minute source is now rejected. In the replacement
 test, increasing round length crosses the limit and drops the source; decreasing
-it builds a new one. Only the current object URL remains during playback and none
-remain after pause. Native reservations persisting after release are a reason to
+it builds a new one. Only the current object URL remains during playback.
+Pause replaces the large WAV with a paused 60-second silent (1.9 MB) placeholder
+to preserve Safari's Play control; ending the session removes all object URLs.
+Native reservations persisting after release are a reason to
 keep phone memory profiling on the device checklist, not evidence of mobile safety.
 
 ## Required physical-device checks before pro trials
