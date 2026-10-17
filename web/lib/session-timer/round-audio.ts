@@ -143,12 +143,28 @@ export class RoundAudioTrack {
       at >= this.origin && at <= this.until && Math.abs(this.media.currentTime * 1000 - (at - this.origin)) < 1500);
   }
 
+  private dueCue(sound: TimerSound, at: number): RoundAudioCue | undefined {
+    return this.cues.find((cue) => cue.sound === sound &&
+      at - (this.origin + cue.atMs) >= -300 && at - (this.origin + cue.atMs) < 1500);
+  }
+
   coversCue(sound: TimerSound, at: number): boolean {
-    // A playing track owns its scheduled cue even if Safari's media clock drifts
-    // briefly from Date.now(). Do not layer a second live Web Audio bell over it.
-    return Boolean(this.ready && this.media && !this.media.paused && !this.media.ended &&
-      this.cues.some((cue) => cue.sound === sound &&
-        at - (this.origin + cue.atMs) >= -300 && at - (this.origin + cue.atMs) < 1500));
+    const cue = this.dueCue(sound, at);
+    const media = this.media;
+    // A stalled decoder must not claim a bell it has not reached. Allow
+    // moderate Safari playhead drift without synthesising a doubled strike.
+    return Boolean(this.ready && cue && media && !media.paused && !media.ended &&
+      !media.seeking && media.readyState >= 2 &&
+      media.currentTime * 1000 >= cue.atMs - 750);
+  }
+
+  abandonStalledCue(sound: TimerSound, at: number): void {
+    // If a scheduled sound is late in the media stream, discard that stream
+    // before the foreground fallback rings. Otherwise its delayed bell may
+    // sound again when Safari recovers.
+    if (!this.ready || !this.media || !this.dueCue(sound, at) || this.coversCue(sound, at)) return;
+    this.stop();
+    this.status("unavailable");
   }
 
   stop(): void {
@@ -247,7 +263,14 @@ export class RoundAudioTrack {
         this.status("interrupted");
         this.onMediaPause?.();
       };
-      media.onerror = () => this.status("interrupted");
+      media.onerror = () => {
+        if (generation !== this.generation) return;
+        this.status("interrupted");
+        // We cannot reliably distinguish a phone-call interruption from
+        // an intentional media pause. Without bells, freeze the workout until
+        // the athlete explicitly resumes it.
+        this.onMediaPause?.();
+      };
       media.onended = () => { this.stop(); this.status("idle"); };
       this.status("playing");
     }).catch(() => {
