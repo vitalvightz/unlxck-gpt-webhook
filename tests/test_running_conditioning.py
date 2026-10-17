@@ -110,3 +110,47 @@ def test_no_machine_boxer_keeps_an_outdoor_run_in_the_aerobic_shortlist():
     *_, candidates = generate_conditioning_block(flags)
     names = {item["drill"]["name"] for item in candidates.get("aerobic", [])}
     assert names & {"Nasal Jog", "5K Steady Run", "Continuous Tempo Run"}, names
+
+
+@pytest.mark.parametrize("name", [
+    "5K Steady Run", "One-Mile Timed Run", "Continuous Tempo Run",
+    "Running Fartlek (1:2)", "Running Aerobic Intervals (6x4min)",
+    "800m Running Repeats (8x)", "Long Hill Intervals (12x2min)",
+    "Boxing Round Running Intervals (10-10-10)",
+])
+def test_endurance_running_has_actual_conditioning_priority_hits(name):
+    from fightcamp.conditioning import _conditioning_collision_safe_priority_bonus
+    from fightcamp.priority_profile import build_priority_profile
+    from fightcamp.tag_maps import GOAL_PRIORITY_TAG_MAP, WEAKNESS_PRIORITY_TAG_MAP
+
+    tags = set(BANK[name]["tags"])
+    assert {"conditioning", "work_capacity"} <= tags
+    profile = build_priority_profile({
+        "key_goals": ["conditioning"], "primary_goal": "conditioning",
+        "weak_areas": ["gas_tank"], "primary_weak_area": "gas_tank",
+    })
+    goals = list(tags & set(GOAL_PRIORITY_TAG_MAP["conditioning"]))
+    weaknesses = list(tags & set(WEAKNESS_PRIORITY_TAG_MAP["gas_tank"]))
+    assert _conditioning_collision_safe_priority_bonus(
+        goals, weaknesses, profile, drill=BANK[name],
+    ) >= 5.0
+
+
+@pytest.mark.parametrize("name", ["Short Hill Sprints (5x10s)", "Descending Sprint Ladder (80-60-40m)"])
+def test_short_running_sprints_score_for_speed_not_fake_endurance(name):
+    from fightcamp.conditioning import _conditioning_collision_safe_priority_bonus
+    from fightcamp.priority_profile import build_priority_profile
+    from fightcamp.tag_maps import GOAL_PRIORITY_TAG_MAP, WEAKNESS_PRIORITY_TAG_MAP
+
+    tags = set(BANK[name]["tags"])
+    assert {"speed", "acceleration", "explosive"} <= tags
+    assert not tags & {"work_capacity", "glycolytic", "aerobic"}
+    profile = build_priority_profile({
+        "key_goals": ["speed"], "primary_goal": "speed",
+        "weak_areas": ["speed"], "primary_weak_area": "speed",
+    })
+    goals = list(tags & set(GOAL_PRIORITY_TAG_MAP["speed"]))
+    weaknesses = list(tags & set(WEAKNESS_PRIORITY_TAG_MAP["speed"]))
+    assert _conditioning_collision_safe_priority_bonus(
+        goals, weaknesses, profile, drill=BANK[name],
+    ) >= 5.0

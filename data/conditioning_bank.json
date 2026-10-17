@@ -9797,6 +9797,8 @@
     "intensity": "moderate",
     "tags": [
       "aerobic",
+      "conditioning",
+      "work_capacity",
       "mech_systemic_fatigue",
       "mech_lower_lunge"
     ],
@@ -9831,10 +9833,10 @@
     "intensity": "high",
     "tags": [
       "aerobic",
+      "conditioning",
+      "work_capacity",
       "mech_systemic_fatigue",
-      "mech_lower_lunge",
-      "mech_acceleration",
-      "mech_cns_high"
+      "mech_lower_lunge"
     ],
     "notes": "Occasional fitness benchmark, not a weekly recovery run. Full warm-up; record time; avoid adjacent hard sparring.",
     "impact_cost": "high",
@@ -9842,9 +9844,7 @@
     "lactate_load": "high",
     "mechanical_risk_tags": [
       "mech_lower_lunge",
-      "mech_systemic_fatigue",
-      "mech_acceleration",
-      "mech_cns_high"
+      "mech_systemic_fatigue"
     ],
     "rpe": 9,
     "late_windows": [],
@@ -9868,6 +9868,8 @@
     "intensity": "hard",
     "tags": [
       "aerobic",
+      "conditioning",
+      "work_capacity",
       "mech_systemic_fatigue",
       "mech_lower_lunge"
     ],
@@ -9901,6 +9903,8 @@
     "intensity": "hard",
     "tags": [
       "aerobic",
+      "conditioning",
+      "work_capacity",
       "mech_systemic_fatigue",
       "mech_lower_lunge"
     ],
@@ -9936,6 +9940,8 @@
     "intensity": "hard",
     "tags": [
       "aerobic",
+      "conditioning",
+      "work_capacity",
       "mech_systemic_fatigue",
       "mech_lower_lunge"
     ],
@@ -9969,7 +9975,9 @@
     "duration": "8x800m hard running, 100m walking recovery",
     "intensity": "high",
     "tags": [
+      "glycolytic",
       "conditioning",
+      "work_capacity",
       "mech_systemic_fatigue",
       "mech_lower_lunge",
       "mech_acceleration",
@@ -10007,7 +10015,10 @@
     "duration": "5x10s maximal uphill, full walk-back recovery",
     "intensity": "high",
     "tags": [
-      "conditioning",
+      "speed",
+      "acceleration",
+      "explosive",
+      "posterior_chain",
       "mech_systemic_fatigue",
       "mech_lower_lunge",
       "mech_acceleration",
@@ -10047,10 +10058,10 @@
     "intensity": "high",
     "tags": [
       "aerobic",
+      "conditioning",
+      "work_capacity",
       "mech_systemic_fatigue",
-      "mech_lower_lunge",
-      "mech_acceleration",
-      "mech_cns_high"
+      "mech_lower_lunge"
     ],
     "notes": "Advanced high-volume hill workout; walk down between repetitions until ready. With two hard sparring days, generally defer rather than add hard load.",
     "impact_cost": "high",
@@ -10058,9 +10069,7 @@
     "lactate_load": "high",
     "mechanical_risk_tags": [
       "mech_lower_lunge",
-      "mech_systemic_fatigue",
-      "mech_acceleration",
-      "mech_cns_high"
+      "mech_systemic_fatigue"
     ],
     "rpe": 8,
     "late_windows": [],
@@ -10084,7 +10093,9 @@
     "duration": "2x80m, 2x60m, 2x40m; walk-back recovery",
     "intensity": "high",
     "tags": [
-      "conditioning",
+      "speed",
+      "acceleration",
+      "explosive",
       "mech_systemic_fatigue",
       "mech_lower_lunge",
       "mech_acceleration",
@@ -10129,7 +10140,9 @@
     "duration": "3x180s rounds: 10s walk, 10s jog, 10s sprint repeated; 60s rest between rounds",
     "intensity": "high",
     "tags": [
+      "glycolytic",
       "conditioning",
+      "work_capacity",
       "mech_systemic_fatigue",
       "mech_lower_lunge",
       "mech_acceleration",
