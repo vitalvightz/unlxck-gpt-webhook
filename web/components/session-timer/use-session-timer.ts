@@ -201,8 +201,13 @@ export function useSessionTimer({
     // still calls the rounds, so the athlete never has to look; the other
     // beeps and chimes stay quiet.
     if (sound && (audibleRef.current || MINIMIZED_SOUNDS.has(sound))) {
-      if (scheduled && roundAudio.coversCue(sound, Date.now())) timerAudio().buzzSound(sound);
-      else timerAudio().play(sound);
+      const at = Date.now();
+      if (scheduled && roundAudio.coversCue(sound, at)) {
+        timerAudio().buzzSound(sound);
+      } else {
+        if (scheduled) roundAudio.abandonStalledCue(sound, at);
+        timerAudio().play(sound);
+      }
     }
     const callout = calloutForEvents(events, next);
     if (callout) timerAudio().say(callout);
@@ -327,8 +332,12 @@ export function useSessionTimer({
         const { sounds, callout } = cueSounds(cues, audibleRef.current);
         const audio = timerAudio();
         for (const sound of sounds) {
-          if (sound !== "beep" && roundAudio.coversCue(sound, at)) audio.buzzSound(sound);
-          else audio.play(sound);
+          if (sound !== "beep" && roundAudio.coversCue(sound, at)) {
+            audio.buzzSound(sound);
+          } else {
+            if (sound !== "beep") roundAudio.abandonStalledCue(sound, at);
+            audio.play(sound);
+          }
         }
         if (callout) audio.say(callout);
       }
