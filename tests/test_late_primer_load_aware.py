@@ -421,6 +421,18 @@ def test_taper_rest_rules_do_not_affect_non_alactic_or_pre_window_work():
     )
 
 
+@pytest.mark.parametrize(("source", "expected"), [
+    ("2x3 reps, 120 sec rest; RPE <=5", "2x3 reps, 120 sec rest; RPE 5 max"),
+    ("2x3 reps, 120 sec rest; RPE 3-4", "2x3 reps, 120 sec rest; RPE 4 max"),
+])
+def test_late_primer_rpe_range_and_ceiling_are_renderable(source, expected):
+    from fightcamp.prescription_resolver import resolve_late_primer_conditioning_dose
+
+    assert resolve_late_primer_conditioning_dose(
+        source, d_day=6, alactic=True,
+    ) == expected
+
+
 def test_selected_d6_alactic_primer_carries_governed_rest_and_rpe_structurally():
     role = _role("alactic_sharpness_day", d_day=6)
     members = _compose(role, conditioning=[_primer(
