@@ -1,10 +1,13 @@
 "use client";
 
 import { type FormEvent, useEffect, useId, useRef, useState } from "react";
+import Link from "next/link";
 import { useAppSession } from "./auth-provider";
 import { habitTrainingDay } from "@/lib/training-habits";
-import { ApiError, editExternalTraining, getTrainingHistory, logExternalTraining } from "@/lib/api";
+import { ApiError, editExternalTraining, getTrainingHistory, logExternalTraining, recordCompliance } from "@/lib/api";
 import { lockOverlayScroll } from "@/lib/overlay-scroll-lock";
+import { consentCopyForBand, hasHealthDataConsent } from "@/lib/compliance";
+import { PRIVACY_HREF } from "@/lib/legal-documents";
 import { formatAppDate } from "@/lib/date-format";
 import {
   TRAINING_EFFORTS, canRepeatTraining, latestRepeatableTraining,
@@ -31,7 +34,10 @@ function LogTrainingContent({ accessToken, entry, repeatEntry, recent = false, h
   const [lastSession, setLastSession] = useState<TrainingHistorySession>();
   const repeatSource = repeatEntry && canRepeatTraining(repeatEntry) ? repeatEntry : recent ? history ? latestRepeatableTraining(history) : lastSession : undefined;
   const [repeating, setRepeating] = useState(false);
-  const { me } = useAppSession();
+  const { me, replaceMe } = useAppSession();
+  const consentCopy = consentCopyForBand(me?.profile.age_band);
+  const [serverConsentRequired, setServerConsentRequired] = useState(false);
+  const requiresConsent = !me || (me.profile.role === "athlete" && !hasHealthDataConsent(me)) || serverConsentRequired;
   const [now, setNow] = useState(() => new Date());
   const today = habitTrainingDay(now, me?.profile.athlete_timezone);
   const [sourceLabel, setSourceLabel] = useState("");
@@ -101,7 +107,27 @@ function LogTrainingContent({ accessToken, entry, repeatEntry, recent = false, h
     return () => clearTimeout(timer);
   }, [saved]);
 
+  useEffect(() => {
+    if (open) dialog.current?.querySelector<HTMLButtonElement>(requiresConsent ? "[data-consent-action]" : repeating ? "[data-effort]" : "[data-activity]")?.focus();
+  }, [open, requiresConsent, repeating]);
+
+  async function grantConsent() {
+    if (!me || saving.current) return;
+    const token = accessToken;
+    saving.current = true; setBusy(true); setError(null);
+    try {
+      const next = await recordCompliance(token, { health_data_consent: true });
+      if (currentToken.current !== token) return;
+      if (!hasHealthDataConsent(next)) throw new Error("Consent was not recorded.");
+      replaceMe(next);
+      setServerConsentRequired(false);
+    } catch {
+      if (currentToken.current === token) setError("Your consent could not be saved. Try again.");
+    } finally { saving.current = false; if (currentToken.current === token) setBusy(false); }
+  }
+
   function startEdit(row?: Partial<TrainingHistorySession>, repeat = false, source = "From previous session") {
+    setServerConsentRequired(false);
     setRepeating(repeat);
     setSourceLabel(source);
     setDetailsOpen(false);
@@ -119,6 +145,7 @@ function LogTrainingContent({ accessToken, entry, repeatEntry, recent = false, h
   async function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!accessToken || saving.current) return;
+    if (requiresConsent) return;
     if (!activity || !effort) {
       setError("Select an activity and effort.");
       dialog.current?.querySelector<HTMLButtonElement>(!activity ? '[data-activity]' : '[data-effort]')?.focus();
@@ -144,7 +171,9 @@ function LogTrainingContent({ accessToken, entry, repeatEntry, recent = false, h
       setOpen(false);
       setSaved(`${row.title} logged successfully. Saved to Training History.`);
     } catch (reason) {
-      if (currentToken.current === token) setError(reason instanceof ApiError && reason.status === 401 ? "Your session expired. Sign in again to log training." : reason instanceof Error ? reason.message.replace("The plan service", "The training service") : "Unable to save session. Try again.");
+      if (currentToken.current === token && reason instanceof ApiError && reason.code === "health_data_consent_required") {
+        setServerConsentRequired(true); setError(null);
+      } else if (currentToken.current === token) setError(reason instanceof ApiError && reason.status === 401 ? "Your session expired. Sign in again to log training." : reason instanceof Error ? reason.message.replace("The plan service", "The training service") : "Unable to save session. Try again.");
     } finally { saving.current = false; if (currentToken.current === token) setBusy(false); }
   }
 
@@ -202,7 +231,14 @@ function LogTrainingContent({ accessToken, entry, repeatEntry, recent = false, h
           </div>
           <button className={styles.close} type="button" aria-label="Close training log" disabled={busy} onClick={() => setOpen(false)}>×</button>
         </header>
-        <form className={styles.form} onSubmit={save} aria-label={editing ? "Edit training" : "Log Training"}>
+        {requiresConsent ? <div className={styles.consent}>
+          <p>Training logs include health-related information, such as effort and sparring.</p>
+          <p id={`${fieldId}-consent`}>{consentCopy.signupHealthConsentLabel}</p>
+          <p className="muted">Optional. You can withdraw in Settings. <Link href={PRIVACY_HREF}>Privacy Notice</Link></p>
+          {error ? <p role="alert">{error}</p> : null}
+          <button type="button" className="cta" data-consent-action aria-describedby={`${fieldId}-consent`} disabled={busy || !me} onClick={() => void grantConsent()}>{busy ? "Saving…" : "Allow health-data use and continue"}</button>
+          <button type="button" className="ghost-button" disabled={busy} onClick={() => setOpen(false)}>Not now</button>
+        </div> : <form className={styles.form} onSubmit={save} aria-label={editing ? "Edit training" : "Log Training"}>
           <div className={styles.body}>
             {!repeating ? activityAndDuration : null}
             <fieldset className={styles.fieldset} disabled={busy} aria-label="Effort">
@@ -224,7 +260,7 @@ function LogTrainingContent({ accessToken, entry, repeatEntry, recent = false, h
             {error ? <p className={styles.error} role="alert">{error}</p> : null}
             <button className="cta" type="submit" disabled={busy}>{busy ? "Saving…" : "Save Session"}</button>
           </footer>
-        </form>
+        </form>}
         </dialog>
       ) : null}
       {saved && !entry && !repeatEntry ? <p className="muted" role="status">{saved}</p> : null}
