@@ -283,7 +283,7 @@ def test_recent_external_edit_blocks_confirmation():
     assert sync.stage_changes(page, now) == {}
 
 
-def test_initial_baseline_does_not_invent_reply_or_acceptance():
+def test_initial_baseline_records_observation_time_milestones():
     now = datetime(2026, 10, 18, 17, tzinfo=timezone.utc)
     page = observed_row(stage="Accepted", observed="Accepted", confirmed="",
                         since=(now - timedelta(minutes=7)).isoformat())
