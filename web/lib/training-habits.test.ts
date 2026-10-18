@@ -33,9 +33,9 @@ test("future, prescribed, skipped, malformed and old sessions cannot teach a pat
   assert.equal(learnTrainingHabits([row("2026-09-28")], today).suggestion, undefined);
 });
 
-test("recent observations lead unconfirmed history; recent per-day medians resist outliers", () => {
+test("weighted frequency beats a newer one-off; recent per-day medians resist outliers", () => {
   const rows = [row("2026-10-12", "strength", 40), ...["2026-10-05", "2026-09-28", "2026-09-21"].map(day => row(day))];
-  assert.equal(learnTrainingHabits(rows, today).suggestion?.activity, "strength");
+  assert.equal(learnTrainingHabits(rows, today).suggestion?.activity, "boxing");
   const result = learnTrainingHabits([...history, row("2026-09-28", "boxing", 600), row("2026-10-12", "boxing", 30, "extra")], today);
   assert.equal(result.suggestion?.duration_minutes, 60);
 });
@@ -68,8 +68,8 @@ test("declining asks once, and explicit replacement preserves other weekday rout
   assert.deepEqual(confirmed, before);
 });
 
-test("coach schedules, safety restrictions, opt-out and truncated evidence suppress inference", () => {
-  for (const options of [{ coachScheduled: true }, { restricted: true }, { truncated: true }]) {
+test("coach schedules, safety restrictions and opt-out suppress suggestions", () => {
+  for (const options of [{ coachScheduled: true }, { restricted: true }]) {
     const result = learnTrainingHabits(history, today, confirmed, options);
     assert.equal(result.suggestion, undefined); assert.equal(result.prompt, undefined);
   }
@@ -100,4 +100,40 @@ test("learning follows athlete timezone and 03:00 rollover, with the API's UTC f
   assert.equal(habitTrainingDay(new Date("2026-10-19T07:30:00Z"), "America/New_York"), "2026-10-19");
   assert.equal(habitTrainingDay(early, "not-a-zone"), "2026-10-19");
   assert.equal(habitTrainingDay(early, ""), "2026-10-19");
+});
+
+
+test("recent repetition can outweigh a consistent older pattern; expired evidence cannot win", () => {
+  const rows = [row("2026-10-12", "strength"), row("2026-10-05", "strength"),
+    row("2026-10-05"), row("2026-09-28"), row("2026-09-21")];
+  assert.equal(learnTrainingHabits(rows, today).suggestion?.activity, "strength");
+  const expired = [row("2026-10-12", "strength"), row("2026-09-28"), row("2026-09-21"), row("2026-09-14")];
+  assert.equal(learnTrainingHabits(expired, today).suggestion?.activity, "strength");
+});
+
+test("equal evidence uses a stable activity tie-break regardless of input order", () => {
+  const rows = [row("2026-10-12", "strength"), row("2026-10-12")];
+  assert.equal(learnTrainingHabits(rows, today).suggestion?.activity, "boxing");
+  assert.equal(learnTrainingHabits([...rows].reverse(), today).suggestion?.activity, "boxing");
+});
+
+test("unavailable or truncated history pauses inference while preserving confirmed preferences", () => {
+  for (const options of [{ historyUnavailable: true }, { truncated: true }]) {
+    const routine = learnTrainingHabits(history, today, confirmed, options);
+    assert.equal(routine.suggestion?.activity, "boxing");
+    assert.equal(routine.suggestion?.duration_minutes, 50);
+    assert.equal(routine.suggestion?.source, undefined);
+    assert.equal(routine.prompt, undefined);
+    assert.equal(learnTrainingHabits([], today, confirmed, options).suggestion?.activity, "boxing");
+    const unconfirmed = learnTrainingHabits(history, today, EMPTY_TRAINING_HABITS, options);
+    assert.equal(unconfirmed.suggestion, undefined);
+    assert.equal(unconfirmed.prompt, undefined);
+    assert.equal(learnTrainingHabits(history, today, confirmed, { ...options, restricted: true }).suggestion, undefined);
+    assert.equal(learnTrainingHabits(history, today, confirmed, { ...options, coachScheduled: true }).suggestion, undefined);
+    assert.equal(learnTrainingHabits(history, today, { ...confirmed, enabled: false }, options).suggestion, undefined);
+    assert.equal(learnTrainingHabits([row(today, "strength")], today, confirmed, options).suggestion, undefined);
+    assert.equal(learnTrainingHabits([row(today)], today, confirmed, options).suggestion, undefined);
+    const contact = { ...confirmed, decisions: confirmed.decisions.map(item => ({ ...item, activity: "sparring" as const })) };
+    assert.equal(learnTrainingHabits([], today, contact, options).suggestion, undefined);
+  }
 });

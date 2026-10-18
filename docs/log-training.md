@@ -158,9 +158,12 @@ jobs, dependencies, programme imports or new logging system are introduced.
 - If both activities were logged on those days, it offers an additional routine;
   it does not assume a second daily session replaced the first.
 
-Each activity/date counts once, regardless of duplicate entries or retries. Recent
-weekday observations outrank older unconfirmed patterns; a 14-day half-life score
-breaks ties using date frequency. Tentative evidence expires after 14 days without
+Each activity/date counts once, regardless of duplicate entries or retries.
+Unconfirmed candidates rank by recency-weighted weekday frequency (14-day
+half-life), then latest matching date, then activity as a stable tie-break. One
+newer session does not automatically outrank a consistent recent pattern; repeated
+recent observations can overtake it. Explicit confirmations and today's manual
+corrections retain priority. Tentative evidence expires after 14 days without
 another matching weekday. Duration is the median of per-day medians from the
 latest three matching weekdays. A confirmed duration stays athlete-controlled.
 These are product heuristics, **not calibrated confidence levels**. Even strong
@@ -191,8 +194,11 @@ API validates a maximum of 42 unique weekday/activity decisions and performs an
 athlete-scoped compare-and-swap to reject stale-device writes. Lost-response
 retries recover by re-reading the saved intention. A failed save never pretends
 a routine was confirmed. Older APIs without these profile fields retain simple
-logging. A truncated 200-row response suppresses inference rather than implying
-that missing history is complete. Confirmation records add no workload.
+logging. Failed history reads and truncated 200-row responses pause new inference
+and pattern prompts. Safe confirmed shortcuts remain available from profile
+preferences, without a historical effort hint. Known logs from this view still
+prevent suggesting an already logged activity or overriding a correction.
+Confirmation records add no workload.
 
 Verification includes deterministic learning tests, profile/consent/ownership and
 revision tests, isolated SQL migration/RLS checks, API contract generation, and

@@ -40,10 +40,10 @@ const median = (values: number[]) => {
 
 /** Forty-two local calendar days; each activity/day is one observation, regardless of entry count. */
 export function learnTrainingHabits(rows: TrainingHistorySession[], today: string, preferences = EMPTY_TRAINING_HABITS,
-  options: { coachScheduled?: boolean; restricted?: boolean; allowSparring?: boolean; truncated?: boolean } = {}) {
+  options: { coachScheduled?: boolean; restricted?: boolean; allowSparring?: boolean; truncated?: boolean; historyUnavailable?: boolean } = {}) {
   const weekday = habitWeekday(today);
   const none = { weekday, suggestion: undefined as HabitSuggestion | undefined, prompt: undefined as HabitPrompt | undefined };
-  if (!preferences.enabled || !Number.isFinite(weekday) || options.coachScheduled || options.restricted || options.truncated) return none;
+  if (!preferences.enabled || !Number.isFinite(weekday) || options.coachScheduled || options.restricted) return none;
   const age = (day: string) => dayNumber(today) - dayNumber(day);
   const seen = new Set<string>();
   const history = rows.filter(row => {
@@ -53,12 +53,15 @@ export function learnTrainingHabits(rows: TrainingHistorySession[], today: strin
   const current = history.filter(row => habitWeekday(row.training_day) === weekday);
   const decisions = preferences.decisions.filter(item => item.weekday === weekday);
   const confirmed = decisions.filter(item => item.state === "confirmed");
+  // Confirmed preferences survive unavailable/incomplete evidence. Only inference pauses.
+  const canLearn = !options.historyUnavailable && !options.truncated;
   const groups = new Map<TrainingActivity, TrainingHistorySession[]>();
-  for (const row of current) {
+  for (const row of canLearn ? current : []) {
     if (row.activity === "sparring" && !options.allowSparring) continue;
     if (decisions.some(item => item.activity === row.activity && item.state === "dismissed")) continue;
     const list = groups.get(row.activity!) ?? []; list.push(row); groups.set(row.activity!, list);
   }
+  // Consistency leads: recency-weighted weekday frequency, then latest date, then activity.
   const candidates: Candidate[] = [...groups].map(([activity, list]) => {
     const dates = [...new Set(list.map(row => row.training_day))].sort().reverse();
     // A day with several entries has the same weight as a day with one entry.
@@ -67,7 +70,7 @@ export function learnTrainingHabits(rows: TrainingHistorySession[], today: strin
       score: dates.reduce((sum, day) => sum + 2 ** (-age(day) / 14), 0),
       source: list.find(row => row.training_day === dates[0])!,
       repeated: dates.length >= 2 && dayNumber(dates[0]) - dayNumber(dates[1]) === 7 && age(dates[0]) <= 7 };
-  }).sort((a, b) => b.dates[0].localeCompare(a.dates[0]) || b.score - a.score || a.activity.localeCompare(b.activity));
+  }).sort((a, b) => b.score - a.score || b.dates[0].localeCompare(a.dates[0]) || a.activity.localeCompare(b.activity));
   const candidate = candidates.find(item => item.repeated && !confirmed.some(rule => rule.activity === item.activity));
   const replacement = candidate && confirmed.length === 1
     && candidate.dates.slice(0, 2).every(day => !current.some(row => row.training_day === day && row.activity === confirmed[0].activity))

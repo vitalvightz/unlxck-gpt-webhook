@@ -75,8 +75,8 @@ function HabitLogContent({ accessToken, state, onSaved }: Props & { accessToken:
   const allowSparring = state?.today.decision_tier === "green"
     && state.effective_clinician_clearance?.level === "train_contact"
     && state.effective_clinician_clearance.requires_update === false;
-  const learned = learnTrainingHabits(history, today, preferences, { coachScheduled, restricted, allowSparring, truncated: history.length >= 200 });
-  const suggestion = profile?.training_habits && !historyError ? learned.suggestion : undefined;
+  const learned = learnTrainingHabits(history, today, preferences, { coachScheduled, restricted, allowSparring, truncated: history.length >= 200, historyUnavailable: historyError });
+  const suggestion = profile?.training_habits ? learned.suggestion : undefined;
   const prompt = profile?.training_habits && !historyError ? learned.prompt : undefined;
 
   async function persist(next: TrainingHabitPreferences, message: string) {

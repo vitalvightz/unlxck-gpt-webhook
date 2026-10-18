@@ -619,3 +619,56 @@ test("two confirmed weekday routines remain separate logging shortcuts", async (
   await expect(page.getByRole("combobox", { name: "Effort", exact: true })).toContainText("Select effort");
   expect(submissions).toHaveLength(1);
 });
+
+test("confirmed routines survive a failed history read without detecting new patterns", async ({ page, baseURL }) => {
+  const preferences: TrainingHabitPreferences = { enabled: true, decisions: [
+    { weekday: 0, activity: "boxing", duration_minutes: 50, state: "confirmed", decided_on: "2026-09-20" },
+  ] };
+  const submissions = await habitSetup(page, baseURL!, mondayHistory, preferences);
+  await page.route("**/api/training/history**", route => route.fulfill({ status: 503, contentType: "application/json", body: JSON.stringify({ detail: "History unavailable." }) }));
+  await page.goto("/today");
+  const usual = page.getByRole("button", { name: "Your usual Monday", exact: true });
+  await expect(usual).toContainText("Boxing · 50 min");
+  await page.getByText("Training habits", { exact: true }).click();
+  await expect(page.getByText("History unavailable.", { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Yes, usually", exact: true })).toHaveCount(0);
+  await usual.click();
+  await expect(page.getByLabel("Duration (minutes)")).toHaveValue("50");
+  await expect(page.getByRole("combobox", { name: "Effort", exact: true })).toContainText("Select effort");
+  await expect(page.getByRole("dialog")).not.toContainText("Last effort:");
+  expect(submissions).toHaveLength(0);
+  await choose(page, page, "Effort", "Easy");
+  await page.getByRole("button", { name: "Save Session", exact: true }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(usual).toHaveCount(0); // The locally saved session remains known during the outage.
+  expect(submissions).toHaveLength(1);
+});
+
+test("failed history leaves simple logging available without inferred suggestions", async ({ page, baseURL }) => {
+  await habitSetup(page, baseURL!);
+  await page.route("**/api/training/history**", route => route.fulfill({ status: 503, contentType: "application/json", body: JSON.stringify({ detail: "History unavailable." }) }));
+  await page.goto("/today");
+  await page.getByText("Training habits", { exact: true }).click();
+  await expect(page.getByText("History unavailable.", { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Suggested today", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Yes, usually", exact: true })).toHaveCount(0);
+  await page.getByRole("button", { name: "Log Training", exact: true }).click();
+  await expect(page.getByRole("dialog")).toBeVisible();
+});
+
+test("history failure never restores a confirmed shortcut blocked by readiness", async ({ page, baseURL }) => {
+  const preferences: TrainingHabitPreferences = { enabled: true, decisions: [
+    { weekday: 0, activity: "boxing", duration_minutes: 50, state: "confirmed", decided_on: "2026-09-20" },
+  ] };
+  await habitSetup(page, baseURL!, mondayHistory, preferences);
+  await page.route("**/api/training/history**", route => route.fulfill({ status: 503, contentType: "application/json", body: JSON.stringify({ detail: "History unavailable." }) }));
+  await page.route("**/api/today", route => route.fulfill({ contentType: "application/json", body: JSON.stringify({
+    active_plan: { id: "plan-1", name: "Camp", phase: "SPP" },
+    today: { training_day: "2026-10-19", recommendation_state: "pull_back", decision_tier: "stop",
+      next_session: {}, session_scope: "none", completion_status: "not_started", session_label: "No session" },
+    open_injuries: [], risk_watch: [], week_summary: {}, quick_actions: [],
+  }) }));
+  await page.goto("/today");
+  await expect(page.getByRole("button", { name: "Log Training", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Your usual Monday", exact: true })).toHaveCount(0);
+});
