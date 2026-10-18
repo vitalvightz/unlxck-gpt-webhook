@@ -86,6 +86,13 @@ def before_achilles_load_activation(pathways, *, preserve_achilles=False):
                 and ankle['activated_checkpoint'] in snapshot['functional_checkpoints']):
             snapshot['profiles'][index] = ankle['historical_profile']
             snapshot['functional_checkpoints'].remove(ankle['activated_checkpoint'])
+    shoulder = json.loads((REPO_ROOT / 'tools/rehab_shoulder_activation_inventory_baseline.json').read_text(encoding='utf-8'))
+    for index, profile in enumerate(snapshot['profiles']):
+        if (profile['policy_id'] == shoulder['historical_profile']['policy_id']
+                and content_hash(profile) == shoulder['activated_profile_sha256']
+                and shoulder['activated_checkpoint'] in snapshot['functional_checkpoints']):
+            snapshot['profiles'][index] = shoulder['historical_profile']
+            snapshot['functional_checkpoints'].remove(shoulder['activated_checkpoint'])
     return snapshot
 
 
@@ -102,6 +109,8 @@ def before_elbow_content_addition(bank, ledger):
         revisions.append((consumer['drill'], consumer['review']))
     ankle = json.loads((REPO_ROOT / 'tools/rehab_ankle_activation_inventory_baseline.json').read_text(encoding='utf-8'))
     revisions.append((ankle['new_drill'], ankle['new_review']))
+    shoulder = json.loads((REPO_ROOT / 'tools/rehab_shoulder_activation_inventory_baseline.json').read_text(encoding='utf-8'))
+    revisions.append((shoulder['new_drill'], shoulder['new_review']))
     for drill, review in revisions:
         if review in ledger:
             for group in bank:

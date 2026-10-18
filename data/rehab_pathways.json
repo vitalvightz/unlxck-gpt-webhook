@@ -119,6 +119,12 @@
       "description": "Eligibility for the seated no-added-resistance lateral-sprain starter, not a function assessment or medical verification.",
       "required_input": "Current episode loading permission and one clinician-described sprain type answer in existing injury details.",
       "basis": "clinical"
+    },
+    {
+      "checkpoint_id": "shoulder_cuff_reported_wall_load_v1",
+      "description": "Reported non-traumatic cuff tendinopathy without tear and loading permission for bounded wall push-ups; no capacity assessment or verification.",
+      "required_input": "One occasional clinician-described shoulder presentation in existing injury editor and current episode rehabilitation loading permission.",
+      "basis": "clinical"
     }
   ],
   "families": [
@@ -1720,13 +1726,14 @@
     },
     {
       "policy_id": "shoulder_tendonitis",
-      "version": 1,
+      "version": 2,
       "region": "shoulder",
       "injury_type": "tendonitis",
       "pathway_family": "tendon_rehab",
       "evidence_sources": [
         "https://www.nhs.uk/conditions/tendonitis/",
-        "https://www.rjah.nhs.uk/our-services/therapy/supported-self-care/rotator-cuff-related-shoulder-pain/"
+        "https://www.rjah.nhs.uk/our-services/therapy/supported-self-care/rotator-cuff-related-shoulder-pain/",
+        "https://www.orthopt.org/uploads/content_files/files/Rotator_Cuff_CPG.pdf"
       ],
       "prescriptions": [
         {
@@ -1776,6 +1783,31 @@
             "https://www.nhs.uk/conditions/tendonitis/",
             "https://www.rjah.nhs.uk/our-services/therapy/supported-self-care/rotator-cuff-related-shoulder-pain/"
           ]
+        },
+        {
+          "drill_id": "shoulder_tendonitis_wall_push_up",
+          "priority": 20,
+          "bank_hash": "7fc302829a4c8b46f30778b84d4511bf835eaf41b11d16cfe25a5520a03dcfa6",
+          "stage": "load",
+          "instructions": "Stand facing a stable wall, close enough to reach it comfortably without leaning. Place both hands slightly wider than shoulder width, turned out slightly, with elbows below shoulders. Keep your body tall and feet fixed near the wall. Slowly bend your elbows a small comfortable amount to bring your body towards the wall, then gently push back. Keep within a pain-free range and clinician restrictions. Do not move your feet further back, lower your hands, add resistance or work to fatigue. Stop for pain, worsening symptoms during or after work, weakness or a feeling of instability.",
+          "dose": {
+            "sets": 1,
+            "reps": 8
+          },
+          "allowed_severities": [
+            "low"
+          ],
+          "stop_when": [
+            "Stop for pain, worsening symptoms, weakness or instability during or after work.",
+            "Seek assessment for traumatic loss of function, suspected tear, altered sensation or unexplained weakness."
+          ],
+          "frequency": "daily",
+          "minimum_gap_days": 1,
+          "sources": [
+            "https://www.orthopt.org/uploads/content_files/files/Rotator_Cuff_CPG.pdf",
+            "https://www.rjah.nhs.uk/our-services/therapy/supported-self-care/rotator-cuff-related-shoulder-pain/"
+          ],
+          "required_rehabilitation_level": "loading"
         }
       ],
       "blocked_regions": [
@@ -1785,12 +1817,30 @@
       "contact_limit": "none",
       "live_stages": [
         "calm",
-        "restore"
+        "restore",
+        "load"
       ],
-      "transition_overrides": {},
+      "transition_overrides": {
+        "restore->load": {
+          "reason": "Only the bounded wall-push-up starter for reported clinician-described non-traumatic cuff tendinopathy without tear. Requires loading permission and all shared RESTORE exposure/response and safety gates. No strength, ROM or medical verification inferred.",
+          "add_requirements": [
+            {
+              "requirement_id": "shoulder_cuff_reported_wall_load_v1",
+              "kind": "functional_checkpoint",
+              "basis": "clinical",
+              "checkpoint": "shoulder_cuff_reported_wall_load_v1",
+              "description": "Reported non-traumatic cuff tendinopathy without tear and loading permission for bounded wall push-ups; no capacity assessment or verification.",
+              "sources": [
+                "https://www.orthopt.org/uploads/content_files/files/Rotator_Cuff_CPG.pdf",
+                "https://www.rjah.nhs.uk/our-services/therapy/supported-self-care/rotator-cuff-related-shoulder-pain/"
+              ]
+            }
+          ]
+        }
+      },
       "status": "active",
       "activation": "live",
-      "content_hash": "0c84ad11e5b9e9ad442a7d26f17b02c0882ba3d0b946c5bef9050b2e52ed7f48"
+      "content_hash": "872775e208fbcfe253f7f443c61595549b2fab6eda72d959e7c97e39bca87df0"
     },
     {
       "policy_id": "biceps_tendonitis",
