@@ -25,8 +25,10 @@ test("an older Today response cannot overwrite a refresh after an injury update"
     let refreshed: Promise<void>;
     await act(async () => { refreshed = current!.refresh(); });
     assert.equal(pending.length, 2);
+    assert.equal(current!.isRefreshing, true);
     await act(async () => { pending[1](response("New injury restriction")); await refreshed!; });
     assert.equal(container.textContent, "New injury restriction");
+    assert.equal(current!.isRefreshing, false);
     await act(async () => { pending[0](response("Old green guidance")); await new Promise(resolve => setTimeout(resolve, 0)); });
     assert.equal(container.textContent, "New injury restriction");
   } finally {
@@ -130,6 +132,35 @@ test("a pending presentation for an old plan cannot replace the newly active pla
     await act(async () => { plans[1](new Response(JSON.stringify({ outputs: {}, created_at: "new" }))); });
     await act(async () => { plans[0](new Response(JSON.stringify({ outputs: {}, created_at: "old" }))); });
     assert.equal(current!.planSchedule.createdAt, "new");
+  } finally {
+    await act(async () => { root.unmount(); });
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("a failed post-save refresh keeps entries with an error and a later refresh retries", async () => {
+  const originalFetch = globalThis.fetch;
+  let fail = false;
+  let reason = "Before training";
+  globalThis.fetch = (async () => fail
+    ? new Response(JSON.stringify({ detail: "Readiness unavailable" }), { status: 400 })
+    : new Response(JSON.stringify({ active_plan: {}, today: { training_day: "2026-10-18", recommendation_reason: reason },
+      open_injuries: [], risk_watch: [] }))) as typeof fetch;
+  const root = createRoot(document.createElement("div"));
+  let current: TodayCommand;
+  function Probe() { current = useTodayCommand("refresh-failure-token"); return null; }
+  try {
+    await act(async () => { root.render(<Probe />); });
+    fail = true;
+    await act(async () => { await current!.refresh(); });
+    assert.equal(current!.isRefreshing, false);
+    assert.match(current!.error!, /Readiness unavailable/);
+    assert.equal(current!.state?.today.recommendation_reason, "Before training");
+    fail = false;
+    reason = "After training";
+    await act(async () => { await current!.refresh(); });
+    assert.equal(current!.error, null);
+    assert.equal(current!.state?.today.recommendation_reason, "After training");
   } finally {
     await act(async () => { root.unmount(); });
     globalThis.fetch = originalFetch;

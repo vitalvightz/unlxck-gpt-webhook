@@ -280,7 +280,8 @@ test("Today without manual history offers the simple form", async ({ page, baseU
   await expect(page.getByRole("group", { name: "Effort", exact: true }).locator('[aria-pressed="true"]')).toHaveCount(0);
 });
 
-test("repeat on Today needs only effort and save; a second session stays separate", async ({ page, baseURL }) => {
+for (const width of [390, 1280]) {
+test(`repeat on Today needs only effort and save; a second session stays separate (${width}px)`, async ({ page, baseURL }) => {
   const errors: string[] = [];
   page.on("pageerror", error => errors.push(error.message));
   page.on("console", message => {
@@ -293,7 +294,7 @@ test("repeat on Today needs only effort and save; a second session stays separat
       errors.push(`App resource failed: ${request.url()} (${request.failure()?.errorText})`);
     }
   });
-  await page.setViewportSize({ width: 390, height: 844 });
+  await page.setViewportSize({ width, height: 844 });
   const submissions = await setup(page, baseURL!, false, false, [prescribed, manual]);
   let todayReads = 0;
   page.on("request", request => { if (new URL(request.url()).pathname === "/api/today") todayReads++; });
@@ -325,6 +326,14 @@ test("repeat on Today needs only effort and save; a second session stays separat
   await effort.press("Enter");
   await expect(effort).toHaveAttribute("aria-pressed", "true");
   expect((await new AxeBuilder({ page }).include("dialog").analyze()).violations).toEqual([]);
+  // Hold the authoritative refresh after persistence: old guidance must yield
+  // to the pending state without unmounting the save acknowledgement.
+  let releaseToday!: () => void;
+  const pendingToday = new Promise<void>(resolve => { releaseToday = resolve; });
+  await page.route("**/api/today", async route => {
+    await pendingToday;
+    await route.fallback();
+  });
   // Two synchronous submits must produce only one request, even before React renders busy state.
   await page.getByRole("form", { name: "Log Training", exact: true }).evaluate((form: HTMLFormElement) => {
     form.requestSubmit(); form.requestSubmit();
@@ -334,6 +343,11 @@ test("repeat on Today needs only effort and save; a second session stays separat
   expect(submissions[0]).toMatchObject({ activity: "boxing", duration_minutes: 60, effort: "easy" });
   expect(submissions[0]).not.toHaveProperty("training_day");
   await expect.poll(() => todayReads).toBeGreaterThan(1);
+  await expect(page.getByRole("status").filter({ hasText: "Updating Today" })).toBeVisible();
+  await page.getByText("Updating Today…", { exact: true }).scrollIntoViewIfNeeded();
+  await page.screenshot({ animations: "disabled", path: `/tmp/source-neutral-readiness-pending-${width}.png` });
+  releaseToday();
+  await expect(page.getByText("Updating Today…", { exact: true })).toHaveCount(0);
   await expect(page.getByRole("status").filter({ hasText: "logged successfully" })).toBeVisible();
   await page.screenshot({ animations: "disabled", path: test.info().outputPath("today-recent-shortcut.png") });
   await page.getByRole("button", { name: "Log Training", exact: true }).click();
@@ -352,6 +366,7 @@ test("repeat on Today needs only effort and save; a second session stays separat
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   expect(errors).toEqual([]);
 });
+}
 
 test("History repeat retries the same occurrence, preserves the source and creates fresh repeats", async ({ page, baseURL }) => {
   await page.setViewportSize({ width: 390, height: 844 });

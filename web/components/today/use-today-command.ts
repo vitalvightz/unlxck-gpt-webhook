@@ -56,6 +56,7 @@ export type TodayCommand = {
   /** Curated demo videos for the active plan's blocks (PlanOutputs.exercise_media). */
   exerciseMedia: Record<string, ExerciseMedia> | null;
   isLoading: boolean;
+  isRefreshing: boolean;
   error: string | null;
   refresh: () => Promise<void>;
   /** Applies an athlete's exercise change to the shown plan, then reloads it. */
@@ -92,6 +93,7 @@ export function useTodayCommand(token: string | null): TodayCommand {
   const [rehabLabelPolicy, setRehabLabelPolicy] = useState<RehabLabelPolicy | null>(null);
   const [exerciseMedia, setExerciseMedia] = useState<Record<string, ExerciseMedia> | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const refreshSequence = useRef(0);
   const loadedPlanId = useRef<string | null>(null);
@@ -103,6 +105,7 @@ export function useTodayCommand(token: string | null): TodayCommand {
       return;
     }
     const sequence = ++refreshSequence.current;
+    setIsRefreshing(true);
     try {
       const nextState = await getToday(token);
       if (sequence !== refreshSequence.current) return;
@@ -168,7 +171,10 @@ export function useTodayCommand(token: string | null): TodayCommand {
       if (sequence !== refreshSequence.current) return;
       setError(loadError instanceof Error ? loadError.message : "Today failed to load.");
     } finally {
-      if (sequence === refreshSequence.current) setIsLoading(false);
+      if (sequence === refreshSequence.current) {
+        setIsLoading(false);
+        setIsRefreshing(false);
+      }
     }
   }, [token]);
 
@@ -196,6 +202,7 @@ export function useTodayCommand(token: string | null): TodayCommand {
     rehabLabelPolicy,
     exerciseMedia,
     isLoading,
+    isRefreshing,
     error,
     patchSession,
     refresh,

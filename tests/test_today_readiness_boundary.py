@@ -474,15 +474,13 @@ def test_the_hold_never_claims_a_source_it_could_not_read():
     assert "your last few check-ins" not in view.today.recommendation_sources
 
 
-def test_a_preserved_conservative_decision_keeps_its_reasons_but_loses_confidence():
-    # Its contributors still describe why it is conservative, so they stand. The
-    # band does not: it reports how much could be verified, and this read could
-    # not verify the history.
+def test_current_poor_sleep_keeps_its_reason_when_history_cannot_be_verified():
+    # Refresh uses the actual answers, not the old recommendation labels.
     store = _store_with_plan(FailingRecentCheckinsStore)
     store.upsert_today_checkin(
         ATHLETE,
         {
-            **_checkin_payload(),
+            **_checkin_payload(sleep="poor"),
             "training_day": NOW.date().isoformat(),
             "athlete_timezone": "",
             "recommendation_state": "modify",
@@ -495,21 +493,23 @@ def test_a_preserved_conservative_decision_keeps_its_reasons_but_loses_confidenc
 
     assert view.today.recommendation_state == "modify"
     assert view.today.recommendation_trigger_labels == ["Poor sleep"]
-    assert view.today.recommendation_context_labels == ["Hard session planned"]
+    assert "Hard session planned" not in view.today.recommendation_context_labels
     assert view.today.recommendation_confidence == "moderate"
     assert "refresh your recent check-ins" in view.today.recommendation_confidence_note
 
 
-def test_a_complete_context_leaves_the_explanation_untouched():
+def test_a_complete_context_refreshes_the_explanation_from_current_inputs():
     store = _store_with_plan()
     _seed_stored_green_with_explanation(store)
 
     view = build_today_command_view(store, athlete_id=ATHLETE, athlete_timezone="", now=NOW)
 
     assert view.today.recommendation_state == "train_as_planned"
-    assert view.today.recommendation_confidence == "high"
-    assert view.today.recommendation_confidence_note == ""
-    assert "Fight week" in view.today.recommendation_context_labels
+    # The stored TAPER explanation does not match this GPP check-in/plan.
+    # The unresolved session uses the existing moderate confidence band.
+    assert view.today.recommendation_confidence == "moderate"
+    assert "session isn't resolved yet" in view.today.recommendation_confidence_note
+    assert "Fight week" not in view.today.recommendation_context_labels
 
 
 def test_an_equal_band_still_adopts_the_live_failure_reason():
@@ -534,15 +534,13 @@ def test_an_equal_band_still_adopts_the_live_failure_reason():
     view = build_today_command_view(store, athlete_id=ATHLETE, athlete_timezone="", now=NOW)
 
     assert view.today.recommendation_confidence == "moderate"
-    assert "refresh your recent check-ins" in view.today.recommendation_confidence_note
+    assert "couldn't load your recent check-ins" in view.today.recommendation_confidence_note
     assert "no recent days to compare" not in view.today.recommendation_confidence_note
 
 
 def test_a_re_check_never_claims_to_have_used_what_it_could_not_reload():
-    # The stored decision genuinely used the athlete's recent check-ins, so they
-    # stay in the sources. But a failed RE-READ next to a present-tense "based on
-    # your last few check-ins" reads as: you couldn't load them, yet you say you
-    # used them. The tense has to move, and the note has to say refresh, not load.
+    # The old decision used history, but this fresh evaluation could not load
+    # it. Its sources and confidence must describe the current evaluation.
     store = _store_with_plan(FailingRecentCheckinsStore)
     store.upsert_today_checkin(
         ATHLETE,
@@ -558,11 +556,10 @@ def test_a_re_check_never_claims_to_have_used_what_it_could_not_reload():
 
     view = build_today_command_view(store, athlete_id=ATHLETE, athlete_timezone="", now=NOW)
 
-    # The band drops below high, which is what stops the card rendering the source
-    # list at all — so it can no longer sit under a note about a failed re-read.
+    # A fresh failure must never claim the old history as a current source.
     assert view.today.recommendation_confidence == "moderate"
-    assert "refresh your recent check-ins" in view.today.recommendation_confidence_note
-    assert "couldn't be loaded" not in view.today.recommendation_confidence_note
+    assert "couldn't load your recent check-ins" in view.today.recommendation_confidence_note
+    assert "your last few check-ins" not in view.today.recommendation_sources
 
 
 def test_a_replaced_decision_is_made_now_and_stays_present_tense():

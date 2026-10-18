@@ -200,6 +200,7 @@ export function TodayScreen() {
     rehabLabelPolicy,
     exerciseMedia,
     isLoading,
+    isRefreshing,
     error,
     refresh,
     patchSession,
@@ -323,7 +324,7 @@ export function TodayScreen() {
           injuriesHref={token ? "#today-injury" : undefined}
           sessionHref={resolvedDecision.displayTier === "preview" ? undefined : "#today-session"}
         />
-        <TodayDecisionPanel
+        {isRefreshing ? <p role="status">Updating Today…</p> : error ? null : <TodayDecisionPanel
           banner={resolvedDecision.currentGuidanceBanner ?? resolvedDecision.banner}
           compactPreview={resolvedDecision.hasSession && !resolvedDecision.currentGuidanceBanner}
           tier={resolvedDecision.currentGuidanceBanner ? resolvedDecision.authoritativeTier : resolvedDecision.displayTier}
@@ -334,12 +335,12 @@ export function TodayScreen() {
             ? state.today.recommendation_sources?.filter((source) => source !== "today's planned session")
             : state.today.recommendation_sources}
           confidenceNote={state.today.recommendation_confidence_note}
-        />
+        />}
         <TodayRiskWatch
           risks={commandRisks}
           hasActiveInjury={(state.open_injuries?.length ?? 0) > 0}
         />
-        {nextStep ? (
+        {nextStep && !isRefreshing && !error ? (
           <div className={styles.nextStep} role="status">
             <div>
               <p className={styles.nextStepTitle}>{nextStep.title}</p>
