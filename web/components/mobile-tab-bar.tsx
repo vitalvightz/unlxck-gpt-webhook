@@ -13,6 +13,7 @@ import { BOTTOM_NAV_ITEMS } from "@/lib/beta-navigation";
 // the athlete straight back to the gate, so the bar is dead chrome there (and it
 // sat on top of the gate's only action). The Menu keeps sign-out reachable.
 const HIDDEN_ROUTES = new Set<string>([
+  "/get-started",
   "/generate",
   "/login",
   "/signup",

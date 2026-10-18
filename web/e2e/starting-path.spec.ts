@@ -149,12 +149,22 @@ for (const width of [320, 390, 1280]) {
     const writes = await setup(page, baseURL!);
     await page.goto("/get-started");
     await expect(page.getByRole("heading", { name: "How would you like to start?" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Open navigation" })).toHaveCount(0);
+    await expect(page.locator(".app-sidebar, .mobile-tab-bar")).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Sign out", exact: true })).toBeVisible();
+    const choices = page.locator('[aria-busy="false"] > button').filter({ hasText: /Start tracking|Build a plan/ });
+    const sizes = await choices.evaluateAll(elements => elements.map(element => element.getBoundingClientRect().height));
+    expect(sizes).toHaveLength(2);
+    expect(Math.abs(sizes[0] - sizes[1])).toBeLessThanOrEqual(1);
+    await page.screenshot({ path: test.info().outputPath(`choice-${width}.png`) });
     const tracking = page.getByRole("button", { name: /I already have a coach/ });
     await tracking.focus(); await expect(tracking).toBeFocused();
+    expect(await tracking.evaluate(element => getComputedStyle(element).boxShadow)).toBe("none");
     expect((await new AxeBuilder({ page }).include("main").analyze()).violations).toEqual([]);
-    await page.screenshot({ path: test.info().outputPath(`choice-${width}.png`) });
+    await page.screenshot({ path: test.info().outputPath(`choice-focus-${width}.png`) });
     await tracking.press("Enter");
     await expect(page).toHaveURL(/\/today$/);
+    await expect(page.locator("html")).toHaveAttribute("data-app-surface", "workspace");
     await expect(page.getByText("No training logged yet", { exact: true })).toBeVisible();
     await expect(page.getByRole("link", { name: /Round timer Start a session/ })).toBeVisible();
     await expect(page.getByText("Want extra S&C?", { exact: true })).toBeVisible();
@@ -193,6 +203,15 @@ test("Saving failure stays on choice and retry saves plan-first", async ({ page,
   await expect(page).toHaveURL(/\/get-started$/); await expect(plan).toBeEnabled();
   await plan.click(); await expect(page).toHaveURL(/\/quick-build$/);
   expect(writes).toEqual([{ starting_path: "plan_first" }, { starting_path: "plan_first" }]);
+});
+
+test("focused entry keeps sign-out available without choosing a path", async ({ page, baseURL }) => {
+  const writes = await setup(page, baseURL!);
+  await page.route("**/auth/v1/logout**", route => route.fulfill({ status: 204 }));
+  await page.goto("/get-started");
+  await page.getByRole("button", { name: "Sign out", exact: true }).click();
+  await expect(page).toHaveURL(/\/login$/);
+  expect(writes).toEqual([]);
 });
 
 test("Unaccepted terms precede the choice", async ({ page, baseURL }) => {
