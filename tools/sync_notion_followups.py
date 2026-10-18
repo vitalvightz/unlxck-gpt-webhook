@@ -168,7 +168,6 @@ def block_text(block):
 
 # Record only stable, observed post-contact stage changes; do not invent historical dates.
 STAGE_STABILITY_SECONDS = 5 * 60
-REPLY_STAGES = ("Replied", "Rejected", "Accepted", "Activated")
 
 
 def plain(p, name):
