@@ -31,12 +31,15 @@ def sparring_readiness_flags(context: dict[str, Any]) -> list[str]:
     for row in sorted(context.get("checkins", []), key=lambda r: str(r.get("updated_at") or r.get("created_at") or "")):
         checkins[row.get("training_day")] = row
     checkins = recent_rows(list(checkins.values()), as_of)
+    completed = [row for row in recent_rows(context.get("sessions", []), as_of)
+                 if row.get("status") in {"done", "modified"} and row.get("source") != "external"]
     sessions = {
         (row.get("plan_id"), row.get("session_id"), row.get("training_day")): row
-        for row in recent_rows(context.get("sessions", []), as_of)
-        if row.get("status") in {"done", "modified"}
+        for row in completed if row.get("completion_origin") == "reported"
     }
     flags = set()
+    if any(row.get("completion_origin") not in {"reported", "day_credit"} for row in completed):
+        flags.add("sparring_history_unavailable")
     if sum(row.get("sleep") == "poor" or row.get("body") == "flat" for row in checkins) >= 3:
         flags.add("poor_recovery")
     hard = [row for row in sessions.values() if row.get("contact_load") == "hard"]

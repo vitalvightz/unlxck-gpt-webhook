@@ -630,8 +630,8 @@ def test_recent_hard_load_ignores_stale_sessions():
         ReadinessContext(
             training_day="2026-06-18",
             recent_sessions=[
-                {"training_day": "2026-05-20", "session_rpe": 9},
-                {"training_day": "2026-05-18", "session_rpe": 9},
+                {"training_day": "2026-05-20", "session_rpe": 9, "completion_origin": "reported"},
+                {"training_day": "2026-05-18", "session_rpe": 9, "completion_origin": "reported"},
             ],
             today_session=_session(title="Technical skill drilling"),
         ),
@@ -1020,9 +1020,9 @@ def test_two_hard_sessions_plus_poor_today_uses_load_trend_message():
         ReadinessContext(
             today_session=_session(title="Moderate strength"),
             recent_sessions=[
-                {"training_day": "2026-06-17", "session_rpe": 8},
-                {"training_day": "2026-06-16", "session_rpe": 9},
-                {"training_day": "2026-06-15", "session_rpe": 5},
+                {"training_day": "2026-06-17", "session_rpe": 8, "completion_origin": "reported"},
+                {"training_day": "2026-06-16", "session_rpe": 9, "completion_origin": "reported"},
+                {"training_day": "2026-06-15", "session_rpe": 5, "completion_origin": "reported"},
             ],
         ),
     )
@@ -1060,9 +1060,9 @@ def test_three_soft_warnings_without_high_risk_or_pain_can_stay_modify():
                 {"training_day": "2026-06-16", "sleep": "poor", "body": "flat"},
             ),
             recent_sessions=[
-                {"training_day": "2026-06-17", "session_rpe": 8},
-                {"training_day": "2026-06-16", "session_rpe": 9},
-                {"training_day": "2026-06-15", "session_rpe": 5},
+                {"training_day": "2026-06-17", "session_rpe": 8, "completion_origin": "reported"},
+                {"training_day": "2026-06-16", "session_rpe": 9, "completion_origin": "reported"},
+                {"training_day": "2026-06-15", "session_rpe": 5, "completion_origin": "reported"},
             ],
             today_session=_session(title="Mobility and recovery"),
         ),

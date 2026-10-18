@@ -35,7 +35,8 @@ def _session(store, age, title="Hard sparring", athlete=ATHLETE, status="done", 
         {"session_id": session_id, "title": title, "blocks": []},
         {"session_id": "other-contact", "title": "Hard sparring"},
     ]})
-    store.upsert_session_completion(athlete, {"plan_id": plan_id, "session_id": session_id, "training_day": _day(age), "status": status, "session_rpe": session_rpe})
+    # These fixtures represent independently reported contact, not legacy credit.
+    store.upsert_session_completion(athlete, {"completion_origin": "reported", "plan_id": plan_id, "session_id": session_id, "training_day": _day(age), "status": status, "session_rpe": session_rpe})
 
 
 def _model(store, monkeypatch, requested=False):

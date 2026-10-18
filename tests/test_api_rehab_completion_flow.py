@@ -137,6 +137,23 @@ def rehab_day():
 
 
 class TestPromptIsRaisedOnlyForAttributableRehab:
+    def test_day_progress_credit_does_not_acquire_rehab_response_ownership(self, rehab_day):
+        client, store, training_day, _injury = rehab_day
+        day = store.plans[PLAN_ID]["structured_plan"]["weeks"][0]["days"][0]
+        day["sessions"].append({"session_id": "breathing", "session_type": "recovery",
+                                "title": "Breathing reset", "blocks": []})
+        response = _complete(client)
+        assert response.status_code == 201, response.text
+        primary = store.get_session_completion("athlete-1", SESSION_ID, training_day)
+        credit = store.get_session_completion("athlete-1", "breathing", training_day)
+        assert primary["completion_origin"] == "reported"
+        assert primary["rehab_response_contexts"]
+        assert credit["completion_origin"] == "day_credit"
+        assert credit.get("rehab_response_contexts") is None
+        assert credit.get("prescription_snapshot") is None
+        assert credit.get("rehab_performance") is None
+        assert credit["pain_after"] is None
+
     def test_completed_rehab_session_asks_about_the_injury_by_name(self, rehab_day):
         client, _store, _day, injury = rehab_day
 

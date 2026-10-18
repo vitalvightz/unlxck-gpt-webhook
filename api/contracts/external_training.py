@@ -32,6 +32,7 @@ class ExternalTrainingCreate(ExternalTrainingFields):
 
 
 class TrainingHistorySession(BaseModel):
+    completion_origin: Literal["reported", "day_credit"] | None = None
     id: str
     source: Literal["unlxck", "external"]
     training_day: str

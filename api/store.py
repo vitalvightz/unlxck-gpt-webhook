@@ -4446,13 +4446,29 @@ class SupabaseAppStore(CommunityStoreMixin, PrivateMediaStoreMixin, CompactGener
         return getattr(response, "data", None) or []
 
     def upsert_session_completion(self, athlete_id: str, fields: dict[str, Any]) -> dict[str, Any]:
-        payload = {"athlete_id": athlete_id, **fields}
+        payload = {**fields, "athlete_id": athlete_id}
         try:
-            response = (
-                self.client.table("session_completions")
-                .upsert(payload, on_conflict="athlete_id,session_id,training_day")
-                .execute()
-            )
+            if fields.get("completion_origin") == "day_credit":
+                # Insert if absent, then update only credit. Both statements
+                # are safe if an independent report wins between them; a
+                # read/check followed by an unconditional upsert would race.
+                self.client.table("session_completions").upsert(
+                    payload, on_conflict="athlete_id,session_id,training_day", ignore_duplicates=True,
+                ).execute()
+                response = (self.client.table("session_completions").update(payload)
+                    .eq("athlete_id", athlete_id).eq("session_id", fields["session_id"])
+                    .eq("training_day", fields["training_day"]).eq("plan_id", fields["plan_id"])
+                    .eq("completion_origin", "day_credit").execute())
+                if not (getattr(response, "data", None) or []):
+                    winner = self.get_session_completion(athlete_id, fields["session_id"], fields["training_day"])
+                    if winner:
+                        return winner
+            else:
+                response = (
+                    self.client.table("session_completions")
+                    .upsert(payload, on_conflict="athlete_id,session_id,training_day")
+                    .execute()
+                )
             rows = getattr(response, "data", None) or []
             if not rows:
                 logger.error("[store] upsert_session_completion:no_rows athlete_id=%s", athlete_id)

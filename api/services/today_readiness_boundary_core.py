@@ -133,8 +133,10 @@ class _ReadinessTrackingStore:
         health: ReadinessContextHealth,
         *,
         cache_injury_flags: bool = False,
+        training_day: str | None = None,
     ):
         self._store = store
+        self._training_day = training_day
         self.health = health
         self.last_plan: Mapping[str, Any] | None = None
         self._cache_injury_flags = cache_injury_flags
@@ -170,9 +172,15 @@ class _ReadinessTrackingStore:
         *,
         limit: int = 30,
     ) -> list[dict[str, Any]]:
-        return self._call_list(
+        rows = self._call_list(
             "recent_sessions", lambda: self._store.list_session_completions(athlete_id, limit=limit)
         )
+        from fightcamp.completed_workload import has_unverified_completions
+        if self._training_day and has_unverified_completions(rows, self._training_day):
+            # Expected legacy state, not a failed I/O operation to send to
+            # Sentry. It still receives the same incomplete-history floor.
+            self.health.failures.setdefault("recent_sessions", "UnverifiedCompletionProvenance")
+        return rows
 
     def list_external_training_sessions(self, athlete_id: str, *, limit: int = 200, include_deleted: bool = False) -> list[dict[str, Any]]:
         return self._call_list("recent_sessions", lambda: self._store.list_external_training_sessions(athlete_id, limit=limit, include_deleted=include_deleted))
@@ -506,7 +514,8 @@ def build_today_command_view(
     """
 
     health = ReadinessContextHealth()
-    tracked = _ReadinessTrackingStore(store, health)
+    tracked = _ReadinessTrackingStore(store, health,
+        training_day=_today_service.resolve_training_day(athlete_timezone, now=now))
     if active_plan is not None and active_plan.plan:
         tracked.last_plan = active_plan.plan
     # One scope for the build and the schedule probe, so the probe re-reads the

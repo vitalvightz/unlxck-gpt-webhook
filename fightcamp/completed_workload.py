@@ -10,6 +10,26 @@ from datetime import date
 from typing import Any
 
 
+def has_unverified_completions(rows: Sequence[Mapping[str, Any]], as_of: str, *, days: int = 5) -> bool:
+    """Unverified legacy records are not proof of independent workouts.
+
+    No guessed grouping: consumers use their existing incomplete-history floor.
+    """
+    today = date.fromisoformat(as_of)
+    for row in rows:
+        if (row.get("source", "unlxck") != "unlxck"
+                or row.get("status") not in {"done", "modified"}
+                or row.get("completion_origin") in {"reported", "day_credit"}):
+            continue
+        try:
+            age = (today - date.fromisoformat(str(row.get("training_day", "")))).days
+        except ValueError:
+            continue
+        if 0 <= age < days:
+            return True
+    return False
+
+
 def completed_workload(rows: Sequence[Mapping[str, Any]], as_of: str, *, days: int = 5, limit: int | None = 3) -> dict:
     try:
         today = date.fromisoformat(as_of)
@@ -17,6 +37,10 @@ def completed_workload(rows: Sequence[Mapping[str, Any]], as_of: str, *, days: i
         today = None
     unique = {}
     for index, row in enumerate(rows):
+        # Only explicit reports prove prescribed workout identity, including
+        # when raw completion rows reach this shared helper without a source.
+        if row.get("source") != "external" and row.get("completion_origin") != "reported":
+            continue
         # Missing status is retained for legacy readiness inputs. Explicit
         # planned/started/skipped rows never represent completed workload.
         if row.get("status", "done") not in {"done", "modified"} or row.get("deleted_at"):
