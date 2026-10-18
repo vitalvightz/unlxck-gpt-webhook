@@ -104,3 +104,39 @@ request keys, plan independence and edit/delete retry safety. Production migrati
 application is complete on `unlxckpdf`, with live catalog verification of constraints,
 RLS, grants and migration history. Live API/PostgREST verification remains a
 deployment follow-up. There are no recurring sessions, custom plans or library changes.
+
+## Quick Log — Repeat Previous Training
+
+Today includes a compact logging action below its main session/check-in controls,
+including when there is no active plan. When the existing history response contains
+an eligible manual session, it also offers **Repeat last session** with its activity,
+minutes and explicitly historical effort. The shortcut searches the most recent
+30 history entries; older manual entries can be repeated from History (up to the
+existing 200-row limit). A failed history read leaves the simple logging action
+available. Plan's existing tile remains unchanged.
+
+Repeat opens the same Log Training dialog, copies activity and duration only,
+and focuses an empty Effort field. The athlete selects today's effort and saves:
+open repeat → choose effort → save (four taps with the current picker), compared
+with also choosing activity and entering minutes in the blank three-field flow.
+Activity and minutes remain editable; new sessions keep blank defaults. The
+optional date starts empty, so the server assigns the athlete's current training
+day with its existing timezone/03:00 rollover, even for a backdated source.
+
+Opening or cancelling never writes. Each new repeat obtains a fresh request key
+at submission; an unchanged failed submission keeps its key for retry. A synchronous
+submission guard also blocks duplicate submits before React updates the UI.
+History inserts the returned occurrence by source/id without replacing the source;
+Today refreshes through `useTodayCommand.refresh` after saving. Existing API
+mutation middleware invalidates readiness caches. No prescribed completion,
+XP-award or rehab-evidence mutation is called. A 401 retains the open form and
+reports that sign-in is required; token changes follow the existing form reset.
+
+Regression coverage includes no history/no active plan, repeat from Today and
+History, changed effort, two sessions in a day, unchanged backdated source,
+fresh repeat keys, lost HTTP/network responses, double submit, session expiry,
+keyboard focus/selection, accessible descriptions and axe checks at 390px.
+
+Beta follow-up: measure median repeat-log time from tapping Repeat to successful
+save, including effort selection and service latency. The target is under 10 seconds;
+interaction reduction alone does not establish that timing result.
