@@ -183,6 +183,7 @@ REQUIRED_GENERATION_JOBS_COLUMNS: tuple[str, ...] = (
 )
 
 REQUIRED_PROFILES_COLUMNS: tuple[str, ...] = (
+    "starting_path",
     "training_habits",
     "training_habits_revision",
     "id",

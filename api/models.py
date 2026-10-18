@@ -1184,6 +1184,7 @@ class TrainingHabitPreferences(BaseModel):
 
 
 class ProfileUpdateRequest(BaseModel):
+    starting_path: Literal["tracking_first", "plan_first"] | None = None
     training_habits: TrainingHabitPreferences | None = None
     training_habits_revision: int | None = Field(default=None, strict=True, ge=0)
 
@@ -1482,6 +1483,7 @@ class PushSettingsResponse(BaseModel):
 
 
 class ProfileRecord(BaseModel):
+    starting_path: Literal["tracking_first", "plan_first"] | None = None
     training_habits: TrainingHabitPreferences = Field(default_factory=TrainingHabitPreferences)
     training_habits_revision: int = 0
     athlete_id: str

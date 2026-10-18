@@ -1,4 +1,5 @@
 .training { min-width: 0; }
+.primary { width: 100%; min-height: 48px; gap: 8px; }
 .actionRow { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; min-height: 44px; padding: 12px 0; background: transparent; color: var(--text-primary); border: 0; border-bottom: 1px solid var(--border-default); text-align: left; cursor: pointer; font: inherit; }
 .actionRow > span:first-child { display: grid; gap: 4px; }
 .actionRow strong { font-size: var(--type-title-sm); }

@@ -436,7 +436,7 @@ test("Today logging remains available without an active plan", async ({ page, ba
     active_plan: {}, today: { training_day: "2026-10-18" }, open_injuries: [], risk_watch: [],
   }) }));
   await page.goto("/today");
-  await expect(page.getByRole("link", { name: "Build my plan" })).toBeVisible();
+  await expect(page.getByRole("link", { name: /Want extra S&C/ })).toBeVisible();
   await page.getByRole("button", { name: "Log Training", exact: true }).click();
   await expect(page.getByRole("dialog")).toBeVisible();
 });

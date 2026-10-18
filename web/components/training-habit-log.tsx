@@ -3,7 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import { useAppSession } from "./auth-provider";
 import { LogTraining } from "./log-training";
-import { ApiError, getManualTrainingHistory, getMe, updateMe } from "@/lib/api";
+import { ApiError, getManualTrainingHistory, getTrainingHistory, getMe, updateMe } from "@/lib/api";
+import { TrackingHistoryPreview } from "./tracking-history-preview";
 import {
   decideTrainingHabit, EMPTY_TRAINING_HABITS, HABIT_WEEKDAYS, habitTrainingDay, learnTrainingHabits,
   type TrainingHabitDecision, type TrainingHabitPreferences,
@@ -15,15 +16,16 @@ import styles from "./training-habit-log.module.css";
 
 const label = (value: string) => value.charAt(0).toUpperCase() + value.slice(1);
 
-type Props = { accessToken: string | null; state: TodayCommandView | null; onSaved: () => void };
+type Props = { accessToken: string | null; state: TodayCommandView | null; onSaved: () => void; trackingFirst?: boolean };
 export function TrainingHabitLog(props: Props) {
   return props.accessToken ? <HabitLogContent key={props.accessToken} {...props} accessToken={props.accessToken} /> : null;
 }
 
-function HabitLogContent({ accessToken, state, onSaved }: Props & { accessToken: string }) {
+function HabitLogContent({ accessToken, state, onSaved, trackingFirst = false }: Props & { accessToken: string }) {
   const { me, replaceMe } = useAppSession();
   const [history, setHistory] = useState<TrainingHistorySession[]>([]);
   const [historyError, setHistoryError] = useState(false);
+  const [historyLoading, setHistoryLoading] = useState(true);
   const [reload, setReload] = useState(0);
   const [busy, setBusy] = useState(false);
   const [pendingEnabled, setPendingEnabled] = useState<boolean | null>(null);
@@ -52,16 +54,17 @@ function HabitLogContent({ accessToken, state, onSaved }: Props & { accessToken:
   useEffect(() => {
     let cancelled = false;
     const initialWrites = historyWrites.current;
-    void getManualTrainingHistory(accessToken).then(({ sessions }) => {
+    void (trackingFirst ? getTrainingHistory(accessToken) : getManualTrainingHistory(accessToken)).then(({ sessions }) => {
       if (!Array.isArray(sessions)) throw new Error("Invalid history");
       if (!cancelled) {
         setHistory(current => initialWrites === historyWrites.current ? sessions
           : [...current, ...sessions.filter(row => !current.some(item => item.id === row.id))]);
         setHistoryError(false);
       }
-    }).catch(() => { if (!cancelled) setHistoryError(true); });
+    }).catch(() => { if (!cancelled) setHistoryError(true); })
+      .finally(() => { if (!cancelled) setHistoryLoading(false); });
     return () => { cancelled = true; };
-  }, [accessToken, reload]);
+  }, [accessToken, reload, trackingFirst]);
 
   // Coach-declared work and the live safety decision outrank learned logging guesses.
   const coachScheduled = state?.today.session_scope === "today" && Boolean(
@@ -119,9 +122,10 @@ function HabitLogContent({ accessToken, state, onSaved }: Props & { accessToken:
   }
 
   return <div className={styles.root} aria-busy={busy || undefined}>
-    <LogTraining accessToken={accessToken} recent history={history}
+    <LogTraining accessToken={accessToken} recent history={history} variant={trackingFirst ? "primary" : "compact"}
       quickSession={suggestion ? { ...suggestion, effort: suggestion.source?.effort } : undefined}
       onSaved={row => { historyWrites.current++; setHistory(current => [row, ...current.filter(item => item.id !== row.id)]); onSaved(); }} />
+    {trackingFirst ? <TrackingHistoryPreview history={history} loading={historyLoading} error={historyError} onRetry={() => setReload(value => value + 1)} /> : null}
     {prompt ? <div className={styles.prompt}>
       <p className={styles.eyebrow}>{prompt.replace ? "Routine changed?" : "Noticed a pattern"}</p>
       <p className={styles.question}>{prompt.replace ? `Switch ${HABIT_WEEKDAYS[prompt.weekday]} to ${prompt.activity}?` : `${label(prompt.activity)} every ${HABIT_WEEKDAYS[prompt.weekday]}?`}</p>

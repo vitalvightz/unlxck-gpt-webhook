@@ -26,32 +26,37 @@ const json = (route: Route, body: unknown, status = 200) =>
  * session, so the form must switch to the one-time-code step instead of
  * sending the athlete off to their inbox and back to the login page.
  */
-async function startSignup(page: Page, baseURL: string, verifyStatus: "ok" | "rejected") {
+async function startSignup(page: Page, baseURL: string, verifyStatus: "ok" | "rejected", immediate = false) {
   await isolateFromNetwork(page, baseURL);
   const signupBodies: Array<Record<string, unknown>> = [];
   const complianceBodies: Array<Record<string, unknown>> = [];
+  let accepted = false;
+  const me = () => ({ profile: {
+    athlete_id: user.id, email: EMAIL, full_name: "", role: "athlete", access_status: "approved", starting_path: null,
+    technical_style: [], tactical_style: [], stance: "", professional_status: "", record: "",
+    athlete_timezone: "Europe/London", athlete_locale: "en", appearance_mode: "dark", nutrition_profile: {},
+    date_of_birth: "1996-05-04", meets_minimum_age: true, terms_accepted: accepted, health_consent_granted: false,
+  }, plan_count: 0, latest_plan: null, latest_intake: null, username_rate_limit: {} });
+  const session = () => ({ access_token: "new-athlete-token", refresh_token: "new-refresh", token_type: "bearer",
+    expires_in: 3600, expires_at: Math.floor(Date.now() / 1000) + 3600,
+    user: { ...user, email_confirmed_at: "2026-10-13T00:01:00Z" } });
+  await page.route("**/api/me", route => json(route, me()));
 
   await page.route(`${SUPABASE_ORIGIN}/auth/v1/signup**`, async (route) => {
     signupBodies.push(route.request().postDataJSON());
-    await json(route, { ...user, email_confirmed_at: null, confirmation_sent_at: "2026-10-13T00:00:00Z" });
+    await json(route, immediate ? session() : { ...user, email_confirmed_at: null, confirmation_sent_at: "2026-10-13T00:00:00Z" });
   });
   await page.route(`${SUPABASE_ORIGIN}/auth/v1/verify**`, async (route) => {
     if (verifyStatus === "rejected") {
       await json(route, { code: 403, error_code: "otp_expired", msg: "Token has expired or is invalid" }, 403);
       return;
     }
-    await json(route, {
-      access_token: "new-athlete-token",
-      refresh_token: "new-refresh",
-      token_type: "bearer",
-      expires_in: 3600,
-      expires_at: Math.floor(Date.now() / 1000) + 3600,
-      user: { ...user, email_confirmed_at: "2026-10-13T00:01:00Z" },
-    });
+    await json(route, session());
   });
   await page.route("**/api/me/compliance", async (route) => {
     complianceBodies.push(route.request().postDataJSON());
-    await json(route, {});
+    accepted = true;
+    await json(route, me());
   });
 
   await page.goto("/signup", { waitUntil: "domcontentloaded" });
@@ -64,8 +69,10 @@ async function startSignup(page: Page, baseURL: string, verifyStatus: "ok" | "re
   await page.locator("#acceptTerms").check();
   await page.getByRole("button", { name: "Create account" }).click();
 
-  await expect(page.getByRole("heading", { name: "Check your email" })).toBeVisible();
-  await expect(page.getByText(`Enter the code we sent to ${EMAIL}`)).toBeVisible();
+  if (!immediate) {
+    await expect(page.getByRole("heading", { name: "Check your email" })).toBeVisible();
+    await expect(page.getByText(`Enter the code we sent to ${EMAIL}`)).toBeVisible();
+  }
   return { signupBodies, complianceBodies };
 }
 
@@ -79,15 +86,17 @@ test("a confirmation code finishes signup on the same page", async ({ page, base
   await expect(verify).toBeDisabled();
   await page.getByLabel("Verification code").fill("12 34 56");
   await expect(page.getByLabel("Verification code")).toHaveValue("123456");
-  // The first-plan route may hand off again (its guards run against stubbed
-  // APIs here), so record every navigation rather than racing the final URL.
-  const visited: string[] = [];
-  page.on("framenavigated", (frame) => {
-    if (frame === page.mainFrame()) visited.push(new URL(frame.url()).pathname);
-  });
   await verify.click();
 
-  await expect.poll(() => visited).toContain("/quick-build");
+  await expect(page).toHaveURL(/\/get-started$/);
+  await expect(page.getByRole("heading", { name: "How would you like to start?" })).toBeVisible();
+  expect(complianceBodies).toEqual([{ date_of_birth: "1996-05-04", accept_terms: true }]);
+});
+
+test("immediate-session signup saves consent before the starting choice", async ({ page, baseURL }) => {
+  const { complianceBodies } = await startSignup(page, baseURL ?? BASE_URL, "ok", true);
+  await expect(page).toHaveURL(/\/get-started$/);
+  await expect(page.getByRole("heading", { name: "How would you like to start?" })).toBeVisible();
   expect(complianceBodies).toEqual([{ date_of_birth: "1996-05-04", accept_terms: true }]);
 });
 

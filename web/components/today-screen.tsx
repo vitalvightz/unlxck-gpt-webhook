@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { TrainingHabitLog } from "@/components/training-habit-log";
+import { TrackingToday } from "@/components/tracking-today";
 import { useMemo } from "react";
 import styles from "./today-screen.module.css";
 
@@ -20,8 +21,6 @@ import { humanizeIfRawEnum } from "@/lib/plan-labels";
 import { isOpenOngoingPlan } from "@/lib/plan-format";
 import { getTodayNextStep } from "@/lib/today-next-step";
 import {
-  TODAY_EMPTY_TEXT,
-  TODAY_EMPTY_TITLE,
   getCompletionLabel,
   getDistinctTodayRiskWatch,
   getSupplementaryRiskWatch,
@@ -38,26 +37,6 @@ function TodayLoadingState() {
       <Skeleton variant="text" width="70%" height={42} />
       <Skeleton variant="block" height={180} />
       <Skeleton variant="block" height={220} />
-    </section>
-  );
-}
-
-function NoActivePlanState() {
-  return (
-    <section className="panel today-shell today-empty-state">
-      <div className="today-hero-copy">
-        <p className="kicker">Today</p>
-        <h1>{TODAY_EMPTY_TITLE}</h1>
-        <p className="muted">{TODAY_EMPTY_TEXT}</p>
-      </div>
-      <div className="today-action-row">
-        <Link href="/quick-build" className="cta">
-          Build my plan
-        </Link>
-        <Link href="/timer" className="secondary-button">
-          Round timer
-        </Link>
-      </div>
     </section>
   );
 }
@@ -254,7 +233,7 @@ export function TodayScreen() {
   }
 
   if (!state || !hasPlan) {
-    return <><NoActivePlanState /><TrainingHabitLog accessToken={token} state={state} onSaved={() => void refresh()} /></>;
+    return <TrackingToday accessToken={token} state={state} onSaved={() => void refresh()} />;
   }
   const resolvedDecision = resolveTodayDecision(state);
   const nextStep = getTodayNextStep(state, resolvedDecision);

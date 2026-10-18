@@ -232,6 +232,7 @@ export type ApproveAndResumeGenerationRequest = {
 };
 
 export type ProfileUpdateRequest = {
+  starting_path?: "tracking_first" | "plan_first";
   training_habits?: TrainingHabitPreferences;
   training_habits_revision?: number;
   full_name?: string;
@@ -251,6 +252,7 @@ export type ProfileUpdateRequest = {
 };
 
 export type ProfileRecord = {
+  starting_path?: "tracking_first" | "plan_first" | null;
   training_habits?: TrainingHabitPreferences;
   training_habits_revision?: number;
   athlete_id: string;

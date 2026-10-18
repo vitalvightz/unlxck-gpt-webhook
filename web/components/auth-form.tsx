@@ -25,7 +25,7 @@ import {
   getSignupCodeResendErrorMessage,
 } from "@/lib/auth-feedback";
 import { clearAuthLinkParams, readAuthLinkStatus } from "@/lib/auth-link";
-import { FIRST_PLAN_HREF, getAuthenticatedLandingHref } from "@/lib/auth-routing";
+import { getAuthenticatedLandingHref } from "@/lib/auth-routing";
 import {
   TERMS_CONSENT_LEAD,
   TERMS_LINK_LABEL,
@@ -63,7 +63,7 @@ export function AuthForm({
 }) {
   const t = useTranslations("Auth");
   const router = useRouter();
-  const { isReady, session, me } = useAppSession();
+  const { isReady, session, me, replaceMe } = useAppSession();
   const emailInputRef = useRef<HTMLInputElement | null>(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -161,14 +161,14 @@ export function AuthForm({
 
   /**
    * Records the signup acceptances against the new session so the evidence is
-   * server-stamped and versioned, then opens the first-plan flow. Shared by the
+   * server-stamped and versioned, then opens the starting choice. Shared by the
    * immediate-session signup and the one-time-code step. If recording fails the
    * account still exists but is not consented, and the compliance gate catches
    * it on the next screen — so a failure here is surfaced, not swallowed.
    */
   async function finishSignup(newSession: Session) {
     try {
-      await recordCompliance(newSession.access_token, {
+      const nextMe = await recordCompliance(newSession.access_token, {
         date_of_birth: dateOfBirth,
         accept_terms: true,
         // Only sent when ticked. Sending `false` would record a
@@ -176,6 +176,8 @@ export function AuthForm({
         // those are different facts and the audit trail keeps them apart.
         ...(healthDataConsent ? { health_data_consent: true } : {}),
       });
+      replaceMe(nextMe);
+      router.replace(getAuthenticatedLandingHref(nextMe));
     } catch (complianceError) {
       setError(
         complianceError instanceof Error
@@ -184,7 +186,6 @@ export function AuthForm({
       );
       return;
     }
-    router.replace(FIRST_PLAN_HREF);
   }
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {

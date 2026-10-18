@@ -98,6 +98,8 @@ def build_profile_router(*, require_profile, get_store) -> APIRouter:
         profile: ProfileRecord = Depends(require_profile),
         store: AppStore = Depends(get_store),
     ) -> MeResponse:
+        if update.starting_path is not None:
+            require_onboarding_compliance(profile)
         if update.training_habits is not None and update.training_habits.enabled:
             require_health_feature_access(profile)
         updated = _map_profile_row(store.update_profile(profile.athlete_id, update))

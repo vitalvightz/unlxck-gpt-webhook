@@ -7,18 +7,28 @@ import type { MeResponse } from "@/lib/types";
  * Advanced Intake stays available for athletes who want more control, but it is
  * never the default path for someone who has not trained with UNLXCK yet.
  *
- * Sign up → Set goals (Quick Build) → Get plan → Train.
+ * The plan-building destination remains available from either starting path.
  */
 export const FIRST_PLAN_HREF = "/quick-build";
+export const STARTING_PATH_HREF = "/get-started";
+
+export function needsStartingPath(me: MeResponse | null): boolean {
+  return Boolean(me?.profile.role === "athlete" && me.profile.starting_path === null
+    && !me.latest_plan?.plan_id && me.plan_count === 0 && !me.latest_intake
+    && !Object.keys(me.profile.onboarding_draft ?? {}).length);
+}
 
 /**
  * Where an athlete belongs once signup is complete: their latest plan if they
- * have one, otherwise the shortest route to a first plan.
+ * have one, otherwise their saved starting experience.
  */
 export function getAthleteWorkspaceHref(me: MeResponse | null): string {
   if (me?.latest_plan?.plan_id) {
     return `/plans/${me.latest_plan.plan_id}`;
   }
+
+  if (me?.profile.starting_path === "tracking_first") return "/today";
+  if (needsStartingPath(me)) return STARTING_PATH_HREF;
 
   return FIRST_PLAN_HREF;
 }
