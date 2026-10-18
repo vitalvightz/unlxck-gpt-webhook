@@ -190,7 +190,7 @@ def test_scorecard_updates_three_rates_without_touching_other_blocks(monkeypatch
     data = {path: body for _, path, body in writes}
     assert data["/blocks/headline-0"]["heading_2"]["rich_text"][0]["text"]["content"] == "21.3%"
     assert data["/blocks/headline-1"]["heading_2"]["rich_text"][0]["text"]["content"] == "3.3%"
-    assert data["/blocks/count-2"]["paragraph"]["rich_text"][0]["text"]["content"] == "0 of 61 fighters"
+    assert data["/blocks/count-2"]["paragraph"]["rich_text"][0]["text"]["content"] == "Awaiting verified app-event integration"
     assert "/blocks/label-0" not in data
 
 
@@ -243,7 +243,7 @@ def test_first_seen_stage_does_not_fabricate_historical_transition_time():
                             confirmed="", since=(now - timedelta(minutes=6)).isoformat())
     change = sync.stage_changes(baseline, now)
     assert "baseline -> Activated" in change["Stage History"]["rich_text"][0]["text"]["content"]
-    assert "Interested At" in change and "Accepted At" in change
+    assert "Interested At" not in change and "Accepted At" not in change
     assert "Registered At" not in change and "First Meaningful Action At" not in change
 
 
@@ -265,3 +265,29 @@ def test_scorecard_does_not_publish_unconfirmed_stage(monkeypatch):
     ]))
     monkeypatch.setattr(sync, "request", lambda *_: pytest.fail("should not write before stage confirmation"))
     assert sync.sync_scorecard() == (1, 0)
+
+
+def test_recent_external_edit_blocks_confirmation():
+    now = datetime(2026, 10, 18, 17, tzinfo=timezone.utc)
+    page = observed_row(stage="Rejected", observed="Rejected", confirmed="Contacted",
+                        since=(now - timedelta(minutes=8)).isoformat())
+    page["last_edited_time"] = (now - timedelta(minutes=2)).isoformat()
+    assert sync.stage_changes(page, now) == {}
+
+
+def test_initial_baseline_does_not_invent_reply_or_acceptance():
+    now = datetime(2026, 10, 18, 17, tzinfo=timezone.utc)
+    page = observed_row(stage="Accepted", observed="Accepted", confirmed="",
+                        since=(now - timedelta(minutes=7)).isoformat())
+    changes = sync.stage_changes(page, now)
+    assert "Confirmed Stage" in changes
+    assert "First Reply Confirmed At" not in changes
+    assert "Accepted At" not in changes
+
+
+def test_stage_history_queries_entire_pipeline(monkeypatch):
+    pages = [observed_row(stage="Inactive", observed="Inactive", confirmed="Inactive",
+                          since="2026-10-18T16:00:00+00:00")]
+    monkeypatch.setattr(sync, "all_pipeline_rows", lambda: iter(pages))
+    monkeypatch.setattr(sync, "request", lambda *_: pytest.fail("No changes expected"))
+    assert sync.sync_stage_history() == (1, 0)
