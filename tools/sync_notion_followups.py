@@ -224,17 +224,18 @@ def stage_changes(page, now):
 
 
 def sync_stage_history(now=None, max_updates=20):
-    # The existing contact-date field bounds this to the actual outreach funnel.
-    from datetime import timezone
     now = now or datetime.now(timezone.utc)
     checked = updated = 0
-    for page in scorecard_rows():
+    for page in all_pipeline_rows():
         checked += 1
         changes = stage_changes(page, now)
         if not changes:
             continue
         # Re-read before writing to avoid confirming a stage changed mid-poll.
         fresh = request("GET", f"/pages/{page['id']}")
+        if ((page["properties"]["Stage (AI Fills First)"].get("select") or {}).get("name")
+                != (fresh["properties"]["Stage (AI Fills First)"].get("select") or {}).get("name")):
+            continue
         changes = stage_changes(fresh, now)
         if not changes:
             continue
@@ -248,10 +249,6 @@ def sync_stage_history(now=None, max_updates=20):
 def sync_scorecard():
     rows = list(scorecard_rows())
     total = len(rows)
-    # During initial five-minute baselining (or a new pending contact), keep
-    # existing cards unchanged rather than publishing unstable partial counts.
-    if any(not plain(p["properties"], "Confirmed Stage") for p in rows):
-        return total, 0
     counts = {"REPLY RATE": 0, "ACCEPT RATE": 0, "ACTIVATION RATE": 0}
     for page in rows:
         p = page["properties"]
@@ -278,7 +275,8 @@ def sync_scorecard():
                         raise ValueError(f"Duplicate scorecard card: {name}")
                     headline = [part for part in parts if part["type"].startswith("heading_")]
                     detail = [part for part in parts if part["type"] == "paragraph"
-                              and ((" of " in block_text(part) and block_text(part).endswith(" fighters"))\n                     or block_text(part) == "Awaiting verified app-event integration")]
+                              and ((" of " in block_text(part) and block_text(part).endswith(" fighters"))
+                                  or block_text(part) == "Awaiting verified app-event integration")]
                     if len(headline) != 1 or len(detail) != 1:
                         raise ValueError(f"Unexpected scorecard layout: {name}")
                     cards[name] = (headline[0], detail[0])
