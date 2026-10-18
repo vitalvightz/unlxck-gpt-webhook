@@ -256,7 +256,7 @@ def sync_scorecard():
     for page in rows:
         p = page["properties"]
         stage = ((p["Stage (AI Fills First)"].get("select") or {}).get("name") or "")
-        if p["First Reply Confirmed At"].get("date") or stage in ("Replied", "Accepted", "Activated"):
+        if p["First Reply Confirmed At"].get("date") or stage in ("Replied", "Accepted", "Activated", "Rejected"):
             counts["REPLY RATE"] += 1
         if p["Accepted At"].get("date") or stage in ("Accepted", "Activated"):
             counts["ACCEPT RATE"] += 1
