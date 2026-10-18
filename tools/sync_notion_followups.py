@@ -193,7 +193,7 @@ def stage_changes(page, now):
     confirmed = plain(p, "Confirmed Stage")
     first_seen = datetime.fromisoformat(
         p["Observed Since"]["date"]["start"].replace("Z", "+00:00"))
-    # A later edit to the candidate page invalidates an earlier stability observation.
+    # General page edits can delay confirmation; they cannot prove stage continuity.
     edited = page.get("last_edited_time")
     if edited:
         last_edit = datetime.fromisoformat(edited.replace("Z", "+00:00"))
@@ -210,14 +210,16 @@ def stage_changes(page, now):
         "Stage Confirmed At": {"date": {"start": timestamp}},
         "Stage History": rich(history + ("\n" if history else "") + entry),
     }
-    # Initial import is a snapshot, not proof that any earlier milestone happened.\n    for prop, reached in (() if not confirmed else (
-        ("First Reply Confirmed At", stage in REPLY_STAGES),
-        ("Interested At", stage in ("Accepted", "Activated")),
-        ("Accepted At", stage in ("Accepted", "Activated")),
-        ("Rejected At", stage == "Rejected"),
-    ):
-        if reached and not p[prop].get("date"):
-            changes[prop] = {"date": {"start": timestamp}}
+    # A baseline is an observation, not evidence of earlier conversions.
+    if confirmed:
+        milestones = (
+            ("First Reply Confirmed At", stage in REPLY_STAGES and bool(p["Date Contacted"].get("date"))),
+            ("Accepted At", stage == "Accepted" and bool(p["Date Contacted"].get("date"))),
+            ("Rejected At", stage == "Rejected" and bool(p["Date Contacted"].get("date"))),
+        )
+        for prop, reached in milestones:
+            if reached and not p[prop].get("date"):
+                changes[prop] = {"date": {"start": timestamp}}
     return changes
 
 
