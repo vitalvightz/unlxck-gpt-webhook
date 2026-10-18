@@ -50,10 +50,10 @@ def test_shipped_profiles_cannot_enter_a_higher_stage(policy_id):
                  or policy_id in {f"{r}_contusion" for r in ["heel", "shin", "quads", "biceps", "triceps", "forearm"]}
                      or policy_id in {'lower_back_stiffness', 'shoulder_pain', 'shoulder_tightness', 'neck_tightness', 'elbow_pain', 'wrist_pain', 'neck_soreness', 'hip_pain', 'shoulder_soreness', 'elbow_stiffness', 'knee_pain', 'hand_pain', 'fingers_pain'})
     expected_stage = "calm" if calm_only else "restore"
-    assert shipped.live_stages == (["calm","restore","load"] if policy_id in {"achilles_tendonitis", "elbow_tendonitis", "ankle_sprain"} else
+    assert shipped.live_stages == (["calm","restore","load"] if policy_id in {"achilles_tendonitis", "elbow_tendonitis", "ankle_sprain", "shoulder_tendonitis"} else
         ["calm"] if expected_stage == "calm" else ["calm","restore"])
-    assert not any(t.promotable for t in (shipped.transitions[1:] if policy_id in {"achilles_tendonitis", "elbow_tendonitis", "ankle_sprain"} else shipped.transitions))
-    assert bool(shipped.transitions[0].promotable) == (policy_id in {"achilles_tendonitis", "elbow_tendonitis", "ankle_sprain"})
+    assert not any(t.promotable for t in (shipped.transitions[1:] if policy_id in {"achilles_tendonitis", "elbow_tendonitis", "ankle_sprain", "shoulder_tendonitis"} else shipped.transitions))
+    assert bool(shipped.transitions[0].promotable) == (policy_id in {"achilles_tendonitis", "elbow_tendonitis", "ankle_sprain", "shoulder_tendonitis"})
     region, kind = shipped.region, shipped.injury_type
     row = injury(body_region=region, canonical_location=region, injury_type=kind, description=f"{region} {kind}")
     if expected_stage == "calm":
@@ -83,6 +83,8 @@ def test_shipped_profiles_cannot_enter_a_higher_stage(policy_id):
             policies=(shipped,), bank=get_rehab_bank(), exposures=ideal, equipment=["table"])
         assert missing_permission["stage"] == "restore"
         assert missing_permission["progression"]["next_transition"]["reason_codes"] == ["rehabilitation_loading_not_reported"]
+    elif policy_id == "shoulder_tendonitis":
+        assert decision["progression"]["next_transition"]["reason_codes"] == ["shoulder_nontraumatic_cuff_not_reported"]
     elif policy_id == "ankle_sprain":
         assert decision["progression"]["next_transition"]["reason_codes"] == ["ankle_uncomplicated_lateral_not_reported"]
     elif policy_id == "achilles_tendonitis":

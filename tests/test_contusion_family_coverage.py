@@ -208,7 +208,7 @@ def test_previous_37_profiles_hashes_decisions_schedules_and_snapshots_unchanged
     baseline = tmp_path / "before.json"
     baseline.write_text(json.dumps(raw), encoding="utf-8")
     for policy in load_clinical_policies(baseline):
-        if policy.policy_id in {"achilles_tendonitis", "elbow_tendonitis", "ankle_sprain"}:
+        if policy.policy_id in {"achilles_tendonitis", "elbow_tendonitis", "ankle_sprain", "shoulder_tendonitis"}:
             # Versioned LOAD activations have their own baseline, ownership and
             # frozen-history assertions; all other profiles remain identical.
             continue

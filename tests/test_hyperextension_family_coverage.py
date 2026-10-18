@@ -239,7 +239,7 @@ def test_previous_31_profiles_hashes_decisions_schedules_and_snapshots_unchanged
     baseline = tmp_path / "before.json"
     baseline.write_text(json.dumps(raw), encoding="utf-8")
     for policy in load_clinical_policies(baseline):
-        if policy.policy_id in {"achilles_tendonitis", "elbow_tendonitis", "ankle_sprain"}:
+        if policy.policy_id in {"achilles_tendonitis", "elbow_tendonitis", "ankle_sprain", "shoulder_tendonitis"}:
             # Exact versioned activations are covered by their own journey and
             # baseline tests; every other profile still compares identically.
             continue

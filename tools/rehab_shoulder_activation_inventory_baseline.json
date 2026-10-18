@@ -1,0 +1,227 @@
+{
+  "historical_profile": {
+    "policy_id": "shoulder_tendonitis",
+    "version": 1,
+    "region": "shoulder",
+    "injury_type": "tendonitis",
+    "pathway_family": "tendon_rehab",
+    "evidence_sources": [
+      "https://www.nhs.uk/conditions/tendonitis/",
+      "https://www.rjah.nhs.uk/our-services/therapy/supported-self-care/rotator-cuff-related-shoulder-pain/"
+    ],
+    "prescriptions": [
+      {
+        "drill_id": "shoulder_tendonitis_recovery_support",
+        "bank_hash": "0f5328748d54b88f49278c74bf696cc5f86536e5f605d808074c581fb27667a8",
+        "stage": "calm",
+        "instructions": "Reduce activities that aggravate the affected tendon and keep the area comfortably supported. Avoid heavy lifting, strong gripping or twisting that worsens symptoms; do not repeatedly test the painful tendon. Keep ordinary comfortable movement as symptoms allow rather than applying a universal prolonged-rest timetable. Follow any clinician-directed restrictions. Sudden severe pain, a snap or pop with loss of function, suspected rupture, a hot red swollen area, fever or altered sensation needs medical assessment. Reduce provocative overhead work and end-range loading; do not force the arm behind the body.",
+        "dose": null,
+        "camp_doses": {},
+        "readiness_doses": {},
+        "allowed_severities": [
+          "low",
+          "moderate"
+        ],
+        "stop_when": [
+          "Stop for pain or worsening symptoms during or after the work.",
+          "Seek assessment for suspected rupture, loss of function, altered sensation, a hot red swollen area or fever."
+        ],
+        "frequency": "scheduled_sessions",
+        "minimum_gap_days": 1,
+        "priority": 0,
+        "sources": [
+          "https://www.nhs.uk/conditions/tendonitis/",
+          "https://www.rjah.nhs.uk/our-services/therapy/supported-self-care/rotator-cuff-related-shoulder-pain/"
+        ]
+      },
+      {
+        "drill_id": "shoulder_tendonitis_reviewed_restore",
+        "bank_hash": "b45ef1074bb6ab3640ab8ba7eec4cb3209bbd289dc764913004bce01df6508e9",
+        "stage": "restore",
+        "instructions": "Sit upright with the affected elbow comfortably bent and tucked by your side. Gently turn the forearm outwards within a small comfortable pain-free range, then return. Keep the upper arm by your side; do not force rotation, raise the arm overhead or add a weight or band. Stop if pain or symptoms worsen during or after the movement. This conservative baseline does not establish readiness for resistance or sport.",
+        "dose": null,
+        "camp_doses": {},
+        "readiness_doses": {},
+        "allowed_severities": [
+          "low",
+          "moderate"
+        ],
+        "stop_when": [
+          "Stop for pain or worsening symptoms during or after the work.",
+          "Seek assessment for suspected rupture, loss of function, altered sensation, a hot red swollen area or fever."
+        ],
+        "frequency": "scheduled_sessions",
+        "minimum_gap_days": 1,
+        "priority": 0,
+        "sources": [
+          "https://www.nhs.uk/conditions/tendonitis/",
+          "https://www.rjah.nhs.uk/our-services/therapy/supported-self-care/rotator-cuff-related-shoulder-pain/"
+        ]
+      }
+    ],
+    "blocked_regions": [
+      "shoulder"
+    ],
+    "blocked_tags": [],
+    "contact_limit": "none",
+    "live_stages": [
+      "calm",
+      "restore"
+    ],
+    "transition_overrides": {},
+    "status": "active",
+    "activation": "live",
+    "content_hash": "0c84ad11e5b9e9ad442a7d26f17b02c0882ba3d0b946c5bef9050b2e52ed7f48"
+  },
+  "unchanged_profiles_sha256": {
+    "chest_strain": "19050cdf7574d5604b292d8ad0a535794d2da4b31ac3a4a1e30ca3303e6677db",
+    "ankle_sprain": "860082415b7b7822251ef9a3fca41d785f0e4d235bbbe12a303a5e39874ff292",
+    "hamstring_strain": "b1e01ef5fad679df998b314913559d4de5ac3ae55897a1d6c0e7d2541e5c113a",
+    "calf_strain": "0229e381a4357f49e83e97fee2ac1f326adff2cb4f9565acd3aca873d7f4c1c9",
+    "groin_strain": "b3f6e366edcdfc07909bc8c3fce067da8b23cb29d4e09cc6a25463779ac026a7",
+    "quads_strain": "604e9378fbb2cda509a753ca607f44715241c8f879744c5495d523567f393f41",
+    "biceps_strain": "b6ca61f91759b478b32f2019e9634f708c3357f37f8b3205b393e1ccd89c0f0e",
+    "triceps_strain": "d3fdfac641a853f8675ab0d25365776a93dba57c3c6805d644a26c02c08d6564",
+    "shoulder_strain": "6c1bd3986816e67e1366acecad21284c15396dfdd51fcda86be04082eaa25789",
+    "ankle_instability": "b238f290a2cfd2de7a0e261fab1162e3489606680277a15a7f4694a0d8182409",
+    "knee_instability": "396566372754e42150f2893b27fd1106f89928297c0f287b9743d173f9a5c830",
+    "toe_sprain": "7f28bb72225a5f75f27a5f109e473d4d4212a2e0c64e243ef5666e0f8b1994e6",
+    "wrist_sprain": "85041d43bc8b592c231aa07ee15be7e06502b7c9fc3c7c3b2c8f5849b1845c54",
+    "elbow_sprain": "076d4f178d3c7e4a8c4444799aa3acf3caf45879da78f52a05f104b9f9b434d1",
+    "shoulder_sprain": "b0490bf9e2eac56d8c5852ed14f61388fe628b8f6f40e0d52d898cf2b0652be9",
+    "shoulder_instability": "990895b897ea1000c1666347ab7465c6fa73aa1d825ba300f7bad99e9f5a48ff",
+    "hand_sprain": "a81ccebf8493e1d8a4e786defdc51252a4056eb3573448ffb20fb78be8e7f150",
+    "fingers_sprain": "35eaf39213d4dc6a0511eb050448a2c4fea70e3615b41d562e5d914d74cf7a5c",
+    "achilles_tendonitis": "0297b3c134bd0be38dabd83bd1ed91bc1dbc4cbf1d764fb52e6fa3ab4767d701",
+    "biceps_tendonitis": "210b258d508b23403564cdc85ca287a40341b70f519e2dc34c335b0a5c16269d",
+    "forearm_tendonitis": "09e1d89a7929f76bf70543cfc28912e175ebeebbf71f41ec0e0da2453edb9a89",
+    "elbow_tendonitis": "67553c8c5d9c066d205f52eb27943561da2944819380cd45404824394275289f",
+    "wrist_tendonitis": "0d6bd594e9da9096687a39f3fa32b680ac088145431fe8d29de01219c9fbf976",
+    "hand_tendonitis": "4394ba67e9fceb6c16edd7ebd83e4b51240a18b2b5a0704d0829ede467cf628e",
+    "fingers_tendonitis": "658edeb331973ee9225c0ebf49240e80cb09fc40bb5d189826546034823c9787",
+    "shoulder_impingement": "9428e6587cf39eee17e85a5adc8256bc38abf2ff4e94ce8a1ef44a672aef212b",
+    "hip_impingement": "4f61eee1d728888e1657cbaab2b98dfcf3a39e5b04cbcf954c390b0355d51593",
+    "ankle_impingement": "3df70359298c12b88d779765856d8950cbd5e2c919bdfe88c72dff5cb3c6b1b6",
+    "elbow_impingement": "d0929cebc425c804c3bf173b58945dbd30005459a89a6444b55fccb047c63e10",
+    "wrist_impingement": "9b668ffb11118073a3332f0214812380c5ba15589cd1c8fc63bff5d015ec355e",
+    "toe_hyperextension": "f823a134d987e05c7b1238cc95755cba63f972c575b4bd8649af3b66d67c1c4a",
+    "fingers_hyperextension": "446bb0f55a9fed04a824b755dd4d3562db5a0f07732422704f7e2b391e2f1872",
+    "elbow_hyperextension": "bcf629e58cc62829e95f8f0ce6b92a082b400680718757eb067d32cd46dd19ac",
+    "wrist_hyperextension": "d7a8de43e0318374125f95607bca6f7039a0c6c003a29c6f04045432074a0c20",
+    "hand_hyperextension": "6cf6076614ee034fe65a49798bf4ff7ccc5ec92d93cd6019eb28cc32472ebac4",
+    "shoulder_hyperextension": "2cefb39c28534ade1d8425fa96b124013ce69bf649ae0067051a34c3a42d87ce",
+    "heel_contusion": "9fa04c161d9df7c63f7696c5b804ce9f7997ddc8a0138052c18ae3a6361bb7cb",
+    "shin_contusion": "ebeb22357b8f6493ac205e4b88a293bf3825b0973ec125a93cb4e076f92b8572",
+    "quads_contusion": "6b242323090b8854e6241ea043f22adcf9c6a9094416496b51f0561e6d5f2279",
+    "biceps_contusion": "c07bdc7c92c9c0cd111c949c5590801616930b107324f0340edb5fad396e44a3",
+    "triceps_contusion": "52985d4fd08773e1238e30c9e8357b781eadb9519f750b81306ee72ffc21a592",
+    "forearm_contusion": "fc3907fea03d7ba5911dbd5f1b088ff88d4d6929df94cfb08314dbd25eaaecff",
+    "shoulder_contusion": "eda45d3cd3da4d26ab3f03d9abd66dd03fda03318b91c1efdf9939b1b27a05e8",
+    "elbow_contusion": "16a614b4938233a54c453b08c94a064b4d4a857a054ce2e6ddb02a77e55e7df4",
+    "wrist_contusion": "28e661fa39582dfe7b5aecf9832fd0bc58adf1ac0e471995f57468010ebd2f9a",
+    "hand_contusion": "4990ead7253ed49a09af2ed05bfc0eb9143e8d08522aeb24f8651cd82e839714",
+    "fingers_contusion": "d129fc5361f4f51bc74ef2c6a2d14373bdbe2fe9d8c1a3a9bb850870cd152855",
+    "shoulder_pain": "900f1d1d01a6d777147d81345d579414459581dbd5e5b8c9c26807b7c51d0d0d",
+    "elbow_pain": "82e9fbf923c0bcd0dc130beb10fdcc2a0fc6fc0930bac36f14435d34c909cb4f",
+    "wrist_pain": "7f1a22feadf6ab8d6df3bc429b12b5e20bef2ce2a332310702a943b906b633a9",
+    "hand_pain": "a32a548babf93e9b08cfe6ac3de1c2b84fa9cb1ac20dddcca540fa9d648047ad",
+    "fingers_pain": "321f34ebab3288db5e9e5c3df8ab7e15e2806a811db0381806604359e261ce17",
+    "knee_pain": "0a380931d551a33e512263376e3578d8342b8a7b470d8ecaccd07ba644ef5fad",
+    "hip_pain": "8faaaecc6625bc03b383faa697c28ef22bebdad61dc09c21ea7a8cd5dbbfae5a",
+    "lower_back_pain": "cfdf842a75dc7dcafd406d8beb06b6fb306a001b71b63fa22eb2917de971f71f",
+    "neck_stiffness": "d54e4f0621bc991d9cbcebf3783388f6c0926ae7a85940609fcd56116dabe44c",
+    "elbow_stiffness": "6a067c0c2d4a9ef5e19cfd07182bc1c0868af16c31b9183b0a0b19f7b9ca8284",
+    "wrist_stiffness": "07044650cb70014fcbdd90d2950e62318fdd3936696c1f2b71cb6db439937bee",
+    "lower_back_stiffness": "466852716953c53d3d0f769c9e5da70a5b1f7fe93a0ed640ff178fcea326dbd2",
+    "neck_tightness": "4a435088da3fc20f08a8ba1db71730fe9746e94c77737e519b09235c6b990ff6",
+    "shoulder_tightness": "229be1cda33ef3846858aa51dab6e802d980b88215b93199e1520ce5d031461c",
+    "neck_soreness": "5abd96932300b254c80a5b542c2da179ad726d73acf66e385b1660de084418f8",
+    "shoulder_soreness": "aaf167ee489e9a54d9fc75cb6039318e2f8d73489b12720a9d41bf20ddbbf4f5"
+  },
+  "bank_before_sha256": "d540891e3a03912761b80acb45eafcde137ceb3024cbf69cfb2ad55acf454c3b",
+  "ledger_before_sha256": "7860bb4a554f37d3222791d379e21ab7134559cf2f0a0c0951684893f723602f",
+  "activated_profile_sha256": "f59ea455b82260be3e370ab11ffeb6ac6d4e4d58d5e3aa8eab2bf982d45a95c7",
+  "activated_checkpoint": {
+    "checkpoint_id": "shoulder_cuff_reported_wall_load_v1",
+    "description": "Reported non-traumatic cuff tendinopathy without tear and loading permission for bounded wall push-ups; no capacity assessment or verification.",
+    "required_input": "One occasional clinician-described shoulder presentation in existing injury editor and current episode rehabilitation loading permission.",
+    "basis": "clinical"
+  },
+  "new_drill": {
+    "id": "shoulder_tendonitis_wall_push_up",
+    "name": "Controlled wall push-ups",
+    "notes": "Stand facing a stable wall, close enough to reach it comfortably without leaning. Place both hands on the wall at shoulder height, slightly wider than shoulder width, turned out slightly, with elbows below shoulders. Keep your body tall and feet fixed near the wall. Slowly bend your elbows a small comfortable amount to bring your body towards the wall, then gently push back. Keep within a pain-free range and clinician restrictions. Do not move your feet further back, lower your hands, add resistance or work to fatigue. Stop for pain, worsening symptoms during or after work, weakness or a feeling of instability.",
+    "rehab_stage": "load",
+    "function": "tendon_loading",
+    "equipment": [
+      "wall"
+    ],
+    "dose": {
+      "sets": 1,
+      "reps": 8
+    },
+    "impact": "none",
+    "load": "moderate",
+    "velocity": "low",
+    "pain_ceiling": null,
+    "allowed_severities": [
+      "low",
+      "moderate"
+    ],
+    "progress_when": [],
+    "regress_when": [
+      "Symptoms worsen: stop loading and follow conservative guidance."
+    ],
+    "stop_when": [
+      "Stop for pain or worsening during or delayed symptoms. Follow clinician restrictions."
+    ],
+    "target_regions": [
+      "shoulder",
+      "elbow",
+      "wrist"
+    ],
+    "laterality_applicability": "side_specific",
+    "target_tissues": [
+      "rotator cuff and shoulder girdle muscles"
+    ],
+    "contraction_type": "mixed",
+    "sport_specificity": "general_rehab",
+    "contact_level": "none",
+    "evidence_notes": "2025 rotator cuff tendinopathy CPG recommendation 25 supports active motor-control/resistance exercise with various loads, not a validated app LOAD threshold or one superior exercise. RJAH NHS describes wall push-ups with elbows below shoulders, 3 sets of 8; this option caps at 1 set of 8 at most once daily, feet near wall, small pain-free range, no foot-distance progression or added resistance. These are conservative product limits. Moderate is a conservative categorical upper-limb weight-bearing demand classification, not measured force or individual capacity. Bodyweight resistance varies with body position; it is not quantified. Only reported clinician-described non-traumatic cuff tendinopathy without tear and current rehabilitation loading permission apply; reported impact is not a clinical grade or measured capacity; this is not medical verification or measured strength/ROM. Sources: https://www.orthopt.org/uploads/content_files/files/Rotator_Cuff_CPG.pdf, https://www.rjah.nhs.uk/our-services/therapy/supported-self-care/rotator-cuff-related-shoulder-pain/ No numeric pain ceiling is inferred; the pain-free stop instruction is a conservative product restriction, not an unrestricted pain allowance."
+  },
+  "new_review": {
+    "drill_id": "shoulder_tendonitis_wall_push_up",
+    "source_hash": "a073049ed28ef30c9ac7ac9af443c9cd2bf98b889629a70e4a13ad2b9a15db6e",
+    "location": "shoulder",
+    "injury_type": "tendonitis",
+    "name": "Controlled wall push-ups",
+    "notes": "Stand facing a stable wall, close enough to reach it comfortably without leaning. Place both hands on the wall at shoulder height, slightly wider than shoulder width, turned out slightly, with elbows below shoulders. Keep your body tall and feet fixed near the wall. Slowly bend your elbows a small comfortable amount to bring your body towards the wall, then gently push back. Keep within a pain-free range and clinician restrictions. Do not move your feet further back, lower your hands, add resistance or work to fatigue. Stop for pain, worsening symptoms during or after work, weakness or a feeling of instability.",
+    "movement_archetype": "bodyweight_strength",
+    "proposed": {
+      "rehab_stage": "load",
+      "function": "tendon_loading",
+      "equipment": [
+        "wall"
+      ],
+      "impact": "none",
+      "load": "moderate",
+      "velocity": "low",
+      "target_regions": [
+        "shoulder",
+        "elbow",
+        "wrist"
+      ],
+      "laterality_applicability": "side_specific",
+      "target_tissues": [
+        "rotator cuff and shoulder girdle muscles"
+      ],
+      "contraction_type": "mixed",
+      "sport_specificity": "general_rehab",
+      "contact_level": "none",
+      "evidence_notes": "2025 rotator cuff tendinopathy CPG recommendation 25 supports active motor-control/resistance exercise with various loads, not a validated app LOAD threshold or one superior exercise. RJAH NHS describes wall push-ups with elbows below shoulders, 3 sets of 8; this option caps at 1 set of 8 at most once daily, feet near wall, small pain-free range, no foot-distance progression or added resistance. These are conservative product limits. Moderate is a conservative categorical upper-limb weight-bearing demand classification, not measured force or individual capacity. Bodyweight resistance varies with body position; it is not quantified. Only reported clinician-described non-traumatic cuff tendinopathy without tear and current rehabilitation loading permission apply; reported impact is not a clinical grade or measured capacity; this is not medical verification or measured strength/ROM. Sources: https://www.orthopt.org/uploads/content_files/files/Rotator_Cuff_CPG.pdf, https://www.rjah.nhs.uk/our-services/therapy/supported-self-care/rotator-cuff-related-shoulder-pain/ No numeric pain ceiling is inferred; the pain-free stop instruction is a conservative product restriction, not an unrestricted pain allowance."
+    },
+    "flags": [],
+    "review_state": "reviewed",
+    "review_version": 1
+  }
+}

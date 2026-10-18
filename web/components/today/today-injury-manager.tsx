@@ -26,6 +26,7 @@ import {
   readAchillesSite, stripAchillesSite, writeAchillesSite, type AchillesSite,
   readElbowSite, stripElbowSite, writeElbowSite, type ElbowSite,
   readAnkleScope, stripAnkleScope, writeAnkleScope, type AnkleScope,
+  readShoulderScope, stripShoulderScope, writeShoulderScope, type ShoulderScope,
   getTodayOtherInjuryTypes,
   readTodayOtherInjuryType,
   isInjuryEntryLimited,
@@ -336,6 +337,7 @@ export function TodayInjuryManager({
   const [newDetail, setNewDetail] = useState("");
   const [achillesSite, setAchillesSite] = useState<AchillesSite>("unknown");
   const [elbowSite, setElbowSite] = useState<ElbowSite>("unknown");
+  const [shoulderScope, setShoulderScope] = useState<ShoulderScope>("unknown");
   const [ankleScope, setAnkleScope] = useState<AnkleScope>("unknown");
   // Whether the last edit hit the word/character cap, so the hint can explain the
   // trim instead of a word silently vanishing.
@@ -545,6 +547,7 @@ export function TodayInjuryManager({
       let description = writeInjuryImpact(composeTodayInjuryDescription({ injuryType: newType, otherType: newOtherType, detail: newDetail }), newImpact);
       if (/achilles/i.test(area)) description = writeAchillesSite(description, achillesSite);
       if (/elbow/i.test(area) && newOtherType === "tendonitis") description = writeElbowSite(description, elbowSite);
+      if (/shoulder/i.test(area) && newOtherType === "tendonitis") description = writeShoulderScope(description, shoulderScope);
       if (/ankle/i.test(area) && newOtherType === "sprain") description = writeAnkleScope(description, ankleScope);
       // Whatever open injury the reconcile returns that was not here before this
       // add is the flag it just created — that is how we find it to route on.
@@ -559,7 +562,7 @@ export function TodayInjuryManager({
       setBodyMapVisible(true);
       setNewType(NO_TODAY_INJURY_TYPE);
       setNewOtherType("");
-      setNewDetail(""); setAchillesSite("unknown"); setElbowSite("unknown"); setAnkleScope("unknown");
+      setNewDetail(""); setAchillesSite("unknown"); setElbowSite("unknown"); setAnkleScope("unknown"); setShoulderScope("unknown");
       setAreaLimited(false);
       setDetailLimited(false);
       setNewZone("");
@@ -609,7 +612,7 @@ export function TodayInjuryManager({
     setBodyMapVisible(true);
     setNewType(NO_TODAY_INJURY_TYPE);
     setNewOtherType("");
-    setNewDetail(""); setAchillesSite("unknown"); setElbowSite("unknown"); setAnkleScope("unknown");
+    setNewDetail(""); setAchillesSite("unknown"); setElbowSite("unknown"); setAnkleScope("unknown"); setShoulderScope("unknown");
     setAreaLimited(false);
     setDetailLimited(false);
     setAddMissing(null);
@@ -692,8 +695,9 @@ export function TodayInjuryManager({
                       setNewImpact(impact?.value ?? "");
                       setAchillesSite(readAchillesSite(injury.description ?? ""));
                       setElbowSite(readElbowSite(injury.description ?? ""));
+                      setShoulderScope(readShoulderScope(injury.description ?? ""));
                       setAnkleScope(readAnkleScope(injury.description ?? ""));
-                      const description = stripAnkleScope(stripElbowSite(stripAchillesSite(writeInjuryImpact(injury.description ?? "", ""))));
+                      const description = stripShoulderScope(stripAnkleScope(stripElbowSite(stripAchillesSite(writeInjuryImpact(injury.description ?? "", "")))));
                       const otherType = readTodayOtherInjuryType(description);
                       const type = otherType ? undefined : TODAY_INJURY_TYPE_OPTIONS.find((option) => option.value !== "other" && new RegExp(`\\b${option.value}\\b`, "i").test(description));
                       const typeWord = otherType ? TODAY_OTHER_INJURY_TYPES[otherType].word : type?.value;
@@ -1042,6 +1046,12 @@ export function TodayInjuryManager({
           value={elbowSite}
           options={[{ value: "lateral", label: "Outside of elbow" }, { value: "other", label: "Elsewhere" }, { value: "unknown", label: "Not sure" }]}
           onChange={value => setElbowSite(value as ElbowSite)}
+        /> : null}
+        {/shoulder/i.test(newArea) && newOtherType === "tendonitis" ? <SegmentGroup
+          label="What shoulder problem did your clinician describe?"
+          value={shoulderScope}
+          options={[{ value: "nontraumatic_cuff", label: "Rotator cuff tendinopathy, no injury accident or tear" }, { value: "other", label: "Another problem" }, { value: "unknown", label: "Not sure" }]}
+          onChange={value => setShoulderScope(value as ShoulderScope)}
         /> : null}
         {/ankle/i.test(newArea) && newOtherType === "sprain" ? <SegmentGroup
           label="What type of sprain did your clinician describe?"

@@ -295,7 +295,7 @@ def test_previous_48_profiles_and_all_other_bank_hashes_preserved(tmp_path):
     path.write_text(json.dumps(raw), encoding="utf-8")
     old_policies = load_clinical_policies(path)
     for p in old_policies:
-        if p.policy_id in {"achilles_tendonitis", "elbow_tendonitis", "ankle_sprain"}:
+        if p.policy_id in {"achilles_tendonitis", "elbow_tendonitis", "ankle_sprain", "shoulder_tendonitis"}:
             # Exact versioned activations are covered by their own journey and
             # baseline tests; every other profile still compares identically.
             continue

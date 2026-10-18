@@ -112,7 +112,7 @@ export const EQUIPMENT_PRESETS: EquipmentPreset[] = [
     description: "All training kit, including pool and strongman equipment; partner and rehab supports separate",
     equipment_access: EQUIPMENT_ACCESS_OPTIONS
       .map((option) => option.value)
-      .filter((value) => value !== "partner" && value !== "stable_support" && value !== "table" && value !== "chair"),
+      .filter((value) => value !== "partner" && value !== "stable_support" && value !== "table" && value !== "chair" && value !== "wall"),
   },
 ];
 

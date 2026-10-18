@@ -201,3 +201,16 @@ export function stripAnkleScope(description: string): string {
 export function writeAnkleScope(description: string, scope: AnkleScope): string {
   return `${stripAnkleScope(description)} [ankle_scope:${scope}]`;
 }
+
+export type ShoulderScope = "nontraumatic_cuff" | "other" | "unknown";
+export function readShoulderScope(description: string): ShoulderScope {
+  const matches = [...description.matchAll(/\[shoulder_scope:([^\]]*)\]/g)];
+  return matches.length === 1 && ["nontraumatic_cuff", "other", "unknown"].includes(matches[0][1])
+    ? matches[0][1] as ShoulderScope : "unknown";
+}
+export function stripShoulderScope(description: string): string {
+  return description.replace(/\s*\[shoulder_scope:[^\]]*\]/g, "").trim();
+}
+export function writeShoulderScope(description: string, scope: ShoulderScope): string {
+  return `${stripShoulderScope(description)} [shoulder_scope:${scope}]`;
+}
