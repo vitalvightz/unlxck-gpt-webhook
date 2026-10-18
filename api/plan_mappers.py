@@ -120,6 +120,7 @@ def _map_profile_row(row: dict[str, Any]) -> ProfileRecord:
     # from client input, so this is the single place the answer comes from.
     compliance = evaluate_profile_compliance(row)
     return ProfileRecord(
+        starting_path=row.get("starting_path", "plan_first"),
         training_habits=row.get("training_habits") or {},
         training_habits_revision=row.get("training_habits_revision") or 0,
         athlete_id=str(row["id"]),

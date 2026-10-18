@@ -6,6 +6,8 @@ import { useLocale, useTranslations } from "next-intl";
 import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 
 import { useAppSession } from "@/components/auth-provider";
+import { TrackingToday } from "@/components/tracking-today";
+import { getAuthenticatedLandingHref, needsStartingPath } from "@/lib/auth-routing";
 import { EmptyState } from "@/components/empty-state";
 import { FightCountdown, FightCountdownSkeleton } from "@/components/fight-countdown";
 import { InstallUnlxck } from "@/components/install-unlxck";
@@ -263,6 +265,12 @@ export default function HomePage() {
     }
   }, [isReady, isMeHydrated, me, router, session]);
 
+  useEffect(() => {
+    if (isReady && session && isMeHydrated && !hasTransientMeError && needsStartingPath(me)) {
+      router.replace(getAuthenticatedLandingHref(me));
+    }
+  }, [isReady, session, isMeHydrated, hasTransientMeError, me, router]);
+
   const [isReloadingCommand, setIsReloadingCommand] = useState(false);
   const latestTokenRef = useRef(session?.access_token);
 
@@ -393,6 +401,17 @@ export default function HomePage() {
   }
 
   if (session && me) {
+    if (needsStartingPath(me)) return <p role="status">Opening your starting options…</p>;
+    if (me.profile.starting_path === "tracking_first") {
+      if (!commandState && !commandError) return <WorkspaceOverviewSkeleton />;
+      if (!commandState && commandError) return <section className="panel"><h1>Today is temporarily unavailable</h1><p role="alert">Couldn’t load your training workspace.</p><button type="button" className="secondary-button" onClick={() => void loadCommandState()}>Retry Today</button></section>;
+      if (commandState && !commandState.active_plan?.id) {
+        return <>
+          {commandError ? <div role="status"><p>Today could not refresh. Your recorded sessions are still here.</p><button type="button" className="secondary-button" onClick={() => void loadCommandState()}>Retry Today</button></div> : null}
+          <TrackingToday accessToken={session.access_token} state={commandState} onSaved={() => void loadCommandState()} />
+        </>;
+      }
+    }
     const latestPlan = me.latest_plan ?? null;
     const draft = (me.profile.onboarding_draft as { current_step?: number } | null) ?? null;
     const latestIntake = me.latest_intake;

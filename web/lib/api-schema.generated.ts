@@ -1818,6 +1818,7 @@ export type PrivateMediaSettings = {
 };
 
 export type ProfileRecord = {
+  starting_path: "plan_first" | "tracking_first" | null;
   training_habits: TrainingHabitPreferences;
   training_habits_revision: number;
   athlete_id: string;
@@ -1856,6 +1857,7 @@ export type ProfileRecord = {
 };
 
 export type ProfileUpdateRequest = {
+  starting_path?: "plan_first" | "tracking_first" | null;
   training_habits?: TrainingHabitPreferencesRequest | null;
   training_habits_revision?: number | null;
   full_name?: string | null;
