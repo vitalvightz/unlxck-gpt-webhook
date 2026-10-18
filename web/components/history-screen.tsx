@@ -167,7 +167,8 @@ function SessionRows({ rows, today, token, onUpdate, onDelete }: {
     );
   }
   const week = today
-    ? countRecentBy(rows, { day: (row) => row.training_day, key: (row) => row.status, today, days: 7 })
+    ? countRecentBy(rows.filter(row => row.source === "external" || row.completion_origin === "reported"),
+      { day: (row) => row.training_day, key: (row) => row.status, today, days: 7 })
     : null;
   return (
     <div className="history-tab-body">
@@ -195,6 +196,7 @@ function SessionRows({ rows, today, token, onUpdate, onDelete }: {
             <div className="history-row-meta">
               <RowDate day={row.training_day} today={today} />
               <span>{row.source === "external" ? "Added by you" : "Unlxck"}</span>
+              {row.source === "unlxck" && row.completion_origin == null ? <span>Legacy completion · workout identity unverified</span> : null}
               {row.duration_minutes ? <span>{row.duration_minutes} min</span> : null}
               {row.effort ? <span>{row.effort.charAt(0).toUpperCase() + row.effort.slice(1)}</span> : null}
               {row.session_rpe != null ? (

@@ -19,8 +19,9 @@ def training_history(store, athlete_id: str, *, limit: int = 200, prescribed: li
         prescribed = store.list_session_completions(athlete_id, limit=limit)
     external = store.list_external_training_sessions(athlete_id, limit=limit)
     rows = [
-        {**row, "source": "unlxck"} for row in prescribed
+        {**row, "source": "unlxck", "completion_origin": row.get("completion_origin")} for row in prescribed
         if row.get("athlete_id") == athlete_id and row.get("status") in ({"done", "modified", "skipped"} if include_skipped else {"done", "modified"})
+        and row.get("completion_origin") != "day_credit"
     ] + [external_occurrence(row) for row in external
          if row.get("athlete_id") == athlete_id and not row.get("deleted_at")]
     # IDs are scoped to their source. Name/date matches are distinct sessions.

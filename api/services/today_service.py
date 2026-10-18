@@ -851,6 +851,9 @@ def _readiness_context_and_status(
     try:
         recent_sessions = training_history(store, athlete_id)
         completions_ok = True
+        from fightcamp.completed_workload import has_unverified_completions
+        if has_unverified_completions(recent_sessions, training_day):
+            completions_ok = False
     except Exception:
         logger.exception("[today] training_history_read_failed")
         recent_sessions, completions_ok = [], False
@@ -1366,6 +1369,10 @@ def upsert_session_completion(
         )
     training_day = requested_day or today
     existing = store.get_session_completion(athlete_id, session_id, training_day) or {}
+    if existing.get("completion_origin") == "day_credit":
+        # Credit is not an accepted/performed occurrence. Direct confirmation
+        # needs fresh actual timestamps, safety gates and its own rehab context.
+        existing = {key: existing[key] for key in ("id", "plan_id", "session_id", "training_day") if key in existing}
     accepted_stop = _is_stopped_started_session(existing, payload)
     stop_requested = bool(existing.get("plan_id") == plan_id and existing.get("started_at")
                           and existing.get("status") == "started" and status_value == "modified"
@@ -1532,6 +1539,7 @@ def upsert_session_completion(
         ) from exc
 
     fields = {
+        "completion_origin": "reported",
         "plan_id": plan_id,
         "session_id": session_id,
         "training_day": training_day,
@@ -1551,11 +1559,9 @@ def upsert_session_completion(
     elif performance in {"changed", "stopped", "skipped"}:
         fields["rehab_performance"] = performance
     row = store.upsert_session_completion(athlete_id, fields)
-    # A training day is one unit for the athlete: one start, one RPE, one log.
-    # When the card schedules several sessions that day (a conditioning block
-    # plus a breathing reset), the same outcome is written to each of them so
-    # Today, week progress and the full-week checks all read the day as logged.
-    # Only the submitted row drives XP, streak and rehab follow-up in the route.
+    # Keep day-level progress without inventing sibling actuals. Only the
+    # explicitly submitted row is execution evidence; sibling progress credit
+    # cannot overwrite reported or legacy occurrences.
     day_session_ids = _day_session_ids(plan_row, training_day)
     held_session_ids = {str(change["session_id"]) for change in (frozen or {}).get("changes", [])
                         if change.get("action") == "held" and change.get("session_id")}
@@ -1567,15 +1573,23 @@ def upsert_session_completion(
             sibling_plan_id = str(sibling.get("plan_id") or "")
             if sibling_plan_id and sibling_plan_id != plan_id:
                 continue
+            if sibling and sibling.get("completion_origin") != "day_credit":
+                continue
             sibling_started_at, sibling_completed_at = _completion_timestamps(
                 sibling, status_value, now_iso
             )
             store.upsert_session_completion(
                 athlete_id,
                 {
-                    **{key: value for key, value in fields.items()
-                       if key not in {"prescription_snapshot", "rehab_performance"}},
+                    "plan_id": plan_id,
                     "session_id": sibling_id,
+                    "training_day": training_day,
+                    "status": status_value,
+                    "completion_origin": "day_credit",
+                    "session_rpe": None,
+                    "pain_after": None,
+                    "notes": "",
+                    "modification_reason": "Day progress credit" if status_value in {"modified", "skipped"} else "",
                     "started_at": sibling_started_at,
                     "completed_at": sibling_completed_at,
                 },

@@ -338,6 +338,7 @@ REQUIRED_TODAY_CHECKINS_COLUMNS: tuple[str, ...] = (
 )
 
 REQUIRED_SESSION_COMPLETIONS_COLUMNS: tuple[str, ...] = (
+    "completion_origin",
     "id",
     "athlete_id",
     "plan_id",

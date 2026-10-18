@@ -10,6 +10,7 @@ export type ExternalTrainingFields = {
 export type TrainingHistorySession = {
   id: string;
   source: "unlxck" | "external";
+  completion_origin?: "reported" | "day_credit" | null;
   training_day: string;
   status: "done" | "modified" | "skipped";
   title: string;

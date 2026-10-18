@@ -5,6 +5,34 @@ import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { AppSessionContext } from "./auth-provider";
 import { HistoryScreen } from "./history-screen";
+import { athleteTrainingDayISO } from "@/lib/camp-map";
+
+test("legacy completion records stay visible without claiming independent workouts in the summary", async () => {
+  const originalFetch = globalThis.fetch;
+  const training_day = athleteTrainingDayISO(new Date(), undefined);
+  globalThis.fetch = async () => new Response(JSON.stringify({ sessions: [
+    { id: "reported", source: "unlxck", completion_origin: "reported", title: "Reported workout", status: "done", training_day },
+    { id: "legacy", source: "unlxck", completion_origin: null, title: "Legacy record", status: "done", training_day },
+  ] }), { status: 200 });
+  const container = document.createElement("div");
+  document.body.appendChild(container);
+  const root = createRoot(container);
+  try {
+    await act(async () => root.render(<AppSessionContext.Provider value={{
+      session: { access_token: "token" }, me: null, isReady: true, isMeHydrated: true,
+      hasTransientMeError: false, refreshMe: async () => {}, signOut: async () => {},
+      replaceMe: () => {}, previewAppearanceMode: () => {},
+    }}><HistoryScreen /></AppSessionContext.Provider>));
+    assert.match(container.textContent ?? "", /Legacy record/);
+    assert.match(container.textContent ?? "", /workout identity unverified/);
+    const done = [...container.querySelectorAll("dt")].find(item => item.textContent === "Done");
+    assert.equal(done?.nextElementSibling?.textContent, "1");
+  } finally {
+    act(() => root.unmount());
+    container.remove();
+    globalThis.fetch = originalFetch;
+  }
+});
 
 test("failed History tabs can be retried without losing the Sessions cache", async () => {
   process.env.NEXT_PUBLIC_API_DEBUG = "false";

@@ -1952,6 +1952,10 @@ class FakeStore(InMemoryNotificationLedger, FullRowStatusReads):
         bucket = self.session_completions.setdefault(athlete_id, [])
         for row in bucket:
             if row["session_id"] == fields["session_id"] and row["training_day"] == fields["training_day"]:
+                if fields.get("completion_origin") == "day_credit" and (
+                    row.get("completion_origin") != "day_credit" or row.get("plan_id") != fields["plan_id"]
+                ):
+                    return dict(row)
                 frozen = row.get("prescription_snapshot")
                 if frozen and fields.get("prescription_snapshot") not in (None, frozen):
                     raise HTTPException(409, "prescription_revision_conflict")

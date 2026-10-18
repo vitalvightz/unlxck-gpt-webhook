@@ -40,6 +40,10 @@ DISCOVERY_CHANGED = frozenset({"api/routes/training_library.py"})
 # Separately requested CI repair: preserve selected names in fallback cards.
 # Its original hash-verified source is retained for immutable audit replay.
 FALLBACK_CHANGED = frozenset({"api/structured_plan_deterministic_fallback.py"})
+# Only the exact additive completion-origin response field is reversible for
+# replay. historical_sources verifies the whole original contract hash first;
+# this does not permit unrelated contract drift or refresh frozen evidence.
+PROVENANCE_CHANGED = frozenset({"api/contracts/external_training.py"})
 EQUIPMENT_ADDED = frozenset({"fightcamp/equipment_requirements.py", "shared/equipment-requirements.json",
                              "web/lib/equipment-requirements.ts"})
 # Custom plans are an independent runtime surface. Keep their reviewed file
@@ -286,7 +290,7 @@ def preservation(baseline):
         raise ValueError("PR 1 evidence changed")
     changed = sorted(p for p, h in original["production_files"].items() if current["production_files"].get(p) != h)
     added = sorted(set(current["production_files"]) - set(original["production_files"]))
-    if not set(changed) <= ALLOWED_CHANGED | EQUIPMENT_CHANGED | FALLBACK_CHANGED | DISCOVERY_CHANGED | CUSTOM_PLAN_CHANGED | PRIVATE_MEDIA_CHANGED | COMMUNITY_CHANGED | OPEN_PLAN_CHANGED | {"fightcamp/strength.py"} or not set(added) <= ALLOWED_ADDED | EQUIPMENT_ADDED | CUSTOM_PLAN_ADDED | PRIVATE_MEDIA_ADDED | COMMUNITY_ADDED | OPEN_PLAN_ADDED:
+    if not set(changed) <= ALLOWED_CHANGED | EQUIPMENT_CHANGED | FALLBACK_CHANGED | DISCOVERY_CHANGED | CUSTOM_PLAN_CHANGED | PRIVATE_MEDIA_CHANGED | COMMUNITY_CHANGED | OPEN_PLAN_CHANGED | PROVENANCE_CHANGED | {"fightcamp/strength.py"} or not set(added) <= ALLOWED_ADDED | EQUIPMENT_ADDED | CUSTOM_PLAN_ADDED | PRIVATE_MEDIA_ADDED | COMMUNITY_ADDED | OPEN_PLAN_ADDED:
         raise ValueError("Unapproved production diff: " + str((changed, added)))
     for p, h in original["configuration_files"].items():
         if p == "data/tag_vocabulary.json" and current["configuration_files"].get(p) != h:
@@ -312,7 +316,7 @@ def preservation(baseline):
             "source_hash_parity": True, "catalogue_identity_and_media_key_parity": True,
             "pr1_evidence_hash_parity": True, "planner_clinical_configuration_parity": True,
             "persisted_equipment_alias_contract_parity": True,
-            "allowed_changed_production": sorted(set(changed) - EQUIPMENT_CHANGED - FALLBACK_CHANGED - DISCOVERY_CHANGED - CUSTOM_PLAN_CHANGED - PRIVATE_MEDIA_CHANGED - COMMUNITY_CHANGED - OPEN_PLAN_CHANGED - {"fightcamp/strength.py"}),
+            "allowed_changed_production": sorted(set(changed) - EQUIPMENT_CHANGED - FALLBACK_CHANGED - DISCOVERY_CHANGED - CUSTOM_PLAN_CHANGED - PRIVATE_MEDIA_CHANGED - COMMUNITY_CHANGED - OPEN_PLAN_CHANGED - PROVENANCE_CHANGED - {"fightcamp/strength.py"}),
             "added_projection_sources": sorted(set(added) - EQUIPMENT_ADDED - CUSTOM_PLAN_ADDED - PRIVATE_MEDIA_ADDED - COMMUNITY_ADDED - OPEN_PLAN_ADDED)}
 
 

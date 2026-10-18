@@ -10,7 +10,7 @@ from api.contracts.readiness_message import classify_injury_surface
 
 from .today_service import _structured_plan_weeks, resolve_training_day
 from .training_history import training_history
-from fightcamp.completed_workload import completed_workload
+from fightcamp.completed_workload import completed_workload, has_unverified_completions
 
 logger = logging.getLogger(__name__)
 
@@ -78,6 +78,8 @@ def annotate_payload_with_sparring_readiness(
     completions = recent_rows(
         read("list_session_completions", lambda: store.list_session_completions(athlete_id, limit=200)), as_of
     )
+    if has_unverified_completions(completions, as_of, days=7):
+        context["unavailable"].append("completion_provenance")
     # Keep contact permission evidence prescribed-only. Manual Sparring/Hard
     # describes effort, never head contact. Conditioning shares Today's engine.
     history_input = {"as_of": as_of, "sessions": [], "checkins": context["checkins"], "available": True}
@@ -89,12 +91,16 @@ def annotate_payload_with_sparring_readiness(
         history_input["available"] = False
     history_input["sessions"] = [{key: row[key] for key in (
         "id", "source", "plan_id", "session_id", "training_day", "status", "session_rpe",
-        "pain_after", "duration_minutes", "effort", "activity") if key in row}
+        "pain_after", "duration_minutes", "effort", "activity", "completion_origin") if key in row}
         for row in history_input["sessions"]]
+    if has_unverified_completions(history_input["sessions"], as_of):
+        history_input["available"] = False
     history_input["workload"] = completed_workload(history_input["sessions"], as_of)
     plans = {}
     for row in completions:
         if row.get("status") not in {"done", "modified"}:
+            continue
+        if row.get("completion_origin") != "reported":
             continue
         plan_id = row.get("plan_id")
         try:
@@ -114,7 +120,7 @@ def annotate_payload_with_sparring_readiness(
     # Carry only decision evidence, never completion notes or unrelated profile data.
     fields = {
         "checkins": ("training_day", "updated_at", "created_at", "sleep", "body", "pain", "active_injury", "previous_session", "neurological_symptoms"),
-        "sessions": ("plan_id", "session_id", "training_day", "status", "session_rpe", "contact_load"),
+        "sessions": ("plan_id", "session_id", "training_day", "status", "session_rpe", "contact_load", "completion_origin"),
         "active_injuries": ("surface_class", "body_area", "label", "description", "severity", "status", "triage_category", "injury_type", "consequence", "flags", "blocked_training_tags"),
     }
     for key, allowed in fields.items():

@@ -2475,6 +2475,7 @@ export type TrainingHistoryResponse = {
 };
 
 export type TrainingHistorySession = {
+  completion_origin: "day_credit" | "reported" | null;
   id: string;
   source: "external" | "unlxck";
   training_day: string;
