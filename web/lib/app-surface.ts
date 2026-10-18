@@ -1,15 +1,16 @@
 // Shell-surface contract shared by the root layout (server) and AppNav (client).
 //
-// The app has two chromes:
+// Shell surfaces:
 //   - "brand":     the public entry shell (marketing homepage + auth routes).
 //                  No signed-in workspace sidebar, no floating workspace Menu.
 //   - "workspace": the signed-in app shell with the full sidebar navigation.
+//   - "entry":     the starting choice with its own account control and no workspace navigation.
 //
 // Keeping the route lists and the resolution rules in one pure module means the
 // server and client agree on the surface without duplicating per-page checks,
 // and the logic stays unit-testable without a DOM or a Supabase session.
 
-export type ShellSurface = "brand" | "workspace";
+export type ShellSurface = "brand" | "workspace" | "entry";
 
 // Fully public authentication routes. These render only the brand/auth shell:
 // the auth form owns all navigation on them, so they resolve to the brand
@@ -46,6 +47,7 @@ export function shouldShowBrandTopbar(pathname: string, hasSession: boolean): bo
 }
 
 export function getShellSurface(pathname: string, hasSession: boolean): ShellSurface {
+  if (pathname === "/get-started") return "entry";
   // Auth routes always use the brand shell. Signed-in users are redirected off
   // them, so we never want workspace chrome to flash in behind the form.
   if (isAuthSurfaceRoute(pathname)) {
@@ -63,6 +65,7 @@ export function getShellSurface(pathname: string, hasSession: boolean): ShellSur
 // switches the client to the workspace surface after hydration; the final
 // signed-in workspace is unchanged. Other routes still defer to the client.
 export function getServerShellSurface(pathname: string | null | undefined): ShellSurface | null {
+  if (pathname === "/get-started") return "entry";
   if (pathname && BRAND_SURFACE_ROUTES.has(pathname)) {
     return "brand";
   }

@@ -72,7 +72,7 @@ export function AppNav() {
   // sidebar drawer there so they can't overlap page content on scroll — those
   // belong to the signed-in workspace shell. Auth routes suppress them too.
   const isPublicBrandSurface = shellSurface === "brand" && !session;
-  const suppressWorkspaceNav = isAuthRoute || isPublicBrandSurface;
+  const suppressWorkspaceNav = isAuthRoute || isPublicBrandSurface || shellSurface === "entry";
 
   const isMobileDrawerVisible = mobileNavState !== "closed";
 

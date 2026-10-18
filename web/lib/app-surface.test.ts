@@ -10,6 +10,13 @@ import {
 
 const AUTH_ROUTES = ["/login", "/signup", "/forgot-password", "/reset-password"];
 
+test("starting choices use a focused entry surface before and after hydration", () => {
+  assert.equal(getShellSurface("/get-started", false), "entry");
+  assert.equal(getShellSurface("/get-started", true), "entry");
+  assert.equal(getServerShellSurface("/get-started"), "entry");
+  assert.equal(shouldShowBrandTopbar("/get-started", false), false);
+});
+
 test("auth routes are identified as auth-surface routes", () => {
   for (const route of AUTH_ROUTES) {
     assert.equal(isAuthSurfaceRoute(route), true, `${route} should be an auth route`);
