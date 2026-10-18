@@ -72,11 +72,12 @@ def frozen_review_hold(store, athlete_id, snapshot, *, work_state, as_of=None, r
                 if option is None:
                     return True
                 if work_state == "unstarted":
-                    if block.get("policy_id") == "ankle_sprain":
+                    if block.get("policy_id") in {"ankle_sprain", "shoulder_tendonitis"}:
                         from api.contracts.ankle_restore_load import seated_ankle_multi_injury_hold
                         active_injuries = store.list_injury_flags(athlete_id,
                             statuses=("open", "monitoring"), limit=500)
-                        if seated_ankle_multi_injury_hold(current, active_injuries):
+                        from api.contracts.shoulder_restore_load import wall_shoulder_multi_injury_hold
+                        if seated_ankle_multi_injury_hold(current, active_injuries) or wall_shoulder_multi_injury_hold(current, active_injuries):
                             return True
                     window = store.list_rehab_exposures(athlete_id, injury_id=injury["id"],
                                                        injury_episode_id=injury["episode_id"])
@@ -92,7 +93,7 @@ def frozen_review_hold(store, athlete_id, snapshot, *, work_state, as_of=None, r
                     intake = intake.get("intake") or intake
                     if not set(block.get("drill_snapshot", {}).get("equipment") or []) <= set(intake.get("equipment_access") or []):
                         return True
-                    if block.get("policy_id") in {"elbow_tendonitis", "ankle_sprain"}:
+                    if block.get("policy_id") in {"elbow_tendonitis", "ankle_sprain", "shoulder_tendonitis"}:
                         from api.contracts.injury_policy import resolve_injury_policy
                         from fightcamp.rehab_protocols import get_rehab_bank
                         decision = resolve_injury_policy(current,

@@ -12211,6 +12211,48 @@
         "sport_specificity": "general_rehab",
         "contact_level": "none",
         "evidence_notes": "Sources: https://www.nhs.uk/conditions/tendonitis/, https://www.rjah.nhs.uk/our-services/therapy/supported-self-care/rotator-cuff-related-shoulder-pain/. Protected regional baseline, not a subtype diagnosis or complete tendon-loading protocol. No numeric dose or pain threshold inferred. Pain-free range is a conservative product constraint, not a universal assertion that pain during tendon exercise is unsafe. Existing low/moderate eligibility and scheduling cadence remain product rules."
+      },
+      {
+        "id": "shoulder_tendonitis_wall_push_up",
+        "name": "Controlled wall push-ups",
+        "notes": "Stand facing a stable wall, close enough to reach it comfortably without leaning. Place both hands on the wall at shoulder height, slightly wider than shoulder width, turned out slightly, with elbows below shoulders. Keep your body tall and feet fixed near the wall. Slowly bend your elbows a small comfortable amount to bring your body towards the wall, then gently push back. Keep within a pain-free range and clinician restrictions. Do not move your feet further back, lower your hands, add resistance or work to fatigue. Stop for pain, worsening symptoms during or after work, weakness or a feeling of instability.",
+        "rehab_stage": "load",
+        "function": "tendon_loading",
+        "equipment": [
+          "wall"
+        ],
+        "dose": {
+          "sets": 1,
+          "reps": 8
+        },
+        "impact": "none",
+        "load": "moderate",
+        "velocity": "low",
+        "pain_ceiling": null,
+        "allowed_severities": [
+          "low",
+          "moderate"
+        ],
+        "progress_when": [],
+        "regress_when": [
+          "Symptoms worsen: stop loading and follow conservative guidance."
+        ],
+        "stop_when": [
+          "Stop for pain or worsening during or delayed symptoms. Follow clinician restrictions."
+        ],
+        "target_regions": [
+          "shoulder",
+          "elbow",
+          "wrist"
+        ],
+        "laterality_applicability": "side_specific",
+        "target_tissues": [
+          "rotator cuff and shoulder girdle muscles"
+        ],
+        "contraction_type": "mixed",
+        "sport_specificity": "general_rehab",
+        "contact_level": "none",
+        "evidence_notes": "2025 rotator cuff tendinopathy CPG recommendation 25 supports active motor-control/resistance exercise with various loads, not a validated app LOAD threshold or one superior exercise. RJAH NHS describes wall push-ups with elbows below shoulders, 3 sets of 8; this option caps at 1 set of 8 at most once daily, feet near wall, small pain-free range, no foot-distance progression or added resistance. These are conservative product limits. Moderate is a conservative categorical upper-limb weight-bearing demand classification, not measured force or individual capacity. Bodyweight resistance varies with body position; it is not quantified. Only reported clinician-described non-traumatic cuff tendinopathy without tear and current rehabilitation loading permission apply; reported impact is not a clinical grade or measured capacity; this is not medical verification or measured strength/ROM. Sources: https://www.orthopt.org/uploads/content_files/files/Rotator_Cuff_CPG.pdf, https://www.rjah.nhs.uk/our-services/therapy/supported-self-care/rotator-cuff-related-shoulder-pain/ No numeric pain ceiling is inferred; the pain-free stop instruction is a conservative product restriction, not an unrestricted pain allowance."
       }
     ]
   },
