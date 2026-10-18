@@ -2,11 +2,14 @@
 from __future__ import annotations
 
 import logging
+from datetime import date
 import re
 from typing import Any, Callable
 
 from fightcamp.sparring_readiness import recent_rows
 from api.contracts.readiness_message import classify_injury_surface
+from api.contracts.completion import COMPLETION_STATUSES
+from api.contracts.external_training import ExternalTrainingFields
 
 from .today_service import _structured_plan_weeks, resolve_training_day
 from .training_history import training_history
@@ -56,13 +59,44 @@ def annotate_payload_with_sparring_readiness(
     as_of = training_day or resolve_training_day(athlete_timezone)
     context: dict[str, Any] = {"as_of": as_of, "checkins": [], "sessions": [], "active_injuries": [], "unavailable": []}
 
+    def unavailable(method: str, error: Exception) -> None:
+        if method not in context["unavailable"]:
+            context["unavailable"].append(method)
+            # Source/type diagnostics only: database exception messages and
+            # workout/medical values do not belong in generation logs.
+            logger.warning("[generation] sparring context unavailable athlete_id=%s source=%s error_type=%s",
+                           athlete_id, method, type(error).__name__)
+
     def read(method: str, fetch: Callable[[], Any]) -> list[dict]:
         try:
-            return [row for row in fetch() if row.get("athlete_id") == athlete_id]
-        except Exception:
-            logger.warning("[generation] sparring context unavailable: %s", method, exc_info=True)
-            context["unavailable"].append(method)
+            rows = fetch()
+            if not isinstance(rows, list):
+                raise ValueError("history response is not a row list")
+        except Exception as exc:
+            unavailable(method, exc)
             return []
+        valid = []
+        for row in rows:
+            try:
+                if not isinstance(row, dict) or not row.get("athlete_id"):
+                    raise ValueError("history row has no owner")
+                if row["athlete_id"] != athlete_id:
+                    raise ValueError("history source returned another owner")
+                if method != "list_injury_flags":
+                    date.fromisoformat(row["training_day"])
+                if method == "list_session_completions":
+                    if (not row.get("session_id") or not row.get("plan_id")
+                            or row.get("status") not in COMPLETION_STATUSES):
+                        raise ValueError("completion identity/status unavailable")
+                if method == "list_external_training_sessions":
+                    if not row.get("id"):
+                        raise ValueError("manual occurrence identity unavailable")
+                    ExternalTrainingFields.model_validate({key: row[key] for key in ExternalTrainingFields.model_fields})
+                valid.append(row)
+            except Exception as exc:
+                # Keep other verified rows, but never call this source complete.
+                unavailable(method, exc)
+        return valid
 
     context["checkins"] = recent_rows(
         read("list_today_checkins", lambda: store.list_today_checkins(athlete_id, limit=100)), as_of
@@ -82,19 +116,23 @@ def annotate_payload_with_sparring_readiness(
         context["unavailable"].append("completion_provenance")
     # Keep contact permission evidence prescribed-only. Manual Sparring/Hard
     # describes effort, never head contact. Conditioning shares Today's engine.
-    history_input = {"as_of": as_of, "sessions": [], "checkins": context["checkins"], "available": True}
-    try:
-        history_input["sessions"] = recent_rows(training_history(
-            store, athlete_id, prescribed=completions), as_of)
-    except Exception:
-        logger.warning("[generation] completed training history unavailable", exc_info=True)
-        history_input["available"] = False
+    external = read("list_external_training_sessions", lambda: store.list_external_training_sessions(athlete_id, limit=200))
+    # Preload each source independently so a fallback [] retains its failure
+    # attribution and cannot discard records retrieved from the other source.
+    history_input = {"as_of": as_of, "sessions": recent_rows(training_history(
+        store, athlete_id, prescribed=completions, external=external), as_of),
+        "checkins": context["checkins"]}
     history_input["sessions"] = [{key: row[key] for key in (
         "id", "source", "plan_id", "session_id", "training_day", "status", "session_rpe",
         "pain_after", "duration_minutes", "effort", "activity", "completion_origin") if key in row}
         for row in history_input["sessions"]]
+    history_input["unavailable"] = [source for source in context["unavailable"] if source in {
+        "list_session_completions", "list_external_training_sessions", "list_today_checkins",
+    }]
+    # Workload keeps its five-day window; the contact context above keeps seven.
     if has_unverified_completions(history_input["sessions"], as_of):
-        history_input["available"] = False
+        history_input["unavailable"].append("completion_provenance")
+    history_input["available"] = not history_input["unavailable"]
     history_input["workload"] = completed_workload(history_input["sessions"], as_of)
     plans = {}
     for row in completions:
@@ -112,9 +150,8 @@ def annotate_payload_with_sparring_readiness(
             load = _contact_load(plan, row)
             if load == "unknown":
                 context["unavailable"].append("completed_session")
-        except Exception:
-            logger.warning("[generation] sparring completion context unavailable", exc_info=True)
-            context["unavailable"].append("completion_plan")
+        except Exception as exc:
+            unavailable("completion_plan", exc)
             load = "unknown"
         context["sessions"].append({**row, "contact_load": load})
     # Carry only decision evidence, never completion notes or unrelated profile data.
