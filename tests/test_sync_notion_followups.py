@@ -212,7 +212,7 @@ def observed_row(stage="Rejected", observed="Contacted", since=None, confirmed="
         "Observed Stage": txt(observed),
         "Observed Since": {"date": {"start": since} if since else None},
         "Confirmed Stage": txt(confirmed),
-        "Stage Confirmed At": {"date": None},
+        "Stage Confirmed At": {"date": None},\n        "Date Contacted": {"date": {"start": "2026-10-17"}},
         "Stage History": txt(history),
         "First Reply Confirmed At": {"date": {"start": reply} if reply else None},
         "Interested At": {"date": None},
@@ -258,13 +258,15 @@ def test_previous_reply_survives_later_inactive_stage():
     assert "Stage History" in change
 
 
-def test_scorecard_does_not_publish_unconfirmed_stage(monkeypatch):
+def test_scorecard_with_pending_stage_still_validates_cards(monkeypatch):
     monkeypatch.setattr(sync, "scorecard_rows", lambda: iter([
         observed_row(stage="Replied", observed="Replied",
                      since="2026-10-18T16:59:00+00:00", confirmed="")
     ]))
-    monkeypatch.setattr(sync, "request", lambda *_: pytest.fail("should not write before stage confirmation"))
-    assert sync.sync_scorecard() == (1, 0)
+    monkeypatch.setattr(sync, "SCORECARD_PAGE_ID", "page")
+    monkeypatch.setattr(sync, "block_children", lambda *_: iter([]))
+    with pytest.raises(ValueError, match="Missing scorecard cards"):
+        sync.sync_scorecard()
 
 
 def test_recent_external_edit_blocks_confirmation():
@@ -291,3 +293,24 @@ def test_stage_history_queries_entire_pipeline(monkeypatch):
     monkeypatch.setattr(sync, "all_pipeline_rows", lambda: iter(pages))
     monkeypatch.setattr(sync, "request", lambda *_: pytest.fail("No changes expected"))
     assert sync.sync_stage_history() == (1, 0)
+
+
+def test_accepted_transition_is_reply_but_not_automatically_interested():
+    now = datetime(2026, 10, 18, 17, tzinfo=timezone.utc)
+    page = observed_row(stage="Accepted", observed="Accepted", confirmed="Replied",
+                        since=(now - timedelta(minutes=7)).isoformat())
+    page["properties"]["Date Contacted"] = {"date": {"start": "2026-10-17"}}
+    changes = sync.stage_changes(page, now)
+    assert "First Reply Confirmed At" in changes
+    assert "Accepted At" in changes
+    assert "Interested At" not in changes
+
+
+def test_uncontacted_rejection_does_not_count_as_reply():
+    now = datetime(2026, 10, 18, 17, tzinfo=timezone.utc)
+    page = observed_row(stage="Rejected", observed="Rejected", confirmed="Contacted",
+                        since=(now - timedelta(minutes=7)).isoformat())
+    page["properties"]["Date Contacted"] = {"date": None}
+    changes = sync.stage_changes(page, now)
+    assert "Confirmed Stage" in changes
+    assert "First Reply Confirmed At" not in changes
