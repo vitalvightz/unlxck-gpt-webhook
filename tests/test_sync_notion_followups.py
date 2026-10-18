@@ -161,7 +161,7 @@ def test_scorecard_updates_three_rates_without_touching_other_blocks(monkeypatch
         }}
     monkeypatch.setenv("UNLXCK_APP_EVENTS_VERIFIED", "0")  # Must not gate CRM activation.
     monkeypatch.setattr(sync, "scorecard_rows", lambda: iter(
-        [item("Contacted")] * 48 + [item("Replied")] * 11
+        [item("Contacted")] * 47 + [item("Rejected")] + [item("Replied")] * 11
         + [item("Accepted")] * 2 + [item("Activated")] * 2 + [item("Inactive")]
     ))
 
@@ -188,10 +188,10 @@ def test_scorecard_updates_three_rates_without_touching_other_blocks(monkeypatch
     assert len(writes) == 6
     assert all(method == "PATCH" and path.startswith("/blocks/") for method, path, _ in writes)
     data = {path: body for _, path, body in writes}
-    assert data["/blocks/headline-0"]["heading_2"]["rich_text"][0]["text"]["content"] == "25.0%"
+    assert data["/blocks/headline-0"]["heading_2"]["rich_text"][0]["text"]["content"] == "26.6%"
     assert data["/blocks/headline-1"]["heading_2"]["rich_text"][0]["text"]["content"] == "7.8%"
     assert data["/blocks/headline-2"]["heading_2"]["rich_text"][0]["text"]["content"] == "3.1%"
-    assert data["/blocks/count-0"]["paragraph"]["rich_text"][0]["text"]["content"] == "16 of 64 fighters"
+    assert data["/blocks/count-0"]["paragraph"]["rich_text"][0]["text"]["content"] == "17 of 64 fighters"
     assert data["/blocks/count-1"]["paragraph"]["rich_text"][0]["text"]["content"] == "5 of 64 fighters"
     assert data["/blocks/count-2"]["paragraph"]["rich_text"][0]["text"]["content"] == "2 of 64 fighters"
     assert "/blocks/label-0" not in data
