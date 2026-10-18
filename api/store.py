@@ -81,6 +81,18 @@ from .settings import env_flag, env_float
 logger = logging.getLogger(__name__)
 
 
+def _readiness_history_rows(response: Any) -> list[dict[str, Any]]:
+    """A successful SELECT returns a list, including a genuinely empty list.
+
+    Missing/malformed data is not evidence of no workouts, check-ins or injury.
+    Callers already handle unavailable reads through their safety boundaries.
+    """
+    rows = getattr(response, "data", None)
+    if not isinstance(rows, list) or any(not isinstance(row, dict) for row in rows):
+        raise HTTPException(503, "Readiness history is temporarily unavailable.")
+    return rows
+
+
 def _guard_persisted_json(
     value: Any,
     *,
@@ -4574,7 +4586,7 @@ class SupabaseAppStore(CommunityStoreMixin, PrivateMediaStoreMixin, CompactGener
         if not include_deleted:
             query = query.is_("deleted_at", "null")
         response = query.order("training_day", desc=True).order("created_at", desc=True).limit(limit).execute()
-        return getattr(response, "data", None) or []
+        return _readiness_history_rows(response)
 
     def update_external_training_session(self, athlete_id: str, entry_id: str, fields: dict[str, Any]) -> dict[str, Any] | None:
         response = (self.client.table("external_training_sessions")
@@ -4606,7 +4618,7 @@ class SupabaseAppStore(CommunityStoreMixin, PrivateMediaStoreMixin, CompactGener
             .limit(limit)
             .execute()
         )
-        return getattr(response, "data", None) or []
+        return _readiness_history_rows(response)
 
     def list_session_completions_from_day(
         self, athlete_id: str, training_day: str, *, limit: int = 200
@@ -5086,7 +5098,7 @@ class SupabaseAppStore(CommunityStoreMixin, PrivateMediaStoreMixin, CompactGener
             .limit(limit)
             .execute()
         )
-        return getattr(response, "data", None) or []
+        return _readiness_history_rows(response)
 
     def award_xp(
         self,
@@ -5145,7 +5157,7 @@ class SupabaseAppStore(CommunityStoreMixin, PrivateMediaStoreMixin, CompactGener
         if statuses:
             query = query.in_("status", list(statuses))
         response = query.order("created_at", desc=True).limit(limit).execute()
-        return getattr(response, "data", None) or []
+        return _readiness_history_rows(response)
 
     def update_injury_flag(self, flag_id: str, fields: dict[str, Any]) -> dict[str, Any]:
         try:

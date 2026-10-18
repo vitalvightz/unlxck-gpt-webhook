@@ -14,10 +14,15 @@ def external_occurrence(row: dict) -> dict:
             "session_id": f"external-{row['id']}", "title": row["activity"].title()}
 
 
-def training_history(store, athlete_id: str, *, limit: int = 200, prescribed: list[dict] | None = None, include_skipped: bool = False) -> list[dict]:
+def training_history(store, athlete_id: str, *, limit: int = 200, prescribed: list[dict] | None = None, external: list[dict] | None = None, include_skipped: bool = False) -> list[dict]:
+    """Combine occurrences; callers supplying preloaded rows retain read health.
+
+    An explicit empty list skips a source read; it does not prove availability.
+    """
     if prescribed is None:
         prescribed = store.list_session_completions(athlete_id, limit=limit)
-    external = store.list_external_training_sessions(athlete_id, limit=limit)
+    if external is None:
+        external = store.list_external_training_sessions(athlete_id, limit=limit)
     rows = [
         {**row, "source": "unlxck", "completion_origin": row.get("completion_origin")} for row in prescribed
         if row.get("athlete_id") == athlete_id and row.get("status") in ({"done", "modified", "skipped"} if include_skipped else {"done", "modified"})
