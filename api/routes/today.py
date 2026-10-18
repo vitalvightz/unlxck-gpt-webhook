@@ -399,9 +399,11 @@ def build_today_router(*, require_profile, get_store) -> APIRouter:
 
     @router.get("/api/today", response_model=CommandView)
     def get_today_state(
+        response: Response,
         profile: ProfileRecord = Depends(require_profile),
         store: AppStore = Depends(get_store),
     ) -> CommandView:
+        response.headers["Cache-Control"] = "private, no-store"
         view = build_today_command_view(
             store,
             athlete_id=profile.athlete_id,

@@ -463,7 +463,13 @@ def create_app(
             ):
                 athlete_id = getattr(request.state, "athlete_id", None)
                 if athlete_id:
-                    forget_today_command(request.app.state.store, athlete_id)
+                    try:
+                        forget_today_command(request.app.state.store, athlete_id)
+                    except Exception:
+                        # Cache maintenance must not turn a committed training
+                        # write into a failed save. GET /api/today always rebuilds
+                        # from authoritative history, independent of this cache.
+                        logger.exception("[http] today_cache_invalidation_failed athlete_id=%s", athlete_id)
 
     async def log_requests(request: Request, call_next):
         request_id = str(uuid.uuid4())[:8]

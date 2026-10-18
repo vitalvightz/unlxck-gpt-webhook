@@ -57,7 +57,6 @@ from api.contracts.rehab_exposure import injury_evidence_identity
 from api.contracts.landing import LandingDecision, resolve_landing
 from api.contracts.rehab_stage import resolve_rehab_stages
 from api.contracts.readiness_message import (
-    _SESSION_RECENCY_WINDOW_DAYS,
     ReadinessAdjustment,
     ReadinessCheckin,
     ReadinessContext,
@@ -3147,21 +3146,15 @@ def _build_today_command_view(
             # Readiness follows the already accepted support, not its held
             # coach-led sibling. Reconciliation still freezes and gates it.
             support_projection = accepted_session
-    recent_manual_work = False
-    if today_checkin:
-        try:
-            # Tombstones trigger a refresh after deletion, but never count as
-            # workload. The boundary tracks outages through its existing floor.
-            first_day = (training_date - timedelta(days=_SESSION_RECENCY_WINDOW_DAYS)).isoformat()
-            recent_manual_work = any(row.get("athlete_id") == athlete_id and first_day <= str(row.get("training_day", "")) <= training_day
-                for row in store.list_external_training_sessions(athlete_id, include_deleted=True))
-        except Exception:
-            logger.exception("[today] external_training_refresh_read_failed")
-    if recent_manual_work or active_medical_hold_reasons(open_injuries) or (today_checkin and any(event.get("event_type") == "clinician_clearance_report"
-                             for events in observations_by_injury.values() for event in events)):
-        # Reuse the current decision engine when manual work changes its inputs.
-        # Preserve existing injury refresh, accepted prescriptions and fail-safes;
-        # neither the check-in history nor the saved plan is rewritten here.
+    if today_checkin or active_medical_hold_reasons(open_injuries):
+        # The saved recommendation is a check-in-time snapshot, not a live
+        # workload decision. Every authoritative read evaluates the current
+        # check-in against BOTH history sources, even when the history is now
+        # empty (edits/deletions) or its read failed. The canonical boundary
+        # shares successful reads within this build and floors failed reads.
+        # This cheap deterministic evaluation writes neither the check-in nor
+        # accepted/frozen prescriptions; no invalidation or refresh write can
+        # race a successful training write or overwrite a newer evaluation.
         decision, _ = _readiness_decision_with_failsafe(
             store, checkin=_stored_readiness_checkin_from(today_checkin or {}), athlete_id=athlete_id,
             plan_row=plan_row, training_day=training_day,
