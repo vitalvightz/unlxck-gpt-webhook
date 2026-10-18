@@ -131,8 +131,8 @@ function LogTrainingContent({ accessToken, entry, repeatEntry, recent = false, o
       {open ? (
         <dialog ref={dialog} className={styles.dialog} aria-label={editing ? "Edit training" : "Log Training"} onCancel={event => { if (busy) event.preventDefault(); else setOpen(false); }}>
         <h2>{editing ? "Edit training" : "Log Training"}</h2>
-        {repeating && previousEffort ? <p className="muted">Last recorded: {label(previousEffort)} effort</p> : null}
-        {repeating ? <p className="muted" id={`${fieldId}-repeat`}>Activity and duration copied. Confirm today’s effort.</p> : null}
+        {repeating && previousEffort ? <p className="muted">Last effort: {label(previousEffort)}</p> : null}
+        {repeating ? <p className="muted" id={`${fieldId}-repeat`}>Confirm today’s effort.</p> : null}
         <form className={styles.form} onSubmit={save} aria-label={editing ? "Edit training" : "Log Training"}>
           <div className="field"><label htmlFor={`${fieldId}-activity`}>Activity</label>
             <CustomSelect id={`${fieldId}-activity`} value={activity} disabled={busy} placeholder="Select activity"

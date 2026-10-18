@@ -307,9 +307,9 @@ test("repeat on Today needs only effort and save; a second session stays separat
   await page.keyboard.press("Enter");
   const effort = page.getByRole("combobox", { name: "Effort", exact: true });
   await expect(effort).toBeFocused();
-  await expect(page.getByRole("dialog")).toContainText("Last recorded: Hard effort");
+  await expect(page.getByRole("dialog")).toContainText("Last effort: Hard");
   await expect(effort).toContainText("Select effort");
-  await expect(effort).toHaveAccessibleDescription("Activity and duration copied. Confirm today’s effort.");
+  await expect(effort).toHaveAccessibleDescription("Confirm today’s effort.");
   await expect(page.getByLabel("Duration (minutes)")).toHaveValue("60");
   expect(submissions).toHaveLength(0);
   await page.screenshot({ path: "/tmp/quick-log-review-mobile.png" });
