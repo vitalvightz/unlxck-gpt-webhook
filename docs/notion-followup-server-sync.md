@@ -45,7 +45,7 @@ The systemd timer lives on the host and calls the running worker. A run may fail
 - Follow-Ups Sent 0 → 1: update the copyable DM, mark the count as synced, and write the observed follow-up date.
 - Follow-Ups Sent 1 → 2: clear the DM when the formula says the sales sequence is over.
 - Replied and Accepted use the existing distinct Notion formula branches. Activated uses the existing feedback prompt.
-- Follow-up copy stays unchanged for Rejected/Inactive and the AI queue. The new stage-history pass also observes Rejected/Inactive only when Date Contacted is present.
+- Follow-up copy stays unchanged for Rejected/Inactive and the AI queue. The stage-history pass observes every pipeline stage, including records without Date Contacted.
 - On first execution, a record with an unknown historical send date is **not assigned today's date**. The job only records dates for count increases it observes *after* baseline sync.
 - The hidden server-owned field **Synced Follow-Ups Sent** distinguishes first observation from later changes. Do not manually edit it.
 - Once this server job runs successfully, disable the existing Notion copy-text-sync automation so two systems do not overwrite the same field.
@@ -55,15 +55,17 @@ Important: this is polling rather than an instantaneous webhook. Date recorded u
 
 ## Outreach milestones and five-minute stage confirmation
 
-The existing two-minute job now checks the **contacted** pipeline for stage changes. A stage must be observed unchanged for at least five minutes before it is recorded as confirmed. Notion polling is not a perfect instant event stream: changes that occur and revert entirely between polls cannot be observed. Old records are logged as **baseline observations**, not as proof of their original change date.
+The existing two-minute job now checks the **entire** pipeline for stage changes. A stage must be observed unchanged for at least five minutes before it is recorded as confirmed. Notion polling is not a perfect instant event stream: changes that occur and revert entirely between polls cannot be observed. Old records are logged as **baseline observations**, not as proof of their original change date.
 
 - Internal fields: `Observed Stage`, `Observed Since`, `Confirmed Stage`, `Stage Confirmed At`, and `Stage History`. Leave these server-managed.
-- First confirmed `Replied`, `Rejected` (only with Date Contacted), `Accepted`, or `Activated` records `First Reply Confirmed At` once. `Inactive` does **not** imply a reply, but it never erases an earlier reply.
+- A newly observed transition to `Replied`, `Rejected`, `Accepted`, or `Activated` records `First Reply Confirmed At` for contacted prospects. Initial baseline stages do not fabricate historical reply or acceptance milestones. `Inactive` does **not** imply a reply, but it never erases an earlier reply.
 - `Accepted` or `Activated` establishes `Interested At` and `Accepted At` as **CRM milestones only**. Later rejection/inactivity does not erase past milestones. These timestamps describe the worker's confirmation, not when a real Instagram message was sent.
 - `Registered At`, `First Meaningful Action At`, and `Returned D7 At` are deliberately **not populated from CRM status**. Only real app-account registration and app activity can establish them.
-- The headline reply/accept cards use permanent milestone dates once all contacted records have completed initial baselining. While a contact is unconfirmed, the job keeps the existing headline cards instead of publishing partial numbers.
-- The headline activation rate reads **Not measured** unless `UNLXCK_APP_EVENTS_VERIFIED=1` is configured after reliable app-event-to-CRM matching exists. Do not enable this flag merely because Notion records show `Activated` or onboarding checkboxes.
+- The headline reply/accept cards use permanent milestone dates once all contacted records have completed initial baselining. Pending transitions are excluded from milestone counts; confirmed milestone counts continue updating. Initial baselines may therefore undercount historical replies until reliable evidence is backfilled.
+- The headline activation rate reads **Not measured**, with an explicit unverified-data explanation instead of a misleading zero count, unless `UNLXCK_APP_EVENTS_VERIFIED=1` is configured after reliable app-event-to-CRM matching exists. Do not enable this flag merely because Notion records show `Activated` or onboarding checkboxes.
 - Notion's existing per-row `Reply Rate (%)`, `Accept Rate (%)`, and `Activation Rate (%)` formulas still use the old current-stage logic. They must be revised after the milestone backfill and actual app-events integration; **do not use those inline formula totals as authoritative yet**.
 - The separate weekly KPI database contains an `EXAMPLE — Week 1` row, not actual UNLXCK conversion data. Exclude it from real performance reporting.
 
 Rollout: merge, deploy, allow the running two-minute sync to establish five-minute stable baselines for the existing contacted set (writes are capped at 20 per run), then verify `Stage History` and the corrected scorecard. The sync never sends an Instagram DM.
+
+The server also checks the Notion page last-edited timestamp before confirmation. This is conservative: unrelated edits can delay confirmation, and polling still cannot prove uninterrupted stability between observations. Do not add a second scheduler: the already-installed Hetzner cron is the intended runtime.\n
