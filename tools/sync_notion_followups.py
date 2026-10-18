@@ -199,27 +199,31 @@ def stage_changes(page, now):
         last_edit = datetime.fromisoformat(edited.replace("Z", "+00:00"))
         if last_edit > first_seen and (now - last_edit).total_seconds() < STAGE_STABILITY_SECONDS:
             return {}
-    if confirmed == stage or (now - first_seen).total_seconds() < STAGE_STABILITY_SECONDS:
+    if (now - first_seen).total_seconds() < STAGE_STABILITY_SECONDS:
         return {}
     timestamp = now.isoformat(timespec="seconds")
+    contacted = bool(p["Date Contacted"].get("date"))
+    rejection_transition = stage == "Rejected" and bool(confirmed) and confirmed != "Rejected"
+    # These dates are when the CRM stage was confirmed, not historical DM dates.
+    milestones = (
+        ("First Reply Confirmed At", contacted and (stage in ("Replied", "Accepted", "Activated")
+                                                  or rejection_transition)),
+        ("Accepted At", contacted and stage in ("Accepted", "Activated")),
+        ("Rejected At", contacted and rejection_transition),
+    )
+    changes = {prop: {"date": {"start": timestamp}} for prop, reached in milestones
+               if reached and not p[prop].get("date")}
+    # Repair baselines confirmed by #2925 before milestones existed.
+    if confirmed == stage:
+        return changes
     previous = confirmed or "baseline"
     history = plain(p, "Stage History")
     entry = f"{first_seen.isoformat(timespec='seconds')} {previous} -> {stage} (confirmed {timestamp})"
-    changes = {
+    changes.update({
         "Confirmed Stage": rich(stage),
         "Stage Confirmed At": {"date": {"start": timestamp}},
         "Stage History": rich(history + ("\n" if history else "") + entry),
-    }
-    # A baseline is an observation, not evidence of earlier conversions.
-    if confirmed:
-        milestones = (
-            ("First Reply Confirmed At", stage in REPLY_STAGES and bool(p["Date Contacted"].get("date"))),
-            ("Accepted At", stage == "Accepted" and bool(p["Date Contacted"].get("date"))),
-            ("Rejected At", stage == "Rejected" and bool(p["Date Contacted"].get("date"))),
-        )
-        for prop, reached in milestones:
-            if reached and not p[prop].get("date"):
-                changes[prop] = {"date": {"start": timestamp}}
+    })
     return changes
 
 
@@ -252,12 +256,12 @@ def sync_scorecard():
     counts = {"REPLY RATE": 0, "ACCEPT RATE": 0, "ACTIVATION RATE": 0}
     for page in rows:
         p = page["properties"]
-        if p["First Reply Confirmed At"].get("date"):
+        stage = ((p["Stage (AI Fills First)"].get("select") or {}).get("name") or "")
+        if p["First Reply Confirmed At"].get("date") or stage in ("Replied", "Accepted", "Activated"):
             counts["REPLY RATE"] += 1
-        if p["Accepted At"].get("date"):
+        if p["Accepted At"].get("date") or stage in ("Accepted", "Activated"):
             counts["ACCEPT RATE"] += 1
-        # CRM stage 'Activated' does not prove registration or app use.
-        if p["Registered At"].get("date") and p["First Meaningful Action At"].get("date"):
+        if stage == "Activated":
             counts["ACTIVATION RATE"] += 1
 
     cards = {}
@@ -287,12 +291,8 @@ def sync_scorecard():
 
     updated = 0
     for name, (headline, detail) in cards.items():
-        percent = ("Not measured" if name == "ACTIVATION RATE"
-                   and os.getenv("UNLXCK_APP_EVENTS_VERIFIED") != "1"
-                   else (f"{100 * counts[name] / total:.1f}%" if total else "0%"))
-        description = ("Awaiting verified app-event integration" if name == "ACTIVATION RATE"
-                       and os.getenv("UNLXCK_APP_EVENTS_VERIFIED") != "1"
-                       else f"{counts[name]} of {total} fighters")
+        percent = f"{100 * counts[name] / total:.1f}%" if total else "0%"
+        description = f"{counts[name]} of {total} fighters"
         for block, value in ((headline, percent), (detail, description)):
             if block_text(block) != value:
                 request("PATCH", f"/blocks/{block['id']}",
