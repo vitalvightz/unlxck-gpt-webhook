@@ -27,6 +27,7 @@ function LogTrainingContent({ accessToken, entry, repeatEntry, recent = false, o
   const [lastSession, setLastSession] = useState<TrainingHistorySession>();
   const repeatSource = repeatEntry && canRepeatTraining(repeatEntry) ? repeatEntry : recent ? lastSession : undefined;
   const [repeating, setRepeating] = useState(false);
+  const [previousEffort, setPreviousEffort] = useState<TrainingEffort | null>(null);
   const saving = useRef(false);
 
   useEffect(() => {
@@ -75,6 +76,7 @@ function LogTrainingContent({ accessToken, entry, repeatEntry, recent = false, o
 
   function startEdit(row?: TrainingHistorySession, repeat = false) {
     setRepeating(repeat);
+    setPreviousEffort(repeat ? row?.effort ?? null : null);
     setActivity(row?.activity ?? "");
     setDuration(row?.duration_minutes?.toString() ?? "");
     setEffort(repeat ? "" : row?.effort ?? "");
@@ -118,7 +120,7 @@ function LogTrainingContent({ accessToken, entry, repeatEntry, recent = false, o
   return (
     <div className={entry || repeatEntry ? styles.editControl : styles.training} role={entry || repeatEntry ? undefined : "region"} aria-label={entry ? `Manage ${entry.title}` : "Log Training"}>
       {repeatSource ? <button className={repeatEntry ? styles.repeatButton : styles.actionRow} type="button" onClick={() => startEdit(repeatSource, true)} aria-haspopup="dialog" aria-label={repeatEntry ? `Repeat ${repeatSource.title}` : "Repeat last session"} aria-describedby={!repeatEntry ? `${fieldId}-recent` : undefined}>
-        {repeatEntry ? "Repeat" : <span><strong>Repeat last session</strong><span id={`${fieldId}-recent`}>{label(repeatSource.activity!)} · {repeatSource.duration_minutes} min<span className="muted">Last recorded: {label(repeatSource.effort!)} effort</span></span><span className="muted">Review and log today’s session</span></span>}
+        {repeatEntry ? "Repeat" : <><span><strong>Repeat last session</strong><span className="muted" id={`${fieldId}-recent`}>{label(repeatSource.activity!)} · {repeatSource.duration_minutes} min</span></span><svg className={styles.chevron} viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m9 5 7 7-7 7" /></svg></>}
       </button> : null}
       {repeatEntry ? null : entry ? <button className={styles.editButton} type="button" onClick={() => startEdit(entry)} aria-haspopup="dialog" aria-label={`Edit ${entry.title}`} title="Edit session">
         <svg className="ex-log-edit-icon" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false"><path d="M4 20h4L18.5 9.5a2.12 2.12 0 0 0-3-3L5 17v3Z" /><path d="m14.5 7.5 3 3" /></svg>
@@ -129,6 +131,7 @@ function LogTrainingContent({ accessToken, entry, repeatEntry, recent = false, o
       {open ? (
         <dialog ref={dialog} className={styles.dialog} aria-label={editing ? "Edit training" : "Log Training"} onCancel={event => { if (busy) event.preventDefault(); else setOpen(false); }}>
         <h2>{editing ? "Edit training" : "Log Training"}</h2>
+        {repeating && previousEffort ? <p className="muted">Last recorded: {label(previousEffort)} effort</p> : null}
         {repeating ? <p className="muted" id={`${fieldId}-repeat`}>Activity and duration copied. Confirm today’s effort.</p> : null}
         <form className={styles.form} onSubmit={save} aria-label={editing ? "Edit training" : "Log Training"}>
           <div className="field"><label htmlFor={`${fieldId}-activity`}>Activity</label>

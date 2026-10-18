@@ -275,6 +275,18 @@ test("Today without manual history offers the simple form", async ({ page, baseU
 });
 
 test("repeat on Today needs only effort and save; a second session stays separate", async ({ page, baseURL }) => {
+  const errors: string[] = [];
+  page.on("pageerror", error => errors.push(error.message));
+  page.on("console", message => {
+    // isolateFromNetwork deliberately aborts external Supabase/Sentry traffic.
+    if (message.type() === "error" && message.text() !== "Failed to load resource: net::ERR_FAILED") errors.push(message.text());
+  });
+  page.on("requestfailed", request => {
+    // Next cancels in-flight route prefetches when this test changes pages.
+    if (new URL(request.url()).origin === new URL(baseURL!).origin && request.failure()?.errorText !== "net::ERR_ABORTED") {
+      errors.push(`App resource failed: ${request.url()} (${request.failure()?.errorText})`);
+    }
+  });
   await page.setViewportSize({ width: 390, height: 844 });
   const submissions = await setup(page, baseURL!, false, false, [prescribed, manual]);
   let todayReads = 0;
@@ -282,15 +294,25 @@ test("repeat on Today needs only effort and save; a second session stays separat
   await page.goto("/today");
   const repeat = page.getByRole("button", { name: "Repeat last session", exact: true });
   await expect(repeat).toContainText("Boxing · 60 min");
-  await expect(repeat).toContainText("Last recorded: Hard effort");
+  await expect(repeat).not.toContainText("Last recorded");
+  await expect(repeat).not.toContainText("Review and log");
+  expect((await repeat.boundingBox())!.height).toBeLessThanOrEqual(80);
+  const entryLink = page.getByRole("link", { name: "Log Training", exact: true });
+  await expect(entryLink).toBeInViewport();
+  await page.screenshot({ path: "/tmp/quick-log-today-first-viewport.png" });
+  await entryLink.click();
+  await expect(repeat).toBeInViewport();
+  await page.screenshot({ path: "/tmp/quick-log-compact-row.png" });
   await repeat.focus();
   await page.keyboard.press("Enter");
   const effort = page.getByRole("combobox", { name: "Effort", exact: true });
   await expect(effort).toBeFocused();
+  await expect(page.getByRole("dialog")).toContainText("Last recorded: Hard effort");
   await expect(effort).toContainText("Select effort");
   await expect(effort).toHaveAccessibleDescription("Activity and duration copied. Confirm today’s effort.");
   await expect(page.getByLabel("Duration (minutes)")).toHaveValue("60");
   expect(submissions).toHaveLength(0);
+  await page.screenshot({ path: "/tmp/quick-log-review-mobile.png" });
   await page.getByRole("button", { name: "Save Session", exact: true }).click();
   await expect(page.getByRole("dialog").getByRole("alert")).toContainText("Select an activity and effort");
   expect(submissions).toHaveLength(0);
@@ -299,7 +321,6 @@ test("repeat on Today needs only effort and save; a second session stays separat
   await page.keyboard.press("Enter");
   await expect(effort).toContainText("Easy");
   expect((await new AxeBuilder({ page }).include("dialog").analyze()).violations).toEqual([]);
-  await page.screenshot({ path: test.info().outputPath("repeat-today-mobile.png") });
   // Two synchronous submits must produce only one request, even before React renders busy state.
   await page.getByRole("form", { name: "Log Training", exact: true }).evaluate((form: HTMLFormElement) => {
     form.requestSubmit(); form.requestSubmit();
@@ -325,6 +346,7 @@ test("repeat on Today needs only effort and save; a second session stays separat
   await expect(rows.filter({ hasText: "Fri 09 Oct 2026" })).toContainText("Hard");
   await expect(rows.filter({ hasText: "Sun 18 Oct 2026" })).toHaveCount(2);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  expect(errors).toEqual([]);
 });
 
 test("History repeat retries the same occurrence, preserves the source and creates fresh repeats", async ({ page, baseURL }) => {

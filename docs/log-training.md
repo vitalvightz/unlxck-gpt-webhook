@@ -110,7 +110,9 @@ deployment follow-up. There are no recurring sessions, custom plans or library c
 Today includes a compact logging action below its main session/check-in controls,
 including when there is no active plan. When the existing history response contains
 an eligible manual session, it also offers **Repeat last session** with its activity,
-minutes and explicitly historical effort. The shortcut searches the most recent
+minutes and a chevron. Historical effort appears only inside the review dialog.
+A discreet Log Training link beside the Today heading jumps to the logging rows,
+so long session details do not require manual scrolling to find them. The shortcut searches the most recent
 30 history entries; older manual entries can be repeated from History (up to the
 existing 200-row limit). A failed history read leaves the simple logging action
 available. Plan's existing tile remains unchanged.

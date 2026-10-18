@@ -313,6 +313,7 @@ export function TodayScreen() {
                 ? humanizeIfRawEnum(activePlan.phase)
                 : null}</p>
           </div>
+          <a className={styles.logTrainingLink} href="#today-training-log">Log Training</a>
         </div>
         <TodayReadinessStrip
           needsCheckin={showCheckin}
@@ -361,7 +362,9 @@ export function TodayScreen() {
         </>
       )}
 
-      <LogTraining accessToken={token} recent onSaved={() => void refresh()} />
+      <div id="today-training-log" className={styles.trainingLog} tabIndex={-1}>
+        <LogTraining accessToken={token} recent onSaved={() => void refresh()} />
+      </div>
 
       {token ? (
         <TodayInjuryManager

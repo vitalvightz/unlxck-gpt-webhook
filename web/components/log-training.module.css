@@ -21,4 +21,4 @@
 .repeatButton { min-height: 44px; padding: 8px 12px; font: inherit; color: var(--text-primary); background: transparent; border: 0; cursor: pointer; }
 .repeatButton:focus-visible { outline: 2px solid var(--brand-red); outline-offset: 2px; }
 
-.actionRow > span:first-child > span { display: grid; gap: 4px; }
+.chevron { width: 18px; height: 18px; flex-shrink: 0; fill: none; stroke: var(--text-muted); stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
