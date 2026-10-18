@@ -1,0 +1,18 @@
+.root { min-width: 0; }
+.prompt { padding: 18px 0; border-bottom: 1px solid var(--border-default); }
+.eyebrow { margin: 0 0 6px; font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--text-muted); }
+.question { margin: 0 0 4px; font-size: 17px; font-weight: 650; line-height: 1.4; text-wrap: balance; }
+.evidence { margin: 6px 0; font-size: 13px; line-height: 1.5; color: var(--text-muted); }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; max-width: 360px; }
+.actions > button { width: auto; flex: 1 1 0; min-width: 0; padding-inline: 12px; }
+.actions button, .routineRow button, .editForm button { min-height: 44px; }
+.settings summary { min-height: 44px; align-content: center; cursor: pointer; font-size: 13px; color: var(--text-muted); }
+.toggle { display: flex; align-items: center; gap: 10px; min-height: 44px; font-size: 14px; }
+.toggle input { width: 20px; height: 20px; accent-color: var(--brand-red); }
+.routines { list-style: none; padding: 0; margin: 8px 0; }
+.routines li { padding: 8px 0; border-top: 1px solid var(--border-default); }
+.routineRow { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 14px; }
+.editForm { display: grid; gap: 12px; padding: 8px 0 12px; }
+.editForm label { display: grid; gap: 6px; font-size: 13px; }
+.editForm input, .editForm select { width: 100%; min-height: 44px; color: var(--text-primary); background: var(--bg-panel); border: 1px solid var(--border-default); padding: 10px; border-radius: 8px; }
+.root button:focus-visible, .settings summary:focus-visible, .toggle input:focus-visible { outline: 2px solid var(--brand-red); outline-offset: 3px; }

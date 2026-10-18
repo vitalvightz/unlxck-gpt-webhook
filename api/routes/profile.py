@@ -5,7 +5,7 @@ import logging
 from fastapi import APIRouter, Depends
 
 from api.compliance import evaluate_profile_compliance
-from api.compliance_guards import require_onboarding_compliance, strip_health_intake_fields
+from api.compliance_guards import require_health_feature_access, require_onboarding_compliance, strip_health_intake_fields
 from api.minor_safety import strip_minor_target_weight
 from api.models import (
     ComplianceAcceptanceRequest,
@@ -98,6 +98,8 @@ def build_profile_router(*, require_profile, get_store) -> APIRouter:
         profile: ProfileRecord = Depends(require_profile),
         store: AppStore = Depends(get_store),
     ) -> MeResponse:
+        if update.training_habits is not None and update.training_habits.enabled:
+            require_health_feature_access(profile)
         updated = _map_profile_row(store.update_profile(profile.athlete_id, update))
         return _build_me_with_activation_xp(updated, store)
 

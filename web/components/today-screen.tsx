@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { LogTraining } from "@/components/log-training";
+import { TrainingHabitLog } from "@/components/training-habit-log";
 import { useMemo } from "react";
 import styles from "./today-screen.module.css";
 
@@ -253,7 +253,7 @@ export function TodayScreen() {
   }
 
   if (!state || !hasPlan) {
-    return <><NoActivePlanState /><LogTraining accessToken={token} recent onSaved={() => void refresh()} /></>;
+    return <><NoActivePlanState /><TrainingHabitLog accessToken={token} state={state} onSaved={() => void refresh()} /></>;
   }
   const resolvedDecision = resolveTodayDecision(state);
   const nextStep = getTodayNextStep(state, resolvedDecision);
@@ -363,7 +363,7 @@ export function TodayScreen() {
       )}
 
       <div id="today-training-log" className={styles.trainingLog} tabIndex={-1}>
-        <LogTraining accessToken={token} recent onSaved={() => void refresh()} />
+        <TrainingHabitLog accessToken={token} state={state} onSaved={() => void refresh()} />
       </div>
 
       {token ? (

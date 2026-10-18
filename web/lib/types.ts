@@ -1,3 +1,4 @@
+import type { TrainingHabitPreferences } from "./training-habits";
 // Role foundation for the single Unlxck app. `athlete` and `admin` are live in
 // private beta; `coach` and `gym_owner` are reserved for public beta and are not
 // yet selectable at sign-up or assignable to accounts. We use `gym_owner` (not
@@ -231,6 +232,8 @@ export type ApproveAndResumeGenerationRequest = {
 };
 
 export type ProfileUpdateRequest = {
+  training_habits?: TrainingHabitPreferences;
+  training_habits_revision?: number;
   full_name?: string;
   technical_style?: string[];
   tactical_style?: string[];
@@ -248,6 +251,8 @@ export type ProfileUpdateRequest = {
 };
 
 export type ProfileRecord = {
+  training_habits?: TrainingHabitPreferences;
+  training_habits_revision?: number;
   athlete_id: string;
   email: string;
   username?: string | null;

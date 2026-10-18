@@ -219,10 +219,10 @@ def build_today_router(*, require_profile, get_store) -> APIRouter:
         return Response(status_code=204)
 
     @router.get("/api/training/history", response_model=TrainingHistoryResponse)
-    def list_training_history(limit: int = Query(default=30, ge=1, le=200), include_skipped: bool = False,
+    def list_training_history(limit: int = Query(default=30, ge=1, le=200), include_skipped: bool = False, manual_only: bool = False,
                               profile: ProfileRecord = Depends(require_profile),
                               store: AppStore = Depends(get_store)):
-        rows = training_history(store, profile.athlete_id, limit=200, include_skipped=include_skipped)[:limit]
+        rows = training_history(store, profile.athlete_id, limit=200, include_skipped=include_skipped, prescribed=[] if manual_only else None)[:limit]
         plans = {}
         for row in rows:
             if row["source"] == "external":
