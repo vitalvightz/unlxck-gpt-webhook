@@ -115,8 +115,82 @@ changed-file ESLint/Ruff, generated API contract check and production build pass
 The build uses command-local `NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:8000`;
 no environment file was changed. Counts overlap and are not a combined suite.
 
-No final local test failures were observed. Existing Starlette/Sentry
-deprecation warnings remain. Full remote CI, live database deployment and
-multi-connection server-Postgres concurrency were not run; the SQL regression
-executes the relevant race interleaving in isolated PGlite. No production data
-was read or changed, and no migration was applied remotely.
+These were targeted runs, not a full-suite green result. The subsequent full
+CI run exposed the fixture and compatibility issues described below. Existing
+Starlette/Sentry deprecation warnings remain. The SQL regression executes the
+relevant race interleaving in isolated PGlite; multi-connection server-Postgres
+concurrency has not been exercised.
+
+## Migration and CI follow-up — 18 October 2026
+
+Applied the exact repository migration to the connected Supabase project
+`unlxckpdf` (`leienvqynijrgghhzczt`) before backend deployment. This is the
+previously confirmed project, identified by Supabase as its default Main
+branch, not a separately verified staging database. The migration API recorded
+version `20261018155432`, name `add_completion_origin`; the repository filename
+is `20261018114339_add_completion_origin.sql`. Account for this version
+difference before a future CLI `db push`.
+
+Metadata queries verify a nullable text column with no default and both
+validated provenance/credit constraints. No athlete records were queried,
+backfilled or edited. No backend was deployed and the PR remains unmerged.
+Run the mandatory runtime schema gate with deployment credentials; if another
+environment uses another project, apply and verify the migration there first.
+
+The disposable PostgreSQL XP fixture now applies the real provenance migration
+twice after loading its clinical-column prerequisites. Its existing replay
+test reapplies it again and verifies persisted completions and XP awards remain
+unchanged. This no longer depends on the hosted database schema.
+
+Historical replay reverses only the exact additive `completion_origin` response
+field before checking the original whole-file hash. The live response keeps
+the field. Tests verify the immutable digest and reject unrelated contract
+changes. No frozen source receipts, audit reports or baselines were regenerated.
+
+Comparison base: Main `6428fb83dce044766966775ade07dc3abfa70315`; implementation
+`2ba82506c0a242eb39b98aaf596e6af897240723` plus this follow-up. Both use the same
+local Python environment (including degraded injury parsing without spaCy/NegEx)
+and Node dependencies. This comparison identifies reproducible existing
+failures; it is not a substitute for full CI with its complete dependencies.
+
+| Check | Main | Updated PR | Interpretation |
+| --- | --- | --- | --- |
+| `test_open_plan_xp_postgres.py` + `test_custom_plan_publication_postgres.py`, real disposable PostgreSQL 17.11 | 16 passed, 1 failed | 16 passed, 1 failed | Four missing-column XP failures fixed. Both fail the same saved-plan `Strength` vs `Strength / Rounds` title assertion. |
+| Historical/canonical metadata suites | 38 passed, 5 failed, 13 errors | 40 passed, 5 failed, 13 errors | Two new compatibility tests pass. Both stop at existing `api/routes/profile.py` historical drift and existing catalogue mismatches. |
+| 145 unique failing Python node IDs extracted from the original PR CI, including coaching release | 128 failed, 13 errors, 4 skipped initially | 132 failed, 13 errors | All 141 non-skipped Main cases fail/error on both branches. Four React-coaching cases initially skipped because dependencies were symlinked; after copying dependencies, all four reproduce on Main with the same missing coaching fields/assertions. |
+| Focused provenance/store tests plus metadata guards that do not invoke the already-failing full replay | — | 30 passed | Includes both new positive/negative contract compatibility tests. |
+| Chromium: mental layout, timer pause/edit playback, saved custom-plan compact doses | 3 failed, 2 flaky, 1 passed | 3 failed, 1 flaky, 2 passed | Both mental widths lack the expected `Visualise · 5 min` heading; both timer runs retain one audio element after pause when the test expects zero. Saved links pass on retry on both branches. |
+
+The existing coaching failures include missing `progression_rule` and empty
+rendered coaching; planner failures include calendar placement, session doses
+and late-camp golden output. Catalogue tests compare 2868 live entries with
+older expected counts. No coaching, planner, catalogue, title or baseline
+changes are included to hide these failures.
+
+The 145-node comparison uses failures from [Python Quality run
+39140273595](https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/39140273595)
+and the coaching job in [Web Build run
+39140273444](https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/39140273444).
+The PostgreSQL/schema failures came from [Backend Checks run
+39140273388](https://github.com/vitalvightz/unlxck-gpt-webhook/actions/runs/39140273388).
+Local reproduction commands (PostgreSQL URL must target a disposable localhost
+cluster):
+
+```sh
+REHAB_TEST_DATABASE_URL="$LOCAL_TEST_DATABASE_URL" python -m pytest tests/test_open_plan_xp_postgres.py tests/test_custom_plan_publication_postgres.py -q
+python -m pytest tests/test_metadata_integrity_audit.py tests/test_canonical_metadata.py -q
+python -m pytest tests/test_metadata_integrity_audit.py -k 'completion_provenance or provenance_compatibility' -q
+```
+
+Both production builds pass with the workflow's same placeholder public
+API/Supabase values. Browser comparison uses repository Playwright/Chromium,
+`CI=1`, one worker and the configured retry, on separate localhost ports:
+
+```sh
+cd web
+npx playwright test e2e/mental-training-layout.spec.ts e2e/round-timer.spec.ts e2e/custom-plans.spec.ts --grep 'mental tasks|pause, resume, edits|compact doses' --workers=1
+```
+
+Ruff and `git diff --check` pass for the follow-up. Full CI remains failing
+on the Main reproductions above; no assertions, prescriptions or thresholds
+were weakened to obtain green checks.

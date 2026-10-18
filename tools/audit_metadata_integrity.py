@@ -759,6 +759,14 @@ def original_equipment_source(relative):
     """
     from tools.replay_combat_round_metadata import pre_combat_round_source
     data = reverse_mechanical_source(relative, pre_combat_round_source(relative, (ROOT / relative).read_bytes()))
+    if relative == "api/contracts/external_training.py":
+        # #2921 adds one response-only provenance field. Reverse only those
+        # exact bytes for historical replay; historical_sources still verifies
+        # the entire reconstructed file against the immutable original digest.
+        field = b'    completion_origin: Literal["reported", "day_credit"] | None = None\n'
+        if data.count(field) > 1:
+            raise ValueError("Completion provenance contract history drift")
+        return data.replace(field, b"", 1)
     if relative == "data/tag_vocabulary.json":
         from tools.check_tag_retirement import original_vocabulary_source
 

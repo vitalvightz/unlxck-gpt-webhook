@@ -206,6 +206,35 @@ def test_retained_historical_receipts_match_frozen_hashes():
         assert audit.source_hash(source.encode("utf-8")) == expected[relative], relative
 
 
+def test_completion_provenance_replay_preserves_exact_frozen_contract_and_live_field():
+    from api.contracts.external_training import TrainingHistorySession
+
+    relative = "api/contracts/external_training.py"
+    original_bytes = (audit.ROOT / relative).read_bytes()
+    expected = json.loads(audit.BASELINE.read_bytes())["production_files"][relative]
+    assert audit.source_hash(audit.original_equipment_source(relative)) == expected
+    assert "completion_origin" in TrainingHistorySession.model_fields
+    assert (audit.ROOT / relative).read_bytes() == original_bytes
+
+
+def test_provenance_compatibility_does_not_allow_other_external_contract_changes(monkeypatch):
+    from pathlib import Path
+
+    target = audit.ROOT / "api/contracts/external_training.py"
+    original_read = Path.read_bytes
+
+    def altered(path):
+        data = original_read(path)
+        if path == target:
+            return data.replace(b'Activity = Literal["sparring"', b'Activity = Literal["wrestling"', 1)
+        return data
+
+    monkeypatch.setattr(Path, "read_bytes", altered)
+    with pytest.raises(ValueError, match="Historical source drift: api/contracts/external_training.py"):
+        with audit.historical_sources():
+            pytest.fail("Only the exact additive provenance field is compatible")
+
+
 def test_tampered_historical_receipt_is_rejected(monkeypatch):
     receipt_bytes = (audit.ROOT / "tools/metadata_integrity_original_sources.json").read_bytes()
     receipts = json.loads(receipt_bytes)

@@ -26,6 +26,7 @@ from test_open_plan_programming_fidelity import _reference_row
 ROOT = Path(__file__).resolve().parents[1]
 MIGRATIONS = ROOT / "supabase/migrations"
 MIGRATION = MIGRATIONS / "20261016143502_align_open_plan_xp_calendar.sql"
+COMPLETION_ORIGIN_MIGRATION = MIGRATIONS / "20261018114339_add_completion_origin.sql"
 OWNER = "00000000-0000-4000-8000-000000000001"
 OTHER = "00000000-0000-4000-8000-000000000002"
 
@@ -69,6 +70,15 @@ def xp_database():
                 create table athlete_intakes(id uuid primary key, athlete_id uuid references profiles(id));
             """)
             db.execute(table("plans") + table("session_completions") + table("today_checkins"))
+            # Extracting CREATE TABLE omits subsequent clinical-column ALTERs.
+            # Keep this disposable database independent of hosted schema state,
+            # then exercise the actual provenance migration (including replay).
+            db.execute(re.search(
+                r"alter table public\.session_completions\s+add column if not exists prescription_snapshot[\s\S]*?;",
+                schema,
+            )[0])
+            for _ in range(2):
+                db.execute(COMPLETION_ORIGIN_MIGRATION.read_text(encoding="utf-8"))
             # Unrelated source tables are required by the real ledger RPCs.
             db.execute("create table injury_flags(id uuid primary key, athlete_id uuid, updated_at timestamptz)")
             milestones = (MIGRATIONS / "20260803123000_add_plan_progress_milestones.sql").read_text(encoding="utf-8")
@@ -341,6 +351,7 @@ def test_migration_reapplication_preserves_saved_plan_completions_and_prior_awar
         (select jsonb_agg(to_jsonb(x)) from xp_accounts x)""").fetchone()
     db.execute("reset role")
     db.execute(MIGRATION.read_text(encoding="utf-8"))
+    db.execute(COMPLETION_ORIGIN_MIGRATION.read_text(encoding="utf-8"))
     db.execute("set role service_role")
     assert db.execute("""select (select jsonb_agg(to_jsonb(p)) from plans p),
         (select jsonb_agg(to_jsonb(c)) from session_completions c),
