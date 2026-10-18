@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { LogTraining } from "@/components/log-training";
 import { useMemo } from "react";
 import styles from "./today-screen.module.css";
 
@@ -252,7 +253,7 @@ export function TodayScreen() {
   }
 
   if (!state || !hasPlan) {
-    return <NoActivePlanState />;
+    return <><NoActivePlanState /><LogTraining accessToken={token} recent onSaved={() => void refresh()} /></>;
   }
   const resolvedDecision = resolveTodayDecision(state);
   const nextStep = getTodayNextStep(state, resolvedDecision);
@@ -312,6 +313,7 @@ export function TodayScreen() {
                 ? humanizeIfRawEnum(activePlan.phase)
                 : null}</p>
           </div>
+          <a className={styles.logTrainingLink} href="#today-training-log">Log Training</a>
         </div>
         <TodayReadinessStrip
           needsCheckin={showCheckin}
@@ -359,6 +361,10 @@ export function TodayScreen() {
           {sessionPanel}
         </>
       )}
+
+      <div id="today-training-log" className={styles.trainingLog} tabIndex={-1}>
+        <LogTraining accessToken={token} recent onSaved={() => void refresh()} />
+      </div>
 
       {token ? (
         <TodayInjuryManager

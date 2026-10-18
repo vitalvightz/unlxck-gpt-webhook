@@ -289,3 +289,23 @@
     right: 12px;
   }
 }
+
+.logTrainingLink {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  flex-shrink: 0;
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+.logTrainingLink:focus-visible,
+.trainingLog:focus-visible {
+  outline: 2px solid var(--brand-red);
+  outline-offset: 4px;
+}
+
+.trainingLog { scroll-margin-block: 80px; }

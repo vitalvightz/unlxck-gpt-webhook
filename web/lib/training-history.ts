@@ -26,3 +26,16 @@ export type TrainingHistorySession = {
 export function sortTrainingHistory(rows: TrainingHistorySession[]): TrainingHistorySession[] {
   return [...rows].sort((a, b) => b.training_day.localeCompare(a.training_day));
 }
+
+/** Only complete manual session fields can seed a new occurrence. */
+export function canRepeatTraining(row: TrainingHistorySession): boolean {
+  return row.source === "external" && row.status === "done"
+    && TRAINING_ACTIVITIES.includes(row.activity as TrainingActivity)
+    && Number.isInteger(row.duration_minutes) && row.duration_minutes! >= 1 && row.duration_minutes! <= 600
+    && TRAINING_EFFORTS.includes(row.effort as TrainingEffort);
+}
+
+export function latestRepeatableTraining(rows: TrainingHistorySession[]): TrainingHistorySession | undefined {
+  // Stable sorting retains the API's creation-time ordering within a day.
+  return sortTrainingHistory(rows).find(canRepeatTraining);
+}

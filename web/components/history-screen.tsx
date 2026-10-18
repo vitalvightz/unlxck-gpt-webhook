@@ -48,7 +48,7 @@ import type {
   TodayCheckinHistoryRecord,
 } from "@/lib/types";
 import { LogTraining } from "./log-training";
-import type { TrainingHistorySession } from "@/lib/training-history";
+import { canRepeatTraining, sortTrainingHistory, type TrainingHistorySession } from "@/lib/training-history";
 import { useTrainingDay } from "@/lib/use-training-day";
 
 type HistoryTab = "sessions" | "exercises" | "sparring" | "checkins" | "injuries";
@@ -144,6 +144,7 @@ function SessionRows({ rows, today, token, onUpdate, onDelete }: {
   rows: TrainingHistorySession[]; today: string | null; token: string | null;
   onUpdate: (row: TrainingHistorySession) => void; onDelete: (id: string) => Promise<void>;
 }) {
+  const [saved, setSaved] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   async function remove(id: string) {
@@ -170,6 +171,7 @@ function SessionRows({ rows, today, token, onUpdate, onDelete }: {
     : null;
   return (
     <div className="history-tab-body">
+      {saved ? <p className="muted" role="status">{saved}</p> : null}
       {error ? <p className="error-banner" role="alert">{error}</p> : null}
       {week ? (
         <section className="history-summary" aria-label="Sessions in the last 7 days">
@@ -204,6 +206,7 @@ function SessionRows({ rows, today, token, onUpdate, onDelete }: {
               {row.pain_after != null ? <span>Pain after {row.pain_after}/10</span> : null}
             </div>
             {row.source === "external" ? <div className="history-session-actions">
+              {canRepeatTraining(row) ? <LogTraining accessToken={token} repeatEntry={row} onSaved={created => { onUpdate(created); setSaved(`${created.title} logged successfully. Saved to Training History.`); }} /> : null}
               <LogTraining accessToken={token} entry={row} onSaved={onUpdate} />
               <button className="history-session-delete" type="button" disabled={deleting !== null} aria-label={`Delete ${row.title}`} onClick={() => void remove(row.id)}>{deleting === row.id ? "Deleting…" : "Delete"}</button>
             </div> : null}
@@ -641,7 +644,7 @@ function HistoryContent() {
         <ListSkeleton />
       ) : tab === "sessions" ? (
         <SessionRows rows={sessions.rows ?? []} today={today} token={token}
-          onUpdate={row => setSessions(previous => ({ ...previous, rows: previous.rows?.map(item => item.source === "external" && item.id === row.id ? row : item) ?? null }))}
+          onUpdate={row => setSessions(previous => ({ ...previous, rows: sortTrainingHistory([row, ...(previous.rows ?? []).filter(item => !(item.source === "external" && item.id === row.id))]) }))}
           onDelete={async id => {
             if (!token) return;
             await deleteExternalTraining(token, id);

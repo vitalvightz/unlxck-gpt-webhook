@@ -2,7 +2,7 @@
 .actionRow { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; min-height: 44px; padding: 12px 0; background: transparent; color: var(--text-primary); border: 0; border-bottom: 1px solid var(--border-default); text-align: left; cursor: pointer; font: inherit; }
 .actionRow > span:first-child { display: grid; gap: 4px; }
 .actionRow strong { font-size: var(--type-title-sm); }
-.actionRow > span:last-child { font-size: 24px; }
+.actionRow > span[aria-hidden] { font-size: 24px; }
 .actionRow:focus-visible { outline: 2px solid var(--brand-red); outline-offset: 4px; }
 .form { display: grid; gap: 14px; }
 .form select, .form input { width: 100%; min-height: 44px; }
@@ -17,3 +17,8 @@
 .editControl { display: inline-flex; flex: 0 0 auto; }
 .editButton { display: inline-flex; justify-content: center; align-items: center; flex: 0 0 auto; width: 44px; min-height: 44px; padding: 0; border: 0; background: transparent; color: var(--text-muted); cursor: pointer; }
 .editButton:focus-visible { outline: 2px solid var(--brand-red); outline-offset: 2px; }
+
+.repeatButton { min-height: 44px; padding: 8px 12px; font: inherit; color: var(--text-primary); background: transparent; border: 0; cursor: pointer; }
+.repeatButton:focus-visible { outline: 2px solid var(--brand-red); outline-offset: 2px; }
+
+.chevron { width: 18px; height: 18px; flex-shrink: 0; fill: none; stroke: var(--text-muted); stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
