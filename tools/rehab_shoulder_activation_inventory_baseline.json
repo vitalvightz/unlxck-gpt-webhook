@@ -140,7 +140,7 @@
   },
   "bank_before_sha256": "d540891e3a03912761b80acb45eafcde137ceb3024cbf69cfb2ad55acf454c3b",
   "ledger_before_sha256": "7860bb4a554f37d3222791d379e21ab7134559cf2f0a0c0951684893f723602f",
-  "activated_profile_sha256": "b1e50fc96b1ad6456afa549d67ce9873bfd327f00baf14e0349f1163a98f298a",
+  "activated_profile_sha256": "f59ea455b82260be3e370ab11ffeb6ac6d4e4d58d5e3aa8eab2bf982d45a95c7",
   "activated_checkpoint": {
     "checkpoint_id": "shoulder_cuff_reported_wall_load_v1",
     "description": "Reported non-traumatic cuff tendinopathy without tear and loading permission for bounded wall push-ups; no capacity assessment or verification.",
@@ -163,9 +163,10 @@
     "impact": "none",
     "load": "moderate",
     "velocity": "low",
-    "pain_ceiling": "unrestricted",
+    "pain_ceiling": null,
     "allowed_severities": [
-      "low"
+      "low",
+      "moderate"
     ],
     "progress_when": [],
     "regress_when": [
@@ -186,7 +187,7 @@
     "contraction_type": "mixed",
     "sport_specificity": "general_rehab",
     "contact_level": "none",
-    "evidence_notes": "2025 rotator cuff tendinopathy CPG recommendation 25 supports active motor-control/resistance exercise with various loads, not a validated app LOAD threshold or one superior exercise. RJAH NHS describes wall push-ups with elbows below shoulders, 3 sets of 8; this option caps at 1 set of 8 at most once daily, feet near wall, small pain-free range, no foot-distance progression or added resistance. These are conservative product limits. Moderate is a conservative categorical upper-limb weight-bearing demand classification, not measured force or individual capacity. Bodyweight resistance varies with body position; it is not quantified. Only reported clinician-described non-traumatic cuff tendinopathy without tear and current rehabilitation loading permission apply; this is not medical verification or measured strength/ROM. Sources: https://www.orthopt.org/uploads/content_files/files/Rotator_Cuff_CPG.pdf, https://www.rjah.nhs.uk/our-services/therapy/supported-self-care/rotator-cuff-related-shoulder-pain/"
+    "evidence_notes": "2025 rotator cuff tendinopathy CPG recommendation 25 supports active motor-control/resistance exercise with various loads, not a validated app LOAD threshold or one superior exercise. RJAH NHS describes wall push-ups with elbows below shoulders, 3 sets of 8; this option caps at 1 set of 8 at most once daily, feet near wall, small pain-free range, no foot-distance progression or added resistance. These are conservative product limits. Moderate is a conservative categorical upper-limb weight-bearing demand classification, not measured force or individual capacity. Bodyweight resistance varies with body position; it is not quantified. Only reported clinician-described non-traumatic cuff tendinopathy without tear and current rehabilitation loading permission apply; reported impact is not a clinical grade or measured capacity; this is not medical verification or measured strength/ROM. Sources: https://www.orthopt.org/uploads/content_files/files/Rotator_Cuff_CPG.pdf, https://www.rjah.nhs.uk/our-services/therapy/supported-self-care/rotator-cuff-related-shoulder-pain/ No numeric pain ceiling is inferred; the pain-free stop instruction is a conservative product restriction, not an unrestricted pain allowance."
   },
   "new_review": {
     "drill_id": "shoulder_tendonitis_wall_push_up",
@@ -217,7 +218,7 @@
       "contraction_type": "mixed",
       "sport_specificity": "general_rehab",
       "contact_level": "none",
-      "evidence_notes": "2025 rotator cuff tendinopathy CPG recommendation 25 supports active motor-control/resistance exercise with various loads, not a validated app LOAD threshold or one superior exercise. RJAH NHS describes wall push-ups with elbows below shoulders, 3 sets of 8; this option caps at 1 set of 8 at most once daily, feet near wall, small pain-free range, no foot-distance progression or added resistance. These are conservative product limits. Moderate is a conservative categorical upper-limb weight-bearing demand classification, not measured force or individual capacity. Bodyweight resistance varies with body position; it is not quantified. Only reported clinician-described non-traumatic cuff tendinopathy without tear and current rehabilitation loading permission apply; this is not medical verification or measured strength/ROM. Sources: https://www.orthopt.org/uploads/content_files/files/Rotator_Cuff_CPG.pdf, https://www.rjah.nhs.uk/our-services/therapy/supported-self-care/rotator-cuff-related-shoulder-pain/"
+      "evidence_notes": "2025 rotator cuff tendinopathy CPG recommendation 25 supports active motor-control/resistance exercise with various loads, not a validated app LOAD threshold or one superior exercise. RJAH NHS describes wall push-ups with elbows below shoulders, 3 sets of 8; this option caps at 1 set of 8 at most once daily, feet near wall, small pain-free range, no foot-distance progression or added resistance. These are conservative product limits. Moderate is a conservative categorical upper-limb weight-bearing demand classification, not measured force or individual capacity. Bodyweight resistance varies with body position; it is not quantified. Only reported clinician-described non-traumatic cuff tendinopathy without tear and current rehabilitation loading permission apply; reported impact is not a clinical grade or measured capacity; this is not medical verification or measured strength/ROM. Sources: https://www.orthopt.org/uploads/content_files/files/Rotator_Cuff_CPG.pdf, https://www.rjah.nhs.uk/our-services/therapy/supported-self-care/rotator-cuff-related-shoulder-pain/ No numeric pain ceiling is inferred; the pain-free stop instruction is a conservative product restriction, not an unrestricted pain allowance."
     },
     "flags": [],
     "review_state": "reviewed",

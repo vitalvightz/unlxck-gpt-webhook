@@ -1787,7 +1787,7 @@
         {
           "drill_id": "shoulder_tendonitis_wall_push_up",
           "priority": 20,
-          "bank_hash": "4710a80a53a472c91acaf06cf951fc61eb1a732c1d41ff58caec98560c8e647d",
+          "bank_hash": "49cb79339262cff700ea576553f2c8faafd7ba00d9f09b0da395e7c3f5d77fdc",
           "stage": "load",
           "instructions": "Stand facing a stable wall, close enough to reach it comfortably without leaning. Place both hands on the wall at shoulder height, slightly wider than shoulder width, turned out slightly, with elbows below shoulders. Keep your body tall and feet fixed near the wall. Slowly bend your elbows a small comfortable amount to bring your body towards the wall, then gently push back. Keep within a pain-free range and clinician restrictions. Do not move your feet further back, lower your hands, add resistance or work to fatigue. Stop for pain, worsening symptoms during or after work, weakness or a feeling of instability.",
           "dose": {
@@ -1795,7 +1795,8 @@
             "reps": 8
           },
           "allowed_severities": [
-            "low"
+            "low",
+            "moderate"
           ],
           "stop_when": [
             "Stop for pain, worsening symptoms, weakness or instability during or after work.",
@@ -1840,7 +1841,7 @@
       },
       "status": "active",
       "activation": "live",
-      "content_hash": "1347627d15303964991b0b4dd862b9ac5021fd3857ecbfe869d72ec45d64aba9"
+      "content_hash": "b94351e90298cb93cd2f1720901603b6fdb60eb070c9e6cca42723a1c9cd7675"
     },
     {
       "policy_id": "biceps_tendonitis",

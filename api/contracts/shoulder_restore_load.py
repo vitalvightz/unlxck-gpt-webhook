@@ -17,17 +17,49 @@ def unsupported_shoulder_presentation(injury):
 
 
 def wall_shoulder_multi_injury_hold(injury, injuries):
-    """Wall push-ups use both arms and standing support.
+    """Exercise-specific veto; shared whole-athlete safety stays authoritative.
 
-    Withhold this starter with any other active injury rather than borrow its
-    permission or infer tolerance of a bilateral weight-bearing task.
+    Both arms, trunk/neck control and standing support participate. A mild,
+    non-limiting soft-tissue bruise away from the feet/joints is not itself a
+    contraindication. This does not measure standing tolerance or grant another
+    episode's permission. Unknown anatomy remains conservative.
     """
     from .rehab_assessment import assessment_identity
+    from fightcamp.injury_body_region import body_region_for_canonical_location
+    from fightcamp.injury_location_registry import canonicalize_location_from_registry
+
     if assessment_identity(injury) != ("shoulder", "tendonitis"):
         return False
-    return any(str(other.get("id")) != str(injury.get("id"))
-               and other.get("status") != "resolved"
-               for other in injuries)
+    for other in injuries:
+        if str(other.get("id")) == str(injury.get("id")) or other.get("status") == "resolved":
+            continue
+        if (other.get("consequence") in {"structural", "neuro"}
+                or other.get("severity") in {"severe", "high"}
+                or any(other.get(k) for k in ("medical_hold", "restriction_hold", "rehab_medical_gate"))):
+            return True
+        # The planning parser intentionally drops not-limiting notes. Strip
+        # only its internal impact marker when identifying mechanical anatomy;
+        # keep the original report below and leave planning behaviour unchanged.
+        described = {**other, "description": re.sub(r"\s*\[training_impact:[^\]]*\]", "", str(other.get("description") or ""))}
+        region, kind = assessment_identity(described)
+        region = canonicalize_location_from_registry(region)
+        body = body_region_for_canonical_location(region)
+        raw_text = " ".join(str(other.get(k) or "") for k in ("body_area", "description")).lower()
+        text = remove_negated_phrases(raw_text)
+        standing_restriction = re.search(
+            r"\b(non[- ]weight[- ]bearing|unable to (?:stand|walk|bear weight)|cannot (?:stand|walk|bear weight)|limping|giving way|unstab\w*|pain (?:with|when|on) (?:standing|walking|weight[- ]bearing))\b", text)
+        if standing_restriction or re.search(r"\b(?:no|avoid|restricted|prohibited) (?:standing|weight[- ]bearing|bearing weight)\b", raw_text):
+            return True
+        minor_bruise = (region in {"shin", "quads", "hamstring", "glute"} and kind == "contusion"
+            and other.get("severity") in {"mild", "low"} and other.get("latest_reported_status") != "worse"
+            and not re.search(r"\[training_impact:(?:limiting|cant_train)\]", text))
+        if minor_bruise:
+            continue
+        if body in {"upper_limb", "trunk_spine", "lower_limb", "unknown"} or region == "neck":
+            return True
+        # Known head/face concerns still pass through the existing medical,
+        # readiness and clinician restrictions; this helper cannot clear them.
+    return False
 
 
 def evaluate_shoulder_permission(context):
@@ -54,7 +86,7 @@ def evaluate_shoulder_permission(context):
     markers = re.findall(r"\[shoulder_scope:([^\]]*)\]", str(injury.get("description") or ""))
     if markers != ["nontraumatic_cuff"]:
         return result("unknown", "shoulder_nontraumatic_cuff_not_reported")
-    if injury.get("severity") not in {"mild", "low"}:
+    if injury.get("severity") not in {"mild", "low", "moderate"}:
         return result("unknown", "shoulder_loading_severity_not_supported")
     if not permits_rehabilitation_loading(injury):
         return result("unknown", "rehabilitation_loading_not_reported")

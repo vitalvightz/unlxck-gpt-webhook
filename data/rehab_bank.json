@@ -12228,9 +12228,10 @@
         "impact": "none",
         "load": "moderate",
         "velocity": "low",
-        "pain_ceiling": "unrestricted",
+        "pain_ceiling": null,
         "allowed_severities": [
-          "low"
+          "low",
+          "moderate"
         ],
         "progress_when": [],
         "regress_when": [
@@ -12251,7 +12252,7 @@
         "contraction_type": "mixed",
         "sport_specificity": "general_rehab",
         "contact_level": "none",
-        "evidence_notes": "2025 rotator cuff tendinopathy CPG recommendation 25 supports active motor-control/resistance exercise with various loads, not a validated app LOAD threshold or one superior exercise. RJAH NHS describes wall push-ups with elbows below shoulders, 3 sets of 8; this option caps at 1 set of 8 at most once daily, feet near wall, small pain-free range, no foot-distance progression or added resistance. These are conservative product limits. Moderate is a conservative categorical upper-limb weight-bearing demand classification, not measured force or individual capacity. Bodyweight resistance varies with body position; it is not quantified. Only reported clinician-described non-traumatic cuff tendinopathy without tear and current rehabilitation loading permission apply; this is not medical verification or measured strength/ROM. Sources: https://www.orthopt.org/uploads/content_files/files/Rotator_Cuff_CPG.pdf, https://www.rjah.nhs.uk/our-services/therapy/supported-self-care/rotator-cuff-related-shoulder-pain/"
+        "evidence_notes": "2025 rotator cuff tendinopathy CPG recommendation 25 supports active motor-control/resistance exercise with various loads, not a validated app LOAD threshold or one superior exercise. RJAH NHS describes wall push-ups with elbows below shoulders, 3 sets of 8; this option caps at 1 set of 8 at most once daily, feet near wall, small pain-free range, no foot-distance progression or added resistance. These are conservative product limits. Moderate is a conservative categorical upper-limb weight-bearing demand classification, not measured force or individual capacity. Bodyweight resistance varies with body position; it is not quantified. Only reported clinician-described non-traumatic cuff tendinopathy without tear and current rehabilitation loading permission apply; reported impact is not a clinical grade or measured capacity; this is not medical verification or measured strength/ROM. Sources: https://www.orthopt.org/uploads/content_files/files/Rotator_Cuff_CPG.pdf, https://www.rjah.nhs.uk/our-services/therapy/supported-self-care/rotator-cuff-related-shoulder-pain/ No numeric pain ceiling is inferred; the pain-free stop instruction is a conservative product restriction, not an unrestricted pain allowance."
       }
     ]
   },

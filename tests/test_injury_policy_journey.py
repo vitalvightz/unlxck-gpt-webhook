@@ -68,18 +68,20 @@ def test_shipped_policies_are_sourced_active_and_self_paced():
                                           "knee", "toe", "wrist", "elbow", "hand", "fingers", "achilles", "forearm", "hip", "heel", "shin", "neck", "lower back"}
     assert all(p.activation == "live" and p.status == "active" for p in policies)
     assert all(p.sources and (p.dose is None if not p.required_rehabilitation_level else
-        policy.policy_id in {"achilles_tendonitis", "elbow_tendonitis", "ankle_sprain"} and p.stage == "load"
+        policy.policy_id in {"achilles_tendonitis", "elbow_tendonitis", "ankle_sprain", "shoulder_tendonitis"} and p.stage == "load"
         and p.clinical_criterion is None and p.required_rehabilitation_level == "loading"
-        and p.dose.model_dump(exclude_none=True) == {"sets":1,"reps":10})
+        and p.dose.model_dump(exclude_none=True) == {"sets":1,"reps":8 if policy.policy_id == "shoulder_tendonitis" else 10})
         for policy in policies for p in policy.prescriptions)
     from fightcamp.rehab_protocols import get_rehab_bank
     from fightcamp.rehab_schema import CONTRACT_FIELDS, PAIN_CEILING_UNRESTRICTED
     bank = {d["id"]: d for group in get_rehab_bank() for d in group["drills"]}
     for policy in policies:
-        assert policy.version == {"chest_strain": 3, "ankle_sprain": 5, "achilles_tendonitis":2, "elbow_tendonitis":3}.get(policy.policy_id, 1)
+        assert policy.version == {"chest_strain": 3, "ankle_sprain": 5, "achilles_tendonitis":2, "elbow_tendonitis":3, "shoulder_tendonitis":2}.get(policy.policy_id, 1)
         for prescription in policy.prescriptions:
             drill = bank[prescription.drill_id]
-            if policy.policy_id in {"chest_strain", "ankle_sprain"}:
+            if policy.policy_id == "shoulder_tendonitis" and prescription.stage == "load":
+                assert drill["dose"] == {"sets": 1, "reps": 8} and drill["pain_ceiling"] is None
+            elif policy.policy_id in {"chest_strain", "ankle_sprain"}:
                 assert drill["pain_ceiling"] == PAIN_CEILING_UNRESTRICTED
                 assert all(drill.get(field) is not None for field in CONTRACT_FIELDS)
             else:

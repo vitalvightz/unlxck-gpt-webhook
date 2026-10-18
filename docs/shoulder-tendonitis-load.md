@@ -7,11 +7,16 @@ No tables, endpoints, assessment form, timestamp or new clearance is added.
 
 ## Exact presentation and evidence
 
-Only an active, owned left/right `shoulder_tendonitis` episode, mild severity,
+Only an active, owned left/right `shoulder_tendonitis` episode with reported
+mild/moderate severity,
 with an explicit athlete report that their clinician described **non-traumatic
 rotator cuff tendinopathy without a tear** can consider this option. The single
 occasional selection lives in the existing injury editor, defaults to Not sure,
-and is not a diagnosis or independent medical verification. Generic tendonitis,
+and is not a diagnosis or independent medical verification. The normal editor's
+“Limiting me” choice stores moderate; it can use this starter when every gate
+passes. “Not limiting me” retains Main's awareness-only planning behaviour.
+These impact bands are not clinical injury grades or measured shoulder function.
+Generic tendonitis,
 outer shoulder pain, Better/Same responses and contact clearance cannot establish
 this presentation. No specific cuff tendon, measured ROM, strength or load
 capacity is inferred. Unknown presentation retains baseline; explicit conflicting
@@ -57,7 +62,7 @@ This introduces closed-chain bodyweight strengthening and cuff/shoulder-girdle
 control beyond RESTORE's small unloaded external rotation. It does not isolate a
 tendon or certify pressing capacity. Moderate is a conservative categorical
 upper-limb weight-bearing demand, not a force measurement. One set, daily ceiling,
-near-wall position and mild-only applicability are product limits, not a tested
+near-wall position and mild/moderate applicability are product limits, not a tested
 complete treatment programme or validated clinical thresholds.
 
 ## Eligibility, reversals and restrictions
@@ -76,9 +81,14 @@ excluded or held. Current medical/training restrictions remain authoritative.
 Stop for pain, worsening during/after work, weakness or instability. New loss of
 function or neurological symptoms requires assessment, not another self-test.
 
-Because both arms and standing support are used, any other active injury holds
-this new option; its permission cannot be borrowed. This intentionally restrictive
-rule applies equally in Today, generation and unstarted saved-work validation.
+Both arms, neck/trunk control and standing support are considered. Active arm,
+shoulder, neck/trunk or standing-support injuries hold this new option. A mild,
+non-limiting soft-tissue contusion at the shin, thigh or glute does not by itself
+hold wall push-ups; worsening, standing restrictions, severe/structural/neural
+concerns and medical holds still veto. Unknown anatomy remains conservative.
+Shared whole-athlete medical/readiness and other episodes' restrictions still
+apply. The same exercise-specific rule runs in Today, generation and unstarted
+saved-work validation; it does not suppress the shoulder CALM/RESTORE decision.
 Stable wall availability is explicit in existing equipment settings; presets do
 not assume it. Started/completed snapshots and exposures remain historical.
 DYNAMIC/RETURN remain closed, including with sport-specific permission.

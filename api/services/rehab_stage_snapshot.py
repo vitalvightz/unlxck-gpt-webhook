@@ -173,6 +173,11 @@ def resolve_open_injury_rehab_context(
             from .injury_episode_service import apply_episode_observations, episode_observations, exposure_rows_with_observations
             observations = episode_observations(store, athlete_id, flag)
             context_by_identity[key]["policy_injury"] = apply_episode_observations(flag, observations)
+            if assessment_identity(flag) == ("shoulder", "tendonitis"):
+                # Persisted flags carry the diagnosis text, not an injury_type
+                # column. Bind the already-parsed type for generation's strict
+                # owned-context comparison; this does not establish cuff scope.
+                context_by_identity[key]["policy_injury"]["injury_type"] = "tendonitis"
             from api.contracts.ankle_restore_load import seated_ankle_multi_injury_hold
             from api.contracts.shoulder_restore_load import wall_shoulder_multi_injury_hold
             if seated_ankle_multi_injury_hold(flag, flags) or wall_shoulder_multi_injury_hold(flag, flags):
