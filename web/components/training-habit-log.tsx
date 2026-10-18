@@ -24,6 +24,8 @@ export function TrainingHabitLog(props: Props) {
 function HabitLogContent({ accessToken, state, onSaved, trackingFirst = false }: Props & { accessToken: string }) {
   const { me, replaceMe } = useAppSession();
   const [history, setHistory] = useState<TrainingHistorySession[]>([]);
+  const [sharedHistory, setSharedHistory] = useState<TrainingHistorySession[]>([]);
+  const [sharedHistoryError, setSharedHistoryError] = useState(false);
   const [historyError, setHistoryError] = useState(false);
   const [historyLoading, setHistoryLoading] = useState(true);
   const [reload, setReload] = useState(0);
@@ -54,14 +56,29 @@ function HabitLogContent({ accessToken, state, onSaved, trackingFirst = false }:
   useEffect(() => {
     let cancelled = false;
     const initialWrites = historyWrites.current;
-    void (trackingFirst ? getTrainingHistory(accessToken) : getManualTrainingHistory(accessToken)).then(({ sessions }) => {
+    void getManualTrainingHistory(accessToken).then(({ sessions }) => {
       if (!Array.isArray(sessions)) throw new Error("Invalid history");
       if (!cancelled) {
         setHistory(current => initialWrites === historyWrites.current ? sessions
           : [...current, ...sessions.filter(row => !current.some(item => item.id === row.id))]);
         setHistoryError(false);
       }
-    }).catch(() => { if (!cancelled) setHistoryError(true); })
+    }).catch(() => { if (!cancelled) setHistoryError(true); });
+    return () => { cancelled = true; };
+  }, [accessToken, reload, trackingFirst]);
+
+  useEffect(() => {
+    if (!trackingFirst) return;
+    let cancelled = false;
+    const initialWrites = historyWrites.current;
+    void getTrainingHistory(accessToken).then(({ sessions }) => {
+      if (!Array.isArray(sessions)) throw new Error("Invalid history");
+      if (!cancelled) {
+        setSharedHistory(current => initialWrites === historyWrites.current ? sessions
+          : [...current, ...sessions.filter(row => !current.some(item => item.id === row.id && item.source === row.source))]);
+        setSharedHistoryError(false);
+      }
+    }).catch(() => { if (!cancelled) setSharedHistoryError(true); })
       .finally(() => { if (!cancelled) setHistoryLoading(false); });
     return () => { cancelled = true; };
   }, [accessToken, reload, trackingFirst]);
@@ -124,8 +141,13 @@ function HabitLogContent({ accessToken, state, onSaved, trackingFirst = false }:
   return <div className={styles.root} aria-busy={busy || undefined}>
     <LogTraining accessToken={accessToken} recent history={history} variant={trackingFirst ? "primary" : "compact"}
       quickSession={suggestion ? { ...suggestion, effort: suggestion.source?.effort } : undefined}
-      onSaved={row => { historyWrites.current++; setHistory(current => [row, ...current.filter(item => item.id !== row.id)]); onSaved(); }} />
-    {trackingFirst ? <TrackingHistoryPreview history={history} loading={historyLoading} error={historyError} onRetry={() => setReload(value => value + 1)} /> : null}
+      onSaved={row => {
+        historyWrites.current++;
+        setHistory(current => [row, ...current.filter(item => item.id !== row.id)]);
+        setSharedHistory(current => [row, ...current.filter(item => item.id !== row.id || item.source !== row.source)]);
+        onSaved();
+      }} />
+    {trackingFirst ? <TrackingHistoryPreview history={sharedHistory} loading={historyLoading} error={sharedHistoryError} onRetry={() => setReload(value => value + 1)} /> : null}
     {prompt ? <div className={styles.prompt}>
       <p className={styles.eyebrow}>{prompt.replace ? "Routine changed?" : "Noticed a pattern"}</p>
       <p className={styles.question}>{prompt.replace ? `Switch ${HABIT_WEEKDAYS[prompt.weekday]} to ${prompt.activity}?` : `${label(prompt.activity)} every ${HABIT_WEEKDAYS[prompt.weekday]}?`}</p>

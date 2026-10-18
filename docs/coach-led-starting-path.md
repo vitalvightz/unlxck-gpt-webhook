@@ -39,6 +39,30 @@ Detailed standalone sparring and plan-free readiness remain separate work.
 Browser fixtures contain no real athlete data. Production migration application
 and live cross-device persistence must be verified during rollout.
 
+## Review follow-up — 18 October 2026
+
+Applied the exact starting-path migration to the previously confirmed connected
+Main project `unlxckpdf` (`leienvqynijrgghhzczt`). Supabase recorded version
+`20261018212315`, name `add_starting_path` (the repository filename remains
+`20261018160000_add_starting_path.sql`; reconcile that version difference before
+future CLI migration pushes). Metadata checks confirm nullable text, no default,
+a validated two-value check, preserved RLS, and all 20 existing profiles keeping
+`plan_first`. The GitHub Actions live runtime schema-check job was rerun and
+passed. No backend was deployed.
+
+Athletes may still choose tracking without health-data consent. Opening the
+logger explains why consent is required before collecting session inputs and
+offers a single explicit consent action through the existing compliance API,
+using the same consent statement as signup. It continues directly into the
+logger, with no Settings detour or medical questionnaire. "Not now" dismisses
+the prompt without granting consent. The same explanation handles a server
+rejection after consent is withdrawn on another device. Consent is never
+silently granted, and the standalone round timer remains available.
+
+Shared history is fetched for display only. Habit learning and repeat shortcuts
+retain the separate manual-only, 200-record history source; a failure in one
+history source does not falsely empty or authorize the other.
+
 The broader backend run found an existing failure in
 `TestCommandView.test_malformed_structured_session_degrades_without_crashing`:
 `fightcamp/exercise_instructions.py:54` calls `.get()` on a malformed string
