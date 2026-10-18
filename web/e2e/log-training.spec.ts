@@ -92,10 +92,9 @@ async function setup(page: Page, baseURL: string, lostResponse: boolean | "netwo
 }
 
 async function choose(scope: Page | Locator, page: Page, field: string, option: string) {
-  await scope.getByRole("combobox", { name: field, exact: true }).click();
-  await expect(page.getByRole("listbox")).toBeVisible();
-  await page.getByRole("option", { name: option, exact: true }).click();
-  await expect(page.getByRole("listbox")).toHaveCount(0);
+  const pick = scope.getByRole("group", { name: field, exact: true }).getByRole("button", { name: option, exact: true });
+  await pick.click();
+  await expect(pick).toHaveAttribute("aria-pressed", "true");
 }
 
 for (const width of [390, 1280]) {
@@ -107,18 +106,12 @@ for (const width of [390, 1280]) {
     await page.goto("/plan");
     await page.getByRole("button", { name: "Log Training", exact: true }).click();
     const form = page.getByRole("form", { name: "Log Training", exact: true });
-    await expect(form.getByRole("combobox")).toHaveCount(2);
-    await expect(form.locator("input[required]")).toHaveCount(1);
+    await expect(form.getByRole("combobox")).toHaveCount(0);
+    await expect(form.getByRole("group", { name: "Activity", exact: true }).getByRole("button")).toHaveCount(6);
     await expect(form.getByLabel("Training date (optional)")).toBeHidden();
-    await form.getByRole("combobox", { name: "Activity", exact: true }).press("ArrowDown");
-    await expect(page.getByRole("listbox")).toBeVisible();
-    await expect(page.locator(".custom-select-menu-sheet")).toHaveCount(width === 390 ? 1 : 0);
-    await page.screenshot({ path: test.info().outputPath("activity-picker.png") });
-    await page.keyboard.press("Escape");
-    await expect(page.getByRole("listbox")).toHaveCount(0);
-    await expect(page.getByRole("dialog")).toBeVisible();
+    await expect(form.getByRole("button", { name: "Boxing", exact: true })).toBeFocused();
     await choose(form, page, "Activity", "Sparring");
-    await form.getByLabel("Duration (minutes)").fill("60");
+    await choose(form, page, "Duration", "60");
     await choose(form, page, "Effort", "Hard");
     // Compare rendered styling with the existing Plan CTA, catching unstyled
     // default buttons even if saving still works functionally.
@@ -128,7 +121,7 @@ for (const width of [390, 1280]) {
     };
     expect(await form.getByRole("button", { name: "Save Session", exact: true }).evaluate(ctaAppearance))
       .toEqual(await page.getByRole("link", { name: "Quick Build Plan" }).evaluate(ctaAppearance));
-    await page.screenshot({ path: test.info().outputPath("log-training-form.png") });
+    await page.screenshot({ animations: "disabled", path: test.info().outputPath("log-training-form.png") });
     expect((await new AxeBuilder({ page }).include('dialog').analyze()).violations).toEqual([]);
     await form.getByRole("button", { name: "Save Session", exact: true }).click();
     await expect(page.getByRole("dialog")).toHaveCount(0);
@@ -152,11 +145,11 @@ for (const width of [390, 1280]) {
     expect(editBox!.width).toBeLessThanOrEqual(44);
     expect(deleteBox!.width).toBeLessThan(120);
     expect(deleteBox!.x).toBeGreaterThan(editBox!.x);
-    await page.screenshot({ path: test.info().outputPath("history-compact-controls.png") });
+    await page.screenshot({ animations: "disabled", path: test.info().outputPath("history-compact-controls.png") });
     expect((await new AxeBuilder({ page }).include(".history-list").analyze()).violations).toEqual([]);
     await editButton.click();
     await choose(page, page, "Activity", "Boxing");
-    await page.getByLabel("Duration (minutes)").fill("45");
+    await choose(page, page, "Duration", "45");
     await choose(page, page, "Effort", "Moderate");
     await page.getByRole("button", { name: "Save Session", exact: true }).click();
     await expect(history).toContainText("45 min");
@@ -188,10 +181,12 @@ test("retry after a lost save response keeps the same request ID", async ({ page
   await page.goto("/plans");
   await page.getByRole("button", { name: "Log Training", exact: true }).click();
   await choose(page, page, "Activity", "Sparring");
-  await page.getByLabel("Duration (minutes)").fill("60");
+  await choose(page, page, "Duration", "60");
   await choose(page, page, "Effort", "Hard");
   await page.getByRole("button", { name: "Save Session", exact: true }).click();
   await expect(page.getByRole("dialog").getByRole("alert")).toContainText("response lost");
+  // Re-selecting the same quick pick must still retry the same payload safely.
+  await choose(page, page, "Effort", "Hard");
   await page.getByRole("button", { name: "Save Session", exact: true }).click();
   await expect(page.getByRole("region", { name: "Log Training", exact: true }).getByRole("status")).toContainText("logged successfully");
   expect(submissions).toHaveLength(2);
@@ -204,11 +199,11 @@ test("log yesterday's sparring with the optional date and preserve it after edit
   await page.goto("/plans");
   await page.getByRole("button", { name: "Log Training", exact: true }).click();
   await choose(page, page, "Activity", "Sparring");
-  await page.getByLabel("Duration (minutes)").fill("60");
+  await choose(page, page, "Duration", "60");
   await choose(page, page, "Effort", "Hard");
-  await page.getByText("Training date · Current day", { exact: true }).click();
+  await page.locator("dialog summary").click();
   await page.getByLabel("Training date (optional)").fill("2026-10-09");
-  await page.screenshot({ path: test.info().outputPath("backdated-training-form.png") });
+  await page.screenshot({ animations: "disabled", path: test.info().outputPath("backdated-training-form.png") });
   expect((await new AxeBuilder({ page }).include('dialog').analyze()).violations).toEqual([]);
   await page.getByRole("button", { name: "Save Session", exact: true }).click();
   expect(submissions[0]).toMatchObject({ activity: "sparring", duration_minutes: 60, effort: "hard", training_day: "2026-10-09" });
@@ -217,7 +212,7 @@ test("log yesterday's sparring with the optional date and preserve it after edit
   await expect(history).toContainText("Fri 09 Oct 2026");
   await page.reload();
   await page.getByRole("button", { name: "Edit Sparring", exact: true }).click();
-  await page.getByLabel("Duration (minutes)").fill("45");
+  await choose(page, page, "Duration", "45");
   await page.getByRole("button", { name: "Save Session", exact: true }).click();
   await expect(history).toContainText("Fri 09 Oct 2026");
   await expect(history).toContainText("45 min");
@@ -232,7 +227,7 @@ test("failed edits and deletes preserve the session and allow another attempt", 
   await page.goto("/plans");
   await page.getByRole("button", { name: "Log Training", exact: true }).click();
   await choose(page, page, "Activity", "Sparring");
-  await page.getByLabel("Duration (minutes)").fill("60");
+  await choose(page, page, "Duration", "60");
   await choose(page, page, "Effort", "Hard");
   await page.getByRole("button", { name: "Save Session", exact: true }).click();
   await expect(page.getByRole("dialog")).toHaveCount(0);
@@ -247,10 +242,10 @@ test("failed edits and deletes preserve the session and allow another attempt", 
   });
   const history = page.locator(".history-list");
   await page.getByRole("button", { name: "Edit Sparring", exact: true }).click();
-  await page.getByLabel("Duration (minutes)").fill("45");
+  await choose(page, page, "Duration", "45");
   await page.getByRole("button", { name: "Save Session", exact: true }).click();
   await expect(page.getByRole("dialog").getByRole("alert")).toContainText("Session could not be changed");
-  await expect(page.getByLabel("Duration (minutes)")).toHaveValue("45");
+  await expect(page.getByRole("dialog").getByRole("button", { name: "45", exact: true })).toHaveAttribute("aria-pressed", "true");
   await expect(history).toContainText("60 min");
   expect(attempts).toEqual(["PATCH"]);
   fail = false;
@@ -280,9 +275,9 @@ test("Today without manual history offers the simple form", async ({ page, baseU
   await expect(page.getByRole("button", { name: "Log Training", exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Repeat last session" })).toHaveCount(0);
   await page.getByRole("button", { name: "Log Training", exact: true }).click();
-  await expect(page.getByRole("combobox", { name: "Activity", exact: true })).toContainText("Select activity");
-  await expect(page.getByLabel("Duration (minutes)")).toHaveValue("");
-  await expect(page.getByRole("combobox", { name: "Effort", exact: true })).toContainText("Select effort");
+  await expect(page.getByRole("group", { name: "Activity", exact: true }).locator('[aria-pressed="true"]')).toHaveCount(0);
+  await expect(page.getByRole("group", { name: "Duration", exact: true }).locator('[aria-pressed="true"]')).toHaveCount(0);
+  await expect(page.getByRole("group", { name: "Effort", exact: true }).locator('[aria-pressed="true"]')).toHaveCount(0);
 });
 
 test("repeat on Today needs only effort and save; a second session stays separate", async ({ page, baseURL }) => {
@@ -310,27 +305,25 @@ test("repeat on Today needs only effort and save; a second session stays separat
   expect((await repeat.boundingBox())!.height).toBeLessThanOrEqual(80);
   const entryLink = page.getByRole("link", { name: "Log Training", exact: true });
   await expect(entryLink).toBeInViewport();
-  await page.screenshot({ path: "/tmp/quick-log-today-first-viewport.png" });
+  await page.screenshot({ animations: "disabled", path: "/tmp/quick-log-today-first-viewport.png" });
   await entryLink.click();
   await expect(repeat).toBeInViewport();
-  await page.screenshot({ path: "/tmp/quick-log-compact-row.png" });
+  await page.screenshot({ animations: "disabled", path: "/tmp/quick-log-compact-row.png" });
   await repeat.focus();
   await page.keyboard.press("Enter");
-  const effort = page.getByRole("combobox", { name: "Effort", exact: true });
+  const effort = page.getByRole("group", { name: "Effort", exact: true }).getByRole("button", { name: "Easy", exact: true });
   await expect(effort).toBeFocused();
-  await expect(page.getByRole("dialog")).toContainText("Last effort: Hard");
-  await expect(effort).toContainText("Select effort");
-  await expect(effort).toHaveAccessibleDescription("Confirm today’s effort.");
-  await expect(page.getByLabel("Duration (minutes)")).toHaveValue("60");
+  await expect(page.getByRole("dialog")).not.toContainText("Last effort:");
+  await expect(effort).toHaveAttribute("aria-pressed", "false");
+  await expect(page.getByRole("dialog")).toContainText("60 min · From previous session");
+  await expect(page.getByRole("group", { name: "Activity", exact: true })).toBeHidden();
   expect(submissions).toHaveLength(0);
-  await page.screenshot({ path: "/tmp/quick-log-review-mobile.png" });
+  await page.screenshot({ animations: "disabled", path: "/tmp/quick-log-review-mobile.png" });
   await page.getByRole("button", { name: "Save Session", exact: true }).click();
   await expect(page.getByRole("dialog").getByRole("alert")).toContainText("Select an activity and effort");
   expect(submissions).toHaveLength(0);
-  await effort.press("ArrowDown");
-  await page.keyboard.press("Home");
-  await page.keyboard.press("Enter");
-  await expect(effort).toContainText("Easy");
+  await effort.press("Enter");
+  await expect(effort).toHaveAttribute("aria-pressed", "true");
   expect((await new AxeBuilder({ page }).include("dialog").analyze()).violations).toEqual([]);
   // Two synchronous submits must produce only one request, even before React renders busy state.
   await page.getByRole("form", { name: "Log Training", exact: true }).evaluate((form: HTMLFormElement) => {
@@ -342,10 +335,10 @@ test("repeat on Today needs only effort and save; a second session stays separat
   expect(submissions[0]).not.toHaveProperty("training_day");
   await expect.poll(() => todayReads).toBeGreaterThan(1);
   await expect(page.getByRole("status").filter({ hasText: "logged successfully" })).toBeVisible();
-  await page.screenshot({ path: test.info().outputPath("today-recent-shortcut.png") });
+  await page.screenshot({ animations: "disabled", path: test.info().outputPath("today-recent-shortcut.png") });
   await page.getByRole("button", { name: "Log Training", exact: true }).click();
   await choose(page, page, "Activity", "Strength");
-  await page.getByLabel("Duration (minutes)").fill("45");
+  await choose(page, page, "Duration", "45");
   await choose(page, page, "Effort", "Moderate");
   await page.getByRole("button", { name: "Save Session", exact: true }).click();
   await expect(page.getByRole("dialog")).toHaveCount(0);
@@ -384,7 +377,7 @@ test("History repeat retries the same occurrence, preserves the source and creat
   await expect(source).toContainText("60 min");
   await expect(source).toContainText("Hard");
   await source.getByRole("button", { name: "Repeat Boxing", exact: true }).click();
-  await expect(page.getByRole("combobox", { name: "Effort", exact: true })).toContainText("Select effort");
+  await expect(page.getByRole("group", { name: "Effort", exact: true }).locator('[aria-pressed="true"]')).toHaveCount(0);
   await choose(page, page, "Effort", "Easy");
   await page.getByRole("button", { name: "Save Session", exact: true }).click();
   await expect(page.getByRole("dialog")).toHaveCount(0);
@@ -414,7 +407,7 @@ test("a dropped network response can retry without creating another session", as
   await choose(page, page, "Effort", "Easy");
   await page.getByRole("button", { name: "Save Session", exact: true }).click();
   await expect(page.getByRole("dialog").getByRole("alert")).toBeVisible();
-  await expect(page.getByLabel("Duration (minutes)")).toHaveValue("60");
+  await expect(page.getByRole("dialog")).toContainText("60 min ·");
   await page.getByRole("button", { name: "Save Session", exact: true }).click();
   await expect(page.getByRole("dialog")).toHaveCount(0);
   expect(submissions).toHaveLength(2);
@@ -448,7 +441,7 @@ test("one week yields a tentative suggestion with blank effort; no routine is cr
   await expect(suggestion).toHaveAccessibleDescription("Boxing · 60 min");
   await expect(page.getByText("Boxing every Monday?", { exact: true })).toHaveCount(0);
   await suggestion.click();
-  await expect(page.getByRole("combobox", { name: "Effort", exact: true })).toContainText("Select effort");
+  await expect(page.getByRole("group", { name: "Effort", exact: true }).locator('[aria-pressed="true"]')).toHaveCount(0);
   expect(submissions).toHaveLength(0);
 });
 
@@ -460,14 +453,14 @@ test("confirm a pattern in one tap, persist it and log through the same form", a
   await expect(page.getByText("Logged two weeks in a row.", { exact: true })).toBeVisible();
   expect((await new AxeBuilder({ page }).include("#today-training-log").analyze()).violations).toEqual([]);
   await page.locator("#today-training-log").scrollIntoViewIfNeeded();
-  await page.screenshot({ path: "/tmp/habit-pattern-mobile.png" });
+  await page.screenshot({ animations: "disabled", path: "/tmp/habit-pattern-mobile.png" });
   await page.getByRole("button", { name: "Yes, usually", exact: true }).click();
   await expect(page.getByRole("status").filter({ hasText: "Routine saved." })).toBeVisible();
   expect(submissions).toHaveLength(0);
   await expect(page.getByRole("button", { name: "Your usual Monday", exact: true })).toContainText("60 min");
   await page.reload();
   await page.getByRole("button", { name: "Your usual Monday", exact: true }).click();
-  await expect(page.getByRole("combobox", { name: "Effort", exact: true })).toContainText("Select effort");
+  await expect(page.getByRole("group", { name: "Effort", exact: true }).locator('[aria-pressed="true"]')).toHaveCount(0);
   await choose(page, page, "Effort", "Easy");
   await page.getByRole("button", { name: "Save Session", exact: true }).click();
   await expect(page.getByRole("dialog")).toHaveCount(0);
@@ -594,7 +587,7 @@ test(`sparring suggestion requires current contact clearance (update pending: ${
   }
   await expect(suggestion).toContainText("Sparring · 60 min");
   await suggestion.click();
-  await expect(page.getByRole("combobox", { name: "Effort", exact: true })).toContainText("Select effort");
+  await expect(page.getByRole("group", { name: "Effort", exact: true }).locator('[aria-pressed="true"]')).toHaveCount(0);
   expect(submissions).toHaveLength(0);
 });
 
@@ -615,8 +608,8 @@ test("two confirmed weekday routines remain separate logging shortcuts", async (
   await expect(page.getByRole("dialog")).toHaveCount(0);
   await expect(usual).toContainText("Strength · 45 min");
   await usual.click();
-  await expect(page.getByLabel("Duration (minutes)")).toHaveValue("45");
-  await expect(page.getByRole("combobox", { name: "Effort", exact: true })).toContainText("Select effort");
+  await expect(page.getByRole("dialog")).toContainText("45 min ·");
+  await expect(page.getByRole("group", { name: "Effort", exact: true }).locator('[aria-pressed="true"]')).toHaveCount(0);
   expect(submissions).toHaveLength(1);
 });
 
@@ -633,8 +626,8 @@ test("confirmed routines survive a failed history read without detecting new pat
   await expect(page.getByText("History unavailable.", { exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Yes, usually", exact: true })).toHaveCount(0);
   await usual.click();
-  await expect(page.getByLabel("Duration (minutes)")).toHaveValue("50");
-  await expect(page.getByRole("combobox", { name: "Effort", exact: true })).toContainText("Select effort");
+  await expect(page.getByRole("dialog")).toContainText("50 min ·");
+  await expect(page.getByRole("group", { name: "Effort", exact: true }).locator('[aria-pressed="true"]')).toHaveCount(0);
   await expect(page.getByRole("dialog")).not.toContainText("Last effort:");
   expect(submissions).toHaveLength(0);
   await choose(page, page, "Effort", "Easy");
@@ -671,4 +664,167 @@ test("history failure never restores a confirmed shortcut blocked by readiness",
   await page.goto("/today");
   await expect(page.getByRole("button", { name: "Log Training", exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Your usual Monday", exact: true })).toHaveCount(0);
+});
+
+for (const width of [375, 390, 430]) {
+  for (const mode of ["new", "repeat", "suggested"] as const) {
+    test(`quick log ${mode} fits ${width}px and saves with quick picks`, async ({ page, baseURL }) => {
+      await page.setViewportSize({ width, height: 844 });
+      const errors: string[] = [];
+      page.on("pageerror", error => errors.push(error.message));
+      const submissions = mode === "suggested"
+        ? await habitSetup(page, baseURL!)
+        : await setup(page, baseURL!, false, false, mode === "repeat" ? [manual] : []);
+      await page.goto("/today");
+      await expect(page).toHaveURL(/\/today$/);
+      await expect(page).toHaveTitle(/Unlxck/i);
+      const trigger = page.getByRole("button", { name: mode === "new" ? "Log Training" : mode === "repeat" ? "Repeat last session" : "Suggested today", exact: true });
+      await trigger.click();
+      const sheet = page.getByRole("dialog");
+      await expect(sheet).toBeVisible();
+      if (mode === "new") {
+        await expect(sheet.getByRole("group", { name: "Duration", exact: true }).locator('[aria-pressed="true"]')).toHaveCount(0);
+        await choose(sheet, page, "Activity", "Boxing");
+        await choose(sheet, page, "Duration", "90");
+      } else {
+        await expect(sheet).toContainText(mode === "repeat" ? "From previous session" : "Suggested today");
+        await expect(sheet.getByRole("group", { name: "Activity", exact: true })).toBeHidden();
+      }
+      await expect(sheet.getByRole("group", { name: "Effort", exact: true }).locator('[aria-pressed="true"]')).toHaveCount(0);
+      // A save without a fresh effort must never create an occurrence.
+      await sheet.getByRole("button", { name: "Save Session", exact: true }).click();
+      await expect(sheet.getByRole("alert")).toBeVisible();
+      expect(submissions).toHaveLength(0);
+      await choose(sheet, page, "Effort", "Moderate");
+      const box = (await sheet.boundingBox())!;
+      expect(box.x).toBeGreaterThanOrEqual(0);
+      expect(box.x + box.width).toBeLessThanOrEqual(width);
+      await expect(sheet.getByRole("button", { name: "Save Session", exact: true })).toBeInViewport();
+      const targets = await sheet.locator('button:visible, summary:visible').evaluateAll(elements => elements.map(el => el.getBoundingClientRect().height));
+      // Fractional sheet positions can produce a subpixel rounding difference.
+      expect(targets.every(height => height >= 43.99)).toBe(true);
+      expect(await sheet.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true);
+      if (width === 390) {
+        // Clear the validation message for comparable, resting-state screenshots.
+        await sheet.getByRole("button", { name: "Close training log" }).click();
+        await trigger.click();
+        await page.screenshot({ animations: "disabled", path: `/tmp/quick-log-after-${mode}.png` });
+        const compactBox = (await sheet.boundingBox())!;
+        expect(compactBox.height).toBeLessThan(mode === "new" ? 490 : 290);
+        console.log(`390px ${mode}:`, compactBox);
+        if (mode === "new") {
+          await choose(sheet, page, "Activity", "Boxing");
+          await choose(sheet, page, "Duration", "90");
+        }
+        await choose(sheet, page, "Effort", "Moderate");
+        await page.screenshot({ animations: "disabled", path: `/tmp/quick-log-selected-${mode}.png` });
+        expect((await new AxeBuilder({ page }).include('dialog').analyze()).violations).toEqual([]);
+      }
+      await sheet.getByRole("button", { name: "Save Session", exact: true }).click();
+      await expect(sheet).toHaveCount(0);
+      expect(submissions).toHaveLength(1);
+      expect(submissions[0]).toMatchObject({ activity: "boxing", duration_minutes: mode === "new" ? 90 : 60, effort: "moderate" });
+      expect(submissions[0].client_request_id).toMatch(/^[0-9a-f-]{36}$/);
+      expect(submissions[0]).not.toHaveProperty("training_day");
+      expect(errors).toEqual([]);
+    });
+  }
+}
+
+test("repeat preserves 75 minutes, can edit details, and supports the full custom duration range", async ({ page, baseURL }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  const submissions = await setup(page, baseURL!, false, false, [{ ...manual, duration_minutes: 75 }]);
+  await page.goto("/today");
+  await page.getByRole("button", { name: "Repeat last session" }).click();
+  await expect(page.getByRole("dialog")).toContainText("75 min · From previous session");
+  await page.getByRole("button", { name: "Edit details" }).click();
+  await expect(page.getByLabel("Duration (minutes)")).toHaveValue("75");
+  await choose(page, page, "Effort", "Easy");
+  await page.getByRole("button", { name: "Save Session", exact: true }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  expect(submissions[0].duration_minutes).toBe(75);
+  await page.getByRole("button", { name: "Log Training", exact: true }).click();
+  await choose(page, page, "Activity", "Conditioning");
+  await page.getByRole("button", { name: "Custom", exact: true }).click();
+  const duration = page.getByLabel("Duration (minutes)");
+  await expect(duration).toBeFocused();
+  await duration.fill("600");
+  await choose(page, page, "Effort", "Hard");
+  // Approximate the reduced visual viewport available above an on-screen keyboard.
+  await page.setViewportSize({ width: 390, height: 380 });
+  await expect(page.getByRole("button", { name: "Save Session", exact: true })).toBeInViewport();
+  await page.screenshot({ animations: "disabled", path: "/tmp/quick-log-keyboard-height.png" });
+  await page.getByRole("button", { name: "Save Session", exact: true }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  expect(submissions[1]).toMatchObject({ activity: "conditioning", duration_minutes: 600, effort: "hard" });
+});
+
+test("date summary uses the athlete timezone and 03:00 rollover without sending an override", async ({ page, baseURL }) => {
+  await setup(page, baseURL!, false, false, []);
+  // London is UTC+1 in October: 01:30 UTC is still the previous training day.
+  await page.clock.setFixedTime(new Date("2026-10-18T01:30:00Z"));
+  await page.goto("/today");
+  await page.getByRole("button", { name: "Log Training", exact: true }).click();
+  await expect(page.locator("dialog summary")).toContainText("Sat 17 Oct 2026");
+  await page.locator("dialog summary").click();
+  await expect(page.getByLabel("Training date (optional)")).toHaveAttribute("max", "2026-10-17");
+  await expect(page.getByLabel("Training date (optional)")).toHaveValue("");
+  await page.getByRole("button", { name: "Close training log" }).click();
+  await expect(page.getByRole("button", { name: "Log Training", exact: true })).toBeFocused();
+});
+
+test("History edit retains effort and record identity; repeat details can change without changing its source", async ({ page, baseURL }) => {
+  const submissions = await setup(page, baseURL!, false, false, [{ ...manual, duration_minutes: 75 }]);
+  const edits: { url: string; body: unknown }[] = [];
+  page.on("request", request => {
+    if (request.method() === "PATCH") edits.push({ url: new URL(request.url()).pathname, body: request.postDataJSON() });
+  });
+  await page.goto("/history");
+  await page.getByRole("button", { name: "Edit Boxing", exact: true }).click();
+  await expect(page.getByLabel("Duration (minutes)")).toHaveValue("75");
+  await expect(page.getByRole("dialog").getByRole("button", { name: "Hard", exact: true })).toHaveAttribute("aria-pressed", "true");
+  await page.getByLabel("Duration (minutes)").fill("1");
+  await page.getByRole("button", { name: "Save Session", exact: true }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  expect(edits).toEqual([{ url: `/api/training/sessions/${manual.id}`, body: { activity: "boxing", duration_minutes: 1, effort: "hard" } }]);
+  expect(submissions).toHaveLength(0);
+  await expect(page.locator(".history-list > li")).toHaveCount(1);
+  await page.getByRole("button", { name: "Repeat Boxing", exact: true }).click();
+  await page.getByRole("button", { name: "Edit details" }).click();
+  await choose(page, page, "Activity", "Strength");
+  await choose(page, page, "Duration", "45");
+  await page.locator("dialog summary").click();
+  await page.getByLabel("Training date (optional)").fill("2026-10-10");
+  await choose(page, page, "Effort", "Easy");
+  await page.getByRole("button", { name: "Save Session", exact: true }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  expect(submissions[0]).toMatchObject({ activity: "strength", duration_minutes: 45, effort: "easy", training_day: "2026-10-10" });
+  const source = page.locator(".history-list > li").filter({ hasText: "Fri 09 Oct 2026" });
+  await expect(source).toContainText("1 min");
+  await expect(source).toContainText("Hard");
+  await expect(page.locator(".history-list > li")).toHaveCount(2);
+});
+
+test("quick picks support keyboard selection, modal focus containment and close restoration", async ({ page, baseURL }) => {
+  await setup(page, baseURL!, false, false, []);
+  await page.goto("/plan");
+  const trigger = page.getByRole("button", { name: "Log Training", exact: true });
+  await trigger.focus();
+  await page.keyboard.press("Enter");
+  const sheet = page.getByRole("dialog");
+  await expect(sheet.getByRole("button", { name: "Boxing", exact: true })).toBeFocused();
+  await page.keyboard.press("Tab");
+  const sparring = sheet.getByRole("button", { name: "Sparring", exact: true });
+  await expect(sparring).toBeFocused();
+  await page.keyboard.press("Space");
+  await expect(sparring).toHaveAttribute("aria-pressed", "true");
+  await page.keyboard.press("Shift+Tab");
+  await page.keyboard.press("Shift+Tab");
+  await expect(sheet.getByRole("button", { name: "Close training log" })).toBeFocused();
+  // Native showModal makes the background inert, including programmatic focus.
+  await trigger.evaluate(element => element.focus());
+  await expect(sheet.getByRole("button", { name: "Close training log" })).toBeFocused();
+  await page.keyboard.press("Escape");
+  await expect(sheet).toHaveCount(0);
+  await expect(trigger).toBeFocused();
 });

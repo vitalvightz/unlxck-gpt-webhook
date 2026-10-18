@@ -1,17 +1,21 @@
 "use client";
 
 import { type FormEvent, useEffect, useId, useRef, useState } from "react";
-import { CustomSelect } from "./custom-select";
+import { useAppSession } from "./auth-provider";
+import { habitTrainingDay } from "@/lib/training-habits";
 import { ApiError, editExternalTraining, getTrainingHistory, logExternalTraining } from "@/lib/api";
 import { lockOverlayScroll } from "@/lib/overlay-scroll-lock";
 import { formatAppDate } from "@/lib/date-format";
 import {
-  TRAINING_ACTIVITIES, TRAINING_EFFORTS, canRepeatTraining, latestRepeatableTraining,
+  TRAINING_EFFORTS, canRepeatTraining, latestRepeatableTraining,
   type TrainingActivity, type TrainingEffort, type TrainingHistorySession,
 } from "@/lib/training-history";
 import styles from "./log-training.module.css";
 import { TrainingActionContent } from "./training-action-tile";
 import tileStyles from "./training-action-tile.module.css";
+
+const ACTIVITY_PICKS: TrainingActivity[] = ["boxing", "sparring", "strength", "conditioning", "roadwork", "other"];
+const DURATION_PICKS = [30, 45, 60, 90];
 
 const label = (value: string) => value.charAt(0).toUpperCase() + value.slice(1);
 
@@ -27,7 +31,13 @@ function LogTrainingContent({ accessToken, entry, repeatEntry, recent = false, h
   const [lastSession, setLastSession] = useState<TrainingHistorySession>();
   const repeatSource = repeatEntry && canRepeatTraining(repeatEntry) ? repeatEntry : recent ? history ? latestRepeatableTraining(history) : lastSession : undefined;
   const [repeating, setRepeating] = useState(false);
-  const [previousEffort, setPreviousEffort] = useState<TrainingEffort | null>(null);
+  const { me } = useAppSession();
+  const [now, setNow] = useState(() => new Date());
+  const today = habitTrainingDay(now, me?.profile.athlete_timezone);
+  const [sourceLabel, setSourceLabel] = useState("");
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  const [customDuration, setCustomDuration] = useState(false);
+  const durationInput = useRef<HTMLInputElement>(null);
   const saving = useRef(false);
 
   useEffect(() => {
@@ -64,8 +74,25 @@ function LogTrainingContent({ accessToken, entry, repeatEntry, recent = false, h
     const previous = document.activeElement as HTMLElement | null;
     const release = lockOverlayScroll();
     dialog.current?.showModal();
-    dialog.current?.querySelector<HTMLButtonElement>(repeating ? `[id="${fieldId}-effort"]` : '[role="combobox"]')?.focus();
-    return () => { release(); previous?.focus(); };
+    dialog.current?.querySelector<HTMLButtonElement>(repeating ? '[data-effort]' : '[data-activity][aria-pressed="true"], [data-activity]')?.focus();
+    const update = () => {
+      setNow(new Date());
+      const viewport = window.visualViewport;
+      dialog.current?.style.setProperty("--sheet-height", `${viewport?.height ?? window.innerHeight}px`);
+      dialog.current?.style.setProperty("--sheet-bottom", `${viewport ? Math.max(0, window.innerHeight - viewport.height - viewport.offsetTop) : 0}px`);
+    };
+    update();
+    const timer = window.setInterval(update, 60_000);
+    window.addEventListener("focus", update);
+    window.visualViewport?.addEventListener("resize", update);
+    window.visualViewport?.addEventListener("scroll", update);
+    return () => {
+      window.clearInterval(timer);
+      window.removeEventListener("focus", update);
+      window.visualViewport?.removeEventListener("resize", update);
+      window.visualViewport?.removeEventListener("scroll", update);
+      release(); previous?.focus();
+    };
   }, [open, repeating, fieldId]);
 
   useEffect(() => {
@@ -74,9 +101,11 @@ function LogTrainingContent({ accessToken, entry, repeatEntry, recent = false, h
     return () => clearTimeout(timer);
   }, [saved]);
 
-  function startEdit(row?: Partial<TrainingHistorySession>, repeat = false) {
+  function startEdit(row?: Partial<TrainingHistorySession>, repeat = false, source = "From previous session") {
     setRepeating(repeat);
-    setPreviousEffort(repeat ? row?.effort ?? null : null);
+    setSourceLabel(source);
+    setDetailsOpen(false);
+    setCustomDuration(row?.duration_minutes != null && !DURATION_PICKS.includes(row.duration_minutes));
     setActivity(row?.activity ?? "");
     setDuration(row?.duration_minutes?.toString() ?? "");
     setEffort(repeat ? "" : row?.effort ?? "");
@@ -91,7 +120,9 @@ function LogTrainingContent({ accessToken, entry, repeatEntry, recent = false, h
     event.preventDefault();
     if (!accessToken || saving.current) return;
     if (!activity || !effort) {
-      setError("Select an activity and effort."); return;
+      setError("Select an activity and effort.");
+      dialog.current?.querySelector<HTMLButtonElement>(!activity ? '[data-activity]' : '[data-effort]')?.focus();
+      return;
     }
     const minutes = Number(duration);
     if (!Number.isInteger(minutes) || minutes < 1 || minutes > 600) {
@@ -117,9 +148,41 @@ function LogTrainingContent({ accessToken, entry, repeatEntry, recent = false, h
     } finally { saving.current = false; if (currentToken.current === token) setBusy(false); }
   }
 
+  const activityAndDuration = <>
+    <fieldset className={styles.fieldset} disabled={busy} aria-label="Activity">
+      <legend>Activity</legend>
+      <div className={styles.activityGrid}>
+        {ACTIVITY_PICKS.map(value => <button key={value} type="button" data-activity aria-pressed={activity === value}
+          onClick={() => { setActivity(value); if (activity !== value) requestId.current = null; }}>{label(value)}</button>)}
+      </div>
+    </fieldset>
+    <fieldset className={styles.fieldset} disabled={busy} aria-label="Duration">
+      <legend>Duration <span className={styles.unit}>min</span></legend>
+      <div className={styles.durationGrid}>
+        {DURATION_PICKS.map(value => <button key={value} type="button" aria-pressed={!customDuration && duration === String(value)}
+          onClick={() => { setDuration(String(value)); setCustomDuration(false); if (Number(duration) !== value) requestId.current = null; }}>{value}</button>)}
+        <button type="button" aria-pressed={customDuration} aria-expanded={customDuration} aria-controls={`${fieldId}-duration`}
+          onClick={() => { setCustomDuration(true); requestAnimationFrame(() => durationInput.current?.focus()); }}>Custom</button>
+      </div>
+      {customDuration ? <label className={styles.customDuration}>Duration (minutes)
+        <input id={`${fieldId}-duration`} ref={durationInput} type="number" inputMode="numeric" required min={1} max={600} step={1} value={duration}
+          onChange={event => { setDuration(event.target.value); requestId.current = null; }} />
+      </label> : null}
+    </fieldset>
+  </>;
+  const dateChoice = !editing ? <details className={styles.dateChoice}>
+    <summary>Training date · {formatAppDate(trainingDay || today)}</summary>
+    <label className={styles.customDuration}>Training date (optional)
+      <input type="date" max={today} value={trainingDay} disabled={busy}
+        onChange={event => { setTrainingDay(event.target.value); requestId.current = null; }} />
+    </label>
+    {trainingDay ? <button className={styles.resetDate} type="button" disabled={busy}
+      onClick={() => { setTrainingDay(""); requestId.current = null; }}>Use current training day</button> : null}
+  </details> : null;
+
   return (
     <div className={entry || repeatEntry ? styles.editControl : styles.training} role={entry || repeatEntry ? undefined : "region"} aria-label={entry ? `Manage ${entry.title}` : "Log Training"}>
-      {quickSession ? <button className={styles.actionRow} type="button" onClick={() => startEdit(quickSession, true)} aria-haspopup="dialog" aria-label={quickSession.title} aria-describedby={`${fieldId}-quick`}>
+      {quickSession ? <button className={styles.actionRow} type="button" onClick={() => startEdit(quickSession, true, quickSession.title)} aria-haspopup="dialog" aria-label={quickSession.title} aria-describedby={`${fieldId}-quick`}>
         <span><strong>{quickSession.title}</strong><span className="muted" id={`${fieldId}-quick`}>{label(quickSession.activity)} · {quickSession.duration_minutes} min</span></span>
         <svg className={styles.chevron} viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m9 5 7 7-7 7" /></svg>
       </button> : repeatSource ? <button className={repeatEntry ? styles.repeatButton : styles.actionRow} type="button" onClick={() => startEdit(repeatSource, true)} aria-haspopup="dialog" aria-label={repeatEntry ? `Repeat ${repeatSource.title}` : "Repeat last session"} aria-describedby={!repeatEntry ? `${fieldId}-recent` : undefined}>
@@ -133,36 +196,34 @@ function LogTrainingContent({ accessToken, entry, repeatEntry, recent = false, h
         </button>}
       {open ? (
         <dialog ref={dialog} className={styles.dialog} aria-label={editing ? "Edit training" : "Log Training"} onCancel={event => { if (busy) event.preventDefault(); else setOpen(false); }}>
-        <h2>{editing ? "Edit training" : "Log Training"}</h2>
-        {repeating && previousEffort ? <p className="muted">Last effort: {label(previousEffort)}</p> : null}
-        {repeating ? <p className="muted" id={`${fieldId}-repeat`}>Confirm today’s effort.</p> : null}
+        <header className={styles.header}>
+          <div><h2>{editing ? "Edit training" : repeating && activity ? `Log ${activity}` : "Log training"}</h2>
+            {repeating ? <p className={styles.source}>{duration} min · {sourceLabel}</p> : null}
+          </div>
+          <button className={styles.close} type="button" aria-label="Close training log" disabled={busy} onClick={() => setOpen(false)}>×</button>
+        </header>
         <form className={styles.form} onSubmit={save} aria-label={editing ? "Edit training" : "Log Training"}>
-          <div className="field"><label htmlFor={`${fieldId}-activity`}>Activity</label>
-            <CustomSelect id={`${fieldId}-activity`} value={activity} disabled={busy} placeholder="Select activity"
-              options={TRAINING_ACTIVITIES.map(value => ({ value, label: label(value) }))}
-              onChange={value => { setActivity(value as TrainingActivity); requestId.current = null; }} />
+          <div className={styles.body}>
+            {!repeating ? activityAndDuration : null}
+            <fieldset className={styles.fieldset} disabled={busy} aria-label="Effort">
+              <legend>{repeating ? "How hard was it today?" : "Effort"} <span className={styles.unit}>Required</span></legend>
+              <div className={styles.effortGrid}>
+                {TRAINING_EFFORTS.map(value => <button key={value} type="button" data-effort aria-pressed={effort === value}
+                  onClick={() => { setEffort(value); if (effort !== value) requestId.current = null; }}>{label(value)}</button>)}
+              </div>
+            </fieldset>
+            {repeating ? <>
+              <button className={styles.detailsToggle} type="button" aria-expanded={detailsOpen} aria-controls={`${fieldId}-details`} disabled={busy}
+                onClick={() => setDetailsOpen(value => !value)}>Edit details <span aria-hidden="true">{detailsOpen ? "−" : "+"}</span></button>
+              <div id={`${fieldId}-details`} className={styles.expandedDetails} hidden={!detailsOpen}>
+                {activityAndDuration}{dateChoice}
+              </div>
+            </> : dateChoice}
           </div>
-          <label className="field"><span>Duration (minutes)</span>
-            <input type="number" inputMode="numeric" required min={1} max={600} step={1} value={duration} disabled={busy} onChange={event => { setDuration(event.target.value); requestId.current = null; }} />
-          </label>
-          <div className="field"><label htmlFor={`${fieldId}-effort`}>Effort</label>
-            <CustomSelect id={`${fieldId}-effort`} value={effort} disabled={busy} placeholder="Select effort"
-              describedBy={repeating ? `${fieldId}-repeat` : undefined}
-              options={TRAINING_EFFORTS.map(value => ({ value, label: label(value) }))}
-              onChange={value => { setEffort(value as TrainingEffort); requestId.current = null; }} />
-          </div>
-          {!editing ? <details className={styles.dateChoice}>
-            <summary>Training date · {trainingDay ? formatAppDate(trainingDay) : "Current day"}</summary>
-            <label className="field"><span>Training date (optional)</span>
-              <input type="date" value={trainingDay} disabled={busy} onChange={event => { setTrainingDay(event.target.value); requestId.current = null; }} />
-            </label>
-            <p className="muted">Leave blank for your current training day.</p>
-          </details> : null}
-          <div className={styles.actions}>
+          <footer className={styles.actions}>
+            {error ? <p className={styles.error} role="alert">{error}</p> : null}
             <button className="cta" type="submit" disabled={busy}>{busy ? "Saving…" : "Save Session"}</button>
-            <button className="ghost-button" type="button" disabled={busy} onClick={() => { setOpen(false); setError(null); }}>Cancel</button>
-          </div>
-          {error ? <p className="error-banner" role="alert">{error}</p> : null}
+          </footer>
         </form>
         </dialog>
       ) : null}
