@@ -9,7 +9,7 @@ import os
 import random
 import sys
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 from zoneinfo import ZoneInfo
@@ -132,6 +132,22 @@ def scorecard_rows():
         cursor = result["next_cursor"]
 
 
+def all_pipeline_rows():
+    cursor = None
+    while True:
+        body = {"page_size": 100}
+        if cursor:
+            body["start_cursor"] = cursor
+        result = request("POST", f"/data_sources/{DATA_SOURCE_ID}/query", body)
+        for page in result["results"]:
+            detail = plain(page["properties"], "Source Detail")
+            if detail != "SYSTEM_COUNTER":
+                yield page
+        if not result.get("has_more"):
+            break
+        cursor = result["next_cursor"]
+
+
 def block_children(parent_id):
     cursor = None
     while True:
@@ -177,6 +193,12 @@ def stage_changes(page, now):
     confirmed = plain(p, "Confirmed Stage")
     first_seen = datetime.fromisoformat(
         p["Observed Since"]["date"]["start"].replace("Z", "+00:00"))
+    # A later edit to the candidate page invalidates an earlier stability observation.
+    edited = page.get("last_edited_time")
+    if edited:
+        last_edit = datetime.fromisoformat(edited.replace("Z", "+00:00"))
+        if last_edit > first_seen and (now - last_edit).total_seconds() < STAGE_STABILITY_SECONDS:
+            return {}
     if confirmed == stage or (now - first_seen).total_seconds() < STAGE_STABILITY_SECONDS:
         return {}
     timestamp = now.isoformat(timespec="seconds")
@@ -188,7 +210,7 @@ def stage_changes(page, now):
         "Stage Confirmed At": {"date": {"start": timestamp}},
         "Stage History": rich(history + ("\n" if history else "") + entry),
     }
-    for prop, reached in (
+    # Initial import is a snapshot, not proof that any earlier milestone happened.\n    for prop, reached in (() if not confirmed else (
         ("First Reply Confirmed At", stage in REPLY_STAGES),
         ("Interested At", stage in ("Accepted", "Activated")),
         ("Accepted At", stage in ("Accepted", "Activated")),
@@ -254,7 +276,7 @@ def sync_scorecard():
                         raise ValueError(f"Duplicate scorecard card: {name}")
                     headline = [part for part in parts if part["type"].startswith("heading_")]
                     detail = [part for part in parts if part["type"] == "paragraph"
-                              and " of " in block_text(part) and block_text(part).endswith(" fighters")]
+                              and ((" of " in block_text(part) and block_text(part).endswith(" fighters"))\n                     or block_text(part) == "Awaiting verified app-event integration")]
                     if len(headline) != 1 or len(detail) != 1:
                         raise ValueError(f"Unexpected scorecard layout: {name}")
                     cards[name] = (headline[0], detail[0])
@@ -268,7 +290,10 @@ def sync_scorecard():
         percent = ("Not measured" if name == "ACTIVATION RATE"
                    and os.getenv("UNLXCK_APP_EVENTS_VERIFIED") != "1"
                    else (f"{100 * counts[name] / total:.1f}%" if total else "0%"))
-        for block, value in ((headline, percent), (detail, f"{counts[name]} of {total} fighters")):
+        description = ("Awaiting verified app-event integration" if name == "ACTIVATION RATE"
+                       and os.getenv("UNLXCK_APP_EVENTS_VERIFIED") != "1"
+                       else f"{counts[name]} of {total} fighters")
+        for block, value in ((headline, percent), (detail, description)):
             if block_text(block) != value:
                 request("PATCH", f"/blocks/{block['id']}",
                         {block["type"]: {"rich_text": [{"type": "text", "text": {"content": value}}]}})
