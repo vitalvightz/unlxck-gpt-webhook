@@ -150,20 +150,19 @@ def test_scorecard_rows_include_all_contacted_stages_and_skip_counters(monkeypat
 
 def test_scorecard_updates_three_rates_without_touching_other_blocks(monkeypatch):
     def item(stage):
-        confirmed = {"rich_text": [{"plain_text": stage}]}
-        reply = {"date": {"start": "2026-10-17"}} if stage != "Contacted" else {"date": None}
-        accepted = {"date": {"start": "2026-10-17"}} if stage == "Accepted" else {"date": None}
+        # Initial baselines have no milestone dates; Inactive keeps previous milestones.
+        past = {"date": {"start": "2026-10-17"}} if stage == "Inactive" else {"date": None}
         return {"properties": {
             "Stage (AI Fills First)": {"select": {"name": stage}},
-            "Confirmed Stage": confirmed,
-            "First Reply Confirmed At": reply,
-            "Accepted At": accepted,
+            "First Reply Confirmed At": past,
+            "Accepted At": past,
             "Registered At": {"date": None},
             "First Meaningful Action At": {"date": None},
         }}
-    monkeypatch.delenv("UNLXCK_APP_EVENTS_VERIFIED", raising=False)
+    monkeypatch.setenv("UNLXCK_APP_EVENTS_VERIFIED", "0")  # Must not gate CRM activation.
     monkeypatch.setattr(sync, "scorecard_rows", lambda: iter(
-        [item("Contacted")] * 48 + [item("Replied")] * 11 + [item("Accepted")] * 2
+        [item("Contacted")] * 48 + [item("Replied")] * 11
+        + [item("Accepted")] * 2 + [item("Activated")] * 2 + [item("Inactive")]
     ))
 
     def block(identifier, kind, value="", children=False):
@@ -177,20 +176,24 @@ def test_scorecard_updates_three_rates_without_touching_other_blocks(monkeypatch
         tree["card-" + str(i)] = [
             block("headline-" + str(i), "heading_2", "0%"),
             block("label-" + str(i), "paragraph", label),
-            block("count-" + str(i), "paragraph", "0 of 0 fighters"),
+            block("count-" + str(i), "paragraph",
+                  "Awaiting verified app-event integration" if i == 2 else "0 of 0 fighters"),
         ]
 
     monkeypatch.setattr(sync, "SCORECARD_PAGE_ID", "page")
     monkeypatch.setattr(sync, "block_children", lambda identifier: iter(tree[identifier]))
     writes = []
     monkeypatch.setattr(sync, "request", lambda method, path, body=None: writes.append((method, path, body)))
-    assert sync.sync_scorecard() == (61, 5)
-    assert len(writes) == 5
+    assert sync.sync_scorecard() == (64, 6)
+    assert len(writes) == 6
     assert all(method == "PATCH" and path.startswith("/blocks/") for method, path, _ in writes)
     data = {path: body for _, path, body in writes}
-    assert data["/blocks/headline-0"]["heading_2"]["rich_text"][0]["text"]["content"] == "21.3%"
-    assert data["/blocks/headline-1"]["heading_2"]["rich_text"][0]["text"]["content"] == "3.3%"
-    assert data["/blocks/count-2"]["paragraph"]["rich_text"][0]["text"]["content"] == "Awaiting verified app-event integration"
+    assert data["/blocks/headline-0"]["heading_2"]["rich_text"][0]["text"]["content"] == "25.0%"
+    assert data["/blocks/headline-1"]["heading_2"]["rich_text"][0]["text"]["content"] == "7.8%"
+    assert data["/blocks/headline-2"]["heading_2"]["rich_text"][0]["text"]["content"] == "3.1%"
+    assert data["/blocks/count-0"]["paragraph"]["rich_text"][0]["text"]["content"] == "16 of 64 fighters"
+    assert data["/blocks/count-1"]["paragraph"]["rich_text"][0]["text"]["content"] == "5 of 64 fighters"
+    assert data["/blocks/count-2"]["paragraph"]["rich_text"][0]["text"]["content"] == "2 of 64 fighters"
     assert "/blocks/label-0" not in data
 
 
@@ -244,7 +247,9 @@ def test_first_seen_stage_does_not_fabricate_historical_transition_time():
                             confirmed="", since=(now - timedelta(minutes=6)).isoformat())
     change = sync.stage_changes(baseline, now)
     assert "baseline -> Activated" in change["Stage History"]["rich_text"][0]["text"]["content"]
-    assert "Interested At" not in change and "Accepted At" not in change
+    assert change["First Reply Confirmed At"]["date"]["start"] == now.isoformat(timespec="seconds")
+    assert change["Accepted At"]["date"]["start"] == now.isoformat(timespec="seconds")
+    assert "Interested At" not in change
     assert "Registered At" not in change and "First Meaningful Action At" not in change
 
 
@@ -284,8 +289,43 @@ def test_initial_baseline_does_not_invent_reply_or_acceptance():
                         since=(now - timedelta(minutes=7)).isoformat())
     changes = sync.stage_changes(page, now)
     assert "Confirmed Stage" in changes
+    assert changes["First Reply Confirmed At"]["date"]["start"] == now.isoformat(timespec="seconds")
+    assert changes["Accepted At"]["date"]["start"] == now.isoformat(timespec="seconds")
+
+
+@pytest.mark.parametrize("stage,accepted", [("Replied", False), ("Accepted", True),
+                                           ("Activated", True)])
+def test_baseline_captures_existing_crm_evidence_not_original_dm_time(stage, accepted):
+    now = datetime(2026, 10, 18, 17, tzinfo=timezone.utc)
+    page = observed_row(stage=stage, observed=stage, confirmed="",
+                        since=(now - timedelta(minutes=7)).isoformat())
+    changes = sync.stage_changes(page, now)
+    assert changes["First Reply Confirmed At"]["date"]["start"] == now.isoformat(timespec="seconds")
+    assert ("Accepted At" in changes) == accepted
+    assert "baseline ->" in changes["Stage History"]["rich_text"][0]["text"]["content"]
+    assert "Registered At" not in changes
+    assert "First Meaningful Action At" not in changes
+
+
+def test_repairs_previously_confirmed_baseline_without_overwriting_history():
+    now = datetime(2026, 10, 18, 17, tzinfo=timezone.utc)
+    page = observed_row(stage="Activated", observed="Activated", confirmed="Activated",
+                        since=(now - timedelta(minutes=7)).isoformat())
+    changes = sync.stage_changes(page, now)
+    assert set(changes) == {"First Reply Confirmed At", "Accepted At"}
+    page["properties"]["First Reply Confirmed At"] = changes["First Reply Confirmed At"]
+    page["properties"]["Accepted At"] = changes["Accepted At"]
+    assert sync.stage_changes(page, now) == {}
+
+
+def test_initial_rejection_is_not_automatically_treated_as_reply():
+    now = datetime(2026, 10, 18, 17, tzinfo=timezone.utc)
+    page = observed_row(stage="Rejected", observed="Rejected", confirmed="",
+                        since=(now - timedelta(minutes=7)).isoformat())
+    changes = sync.stage_changes(page, now)
+    assert "Confirmed Stage" in changes
     assert "First Reply Confirmed At" not in changes
-    assert "Accepted At" not in changes
+    assert "Rejected At" not in changes
 
 
 def test_stage_history_queries_entire_pipeline(monkeypatch):
