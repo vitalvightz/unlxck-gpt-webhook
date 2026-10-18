@@ -197,6 +197,11 @@ def test_other_profiles_and_ankle_baselines_unchanged():
     from fightcamp.rehab_clinical import content_hash
     current = json.loads(open("data/rehab_pathways.json", encoding="utf-8").read())
     manifest = json.loads(open("tools/rehab_ankle_activation_inventory_baseline.json", encoding="utf-8").read())
+    shoulder = json.loads(open("tools/rehab_shoulder_activation_inventory_baseline.json", encoding="utf-8").read())
+    for index, profile in enumerate(current["profiles"]):
+        if profile["policy_id"] == "shoulder_tendonitis":
+            assert content_hash(profile) == shoulder["activated_profile_sha256"]
+            current["profiles"][index] = shoulder["historical_profile"]
     assert {p["policy_id"]: content_hash(p) for p in current["profiles"] if p["policy_id"] != "ankle_sprain"} == manifest["unchanged_profiles_sha256"]
     before = manifest["historical_profile"]
     after = next(p for p in current["profiles"] if p["policy_id"] == "ankle_sprain")

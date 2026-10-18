@@ -37,12 +37,19 @@ def reported_load_option(profile_id):
     from .achilles_restore_load_pilot import ACHILLES_LOAD_OPTION
     from .elbow_restore_load_option import ELBOW_LOAD_OPTION
     from .ankle_restore_load_option import ANKLE_LOAD_OPTION
-    return {"achilles_tendonitis": ACHILLES_LOAD_OPTION,
+    from .shoulder_restore_load_option import SHOULDER_LOAD_OPTION
+    return {"shoulder_tendonitis": SHOULDER_LOAD_OPTION, "achilles_tendonitis": ACHILLES_LOAD_OPTION,
             "elbow_tendonitis": ELBOW_LOAD_OPTION,
             "ankle_sprain": ANKLE_LOAD_OPTION}.get(profile_id)
 
 
 def reported_load_hold(profile_id, injury, *, as_of, exposures=(), history_truncated=False):
+    if profile_id == "shoulder_tendonitis":
+        from .shoulder_restore_load import evaluate_shoulder_permission
+        context = AssessmentContext.from_injury(injury, as_of=as_of,
+            setback_at=episode_setback_at(injury, exposures), history_truncated=history_truncated)
+        entry = evaluate_shoulder_permission(context)
+        return entry["reason_code"] if entry["status"] != "pass" else None
     if profile_id == "ankle_sprain":
         from .ankle_restore_load import evaluate_ankle_permission
         context = AssessmentContext.from_injury(injury, as_of=as_of,
@@ -140,6 +147,12 @@ def resolve_injury_policy(
         "blocked_regions": policy.blocked_regions, "blocked_tags": policy.blocked_tags,
         "contact_limit": policy.contact_limit,
     }
+    if policy.policy_id == "shoulder_tendonitis":
+        from .shoulder_restore_load import unsupported_shoulder_presentation
+        if unsupported_shoulder_presentation(injury):
+            result.update(stage=None, summary="No reviewed guided pathway covers this shoulder presentation. Follow clinician advice and your current restrictions.",
+                          reason_codes=["shoulder_conflicting_or_unsupported_presentation"])
+            return result
     if policy.policy_id == "ankle_sprain":
         from .ankle_restore_load import unsupported_ankle_presentation
         if unsupported_ankle_presentation(injury):

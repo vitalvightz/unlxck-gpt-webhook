@@ -166,7 +166,7 @@ def test_external_stage_cannot_open_an_advanced_rung(region, kind, stage):
     assert decision["stage"] in {"calm", "restore"}
     assert decision["prescription"]["drill"]["rehab_stage"] in {"calm", "restore"}
     policy = next(p for p in load_clinical_policies() if (p.region, p.injury_type) == (region, kind))
-    if policy.policy_id in {"achilles_tendonitis", "elbow_tendonitis"}:
+    if policy.policy_id in {"achilles_tendonitis", "elbow_tendonitis", "shoulder_tendonitis"}:
         assert policy.live_stages == ["calm", "restore", "load"]
         assert policy.transitions[0].promotable and not any(t.promotable for t in policy.transitions[1:])
     else:
@@ -254,11 +254,11 @@ def test_dormant_reviewed_load_work_is_not_a_prescription():
     ledger = json.loads((ROOT / "data/rehab_metadata_review.json").read_text(encoding="utf-8"))
     load_ids = {r["drill_id"] for r in ledger if r["injury_type"] == "tendonitis"
                 and r["review_state"] == "reviewed" and r["proposed"]["rehab_stage"] == "load"}
-    assert len(load_ids) == 7
+    assert len(load_ids) == 8
     policies = [p for p in load_clinical_policies() if p.injury_type == "tendonitis"]
-    assert load_ids & {r.drill_id for p in policies for r in p.prescriptions} == {"achilles_tendonitis_eccentric_calf_drops_on_step", "elbow_tendonitis_supported_hand_weight_wrist_extension"}
+    assert load_ids & {r.drill_id for p in policies for r in p.prescriptions} == {"achilles_tendonitis_eccentric_calf_drops_on_step", "elbow_tendonitis_supported_hand_weight_wrist_extension", "shoulder_tendonitis_wall_push_up"}
     assert all(p.live_stages == ["calm", "restore"] and not any(t.promotable for t in p.transitions)
-        for p in policies if p.policy_id not in {"achilles_tendonitis", "elbow_tendonitis"})
+        for p in policies if p.policy_id not in {"achilles_tendonitis", "elbow_tendonitis", "shoulder_tendonitis"})
 
 
 @pytest.mark.parametrize("region", REGIONS)

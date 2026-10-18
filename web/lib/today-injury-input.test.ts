@@ -8,6 +8,7 @@ import {
   isInjuryEntryLimited,
   limitInjuryEntryText,
   readElbowSite, stripElbowSite, writeElbowSite,
+  readShoulderScope, stripShoulderScope, writeShoulderScope,
 } from "./today-injury-input.ts";
 
 test("elbow location remains explicit and editing replaces rather than duplicates it", () => {
@@ -117,4 +118,14 @@ test("Other types follow the area and write a word the scorer recognises", async
   assert.equal(readTodayOtherInjuryType("numbness and tingling"), "nerve");
   assert.equal(readTodayOtherInjuryType("odd ache after a sprain"), "");
   assert.ok(Object.values(TODAY_OTHER_INJURY_TYPES).filter((type) => type.serious).length === 4);
+});
+
+
+test("shoulder presentation is explicit, unknown by default, and replaces stale markers", () => {
+  assert.equal(readShoulderScope("shoulder tendonitis"), "unknown");
+  assert.equal(readShoulderScope("[shoulder_scope:nontraumatic_cuff] [shoulder_scope:other]"), "unknown");
+  assert.equal(readShoulderScope("[shoulder_scope:made_up]"), "unknown");
+  const saved = writeShoulderScope("tendonitis [shoulder_scope:other]", "nontraumatic_cuff");
+  assert.equal(readShoulderScope(saved), "nontraumatic_cuff");
+  assert.equal(stripShoulderScope(saved), "tendonitis");
 });
