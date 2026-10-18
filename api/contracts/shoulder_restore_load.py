@@ -13,7 +13,7 @@ SOURCES = (
 def unsupported_shoulder_presentation(injury):
     text = remove_negated_phrases(" ".join(str(injury.get(k) or "") for k in ("body_area", "description"))).lower()
     return ("[shoulder_scope:other]" in text or bool(re.search(
-        r"\b(tear|torn|rupture|trauma\w*|fall|fell|fracture|break|structural|unstable|instability|recurrent|dislocat\w*|sublux\w*|giving way|gave way|numb\w*|tingling|neurolog\w*|radicul\w*|weak\w*|power loss|loss of (?:power|function)|cannot (?:lift|raise)|unable to (?:lift|raise)|frozen shoulder|adhesive capsulitis|biceps|labra\w*|acromioclavicular|cervical|surgery|post[- ]?operati\w*)\b", text)))
+        r"\b(tear|torn|rupture|trauma\w*|fall|fell|fracture|break|structural|unstable|instability|recurrent|dislocat\w*|sublux\w*|giving way|gave way|numb\w*|tingling|pins and needles|loss of sensation|neurolog\w*|radicul\w*|weak\w*|power loss|strength loss|loss of (?:power|function|strength)|cannot (?:lift|raise)|unable to (?:lift|raise)|frozen shoulder|adhesive capsulitis|biceps|labra\w*|acromioclavicular|ac joint|(?:osteo)?arthrit\w*|cervical|surgery|post[- ]?operati\w*)\b", text)))
 
 
 def wall_shoulder_multi_injury_hold(injury, injuries):

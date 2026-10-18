@@ -48,7 +48,7 @@ review or other shoulder activation is performed.
 ## Prescription and why LOAD
 
 **Controlled wall push-ups**, `shoulder_tendonitis_wall_push_up`: **1 × 8,
-maximum once daily**, stable wall, both hands slightly wider than shoulders,
+maximum once daily**, stable wall, hands at shoulder height and slightly wider than shoulders,
 slightly turned out, elbows below shoulders, body tall, feet fixed near wall,
 slow small pain-free elbow bend and push back. No added resistance, hands lower,
 feet further back, fatigue, automatic increase, overhead or contact work.

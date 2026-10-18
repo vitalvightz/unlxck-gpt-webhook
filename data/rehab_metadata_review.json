@@ -44812,11 +44812,11 @@
   },
   {
     "drill_id": "shoulder_tendonitis_wall_push_up",
-    "source_hash": "1a4018da8013fe7743b59eaf689bf843c7d7954dc6982264676a8ada72b3a52d",
+    "source_hash": "a073049ed28ef30c9ac7ac9af443c9cd2bf98b889629a70e4a13ad2b9a15db6e",
     "location": "shoulder",
     "injury_type": "tendonitis",
     "name": "Controlled wall push-ups",
-    "notes": "Stand facing a stable wall, close enough to reach it comfortably without leaning. Place both hands slightly wider than shoulder width, turned out slightly, with elbows below shoulders. Keep your body tall and feet fixed near the wall. Slowly bend your elbows a small comfortable amount to bring your body towards the wall, then gently push back. Keep within a pain-free range and clinician restrictions. Do not move your feet further back, lower your hands, add resistance or work to fatigue. Stop for pain, worsening symptoms during or after work, weakness or a feeling of instability.",
+    "notes": "Stand facing a stable wall, close enough to reach it comfortably without leaning. Place both hands on the wall at shoulder height, slightly wider than shoulder width, turned out slightly, with elbows below shoulders. Keep your body tall and feet fixed near the wall. Slowly bend your elbows a small comfortable amount to bring your body towards the wall, then gently push back. Keep within a pain-free range and clinician restrictions. Do not move your feet further back, lower your hands, add resistance or work to fatigue. Stop for pain, worsening symptoms during or after work, weakness or a feeling of instability.",
     "movement_archetype": "bodyweight_strength",
     "proposed": {
       "rehab_stage": "load",

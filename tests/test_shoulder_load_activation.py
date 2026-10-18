@@ -96,7 +96,7 @@ def test_new_active_injury_blocks_saved_unstarted_load(area):
 
 
 @pytest.mark.parametrize("status,other_athlete", [("resolved", False), ("open", True)])
-def test_resolved_or_other_athlete_leg_injury_does_not_hold_saved_load(status, other_athlete):
+def test_resolved_or_other_athlete_injury_does_not_hold_saved_load(status, other_athlete):
     b = bundle()
     snapshot = deepcopy(view(b).live_prescription)
     b[0].create_injury_flag(str(uuid4()) if other_athlete else b[3],
@@ -105,7 +105,7 @@ def test_resolved_or_other_athlete_leg_injury_does_not_hold_saved_load(status, o
 
 
 @pytest.mark.parametrize("status,work_state", [("started", "started"), ("done", "completed")])
-def test_second_leg_injury_preserves_started_and_completed_records(status, work_state):
+def test_second_injury_preserves_started_and_completed_records(status, work_state):
     b = bundle()
     live = view(b).live_prescription
     record = execute(b, live)
@@ -118,7 +118,7 @@ def test_second_leg_injury_preserves_started_and_completed_records(status, work_
     assert b[0].session_completions[b[3]][0] == historical
 
 
-@pytest.mark.parametrize("detail", ["suspected tear", "rupture", "acute traumatic loss of function", "recurrent instability", "dislocation", "numbness", "tingling", "unexplained weakness", "frozen shoulder", "biceps tendinopathy", "cervical radiculopathy", "labral injury", "suspected fracture"])
+@pytest.mark.parametrize("detail", ["suspected tear", "rupture", "acute traumatic loss of function", "recurrent instability", "dislocation", "numbness", "tingling", "unexplained weakness", "frozen shoulder", "biceps tendinopathy", "cervical radiculopathy", "labral injury", "suspected fracture", "AC joint injury", "osteoarthritis", "arthritis", "pins and needles", "loss of strength"])
 def test_unsupported_concerns_veto_reassuring_permission_and_completion(detail):
     b = bundle()
     b[0].injury_flags[b[3]][0]["description"] += f" {detail}"
@@ -161,7 +161,7 @@ def test_single_better_permission_or_elapsed_time_is_insufficient():
     assert view(b).open_injuries[0]["rehab_decision"]["stage"] == "restore"
 
 
-@pytest.mark.parametrize("mutation", ["permission", "episode", "worse", "medical", "restriction", "equipment", "setback", "response", "history"])
+@pytest.mark.parametrize("mutation", ["permission", "episode", "worse", "medical", "restriction", "equipment", "setback", "response", "history", "scope"])
 def test_frozen_future_rechecks_preserve_started_and_completed_history(mutation):
     b = bundle()
     live = deepcopy(view(b).live_prescription)
@@ -169,6 +169,8 @@ def test_frozen_future_rechecks_preserve_started_and_completed_history(mutation)
     row = b[0].injury_flags[b[3]][0]
     if mutation == "permission":
         report_permission(b, "not_cleared")["created_at"] = NOW.isoformat()
+    elif mutation == "scope":
+        row["description"] = "tendonitis [shoulder_scope:unknown]"
     elif mutation == "episode":
         row["episode_id"] = str(uuid4())
     elif mutation == "worse":
@@ -284,6 +286,8 @@ def test_real_restore_completion_and_existing_checkins_supply_consumer_progressi
     if eligible:
         from api.services import today_service
         tomorrow = NOW + timedelta(days=1, minutes=1)
+        b[0].upsert_today_checkin(b[3], dict(plan_id=b[4], training_day=tomorrow.date().isoformat(),
+            recommendation_state="train_as_planned", pain="none", body="good"))
         next_view = today_service.build_today_command_view(b[0], athlete_id=b[3], athlete_timezone="UTC", now=tomorrow)
         assert next_view.open_injuries[0]["rehab_decision"]["stage"] == "load"
         load = next_view.live_prescription
@@ -291,8 +295,16 @@ def test_real_restore_completion_and_existing_checkins_supply_consumer_progressi
         for status in ("started", "done"):
             done = today_service.upsert_session_completion(b[0], athlete_id=b[3], athlete_timezone="UTC", now=tomorrow,
                 payload=dict(plan_id=b[4], session_id=load["session"]["session_id"], status=status,
-                    prescription_revision=load["revision"], rehab_performance="done_as_shown", rehab_tracking="injury_checkin"))
+                    prescription_revision=load["revision"], rehab_tracking="injury_checkin",
+                    **({"rehab_performance": "done_as_shown"} if status == "done" else {})))
         assert done["status"] == "done"
+        _, load_contexts = build_rehab_response_contexts(b[0], athlete_id=b[3], plan_row=b[0].plans[b[4]],
+            training_day=tomorrow.date().isoformat(), session_id=done["session_id"], completion=done)
+        done.update(b[0].initialize_session_completion_rehab_contexts(b[3], completion_id=done["id"],
+            plan_id=b[4], session_id=done["session_id"], training_day=tomorrow.date().isoformat(), contexts=load_contexts))
+        record_reported_permission_rehab(b[0], athlete_id=b[3], plan_row=b[0].plans[b[4]], completion=done)
+        load_events = [e for e in b[0].rehab_exposures.values() if e["event_json"]["drill_id"] == OPTION.drill_id]
+        assert len(load_events) == 1 and load_events[0]["event_json"]["dose_completed"]["reps"] == 8
 
 
 
@@ -367,7 +379,7 @@ def test_full_guided_intake_generation(scope, severity, permission, eligible):
         assert "1 x 8 reps" in block and OPTION.instructions in block
 
 
-def test_no_dynamic_return_and_missing_reviewed_content_or_chair_cannot_schedule():
+def test_no_dynamic_return_and_missing_reviewed_content_or_wall_cannot_schedule():
     b = bundle(permission="sport_specific")
     row = apply_episode_observations(b[0].injury_flags[b[3]][0], list(b[0].injury_episode_events.values()), as_of=NOW)
     policy = next(p for p in load_clinical_policies() if p.policy_id == "shoulder_tendonitis")
@@ -377,3 +389,10 @@ def test_no_dynamic_return_and_missing_reviewed_content_or_chair_cannot_schedule
         decision = resolve_injury_policy(row, policies=[policy], bank=bank, equipment=equipment,
             exposures=list(b[0].rehab_exposures.values()), as_of=NOW)
         assert not decision["prescription"] or decision["prescription"]["drill_id"] != OPTION.drill_id
+
+
+@pytest.mark.parametrize("side", [None, "unknown", "bilateral"])
+def test_unknown_or_bilateral_injury_side_does_not_gain_load(side):
+    b = bundle()
+    b[0].injury_flags[b[3]][0].update(side=side, body_area="Shoulder")
+    assert view(b).open_injuries[0]["rehab_decision"]["stage"] != "load"
