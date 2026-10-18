@@ -1,7 +1,7 @@
 """Minimal regression tests for the scheduled Notion sync."""
 
 import importlib.util
-from datetime import date
+from datetime import date, datetime, timedelta, timezone
 from io import BytesIO
 from urllib.error import HTTPError
 
@@ -150,7 +150,18 @@ def test_scorecard_rows_include_all_contacted_stages_and_skip_counters(monkeypat
 
 def test_scorecard_updates_three_rates_without_touching_other_blocks(monkeypatch):
     def item(stage):
-        return {"properties": {"Stage (AI Fills First)": {"select": {"name": stage}}}}
+        confirmed = {"rich_text": [{"plain_text": stage}]}
+        reply = {"date": {"start": "2026-10-17"}} if stage != "Contacted" else {"date": None}
+        accepted = {"date": {"start": "2026-10-17"}} if stage == "Accepted" else {"date": None}
+        return {"properties": {
+            "Stage (AI Fills First)": {"select": {"name": stage}},
+            "Confirmed Stage": confirmed,
+            "First Reply Confirmed At": reply,
+            "Accepted At": accepted,
+            "Registered At": {"date": None},
+            "First Meaningful Action At": {"date": None},
+        }}
+    monkeypatch.delenv("UNLXCK_APP_EVENTS_VERIFIED", raising=False)
     monkeypatch.setattr(sync, "scorecard_rows", lambda: iter(
         [item("Contacted")] * 48 + [item("Replied")] * 11 + [item("Accepted")] * 2
     ))
@@ -179,7 +190,7 @@ def test_scorecard_updates_three_rates_without_touching_other_blocks(monkeypatch
     data = {path: body for _, path, body in writes}
     assert data["/blocks/headline-0"]["heading_2"]["rich_text"][0]["text"]["content"] == "21.3%"
     assert data["/blocks/headline-1"]["heading_2"]["rich_text"][0]["text"]["content"] == "3.3%"
-    assert data["/blocks/count-2"]["paragraph"]["rich_text"][0]["text"]["content"] == "0 of 61 fighters"
+    assert data["/blocks/count-2"]["paragraph"]["rich_text"][0]["text"]["content"] == "Awaiting verified app-event integration"
     assert "/blocks/label-0" not in data
 
 
@@ -190,3 +201,117 @@ def test_scorecard_fails_closed_when_card_missing(monkeypatch):
     monkeypatch.setattr(sync, "request", lambda *_: pytest.fail("No writes if cards are missing"))
     with pytest.raises(ValueError, match="Missing scorecard cards"):
         sync.sync_scorecard()
+
+
+def observed_row(stage="Rejected", observed="Contacted", since=None, confirmed="Contacted",
+                 reply=None, history=""):
+    def txt(value):
+        return {"rich_text": [{"plain_text": value}] if value else []}
+    return {"id": "sample", "properties": {
+        "Stage (AI Fills First)": {"select": {"name": stage}},
+        "Observed Stage": txt(observed),
+        "Observed Since": {"date": {"start": since} if since else None},
+        "Confirmed Stage": txt(confirmed),
+        "Stage Confirmed At": {"date": None},
+        "Date Contacted": {"date": {"start": "2026-10-17"}},
+        "Stage History": txt(history),
+        "First Reply Confirmed At": {"date": {"start": reply} if reply else None},
+        "Interested At": {"date": None},
+        "Accepted At": {"date": None},
+        "Rejected At": {"date": None},
+        "Registered At": {"date": None},
+        "First Meaningful Action At": {"date": None},
+    }}
+
+
+def test_debounces_stage_and_remembers_rejection_as_reply():
+    now = datetime(2026, 10, 18, 17, tzinfo=timezone.utc)
+    initial = sync.stage_changes(observed_row(), now)
+    assert initial["Observed Stage"]["rich_text"][0]["text"]["content"] == "Rejected"
+    pending = observed_row(observed="Rejected", since=(now - timedelta(minutes=4)).isoformat())
+    assert sync.stage_changes(pending, now) == {}
+    stable = observed_row(observed="Rejected", since=(now - timedelta(minutes=6)).isoformat())
+    change = sync.stage_changes(stable, now)
+    assert "First Reply Confirmed At" in change
+    assert "Rejected At" in change
+    assert "Registered At" not in change
+    assert "baseline" not in change["Stage History"]["rich_text"][0]["text"]["content"]
+
+
+def test_first_seen_stage_does_not_fabricate_historical_transition_time():
+    now = datetime(2026, 10, 18, 17, tzinfo=timezone.utc)
+    baseline = observed_row(stage="Activated", observed="Activated",
+                            confirmed="", since=(now - timedelta(minutes=6)).isoformat())
+    change = sync.stage_changes(baseline, now)
+    assert "baseline -> Activated" in change["Stage History"]["rich_text"][0]["text"]["content"]
+    assert "Interested At" not in change and "Accepted At" not in change
+    assert "Registered At" not in change and "First Meaningful Action At" not in change
+
+
+def test_previous_reply_survives_later_inactive_stage():
+    now = datetime(2026, 10, 18, 17, tzinfo=timezone.utc)
+    page = observed_row(stage="Inactive", observed="Inactive", confirmed="Replied",
+                        reply="2026-10-14T10:00:00+00:00",
+                        since=(now - timedelta(minutes=6)).isoformat())
+    change = sync.stage_changes(page, now)
+    assert "First Reply Confirmed At" not in change
+    assert "Confirmed Stage" in change
+    assert "Stage History" in change
+
+
+def test_scorecard_with_pending_stage_still_validates_cards(monkeypatch):
+    monkeypatch.setattr(sync, "scorecard_rows", lambda: iter([
+        observed_row(stage="Replied", observed="Replied",
+                     since="2026-10-18T16:59:00+00:00", confirmed="")
+    ]))
+    monkeypatch.setattr(sync, "SCORECARD_PAGE_ID", "page")
+    monkeypatch.setattr(sync, "block_children", lambda *_: iter([]))
+    with pytest.raises(ValueError, match="Missing scorecard cards"):
+        sync.sync_scorecard()
+
+
+def test_recent_external_edit_blocks_confirmation():
+    now = datetime(2026, 10, 18, 17, tzinfo=timezone.utc)
+    page = observed_row(stage="Rejected", observed="Rejected", confirmed="Contacted",
+                        since=(now - timedelta(minutes=8)).isoformat())
+    page["last_edited_time"] = (now - timedelta(minutes=2)).isoformat()
+    assert sync.stage_changes(page, now) == {}
+
+
+def test_initial_baseline_does_not_invent_reply_or_acceptance():
+    now = datetime(2026, 10, 18, 17, tzinfo=timezone.utc)
+    page = observed_row(stage="Accepted", observed="Accepted", confirmed="",
+                        since=(now - timedelta(minutes=7)).isoformat())
+    changes = sync.stage_changes(page, now)
+    assert "Confirmed Stage" in changes
+    assert "First Reply Confirmed At" not in changes
+    assert "Accepted At" not in changes
+
+
+def test_stage_history_queries_entire_pipeline(monkeypatch):
+    pages = [observed_row(stage="Inactive", observed="Inactive", confirmed="Inactive",
+                          since="2026-10-18T16:00:00+00:00")]
+    monkeypatch.setattr(sync, "all_pipeline_rows", lambda: iter(pages))
+    monkeypatch.setattr(sync, "request", lambda *_: pytest.fail("No changes expected"))
+    assert sync.sync_stage_history() == (1, 0)
+
+
+def test_accepted_transition_is_reply_but_not_automatically_interested():
+    now = datetime(2026, 10, 18, 17, tzinfo=timezone.utc)
+    page = observed_row(stage="Accepted", observed="Accepted", confirmed="Replied",
+                        since=(now - timedelta(minutes=7)).isoformat())
+    page["properties"]["Date Contacted"] = {"date": {"start": "2026-10-17"}}
+    changes = sync.stage_changes(page, now)
+    assert "First Reply Confirmed At" in changes
+    assert "Accepted At" in changes
+    assert "Interested At" not in changes
+
+
+def test_uncontacted_rejection_does_not_count_as_reply():
+    now = datetime(2026, 10, 18, 17, tzinfo=timezone.utc)
+    page = observed_row(stage="Rejected", observed="Rejected", confirmed="Contacted",
+                        since=(now - timedelta(minutes=7)).isoformat())
+    page["properties"]["Date Contacted"] = {"date": None}
+    changes = sync.stage_changes(page, now)
+    assert "Confirmed Stage" in changes
+    assert "First Reply Confirmed At" not in changes
