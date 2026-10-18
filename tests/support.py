@@ -700,7 +700,11 @@ class FakeStore(InMemoryNotificationLedger, FullRowStatusReads):
 
     def update_profile(self, athlete_id: str, update: ProfileUpdateRequest) -> dict:
         profile = self.profiles[athlete_id]
+        if update.training_habits is not None and update.training_habits_revision != profile.get("training_habits_revision", 0):
+            raise HTTPException(409, "Routines changed on another device. Refresh and try again.")
         data = update.model_dump(mode="json", exclude_none=True)
+        if update.training_habits is not None:
+            data["training_habits_revision"] = update.training_habits_revision + 1
         if "record" in data:
             data["record_summary"] = data.pop("record")
         if "private_trial_acknowledged" in data:

@@ -220,3 +220,6 @@ export type DeclaredTodayInjuryCheckinResponse = Expect<Declared<Web.TodayInjury
 export type DeclaredUsernameRateLimitInfo = Expect<Declared<Web.UsernameRateLimitInfo, Api.UsernameRateLimitInfo>>;
 export type DeclaredWeeklyDayEntry = Expect<Declared<Web.WeeklyDayEntry, Api.WeeklyDayEntry>>;
 export type DeclaredWeeklySchedule = Expect<Declared<Web.WeeklySchedule, Api.WeeklySchedule>>;
+
+export type ReadAdminTimeToFirstPlanSummary = Reads<Api.AdminTimeToFirstPlanSummary, Web.AdminTimeToFirstPlanSummary>;
+export type DeclaredAdminTimeToFirstPlanSummary = Expect<Declared<Web.AdminTimeToFirstPlanSummary, Api.AdminTimeToFirstPlanSummary>>;

@@ -15,23 +15,23 @@ import tileStyles from "./training-action-tile.module.css";
 
 const label = (value: string) => value.charAt(0).toUpperCase() + value.slice(1);
 
-type Props = { accessToken: string | null; entry?: TrainingHistorySession; repeatEntry?: TrainingHistorySession; recent?: boolean; onSaved?: (row: TrainingHistorySession) => void; variant?: "compact" | "tile" };
+type Props = { accessToken: string | null; entry?: TrainingHistorySession; repeatEntry?: TrainingHistorySession; recent?: boolean; history?: TrainingHistorySession[]; quickSession?: { activity: TrainingActivity; duration_minutes: number; title: string; effort?: TrainingEffort | null }; onSaved?: (row: TrainingHistorySession) => void; variant?: "compact" | "tile" };
 
 export function LogTraining(props: Props) {
   return props.accessToken ? <LogTrainingContent key={props.accessToken} {...props} accessToken={props.accessToken} /> : null;
 }
 
-function LogTrainingContent({ accessToken, entry, repeatEntry, recent = false, onSaved, variant = "compact" }: Props & { accessToken: string }) {
+function LogTrainingContent({ accessToken, entry, repeatEntry, recent = false, history, quickSession, onSaved, variant = "compact" }: Props & { accessToken: string }) {
   const [open, setOpen] = useState(false);
   const editing = entry?.id;
   const [lastSession, setLastSession] = useState<TrainingHistorySession>();
-  const repeatSource = repeatEntry && canRepeatTraining(repeatEntry) ? repeatEntry : recent ? lastSession : undefined;
+  const repeatSource = repeatEntry && canRepeatTraining(repeatEntry) ? repeatEntry : recent ? history ? latestRepeatableTraining(history) : lastSession : undefined;
   const [repeating, setRepeating] = useState(false);
   const [previousEffort, setPreviousEffort] = useState<TrainingEffort | null>(null);
   const saving = useRef(false);
 
   useEffect(() => {
-    if (!recent) return;
+    if (!recent || history) return;
     let cancelled = false;
     void getTrainingHistory(accessToken).then(({ sessions }) => {
       if (!cancelled) {
@@ -40,7 +40,7 @@ function LogTrainingContent({ accessToken, entry, repeatEntry, recent = false, o
       }
     }).catch(() => { /* The simple action remains available if history cannot load. */ });
     return () => { cancelled = true; };
-  }, [accessToken, recent]);
+  }, [accessToken, recent, history]);
   const [activity, setActivity] = useState<TrainingActivity | "">("");
   const [duration, setDuration] = useState("");
   const [effort, setEffort] = useState<TrainingEffort | "">("");
@@ -74,7 +74,7 @@ function LogTrainingContent({ accessToken, entry, repeatEntry, recent = false, o
     return () => clearTimeout(timer);
   }, [saved]);
 
-  function startEdit(row?: TrainingHistorySession, repeat = false) {
+  function startEdit(row?: Partial<TrainingHistorySession>, repeat = false) {
     setRepeating(repeat);
     setPreviousEffort(repeat ? row?.effort ?? null : null);
     setActivity(row?.activity ?? "");
@@ -119,14 +119,17 @@ function LogTrainingContent({ accessToken, entry, repeatEntry, recent = false, o
 
   return (
     <div className={entry || repeatEntry ? styles.editControl : styles.training} role={entry || repeatEntry ? undefined : "region"} aria-label={entry ? `Manage ${entry.title}` : "Log Training"}>
-      {repeatSource ? <button className={repeatEntry ? styles.repeatButton : styles.actionRow} type="button" onClick={() => startEdit(repeatSource, true)} aria-haspopup="dialog" aria-label={repeatEntry ? `Repeat ${repeatSource.title}` : "Repeat last session"} aria-describedby={!repeatEntry ? `${fieldId}-recent` : undefined}>
+      {quickSession ? <button className={styles.actionRow} type="button" onClick={() => startEdit(quickSession, true)} aria-haspopup="dialog" aria-label={quickSession.title} aria-describedby={`${fieldId}-quick`}>
+        <span><strong>{quickSession.title}</strong><span className="muted" id={`${fieldId}-quick`}>{label(quickSession.activity)} · {quickSession.duration_minutes} min</span></span>
+        <svg className={styles.chevron} viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m9 5 7 7-7 7" /></svg>
+      </button> : repeatSource ? <button className={repeatEntry ? styles.repeatButton : styles.actionRow} type="button" onClick={() => startEdit(repeatSource, true)} aria-haspopup="dialog" aria-label={repeatEntry ? `Repeat ${repeatSource.title}` : "Repeat last session"} aria-describedby={!repeatEntry ? `${fieldId}-recent` : undefined}>
         {repeatEntry ? "Repeat" : <><span><strong>Repeat last session</strong><span className="muted" id={`${fieldId}-recent`}>{label(repeatSource.activity!)} · {repeatSource.duration_minutes} min</span></span><svg className={styles.chevron} viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m9 5 7 7-7 7" /></svg></>}
       </button> : null}
       {repeatEntry ? null : entry ? <button className={styles.editButton} type="button" onClick={() => startEdit(entry)} aria-haspopup="dialog" aria-label={`Edit ${entry.title}`} title="Edit session">
         <svg className="ex-log-edit-icon" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false"><path d="M4 20h4L18.5 9.5a2.12 2.12 0 0 0-3-3L5 17v3Z" /><path d="m14.5 7.5 3 3" /></svg>
       </button> :
         <button className={variant === "tile" ? `${tileStyles.tile} ${tileStyles.log}` : styles.actionRow} type="button" onClick={() => startEdit()} aria-haspopup="dialog" aria-label="Log Training">
-          {variant === "tile" ? <TrainingActionContent kind="log" /> : <><span><strong>{recent && repeatSource ? "Log another session" : "Log Training"}</strong><span className="muted">Sparring, boxing, roadwork, strength and more.</span></span><span aria-hidden="true">+</span></>}
+          {variant === "tile" ? <TrainingActionContent kind="log" /> : <><span><strong>{recent && (repeatSource || quickSession) ? "Log another session" : "Log Training"}</strong><span className="muted">Sparring, boxing, roadwork, strength and more.</span></span><span aria-hidden="true">+</span></>}
         </button>}
       {open ? (
         <dialog ref={dialog} className={styles.dialog} aria-label={editing ? "Edit training" : "Log Training"} onCancel={event => { if (busy) event.preventDefault(); else setOpen(false); }}>

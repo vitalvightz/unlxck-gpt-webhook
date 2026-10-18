@@ -1154,7 +1154,45 @@ class ComplianceAcceptanceRequest(BaseModel):
         return _clean_optional_text(value)
 
 
+class TrainingHabitDecision(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    weekday: int = Field(strict=True, ge=0, le=6)  # Monday = 0
+    activity: Literal["sparring", "boxing", "roadwork", "strength", "conditioning", "other"]
+    duration_minutes: int = Field(strict=True, ge=1, le=600)
+    state: Literal["confirmed", "dismissed"]
+    decided_on: date
+
+    @field_validator("decided_on", mode="before")
+    @classmethod
+    def validate_decision_day(cls, value):
+        if not isinstance(value, str) or len(value) != 10:
+            raise ValueError("Use a decision date in YYYY-MM-DD format.")
+        return date.fromisoformat(value)
+
+
+class TrainingHabitPreferences(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    enabled: bool = Field(default=True, strict=True)
+    decisions: list[TrainingHabitDecision] = Field(default_factory=list, max_length=42)
+
+    @model_validator(mode="after")
+    def unique_slots(self):
+        slots = [(item.weekday, item.activity) for item in self.decisions]
+        if len(slots) != len(set(slots)):
+            raise ValueError("Use one decision per weekday and activity.")
+        return self
+
+
 class ProfileUpdateRequest(BaseModel):
+    training_habits: TrainingHabitPreferences | None = None
+    training_habits_revision: int | None = Field(default=None, strict=True, ge=0)
+
+    @model_validator(mode="after")
+    def require_habit_revision(self):
+        if (self.training_habits is None) != (self.training_habits_revision is None):
+            raise ValueError("Send training habits and their current revision together.")
+        return self
+
     full_name: str | None = Field(default=None, max_length=ATHLETE_FULL_NAME_MAX_CHARS)
     technical_style: list[str] | None = Field(default=None, max_length=ATHLETE_STYLE_LIST_MAX_ITEMS)
     tactical_style: list[str] | None = Field(default=None, max_length=ATHLETE_STYLE_LIST_MAX_ITEMS)
@@ -1444,6 +1482,8 @@ class PushSettingsResponse(BaseModel):
 
 
 class ProfileRecord(BaseModel):
+    training_habits: TrainingHabitPreferences = Field(default_factory=TrainingHabitPreferences)
+    training_habits_revision: int = 0
     athlete_id: str
     email: str
     username: str | None = None

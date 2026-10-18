@@ -1818,6 +1818,8 @@ export type PrivateMediaSettings = {
 };
 
 export type ProfileRecord = {
+  training_habits: TrainingHabitPreferences;
+  training_habits_revision: number;
   athlete_id: string;
   email: string;
   username: string | null;
@@ -1854,6 +1856,8 @@ export type ProfileRecord = {
 };
 
 export type ProfileUpdateRequest = {
+  training_habits?: TrainingHabitPreferencesRequest | null;
+  training_habits_revision?: number | null;
   full_name?: string | null;
   technical_style?: string[] | null;
   tactical_style?: string[] | null;
@@ -2154,6 +2158,7 @@ export type SessionBlock = {
   purpose: string | null;
   why_today: string | null;
   coaching_cues: string[];
+  execution_instructions: string | null;
   regression_options: string[];
   progression_rule: string | null;
   deload_rule: string | null;
@@ -2437,6 +2442,32 @@ export type TodayInjuryDeclaration = {
   infection_signs?: string[] | null;
   coverable?: "no" | "unknown" | "yes" | null;
   friction_or_contact_problem?: "no" | "unknown" | "yes" | null;
+};
+
+export type TrainingHabitDecision = {
+  weekday: number;
+  activity: "boxing" | "conditioning" | "other" | "roadwork" | "sparring" | "strength";
+  duration_minutes: number;
+  state: "confirmed" | "dismissed";
+  decided_on: string;
+};
+
+export type TrainingHabitDecisionRequest = {
+  weekday: number;
+  activity: "boxing" | "conditioning" | "other" | "roadwork" | "sparring" | "strength";
+  duration_minutes: number;
+  state: "confirmed" | "dismissed";
+  decided_on: string;
+};
+
+export type TrainingHabitPreferences = {
+  enabled: boolean;
+  decisions: TrainingHabitDecision[];
+};
+
+export type TrainingHabitPreferencesRequest = {
+  enabled?: boolean;
+  decisions?: TrainingHabitDecisionRequest[];
 };
 
 export type TrainingHistoryResponse = {

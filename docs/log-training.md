@@ -142,3 +142,66 @@ keyboard focus/selection, accessible descriptions and axe checks at 390px.
 Beta follow-up: measure median repeat-log time from tapping Repeat to successful
 save, including effort selection and service latency. The target is under 10 seconds;
 interaction reduction alone does not establish that timing result.
+
+## Progressive training habits
+
+Today optionally learns from the existing **manual-only** history API (up to 200
+rows), then considers the last 42 athlete-local training days. No models, training
+jobs, dependencies, programme imports or new logging system are introduced.
+
+- One recent observation on today's weekday yields **Suggested today**.
+- Two distinct, consecutive weekday dates offer **Boxing every Monday?**
+- **Yes, usually** saves an editable routine. **Not always** remembers a refusal.
+- Confirmed routines produce **Your usual Monday**. They never create sessions.
+- Two later changed weekdays can offer **Switch Monday to strength?** Accepting
+  dismisses the previous routine and confirms the replacement in one write.
+- If both activities were logged on those days, it offers an additional routine;
+  it does not assume a second daily session replaced the first.
+
+Each activity/date counts once, regardless of duplicate entries or retries.
+Unconfirmed candidates rank by recency-weighted weekday frequency (14-day
+half-life), then latest matching date, then activity as a stable tie-break. One
+newer session does not automatically outrank a consistent recent pattern; repeated
+recent observations can overtake it. Explicit confirmations and today's manual
+corrections retain priority. Tentative evidence expires after 14 days without
+another matching weekday. Duration is the median of per-day medians from the
+latest three matching weekdays. A confirmed duration stays athlete-controlled.
+These are product heuristics, **not calibrated confidence levels**. Even strong
+repetition needs confirmation before it becomes a saved routine.
+
+Today's actual manual corrections suppress guesses for that day. If a matching
+confirmed routine is logged, another explicitly confirmed activity can still be
+suggested; an activity already logged is never suggested again that day. Confirmed
+coach/contact fields outrank inference. Readiness holds, modified/pull-back days,
+active injuries and withdrawn health consent suppress learned prompts. Sparring
+inference requires the live Today decision to be green and the existing clinician
+clearance level to be train_contact. This only permits a logging suggestion; it
+never starts contact or changes clearance. Existing retrospective manual log/repeat actions
+remain available. Habit settings never change contact clearance, prescriptions,
+rehab evidence, session completion or prescribed-session XP.
+
+The current form reviews every suggested session and requires today's effort.
+**Training habits** opens inline controls to pause suggestions, edit activity or
+minutes, remove routines, or allow a declined activity to be suggested again.
+Refusals persist until reset. Multiple activities can be confirmed on one weekday;
+only one suggestion/prompt is shown at a time to keep Today compact. No start
+times are inferred. Existing Plan and History entry points remain unchanged.
+
+Preferences live in the existing profile (`training_habits` and a revision), not
+in training history. Apply `20261018095110_add_training_habit_preferences.sql`
+before deploying the API. Existing profile ownership/RLS remains in force; the
+API validates a maximum of 42 unique weekday/activity decisions and performs an
+athlete-scoped compare-and-swap to reject stale-device writes. Lost-response
+retries recover by re-reading the saved intention. A failed save never pretends
+a routine was confirmed. Older APIs without these profile fields retain simple
+logging. Failed history reads and truncated 200-row responses pause new inference
+and pattern prompts. Safe confirmed shortcuts remain available from profile
+preferences, without a historical effort hint. Known logs from this view still
+prevent suggesting an already logged activity or overriding a correction.
+Confirmation records add no workload.
+
+Verification includes deterministic learning tests, profile/consent/ownership and
+revision tests, isolated SQL migration/RLS checks, API contract generation, and
+mobile browser flows for tentative suggestions, one-tap confirmation, reload,
+editing, opt-out, declines, replacement, failed saves and lost-response recovery.
+Physical iPhone/Safari and real beta behaviour remain deployment follow-ups.

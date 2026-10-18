@@ -530,6 +530,11 @@ export function getTrainingHistory(token: string, includeSkipped = false): Promi
   return readJson(includeSkipped ? "/api/training/history?include_skipped=true&limit=200" : "/api/training/history", { token });
 }
 
+/** Manual-only evidence avoids truncating habits behind prescribed sessions. */
+export function getManualTrainingHistory(token: string): Promise<{ sessions: TrainingHistorySession[] }> {
+  return readJson("/api/training/history?manual_only=true&limit=200", { token });
+}
+
 export function logExternalTraining(token: string, body: ExternalTrainingFields & { client_request_id: string; training_day?: string }): Promise<TrainingHistorySession> {
   return readJson("/api/training/sessions", { method: "POST", token, body: JSON.stringify(body) });
 }

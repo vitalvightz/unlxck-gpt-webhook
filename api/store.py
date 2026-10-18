@@ -1502,7 +1502,7 @@ class SupabaseAppStore(CommunityStoreMixin, PrivateMediaStoreMixin, CompactGener
                 fields["private_trial_ack_at"] = (
                     datetime.now(timezone.utc).isoformat() if acknowledged else None
                 )
-            for json_field in ("onboarding_draft", "nutrition_profile"):
+            for json_field in ("onboarding_draft", "nutrition_profile", "training_habits"):
                 if json_field in fields:
                     _guard_persisted_json(
                         fields[json_field],
@@ -1515,7 +1515,15 @@ class SupabaseAppStore(CommunityStoreMixin, PrivateMediaStoreMixin, CompactGener
                 return self._require_profile(athlete_id)
 
             logger.info("[store] update_profile:start athlete_id=%s fields=%s", athlete_id, sorted(fields.keys()))
-            self.client.table("profiles").update(fields).eq("id", athlete_id).execute()
+            query = self.client.table("profiles").update({
+                **fields,
+                **({"training_habits_revision": update.training_habits_revision + 1} if update.training_habits is not None else {}),
+            }).eq("id", athlete_id)
+            if update.training_habits is not None:
+                query = query.eq("training_habits_revision", update.training_habits_revision)
+            response = query.execute()
+            if update.training_habits is not None and not getattr(response, "data", None):
+                raise HTTPException(409, "Routines changed on another device. Refresh and try again.")
             profile = self._require_profile(athlete_id)
             logger.info("[store] update_profile:success athlete_id=%s", athlete_id)
             return profile

@@ -1,6 +1,7 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import { isolateFromNetwork } from "./support";
+import type { TrainingHabitPreferences } from "../lib/training-habits";
 import type { TrainingHistorySession } from "../lib/training-history";
 
 const athlete = "00000000-0000-4000-8000-000000000001";
@@ -12,23 +13,33 @@ const prescribed: TrainingHistorySession = {
   session_rpe: 7, notes: "Coach session",
 };
 
-async function setup(page: Page, baseURL: string, lostResponse: boolean | "network" = false, failMutations = false, initialSessions: TrainingHistorySession[] = [prescribed]) {
+async function setup(page: Page, baseURL: string, lostResponse: boolean | "network" = false, failMutations = false, initialSessions: TrainingHistorySession[] = [prescribed], initialHabits: TrainingHabitPreferences = { enabled: true, decisions: [] }, trainingDay = "2026-10-18") {
   await isolateFromNetwork(page, baseURL);
+  const testNow = new Date(`${trainingDay}T12:00:00Z`);
+  await page.clock.setFixedTime(testNow);
   await page.addInitScript(([key, value]) => localStorage.setItem(key, value), [storageKey, JSON.stringify({
     access_token: token, refresh_token: "test-refresh", token_type: "bearer",
-    expires_in: 86400, expires_at: Math.floor(Date.now() / 1000) + 86400,
+    expires_in: 86400, expires_at: Math.floor(testNow.getTime() / 1000) + 86400,
     user: { id: athlete, email: "fighter@example.com", aud: "authenticated", role: "authenticated", app_metadata: {}, user_metadata: {} },
   })]);
   let sessions = [...initialSessions];
   const created = new Map<string, TrainingHistorySession>();
   const submissions: Record<string, unknown>[] = [];
+  let habits = initialHabits;
+  let habitRevision = 0;
   let editAttempts = 0;
   let deleteAttempts = 0;
   await page.route("**/api/**", async route => {
     const request = route.request();
     const path = new URL(request.url()).pathname;
     const json = (body: unknown, status = 200) => route.fulfill({ status, contentType: "application/json", body: JSON.stringify(body) });
+    if (path === "/api/me" && request.method() === "PUT") {
+      const body = request.postDataJSON();
+      if (body.training_habits_revision !== habitRevision) return json({ detail: "Routines changed on another device. Refresh and try again." }, 409);
+      habits = body.training_habits; habitRevision++;
+    }
     if (path === "/api/me") return json({ profile: {
+      training_habits: habits, training_habits_revision: habitRevision,
       athlete_id: athlete, email: "fighter@example.com", full_name: "Carlos", role: "athlete", access_status: "approved",
       technical_style: ["boxing"], tactical_style: [], stance: "orthodox", professional_status: "professional", record: "",
       athlete_timezone: "Europe/London", athlete_locale: "en", appearance_mode: "dark", nutrition_profile: {},
@@ -37,7 +48,7 @@ async function setup(page: Page, baseURL: string, lostResponse: boolean | "netwo
     }, plan_count: 0, latest_plan: null, latest_intake: null, username_rate_limit: {} });
     if (path === "/api/today") return json({
       active_plan: { id: "plan-1", name: "Camp", phase: "SPP" },
-      today: { training_day: "2026-10-18", recommendation_state: "not_checked_in", decision_tier: "not_checked_in",
+      today: { training_day: trainingDay, recommendation_state: "not_checked_in", decision_tier: "not_checked_in",
         warnings: [], next_session: {}, completion_status: "not_started", session_scope: "none", session_label: "No session" },
       open_injuries: [], risk_watch: [], week_summary: {}, quick_actions: [],
     });
@@ -51,7 +62,7 @@ async function setup(page: Page, baseURL: string, lostResponse: boolean | "netwo
       submissions.push(body);
       if (!created.has(body.client_request_id)) {
         const row: TrainingHistorySession = {
-        id: `manual-${created.size}`, source: "external", training_day: body.training_day ?? "2026-10-18", status: "done",
+        id: `manual-${created.size}`, source: "external", training_day: body.training_day ?? trainingDay, status: "done",
         plan_id: null,
         title: body.activity.charAt(0).toUpperCase() + body.activity.slice(1), activity: body.activity, duration_minutes: body.duration_minutes, effort: body.effort,
       };
@@ -420,4 +431,244 @@ test("Today logging remains available without an active plan", async ({ page, ba
   await expect(page.getByRole("link", { name: "Build my plan" })).toBeVisible();
   await page.getByRole("button", { name: "Log Training", exact: true }).click();
   await expect(page.getByRole("dialog")).toBeVisible();
+});
+
+
+const mondayHistory: TrainingHistorySession[] = ["2026-10-12", "2026-10-05"].map(day => ({ ...manual, id: day, training_day: day }));
+
+async function habitSetup(page: Page, baseURL: string, rows = mondayHistory, preferences?: TrainingHabitPreferences) {
+  return setup(page, baseURL, false, false, rows, preferences, "2026-10-19");
+}
+
+test("one week yields a tentative suggestion with blank effort; no routine is created", async ({ page, baseURL }) => {
+  const submissions = await habitSetup(page, baseURL!, mondayHistory.slice(0, 1));
+  await page.goto("/today");
+  const suggestion = page.getByRole("button", { name: "Suggested today", exact: true });
+  await expect(suggestion).toContainText("Boxing · 60 min");
+  await expect(suggestion).toHaveAccessibleDescription("Boxing · 60 min");
+  await expect(page.getByText("Boxing every Monday?", { exact: true })).toHaveCount(0);
+  await suggestion.click();
+  await expect(page.getByRole("combobox", { name: "Effort", exact: true })).toContainText("Select effort");
+  expect(submissions).toHaveLength(0);
+});
+
+test("confirm a pattern in one tap, persist it and log through the same form", async ({ page, baseURL }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  const submissions = await habitSetup(page, baseURL!);
+  await page.goto("/today");
+  await expect(page.getByText("Boxing every Monday?", { exact: true })).toBeVisible();
+  await expect(page.getByText("Logged two weeks in a row.", { exact: true })).toBeVisible();
+  expect((await new AxeBuilder({ page }).include("#today-training-log").analyze()).violations).toEqual([]);
+  await page.locator("#today-training-log").scrollIntoViewIfNeeded();
+  await page.screenshot({ path: "/tmp/habit-pattern-mobile.png" });
+  await page.getByRole("button", { name: "Yes, usually", exact: true }).click();
+  await expect(page.getByRole("status").filter({ hasText: "Routine saved." })).toBeVisible();
+  expect(submissions).toHaveLength(0);
+  await expect(page.getByRole("button", { name: "Your usual Monday", exact: true })).toContainText("60 min");
+  await page.reload();
+  await page.getByRole("button", { name: "Your usual Monday", exact: true }).click();
+  await expect(page.getByRole("combobox", { name: "Effort", exact: true })).toContainText("Select effort");
+  await choose(page, page, "Effort", "Easy");
+  await page.getByRole("button", { name: "Save Session", exact: true }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  expect(submissions).toHaveLength(1);
+  expect(submissions[0]).toMatchObject({ activity: "boxing", duration_minutes: 60, effort: "easy" });
+  expect(submissions[0]).not.toHaveProperty("plan_id");
+  await expect(page.getByRole("button", { name: "Your usual Monday", exact: true })).toHaveCount(0);
+});
+
+test("Not always is remembered; routines remain editable and suggestions can pause", async ({ page, baseURL }) => {
+  await habitSetup(page, baseURL!);
+  await page.goto("/today");
+  await page.getByRole("button", { name: "Not always", exact: true }).click();
+  await page.reload();
+  await expect(page.getByText("Boxing every Monday?", { exact: true })).toHaveCount(0);
+  await page.getByText("Training habits", { exact: true }).click();
+  await page.getByRole("button", { name: "Suggest Monday Boxing again", exact: true }).click();
+  await page.getByRole("button", { name: "Yes, usually", exact: true }).click();
+  await page.getByText("Edit · 60 min", { exact: true }).click();
+  const form = page.getByRole("form", { name: "Edit Monday Boxing routine", exact: true });
+  await form.getByLabel("Minutes", { exact: true }).fill("45");
+  await form.getByRole("button", { name: "Save routine", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Your usual Monday", exact: true })).toContainText("45 min");
+  await page.getByLabel("Suggest from my history", { exact: true }).uncheck();
+  await expect(page.getByRole("button", { name: "Your usual Monday", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Repeat last session", exact: true })).toBeVisible();
+  await page.reload();
+  await expect(page.getByRole("button", { name: "Your usual Monday", exact: true })).toHaveCount(0);
+});
+
+test("preference errors do not pretend to confirm a routine", async ({ page, baseURL }) => {
+  await habitSetup(page, baseURL!);
+  await page.route("**/api/me", async route => {
+    if (route.request().method() === "PUT") return route.fulfill({ status: 503, contentType: "application/json", body: JSON.stringify({ detail: "Couldn’t save. Try again." }) });
+    await route.fallback();
+  });
+  await page.goto("/today");
+  await page.getByRole("button", { name: "Yes, usually", exact: true }).click();
+  await expect(page.getByRole("alert").filter({ hasText: "Couldn’t save" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Yes, usually", exact: true })).toBeEnabled();
+  await expect(page.getByRole("button", { name: "Your usual Monday", exact: true })).toHaveCount(0);
+});
+
+test("sparring history does not predict contact permission", async ({ page, baseURL }) => {
+  await habitSetup(page, baseURL!, mondayHistory.map(row => ({ ...row, activity: "sparring", title: "Sparring" })));
+  await page.goto("/today");
+  await expect(page.getByRole("button", { name: "Repeat last session", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Suggested today", exact: true })).toHaveCount(0);
+  await expect(page.getByText("Sparring every Monday?", { exact: true })).toHaveCount(0);
+});
+
+test("changed routines need confirmation; one-off changes do not overwrite them", async ({ page, baseURL }) => {
+  const preferences: TrainingHabitPreferences = { enabled: true, decisions: [{ weekday: 0, activity: "boxing", duration_minutes: 60, state: "confirmed", decided_on: "2026-09-20" }] };
+  const rows = mondayHistory.map(row => ({ ...row, activity: "strength" as const, title: "Strength", duration_minutes: 45 }));
+  await habitSetup(page, baseURL!, rows, preferences);
+  await page.goto("/today");
+  await expect(page.getByRole("button", { name: "Your usual Monday", exact: true })).toContainText("Boxing");
+  await expect(page.getByText("Switch Monday to strength?", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Yes, update", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Your usual Monday", exact: true })).toContainText("Strength · 45 min");
+  await page.reload();
+  await expect(page.getByRole("button", { name: "Your usual Monday", exact: true })).toContainText("Strength · 45 min");
+});
+
+for (const mode of ["coach", "injury"] as const) {
+  test(`${mode} context outranks learned logging suggestions`, async ({ page, baseURL }) => {
+    await habitSetup(page, baseURL!);
+    await page.route("**/api/today", route => route.fulfill({ contentType: "application/json", body: JSON.stringify({
+      active_plan: { id: "plan-1", name: "Camp", phase: "SPP" },
+      today: { training_day: "2026-10-19", recommendation_state: mode === "injury" ? "pull_back" : "train_as_planned",
+        decision_tier: mode === "injury" ? "stop" : "green", next_session: { coach_led_contact: mode === "coach" ? "sparring" : undefined },
+        session_scope: "today", completion_status: "not_started", session_label: "Today’s session" },
+      open_injuries: [], risk_watch: [], week_summary: {}, quick_actions: [],
+    }) }));
+    await page.goto("/today");
+    await expect(page.getByRole("button", { name: "Repeat last session", exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Suggested today", exact: true })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Yes, usually", exact: true })).toHaveCount(0);
+  });
+}
+
+test("retrying a lost routine response recovers the saved intention", async ({ page, baseURL }) => {
+  const submissions = await habitSetup(page, baseURL!);
+  const initialRead = page.waitForResponse(response => new URL(response.url()).pathname === "/api/me" && response.request().method() === "GET");
+  await page.goto("/today");
+  const initial = await (await initialRead).json();
+  let saved: TrainingHabitPreferences | undefined;
+  await page.route("**/api/me", async route => {
+    if (route.request().method() === "PUT") {
+      if (!saved) {
+        saved = route.request().postDataJSON().training_habits;
+        return route.fulfill({ status: 503, contentType: "application/json", body: JSON.stringify({ detail: "Response lost. Retry." }) });
+      }
+      return route.fulfill({ status: 409, contentType: "application/json", body: JSON.stringify({ detail: "Routines changed on another device. Refresh and try again." }) });
+    }
+    return route.fulfill({ contentType: "application/json", body: JSON.stringify({ ...initial, profile: {
+      ...initial.profile, training_habits: saved ?? initial.profile.training_habits, training_habits_revision: saved ? 1 : 0,
+    } }) });
+  });
+  await page.getByRole("button", { name: "Yes, usually", exact: true }).click();
+  await expect(page.getByRole("alert").filter({ hasText: "Response lost" })).toBeVisible();
+  await page.getByRole("button", { name: "Yes, usually", exact: true }).click();
+  await expect(page.getByRole("status").filter({ hasText: "Routine saved." })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Your usual Monday", exact: true })).toBeVisible();
+  expect(submissions).toHaveLength(0);
+});
+
+for (const requiresUpdate of [false, true]) {
+test(`sparring suggestion requires current contact clearance (update pending: ${requiresUpdate})`, async ({ page, baseURL }) => {
+  const submissions = await habitSetup(page, baseURL!, mondayHistory.map(row => ({ ...row, activity: "sparring", title: "Sparring" })));
+  await page.route("**/api/today", route => route.fulfill({ contentType: "application/json", body: JSON.stringify({
+    active_plan: { id: "plan-1", name: "Camp", phase: "SPP" },
+    today: { training_day: "2026-10-19", recommendation_state: "train_as_planned", decision_tier: "green",
+      next_session: {}, session_scope: "none", completion_status: "not_started", session_label: "No session" },
+    effective_clinician_clearance: { level: "train_contact", scopes: [], requires_update: requiresUpdate, limited_by: [] },
+    open_injuries: [], risk_watch: [], week_summary: {}, quick_actions: [],
+  }) }));
+  await page.goto("/today");
+  const suggestion = page.getByRole("button", { name: "Suggested today", exact: true });
+  if (requiresUpdate) {
+    await expect(page.getByRole("button", { name: "Repeat last session", exact: true })).toBeVisible();
+    await expect(suggestion).toHaveCount(0);
+    return;
+  }
+  await expect(suggestion).toContainText("Sparring · 60 min");
+  await suggestion.click();
+  await expect(page.getByRole("combobox", { name: "Effort", exact: true })).toContainText("Select effort");
+  expect(submissions).toHaveLength(0);
+});
+
+}
+
+test("two confirmed weekday routines remain separate logging shortcuts", async ({ page, baseURL }) => {
+  const preferences: TrainingHabitPreferences = { enabled: true, decisions: [
+    { weekday: 0, activity: "boxing", duration_minutes: 60, state: "confirmed", decided_on: "2026-09-20" },
+    { weekday: 0, activity: "strength", duration_minutes: 45, state: "confirmed", decided_on: "2026-09-20" },
+  ] };
+  const submissions = await habitSetup(page, baseURL!, mondayHistory, preferences);
+  await page.goto("/today");
+  const usual = page.getByRole("button", { name: "Your usual Monday", exact: true });
+  await expect(usual).toContainText("Boxing · 60 min");
+  await usual.click();
+  await choose(page, page, "Effort", "Easy");
+  await page.getByRole("button", { name: "Save Session", exact: true }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(usual).toContainText("Strength · 45 min");
+  await usual.click();
+  await expect(page.getByLabel("Duration (minutes)")).toHaveValue("45");
+  await expect(page.getByRole("combobox", { name: "Effort", exact: true })).toContainText("Select effort");
+  expect(submissions).toHaveLength(1);
+});
+
+test("confirmed routines survive a failed history read without detecting new patterns", async ({ page, baseURL }) => {
+  const preferences: TrainingHabitPreferences = { enabled: true, decisions: [
+    { weekday: 0, activity: "boxing", duration_minutes: 50, state: "confirmed", decided_on: "2026-09-20" },
+  ] };
+  const submissions = await habitSetup(page, baseURL!, mondayHistory, preferences);
+  await page.route("**/api/training/history**", route => route.fulfill({ status: 503, contentType: "application/json", body: JSON.stringify({ detail: "History unavailable." }) }));
+  await page.goto("/today");
+  const usual = page.getByRole("button", { name: "Your usual Monday", exact: true });
+  await expect(usual).toContainText("Boxing · 50 min");
+  await page.getByText("Training habits", { exact: true }).click();
+  await expect(page.getByText("History unavailable.", { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Yes, usually", exact: true })).toHaveCount(0);
+  await usual.click();
+  await expect(page.getByLabel("Duration (minutes)")).toHaveValue("50");
+  await expect(page.getByRole("combobox", { name: "Effort", exact: true })).toContainText("Select effort");
+  await expect(page.getByRole("dialog")).not.toContainText("Last effort:");
+  expect(submissions).toHaveLength(0);
+  await choose(page, page, "Effort", "Easy");
+  await page.getByRole("button", { name: "Save Session", exact: true }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(usual).toHaveCount(0); // The locally saved session remains known during the outage.
+  expect(submissions).toHaveLength(1);
+});
+
+test("failed history leaves simple logging available without inferred suggestions", async ({ page, baseURL }) => {
+  await habitSetup(page, baseURL!);
+  await page.route("**/api/training/history**", route => route.fulfill({ status: 503, contentType: "application/json", body: JSON.stringify({ detail: "History unavailable." }) }));
+  await page.goto("/today");
+  await page.getByText("Training habits", { exact: true }).click();
+  await expect(page.getByText("History unavailable.", { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Suggested today", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Yes, usually", exact: true })).toHaveCount(0);
+  await page.getByRole("button", { name: "Log Training", exact: true }).click();
+  await expect(page.getByRole("dialog")).toBeVisible();
+});
+
+test("history failure never restores a confirmed shortcut blocked by readiness", async ({ page, baseURL }) => {
+  const preferences: TrainingHabitPreferences = { enabled: true, decisions: [
+    { weekday: 0, activity: "boxing", duration_minutes: 50, state: "confirmed", decided_on: "2026-09-20" },
+  ] };
+  await habitSetup(page, baseURL!, mondayHistory, preferences);
+  await page.route("**/api/training/history**", route => route.fulfill({ status: 503, contentType: "application/json", body: JSON.stringify({ detail: "History unavailable." }) }));
+  await page.route("**/api/today", route => route.fulfill({ contentType: "application/json", body: JSON.stringify({
+    active_plan: { id: "plan-1", name: "Camp", phase: "SPP" },
+    today: { training_day: "2026-10-19", recommendation_state: "pull_back", decision_tier: "stop",
+      next_session: {}, session_scope: "none", completion_status: "not_started", session_label: "No session" },
+    open_injuries: [], risk_watch: [], week_summary: {}, quick_actions: [],
+  }) }));
+  await page.goto("/today");
+  await expect(page.getByRole("button", { name: "Log Training", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Your usual Monday", exact: true })).toHaveCount(0);
 });
