@@ -83,7 +83,14 @@ The backend-only per-revision RPC remains available for immediate manual repair.
    XP call fails after approval, verify the running worker credits it on replay
    and subsequent replays leave the ledger and notification count unchanged.
 
-The migration is prepared and tested locally, **not applied to a hosted database**.
+Applied and verified on **unlxckpdf** (`leienvqynijrgghhzczt`) on 2026-10-19,
+recorded as migration `20261019195932_add_tracking_and_contribution_xp`.
+The three reconciliation/discovery RPCs are service-role only; the source guard,
+deduplication indexes and XP readiness checks passed. Applying the schema did
+not change existing ledger rows or account totals. The backend schema CI check
+passed on rerun. Deploying PR2951's normal API/worker enables the new earning and
+replay paths.
+
 Use a disposable localhost PostgreSQL cluster for `tests/test_tracking_xp_postgres.py`;
 never point the test DSN at a hosted database. Tests cover migration replay,
 ownership, daily sharing, 03:00 eligibility, source provenance, measurement
