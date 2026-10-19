@@ -1055,10 +1055,10 @@ export function SessionCard({
     const mentalStops = Array.from(new Set(blocks.flatMap(block => getBlockAdjustmentDisplay(block).stopRules)));
     const mentalDrill = blocks.map(block => cleanText(block.display_name))
       .find(name => name && !sameCopy(name, title));
-    const mentalCue = cleanText(sessionMindset?.focus_cue || sessionMindset?.intent
-      || sessionMindset?.confidence_anchor);
+    // Low-load tasks show the steps only: Cue / Reset / Coach cue restate the
+    // drill and bloat the card. A constraint Context line still prints.
     const context = getSessionCoachingLines(sessionMindset).filter(line =>
-      !sameCopy(line.value, mentalCue) && !steps.some(step => sameCopy(step, line.value)));
+      line.label === "Context" && !steps.some(step => sameCopy(step, line.value)));
     return (
       <article className="sp-session sp-mental-task" data-mental-category={mentalCategory.toLowerCase()}>
         <header className="sp-mental-head">
@@ -1075,9 +1075,6 @@ export function SessionCard({
             {steps.map((instruction, index) => <li key={`${index}-${instruction}`}>{instruction}</li>)}
           </ol>
         ) : <p className="sp-session-instruction">{summary}</p>}
-        {mentalCue && !steps.some(step => sameCopy(step, mentalCue)) && !sameCopy(mentalCue, summary) ? (
-          <p className="sp-block-aside"><span className="sp-stat-label">Cue</span>{mentalCue}</p>
-        ) : null}
         {context.map(line => <p className="sp-block-aside" key={`${line.label}-${line.value}`}>
           <span className="sp-stat-label">{line.label}</span>{line.value}
         </p>)}

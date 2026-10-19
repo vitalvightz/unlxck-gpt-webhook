@@ -97,7 +97,7 @@ test("a blockless instruction card reads as the instruction, not as a Why", () =
   assert.equal(/>Recovery</.test(markup), false);
 });
 
-test("a single bank cue prints once, not as Focus + Reset + Coach cue", () => {
+test("a low-load task prints no Cue / Reset / Coach cue lines", () => {
   // The Fight Visualisation bank carries one trusted cue. Replicating it into
   // every mindset slot printed the same sentence three times on the card.
   const visualisationWithCue: StructuredSession = {
@@ -111,12 +111,12 @@ test("a single bank cue prints once, not as Focus + Reset + Coach cue", () => {
   };
   const markup = render(planWith([day("D-9", "2026-10-06", [visualisationWithCue])]));
 
-  assert.equal(markup.split("Take the space, do not chase it").length - 1, 1);
-  // …and it occupies exactly one labelled coaching line, whichever slot held it.
-  assert.equal(markup.split('sp-stat-label">Cue').length - 1, 1);
+  // Low-load cards show the steps only; mindset slots are not restated.
+  assert.equal(markup.includes("Take the space, do not chase it"), false);
+  assert.equal(markup.includes('sp-stat-label">Cue'), false);
 });
 
-test("a bank cue emitted by the server fills only the coach-cue slot", () => {
+test("a bank cue emitted by the server is not printed on a low-load task", () => {
   // Mirrors api/structured_plan_locked_merge._mindset_anchor for a bank entry
   // that carries a single `cue` and no four-part mindset block.
   const markup = render(
@@ -135,7 +135,8 @@ test("a bank cue emitted by the server fills only the coach-cue slot", () => {
     ]),
   );
 
-  assert.match(markup, />Cue</);
+  assert.equal(markup.includes(">Cue<"), false);
+  assert.equal(markup.includes(">Coach cue<"), false);
   assert.equal(markup.includes(">Focus</span>"), false);
   assert.equal(markup.includes(">Reset</span>"), false);
 });
