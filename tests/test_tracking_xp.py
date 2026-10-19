@@ -82,3 +82,48 @@ def test_failed_hardening_prevents_new_reward_rpcs(monkeypatch):
     assert tracking_xp.reconcile_training_xp(store, "athlete") == []
     tracking_xp.reconcile_contribution_xp(store, "revision")
     assert store.calls == []
+
+
+class ReplayStore(Store):
+    def __init__(self):
+        super().__init__([reward("exercise_contribution_approved", 100)])
+        self.pending = {"a": "rev-a", "b": "rev-b"}
+        self.failures = {"rev-a"}
+
+    def list_unrewarded_contribution_revisions(self, *, after_id=None, limit=50):
+        return [{"exercise_id": key, "revision_id": revision}
+                for key, revision in sorted(self.pending.items()) if after_id is None or key > after_id][:limit]
+
+    def reconcile_approved_contribution_xp(self, revision_id):
+        self.calls.append(revision_id)
+        if revision_id in self.failures:
+            raise RuntimeError("temporary XP outage")
+        self.pending = {key: value for key, value in self.pending.items() if value != revision_id}
+        return {"athlete_id": "creator", "results": self.results}
+
+
+def test_replay_recovers_missed_approval_and_revisits_failures_without_starving_later_rows(monkeypatch):
+    store = ReplayStore()
+    notifications = []
+    monkeypatch.setattr(tracking_xp, "dispatch_push_candidate", lambda store, candidate, **kw: notifications.append(candidate))
+    cursor = tracking_xp.replay_contribution_xp(store)
+    assert cursor == "b"
+    assert store.calls == ["rev-a", "rev-b"]
+    assert store.pending == {"a": "rev-a"}
+    assert len(notifications) == 1
+    assert tracking_xp.replay_contribution_xp(store, after_id=cursor) is None
+    store.failures.clear()
+    assert tracking_xp.replay_contribution_xp(store) == "a"
+    assert store.pending == {}
+    assert len(notifications) == 2
+    assert tracking_xp.replay_contribution_xp(store) is None
+    assert len(notifications) == 2
+
+
+def test_replay_keeps_cursor_on_discovery_failure_and_stops_before_next_row(monkeypatch):
+    store = ReplayStore()
+    assert tracking_xp.replay_contribution_xp(store, after_id="previous", should_stop=lambda: True) == "previous"
+    assert store.calls == []
+    monkeypatch.setattr(store, "list_unrewarded_contribution_revisions", lambda **kw: (_ for _ in ()).throw(RuntimeError("offline")))
+    assert tracking_xp.replay_contribution_xp(store, after_id="previous") == "previous"
+    assert store.calls == []

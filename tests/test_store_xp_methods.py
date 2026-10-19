@@ -199,3 +199,13 @@ def test_live_store_hardening_check_runs_once_after_success():
     ensure_xp_abuse_hardening(store)
 
     assert client.calls("validate_xp_abuse_hardening") == [("rpc", (None,))]
+
+
+def test_unrewarded_contribution_revisions_use_bounded_keyset_rpc():
+    rows = [{"exercise_id": "exercise-1", "revision_id": "revision-1"}]
+    client = RecordingClient(rpcs={"list_unrewarded_contribution_revisions": rows})
+    store = SupabaseAppStore(client, admin_emails=set())
+    assert store.list_unrewarded_contribution_revisions(after_id="cursor", limit=50) == rows
+    assert client.calls("list_unrewarded_contribution_revisions") == [
+        ("rpc", ({"p_after_id": "cursor", "p_limit": 50},)),
+    ]

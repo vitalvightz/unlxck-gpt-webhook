@@ -252,6 +252,35 @@ begin
   return jsonb_build_object('athlete_id',v_creator,'timezone',coalesce(v_zone,'UTC'),'results',jsonb_build_array(v_result));
 end; $$;
 
+-- Discover missed approvals from durable publication state. Keyset pagination
+-- lets the worker pass a failing row and revisit it on the next full scan.
+create or replace function public.list_unrewarded_contribution_revisions(
+  p_after_id uuid default null, p_limit integer default 50
+)
+returns table(exercise_id uuid, revision_id uuid)
+language plpgsql stable security invoker set search_path=pg_catalog,public as $$
+begin
+  if coalesce(auth.role(),'')<>'service_role' then raise exception 'backend only' using errcode='42501'; end if;
+  return query
+  select e.id,r.id
+  from public.community_exercises e
+  join public.community_exercise_revisions r on r.id=e.published_revision_id and r.exercise_id=e.id
+  join public.private_exercise_media m on m.id=r.media_id
+  join public.profiles p on p.id=e.creator_id and p.role::text='athlete'
+  where (p_after_id is null or e.id>p_after_id)
+    and e.attribution_consent and e.withdrawn_at is null
+    and r.status='published' and r.confirmed_at is not null and r.verified_at is not null
+    and m.provider='youtube' and r.verified_proof->>'youtube_id'=m.video_id
+    and r.verified_proof->>'youtube_verified'='true'
+    and public.community_revision_available(r.id)
+    and not exists (
+      select 1 from public.xp_awards a where a.action='exercise_contribution_approved'
+        and ((a.athlete_id=e.creator_id and split_part(a.idempotency_key,':',2)=e.id::text)
+          or split_part(a.idempotency_key,':',3)=m.video_id)
+    )
+  order by e.id limit greatest(1,least(coalesce(p_limit,50),100));
+end; $$;
+
 create or replace function public.award_athlete_xp(
   p_athlete_id uuid,
   p_action text,
@@ -514,3 +543,6 @@ revoke all on function public.reconcile_training_engagement_xp(uuid,uuid) from p
 grant execute on function public.reconcile_training_engagement_xp(uuid,uuid) to service_role;
 revoke all on function public.reconcile_approved_contribution_xp(uuid) from public,anon,authenticated;
 grant execute on function public.reconcile_approved_contribution_xp(uuid) to service_role;
+
+revoke all on function public.list_unrewarded_contribution_revisions(uuid,integer) from public,anon,authenticated;
+grant execute on function public.list_unrewarded_contribution_revisions(uuid,integer) to service_role;

@@ -256,3 +256,92 @@ def test_browser_roles_cannot_call_reward_rpcs(db):
                 db.execute("select reconcile_training_engagement_xp(%s)", (OWNER,))
         finally:
             db.execute("reset role")
+
+
+class ContributionReplayStore:
+    def __init__(self, db, *, fail_approval=False):
+        self.db = db
+        self.fail_approval = fail_approval
+
+    def validate_xp_abuse_hardening(self):
+        self.db.execute("set role service_role")
+        try:
+            return self.db.execute("select validate_xp_abuse_hardening()").fetchone()[0]
+        finally:
+            self.db.execute("reset role")
+
+    def list_unrewarded_contribution_revisions(self, *, after_id=None, limit=50):
+        self.db.execute("set role service_role")
+        try:
+            return [{"exercise_id": str(row[0]), "revision_id": str(row[1])} for row in self.db.execute(
+                "select * from list_unrewarded_contribution_revisions(%s,%s)", (after_id, limit)).fetchall()]
+        finally:
+            self.db.execute("reset role")
+
+    def reconcile_approved_contribution_xp(self, revision_id):
+        if self.fail_approval:
+            raise RuntimeError("XP RPC temporarily unavailable after publication")
+        return approve(self.db, revision_id)
+
+
+def test_replay_recovers_persisted_approval_after_xp_failure(db, monkeypatch):
+    from api.services import tracking_xp
+    captured = []
+    monkeypatch.setattr(tracking_xp, "dispatch_push_candidate", lambda store, candidate, **kw: captured.append(candidate))
+    exercise, revision = contribution(db)
+    store = ContributionReplayStore(db, fail_approval=True)
+    tracking_xp.reconcile_contribution_xp(store, revision)
+    assert db.execute("select published_revision_id from community_exercises where id=%s", (exercise,)).fetchone()[0]
+    assert db.execute("select count(*) from xp_awards").fetchone()[0] == 0
+    assert store.list_unrewarded_contribution_revisions() == [{"exercise_id": exercise, "revision_id": revision}]
+    store.fail_approval = False
+    assert tracking_xp.replay_contribution_xp(store) == exercise
+    assert db.execute("select total_xp from xp_accounts where athlete_id=%s", (OWNER,)).fetchone()[0] == 100
+    assert captured[0].profile_id == OWNER
+    assert tracking_xp.replay_contribution_xp(store) is None
+    assert len(captured) == 1
+
+
+def test_replay_discovery_skips_paid_duplicate_and_ineligible_sources(db):
+    paid_exercise, paid_revision = contribution(db)
+    approve(db, paid_revision)
+    contribution(db, owner=OTHER)  # Same canonical video, another creator.
+    for field, value in [("attribution_consent", "false"), ("withdrawn_at", "now()")]:
+        exercise, _ = contribution(db, video=uuid4().hex[:11])
+        db.execute(f"update community_exercises set {field}={value} where id=%s", (exercise,))
+    contribution(db, video=uuid4().hex[:11], status="in_review")
+    _, unverified = contribution(db, video=uuid4().hex[:11])
+    db.execute("update community_exercise_revisions set verified_at=null where id=%s", (unverified,))
+    eligible = sorted(contribution(db, video=uuid4().hex[:11]) for _ in range(3))
+    store = ContributionReplayStore(db)
+    first = store.list_unrewarded_contribution_revisions(limit=2)
+    assert [(row["exercise_id"], row["revision_id"]) for row in first] == eligible[:2]
+    rest = store.list_unrewarded_contribution_revisions(after_id=first[-1]["exercise_id"], limit=2)
+    assert [(row["exercise_id"], row["revision_id"]) for row in rest] == eligible[2:]
+    assert paid_exercise not in {row["exercise_id"] for row in first + rest}
+    assert db.execute("select count(*) from xp_awards").fetchone()[0] == 1
+
+
+def test_concurrent_replays_bank_once(tracking_database, db, monkeypatch):
+    import psycopg
+    from api.services import tracking_xp
+    contribution(db)
+    monkeypatch.setattr(tracking_xp, "dispatch_push_candidate", lambda *args, **kw: None)
+    def replay(_):
+        with psycopg.connect(tracking_database, autocommit=True) as conn:
+            return tracking_xp.replay_contribution_xp(ContributionReplayStore(conn))
+    with ThreadPoolExecutor(max_workers=4) as pool:
+        list(pool.map(replay, range(8)))
+    assert db.execute("select count(*) from xp_awards where action='exercise_contribution_approved'").fetchone()[0] == 1
+    assert db.execute("select total_xp from xp_accounts where athlete_id=%s", (OWNER,)).fetchone()[0] == 100
+
+
+def test_replay_discovery_is_backend_only(db):
+    import psycopg
+    for role in ("anon", "authenticated"):
+        db.execute(f"set role {role}")
+        try:
+            with pytest.raises(psycopg.errors.InsufficientPrivilege):
+                db.execute("select * from list_unrewarded_contribution_revisions()")
+        finally:
+            db.execute("reset role")

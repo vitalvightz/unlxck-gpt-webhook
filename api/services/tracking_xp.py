@@ -4,6 +4,7 @@ No client chooses an amount, beneficiary, milestone or notification. These
 best-effort hooks run after the authoritative product save; retries reconcile.
 """
 import logging
+from collections.abc import Callable
 from datetime import datetime, timedelta, timezone
 
 from api.services.notification_foundation import NotificationCandidate
@@ -80,3 +81,26 @@ def reconcile_contribution_xp(store, revision_id: str) -> None:
             notify_tracking_awards(store, result["athlete_id"], result.get("results") or [], result.get("timezone") or "UTC")
     except Exception:  # noqa: BLE001 - approval and publication have already succeeded
         logger.exception("[xp] approved contribution reconciliation failed revision_id=%s", revision_id)
+
+
+def replay_contribution_xp(
+    store, *, after_id: str | None = None, should_stop: Callable[[], bool] | None = None,
+) -> str | None:
+    """One bounded batch; publication state remains the durable retry source."""
+    if should_stop and should_stop():
+        return after_id
+    try:
+        ensure_xp_abuse_hardening(store)
+        rows = store.list_unrewarded_contribution_revisions(after_id=after_id, limit=50)
+    except Exception:  # noqa: BLE001 - retry discovery on the next worker sweep
+        logger.exception("[xp] contribution replay discovery failed")
+        return after_id
+    if not rows:
+        return None  # Wrap to the beginning; failed rows remain discoverable.
+    cursor = after_id
+    for row in rows:
+        if should_stop and should_stop():
+            break
+        reconcile_contribution_xp(store, str(row["revision_id"]))
+        cursor = str(row["exercise_id"])
+    return cursor

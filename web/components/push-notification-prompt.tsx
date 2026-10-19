@@ -23,18 +23,19 @@ export function DevicePushPrompt({ token, athleteId }: { token: string; athleteI
   const [setup, setSetup] = useState<Setup | null>(null);
   const [busy, setBusy] = useState(false);
   const working = useRef(false);
+  const offered = useRef(false);
   const [error, setError] = useState<string | null>(null);
   const storageKey = `unlxck:push-prompt:v1:${athleteId}`;
 
   useEffect(() => {
     let cancelled = false;
-    let offered = false;
+    offered.current = false;
     let checking = false;
     let timer: ReturnType<typeof setInterval> | undefined;
-    try { offered = window.localStorage.getItem(storageKey) === "seen"; } catch { /* Device storage is optional. */ }
+    try { offered.current = window.localStorage.getItem(storageKey) === "seen"; } catch { /* Device storage is optional. */ }
 
     async function onSaved(event: Event) {
-      if ((event as CustomEvent<{ token: string }>).detail?.token !== token || offered || checking || timer) return;
+      if ((event as CustomEvent<{ token: string }>).detail?.token !== token || offered.current || checking || timer) return;
       if (!isPushSupported() || Notification.permission !== "default") return;
       checking = true;
       try {
@@ -49,9 +50,8 @@ export function DevicePushPrompt({ token, athleteId }: { token: string; athleteI
         timer = setInterval(() => {
           if (document.visibilityState !== "visible" || document.querySelector('dialog[open], [aria-modal="true"]')) return;
           clearInterval(timer);
+          timer = undefined;
           if (cancelled || Notification.permission !== "default") return;
-          offered = true;
-          try { window.localStorage.setItem(storageKey, "seen"); } catch { /* Keep the in-memory guard. */ }
           setSetup({ public_key: settings.public_key!, registration });
         }, 500);
       } catch { /* An optional prompt must never interrupt a saved workout. */ }
@@ -70,13 +70,23 @@ export function DevicePushPrompt({ token, athleteId }: { token: string; athleteI
     const previousFocus = document.activeElement as HTMLElement | null;
     const node = dialog.current;
     const release = lockOverlayScroll();
-    node.showModal();
+    try {
+      node.showModal();
+    } catch {
+      // Navigation or another interruption must not consume this opportunity.
+      release();
+      return;
+    }
+    if (node.open) {
+      offered.current = true;
+      try { window.localStorage.setItem(storageKey, "seen"); } catch { /* Keep the in-memory guard. */ }
+    }
     return () => {
       node.close();
       release();
       if (previousFocus?.isConnected) previousFocus.focus({ preventScroll: true });
     };
-  }, [setup]);
+  }, [setup, storageKey]);
 
   async function enable() {
     if (!setup || working.current) return;

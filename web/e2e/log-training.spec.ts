@@ -113,7 +113,20 @@ for (const width of [390, 1280]) {
     const errors: string[] = [];
     page.on("pageerror", error => errors.push(error.message));
     await setup(page, baseURL!);
-    await page.addInitScript(() => {
+    await page.addInitScript((interruptFirst) => {
+      const originalOpen = HTMLDialogElement.prototype.showModal;
+      let interruptNextOffer = interruptFirst;
+      HTMLDialogElement.prototype.showModal = function () {
+        if (this.getAttribute("aria-labelledby") === "push-prompt-title") {
+          document.documentElement.dataset.pushSeenBeforeOpen = localStorage.getItem("unlxck:push-prompt:v1:00000000-0000-4000-8000-000000000001") ?? "unseen";
+          if (interruptNextOffer) {
+            interruptNextOffer = false;
+            document.documentElement.dataset.pushOpenInterrupted = "true";
+            throw new DOMException("Navigation interrupted opening", "InvalidStateError");
+          }
+        }
+        originalOpen.call(this);
+      };
       Object.defineProperty(window, "PushManager", { configurable: true, value: function () {} });
       Object.defineProperty(window, "Notification", { configurable: true, value: {
         permission: "default", requestPermission: async () => "granted",
@@ -122,7 +135,7 @@ for (const width of [390, 1280]) {
         active: {}, pushManager: { getSubscription: async () => null,
           subscribe: async () => ({ toJSON: () => ({ endpoint: "https://push.example.test/device", keys: { p256dh: "key", auth: "auth" } }) }) },
       }) });
-    });
+    }, width === 390);
     await page.route("**/api/push/settings", route => route.fulfill({ json: {
       enabled: true, public_key: "AQAB", preferences: { push_enabled: true }, subscription_endpoints: [],
     } }));
@@ -140,7 +153,16 @@ for (const width of [390, 1280]) {
     await expect(takeaway).toBeVisible();
     await expect(prompt).toHaveCount(0);
     await takeaway.getByRole("button", { name: "Optional — skip anytime" }).click();
+    if (width === 390) {
+      await expect(page.locator("html")).toHaveAttribute("data-push-open-interrupted", "true");
+      await expect(prompt).toBeHidden();
+      expect(await page.evaluate(() => localStorage.getItem("unlxck:push-prompt:v1:00000000-0000-4000-8000-000000000001"))).toBeNull();
+      expect(await page.evaluate(() => document.body.style.position)).not.toBe("fixed");
+      await page.evaluate(value => window.dispatchEvent(new CustomEvent("unlxck:session-saved", { detail: { token: value } })), token);
+    }
     await expect(prompt).toBeVisible();
+    await expect(page.locator("html")).toHaveAttribute("data-push-seen-before-open", "unseen");
+    expect(await page.evaluate(() => localStorage.getItem("unlxck:push-prompt:v1:00000000-0000-4000-8000-000000000001"))).toBe("seen");
     await expect(prompt.getByRole("button", { name: "Enable notifications" })).toBeFocused();
     expect(await prompt.evaluate(node => getComputedStyle(node, "::backdrop").backdropFilter)).toBe("blur(12px)");
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);

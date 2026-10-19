@@ -2337,6 +2337,9 @@ class FakeStore(InMemoryNotificationLedger, FullRowStatusReads):
         # Source validation/concurrency live in PostgreSQL integration tests.
         return []
 
+    def list_unrewarded_contribution_revisions(self, *, after_id: str | None = None, limit: int = 50) -> list[dict]:
+        return []
+
     def reconcile_approved_contribution_xp(self, revision_id: str) -> None:
         return None
 

@@ -7,7 +7,10 @@ Its red CTA has two light sweeps; reduced motion disables them. Permission is
 requested only on the Enable click using preloaded subscription prerequisites.
 Session takeaway and sparring/safety dialogs finish first. Unsupported, blocked,
 already subscribed, server-disabled and account-paused devices are excluded.
-The offer is shown once per athlete/browser device; Settings remains available.
+The offer is recorded once per athlete/browser device only after the native
+dialog successfully opens. Navigation, a blocked open or another interruption
+before that point preserves the next opportunity; overlay locks are released on
+an unsuccessful open. Settings remains available.
 
 ## Rewards
 
@@ -48,25 +51,37 @@ including any level-up from the same reconciliation. Copy uses **UNLXCKED**.
 Existing account preferences, quiet hours, event caps, spacing and delivery
 deduplication apply. Routine daily logs have no new milestone push. XP and push
 failures never turn a successful product save or approval into a failed action.
-Later qualifying saves/retries reconcile missing training awards. Approval XP
-can be retried by calling its backend-only reconciliation RPC with the revision
-ID; no notification is emitted again for already awarded XP.
+Later qualifying saves/retries reconcile missing training awards. The existing
+generation worker automatically retries missed approval XP every 60 seconds in
+batches of at most 50 eligible contributions, independently of push settings.
+Publication state is the durable replay source, so a process restart cannot
+lose an approval. Backend-only discovery excludes already rewarded contributions
+and canonical videos. Keyset pagination wraps after the scan and revisits failed
+rows without letting one failure block later contributions. Each attempt uses
+the existing authoritative reconciliation RPC, which checks current eligibility
+and prevents duplicate credit across workers. Only newly awarded XP can notify.
+Shutdown stops replay before its next contribution; generation claiming does
+not wait for a replay batch. This requires the normal generation worker to run.
+The backend-only per-revision RPC remains available for immediate manual repair.
 
 ## Rollout and verification
 
 1. Verify existing migrations through `20261019170000_add_manual_exercise_entries.sql`
    are applied in the target database.
 2. Review/apply `20261019200000_add_tracking_and_contribution_xp.sql` before backend
-   rollout. Runtime schema requirements include both reconciliation RPCs and the
-   new source guard. Only `service_role` can execute them. No new browser grants,
-   RLS assumptions or environment variables are introduced.
+   rollout. Runtime schema requirements include both reconciliation RPCs, the
+   `list_unrewarded_contribution_revisions` discovery RPC and the new source
+   guard. Only `service_role` can execute them. No new browser grants, RLS
+   assumptions or environment variables are introduced.
 3. Deploy backend and frontend. Verify push server settings/VAPID already work;
    this change reuses them and does not provision delivery credentials.
 4. Log a first manual session: 25 + 50 XP; add measured exercise actuals: 25 XP.
    Retry and log another same-day session: no additional manual daily reward.
    Publish a manual plan: the existing first-plan milestone pays once.
 5. Approve a verified public YouTube contribution: its creator earns 100 XP.
-   Reapproval and duplicate-video submissions must award zero.
+   Reapproval and duplicate-video submissions must award zero. If the immediate
+   XP call fails after approval, verify the running worker credits it on replay
+   and subsequent replays leave the ledger and notification count unchanged.
 
 The migration is prepared and tested locally, **not applied to a hosted database**.
 Use a disposable localhost PostgreSQL cluster for `tests/test_tracking_xp_postgres.py`;

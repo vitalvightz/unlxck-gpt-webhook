@@ -6,7 +6,7 @@ import { createRoot } from "react-dom/client";
 import { DevicePushPrompt } from "./push-notification-prompt";
 import { offerPushNotifications } from "@/lib/push-prompt";
 
-async function mount(options: { permission?: string; enabled?: boolean; subscribed?: boolean; paused?: boolean; failSave?: boolean } = {}) {
+async function mount(options: { permission?: string; enabled?: boolean; subscribed?: boolean; paused?: boolean; failSave?: boolean; beforeOpen?: () => void } = {}) {
   window.localStorage.clear();
   const originalFetch = globalThis.fetch;
   let requests = 0;
@@ -24,7 +24,7 @@ async function mount(options: { permission?: string; enabled?: boolean; subscrib
     } }),
   } });
   const prototype = window.HTMLDialogElement.prototype;
-  prototype.showModal = function () { this.setAttribute("open", ""); };
+  prototype.showModal = function () { options.beforeOpen?.(); this.setAttribute("open", ""); };
   prototype.close = function () { this.removeAttribute("open"); };
   globalThis.fetch = (async (input: unknown) => {
     if (String(input).endsWith("/api/push/settings")) return new Response(JSON.stringify({
@@ -84,5 +84,39 @@ test("ignores another account's save and keeps subscription failures visible", a
     });
     assert.ok(app.container.querySelector('[role="alert"]'));
     assert.ok(app.container.querySelector("dialog[open]"));
+  } finally { await app.cleanup(); }
+});
+
+
+test("records the offer only after the dialog successfully opens", async () => {
+  let attempted = false;
+  const app = await mount({ beforeOpen: () => {
+    attempted = true;
+    assert.equal(window.localStorage.getItem("unlxck:push-prompt:v1:athlete-1"), null,
+      "preparing a dialog must not consume the offer");
+  } });
+  try {
+    await saved();
+    assert.equal(attempted, true);
+    assert.ok(app.container.querySelector("dialog[open]"));
+    assert.equal(window.localStorage.getItem("unlxck:push-prompt:v1:athlete-1"), "seen");
+  } finally { await app.cleanup(); }
+});
+
+test("an interrupted dialog open releases the overlay and preserves the next offer", async () => {
+  let interrupted = true;
+  const previousPosition = document.body.style.position;
+  const app = await mount({ beforeOpen: () => {
+    if (interrupted) throw new DOMException("Navigation interrupted the dialog", "InvalidStateError");
+  } });
+  try {
+    await saved();
+    assert.equal(window.localStorage.getItem("unlxck:push-prompt:v1:athlete-1"), null);
+    assert.equal(app.container.querySelector("dialog[open]"), null);
+    assert.equal(document.body.style.position, previousPosition);
+    interrupted = false;
+    await saved();
+    assert.ok(app.container.querySelector("dialog[open]"), "the same device gets another opportunity");
+    assert.equal(window.localStorage.getItem("unlxck:push-prompt:v1:athlete-1"), "seen");
   } finally { await app.cleanup(); }
 });

@@ -590,6 +590,7 @@ REQUIRED_FUNCTIONS: tuple[str, ...] = (
     "public.award_athlete_xp",
     "public.reconcile_training_engagement_xp",
     "public.reconcile_approved_contribution_xp",
+    "public.list_unrewarded_contribution_revisions",
     "public.enforce_tracking_xp_source",
     "public.xp_open_plan_session_weeks",
     "public.claim_notification_delivery_v2",

@@ -4889,6 +4889,12 @@ class SupabaseAppStore(CommunityStoreMixin, PrivateMediaStoreMixin, CompactGener
         }).execute()
         return getattr(response, "data", None)
 
+    def list_unrewarded_contribution_revisions(self, *, after_id: str | None = None, limit: int = 50) -> list[dict[str, Any]]:
+        response = self.client.rpc("list_unrewarded_contribution_revisions", {
+            "p_after_id": after_id, "p_limit": limit,
+        }).execute()
+        return self._mapping_rows(getattr(response, "data", None))
+
     def reconcile_approved_contribution_xp(self, revision_id: str) -> Any:
         response = self.client.rpc("reconcile_approved_contribution_xp", {
             "p_revision_id": revision_id,
