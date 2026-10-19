@@ -180,7 +180,6 @@ def get_changes(page, today):
         raise ValueError(f"Missing calculated follow-up for {page['id']}")
     now = now_london(today)
     observed = now.isoformat(timespec="seconds")
-    stage = (p["Stage (AI Fills First)"].get("select") or {}).get("name")
     first = date_value(p, "Follow-Up 1 Sent At")
     second = date_value(p, "Follow-Up 2 Sent At")
     legacy = date_value(p, "Last Follow-Up Sent")
