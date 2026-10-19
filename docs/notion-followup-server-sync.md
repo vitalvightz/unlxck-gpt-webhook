@@ -40,13 +40,56 @@ This job keeps the editable **Copy Follow-Up** text equal to the existing **Foll
 
 The systemd timer lives on the host and calls the running worker. A run may fail while the worker restarts during backend deployment; the next scheduled run will retry. Confirm Docker is installed at /usr/bin/docker; replace that path if necessary.
 
+## Safe follow-up timestamps and Notion UX
+
+The sync preserves a `Last Follow-Up Sent` date/time already written by Notion.
+If the team only edits the `Follow-Ups Sent` dropdown, the worker records the
+**observation timestamp** (Europe/London, normally within two minutes) when
+it sees a 0 → 1 or 1 → 2 increment. This is not proof of the exact Instagram
+send time. It does not backdate first-observed historical records.
+
+**Recommended one-tap Notion setup (manual, not installed by this PR):**
+
+1. In the outreach database, add a database **Button** property labelled
+   `Mark sent` to the Contacted follow-up view.
+2. Configure a confirmation: `I have sent this follow-up in Instagram`.
+3. Configure the button's `Edit property` actions to change
+   `Follow-Ups Sent` to the next count (0 → 1 or 1 → 2) **and**
+   `Last Follow-Up Sent` to `Now`. If your Notion button editor cannot
+   compute the next select value, use two labelled buttons
+   (`Sent follow-up 1` and `Sent follow-up 2`), each with both edits.
+   Do not configure a button that only updates the count.
+4. Only click after the Instagram message is actually sent, and only while
+   Stage is `Contacted`. A Notion button does **not** send the Instagram DM.
+   Test both transitions on a test page before using the button with real leads.
+5. Keep the existing two-minute worker; its count sync remains a backstop for
+   legacy dropdown edits and it must not overwrite the button's timestamp.
+
+**Historical exception queue:** the Notion view `3C. MISSING SEND DATE` shows
+Contacted leads where `Follow-Ups Sent = 1` but `Last Follow-Up Sent` is empty.
+Verify each actual send date in Instagram, then enter it manually.
+The copyable `Copy Follow-Up` field shows a check-the-date instruction rather
+than follow-up 2 until this is fixed. A Contacted record without `Date Contacted`
+also displays a clear instruction instead of sendable copy.
+
+A counter reversal clears its stale last-send timestamp; verify the corrected
+state. Stage history timestamps and follow-up send timestamps represent
+different events and must not be conflated.
+
+**Eligibility:** first follow-up is Day 3 after contact; second follow-up is
+no earlier than both Day 8 after contact **and** five full days after the
+verified first follow-up send. Do not invent historical dates or schedule an
+unverified second send simply to fill a blank calendar cell. Stopped/replied/
+accepted/completed outreach should not receive further follow-up dates.
+The worker deliberately does not change the existing Notion date formulas.
+
 ## Behavior
 
-- Follow-Ups Sent 0 → 1: update the copyable DM, mark the count as synced, and write the observed follow-up date.
+- Follow-Ups Sent 0 → 1: update the copyable DM, mark the count as synced, and write the observed follow-up timestamp only if a date was not already set.
 - Follow-Ups Sent 1 → 2: clear the DM when the formula says the sales sequence is over.
 - Replied and Accepted use the existing distinct Notion formula branches. Activated uses the existing feedback prompt.
 - Follow-up copy stays unchanged for Rejected/Inactive and the AI queue. The stage-history pass observes every pipeline stage, including records without Date Contacted.
-- On first execution, a record with an unknown historical send date is **not assigned today's date**. The job only records dates for count increases it observes *after* baseline sync.
+- On first execution, a record with an unknown historical send date is **not assigned today's date**. The job flags it in Copy Follow-Up and reports the exception count. Date/time is only recorded for count increases observed *after* baseline sync, unless a Notion button has already supplied a more exact timestamp.
 - The hidden server-owned field **Synced Follow-Ups Sent** distinguishes first observation from later changes. Do not manually edit it.
 - Once this server job runs successfully, disable the existing Notion copy-text-sync automation so two systems do not overwrite the same field.
 - Only one timer should run at a time. Errors are reported to the systemd journal and are retried at the next scheduled run.
