@@ -52,6 +52,19 @@ def _store(client: RecordingClient) -> SupabaseAppStore:
     return SupabaseAppStore(client=client, admin_emails=set())
 
 
+def test_tracking_and_approval_rpcs_only_send_source_identifiers():
+    client = RecordingClient(rpcs={"reconcile_training_engagement_xp": [], "reconcile_approved_contribution_xp": None})
+    store = _store(client)
+    assert store.reconcile_training_engagement_xp("athlete-1", manual_session_id="session-1") == []
+    assert store.reconcile_approved_contribution_xp("revision-1") is None
+    assert client.calls("reconcile_training_engagement_xp") == [
+        ("rpc", ({"p_athlete_id": "athlete-1", "p_manual_session_id": "session-1"},)),
+    ]
+    assert client.calls("reconcile_approved_contribution_xp") == [
+        ("rpc", ({"p_revision_id": "revision-1"},)),
+    ]
+
+
 def test_xp_progress_state_reads_the_account_and_newest_awards():
     award = {"id": "a1", "action": "daily_login", "amount": 5, "awarded_at": "t", "calendar_date": "2026-08-01"}
     client = RecordingClient(

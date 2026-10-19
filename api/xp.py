@@ -29,6 +29,14 @@ XpAction = Literal[
     "first_plan_completed",
     "phase_completed",
     "camp_completed",
+    "manual_training_logged",
+    "first_session_logged",
+    "first_exercise_logged",
+    "training_days_10",
+    "training_days_25",
+    "training_days_50",
+    "training_days_100",
+    "exercise_contribution_approved",
 ]
 
 XP_REWARD_AMOUNTS: dict[XpAction, int] = {
@@ -49,6 +57,14 @@ XP_REWARD_AMOUNTS: dict[XpAction, int] = {
     "first_plan_completed": 250,
     "phase_completed": 200,
     "camp_completed": 500,
+    "manual_training_logged": 25,
+    "first_session_logged": 50,
+    "first_exercise_logged": 25,
+    "training_days_10": 100,
+    "training_days_25": 150,
+    "training_days_50": 250,
+    "training_days_100": 500,
+    "exercise_contribution_approved": 100,
 }
 
 # Mirrors the xp_awards_calendar_scope_check constraint: these actions must
@@ -57,6 +73,7 @@ XP_CALENDAR_SCOPED_ACTIONS: frozenset[str] = frozenset(
     {
         "daily_login",
         "training_logged",
+        "manual_training_logged",
         "planned_session_completed",
         "full_training_week_completed",
         "readiness_checkin_completed",

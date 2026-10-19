@@ -53,7 +53,11 @@ def build_custom_plans_router(*, require_profile, get_store):
             ],
         })
         fields = plan_fields(store, body, row, athlete_id=profile.athlete_id)
-        return _map_plan_summary(publish_custom_plan(store, {**row, **fields}, profile))
+        published = publish_custom_plan(store, {**row, **fields}, profile)
+        from api.services.tracking_xp import reconcile_training_xp
+
+        reconcile_training_xp(store, profile.athlete_id, athlete_timezone=profile.athlete_timezone)
+        return _map_plan_summary(published)
 
     @router.put("/{plan_id}", response_model=CustomPlan)
     def update_custom_plan(plan_id: UUID, body: CustomPlanInput, profile=Depends(require_profile), store=Depends(get_store)):

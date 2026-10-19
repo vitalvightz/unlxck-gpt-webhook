@@ -34,6 +34,7 @@ import { SparringLogPrompt, type SparringDraft } from "@/components/today/sparri
 import { useTodayExerciseLogs } from "@/components/today/use-exercise-logs";
 import { useToast } from "@/components/toast-provider";
 import { submitTodaySessionCompletion } from "@/lib/api";
+import { offerPushNotifications } from "@/lib/push-prompt";
 import { timerAudio } from "@/lib/session-timer/audio";
 import {
   CONTACT_FORMAT_MEMORY_KEY,
@@ -897,6 +898,7 @@ export function TodaySessionPanel({
           : null,
       );
       await onRefresh();
+      if (nextStatus === "done" || nextStatus === "modified") offerPushNotifications(token);
       return true;
     } catch (error) {
       showToast(error instanceof Error ? error.message : "Session update failed.", { tone: "error" });

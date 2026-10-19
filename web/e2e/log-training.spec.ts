@@ -108,6 +108,63 @@ async function choose(scope: Page | Locator, page: Page, field: string, option: 
 }
 
 for (const width of [390, 1280]) {
+  test(`post-session notification prompt is focused and dismisses once (${width}px)`, async ({ page, baseURL }) => {
+    await page.setViewportSize({ width, height: 844 });
+    const errors: string[] = [];
+    page.on("pageerror", error => errors.push(error.message));
+    await setup(page, baseURL!);
+    await page.addInitScript(() => {
+      Object.defineProperty(window, "PushManager", { configurable: true, value: function () {} });
+      Object.defineProperty(window, "Notification", { configurable: true, value: {
+        permission: "default", requestPermission: async () => "granted",
+      } });
+      Object.defineProperty(navigator.serviceWorker, "getRegistration", { configurable: true, value: async () => ({
+        active: {}, pushManager: { getSubscription: async () => null,
+          subscribe: async () => ({ toJSON: () => ({ endpoint: "https://push.example.test/device", keys: { p256dh: "key", auth: "auth" } }) }) },
+      }) });
+    });
+    await page.route("**/api/push/settings", route => route.fulfill({ json: {
+      enabled: true, public_key: "AQAB", preferences: { push_enabled: true }, subscription_endpoints: [],
+    } }));
+    await page.goto("/plan");
+    await expect(page).toHaveTitle(/UNLXCK/i);
+    const prompt = page.getByRole("dialog", { name: "UNLXCK your next move." });
+    await expect(prompt).toHaveCount(0);
+    await page.getByRole("button", { name: "Log Training", exact: true }).click();
+    const form = page.getByRole("form", { name: "Log Training", exact: true });
+    await choose(form, page, "Activity", "Roadwork");
+    await choose(form, page, "Duration", "30");
+    await choose(form, page, "Effort", "Moderate");
+    await form.getByRole("button", { name: "Save Session", exact: true }).click();
+    const takeaway = page.getByRole("dialog", { name: "Session saved", exact: true });
+    await expect(takeaway).toBeVisible();
+    await expect(prompt).toHaveCount(0);
+    await takeaway.getByRole("button", { name: "Optional — skip anytime" }).click();
+    await expect(prompt).toBeVisible();
+    await expect(prompt.getByRole("button", { name: "Enable notifications" })).toBeFocused();
+    expect(await prompt.evaluate(node => getComputedStyle(node, "::backdrop").backdropFilter)).toBe("blur(12px)");
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    expect((await new AxeBuilder({ page }).include("dialog[open]").analyze()).violations).toEqual([]);
+    await page.screenshot({ path: test.info().outputPath(`push-prompt-${width}.png`), animations: "disabled" });
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    expect(await prompt.getByRole("button", { name: "Enable notifications" }).evaluate(node => getComputedStyle(node, "::after").animationName)).toBe("none");
+    if (width === 390) {
+      await prompt.getByRole("button", { name: "Not now", exact: true }).click();
+    } else {
+      const saved = page.waitForRequest(request => request.url().endsWith("/api/push/subscriptions") && request.method() === "POST");
+      await prompt.getByRole("button", { name: "Enable notifications" }).click();
+      expect((await saved).postDataJSON()).toMatchObject({ endpoint: "https://push.example.test/device" });
+    }
+    await expect(prompt).toHaveCount(0);
+    await page.reload();
+    // A fresh session-save event cannot re-open the one-time prompt.
+    await page.evaluate(value => window.dispatchEvent(new CustomEvent("unlxck:session-saved", { detail: { token: value } })), token);
+    await expect(prompt).toHaveCount(0);
+    expect(errors).toEqual([]);
+  });
+}
+
+for (const width of [390, 1280]) {
   test(`Plan logs work; History edits and deletes it (${width}px)`, async ({ page, baseURL }) => {
     await page.setViewportSize({ width, height: 844 });
     const errors: string[] = [];

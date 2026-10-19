@@ -26,6 +26,7 @@ from api.services.session_details import session_details
 from api.contracts.exercise_library import ExerciseLibraryResponse, ExercisePerformancesResponse
 from api.contracts.manual_exercises import ManualExerciseEntry, PerformedExerciseInput, ManualExerciseListResponse
 from api.services.manual_exercises import delete_session_exercise, list_session_exercises, save_session_exercise
+from api.services.tracking_xp import reconcile_training_xp
 from api.services.exercise_library import exercise_library, exercise_performances
 
 from api.compliance_guards import require_health_feature_access
@@ -246,7 +247,9 @@ def build_today_router(*, require_profile, get_store) -> APIRouter:
                              profile: ProfileRecord = Depends(require_profile),
                              store: AppStore = Depends(get_store)):
         require_health_feature_access(profile)
-        return save_session_exercise(store, profile.athlete_id, str(entry_id), str(exercise_entry_id), body)
+        saved = save_session_exercise(store, profile.athlete_id, str(entry_id), str(exercise_entry_id), body)
+        reconcile_training_xp(store, profile.athlete_id, athlete_timezone=profile.athlete_timezone)
+        return saved
 
     @router.delete("/api/training/sessions/{entry_id}/exercises/{exercise_entry_id}", status_code=204)
     def remove_manual_exercise(entry_id: UUID, exercise_entry_id: UUID,
@@ -794,6 +797,7 @@ def build_today_router(*, require_profile, get_store) -> APIRouter:
             payload=request_body.model_dump(exclude_none=True),
             health_consent_granted=evaluate_profile_compliance(profile).health_consent_granted,
         )
+        reconcile_training_xp(store, profile.athlete_id, athlete_timezone=profile.athlete_timezone)
         return ExerciseLogResponse(log=_exercise_log_record(row))
 
     @router.post(
@@ -820,6 +824,7 @@ def build_today_router(*, require_profile, get_store) -> APIRouter:
             health_consent_granted=evaluate_profile_compliance(profile).health_consent_granted,
             keep_existing=request_body.keep_existing,
         )
+        reconcile_training_xp(store, profile.athlete_id, athlete_timezone=profile.athlete_timezone)
         return ExerciseLogBatchResponse(logs=[_exercise_log_record(row) for row in rows])
 
     @router.get("/api/history/exercise-library", response_model=ExerciseLibraryResponse)

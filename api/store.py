@@ -4883,6 +4883,18 @@ class SupabaseAppStore(CommunityStoreMixin, PrivateMediaStoreMixin, CompactGener
 
     # --- Account XP and plan milestones (moved verbatim from the XP services) ---
 
+    def reconcile_training_engagement_xp(self, athlete_id: str, *, manual_session_id: str | None = None) -> Any:
+        response = self.client.rpc("reconcile_training_engagement_xp", {
+            "p_athlete_id": athlete_id, "p_manual_session_id": manual_session_id,
+        }).execute()
+        return getattr(response, "data", None)
+
+    def reconcile_approved_contribution_xp(self, revision_id: str) -> Any:
+        response = self.client.rpc("reconcile_approved_contribution_xp", {
+            "p_revision_id": revision_id,
+        }).execute()
+        return getattr(response, "data", None)
+
     @staticmethod
     def _mapping_rows(value: Any) -> list[dict[str, Any]]:
         if not isinstance(value, list):

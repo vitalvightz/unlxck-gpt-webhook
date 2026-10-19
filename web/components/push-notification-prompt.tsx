@@ -1,0 +1,113 @@
+"use client";
+
+import { useEffect, useRef, useState } from "react";
+import Image from "next/image";
+import { useAppSession } from "@/components/auth-provider";
+import { getPushSettings } from "@/lib/api";
+import { isPushSupported, subscribeToPushNotifications } from "@/lib/push";
+import { PUSH_PROMPT_EVENT } from "@/lib/push-prompt";
+import { lockOverlayScroll } from "@/lib/overlay-scroll-lock";
+import styles from "./push-notification-prompt.module.css";
+
+type Setup = { public_key: string; registration: ServiceWorkerRegistration };
+
+export function PushNotificationPrompt() {
+  const { session, me } = useAppSession();
+  return session?.access_token && me?.profile.role === "athlete"
+    ? <DevicePushPrompt key={`${me.profile.athlete_id}:${session.access_token}`} token={session.access_token} athleteId={me.profile.athlete_id} />
+    : null;
+}
+
+export function DevicePushPrompt({ token, athleteId }: { token: string; athleteId: string }) {
+  const dialog = useRef<HTMLDialogElement>(null);
+  const [setup, setSetup] = useState<Setup | null>(null);
+  const [busy, setBusy] = useState(false);
+  const working = useRef(false);
+  const [error, setError] = useState<string | null>(null);
+  const storageKey = `unlxck:push-prompt:v1:${athleteId}`;
+
+  useEffect(() => {
+    let cancelled = false;
+    let offered = false;
+    let checking = false;
+    let timer: ReturnType<typeof setInterval> | undefined;
+    try { offered = window.localStorage.getItem(storageKey) === "seen"; } catch { /* Device storage is optional. */ }
+
+    async function onSaved(event: Event) {
+      if ((event as CustomEvent<{ token: string }>).detail?.token !== token || offered || checking || timer) return;
+      if (!isPushSupported() || Notification.permission !== "default") return;
+      checking = true;
+      try {
+        const [settings, registration] = await Promise.all([
+          getPushSettings(token), navigator.serviceWorker.getRegistration(),
+        ]);
+        if (cancelled || !settings.enabled || !settings.public_key || !registration?.active) return;
+        if ((settings as typeof settings & { preferences?: { push_enabled?: boolean } }).preferences?.push_enabled === false) return;
+        const subscription = await registration.pushManager.getSubscription();
+        if (cancelled || subscription) return;
+        // Let completion review, sparring safety reports and other modals finish.
+        timer = setInterval(() => {
+          if (document.visibilityState !== "visible" || document.querySelector('dialog[open], [aria-modal="true"]')) return;
+          clearInterval(timer);
+          if (cancelled || Notification.permission !== "default") return;
+          offered = true;
+          try { window.localStorage.setItem(storageKey, "seen"); } catch { /* Keep the in-memory guard. */ }
+          setSetup({ public_key: settings.public_key!, registration });
+        }, 500);
+      } catch { /* An optional prompt must never interrupt a saved workout. */ }
+      finally { checking = false; }
+    }
+    window.addEventListener(PUSH_PROMPT_EVENT, onSaved);
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+      window.removeEventListener(PUSH_PROMPT_EVENT, onSaved);
+    };
+  }, [token, storageKey]);
+
+  useEffect(() => {
+    if (!setup || !dialog.current) return;
+    const previousFocus = document.activeElement as HTMLElement | null;
+    const node = dialog.current;
+    const release = lockOverlayScroll();
+    node.showModal();
+    return () => {
+      node.close();
+      release();
+      if (previousFocus?.isConnected) previousFocus.focus({ preventScroll: true });
+    };
+  }, [setup]);
+
+  async function enable() {
+    if (!setup || working.current) return;
+    working.current = true;
+    setBusy(true);
+    setError(null);
+    try {
+      // Prepared before the click so the native request keeps user activation.
+      await subscribeToPushNotifications(token, setup);
+      setSetup(null);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Unable to enable notifications. Try again in Settings.");
+    } finally { working.current = false; setBusy(false); }
+  }
+
+  if (!setup) return null;
+  return (
+    <dialog ref={dialog} className={styles.dialog} aria-labelledby="push-prompt-title" aria-describedby="push-prompt-description" aria-busy={busy}
+      onCancel={(event) => { event.preventDefault(); if (!working.current) setSetup(null); }}>
+      <div className={styles.header}>
+        <Image src="/brand/unlxck-one-angle-48.png" alt="" width={28} height={28} className={styles.mark} />
+        <p className={styles.eyebrow}>STAY READY</p>
+      </div>
+      <h2 id="push-prompt-title"><span className={styles.brand}>UNLXCK</span>{" "}<span className={styles.headline}>your next move.</span></h2>
+      <p id="push-prompt-description" className={styles.description}>Get timely training reminders, check-in nudges and key camp updates.</p>
+      {error ? <p role="alert" className={styles.error}>{error}</p> : null}
+      <button type="button" className={styles.enable} onClick={() => void enable()} disabled={busy}>
+        {busy ? "Enabling…" : "Enable notifications"}<span aria-hidden="true">↗</span>
+      </button>
+      <button type="button" className={styles.later} disabled={busy} onClick={() => setSetup(null)}>Not now</button>
+      <p className={styles.footnote}>You control what comes through in Settings.</p>
+    </dialog>
+  );
+}
