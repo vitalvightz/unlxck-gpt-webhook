@@ -49,7 +49,7 @@ def dsn():
                 as $f$ begin new.updated_at = now(); return new; end $f$;
             """)
             for migration in ("20260618120000_add_today_checkins_and_completions.sql",
-                              "20261019150000_allow_plan_free_today_checkins.sql"):
+                              "20261019061051_allow_plan_free_today_checkins.sql"):
                 setup.execute((ROOT / "supabase/migrations" / migration).read_text(encoding="utf-8"))
         yield test_dsn
     finally:

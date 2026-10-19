@@ -68,7 +68,7 @@ the session-based tier titles. A safety notice or STOP keeps its own copy.
 
 ## Database
 
-Migration `20261019150000_allow_plan_free_today_checkins.sql`:
+Migration `20261019061051_allow_plan_free_today_checkins.sql`:
 
 - `today_checkins.plan_id` and `phase` become nullable together:
   `today_checkins_phase_matches_plan` requires `(plan_id is null) = (phase is null)`.

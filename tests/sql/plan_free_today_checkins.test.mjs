@@ -28,7 +28,7 @@ await db.exec(await migration("20260618120000_add_today_checkins_and_completions
 // An existing planned check-in survives the migration untouched.
 await db.query(`insert into public.today_checkins (athlete_id, plan_id, training_day, sleep, body, pain, phase, recommendation_state)
   values ($1, $2, '2026-10-18', 'good', 'normal', 'none', 'SPP', 'train_as_planned')`, [owner, plan]);
-const change = await migration("20261019150000_allow_plan_free_today_checkins.sql");
+const change = await migration("20261019061051_allow_plan_free_today_checkins.sql");
 await db.exec(change);
 await db.exec(change); // Safe reapplication.
 
