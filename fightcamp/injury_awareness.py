@@ -33,7 +33,11 @@ def _area_label(entry: dict[str, Any]) -> str:
     location = _clean(entry.get("guided_area")) or _clean(entry.get("canonical_location"))
     if not location or location.lower() in {"unspecified", "unknown"}:
         return ""
+    # Guided areas can already carry the side ("left bicep"); strip it so the
+    # side prefix below is never doubled ("left left bicep").
     side = _clean(entry.get("side") or entry.get("laterality")).lower()
+    if side in {"left", "right", "bilateral"}:
+        location = re.sub(r"^(?:left|right|both|bilateral)\s+", "", location, flags=re.IGNORECASE) or location
     if side in {"left", "right"}:
         return f"{side} {location}".lower()
     if side == "bilateral":

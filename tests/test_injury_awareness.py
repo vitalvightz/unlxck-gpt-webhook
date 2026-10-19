@@ -109,3 +109,13 @@ def test_conversion_prompt_never_sees_non_limiting_injuries():
     )
     assert "injury_awareness" not in prompt
     assert "left shoulder" not in prompt.lower()
+
+
+def test_side_is_not_doubled_when_area_already_names_it():
+    from fightcamp.injury_awareness import awareness_plan_note, build_injury_awareness
+
+    records = build_injury_awareness(
+        [{"guided_area": "Left bicep", "side": "left", "injury_type": "cut", "training_impact": "not_limiting"}]
+    )
+    assert records == [{"area": "left bicep", "injury_type": "cut"}]
+    assert awareness_plan_note(records)["text"].startswith("Left bicep cut is logged")
