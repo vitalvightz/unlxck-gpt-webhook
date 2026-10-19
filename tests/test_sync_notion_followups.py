@@ -162,6 +162,24 @@ def test_second_button_timestamp_is_not_overwritten():
     assert "Last Follow-Up Sent" not in changed
 
 
+def test_early_second_send_is_visible_as_timing_review():
+    page = row(stage="Contacted", sent="2", synced=2,
+               first="2026-10-19T20:00:00+01:00",
+               second="2026-10-22T19:00:00+01:00")
+    changed = sync.get_changes(page, date(2026, 10, 25))
+    assert changed["Follow-Up Timing"]["rich_text"][0]["text"]["content"] == "Complete (timing review)"
+    assert changed["Safe Next Due"] == {"date": None}
+    assert changed["Copy Follow-Up"] == {"rich_text": []}
+
+
+def test_two_sent_without_first_date_marks_incomplete_history():
+    page = row(stage="Contacted", sent="2", synced=2,
+               second="2026-10-24T20:00:00+01:00")
+    changed = sync.get_changes(page, date(2026, 10, 25))
+    assert changed["Follow-Up Timing"]["rich_text"][0]["text"]["content"] == (
+        "Complete (send history incomplete)")
+
+
 def test_counter_reversal_keeps_history_and_blocks_copy():
     page = row(stage="Contacted", sent="1", synced=2,
                first="2026-10-19", second="2026-10-24", last_sent="2026-10-24")
