@@ -77,6 +77,21 @@ def test_native_button_timestamp_is_preserved():
     assert changed["Synced Follow-Ups Sent"] == {"number": 1}
 
 
+def test_second_dropdown_send_replaces_first_send_timestamp():
+    page = row(stage="Contacted", sent="2", synced=1, last_sent="2026-10-17T10:00:00+01:00")
+    page["last_edited_time"] = "2026-10-24T17:00:01Z"
+    changed = sync.get_changes(page, datetime.fromisoformat("2026-10-24T18:01:00+01:00"))
+    assert changed["Last Follow-Up Sent"] == {"date": {"start": "2026-10-24T18:01:00+01:00"}}
+
+
+def test_second_native_button_send_preserves_exact_timestamp():
+    page = row(stage="Contacted", sent="2", synced=1, last_sent="2026-10-24T17:59:50+01:00")
+    page["last_edited_time"] = "2026-10-24T16:59:50Z"
+    changed = sync.get_changes(page, datetime.fromisoformat("2026-10-24T18:01:00+01:00"))
+    assert "Last Follow-Up Sent" not in changed
+    assert changed["Synced Follow-Ups Sent"] == {"number": 2}
+
+
 def test_reversing_count_clears_stale_timestamp():
     changed = sync.get_changes(
         row(stage="Contacted", sent="1", synced=2, last_sent="2026-10-19"),
