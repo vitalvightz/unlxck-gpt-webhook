@@ -3024,6 +3024,10 @@ def _build_today_command_view(
         injuries = _with_rehab_stage(_with_safe_session_context(_with_surface_class(_open_injury_flags(store, athlete_id))),
                                     store=store, athlete_id=athlete_id)
         injuries = _with_injury_policy(injuries, store=store, athlete_id=athlete_id, training_day=training_day, as_of=assessment_as_of)
+        # Same clean, athlete-facing names as the planned path: the stored
+        # description carries internal markers and is never displayed as-is.
+        for injury in injuries:
+            injury["label"] = build_injury_label(injury.get("body_area"), injury.get("description"))
         # The plan-free check-in is read like a planned one: a failed read
         # raises (Today unavailable) rather than looking like "not checked in".
         plan_free_checkin = store.get_today_checkin(athlete_id, None, training_day)

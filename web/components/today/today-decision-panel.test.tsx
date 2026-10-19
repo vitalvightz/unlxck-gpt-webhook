@@ -414,3 +414,9 @@ test("a trigger the reason line already names is not repeated under Why", () => 
   assert.equal(html.match(/achilles tendonitis/gi)?.length, 1);
   assert.match(html, /Poor sleep/);
 });
+
+test("a trigger never shows internal injury markers", () => {
+  const html = render({ banner: STOP_BANNER, tier: "stop", triggers: ["Bruise [training_impact:not_limiting] — getting worse"] });
+  assert.match(html, /Bruise — getting worse/);
+  assert.doesNotMatch(html, /training_impact|not_limiting|\[/);
+});

@@ -658,7 +658,7 @@ def test_context_worse_injury_uses_clean_label_when_row_has_no_label():
     )
 
     assert adjustment.decision == "pull_back"
-    assert "The Shoulder strain injury is worse." in adjustment.reason
+    assert "The shoulder strain injury is worse." in adjustment.reason
     assert "strained shoulder" not in adjustment.reason
     assert "active_injury_worse" in adjustment.triggers
     _assert_card_shape(adjustment)

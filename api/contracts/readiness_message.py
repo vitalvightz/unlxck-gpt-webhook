@@ -1486,7 +1486,7 @@ def _active_context_injury_stop(context: ReadinessContext) -> tuple[str, str] | 
         if _clean(injury.get("latest_reported_status")).lower() == "worse":
             if _surface_assessment(injury).is_surface:
                 continue
-            return f"The {label} injury is worse.", flag_id
+            return f"The {_natural_injury_label(label)} injury is worse.", flag_id
     return None
 
 

@@ -2,6 +2,7 @@
 
 import { type TodayDecisionBanner, type TodayDecisionTier } from "@/lib/today";
 import type { TodaySafetyCheck } from "@/lib/types";
+import { stripInternalMarkers } from "@/lib/injury-display";
 
 function isSupersededReadinessMessage(value?: string): boolean {
   return value?.trim() ===
@@ -211,5 +212,6 @@ function splitDirective(action: string | undefined): { lead: string; rest: strin
 }
 
 function clean(values: string[] | undefined): string[] {
-  return (values ?? []).filter((value) => value.trim());
+  // Defensive: an internal injury marker must never reach the athlete.
+  return (values ?? []).map(stripInternalMarkers).filter((value) => value.trim());
 }
