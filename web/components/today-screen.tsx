@@ -416,7 +416,7 @@ export function TodayScreen() {
 
       <nav className={styles.quickActions} aria-label="Quick actions">
         <p className={styles.quickTitle}>Quick actions</p>
-        <div className={styles.quickRow}>
+        <div className={hasPlan ? styles.quickRow : `${styles.quickRow} ${styles.quickRowFour}`}>
           {/* Without a plan the round timer stays: the check-in has its own tile. */}
           {showCheckin && hasPlan ? (
             <a href="#today-checkin" className={styles.quickAction}>
@@ -447,6 +447,14 @@ export function TodayScreen() {
             <Link href="/quick-build" className={styles.quickAction}>
               <TileIcon name="plan" />
               Build S&amp;C plan
+              <span className={styles.chevron} aria-hidden="true" />
+            </Link>
+          )}
+          {hasPlan ? null : (
+            // Coach-led athletes put their coach's sessions into a plan of their own.
+            <Link href="/plans/custom" className={styles.quickAction}>
+              <TileIcon name="plan" />
+              Build my own plan
               <span className={styles.chevron} aria-hidden="true" />
             </Link>
           )}

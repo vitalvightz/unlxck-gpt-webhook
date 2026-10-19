@@ -95,6 +95,7 @@ test("without a plan, the same Today shares logging, injuries and the daily chec
     assert.ok(container.querySelector("#today-training-log [aria-label='Log Training']"));
     assert.ok(container.querySelector(".today-injury-add-trigger"));
     assert.match(container.textContent ?? "", /Build S&C plan/);
+    assert.equal(container.querySelector('[aria-label="Quick actions"] a[href="/plans/custom"]')?.textContent?.trim(), "Build my own plan");
     assert.doesNotMatch(container.textContent ?? "", /View plan/);
   } finally { await cleanup(); }
 });

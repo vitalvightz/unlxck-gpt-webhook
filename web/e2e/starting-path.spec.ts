@@ -192,6 +192,8 @@ for (const width of [320, 390, 1280]) {
     const choices = page.locator('[aria-busy="false"] > button').filter({ hasText: /Start tracking|Build a plan/ });
     const sizes = await choices.evaluateAll(elements => elements.map(element => element.getBoundingClientRect().height));
     expect(sizes).toHaveLength(2);
+    // Building an S&C plan is offered first.
+    await expect(choices.first()).toContainText("Build my training plan");
     expect(Math.abs(sizes[0] - sizes[1])).toBeLessThanOrEqual(1);
     await page.screenshot({ path: test.info().outputPath(`choice-${width}.png`) });
     const tracking = page.getByRole("button", { name: /I already have a coach/ });
@@ -206,6 +208,7 @@ for (const width of [320, 390, 1280]) {
     const quickActions = page.getByRole("navigation", { name: "Quick actions" });
     await expect(quickActions.getByRole("link", { name: "Round timer" })).toBeVisible();
     await expect(quickActions.getByRole("link", { name: "Build S&C plan" })).toBeVisible();
+    await expect(quickActions.getByRole("link", { name: "Build my own plan" })).toHaveAttribute("href", "/plans/custom");
     // The daily check-in is the same as a planned athlete's, sent plan-free.
     await expect(page.getByRole("list", { name: "Today command status" })).toContainText("Check-in");
     await expect(page.getByRole("list", { name: "Today command status" })).toContainText("Due");
@@ -341,6 +344,7 @@ for (const width of [320, 390, 1280]) {
     await expect(status).not.toContainText("Not assessed");
     await expect(page.locator("#today-checkin")).toBeVisible();
     await expect(page.getByRole("navigation", { name: "Quick actions" }).getByRole("link", { name: "View plan" })).toHaveAttribute("href", "/plans/plan-9");
+    await expect(page.getByRole("navigation", { name: "Quick actions" }).getByRole("link", { name: "Build my own plan" })).toHaveCount(0);
     // Shared sections are the same components as the no-plan state.
     await expect(page.getByRole("region", { name: "Training history", exact: true })).toBeVisible();
     await expect(page.locator("#today-injury")).toContainText("No injuries tracked.");
