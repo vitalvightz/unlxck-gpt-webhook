@@ -4,12 +4,11 @@ import { readFileSync } from "node:fs";
 
 const SOURCE = readFileSync(new URL("./compliance-gate-screen.tsx", import.meta.url), "utf8");
 
-test("profile verification uses the concise approved copy and legal links", () => {
+test("account completion uses concise copy, shared consent wording and legal links", () => {
   for (const text of [
-    "Athlete Profile Verification",
-    "Set your baseline to unlock personalized camp programming and safety protocols.",
+    "Finish your account",
     "I accept the",
-    "Allow UNLXCK to process health and recovery metrics to adapt my camp.",
+    "consentCopy.signupHealthConsentLabel",
   ]) {
     assert.ok(SOURCE.includes(text), text);
   }
@@ -18,7 +17,7 @@ test("profile verification uses the concise approved copy and legal links", () =
   assert.ok(!SOURCE.includes("Under-18s get extra privacy and safety protections"));
   assert.ok(!SOURCE.includes("Must be 18+ for full weight-cut protocols"));
   assert.ok(!SOURCE.includes("healthConsentHelp"));
-  assert.ok(!SOURCE.includes("declineNote"));
+  assert.ok(SOURCE.includes("consentCopy.declineNote"));
 });
 
 test("health consent starts unchecked but does not block account continuation", () => {

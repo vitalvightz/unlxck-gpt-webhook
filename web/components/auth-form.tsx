@@ -41,6 +41,7 @@ import { getSupabaseBrowserClient } from "@/lib/supabase";
 import type { Session } from "@supabase/supabase-js";
 
 import type { UserRole } from "@/lib/types";
+import styles from "./auth-form.module.css";
 
 /** How long Turnstile gets to pass on its own before the hint explains the disabled button. */
 const CAPTCHA_HINT_DELAY_MS = 2500;
@@ -65,6 +66,8 @@ export function AuthForm({
   const router = useRouter();
   const { isReady, session, me, replaceMe } = useAppSession();
   const emailInputRef = useRef<HTMLInputElement | null>(null);
+  const [showEmail, setShowEmail] = useState(false);
+  const [isGooglePending, setIsGooglePending] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [dateOfBirth, setDateOfBirth] = useState("");
@@ -143,10 +146,10 @@ export function AuthForm({
   }, [isReady, me, router, session]);
 
   useEffect(() => {
-    if (mode === "login" && window.matchMedia("(min-width: 721px)").matches) {
+    if (showEmail) {
       emailInputRef.current?.focus();
     }
-  }, [mode]);
+  }, [showEmail]);
 
   useEffect(() => {
     const linkStatus = readAuthLinkStatus({
@@ -185,6 +188,25 @@ export function AuthForm({
           : "Your account was created but your consent could not be saved. Sign in to finish setup.",
       );
       return;
+    }
+  }
+
+  async function handleGoogle() {
+    if (isGooglePending) return;
+    setError(null);
+    setMessage(null);
+    setIsGooglePending(true);
+    try {
+      const { error: oauthError } = await getSupabaseBrowserClient().auth.signInWithOAuth({
+        provider: "google",
+        options: { redirectTo: buildAuthRedirectUrl("/login") },
+      });
+      if (oauthError) throw oauthError;
+      // Keep the button busy until navigation. The existing AuthProvider consumes
+      // the callback session, resolves /me and uses the same landing-route gate.
+    } catch {
+      setError(t("googleError"));
+      setIsGooglePending(false);
     }
   }
 
@@ -425,14 +447,13 @@ export function AuthForm({
   }
 
   return (
-    <section className="auth-layout">
-      <div className="auth-card">
+    <section className={styles.layout} aria-labelledby="auth-title">
+      <div className={`auth-card ${styles.content}`}>
         <div className="auth-header">
           <div>
-            <p className="kicker">{mode === "signup" ? t("createAccount") : t("welcomeBack")}</p>
-            <h2>{verificationEmail ? t("verifyTitle") : mode === "signup" ? t("startIntake") : t("continueCamp")}</h2>
+            <p className={`kicker ${styles.brand}`}>UNLXCK</p>
+            <h1 id="auth-title" className={styles.title}>{verificationEmail ? t("verifyTitle") : mode === "signup" ? t("createAccount") : t("welcomeBack")}</h1>
           </div>
-          {mode === "signup" ? <span className="badge status-badge-neutral">{t("beta")}</span> : null}
         </div>
 
         {message ? (
@@ -504,8 +525,26 @@ export function AuthForm({
               </div>
             </div>
           </form>
+        ) : !showEmail ? (
+          <div className={styles.choices} aria-busy={isGooglePending}>
+            <button type="button" className={styles.google} onClick={() => void handleGoogle()} disabled={!isReady || isGooglePending}>
+              <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24">
+                <path fill="#4285F4" d="M21.6 12.23c0-.71-.06-1.39-.18-2.05H12v3.88h5.38a4.6 4.6 0 0 1-2 3.02v2.51h3.24c1.9-1.75 2.98-4.33 2.98-7.36Z" />
+                <path fill="#34A853" d="M12 22c2.7 0 4.96-.9 6.62-2.41l-3.24-2.51c-.9.6-2.05.97-3.38.97-2.6 0-4.8-1.76-5.59-4.12H3.07v2.59A10 10 0 0 0 12 22Z" />
+                <path fill="#FBBC05" d="M6.41 13.93A6 6 0 0 1 6.1 12c0-.67.11-1.32.31-1.93V7.48H3.07A10 10 0 0 0 2 12c0 1.61.38 3.14 1.07 4.52l3.34-2.59Z" />
+                <path fill="#EA4335" d="M12 5.95c1.47 0 2.79.51 3.83 1.51l2.87-2.87A9.6 9.6 0 0 0 12 2a10 10 0 0 0-8.93 5.48l3.34 2.59C7.2 7.71 9.4 5.95 12 5.95Z" />
+              </svg>
+              {isGooglePending ? t("connectingGoogle") : t("continueGoogle")}
+            </button>
+            <button type="button" className={`secondary-button ${styles.email}`} disabled={!isReady || isGooglePending} onClick={() => { setShowEmail(true); setError(null); setMessage(null); }}>
+              {t("continueEmail")}
+            </button>
+          </div>
         ) : (
-        <form onSubmit={handleSubmit} className="auth-form-grid">
+        <form onSubmit={handleSubmit} className="auth-form-grid" id="email-auth-form">
+          <button type="button" className={`auth-text-link ${styles.back}`} disabled={isPending || isMagicLinkPending} onClick={() => { setShowEmail(false); setError(null); setMessage(null); resetCaptcha(); }}>
+            <span aria-hidden="true">← </span>{t("allOptions")}
+          </button>
           <div className="field">
             <label htmlFor="email">{t("email")}</label>
             <input
@@ -654,9 +693,6 @@ export function AuthForm({
               {isMagicLinkPending ? t("sendingLink") : t("emailLink")}
             </button>
             <div className="auth-secondary-links" aria-label={t("accountHelp")}>
-              <Link href={mode === "signup" ? "/login" : "/signup"} className="auth-text-link">
-                {mode === "signup" ? t("alreadyAccount") : t("joinBeta")}
-              </Link>
               {mode === "login" ? (
                 <Link href="/forgot-password" className="auth-text-link">
                   {t("forgotPassword")}
@@ -667,18 +703,21 @@ export function AuthForm({
         </form>
         )}
 
+        {!verificationEmail ? (
+          <Link href={mode === "signup" ? "/login" : "/signup"} className={`auth-text-link ${styles.accountLink}`}>
+            {mode === "signup" ? t("alreadyAccount") : t("joinBeta")}
+          </Link>
+        ) : null}
+
+        <div className={styles.legal}>
+          <Link href={TERMS_HREF}>{TERMS_LINK_LABEL}</Link>
+          <span aria-hidden="true">·</span>
+          <Link href={PRIVACY_HREF}>{t("privacyNotice")}</Link>
+        </div>
+
         {footerSlot}
       </div>
 
-      <div className="auth-rail">
-        <div className="hero-panel-copy">
-          <p className="eyebrow">{mode === "signup" ? t("privateBeta") : t("athleteAccess")}</p>
-          <h1>{mode === "signup" ? t("signupTitle") : t("loginTitle")}</h1>
-          {mode === "signup" ? (
-            <p>{t("signupSummary")}</p>
-          ) : null}
-        </div>
-      </div>
     </section>
   );
 }

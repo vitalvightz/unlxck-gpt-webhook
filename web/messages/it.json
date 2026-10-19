@@ -91,6 +91,11 @@
     "finalTitle": "Crea il tuo primo piano."
   },
   "Auth": {
+    "continueGoogle": "Continua con Google",
+    "continueEmail": "Continua con email",
+    "connectingGoogle": "Connessione a Google…",
+    "googleError": "Impossibile completare l’accesso con Google. Riprova o continua con email.",
+    "allOptions": "Tutte le opzioni di accesso",
     "createAccount": "Crea account",
     "welcomeBack": "Bentornato",
     "startIntake": "Inizia la valutazione",

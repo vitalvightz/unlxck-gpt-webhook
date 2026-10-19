@@ -91,6 +91,11 @@
     "finalTitle": "Crie seu primeiro plano."
   },
   "Auth": {
+    "continueGoogle": "Continuar com Google",
+    "continueEmail": "Continuar com e-mail",
+    "connectingGoogle": "Conectando ao Google…",
+    "googleError": "Não foi possível entrar com Google. Tente novamente ou continue com e-mail.",
+    "allOptions": "Todas as opções de acesso",
     "createAccount": "Criar conta",
     "welcomeBack": "Bem-vindo de volta",
     "startIntake": "Inicie a entrada de ar",

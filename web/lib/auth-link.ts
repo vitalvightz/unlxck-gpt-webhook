@@ -7,6 +7,7 @@
 // athlete staring at a blank login form.
 
 export const AUTH_LINK_FEEDBACK = {
+  oauth: "Google sign-in could not be completed. Try again or continue with email.",
   expired: "This link has expired or has already been used. Request a new one.",
   invalid: "This link is not valid. Request a new one.",
   missing: "This link is missing its verification token. Request a new one.",
@@ -68,6 +69,9 @@ function toMessage(code: string | null, description: string | null): string {
   const normalizedDescription = description?.toLowerCase() ?? "";
   if (normalizedDescription.includes("expired") || normalizedDescription.includes("has already been used")) {
     return AUTH_LINK_FEEDBACK.expired;
+  }
+  if (code === "access_denied" || code?.startsWith("oauth_")) {
+    return AUTH_LINK_FEEDBACK.oauth;
   }
 
   return AUTH_LINK_FEEDBACK.invalid;

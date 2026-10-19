@@ -7,9 +7,11 @@ import { useEffect, useId, useState } from "react";
 import { RequireAuth } from "@/components/auth-guard";
 import { useAppSession } from "@/components/auth-provider";
 import { recordCompliance } from "@/lib/api";
-import { getAthleteWorkspaceHref, getAuthenticatedLandingHref } from "@/lib/auth-routing";
+import { getAuthenticatedLandingHref } from "@/lib/auth-routing";
 import {
   hasHealthDataConsent,
+  consentCopyForBand,
+  provisionalAgeBand,
   requiresComplianceAcceptance,
   validateDateOfBirth,
 } from "@/lib/compliance";
@@ -28,7 +30,7 @@ import {
  */
 function ComplianceAcceptance() {
   const router = useRouter();
-  const { me, session, refreshMe } = useAppSession();
+  const { me, session, replaceMe, signOut } = useAppSession();
   const headingId = useId();
   const [dateOfBirth, setDateOfBirth] = useState("");
   const [acceptedTerms, setAcceptedTerms] = useState(false);
@@ -42,6 +44,7 @@ function ComplianceAcceptance() {
   const needsHealthConsent = !hasHealthDataConsent(me);
   const isPending = requiresComplianceAcceptance(me);
   const dateOfBirthError = needsDateOfBirth ? validateDateOfBirth(dateOfBirth) : null;
+  const consentCopy = consentCopyForBand(provisionalAgeBand(dateOfBirth || me?.profile.date_of_birth || ""));
   const canContinue =
     !isSubmitting &&
     !dateOfBirthError &&
@@ -58,10 +61,10 @@ function ComplianceAcceptance() {
   // Once the durable profile markers exist this route must never gate again —
   // protecting against stale links, bookmarks and a double submit.
   useEffect(() => {
-    if (role === "athlete" && !isPending && !needsHealthConsent) {
+    if (role === "athlete" && !isPending) {
       router.replace(getAuthenticatedLandingHref(me));
     }
-  }, [isPending, me, needsHealthConsent, role, router]);
+  }, [isPending, me, role, router]);
 
   async function submit() {
     if (isSubmitting) {
@@ -78,7 +81,7 @@ function ComplianceAcceptance() {
     setIsSubmitting(true);
     setError(null);
     try {
-      await recordCompliance(token, {
+      const nextMe = await recordCompliance(token, {
         ...(needsDateOfBirth ? { date_of_birth: dateOfBirth } : {}),
         ...(needsTerms ? { accept_terms: acceptedTerms } : {}),
         // Only sent when ticked. Leaving it unticked must not be recorded as a
@@ -86,8 +89,8 @@ function ComplianceAcceptance() {
         // fact from having consented and changed their mind.
         ...(needsHealthConsent && healthDataConsent ? { health_data_consent: true } : {}),
       });
-      await refreshMe();
-      router.replace(getAthleteWorkspaceHref(me));
+      replaceMe(nextMe);
+      router.replace(getAuthenticatedLandingHref(nextMe));
     } catch (submitError) {
       setError(
         submitError instanceof Error
@@ -101,10 +104,7 @@ function ComplianceAcceptance() {
   return (
     <section className="panel private-trial-panel" aria-labelledby={headingId}>
       <p className="kicker">Before you start</p>
-      <h1 id={headingId}>Athlete Profile Verification</h1>
-      <p className="muted">
-        Set your baseline to unlock personalized camp programming and safety protocols.
-      </p>
+      <h1 id={headingId}>Finish your account</h1>
 
       {error ? (
         <p className="error-banner" role="alert">
@@ -122,7 +122,12 @@ function ComplianceAcceptance() {
             value={dateOfBirth}
             onChange={(event) => setDateOfBirth(event.target.value)}
             required
+            aria-invalid={Boolean(dateOfBirth && dateOfBirthError)}
+            aria-describedby={dateOfBirth && dateOfBirthError ? "compliance-dob-error" : undefined}
           />
+          {dateOfBirth && dateOfBirthError ? (
+            <p id="compliance-dob-error" className="error-banner" role="alert">{dateOfBirthError}</p>
+          ) : null}
         </div>
       ) : null}
 
@@ -160,14 +165,20 @@ function ComplianceAcceptance() {
               checked={healthDataConsent}
               onChange={(event) => setHealthDataConsent(event.target.checked)}
             />
-            <span>Allow UNLXCK to process health and recovery metrics to adapt my camp.</span>
+            <span>{consentCopy.signupHealthConsentLabel}</span>
           </label>
+          <p className="muted auth-consent-help">{consentCopy.signupHealthConsentHelp}</p>
+          <p className="muted auth-consent-help">{consentCopy.declineNote}</p>
+          <Link href="/privacy" className="auth-text-link" target="_blank">Privacy Notice</Link>
         </div>
       ) : null}
 
       <div className="private-trial-actions">
         <button type="button" className="cta" onClick={() => void submit()} disabled={!canContinue}>
           {isSubmitting ? "Saving…" : "CONTINUE"}
+        </button>
+        <button type="button" className="auth-text-link auth-magic-link-action" disabled={isSubmitting} onClick={async () => { await signOut(); router.replace("/login"); }}>
+          Sign out
         </button>
       </div>
     </section>

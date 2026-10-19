@@ -1,0 +1,55 @@
+.layout {
+  display: grid;
+  place-items: center;
+  min-height: min(680px, calc(100svh - 180px));
+  padding: 32px 0;
+}
+
+.layout .content {
+  width: min(100%, 420px);
+  min-width: 0;
+  gap: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+}
+
+.brand { color: var(--text-secondary); letter-spacing: .22em; }
+.layout .title { margin: 10px 0 0; font-size: clamp(30px, 5vw, 40px); line-height: 1.1; letter-spacing: -.04em; }
+.choices { display: grid; gap: 12px; }
+.google, .email {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 54px;
+  border-radius: 8px;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 140ms ease, border-color 140ms ease;
+}
+.google { background: #fff; color: #121212; border: 1px solid #fff; }
+.google:hover { background: #e8e8e8; border-color: #e8e8e8; }
+.email { background: transparent; border: 1px solid var(--border-default); color: var(--text-primary); }
+.email:hover { border-color: var(--text-secondary); }
+.google:focus-visible, .email:focus-visible, .back:focus-visible { outline: 2px solid var(--text-primary); outline-offset: 4px; }
+.google:disabled, .email:disabled { opacity: .6; cursor: wait; }
+.back { justify-self: start; min-height: 44px; padding: 0; background: none; border: 0; font: inherit; cursor: pointer; }
+.accountLink { justify-self: center; display: inline-flex; align-items: center; min-height: 44px; text-align: center; }
+.legal { display: flex; justify-content: center; gap: 12px; color: var(--text-secondary); font-size: 12px; }
+.legal a { display: inline-flex; align-items: center; min-height: 32px; }
+.legal span { align-self: center; }
+/* The shared email actions are sticky in long mobile forms. Here they remain
+   in flow, so they cannot cover the consent choices or legal footer. */
+.content :global(.auth-form-actions) { position: static; margin: 4px 0 0; padding: 0; border: 0; background: none; box-shadow: none; }
+@media (max-width: 600px) {
+  .layout { align-items: start; min-height: 0; padding: 24px 4px; }
+  .layout .content { gap: 24px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .google, .email { transition: none; }
+}

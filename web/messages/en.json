@@ -91,6 +91,11 @@
     "finalTitle": "Build your first plan."
   },
   "Auth": {
+    "continueGoogle": "Continue with Google",
+    "continueEmail": "Continue with email",
+    "connectingGoogle": "Connecting to Google…",
+    "googleError": "Google sign-in could not be completed. Try again or continue with email.",
+    "allOptions": "All sign-in options",
     "createAccount": "Create account",
     "welcomeBack": "Welcome back",
     "startIntake": "Start the intake",

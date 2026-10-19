@@ -91,6 +91,11 @@
     "finalTitle": "Crée ton premier plan."
   },
   "Auth": {
+    "continueGoogle": "Continuer avec Google",
+    "continueEmail": "Continuer avec un e-mail",
+    "connectingGoogle": "Connexion à Google…",
+    "googleError": "La connexion avec Google a échoué. Réessayez ou continuez avec un e-mail.",
+    "allOptions": "Toutes les options de connexion",
     "createAccount": "Créer un compte",
     "welcomeBack": "Bon retour",
     "startIntake": "Démarrez l’admission",
