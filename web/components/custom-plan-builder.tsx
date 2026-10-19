@@ -776,7 +776,11 @@ export function CustomPlanBuilder({ accessToken, planId, onboarding = null }: { 
                   </label>
                 ))}
                 {editing.exercise.community_revision_id ? <button type="button" className="ghost-button" onClick={() => setCommunityPreview(editing.exercise.origin === 'manual' ? editing.exercise.community_revision_id ?? undefined : undefined)}>View community exercise</button> :
-                  <button type="button" className="ghost-button" disabled={!editing.exercise.name.trim()} onClick={() => setCommunityOpen(true)}>{editing.exercise.community_id ? 'Community submission' : 'Community · Private'}</button>}
+                  <div className={styles.visibility}>
+                    <p><strong>{editing.exercise.community_id ? 'Shared with community' : 'Only you can see this exercise'}</strong>
+                      <span className="muted">{editing.exercise.community_id ? 'Public once an admin approves it.' : 'Sharing is optional and needs admin approval before it goes public.'}</span></p>
+                    <button type="button" className="ghost-button" disabled={!editing.exercise.name.trim()} onClick={() => setCommunityOpen(true)}>{editing.exercise.community_id ? 'Manage community submission' : 'Share with community'}</button>
+                  </div>}
                 {editing.exercise.community_id && linkedCommunity?.id === editing.exercise.community_id && linkedCommunity.entry &&
                   communityDetailsChanged(linkedCommunity.entry, editing.exercise) ? <div role="status" className={styles.communityNotice}>
                     {linkedCommunity.entry.media_id !== editing.exercise.media_id
@@ -787,7 +791,7 @@ export function CustomPlanBuilder({ accessToken, planId, onboarding = null }: { 
                   ? <button type="button" className="ghost-button" onClick={() => setCommunityOpen(true)}>Check community submission</button> : null}
                 {editing.exercise.media_id ? <PrivateExerciseVideo token={accessToken} id={editing.exercise.media_id} name={editing.exercise.name} /> : null}
                 <button type="button" className="ghost-button" onClick={() => setVideoOpen(true)}>
-                  {editing.exercise.media_id ? "Replace video" : "Add video (optional)"}
+                  {editing.exercise.media_id ? "Replace video" : "Add YouTube demo (optional)"}
                 </button>
                 {editing.exercise.media_id ? <button type="button" className="ghost-button" onClick={() => setEditing((current) =>
                   current?.exercise.origin === "manual" ? { ...current, exercise: { ...current.exercise, media_id: null } } : current,

@@ -38,7 +38,7 @@ for(const width of [320,390,1280]) {
   const {saved}=await setup(page,baseURL!);const actions=await mockCommunity(page,entry('private'));
   await page.goto('/plans/custom');await page.getByRole('button',{name:'+ Add Session',exact:true}).click();
   await page.getByRole('button',{name:'Add exercise to Training',exact:true}).click();await page.getByRole('button',{name:'Create my exercise',exact:true}).click();await page.getByLabel('Exercise name',{exact:true}).fill('My defensive drill');
-  await page.getByRole('button',{name:'Community · Private',exact:true}).click();
+  await page.getByRole('button',{name:'Share with community',exact:true}).click();
   const consent=page.getByRole('dialog',{name:'Community exercise',exact:true});
   await expect(consent.getByRole('button',{name:'Submit for review'})).toBeDisabled();
   await consent.getByText('Equipment · None selected',{exact:true}).click();
@@ -104,16 +104,15 @@ test('Video added after submission requires a new reviewed revision',async({page
   await page.getByRole('button',{name:'+ Add Session',exact:true}).click();
   await page.getByRole('button',{name:'Add exercise to Training',exact:true}).click();await page.getByRole('button',{name:'Create my exercise',exact:true}).click();
   await page.getByLabel('Exercise name',{exact:true}).fill('My defensive drill');
-  await page.getByRole('button',{name:'Community · Private',exact:true}).click();
+  await page.getByRole('button',{name:'Share with community',exact:true}).click();
   let sheet=page.getByRole('dialog',{name:'Community exercise',exact:true});
   await expect(sheet.getByText('No video attached to this community submission.')).toBeVisible();
   await sheet.getByRole('checkbox').nth(0).check();await sheet.getByRole('checkbox').nth(1).check();
   await sheet.getByRole('button',{name:'Submit for review'}).click();
   await expect(sheet.getByText('In review',{exact:true})).toBeVisible();
   await sheet.getByRole('button',{name:'Close'}).click();
-  await page.getByRole('button',{name:'Add video (optional)'}).click();
+  await page.getByRole('button',{name:'Add YouTube demo (optional)'}).click();
   const video=page.getByRole('dialog',{name:'Demonstration video'});
-  await video.getByRole('button',{name:'YouTube link'}).click();
   await video.getByLabel('YouTube link').fill('https://www.youtube.com/watch?v=abcdefghijk');
   await video.getByLabel('Start (seconds)').fill('5');
   await video.getByLabel('End (seconds)').fill('15');

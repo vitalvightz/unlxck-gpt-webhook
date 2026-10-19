@@ -201,6 +201,11 @@
 }
 .sessionActions { display: flex; gap: 8px; flex: 0 0 auto; }
 
+/* Who can see a self-made exercise, stated before the share action. */
+.visibility { display: grid; gap: 8px; padding: 12px; border: 1px solid var(--border-default); border-radius: 12px; }
+.visibility p { display: grid; gap: 2px; margin: 0; font-size: 14px; line-height: 1.4; }
+.visibility .muted { font-size: 13px; }
+
 /* Compact, inline revision notice using the same control styles as Today. */
 .communityNotice {
   display: grid;
