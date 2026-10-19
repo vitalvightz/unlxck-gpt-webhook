@@ -51,6 +51,7 @@ import { LogTraining, manualSparringDraft } from "./log-training";
 import { TakeawayEditor } from "./session-takeaway";
 import { SparringLogPrompt, type SparringDraft } from "./today/sparring-log-prompt";
 import { TrainingSummaryCard } from "./training-summary-card";
+import { TrainingRhythm } from "./training-rhythm";
 import { filterTakeaways } from "@/lib/training-summary";
 import { canRepeatTraining, sortTrainingHistory, type TrainingHistorySession } from "@/lib/training-history";
 import { useTrainingDay } from "@/lib/use-training-day";
@@ -212,7 +213,10 @@ function SessionRows({ rows, today, token, onUpdate, onDelete, loadedFrom, loadi
       {saved ? <p className="muted" role="status">{saved}</p> : null}
       {error ? <p className="error-banner" role="alert">{error}</p> : null}
       {today ? <TrainingSummaryCard rows={rows} today={today} loadedFrom={loadedFrom}
-        loading={loadingMore} error={moreError} onLoadMore={onMore} /> : null}
+        loading={loadingMore} error={moreError} onLoadMore={onMore}>
+        {token ? <TrainingRhythm rows={rows} today={today} loadedFrom={loadedFrom} loading={loadingMore}
+          error={moreError} onLoadMore={onMore} token={token} detailsCache={detailsCache} /> : null}
+      </TrainingSummaryCard> : null}
       {week ? (
         <section className="history-summary" aria-label="Sessions in the last 7 days">
           <SummaryGroup

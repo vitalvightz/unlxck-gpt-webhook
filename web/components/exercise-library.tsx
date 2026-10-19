@@ -3,6 +3,7 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { EmptyState } from "./empty-state";
 import { TrainingBlock } from "./session-details";
+import { ExerciseProgress } from "./exercise-progress";
 import { getExercisePerformances } from "@/lib/api";
 import type { ExerciseLibraryResponse, ExercisePerformancesResponse, PersonalExercise } from "@/lib/api-schema.generated";
 import { formatAppDate } from "@/lib/date-format";
@@ -58,6 +59,7 @@ export function ExerciseDetails({ exercise, asOf, token, cache, onDismiss }: {
   const alive = useRef(false);
   const loadingMore = useRef(false);
   const heading = useId();
+  const timeline = useRef<HTMLOListElement>(null);
   const [data, setData] = useState<ExercisePerformancesResponse | null>(null);
   const [error, setError] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -108,9 +110,13 @@ export function ExerciseDetails({ exercise, asOf, token, cache, onDismiss }: {
     <div className={sheet.body} tabIndex={0} role="region" aria-label="Exercise performance record">
       <p className={sheet.quiet}>{exercise.identity_kind === "legacy" ? "One original legacy record. Movement identity across other dates is unknown." : "Saved exercise-block results, across your plans. These are not individual set records."}</p>
       {exercise.best_loads.length ? <p className={sheet.quiet}>Highest eligible recorded load by unit; not an estimated one-rep maximum.</p> : null}
+      {data ? <ExerciseProgress records={data.performances} exercise={exercise} hasMore={data.next_cursor !== null} onInspect={id => {
+        const target = [...(timeline.current?.children ?? [])].find(element => (element as HTMLElement).dataset.performance === id) as HTMLElement | undefined;
+        target?.scrollIntoView({ block: "start", behavior: "instant" }); target?.focus({ preventScroll: true });
+      }} /> : null}
       <section className={sheet.section}><h3>Performance history</h3>
         {!data && !error ? <p role="status">Loading exercise history…</p> : null}
-        {data ? <ol className={sheet.blocks}>{data.performances.map((item, index) => <TrainingBlock key={item.id} block={item.block} index={index} heading={formatAppDate(item.training_day)} />)}</ol> : null}
+        {data ? <ol ref={timeline} className={sheet.blocks}>{data.performances.map((item, index) => <TrainingBlock key={item.id} block={item.block} index={index} heading={formatAppDate(item.training_day)} recordId={item.id} />)}</ol> : null}
         {data?.performances.length === 0 ? <p className={sheet.quiet}>No remaining records for this exercise.</p> : null}
         {error ? <div role="alert"><p>{data ? "Unable to load earlier records. Your loaded records are still available." : "Unable to load exercise records. Try again."}</p><button type="button" className="secondary-button" onClick={() => { setError(false); if (data?.next_cursor) void more(); else setAttempt(value => value + 1); }}>Retry</button></div> : null}
         {data?.next_cursor && !error ? <button type="button" className="secondary-button" disabled={busy} onClick={() => void more()}>{busy ? "Loading…" : "Load earlier performances"}</button> : null}

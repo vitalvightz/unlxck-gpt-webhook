@@ -34,6 +34,9 @@ class ExercisePerformance(BaseModel):
     id: str
     training_day: str
     block: SessionDetailBlock
+    # Same eligibility and frozen-prescription resolution as the library index.
+    # Null means the record cannot supply chart evidence.
+    performed_values: ExerciseLogActual | None = None
 
 
 class ExercisePerformancesResponse(BaseModel):
