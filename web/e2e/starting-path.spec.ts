@@ -103,7 +103,9 @@ test("tracking keeps consent optional and grants it in one explicit tap inside t
   const writes = await setup(page, baseURL!, { consent: false });
   await page.goto("/get-started");
   await page.getByRole("button", { name: /I already have a coach/ }).click();
-  await expect(page).toHaveURL(/\/today$/);
+  // Tracking athletes land on Home; logging lives on Today.
+  await expect(page).toHaveURL(/\/$/);
+  await page.goto("/today");
   await page.getByRole("button", { name: "Log Training", exact: true }).click();
   const dialog = page.getByRole("dialog");
   await expect(dialog).toContainText("Training logs include health-related information");
@@ -204,7 +206,9 @@ for (const width of [320, 390, 1280]) {
     expect((await new AxeBuilder({ page }).include("main").analyze()).violations).toEqual([]);
     await page.screenshot({ path: test.info().outputPath(`choice-focus-${width}.png`) });
     await tracking.press("Enter");
-    await expect(page).toHaveURL(/\/today$/);
+    // Tracking athletes land on Home; logging lives on Today.
+    await expect(page).toHaveURL(/\/$/);
+    await page.goto("/today");
     await expect(page.locator("html")).toHaveAttribute("data-app-surface", "workspace");
     await expect(page.getByRole("button", { name: "Repeat last session", exact: true })).toHaveCount(0);
     const quickActions = page.getByRole("navigation", { name: "Quick actions" });
@@ -235,10 +239,17 @@ for (const width of [320, 390, 1280]) {
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
     expect((await new AxeBuilder({ page }).include("main").analyze()).violations).toEqual([]);
     await page.screenshot({ path: test.info().outputPath(`tracking-${width}.png`) });
+    // Home keeps its layout, filled from what was logged; no redirect to Today.
     await page.goto("/");
-    await expect(page).toHaveURL(/\/today$/);
-    await expect(page.getByRole("heading", { name: "Today", level: 1 })).toHaveCount(1);
-    await page.getByRole("navigation", { name: "Quick actions" }).getByRole("link", { name: "Build S&C plan" }).click();
+    await expect(page).toHaveURL(/\/$/);
+    // Not checked in yet, so the check-in leads; the logged session fills the strip and summary.
+    await expect(page.getByRole("heading", { name: "How are you today?", level: 1 })).toBeVisible();
+    await expect(page.getByLabel("Training status")).toContainText("1 session");
+    await expect(page.getByRole("region", { name: "Training summary" })).toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+    expect((await new AxeBuilder({ page }).include("main").analyze()).violations).toEqual([]);
+    await page.screenshot({ path: test.info().outputPath(`tracking-home-${width}.png`) });
+    await page.getByRole("link", { name: "Build S&C plan" }).first().click();
     await expect(page).toHaveURL(/\/quick-build$/);
     expect(writes[0]).toEqual({ starting_path: "tracking_first" });
     expect(writes[1]).toMatchObject({ activity: "boxing", duration_minutes: 45, effort: "moderate" });
@@ -483,7 +494,9 @@ for (const width of [320, 390, 1280]) {
     await expect(hint).toHaveCount(0);
     await page.screenshot({ path: test.info().outputPath(`start-${width}.png`) });
     await page.getByRole("button", { name: /I already have a coach/ }).click();
-    await expect(page).toHaveURL(/\/today$/);
+    // Tracking athletes land on Home; logging lives on Today.
+    await expect(page).toHaveURL(/\/$/);
+    await page.goto("/today");
     expect(writes[0]).toEqual({ starting_path: "tracking_first", technical_style: ["muay_thai"] });
     await page.getByRole("button", { name: "Log Training", exact: true }).click();
     const form = page.getByRole("form", { name: "Log Training", exact: true });
@@ -507,10 +520,26 @@ test("Other sport keeps the original log choices and saves no sport", async ({ p
   await page.goto("/get-started");
   await page.getByRole("button", { name: "Other", exact: true }).click();
   await page.getByRole("button", { name: /I already have a coach/ }).click();
-  await expect(page).toHaveURL(/\/today$/);
+  // Tracking athletes land on Home; logging lives on Today.
+  await expect(page).toHaveURL(/\/$/);
+  await page.goto("/today");
   expect(writes[0]).toEqual({ starting_path: "tracking_first" });
   await page.getByRole("button", { name: "Log Training", exact: true }).click();
   await expect(page.getByRole("group", { name: "Activity", exact: true }).locator("[data-activity]"))
     .toHaveText(["Boxing", "Sparring", "Strength", "Conditioning", "Roadwork", "Other"]);
+});
+
+test("a tracking athlete with nothing logged gets a first-session CTA on Home", async ({ page, baseURL }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await setup(page, baseURL!, { path: "tracking_first" });
+  await page.goto("/");
+  await expect(page).toHaveURL(/\/$/);
+  const hero = page.locator(".overview-decision-lead");
+  await expect(hero.getByRole("heading", { level: 1 })).toHaveText("How are you today?");
+  await expect(hero.getByRole("link", { name: "Check in" })).toHaveAttribute("href", "/today#today-checkin");
+  await expect(page.getByText("Build your fight camp in minutes.")).toHaveCount(0);
+  await expect(page.getByText("Fight countdown")).toHaveCount(0);
+  await expect(page.getByLabel("Training status")).toContainText("0 sessions");
+  await page.screenshot({ path: test.info().outputPath("tracking-home-empty.png") });
 });
 
