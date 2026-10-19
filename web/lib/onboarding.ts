@@ -224,6 +224,9 @@ export function hydratePlanRequest(me: MeResponse | null): PlanRequest {
     // The backend strips it from the request too; clearing it here stops it
     // reappearing in a form the athlete can no longer see the field for.
     ...(me.profile.is_minor ? { target_weight_kg: null } : {}),
+    // Like age, the saved profile timezone is forced after every layer so an
+    // old intake or draft cannot carry a stale zone back into Camp Setup.
+    ...(me.profile.athlete_timezone?.trim() ? { athlete_timezone: me.profile.athlete_timezone.trim() } : {}),
   };
 
   return canonicalizePerformanceFocus({
@@ -252,7 +255,7 @@ export function mergeSavedOnboardingDraft(
       stance: athlete.stance ?? me.profile.stance,
       professional_status: athlete.professional_status ?? me.profile.professional_status,
       record: athlete.record ?? me.profile.record,
-      athlete_timezone: athlete.athlete_timezone ?? me.profile.athlete_timezone,
+      athlete_timezone: me.profile.athlete_timezone?.trim() || athlete.athlete_timezone || me.profile.athlete_timezone,
       onboarding_draft: draft,
     },
   };

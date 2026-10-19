@@ -106,6 +106,22 @@ def _athlete_includes_generation_day(store: AppStore, athlete_id: str) -> bool:
     return email in _GENERATION_DAY_INCLUDED_EMAILS
 
 
+def _athlete_saved_timezone(store: AppStore, athlete_id: str) -> str:
+    """The athlete's saved profile timezone, or ``""`` when none is set yet.
+
+    The route already applies it to fresh requests; the worker re-applies it for
+    queued jobs, retries and replayed drafts so the profile refresh below never
+    tries to overwrite a saved zone (which the database guard rejects shortly
+    after training or XP activity).
+    """
+    try:
+        profile_row = store.get_profile(athlete_id)
+    except Exception:  # noqa: BLE001 - fall back to the payload's zone
+        logger.exception("[jobs] generation:saved_timezone_read_failed athlete_id=%s", athlete_id)
+        return ""
+    return str((profile_row or {}).get("athlete_timezone") or "").strip()
+
+
 def _athlete_canonical_age(store: AppStore, athlete_id: str) -> int | None:
     """The athlete's current DOB-derived age, read from the stored profile.
 
@@ -430,6 +446,11 @@ async def run_generation_job(
                 request_body.athlete.age is not None,
             )
             request_body.athlete.age = canonical_age
+        saved_timezone = await _to_thread_with_heartbeat(
+            _athlete_saved_timezone, store, athlete_id
+        )
+        if saved_timezone:
+            request_body.athlete.athlete_timezone = saved_timezone
 
         await _touch_heartbeat()
         _emit_milestone(

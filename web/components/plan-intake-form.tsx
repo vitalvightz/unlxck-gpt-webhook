@@ -813,13 +813,14 @@ function getReviewStepBlockingIssue(
   return null;
 }
 
-function syncDeviceFields(current: PlanRequest): PlanRequest {
+function syncDeviceFields(current: PlanRequest, savedTimeZone?: string | null): PlanRequest {
+  // The device zone only fills a first-time setup; it never overwrites a saved one.
   const detectedTimeZone = detectDeviceTimeZone();
   return {
     ...current,
     athlete: {
       ...current.athlete,
-      athlete_timezone: detectedTimeZone || current.athlete.athlete_timezone || "",
+      athlete_timezone: savedTimeZone?.trim() || detectedTimeZone || current.athlete.athlete_timezone || "",
     },
   };
 }
@@ -928,7 +929,7 @@ export function PlanIntakeForm() {
     if (!me || hydrated) {
       return;
     }
-    const nextForm = syncDeviceFields(hydratePlanRequest(me));
+    const nextForm = syncDeviceFields(hydratePlanRequest(me), me.profile.athlete_timezone);
     const draft = (me.profile.onboarding_draft as DraftMetadata | null | undefined) ?? null;
     const nextGuidedInjuries = hydrateGuidedInjuryStates({
       injuries: nextForm.injuries,
@@ -1281,7 +1282,7 @@ export function PlanIntakeForm() {
       }),
     };
     const safeForm = healthConsentGranted ? withGuidedAndCollision : withoutIntakeHealthData(withGuidedAndCollision);
-    return canonicalizePerformanceFocus(syncDeviceFields(applyNoScheduledFightSnapshot(safeForm, noScheduledFight)));
+    return canonicalizePerformanceFocus(syncDeviceFields(applyNoScheduledFightSnapshot(safeForm, noScheduledFight), me?.profile.athlete_timezone));
   }
 
   function syncGuidedInjuryFields(nextGuidedInjuries: GuidedInjuryState[], nextNoRestrictions: boolean) {

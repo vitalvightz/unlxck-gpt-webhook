@@ -424,3 +424,23 @@ test("an adult keeps a target weight carried over from a draft", () => {
 
   assert.equal(hydratePlanRequest(me).athlete.target_weight_kg, 70);
 });
+
+test("hydratePlanRequest keeps the saved profile timezone over stale intake and draft zones", () => {
+  const stale = { ...emptyPlanRequest("Athlete"), athlete: { ...emptyPlanRequest("Athlete").athlete, athlete_timezone: "America/New_York" } };
+  const me = {
+    profile: {
+      full_name: "Athlete",
+      technical_style: [],
+      tactical_style: [],
+      stance: "",
+      professional_status: "",
+      record: "",
+      athlete_timezone: "Europe/London",
+      nutrition_profile: null,
+      onboarding_draft: { athlete: { athlete_timezone: "Asia/Tokyo" } },
+    },
+    latest_intake: stale,
+  } as any;
+
+  assert.equal(hydratePlanRequest(me).athlete.athlete_timezone, "Europe/London");
+});

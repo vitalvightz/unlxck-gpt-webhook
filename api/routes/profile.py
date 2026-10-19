@@ -149,6 +149,11 @@ def build_profile_router(*, require_profile, get_store) -> APIRouter:
         # rather than only in the client's routing.
         require_onboarding_compliance(profile)
         update_data = update.model_dump(exclude_unset=True)
+        if (profile.athlete_timezone or "").strip():
+            # Drafts may only seed a first-time timezone. Once one is saved it
+            # is owned by Settings, so a stale draft or a different browser zone
+            # cannot overwrite it (and trip the database's timezone guard).
+            update_data.pop("athlete_timezone", None)
         if (
             not evaluate_profile_compliance(profile).health_consent_granted
             and isinstance(update_data.get("onboarding_draft"), dict)

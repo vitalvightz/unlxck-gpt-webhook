@@ -291,6 +291,8 @@ function PresetSelect({
 function QuickBuildFormInner() {
   const router = useRouter();
   const { me, session, replaceMe } = useAppSession();
+  const savedTimeZone = me?.profile.athlete_timezone?.trim() || "";
+  const athleteTimeZone = savedTimeZone || (typeof Intl !== "undefined" ? Intl.DateTimeFormat().resolvedOptions().timeZone : null);
   const [input, setInput] = useState<QuickBuildInput>(() =>
     me
       ? planRequestToQuickBuildInput(hydratePlanRequest(me))
@@ -313,7 +315,7 @@ function QuickBuildFormInner() {
   const parsedRounds = parseRoundsFormat(input.rounds_format);
   const focusValidation = useMemo(
     () => (!input.no_scheduled_fight && input.fight_date
-      ? validatePerformanceFocusSelections(input.fight_date, { keyGoals: input.key_goals, weakAreas: input.weak_areas }, { timeZone: typeof Intl !== "undefined" ? Intl.DateTimeFormat().resolvedOptions().timeZone : null })
+      ? validatePerformanceFocusSelections(input.fight_date, { keyGoals: input.key_goals, weakAreas: input.weak_areas }, { timeZone: athleteTimeZone })
       : null),
     [input.no_scheduled_fight, input.fight_date, input.key_goals, input.weak_areas],
   );
@@ -720,7 +722,7 @@ function QuickBuildFormInner() {
     setSubmitError(null);
     const currentErrors = validateQuickBuildInput(input);
     const currentFocusValidation = (!input.no_scheduled_fight && input.fight_date)
-      ? validatePerformanceFocusSelections(input.fight_date, { keyGoals: input.key_goals, weakAreas: input.weak_areas }, { timeZone: typeof Intl !== "undefined" ? Intl.DateTimeFormat().resolvedOptions().timeZone : null })
+      ? validatePerformanceFocusSelections(input.fight_date, { keyGoals: input.key_goals, weakAreas: input.weak_areas }, { timeZone: athleteTimeZone })
       : null;
     if (currentFocusValidation?.isOverCap) {
       currentErrors.focus_cap = currentFocusValidation.errorMessage ?? "Adjust goals and weak areas before generating.";
@@ -740,6 +742,7 @@ function QuickBuildFormInner() {
       try {
         const planRequest = quickBuildToPlanRequest(
           healthConsentGranted ? input : withoutQuickBuildHealthData(input),
+          { savedTimeZone },
         );
         const equipmentPresetMatch = matchesEquipmentPreset(planRequest.equipment_access);
         const trainingPresetMatch = matchesTrainingPreset(
@@ -767,7 +770,8 @@ function QuickBuildFormInner() {
           stance: planRequest.athlete.stance ?? "",
           professional_status: planRequest.athlete.professional_status ?? "",
           record: planRequest.athlete.record ?? "",
-          athlete_timezone: planRequest.athlete.athlete_timezone ?? "",
+          // Only a first-time setup sends a timezone; a saved one is owned by Settings.
+          ...(savedTimeZone ? {} : { athlete_timezone: planRequest.athlete.athlete_timezone ?? "" }),
           onboarding_draft: draft,
         });
 
