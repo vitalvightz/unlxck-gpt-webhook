@@ -335,3 +335,24 @@ def test_a_medical_hold_still_outranks_the_morning_check_in():
     today = _today(client)["today"]
     assert today["recommendation_state"] == "pull_back"
     assert today["decision_tier"] in {"pull_back", "stop"}
+
+
+@pytest.mark.parametrize("body_area", ["", "core"])
+def test_plan_free_injury_names_never_show_internal_markers(body_area):
+    # A tracking-only athlete's worsening injury is named in Today's trigger,
+    # injury list and copy by its clean label, never the stored description.
+    client, store, _ = _build_client()
+    store.create_injury_flag("athlete-1", {"body_area": body_area, "description": "Bruise [training_impact:not_limiting]",
+                                           "severity": "moderate", "latest_reported_status": "worse"})
+    assert _checkin(client, active_injury="worse").status_code in (200, 201)
+    resp = client.get("/api/today", headers=ATHLETE)
+    assert resp.status_code == 200, resp.text
+    today = resp.json()
+    # Only the raw description (read by the injury editor) keeps its markers.
+    for injury in today["open_injuries"]:
+        injury.pop("description", None)
+    assert "[training_impact" not in str(today)
+    name = "Core bruise" if body_area else "Bruise"
+    assert today["today"]["recommendation_trigger_labels"][0] == f"{name} — getting worse"
+    assert f"The {name.lower()} injury is worse." in today["today"]["recommendation_reason"]
+    assert [injury["label"] for injury in today["open_injuries"]] == [name]

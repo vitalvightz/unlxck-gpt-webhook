@@ -5,6 +5,7 @@ import {
   formatInjuryDetail,
   normalizeInjuryLabel,
   resolveInjuryTypeLabel,
+  stripInternalMarkers,
 } from "./injury-display.ts";
 
 test("functional impact metadata never appears in athlete-facing labels", () => {
@@ -202,4 +203,11 @@ test("Achilles metadata stays internal while athlete wording is preserved", () =
   assert.equal(resolveInjuryTypeLabel("[achilles_site:insertional]"), "");
   assert.equal(resolveInjuryTypeLabel("tendonitis [elbow_site:lateral]"), "tendonitis");
   assert.equal(normalizeInjuryLabel("Left elbow [elbow_site:unknown]"), "Left elbow");
+});
+
+test("internal injury markers are stripped, an athlete's own brackets are kept", () => {
+  assert.equal(stripInternalMarkers("Bruise [training_impact:not_limiting] — getting worse"), "Bruise — getting worse");
+  assert.equal(stripInternalMarkers("Tendon pain [achilles_site:midportion] [shoulder_scope:other]"), "Tendon pain");
+  assert.equal(stripInternalMarkers("Sore [note: after pads]"), "Sore [note: after pads]");
+  assert.equal(normalizeInjuryLabel("Bruise [training_impact:limiting]"), normalizeInjuryLabel("Bruise"));
 });

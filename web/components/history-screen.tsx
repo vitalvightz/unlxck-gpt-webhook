@@ -470,7 +470,7 @@ function CheckinRows({ rows, today }: { rows: TodayCheckinHistoryRecord[]; today
 }
 
 function InjuryRow({ row }: { row: InjuryFlagRecord }) {
-  const title = row.label || normalizeInjuryLabel(row.body_area) || row.description;
+  const title = row.label || normalizeInjuryLabel(row.body_area) || normalizeInjuryLabel(row.description) || "Injury";
   // The stored description carries the planner's taxonomy tokens for a
   // guided-intake injury, so the note line shows only the athlete-facing
   // part of it.

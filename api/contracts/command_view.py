@@ -409,13 +409,16 @@ def _as_iso(day: date | str) -> str:
 
 
 def _injury_name(injury: Mapping[str, Any]) -> str:
-    """Use the server-normalized injury label; keep a safe legacy fallback."""
-    raw = str(
-        injury.get("label")
-        or injury.get("description")
-        or injury.get("body_area")
-        or "Injury"
-    ).strip()
+    """Use the server-normalized injury label, else build the same clean label.
+
+    The stored description carries internal markers such as
+    ``[training_impact:not_limiting]``; it is never shown as-is.
+    """
+    raw = str(injury.get("label") or "").strip()
+    if not raw:
+        from api.contracts.injury_checkin import build_injury_label
+
+        raw = build_injury_label(injury.get("body_area"), injury.get("description")).strip() or "Injury"
     return raw[:1].upper() + raw[1:]
 
 

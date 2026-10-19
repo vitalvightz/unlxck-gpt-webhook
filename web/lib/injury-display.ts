@@ -183,6 +183,15 @@ function segmentIsInternal(segment: string): boolean {
 }
 
 /**
+ * Remove the internal markers stored inside injury text, such as
+ * "[training_impact:not_limiting]" or "[achilles_site:midportion]". They are
+ * snake_case keys by convention, so an athlete's own "[note: ...]" survives.
+ */
+export function stripInternalMarkers(text: string): string {
+  return collapseWhitespace(text.replace(/\s?\[[a-z]+(?:_[a-z]+)+:[^\]]*\]/g, ""));
+}
+
+/**
  * The athlete-facing detail line for an injury: what the injury IS (and any
  * detail the athlete added), with the planner's internal taxonomy stripped out.
  *
@@ -200,7 +209,7 @@ export function formatInjuryDetail(
   description: string | null | undefined,
   options: { bodyArea?: string | null } = {},
 ): string {
-  const raw = collapseWhitespace(String(description ?? "").replace(/\s?\[(?:training_impact|achilles_site|elbow_site|ankle_scope|shoulder_scope):[^\]]*\]/g, ""));
+  const raw = collapseWhitespace(stripInternalMarkers(String(description ?? "")));
   if (!raw) {
     return "";
   }
@@ -258,7 +267,7 @@ export function resolveInjuryTypeLabel(
  * "L5-S1 stiffness"          -> "L5-S1 stiffness"
  */
 export function normalizeInjuryLabel(raw: string | null | undefined): string {
-  const trimmed = collapseWhitespace(String(raw ?? "").replace(/\s?\[(?:training_impact|achilles_site|elbow_site|ankle_scope|shoulder_scope):[^\]]*\]/g, ""));
+  const trimmed = collapseWhitespace(stripInternalMarkers(String(raw ?? "")));
   if (!trimmed) {
     return "";
   }
