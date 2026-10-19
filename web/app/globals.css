@@ -9696,6 +9696,11 @@ html[data-theme="light"] .today-injury-other-warning {
   opacity: 0.7;
 }
 
+.connection-restored .connection-lost-dot {
+  background: var(--success-ink);
+  animation: none;
+}
+
 @keyframes connection-lost-pulse {
   0%,
   100% {

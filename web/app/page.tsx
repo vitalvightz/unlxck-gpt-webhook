@@ -6,6 +6,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 
 import { useAppSession } from "@/components/auth-provider";
+import { useConnectivity, useOnReconnect } from "@/components/connection-status-banner";
 import { getAuthenticatedLandingHref, needsStartingPath } from "@/lib/auth-routing";
 import { EmptyState } from "@/components/empty-state";
 import { FightCountdown, FightCountdownSkeleton } from "@/components/fight-countdown";
@@ -15,6 +16,7 @@ import { XpProgressCard, XpProgressCardSkeleton } from "@/components/xp-progress
 import { TrainingSummaryCard } from "@/components/training-summary-card";
 import { useXp } from "@/components/xp-provider";
 import { getPlan, getToday, getTrainingHistory } from "@/lib/api";
+import { describeLoadFailure } from "@/lib/connectivity";
 import { hasHealthDataConsent } from "@/lib/compliance";
 import { getTrackingHome } from "@/lib/tracking-home";
 import type { TrainingHistorySession } from "@/lib/training-history";
@@ -332,6 +334,7 @@ export default function HomePage() {
   }, [session?.access_token, historyOwner, trainingCursor]);
 
   const [isReloadingCommand, setIsReloadingCommand] = useState(false);
+  const { offline: isOffline } = useConnectivity();
   const latestTokenRef = useRef(session?.access_token);
 
   useEffect(() => {
@@ -354,17 +357,20 @@ export default function HomePage() {
       }
       setCommandState(state);
       setCommandError(null);
-    } catch {
+    } catch (error) {
       if (latestTokenRef.current !== token) {
         return;
       }
-      setCommandError("We couldn't load your camp status. Please try again.");
+      setCommandError(describeLoadFailure(error, "We couldn't load your camp status. Please try again."));
     } finally {
       if (latestTokenRef.current === token) {
         setIsReloadingCommand(false);
       }
     }
   }, [session?.access_token]);
+
+  // Sitting on a load error when the connection comes back: refetch quietly.
+  useOnReconnect(() => void loadCommandState(), Boolean(commandError));
 
   useEffect(() => {
     let active = true;
@@ -380,9 +386,9 @@ export default function HomePage() {
         setCommandState(state);
         setCommandError(null);
       })
-      .catch(() => {
+      .catch((error) => {
         if (!active) return;
-        setCommandError("We couldn't load your camp status. Please try again.");
+        setCommandError(describeLoadFailure(error, "We couldn't load your camp status. Please try again."));
       });
     return () => {
       active = false;
@@ -421,16 +427,23 @@ export default function HomePage() {
   if (session && hasTransientMeError) {
     return (
       <section className="panel loading-card">
-        <p className="kicker">Home</p>
-        <h1>Workspace temporarily unavailable</h1>
-        <p className="muted">We couldn&apos;t load your athlete profile. Please try again.</p>
+        <p className="kicker">{isOffline ? "Connection offline" : "Home"}</p>
+        <h1>{isOffline ? "You’re offline." : "Workspace temporarily unavailable"}</h1>
+        <p className="muted">
+          {isOffline
+            ? "Your camp is safe. We’ll reload your workspace the moment you reconnect."
+            : "We couldn’t load your athlete profile. Please try again."}
+        </p>
         <div className="hero-actions">
           <button type="button" className="cta" onClick={() => void refreshMe()}>
             Retry
           </button>
-          <button type="button" className="secondary-button" onClick={() => void signOut()}>
-            Sign out
-          </button>
+          {/* Signing out offline strands the athlete: they could not sign back in. */}
+          {isOffline ? null : (
+            <button type="button" className="secondary-button" onClick={() => void signOut()}>
+              Sign out
+            </button>
+          )}
         </div>
       </section>
     );
@@ -439,7 +452,7 @@ export default function HomePage() {
   if (!isReady) {
     return (
       <section className="panel loading-card">
-        <p className="kicker">Home</p>
+        <p className="kicker">Unlxcking…</p>
         <h1>Loading your athlete workspace</h1>
         <p className="muted">Checking saved intake and plan history.</p>
       </section>
@@ -513,8 +526,14 @@ export default function HomePage() {
           <h1>Camp command view unavailable</h1>
           <p className="muted">{commandError}</p>
           <div className="hero-actions">
-            <button type="button" className="cta" onClick={() => window.location.reload()}>
-              Retry
+            {/* In-place refetch: a full reload while offline lands on the offline shell. */}
+            <button
+              type="button"
+              className="cta"
+              onClick={() => void loadCommandState()}
+              disabled={isReloadingCommand}
+            >
+              {isReloadingCommand ? "Unlxcking…" : "Retry"}
             </button>
             <Link href="/plans" className="secondary-button">
               View plans
@@ -652,7 +671,7 @@ export default function HomePage() {
                 onClick={() => void loadCommandState()}
                 disabled={isReloadingCommand}
               >
-                {isReloadingCommand ? "Retrying..." : "Retry"}
+                {isReloadingCommand ? "Unlxcking…" : "Retry"}
               </button>
             </div>
           ) : null}

@@ -22,7 +22,7 @@ function Editor() {
 }
 export default function CustomPlansPage() {
   return (
-    <Suspense fallback={<p role="status">Loading plan…</p>}>
+    <Suspense fallback={<p role="status">Unlxcking plan…</p>}>
       <Editor />
     </Suspense>
   );

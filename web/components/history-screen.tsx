@@ -3,6 +3,7 @@
 import { type CSSProperties, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { useAppSession } from "@/components/auth-provider";
+import { useOnReconnect } from "@/components/connection-status-banner";
 import { EmptyState } from "@/components/empty-state";
 import { GlossaryTooltip } from "@/components/glossary-tooltip";
 import { Skeleton } from "@/components/skeleton";
@@ -735,6 +736,15 @@ function HistoryContent() {
           ? checkins
           : injuries;
 
+  function retryActiveTab() {
+    if (tab === "sessions") setSessions({ rows: null, error: null });
+    else if (tab === "exercises") setExercises({ rows: null, error: null });
+    else if (tab === "sparring") setSparring({ rows: null, error: null });
+    else if (tab === "checkins") setCheckins({ rows: null, error: null });
+    else setInjuries({ rows: null, error: null });
+  }
+  useOnReconnect(retryActiveTab, Boolean(active.error));
+
   return (
     <section className="panel history-screen">
       <header className="form-section-header">
@@ -766,13 +776,7 @@ function HistoryContent() {
           <button
             type="button"
             className="error-banner-retry"
-            onClick={() => {
-              if (tab === "sessions") setSessions({ rows: null, error: null });
-              else if (tab === "exercises") setExercises({ rows: null, error: null });
-              else if (tab === "sparring") setSparring({ rows: null, error: null });
-              else if (tab === "checkins") setCheckins({ rows: null, error: null });
-              else setInjuries({ rows: null, error: null });
-            }}
+            onClick={retryActiveTab}
           >
             Retry
           </button>

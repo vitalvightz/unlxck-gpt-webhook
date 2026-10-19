@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useRef, useState, useCallback, type ReactNode } from "react";
-import { getActiveGenerationJob, getGenerationJob, getLatestGenerationJob } from "@/lib/api";
+import { getActiveGenerationJob, getGenerationJob, getLatestGenerationJob, isRetryableApiFailure } from "@/lib/api";
 import {
   isPreStartStaleGenerationJob,
   resolveFailedJobWithSavedPlan,
@@ -583,7 +583,13 @@ export function GenerationStatusProvider({ children, token }: GenerationStatusPr
               void checkStatusRef.current?.();
             }, delay);
           }
-        } catch {
+        } catch (pollError) {
+          // A connection drop says nothing about the build itself: keep the
+          // pending record and the ribbon as-is so the next poll (or the
+          // reconnect) re-attaches to the same job instead of forgetting it.
+          if (isRetryableApiFailure(pollError)) {
+            return;
+          }
           clearPendingGenerations();
           clearActiveJobState();
           setLatestJob(null);
@@ -713,7 +719,13 @@ export function GenerationStatusProvider({ children, token }: GenerationStatusPr
       }
     };
 
+    // Back online: re-attach to whatever was building while we were away.
+    const handleOnline = () => {
+      void checkStatus();
+    };
+
     window.addEventListener("storage", handleStorageChange);
+    window.addEventListener("online", handleOnline);
     document.addEventListener("visibilitychange", handleVisibilityChange);
 
     return () => {
@@ -721,6 +733,7 @@ export function GenerationStatusProvider({ children, token }: GenerationStatusPr
       clearInterval(interval);
       clearInterval(adminHoldInterval);
       window.removeEventListener("storage", handleStorageChange);
+      window.removeEventListener("online", handleOnline);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, [checkStatus, token, latestJob?.requires_admin_resume]);

@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import apiMessages from "../../shared/api-messages.json";
 
 import { ApiError, getGenerationJob, isRetryableApiFailure, retryGenerationJob } from "@/lib/api";
+import { isBrowserOffline, waitForOnline } from "@/lib/connectivity";
 import {
   classifyGenerationFailure,
   isRetryableGenerationFailure,
@@ -395,8 +396,30 @@ export function useGenerationController({
         createdAt: job.created_at || pendingCreatedAtFallback,
       });
 
+      let networkMisses = 0;
       for (;;) {
-        const currentJob = await getGenerationJob(activeToken, job.job_id);
+        let currentJob: GenerationJobResponse;
+        try {
+          currentJob = await getGenerationJob(activeToken, job.job_id);
+          networkMisses = 0;
+        } catch (pollError) {
+          // The build runs server-side whether or not this device can see it.
+          // A dropped connection must never read as a failed camp: hold the
+          // pending record, say we are reconnecting, and resume polling the
+          // same job as soon as the connection is back.
+          if (!isRetryableApiFailure(pollError)) {
+            throw pollError;
+          }
+          networkMisses += 1;
+          setPhase("reconnecting");
+          setStatusMessage(
+            isBrowserOffline()
+              ? "You're offline. Your camp is still being built — we'll pick it back up when you reconnect."
+              : "Connection dropped. Reconnecting to your camp build.",
+          );
+          await waitForOnline(Math.min(2_000 * networkMisses, 15_000));
+          continue;
+        }
         setCurrentJobId(currentJob.job_id);
         setReadyToOpen(currentJob.ready_to_open === true);
 

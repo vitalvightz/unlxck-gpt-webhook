@@ -10,6 +10,7 @@ import { PlanSwitchDialog } from "@/components/plan-switch-dialog";
 import { RequireAuth } from "@/components/auth-guard";
 import { LogTraining } from "@/components/log-training";
 import { useAppSession } from "@/components/auth-provider";
+import { useOnReconnect } from "@/components/connection-status-banner";
 import { TrainingLibraryLink } from "@/components/training-library-link";
 import { FeaturedDrill } from "@/components/featured-drill";
 import actionStyles from "@/components/training-action-tile.module.css";
@@ -26,6 +27,7 @@ import styles from "@/components/plans/plans.module.css";
 import { PlanHistoryRowSkeleton } from "@/components/skeleton";
 import { useToast } from "@/components/toast-provider";
 import { ApiError, getActivePlan, getToday, listCustomPlans, listPlans, setActivePlan } from "@/lib/api";
+import { describeLoadFailure } from "@/lib/connectivity";
 import { getOptionLabels, TACTICAL_STYLE_OPTIONS } from "@/lib/intake-options";
 import { humanizeIfRawEnum } from "@/lib/plan-labels";
 import { requestXpRefresh } from "@/lib/xp-events";
@@ -93,7 +95,7 @@ function PlansSyncState() {
     <article className="list-card plans-sync-card" aria-busy="true">
       <div className="plans-dashboard-card-header">
         <div className="plans-dashboard-card-copy">
-          <p className="kicker">Plan sync</p>
+          <p className="kicker">Unlxcking…</p>
           <h2>Loading saved fight camps</h2>
           <p className="muted">
             One moment.
@@ -196,7 +198,7 @@ export default function PlansPage() {
       const message = plansError instanceof Error ? plansError.message : "";
       setError(message.includes("401") || message.toLowerCase().includes("session")
         ? "Session expired. Sign in again."
-        : "Connection issue. Try again in a minute.");
+        : describeLoadFailure(plansError, "Connection issue. Try again in a minute."));
     } finally {
       if (latestTokenRef.current === token) {
         setIsLoading(false);
@@ -207,6 +209,8 @@ export default function PlansPage() {
   useEffect(() => {
     void loadPlans();
   }, [loadPlans]);
+
+  useOnReconnect(() => void loadPlans(), Boolean(error));
 
   useEffect(() => {
     if (!archivedPlans.length) {
