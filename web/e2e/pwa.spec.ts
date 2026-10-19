@@ -5,6 +5,7 @@ import { isolateFromNetwork } from "./support";
 const BASE_URL = "http://127.0.0.1:3100";
 const PRECACHED_STATIC_PATHS = new Set([
   "/offline.html",
+  "/brand/unlxck-one-angle-48.png",
   "/icons/icon-192x192.png",
   "/icons/icon-512x512.png",
   "/icons/apple-touch-icon.png",
@@ -119,16 +120,95 @@ test("registered worker serves the honest offline fallback and recovers", async 
     }
   });
 
+  let apiHealthy = false;
+  await page.route("**/api/health", (route) => route.fulfill({
+    status: apiHealthy ? 200 : 503,
+    contentType: "application/json",
+    body: JSON.stringify({ ok: apiHealthy, app: "unlxck-fight-camp-api" }),
+  }));
+  const destination = "/signup?offline-test=1#original-destination";
   await context.setOffline(true);
-  try {
-    await page.goto("/dashboard?offline-test=1", { waitUntil: "domcontentloaded" });
-    await expect(page.getByRole("heading", { name: "UNLXCK can’t connect right now." })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Retry connection" })).toBeVisible();
-  } finally {
-    await context.setOffline(false);
-  }
+  await page.goto(destination, { waitUntil: "domcontentloaded" });
+  await expect(page.getByRole("heading", { name: "UNLXCK your connection." })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Retry connection" })).toBeVisible();
+  await expect(page.locator("img")).toHaveJSProperty("naturalWidth", 48);
 
+  await context.setOffline(false);
+  await expect(page.getByRole("status")).toContainText("Still can’t reach UNLXCK");
+  expect(new URL(page.url()).pathname + new URL(page.url()).search + new URL(page.url()).hash).toBe(destination);
   await page.getByRole("button", { name: "Retry connection" }).click();
-  await page.waitForURL(/\/(dashboard|login)(\?|$)/);
-  expect(page.url()).not.toContain("offline-test=1");
+  await expect(page.getByRole("status")).toContainText("Still can’t reach UNLXCK");
+  apiHealthy = true;
+  await page.getByRole("button", { name: "Retry connection" }).click();
+  await expect(page.getByRole("heading", { name: "UNLXCK your connection." })).toHaveCount(0);
+  expect(new URL(page.url()).pathname + new URL(page.url()).search + new URL(page.url()).hash).toBe(destination);
+});
+
+
+test("connection card waits for API confirmation, ignores unrelated success, and recovers once", async ({ page, context, baseURL }) => {
+  await isolateFromNetwork(page, baseURL ?? BASE_URL);
+  let healthy = false;
+  let checks = 0;
+  await page.route("**/api/health", (route) => {
+    checks += 1;
+    return route.fulfill({
+      status: healthy ? 200 : 503,
+      contentType: "application/json",
+      body: JSON.stringify({ ok: healthy, app: "unlxck-fight-camp-api" }),
+    });
+  });
+  await page.route("**/api/unrelated", (route) => route.fulfill({ json: { ok: true } }));
+  await page.goto("/login", { waitUntil: "networkidle" });
+  await page.evaluate(() => {
+    (window as unknown as { recoveries: number }).recoveries = 0;
+    window.addEventListener("unlxck:reconnected", () => { (window as unknown as { recoveries: number }).recoveries += 1; });
+  });
+  await context.setOffline(true);
+  await expect(page.getByRole("status")).toContainText("You’re offline.");
+  await context.setOffline(false);
+  await expect(page.getByRole("status")).toContainText("Can’t reach UNLXCK.");
+  await expect.poll(() => checks).toBeGreaterThan(0);
+  await page.evaluate(async () => { await fetch("/api/unrelated"); });
+  await expect(page.getByRole("status")).not.toContainText("Back online");
+  expect(await page.evaluate(() => (window as unknown as { recoveries: number }).recoveries)).toBe(0);
+  healthy = true;
+  await page.getByRole("button", { name: "Retry connection" }).click();
+  await expect(page.getByRole("status")).toContainText("Back online.");
+  expect(await page.evaluate(() => (window as unknown as { recoveries: number }).recoveries)).toBe(1);
+});
+
+
+test("API recovery cannot repeatedly reload a destination that is still unavailable", async ({ page, context, baseURL }) => {
+  await isolateFromNetwork(page, baseURL ?? BASE_URL);
+  await page.goto("/login", { waitUntil: "networkidle" });
+  await page.evaluate(async () => {
+    await navigator.serviceWorker.ready;
+    if (!navigator.serviceWorker.controller) {
+      await new Promise<void>(resolve => navigator.serviceWorker.addEventListener("controllerchange", () => resolve(), { once: true }));
+    }
+  });
+  let checks = 0;
+  await page.route("**/api/health", route => {
+    checks += 1;
+    return route.fulfill({ json: { ok: true, app: "unlxck-fight-camp-api" } });
+  });
+  await context.route("**/signup?reload-test=1", route => route.abort());
+  await context.setOffline(true);
+  await page.goto("/signup?reload-test=1", { waitUntil: "domcontentloaded" });
+  await expect(page.getByRole("heading", { name: "UNLXCK your connection." })).toBeVisible();
+  const reloaded = page.waitForEvent("framenavigated", frame => frame === page.mainFrame());
+  await context.setOffline(false);
+  await reloaded;
+  await expect(page.getByRole("button", { name: "Retry connection" })).toBeEnabled();
+  expect(checks).toBe(1);
+  await page.evaluate(() => {
+    window.dispatchEvent(new Event("online"));
+    window.dispatchEvent(new Event("online"));
+  });
+  expect(checks).toBe(1);
+  const manualReload = page.waitForEvent("framenavigated", frame => frame === page.mainFrame());
+  await page.getByRole("button", { name: "Retry connection" }).click();
+  await manualReload;
+  await expect(page.getByRole("button", { name: "Retry connection" })).toBeEnabled();
+  expect(checks).toBe(2);
 });

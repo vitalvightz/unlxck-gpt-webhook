@@ -6,6 +6,7 @@ import { NutritionBodyweightChart } from "@/components/nutrition-bodyweight-char
 import styles from "@/components/nutrition-pages.module.css";
 import { RequireAuth } from "@/components/auth-guard";
 import { useAppSession } from "@/components/auth-provider";
+import { useOnReconnect } from "@/components/connection-status-banner";
 import { EmptyState } from "@/components/empty-state";
 import { NutritionSubnav } from "@/components/nutrition-subnav";
 import { NutritionWorkspaceHeader } from "@/components/nutrition-workspace-header";
@@ -125,6 +126,13 @@ export function BodyweightLogScreen() {
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const [reloadKey, setReloadKey] = useState(0);
+  const loadFailed = !workspace && Boolean(error);
+  const retryLoad = () => {
+    setError(null);
+    setReloadKey((key) => key + 1);
+  };
+  useOnReconnect(retryLoad, loadFailed);
 
   useEffect(() => {
     if (!session?.access_token) return;
@@ -141,7 +149,7 @@ export function BodyweightLogScreen() {
     return () => {
       active = false;
     };
-  }, [session?.access_token]);
+  }, [reloadKey, session?.access_token]);
 
   const athleteName = me?.profile.full_name || me?.profile.email || "Nutrition workspace";
   const entries = workspace?.nutrition_monitoring.daily_bodyweight_log ?? [];
@@ -245,7 +253,7 @@ export function BodyweightLogScreen() {
         <SafetyNote tone="warning">{WEIGHT_CUT_SAFETY}</SafetyNote>
 
         {!workspace ? (
-          <section className="support-panel loading-card"><p className="muted">Loading bodyweight log.</p></section>
+          <section className="support-panel loading-card"><p className="muted">{error ? "Bodyweight log unavailable." : "Unlxcking your bodyweight log…"}</p></section>
         ) : (
           <>
             <section className={styles.heroPanel}>
@@ -544,7 +552,16 @@ export function BodyweightLogScreen() {
         )}
 
         {message ? <div className="success-banner athlete-motion-slot athlete-motion-status">{message}</div> : null}
-        {error ? <div className="error-banner athlete-motion-slot athlete-motion-status">{error}</div> : null}
+        {error ? (
+          <div className="error-banner athlete-motion-slot athlete-motion-status" role="alert">
+            <span>{error}</span>
+            {loadFailed ? (
+              <button type="button" className="error-banner-retry" onClick={retryLoad}>
+                Retry
+              </button>
+            ) : null}
+          </div>
+        ) : null}
       </section>
     </RequireAuth>
   );

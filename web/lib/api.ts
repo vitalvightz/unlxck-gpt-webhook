@@ -1,3 +1,9 @@
+import {
+  OFFLINE_NETWORK_MESSAGE,
+  RETRYABLE_NETWORK_MESSAGE,
+  isBrowserOffline,
+  reportNetworkFailure,
+} from "@/lib/connectivity";
 import type { ExternalTrainingFields, TrainingHistoryPage, TrainingHistorySession } from "@/lib/training-history";
 import type { SessionDetails, ExerciseLibraryResponse, ExercisePerformancesResponse } from "@/lib/api-schema.generated";
 import type { ManualExerciseEntry, ManualExerciseListResponse, PerformedExerciseInput } from "@/lib/api-schema.generated";
@@ -168,7 +174,7 @@ const RETRYABLE_INTERNAL_ERROR_SNIPPETS = [
   "profile service temporarily unavailable",
   "store service temporarily unavailable",
 ];
-export const RETRYABLE_NETWORK_MESSAGE = "Connection issue. Try again in a minute.";
+export { OFFLINE_NETWORK_MESSAGE, RETRYABLE_NETWORK_MESSAGE } from "@/lib/connectivity";
 const meRequestsByToken = new Map<string, Promise<MeResponse>>();
 const meUpdatesByToken = new Map<string, Promise<MeResponse>>();
 
@@ -231,7 +237,10 @@ export function isRetryableApiFailure(error: unknown): boolean {
       )
     );
   }
-  return error instanceof Error && error.message === RETRYABLE_NETWORK_MESSAGE;
+  return (
+    error instanceof Error &&
+    (error.message === RETRYABLE_NETWORK_MESSAGE || error.message === OFFLINE_NETWORK_MESSAGE)
+  );
 }
 
 async function sleep(ms: number): Promise<void> {
@@ -280,7 +289,14 @@ async function withTransientRetries<T>(
       return await operation();
     } catch (error) {
       lastError = error;
-      if (signal?.aborted || !isRetryableApiFailure(error) || attempt === attempts) {
+      // Offline: retrying in-place only holds a spinner up for nothing. Fail
+      // now; screens and the connection banner recover on reconnect.
+      if (
+        signal?.aborted ||
+        !isRetryableApiFailure(error) ||
+        attempt === attempts ||
+        isBrowserOffline()
+      ) {
         throw error;
       }
       await sleep(delayMs * attempt);
@@ -376,7 +392,8 @@ async function executeRequest(path: string, init?: ApiRequestInit): Promise<Exec
             : networkError,
       });
     }
-    throw new Error(RETRYABLE_NETWORK_MESSAGE, {
+    reportNetworkFailure();
+    throw new Error(isBrowserOffline() ? OFFLINE_NETWORK_MESSAGE : RETRYABLE_NETWORK_MESSAGE, {
       cause: networkError,
     });
   } finally {
@@ -390,6 +407,10 @@ async function executeRequest(path: string, init?: ApiRequestInit): Promise<Exec
   const durationMs = Date.now() - startedAt;
   const contentType = response.headers.get("content-type") ?? "";
   const requestId = response.headers.get("x-request-id");
+  // A gateway error means the edge answered but the plan service did not.
+  if (RETRYABLE_GATEWAY_STATUSES.has(response.status)) {
+    reportNetworkFailure();
+  }
 
   if (!response.ok) {
     const rawText = await response.text();

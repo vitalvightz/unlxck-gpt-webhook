@@ -7,6 +7,7 @@ import { getLocale, getTranslations } from "next-intl/server";
 
 import { AppNav } from "@/components/app-nav";
 import { AuthProvider } from "@/components/auth-provider";
+import { ConnectionStatusBanner } from "@/components/connection-status-banner";
 import { GenerationStatusShell } from "@/components/generation-status-shell";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { PasswordRecoveryRedirect } from "@/components/password-recovery-redirect";
@@ -113,6 +114,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
         <NextIntlClientProvider>
           <AuthProvider>
             <XpProvider>
+              <ConnectionStatusBanner />
               <PasswordRecoveryRedirect />
               <PrivateBetaNutritionGate />
               <ToastProvider>

@@ -1,0 +1,13 @@
+.card { width: min(400px, 100%); margin: 32px auto; padding: 32px; border: 1px solid #ffffff1c; border-radius: 16px; background: #101012; color: #fff; box-shadow: 0 24px 64px #0008; }
+.header { display: flex; align-items: center; justify-content: space-between; padding-bottom: 22px; margin-bottom: 26px; border-bottom: 1px solid #ffffff12; }
+.label { margin: 0; font: 500 10px/1.4 var(--font-mono), monospace; letter-spacing: .18em; color: #b2b2ba; }
+.card h1 { margin: 0; letter-spacing: -.045em; line-height: 1.03; }
+.brand { display: block; font-size: clamp(46px, 12vw, 58px); font-weight: 700; letter-spacing: -.065em; }
+.headline { display: block; margin-top: 8px; font-size: clamp(27px, 7.3vw, 34px); font-weight: 500; }
+.description { color: #b4b4be; font-size: 14px; line-height: 1.65; margin: 20px 0 28px; }
+.retry { display: flex; align-items: center; justify-content: space-between; gap: 14px; width: 100%; min-height: 52px; padding: 14px 18px; border: 1px solid #e04451; border-radius: 7px; background: #b5122b; color: #fff; font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
+.retry:hover { background: #ca1733; }
+.retry:disabled { cursor: wait; opacity: .7; }
+.retry:focus-visible, .secondary:focus-visible { outline: 2px solid #fff; outline-offset: 4px; }
+.secondary { display: grid; place-items: center; min-height: 44px; margin-top: 8px; color: #b9b9c3; font-size: 13px; text-decoration: none; }
+@media (max-width: 380px) { .card { padding: 26px 24px; } }

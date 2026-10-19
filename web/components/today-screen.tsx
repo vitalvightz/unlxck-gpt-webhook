@@ -6,6 +6,7 @@ import { useMemo, useState } from "react";
 import styles from "./today-screen.module.css";
 
 import { useAppSession } from "@/components/auth-provider";
+import { useConnectivity, useOnReconnect } from "@/components/connection-status-banner";
 import { hasHealthDataConsent } from "@/lib/compliance";
 import { ContextualFeedback } from "@/components/feedback/contextual-feedback";
 import { Skeleton } from "@/components/skeleton";
@@ -207,6 +208,8 @@ export function TodayScreen() {
     refresh,
     patchSession,
   } = useTodayCommand(token);
+  const { offline: isOffline } = useConnectivity();
+  useOnReconnect(() => void refresh(), Boolean(error));
 
   const activePlan = state?.active_plan ?? {};
   const openOngoing = isOpenOngoingPlan(activePlan.fight_date);
@@ -233,11 +236,19 @@ export function TodayScreen() {
       <section className="panel today-shell today-error-state">
         <div className="today-hero-copy">
           <p className="kicker">Today command feed</p>
-          <h1>{isAccessIssue ? "Access is locked" : "Today is temporarily unavailable"}</h1>
+          <h1>
+            {isAccessIssue
+              ? "Access is locked"
+              : isOffline
+                ? "You’re offline."
+                : "Today is temporarily unavailable"}
+          </h1>
           <p className="muted" role="alert">
             {isAccessIssue
               ? "Sign in with an active athlete account to unlock Today."
-              : "The live Today feed did not respond. Your saved training has not changed."}
+              : isOffline
+                ? "Your saved training hasn’t changed. Today reloads the moment you reconnect."
+                : "The live Today feed did not respond. Your saved training has not changed."}
           </p>
           {process.env.NODE_ENV !== "production" ? (
             <p className="today-error-detail">Technical detail: {error}</p>

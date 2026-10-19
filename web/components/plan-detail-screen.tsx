@@ -5,11 +5,13 @@ import { useSearchParams } from "next/navigation";
 
 import { RequireAuth } from "@/components/auth-guard";
 import { useAppSession } from "@/components/auth-provider";
+import { useOnReconnect } from "@/components/connection-status-banner";
 import { TrainingLibraryLink } from "@/components/training-library-link";
 import actionStyles from "@/components/training-action-tile.module.css";
 import { PlanViewer } from "@/components/plan-viewer";
 import { LogTraining } from "@/components/log-training";
 import { ApiError, getPlan } from "@/lib/api";
+import { isNetworkFailure } from "@/lib/connectivity";
 import type { PlanDetail } from "@/lib/types";
 
 // Right after generation completes the app redirects straight to
@@ -95,6 +97,11 @@ export function PlanDetailScreen({ planId }: { planId: string }) {
 
   const [plan, setPlan] = useState<PlanDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isConnectionError, setIsConnectionError] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
+  // A plan that failed to load because the connection dropped reloads itself
+  // on reconnect instead of stranding the athlete on an error card.
+  useOnReconnect(() => setReloadKey((key) => key + 1), isConnectionError);
 
   useEffect(() => {
     if (!session?.access_token) {
@@ -102,6 +109,7 @@ export function PlanDetailScreen({ planId }: { planId: string }) {
     }
 
     setError(null);
+    setIsConnectionError(false);
 
     let cancelled = false;
     const token = session.access_token;
@@ -119,6 +127,7 @@ export function PlanDetailScreen({ planId }: { planId: string }) {
             return;
           }
           if (attempt === PLAN_LOAD_MAX_ATTEMPTS || !shouldRetryPlanLoad(planError)) {
+            setIsConnectionError(isNetworkFailure(planError));
             setError(planError instanceof Error ? planError.message : "Unable to load plan.");
             return;
           }
@@ -132,7 +141,7 @@ export function PlanDetailScreen({ planId }: { planId: string }) {
     return () => {
       cancelled = true;
     };
-  }, [planId, session?.access_token]);
+  }, [planId, reloadKey, session?.access_token]);
 
   const recovered = searchParams.get("recovered") === "1";
   const protectedTriage = searchParams.get("protected_triage") === "1";
@@ -184,8 +193,12 @@ export function PlanDetailScreen({ planId }: { planId: string }) {
         <PlanDetailStateCard
           phase="failed"
           eyebrow="Plan detail"
-          title="We couldn't load this plan."
-          copy="Check the error below, then try again from your plans."
+          title={isConnectionError ? "Connection dropped." : "We couldn't load this plan."}
+          copy={
+            isConnectionError
+              ? "This plan reloads automatically as soon as you're back online."
+              : "Check the error below, then try again from your plans."
+          }
           railTitle="Your plan is safe"
           railCopy="Nothing was deleted. You can reopen it from your plans."
           error={error}
@@ -203,7 +216,7 @@ export function PlanDetailScreen({ planId }: { planId: string }) {
         <PlanDetailStateCard
           phase="finalizing"
           eyebrow="Plan detail"
-          title="Restoring saved plan."
+          title="Unlxcking your plan…"
           copy="We are rebuilding the saved output and athlete-safe view now."
           railTitle="Current action"
           railCopy="Pulling the latest saved version from your workspace before the plan viewer opens."

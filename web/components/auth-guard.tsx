@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 
 import { useAppSession } from "@/components/auth-provider";
@@ -8,35 +8,10 @@ import { useAppSession } from "@/components/auth-provider";
 function LoadingCard({ label }: { label: string }) {
   return (
     <section className="panel loading-card">
-      <p className="kicker">Loading</p>
+      <p className="kicker">Unlxcking…</p>
       <h1>{label}</h1>
       <p className="muted">We are checking your session and restoring the correct athlete workspace.</p>
     </section>
-  );
-}
-
-function ConnectionLostBanner({
-  isRetrying,
-  onRetry,
-}: {
-  isRetrying: boolean;
-  onRetry: () => void;
-}) {
-  return (
-    <div className="connection-lost-banner" role="status" aria-live="polite">
-      <span className="connection-lost-dot" aria-hidden="true" />
-      <span className="connection-lost-text">
-        {isRetrying ? "Reconnecting…" : "No internet connection"}
-      </span>
-      <button
-        type="button"
-        className="connection-lost-retry"
-        onClick={onRetry}
-        disabled={isRetrying}
-      >
-        {isRetrying ? "Retrying…" : "Retry"}
-      </button>
-    </div>
   );
 }
 
@@ -45,8 +20,7 @@ export function RequireAuth({
   adminOnly = false,
 }: Readonly<{ children: React.ReactNode; adminOnly?: boolean }>) {
   const router = useRouter();
-  const { isReady, isMeHydrated, hasTransientMeError, session, me, refreshMe, signOut } = useAppSession();
-  const [isRetryingRecovery, setIsRetryingRecovery] = useState(false);
+  const { isReady, isMeHydrated, hasTransientMeError, session, me } = useAppSession();
   const role = me?.profile.role;
 
   useEffect(() => {
@@ -69,35 +43,8 @@ export function RequireAuth({
     }
   }, [adminOnly, hasTransientMeError, isMeHydrated, isReady, me, role, router, session]);
 
-  useEffect(() => {
-    if (!hasTransientMeError) {
-      setIsRetryingRecovery(false);
-    }
-  }, [hasTransientMeError]);
-
-  async function handleRetryRecovery() {
-    if (isRetryingRecovery) {
-      return;
-    }
-    setIsRetryingRecovery(true);
-    try {
-      await refreshMe();
-    } finally {
-      setIsRetryingRecovery(false);
-    }
-  }
-
-  // The connection banner is a small, persistent overlay shown on every guarded
-  // page (admin and athlete alike) whenever profile access could not be reached.
-  // It reads as a plain "no internet" indicator rather than an app-specific
-  // failure, and the provider keeps auto-retrying in the background.
-  const connectionBanner =
-    isReady && session && hasTransientMeError ? (
-      <ConnectionLostBanner
-        isRetrying={isRetryingRecovery}
-        onRetry={() => void handleRetryRecovery()}
-      />
-    ) : null;
+  // Connection loss is surfaced by the app-wide ConnectionStatusBanner in the
+  // root layout, which also re-hydrates the profile on reconnect.
 
   let body: React.ReactNode;
   if (!isReady) {
@@ -116,10 +63,5 @@ export function RequireAuth({
     body = children;
   }
 
-  return (
-    <>
-      {connectionBanner}
-      {body}
-    </>
-  );
+  return <>{body}</>;
 }

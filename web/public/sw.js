@@ -10,6 +10,7 @@ const OFFLINE_URL = "/offline.html";
 const APP_ICON_192 = "/icons/icon-192x192.png";
 const PRECACHE_URLS = [
   OFFLINE_URL,
+  "/brand/unlxck-one-angle-48.png",
   APP_ICON_192,
   "/icons/icon-512x512.png",
   "/icons/apple-touch-icon.png",
@@ -53,7 +54,10 @@ async function networkFirstNavigation(request) {
 
 async function staleWhileRevalidate(request, event) {
   const cache = await caches.open(STATIC_CACHE_NAME);
-  const cached = await cache.match(request);
+  // Icons are precached at install into PRECACHE_NAME, not the runtime cache.
+  // Looking only in the runtime cache meant the offline page's first request
+  // for an icon went to the (dead) network and rendered a broken image.
+  const cached = (await cache.match(request)) ?? (await caches.match(request));
   const networkRequest = fetch(request)
     .then((response) => {
       if (response.ok && response.type === "basic") {

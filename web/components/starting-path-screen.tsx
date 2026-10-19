@@ -54,7 +54,7 @@ export function StartingPathScreen() {
   }
 
   if (!ready) return <section className="panel" aria-busy={!hasTransientMeError}>
-    <h1>{hasTransientMeError ? "Couldn’t load your account" : "Loading your account…"}</h1>
+    <h1>{hasTransientMeError ? "Couldn’t load your account" : "Unlxcking your account…"}</h1>
     {hasTransientMeError ? <button className="secondary-button" onClick={() => void refreshMe()}>Retry</button> : null}
   </section>;
   if (mustAccept || !needsStartingPath(me)) return <p role="status">Opening your workspace…</p>;

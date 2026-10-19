@@ -6,6 +6,7 @@ import { useEffect, useState, useTransition } from "react";
 import styles from "@/components/nutrition-pages.module.css";
 import { RequireAuth } from "@/components/auth-guard";
 import { useAppSession } from "@/components/auth-provider";
+import { useOnReconnect } from "@/components/connection-status-banner";
 import { NutritionSubnav } from "@/components/nutrition-subnav";
 import { NutritionWorkspaceHeader } from "@/components/nutrition-workspace-header";
 import { NutritionWorkspaceSkeleton } from "@/components/skeleton";
@@ -178,6 +179,13 @@ export function NutritionWorkspaceScreen() {
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const [reloadKey, setReloadKey] = useState(0);
+  const loadFailed = !workspace && Boolean(error);
+  const retryLoad = () => {
+    setError(null);
+    setReloadKey((key) => key + 1);
+  };
+  useOnReconnect(retryLoad, loadFailed);
 
   useEffect(() => {
     if (!session?.access_token) return;
@@ -195,7 +203,7 @@ export function NutritionWorkspaceScreen() {
     return () => {
       active = false;
     };
-  }, [session?.access_token]);
+  }, [reloadKey, session?.access_token]);
 
   function setProfileField(key: keyof NutritionProfileInput, value: unknown) {
     setForm((current) => ({ ...current, nutrition_profile: { ...current.nutrition_profile, [key]: value } }));
@@ -622,7 +630,16 @@ export function NutritionWorkspaceScreen() {
         )}
 
         {message ? <div className="success-banner athlete-motion-slot athlete-motion-status">{message}</div> : null}
-        {error ? <div className="error-banner athlete-motion-slot athlete-motion-status">{error}</div> : null}
+        {error ? (
+          <div className="error-banner athlete-motion-slot athlete-motion-status" role="alert">
+            <span>{error}</span>
+            {loadFailed ? (
+              <button type="button" className="error-banner-retry" onClick={retryLoad}>
+                Retry
+              </button>
+            ) : null}
+          </div>
+        ) : null}
 
         <div className="nutrition-sticky-save">
           <button type="button" className="cta" onClick={handleSave} disabled={isPending || !workspace}>
