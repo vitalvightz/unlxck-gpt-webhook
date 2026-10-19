@@ -1,5 +1,5 @@
 import type { ExternalTrainingFields, TrainingHistoryPage, TrainingHistorySession } from "@/lib/training-history";
-import type { SessionDetails } from "@/lib/api-schema.generated";
+import type { SessionDetails, ExerciseLibraryResponse, ExercisePerformancesResponse } from "@/lib/api-schema.generated";
 import type { LibraryFeaturedResponse, LibraryPreview, LibrarySearchResponse } from "@/lib/api-schema.generated";
 import type { CustomDoseSuggestion, CustomPlan, CustomPlanInput } from "@/lib/api-schema.generated";
 import type { PrivateMediaPreview, PrivateMediaSettings, UploadPermission, UploadState, YouTubeClipInput } from "@/lib/api-schema.generated";
@@ -534,6 +534,16 @@ export function getTrainingHistory(token: string, includeSkipped = false, before
 
 export function getSessionDetails(token: string, source: TrainingHistorySession["source"], id: string): Promise<SessionDetails> {
   return readJson(`/api/training/history/${source}/${encodeURIComponent(id)}`, { token });
+}
+
+export function getExerciseLibrary(token: string): Promise<ExerciseLibraryResponse> {
+  return readJson("/api/history/exercise-library", { token });
+}
+
+export function getExercisePerformances(token: string, exercise: string, asOf: string, cursor?: string): Promise<ExercisePerformancesResponse> {
+  const query = new URLSearchParams({ exercise, as_of: asOf });
+  if (cursor) query.set("cursor", cursor);
+  return readJson(`/api/history/exercise-performances?${query}`, { token });
 }
 
 /** Manual-only evidence avoids truncating habits behind prescribed sessions. */

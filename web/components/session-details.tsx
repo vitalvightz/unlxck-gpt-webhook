@@ -24,17 +24,18 @@ function Measurements({ values }: { values: Record<string, unknown> }) {
   </div>)}</dl> : <p className={styles.quiet}>No values recorded.</p>;
 }
 
-function TrainingBlock({ block, index }: { block: SessionDetailBlock; index: number }) {
+export function TrainingBlock({ block, index, heading }: { block: SessionDetailBlock; index: number; heading?: string }) {
   const rehab = block.kind !== "exercise";
   const actuals = detailMeasurements(block.actual).length > 0;
   const quantified = block.completed_dose?.completion_state === "quantified";
+  const context = heading ? `${block.name} · ${heading} · Record ${index + 1}` : block.name;
   return <li className={styles.block}>
     <div className={styles.blockHeading}><span className={styles.number}>{String(index + 1).padStart(2, "0")}</span>
-      <h4>{block.name}</h4></div>
+      <h4>{heading || block.name}</h4></div>
     <p className={styles.outcome}>{block.kind === "guidance" ? "Guidance · " : ""}{block.status ? OUTCOMES[block.status] : "Completion not recorded"}</p>
     <div className={styles.comparison}>
-      <section aria-label={`Prescribed: ${block.name}`}><h5>{block.kind === "guidance" ? "Saved guidance" : "Prescribed"}</h5><Measurements values={block.prescribed} /></section>
-      {block.kind !== "guidance" ? <section aria-label={`Performance: ${block.name}`}><h5>{rehab ? "Confirmed completed dose" : "Reported"}</h5>
+      <section aria-label={`Prescribed: ${context}`}><h5>{block.kind === "guidance" ? "Saved guidance" : "Prescribed"}</h5><Measurements values={block.prescribed} /></section>
+      {block.kind !== "guidance" ? <section aria-label={`Performance: ${context}`}><h5>{rehab ? "Confirmed completed dose" : "Reported"}</h5>
         {rehab ? quantified ? <Measurements values={block.completed_dose!} /> : <p className={styles.quiet}>{block.status === "skipped" ? "Skipped. No completed dose recorded." : "Completed amount unknown."}</p>
           : actuals ? <><Measurements values={block.actual} /><p className={styles.quiet}>{block.status === "as_prescribed" ? "Other prescribed values confirmed as completed." : "Other performed values are unknown."}</p></>
           : <p className={styles.quiet}>{block.status === "as_prescribed" ? "Confirmed completed as prescribed. No separate values logged." : block.status === "skipped" ? "Skipped. No performance values logged." : "Performed values unknown."}</p>}

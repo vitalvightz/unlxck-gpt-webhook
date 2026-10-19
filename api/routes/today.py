@@ -23,6 +23,8 @@ from api.services.training_history import (
 )
 from api.contracts.session_details import SessionDetails
 from api.services.session_details import session_details
+from api.contracts.exercise_library import ExerciseLibraryResponse, ExercisePerformancesResponse
+from api.services.exercise_library import exercise_library, exercise_performances
 
 from api.compliance_guards import require_health_feature_access
 from api.compliance import evaluate_profile_compliance
@@ -791,6 +793,21 @@ def build_today_router(*, require_profile, get_store) -> APIRouter:
             keep_existing=request_body.keep_existing,
         )
         return ExerciseLogBatchResponse(logs=[_exercise_log_record(row) for row in rows])
+
+    @router.get("/api/history/exercise-library", response_model=ExerciseLibraryResponse)
+    def personal_exercise_library(profile: ProfileRecord = Depends(require_profile),
+                                  store: AppStore = Depends(get_store)):
+        return exercise_library(store, profile.athlete_id)
+
+    @router.get("/api/history/exercise-performances", response_model=ExercisePerformancesResponse)
+    def personal_exercise_performances(exercise: str = Query(min_length=5, max_length=124),
+                                       as_of: str | None = Query(default=None, max_length=40),
+                                       cursor: str | None = Query(default=None, max_length=512),
+                                       limit: int = Query(default=30, ge=1, le=100),
+                                       profile: ProfileRecord = Depends(require_profile),
+                                       store: AppStore = Depends(get_store)):
+        return exercise_performances(store, profile.athlete_id, exercise, as_of=as_of, cursor=cursor, limit=limit,
+            health_consent_granted=evaluate_profile_compliance(profile).health_consent_granted)
 
     @router.get("/api/history/exercises", response_model=ExerciseHistoryResponse)
     def exercise_history(

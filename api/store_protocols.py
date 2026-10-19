@@ -599,6 +599,13 @@ class InjuryStore(Protocol):
         self, athlete_id: str, *, plan_id: str, training_day: str
     ) -> list[dict[str, Any]]: ...
 
+    def list_exercise_index_page(self, athlete_id: str, *, as_of: str, after_id: str | None,
+                                 limit: int = 500) -> list[dict[str, Any]]: ...
+
+    def list_exercise_performances(self, athlete_id: str, *, exercise_key: str | None, log_id: str | None,
+                                   as_of: str, before_day: str | None, before_id: str | None,
+                                   limit: int = 31) -> list[dict[str, Any]]: ...
+
     def list_exercise_history(
         self, athlete_id: str, *, before_day: str | None = None, limit: int = 50, offset: int = 0
     ) -> list[dict[str, Any]]: ...

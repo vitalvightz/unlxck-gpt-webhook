@@ -1,0 +1,120 @@
+"use client";
+
+import { useEffect, useId, useRef, useState } from "react";
+import { EmptyState } from "./empty-state";
+import { TrainingBlock } from "./session-details";
+import { getExercisePerformances } from "@/lib/api";
+import type { ExerciseLibraryResponse, ExercisePerformancesResponse, PersonalExercise } from "@/lib/api-schema.generated";
+import { formatAppDate } from "@/lib/date-format";
+import { exerciseResult } from "@/lib/exercise-library";
+import { lockOverlayScroll } from "@/lib/overlay-scroll-lock";
+import sheet from "./session-details.module.css";
+import styles from "./exercise-library.module.css";
+
+export type ExerciseHistoryCache = Map<string, Promise<ExercisePerformancesResponse>>;
+
+function ExerciseCard({ exercise, onSelect }: { exercise: PersonalExercise; onSelect: () => void }) {
+  const result = exerciseResult(exercise);
+  return <li className={`history-row ${styles.card}`} data-tone={exercise.identity_kind === "legacy" ? "grey" : "green"}>
+    <button className={styles.open} type="button" aria-haspopup="dialog" aria-label={`View ${exercise.name} performance history${exercise.identity_kind === "legacy" ? ` for ${formatAppDate(exercise.latest_day)}` : ""}`} onClick={onSelect}>
+      <span className={styles.cardHeading}><span className="history-row-title">{exercise.name}</span><span className={styles.chevron} aria-hidden="true">›</span></span>
+      <span className={styles.resultLabel}>{result.label}</span><strong className={styles.result}>{result.value}</strong>
+      <span className={styles.date}>{exercise.identity_kind === "legacy" ? "Unlinked record" : "Last performed"} · {formatAppDate(exercise.latest_day)}</span>
+    </button>
+  </li>;
+}
+
+export function ExerciseLibrary({ library, token, cache }: { library: ExerciseLibraryResponse; token: string; cache: ExerciseHistoryCache }) {
+  const [search, setSearch] = useState("");
+  const [selected, setSelected] = useState<PersonalExercise | null>(null);
+  if (!library.exercises.length) return <EmptyState eyebrow="Exercise records" title="No performed exercises recorded yet."
+    description="Completed and modified exercise logs build your personal record. Skipped-only exercises are excluded."
+    example="Log your performance on Today to start your record." />;
+  const query = search.trim().toLocaleLowerCase();
+  const matching = library.exercises.filter(exercise => `${exercise.name} ${exercise.identity_kind === "canonical" ? exercise.id.slice(4).replaceAll("-", " ") : ""}`.toLocaleLowerCase().includes(query));
+  const canonical = matching.filter(exercise => exercise.identity_kind === "canonical");
+  const legacy = matching.filter(exercise => exercise.identity_kind === "legacy");
+  return <div className="history-tab-body">
+    <label className="history-exercise-search">Find an exercise
+      <input type="search" value={search} onChange={event => setSearch(event.target.value)} placeholder="Search your exercise records" />
+    </label>
+    <p className={styles.scope}>Best loads from your saved performances. Each weight unit is kept separate.</p>
+    {canonical.length ? <ul className={`history-list ${styles.library}`} aria-label="Your exercises">
+      {canonical.map(exercise => <ExerciseCard key={exercise.id} exercise={exercise} onSelect={() => setSelected(exercise)} />)}
+    </ul> : null}
+    {legacy.length ? <section className={styles.legacy} aria-label="Unlinked legacy records">
+      <h2>Unlinked legacy records</h2><p className={styles.scope}>These records have no saved exercise key. They stay separate so different movements aren’t combined.</p>
+      <ul className={`history-list ${styles.library}`}>{legacy.map(exercise => <ExerciseCard key={exercise.id} exercise={exercise} onSelect={() => setSelected(exercise)} />)}</ul>
+    </section> : null}
+    {!matching.length ? <p className="muted" role="status">No matching exercises in your saved history.</p> : null}
+    {selected ? <ExerciseDetails key={selected.id} exercise={selected} asOf={library.as_of} token={token} cache={cache} onDismiss={() => setSelected(null)} /> : null}
+  </div>;
+}
+
+export function ExerciseDetails({ exercise, asOf, token, cache, onDismiss }: {
+  exercise: PersonalExercise; asOf: string; token: string; cache: ExerciseHistoryCache; onDismiss: () => void;
+}) {
+  const dialog = useRef<HTMLDialogElement>(null);
+  const alive = useRef(false);
+  const loadingMore = useRef(false);
+  const heading = useId();
+  const [data, setData] = useState<ExercisePerformancesResponse | null>(null);
+  const [error, setError] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [attempt, setAttempt] = useState(0);
+  const cacheKey = `${asOf}:${exercise.id}`;
+  useEffect(() => {
+    const element = dialog.current;
+    if (!element) return;
+    alive.current = true;
+    const previous = document.activeElement as HTMLElement | null;
+    element.showModal(); element.querySelector<HTMLButtonElement>("button")?.focus();
+    const release = lockOverlayScroll();
+    return () => { alive.current = false; element.close(); release(); previous?.focus(); };
+  }, []);
+  useEffect(() => {
+    let cancelled = false;
+    let request = cache.get(cacheKey);
+    if (!request) { request = getExercisePerformances(token, exercise.id, asOf); cache.set(cacheKey, request); }
+    void request.then(page => { if (!cancelled) setData(page); }).catch(() => {
+      if (cache.get(cacheKey) === request) cache.delete(cacheKey);
+      if (!cancelled) setError(true);
+    });
+    return () => { cancelled = true; };
+  }, [cache, cacheKey, exercise.id, asOf, token, attempt]);
+  async function more() {
+    if (!data?.next_cursor || loadingMore.current) return;
+    loadingMore.current = true; setBusy(true); setError(false);
+    const previous = data;
+    const request = getExercisePerformances(token, exercise.id, asOf, data.next_cursor).then(page => {
+      const seen = new Set(previous.performances.map(item => item.id));
+      return { ...page, performances: [...previous.performances, ...page.performances.filter(item => !seen.has(item.id))] };
+    });
+    cache.set(cacheKey, request);
+    try { const page = await request; if (alive.current) setData(page); }
+    catch { if (cache.get(cacheKey) === request) cache.set(cacheKey, Promise.resolve(previous)); if (alive.current) setError(true); }
+    finally { loadingMore.current = false; if (alive.current) setBusy(false); }
+  }
+  const result = exerciseResult(exercise);
+  return <dialog ref={dialog} className={sheet.dialog} aria-labelledby={heading}
+    onCancel={event => { event.preventDefault(); onDismiss(); }}
+    onClick={event => { if (event.target === event.currentTarget) {
+      const bounds = event.currentTarget.getBoundingClientRect();
+      if (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom) onDismiss();
+    } }}>
+    <header className={sheet.header}><div><p className={sheet.eyebrow}>Exercise record</p><h2 id={heading}>{exercise.name}</h2>
+      <p className={styles.resultLabel}>{result.label}</p><strong className={styles.detailResult}>{result.value}</strong></div>
+      <button type="button" className={sheet.close} aria-label="Close exercise history" onClick={onDismiss}>×</button></header>
+    <div className={sheet.body} tabIndex={0} role="region" aria-label="Exercise performance record">
+      <p className={sheet.quiet}>{exercise.identity_kind === "legacy" ? "One original legacy record. Movement identity across other dates is unknown." : "Saved exercise-block results, across your plans. These are not individual set records."}</p>
+      {exercise.best_loads.length ? <p className={sheet.quiet}>Highest eligible recorded load by unit; not an estimated one-rep maximum.</p> : null}
+      <section className={sheet.section}><h3>Performance history</h3>
+        {!data && !error ? <p role="status">Loading exercise history…</p> : null}
+        {data ? <ol className={sheet.blocks}>{data.performances.map((item, index) => <TrainingBlock key={item.id} block={item.block} index={index} heading={formatAppDate(item.training_day)} />)}</ol> : null}
+        {data?.performances.length === 0 ? <p className={sheet.quiet}>No remaining records for this exercise.</p> : null}
+        {error ? <div role="alert"><p>{data ? "Unable to load earlier records. Your loaded records are still available." : "Unable to load exercise records. Try again."}</p><button type="button" className="secondary-button" onClick={() => { setError(false); if (data?.next_cursor) void more(); else setAttempt(value => value + 1); }}>Retry</button></div> : null}
+        {data?.next_cursor && !error ? <button type="button" className="secondary-button" disabled={busy} onClick={() => void more()}>{busy ? "Loading…" : "Load earlier performances"}</button> : null}
+      </section>
+    </div>
+  </dialog>;
+}

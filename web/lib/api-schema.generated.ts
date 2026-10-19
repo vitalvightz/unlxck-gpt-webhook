@@ -724,6 +724,12 @@ export type ExerciseHistoryResponse = {
   next_offset: number | null;
 };
 
+export type ExerciseLibraryResponse = {
+  exercises: PersonalExercise[];
+  as_of: string;
+  coverage: "retained_logs";
+};
+
 /**
  * What the athlete actually did for one block.
  *
@@ -877,6 +883,17 @@ export type ExerciseOptionsResponse = {
   more_available: boolean;
   notice: string | null;
   scopes: ExerciseChangeScope[];
+};
+
+export type ExercisePerformance = {
+  id: string;
+  training_day: string;
+  block: SessionDetailBlock;
+};
+
+export type ExercisePerformancesResponse = {
+  performances: ExercisePerformance[];
+  next_cursor: string | null;
 };
 
 /** The weight last logged for an exercise, carried into the next log. */
@@ -1601,6 +1618,16 @@ export type PendingRehabResponsesResponse = {
   history_truncated: boolean;
 };
 
+export type PersonalExercise = {
+  id: string;
+  name: string;
+  identity_kind: "canonical" | "legacy";
+  latest_day: string;
+  latest_values: ExerciseLogActual;
+  latest_confirmed_as_prescribed: boolean;
+  best_loads: RecordedExerciseLoad[];
+};
+
 export type PlanActivationRequest = {
   overlap_action?: string | null;
 };
@@ -1947,6 +1974,13 @@ export type QuickAction = {
   id: string;
   label: string;
   route: string;
+};
+
+export type RecordedExerciseLoad = {
+  value: number;
+  unit: "kg" | "lb";
+  training_day: string;
+  basis: "confirmed_prescription" | "reported";
 };
 
 /**

@@ -46,7 +46,7 @@ test("failed History tabs can be retried without losing the Sessions cache", asy
     const isSessions = url.includes("training/history");
     const failed = !isSessions && fail;
     const body = failed ? { detail: "invalid authentication token" }
-      : isSessions ? { sessions: [] } : url.includes("sparring-logs") ? { logs: [] } : url.includes("history/exercises") ? { logs: [], next_offset: null } : [];
+      : isSessions ? { sessions: [] } : url.includes("sparring-logs") ? { logs: [] } : url.includes("history/exercise-library") ? { exercises: [], as_of: "2026-10-19T12:00:00Z" } : [];
     return new Response(JSON.stringify(body), {
       status: failed ? 401 : 200,
       headers: { "content-type": "application/json" },

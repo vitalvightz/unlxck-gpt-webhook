@@ -8,13 +8,12 @@ import { GlossaryTooltip } from "@/components/glossary-tooltip";
 import { Skeleton } from "@/components/skeleton";
 import {
   listInjuryFlags,
-  listExerciseHistory,
+  getExerciseLibrary,
   getTrainingHistory,
   deleteExternalTraining,
   listSparringLogHistory,
   listTodayCheckinHistory,
 } from "@/lib/api";
-import { EXERCISE_LOG_REASON_LABELS, EXERCISE_LOG_STATUS_LABELS, performanceSummary } from "@/lib/exercise-log";
 import { athleteTrainingDayISO } from "@/lib/camp-map";
 import { formatAppDate } from "@/lib/date-format";
 import {
@@ -43,7 +42,6 @@ import { loadHistoryWithAuthRecovery } from "@/lib/history-request";
 import type { TodayDecisionTone } from "@/lib/today";
 import type {
   InjuryFlagRecord,
-  ExerciseHistoryResponse,
   SparringIntensity,
   SparringLogHistoryResponse,
   SparringLogRecord,
@@ -57,6 +55,8 @@ import { filterTakeaways } from "@/lib/training-summary";
 import { canRepeatTraining, sortTrainingHistory, type TrainingHistorySession } from "@/lib/training-history";
 import { useTrainingDay } from "@/lib/use-training-day";
 import { SessionDetails, type SessionDetailsCache } from "./session-details";
+import { ExerciseLibrary, type ExerciseHistoryCache } from "./exercise-library";
+import type { ExerciseLibraryResponse } from "@/lib/api-schema.generated";
 
 type HistoryTab = "sessions" | "exercises" | "sparring" | "checkins" | "injuries";
 
@@ -560,36 +560,6 @@ function InjuryRows({ rows }: { rows: InjuryFlagRecord[] }) {
   );
 }
 
-function ExerciseRows({ history, onMore, loading }: {
-  history: ExerciseHistoryResponse; onMore: () => void; loading: boolean;
-}) {
-  const [search, setSearch] = useState("");
-  if (history.logs.length === 0) return <EmptyState eyebrow="Exercise history" title="No exercises logged yet."
-    description="Your logged loads, sets and reps appear here across every plan." example="Log an exercise on Today to start your record." />;
-  const rows = history.logs.filter((row) => String(row.prescribed.display_name ?? row.exercise_key ?? "")
-    .toLowerCase().includes(search.trim().toLowerCase()));
-  return <div className="history-tab-body">
-    <label className="history-exercise-search">Find an exercise
-      <input type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Exercise name" />
-    </label>
-    <ul className="history-list">
-      {rows.map((row) => <li key={row.id} className="history-row" data-tone={row.status === "skipped" ? "grey" : "green"}>
-        <div className="history-row-head">
-          <span className="history-row-title">{String(row.prescribed.display_name ?? row.exercise_key ?? "Exercise")}</span>
-          <StatusBadge tone={row.status === "skipped" ? "grey" : "green"} label={EXERCISE_LOG_STATUS_LABELS[row.status]} />
-        </div>
-        <div className="history-row-meta">{formatAppDate(row.training_day)}</div>
-        <p className="history-summary-line">{performanceSummary(row)}</p>
-        {row.reason ? <p className="muted history-row-note">{EXERCISE_LOG_REASON_LABELS[row.reason]}</p> : null}
-      </li>)}
-    </ul>
-    {!rows.length ? <p className="muted">No matching exercises in the loaded history.</p> : null}
-    {history.next_offset !== null ? <button className="secondary-button" disabled={loading} onClick={onMore}>
-      {loading ? "Loading…" : "Load earlier records"}
-    </button> : null}
-  </div>;
-}
-
 export function HistoryScreen() {
   const { session, me } = useAppSession();
   return <HistoryContent key={`${session?.access_token ?? "anonymous"}:${me?.profile.health_consent_granted ?? "unknown"}`} />;
@@ -612,8 +582,8 @@ function HistoryContent() {
     rows: null,
     error: null,
   });
-  const [exercises, setExercises] = useState<TabData<ExerciseHistoryResponse>>({ rows: null, error: null });
-  const [exerciseOffset, setExerciseOffset] = useState<number | null>(null);
+  const [exercises, setExercises] = useState<TabData<ExerciseLibraryResponse>>({ rows: null, error: null });
+  const [exerciseHistoryCache] = useState<ExerciseHistoryCache>(() => new Map());
   const [sparring, setSparring] = useState<TabData<SparringLogHistoryResponse>>({
     rows: null,
     error: null,
@@ -673,15 +643,7 @@ function HistoryContent() {
       // Manual sparring sessions show their linked report, so load those too.
       if (hasManualSparring) void load(sparring, listSparringLogHistory, setSparring);
     } else if (tab === "exercises") {
-      if (exerciseOffset !== null && exercises.rows) {
-        const previous = exercises.rows;
-        void load({ rows: null, error: null }, async (accessToken) => {
-          const page = await listExerciseHistory(accessToken, exerciseOffset);
-          return { ...page, logs: [...previous.logs, ...page.logs].filter((row, index, all) => all.findIndex((item) => item.id === row.id) === index) };
-        }, (data) => { setExerciseOffset(null); setExercises(data.error ? { ...data, rows: previous } : data); });
-      } else {
-        void load(exercises, (accessToken) => listExerciseHistory(accessToken), setExercises);
-      }
+      void load(exercises, getExerciseLibrary, setExercises);
     } else if (tab === "sparring") {
       void load(sparring, listSparringLogHistory, setSparring);
     } else if (tab === "checkins") {
@@ -692,7 +654,7 @@ function HistoryContent() {
     return () => {
       cancelled = true;
     };
-  }, [tab, token, userId, sessions, exercises, exerciseOffset, sparring, checkins, injuries, hasManualSparring]);
+  }, [tab, token, userId, sessions, exercises, sparring, checkins, injuries, hasManualSparring]);
 
   // Stable, and guarded by a ref, so the summary can ask for pages from an effect.
   const loadingMore = useRef(false);
@@ -777,7 +739,7 @@ function HistoryContent() {
             className="error-banner-retry"
             onClick={() => {
               if (tab === "sessions") setSessions({ rows: null, error: null });
-              else if (tab === "exercises") { setExerciseOffset(exercises.rows?.next_offset ?? null); setExercises((current) => ({ ...current, error: null })); }
+              else if (tab === "exercises") setExercises({ rows: null, error: null });
               else if (tab === "sparring") setSparring({ rows: null, error: null });
               else if (tab === "checkins") setCheckins({ rows: null, error: null });
               else setInjuries({ rows: null, error: null });
@@ -803,8 +765,7 @@ function HistoryContent() {
             setSessions(previous => ({ ...previous, rows: previous.rows?.filter(item => !(item.source === "external" && item.id === id)) ?? null }));
           }} />
       ) : tab === "exercises" ? (
-        exercises.rows ? <ExerciseRows history={exercises.rows} loading={exerciseOffset !== null}
-          onMore={() => setExerciseOffset(exercises.rows?.next_offset ?? null)} /> : <ListSkeleton />
+        exercises.rows && token ? <ExerciseLibrary library={exercises.rows} token={token} cache={exerciseHistoryCache} /> : <ListSkeleton />
       ) : tab === "sparring" ? (
         sparring.rows ? <SparringRows history={sparring.rows} token={token} onSaved={onSparringSaved} /> : <ListSkeleton />
       ) : tab === "checkins" ? (
