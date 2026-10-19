@@ -236,3 +236,102 @@ def test_no_health_data_consent_means_no_plan_free_collection():
 
     assert resp.status_code == 403
     assert store.today_checkins.get("athlete-1", []) == []
+
+
+# -- Every Today read re-evaluates the plan-free check-in ----------------------
+# The stored recommendation is a check-in-time snapshot. As on the planned path,
+# each read evaluates the stored answers against the latest evidence, without
+# rewriting the check-in.
+
+
+def _log_hard_session(client) -> dict:
+    resp = client.post("/api/training/sessions", headers=ATHLETE, json={
+        "activity": "sparring", "duration_minutes": 60, "effort": "hard", "client_request_id": str(uuid4()),
+    })
+    assert resp.status_code == 201, resp.text
+    return resp.json()
+
+
+def test_workload_logged_after_the_check_in_is_reflected_on_reload():
+    client, store, _ = _build_client()
+    _checkin(client, sleep="poor")
+    assert "Heavy recent load" not in _today(client)["today"]["recommendation_trigger_labels"]
+    stored = dict(_plan_free_rows(store)[0])
+
+    _log_hard_session(client)
+    _log_hard_session(client)
+
+    today = _today(client)["today"]
+    assert "Heavy recent load" in today["recommendation_trigger_labels"]
+    # Read-only: the morning check-in is never rewritten by a read.
+    assert _plan_free_rows(store)[0]["recommendation_triggers"] == stored["recommendation_triggers"]
+    assert _plan_free_rows(store)[0]["updated_at"] == stored["updated_at"]
+
+
+def test_removed_workload_is_reflected_on_reload_too():
+    client, store, _ = _build_client()
+    _checkin(client, sleep="poor")
+    first = _log_hard_session(client)
+    _log_hard_session(client)
+    assert "Heavy recent load" in _today(client)["today"]["recommendation_trigger_labels"]
+
+    assert client.delete(f"/api/training/sessions/{first['id']}", headers=ATHLETE).status_code == 204
+
+    assert "Heavy recent load" not in _today(client)["today"]["recommendation_trigger_labels"]
+
+
+@pytest.mark.parametrize("method, expected_tier", [
+    ("list_injury_flags", "pull_back"),
+    ("list_external_training_sessions", "modify"),
+    ("list_session_completions", "modify"),
+    ("latest_sparring_log_day", "modify"),
+])
+def test_a_safety_read_failing_after_a_green_check_in_never_shows_green(monkeypatch, method, expected_tier):
+    client, store, _ = _build_client()
+    assert _checkin(client).json()["recommendation_state"] == "train_as_planned"
+    assert _today(client)["today"]["decision_tier"] == "green"
+
+    def broken(*args, **kwargs):
+        raise RuntimeError(f"{method} down")
+
+    monkeypatch.setattr(store, method, broken)
+    resp = client.get("/api/today", headers=ATHLETE)
+
+    if resp.status_code == 200:
+        today = resp.json()["today"]
+        assert today["recommendation_state"] != "train_as_planned"
+        assert today["decision_tier"] in {expected_tier, "pull_back", "stop"}
+    else:
+        # Failing closed by making Today unavailable is also never green.
+        assert resp.status_code >= 500
+
+
+def test_a_head_impact_reported_after_a_green_check_in_takes_over_on_reload():
+    client, store, _ = _build_client()
+    assert _checkin(client).json()["recommendation_state"] == "train_as_planned"
+
+    session = client.post("/api/training/sessions", headers=ATHLETE, json={
+        "activity": "sparring", "duration_minutes": 30, "effort": "moderate", "client_request_id": str(uuid4()),
+    }).json()
+    client.post("/api/today/sparring-log", headers=ATHLETE, json={
+        "source": "free", "external_session_id": session["id"], "intensity": "medium", "rounds_completed": 3,
+        "head_contact": "heavy", "rocked": True, "client_request_id": str(uuid4()), "detail_revision": 1,
+    })
+
+    today = _today(client)["today"]
+    assert today["recommendation_state"] == "pull_back"
+    assert "Head impact reported" in today["recommendation_trigger_labels"]
+    assert today["primary_safety_notice"]["code"] == "head_impact_no_contact"
+
+
+def test_a_medical_hold_still_outranks_the_morning_check_in():
+    client, store, _ = _build_client()
+    assert _checkin(client).json()["recommendation_state"] == "train_as_planned"
+
+    client.post("/api/today/injury-checkin", headers=ATHLETE, json={"injuries": [{
+        "body_area": "head", "description": "dizziness after a clash of heads", "severity": "severe",
+    }]})
+
+    today = _today(client)["today"]
+    assert today["recommendation_state"] == "pull_back"
+    assert today["decision_tier"] in {"pull_back", "stop"}

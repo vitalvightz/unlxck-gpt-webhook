@@ -3022,18 +3022,34 @@ def _build_today_command_view(
         injuries = _with_rehab_stage(_with_safe_session_context(_with_surface_class(_open_injury_flags(store, athlete_id))),
                                     store=store, athlete_id=athlete_id)
         injuries = _with_injury_policy(injuries, store=store, athlete_id=athlete_id, training_day=training_day, as_of=assessment_as_of)
-        symptom_recommendation = None
-        if active_medical_hold_reasons(injuries):
-            symptom_decision = build_readiness_adjustment(ReadinessCheckin(), ReadinessContext(open_injuries=injuries))
-            symptom_recommendation = {"decision": symptom_decision.decision, "reason": symptom_decision.message,
-                                      "triggers": list(symptom_decision.triggers), "training_day": training_day}
         # The plan-free check-in is read like a planned one: a failed read
         # raises (Today unavailable) rather than looking like "not checked in".
         plan_free_checkin = store.get_today_checkin(athlete_id, None, training_day)
+        recommendation = None
+        if plan_free_checkin or active_medical_hold_reasons(injuries):
+            from dataclasses import replace
+
+            # As on the planned path, the saved recommendation is a check-in-time
+            # snapshot: every read re-evaluates the stored answers against the
+            # current injuries, workload, sparring and safety reads, with no plan
+            # context. Read-only: the check-in row is never rewritten here. A
+            # current medical hold or worsening injury leads through the same
+            # engine, and failed reads are floored by the same fail-safe.
+            decision, _ = _readiness_decision_with_failsafe(
+                store,
+                checkin=replace(_stored_readiness_checkin_from(plan_free_checkin or {}), phase=""),
+                athlete_id=athlete_id,
+                plan_row=None,
+                training_day=training_day,
+                phase="",
+                open_injuries=injuries,
+            )
+            decision = _plan_free_wording(decision)
+            recommendation = {"decision": decision.decision, "reason": decision.message,
+                              "triggers": list(decision.triggers), "training_day": training_day}
         view = build_command_view(current_training_day=training_day, plan=None, open_injuries=injuries,
                                   head_impact_today=_head_impact_reported(store, athlete_id, training_day),
-                                  # A current medical hold outranks the morning's check-in.
-                                  recommendation=symptom_recommendation or _recommendation_mapping(plan_free_checkin),
+                                  recommendation=recommendation,
                                   risks=_risks_from_checkin(plan_free_checkin))
         view.effective_clinician_clearance = effective_clinician_clearance(injuries)
         view.delayed_rehab_prompts = delayed_rehab_prompts(store, athlete_id, training_day, athlete_timezone)

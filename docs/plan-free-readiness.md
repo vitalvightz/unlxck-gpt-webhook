@@ -48,8 +48,16 @@ the session-based tier titles. A safety notice or STOP keeps its own copy.
   do for planned athletes. A failed injury read holds at pull-back, and other
   failed reads degrade to modify, on submission and again whenever Today is
   read.
-- A new injury report, or a worsening one, re-evaluates the plan-free
-  check-in, so a morning green never outlives a later injury.
+- **Every Today read re-evaluates the check-in**, exactly as on the planned
+  path. The stored recommendation is a check-in-time snapshot. Each read runs
+  the stored answers through the same evaluator (`plan_row=None`) against the
+  latest injuries, medical holds, workload, sparring and safety reads, so a
+  hard session logged later, a deleted session, a head-impact report or a
+  failed read changes what Today shows. The read is read-only and never
+  rewrites the check-in. It reuses reads already made in the same build; the
+  planned path has always paid this cost.
+- A new injury report, or a worsening one, also re-evaluates and stores the
+  plan-free check-in, so the persisted recommendation keeps up too.
 - **Head impact (all athletes):** a rocked/dropped sparring report on the
   current or previous training day pulls readiness back with "No contact
   today." This is a floor, never a clearance. A failed sparring read degrades
