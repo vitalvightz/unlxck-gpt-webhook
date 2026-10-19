@@ -82,13 +82,14 @@ def awareness_plan_note(records: list[dict[str, str]]) -> dict[str, str] | None:
     described = [_describe(r) for r in records]
     subject = described[0] if len(described) == 1 else ", ".join(described[:-1]) + f" and {described[-1]}"
     subject = subject[:1].upper() + subject[1:]
-    verb = "is" if len(described) == 1 else "are"
+    plural = len(described) > 1 or records[0]["area"].startswith("both ")
+    verb = "are" if plural else "is"
     return {
         "category": "injury",
         "label": "Injury - not limiting",
         "text": (
-            f"{subject} {verb} logged as not limiting, so it does not change your "
-            "loading or session choices. Warm it up properly, keep an eye on it, "
+            f"{subject} {verb} logged as not limiting, so {'they do' if plural else 'it does'} not change your "
+            f"loading or session choices. Warm {'them' if plural else 'it'} up properly, keep an eye on {'them' if plural else 'it'}, "
             "and log any change in your check-in."
         ),
     }
