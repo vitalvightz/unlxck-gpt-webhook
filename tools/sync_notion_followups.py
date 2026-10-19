@@ -56,6 +56,15 @@ def parse_stamp(value):
     return stamp.replace(tzinfo=LONDON) if stamp.tzinfo is None else stamp.astimezone(LONDON)
 
 
+def same_date_value(left, right):
+    """Compare real timestamps, not Notion's differing timezone/precision renderings."""
+    if not left or not right:
+        return left == right
+    if ("T" in left) != ("T" in right):
+        return False
+    return parse_stamp(left) == parse_stamp(right)
+
+
 def now_london(value):
     if isinstance(value, date) and not isinstance(value, datetime):
         return datetime.combine(value, datetime_time.min, LONDON)
@@ -199,7 +208,7 @@ def get_changes(page, today):
         second = observed
         changes["Follow-Up 2 Sent At"] = date_patch(second)
         changes["Last Follow-Up Sent"] = date_patch(second)
-    elif count == 2 and second and legacy != second:
+    elif count == 2 and second and not same_date_value(legacy, second):
         # Preserve first-send history in its own property, and maintain the
         # existing compatibility field as the *last* event.
         changes["Last Follow-Up Sent"] = date_patch(second)
@@ -217,7 +226,7 @@ def get_changes(page, today):
         due, status, message = None, "Needs count review", BAD_COUNT
 
     current_due = date_value(p, "Safe Next Due")
-    if current_due != due:
+    if not same_date_value(current_due, due):
         changes["Safe Next Due"] = date_patch(due)
     current_status = "".join(x.get("plain_text", "") for x in p["Follow-Up Timing"].get("rich_text", []))
     if current_status != status:
