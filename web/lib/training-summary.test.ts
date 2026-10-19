@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { filterTakeaways, formatTrainingDuration, summarizeTraining } from "./training-summary.ts";
+import { filterTakeaways, formatTrainingDuration, summarizeTraining, summaryWindowLoaded } from "./training-summary.ts";
 import type { TrainingHistorySession } from "@/lib/training-history";
 
 const TODAY = "2026-10-19";
@@ -64,4 +64,13 @@ test("takeaways are found by their text or session title", () => {
   assert.deepEqual(filterTakeaways(rows, "").map(item => item.id), ["a", "b"]);
   assert.deepEqual(filterTakeaways(rows, "JAB").map(item => item.id), ["a"]);
   assert.deepEqual(filterTakeaways(rows, "roadwork").map(item => item.id), ["b"]);
+});
+
+test("a window counts as loaded only when every day in it is fully loaded", () => {
+  assert.equal(summaryWindowLoaded(null, TODAY, 28), true);
+  // Pages hold whole days: everything on or after the cursor day is loaded.
+  assert.equal(summaryWindowLoaded("2026-10-13", TODAY, 7), true);
+  assert.equal(summaryWindowLoaded("2026-10-14", TODAY, 7), false);
+  assert.equal(summaryWindowLoaded("2026-09-22", TODAY, 28), true);
+  assert.equal(summaryWindowLoaded("2026-09-23", TODAY, 28), false);
 });

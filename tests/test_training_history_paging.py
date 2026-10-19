@@ -56,15 +56,42 @@ def test_last_page_has_no_cursor(api):
     assert len(rows) == 1 and before is None
 
 
-def test_one_day_filling_a_read_still_advances(api):
+def _all_pages(store, limit: int, **options) -> list[dict]:
+    seen, before = [], None
+    for _ in range(50):
+        rows, before = training_history_page(store, ATHLETE, limit=limit, before_day=before, **options)
+        seen += rows
+        if before is None:
+            return seen
+    raise AssertionError("pager did not finish")
+
+
+def test_a_day_larger_than_the_page_is_returned_whole_and_exactly_once(api):
     _, store = api
     for _ in range(4):
         _manual(store, "2026-10-10")
     _manual(store, "2026-10-09")
     rows, before = training_history_page(store, ATHLETE, limit=3)
-    assert {row["training_day"] for row in rows} == {"2026-10-10"} and before == "2026-10-10"
-    rows, before = training_history_page(store, ATHLETE, limit=3, before_day=before)
-    assert [row["training_day"] for row in rows] == ["2026-10-09"] and before is None
+    assert len(rows) == 4 and {row["training_day"] for row in rows} == {"2026-10-10"} and before == "2026-10-10"
+    seen = _all_pages(store, 3)
+    assert sorted(row["id"] for row in seen) == sorted(store.external_training_sessions)
+    assert len(seen) == len({row["id"] for row in seen}) == 5
+
+
+def test_large_days_from_both_sources_are_complete(api):
+    _, store = api
+    for _ in range(9):
+        _manual(store, "2026-10-10")
+    for index in range(7):
+        store.upsert_session_completion(ATHLETE, {"plan_id": f"plan-{index}", "session_id": f"s-{index}",
+                                                  "training_day": "2026-10-10", "status": "done",
+                                                  "completion_origin": "reported"})
+    for day in _days("2026-10-09", 5):
+        _manual(store, day)
+    seen = _all_pages(store, 2)
+    keys = [(row["source"], row["id"]) for row in seen]
+    assert len(keys) == len(set(keys)) == 9 + 7 + 5
+    assert [row["training_day"] for row in seen] == sorted((row["training_day"] for row in seen), reverse=True)
 
 
 def test_history_endpoint_returns_the_cursor(api):

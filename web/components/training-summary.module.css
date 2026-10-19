@@ -20,3 +20,5 @@
 .mixValue { min-width: 3.5em; color: var(--text-secondary); font-variant-numeric: tabular-nums; text-align: right; }
 .footnote { margin: 0; font-size: 0.78rem; color: var(--text-secondary); }
 @media (max-width: 380px) { .stats dd { font-size: 1.4rem; } }
+.incomplete { display: grid; gap: 10px; justify-items: start; font-size: 0.85rem; color: var(--text-secondary); }
+.incomplete p { margin: 0; }

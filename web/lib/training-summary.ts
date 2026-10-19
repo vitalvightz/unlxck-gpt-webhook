@@ -1,4 +1,4 @@
-import { isWithinLastDays } from "@/lib/history";
+import { isWithinLastDays, trainingDaysAgo } from "@/lib/history";
 import type { TrainingActivity, TrainingHistorySession } from "@/lib/training-history";
 
 /** One discipline's share of the window. Strength and conditioning are one S&C bucket. */
@@ -65,4 +65,15 @@ export function filterTakeaways(rows: readonly TrainingHistorySession[], query: 
   const needle = query.trim().toLowerCase();
   return rows.filter(row => row.takeaway?.trim() && (!needle || row.takeaway.toLowerCase().includes(needle)
     || row.title.toLowerCase().includes(needle)));
+}
+
+/**
+ * True when every session of the last `days` training days is loaded. History
+ * pages hold whole days, so all days on or after `loadedFrom` are complete;
+ * null means nothing older remains to load.
+ */
+export function summaryWindowLoaded(loadedFrom: string | null, today: string, days: number): boolean {
+  if (loadedFrom === null) return true;
+  const ago = trainingDaysAgo(loadedFrom, today);
+  return ago !== null && ago >= days - 1;
 }

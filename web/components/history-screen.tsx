@@ -1,6 +1,6 @@
 "use client";
 
-import { type CSSProperties, useEffect, useMemo, useState } from "react";
+import { type CSSProperties, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { useAppSession } from "@/components/auth-provider";
 import { EmptyState } from "@/components/empty-state";
@@ -164,10 +164,11 @@ function sessionSparringChips(log: SparringLogRecord): HistoryChip[] {
   ];
 }
 
-function SessionRows({ rows, today, token, onUpdate, onDelete, hasMore, loadingMore, moreError, onMore, sparringLogs, onSparringSaved }: {
+function SessionRows({ rows, today, token, onUpdate, onDelete, loadedFrom, loadingMore, moreError, onMore, sparringLogs, onSparringSaved }: {
   rows: TrainingHistorySession[]; today: string | null; token: string | null;
   onUpdate: (row: TrainingHistorySession) => void; onDelete: (id: string) => Promise<void>;
-  hasMore: boolean; loadingMore: boolean; moreError: string | null; onMore: () => void;
+  /** Oldest fully loaded training day; null when no older sessions remain. */
+  loadedFrom: string | null; loadingMore: boolean; moreError: string | null; onMore: () => Promise<void>;
   /** Linked manual sparring reports by session id; null until loaded. */
   sparringLogs: Map<string, SparringLogRecord> | null;
   onSparringSaved: (log: SparringLogRecord) => void;
@@ -207,7 +208,8 @@ function SessionRows({ rows, today, token, onUpdate, onDelete, hasMore, loadingM
     <div className="history-tab-body">
       {saved ? <p className="muted" role="status">{saved}</p> : null}
       {error ? <p className="error-banner" role="alert">{error}</p> : null}
-      {today ? <TrainingSummaryCard rows={rows} today={today} /> : null}
+      {today ? <TrainingSummaryCard rows={rows} today={today} loadedFrom={loadedFrom}
+        loading={loadingMore} error={moreError} onLoadMore={onMore} /> : null}
       {week ? (
         <section className="history-summary" aria-label="Sessions in the last 7 days">
           <SummaryGroup
@@ -281,7 +283,7 @@ function SessionRows({ rows, today, token, onUpdate, onDelete, hasMore, loadingM
       </ul>
       {takeawaysOnly && !shown.length ? <p className="muted">No matching takeaways in the loaded history.</p> : null}
       {moreError ? <p className="error-banner" role="alert">{moreError}</p> : null}
-      {hasMore ? <button type="button" className="secondary-button" disabled={loadingMore} onClick={onMore}>
+      {loadedFrom !== null ? <button type="button" className="secondary-button" disabled={loadingMore} onClick={() => void onMore()}>
         {loadingMore ? "Loading…" : "Load earlier sessions"}
       </button> : null}
       {sparringDraft && token ? <SparringLogPrompt key={sparringDraft.externalSessionId} token={token} draft={sparringDraft}
@@ -683,9 +685,12 @@ function HistoryContent() {
     };
   }, [tab, token, userId, sessions, exercises, exerciseOffset, sparring, checkins, injuries, hasManualSparring]);
 
-  async function loadMoreSessions() {
-    if (!token || !sessionCursor || loadingMoreSessions) return;
+  // Stable, and guarded by a ref, so the summary can ask for pages from an effect.
+  const loadingMore = useRef(false);
+  const loadMoreSessions = useCallback(async () => {
+    if (!token || !sessionCursor || loadingMore.current) return;
     const before = sessionCursor;
+    loadingMore.current = true;
     setLoadingMoreSessions(true);
     setMoreSessionsError(null);
     try {
@@ -700,9 +705,10 @@ function HistoryContent() {
     } catch (error) {
       setMoreSessionsError(error instanceof Error ? error.message : "Unable to load earlier sessions.");
     } finally {
+      loadingMore.current = false;
       setLoadingMoreSessions(false);
     }
-  }
+  }, [token, userId, sessionCursor]);
 
   function onSparringSaved(log: SparringLogRecord) {
     // Show the corrected report straight away, then refresh the windowed totals.
@@ -774,8 +780,8 @@ function HistoryContent() {
         <ListSkeleton />
       ) : tab === "sessions" ? (
         <SessionRows rows={sessions.rows ?? []} today={today} token={token}
-          hasMore={sessionCursor !== null} loadingMore={loadingMoreSessions} moreError={moreSessionsError}
-          onMore={() => void loadMoreSessions()} sparringLogs={sparringBySession} onSparringSaved={onSparringSaved}
+          loadedFrom={sessionCursor} loadingMore={loadingMoreSessions} moreError={moreSessionsError}
+          onMore={loadMoreSessions} sparringLogs={sparringBySession} onSparringSaved={onSparringSaved}
           onUpdate={row => setSessions(previous => ({ ...previous, rows: sortTrainingHistory([row, ...(previous.rows ?? []).filter(item => !(item.source === "external" && item.id === row.id))]) }))}
           onDelete={async id => {
             if (!token) return;

@@ -190,3 +190,67 @@ test("Sessions shows the training summary, takeaways, linked sparring reports an
     globalThis.fetch = originalFetch;
   }
 });
+
+
+function shiftDay(day: string, offset: number): string {
+  return new Date(Date.parse(`${day}T12:00:00Z`) + offset * 86_400_000).toISOString().slice(0, 10);
+}
+
+async function renderSessions(fetcher: typeof fetch) {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = fetcher;
+  const container = document.createElement("div");
+  document.body.appendChild(container);
+  const root = createRoot(container);
+  await act(async () => root.render(<AppSessionContext.Provider value={{
+    session: { access_token: "token" }, me: null, isReady: true, isMeHydrated: true,
+    hasTransientMeError: false, refreshMe: async () => {}, signOut: async () => {},
+    replaceMe: () => {}, previewAppearanceMode: () => {},
+  }}><HistoryScreen /></AppSessionContext.Provider>));
+  await act(async () => { await new Promise(resolve => setTimeout(resolve, 0)); });
+  return {
+    container,
+    cleanup: () => { act(() => root.unmount()); container.remove(); globalThis.fetch = originalFetch; },
+  };
+}
+
+test("the summary loads every page in its window before showing totals", async () => {
+  const today = athleteTrainingDayISO(new Date(), undefined);
+  const session = (id: string, day: string, minutes: number) => ({ id, source: "external", title: "Boxing", activity: "boxing",
+    duration_minutes: minutes, effort: "hard", status: "done", training_day: day, plan_id: null });
+  const requests: string[] = [];
+  const ui = await renderSessions((async (input: unknown) => {
+    const url = String(input);
+    requests.push(url);
+    const body = url.includes(`before_day=${shiftDay(today, -1)}`)
+      ? { sessions: [session("b", shiftDay(today, -3), 30)], next_before_day: null }
+      : { sessions: [session("a", today, 60), session("c", shiftDay(today, -1), 45)], next_before_day: shiftDay(today, -1) };
+    return new Response(JSON.stringify(body), { status: 200, headers: { "content-type": "application/json" } });
+  }) as typeof fetch);
+  try {
+    const summary = ui.container.querySelector('[aria-label="Training summary"]')!;
+    const stat = (label: string) => [...summary.querySelectorAll("dt")].find(item => item.textContent === label)?.nextElementSibling?.textContent;
+    assert.ok(requests.some(url => url.includes(`before_day=${shiftDay(today, -1)}`)));
+    assert.equal(stat("Sessions"), "3");
+    assert.equal(stat("Training"), "2h 15m");
+  } finally { ui.cleanup(); }
+});
+
+test("a window that cannot be completed shows no totals rather than an undercount", async () => {
+  const today = athleteTrainingDayISO(new Date(), undefined);
+  const ui = await renderSessions((async (input: unknown) => {
+    const url = String(input);
+    if (url.includes("before_day=")) {
+      return new Response(JSON.stringify({ detail: "Service unavailable" }), { status: 503, headers: { "content-type": "application/json" } });
+    }
+    return new Response(JSON.stringify({ sessions: [{ id: "a", source: "external", title: "Boxing", activity: "boxing",
+      duration_minutes: 60, effort: "hard", status: "done", training_day: today, plan_id: null }], next_before_day: today }),
+    { status: 200, headers: { "content-type": "application/json" } });
+  }) as typeof fetch);
+  try {
+    const summary = ui.container.querySelector('[aria-label="Training summary"]')!;
+    assert.equal(summary.querySelector("dl"), null);
+    assert.match(summary.textContent ?? "", /totals aren.t shown/);
+    assert.ok([...summary.querySelectorAll("button")].some(button => button.textContent === "Retry"));
+  } finally { ui.cleanup(); }
+});
