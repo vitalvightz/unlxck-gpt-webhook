@@ -40,6 +40,7 @@ def to_entry(row: dict, *, health_consent_granted: bool) -> ManualExerciseEntry:
         training_day=str(row["training_day"])[:10], exercise_id=entry_identity(row), name=row["display_name"],
         format=row["measurement_format"], actual=entry_actual(row) or ExerciseLogActual(),
         notes=(row.get("notes") or None) if health_consent_granted else None,
+        revision=int(row.get("revision") or 1),
     )
 
 
@@ -146,8 +147,18 @@ def list_session_exercises(store, athlete_id: str, session_id: str, *, health_co
     return [to_entry(row, health_consent_granted=health_consent_granted) for row in rows]
 
 
+STALE_EDIT = "This exercise changed since you opened it. Reload to see the latest values."
+
+
+def _same(row: dict, fields: dict) -> bool:
+    return all(row.get(key) == value for key, value in fields.items())
+
+
 def save_session_exercise(store, athlete_id: str, session_id: str, entry_id: str, body: PerformedExerciseInput) -> ManualExerciseEntry:
-    """Idempotent PUT: the same entry_id always names the same occurrence."""
+    """Idempotent, ordered PUT. ``body.revision`` is the revision this save was
+    based on (0 for a new entry). It applies only while that is still current,
+    so a delayed retry of an earlier save can never overwrite a correction. A
+    replay of a save that already applied returns the stored row unchanged."""
     _live_session(store, athlete_id, session_id)
     existing = store.get_manual_exercise(athlete_id, entry_id)
     if existing and existing.get("athlete_id") != athlete_id:
@@ -156,6 +167,8 @@ def save_session_exercise(store, athlete_id: str, session_id: str, entry_id: str
         raise HTTPException(410, "This exercise was removed. Add it again as a new entry.")
     if existing and str(existing["external_session_id"]) != session_id:
         raise HTTPException(409, "This entry belongs to another session.")
+    if not existing and body.revision:
+        raise HTTPException(404, "Exercise not found.")
     fields = {**_identity(store, athlete_id, body), "measurement_format": body.format,
               "actual": body.actual.model_dump(mode="json", exclude_none=True), "notes": body.notes}
     if not existing:
@@ -166,11 +179,24 @@ def save_session_exercise(store, athlete_id: str, session_id: str, entry_id: str
             raise HTTPException(410, "This exercise was removed. Add it again as a new entry.")
         if str(existing["external_session_id"]) != session_id:
             raise HTTPException(409, "This entry belongs to another session.")
-    if any(existing.get(key) != value for key, value in fields.items()):
-        existing = store.update_manual_exercise(athlete_id, entry_id, fields)
-        if existing is None:
+    current = int(existing.get("revision") or 1)
+    if current == body.revision + 1 and _same(existing, fields):
+        # This exact save already applied (or a concurrent identical create won).
+        return to_entry(existing, health_consent_granted=True)
+    if current != body.revision:
+        raise HTTPException(409, STALE_EDIT)
+    if _same(existing, fields):
+        return to_entry(existing, health_consent_granted=True)
+    updated = store.update_manual_exercise(athlete_id, entry_id, fields, revision=body.revision)
+    if updated is None:
+        # Lost a race: only a replay of this same save is still a success.
+        latest = store.get_manual_exercise(athlete_id, entry_id)
+        if latest and latest.get("deleted_at"):
             raise HTTPException(410, "This exercise was removed. Add it again as a new entry.")
-    return to_entry(existing, health_consent_granted=True)
+        if latest and int(latest.get("revision") or 1) == body.revision + 1 and _same(latest, fields):
+            return to_entry(latest, health_consent_granted=True)
+        raise HTTPException(409, STALE_EDIT)
+    return to_entry(updated, health_consent_granted=True)
 
 
 def delete_session_exercise(store, athlete_id: str, session_id: str, entry_id: str) -> None:

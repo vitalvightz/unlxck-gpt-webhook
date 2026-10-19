@@ -41,7 +41,8 @@ async function mount({ entries = [] as ManualExerciseEntry[], reference = null a
       const body = call.body as { exercise: Record<string, string>; format: string; actual: Record<string, unknown>; notes: string };
       const name = body.exercise.name ?? (body.exercise.catalogue_id ? "Plank" : "Back Squat");
       return json({ id: `row-${calls.length}`, entry_id: url.pathname.split("/").at(-1), external_session_id: session.id, training_day: session.training_day,
-        exercise_id: body.exercise.name ? "custom:new" : "key:back-squat", name, format: body.format, actual: { ...blank, ...body.actual }, notes: body.notes || null });
+        exercise_id: body.exercise.name ? "custom:new" : "key:back-squat", name, format: body.format, actual: { ...blank, ...body.actual }, notes: body.notes || null,
+        revision: Number((call.body as { revision?: number }).revision ?? 0) + 1 });
     }
     if (url.pathname === `/api/training/sessions/${session.id}/exercises`) return json({ entries });
     if (url.pathname === "/api/training/sessions/old-session/exercises") return json({ entries: [{ id: "old", entry_id: "old-entry", external_session_id: "old-session",
@@ -88,7 +89,7 @@ test("a recent exercise becomes a compact saved row and the logger is ready for 
     await ui.type('[data-measure="load"]', "80");
     await ui.submit();
     const [put] = puts(ui.calls);
-    assert.deepEqual(put.body, { exercise: { exercise_key: "back-squat" }, format: "strength", actual: { sets: 3, reps: 5, load: { value: 80, unit: "kg" } }, notes: "" });
+    assert.deepEqual(put.body, { exercise: { exercise_key: "back-squat" }, format: "strength", actual: { sets: 3, reps: 5, load: { value: 80, unit: "kg" } }, notes: "", revision: 0 });
     const row = ui.container.querySelector('ul[aria-label="Exercises in this session"] li')!;
     assert.match(row.textContent!, /Back Squat3 × 5 · 80 kg/);
     assert.ok(ui.container.querySelector('input[type="search"]'), "editor resets to search");
@@ -104,7 +105,7 @@ test("a new name alone is enough, with an explicit no-measurements row, and Done
     await ui.click("Bodyweight");
     await ui.click("Done");
     await act(async () => { await new Promise(resolve => setTimeout(resolve, 0)); });
-    assert.deepEqual(puts(ui.calls)[0].body, { exercise: { name: "Landmine rotation" }, format: "bodyweight", actual: {}, notes: "" });
+    assert.deepEqual(puts(ui.calls)[0].body, { exercise: { name: "Landmine rotation" }, format: "bodyweight", actual: {}, notes: "", revision: 0 });
     assert.equal(ui.closed.length, 1);
     assert.equal(ui.closed[0]!.length, 1);
   } finally { ui.cleanup(); }
@@ -128,7 +129,7 @@ test("catalogue picks preselect a trusted format and invalid values stay beside 
 
 test("a failed save keeps the draft and retries with the same entry ID", async () => {
   let attempts = 0;
-  const ui = await mount({ respond: call => call.method === "PUT" && ++attempts === 1 ? json({ detail: "conflict" }, 409) : undefined });
+  const ui = await mount({ respond: call => call.method === "PUT" && ++attempts === 1 ? json({ detail: "bad request" }, 400) : undefined });
   try {
     await ui.click("Back Squat");
     await ui.type('[data-measure="sets"]', "3");
@@ -167,7 +168,7 @@ test("repeating reuses names from the earlier session but no performed values", 
 
 test("editing a saved row updates it in place and removal confirms", async () => {
   const saved = { id: "row", entry_id: "entry-1", external_session_id: session.id, training_day: session.training_day, exercise_id: "key:back-squat",
-    name: "Back Squat", format: "strength" as const, actual: { ...blank, sets: 3, reps: 5, load: { value: 80, unit: "lb" as const } }, notes: null };
+    name: "Back Squat", format: "strength" as const, actual: { ...blank, sets: 3, reps: 5, load: { value: 80, unit: "lb" as const } }, notes: null, revision: 3 };
   const ui = await mount({ entries: [saved] });
   try {
     await ui.click("Edit Back Squat");
@@ -176,11 +177,35 @@ test("editing a saved row updates it in place and removal confirms", async () =>
     await ui.type('[data-measure="load"]', "85");
     await ui.submit();
     assert.match(puts(ui.calls)[0].url, /entry-1$/);
+    // The edit names the revision it was based on.
+    assert.equal(puts(ui.calls)[0].body!.revision, 3);
     assert.equal(ui.container.querySelectorAll('ul[aria-label="Exercises in this session"] li').length, 1);
     assert.match(ui.container.textContent!, /3 × 5 · 85 lb/);
     await ui.click("Remove Back Squat");
     assert.deepEqual(ui.confirms, ["Remove Back Squat?"]);
     assert.equal(ui.calls.at(-1)!.method, "DELETE");
+  } finally { ui.cleanup(); }
+});
+
+test("an edit refused as stale reloads the stored values instead of overwriting them", async () => {
+  const saved = { id: "row", entry_id: "entry-1", external_session_id: session.id, training_day: session.training_day, exercise_id: "key:back-squat",
+    name: "Back Squat", format: "strength" as const, actual: { ...blank, sets: 3, reps: 5, load: { value: 80, unit: "kg" as const } }, notes: null, revision: 1 };
+  const latest = { ...saved, actual: { ...saved.actual, load: { value: 90, unit: "kg" as const } }, revision: 2 };
+  let lists = 0;
+  const ui = await mount({ respond: call => {
+    if (call.method === "PUT") return json({ detail: "This exercise changed since you opened it. Reload to see the latest values." }, 409);
+    if (call.url === `/api/training/sessions/${session.id}/exercises`) return json({ entries: [++lists === 1 ? saved : latest] });
+    return undefined;
+  } });
+  try {
+    await ui.click("Edit Back Squat");
+    await ui.type('[data-measure="load"]', "85");
+    await ui.submit();
+    await act(async () => { await new Promise(resolve => setTimeout(resolve, 0)); });
+    assert.match(ui.container.querySelector('[role="alert"]')!.textContent!, /changed since you opened it/);
+    assert.match(ui.container.textContent!, /3 × 5 · 90 kg/);
+    assert.ok(ui.container.querySelector('input[type="search"]'), "the stale edit is closed");
+    assert.equal(puts(ui.calls).length, 1);
   } finally { ui.cleanup(); }
 });
 

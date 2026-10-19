@@ -101,7 +101,7 @@ def test_exercises_added_and_edited_later_from_history(api):
     row = session(client, training_day="2026-10-01")
     entry_id = str(uuid4())
     add(client, row["id"], entry_id, actual=squat(value=70))
-    edited = add(client, row["id"], entry_id, actual=squat(value=75), notes="Belt on")
+    edited = add(client, row["id"], entry_id, actual=squat(value=75), notes="Belt on", revision=1)
     assert edited["actual"]["load"]["value"] == 75 and edited["notes"] == "Belt on"
     assert edited["training_day"] == "2026-10-01"
     listed = client.get(f"/api/training/sessions/{row['id']}/exercises", headers=AUTH).json()["entries"]
@@ -276,6 +276,60 @@ def test_parent_date_change_moves_its_entries(api):
     store.sync_manual_exercise_parent(row["id"])
     assert library(store)["key:back-squat"].latest_day == "2026-09-30"
     assert details(client, row["id"]).json()["session"]["training_day"] == "2026-09-30"
+
+
+def test_delayed_retry_of_an_old_save_never_overwrites_a_later_correction(api):
+    client, store = api
+    row = session(client)
+    entry_id = str(uuid4())
+    original = {"exercise": {"catalogue_id": BACK_SQUAT}, "format": "strength", "actual": squat(value=80), "revision": 0}
+    # 1. Saves Back Squat at 80 kg.
+    first = client.put(f"/api/training/sessions/{row['id']}/exercises/{entry_id}", headers=AUTH, json=original)
+    assert first.status_code == 200 and first.json()["revision"] == 1
+    # 2. Corrects it to 90 kg, based on revision 1.
+    corrected = add(client, row["id"], entry_id, actual=squat(value=90), revision=1)
+    assert corrected["revision"] == 2
+    # 3. The original 80 kg request arrives late.
+    late = client.put(f"/api/training/sessions/{row['id']}/exercises/{entry_id}", headers=AUTH, json=original)
+    assert late.status_code == 409
+    stored = client.get(f"/api/training/sessions/{row['id']}/exercises", headers=AUTH).json()["entries"]
+    assert [(item["actual"]["load"]["value"], item["revision"]) for item in stored] == [(90, 2)]
+    assert library(store)["key:back-squat"].best_loads[0].value == 90
+    assert performances(store, "key:back-squat").performances[0].performed_values.load.value == 90
+
+
+def test_replays_of_the_latest_save_succeed_but_stale_or_skipped_revisions_are_refused(api):
+    client, store = api
+    row = session(client)
+    entry_id = str(uuid4())
+    add(client, row["id"], entry_id, actual=squat(value=80))
+    corrected = add(client, row["id"], entry_id, actual=squat(value=90), revision=1)
+    # A lost response for the correction is retried with the same body: same row, no extra revision.
+    assert add(client, row["id"], entry_id, actual=squat(value=90), revision=1) == corrected
+    # An edit based on an old revision with new values is a conflict, not a silent overwrite.
+    assert put(client, row["id"], entry_id, actual=squat(value=95), revision=1).status_code == 409
+    assert put(client, row["id"], entry_id, actual=squat(value=95), revision=5).status_code == 409
+    # Editing an entry that doesn't exist yet is not a create.
+    assert put(client, row["id"], str(uuid4()), revision=3).status_code == 404
+    assert [entry["actual"]["load"]["value"] for entry in store.manual_exercise_entries] == [90]
+    assert put(client, row["id"], entry_id, actual=squat(value=95), revision=2).json()["revision"] == 3
+
+
+def test_a_correction_racing_with_another_write_cannot_overwrite_it(api):
+    client, store = api
+    row = session(client)
+    entry_id = str(uuid4())
+    add(client, row["id"], entry_id, actual=squat(value=80))
+    original_update = store.update_manual_exercise
+
+    def concurrent_win(athlete_id, entry, fields, *, revision):
+        # Another device's 100 kg correction commits between the read and the write.
+        original_update(athlete_id, entry, {**fields, "actual": squat(value=100)}, revision=revision)
+        return original_update(athlete_id, entry, fields, revision=revision)
+
+    store.update_manual_exercise = concurrent_win
+    assert put(client, row["id"], entry_id, actual=squat(value=90), revision=1).status_code == 409
+    assert store.manual_exercise_entries[0]["actual"]["load"]["value"] == 100
 
 
 def test_retries_are_idempotent_and_tombstones_block_resurrection(api):

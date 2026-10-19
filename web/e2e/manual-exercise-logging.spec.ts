@@ -6,7 +6,7 @@ const athlete = "00000000-0000-4000-8000-000000000001";
 const day = "2026-10-19";
 const shots = process.env.EXERCISE_QA_DIR;
 const blank = { sets: null, reps: null, rounds: null, load: null, duration: null, work: null, rest: null, distance: null, effort: null };
-type Entry = { id: string; entry_id: string; external_session_id: string; training_day: string; exercise_id: string; name: string; format: string; actual: Record<string, unknown>; notes: string | null };
+type Entry = { id: string; entry_id: string; external_session_id: string; training_day: string; exercise_id: string; name: string; format: string; actual: Record<string, unknown>; notes: string | null; revision: number };
 type Session = { id: string; source: "external"; title: string; activity: string; duration_minutes: number; effort: string; status: "done"; training_day: string; plan_id: null; exercise_count: number; takeaway: string };
 
 const catalogue = [
@@ -28,8 +28,8 @@ async function setup(page: Page, baseURL: string, { slowSearch = false, failFirs
   const sessions: Session[] = [{ id: "earlier", source: "external", title: "Strength", activity: "strength", duration_minutes: 60, effort: "hard",
     status: "done", training_day: "2026-10-12", plan_id: null, exercise_count: 2, takeaway: "" }];
   const entries: Entry[] = [
-    { id: "e1", entry_id: "old-1", external_session_id: "earlier", training_day: "2026-10-12", exercise_id: "key:back-squat", name: "Back Squat", format: "strength", actual: { ...blank, sets: 3, reps: 5, load: { value: 75, unit: "kg" } }, notes: null },
-    { id: "e2", entry_id: "old-2", external_session_id: "earlier", training_day: "2026-10-12", exercise_id: "key:plank", name: "Plank", format: "isometric", actual: { ...blank, sets: 3, duration: { value: 40, unit: "seconds" } }, notes: null },
+    { id: "e1", entry_id: "old-1", external_session_id: "earlier", training_day: "2026-10-12", exercise_id: "key:back-squat", name: "Back Squat", format: "strength", actual: { ...blank, sets: 3, reps: 5, load: { value: 75, unit: "kg" } }, notes: null, revision: 1 },
+    { id: "e2", entry_id: "old-2", external_session_id: "earlier", training_day: "2026-10-12", exercise_id: "key:plank", name: "Plank", format: "isometric", actual: { ...blank, sets: 3, duration: { value: 40, unit: "seconds" } }, notes: null, revision: 1 },
   ];
   const puts: Record<string, unknown>[] = [];
   let saveAttempts = 0;
@@ -76,14 +76,15 @@ async function setup(page: Page, baseURL: string, { slowSearch = false, failFirs
       if (request.method() === "DELETE") { entries.splice(entries.findIndex(entry => entry.entry_id === entryId), 1); return route.fulfill({ status: 204 }); }
       const body = request.postDataJSON();
       puts.push(body);
-      if (failFirstSave && ++saveAttempts === 1) return json({ detail: "conflict" }, 409);
+      if (failFirstSave && ++saveAttempts === 1) return json({ detail: "bad request" }, 400);
       const known = catalogue.find(item => item.catalogue_id === body.exercise.catalogue_id);
       const exerciseId = body.exercise.name ? `custom:${body.exercise.name.toLowerCase()}` : body.exercise.exercise_key ? `key:${body.exercise.exercise_key}`
         : body.exercise.personal_exercise_id ? `custom:${body.exercise.personal_exercise_id}` : `key:${known!.exercise_key}`;
       const name = body.exercise.name ?? known?.name ?? entries.find(item => item.exercise_id === exerciseId)?.name ?? "Exercise";
       const existing = entries.find(entry => entry.entry_id === entryId);
       const row: Entry = { id: existing?.id ?? `row-${entries.length}`, entry_id: entryId, external_session_id: sessionId, training_day: sessions.find(item => item.id === sessionId)!.training_day,
-        exercise_id: exerciseId, name, format: body.format, actual: { ...blank, ...body.actual }, notes: body.notes || null };
+        exercise_id: exerciseId, name, format: body.format, actual: { ...blank, ...body.actual }, notes: body.notes || null, revision: body.revision + 1 };
+      if ((existing?.revision ?? 0) !== body.revision) return json({ detail: "stale" }, 409);
       if (existing) Object.assign(existing, row); else entries.push(row);
       return json(row);
     }
@@ -191,7 +192,7 @@ for (const width of [390, 1280]) {
     // Done keeps the name-only exercise rather than dropping it.
     await sheet.getByRole("button", { name: "Done" }).click();
     await expect(sheet).toHaveCount(0);
-    expect(puts.at(-1)).toEqual({ exercise: { name: "Landmine rotation" }, format: "bodyweight", actual: {}, notes: "" });
+    expect(puts.at(-1)).toEqual({ exercise: { name: "Landmine rotation" }, format: "bodyweight", actual: {}, notes: "", revision: 0 });
     await expect(page.getByRole("button", { name: /4 exercises added/ })).toBeVisible();
     await shoot(page, "08-saved-with-exercises", width);
     expect(errors).toEqual([]);

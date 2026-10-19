@@ -88,10 +88,12 @@ def test_manual_exercise_update_whitelist_cannot_move_session_day_owner_or_undel
     fields = {"display_name": "Back Squat", "measurement_format": "strength", "actual": {}, "notes": "",
               "exercise_key": "back-squat", "personal_exercise_id": None, "athlete_id": "other",
               "external_session_id": "elsewhere", "training_day": "2020-01-01", "deleted_at": None}
-    store.update_manual_exercise("owner", "entry", fields)
-    assert set(query.update.call_args.args[0]) == {
-        "exercise_key", "personal_exercise_id", "display_name", "measurement_format", "actual", "notes"}
-    assert [call.args for call in query.eq.call_args_list] == [("athlete_id", "owner"), ("client_entry_id", "entry")]
+    store.update_manual_exercise("owner", "entry", fields, revision=4)
+    assert query.update.call_args.args[0] == {**{key: fields[key] for key in (
+        "exercise_key", "personal_exercise_id", "display_name", "measurement_format", "actual", "notes")}, "revision": 5}
+    # Compare-and-set: only the revision the edit was based on can be replaced.
+    assert [call.args for call in query.eq.call_args_list] == [
+        ("athlete_id", "owner"), ("client_entry_id", "entry"), ("revision", 4)]
     query.is_.assert_called_once_with("deleted_at", "null")
 
 

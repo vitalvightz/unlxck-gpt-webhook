@@ -43,8 +43,14 @@ did on that session, without creating an UNLXCK programme.
   (`strength`/`bodyweight`/`isometric`/`intervals`/`distance`), `actual`
   (exercise_logs' actual shape: only entered values), optional `notes`.
 - Retry key `(athlete_id, client_entry_id)`; saves use
-  `INSERT … ON CONFLICT DO NOTHING` then update, so a retried PUT never adds a
-  second occurrence. Deletes are tombstones; a late retry gets 410.
+  `INSERT … ON CONFLICT DO NOTHING`, so a retried PUT never adds a second
+  occurrence. Deletes are tombstones; a late retry gets 410.
+- `revision` orders edits. Each PUT names the revision it was based on (0 to
+  create). An edit is a compare-and-set on that revision and bumps it by one.
+  A replay of a save that already applied (stored revision = base + 1, same
+  values) returns the stored row; anything older is 409. So a delayed retry of
+  "80 kg" can never overwrite a later "90 kg" correction. The trigger only lets
+  revisions step forward by one.
 - Triggers: an insert takes the parent's `training_day`, needs a live parent and
   fewer than 30 live siblings (a retry of an existing entry passes through); an
   update cannot change owner, session, retry key or day, and cannot undelete.

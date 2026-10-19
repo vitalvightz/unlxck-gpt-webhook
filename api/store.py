@@ -4683,11 +4683,16 @@ class SupabaseAppStore(CommunityStoreMixin, PrivateMediaStoreMixin, CompactGener
             raise HTTPException(500, "Failed to save exercise.")
         return row
 
-    def update_manual_exercise(self, athlete_id: str, entry_id: str, fields: dict[str, Any]) -> dict[str, Any] | None:
+    def update_manual_exercise(self, athlete_id: str, entry_id: str, fields: dict[str, Any], *,
+                               revision: int) -> dict[str, Any] | None:
+        """Compare-and-set: applies only while ``revision`` is current, then bumps it.
+        None when the entry moved on, was deleted or never existed."""
         response = (self.client.table("manual_exercise_entries")
-            .update({key: fields.get(key) for key in (
-                "exercise_key", "personal_exercise_id", "display_name", "measurement_format", "actual", "notes")})
-            .eq("athlete_id", athlete_id).eq("client_entry_id", entry_id).is_("deleted_at", "null").execute())
+            .update({**{key: fields.get(key) for key in (
+                "exercise_key", "personal_exercise_id", "display_name", "measurement_format", "actual", "notes")},
+                "revision": revision + 1})
+            .eq("athlete_id", athlete_id).eq("client_entry_id", entry_id).eq("revision", revision)
+            .is_("deleted_at", "null").execute())
         return (getattr(response, "data", None) or [None])[0]
 
     def delete_manual_exercise(self, athlete_id: str, entry_id: str) -> bool:

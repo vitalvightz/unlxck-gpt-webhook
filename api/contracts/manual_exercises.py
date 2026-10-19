@@ -9,7 +9,7 @@ import re
 from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, StrictInt, field_validator, model_validator
 
 from api.models import ExerciseLogActual
 
@@ -74,6 +74,9 @@ class PerformedExerciseInput(BaseModel):
     format: MeasurementFormat
     actual: ExerciseLogActual = Field(default_factory=ExerciseLogActual)
     notes: str = Field(default="", max_length=NOTES_MAX_CHARS)
+    # The entry revision this save is based on: 0 creates, n edits revision n.
+    # Saves apply in order; a delayed retry of an older one is refused.
+    revision: StrictInt = Field(default=0, ge=0, le=1_000_000)
 
     @field_validator("notes", mode="before")
     @classmethod
@@ -132,6 +135,8 @@ class ManualExerciseEntry(BaseModel):
     format: MeasurementFormat
     actual: ExerciseLogActual = Field(default_factory=ExerciseLogActual)
     notes: str | None = None
+    # Send back as ``revision`` to edit this entry.
+    revision: int = 1
 
 
 class ManualExerciseListResponse(BaseModel):

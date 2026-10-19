@@ -151,6 +151,31 @@ def test_parent_delete_and_date_change_reach_entries_and_nothing_undeletes(db):
     assert insert(db, owner, session_id, entry_id) is None
 
 
+def test_revisions_start_at_one_and_only_step_forward(db):
+    owner = athlete(db)
+    session_id = parent(db, owner)
+    entry_id = uuid4()
+    insert(db, owner, session_id, entry_id)
+
+    def revision():
+        return db.execute("select revision from public.manual_exercise_entries where client_entry_id = %s", (entry_id,)).fetchone()[0]
+
+    assert revision() == 1
+    # Compare-and-set as the store does it: a stale base revision changes nothing.
+    update = """update public.manual_exercise_entries set actual = %s, revision = %s
+                where client_entry_id = %s and revision = %s returning id"""
+    assert db.execute(update, (json.dumps({"load": {"value": 90, "unit": "kg"}}), 2, entry_id, 1)).fetchone()
+    assert db.execute(update, (json.dumps({"load": {"value": 80, "unit": "kg"}}), 2, entry_id, 1)).fetchone() is None
+    assert revision() == 2
+    # Skips and rewinds are ignored; parent sync never bumps it.
+    db.execute("update public.manual_exercise_entries set revision = 9 where client_entry_id = %s", (entry_id,))
+    db.execute("update public.manual_exercise_entries set revision = 1 where client_entry_id = %s", (entry_id,))
+    db.execute("update public.external_training_sessions set training_day = '2026-10-18' where id = %s", (session_id,))
+    assert revision() == 2
+    assert db.execute("select actual->'load'->>'value' from public.manual_exercise_entries where client_entry_id = %s",
+                      (entry_id,)).fetchone()[0] == "90"
+
+
 def test_thirty_live_entries_per_session_but_an_existing_retry_still_passes(db):
     import psycopg
 

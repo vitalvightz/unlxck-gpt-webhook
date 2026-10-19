@@ -1326,6 +1326,7 @@ export type ManualExerciseEntry = {
   format: "bodyweight" | "distance" | "intervals" | "isometric" | "strength";
   actual: ExerciseLogActual;
   notes: string | null;
+  revision: number;
 };
 
 export type ManualExerciseInput = {
@@ -1651,6 +1652,7 @@ export type PerformedExerciseInput = {
   format: "bodyweight" | "distance" | "intervals" | "isometric" | "strength";
   actual?: ExerciseLogActualRequest;
   notes?: string;
+  revision?: number;
 };
 
 export type PersonalExercise = {

@@ -15,10 +15,14 @@ import sheet from "./log-training.module.css";
 import styles from "./manual-exercise-logger.module.css";
 
 type Picked = { name: string; choice: ExerciseChoice; format: MeasurementFormat | null; reference: string | null };
-/** `original` is the saved entry being edited, to tell real changes from none. */
-type Editor = { entryId: string; editing: boolean; picked: Picked | null; draft: Draft; formatMenu: boolean; original: string | null };
+/**
+ * `original` is the saved entry being edited, to tell real changes from none.
+ * `revision` is the saved revision this edit is based on (0 for a new entry);
+ * the server refuses it if the entry has moved on since.
+ */
+type Editor = { entryId: string; revision: number; editing: boolean; picked: Picked | null; draft: Draft; formatMenu: boolean; original: string | null };
 
-const fresh = (unit: "kg" | "lb"): Editor => ({ entryId: crypto.randomUUID(), editing: false, picked: null, draft: blankDraft("strength", unit), formatMenu: false, original: null });
+const fresh = (unit: "kg" | "lb"): Editor => ({ entryId: crypto.randomUUID(), revision: 0, editing: false, picked: null, draft: blankDraft("strength", unit), formatMenu: false, original: null });
 const snapshot = (format: MeasurementFormat | null, draft: Draft) => JSON.stringify([format, draft.values, draft.units, draft.notes]);
 const choiceOf = (entry: ManualExerciseEntry): ExerciseChoice => entry.exercise_id.startsWith("custom:")
   ? { personal_exercise_id: entry.exercise_id.slice(7) } : { exercise_key: entry.exercise_id.slice(4) };
@@ -26,7 +30,7 @@ const choiceOf = (entry: ManualExerciseEntry): ExerciseChoice => entry.exercise_
 function saveError(reason: unknown): string {
   if (reason instanceof ApiError && reason.code === "health_data_consent_required") return "Health-data use is off. Turn it on in Settings to record exercises.";
   if (reason instanceof ApiError && reason.status === 401) return "Your session expired. Sign in again to save.";
-  if (reason instanceof ApiError && reason.status === 422 && reason.message) return reason.message;
+  if (reason instanceof ApiError && (reason.status === 422 || reason.status === 409) && reason.message) return reason.message;
   return "Not saved. Check your connection and try again.";
 }
 
@@ -155,7 +159,7 @@ export function ManualExerciseLogger({ token, session, reference, onClose }: {
   function startEdit(entry: ManualExerciseEntry) {
     if (unsaved && !window.confirm("Discard this exercise?")) return;
     const draft = draftFromEntry(entry);
-    setEditor({ entryId: entry.entry_id, editing: true, picked: { name: entry.name, choice: choiceOf(entry), format: entry.format, reference: null },
+    setEditor({ entryId: entry.entry_id, revision: entry.revision, editing: true, picked: { name: entry.name, choice: choiceOf(entry), format: entry.format, reference: null },
       draft, formatMenu: false, original: snapshot(entry.format, draft) });
     setErrors({}); setError(null);
     focusFirstField();
@@ -192,7 +196,8 @@ export function ManualExerciseLogger({ token, session, reference, onClose }: {
     }
     saving.current = true; setBusy(true); setError(null);
     try {
-      const saved = await saveManualExercise(token, session.id, editor.entryId, { exercise: picked.choice, format, actual, notes: editor.draft.notes.trim() });
+      const saved = await saveManualExercise(token, session.id, editor.entryId,
+        { exercise: picked.choice, format, actual, notes: editor.draft.notes.trim(), revision: editor.revision });
       const list = entries ?? [];
       const next = list.some(item => item.entry_id === saved.entry_id) ? list.map(item => item.entry_id === saved.entry_id ? saved : item) : [...list, saved];
       setEntries(next);
@@ -200,6 +205,8 @@ export function ManualExerciseLogger({ token, session, reference, onClose }: {
       setStatus(`${saved.name} ${editor.editing ? "updated" : "added"}.`);
       return next;
     } catch (reason) {
+      // Changed elsewhere: show the stored values rather than overwrite them.
+      if (reason instanceof ApiError && reason.status === 409 && editor.editing) { reset(false); setAttempt(value => value + 1); }
       setError(saveError(reason));
       return null;
     } finally { saving.current = false; setBusy(false); }

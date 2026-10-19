@@ -19,6 +19,9 @@
 -- Lifecycle:
 --   client_entry_id is the retry key: a repeated save never creates a second
 --   occurrence, and a tombstone stops a late retry resurrecting a deleted one.
+--   revision orders edits: each save names the revision it was based on and the
+--   backend applies it only if that is still current, so a delayed retry of an
+--   older save can never overwrite a later correction.
 --   training_day always mirrors the parent session, and soft-deleting the parent
 --   soft-deletes its entries in the same statement.
 --
@@ -65,6 +68,7 @@ create table if not exists public.manual_exercise_entries (
   actual jsonb not null default '{}'::jsonb
     check (jsonb_typeof(actual) = 'object' and octet_length(actual::text) <= 4096),
   notes text not null default '' check (char_length(notes) <= 500),
+  revision integer not null default 1 check (revision >= 1),
   deleted_at timestamptz,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
@@ -117,6 +121,7 @@ begin
     end if;
     new.training_day := parent.training_day;
     new.deleted_at := null;
+    new.revision := 1;
     return new;
   end if;
   new.athlete_id := old.athlete_id;
@@ -124,6 +129,10 @@ begin
   new.client_entry_id := old.client_entry_id;
   new.created_at := old.created_at;
   new.deleted_at := coalesce(old.deleted_at, new.deleted_at);
+  -- Revisions only move forward, one edit at a time.
+  if new.revision is distinct from old.revision and new.revision <> old.revision + 1 then
+    new.revision := old.revision;
+  end if;
   select training_day into new.training_day from public.external_training_sessions
     where id = old.external_session_id and athlete_id = old.athlete_id;
   return new;

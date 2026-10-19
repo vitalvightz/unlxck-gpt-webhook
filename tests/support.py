@@ -2172,17 +2172,19 @@ class FakeStore(InMemoryNotificationLedger, FullRowStatusReads):
             raise HTTPException(status_code=500, detail="manual exercise limit reached")
         row = {"exercise_key": None, "personal_exercise_id": None, "actual": {}, "notes": "", **fields,
                "id": str(uuid4()), "athlete_id": athlete_id, "training_day": parent["training_day"],
-               "created_at": _now(), "updated_at": _now(), "deleted_at": None}
+               "revision": 1, "created_at": _now(), "updated_at": _now(), "deleted_at": None}
         self.manual_exercise_entries.append(row)
         return dict(row)
 
-    def update_manual_exercise(self, athlete_id: str, entry_id: str, fields: dict) -> dict | None:
+    def update_manual_exercise(self, athlete_id: str, entry_id: str, fields: dict, *, revision: int) -> dict | None:
         row = next((row for row in self.manual_exercise_entries if row["athlete_id"] == athlete_id
-                    and row["client_entry_id"] == entry_id and not row.get("deleted_at")), None)
+                    and row["client_entry_id"] == entry_id and not row.get("deleted_at")
+                    and row.get("revision", 1) == revision), None)
         if not row:
             return None
         row.update({key: fields.get(key) for key in (
             "exercise_key", "personal_exercise_id", "display_name", "measurement_format", "actual", "notes")})
+        row["revision"] = revision + 1
         row["updated_at"] = _now()
         return dict(row)
 

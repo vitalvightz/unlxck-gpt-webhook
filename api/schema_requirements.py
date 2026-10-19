@@ -409,7 +409,7 @@ REQUIRED_EXTERNAL_TRAINING_COLUMNS: tuple[str, ...] = (
 
 REQUIRED_MANUAL_EXERCISE_ENTRIES_COLUMNS: tuple[str, ...] = (
     "id", "athlete_id", "external_session_id", "client_entry_id", "training_day", "exercise_key",
-    "personal_exercise_id", "display_name", "measurement_format", "actual", "notes", "deleted_at",
+    "personal_exercise_id", "display_name", "measurement_format", "actual", "notes", "revision", "deleted_at",
     "created_at", "updated_at",
 )
 
