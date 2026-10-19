@@ -285,7 +285,7 @@ function LogTrainingContent({ accessToken, entry, repeatEntry, recent = false, h
         </dialog>
       ) : null}
       {saved && !entry && !repeatEntry ? <p className="muted" role="status">{saved}</p> : null}
-      {sparringDraft ? <SparringLogPrompt key={sparringDraft.externalSessionId} token={accessToken} draft={sparringDraft} focusOnMount
+      {sparringDraft ? <SparringLogPrompt key={sparringDraft.externalSessionId} token={accessToken} draft={sparringDraft}
         onSaved={onSparringReported} onDismiss={() => setSparringDraft(null)} /> : null}
     </div>
   );

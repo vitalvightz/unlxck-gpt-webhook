@@ -34,7 +34,7 @@ function render(consent: boolean): string {
 test("the log opens pre-filled from the plan and the timer", () => {
   const html = render(true);
   assert.match(html, /Log your sparring/);
-  assert.match(html, /Hard sparring · takes 15 seconds/);
+  assert.match(html, /Hard sparring · Takes 15 seconds/);
   // Planned hard sparring starts on Hard; the athlete corrects it if needed.
   assert.match(html, /aria-pressed="true"[^>]*>Hard</);
   // Rounds come from the timer.
@@ -125,8 +125,8 @@ async function mountInteractive(draft: SparringDraft, responses: Array<{ status:
     return match as HTMLButtonElement;
   };
   const group = (legend: string) => {
-    const label = Array.from(container.querySelectorAll(".session-feedback-legend")).find(p => p.textContent === legend)!;
-    return container.querySelector(`[aria-labelledby="${label.id}"]`)!;
+    const label = Array.from(container.querySelectorAll("fieldset > legend")).find(p => p.textContent === legend)!;
+    return label.parentElement!;
   };
   const click = async (element: HTMLElement) => {
     await act(async () => { element.click(); });
@@ -145,7 +145,7 @@ const LOG = { id: "log-1", athlete_id: "a", plan_id: null, session_id: null, tra
 test("a manual sparring follow-up never invents rounds and starts from the logged effort", async () => {
   const ui = await mountInteractive(MANUAL, [{ status: 201, body: { log: LOG, review_created: false, safety_notice: null } }]);
   try {
-    assert.match(ui.container.textContent ?? "", /your session is already saved/);
+    assert.match(ui.container.textContent ?? "", /Session saved. This is optional/);
     assert.equal(ui.container.querySelector(".sparring-log-rounds-value")?.textContent, "–");
     assert.equal(ui.button("Hard", ui.group("How hard was it?")).getAttribute("aria-pressed"), "true");
     await ui.click(ui.button("Light", ui.group("Head contact")));
