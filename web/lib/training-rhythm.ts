@@ -55,6 +55,9 @@ export function weekComparison(weeks: TrainingWeek[], metric: "sessions" | "minu
   const complete = weeks.filter(week => !week.current);
   const latest = complete.at(-1), previous = complete.at(-2);
   if (!latest || !previous) return "";
+  // Zero against zero is not "no change" when the only training in either week lacks a duration.
+  if (metric === "minutes" && !latest.minutes && !previous.minutes && (latest.untimed || previous.untimed))
+    return "Training time comparison unavailable. Neither week has recorded durations.";
   const difference = latest[metric] - previous[metric];
   const change = difference === 0 ? "No change in" : `${difference > 0 ? "+" : "−"}${Math.abs(difference)} `;
   const label = metric === "minutes" ? "recorded minutes" : Math.abs(difference) === 1 ? "session" : "sessions";

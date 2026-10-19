@@ -114,7 +114,8 @@ test("incomplete weekly reads retry without showing partial trends or inventing 
   await dialog.getByRole("button", { name: "Minutes", exact: true }).click();
   await dialog.getByRole("combobox", { name: "Discipline", exact: true }).selectOption("unlxck");
   await expect(dialog).toContainText("Recorded time unavailable");
-  await expect(dialog).toContainText("Missing durations: 1 last completed week; 1 previous week.");
+  await expect(dialog).toContainText("Training time comparison unavailable. Neither week has recorded durations.");
+  await expect(dialog).not.toContainText("No change in recorded minutes");
   if (process.env.PROGRESS_QA_DIR) await page.screenshot({ path: `${process.env.PROGRESS_QA_DIR}/untimed-390.png` });
 });
 

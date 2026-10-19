@@ -47,3 +47,13 @@ test("recorded-minute comparisons identify missing durations in either week", ()
   assert.equal(weekValue(untimed, "minutes"), null);
   assert.equal(weekValue(weeks[0], "minutes"), 0);
 });
+
+test("recorded-minute comparisons are unavailable when neither week has a duration", () => {
+  const untimed = { duration_minutes: null };
+  const both = trainingWeeks([row("prev", "2026-10-11", untimed), row("last", "2026-10-18", untimed), row("last-2", "2026-10-18", untimed)], "2026-10-19", 4);
+  assert.equal(weekComparison(both, "minutes"), "Training time comparison unavailable. Neither week has recorded durations.");
+  assert.equal(weekComparison(both, "sessions"), "+1 session versus the previous week.");
+  const oneEmpty = trainingWeeks([row("last", "2026-10-18", untimed)], "2026-10-19", 4);
+  assert.equal(weekComparison(oneEmpty, "minutes"), "Training time comparison unavailable. Neither week has recorded durations.");
+  assert.equal(weekComparison(trainingWeeks([], "2026-10-19", 4), "minutes"), "No change in recorded minutes versus the previous week.");
+});

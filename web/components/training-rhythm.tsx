@@ -18,6 +18,7 @@ type Props = {
   token: string; detailsCache: SessionDetailsCache;
 };
 const shortDate = (day: string) => new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", timeZone: "UTC" }).format(new Date(`${day}T12:00:00Z`));
+const count = (value: number, noun: string) => `${value} ${noun}${value === 1 ? "" : "s"}`;
 const weekLabel = (week: TrainingWeek) => `${shortDate(week.start)} – ${shortDate(week.end)}${week.current ? " · This week" : ""}`;
 
 function WeeklyChart({ weeks, metric, selected, onSelect, preview = false, active = true }: {
@@ -49,7 +50,7 @@ function WeeklyChart({ weeks, metric, selected, onSelect, preview = false, activ
           {shown.map(week => {
             const value = weekValue(week, metric);
             return <button type="button" key={week.start} className={styles.weekButton}
-              aria-pressed={selected === week.start} aria-label={`${weekLabel(week)}: ${value === null ? "Recorded minutes unavailable" : `${value} ${metric === "minutes" ? "recorded minutes" : "sessions"}`}${week.untimed ? `; ${week.untimed} missing durations` : ""}`}
+              aria-pressed={selected === week.start} aria-label={`${weekLabel(week)}: ${value === null ? "Recorded minutes unavailable" : (metric === "minutes" ? `${value} recorded minutes` : count(value, "session"))}${week.untimed ? `; ${count(week.untimed, "missing duration")}` : ""}`}
               onClick={() => onSelect(week.start)}>
               <span className={styles.barTrack} aria-hidden="true"><span className={styles.weekBar} data-current={week.current || undefined}
                 data-unknown={value === null || undefined} style={{ height: value === null ? "12px" : `${Math.max(value > 0 ? 2 : 0, (value / ceiling) * 100)}%` }} /></span>
@@ -118,7 +119,7 @@ export function TrainingRhythm(props: Props) {
       <div className={styles.sectionHead}><div><h3>Training Rhythm</h3><p>Recorded sessions across 8 weeks</p></div>
         <button ref={trigger} type="button" className={styles.textButton} aria-haspopup="dialog" onClick={() => show()}>View trends <span aria-hidden="true">↗</span></button></div>
       {previewComplete ? preview.some(week => week.sessions) ? <>
-        <div className={styles.headline}><strong>{last.sessions}</strong><span>sessions<br />last completed week</span></div>
+        <div className={styles.headline}><strong>{last.sessions}</strong><span>{last.sessions === 1 ? "session" : "sessions"}<br />last completed week</span></div>
         <WeeklyChart weeks={preview} metric="sessions" onSelect={show} preview />
         <p className={styles.note}>Select a week to see its training.</p>
       </> : <p className={styles.note}>No sessions recorded in this period.</p>
@@ -134,12 +135,12 @@ export function TrainingRhythm(props: Props) {
           <label className={styles.selectLabel}>Discipline<select aria-label="Discipline" value={discipline} onChange={event => setDiscipline(event.target.value)}><option value="all">All disciplines</option>{disciplines.map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></label>
         </div>
         {complete ? <>
-          <div className={styles.headline}><strong>{metric === "sessions" ? selected.sessions : weekValue(selected, metric) === null ? "—" : selected.minutes}</strong><span>{metric === "sessions" ? "sessions" : "recorded minutes"}<br />{weekLabel(selected)}</span></div>
+          <div className={styles.headline}><strong>{metric === "sessions" ? selected.sessions : weekValue(selected, metric) === null ? "—" : selected.minutes}</strong><span>{metric === "sessions" ? selected.sessions === 1 ? "session" : "sessions" : "recorded minutes"}<br />{weekLabel(selected)}</span></div>
           <p className={styles.note}>{weekComparison(weeks, metric)}</p>
           {weeks.some(week => week.sessions > 0) ? <WeeklyChart weeks={weeks} metric={metric} selected={selected.start} onSelect={setSelectedWeek} active={open && !session} />
             : <p className={styles.note}>No sessions recorded in this period.</p>}
           <div className={styles.weekDetail} aria-live="polite"><h3>{weekLabel(selected)}</h3>
-            <p className={styles.note}>{selected.sessions} sessions · {selected.sessions > 0 && selected.untimed === selected.sessions ? "Recorded time unavailable" : `${formatTrainingDuration(selected.minutes)} recorded`}{selected.untimed ? ` · ${selected.untimed} missing durations` : ""}</p>
+            <p className={styles.note}>{count(selected.sessions, "session")} · {selected.sessions > 0 && selected.untimed === selected.sessions ? "Recorded time unavailable" : `${formatTrainingDuration(selected.minutes)} recorded`}{selected.untimed ? ` · ${count(selected.untimed, "missing duration")}` : ""}</p>
           </div>
           <ul className={`history-list ${styles.sessionList}`} aria-label="Sessions in selected week">{selected.rows.map(row => <li key={`${row.source}:${row.id}`} className="history-row" data-tone={sessionStatusTone(row.status)}>
             <button type="button" className={styles.sessionOpen} data-session={`${row.source}:${row.id}`} aria-haspopup="dialog" onClick={() => {
