@@ -40,7 +40,7 @@ test("not checked in asks for the check-in, but only with health-data consent", 
 test("nothing logged: a first-session CTA and an empty strip; the slot shows readiness only if checked in", () => {
   const result = home();
   assert.deepEqual([result.hero.title, result.hero.primary.label], ["Log your first session", "Log training"]);
-  assert.deepEqual(result.strip.map(cell => cell.value), ["0 sessions", "—", "—", "—"]);
+  assert.deepEqual(result.strip.map(cell => cell.value), ["0 sessions", "None", "None", "None"]);
   assert.equal(result.slot, "readiness");
   const unchecked = state({ recommendation_state: "not_checked_in", decision_tier: "not_checked_in" });
   assert.equal(home({ state: unchecked, canCheckIn: false }).slot, null);
@@ -79,12 +79,12 @@ test("without recent training the slot falls back to readiness, then routines", 
 test("an unloaded or failed history claims nothing about training", () => {
   const result = home({ rows: null });
   assert.notEqual(result.hero.title, "Log your first session");
-  assert.deepEqual(result.strip.map(cell => cell.value), ["—", "—", "—", "—"]);
+  assert.deepEqual(result.strip.map(cell => cell.value), ["None", "None", "None", "None"]);
   assert.equal(result.slot, "readiness");
 });
 
 test("incomplete week data is not shown as a total", () => {
-  assert.equal(home({ rows: [row(TODAY)], loadedFrom: "2026-10-18" }).strip[0].value, "—");
+  assert.equal(home({ rows: [row(TODAY)], loadedFrom: "2026-10-18" }).strip[0].value, "None");
 });
 
 test("the week cell is labelled as the rolling window it counts", () => {

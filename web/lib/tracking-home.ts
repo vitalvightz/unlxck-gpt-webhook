@@ -38,7 +38,7 @@ function sessionLine(row: TrainingHistorySession): string {
 
 function daysAgoLabel(day: string, today: string): string {
   const ago = trainingDaysAgo(day, today);
-  return ago === 0 ? "Today" : ago === 1 ? "Yesterday" : ago === null ? "—" : `${ago} days ago`;
+  return ago === 0 ? "Today" : ago === 1 ? "Yesterday" : ago === null ? "None" : `${ago} days ago`;
 }
 
 export function getTrackingHome({ state, rows, loadedFrom, today, canCheckIn, habits }: {
@@ -73,7 +73,7 @@ export function getTrackingHome({ state, rows, loadedFrom, today, canCheckIn, ha
   } else if (!checkedIn && canCheckIn) {
     hero = {
       eyebrow: "Daily check-in", title: "How are you today?",
-      lines: ["Sleep, body and pain — ten seconds, and today's guidance is ready."],
+      lines: ["Sleep, body and pain take ten seconds, then today's guidance is ready."],
       primary: { label: "Check in", href: "/today#today-checkin" },
     };
   } else if (done && !done.length) {
@@ -114,10 +114,10 @@ export function getTrackingHome({ state, rows, loadedFrom, today, canCheckIn, ha
   const week = done && summaryWindowLoaded(loadedFrom, today, 7) ? summarizeTraining(done, today, 7) : null;
   const latest = done?.[0];
   const strip = [
-    { label: "Last 7 days", value: week ? `${week.sessions} session${week.sessions === 1 ? "" : "s"}` : "—" },
-    { label: "Time", value: week && week.minutes ? formatTrainingDuration(week.minutes) : "—" },
-    { label: "Top discipline", value: week?.mix[0]?.label ?? "—" },
-    { label: "Last session", value: latest ? daysAgoLabel(latest.training_day, today) : "—" },
+    { label: "Last 7 days", value: week ? `${week.sessions} session${week.sessions === 1 ? "" : "s"}` : "None" },
+    { label: "Time", value: week && week.minutes ? formatTrainingDuration(week.minutes) : "None" },
+    { label: "Top discipline", value: week?.mix[0]?.label ?? "None" },
+    { label: "Last session", value: latest ? daysAgoLabel(latest.training_day, today) : "None" },
   ];
 
   const recent = done ? summarizeTraining(done, today, 28).sessions > 0 : false;

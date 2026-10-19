@@ -638,9 +638,14 @@ function MobileOnboardingHeader({
         <p className="kicker">Camp Setup</p>
         <p className="onboarding-mobile-title">Build your camp profile.</p>
         <p className="muted">Saved, resumable athlete intake.</p>
-        <Link href="/quick-build" className="ghost-button onboarding-quick-build-link">
-          Use Quick Build instead
-        </Link>
+        <div className="hero-actions">
+          <Link href="/quick-build" className="ghost-button onboarding-quick-build-link">
+            Use Quick Build instead
+          </Link>
+          <Link href="/plans/custom" className="ghost-button onboarding-quick-build-link">
+            Build my plan manually
+          </Link>
+        </div>
       </div>
       <OnboardingProgressStrip
         currentStep={currentStep}
@@ -2377,9 +2382,14 @@ export function PlanIntakeForm() {
             <p className="kicker">{t("eyebrow")}</p>
             <h1>{t("title")}</h1>
             <p className="muted">Saved, resumable athlete intake.</p>
-            <Link href="/quick-build" className="ghost-button onboarding-quick-build-link">
-              Use Quick Build instead
-            </Link>
+            <div className="hero-actions">
+              <Link href="/quick-build" className="ghost-button onboarding-quick-build-link">
+                Use Quick Build instead
+              </Link>
+              <Link href="/plans/custom" className="ghost-button onboarding-quick-build-link">
+                Build my plan manually
+              </Link>
+            </div>
           </div>
         </div>
 

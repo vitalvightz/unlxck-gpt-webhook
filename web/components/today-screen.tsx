@@ -446,7 +446,7 @@ export function TodayScreen() {
           ) : (
             <Link href="/quick-build" className={styles.quickAction}>
               <TileIcon name="plan" />
-              Build S&amp;C plan
+              Generate my S&amp;C plan
               <span className={styles.chevron} aria-hidden="true" />
             </Link>
           )}
@@ -454,7 +454,7 @@ export function TodayScreen() {
             // Coach-led athletes put their coach's sessions into a plan of their own.
             <Link href="/plans/custom" className={styles.quickAction}>
               <TileIcon name="plan" />
-              Build my own plan
+              Build my plan manually
               <span className={styles.chevron} aria-hidden="true" />
             </Link>
           )}
