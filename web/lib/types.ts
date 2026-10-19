@@ -1256,12 +1256,14 @@ export type TodayCommandView = {
   }>;
 };
 
+/** Plan-free when ``plan_id`` and ``phase`` are both omitted: the server
+ * confirms there is no active plan and invents neither. */
 export type TodayCheckinRequest = {
-  plan_id: string;
+  plan_id?: string;
   sleep: TodayCheckinSleep;
   body: TodayCheckinBody;
   pain: TodayCheckinPain;
-  phase: TodayCheckinPhase;
+  phase?: TodayCheckinPhase;
   active_injury?: TodayActiveInjury;
   previous_session?: TodayPreviousSession;
   sharp_pain?: boolean;
@@ -1532,13 +1534,14 @@ export type TodaySessionCompletionRecord = {
 export type TodayCheckinHistoryRecord = {
   id: string;
   athlete_id: string;
-  plan_id: string;
+  /** Null for a plan-free check-in, which also has no phase. */
+  plan_id: string | null;
   training_day: string;
   athlete_timezone?: string;
   sleep: TodayCheckinSleep;
   body: TodayCheckinBody;
   pain: TodayCheckinPain;
-  phase: TodayCheckinPhase;
+  phase: TodayCheckinPhase | null;
   active_injury?: TodayActiveInjury;
   previous_session?: TodayPreviousSession;
   sharp_pain?: boolean;

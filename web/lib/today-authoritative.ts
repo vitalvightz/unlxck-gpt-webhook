@@ -634,3 +634,46 @@ export function getInjuryOverrideBanner(
 ): TodayDecisionBanner | null {
   return getLegacyInjuryOverrideBanner(state, sessionName);
 }
+
+// Fallback titles when the stored copy cannot sit under the authoritative tier.
+// None of them refers to a session, a plan or a clearance.
+const PLAN_FREE_TITLE_BY_TIER: Partial<Record<AuthoritativeTodayTier, string>> = {
+  green: "No warning signs today",
+  modify: "Ease off today",
+  pull_back: "Pull back today",
+};
+
+/**
+ * Today's lead message for an athlete without a programme.
+ *
+ * Presentation only: the tier, chip and tone stay exactly as
+ * resolveTodayDecision set them, and a safety notice or STOP keeps its own
+ * copy. Below that, the session-based fixed titles ("Session unchanged") are
+ * replaced by the backend's own plan-free wording, when it is compatible with
+ * the tier, so nothing describes a prescribed session that does not exist.
+ */
+export function getPlanFreeGuidanceBanner(
+  state: TodayCommandView,
+  decision: ResolvedTodayDecision,
+): TodayDecisionBanner | null {
+  if (decision.primaryMessageKind === "safety_notice") {
+    return decision.banner;
+  }
+  const banner = decision.currentGuidanceBanner;
+  if (!banner || decision.authoritativeTier === "stop") {
+    return banner;
+  }
+  const copy = getCompatibleRecommendationCopy(
+    state.today.recommendation_state,
+    decision.authoritativeTier,
+    state.today.recommendation_reason,
+  );
+  const action = copy?.action && !/\bsession\b|\bplanned work\b/i.test(copy.action) ? copy.action : undefined;
+  return {
+    ...banner,
+    title: copy?.title || PLAN_FREE_TITLE_BY_TIER[decision.authoritativeTier] || banner.title,
+    detail: copy?.detail || banner.detail,
+    action,
+    safety: copy?.safety ?? banner.safety,
+  };
+}

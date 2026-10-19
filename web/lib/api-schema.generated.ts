@@ -2364,13 +2364,13 @@ export type TodayCard = {
 export type TodayCheckinRecord = {
   id: string;
   athlete_id: string;
-  plan_id: string;
+  plan_id: string | null;
   training_day: string;
   athlete_timezone: string;
   sleep: "good" | "okay" | "poor";
   body: "flat" | "normal" | "sharp";
   pain: "high" | "manageable" | "none";
-  phase: "GPP" | "REINTEGRATION" | "SPP" | "TAPER";
+  phase: "GPP" | "REINTEGRATION" | "SPP" | "TAPER" | null;
   active_injury: "none" | "stable" | "worse";
   previous_session: "none" | "normal" | "very_hard";
   sharp_pain: boolean;
@@ -2388,11 +2388,11 @@ export type TodayCheckinRecord = {
 };
 
 export type TodayCheckinRequest = {
-  plan_id: string;
+  plan_id?: string | null;
   sleep: "good" | "okay" | "poor";
   body: "flat" | "normal" | "sharp";
   pain: "high" | "manageable" | "none";
-  phase: "GPP" | "REINTEGRATION" | "SPP" | "TAPER";
+  phase?: "GPP" | "REINTEGRATION" | "SPP" | "TAPER" | null;
   active_injury?: "none" | "stable" | "worse";
   previous_session?: "none" | "normal" | "very_hard";
   sharp_pain?: boolean;

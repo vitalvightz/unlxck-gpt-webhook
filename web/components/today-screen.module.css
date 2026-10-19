@@ -251,6 +251,16 @@
   gap: 8px;
 }
 
+.quickRowFour {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+@media (max-width: 480px) {
+  .quickRowFour {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 .quickAction {
   display: flex;
   align-items: center;

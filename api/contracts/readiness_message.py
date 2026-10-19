@@ -152,6 +152,8 @@ class ReadinessContext:
     open_injuries: Sequence[Mapping[str, Any]] = field(default_factory=tuple)
     recent_checkins: Sequence[Mapping[str, Any]] = field(default_factory=tuple)
     recent_sessions: Sequence[Mapping[str, Any]] = field(default_factory=tuple)
+    # The latest athlete-local day with a rocked/dropped sparring report.
+    last_head_impact_day: str | None = None
 
 
 @dataclass(frozen=True)
@@ -1765,6 +1767,23 @@ def _risk_adjustment(
             session_risk=session_risk,
         )
 
+    head_impact = _recent_head_impact_when(context)
+    if head_impact:
+        return ReadinessAdjustment(
+            decision="pull_back",
+            title="No contact today.",
+            reason=f"You reported being rocked or dropped {head_impact}.",
+            action="No sparring, pads or contact. Keep to light, non-contact work only if you feel completely normal.",
+            safety=HEAD_IMPACT_SAFETY,
+            triggers=_with_context_triggers(
+                "recent_head_impact",
+                session_risk=session_risk,
+                phase=phase,
+                contact_sport=contact_sport,
+            ),
+            session_risk=session_risk,
+        )
+
     if checkin.pain == "high":
         return ReadinessAdjustment(
             decision="pull_back",
@@ -1781,6 +1800,29 @@ def _risk_adjustment(
         )
 
     return None
+
+
+# A rocked/dropped report rules out contact for the day it happened and the next.
+# It is a floor, never a clearance: whether contact may resume is for a medical
+# professional and the admin review the report opened, not this check-in.
+HEAD_IMPACT_WINDOW_DAYS = 1
+HEAD_IMPACT_SAFETY = (
+    "If you get a headache, dizziness, nausea, confusion, memory problems or blurred "
+    "vision, stop and get checked by a medical professional. Tell your coach."
+)
+
+
+def _recent_head_impact_when(context: ReadinessContext) -> str:
+    """'today' or 'yesterday' for a rocked report inside the window, else ''."""
+    try:
+        reported = date.fromisoformat(str(context.last_head_impact_day or "")[:10])
+        today = date.fromisoformat(str(context.training_day or "")[:10])
+    except ValueError:
+        return ""
+    days_ago = (today - reported).days
+    if days_ago < 0 or days_ago > HEAD_IMPACT_WINDOW_DAYS:
+        return ""
+    return "today" if days_ago == 0 else "yesterday"
 
 
 def _append_unique(values: list[str], value: str) -> None:
@@ -2986,6 +3028,7 @@ _SELF_SUFFICIENT_TRIGGERS = frozenset(
         "active_injury_worse",
         "pain_high",
         "injury_hold",
+        "recent_head_impact",
         # An infected / bleeding wound is a medical fact, not a readiness trend:
         # no amount of history would change the call, so thin data takes nothing
         # away from it.
@@ -3265,6 +3308,7 @@ _TRIGGER_LABELS: dict[str, str] = {
     "illness_symptoms": "Feeling unwell",
     "cannot_warm_into_movement": "Can't warm up",
     "worse_next_day_pain": "Pain worse next day",
+    "recent_head_impact": "Head impact reported",
     # Injury state.
     "active_injury_worse": "Injury getting worse",
     "active_injury_restriction": "Active injury",
@@ -3587,6 +3631,7 @@ _CONFIDENCE_GAP_SUBJECTS: tuple[tuple[str, str], ...] = (
     ("checkins_unavailable", "your recent check-ins"),
     ("completions_unavailable", "your recent sessions"),
     ("intake_unavailable", "part of your profile"),
+    ("sparring_unavailable", "your recent sparring reports"),
     ("context_degraded", "some of your recent history"),
 )
 
@@ -3607,6 +3652,7 @@ _MODERATE_CONFIDENCE_TRIGGERS = frozenset(
         "checkins_unavailable",
         "completions_unavailable",
         "intake_unavailable",
+        "sparring_unavailable",
         "session_unresolved",
         SPARSE_HISTORY,
     }

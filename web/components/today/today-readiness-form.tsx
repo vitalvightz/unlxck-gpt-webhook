@@ -70,7 +70,7 @@ export type TodaySafetyFlags = {
 /**
  * The fast daily check-in. Submits the categorical readiness inputs and safety
  * flags; the backend computes and persists the recommendation (the client
- * never supplies one).
+ * never supplies one). Without a plan it is the same check-in, sent plan-free.
  */
 export function TodayReadinessForm({
   plan,
@@ -78,7 +78,8 @@ export function TodayReadinessForm({
   warnings,
   onRefresh,
 }: {
-  plan: TodayActivePlan;
+  /** Omitted when the athlete has no active programme. */
+  plan?: TodayActivePlan;
   token: string;
   warnings?: string[];
   onRefresh: () => Promise<void>;
@@ -103,7 +104,7 @@ export function TodayReadinessForm({
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!plan.id || isSubmitting) {
+    if ((plan && !plan.id) || isSubmitting) {
       return;
     }
     setIsSubmitting(true);
@@ -111,8 +112,8 @@ export function TodayReadinessForm({
       const response = await submitTodayCheckin(
         token,
         buildTodayCheckinPayload({
-          planId: plan.id,
-          phase: plan.phase,
+          planId: plan?.id,
+          phase: plan?.phase,
           sleep,
           body,
           pain,
@@ -121,7 +122,8 @@ export function TodayReadinessForm({
           safetyFlags,
         }),
       );
-      showToast(`Recommendation: ${getRecommendationCopy(response.recommendation_state).label}.`, {
+      // "Train as planned" names a programme, so a plan-free check-in just confirms.
+      showToast(plan ? `Recommendation: ${getRecommendationCopy(response.recommendation_state).label}.` : "Check-in saved.", {
         tone: response.recommendation_state === "pull_back" ? "info" : "success",
       });
       const [responseWarning] = getAthleteWarnings(response.warnings);

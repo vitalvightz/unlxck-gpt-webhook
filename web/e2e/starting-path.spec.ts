@@ -20,6 +20,7 @@ async function setup(page: Page, baseURL: string, options: { path?: string | nul
   const writes: Record<string, unknown>[] = [];
   let injuries: Record<string, unknown>[] = [];
   const sparringLogs: Record<string, unknown>[] = [];
+  let checkin: Record<string, unknown> | null = null;
   await page.route("**/api/**", async route => {
     const request = route.request();
     const endpoint = new URL(request.url()).pathname;
@@ -45,11 +46,23 @@ async function setup(page: Page, baseURL: string, options: { path?: string | nul
     }
     if (endpoint === "/api/today") return options.failToday ? json({ detail: "Unavailable" }, 503) : json({
       active_plan: options.activePlan ? { id: "plan-9", name: "Autumn camp", phase: "GPP", fight_date: "2026-12-12" } : {},
-      today: { training_day: "2026-10-18", recommendation_state: "not_checked_in", decision_tier: "not_checked_in", warnings: [], next_session: {}, completion_status: "not_started", session_scope: "none" },
+      today: { training_day: "2026-10-18", warnings: [], next_session: {}, completion_status: "not_started", session_scope: "none",
+        ...(checkin ? { recommendation_state: checkin.recommendation_state, decision_tier: checkin.decision_tier, recommendation_reason: checkin.recommendation_reason }
+          : { recommendation_state: "not_checked_in", decision_tier: "not_checked_in" }) },
       open_injuries: injuries, risk_watch: [], week_summary: {}, quick_actions: [],
       ...(sparringLogs.some(log => log.rocked) ? { today: { training_day: "2026-10-18", recommendation_state: "not_checked_in", decision_tier: "not_checked_in", warnings: [], next_session: {}, completion_status: "not_started", session_scope: "none",
         primary_safety_notice: { code: "head_impact_no_contact", injury_id: "", chip: "CHECK", title: "No more contact today", action: "You reported being rocked or dropped. No more contact today, and tell your coach.", detail: "Get checked if symptoms appear.", tone: "red" } } } : {}),
     });
+    if (endpoint === "/api/today/checkin" && request.method() === "POST") {
+      const body = request.postDataJSON(); writes.push(body);
+      const pulled = body.pain === "high";
+      const reason = pulled
+        ? "Rehab only today.\nPain is high, so contact and impact are not safe today.\nUse rehab or easy mobility only; skip sparring, pads, bag work, and conditioning."
+        : "No warning signs today.\nYour sleep, body, and pain checks are all clear today.\nTrain as your coach plans and stop anything that hurts.\nThis check-in is not medical clearance for sparring or contact.";
+      checkin = { recommendation_state: pulled ? "pull_back" : "train_as_planned", decision_tier: pulled ? "pull_back" : "green", recommendation_reason: reason };
+      return json({ checkin: { ...body, id: "checkin-1", athlete_id: "athlete-1", plan_id: null, phase: null, training_day: "2026-10-18", ...checkin },
+        training_day: "2026-10-18", recommendation_state: checkin.recommendation_state, recommendation_reason: reason, triggers: [], warnings: [] }, 201);
+    }
     if (endpoint === "/api/today/sparring-log" && request.method() === "POST") {
       const body = request.postDataJSON(); writes.push(body);
       const replay = sparringLogs.find(log => log.client_request_id === body.client_request_id);
@@ -179,6 +192,8 @@ for (const width of [320, 390, 1280]) {
     const choices = page.locator('[aria-busy="false"] > button').filter({ hasText: /Start tracking|Build a plan/ });
     const sizes = await choices.evaluateAll(elements => elements.map(element => element.getBoundingClientRect().height));
     expect(sizes).toHaveLength(2);
+    // Building an S&C plan is offered first.
+    await expect(choices.first()).toContainText("Build my training plan");
     expect(Math.abs(sizes[0] - sizes[1])).toBeLessThanOrEqual(1);
     await page.screenshot({ path: test.info().outputPath(`choice-${width}.png`) });
     const tracking = page.getByRole("button", { name: /I already have a coach/ });
@@ -193,8 +208,11 @@ for (const width of [320, 390, 1280]) {
     const quickActions = page.getByRole("navigation", { name: "Quick actions" });
     await expect(quickActions.getByRole("link", { name: "Round timer" })).toBeVisible();
     await expect(quickActions.getByRole("link", { name: "Build S&C plan" })).toBeVisible();
-    await expect(page.getByRole("list", { name: "Today command status" })).toContainText("Not assessed");
-    await expect(page.locator("#today-checkin")).toHaveCount(0);
+    await expect(quickActions.getByRole("link", { name: "Build my own plan" })).toHaveAttribute("href", "/plans/custom");
+    // The daily check-in is the same as a planned athlete's, sent plan-free.
+    await expect(page.getByRole("list", { name: "Today command status" })).toContainText("Check-in");
+    await expect(page.getByRole("list", { name: "Today command status" })).toContainText("Due");
+    await expect(page.locator("#today-checkin")).toBeVisible();
     await page.getByRole("button", { name: "Log Training", exact: true }).click();
     const form = page.getByRole("form", { name: "Log Training", exact: true });
     await form.getByRole("button", { name: "Boxing", exact: true }).click();
@@ -326,6 +344,7 @@ for (const width of [320, 390, 1280]) {
     await expect(status).not.toContainText("Not assessed");
     await expect(page.locator("#today-checkin")).toBeVisible();
     await expect(page.getByRole("navigation", { name: "Quick actions" }).getByRole("link", { name: "View plan" })).toHaveAttribute("href", "/plans/plan-9");
+    await expect(page.getByRole("navigation", { name: "Quick actions" }).getByRole("link", { name: "Build my own plan" })).toHaveCount(0);
     // Shared sections are the same components as the no-plan state.
     await expect(page.getByRole("region", { name: "Training history", exact: true })).toBeVisible();
     await expect(page.locator("#today-injury")).toContainText("No injuries tracked.");
@@ -399,4 +418,37 @@ test("a rocked report shows the safety notice at once and Today stops leading wi
   await expect(page.locator("#today-decision")).toContainText("No more contact today");
   expect(writes.filter(row => "head_contact" in row)).toHaveLength(1);
   await page.screenshot({ path: test.info().outputPath("rocked-today.png"), fullPage: true });
+});
+
+for (const width of [320, 390, 1280]) {
+  test(`a plan-free athlete completes a real daily check-in that survives reload (${width}px)`, async ({ page, baseURL }) => {
+    await page.setViewportSize({ width, height: 844 });
+    const writes = await setup(page, baseURL!, { path: "tracking_first" });
+    await page.goto("/today");
+    const checkin = page.locator("#today-checkin");
+    await expect(checkin).toBeVisible();
+    expect((await new AxeBuilder({ page }).include("main").analyze()).violations).toEqual([]);
+    await checkin.getByRole("button", { name: "Submit check-in", exact: true }).click();
+    await expect(page.locator("#today-decision")).toContainText("Train as your coach plans");
+    await expect(page.locator("#today-decision")).toContainText("not medical clearance");
+    await expect(page.locator("#today-decision")).not.toContainText(/Session unchanged|planned session/);
+    expect(writes[0]).not.toHaveProperty("plan_id");
+    expect(writes[0]).not.toHaveProperty("phase");
+    await page.reload();
+    await expect(page.locator("#today-checkin")).toHaveCount(0);
+    await expect(page.getByRole("list", { name: "Today command status" })).toContainText("Done");
+    await expect(page.locator("#today-decision")).toContainText("Train as your coach plans");
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+    await page.screenshot({ path: test.info().outputPath(`plan-free-checkin-${width}.png`), fullPage: true });
+  });
+}
+
+test("a plan-free athlete reporting high pain is pulled back, not cleared", async ({ page, baseURL }) => {
+  await setup(page, baseURL!, { path: "tracking_first" });
+  await page.goto("/today");
+  const checkin = page.locator("#today-checkin");
+  await checkin.getByRole("group", { name: "Pain", exact: true }).getByRole("button", { name: "High", exact: true }).click();
+  await checkin.getByRole("button", { name: "Submit check-in", exact: true }).click();
+  await expect(page.locator("#today-decision")).toContainText("Use rehab or easy mobility only");
+  await expect(page.locator("#today-decision")).not.toContainText("Train as your coach plans");
 });

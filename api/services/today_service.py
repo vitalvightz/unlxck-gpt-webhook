@@ -88,6 +88,7 @@ from api.services.readiness_failsafe import (
     CHECKINS_UNAVAILABLE,
     COMPLETIONS_UNAVAILABLE,
     INJURY_CONTEXT_UNAVAILABLE,
+    SPARRING_UNAVAILABLE,
     INTAKE_UNAVAILABLE,
     SESSION_UNAVAILABLE,
     ContextStatusBuilder,
@@ -224,7 +225,9 @@ def _plan_has_not_started(plan_row: Mapping[str, Any], training_day: str) -> boo
 
 
 def _readiness_checkin_from(payload: Mapping[str, Any]) -> ReadinessCheckin:
-    return ReadinessCheckin(**{field: payload[field] for field in _CHECKIN_INPUT_FIELDS})
+    # A plan-free check-in has no camp phase; the engine reads "" as none.
+    return ReadinessCheckin(**{field: payload[field] if field != "phase" else payload[field] or ""
+                               for field in _CHECKIN_INPUT_FIELDS})
 
 
 def _stored_readiness_checkin_from(
@@ -794,11 +797,22 @@ def _checked_with_injury_consequence(
     return tuple(enriched), ok
 
 
+def _checked_last_head_impact_day(store: AppStore, athlete_id: str) -> tuple[str | None, bool]:
+    """``(day, ok)`` for the latest rocked/dropped sparring report. A raised
+    read is ``ok=False``: it must not look like "no head impact"."""
+    try:
+        day = store.latest_sparring_log_day(athlete_id, rocked=True)
+        return (str(day)[:10] if day else None), True
+    except Exception:
+        logger.exception("[today] sparring_read_failed athlete_id=%s", athlete_id)
+        return None, False
+
+
 def _readiness_context_and_status(
     store: AppStore,
     *,
     athlete_id: str,
-    plan_row: Mapping[str, Any],
+    plan_row: Mapping[str, Any] | None,
     training_day: str,
     phase: str,
     open_injuries: Sequence[Mapping[str, Any]] | None = None,
@@ -834,13 +848,24 @@ def _readiness_context_and_status(
     if not classify_ok:
         builder.add(INJURY_CONTEXT_UNAVAILABLE)
 
-    today_session, session_ok = _checked_today_session_for_readiness(plan_row, training_day)
-    if not session_ok:
-        builder.add(SESSION_UNAVAILABLE)
+    if plan_row is None:
+        # No programme is a known fact, not a failed read: there is no
+        # prescribed session to grade and no camp intake. The engine treats the
+        # missing session as unresolved exposure, never as a safe rest day.
+        today_session: Mapping[str, Any] = {}
+        intake: Mapping[str, Any] = {}
+    else:
+        today_session, session_ok = _checked_today_session_for_readiness(plan_row, training_day)
+        if not session_ok:
+            builder.add(SESSION_UNAVAILABLE)
 
-    intake, intake_ok = _checked_intake_payload_for_readiness(store, plan_row)
-    if not intake_ok:
-        builder.add(INTAKE_UNAVAILABLE)
+        intake, intake_ok = _checked_intake_payload_for_readiness(store, plan_row)
+        if not intake_ok:
+            builder.add(INTAKE_UNAVAILABLE)
+
+    last_head_impact_day, sparring_ok = _checked_last_head_impact_day(store, athlete_id)
+    if not sparring_ok:
+        builder.add(SPARRING_UNAVAILABLE)
 
     recent_checkins, checkins_ok = _checked_recent_today_checkins(store, athlete_id)
     if not checkins_ok:
@@ -869,6 +894,7 @@ def _readiness_context_and_status(
         open_injuries=enriched_injuries,
         recent_checkins=recent_checkins,
         recent_sessions=recent_sessions,
+        last_head_impact_day=last_head_impact_day,
     )
     return context, builder.build()
 
@@ -878,7 +904,7 @@ def _readiness_decision_with_failsafe(
     *,
     checkin: ReadinessCheckin,
     athlete_id: str,
-    plan_row: Mapping[str, Any],
+    plan_row: Mapping[str, Any] | None,
     training_day: str,
     phase: str,
     open_injuries: Sequence[Mapping[str, Any]] | None = None,
@@ -929,15 +955,17 @@ def _refresh_today_recommendation_after_injury_change(
     store: AppStore,
     *,
     athlete_id: str,
-    plan_row: Mapping[str, Any],
+    plan_row: Mapping[str, Any] | None,
     training_day: str,
     open_injuries: Sequence[Mapping[str, Any]],
     injury_reported_worse: bool,
 ) -> dict[str, Any] | None:
-    plan_id = str(plan_row.get("id") or "").strip()
-    if not plan_id:
+    """Re-evaluate today's stored check-in after an injury change. ``plan_row``
+    None re-evaluates the plan-free check-in, so its green cannot go stale."""
+    plan_id = str((plan_row or {}).get("id") or "").strip()
+    if plan_row is not None and not plan_id:
         return None
-    today_checkin = store.get_today_checkin(athlete_id, plan_id, training_day)
+    today_checkin = store.get_today_checkin(athlete_id, plan_id or None, training_day)
     if not today_checkin:
         return None
 
@@ -956,10 +984,12 @@ def _refresh_today_recommendation_after_injury_change(
         athlete_id=athlete_id,
         plan_row=plan_row,
         training_day=training_day,
-        phase=str(today_checkin.get("phase") or plan_row.get("phase") or ""),
+        phase=str(today_checkin.get("phase") or (plan_row or {}).get("phase") or ""),
         open_injuries=[apply_episode_observations(row, episode_observations(store, athlete_id, row))
                        for row in open_injuries],
     )
+    if plan_row is None:
+        decision = _plan_free_wording(decision)
     refreshed = dict(
         store.upsert_today_checkin(
             athlete_id,
@@ -983,10 +1013,18 @@ def submit_today_checkin(
     ``payload`` carries ``plan_id`` plus the categorical inputs/safety flags.
     Any client-supplied recommendation field is ignored — the recommendation is
     always recomputed here. Returns the persisted row (recommendation included).
+
+    Without ``plan_id`` the check-in is plan-free: the same engine and fail-safe
+    run with no prescribed session, phase or intake, and nothing is invented to
+    stand in for them. That path is only taken once the server confirms there is
+    no active plan, so a stale client can never record a plan-free check-in for
+    an athlete whose programme should own the day.
     """
     plan_id = str(payload.get("plan_id") or "").strip()
     if not plan_id:
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="plan_id is required")
+        return _submit_plan_free_checkin(
+            store, athlete_id=athlete_id, athlete_timezone=athlete_timezone, payload=payload, now=now
+        )
     _require_valid_plan_id(plan_id)
 
     # Writes are service-role (RLS does not gate them here), so the backend must
@@ -1029,6 +1067,69 @@ def submit_today_checkin(
     row = dict(store.upsert_today_checkin(athlete_id, fields))
     row["warnings"] = warnings
     # Backend-owned typed safety signal (additive; see readiness_failsafe).
+    row["readiness_signal"] = build_readiness_signal(decision, context_status).to_dict()
+    return row
+
+
+# The clean-day copy written for a prescribed session ("Full session.",
+# "Run the planned work…") would describe a session that does not exist. Only
+# those titles are reworded; every restrictive decision keeps its own copy.
+_PLANNED_CLEAN_TITLES = frozenset({"Full session.", "Sharp work only."})
+PLAN_FREE_CLEAN_TITLE = "No warning signs today."
+PLAN_FREE_CLEAN_ACTION = "Train as your coach plans and stop anything that hurts."
+PLAN_FREE_CLEARANCE_NOTE = "This check-in is not medical clearance for sparring or contact."
+
+
+def _plan_free_wording(adjustment: ReadinessAdjustment) -> ReadinessAdjustment:
+    """The same decision, worded for an athlete with no prescribed session."""
+    from dataclasses import replace
+
+    if adjustment.decision != "train_as_planned":
+        return adjustment
+    title, action = adjustment.title, adjustment.action
+    if title in _PLANNED_CLEAN_TITLES:
+        title, action = PLAN_FREE_CLEAN_TITLE, PLAN_FREE_CLEAN_ACTION
+    return replace(adjustment, title=title, action=action,
+                   safety=adjustment.safety or PLAN_FREE_CLEARANCE_NOTE)
+
+
+def _submit_plan_free_checkin(
+    store: AppStore,
+    *,
+    athlete_id: str,
+    athlete_timezone: str | None,
+    payload: Mapping[str, Any],
+    now: datetime | None,
+) -> dict[str, Any]:
+    if payload.get("phase"):
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                            detail="a camp phase needs a plan")
+    training_day = resolve_training_day(athlete_timezone, now=now)
+    # A failed read raises (503) rather than reading as "no plan".
+    if resolve_active_plan(store, athlete_id, current_training_day=training_day).plan:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT,
+                            detail="Your plan is active. Refresh Today before checking in.")
+    decision, context_status = _readiness_decision_with_failsafe(
+        store,
+        checkin=_readiness_checkin_from(payload),
+        athlete_id=athlete_id,
+        plan_row=None,
+        training_day=training_day,
+        phase="",
+    )
+    decision = _plan_free_wording(decision)
+    fields: dict[str, Any] = {
+        "plan_id": None,
+        "training_day": training_day,
+        "athlete_timezone": athlete_timezone or "",
+        "recommendation_state": decision.decision,
+        "recommendation_reason": decision.message,
+        "recommendation_triggers": list(decision.triggers),
+    }
+    for field in _CHECKIN_INPUT_FIELDS:
+        fields[field] = payload.get(field) if field != "phase" else None
+    row = dict(store.upsert_today_checkin(athlete_id, fields))
+    row["warnings"] = []
     row["readiness_signal"] = build_readiness_signal(decision, context_status).to_dict()
     return row
 
@@ -1695,16 +1796,15 @@ def submit_today_injury_checkin(
     # ``_load_relevant_worse_injury``).
     open_after = _with_injury_policy(_with_safe_session_context(open_after), store=store, athlete_id=athlete_id)
     injury_reported_worse = _load_relevant_worse_injury(open_after)
-    refreshed_recommendation = None
-    if active_plan_row:
-        refreshed_recommendation = _refresh_today_recommendation_after_injury_change(
-            store,
-            athlete_id=athlete_id,
-            plan_row=active_plan_row,
-            training_day=training_day,
-            open_injuries=open_after,
-            injury_reported_worse=injury_reported_worse,
-        )
+    # With or without a plan: a plan-free check-in is re-evaluated the same way.
+    refreshed_recommendation = _refresh_today_recommendation_after_injury_change(
+        store,
+        athlete_id=athlete_id,
+        plan_row=active_plan_row or None,
+        training_day=training_day,
+        open_injuries=open_after,
+        injury_reported_worse=injury_reported_worse,
+    )
     return {
         "open_injuries": open_after,
         "recommendation": refreshed_recommendation,
@@ -2924,14 +3024,35 @@ def _build_today_command_view(
         injuries = _with_rehab_stage(_with_safe_session_context(_with_surface_class(_open_injury_flags(store, athlete_id))),
                                     store=store, athlete_id=athlete_id)
         injuries = _with_injury_policy(injuries, store=store, athlete_id=athlete_id, training_day=training_day, as_of=assessment_as_of)
-        symptom_recommendation = None
-        if active_medical_hold_reasons(injuries):
-            symptom_decision = build_readiness_adjustment(ReadinessCheckin(), ReadinessContext(open_injuries=injuries))
-            symptom_recommendation = {"decision": symptom_decision.decision, "reason": symptom_decision.message,
-                                      "triggers": list(symptom_decision.triggers), "training_day": training_day}
+        # The plan-free check-in is read like a planned one: a failed read
+        # raises (Today unavailable) rather than looking like "not checked in".
+        plan_free_checkin = store.get_today_checkin(athlete_id, None, training_day)
+        recommendation = None
+        if plan_free_checkin or active_medical_hold_reasons(injuries):
+            from dataclasses import replace
+
+            # As on the planned path, the saved recommendation is a check-in-time
+            # snapshot: every read re-evaluates the stored answers against the
+            # current injuries, workload, sparring and safety reads, with no plan
+            # context. Read-only: the check-in row is never rewritten here. A
+            # current medical hold or worsening injury leads through the same
+            # engine, and failed reads are floored by the same fail-safe.
+            decision, _ = _readiness_decision_with_failsafe(
+                store,
+                checkin=replace(_stored_readiness_checkin_from(plan_free_checkin or {}), phase=""),
+                athlete_id=athlete_id,
+                plan_row=None,
+                training_day=training_day,
+                phase="",
+                open_injuries=injuries,
+            )
+            decision = _plan_free_wording(decision)
+            recommendation = {"decision": decision.decision, "reason": decision.message,
+                              "triggers": list(decision.triggers), "training_day": training_day}
         view = build_command_view(current_training_day=training_day, plan=None, open_injuries=injuries,
                                   head_impact_today=_head_impact_reported(store, athlete_id, training_day),
-                                  recommendation=symptom_recommendation)
+                                  recommendation=recommendation,
+                                  risks=_risks_from_checkin(plan_free_checkin))
         view.effective_clinician_clearance = effective_clinician_clearance(injuries)
         view.delayed_rehab_prompts = delayed_rehab_prompts(store, athlete_id, training_day, athlete_timezone)
         return view

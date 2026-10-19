@@ -56,15 +56,15 @@ export function StartingPathScreen() {
       <p>Choose your starting point. You can use both whenever you want.</p>
     </div>
     <div className={styles.choices} aria-busy={Boolean(saving)}>
-      <button className={styles.choice} type="button" disabled={Boolean(saving) || isSigningOut} onClick={() => void choose("tracking_first")}>
-        <span className={styles.icon} aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 5H6v15h12V5h-3M9 3h6v4H9zM9 12l2 2 4-4M9 17h6" /></svg></span>
-        <span className={styles.copy}><strong>I already have a coach or plan</strong><span>Track your training without building a programme.</span></span>
-        <span className={styles.action}>{saving === "tracking_first" ? "Saving…" : "Start tracking"}<span aria-hidden="true"> →</span></span>
-      </button>
       <button className={styles.choice} type="button" disabled={Boolean(saving) || isSigningOut} onClick={() => void choose("plan_first")}>
         <span className={styles.icon} aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 9v6M6 6v12M9 9v6M9 12h6M15 9v6M18 6v12M21 9v6" /></svg></span>
         <span className={styles.copy}><strong>Build my training plan</strong><span>Personalised S&amp;C around your sport, schedule and goals.</span></span>
         <span className={styles.action}>{saving === "plan_first" ? "Saving…" : "Build a plan"}<span aria-hidden="true"> →</span></span>
+      </button>
+      <button className={styles.choice} type="button" disabled={Boolean(saving) || isSigningOut} onClick={() => void choose("tracking_first")}>
+        <span className={styles.icon} aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 5H6v15h12V5h-3M9 3h6v4H9zM9 12l2 2 4-4M9 17h6" /></svg></span>
+        <span className={styles.copy}><strong>I already have a coach or plan</strong><span>Track your training without building a programme.</span></span>
+        <span className={styles.action}>{saving === "tracking_first" ? "Saving…" : "Start tracking"}<span aria-hidden="true"> →</span></span>
       </button>
     </div>
     {error ? <p role="alert" className={styles.error}>{error}</p> : null}
