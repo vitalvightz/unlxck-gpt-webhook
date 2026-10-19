@@ -115,7 +115,6 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
         <NextIntlClientProvider>
           <AuthProvider>
             <XpProvider>
-              <ConnectionStatusBanner />
               <PasswordRecoveryRedirect />
               <PrivateBetaNutritionGate />
               <ToastProvider>
@@ -129,6 +128,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
                       <AppNav />
                       <div className="app-content">
                         <main className="app-main">
+                          <ConnectionStatusBanner />
                           <div className="page">{children}</div>
                         </main>
                         <footer className="app-safety-footer" role="contentinfo">

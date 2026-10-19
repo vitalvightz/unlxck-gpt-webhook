@@ -9643,12 +9643,9 @@ html[data-theme="light"] .today-injury-other-warning {
 }
 
 .connection-lost-banner {
-  position: fixed;
-  top: calc(var(--safe-area-top) + 12px);
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 1000;
-  width: min(400px, calc(100vw - var(--safe-area-left) - var(--safe-area-right) - 32px));
+  position: relative;
+  width: min(400px, 100%);
+  margin: 0 auto 24px;
   padding: 22px 24px;
   border-radius: 16px;
   border: 1px solid #ffffff1c;

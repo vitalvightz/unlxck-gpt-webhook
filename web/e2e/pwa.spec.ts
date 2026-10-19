@@ -212,3 +212,19 @@ test("API recovery cannot repeatedly reload a destination that is still unavaila
   await expect(page.getByRole("button", { name: "Retry connection" })).toBeEnabled();
   expect(checks).toBe(2);
 });
+
+for (const width of [390, 1280]) {
+  test(`connection card leaves loaded page controls reachable (${width}px)`, async ({ page, context, baseURL }) => {
+    await page.setViewportSize({ width, height: 844 });
+    await isolateFromNetwork(page, baseURL ?? BASE_URL);
+    await page.route("**/api/health", route => route.fulfill({ status: 503, json: { ok: false } }));
+    await page.goto("/login", { waitUntil: "networkidle" });
+    await context.setOffline(true);
+    await expect(page.getByRole("status")).toContainText("You’re offline.");
+    await context.setOffline(false);
+    await expect(page.getByRole("status")).toContainText("Can’t reach UNLXCK.");
+    await page.getByRole("button", { name: "Continue with email", exact: true }).click();
+    await expect(page.getByRole("textbox", { name: /email/i })).toBeVisible();
+    await expect(page.getByRole("status")).toContainText("Can’t reach UNLXCK.");
+  });
+}
