@@ -18,7 +18,8 @@ def test_confirmation_persists_and_stale_device_cannot_overwrite_or_create_evide
     other = copy.deepcopy(store.profiles["admin-1"])
     response = client.put("/api/me", headers=AUTH, json=payload())
     assert response.status_code == 200, response.text
-    assert response.json()["profile"]["training_habits"]["decisions"] == [DECISION]
+    # Older routines gain no sport: the response echoes the optional fields as null.
+    assert response.json()["profile"]["training_habits"]["decisions"] == [{**DECISION, "sport": None, "session_type": None}]
     assert response.json()["profile"]["training_habits_revision"] == 1
     assert client.get("/api/me", headers=AUTH).json()["profile"]["training_habits_revision"] == 1
     assert client.put("/api/me", headers=AUTH, json=payload(activity="strength")).status_code == 409
@@ -37,6 +38,19 @@ def test_confirmation_persists_and_stale_device_cannot_overwrite_or_create_evide
 def test_invalid_routines_are_rejected(change):
     client, _, _ = _build_client()
     assert client.put("/api/me", headers=AUTH, json=payload(**change)).status_code == 422
+
+
+def test_sport_routines_are_kept_apart_and_must_be_consistent():
+    client, store, _ = _build_client()
+    bjj = {**DECISION, "activity": "other", "sport": "bjj", "session_type": "rolling"}
+    thai = {**DECISION, "activity": "other", "sport": "muay_thai", "session_type": "clinch"}
+    response = client.put("/api/me", headers=AUTH, json={
+        "training_habits": {"enabled": True, "decisions": [bjj, thai, DECISION]}, "training_habits_revision": 0})
+    assert response.status_code == 200, response.text
+    assert store.profiles["athlete-1"]["training_habits"]["decisions"] == [bjj, thai, DECISION]
+    for invalid in ({**bjj, "activity": "sparring"}, {**bjj, "session_type": "clinch"}, {**DECISION, "session_type": "pads"}):
+        assert client.put("/api/me", headers=AUTH, json={
+            "training_habits": {"enabled": True, "decisions": [invalid]}, "training_habits_revision": 1}).status_code == 422
 
 
 def test_revision_pair_and_unique_bounded_decisions():

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { decideTrainingHabit, EMPTY_TRAINING_HABITS, habitTrainingDay, habitWeekday, learnTrainingHabits, type TrainingHabitPreferences } from "./training-habits";
+import { decideTrainingHabit, EMPTY_TRAINING_HABITS, habitKey, habitTrainingDay, habitWeekday, learnTrainingHabits, type TrainingHabitPreferences } from "./training-habits";
 import type { TrainingActivity, TrainingHistorySession } from "./training-history";
 const today = "2026-10-19"; // Monday
 const row = (day: string, activity: TrainingActivity = "boxing", minutes = 60, id = `${day}-${activity}`): TrainingHistorySession => ({
@@ -136,4 +136,29 @@ test("unavailable or truncated history pauses inference while preserving confirm
     const contact = { ...confirmed, decisions: confirmed.decisions.map(item => ({ ...item, activity: "sparring" as const })) };
     assert.equal(learnTrainingHabits([], today, contact, options).suggestion, undefined);
   }
+});
+
+const classified = (day: string, sport: "bjj" | "muay_thai", session_type: "rolling" | "clinch", id = `${day}-${sport}`): TrainingHistorySession => ({
+  ...row(day, "other", 90, id), sport, session_type, title: sport,
+});
+
+test("different disciplines logged as Other never merge into one habit", () => {
+  const rows = [classified("2026-10-12", "bjj", "rolling"), classified("2026-10-05", "muay_thai", "clinch")];
+  assert.equal(learnTrainingHabits(rows, today).prompt, undefined);
+  const bjj = learnTrainingHabits([classified("2026-10-12", "bjj", "rolling"), classified("2026-10-05", "bjj", "rolling")], today);
+  assert.deepEqual([bjj.prompt?.activity, bjj.prompt?.sport, bjj.prompt?.session_type], ["other", "bjj", "rolling"]);
+  assert.equal(bjj.suggestion?.sport, "bjj");
+  assert.equal(learnTrainingHabits([classified("2026-10-12", "bjj", "rolling"), row("2026-10-05", "other")], today).prompt, undefined);
+});
+
+test("routines without a sport keep matching older records exactly", () => {
+  assert.equal(habitKey({ activity: "boxing" }), habitKey({ activity: "boxing", sport: null, session_type: null }));
+  assert.notEqual(habitKey({ activity: "sparring" }), habitKey({ activity: "sparring", sport: "boxing", session_type: "sparring" }));
+  const result = learnTrainingHabits([history[0]], today, confirmed);
+  assert.equal(result.suggestion?.title, "Your usual Monday");
+  assert.deepEqual([result.suggestion?.activity, result.suggestion?.sport], ["boxing", undefined]);
+  const pads = { weekday: 0, activity: "boxing" as const, sport: "boxing" as const, session_type: "pads" as const, duration_minutes: 60, state: "confirmed" as const, decided_on: today };
+  // A sport routine is its own slot beside an older one.
+  assert.equal(decideTrainingHabit(confirmed, pads).decisions.length, 2);
+  assert.equal(decideTrainingHabit(decideTrainingHabit(confirmed, pads), { ...pads, duration_minutes: 45 }).decisions.length, 2);
 });

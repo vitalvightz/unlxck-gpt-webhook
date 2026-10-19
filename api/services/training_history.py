@@ -7,11 +7,12 @@ from fastapi import HTTPException
 
 from api.contracts.external_training import ExternalTrainingCreate, ExternalTrainingFields, ExternalTrainingTakeaway
 from api.contracts.training_day import resolve_training_day_str
+from api.contracts.training_disciplines import training_title
 
 
 def external_occurrence(row: dict) -> dict:
     return {**row, "source": "external", "status": "done", "plan_id": None,
-            "session_id": f"external-{row['id']}", "title": row["activity"].title()}
+            "session_id": f"external-{row['id']}", "title": training_title(row)}
 
 
 def training_history(store, athlete_id: str, *, limit: int = 200, prescribed: list[dict] | None = None, external: list[dict] | None = None, include_skipped: bool = False) -> list[dict]:
@@ -93,7 +94,8 @@ def create_external_training(store, athlete_id: str, athlete_timezone: str | Non
     training_day = body.training_day.isoformat() if body.training_day else current_day
     if training_day > current_day:
         raise HTTPException(422, "Training date cannot be after your current training day.")
-    # Preserve existing request fingerprints when the optional date is omitted.
+    # Preserve existing request fingerprints when the optional date, sport or
+    # session type is omitted.
     fields = body.model_dump(mode="json", exclude={"client_request_id"}, exclude_none=True)
     fingerprint = hashlib.sha256(json.dumps(fields, sort_keys=True).encode()).hexdigest()
     row = store.create_external_training_session(athlete_id, {

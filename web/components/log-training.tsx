@@ -13,6 +13,9 @@ import {
   TRAINING_EFFORTS, canRepeatTraining, latestRepeatableTraining,
   type TrainingActivity, type TrainingEffort, type TrainingHistorySession,
 } from "@/lib/training-history";
+import {
+  athleteSport, fitsPicks, sportLabel, trainingLabel, trainingPicks, type TrainingPick, type TrainingSessionType, type TrainingSport,
+} from "@/lib/training-disciplines";
 import styles from "./log-training.module.css";
 import { TrainingActionContent } from "./training-action-tile";
 import tileStyles from "./training-action-tile.module.css";
@@ -20,7 +23,6 @@ import { SparringLogPrompt, type SparringDraft } from "./today/sparring-log-prom
 import { SessionTakeawayPrompt } from "./session-takeaway";
 import type { SparringIntensity } from "@/lib/types";
 
-const ACTIVITY_PICKS: TrainingActivity[] = ["boxing", "sparring", "strength", "conditioning", "roadwork", "other"];
 const DURATION_PICKS = [30, 45, 60, 90];
 
 const label = (value: string) => value.charAt(0).toUpperCase() + value.slice(1);
@@ -41,7 +43,7 @@ export function manualSparringDraft(row: TrainingHistorySession): SparringDraft 
   };
 }
 
-type Props = { accessToken: string | null; entry?: TrainingHistorySession; repeatEntry?: TrainingHistorySession; recent?: boolean; history?: TrainingHistorySession[]; quickSession?: { activity: TrainingActivity; duration_minutes: number; title: string; effort?: TrainingEffort | null }; onSaved?: (row: TrainingHistorySession) => void; onSparringReported?: () => void; variant?: "compact" | "tile" | "primary" };
+type Props = { accessToken: string | null; entry?: TrainingHistorySession; repeatEntry?: TrainingHistorySession; recent?: boolean; history?: TrainingHistorySession[]; quickSession?: { activity: TrainingActivity; sport?: TrainingSport | null; session_type?: TrainingSessionType | null; duration_minutes: number; title: string; effort?: TrainingEffort | null }; onSaved?: (row: TrainingHistorySession) => void; onSparringReported?: () => void; variant?: "compact" | "tile" | "primary" };
 
 export function LogTraining(props: Props) {
   return props.accessToken ? <LogTrainingContent key={props.accessToken} {...props} accessToken={props.accessToken} /> : null;
@@ -77,6 +79,12 @@ function LogTrainingContent({ accessToken, entry, repeatEntry, recent = false, h
     return () => { cancelled = true; };
   }, [accessToken, recent, history]);
   const [activity, setActivity] = useState<TrainingActivity | "">("");
+  // Optional detail from the athlete's sport; activity always follows from the pair.
+  const [sport, setSport] = useState<TrainingSport | null>(null);
+  const [sessionType, setSessionType] = useState<TrainingSessionType | null>(null);
+  // Whose session types the Activity grid shows; fixed when the sheet opens.
+  const mySport = athleteSport(me?.profile.technical_style);
+  const [gridSport, setGridSport] = useState<TrainingSport | null>(null);
   const [duration, setDuration] = useState("");
   const [effort, setEffort] = useState<TrainingEffort | "">("");
   const [trainingDay, setTrainingDay] = useState("");
@@ -155,7 +163,12 @@ function LogTrainingContent({ accessToken, entry, repeatEntry, recent = false, h
     setSourceLabel(source);
     setDetailsOpen(false);
     setCustomDuration(row?.duration_minutes != null && !DURATION_PICKS.includes(row.duration_minutes));
+    // Records keep exactly what was stored until the athlete changes it. An
+    // older Boxing or Sparring record without a sport opens in the original grid.
     setActivity(row?.activity ?? "");
+    setSport(row?.sport ?? null);
+    setSessionType(row?.sport ? row.session_type ?? null : null);
+    setGridSport(row?.sport ?? (row?.activity && !fitsPicks(row, mySport) ? null : mySport));
     setDuration(row?.duration_minutes?.toString() ?? "");
     setEffort(repeat ? "" : row?.effort ?? "");
     setTrainingDay("");
@@ -184,7 +197,7 @@ function LogTrainingContent({ accessToken, entry, repeatEntry, recent = false, h
     setBusy(true);
     setError(null);
     try {
-      const body = { activity, duration_minutes: minutes, effort };
+      const body = { activity, duration_minutes: minutes, effort, ...(sport ? { sport } : {}), ...(sport && sessionType ? { session_type: sessionType } : {}) };
       const row = editing
         ? await editExternalTraining(token, editing, body)
         : await logExternalTraining(token, { ...body, ...(trainingDay ? { training_day: trainingDay } : {}), client_request_id: requestId.current ??= crypto.randomUUID() });
@@ -203,12 +216,17 @@ function LogTrainingContent({ accessToken, entry, repeatEntry, recent = false, h
     } finally { saving.current = false; if (currentToken.current === token) setBusy(false); }
   }
 
+  function choose(pick: TrainingPick) {
+    if (pick.activity !== activity || pick.sport !== sport || pick.session_type !== sessionType) requestId.current = null;
+    setActivity(pick.activity); setSport(pick.sport); setSessionType(pick.session_type);
+  }
   const activityAndDuration = <>
     <fieldset className={styles.fieldset} disabled={busy} aria-label="Activity">
       <legend>Activity</legend>
       <div className={styles.activityGrid}>
-        {ACTIVITY_PICKS.map(value => <button key={value} type="button" data-activity aria-pressed={activity === value}
-          onClick={() => { setActivity(value); if (activity !== value) requestId.current = null; }}>{label(value)}</button>)}
+        {trainingPicks(gridSport).map(pick => <button key={pick.label} type="button" data-activity
+          aria-pressed={activity === pick.activity && sport === pick.sport && sessionType === pick.session_type}
+          onClick={() => choose(pick)}>{pick.label}</button>)}
       </div>
     </fieldset>
     <fieldset className={styles.fieldset} disabled={busy} aria-label="Duration">
@@ -238,21 +256,21 @@ function LogTrainingContent({ accessToken, entry, repeatEntry, recent = false, h
   return (
     <div className={entry || repeatEntry ? styles.editControl : styles.training} role={entry || repeatEntry ? undefined : "region"} aria-label={entry ? `Manage ${entry.title}` : "Log Training"}>
       {quickSession ? <button className={styles.actionRow} type="button" onClick={() => startEdit(quickSession, true, quickSession.title)} aria-haspopup="dialog" aria-label={quickSession.title} aria-describedby={`${fieldId}-quick`}>
-        <span><strong>{quickSession.title}</strong><span className="muted" id={`${fieldId}-quick`}>{label(quickSession.activity)} · {quickSession.duration_minutes} min</span></span>
+        <span><strong>{quickSession.title}</strong><span className="muted" id={`${fieldId}-quick`}>{trainingLabel(quickSession)} · {quickSession.duration_minutes} min</span></span>
         <svg className={styles.chevron} viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m9 5 7 7-7 7" /></svg>
       </button> : repeatSource ? <button className={repeatEntry ? styles.repeatButton : styles.actionRow} type="button" onClick={() => startEdit(repeatSource, true)} aria-haspopup="dialog" aria-label={repeatEntry ? `Repeat ${repeatSource.title}` : "Repeat last session"} aria-describedby={!repeatEntry ? `${fieldId}-recent` : undefined}>
-        {repeatEntry ? "Repeat" : <><span><strong>Repeat last session</strong><span className="muted" id={`${fieldId}-recent`}>{label(repeatSource.activity!)} · {repeatSource.duration_minutes} min</span></span><svg className={styles.chevron} viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m9 5 7 7-7 7" /></svg></>}
+        {repeatEntry ? "Repeat" : <><span><strong>Repeat last session</strong><span className="muted" id={`${fieldId}-recent`}>{trainingLabel(repeatSource)} · {repeatSource.duration_minutes} min</span></span><svg className={styles.chevron} viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m9 5 7 7-7 7" /></svg></>}
       </button> : null}
       {repeatEntry ? null : entry ? <button className={styles.editButton} type="button" onClick={() => startEdit(entry)} aria-haspopup="dialog" aria-label={`Edit ${entry.title}`} title="Edit session">
         <svg className="ex-log-edit-icon" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false"><path d="M4 20h4L18.5 9.5a2.12 2.12 0 0 0-3-3L5 17v3Z" /><path d="m14.5 7.5 3 3" /></svg>
       </button> :
         <button className={variant === "primary" ? `cta ${styles.primary}` : variant === "tile" ? `${tileStyles.tile} ${tileStyles.log}` : styles.actionRow} type="button" onClick={() => startEdit()} aria-haspopup="dialog" aria-label="Log Training">
-          {variant === "primary" ? <><span aria-hidden="true">+</span> Log training</> : variant === "tile" ? <TrainingActionContent kind="log" /> : <><span><strong>{recent && (repeatSource || quickSession) ? "Log another session" : "Log Training"}</strong><span className="muted">Sparring, boxing, roadwork, strength and more.</span></span><span aria-hidden="true">+</span></>}
+          {variant === "primary" ? <><span aria-hidden="true">+</span> Log training</> : variant === "tile" ? <TrainingActionContent kind="log" /> : <><span><strong>{recent && (repeatSource || quickSession) ? "Log another session" : "Log Training"}</strong><span className="muted">{mySport ? `${sportLabel(mySport)}, strength, conditioning and more.` : "Sparring, boxing, roadwork, strength and more."}</span></span><span aria-hidden="true">+</span></>}
         </button>}
       {open ? (
         <dialog ref={dialog} className={styles.dialog} aria-label={editing ? "Edit training" : "Log Training"} onCancel={event => { if (busy) event.preventDefault(); else setOpen(false); }}>
         <header className={styles.header}>
-          <div><h2>{editing ? "Edit training" : repeating && activity ? `Log ${activity}` : "Log training"}</h2>
+          <div><h2>{editing ? "Edit training" : repeating && activity ? `Log ${trainingLabel({ activity, sport, session_type: sessionType })}` : "Log training"}</h2>
             {repeating ? <p className={styles.source}>{duration} min · {sourceLabel}</p> : null}
           </div>
           <button className={styles.close} type="button" aria-label="Close training log" disabled={busy} onClick={() => setOpen(false)}>×</button>

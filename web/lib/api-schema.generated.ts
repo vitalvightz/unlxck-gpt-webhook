@@ -987,6 +987,8 @@ export type ExternalTrainingCreate = {
   activity: "boxing" | "conditioning" | "other" | "roadwork" | "sparring" | "strength";
   duration_minutes: number;
   effort: "easy" | "hard" | "moderate";
+  sport?: "bjj" | "boxing" | "kickboxing" | "mma" | "muay_thai" | "wrestling" | null;
+  session_type?: "bag" | "clinch" | "drilling" | "grappling" | "integrated" | "live" | "pads" | "positional" | "rolling" | "shadowboxing" | "sparring" | "striking" | "technical" | "wrestling" | null;
   client_request_id: string;
   training_day?: string | null;
 };
@@ -995,6 +997,8 @@ export type ExternalTrainingFields = {
   activity: "boxing" | "conditioning" | "other" | "roadwork" | "sparring" | "strength";
   duration_minutes: number;
   effort: "easy" | "hard" | "moderate";
+  sport?: "bjj" | "boxing" | "kickboxing" | "mma" | "muay_thai" | "wrestling" | null;
+  session_type?: "bag" | "clinch" | "drilling" | "grappling" | "integrated" | "live" | "pads" | "positional" | "rolling" | "shadowboxing" | "sparring" | "striking" | "technical" | "wrestling" | null;
 };
 
 export type ExternalTrainingTakeaway = {
@@ -2458,6 +2462,8 @@ export type TodayInjuryDeclaration = {
 export type TrainingHabitDecision = {
   weekday: number;
   activity: "boxing" | "conditioning" | "other" | "roadwork" | "sparring" | "strength";
+  sport: "bjj" | "boxing" | "kickboxing" | "mma" | "muay_thai" | "wrestling" | null;
+  session_type: "bag" | "clinch" | "drilling" | "grappling" | "integrated" | "live" | "pads" | "positional" | "rolling" | "shadowboxing" | "sparring" | "striking" | "technical" | "wrestling" | null;
   duration_minutes: number;
   state: "confirmed" | "dismissed";
   decided_on: string;
@@ -2466,6 +2472,8 @@ export type TrainingHabitDecision = {
 export type TrainingHabitDecisionRequest = {
   weekday: number;
   activity: "boxing" | "conditioning" | "other" | "roadwork" | "sparring" | "strength";
+  sport?: "bjj" | "boxing" | "kickboxing" | "mma" | "muay_thai" | "wrestling" | null;
+  session_type?: "bag" | "clinch" | "drilling" | "grappling" | "integrated" | "live" | "pads" | "positional" | "rolling" | "shadowboxing" | "sparring" | "striking" | "technical" | "wrestling" | null;
   duration_minutes: number;
   state: "confirmed" | "dismissed";
   decided_on: string;
@@ -2494,6 +2502,8 @@ export type TrainingHistorySession = {
   status: "done" | "modified" | "skipped";
   title: string;
   activity: "boxing" | "conditioning" | "other" | "roadwork" | "sparring" | "strength" | null;
+  sport: "bjj" | "boxing" | "kickboxing" | "mma" | "muay_thai" | "wrestling" | null;
+  session_type: "bag" | "clinch" | "drilling" | "grappling" | "integrated" | "live" | "pads" | "positional" | "rolling" | "shadowboxing" | "sparring" | "striking" | "technical" | "wrestling" | null;
   duration_minutes: number | null;
   effort: "easy" | "hard" | "moderate" | null;
   plan_id: string | null;

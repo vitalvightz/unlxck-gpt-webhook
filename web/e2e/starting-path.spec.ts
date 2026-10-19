@@ -3,7 +3,7 @@ import AxeBuilder from "@axe-core/playwright";
 import { isolateFromNetwork } from "./support";
 import type { TrainingHistorySession } from "../lib/training-history";
 
-async function setup(page: Page, baseURL: string, options: { path?: string | null; failSave?: boolean; failMe?: boolean; failToday?: boolean; terms?: boolean; plan?: boolean; consent?: boolean; rejectConsent?: boolean; failConsent?: boolean; manualHistory?: TrainingHistorySession[]; sharedHistory?: TrainingHistorySession[]; activePlan?: boolean } = {}) {
+async function setup(page: Page, baseURL: string, options: { path?: string | null; failSave?: boolean; failMe?: boolean; failToday?: boolean; terms?: boolean; plan?: boolean; consent?: boolean; rejectConsent?: boolean; failConsent?: boolean; manualHistory?: TrainingHistorySession[]; sharedHistory?: TrainingHistorySession[]; activePlan?: boolean; sports?: string[] } = {}) {
   await isolateFromNetwork(page, baseURL);
   const storageKey = `sb-${new URL(process.env.NEXT_PUBLIC_SUPABASE_URL ?? "https://stub.supabase.co").hostname.split(".")[0]}-auth-token`;
   await page.addInitScript(([key, value]) => localStorage.setItem(key, value), [storageKey, JSON.stringify({
@@ -12,6 +12,7 @@ async function setup(page: Page, baseURL: string, options: { path?: string | nul
     user: { id: "athlete-1", email: "fighter@example.com", aud: "authenticated", role: "authenticated", app_metadata: {}, user_metadata: {} },
   })]);
   let path = options.path ?? null;
+  let sports = options.sports ?? ["boxing"];
   let healthConsent = options.consent !== false;
   let consentFailed = false;
   let failed = false;
@@ -36,9 +37,10 @@ async function setup(page: Page, baseURL: string, options: { path?: string | nul
         const body = request.postDataJSON(); writes.push(body);
         if (options.failSave && !failed) { failed = true; return json({ detail: "Unavailable" }, 503); }
         path = body.starting_path;
+        if (body.technical_style) sports = body.technical_style;
       }
       return json({ profile: { starting_path: path, athlete_id: "athlete-1", email: "fighter@example.com", full_name: "Alex", role: "athlete", access_status: "approved",
-        technical_style: ["boxing"], tactical_style: [], stance: "orthodox", professional_status: "amateur", record: "",
+        technical_style: sports, tactical_style: [], stance: "orthodox", professional_status: "amateur", record: "",
         athlete_timezone: "Europe/London", athlete_locale: "en", appearance_mode: "dark", nutrition_profile: {},
         date_of_birth: "1995-01-01", meets_minimum_age: true, is_minor: false, terms_accepted: options.terms !== false, health_consent_granted: healthConsent,
         training_habits: options.manualHistory ? { enabled: true, decisions: [] } : undefined,
@@ -114,7 +116,8 @@ test("tracking keeps consent optional and grants it in one explicit tap inside t
   await allow.click();
   await expect(page).toHaveURL(/\/today$/);
   await expect(page.getByRole("form", { name: "Log Training", exact: true })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Boxing", exact: true })).toBeFocused();
+  // The athlete boxes, so the first Activity choice is a boxing session type.
+  await expect(page.getByRole("button", { name: "Pads", exact: true })).toBeFocused();
   expect(writes).toEqual([{ starting_path: "tracking_first" }, { health_data_consent: true }]);
 });
 
@@ -146,7 +149,7 @@ test("server-side consent withdrawal replaces the logger with a recovery route",
   await page.goto("/today");
   await page.getByRole("button", { name: "Log Training", exact: true }).click();
   const form = page.getByRole("form", { name: "Log Training", exact: true });
-  await form.getByRole("button", { name: "Boxing", exact: true }).click();
+  await form.getByRole("button", { name: "Pads", exact: true }).click();
   await form.getByRole("button", { name: "45", exact: true }).click();
   await form.getByRole("button", { name: "Moderate", exact: true }).click();
   await form.getByRole("button", { name: "Save Session", exact: true }).click();
@@ -169,13 +172,11 @@ for (const failedSource of ["none", "manual", "shared"]) {
     if (failedSource !== "none") await page.route(failedSource === "manual" ? "**/api/training/history?manual_only=true&limit=200" : "**/api/training/history", route => route.fulfill({ status: 503, contentType: "application/json", body: '{}' }));
     await page.goto("/today");
     await expect.poll(() => urls.some(url => url.endsWith("manual_only=true&limit=200"))).toBe(true);
-    if (failedSource === "manual") {
-      await page.getByText("Training habits", { exact: true }).click();
-      await expect(page.getByText("History unavailable.", { exact: true })).toBeVisible();
-      await expect(page.getByText("Boxing every Sunday?", { exact: true })).toHaveCount(0);
-    } else await expect(page.getByText("Boxing every Sunday?", { exact: true })).toBeVisible();
-    if (failedSource === "shared") await expect(page.getByText("Couldn’t load your training history.", { exact: true })).toBeVisible();
-    else await expect(page.getByRole("region", { name: "Training history", exact: true })).toContainText("Prescribed strength");
+    if (failedSource === "manual") await expect(page.getByText("Boxing every Sunday?", { exact: true })).toHaveCount(0);
+    else await expect(page.getByText("Boxing every Sunday?", { exact: true })).toBeVisible();
+    // Today carries no recent-history list or habit settings; History owns the record.
+    await expect(page.getByRole("region", { name: "Training history", exact: true })).toHaveCount(0);
+    await expect(page.getByText("Training habits", { exact: true })).toHaveCount(0);
   });
 }
 
@@ -189,12 +190,13 @@ for (const width of [320, 390, 1280]) {
     await expect(page.getByRole("button", { name: "Open navigation" })).toHaveCount(0);
     await expect(page.locator(".app-sidebar, .mobile-tab-bar")).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Sign out", exact: true })).toBeVisible();
-    const choices = page.locator('[aria-busy="false"] > button').filter({ hasText: /Start tracking|Build a plan/ });
+    const choices = page.locator('[aria-busy="false"] > button');
     const sizes = await choices.evaluateAll(elements => elements.map(element => element.getBoundingClientRect().height));
     expect(sizes).toHaveLength(2);
     // Building an S&C plan is offered first.
     await expect(choices.first()).toContainText("Build my training plan");
-    expect(Math.abs(sizes[0] - sizes[1])).toBeLessThanOrEqual(1);
+    // Slim list rows, not cards: touch-sized, but no taller than a short two-line row.
+    expect(sizes.every(size => size >= 44 && size <= 96)).toBe(true);
     await page.screenshot({ path: test.info().outputPath(`choice-${width}.png`) });
     const tracking = page.getByRole("button", { name: /I already have a coach/ });
     await tracking.focus(); await expect(tracking).toBeFocused();
@@ -204,7 +206,7 @@ for (const width of [320, 390, 1280]) {
     await tracking.press("Enter");
     await expect(page).toHaveURL(/\/today$/);
     await expect(page.locator("html")).toHaveAttribute("data-app-surface", "workspace");
-    await expect(page.getByText("No training logged yet", { exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Repeat last session", exact: true })).toHaveCount(0);
     const quickActions = page.getByRole("navigation", { name: "Quick actions" });
     await expect(quickActions.getByRole("link", { name: "Round timer" })).toBeVisible();
     await expect(quickActions.getByRole("link", { name: "Build S&C plan" })).toBeVisible();
@@ -215,14 +217,15 @@ for (const width of [320, 390, 1280]) {
     await expect(page.locator("#today-checkin")).toBeVisible();
     await page.getByRole("button", { name: "Log Training", exact: true }).click();
     const form = page.getByRole("form", { name: "Log Training", exact: true });
-    await form.getByRole("button", { name: "Boxing", exact: true }).click();
+    // A boxer's Activity choices are boxing session types.
+    await form.getByRole("button", { name: "Pads", exact: true }).click();
     await form.getByRole("button", { name: "45", exact: true }).click();
     await form.getByRole("button", { name: "Moderate", exact: true }).click();
     await form.getByRole("button", { name: "Save Session", exact: true }).click();
     await expect(page.getByRole("dialog")).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Log Training", exact: true })).toBeFocused();
     await expect(page.getByRole("button", { name: "Repeat last session", exact: true })).toBeVisible();
-    await expect(page.getByRole("region", { name: "Training history", exact: true })).toContainText("Boxing");
+    await expect(page.getByRole("button", { name: "Repeat last session", exact: true })).toContainText("Boxing · Pads");
     // Boxing gets no sparring follow-up; the tile now reports today's log.
     await expect(page.getByRole("dialog", { name: "Log your sparring" })).toHaveCount(0);
     await expect(page.getByRole("list", { name: "Today command status" })).toContainText("Logged");
@@ -346,7 +349,6 @@ for (const width of [320, 390, 1280]) {
     await expect(page.getByRole("navigation", { name: "Quick actions" }).getByRole("link", { name: "View plan" })).toHaveAttribute("href", "/plans/plan-9");
     await expect(page.getByRole("navigation", { name: "Quick actions" }).getByRole("link", { name: "Build my own plan" })).toHaveCount(0);
     // Shared sections are the same components as the no-plan state.
-    await expect(page.getByRole("region", { name: "Training history", exact: true })).toBeVisible();
     await expect(page.locator("#today-injury")).toContainText("No injuries tracked.");
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
     await page.screenshot({ path: test.info().outputPath(`planned-today-${width}.png`), fullPage: true });
@@ -401,7 +403,7 @@ test("skipping the sparring follow-up keeps the basic training log", async ({ pa
   await expect(prompt.getByRole("group", { name: "How hard was it?" }).getByRole("button", { name: "Light", exact: true })).toHaveAttribute("aria-pressed", "true");
   await prompt.getByRole("button", { name: "Skip", exact: true }).click();
   await expect(prompt).toHaveCount(0);
-  await expect(page.getByRole("region", { name: "Training history", exact: true })).toContainText("Sparring");
+  await expect(page.getByRole("button", { name: "Repeat last session", exact: true })).toContainText("Sparring");
   expect(writes).toHaveLength(1);
 });
 
@@ -454,3 +456,61 @@ test("a plan-free athlete reporting high pain is pulled back, not cleared", asyn
   await expect(page.locator("#today-decision")).toContainText("Use rehab or easy mobility only");
   await expect(page.locator("#today-decision")).not.toContainText("Train as your coach plans");
 });
+
+for (const width of [320, 390, 1280]) {
+  test(`sign-up asks the sport first, then the start, and the log shows that sport (${width}px)`, async ({ page, baseURL }) => {
+    await page.setViewportSize({ width, height: 844 });
+    const errors: string[] = []; page.on("pageerror", e => errors.push(e.message));
+    const writes = await setup(page, baseURL!, { sports: [] });
+    await page.goto("/get-started");
+    // One page: a compact sport pill row, then the two ways to start.
+    await expect(page.getByRole("heading", { name: "How would you like to start?" })).toBeVisible();
+    const sports = page.getByRole("group", { name: "Your sport" });
+    await expect(sports.getByRole("button")).toHaveText(["Boxing", "Muay Thai", "Kickboxing", "MMA", "BJJ", "Wrestling", "Other"]);
+    await expect(sports.locator('[aria-pressed="true"]')).toHaveCount(0);
+    const pill = (await sports.getByRole("button").first().boundingBox())!;
+    expect(pill.height).toBeLessThanOrEqual(44);
+    // Starting without a sport asks for one and saves nothing.
+    await page.getByRole("button", { name: /I already have a coach/ }).click();
+    const hint = page.getByRole("alert").filter({ hasText: "Pick your sport first." });
+    await expect(hint).toBeVisible();
+    await expect(sports.getByRole("button", { name: "Boxing", exact: true })).toBeFocused();
+    expect(writes).toHaveLength(0);
+    expect((await new AxeBuilder({ page }).include("main").analyze()).violations).toEqual([]);
+    await sports.getByRole("button", { name: "BJJ", exact: true }).click();
+    await sports.getByRole("button", { name: "Muay Thai", exact: true }).click();
+    await expect(sports.locator('[aria-pressed="true"]')).toHaveText(["Muay Thai"]);
+    await expect(hint).toHaveCount(0);
+    await page.screenshot({ path: test.info().outputPath(`start-${width}.png`) });
+    await page.getByRole("button", { name: /I already have a coach/ }).click();
+    await expect(page).toHaveURL(/\/today$/);
+    expect(writes[0]).toEqual({ starting_path: "tracking_first", technical_style: ["muay_thai"] });
+    await page.getByRole("button", { name: "Log Training", exact: true }).click();
+    const form = page.getByRole("form", { name: "Log Training", exact: true });
+    const activity = form.getByRole("group", { name: "Activity", exact: true });
+    await expect(activity.getByRole("button")).toHaveText(["Pads", "Bag work", "Clinch", "Technical drills", "Sparring", "Strength", "Conditioning", "Roadwork", "Other"]);
+    await activity.getByRole("button", { name: "Clinch", exact: true }).click();
+    await form.getByRole("button", { name: "60", exact: true }).click();
+    await form.getByRole("button", { name: "Hard", exact: true }).click();
+    expect((await new AxeBuilder({ page }).include("dialog").analyze()).violations).toEqual([]);
+    await page.screenshot({ path: test.info().outputPath(`muay-thai-log-${width}.png`) });
+    await form.getByRole("button", { name: "Save Session", exact: true }).click();
+    await expect(page.getByRole("dialog", { name: "Log Training", exact: true })).toHaveCount(0);
+    expect(writes.at(-1)).toMatchObject({ activity: "other", sport: "muay_thai", session_type: "clinch", duration_minutes: 60, effort: "hard" });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+    expect(errors).toEqual([]);
+  });
+}
+
+test("Other sport keeps the original log choices and saves no sport", async ({ page, baseURL }) => {
+  const writes = await setup(page, baseURL!, { sports: [] });
+  await page.goto("/get-started");
+  await page.getByRole("button", { name: "Other", exact: true }).click();
+  await page.getByRole("button", { name: /I already have a coach/ }).click();
+  await expect(page).toHaveURL(/\/today$/);
+  expect(writes[0]).toEqual({ starting_path: "tracking_first" });
+  await page.getByRole("button", { name: "Log Training", exact: true }).click();
+  await expect(page.getByRole("group", { name: "Activity", exact: true }).getByRole("button"))
+    .toHaveText(["Boxing", "Sparring", "Strength", "Conditioning", "Roadwork", "Other"]);
+});
+

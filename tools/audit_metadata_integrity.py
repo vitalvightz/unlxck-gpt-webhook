@@ -751,6 +751,48 @@ def historical_sources():
         yield replay
 
 
+EXTERNAL_TRAINING_ADDITIONS = (
+    (b"field_validator, model_validator\n\nfrom api.contracts.training_disciplines import SessionType, Sport, discipline_error\n",
+     b"field_validator\n"),
+    (b"""    effort: Effort
+    # Optional detail on what was trained. Absent on older records and never
+    # inferred for them; ``activity`` must be the kind the pair maps to.
+    sport: Sport | None = None
+    session_type: SessionType | None = None
+
+    @model_validator(mode="after")
+    def check_discipline(self):
+        if error := discipline_error(self.activity, self.sport, self.session_type):
+            raise ValueError(error)
+        return self
+""", b"    effort: Effort\n"),
+    (b"    activity: Activity | None = None\n    sport: Sport | None = None\n    session_type: SessionType | None = None\n",
+     b"    activity: Activity | None = None\n"),
+    (b"""    notes: str | None = None
+    # A manual session's short note on what was learned; never workload.
+    takeaway: str = ""
+""", b"    notes: str | None = None\n"),
+    (b"""    sessions: list[TrainingHistorySession]
+    # Pass as ``before_day`` for the next, older page; None when there is none.
+    next_before_day: str | None = None
+""", b"    sessions: list[TrainingHistorySession]\n"),
+    (b"""
+
+TAKEAWAY_MAX_CHARS = 280
+
+
+class ExternalTrainingTakeaway(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    takeaway: str = Field(default="", max_length=TAKEAWAY_MAX_CHARS)
+
+    @field_validator("takeaway", mode="before")
+    @classmethod
+    def clean_takeaway(cls, value):
+        return value.strip() if isinstance(value, str) else value
+""", b""),
+)
+
+
 def original_equipment_source(relative):
     """Reverse only reviewed equipment/hash edits; frozen file hashes verify bytes.
 
@@ -766,7 +808,15 @@ def original_equipment_source(relative):
         field = b'    completion_origin: Literal["reported", "day_credit"] | None = None\n'
         if data.count(field) > 1:
             raise ValueError("Completion provenance contract history drift")
-        return data.replace(field, b"", 1)
+        data = data.replace(field, b"", 1)
+        # #2935 (History paging and takeaways) and the optional manual sport and
+        # session type are reviewed additive training-log fields. Each exact
+        # block is reversed once; any other edit still fails the digest check.
+        for added, original in EXTERNAL_TRAINING_ADDITIONS:
+            if data.count(added) != 1:
+                raise ValueError("External training contract history drift")
+            data = data.replace(added, original, 1)
+        return data
     if relative == "data/tag_vocabulary.json":
         from tools.check_tag_retirement import original_vocabulary_source
 

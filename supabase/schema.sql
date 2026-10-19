@@ -2814,6 +2814,17 @@ create table if not exists public.external_training_sessions (
   duration_minutes integer not null check (duration_minutes between 1 and 600),
   effort text not null check (effort in ('easy', 'moderate', 'hard')),
   takeaway text not null default '' constraint external_training_sessions_takeaway_length check (char_length(takeaway) <= 280),
+  sport text,
+  session_type text,
+  constraint external_training_sessions_discipline check (
+      (sport is null and session_type is null)
+      or ((coalesce(sport, ''), coalesce(session_type, ''), activity) in (
+        ('boxing', '', 'boxing'), ('boxing', 'pads', 'boxing'), ('boxing', 'bag', 'boxing'), ('boxing', 'shadowboxing', 'boxing'), ('boxing', 'technical', 'boxing'), ('boxing', 'sparring', 'sparring'),
+        ('muay_thai', '', 'other'), ('muay_thai', 'pads', 'other'), ('muay_thai', 'bag', 'other'), ('muay_thai', 'clinch', 'other'), ('muay_thai', 'technical', 'other'), ('muay_thai', 'sparring', 'sparring'),
+        ('kickboxing', '', 'other'), ('kickboxing', 'pads', 'other'), ('kickboxing', 'bag', 'other'), ('kickboxing', 'technical', 'other'), ('kickboxing', 'sparring', 'sparring'),
+        ('mma', '', 'other'), ('mma', 'striking', 'other'), ('mma', 'grappling', 'other'), ('mma', 'wrestling', 'other'), ('mma', 'integrated', 'other'), ('mma', 'sparring', 'sparring'),
+        ('bjj', '', 'other'), ('bjj', 'drilling', 'other'), ('bjj', 'positional', 'other'), ('bjj', 'rolling', 'other'),
+        ('wrestling', '', 'other'), ('wrestling', 'technical', 'other'), ('wrestling', 'live', 'other')))),
   deleted_at timestamptz,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),

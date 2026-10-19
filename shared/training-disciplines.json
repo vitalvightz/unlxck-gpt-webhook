@@ -1,0 +1,147 @@
+{
+  "description": "Optional combat sport and session type for manually logged training; the sport normally comes from the athlete's profile. Read by api/contracts/training_disciplines.py and web/lib/training-disciplines.ts. 'activity' is the existing high-level kind each choice is stored with: it keeps the sparring follow-up and older consumers working and never changes workload. Only striking sparring is stored as activity 'sparring'; grappling live work is not head-contact sparring. Strength, conditioning and roadwork stay the existing activities without a sport.",
+  "sports": [
+    {
+      "id": "boxing",
+      "label": "Boxing",
+      "activity": "boxing",
+      "session_types": [
+        {
+          "id": "pads",
+          "label": "Pads"
+        },
+        {
+          "id": "bag",
+          "label": "Bag work"
+        },
+        {
+          "id": "shadowboxing",
+          "label": "Shadowboxing"
+        },
+        {
+          "id": "technical",
+          "label": "Technical drills"
+        },
+        {
+          "id": "sparring",
+          "label": "Sparring",
+          "activity": "sparring"
+        }
+      ]
+    },
+    {
+      "id": "muay_thai",
+      "label": "Muay Thai",
+      "activity": "other",
+      "session_types": [
+        {
+          "id": "pads",
+          "label": "Pads"
+        },
+        {
+          "id": "bag",
+          "label": "Bag work"
+        },
+        {
+          "id": "clinch",
+          "label": "Clinch"
+        },
+        {
+          "id": "technical",
+          "label": "Technical drills"
+        },
+        {
+          "id": "sparring",
+          "label": "Sparring",
+          "activity": "sparring"
+        }
+      ]
+    },
+    {
+      "id": "kickboxing",
+      "label": "Kickboxing",
+      "activity": "other",
+      "session_types": [
+        {
+          "id": "pads",
+          "label": "Pads"
+        },
+        {
+          "id": "bag",
+          "label": "Bag work"
+        },
+        {
+          "id": "technical",
+          "label": "Technical drills"
+        },
+        {
+          "id": "sparring",
+          "label": "Sparring",
+          "activity": "sparring"
+        }
+      ]
+    },
+    {
+      "id": "mma",
+      "label": "MMA",
+      "activity": "other",
+      "session_types": [
+        {
+          "id": "striking",
+          "label": "Striking"
+        },
+        {
+          "id": "grappling",
+          "label": "Grappling"
+        },
+        {
+          "id": "wrestling",
+          "label": "Wrestling"
+        },
+        {
+          "id": "integrated",
+          "label": "Integrated MMA"
+        },
+        {
+          "id": "sparring",
+          "label": "Sparring",
+          "activity": "sparring"
+        }
+      ]
+    },
+    {
+      "id": "bjj",
+      "label": "BJJ",
+      "activity": "other",
+      "session_types": [
+        {
+          "id": "drilling",
+          "label": "Drilling"
+        },
+        {
+          "id": "positional",
+          "label": "Positional"
+        },
+        {
+          "id": "rolling",
+          "label": "Rolling"
+        }
+      ]
+    },
+    {
+      "id": "wrestling",
+      "label": "Wrestling",
+      "activity": "other",
+      "session_types": [
+        {
+          "id": "technical",
+          "label": "Technical drilling"
+        },
+        {
+          "id": "live",
+          "label": "Live wrestling"
+        }
+      ]
+    }
+  ]
+}

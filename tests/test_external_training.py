@@ -169,7 +169,9 @@ def test_omitted_date_keeps_existing_retry_fingerprint():
     store = FakeStore()
     request = ExternalTrainingCreate(**body())
     row = create_external_training(store, "athlete-1", None, request, now=NOW)
-    original_fields = request.model_dump(mode="json", exclude={"client_request_id", "training_day"})
+    # The exact pre-sport field set: rows logged before sport/session type
+    # existed must keep retrying against the same fingerprint.
+    original_fields = {"activity": "sparring", "duration_minutes": 60, "effort": "hard"}
     assert row["request_fingerprint"] == hashlib.sha256(json.dumps(original_fields, sort_keys=True).encode()).hexdigest()
     explicit_null = ExternalTrainingCreate(**request.model_dump(mode="json"))
     retry = create_external_training(store, "athlete-1", None, explicit_null, now=NOW + timedelta(days=1))

@@ -42,6 +42,28 @@ test("plan sessions keep their own bucket and missing durations are never estima
   assert.deepEqual(summary.mix.map(item => item.label), ["Roadwork", "Unlxck plan"]);
 });
 
+test("a recorded sport decides the bucket; older records keep theirs", () => {
+  const summary = summarizeTraining([
+    row({ sport: "bjj", session_type: "rolling", activity: "other", duration_minutes: 90 }),
+    row({ sport: "muay_thai", session_type: "clinch", activity: "other", duration_minutes: 60 }),
+    row({ sport: "mma", session_type: "striking", activity: "other", duration_minutes: 60 }),
+    row({ sport: "mma", session_type: "wrestling", activity: "other", duration_minutes: 45 }),
+    row({ sport: "kickboxing", session_type: "sparring", activity: "sparring", duration_minutes: 30 }),
+    row({ sport: "boxing", session_type: "pads", activity: "boxing", duration_minutes: 60 }),
+    row({ activity: "boxing", duration_minutes: 30 }),
+    row({ activity: "strength", duration_minutes: 40 }),
+    row({ activity: "conditioning", duration_minutes: 20 }),
+    row({ activity: "sparring", duration_minutes: 50 }),
+  ], TODAY, 7);
+  assert.equal(summary.sessions, 10);
+  assert.equal(summary.minutes, 485);
+  assert.deepEqual(summary.mix.map(item => [item.label, item.sessions, item.minutes]), [
+    ["MMA", 2, 105], ["Boxing", 2, 90], ["BJJ", 1, 90], ["S&C", 2, 60], ["Muay Thai", 1, 60], ["Sparring", 1, 50], ["Kickboxing", 1, 30],
+  ]);
+  // Every session sits in exactly one bucket.
+  assert.equal(summary.mix.reduce((total, item) => total + item.minutes, 0), summary.minutes);
+});
+
 test("the four-week window reaches 28 training days back", () => {
   const rows = [row({ training_day: "2026-09-22" }), row({ training_day: "2026-09-21" })];
   assert.equal(summarizeTraining(rows, TODAY, 28).sessions, 1);

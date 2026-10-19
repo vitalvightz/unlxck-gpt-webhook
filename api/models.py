@@ -20,6 +20,7 @@ from .contracts.checkin_decision import (
     Sleep as CheckinSleep,
 )
 from .contracts.completion import CompletionStatus, LandingSessionState
+from .contracts.training_disciplines import SessionType, Sport, discipline_error
 from .contracts.achilles_restore_load import AchillesRestoreLoadReview
 from .contracts.injury_checkin import (
     MAX_INFECTION_SIGNS,
@@ -1158,9 +1159,18 @@ class TrainingHabitDecision(BaseModel):
     model_config = ConfigDict(extra="forbid")
     weekday: int = Field(strict=True, ge=0, le=6)  # Monday = 0
     activity: Literal["sparring", "boxing", "roadwork", "strength", "conditioning", "other"]
+    # Optional, as on the manual sessions a routine repeats; absent on older routines.
+    sport: Sport | None = None
+    session_type: SessionType | None = None
     duration_minutes: int = Field(strict=True, ge=1, le=600)
     state: Literal["confirmed", "dismissed"]
     decided_on: date
+
+    @model_validator(mode="after")
+    def check_discipline(self):
+        if error := discipline_error(self.activity, self.sport, self.session_type):
+            raise ValueError(error)
+        return self
 
     @field_validator("decided_on", mode="before")
     @classmethod
@@ -1177,9 +1187,9 @@ class TrainingHabitPreferences(BaseModel):
 
     @model_validator(mode="after")
     def unique_slots(self):
-        slots = [(item.weekday, item.activity) for item in self.decisions]
+        slots = [(item.weekday, item.activity, item.sport, item.session_type) for item in self.decisions]
         if len(slots) != len(set(slots)):
-            raise ValueError("Use one decision per weekday and activity.")
+            raise ValueError("Use one decision per weekday and kind of session.")
         return self
 
 

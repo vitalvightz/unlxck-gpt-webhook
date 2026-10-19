@@ -56,6 +56,8 @@ async function setup(page: Page, baseURL: string, lostResponse: boolean | "netwo
     if (path === "/api/plans/active") return json({ detail: "No active plan" }, 404);
     if (path === "/api/plans") return json([]);
     if (path === "/api/training/history") return json({ sessions });
+    // History reads linked sparring reports (#2935); none exist in these flows.
+    if (path === "/api/today/sparring-logs") return json({ logs: [] });
     if (path === "/api/training/sessions" && request.method() === "POST") {
       expect(request.headers().authorization).toBe(`Bearer ${token}`);
       const body = request.postDataJSON();
@@ -65,6 +67,7 @@ async function setup(page: Page, baseURL: string, lostResponse: boolean | "netwo
         id: `manual-${created.size}`, source: "external", training_day: body.training_day ?? trainingDay, status: "done",
         plan_id: null,
         title: body.activity.charAt(0).toUpperCase() + body.activity.slice(1), activity: body.activity, duration_minutes: body.duration_minutes, effort: body.effort,
+        sport: body.sport ?? null, session_type: body.session_type ?? null,
       };
         created.set(body.client_request_id, row);
         sessions = [row, ...sessions];
@@ -91,6 +94,13 @@ async function setup(page: Page, baseURL: string, lostResponse: boolean | "netwo
   return submissions;
 }
 
+/** The optional post-sparring follow-up (#2934) opens after a sparring save. */
+async function skipSparringFollowUp(page: Page) {
+  const prompt = page.getByRole("dialog", { name: "Log your sparring" });
+  await prompt.getByRole("button", { name: "Skip", exact: true }).click();
+  await expect(prompt).toHaveCount(0);
+}
+
 async function choose(scope: Page | Locator, page: Page, field: string, option: string) {
   const pick = scope.getByRole("group", { name: field, exact: true }).getByRole("button", { name: option, exact: true });
   await pick.click();
@@ -107,9 +117,11 @@ for (const width of [390, 1280]) {
     await page.getByRole("button", { name: "Log Training", exact: true }).click();
     const form = page.getByRole("form", { name: "Log Training", exact: true });
     await expect(form.getByRole("combobox")).toHaveCount(0);
-    await expect(form.getByRole("group", { name: "Activity", exact: true }).getByRole("button")).toHaveCount(6);
+    // The athlete boxes: the same single grid holds boxing session types, then S&C, roadwork and other.
+    await expect(form.getByRole("group", { name: "Activity", exact: true }).getByRole("button")).toHaveText(
+      ["Pads", "Bag work", "Shadowboxing", "Technical drills", "Sparring", "Strength", "Conditioning", "Roadwork", "Other"]);
     await expect(form.getByLabel("Training date (optional)")).toBeHidden();
-    await expect(form.getByRole("button", { name: "Boxing", exact: true })).toBeFocused();
+    await expect(form.getByRole("button", { name: "Pads", exact: true })).toBeFocused();
     await choose(form, page, "Activity", "Sparring");
     await choose(form, page, "Duration", "60");
     await choose(form, page, "Effort", "Hard");
@@ -124,12 +136,13 @@ for (const width of [390, 1280]) {
     await page.screenshot({ animations: "disabled", path: test.info().outputPath("log-training-form.png") });
     expect((await new AxeBuilder({ page }).include('dialog').analyze()).violations).toEqual([]);
     await form.getByRole("button", { name: "Save Session", exact: true }).click();
-    await expect(page.getByRole("dialog")).toHaveCount(0);
+    await skipSparringFollowUp(page);
     await expect(page.getByRole("region", { name: "Log Training", exact: true }).getByRole("status")).toContainText("logged successfully");
     await expect(page.locator(".history-list")).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Edit Sparring" })).toHaveCount(0);
     expect(submissions[0]).toMatchObject({ activity: "sparring", duration_minutes: 60, effort: "hard" });
-    expect(Object.keys(submissions[0]).sort()).toEqual(["activity", "client_request_id", "duration_minutes", "effort"]);
+    expect(Object.keys(submissions[0]).sort()).toEqual(["activity", "client_request_id", "duration_minutes", "effort", "session_type", "sport"]);
+    expect(submissions[0]).toMatchObject({ sport: "boxing", session_type: "sparring" });
     await page.reload();
     await expect(page.getByRole("button", { name: "Edit Sparring" })).toHaveCount(0);
     if (width === 390) await page.getByRole("button", { name: "Open navigation" }).click();
@@ -148,7 +161,7 @@ for (const width of [390, 1280]) {
     await page.screenshot({ animations: "disabled", path: test.info().outputPath("history-compact-controls.png") });
     expect((await new AxeBuilder({ page }).include(".history-list").analyze()).violations).toEqual([]);
     await editButton.click();
-    await choose(page, page, "Activity", "Boxing");
+    await choose(page, page, "Activity", "Pads");
     await choose(page, page, "Duration", "45");
     await choose(page, page, "Effort", "Moderate");
     await page.getByRole("button", { name: "Save Session", exact: true }).click();
@@ -230,7 +243,7 @@ test("failed edits and deletes preserve the session and allow another attempt", 
   await choose(page, page, "Duration", "60");
   await choose(page, page, "Effort", "Hard");
   await page.getByRole("button", { name: "Save Session", exact: true }).click();
-  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await skipSparringFollowUp(page);
   await page.goto("/history");
   let fail = true;
   const attempts: string[] = [];
@@ -489,25 +502,15 @@ test("confirm a pattern in one tap, persist it and log through the same form", a
   await expect(page.getByRole("button", { name: "Your usual Monday", exact: true })).toHaveCount(0);
 });
 
-test("Not always is remembered; routines remain editable and suggestions can pause", async ({ page, baseURL }) => {
+test("Not always is remembered; Today has no habit settings to manage", async ({ page, baseURL }) => {
   await habitSetup(page, baseURL!);
   await page.goto("/today");
+  await expect(page.getByText("Training habits", { exact: true })).toHaveCount(0);
+  await expect(page.getByRole("region", { name: "Training history", exact: true })).toHaveCount(0);
   await page.getByRole("button", { name: "Not always", exact: true }).click();
   await page.reload();
   await expect(page.getByText("Boxing every Monday?", { exact: true })).toHaveCount(0);
-  await page.getByText("Training habits", { exact: true }).click();
-  await page.getByRole("button", { name: "Suggest Monday Boxing again", exact: true }).click();
-  await page.getByRole("button", { name: "Yes, usually", exact: true }).click();
-  await page.getByText("Edit · 60 min", { exact: true }).click();
-  const form = page.getByRole("form", { name: "Edit Monday Boxing routine", exact: true });
-  await form.getByLabel("Minutes", { exact: true }).fill("45");
-  await form.getByRole("button", { name: "Save routine", exact: true }).click();
-  await expect(page.getByRole("button", { name: "Your usual Monday", exact: true })).toContainText("45 min");
-  await page.getByLabel("Suggest from my history", { exact: true }).uncheck();
-  await expect(page.getByRole("button", { name: "Your usual Monday", exact: true })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Repeat last session", exact: true })).toBeVisible();
-  await page.reload();
-  await expect(page.getByRole("button", { name: "Your usual Monday", exact: true })).toHaveCount(0);
 });
 
 test("preference errors do not pretend to confirm a routine", async ({ page, baseURL }) => {
@@ -537,7 +540,7 @@ test("changed routines need confirmation; one-off changes do not overwrite them"
   await habitSetup(page, baseURL!, rows, preferences);
   await page.goto("/today");
   await expect(page.getByRole("button", { name: "Your usual Monday", exact: true })).toContainText("Boxing");
-  await expect(page.getByText("Switch Monday to strength?", { exact: true })).toBeVisible();
+  await expect(page.getByText("Switch Monday to Strength?", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Yes, update", exact: true }).click();
   await expect(page.getByRole("button", { name: "Your usual Monday", exact: true })).toContainText("Strength · 45 min");
   await page.reload();
@@ -641,8 +644,6 @@ test("confirmed routines survive a failed history read without detecting new pat
   await page.goto("/today");
   const usual = page.getByRole("button", { name: "Your usual Monday", exact: true });
   await expect(usual).toContainText("Boxing · 50 min");
-  await page.getByText("Training habits", { exact: true }).click();
-  await expect(page.getByText("History unavailable.", { exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Yes, usually", exact: true })).toHaveCount(0);
   await usual.click();
   await expect(page.getByRole("dialog")).toContainText("50 min ·");
@@ -660,8 +661,6 @@ test("failed history leaves simple logging available without inferred suggestion
   await habitSetup(page, baseURL!);
   await page.route("**/api/training/history**", route => route.fulfill({ status: 503, contentType: "application/json", body: JSON.stringify({ detail: "History unavailable." }) }));
   await page.goto("/today");
-  await page.getByText("Training habits", { exact: true }).click();
-  await expect(page.getByText("History unavailable.", { exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Suggested today", exact: true })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Yes, usually", exact: true })).toHaveCount(0);
   await page.getByRole("button", { name: "Log Training", exact: true }).click();
@@ -703,7 +702,7 @@ for (const width of [375, 390, 430]) {
       await expect(sheet).toBeVisible();
       if (mode === "new") {
         await expect(sheet.getByRole("group", { name: "Duration", exact: true }).locator('[aria-pressed="true"]')).toHaveCount(0);
-        await choose(sheet, page, "Activity", "Boxing");
+        await choose(sheet, page, "Activity", "Pads");
         await choose(sheet, page, "Duration", "90");
       } else {
         await expect(sheet).toContainText(mode === "repeat" ? "From previous session" : "Suggested today");
@@ -729,10 +728,11 @@ for (const width of [375, 390, 430]) {
         await trigger.click();
         await page.screenshot({ animations: "disabled", path: `/tmp/quick-log-after-${mode}.png` });
         const compactBox = (await sheet.boundingBox())!;
-        expect(compactBox.height).toBeLessThan(mode === "new" ? 490 : 290);
+        // A boxer's nine session-type choices take one more chip row than the original six.
+        expect(compactBox.height).toBeLessThan(mode === "new" ? 530 : 290);
         console.log(`390px ${mode}:`, compactBox);
         if (mode === "new") {
-          await choose(sheet, page, "Activity", "Boxing");
+          await choose(sheet, page, "Activity", "Pads");
           await choose(sheet, page, "Duration", "90");
         }
         await choose(sheet, page, "Effort", "Moderate");
@@ -831,12 +831,12 @@ test("quick picks support keyboard selection, modal focus containment and close 
   await trigger.focus();
   await page.keyboard.press("Enter");
   const sheet = page.getByRole("dialog");
-  await expect(sheet.getByRole("button", { name: "Boxing", exact: true })).toBeFocused();
+  await expect(sheet.getByRole("button", { name: "Pads", exact: true })).toBeFocused();
   await page.keyboard.press("Tab");
-  const sparring = sheet.getByRole("button", { name: "Sparring", exact: true });
-  await expect(sparring).toBeFocused();
+  const bag = sheet.getByRole("button", { name: "Bag work", exact: true });
+  await expect(bag).toBeFocused();
   await page.keyboard.press("Space");
-  await expect(sparring).toHaveAttribute("aria-pressed", "true");
+  await expect(bag).toHaveAttribute("aria-pressed", "true");
   await page.keyboard.press("Shift+Tab");
   await page.keyboard.press("Shift+Tab");
   await expect(sheet.getByRole("button", { name: "Close training log" })).toBeFocused();

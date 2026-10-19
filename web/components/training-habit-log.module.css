@@ -5,28 +5,5 @@
 .evidence { margin: 6px 0; font-size: 13px; line-height: 1.5; color: var(--text-muted); }
 .actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; max-width: 360px; }
 .actions > button { width: auto; flex: 1 1 0; min-width: 0; padding-inline: 12px; }
-.actions button, .routineRow button, .editForm button { min-height: 44px; }
-.settings summary { min-height: 44px; align-content: center; cursor: pointer; font-size: 13px; color: var(--text-muted); }
-.toggle { display: flex; align-items: center; gap: 10px; min-height: 44px; font-size: 14px; }
-.toggle input { width: 20px; height: 20px; accent-color: var(--brand-red); }
-.routines { list-style: none; padding: 0; margin: 8px 0; }
-.routines li { padding: 8px 0; border-top: 1px solid var(--border-default); }
-.routineRow { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 14px; }
-.editForm { display: grid; gap: 12px; padding: 8px 0 12px; }
-.editForm label { display: grid; gap: 6px; font-size: 13px; }
-.editForm input, .editForm select { width: 100%; min-height: 44px; color: var(--text-primary); background: var(--bg-panel); border: 1px solid var(--border-default); padding: 10px; border-radius: 8px; }
-.root button:focus-visible, .settings summary:focus-visible, .toggle input:focus-visible { outline: 2px solid var(--brand-red); outline-offset: 3px; }
-.history { margin: 22px 0 8px; }
-.history header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
-.history h2 { margin: 0; font-size: 16px; line-height: 1.4; }
-.history header a { display: flex; align-items: center; min-height: 44px; color: var(--text-muted); font-size: 12px; text-decoration: none; }
-.history a:focus-visible { outline: 2px solid var(--brand-red); outline-offset: 4px; }
-.empty { margin: 0; padding: 18px 16px; border-radius: 8px; background: color-mix(in srgb, var(--text-primary) 4%, var(--bg-panel)); font-size: 13px; color: var(--text-muted); }
-.empty strong { color: var(--text-primary); font-size: 14px; }
-.empty p { margin: 6px 0 0; line-height: 1.5; }
-.sessions { list-style: none; margin: 0; padding: 0; }
-.sessions li { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 0; border-bottom: 1px solid var(--border-subtle); }
-.sessions li div { display: grid; gap: 6px; min-width: 0; }
-.sessions strong { font-size: 14px; overflow-wrap: anywhere; }
-.sessions span { color: var(--text-muted); font-size: 12px; }
-.source { flex-shrink: 0; }
+.actions button { min-height: 44px; }
+.root button:focus-visible { outline: 2px solid var(--brand-red); outline-offset: 3px; }

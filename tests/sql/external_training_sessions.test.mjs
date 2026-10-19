@@ -66,5 +66,27 @@ await db.exec(`reset role; set role authenticated; set request.jwt.claim.sub = '
 assert.equal((await db.query("select * from public.external_training_sessions")).rows.length, 0);
 await db.exec(`set request.jwt.claim.sub = '${other}'`);
 assert.equal((await db.query("select * from public.external_training_sessions")).rows.length, 1);
+// Optional sport and session type: rows that existed stay unclassified.
+await db.exec("reset role");
+const before = (await db.query("select id, activity from public.external_training_sessions order by id")).rows;
+const discipline = await readFile(new URL("../../supabase/migrations/20261019150000_add_external_training_discipline.sql", import.meta.url), "utf8");
+await db.exec(discipline);
+await db.exec(discipline); // Safe migration reapplication.
+const after = (await db.query("select id, activity, sport, session_type from public.external_training_sessions order by id")).rows;
+assert.deepEqual(after.map(({ id, activity }) => ({ id, activity })), before);
+assert.ok(after.every(row => row.sport === null && row.session_type === null));
+const classified = `insert into public.external_training_sessions
+  (athlete_id, client_request_id, request_fingerprint, training_day, activity, sport, session_type, duration_minutes, effort)
+  values ($1, gen_random_uuid(), $2, '2026-10-10', $3, $4, $5, 60, 'hard') returning sport, session_type`;
+for (const [activity, sport, sessionType] of [["boxing", "boxing", "pads"], ["other", "bjj", "rolling"], ["other", "muay_thai", "clinch"],
+  ["sparring", "mma", "sparring"], ["other", "wrestling", null], ["strength", null, null], ["roadwork", null, null]]) {
+  const row = (await db.query(classified, [owner, "b".repeat(64), activity, sport, sessionType])).rows[0];
+  assert.deepEqual([row.sport, row.session_type], [sport, sessionType]);
+}
+// BJJ rolling is never head-contact sparring; pairs and activities must agree.
+for (const [activity, sport, sessionType] of [["sparring", "bjj", "rolling"], ["boxing", "muay_thai", "pads"], ["boxing", "boxing", "clinch"],
+  ["other", null, "pads"], ["other", "judo", null], ["sparring", "mma", null], ["strength", "strength_conditioning", "power"]]) {
+  await assert.rejects(db.query(classified, [owner, "b".repeat(64), activity, sport, sessionType]), /check constraint/);
+}
 await db.close();
-console.log("PASS: migration replay, atomic retries, constraints, owner RLS, forbidden client writes, plan independence, edit/delete retry safety");
+console.log("PASS: migration replay, atomic retries, constraints, owner RLS, forbidden client writes, plan independence, edit/delete retry safety, optional discipline");
