@@ -27,6 +27,19 @@ def notion_token():
 
 ACTIVE_STAGES = ("Contacted", "Replied", "Accepted", "Activated")
 
+MISSING_SEND_DATE = "CHECK INSTAGRAM: set Last Follow-Up Sent to the actual first follow-up date before sending follow-up 2."
+MISSING_CONTACT_DATE = "CHECK INSTAGRAM: record Date Contacted before sending a follow-up."
+
+
+def missing_send_date(properties):
+    synced = properties["Synced Follow-Ups Sent"].get("number")
+    return (
+        (properties["Stage (AI Fills First)"].get("select") or {}).get("name") == "Contacted"
+        and (properties["Follow-Ups Sent"].get("select") or {}).get("name") == "1"
+        and not properties["Last Follow-Up Sent"].get("date")
+        and (synced is None or int(synced) >= 1)
+    )
+
 
 def request(method, path, body=None):
     headers = {
@@ -73,23 +86,35 @@ def get_changes(page, today):
     if calculated.get("type") != "string" or calculated.get("string") is None:
         raise ValueError(f"Missing calculated follow-up for {page['id']}")
     message = calculated["string"]
+    stage = (p["Stage (AI Fills First)"].get("select") or {}).get("name")
+    increased = synced is not None and int(synced) < count
+    decreased = synced is not None and int(synced) > count
+    if stage == "Contacted" and not p["Date Contacted"].get("date"):
+        message = MISSING_CONTACT_DATE
+    elif missing_send_date(p) or (stage == "Contacted" and count == 1 and decreased):
+        message = MISSING_SEND_DATE
     current = "".join(x.get("plain_text", "") for x in p["Copy Follow-Up"].get("rich_text", []))
     changes = {}
     if current != message:
         changes["Copy Follow-Up"] = {"rich_text": [{"text": {"content": message}}] if message else []}
     if synced is None or int(synced) != count:
         changes["Synced Follow-Ups Sent"] = {"number": count}
-        # Baseline pre-existing records without assuming a date we did not witness.
-        if synced is not None and int(synced) < count:
-            changes["Last Follow-Up Sent"] = {"date": {"start": today.isoformat()}}
+        if decreased:
+            # A corrected/reversed count invalidates the old last-send date.
+            changes["Last Follow-Up Sent"] = {"date": None}
+        elif increased and not p["Last Follow-Up Sent"].get("date"):
+            # Only timestamp an observed increment; preserve a native Notion button's exact time.
+            observed = today.isoformat(timespec="seconds") if isinstance(today, datetime) else today.isoformat()
+            changes["Last Follow-Up Sent"] = {"date": {"start": observed}}
     return changes
 
 
 def sync(today=None):
-    today = today or datetime.now(ZoneInfo("Europe/London")).date()
-    total = changed = 0
+    today = today or datetime.now(ZoneInfo("Europe/London"))
+    total = changed = missing_dates = 0
     for page in pages():
         total += 1
+        missing_dates += missing_send_date(page["properties"])
         changes = get_changes(page, today)
         if not changes:
             continue
@@ -104,6 +129,8 @@ def sync(today=None):
         if changes:
             request("PATCH", f"/pages/{page['id']}", {"properties": changes})
             changed += 1
+    if missing_dates:
+        print(f"Notion follow-ups: {missing_dates} contacted rows need historical send-date verification")
     return total, changed
 
 
