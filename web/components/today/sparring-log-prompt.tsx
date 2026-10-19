@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 
 import { useAppSession } from "@/components/auth-provider";
 import { useToast } from "@/components/toast-provider";
@@ -13,15 +13,20 @@ import type {
   SparringPlannedIntensity,
 } from "@/lib/types";
 
-/** What the finished timer knows about the sparring it just ran. */
+/** What the finished timer, or a manual sparring log, knows about the sparring. */
 export type SparringDraft = {
   source: SparringLogSource;
   planId: string | null;
   sessionId: string | null;
   plannedIntensity: SparringPlannedIntensity | null;
   title: string;
-  rounds: number;
+  /** Counted by the timer. A manual log has no count, so the athlete sets it. */
+  rounds: number | null;
   roundSeconds: number | null;
+  /** The manual training record this report details. */
+  externalSessionId?: string | null;
+  /** A starting answer from the manual log's effort, never sent as planned. */
+  suggestedIntensity?: SparringIntensity;
 };
 
 /** Shown the moment "Yes" is picked, before saving; the server returns the same. */
@@ -98,18 +103,30 @@ export function SparringLogPrompt({
   token,
   draft,
   onDismiss,
+  onSaved,
+  focusOnMount = false,
 }: {
   token: string;
   draft: SparringDraft;
   onDismiss: () => void;
+  /** After a confirmed save, so Today can refresh its safety guidance. */
+  onSaved?: () => void;
+  focusOnMount?: boolean;
 }) {
   const { me } = useAppSession();
   const { showToast } = useToast();
   const notesId = useId();
+  const card = useRef<HTMLElement>(null);
+  // Kept across retries of the same answers; any change makes it a new report,
+  // so a corrected answer (above all a "Yes, rocked") is never swallowed by
+  // an earlier request that landed without its response.
+  const requestId = useRef<string | null>(null);
   const [intensity, setIntensity] = useState<SparringIntensity | undefined>(
-    defaultIntensity(draft.plannedIntensity),
+    defaultIntensity(draft.plannedIntensity) ?? draft.suggestedIntensity,
   );
-  const [rounds, setRounds] = useState(Math.min(30, Math.max(0, draft.rounds)));
+  const [rounds, setRounds] = useState<number | null>(
+    draft.rounds === null ? null : Math.min(30, Math.max(0, draft.rounds)),
+  );
   const [headContact, setHeadContact] = useState<SparringHeadContact | undefined>();
   const [rocked, setRocked] = useState<"no" | "yes">("no");
   const [notes, setNotes] = useState("");
@@ -117,13 +134,22 @@ export function SparringLogPrompt({
   const [error, setError] = useState<string | null>(null);
   const [savedNotice, setSavedNotice] = useState<string | null>(null);
 
+  useEffect(() => {
+    if (focusOnMount) card.current?.focus();
+  }, [focusOnMount]);
+
+  const answer = <Value,>(set: (value: Value) => void) => (value: Value) => {
+    requestId.current = null;
+    set(value);
+  };
+
   if (!hasHealthDataConsent(me)) {
     return null;
   }
 
   if (savedNotice) {
     return (
-      <section className="feedback-card sparring-log-card" aria-label="Sparring logged">
+      <section className="feedback-card sparring-log-card" aria-label="Sparring logged" ref={card} tabIndex={-1}>
         <p className="session-feedback-title">Sparring logged</p>
         <p className="sparring-log-safety" role="alert">
           {savedNotice}
@@ -142,6 +168,10 @@ export function SparringLogPrompt({
       setError("Pick how hard it was and how much head contact you took.");
       return;
     }
+    if (rounds === null) {
+      setError("Add how many rounds you sparred.");
+      return;
+    }
     setError(null);
     setIsSubmitting(true);
     try {
@@ -149,6 +179,8 @@ export function SparringLogPrompt({
         plan_id: draft.planId,
         session_id: draft.sessionId,
         source: draft.source,
+        external_session_id: draft.externalSessionId ?? null,
+        client_request_id: requestId.current ??= crypto.randomUUID(),
         planned_intensity: draft.plannedIntensity,
         intensity,
         rounds_completed: rounds,
@@ -163,6 +195,7 @@ export function SparringLogPrompt({
         setError("Your report wasn't sent. Please try again.");
         return;
       }
+      onSaved?.();
       if (result.safety_notice) {
         setSavedNotice(result.safety_notice);
       } else {
@@ -177,10 +210,11 @@ export function SparringLogPrompt({
   }
 
   return (
-    <section className="feedback-card sparring-log-card" aria-label="Log your sparring">
+    <section className="feedback-card sparring-log-card" aria-label="Log your sparring" ref={card} tabIndex={-1}>
       <p className="session-feedback-title">Log your sparring</p>
       <p className="muted session-feedback-intro">
         {draft.title} · takes 15 seconds. Your coach and the app use this to manage contact load.
+        {draft.externalSessionId ? " Optional: your session is already saved." : null}
       </p>
 
       <Chips
@@ -189,7 +223,7 @@ export function SparringLogPrompt({
         labels={INTENSITY_LABELS}
         selected={intensity}
         disabled={isSubmitting}
-        onSelect={setIntensity}
+        onSelect={answer(setIntensity)}
       />
 
       <div className="session-feedback-question">
@@ -199,20 +233,20 @@ export function SparringLogPrompt({
             type="button"
             className="feedback-chip"
             aria-label="Fewer rounds"
-            disabled={isSubmitting || rounds <= 0}
-            onClick={() => setRounds((value) => Math.max(0, value - 1))}
+            disabled={isSubmitting || rounds === null || rounds <= 0}
+            onClick={() => answer(setRounds)(Math.max(0, (rounds ?? 0) - 1))}
           >
             −
           </button>
-          <span className="sparring-log-rounds-value" aria-live="polite">
-            {rounds}
+          <span className="sparring-log-rounds-value" aria-live="polite" aria-label={rounds === null ? "Rounds not set" : undefined}>
+            {rounds ?? "–"}
           </span>
           <button
             type="button"
             className="feedback-chip"
             aria-label="More rounds"
-            disabled={isSubmitting || rounds >= 30}
-            onClick={() => setRounds((value) => Math.min(30, value + 1))}
+            disabled={isSubmitting || (rounds ?? 0) >= 30}
+            onClick={() => answer(setRounds)(Math.min(30, (rounds ?? 0) + 1))}
           >
             +
           </button>
@@ -225,7 +259,7 @@ export function SparringLogPrompt({
         labels={HEAD_CONTACT_LABELS}
         selected={headContact}
         disabled={isSubmitting}
-        onSelect={setHeadContact}
+        onSelect={answer(setHeadContact)}
       />
 
       <Chips
@@ -234,7 +268,7 @@ export function SparringLogPrompt({
         labels={{ no: "No", yes: "Yes" }}
         selected={rocked}
         disabled={isSubmitting}
-        onSelect={setRocked}
+        onSelect={answer(setRocked)}
       />
       {rocked === "yes" ? (
         <p className="sparring-log-safety" role="alert">
@@ -251,7 +285,7 @@ export function SparringLogPrompt({
           rows={2}
           disabled={isSubmitting}
           placeholder="Who with, what worked, what to fix"
-          onChange={(event) => setNotes(event.target.value)}
+          onChange={(event) => answer(setNotes)(event.target.value)}
         />
       </label>
 

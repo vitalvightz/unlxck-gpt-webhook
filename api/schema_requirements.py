@@ -373,6 +373,10 @@ REQUIRED_SPARRING_LOGS_COLUMNS: tuple[str, ...] = (
     "rocked",
     "notes",
     "created_at",
+    # Manual-session link and retry safety (record_sparring_log RPC).
+    "external_session_id",
+    "client_request_id",
+    "admin_review_id",
 )
 
 REQUIRED_EXERCISE_LOGS_COLUMNS: tuple[str, ...] = (
@@ -658,6 +662,16 @@ INDEX_REQUIREMENTS: tuple[IndexRequirement, ...] = (
     IndexRequirement(
         label="sparring_logs athlete/training-day index",
         accepted_names=("sparring_logs_athlete_day_idx",),
+    ),
+    IndexRequirement(
+        # One detailed report per manual sparring session.
+        label="sparring_logs manual-session uniqueness",
+        accepted_names=("sparring_logs_external_session_key",),
+    ),
+    IndexRequirement(
+        # A retried report returns the original row and review.
+        label="sparring_logs request uniqueness",
+        accepted_names=("sparring_logs_client_request_key",),
     ),
     IndexRequirement(
         # The upsert's ON CONFLICT target: one log per plan/day/block.

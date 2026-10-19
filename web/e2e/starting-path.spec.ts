@@ -19,6 +19,7 @@ async function setup(page: Page, baseURL: string, options: { path?: string | nul
   let manualSessions: Record<string, unknown>[] = options.manualHistory ?? [];
   const writes: Record<string, unknown>[] = [];
   let injuries: Record<string, unknown>[] = [];
+  const sparringLogs: Record<string, unknown>[] = [];
   await page.route("**/api/**", async route => {
     const request = route.request();
     const endpoint = new URL(request.url()).pathname;
@@ -46,7 +47,16 @@ async function setup(page: Page, baseURL: string, options: { path?: string | nul
       active_plan: options.activePlan ? { id: "plan-9", name: "Autumn camp", phase: "GPP", fight_date: "2026-12-12" } : {},
       today: { training_day: "2026-10-18", recommendation_state: "not_checked_in", decision_tier: "not_checked_in", warnings: [], next_session: {}, completion_status: "not_started", session_scope: "none" },
       open_injuries: injuries, risk_watch: [], week_summary: {}, quick_actions: [],
+      ...(sparringLogs.some(log => log.rocked) ? { today: { training_day: "2026-10-18", recommendation_state: "not_checked_in", decision_tier: "not_checked_in", warnings: [], next_session: {}, completion_status: "not_started", session_scope: "none",
+        primary_safety_notice: { code: "head_impact_no_contact", injury_id: "", chip: "CHECK", title: "No more contact today", action: "You reported being rocked or dropped. No more contact today, and tell your coach.", detail: "Get checked if symptoms appear.", tone: "red" } } } : {}),
     });
+    if (endpoint === "/api/today/sparring-log" && request.method() === "POST") {
+      const body = request.postDataJSON(); writes.push(body);
+      const replay = sparringLogs.find(log => log.client_request_id === body.client_request_id);
+      const log = replay ?? { ...body, id: `spar-${sparringLogs.length}`, athlete_id: "athlete-1", training_day: "2026-10-18", created_at: "" };
+      if (!replay) sparringLogs.push(log);
+      return json({ log, review_created: Boolean(log.rocked), safety_notice: log.rocked ? "You logged being rocked or dropped. No more contact today." : null }, 201);
+    }
     if (endpoint === "/api/today/injury-checkin" && request.method() === "POST") {
       const body = request.postDataJSON(); writes.push(body);
       if (!healthConsent) return json({ detail: { code: "health_data_consent_required", message: "Health-data consent is required." } }, 403);
@@ -63,7 +73,7 @@ async function setup(page: Page, baseURL: string, options: { path?: string | nul
     if (endpoint === "/api/training/sessions" && request.method() === "POST") {
       const body = request.postDataJSON(); writes.push(body);
       if (!healthConsent || options.rejectConsent) return json({ detail: { code: "health_data_consent_required", message: "Health-data consent is required." } }, 403);
-      const row = { ...body, id: `manual-${sessions.length}`, source: "external", training_day: "2026-10-18", title: "Boxing", status: "done", plan_id: null };
+      const row = { ...body, id: `manual-${sessions.length}`, source: "external", training_day: "2026-10-18", title: body.activity === "sparring" ? "Sparring" : "Boxing", status: "done", plan_id: null };
       sessions = [row, ...sessions]; manualSessions = [row, ...manualSessions]; return json(row, 201);
     }
     if (endpoint === "/api/plans/active") return json({ detail: "No active plan" }, 404);
@@ -195,6 +205,9 @@ for (const width of [320, 390, 1280]) {
     await expect(page.getByRole("button", { name: "Log Training", exact: true })).toBeFocused();
     await expect(page.getByRole("button", { name: "Repeat last session", exact: true })).toBeVisible();
     await expect(page.getByRole("region", { name: "Training history", exact: true })).toContainText("Boxing");
+    // Boxing gets no sparring follow-up; the tile now reports today's log.
+    await expect(page.getByRole("region", { name: "Log your sparring" })).toHaveCount(0);
+    await expect(page.getByRole("list", { name: "Today command status" })).toContainText("Logged");
     await page.reload();
     await expect(page.getByText(/^Your training, your record\./)).toBeVisible();
     await expect(page.getByRole("button", { name: "Repeat last session", exact: true })).toBeVisible();
@@ -320,3 +333,70 @@ for (const width of [320, 390, 1280]) {
     await page.screenshot({ path: test.info().outputPath(`planned-today-${width}.png`), fullPage: true });
   });
 }
+
+async function logSparring(page: Page, effort: "Easy" | "Moderate" | "Hard") {
+  await page.getByRole("button", { name: "Log Training", exact: true }).click();
+  const form = page.getByRole("form", { name: "Log Training", exact: true });
+  await form.getByRole("button", { name: "Sparring", exact: true }).click();
+  await form.getByRole("button", { name: "45", exact: true }).click();
+  await form.getByRole("button", { name: effort, exact: true }).click();
+  await form.getByRole("button", { name: "Save Session", exact: true }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+}
+
+for (const width of [320, 390, 1280]) {
+  test(`manual sparring offers the shared follow-up, prefilled but never with invented rounds (${width}px)`, async ({ page, baseURL }) => {
+    await page.setViewportSize({ width, height: 844 });
+    const writes = await setup(page, baseURL!, { path: "tracking_first" });
+    await page.goto("/today");
+    await logSparring(page, "Hard");
+    const prompt = page.getByRole("region", { name: "Log your sparring" });
+    await expect(prompt).toBeFocused();
+    await expect(prompt).toContainText("your session is already saved");
+    await expect(prompt.locator(".sparring-log-rounds-value")).toHaveText("–");
+    await expect(prompt.getByRole("button", { name: "Hard", exact: true }).first()).toHaveAttribute("aria-pressed", "true");
+    await prompt.getByRole("button", { name: "More rounds" }).click();
+    await prompt.getByRole("button", { name: "More rounds" }).click();
+    await prompt.getByRole("group", { name: "Head contact" }).getByRole("button", { name: "Light", exact: true }).click();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+    expect((await new AxeBuilder({ page }).include("main").analyze()).violations).toEqual([]);
+    await page.screenshot({ path: test.info().outputPath(`manual-sparring-${width}.png`), fullPage: true });
+    await prompt.getByRole("button", { name: "Save", exact: true }).click();
+    await expect(prompt).toHaveCount(0);
+    const [manual, detail] = writes;
+    expect(manual).toMatchObject({ activity: "sparring", effort: "hard" });
+    expect(detail).toMatchObject({ source: "free", plan_id: null, planned_intensity: null, external_session_id: "manual-0",
+      intensity: "hard", rounds_completed: 2, head_contact: "light", rocked: false });
+    expect(detail.client_request_id).toEqual(expect.any(String));
+    expect(writes).toHaveLength(2);
+  });
+}
+
+test("skipping the sparring follow-up keeps the basic training log", async ({ page, baseURL }) => {
+  const writes = await setup(page, baseURL!, { path: "tracking_first" });
+  await page.goto("/today");
+  await logSparring(page, "Easy");
+  const prompt = page.getByRole("region", { name: "Log your sparring" });
+  await expect(prompt.getByRole("group", { name: "How hard was it?" }).getByRole("button", { name: "Light", exact: true })).toHaveAttribute("aria-pressed", "true");
+  await prompt.getByRole("button", { name: "Skip", exact: true }).click();
+  await expect(prompt).toHaveCount(0);
+  await expect(page.getByRole("region", { name: "Training history", exact: true })).toContainText("Sparring");
+  expect(writes).toHaveLength(1);
+});
+
+test("a rocked report shows the safety notice at once and Today stops leading with anything else", async ({ page, baseURL }) => {
+  const writes = await setup(page, baseURL!, { path: "tracking_first" });
+  await page.goto("/today");
+  await logSparring(page, "Moderate");
+  const prompt = page.getByRole("region", { name: "Log your sparring" });
+  await prompt.getByRole("button", { name: "More rounds" }).click();
+  await prompt.getByRole("group", { name: "Head contact" }).getByRole("button", { name: "A lot", exact: true }).click();
+  await prompt.getByRole("group", { name: "Got rocked or dropped?" }).getByRole("button", { name: "Yes", exact: true }).click();
+  await expect(prompt.getByRole("alert")).toContainText("No more contact today");
+  await prompt.getByRole("button", { name: "Save", exact: true }).click();
+  const saved = page.getByRole("region", { name: "Sparring logged" });
+  await expect(saved.getByRole("alert")).toContainText("No more contact today");
+  await expect(page.locator("#today-decision")).toContainText("No more contact today");
+  expect(writes.filter(row => "head_contact" in row)).toHaveLength(1);
+  await page.screenshot({ path: test.info().outputPath("rocked-today.png"), fullPage: true });
+});

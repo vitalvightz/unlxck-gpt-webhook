@@ -91,3 +91,95 @@ test("the sparring summary counts only completed sparring rounds", () => {
   assert.equal(sparringSummary(planned)?.plannedIntensity, "hard");
   assert.equal(sparringSummary(createTimerState([items[1]])), null);
 });
+
+const MANUAL: SparringDraft = {
+  source: "free", planId: null, sessionId: null, plannedIntensity: null, title: "Sparring",
+  rounds: null, roundSeconds: null, externalSessionId: "manual-1", suggestedIntensity: "hard",
+};
+
+async function mountInteractive(draft: SparringDraft, responses: Array<{ status: number; body: unknown }>) {
+  await import("../test-dom");
+  const { act } = await import("react");
+  const { createRoot } = await import("react-dom/client");
+  const bodies: Array<Record<string, unknown>> = [];
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = (async (_input: unknown, init?: RequestInit) => {
+    bodies.push(JSON.parse(String(init?.body ?? "{}")));
+    const next = responses.shift() ?? { status: 201, body: {} };
+    return new Response(JSON.stringify(next.body), { status: next.status, headers: { "content-type": "application/json" } });
+  }) as typeof fetch;
+  let saved = 0;
+  const container = document.createElement("div");
+  document.body.appendChild(container);
+  const root = createRoot(container);
+  await act(async () => root.render(
+    <AppSessionContext.Provider value={{ session: null, me: { profile: { health_consent_granted: true } } } as never}>
+      <ToastProvider>
+        <SparringLogPrompt token="t" draft={draft} onDismiss={() => undefined} onSaved={() => { saved += 1; }} />
+      </ToastProvider>
+    </AppSessionContext.Provider>,
+  ));
+  const button = (text: string, scope: ParentNode = container) => {
+    const match = Array.from(scope.querySelectorAll("button")).find(b => b.textContent?.trim() === text || b.getAttribute("aria-label") === text);
+    assert.ok(match, `expected "${text}"`);
+    return match as HTMLButtonElement;
+  };
+  const group = (legend: string) => {
+    const label = Array.from(container.querySelectorAll(".session-feedback-legend")).find(p => p.textContent === legend)!;
+    return container.querySelector(`[aria-labelledby="${label.id}"]`)!;
+  };
+  const click = async (element: HTMLElement) => {
+    await act(async () => { element.click(); });
+    await act(async () => { await Promise.resolve(); await Promise.resolve(); });
+  };
+  return {
+    container, bodies, button, group, click, saved: () => saved,
+    cleanup: async () => { await act(async () => root.unmount()); container.remove(); globalThis.fetch = originalFetch; },
+  };
+}
+
+const LOG = { id: "log-1", athlete_id: "a", plan_id: null, session_id: null, training_day: "2026-10-19", source: "free",
+  external_session_id: "manual-1", planned_intensity: null, intensity: "hard", rounds_completed: 1, round_seconds: null,
+  head_contact: "light", rocked: false, notes: "", created_at: "" };
+
+test("a manual sparring follow-up never invents rounds and starts from the logged effort", async () => {
+  const ui = await mountInteractive(MANUAL, [{ status: 201, body: { log: LOG, review_created: false, safety_notice: null } }]);
+  try {
+    assert.match(ui.container.textContent ?? "", /your session is already saved/);
+    assert.equal(ui.container.querySelector(".sparring-log-rounds-value")?.textContent, "–");
+    assert.equal(ui.button("Hard", ui.group("How hard was it?")).getAttribute("aria-pressed"), "true");
+    await ui.click(ui.button("Light", ui.group("Head contact")));
+    await ui.click(ui.button("Save"));
+    assert.equal(ui.bodies.length, 0);
+    assert.match(ui.container.textContent ?? "", /Add how many rounds you sparred/);
+    await ui.click(ui.button("More rounds"));
+    await ui.click(ui.button("Save"));
+    assert.equal(ui.bodies.length, 1);
+    assert.equal(ui.bodies[0].external_session_id, "manual-1");
+    assert.equal(ui.bodies[0].rounds_completed, 1);
+    assert.equal(ui.bodies[0].planned_intensity, null);
+    assert.equal(ui.bodies[0].plan_id, null);
+    assert.equal(ui.saved(), 1);
+  } finally { await ui.cleanup(); }
+});
+
+test("a retry reuses its request id; a changed answer becomes a new report", async () => {
+  const fail = { status: 503, body: { detail: "Your sparring log was not saved. Please try again." } };
+  const ui = await mountInteractive({ ...MANUAL, rounds: null }, [fail, fail,
+    { status: 201, body: { log: { ...LOG, rocked: true }, review_created: true, safety_notice: "You logged being rocked or dropped. No more contact today." } }]);
+  try {
+    await ui.click(ui.button("More rounds"));
+    await ui.click(ui.button("Light", ui.group("Head contact")));
+    await ui.click(ui.button("Save"));
+    await ui.click(ui.button("Save"));
+    assert.equal(ui.bodies.length, 2);
+    assert.equal(ui.bodies[1].client_request_id, ui.bodies[0].client_request_id);
+    await ui.click(ui.button("Yes", ui.group("Got rocked or dropped?")));
+    assert.match(ui.container.textContent ?? "", /No more contact today/);
+    await ui.click(ui.button("Save"));
+    assert.equal(ui.bodies[2].rocked, true);
+    assert.notEqual(ui.bodies[2].client_request_id, ui.bodies[0].client_request_id);
+    assert.match(ui.container.querySelector('[aria-label="Sparring logged"]')?.textContent ?? "", /No more contact today/);
+    assert.equal(ui.saved(), 1);
+  } finally { await ui.cleanup(); }
+});

@@ -2083,6 +2083,12 @@ class FakeStore(InMemoryNotificationLedger, FullRowStatusReads):
                        if row["athlete_id"] == athlete_id and (include_deleted or not row.get("deleted_at"))),
                       key=lambda row: (row["training_day"], row["created_at"]), reverse=True)[:limit]
 
+    def get_external_training_session(self, athlete_id: str, entry_id: str) -> dict | None:
+        row = self.external_training_sessions.get(entry_id)
+        if not row or row["athlete_id"] != athlete_id or row.get("deleted_at"):
+            return None
+        return dict(row)
+
     def update_external_training_session(self, athlete_id: str, entry_id: str, fields: dict) -> dict | None:
         row = self.external_training_sessions.get(entry_id)
         if not row or row["athlete_id"] != athlete_id or row.get("deleted_at"):
@@ -2673,12 +2679,39 @@ class FakeStore(InMemoryNotificationLedger, FullRowStatusReads):
             raise ValueError("rocked report requires a review reason")
         if rocked and self.fail_sparring_review_insert:
             raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="review insert failed")
-        row = {"id": str(uuid4()), "athlete_id": athlete_id, "created_at": _now(), **fields}
-        review = None
-        if rocked:
+        request_id = fields.get("client_request_id")
+        external_id = fields.get("external_session_id")
+
+        def review_of(log: dict) -> dict | None:
+            return next((dict(r) for r in self.admin_reviews if r.get("id") == log.get("admin_review_id")), None)
+
+        if request_id:
+            replay = next((r for r in self.sparring_logs
+                           if r["athlete_id"] == athlete_id and r.get("client_request_id") == request_id), None)
+            if replay:
+                return {"log": dict(replay), "review": review_of(replay)}
+        fields = {**fields}
+        if external_id:
+            session = self.get_external_training_session(athlete_id, external_id)
+            if not session or session.get("activity") != "sparring":
+                raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="sparring session not found")
+            fields["training_day"] = session["training_day"]
+            existing = next((r for r in self.sparring_logs if r.get("external_session_id") == external_id), None)
+        else:
+            existing = None
+        was_rocked = bool(existing and existing.get("rocked"))
+        if existing:
+            existing.update({key: fields[key] for key in ("intensity", "rounds_completed", "round_seconds", "head_contact", "notes") if key in fields})
+            existing["rocked"] = was_rocked or rocked
+            existing["client_request_id"] = request_id or existing.get("client_request_id")
+            row = existing
+        else:
+            row = {"id": str(uuid4()), "athlete_id": athlete_id, "created_at": _now(), "admin_review_id": None, **fields}
+            self.sparring_logs.append(row)
+        if rocked and not was_rocked:
             review = self.create_admin_review(athlete_id, {"reason": review_reason, "status": "pending"})
-        self.sparring_logs.append(row)
-        return {"log": dict(row), "review": review}
+            row["admin_review_id"] = review["id"]
+        return {"log": dict(row), "review": review_of(row)}
 
     def list_sparring_logs(self, athlete_id: str, *, limit: int = 60, from_day: str | None = None) -> list[dict]:
         rows = [

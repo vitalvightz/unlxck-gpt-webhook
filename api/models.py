@@ -2264,6 +2264,11 @@ class SparringLogRequest(BaseModel):
     plan_id: str | None = Field(default=None, max_length=64)
     session_id: str | None = Field(default=None, max_length=200)
     source: SparringLogSource
+    # The manually logged sparring session this report details. The manual
+    # session stays the training record; this adds its contact evidence.
+    external_session_id: UUID | None = None
+    # Generated once per report so a retried save cannot write it twice.
+    client_request_id: UUID | None = None
     planned_intensity: SparringPlannedIntensity | None = None
     intensity: SparringIntensity
     rounds_completed: int = Field(ge=0, le=30)
@@ -2283,6 +2288,16 @@ class SparringLogRequest(BaseModel):
         cleaned = str(value or "").strip()
         return cleaned or None
 
+    @model_validator(mode="after")
+    def manual_detail_is_unplanned(self) -> "SparringLogRequest":
+        # A manual session is not a prescription: it carries no plan, session or
+        # planned intensity, so none can be attached to its detail.
+        if self.external_session_id is not None and (
+            self.source != "free" or self.plan_id or self.session_id or self.planned_intensity
+        ):
+            raise ValueError("a manual sparring detail must use source 'free' without plan fields")
+        return self
+
 
 class SparringLogRecord(BaseModel):
     id: str
@@ -2291,6 +2306,7 @@ class SparringLogRecord(BaseModel):
     session_id: str | None = None
     training_day: str
     source: SparringLogSource
+    external_session_id: str | None = None
     planned_intensity: SparringPlannedIntensity | None = None
     intensity: SparringIntensity
     rounds_completed: int

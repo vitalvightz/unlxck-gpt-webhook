@@ -1026,7 +1026,8 @@ export type TodayPrimarySafetyNotice = {
     | "skin_care"
     | "skin_local_protection"
     | "skin_no_contact"
-    | "skin_medical_review";
+    | "skin_medical_review"
+    | "head_impact_no_contact";
   injury_id: string;
   chip: "SKIN CARE" | "CHECK";
   title: string;
@@ -1285,11 +1286,16 @@ export type SparringPlannedIntensity = "hard" | "light" | "technical" | "contact
 export type SparringHeadContact = "none" | "light" | "heavy";
 export type SparringLogSource = "contact" | "session" | "free";
 
-/** A post-sparring entry. The server stamps the athlete-local training day. */
+/** A post-sparring entry. The server stamps the athlete-local training day,
+ * or the linked manual session's own day. */
 export type SparringLogRequest = {
   plan_id: string | null;
   session_id: string | null;
   source: SparringLogSource;
+  /** The manually logged sparring session this report details. */
+  external_session_id?: string | null;
+  /** One per report, so a retried save returns the original. */
+  client_request_id?: string | null;
   planned_intensity: SparringPlannedIntensity | null;
   intensity: SparringIntensity;
   rounds_completed: number;
@@ -1299,7 +1305,7 @@ export type SparringLogRequest = {
   notes: string;
 };
 
-export type SparringLogRecord = SparringLogRequest & {
+export type SparringLogRecord = Omit<SparringLogRequest, "client_request_id"> & {
   id: string;
   athlete_id: string;
   training_day: string;

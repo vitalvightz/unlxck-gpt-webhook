@@ -979,6 +979,7 @@ export function TodaySessionPanel({
       key={`${sparringDraft.source}:${sparringDraft.rounds}:${sparringDraft.title}`}
       token={token}
       draft={sparringDraft}
+      onSaved={() => void onRefresh()}
       onDismiss={() => setSparringDraft(null)}
     />
   ) : null;

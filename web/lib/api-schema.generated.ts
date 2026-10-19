@@ -1784,7 +1784,7 @@ export type PlanSummary = {
  * priority so every client gets the same message hierarchy.
  */
 export type PrimarySafetyNotice = {
-  code: "skin_care" | "skin_local_protection" | "skin_medical_review" | "skin_no_contact";
+  code: "head_impact_no_contact" | "skin_care" | "skin_local_protection" | "skin_medical_review" | "skin_no_contact";
   injury_id: string;
   chip: "CHECK" | "SKIN CARE";
   title: string;
@@ -2257,6 +2257,7 @@ export type SparringLogRecord = {
   session_id: string | null;
   training_day: string;
   source: "contact" | "free" | "session";
+  external_session_id: string | null;
   planned_intensity: "contact" | "hard" | "light" | "technical" | null;
   intensity: "hard" | "light" | "medium";
   rounds_completed: number;
@@ -2278,6 +2279,8 @@ export type SparringLogRequest = {
   plan_id?: string | null;
   session_id?: string | null;
   source: "contact" | "free" | "session";
+  external_session_id?: string | null;
+  client_request_id?: string | null;
   planned_intensity?: "contact" | "hard" | "light" | "technical" | null;
   intensity: "hard" | "light" | "medium";
   rounds_completed: number;

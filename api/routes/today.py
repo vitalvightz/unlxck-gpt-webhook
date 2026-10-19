@@ -120,6 +120,7 @@ def _sparring_log_record(row: Mapping[str, Any]) -> SparringLogRecord:
     return SparringLogRecord.model_validate(
         {
             **row,
+            "external_session_id": str(row["external_session_id"]) if row.get("external_session_id") else None,
             "training_day": str(row.get("training_day") or "")[:10],
             "created_at": str(row.get("created_at") or ""),
         }
@@ -653,13 +654,18 @@ def build_today_router(*, require_profile, get_store) -> APIRouter:
         profile: ProfileRecord = Depends(require_profile),
         store: AppStore = Depends(get_store),
     ) -> SparringLogResponse:
-        """Record one block of sparring rounds from the round timer.
+        """Record one block of sparring rounds from the round timer, or the
+        detail of a manually logged sparring session.
 
         Head contact and a rocked/dropped report are health data, so the
         health-feature gate applies. The day is the server's athlete-local
-        training day. A rocked/dropped report always opens an admin review (not
-        deduplicated against other pending reviews: each one is a separate
-        head-impact event a human should see). It does not change readiness.
+        training day, or the linked manual session's own day. A rocked/dropped
+        report opens an admin review (not deduplicated against other pending
+        reviews: each one is a separate head-impact event a human should see).
+        A retried request (same ``client_request_id``) returns the original row
+        and review. A manual session has one detail row: a later report corrects
+        it in place and can never withdraw a head-impact report. Today shows a
+        no-contact notice for the rest of a day with a rocked report.
         """
         require_health_feature_access(profile)
         plan_id = request_body.plan_id
@@ -671,8 +677,14 @@ def build_today_router(*, require_profile, get_store) -> APIRouter:
             plan_row = store.get_plan(plan_id)
             if not plan_row or str(plan_row.get("athlete_id")) != str(profile.athlete_id):
                 raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
+        if request_body.external_session_id is not None:
+            # The RPC re-checks this inside its transaction; this read gives a
+            # clean 404 instead of a retryable failure for a missing session.
+            manual = store.get_external_training_session(profile.athlete_id, str(request_body.external_session_id))
+            if not manual or manual.get("activity") != "sparring":
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="sparring session not found")
 
-        fields = request_body.model_dump(exclude={"plan_id"})
+        fields = request_body.model_dump(mode="json", exclude={"plan_id"})
         # The log and (for a rocked report) its admin review are written in one
         # transaction. If either fails, nothing is kept and the athlete is told
         # to retry: a rocked report is never acknowledged without its review.
@@ -694,7 +706,9 @@ def build_today_router(*, require_profile, get_store) -> APIRouter:
             ) from exc
         row = result["log"]
         review_created = result.get("review") is not None
-        if request_body.rocked and not review_created:
+        # A stored head-impact report outlives a later correction or retry.
+        rocked = bool(row.get("rocked")) or request_body.rocked
+        if rocked and not review_created:
             logger.error("[sparring] rocked log without review athlete_id=%s", profile.athlete_id)
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -703,7 +717,7 @@ def build_today_router(*, require_profile, get_store) -> APIRouter:
         return SparringLogResponse(
             log=_sparring_log_record(row),
             review_created=review_created,
-            safety_notice=ROCKED_SAFETY_NOTICE if request_body.rocked else None,
+            safety_notice=ROCKED_SAFETY_NOTICE if rocked else None,
         )
 
     @router.post(

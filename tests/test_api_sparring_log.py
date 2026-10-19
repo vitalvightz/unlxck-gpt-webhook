@@ -321,3 +321,155 @@ def test_history_rejects_an_out_of_range_limit():
 
     assert _history(client, limit=0).status_code == 422
     assert _history(client, limit=201).status_code == 422
+
+
+# -- Manual sparring follow-up and retry safety --------------------------------
+
+REQUEST_ID = "33333333-3333-4333-8333-333333333333"
+
+
+def _manual_session(client, *, activity: str = "sparring", effort: str = "hard", request_id: str | None = None) -> dict:
+    from uuid import uuid4
+
+    resp = client.post("/api/training/sessions", headers=ATHLETE, json={
+        "activity": activity, "duration_minutes": 45, "effort": effort,
+        "client_request_id": request_id or str(uuid4()),
+    })
+    assert resp.status_code == 201, resp.text
+    return resp.json()
+
+
+def _manual_detail(client, session_id: str, **overrides):
+    return _post(client, **{
+        "plan_id": None, "source": "free", "planned_intensity": None, "round_seconds": None,
+        "external_session_id": session_id, **overrides,
+    })
+
+
+def test_manual_sparring_detail_links_to_the_session_without_a_plan():
+    client, store, _ = _build_client()
+    session = _manual_session(client)
+
+    resp = _manual_detail(client, session["id"], client_request_id=REQUEST_ID)
+
+    assert resp.status_code == 201, resp.text
+    log = resp.json()["log"]
+    assert log["external_session_id"] == session["id"]
+    assert log["plan_id"] is None
+    assert log["training_day"] == session["training_day"]
+    # The manual session stays the one training occurrence in history.
+    history = client.get("/api/training/history", headers=ATHLETE).json()["sessions"]
+    assert [row["id"] for row in history] == [session["id"]]
+
+
+def test_manual_detail_uses_the_manual_sessions_own_day():
+    client, store, _ = _build_client()
+    session = _manual_session(client)
+    store.external_training_sessions[session["id"]]["training_day"] = "2026-01-02"
+
+    log = _manual_detail(client, session["id"]).json()["log"]
+
+    assert log["training_day"] == "2026-01-02"
+
+
+def test_manual_detail_requires_an_owned_live_sparring_session():
+    client, store, _ = _build_client()
+    boxing = _manual_session(client, activity="boxing")
+    assert _manual_detail(client, boxing["id"]).status_code == 404
+    assert _manual_detail(client, "44444444-4444-4444-8444-444444444444").status_code == 404
+    sparring = _manual_session(client)
+    store.external_training_sessions[sparring["id"]]["athlete_id"] = "someone-else"
+    assert _manual_detail(client, sparring["id"]).status_code == 404
+    assert store.sparring_logs == []
+
+
+def test_manual_detail_rejects_plan_fields():
+    client, store, _ = _build_client()
+    _seed_plan(store)
+    session = _manual_session(client)
+
+    assert _manual_detail(client, session["id"], plan_id=PLAN_ID).status_code == 422
+    assert _manual_detail(client, session["id"], source="contact").status_code == 422
+    assert _manual_detail(client, session["id"], planned_intensity="hard").status_code == 422
+    assert store.sparring_logs == []
+
+
+def test_a_retried_report_writes_one_log_and_one_review():
+    client, store, _ = _build_client()
+    _seed_plan(store)
+
+    first = _post(client, rocked=True, client_request_id=REQUEST_ID)
+    retry = _post(client, rocked=True, client_request_id=REQUEST_ID)
+
+    assert first.status_code == retry.status_code == 201
+    assert retry.json()["log"]["id"] == first.json()["log"]["id"]
+    assert retry.json()["review_created"] is True
+    assert retry.json()["safety_notice"] == ROCKED_SAFETY_NOTICE
+    assert len(store.sparring_logs) == 1
+    assert len(store.admin_reviews) == 1
+
+
+def test_a_later_correction_never_withdraws_a_head_impact_report():
+    client, store, _ = _build_client()
+    session = _manual_session(client)
+
+    rocked = _manual_detail(client, session["id"], rocked=True, client_request_id=REQUEST_ID)
+    corrected = _manual_detail(client, session["id"], rocked=False, head_contact="none")
+
+    assert rocked.status_code == corrected.status_code == 201
+    assert corrected.json()["log"]["id"] == rocked.json()["log"]["id"]
+    assert corrected.json()["log"]["rocked"] is True
+    assert corrected.json()["safety_notice"] == ROCKED_SAFETY_NOTICE
+    assert len(store.sparring_logs) == 1
+    assert len(store.admin_reviews) == 1
+
+
+def test_separate_manual_sparring_sessions_on_one_day_stay_distinct():
+    client, store, _ = _build_client()
+    first = _manual_session(client)
+    second = _manual_session(client)
+
+    assert _manual_detail(client, first["id"]).status_code == 201
+    assert _manual_detail(client, second["id"]).status_code == 201
+
+    assert len(store.sparring_logs) == 2
+
+
+def test_rocked_report_leads_today_with_a_no_contact_notice():
+    client, store, _ = _build_client()
+    assert client.get("/api/today", headers=ATHLETE).json()["today"]["primary_safety_notice"] is None
+    session = _manual_session(client)
+
+    _manual_detail(client, session["id"], rocked=True)
+
+    notice = client.get("/api/today", headers=ATHLETE).json()["today"]["primary_safety_notice"]
+    assert notice["code"] == "head_impact_no_contact"
+    assert notice["tone"] == "red"
+    assert "No more contact today" in notice["title"]
+
+
+def test_rocked_report_notice_also_applies_with_a_plan():
+    client, store, _ = _build_client()
+    _seed_plan(store)
+
+    _post(client, rocked=True)
+
+    notice = client.get("/api/today", headers=ATHLETE).json()["today"]["primary_safety_notice"]
+    assert notice["code"] == "head_impact_no_contact"
+
+
+def test_an_earlier_days_head_impact_does_not_carry_the_same_day_notice():
+    client, store, _ = _build_client()
+    _seed_log(store, 1, rocked=True)
+
+    assert client.get("/api/today", headers=ATHLETE).json()["today"]["primary_safety_notice"] is None
+
+
+def test_hard_manual_effort_alone_never_creates_contact_evidence():
+    client, store, _ = _build_client()
+
+    _manual_session(client, effort="hard")
+
+    assert store.sparring_logs == []
+    assert store.admin_reviews == []
+    assert client.get("/api/today", headers=ATHLETE).json()["today"]["primary_safety_notice"] is None
