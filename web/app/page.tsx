@@ -6,7 +6,6 @@ import { useLocale, useTranslations } from "next-intl";
 import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 
 import { useAppSession } from "@/components/auth-provider";
-import { TrackingToday } from "@/components/tracking-today";
 import { getAuthenticatedLandingHref, needsStartingPath } from "@/lib/auth-routing";
 import { EmptyState } from "@/components/empty-state";
 import { FightCountdown, FightCountdownSkeleton } from "@/components/fight-countdown";
@@ -271,6 +270,15 @@ export default function HomePage() {
     }
   }, [isReady, session, isMeHydrated, hasTransientMeError, me, router]);
 
+  // Tracking athletes without a programme land on the one Today screen. Only a
+  // loaded feed can establish "no active plan"; a failed read never redirects.
+  const opensTodayWithoutPlan = Boolean(
+    me?.profile.starting_path === "tracking_first" && commandState && !commandState.active_plan?.id,
+  );
+  useEffect(() => {
+    if (opensTodayWithoutPlan) router.replace("/today");
+  }, [opensTodayWithoutPlan, router]);
+
   const [isReloadingCommand, setIsReloadingCommand] = useState(false);
   const latestTokenRef = useRef(session?.access_token);
 
@@ -405,12 +413,7 @@ export default function HomePage() {
     if (me.profile.starting_path === "tracking_first") {
       if (!commandState && !commandError) return <WorkspaceOverviewSkeleton />;
       if (!commandState && commandError) return <section className="panel"><h1>Today is temporarily unavailable</h1><p role="alert">Couldn’t load your training workspace.</p><button type="button" className="secondary-button" onClick={() => void loadCommandState()}>Retry Today</button></section>;
-      if (commandState && !commandState.active_plan?.id) {
-        return <>
-          {commandError ? <div role="status"><p>Today could not refresh. Your recorded sessions are still here.</p><button type="button" className="secondary-button" onClick={() => void loadCommandState()}>Retry Today</button></div> : null}
-          <TrackingToday accessToken={session.access_token} state={commandState} onSaved={() => void loadCommandState()} />
-        </>;
-      }
+      if (opensTodayWithoutPlan) return <p role="status">Opening Today…</p>;
     }
     const latestPlan = me.latest_plan ?? null;
     const draft = (me.profile.onboarding_draft as { current_step?: number } | null) ?? null;

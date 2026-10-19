@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useAppSession } from "./auth-provider";
 import { LogTraining } from "./log-training";
 import { ApiError, getManualTrainingHistory, getTrainingHistory, getMe, updateMe } from "@/lib/api";
-import { TrackingHistoryPreview } from "./tracking-history-preview";
+import { TrainingHistoryPreview } from "./training-history-preview";
 import {
   decideTrainingHabit, EMPTY_TRAINING_HABITS, HABIT_WEEKDAYS, habitTrainingDay, learnTrainingHabits,
   type TrainingHabitDecision, type TrainingHabitPreferences,
@@ -16,12 +16,13 @@ import styles from "./training-habit-log.module.css";
 
 const label = (value: string) => value.charAt(0).toUpperCase() + value.slice(1);
 
-type Props = { accessToken: string | null; state: TodayCommandView | null; onSaved: () => void; trackingFirst?: boolean };
+// The logger is the lead action when no programme prescribes today's work.
+type Props = { accessToken: string | null; state: TodayCommandView | null; onSaved: () => void; variant?: "primary" | "compact" };
 export function TrainingHabitLog(props: Props) {
   return props.accessToken ? <HabitLogContent key={props.accessToken} {...props} accessToken={props.accessToken} /> : null;
 }
 
-function HabitLogContent({ accessToken, state, onSaved, trackingFirst = false }: Props & { accessToken: string }) {
+function HabitLogContent({ accessToken, state, onSaved, variant = "compact" }: Props & { accessToken: string }) {
   const { me, replaceMe } = useAppSession();
   const [history, setHistory] = useState<TrainingHistorySession[]>([]);
   const [sharedHistory, setSharedHistory] = useState<TrainingHistorySession[]>([]);
@@ -65,10 +66,9 @@ function HabitLogContent({ accessToken, state, onSaved, trackingFirst = false }:
       }
     }).catch(() => { if (!cancelled) setHistoryError(true); });
     return () => { cancelled = true; };
-  }, [accessToken, reload, trackingFirst]);
+  }, [accessToken, reload]);
 
   useEffect(() => {
-    if (!trackingFirst) return;
     let cancelled = false;
     const initialWrites = historyWrites.current;
     void getTrainingHistory(accessToken).then(({ sessions }) => {
@@ -81,7 +81,7 @@ function HabitLogContent({ accessToken, state, onSaved, trackingFirst = false }:
     }).catch(() => { if (!cancelled) setSharedHistoryError(true); })
       .finally(() => { if (!cancelled) setHistoryLoading(false); });
     return () => { cancelled = true; };
-  }, [accessToken, reload, trackingFirst]);
+  }, [accessToken, reload]);
 
   // Coach-declared work and the live safety decision outrank learned logging guesses.
   const coachScheduled = state?.today.session_scope === "today" && Boolean(
@@ -139,7 +139,7 @@ function HabitLogContent({ accessToken, state, onSaved, trackingFirst = false }:
   }
 
   return <div className={styles.root} aria-busy={busy || undefined}>
-    <LogTraining accessToken={accessToken} recent history={history} variant={trackingFirst ? "primary" : "compact"}
+    <LogTraining accessToken={accessToken} recent history={history} variant={variant}
       quickSession={suggestion ? { ...suggestion, effort: suggestion.source?.effort } : undefined}
       onSaved={row => {
         historyWrites.current++;
@@ -147,7 +147,7 @@ function HabitLogContent({ accessToken, state, onSaved, trackingFirst = false }:
         setSharedHistory(current => [row, ...current.filter(item => item.id !== row.id || item.source !== row.source)]);
         onSaved();
       }} />
-    {trackingFirst ? <TrackingHistoryPreview history={sharedHistory} loading={historyLoading} error={sharedHistoryError} onRetry={() => setReload(value => value + 1)} /> : null}
+    <TrainingHistoryPreview history={sharedHistory} loading={historyLoading} error={sharedHistoryError} onRetry={() => setReload(value => value + 1)} />
     {prompt ? <div className={styles.prompt}>
       <p className={styles.eyebrow}>{prompt.replace ? "Routine changed?" : "Noticed a pattern"}</p>
       <p className={styles.question}>{prompt.replace ? `Switch ${HABIT_WEEKDAYS[prompt.weekday]} to ${prompt.activity}?` : `${label(prompt.activity)} every ${HABIT_WEEKDAYS[prompt.weekday]}?`}</p>

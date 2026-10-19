@@ -4,14 +4,36 @@ New athletes choose `/get-started` after age and Terms acceptance. The choice is
 stored in `profiles.starting_path` through the existing authenticated `/api/me`
 endpoint. It selects a landing experience, never feature access:
 
-- `tracking_first`: Today, with the existing manual logger, repeat shortcut,
-  recent shared history, round timer, and a secondary link to Quick Build.
+- `tracking_first`: Today, led by the manual logger, repeat shortcut and recent
+  shared history, with the round timer and Quick Build in Today's quick actions.
 - `plan_first`: the existing Quick Build.
 - `null`: show the choice only if there are no plans, intake or onboarding draft.
 
-Existing plan destinations take priority over the preference. Home also exposes
-the tracking workspace for tracking-first athletes with no active programme.
-Loading errors never create a new-account or empty-history state.
+Existing plan destinations take priority over the preference. Home sends
+tracking-first athletes with no active programme to `/today`, and only once the
+Today feed has loaded. Loading errors never create a new-account or
+empty-history state.
+
+## One Today screen
+
+`TodayScreen` is the only Today implementation. What it shows depends on whether
+the Today feed reports an active plan, never on `starting_path`:
+
+- Shared by every athlete: header and date, the status strip, current safety
+  guidance and risk watch, the training logger and recent history, the injury
+  manager, and quick actions (round timer, history).
+- Only with an active plan: phase, the readiness check-in, today's session and
+  its completion controls, adaptation guidance, daily-recommendation feedback
+  and View plan.
+- Without one: the logger is the primary action, the status strip says
+  readiness is "Not assessed" (plan-free check-ins are not persisted yet), and
+  quick actions offer Build S&C plan (or Choose a plan when saved plans exist).
+  A current injury hold or safety notice still leads, and a preview of a session
+  that does not exist is never shown.
+- Injuries use the existing `TodayInjuryManager` and `POST /api/today/injury-checkin`,
+  which attach the active plan when there is one and `null` otherwise. Without
+  health-data consent the form is replaced by a link to consent settings, since
+  the server rejects the report.
 
 ## Rollout
 

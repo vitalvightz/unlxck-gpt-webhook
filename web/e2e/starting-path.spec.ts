@@ -3,7 +3,7 @@ import AxeBuilder from "@axe-core/playwright";
 import { isolateFromNetwork } from "./support";
 import type { TrainingHistorySession } from "../lib/training-history";
 
-async function setup(page: Page, baseURL: string, options: { path?: string | null; failSave?: boolean; failMe?: boolean; failToday?: boolean; terms?: boolean; plan?: boolean; consent?: boolean; rejectConsent?: boolean; failConsent?: boolean; manualHistory?: TrainingHistorySession[]; sharedHistory?: TrainingHistorySession[] } = {}) {
+async function setup(page: Page, baseURL: string, options: { path?: string | null; failSave?: boolean; failMe?: boolean; failToday?: boolean; terms?: boolean; plan?: boolean; consent?: boolean; rejectConsent?: boolean; failConsent?: boolean; manualHistory?: TrainingHistorySession[]; sharedHistory?: TrainingHistorySession[]; activePlan?: boolean } = {}) {
   await isolateFromNetwork(page, baseURL);
   const storageKey = `sb-${new URL(process.env.NEXT_PUBLIC_SUPABASE_URL ?? "https://stub.supabase.co").hostname.split(".")[0]}-auth-token`;
   await page.addInitScript(([key, value]) => localStorage.setItem(key, value), [storageKey, JSON.stringify({
@@ -18,6 +18,7 @@ async function setup(page: Page, baseURL: string, options: { path?: string | nul
   let sessions: Record<string, unknown>[] = options.sharedHistory ?? [];
   let manualSessions: Record<string, unknown>[] = options.manualHistory ?? [];
   const writes: Record<string, unknown>[] = [];
+  let injuries: Record<string, unknown>[] = [];
   await page.route("**/api/**", async route => {
     const request = route.request();
     const endpoint = new URL(request.url()).pathname;
@@ -42,9 +43,22 @@ async function setup(page: Page, baseURL: string, options: { path?: string | nul
       }, plan_count: options.plan ? 1 : 0, latest_plan: options.plan ? { plan_id: "plan-9", status: "ready" } : null, latest_intake: null, username_rate_limit: {} });
     }
     if (endpoint === "/api/today") return options.failToday ? json({ detail: "Unavailable" }, 503) : json({
-      active_plan: {}, today: { training_day: "2026-10-18", recommendation_state: "not_checked_in", decision_tier: "not_checked_in", warnings: [], next_session: {}, completion_status: "not_started", session_scope: "none" },
-      open_injuries: [], risk_watch: [], week_summary: {}, quick_actions: [],
+      active_plan: options.activePlan ? { id: "plan-9", name: "Autumn camp", phase: "GPP", fight_date: "2026-12-12" } : {},
+      today: { training_day: "2026-10-18", recommendation_state: "not_checked_in", decision_tier: "not_checked_in", warnings: [], next_session: {}, completion_status: "not_started", session_scope: "none" },
+      open_injuries: injuries, risk_watch: [], week_summary: {}, quick_actions: [],
     });
+    if (endpoint === "/api/today/injury-checkin" && request.method() === "POST") {
+      const body = request.postDataJSON(); writes.push(body);
+      if (!healthConsent) return json({ detail: { code: "health_data_consent_required", message: "Health-data consent is required." } }, 403);
+      for (const item of body.injuries as Record<string, unknown>[]) {
+        if (!item.flag_id) injuries = [...injuries, { id: `flag-${injuries.length + 1}`, athlete_id: "athlete-1", source: "checkin", plan_id: null,
+          body_area: item.body_area, description: item.description, severity: item.severity, status: "open", latest_reported_status: "ongoing",
+          surface_class: "non_surface", created_at: "2026-10-18T09:00:00Z", updated_at: "2026-10-18T09:00:00Z" }];
+        else if (item.status === "resolved") injuries = injuries.filter(row => row.id !== item.flag_id);
+        else injuries = injuries.map(row => row.id === item.flag_id ? { ...row, latest_reported_status: item.status } : row);
+      }
+      return json({ open_injuries: injuries }, 201);
+    }
     if (endpoint === "/api/training/history") return json({ sessions: new URL(request.url()).searchParams.get("manual_only") === "true" ? manualSessions : sessions });
     if (endpoint === "/api/training/sessions" && request.method() === "POST") {
       const body = request.postDataJSON(); writes.push(body);
@@ -87,7 +101,7 @@ test("declining contextual consent keeps tracking and the round timer available"
   await page.getByRole("button", { name: "Log Training", exact: true }).click();
   await page.getByRole("button", { name: "Not now", exact: true }).click();
   await expect(page.getByRole("dialog")).toHaveCount(0);
-  await expect(page.getByRole("link", { name: /Round timer Start a session/ })).toBeVisible();
+  await expect(page.getByRole("navigation", { name: "Quick actions" }).getByRole("link", { name: "Round timer" })).toBeVisible();
   expect(writes).toEqual([]);
 });
 
@@ -166,8 +180,11 @@ for (const width of [320, 390, 1280]) {
     await expect(page).toHaveURL(/\/today$/);
     await expect(page.locator("html")).toHaveAttribute("data-app-surface", "workspace");
     await expect(page.getByText("No training logged yet", { exact: true })).toBeVisible();
-    await expect(page.getByRole("link", { name: /Round timer Start a session/ })).toBeVisible();
-    await expect(page.getByText("Want extra S&C?", { exact: true })).toBeVisible();
+    const quickActions = page.getByRole("navigation", { name: "Quick actions" });
+    await expect(quickActions.getByRole("link", { name: "Round timer" })).toBeVisible();
+    await expect(quickActions.getByRole("link", { name: "Build S&C plan" })).toBeVisible();
+    await expect(page.getByRole("list", { name: "Today command status" })).toContainText("Not assessed");
+    await expect(page.locator("#today-checkin")).toHaveCount(0);
     await page.getByRole("button", { name: "Log Training", exact: true }).click();
     const form = page.getByRole("form", { name: "Log Training", exact: true });
     await form.getByRole("button", { name: "Boxing", exact: true }).click();
@@ -177,16 +194,17 @@ for (const width of [320, 390, 1280]) {
     await expect(page.getByRole("dialog")).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Log Training", exact: true })).toBeFocused();
     await expect(page.getByRole("button", { name: "Repeat last session", exact: true })).toBeVisible();
-    await expect(page.locator("#tracking-history-heading").locator("..").locator("..")).toContainText("Boxing");
+    await expect(page.getByRole("region", { name: "Training history", exact: true })).toContainText("Boxing");
     await page.reload();
-    await expect(page.getByText("Your training, your record.", { exact: true })).toBeVisible();
+    await expect(page.getByText(/^Your training, your record\./)).toBeVisible();
     await expect(page.getByRole("button", { name: "Repeat last session", exact: true })).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
     expect((await new AxeBuilder({ page }).include("main").analyze()).violations).toEqual([]);
     await page.screenshot({ path: test.info().outputPath(`tracking-${width}.png`) });
     await page.goto("/");
-    await expect(page.getByText("Your training, your record.", { exact: true })).toBeVisible();
-    await page.getByRole("link", { name: /Want extra S&C/ }).click();
+    await expect(page).toHaveURL(/\/today$/);
+    await expect(page.getByRole("heading", { name: "Today", level: 1 })).toHaveCount(1);
+    await page.getByRole("navigation", { name: "Quick actions" }).getByRole("link", { name: "Build S&C plan" }).click();
     await expect(page).toHaveURL(/\/quick-build$/);
     expect(writes[0]).toEqual({ starting_path: "tracking_first" });
     expect(writes[1]).toMatchObject({ activity: "boxing", duration_minutes: 45, effort: "moderate" });
@@ -239,3 +257,66 @@ test("Today failure never becomes a no-plan empty state", async ({ page, baseURL
   await expect(page.getByRole("heading", { name: "Today is temporarily unavailable" })).toBeVisible();
   await expect(page.getByText("Build your fight camp in minutes.", { exact: true })).toHaveCount(0);
 });
+
+for (const width of [320, 390, 1280]) {
+  test(`no-plan athlete reports, updates and resolves an injury on the shared Today (${width}px)`, async ({ page, baseURL }) => {
+    await page.setViewportSize({ width, height: 844 });
+    const writes = await setup(page, baseURL!, { path: "tracking_first" });
+    await page.goto("/today");
+    const manager = page.locator("#today-injury");
+    await expect(manager).toContainText("No injuries tracked.");
+    // Compact by default: the questionnaire stays closed until asked for.
+    await expect(manager.locator("form.today-injury-add")).toBeHidden();
+    await manager.getByRole("button", { name: /Add injury/ }).click();
+    await manager.getByRole("button", { name: /Enter it manually/ }).click();
+    await manager.getByLabel(/Affected area/).fill("left shoulder");
+    await manager.getByRole("button", { name: "Soreness", exact: true }).click();
+    await manager.getByRole("button", { name: "Not limiting me", exact: true }).click();
+    await manager.getByRole("button", { name: "Save injury", exact: true }).click();
+    await expect(page.getByRole("list", { name: "Today command status" })).toContainText("1 active");
+    expect(writes[0]).toMatchObject({ injuries: [{ body_area: "left shoulder" }] });
+    expect(writes[0]).not.toHaveProperty("plan_id");
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+    expect((await new AxeBuilder({ page }).include("main").analyze()).violations).toEqual([]);
+    await page.screenshot({ path: test.info().outputPath(`no-plan-injury-${width}.png`), fullPage: true });
+
+    await manager.locator(".today-injury-summary-row").click();
+    await manager.getByRole("button", { name: "Better", exact: true }).click();
+    await expect.poll(() => writes.length).toBe(2);
+    expect(writes[1]).toEqual({ injuries: [{ flag_id: "flag-1", status: "improving" }] });
+    await manager.getByRole("button", { name: "Mark resolved" }).click();
+    await manager.getByRole("button", { name: "Yes, resolve", exact: true }).click();
+    await expect(manager).toContainText("No injuries tracked.");
+    expect(writes[2]).toEqual({ injuries: [{ flag_id: "flag-1", status: "resolved" }] });
+    await expect(page.getByRole("list", { name: "Today command status" })).toContainText("None");
+  });
+}
+
+test("without health-data consent the injury form is never offered", async ({ page, baseURL }) => {
+  const writes = await setup(page, baseURL!, { path: "tracking_first", consent: false });
+  await page.goto("/today");
+  const injuries = page.locator("#today-injury");
+  await expect(injuries).toContainText("needs your health-data consent");
+  await expect(injuries.getByRole("button", { name: /Add injury/ })).toHaveCount(0);
+  expect(writes).toEqual([]);
+});
+
+for (const width of [320, 390, 1280]) {
+  test(`a tracking athlete with an active plan keeps the same Today with prescribed content (${width}px)`, async ({ page, baseURL }) => {
+    await page.setViewportSize({ width, height: 844 });
+    await setup(page, baseURL!, { path: "tracking_first", activePlan: true, plan: true });
+    await page.goto("/today");
+    await expect(page.getByRole("heading", { name: "Today", level: 1 })).toHaveCount(1);
+    await expect(page.getByText("General prep", { exact: true })).toBeVisible();
+    const status = page.getByRole("list", { name: "Today command status" });
+    await expect(status).toContainText("Check-in");
+    await expect(status).not.toContainText("Not assessed");
+    await expect(page.locator("#today-checkin")).toBeVisible();
+    await expect(page.getByRole("navigation", { name: "Quick actions" }).getByRole("link", { name: "View plan" })).toHaveAttribute("href", "/plans/plan-9");
+    // Shared sections are the same components as the no-plan state.
+    await expect(page.getByRole("region", { name: "Training history", exact: true })).toBeVisible();
+    await expect(page.locator("#today-injury")).toContainText("No injuries tracked.");
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+    await page.screenshot({ path: test.info().outputPath(`planned-today-${width}.png`), fullPage: true });
+  });
+}
