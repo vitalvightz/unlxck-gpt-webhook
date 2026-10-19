@@ -116,7 +116,8 @@ test("tracking keeps consent optional and grants it in one explicit tap inside t
   await allow.click();
   await expect(page).toHaveURL(/\/today$/);
   await expect(page.getByRole("form", { name: "Log Training", exact: true })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Boxing", exact: true })).toBeFocused();
+  // The athlete boxes, so the first Activity choice is a boxing session type.
+  await expect(page.getByRole("button", { name: "Pads", exact: true })).toBeFocused();
   expect(writes).toEqual([{ starting_path: "tracking_first" }, { health_data_consent: true }]);
 });
 
@@ -148,7 +149,7 @@ test("server-side consent withdrawal replaces the logger with a recovery route",
   await page.goto("/today");
   await page.getByRole("button", { name: "Log Training", exact: true }).click();
   const form = page.getByRole("form", { name: "Log Training", exact: true });
-  await form.getByRole("button", { name: "Boxing", exact: true }).click();
+  await form.getByRole("button", { name: "Pads", exact: true }).click();
   await form.getByRole("button", { name: "45", exact: true }).click();
   await form.getByRole("button", { name: "Moderate", exact: true }).click();
   await form.getByRole("button", { name: "Save Session", exact: true }).click();
@@ -189,12 +190,13 @@ for (const width of [320, 390, 1280]) {
     await expect(page.getByRole("button", { name: "Open navigation" })).toHaveCount(0);
     await expect(page.locator(".app-sidebar, .mobile-tab-bar")).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Sign out", exact: true })).toBeVisible();
-    const choices = page.locator('[aria-busy="false"] > button').filter({ hasText: /Start tracking|Build a plan/ });
+    const choices = page.locator('[aria-busy="false"] > button');
     const sizes = await choices.evaluateAll(elements => elements.map(element => element.getBoundingClientRect().height));
     expect(sizes).toHaveLength(2);
     // Building an S&C plan is offered first.
     await expect(choices.first()).toContainText("Build my training plan");
-    expect(Math.abs(sizes[0] - sizes[1])).toBeLessThanOrEqual(1);
+    // Slim list rows, not cards: touch-sized, but no taller than a short two-line row.
+    expect(sizes.every(size => size >= 44 && size <= 96)).toBe(true);
     await page.screenshot({ path: test.info().outputPath(`choice-${width}.png`) });
     const tracking = page.getByRole("button", { name: /I already have a coach/ });
     await tracking.focus(); await expect(tracking).toBeFocused();
@@ -461,16 +463,25 @@ for (const width of [320, 390, 1280]) {
     const errors: string[] = []; page.on("pageerror", e => errors.push(e.message));
     const writes = await setup(page, baseURL!, { sports: [] });
     await page.goto("/get-started");
-    await expect(page.getByRole("heading", { name: "What do you train?" })).toBeVisible();
-    await expect(page.getByRole("button", { name: /I already have a coach/ })).toHaveCount(0);
-    expect((await new AxeBuilder({ page }).include("main").analyze()).violations).toEqual([]);
-    await page.screenshot({ path: test.info().outputPath(`sport-step-${width}.png`) });
-    await page.getByRole("button", { name: "BJJ", exact: true }).click();
+    // One page: a compact sport pill row, then the two ways to start.
     await expect(page.getByRole("heading", { name: "How would you like to start?" })).toBeVisible();
-    await expect(page.getByText("BJJ ·")).toBeVisible();
-    await page.getByRole("button", { name: "Change sport" }).click();
-    await page.getByRole("button", { name: "Muay Thai", exact: true }).click();
-    await page.screenshot({ path: test.info().outputPath(`sport-then-start-${width}.png`) });
+    const sports = page.getByRole("group", { name: "Your sport" });
+    await expect(sports.getByRole("button")).toHaveText(["Boxing", "Muay Thai", "Kickboxing", "MMA", "BJJ", "Wrestling", "Other"]);
+    await expect(sports.locator('[aria-pressed="true"]')).toHaveCount(0);
+    const pill = (await sports.getByRole("button").first().boundingBox())!;
+    expect(pill.height).toBeLessThanOrEqual(44);
+    // Starting without a sport asks for one and saves nothing.
+    await page.getByRole("button", { name: /I already have a coach/ }).click();
+    const hint = page.getByRole("alert").filter({ hasText: "Pick your sport first." });
+    await expect(hint).toBeVisible();
+    await expect(sports.getByRole("button", { name: "Boxing", exact: true })).toBeFocused();
+    expect(writes).toHaveLength(0);
+    expect((await new AxeBuilder({ page }).include("main").analyze()).violations).toEqual([]);
+    await sports.getByRole("button", { name: "BJJ", exact: true }).click();
+    await sports.getByRole("button", { name: "Muay Thai", exact: true }).click();
+    await expect(sports.locator('[aria-pressed="true"]')).toHaveText(["Muay Thai"]);
+    await expect(hint).toHaveCount(0);
+    await page.screenshot({ path: test.info().outputPath(`start-${width}.png`) });
     await page.getByRole("button", { name: /I already have a coach/ }).click();
     await expect(page).toHaveURL(/\/today$/);
     expect(writes[0]).toEqual({ starting_path: "tracking_first", technical_style: ["muay_thai"] });

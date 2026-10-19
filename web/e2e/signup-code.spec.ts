@@ -89,9 +89,6 @@ test("a confirmation code finishes signup on the same page", async ({ page, base
   await verify.click();
 
   await expect(page).toHaveURL(/\/get-started$/);
-  // A new athlete names their sport first, then chooses how to start.
-  await expect(page.getByRole("heading", { name: "What do you train?" })).toBeVisible();
-  await page.getByRole("button", { name: "Boxing", exact: true }).click();
   await expect(page.getByRole("heading", { name: "How would you like to start?" })).toBeVisible();
   expect(complianceBodies).toEqual([{ date_of_birth: "1996-05-04", accept_terms: true }]);
 });
@@ -99,9 +96,6 @@ test("a confirmation code finishes signup on the same page", async ({ page, base
 test("immediate-session signup saves consent before the starting choice", async ({ page, baseURL }) => {
   const { complianceBodies } = await startSignup(page, baseURL ?? BASE_URL, "ok", true);
   await expect(page).toHaveURL(/\/get-started$/);
-  // A new athlete names their sport first, then chooses how to start.
-  await expect(page.getByRole("heading", { name: "What do you train?" })).toBeVisible();
-  await page.getByRole("button", { name: "Boxing", exact: true }).click();
   await expect(page.getByRole("heading", { name: "How would you like to start?" })).toBeVisible();
   expect(complianceBodies).toEqual([{ date_of_birth: "1996-05-04", accept_terms: true }]);
 });
