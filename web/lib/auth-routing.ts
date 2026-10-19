@@ -27,7 +27,8 @@ export function getAthleteWorkspaceHref(me: MeResponse | null): string {
     return `/plans/${me.latest_plan.plan_id}`;
   }
 
-  if (me?.profile.starting_path === "tracking_first") return "/today";
+  // Tracking athletes keep the same Home, filled from what they log.
+  if (me?.profile.starting_path === "tracking_first") return "/";
   if (needsStartingPath(me)) return STARTING_PATH_HREF;
 
   return FIRST_PLAN_HREF;

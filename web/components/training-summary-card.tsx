@@ -7,7 +7,7 @@ import type { TrainingHistorySession } from "@/lib/training-history";
 import styles from "./training-summary.module.css";
 
 const WINDOWS = [
-  { days: 7, label: "This week", empty: "No training logged in the last 7 days." },
+  { days: 7, label: "Last 7 days", empty: "No training logged in the last 7 days." },
   { days: 28, label: "Last 4 weeks", empty: "No training logged in the last 4 weeks." },
 ] as const;
 

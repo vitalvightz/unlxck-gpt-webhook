@@ -46,7 +46,7 @@ export function StartingPathScreen() {
       });
       if (result.profile.starting_path !== path) throw new Error("Your choice could not be saved. Try again.");
       replaceMe(result);
-      router.replace(path === "tracking_first" ? "/today" : "/quick-build");
+      router.replace(path === "tracking_first" ? "/" : "/quick-build");
     } catch {
       setError("Your choice could not be saved. Try again.");
       locked.current = false; setSaving(null);

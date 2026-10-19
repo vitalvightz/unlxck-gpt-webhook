@@ -12,7 +12,12 @@ import { FightCountdown, FightCountdownSkeleton } from "@/components/fight-count
 import { InstallUnlxck } from "@/components/install-unlxck";
 import { PlansFeaturedSkeleton, Skeleton } from "@/components/skeleton";
 import { XpProgressCard, XpProgressCardSkeleton } from "@/components/xp-progress-card";
-import { getPlan, getToday } from "@/lib/api";
+import { TrainingSummaryCard } from "@/components/training-summary-card";
+import { useXp } from "@/components/xp-provider";
+import { getPlan, getToday, getTrainingHistory } from "@/lib/api";
+import { hasHealthDataConsent } from "@/lib/compliance";
+import { getTrackingHome } from "@/lib/tracking-home";
+import type { TrainingHistorySession } from "@/lib/training-history";
 import { getFightCountdown } from "@/lib/fight-countdown";
 import {
   getOptionLabel,
@@ -270,14 +275,61 @@ export default function HomePage() {
     }
   }, [isReady, session, isMeHydrated, hasTransientMeError, me, router]);
 
-  // Tracking athletes without a programme land on the one Today screen. Only a
-  // loaded feed can establish "no active plan"; a failed read never redirects.
-  const opensTodayWithoutPlan = Boolean(
+  // Tracking athletes without a programme keep the same Home; its plan cards
+  // are filled from what they have logged. Only a loaded feed can establish
+  // "no active plan", and only then is their training history read.
+  const tracksWithoutPlan = Boolean(
     me?.profile.starting_path === "tracking_first" && commandState && !commandState.active_plan?.id,
   );
+  const { progress: xpProgress } = useXp();
+  // History is tagged with the athlete it was read for, and only that athlete's
+  // rows are ever shown: after an account switch nothing from the previous
+  // account renders, even before the new read returns.
+  const historyOwner = me?.profile.athlete_id ?? "";
+  const [trainingHistory, setTrainingHistory] = useState<
+    { owner: string; rows: TrainingHistorySession[]; cursor: string | null } | null
+  >(null);
+  const ownHistory = trainingHistory && trainingHistory.owner === historyOwner ? trainingHistory : null;
+  const trainingRows = ownHistory?.rows ?? null;
+  const trainingCursor = ownHistory?.cursor ?? null;
+  const [trainingMore, setTrainingMore] = useState<{ owner: string; loading: boolean; error: string | null }>(
+    { owner: "", loading: false, error: null },
+  );
+  const trainingMoreLoading = trainingMore.owner === historyOwner && trainingMore.loading;
+  const trainingMoreError = trainingMore.owner === historyOwner ? trainingMore.error : null;
   useEffect(() => {
-    if (opensTodayWithoutPlan) router.replace("/today");
-  }, [opensTodayWithoutPlan, router]);
+    const token = session?.access_token;
+    if (!token || !historyOwner || !tracksWithoutPlan) return;
+    let cancelled = false;
+    getTrainingHistory(token, true)
+      .then((page) => {
+        if (cancelled) return;
+        setTrainingHistory({ owner: historyOwner, rows: page.sessions, cursor: page.next_before_day ?? null });
+      })
+      .catch(() => { /* History stays unknown; Home claims nothing about it. */ });
+    return () => { cancelled = true; };
+  }, [session?.access_token, historyOwner, tracksWithoutPlan]);
+  const loadMoreTraining = useCallback(async () => {
+    const token = session?.access_token;
+    const owner = historyOwner;
+    const before = trainingCursor;
+    if (!token || !owner || !before) return;
+    setTrainingMore({ owner, loading: true, error: null });
+    try {
+      const page = await getTrainingHistory(token, true, before);
+      // A page read for another account (or an older cursor) is dropped.
+      setTrainingHistory((current) => {
+        if (!current || current.owner !== owner || current.cursor !== before) return current;
+        const seen = new Set(current.rows.map((row) => `${row.source}-${row.id}`));
+        const older = page.sessions.filter((row) => !seen.has(`${row.source}-${row.id}`));
+        return { owner, rows: [...current.rows, ...older], cursor: page.next_before_day ?? null };
+      });
+      setTrainingMore((current) => (current.owner === owner ? { owner, loading: false, error: null } : current));
+    } catch {
+      setTrainingMore((current) => (current.owner === owner
+        ? { owner, loading: false, error: "Couldn’t load older sessions." } : current));
+    }
+  }, [session?.access_token, historyOwner, trainingCursor]);
 
   const [isReloadingCommand, setIsReloadingCommand] = useState(false);
   const latestTokenRef = useRef(session?.access_token);
@@ -413,7 +465,6 @@ export default function HomePage() {
     if (me.profile.starting_path === "tracking_first") {
       if (!commandState && !commandError) return <WorkspaceOverviewSkeleton />;
       if (!commandState && commandError) return <section className="panel"><h1>Today is temporarily unavailable</h1><p role="alert">Couldn’t load your training workspace.</p><button type="button" className="secondary-button" onClick={() => void loadCommandState()}>Retry Today</button></section>;
-      if (opensTodayWithoutPlan) return <p role="status">Opening Today…</p>;
     }
     const latestPlan = me.latest_plan ?? null;
     const draft = (me.profile.onboarding_draft as { current_step?: number } | null) ?? null;
@@ -421,8 +472,9 @@ export default function HomePage() {
     const hasMeaningfulDraft = Boolean(
       draft && typeof draft === "object" && Object.keys(draft as Record<string, unknown>).length > 0,
     );
-    const isFirstTimeUser =
-      me.plan_count === 0 && !latestPlan && !latestIntake && !hasMeaningfulDraft;
+    // A tracking athlete has chosen not to build a camp: no plan welcome.
+    const isFirstTimeUser = me.profile.starting_path !== "tracking_first"
+      && me.plan_count === 0 && !latestPlan && !latestIntake && !hasMeaningfulDraft;
 
     if (isFirstTimeUser) {
       return (
@@ -544,6 +596,19 @@ export default function HomePage() {
     });
     const primaryHref = primaryAction.href;
     const primaryLabel = primaryAction.label;
+    const trainingDay = commandState?.today?.training_day ?? "";
+    const tracking = tracksWithoutPlan && commandState
+      ? getTrackingHome({
+        state: commandState, rows: trainingRows, loadedFrom: trainingCursor, today: trainingDay,
+        canCheckIn: hasHealthDataConsent(me), habits: me.profile.training_habits,
+      })
+      : null;
+    const trainingStreak = xpProgress.streaks.adherence.current;
+    const trackingSlot = tracking ? tracking.slot ?? (trainingStreak > 0 ? "habits" : null) : null;
+    const hero = tracking
+      ? { ...tracking.hero, primary: tracking.hero.primary }
+      : { eyebrow: overviewEyebrow, title: overviewTitle, lines: overviewLines, safety: overviewSafety, tone: decisionTone,
+        primary: { href: primaryHref, label: primaryLabel } };
 
     return (
       <>
@@ -551,19 +616,21 @@ export default function HomePage() {
             one dominant action lead the first viewport. */}
         <section className="hero-panel overview-command-shell overview-command-primary athlete-motion-slot athlete-motion-header">
           <div className="overview-primary-grid">
-            <div className="status-card overview-command-card overview-decision-lead" data-tone={decisionTone}>
-              <p className="eyebrow">{overviewEyebrow}</p>
-              <h1 className="hero-title overview-decision-headline">{overviewTitle}</h1>
+            <div className="status-card overview-command-card overview-decision-lead" data-tone={hero.tone}>
+              <p className="eyebrow">{hero.eyebrow}</p>
+              <h1 className="hero-title overview-decision-headline">{hero.title}</h1>
               <div className="overview-decision-copy">
-                {overviewLines.map((line, index) => (
+                {hero.lines.map((line, index) => (
                   <p key={index} className="muted">{line}</p>
                 ))}
-                {overviewSafety ? <p className="muted overview-decision-safety">{overviewSafety}</p> : null}
+                {hero.safety ? <p className="muted overview-decision-safety">{hero.safety}</p> : null}
               </div>
               <div className="plan-summary-actions overview-primary-actions">
-                <Link href={primaryHref} className="cta overview-primary-action">{primaryLabel}</Link>
+                <Link href={hero.primary.href} className="cta overview-primary-action">{hero.primary.label}</Link>
                 {hasActivePlan ? (
                   <Link href={`/plans/${activePlan.id}`} className="secondary-button">{openOngoing ? "Training plan" : "Fight camp"}</Link>
+                ) : tracking ? (
+                  <Link href="/quick-build" className="secondary-button">Build S&amp;C plan</Link>
                 ) : (
                   <Link href="/quick-build" className="secondary-button">Quick Build</Link>
                 )}
@@ -591,23 +658,61 @@ export default function HomePage() {
         {/* Secondary — camp context, progress, full risk watch, disclaimer.
             Available but visually reduced so it never competes with the command. */}
         <section className="panel overview-secondary athlete-motion-slot athlete-motion-status">
+          {tracking ? (
+            <>
+              <p className="kicker overview-secondary-eyebrow">Training</p>
+              <div className="overview-operational-strip" aria-label="Training status">
+                {tracking.strip.map((item) => (
+                  <div key={item.label} className="overview-operational-item"><span className="overview-operational-label">{item.label}</span><span className="overview-operational-value">{item.value}</span></div>
+                ))}
+              </div>
+              {trackingSlot === "summary" && trainingRows ? (
+                <TrainingSummaryCard rows={trainingRows} today={trainingDay} loadedFrom={trainingCursor}
+                  loading={trainingMoreLoading} error={trainingMoreError} onLoadMore={loadMoreTraining} />
+              ) : trackingSlot === "readiness" && tracking.readiness ? (
+                <section className="fight-countdown" aria-label="Daily readiness">
+                  <div className="fight-countdown-head"><div>
+                    <p className="fight-countdown-kicker">Daily readiness</p>
+                    <p className="fight-countdown-days">{tracking.readiness.title}</p>
+                    <p className="fight-countdown-date">{tracking.readiness.detail}</p>
+                  </div></div>
+                  <p className="fight-countdown-next"><Link href="/today" className="fight-countdown-next-label">Open Today</Link></p>
+                </section>
+              ) : trackingSlot === "habits" ? (
+                <section className="fight-countdown" aria-label="Your routine">
+                  <div className="fight-countdown-head"><div>
+                    <p className="fight-countdown-kicker">Your routine</p>
+                    <p className="fight-countdown-days">
+                      <span className="fight-countdown-number">{trainingStreak}</span> day training streak
+                    </p>
+                  </div></div>
+                  {tracking.routines.map((routine) => (
+                    <p key={routine} className="fight-countdown-next">{routine}</p>
+                  ))}
+                </section>
+              ) : null}
+            </>
+          ) : (
+            <>
           <p className="kicker overview-secondary-eyebrow">{openOngoing ? "Block progress" : "Camp progress"}</p>
-          <div className="overview-operational-strip" aria-label={openOngoing ? "Training status" : "Camp status"}>
-            <div className="overview-operational-item"><span className="overview-operational-label">Plan</span><span className="overview-operational-value">{String(activePlan.name || "No active plan")}</span></div>
-            <div className="overview-operational-item"><span className="overview-operational-label">{openOngoing ? "Cycle" : "Camp day"}</span><span className="overview-operational-value">{openOngoing ? "Renewable 4-week block" : campDay || "Not set"}</span></div>
-            <div className="overview-operational-item"><span className="overview-operational-label">{openOngoing ? "Mode" : "Phase"}</span><span className="overview-operational-value">{openOngoing ? "Ongoing" : humanizeIfRawEnum(activePlan.phase) || "Not set"}</span></div>
-            <div className="overview-operational-item"><span className="overview-operational-label">Fight date</span><span className="overview-operational-value">{openOngoing ? "Not scheduled" : formatPlanFightDate(String(activePlan.fight_date || ""))}</span></div>
-          </div>
-          {planSettledFor === activePlanId ? (
-            <FightCountdown
-              fightDate={activePlan.fight_date ? String(activePlan.fight_date) : null}
-              trainingDay={commandState?.today?.training_day}
-              phase={activePlan.phase ? String(activePlan.phase) : null}
-              plan={structuredPlan}
-            />
-          ) : getFightCountdown({ fightDate: activePlan.fight_date, trainingDay: commandState?.today?.training_day }) ? (
-            <FightCountdownSkeleton />
-          ) : null}
+              <div className="overview-operational-strip" aria-label={openOngoing ? "Training status" : "Camp status"}>
+                <div className="overview-operational-item"><span className="overview-operational-label">Plan</span><span className="overview-operational-value">{String(activePlan.name || "No active plan")}</span></div>
+                <div className="overview-operational-item"><span className="overview-operational-label">{openOngoing ? "Cycle" : "Camp day"}</span><span className="overview-operational-value">{openOngoing ? "Renewable 4-week block" : campDay || "Not set"}</span></div>
+                <div className="overview-operational-item"><span className="overview-operational-label">{openOngoing ? "Mode" : "Phase"}</span><span className="overview-operational-value">{openOngoing ? "Ongoing" : humanizeIfRawEnum(activePlan.phase) || "Not set"}</span></div>
+                <div className="overview-operational-item"><span className="overview-operational-label">Fight date</span><span className="overview-operational-value">{openOngoing ? "Not scheduled" : formatPlanFightDate(String(activePlan.fight_date || ""))}</span></div>
+              </div>
+              {planSettledFor === activePlanId ? (
+                <FightCountdown
+                  fightDate={activePlan.fight_date ? String(activePlan.fight_date) : null}
+                  trainingDay={commandState?.today?.training_day}
+                  phase={activePlan.phase ? String(activePlan.phase) : null}
+                  plan={structuredPlan}
+                />
+              ) : getFightCountdown({ fightDate: activePlan.fight_date, trainingDay: commandState?.today?.training_day }) ? (
+                <FightCountdownSkeleton />
+              ) : null}
+            </>
+          )}
           <OverviewRiskWatch risks={risks} />
         </section>
       </>
