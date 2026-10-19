@@ -94,6 +94,24 @@ def test_date_only_history_waits_through_full_fifth_day():
     assert message.startswith("WAIT")
 
 
+def test_elapsed_gap_is_120_hours_through_spring_dst_change():
+    page = row(stage="Contacted", sent="1", synced=1,
+               contacted="2027-03-20", first="2027-03-26T20:00:00+00:00")
+    due, _, _ = sync.due_and_copy(
+        page["properties"], 1, "2027-03-26T20:00:00+00:00", None,
+        datetime.fromisoformat("2027-03-31T20:30:00+01:00"), "second DM")
+    assert due == "2027-03-31T21:00:00+01:00"
+
+
+def test_full_five_day_gap_recomputed_on_repeated_poll():
+    instant = datetime.fromisoformat("2026-10-19T18:00:00+01:00")
+    prior_due = "2026-10-24T18:00:00+01:00"
+    page = row(stage="Contacted", sent="1", synced=1, first=instant.isoformat(),
+               copied="WAIT: next follow-up is due 24 Oct 2026, 18:00 BST.",
+               safe_due=prior_due, timing="Follow-up 2: waiting")
+    assert sync.get_changes(page, datetime.fromisoformat("2026-10-20T18:00:00+01:00")) == {}
+
+
 def test_first_due_date_and_early_copy_are_consistent():
     page = row(stage="Contacted", sent="0", synced=0)
     due, status, message = sync.due_and_copy(
