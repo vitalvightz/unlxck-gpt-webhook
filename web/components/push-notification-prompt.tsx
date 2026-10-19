@@ -45,9 +45,10 @@ export function DevicePushPrompt({ token, athleteId }: { token: string; athleteI
         if (cancelled || !settings.enabled || !settings.public_key || !registration?.active) return;
         if ((settings as typeof settings & { preferences?: { push_enabled?: boolean } }).preferences?.push_enabled === false) return;
         const subscription = await registration.pushManager.getSubscription();
-        if (cancelled || subscription) return;
+        if (cancelled || offered.current || subscription) return;
         // Let completion review, sparring safety reports and other modals finish.
         timer = setInterval(() => {
+          if (offered.current) { clearInterval(timer); timer = undefined; return; }
           if (document.visibilityState !== "visible" || document.querySelector('dialog[open], [aria-modal="true"]')) return;
           clearInterval(timer);
           timer = undefined;

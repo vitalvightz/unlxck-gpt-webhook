@@ -120,3 +120,23 @@ test("an interrupted dialog open releases the overlay and preserves the next off
     assert.equal(window.localStorage.getItem("unlxck:push-prompt:v1:athlete-1"), "seen");
   } finally { await app.cleanup(); }
 });
+
+
+test("a save arriving during dialog opening cannot queue a second offer", async () => {
+  let repeated = false;
+  const app = await mount({ beforeOpen: () => {
+    if (!repeated) {
+      repeated = true;
+      offerPushNotifications("test-token");
+    }
+  } });
+  try {
+    await saved();
+    assert.ok(app.container.querySelector("dialog[open]"));
+    const later = Array.from(app.container.querySelectorAll("button")).find(button => button.textContent === "Not now")!;
+    await act(async () => later.click());
+    await act(async () => { await new Promise(resolve => setTimeout(resolve, 650)); });
+    assert.equal(app.container.querySelector("dialog[open]"), null);
+    assert.equal(window.localStorage.getItem("unlxck:push-prompt:v1:athlete-1"), "seen");
+  } finally { await app.cleanup(); }
+});
