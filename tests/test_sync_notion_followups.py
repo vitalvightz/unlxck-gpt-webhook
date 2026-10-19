@@ -15,7 +15,11 @@ spec.loader.exec_module(sync)
 
 
 def row(*, stage="Replied", sent="0", synced=None, copied="old DM", formula="next DM",
-        contacted="2026-10-13", last_sent=None):
+        contacted="2026-10-13", last_sent=None, first=None, second=None, safe_due=None,
+        timing=""):
+    def event(value):
+        return {"date": {"start": value} if value else None}
+
     return {
         "id": "sample",
         "properties": {
@@ -24,95 +28,154 @@ def row(*, stage="Replied", sent="0", synced=None, copied="old DM", formula="nex
             "Synced Follow-Ups Sent": {"number": synced},
             "Follow-Up DM": {"formula": {"type": "string", "string": formula}},
             "Copy Follow-Up": {"rich_text": [{"plain_text": copied}]},
-            "Date Contacted": {"date": {"start": contacted} if contacted else None},
-            "Last Follow-Up Sent": {"date": {"start": last_sent} if last_sent else None},
+            "Date Contacted": event(contacted),
+            "Last Follow-Up Sent": event(last_sent),
+            "Follow-Up 1 Sent At": event(first),
+            "Follow-Up 2 Sent At": event(second),
+            "Safe Next Due": event(safe_due),
+            "Follow-Up Timing": {"rich_text": [{"plain_text": timing}] if timing else []},
         },
     }
 
 
-def test_first_run_syncs_text_without_inventing_old_send_date():
-    changed = sync.get_changes(row(sent="1"), date(2026, 10, 16))
+def get_copy(changed):
+    return changed["Copy Follow-Up"]["rich_text"][0]["text"]["content"]
+
+
+def test_old_baseline_requires_manual_first_send_date():
+    changed = sync.get_changes(row(stage="Contacted", sent="1"), date(2026, 10, 19))
     assert changed["Synced Follow-Ups Sent"] == {"number": 1}
-    assert changed["Copy Follow-Up"]["rich_text"][0]["text"]["content"] == "next DM"
+    assert get_copy(changed) == sync.MISSING_SEND_DATE
+    assert changed["Follow-Up Timing"]["rich_text"][0]["text"]["content"] == "Needs first send date"
+    assert "Follow-Up 1 Sent At" not in changed
     assert "Last Follow-Up Sent" not in changed
+    assert sync.missing_send_date(row(stage="Contacted", sent="1")["properties"])
 
 
-def test_increment_updates_text_and_true_send_date():
-    changed = sync.get_changes(row(sent="1", synced=0), date(2026, 10, 16))
-    assert changed["Last Follow-Up Sent"] == {"date": {"start": "2026-10-16"}}
-    assert changed["Synced Follow-Ups Sent"] == {"number": 1}
-
-
-def test_final_followup_removes_stale_copy():
-    changed = sync.get_changes(row(sent="2", synced=1, formula=""), date(2026, 10, 16))
-    assert changed["Copy Follow-Up"] == {"rich_text": []}
-    assert changed["Synced Follow-Ups Sent"] == {"number": 2}
-
-
-def test_no_changes_when_already_synced():
-    assert sync.get_changes(row(sent="1", synced=1, copied="next DM"), date(2026, 10, 16)) == {}
-
-
-def test_old_first_followup_needs_verified_date_not_invented():
-    for synced in (None, 1):
-        changed = sync.get_changes(row(stage="Contacted", sent="1", synced=synced), date(2026, 10, 19))
-        assert changed["Copy Follow-Up"]["rich_text"][0]["text"]["content"] == sync.MISSING_SEND_DATE
-        assert "Last Follow-Up Sent" not in changed
-        assert sync.missing_send_date(row(stage="Contacted", sent="1", synced=synced)["properties"])
-
-
-def test_observed_send_stores_timestamp_and_keeps_copy_safe():
+def test_first_dropdown_send_records_observation_not_legacy_guess():
     observed = datetime.fromisoformat("2026-10-19T20:01:45+01:00")
     changed = sync.get_changes(row(stage="Contacted", sent="1", synced=0), observed)
-    assert changed["Last Follow-Up Sent"] == {"date": {"start": "2026-10-19T20:01:45+01:00"}}
-    assert changed["Copy Follow-Up"]["rich_text"][0]["text"]["content"] == "next DM"
+    stamp = "2026-10-19T20:01:45+01:00"
+    assert changed["Follow-Up 1 Sent At"] == {"date": {"start": stamp}}
+    assert changed["Last Follow-Up Sent"] == {"date": {"start": stamp}}
+    assert changed["Safe Next Due"] == {"date": {"start": "2026-10-24T20:01:45+01:00"}}
+    assert "WAIT" in get_copy(changed)
 
 
-def test_native_button_timestamp_is_preserved():
+def test_verified_native_button_first_timestamp_survives_poll():
     changed = sync.get_changes(
-        row(stage="Contacted", sent="1", synced=0, last_sent="2026-10-19T19:59:00+01:00"),
+        row(stage="Contacted", sent="1", synced=0,
+            first="2026-10-19T19:59:00+01:00", last_sent="2026-10-19T19:59:00+01:00"),
         datetime.fromisoformat("2026-10-19T20:01:45+01:00"),
     )
+    assert "Follow-Up 1 Sent At" not in changed
     assert "Last Follow-Up Sent" not in changed
     assert changed["Synced Follow-Ups Sent"] == {"number": 1}
+    assert changed["Safe Next Due"]["date"]["start"] == "2026-10-24T19:59:00+01:00"
 
 
-def test_second_dropdown_send_replaces_first_send_timestamp():
-    page = row(stage="Contacted", sent="2", synced=1, last_sent="2026-10-17T10:00:00+01:00")
-    page["last_edited_time"] = "2026-10-24T17:00:01Z"
+def test_legacy_first_date_backfills_without_inventing_new_date():
+    changed = sync.get_changes(
+        row(stage="Contacted", sent="1", synced=1, last_sent="2026-10-16"),
+        date(2026, 10, 19),
+    )
+    assert changed["Follow-Up 1 Sent At"] == {"date": {"start": "2026-10-16"}}
+    assert changed["Safe Next Due"] == {"date": {"start": "2026-10-22T00:00:00+01:00"}}
+    assert "Last Follow-Up Sent" not in changed
+
+
+def test_date_only_history_waits_through_full_fifth_day():
+    page = row(stage="Contacted", sent="1", synced=1, first="2026-10-16")
+    due, status, message = sync.due_and_copy(
+        page["properties"], 1, "2026-10-16", None,
+        datetime.fromisoformat("2026-10-21T17:00:00+01:00"), "second follow-up text")
+    assert due == "2026-10-22T00:00:00+01:00"
+    assert status == "Follow-up 2: waiting"
+    assert message.startswith("WAIT")
+
+
+def test_first_due_date_and_early_copy_are_consistent():
+    page = row(stage="Contacted", sent="0", synced=0)
+    due, status, message = sync.due_and_copy(
+        page["properties"], 0, None, None,
+        datetime.fromisoformat("2026-10-15T12:00:00+01:00"), "follow-up 1 text")
+    assert due == "2026-10-16T00:00:00+01:00"
+    assert status == "Follow-up 1: waiting"
+    assert "follow-up 1 text" not in message
+
+
+def test_second_due_respects_day_eight_and_five_days():
+    page = row(stage="Contacted", sent="1", synced=1, first="2026-10-14T09:00:00+01:00")
+    due, status, message = sync.due_and_copy(
+        page["properties"], 1, "2026-10-14T09:00:00+01:00", None,
+        datetime.fromisoformat("2026-10-20T11:00:00+01:00"), "second DM")
+    assert due == "2026-10-21T00:00:00+01:00"  # Day 8 wins over 5-day gap.
+    assert status.endswith("waiting")
+    assert message.startswith("WAIT")
+
+
+def test_ready_followup_displays_message_at_eligibility():
+    page = row(stage="Contacted", sent="1", synced=1, first="2026-10-19T20:00:00+01:00")
+    due, status, message = sync.due_and_copy(
+        page["properties"], 1, "2026-10-19T20:00:00+01:00", None,
+        datetime.fromisoformat("2026-10-24T20:00:00+01:00"), "second DM")
+    assert due == "2026-10-24T20:00:00+01:00"
+    assert status == "Follow-up 2: ready"
+    assert message == "second DM"
+
+
+def test_second_dropdown_send_preserves_first_and_records_second():
+    page = row(stage="Contacted", sent="2", synced=1, first="2026-10-17T10:00:00+01:00",
+               last_sent="2026-10-17T10:00:00+01:00", formula="")
     changed = sync.get_changes(page, datetime.fromisoformat("2026-10-24T18:01:00+01:00"))
+    assert "Follow-Up 1 Sent At" not in changed
+    assert changed["Follow-Up 2 Sent At"] == {"date": {"start": "2026-10-24T18:01:00+01:00"}}
     assert changed["Last Follow-Up Sent"] == {"date": {"start": "2026-10-24T18:01:00+01:00"}}
+    assert changed["Copy Follow-Up"] == {"rich_text": []}
 
 
-def test_second_native_button_send_preserves_exact_timestamp():
-    page = row(stage="Contacted", sent="2", synced=1, last_sent="2026-10-24T17:59:50+01:00")
+def test_second_button_timestamp_is_not_overwritten():
+    page = row(stage="Contacted", sent="2", synced=1,
+               first="2026-10-17T10:00:00+01:00",
+               second="2026-10-24T17:59:50+01:00", last_sent="2026-10-24T17:59:50+01:00")
     page["last_edited_time"] = "2026-10-24T16:59:50Z"
     changed = sync.get_changes(page, datetime.fromisoformat("2026-10-24T18:01:00+01:00"))
+    assert "Follow-Up 2 Sent At" not in changed
     assert "Last Follow-Up Sent" not in changed
-    assert changed["Synced Follow-Ups Sent"] == {"number": 2}
 
 
-def test_reversing_count_clears_stale_timestamp():
+def test_counter_reversal_keeps_history_and_blocks_copy():
+    page = row(stage="Contacted", sent="1", synced=2,
+               first="2026-10-19", second="2026-10-24", last_sent="2026-10-24")
+    changed = sync.get_changes(page, date(2026, 10, 25))
+    assert "Follow-Up 1 Sent At" not in changed
+    assert "Follow-Up 2 Sent At" not in changed
+    assert "Last Follow-Up Sent" not in changed
+    assert "count" in get_copy(changed).lower()
+    assert changed["Safe Next Due"] == {"date": None}
+
+
+def test_missed_multiple_counter_increments_hold_for_review():
+    changed = sync.get_changes(row(stage="Contacted", sent="2", synced=0), date(2026, 10, 25))
+    assert "Follow-Up 1 Sent At" not in changed
+    assert "Follow-Up 2 Sent At" not in changed
+    assert changed["Follow-Up Timing"]["rich_text"][0]["text"]["content"] == "Needs count review"
+
+
+def test_missing_contact_date_blocks_copy():
     changed = sync.get_changes(
-        row(stage="Contacted", sent="1", synced=2, last_sent="2026-10-19"),
-        date(2026, 10, 19),
-    )
-    assert changed["Last Follow-Up Sent"] == {"date": None}
-    assert changed["Copy Follow-Up"]["rich_text"][0]["text"]["content"] == sync.MISSING_SEND_DATE
+        row(stage="Contacted", sent="0", synced=0, contacted=None), date(2026, 10, 19))
+    assert get_copy(changed) == sync.MISSING_CONTACT_DATE
 
 
-def test_missing_contact_date_blocks_followup_copy():
-    changed = sync.get_changes(
-        row(stage="Contacted", sent="0", synced=0, contacted=None),
-        date(2026, 10, 19),
-    )
-    assert changed["Copy Follow-Up"]["rich_text"][0]["text"]["content"] == sync.MISSING_CONTACT_DATE
-
-
-def test_replied_stage_is_not_blocked_by_missing_send_date():
+def test_replied_stage_preserves_reply_template():
     changed = sync.get_changes(row(stage="Replied", sent="1", synced=1), date(2026, 10, 19))
-    assert changed["Copy Follow-Up"]["rich_text"][0]["text"]["content"] == "next DM"
+    assert get_copy(changed) == "next DM"
 
+
+def test_idempotent_no_change_when_fields_synced():
+    page = row(stage="Replied", sent="1", synced=1, copied="next DM", timing="Not in follow-up queue")
+    assert sync.get_changes(page, date(2026, 10, 19)) == {}
 
 
 
