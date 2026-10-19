@@ -70,7 +70,7 @@ test("Home never shows the previous account's training after an account switch",
     await act(async () => { await new Promise(resolve => setTimeout(resolve, 0)); });
     // B's read has not returned: nothing from A, and no claims about B either.
     assert.doesNotMatch(strip(), /1 session/);
-    assert.match(strip(), /Last 7 days—/);
+    assert.match(strip(), /Last 7 daysNone/);
     assert.doesNotMatch(host.textContent ?? "", /Logged today|Boxing · Pads/);
   } finally {
     act(() => root.unmount());
