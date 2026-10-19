@@ -42,11 +42,22 @@ export function ExercisePrescriptionEditor({ initial, action, busy, coaching, pa
   children?: ReactNode;
 }) {
   const [dose, setDose] = useState(initial);
+  // A later starting dose (history arriving after the editor opened) is taken
+  // only while the athlete has not changed anything; their input is never reset.
+  const [touched, setTouched] = useState(false);
+  const [baseline, setBaseline] = useState(initial);
+  if (!touched && initial !== baseline && JSON.stringify(initial) !== JSON.stringify(baseline)) {
+    setBaseline(initial);
+    setDose(initial);
+  }
   const [cueText, setCueText] = useState((coaching?.coaching_cues ?? []).join("\n"));
   const [easierText, setEasierText] = useState((coaching?.regression_options ?? []).join("\n"));
   const [progressText, setProgressText] = useState(coaching?.progression_rule ?? "");
   const [stopText, setStopText] = useState((coaching?.stop_rules ?? []).join("\n"));
-  const update = (field: keyof DoseDraft, value: DoseDraft[keyof DoseDraft]) => setDose(current => ({ ...current, [field]: value }));
+  const update = (field: keyof DoseDraft, value: DoseDraft[keyof DoseDraft]) => {
+    setTouched(true);
+    setDose(current => ({ ...current, [field]: value }));
+  };
   function number(field: "sets" | "reps" | "rounds" | "rpe", label: string, max: number, optional = false) {
     return <label className={styles.doseField}><span>{label}</span><input aria-label={label}
       type="number" inputMode="decimal" min={1} max={max} step={field === "rpe" ? 0.5 : 1}
@@ -68,10 +79,13 @@ export function ExercisePrescriptionEditor({ initial, action, busy, coaching, pa
     } : undefined);
   }}>
     <label className={styles.formatField}><span className="sr-only">Dose format</span>
-      <select aria-label="Dose format" value={dose.mode} onChange={e => setDose({
-        mode: e.target.value as DoseDraft["mode"], rest_seconds: dose.rest_seconds,
-        load_or_intensity: dose.load_or_intensity, rpe: dose.rpe, distance_unit: "m",
-      })}>
+      <select aria-label="Dose format" value={dose.mode} onChange={e => {
+        setTouched(true);
+        setDose({
+          mode: e.target.value as DoseDraft["mode"], rest_seconds: dose.rest_seconds,
+          load_or_intensity: dose.load_or_intensity, rpe: dose.rpe, distance_unit: "m",
+        });
+      }}>
         <option value="reps">Sets × reps</option><option value="duration">Time / hold</option>
         <option value="intervals">Intervals / rounds</option><option value="distance">Distance</option>
         <option value="text">Drill instructions</option>

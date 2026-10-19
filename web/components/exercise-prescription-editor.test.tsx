@@ -143,3 +143,31 @@ test("timed work and existing text open on free text, an existing weight opens o
     host.remove();
   }
 });
+
+
+test("history arriving after the editor opens fills an untouched dose but never resets typed input", async () => {
+  const host = document.createElement("div");
+  document.body.appendChild(host);
+  const root = createRoot(host);
+  const value = (label: string) => host.querySelector<HTMLInputElement>(`[aria-label="${label}"]`)!.value;
+  const render = (initial: Parameters<typeof ExercisePrescriptionEditor>[0]["initial"]) =>
+    act(async () => root.render(<ExercisePrescriptionEditor initial={initial} action="Add" busy={false} onSubmit={() => {}} />));
+  try {
+    await render({ mode: "reps" });
+    await render({ mode: "reps", sets: 4, reps: 6, load_or_intensity: "80 kg" });
+    assert.equal(value("Sets"), "4");
+    assert.equal(value("Weight"), "80");
+    const reps = host.querySelector<HTMLInputElement>('[aria-label="Reps"]')!;
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value")!.set!.call(reps, "10");
+      reps.dispatchEvent(new window.Event("input", { bubbles: true }));
+    });
+    await render({ mode: "reps", sets: 5, reps: 5, load_or_intensity: "90 kg" });
+    assert.equal(value("Reps"), "10");
+    assert.equal(value("Sets"), "4");
+    assert.equal(value("Weight"), "80");
+  } finally {
+    await act(async () => root.unmount());
+    host.remove();
+  }
+});

@@ -611,8 +611,6 @@ function ExerciseOptionsSheet({
                 ) : null}
                 {dosing === option.catalogue_id ? (
                   <ExercisePrescriptionEditor
-                    // History arriving after the editor opens refills it once.
-                    key={past ? "past" : "loading"}
                     initial={withPastDose({ ...option.suggested_dose, mode: option.dose_mode ?? "text" } as DoseDraft, past?.get(option.exercise_key))}
                     past={past?.get(option.exercise_key)}
                     busy={pending === option.catalogue_id}
