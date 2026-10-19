@@ -2815,6 +2815,22 @@ class FakeStore(InMemoryNotificationLedger, FullRowStatusReads):
             and str(row.get("training_day")) == training_day
         ]
 
+    def list_exercise_index_page(self, athlete_id: str, *, as_of: str, after_id: str | None,
+                                 limit: int = 500) -> list[dict]:
+        rows = [dict(row) for row in self.exercise_logs if row["athlete_id"] == athlete_id
+                and row.get("status") != "skipped" and row.get("created_at", "") <= as_of
+                and (after_id is None or row["id"] > after_id)]
+        return sorted(rows, key=lambda row: row["id"])[:limit]
+
+    def list_exercise_performances(self, athlete_id: str, *, exercise_key: str | None, log_id: str | None,
+                                   as_of: str, before_day: str | None, before_id: str | None,
+                                   limit: int = 31) -> list[dict]:
+        rows = [dict(row) for row in self.exercise_logs if row["athlete_id"] == athlete_id
+                and row.get("created_at", "") <= as_of
+                and (row.get("exercise_key") == exercise_key if exercise_key is not None else row["id"] == log_id)
+                and (before_day is None or (row["training_day"], row["id"]) < (before_day, before_id))]
+        return sorted(rows, key=lambda row: (row["training_day"], row["id"]), reverse=True)[:limit]
+
     def list_exercise_history(self, athlete_id: str, *, before_day: str | None = None,
                               limit: int = 50, offset: int = 0) -> list[dict]:
         rows = [dict(row) for row in self.exercise_logs if row["athlete_id"] == athlete_id

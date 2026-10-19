@@ -1,0 +1,15 @@
+.library { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.library .card { padding: 0; min-width: 0; overflow: hidden; }
+.open { display: flex; flex-direction: column; gap: 8px; width: 100%; height: 100%; padding: 18px 20px; border: 0; border-radius: inherit; background: transparent; color: var(--text-primary); text-align: left; font: inherit; cursor: pointer; }
+.open:hover { background: color-mix(in srgb, var(--text-primary) 3%, transparent); }
+.open:focus-visible { outline: 2px solid var(--brand-red); outline-offset: -3px; }
+.cardHeading { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; width: 100%; }
+.chevron { color: var(--text-muted); font-size: 24px; }
+.resultLabel { margin: 4px 0 0; color: var(--text-muted); font-size: 12px; line-height: 1.5; }
+.result { font-size: clamp(20px, 3vw, 28px); font-weight: 750; line-height: 1.25; overflow-wrap: anywhere; }
+.date { margin-top: 4px; color: var(--text-muted); font-size: 12px; }
+.scope { margin: 0 0 16px; color: var(--text-muted); font-size: 13px; line-height: 1.6; }
+.legacy { margin-top: 28px; }
+.legacy h2 { margin-bottom: 8px; font-size: 16px; }
+.detailResult { display: block; margin-top: 6px; font-size: 26px; line-height: 1.3; overflow-wrap: anywhere; }
+@media (max-width: 700px) { .library { grid-template-columns: minmax(0, 1fr); } }

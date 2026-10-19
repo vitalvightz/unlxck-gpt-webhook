@@ -5559,6 +5559,24 @@ class SupabaseAppStore(CommunityStoreMixin, PrivateMediaStoreMixin, CompactGener
         )
         return getattr(response, "data", None) or []
 
+    def list_exercise_index_page(self, athlete_id: str, *, as_of: str, after_id: str | None,
+                                 limit: int = 500) -> list[dict[str, Any]]:
+        query = (self.client.table("exercise_logs")
+            .select("id,athlete_id,exercise_key,status,training_day,prescribed,actual")
+            .eq("athlete_id", athlete_id).neq("status", "skipped").lte("created_at", as_of))
+        if after_id:
+            query = query.gt("id", after_id)
+        return _readiness_history_rows(query.order("id").limit(limit).execute())
+
+    def list_exercise_performances(self, athlete_id: str, *, exercise_key: str | None, log_id: str | None,
+                                   as_of: str, before_day: str | None, before_id: str | None,
+                                   limit: int = 31) -> list[dict[str, Any]]:
+        query = self.client.table("exercise_logs").select("*").eq("athlete_id", athlete_id).lte("created_at", as_of)
+        query = query.eq("exercise_key", exercise_key) if exercise_key is not None else query.eq("id", log_id)
+        if before_day and before_id:
+            query = query.or_(f"training_day.lt.{before_day},and(training_day.eq.{before_day},id.lt.{before_id})")
+        return _readiness_history_rows(query.order("training_day", desc=True).order("id", desc=True).limit(limit).execute())
+
     def list_exercise_history(
         self, athlete_id: str, *, before_day: str | None = None, limit: int = 50, offset: int = 0
     ) -> list[dict[str, Any]]:
