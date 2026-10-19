@@ -14,7 +14,7 @@ import {
   type TrainingActivity, type TrainingEffort, type TrainingHistorySession,
 } from "@/lib/training-history";
 import {
-  athleteSport, fitsPicks, sportLabel, trainingLabel, trainingPicks, type TrainingPick, type TrainingSessionType, type TrainingSport,
+  athleteSport, fitsPicks, sportLabel, TRAINING_SPORTS, trainingLabel, trainingPicks, type TrainingPick, type TrainingSessionType, type TrainingSport,
 } from "@/lib/training-disciplines";
 import styles from "./log-training.module.css";
 import { TrainingActionContent } from "./training-action-tile";
@@ -85,6 +85,8 @@ function LogTrainingContent({ accessToken, entry, repeatEntry, recent = false, h
   // Whose session types the Activity grid shows; fixed when the sheet opens.
   const mySport = athleteSport(me?.profile.technical_style);
   const [gridSport, setGridSport] = useState<TrainingSport | null>(null);
+  // A per-session switch; the saved profile sport never changes here.
+  const [sportMenu, setSportMenu] = useState(false);
   const [duration, setDuration] = useState("");
   const [effort, setEffort] = useState<TrainingEffort | "">("");
   const [trainingDay, setTrainingDay] = useState("");
@@ -162,6 +164,7 @@ function LogTrainingContent({ accessToken, entry, repeatEntry, recent = false, h
     setRepeating(repeat);
     setSourceLabel(source);
     setDetailsOpen(false);
+    setSportMenu(false);
     setCustomDuration(row?.duration_minutes != null && !DURATION_PICKS.includes(row.duration_minutes));
     // Records keep exactly what was stored until the athlete changes it. An
     // older Boxing or Sparring record without a sport opens in the original grid.
@@ -220,9 +223,25 @@ function LogTrainingContent({ accessToken, entry, repeatEntry, recent = false, h
     if (pick.activity !== activity || pick.sport !== sport || pick.session_type !== sessionType) requestId.current = null;
     setActivity(pick.activity); setSport(pick.sport); setSessionType(pick.session_type);
   }
+  function switchSport(next: TrainingSport | null) {
+    setSportMenu(false);
+    if (next === gridSport) return;
+    setGridSport(next);
+    // A session type of the old sport no longer fits; strength, roadwork and the rest carry over.
+    if (sport) { setActivity(""); setSport(null); setSessionType(null); requestId.current = null; }
+    requestAnimationFrame(() => dialog.current?.querySelector<HTMLButtonElement>("[data-activity]")?.focus());
+  }
   const activityAndDuration = <>
     <fieldset className={styles.fieldset} disabled={busy} aria-label="Activity">
-      <legend>Activity</legend>
+      <legend className={styles.activityLegend}>Activity
+        <button type="button" className={styles.sportSwitch} aria-expanded={sportMenu} aria-controls={`${fieldId}-sports`}
+          aria-label={`Change sport for this session. Currently ${gridSport ? sportLabel(gridSport) : "no sport"}`}
+          onClick={() => setSportMenu(value => !value)}>{gridSport ? sportLabel(gridSport) : "No sport"} · Change</button>
+      </legend>
+      {sportMenu ? <div className={styles.sportMenu} id={`${fieldId}-sports`} role="group" aria-label="Sport for this session">
+        {[...TRAINING_SPORTS, null].map(value => <button key={value ?? "none"} type="button" aria-pressed={gridSport === value}
+          onClick={() => switchSport(value)}>{value ? sportLabel(value) : "No sport"}</button>)}
+      </div> : null}
       <div className={styles.activityGrid}>
         {trainingPicks(gridSport).map(pick => <button key={pick.label} type="button" data-activity
           aria-pressed={activity === pick.activity && sport === pick.sport && sessionType === pick.session_type}
