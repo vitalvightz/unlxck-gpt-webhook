@@ -40,56 +40,88 @@ This job keeps the editable **Copy Follow-Up** text equal to the existing **Foll
 
 The systemd timer lives on the host and calls the running worker. A run may fail while the worker restarts during backend deployment; the next scheduled run will retry. Confirm Docker is installed at /usr/bin/docker; replace that path if necessary.
 
-## Safe follow-up timestamps and Notion UX
+## Follow-up event history and safe Notion UX
 
-The sync preserves a `Last Follow-Up Sent` date/time already written by Notion.
-If the team only edits the `Follow-Ups Sent` dropdown, the worker records the
-**observation timestamp** (Europe/London, normally within two minutes) when
-it sees a 0 → 1 or 1 → 2 increment. This is not proof of the exact Instagram
-send time. It does not backdate first-observed historical records.
+The Notion outreach data source now has four additive properties:
 
-**Recommended one-tap Notion setup (manual, not installed by this PR):**
+- `Follow-Up 1 Sent At` and `Follow-Up 2 Sent At`: separate event times.
+  Never erase either automatically; corrections require checking Instagram.
+- `Safe Next Due`: the worker's materialized next eligible date/time.
+- `Follow-Up Timing`: shows waiting, ready, completed or needs review.
 
-1. In the outreach database, add a database **Button** property labelled
-   `Mark sent` to the Contacted follow-up view.
-2. Configure a confirmation: `I have sent this follow-up in Instagram`.
-3. Configure the button's `Edit property` actions to change
-   `Follow-Ups Sent` to the next count (0 → 1 or 1 → 2) **and**
-   `Last Follow-Up Sent` to `Now`. If your Notion button editor cannot
-   compute the next select value, use two labelled buttons
-   (`Sent follow-up 1` and `Sent follow-up 2`), each with both edits.
-   Do not configure a button that only updates the count.
-4. Only click after the Instagram message is actually sent, and only while
-   Stage is `Contacted`. A Notion button does **not** send the Instagram DM.
-   Test both transitions on a test page before using the button with real leads.
-5. Keep the existing two-minute worker; its count sync remains a backstop for
-   legacy dropdown edits and it must not overwrite the button's timestamp.
+Existing `Last Follow-Up Sent` remains only for legacy compatibility.
+When a row has exactly one follow-up, the worker can copy its legacy date to
+the new first-send property. When it has two, the legacy last-send value can
+only populate the second-send property; the first date is **not inferred**.
+Pre-existing cases without send dates remain unverified.
 
-**Historical exception queue:** the Notion view `3C. MISSING SEND DATE` shows
-Contacted leads where `Follow-Ups Sent = 1` but `Last Follow-Up Sent` is empty.
-Verify each actual send date in Instagram, then enter it manually.
-The copyable `Copy Follow-Up` field shows a check-the-date instruction rather
-than follow-up 2 until this is fixed. A Contacted record without `Date Contacted`
-also displays a clear instruction instead of sendable copy.
+### Sending and Notion button configuration
 
-A counter reversal clears its stale last-send timestamp; verify the corrected
-state. Stage history timestamps and follow-up send timestamps represent
-different events and must not be conflated.
+A **Notion button must be configured manually**; this PR does not create it.
+For reliability, two explicit actions are preferable to a dynamic counter:
 
-**Eligibility:** first follow-up is Day 3 after contact; second follow-up is
-no earlier than both Day 8 after contact **and** five full days after the
-verified first follow-up send. Do not invent historical dates or schedule an
-unverified second send simply to fill a blank calendar cell. Stopped/replied/
-accepted/completed outreach should not receive further follow-up dates.
-The worker deliberately does not change the existing Notion date formulas.
+1. On the pipeline database, create buttons `Sent follow-up 1` and
+   `Sent follow-up 2`, and show them only in an operator view (the buttons
+   are not hard access controls). Each has a confirmation action.
+2. `Sent follow-up 1` updates `Follow-Ups Sent = 1`,
+   `Follow-Up 1 Sent At = Now`, and `Last Follow-Up Sent = Now`.
+   `Sent follow-up 2` updates `Follow-Ups Sent = 2`,
+   `Follow-Up 2 Sent At = Now`, and `Last Follow-Up Sent = Now`.
+3. **Only click after the corresponding Instagram DM was actually sent.**
+   Do not use the buttons if `Follow-Up Timing` is not `...: ready`.
+   The button does not send Instagram messages or enforce eligibility itself.
+4. Never click the same follow-up button twice. Test both actions on a test
+   record, then verify the individual timestamps and `Safe Next Due`.
+
+The worker preserves explicitly provided event times. On a legacy dropdown
+change, it records the time **the poll observed the increase** instead,
+normally within two minutes, without pretending that is the Instagram send
+time. A missed 0 → 2 jump is flagged, never backfilled with fabricated times.
+A reversed count retains both history fields and raises a review status.
+
+### Eligibility and what operators see
+
+- Follow-up 1: three calendar days after `Date Contacted`.
+- Follow-up 2: **later of** Day 8 after initial contact and 120 elapsed
+  hours after the recorded first send. For a *date-only* first-send entry,
+  conservatively wait until the beginning of the sixth calendar day after it.
+- If not yet eligible, `Copy Follow-Up` says **WAIT**; it contains no
+  sendable script. If the date is missing or the counter conflicts with
+  history, it says **NEEDS DATE** or **NEEDS REVIEW**.
+- Once eligible, `Copy Follow-Up` contains the existing calculated DM.
+- At two sends, `Copy Follow-Up` becomes empty and `Safe Next Due` is
+  empty. Replied and Accepted use their existing distinct response templates;
+  there is no automatic outbound follow-up due.
+- A blank `Safe Next Due` is **correct** for terminal or blocked records;
+  the `Follow-Up Timing` field explains the reason.
+
+Use `Safe Next Due` and `Follow-Up Timing` as the two operator-facing
+scheduling properties; hide the older formula-based `Actual Next Due`,
+`Next Follow-Up Due`, `Follow-Up DM`, and `Next DM to Copy` from the
+sending view. Those existing formulas are retained for compatibility and
+may not know about the safety guard: **never send directly from them**.
+The Notion `3C. MISSING SEND DATE` view isolates the historical exceptions.
+Verify each first-send date against Instagram and fill in
+`Follow-Up 1 Sent At` (or legacy `Last Follow-Up Sent` while still at
+count 1), rather than assigning today's date.
+
+### Deployment verification
+
+The additive Notion schema changes were made before this PR was merged; the
+previous worker ignores the new fields. Merge and deploy the worker before
+switching the operator view from its existing `Actual Next Due` to
+`Safe Next Due`. Once deployed, confirm a complete cron run and check
+sample records for waiting/ready/blocked/complete states and event dates.
+Disable any older Notion automation overwriting `Copy Follow-Up`.
+No additional poller, Notion token, or separate scheduling service is needed.
 
 ## Behavior
 
-- Follow-Ups Sent 0 → 1: update the copyable DM, mark the count as synced, and write the observed follow-up timestamp only if a date was not already set.
-- Follow-Ups Sent 1 → 2: clear the DM when the formula says the sales sequence is over.
+- Follow-Ups Sent 0 → 1: set the first-send timestamp only if unknown and this is a consecutive observed increase; compute the next safe due time and show WAIT until eligible.
+- Follow-Ups Sent 1 → 2: preserve the first event, store the second event separately, clear the follow-up copy and safe due date.
 - Replied and Accepted use the existing distinct Notion formula branches. Activated uses the existing feedback prompt.
 - Follow-up copy stays unchanged for Rejected/Inactive and the AI queue. The stage-history pass observes every pipeline stage, including records without Date Contacted.
-- On first execution, a record with an unknown historical send date is **not assigned today's date**. The job flags it in Copy Follow-Up and reports the exception count. Date/time is only recorded for count increases observed *after* baseline sync, unless a Notion button has already supplied a more exact timestamp.
+- On first execution, a record with an unknown historical send date is **not assigned today's date**. The job flags it in Copy Follow-Up and reports the exception count. Date/time is only recorded for *consecutive* count increases observed after baseline sync unless a Notion button supplied the event time.
 - The hidden server-owned field **Synced Follow-Ups Sent** distinguishes first observation from later changes. Do not manually edit it.
 - Once this server job runs successfully, disable the existing Notion copy-text-sync automation so two systems do not overwrite the same field.
 - Only one timer should run at a time. Errors are reported to the systemd journal and are retried at the next scheduled run.
