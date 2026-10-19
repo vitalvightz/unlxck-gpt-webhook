@@ -134,7 +134,7 @@ def test_future_work_holds_and_saved_history_is_not_rewritten(mutation):
     assert bundle[0].session_completions[bundle[3]][0]["prescription_snapshot"] == snapshot
 
 
-@pytest.mark.parametrize("status,performance", [("done","done_as_shown"),("modified","changed"),("skipped",None),("done","skipped")])
+@pytest.mark.parametrize("status,performance", [("done","done_as_shown"),("modified","done_as_shown"),("modified","changed"),("skipped",None),("done","skipped")])
 def test_simple_completion_records_actual_work_only(status, performance):
     from api.services.rehab_completion_service import build_rehab_response_contexts, record_reported_permission_rehab
     bundle = activation_bundle()
@@ -147,10 +147,20 @@ def test_simple_completion_records_actual_work_only(status, performance):
         assert not events
     else:
         assert len(events) == 1 and events[0].response.during_response == "not_reported"
-        if status == "done":
+        if performance == "done_as_shown":
+            # Rehab confirmed as shown counts even when another block was skipped.
             assert events[0].dose_completed.reps == 10
         else:
             assert events[0].dose_completed.reps is None
+
+
+@pytest.mark.parametrize("status", ["started", "skipped"])
+def test_done_as_shown_still_needs_finished_work(status):
+    bundle = activation_bundle()
+    live = view(bundle).live_prescription
+    with pytest.raises(HTTPException) as exc:
+        execute(bundle, live, status, rehab_performance="done_as_shown", modification_reason="Ran out of time")
+    assert exc.value.status_code == 422
 
 
 def test_started_and_completed_snapshots_survive_permission_change():

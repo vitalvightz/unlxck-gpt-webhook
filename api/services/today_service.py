@@ -1602,7 +1602,9 @@ def upsert_session_completion(
                 work_state="started" if existing.get("status") == "started" else "unstarted",
                 as_of=now or datetime.now(timezone.utc)):
             raise HTTPException(409, "The clinical review or prescribed work changed. Stop and refresh Today.")
-    if performance == "done_as_shown" and (not frozen or status_value != "done"):
+    # The rehab answer is about the rehab block. A session saved as modified
+    # because a different block was skipped can still have its rehab done as shown.
+    if performance == "done_as_shown" and (not frozen or status_value not in {"done", "modified"}):
         raise HTTPException(422, "Confirm rehab as shown only for a completed, saved prescription.")
     if (status_value == "done" and frozen and any(b.get("block_type") == "rehab" for b in frozen.get("session", {}).get("blocks", []))
             and performance not in {"done_as_shown", "changed", "stopped", "skipped"}):

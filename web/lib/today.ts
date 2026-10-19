@@ -34,6 +34,17 @@ export function hasActivePlan(plan: TodayActivePlan | null | undefined): boolean
   return Boolean(plan?.id);
 }
 
+// The backend appends structured fail-safe signals to Today's warnings for
+// machines ("readiness_context_status=…", "reason_code:…"). The fail-safe
+// itself is shown through the decision; only prose is for the athlete.
+const MACHINE_WARNING_PREFIXES = ["readiness_context_status=", "reason_code:"];
+
+export function getAthleteWarnings(warnings: readonly string[] | null | undefined): string[] {
+  return (warnings ?? []).filter(
+    (warning) => !MACHINE_WARNING_PREFIXES.some((prefix) => warning.startsWith(prefix)),
+  );
+}
+
 /** The daily check-in is due for every athlete, with or without a plan. */
 export function shouldShowTodayCheckin(state: TodayCommandView): boolean {
   return state.today.recommendation_state === "not_checked_in";

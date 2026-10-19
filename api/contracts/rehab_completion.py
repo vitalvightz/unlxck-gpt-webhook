@@ -297,11 +297,13 @@ def completed_dose_from_session(
     """The clearest defensible statement of what was actually done.
 
     Only the explicit "done as shown" answer on a frozen server prescription
-    confirms its dose. Ordinary completion leaves the performed amount unknown.
+    confirms its dose. That answer covers the rehab block, so it holds when the
+    session was modified elsewhere. Ordinary completion leaves the performed
+    amount unknown.
     """
     status = _lower((completion or {}).get("status"))
     performance = (completion or {}).get("rehab_performance")
-    if status == "done" and performance == "done_as_shown" and (completion or {}).get("prescription_snapshot"):
+    if status in {"done", "modified"} and performance == "done_as_shown" and (completion or {}).get("prescription_snapshot"):
         dose = _prescribed_dose(prescribed)
         if dose is not None:
             return ExposureDose(**dose.model_dump(exclude_none=True, exclude={"completion_state"}), completion_state="quantified")

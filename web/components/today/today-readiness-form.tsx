@@ -7,7 +7,7 @@ import { SegmentGroup } from "@/components/today/segment-group";
 import { useToast } from "@/components/toast-provider";
 import { submitTodayCheckin } from "@/lib/api";
 import { TODAY_RED_FLAG_SAFETY } from "@/lib/safety-copy";
-import { buildTodayCheckinPayload, getRecommendationCopy } from "@/lib/today";
+import { buildTodayCheckinPayload, getAthleteWarnings, getRecommendationCopy } from "@/lib/today";
 import type {
   TodayActiveInjury,
   TodayActivePlan,
@@ -100,6 +100,7 @@ export function TodayReadinessForm({
     worse_next_day_pain: false,
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [inlineWarning] = getAthleteWarnings(warnings);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -125,8 +126,9 @@ export function TodayReadinessForm({
       showToast(plan ? `Recommendation: ${getRecommendationCopy(response.recommendation_state).label}.` : "Check-in saved.", {
         tone: response.recommendation_state === "pull_back" ? "info" : "success",
       });
-      if (response.warnings?.length) {
-        showToast(response.warnings[0], { tone: "info" });
+      const [responseWarning] = getAthleteWarnings(response.warnings);
+      if (responseWarning) {
+        showToast(responseWarning, { tone: "info" });
       }
       await onRefresh();
     } catch (error) {
@@ -160,8 +162,8 @@ export function TodayReadinessForm({
           options={PREVIOUS_SESSION_OPTIONS}
           onChange={setPreviousSession}
         />
-        {warnings?.length ? (
-          <p className="today-inline-warning" role="status">{warnings[0]}</p>
+        {inlineWarning ? (
+          <p className="today-inline-warning" role="status">{inlineWarning}</p>
         ) : null}
 
         <details className="today-red-flags">
