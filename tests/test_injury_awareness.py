@@ -119,3 +119,14 @@ def test_side_is_not_doubled_when_area_already_names_it():
     )
     assert records == [{"area": "left bicep", "injury_type": "cut"}]
     assert awareness_plan_note(records)["text"].startswith("Left bicep cut is logged")
+
+
+def test_bilateral_injury_note_uses_plural_grammar():
+    from fightcamp.injury_awareness import awareness_plan_note, build_injury_awareness
+
+    records = build_injury_awareness(
+        [{"guided_area": "knee", "side": "bilateral", "injury_type": "", "training_impact": "not_limiting"}]
+    )
+    text = awareness_plan_note(records)["text"]
+    assert text.startswith("Both knees are logged as not limiting, so they do not change")
+    assert "Warm them up properly, keep an eye on them," in text
