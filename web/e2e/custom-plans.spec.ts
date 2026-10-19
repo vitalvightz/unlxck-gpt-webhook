@@ -49,7 +49,7 @@ for (const width of [320, 390, 1280]) {
     await page.getByLabel("Sets", { exact: true }).fill("4");
     await page.getByLabel("Reps", { exact: true }).fill("8");
     await page.getByLabel("Rest (sec)", { exact: true }).fill("120");
-    await page.getByLabel("Load or intensity", { exact: true }).fill("80 kg");
+    await page.getByLabel("Weight", { exact: true }).fill("80");
     await page.getByRole("button", { name: "Done", exact: true }).click();
     await page.getByRole("button", { name: "Add exercise to Strength", exact: true }).click();
     await page.getByRole("button", { name: "Create my exercise", exact: true }).click();

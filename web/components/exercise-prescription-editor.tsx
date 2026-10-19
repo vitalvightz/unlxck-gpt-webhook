@@ -3,6 +3,9 @@
 import { useState, type ReactNode } from "react";
 import type { ExerciseChangeDose } from "@/lib/types";
 import { finishedDose, validDose, type DoseDraft } from "@/lib/exercise-dose";
+import type { PersonalExercise } from "@/lib/api-schema.generated";
+import { pastLoad, weighedFormat } from "@/lib/load-entry";
+import { LoadField } from "./load-field";
 import styles from "./exercise-customisation.module.css";
 
 /** The coaching copy a rendered card shows: cues, Easier, Progress and the stop rule. */
@@ -30,18 +33,31 @@ function TimeField({ label, value, onChange, rest = false }: {
 const lines = (text: string) => text.split("\n").map(s => s.trim()).filter(Boolean);
 
 /** The same prescription editor for Add, Swap and an existing rendered card. */
-export function ExercisePrescriptionEditor({ initial, action, busy, coaching, onSubmit, children }: {
+export function ExercisePrescriptionEditor({ initial, action, busy, coaching, past, onSubmit, children }: {
   initial: DoseDraft; action: string; busy: boolean; coaching?: ExerciseCoaching;
+  /** The athlete's own record of this exercise: last weight and whether it is weighed. */
+  past?: PersonalExercise | null;
   onSubmit: (dose: ExerciseChangeDose, coaching?: ExerciseCoaching) => void;
   /** Rendered just above the submit button (e.g. which workouts to apply to). */
   children?: ReactNode;
 }) {
   const [dose, setDose] = useState(initial);
+  // A later starting dose (history arriving after the editor opened) is taken
+  // only while the athlete has not changed anything; their input is never reset.
+  const [touched, setTouched] = useState(false);
+  const [baseline, setBaseline] = useState(initial);
+  if (!touched && initial !== baseline && JSON.stringify(initial) !== JSON.stringify(baseline)) {
+    setBaseline(initial);
+    setDose(initial);
+  }
   const [cueText, setCueText] = useState((coaching?.coaching_cues ?? []).join("\n"));
   const [easierText, setEasierText] = useState((coaching?.regression_options ?? []).join("\n"));
   const [progressText, setProgressText] = useState(coaching?.progression_rule ?? "");
   const [stopText, setStopText] = useState((coaching?.stop_rules ?? []).join("\n"));
-  const update = (field: keyof DoseDraft, value: DoseDraft[keyof DoseDraft]) => setDose(current => ({ ...current, [field]: value }));
+  const update = (field: keyof DoseDraft, value: DoseDraft[keyof DoseDraft]) => {
+    setTouched(true);
+    setDose(current => ({ ...current, [field]: value }));
+  };
   function number(field: "sets" | "reps" | "rounds" | "rpe", label: string, max: number, optional = false) {
     return <label className={styles.doseField}><span>{label}</span><input aria-label={label}
       type="number" inputMode="decimal" min={1} max={max} step={field === "rpe" ? 0.5 : 1}
@@ -63,10 +79,13 @@ export function ExercisePrescriptionEditor({ initial, action, busy, coaching, on
     } : undefined);
   }}>
     <label className={styles.formatField}><span className="sr-only">Dose format</span>
-      <select aria-label="Dose format" value={dose.mode} onChange={e => setDose({
-        mode: e.target.value as DoseDraft["mode"], rest_seconds: dose.rest_seconds,
-        load_or_intensity: dose.load_or_intensity, rpe: dose.rpe, distance_unit: "m",
-      })}>
+      <select aria-label="Dose format" value={dose.mode} onChange={e => {
+        setTouched(true);
+        setDose({
+          mode: e.target.value as DoseDraft["mode"], rest_seconds: dose.rest_seconds,
+          load_or_intensity: dose.load_or_intensity, rpe: dose.rpe, distance_unit: "m",
+        });
+      }}>
         <option value="reps">Sets × reps</option><option value="duration">Time / hold</option>
         <option value="intervals">Intervals / rounds</option><option value="distance">Distance</option>
         <option value="text">Drill instructions</option>
@@ -96,9 +115,8 @@ export function ExercisePrescriptionEditor({ initial, action, busy, coaching, on
     <details className={styles.advanced}>
       <summary><span>Load &amp; effort</span>{effortSummary ? <small>{effortSummary}</small> : null}</summary>
       <div className={styles.groupBody}>
-        <label className={`${styles.doseField} ${styles.textField}`}><span>Weight / intensity</span>
-          <input aria-label="Weight or intensity" maxLength={80} placeholder="e.g. 20 kg, light band" value={dose.load_or_intensity ?? ""} onChange={e => update("load_or_intensity", e.target.value)} />
-        </label>
+        <LoadField className={styles.doseField} value={dose.load_or_intensity} weighed={weighedFormat(dose.mode, past)}
+          last={pastLoad(past)} onChange={text => update("load_or_intensity", text)} />
         <div className={styles.pairGrid}>
           {number("rpe", "RPE (optional)", 10, true)}
           {dose.mode === "reps" ? <label className={`${styles.doseField} ${styles.textField}`}><span>Tempo</span>

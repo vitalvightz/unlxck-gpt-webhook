@@ -5,6 +5,8 @@ import Link from "next/link";
 
 import { ExerciseDemo } from "@/components/exercise-demo";
 import { ExercisePrescriptionEditor } from "@/components/exercise-prescription-editor";
+import { usePastExercises } from "@/components/load-field";
+import { withPastDose } from "@/lib/load-entry";
 import { doseFromBlock, finishedDose, type DoseDraft } from "@/lib/exercise-dose";
 import { useToast } from "@/components/toast-provider";
 import { InjuryDetailSheet } from "@/components/today/injury-detail-sheet";
@@ -180,6 +182,8 @@ export function ExerciseActions({ block, title }: { block: StructuredBlock; titl
   const [error, setError] = useState<string | null>(null);
   const [editScope, setEditScope] = useState<"occurrence" | "future">("occurrence");
   const { apply, restore } = useExerciseChange(scope);
+  // Read only once Edit opens, for last time's weight.
+  const past = usePastExercises(panel === "edit" ? scope?.customisation.token : null);
   if (!scope || !isCustomisableBlock(block)) return null;
   const change = block.athlete_change;
   const blockId = cleanText(block.block_id)!;
@@ -324,6 +328,7 @@ export function ExerciseActions({ block, title }: { block: StructuredBlock; titl
               <span className="ex-row-meta">{block.block_type?.replaceAll("_", " ")}</span>
             </span></div>
             <ExercisePrescriptionEditor initial={doseFromBlock(block)} busy={busy} action="Save changes"
+              past={past?.get(cleanText(block.exercise_key) ?? "")}
               coaching={{
                 coaching_cues: block.coaching_cues ?? [], regression_options: block.regression_options ?? [],
                 progression_rule: block.progression_rule ?? null, stop_rules: block.stop_rules ?? [],
@@ -446,6 +451,8 @@ function ExerciseOptionsSheet({
   const [search, setSearch] = useState("");
   const [term, setTerm] = useState("");
   const scopeLabelId = useId();
+  // What the athlete did last time fills a prescription the library leaves open.
+  const past = usePastExercises(scope?.customisation.token);
 
   useEffect(() => {
     const timer = window.setTimeout(() => setTerm(search.trim()), 250);
@@ -604,7 +611,8 @@ function ExerciseOptionsSheet({
                 ) : null}
                 {dosing === option.catalogue_id ? (
                   <ExercisePrescriptionEditor
-                    initial={{ ...option.suggested_dose, mode: option.dose_mode ?? "text" } as DoseDraft}
+                    initial={withPastDose({ ...option.suggested_dose, mode: option.dose_mode ?? "text" } as DoseDraft, past?.get(option.exercise_key))}
+                    past={past?.get(option.exercise_key)}
                     busy={pending === option.catalogue_id}
                     action={mode === "swap" ? "Swap" : "Add"}
                     onSubmit={(dose) => void choose(option, dose)}

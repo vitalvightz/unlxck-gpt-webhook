@@ -1,0 +1,97 @@
+.field {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.field .box {
+  display: flex;
+  align-items: stretch;
+  min-width: 0;
+  min-height: 44px;
+  border: 1px solid var(--border-default);
+  border-radius: 10px;
+  background: var(--bg-input);
+}
+
+.field .box:focus-within {
+  border-color: var(--brand-red);
+}
+
+.field .box input {
+  flex: 1 1 0;
+  width: 0;
+  min-width: 0;
+  min-height: 0;
+  padding: 8px 12px;
+  border: 0;
+  border-radius: 10px 0 0 10px;
+  background: transparent;
+  color: var(--text-primary);
+  font: 400 16px/1.2 var(--font-sans);
+  text-align: left;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.field .box[data-mode="weight"] input {
+  font: 500 16px/1.2 var(--font-mono);
+}
+
+.field .box input::placeholder {
+  color: var(--text-muted);
+}
+
+/* The surrounding focus ring is the box's border; no second ring inside it. */
+.field .box input:focus-visible,
+.field .box select:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+
+.field .box select {
+  flex: 0 0 auto;
+  min-width: 48px;
+  padding: 0 8px;
+  border: 0;
+  background: transparent;
+  color: var(--text-secondary);
+  font: 500 13px/1.2 var(--font-sans);
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.field .toggle {
+  flex: 0 0 44px;
+  display: grid;
+  place-items: center;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  border-left: 1px solid var(--border-default);
+  border-radius: 0 10px 10px 0;
+  background: transparent;
+  color: var(--text-muted);
+  font: 500 12px/1 var(--font-sans);
+  text-transform: none;
+  letter-spacing: 0;
+  cursor: pointer;
+}
+
+.field .toggle:hover {
+  color: var(--text-primary);
+}
+
+.field .toggle:focus-visible {
+  outline: 2px solid var(--brand-red);
+  outline-offset: -2px;
+  box-shadow: none;
+}
+
+.field .toggle svg {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
