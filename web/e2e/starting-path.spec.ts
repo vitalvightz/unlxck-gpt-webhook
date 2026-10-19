@@ -196,7 +196,7 @@ for (const width of [320, 390, 1280]) {
     const sizes = await choices.evaluateAll(elements => elements.map(element => element.getBoundingClientRect().height));
     expect(sizes).toHaveLength(2);
     // Building an S&C plan is offered first.
-    await expect(choices.first()).toContainText("Build my training plan");
+    await expect(choices.first()).toContainText("Generate my S&C plan");
     // Slim list rows, not cards: touch-sized, but no taller than a short two-line row.
     expect(sizes.every(size => size >= 44 && size <= 96)).toBe(true);
     await page.screenshot({ path: test.info().outputPath(`choice-${width}.png`) });
@@ -213,8 +213,8 @@ for (const width of [320, 390, 1280]) {
     await expect(page.getByRole("button", { name: "Repeat last session", exact: true })).toHaveCount(0);
     const quickActions = page.getByRole("navigation", { name: "Quick actions" });
     await expect(quickActions.getByRole("link", { name: "Round timer" })).toBeVisible();
-    await expect(quickActions.getByRole("link", { name: "Build S&C plan" })).toBeVisible();
-    await expect(quickActions.getByRole("link", { name: "Build my own plan" })).toHaveAttribute("href", "/plans/custom");
+    await expect(quickActions.getByRole("link", { name: "Generate my S&C plan" })).toBeVisible();
+    await expect(quickActions.getByRole("link", { name: "Build my plan manually" })).toHaveAttribute("href", "/plans/custom");
     // The daily check-in is the same as a planned athlete's, sent plan-free.
     await expect(page.getByRole("list", { name: "Today command status" })).toContainText("Check-in");
     await expect(page.getByRole("list", { name: "Today command status" })).toContainText("Due");
@@ -249,7 +249,7 @@ for (const width of [320, 390, 1280]) {
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
     expect((await new AxeBuilder({ page }).include("main").analyze()).violations).toEqual([]);
     await page.screenshot({ path: test.info().outputPath(`tracking-home-${width}.png`) });
-    await page.getByRole("link", { name: "Build S&C plan" }).first().click();
+    await page.getByRole("link", { name: "Generate my S&C plan" }).first().click();
     await expect(page).toHaveURL(/\/quick-build$/);
     expect(writes[0]).toEqual({ starting_path: "tracking_first" });
     expect(writes[1]).toMatchObject({ activity: "boxing", duration_minutes: 45, effort: "moderate" });
@@ -261,7 +261,7 @@ for (const width of [320, 390, 1280]) {
 test("Saving failure stays on choice and retry saves plan-first", async ({ page, baseURL }) => {
   const writes = await setup(page, baseURL!, { failSave: true });
   await page.goto("/get-started");
-  const plan = page.getByRole("button", { name: /Build my training plan/ });
+  const plan = page.getByRole("button", { name: /Generate my S&C plan/ });
   await plan.click(); await expect(page.getByRole("alert").filter({ hasText: "could not be saved" })).toBeVisible();
   await expect(page).toHaveURL(/\/get-started$/); await expect(plan).toBeEnabled();
   await plan.click(); await expect(page).toHaveURL(/\/quick-build$/);
@@ -358,7 +358,7 @@ for (const width of [320, 390, 1280]) {
     await expect(status).not.toContainText("Not assessed");
     await expect(page.locator("#today-checkin")).toBeVisible();
     await expect(page.getByRole("navigation", { name: "Quick actions" }).getByRole("link", { name: "View plan" })).toHaveAttribute("href", "/plans/plan-9");
-    await expect(page.getByRole("navigation", { name: "Quick actions" }).getByRole("link", { name: "Build my own plan" })).toHaveCount(0);
+    await expect(page.getByRole("navigation", { name: "Quick actions" }).getByRole("link", { name: "Build my plan manually" })).toHaveCount(0);
     // Shared sections are the same components as the no-plan state.
     await expect(page.locator("#today-injury")).toContainText("No injuries tracked.");
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);

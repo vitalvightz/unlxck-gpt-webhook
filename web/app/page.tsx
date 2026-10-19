@@ -630,7 +630,10 @@ export default function HomePage() {
                 {hasActivePlan ? (
                   <Link href={`/plans/${activePlan.id}`} className="secondary-button">{openOngoing ? "Training plan" : "Fight camp"}</Link>
                 ) : tracking ? (
-                  <Link href="/quick-build" className="secondary-button">Build S&amp;C plan</Link>
+                  <>
+                    <Link href="/quick-build" className="secondary-button">Generate my S&amp;C plan</Link>
+                    <Link href="/plans/custom" className="secondary-button">Build my plan manually</Link>
+                  </>
                 ) : (
                   <Link href="/quick-build" className="secondary-button">Quick Build</Link>
                 )}

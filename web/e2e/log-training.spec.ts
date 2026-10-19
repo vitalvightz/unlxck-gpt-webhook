@@ -452,7 +452,7 @@ test("Today logging remains available without an active plan", async ({ page, ba
   }) }));
   const errors: string[] = []; page.on("pageerror", error => errors.push(error.message));
   await page.goto("/today");
-  await expect(page.getByRole("navigation", { name: "Quick actions" }).getByRole("link", { name: "Build S&C plan" })).toBeVisible();
+  await expect(page.getByRole("navigation", { name: "Quick actions" }).getByRole("link", { name: "Generate my S&C plan" })).toBeVisible();
   await page.getByRole("button", { name: "Log Training", exact: true }).click();
   await expect(page.getByRole("dialog")).toBeVisible();
   expect(errors).toEqual([]);
