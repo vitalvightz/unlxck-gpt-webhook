@@ -77,6 +77,18 @@ def due_and_copy(properties, count, first, second, now, formula):
     if count not in (0, 1, 2):
         return None, "Invalid follow-up count", BAD_COUNT
     if count == 2:
+        if not first or not second:
+            return None, "Complete (send history incomplete)", ""
+        # Historical send records cannot be undone, but early second sends
+        # should remain visible for investigation rather than silently pass.
+        first_stamp = parse_stamp(first)
+        after_first = (datetime.combine(first_stamp.date() + timedelta(days=6),
+                       datetime_time.min, LONDON) if "T" not in first
+                       else (first_stamp.astimezone(timezone.utc) + timedelta(days=5)).astimezone(LONDON))
+        day_eight = datetime.combine(
+            parse_stamp(contacted).date() + timedelta(days=8), datetime_time.min, LONDON)
+        if parse_stamp(second) < max(day_eight, after_first):
+            return None, "Complete (timing review)", ""
         return None, "Complete (2 sent)", ""  # Never issue follow-up 3.
     if (count == 0 and (first or second)) or (count == 1 and second):
         return None, "Needs count review", BAD_COUNT
