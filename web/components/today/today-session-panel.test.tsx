@@ -360,7 +360,8 @@ test("a previewed multi-part day is named by its parts and opens on its own prev
         weekday: "Sat",
         sessions: [
           { session_id: "viz", title: "Fight IQ", session_type: "skill", planned_duration: { value: 12, unit: "min" },
-            blocks: [{ block_id: "read-react", block_type: "mindset", display_name: "Read React" }] },
+            blocks: [{ block_id: "read-react", block_type: "mindset", display_name: "Read React",
+              coaching_cues: ["Identify the clearest signal before a jab.", "Choose the one trigger you trust most."] }] },
           { session_id: "2026-10-10-strength", title: "Controlled strength", session_type: "strength_power",
             planned_duration: { value: 23, unit: "min" },
             blocks: [{ block_id: "pull", block_type: "strength", display_name: "Slow-Lowered Pull-Up", sets: 2, reps: "6",
@@ -453,6 +454,25 @@ test("a previewed multi-part day is named by its parts and opens on its own prev
       domWindow.document.dispatchEvent(new domWindow.KeyboardEvent("keydown", { key: "Escape" }));
     });
     assert.equal(domWindow.document.querySelectorAll('[role="dialog"]').length, 1);
+
+    // A banked mindset drill's instructions read as numbered steps, not one
+    // "Cue" label per step.
+    const drill = [...screen.querySelectorAll<HTMLButtonElement>(".ex-row-toggle")]
+      .find((item) => item.textContent?.includes("Read React"));
+    assert.ok(drill);
+    await act(async () => {
+      drill.dispatchEvent(new domWindow.MouseEvent("click", { bubbles: true }));
+    });
+    const drillSheets = domWindow.document.querySelectorAll('[role="dialog"]');
+    const drillSheet = drillSheets[drillSheets.length - 1];
+    assert.deepEqual(
+      [...drillSheet.querySelectorAll(".ex-detail-steps li")].map((item) => item.textContent),
+      ["Identify the clearest signal before a jab.", "Choose the one trigger you trust most."],
+    );
+    assert.doesNotMatch(drillSheet.textContent ?? "", /Cue/);
+    await act(async () => {
+      domWindow.document.dispatchEvent(new domWindow.KeyboardEvent("keydown", { key: "Escape" }));
+    });
     const back = screen.querySelector<HTMLButtonElement>('button[aria-label="Back to Today"]');
     assert.ok(back);
     await act(async () => {

@@ -21660,3 +21660,20 @@ button.history-chip:focus-visible { outline: 2px solid var(--brand-red); outline
 .sp-mental-steps li::before { content: counter(mental-step, decimal-leading-zero); font-size: 10px; font-weight: 700; top: 3px; }
 
 .cm-day-context-contact .sp-tag.sp-accent { color: var(--danger-ink); }
+
+/* Detail-sheet asides: the label leads its text on the same line however
+   long the text is, instead of wrapping onto a line of its own. */
+.ex-detail > .sp-block-aside {
+  display: block;
+  line-height: 1.5;
+}
+.ex-detail > .sp-block-aside > .sp-stat-label {
+  margin-right: 8px;
+}
+.ex-detail > .ex-detail-steps ol {
+  margin: 4px 0 0;
+  padding-left: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
