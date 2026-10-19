@@ -2267,8 +2267,11 @@ class SparringLogRequest(BaseModel):
     # The manually logged sparring session this report details. The manual
     # session stays the training record; this adds its contact evidence.
     external_session_id: UUID | None = None
-    # Generated once per report so a retried save cannot write it twice.
+    # Generated once per set of answers, so a retried save cannot write twice.
     client_request_id: UUID | None = None
+    # Increases with each new set of answers in one report, so a late older
+    # request can never overwrite a newer correction.
+    detail_revision: int = Field(default=0, ge=0, le=10_000)
     planned_intensity: SparringPlannedIntensity | None = None
     intensity: SparringIntensity
     rounds_completed: int = Field(ge=0, le=30)

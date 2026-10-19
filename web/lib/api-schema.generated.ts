@@ -2281,6 +2281,7 @@ export type SparringLogRequest = {
   source: "contact" | "free" | "session";
   external_session_id?: string | null;
   client_request_id?: string | null;
+  detail_revision?: number;
   planned_intensity?: "contact" | "hard" | "light" | "technical" | null;
   intensity: "hard" | "light" | "medium";
   rounds_completed: number;

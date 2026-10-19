@@ -1294,8 +1294,10 @@ export type SparringLogRequest = {
   source: SparringLogSource;
   /** The manually logged sparring session this report details. */
   external_session_id?: string | null;
-  /** One per report, so a retried save returns the original. */
+  /** One per set of answers, so a retried save returns the original. */
   client_request_id?: string | null;
+  /** Rises with each new set of answers, so a late older one never wins. */
+  detail_revision?: number;
   planned_intensity: SparringPlannedIntensity | null;
   intensity: SparringIntensity;
   rounds_completed: number;
@@ -1305,7 +1307,7 @@ export type SparringLogRequest = {
   notes: string;
 };
 
-export type SparringLogRecord = Omit<SparringLogRequest, "client_request_id"> & {
+export type SparringLogRecord = Omit<SparringLogRequest, "client_request_id" | "detail_revision"> & {
   id: string;
   athlete_id: string;
   training_day: string;

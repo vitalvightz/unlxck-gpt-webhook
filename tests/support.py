@@ -519,6 +519,7 @@ class FakeStore(InMemoryNotificationLedger, FullRowStatusReads):
         self.injury_episode_events: dict[str, dict] = {}
         self.adaptation_notes: dict[str, list[dict]] = {}
         self.admin_reviews: list[dict] = []
+        self.sparring_log_requests: dict[tuple[str, str], str] = {}
         self.sparring_logs: list[dict] = []
         self.exercise_logs: list[dict] = []
         # Simulates the bulk write failing in the database (nothing commits).
@@ -2681,16 +2682,16 @@ class FakeStore(InMemoryNotificationLedger, FullRowStatusReads):
             raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="review insert failed")
         request_id = fields.get("client_request_id")
         external_id = fields.get("external_session_id")
+        revision = int(fields.get("detail_revision") or 0)
 
         def review_of(log: dict) -> dict | None:
             return next((dict(r) for r in self.admin_reviews if r.get("id") == log.get("admin_review_id")), None)
 
-        if request_id:
-            replay = next((r for r in self.sparring_logs
-                           if r["athlete_id"] == athlete_id and r.get("client_request_id") == request_id), None)
-            if replay:
-                return {"log": dict(replay), "review": review_of(replay)}
-        fields = {**fields}
+        # Mirrors sparring_log_requests: every accepted request id is kept.
+        if request_id and (athlete_id, request_id) in self.sparring_log_requests:
+            replay = next(r for r in self.sparring_logs if r["id"] == self.sparring_log_requests[(athlete_id, request_id)])
+            return {"log": dict(replay), "review": review_of(replay), "replayed": True}
+        fields = {key: value for key, value in fields.items() if key != "client_request_id"}
         if external_id:
             session = self.get_external_training_session(athlete_id, external_id)
             if not session or session.get("activity") != "sparring":
@@ -2701,17 +2702,21 @@ class FakeStore(InMemoryNotificationLedger, FullRowStatusReads):
             existing = None
         was_rocked = bool(existing and existing.get("rocked"))
         if existing:
-            existing.update({key: fields[key] for key in ("intensity", "rounds_completed", "round_seconds", "head_contact", "notes") if key in fields})
+            if revision > int(existing.get("detail_revision") or 0):
+                existing.update({key: fields[key] for key in ("intensity", "rounds_completed", "round_seconds", "head_contact", "notes") if key in fields})
+                existing["detail_revision"] = revision
             existing["rocked"] = was_rocked or rocked
-            existing["client_request_id"] = request_id or existing.get("client_request_id")
             row = existing
         else:
-            row = {"id": str(uuid4()), "athlete_id": athlete_id, "created_at": _now(), "admin_review_id": None, **fields}
+            row = {"id": str(uuid4()), "athlete_id": athlete_id, "created_at": _now(), "admin_review_id": None,
+                   "detail_revision": revision, **fields}
             self.sparring_logs.append(row)
         if rocked and not was_rocked:
             review = self.create_admin_review(athlete_id, {"reason": review_reason, "status": "pending"})
             row["admin_review_id"] = review["id"]
-        return {"log": dict(row), "review": review_of(row)}
+        if request_id:
+            self.sparring_log_requests[(athlete_id, request_id)] = row["id"]
+        return {"log": dict(row), "review": review_of(row), "replayed": False}
 
     def list_sparring_logs(self, athlete_id: str, *, limit: int = 60, from_day: str | None = None) -> list[dict]:
         rows = [

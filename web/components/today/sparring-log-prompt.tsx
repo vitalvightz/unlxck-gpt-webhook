@@ -121,6 +121,8 @@ export function SparringLogPrompt({
   // so a corrected answer (above all a "Yes, rocked") is never swallowed by
   // an earlier request that landed without its response.
   const requestId = useRef<string | null>(null);
+  // Orders this report's sets of answers on the server.
+  const revision = useRef(0);
   const [intensity, setIntensity] = useState<SparringIntensity | undefined>(
     defaultIntensity(draft.plannedIntensity) ?? draft.suggestedIntensity,
   );
@@ -172,6 +174,10 @@ export function SparringLogPrompt({
       setError("Add how many rounds you sparred.");
       return;
     }
+    if (!requestId.current) {
+      requestId.current = crypto.randomUUID();
+      revision.current += 1;
+    }
     setError(null);
     setIsSubmitting(true);
     try {
@@ -180,7 +186,8 @@ export function SparringLogPrompt({
         session_id: draft.sessionId,
         source: draft.source,
         external_session_id: draft.externalSessionId ?? null,
-        client_request_id: requestId.current ??= crypto.randomUUID(),
+        client_request_id: requestId.current,
+        detail_revision: revision.current,
         planned_intensity: draft.plannedIntensity,
         intensity,
         rounds_completed: rounds,

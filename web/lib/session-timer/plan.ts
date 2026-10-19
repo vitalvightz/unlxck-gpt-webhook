@@ -461,6 +461,12 @@ export function timerSessionFor(
  * session being logged is one of that day's. [] when it is not, or when the day
  * has nothing timeable.
  */
+/** The day's timer without its sparring rounds: what stays runnable once contact
+ * is off for the day (a head-impact report). Non-contact blocks are kept. */
+export function withoutSparringItems(items: TimerItem[]): TimerItem[] {
+  return items.filter((item) => !(item.kind === "interval" && item.sparring));
+}
+
 export function dayTimerItems(
   sessions: StructuredSession[],
   sessionId: string | null | undefined,

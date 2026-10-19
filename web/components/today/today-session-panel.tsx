@@ -46,7 +46,7 @@ import {
 import { isLoggableBlock, withLastLoad } from "@/lib/exercise-log";
 import { timerExerciseLogs } from "@/lib/session-timer/logs";
 import { cleanText, getBlocks, isZeroLoadSupportSession } from "@/lib/structured-plan";
-import { dayTimerItems, timerSessionFor, type TimerItem } from "@/lib/session-timer/plan";
+import { dayTimerItems, timerSessionFor, withoutSparringItems, type TimerItem } from "@/lib/session-timer/plan";
 import { fightVisualisationFromSession, firstNameOf } from "@/lib/fight-visualisation/script";
 import { fightLevel } from "@/lib/fight-visualisation/crowd";
 import {
@@ -200,6 +200,7 @@ type TimerSource = "session" | "contact";
 const CONTACT_LOCK_COPY = {
   not_checked_in: "Sparring rounds unlock after check-in",
   clinician_clearance: "Sparring rounds locked by clinician clearance",
+  head_impact: "No more contact today after your head-impact report",
   blocked: "Sparring rounds locked today",
 };
 
@@ -663,12 +664,19 @@ export function TodaySessionPanel({
   // into rounds.
   const timerSourceText = structuredPlan?.raw_markdown_fallback ?? null;
   const timerCountdown = current.day?.countdown_label ?? null;
-  const timerItems: TimerItem[] = hasResolvedDaySessions
+  // A rocked/dropped report today ends contact for the day: the server's
+  // notice is authoritative for every contact action, whatever the tier or
+  // clearance says. Non-contact work is untouched.
+  const headImpactToday = state.today.primary_safety_notice?.code === "head_impact_no_contact";
+  const plannedTimerItems: TimerItem[] = hasResolvedDaySessions
     ? dayTimerItems(current.sessions, session.session_id, {
         sourceText: timerSourceText,
         countdown: timerCountdown,
       })
     : [];
+  const nonContactItems = headImpactToday ? withoutSparringItems(plannedTimerItems) : plannedTimerItems;
+  const contactRemovedFromTimer = nonContactItems.length !== plannedTimerItems.length;
+  const timerItems = nonContactItems;
   // The day's Fight Visualisation, offered as a voice-guided run. Only when the
   // session being logged is one of this day's, the same rule as the timer.
   const guidedVisualisation =
@@ -676,7 +684,8 @@ export function TodaySessionPanel({
       ? current.sessions.map(fightVisualisationFromSession).find((item) => item !== null) ?? null
       : null;
   const timerKeys: Record<TimerSource, string> = {
-    session: `${SESSION_RUN_KEY_PREFIX}${activePlanId}:${session.session_id ?? ""}:${state.today.training_day}`,
+    // A run saved with its sparring rounds is not resumed once they are removed.
+    session: `${SESSION_RUN_KEY_PREFIX}${activePlanId}:${session.session_id ?? ""}:${state.today.training_day}${contactRemovedFromTimer ? ":no-contact" : ""}`,
     contact: `${CONTACT_RUN_KEY_PREFIX}${activePlanId}:${state.today.training_day}`,
   };
   const timerStorageKey = timerKeys.session;
@@ -709,8 +718,8 @@ export function TodaySessionPanel({
       : null);
   // Hard contact follows the same readiness authority as a session: only a
   // go / follow-the-limits day, never under pull back, stop or a severe injury.
-  const clearanceAllowsContact = !state.effective_clinician_clearance ||
-    (state.effective_clinician_clearance.level === "train_contact" && !state.effective_clinician_clearance.requires_update);
+  const clearanceAllowsContact = !headImpactToday && (!state.effective_clinician_clearance ||
+    (state.effective_clinician_clearance.level === "train_contact" && !state.effective_clinician_clearance.requires_update));
   const contactCleared =
     clearanceAllowsContact &&
     (resolvedDecision.authoritativeTier === "green" ||
@@ -770,7 +779,9 @@ export function TodaySessionPanel({
   // Something to go back into while the session is started.
   const canResume = timerAvailable || guidedLeads || (contactIsSession && contactTimerAvailable);
   const contactLockCopy =
-    !clearanceAllowsContact
+    headImpactToday
+      ? CONTACT_LOCK_COPY.head_impact
+      : !clearanceAllowsContact
       ? CONTACT_LOCK_COPY.clinician_clearance
       : resolvedDecision.authoritativeTier === "not_checked_in"
         ? CONTACT_LOCK_COPY.not_checked_in
@@ -821,7 +832,9 @@ export function TodaySessionPanel({
     : decisionBlocksCurrentSession
       ? "Follow the recommendation above. Do not start this session from Today."
       : contactClearanceBlocked
-        ? "This contact session is locked by your effective clinician clearance."
+        ? headImpactToday
+          ? "No more contact today: you reported being rocked or dropped."
+          : "This contact session is locked by your effective clinician clearance."
         : guidanceCanCheckOff
           ? status === "done" ? "Guidance followed today." : "No rehab exercises at this stage. Follow the guidance, then check it off."
         : resolvedDecision.authoritativeTier === "not_checked_in"

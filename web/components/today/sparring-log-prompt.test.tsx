@@ -179,6 +179,9 @@ test("a retry reuses its request id; a changed answer becomes a new report", asy
     await ui.click(ui.button("Save"));
     assert.equal(ui.bodies[2].rocked, true);
     assert.notEqual(ui.bodies[2].client_request_id, ui.bodies[0].client_request_id);
+    // The same answers keep their revision; changed answers outrank them.
+    assert.equal(ui.bodies[1].detail_revision, ui.bodies[0].detail_revision);
+    assert.ok(Number(ui.bodies[2].detail_revision) > Number(ui.bodies[0].detail_revision));
     assert.match(ui.container.querySelector('[aria-label="Sparring logged"]')?.textContent ?? "", /No more contact today/);
     assert.equal(ui.saved(), 1);
   } finally { await ui.cleanup(); }

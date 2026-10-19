@@ -413,11 +413,13 @@ def test_a_later_correction_never_withdraws_a_head_impact_report():
     client, store, _ = _build_client()
     session = _manual_session(client)
 
-    rocked = _manual_detail(client, session["id"], rocked=True, client_request_id=REQUEST_ID)
-    corrected = _manual_detail(client, session["id"], rocked=False, head_contact="none")
+    rocked = _manual_detail(client, session["id"], rocked=True, client_request_id=REQUEST_ID, detail_revision=1)
+    corrected = _manual_detail(client, session["id"], rocked=False, head_contact="none", detail_revision=2,
+                               client_request_id="55555555-5555-4555-8555-555555555555")
 
     assert rocked.status_code == corrected.status_code == 201
     assert corrected.json()["log"]["id"] == rocked.json()["log"]["id"]
+    assert corrected.json()["log"]["head_contact"] == "none"
     assert corrected.json()["log"]["rocked"] is True
     assert corrected.json()["safety_notice"] == ROCKED_SAFETY_NOTICE
     assert len(store.sparring_logs) == 1
@@ -473,3 +475,39 @@ def test_hard_manual_effort_alone_never_creates_contact_evidence():
     assert store.sparring_logs == []
     assert store.admin_reviews == []
     assert client.get("/api/today", headers=ATHLETE).json()["today"]["primary_safety_notice"] is None
+
+
+def test_a_delayed_retry_never_overwrites_a_later_correction():
+    client, store, _ = _build_client()
+    session = _manual_session(client)
+    report_a = "66666666-6666-4666-8666-666666666666"
+    report_b = "77777777-7777-4777-8777-777777777777"
+
+    _manual_detail(client, session["id"], client_request_id=report_a, detail_revision=1, rounds_completed=3)
+    _manual_detail(client, session["id"], client_request_id=report_b, detail_revision=2, rounds_completed=8)
+    stale = _manual_detail(client, session["id"], client_request_id=report_a, detail_revision=1, rounds_completed=3)
+
+    assert stale.status_code == 201
+    assert stale.json()["log"]["rounds_completed"] == 8
+    assert store.sparring_logs[0]["rounds_completed"] == 8
+    assert len(store.sparring_logs) == 1
+
+
+def test_an_older_revision_arriving_late_cannot_overwrite_a_newer_one():
+    client, store, _ = _build_client()
+    session = _manual_session(client)
+
+    _manual_detail(client, session["id"], detail_revision=2, rounds_completed=8,
+                   client_request_id="88888888-8888-4888-8888-888888888888")
+    late = _manual_detail(client, session["id"], detail_revision=1, rounds_completed=3,
+                          client_request_id="99999999-9999-4999-8999-999999999999")
+
+    assert late.json()["log"]["rounds_completed"] == 8
+
+
+def test_detail_revision_is_bounded():
+    client, store, _ = _build_client()
+    session = _manual_session(client)
+
+    assert _manual_detail(client, session["id"], detail_revision=-1).status_code == 422
+    assert store.sparring_logs == []
