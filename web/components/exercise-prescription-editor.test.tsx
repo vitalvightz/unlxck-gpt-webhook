@@ -5,7 +5,7 @@ import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { ExercisePrescriptionEditor } from "./exercise-prescription-editor";
 import type { ExerciseChangeDose } from "@/lib/types";
-import type { ExerciseLogActual } from "@/lib/api-schema.generated";
+import type { ExerciseLogActual, PersonalExercise } from "@/lib/api-schema.generated";
 import type { ExerciseCoaching } from "./exercise-prescription-editor";
 
 test("hill runs show work and rounds, then submit editable rest instead of sets and reps", async () => {
@@ -104,7 +104,7 @@ test("sets × reps weight is a number with a picked unit, and the pencil switche
   try {
     await act(async () => root.render(<ExercisePrescriptionEditor initial={{ mode: "reps", sets: 3, reps: 8 }}
       action="Add" busy={false} past={{ id: "key:goblet-squat", name: "Goblet Squat", identity_kind: "canonical", latest_day: "2026-10-12",
-        latest_values: { load: { value: 25, unit: "kg" } } as ExerciseLogActual, latest_confirmed_as_prescribed: false, best_loads: [] }} onSubmit={dose => { results.push(dose); }} />));
+        latest_values: { load: { value: 25, unit: "kg" } } as ExerciseLogActual, latest_confirmed_as_prescribed: false, best_loads: [] } as unknown as PersonalExercise} onSubmit={dose => { results.push(dose); }} />));
     assert.equal(host.querySelector<HTMLInputElement>('[aria-label="Weight"]')!.placeholder, "25");
     assert.equal(host.querySelector<HTMLSelectElement>('[aria-label="Weight unit"]')!.value, "kg");
     await set('[aria-label="Weight"]', "30");
