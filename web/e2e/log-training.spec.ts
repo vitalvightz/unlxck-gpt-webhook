@@ -118,7 +118,7 @@ for (const width of [390, 1280]) {
     const form = page.getByRole("form", { name: "Log Training", exact: true });
     await expect(form.getByRole("combobox")).toHaveCount(0);
     // The athlete boxes: the same single grid holds boxing session types, then S&C, roadwork and other.
-    await expect(form.getByRole("group", { name: "Activity", exact: true }).getByRole("button")).toHaveText(
+    await expect(form.getByRole("group", { name: "Activity", exact: true }).locator("[data-activity]")).toHaveText(
       ["Pads", "Bag work", "Shadowboxing", "Technical drills", "Sparring", "Strength", "Conditioning", "Roadwork", "Other"]);
     await expect(form.getByLabel("Training date (optional)")).toBeHidden();
     await expect(form.getByRole("button", { name: "Pads", exact: true })).toBeFocused();
@@ -839,6 +839,9 @@ test("quick picks support keyboard selection, modal focus containment and close 
   await expect(bag).toHaveAttribute("aria-pressed", "true");
   await page.keyboard.press("Shift+Tab");
   await page.keyboard.press("Shift+Tab");
+  // The optional per-session sport switch sits on the Activity label line.
+  await expect(sheet.getByRole("button", { name: /^Change sport for this session/ })).toBeFocused();
+  await page.keyboard.press("Shift+Tab");
   await expect(sheet.getByRole("button", { name: "Close training log" })).toBeFocused();
   // Native showModal makes the background inert, including programmatic focus.
   await trigger.evaluate(element => element.focus());
@@ -847,3 +850,32 @@ test("quick picks support keyboard selection, modal focus containment and close 
   await expect(sheet).toHaveCount(0);
   await expect(trigger).toBeFocused();
 });
+
+test("Change sport is a quiet, optional per-session switch (390px)", async ({ page, baseURL }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  const submissions = await setup(page, baseURL!, false, false, []);
+  await page.goto("/today");
+  await page.getByRole("button", { name: "Log Training", exact: true }).click();
+  const sheet = page.getByRole("dialog");
+  const toggle = sheet.getByRole("button", { name: /^Change sport for this session/ });
+  await expect(toggle).toHaveText("Boxing · Change");
+  await expect(toggle).toHaveAttribute("aria-expanded", "false");
+  await toggle.click();
+  const menu = sheet.getByRole("group", { name: "Sport for this session" });
+  await expect(menu.getByRole("button", { name: "Boxing", exact: true })).toHaveAttribute("aria-pressed", "true");
+  expect((await new AxeBuilder({ page }).include("dialog").analyze()).violations).toEqual([]);
+  expect(await sheet.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true);
+  await page.screenshot({ animations: "disabled", path: test.info().outputPath("change-sport-open.png") });
+  await menu.getByRole("button", { name: "MMA", exact: true }).click();
+  await expect(menu).toHaveCount(0);
+  await expect(toggle).toHaveText("MMA · Change");
+  await choose(sheet, page, "Activity", "Grappling");
+  await choose(sheet, page, "Duration", "60");
+  await choose(sheet, page, "Effort", "Hard");
+  await sheet.getByRole("button", { name: "Save Session", exact: true }).click();
+  await expect(sheet).toHaveCount(0);
+  expect(submissions[0]).toMatchObject({ activity: "other", sport: "mma", session_type: "grappling" });
+  await page.getByRole("button", { name: "Log another session", exact: true }).or(page.getByRole("button", { name: "Log Training", exact: true })).first().click();
+  await expect(page.getByRole("dialog").getByRole("button", { name: /^Change sport for this session/ })).toHaveText("Boxing · Change");
+});
+

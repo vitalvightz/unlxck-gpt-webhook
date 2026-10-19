@@ -488,7 +488,7 @@ for (const width of [320, 390, 1280]) {
     await page.getByRole("button", { name: "Log Training", exact: true }).click();
     const form = page.getByRole("form", { name: "Log Training", exact: true });
     const activity = form.getByRole("group", { name: "Activity", exact: true });
-    await expect(activity.getByRole("button")).toHaveText(["Pads", "Bag work", "Clinch", "Technical drills", "Sparring", "Strength", "Conditioning", "Roadwork", "Other"]);
+    await expect(activity.locator("[data-activity]")).toHaveText(["Pads", "Bag work", "Clinch", "Technical drills", "Sparring", "Strength", "Conditioning", "Roadwork", "Other"]);
     await activity.getByRole("button", { name: "Clinch", exact: true }).click();
     await form.getByRole("button", { name: "60", exact: true }).click();
     await form.getByRole("button", { name: "Hard", exact: true }).click();
@@ -510,7 +510,7 @@ test("Other sport keeps the original log choices and saves no sport", async ({ p
   await expect(page).toHaveURL(/\/today$/);
   expect(writes[0]).toEqual({ starting_path: "tracking_first" });
   await page.getByRole("button", { name: "Log Training", exact: true }).click();
-  await expect(page.getByRole("group", { name: "Activity", exact: true }).getByRole("button"))
+  await expect(page.getByRole("group", { name: "Activity", exact: true }).locator("[data-activity]"))
     .toHaveText(["Boxing", "Sparring", "Strength", "Conditioning", "Roadwork", "Other"]);
 });
 

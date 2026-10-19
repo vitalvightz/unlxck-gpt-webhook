@@ -38,7 +38,7 @@ async function mount(sports: string[], props: Partial<Parameters<typeof LogTrain
     session: { access_token: "token" } as never, me: me(sports), isReady: true, isMeHydrated: true,
     hasTransientMeError: false, refreshMe: async () => {}, signOut: async () => {}, replaceMe: () => {}, previewAppearanceMode: () => {},
   }}><LogTraining accessToken="token" onSaved={row => saved.push(row)} {...props} /></AppSessionContext.Provider>));
-  const group = (name: string) => container.querySelector<HTMLFieldSetElement>(`fieldset[aria-label="${name}"]`);
+  const group = (name: string) => container.querySelector<HTMLElement>(`fieldset[aria-label="${name}"], [role="group"][aria-label="${name}"]`);
   const buttons = (name: string) => [...(group(name)?.querySelectorAll("button") ?? [])];
   const pick = async (name: string, text: string) => {
     const button = buttons(name).find(item => item.textContent === text);
@@ -61,7 +61,7 @@ async function mount(sports: string[], props: Partial<Parameters<typeof LogTrain
   };
 }
 
-const labels = (ui: Awaited<ReturnType<typeof mount>>) => ui.buttons("Activity").map(item => item.textContent);
+const labels = (ui: Awaited<ReturnType<typeof mount>>) => ui.buttons("Activity").filter(item => item.hasAttribute("data-activity")).map(item => item.textContent);
 const sent = (call: Call) => ({ ...call.body, client_request_id: undefined });
 
 test("without a known sport the original six activities and payload are unchanged", async () => {
@@ -207,5 +207,53 @@ test("a lost response retries the same request ID; double submits send one reque
     assert.equal(ui.calls.length, 2);
     assert.equal(ui.calls[1].body.client_request_id, ui.calls[0].body.client_request_id);
     assert.equal(ui.saved.length, 1);
+  } finally { ui.cleanup(); }
+});
+
+test("Change sport switches the choices for this session only, then defaults back to the saved sport", async () => {
+  const ui = await mount(["boxing"]);
+  try {
+    await ui.click("Log Training");
+    const toggle = ui.container.querySelector<HTMLButtonElement>("dialog legend button")!;
+    assert.equal(toggle.textContent, "Boxing · Change");
+    assert.equal(toggle.getAttribute("aria-expanded"), "false");
+    assert.equal(ui.group("Sport for this session"), null);
+    await act(async () => toggle.click());
+    assert.deepEqual(ui.buttons("Sport for this session").map(item => item.textContent),
+      ["Boxing", "Muay Thai", "Kickboxing", "MMA", "BJJ", "Wrestling", "No sport"]);
+    assert.deepEqual(ui.pressed("Sport for this session"), ["Boxing"]);
+    await ui.pick("Sport for this session", "BJJ");
+    // The menu closes; the grid is BJJ's and the toggle says so.
+    assert.equal(ui.group("Sport for this session"), null);
+    assert.equal(toggle.textContent, "BJJ · Change");
+    assert.deepEqual(labels(ui), ["Drilling", "Positional", "Rolling", "Strength", "Conditioning", "Roadwork", "Other"]);
+    await ui.pick("Activity", "Rolling");
+    await ui.pick("Duration", "90");
+    await ui.pick("Effort", "Hard");
+    await ui.save();
+    assert.deepEqual(sent(ui.calls[0]), { activity: "other", sport: "bjj", session_type: "rolling", duration_minutes: 90, effort: "hard", client_request_id: undefined });
+    // Nothing is written to the profile.
+    assert.ok(ui.calls.every(call => !call.url.includes("/api/me")));
+    await ui.click("Log Training");
+    assert.equal(ui.container.querySelector("dialog legend button")!.textContent, "Boxing · Change");
+    assert.equal(labels(ui)[0], "Pads");
+  } finally { ui.cleanup(); }
+});
+
+test("switching sport clears a session type that no longer fits, but keeps Strength; No sport shows the original six", async () => {
+  const ui = await mount(["muay_thai"]);
+  try {
+    await ui.click("Log Training");
+    const toggle = () => ui.container.querySelector<HTMLButtonElement>("dialog legend button")!;
+    await ui.pick("Activity", "Clinch");
+    await act(async () => toggle().click());
+    await ui.pick("Sport for this session", "Kickboxing");
+    assert.deepEqual(ui.pressed("Activity"), []);
+    await ui.pick("Activity", "Strength");
+    await act(async () => toggle().click());
+    await ui.pick("Sport for this session", "No sport");
+    assert.equal(toggle().textContent, "No sport · Change");
+    assert.deepEqual(labels(ui), ["Boxing", "Sparring", "Strength", "Conditioning", "Roadwork", "Other"]);
+    assert.deepEqual(ui.pressed("Activity"), ["Strength"]);
   } finally { ui.cleanup(); }
 });
