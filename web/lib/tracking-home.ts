@@ -110,10 +110,11 @@ export function getTrackingHome({ state, rows, loadedFrom, today, canCheckIn, ha
     if (readinessLine) hero.lines.push(readinessLine);
   }
 
+  // A rolling 7 training days, the same window as readiness and History, not a calendar week.
   const week = done && summaryWindowLoaded(loadedFrom, today, 7) ? summarizeTraining(done, today, 7) : null;
   const latest = done?.[0];
   const strip = [
-    { label: "This week", value: week ? `${week.sessions} session${week.sessions === 1 ? "" : "s"}` : "—" },
+    { label: "Last 7 days", value: week ? `${week.sessions} session${week.sessions === 1 ? "" : "s"}` : "—" },
     { label: "Time", value: week && week.minutes ? formatTrainingDuration(week.minutes) : "—" },
     { label: "Top discipline", value: week?.mix[0]?.label ?? "—" },
     { label: "Last session", value: latest ? daysAgoLabel(latest.training_day, today) : "—" },

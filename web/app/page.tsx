@@ -282,38 +282,54 @@ export default function HomePage() {
     me?.profile.starting_path === "tracking_first" && commandState && !commandState.active_plan?.id,
   );
   const { progress: xpProgress } = useXp();
-  const [trainingRows, setTrainingRows] = useState<TrainingHistorySession[] | null>(null);
-  const [trainingCursor, setTrainingCursor] = useState<string | null>(null);
-  const [trainingMoreLoading, setTrainingMoreLoading] = useState(false);
-  const [trainingMoreError, setTrainingMoreError] = useState<string | null>(null);
+  // History is tagged with the athlete it was read for, and only that athlete's
+  // rows are ever shown: after an account switch nothing from the previous
+  // account renders, even before the new read returns.
+  const historyOwner = me?.profile.athlete_id ?? "";
+  const [trainingHistory, setTrainingHistory] = useState<
+    { owner: string; rows: TrainingHistorySession[]; cursor: string | null } | null
+  >(null);
+  const ownHistory = trainingHistory && trainingHistory.owner === historyOwner ? trainingHistory : null;
+  const trainingRows = ownHistory?.rows ?? null;
+  const trainingCursor = ownHistory?.cursor ?? null;
+  const [trainingMore, setTrainingMore] = useState<{ owner: string; loading: boolean; error: string | null }>(
+    { owner: "", loading: false, error: null },
+  );
+  const trainingMoreLoading = trainingMore.owner === historyOwner && trainingMore.loading;
+  const trainingMoreError = trainingMore.owner === historyOwner ? trainingMore.error : null;
   useEffect(() => {
     const token = session?.access_token;
-    if (!token || !tracksWithoutPlan) return;
+    if (!token || !historyOwner || !tracksWithoutPlan) return;
     let cancelled = false;
     getTrainingHistory(token, true)
       .then((page) => {
         if (cancelled) return;
-        setTrainingRows(page.sessions);
-        setTrainingCursor(page.next_before_day ?? null);
+        setTrainingHistory({ owner: historyOwner, rows: page.sessions, cursor: page.next_before_day ?? null });
       })
       .catch(() => { /* History stays unknown; Home claims nothing about it. */ });
     return () => { cancelled = true; };
-  }, [session?.access_token, tracksWithoutPlan]);
+  }, [session?.access_token, historyOwner, tracksWithoutPlan]);
   const loadMoreTraining = useCallback(async () => {
     const token = session?.access_token;
-    if (!token || !trainingCursor) return;
-    setTrainingMoreLoading(true);
-    setTrainingMoreError(null);
+    const owner = historyOwner;
+    const before = trainingCursor;
+    if (!token || !owner || !before) return;
+    setTrainingMore({ owner, loading: true, error: null });
     try {
-      const page = await getTrainingHistory(token, true, trainingCursor);
-      setTrainingRows((current) => [...(current ?? []), ...page.sessions]);
-      setTrainingCursor(page.next_before_day ?? null);
+      const page = await getTrainingHistory(token, true, before);
+      // A page read for another account (or an older cursor) is dropped.
+      setTrainingHistory((current) => {
+        if (!current || current.owner !== owner || current.cursor !== before) return current;
+        const seen = new Set(current.rows.map((row) => `${row.source}-${row.id}`));
+        const older = page.sessions.filter((row) => !seen.has(`${row.source}-${row.id}`));
+        return { owner, rows: [...current.rows, ...older], cursor: page.next_before_day ?? null };
+      });
+      setTrainingMore((current) => (current.owner === owner ? { owner, loading: false, error: null } : current));
     } catch {
-      setTrainingMoreError("Couldn’t load older sessions.");
-    } finally {
-      setTrainingMoreLoading(false);
+      setTrainingMore((current) => (current.owner === owner
+        ? { owner, loading: false, error: "Couldn’t load older sessions." } : current));
     }
-  }, [session?.access_token, trainingCursor]);
+  }, [session?.access_token, historyOwner, trainingCursor]);
 
   const [isReloadingCommand, setIsReloadingCommand] = useState(false);
   const latestTokenRef = useRef(session?.access_token);

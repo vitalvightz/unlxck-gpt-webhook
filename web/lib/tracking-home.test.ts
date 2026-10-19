@@ -86,3 +86,8 @@ test("an unloaded or failed history claims nothing about training", () => {
 test("incomplete week data is not shown as a total", () => {
   assert.equal(home({ rows: [row(TODAY)], loadedFrom: "2026-10-18" }).strip[0].value, "—");
 });
+
+test("the week cell is labelled as the rolling window it counts", () => {
+  assert.equal(home().strip[0].label, "Last 7 days");
+});
+
