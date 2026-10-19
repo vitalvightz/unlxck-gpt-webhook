@@ -91,6 +91,11 @@
     "finalTitle": "Crea tu primer plan."
   },
   "Auth": {
+    "continueGoogle": "Continuar con Google",
+    "continueEmail": "Continuar con correo electrónico",
+    "connectingGoogle": "Conectando con Google…",
+    "googleError": "No se pudo completar el acceso con Google. Inténtalo de nuevo o continúa con correo electrónico.",
+    "allOptions": "Todas las opciones de acceso",
     "createAccount": "Crear cuenta",
     "welcomeBack": "Bienvenido de nuevo",
     "startIntake": "Inicia la admisión",

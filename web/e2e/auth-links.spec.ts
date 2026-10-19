@@ -325,6 +325,7 @@ test.describe("spent auth links explain themselves", () => {
     await isolateFromNetwork(page, baseURL ?? BASE_URL);
     await page.goto("/login", { waitUntil: "domcontentloaded" });
 
+    await page.getByRole("button", { name: "Continue with email", exact: true }).click();
     await expect(page.getByLabel("Email")).toBeVisible();
     await expect(page.getByText(EXPIRED_MESSAGE)).toHaveCount(0);
     await expect(page.getByText(MISSING_MESSAGE)).toHaveCount(0);

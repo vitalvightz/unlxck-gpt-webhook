@@ -26,5 +26,8 @@ export function RequireComplianceAcceptance({ children }: Readonly<{ children: R
     }
   }, [mustAccept, router]);
 
+  // Do not mount protected forms while profile compliance is unresolved or the
+  // redirect is pending: their effects may start fetching or saving immediately.
+  if (!isMeHydrated || mustAccept) return <p role="status">Checking your account…</p>;
   return <>{children}</>;
 }

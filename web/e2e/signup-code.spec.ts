@@ -60,6 +60,7 @@ async function startSignup(page: Page, baseURL: string, verifyStatus: "ok" | "re
   });
 
   await page.goto("/signup", { waitUntil: "domcontentloaded" });
+  await page.getByRole("button", { name: "Continue with email", exact: true }).click();
   // Full name is no longer asked at signup; intake collects it.
   await expect(page.getByLabel("Full name")).toHaveCount(0);
 

@@ -41,7 +41,14 @@ test("never surfaces the raw provider description", () => {
     hash: "#error=access_denied&error_description=Contact+evil.example+for+support",
     search: "",
   });
-  assert.equal(status.kind === "error" && status.message, AUTH_LINK_FEEDBACK.invalid);
+  assert.equal(status.kind === "error" && status.message, AUTH_LINK_FEEDBACK.oauth);
+});
+
+test("OAuth callback failures offer a retry without exposing provider details", () => {
+  for (const code of ["access_denied", "oauth_callback_error", "oauth_provider_not_supported"]) {
+    const result = readAuthLinkStatus({ hash: "", search: `?error_code=${code}` });
+    assert.equal(result.kind === "error" && result.message, AUTH_LINK_FEEDBACK.oauth);
+  }
 });
 
 test("detects implicit-flow credentials and exposes the token for verification", () => {

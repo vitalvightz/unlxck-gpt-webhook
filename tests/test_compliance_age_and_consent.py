@@ -362,6 +362,44 @@ def test_onboarding_draft_is_blocked_until_the_terms_are_accepted():
     assert response.json()["detail"]["code"] == "date_of_birth_required"
 
 
+def test_oauth_identity_without_dob_cannot_bypass_age_by_accepting_consents():
+    """OAuth supplies no DOB; even affirmative consents are not age evidence."""
+    client, store, _ = _build_client()
+    clear_compliance(store)
+    acceptance = client.post(
+        "/api/me/compliance", headers=ATHLETE,
+        json={"accept_terms": True, "health_data_consent": True},
+    )
+    assert acceptance.status_code == 200
+    assert acceptance.json()["profile"]["meets_minimum_age"] is False
+    response = client.patch(
+        "/api/onboarding/draft", headers=ATHLETE,
+        json={"onboarding_draft": {"current_step": 1}},
+    )
+    assert response.status_code == 403
+    assert response.json()["detail"]["code"] == "date_of_birth_required"
+
+
+def test_refused_underage_oauth_identity_remains_unverified_after_signin():
+    client, store, _ = _build_client()
+    clear_compliance(store)
+    response = client.post(
+        "/api/me/compliance", headers=ATHLETE,
+        json={"date_of_birth": _dob_for_age(12, reference=date.today()),
+              "accept_terms": True, "health_data_consent": True},
+    )
+    assert response.status_code == 403
+    profile = client.get("/api/me", headers=ATHLETE).json()["profile"]
+    assert profile["meets_minimum_age"] is False
+    assert profile["terms_accepted"] is False
+    assert profile["health_consent_granted"] is False
+    response = client.patch(
+        "/api/onboarding/draft", headers=ATHLETE,
+        json={"onboarding_draft": {"current_step": 1}},
+    )
+    assert response.status_code == 403
+
+
 def test_onboarding_draft_reports_terms_when_only_the_terms_are_missing():
     client, store, _ = _build_client()
     clear_compliance(store)
