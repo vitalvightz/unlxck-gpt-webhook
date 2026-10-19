@@ -79,6 +79,9 @@ function feedbackLabel(awards: XpAwardRecord[]): string {
   if (actions.has("full_training_week_completed")) {
     return "Training week complete";
   }
+  for (const action of ["exercise_contribution_approved", "training_days_100", "training_days_50", "training_days_25", "training_days_10", "first_session_logged", "first_exercise_logged"] as const) {
+    if (actions.has(action)) return XP_ACTIONS[action].label;
+  }
   if (
     actions.has("training_logged") ||
     actions.has("planned_session_completed")

@@ -67,6 +67,7 @@ import type {
 } from "@/lib/types";
 import type { ActivePlanOverlapAction } from "@/lib/plan-active";
 import { parseXpAwardResponse, type XpAwardResult } from "@/lib/xp";
+import { requestXpRefresh } from "@/lib/xp-events";
 
 const EXPLICIT_API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") ?? null;
 const LOCAL_API_BASE_URL = "http://127.0.0.1:8000";
@@ -114,7 +115,7 @@ export function getCustomPlan(token: string, id: string) {
 export function publishCustomPlan(token: string, id: string) {
   return readJson<PlanSummary>(`/api/custom-plans/${encodeURIComponent(id)}/open-plan`, {
     token, method: "POST",
-  });
+  }).then(row => { requestXpRefresh(); return row; });
 }
 
 export function saveCustomPlan(token: string, body: CustomPlanInput, id?: string) {
@@ -574,7 +575,8 @@ export function getManualTrainingHistory(token: string): Promise<{ sessions: Tra
 }
 
 export function logExternalTraining(token: string, body: ExternalTrainingFields & { client_request_id: string; training_day?: string }): Promise<TrainingHistorySession> {
-  return readJson("/api/training/sessions", { method: "POST", token, body: JSON.stringify(body) });
+  return readJson<TrainingHistorySession>("/api/training/sessions", { method: "POST", token, body: JSON.stringify(body) })
+    .then(row => { requestXpRefresh(); return row; });
 }
 
 export function editExternalTraining(token: string, id: string, body: ExternalTrainingFields): Promise<TrainingHistorySession> {
@@ -596,8 +598,8 @@ export function listManualExercises(token: string, sessionId: string, signal?: A
 export function saveManualExercise(token: string, sessionId: string, entryId: string, body: PerformedExerciseInput): Promise<ManualExerciseEntry> {
   const payload = JSON.stringify(body);
   // The client-chosen entry ID makes the save idempotent: a retry never adds a second exercise.
-  return withTransientRetries(() => readJson(`/api/training/sessions/${encodeURIComponent(sessionId)}/exercises/${encodeURIComponent(entryId)}`,
-    { method: "PUT", token, body: payload }));
+  return withTransientRetries(() => readJson<ManualExerciseEntry>(`/api/training/sessions/${encodeURIComponent(sessionId)}/exercises/${encodeURIComponent(entryId)}`,
+    { method: "PUT", token, body: payload })).then(row => { requestXpRefresh(); return row; });
 }
 
 export function deleteManualExercise(token: string, sessionId: string, entryId: string): Promise<void> {
@@ -1405,7 +1407,7 @@ export function submitExerciseLog(
     method: "POST",
     token,
     body: JSON.stringify(payload),
-  });
+  }).then(row => { requestXpRefresh(); return row; });
 }
 
 /** Log several blocks of today's started session at once; all or nothing. */
@@ -1417,7 +1419,7 @@ export function submitExerciseLogs(
     method: "POST",
     token,
     body: JSON.stringify(payload),
-  });
+  }).then(row => { requestXpRefresh(); return row; });
 }
 
 /** The athlete's exercise logs for one plan on the current training day. */

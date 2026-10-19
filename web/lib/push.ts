@@ -108,17 +108,20 @@ function deviceTimezone(): string {
  * server-side. Throws with a human-readable message on any failure so callers
  * can surface it inline.
  */
-export async function subscribeToPushNotifications(token: string): Promise<void> {
+export async function subscribeToPushNotifications(
+  token: string,
+  prepared?: { public_key: string; registration: ServiceWorkerRegistration },
+): Promise<void> {
   if (!isPushSupported()) {
     throw new Error(
       "Notifications aren't available in this browser. On iPhone, install UNLXCK to your home screen first.",
     );
   }
-  const settings = await getPushSettings(token);
+  const settings = prepared ? { enabled: true, public_key: prepared.public_key } : await getPushSettings(token);
   if (!settings.enabled || !settings.public_key) {
     throw new Error("Notifications aren't enabled on the server yet.");
   }
-  const registration = await getReadyRegistration();
+  const registration = prepared?.registration ?? await getReadyRegistration();
   if (!registration) {
     throw new Error("The app isn't installed as a PWA yet, so notifications can't be enabled.");
   }

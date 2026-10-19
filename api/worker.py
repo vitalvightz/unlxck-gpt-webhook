@@ -5,6 +5,7 @@ import logging
 import signal
 import time
 from contextlib import suppress
+from typing import TypedDict
 
 from fightcamp.logging_utils import configure_logging
 
@@ -84,6 +85,44 @@ async def _run_morning_push_sweep_if_due(
 
 
 _MORNING_PUSH_SWEEP_TASK: dict[str, asyncio.Task[None] | None] = {"task": None}
+
+
+class ContributionReplayState(TypedDict, total=False):
+    last_sweep_at: float
+    after_id: str | None
+
+
+_CONTRIBUTION_XP_REPLAY_TASK: dict[str, asyncio.Task[None] | None] = {"task": None}
+
+
+async def _run_contribution_xp_replay_if_due(
+    *, store: AppStore, state: ContributionReplayState,
+    interval_seconds: int = 60, shutdown_event: asyncio.Event | None = None,
+) -> None:
+    """Retry missed approvals without holding up generation or requiring push."""
+    if shutdown_event is not None and shutdown_event.is_set():
+        return
+    now = time.monotonic()
+    last = state.get("last_sweep_at")
+    if last is not None and now - last < interval_seconds:
+        return
+    running = _CONTRIBUTION_XP_REPLAY_TASK.get("task")
+    if running is not None and not running.done():
+        return
+    state["last_sweep_at"] = now
+
+    async def _replay() -> None:
+        try:
+            from .services.tracking_xp import replay_contribution_xp
+
+            state["after_id"] = await asyncio.to_thread(
+                replay_contribution_xp, store, after_id=state.get("after_id"),
+                should_stop=shutdown_event.is_set if shutdown_event is not None else None,
+            )
+        except Exception:  # noqa: BLE001 - reward recovery must not interrupt generation
+            logger.exception("[worker] contribution XP replay failed")
+
+    _CONTRIBUTION_XP_REPLAY_TASK["task"] = asyncio.create_task(_replay())
 
 
 def _exercise_media_sweep_interval_seconds() -> int:
@@ -403,6 +442,7 @@ async def run_worker() -> None:
     recovery_sweep_state: dict[str, float] = {}
     morning_sweep_state: dict[str, float] = {}
     morning_sweep_interval = _morning_push_sweep_interval_seconds()
+    contribution_replay_state: ContributionReplayState = {}
     media_sweep_state: dict[str, float] = {}
     media_sweep_interval = _exercise_media_sweep_interval_seconds()
 
@@ -422,6 +462,9 @@ async def run_worker() -> None:
                 state=morning_sweep_state,
                 interval_seconds=morning_sweep_interval,
                 shutdown_event=shutdown_event,
+            )
+            await _run_contribution_xp_replay_if_due(
+                store=store, state=contribution_replay_state, shutdown_event=shutdown_event,
             )
             await _run_exercise_media_sweep_if_due(
                 store=store,

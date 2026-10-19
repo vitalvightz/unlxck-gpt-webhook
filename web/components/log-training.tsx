@@ -22,6 +22,7 @@ import tileStyles from "./training-action-tile.module.css";
 import { SparringLogPrompt, type SparringDraft } from "./today/sparring-log-prompt";
 import { SessionTakeawayPrompt } from "./session-takeaway";
 import { ManualExerciseLogger } from "./manual-exercise-logger";
+import { offerPushNotifications } from "@/lib/push-prompt";
 import type { SparringIntensity } from "@/lib/types";
 
 const DURATION_PICKS = [30, 45, 60, 90];
@@ -217,6 +218,7 @@ function LogTrainingContent({ accessToken, entry, repeatEntry, recent = false, h
       onSaved?.(row);
       requestId.current = null;
       setOpen(false);
+      if (!editing) offerPushNotifications(token);
       if (!entry && !repeatEntry && row.source === "external" && row.activity !== "sparring") setTakeawayRow(row);
       else setSaved(`${row.title} logged successfully. Saved to Training History.`);
       if (!editing && row.source === "external" && row.activity === "sparring") setSparringDraft(manualSparringDraft(row));

@@ -2333,6 +2333,16 @@ class FakeStore(InMemoryNotificationLedger, FullRowStatusReads):
     def validate_xp_abuse_hardening(self) -> dict:
         return xp_hardening_ready_payload()
 
+    def reconcile_training_engagement_xp(self, athlete_id: str, *, manual_session_id: str | None = None) -> list:
+        # Source validation/concurrency live in PostgreSQL integration tests.
+        return []
+
+    def list_unrewarded_contribution_revisions(self, *, after_id: str | None = None, limit: int = 50) -> list[dict]:
+        return []
+
+    def reconcile_approved_contribution_xp(self, revision_id: str) -> None:
+        return None
+
     def reconcile_feedback_xp(
         self, athlete_id: str, *, feedback_id: str, target_amount: int
     ) -> dict | None:

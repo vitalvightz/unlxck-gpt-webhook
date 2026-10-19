@@ -52,6 +52,19 @@ def _store(client: RecordingClient) -> SupabaseAppStore:
     return SupabaseAppStore(client=client, admin_emails=set())
 
 
+def test_tracking_and_approval_rpcs_only_send_source_identifiers():
+    client = RecordingClient(rpcs={"reconcile_training_engagement_xp": [], "reconcile_approved_contribution_xp": None})
+    store = _store(client)
+    assert store.reconcile_training_engagement_xp("athlete-1", manual_session_id="session-1") == []
+    assert store.reconcile_approved_contribution_xp("revision-1") is None
+    assert client.calls("reconcile_training_engagement_xp") == [
+        ("rpc", ({"p_athlete_id": "athlete-1", "p_manual_session_id": "session-1"},)),
+    ]
+    assert client.calls("reconcile_approved_contribution_xp") == [
+        ("rpc", ({"p_revision_id": "revision-1"},)),
+    ]
+
+
 def test_xp_progress_state_reads_the_account_and_newest_awards():
     award = {"id": "a1", "action": "daily_login", "amount": 5, "awarded_at": "t", "calendar_date": "2026-08-01"}
     client = RecordingClient(
@@ -186,3 +199,13 @@ def test_live_store_hardening_check_runs_once_after_success():
     ensure_xp_abuse_hardening(store)
 
     assert client.calls("validate_xp_abuse_hardening") == [("rpc", (None,))]
+
+
+def test_unrewarded_contribution_revisions_use_bounded_keyset_rpc():
+    rows = [{"exercise_id": "exercise-1", "revision_id": "revision-1"}]
+    client = RecordingClient(rpcs={"list_unrewarded_contribution_revisions": rows})
+    store = SupabaseAppStore(client, admin_emails=set())
+    assert store.list_unrewarded_contribution_revisions(after_id="cursor", limit=50) == rows
+    assert client.calls("list_unrewarded_contribution_revisions") == [
+        ("rpc", ({"p_after_id": "cursor", "p_limit": 50},)),
+    ]

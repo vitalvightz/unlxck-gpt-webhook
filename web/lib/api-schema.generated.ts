@@ -2725,7 +2725,7 @@ export type XpAccountState = {
 
 export type XpAwardRecord = {
   id: string;
-  action: "camp_completed" | "daily_login" | "feedback_submitted" | "feedback_with_comment" | "first_checkin_completed" | "first_intake_completed" | "first_plan_completed" | "first_plan_ready" | "full_training_week_completed" | "injury_update_completed" | "phase_completed" | "planned_session_completed" | "profile_completed" | "readiness_checkin_completed" | "recommended_fighter_content_watched" | "stop_decision_followed" | "training_logged";
+  action: "camp_completed" | "daily_login" | "exercise_contribution_approved" | "feedback_submitted" | "feedback_with_comment" | "first_checkin_completed" | "first_exercise_logged" | "first_intake_completed" | "first_plan_completed" | "first_plan_ready" | "first_session_logged" | "full_training_week_completed" | "injury_update_completed" | "manual_training_logged" | "phase_completed" | "planned_session_completed" | "profile_completed" | "readiness_checkin_completed" | "recommended_fighter_content_watched" | "stop_decision_followed" | "training_days_10" | "training_days_100" | "training_days_25" | "training_days_50" | "training_logged";
   amount: number;
   awarded_at: string;
   calendar_date: string | null;

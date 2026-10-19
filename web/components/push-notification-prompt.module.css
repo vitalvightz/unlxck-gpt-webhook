@@ -1,0 +1,36 @@
+.dialog {
+  width: min(400px, calc(100% - 32px));
+  max-height: calc(100dvh - 32px);
+  overflow-y: auto;
+  margin: auto;
+  padding: 32px;
+  border: 1px solid #ffffff1c;
+  border-radius: 16px;
+  background: #101012;
+  color: #fff;
+  box-shadow: 0 24px 64px #0008;
+}
+.dialog::backdrop {
+  background: rgb(7 8 10 / 76%);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+}
+.header { display: flex; align-items: center; justify-content: space-between; padding-bottom: 22px; margin-bottom: 26px; border-bottom: 1px solid #ffffff12; }
+.mark { display: block; object-fit: contain; }
+.eyebrow { font-family: var(--font-mono), monospace; font-size: 10px; font-weight: 500; letter-spacing: .18em; color: #b2b2ba; margin: 0; }
+.dialog h2 { color: #fff; letter-spacing: -.045em; line-height: 1.03; margin: 0; }
+.brand { display: block; font-size: clamp(46px, 12vw, 58px); font-weight: 700; letter-spacing: -.065em; }
+.headline { display: block; margin-top: 8px; font-size: clamp(27px, 7.3vw, 34px); font-weight: 500; letter-spacing: -.045em; }
+.description { color: #b4b4be; font-size: 14px; line-height: 1.65; margin: 20px 0 28px; }
+.enable { position: relative; isolation: isolate; overflow: hidden; display: flex; align-items: center; justify-content: space-between; gap: 14px; width: 100%; min-height: 52px; padding: 14px 18px; border: 1px solid #e04451; border-radius: 7px; background: #b5122b; color: #fff; font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
+.enable::after { content: ""; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(110deg, transparent 25%, #ffffff38 50%, transparent 75%); transform: translateX(-120%); animation: keySweep 2.8s ease-in-out 2; }
+.enable:hover { background: #ca1733; }
+.enable:focus-visible, .later:focus-visible { outline: 2px solid #fff; outline-offset: 4px; }
+.enable:disabled { cursor: wait; opacity: .7; }
+.enable:disabled::after { animation: none; }
+.later { display: block; width: 100%; min-height: 44px; margin-top: 8px; border: 0; background: transparent; color: #b9b9c3; font: inherit; font-size: 13px; cursor: pointer; }
+.footnote { color: #a2a2ad; text-align: center; font-size: 12px; line-height: 1.5; margin: 12px 0 0; }
+.error { color: #ffb6bd; font-size: 14px; line-height: 1.5; }
+@keyframes keySweep { 0%, 15% { transform: translateX(-120%); } 65%, 100% { transform: translateX(120%); } }
+@media (prefers-reduced-motion: reduce) { .enable::after { animation: none; } }
+@media (max-width: 380px) { .dialog { padding: 26px 24px; } }

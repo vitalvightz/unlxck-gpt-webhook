@@ -106,6 +106,9 @@ def create_external_training(store, athlete_id: str, athlete_timezone: str | Non
         raise HTTPException(410, "This session was deleted. Log new work with a new request ID.")
     if row["request_fingerprint"] != fingerprint:
         raise HTTPException(409, "This request ID was already used for another session.")
+    from api.services.tracking_xp import reconcile_training_xp
+
+    reconcile_training_xp(store, athlete_id, manual_session_id=str(row["id"]), athlete_timezone=athlete_timezone)
     return external_occurrence(row)
 
 

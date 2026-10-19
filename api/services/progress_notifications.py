@@ -277,6 +277,9 @@ def award_session_progress(
                     athlete_id,
                     action,
                 )
+    from api.services.tracking_xp import reconcile_training_xp
+
+    results.extend(reconcile_training_xp(store, athlete_id, athlete_timezone=athlete_timezone))
     return results
 
 

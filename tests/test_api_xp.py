@@ -33,6 +33,14 @@ def test_reward_configuration_contains_every_planned_action():
         "first_plan_completed": 250,
         "phase_completed": 200,
         "camp_completed": 500,
+        "manual_training_logged": 25,
+        "first_session_logged": 50,
+        "first_exercise_logged": 25,
+        "training_days_10": 100,
+        "training_days_25": 150,
+        "training_days_50": 250,
+        "training_days_100": 500,
+        "exercise_contribution_approved": 100,
     }
 
 

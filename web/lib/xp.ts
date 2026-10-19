@@ -17,7 +17,15 @@ export type XpAction =
   | "feedback_with_comment"
   | "first_plan_completed"
   | "phase_completed"
-  | "camp_completed";
+  | "camp_completed"
+  | "manual_training_logged"
+  | "first_session_logged"
+  | "first_exercise_logged"
+  | "training_days_10"
+  | "training_days_25"
+  | "training_days_50"
+  | "training_days_100"
+  | "exercise_contribution_approved";
 
 export type XpActionConfig = {
   label: string;
@@ -85,6 +93,14 @@ export const XP_ACTIONS: Record<XpAction, XpActionConfig> = {
   first_plan_completed: { label: "First plan completed", xp: 250 },
   phase_completed: { label: "Training phase completed", xp: 200 },
   camp_completed: { label: "Fight camp completed", xp: 500 },
+  manual_training_logged: { label: "Manual training logged", xp: 25 },
+  first_session_logged: { label: "First session recorded", xp: 50 },
+  first_exercise_logged: { label: "First exercise result recorded", xp: 25 },
+  training_days_10: { label: "10 training days recorded", xp: 100 },
+  training_days_25: { label: "25 training days recorded", xp: 150 },
+  training_days_50: { label: "50 training days recorded", xp: 250 },
+  training_days_100: { label: "100 training days recorded", xp: 500 },
+  exercise_contribution_approved: { label: "Exercise contribution approved", xp: 100 },
 };
 
 function parseXpLevelContract(value: unknown): readonly XpLevelConfig[] {

@@ -8,10 +8,15 @@ from api.services.private_media import validate_clip
 
 
 def command(store, actor_id, action, payload):
-    return store.community_rpc(
+    result = store.community_rpc(
         "community_command",
         {"p_actor_id": actor_id, "p_action": action, "p_payload": payload},
     )
+    if action == "approve":
+        from api.services.tracking_xp import reconcile_contribution_xp
+
+        reconcile_contribution_xp(store, str(result))
+    return result
 
 
 def detail_row(store, actor_id, revision_id, *, admin=False):

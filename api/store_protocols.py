@@ -429,6 +429,12 @@ class StreakStore(Protocol):
 class XpStore(Protocol):
     """Durable, server-awarded XP, plan milestones and week lifecycle."""
 
+    def reconcile_training_engagement_xp(self, athlete_id: str, *, manual_session_id: str | None = None) -> Any: ...
+
+    def list_unrewarded_contribution_revisions(self, *, after_id: str | None = None, limit: int = 50) -> list[dict[str, Any]]: ...
+
+    def reconcile_approved_contribution_xp(self, revision_id: str) -> Any: ...
+
     def award_xp(
         self,
         athlete_id: str,
