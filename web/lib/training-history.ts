@@ -1,3 +1,5 @@
+import { isValidClassification, type TrainingSessionType, type TrainingSport } from "./training-disciplines";
+
 export const TRAINING_ACTIVITIES = ["sparring", "boxing", "roadwork", "strength", "conditioning", "other"] as const;
 export const TRAINING_EFFORTS = ["easy", "moderate", "hard"] as const;
 export type TrainingActivity = (typeof TRAINING_ACTIVITIES)[number];
@@ -6,6 +8,9 @@ export type ExternalTrainingFields = {
   activity: TrainingActivity;
   duration_minutes: number;
   effort: TrainingEffort;
+  /** Optional; omitted, never guessed, when the athlete does not choose one. */
+  sport?: TrainingSport | null;
+  session_type?: TrainingSessionType | null;
 };
 export type TrainingHistorySession = {
   id: string;
@@ -15,6 +20,9 @@ export type TrainingHistorySession = {
   status: "done" | "modified" | "skipped";
   title: string;
   activity: TrainingActivity | null;
+  /** Absent or null on older records and on sessions logged without one. */
+  sport?: TrainingSport | null;
+  session_type?: TrainingSessionType | null;
   duration_minutes: number | null;
   effort: TrainingEffort | null;
   plan_id: string | null;
@@ -43,7 +51,8 @@ export function canRepeatTraining(row: TrainingHistorySession): boolean {
   return row.source === "external" && row.status === "done"
     && TRAINING_ACTIVITIES.includes(row.activity as TrainingActivity)
     && Number.isInteger(row.duration_minutes) && row.duration_minutes! >= 1 && row.duration_minutes! <= 600
-    && TRAINING_EFFORTS.includes(row.effort as TrainingEffort);
+    && TRAINING_EFFORTS.includes(row.effort as TrainingEffort)
+    && isValidClassification(row);
 }
 
 export function latestRepeatableTraining(rows: TrainingHistorySession[]): TrainingHistorySession | undefined {

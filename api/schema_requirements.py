@@ -400,7 +400,7 @@ REQUIRED_EXERCISE_LOGS_COLUMNS: tuple[str, ...] = (
 
 REQUIRED_EXTERNAL_TRAINING_COLUMNS: tuple[str, ...] = (
     "id", "athlete_id", "client_request_id", "request_fingerprint", "training_day",
-    "activity", "duration_minutes", "effort", "takeaway", "deleted_at", "created_at", "updated_at",
+    "activity", "sport", "session_type", "duration_minutes", "effort", "takeaway", "deleted_at", "created_at", "updated_at",
 )
 
 REQUIRED_XP_ACCOUNTS_COLUMNS: tuple[str, ...] = (

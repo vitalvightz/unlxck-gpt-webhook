@@ -3,7 +3,9 @@ from datetime import date
 from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, StrictInt, field_validator
+from pydantic import BaseModel, ConfigDict, Field, StrictInt, field_validator, model_validator
+
+from api.contracts.training_disciplines import SessionType, Sport, discipline_error
 
 Activity = Literal["sparring", "boxing", "roadwork", "strength", "conditioning", "other"]
 Effort = Literal["easy", "moderate", "hard"]
@@ -15,6 +17,16 @@ class ExternalTrainingFields(BaseModel):
     # Same upper bound as the existing session_logs duration contract.
     duration_minutes: StrictInt = Field(ge=1, le=600)
     effort: Effort
+    # Optional detail on what was trained. Absent on older records and never
+    # inferred for them; ``activity`` must be the kind the pair maps to.
+    sport: Sport | None = None
+    session_type: SessionType | None = None
+
+    @model_validator(mode="after")
+    def check_discipline(self):
+        if error := discipline_error(self.activity, self.sport, self.session_type):
+            raise ValueError(error)
+        return self
 
 
 class ExternalTrainingCreate(ExternalTrainingFields):
@@ -39,6 +51,8 @@ class TrainingHistorySession(BaseModel):
     status: Literal["done", "modified", "skipped"]
     title: str
     activity: Activity | None = None
+    sport: Sport | None = None
+    session_type: SessionType | None = None
     duration_minutes: int | None = None
     effort: Effort | None = None
     plan_id: str | None = None

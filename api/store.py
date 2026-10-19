@@ -4607,7 +4607,7 @@ class SupabaseAppStore(CommunityStoreMixin, PrivateMediaStoreMixin, CompactGener
 
     def update_external_training_session(self, athlete_id: str, entry_id: str, fields: dict[str, Any]) -> dict[str, Any] | None:
         response = (self.client.table("external_training_sessions")
-            .update({key: fields[key] for key in ("activity", "duration_minutes", "effort")})
+            .update({key: fields.get(key) for key in ("activity", "duration_minutes", "effort", "sport", "session_type")})
             .eq("athlete_id", athlete_id).eq("id", entry_id).is_("deleted_at", "null").execute())
         return (getattr(response, "data", None) or [None])[0]
 

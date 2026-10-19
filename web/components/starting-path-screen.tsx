@@ -6,6 +6,7 @@ import { useAppSession } from "./auth-provider";
 import { updateMe } from "@/lib/api";
 import { getAuthenticatedLandingHref, needsStartingPath } from "@/lib/auth-routing";
 import { requiresComplianceAcceptance } from "@/lib/compliance";
+import { athleteSport, sportLabel, TRAINING_SPORTS, type TrainingSport } from "@/lib/training-disciplines";
 import styles from "./starting-path-screen.module.css";
 
 export function StartingPathScreen() {
@@ -16,6 +17,11 @@ export function StartingPathScreen() {
   const [isSigningOut, setSigningOut] = useState(false);
   const locked = useRef(false);
   const ready = isMeHydrated && me && !hasTransientMeError;
+  // Sport comes first; "other" logs without one. A sport already on the profile is kept.
+  const known = athleteSport(me?.profile.technical_style);
+  const [picked, setPicked] = useState<TrainingSport | "other" | null>(null);
+  const [changingSport, setChangingSport] = useState(false);
+  const sport = changingSport ? null : picked ?? known;
   const mustAccept = requiresComplianceAcceptance(me);
 
   useEffect(() => {
@@ -29,7 +35,9 @@ export function StartingPathScreen() {
     locked.current = true;
     setSaving(path); setError(null);
     try {
-      const result = await updateMe(session.access_token, { starting_path: path });
+      const result = await updateMe(session.access_token, {
+        starting_path: path, ...(sport && sport !== "other" && sport !== known ? { technical_style: [sport] } : {}),
+      });
       if (result.profile.starting_path !== path) throw new Error("Your choice could not be saved. Try again.");
       replaceMe(result);
       router.replace(path === "tracking_first" ? "/today" : "/quick-build");
@@ -51,9 +59,21 @@ export function StartingPathScreen() {
       await signOut();
       router.replace("/login");
     }}>{isSigningOut ? "Signing out…" : "Sign out"}</button></header>
+    {sport === null ? <>
+      <div className={styles.intro}>
+        <h1 id="starting-heading">What do you train?</h1>
+        <p>Your training log will show the sessions your sport actually has.</p>
+      </div>
+      <div className={styles.sports}>
+        {[...TRAINING_SPORTS, "other" as const].map(value => <button key={value} className={styles.sport} type="button" disabled={isSigningOut}
+          onClick={() => { setPicked(value); setChangingSport(false); }}>{value === "other" ? "Other" : sportLabel(value)}</button>)}
+      </div>
+    </> : <>
     <div className={styles.intro}>
       <h1 id="starting-heading">How would you like to start?</h1>
       <p>Choose your starting point. You can use both whenever you want.</p>
+      <p className={styles.picked}>{sport === "other" ? "Other sport" : sportLabel(sport)} · <button type="button" className={styles.change}
+        disabled={Boolean(saving) || isSigningOut} onClick={() => setChangingSport(true)} aria-label="Change sport">Change</button></p>
     </div>
     <div className={styles.choices} aria-busy={Boolean(saving)}>
       <button className={styles.choice} type="button" disabled={Boolean(saving) || isSigningOut} onClick={() => void choose("plan_first")}>
@@ -67,6 +87,7 @@ export function StartingPathScreen() {
         <span className={styles.action}>{saving === "tracking_first" ? "Saving…" : "Start tracking"}<span aria-hidden="true"> →</span></span>
       </button>
     </div>
+    </>}
     {error ? <p role="alert" className={styles.error}>{error}</p> : null}
     <p className={styles.footer}>Two starting points. One UNLXCK account.</p>
   </section>;

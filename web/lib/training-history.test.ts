@@ -20,3 +20,10 @@ test("repeat selects the latest eligible manual session without mutating history
   }
   assert.equal(latestRepeatableTraining([newer, { ...newer, id: "earlier" }]), newer);
 });
+
+test("repeat keeps a classified session and rejects an inconsistent one", () => {
+  const rolling = { ...manual, activity: "other" as const, sport: "bjj" as const, session_type: "rolling" as const };
+  assert.equal(canRepeatTraining(rolling), true);
+  assert.equal(canRepeatTraining({ ...rolling, activity: "sparring" }), false);
+  assert.equal(canRepeatTraining({ ...manual, sport: null, session_type: null }), true);
+});

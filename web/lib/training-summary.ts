@@ -1,7 +1,11 @@
 import { isWithinLastDays, trainingDaysAgo } from "@/lib/history";
 import type { TrainingActivity, TrainingHistorySession } from "@/lib/training-history";
+import { sportLabel, type TrainingSport } from "@/lib/training-disciplines";
 
-/** One discipline's share of the window. Strength and conditioning are one S&C bucket. */
+/**
+ * One discipline's share of the window. A recorded sport decides the bucket;
+ * other records keep their activity's bucket. Strength and conditioning are one S&C bucket.
+ */
 export type TrainingMixRow = { key: string; label: string; sessions: number; minutes: number };
 
 export type TrainingSummary = {
@@ -20,6 +24,8 @@ const DISCIPLINE: Record<TrainingActivity, { key: string; label: string }> = {
   roadwork: { key: "roadwork", label: "Roadwork" },
   other: { key: "other", label: "Other" },
 };
+// Boxing shares the activity bucket above; it is the same discipline.
+const sportDiscipline = (sport: TrainingSport) => sport === "boxing" ? DISCIPLINE.boxing : { key: sport, label: sportLabel(sport) };
 // Prescribed sessions keep their own bucket rather than a discipline guessed from a title.
 const PLAN = { key: "unlxck", label: "Unlxck plan" };
 
@@ -36,7 +42,8 @@ export function summarizeTraining(rows: readonly TrainingHistorySession[], today
   for (const row of rows) {
     if (row.status === "skipped" || !isWithinLastDays(row.training_day, today, days)) continue;
     if (row.source !== "external" && row.completion_origin !== "reported") continue;
-    const discipline = row.source === "external" && row.activity ? DISCIPLINE[row.activity] ?? DISCIPLINE.other : PLAN;
+    const discipline = row.source !== "external" ? PLAN : row.sport ? sportDiscipline(row.sport)
+      : row.activity ? DISCIPLINE[row.activity] ?? DISCIPLINE.other : PLAN;
     const entry = mix.get(discipline.key) ?? { ...discipline, sessions: 0, minutes: 0 };
     const duration = row.duration_minutes && row.duration_minutes > 0 ? row.duration_minutes : 0;
     entry.sessions += 1;

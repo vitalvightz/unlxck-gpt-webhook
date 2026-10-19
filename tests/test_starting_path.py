@@ -21,6 +21,16 @@ def test_starting_path_round_trip_is_owned_and_does_not_create_training(path):
     assert client.put("/api/me", json={"starting_path": path}).status_code == 401
 
 
+@pytest.mark.parametrize("sport", ["bjj", "muay_thai", "boxing"])
+def test_sport_chosen_at_start_is_saved_with_the_path_in_one_request(sport):
+    client, store, _ = _build_client()
+    response = client.put("/api/me", headers=AUTH, json={"starting_path": "tracking_first", "technical_style": [sport]})
+    assert response.status_code == 200, response.text
+    assert response.json()["profile"]["technical_style"] == [sport]
+    assert response.json()["profile"]["starting_path"] == "tracking_first"
+    assert not store.external_training_sessions
+
+
 def test_invalid_path_and_missing_consent_do_not_save():
     client, store, _ = _build_client()
     assert client.put("/api/me", headers=AUTH, json={"starting_path": "coach"}).status_code == 422

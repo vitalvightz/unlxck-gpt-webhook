@@ -20,9 +20,15 @@
 .copy > span { color: var(--text-muted); font-size: 12px; line-height: 1.5; }
 .action { grid-column: 2; display: flex; justify-content: space-between; gap: 12px; color: var(--text-primary); font-size: 13px; font-weight: 600; }
 .action > span { color: var(--brand-red); }
+.sports { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.sport { min-height: 64px; padding: 16px; border: 1px solid var(--border-default); border-radius: 12px; background: var(--bg-panel); color: var(--text-primary); text-align: left; font: inherit; font-size: 15px; font-weight: 600; cursor: pointer; transition: background 160ms, border-color 160ms; }
+.sport:hover { background: color-mix(in srgb, var(--text-primary) 6%, var(--bg-panel)); border-color: var(--text-muted); }
+.sport:focus-visible, .change:focus-visible { outline: 2px solid var(--text-primary); outline-offset: -2px; box-shadow: none; }
+.picked { margin: 12px 0 0; color: var(--text-primary) !important; font-weight: 600; }
+.change { min-height: 44px; padding: 0 4px; border: 0; background: transparent; color: var(--text-muted); font: inherit; font-weight: 400; text-decoration: underline; cursor: pointer; }
 .footer { margin: 24px 0 0; text-align: center; font-size: 12px; }
 .error { font-size: 14px; }
 @media (max-width: 380px) { .choice { padding: 16px; gap: 10px; grid-template-columns: 30px minmax(0, 1fr); } .icon { height: 30px; } .copy strong { font-size: 14px; } }
 /* Remove only the clearance reserved for workspace navigation on this route. */
 :global(html[data-app-surface="entry"]) :global(.app-main) { padding-top: max(24px, var(--safe-area-top)); }
-@media (prefers-reduced-motion: reduce) { .choice { transition: none; } .choice:active { transform: none; } }
+@media (prefers-reduced-motion: reduce) { .choice, .sport { transition: none; } .choice:active { transform: none; } }

@@ -4,17 +4,14 @@ import { useEffect, useRef, useState } from "react";
 import { useAppSession } from "./auth-provider";
 import { LogTraining } from "./log-training";
 import { ApiError, getManualTrainingHistory, getTrainingHistory, getMe, updateMe } from "@/lib/api";
-import { TrainingHistoryPreview } from "./training-history-preview";
 import {
   decideTrainingHabit, EMPTY_TRAINING_HABITS, HABIT_WEEKDAYS, habitTrainingDay, learnTrainingHabits,
   type TrainingHabitDecision, type TrainingHabitPreferences,
 } from "@/lib/training-habits";
-import type { TrainingActivity, TrainingHistorySession } from "@/lib/training-history";
-import { TRAINING_ACTIVITIES } from "@/lib/training-history";
+import type { TrainingHistorySession } from "@/lib/training-history";
+import { trainingLabel } from "@/lib/training-disciplines";
 import type { TodayCommandView } from "@/lib/types";
 import styles from "./training-habit-log.module.css";
-
-const label = (value: string) => value.charAt(0).toUpperCase() + value.slice(1);
 
 // The logger is the lead action when no programme prescribes today's work.
 // onLoggedToday receives null while shared history is loading or unavailable.
@@ -30,16 +27,15 @@ function HabitLogContent({ accessToken, state, onSaved, variant = "compact", onL
   const [sharedHistoryError, setSharedHistoryError] = useState(false);
   const [historyError, setHistoryError] = useState(false);
   const [historyLoading, setHistoryLoading] = useState(true);
-  const [reload, setReload] = useState(0);
   const [busy, setBusy] = useState(false);
-  const [pendingEnabled, setPendingEnabled] = useState<boolean | null>(null);
   const saving = useRef(false);
   const active = useRef(true);
   const historyWrites = useRef(0);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const profile = me?.profile;
-  const preferences = profile?.training_habits ?? EMPTY_TRAINING_HABITS;
+  // Suggestions are always on; athletes steer them with "Yes, usually" / "Not always".
+  const preferences = { ...(profile?.training_habits ?? EMPTY_TRAINING_HABITS), enabled: true };
   const [now, setNow] = useState(() => new Date());
   const today = habitTrainingDay(now, profile?.athlete_timezone);
 
@@ -67,7 +63,7 @@ function HabitLogContent({ accessToken, state, onSaved, variant = "compact", onL
       }
     }).catch(() => { if (!cancelled) setHistoryError(true); });
     return () => { cancelled = true; };
-  }, [accessToken, reload]);
+  }, [accessToken]);
 
   useEffect(() => {
     let cancelled = false;
@@ -82,7 +78,7 @@ function HabitLogContent({ accessToken, state, onSaved, variant = "compact", onL
     }).catch(() => { if (!cancelled) setSharedHistoryError(true); })
       .finally(() => { if (!cancelled) setHistoryLoading(false); });
     return () => { cancelled = true; };
-  }, [accessToken, reload]);
+  }, [accessToken]);
 
   const trainingDay = state?.today.training_day || today;
   const loggedToday = historyLoading || sharedHistoryError ? null
@@ -125,7 +121,8 @@ function HabitLogContent({ accessToken, state, onSaved, variant = "compact", onL
           // A retry after a lost response may already have saved this exact intention.
           if (saved?.enabled === next.enabled && saved.decisions.length === next.decisions.length
             && next.decisions.every(item => saved.decisions.some(rule => rule.weekday === item.weekday
-              && rule.activity === item.activity && rule.duration_minutes === item.duration_minutes
+              && rule.activity === item.activity && (rule.sport ?? null) === (item.sport ?? null)
+              && (rule.session_type ?? null) === (item.session_type ?? null) && rule.duration_minutes === item.duration_minutes
               && rule.state === item.state && rule.decided_on === item.decided_on))) {
             setNotice(message); return;
           }
@@ -133,13 +130,14 @@ function HabitLogContent({ accessToken, state, onSaved, variant = "compact", onL
       }
       setError(reason instanceof ApiError && reason.status === 401 ? "Sign in again to save routines."
         : reason instanceof Error ? reason.message : "Couldn’t save. Try again.");
-    } finally { saving.current = false; if (active.current) { setBusy(false); setPendingEnabled(null); } }
+    } finally { saving.current = false; if (active.current) setBusy(false); }
   }
 
   function decide(confirmed: boolean) {
     if (!prompt) return;
     void persist(decideTrainingHabit(preferences, {
       weekday: prompt.weekday, activity: prompt.activity, duration_minutes: prompt.duration_minutes,
+      ...(prompt.sport ? { sport: prompt.sport, session_type: prompt.session_type ?? null } : {}),
       state: confirmed ? "confirmed" : "dismissed", decided_on: today,
     }, confirmed ? prompt.replace : undefined), confirmed ? "Routine saved." : "We won’t ask again.");
   }
@@ -153,61 +151,16 @@ function HabitLogContent({ accessToken, state, onSaved, variant = "compact", onL
         setSharedHistory(current => [row, ...current.filter(item => item.id !== row.id || item.source !== row.source)]);
         onSaved();
       }} />
-    <TrainingHistoryPreview history={sharedHistory} loading={historyLoading} error={sharedHistoryError} onRetry={() => setReload(value => value + 1)} />
     {prompt ? <div className={styles.prompt}>
       <p className={styles.eyebrow}>{prompt.replace ? "Routine changed?" : "Noticed a pattern"}</p>
-      <p className={styles.question}>{prompt.replace ? `Switch ${HABIT_WEEKDAYS[prompt.weekday]} to ${prompt.activity}?` : `${label(prompt.activity)} every ${HABIT_WEEKDAYS[prompt.weekday]}?`}</p>
+      <p className={styles.question}>{prompt.replace ? `Switch ${HABIT_WEEKDAYS[prompt.weekday]} to ${trainingLabel(prompt)}?` : `${trainingLabel(prompt)} every ${HABIT_WEEKDAYS[prompt.weekday]}?`}</p>
       <p className={styles.evidence}>Logged two weeks in a row.</p>
       <div className={styles.actions}>
         <button type="button" className="secondary-button" disabled={busy} onClick={() => decide(true)}>{prompt.replace ? "Yes, update" : "Yes, usually"}</button>
         <button type="button" className="ghost-button" disabled={busy} onClick={() => decide(false)}>Not always</button>
       </div>
     </div> : null}
-    {profile?.training_habits ? <details className={styles.settings}>
-      <summary>Training habits</summary>
-      <label className={styles.toggle}><input type="checkbox" checked={pendingEnabled ?? preferences.enabled} disabled={busy}
-        onChange={event => {
-          if (saving.current) return;
-          const enabled = event.target.checked; setPendingEnabled(enabled);
-          void persist({ ...preferences, enabled }, enabled ? "Suggestions on." : "Suggestions paused.");
-        }} />Suggest from my history</label>
-      <p className={styles.evidence}>Logging suggestions. Readiness still applies.</p>
-      {preferences.decisions.length ? <ul className={styles.routines}>
-        {preferences.decisions.map(item => <li key={`${item.weekday}-${item.activity}-${item.duration_minutes}-${item.decided_on}`}>
-          <RoutineEditor item={item} busy={busy} onSave={updated => void persist(decideTrainingHabit(preferences, { ...updated, decided_on: today }, updated.activity !== item.activity ? item : undefined), "Routine updated.")}
-            onRemove={() => void persist(decideTrainingHabit(preferences, { ...item, state: "dismissed", decided_on: today }), "Routine removed.")}
-            onReset={() => void persist({ ...preferences, decisions: preferences.decisions.filter(rule => rule !== item) }, "Suggestion reset.")} />
-        </li>)}
-      </ul> : <p className={styles.evidence}>No routines saved.</p>}
-      {historyError ? <div role="status"><p className={styles.evidence}>History unavailable.</p><button type="button" className="ghost-button" onClick={() => setReload(value => value + 1)}>Retry history</button></div> : null}
-    </details> : null}
     {notice ? <p className={styles.evidence} role="status">{notice}</p> : null}
     {error ? <p className="error-banner" role="alert">{error}</p> : null}
-  </div>;
-}
-
-function RoutineEditor({ item, busy, onSave, onRemove, onReset }: {
-  item: TrainingHabitDecision; busy: boolean; onSave: (item: TrainingHabitDecision) => void; onRemove: () => void; onReset: () => void;
-}) {
-  const [activity, setActivity] = useState(item.activity);
-  const [duration, setDuration] = useState(String(item.duration_minutes));
-  const name = `${HABIT_WEEKDAYS[item.weekday]} ${label(item.activity)}`;
-  return <div>
-    <div className={styles.routineRow}><span>{HABIT_WEEKDAYS[item.weekday]} · {label(item.activity)}</span>
-      {item.state === "dismissed" ? <button className="ghost-button" type="button" disabled={busy} onClick={onReset} aria-label={`Suggest ${name} again`}>Suggest again</button> : <button className="ghost-button" type="button" disabled={busy} onClick={onRemove} aria-label={`Remove ${name}`}>Remove</button>}
-    </div>
-    {item.state === "confirmed" ? <details>
-      <summary>Edit · {item.duration_minutes} min</summary>
-      <form className={styles.editForm} aria-label={`Edit ${name} routine`} onSubmit={event => {
-        event.preventDefault();
-        const minutes = Number(duration);
-        if (!Number.isInteger(minutes) || minutes < 1 || minutes > 600) return;
-        onSave({ ...item, activity, duration_minutes: minutes });
-      }}>
-        <label>Activity<select value={activity} disabled={busy} onChange={event => setActivity(event.target.value as TrainingActivity)}>{TRAINING_ACTIVITIES.map(value => <option value={value} key={value}>{label(value)}</option>)}</select></label>
-        <label>Minutes<input type="number" required min={1} max={600} step={1} value={duration} disabled={busy} onChange={event => setDuration(event.target.value)} /></label>
-        <button className="secondary-button" type="submit" disabled={busy}>Save routine</button>
-      </form>
-    </details> : null}
   </div>;
 }

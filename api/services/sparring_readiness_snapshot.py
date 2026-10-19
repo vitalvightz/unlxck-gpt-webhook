@@ -91,7 +91,7 @@ def annotate_payload_with_sparring_readiness(
                 if method == "list_external_training_sessions":
                     if not row.get("id"):
                         raise ValueError("manual occurrence identity unavailable")
-                    ExternalTrainingFields.model_validate({key: row[key] for key in ExternalTrainingFields.model_fields})
+                    ExternalTrainingFields.model_validate({key: row[key] for key in ExternalTrainingFields.model_fields if key in row})
                 valid.append(row)
             except Exception as exc:
                 # Keep other verified rows, but never call this source complete.
