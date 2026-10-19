@@ -85,3 +85,59 @@ test("an edited card submits Easier and Progress alongside cues and stop rules, 
     host.remove();
   }
 });
+
+
+test("sets × reps weight is a number with a picked unit, and the pencil switches to free text", async () => {
+  const host = document.createElement("div");
+  document.body.appendChild(host);
+  const root = createRoot(host);
+  const results: ExerciseChangeDose[] = [];
+  const set = async (selector: string, value: string, proto: typeof window.HTMLInputElement | typeof window.HTMLSelectElement = window.HTMLInputElement) => {
+    const field = host.querySelector<HTMLInputElement>(selector)!;
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(proto.prototype, "value")!.set!.call(field, value);
+      field.dispatchEvent(new window.Event(proto === window.HTMLSelectElement ? "change" : "input", { bubbles: true }));
+    });
+  };
+  const submit = () => act(async () => host.querySelector("form")!.dispatchEvent(new window.Event("submit", { bubbles: true, cancelable: true })));
+  try {
+    await act(async () => root.render(<ExercisePrescriptionEditor initial={{ mode: "reps", sets: 3, reps: 8 }}
+      action="Add" busy={false} lastLoad={{ value: 25, unit: "kg" }} onSubmit={dose => { results.push(dose); }} />));
+    assert.equal(host.querySelector<HTMLInputElement>('[aria-label="Weight"]')!.placeholder, "25");
+    assert.equal(host.querySelector<HTMLSelectElement>('[aria-label="Weight unit"]')!.value, "kg");
+    await set('[aria-label="Weight"]', "30");
+    await submit();
+    assert.equal(results.at(-1)?.load_or_intensity, "30 kg");
+    await set('[aria-label="Weight unit"]', "lb", window.HTMLSelectElement);
+    await submit();
+    assert.equal(results.at(-1)?.load_or_intensity, "30 lb");
+    await act(async () => host.querySelector<HTMLButtonElement>('[aria-label="Describe it instead of a weight"]')!.click());
+    assert.equal(host.querySelector('[aria-label="Weight"]'), null);
+    await set('[aria-label="Intensity"]', "fast");
+    await submit();
+    assert.equal(results.at(-1)?.load_or_intensity, "fast");
+  } finally {
+    await act(async () => root.unmount());
+    host.remove();
+  }
+});
+
+test("timed work and existing text open on free text, an existing weight opens on the number", async () => {
+  const host = document.createElement("div");
+  document.body.appendChild(host);
+  const root = createRoot(host);
+  try {
+    await act(async () => root.render(<ExercisePrescriptionEditor initial={{ mode: "duration", duration_seconds: 60 }}
+      action="Add" busy={false} onSubmit={() => {}} />));
+    assert.ok(host.querySelector('[aria-label="Intensity"]'));
+    await act(async () => root.render(<ExercisePrescriptionEditor key="text" initial={{ mode: "reps", sets: 3, reps: 8, load_or_intensity: "Bodyweight" }}
+      action="Add" busy={false} onSubmit={() => {}} />));
+    assert.equal(host.querySelector<HTMLInputElement>('[aria-label="Intensity"]')!.value, "Bodyweight");
+    await act(async () => root.render(<ExercisePrescriptionEditor key="weight" initial={{ mode: "distance", distance: 20, distance_unit: "m", load_or_intensity: "24kg" }}
+      action="Add" busy={false} onSubmit={() => {}} />));
+    assert.equal(host.querySelector<HTMLInputElement>('[aria-label="Weight"]')!.value, "24");
+  } finally {
+    await act(async () => root.unmount());
+    host.remove();
+  }
+});

@@ -3,6 +3,8 @@
 import { useState, type ReactNode } from "react";
 import type { ExerciseChangeDose } from "@/lib/types";
 import { finishedDose, validDose, type DoseDraft } from "@/lib/exercise-dose";
+import type { LoadUnit } from "@/lib/load-entry";
+import { LoadField } from "./load-field";
 import styles from "./exercise-customisation.module.css";
 
 /** The coaching copy a rendered card shows: cues, Easier, Progress and the stop rule. */
@@ -30,8 +32,10 @@ function TimeField({ label, value, onChange, rest = false }: {
 const lines = (text: string) => text.split("\n").map(s => s.trim()).filter(Boolean);
 
 /** The same prescription editor for Add, Swap and an existing rendered card. */
-export function ExercisePrescriptionEditor({ initial, action, busy, coaching, onSubmit, children }: {
+export function ExercisePrescriptionEditor({ initial, action, busy, coaching, lastLoad, onSubmit, children }: {
   initial: DoseDraft; action: string; busy: boolean; coaching?: ExerciseCoaching;
+  /** The weight this exercise was last done with, when the athlete has done it. */
+  lastLoad?: { value: number; unit: LoadUnit } | null;
   onSubmit: (dose: ExerciseChangeDose, coaching?: ExerciseCoaching) => void;
   /** Rendered just above the submit button (e.g. which workouts to apply to). */
   children?: ReactNode;
@@ -96,9 +100,8 @@ export function ExercisePrescriptionEditor({ initial, action, busy, coaching, on
     <details className={styles.advanced}>
       <summary><span>Load &amp; effort</span>{effortSummary ? <small>{effortSummary}</small> : null}</summary>
       <div className={styles.groupBody}>
-        <label className={`${styles.doseField} ${styles.textField}`}><span>Weight / intensity</span>
-          <input aria-label="Weight or intensity" maxLength={80} placeholder="e.g. 20 kg, light band" value={dose.load_or_intensity ?? ""} onChange={e => update("load_or_intensity", e.target.value)} />
-        </label>
+        <LoadField className={styles.doseField} value={dose.load_or_intensity} weighed={dose.mode === "reps"}
+          last={lastLoad} onChange={text => update("load_or_intensity", text)} />
         <div className={styles.pairGrid}>
           {number("rpe", "RPE (optional)", 10, true)}
           {dose.mode === "reps" ? <label className={`${styles.doseField} ${styles.textField}`}><span>Tempo</span>

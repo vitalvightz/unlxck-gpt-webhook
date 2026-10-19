@@ -3,6 +3,8 @@ import { useState } from "react";
 import type { CustomDose } from "@/lib/api-schema.generated";
 import styles from "./custom-plan-builder.module.css";
 import { blankDose } from "@/lib/custom-plan-dose";
+import type { LoadUnit } from "@/lib/load-entry";
+import { LoadField } from "./load-field";
 function DurationField({
   value,
   label,
@@ -35,7 +37,12 @@ function DurationField({
     </label>
   );
 }
-export function CustomDoseEditor({ dose, onChange }: { dose: CustomDose; onChange: (dose: CustomDose) => void }) {
+export function CustomDoseEditor({ dose, onChange, lastLoad }: {
+  dose: CustomDose;
+  onChange: (dose: CustomDose) => void;
+  /** The weight this exercise was last done with, when the athlete has done it. */
+  lastLoad?: { value: number; unit: LoadUnit } | null;
+}) {
   function number(
     field: "sets" | "reps" | "rest_seconds" | "rounds" | "rpe" | "distance",
     label: string,
@@ -136,15 +143,15 @@ export function CustomDoseEditor({ dose, onChange }: { dose: CustomDose; onChang
           />
         </label>
       )}
-      <label className={styles.wide}>
-        <span>{dose.mode === "reps" ? "Load / units (optional)" : "Intensity (optional)"}</span>
-        <input
-          aria-label="Load or intensity"
-          maxLength={80}
-          value={dose.load_or_intensity ?? ""}
-          onChange={(e) => onChange({ ...dose, load_or_intensity: e.target.value || null })}
-        />
-      </label>
+      <LoadField
+        // A new format starts the field over on its own default.
+        key={dose.mode}
+        className={styles.wide}
+        value={dose.load_or_intensity}
+        weighed={dose.mode === "reps"}
+        last={lastLoad}
+        onChange={(text) => onChange({ ...dose, load_or_intensity: text || null })}
+      />
       {number("rpe", "RPE (optional)", 1, 10, 0.5)}
       {dose.mode === "reps" ? (
         <>

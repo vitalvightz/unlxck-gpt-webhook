@@ -190,7 +190,7 @@ for (const width of [390, 1280]) {
     await edit.getByLabel("Rest", { exact: true }).fill("75");
     await expect(edit.locator("details")).not.toHaveAttribute("open");
     await edit.locator("summary").click();
-    await edit.getByLabel("Weight or intensity").fill("Easy uphill pace");
+    await edit.getByLabel("Intensity", { exact: true }).fill("Easy uphill pace");
     await edit.getByLabel("RPE (optional)", { exact: true }).fill("6.5");
     await edit.getByLabel("Cues", { exact: true }).fill("Run tall; keep the shoulders relaxed.");
     await edit.getByLabel("Stop rules", { exact: true }).fill("Stop for sharp pain.");

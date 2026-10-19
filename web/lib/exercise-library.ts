@@ -18,3 +18,21 @@ export function exerciseResult(exercise: PersonalExercise): { label: string; val
   return { label: exercise.latest_confirmed_as_prescribed ? "Latest confirmed" : "Latest recorded",
     value: parts.join(" · ") || (exercise.latest_confirmed_as_prescribed ? "Completed as prescribed" : "Modified result") };
 }
+
+// One read of the athlete's movement index serves every editor opened soon after.
+const PAST_TTL_MS = 5 * 60_000;
+let past: { token: string; at: number; request: Promise<ReadonlyMap<string, PersonalExercise>> } | null = null;
+
+/** The athlete's own exercises by canonical key, for prefilling a new prescription. Never fails: no history is an empty map. */
+export function pastExercisesByKey(token: string, read: (token: string) => Promise<{ exercises: PersonalExercise[] }>): Promise<ReadonlyMap<string, PersonalExercise>> {
+  if (past && past.token === token && Date.now() - past.at < PAST_TTL_MS) return past.request;
+  const request = read(token)
+    .then(response => new Map(response.exercises.filter(item => item.identity_kind === "canonical")
+      .map(item => [item.id.slice("key:".length), item] as const)))
+    .catch(() => {
+      if (past?.request === request) past = null;
+      return new Map<string, PersonalExercise>();
+    });
+  past = { token, at: Date.now(), request };
+  return request;
+}
