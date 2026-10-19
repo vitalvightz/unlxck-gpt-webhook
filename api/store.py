@@ -4588,6 +4588,11 @@ class SupabaseAppStore(CommunityStoreMixin, PrivateMediaStoreMixin, CompactGener
         response = query.order("training_day", desc=True).order("created_at", desc=True).limit(limit).execute()
         return _readiness_history_rows(response)
 
+    def get_external_training_session(self, athlete_id: str, entry_id: str) -> dict[str, Any] | None:
+        """One live manual session, owner-scoped."""
+        return self._select_first(self.client.table("external_training_sessions").select("*")
+            .eq("athlete_id", athlete_id).eq("id", entry_id).is_("deleted_at", "null"))
+
     def update_external_training_session(self, athlete_id: str, entry_id: str, fields: dict[str, Any]) -> dict[str, Any] | None:
         response = (self.client.table("external_training_sessions")
             .update({key: fields[key] for key in ("activity", "duration_minutes", "effort")})

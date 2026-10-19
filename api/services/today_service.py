@@ -2855,6 +2855,21 @@ class _UpcomingCompletions:
             str(row.get("updated_at") or row.get("created_at") or ""), str(row.get("session_id"))))) if accepted else None
 
 
+def _head_impact_reported(store: AppStore, athlete_id: str, training_day: str) -> bool:
+    """Whether a sparring report for this athlete-local day says rocked/dropped.
+
+    The report itself is the record; this only keeps Today's lead message
+    consistent with it. A failed read leaves Today as it was before the report
+    was readable here: it never adds clearance.
+    """
+    try:
+        rows = store.list_sparring_logs(athlete_id, limit=50, from_day=training_day)
+    except Exception as exc:  # noqa: BLE001 - logged; Today must still render
+        logger.warning("[today] sparring read failed athlete_id=%s error_type=%s", athlete_id, type(exc).__name__)
+        return False
+    return any(bool(row.get("rocked")) and str(row.get("training_day") or "")[:10] == training_day for row in rows)
+
+
 def build_today_command_view(
     store: AppStore,
     *,
@@ -2913,6 +2928,7 @@ def _build_today_command_view(
             symptom_recommendation = {"decision": symptom_decision.decision, "reason": symptom_decision.message,
                                       "triggers": list(symptom_decision.triggers), "training_day": training_day}
         view = build_command_view(current_training_day=training_day, plan=None, open_injuries=injuries,
+                                  head_impact_today=_head_impact_reported(store, athlete_id, training_day),
                                   recommendation=symptom_recommendation)
         view.effective_clinician_clearance = effective_clinician_clearance(injuries)
         view.delayed_rehab_prompts = delayed_rehab_prompts(store, athlete_id, training_day, athlete_timezone)
@@ -3329,6 +3345,7 @@ def _build_today_command_view(
         current_training_day=training_day,
         plan=resolved_plan,
         recommendation=recommendation,
+        head_impact_today=_head_impact_reported(store, athlete_id, training_day),
         injury_hold_exempt=today_is_support_filler,
         completion=today_completion,
         next_session=sanitize_surface_guidance(_next_session_payload(target_entry, session_id, relation=session_relation)),

@@ -174,6 +174,8 @@ def test_index_requirement_satisfied_by_constraint_alias():
         "today_checkins_athlete_plan_day_key",
         "session_completions_athlete_session_day_key",
         "sparring_logs_athlete_day_idx",
+        "sparring_logs_external_session_key",
+        "sparring_log_requests_pkey",
         "exercise_logs_occurrence_key",
         "external_training_sessions_request_key",
         "external_training_sessions_athlete_day_idx",

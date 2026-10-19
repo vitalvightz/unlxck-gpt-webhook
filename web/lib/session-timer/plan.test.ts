@@ -12,6 +12,8 @@ import {
   plannedSparringIntensity,
   dayTimerItems,
   timerSessionFor,
+  withoutSparringItems,
+  type TimerItem,
 } from "./plan.ts";
 import type { StructuredBlock, StructuredSession } from "../types.ts";
 
@@ -378,4 +380,12 @@ test("the dose is also carried as chips: the target first, then load and effort"
   // A hold's time is on the clock, so it is not repeated as a chip.
   const hold = blockToTimerItem({ block_type: "rehab", display_name: "Wall sit", sets: 2, reps: "30s" }, 0);
   assert.deepEqual(hold?.stats, []);
+});
+
+test("after a head impact the day's timer keeps every block except its sparring rounds", () => {
+  const interval = (id: string, sparring: boolean): TimerItem => ({ kind: "interval", id, title: id, detail: null,
+    blockType: sparring ? "sparring" : "conditioning", rounds: 3, workSec: 120, restSec: 60, sparring, needsSetup: false });
+  const items = [interval("spar", true), interval("bag", false)];
+  assert.deepEqual(withoutSparringItems(items).map((item) => item.id), ["bag"]);
+  assert.deepEqual(withoutSparringItems([interval("bag", false)]).map((item) => item.id), ["bag"]);
 });

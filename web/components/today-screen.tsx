@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { TrainingHabitLog } from "@/components/training-habit-log";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import styles from "./today-screen.module.css";
 
 import { useAppSession } from "@/components/auth-provider";
@@ -116,6 +116,7 @@ function StatusTile({
 
 function TodayReadinessStrip({
   hasPlan,
+  loggedToday,
   needsCheckin,
   openInjuryCount,
   completionStatus,
@@ -124,6 +125,7 @@ function TodayReadinessStrip({
   sessionHref,
 }: {
   hasPlan: boolean;
+  loggedToday: boolean | null;
   needsCheckin: boolean;
   openInjuryCount: number;
   completionStatus: TodayCompletionStatus;
@@ -168,8 +170,9 @@ function TodayReadinessStrip({
       ) : (
         <StatusTile
           label="Training"
-          value="Log session"
-          icon="history"
+          value={loggedToday ? "Logged" : "Log session"}
+          tone={loggedToday ? "clear" : undefined}
+          icon={loggedToday ? "check" : "history"}
           href="#today-training-log"
           actionLabel="Go to the training log"
         />
@@ -207,6 +210,8 @@ export function TodayScreen() {
   const planTitle = activePlan.name?.trim() || (openOngoing ? "Open training plan" : "Active fight camp");
   const hasPlan = hasActivePlan(activePlan);
   const showCheckin = state ? shouldShowTodayCheckin(state) : false;
+  // Unknown (null) until shared history confirms it; never assumed.
+  const [loggedToday, setLoggedToday] = useState<boolean | null>(null);
   const trainingDayLabel = useMemo(
     () => formatTrainingDay(state?.today.training_day),
     [state?.today.training_day],
@@ -326,6 +331,7 @@ export function TodayScreen() {
         </div>
         <TodayReadinessStrip
           hasPlan={hasPlan}
+          loggedToday={loggedToday}
           needsCheckin={showCheckin}
           openInjuryCount={state.open_injuries?.length ?? 0}
           completionStatus={state.today.completion_status}
@@ -377,6 +383,7 @@ export function TodayScreen() {
           accessToken={token}
           state={state}
           variant={hasPlan ? "compact" : "primary"}
+          onLoggedToday={setLoggedToday}
           onSaved={() => void refresh()}
         />
       </div>

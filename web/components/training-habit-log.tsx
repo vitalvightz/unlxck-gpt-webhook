@@ -17,12 +17,13 @@ import styles from "./training-habit-log.module.css";
 const label = (value: string) => value.charAt(0).toUpperCase() + value.slice(1);
 
 // The logger is the lead action when no programme prescribes today's work.
-type Props = { accessToken: string | null; state: TodayCommandView | null; onSaved: () => void; variant?: "primary" | "compact" };
+// onLoggedToday receives null while shared history is loading or unavailable.
+type Props = { accessToken: string | null; state: TodayCommandView | null; onSaved: () => void; variant?: "primary" | "compact"; onLoggedToday?: (logged: boolean | null) => void };
 export function TrainingHabitLog(props: Props) {
   return props.accessToken ? <HabitLogContent key={props.accessToken} {...props} accessToken={props.accessToken} /> : null;
 }
 
-function HabitLogContent({ accessToken, state, onSaved, variant = "compact" }: Props & { accessToken: string }) {
+function HabitLogContent({ accessToken, state, onSaved, variant = "compact", onLoggedToday }: Props & { accessToken: string }) {
   const { me, replaceMe } = useAppSession();
   const [history, setHistory] = useState<TrainingHistorySession[]>([]);
   const [sharedHistory, setSharedHistory] = useState<TrainingHistorySession[]>([]);
@@ -83,6 +84,11 @@ function HabitLogContent({ accessToken, state, onSaved, variant = "compact" }: P
     return () => { cancelled = true; };
   }, [accessToken, reload]);
 
+  const trainingDay = state?.today.training_day || today;
+  const loggedToday = historyLoading || sharedHistoryError ? null
+    : sharedHistory.some(row => row.training_day === trainingDay && row.status !== "skipped");
+  useEffect(() => { onLoggedToday?.(loggedToday); }, [loggedToday, onLoggedToday]);
+
   // Coach-declared work and the live safety decision outrank learned logging guesses.
   const coachScheduled = state?.today.session_scope === "today" && Boolean(
     state.today.next_session.coach_led_contact || ["sparring", "light_combat", "coach_led", "technical"].includes(state.today.next_session.session_type ?? ""),
@@ -139,7 +145,7 @@ function HabitLogContent({ accessToken, state, onSaved, variant = "compact" }: P
   }
 
   return <div className={styles.root} aria-busy={busy || undefined}>
-    <LogTraining accessToken={accessToken} recent history={history} variant={variant}
+    <LogTraining accessToken={accessToken} recent history={history} variant={variant} onSparringReported={onSaved}
       quickSession={suggestion ? { ...suggestion, effort: suggestion.source?.effort } : undefined}
       onSaved={row => {
         historyWrites.current++;

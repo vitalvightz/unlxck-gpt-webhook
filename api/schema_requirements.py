@@ -60,6 +60,8 @@ REQUIRED_TABLES: tuple[str, ...] = (
     # A missing migration must fail the gate: the endpoint writes this table
     # and, for rocked reports, its admin review in one RPC.
     "sparring_logs",
+    # Accepted sparring request ids, so a retried report never writes twice.
+    "sparring_log_requests",
     # What the athlete actually did per prescribed block (POST
     # /api/today/exercise-log). A missing migration must fail the gate: the
     # in-session log would otherwise fail on every save.
@@ -373,6 +375,10 @@ REQUIRED_SPARRING_LOGS_COLUMNS: tuple[str, ...] = (
     "rocked",
     "notes",
     "created_at",
+    # Manual-session link and ordered corrections (record_sparring_log RPC).
+    "external_session_id",
+    "detail_revision",
+    "admin_review_id",
 )
 
 REQUIRED_EXERCISE_LOGS_COLUMNS: tuple[str, ...] = (
@@ -508,6 +514,7 @@ REQUIRED_COLUMNS: Mapping[str, tuple[str, ...]] = {
     "today_checkins": REQUIRED_TODAY_CHECKINS_COLUMNS,
     "session_completions": REQUIRED_SESSION_COMPLETIONS_COLUMNS,
     "sparring_logs": REQUIRED_SPARRING_LOGS_COLUMNS,
+    "sparring_log_requests": ("athlete_id", "client_request_id", "sparring_log_id", "created_at"),
     "exercise_logs": REQUIRED_EXERCISE_LOGS_COLUMNS,
     "external_training_sessions": REQUIRED_EXTERNAL_TRAINING_COLUMNS,
     "custom_training_plans": ("id", "athlete_id", "name", "kind", "sessions", "incomplete", "created_at", "updated_at"),
@@ -660,6 +667,16 @@ INDEX_REQUIREMENTS: tuple[IndexRequirement, ...] = (
         accepted_names=("sparring_logs_athlete_day_idx",),
     ),
     IndexRequirement(
+        # One detailed report per manual sparring session.
+        label="sparring_logs manual-session uniqueness",
+        accepted_names=("sparring_logs_external_session_key",),
+    ),
+    IndexRequirement(
+        # Every accepted request id: a retried report is answered from here.
+        label="sparring_log_requests athlete/request uniqueness",
+        accepted_names=("sparring_log_requests_pkey",),
+    ),
+    IndexRequirement(
         # The upsert's ON CONFLICT target: one log per plan/day/block.
         label="exercise_logs plan/day/block uniqueness",
         accepted_names=("exercise_logs_occurrence_key",),
@@ -728,6 +745,7 @@ RLS_REQUIRED_TABLES: tuple[str, ...] = (
     "today_checkins",
     "session_completions",
     "sparring_logs",
+    "sparring_log_requests",
     "exercise_logs",
     "external_training_sessions",
     "xp_accounts",

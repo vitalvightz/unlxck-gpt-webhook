@@ -1353,3 +1353,38 @@ test("Home's Preview session link opens the previewed day's screen once", async 
     domWindow.history.replaceState(null, "", "/");
   }
 });
+
+const HEAD_IMPACT_NOTICE: NonNullable<TodayCommandView["today"]["primary_safety_notice"]> = {
+  code: "head_impact_no_contact", injury_id: "", chip: "CHECK", title: "No more contact today",
+  action: "You reported being rocked or dropped. No more contact today, and tell your coach.",
+  detail: "Get checked if symptoms appear.", tone: "red",
+};
+
+test("a head-impact report locks contact on a green day but keeps the non-contact session", () => {
+  const state = contactDayState("green");
+  state.effective_clinician_clearance = { level: "train_contact", scopes: ["rehab", "training", "contact"],
+    requires_update: false, limited_by: [] };
+  state.today.primary_safety_notice = HEAD_IMPACT_NOTICE;
+  const html = renderPanel(state);
+  assert.doesNotMatch(html, />Start hard sparring<|Sparring rounds<\/button>/);
+  assert.match(html, /No more contact today after your head-impact report/);
+  assert.doesNotMatch(html, /locked by clinician clearance/);
+  // The mobility flush is not contact, so it stays startable.
+  assert.match(html, />Start (session|Mobility flush)</);
+});
+
+test("a head-impact report blocks a contact-only session from being started or finished", () => {
+  const state = contactDayState("green");
+  state.today.next_session = { ...state.today.next_session, session_id: "2026-09-25", title: "Hard sparring",
+    coach_led_contact: "Hard sparring" };
+  state.today.primary_safety_notice = HEAD_IMPACT_NOTICE;
+  const html = renderPanel(state);
+  assert.doesNotMatch(html, />Start hard sparring<|>Start session<|>Finish session<|>Mark done</);
+  assert.match(html, /No more contact today: you reported being rocked or dropped/);
+});
+
+test("without a head-impact notice the same contact day is unchanged", () => {
+  const state = contactDayState("green");
+  state.today.primary_safety_notice = { ...HEAD_IMPACT_NOTICE, code: "skin_care", chip: "SKIN CARE", tone: "amber" };
+  assert.match(renderPanel(state), />Start hard sparring</);
+});

@@ -189,7 +189,9 @@ class PrimarySafetyNotice(BaseModel):
         "skin_local_protection",
         "skin_no_contact",
         "skin_medical_review",
+        "head_impact_no_contact",
     ]
+    # Empty for a head-impact notice, which comes from a sparring report.
     injury_id: str
     chip: Literal["SKIN CARE", "CHECK"]
     title: str
@@ -444,13 +446,31 @@ def _natural_injury_name(label: str) -> str:
 
 def _primary_safety_notice(
     open_injuries: Sequence[Mapping[str, Any]] | None,
+    *,
+    head_impact_today: bool = False,
 ) -> PrimarySafetyNotice | None:
-    """Return the strongest current skin-care instruction, if one exists.
+    """Return the strongest current safety instruction, if one exists.
 
     Session timing is intentionally absent from this selector. A future-session
     preview is planning information; an active wound instruction is current
     safety information and therefore remains eligible to lead the command card.
+    A head-impact report from today outranks every skin instruction, so no
+    earlier positive message stays in the lead after it. It is a no-contact
+    instruction, never a diagnosis or a clearance.
     """
+    if head_impact_today:
+        return PrimarySafetyNotice(
+            code="head_impact_no_contact",
+            injury_id="",
+            chip="CHECK",
+            title="No more contact today",
+            action="You reported being rocked or dropped. No more contact today, and tell your coach.",
+            detail=(
+                "If you get a headache, dizziness, nausea, confusion, memory problems or "
+                "blurred vision, stop training and get checked by a medical professional."
+            ),
+            tone="red",
+        )
     surface_injuries = [
         injury
         for injury in _active_injury_rows(open_injuries)
@@ -628,6 +648,7 @@ def build_command_view(
     open_injuries: Sequence[Mapping[str, Any]] | None = None,
     week_summary: Mapping[str, Any] | None = None,
     injury_hold_exempt: bool = False,
+    head_impact_today: bool = False,
 ) -> CommandView:
     """Assemble the normalized command view from derived inputs.
 
@@ -679,7 +700,7 @@ def build_command_view(
             confidence_band(rec_view.triggers) if rec_view.triggers else None
         ),
         recommendation_confidence_note=confidence_note(rec_view.triggers),
-        primary_safety_notice=_primary_safety_notice(open_injuries),
+        primary_safety_notice=_primary_safety_notice(open_injuries, head_impact_today=head_impact_today),
         warnings=[str(warning) for warning in (warnings or []) if str(warning).strip()],
         next_session=dict(next_session) if next_session else {},
         session_scope=resolved_session_scope,
