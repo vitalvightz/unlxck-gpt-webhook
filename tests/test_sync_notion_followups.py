@@ -112,6 +112,17 @@ def test_full_five_day_gap_recomputed_on_repeated_poll():
     assert sync.get_changes(page, datetime.fromisoformat("2026-10-20T18:00:00+01:00")) == {}
 
 
+def test_equivalent_utc_and_local_date_representation_does_not_resync():
+    assert sync.same_date_value("2026-10-24T18:00:00+01:00", "2026-10-24T17:00:00.000Z")
+    page = row(stage="Contacted", sent="1", synced=1,
+               first="2026-10-19T18:00:00+01:00",
+               last_sent="2026-10-19T18:00:00+01:00",
+               copied="WAIT: next follow-up is due 24 Oct 2026, 18:00 BST.",
+               safe_due="2026-10-24T17:00:00.000Z",
+               timing="Follow-up 2: waiting")
+    assert sync.get_changes(page, datetime.fromisoformat("2026-10-20T18:00:00+01:00")) == {}
+
+
 def test_first_due_date_and_early_copy_are_consistent():
     page = row(stage="Contacted", sent="0", synced=0)
     due, status, message = sync.due_and_copy(
