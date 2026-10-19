@@ -7,11 +7,13 @@ import sheet from "@/components/log-training.module.css";
 import { useAppSession } from "@/components/auth-provider";
 import { useToast } from "@/components/toast-provider";
 import { submitSparringLog } from "@/lib/api";
+import { formatAppDate } from "@/lib/date-format";
 import { hasHealthDataConsent } from "@/lib/compliance";
 import { lockOverlayScroll } from "@/lib/overlay-scroll-lock";
 import type {
   SparringHeadContact,
   SparringIntensity,
+  SparringLogRecord,
   SparringLogSource,
   SparringPlannedIntensity,
 } from "@/lib/types";
@@ -32,6 +34,8 @@ export type SparringDraft = {
   externalSessionId?: string | null;
   /** A starting answer from the manual log's effort, never sent as planned. */
   suggestedIntensity?: SparringIntensity;
+  /** A saved report being reopened to correct it. */
+  existing?: SparringLogRecord;
 };
 
 /** Shown the moment "Yes" is picked, before saving; the server returns the same. */
@@ -51,6 +55,11 @@ const HEAD_CONTACT_LABELS: Record<SparringHeadContact, string> = {
   heavy: "A lot",
 };
 
+const HEAD_CONTACT_ORDER: readonly SparringHeadContact[] = ["none", "light", "heavy"];
+
+/** Shown when a reopened report holds head-impact evidence a correction cannot lower. */
+export const PROTECTED_EVIDENCE_COPY = "Head-impact reports stay on your record for safety. You can add to them, not reduce them.";
+
 /** The plan's intent as the starting answer; the athlete corrects it if needed. */
 export function defaultIntensity(planned: SparringPlannedIntensity | null): SparringIntensity | undefined {
   if (planned === "hard") return "hard";
@@ -65,19 +74,22 @@ function Choice<Value extends string>({
   labels,
   selected,
   onSelect,
+  locked,
 }: Readonly<{
   legend: string;
   options: readonly Value[];
   labels: Record<Value, string>;
   selected: Value | undefined;
   onSelect: (value: Value) => void;
+  /** Answers a correction may not choose. */
+  locked?: (value: Value) => boolean;
 }>) {
   return (
     <fieldset className={sheet.fieldset}>
       <legend>{legend}</legend>
       <div className={options.length === 2 ? styles.twoUp : sheet.effortGrid}>
         {options.map((value) => (
-          <button key={value} type="button" aria-pressed={selected === value} onClick={() => onSelect(value)}>
+          <button key={value} type="button" aria-pressed={selected === value} disabled={locked?.(value)} onClick={() => onSelect(value)}>
             {labels[value]}
           </button>
         ))}
@@ -105,7 +117,7 @@ export function SparringLogPrompt({
   draft: SparringDraft;
   onDismiss: () => void;
   /** After a confirmed save, so Today can refresh its safety guidance. */
-  onSaved?: () => void;
+  onSaved?: (log: SparringLogRecord) => void;
 }) {
   const { me } = useAppSession();
   const { showToast } = useToast();
@@ -116,20 +128,25 @@ export function SparringLogPrompt({
   // an earlier request that landed without its response.
   const requestId = useRef<string | null>(null);
   // Orders this report's sets of answers on the server.
-  const revision = useRef(0);
+  // A reopened report continues from its latest applied correction.
+  const existing = draft.existing;
+  const revision = useRef(existing?.detail_revision ?? 0);
   const [intensity, setIntensity] = useState<SparringIntensity | undefined>(
-    defaultIntensity(draft.plannedIntensity) ?? draft.suggestedIntensity,
+    existing?.intensity ?? defaultIntensity(draft.plannedIntensity) ?? draft.suggestedIntensity,
   );
   const [rounds, setRounds] = useState<number | null>(
-    draft.rounds === null ? null : Math.min(30, Math.max(0, draft.rounds)),
+    existing ? existing.rounds_completed : draft.rounds === null ? null : Math.min(30, Math.max(0, draft.rounds)),
   );
-  const [headContact, setHeadContact] = useState<SparringHeadContact | undefined>();
-  const [rocked, setRocked] = useState<"no" | "yes">("no");
-  const [notes, setNotes] = useState("");
+  const [headContact, setHeadContact] = useState<SparringHeadContact | undefined>(existing?.head_contact);
+  const [rocked, setRocked] = useState<"no" | "yes">(existing?.rocked ? "yes" : "no");
+  const [notes, setNotes] = useState(existing?.notes ?? "");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [savedNotice, setSavedNotice] = useState<string | null>(null);
-  const [notesOpen, setNotesOpen] = useState(false);
+  const [notesOpen, setNotesOpen] = useState(Boolean(existing?.notes));
+  // The server keeps recorded head-impact evidence; the form says so up front.
+  const contactFloor = existing ? HEAD_CONTACT_ORDER.indexOf(existing.head_contact) : -1;
+  const protectedEvidence = Boolean(existing && (existing.rocked || contactFloor > 0));
   const consented = hasHealthDataConsent(me);
 
   useEffect(() => {
@@ -189,7 +206,8 @@ export function SparringLogPrompt({
         planned_intensity: draft.plannedIntensity,
         intensity,
         rounds_completed: rounds,
-        round_seconds: draft.roundSeconds,
+        // A correction keeps the saved round length; only the timer measures it.
+        round_seconds: draft.roundSeconds ?? existing?.round_seconds ?? null,
         head_contact: headContact,
         rocked: rocked === "yes",
         notes: notes.trim(),
@@ -200,11 +218,13 @@ export function SparringLogPrompt({
         setError("Your report wasn't sent. Please try again.");
         return;
       }
-      onSaved?.();
-      if (result.safety_notice) {
+      onSaved?.(result.log);
+      // A reopened report that was already rocked was acknowledged when first
+      // saved; repeating "no more contact today" days later would mislead.
+      if (result.safety_notice && !existing?.rocked) {
         setSavedNotice(result.safety_notice);
       } else {
-        showToast("Sparring logged.", { tone: "success" });
+        showToast(existing ? "Sparring report updated." : "Sparring logged.", { tone: "success" });
         onDismiss();
       }
     } catch (caught) {
@@ -218,7 +238,7 @@ export function SparringLogPrompt({
     <dialog
       ref={dialog}
       className={sheet.dialog}
-      aria-label={savedNotice ? "Sparring logged" : "Log your sparring"}
+      aria-label={savedNotice ? "Sparring logged" : existing ? "Update sparring report" : "Log your sparring"}
       onCancel={(event) => {
         event.preventDefault();
         if (!isSubmitting) onDismiss();
@@ -226,11 +246,12 @@ export function SparringLogPrompt({
     >
       <header className={sheet.header}>
         <div>
-          <h2>{savedNotice ? "Sparring logged" : "Log your sparring"}</h2>
+          <h2>{savedNotice ? "Sparring logged" : existing ? "Update sparring report" : "Log your sparring"}</h2>
           {savedNotice ? null : (
             <p className={sheet.source}>
               {draft.title}
-              {draft.externalSessionId ? " · Session saved. This is optional." : " · Takes 15 seconds."}
+              {existing ? ` · ${formatAppDate(existing.training_day)}`
+                : draft.externalSessionId ? " · Session saved. This is optional." : " · Takes 15 seconds."}
             </p>
           )}
         </div>
@@ -250,7 +271,7 @@ export function SparringLogPrompt({
       ) : (
         <form
           className={sheet.form}
-          aria-label="Log your sparring"
+          aria-label={existing ? "Update sparring report" : "Log your sparring"}
           onSubmit={(event) => {
             event.preventDefault();
             void save();
@@ -293,6 +314,7 @@ export function SparringLogPrompt({
                 labels={HEAD_CONTACT_LABELS}
                 selected={headContact}
                 onSelect={answer(setHeadContact)}
+                locked={(value) => HEAD_CONTACT_ORDER.indexOf(value) < contactFloor}
               />
               <Choice
                 legend="Got rocked or dropped?"
@@ -300,8 +322,10 @@ export function SparringLogPrompt({
                 labels={{ no: "No", yes: "Yes" }}
                 selected={rocked}
                 onSelect={answer(setRocked)}
+                locked={(value) => Boolean(existing?.rocked) && value === "no"}
               />
-              {rocked === "yes" ? (
+              {protectedEvidence ? <p className={styles.protected} role="note">{PROTECTED_EVIDENCE_COPY}</p> : null}
+              {rocked === "yes" && !existing?.rocked ? (
                 <p className={styles.safety} role="alert">
                   {ROCKED_SAFETY_COPY}
                 </p>
@@ -335,10 +359,10 @@ export function SparringLogPrompt({
               </p>
             ) : null}
             <button type="button" className="ghost-button" disabled={isSubmitting} onClick={onDismiss}>
-              Skip
+              {existing ? "Cancel" : "Skip"}
             </button>
             <button type="submit" className="cta" disabled={isSubmitting}>
-              {isSubmitting ? "Saving…" : "Save"}
+              {isSubmitting ? "Saving…" : existing ? "Save changes" : "Save"}
             </button>
           </footer>
         </form>

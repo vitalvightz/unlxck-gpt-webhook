@@ -1,0 +1,19 @@
+.card { display: grid; gap: 12px; margin-top: 12px; padding: 16px; border: 1px solid var(--border-subtle); border-radius: var(--radius-support); background: var(--bg-surface-alt); }
+.saved { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding-bottom: 12px; border-bottom: 1px solid var(--border-subtle); }
+.savedTitle { margin: 0; font-size: 1.05rem; font-weight: 700; color: var(--text-primary); }
+.meta { margin: 4px 0 0; font-size: 0.85rem; color: var(--text-secondary); }
+.check { width: 22px; height: 22px; flex-shrink: 0; fill: none; stroke: var(--success-ink); stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.question { font-size: 1rem; font-weight: 700; color: var(--text-primary); }
+.input { width: 100%; min-height: 48px; box-sizing: border-box; padding: 12px 14px; border: 1px solid var(--border-default); border-radius: 10px; background: var(--bg-panel); color: var(--text-primary); font: inherit; font-size: 16px; resize: vertical; }
+.input::placeholder { color: var(--text-muted); }
+.input:focus-visible { outline: 2px solid var(--brand-red); outline-offset: 1px; }
+.footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.skip, .add { min-height: 44px; padding: 0; border: 0; background: transparent; font: inherit; cursor: pointer; }
+.skip { color: var(--text-secondary); font-size: 0.85rem; text-align: left; }
+.add { color: var(--text-primary); font-size: 0.92rem; font-weight: 700; white-space: nowrap; }
+.add:disabled { color: var(--text-muted); cursor: default; }
+.skip:focus-visible, .add:focus-visible { outline: 2px solid var(--brand-red); outline-offset: 2px; }
+.error { margin: 0; font-size: 0.85rem; color: var(--danger-ink); }
+.count { margin: -4px 0 0; font-size: 0.75rem; color: var(--text-muted); text-align: right; }
+/* Inside the bottom sheet: the sheet supplies the surface and edges. */
+.inSheet { margin: 0; padding: 20px 20px max(16px, env(safe-area-inset-bottom)); border: 0; border-radius: 0; background: transparent; }

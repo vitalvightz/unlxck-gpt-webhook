@@ -4590,10 +4590,13 @@ class SupabaseAppStore(CommunityStoreMixin, PrivateMediaStoreMixin, CompactGener
             raise HTTPException(500, "Failed to save training session.")
         return row
 
-    def list_external_training_sessions(self, athlete_id: str, *, limit: int = 200, include_deleted: bool = False) -> list[dict[str, Any]]:
+    def list_external_training_sessions(self, athlete_id: str, *, limit: int = 200, include_deleted: bool = False,
+                                        before_day: str | None = None) -> list[dict[str, Any]]:
         query = self.client.table("external_training_sessions").select("*").eq("athlete_id", athlete_id)
         if not include_deleted:
             query = query.is_("deleted_at", "null")
+        if before_day:
+            query = query.lt("training_day", before_day)
         response = query.order("training_day", desc=True).order("created_at", desc=True).limit(limit).execute()
         return _readiness_history_rows(response)
 
@@ -4605,6 +4608,12 @@ class SupabaseAppStore(CommunityStoreMixin, PrivateMediaStoreMixin, CompactGener
     def update_external_training_session(self, athlete_id: str, entry_id: str, fields: dict[str, Any]) -> dict[str, Any] | None:
         response = (self.client.table("external_training_sessions")
             .update({key: fields[key] for key in ("activity", "duration_minutes", "effort")})
+            .eq("athlete_id", athlete_id).eq("id", entry_id).is_("deleted_at", "null").execute())
+        return (getattr(response, "data", None) or [None])[0]
+
+    def set_external_training_takeaway(self, athlete_id: str, entry_id: str, takeaway: str) -> dict[str, Any] | None:
+        # Its own write: a training edit or a retried create never touches it.
+        response = (self.client.table("external_training_sessions").update({"takeaway": takeaway})
             .eq("athlete_id", athlete_id).eq("id", entry_id).is_("deleted_at", "null").execute())
         return (getattr(response, "data", None) or [None])[0]
 
@@ -4621,17 +4630,19 @@ class SupabaseAppStore(CommunityStoreMixin, PrivateMediaStoreMixin, CompactGener
         return bool(getattr(response, "data", None))
 
     def list_session_completions(
-        self, athlete_id: str, *, limit: int = 30
+        self, athlete_id: str, *, limit: int = 30, before_day: str | None = None
     ) -> list[dict[str, Any]]:
-        """Recent completions (newest training day first) for the derived signal."""
-        response = (
+        """Recent completions (newest training day first) for the derived signal.
+
+        ``before_day`` pages History back past the newest ``limit`` rows."""
+        query = (
             self.client.table("session_completions")
             .select("*")
             .eq("athlete_id", athlete_id)
-            .order("training_day", desc=True)
-            .limit(limit)
-            .execute()
         )
+        if before_day:
+            query = query.lt("training_day", before_day)
+        response = query.order("training_day", desc=True).limit(limit).execute()
         return _readiness_history_rows(response)
 
     def list_session_completions_from_day(

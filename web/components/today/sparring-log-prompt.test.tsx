@@ -8,6 +8,8 @@ import { ToastProvider } from "@/components/toast-provider";
 import { createTimerState } from "@/lib/session-timer/engine";
 import type { TimerItem } from "@/lib/session-timer/plan";
 
+import type { SparringLogRecord } from "@/lib/types";
+
 import { defaultIntensity, SparringLogPrompt, type SparringDraft } from "./sparring-log-prompt";
 
 const DRAFT: SparringDraft = {
@@ -183,6 +185,48 @@ test("a retry reuses its request id; a changed answer becomes a new report", asy
     assert.equal(ui.bodies[1].detail_revision, ui.bodies[0].detail_revision);
     assert.ok(Number(ui.bodies[2].detail_revision) > Number(ui.bodies[0].detail_revision));
     assert.match(ui.container.querySelector('[aria-label="Sparring logged"]')?.textContent ?? "", /No more contact today/);
+    assert.equal(ui.saved(), 1);
+  } finally { await ui.cleanup(); }
+});
+
+test("a reopened report starts from its saved answers and continues its revision", async () => {
+  const existing: SparringLogRecord = { ...(LOG as SparringLogRecord), rounds_completed: 6, round_seconds: 180, intensity: "medium", notes: "Slipped well", detail_revision: 3 };
+  const ui = await mountInteractive({ ...MANUAL, existing },
+    [{ status: 201, body: { log: { ...existing, rounds_completed: 5, detail_revision: 4 }, review_created: false, safety_notice: null } }]);
+  try {
+    assert.match(ui.container.textContent ?? "", /Update sparring report/);
+    assert.equal(ui.container.querySelector(".sparring-log-rounds-value")?.textContent, "6");
+    assert.equal(ui.button("Medium", ui.group("How hard was it?")).getAttribute("aria-pressed"), "true");
+    assert.equal((ui.container.querySelector("textarea") as HTMLTextAreaElement).value, "Slipped well");
+    // Light head contact was recorded: "None" can no longer be chosen.
+    assert.equal(ui.button("None", ui.group("Head contact")).disabled, true);
+    assert.equal(ui.button("A lot", ui.group("Head contact")).disabled, false);
+    await ui.click(ui.button("Fewer rounds"));
+    await ui.click(ui.button("Save changes"));
+    assert.equal(ui.bodies.length, 1);
+    assert.equal(ui.bodies[0].rounds_completed, 5);
+    assert.equal(ui.bodies[0].detail_revision, 4);
+    assert.equal(ui.bodies[0].round_seconds, 180);
+    assert.equal(ui.bodies[0].external_session_id, "manual-1");
+    assert.equal(ui.saved(), 1);
+  } finally { await ui.cleanup(); }
+});
+
+test("a reopened rocked report keeps rocked locked and does not repeat today's no-contact notice", async () => {
+  const existing: SparringLogRecord = { ...(LOG as SparringLogRecord), rocked: true, head_contact: "heavy", detail_revision: 1 };
+  const ui = await mountInteractive({ ...MANUAL, existing },
+    [{ status: 201, body: { log: { ...existing, rounds_completed: 2, detail_revision: 2 }, review_created: true,
+      safety_notice: "You logged being rocked or dropped. No more contact today." } }]);
+  try {
+    assert.equal(ui.button("No", ui.group("Got rocked or dropped?")).disabled, true);
+    assert.equal(ui.button("Yes", ui.group("Got rocked or dropped?")).getAttribute("aria-pressed"), "true");
+    assert.match(ui.container.textContent ?? "", /stay on your record for safety/);
+    assert.doesNotMatch(ui.container.textContent ?? "", /No more contact today/);
+    await ui.click(ui.button("More rounds"));
+    await ui.click(ui.button("Save changes"));
+    assert.equal(ui.bodies[0].rocked, true);
+    assert.equal(ui.bodies[0].head_contact, "heavy");
+    assert.equal(ui.container.querySelector('[aria-label="Sparring logged"]'), null);
     assert.equal(ui.saved(), 1);
   } finally { await ui.cleanup(); }
 });

@@ -122,3 +122,71 @@ test("switching accounts drops history before the next account finishes loading"
     globalThis.fetch = originalFetch;
   }
 });
+
+test("Sessions shows the training summary, takeaways, linked sparring reports and pages back", async () => {
+  const originalFetch = globalThis.fetch;
+  const today = athleteTrainingDayISO(new Date(), undefined);
+  const requests: string[] = [];
+  globalThis.fetch = async (input) => {
+    const url = String(input);
+    requests.push(url);
+    const body = url.includes("before_day=2026-01-10")
+      ? { sessions: [{ id: "old", source: "external", title: "Roadwork", activity: "roadwork", duration_minutes: 40,
+          effort: "easy", status: "done", training_day: "2026-01-09", plan_id: null }], next_before_day: null }
+      : url.includes("training/history")
+        ? { sessions: [
+            { id: "box", source: "external", title: "Boxing", activity: "boxing", duration_minutes: 60, effort: "hard",
+              status: "done", training_day: today, plan_id: null, takeaway: "Right hand up after the jab" },
+            { id: "spar", source: "external", title: "Sparring", activity: "sparring", duration_minutes: 45, effort: "hard",
+              status: "done", training_day: today, plan_id: null },
+            { id: "jan", source: "external", title: "Boxing", activity: "boxing", duration_minutes: 30, effort: "easy",
+              status: "done", training_day: "2026-01-10", plan_id: null },
+          ], next_before_day: "2026-01-10" }
+        : { logs: [{ id: "log-1", athlete_id: "a", plan_id: null, session_id: null, training_day: today, source: "free",
+            external_session_id: "spar", planned_intensity: null, intensity: "hard", rounds_completed: 6, round_seconds: null,
+            head_contact: "light", rocked: false, notes: "", created_at: "", detail_revision: 1 }],
+          current_training_day: today,
+          last_7_days: { days: 7, sessions: 1, rounds: 6, hard_rounds: 6, hard_days: 1, heavy_head_contact_sessions: 0, rocked_count: 0 },
+          last_28_days: { days: 28, sessions: 1, rounds: 6, hard_rounds: 6, hard_days: 1, heavy_head_contact_sessions: 0, rocked_count: 0 },
+          last_hard_day: today, last_rocked_day: null };
+    return new Response(JSON.stringify(body), { status: 200, headers: { "content-type": "application/json" } });
+  };
+  const container = document.createElement("div");
+  document.body.appendChild(container);
+  const root = createRoot(container);
+  const button = (text: string) => Array.from(container.querySelectorAll("button")).find(item => item.textContent?.trim() === text);
+  try {
+    await act(async () => root.render(<AppSessionContext.Provider value={{
+      session: { access_token: "token" }, me: null, isReady: true, isMeHydrated: true,
+      hasTransientMeError: false, refreshMe: async () => {}, signOut: async () => {},
+      replaceMe: () => {}, previewAppearanceMode: () => {},
+    }}><HistoryScreen /></AppSessionContext.Provider>));
+    const summary = container.querySelector('[aria-label="Training summary"]');
+    assert.ok(summary);
+    const stat = (label: string) => [...summary.querySelectorAll("dt")].find(item => item.textContent === label)?.nextElementSibling?.textContent;
+    assert.equal(stat("Sessions"), "2");
+    assert.equal(stat("Training"), "1h 45m");
+    assert.match(summary.textContent ?? "", /Boxing.*60m/);
+    assert.match(summary.textContent ?? "", /Sparring.*45m/);
+
+    assert.match(container.textContent ?? "", /Right hand up after the jab/);
+    assert.ok(button("Edit takeaway"));
+    // The manual sparring session shows its linked report, loaded alongside.
+    assert.ok(requests.some(url => url.includes("sparring-logs")));
+    assert.match(container.textContent ?? "", /6 rounds · Light head contact/);
+    assert.ok(button("Update report"));
+
+    await act(async () => button("Takeaways · 1")!.click());
+    assert.equal(container.querySelectorAll(".history-row").length, 1);
+    await act(async () => button("Takeaways · 1")!.click());
+
+    await act(async () => button("Load earlier sessions")!.click());
+    assert.ok(requests.some(url => url.includes("before_day=2026-01-10")));
+    assert.match(container.textContent ?? "", /Roadwork/);
+    assert.equal(button("Load earlier sessions"), undefined);
+  } finally {
+    act(() => root.unmount());
+    container.remove();
+    globalThis.fetch = originalFetch;
+  }
+});

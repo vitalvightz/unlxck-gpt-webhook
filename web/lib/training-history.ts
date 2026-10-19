@@ -22,7 +22,17 @@ export type TrainingHistorySession = {
   pain_after?: number | null;
   modification_reason?: string | null;
   notes?: string | null;
+  /** A manual session's note on what was learned. */
+  takeaway?: string;
 };
+
+/** One page of whole training days; pass `next_before_day` back for older ones. */
+export type TrainingHistoryPage = {
+  sessions: TrainingHistorySession[];
+  next_before_day?: string | null;
+};
+
+export const TAKEAWAY_MAX_CHARS = 280;
 
 export function sortTrainingHistory(rows: TrainingHistorySession[]): TrainingHistorySession[] {
   return [...rows].sort((a, b) => b.training_day.localeCompare(a.training_day));

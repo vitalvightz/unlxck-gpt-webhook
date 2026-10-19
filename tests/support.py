@@ -2083,9 +2083,11 @@ class FakeStore(InMemoryNotificationLedger, FullRowStatusReads):
         self.external_training_sessions[row["id"]] = row
         return dict(row)
 
-    def list_external_training_sessions(self, athlete_id: str, *, limit: int = 200, include_deleted: bool = False) -> list[dict]:
+    def list_external_training_sessions(self, athlete_id: str, *, limit: int = 200, include_deleted: bool = False,
+                                        before_day: str | None = None) -> list[dict]:
         return sorted((dict(row) for row in self.external_training_sessions.values()
-                       if row["athlete_id"] == athlete_id and (include_deleted or not row.get("deleted_at"))),
+                       if row["athlete_id"] == athlete_id and (include_deleted or not row.get("deleted_at"))
+                       and (not before_day or row["training_day"] < before_day)),
                       key=lambda row: (row["training_day"], row["created_at"]), reverse=True)[:limit]
 
     def get_external_training_session(self, athlete_id: str, entry_id: str) -> dict | None:
@@ -2102,6 +2104,9 @@ class FakeStore(InMemoryNotificationLedger, FullRowStatusReads):
         row["updated_at"] = _now()
         return dict(row)
 
+    def set_external_training_takeaway(self, athlete_id: str, entry_id: str, takeaway: str) -> dict | None:
+        return self.update_external_training_session(athlete_id, entry_id, {"takeaway": takeaway})
+
     def delete_external_training_session(self, athlete_id: str, entry_id: str) -> bool:
         row = self.external_training_sessions.get(entry_id)
         if not row or row["athlete_id"] != athlete_id:
@@ -2109,9 +2114,10 @@ class FakeStore(InMemoryNotificationLedger, FullRowStatusReads):
         row["deleted_at"] = row.get("deleted_at") or _now()
         return True
 
-    def list_session_completions(self, athlete_id: str, *, limit: int = 30) -> list[dict]:
+    def list_session_completions(self, athlete_id: str, *, limit: int = 30, before_day: str | None = None) -> list[dict]:
         rows = sorted(
-            self.session_completions.get(athlete_id, []),
+            (row for row in self.session_completions.get(athlete_id, [])
+             if not before_day or row["training_day"] < before_day),
             key=lambda row: row["training_day"],
             reverse=True,
         )
@@ -2707,7 +2713,12 @@ class FakeStore(InMemoryNotificationLedger, FullRowStatusReads):
         was_rocked = bool(existing and existing.get("rocked"))
         if existing:
             if revision > int(existing.get("detail_revision") or 0):
+                severity = ("none", "light", "heavy")
+                recorded = existing.get("head_contact")
                 existing.update({key: fields[key] for key in ("intensity", "rounds_completed", "round_seconds", "head_contact", "notes") if key in fields})
+                # Mirrors the RPC: a correction never lowers recorded head contact.
+                if recorded in severity and severity.index(existing["head_contact"]) < severity.index(recorded):
+                    existing["head_contact"] = recorded
                 existing["detail_revision"] = revision
             existing["rocked"] = was_rocked or rocked
             row = existing

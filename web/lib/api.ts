@@ -1,4 +1,4 @@
-import type { ExternalTrainingFields, TrainingHistorySession } from "@/lib/training-history";
+import type { ExternalTrainingFields, TrainingHistoryPage, TrainingHistorySession } from "@/lib/training-history";
 import type { LibraryFeaturedResponse, LibraryPreview, LibrarySearchResponse } from "@/lib/api-schema.generated";
 import type { CustomDoseSuggestion, CustomPlan, CustomPlanInput } from "@/lib/api-schema.generated";
 import type { PrivateMediaPreview, PrivateMediaSettings, UploadPermission, UploadState, YouTubeClipInput } from "@/lib/api-schema.generated";
@@ -526,8 +526,9 @@ async function readJson<T>(path: string, init?: ApiRequestInit): Promise<T> {
   }
 }
 
-export function getTrainingHistory(token: string, includeSkipped = false): Promise<{ sessions: TrainingHistorySession[] }> {
-  return readJson(includeSkipped ? "/api/training/history?include_skipped=true&limit=200" : "/api/training/history", { token });
+export function getTrainingHistory(token: string, includeSkipped = false, beforeDay?: string): Promise<TrainingHistoryPage> {
+  const before = beforeDay ? `&before_day=${encodeURIComponent(beforeDay)}` : "";
+  return readJson(includeSkipped ? `/api/training/history?include_skipped=true&limit=200${before}` : "/api/training/history", { token });
 }
 
 /** Manual-only evidence avoids truncating habits behind prescribed sessions. */
@@ -543,6 +544,12 @@ export function editExternalTraining(token: string, id: string, body: ExternalTr
   const payload = JSON.stringify(body);
   // Replaying the same field replacement is safe after a lost gateway response.
   return withTransientRetries(() => readJson(`/api/training/sessions/${encodeURIComponent(id)}`, { method: "PATCH", token, body: payload }));
+}
+
+export function saveTrainingTakeaway(token: string, id: string, takeaway: string): Promise<TrainingHistorySession> {
+  const payload = JSON.stringify({ takeaway });
+  // Setting the same text again is a no-op, so a lost response can be retried.
+  return withTransientRetries(() => readJson(`/api/training/sessions/${encodeURIComponent(id)}/takeaway`, { method: "PUT", token, body: payload }));
 }
 
 export function deleteExternalTraining(token: string, id: string): Promise<void> {

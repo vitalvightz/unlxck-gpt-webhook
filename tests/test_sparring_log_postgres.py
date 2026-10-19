@@ -19,6 +19,7 @@ MIGRATIONS = (
     "20261010184612_add_external_training_sessions.sql",
     "20260930141404_add_sparring_logs.sql",
     "20261019014437_link_sparring_detail_to_manual_sessions.sql",
+    "20261019120100_protect_sparring_head_contact.sql",
 )
 COPIES = 12
 
@@ -177,3 +178,28 @@ def test_delayed_retries_of_a_never_overwrite_correction_b(dsn, athlete, attempt
     assert stale["log"]["rounds_completed"] == 8
     assert _scalar(dsn, "select rounds_completed from public.sparring_logs where external_session_id = %s",
                    session) == 8
+
+
+def test_a_later_correction_cannot_lower_head_contact_or_withdraw_rocked(dsn, athlete):
+    session = _session(dsn, athlete)
+    _record(dsn, athlete, reason="rocked", external_session_id=session, client_request_id=str(uuid4()),
+            detail_revision=1, head_contact="heavy", rocked=True, rounds_completed=6)
+    corrected = _record(dsn, athlete, external_session_id=session, client_request_id=str(uuid4()),
+                        detail_revision=2, head_contact="none", rocked=False, rounds_completed=4, notes="Was 4")
+
+    assert corrected["log"]["rounds_completed"] == 4
+    assert corrected["log"]["notes"] == "Was 4"
+    assert corrected["log"]["head_contact"] == "heavy"
+    assert corrected["log"]["rocked"] is True
+    assert corrected["review"] is not None
+    assert _scalar(dsn, "select count(*) from public.admin_reviews where athlete_id = %s", athlete) == 1
+
+
+def test_a_later_correction_can_raise_head_contact(dsn, athlete):
+    session = _session(dsn, athlete)
+    _record(dsn, athlete, external_session_id=session, client_request_id=str(uuid4()),
+            detail_revision=1, head_contact="none")
+    corrected = _record(dsn, athlete, external_session_id=session, client_request_id=str(uuid4()),
+                        detail_revision=2, head_contact="heavy")
+
+    assert corrected["log"]["head_contact"] == "heavy"
