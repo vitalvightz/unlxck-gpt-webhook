@@ -19,15 +19,16 @@ empty-history state.
 `TodayScreen` is the only Today implementation. What it shows depends on whether
 the Today feed reports an active plan, never on `starting_path`:
 
-- Shared by every athlete: header and date, the status strip, current safety
-  guidance and risk watch, the training logger and recent history, the injury
-  manager, and quick actions (round timer, history).
-- Only with an active plan: phase, the readiness check-in, today's session and
-  its completion controls, adaptation guidance, daily-recommendation feedback
-  and View plan.
-- Without one: the logger is the primary action, the status strip says
-  readiness is "Not assessed" (plan-free check-ins are not persisted yet), and
-  quick actions offer Build S&C plan (or Choose a plan when saved plans exist).
+- Shared by every athlete: header and date, the status strip, the daily
+  readiness check-in (see [plan-free readiness](plan-free-readiness.md)),
+  current safety guidance and risk watch, the training logger and recent
+  history, the injury manager, and quick actions (round timer, history).
+- Only with an active plan: phase, today's session and its completion
+  controls, adaptation guidance, daily-recommendation feedback and View plan.
+- Without one: the logger is the primary action, the round timer stays in
+  quick actions, and quick actions offer Build S&C plan (or Choose a plan when
+  saved plans exist). Without health-data consent the status strip reads
+  "Not assessed" and no check-in is offered.
   A current injury hold or safety notice still leads, and a preview of a session
   that does not exist is never shown.
 - Injuries use the existing `TodayInjuryManager` and `POST /api/today/injury-checkin`,
@@ -45,7 +46,8 @@ runtime schema gate requires the new column. No environment changes are needed.
 
 This release does not change Quick Build, plan generation, readiness, workload,
 rehab or clearance calculations. The timer does not create training records.
-Detailed standalone sparring and plan-free readiness remain separate work.
+Detailed standalone sparring and plan-free readiness followed separately
+(see `sparring-follow-up.md` and `plan-free-readiness.md`).
 
 ## Verification
 

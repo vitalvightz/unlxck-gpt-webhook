@@ -307,7 +307,7 @@ class TodayStore(Protocol):
     def upsert_today_checkin(self, athlete_id: str, fields: dict[str, Any]) -> dict[str, Any]: ...
 
     def get_today_checkin(
-        self, athlete_id: str, plan_id: str, training_day: str
+        self, athlete_id: str, plan_id: str | None, training_day: str
     ) -> dict[str, Any] | None: ...
 
     def list_today_checkins_for_day(

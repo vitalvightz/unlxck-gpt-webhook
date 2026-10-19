@@ -4411,12 +4411,23 @@ class SupabaseAppStore(CommunityStoreMixin, PrivateMediaStoreMixin, CompactGener
     def upsert_today_checkin(self, athlete_id: str, fields: dict[str, Any]) -> dict[str, Any]:
         payload = {"athlete_id": athlete_id, **fields}
         try:
-            response = (
-                self.client.table("today_checkins")
-                .upsert(payload, on_conflict="athlete_id,plan_id,training_day")
-                .execute()
-            )
+            if fields.get("plan_id") is None:
+                # NULL plan_ids never conflict on the plan-scoped key, so a
+                # plan-free row upserts on its own partial key via the RPC.
+                response = self.client.rpc(
+                    "upsert_plan_free_today_checkin",
+                    {"p_athlete_id": athlete_id, "p_fields": fields},
+                ).execute()
+            else:
+                response = (
+                    self.client.table("today_checkins")
+                    .upsert(payload, on_conflict="athlete_id,plan_id,training_day")
+                    .execute()
+                )
             rows = getattr(response, "data", None) or []
+            # A function returning one composite row arrives as an object.
+            if isinstance(rows, dict):
+                rows = [rows]
             if not rows:
                 logger.error("[store] upsert_today_checkin:no_rows athlete_id=%s", athlete_id)
                 raise HTTPException(
@@ -4434,15 +4445,12 @@ class SupabaseAppStore(CommunityStoreMixin, PrivateMediaStoreMixin, CompactGener
             )
 
     def get_today_checkin(
-        self, athlete_id: str, plan_id: str, training_day: str
+        self, athlete_id: str, plan_id: str | None, training_day: str
     ) -> dict[str, Any] | None:
-        return self._select_first(
-            self.client.table("today_checkins")
-            .select("*")
-            .eq("athlete_id", athlete_id)
-            .eq("plan_id", plan_id)
-            .eq("training_day", training_day)
-        )
+        """The day's check-in for ``plan_id``, or the plan-free one for ``None``."""
+        query = self.client.table("today_checkins").select("*").eq("athlete_id", athlete_id)
+        query = query.is_("plan_id", "null") if plan_id is None else query.eq("plan_id", plan_id)
+        return self._select_first(query.eq("training_day", training_day))
 
     def list_today_checkins_for_day(
         self, athlete_id: str, training_day: str

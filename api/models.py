@@ -2115,11 +2115,14 @@ class AdminReviewResolveRequest(BaseModel):
 
 
 class TodayCheckinRequest(BaseModel):
-    plan_id: str = Field(min_length=1)
+    # Omitted for an athlete without an active UNLXCK programme. The server
+    # decides which applies; a missing plan is never filled in.
+    plan_id: str | None = Field(default=None, min_length=1)
     sleep: CheckinSleep
     body: CheckinBody
     pain: CheckinPain
-    phase: CheckinPhase
+    # A camp phase exists only with a plan, and is never invented without one.
+    phase: CheckinPhase | None = None
     active_injury: CheckinActiveInjury = "none"
     previous_session: CheckinPreviousSession = "none"
     sharp_pain: bool = False
@@ -2130,17 +2133,23 @@ class TodayCheckinRequest(BaseModel):
     cannot_warm_into_movement: bool = False
     worse_next_day_pain: bool = False
 
+    @model_validator(mode="after")
+    def phase_matches_plan(self) -> "TodayCheckinRequest":
+        if (self.plan_id is None) != (self.phase is None):
+            raise ValueError("a camp phase is sent with a plan_id, and only then")
+        return self
+
 
 class TodayCheckinRecord(BaseModel):
     id: str
     athlete_id: str
-    plan_id: str
+    plan_id: str | None = None
     training_day: str
     athlete_timezone: str = ""
     sleep: CheckinSleep
     body: CheckinBody
     pain: CheckinPain
-    phase: CheckinPhase
+    phase: CheckinPhase | None = None
     active_injury: CheckinActiveInjury = "none"
     previous_session: CheckinPreviousSession = "none"
     sharp_pain: bool = False

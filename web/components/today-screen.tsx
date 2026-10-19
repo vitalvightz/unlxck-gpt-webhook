@@ -22,11 +22,12 @@ import { getTodayNextStep } from "@/lib/today-next-step";
 import {
   getCompletionLabel,
   getDistinctTodayRiskWatch,
+  getPlanFreeGuidanceBanner,
   getSupplementaryRiskWatch,
   hasActivePlan,
   resolveTodayDecision,
   shouldShowTodayCheckin,
-} from "@/lib/today";
+} from "@/lib/today-authoritative";
 import type { TodayCompletionStatus } from "@/lib/types";
 
 function TodayLoadingState() {
@@ -116,6 +117,7 @@ function StatusTile({
 
 function TodayReadinessStrip({
   hasPlan,
+  canCheckIn,
   loggedToday,
   needsCheckin,
   openInjuryCount,
@@ -125,6 +127,7 @@ function TodayReadinessStrip({
   sessionHref,
 }: {
   hasPlan: boolean;
+  canCheckIn: boolean;
   loggedToday: boolean | null;
   needsCheckin: boolean;
   openInjuryCount: number;
@@ -144,9 +147,9 @@ function TodayReadinessStrip({
 
   return (
     <ul className={styles.tiles} aria-label="Today command status">
-      {/* Without a programme the check-in is not assessed yet, so it must not
-          read as due-and-actionable or as done. */}
-      {hasPlan ? (
+      {/* The check-in is the same with or without a plan. Without health-data
+          consent there is none, so it must not read as due or as done. */}
+      {canCheckIn ? (
         <StatusTile
           label="Check-in"
           value={needsCheckin ? "Due" : "Done"}
@@ -209,7 +212,11 @@ export function TodayScreen() {
   const openOngoing = isOpenOngoingPlan(activePlan.fight_date);
   const planTitle = activePlan.name?.trim() || (openOngoing ? "Open training plan" : "Active fight camp");
   const hasPlan = hasActivePlan(activePlan);
-  const showCheckin = state ? shouldShowTodayCheckin(state) : false;
+  // Readiness answers are health data. Without a plan the check-in is only
+  // offered with consent; the planned check-in keeps its existing behaviour
+  // (the server enforces consent for both).
+  const canCheckIn = hasPlan || hasHealthDataConsent(me);
+  const showCheckin = state && canCheckIn ? shouldShowTodayCheckin(state) : false;
   // Unknown (null) until shared history confirms it; never assumed.
   const [loggedToday, setLoggedToday] = useState<boolean | null>(null);
   const trainingDayLabel = useMemo(
@@ -272,15 +279,14 @@ export function TodayScreen() {
     supplementaryRisks,
     visibleTriggerLabels,
   );
-  // With no programme there is no session to preview, so only current
-  // guidance (an injury hold) or a safety notice may lead.
+  // With no programme there is no session to preview: the lead is today's
+  // readiness, an injury hold or a safety notice, worded without a session.
   const decisionBanner = hasPlan
     ? resolvedDecision.currentGuidanceBanner ?? resolvedDecision.banner
-    : resolvedDecision.currentGuidanceBanner
-      ?? (resolvedDecision.primaryMessageKind === "safety_notice" ? resolvedDecision.banner : null);
+    : getPlanFreeGuidanceBanner(state, resolvedDecision);
   const readinessForm = showCheckin ? (
     <TodayReadinessForm
-      plan={activePlan}
+      plan={hasPlan ? activePlan : undefined}
       token={token ?? ""}
       warnings={state.today.warnings}
       onRefresh={refresh}
@@ -331,6 +337,7 @@ export function TodayScreen() {
         </div>
         <TodayReadinessStrip
           hasPlan={hasPlan}
+          canCheckIn={canCheckIn}
           loggedToday={loggedToday}
           needsCheckin={showCheckin}
           openInjuryCount={state.open_injuries?.length ?? 0}
@@ -410,7 +417,8 @@ export function TodayScreen() {
       <nav className={styles.quickActions} aria-label="Quick actions">
         <p className={styles.quickTitle}>Quick actions</p>
         <div className={styles.quickRow}>
-          {showCheckin ? (
+          {/* Without a plan the round timer stays: the check-in has its own tile. */}
+          {showCheckin && hasPlan ? (
             <a href="#today-checkin" className={styles.quickAction}>
               <TileIcon name="clock" />
               Check in

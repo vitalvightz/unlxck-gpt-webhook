@@ -82,14 +82,14 @@ const NO_PLAN_STATE: TodayCommandView = { active_plan: {},
   open_injuries: [], risk_watch: [], week_summary: {}, quick_actions: [] };
 const CONSENTED = {profile: {role: "athlete", health_consent_granted: true, athlete_timezone: "Europe/London"}, plan_count: 0};
 
-test("without a plan, the same Today shares logging and injuries but never claims readiness", async () => {
+test("without a plan, the same Today shares logging, injuries and the daily check-in", async () => {
   const {container, cleanup} = await renderToday(NO_PLAN_STATE, CONSENTED);
   try {
     assert.equal(container.querySelectorAll("h1").length, 1);
     const status = container.querySelector('[aria-label="Today command status"]')?.textContent ?? "";
-    assert.match(status, /Readiness.*Not assessed/);
-    assert.doesNotMatch(status, /Check-in|Due|Done/);
-    assert.equal(container.querySelector("#today-checkin"), null);
+    assert.match(status, /Check-in.*Due/);
+    assert.doesNotMatch(status, /Not assessed/);
+    assert.ok(container.querySelector("#today-checkin form"));
     assert.equal(container.querySelector("#today-session"), null);
     assert.equal(container.querySelector("#today-decision"), null);
     assert.ok(container.querySelector("#today-training-log [aria-label='Log Training']"));
@@ -131,5 +131,57 @@ test("withdrawn consent never hides an injury that is already restricting traini
   try {
     assert.ok(container.querySelector(".today-injury-item"));
     assert.doesNotMatch(container.textContent ?? "", /needs your health-data consent/);
+  } finally { await cleanup(); }
+});
+
+test("a plan-free check-in sends no plan and no invented phase", async () => {
+  const {container, cleanup} = await renderToday(NO_PLAN_STATE, CONSENTED);
+  const bodies: Array<Record<string, unknown>> = [];
+  const previousFetch = globalThis.fetch;
+  globalThis.fetch = (async (input: string, init?: RequestInit) => {
+    if (String(input).endsWith("/api/today/checkin")) {
+      bodies.push(JSON.parse(String(init?.body ?? "{}")));
+      return new Response(JSON.stringify({recommendation_state: "train_as_planned", recommendation_reason: "",
+        triggers: [], training_day: "2026-10-07"}), {status: 201});
+    }
+    return previousFetch(input, init);
+  }) as typeof fetch;
+  try {
+    const submit = container.querySelector<HTMLButtonElement>('#today-checkin [type="submit"]')!;
+    await act(async () => { submit.click(); });
+    assert.equal(bodies.length, 1);
+    assert.equal("plan_id" in bodies[0], false);
+    assert.equal("phase" in bodies[0], false);
+    assert.equal(bodies[0].sleep, "good");
+  } finally {
+    globalThis.fetch = previousFetch;
+    await cleanup();
+  }
+});
+
+test("a clean plan-free result never describes a session that does not exist", async () => {
+  const checkedIn: TodayCommandView = {...NO_PLAN_STATE, today: {...NO_PLAN_STATE.today,
+    recommendation_state: "train_as_planned", decision_tier: "green",
+    recommendation_reason: "No warning signs today.\nYour sleep, body, and pain checks are all clear today.\n"
+      + "Train as your coach plans and stop anything that hurts.\n"
+      + "This check-in is not medical clearance for sparring or contact."}};
+  const {container, cleanup} = await renderToday(checkedIn, CONSENTED);
+  try {
+    const lead = container.querySelector("#today-decision")?.textContent ?? "";
+    // The panel leads with the action; nothing in it describes a session.
+    assert.match(lead, /Train as your coach plans/);
+    assert.match(lead, /not medical clearance/);
+    assert.doesNotMatch(lead, /Session unchanged|planned session|planned work/);
+    assert.match(container.querySelector('[aria-label="Today command status"]')?.textContent ?? "", /Check-in.*Done/);
+    assert.equal(container.querySelector("#today-checkin"), null);
+  } finally { await cleanup(); }
+});
+
+test("without consent a plan-free athlete is not asked for readiness data", async () => {
+  const {container, cleanup} = await renderToday(NO_PLAN_STATE,
+    {...CONSENTED, profile: {...CONSENTED.profile, health_consent_granted: false}});
+  try {
+    assert.equal(container.querySelector("#today-checkin"), null);
+    assert.match(container.querySelector('[aria-label="Today command status"]')?.textContent ?? "", /Readiness.*Not assessed/);
   } finally { await cleanup(); }
 });

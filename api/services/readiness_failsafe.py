@@ -39,6 +39,9 @@ COMPLETIONS_UNAVAILABLE = "completions_unavailable"
 INTAKE_UNAVAILABLE = "intake_unavailable"
 SESSION_UNAVAILABLE = "session_unavailable"
 INJURY_CONTEXT_UNAVAILABLE = "injury_context_unavailable"
+# The latest rocked/dropped sparring report could not be read. Head impact is
+# only ever a reason for MORE caution, so this degrades rather than holds.
+SPARRING_UNAVAILABLE = "sparring_unavailable"
 
 # Reasons that escalate the whole context to UNAVAILABLE (a conservative
 # ``pull_back`` hold), rather than merely DEGRADED (``modify``):
@@ -60,6 +63,7 @@ _COMPONENT_REASON_CODES: dict[str, str] = {
     "injury_classification": INJURY_CONTEXT_UNAVAILABLE,
     "schedule": SESSION_UNAVAILABLE,
     "intake": INTAKE_UNAVAILABLE,
+    "sparring": SPARRING_UNAVAILABLE,
 }
 
 

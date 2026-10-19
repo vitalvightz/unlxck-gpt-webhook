@@ -34,8 +34,9 @@ export function hasActivePlan(plan: TodayActivePlan | null | undefined): boolean
   return Boolean(plan?.id);
 }
 
+/** The daily check-in is due for every athlete, with or without a plan. */
 export function shouldShowTodayCheckin(state: TodayCommandView): boolean {
-  return hasActivePlan(state.active_plan) && state.today.recommendation_state === "not_checked_in";
+  return state.today.recommendation_state === "not_checked_in";
 }
 
 export function normalizeTodayPhase(phase: string | null | undefined): TodayCheckinPhase | null {
@@ -537,7 +538,8 @@ export function getCompletionReasonError(status: TodayCompletionStatus): string 
 }
 
 export function buildTodayCheckinPayload(params: {
-  planId: string;
+  /** Omitted for a plan-free check-in. */
+  planId?: string | null;
   phase?: string | null;
   sleep: TodayCheckinSleep;
   body: TodayCheckinBody;
@@ -546,16 +548,16 @@ export function buildTodayCheckinPayload(params: {
   previousSession?: TodayPreviousSession;
   safetyFlags: TodaySafetyFlags;
 }): TodayCheckinRequest {
-  const phase = normalizeTodayPhase(params.phase);
-  if (!phase) {
+  // A camp phase only exists with a plan, and is never invented without one.
+  const phase = params.planId ? normalizeTodayPhase(params.phase) : null;
+  if (params.planId && !phase) {
     throw new Error("Today phase is unavailable. Refresh Today before checking in.");
   }
   return {
-    plan_id: params.planId,
+    ...(params.planId && phase ? { plan_id: params.planId, phase } : {}),
     sleep: params.sleep,
     body: params.body,
     pain: params.pain,
-    phase,
     // Carry the athlete-reported injury/session truth so the backend safety
     // evaluator can pull back for a worsening injury or modify after a very hard
     // prior session. Defaults stay conservative-neutral when not collected.

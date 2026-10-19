@@ -582,6 +582,8 @@ REQUIRED_FUNCTIONS: tuple[str, ...] = (
     "public.invalidate_notification_action",
     # Atomic sparring log + rocked/dropped admin review (api/store.py::record_sparring_log).
     "public.record_sparring_log",
+    # Plan-free daily check-in upsert (api/store.py::upsert_today_checkin).
+    "public.upsert_plan_free_today_checkin",
     "public.record_rehab_exposure",
     "public.record_injury_episode_event",
     "public.clinical_review_capture_context",
@@ -655,6 +657,12 @@ INDEX_REQUIREMENTS: tuple[IndexRequirement, ...] = (
     IndexRequirement(
         label="today_checkins athlete/plan/training-day uniqueness",
         accepted_names=("today_checkins_athlete_plan_day_key",),
+    ),
+    # One plan-free check-in per athlete-day: the plan-scoped key above treats
+    # NULL plan_ids as distinct, so the upsert RPC targets this partial key.
+    IndexRequirement(
+        label="today_checkins plan-free athlete/training-day uniqueness",
+        accepted_names=("today_checkins_athlete_plan_free_day_key",),
     ),
     # One completion per athlete/session/training-day; the store's upsert path
     # (api/store.py::upsert_session_completion) depends on this conflict target.
