@@ -1,10 +1,13 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 
 import { useAppSession } from "@/components/auth-provider";
 import {
   RECONNECTED_EVENT,
+  checkApiConnection,
+  isBrowserOffline,
   getConnectivitySnapshot,
   getServerConnectivitySnapshot,
   subscribeConnectivity,
@@ -21,8 +24,8 @@ export function useConnectivity() {
 }
 
 /**
- * Runs `callback` when the app reconnects (browser back online, or the first
- * successful request after a failure). Screens pass `enabled` only while they
+ * Runs `callback` after the API health check confirms recovery.
+ * Screens pass `enabled` only while they
  * are sitting on a load error, so a healthy screen never refetches.
  */
 export function useOnReconnect(callback: () => void, enabled: boolean) {
@@ -33,15 +36,13 @@ export function useOnReconnect(callback: () => void, enabled: boolean) {
   useEffect(() => {
     if (!enabled) return;
     const handler = () => callbackRef.current();
-    // RECONNECTED_EVENT also fires for the browser's own "online" event
-    // (lib/connectivity re-dispatches it), so one listener covers both.
     window.addEventListener(RECONNECTED_EVENT, handler);
     return () => window.removeEventListener(RECONNECTED_EVENT, handler);
   }, [enabled]);
 }
 
 /**
- * App-wide connection pill. Mounted once in the root layout so every surface —
+ * App-wide connection card. Mounted once in the root layout so every surface —
  * guarded or public — gets the same honest signal, and so reconnecting
  * re-hydrates the athlete profile without the user having to find a button.
  */
@@ -79,7 +80,11 @@ export function ConnectionStatusBanner() {
     if (isRetrying) return;
     setIsRetrying(true);
     try {
-      await refreshMe();
+      const wasDown = getConnectivitySnapshot().offline || getConnectivitySnapshot().degraded;
+      if (await checkApiConnection()) {
+        // The recovery event refreshes a failed profile when transitioning up.
+        if (!wasDown && needsProfileRef.current) await refreshMe();
+      }
     } finally {
       setIsRetrying(false);
     }
@@ -87,44 +92,29 @@ export function ConnectionStatusBanner() {
 
   const unreachable = degraded || Boolean(session && hasTransientMeError);
 
-  if (offline) {
-    return (
-      <div className="connection-lost-banner" role="status" aria-live="polite">
-        <span className="connection-lost-dot" aria-hidden="true" />
-        <span className="connection-lost-text">Offline · showing what’s already loaded</span>
-      </div>
-    );
-  }
+  if (!offline && !unreachable && !showBackOnline) return null;
 
-  if (unreachable) {
-    return (
-      <div className="connection-lost-banner" role="status" aria-live="polite">
-        <span className="connection-lost-dot" aria-hidden="true" />
-        <span className="connection-lost-text">
-          {isRetrying ? "Reconnecting…" : "Can’t reach UNLXCK"}
-        </span>
-        {session ? (
-          <button
-            type="button"
-            className="connection-lost-retry"
-            onClick={() => void handleRetry()}
-            disabled={isRetrying}
-          >
-            {isRetrying ? "Retrying…" : "Retry"}
-          </button>
-        ) : null}
-      </div>
-    );
-  }
+  const restored = !offline && !unreachable;
+  const title = offline ? "You’re offline." : unreachable ? "Can’t reach UNLXCK." : "Back online.";
+  const description = offline
+    ? "Keep what’s loaded. We’ll reconnect when your connection returns."
+    : unreachable
+      ? "Your progress is safe. We’re checking the connection."
+      : "Connection confirmed. Pick up where you left off.";
 
-  if (showBackOnline) {
-    return (
-      <div className="connection-lost-banner connection-restored" role="status" aria-live="polite">
-        <span className="connection-lost-dot" aria-hidden="true" />
-        <span className="connection-lost-text">Back online</span>
+  return (
+    <div className={`connection-lost-banner${restored ? " connection-restored" : ""}`} role="status" aria-live="polite" aria-atomic="true">
+      <div className="connection-card-header">
+        <Image src="/brand/unlxck-one-angle-48.png" alt="" unoptimized width={24} height={24} />
+        <span className="connection-card-label"><span className="connection-lost-dot" aria-hidden="true" />CONNECTION</span>
       </div>
-    );
-  }
-
-  return null;
+      <p className="connection-card-title">{title}</p>
+      <p className="connection-card-description">{description}</p>
+      {!restored ? (
+        <button type="button" className="connection-lost-retry" onClick={() => void handleRetry()} disabled={offline || isRetrying || isBrowserOffline()}>
+          {isRetrying ? "Checking connection…" : "Retry connection"}<svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 12 12 4M4 4h8v8" stroke="currentColor" strokeWidth="1.5" /></svg>
+        </button>
+      ) : null}
+    </div>
+  );
 }

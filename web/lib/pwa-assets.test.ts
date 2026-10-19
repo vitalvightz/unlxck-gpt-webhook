@@ -76,8 +76,8 @@ test("all active app and favicon icons exist with exact dimensions", () => {
 
 test("offline fallback is branded, connection-honest, and retryable", () => {
   const html = readPublic("offline.html").toString("utf8");
-  assert.match(html, /UNLXCK can’t connect right now\./);
-  assert.match(html, /account data and fight-camp plans require a connection/i);
+  assert.match(html, /<span class="brand">UNLXCK<\/span>your connection\./);
+  assert.match(html, /Nothing personal is stored on this screen/i);
   assert.match(html, /Retry connection/);
   assert.doesNotMatch(html, /localStorage|sessionStorage|access_token|service_role/i);
 });

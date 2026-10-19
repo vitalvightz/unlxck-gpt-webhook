@@ -1,7 +1,10 @@
 "use client";
 
 import * as Sentry from "@sentry/nextjs";
-import { useEffect, useState } from "react";
+import Image from "next/image";
+import { useEffect } from "react";
+import styles from "@/components/connection-recovery-card.module.css";
+import { useConnectionRecovery } from "@/lib/use-connection-recovery";
 
 import { isBrowserOffline, isNetworkFailure } from "@/lib/connectivity";
 
@@ -18,7 +21,7 @@ export default function RouteError({
   reset: () => void;
 }) {
   const connectionProblem = isNetworkFailure(error) || isBrowserOffline();
-  const [isRetrying, setIsRetrying] = useState(false);
+  const { retrying, retryFailed, retryConnection } = useConnectionRecovery(connectionProblem);
 
   useEffect(() => {
     // Connection drops are expected field conditions, not bugs.
@@ -27,40 +30,30 @@ export default function RouteError({
     }
   }, [connectionProblem, error]);
 
-  useEffect(() => {
-    if (!connectionProblem) return;
-    // Reconnecting recovers on its own: a full reload re-fetches the chunk
-    // that failed, which reset() alone cannot do.
-    const onOnline = () => window.location.reload();
-    window.addEventListener("online", onOnline);
-    return () => window.removeEventListener("online", onOnline);
-  }, [connectionProblem]);
-
   function retry() {
-    setIsRetrying(true);
-    if (connectionProblem) {
-      window.location.reload();
-      return;
-    }
-    reset();
-    setIsRetrying(false);
+    if (connectionProblem) void retryConnection();
+    else reset();
   }
 
   return (
-    <section className="panel loading-card" role="alert">
-      <p className="kicker">{connectionProblem ? "Connection offline" : "Something broke"}</p>
-      <h1>{connectionProblem ? "Lost the connection mid-round." : "This screen hit a snag."}</h1>
-      <p className="muted">
+    <section className={styles.card} role="alert">
+      <div className={styles.header}>
+        <Image src="/brand/unlxck-one-angle-48.png" alt="" unoptimized width={28} height={28} />
+        <p className={styles.label}>{connectionProblem ? "CONNECTION" : "UNLXCK"}</p>
+      </div>
+      <h1><span className={styles.brand}>UNLXCK</span><span className={styles.headline}>{connectionProblem ? "your connection." : "hit a snag."}</span></h1>
+      <p className={styles.description}>
         {connectionProblem
           ? "Your plan and logs are safe on our side. Reconnect and we’ll pick up where you left off."
           : "Your data is safe. Try again — if it keeps happening, head back to your dashboard."}
       </p>
-      <div className="hero-actions">
-        <button type="button" className="cta" onClick={retry} disabled={isRetrying}>
-          {isRetrying ? "Unlxcking…" : "Try again"}
+      {retryFailed ? <p className={styles.description} role="status">Still can’t reach UNLXCK. Try again shortly.</p> : null}
+      <div>
+        <button type="button" className={styles.retry} onClick={retry} disabled={retrying}>
+          {retrying ? "Checking connection…" : "Try again"}<svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 12 12 4M4 4h8v8" stroke="currentColor" strokeWidth="1.5" /></svg>
         </button>
         {/* Plain anchor: a full navigation is the reliable path out of a broken route. */}
-        <a href="/" className="secondary-button">
+        <a href="/dashboard" className={styles.secondary}>
           Back to dashboard
         </a>
       </div>

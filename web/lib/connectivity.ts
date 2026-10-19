@@ -1,12 +1,5 @@
-// Single source of truth for "can the app reach the network right now".
-//
-// Two independent signals feed it:
-// - the browser's own online/offline flag (`navigator.onLine` + its events),
-//   which is reliable when it says *offline* and is what lets requests fail
-//   fast instead of sitting on a 60s timeout;
-// - real request outcomes reported by lib/api.ts, which catch the cases the
-//   browser flag misses (captive wifi, dead backend route, flaky 4G).
-//
+// Browser online events are hints. Only a fresh, validated response from the
+// UNLXCK health endpoint can confirm recovery; ordinary requests cannot.
 // This module must not import lib/api.ts (api.ts imports it).
 
 /** Thrown by the API client when a request could not reach the server at all. */
@@ -65,6 +58,71 @@ const ONLINE_SNAPSHOT: ConnectivitySnapshot = { offline: false, degraded: false 
 let snapshot: ConnectivitySnapshot = ONLINE_SNAPSHOT;
 const listeners = new Set<() => void>();
 let windowListenersAttached = false;
+let failureRevision = 0;
+let recoveryRequest: Promise<boolean> | null = null;
+let recoveryController: AbortController | null = null;
+let recoveryTimer: ReturnType<typeof setTimeout> | null = null;
+let recoveryDelayMs = 3000;
+
+function scheduleRecovery() {
+  if (recoveryTimer || recoveryRequest || !listeners.size || snapshot.offline || !snapshot.degraded) return;
+  recoveryTimer = setTimeout(() => {
+    recoveryTimer = null;
+    void checkApiConnection();
+  }, recoveryDelayMs);
+}
+
+function clearRecoveryTimer() {
+  if (recoveryTimer) clearTimeout(recoveryTimer);
+  recoveryTimer = null;
+}
+
+/** Deduplicated, uncached API check, including body download in the timeout. */
+export function checkApiConnection(): Promise<boolean> {
+  attachWindowListeners();
+  if (isBrowserOffline()) {
+    reportNetworkFailure();
+    return Promise.resolve(false);
+  }
+  if (recoveryRequest) return recoveryRequest;
+  clearRecoveryTimer();
+  const revision = failureRevision;
+  const controller = new AbortController();
+  recoveryController = controller;
+  const timeout = setTimeout(() => controller.abort(), 8000);
+  recoveryRequest = (async () => {
+    try {
+      const response = await fetch("/api/health", {
+        cache: "no-store",
+        credentials: "same-origin",
+        redirect: "error",
+        signal: controller.signal,
+      });
+      if (!response.ok || !response.headers.get("content-type")?.includes("application/json")) return false;
+      const body: unknown = await response.json();
+      if (!body || typeof body !== "object" || !("ok" in body) || body.ok !== true ||
+          !("app" in body) || body.app !== "unlxck-fight-camp-api") return false;
+      // A newer failure or offline event invalidates even a successful probe.
+      if (controller.signal.aborted || revision !== failureRevision || isBrowserOffline()) return false;
+      recoveryDelayMs = 3000;
+      setSnapshot(ONLINE_SNAPSHOT);
+      return true;
+    } catch {
+      return false;
+    } finally {
+      clearTimeout(timeout);
+    }
+  })().then((healthy) => {
+    recoveryRequest = null;
+    recoveryController = null;
+    if (!healthy) {
+      recoveryDelayMs = Math.min(recoveryDelayMs * 2, 30000);
+      reportNetworkFailure();
+    }
+    return healthy;
+  });
+  return recoveryRequest;
+}
 
 function setSnapshot(next: ConnectivitySnapshot) {
   if (next.offline === snapshot.offline && next.degraded === snapshot.degraded) {
@@ -84,17 +142,29 @@ function attachWindowListeners() {
   }
   windowListenersAttached = true;
   snapshot = isBrowserOffline() ? { offline: true, degraded: false } : snapshot;
-  window.addEventListener("offline", () => setSnapshot({ offline: true, degraded: false }));
-  // The browser flag flipping back is a hint, not proof: clear "offline" but
-  // leave confirmation to the next successful request.
-  window.addEventListener("online", () => setSnapshot({ offline: false, degraded: false }));
+  window.addEventListener("offline", onOffline);
+  window.addEventListener("online", onOnline);
+}
+
+function onOffline() {
+  failureRevision += 1;
+  clearRecoveryTimer();
+  recoveryController?.abort();
+  setSnapshot({ offline: true, degraded: false });
+}
+
+function onOnline() {
+  setSnapshot({ offline: false, degraded: true });
+  void checkApiConnection();
 }
 
 export function subscribeConnectivity(listener: () => void): () => void {
   attachWindowListeners();
   listeners.add(listener);
+  scheduleRecovery();
   return () => {
     listeners.delete(listener);
+    if (!listeners.size) clearRecoveryTimer();
   };
 }
 
@@ -108,13 +178,23 @@ export function getServerConnectivitySnapshot(): ConnectivitySnapshot {
 }
 
 export function reportNetworkFailure(): void {
+  failureRevision += 1;
   setSnapshot({ offline: isBrowserOffline(), degraded: !isBrowserOffline() });
+  scheduleRecovery();
 }
 
-export function reportNetworkSuccess(): void {
-  if (snapshot.offline || snapshot.degraded) {
-    setSnapshot({ offline: false, degraded: false });
+// Avoid automatic reload loops if the API recovers but a chunk is still missing.
+export function reloadAfterRecovery(manual = false): boolean {
+  try {
+    const previous = Number(window.history.state?.unlxckRecoveryReloadAt);
+    if (!manual && previous && Date.now() - previous < 60000) return false;
+    window.history.replaceState({ ...window.history.state, unlxckRecoveryReloadAt: Date.now() }, "");
+  } catch {
+    // Without a guard that survives reload, leave recovery to an explicit retry.
+    if (!manual) return false;
   }
+  window.location.reload();
+  return true;
 }
 
 /**
@@ -142,7 +222,15 @@ export function waitForOnline(maxWaitMs: number, signal?: AbortSignal | null): P
 
 /** Test-only: reset module state between cases. */
 export function __resetConnectivityForTests(): void {
+  clearRecoveryTimer();
+  recoveryController?.abort();
+  if (typeof window !== "undefined") {
+    window.removeEventListener("online", onOnline);
+    window.removeEventListener("offline", onOffline);
+  }
   snapshot = ONLINE_SNAPSHOT;
   listeners.clear();
   windowListenersAttached = false;
+  failureRevision = 0;
+  recoveryDelayMs = 3000;
 }

@@ -3,7 +3,6 @@ import {
   RETRYABLE_NETWORK_MESSAGE,
   isBrowserOffline,
   reportNetworkFailure,
-  reportNetworkSuccess,
 } from "@/lib/connectivity";
 import type { ExternalTrainingFields, TrainingHistoryPage, TrainingHistorySession } from "@/lib/training-history";
 import type { SessionDetails, ExerciseLibraryResponse, ExercisePerformancesResponse } from "@/lib/api-schema.generated";
@@ -411,8 +410,6 @@ async function executeRequest(path: string, init?: ApiRequestInit): Promise<Exec
   // A gateway error means the edge answered but the plan service did not.
   if (RETRYABLE_GATEWAY_STATUSES.has(response.status)) {
     reportNetworkFailure();
-  } else {
-    reportNetworkSuccess();
   }
 
   if (!response.ok) {

@@ -9648,74 +9648,55 @@ html[data-theme="light"] .today-injury-other-warning {
   left: 50%;
   transform: translateX(-50%);
   z-index: 1000;
-  display: inline-flex;
+  width: min(400px, calc(100vw - var(--safe-area-left) - var(--safe-area-right) - 32px));
+  padding: 22px 24px;
+  border-radius: 16px;
+  border: 1px solid #ffffff1c;
+  background: #101012;
+  box-shadow: 0 24px 64px #0008;
+  color: #fff;
+}
+.connection-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 14px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid #ffffff12;
+}
+.connection-card-label {
+  display: flex;
   align-items: center;
   gap: 8px;
-  max-width: calc(100vw - var(--safe-area-left) - var(--safe-area-right) - 24px);
-  padding: 7px 10px 7px 12px;
-  border-radius: var(--radius-pill);
-  border: 1px solid var(--border-strong);
-  background: var(--bg-surface);
-  box-shadow: var(--shadow-support);
-  color: var(--text-secondary);
-  font-size: 12px;
-  line-height: 1;
+  color: #b2b2ba;
+  font: 500 10px/1.4 var(--font-mono), monospace;
+  letter-spacing: .18em;
 }
-
-.connection-lost-dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--danger-ink);
-  animation: connection-lost-pulse 1.4s ease-in-out infinite;
-}
-
-.connection-lost-text {
-  white-space: nowrap;
-}
-
+.connection-lost-dot { width: 6px; height: 6px; border-radius: 50%; background: #ff8da1; }
+.connection-card-title { margin: 0; font-size: 24px; font-weight: 600; line-height: 1.15; letter-spacing: -.045em; }
+.connection-card-description { margin: 10px 0 0; color: #b4b4be; font-size: 13px; line-height: 1.6; }
 .connection-lost-retry {
-  appearance: none;
-  border: none;
-  background: transparent;
-  padding: 2px 4px;
-  margin: 0;
-  border-radius: var(--radius-btn);
-  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  width: 100%;
+  min-height: 44px;
+  margin-top: 18px;
+  padding: 10px 14px;
+  border: 1px solid #e04451;
+  border-radius: 7px;
+  background: #b5122b;
+  color: #fff;
   font: inherit;
+  font-size: 13px;
   font-weight: 600;
   cursor: pointer;
 }
-
-.connection-lost-retry:hover:not(:disabled) {
-  color: var(--brand-red-hover);
-}
-
-.connection-lost-retry:disabled {
-  cursor: default;
-  opacity: 0.7;
-}
-
-.connection-restored .connection-lost-dot {
-  background: var(--success-ink);
-  animation: none;
-}
-
-@keyframes connection-lost-pulse {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.35;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .connection-lost-dot {
-    animation: none;
-  }
-}
+.connection-lost-retry:hover:not(:disabled) { background: #ca1733; }
+.connection-lost-retry:focus-visible { outline: 2px solid #fff; outline-offset: 4px; }
+.connection-lost-retry:disabled { cursor: default; opacity: .7; }
+.connection-restored .connection-lost-dot { background: var(--success-ink); }
 
 .status-card .plan-summary-actions,
 .plan-summary-card .plan-summary-actions {
