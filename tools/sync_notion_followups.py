@@ -92,7 +92,7 @@ def due_and_copy(properties, count, first, second, now, formula):
         # Date-only historical evidence has unknown time of day. Wait through day 5.
         after_first = (datetime.combine(first_stamp.date() + timedelta(days=6),
                        datetime_time.min, LONDON) if "T" not in first
-                       else first_stamp + timedelta(days=5))
+                       else (first_stamp.astimezone(timezone.utc) + timedelta(days=5)).astimezone(LONDON))
         day_eight = datetime.combine(contacted_local + timedelta(days=8), datetime_time.min, LONDON)
         due = max(day_eight, after_first)
         status = "Follow-up 2"
