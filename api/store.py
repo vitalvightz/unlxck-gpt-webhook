@@ -4509,6 +4509,22 @@ class SupabaseAppStore(CommunityStoreMixin, PrivateMediaStoreMixin, CompactGener
                 exc=exc,
             )
 
+    def get_session_completion_by_id(self, athlete_id: str, completion_id: str) -> dict[str, Any] | None:
+        return self._select_first(self.client.table("session_completions").select("*")
+            .eq("athlete_id", athlete_id).eq("id", completion_id))
+
+    def list_session_detail_exercise_logs(self, athlete_id: str, *, plan_id: str,
+                                         training_day: str, session_ids: list[str]) -> list[dict[str, Any]]:
+        response = (self.client.table("exercise_logs").select("*")
+            .eq("athlete_id", athlete_id).eq("plan_id", plan_id).eq("training_day", training_day)
+            .in_("session_id", session_ids).order("created_at").execute())
+        return getattr(response, "data", None) or []
+
+    def get_external_session_sparring_log(self, athlete_id: str, entry_id: str) -> dict[str, Any] | None:
+        return self._select_first(self.client.table("sparring_logs").select(
+            "athlete_id,external_session_id,intensity,rounds_completed,round_seconds,head_contact,rocked,notes")
+            .eq("athlete_id", athlete_id).eq("external_session_id", entry_id))
+
     def get_session_completion(
         self, athlete_id: str, session_id: str, training_day: str
     ) -> dict[str, Any] | None:

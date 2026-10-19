@@ -1985,6 +1985,19 @@ class FakeStore(InMemoryNotificationLedger, FullRowStatusReads):
         bucket.append(row)
         return dict(row)
 
+    def get_session_completion_by_id(self, athlete_id: str, completion_id: str) -> dict | None:
+        return next((row.copy() for row in self.session_completions.get(athlete_id, [])
+                     if row.get("athlete_id") == athlete_id and row.get("id") == completion_id), None)
+
+    def list_session_detail_exercise_logs(self, athlete_id: str, *, plan_id: str,
+                                         training_day: str, session_ids: list[str]) -> list[dict]:
+        return [row for row in self.list_exercise_logs_for_day(athlete_id, plan_id=plan_id, training_day=training_day)
+                if row.get("session_id") in session_ids]
+
+    def get_external_session_sparring_log(self, athlete_id: str, entry_id: str) -> dict | None:
+        return next((row for row in self.list_sparring_logs(athlete_id)
+                     if row.get("external_session_id") == entry_id), None)
+
     def get_session_completion(self, athlete_id: str, session_id: str, training_day: str) -> dict | None:
         for row in self.session_completions.get(athlete_id, []):
             if row["session_id"] == session_id and row["training_day"] == training_day:

@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from datetime import date, datetime, timedelta, timezone
 import logging
-from typing import Any, Mapping
+from typing import Any, Literal, Mapping
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -21,6 +21,8 @@ from api.services.training_history import (
     training_history_page, create_external_training, update_external_training,
     delete_external_training, set_external_training_takeaway,
 )
+from api.contracts.session_details import SessionDetails
+from api.services.session_details import session_details
 
 from api.compliance_guards import require_health_feature_access
 from api.compliance import evaluate_profile_compliance
@@ -251,6 +253,13 @@ def build_today_router(*, require_profile, get_store) -> APIRouter:
                 _session_history_title(*resolved, row) if resolved else None) or "Unlxck session"
             row["id"] = str(row.get("id") or row.get("session_id"))
         return {"sessions": rows, "next_before_day": next_before_day}
+
+    @router.get("/api/training/history/{source}/{entry_id}", response_model=SessionDetails)
+    def get_training_session_details(source: Literal["unlxck", "external"], entry_id: UUID,
+                                     profile: ProfileRecord = Depends(require_profile),
+                                     store: AppStore = Depends(get_store)):
+        return session_details(store, profile.athlete_id, source, str(entry_id),
+            health_consent_granted=evaluate_profile_compliance(profile).health_consent_granted)
 
     @router.post("/api/today/injury-episode-observation")
     def injury_episode_observation(

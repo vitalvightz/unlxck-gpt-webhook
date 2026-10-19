@@ -2248,6 +2248,35 @@ export type SessionCompletionResponse = {
   rehab_response_prompts: RehabResponsePromptResponse[];
 };
 
+export type SessionDetailBlock = {
+  name: string;
+  kind: "exercise" | "guidance" | "rehab";
+  prescribed: Record<string, unknown>;
+  actual: ExerciseLogActual;
+  status: "as_prescribed" | "changed" | "done_as_shown" | "modified" | "skipped" | "stopped" | null;
+  reason: string | null;
+  notes: string | null;
+  completed_dose: ExposureDose | null;
+  responses: ExposureResponse[];
+};
+
+export type SessionDetailSparring = {
+  intensity: string;
+  rounds_completed: number;
+  round_seconds: number | null;
+  head_contact: string | null;
+  rocked: boolean | null;
+  notes: string | null;
+};
+
+export type SessionDetails = {
+  session: TrainingHistorySession;
+  blocks: SessionDetailBlock[];
+  prescription_source: "exercise_logs" | "manual" | "snapshot" | "unavailable";
+  message: string | null;
+  sparring: SessionDetailSparring | null;
+};
+
 /** The athlete's own sparring log, newest first, with recent exposure. */
 export type SparringLogHistoryResponse = {
   logs: SparringLogRecord[];

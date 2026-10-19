@@ -56,6 +56,7 @@ import { TrainingSummaryCard } from "./training-summary-card";
 import { filterTakeaways } from "@/lib/training-summary";
 import { canRepeatTraining, sortTrainingHistory, type TrainingHistorySession } from "@/lib/training-history";
 import { useTrainingDay } from "@/lib/use-training-day";
+import { SessionDetails, type SessionDetailsCache } from "./session-details";
 
 type HistoryTab = "sessions" | "exercises" | "sparring" | "checkins" | "injuries";
 
@@ -164,7 +165,7 @@ function sessionSparringChips(log: SparringLogRecord): HistoryChip[] {
   ];
 }
 
-function SessionRows({ rows, today, token, onUpdate, onDelete, loadedFrom, loadingMore, moreError, onMore, sparringLogs, onSparringSaved }: {
+function SessionRows({ rows, today, token, onUpdate, onDelete, loadedFrom, loadingMore, moreError, onMore, sparringLogs, onSparringSaved, detailsCache }: {
   rows: TrainingHistorySession[]; today: string | null; token: string | null;
   onUpdate: (row: TrainingHistorySession) => void; onDelete: (id: string) => Promise<void>;
   /** Oldest fully loaded training day; null when no older sessions remain. */
@@ -172,6 +173,7 @@ function SessionRows({ rows, today, token, onUpdate, onDelete, loadedFrom, loadi
   /** Linked manual sparring reports by session id; null until loaded. */
   sparringLogs: Map<string, SparringLogRecord> | null;
   onSparringSaved: (log: SparringLogRecord) => void;
+  detailsCache: SessionDetailsCache;
 }) {
   const [saved, setSaved] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
@@ -179,6 +181,7 @@ function SessionRows({ rows, today, token, onUpdate, onDelete, loadedFrom, loadi
   const [takeawaysOnly, setTakeawaysOnly] = useState(false);
   const [search, setSearch] = useState("");
   const [sparringDraft, setSparringDraft] = useState<SparringDraft | null>(null);
+  const [selected, setSelected] = useState<TrainingHistorySession | null>(null);
   async function remove(id: string) {
     if (deleting) return;
     setDeleting(id);
@@ -237,7 +240,10 @@ function SessionRows({ rows, today, token, onUpdate, onDelete, loadedFrom, loadi
       ) : null}
       <ul className="history-list">
         {shown.map((row) => (
-          <li key={`${row.source}-${row.id}`} className="history-row" data-tone={sessionStatusTone(row.status)}>
+          <li key={`${row.source}-${row.id}`} className="history-row history-session-row" data-tone={sessionStatusTone(row.status)}>
+            <button type="button" className="history-session-open" aria-haspopup="dialog"
+              aria-label={`View ${row.title || "session"} details for ${formatAppDate(row.training_day)}`}
+              onClick={() => setSelected(row)} />
             <div className="history-row-head">
               <span className="history-row-title">{row.title?.trim() || "Session"}</span>
               <StatusBadge tone={sessionStatusTone(row.status)} label={sessionStatusLabel(row.status)} />
@@ -288,6 +294,8 @@ function SessionRows({ rows, today, token, onUpdate, onDelete, loadedFrom, loadi
       </button> : null}
       {sparringDraft && token ? <SparringLogPrompt key={sparringDraft.externalSessionId} token={token} draft={sparringDraft}
         onSaved={onSparringSaved} onDismiss={() => setSparringDraft(null)} /> : null}
+      {selected && token ? <SessionDetails key={`${selected.source}:${selected.id}`} row={selected} token={token}
+        cache={detailsCache} onDismiss={() => setSelected(null)} /> : null}
     </div>
   );
 }
@@ -583,14 +591,15 @@ function ExerciseRows({ history, onMore, loading }: {
 }
 
 export function HistoryScreen() {
-  const { session } = useAppSession();
-  return <HistoryContent key={session?.access_token ?? "anonymous"} />;
+  const { session, me } = useAppSession();
+  return <HistoryContent key={`${session?.access_token ?? "anonymous"}:${me?.profile.health_consent_granted ?? "unknown"}`} />;
 }
 
 function HistoryContent() {
   const { session, me } = useAppSession();
   const token = session?.access_token ?? null;
   const userId = session?.user_id ?? null;
+  const [detailsCache] = useState<SessionDetailsCache>(() => new Map());
   // The training day for the "last 7 days" counts, in the athlete's own
   // timezone so it matches the server-stamped days on every row even when the
   // device is set elsewhere. useTrainingDay only supplies the client-only
@@ -711,6 +720,7 @@ function HistoryContent() {
   }, [token, userId, sessionCursor]);
 
   function onSparringSaved(log: SparringLogRecord) {
+    if (log.external_session_id) detailsCache.delete(`external:${log.external_session_id}`);
     // Show the corrected report straight away, then refresh the windowed totals.
     setSparring(previous => previous.rows ? {
       ...previous,
@@ -779,13 +789,17 @@ function HistoryContent() {
       ) : active.rows === null ? (
         <ListSkeleton />
       ) : tab === "sessions" ? (
-        <SessionRows rows={sessions.rows ?? []} today={today} token={token}
+        <SessionRows rows={sessions.rows ?? []} today={today} token={token} detailsCache={detailsCache}
           loadedFrom={sessionCursor} loadingMore={loadingMoreSessions} moreError={moreSessionsError}
           onMore={loadMoreSessions} sparringLogs={sparringBySession} onSparringSaved={onSparringSaved}
-          onUpdate={row => setSessions(previous => ({ ...previous, rows: sortTrainingHistory([row, ...(previous.rows ?? []).filter(item => !(item.source === "external" && item.id === row.id))]) }))}
+          onUpdate={row => {
+            detailsCache.delete(`${row.source}:${row.id}`);
+            setSessions(previous => ({ ...previous, rows: sortTrainingHistory([row, ...(previous.rows ?? []).filter(item => !(item.source === "external" && item.id === row.id))]) }));
+          }}
           onDelete={async id => {
             if (!token) return;
             await deleteExternalTraining(token, id);
+            detailsCache.delete(`external:${id}`);
             setSessions(previous => ({ ...previous, rows: previous.rows?.filter(item => !(item.source === "external" && item.id === id)) ?? null }));
           }} />
       ) : tab === "exercises" ? (

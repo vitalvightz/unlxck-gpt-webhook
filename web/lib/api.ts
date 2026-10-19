@@ -1,4 +1,5 @@
 import type { ExternalTrainingFields, TrainingHistoryPage, TrainingHistorySession } from "@/lib/training-history";
+import type { SessionDetails } from "@/lib/api-schema.generated";
 import type { LibraryFeaturedResponse, LibraryPreview, LibrarySearchResponse } from "@/lib/api-schema.generated";
 import type { CustomDoseSuggestion, CustomPlan, CustomPlanInput } from "@/lib/api-schema.generated";
 import type { PrivateMediaPreview, PrivateMediaSettings, UploadPermission, UploadState, YouTubeClipInput } from "@/lib/api-schema.generated";
@@ -529,6 +530,10 @@ async function readJson<T>(path: string, init?: ApiRequestInit): Promise<T> {
 export function getTrainingHistory(token: string, includeSkipped = false, beforeDay?: string): Promise<TrainingHistoryPage> {
   const before = beforeDay ? `&before_day=${encodeURIComponent(beforeDay)}` : "";
   return readJson(includeSkipped ? `/api/training/history?include_skipped=true&limit=200${before}` : "/api/training/history", { token });
+}
+
+export function getSessionDetails(token: string, source: TrainingHistorySession["source"], id: string): Promise<SessionDetails> {
+  return readJson(`/api/training/history/${source}/${encodeURIComponent(id)}`, { token });
 }
 
 /** Manual-only evidence avoids truncating habits behind prescribed sessions. */

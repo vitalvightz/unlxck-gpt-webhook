@@ -21642,6 +21642,10 @@ button.injury-progress:hover > svg { color: var(--text-primary); }
 @media (prefers-reduced-motion: reduce) { .injury-sheet { animation: none; } .injury-rehab-action { transition: none; } }
 
 /* Manual session controls follow Today's light pencil treatment. */
+.history-session-row { position: relative; }
+.history-session-open { position: absolute; inset: 0; z-index: 1; width: 100%; border: 0; border-radius: inherit; background: transparent; cursor: pointer; }
+.history-session-open:focus-visible { outline: 2px solid var(--brand-red); outline-offset: 3px; }
+.history-session-row .history-session-actions, .history-session-row .glossary-tooltip { position: relative; z-index: 2; }
 .history-session-actions { display: flex; align-items: center; gap: 8px; }
 .history-session-actions .history-session-delete { flex: 0 0 auto; width: auto; min-height: 44px; padding: 0 8px; border: 0; background: transparent; color: var(--text-muted); font: inherit; font-size: 0.82rem; cursor: pointer; }
 .history-session-delete:hover:not(:disabled) { color: var(--danger-ink); }
