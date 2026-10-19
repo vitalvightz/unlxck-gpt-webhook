@@ -114,7 +114,7 @@ export function DevicePushPrompt({ token, athleteId }: { token: string; athleteI
       <p id="push-prompt-description" className={styles.description}>Get timely training reminders, check-in nudges and key camp updates.</p>
       {error ? <p role="alert" className={styles.error}>{error}</p> : null}
       <button type="button" className={styles.enable} onClick={() => void enable()} disabled={busy}>
-        {busy ? "Enabling…" : "Enable notifications"}<span aria-hidden="true">↗</span>
+        {busy ? "Enabling…" : "Enable notifications"}<svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 12 12 4M4 4h8v8" stroke="currentColor" strokeWidth="1.5" /></svg>
       </button>
       <button type="button" className={styles.later} disabled={busy} onClick={() => setSetup(null)}>Not now</button>
       <p className={styles.footnote}>You control what comes through in Settings.</p>
