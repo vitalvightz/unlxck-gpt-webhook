@@ -1,4 +1,4 @@
-.content, .settings, .form, .preview, .choices { display: grid; gap: 12px; min-width: 0; }
+.content, .settings, .form, .preview { display: grid; gap: 12px; min-width: 0; }
 .content p { margin: 0; }
 .form { border: 0; padding: 0; margin: 0; }
 .times { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
@@ -7,6 +7,4 @@
 @media (min-width: 820px) {
   .dialog:global(.injury-sheet) { width: min(100%, 720px); }
   .content[data-preview="true"] { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; gap: 20px; }
-  .choices { grid-template-columns: 1fr 1fr; }
-  .choices small { grid-column: 1 / -1; }
 }

@@ -163,10 +163,9 @@ for (const width of [320, 390, 1280]) {
     await page.getByRole("button", { name: "Add exercise to Training", exact: true }).click();
     await page.getByRole("button", { name: "Create my exercise", exact: true }).click();
     await page.getByLabel("Exercise name", { exact: true }).fill("My defensive drill");
-    await page.getByRole("button", { name: "Add video (optional)", exact: true }).click();
+    await page.getByRole("button", { name: "Add YouTube demo (optional)", exact: true }).click();
     const sheet = page.getByRole("dialog", { name: "Demonstration video", exact: true });
-    await expect(sheet.getByRole("button", { name: "Upload video", exact: true })).toBeDisabled();
-    await sheet.getByRole("button", { name: "YouTube link", exact: true }).click();
+    await expect(sheet.getByRole("button", { name: "Upload video" })).toHaveCount(0);
     await sheet.getByLabel("YouTube link", { exact: true }).fill("https://youtube.com/watch?v=abcdefghijk");
     await sheet.getByLabel("Start (seconds)").fill("10");
     await sheet.getByLabel("End (seconds)").fill("50");
@@ -187,7 +186,7 @@ for (const width of [320, 390, 1280]) {
     await expect.poll(() => page.evaluate(() => (window as unknown as { __clipTime: number }).__clipTime)).toBe(10);
     expect(await sheet.evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true);
     if (width >= 1024) {
-      const settings = await sheet.getByText("Optional · Up to 30 seconds · Private", { exact: true }).boundingBox();
+      const settings = await sheet.getByText("Optional · YouTube clip up to 30 seconds · Only you can see it", { exact: true }).boundingBox();
       const preview = await sheet.getByRole("button", { name: "Use video", exact: true }).boundingBox();
       expect(preview!.x).toBeGreaterThan(settings!.x + settings!.width);
       expect((await sheet.boundingBox())!.width).toBe(720);
@@ -210,7 +209,7 @@ for (const width of [320, 390, 1280]) {
     await page.getByRole("button", { name: "Edit dose for My defensive drill", exact: true }).click();
     await expect(page.getByRole("button", { name: "Replace video", exact: true })).toBeVisible();
     await page.getByRole("button", { name: "Remove video", exact: true }).click();
-    await expect(page.getByRole("button", { name: "Add video (optional)", exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Add YouTube demo (optional)", exact: true })).toBeVisible();
     expect(errors).toEqual([]);
   });
 }
