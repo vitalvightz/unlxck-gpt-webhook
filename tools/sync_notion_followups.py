@@ -102,10 +102,17 @@ def get_changes(page, today):
         if decreased:
             # A corrected/reversed count invalidates the old last-send date.
             changes["Last Follow-Up Sent"] = {"date": None}
-        elif increased and not p["Last Follow-Up Sent"].get("date"):
-            # Only timestamp an observed increment; preserve a native Notion button's exact time.
-            observed = today.isoformat(timespec="seconds") if isinstance(today, datetime) else today.isoformat()
-            changes["Last Follow-Up Sent"] = {"date": {"start": observed}}
+        elif increased:
+            last = (p["Last Follow-Up Sent"].get("date") or {}).get("start")
+            edited = page.get("last_edited_time")
+            # A button stamps count and date together; a dropdown edit leaves the older date.
+            button_stamp = bool(last and "T" in last and edited and abs((
+                datetime.fromisoformat(last.replace("Z", "+00:00"))
+                - datetime.fromisoformat(edited.replace("Z", "+00:00"))
+            ).total_seconds()) < 300)
+            if not last or (count == 2 and not button_stamp):
+                observed = today.isoformat(timespec="seconds") if isinstance(today, datetime) else today.isoformat()
+                changes["Last Follow-Up Sent"] = {"date": {"start": observed}}
     return changes
 
 
