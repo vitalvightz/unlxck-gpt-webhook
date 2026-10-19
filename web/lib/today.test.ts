@@ -10,6 +10,7 @@ import {
   completionRequiresReviewFields,
   canCompleteTodaySession,
   getActiveSevereInjury,
+  getAthleteWarnings,
   getCampDayLabel,
   getCompletionActions,
   getDecisionTier,
@@ -105,6 +106,19 @@ function installFetchMock(responseBody: unknown) {
     },
   };
 }
+
+test("fail-safe machine signals never reach the athlete as warning text", () => {
+  const sameDay = "You already completed a check-in today. This response applies to the current active plan only.";
+  assert.deepEqual(
+    getAthleteWarnings([
+      "readiness_context_status=degraded; reason_codes=completions_unavailable",
+      "reason_code:completions_unavailable",
+      sameDay,
+    ]),
+    [sameDay],
+  );
+  assert.deepEqual(getAthleteWarnings(undefined), []);
+});
 
 test("no active plan state uses intake copy and no plan identity", () => {
   assert.equal(TODAY_EMPTY_TITLE, "No active plan yet");

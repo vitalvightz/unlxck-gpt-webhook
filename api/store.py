@@ -194,10 +194,10 @@ _TRANSIENT_POSTGREST_SNIPPETS = (
     "connection terminated",
     "upstream",
     "gateway",
-    "502",
-    "503",
-    "504",
 )
+# HTTP gateway statuses, matched as whole numbers: SQLSTATE codes such as
+# 23503 (foreign_key_violation) contain "503" but are permanent errors.
+_TRANSIENT_HTTP_STATUS_PATTERN = re.compile(r"(?<![0-9a-z])50[234](?![0-9a-z])")
 _GENERATION_JOB_SCHEMA_SNIPPETS = (
     "schema cache",
     "could not find the table",
@@ -913,7 +913,8 @@ class SupabaseAppStore(CommunityStoreMixin, PrivateMediaStoreMixin, CompactGener
                 for part in (exc.code, exc.message, exc.hint, exc.details)
                 if part
             ).lower()
-            return any(snippet in text for snippet in _TRANSIENT_POSTGREST_SNIPPETS)
+            return (any(snippet in text for snippet in _TRANSIENT_POSTGREST_SNIPPETS)
+                    or _TRANSIENT_HTTP_STATUS_PATTERN.search(text) is not None)
         return False
 
     def _is_generation_job_schema_error(self, exc: Exception) -> bool:

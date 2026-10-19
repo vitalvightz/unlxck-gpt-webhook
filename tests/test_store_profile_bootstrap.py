@@ -343,6 +343,43 @@ def test_transient_store_error_detects_postgrest_gateway_failures():
     assert store._is_transient_store_error(error) is True
 
 
+@pytest.mark.parametrize("code,message", [
+    ("23503", "xp athlete profile not found"),
+    ("22503", "invalid input"),
+    ("P0001", "order 5030 rejected"),
+])
+def test_sqlstate_containing_a_gateway_status_is_not_transient(code, message):
+    store = _make_store()
+    error = APIError({"message": message, "code": code, "hint": None, "details": None})
+
+    assert store._is_transient_store_error(error) is False
+
+
+@pytest.mark.parametrize("code", ["502", "503", "504"])
+def test_bare_gateway_status_codes_stay_transient(code):
+    store = _make_store()
+    error = APIError({"message": "Bad gateway response", "code": code, "hint": None, "details": None})
+
+    assert store._is_transient_store_error(error) is True
+
+
+def test_permanent_xp_rejection_is_not_retried(monkeypatch):
+    # The XP RPC rejects non-athlete profiles with SQLSTATE 23503. Treating its
+    # "503" as a gateway outage retried it with sleeps on every check-in.
+    sleeps: list[float] = []
+    monkeypatch.setattr(store_module.time, "sleep", sleeps.append)
+    store = _make_store()
+    store.client.rpc.return_value.execute.side_effect = APIError(
+        {"message": "xp athlete profile not found", "code": "23503", "hint": None, "details": None})
+
+    with pytest.raises(HTTPException) as exc_info:
+        store.award_xp("athlete-1", action="first_checkin_completed", idempotency_key="first-checkin:athlete-1")
+
+    assert exc_info.value.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
+    assert store.client.rpc.return_value.execute.call_count == 1
+    assert sleeps == []
+
+
 def test_generation_job_schema_error_detects_missing_generation_jobs_table():
     store = _make_store()
     error = APIError(
