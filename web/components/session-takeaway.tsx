@@ -42,7 +42,7 @@ function useTakeawaySave(token: string, row: TrainingHistorySession, onSaved: (r
   return { busy, error, save };
 }
 
-/** Opens `dialog` as a modal sheet for as long as it is mounted. */
+/** Opens `dialog` as a modal sheet while mounted and enabled; disabling hands the top layer back. */
 function useModalSheet(dialog: RefObject<HTMLDialogElement | null>, enabled = true) {
   useEffect(() => {
     const element = dialog.current;
@@ -51,7 +51,7 @@ function useModalSheet(dialog: RefObject<HTMLDialogElement | null>, enabled = tr
     const release = lockOverlayScroll();
     if (!element.open) element.showModal?.();
     element.querySelector<HTMLElement>("textarea, input")?.focus();
-    return () => { release(); previous?.focus(); };
+    return () => { if (element.open) element.close?.(); release(); previous?.focus(); };
   }, [dialog, enabled]);
 }
 
@@ -60,15 +60,20 @@ function useModalSheet(dialog: RefObject<HTMLDialogElement | null>, enabled = tr
  * saved. Inline under a full-width log action; as a bottom sheet (`sheet`)
  * where the action is a half-width tile with no room beneath it.
  */
-export function SessionTakeawayPrompt({ token, row, onSaved, onDismiss, sheet: asSheet = false }: {
+export function SessionTakeawayPrompt({ token, row, onSaved, onDismiss, sheet: asSheet = false, onAddExercises, exerciseCount = 0, suspended = false }: {
   token: string; row: TrainingHistorySession; onSaved: (row: TrainingHistorySession) => void; onDismiss: () => void;
   sheet?: boolean;
+  /** Offers the optional exercise logger; the takeaway stays where it was. */
+  onAddExercises?: () => void;
+  exerciseCount?: number;
+  /** Another sheet is open on top; the takeaway sheet steps out of the top layer. */
+  suspended?: boolean;
 }) {
   const fieldId = useId();
   const dialog = useRef<HTMLDialogElement>(null);
   const [text, setText] = useState("");
   const { busy, error, save } = useTakeawaySave(token, row, onSaved);
-  useModalSheet(dialog, asSheet);
+  useModalSheet(dialog, asSheet && !suspended);
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!text.trim()) { onDismiss(); return; }
@@ -84,6 +89,12 @@ export function SessionTakeawayPrompt({ token, row, onSaved, onDismiss, sheet: a
         </div>
         <svg className={styles.check} viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9" /><path d="m8 12.5 2.6 2.5L16 9.5" /></svg>
       </div>
+      {onAddExercises ? <button type="button" className={styles.exercises} disabled={busy} aria-haspopup="dialog" onClick={onAddExercises}
+        aria-describedby={`${fieldId}-exercises`}>
+        <span><strong>{exerciseCount ? `${exerciseCount} ${exerciseCount === 1 ? "exercise" : "exercises"} added` : "Add exercises"}</strong>
+          <span id={`${fieldId}-exercises`}>{exerciseCount ? "Edit or add more" : "Optional · sets, reps, load"}</span></span>
+        <span aria-hidden="true">{exerciseCount ? "›" : "+"}</span>
+      </button> : null}
       <label className={styles.question} htmlFor={`${fieldId}-takeaway`}>Anything worth remembering?</label>
       <input id={`${fieldId}-takeaway`} className={styles.input} type="text" value={text} maxLength={TAKEAWAY_MAX_CHARS}
         placeholder={PLACEHOLDER} disabled={busy} enterKeyHint="done" autoComplete="off" onChange={event => setText(event.target.value)} />

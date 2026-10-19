@@ -180,6 +180,8 @@ def test_index_requirement_satisfied_by_constraint_alias():
         "exercise_logs_occurrence_key",
         "external_training_sessions_request_key",
         "external_training_sessions_athlete_day_idx",
+        "manual_exercise_entries_request_key",
+        "personal_exercises_name_key",
         "custom_training_plans_athlete_updated_idx",
         "private_video_assets_owner_created_idx",
         "community_revision_queue_idx", "community_exercises_creator_idx",

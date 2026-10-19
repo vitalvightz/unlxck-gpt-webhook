@@ -1,4 +1,10 @@
-"""Complete retained-log summaries; no current plans, guessed keys or evidence writes."""
+"""Complete retained-log summaries; no current plans, guessed keys or evidence writes.
+
+Two sources feed one personal library: prescribed exercise logs and the
+optional exercise entries on manual sessions. They share canonical
+``key:`` identities only through an exact stored exercise key. A movement the
+athlete named themselves stays its own private ``custom:`` identity.
+"""
 import base64
 from datetime import date, datetime, timezone
 import json
@@ -13,7 +19,8 @@ from api.contracts.exercise_library import (
     PersonalExercise, RecordedExerciseLoad,
 )
 from api.models import ExerciseLogActual
-from api.services.session_details import _exercise, _map, _text
+from api.services.manual_exercises import entry_actual, entry_identity, values_format
+from api.services.session_details import _exercise, _manual_block, _map, _text
 
 _BATCH_SIZE = 500
 _KEY = re.compile(r"[a-z0-9]+(?:-[a-z0-9]+)*\Z")
@@ -108,36 +115,74 @@ def exercise_library(store, athlete_id: str, *, now: datetime | None = None) -> 
                 continue
             values = performed_values(row, actual)
             identity = exercise_identity(row)
-            day = row["training_day"]
-            order = (day, row["id"])
-            if identity not in summaries:
-                summaries[identity] = PersonalExercise(id=identity, name="Exercise", identity_kind="canonical" if identity.startswith("key:") else "legacy",
-                    latest_day=day, latest_values=values, latest_confirmed_as_prescribed=False)
-            summary = summaries[identity]
-            if identity not in latest or order > latest[identity]:
-                latest[identity] = order
-                summary.name = _text(_map(row.get("prescribed")).get("display_name")) or (row.get("exercise_key") or "Legacy exercise record")
-                summary.latest_day, summary.latest_values = day, values
-                summary.latest_confirmed_as_prescribed = row["status"] == "as_prescribed"
-            load = values.load
-            if load is not None and load.value > 0:
-                before = next((entry for entry in summary.best_loads if entry.unit == load.unit), None)
-                if before is None or load.value > before.value:
-                    summary.best_loads = [entry for entry in summary.best_loads if entry.unit != load.unit] + [RecordedExerciseLoad(
-                        value=load.value, unit=load.unit, training_day=day,
-                        basis="reported" if actual.load is not None else "confirmed_prescription")]
+            _record(summaries, latest, identity, (row["training_day"], row["id"]), values,
+                name=_text(_map(row.get("prescribed")).get("display_name")) or (row.get("exercise_key") or "Legacy exercise record"),
+                source="plan", kind="canonical" if identity.startswith("key:") else "legacy",
+                confirmed=row["status"] == "as_prescribed",
+                basis="reported" if actual.load is not None else "confirmed_prescription")
         after_id = ids[-1]
-    for summary in summaries.values():
+    manual_formats: dict[str, tuple[tuple[str, str], str]] = {}
+    for row in _manual_index_rows(store, athlete_id, as_of):
+        values = entry_actual(row)
+        if values is None:
+            continue
+        identity = entry_identity(row)
+        day = str(row["training_day"])[:10]
+        order = (day, str(row["id"]))
+        _record(summaries, latest, identity, order, values, name=row["display_name"], source="manual",
+                kind="canonical" if identity.startswith("key:") else "personal", confirmed=False, basis="reported")
+        if identity not in manual_formats or order > manual_formats[identity][0]:
+            manual_formats[identity] = (order, row["measurement_format"])
+    for identity, summary in summaries.items():
         summary.best_loads.sort(key=lambda entry: entry.unit)
+        # The athlete's own last layout for this movement, else what the record shows.
+        summary.log_format = manual_formats[identity][1] if identity in manual_formats else values_format(summary.latest_values)
     return ExerciseLibraryResponse(exercises=sorted(summaries.values(), key=lambda item: (item.name.casefold(), item.id)), as_of=as_of)
 
 
-def _selector(identity: str) -> tuple[str | None, str | None]:
+def _record(summaries, latest, identity, order, values, *, name, source, kind, confirmed, basis):
+    day = order[0]
+    if identity not in summaries:
+        summaries[identity] = PersonalExercise(id=identity, name="Exercise", identity_kind=kind,
+            latest_day=day, latest_values=values, latest_confirmed_as_prescribed=False)
+    summary = summaries[identity]
+    if identity not in latest or order > latest[identity]:
+        latest[identity] = order
+        summary.name, summary.latest_day, summary.latest_values = name, day, values
+        summary.latest_confirmed_as_prescribed, summary.latest_source = confirmed, source
+    load = values.load
+    if load is not None and load.value > 0:
+        before = next((entry for entry in summary.best_loads if entry.unit == load.unit), None)
+        if before is None or load.value > before.value:
+            summary.best_loads = [entry for entry in summary.best_loads if entry.unit != load.unit] + [RecordedExerciseLoad(
+                value=load.value, unit=load.unit, training_day=day, basis=basis)]
+
+
+def _manual_index_rows(store, athlete_id: str, as_of: str):
+    """Every live entry once, by immutable ID; a malformed page fails the whole index."""
+    after_id = None
+    while True:
+        rows = store.list_manual_exercise_index_page(athlete_id, as_of=as_of, after_id=after_id, limit=_BATCH_SIZE)
+        if not rows:
+            return
+        ids = [str(row.get("id") or "") for row in rows]
+        if ids != sorted(set(ids)) or not all(ids) or (after_id and ids[0] <= after_id):
+            raise HTTPException(503, "Exercise history is temporarily unavailable.")
+        for row in rows:
+            if row.get("athlete_id") == athlete_id and not row.get("deleted_at") and (row.get("exercise_key") or row.get("personal_exercise_id")):
+                yield row
+        after_id = ids[-1]
+
+
+def _selector(identity: str) -> tuple[str | None, str | None, str | None]:
+    """(exercise key, legacy log ID, personal exercise ID); exactly one is set."""
     if identity.startswith("key:") and len(identity) <= 124 and _KEY.fullmatch(identity[4:]):
-        return identity[4:], None
+        return identity[4:], None, None
     try:
         if identity.startswith("log:"):
-            return None, str(UUID(identity[4:]))
+            return None, str(UUID(identity[4:])), None
+        if identity.startswith("custom:"):
+            return None, None, str(UUID(identity[7:]))
     except ValueError:
         pass
     raise HTTPException(422, "Invalid exercise record.")
@@ -155,9 +200,29 @@ def _cutoff(value: str) -> str:
     return instant.isoformat()
 
 
+def _ordered(read, keep, *, before_day, before_id, limit: int) -> list[dict]:
+    """Up to ``limit + 1`` kept rows after the cursor, newest first.
+
+    Do not mistake a lower server row cap or excluded rows for the end of this
+    movement's history. Stop at one valid sentinel or an empty read.
+    """
+    rows: list[dict] = []
+    while len(rows) <= limit:
+        batch = read(before_day=before_day, before_id=before_id, limit=limit + 1 - len(rows))
+        if not batch:
+            break
+        order = [(str(row.get("training_day") or "")[:10], str(row.get("id") or "")) for row in batch]
+        if (order != sorted(set(order), reverse=True) or not all(day and id for day, id in order)
+                or (before_day and order[0] >= (before_day, before_id))):
+            raise HTTPException(503, "Exercise history is temporarily unavailable.")
+        rows.extend(row for row in batch if keep(row))
+        before_day, before_id = order[-1]
+    return rows
+
+
 def exercise_performances(store, athlete_id: str, identity: str, *, as_of: str | None = None,
                           cursor: str | None = None, limit: int = 30, health_consent_granted: bool) -> ExercisePerformancesResponse:
-    key, log_id = _selector(identity)
+    key, log_id, personal_id = _selector(identity)
     before_day = before_id = None
     try:
         cutoff = _cutoff(as_of) if as_of else datetime.now(timezone.utc).isoformat()
@@ -169,29 +234,37 @@ def exercise_performances(store, athlete_id: str, identity: str, *, as_of: str |
             before_day, before_id = date.fromisoformat(data["day"]).isoformat(), str(UUID(data["id"]))
     except (ValueError, TypeError, KeyError, UnicodeError):
         raise HTTPException(422, "Invalid exercise history cursor.") from None
-    rows = []
-    # Do not mistake a lower server row cap or excluded legacy blocks for the
-    # end of this movement's history. Stop at one valid sentinel or an empty read.
-    while len(rows) <= limit:
-        batch = store.list_exercise_performances(athlete_id, exercise_key=key, log_id=log_id,
-            as_of=cutoff, before_day=before_day, before_id=before_id, limit=limit + 1 - len(rows))
-        if not batch:
-            break
-        order = [(str(row.get("training_day") or ""), str(row.get("id") or "")) for row in batch]
-        if (order != sorted(set(order), reverse=True) or not all(day and id for day, id in order)
-                or (before_day and order[0] >= (before_day, before_id))):
-            raise HTTPException(503, "Exercise history is temporarily unavailable.")
-        rows.extend(row for row in batch if row.get("athlete_id") == athlete_id and exercise_identity(row) == identity
-                    and _map(row.get("prescribed")).get("block_type") not in _EXCLUDED_TYPES)
-        before_day, before_id = order[-1]
+    rows: list[tuple[str, dict]] = []
+    if personal_id is None:
+        rows += [("plan", row) for row in _ordered(
+            lambda **page: store.list_exercise_performances(athlete_id, exercise_key=key, log_id=log_id, as_of=cutoff, **page),
+            lambda row: (row.get("athlete_id") == athlete_id and exercise_identity(row) == identity
+                         and _map(row.get("prescribed")).get("block_type") not in _EXCLUDED_TYPES),
+            before_day=before_day, before_id=before_id, limit=limit)]
+    if log_id is None:
+        rows += [("manual", row) for row in _ordered(
+            lambda **page: store.list_manual_exercise_performances(athlete_id, exercise_key=key,
+                personal_exercise_id=personal_id, as_of=cutoff, **page),
+            lambda row: (row.get("athlete_id") == athlete_id and not row.get("deleted_at")
+                         and entry_identity(row) == identity),
+            before_day=before_day, before_id=before_id, limit=limit)]
+    # One keyset across both sources: (training_day, id) is immutable and unique.
+    rows.sort(key=lambda item: (str(item[1]["training_day"])[:10], str(item[1]["id"])), reverse=True)
     if not rows and not cursor:
         raise HTTPException(404, "Exercise history not found.")
     page = rows[:limit]
     next_cursor = None
     if len(rows) > limit:
-        last = page[-1]
+        last = page[-1][1]
         next_cursor = base64.urlsafe_b64encode(json.dumps({"exercise": identity, "as_of": cutoff,
-            "day": last["training_day"], "id": last["id"]}).encode()).decode().rstrip("=")
-    return ExercisePerformancesResponse(performances=[ExercisePerformance(id=row["id"], training_day=row["training_day"],
-        block=_exercise(_map(row.get("prescribed")), row, health_consent_granted),
-        performed_values=_chart_values(row)) for row in page], next_cursor=next_cursor)
+            "day": str(last["training_day"])[:10], "id": last["id"]}).encode()).decode().rstrip("=")
+    performances = []
+    for source, row in page:
+        if source == "plan":
+            performances.append(ExercisePerformance(id=row["id"], training_day=row["training_day"],
+                block=_exercise(_map(row.get("prescribed")), row, health_consent_granted), performed_values=_chart_values(row)))
+        else:
+            values = entry_actual(row)
+            performances.append(ExercisePerformance(id=str(row["id"]), training_day=str(row["training_day"])[:10],
+                block=_manual_block(row, health_consent_granted), performed_values=values))
+    return ExercisePerformancesResponse(performances=performances, next_cursor=next_cursor)

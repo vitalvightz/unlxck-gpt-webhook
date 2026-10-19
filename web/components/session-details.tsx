@@ -9,6 +9,7 @@ import { EXERCISE_LOG_REASON_LABELS } from "@/lib/exercise-log";
 import type { ExerciseLogReason } from "@/lib/types";
 import { lockOverlayScroll } from "@/lib/overlay-scroll-lock";
 import { detailMeasurements } from "@/lib/session-details";
+import { NO_MEASUREMENTS, summarise } from "@/lib/manual-exercises";
 import { sessionTypes, sportLabel } from "@/lib/training-disciplines";
 import type { TrainingHistorySession } from "@/lib/training-history";
 import styles from "./session-details.module.css";
@@ -25,6 +26,15 @@ function Measurements({ values }: { values: Record<string, unknown> }) {
 }
 
 export function TrainingBlock({ block, index, heading, recordId }: { block: SessionDetailBlock; index: number; heading?: string; recordId?: string }) {
+  // Recorded on the athlete's own training: no prescription exists to compare.
+  if (block.source === "manual") return <li className={styles.block} data-performance={recordId} tabIndex={recordId ? -1 : undefined}>
+    <div className={styles.blockHeading}><span className={styles.number}>{String(index + 1).padStart(2, "0")}</span>
+      <h4>{heading || block.name}</h4></div>
+    <p className={styles.outcome}>Logged training · added by you</p>
+    <section aria-label={`Recorded: ${heading ? `${block.name} · ${heading} · Record ${index + 1}` : block.name}`}><h5 className={styles.recordedHeading}>Recorded</h5>
+      {detailMeasurements(block.actual).length ? <Measurements values={block.actual} /> : <p className={styles.quiet}>No measurements recorded.</p>}</section>
+    {block.notes ? <p className={styles.note}>{block.notes}</p> : null}
+  </li>;
   const rehab = block.kind !== "exercise";
   const actuals = detailMeasurements(block.actual).length > 0;
   const quantified = block.completed_dose?.completion_state === "quantified";
@@ -56,10 +66,12 @@ export function TrainingBlock({ block, index, heading, recordId }: { block: Sess
 }
 
 /** Native modal supplies focus containment, inert background and Escape handling. */
-export function SessionDetails({ row, token, cache, onDismiss, restoreFocus = true }: {
+export function SessionDetails({ row, token, cache, onDismiss, restoreFocus = true, onEditExercises }: {
   row: TrainingHistorySession; token: string; cache: SessionDetailsCache; onDismiss: () => void;
   /** A suspended parent sheet owns focus restoration during a modal handoff. */
   restoreFocus?: boolean;
+  /** Hands off to the exercise logger; this sheet closes first so only one modal is open. */
+  onEditExercises?: (row: TrainingHistorySession) => void;
 }) {
   const dialog = useRef<HTMLDialogElement>(null);
   const heading = useId();
@@ -112,7 +124,15 @@ export function SessionDetails({ row, token, cache, onDismiss, restoreFocus = tr
             {record.activity ? <div><dt>Activity</dt><dd>{record.activity}</dd></div> : null}
             {record.sport ? <div><dt>Sport</dt><dd>{sportLabel(record.sport)}</dd></div> : null}
             {record.session_type ? <div><dt>Session type</dt><dd>{sessionTypes(record.sport).find(item => item.id === record.session_type)?.label || record.session_type.replaceAll("_", " ")}</dd></div> : null}
-          </dl><p className={styles.quiet}>Exercise-level records weren’t captured for manually logged training.</p>
+          </dl>
+          <div className={styles.manualHead}><h3>Exercises</h3>
+            {onEditExercises && record.activity !== "sparring" ? <button type="button" className={styles.manualAction} aria-haspopup="dialog"
+              onClick={() => onEditExercises({ ...row, ...record })}>{details.blocks.length ? "Edit exercises" : "Add exercises"}</button> : null}</div>
+          {details.blocks.length ? <ol className={styles.manualList}>{details.blocks.map((block, index) => <li key={index}>
+            <span className={styles.manualName}>{block.name}</span>
+            <span className={styles.manualValues}>{summarise(block.actual, block.format) || NO_MEASUREMENTS}</span>
+            {block.notes ? <p className={styles.note}>{block.notes}</p> : null}
+          </li>)}</ol> : <p className={styles.quiet}>No exercises recorded. Only the session’s activity, duration and effort were logged.</p>}
           {details.sparring ? <><h3>Sparring report</h3><p>{details.sparring.rounds_completed} rounds{details.sparring.round_seconds != null ? ` · ${details.sparring.round_seconds} sec` : ""} · {details.sparring.intensity}</p>
             {details.sparring.head_contact ? <p>Head contact: {details.sparring.head_contact}</p> : null}
             {details.sparring.rocked != null ? <p>Rocked: {details.sparring.rocked ? "Yes" : "No"}</p> : null}

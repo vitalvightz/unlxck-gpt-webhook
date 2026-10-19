@@ -56,6 +56,7 @@ import { filterTakeaways } from "@/lib/training-summary";
 import { canRepeatTraining, sortTrainingHistory, type TrainingHistorySession } from "@/lib/training-history";
 import { useTrainingDay } from "@/lib/use-training-day";
 import { SessionDetails, type SessionDetailsCache } from "./session-details";
+import { ManualExerciseLogger } from "./manual-exercise-logger";
 import { ExerciseLibrary, type ExerciseHistoryCache } from "./exercise-library";
 import type { ExerciseLibraryResponse } from "@/lib/api-schema.generated";
 
@@ -166,7 +167,9 @@ function sessionSparringChips(log: SparringLogRecord): HistoryChip[] {
   ];
 }
 
-function SessionRows({ rows, today, token, onUpdate, onDelete, loadedFrom, loadingMore, moreError, onMore, sparringLogs, onSparringSaved, detailsCache }: {
+type ExerciseTarget = { row: TrainingHistorySession; reference?: TrainingHistorySession | null; reopenDetails?: boolean };
+
+function SessionRows({ rows, today, token, onUpdate, onDelete, loadedFrom, loadingMore, moreError, onMore, sparringLogs, onSparringSaved, detailsCache, onExercisesChanged }: {
   rows: TrainingHistorySession[]; today: string | null; token: string | null;
   onUpdate: (row: TrainingHistorySession) => void; onDelete: (id: string) => Promise<void>;
   /** Oldest fully loaded training day; null when no older sessions remain. */
@@ -175,8 +178,13 @@ function SessionRows({ rows, today, token, onUpdate, onDelete, loadedFrom, loadi
   sparringLogs: Map<string, SparringLogRecord> | null;
   onSparringSaved: (log: SparringLogRecord) => void;
   detailsCache: SessionDetailsCache;
+  /** Exercise entries changed: personal exercise records must be re-read. */
+  onExercisesChanged: () => void;
 }) {
   const [saved, setSaved] = useState<string | null>(null);
+  // A session just repeated from History, offered optional exercises.
+  const [repeated, setRepeated] = useState<{ row: TrainingHistorySession; source: TrainingHistorySession } | null>(null);
+  const [exercisesFor, setExercisesFor] = useState<ExerciseTarget | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [takeawaysOnly, setTakeawaysOnly] = useState(false);
@@ -210,7 +218,10 @@ function SessionRows({ rows, today, token, onUpdate, onDelete, loadedFrom, loadi
   const shown = takeawaysOnly ? filterTakeaways(rows, search) : rows;
   return (
     <div className="history-tab-body">
-      {saved ? <p className="muted" role="status">{saved}</p> : null}
+      {saved ? <div className="history-saved-line"><p className="muted" role="status">{saved}</p>
+        {repeated && token ? <button type="button" className="history-session-delete history-session-report" aria-haspopup="dialog"
+          onClick={() => setExercisesFor({ row: repeated.row, reference: repeated.source.exercise_count ? repeated.source : null })}>
+          Add exercises</button> : null}</div> : null}
       {error ? <p className="error-banner" role="alert">{error}</p> : null}
       {today ? <TrainingSummaryCard rows={rows} today={today} loadedFrom={loadedFrom}
         loading={loadingMore} error={moreError} onLoadMore={onMore}>
@@ -257,6 +268,7 @@ function SessionRows({ rows, today, token, onUpdate, onDelete, loadedFrom, loadi
               <span>{row.source === "external" ? "Added by you" : "Unlxck"}</span>
               {row.source === "unlxck" && row.completion_origin == null ? <span>Legacy completion · workout identity unverified</span> : null}
               {row.duration_minutes ? <span>{row.duration_minutes} min</span> : null}
+              {row.source === "external" && row.exercise_count ? <span>{plural(row.exercise_count, "exercise")}</span> : null}
               {row.effort ? <span>{row.effort.charAt(0).toUpperCase() + row.effort.slice(1)}</span> : null}
               {row.session_rpe != null ? (
                 <span>
@@ -279,7 +291,7 @@ function SessionRows({ rows, today, token, onUpdate, onDelete, loadedFrom, loadi
                   {log ? "Update report" : "Add details"}
                 </button>;
               })() : null}
-              {canRepeatTraining(row) ? <LogTraining accessToken={token} repeatEntry={row} onSaved={created => { onUpdate(created); setSaved(`${created.title} logged successfully. Saved to Training History.`); }} /> : null}
+              {canRepeatTraining(row) ? <LogTraining accessToken={token} repeatEntry={row} onSaved={created => { onUpdate(created); setRepeated({ row: created, source: row }); setSaved(`${created.title} logged successfully. Saved to Training History.`); }} /> : null}
               <LogTraining accessToken={token} entry={row} onSaved={onUpdate} />
               {token && row.activity !== "sparring" ? <TakeawayEditor token={token} row={row} onSaved={onUpdate} /> : null}
               <button className="history-session-delete" type="button" disabled={deleting !== null} aria-label={`Delete ${row.title}`} onClick={() => void remove(row.id)}>{deleting === row.id ? "Deleting…" : "Delete"}</button>
@@ -299,7 +311,20 @@ function SessionRows({ rows, today, token, onUpdate, onDelete, loadedFrom, loadi
       {sparringDraft && token ? <SparringLogPrompt key={sparringDraft.externalSessionId} token={token} draft={sparringDraft}
         onSaved={onSparringSaved} onDismiss={() => setSparringDraft(null)} /> : null}
       {selected && token ? <SessionDetails key={`${selected.source}:${selected.id}`} row={selected} token={token}
-        cache={detailsCache} onDismiss={() => setSelected(null)} /> : null}
+        cache={detailsCache} onDismiss={() => setSelected(null)}
+        onEditExercises={selected.source === "external" ? row => { setExercisesFor({ row, reopenDetails: true }); setSelected(null); } : undefined} /> : null}
+      {exercisesFor && token ? <ManualExerciseLogger key={exercisesFor.row.id} token={token} session={exercisesFor.row} reference={exercisesFor.reference}
+        onClose={entries => {
+          const target = exercisesFor;
+          setExercisesFor(null);
+          const updated = entries ? { ...target.row, exercise_count: entries.length } : target.row;
+          if (entries) {
+            onExercisesChanged();
+            onUpdate(updated);
+            if (repeated?.row.id === updated.id) setRepeated(null);
+          }
+          if (target.reopenDetails) setSelected(updated);
+        }} /> : null}
     </div>
   );
 }
@@ -756,11 +781,17 @@ function HistoryContent() {
         <ListSkeleton />
       ) : tab === "sessions" ? (
         <SessionRows rows={sessions.rows ?? []} today={today} token={token} detailsCache={detailsCache}
+          onExercisesChanged={() => { exerciseHistoryCache.clear(); setExercises({ rows: null, error: null }); }}
           loadedFrom={sessionCursor} loadingMore={loadingMoreSessions} moreError={moreSessionsError}
           onMore={loadMoreSessions} sparringLogs={sparringBySession} onSparringSaved={onSparringSaved}
           onUpdate={row => {
             detailsCache.delete(`${row.source}:${row.id}`);
-            setSessions(previous => ({ ...previous, rows: sortTrainingHistory([row, ...(previous.rows ?? []).filter(item => !(item.source === "external" && item.id === row.id))]) }));
+            setSessions(previous => {
+              // Edits and takeaways don't recount exercises; keep the known count.
+              const known = previous.rows?.find(item => item.source === "external" && item.id === row.id)?.exercise_count;
+              const next = { ...row, exercise_count: row.exercise_count ?? known };
+              return { ...previous, rows: sortTrainingHistory([next, ...(previous.rows ?? []).filter(item => !(item.source === "external" && item.id === row.id))]) };
+            });
           }}
           onDelete={async id => {
             if (!token) return;

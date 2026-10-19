@@ -3,6 +3,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
+from api.contracts.manual_exercises import MeasurementFormat
 from api.contracts.session_details import SessionDetailBlock
 from api.models import ExerciseLogActual
 
@@ -17,11 +18,17 @@ class RecordedExerciseLoad(BaseModel):
 class PersonalExercise(BaseModel):
     id: str
     name: str
-    identity_kind: Literal["canonical", "legacy"]
+    # canonical: an exact catalogue key; personal: a private movement the athlete
+    # named; legacy: one unkeyed prescribed log, never merged with others.
+    identity_kind: Literal["canonical", "legacy", "personal"]
     latest_day: str
     latest_values: ExerciseLogActual
     latest_confirmed_as_prescribed: bool
     best_loads: list[RecordedExerciseLoad] = Field(default_factory=list)
+    # Where the latest record came from: a prescribed log or a manual session.
+    latest_source: Literal["plan", "manual"] = "plan"
+    # The measurement layout to offer when this movement is logged again.
+    log_format: MeasurementFormat | None = None
 
 
 class ExerciseLibraryResponse(BaseModel):

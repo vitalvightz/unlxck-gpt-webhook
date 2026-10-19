@@ -15,8 +15,10 @@ export function exerciseResult(exercise: PersonalExercise): { label: string; val
     if (item.label === "Rest" || item.label === "Effort") continue;
     parts.push(item.label === "Rounds" || item.label === "Sets" || item.label === "Reps" ? `${item.value} ${item.label.toLowerCase()}` : compactTimeUnits(item.value));
   }
-  return { label: exercise.latest_confirmed_as_prescribed ? "Latest confirmed" : "Latest recorded",
-    value: parts.join(" · ") || (exercise.latest_confirmed_as_prescribed ? "Completed as prescribed" : "Modified result") };
+  // A movement logged by name alone was performed; nothing was measured.
+  const empty = exercise.latest_source === "manual" ? "No measurements recorded"
+    : exercise.latest_confirmed_as_prescribed ? "Completed as prescribed" : "Modified result";
+  return { label: exercise.latest_confirmed_as_prescribed ? "Latest confirmed" : "Latest recorded", value: parts.join(" · ") || empty };
 }
 
 // One read of the athlete's movement index serves every editor opened soon after.

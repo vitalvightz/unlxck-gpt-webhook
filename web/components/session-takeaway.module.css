@@ -3,6 +3,13 @@
 .savedTitle { margin: 0; font-size: 1.05rem; font-weight: 700; color: var(--text-primary); }
 .meta { margin: 4px 0 0; font-size: 0.85rem; color: var(--text-secondary); }
 .check { width: 22px; height: 22px; flex-shrink: 0; fill: none; stroke: var(--success-ink); stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+/* The optional exercise logger: one quiet row, never a required step. */
+.exercises { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; min-height: 52px; padding: 4px 0 12px; border: 0; border-bottom: 1px solid var(--border-subtle); background: transparent; color: var(--text-primary); font: inherit; text-align: left; cursor: pointer; }
+.exercises > span:first-child { display: grid; gap: 2px; }
+.exercises strong { font-size: 0.95rem; font-weight: 700; }
+.exercises > span:first-child > span { color: var(--text-secondary); font-size: 0.82rem; }
+.exercises > span[aria-hidden] { color: var(--text-muted); font-size: 22px; }
+.exercises:focus-visible { outline: 2px solid var(--brand-red); outline-offset: 2px; }
 .question { font-size: 1rem; font-weight: 700; color: var(--text-primary); }
 .input { width: 100%; min-height: 48px; box-sizing: border-box; padding: 12px 14px; border: 1px solid var(--border-default); border-radius: 10px; background: var(--bg-panel); color: var(--text-primary); font: inherit; font-size: 16px; resize: vertical; }
 .input::placeholder { color: var(--text-muted); }
