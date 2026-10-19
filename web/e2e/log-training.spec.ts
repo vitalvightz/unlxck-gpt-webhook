@@ -433,12 +433,16 @@ test("a dropped network response can retry without creating another session", as
 test("Today logging remains available without an active plan", async ({ page, baseURL }) => {
   await setup(page, baseURL!, false, false, []);
   await page.route("**/api/today", route => route.fulfill({ contentType: "application/json", body: JSON.stringify({
-    active_plan: {}, today: { training_day: "2026-10-18" }, open_injuries: [], risk_watch: [],
+    // The shape the API serialises for an athlete with no programme.
+    active_plan: {}, today: { training_day: "2026-10-18", recommendation_state: "not_checked_in", decision_tier: "not_checked_in", warnings: [], next_session: {}, completion_status: "not_started", session_scope: "none" },
+    open_injuries: [], risk_watch: [],
   }) }));
+  const errors: string[] = []; page.on("pageerror", error => errors.push(error.message));
   await page.goto("/today");
-  await expect(page.getByRole("link", { name: /Want extra S&C/ })).toBeVisible();
+  await expect(page.getByRole("navigation", { name: "Quick actions" }).getByRole("link", { name: "Build S&C plan" })).toBeVisible();
   await page.getByRole("button", { name: "Log Training", exact: true }).click();
   await expect(page.getByRole("dialog")).toBeVisible();
+  expect(errors).toEqual([]);
 });
 
 

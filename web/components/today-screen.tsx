@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { TrainingHabitLog } from "@/components/training-habit-log";
-import { TrackingToday } from "@/components/tracking-today";
 import { useMemo } from "react";
 import styles from "./today-screen.module.css";
 
@@ -116,6 +115,7 @@ function StatusTile({
 }
 
 function TodayReadinessStrip({
+  hasPlan,
   needsCheckin,
   openInjuryCount,
   completionStatus,
@@ -123,6 +123,7 @@ function TodayReadinessStrip({
   injuriesHref,
   sessionHref,
 }: {
+  hasPlan: boolean;
   needsCheckin: boolean;
   openInjuryCount: number;
   completionStatus: TodayCompletionStatus;
@@ -141,22 +142,38 @@ function TodayReadinessStrip({
 
   return (
     <ul className={styles.tiles} aria-label="Today command status">
-      <StatusTile
-        label="Check-in"
-        value={needsCheckin ? "Due" : "Done"}
-        tone={needsCheckin ? "pending" : "clear"}
-        icon={needsCheckin ? "clock" : "check"}
-        href={checkinHref}
-        actionLabel="Go to today's check-in"
-      />
-      <StatusTile
-        label="Today’s session"
-        value={SESSION_TILE_VALUE[completionStatus] ?? getCompletionLabel(completionStatus)}
-        tone={sessionTone}
-        icon={sessionLogged ? "check" : completionStatus === "started" ? "pulse" : "clock"}
-        href={sessionHref}
-        actionLabel="Go to today's session"
-      />
+      {/* Without a programme the check-in is not assessed yet, so it must not
+          read as due-and-actionable or as done. */}
+      {hasPlan ? (
+        <StatusTile
+          label="Check-in"
+          value={needsCheckin ? "Due" : "Done"}
+          tone={needsCheckin ? "pending" : "clear"}
+          icon={needsCheckin ? "clock" : "check"}
+          href={checkinHref}
+          actionLabel="Go to today's check-in"
+        />
+      ) : (
+        <StatusTile label="Readiness" value="Not assessed" icon="pulse" actionLabel="" />
+      )}
+      {hasPlan ? (
+        <StatusTile
+          label="Today’s session"
+          value={SESSION_TILE_VALUE[completionStatus] ?? getCompletionLabel(completionStatus)}
+          tone={sessionTone}
+          icon={sessionLogged ? "check" : completionStatus === "started" ? "pulse" : "clock"}
+          href={sessionHref}
+          actionLabel="Go to today's session"
+        />
+      ) : (
+        <StatusTile
+          label="Training"
+          value="Log session"
+          icon="history"
+          href="#today-training-log"
+          actionLabel="Go to the training log"
+        />
+      )}
       <StatusTile
         label="Injuries"
         value={openInjuryCount ? `${openInjuryCount} active` : "None"}
@@ -208,7 +225,7 @@ export function TodayScreen() {
           <p className="muted" role="alert">
             {isAccessIssue
               ? "Sign in with an active athlete account to unlock Today."
-              : "The live check-in feed did not respond. Your saved plan has not changed."}
+              : "The live Today feed did not respond. Your saved training has not changed."}
           </p>
           {process.env.NODE_ENV !== "production" ? (
             <p className="today-error-detail">Technical detail: {error}</p>
@@ -232,8 +249,9 @@ export function TodayScreen() {
     );
   }
 
-  if (!state || !hasPlan) {
-    return <TrackingToday accessToken={token} state={state} onSaved={() => void refresh()} />;
+  // A missing feed is never read as "no plan" or "no injuries".
+  if (!state) {
+    return <TodayLoadingState />;
   }
   const resolvedDecision = resolveTodayDecision(state);
   const nextStep = getTodayNextStep(state, resolvedDecision);
@@ -249,6 +267,12 @@ export function TodayScreen() {
     supplementaryRisks,
     visibleTriggerLabels,
   );
+  // With no programme there is no session to preview, so only current
+  // guidance (an injury hold) or a safety notice may lead.
+  const decisionBanner = hasPlan
+    ? resolvedDecision.currentGuidanceBanner ?? resolvedDecision.banner
+    : resolvedDecision.currentGuidanceBanner
+      ?? (resolvedDecision.primaryMessageKind === "safety_notice" ? resolvedDecision.banner : null);
   const readinessForm = showCheckin ? (
     <TodayReadinessForm
       plan={activePlan}
@@ -257,7 +281,7 @@ export function TodayScreen() {
       onRefresh={refresh}
     />
   ) : null;
-  const sessionPanel = (
+  const sessionPanel = hasPlan ? (
     <TodaySessionPanel
       state={state}
       structuredPlan={structuredPlan}
@@ -272,7 +296,7 @@ export function TodayScreen() {
       onPlanSessionChanged={patchSession}
       professionalStatus={me?.profile.professional_status}
     />
-  );
+  ) : null;
 
   return (
     <div className="today-page">
@@ -287,15 +311,21 @@ export function TodayScreen() {
           <div className="today-hero-copy">
             <p className={styles.heroDate}>{trainingDayLabel}</p>
             <h1>Today</h1>
-            <p className={styles.heroPhase}>{openOngoing
-              ? "Ongoing 4-week block"
-              : activePlan.phase
-                ? humanizeIfRawEnum(activePlan.phase)
-                : null}</p>
+            {hasPlan ? (
+              <p className={styles.heroPhase}>{openOngoing
+                ? "Ongoing 4-week block"
+                : activePlan.phase
+                  ? humanizeIfRawEnum(activePlan.phase)
+                  : null}</p>
+            ) : (
+              <p className={styles.heroIntro}>Your training, your record. Log sessions from your coach or your own training.</p>
+            )}
           </div>
-          <a className={styles.logTrainingLink} href="#today-training-log">Log Training</a>
+          {/* Without a programme the logger itself leads directly below. */}
+          {hasPlan ? <a className={styles.logTrainingLink} href="#today-training-log">Log Training</a> : null}
         </div>
         <TodayReadinessStrip
+          hasPlan={hasPlan}
           needsCheckin={showCheckin}
           openInjuryCount={state.open_injuries?.length ?? 0}
           completionStatus={state.today.completion_status}
@@ -304,7 +334,7 @@ export function TodayScreen() {
           sessionHref={resolvedDecision.displayTier === "preview" ? undefined : "#today-session"}
         />
         {isRefreshing ? <p role="status">Updating Today…</p> : error ? null : <TodayDecisionPanel
-          banner={resolvedDecision.currentGuidanceBanner ?? resolvedDecision.banner}
+          banner={decisionBanner}
           compactPreview={resolvedDecision.hasSession && !resolvedDecision.currentGuidanceBanner}
           tier={resolvedDecision.currentGuidanceBanner ? resolvedDecision.authoritativeTier : resolvedDecision.displayTier}
           triggers={state.today.recommendation_trigger_labels}
@@ -343,10 +373,18 @@ export function TodayScreen() {
       )}
 
       <div id="today-training-log" className={styles.trainingLog} tabIndex={-1}>
-        <TrainingHabitLog accessToken={token} state={state} onSaved={() => void refresh()} />
+        <TrainingHabitLog
+          accessToken={token}
+          state={state}
+          variant={hasPlan ? "compact" : "primary"}
+          onSaved={() => void refresh()}
+        />
       </div>
 
-      {token ? (
+      {/* Injury reports are health data: the server rejects them without
+          consent, so a new report is never offered until it is granted. Open
+          injuries stay visible regardless, with their restrictions. */}
+      {token && (hasHealthDataConsent(me) || (state.open_injuries?.length ?? 0) > 0) ? (
         <TodayInjuryManager
           openInjuries={state.open_injuries ?? []}
           effectiveClearance={state.effective_clinician_clearance}
@@ -354,6 +392,12 @@ export function TodayScreen() {
           token={token}
           onRefresh={refresh}
         />
+      ) : token ? (
+        <section id="today-injury" className={`panel ${styles.injuryConsent}`} aria-labelledby="today-injury-consent-heading">
+          <h2 id="today-injury-consent-heading">Injuries</h2>
+          <p className="muted">Reporting an injury uses health information, so it needs your health-data consent.</p>
+          <Link href="/settings#privacy" className="secondary-button">Review consent</Link>
+        </section>
       ) : null}
 
       <nav className={styles.quickActions} aria-label="Quick actions">
@@ -372,11 +416,25 @@ export function TodayScreen() {
               <span className={styles.chevron} aria-hidden="true" />
             </Link>
           )}
-          <Link href={`/plans/${activePlan.id}`} className={styles.quickAction}>
-            <TileIcon name="plan" />
-            View plan
-            <span className={styles.chevron} aria-hidden="true" />
-          </Link>
+          {hasPlan ? (
+            <Link href={`/plans/${activePlan.id}`} className={styles.quickAction}>
+              <TileIcon name="plan" />
+              View plan
+              <span className={styles.chevron} aria-hidden="true" />
+            </Link>
+          ) : (me?.plan_count ?? 0) > 0 ? (
+            <Link href="/plans" className={styles.quickAction}>
+              <TileIcon name="plan" />
+              Choose a plan
+              <span className={styles.chevron} aria-hidden="true" />
+            </Link>
+          ) : (
+            <Link href="/quick-build" className={styles.quickAction}>
+              <TileIcon name="plan" />
+              Build S&amp;C plan
+              <span className={styles.chevron} aria-hidden="true" />
+            </Link>
+          )}
           <Link href="/history" className={styles.quickAction}>
             <TileIcon name="history" />
             History
@@ -385,7 +443,7 @@ export function TodayScreen() {
         </div>
       </nav>
 
-      {resolvedDecision.recommendationState !== "not_checked_in" ? (
+      {hasPlan && resolvedDecision.recommendationState !== "not_checked_in" ? (
         <ContextualFeedback
           key={`daily-feedback-${state.active_plan?.id ?? "none"}-${state.today.training_day}`}
           token={token ?? ""}

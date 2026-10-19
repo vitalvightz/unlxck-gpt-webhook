@@ -309,3 +309,22 @@
 }
 
 .trainingLog { scroll-margin-block: 80px; }
+
+.heroIntro {
+  max-width: 34ch;
+  margin: 10px 0 0;
+  color: var(--text-secondary);
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.injuryConsent h2 {
+  margin: 0 0 6px;
+  font-size: 16px;
+}
+
+.injuryConsent p {
+  margin: 0 0 14px;
+  font-size: 13px;
+  line-height: 1.5;
+}
