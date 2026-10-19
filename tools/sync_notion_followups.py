@@ -9,7 +9,7 @@ import os
 import random
 import sys
 import time
-from datetime import datetime, timezone
+from datetime import date, datetime, time as datetime_time, timedelta, timezone
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 from zoneinfo import ZoneInfo
@@ -27,17 +27,88 @@ def notion_token():
 
 ACTIVE_STAGES = ("Contacted", "Replied", "Accepted", "Activated")
 
-MISSING_SEND_DATE = "CHECK INSTAGRAM: set Last Follow-Up Sent to the actual first follow-up date before sending follow-up 2."
-MISSING_CONTACT_DATE = "CHECK INSTAGRAM: record Date Contacted before sending a follow-up."
+# Only the Contacted stage produces automatic follow-up sends.
+# A blank due date for an exception/terminal stage is intentional; Timing explains why.
+MISSING_SEND_DATE = "NEEDS DATE: verify the first follow-up's actual Instagram send date."
+MISSING_CONTACT_DATE = "NEEDS DATE: record the Instagram initial contact date."
+BAD_COUNT = "NEEDS REVIEW: follow-up count conflicts with recorded send history."
+LONDON = ZoneInfo("Europe/London")
+
+
+def date_value(properties, name):
+    return (properties[name].get("date") or {}).get("start")
+
+
+def date_patch(value):
+    return {"date": {"start": value} if value else None}
+
+
+def message_patch(value):
+    return {"rich_text": [{"text": {"content": value}}] if value else []}
+
+
+def parse_stamp(value):
+    if not value:
+        return None
+    if "T" not in value:
+        return datetime.combine(date.fromisoformat(value), datetime_time.min, LONDON)
+    stamp = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    return stamp.replace(tzinfo=LONDON) if stamp.tzinfo is None else stamp.astimezone(LONDON)
+
+
+def now_london(value):
+    if isinstance(value, date) and not isinstance(value, datetime):
+        return datetime.combine(value, datetime_time.min, LONDON)
+    return value.replace(tzinfo=LONDON) if value.tzinfo is None else value.astimezone(LONDON)
+
+
+def waiting_until(due):
+    return f"WAIT: next follow-up is due {due.strftime('%d %b %Y, %H:%M %Z')}."
+
+
+def due_and_copy(properties, count, first, second, now, formula):
+    stage = (properties["Stage (AI Fills First)"].get("select") or {}).get("name")
+    if stage != "Contacted":
+        return None, "Not in follow-up queue", formula
+
+    contacted = date_value(properties, "Date Contacted")
+    if not contacted:
+        return None, "Needs contact date", MISSING_CONTACT_DATE
+    if count not in (0, 1, 2):
+        return None, "Invalid follow-up count", BAD_COUNT
+    if count == 2:
+        return None, "Complete (2 sent)", ""  # Never issue follow-up 3.
+    if (count == 0 and (first or second)) or (count == 1 and second):
+        return None, "Needs count review", BAD_COUNT
+
+    contacted_local = parse_stamp(contacted).date()
+    if count == 0:
+        due = datetime.combine(contacted_local + timedelta(days=3), datetime_time.min, LONDON)
+        status = "Follow-up 1"
+    else:
+        if not first:
+            return None, "Needs first send date", MISSING_SEND_DATE
+        first_stamp = parse_stamp(first)
+        # Date-only historical evidence has unknown time of day. Wait through day 5.
+        after_first = (datetime.combine(first_stamp.date() + timedelta(days=6),
+                       datetime_time.min, LONDON) if "T" not in first
+                       else first_stamp + timedelta(days=5))
+        day_eight = datetime.combine(contacted_local + timedelta(days=8), datetime_time.min, LONDON)
+        due = max(day_eight, after_first)
+        status = "Follow-up 2"
+
+    if now < due:
+        return due.isoformat(timespec="seconds"), f"{status}: waiting", waiting_until(due)
+    return due.isoformat(timespec="seconds"), f"{status}: ready", formula
 
 
 def missing_send_date(properties):
-    synced = properties["Synced Follow-Ups Sent"].get("number")
     return (
         (properties["Stage (AI Fills First)"].get("select") or {}).get("name") == "Contacted"
         and (properties["Follow-Ups Sent"].get("select") or {}).get("name") == "1"
-        and not properties["Last Follow-Up Sent"].get("date")
-        and (synced is None or int(synced) >= 1)
+        and not (date_value(properties, "Follow-Up 1 Sent At")
+                 or date_value(properties, "Last Follow-Up Sent"))
+        and properties["Synced Follow-Ups Sent"].get("number") not in (0, 0.0)
     )
 
 
@@ -79,40 +150,69 @@ def pages():
 
 
 def get_changes(page, today):
+    """Synchronise state without guessing whether an editor or a button supplied a time."""
     p = page["properties"]
     count = int((p["Follow-Ups Sent"].get("select") or {}).get("name") or 0)
     synced = p["Synced Follow-Ups Sent"].get("number")
     calculated = p["Follow-Up DM"].get("formula") or {}
     if calculated.get("type") != "string" or calculated.get("string") is None:
         raise ValueError(f"Missing calculated follow-up for {page['id']}")
-    message = calculated["string"]
+    now = now_london(today)
+    observed = now.isoformat(timespec="seconds")
     stage = (p["Stage (AI Fills First)"].get("select") or {}).get("name")
-    increased = synced is not None and int(synced) < count
-    decreased = synced is not None and int(synced) > count
-    if stage == "Contacted" and not p["Date Contacted"].get("date"):
-        message = MISSING_CONTACT_DATE
-    elif missing_send_date(p) or (stage == "Contacted" and count == 1 and decreased):
-        message = MISSING_SEND_DATE
-    current = "".join(x.get("plain_text", "") for x in p["Copy Follow-Up"].get("rich_text", []))
+    first = date_value(p, "Follow-Up 1 Sent At")
+    second = date_value(p, "Follow-Up 2 Sent At")
+    legacy = date_value(p, "Last Follow-Up Sent")
     changes = {}
-    if current != message:
-        changes["Copy Follow-Up"] = {"rich_text": [{"text": {"content": message}}] if message else []}
+
+    # Backfill unambiguous existing evidence. Never use a last-send date as the
+    # first-send date for a record already at 2: it may belong to follow-up 2.
+    if count == 1 and not first and legacy:
+        first = legacy
+        changes["Follow-Up 1 Sent At"] = date_patch(first)
+    elif count == 2 and not second and legacy and synced in (None, 2, 2.0):
+        second = legacy
+        changes["Follow-Up 2 Sent At"] = date_patch(second)
+
+    increased = synced is not None and int(synced) < count
+    consecutive = increased and count - int(synced) == 1
+    if consecutive and count == 1 and not first:
+        # Polling observation is a conservative upper bound on the send time,
+        # not proof of an exact Instagram timestamp.
+        first = observed
+        changes["Follow-Up 1 Sent At"] = date_patch(first)
+        if not legacy:
+            changes["Last Follow-Up Sent"] = date_patch(first)
+    elif consecutive and count == 2 and not second:
+        second = observed
+        changes["Follow-Up 2 Sent At"] = date_patch(second)
+        changes["Last Follow-Up Sent"] = date_patch(second)
+    elif count == 2 and second and legacy != second:
+        # Preserve first-send history in its own property, and maintain the
+        # existing compatibility field as the *last* event.
+        changes["Last Follow-Up Sent"] = date_patch(second)
+
     if synced is None or int(synced) != count:
         changes["Synced Follow-Ups Sent"] = {"number": count}
-        if decreased:
-            # A corrected/reversed count invalidates the old last-send date.
-            changes["Last Follow-Up Sent"] = {"date": None}
-        elif increased:
-            last = (p["Last Follow-Up Sent"].get("date") or {}).get("start")
-            edited = page.get("last_edited_time")
-            # A button stamps count and date together; a dropdown edit leaves the older date.
-            button_stamp = bool(last and "T" in last and edited and abs((
-                datetime.fromisoformat(last.replace("Z", "+00:00"))
-                - datetime.fromisoformat(edited.replace("Z", "+00:00"))
-            ).total_seconds()) < 300)
-            if not last or (count == 2 and not button_stamp):
-                observed = today.isoformat(timespec="seconds") if isinstance(today, datetime) else today.isoformat()
-                changes["Last Follow-Up Sent"] = {"date": {"start": observed}}
+
+    due, status, message = due_and_copy(
+        p, count, first, second, now, calculated["string"])
+    # A poll missed one or more intermediate send events. Never infer their
+    # dates, and never show potentially premature sendable copy.
+    if increased and not consecutive:
+        due, status, message = None, "Needs count review", BAD_COUNT
+    if synced is not None and count < int(synced):
+        due, status, message = None, "Needs count review", BAD_COUNT
+
+    current_due = date_value(p, "Safe Next Due")
+    if current_due != due:
+        changes["Safe Next Due"] = date_patch(due)
+    current_status = "".join(x.get("plain_text", "") for x in p["Follow-Up Timing"].get("rich_text", []))
+    if current_status != status:
+        changes["Follow-Up Timing"] = message_patch(status)
+    current_message = "".join(x.get("plain_text", "") for x in p["Copy Follow-Up"].get("rich_text", []))
+    if current_message != message:
+        changes["Copy Follow-Up"] = message_patch(message)
     return changes
 
 
