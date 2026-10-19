@@ -21,7 +21,7 @@ import { DrillPreview, TrainingLibrary } from "./training-library";
 import { CustomDoseEditor } from "./custom-dose-editor";
 import { usePastExercises } from "./load-field";
 import { pastExercisesByKey } from "@/lib/exercise-library";
-import { pastLoad, withPastDose } from "@/lib/load-entry";
+import { withPastDose } from "@/lib/load-entry";
 import { CommunityContributionSheet, CommunityExercisePreview, communityDetailsChanged } from "./community-exercises";
 import { PrivateExerciseMediaProvider, PrivateExerciseVideo, PrivateExerciseVideoSheet } from "./private-exercise-video";
 import { blankDose, doseSummary, doseIncomplete } from "@/lib/custom-plan-dose";
@@ -132,7 +132,8 @@ export function CustomPlanBuilder({ accessToken, planId, onboarding = null }: { 
     [suggestionError, setSuggestionError] = useState<string>(),
     [suggesting, setSuggesting] = useState(false);
   const suggestionRequest = useRef(0);
-  const past = usePastExercises(accessToken);
+  // Read only once an exercise is open, for last time's weight.
+  const past = usePastExercises(editing ? accessToken : null);
   const mounted = useRef(true);
   useEffect(() => {
     mounted.current = true;
@@ -870,8 +871,9 @@ export function CustomPlanBuilder({ accessToken, planId, onboarding = null }: { 
             ) : null}
             <CustomDoseEditor
               dose={editing.exercise.dose}
-              lastLoad={editing.exercise.origin === "catalogue" && editing.exercise.snapshot.exercise_key
-                ? pastLoad(past?.get(editing.exercise.snapshot.exercise_key)) : null}
+              movement={editing.exercise.origin === "catalogue" ? editing.exercise.snapshot : null}
+              past={editing.exercise.origin === "catalogue" && editing.exercise.snapshot.exercise_key
+                ? past?.get(editing.exercise.snapshot.exercise_key) : null}
               onChange={(dose) =>
                 setEditing({
                   ...editing,

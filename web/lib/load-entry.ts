@@ -10,10 +10,11 @@ import type { PersonalExercise } from "./api-schema.generated";
 export type LoadUnit = "kg" | "lb";
 
 export function parseLoad(text: string | null | undefined): { value: number; unit: LoadUnit } | null {
-  const match = (text ?? "").trim().match(/^(\d+(?:[.,]\d+)?)\s*(kg|kgs|lb|lbs)$/i);
+  // The same pattern the server reads a numeric load from (api/services/custom_plans.py).
+  const match = (text ?? "").trim().match(/^(\d+(?:\.\d+)?)\s*(kg|lb|lbs)$/i);
   if (!match) return null;
-  const value = Number(match[1].replace(",", "."));
-  return Number.isFinite(value) && value > 0 ? { value, unit: match[2].toLowerCase().startsWith("kg") ? "kg" : "lb" } : null;
+  const value = Number(match[1]);
+  return Number.isFinite(value) && value > 0 ? { value, unit: match[2].toLowerCase() === "kg" ? "kg" : "lb" } : null;
 }
 
 export function formatLoad(value: number, unit: LoadUnit): string {
@@ -25,6 +26,19 @@ export function startsAsWeight(text: string | null | undefined, weighed: boolean
   const value = (text ?? "").trim();
   if (value) return parseLoad(value) !== null;
   return weighed;
+}
+
+/**
+ * Whether sets × reps work is weighed. A catalogue movement or past exercise
+ * may carry a `log_format` ("strength", "bodyweight", …); only an explicit
+ * non-strength format turns the default off. Read structurally because not
+ * every response carries it.
+ */
+export function weighedFormat(mode: string, ...sources: (object | null | undefined)[]): boolean {
+  if (mode !== "reps") return false;
+  const format = sources.map(source => (source as { log_format?: unknown } | null | undefined)?.log_format)
+    .find(value => typeof value === "string");
+  return format === undefined || format === "strength";
 }
 
 type DoseShape = {

@@ -3,7 +3,8 @@
 import { useState, type ReactNode } from "react";
 import type { ExerciseChangeDose } from "@/lib/types";
 import { finishedDose, validDose, type DoseDraft } from "@/lib/exercise-dose";
-import type { LoadUnit } from "@/lib/load-entry";
+import type { PersonalExercise } from "@/lib/api-schema.generated";
+import { pastLoad, weighedFormat } from "@/lib/load-entry";
 import { LoadField } from "./load-field";
 import styles from "./exercise-customisation.module.css";
 
@@ -32,10 +33,10 @@ function TimeField({ label, value, onChange, rest = false }: {
 const lines = (text: string) => text.split("\n").map(s => s.trim()).filter(Boolean);
 
 /** The same prescription editor for Add, Swap and an existing rendered card. */
-export function ExercisePrescriptionEditor({ initial, action, busy, coaching, lastLoad, onSubmit, children }: {
+export function ExercisePrescriptionEditor({ initial, action, busy, coaching, past, onSubmit, children }: {
   initial: DoseDraft; action: string; busy: boolean; coaching?: ExerciseCoaching;
-  /** The weight this exercise was last done with, when the athlete has done it. */
-  lastLoad?: { value: number; unit: LoadUnit } | null;
+  /** The athlete's own record of this exercise: last weight and whether it is weighed. */
+  past?: PersonalExercise | null;
   onSubmit: (dose: ExerciseChangeDose, coaching?: ExerciseCoaching) => void;
   /** Rendered just above the submit button (e.g. which workouts to apply to). */
   children?: ReactNode;
@@ -100,8 +101,8 @@ export function ExercisePrescriptionEditor({ initial, action, busy, coaching, la
     <details className={styles.advanced}>
       <summary><span>Load &amp; effort</span>{effortSummary ? <small>{effortSummary}</small> : null}</summary>
       <div className={styles.groupBody}>
-        <LoadField className={styles.doseField} value={dose.load_or_intensity} weighed={dose.mode === "reps"}
-          last={lastLoad} onChange={text => update("load_or_intensity", text)} />
+        <LoadField className={styles.doseField} value={dose.load_or_intensity} weighed={weighedFormat(dose.mode, past)}
+          last={pastLoad(past)} onChange={text => update("load_or_intensity", text)} />
         <div className={styles.pairGrid}>
           {number("rpe", "RPE (optional)", 10, true)}
           {dose.mode === "reps" ? <label className={`${styles.doseField} ${styles.textField}`}><span>Tempo</span>

@@ -6,7 +6,7 @@ import Link from "next/link";
 import { ExerciseDemo } from "@/components/exercise-demo";
 import { ExercisePrescriptionEditor } from "@/components/exercise-prescription-editor";
 import { usePastExercises } from "@/components/load-field";
-import { pastLoad, withPastDose } from "@/lib/load-entry";
+import { withPastDose } from "@/lib/load-entry";
 import { doseFromBlock, finishedDose, type DoseDraft } from "@/lib/exercise-dose";
 import { useToast } from "@/components/toast-provider";
 import { InjuryDetailSheet } from "@/components/today/injury-detail-sheet";
@@ -328,7 +328,7 @@ export function ExerciseActions({ block, title }: { block: StructuredBlock; titl
               <span className="ex-row-meta">{block.block_type?.replaceAll("_", " ")}</span>
             </span></div>
             <ExercisePrescriptionEditor initial={doseFromBlock(block)} busy={busy} action="Save changes"
-              lastLoad={pastLoad(past?.get(cleanText(block.exercise_key) ?? ""))}
+              past={past?.get(cleanText(block.exercise_key) ?? "")}
               coaching={{
                 coaching_cues: block.coaching_cues ?? [], regression_options: block.regression_options ?? [],
                 progression_rule: block.progression_rule ?? null, stop_rules: block.stop_rules ?? [],
@@ -614,7 +614,7 @@ function ExerciseOptionsSheet({
                     // History arriving after the editor opens refills it once.
                     key={past ? "past" : "loading"}
                     initial={withPastDose({ ...option.suggested_dose, mode: option.dose_mode ?? "text" } as DoseDraft, past?.get(option.exercise_key))}
-                    lastLoad={pastLoad(past?.get(option.exercise_key))}
+                    past={past?.get(option.exercise_key)}
                     busy={pending === option.catalogue_id}
                     action={mode === "swap" ? "Swap" : "Add"}
                     onSubmit={(dose) => void choose(option, dose)}

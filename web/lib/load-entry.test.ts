@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import type { PersonalExercise } from "./api-schema.generated";
 import { blankDose } from "./custom-plan-dose";
-import { parseLoad, pastLoad, startsAsWeight, withPastDose } from "./load-entry";
+import { parseLoad, pastLoad, startsAsWeight, weighedFormat, withPastDose } from "./load-entry";
 
 const past = (latest_values: Partial<PersonalExercise["latest_values"]>) => ({ id: "key:back-squat", name: "Back Squat",
   identity_kind: "canonical", latest_day: "2026-10-12", latest_values, latest_confirmed_as_prescribed: false, best_loads: [] }) as unknown as PersonalExercise;
@@ -34,4 +34,14 @@ test("a suggested format wins and history only adds the missing weight", () => {
   assert.equal(kept.load_or_intensity, "light band");
   assert.deepEqual(withPastDose({ mode: "reps" as const }, null), { mode: "reps" });
   assert.deepEqual(pastLoad(past({ load: { value: 20, unit: "kg" } })), { value: 20, unit: "kg" });
+});
+
+test("sets × reps default to a weight unless the movement's own format says it is not weighed", () => {
+  assert.equal(weighedFormat("reps"), true);
+  assert.equal(weighedFormat("reps", { log_format: "strength" }), true);
+  assert.equal(weighedFormat("reps", { log_format: "bodyweight" }), false);
+  assert.equal(weighedFormat("reps", null, { log_format: "bodyweight" }), false);
+  assert.equal(weighedFormat("reps", { log_format: null }), true);
+  assert.equal(weighedFormat("duration", { log_format: "strength" }), false);
+  assert.equal(parseLoad("30 kgs"), null);
 });

@@ -3,7 +3,8 @@ import { useState } from "react";
 import type { CustomDose } from "@/lib/api-schema.generated";
 import styles from "./custom-plan-builder.module.css";
 import { blankDose } from "@/lib/custom-plan-dose";
-import type { LoadUnit } from "@/lib/load-entry";
+import type { PersonalExercise } from "@/lib/api-schema.generated";
+import { pastLoad, weighedFormat } from "@/lib/load-entry";
 import { LoadField } from "./load-field";
 function DurationField({
   value,
@@ -37,11 +38,13 @@ function DurationField({
     </label>
   );
 }
-export function CustomDoseEditor({ dose, onChange, lastLoad }: {
+export function CustomDoseEditor({ dose, onChange, movement, past }: {
   dose: CustomDose;
   onChange: (dose: CustomDose) => void;
-  /** The weight this exercise was last done with, when the athlete has done it. */
-  lastLoad?: { value: number; unit: LoadUnit } | null;
+  /** The catalogue movement, whose format says whether it is weighed. */
+  movement?: object | null;
+  /** The athlete's own record of this exercise, for the last weight. */
+  past?: PersonalExercise | null;
 }) {
   function number(
     field: "sets" | "reps" | "rest_seconds" | "rounds" | "rpe" | "distance",
@@ -148,8 +151,8 @@ export function CustomDoseEditor({ dose, onChange, lastLoad }: {
         key={dose.mode}
         className={styles.wide}
         value={dose.load_or_intensity}
-        weighed={dose.mode === "reps"}
-        last={lastLoad}
+        weighed={weighedFormat(dose.mode, movement, past)}
+        last={pastLoad(past)}
         onChange={(text) => onChange({ ...dose, load_or_intensity: text || null })}
       />
       {number("rpe", "RPE (optional)", 1, 10, 0.5)}
