@@ -377,3 +377,10 @@ test("validateQuickBuildInput blocks generation when focus cap is exceeded", () 
     "This camp allows 4 total focus picks. Remove 1 goal or weak-area selection before generating.",
   );
 });
+
+test("quick build keeps the saved profile timezone instead of the device zone", () => {
+  const saved = quickBuildToPlanRequest(buildValidInput(), { savedTimeZone: "Europe/London" });
+  assert.equal(saved.athlete.athlete_timezone, "Europe/London");
+  const firstTime = quickBuildToPlanRequest(buildValidInput(), { savedTimeZone: "" });
+  assert.equal(firstTime.athlete.athlete_timezone, emptyPlanRequest().athlete.athlete_timezone);
+});

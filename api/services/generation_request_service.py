@@ -98,6 +98,11 @@ async def generate_plan_for_current_user(
             "[generation] request:minor_target_weight_suppressed athlete_id=%s",
             profile.athlete_id,
         )
+    saved_timezone = (profile.athlete_timezone or "").strip()
+    if saved_timezone:
+        # The saved profile timezone owns the athlete's training day, so the
+        # camp is generated in it rather than whatever the browser detected.
+        request_body.athlete.athlete_timezone = saved_timezone
     focus_validation = validate_performance_focus_selections(
         request_body.effective_fight_date,
         key_goals=request_body.key_goals,

@@ -222,7 +222,10 @@ export function validateQuickBuildInput(
   return errors;
 }
 
-export function quickBuildToPlanRequest(input: QuickBuildInput): PlanRequest {
+export function quickBuildToPlanRequest(
+  input: QuickBuildInput,
+  options?: { savedTimeZone?: string | null },
+): PlanRequest {
   const trimmedName = input.full_name.trim();
   const base = emptyPlanRequest(trimmedName);
   const keyGoals = retainKnownOptionValues(input.key_goals, KEY_GOAL_OPTIONS);
@@ -234,7 +237,8 @@ export function quickBuildToPlanRequest(input: QuickBuildInput): PlanRequest {
       full_name: trimmedName,
       technical_style: retainKnownOptionValues(input.technical_style, TECHNICAL_STYLE_OPTIONS),
       tactical_style: retainKnownOptionValues(input.tactical_style, TACTICAL_STYLE_OPTIONS),
-      athlete_timezone: base.athlete.athlete_timezone || detectDeviceTimeZone(),
+      // A saved profile timezone always wins; the device zone only seeds a first-time setup.
+      athlete_timezone: options?.savedTimeZone?.trim() || base.athlete.athlete_timezone || detectDeviceTimeZone(),
     },
     fight_date: input.no_scheduled_fight ? "" : input.fight_date,
     no_scheduled_fight: input.no_scheduled_fight,
