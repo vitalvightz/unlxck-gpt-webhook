@@ -21651,6 +21651,8 @@ button.injury-progress:hover > svg { color: var(--text-primary); }
 .history-session-delete:hover:not(:disabled) { color: var(--danger-ink); }
 .history-session-delete:disabled { opacity: 0.45; cursor: not-allowed; }
 .history-session-delete:focus-visible { outline: 2px solid var(--brand-red); outline-offset: 2px; }
+.history-saved-line { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px 12px; }
+.history-saved-line p { margin: 0; }
 /* A manual session's takeaway: the athlete's own words, set apart from the meta. */
 .history-row-takeaway { margin: 0; padding-left: 10px; border-left: 2px solid var(--border-active); color: var(--text-primary); font-size: 0.88rem; line-height: 1.45; overflow-wrap: anywhere; }
 .history-takeaway-filter { display: grid; gap: 10px; justify-items: start; }

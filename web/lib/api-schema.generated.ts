@@ -570,6 +570,7 @@ export type CustomExerciseSnapshot = {
   media: ExerciseMedia | null;
   selection_boundary: string;
   prescription_allowed: false;
+  log_format: "bodyweight" | "distance" | "intervals" | "isometric" | "strength" | null;
   source: string;
   source_revision: string;
   row_revision: string;
@@ -1226,6 +1227,7 @@ export type LibraryEntry = {
   media: ExerciseMedia | null;
   selection_boundary: string;
   prescription_allowed: false;
+  log_format: "bodyweight" | "distance" | "intervals" | "isometric" | "strength" | null;
 };
 
 export type LibraryFacet = {
@@ -1255,6 +1257,7 @@ export type LibraryPreview = {
   media: ExerciseMedia | null;
   selection_boundary: string;
   prescription_allowed: false;
+  log_format: "bodyweight" | "distance" | "intervals" | "isometric" | "strength" | null;
   source: string;
   source_revision: string;
   row_revision: string;
@@ -1313,6 +1316,19 @@ export type ManualExercise = {
   incomplete: boolean;
 };
 
+export type ManualExerciseEntry = {
+  id: string;
+  entry_id: string;
+  external_session_id: string;
+  training_day: string;
+  exercise_id: string;
+  name: string;
+  format: "bodyweight" | "distance" | "intervals" | "isometric" | "strength";
+  actual: ExerciseLogActual;
+  notes: string | null;
+  revision: number;
+};
+
 export type ManualExerciseInput = {
   id: string;
   origin: "manual";
@@ -1325,6 +1341,10 @@ export type ManualExerciseInput = {
   dose?: CustomDoseRequest;
   coaching_cues?: string[] | null;
   stop_rules?: string[] | null;
+};
+
+export type ManualExerciseListResponse = {
+  entries: ManualExerciseEntry[];
 };
 
 export type ManualStage2SubmissionRequest = {
@@ -1619,14 +1639,32 @@ export type PendingRehabResponsesResponse = {
   history_truncated: boolean;
 };
 
+/** Exactly one way of naming the movement. */
+export type PerformedExerciseChoice = {
+  catalogue_id?: string | null;
+  exercise_key?: string | null;
+  personal_exercise_id?: string | null;
+  name?: string | null;
+};
+
+export type PerformedExerciseInput = {
+  exercise: PerformedExerciseChoice;
+  format: "bodyweight" | "distance" | "intervals" | "isometric" | "strength";
+  actual?: ExerciseLogActualRequest;
+  notes?: string;
+  revision?: number;
+};
+
 export type PersonalExercise = {
   id: string;
   name: string;
-  identity_kind: "canonical" | "legacy";
+  identity_kind: "canonical" | "legacy" | "personal";
   latest_day: string;
   latest_values: ExerciseLogActual;
   latest_confirmed_as_prescribed: boolean;
   best_loads: RecordedExerciseLoad[];
+  latest_source: "manual" | "plan";
+  log_format: "bodyweight" | "distance" | "intervals" | "isometric" | "strength" | null;
 };
 
 export type PlanActivationRequest = {
@@ -2286,6 +2324,8 @@ export type SessionCompletionResponse = {
 export type SessionDetailBlock = {
   name: string;
   kind: "exercise" | "guidance" | "rehab";
+  source: "manual" | "plan";
+  format: "bodyweight" | "distance" | "intervals" | "isometric" | "strength" | null;
   prescribed: Record<string, unknown>;
   actual: ExerciseLogActual;
   status: "as_prescribed" | "changed" | "done_as_shown" | "modified" | "skipped" | "stopped" | null;
@@ -2576,6 +2616,7 @@ export type TrainingHistorySession = {
   modification_reason: string | null;
   notes: string | null;
   takeaway: string;
+  exercise_count: number | null;
 };
 
 export type UploadInput = {

@@ -32,6 +32,8 @@ export type TrainingHistorySession = {
   notes?: string | null;
   /** A manual session's note on what was learned. */
   takeaway?: string;
+  /** Live exercise entries on a manual session; null/absent when not counted. */
+  exercise_count?: number | null;
 };
 
 /** One page of whole training days; pass `next_before_day` back for older ones. */

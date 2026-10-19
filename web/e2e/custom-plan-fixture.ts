@@ -23,6 +23,7 @@ export const entries: LibraryEntry[] = ["Medicine Ball Hook Throw", "Standing Ca
   media: null,
   selection_boundary: "training_validation_required",
   prescription_allowed: false,
+  log_format: null,
 }));
 
 export async function setup(page: Page, baseURL: string, role = "athlete") {

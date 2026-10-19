@@ -20,7 +20,7 @@ function ExerciseCard({ exercise, onSelect }: { exercise: PersonalExercise; onSe
     <button className={styles.open} type="button" aria-haspopup="dialog" aria-label={`View ${exercise.name} performance history${exercise.identity_kind === "legacy" ? ` for ${formatAppDate(exercise.latest_day)}` : ""}`} onClick={onSelect}>
       <span className={styles.cardHeading}><span className="history-row-title">{exercise.name}</span><span className={styles.chevron} aria-hidden="true">›</span></span>
       <span className={styles.resultLabel}>{result.label}</span><strong className={styles.result}>{result.value}</strong>
-      <span className={styles.date}>{exercise.identity_kind === "legacy" ? "Unlinked record" : "Last performed"} · {formatAppDate(exercise.latest_day)}</span>
+      <span className={styles.date}>{exercise.identity_kind === "legacy" ? "Unlinked record" : exercise.identity_kind === "personal" ? "Your exercise · Last performed" : "Last performed"} · {formatAppDate(exercise.latest_day)}</span>
     </button>
   </li>;
 }
@@ -29,11 +29,12 @@ export function ExerciseLibrary({ library, token, cache }: { library: ExerciseLi
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<PersonalExercise | null>(null);
   if (!library.exercises.length) return <EmptyState eyebrow="Exercise records" title="No performed exercises recorded yet."
-    description="Completed and modified exercise logs build your personal record. Skipped-only exercises are excluded."
-    example="Log your performance on Today to start your record." />;
+    description="Completed and modified exercise logs, and exercises you add to logged training, build your personal record. Skipped-only exercises are excluded."
+    example="Log your performance on Today, or add exercises to a session you logged." />;
   const query = search.trim().toLocaleLowerCase();
   const matching = library.exercises.filter(exercise => `${exercise.name} ${exercise.identity_kind === "canonical" ? exercise.id.slice(4).replaceAll("-", " ") : ""}`.toLocaleLowerCase().includes(query));
-  const canonical = matching.filter(exercise => exercise.identity_kind === "canonical");
+  // Stable identities: catalogue movements and the athlete's own named ones.
+  const canonical = matching.filter(exercise => exercise.identity_kind !== "legacy");
   const legacy = matching.filter(exercise => exercise.identity_kind === "legacy");
   return <div className="history-tab-body">
     <label className="history-exercise-search">Find an exercise
@@ -108,7 +109,9 @@ export function ExerciseDetails({ exercise, asOf, token, cache, onDismiss }: {
       <p className={styles.resultLabel}>{result.label}</p><strong className={styles.detailResult}>{result.value}</strong></div>
       <button type="button" className={sheet.close} aria-label="Close exercise history" onClick={onDismiss}>×</button></header>
     <div className={sheet.body} tabIndex={0} role="region" aria-label="Exercise performance record">
-      <p className={sheet.quiet}>{exercise.identity_kind === "legacy" ? "One original legacy record. Movement identity across other dates is unknown." : "Saved exercise-block results, across your plans. These are not individual set records."}</p>
+      <p className={sheet.quiet}>{exercise.identity_kind === "legacy" ? "One original legacy record. Movement identity across other dates is unknown."
+        : exercise.identity_kind === "personal" ? "An exercise you named, from training you logged. Only you can see it. These are not individual set records."
+        : "Saved results from your plans and the training you logged. These are not individual set records."}</p>
       {exercise.best_loads.length ? <p className={sheet.quiet}>Highest eligible recorded load by unit; not an estimated one-rep maximum.</p> : null}
       {data ? <ExerciseProgress records={data.performances} exercise={exercise} hasMore={data.next_cursor !== null} onInspect={id => {
         const target = [...(timeline.current?.children ?? [])].find(element => (element as HTMLElement).dataset.performance === id) as HTMLElement | undefined;

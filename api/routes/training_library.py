@@ -46,6 +46,8 @@ def build_training_library_router(*, require_profile, get_store):
         offset: int = Query(0, ge=0, le=10000), limit: int = Query(24, ge=1, le=50),
         revision: str | None = Query(None, max_length=64),
         for_plan: bool = False,
+        # Recording performed work: add each result's suggested measurement layout.
+        for_log: bool = False,
         profile=Depends(require_profile), store=Depends(get_store),
     ):
         index = _index()
@@ -64,6 +66,10 @@ def build_training_library_router(*, require_profile, get_store):
         media = load_media_index(store)
         for payload in result["entries"]:
             _attach_media(payload, index.by_id[payload["catalogue_id"]], media)
+            if for_log and payload["category"] == "training":
+                from api.services.manual_exercises import catalogue_format
+
+                payload["log_format"] = catalogue_format(index.by_id[payload["catalogue_id"]])
         return result
 
     @router.get("/featured", response_model=LibraryFeaturedResponse)

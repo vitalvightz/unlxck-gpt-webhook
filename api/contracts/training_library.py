@@ -58,6 +58,9 @@ class LibraryEntry(BaseModel):
     media: ExerciseMedia | None = None
     selection_boundary: str
     prescription_allowed: Literal[False] = False
+    # Only with ``for_log``: the layout for recording performed work, or None
+    # when the catalogue's own evidence leaves it ambiguous.
+    log_format: Literal["strength", "bodyweight", "isometric", "intervals", "distance"] | None = None
 
 
 class ProjectedMetadata(BaseModel):

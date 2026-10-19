@@ -62,6 +62,8 @@ class TrainingHistorySession(BaseModel):
     notes: str | None = None
     # A manual session's short note on what was learned; never workload.
     takeaway: str = ""
+    # Live exercise entries on a manual session; None where not counted.
+    exercise_count: int | None = None
 
 
 class TrainingHistoryResponse(BaseModel):

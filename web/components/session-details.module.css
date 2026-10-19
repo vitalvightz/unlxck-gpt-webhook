@@ -28,6 +28,17 @@
 .quiet { margin: 0; color: var(--text-muted); font-size: 13px; line-height: 1.6; }
 .measurements + .quiet { margin-top: 10px; }
 .note { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 14px; line-height: 1.6; }
+/* Exercises on a manual session: name, then exactly what was recorded. */
+.manualHead { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 24px; }
+.manualHead h3 { margin: 0; }
+.manualAction { min-height: 44px; padding: 0 2px; border: 0; background: transparent; color: var(--text-secondary); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
+.manualAction:hover { color: var(--text-primary); }
+.manualList { display: grid; margin: 8px 0 0; padding: 0; list-style: none; }
+.manualList li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 16px; align-items: baseline; padding: 12px 0; border-top: 1px solid var(--border-subtle); }
+.manualName { font-size: 15px; font-weight: 600; overflow-wrap: anywhere; }
+.manualValues { color: var(--text-secondary); font-size: 14px; font-variant-numeric: tabular-nums; text-align: right; }
+.manualList .note { grid-column: 1 / -1; margin: 0; color: var(--text-muted); font-size: 13px; }
+.recordedHeading { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; margin: 0 0 10px; color: var(--text-muted); }
 .response { margin-top: 16px; padding-left: 12px; border-left: 2px solid var(--border-default); font-size: 13px; }
 .response > span { color: var(--text-muted); }
 .response p { margin: 8px 0; }
@@ -36,4 +47,6 @@
   .header { padding: 20px; }
   .body { padding-left: 20px; padding-right: 20px; }
   .comparison { grid-template-columns: 1fr; gap: 18px; }
+  .manualList li { grid-template-columns: 1fr; }
+  .manualValues { text-align: left; }
 }

@@ -9,7 +9,7 @@ const storageKey = `sb-${new URL(process.env.NEXT_PUBLIC_SUPABASE_URL ?? "https:
 const entry = (name: string, equipment: string[] | null, overrides: Partial<LibraryEntry> = {}): LibraryEntry => ({
   catalogue_id: name, name, equipment, equipment_state: equipment === null ? "absent" : "known", equipment_requirements: null, content_type: "strength_power",
   category: "training", context: "Strength", focus: ["Punching power"], verified_goals: ["Punching power"], exercise_details: [], discovery_match: null, exercise_key: null, media: null,
-  selection_boundary: "training_validation_required", prescription_allowed: false, ...overrides,
+  selection_boundary: "training_validation_required", prescription_allowed: false, log_format: null, ...overrides,
 });
 const drills = [entry("Medicine Ball Hook Throw", ["medicine_ball"]), entry("Standing Cable Punch Simulation", ["cable"]),
   entry("Max-Power Bag Burst", ["heavy_bag"]), entry("Straight-Shot Re-Angle", ["punching_bag"])];
