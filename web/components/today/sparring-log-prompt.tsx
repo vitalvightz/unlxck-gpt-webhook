@@ -2,16 +2,21 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 
+import sheet from "@/components/log-training.module.css";
+
 import { useAppSession } from "@/components/auth-provider";
 import { useToast } from "@/components/toast-provider";
 import { submitSparringLog } from "@/lib/api";
 import { hasHealthDataConsent } from "@/lib/compliance";
+import { lockOverlayScroll } from "@/lib/overlay-scroll-lock";
 import type {
   SparringHeadContact,
   SparringIntensity,
   SparringLogSource,
   SparringPlannedIntensity,
 } from "@/lib/types";
+
+import styles from "./sparring-log-prompt.module.css";
 
 /** What the finished timer, or a manual sparring log, knows about the sparring. */
 export type SparringDraft = {
@@ -54,42 +59,30 @@ export function defaultIntensity(planned: SparringPlannedIntensity | null): Spar
   return undefined;
 }
 
-function Chips<Value extends string>({
+function Choice<Value extends string>({
   legend,
   options,
   labels,
   selected,
-  disabled,
   onSelect,
 }: Readonly<{
   legend: string;
   options: readonly Value[];
   labels: Record<Value, string>;
   selected: Value | undefined;
-  disabled: boolean;
   onSelect: (value: Value) => void;
 }>) {
-  const legendId = useId();
   return (
-    <div className="session-feedback-question">
-      <p className="session-feedback-legend" id={legendId}>
-        {legend}
-      </p>
-      <div className="feedback-chips" role="group" aria-labelledby={legendId}>
+    <fieldset className={sheet.fieldset}>
+      <legend>{legend}</legend>
+      <div className={options.length === 2 ? styles.twoUp : sheet.effortGrid}>
         {options.map((value) => (
-          <button
-            key={value}
-            type="button"
-            className={selected === value ? "feedback-chip is-selected" : "feedback-chip"}
-            aria-pressed={selected === value}
-            disabled={disabled}
-            onClick={() => onSelect(value)}
-          >
+          <button key={value} type="button" aria-pressed={selected === value} onClick={() => onSelect(value)}>
             {labels[value]}
           </button>
         ))}
       </div>
-    </div>
+    </fieldset>
   );
 }
 
@@ -98,25 +91,26 @@ function Chips<Value extends string>({
  * timer), head contact, and whether the athlete got rocked or dropped. A "yes"
  * shows the safety message straight away and, once saved, opens an admin
  * review server-side. Health data, so it only appears with health consent.
+ *
+ * It opens as the same bottom sheet as Log training, so it never lengthens
+ * Today itself.
  */
 export function SparringLogPrompt({
   token,
   draft,
   onDismiss,
   onSaved,
-  focusOnMount = false,
 }: {
   token: string;
   draft: SparringDraft;
   onDismiss: () => void;
   /** After a confirmed save, so Today can refresh its safety guidance. */
   onSaved?: () => void;
-  focusOnMount?: boolean;
 }) {
   const { me } = useAppSession();
   const { showToast } = useToast();
   const notesId = useId();
-  const card = useRef<HTMLElement>(null);
+  const dialog = useRef<HTMLDialogElement>(null);
   // Kept across retries of the same answers; any change makes it a new report,
   // so a corrected answer (above all a "Yes, rocked") is never swallowed by
   // an earlier request that landed without its response.
@@ -135,34 +129,38 @@ export function SparringLogPrompt({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [savedNotice, setSavedNotice] = useState<string | null>(null);
+  const [notesOpen, setNotesOpen] = useState(false);
+  const consented = hasHealthDataConsent(me);
 
   useEffect(() => {
-    if (focusOnMount) card.current?.focus();
-  }, [focusOnMount]);
+    const element = dialog.current;
+    if (!consented || !element) return;
+    const previous = document.activeElement as HTMLElement | null;
+    const release = lockOverlayScroll();
+    if (!element.open) element.showModal?.();
+    const fit = () => {
+      const viewport = window.visualViewport;
+      element.style.setProperty("--sheet-height", `${viewport?.height ?? window.innerHeight}px`);
+      element.style.setProperty("--sheet-bottom", `${viewport ? Math.max(0, window.innerHeight - viewport.height - viewport.offsetTop) : 0}px`);
+    };
+    fit();
+    window.visualViewport?.addEventListener("resize", fit);
+    window.visualViewport?.addEventListener("scroll", fit);
+    return () => {
+      window.visualViewport?.removeEventListener("resize", fit);
+      window.visualViewport?.removeEventListener("scroll", fit);
+      release();
+      previous?.focus();
+    };
+  }, [consented]);
 
   const answer = <Value,>(set: (value: Value) => void) => (value: Value) => {
     requestId.current = null;
     set(value);
   };
 
-  if (!hasHealthDataConsent(me)) {
+  if (!consented) {
     return null;
-  }
-
-  if (savedNotice) {
-    return (
-      <section className="feedback-card sparring-log-card" aria-label="Sparring logged" ref={card} tabIndex={-1}>
-        <p className="session-feedback-title">Sparring logged</p>
-        <p className="sparring-log-safety" role="alert">
-          {savedNotice}
-        </p>
-        <div className="feedback-actions">
-          <button type="button" className="cta" onClick={onDismiss}>
-            Got it
-          </button>
-        </div>
-      </section>
-    );
   }
 
   async function save() {
@@ -217,98 +215,134 @@ export function SparringLogPrompt({
   }
 
   return (
-    <section className="feedback-card sparring-log-card" aria-label="Log your sparring" ref={card} tabIndex={-1}>
-      <p className="session-feedback-title">Log your sparring</p>
-      <p className="muted session-feedback-intro">
-        {draft.title} · takes 15 seconds. Your coach and the app use this to manage contact load.
-        {draft.externalSessionId ? " Optional: your session is already saved." : null}
-      </p>
-
-      <Chips
-        legend="How hard was it?"
-        options={["light", "medium", "hard"] as const}
-        labels={INTENSITY_LABELS}
-        selected={intensity}
-        disabled={isSubmitting}
-        onSelect={answer(setIntensity)}
-      />
-
-      <div className="session-feedback-question">
-        <p className="session-feedback-legend">Rounds</p>
-        <div className="sparring-log-rounds">
-          <button
-            type="button"
-            className="feedback-chip"
-            aria-label="Fewer rounds"
-            disabled={isSubmitting || rounds === null || rounds <= 0}
-            onClick={() => answer(setRounds)(Math.max(0, (rounds ?? 0) - 1))}
-          >
-            −
-          </button>
-          <span className="sparring-log-rounds-value" aria-live="polite" aria-label={rounds === null ? "Rounds not set" : undefined}>
-            {rounds ?? "–"}
-          </span>
-          <button
-            type="button"
-            className="feedback-chip"
-            aria-label="More rounds"
-            disabled={isSubmitting || (rounds ?? 0) >= 30}
-            onClick={() => answer(setRounds)(Math.min(30, (rounds ?? 0) + 1))}
-          >
-            +
-          </button>
+    <dialog
+      ref={dialog}
+      className={sheet.dialog}
+      aria-label={savedNotice ? "Sparring logged" : "Log your sparring"}
+      onCancel={(event) => {
+        event.preventDefault();
+        if (!isSubmitting) onDismiss();
+      }}
+    >
+      <header className={sheet.header}>
+        <div>
+          <h2>{savedNotice ? "Sparring logged" : "Log your sparring"}</h2>
+          {savedNotice ? null : (
+            <p className={sheet.source}>
+              {draft.title}
+              {draft.externalSessionId ? " · Session saved. This is optional." : " · Takes 15 seconds."}
+            </p>
+          )}
         </div>
-      </div>
-
-      <Chips
-        legend="Head contact"
-        options={["none", "light", "heavy"] as const}
-        labels={HEAD_CONTACT_LABELS}
-        selected={headContact}
-        disabled={isSubmitting}
-        onSelect={answer(setHeadContact)}
-      />
-
-      <Chips
-        legend="Got rocked or dropped?"
-        options={["no", "yes"] as const}
-        labels={{ no: "No", yes: "Yes" }}
-        selected={rocked}
-        disabled={isSubmitting}
-        onSelect={answer(setRocked)}
-      />
-      {rocked === "yes" ? (
-        <p className="sparring-log-safety" role="alert">
-          {ROCKED_SAFETY_COPY}
-        </p>
-      ) : null}
-
-      <label className="field sparring-log-notes" htmlFor={notesId}>
-        <span className="session-feedback-legend">Notes (optional)</span>
-        <textarea
-          id={notesId}
-          value={notes}
-          maxLength={1000}
-          rows={2}
-          disabled={isSubmitting}
-          placeholder="Who with, what worked, what to fix"
-          onChange={(event) => answer(setNotes)(event.target.value)}
-        />
-      </label>
-
-      {error ? (
-        <p className="form-error" role="alert">
-          {error}
-        </p>
-      ) : null}
-      <div className="feedback-actions sparring-log-actions">
-        <button type="button" className="ghost-button" disabled={isSubmitting} onClick={onDismiss}>
-          Skip
+        <button className={sheet.close} type="button" aria-label="Close sparring log" disabled={isSubmitting} onClick={onDismiss}>
+          ×
         </button>
-        <button type="button" className="cta" disabled={isSubmitting} onClick={() => void save()}>
-          {isSubmitting ? "Saving…" : "Save"}
-        </button>
-      </div>
-    </section>
+      </header>
+      {savedNotice ? (
+        <div className={sheet.form}>
+          <div className={sheet.body}>
+            <p className={styles.safety} role="alert">{savedNotice}</p>
+          </div>
+          <footer className={sheet.actions}>
+            <button type="button" className="cta" onClick={onDismiss}>Got it</button>
+          </footer>
+        </div>
+      ) : (
+        <form
+          className={sheet.form}
+          aria-label="Log your sparring"
+          onSubmit={(event) => {
+            event.preventDefault();
+            void save();
+          }}
+        >
+          <fieldset className={styles.questions} disabled={isSubmitting}>
+            <div className={sheet.body}>
+              <Choice
+                legend="How hard was it?"
+                options={["light", "medium", "hard"] as const}
+                labels={INTENSITY_LABELS}
+                selected={intensity}
+                onSelect={answer(setIntensity)}
+              />
+              <div className={styles.rounds} role="group" aria-label="Rounds">
+                <span className={styles.roundsLabel}>Rounds</span>
+                <button
+                  type="button"
+                  aria-label="Fewer rounds"
+                  disabled={rounds === null || rounds <= 0}
+                  onClick={() => answer(setRounds)(Math.max(0, (rounds ?? 0) - 1))}
+                >
+                  −
+                </button>
+                <span className={`sparring-log-rounds-value ${styles.roundsValue}`} aria-live="polite" aria-label={rounds === null ? "Rounds not set" : undefined}>
+                  {rounds ?? "–"}
+                </span>
+                <button
+                  type="button"
+                  aria-label="More rounds"
+                  disabled={(rounds ?? 0) >= 30}
+                  onClick={() => answer(setRounds)(Math.min(30, (rounds ?? 0) + 1))}
+                >
+                  +
+                </button>
+              </div>
+              <Choice
+                legend="Head contact"
+                options={["none", "light", "heavy"] as const}
+                labels={HEAD_CONTACT_LABELS}
+                selected={headContact}
+                onSelect={answer(setHeadContact)}
+              />
+              <Choice
+                legend="Got rocked or dropped?"
+                options={["no", "yes"] as const}
+                labels={{ no: "No", yes: "Yes" }}
+                selected={rocked}
+                onSelect={answer(setRocked)}
+              />
+              {rocked === "yes" ? (
+                <p className={styles.safety} role="alert">
+                  {ROCKED_SAFETY_COPY}
+                </p>
+              ) : null}
+              <button
+                className={sheet.detailsToggle}
+                type="button"
+                aria-expanded={notesOpen}
+                aria-controls={notesId}
+                onClick={() => setNotesOpen((open) => !open)}
+              >
+                Add a note <span aria-hidden="true">{notesOpen ? "−" : "+"}</span>
+              </button>
+              <label className={styles.notes} hidden={!notesOpen}>
+                <span className="sr-only">Notes (optional)</span>
+                <textarea
+                  id={notesId}
+                  value={notes}
+                  maxLength={1000}
+                  rows={2}
+                  placeholder="Who with, what worked, what to fix"
+                  onChange={(event) => answer(setNotes)(event.target.value)}
+                />
+              </label>
+            </div>
+          </fieldset>
+          <footer className={`${sheet.actions} ${styles.actions}`}>
+            {error ? (
+              <p className={sheet.error} role="alert">
+                {error}
+              </p>
+            ) : null}
+            <button type="button" className="ghost-button" disabled={isSubmitting} onClick={onDismiss}>
+              Skip
+            </button>
+            <button type="submit" className="cta" disabled={isSubmitting}>
+              {isSubmitting ? "Saving…" : "Save"}
+            </button>
+          </footer>
+        </form>
+      )}
+    </dialog>
   );
 }

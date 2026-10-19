@@ -224,7 +224,7 @@ for (const width of [320, 390, 1280]) {
     await expect(page.getByRole("button", { name: "Repeat last session", exact: true })).toBeVisible();
     await expect(page.getByRole("region", { name: "Training history", exact: true })).toContainText("Boxing");
     // Boxing gets no sparring follow-up; the tile now reports today's log.
-    await expect(page.getByRole("region", { name: "Log your sparring" })).toHaveCount(0);
+    await expect(page.getByRole("dialog", { name: "Log your sparring" })).toHaveCount(0);
     await expect(page.getByRole("list", { name: "Today command status" })).toContainText("Logged");
     await page.reload();
     await expect(page.getByText(/^Your training, your record\./)).toBeVisible();
@@ -360,7 +360,7 @@ async function logSparring(page: Page, effort: "Easy" | "Moderate" | "Hard") {
   await form.getByRole("button", { name: "45", exact: true }).click();
   await form.getByRole("button", { name: effort, exact: true }).click();
   await form.getByRole("button", { name: "Save Session", exact: true }).click();
-  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(page.getByRole("dialog", { name: "Log Training", exact: true })).toHaveCount(0);
 }
 
 for (const width of [320, 390, 1280]) {
@@ -369,9 +369,11 @@ for (const width of [320, 390, 1280]) {
     const writes = await setup(page, baseURL!, { path: "tracking_first" });
     await page.goto("/today");
     await logSparring(page, "Hard");
-    const prompt = page.getByRole("region", { name: "Log your sparring" });
-    await expect(prompt).toBeFocused();
-    await expect(prompt).toContainText("your session is already saved");
+    const prompt = page.getByRole("dialog", { name: "Log your sparring" });
+    await expect(prompt).toBeVisible();
+    await expect(prompt).toContainText("Session saved. This is optional.");
+    // The follow-up is the Log training sheet's size, not a long card on Today.
+    expect((await prompt.boundingBox())!.height).toBeLessThanOrEqual(640);
     await expect(prompt.locator(".sparring-log-rounds-value")).toHaveText("–");
     await expect(prompt.getByRole("button", { name: "Hard", exact: true }).first()).toHaveAttribute("aria-pressed", "true");
     await prompt.getByRole("button", { name: "More rounds" }).click();
@@ -379,7 +381,7 @@ for (const width of [320, 390, 1280]) {
     await prompt.getByRole("group", { name: "Head contact" }).getByRole("button", { name: "Light", exact: true }).click();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
     expect((await new AxeBuilder({ page }).include("main").analyze()).violations).toEqual([]);
-    await page.screenshot({ path: test.info().outputPath(`manual-sparring-${width}.png`), fullPage: true });
+    await page.screenshot({ path: test.info().outputPath(`manual-sparring-${width}.png`) });
     await prompt.getByRole("button", { name: "Save", exact: true }).click();
     await expect(prompt).toHaveCount(0);
     const [manual, detail] = writes;
@@ -395,7 +397,7 @@ test("skipping the sparring follow-up keeps the basic training log", async ({ pa
   const writes = await setup(page, baseURL!, { path: "tracking_first" });
   await page.goto("/today");
   await logSparring(page, "Easy");
-  const prompt = page.getByRole("region", { name: "Log your sparring" });
+  const prompt = page.getByRole("dialog", { name: "Log your sparring" });
   await expect(prompt.getByRole("group", { name: "How hard was it?" }).getByRole("button", { name: "Light", exact: true })).toHaveAttribute("aria-pressed", "true");
   await prompt.getByRole("button", { name: "Skip", exact: true }).click();
   await expect(prompt).toHaveCount(0);
@@ -407,13 +409,13 @@ test("a rocked report shows the safety notice at once and Today stops leading wi
   const writes = await setup(page, baseURL!, { path: "tracking_first" });
   await page.goto("/today");
   await logSparring(page, "Moderate");
-  const prompt = page.getByRole("region", { name: "Log your sparring" });
+  const prompt = page.getByRole("dialog", { name: "Log your sparring" });
   await prompt.getByRole("button", { name: "More rounds" }).click();
   await prompt.getByRole("group", { name: "Head contact" }).getByRole("button", { name: "A lot", exact: true }).click();
   await prompt.getByRole("group", { name: "Got rocked or dropped?" }).getByRole("button", { name: "Yes", exact: true }).click();
   await expect(prompt.getByRole("alert")).toContainText("No more contact today");
   await prompt.getByRole("button", { name: "Save", exact: true }).click();
-  const saved = page.getByRole("region", { name: "Sparring logged" });
+  const saved = page.getByRole("dialog", { name: "Sparring logged" });
   await expect(saved.getByRole("alert")).toContainText("No more contact today");
   await expect(page.locator("#today-decision")).toContainText("No more contact today");
   expect(writes.filter(row => "head_contact" in row)).toHaveLength(1);
