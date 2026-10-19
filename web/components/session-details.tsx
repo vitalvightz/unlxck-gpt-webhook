@@ -24,12 +24,12 @@ function Measurements({ values }: { values: Record<string, unknown> }) {
   </div>)}</dl> : <p className={styles.quiet}>No values recorded.</p>;
 }
 
-export function TrainingBlock({ block, index, heading }: { block: SessionDetailBlock; index: number; heading?: string }) {
+export function TrainingBlock({ block, index, heading, recordId }: { block: SessionDetailBlock; index: number; heading?: string; recordId?: string }) {
   const rehab = block.kind !== "exercise";
   const actuals = detailMeasurements(block.actual).length > 0;
   const quantified = block.completed_dose?.completion_state === "quantified";
   const context = heading ? `${block.name} · ${heading} · Record ${index + 1}` : block.name;
-  return <li className={styles.block}>
+  return <li className={styles.block} data-performance={recordId} tabIndex={recordId ? -1 : undefined}>
     <div className={styles.blockHeading}><span className={styles.number}>{String(index + 1).padStart(2, "0")}</span>
       <h4>{heading || block.name}</h4></div>
     <p className={styles.outcome}>{block.kind === "guidance" ? "Guidance · " : ""}{block.status ? OUTCOMES[block.status] : "Completion not recorded"}</p>
@@ -56,8 +56,10 @@ export function TrainingBlock({ block, index, heading }: { block: SessionDetailB
 }
 
 /** Native modal supplies focus containment, inert background and Escape handling. */
-export function SessionDetails({ row, token, cache, onDismiss }: {
+export function SessionDetails({ row, token, cache, onDismiss, restoreFocus = true }: {
   row: TrainingHistorySession; token: string; cache: SessionDetailsCache; onDismiss: () => void;
+  /** A suspended parent sheet owns focus restoration during a modal handoff. */
+  restoreFocus?: boolean;
 }) {
   const dialog = useRef<HTMLDialogElement>(null);
   const heading = useId();
@@ -71,8 +73,8 @@ export function SessionDetails({ row, token, cache, onDismiss }: {
     element.showModal();
     element.querySelector<HTMLButtonElement>("button")?.focus();
     const release = lockOverlayScroll();
-    return () => { element.close(); release(); previous?.focus(); };
-  }, []);
+    return () => { element.close(); release(); if (restoreFocus) previous?.focus(); };
+  }, [restoreFocus]);
   useEffect(() => {
     let cancelled = false;
     const key = `${row.source}:${row.id}`;

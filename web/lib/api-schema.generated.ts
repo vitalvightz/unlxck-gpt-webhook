@@ -889,6 +889,7 @@ export type ExercisePerformance = {
   id: string;
   training_day: string;
   block: SessionDetailBlock;
+  performed_values: ExerciseLogActual | null;
 };
 
 export type ExercisePerformancesResponse = {

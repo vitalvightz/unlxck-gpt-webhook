@@ -143,6 +143,11 @@ def _selector(identity: str) -> tuple[str | None, str | None]:
     raise HTTPException(422, "Invalid exercise record.")
 
 
+def _chart_values(row: dict) -> ExerciseLogActual | None:
+    actual = _actual(row)
+    return performed_values(row, actual) if _performed(row, actual) else None
+
+
 def _cutoff(value: str) -> str:
     instant = datetime.fromisoformat(value)
     if instant.tzinfo is None:
@@ -188,4 +193,5 @@ def exercise_performances(store, athlete_id: str, identity: str, *, as_of: str |
         next_cursor = base64.urlsafe_b64encode(json.dumps({"exercise": identity, "as_of": cutoff,
             "day": last["training_day"], "id": last["id"]}).encode()).decode().rstrip("=")
     return ExercisePerformancesResponse(performances=[ExercisePerformance(id=row["id"], training_day=row["training_day"],
-        block=_exercise(_map(row.get("prescribed")), row, health_consent_granted)) for row in page], next_cursor=next_cursor)
+        block=_exercise(_map(row.get("prescribed")), row, health_consent_granted),
+        performed_values=_chart_values(row)) for row in page], next_cursor=next_cursor)

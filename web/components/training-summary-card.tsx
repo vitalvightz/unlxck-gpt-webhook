@@ -1,6 +1,6 @@
 "use client";
 
-import { type CSSProperties, useEffect, useState } from "react";
+import { type CSSProperties, type ReactNode, useEffect, useState } from "react";
 
 import { formatTrainingDuration, summarizeTraining, summaryWindowLoaded } from "@/lib/training-summary";
 import type { TrainingHistorySession } from "@/lib/training-history";
@@ -16,11 +16,12 @@ const WINDOWS = [
  * records only. Totals show only once every session in the window is loaded;
  * until then the card loads the missing pages instead of undercounting.
  */
-export function TrainingSummaryCard({ rows, today, loadedFrom, loading, error, onLoadMore }: {
+export function TrainingSummaryCard({ rows, today, loadedFrom, loading, error, onLoadMore, children }: {
   rows: readonly TrainingHistorySession[]; today: string;
   /** Oldest training day whose sessions are all loaded; null once History is fully loaded. */
   loadedFrom: string | null;
   loading: boolean; error: string | null; onLoadMore: () => Promise<void>;
+  children?: ReactNode;
 }) {
   const [days, setDays] = useState<7 | 28>(7);
   const window = WINDOWS.find(item => item.days === days)!;
@@ -77,6 +78,7 @@ export function TrainingSummaryCard({ rows, today, loadedFrom, loading, error, o
           ) : null}
         </div>
       </>}
+      {children}
     </section>
   );
 }

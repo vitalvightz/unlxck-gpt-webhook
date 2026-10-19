@@ -29,6 +29,16 @@ const sportDiscipline = (sport: TrainingSport) => sport === "boxing" ? DISCIPLIN
 // Prescribed sessions keep their own bucket rather than a discipline guessed from a title.
 const PLAN = { key: "unlxck", label: "Unlxck plan" };
 
+export function isRecordedTraining(row: TrainingHistorySession): boolean {
+  return (row.status === "done" || row.status === "modified")
+    && (row.source === "external" || row.completion_origin === "reported");
+}
+
+export function trainingDiscipline(row: TrainingHistorySession): { key: string; label: string } {
+  return row.source !== "external" ? PLAN : row.sport ? sportDiscipline(row.sport)
+    : row.activity ? DISCIPLINE[row.activity] ?? DISCIPLINE.other : PLAN;
+}
+
 /**
  * Completed training over the last `days` athlete-local days, from records
  * already on the page. Same rows as the status counts: manual sessions and
@@ -40,10 +50,8 @@ export function summarizeTraining(rows: readonly TrainingHistorySession[], today
   let minutes = 0;
   let untimed = 0;
   for (const row of rows) {
-    if (row.status === "skipped" || !isWithinLastDays(row.training_day, today, days)) continue;
-    if (row.source !== "external" && row.completion_origin !== "reported") continue;
-    const discipline = row.source !== "external" ? PLAN : row.sport ? sportDiscipline(row.sport)
-      : row.activity ? DISCIPLINE[row.activity] ?? DISCIPLINE.other : PLAN;
+    if (!isRecordedTraining(row) || !isWithinLastDays(row.training_day, today, days)) continue;
+    const discipline = trainingDiscipline(row);
     const entry = mix.get(discipline.key) ?? { ...discipline, sessions: 0, minutes: 0 };
     const duration = row.duration_minutes && row.duration_minutes > 0 ? row.duration_minutes : 0;
     entry.sessions += 1;

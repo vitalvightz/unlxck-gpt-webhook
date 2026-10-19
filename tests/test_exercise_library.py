@@ -37,6 +37,29 @@ def history(store, identity="key:back-squat", **kwargs):
     return exercise_performances(store, ATHLETE, identity, as_of=NOW.isoformat(), health_consent_granted=True, **kwargs)
 
 
+def test_chart_values_share_index_eligibility_and_preserve_reported_vs_prescribed():
+    rows = [
+        entry(1, actual={"load": {"value": 80, "unit": "kg"}}),
+        entry(2, prescribed={"reps": 5, "load": {"value": 90, "unit": "kg"}}),
+        entry(3, status="modified", actual={"sets": 2}, prescribed={"reps": 5, "load": {"value": 900, "unit": "kg"}}),
+        entry(4, status="skipped", actual={"load": {"value": 999, "unit": "kg"}}),
+        entry(5, actual={"sets": 0, "load": {"value": 999, "unit": "kg"}}),
+        entry(6, prescribed={"reps": "8-12", "load": {"display": "500 kg"}}),
+    ]
+    values = {item.id: item for item in history(store_with(*rows)).performances}
+    assert values[rows[0]["id"]].performed_values.load.value == 80
+    assert values[rows[0]["id"]].performed_values.reps == 5
+    confirmed = values[rows[1]["id"]]
+    assert confirmed.performed_values.load.value == 90
+    assert confirmed.block.actual.load is None
+    assert values[rows[2]["id"]].performed_values.sets == 2
+    assert values[rows[2]["id"]].performed_values.load is None
+    assert values[rows[3]["id"]].performed_values is None
+    assert values[rows[4]["id"]].performed_values is None
+    assert values[rows[5]["id"]].performed_values.load is None
+    assert values[rows[5]["id"]].performed_values.reps is None
+
+
 def test_complete_index_reaches_old_movements_and_best_beyond_first_50_and_1000_logs():
     rows = [entry(i, actual={"load": {"value": 80, "unit": "kg"}}) for i in range(1, 1040)]
     rows[0]["actual"]["load"]["value"] = 150
