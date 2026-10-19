@@ -997,6 +997,10 @@ export type ExternalTrainingFields = {
   effort: "easy" | "hard" | "moderate";
 };
 
+export type ExternalTrainingTakeaway = {
+  takeaway?: string;
+};
+
 export type FeedbackRecord = {
   id: string;
   surface: "daily_recommendation" | "global" | "plan" | "session";
@@ -2258,6 +2262,7 @@ export type SparringLogRecord = {
   training_day: string;
   source: "contact" | "free" | "session";
   external_session_id: string | null;
+  detail_revision: number;
   planned_intensity: "contact" | "hard" | "light" | "technical" | null;
   intensity: "hard" | "light" | "medium";
   rounds_completed: number;
@@ -2478,6 +2483,7 @@ export type TrainingHabitPreferencesRequest = {
 
 export type TrainingHistoryResponse = {
   sessions: TrainingHistorySession[];
+  next_before_day: string | null;
 };
 
 export type TrainingHistorySession = {
@@ -2495,6 +2501,7 @@ export type TrainingHistorySession = {
   pain_after: number | null;
   modification_reason: string | null;
   notes: string | null;
+  takeaway: string;
 };
 
 export type UploadInput = {

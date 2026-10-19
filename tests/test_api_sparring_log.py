@@ -413,13 +413,17 @@ def test_a_later_correction_never_withdraws_a_head_impact_report():
     client, store, _ = _build_client()
     session = _manual_session(client)
 
-    rocked = _manual_detail(client, session["id"], rocked=True, client_request_id=REQUEST_ID, detail_revision=1)
+    rocked = _manual_detail(client, session["id"], rocked=True, head_contact="heavy", client_request_id=REQUEST_ID,
+                            detail_revision=1)
     corrected = _manual_detail(client, session["id"], rocked=False, head_contact="none", detail_revision=2,
-                               client_request_id="55555555-5555-4555-8555-555555555555")
+                               rounds_completed=2, client_request_id="55555555-5555-4555-8555-555555555555")
 
     assert rocked.status_code == corrected.status_code == 201
     assert corrected.json()["log"]["id"] == rocked.json()["log"]["id"]
-    assert corrected.json()["log"]["head_contact"] == "none"
+    # Rounds are corrected; recorded head-impact evidence is not lowered.
+    assert corrected.json()["log"]["rounds_completed"] == 2
+    assert corrected.json()["log"]["detail_revision"] == 2
+    assert corrected.json()["log"]["head_contact"] == "heavy"
     assert corrected.json()["log"]["rocked"] is True
     assert corrected.json()["safety_notice"] == ROCKED_SAFETY_NOTICE
     assert len(store.sparring_logs) == 1
@@ -511,3 +515,14 @@ def test_detail_revision_is_bounded():
 
     assert _manual_detail(client, session["id"], detail_revision=-1).status_code == 422
     assert store.sparring_logs == []
+
+
+def test_a_later_correction_can_raise_head_contact_and_history_returns_the_revision():
+    client, store, _ = _build_client()
+    session = _manual_session(client)
+    _manual_detail(client, session["id"], head_contact="none", detail_revision=1)
+    corrected = _manual_detail(client, session["id"], head_contact="heavy", detail_revision=2)
+
+    assert corrected.json()["log"]["head_contact"] == "heavy"
+    logs = client.get("/api/today/sparring-logs", headers=ATHLETE).json()["logs"]
+    assert logs[0]["detail_revision"] == 2 and logs[0]["external_session_id"] == session["id"]

@@ -46,7 +46,24 @@ class TrainingHistorySession(BaseModel):
     pain_after: int | None = None
     modification_reason: str | None = None
     notes: str | None = None
+    # A manual session's short note on what was learned; never workload.
+    takeaway: str = ""
 
 
 class TrainingHistoryResponse(BaseModel):
     sessions: list[TrainingHistorySession]
+    # Pass as ``before_day`` for the next, older page; None when there is none.
+    next_before_day: str | None = None
+
+
+TAKEAWAY_MAX_CHARS = 280
+
+
+class ExternalTrainingTakeaway(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    takeaway: str = Field(default="", max_length=TAKEAWAY_MAX_CHARS)
+
+    @field_validator("takeaway", mode="before")
+    @classmethod
+    def clean_takeaway(cls, value):
+        return value.strip() if isinstance(value, str) else value

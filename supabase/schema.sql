@@ -2813,6 +2813,7 @@ create table if not exists public.external_training_sessions (
   activity text not null check (activity in ('sparring', 'boxing', 'roadwork', 'strength', 'conditioning', 'other')),
   duration_minutes integer not null check (duration_minutes between 1 and 600),
   effort text not null check (effort in ('easy', 'moderate', 'hard')),
+  takeaway text not null default '' constraint external_training_sessions_takeaway_length check (char_length(takeaway) <= 280),
   deleted_at timestamptz,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),

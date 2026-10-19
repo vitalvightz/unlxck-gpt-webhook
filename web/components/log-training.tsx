@@ -17,6 +17,7 @@ import styles from "./log-training.module.css";
 import { TrainingActionContent } from "./training-action-tile";
 import tileStyles from "./training-action-tile.module.css";
 import { SparringLogPrompt, type SparringDraft } from "./today/sparring-log-prompt";
+import { SessionTakeawayPrompt } from "./session-takeaway";
 import type { SparringIntensity } from "@/lib/types";
 
 const ACTIVITY_PICKS: TrainingActivity[] = ["boxing", "sparring", "strength", "conditioning", "roadwork", "other"];
@@ -32,7 +33,7 @@ const SPARRING_INTENSITY_FROM_EFFORT: Record<TrainingEffort, SparringIntensity> 
   hard: "hard",
 };
 
-function manualSparringDraft(row: TrainingHistorySession): SparringDraft {
+export function manualSparringDraft(row: TrainingHistorySession): SparringDraft {
   return {
     source: "free", planId: null, sessionId: null, plannedIntensity: null,
     title: row.title, rounds: null, roundSeconds: null, externalSessionId: row.id,
@@ -85,6 +86,8 @@ function LogTrainingContent({ accessToken, entry, repeatEntry, recent = false, h
   const [saved, setSaved] = useState<string | null>(null);
   // A newly saved sparring session offers the shared post-sparring follow-up.
   const [sparringDraft, setSparringDraft] = useState<SparringDraft | null>(null);
+  // Any other new session offers an optional takeaway in place of the saved line.
+  const [takeawayRow, setTakeawayRow] = useState<TrainingHistorySession | null>(null);
   const dialog = useRef<HTMLDialogElement>(null);
   const requestId = useRef<string | null>(null);
   const currentToken = useRef<string | null>(accessToken);
@@ -159,6 +162,7 @@ function LogTrainingContent({ accessToken, entry, repeatEntry, recent = false, h
     requestId.current = null;
     setError(null);
     setSaved(null);
+    setTakeawayRow(null);
     setOpen(true);
   }
 
@@ -189,7 +193,8 @@ function LogTrainingContent({ accessToken, entry, repeatEntry, recent = false, h
       onSaved?.(row);
       requestId.current = null;
       setOpen(false);
-      setSaved(`${row.title} logged successfully. Saved to Training History.`);
+      if (!entry && !repeatEntry && row.source === "external" && row.activity !== "sparring") setTakeawayRow(row);
+      else setSaved(`${row.title} logged successfully. Saved to Training History.`);
       if (!editing && row.source === "external" && row.activity === "sparring") setSparringDraft(manualSparringDraft(row));
     } catch (reason) {
       if (currentToken.current === token && reason instanceof ApiError && reason.code === "health_data_consent_required") {
@@ -285,6 +290,8 @@ function LogTrainingContent({ accessToken, entry, repeatEntry, recent = false, h
         </dialog>
       ) : null}
       {saved && !entry && !repeatEntry ? <p className="muted" role="status">{saved}</p> : null}
+      {takeawayRow ? <SessionTakeawayPrompt key={takeawayRow.id} token={accessToken} row={takeawayRow} sheet={variant === "tile"}
+        onSaved={() => setTakeawayRow(null)} onDismiss={() => setTakeawayRow(null)} /> : null}
       {sparringDraft ? <SparringLogPrompt key={sparringDraft.externalSessionId} token={accessToken} draft={sparringDraft}
         onSaved={onSparringReported} onDismiss={() => setSparringDraft(null)} /> : null}
     </div>

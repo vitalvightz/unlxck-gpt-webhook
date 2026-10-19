@@ -2319,6 +2319,8 @@ class SparringLogRecord(BaseModel):
     training_day: str
     source: SparringLogSource
     external_session_id: str | None = None
+    # The latest applied correction, so a report reopened later continues from it.
+    detail_revision: int = 0
     planned_intensity: SparringPlannedIntensity | None = None
     intensity: SparringIntensity
     rounds_completed: int

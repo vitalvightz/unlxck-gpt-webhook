@@ -1,0 +1,24 @@
+.card { gap: 14px; }
+.head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.toggle { display: inline-grid; grid-auto-flow: column; gap: 2px; padding: 3px; border: 1px solid var(--border-subtle); border-radius: var(--radius-pill); background: var(--bg-surface); }
+.toggle button { min-height: 32px; padding: 0 12px; border: 1px solid transparent; border-radius: var(--radius-pill); background: transparent; color: var(--text-secondary); font: inherit; font-size: 0.78rem; font-weight: 600; white-space: nowrap; cursor: pointer; }
+.toggle button[aria-pressed="true"] { border-color: var(--border-active); background: var(--brand-red-soft); color: var(--text-primary); }
+.toggle button:focus-visible { outline: 2px solid var(--brand-red); outline-offset: 2px; }
+/* Big white numerals, centred, as the at-a-glance headline. */
+.stats div { align-items: center; padding: 14px 8px; text-align: center; }
+.stats dd { font-size: 1.75rem; letter-spacing: -0.02em; white-space: nowrap; }
+.stats dt { font-size: 0.78rem; }
+.mix { display: grid; gap: 10px; }
+.mixTitle { margin: 0; font-size: 1rem; font-weight: 700; color: var(--text-primary); }
+.mix ul { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
+.mix li { display: grid; grid-template-columns: minmax(72px, 28%) 1fr auto; align-items: center; gap: 12px; font-size: 0.88rem; }
+.mixLabel { color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.track { height: 8px; border-radius: var(--radius-pill); background: var(--bg-surface); overflow: hidden; }
+.bar { display: block; width: var(--share); height: 100%; border-radius: inherit; background: color-mix(in srgb, var(--text-primary) 55%, transparent); }
+/* Red only marks the largest share. */
+.bar[data-lead] { background: var(--brand-red); }
+.mixValue { min-width: 3.5em; color: var(--text-secondary); font-variant-numeric: tabular-nums; text-align: right; }
+.footnote { margin: 0; font-size: 0.78rem; color: var(--text-secondary); }
+@media (max-width: 380px) { .stats dd { font-size: 1.4rem; } }
+.incomplete { display: grid; gap: 10px; justify-items: start; font-size: 0.85rem; color: var(--text-secondary); }
+.incomplete p { margin: 0; }

@@ -16,9 +16,10 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import Response
 
-from api.contracts.external_training import ExternalTrainingCreate, ExternalTrainingFields, TrainingHistorySession, TrainingHistoryResponse
+from api.contracts.external_training import ExternalTrainingCreate, ExternalTrainingFields, ExternalTrainingTakeaway, TrainingHistorySession, TrainingHistoryResponse
 from api.services.training_history import (
-    training_history, create_external_training, update_external_training, delete_external_training,
+    training_history_page, create_external_training, update_external_training,
+    delete_external_training, set_external_training_takeaway,
 )
 
 from api.compliance_guards import require_health_feature_access
@@ -212,6 +213,13 @@ def build_today_router(*, require_profile, get_store) -> APIRouter:
         require_health_feature_access(profile)
         return update_external_training(store, profile.athlete_id, str(entry_id), body)
 
+    @router.put("/api/training/sessions/{entry_id}/takeaway", response_model=TrainingHistorySession)
+    def save_external_training_takeaway(entry_id: UUID, body: ExternalTrainingTakeaway,
+                                        profile: ProfileRecord = Depends(require_profile),
+                                        store: AppStore = Depends(get_store)):
+        require_health_feature_access(profile)
+        return set_external_training_takeaway(store, profile.athlete_id, str(entry_id), body)
+
     @router.delete("/api/training/sessions/{entry_id}", status_code=204)
     def remove_external_training(entry_id: UUID,
                                  profile: ProfileRecord = Depends(require_profile),
@@ -221,9 +229,13 @@ def build_today_router(*, require_profile, get_store) -> APIRouter:
 
     @router.get("/api/training/history", response_model=TrainingHistoryResponse)
     def list_training_history(limit: int = Query(default=30, ge=1, le=200), include_skipped: bool = False, manual_only: bool = False,
+                              before_day: date | None = None,
                               profile: ProfileRecord = Depends(require_profile),
                               store: AppStore = Depends(get_store)):
-        rows = training_history(store, profile.athlete_id, limit=200, include_skipped=include_skipped, prescribed=[] if manual_only else None)[:limit]
+        # Pages hold whole training days, so a page can run past ``limit`` rows.
+        rows, next_before_day = training_history_page(
+            store, profile.athlete_id, limit=limit, before_day=before_day.isoformat() if before_day else None,
+            include_skipped=include_skipped, manual_only=manual_only)
         plans = {}
         for row in rows:
             if row["source"] == "external":
@@ -238,7 +250,7 @@ def build_today_router(*, require_profile, get_store) -> APIRouter:
             row["title"] = (frozen.get("session") or {}).get("title") or (
                 _session_history_title(*resolved, row) if resolved else None) or "Unlxck session"
             row["id"] = str(row.get("id") or row.get("session_id"))
-        return {"sessions": rows}
+        return {"sessions": rows, "next_before_day": next_before_day}
 
     @router.post("/api/today/injury-episode-observation")
     def injury_episode_observation(

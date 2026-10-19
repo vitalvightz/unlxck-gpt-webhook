@@ -1,11 +1,11 @@
 """One session-level history for Plan and adaptive consumers; no exercise rows."""
-from datetime import datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 import hashlib
 import json
 
 from fastapi import HTTPException
 
-from api.contracts.external_training import ExternalTrainingCreate, ExternalTrainingFields
+from api.contracts.external_training import ExternalTrainingCreate, ExternalTrainingFields, ExternalTrainingTakeaway
 from api.contracts.training_day import resolve_training_day_str
 
 
@@ -23,6 +23,56 @@ def training_history(store, athlete_id: str, *, limit: int = 200, prescribed: li
         prescribed = store.list_session_completions(athlete_id, limit=limit)
     if external is None:
         external = store.list_external_training_sessions(athlete_id, limit=limit)
+    return _combine(athlete_id, prescribed, external, include_skipped)
+
+
+def training_history_page(store, athlete_id: str, *, limit: int, before_day: str | None = None,
+                          include_skipped: bool = False, manual_only: bool = False) -> tuple[list[dict], str | None]:
+    """One History page of whole training days, newest first, and the cursor for the next.
+
+    Each source reads ``limit`` rows before ``before_day``. When a source fills its
+    read, its oldest day may be cut short, so that day moves to the next page. A
+    day that alone fills a read is read in full instead, so no row is skipped.
+    """
+    def prescribed_read(*, limit: int, before_day: str | None) -> list[dict]:
+        if manual_only:
+            return []
+        return store.list_session_completions(athlete_id, limit=limit, before_day=before_day)
+
+    def external_read(*, limit: int, before_day: str | None) -> list[dict]:
+        return store.list_external_training_sessions(athlete_id, limit=limit, before_day=before_day)
+
+    prescribed = prescribed_read(limit=limit, before_day=before_day)
+    external = external_read(limit=limit, before_day=before_day)
+    full = [source for source in (prescribed, external) if len(source) >= limit]
+    if not full:
+        return _combine(athlete_id, prescribed, external, include_skipped), None
+    # The newest day any full source reached may be missing rows, so it and
+    # everything older is left to the next page, which reads before ``oldest``.
+    cutoff = max(str(source[-1]["training_day"]) for source in full)
+    rows = _combine(athlete_id, prescribed, external, include_skipped)
+    kept = [row for row in rows if str(row["training_day"]) > cutoff]
+    if kept:
+        return kept, min(str(row["training_day"]) for row in kept)
+    # One day fills a whole read: return all of that day, and continue before it.
+    day_rows = _combine(athlete_id, _whole_day(prescribed_read, cutoff, limit),
+                        _whole_day(external_read, cutoff, limit), include_skipped)
+    return day_rows, cutoff
+
+
+def _whole_day(read, day: str, limit: int) -> list[dict]:
+    """Every row of ``day`` from one source, newest-day-first reads widened until
+    the read is short or reaches an older day."""
+    after = (date.fromisoformat(day) + timedelta(days=1)).isoformat()
+    size = max(limit, 1) * 2
+    while True:
+        rows = read(limit=size, before_day=after)
+        if len(rows) < size or str(rows[-1]["training_day"]) < day:
+            return [row for row in rows if str(row["training_day"]) == day]
+        size *= 2
+
+
+def _combine(athlete_id: str, prescribed: list[dict], external: list[dict], include_skipped: bool) -> list[dict]:
     rows = [
         {**row, "source": "unlxck", "completion_origin": row.get("completion_origin")} for row in prescribed
         if row.get("athlete_id") == athlete_id and row.get("status") in ({"done", "modified", "skipped"} if include_skipped else {"done", "modified"})
@@ -59,6 +109,13 @@ def create_external_training(store, athlete_id: str, athlete_timezone: str | Non
 
 def update_external_training(store, athlete_id: str, entry_id: str, body: ExternalTrainingFields) -> dict:
     row = store.update_external_training_session(athlete_id, entry_id, body.model_dump())
+    if row is None:
+        raise HTTPException(404, "Training session not found.")
+    return external_occurrence(row)
+
+
+def set_external_training_takeaway(store, athlete_id: str, entry_id: str, body: ExternalTrainingTakeaway) -> dict:
+    row = store.set_external_training_takeaway(athlete_id, entry_id, body.takeaway)
     if row is None:
         raise HTTPException(404, "Training session not found.")
     return external_occurrence(row)

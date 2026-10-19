@@ -1311,6 +1311,8 @@ export type SparringLogRequest = {
 
 export type SparringLogRecord = Omit<SparringLogRequest, "client_request_id" | "detail_revision"> & {
   id: string;
+  /** The latest applied correction; a reopened report continues from it. */
+  detail_revision?: number;
   athlete_id: string;
   training_day: string;
   created_at: string;

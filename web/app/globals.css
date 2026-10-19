@@ -21647,6 +21647,16 @@ button.injury-progress:hover > svg { color: var(--text-primary); }
 .history-session-delete:hover:not(:disabled) { color: var(--danger-ink); }
 .history-session-delete:disabled { opacity: 0.45; cursor: not-allowed; }
 .history-session-delete:focus-visible { outline: 2px solid var(--brand-red); outline-offset: 2px; }
+/* A manual session's takeaway: the athlete's own words, set apart from the meta. */
+.history-row-takeaway { margin: 0; padding-left: 10px; border-left: 2px solid var(--border-active); color: var(--text-primary); font-size: 0.88rem; line-height: 1.45; overflow-wrap: anywhere; }
+.history-takeaway-filter { display: grid; gap: 10px; justify-items: start; }
+.history-takeaway-filter .history-exercise-search { width: 100%; margin-bottom: 0; }
+button.history-chip { min-height: 32px; font: inherit; font-size: 0.8rem; font-weight: 600; cursor: pointer; }
+button.history-chip[aria-pressed="true"] { border-color: var(--border-active); background: var(--brand-red-soft); color: var(--text-primary); }
+button.history-chip:focus-visible { outline: 2px solid var(--brand-red); outline-offset: 2px; }
+/* A manual sparring session's report action reads as primary among the row actions. */
+.history-session-actions .history-session-report { color: var(--text-primary); font-weight: 600; }
+.history-session-actions .history-session-report:hover { color: var(--text-primary); }
 
 /* Mental support stays compact beside the physical appointment. */
 .sp-mental-task { padding: 14px 16px; min-width: 0; }

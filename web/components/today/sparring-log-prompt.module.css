@@ -12,3 +12,6 @@
 .actions { grid-template-columns: auto 1fr; }
 .actions > p { grid-column: 1 / -1; }
 footer.actions > button { width: auto; }
+/* A reopened report's recorded head-impact answers, which a correction cannot lower. */
+.protected { margin: -4px 0 0; color: var(--text-secondary); font-size: 12px; line-height: 1.5; }
+.questions button:disabled { cursor: not-allowed; }
