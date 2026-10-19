@@ -21,6 +21,7 @@ import { TrainingActionContent } from "./training-action-tile";
 import tileStyles from "./training-action-tile.module.css";
 import { SparringLogPrompt, type SparringDraft } from "./today/sparring-log-prompt";
 import { SessionTakeawayPrompt } from "./session-takeaway";
+import { ManualExerciseLogger } from "./manual-exercise-logger";
 import type { SparringIntensity } from "@/lib/types";
 
 const DURATION_PICKS = [30, 45, 60, 90];
@@ -98,6 +99,10 @@ function LogTrainingContent({ accessToken, entry, repeatEntry, recent = false, h
   const [sparringDraft, setSparringDraft] = useState<SparringDraft | null>(null);
   // Any other new session offers an optional takeaway in place of the saved line.
   const [takeawayRow, setTakeawayRow] = useState<TrainingHistorySession | null>(null);
+  // ...and, beside it, optional exercises. A repeated session may reuse its source's names.
+  const [exercisesOpen, setExercisesOpen] = useState(false);
+  const [exerciseCount, setExerciseCount] = useState(0);
+  const [exerciseReference, setExerciseReference] = useState<TrainingHistorySession | null>(null);
   const dialog = useRef<HTMLDialogElement>(null);
   const requestId = useRef<string | null>(null);
   const currentToken = useRef<string | null>(accessToken);
@@ -179,6 +184,9 @@ function LogTrainingContent({ accessToken, entry, repeatEntry, recent = false, h
     setError(null);
     setSaved(null);
     setTakeawayRow(null);
+    setExercisesOpen(false);
+    setExerciseCount(0);
+    setExerciseReference(repeat && row?.id && row.exercise_count ? row as TrainingHistorySession : null);
     setOpen(true);
   }
 
@@ -328,7 +336,10 @@ function LogTrainingContent({ accessToken, entry, repeatEntry, recent = false, h
       ) : null}
       {saved && !entry && !repeatEntry ? <p className="muted" role="status">{saved}</p> : null}
       {takeawayRow ? <SessionTakeawayPrompt key={takeawayRow.id} token={accessToken} row={takeawayRow} sheet={variant === "tile"}
-        onSaved={() => setTakeawayRow(null)} onDismiss={() => setTakeawayRow(null)} /> : null}
+        onSaved={() => setTakeawayRow(null)} onDismiss={() => setTakeawayRow(null)}
+        onAddExercises={() => setExercisesOpen(true)} exerciseCount={exerciseCount} suspended={exercisesOpen} /> : null}
+      {takeawayRow && exercisesOpen ? <ManualExerciseLogger token={accessToken} session={takeawayRow} reference={exerciseReference}
+        onClose={entries => { setExercisesOpen(false); if (entries) setExerciseCount(entries.length); }} /> : null}
       {sparringDraft ? <SparringLogPrompt key={sparringDraft.externalSessionId} token={accessToken} draft={sparringDraft}
         onSaved={onSparringReported} onDismiss={() => setSparringDraft(null)} /> : null}
     </div>

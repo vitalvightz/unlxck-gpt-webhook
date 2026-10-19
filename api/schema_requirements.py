@@ -67,6 +67,10 @@ REQUIRED_TABLES: tuple[str, ...] = (
     # in-session log would otherwise fail on every save.
     "exercise_logs",
     "external_training_sessions",
+    # Optional exercise results on a manual session and the athlete's private
+    # movement names (PUT /api/training/sessions/{id}/exercises/{entry_id}).
+    "manual_exercise_entries",
+    "personal_exercises",
     "custom_training_plans",
     "private_video_assets",
     "private_exercise_media",
@@ -403,6 +407,12 @@ REQUIRED_EXTERNAL_TRAINING_COLUMNS: tuple[str, ...] = (
     "activity", "sport", "session_type", "duration_minutes", "effort", "takeaway", "deleted_at", "created_at", "updated_at",
 )
 
+REQUIRED_MANUAL_EXERCISE_ENTRIES_COLUMNS: tuple[str, ...] = (
+    "id", "athlete_id", "external_session_id", "client_entry_id", "training_day", "exercise_key",
+    "personal_exercise_id", "display_name", "measurement_format", "actual", "notes", "deleted_at",
+    "created_at", "updated_at",
+)
+
 REQUIRED_XP_ACCOUNTS_COLUMNS: tuple[str, ...] = (
     "athlete_id",
     "total_xp",
@@ -517,6 +527,8 @@ REQUIRED_COLUMNS: Mapping[str, tuple[str, ...]] = {
     "sparring_log_requests": ("athlete_id", "client_request_id", "sparring_log_id", "created_at"),
     "exercise_logs": REQUIRED_EXERCISE_LOGS_COLUMNS,
     "external_training_sessions": REQUIRED_EXTERNAL_TRAINING_COLUMNS,
+    "manual_exercise_entries": REQUIRED_MANUAL_EXERCISE_ENTRIES_COLUMNS,
+    "personal_exercises": ("id", "athlete_id", "name", "name_key", "created_at", "updated_at"),
     "custom_training_plans": ("id", "athlete_id", "name", "kind", "sessions", "incomplete", "created_at", "updated_at"),
     "private_video_assets": ("id", "athlete_id", "status", "size_bytes", "content_type", "intake_path", "rendition_path", "duration_seconds", "width", "height", "sha256", "processor_version", "upload_expires_at", "processed_at", "created_at", "updated_at"),
     "private_exercise_media": ("id", "athlete_id", "provider", "video_id", "asset_id", "start_s", "end_s", "channel_title", "orientation", "made_for_kids", "created_at"),
@@ -695,6 +707,9 @@ INDEX_REQUIREMENTS: tuple[IndexRequirement, ...] = (
     ),
     IndexRequirement(label="external training request uniqueness", accepted_names=("external_training_sessions_request_key",)),
     IndexRequirement(label="external training athlete/day index", accepted_names=("external_training_sessions_athlete_day_idx",)),
+    # ON CONFLICT target: a retried exercise save never adds a second occurrence.
+    IndexRequirement(label="manual exercise retry uniqueness", accepted_names=("manual_exercise_entries_request_key",)),
+    IndexRequirement(label="personal exercise name uniqueness", accepted_names=("personal_exercises_name_key",)),
     IndexRequirement(label="custom plans athlete index", accepted_names=("custom_training_plans_athlete_updated_idx",)),
     IndexRequirement(label="community review queue index", accepted_names=("community_revision_queue_idx",)),
     IndexRequirement(label="community ownership index", accepted_names=("community_exercises_creator_idx",)),
@@ -738,6 +753,7 @@ RLS_REQUIRED_TABLES: tuple[str, ...] = (
     "private_media_worker_health",
     "community_exercises", "community_exercise_revisions", "community_exercise_audit", "community_exercise_reports",
     "custom_training_plans",
+    "manual_exercise_entries", "personal_exercises",
     "rehab_exposures", "injury_episode_events",
     "profiles",
     "plans",

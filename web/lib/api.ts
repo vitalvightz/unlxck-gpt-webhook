@@ -1,5 +1,6 @@
 import type { ExternalTrainingFields, TrainingHistoryPage, TrainingHistorySession } from "@/lib/training-history";
 import type { SessionDetails, ExerciseLibraryResponse, ExercisePerformancesResponse } from "@/lib/api-schema.generated";
+import type { ManualExerciseEntry, ManualExerciseListResponse, PerformedExerciseInput } from "@/lib/api-schema.generated";
 import type { LibraryFeaturedResponse, LibraryPreview, LibrarySearchResponse } from "@/lib/api-schema.generated";
 import type { CustomDoseSuggestion, CustomPlan, CustomPlanInput } from "@/lib/api-schema.generated";
 import type { PrivateMediaPreview, PrivateMediaSettings, UploadPermission, UploadState, YouTubeClipInput } from "@/lib/api-schema.generated";
@@ -565,6 +566,23 @@ export function saveTrainingTakeaway(token: string, id: string, takeaway: string
   const payload = JSON.stringify({ takeaway });
   // Setting the same text again is a no-op, so a lost response can be retried.
   return withTransientRetries(() => readJson(`/api/training/sessions/${encodeURIComponent(id)}/takeaway`, { method: "PUT", token, body: payload }));
+}
+
+export function listManualExercises(token: string, sessionId: string, signal?: AbortSignal): Promise<ManualExerciseListResponse> {
+  return readJson(`/api/training/sessions/${encodeURIComponent(sessionId)}/exercises`, { token, signal });
+}
+
+export function saveManualExercise(token: string, sessionId: string, entryId: string, body: PerformedExerciseInput): Promise<ManualExerciseEntry> {
+  const payload = JSON.stringify(body);
+  // The client-chosen entry ID makes the save idempotent: a retry never adds a second exercise.
+  return withTransientRetries(() => readJson(`/api/training/sessions/${encodeURIComponent(sessionId)}/exercises/${encodeURIComponent(entryId)}`,
+    { method: "PUT", token, body: payload }));
+}
+
+export function deleteManualExercise(token: string, sessionId: string, entryId: string): Promise<void> {
+  // A tombstone answers a repeated delete.
+  return withTransientRetries(() => requestVoid(`/api/training/sessions/${encodeURIComponent(sessionId)}/exercises/${encodeURIComponent(entryId)}`,
+    { method: "DELETE", token }));
 }
 
 export function deleteExternalTraining(token: string, id: string): Promise<void> {

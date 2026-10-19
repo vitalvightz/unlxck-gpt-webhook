@@ -504,6 +504,9 @@ class FakeStore(InMemoryNotificationLedger, FullRowStatusReads):
         self.today_checkins: dict[str, list[dict]] = {}
         self.session_completions: dict[str, list[dict]] = {}
         self.external_training_sessions: dict[str, dict] = {}
+        # Mirrors manual_exercise_entries / personal_exercises and their triggers.
+        self.manual_exercise_entries: list[dict] = []
+        self.personal_exercises: dict[str, dict] = {}
         self.custom_plans: dict[str, dict] = {}
         self.private_media: dict[str, dict] = {}
         self.private_video_assets: dict[str, dict] = {}
@@ -2125,7 +2128,105 @@ class FakeStore(InMemoryNotificationLedger, FullRowStatusReads):
         if not row or row["athlete_id"] != athlete_id:
             return False
         row["deleted_at"] = row.get("deleted_at") or _now()
+        self.sync_manual_exercise_parent(entry_id)
         return True
+
+    def sync_manual_exercise_parent(self, entry_id: str) -> None:
+        """The sync_manual_exercise_entries trigger: day and tombstone follow the parent."""
+        parent = self.external_training_sessions[entry_id]
+        for row in self.manual_exercise_entries:
+            if row["external_session_id"] == entry_id and row["athlete_id"] == parent["athlete_id"]:
+                row["training_day"] = parent["training_day"]
+                if parent.get("deleted_at"):
+                    row["deleted_at"] = row.get("deleted_at") or parent["deleted_at"]
+
+    def get_personal_exercise(self, athlete_id: str, personal_exercise_id: str) -> dict | None:
+        row = self.personal_exercises.get(personal_exercise_id)
+        return dict(row) if row and row["athlete_id"] == athlete_id else None
+
+    def ensure_personal_exercise(self, athlete_id: str, name: str, name_key: str) -> dict:
+        existing = next((row for row in self.personal_exercises.values()
+                         if row["athlete_id"] == athlete_id and row["name_key"] == name_key), None)
+        if existing:
+            return dict(existing)
+        row = {"id": str(uuid4()), "athlete_id": athlete_id, "name": name, "name_key": name_key,
+               "created_at": _now(), "updated_at": _now()}
+        self.personal_exercises[row["id"]] = row
+        return dict(row)
+
+    def get_manual_exercise(self, athlete_id: str, entry_id: str) -> dict | None:
+        row = next((row for row in self.manual_exercise_entries
+                    if row["athlete_id"] == athlete_id and row["client_entry_id"] == entry_id), None)
+        return dict(row) if row else None
+
+    def create_manual_exercise(self, athlete_id: str, fields: dict) -> dict:
+        existing = self.get_manual_exercise(athlete_id, fields["client_entry_id"])
+        if existing:
+            return existing
+        parent = self.external_training_sessions.get(fields["external_session_id"])
+        if not parent or parent["athlete_id"] != athlete_id or parent.get("deleted_at"):
+            raise HTTPException(status_code=500, detail="manual training session not found")
+        live = [row for row in self.manual_exercise_entries if row["athlete_id"] == athlete_id
+                and row["external_session_id"] == fields["external_session_id"] and not row.get("deleted_at")]
+        if len(live) >= 30:
+            raise HTTPException(status_code=500, detail="manual exercise limit reached")
+        row = {"exercise_key": None, "personal_exercise_id": None, "actual": {}, "notes": "", **fields,
+               "id": str(uuid4()), "athlete_id": athlete_id, "training_day": parent["training_day"],
+               "created_at": _now(), "updated_at": _now(), "deleted_at": None}
+        self.manual_exercise_entries.append(row)
+        return dict(row)
+
+    def update_manual_exercise(self, athlete_id: str, entry_id: str, fields: dict) -> dict | None:
+        row = next((row for row in self.manual_exercise_entries if row["athlete_id"] == athlete_id
+                    and row["client_entry_id"] == entry_id and not row.get("deleted_at")), None)
+        if not row:
+            return None
+        row.update({key: fields.get(key) for key in (
+            "exercise_key", "personal_exercise_id", "display_name", "measurement_format", "actual", "notes")})
+        row["updated_at"] = _now()
+        return dict(row)
+
+    def delete_manual_exercise(self, athlete_id: str, entry_id: str) -> bool:
+        row = next((row for row in self.manual_exercise_entries
+                    if row["athlete_id"] == athlete_id and row["client_entry_id"] == entry_id), None)
+        if not row:
+            return False
+        row["deleted_at"] = row.get("deleted_at") or _now()
+        return True
+
+    def list_manual_exercises(self, athlete_id: str, external_session_id: str) -> list[dict]:
+        rows = [dict(row) for row in self.manual_exercise_entries if row["athlete_id"] == athlete_id
+                and row["external_session_id"] == external_session_id and not row.get("deleted_at")]
+        return sorted(rows, key=lambda row: (row["created_at"], row["id"]))
+
+    def count_manual_exercises(self, athlete_id: str, external_session_ids: list[str]) -> dict[str, int]:
+        counts: dict[str, int] = {}
+        for row in self.manual_exercise_entries:
+            if row["athlete_id"] == athlete_id and row["external_session_id"] in external_session_ids and not row.get("deleted_at"):
+                counts[row["external_session_id"]] = counts.get(row["external_session_id"], 0) + 1
+        return counts
+
+    def has_exercise_record(self, athlete_id: str, exercise_key: str) -> bool:
+        return any(row["athlete_id"] == athlete_id and row.get("exercise_key") == exercise_key for row in self.exercise_logs) or any(
+            row["athlete_id"] == athlete_id and row.get("exercise_key") == exercise_key and not row.get("deleted_at")
+            for row in self.manual_exercise_entries)
+
+    def list_manual_exercise_index_page(self, athlete_id: str, *, as_of: str, after_id: str | None,
+                                        limit: int = 500) -> list[dict]:
+        rows = [dict(row) for row in self.manual_exercise_entries if row["athlete_id"] == athlete_id
+                and not row.get("deleted_at") and row.get("created_at", "") <= as_of
+                and (after_id is None or row["id"] > after_id)]
+        return sorted(rows, key=lambda row: row["id"])[:limit]
+
+    def list_manual_exercise_performances(self, athlete_id: str, *, exercise_key: str | None,
+                                          personal_exercise_id: str | None, as_of: str, before_day: str | None,
+                                          before_id: str | None, limit: int = 31) -> list[dict]:
+        rows = [dict(row) for row in self.manual_exercise_entries if row["athlete_id"] == athlete_id
+                and not row.get("deleted_at") and row.get("created_at", "") <= as_of
+                and (row.get("exercise_key") == exercise_key if exercise_key is not None
+                     else row.get("personal_exercise_id") == personal_exercise_id)
+                and (before_day is None or (row["training_day"], row["id"]) < (before_day, before_id))]
+        return sorted(rows, key=lambda row: (row["training_day"], row["id"]), reverse=True)[:limit]
 
     def list_session_completions(self, athlete_id: str, *, limit: int = 30, before_day: str | None = None) -> list[dict]:
         rows = sorted(

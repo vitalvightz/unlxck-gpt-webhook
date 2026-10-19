@@ -14,6 +14,7 @@ from api.models import ExerciseLogActual
 from api.services.rehab_completion_service import (
     _canonical_stored_event, _prescribed_dose_from_block, rehab_response_contexts_by_injury,
 )
+from api.services.manual_exercises import entry_actual
 from api.services.training_history import external_occurrence
 
 MISSING_DETAILS = "Detailed exercise records weren't captured for this session."
@@ -93,6 +94,13 @@ def _exercise(block, log, consent):
     )
 
 
+def _manual_block(row, consent):
+    """Only what the athlete entered; no prescription to compare against."""
+    return SessionDetailBlock(name=_text(row.get("display_name")) or "Exercise", source="manual",
+        format=row.get("measurement_format"), actual=entry_actual(row) or ExerciseLogActual(),
+        notes=(_text(row.get("notes")) or None) if consent else None)
+
+
 def _rehab_responses(store, athlete_id, row):
     contexts = rehab_response_contexts_by_injury(row, athlete_id=athlete_id)
     expected = [(context, item) for context in contexts.values()
@@ -133,7 +141,11 @@ def session_details(store, athlete_id, source, entry_id, *, health_consent_grant
                 key: (_text(sparring.get(key)) if key == "notes" else sparring.get(key))
                 for key in SessionDetailSparring.model_fields
                 if key in sparring and (consent or key not in {"head_contact", "rocked", "notes"})})
-        return SessionDetails(session=_summary(occurrence, source, occurrence["title"], consent),
+        entries = [entry for entry in store.list_manual_exercises(athlete_id, entry_id)
+                   if entry.get("athlete_id") == athlete_id and str(entry.get("external_session_id")) == entry_id
+                   and not entry.get("deleted_at")]
+        summary = _summary({**occurrence, "exercise_count": len(entries)}, source, occurrence["title"], consent)
+        return SessionDetails(session=summary, blocks=[_manual_block(entry, consent) for entry in entries],
                               prescription_source="manual", sparring=safe_sparring)
 
     session = _snapshot_session(row)

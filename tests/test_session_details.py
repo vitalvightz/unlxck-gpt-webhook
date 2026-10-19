@@ -251,7 +251,8 @@ def test_manual_sparring_reads_only_its_linked_report_and_redacts_health(consent
               "rounds_completed": 5, "round_seconds": None, "head_contact": "light", "rocked": False,
               "notes": "Coach feedback", "admin_review_id": "private"}
     store = SimpleNamespace(get_external_training_session=Mock(return_value=row),
-                            get_external_session_sparring_log=Mock(return_value=report))
+                            get_external_session_sparring_log=Mock(return_value=report),
+                            list_manual_exercises=Mock(return_value=[]))
     result = session_details(store, ATHLETE, "external", entry_id, health_consent_granted=consent)
     assert result.blocks == [] and result.sparring.rounds_completed == 5
     assert result.sparring.round_seconds is None

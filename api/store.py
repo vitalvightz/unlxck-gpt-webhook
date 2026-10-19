@@ -4640,10 +4640,113 @@ class SupabaseAppStore(CommunityStoreMixin, PrivateMediaStoreMixin, CompactGener
             return False
         if row.get("deleted_at"):
             return True
+        deleted_at = datetime.now(timezone.utc).isoformat()
         response = (self.client.table("external_training_sessions")
-            .update({"deleted_at": datetime.now(timezone.utc).isoformat()})
+            .update({"deleted_at": deleted_at})
             .eq("athlete_id", athlete_id).eq("id", entry_id).execute())
+        # The database trigger already tombstones the session's exercise
+        # entries; this repeats it so no visible result outlives its session.
+        (self.client.table("manual_exercise_entries").update({"deleted_at": deleted_at})
+            .eq("athlete_id", athlete_id).eq("external_session_id", entry_id).is_("deleted_at", "null").execute())
         return bool(getattr(response, "data", None))
+
+    def get_personal_exercise(self, athlete_id: str, personal_exercise_id: str) -> dict[str, Any] | None:
+        return self._select_first(self.client.table("personal_exercises").select("*")
+            .eq("athlete_id", athlete_id).eq("id", personal_exercise_id))
+
+    def ensure_personal_exercise(self, athlete_id: str, name: str, name_key: str) -> dict[str, Any]:
+        # One private identity per athlete and name; a repeat returns it.
+        self.client.table("personal_exercises").upsert(
+            {"athlete_id": athlete_id, "name": name, "name_key": name_key},
+            on_conflict="athlete_id,name_key", ignore_duplicates=True,
+        ).execute()
+        row = self._select_first(self.client.table("personal_exercises").select("*")
+            .eq("athlete_id", athlete_id).eq("name_key", name_key))
+        if not row:
+            raise HTTPException(500, "Failed to save exercise.")
+        return row
+
+    def get_manual_exercise(self, athlete_id: str, entry_id: str) -> dict[str, Any] | None:
+        """By the client's retry key, tombstones included."""
+        return self._select_first(self.client.table("manual_exercise_entries").select("*")
+            .eq("athlete_id", athlete_id).eq("client_entry_id", entry_id))
+
+    def create_manual_exercise(self, athlete_id: str, fields: dict[str, Any]) -> dict[str, Any]:
+        # ON CONFLICT DO NOTHING: a retry cannot add a second occurrence or
+        # resurrect a deleted one. The trigger stamps the parent's day.
+        self.client.table("manual_exercise_entries").upsert(
+            {**fields, "athlete_id": athlete_id},
+            on_conflict="athlete_id,client_entry_id", ignore_duplicates=True,
+        ).execute()
+        row = self.get_manual_exercise(athlete_id, fields["client_entry_id"])
+        if not row:
+            raise HTTPException(500, "Failed to save exercise.")
+        return row
+
+    def update_manual_exercise(self, athlete_id: str, entry_id: str, fields: dict[str, Any]) -> dict[str, Any] | None:
+        response = (self.client.table("manual_exercise_entries")
+            .update({key: fields.get(key) for key in (
+                "exercise_key", "personal_exercise_id", "display_name", "measurement_format", "actual", "notes")})
+            .eq("athlete_id", athlete_id).eq("client_entry_id", entry_id).is_("deleted_at", "null").execute())
+        return (getattr(response, "data", None) or [None])[0]
+
+    def delete_manual_exercise(self, athlete_id: str, entry_id: str) -> bool:
+        row = self.get_manual_exercise(athlete_id, entry_id)
+        if not row:
+            return False
+        if row.get("deleted_at"):
+            return True
+        response = (self.client.table("manual_exercise_entries")
+            .update({"deleted_at": datetime.now(timezone.utc).isoformat()})
+            .eq("athlete_id", athlete_id).eq("client_entry_id", entry_id).execute())
+        return bool(getattr(response, "data", None))
+
+    def list_manual_exercises(self, athlete_id: str, external_session_id: str) -> list[dict[str, Any]]:
+        response = (self.client.table("manual_exercise_entries").select("*")
+            .eq("athlete_id", athlete_id).eq("external_session_id", external_session_id).is_("deleted_at", "null")
+            .order("created_at").order("id").limit(100).execute())
+        return _readiness_history_rows(response)
+
+    def count_manual_exercises(self, athlete_id: str, external_session_ids: list[str]) -> dict[str, int]:
+        if not external_session_ids:
+            return {}
+        response = (self.client.table("manual_exercise_entries").select("external_session_id")
+            .eq("athlete_id", athlete_id).in_("external_session_id", external_session_ids)
+            .is_("deleted_at", "null").limit(len(external_session_ids) * 31).execute())
+        counts: dict[str, int] = {}
+        for row in _readiness_history_rows(response):
+            counts[str(row["external_session_id"])] = counts.get(str(row["external_session_id"]), 0) + 1
+        return counts
+
+    def has_exercise_record(self, athlete_id: str, exercise_key: str) -> bool:
+        for table, live in (("exercise_logs", False), ("manual_exercise_entries", True)):
+            query = self.client.table(table).select("id").eq("athlete_id", athlete_id).eq("exercise_key", exercise_key)
+            if live:
+                query = query.is_("deleted_at", "null")
+            if _readiness_history_rows(query.limit(1).execute()):
+                return True
+        return False
+
+    def list_manual_exercise_index_page(self, athlete_id: str, *, as_of: str, after_id: str | None,
+                                        limit: int = 500) -> list[dict[str, Any]]:
+        query = (self.client.table("manual_exercise_entries")
+            .select("id,athlete_id,external_session_id,exercise_key,personal_exercise_id,display_name,"
+                    "measurement_format,training_day,actual,deleted_at")
+            .eq("athlete_id", athlete_id).is_("deleted_at", "null").lte("created_at", as_of))
+        if after_id:
+            query = query.gt("id", after_id)
+        return _readiness_history_rows(query.order("id").limit(limit).execute())
+
+    def list_manual_exercise_performances(self, athlete_id: str, *, exercise_key: str | None,
+                                          personal_exercise_id: str | None, as_of: str, before_day: str | None,
+                                          before_id: str | None, limit: int = 31) -> list[dict[str, Any]]:
+        query = (self.client.table("manual_exercise_entries").select("*")
+            .eq("athlete_id", athlete_id).is_("deleted_at", "null").lte("created_at", as_of))
+        query = (query.eq("exercise_key", exercise_key) if exercise_key is not None
+                 else query.eq("personal_exercise_id", personal_exercise_id))
+        if before_day and before_id:
+            query = query.or_(f"training_day.lt.{before_day},and(training_day.eq.{before_day},id.lt.{before_id})")
+        return _readiness_history_rows(query.order("training_day", desc=True).order("id", desc=True).limit(limit).execute())
 
     def list_session_completions(
         self, athlete_id: str, *, limit: int = 30, before_day: str | None = None

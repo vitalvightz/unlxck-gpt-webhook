@@ -8,7 +8,7 @@ import type { LibraryEntry, LibrarySearchResponse } from "@/lib/api-schema.gener
 
 const entry: LibraryEntry = { catalogue_id: "stable-id", name: "Medicine Ball Hook Throw", category: "training", content_type: "strength_power",
   context: "Strength", equipment: ["medicine_ball"], equipment_state: "known", equipment_requirements: null, exercise_key: "medicine-ball-hook-throw", media: null,
-  focus: ["Punching power"], verified_goals: ["Punching power"], exercise_details: [], discovery_match: null, selection_boundary: "training_validation_required", prescription_allowed: false };
+  focus: ["Punching power"], verified_goals: ["Punching power"], exercise_details: [], discovery_match: null, selection_boundary: "training_validation_required", prescription_allowed: false, log_format: null };
 const response = (overrides: Partial<LibrarySearchResponse> = {}): LibrarySearchResponse => ({ entries: [entry], total: 1, catalogue_total: 2855,
   offset: 0, limit: 24, next_offset: null, revision: "initial", facets: {}, ...overrides });
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status });

@@ -4,6 +4,7 @@ from typing import Any, Literal
 from pydantic import BaseModel, Field
 
 from api.contracts.external_training import TrainingHistorySession
+from api.contracts.manual_exercises import MeasurementFormat
 from api.contracts.rehab_exposure import ExposureDose, ExposureResponse
 from api.models import ExerciseLogActual
 
@@ -11,6 +12,10 @@ from api.models import ExerciseLogActual
 class SessionDetailBlock(BaseModel):
     name: str
     kind: Literal["exercise", "rehab", "guidance"] = "exercise"
+    # manual: an exercise the athlete recorded on their own manual session. It
+    # has no prescription, so nothing compares it against one.
+    source: Literal["plan", "manual"] = "plan"
+    format: MeasurementFormat | None = None
     prescribed: dict[str, Any] = Field(default_factory=dict)
     actual: ExerciseLogActual = Field(default_factory=ExerciseLogActual)
     status: Literal["as_prescribed", "modified", "skipped", "done_as_shown", "changed", "stopped"] | None = None

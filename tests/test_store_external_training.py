@@ -60,5 +60,51 @@ def test_internal_refresh_can_see_tombstones_without_losing_owner_scope():
 def test_delete_is_scoped_even_with_privileged_client():
     store, query = store_query()
     assert store.delete_external_training_session("owner", "entry")
-    assert [call.args for call in query.eq.call_args_list] == [("athlete_id", "owner"), ("id", "entry")] * 2
-    assert set(query.update.call_args.args[0]) == {"deleted_at"}
+    # Session lookup, session tombstone, then the same owner's exercise entries.
+    assert [call.args for call in query.eq.call_args_list] == [("athlete_id", "owner"), ("id", "entry")] * 2 + [
+        ("athlete_id", "owner"), ("external_session_id", "entry")]
+    assert [set(call.args[0]) for call in query.update.call_args_list] == [{"deleted_at"}, {"deleted_at"}]
+
+
+def manual_store():
+    store, query = store_query()
+    for method in ("in_", "lte", "gt", "or_", "delete"):
+        getattr(query, method).return_value = query
+    return store, query
+
+
+def test_manual_exercise_insert_is_atomic_owner_scoped_and_ignores_client_owner():
+    store, query = manual_store()
+    query.execute.return_value = SimpleNamespace(data=[{"id": "row", "athlete_id": "owner", "client_entry_id": "entry"}])
+    fields = {"client_entry_id": "entry", "external_session_id": "session", "athlete_id": "attacker"}
+    store.create_manual_exercise("owner", fields)
+    query.upsert.assert_called_once_with({**fields, "athlete_id": "owner"},
+        on_conflict="athlete_id,client_entry_id", ignore_duplicates=True)
+    assert ("athlete_id", "owner") in [call.args for call in query.eq.call_args_list]
+
+
+def test_manual_exercise_update_whitelist_cannot_move_session_day_owner_or_undelete():
+    store, query = manual_store()
+    fields = {"display_name": "Back Squat", "measurement_format": "strength", "actual": {}, "notes": "",
+              "exercise_key": "back-squat", "personal_exercise_id": None, "athlete_id": "other",
+              "external_session_id": "elsewhere", "training_day": "2020-01-01", "deleted_at": None}
+    store.update_manual_exercise("owner", "entry", fields)
+    assert set(query.update.call_args.args[0]) == {
+        "exercise_key", "personal_exercise_id", "display_name", "measurement_format", "actual", "notes"}
+    assert [call.args for call in query.eq.call_args_list] == [("athlete_id", "owner"), ("client_entry_id", "entry")]
+    query.is_.assert_called_once_with("deleted_at", "null")
+
+
+def test_manual_exercise_reads_are_owner_scoped_and_hide_tombstones():
+    store, query = manual_store()
+    store.list_manual_exercises("owner", "session")
+    store.list_manual_exercise_index_page("owner", as_of="2026-10-19T00:00:00+00:00", after_id=None)
+    store.list_manual_exercise_performances("owner", exercise_key="back-squat", personal_exercise_id=None,
+        as_of="2026-10-19T00:00:00+00:00", before_day=None, before_id=None)
+    query.execute.return_value = SimpleNamespace(data=[{"external_session_id": "session"}] * 2)
+    assert store.count_manual_exercises("owner", ["session"]) == {"session": 2}
+    owners = [call.args for call in query.eq.call_args_list if call.args[0] == "athlete_id"]
+    assert owners == [("athlete_id", "owner")] * 4
+    assert query.is_.call_count == 4
+    assert all(call.args == ("deleted_at", "null") for call in query.is_.call_args_list)
+    assert store.count_manual_exercises("owner", []) == {}

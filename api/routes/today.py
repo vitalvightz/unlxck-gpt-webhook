@@ -24,6 +24,8 @@ from api.services.training_history import (
 from api.contracts.session_details import SessionDetails
 from api.services.session_details import session_details
 from api.contracts.exercise_library import ExerciseLibraryResponse, ExercisePerformancesResponse
+from api.contracts.manual_exercises import ManualExerciseEntry, PerformedExerciseInput, ManualExerciseListResponse
+from api.services.manual_exercises import delete_session_exercise, list_session_exercises, save_session_exercise
 from api.services.exercise_library import exercise_library, exercise_performances
 
 from api.compliance_guards import require_health_feature_access
@@ -231,6 +233,28 @@ def build_today_router(*, require_profile, get_store) -> APIRouter:
         delete_external_training(store, profile.athlete_id, str(entry_id))
         return Response(status_code=204)
 
+    # Optional exercise results on a manual session. Writes record health data
+    # and need consent; none of them touches workload, XP, rehab or sparring.
+    @router.get("/api/training/sessions/{entry_id}/exercises", response_model=ManualExerciseListResponse)
+    def list_manual_exercises(entry_id: UUID, profile: ProfileRecord = Depends(require_profile),
+                              store: AppStore = Depends(get_store)):
+        return {"entries": list_session_exercises(store, profile.athlete_id, str(entry_id),
+            health_consent_granted=evaluate_profile_compliance(profile).health_consent_granted)}
+
+    @router.put("/api/training/sessions/{entry_id}/exercises/{exercise_entry_id}", response_model=ManualExerciseEntry)
+    def save_manual_exercise(entry_id: UUID, exercise_entry_id: UUID, body: PerformedExerciseInput,
+                             profile: ProfileRecord = Depends(require_profile),
+                             store: AppStore = Depends(get_store)):
+        require_health_feature_access(profile)
+        return save_session_exercise(store, profile.athlete_id, str(entry_id), str(exercise_entry_id), body)
+
+    @router.delete("/api/training/sessions/{entry_id}/exercises/{exercise_entry_id}", status_code=204)
+    def remove_manual_exercise(entry_id: UUID, exercise_entry_id: UUID,
+                               profile: ProfileRecord = Depends(require_profile),
+                               store: AppStore = Depends(get_store)):
+        delete_session_exercise(store, profile.athlete_id, str(entry_id), str(exercise_entry_id))
+        return Response(status_code=204)
+
     @router.get("/api/training/history", response_model=TrainingHistoryResponse)
     def list_training_history(limit: int = Query(default=30, ge=1, le=200), include_skipped: bool = False, manual_only: bool = False,
                               before_day: date | None = None,
@@ -254,6 +278,10 @@ def build_today_router(*, require_profile, get_store) -> APIRouter:
             row["title"] = (frozen.get("session") or {}).get("title") or (
                 _session_history_title(*resolved, row) if resolved else None) or "Unlxck session"
             row["id"] = str(row.get("id") or row.get("session_id"))
+        counts = store.count_manual_exercises(profile.athlete_id, [str(row["id"]) for row in rows if row["source"] == "external"])
+        for row in rows:
+            if row["source"] == "external":
+                row["exercise_count"] = counts.get(str(row["id"]), 0)
         return {"sessions": rows, "next_before_day": next_before_day}
 
     @router.get("/api/training/history/{source}/{entry_id}", response_model=SessionDetails)

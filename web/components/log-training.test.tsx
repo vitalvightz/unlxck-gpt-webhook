@@ -257,3 +257,34 @@ test("switching sport clears a session type that no longer fits, but keeps Stren
     assert.deepEqual(ui.pressed("Activity"), ["Strength"]);
   } finally { ui.cleanup(); }
 });
+
+test("saving needs only activity, duration and effort; exercises are a dismissible offer afterwards", async () => {
+  const ui = await mount([]);
+  try {
+    await ui.click("Log Training");
+    await ui.pick("Activity", "Strength");
+    await ui.pick("Duration", "60");
+    await ui.pick("Effort", "Hard");
+    await ui.save();
+    assert.equal(ui.calls.length, 1, "one save request, no exercise step");
+    assert.match(ui.container.textContent!, /Session saved/);
+    const offer = [...ui.container.querySelectorAll("button")].find(item => item.textContent?.startsWith("Add exercises"));
+    assert.ok(offer, "Add exercises is offered beside the takeaway");
+    assert.equal(ui.container.querySelectorAll("dialog[open]").length, 0, "nothing opens until the athlete asks");
+    await ui.click("Optional — skip anytime");
+    assert.doesNotMatch(ui.container.textContent!, /Add exercises/);
+    assert.equal(ui.calls.length, 1);
+  } finally { ui.cleanup(); }
+});
+
+test("sparring keeps its own follow-up without an exercise offer", async () => {
+  const ui = await mount([]);
+  try {
+    await ui.click("Log Training");
+    await ui.pick("Activity", "Sparring");
+    await ui.pick("Duration", "30");
+    await ui.pick("Effort", "Hard");
+    await ui.save();
+    assert.doesNotMatch(ui.container.textContent!, /Add exercises/);
+  } finally { ui.cleanup(); }
+});
