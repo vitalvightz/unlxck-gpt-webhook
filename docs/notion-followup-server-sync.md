@@ -1,90 +1,8 @@
 # UNLXCK Notion follow-up sync (Hetzner)
 
-The existing two-minute Hetzner job records manual outreach actions and materializes **Copy Follow-Up**, **Safe Next Due** and **Follow-Up Timing**. It never sends Instagram messages. Cold, signup and onboarding counters/history remain independent. **Activated means the founder has confirmed the fighter has used Unlxck**, not merely signed up.
+This job keeps editable **Copy Follow-Up** equal to the cold **Follow-Up DM** while Contacted, or to the warm **Warm Next DM** when a Replied/Accepted/Activated reminder is due. It never sends Instagram messages. It records **Last Follow-Up Sent** when it observes **Follow-Ups Sent** advance, which powers the existing **Actual Next Due** formula. No second set of DM scripts is hardcoded in Python. The recurring job uses the already-running worker container, not a new container each time.
 
-## Operator workflow
-
-1. Change the fighter's stage.
-2. Read the next action and copy the approved DM from **Copy Follow-Up** on iPhone; send it manually.
-3. Click **Record Send** once. The worker updates the existing checkbox/counter and send timestamps. Do not also increment a counter for the same send.
-
-After bootstrap, the existing **Details Sent**, **Onboarding Sent**, **Feedback Requested**, **Feedback Reminder Sent** checkboxes and existing nudge counters remain supported as alternative single actions. They record the worker's observation time. The recommended button also works before the first worker baseline because it supplies an explicit action receipt. No operator dates or forms are needed.
-
-**Copy Follow-Up contains only eligible DM text.** Waiting, blocked, completed, rejected and inactive rows have an empty copy field. Timing/review instructions live in **Follow-Up Timing**, not in the DM. In the existing warm views, **Outreach Next Step** mirrors that status, **Warm Next Due** mirrors Safe Next Due and **Warm Next DM** mirrors the copy field. Do not send from older cold estimate/formula fields.
-
-For Replied, the states are: reply received / send details; details sent / waiting for signup; first follow-up due; final follow-up due; completed or progressed. Entering Replied does not imply a link was sent. The initial response comes from the existing [RESPONSE DM](https://www.notion.so/3fbd6e718d27803cbd94fe94f19a002a) page. General replies use the segment's recommended response; explicit enquiry cues in existing Notes/Objection can select the approved coaching, conditioning, timer or recovery response. All eight alternatives remain available on that page. Check the conversation and choose a matching response before sending. Accepted initial access instructions remain a manual approved response; tick Onboarding Sent after sending them.
-
-## Scheduling and history
-
-| Stage/action | Next action |
-| --- | --- |
-| Contacted, zero cold sends | First cold follow-up on calendar Day 3 in Europe/London |
-| Contacted, one cold send | Second cold follow-up at the later of calendar Day 8 and 120 elapsed hours after first send |
-| Replied, details/link actually sent | First signup nudge after 72 elapsed hours |
-| Replied, first signup nudge sent | Final signup nudge after 96 elapsed hours; stop after two |
-| Accepted, instructions actually sent | First onboarding nudge after 72 elapsed hours |
-| Accepted, first onboarding nudge sent | Final onboarding nudge after 96 elapsed hours; stop after two |
-| Activated, founder-confirmed use observed | Feedback request after 96 elapsed hours |
-| Feedback requested | One reminder after 120 elapsed hours; stop thereafter |
-
-Timestamp arithmetic uses UTC elapsed hours and renders Europe/London with DST. Cold Day 3/Day 8 retain their original London calendar-day rules. A date-only historical action has unknown time of day: wait through the whole final day (e.g. a three-day wait becomes midnight at the start of day four). Overdue messages remain eligible; time passing never increments a send counter.
-
-The worker baselines every non-system prospect, including Ready to Send, so stage entry cannot consume the first warm counter increment. It also checks for actions between the query and fresh read. A 0→1 transition with an established zero baseline records its observed time, even when the stage subsequently progresses. Existing verified event timestamps are retained. A plain nonzero counter already present on the very first observation cannot establish a send time: **Needs Review**, never today’s invented timestamp. The Record Send receipt resolves this ambiguity for new actions.
-
-0→2, reversals, missing roots/first/final timestamps, changed verified dates, impossible timing, malformed receipts and conflicting sends block that stage. Review latches survive retries and stage exits/re-entry. A duplicate delivery of the same receipt is idempotent; another receipt for an already recorded action is blocked. Two sends never generate a third message. Confirmed registration stops signup nudges; Onboarding Complete stops onboarding nudges; Feedback Submitted stops feedback requests/reminders. Stage progression stops the previous sequence; Rejected/Inactive/Review Hold clear outbound copy.
-
-**Historical exceptions are not routine operator work.** A maintainer must verify the conversation/evidence, repair the existing canonical fields if evidence exists and clear only that stage's review entry in Follow-Up Sync State after reviewing the evidence. Do not reset whole state, zero counters, clear receipt deduplication or assign today's date. If send time is unknowable, leave the row blocked or move it to Inactive. New sends require one action, not historical reconstruction.
-
-## One-time compatibility migration (after PR review)
-
-The corrective PR does not change the live workspace or deploy itself. Use the existing worker image/token, not a new integration.
-
-1. Pause the existing timer during migration/bootstrap; retain its two-minute schedule. Disable any old Notion automation that writes Copy Follow-Up. Keep a schema export for rollback.
-2. Preview the exact live schema/formula changes with:
-
-   ```sh
-   docker compose exec -T worker python tools/sync_notion_followups.py --schema-plan
-   ```
-
-3. Review the preview, then apply it with `--prepare-schema`. This adds two hidden text properties, **Follow-Up Sync State** (baselines, separate warm final-send evidence, immutable date snapshots and review latches) and **Follow-Up Send Receipt** (one button request, deduplicated in state). These are essential: the existing shared Warm Last Nudge At cannot retain independent signup/onboarding final-send evidence, and a counter alone cannot distinguish a historical value from a newly recorded pre-baseline send. Neither is a duplicate counter or external datastore.
-4. The same migration makes Warm Next Due = `prop("Safe Next Due")`, Warm Next DM = `prop("Copy Follow-Up")`, and wraps the existing Outreach Next Step expression with a warm-stage Timing branch, preserving the complete original non-warm expression. Existing view names, filters, sorts and displayed warm fields continue working. Cold Follow-Up DM, Actual Next Due, stage history and KPI formulas are untouched. The migration is idempotent and rejects incompatible property types before any writes.
-5. Grant the existing worker integration read access to RESPONSE DM if it does not already have it (reuse the same token). Configure the native **Record Send** database button below, then run `--check-schema`. That read-only check verifies property types, the bridge formulas and all approved RESPONSE DM section boundaries using the existing REST token.
-6. Bootstrap once using the usual command. Historical exceptions should become Needs Review, with no fabricated send dates. A first full baseline may exceed two minutes; the lock prevents overlap. Resume the same timer.
-7. Test with a clearly marked non-production prospect: initial response, details recorded, signup 0→1, onboarding independently, feedback request/reminder, waiting/overdue/completed/rejected and a counter reversal. Check individual event dates, next date/action, selectable iPhone copy and the existing stage/KPI passes. Do not send real test DMs. Confirm the entire cron run in the journal.
-
-The live connector audit on 2026-10-20 verified existing property names/types, the 3/3B/3C views, milestone/scorecard documentation and approved RESPONSE DM content. It exposes formulaCode references but cannot retrieve formula source or evaluate formulaResult references. **Live formula source, migration writes, native button execution, iPhone behavior and Hetzner deployment remain unverified until the above checks run.** Unit tests do not establish live integration success.
-
-### Record Send button
-
-Create one database Button property named **Record Send** and show it in sending views. Its only Edit pages action targets **This page** and sets **Follow-Up Send Receipt** using the following custom formula. Insert the native **This page** property references with Notion's formula picker where needed; the expression below uses the ordinary `prop(...)` notation to describe those references. The button records the stage/action at click time, so a later stage change cannot relabel it. It sends no Instagram message.
-
-```text
-lets(
-  s, prop("Stage (AI Fills First)"),
-  a, ifs(
-    s == "Contacted", format(toNumber(prop("Follow-Ups Sent")) + 1),
-    s == "Replied", if(prop("Details Sent"), format(toNumber(prop("Signup Nudges Sent")) + 1), "initial"),
-    s == "Accepted", if(prop("Onboarding Sent"), format(toNumber(prop("Onboarding Nudges Sent")) + 1), "initial"),
-    s == "Activated", if(prop("Feedback Requested"), "reminder", "request"),
-    "blocked"
-  ),
-  s + "|" + a + "|" + formatDate(now(), "YYYY-MM-DDTHH:mm:ssZ")
-)
-```
-
-Example receipt: `Replied|1|2026-10-20T20:00:00+01:00`. Click only after the actual DM and while the displayed action is ready. Before the first baseline, an initial response can be copied directly from RESPONSE DM and recorded with the same button. The worker independently rejects unknown/early/skipped/duplicate actions; it never overwrites a verified event date. Do not combine the button with a checkbox/counter change. Native button configuration is a one-time maintainer setup; the API schema migration cannot configure Notion buttons.
-
-## Concurrency and operational limits
-
-The existing worker uses a nonblocking Linux flock across follow-ups, stage history and scorecards. Keep every invocation in that same worker/container and never delete the lock file while it may be held. It is not a distributed lock for multiple hosts; no second worker is supported. Stable baselined rows use no per-row API reads/writes, preserving normal polling capacity. Changed rows get fresh reads and a final full-property/revision comparison before writing. Mutating requests are not blindly retried on rate limits/server errors; the next poll reads current state and resumes.
-
-Notion does not offer a conditional page PATCH. An edit in the narrow interval after the final GET remains possible; this implementation cannot promise transactional isolation from human edits. The worker never patches operator fields except when consuming an explicit Record Send receipt. Do not edit/click a row again while a receipt is pending; wait for the copy/action to refresh. Stage changes that occur and revert entirely between polls are unobservable. New in-stage Instagram replies/engagement are not available to this worker: the operator must progress the stage or select Inactive when follow-ups should stop. No Instagram/app-event integration is added.
-
-Approved copy is read from RESPONSE DM every run, identified by section metadata, not greeting text. Removing/renaming those section labels blocks warm copying until repaired; editing message wording does not affect eligibility. If that page is inaccessible or malformed, warm copy clears with Needs Review while cold/history/KPI work can continue. The test fixture is an audited page snapshot for parser regression only; runtime never uses it as a second message bank.
-
-## Original server setup reference
-
-If the two-minute Hetzner timer is already running, keep it; do not create a second timer or service. For an existing installation, use the compatibility migration above. This section documents the original installation only.
+## One-time server setup
 
 1. **Reuse the existing outreach AI qualification integration.** The qualification worker already polls and writes the same UNLXCK Beta Candidate Pipeline every ~2 minutes, so do not make a new Notion integration or issue a second token. Check that its integration can update `Copy Follow-Up`, `Synced Follow-Ups Sent`, and `Last Follow-Up Sent`.
 2. Check where that existing secret is injected. This script recognises `NOTION_TOKEN`, `NOTION_API_KEY`, or `NOTION_INTEGRATION_TOKEN` in its own process. If the qualification worker and Unlxck Docker worker already share one of these environment variables, no credential change is needed. **If the qualification worker is a separate service, the Docker worker does not automatically inherit its environment**: securely expose the *existing* token to the Docker worker via `/opt/unlxck/.env.production` or invoke this script from the existing qualification worker instead. Never print or commit the secret. The data source ID already points at the current pipeline; optionally set `NOTION_OUTREACH_DATA_SOURCE_ID`.
@@ -121,6 +39,98 @@ If the two-minute Hetzner timer is already running, keep it; do not create a sec
     sudo journalctl -u unlxck-notion-followups.service -n 30 --no-pager
 
 The systemd timer lives on the host and calls the running worker. A run may fail while the worker restarts during backend deployment; the next scheduled run will retry. Confirm Docker is installed at /usr/bin/docker; replace that path if necessary.
+
+## Follow-up event history and safe Notion UX
+
+The Notion outreach data source now has four additive properties:
+
+- `Follow-Up 1 Sent At` and `Follow-Up 2 Sent At`: separate event times.
+  Never erase either automatically; corrections require checking Instagram.
+- `Safe Next Due`: the worker's materialized next eligible date/time.
+- `Follow-Up Timing`: shows waiting, ready, completed or needs review.
+
+Existing `Last Follow-Up Sent` remains only for legacy compatibility.
+When a row has exactly one follow-up, the worker can copy its legacy date to
+the new first-send property. When it has two, the legacy last-send value can
+only populate the second-send property; the first date is **not inferred**.
+Pre-existing cases without send dates remain unverified.
+
+### Recording an action
+
+After manually sending a DM, use the existing sent checkbox or the existing stage-specific counter once. The worker records the observation timestamp and recalculates the next due date. No new button, form, receipt field or manual date entry is required. Keep cold, signup and onboarding counters separate. Existing recorded timestamps are preserved; first-observed historical nonzero counters without timestamps remain unscheduled for review rather than being assigned today's date.
+
+### Eligibility and what operators see
+
+- Follow-up 1: three calendar days after `Date Contacted`.
+- Follow-up 2: **later of** Day 8 after initial contact and 120 elapsed
+  hours after the recorded first send. For a *date-only* first-send entry,
+  conservatively wait until the beginning of the sixth calendar day after it.
+- If not yet eligible, `Copy Follow-Up` says **WAIT**; it contains no
+  sendable script. If the date is missing or the counter conflicts with
+  history, it says **NEEDS DATE** or **NEEDS REVIEW**.
+- Once eligible, `Copy Follow-Up` contains the existing calculated DM.
+- At two sends, `Copy Follow-Up` becomes empty and `Safe Next Due` is
+  empty. Replied and Accepted have a separate automatic reminder schedule for the manual signup/onboarding check-in; no Instagram messages are ever sent automatically.
+- A blank `Safe Next Due` is **correct** for terminal or blocked records;
+  the `Follow-Up Timing` field explains the reason.
+
+Use `Safe Next Due` and `Follow-Up Timing` as the two operator-facing
+scheduling properties; hide the older formula-based `Actual Next Due`,
+`Next Follow-Up Due`, `Follow-Up DM`, and `Next DM to Copy` from the
+sending view. Those existing formulas are retained for compatibility and
+may not know about the safety guard: **never send directly from them**.
+The Notion `3C. MISSING SEND DATE` view isolates the historical exceptions.
+Historical records with unknown send times remain blocked for review; do not assign today's date or require operators to enter dates.
+
+### Deployment verification
+
+The additive Notion schema changes were made before this PR was merged; the
+previous worker ignores the new fields. Merge and deploy the worker before
+switching the operator view from its existing `Actual Next Due` to
+`Safe Next Due`. Once deployed, confirm a complete cron run and check
+sample records for waiting/ready/blocked/complete states and event dates.
+Disable any older Notion automation overwriting `Copy Follow-Up`.
+No additional poller, Notion token, or separate scheduling service is needed.
+
+## Warm follow-ups: automatic timestamps, no manual date fields
+
+The existing two-minute Hetzner sync handles warm actions with no extra token, timer, or form. It preserves cold follow-ups, stage history and existing send dates. Instagram sending itself remains manual.
+
+| Operator action after real Instagram send | Worker timestamps | Reminder |
+| --- | --- | --- |
+| Replied: tick **Details Sent** | Details Sent At | 3 days after signup link |
+| Set **Signup Nudges Sent** 0 → 1 | Signup Nudge 1 At and Warm Last Nudge At | 4 days later |
+| Set **Signup Nudges Sent** 1 → 2 | Warm Last Nudge At | Stop |
+| Accepted: tick **Onboarding Sent** | Onboarding Sent At | 3 days after instructions |
+| Set **Onboarding Nudges Sent** 0 → 1 | Onboarding Nudge 1 At and Warm Last Nudge At | 4 days later |
+| Set **Onboarding Nudges Sent** 1 → 2 | Warm Last Nudge At | Stop |
+| Activated: tick **Feedback Requested** | Feedback Requested At | Final feedback check 5 days later |
+| Tick **Feedback Reminder Sent** | Existing Warm Last Nudge At summary | Stop |
+
+**Activated means the founder has confirmed the fighter used Unlxck**. The existing stage pass records the stage's observed date in **Observed Since** automatically. The feedback request is due four full days after that observation. Five-minute confirmation, Stage History and existing milestone/KPI calculations retain their existing definitions. The stage pass runs before scheduling, using the same worker invocation. A newly observed transition to Contacted fills a missing Date Contacted; a historical Contacted baseline does not invent a contact date.
+
+**Safe Next Due** now materializes scheduling for Replied, Accepted and Activated as well as Contacted. Replied requires an actual Details Sent timestamp; Accepted requires an actual Onboarding Sent timestamp. Changing stage alone never claims a signup link or access instructions were sent. First warm reminders wait three full days; final signup/onboarding reminders wait four full days after the actual first nudge. Feedback has one reminder five full days after the first request. Completion/progression stops the relevant sequence, and the stage pass clears Safe Next Due on Rejected/Inactive/other non-follow-up stages.
+
+Warm intervals use elapsed UTC hours and render Europe/London timestamps across DST. Date-only historical sends wait conservatively through the last day because their time of day is unknown. Cold Day 3 / later-of-Day 8 and 120-hour rules are unchanged. Overdue reminders keep their original due dates. Invalid/missing warm counter history has no next due date. The existing synced counters are baselined while Contacted; a zero observed between the query and fresh read can establish a real first-poll 0→1. An already-nonzero first observation cannot establish its send date.
+
+The existing warm Notion formulas still supply all message wording. This revision contains no RESPONSE DM reader, segment/enquiry routing, message bank, native button, receipt/state property or schema migration. Warm Last Nudge At remains the existing latest-send summary; separate signup/onboarding first-send fields are never replaced by that shared summary.
+
+**Deploy:** after review, deploy the existing Hetzner worker and retain its current two-minute sync. No schema migration, new property or operator setup is required. Confirm a test record's observed stage date, existing sent-action timestamp and Safe Next Due together; confirm existing historical timestamps/cold dates and scorecard values remain intact. This PR does not merge or deploy itself.
+
+**Live compatibility audit (2026-10-20):** read-only inspection matched all 32 required existing stage/action/scheduling field names and types; there are no added properties. The existing 3B Replied/Accepted view and 3C Activated view still use their current checkboxes, counters and Warm Next Due formula. No view/formula was edited. Those views display/sort the formula-based Warm Next Due, while Safe Next Due is the worker's existing materialized date. The connector exposes formula references but not formula source/evaluations; equivalence of displayed formula results, deployed worker writes and iPhone behavior must be checked on a test record at rollout. The schema/view inspection and unit tests do not establish live write success.
+
+## Behavior
+
+- Follow-Ups Sent 0 → 1: set the first-send timestamp only if unknown and this is a consecutive observed increase; compute the next safe due time and show WAIT until eligible.
+- Follow-Ups Sent 1 → 2: preserve the first event, store the second event separately, clear the follow-up copy and safe due date.
+- Replied/Accepted use new warm signup/onboarding branches, and Activated uses the feedback branch. Copy Follow-Up shows only a due sendable warm script, never operator instructions or WAIT.
+- Follow-up copy stays unchanged for Rejected/Inactive and the AI queue. The stage-history pass observes every pipeline stage, including records without Date Contacted.
+- On first execution, a record with an unknown historical send date is **not assigned today's date**. The job flags it in Copy Follow-Up and reports the exception count. Date/time is only recorded for *consecutive* count increases observed after baseline sync when existing event evidence is available.
+- The hidden server-owned field **Synced Follow-Ups Sent** distinguishes first observation from later changes. Do not manually edit it.
+- Once this server job runs successfully, disable the existing Notion copy-text-sync automation so two systems do not overwrite the same field.
+- Only one timer should run at a time. Errors are reported to the systemd journal and are retried at the next scheduled run.
+
+Important: this is polling rather than an instantaneous webhook. Date recorded uses Europe/London on the day of observation (normally within two minutes), not a timestamp proven to be when the Instagram DM was sent. If a lead's count changes just before midnight and is observed after midnight, the observed date may differ from the actual send date. The existing sent action is sufficient; do not add a separate action.
 
 ## Outreach milestones and five-minute stage confirmation
 
