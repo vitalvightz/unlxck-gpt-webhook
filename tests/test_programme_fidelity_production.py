@@ -66,7 +66,9 @@ def test_intake_through_finalizer_preserves_real_goals_and_all_appointments(prod
     _, stage1, final, client = production_replay
     brief = stage1["planning_brief"]
     assert len(client.responses.calls) == 1
-    assert final["stage2_validator_report"]["errors"] == []
+    # This historical model response predates required AI-authored Easier.
+    # Reconciliation must not fabricate it; all programme/safety checks remain clean.
+    assert all(error["code"] == "exercise_coaching_missing" for error in final["stage2_validator_report"]["errors"])
     assert programme_fidelity_findings(brief, final["final_plan_text"]) == []
     assert final["stage2_validator_report"]["programme_reconciliation"]["model_call_used"] is False
     goals = {g["goal"]: g for g in brief["goal_preservation"]}
@@ -322,7 +324,9 @@ def test_earlier_saved_intakes_and_recorded_responses_have_the_same_fidelity_con
     assert appointment_budget_exceeded(brief["weekly_role_map"], 6)
     assert any(w["code"] == "total_session_budget_exceeded" for w in final["stage2_validator_report"]["warnings"])
     assert programme_fidelity_findings(brief, final["final_plan_text"]) == []
-    assert final["stage2_validator_report"]["errors"] == []
+    # This historical model response predates required AI-authored Easier.
+    # Reconciliation must not fabricate it; all programme/safety checks remain clean.
+    assert all(error["code"] == "exercise_coaching_missing" for error in final["stage2_validator_report"]["errors"])
     assert all(g["satisfied"] for g in brief["goal_preservation"])
     assert "Max-Power Bag Burst" in final["final_plan_text"]
     if name == "earlier_with_notes":

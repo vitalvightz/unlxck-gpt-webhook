@@ -12,7 +12,19 @@ from api.services.today_service import build_today_command_view, upsert_session_
 from api.services.xp_progress import _RecordRead, _opportunities
 from api.notification_models import NotificationPreferences
 from tests.support import FakeStore
-from tests.test_structured_plan_models import _valid_plan
+from tests.test_structured_plan_models import _valid_plan as _schema_valid_plan
+
+
+def _valid_plan():
+    plan = _schema_valid_plan()
+    # Schema examples carry a bare alternative movement. These resolver tests
+    # use actual actionable, same-movement authored coaching instead.
+    for week in plan["weeks"]:
+        for day in week["days"]:
+            for session in day["sessions"]:
+                for block in session["blocks"]:
+                    block["regression_options"] = ["Use a shallower pain-free squat."]
+    return plan
 
 
 ATHLETE = "effective-plan-athlete"

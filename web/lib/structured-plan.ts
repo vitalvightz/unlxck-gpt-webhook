@@ -1038,7 +1038,7 @@ export function getBlockAdjustmentDisplay(
   const embeddedStops: string[] = [];
 
   for (const rawProgression of progressionCandidates) {
-    let candidate: string | null = rawProgression;
+    let candidate: string | null = rawProgression.replace(/^Progress(?:ion)?:\s*/i, "");
     const match = EMBEDDED_STOP_RULE_LABEL_RE.exec(rawProgression);
     if (match) {
       candidate = cleanText(rawProgression.slice(0, match.index).replace(/[\s—–\-:;,.]+$/, ""));

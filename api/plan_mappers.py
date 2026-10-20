@@ -610,6 +610,9 @@ def _map_plan_detail(
         and summary.status in {"ready", "publishable_with_flags"}
     ):
         display_plan_text = str(row.get("final_plan_text") or "")
+    if not (planning_brief or {}).get("custom_plan"):
+        from fightcamp.exercise_coaching_source import validate_source_coaching
+        display_plan_text, _ = validate_source_coaching(planning_brief or {}, display_plan_text)
     effective_structured_plan = resolve_effective_structured_plan(
         row,
         raw_markdown=display_plan_text,

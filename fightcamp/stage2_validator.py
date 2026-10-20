@@ -4126,6 +4126,10 @@ def validate_stage2_output(*, planning_brief: dict, final_plan_text: str, final_
     countdown_blocks = _countdown_blocks(final_plan_text)
 
     errors: list[dict[str, Any]] = validate_goal_preservation(planning_brief)
+    from .exercise_coaching_source import validate_source_coaching
+    _, coaching_findings = validate_source_coaching(planning_brief, final_plan_text)
+    errors.extend(_issue(**finding, message="Exercise coaching requires source validation.",
+                         severity="blocker", confidence="high") for finding in coaching_findings)
     goal_contract_valid = not errors
     from .programme_fidelity import programme_fidelity_findings
     if final_programme:

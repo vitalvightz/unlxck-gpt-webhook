@@ -516,6 +516,11 @@ async def persist_plan_and_finalize(
     # Open camps (no_scheduled_fight) have no fight day even when fight_date
     # carries a stale value; mirror PlanRequest.to_payload and pass None so the
     # missing-D-0 invariant is not falsely tripped.
+    # Recheck the final artifact before every save: a held-text release must
+    # never bypass exercise-coaching safety via the markdown fallback.
+    from ..structured_plan_coaching import validate_final_coaching
+    final_result = validate_final_coaching(final_result)
+
     final_result = _apply_plan_contract_validation(
         final_result,
         fight_date=_contract_fight_date(request_body),

@@ -29,7 +29,9 @@ def _blocks(text: str) -> list[tuple]:
                 blocks.append(current)
             current = None
         elif current is not None and line.strip():
-            current[3].append(line.strip())
+            # Coaching wording is AI-owned; programme identity and dose remain exact.
+            if not re.match(r"^\s*(?:How|Cue|Coaching cues|Easier|Regression|Progress|Progression|Stop|Stop rule)\s*:", line, re.I):
+                current[3].append(line.strip())
     if current:
         blocks.append(current)
     return [(d, weekday, label, tuple(body)) for d, weekday, label, body in blocks]
@@ -73,9 +75,40 @@ def programme_fidelity_findings(planning_brief: dict, text: str) -> list[dict]:
 
 
 def reconcile_authoritative_programme(planning_brief: dict, text: str) -> dict:
+    from .exercise_coaching_source import source_coaching, validate_source_coaching
+    original = text
+    text, coaching_findings = validate_source_coaching(planning_brief, text)
     schedule = render_weekly_schedule_section(planning_brief=planning_brief, blocks=None)
     if not schedule:
-        return {"text": text, "applied": False, "findings": []}
+        return {"text": text, "applied": text != original, "findings": [],
+                "coaching_rejections": coaching_findings}
+    authored = source_coaching(text)
+    # Replace only labelled display metadata at an exact occurrence. Never move
+    # coaching to another day, appointment or exercise when correcting a dose.
+    from .exercise_coaching_source import _DAY, _EXERCISE, _LABEL
+    merged, pending = [], None
+    day = title = None
+    from .exercise_coaching_source import coaching_identity
+    for line in schedule.splitlines():
+        if header := _DAY.match(line):
+            pending = None
+            day, title = int(header[1] or header[2]), coaching_identity(header[3])
+        elif exercise := _EXERCISE.match(line):
+            pending = authored.get((day, title, coaching_identity(exercise[1])))
+            merged.append(line)
+            if pending:
+                merged.extend(pending["lines"])
+            continue
+        elif line.startswith("#"):
+            pending = None
+        label = _LABEL.match(line)
+        if label:
+            from .exercise_coaching_source import _FIELDS
+            field = _FIELDS[label[1].lower()]
+            if field in {"progression_rule", "regression_options"} or (pending and field in pending["fields"]):
+                continue
+        merged.append(line)
+    schedule = "\n".join(merged)
     lines = str(text or "").splitlines()
     start = next((i for i, line in enumerate(lines) if _WEEK.match(line) or _DAY.match(line)), None)
     if start is None:
@@ -91,7 +124,8 @@ def reconcile_authoritative_programme(planning_brief: dict, text: str) -> dict:
         facts += " Weight information is incomplete; no individual weight-cut target is assumed."
     prefix = "\n\n".join(p for p in ("# Fight Camp Plan", lead, facts) if p)
     corrected = "\n\n".join(p for p in (prefix, schedule, "\n".join(lines[end:]).strip()) if p)
-    return {"text": corrected, "applied": corrected != text,
+    return {"text": corrected, "applied": corrected != original,
+            "coaching_rejections": coaching_findings,
             "findings": programme_fidelity_findings(planning_brief, corrected),
             "corrected_finding_count": len(programme_fidelity_findings(planning_brief, text)),
             "authority": "scheduled_roles_and_resolved_prescriptions", "model_call_used": False}

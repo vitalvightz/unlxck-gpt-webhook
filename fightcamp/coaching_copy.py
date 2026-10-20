@@ -129,11 +129,10 @@ def readable_stop(rules):
 
 
 def concise_coaching(fields):
-    """One execution cue, one Easier, and lossless stop criteria.
+    """One execution cue, source-authored Easier options, and lossless stops.
 
-    Idempotent by construction: recovery selects, it never appends an alternative
-    to an already actionable regression. Different wording of the same numeric
-    reduction therefore cannot multiply on subsequent reads.
+    Idempotent by construction: recovery never appends an invented alternative.
+    Preserve each distinct AI-authored option without rewriting its wording.
     """
     result = deepcopy(fields)
     cues = []
@@ -161,6 +160,6 @@ def concise_coaching(fields):
         lead = short_cue((execution or cues)[0])
         result["coaching_cues"] = [lead]
     options = _unique(result.get("regression_options"))
-    result["regression_options"] = [compact_instruction(x) for x in options[:1]]
+    result["regression_options"] = options  # Validated AI wording is the source; never rewrite it.
     result["stop_rules"] = readable_stop(stops)
     return result

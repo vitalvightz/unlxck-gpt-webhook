@@ -1959,7 +1959,7 @@ def test_open_plan_prompt_carries_authoritative_weekday_contract():
     assert 'event_context.event_type to "none"' in prompt
 
 
-def test_open_plan_prompt_constrains_progression_and_deload_by_exercise_type():
+def test_open_plan_conversion_prompt_projects_authored_adjustments_only():
     prompt = build_structured_plan_prompt(
         plan_markdown="# Open plan",
         planning_brief=_open_plan_brief("Monday", "Tuesday"),
@@ -1967,15 +1967,9 @@ def test_open_plan_prompt_constrains_progression_and_deload_by_exercise_type():
 
     assert "PER-BLOCK PROGRESSION & DELOAD (open plans only)" in prompt
     assert '"deload_rule"' in prompt
-    for needle in (
-        "aerobic conditioning -> duration, pace",
-        "rehab/prehab -> symptom-led only",
-        "warm-up/preparation -> normally unchanged",
-        "NEVER force progression where none is appropriate",
-    ):
-        assert needle in prompt, needle
-    # The deload instruction must stay block-specific, not a blanket set cut.
-    assert 'Do NOT write "halve the sets" for a block that has no sets.' in prompt
+    assert 'Preserve each source "progression_rule" and "deload_rule" verbatim' in prompt
+    assert "Missing source fields stay empty" in prompt
+    assert "Never create a progression or Easier note" in prompt
 
 
 def test_block_name_offering_a_choice_keeps_one_exercise_and_swaps_the_other():
@@ -2094,21 +2088,17 @@ def test_conditional_swap_is_never_routed_into_progression_rule():
     assert "never put a conditional swap there" in " ".join(prompt.split())
 
 
-def test_open_plan_prompt_demands_a_quantified_step_without_inventing_load():
+def test_open_plan_conversion_prompt_forbids_authoring_missing_progress():
     prompt = build_structured_plan_prompt(
         plan_markdown="# Open plan",
         planning_brief=_open_plan_brief("Monday", "Tuesday"),
     )
 
-    # The step must be stated in the block's own units, not hedged.
-    assert "BE SPECIFIC" in prompt
-    assert "SAME units the block already" in prompt
-    assert '"3 x 30 sec" progresses to "Go to 3 x 40 sec"' in " ".join(prompt.split())
-    for hedge in ('"small"', '"slowly"', '"gradually"'):
-        assert hedge in prompt, hedge
-    # ... but a kilo target is never invented for an RPE-anchored lift.
     assert "Never invent a number the plan does not have" in prompt
-    assert "do NOT name a kilo or percentage target" in " ".join(prompt.split())
+    assert "Missing source fields stay empty" in prompt
+    assert "not authoring adjustments" in prompt
+    assert "You own the Progress" not in prompt
+    assert "author a useful short note" not in prompt
 
 
 def test_dated_camp_prompt_has_no_open_plan_progression_contract():

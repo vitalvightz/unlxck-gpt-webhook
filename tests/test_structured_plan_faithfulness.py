@@ -630,6 +630,9 @@ def test_prescription_omission_warns_without_discarding_source_backed_card():
     # Only omissions are under test; retained dose fields must match the source.
     block["sets"] = 3
     block["reps"] = 4
+    # This omission fixture has no authored adjustment in its source.
+    block.pop("progression_rule", None)
+    block["regression_options"] = []
     block.pop("rest")
     block.pop("effort")
     block["coaching_cues"] = ["Drive through your legs and hips, keep a tall chest."]

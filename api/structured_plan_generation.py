@@ -3342,7 +3342,7 @@ def build_structured_plan_outcome(
         # Conversion cannot turn a quality cue or an ungrounded number into a
         # programming instruction. Use the same deterministic recovery as reads.
         from .structured_plan_coaching import recover_selected_coaching
-        plan_dict = recover_selected_coaching(plan_dict, planning_brief or {})
+        plan_dict = recover_selected_coaching(plan_dict, planning_brief or {}, source_text=raw_markdown)
         # Hard invariant for every candidate that can ship (first pass,
         # schema-salvaged, faithfulness-pruned or model-repaired): conversion
         # never costs Stage 1 strength/conditioning the source rendered. A card
@@ -3813,25 +3813,19 @@ The JSON object MUST conform to the StructuredTrainingPlan schema:
   "purpose" (what the exercise develops), "why_today" (why it is placed today),
   "coaching_cues" (execution-only how-to instructions),
   "regression_options"/"substitutions" (safer or alternative exercises),
-  "progression_rule" (exercise-level advancement only), and "stop_rules"
+  "progression_rule" (authored exercise progression or quality guidance), and "stop_rules"
   (stop/safety criteria). Each stop_rules item MUST be athlete-facing, contain one
   trigger only, and use no more than 9 words. Preserve the source meaning and never
   invent a new safety criterion. Preserve purpose/why_today as structured backend context,
   but NEVER copy those explanations into coaching_cues.
 - Keep every planner-selected exercise on its assigned day with its exact dose
   and complete contrast-pair name. Do not split, drop or rename members.
-- Emit one Cue, at most 9 words. You own the Progress and Easier notes for
-  the FINAL session in the plan below. Read its complete exercise prescription,
-  session totals, purpose, phase, athlete context and restrictions before choosing
-  an adjustment. Keep an existing appropriate note; create one only if missing.
-  Choose a meaningful exercise-specific next step or easier version yourself.
-  Do not mechanically add one minute, one rep or one set to every exercise.
-  Keep each adjustment as short as the current UI: usually 2-5 words, maximum 9.
-  Preserve per-set/per-side scope and any essential condition. Do not rewrite
-  today's dose, rest, effort, exercise membership or schedule. Omit Progress for
-  taper, final-fortnight, injury/fatigue/cut restrictions or work that should not
-  advance. Omit either field when no useful adjustment is appropriate. No em dashes.
-  Do not duplicate the cue in subtitles or a separate Coaching cues section.
+- Project the final-session AI's Progress and Easier notes verbatim into
+  progression_rule and regression_options. You are converting validated source,
+  not authoring adjustments. Never invent, replace, shorten or expand either
+  instruction. If a field is absent, leave it absent. Preserve every condition,
+  quantity, per-set/per-side scope and safety restriction. Keep today's dose,
+  rest, effort, exercise membership and schedule unchanged.
   Locked tactical/visualisation steps retain exact bank wording and membership.
 - Preserve a technical drill's setup and movement sequence in
   execution_instructions, separate from its single short coaching_cues item.
@@ -3850,9 +3844,7 @@ The JSON object MUST conform to the StructuredTrainingPlan schema:
   coaching_cues. An explicit source volume, rest, effort/RPE, or Cue must never be
   omitted or simplified away in the structured block. Ignore a
   bare separator label such as "Regression /" rather than rendering it as athlete
-  guidance. If Progress or Easier is absent, author a useful short note from the
-  final session context when appropriate; it need not already exist in the source. Do NOT put taper/week dose restrictions, injury
-  restrictions, session-programming constraints, or stop criteria into it, and
+  guidance. If Progress or Easier is absent, leave its field empty. Do not invent it;
   never put a conditional swap there: "Switch to X if the joints feel sore" is
   a regression/substitution, not a progression.
 - Carry mental/mindset coaching into mindset_anchor at BOTH the session level and
@@ -4078,58 +4070,16 @@ values in the generic root skeleton):
   stated, otherwise use "GPP" as a neutral internal value. Never surface phase
   labels as open-plan headings.
 
-PER-BLOCK PROGRESSION & DELOAD (open plans only). The renewable block runs
-Week 1 baseline, Week 2 small progression, Week 3 highest controlled exposure,
-Week 4 deload/reassess. The athlete reads YOUR wording on the block card, so
-each block must carry its OWN instruction rather than a generic "add a set or
-load" line:
-- "progression_rule": how to progress THIS exercise across Weeks 2 and 3 —
-  Week 2 a small justified step, Week 3 the highest controlled exposure.
-- "deload_rule": a block field alongside "progression_rule" — how THIS
-  exercise deloads or is reassessed in Week 4.
-- NEVER write week numbers INSIDE either line. The app shows one week at a
-  time and labels it itself, so "Week 2 add 1 more burst, week 3 add 1 more
-  burst, week 4 keep same low volume" reads as a wall of other weeks' work on
-  every card. Write the step alone — "Add one more burst" — and put the week-4
-  instruction in "deload_rule", not in a clause. Same for "deload_rule": no
-  "Week 4 ..." prefix.
-- Match the variable to the exercise type:
-  * strength -> load, reps or sets
-  * power/speed -> quality, reps or sets, protecting speed and avoiding extra
-    fatigue
-  * aerobic conditioning -> duration, pace, or an HR/RPE ceiling
-  * intervals -> reps, work duration, recovery, or intensity
-  * technical/skill -> complexity, resistance, constraints, or live application
-  * mobility -> range or control, or no progression at all
-  * rehab/prehab -> symptom-led only; never automatically add load or volume
-  * warm-up/preparation -> normally unchanged; never force progression
-- NEVER force progression where none is appropriate. Omit "progression_rule",
-  or say plainly that it stays unchanged, when the block should not advance
-  (warm-ups, symptom-led rehab, pure mobility).
-- "deload_rule" is block-specific too: cut working sets on a strength lift, keep
-  the easy aerobic duration but stay strictly easy, drop interval reps, reduce
-  live resistance on skill work, leave a warm-up or mobility piece as written.
-  Do NOT write "halve the sets" for a block that has no sets.
-- BE SPECIFIC. You are writing these lines next to the block's own
-  prescription, so use it: name the target in the SAME units the block already
-  shows. "3 x 30 sec" progresses to "Go to 3 x 40 sec", "2 x 6/side" to "Take
-  it to 2 x 8/side", "20 min easy" to "Ride 25 min at the same easy pace",
-  "5 rounds" to "Add a sixth round". A line whose only content is "small",
-  "slowly", "gradually", "a bit" or "where you can" is NOT acceptable — every
-  progression_rule and deload_rule must state what the athlete actually does
-  this week.
-- Never invent a number the plan does not have. When the block prescribes no
-  absolute load (an RPE- or effort-anchored lift with no kg/% on the card),
-  do NOT name a kilo or percentage target: progress it in the units that ARE
-  prescribed — reps, sets, or the effort/RPE step — or say to add the smallest
-  jump available on the bar. Only cite a load number when the block itself
-  carries one, and then step it from that number.
-- Respect injury restrictions, fatigue rules, sparring protection and every
-  other constraint the plan states. Keep both lines athlete-facing, plain and
-  at most one short sentence.
-- These fields only reword the instruction for the block already in the plan.
-  Never change exercise membership, invent exercises, or restate the Week 1
-  dose as a progression.
+PER-BLOCK PROGRESSION & DELOAD (open plans only).
+- Preserve each source "progression_rule" and "deload_rule" verbatim.
+- These fields project the final-session AI's wording and the authorised
+  programme. Never create a progression or Easier note from exercise type,
+  baseline dose, week number or a generic 4-week development policy.
+- Never invent a number the plan does not have. No new sets, reps, duration,
+  load, effort, rest change or future workout. Missing source fields stay empty.
+- Preserve source-specific conditions, movement quality and recovery limits.
+- The existing week display selects the source progression or deload rule;
+  conversion does not write a new instruction for the week.
 
 AUTHORITATIVE open_plan_spec:
 {spec_json}"""

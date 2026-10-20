@@ -1113,3 +1113,22 @@ def test_shorter_rest_edit_is_checked_against_injury_guidance():
                          block_id=squat_id(today), dose={"mode": "reps", "sets": 3, "reps": 5,
                                                         "load_or_intensity": "100 kg", "rest_seconds": 30})
     assert response.status_code == 409, response.text
+
+
+def test_dose_edit_clears_inherited_adjustments_but_preserves_the_edited_prescription():
+    client, store, _ = _build_client()
+    today = seed_dated(store)
+    row = store.plans[PLAN_ID]
+    block = row["structured_plan"]["weeks"][0]["days"][0]["sessions"][0]["blocks"][0]
+    block.update(progression_rule="At the same dose, refine squat control.",
+                 regression_options=["Use a shallower pain-free squat."])
+    original = copy.deepcopy(row["structured_plan"])
+    response, _ = change(client, PLAN_ID, action="edit", date=today.isoformat(), session_id=SESSION_ID,
+        block_id=squat_id(today), dose={"mode": "reps", "sets": 2, "reps": 5, "load_or_intensity": "80 kg"})
+    assert response.status_code == 200, response.text
+    actual = response.json()["session"]["blocks"][0]
+    assert actual["sets"] == 2 and actual["reps"] == 5 and actual["load"]["value"] == 80
+    assert not actual.get("progression_rule") and not actual.get("regression_options")
+    assert store.plans[PLAN_ID]["structured_plan"] == original
+    override = store.plans[PLAN_ID]["exercise_overrides"][-1]["block"]
+    assert not override.get("progression_rule") and not override.get("regression_options")

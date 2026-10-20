@@ -1251,6 +1251,10 @@ def apply_change(
         new_block = deepcopy(dict(occurrence.block or {}))
         if payload.get("dose") is not None:
             dumped = _validated_dose(payload["dose"])
+            # A changed prescription invalidates the old AI promise. The athlete
+            # may supply their own instruction below; never regenerate one.
+            new_block.pop("progression_rule", None)
+            new_block["regression_options"] = []
             new_block = _edited_dose(new_block, dumped)
             # A deload (same exercise, nothing raised) never needs clearance.
             # Anything heavier or not comparable is validated against today's

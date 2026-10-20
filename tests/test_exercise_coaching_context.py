@@ -20,10 +20,11 @@ FIELDS = ("coaching_cues", "regression_options", "progression_rule", "stop_rules
 
 
 def authored(prefix):
+    prefix = prefix.replace("0", "Z").replace("1", "A").replace("2", "B")
     return {
         "coaching_cues": [f"{prefix}: drive from the floor.", f"{prefix}: keep the ribs stacked.",
                           f"{prefix}: finish with a balanced stance."],
-        "regression_options": [f"{prefix}: use the lighter training bar while keeping the same dose."],
+        "regression_options": [f"{prefix}: use a smaller pain-free movement at the same dose."],
         "progression_rule": f"{prefix}: once balanced, refine the drive into the overhead finish at the same dose.",
         "stop_rules": [f"{prefix}: end the set if the overhead finish loses control."],
     }
@@ -32,7 +33,6 @@ def authored(prefix):
 def execution_fields(prefix):
     """The first authored execution cue owns the compact card."""
     fields = authored(prefix)
-    fields["coaching_cues"].append(fields.pop("progression_rule"))
     return concise_coaching(fields)
 
 
@@ -79,7 +79,7 @@ def test_authored_unknown_movement_progress_is_not_added_during_taper():
                   **authored("Coach")}
     assert exercise_coaching(assignment, {}, phase="GPP", d_day=32) == execution_fields("Coach")
     maintenance = exercise_coaching(assignment, {}, phase="TAPER", d_day=6)
-    assert not maintenance.get("progression_rule")
+    assert maintenance.get("progression_rule") == assignment["progression_rule"]
     assert maintenance == execution_fields("Coach")
 
 
@@ -123,6 +123,8 @@ def test_duplicate_recovery_keeps_each_sessions_coaching_and_dose(identity, reve
         i = int(session["title"][-1])
         block = session["blocks"][0]
         expected = execution_fields(f"Session {i}")
+        expected.pop("progression_rule")
+        expected["regression_options"] = []
         assert all(block.get(key) == value for key, value in expected.items())
         assert not block.get("progression_rule")  # Neither has an authorised future increase.
         assert block["sets"] == i and block["reps"] == 2 and block["rest"]["value"] == 120
@@ -145,7 +147,7 @@ def test_existing_coach_fields_always_win_over_bank_and_profiles():
     for i, session in enumerate(sessions(recovered)):
         block = session["blocks"][0]
         assert all(block.get(k) == v for k, v in execution_fields(f"Existing coach {i}").items())
-        assert not block.get("progression_rule")
+        assert block.get("progression_rule") == authored(f"Existing coach {i}")["progression_rule"]
 
 
 def test_source_fallback_reads_duplicate_exercises_from_their_own_session():

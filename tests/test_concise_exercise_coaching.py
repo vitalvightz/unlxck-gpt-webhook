@@ -33,7 +33,7 @@ def test_saved_examples_are_idempotent_preserve_dose_and_retain_every_warning(re
     assert blocks(api) == blocks(after)
     for before, current in zip(blocks(original), blocks(after)):
         assert {k: current.get(k) for k in DOSE} == {k: before.get(k) for k in DOSE}
-        assert len(current.get("regression_options", [])) <= 1
+        assert all(option in before.get("regression_options", []) for option in current.get("regression_options", []))
         assert len(current.get("stop_rules", [])) <= 1
         assert len(current.get("coaching_cues", [])) <= 1
         if before.get("coaching_cues"):
@@ -43,13 +43,14 @@ def test_saved_examples_are_idempotent_preserve_dose_and_retain_every_warning(re
             assert condition.casefold() in " ".join(current["stop_rules"]).casefold()
 
 
-def test_actual_band_punch_has_one_easier_short_cue_and_all_four_stop_criteria():
+def test_actual_band_punch_preserves_authored_easier_short_cue_and_all_four_stop_criteria():
     record = RECORDS[1]
     current = next(b for b in blocks(recover_selected_coaching(record["card"], record["brief"]))
                    if b["display_name"] == "Band-Resisted Punch")
     assert current["coaching_cues"][0] == "Keep punches balanced; return to guard"
     assert len(current["coaching_cues"][0].split()) <= 7
-    assert current["regression_options"] == ["Reduce reps per set to 1"]
+    source = next(b for b in blocks(record["card"]) if b["display_name"] == "Band-Resisted Punch")
+    assert current["regression_options"] == source["regression_options"]
     assert current["stop_rules"] == [
         "Stop if punch speed worsens, guard return fails, balance deteriorates, or pain appears."]
     assert not current.get("progression_rule")  # actual D-13 taper card
@@ -65,7 +66,7 @@ def test_fast_fallback_keeps_execution_first_and_exact_dose_in_detail():
     current = next(b for b in session["blocks"] if b["display_name"] == "Band-Resisted Punch")
     assert not re.match(r"\d", current["coaching_cues"][0])
     assert len(current["coaching_cues"][0].split()) <= 7
-    assert len(current["regression_options"]) == 1
+    assert not current["regression_options"]  # No AI-authored source was supplied.
     assert len(current["stop_rules"]) == 1
     assert not current.get("progression_rule")
     assert (current["sets"], current["reps"], current["rest"]["value"]) == (1, 2, 120)
@@ -76,9 +77,9 @@ def test_fast_fallback_keeps_execution_first_and_exact_dose_in_detail():
     ["Use a lighter band.", "Reduce reps per set to 1"],
     ["Do one rep per set.", "Reduce repetitions from 2 to 1."],
 ])
-def test_one_actionable_easier_is_selected_without_appending_equivalent_prose(options):
+def test_authored_easier_options_remain_unchanged_without_appended_copy(options):
     actual = concise_coaching({"regression_options": options})
-    assert actual["regression_options"] == options[:1]
+    assert actual["regression_options"] == options  # Never select/rewrite the AI's alternatives.
     assert concise_coaching(actual) == actual
 
 
@@ -103,12 +104,12 @@ def test_labelled_and_unlabelled_versions_of_one_cue_do_not_multiply():
     assert concise_coaching(fields) == fields
 
 
-def test_standard_movement_profiles_emit_one_cue_and_nine_word_guidance():
+def test_standard_movement_profiles_keep_cues_and_stop_rules_concise():
     from fightcamp.exercise_coaching import _PROFILES
     for _, (cue, easier, _, stop) in _PROFILES:
         fields = concise_coaching({"coaching_cues": [cue, cue],
                                    "regression_options": [easier], "stop_rules": [stop]})
-        for key in ("coaching_cues", "regression_options", "stop_rules"):
+        for key in ("coaching_cues", "stop_rules"):
             assert len(fields[key]) == 1
             assert len(fields[key][0].split()) <= 9, fields[key]
         assert concise_coaching(fields) == fields
@@ -158,11 +159,15 @@ def test_october_11_style_progress_requires_an_actual_authorised_future_exposure
     future["selected_exercise_assignments"][0]["effective_prescription"] = "4 x 4 reps at max speed; rest 90 sec"
     brief = {"weekly_role_map": {"weeks": [{"phase": "SPP", "session_roles": [role, future]}]}}
     context = build_progression_context(brief)[occurrence_key(role, assignment, 18)]
+    assert not exercise_coaching(assignment, role, phase="SPP", d_day=18, progression_context=context).get("progression_rule")
+    assignment["progression_rule"] = "Next time add one rep per set (4 x 4)."
     current = exercise_coaching(assignment, role, phase="SPP", d_day=18, progression_context=context)
-    assert current["progression_rule"] == (
-        "Next D-15: add 1 rep/set if controlled and recovered.")
+    assert current["progression_rule"] == assignment["progression_rule"]
     # The saved coach wording survives unchanged when this future dose supports it.
-    recovered = recover_selected_coaching(record["card"], brief)
+    from api.structured_plan_deterministic_fallback import _session
+    matched_card = {"weeks": [{"days": [{"countdown_label": "D-18", "sessions": [_session(role, 18)]}]}]}
+    blocks(matched_card)[0]["progression_rule"] = assignment["progression_rule"]
+    recovered = recover_selected_coaching(matched_card, brief)
     jump = next(b for b in blocks(recovered) if b["display_name"] == "Jump Squat")
     assert jump["progression_rule"] == "Next time add one rep per set (4 x 4)."
     assert recover_selected_coaching(recovered, brief) == recovered

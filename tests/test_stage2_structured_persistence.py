@@ -51,7 +51,19 @@ from api.structured_plan_models import SCHEMA_VERSION
 
 from support import FakeOpenAIClient as _FakeClient
 from support import FakeStore, _build_request, _now
-from test_structured_plan_models import _valid_plan
+from test_structured_plan_models import _valid_plan as _schema_valid_plan
+
+
+def _valid_plan():
+    plan = _schema_valid_plan()
+    # Persistence fixtures carry actionable authored coaching rather than the
+    # schema example's bare alternate exercise with unknown equipment.
+    for week in plan["weeks"]:
+        for day in week["days"]:
+            for session in day["sessions"]:
+                for block in session["blocks"]:
+                    block["regression_options"] = ["Use a shallower pain-free squat."]
+    return plan
 
 
 class _StructuredAutomator:
