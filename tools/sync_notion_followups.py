@@ -190,7 +190,7 @@ def get_changes(page, today, templates=None):
 
     # Backfill unambiguous existing evidence. Never use a last-send date as the
     # first-send date for a record already at 2: it may belong to follow-up 2.
-    if count == 1 and not first and legacy:
+    if count == 1 and not first and legacy and synced in (None, 0, 1):
         first = legacy
         changes["Follow-Up 1 Sent At"] = date_patch(first)
     elif count == 2 and not second and legacy and synced in (None, 2, 2.0):
@@ -228,6 +228,13 @@ def get_changes(page, today, templates=None):
         due, status, message = warm_due_and_copy({**p, **warm_changes}, state, now, templates or {})
     elif stage != "Contacted":
         due, status, message = None, "No further follow-up", ""
+    for field, value in (("Follow-Up 1 Sent At", first), ("Follow-Up 2 Sent At", second)):
+        recorded = state["dates"].get(field)
+        current = date_value(p, field)
+        if recorded and not same_date_value(recorded, current):
+            state["reviews"]["Contacted"] = f"{field}: verified timestamp changed"
+        elif value:
+            state["dates"][field] = value
     if stage == "Contacted":
         if invalid_checkpoint:
             state["reviews"][stage] = "Invalid counter checkpoint"
@@ -350,15 +357,23 @@ def elapsed_due(value, days):
     return (stamp.astimezone(timezone.utc) + timedelta(days=days)).astimezone(LONDON)
 
 
+
+def read_sync_state(p):
+    raw = plain(p, SYNC_STATE)
+    state = json.loads(raw) if raw else {"version": 1, "flags": {}, "seconds": {}, "reviews": {}, "dates": {}}
+    if not isinstance(state, dict) or state.get("version") != 1:
+        raise ValueError("Unsupported follow-up sync state")
+    if any(not isinstance(state.get(key), dict) for key in ("flags", "seconds", "reviews", "dates")):
+        raise ValueError("Malformed follow-up sync state")
+    return state
+
 def warm_state(page, today):
     """Observe actions, atomically checkpoint evidence, and retain review latches."""
     import copy
 
     p = page["properties"]
     raw = plain(p, SYNC_STATE)
-    state = json.loads(raw) if raw else {"version": 1, "flags": {}, "seconds": {}, "reviews": {}, "dates": {}}
-    if state.get("version") != 1:
-        raise ValueError("Unsupported follow-up sync state")
+    state = read_sync_state(p)
     state = copy.deepcopy(state)
     changes = {}
     now = now_london(today).isoformat(timespec="seconds")
@@ -527,10 +542,7 @@ def consume_send_receipt(page, today):
     receipt = plain(p, SEND_RECEIPT)
     if not receipt:
         return page, {}
-    raw = plain(p, SYNC_STATE)
-    state = json.loads(raw) if raw else {"version": 1, "flags": {}, "seconds": {}, "reviews": {}, "dates": {}}
-    if state.get("version") != 1:
-        raise ValueError("Unsupported follow-up sync state")
+    state = read_sync_state(p)
     if state.get("receipt") == receipt:
         return page, {}
     state = copy.deepcopy(state)

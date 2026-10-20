@@ -158,6 +158,9 @@ def test_full_five_day_gap_recomputed_on_repeated_poll():
     page = row(stage="Contacted", sent="1", synced=1, first=instant.isoformat(),
                copied="",
                safe_due=prior_due, timing="Follow-up 2: waiting")
+    changes = sync.get_changes(page, datetime.fromisoformat("2026-10-20T18:00:00+01:00"))
+    assert set(changes) == {sync.SYNC_STATE}  # One-time immutable date snapshot.
+    apply(page, changes)
     assert sync.get_changes(page, datetime.fromisoformat("2026-10-20T18:00:00+01:00")) == {}
 
 
@@ -169,6 +172,9 @@ def test_equivalent_utc_and_local_date_representation_does_not_resync():
                copied="",
                safe_due="2026-10-24T17:00:00.000Z",
                timing="Follow-up 2: waiting")
+    changes = sync.get_changes(page, datetime.fromisoformat("2026-10-20T18:00:00+01:00"))
+    assert set(changes) == {sync.SYNC_STATE}  # One-time immutable date snapshot.
+    apply(page, changes)
     assert sync.get_changes(page, datetime.fromisoformat("2026-10-20T18:00:00+01:00")) == {}
 
 
@@ -1141,3 +1147,38 @@ def test_feedback_activation_uses_existing_confirmed_crm_observation():
     assert get_copy(changes) == TEMPLATES["feedback1"]
     assert "Stage Confirmed At" not in changes
     assert "First Meaningful Action At" not in changes
+
+
+@pytest.mark.parametrize("bad_state", ['[]', 'null', '{"version":1,"flags":[]}'])
+def test_invalid_state_shape_clears_copy_without_stopping_other_rows(monkeypatch, bad_state):
+    page = warm_row()
+    page["properties"][sync.SYNC_STATE] = sync.rich(bad_state)
+    writes = []
+    def request(method, path, body=None):
+        if method == "GET":
+            return copy.deepcopy(page)
+        writes.append(body["properties"])
+    monkeypatch.setattr(sync, "pages", lambda: iter([page]))
+    monkeypatch.setattr(sync, "request", request)
+    assert sync.sync(NOW, TEMPLATES) == (1, 1)
+    assert "Needs Review" in sync.plain(writes[0], "Follow-Up Timing")
+    assert writes[0]["Copy Follow-Up"] == sync.rich("")
+
+
+def test_cold_event_timestamp_changes_are_detected_without_rewriting_history():
+    page = row(stage="Contacted", sent="1", synced=1, first="2026-10-17T10:00:00+01:00", last_sent="2026-10-17T10:00:00+01:00")
+    apply(page, sync.get_changes(page, NOW, TEMPLATES))
+    page["properties"]["Follow-Up 1 Sent At"] = sync.date_patch("2026-10-16T10:00:00+01:00")
+    page["properties"]["Last Follow-Up Sent"] = sync.date_patch("2026-10-16T10:00:00+01:00")
+    changes = sync.get_changes(page, NOW, TEMPLATES)
+    assert "verified timestamp changed" in sync.plain(changes, "Follow-Up Timing")
+    assert "Follow-Up 1 Sent At" not in changes
+    assert "Last Follow-Up Sent" not in changes
+    assert sync.plain(apply(page, changes)["properties"], "Copy Follow-Up") == ""
+
+
+def test_cold_reversal_does_not_backfill_second_send_as_first():
+    page = row(stage="Contacted", sent="1", synced=2, last_sent="2026-10-19T10:00:00+01:00")
+    changes = sync.get_changes(page, NOW, TEMPLATES)
+    assert "Follow-Up 1 Sent At" not in changes
+    assert "Needs Review" in sync.plain(changes, "Follow-Up Timing")
