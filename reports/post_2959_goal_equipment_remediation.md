@@ -43,11 +43,14 @@ goals, then matched symptom hints as substrings:
 - Legacy regional goals (`Shoulders`, `Hip Mobility`, `Knees` → `quad_dominant`)
   set swim sensitivity or lower-limb unloading for uninjured athletes.
 
-**Correction** (`fightcamp/conditioning_boxing.py`): injury text keeps its
-existing substring matching, unchanged. Weak areas match region hints as whole
-words, so `knee stability`, `knees`, `hip mobility` and `shoulders` still
-count. Goals are never read as tissue state. Impact keywords are read from
-injury text only. The existing test `knee stability → unload` still passes.
+**Correction** (`fightcamp/conditioning_boxing.py`): the context flags read
+only injury text (unchanged substring matching) and restrictions. A
+performance weakness is something to improve, a functional limitation is
+something currently restricting training, and a medical restriction is an
+independent safety decision: only the last two may change aerobic
+preferences. A healthy boxer working on knee stability, hip mobility or
+shoulders keeps normal running and shadowboxing. The old
+`knee stability → unload` test is inverted accordingly.
 
 This is the root cause of `MI-e85f5cef1705`'s programme divergence. Selection
 tag maps already treat the two spellings the same (`GOAL_TAG_MAP["reactive"]
@@ -98,8 +101,8 @@ deliberately out of scope.
 
 ## 3. Targeted corrections
 
-- `fightcamp/conditioning_boxing.py`: `_whole_words` helper; the context flags
-  read injuries (substring, as before), weak areas (whole word) and no goals.
+- `fightcamp/conditioning_boxing.py`: the context flags read injuries
+  (substring, as before) and restrictions only.
 - `fightcamp/strength.py`: `_SPACE_ONLY_EQUIPMENT`, `_SPACE_ONLY_HELD_BACK` and
   `_required_strength_equipment`, used by both strength eligibility gates.
 - `fightcamp/stage2_payload.py`: the strength option's `universally_available`
@@ -202,3 +205,23 @@ running and sport-safety conditioning tests pass unchanged. Ruff and
 7. Observed, not investigated: Light Heavy Bag (Pacing Drill) is authored
    `system: aerobic` but rendered under a Glycolytic heading in one SPP
    session (Main, legacy-speed run). It belongs with `MI-cc45611f69c2`.
+
+## Addendum: merged follow-ups
+
+This PR also carries the two follow-ups (formerly #2961 and #2962).
+
+**Primary goal and legacy labels.** `GOAL_NORMALIZER` maps legacy labels to
+the intake form's values (`Speed`, `Speed / Reaction` → `speed`;
+`Power & Explosiveness` → `power`), and `primary_goal` is normalized with the
+same map. On Main, a "Speed / Reaction" primary was scored as `explosive`,
+and a "Maximal Strength" primary as conditioning, because the raw primary was
+not found among the normalized goals. Five legacy-label programmes now have
+Stage 2 payloads byte-identical to their intake-value equivalents.
+Intake-value programmes are unchanged.
+
+**Equipment (owner decision).** Mat/mats, line/tape, Towel Hang's `bar` and
+Adductor Squeeze's `pad` never gate eligibility (`NOT_REQUIRED_EQUIPMENT` in
+the shared normalizer), and ticking `dumbbells` satisfies the single-dumbbell
+rehab rows. The four UNKNOWN equipment reviews record the decision so the
+editor agrees. This supersedes deferred items 3, 4 and 6 above, and the mat
+preservation in §6.

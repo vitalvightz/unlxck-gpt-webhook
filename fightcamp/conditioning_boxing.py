@@ -174,16 +174,6 @@ def _conditioning_context_text(*groups: Any) -> str:
     return " ".join(parts)
 
 
-def _whole_words(*groups: Any) -> set[str]:
-    """Words in the groups, plus their singular when plural ("knees" -> "knee")."""
-    words: set[str] = set()
-    for word in re.findall(r"[a-z]+", _conditioning_context_text(*groups)):
-        words.add(word)
-        if word.endswith("s"):
-            words.add(word[:-1])
-    return words
-
-
 # ── Boxing aerobic functions ──────────────────────────────────────────────────
 def _sanitize_sport_language(text: str, *, fight_format: str) -> str:
     """Swap blacklisted sport language with sport-safe alternatives."""
@@ -315,14 +305,14 @@ def _boxing_aerobic_context_flags(
 ) -> dict[str, bool]:
     restriction_keys = _restriction_key_set(restrictions)
     injury_text = _conditioning_context_text(injuries)
-    # Goals are performance targets, never evidence about tissue state: the
-    # "reactive" speed goal is not an impact complaint and a "Shoulders" goal
-    # is not a sensitive shoulder. A weak area may name a body region ("knee
-    # stability"), but only as a whole word: "footwork" is not a foot problem.
-    weakness_words = _whole_words(weaknesses)
+    # Only injuries and restrictions describe what is limiting training now.
+    # Goals and weak areas are what the athlete wants to improve: a healthy
+    # boxer working on knee stability, footwork or shoulders still runs and
+    # shadowboxes normally, and the "reactive" speed goal is not an impact
+    # complaint. ``weaknesses``/``goals`` stay in the signature for callers.
 
     def _hinted(hints: set[str]) -> bool:
-        return any(token in injury_text for token in hints) or bool(weakness_words & hints)
+        return any(token in injury_text for token in hints)
 
     lower_limb_unload_desirable = _hinted(_LOWER_LIMB_UNLOAD_HINTS)
     impact_tolerance_reduced = bool(restriction_keys & _IMPACT_SENSITIVE_RESTRICTIONS)

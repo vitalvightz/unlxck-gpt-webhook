@@ -297,11 +297,12 @@ class TestBoxingAerobicContextFlags:
         )
         assert flags["lower_limb_unload_desirable"]
 
-    def test_knee_weakness_sets_lower_limb_unload(self):
+    def test_knee_weakness_is_not_a_limitation(self):
+        # A weak area is something to improve, not a current restriction.
         flags = _boxing_aerobic_context_flags(
             **self._base_kwargs(weaknesses=["knee stability"])
         )
-        assert flags["lower_limb_unload_desirable"]
+        assert not flags["lower_limb_unload_desirable"]
 
     def test_shoulder_injury_sets_upper_body_swim_sensitive(self):
         flags = _boxing_aerobic_context_flags(

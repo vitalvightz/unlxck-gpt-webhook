@@ -2,8 +2,8 @@
 
 Two defects, both reproduced on real bank rows and complete programmes:
 
-* Boxing aerobic ranking read goals and weak areas as symptom text by
-  substring. The "footwork" weak area (an intake option) contains "foot", and
+* Boxing aerobic ranking read goals and weak areas as symptom text. Only
+  injuries and restrictions describe a current limitation. The "footwork" weak area (an intake option) contains "foot", and
   the legacy "Speed" goal normalizes to "reactive", an impact keyword. A
   healthy boxer was ranked as if lower-limb impact had to be avoided.
 * Strength rows that spell out ``open_space`` were unreachable for every
@@ -60,13 +60,11 @@ def test_performance_selections_do_not_read_as_tissue_state(overrides):
     assert _context(**overrides) == _context()
 
 
-@pytest.mark.parametrize("weakness", ["knee stability", "knees", "hip mobility", "adductor groin"])
-def test_regional_weak_areas_still_ask_for_lower_limb_unloading(weakness):
-    assert _context(weaknesses=[weakness])["lower_limb_unload_desirable"]
-
-
-def test_regional_weak_area_still_marks_swim_sensitivity():
-    assert _context(weaknesses=["shoulders"])["upper_body_swim_sensitive"]
+@pytest.mark.parametrize("weakness", ["knee stability", "knees", "hip mobility", "adductor groin", "shoulders",
+                                      "sore hamstrings"])
+def test_weak_areas_are_improvement_targets_not_limitations(weakness):
+    # Performance weakness != functional limitation != medical restriction.
+    assert _context(weaknesses=[weakness]) == _context()
 
 
 @pytest.mark.parametrize("injury,flag", [
