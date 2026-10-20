@@ -223,6 +223,17 @@ def get_changes(page, today):
 
     due, status, message = due_and_copy(
         p, count, first, second, now, calculated["string"])
+    if (p["Stage (AI Fills First)"].get("select") or {}).get("name") in WARM_STAGES:
+        warm = p["Warm Next DM"].get("formula") or {}
+        if warm.get("type") != "string" or warm.get("string") is None:
+            raise ValueError(f"Missing calculated warm follow-up for {page['id']}")
+        # Only copy an actually due, sendable DM. Formula previews also show
+        # WAIT and operator instructions; never copy those into Instagram.
+        candidate = warm["string"]
+        sendable_prefixes = ("Hey mate,", "Final check mate.", "Quick final check mate.",
+                             "How have your", "Any quick thoughts")
+        message = candidate if candidate.startswith(sendable_prefixes) else ""
+        status = "Warm follow-up: ready" if message else "Warm follow-up: waiting"
     # A poll missed one or more intermediate send events. Never infer their
     # dates, and never show potentially premature sendable copy.
     if increased and not consecutive:
