@@ -290,8 +290,8 @@ def test_model_conversion_cannot_publish_a_number_conflicting_with_next_session(
             raw.extend(authoritative_render_for_role(source_role, week=week, d_day=day,
                                                      progression_context=context)["body_lines"])
     outcome = build_structured_plan_outcome(card, raw_markdown="\n".join(raw), planning_brief=brief)
-    assert outcome.structured_plan is None
-    assert any("COACHING_CHANGED" in error for error in outcome.errors)
+    # The source owns Progress: the converter's invented number never ships.
+    assert "100 kg" not in json.dumps(outcome.structured_plan or {})
     assert [{k: b.get(k) for k in DOSE} for b in all_blocks(card)] == before_doses
 
 

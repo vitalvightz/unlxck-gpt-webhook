@@ -34,6 +34,7 @@ import re
 from dataclasses import dataclass, field
 from typing import Any
 
+from fightcamp.coaching_copy import is_null_progression
 from fightcamp.role_labels import athlete_facing_label_for
 from fightcamp.session_sequencing import sequence_structured_plan
 
@@ -364,6 +365,9 @@ def _lift_dose_fields(dose: str) -> tuple[dict[str, Any], str]:
         fields.update(rounds=int(interval[5]),
                       work={"value": _number(interval[1]), "unit": _UNIT_NAMES[interval[2].lower()]},
                       rest={"value": _number(interval[3]), "unit": _UNIT_NAMES[interval[4].lower()]})
+    elif lead := re.match(r"\s*" + _NUMBER + r"\s*" + _TIME_UNIT + r"\b(?!\s*(?:rest|recovery|between|[x×]))", dose, re.I):
+        # One continuous bout: "30min continuous", "6 minutes, RPE 4 max."
+        fields["duration"] = _measured(lead)
     kept: list[str] = []
     for raw_clause in re.split(r"\s*;\s*", dose.strip().rstrip(".").strip()):
         clause = raw_clause.strip().rstrip(".").strip()
@@ -502,8 +506,12 @@ def _preserve_unrepresented_dose(dose: str, instructions: str | None) -> str | N
     sequence, loading and rest must survive cue compaction without inventing
     a single set/rep interpretation for its different components.
     """
-    _, remainder = _lift_dose_fields(dose)
-    working = dose if "→" in dose or re.search(r"\brounds?\s*:", dose, re.I) else remainder
+    lifted, remainder = _lift_dose_fields(dose)
+    compound = "→" in dose or re.search(r"\brounds?\s*:", dose, re.I)
+    # A dose the card already shows as Sets/Duration/Rest/Effort is not an
+    # execution instruction; repeating it under "How" only duplicates the stats.
+    # Keep it only when it is compound or nothing could be shown as a stat.
+    working = dose if compound else (remainder if not lifted else "")
     if working and working not in str(instructions or ""):
         return "\n".join(part for part in (working, instructions) if part)
     return instructions or None
@@ -774,8 +782,10 @@ def _parse_display_text(display_text: str) -> _ParsedDisplayText:
                 parsed.stop_rules.append(text)
             elif label in _REGRESSION_LABELS:
                 parsed.regressions.append(text)
-            elif label in _PROGRESSION_LABELS and not parsed.progression:
-                parsed.progression = text
+            elif label in _PROGRESSION_LABELS:
+                # "Progress: none this block" states that nothing advances.
+                if not parsed.progression and not is_null_progression(text):
+                    parsed.progression = text
             elif label in _PURPOSE_LABELS and not parsed.purpose:
                 parsed.purpose = text
             elif label in _WHY_LABELS and not parsed.why:
@@ -804,9 +814,12 @@ def _parsed_block(
     # direction, full stance reset between reps."), not a parsed set/rep
     # structure. It is surfaced verbatim as the block's leading cue rather than
     # split into numbers this module would have to invent.
-    cues = [parsed.activity_dose] if parsed.activity_dose else []
+    lifted, _ = _lift_dose_fields(parsed.activity_dose) if parsed.activity_dose else ({}, "")
+    # A dose the stats can show ("6 minutes, RPE 4 max.") is not repeated as a cue.
+    cues = [parsed.activity_dose] if parsed.activity_dose and not lifted else []
     cues.extend(parsed.cues)
     block = {
+        **lifted,
         "block_id": f"deterministic-{d_day}-{role_key or 'role'}-display",
         "block_type": _block_type(role),
         "display_name": parsed.activity_name,

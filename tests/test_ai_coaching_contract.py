@@ -157,8 +157,24 @@ def test_conversion_cannot_drop_invent_or_rewrite_ai_adjustments(field, mutation
     else:
         block[field] = "Add 100 kg next time." if field == "progression_rule" else ["Use a bike instead."]
     outcome = build_structured_plan_outcome(card, raw_markdown=text, planning_brief=brief)
-    assert outcome.structured_plan is None
-    assert any(("COACHING_DROPPED" if mutation == "drop" else "COACHING_CHANGED") in error for error in outcome.errors)
+    # The converted card still ships, but the field is the source's, verbatim:
+    # a drop or rewrite is restored and an invention is removed.
+    assert outcome.structured_plan is not None, outcome.errors
+    published = all_blocks(outcome.structured_plan)[0]
+    expected = None if mutation == "invent" else (PROGRESS if field == "progression_rule" else [EASIER])
+    assert (published.get(field) or None) == expected
+    assert "100 kg" not in json.dumps(outcome.structured_plan)
+    assert "bike" not in json.dumps(outcome.structured_plan)
+
+
+def test_written_out_none_progress_is_absent_and_keeps_the_converted_card():
+    brief, _, _ = programme("3 x 8 reps; rest 120 sec; RPE 7", "3 x 8 reps; rest 120 sec; RPE 7")
+    text = source_for(brief, progress="none this block.")
+    card = projected_card(brief, text)
+    all_blocks(card)[0]["progression_rule"] = "None this block"
+    outcome = build_structured_plan_outcome(card, raw_markdown=text, planning_brief=brief)
+    assert outcome.structured_plan is not None, outcome.errors
+    assert not all_blocks(outcome.structured_plan)[0].get("progression_rule")
 
 
 def test_missing_easier_uses_source_fallback_without_manufacturing_coaching():

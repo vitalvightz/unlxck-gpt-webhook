@@ -5,6 +5,8 @@ Only programming and its saved template are retained, never athlete records.
 from __future__ import annotations
 
 import copy
+
+from fightcamp.coaching_copy import is_null_progression
 from datetime import datetime, timezone
 
 import pytest
@@ -147,8 +149,11 @@ def test_reference_keeps_each_weeks_actual_sessions_exercises_doses_and_flexible
     original = copy.deepcopy(row)
     effective, projected = _project(row)
     decisions = row["planning_brief"]["open_plan_spec"]["weekly_session_plan"]["weeks"]
+    # A written-out "Progress: none this block." is no rule and is not shown.
     original_guidance = {
-        block["display_name"]: {key: block.get(key) for key in ("progression_rule", "regression_options", "stop_rules")}
+        block["display_name"]: {key: (None if key == "progression_rule" and is_null_progression(block.get(key))
+                                      else block.get(key))
+                                for key in ("progression_rule", "regression_options", "stop_rules")}
         for day in row["structured_plan"]["weeks"][0]["days"]
         for session in day["sessions"] for block in session["blocks"]
     }

@@ -2,6 +2,17 @@
 import re
 from copy import deepcopy
 
+_NULL_PROGRESSION_RE = re.compile(
+    r"^\s*(?:\*\*)?(?:progress(?:ion)?\s*:\s*)?(?:\*\*)?\s*(?:none|n/?a|no(?:ne)?\s+progression|no\s+change|hold|not\s+applicable)"
+    r"(?:\s+(?:this|for\s+this)\s+(?:block|week|phase|camp))?\s*[.!]?\s*$",
+    re.I,
+)
+
+
+def is_null_progression(text) -> bool:
+    """A written-out absence ("Progress: none this block.") is no instruction."""
+    return isinstance(text, str) and bool(_NULL_PROGRESSION_RE.match(text))
+
 # Authored replacements, rather than word slicing: every stop trigger survives.
 _COMPACT_COPY = {
     "Keep the stroke relaxed and breathe regularly; avoid breath holds.": "Relax your stroke; breathe regularly without breath holds.",

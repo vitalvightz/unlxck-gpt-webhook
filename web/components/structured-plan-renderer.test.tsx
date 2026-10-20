@@ -2950,3 +2950,21 @@ test("technical drills explain their sequence separately from the one coach cue"
   assert.equal(html.includes("View steps"), false);
   assert.equal(html.includes(">Progress</span>"), false);
 });
+
+test("a written-out 'none this block' Progress and a dose-only How are not shown", () => {
+  const html = renderToStaticMarkup(<BlockCard block={{
+    display_name: "Lateral Bound Intervals", block_type: "conditioning",
+    sets: 6, duration: { value: 20, unit: "seconds" }, rest: { value: 100, unit: "seconds" },
+    execution_instructions: "6 x 20 sec work", progression_rule: "none this block.",
+    coaching_cues: ["Soft landing, quick reset."], stop_rules: ["Stop if knee gives out."],
+  }} />);
+  assert.equal(html.includes(">Progress</span>"), false);
+  assert.equal(html.includes(">How</span>"), false);
+  assert.doesNotMatch(html, /none this block/);
+  const drill = renderToStaticMarkup(<BlockCard block={{
+    display_name: "Pull-Counter-Reset", block_type: "skill", sets: 1, duration: { value: 5, unit: "seconds" },
+    execution_instructions: "1x5s with 120s rest\nDraw one attack, take a small pull, then restore stance.",
+  }} />);
+  assert.match(drill, />How<\/span>Draw one attack/);
+  assert.doesNotMatch(drill, /1x5s with 120s rest/);
+});

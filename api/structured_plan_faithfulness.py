@@ -46,6 +46,8 @@ from dataclasses import dataclass, field
 import re
 from typing import Any
 
+from fightcamp.coaching_copy import is_null_progression
+
 # Violation prefixes so findings are greppable in debug metadata / logs.
 INTRODUCED = "INTRODUCED"
 MISPLACED = "MISPLACED"
@@ -100,6 +102,11 @@ _SOURCE_REST_RE = re.compile(
     r"\d[^\n]{0,24}\b(?:rest|recovery|reset)\b)",
     re.I,
 )
+_SOURCE_DETAIL_LABEL_RE = re.compile(
+    r"^\s*(?:\*\*)?(?:How|Cue|Coaching cues|Easier|Regression|Regress|Progress|Progression|"
+    r"Stop|Stop rule|Quality stop|Swap|Swaps|Substitution|Purpose|Why today)(?:\*\*)?\s*:",
+    re.I,
+)
 _SOURCE_CUE_RE = re.compile(r"^\s*Cue\s*:\s*\S", re.I | re.M)
 
 
@@ -138,7 +145,9 @@ def _source_block_segment(source: str, display_name: str) -> str:
                 break
             if _SOURCE_HEADING_RE.match(following) or re.match(r"^\s*[-*•]\s+", following):
                 break
-            if following[:1].isspace():
+            if following[:1].isspace() or _SOURCE_DETAIL_LABEL_RE.match(following):
+                # Final-session text may write its labelled Cue/Progress/
+                # Easier/Stop/How lines flush-left under the exercise.
                 segment.append(following)
                 continue
             break
@@ -149,6 +158,47 @@ def _source_block_segment(source: str, display_name: str) -> str:
             if pattern.match(line):
                 return _segment_at(index)
     return ""
+
+
+def project_source_adjustments(plan: dict[str, Any], source: str) -> dict[str, Any]:
+    """Copy each exact source block's Progress/Easier onto its card, verbatim.
+
+    Those fields are projections of the final-session text, never conversion
+    authorship. Projecting them in code means a converter that paraphrased,
+    dropped or wrote out "none this block" cannot cost the athlete the whole
+    converted card. Blocks without a provable source occurrence are untouched
+    (the faithfulness gate and coaching recovery still judge them).
+    """
+    from .structured_plan_deterministic_fallback import _source_block, _source_lines_for_session
+    source_days = _source_day_section_lines(str(source or ""))
+    for week in plan.get("weeks") or []:
+        for day in (week.get("days") or []) if isinstance(week, dict) else []:
+            if not isinstance(day, dict):
+                continue
+            day_lines = source_days.get(_dday_num(day.get("countdown_label")), [])
+            if not day_lines:
+                continue
+            for session in day.get("sessions") or []:
+                if not isinstance(session, dict):
+                    continue
+                scoped = _source_lines_for_session(day_lines, str(session.get("title") or ""))
+                if scoped is None:
+                    continue
+                for block in session.get("blocks") or []:
+                    if not isinstance(block, dict) or str(block.get("block_type")) not in _EXERCISE_BLOCK_TYPES:
+                        continue
+                    name = str(block.get("display_name") or "").strip()
+                    if not _source_block_segment("\n".join(scoped), name):
+                        continue
+                    expected = _source_block(scoped, name)
+                    if not expected:
+                        continue
+                    block["regression_options"] = list(expected.get("regression_options") or [])
+                    if expected.get("progression_rule"):
+                        block["progression_rule"] = expected["progression_rule"]
+                    else:
+                        block.pop("progression_rule", None)
+    return plan
 
 
 def _explicit_prescription_violations(plan: dict[str, Any], source: str) -> list[str]:
@@ -190,6 +240,8 @@ def _explicit_prescription_violations(plan: dict[str, Any], source: str) -> list
                                 continue  # Dose remainder is not a labelled execution cue.
                             if expected.get(key) and not block.get(key):
                                 violations.append(f"{COACHING_DROPPED}: {name!r} dropped source {key}")
+                            if key == "progression_rule" and is_null_progression(block.get(key)):
+                                continue  # A written-out "none" is the absent field.
                             if key in {"progression_rule", "regression_options"} and block.get(key) and str(block.get("block_type")) in _EXERCISE_BLOCK_TYPES:
                                 actual = block[key]
                                 wanted = expected.get(key)
@@ -354,6 +406,10 @@ def _source_day_sections(markdown: str) -> dict[int, str]:
         if day is not None:
             current = day
             sections.setdefault(current, [])
+        elif _SOURCE_HEADING_RE.match(line):
+            # A week/phase heading ("## Week 4 — TAPER") closes the previous
+            # day; its lines and Focus copy never belong to that day's session.
+            current = None
         if current is not None:
             sections[current].append(line)
     return {day: "\n".join(lines).lower() for day, lines in sections.items()}
@@ -368,6 +424,10 @@ def _source_day_section_lines(markdown: str) -> dict[int, list[str]]:
         if day is not None:
             current = day
             sections.setdefault(current, [])
+        elif _SOURCE_HEADING_RE.match(line):
+            # A week/phase heading ("## Week 4 — TAPER") closes the previous
+            # day; its lines and Focus copy never belong to that day's session.
+            current = None
         if current is not None:
             sections[current].append(line)
     return sections

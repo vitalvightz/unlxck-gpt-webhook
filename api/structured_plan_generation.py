@@ -161,7 +161,11 @@ def _merge_locked_content(
                 issue.block_name,
                 issue.reason,
             )
-    return result.plan
+    # Progress/Easier are verbatim source projections; copy them in code so a
+    # paraphrase cannot fail the whole conversion. Coaching recovery still
+    # validates them against the programme afterwards.
+    from .structured_plan_faithfulness import project_source_adjustments
+    return project_source_adjustments(result.plan, raw_markdown or "")
 
 
 @dataclass
