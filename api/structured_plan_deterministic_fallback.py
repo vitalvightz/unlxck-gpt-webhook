@@ -843,9 +843,10 @@ def _parsed_block(
     # structure. It is surfaced verbatim as the block's leading cue rather than
     # split into numbers this module would have to invent.
     lifted, _ = _lift_dose_fields(parsed.activity_dose) if parsed.activity_dose else ({}, "")
-    # A dose the stats can show ("6 minutes, RPE 4 max.") is not repeated as a cue.
-    dose_only = bool(lifted) and not _dose_qualifiers(parsed.activity_dose)
-    cues = [parsed.activity_dose] if parsed.activity_dose and not dose_only else []
+    # Numbers the stats show are not repeated as a cue; only the coaching
+    # wording around them stays ("6 minutes, RPE 4 max." leaves nothing).
+    lead = _dose_qualifiers(parsed.activity_dose) if lifted else parsed.activity_dose
+    cues = [lead] if lead else []
     cues.extend(parsed.cues)
     block = {
         **lifted,
