@@ -410,7 +410,9 @@ def build_runtime_context(
         fatigue=plan_input.fatigue.lower(),
         sparring_readiness=dict(plan_input.sparring_readiness),
         training_frequency=plan_input.training_frequency,
-        primary_goal=plan_input.primary_goal,
+        # Same vocabulary as key_goals, or the priority profile cannot find the
+        # primary among them and silently promotes the first-listed goal.
+        primary_goal=GOAL_NORMALIZER.get(plan_input.primary_goal.strip(), plan_input.primary_goal.strip()).lower(),
         primary_weak_area=plan_input.primary_weak_area,
         training_workload_context=dict(plan_input.training_workload_context),
         days_available=len(plan_input.training_days),

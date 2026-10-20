@@ -61,7 +61,7 @@ def _coverage_athlete(runtime_goal: str) -> dict:
 @pytest.mark.parametrize("label", ["Speed", "Speed / Reaction"])
 def test_runtime_speed_labels_reach_low_cost_speed_target(label: str):
     runtime_goal = _runtime_goal(label)
-    assert runtime_goal == "reactive"
+    assert runtime_goal == "speed"
 
     athlete = _coverage_athlete(runtime_goal)
     state = build_target_coverage_state(athlete)[0]
@@ -74,9 +74,9 @@ def test_runtime_speed_labels_reach_low_cost_speed_target(label: str):
     assert float((insert.get("support_target_capabilities") or {}).get("speed", 0.0)) > 0
 
 
-def test_runtime_explosive_label_projects_to_power_without_fake_low_cost_repair():
+def test_runtime_power_label_projects_to_power_without_fake_low_cost_repair():
     runtime_goal = _runtime_goal("Power & Explosiveness")
-    assert runtime_goal == "explosive"
+    assert runtime_goal == "power"
 
     athlete = _coverage_athlete(runtime_goal)
     state = build_target_coverage_state(athlete)[0]
@@ -87,3 +87,23 @@ def test_runtime_explosive_label_projects_to_power_without_fake_low_cost_repair(
     assert state.remaining_need == 1.0
     assert insert is not None
     assert "power" not in (insert.get("support_target_capabilities") or {})
+
+
+@pytest.mark.parametrize("label,expected", [
+    ("Speed / Reaction", "speed"), ("Speed", "speed"), ("Power & Explosiveness", "power"),
+    ("Maximal Strength", "strength"), ("speed", "speed"),
+])
+def test_primary_goal_uses_key_goal_vocabulary(label, expected):
+    request = PlanRequest(
+        athlete={"full_name": "Ari Mensah", "technical_style": ["boxing"], "tactical_style": []},
+        fight_date=(datetime.now(timezone.utc).date() + timedelta(days=42)).isoformat(),
+        training_availability=["Monday", "Wednesday", "Friday"],
+        key_goals=["Conditioning / Endurance", label],
+        primary_goal=label,
+    )
+    context = build_runtime_context(plan_input=PlanInput.from_payload(request.to_payload()),
+                                    random_seed=1, logger=logging.getLogger(__name__))
+    # The second-listed primary must survive: before, a renamed label was not
+    # found among key_goals and the first-listed goal (conditioning) took over.
+    assert context.training_context.primary_goal == expected
+    assert context.training_context.key_goals == ["conditioning", expected]

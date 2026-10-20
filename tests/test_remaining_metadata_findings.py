@@ -91,8 +91,11 @@ def test_saved_band_spellings_resolve_to_same_capability(token):
 
 
 def test_equipment_quantity_and_suitability_distinctions_survive():
-    for token in ("dumbbell", "dumbbells", "mat", "mats", "pad", "pads"):
+    for token in ("dumbbell", "dumbbells", "pads"):
         assert training_context.normalize_equipment_list([token]) == [token]
+    # Product decision: mats, lines, tape and squeeze pads never gate eligibility.
+    for token in ("mat", "mats", "pad"):
+        assert training_context.normalize_equipment_list([token]) == []
 
 
 def test_review_covers_exactly_the_original_74_findings():
