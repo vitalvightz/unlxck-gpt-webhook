@@ -240,7 +240,7 @@ def build_location_region_map() -> dict[str, str]:
 
 
 def get_rehab_location_candidates(location: str) -> list[str]:
-    entry = LOCATION_REGISTRY.get(location)
+    entry = LOCATION_REGISTRY.get(canonicalize_location_from_registry(location))
     if not entry:
         return [location, "unspecified"]
     return entry.get("rehab_locations", [location])

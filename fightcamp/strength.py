@@ -3422,9 +3422,14 @@ def generate_strength_block(*, flags: dict, weaknesses=None):
 
     strength_output = _run_real_poststep("format_strength_block", lambda: format_strength_block(phase, fatigue, base_exercises))
     def _build_capped_candidate_reservoir():
-        capped_weighted = weighted_exercises[:500]
-        if len(weighted_exercises) > len(capped_weighted):
-            log_fail_safe_degrade(module="strength", phase=phase, reason="candidate_reservoir_capped", target=len(weighted_exercises), actual=len(capped_weighted))
+        # Alternates become dated assignments downstream. Reuse the settled
+        # verdict so an authored prohibition cannot re-enter through that pool.
+        metadata_safe = [entry for entry in weighted_exercises
+                         if not (entry[0].get("avoid_if") or entry[0].get("contraindications"))
+                         or _cached_guarded_decision(entry[0]).reason.get("bucket") != "safety_metadata"]
+        capped_weighted = metadata_safe[:500]
+        if len(metadata_safe) > len(capped_weighted):
+            log_fail_safe_degrade(module="strength", phase=phase, reason="candidate_reservoir_capped", target=len(metadata_safe), actual=len(capped_weighted))
         elif source_candidate_count > 500:
             log_fail_safe_degrade(module="strength", phase=phase, reason="candidate_reservoir_capped", target=source_candidate_count, actual=len(capped_weighted))
         return _build_strength_candidate_reservoir(capped_weighted)

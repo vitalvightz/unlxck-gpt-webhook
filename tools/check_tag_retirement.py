@@ -32,7 +32,9 @@ TEXT_SUFFIXES = {".py", ".json", ".ts", ".tsx", ".js", ".mjs", ".cjs",
 def digest(path: Path) -> str:
     # Match the existing LF-normalized source evidence across Git checkouts.
     from tools.replay_combat_round_metadata import pre_combat_round_source
-    return hashlib.sha256(pre_combat_round_source(path.relative_to(ROOT).as_posix(), path.read_bytes())).hexdigest()
+    from tools.replay_safety_metadata import original_safety_source
+    relative = path.relative_to(ROOT).as_posix()
+    return hashlib.sha256(pre_combat_round_source(relative, original_safety_source(relative, path.read_bytes()))).hexdigest()
 
 
 def original_vocabulary_source(current: bytes) -> bytes:

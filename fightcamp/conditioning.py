@@ -1042,7 +1042,17 @@ def _evaluate_conditioning_late_window(
     conditioning_focus_requested: bool = False,
     hard_sparring_declared: bool = False,
     source: str = "conditioning_bank.json",
+    days_until_fight=None,
 ) -> dict:
+    from .late_selector_windows import fight_proximity_allowed
+
+    if not fight_proximity_allowed(drill, days_until_fight):
+        return {
+            "blocked": True, "severity": "blocked",
+            "block_codes": ["conditioning_block_fight_proximity"],
+            "reason_codes": ["conditioning_block_fight_proximity"],
+            "penalty_codes": [], "adjustment": 0.0, "ambiguous_gap": None,
+        }
     if not is_active_late_selector_window(window):
         return {
             "blocked": False,
@@ -3155,6 +3165,7 @@ def generate_conditioning_block(flags):
                 conditioning_focus_requested=conditioning_focus_requested,
                 hard_sparring_declared=hard_sparring_declared,
                 source=source,
+                days_until_fight=days_until_fight,
             )
         return _late_eval_cache[key]
 
@@ -5293,9 +5304,15 @@ def generate_conditioning_block(flags):
             why_log.append({"name": nm, "system": system, "reasons": reasons, "explanation": explanation})
 
     def _build_candidate_reservoir_step():
+        def metadata_safe(source):
+            return {system: [entry for entry in entries
+                             if not (entry[0].get("avoid_if") or entry[0].get("contraindications"))
+                             or _cached_injury_decision(entry[0]).reason.get("bucket") != "safety_metadata"]
+                    for system, entries in source.items()}
+
         reservoir = _build_conditioning_candidate_reservoir(
-            scored_system_drills,
-            scored_style_system_drills,
+            metadata_safe(scored_system_drills),
+            metadata_safe(scored_style_system_drills),
             grouped_drills,
             reason_lookup,
         )
