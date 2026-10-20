@@ -21702,3 +21702,32 @@ fieldset.priority-clarification-options,
 .checkbox-card-disabled .checkbox-card-title {
   opacity: 0.6;
 }
+
+/* Logging mid-session: prescription, then a calm stack of log actions. */
+.ex-detail-logging {
+  gap: 16px;
+}
+.ex-detail-logging .ex-log {
+  padding-top: 16px;
+  border-top: 1px solid var(--border-subtle);
+}
+.ex-detail-logging .ex-log-choices {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+.ex-detail-logging .ex-log-choice-primary {
+  grid-column: 1 / -1;
+  min-height: 52px;
+  font-size: 0.95rem;
+}
+.ex-detail-logging .ex-log-choices > .ex-log-link {
+  grid-column: 1 / -1;
+  justify-self: center;
+}
+.ex-detail-logging .ex-log-bar {
+  gap: 12px;
+}
+.ex-detail-logging .ex-log-bar > .ex-log-save {
+  min-height: 52px;
+}

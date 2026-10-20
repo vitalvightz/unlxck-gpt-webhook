@@ -67,11 +67,14 @@ test("in a preview the demo section starts open, paused on its tap-to-play frame
   }
 });
 
-test("once the session is running the demo section starts collapsed like the rest", async () => {
-  const { byTitle, others, cleanup } = await openSheet(true);
+test("once the session is running the sheet shows only the prescription and the log", async () => {
+  const { sheet, byTitle, cleanup } = await openSheet(true);
   try {
-    assert.equal(byTitle("Demo video")?.open, false);
-    assert.ok(others.every((section) => !section.open));
+    assert.equal(byTitle("Demo video"), undefined);
+    assert.equal(byTitle("Why it's here"), undefined);
+    assert.equal(sheet.querySelector(".ex-detail-stop"), null);
+    assert.ok(sheet.querySelector(".ex-detail-prescription"));
+    assert.ok(sheet.querySelector(".ex-log"));
   } finally {
     await cleanup();
   }

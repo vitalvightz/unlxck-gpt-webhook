@@ -860,6 +860,29 @@ function ExerciseDetail({
   const swap = execution.substitutions[0] ?? null;
   const sessionRunning = useExerciseLoggingActive();
 
+  // Mid-session the sheet is for logging: just the prescription and the log.
+  // Demo, rationale, coaching and the stop line stay in the plan view.
+  if (sessionRunning) {
+    return (
+      <div className="injury-sheet-body ex-detail ex-detail-logging">
+        {tagLabel || summary ? (
+          <p className="ex-detail-summary">{[tagLabel, summary].filter(Boolean).join(" · ")}</p>
+        ) : null}
+        {steps.length > 0 ? (
+          <div className="sp-block-aside ex-detail-steps">
+            <span className="sp-stat-label">Steps</span>
+            <ol>{steps.map(step => <li key={step}>{step}</li>)}</ol>
+          </div>
+        ) : null}
+        <div className="ex-detail-prescription">
+          <BlockCard block={block} openWeekIntent={openWeekIntent}
+            sourceCountdown={sourceCountdown} embedded hideCues hideStopRule hideAdjustments hideInstructions />
+        </div>
+        <ExerciseLogPanel block={block} />
+      </div>
+    );
+  }
+
   return (
     <div className="injury-sheet-body ex-detail">
       {tagLabel || summary ? (
