@@ -4,6 +4,7 @@ Run every two minutes using a single server-side timer. Reuse the existing
 server-side outreach qualification worker's Notion integration and credentials.
 """
 
+import fcntl
 import json
 import os
 import random
@@ -42,7 +43,7 @@ LONDON = ZoneInfo("Europe/London")
 
 
 def date_value(properties, name):
-    return (properties[name].get("date") or {}).get("start")
+    return (properties.get(name, {}).get("date") or {}).get("start")
 
 
 def date_patch(value):
@@ -224,6 +225,9 @@ def get_changes(page, today):
     due, status, message = due_and_copy(
         p, count, first, second, now, calculated["string"])
     if (p["Stage (AI Fills First)"].get("select") or {}).get("name") in WARM_STAGES:
+        warm_changes = get_warm_changes(page, today)
+        changes.update(warm_changes)
+        due, status = warm_schedule({**p, **warm_changes}, now)
         warm = p["Warm Next DM"].get("formula") or {}
         if warm.get("type") != "string" or warm.get("string") is None:
             raise ValueError(f"Missing calculated warm follow-up for {page['id']}")
@@ -232,41 +236,86 @@ def get_changes(page, today):
         candidate = warm["string"]
         sendable_prefixes = ("Hey mate,", "Final check mate.", "Quick final check mate.",
                              "How have your", "Any quick thoughts")
-        message = candidate if candidate.startswith(sendable_prefixes) else ""
-        status = "Warm follow-up: ready" if message else "Warm follow-up: waiting"
+        message = candidate if status.endswith(": ready") and candidate.startswith(sendable_prefixes) else ""
     # A poll missed one or more intermediate send events. Never infer their
     # dates, and never show potentially premature sendable copy.
-    if increased and not consecutive:
+    if (p["Stage (AI Fills First)"].get("select") or {}).get("name") == "Contacted" and increased and not consecutive:
         due, status, message = None, "Needs count review", BAD_COUNT
-    if synced is not None and count < int(synced):
+    if (p["Stage (AI Fills First)"].get("select") or {}).get("name") == "Contacted" and synced is not None and count < int(synced):
         due, status, message = None, "Needs count review", BAD_COUNT
 
     current_due = date_value(p, "Safe Next Due")
     if not same_date_value(current_due, due):
         changes["Safe Next Due"] = date_patch(due)
-    current_status = "".join(x.get("plain_text", "") for x in p["Follow-Up Timing"].get("rich_text", []))
+    current_status = plain(p, "Follow-Up Timing")
     if current_status != status:
         changes["Follow-Up Timing"] = message_patch(status)
-    current_message = "".join(x.get("plain_text", "") for x in p["Copy Follow-Up"].get("rich_text", []))
+    current_message = plain(p, "Copy Follow-Up")
     if current_message != message:
         changes["Copy Follow-Up"] = message_patch(message)
     return changes
 
 
 
-def get_warm_changes(page, today):
-    """Timestamp real operator actions observed by the existing two-minute poll.
+def elapsed_due(value, days):
+    """A full interval across UK DST; date-only history waits through the last day."""
+    stamp = parse_stamp(value)
+    if "T" not in value:
+        return datetime.combine(stamp.date() + timedelta(days=days + 1), datetime_time.min, LONDON)
+    return (stamp.astimezone(timezone.utc) + timedelta(days=days)).astimezone(LONDON)
 
-    The operator only ticks Details Sent / Onboarding Sent / Feedback Requested,
-    or increments a stage-specific nudge dropdown. No date input is required.
-    Poll observation is recorded, NOT falsely represented as an Instagram
-    timestamp. An already recorded date is never overwritten.
-    """
+
+def warm_schedule(properties, now):
+    """Return only scheduling state; message content remains in existing formulas."""
+    stage = (properties["Stage (AI Fills First)"].get("select") or {}).get("name")
+    if stage == "Activated":
+        if (properties.get("Feedback Submitted", {}).get("number") or 0) > 0:
+            return None, "Feedback complete"
+        requested = date_value(properties, "Feedback Requested At")
+        if properties.get("Feedback Reminder Sent", {}).get("checkbox"):
+            return None, "Feedback complete (reminder sent)" if requested else "Needs Review: missing feedback request timestamp"
+        if requested:
+            due, label = elapsed_due(requested, 5), "Feedback reminder"
+        else:
+            # Activated is founder-confirmed app use, not signup. Reuse the
+            # date the existing stage-history pass first observed that stage.
+            observed = plain(properties, "Observed Stage")
+            anchor = date_value(properties, "Observed Since") if observed == stage else None
+            if not anchor:
+                return None, "Waiting for activation stage timestamp"
+            due, label = elapsed_due(anchor, 4), "Feedback request"
+    else:
+        signup = stage == "Replied"
+        prefix = "Signup" if signup else "Onboarding"
+        if signup and date_value(properties, "Registered At"):
+            return None, "Signup complete"
+        if not signup and properties.get("Onboarding Complete", {}).get("checkbox"):
+            return None, "Onboarding complete"
+        count_name = (properties[prefix + " Nudges Sent"].get("select") or {}).get("name") or "0"
+        synced = properties["Synced " + prefix + " Nudges Sent"].get("number")
+        if count_name not in ("0", "1", "2") or synced not in (None, 0, 1, 2):
+            return None, "Needs Review: invalid nudge count"
+        count = int(count_name)
+        if synced is not None and (count < synced or count > synced + 1):
+            return None, "Needs Review: skipped or reversed nudge count"
+        first = date_value(properties, prefix + " Nudge 1 At")
+        if (count and not first) or (not count and first):
+            return None, "Needs Review: nudge timestamp history conflicts with count"
+        root = date_value(properties, "Details Sent At" if signup else "Onboarding Sent At")
+        if not root:
+            return None, f"{prefix}: waiting for {'details' if signup else 'instructions'} sent" if count == 0 else "Needs Review: missing initial send timestamp"
+        if count == 2:
+            return None, f"{prefix} complete (2 nudges sent)"
+        due = elapsed_due(first if count else root, 4 if count else 3)
+        label = prefix + (" final follow-up" if count else " first follow-up")
+    ready = now.astimezone(timezone.utc) >= due.astimezone(timezone.utc)
+    return due.isoformat(timespec="seconds"), label + (": ready" if ready else ": waiting")
+
+
+def get_warm_changes(page, today):
+    """Reuse existing sent checkboxes/counters; preserve all dated history."""
     p = page["properties"]
     stage = (p["Stage (AI Fills First)"].get("select") or {}).get("name")
-    if stage not in WARM_STAGES:
-        return {}
-
     now = now_london(today).isoformat(timespec="seconds")
     changes = {}
     sent_flags = (
@@ -278,33 +327,45 @@ def get_warm_changes(page, today):
         if stage == required_stage and p[flag].get("checkbox") is True and not date_value(p, date_field):
             changes[date_field] = date_patch(now)
 
-    for required_stage, count_field, synced_field, first_field in WARM_COUNTERS:
-        # Keep each counter's checkpoint independent, even as stages advance.
+    def record_last(value):
+        # This existing summary is the latest observed warm send, not a
+        # replacement for the separate signup/onboarding first-send dates.
+        last = date_value({**p, **changes}, "Warm Last Nudge At")
+        if not last or parse_stamp(value).astimezone(timezone.utc) > parse_stamp(last).astimezone(timezone.utc):
+            changes["Warm Last Nudge At"] = date_patch(value)
+
+    for _, count_field, synced_field, first_field in WARM_COUNTERS:
         count_name = (p[count_field].get("select") or {}).get("name") or "0"
-        if count_name not in {"0", "1", "2"}:
-            raise ValueError(f"Unexpected {count_field}: {count_name}")
-        count = int(count_name)
         synced = p[synced_field].get("number")
+        if count_name not in ("0", "1", "2") or synced not in (None, 0, 1, 2):
+            continue
+        count = int(count_name)
         if synced is None:
-            # An existing nonzero value on first poll has no proven send time.
-            # Baseline it without inventing a historical event.
+            # First sight of an existing nonzero counter proves no event time.
             changes[synced_field] = {"number": count}
-        elif int(synced) != count:
+        elif count == synced + 1:
             changes[synced_field] = {"number": count}
-            if (stage == required_stage and count == int(synced) + 1
-                    and 1 <= count <= 2):
-                if count == 1 and not date_value(p, first_field):
-                    changes[first_field] = date_patch(now)
-                # Retain the legacy warm-last timestamp for the UI, while
-                # due-date formulas use the stage-specific first-send date.
-                changes["Warm Last Nudge At"] = date_patch(now)
-            # A missed 0->2 jump, reversal or cross-stage edit cannot prove
-            # when messages went out and must not manufacture timestamps.
+            first = date_value(p, first_field)
+            if count == 1:
+                if not first:
+                    first = now
+                    changes[first_field] = date_patch(first)
+                record_last(first)
+            elif count == 2 and first:
+                record_last(now)
+        # Do not checkpoint a jump/reversal: the inconsistency must persist.
+        # Counter identities keep sends attributable even after stage changes.
+
+    requested = date_value({**p, **changes}, "Feedback Requested At")
+    if stage == "Activated" and p.get("Feedback Reminder Sent", {}).get("checkbox") and requested:
+        last = date_value({**p, **changes}, "Warm Last Nudge At")
+        if not last or parse_stamp(last).astimezone(timezone.utc) <= parse_stamp(requested).astimezone(timezone.utc):
+            record_last(now)
     return changes
 
-
 def sync(today=None):
-    today = today or datetime.now(ZoneInfo("Europe/London"))
+    fixed_time = today
+    today = today or datetime.now(LONDON)
     total = changed = missing_dates = 0
     for page in pages():
         total += 1
@@ -315,23 +376,24 @@ def sync(today=None):
             continue
         # Avoid applying an out-of-date candidate if stage/count changed mid-poll.
         fresh = request("GET", f"/pages/{page['id']}")
+        observed_at = fixed_time or datetime.now(LONDON)
         original = page["properties"]
         current = fresh["properties"]
-        watched = (
-            ("Stage (AI Fills First)", "select"),
-            ("Follow-Ups Sent", "select"),
-            ("Signup Nudges Sent", "select"),
-            ("Onboarding Nudges Sent", "select"),
-            ("Details Sent", "checkbox"),
-            ("Onboarding Sent", "checkbox"),
-            ("Feedback Requested", "checkbox"),
-        )
-        if any(original[name].get(kind) != current[name].get(kind)
-               for name, kind in watched):
-            continue
-        changes = get_changes(fresh, today)
-        changes.update(get_warm_changes(fresh, today))
+        # Query/read evidence can establish 0->1 on the first poll, without
+        # treating a historic nonzero value as a newly recorded send.
+        baseline = {}
+        for _, counter, checkpoint, _ in WARM_COUNTERS:
+            if original[checkpoint].get("number") is None and current[checkpoint].get("number") is None:
+                name = (original[counter].get("select") or {}).get("name") or "0"
+                if name == "0":
+                    baseline[checkpoint] = {"number": 0}
+        evaluated = {**fresh, "properties": {**current, **baseline}}
+        changes = {**baseline, **get_changes(evaluated, observed_at), **get_warm_changes(evaluated, observed_at)}
         if changes:
+            # Include date/checkpoint edits, not just stage/counter edits.
+            latest = request("GET", f"/pages/{page['id']}")
+            if latest["properties"] != current or latest.get("last_edited_time") != fresh.get("last_edited_time"):
+                continue
             request("PATCH", f"/pages/{page['id']}", {"properties": changes})
             changed += 1
     if missing_dates:
@@ -458,12 +520,26 @@ def stage_changes(page, now):
     return changes
 
 
+
+def stage_sync_changes(page, now):
+    """Keep stage observations and materialized scheduling in the existing pass."""
+    changes = stage_changes(page, now)
+    p = page["properties"]
+    stage = (p["Stage (AI Fills First)"].get("select") or {}).get("name")
+    previous = plain(p, "Observed Stage")
+    if stage == "Contacted" and previous and previous != stage and not date_value(p, "Date Contacted"):
+        # A newly observed contact, not an invented date for a historic baseline.
+        changes["Date Contacted"] = date_patch(now_london(now).isoformat(timespec="seconds"))
+    if stage not in ACTIVE_STAGES and date_value(p, "Safe Next Due"):
+        changes["Safe Next Due"] = date_patch(None)
+    return changes
+
 def sync_stage_history(now=None, max_updates=20):
     now = now or datetime.now(timezone.utc)
     checked = updated = 0
     for page in all_pipeline_rows():
         checked += 1
-        changes = stage_changes(page, now)
+        changes = stage_sync_changes(page, now)
         if not changes:
             continue
         # Re-read before writing to avoid confirming a stage changed mid-poll.
@@ -471,7 +547,7 @@ def sync_stage_history(now=None, max_updates=20):
         if ((page["properties"]["Stage (AI Fills First)"].get("select") or {}).get("name")
                 != (fresh["properties"]["Stage (AI Fills First)"].get("select") or {}).get("name")):
             continue
-        changes = stage_changes(fresh, now)
+        changes = stage_sync_changes(fresh, now)
         if not changes:
             continue
         request("PATCH", f"/pages/{page['id']}", {"properties": changes})
@@ -531,12 +607,23 @@ def sync_scorecard():
                 updated += 1
     return total, updated
 
-if __name__ == "__main__":
+def run():
     if not notion_token():
         sys.exit("Expose the existing qualification worker Notion token as NOTION_TOKEN or NOTION_API_KEY (never commit it).")
-    total, changed = sync()
-    print(f"Notion follow-ups: checked {total}, updated {changed}")
-    checked, updated = sync_stage_history()
-    print(f"Notion stages: examined {checked}, updated {updated}")
-    contacted, updated = sync_scorecard()
-    print(f"Notion conversion: contacted {contacted}, updated {updated} blocks")
+    # Keep overlapping invocations of the existing worker from dating one send twice.
+    with open("/tmp/unlxck-notion-followups.lock", "a") as lock:
+        try:
+            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            return
+        # Observe stage dates before using them for this poll's scheduling.
+        checked, updated = sync_stage_history()
+        print(f"Notion stages: examined {checked}, updated {updated}")
+        total, changed = sync()
+        print(f"Notion follow-ups: checked {total}, updated {changed}")
+        contacted, updated = sync_scorecard()
+        print(f"Notion conversion: contacted {contacted}, updated {updated} blocks")
+
+
+if __name__ == "__main__":
+    run()

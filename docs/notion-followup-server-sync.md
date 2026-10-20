@@ -55,29 +55,9 @@ the new first-send property. When it has two, the legacy last-send value can
 only populate the second-send property; the first date is **not inferred**.
 Pre-existing cases without send dates remain unverified.
 
-### Sending and Notion button configuration
+### Recording an action
 
-A **Notion button must be configured manually**; this PR does not create it.
-For reliability, two explicit actions are preferable to a dynamic counter:
-
-1. On the pipeline database, create buttons `Sent follow-up 1` and
-   `Sent follow-up 2`, and show them only in an operator view (the buttons
-   are not hard access controls). Each has a confirmation action.
-2. `Sent follow-up 1` updates `Follow-Ups Sent = 1`,
-   `Follow-Up 1 Sent At = Now`, and `Last Follow-Up Sent = Now`.
-   `Sent follow-up 2` updates `Follow-Ups Sent = 2`,
-   `Follow-Up 2 Sent At = Now`, and `Last Follow-Up Sent = Now`.
-3. **Only click after the corresponding Instagram DM was actually sent.**
-   Do not use the buttons if `Follow-Up Timing` is not `...: ready`.
-   The button does not send Instagram messages or enforce eligibility itself.
-4. Never click the same follow-up button twice. Test both actions on a test
-   record, then verify the individual timestamps and `Safe Next Due`.
-
-The worker preserves explicitly provided event times. On a legacy dropdown
-change, it records the time **the poll observed the increase** instead,
-normally within two minutes, without pretending that is the Instagram send
-time. A missed 0 → 2 jump is flagged, never backfilled with fabricated times.
-A reversed count retains both history fields and raises a review status.
+After manually sending a DM, use the existing sent checkbox or the existing stage-specific counter once. The worker records the observation timestamp and recalculates the next due date. No new button, form, receipt field or manual date entry is required. Keep cold, signup and onboarding counters separate. Existing recorded timestamps are preserved; first-observed historical nonzero counters without timestamps remain unscheduled for review rather than being assigned today's date.
 
 ### Eligibility and what operators see
 
@@ -100,9 +80,7 @@ scheduling properties; hide the older formula-based `Actual Next Due`,
 sending view. Those existing formulas are retained for compatibility and
 may not know about the safety guard: **never send directly from them**.
 The Notion `3C. MISSING SEND DATE` view isolates the historical exceptions.
-Verify each first-send date against Instagram and fill in
-`Follow-Up 1 Sent At` (or legacy `Last Follow-Up Sent` while still at
-count 1), rather than assigning today's date.
+Historical records with unknown send times remain blocked for review; do not assign today's date or require operators to enter dates.
 
 ### Deployment verification
 
@@ -127,12 +105,21 @@ The existing two-minute Hetzner sync handles warm actions with no extra token, t
 | Set **Onboarding Nudges Sent** 0 → 1 | Onboarding Nudge 1 At and Warm Last Nudge At | 4 days later |
 | Set **Onboarding Nudges Sent** 1 → 2 | Warm Last Nudge At | Stop |
 | Activated: tick **Feedback Requested** | Feedback Requested At | Final feedback check 5 days later |
+| Tick **Feedback Reminder Sent** | Existing Warm Last Nudge At summary | Stop |
 
-**Activated means the founder has confirmed the fighter used Unlxck**. The existing stage history worker already confirms/timestamps the stage; the operator does not enter an activation date.
+**Activated means the founder has confirmed the fighter used Unlxck**. The existing stage pass records the stage's observed date in **Observed Since** automatically. The feedback request is due four full days after that observation. Five-minute confirmation, Stage History and existing milestone/KPI calculations retain their existing definitions. The stage pass runs before scheduling, using the same worker invocation. A newly observed transition to Contacted fills a missing Date Contacted; a historical Contacted baseline does not invent a contact date.
 
-Warm Next Due calculates the next date; Warm Next DM displays WAIT while ineligible. Copy Follow-Up becomes a selectable DM only when Warm Next DM is a due sendable message. A stage/counter update is an event *observation* within the poll interval, not a claim to know the precise Instagram send time. Previously sent links cannot be retroactively dated from Instagram; inspect older conversations before scheduling them. A skipped 0 → 2 jump or a historical nonzero counter on first baseline deliberately cannot create an invented event timestamp.
+**Safe Next Due** now materializes scheduling for Replied, Accepted and Activated as well as Contacted. Replied requires an actual Details Sent timestamp; Accepted requires an actual Onboarding Sent timestamp. Changing stage alone never claims a signup link or access instructions were sent. First warm reminders wait three full days; final signup/onboarding reminders wait four full days after the actual first nudge. Feedback has one reminder five full days after the first request. Completion/progression stops the relevant sequence, and the stage pass clears Safe Next Due on Rejected/Inactive/other non-follow-up stages.
 
-**Deploy:** merge the GitHub PR, deploy the existing Hetzner worker, and let the current 2-minute sync run. Do not add a second scheduler. Verify Replied Details Sent, Signup Nudges 0 → 1, Accepted Onboarding Sent, and Activated Feedback Requested fill their timestamps, with no changes to the cold follow-up dates.
+Warm intervals use elapsed UTC hours and render Europe/London timestamps across DST. Date-only historical sends wait conservatively through the last day because their time of day is unknown. Cold Day 3 / later-of-Day 8 and 120-hour rules are unchanged. Overdue reminders keep their original due dates. Invalid/missing warm counter history has no next due date. The existing synced counters are baselined while Contacted; a zero observed between the query and fresh read can establish a real first-poll 0→1. An already-nonzero first observation cannot establish its send date.
+
+The existing warm Notion formulas still supply all message wording. This revision contains no RESPONSE DM reader, segment/enquiry routing, message bank, native button, receipt/state property or schema migration. Warm Last Nudge At remains the existing latest-send summary; separate signup/onboarding first-send fields are never replaced by that shared summary.
+
+**Deploy:** after review, deploy the existing Hetzner worker and retain its current two-minute sync. No schema migration, new property or operator setup is required. Confirm a test record's observed stage date, existing sent-action timestamp and Safe Next Due together; confirm existing historical timestamps/cold dates and scorecard values remain intact. This PR does not merge or deploy itself.
+
+**Live compatibility audit and view correction (2026-10-20):** inspection matched all 32 required existing stage/action/scheduling field names and types. Views **3B. REPLIES / SIGNUP FOLLOW UPS** and **3C. ACTIVATED / FEEDBACK** now display **Safe Next Due** in the former Warm Next Due column position and sort ascending by **Safe Next Due**. Both views were fetched again after the live update; their full saved configurations matched the expected replacement, with all other columns, stage filters, names and settings preserved. Operators therefore read the exact date field written by the worker, with no separate formula/date-equivalence assumption. Warm Next Due remains an untouched legacy formula, hidden in those two views. No new property, formula change or fighter-data edit was made.
+
+The view correction is live; the revised worker remains in unmerged PR #2972. Until that worker is deployed, warm dates can still be blank or reflect the currently deployed worker. Rollout must verify the stage/action timestamp and Safe Next Due on a test record, including waiting, overdue, complete and review states. Saved-view verification does not establish deployed worker writes or iPhone rendering.
 
 ## Behavior
 
@@ -140,12 +127,12 @@ Warm Next Due calculates the next date; Warm Next DM displays WAIT while ineligi
 - Follow-Ups Sent 1 → 2: preserve the first event, store the second event separately, clear the follow-up copy and safe due date.
 - Replied/Accepted use new warm signup/onboarding branches, and Activated uses the feedback branch. Copy Follow-Up shows only a due sendable warm script, never operator instructions or WAIT.
 - Follow-up copy stays unchanged for Rejected/Inactive and the AI queue. The stage-history pass observes every pipeline stage, including records without Date Contacted.
-- On first execution, a record with an unknown historical send date is **not assigned today's date**. The job flags it in Copy Follow-Up and reports the exception count. Date/time is only recorded for *consecutive* count increases observed after baseline sync unless a Notion button supplied the event time.
+- On first execution, a record with an unknown historical send date is **not assigned today's date**. The job flags it in Copy Follow-Up and reports the exception count. Date/time is only recorded for *consecutive* count increases observed after baseline sync when existing event evidence is available.
 - The hidden server-owned field **Synced Follow-Ups Sent** distinguishes first observation from later changes. Do not manually edit it.
 - Once this server job runs successfully, disable the existing Notion copy-text-sync automation so two systems do not overwrite the same field.
 - Only one timer should run at a time. Errors are reported to the systemd journal and are retried at the next scheduled run.
 
-Important: this is polling rather than an instantaneous webhook. Date recorded uses Europe/London on the day of observation (normally within two minutes), not a timestamp proven to be when the Instagram DM was sent. If a lead's count changes just before midnight and is observed after midnight, the observed date may differ from the actual send date. For exact timestamps, use a separate Mark Sent action.
+Important: this is polling rather than an instantaneous webhook. Date recorded uses Europe/London on the day of observation (normally within two minutes), not a timestamp proven to be when the Instagram DM was sent. If a lead's count changes just before midnight and is observed after midnight, the observed date may differ from the actual send date. The existing sent action is sufficient; do not add a separate action.
 
 ## Outreach milestones and five-minute stage confirmation
 
