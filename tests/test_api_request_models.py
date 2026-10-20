@@ -315,7 +315,7 @@ def test_plan_request_payload_round_trip_normalizes_real_app_goal_and_weakness_l
         logger=logging.getLogger(__name__),
     )
 
-    assert context.training_context.key_goals == ["explosive", "reactive"]
+    assert context.training_context.key_goals == ["power", "speed"]
     assert context.training_context.weaknesses == ["coordination"]
 
 
