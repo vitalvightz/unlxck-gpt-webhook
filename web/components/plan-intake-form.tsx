@@ -238,7 +238,6 @@ function withoutComingSoonFields(form: PlanRequest): PlanRequest {
   if (
     keyGoals.length === form.key_goals.length
     && form.primary_goal !== "weight_cut"
-    && !hasValue(form.athlete.target_weight_kg)
     && !form.mindset_challenges
     && !form.notes
   ) {
@@ -248,7 +247,6 @@ function withoutComingSoonFields(form: PlanRequest): PlanRequest {
     ...form,
     key_goals: keyGoals,
     primary_goal: form.primary_goal === "weight_cut" ? "" : form.primary_goal,
-    athlete: { ...form.athlete, target_weight_kg: null },
     mindset_challenges: "",
     notes: "",
   };
@@ -2583,9 +2581,9 @@ export function PlanIntakeForm() {
                       too, so hiding it here is presentation, not enforcement. */}
                   {isMinorAthlete ? null : (
                     <div className="field">
-                      <label htmlFor="targetWeightKg">Target weight (kg) <span className="badge coming-soon-badge">Coming soon</span></label>
-                      <input id="targetWeightKg" type="number" min="0" step="0.1" inputMode="decimal" disabled value="" readOnly />
-                      <p className="muted">Weight cut support is coming soon.</p>
+                      <label htmlFor="targetWeightKg">Target weight (kg)</label>
+                      <input id="targetWeightKg" type="number" min="0" step="0.1" inputMode="decimal" disabled={!healthConsentGranted} value={healthConsentGranted ? (form.athlete.target_weight_kg ?? "") : ""} onChange={(event) => updateAthlete("target_weight_kg", numberOrNull(event.target.value))} />
+                      <p className="muted">{healthConsentGranted ? "Use realistic fight-week target, not an ideal someday number." : HEALTH_CONSENT_BLOCKED_MESSAGE}</p>
                     </div>
                   )}
                   <div className="field">
