@@ -756,7 +756,7 @@ function CheckboxGroup({
               <span className="checkbox-card-copy">
                 <span className="checkbox-card-title">
                   {option.label}
-                  {comingSoon ? <span aria-label="Coming soon" role="img"> 🚫</span> : null}
+                  {comingSoon ? <span aria-label="Coming soon" role="img">{"\u00a0"}🚫</span> : null}
                 </span>
               </span>
               {labelTitle ? (
