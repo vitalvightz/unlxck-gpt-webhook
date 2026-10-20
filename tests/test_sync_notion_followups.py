@@ -34,6 +34,19 @@ def row(*, stage="Replied", sent="0", synced=None, copied="old DM", formula="nex
             "Follow-Up 2 Sent At": event(second),
             "Safe Next Due": event(safe_due),
             "Follow-Up Timing": {"rich_text": [{"plain_text": timing}] if timing else []},
+            "Details Sent": {"checkbox": False},
+            "Details Sent At": event(None),
+            "Onboarding Sent": {"checkbox": False},
+            "Onboarding Sent At": event(None),
+            "Signup Nudges Sent": {"select": None},
+            "Synced Signup Nudges Sent": {"number": None},
+            "Onboarding Nudges Sent": {"select": None},
+            "Synced Onboarding Nudges Sent": {"number": None},
+            "Signup Nudge 1 At": event(None),
+            "Onboarding Nudge 1 At": event(None),
+            "Warm Last Nudge At": event(None),
+            "Feedback Requested": {"checkbox": False},
+            "Feedback Requested At": event(None),
         },
     }
 
@@ -531,3 +544,111 @@ def test_uncontacted_rejection_does_not_count_as_reply():
     changes = sync.stage_changes(page, now)
     assert "Confirmed Stage" in changes
     assert "First Reply Confirmed At" not in changes
+
+
+# Stage changes are timestamped by stage_changes; warm events only require
+# one operator checkbox/dropdown after the Instagram action, never a date field.
+def test_warm_initial_poll_baselines_counters_without_inventing_send_dates():
+    page = row(stage="Replied")
+    changes = sync.get_warm_changes(page, datetime(2026, 10, 20, 20, tzinfo=timezone.utc))
+    assert changes == {
+        "Synced Signup Nudges Sent": {"number": 0},
+        "Synced Onboarding Nudges Sent": {"number": 0},
+    }
+
+
+def test_ticking_details_sent_stamps_once_in_replied():
+    page = row(stage="Replied")
+    page["properties"]["Details Sent"]["checkbox"] = True
+    now = datetime(2026, 10, 20, 20, 3, tzinfo=timezone.utc)
+    changes = sync.get_warm_changes(page, now)
+    assert changes["Details Sent At"]["date"]["start"] == now.astimezone(sync.LONDON).isoformat(timespec="seconds")
+    page["properties"]["Details Sent At"] = changes["Details Sent At"]
+    again = sync.get_warm_changes(page, now + timedelta(days=1))
+    assert "Details Sent At" not in again
+
+
+def test_accepted_onboarding_is_distinct_from_replied_details():
+    page = row(stage="Accepted")
+    page["properties"]["Details Sent"]["checkbox"] = True
+    page["properties"]["Onboarding Sent"]["checkbox"] = True
+    changed = sync.get_warm_changes(page, datetime(2026, 10, 20, 20, tzinfo=timezone.utc))
+    assert "Onboarding Sent At" in changed
+    assert "Details Sent At" not in changed
+
+
+def test_activated_means_used_app_and_feedback_checkbox_stamps():
+    page = row(stage="Activated")
+    page["properties"]["Feedback Requested"]["checkbox"] = True
+    changed = sync.get_warm_changes(page, datetime(2026, 10, 20, 20, tzinfo=timezone.utc))
+    assert "Feedback Requested At" in changed
+    assert "Details Sent At" not in changed
+
+
+def test_signup_nudge_progression_stamps_first_and_last_automatically():
+    page = row(stage="Replied")
+    p = page["properties"]
+    p["Synced Signup Nudges Sent"]["number"] = 0
+    p["Synced Onboarding Nudges Sent"]["number"] = 0
+    p["Signup Nudges Sent"]["select"] = {"name": "1"}
+    now = datetime(2026, 10, 20, 20, tzinfo=timezone.utc)
+    first = sync.get_warm_changes(page, now)
+    assert first["Synced Signup Nudges Sent"] == {"number": 1}
+    assert first["Signup Nudge 1 At"] == first["Warm Last Nudge At"]
+    p["Synced Signup Nudges Sent"]["number"] = 1
+    p["Signup Nudge 1 At"] = first["Signup Nudge 1 At"]
+    p["Warm Last Nudge At"] = first["Warm Last Nudge At"]
+    p["Signup Nudges Sent"]["select"] = {"name": "2"}
+    last = sync.get_warm_changes(page, now + timedelta(days=4))
+    assert last["Synced Signup Nudges Sent"] == {"number": 2}
+    assert "Signup Nudge 1 At" not in last
+    assert last["Warm Last Nudge At"]["date"]["start"] != first["Warm Last Nudge At"]["date"]["start"]
+
+
+def test_onboarding_nudges_are_independent_of_previous_signup_counter():
+    page = row(stage="Accepted")
+    p = page["properties"]
+    p["Signup Nudges Sent"]["select"] = {"name": "2"}
+    p["Synced Signup Nudges Sent"]["number"] = 2
+    p["Onboarding Nudges Sent"]["select"] = {"name": "1"}
+    p["Synced Onboarding Nudges Sent"]["number"] = 0
+    changes = sync.get_warm_changes(page, datetime(2026, 10, 20, 20, tzinfo=timezone.utc))
+    assert changes["Synced Onboarding Nudges Sent"] == {"number": 1}
+    assert "Onboarding Nudge 1 At" in changes
+    assert "Synced Signup Nudges Sent" not in changes
+
+
+def test_historical_warm_count_or_skipped_increment_never_fabricates_dates():
+    page = row(stage="Replied")
+    p = page["properties"]
+    p["Signup Nudges Sent"]["select"] = {"name": "1"}
+    baseline = sync.get_warm_changes(page, datetime(2026, 10, 20, 20, tzinfo=timezone.utc))
+    assert baseline["Synced Signup Nudges Sent"] == {"number": 1}
+    assert "Warm Last Nudge At" not in baseline
+    assert "Signup Nudge 1 At" not in baseline
+    p["Synced Signup Nudges Sent"]["number"] = 0
+    p["Signup Nudges Sent"]["select"] = {"name": "2"}
+    missed = sync.get_warm_changes(page, datetime(2026, 10, 20, 20, tzinfo=timezone.utc))
+    assert missed["Synced Signup Nudges Sent"] == {"number": 2}
+    assert "Warm Last Nudge At" not in missed
+    assert "Signup Nudge 1 At" not in missed
+
+
+def test_poll_writes_warm_timestamp_without_touching_cold_followup(monkeypatch):
+    page = row(stage="Replied", copied="next DM", timing="Not in follow-up queue")
+    p = page["properties"]
+    p["Synced Signup Nudges Sent"]["number"] = 0
+    p["Synced Onboarding Nudges Sent"]["number"] = 0
+    p["Details Sent"]["checkbox"] = True
+    writes = []
+    def fake_request(method, path, body=None):
+        if method == "GET":
+            return page
+        writes.append(body["properties"])
+        return {}
+    monkeypatch.setattr(sync, "pages", lambda: iter([page]))
+    monkeypatch.setattr(sync, "request", fake_request)
+    assert sync.sync(datetime(2026, 10, 20, 20, tzinfo=timezone.utc)) == (1, 1)
+    assert "Details Sent At" in writes[0]
+    assert "Follow-Ups Sent" not in writes[0]
+    assert "Follow-Up 1 Sent At" not in writes[0]
