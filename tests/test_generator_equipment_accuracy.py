@@ -210,6 +210,11 @@ def test_complete_fixed_clock_plans_have_only_explained_changes(tmp_path):
             if before['case'] == 'boxing_shoulder_limited' and phase == 'GPP':
                 expected.remove('Sissy Squat')
                 expected.insert(expected.index('Glute Bridge Hold (Heavy Load)') + 1, 'Cossack Squat')
+            tandem = 'Tandem Gait Walk (Heel-to-Toe)'
+            if (before['case'] == 'mma_no_equipment' and NAMES[3] in old_names
+                    and tandem in new_names and tandem not in old_names):
+                # The freed slot goes to a row line/tape no longer gates (#2962).
+                expected.insert(new_names.index(tandem), tandem)
             assert new_names == expected
             old_log = {r['name']: r for r in a['stage1_selection_summary']['strength_reason_log'][phase]}
             new_log = {r['name']: r for r in b['stage1_selection_summary']['strength_reason_log'][phase]}
@@ -227,7 +232,8 @@ def test_complete_fixed_clock_plans_have_only_explained_changes(tmp_path):
         assert a == b  # Conditioning, rehab, workload, schedule and clinical payloads.
         def dose_text(text):
             return '\n'.join(line for line in text.splitlines()
-                             if not line.startswith(('**Top Exercises:**', '- Slow-Lowered Pull-Up:', '- Sissy Squat:', '- Cossack Squat:')))
+                             if not line.startswith(('**Top Exercises:**', '- Slow-Lowered Pull-Up:', '- Sissy Squat:', '- Cossack Squat:',
+                                                     '- Tandem Gait Walk (Heel-to-Toe):')))
         assert dose_text(before['plan_text']) == dose_text(after['plan_text'])
 
 
