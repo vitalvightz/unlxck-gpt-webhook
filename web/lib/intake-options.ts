@@ -173,7 +173,7 @@ export const KEY_GOAL_OPTIONS: IntakeOption[] = [
   { label: "Skill Refinement", value: "skill_refinement" },
   { label: "Mobility", value: "mobility" },
   { label: "Recovery", value: "recovery" },
-  { label: "Weight Cut Support", value: "weight_cut" },
+  { label: "Weight Cut Support", value: "weight_cut", disabled: true },
 ];
 
 export const WEAK_AREA_OPTIONS: IntakeOption[] = [

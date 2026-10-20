@@ -21677,3 +21677,13 @@ button.history-chip:focus-visible { outline: 2px solid var(--brand-red); outline
   flex-direction: column;
   gap: 4px;
 }
+
+/* Disabled "Coming soon" sections wrap their controls in a fieldset. */
+fieldset.priority-clarification-options,
+.onboarding-optional-disclosure fieldset.form-grid {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+  opacity: 0.6;
+}

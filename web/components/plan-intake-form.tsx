@@ -228,9 +228,35 @@ function getClarificationOptions(
   return GENERIC_CLARIFICATION_OPTIONS;
 }
 
+// Weight cut support, coach notes and priority clarification detail are switched
+// off ("Coming soon"), the same way unsupported sports are. Clear anything a
+// saved draft still carries so it never reaches review or the plan request.
+const PRIORITY_CLARIFICATION_ENABLED = false;
+
+function withoutComingSoonFields(form: PlanRequest): PlanRequest {
+  const keyGoals = form.key_goals.filter((goal) => goal !== "weight_cut");
+  if (
+    keyGoals.length === form.key_goals.length
+    && form.primary_goal !== "weight_cut"
+    && !hasValue(form.athlete.target_weight_kg)
+    && !form.mindset_challenges
+    && !form.notes
+  ) {
+    return form;
+  }
+  return {
+    ...form,
+    key_goals: keyGoals,
+    primary_goal: form.primary_goal === "weight_cut" ? "" : form.primary_goal,
+    athlete: { ...form.athlete, target_weight_kg: null },
+    mindset_challenges: "",
+    notes: "",
+  };
+}
+
 function sanitizeCollisionMetadata(form: PlanRequest): Pick<PlanRequest, "goal_weakness_collision_detail" | "goal_weakness_collision_tags" | "goal_weakness_collision_details"> {
   const overlaps = getGoalWeakAreaOverlaps(form.key_goals, form.weak_areas);
-  if (!overlaps.length) {
+  if (!PRIORITY_CLARIFICATION_ENABLED || !overlaps.length) {
     return {
       goal_weakness_collision_detail: "",
       goal_weakness_collision_tags: [],
@@ -711,8 +737,9 @@ function CheckboxGroup({
           const checked = selectedValues.includes(option.value);
           const daysOutDisabledReason = getOptionDisabledReason?.(option, checked) ?? null;
           const capDisabled = disableAdditionalSelections && !checked;
-          const disabled = disableAll || Boolean(daysOutDisabledReason) || capDisabled;
-          const labelTitle = daysOutDisabledReason ?? (capDisabled ? capDisabledReason ?? "Focus cap reached." : undefined);
+          const comingSoon = Boolean(option.disabled) && !checked;
+          const disabled = disableAll || comingSoon || Boolean(daysOutDisabledReason) || capDisabled;
+          const labelTitle = comingSoon ? undefined : daysOutDisabledReason ?? (capDisabled ? capDisabledReason ?? "Focus cap reached." : undefined);
           return (
             <label
               key={option.value}
@@ -731,6 +758,7 @@ function CheckboxGroup({
               <span className="checkbox-card-copy">
                 <span className="checkbox-card-title">{option.label}</span>
               </span>
+              {comingSoon ? <span className="badge role-card-badge">🚫 Coming soon</span> : null}
               {labelTitle ? (
                 <WhyTooltip
                   title="Unavailable"
@@ -747,13 +775,13 @@ function CheckboxGroup({
   );
 }
 
-function OptionalDetails({ title, hint, children }: { title: string; hint?: string; children: React.ReactNode }) {
+function OptionalDetails({ title, hint, comingSoon = false, children }: { title: string; hint?: string; comingSoon?: boolean; children: React.ReactNode }) {
   return (
     <details className="overview-disclosure onboarding-optional-disclosure">
       <summary className="overview-disclosure-summary">
         <div className="overview-disclosure-copy">
           <p className="kicker">Optional</p>
-          <p className="overview-disclosure-title">{title}</p>
+          <p className="overview-disclosure-title">{title}{comingSoon ? <> <span className="badge role-card-badge">🚫 Coming soon</span></> : null}</p>
           {hint ? <p className="muted">{hint}</p> : null}
         </div>
         <span className="overview-disclosure-meta">
@@ -1213,6 +1241,11 @@ export function PlanIntakeForm() {
 
   useEffect(() => {
     if (!hydrated) return;
+    setForm(withoutComingSoonFields);
+  }, [hydrated]);
+
+  useEffect(() => {
+    if (!hydrated) return;
     setForm((current) => {
       const collisionMetadata = sanitizeCollisionMetadata(current);
       const currentTags = current.goal_weakness_collision_tags ?? [];
@@ -1274,7 +1307,7 @@ export function PlanIntakeForm() {
       noRestrictions: currentNoRestrictions,
     });
     const withGuidedAndCollision = {
-      ...currentForm,
+      ...withoutComingSoonFields(currentForm),
       ...nextGuidedInjuryFields,
       ...sanitizeCollisionMetadata({
         ...currentForm,
@@ -2551,9 +2584,9 @@ export function PlanIntakeForm() {
                       too, so hiding it here is presentation, not enforcement. */}
                   {isMinorAthlete ? null : (
                     <div className="field">
-                      <label htmlFor="targetWeightKg">Target weight (kg)</label>
-                      <input id="targetWeightKg" type="number" min="0" step="0.1" inputMode="decimal" disabled={!healthConsentGranted} value={healthConsentGranted ? (form.athlete.target_weight_kg ?? "") : ""} onChange={(event) => updateAthlete("target_weight_kg", numberOrNull(event.target.value))} />
-                      <p className="muted">{healthConsentGranted ? "Use realistic fight-week target, not an ideal someday number." : HEALTH_CONSENT_BLOCKED_MESSAGE}</p>
+                      <label htmlFor="targetWeightKg">Target weight (kg) <span className="badge role-card-badge">🚫 Coming soon</span></label>
+                      <input id="targetWeightKg" type="number" min="0" step="0.1" inputMode="decimal" disabled value="" readOnly />
+                      <p className="muted">Weight cut support is coming soon.</p>
                     </div>
                   )}
                   <div className="field">
@@ -3232,13 +3265,13 @@ export function PlanIntakeForm() {
                 <article className="step-card priority-clarification-card">
                   <div className="form-section-header">
                     <p className="kicker">Clarification</p>
-                    <h2 className="form-section-title">{t("priorityDetail")}</h2>
+                    <h2 className="form-section-title">{t("priorityDetail")} <span className="badge role-card-badge">🚫 Coming soon</span></h2>
                   </div>
                   <div className="priority-clarification-copy">
                     <p>{overlapClarificationPrompt}</p>
-                    <p className="muted">Optional. This helps capture intent without changing your selected goal or weak area.</p>
+                    <p className="muted">Coming soon. Clarifying overlapping goals and weak areas is not available yet.</p>
                   </div>
-                  <div className="priority-clarification-options" role="radiogroup" aria-label="Goal and weak area clarification">
+                  <fieldset disabled className="priority-clarification-options" role="radiogroup" aria-label="Goal and weak area clarification" aria-disabled="true">
                     {goalWeakAreaOverlaps.map((overlap, overlapIndex) => {
                       const overlapClarificationOptions = getClarificationOptions(overlap.normalizedTag, form.athlete.technical_style, form.athlete.tactical_style);
                       const selectedDetail = form.goal_weakness_collision_details?.[overlapIndex]?.detail ?? "";
@@ -3272,14 +3305,15 @@ export function PlanIntakeForm() {
                         </div>
                       );
                     })}
-                  </div>
+                  </fieldset>
                 </article>
               ) : null}
               <OptionalDetails
                 title="Add coach notes"
-                hint="Mental / confidence issues, or anything else the planner should know."
+                hint="Coming soon. Mental / confidence issues, or anything else the planner should know."
+                comingSoon
               >
-                <div className="form-grid">
+                <fieldset disabled className="form-grid" aria-disabled="true">
                   <div className="field">
                     <label htmlFor="mindsetChallenges">Mental / confidence issue</label>
                     <textarea
@@ -3302,7 +3336,7 @@ export function PlanIntakeForm() {
                     />
                     <p className="muted">Use this for extra coach context that does not fit the other fields.</p>
                   </div>
-                </div>
+                </fieldset>
               </OptionalDetails>
             </div>
 
