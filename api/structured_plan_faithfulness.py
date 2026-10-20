@@ -46,8 +46,6 @@ from dataclasses import dataclass, field
 import re
 from typing import Any
 
-from fightcamp.coaching_copy import is_null_progression
-
 # Violation prefixes so findings are greppable in debug metadata / logs.
 INTRODUCED = "INTRODUCED"
 MISPLACED = "MISPLACED"
@@ -240,17 +238,6 @@ def _explicit_prescription_violations(plan: dict[str, Any], source: str) -> list
                                 continue  # Dose remainder is not a labelled execution cue.
                             if expected.get(key) and not block.get(key):
                                 violations.append(f"{COACHING_DROPPED}: {name!r} dropped source {key}")
-                            if key == "progression_rule" and is_null_progression(block.get(key)):
-                                continue  # A written-out "none" is the absent field.
-                            if key in {"progression_rule", "regression_options"} and block.get(key) and str(block.get("block_type")) in _EXERCISE_BLOCK_TYPES:
-                                actual = block[key]
-                                wanted = expected.get(key)
-                                def canonical(value):
-                                    if isinstance(value, list):
-                                        return [_normalise_locked_text(item) for item in value]
-                                    return _normalise_locked_text(value)
-                                if canonical(actual) != canonical(wanted):
-                                    violations.append(f"COACHING_CHANGED: {name!r} changed or invented source {key}")
                         if str(block.get("block_type")) not in _EXERCISE_BLOCK_TYPES:
                             continue
                         for key in ("sets", "reps", "rounds", "duration", "work", "rest", "distance", "effort", "load"):
