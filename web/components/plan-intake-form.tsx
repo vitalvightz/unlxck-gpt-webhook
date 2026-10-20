@@ -756,6 +756,7 @@ function CheckboxGroup({
               <span className="checkbox-card-copy">
                 <span className="checkbox-card-title">{option.label}</span>
               </span>
+              {comingSoon ? <span className="badge role-card-badge">🚫 Coming soon</span> : null}
               {labelTitle ? (
                 <WhyTooltip
                   title="Unavailable"
@@ -2581,9 +2582,9 @@ export function PlanIntakeForm() {
                       too, so hiding it here is presentation, not enforcement. */}
                   {isMinorAthlete ? null : (
                     <div className="field">
-                      <label htmlFor="targetWeightKg">Target weight (kg)</label>
-                      <input id="targetWeightKg" type="number" min="0" step="0.1" inputMode="decimal" disabled={!healthConsentGranted} value={healthConsentGranted ? (form.athlete.target_weight_kg ?? "") : ""} onChange={(event) => updateAthlete("target_weight_kg", numberOrNull(event.target.value))} />
-                      <p className="muted">{healthConsentGranted ? "Use realistic fight-week target, not an ideal someday number." : HEALTH_CONSENT_BLOCKED_MESSAGE}</p>
+                      <label htmlFor="targetWeightKg">Target weight (kg) <span className="badge role-card-badge">🚫 Coming soon</span></label>
+                      <input id="targetWeightKg" type="number" min="0" step="0.1" inputMode="decimal" disabled value="" readOnly />
+                      <p className="muted">Weight cut support is coming soon.</p>
                     </div>
                   )}
                   <div className="field">
