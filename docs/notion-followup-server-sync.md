@@ -1,6 +1,6 @@
 # UNLXCK Notion follow-up sync (Hetzner)
 
-This job keeps the editable **Copy Follow-Up** text equal to the existing **Follow-Up DM** formula. It never sends Instagram messages. It records **Last Follow-Up Sent** when it observes **Follow-Ups Sent** advance, which powers the existing **Actual Next Due** formula. No second set of DM scripts is hardcoded in Python. The recurring job uses the already-running worker container, not a new container each time.
+This job keeps editable **Copy Follow-Up** equal to the cold **Follow-Up DM** while Contacted, or to the warm **Warm Next DM** when a Replied/Accepted/Activated reminder is due. It never sends Instagram messages. It records **Last Follow-Up Sent** when it observes **Follow-Ups Sent** advance, which powers the existing **Actual Next Due** formula. No second set of DM scripts is hardcoded in Python. The recurring job uses the already-running worker container, not a new container each time.
 
 ## One-time server setup
 
@@ -90,8 +90,7 @@ A reversed count retains both history fields and raises a review status.
   history, it says **NEEDS DATE** or **NEEDS REVIEW**.
 - Once eligible, `Copy Follow-Up` contains the existing calculated DM.
 - At two sends, `Copy Follow-Up` becomes empty and `Safe Next Due` is
-  empty. Replied and Accepted use their existing distinct response templates;
-  there is no automatic outbound follow-up due.
+  empty. Replied and Accepted have a separate automatic reminder schedule for the manual signup/onboarding check-in; no Instagram messages are ever sent automatically.
 - A blank `Safe Next Due` is **correct** for terminal or blocked records;
   the `Follow-Up Timing` field explains the reason.
 
@@ -115,11 +114,31 @@ sample records for waiting/ready/blocked/complete states and event dates.
 Disable any older Notion automation overwriting `Copy Follow-Up`.
 No additional poller, Notion token, or separate scheduling service is needed.
 
+## Warm follow-ups: automatic timestamps, no manual date fields
+
+The existing two-minute Hetzner sync handles warm actions with no extra token, timer, or form. It preserves cold follow-ups, stage history and existing send dates. Instagram sending itself remains manual.
+
+| Operator action after real Instagram send | Worker timestamps | Reminder |
+| --- | --- | --- |
+| Replied: tick **Details Sent** | Details Sent At | 3 days after signup link |
+| Set **Signup Nudges Sent** 0 → 1 | Signup Nudge 1 At and Warm Last Nudge At | 4 days later |
+| Set **Signup Nudges Sent** 1 → 2 | Warm Last Nudge At | Stop |
+| Accepted: tick **Onboarding Sent** | Onboarding Sent At | 3 days after instructions |
+| Set **Onboarding Nudges Sent** 0 → 1 | Onboarding Nudge 1 At and Warm Last Nudge At | 4 days later |
+| Set **Onboarding Nudges Sent** 1 → 2 | Warm Last Nudge At | Stop |
+| Activated: tick **Feedback Requested** | Feedback Requested At | Final feedback check 5 days later |
+
+**Activated means the founder has confirmed the fighter used Unlxck**. The existing stage history worker already confirms/timestamps the stage; the operator does not enter an activation date.
+
+Warm Next Due calculates the next date; Warm Next DM displays WAIT while ineligible. Copy Follow-Up becomes a selectable DM only when Warm Next DM is a due sendable message. A stage/counter update is an event *observation* within the poll interval, not a claim to know the precise Instagram send time. Previously sent links cannot be retroactively dated from Instagram; inspect older conversations before scheduling them. A skipped 0 → 2 jump or a historical nonzero counter on first baseline deliberately cannot create an invented event timestamp.
+
+**Deploy:** merge the GitHub PR, deploy the existing Hetzner worker, and let the current 2-minute sync run. Do not add a second scheduler. Verify Replied Details Sent, Signup Nudges 0 → 1, Accepted Onboarding Sent, and Activated Feedback Requested fill their timestamps, with no changes to the cold follow-up dates.
+
 ## Behavior
 
 - Follow-Ups Sent 0 → 1: set the first-send timestamp only if unknown and this is a consecutive observed increase; compute the next safe due time and show WAIT until eligible.
 - Follow-Ups Sent 1 → 2: preserve the first event, store the second event separately, clear the follow-up copy and safe due date.
-- Replied and Accepted use the existing distinct Notion formula branches. Activated uses the existing feedback prompt.
+- Replied/Accepted use new warm signup/onboarding branches, and Activated uses the feedback branch. Copy Follow-Up shows only a due sendable warm script, never operator instructions or WAIT.
 - Follow-up copy stays unchanged for Rejected/Inactive and the AI queue. The stage-history pass observes every pipeline stage, including records without Date Contacted.
 - On first execution, a record with an unknown historical send date is **not assigned today's date**. The job flags it in Copy Follow-Up and reports the exception count. Date/time is only recorded for *consecutive* count increases observed after baseline sync unless a Notion button supplied the event time.
 - The hidden server-owned field **Synced Follow-Ups Sent** distinguishes first observation from later changes. Do not manually edit it.
@@ -137,7 +156,7 @@ The existing two-minute job now checks the **entire** pipeline for stage changes
 - A stable observed transition to `Rejected` from a previously confirmed stage records a durable reply milestone for contacted prospects. The scorecard counts current `Rejected` immediately, without waiting for stage confirmation; an initial `Rejected` baseline does not fabricate a historical reply timestamp. `Inactive` never implies a new reply and never erases confirmed earlier milestones.
 - `Registered At`, `First Meaningful Action At`, and `Returned D7 At` are deliberately **not populated from CRM status**. Only real app-account registration and app activity can establish them.
 - Headline reply rate counts confirmed historical milestones **or** current `Replied`/`Accepted`/`Activated`/`Rejected` stages for contacted prospects. Acceptance counts confirmed milestones **or** current `Accepted`/`Activated`. Each fighter counts once per rate, including when a current stage and prior milestone both match. A later `Inactive` stage retains confirmed previous milestones.
-- Activation is founder-controlled: `Stage (AI Fills First) = Activated` counts as activated immediately, using the existing contacted denominator. Neither app-event integration nor `UNLXCK_APP_EVENTS_VERIFIED` is required. Changing the stage away from `Activated` removes current activation, as before #2925.
+- Activation is founder-controlled: the founder sets `Stage (AI Fills First) = Activated` only after confirming the fighter **used the app**. The CRM counts the stage immediately, using the existing contacted denominator. Neither app-event integration nor `UNLXCK_APP_EVENTS_VERIFIED` is required. Changing the stage away from `Activated` removes current activation, as before #2925.
 - Notion's existing per-row stage-only reply/accept formulas can undercount confirmed historical replies after `Inactive`/`Rejected`. Use the headline cards as the conversion source of truth after successful worker sync. Per-row activation remains current-stage based.
 - The separate weekly KPI database contains an `EXAMPLE — Week 1` row, not actual UNLXCK conversion data. Exclude it from real performance reporting.
 
