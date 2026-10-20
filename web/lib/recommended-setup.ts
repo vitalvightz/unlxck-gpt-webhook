@@ -306,6 +306,9 @@ export type FocusPresetAvailability = {
   disabledReason: string | null;
 };
 
+// Presets for features that are switched off for now (shown nowhere until enabled).
+const COMING_SOON_FOCUS_PRESETS = new Set<FocusPresetKey>(["weight_cut_support"]);
+
 export function getAvailableFocusPresets(input: {
   fightDate: string;
   noScheduledFight: boolean;
@@ -315,7 +318,9 @@ export function getAvailableFocusPresets(input: {
     const selections = resolveFocusPresetSelections(preset, input.limits);
     return {
       preset,
-      disabledReason: selections.key_goals.length === 0 ? "No goal available for this window." : null,
+      disabledReason: COMING_SOON_FOCUS_PRESETS.has(preset.key)
+        ? "Coming soon."
+        : selections.key_goals.length === 0 ? "No goal available for this window." : null,
     };
   });
 }
