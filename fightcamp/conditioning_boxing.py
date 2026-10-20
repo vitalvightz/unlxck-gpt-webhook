@@ -174,6 +174,16 @@ def _conditioning_context_text(*groups: Any) -> str:
     return " ".join(parts)
 
 
+def _whole_words(*groups: Any) -> set[str]:
+    """Words in the groups, plus their singular when plural ("knees" -> "knee")."""
+    words: set[str] = set()
+    for word in re.findall(r"[a-z]+", _conditioning_context_text(*groups)):
+        words.add(word)
+        if word.endswith("s"):
+            words.add(word[:-1])
+    return words
+
+
 # ── Boxing aerobic functions ──────────────────────────────────────────────────
 def _sanitize_sport_language(text: str, *, fight_format: str) -> str:
     """Swap blacklisted sport language with sport-safe alternatives."""
@@ -304,15 +314,24 @@ def _boxing_aerobic_context_flags(
     equipment_access_set: set[str],
 ) -> dict[str, bool]:
     restriction_keys = _restriction_key_set(restrictions)
-    context_text = _conditioning_context_text(injuries, weaknesses, goals)
-    lower_limb_unload_desirable = any(token in context_text for token in _LOWER_LIMB_UNLOAD_HINTS)
+    injury_text = _conditioning_context_text(injuries)
+    # Goals are performance targets, never evidence about tissue state: the
+    # "reactive" speed goal is not an impact complaint and a "Shoulders" goal
+    # is not a sensitive shoulder. A weak area may name a body region ("knee
+    # stability"), but only as a whole word: "footwork" is not a foot problem.
+    weakness_words = _whole_words(weaknesses)
+
+    def _hinted(hints: set[str]) -> bool:
+        return any(token in injury_text for token in hints) or bool(weakness_words & hints)
+
+    lower_limb_unload_desirable = _hinted(_LOWER_LIMB_UNLOAD_HINTS)
     impact_tolerance_reduced = bool(restriction_keys & _IMPACT_SENSITIVE_RESTRICTIONS)
     if not impact_tolerance_reduced:
         impact_tolerance_reduced = any(
-            token in context_text for token in ("impact", "shin splint", "landing", "reactive", "jarring")
+            token in injury_text for token in ("impact", "shin splint", "landing", "reactive", "jarring")
         )
-    active_tissue_irritation = any(token in context_text for token in _TISSUE_IRRITATION_HINTS)
-    upper_body_swim_sensitive = any(token in context_text for token in _UPPER_BODY_SWIM_SENSITIVITY_HINTS)
+    active_tissue_irritation = _hinted(_TISSUE_IRRITATION_HINTS)
+    upper_body_swim_sensitive = _hinted(_UPPER_BODY_SWIM_SENSITIVITY_HINTS)
     bike_available = bool(equipment_access_set & _BIKE_EQUIPMENT_KEYS)
     sled_available = "sled" in equipment_access_set
 
