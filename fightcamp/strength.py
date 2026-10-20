@@ -1170,6 +1170,30 @@ def _apply_late_strength_diversity_dampener(
     return reordered
 
 
+# Running space is a surface, not apparatus, and intake never asks for it: the
+# conditioning bank's hill sprints and 80-60-40m ladders require nothing, and
+# the editor already treats it as ambient. Requiring it made the strength rows
+# that spell it out (Sprint Acceleration, Carioca Sprint, ...) unreachable for
+# every athlete. Mats, lines and tape are not covered: their suitability is
+# task-specific.
+_SPACE_ONLY_EQUIPMENT = frozenset({"open_space"})
+# Still unreachable: their injury metadata gates more loosely than the
+# conditioning sprints athletes already receive (Backpedal-to-Sprint derives no
+# deceleration risk, so a high-severity ankle or knee injury allows it; Single-
+# Leg Bounding is allowed with a high-severity Achilles injury). Making them
+# reachable waits on that metadata, which this gate does not own.
+_SPACE_ONLY_HELD_BACK = frozenset({"Backpedal-to-Sprint Transition", "Single-Leg Bounding"})
+
+
+def _unrequired_space_tokens(exercise: dict) -> frozenset[str]:
+    return frozenset() if exercise.get("name") in _SPACE_ONLY_HELD_BACK else _SPACE_ONLY_EQUIPMENT
+
+
+def _required_strength_equipment(exercise: dict) -> list[str]:
+    exempt = _unrequired_space_tokens(exercise)
+    return [token for token in normalize_equipment_list(exercise.get("equipment", [])) if token not in exempt]
+
+
 def equipment_score_adjust(entry_equip, user_equipment, known_equipment):
     entry_equip_list = normalize_equipment_list(entry_equip)
     user_equipment = normalize_athlete_equipment_list(user_equipment)
@@ -2288,7 +2312,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None):
         )
         if is_banned_exercise(ex.get("name", ""), tags, fight_format, details):
             continue
-        ex_equipment = normalize_equipment_list(ex.get("equipment", []))
+        ex_equipment = _required_strength_equipment(ex)
         if legacy_taper_gate:
             if any(t in taper_banned for t in tags_lower) or any(eq in {"barbell", "trap_bar"} for eq in ex_equipment):
                 _record_prefilter_late_eval(ex)
@@ -2489,7 +2513,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None):
                 continue
             if _is_supra_max_isometric(ex) and not (tested_1rm_available and has_isometric_setup):
                 continue
-            ex_equipment = normalize_equipment_list(ex.get("equipment", []))
+            ex_equipment = _required_strength_equipment(ex)
             if not set(ex_equipment).issubset(set(equipment_access)):
                 continue
             tags = ex.get("tags", [])

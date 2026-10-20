@@ -1,0 +1,3180 @@
+{
+  "scope": "All 74 requires_investigation findings from PR #2853; original register and retirement review remain immutable. No source-bank, ID, clinical, cutoff or dose edits. One missing runtime equipment alias corrected.",
+  "main_revision": "71e9d02e8f4035e1ec40bb8cafded5e08f5bbae3",
+  "original_register_sha256": "e2ea368cae32351cab83b8a978316e3bf9ddd60d305bdd02fe8ca4eaa341814d",
+  "previous_work_checked": [
+    2823,
+    2824,
+    2825,
+    2827,
+    2830,
+    2853,
+    2854,
+    2856,
+    2860,
+    2882,
+    2897,
+    2898
+  ],
+  "classifications": {
+    "intentional_distinction": 22,
+    "confirmed_defect": 2,
+    "unresolved": 35,
+    "already_resolved": 2,
+    "cosmetic_inconsistency": 13
+  },
+  "priorities": {
+    "P0": 13,
+    "P1": 19,
+    "P2": 28,
+    "P3": 14
+  },
+  "receipt_method": "For each finding: content_hash([{catalogue_id,row_sha256,group_sha256:content_hash(raw_group)} for every original affected_entry_id in original order]). Resolve IDs via build_catalogue on main_revision. Configuration references retain the original record list; whole-file hashes are below. Receipts bind source inspection, not clinical approval.",
+  "source_sha256": {
+    "conditioning_bank.json": "62e190e9683171f43667e46c5dcfb1187e190b44de935743817cfe1c1666e4c1",
+    "coordination/grappling.json": "655bfeb697845a93a8aa51353bc121a6fc6d8a07154e452eb1478d669c44964c",
+    "coordination/kicks.json": "ab258da761323d7a08be1aabeab75692d16ff289df90d1db8c453d3c27196399",
+    "coordination/mma_transitions.json": "3a8767a6083e1ae51f108dfaab85c4bcc798c9f090002a673746a2029a5e5edc",
+    "coordination/striking.json": "f658fa3113edf4bbe3cfbdec9a50788c5c908b4225f9767e0d15daf809f3bbff",
+    "coordination/universal.json": "7dace5870c80d79d724cd4360eded38bdb03f6c42cd9994768ae3cdaa98afeb2",
+    "data/rehab_metadata_review.json": "3546346f4993223aa5126e4c20b63a5eb4d0a4124a6e5b59aa94836b9e2d8f43",
+    "data/tag_vocabulary.json": "36f320c11b794ca52ce3fa55ce0b924fc38817fd8c4090c823df23ac310744bb",
+    "exercise_bank.json": "84dd7c1fb7d68513896ccbc14c7cc3d0b8ff68751ae837d4611f9e803a8a36fa",
+    "fightcamp/tag_maps.py": "1fd8cba79fd03f2c9fcf0394a822e28ea602fea26af60ed2057c793edb9f5e9a",
+    "rehab_bank.json": "5a84e46d9e00cf0b97b6af910ef9903bd4e02c11a0f313b6a3db4e823bb4f981",
+    "style_conditioning_bank.json": "6b99234bdbbd44d18bc84a0200346d1105fcba183d94dffd4456ea58b2e97b97",
+    "style_taper_conditioning.json": "5b9aa72f2da66ba02424f847f786bb2d758c16b47ae422f64a0a98ff9bd62a4c",
+    "technical_footwork_bank.json": "ea8fdb6eebc9649bc63c3b03562023b43d1ffeb144be18bbcc9617a372d8cba3"
+  },
+  "findings": [
+    {
+      "issue_id": "MI-1a6aaa4a34c4",
+      "field": "avoid_if",
+      "classification": "intentional_distinction",
+      "priority": "P0",
+      "evidence": "Both real rows reject Achilles, ankle, calf and foot injuries through injury_match_details; recovery rope also rejects shin symptoms. The authored avoid_if is a caution, not a replacement for mechanism restrictions. #2860 added rebound/finger enforcement, not a reader of this field.",
+      "disposition": "Preserve source cautions and independent mechanism gates; no new region-text parser.",
+      "evidence_needed": "",
+      "previous_prs": [
+        2860
+      ],
+      "pathways": [
+        "injury exclusions",
+        "mechanical costs",
+        "late-window eligibility",
+        "readiness/edit safety"
+      ],
+      "consumers": [
+        "fightcamp/injury_filtering.py:injury_match_details",
+        "fightcamp/injury_guard.py:injury_decision",
+        "fightcamp/strength.py:_evaluate_strength_late_window",
+        "fightcamp/conditioning.py:_evaluate_conditioning_late_window",
+        "fightcamp/bank_schema.py:is_late_fight_metadata_safe",
+        "api/services/exercise_customisation.py:SafetyContext"
+      ],
+      "original_evidence": "reports/metadata_integrity/remediation.json#MI-1a6aaa4a34c4",
+      "affected_entries": 2,
+      "affected_configuration_records": 0,
+      "affected_ids_reference": "original_evidence.affected_entry_ids / affected_configuration_record_ids",
+      "current_receipt_sha256": "4f0da6508e3ca23f9375bd3737f3e8754cd387c608294c2fa216ec60387a171c",
+      "sources": [
+        "conditioning_bank.json"
+      ],
+      "current_field_unchanged_entries": 2,
+      "current_row_unchanged_entries": 2,
+      "current_field_states": {
+        "known": 2
+      }
+    },
+    {
+      "issue_id": "MI-571670673453",
+      "field": "block_if_fight_within_days",
+      "classification": "confirmed_defect",
+      "priority": "P0",
+      "evidence": "No production cutoff reader exists. Actual SPP generators select 5-10-15 Ladder and EMOM: 5 Squat Cleans + 5 Burpees at D21, D18 and D14 with conditioning/gas-tank priorities, no hard sparring and required gear, despite cutoff=21. Pad EMOM cutoff=10 is independently blocked at D13 inward by its late_windows.",
+      "disposition": "Deferred per user instruction to ignore cutoff; no cutoff enforcement change in this PR.",
+      "evidence_needed": "If reopened, enforce the existing exact cutoffs in generation, scheduled-day legality and edit/add/swap paths; test D22/D21 and D11/D10, without new thresholds.",
+      "previous_prs": [
+        2882
+      ],
+      "pathways": [
+        "injury exclusions",
+        "mechanical costs",
+        "late-window eligibility",
+        "readiness/edit safety"
+      ],
+      "consumers": [
+        "fightcamp/injury_filtering.py:injury_match_details",
+        "fightcamp/injury_guard.py:injury_decision",
+        "fightcamp/strength.py:_evaluate_strength_late_window",
+        "fightcamp/conditioning.py:_evaluate_conditioning_late_window",
+        "fightcamp/bank_schema.py:is_late_fight_metadata_safe",
+        "api/services/exercise_customisation.py:SafetyContext"
+      ],
+      "original_evidence": "reports/metadata_integrity/remediation.json#MI-571670673453",
+      "affected_entries": 3,
+      "affected_configuration_records": 0,
+      "affected_ids_reference": "original_evidence.affected_entry_ids / affected_configuration_record_ids",
+      "current_receipt_sha256": "1fd951b4669314390384af9c0d348ae32507a5519d4eaf62fe5a2528e42aac7a",
+      "sources": [
+        "conditioning_bank.json"
+      ],
+      "current_field_unchanged_entries": 3,
+      "current_row_unchanged_entries": 3,
+      "current_field_states": {
+        "known": 3
+      }
+    },
+    {
+      "issue_id": "MI-dae5ec15f5f9",
+      "field": "contraindications",
+      "classification": "unresolved",
+      "priority": "P0",
+      "evidence": "All 13 source rows retained. SafetyContext.contraindicated now reads regional cautions for edit/swap and #2854 scopes them to active injured regions. Generators still use mechanical/injury/restriction policies, not arbitrary prose. Notes mix symptoms, equipment, quality stops and blood-pressure cautions; equivalence of all conditions is unproved.",
+      "disposition": "Preserve cautions and existing restrictions. Do not turn all free text into a blanket injury ban.",
+      "evidence_needed": "Per-row equivalence of each condition to live mechanism/cut/quality rules, and authoritative clinical interpretation for blood-pressure/symptom thresholds.",
+      "previous_prs": [
+        2854,
+        2860
+      ],
+      "pathways": [
+        "injury exclusions",
+        "mechanical costs",
+        "late-window eligibility",
+        "readiness/edit safety"
+      ],
+      "consumers": [
+        "fightcamp/injury_filtering.py:injury_match_details",
+        "fightcamp/injury_guard.py:injury_decision",
+        "fightcamp/strength.py:_evaluate_strength_late_window",
+        "fightcamp/conditioning.py:_evaluate_conditioning_late_window",
+        "fightcamp/bank_schema.py:is_late_fight_metadata_safe",
+        "api/services/exercise_customisation.py:SafetyContext"
+      ],
+      "original_evidence": "reports/metadata_integrity/remediation.json#MI-dae5ec15f5f9",
+      "affected_entries": 13,
+      "affected_configuration_records": 0,
+      "affected_ids_reference": "original_evidence.affected_entry_ids / affected_configuration_record_ids",
+      "current_receipt_sha256": "abc97e6eb3460d89a58728c6e10d19dc54490a573c8b30d39c84b80efcd4454a",
+      "sources": [
+        "conditioning_bank.json",
+        "exercise_bank.json"
+      ],
+      "current_field_unchanged_entries": 13,
+      "current_row_unchanged_entries": 11,
+      "current_field_states": {
+        "known": 13
+      }
+    },
+    {
+      "issue_id": "MI-ed7b3bb9bdca",
+      "field": "dose",
+      "classification": "unresolved",
+      "priority": "P0",
+      "evidence": "Legacy textual prescriptions and policy-owned bounded clinical doses are separate authorities; absent structured dose is not zero dose. Current affected IDs and values are bound in the receipt.",
+      "disposition": "Defer individual clinical metadata review; no permissive defaults or new thresholds.",
+      "evidence_needed": "Qualified per-drill stage/function/demand/dose/pain review with injury type, severity, side, negative-response, progression and immutable exposure compatibility.",
+      "previous_prs": [],
+      "pathways": [
+        "rehab region/stage eligibility",
+        "clinical dose",
+        "progression/exposure history"
+      ],
+      "consumers": [
+        "fightcamp/rehab_protocols.py:normalize_rehab_location",
+        "fightcamp/rehab_selector.py:filter_rehab_candidates",
+        "fightcamp/rehab_clinical.py",
+        "api/contracts/rehab_exposure.py:RehabExposureEvent",
+        "api/contracts/rehab_progression.py",
+        "tools/apply_rehab_metadata_review.py:apply_reviews"
+      ],
+      "original_evidence": "reports/metadata_integrity/remediation.json#MI-ed7b3bb9bdca",
+      "affected_entries": 1491,
+      "affected_configuration_records": 0,
+      "affected_ids_reference": "original_evidence.affected_entry_ids / affected_configuration_record_ids",
+      "current_receipt_sha256": "8afc8a93355ad68ea72ecbd7b7f6bcb20a00d3ad86c0a87c54dbb9c6bb9a89f3",
+      "sources": [
+        "rehab_bank.json"
+      ],
+      "current_field_unchanged_entries": 1491,
+      "current_row_unchanged_entries": 1491,
+      "current_field_states": {
+        "null": 1491
+      }
+    },
+    {
+      "issue_id": "MI-8a323c275807",
+      "field": "function",
+      "classification": "unresolved",
+      "priority": "P0",
+      "evidence": "resolve_drill_function preserves a legacy fallback; explicit functions rank session fit. Filling from a name would alter clinical selection. Current affected IDs and values are bound in the receipt.",
+      "disposition": "Defer individual clinical metadata review; no permissive defaults or new thresholds.",
+      "evidence_needed": "Qualified per-drill stage/function/demand/dose/pain review with injury type, severity, side, negative-response, progression and immutable exposure compatibility.",
+      "previous_prs": [],
+      "pathways": [
+        "rehab region/stage eligibility",
+        "clinical dose",
+        "progression/exposure history"
+      ],
+      "consumers": [
+        "fightcamp/rehab_protocols.py:normalize_rehab_location",
+        "fightcamp/rehab_selector.py:filter_rehab_candidates",
+        "fightcamp/rehab_clinical.py",
+        "api/contracts/rehab_exposure.py:RehabExposureEvent",
+        "api/contracts/rehab_progression.py",
+        "tools/apply_rehab_metadata_review.py:apply_reviews"
+      ],
+      "original_evidence": "reports/metadata_integrity/remediation.json#MI-8a323c275807",
+      "affected_entries": 421,
+      "affected_configuration_records": 0,
+      "affected_ids_reference": "original_evidence.affected_entry_ids / affected_configuration_record_ids",
+      "current_receipt_sha256": "20b06a69a59186fd1492e65d7381a1c643b5e0f483de85526fbf3d5434c480b0",
+      "sources": [
+        "rehab_bank.json"
+      ],
+      "current_field_unchanged_entries": 421,
+      "current_row_unchanged_entries": 421,
+      "current_field_states": {
+        "null": 421
+      }
+    },
+    {
+      "issue_id": "MI-b30c402ba17a",
+      "field": "low_eccentric",
+      "classification": "already_resolved",
+      "priority": "P0",
+      "evidence": "Slow-Lowered Pull-Up now has low_eccentric=false and unknown eccentric_cost. #2827 removed unsupported low-eccentric bonuses; unknown late costs retain conservative gating. Apparatus was separately corrected in #2825.",
+      "disposition": "No repeated cost or apparatus edits; no invented numerical cost.",
+      "evidence_needed": "",
+      "previous_prs": [
+        2825,
+        2827
+      ],
+      "pathways": [
+        "injury exclusions",
+        "mechanical costs",
+        "late-window eligibility",
+        "readiness/edit safety"
+      ],
+      "consumers": [
+        "fightcamp/injury_filtering.py:injury_match_details",
+        "fightcamp/injury_guard.py:injury_decision",
+        "fightcamp/strength.py:_evaluate_strength_late_window",
+        "fightcamp/conditioning.py:_evaluate_conditioning_late_window",
+        "fightcamp/bank_schema.py:is_late_fight_metadata_safe",
+        "api/services/exercise_customisation.py:SafetyContext"
+      ],
+      "original_evidence": "reports/metadata_integrity/remediation.json#MI-b30c402ba17a",
+      "affected_entries": 1,
+      "affected_configuration_records": 0,
+      "affected_ids_reference": "original_evidence.affected_entry_ids / affected_configuration_record_ids",
+      "current_receipt_sha256": "df9e4772fbed256674178c01159f45d0e0ee4121e737a921d05511228f36871d",
+      "sources": [
+        "exercise_bank.json"
+      ],
+      "current_field_unchanged_entries": 0,
+      "current_row_unchanged_entries": 0,
+      "current_field_states": {
+        "known": 1
+      }
+    },
+    {
+      "issue_id": "MI-d857b5615775",
+      "field": "mechanical_risk_tags",
+      "classification": "unresolved",
+      "priority": "P0",
+      "evidence": "Three stationary rope rows lost disproven landing/rebound risks and high impact in #2827. Remaining Farmer Carry + Battle Rope Combo involves loaded travel; Swimming Interval Pyramid explicitly mentions minimal wall impact. Neither establishes zero lower-body impact/rebound for every execution.",
+      "disposition": "Keep remaining conservative risks; do not label the five-row finding wholly resolved.",
+      "evidence_needed": "Execution, push-off/landing and dose evidence for carry+rope and swim variants.",
+      "previous_prs": [
+        2827
+      ],
+      "pathways": [
+        "injury exclusions",
+        "mechanical costs",
+        "late-window eligibility",
+        "readiness/edit safety"
+      ],
+      "consumers": [
+        "fightcamp/injury_filtering.py:injury_match_details",
+        "fightcamp/injury_guard.py:injury_decision",
+        "fightcamp/strength.py:_evaluate_strength_late_window",
+        "fightcamp/conditioning.py:_evaluate_conditioning_late_window",
+        "fightcamp/bank_schema.py:is_late_fight_metadata_safe",
+        "api/services/exercise_customisation.py:SafetyContext"
+      ],
+      "original_evidence": "reports/metadata_integrity/remediation.json#MI-d857b5615775",
+      "affected_entries": 5,
+      "affected_configuration_records": 0,
+      "affected_ids_reference": "original_evidence.affected_entry_ids / affected_configuration_record_ids",
+      "current_receipt_sha256": "57e1e59ec88e5b21eef950cd86e04df014800433f31aae0d40f112bcc6c14a69",
+      "sources": [
+        "conditioning_bank.json"
+      ],
+      "current_field_unchanged_entries": 2,
+      "current_row_unchanged_entries": 2,
+      "current_field_states": {
+        "known": 5
+      }
+    },
+    {
+      "issue_id": "MI-f6ac4b3a763c",
+      "field": "mechanical_risk_tags",
+      "classification": "unresolved",
+      "priority": "P0",
+      "evidence": "#2827 corrected three stationary rope rows and Defensive Rhythm Flow. The original 146-row screen is absence-of-description evidence, not proof of absent loading; current turns, reactive steps, entries and stance work need row-specific review. Cognitive reaction cannot establish mechanical rebound.",
+      "disposition": "Preserve all remaining mechanical risks and clinical distinctions; retain the bounded prior corrections.",
+      "evidence_needed": "Per-row mechanics/dose/cue evidence and injury/late-window before-after proof before removing any risk.",
+      "previous_prs": [
+        2827
+      ],
+      "pathways": [
+        "injury exclusions",
+        "mechanical costs",
+        "late-window eligibility",
+        "readiness/edit safety"
+      ],
+      "consumers": [
+        "fightcamp/injury_filtering.py:injury_match_details",
+        "fightcamp/injury_guard.py:injury_decision",
+        "fightcamp/strength.py:_evaluate_strength_late_window",
+        "fightcamp/conditioning.py:_evaluate_conditioning_late_window",
+        "fightcamp/bank_schema.py:is_late_fight_metadata_safe",
+        "api/services/exercise_customisation.py:SafetyContext"
+      ],
+      "original_evidence": "reports/metadata_integrity/remediation.json#MI-f6ac4b3a763c",
+      "affected_entries": 146,
+      "affected_configuration_records": 0,
+      "affected_ids_reference": "original_evidence.affected_entry_ids / affected_configuration_record_ids",
+      "current_receipt_sha256": "20cab2791efc922b381b79ed08fbc744814cbb5cde58070ccc83e014a1d23813",
+      "sources": [
+        "conditioning_bank.json",
+        "coordination/universal.json",
+        "exercise_bank.json",
+        "style_conditioning_bank.json"
+      ],
+      "current_field_unchanged_entries": 142,
+      "current_row_unchanged_entries": 141,
+      "current_field_states": {
+        "known": 146
+      }
+    },
+    {
+      "issue_id": "MI-3904a77f1745",
+      "field": "pain_ceiling",
+      "classification": "unresolved",
+      "priority": "P0",
+      "evidence": "Null is not an unrestricted pain ceiling. Clinical policies, symptoms and stop/regress criteria require evidence; do not invent a number. Current affected IDs and values are bound in the receipt.",
+      "disposition": "Defer individual clinical metadata review; no permissive defaults or new thresholds.",
+      "evidence_needed": "Qualified per-drill stage/function/demand/dose/pain review with injury type, severity, side, negative-response, progression and immutable exposure compatibility.",
+      "previous_prs": [],
+      "pathways": [
+        "rehab region/stage eligibility",
+        "clinical dose",
+        "progression/exposure history"
+      ],
+      "consumers": [
+        "fightcamp/rehab_protocols.py:normalize_rehab_location",
+        "fightcamp/rehab_selector.py:filter_rehab_candidates",
+        "fightcamp/rehab_clinical.py",
+        "api/contracts/rehab_exposure.py:RehabExposureEvent",
+        "api/contracts/rehab_progression.py",
+        "tools/apply_rehab_metadata_review.py:apply_reviews"
+      ],
+      "original_evidence": "reports/metadata_integrity/remediation.json#MI-3904a77f1745",
+      "affected_entries": 1491,
+      "affected_configuration_records": 0,
+      "affected_ids_reference": "original_evidence.affected_entry_ids / affected_configuration_record_ids",
+      "current_receipt_sha256": "8afc8a93355ad68ea72ecbd7b7f6bcb20a00d3ad86c0a87c54dbb9c6bb9a89f3",
+      "sources": [
+        "rehab_bank.json"
+      ],
+      "current_field_unchanged_entries": 1491,
+      "current_row_unchanged_entries": 1491,
+      "current_field_states": {
+        "null": 1491
+      }
+    },
+    {
+      "issue_id": "MI-2d2d6befa98b",
+      "field": "rehab_stage",
+      "classification": "unresolved",
+      "priority": "P0",
+      "evidence": "Missing stages retain legacy eligibility with no stage-specificity credit; stated unknown or higher-than-live stages are rejected, and only activated stages are live. No universal CALM/RESTORE backfill is valid. Current affected IDs and values are bound in the receipt.",
+      "disposition": "Defer individual clinical metadata review; no permissive defaults or new thresholds.",
+      "evidence_needed": "Qualified per-drill stage/function/demand/dose/pain review with injury type, severity, side, negative-response, progression and immutable exposure compatibility.",
+      "previous_prs": [],
+      "pathways": [
+        "rehab region/stage eligibility",
+        "clinical dose",
+        "progression/exposure history"
+      ],
+      "consumers": [
+        "fightcamp/rehab_protocols.py:normalize_rehab_location",
+        "fightcamp/rehab_selector.py:filter_rehab_candidates",
+        "fightcamp/rehab_clinical.py",
+        "api/contracts/rehab_exposure.py:RehabExposureEvent",
+        "api/contracts/rehab_progression.py",
+        "tools/apply_rehab_metadata_review.py:apply_reviews"
+      ],
+      "original_evidence": "reports/metadata_integrity/remediation.json#MI-2d2d6befa98b",
+      "affected_entries": 1333,
+      "affected_configuration_records": 0,
+      "affected_ids_reference": "original_evidence.affected_entry_ids / affected_configuration_record_ids",
+      "current_receipt_sha256": "5f3e507e797f293abf18ad25175d2b05027eaa9516f28a6542f2555c471330f9",
+      "sources": [
+        "rehab_bank.json"
+      ],
+      "current_field_unchanged_entries": 1333,
+      "current_row_unchanged_entries": 1333,
+      "current_field_states": {
+        "null": 1333
+      }
+    },
+    {
+      "issue_id": "MI-c53ebeb0917a",
+      "field": "tags",
+      "classification": "intentional_distinction",
+      "priority": "P0",
+      "evidence": "Mixed tags and mechanical_risk_tags are compatibility copies, not an approved consolidation. injury_match_details consumes normalized mixed tags plus inference; scoring and late-window mechanisms also read tags. #2827 removed only disproven assignments in both copies (including two isometric ballistic flags).",
+      "disposition": "Keep both copies synchronized and preserve historical consumers; dedicated consumer migration required before deletion.",
+      "evidence_needed": "",
+      "previous_prs": [
+        2827
+      ],
+      "pathways": [
+        "injury exclusions",
+        "mechanical costs",
+        "late-window eligibility",
+        "readiness/edit safety"
+      ],
+      "consumers": [
+        "fightcamp/injury_filtering.py:injury_match_details",
+        "fightcamp/injury_guard.py:injury_decision",
+        "fightcamp/strength.py:_evaluate_strength_late_window",
+        "fightcamp/conditioning.py:_evaluate_conditioning_late_window",
+        "fightcamp/bank_schema.py:is_late_fight_metadata_safe",
+        "api/services/exercise_customisation.py:SafetyContext"
+      ],
+      "original_evidence": "reports/metadata_integrity/remediation.json#MI-c53ebeb0917a",
+      "affected_entries": 692,
+      "affected_configuration_records": 0,
+      "affected_ids_reference": "original_evidence.affected_entry_ids / affected_configuration_record_ids",
+      "current_receipt_sha256": "cc3139e191921fa2561123373fdda512df981690bfeca6dcc7bbfd5843db1cee",
+      "sources": [
+        "conditioning_bank.json",
+        "coordination/grappling.json",
+        "coordination/mma_transitions.json",
+        "coordination/universal.json",
+        "exercise_bank.json",
+        "style_conditioning_bank.json",
+        "style_taper_conditioning.json"
+      ],
+      "current_field_unchanged_entries": 685,
+      "current_row_unchanged_entries": 665,
+      "current_field_states": {
+        "known": 692
+      }
+    },
+    {
+      "issue_id": "MI-61ca7482f884",
+      "field": "target_regions",
+      "classification": "unresolved",
+      "priority": "P0",
+      "evidence": "hamstring/hamstrings lookup aliases are supplied by rehab_protocols, but target_regions is also a strict clinical exposure identity. RehabExposureEvent validates registry targets and requires body_region inclusion; immutable events and reviewed policy bindings cannot be rewritten as cosmetic names.",
+      "disposition": "Preserve aliases and all historical region identities; defer source reconciliation.",
+      "evidence_needed": "Per-entry live policy/exposure demand mapping, historical replay, stage/severity/side compatibility and proof no qualifying event changes meaning.",
+      "previous_prs": [],
+      "pathways": [
+        "rehab region/stage eligibility",
+        "clinical dose",
+        "progression/exposure history"
+      ],
+      "consumers": [
+        "fightcamp/rehab_protocols.py:normalize_rehab_location",
+        "fightcamp/rehab_selector.py:filter_rehab_candidates",
+        "fightcamp/rehab_clinical.py",
+        "api/contracts/rehab_exposure.py:RehabExposureEvent",
+        "api/contracts/rehab_progression.py",
+        "tools/apply_rehab_metadata_review.py:apply_reviews"
+      ],
+      "original_evidence": "reports/metadata_integrity/remediation.json#MI-61ca7482f884",
+      "affected_entries": 31,
+      "affected_configuration_records": 0,
+      "affected_ids_reference": "original_evidence.affected_entry_ids / affected_configuration_record_ids",
+      "current_receipt_sha256": "a525aa121fd22b6e7f3543df28a0f071add0bb937b42b302b2b129f53514ea6f",
+      "sources": [
+        "rehab_bank.json"
+      ],
+      "current_field_unchanged_entries": 31,
+      "current_row_unchanged_entries": 31,
+      "current_field_states": {
+        "known": 31
+      }
+    },
+    {
+      "issue_id": "MI-7e256062a1ab",
+      "field": "target_regions",
+      "classification": "unresolved",
+      "priority": "P0",
+      "evidence": "bicep/biceps lookup aliases are supplied by rehab_protocols, but target_regions is also a strict clinical exposure identity. RehabExposureEvent validates registry targets and requires body_region inclusion; immutable events and reviewed policy bindings cannot be rewritten as cosmetic names.",
+      "disposition": "Preserve aliases and all historical region identities; defer source reconciliation.",
+      "evidence_needed": "Per-entry live policy/exposure demand mapping, historical replay, stage/severity/side compatibility and proof no qualifying event changes meaning.",
+      "previous_prs": [],
+      "pathways": [
+        "rehab region/stage eligibility",
+        "clinical dose",
+        "progression/exposure history"
+      ],
+      "consumers": [
+        "fightcamp/rehab_protocols.py:normalize_rehab_location",
+        "fightcamp/rehab_selector.py:filter_rehab_candidates",
+        "fightcamp/rehab_clinical.py",
+        "api/contracts/rehab_exposure.py:RehabExposureEvent",
+        "api/contracts/rehab_progression.py",
+        "tools/apply_rehab_metadata_review.py:apply_reviews"
+      ],
+      "original_evidence": "reports/metadata_integrity/remediation.json#MI-7e256062a1ab",
+      "affected_entries": 65,
+      "affected_configuration_records": 0,
+      "affected_ids_reference": "original_evidence.affected_entry_ids / affected_configuration_record_ids",
+      "current_receipt_sha256": "e809e60dbb536b541b985fe570c6451d765b6725b19d80e59ed84482e6afe755",
+      "sources": [
+        "rehab_bank.json"
+      ],
+      "current_field_unchanged_entries": 65,
+      "current_row_unchanged_entries": 65,
+      "current_field_states": {
+        "known": 65
+      }
+    },
+    {
+      "issue_id": "MI-5650eecead89",
+      "field": "body_region",
+      "classification": "intentional_distinction",
+      "priority": "P1",
+      "evidence": "Boxer stance weight-shift hold is balance/stance micro-support, not a full-body loaded lift. Authored category, balance_static, goals and D1 opt-in carry intent; whole-body load substitution is not justified.",
+      "disposition": "Keep full_body_stance and the exercise identity.",
+      "evidence_needed": "",
+      "previous_prs": [],
+      "pathways": [
+        "movement/task classification",
+        "sport eligibility",
+        "selection/scoring",
+        "discovery"
+      ],
+      "consumers": [
+        "fightcamp/strength.py:generate_strength_block",
+        "fightcamp/conditioning.py:generate_conditioning_block",
+        "api/services/training_library.py:_prepare",
+        "shared/training-metadata.json"
+      ],
+      "original_evidence": "reports/metadata_integrity/remediation.json#MI-5650eecead89",
+      "affected_entries": 1,
+      "affected_configuration_records": 0,
+      "affected_ids_reference": "original_evidence.affected_entry_ids / affected_configuration_record_ids",
+      "current_receipt_sha256": "3ecd2a96c734ca85eabf4dfd7524572b0c17735993c8751059e137eafad4c4d7",
+      "sources": [
+        "exercise_bank.json"
+      ],
+      "current_field_unchanged_entries": 1,
+      "current_row_unchanged_entries": 1,
+      "current_field_states": {
+        "known": 1
+      }
+    },
+    {
+      "issue_id": "MI-ec3d257049b6",
+      "field": "body_region",
+      "classification": "intentional_distinction",
+      "priority": "P1",
+      "evidence": "Lead/rear single-leg stance and lead-foot pivot use the same regional words but different stance/pivot mechanics and D1 eligibility. Explicit mobility discovery accepts both regional tokens. Region token order is not grounds to merge the exercises.",
+      "disposition": "Preserve regional tokens and distinct stance/pivot classifications; no clinical joins changed.",
+      "evidence_needed": "",
+      "previous_prs": [],
+      "pathways": [
+        "movement/task classification",
+        "sport eligibility",
+        "selection/scoring",
+        "discovery"
+      ],
+      "consumers": [
+        "fightcamp/strength.py:generate_strength_block",
+        "fightcamp/conditioning.py:generate_conditioning_block",
+        "api/services/training_library.py:_prepare",
+        "shared/training-metadata.json"
+      ],
+      "original_evidence": "reports/metadata_integrity/remediation.json#MI-ec3d257049b6",
+      "affected_entries": 3,
+      "affected_configuration_records": 0,
+      "affected_ids_reference": "original_evidence.affected_entry_ids / affected_configuration_record_ids",
+      "current_receipt_sha256": "dc6073679c7fe6fcafcd8044acc727cf105619c3daf04a268bb772e55ae9b74e",
+      "sources": [
+        "exercise_bank.json"
+      ],
+      "current_field_unchanged_entries": 3,
+      "current_row_unchanged_entries": 3,
+      "current_field_states": {
+        "known": 3
+      }
+    },
+    {
+      "issue_id": "MI-0652eadb8203",
+      "field": "equipment",
+      "classification": "intentional_distinction",
+      "priority": "P1",
+      "evidence": "Overcoming Split-Squat Isometric explicitly requires bands; bodyweight describes loading, not absence of apparatus. Normalization retains bands. shared/equipment-requirements.json records the source-bound decision from #2824.",
+      "disposition": "Keep compound source spelling and required setup; no global separator reinterpretation.",
+      "evidence_needed": "",
+      "previous_prs": [
+        2824
+      ],
+      "pathways": [
+        "equipment eligibility",
+        "style/phase scoring",
+        "substitution",
+        "rehab setup"
+      ],
+      "consumers": [
+        "fightcamp/training_context.py:normalize_equipment_list",
+        "fightcamp/conditioning.py:generate_conditioning_block",
+        "fightcamp/strength.py:generate_strength_block",
+        "fightcamp/rehab_selector.py:filter_rehab_candidates",
+        "api/services/exercise_customisation.py:_equipment_available",
+        "api/services/training_library.py"
+      ],
+      "original_evidence": "reports/metadata_integrity/remediation.json#MI-0652eadb8203",
+      "affected_entries": 1,
+      "affected_configuration_records": 0,
+      "affected_ids_reference": "original_evidence.affected_entry_ids / affected_configuration_record_ids",
+      "current_receipt_sha256": "58565440cc61fa3ca5ab4df054775e0a6d321d559db810c10655fb5f445d791a",
+      "sources": [
+        "exercise_bank.json"
+      ],
+      "current_field_unchanged_entries": 1,
+      "current_row_unchanged_entries": 1,
+      "current_field_states": {
+        "known": 1
+      }
+    },
+    {
+      "issue_id": "MI-2feb680cf7c6",
+      "field": "equipment",
+      "classification": "intentional_distinction",
+      "priority": "P1",
+      "evidence": "Landmine press followed by medicine-ball chest pass requires both stations; reviewed ALL, not an alternative. shared/equipment-requirements.json records the source-bound decision from #2824.",
+      "disposition": "Keep compound source spelling and required setup; no global separator reinterpretation.",
+      "evidence_needed": "",
+      "previous_prs": [
+        2824
+      ],
+      "pathways": [
+        "equipment eligibility",
+        "style/phase scoring",
+        "substitution",
+        "rehab setup"
+      ],
+      "consumers": [
+        "fightcamp/training_context.py:normalize_equipment_list",
+        "fightcamp/conditioning.py:generate_conditioning_block",
+        "fightcamp/strength.py:generate_strength_block",
+        "fightcamp/rehab_selector.py:filter_rehab_candidates",
+        "api/services/exercise_customisation.py:_equipment_available",
+        "api/services/training_library.py"
+      ],
+      "original_evidence": "reports/metadata_integrity/remediation.json#MI-2feb680cf7c6",
+      "affected_entries": 1,
+      "affected_configuration_records": 0,
+      "affected_ids_reference": "original_evidence.affected_entry_ids / affected_configuration_record_ids",
+      "current_receipt_sha256": "f37fe6ebe36589f340b5227cd39ec95c2f4bf858dbc724d0edec9cbe3765e1f8",
+      "sources": [
+        "exercise_bank.json"
+      ],
+      "current_field_unchanged_entries": 1,
+      "current_row_unchanged_entries": 1,
+      "current_field_states": {
+        "known": 1
+      }
+    },
+    {
+      "issue_id": "MI-55bca90d64d1",
+      "field": "equipment",
+      "classification": "intentional_distinction",
+      "priority": "P1",
+      "evidence": "Weighted-vest jump rope uses vest AND jump rope; reviewed ALL and both tokens survive runtime normalization. shared/equipment-requirements.json records the source-bound decision from #2824.",
+      "disposition": "Keep compound source spelling and required setup; no global separator reinterpretation.",
+      "evidence_needed": "",
+      "previous_prs": [
+        2824
+      ],
+      "pathways": [
+        "equipment eligibility",
+        "style/phase scoring",
+        "substitution",
+        "rehab setup"
+      ],
+      "consumers": [
+        "fightcamp/training_context.py:normalize_equipment_list",
+        "fightcamp/conditioning.py:generate_conditioning_block",
+        "fightcamp/strength.py:generate_strength_block",
+        "fightcamp/rehab_selector.py:filter_rehab_candidates",
+        "api/services/exercise_customisation.py:_equipment_available",
+        "api/services/training_library.py"
+      ],
+      "original_evidence": "reports/metadata_integrity/remediation.json#MI-55bca90d64d1",
+      "affected_entries": 1,
+      "affected_configuration_records": 0,
+      "affected_ids_reference": "original_evidence.affected_entry_ids / affected_configuration_record_ids",
+      "current_receipt_sha256": "78de086802d573eb3d0a5b8bbf78058bcd81c1840ee01f1a220f33a50929dadd",
+      "sources": [
+        "exercise_bank.json"
+      ],
+      "current_field_unchanged_entries": 1,
+      "current_row_unchanged_entries": 1,
+      "current_field_states": {
+        "known": 1
+      }
+    },
+    {
+      "issue_id": "MI-5a11f50b939f",
+      "field": "equipment",
+      "classification": "intentional_distinction",
+      "priority": "P1",
+      "evidence": "Partner gently tugs a band during single-leg stance; reviewed ALL bands plus partner, not interchangeable equipment. shared/equipment-requirements.json records the source-bound decision from #2824.",
+      "disposition": "Keep compound source spelling and required setup; no global separator reinterpretation.",
+      "evidence_needed": "",
+      "previous_prs": [
+        2824
+      ],
+      "pathways": [
+        "equipment eligibility",
+        "style/phase scoring",
+        "substitution",
+        "rehab setup"
+      ],
+      "consumers": [
+        "fightcamp/training_context.py:normalize_equipment_list",
+        "fightcamp/conditioning.py:generate_conditioning_block",
+        "fightcamp/strength.py:generate_strength_block",
+        "fightcamp/rehab_selector.py:filter_rehab_candidates",
+        "api/services/exercise_customisation.py:_equipment_available",
+        "api/services/training_library.py"
+      ],
+      "original_evidence": "reports/metadata_integrity/remediation.json#MI-5a11f50b939f",
+      "affected_entries": 1,
+      "affected_configuration_records": 0,
+      "affected_ids_reference": "original_evidence.affected_entry_ids / affected_configuration_record_ids",
+      "current_receipt_sha256": "006482e50ecd8afd8a9cb6d4cea5de15c7e2c5f07f291addadecee12aa10beb5",
+      "sources": [
+        "exercise_bank.json"
+      ],
+      "current_field_unchanged_entries": 1,
+      "current_row_unchanged_entries": 1,
+      "current_field_states": {
+        "known": 1
+      }
+    },
+    {
+      "issue_id": "MI-71931d8b6978",
+      "field": "equipment",
+      "classification": "intentional_distinction",
+      "priority": "P1",
+      "evidence": "Rotational sledgehammer strike requires hammer AND tire; reviewed ALL and runtime requires both. shared/equipment-requirements.json records the source-bound decision from #2824.",
+      "disposition": "Keep compound source spelling and required setup; no global separator reinterpretation.",
+      "evidence_needed": "",
+      "previous_prs": [
+        2824
+      ],
+      "pathways": [
+        "equipment eligibility",
+        "style/phase scoring",
+        "substitution",
+        "rehab setup"
+      ],
+      "consumers": [
+        "fightcamp/training_context.py:normalize_equipment_list",
+        "fightcamp/conditioning.py:generate_conditioning_block",
+        "fightcamp/strength.py:generate_strength_block",
+        "fightcamp/rehab_selector.py:filter_rehab_candidates",
+        "api/services/exercise_customisation.py:_equipment_available",
+        "api/services/training_library.py"
+      ],
+      "original_evidence": "reports/metadata_integrity/remediation.json#MI-71931d8b6978",
+      "affected_entries": 1,
+      "affected_configuration_records": 0,
+      "affected_ids_reference": "original_evidence.affected_entry_ids / affected_configuration_record_ids",
+      "current_receipt_sha256": "90c02d4fddd047d1ee697470576a50cd804cbc57fbcf7aacb153c76eff127f4a",
+      "sources": [
+        "exercise_bank.json"
+      ],
+      "current_field_unchanged_entries": 1,
+      "current_row_unchanged_entries": 1,
+      "current_field_states": {
+        "known": 1
+      }
+    },
+    {
+      "issue_id": "MI-7b3671fc562e",
+      "field": "equipment",
+      "classification": "intentional_distinction",
+      "priority": "P1",
+      "evidence": "Both pin-pull isometrics require trap bar AND pins; reviews and contraindication notes agree. No requirement is optional. shared/equipment-requirements.json records the source-bound decision from #2824.",
+      "disposition": "Keep compound source spelling and required setup; no global separator reinterpretation.",
+      "evidence_needed": "",
+      "previous_prs": [
+        2824
+      ],
+      "pathways": [
+        "equipment eligibility",
+        "style/phase scoring",
+        "substitution",
+        "rehab setup"
+      ],
+      "consumers": [
+        "fightcamp/training_context.py:normalize_equipment_list",
+        "fightcamp/conditioning.py:generate_conditioning_block",
+        "fightcamp/strength.py:generate_strength_block",
+        "fightcamp/rehab_selector.py:filter_rehab_candidates",
+        "api/services/exercise_customisation.py:_equipment_available",
+        "api/services/training_library.py"
+      ],
+      "original_evidence": "reports/metadata_integrity/remediation.json#MI-7b3671fc562e",
+      "affected_entries": 2,
+      "affected_configuration_records": 0,
+      "affected_ids_reference": "original_evidence.affected_entry_ids / affected_configuration_record_ids",
+      "current_receipt_sha256": "6b9b441582b53021e392b021ddbd3cddaa6ba62658c18ae3c6fde28151e629ff",
+      "sources": [
+        "exercise_bank.json"
+      ],
+      "current_field_unchanged_entries": 2,
+      "current_row_unchanged_entries": 0,
+      "current_field_states": {
+        "known": 2
+      }
+    },
+    {
+      "issue_id": "MI-a94cd8760e27",
+      "field": "equipment",
+      "classification": "intentional_distinction",
+      "priority": "P1",
+      "evidence": "Band-resisted slip-rope drill requires bands AND rope in the reviewed setup; split tokens already enforce both. shared/equipment-requirements.json records the source-bound decision from #2824.",
+      "disposition": "Keep compound source spelling and required setup; no global separator reinterpretation.",
+      "evidence_needed": "",
+      "previous_prs": [
+        2824
+      ],
+      "pathways": [
+        "equipment eligibility",
+        "style/phase scoring",
+        "substitution",
+        "rehab setup"
+      ],
+      "consumers": [
+        "fightcamp/training_context.py:normalize_equipment_list",
+        "fightcamp/conditioning.py:generate_conditioning_block",
+        "fightcamp/strength.py:generate_strength_block",
+        "fightcamp/rehab_selector.py:filter_rehab_candidates",
+        "api/services/exercise_customisation.py:_equipment_available",
+        "api/services/training_library.py"
+      ],
+      "original_evidence": "reports/metadata_integrity/remediation.json#MI-a94cd8760e27",
+      "affected_entries": 1,
+      "affected_configuration_records": 0,
+      "affected_ids_reference": "original_evidence.affected_entry_ids / affected_configuration_record_ids",
+      "current_receipt_sha256": "c68e7a894b03b6c410ef240f70b7e17b984c47ab7f1ec1853353df29cbda3112",
+      "sources": [
+        "exercise_bank.json"
+      ],
+      "current_field_unchanged_entries": 1,
+      "current_row_unchanged_entries": 1,
+      "current_field_states": {
+        "known": 1
+      }
+    },
+    {
+      "issue_id": "MI-ac585612eeee",
+      "field": "equipment",
+      "classification": "intentional_distinction",
+      "priority": "P1",
+      "evidence": "Split-stance landmine press retains reviewed ALL barbell plus landmine. Runtime has no blanket athlete-side barbell=>landmine implication on current Main. shared/equipment-requirements.json records the source-bound decision from #2824.",
+      "disposition": "Keep compound source spelling and required setup; no global separator reinterpretation.",
+      "evidence_needed": "",
+      "previous_prs": [
+        2824
+      ],
+      "pathways": [
+        "equipment eligibility",
+        "style/phase scoring",
+        "substitution",
+        "rehab setup"
+      ],
+      "consumers": [
+        "fightcamp/training_context.py:normalize_equipment_list",
+        "fightcamp/conditioning.py:generate_conditioning_block",
+        "fightcamp/strength.py:generate_strength_block",
+        "fightcamp/rehab_selector.py:filter_rehab_candidates",
+        "api/services/exercise_customisation.py:_equipment_available",
+        "api/services/training_library.py"
+      ],
+      "original_evidence": "reports/metadata_integrity/remediation.json#MI-ac585612eeee",
+      "affected_entries": 1,
+      "affected_configuration_records": 0,
+      "affected_ids_reference": "original_evidence.affected_entry_ids / affected_configuration_record_ids",
+      "current_receipt_sha256": "274bc8b2171d70da564b06bbc2babc06a653f0c81eb0d535b962ce48e7540461",
+      "sources": [
+        "exercise_bank.json"
+      ],
+      "current_field_unchanged_entries": 1,
+      "current_row_unchanged_entries": 1,
+      "current_field_states": {
+        "known": 1
+      }
+    },
+    {
+      "issue_id": "MI-f1ed6d5c05f8",
+      "field": "equipment",
+      "classification": "already_resolved",
+      "priority": "P1",
+      "evidence": "All three actual source rows now declare towel+pullup_bar, pullup_bar, and towel respectively. #2825 corrected the generator sources after #2824 corrected discovery; strict identity bindings and historical IDs are retained.",
+      "disposition": "No repeated apparatus edits.",
+      "evidence_needed": "",
+      "previous_prs": [
+        2824,
+        2825
+      ],
+      "pathways": [
+        "equipment eligibility",
+        "style/phase scoring",
+        "substitution",
+        "rehab setup"
+      ],
+      "consumers": [
+        "fightcamp/training_context.py:normalize_equipment_list",
+        "fightcamp/conditioning.py:generate_conditioning_block",
+        "fightcamp/strength.py:generate_strength_block",
+        "fightcamp/rehab_selector.py:filter_rehab_candidates",
+        "api/services/exercise_customisation.py:_equipment_available",
+        "api/services/training_library.py"
+      ],
+      "original_evidence": "reports/metadata_integrity/remediation.json#MI-f1ed6d5c05f8",
+      "affected_entries": 3,
+      "affected_configuration_records": 0,
+      "affected_ids_reference": "original_evidence.affected_entry_ids / affected_configuration_record_ids",
+      "current_receipt_sha256": "5c0e150ae7154f4d48ef142ab1470930cbccde917192a0239f593ac15ae6c70a",
+      "sources": [
+        "conditioning_bank.json",
+        "exercise_bank.json"
+      ],
+      "current_field_unchanged_entries": 0,
+      "current_row_unchanged_entries": 0,
+      "current_field_states": {
+        "known": 3
+      }
+    },
+    {
+      "issue_id": "MI-15596c12f262",
+      "field": "modality",
+      "classification": "intentional_distinction",
+      "priority": "P1",
+      "evidence": "Gogoplata Grinder practices a flexibility-plus-submission setup, 10 shin-to-throat setups across five rounds. A combined modality is intentional task description, not two independent energy systems or clearance.",
+      "disposition": "Retain combined task and existing contact/injury restrictions.",
+      "evidence_needed": "",
+      "previous_prs": [],
+      "pathways": [
+        "movement/task classification",
+        "sport eligibility",
+        "selection/scoring",
+        "discovery"
+      ],
+      "consumers": [
+        "fightcamp/strength.py:generate_strength_block",
+        "fightcamp/conditioning.py:generate_conditioning_block",
+        "api/services/training_library.py:_prepare",
+        "shared/training-metadata.json"
+      ],
+      "original_evidence": "reports/metadata_integrity/remediation.json#MI-15596c12f262",
+      "affected_entries": 1,
+      "affected_configuration_records": 0,
+      "affected_ids_reference": "original_evidence.affected_entry_ids / affected_configuration_record_ids",
+      "current_receipt_sha256": "c57398cc4ad463ea4461b56d5e59f23fac6b8928f9842a8acce1304ae6bd0e78",
+      "sources": [
+        "style_conditioning_bank.json"
+      ],
+      "current_field_unchanged_entries": 1,
+      "current_row_unchanged_entries": 1,
+      "current_field_states": {
+        "known": 1
+      }
+    },
+    {
+      "issue_id": "MI-1fbb489fff4b",
+      "field": "modality",
+      "classification": "intentional_distinction",
+      "priority": "P1",
+      "evidence": "Range Reset Flow is controlled partner-cued aerobic restoration (120s/60s); Range Recovery Intervals repeats compressed-distance score/reposition at demanding glycolytic pace (60s/45s).",
+      "disposition": "Keep reactive versus repeated restoration tasks and doses distinct.",
+      "evidence_needed": "",
+      "previous_prs": [],
+      "pathways": [
+        "movement/task classification",
+        "sport eligibility",
+        "selection/scoring",
+        "discovery"
+      ],
+      "consumers": [
+        "fightcamp/strength.py:generate_strength_block",
+        "fightcamp/conditioning.py:generate_conditioning_block",
+        "api/services/training_library.py:_prepare",
+        "shared/training-metadata.json"
+      ],
+      "original_evidence": "reports/metadata_integrity/remediation.json#MI-1fbb489fff4b",
+      "affected_entries": 2,
+      "affected_configuration_records": 0,
+      "affected_ids_reference": "original_evidence.affected_entry_ids / affected_configuration_record_ids",
+      "current_receipt_sha256": "6eb91f499df2ccfa93c8540f58a22c4a6a94a0cc5cbecb40ca6fda9ffeef157b",
+      "sources": [
+        "style_conditioning_bank.json"
+      ],
+      "current_field_unchanged_entries": 2,
+      "current_row_unchanged_entries": 2,
+      "current_field_states": {
+        "known": 2
+      }
+    },
+    {
+      "issue_id": "MI-947031a5e18e",
+      "field": "modality",
+      "classification": "intentional_distinction",
+      "priority": "P1",
+      "evidence": "Random Attack Counter Rounds uses unpredictable strikes/entries, glycolytic 4x120s; Reactive Clinch Position Rounds uses grips/frames/posture and controlled knee decisions, aerobic 4x120s. Singular/plural modality wording does not equate tasks.",
+      "disposition": "Retain sport/contact/system differences; no exercise consolidation.",
+      "evidence_needed": "",
+      "previous_prs": [],
+      "pathways": [
+        "movement/task classification",
+        "sport eligibility",
+        "selection/scoring",
+        "discovery"
+      ],
+      "consumers": [
+        "fightcamp/strength.py:generate_strength_block",
+        "fightcamp/conditioning.py:generate_conditioning_block",
+        "api/services/training_library.py:_prepare",
+        "shared/training-metadata.json"
+      ],
+      "original_evidence": "reports/metadata_integrity/remediation.json#MI-947031a5e18e",
+      "affected_entries": 2,
+      "affected_configuration_records": 0,
+      "affected_ids_reference": "original_evidence.affected_entry_ids / affected_configuration_record_ids",
+      "current_receipt_sha256": "8af96f2c1088c1948c5363698979f7a3c7adeac34d43fa03f80a33d5973f9a1f",
+      "sources": [
+        "style_conditioning_bank.json"
+      ],
+      "current_field_unchanged_entries": 2,
+      "current_row_unchanged_entries": 2,
+      "current_field_states": {
+        "known": 2
+      }
+    },
+    {
+      "issue_id": "MI-9fca9706fdf6",
+      "field": "modality",
+      "classification": "intentional_distinction",
+      "priority": "P1",
+      "evidence": "Movement Economy Rounds scores/repositions every 6-10s; Range Movement Flow scores every 10-15s at low pace. Even equal round lengths do not erase authored pacing and decision frequency.",
+      "disposition": "Keep both named task variants and intensity guidance.",
+      "evidence_needed": "",
+      "previous_prs": [],
+      "pathways": [
+        "movement/task classification",
+        "sport eligibility",
+        "selection/scoring",
+        "discovery"
+      ],
+      "consumers": [
+        "fightcamp/strength.py:generate_strength_block",
+        "fightcamp/conditioning.py:generate_conditioning_block",
+        "api/services/training_library.py:_prepare",
+        "shared/training-metadata.json"
+      ],
+      "original_evidence": "reports/metadata_integrity/remediation.json#MI-9fca9706fdf6",
+      "affected_entries": 2,
+      "affected_configuration_records": 0,
+      "affected_ids_reference": "original_evidence.affected_entry_ids / affected_configuration_record_ids",
+      "current_receipt_sha256": "85eaaae1f7e408491fa2b66e2ce07cd0beb440ee0e0db219c3c1811dd8c2fcf6",
+      "sources": [
+        "style_conditioning_bank.json"
+      ],
+      "current_field_unchanged_entries": 2,
+      "current_row_unchanged_entries": 2,
+      "current_field_states": {
+        "known": 2
+      }
+    },
+    {
+      "issue_id": "MI-e2c12769df3e",
+      "field": "modality",
+      "classification": "intentional_distinction",
+      "priority": "P1",
+      "evidence": "Reactive Long-Weapon Burst permits jab/teep/long-kick choice, 7s/75s x6; Teep Intercept Burst is teep on unpredictable entry, 5s/60s x8.",
+      "disposition": "Preserve technique choice, dose and sport specificity.",
+      "evidence_needed": "",
+      "previous_prs": [],
+      "pathways": [
+        "movement/task classification",
+        "sport eligibility",
+        "selection/scoring",
+        "discovery"
+      ],
+      "consumers": [
+        "fightcamp/strength.py:generate_strength_block",
+        "fightcamp/conditioning.py:generate_conditioning_block",
+        "api/services/training_library.py:_prepare",
+        "shared/training-metadata.json"
+      ],
+      "original_evidence": "reports/metadata_integrity/remediation.json#MI-e2c12769df3e",
+      "affected_entries": 2,
+      "affected_configuration_records": 0,
+      "affected_ids_reference": "original_evidence.affected_entry_ids / affected_configuration_record_ids",
+      "current_receipt_sha256": "f70d7bce3aab461ecd962d21b859a7bf063afb26b61e3b008c892e45da932d22",
+      "sources": [
+        "style_conditioning_bank.json"
+      ],
+      "current_field_unchanged_entries": 2,
+      "current_row_unchanged_entries": 2,
+      "current_field_states": {
+        "known": 2
+      }
+    },
+    {
+      "issue_id": "MI-f5af987cac2e",
+      "field": "modality",
+      "classification": "intentional_distinction",
+      "priority": "P1",
+      "evidence": "Inside Decision Rounds (kickboxing/Muay Thai) includes checks/catches/kicks and controlled pad knee. Boxing clinch decisions use grips/frames/turns/separation and punches without importing knee/kick permission.",
+      "disposition": "Retain distinct boxing and kickboxing/Muay Thai legal techniques.",
+      "evidence_needed": "",
+      "previous_prs": [],
+      "pathways": [
+        "movement/task classification",
+        "sport eligibility",
+        "selection/scoring",
+        "discovery"
+      ],
+      "consumers": [
+        "fightcamp/strength.py:generate_strength_block",
+        "fightcamp/conditioning.py:generate_conditioning_block",
+        "api/services/training_library.py:_prepare",
+        "shared/training-metadata.json"
+      ],
+      "original_evidence": "reports/metadata_integrity/remediation.json#MI-f5af987cac2e",
+      "affected_entries": 2,
+      "affected_configuration_records": 0,
+      "affected_ids_reference": "original_evidence.affected_entry_ids / affected_configuration_record_ids",
+      "current_receipt_sha256": "6e8a497b2400f13336a0b8433cd63c02f3202318070a3d6eb6e3963087418ad2",
+      "sources": [
+        "style_conditioning_bank.json"
+      ],
+      "current_field_unchanged_entries": 2,
+      "current_row_unchanged_entries": 2,
+      "current_field_states": {
+        "known": 2
+      }
+    },
+    {
+      "issue_id": "MI-b51b84fc851f",
+      "field": "system",
+      "classification": "intentional_distinction",
+      "priority": "P1",
+      "evidence": "Neck Harness Flexion/Extension now explicitly has placement=strength and structural-support notes (#2882). Hypertrophy and cognitive remain legacy support-alias inputs to get_system_or_warn, not equivalent adaptations; blindfold pummeling is controlled sensory skill work with independent alactic-structure and safety gates.",
+      "disposition": "Keep placement/support semantics; do not rename cognitive or hypertrophy into energy claims.",
+      "evidence_needed": "",
+      "previous_prs": [
+        2882
+      ],
+      "pathways": [
+        "system quotas",
+        "conditioning selection",
+        "work/rest dose",
+        "fight proximity"
+      ],
+      "consumers": [
+        "fightcamp/conditioning.py:normalize_system",
+        "fightcamp/conditioning.py:get_system_or_warn",
+        "fightcamp/conditioning.py:generate_conditioning_block",
+        "fightcamp/prescription_resolver.py"
+      ],
+      "original_evidence": "reports/metadata_integrity/remediation.json#MI-b51b84fc851f",
+      "affected_entries": 2,
+      "affected_configuration_records": 0,
+      "affected_ids_reference": "original_evidence.affected_entry_ids / affected_configuration_record_ids",
+      "current_receipt_sha256": "a9172943976dabfb707a156c453412e8cfb9be8e01c54eed1f3219160d962a5c",
+      "sources": [
+        "conditioning_bank.json",
+        "style_conditioning_bank.json"
+      ],
+      "current_field_unchanged_entries": 2,
+      "current_row_unchanged_entries": 1,
+      "current_field_states": {
+        "known": 2
+      }
+    },
+    {
+      "issue_id": "MI-cc45611f69c2",
+      "field": "system",
+      "classification": "unresolved",
+      "priority": "P1",
+      "evidence": "Mixed aerobic/glycolytic tags can describe threshold or mixed hard/easy work; system owns allocation while tags affect ranking. #2882 removed glycolytic from Concept2 Rower Zone 3 Block and clarified controlled zone-3 pacing. Other five rows retain threshold/mixed notes; no single-system rewrite follows from tag overlap.",
+      "disposition": "Keep prior zone-3 correction and the remaining mixed distinctions.",
+      "evidence_needed": "Source intensity/work-rest/adaptation evidence for each remaining mixed row; change only demonstrated incorrect allocation/dose.",
+      "previous_prs": [
+        2882
+      ],
+      "pathways": [
+        "system quotas",
+        "conditioning selection",
+        "work/rest dose",
+        "fight proximity"
+      ],
+      "consumers": [
+        "fightcamp/conditioning.py:normalize_system",
+        "fightcamp/conditioning.py:get_system_or_warn",
+        "fightcamp/conditioning.py:generate_conditioning_block",
+        "fightcamp/prescription_resolver.py"
+      ],
+      "original_evidence": "reports/metadata_integrity/remediation.json#MI-cc45611f69c2",
+      "affected_entries": 6,
+      "affected_configuration_records": 0,
+      "affected_ids_reference": "original_evidence.affected_entry_ids / affected_configuration_record_ids",
+      "current_receipt_sha256": "5a058332a22638f10e9ced392975726cf1cc1e86cc9b2e188c630ddb87264424",
+      "sources": [
+        "conditioning_bank.json"
+      ],
+      "current_field_unchanged_entries": 5,
+      "current_row_unchanged_entries": 4,
+      "current_field_states": {
+        "known": 6
+      }
+    },
+    {
+      "issue_id": "MI-001c17155974",
+      "field": "equipment",
+      "classification": "unresolved",
+      "priority": "P2",
+      "evidence": "Death by Carry (Sandbag/Sled) does not specify whether sled/carry is a substitution or combined station. #2824 deliberately left these source-bound reviews UNKNOWN; discovery does not grant prescription authority.",
+      "disposition": "Keep conservative current gate and raw source value; no ANY inference.",
+      "evidence_needed": "Explicit setup/execution variant and ALL/ANY/OPTIONAL grouping with equal-dose substitution and relevant injury checks.",
+      "previous_prs": [
+        2824
+      ],
+      "pathways": [
+        "equipment eligibility",
+        "style/phase scoring",
+        "substitution",
+        "rehab setup"
+      ],
+      "consumers": [
+        "fightcamp/training_context.py:normalize_equipment_list",
+        "fightcamp/conditioning.py:generate_conditioning_block",
+        "fightcamp/strength.py:generate_strength_block",
+        "fightcamp/rehab_selector.py:filter_rehab_candidates",
+        "api/services/exercise_customisation.py:_equipment_available",
+        "api/services/training_library.py"
+      ],
+      "original_evidence": "reports/metadata_integrity/remediation.json#MI-001c17155974",
+      "affected_entries": 1,
+      "affected_configuration_records": 0,
+      "affected_ids_reference": "original_evidence.affected_entry_ids / affected_configuration_record_ids",
+      "current_receipt_sha256": "2bb287d2e7570e7059a2e67257ac217b791b0d6f107724ed33f3294273a759f9",
+      "sources": [
+        "exercise_bank.json"
+      ],
+      "current_field_unchanged_entries": 1,
+      "current_row_unchanged_entries": 1,
+      "current_field_states": {
+        "known": 1
+      }
+    },
+    {
+      "issue_id": "MI-1277d8b6d1a1",
+      "field": "equipment",
+      "classification": "unresolved",
+      "priority": "P2",
+      "evidence": "Tabata Sprints (Treadmill/Row) lacks per-modality setup and dose evidence; runtime currently requires both tokens. #2824 deliberately left these source-bound reviews UNKNOWN; discovery does not grant prescription authority.",
+      "disposition": "Keep conservative current gate and raw source value; no ANY inference.",
+      "evidence_needed": "Explicit setup/execution variant and ALL/ANY/OPTIONAL grouping with equal-dose substitution and relevant injury checks.",
+      "previous_prs": [
+        2824
+      ],
+      "pathways": [
+        "equipment eligibility",
+        "style/phase scoring",
+        "substitution",
+        "rehab setup"
+      ],
+      "consumers": [
+        "fightcamp/training_context.py:normalize_equipment_list",
+        "fightcamp/conditioning.py:generate_conditioning_block",
+        "fightcamp/strength.py:generate_strength_block",
+        "fightcamp/rehab_selector.py:filter_rehab_candidates",
+        "api/services/exercise_customisation.py:_equipment_available",
+        "api/services/training_library.py"
+      ],
+      "original_evidence": "reports/metadata_integrity/remediation.json#MI-1277d8b6d1a1",
+      "affected_entries": 1,
+      "affected_configuration_records": 0,
+      "affected_ids_reference": "original_evidence.affected_entry_ids / affected_configuration_record_ids",
+      "current_receipt_sha256": "c026351f4523ee7a691c310fe91e2c9486c6580212a174dbb4849602d5848d17",
+      "sources": [
+        "exercise_bank.json"
+      ],
+      "current_field_unchanged_entries": 1,
+      "current_row_unchanged_entries": 1,
+      "current_field_states": {
+        "known": 1
+      }
+    },
+    {
+      "issue_id": "MI-19c8f76c5408",
+      "field": "equipment",
+      "classification": "unresolved",
+      "priority": "P2",
+      "evidence": "Six slash rows mix proven ALL setups (hammer/tire, bands/partner, vest/rope) and UNKNOWN treadmill/rower plus partner/dummy. Current normalize_equipment_list splits punctuation into mandatory tokens; discovery reviews preserve per-row uncertainty.",
+      "disposition": "Retain reviewed distinctions; no global slash=>ANY conversion.",
+      "evidence_needed": "Resolve the three UNKNOWN rows individually; known ALL rows need no programming change.",
+      "previous_prs": [
+        2824
+      ],
+      "pathways": [
+        "equipment eligibility",
+        "style/phase scoring",
+        "substitution",
+        "rehab setup"
+      ],
+      "consumers": [
+        "fightcamp/training_context.py:normalize_equipment_list",
+        "fightcamp/conditioning.py:generate_conditioning_block",
+        "fightcamp/strength.py:generate_strength_block",
+        "fightcamp/rehab_selector.py:filter_rehab_candidates",
+        "api/services/exercise_customisation.py:_equipment_available",
+        "api/services/training_library.py"
+      ],
+      "original_evidence": "reports/metadata_integrity/remediation.json#MI-19c8f76c5408",
+      "affected_entries": 6,
+      "affected_configuration_records": 0,
+      "affected_ids_reference": "original_evidence.affected_entry_ids / affected_configuration_record_ids",
+      "current_receipt_sha256": "0cc878b6ecaafab50469e6bc471f4fec51e0e4af8918950d3de69e87d3141cda",
+      "sources": [
+        "exercise_bank.json"
+      ],
+      "current_field_unchanged_entries": 6,
+      "current_row_unchanged_entries": 6,
+      "current_field_states": {
+        "known": 6
+      }
+    },
+    {
+      "issue_id": "MI-25efc74f546c",
+      "field": "equipment",
+      "classification": "unresolved",
+      "priority": "P2",
+      "evidence": "Both bag isometric holds have bands,heavy_bag. Source-bound reviews remain UNKNOWN for anchoring and simultaneous versus optional setup. #2824 deliberately left these source-bound reviews UNKNOWN; discovery does not grant prescription authority.",
+      "disposition": "Keep conservative current gate and raw source value; no ANY inference.",
+      "evidence_needed": "Explicit setup/execution variant and ALL/ANY/OPTIONAL grouping with equal-dose substitution and relevant injury checks.",
+      "previous_prs": [
+        2824
+      ],
+      "pathways": [
+        "equipment eligibility",
+        "style/phase scoring",
+        "substitution",
+        "rehab setup"
+      ],
+      "consumers": [
+        "fightcamp/training_context.py:normalize_equipment_list",
+        "fightcamp/conditioning.py:generate_conditioning_block",
+        "fightcamp/strength.py:generate_strength_block",
+        "fightcamp/rehab_selector.py:filter_rehab_candidates",
+        "api/services/exercise_customisation.py:_equipment_available",
+        "api/services/training_library.py"
+      ],
+      "original_evidence": "reports/metadata_integrity/remediation.json#MI-25efc74f546c",
+      "affected_entries": 2,
+      "affected_configuration_records": 0,
+      "affected_ids_reference": "original_evidence.affected_entry_ids / affected_configuration_record_ids",
+      "current_receipt_sha256": "c1e36fc3697376de223d9e7a63bc7a3774532f374f84ec65d5f4b0a392eb830b",
+      "sources": [
+        "exercise_bank.json"
+      ],
+      "current_field_unchanged_entries": 2,
+      "current_row_unchanged_entries": 2,
+      "current_field_states": {
+        "known": 2
+      }
+    },
+    {
+      "issue_id": "MI-2a5bb39b6422",
+      "field": "equipment",
+      "classification": "unresolved",
+      "priority": "P2",
+      "evidence": "Towel Hang uses towel/bar but bar is not an explicit supported pull-up-bar identity. The reviewed setup remains UNKNOWN. #2824 deliberately left these source-bound reviews UNKNOWN; discovery does not grant prescription authority.",
+      "disposition": "Keep conservative current gate and raw source value; no ANY inference.",
+      "evidence_needed": "Explicit setup/execution variant and ALL/ANY/OPTIONAL grouping with equal-dose substitution and relevant injury checks.",
+      "previous_prs": [
+        2824
+      ],
+      "pathways": [
+        "equipment eligibility",
+        "style/phase scoring",
+        "substitution",
+        "rehab setup"
+      ],
+      "consumers": [
+        "fightcamp/training_context.py:normalize_equipment_list",
+        "fightcamp/conditioning.py:generate_conditioning_block",
+        "fightcamp/strength.py:generate_strength_block",
+        "fightcamp/rehab_selector.py:filter_rehab_candidates",
+        "api/services/exercise_customisation.py:_equipment_available",
+        "api/services/training_library.py"
+      ],
+      "original_evidence": "reports/metadata_integrity/remediation.json#MI-2a5bb39b6422",
+      "affected_entries": 1,
+      "affected_configuration_records": 0,
+      "affected_ids_reference": "original_evidence.affected_entry_ids / affected_configuration_record_ids",
+      "current_receipt_sha256": "e966918cbc20aed661f3417b6d5acae5b3fb93bf601dde12910cc9027950398d",
+      "sources": [
+        "exercise_bank.json"
+      ],
+      "current_field_unchanged_entries": 1,
+      "current_row_unchanged_entries": 1,
+      "current_field_states": {
+        "known": 1
+      }
+    },
+    {
+      "issue_id": "MI-487facf8df61",
+      "field": "equipment",
+      "classification": "unresolved",
+      "priority": "P2",
+      "evidence": "Towel/Gi Row Isometric Hold may require a particular anchor; source instructions do not establish the exact anchor/substitution. #2824 deliberately left these source-bound reviews UNKNOWN; discovery does not grant prescription authority.",
+      "disposition": "Keep conservative current gate and raw source value; no ANY inference.",
+      "evidence_needed": "Explicit setup/execution variant and ALL/ANY/OPTIONAL grouping with equal-dose substitution and relevant injury checks.",
+      "previous_prs": [
+        2824
+      ],
+      "pathways": [
+        "equipment eligibility",
+        "style/phase scoring",
+        "substitution",
+        "rehab setup"
+      ],
+      "consumers": [
+        "fightcamp/training_context.py:normalize_equipment_list",
+        "fightcamp/conditioning.py:generate_conditioning_block",
+        "fightcamp/strength.py:generate_strength_block",
+        "fightcamp/rehab_selector.py:filter_rehab_candidates",
+        "api/services/exercise_customisation.py:_equipment_available",
+        "api/services/training_library.py"
+      ],
+      "original_evidence": "reports/metadata_integrity/remediation.json#MI-487facf8df61",
+      "affected_entries": 1,
+      "affected_configuration_records": 0,
+      "affected_ids_reference": "original_evidence.affected_entry_ids / affected_configuration_record_ids",
+      "current_receipt_sha256": "bcf5a34ce6ffe360aa34d63c85d0d5f2be2557c08dc45a631f4e0c0b7657feaa",
+      "sources": [
+        "exercise_bank.json"
+      ],
+      "current_field_unchanged_entries": 1,
+      "current_row_unchanged_entries": 1,
+      "current_field_states": {
+        "known": 1
+      }
+    },
+    {
+      "issue_id": "MI-58ae8898fd59",
+      "field": "equipment",
+      "classification": "unresolved",
+      "priority": "P2",
+      "evidence": "Seven comma rows mix reviewed ALL landmine/ball, trap-bar/pins and barbell/landmine with UNKNOWN towel/anchor and the two bag-isometric setups. Comma is already split by runtime.",
+      "disposition": "Preserve proven ALL semantics and defer UNKNOWN setups.",
+      "evidence_needed": "Source anchor/optional attachment evidence for Towel/Gi Row and the two bag holds.",
+      "previous_prs": [
+        2824
+      ],
+      "pathways": [
+        "equipment eligibility",
+        "style/phase scoring",
+        "substitution",
+        "rehab setup"
+      ],
+      "consumers": [
+        "fightcamp/training_context.py:normalize_equipment_list",
+        "fightcamp/conditioning.py:generate_conditioning_block",
+        "fightcamp/strength.py:generate_strength_block",
+        "fightcamp/rehab_selector.py:filter_rehab_candidates",
+        "api/services/exercise_customisation.py:_equipment_available",
+        "api/services/training_library.py"
+      ],
+      "original_evidence": "reports/metadata_integrity/remediation.json#MI-58ae8898fd59",
+      "affected_entries": 7,
+      "affected_configuration_records": 0,
+      "affected_ids_reference": "original_evidence.affected_entry_ids / affected_configuration_record_ids",
+      "current_receipt_sha256": "2d7f5bf99f9ecf67f285e57ff704bc6dc562c1c1eea17f4a4239d5252deeb2bf",
+      "sources": [
+        "exercise_bank.json"
+      ],
+      "current_field_unchanged_entries": 7,
+      "current_row_unchanged_entries": 5,
+      "current_field_states": {
+        "known": 7
+      }
+    },
+    {
+      "issue_id": "MI-770609066613",
+      "field": "equipment",
+      "classification": "unresolved",
+      "priority": "P2",
+      "evidence": "mat and mats remain separate capabilities. The 45 rows span ground-combat surfaces and rehab supports; normalizing words cannot establish surface thickness, slip resistance or task suitability.",
+      "disposition": "Preserve both spellings and suitability uncertainty.",
+      "evidence_needed": "Per-task acceptable surface specifications and equipment compatibility; no clinical support=>combat mat permission.",
+      "previous_prs": [],
+      "pathways": [
+        "equipment eligibility",
+        "style/phase scoring",
+        "substitution",
+        "rehab setup"
+      ],
+      "consumers": [
+        "fightcamp/training_context.py:normalize_equipment_list",
+        "fightcamp/conditioning.py:generate_conditioning_block",
+        "fightcamp/strength.py:generate_strength_block",
+        "fightcamp/rehab_selector.py:filter_rehab_candidates",
+        "api/services/exercise_customisation.py:_equipment_available",
+        "api/services/training_library.py"
+      ],
+      "original_evidence": "reports/metadata_integrity/remediation.json#MI-770609066613",
+      "affected_entries": 45,
+      "affected_configuration_records": 0,
+      "affected_ids_reference": "original_evidence.affected_entry_ids / affected_configuration_record_ids",
+      "current_receipt_sha256": "6c4c443cdb0f4c814f8f8eee6cdc5f6dccfd424c808e46fa29a0582844c518a3",
+      "sources": [
+        "rehab_bank.json",
+        "style_conditioning_bank.json",
+        "style_taper_conditioning.json"
+      ],
+      "current_field_unchanged_entries": 45,
+      "current_row_unchanged_entries": 45,
+      "current_field_states": {
+        "known": 45
+      }
+    },
+    {
+      "issue_id": "MI-85d8031a7c6b",
+      "field": "equipment",
+      "classification": "unresolved",
+      "priority": "P2",
+      "evidence": "Heel-to-toe gait and side-hop stabilization list line/tape; instructions do not establish apparatus necessity and substitution for both tasks. #2824 deliberately left these source-bound reviews UNKNOWN; discovery does not grant prescription authority.",
+      "disposition": "Keep conservative current gate and raw source value; no ANY inference.",
+      "evidence_needed": "Explicit setup/execution variant and ALL/ANY/OPTIONAL grouping with equal-dose substitution and relevant injury checks.",
+      "previous_prs": [
+        2824
+      ],
+      "pathways": [
+        "equipment eligibility",
+        "style/phase scoring",
+        "substitution",
+        "rehab setup"
+      ],
+      "consumers": [
+        "fightcamp/training_context.py:normalize_equipment_list",
+        "fightcamp/conditioning.py:generate_conditioning_block",
+        "fightcamp/strength.py:generate_strength_block",
+        "fightcamp/rehab_selector.py:filter_rehab_candidates",
+        "api/services/exercise_customisation.py:_equipment_available",
+        "api/services/training_library.py"
+      ],
+      "original_evidence": "reports/metadata_integrity/remediation.json#MI-85d8031a7c6b",
+      "affected_entries": 2,
+      "affected_configuration_records": 0,
+      "affected_ids_reference": "original_evidence.affected_entry_ids / affected_configuration_record_ids",
+      "current_receipt_sha256": "c9cf4cc64250dae279212aa61065cfce697de84608da4b85d6acdf3f38e9fe77",
+      "sources": [
+        "exercise_bank.json"
+      ],
+      "current_field_unchanged_entries": 2,
+      "current_row_unchanged_entries": 2,
+      "current_field_states": {
+        "known": 2
+      }
+    },
+    {
+      "issue_id": "MI-8c1eb5c925d8",
+      "field": "equipment",
+      "classification": "intentional_distinction",
+      "priority": "P2",
+      "evidence": "Nineteen plural strength/conditioning rows include paired dumbbells; four singular clinical rows explicitly use one fixed clinician-selected implement. Both tokens are deliberately accepted and not aliases.",
+      "disposition": "Preserve single/pair requirements, selected load and clinical range; inventory quantity support is separate work.",
+      "evidence_needed": "",
+      "previous_prs": [],
+      "pathways": [
+        "equipment eligibility",
+        "style/phase scoring",
+        "substitution",
+        "rehab setup"
+      ],
+      "consumers": [
+        "fightcamp/training_context.py:normalize_equipment_list",
+        "fightcamp/conditioning.py:generate_conditioning_block",
+        "fightcamp/strength.py:generate_strength_block",
+        "fightcamp/rehab_selector.py:filter_rehab_candidates",
+        "api/services/exercise_customisation.py:_equipment_available",
+        "api/services/training_library.py"
+      ],
+      "original_evidence": "reports/metadata_integrity/remediation.json#MI-8c1eb5c925d8",
+      "affected_entries": 23,
+      "affected_configuration_records": 0,
+      "affected_ids_reference": "original_evidence.affected_entry_ids / affected_configuration_record_ids",
+      "current_receipt_sha256": "caa694356fb88f5b4938a18a7f2c98d978a0a5045930d20b2beb8830cb9e94da",
+      "sources": [
+        "conditioning_bank.json",
+        "exercise_bank.json",
+        "rehab_bank.json"
+      ],
+      "current_field_unchanged_entries": 23,
+      "current_row_unchanged_entries": 23,
+      "current_field_states": {
+        "known": 23
+      }
+    },
+    {
+      "issue_id": "MI-a22b542d2011",
+      "field": "equipment",
+      "classification": "unresolved",
+      "priority": "P2",
+      "evidence": "Partner/dummy takedown drills lack evidence that inert dummy and reactive partner variants have equivalent feedback, safety and dose. #2824 deliberately left these source-bound reviews UNKNOWN; discovery does not grant prescription authority.",
+      "disposition": "Keep conservative current gate and raw source value; no ANY inference.",
+      "evidence_needed": "Explicit setup/execution variant and ALL/ANY/OPTIONAL grouping with equal-dose substitution and relevant injury checks.",
+      "previous_prs": [
+        2824
+      ],
+      "pathways": [
+        "equipment eligibility",
+        "style/phase scoring",
+        "substitution",
+        "rehab setup"
+      ],
+      "consumers": [
+        "fightcamp/training_context.py:normalize_equipment_list",
+        "fightcamp/conditioning.py:generate_conditioning_block",
+        "fightcamp/strength.py:generate_strength_block",
+        "fightcamp/rehab_selector.py:filter_rehab_candidates",
+        "api/services/exercise_customisation.py:_equipment_available",
+        "api/services/training_library.py"
+      ],
+      "original_evidence": "reports/metadata_integrity/remediation.json#MI-a22b542d2011",
+      "affected_entries": 2,
+      "affected_configuration_records": 0,
+      "affected_ids_reference": "original_evidence.affected_entry_ids / affected_configuration_record_ids",
+      "current_receipt_sha256": "9fda20d231c0359ef7ec4f3ff59bee4d9efc6863863162c3adc2975de807c7ac",
+      "sources": [
+        "exercise_bank.json"
+      ],
+      "current_field_unchanged_entries": 2,
+      "current_row_unchanged_entries": 2,
+      "current_field_states": {
+        "known": 2
+      }
+    },
+    {
+      "issue_id": "MI-b4fe8a71fda0",
+      "field": "equipment",
+      "classification": "unresolved",
+      "priority": "P2",
+      "evidence": "Adductor Squeeze Isometric requires pad in the current runtime tokens; pad subtype/necessity/substitutions remain unreviewed. #2824 deliberately left these source-bound reviews UNKNOWN; discovery does not grant prescription authority.",
+      "disposition": "Keep conservative current gate and raw source value; no ANY inference.",
+      "evidence_needed": "Explicit setup/execution variant and ALL/ANY/OPTIONAL grouping with equal-dose substitution and relevant injury checks.",
+      "previous_prs": [
+        2824
+      ],
+      "pathways": [
+        "equipment eligibility",
+        "style/phase scoring",
+        "substitution",
+        "rehab setup"
+      ],
+      "consumers": [
+        "fightcamp/training_context.py:normalize_equipment_list",
+        "fightcamp/conditioning.py:generate_conditioning_block",
+        "fightcamp/strength.py:generate_strength_block",
+        "fightcamp/rehab_selector.py:filter_rehab_candidates",
+        "api/services/exercise_customisation.py:_equipment_available",
+        "api/services/training_library.py"
+      ],
+      "original_evidence": "reports/metadata_integrity/remediation.json#MI-b4fe8a71fda0",
+      "affected_entries": 1,
+      "affected_configuration_records": 0,
+      "affected_ids_reference": "original_evidence.affected_entry_ids / affected_configuration_record_ids",
+      "current_receipt_sha256": "9cb0e7742d240b12f6686de836c1340f1a18a3ca2e2cf26682bf1aee89a78ee2",
+      "sources": [
+        "exercise_bank.json"
+      ],
+      "current_field_unchanged_entries": 1,
+      "current_row_unchanged_entries": 1,
+      "current_field_states": {
+        "known": 1
+      }
+    },
+    {
+      "issue_id": "MI-e53d6bc86152",
+      "field": "equipment",
+      "classification": "confirmed_defect",
+      "priority": "P2",
+      "evidence": "Four style rows require resistance_bands, while singular and spaced plural already normalize to bands. The underscore plural alone misses EQUIP_ALIASES, falsely rejecting an athlete declaring bands. Real Limb Collector generator candidate is absent before and present after the one-entry alias repair; output equals the already-supported canonical source spelling.",
+      "disposition": "Correct only the missing resistance_bands=>bands alias. Source rows, saved tokens, clinical dose, subgroup semantics and IDs are untouched.",
+      "evidence_needed": "",
+      "previous_prs": [],
+      "pathways": [
+        "equipment eligibility",
+        "style/phase scoring",
+        "substitution",
+        "rehab setup"
+      ],
+      "consumers": [
+        "fightcamp/training_context.py:normalize_equipment_list",
+        "fightcamp/conditioning.py:generate_conditioning_block",
+        "fightcamp/strength.py:generate_strength_block",
+        "fightcamp/rehab_selector.py:filter_rehab_candidates",
+        "api/services/exercise_customisation.py:_equipment_available",
+        "api/services/training_library.py"
+      ],
+      "original_evidence": "reports/metadata_integrity/remediation.json#MI-e53d6bc86152",
+      "affected_entries": 22,
+      "affected_configuration_records": 0,
+      "affected_ids_reference": "original_evidence.affected_entry_ids / affected_configuration_record_ids",
+      "current_receipt_sha256": "323f6f59bf82e67e4e931c231df19bdafa847dda4eba517f339d6e8eb59de9a0",
+      "sources": [
+        "exercise_bank.json",
+        "rehab_bank.json",
+        "style_conditioning_bank.json"
+      ],
+      "current_field_unchanged_entries": 22,
+      "current_row_unchanged_entries": 22,
+      "current_field_states": {
+        "known": 22
+      },
+      "before_after": {
+        "athlete": {
+          "sport": "bjj",
+          "style_tactical": [
+            "submission_hunter"
+          ],
+          "phase": "SPP",
+          "days_until_fight": 35,
+          "fatigue": "low",
+          "equipment": [
+            "bands"
+          ],
+          "key_goals": [
+            "conditioning"
+          ],
+          "weaknesses": [
+            "gas_tank"
+          ]
+        },
+        "exercise": "Limb Collector",
+        "required_equipment_before": [
+          "resistance_bands"
+        ],
+        "required_equipment_after": [
+          "bands"
+        ],
+        "candidate_before": false,
+        "candidate_after": true,
+        "selected_before": [
+          "Fight-Pace Rounds: 6-10 x (2-3 min on / 1 min off)"
+        ],
+        "selected_after": [
+          "Fight-Pace Rounds: 6-10 x (2-3 min on / 1 min off)"
+        ],
+        "dose": "Existing source 20 armbar snaps/min, 4 rounds; RPE 9. No dose edit. Candidate repair does not promise top-ranked selection.",
+        "test": "tests/test_remaining_metadata_findings.py:test_resistance_band_alias_repairs_real_style_candidate_eligibility",
+        "editor_equipment_gate": "All four real source rows: bands access rejected before, accepted after; absent or battle-rope-only access still rejects. Other editor safety checks are unchanged."
+      }
+    },
+    {
+      "issue_id": "MI-0b14c481ac7e",
+      "field": "goals",
+      "classification": "unresolved",
+      "priority": "P2",
+      "evidence": "Missing explicit goals is not missing planner stimulus: active strength/conditioning score normalized tags, method/system and priority maps. Library Goal facets retain explicit source goals plus bounded reviewed aliases/conjunctions; #2830 discovery concepts are not efficacy claims. shared/training-metadata.json has a few hash-bound entry overrides, not a catalogue-wide goal backfill.",
+      "disposition": "Retain unknown Goal declarations; do not infer from exercise names or coverage targets.",
+      "evidence_needed": "Per-entry adaptation evidence with source-guidance/dose rationale; compare facet precision and any actual planner reader before adding goals.",
+      "previous_prs": [
+        2823,
+        2830
+      ],
+      "pathways": [
+        "goal/weakness personalization",
+        "discovery Goal filtering",
+        "tag-based generator scoring"
+      ],
+      "consumers": [
+        "api/services/training_library.py:_prepare",
+        "fightcamp/training_metadata.py",
+        "shared/training-metadata.json",
+        "fightcamp/tag_maps.py:GOAL_TAG_MAP",
+        "fightcamp/strength.py:generate_strength_block",
+        "fightcamp/conditioning.py:generate_conditioning_block",
+        "fightcamp/plan_pipeline_runtime.py",
+        "api/services/exercise_customisation.py:AthleteContext"
+      ],
+      "original_evidence": "reports/metadata_integrity/remediation.json#MI-0b14c481ac7e",
+      "affected_entries": 284,
+      "affected_configuration_records": 0,
+      "affected_ids_reference": "original_evidence.affected_entry_ids / affected_configuration_record_ids",
+      "current_receipt_sha256": "6dd0430ce508740c27cb2ffbc8f64bad99ecbf0be9c254f0533ab263d30a456d",
+      "sources": [
+        "exercise_bank.json"
+      ],
+      "current_field_unchanged_entries": 284,
+      "current_row_unchanged_entries": 283,
+      "current_field_states": {
+        "absent": 284
+      }
+    },
+    {
+      "issue_id": "MI-1489316c995a",
+      "field": "goals",
+      "classification": "unresolved",
+      "priority": "P2",
+      "evidence": "Missing explicit goals is not missing planner stimulus: active strength/conditioning score normalized tags, method/system and priority maps. Library Goal facets retain explicit source goals plus bounded reviewed aliases/conjunctions; #2830 discovery concepts are not efficacy claims. shared/training-metadata.json has a few hash-bound entry overrides, not a catalogue-wide goal backfill.",
+      "disposition": "Retain unknown Goal declarations; do not infer from exercise names or coverage targets.",
+      "evidence_needed": "Per-entry adaptation evidence with source-guidance/dose rationale; compare facet precision and any actual planner reader before adding goals.",
+      "previous_prs": [
+        2823,
+        2830
+      ],
+      "pathways": [
+        "goal/weakness personalization",
+        "discovery Goal filtering",
+        "tag-based generator scoring"
+      ],
+      "consumers": [
+        "api/services/training_library.py:_prepare",
+        "fightcamp/training_metadata.py",
+        "shared/training-metadata.json",
+        "fightcamp/tag_maps.py:GOAL_TAG_MAP",
+        "fightcamp/strength.py:generate_strength_block",
+        "fightcamp/conditioning.py:generate_conditioning_block",
+        "fightcamp/plan_pipeline_runtime.py",
+        "api/services/exercise_customisation.py:AthleteContext"
+      ],
+      "original_evidence": "reports/metadata_integrity/remediation.json#MI-1489316c995a",
+      "affected_entries": 277,
+      "affected_configuration_records": 0,
+      "affected_ids_reference": "original_evidence.affected_entry_ids / affected_configuration_record_ids",
+      "current_receipt_sha256": "8aca48d5f9316cae373135c7d7f4c6345d2f6672af67f1da8cf182793f0da21e",
+      "sources": [
+        "style_conditioning_bank.json"
+      ],
+      "current_field_unchanged_entries": 277,
+      "current_row_unchanged_entries": 276,
+      "current_field_states": {
+        "absent": 277
+      }
+    },
+    {
+      "issue_id": "MI-3f6518c161c8",
+      "field": "goals",
+      "classification": "unresolved",
+      "priority": "P2",
+      "evidence": "Missing explicit goals is not missing planner stimulus: active strength/conditioning score normalized tags, method/system and priority maps. Library Goal facets retain explicit source goals plus bounded reviewed aliases/conjunctions; #2830 discovery concepts are not efficacy claims. shared/training-metadata.json has a few hash-bound entry overrides, not a catalogue-wide goal backfill.",
+      "disposition": "Retain unknown Goal declarations; do not infer from exercise names or coverage targets.",
+      "evidence_needed": "Per-entry adaptation evidence with source-guidance/dose rationale; compare facet precision and any actual planner reader before adding goals.",
+      "previous_prs": [
+        2823,
+        2830
+      ],
+      "pathways": [
+        "goal/weakness personalization",
+        "discovery Goal filtering",
+        "tag-based generator scoring"
+      ],
+      "consumers": [
+        "api/services/training_library.py:_prepare",
+        "fightcamp/training_metadata.py",
+        "shared/training-metadata.json",
+        "fightcamp/tag_maps.py:GOAL_TAG_MAP",
+        "fightcamp/strength.py:generate_strength_block",
+        "fightcamp/conditioning.py:generate_conditioning_block",
+        "fightcamp/plan_pipeline_runtime.py",
+        "api/services/exercise_customisation.py:AthleteContext"
+      ],
+      "original_evidence": "reports/metadata_integrity/remediation.json#MI-3f6518c161c8",
+      "affected_entries": 7,
+      "affected_configuration_records": 0,
+      "affected_ids_reference": "original_evidence.affected_entry_ids / affected_configuration_record_ids",
+      "current_receipt_sha256": "dcc72a2d7de4893f5e37a1d4e0d6a20b2379c523472b549efb955d0b37e28812",
+      "sources": [
+        "coordination/grappling.json"
+      ],
+      "current_field_unchanged_entries": 7,
+      "current_row_unchanged_entries": 7,
+      "current_field_states": {
+        "absent": 7
+      }
+    },
+    {
+      "issue_id": "MI-5b99d6aabf49",
+      "field": "goals",
+      "classification": "unresolved",
+      "priority": "P2",
+      "evidence": "The four source injury_prevention goals express broad intent. No source instruction alone proves injury reduction. Deleting the goal would also change discovery/personalization; risk tags are not evidence of efficacy.",
+      "disposition": "Preserve pending qualified claim review, without broadening synonyms.",
+      "evidence_needed": "Qualified evidence for each prevention claim and explicit discovery/programming expectations.",
+      "previous_prs": [],
+      "pathways": [
+        "goal/weakness personalization",
+        "discovery Goal filtering",
+        "tag-based generator scoring"
+      ],
+      "consumers": [
+        "api/services/training_library.py:_prepare",
+        "fightcamp/training_metadata.py",
+        "shared/training-metadata.json",
+        "fightcamp/tag_maps.py:GOAL_TAG_MAP",
+        "fightcamp/strength.py:generate_strength_block",
+        "fightcamp/conditioning.py:generate_conditioning_block",
+        "fightcamp/plan_pipeline_runtime.py",
+        "api/services/exercise_customisation.py:AthleteContext"
+      ],
+      "original_evidence": "reports/metadata_integrity/remediation.json#MI-5b99d6aabf49",
+      "affected_entries": 4,
+      "affected_configuration_records": 0,
+      "affected_ids_reference": "original_evidence.affected_entry_ids / affected_configuration_record_ids",
+      "current_receipt_sha256": "9c6cde74958484f8be360e5778f3f0ff484bdb6402bf951db82a9135c925c781",
+      "sources": [
+        "exercise_bank.json"
+      ],
+      "current_field_unchanged_entries": 4,
+      "current_row_unchanged_entries": 4,
+      "current_field_states": {
+        "known": 4
+      }
+    },
+    {
+      "issue_id": "MI-5e032cc4ef78",
+      "field": "goals",
+      "classification": "unresolved",
+      "priority": "P2",
+      "evidence": "Missing explicit goals is not missing planner stimulus: active strength/conditioning score normalized tags, method/system and priority maps. Library Goal facets retain explicit source goals plus bounded reviewed aliases/conjunctions; #2830 discovery concepts are not efficacy claims. shared/training-metadata.json has a few hash-bound entry overrides, not a catalogue-wide goal backfill.",
+      "disposition": "Retain unknown Goal declarations; do not infer from exercise names or coverage targets.",
+      "evidence_needed": "Per-entry adaptation evidence with source-guidance/dose rationale; compare facet precision and any actual planner reader before adding goals.",
+      "previous_prs": [
+        2823,
+        2830
+      ],
+      "pathways": [
+        "goal/weakness personalization",
+        "discovery Goal filtering",
+        "tag-based generator scoring"
+      ],
+      "consumers": [
+        "api/services/training_library.py:_prepare",
+        "fightcamp/training_metadata.py",
+        "shared/training-metadata.json",
+        "fightcamp/tag_maps.py:GOAL_TAG_MAP",
+        "fightcamp/strength.py:generate_strength_block",
+        "fightcamp/conditioning.py:generate_conditioning_block",
+        "fightcamp/plan_pipeline_runtime.py",
+        "api/services/exercise_customisation.py:AthleteContext"
+      ],
+      "original_evidence": "reports/metadata_integrity/remediation.json#MI-5e032cc4ef78",
+      "affected_entries": 12,
+      "affected_configuration_records": 0,
+      "affected_ids_reference": "original_evidence.affected_entry_ids / affected_configuration_record_ids",
+      "current_receipt_sha256": "14e66b1dfd115dfa445decf5bc8f036b54b7164349b72f801883d142cee4c785",
+      "sources": [
+        "coordination/kicks.json"
+      ],
+      "current_field_unchanged_entries": 12,
+      "current_row_unchanged_entries": 12,
+      "current_field_states": {
+        "absent": 12
+      }
+    },
+    {
+      "issue_id": "MI-6d9fbdada3aa",
+      "field": "goals",
+      "classification": "unresolved",
+      "priority": "P2",
+      "evidence": "Missing explicit goals is not missing planner stimulus: active strength/conditioning score normalized tags, method/system and priority maps. Library Goal facets retain explicit source goals plus bounded reviewed aliases/conjunctions; #2830 discovery concepts are not efficacy claims. shared/training-metadata.json has a few hash-bound entry overrides, not a catalogue-wide goal backfill.",
+      "disposition": "Retain unknown Goal declarations; do not infer from exercise names or coverage targets.",
+      "evidence_needed": "Per-entry adaptation evidence with source-guidance/dose rationale; compare facet precision and any actual planner reader before adding goals.",
+      "previous_prs": [
+        2823,
+        2830
+      ],
+      "pathways": [
+        "goal/weakness personalization",
+        "discovery Goal filtering",
+        "tag-based generator scoring"
+      ],
+      "consumers": [
+        "api/services/training_library.py:_prepare",
+        "fightcamp/training_metadata.py",
+        "shared/training-metadata.json",
+        "fightcamp/tag_maps.py:GOAL_TAG_MAP",
+        "fightcamp/strength.py:generate_strength_block",
+        "fightcamp/conditioning.py:generate_conditioning_block",
+        "fightcamp/plan_pipeline_runtime.py",
+        "api/services/exercise_customisation.py:AthleteContext"
+      ],
+      "original_evidence": "reports/metadata_integrity/remediation.json#MI-6d9fbdada3aa",
+      "affected_entries": 12,
+      "affected_configuration_records": 0,
+      "affected_ids_reference": "original_evidence.affected_entry_ids / affected_configuration_record_ids",
+      "current_receipt_sha256": "4300bb9fd6b9dc4a518143af9de254ed00fcb6db6d6c3ac6e86cd5af7792e9fc",
+      "sources": [
+        "coordination/universal.json"
+      ],
+      "current_field_unchanged_entries": 12,
+      "current_row_unchanged_entries": 12,
+      "current_field_states": {
+        "absent": 12
+      }
+    },
+    {
+      "issue_id": "MI-8220764db0f1",
+      "field": "goals",
+      "classification": "unresolved",
+      "priority": "P2",
+      "evidence": "Missing explicit goals is not missing planner stimulus: active strength/conditioning score normalized tags, method/system and priority maps. Library Goal facets retain explicit source goals plus bounded reviewed aliases/conjunctions; #2830 discovery concepts are not efficacy claims. shared/training-metadata.json has a few hash-bound entry overrides, not a catalogue-wide goal backfill.",
+      "disposition": "Retain unknown Goal declarations; do not infer from exercise names or coverage targets.",
+      "evidence_needed": "Per-entry adaptation evidence with source-guidance/dose rationale; compare facet precision and any actual planner reader before adding goals.",
+      "previous_prs": [
+        2823,
+        2830
+      ],
+      "pathways": [
+        "goal/weakness personalization",
+        "discovery Goal filtering",
+        "tag-based generator scoring"
+      ],
+      "consumers": [
+        "api/services/training_library.py:_prepare",
+        "fightcamp/training_metadata.py",
+        "shared/training-metadata.json",
+        "fightcamp/tag_maps.py:GOAL_TAG_MAP",
+        "fightcamp/strength.py:generate_strength_block",
+        "fightcamp/conditioning.py:generate_conditioning_block",
+        "fightcamp/plan_pipeline_runtime.py",
+        "api/services/exercise_customisation.py:AthleteContext"
+      ],
+      "original_evidence": "reports/metadata_integrity/remediation.json#MI-8220764db0f1",
+      "affected_entries": 75,
+      "affected_configuration_records": 0,
+      "affected_ids_reference": "original_evidence.affected_entry_ids / affected_configuration_record_ids",
+      "current_receipt_sha256": "1c78438ad29234ee56a6a9c86e6aca2530da6af738cfe43d12757e3e240653c5",
+      "sources": [
+        "style_taper_conditioning.json"
+      ],
+      "current_field_unchanged_entries": 75,
+      "current_row_unchanged_entries": 75,
+      "current_field_states": {
+        "absent": 75
+      }
+    },
+    {
+      "issue_id": "MI-8d61209ed2d8",
+      "field": "goals",
+      "classification": "unresolved",
+      "priority": "P2",
+      "evidence": "Missing explicit goals is not missing planner stimulus: active strength/conditioning score normalized tags, method/system and priority maps. Library Goal facets retain explicit source goals plus bounded reviewed aliases/conjunctions; #2830 discovery concepts are not efficacy claims. shared/training-metadata.json has a few hash-bound entry overrides, not a catalogue-wide goal backfill.",
+      "disposition": "Retain unknown Goal declarations; do not infer from exercise names or coverage targets.",
+      "evidence_needed": "Per-entry adaptation evidence with source-guidance/dose rationale; compare facet precision and any actual planner reader before adding goals.",
+      "previous_prs": [
+        2823,
+        2830
+      ],
+      "pathways": [
+        "goal/weakness personalization",
+        "discovery Goal filtering",
+        "tag-based generator scoring"
+      ],
+      "consumers": [
+        "api/services/training_library.py:_prepare",
+        "fightcamp/training_metadata.py",
+        "shared/training-metadata.json",
+        "fightcamp/tag_maps.py:GOAL_TAG_MAP",
+        "fightcamp/strength.py:generate_strength_block",
+        "fightcamp/conditioning.py:generate_conditioning_block",
+        "fightcamp/plan_pipeline_runtime.py",
+        "api/services/exercise_customisation.py:AthleteContext"
+      ],
+      "original_evidence": "reports/metadata_integrity/remediation.json#MI-8d61209ed2d8",
+      "affected_entries": 9,
+      "affected_configuration_records": 0,
+      "affected_ids_reference": "original_evidence.affected_entry_ids / affected_configuration_record_ids",
+      "current_receipt_sha256": "5292e1139a1478e519ad5a6fa503a36e07233c0be6c7eef2d50abf7624b7f68b",
+      "sources": [
+        "coordination/mma_transitions.json"
+      ],
+      "current_field_unchanged_entries": 9,
+      "current_row_unchanged_entries": 9,
+      "current_field_states": {
+        "absent": 9
+      }
+    },
+    {
+      "issue_id": "MI-a95e6cf828d5",
+      "field": "goals",
+      "classification": "unresolved",
+      "priority": "P2",
+      "evidence": "Missing explicit goals is not missing planner stimulus: active strength/conditioning score normalized tags, method/system and priority maps. Library Goal facets retain explicit source goals plus bounded reviewed aliases/conjunctions; #2830 discovery concepts are not efficacy claims. shared/training-metadata.json has a few hash-bound entry overrides, not a catalogue-wide goal backfill.",
+      "disposition": "Retain unknown Goal declarations; do not infer from exercise names or coverage targets.",
+      "evidence_needed": "Per-entry adaptation evidence with source-guidance/dose rationale; compare facet precision and any actual planner reader before adding goals.",
+      "previous_prs": [
+        2823,
+        2830
+      ],
+      "pathways": [
+        "goal/weakness personalization",
+        "discovery Goal filtering",
+        "tag-based generator scoring"
+      ],
+      "consumers": [
+        "api/services/training_library.py:_prepare",
+        "fightcamp/training_metadata.py",
+        "shared/training-metadata.json",
+        "fightcamp/tag_maps.py:GOAL_TAG_MAP",
+        "fightcamp/strength.py:generate_strength_block",
+        "fightcamp/conditioning.py:generate_conditioning_block",
+        "fightcamp/plan_pipeline_runtime.py",
+        "api/services/exercise_customisation.py:AthleteContext"
+      ],
+      "original_evidence": "reports/metadata_integrity/remediation.json#MI-a95e6cf828d5",
+      "affected_entries": 18,
+      "affected_configuration_records": 0,
+      "affected_ids_reference": "original_evidence.affected_entry_ids / affected_configuration_record_ids",
+      "current_receipt_sha256": "a1dba4c8973a527dc46c8b4b48cda389f6dbb7105e1e8a86ac7154a7ad0bc33b",
+      "sources": [
+        "coordination/striking.json"
+      ],
+      "current_field_unchanged_entries": 18,
+      "current_row_unchanged_entries": 18,
+      "current_field_states": {
+        "absent": 18
+      }
+    },
+    {
+      "issue_id": "MI-dbebbb9b0c3e",
+      "field": "goals",
+      "classification": "unresolved",
+      "priority": "P2",
+      "evidence": "Missing explicit goals is not missing planner stimulus: active strength/conditioning score normalized tags, method/system and priority maps. Library Goal facets retain explicit source goals plus bounded reviewed aliases/conjunctions; #2830 discovery concepts are not efficacy claims. shared/training-metadata.json has a few hash-bound entry overrides, not a catalogue-wide goal backfill.",
+      "disposition": "Retain unknown Goal declarations; do not infer from exercise names or coverage targets.",
+      "evidence_needed": "Per-entry adaptation evidence with source-guidance/dose rationale; compare facet precision and any actual planner reader before adding goals.",
+      "previous_prs": [
+        2823,
+        2830
+      ],
+      "pathways": [
+        "goal/weakness personalization",
+        "discovery Goal filtering",
+        "tag-based generator scoring"
+      ],
+      "consumers": [
+        "api/services/training_library.py:_prepare",
+        "fightcamp/training_metadata.py",
+        "shared/training-metadata.json",
+        "fightcamp/tag_maps.py:GOAL_TAG_MAP",
+        "fightcamp/strength.py:generate_strength_block",
+        "fightcamp/conditioning.py:generate_conditioning_block",
+        "fightcamp/plan_pipeline_runtime.py",
+        "api/services/exercise_customisation.py:AthleteContext"
+      ],
+      "original_evidence": "reports/metadata_integrity/remediation.json#MI-dbebbb9b0c3e",
+      "affected_entries": 236,
+      "affected_configuration_records": 0,
+      "affected_ids_reference": "original_evidence.affected_entry_ids / affected_configuration_record_ids",
+      "current_receipt_sha256": "54984baf0f39b5e4137973632d70b5c18491a3541243c0ab9b4e43d5df7d6f5c",
+      "sources": [
+        "conditioning_bank.json"
+      ],
+      "current_field_unchanged_entries": 236,
+      "current_row_unchanged_entries": 212,
+      "current_field_states": {
+        "absent": 236
+      }
+    },
+    {
+      "issue_id": "MI-e85f5cef1705",
+      "field": "goals",
+      "classification": "unresolved",
+      "priority": "P2",
+      "evidence": "GOAL_NORMALIZER still maps Speed=>reactive and speed=>speed, while Speed / Reaction=>reactive. plan_pipeline_runtime and exercise_customisation look up before lowercasing. This is a real distinct input contract, but case-only unification would also reinterpret existing saved selections.",
+      "disposition": "Defer a dedicated input-contract migration; do not silently conflate physical speed, cue reaction and rebound mechanics.",
+      "evidence_needed": "Decision on intended legacy Speed meaning, persisted intake compatibility, and before/after goal-dose/selection evidence.",
+      "previous_prs": [],
+      "pathways": [
+        "goal/weakness personalization",
+        "discovery Goal filtering",
+        "tag-based generator scoring"
+      ],
+      "consumers": [
+        "api/services/training_library.py:_prepare",
+        "fightcamp/training_metadata.py",
+        "shared/training-metadata.json",
+        "fightcamp/tag_maps.py:GOAL_TAG_MAP",
+        "fightcamp/strength.py:generate_strength_block",
+        "fightcamp/conditioning.py:generate_conditioning_block",
+        "fightcamp/plan_pipeline_runtime.py",
+        "api/services/exercise_customisation.py:AthleteContext"
+      ],
+      "original_evidence": "reports/metadata_integrity/remediation.json#MI-e85f5cef1705",
+      "affected_entries": 0,
+      "affected_configuration_records": 1,
+      "affected_ids_reference": "original_evidence.affected_entry_ids / affected_configuration_record_ids",
+      "current_receipt_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "sources": [
+        "fightcamp/tag_maps.py"
+      ],
+      "current_configuration_receipt_sha256": "e7fde2b0b593ae8ac2ed649339117a2829f88649a0997c9cebf482d75e03af42",
+      "current_configuration_records_found": 1
+    },
+    {
+      "issue_id": "MI-ef4274109cb7",
+      "field": "goals",
+      "classification": "unresolved",
+      "priority": "P2",
+      "evidence": "Missing explicit goals is not missing planner stimulus: active strength/conditioning score normalized tags, method/system and priority maps. Library Goal facets retain explicit source goals plus bounded reviewed aliases/conjunctions; #2830 discovery concepts are not efficacy claims. shared/training-metadata.json has a few hash-bound entry overrides, not a catalogue-wide goal backfill.",
+      "disposition": "Retain unknown Goal declarations; do not infer from exercise names or coverage targets.",
+      "evidence_needed": "Per-entry adaptation evidence with source-guidance/dose rationale; compare facet precision and any actual planner reader before adding goals.",
+      "previous_prs": [
+        2823,
+        2830
+      ],
+      "pathways": [
+        "goal/weakness personalization",
+        "discovery Goal filtering",
+        "tag-based generator scoring"
+      ],
+      "consumers": [
+        "api/services/training_library.py:_prepare",
+        "fightcamp/training_metadata.py",
+        "shared/training-metadata.json",
+        "fightcamp/tag_maps.py:GOAL_TAG_MAP",
+        "fightcamp/strength.py:generate_strength_block",
+        "fightcamp/conditioning.py:generate_conditioning_block",
+        "fightcamp/plan_pipeline_runtime.py",
+        "api/services/exercise_customisation.py:AthleteContext"
+      ],
+      "original_evidence": "reports/metadata_integrity/remediation.json#MI-ef4274109cb7",
+      "affected_entries": 25,
+      "affected_configuration_records": 0,
+      "affected_ids_reference": "original_evidence.affected_entry_ids / affected_configuration_record_ids",
+      "current_receipt_sha256": "aaab39e042fef82234d2747fe5b74ddde8399d5961b32bc3095af8f14957ec92",
+      "sources": [
+        "technical_footwork_bank.json"
+      ],
+      "current_field_unchanged_entries": 25,
+      "current_row_unchanged_entries": 25,
+      "current_field_states": {
+        "absent": 25
+      }
+    },
+    {
+      "issue_id": "MI-a290d57c801b",
+      "field": "qualities",
+      "classification": "intentional_distinction",
+      "priority": "P2",
+      "evidence": "Hand-Fight to Snapdown wins hand contact then steps/snaps; striking and transition rows prescribe specific foot/hand ordering (e.g. recover the kick before the jab). Discovery may group coordination while directional sequence semantics remain distinct.",
+      "disposition": "Preserve foot_hand_timing and hand_foot_timing; no global alias.",
+      "evidence_needed": "",
+      "previous_prs": [],
+      "pathways": [
+        "movement/task classification",
+        "sport eligibility",
+        "selection/scoring",
+        "discovery"
+      ],
+      "consumers": [
+        "fightcamp/strength.py:generate_strength_block",
+        "fightcamp/conditioning.py:generate_conditioning_block",
+        "api/services/training_library.py:_prepare",
+        "shared/training-metadata.json"
+      ],
+      "original_evidence": "reports/metadata_integrity/remediation.json#MI-a290d57c801b",
+      "affected_entries": 13,
+      "affected_configuration_records": 0,
+      "affected_ids_reference": "original_evidence.affected_entry_ids / affected_configuration_record_ids",
+      "current_receipt_sha256": "c14a9fdf91549d0636877bf75b018f5b616ef1733266a871ac2bfa92877272d4",
+      "sources": [
+        "coordination/grappling.json",
+        "coordination/kicks.json",
+        "coordination/mma_transitions.json",
+        "coordination/striking.json"
+      ],
+      "current_field_unchanged_entries": 13,
+      "current_row_unchanged_entries": 13,
+      "current_field_states": {
+        "known": 13
+      }
+    },
+    {
+      "issue_id": "MI-16607bd82e68",
+      "field": "tags",
+      "classification": "unresolved",
+      "priority": "P2",
+      "evidence": "The 13 reaction-label rows include rhythmic bag work and sequences with sparse cue descriptions. Mirror Base Movement describes matching position; other guidance may be technique practice or cue response. Missing explicit external-cue prose does not prove a wrong reaction label.",
+      "disposition": "Do not delete reaction or manufacture cues.",
+      "evidence_needed": "Actual cue source, uncertainty/timing, task instructions and goal-selection consequences per row.",
+      "previous_prs": [],
+      "pathways": [
+        "movement/task classification",
+        "sport eligibility",
+        "selection/scoring",
+        "discovery"
+      ],
+      "consumers": [
+        "fightcamp/strength.py:generate_strength_block",
+        "fightcamp/conditioning.py:generate_conditioning_block",
+        "api/services/training_library.py:_prepare",
+        "shared/training-metadata.json"
+      ],
+      "original_evidence": "reports/metadata_integrity/remediation.json#MI-16607bd82e68",
+      "affected_entries": 13,
+      "affected_configuration_records": 0,
+      "affected_ids_reference": "original_evidence.affected_entry_ids / affected_configuration_record_ids",
+      "current_receipt_sha256": "5126f25c8007766fbcbef03260fef383ddfbb7309cb9ba4372b519eaa9310af7",
+      "sources": [
+        "conditioning_bank.json",
+        "coordination/kicks.json",
+        "coordination/mma_transitions.json",
+        "coordination/striking.json",
+        "coordination/universal.json",
+        "style_taper_conditioning.json"
+      ],
+      "current_field_unchanged_entries": 13,
+      "current_row_unchanged_entries": 13,
+      "current_field_states": {
+        "known": 13
+      }
+    },
+    {
+      "issue_id": "MI-cd90e68e84e3",
+      "field": "tags",
+      "classification": "intentional_distinction",
+      "priority": "P2",
+      "evidence": "Nineteen grips include carries, pulls, KB/snatch, stones, hammer and hand-fight tasks. Grip quality scores intended support/strength; mech_grip_support/intensive describe hand load for safety. A supporting demand does not disprove the trained quality, and removing either namespace changes consumers.",
+      "disposition": "Keep goal/demand distinction and source grip labels; no synonym merge or quality deletion.",
+      "evidence_needed": "",
+      "previous_prs": [],
+      "pathways": [
+        "injury exclusions",
+        "mechanical costs",
+        "late-window eligibility",
+        "readiness/edit safety"
+      ],
+      "consumers": [
+        "fightcamp/injury_filtering.py:injury_match_details",
+        "fightcamp/injury_guard.py:injury_decision",
+        "fightcamp/strength.py:_evaluate_strength_late_window",
+        "fightcamp/conditioning.py:_evaluate_conditioning_late_window",
+        "fightcamp/bank_schema.py:is_late_fight_metadata_safe",
+        "api/services/exercise_customisation.py:SafetyContext"
+      ],
+      "original_evidence": "reports/metadata_integrity/remediation.json#MI-cd90e68e84e3",
+      "affected_entries": 19,
+      "affected_configuration_records": 0,
+      "affected_ids_reference": "original_evidence.affected_entry_ids / affected_configuration_record_ids",
+      "current_receipt_sha256": "74b89fc2834cd46027318b92cc03bfa836e60f22b7d7468d69599fc8497b802d",
+      "sources": [
+        "conditioning_bank.json",
+        "coordination/grappling.json",
+        "exercise_bank.json"
+      ],
+      "current_field_unchanged_entries": 17,
+      "current_row_unchanged_entries": 16,
+      "current_field_states": {
+        "known": 19
+      }
+    },
+    {
+      "issue_id": "MI-61102b0d5acd",
+      "field": "config.proposed.target_regions",
+      "classification": "cosmetic_inconsistency",
+      "priority": "P3",
+      "evidence": "upper back/upper_back occurs in the review ledger proposed.target_regions. apply_reviews applies only reviewed, source-hash-matching non-null mechanical fields; the ledger is not a runtime prescription. normalize_rehab_location provides aliases at the bank-lookup boundary.",
+      "disposition": "Retain ledger provenance and spellings. Cosmetic source migration has no demonstrated programming benefit.",
+      "evidence_needed": "",
+      "previous_prs": [
+        2349
+      ],
+      "pathways": [
+        "rehab region/stage eligibility",
+        "clinical dose",
+        "progression/exposure history"
+      ],
+      "consumers": [
+        "fightcamp/rehab_protocols.py:normalize_rehab_location",
+        "fightcamp/rehab_selector.py:filter_rehab_candidates",
+        "fightcamp/rehab_clinical.py",
+        "api/contracts/rehab_exposure.py:RehabExposureEvent",
+        "api/contracts/rehab_progression.py",
+        "tools/apply_rehab_metadata_review.py:apply_reviews"
+      ],
+      "original_evidence": "reports/metadata_integrity/remediation.json#MI-61102b0d5acd",
+      "affected_entries": 0,
+      "affected_configuration_records": 52,
+      "affected_ids_reference": "original_evidence.affected_entry_ids / affected_configuration_record_ids",
+      "current_receipt_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "sources": [
+        "data/rehab_metadata_review.json"
+      ],
+      "configuration_identity": "drill_id resolved from original inventory record; current ordinals are not identities",
+      "current_configuration_records_found": 52,
+      "current_configuration_field_unchanged_records": 52,
+      "current_configuration_receipt_sha256": "3f7c612cdf73daab52a0b479acbe3c7bf9c974ce632f1bedeeddbfeca25db5fb"
+    },
+    {
+      "issue_id": "MI-76e10c33535c",
+      "field": "config.proposed.target_regions",
+      "classification": "cosmetic_inconsistency",
+      "priority": "P3",
+      "evidence": "bicep/biceps occurs in the review ledger proposed.target_regions. apply_reviews applies only reviewed, source-hash-matching non-null mechanical fields; the ledger is not a runtime prescription. normalize_rehab_location provides aliases at the bank-lookup boundary.",
+      "disposition": "Retain ledger provenance and spellings. Cosmetic source migration has no demonstrated programming benefit.",
+      "evidence_needed": "",
+      "previous_prs": [
+        2349
+      ],
+      "pathways": [
+        "rehab region/stage eligibility",
+        "clinical dose",
+        "progression/exposure history"
+      ],
+      "consumers": [
+        "fightcamp/rehab_protocols.py:normalize_rehab_location",
+        "fightcamp/rehab_selector.py:filter_rehab_candidates",
+        "fightcamp/rehab_clinical.py",
+        "api/contracts/rehab_exposure.py:RehabExposureEvent",
+        "api/contracts/rehab_progression.py",
+        "tools/apply_rehab_metadata_review.py:apply_reviews"
+      ],
+      "original_evidence": "reports/metadata_integrity/remediation.json#MI-76e10c33535c",
+      "affected_entries": 0,
+      "affected_configuration_records": 65,
+      "affected_ids_reference": "original_evidence.affected_entry_ids / affected_configuration_record_ids",
+      "current_receipt_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "sources": [
+        "data/rehab_metadata_review.json"
+      ],
+      "configuration_identity": "drill_id resolved from original inventory record; current ordinals are not identities",
+      "current_configuration_records_found": 65,
+      "current_configuration_field_unchanged_records": 65,
+      "current_configuration_receipt_sha256": "12cde70c066feaed77ae4ba019f78414ca75b8bcd72fce5a5db56594ef96bd85"
+    },
+    {
+      "issue_id": "MI-b984154148db",
+      "field": "config.proposed.target_regions",
+      "classification": "cosmetic_inconsistency",
+      "priority": "P3",
+      "evidence": "hamstring/hamstrings occurs in the review ledger proposed.target_regions. apply_reviews applies only reviewed, source-hash-matching non-null mechanical fields; the ledger is not a runtime prescription. normalize_rehab_location provides aliases at the bank-lookup boundary.",
+      "disposition": "Retain ledger provenance and spellings. Cosmetic source migration has no demonstrated programming benefit.",
+      "evidence_needed": "",
+      "previous_prs": [
+        2349
+      ],
+      "pathways": [
+        "rehab region/stage eligibility",
+        "clinical dose",
+        "progression/exposure history"
+      ],
+      "consumers": [
+        "fightcamp/rehab_protocols.py:normalize_rehab_location",
+        "fightcamp/rehab_selector.py:filter_rehab_candidates",
+        "fightcamp/rehab_clinical.py",
+        "api/contracts/rehab_exposure.py:RehabExposureEvent",
+        "api/contracts/rehab_progression.py",
+        "tools/apply_rehab_metadata_review.py:apply_reviews"
+      ],
+      "original_evidence": "reports/metadata_integrity/remediation.json#MI-b984154148db",
+      "affected_entries": 0,
+      "affected_configuration_records": 31,
+      "affected_ids_reference": "original_evidence.affected_entry_ids / affected_configuration_record_ids",
+      "current_receipt_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "sources": [
+        "data/rehab_metadata_review.json"
+      ],
+      "configuration_identity": "drill_id resolved from original inventory record; current ordinals are not identities",
+      "current_configuration_records_found": 31,
+      "current_configuration_field_unchanged_records": 31,
+      "current_configuration_receipt_sha256": "d1190a907534014ab521bd8769e90929a281c3764165d2e83e945df2a65de1be"
+    },
+    {
+      "issue_id": "MI-22246d2e47eb",
+      "field": "equipment",
+      "classification": "cosmetic_inconsistency",
+      "priority": "P3",
+      "evidence": "thai_pad and thai_pads both resolve to the shared pads capability on athlete and exercise sides; foam pad remains separate.",
+      "disposition": "Retain spelling; no eligibility/scoring defect demonstrated.",
+      "evidence_needed": "",
+      "previous_prs": [],
+      "pathways": [
+        "equipment eligibility",
+        "style/phase scoring",
+        "substitution",
+        "rehab setup"
+      ],
+      "consumers": [
+        "fightcamp/training_context.py:normalize_equipment_list",
+        "fightcamp/conditioning.py:generate_conditioning_block",
+        "fightcamp/strength.py:generate_strength_block",
+        "fightcamp/rehab_selector.py:filter_rehab_candidates",
+        "api/services/exercise_customisation.py:_equipment_available",
+        "api/services/training_library.py"
+      ],
+      "original_evidence": "reports/metadata_integrity/remediation.json#MI-22246d2e47eb",
+      "affected_entries": 78,
+      "affected_configuration_records": 0,
+      "affected_ids_reference": "original_evidence.affected_entry_ids / affected_configuration_record_ids",
+      "current_receipt_sha256": "ccd6a5d2c3030d2c91888ad13fd3d02cedefe6ebfe1e3ca5d658245965302066",
+      "sources": [
+        "exercise_bank.json",
+        "style_conditioning_bank.json",
+        "style_taper_conditioning.json"
+      ],
+      "current_field_unchanged_entries": 78,
+      "current_row_unchanged_entries": 78,
+      "current_field_states": {
+        "known": 78
+      }
+    },
+    {
+      "issue_id": "MI-5105da333463",
+      "field": "equipment",
+      "classification": "cosmetic_inconsistency",
+      "priority": "P3",
+      "evidence": "plate and plates both normalize to plate; single fixed clinical plate dose/weight is still individually specified.",
+      "disposition": "Retain spelling; no eligibility/scoring defect demonstrated.",
+      "evidence_needed": "",
+      "previous_prs": [],
+      "pathways": [
+        "equipment eligibility",
+        "style/phase scoring",
+        "substitution",
+        "rehab setup"
+      ],
+      "consumers": [
+        "fightcamp/training_context.py:normalize_equipment_list",
+        "fightcamp/conditioning.py:generate_conditioning_block",
+        "fightcamp/strength.py:generate_strength_block",
+        "fightcamp/rehab_selector.py:filter_rehab_candidates",
+        "api/services/exercise_customisation.py:_equipment_available",
+        "api/services/training_library.py"
+      ],
+      "original_evidence": "reports/metadata_integrity/remediation.json#MI-5105da333463",
+      "affected_entries": 3,
+      "affected_configuration_records": 0,
+      "affected_ids_reference": "original_evidence.affected_entry_ids / affected_configuration_record_ids",
+      "current_receipt_sha256": "98d4efde0c72affd2a89de8362afc355809288289617286840ddd2e5979f6a89",
+      "sources": [
+        "exercise_bank.json",
+        "rehab_bank.json"
+      ],
+      "current_field_unchanged_entries": 3,
+      "current_row_unchanged_entries": 3,
+      "current_field_states": {
+        "known": 3
+      }
+    },
+    {
+      "issue_id": "MI-c2cd6e809977",
+      "field": "equipment",
+      "classification": "cosmetic_inconsistency",
+      "priority": "P3",
+      "evidence": "All 15 entries describe a cable-station exercise, including cable-machine rehab curl/adduction. Both cable and cable_machine normalize to cable; attachment and dose notes remain separate.",
+      "disposition": "Retain spelling; no eligibility/scoring defect demonstrated.",
+      "evidence_needed": "",
+      "previous_prs": [],
+      "pathways": [
+        "equipment eligibility",
+        "style/phase scoring",
+        "substitution",
+        "rehab setup"
+      ],
+      "consumers": [
+        "fightcamp/training_context.py:normalize_equipment_list",
+        "fightcamp/conditioning.py:generate_conditioning_block",
+        "fightcamp/strength.py:generate_strength_block",
+        "fightcamp/rehab_selector.py:filter_rehab_candidates",
+        "api/services/exercise_customisation.py:_equipment_available",
+        "api/services/training_library.py"
+      ],
+      "original_evidence": "reports/metadata_integrity/remediation.json#MI-c2cd6e809977",
+      "affected_entries": 15,
+      "affected_configuration_records": 0,
+      "affected_ids_reference": "original_evidence.affected_entry_ids / affected_configuration_record_ids",
+      "current_receipt_sha256": "1de454cfafe504a916e69a709970605c0802921db7176624dbb48ee0e2e6ed2f",
+      "sources": [
+        "exercise_bank.json",
+        "rehab_bank.json"
+      ],
+      "current_field_unchanged_entries": 15,
+      "current_row_unchanged_entries": 15,
+      "current_field_states": {
+        "known": 15
+      }
+    },
+    {
+      "issue_id": "MI-7c48a23da18a",
+      "field": "group.location",
+      "classification": "cosmetic_inconsistency",
+      "priority": "P3",
+      "evidence": "hamstring/hamstrings groups are reachable via normalize_rehab_location alias candidates. Group type, stage and severity are independent; names are not interchangeable with injury-family or progression identity.",
+      "disposition": "Leave historical group spellings; no demonstrated location-lookup defect. Clinical record migrations remain out of scope.",
+      "evidence_needed": "",
+      "previous_prs": [],
+      "pathways": [
+        "rehab region/stage eligibility",
+        "clinical dose",
+        "progression/exposure history"
+      ],
+      "consumers": [
+        "fightcamp/rehab_protocols.py:normalize_rehab_location",
+        "fightcamp/rehab_selector.py:filter_rehab_candidates",
+        "fightcamp/rehab_clinical.py",
+        "api/contracts/rehab_exposure.py:RehabExposureEvent",
+        "api/contracts/rehab_progression.py",
+        "tools/apply_rehab_metadata_review.py:apply_reviews"
+      ],
+      "original_evidence": "reports/metadata_integrity/remediation.json#MI-7c48a23da18a",
+      "affected_entries": 31,
+      "affected_configuration_records": 0,
+      "affected_ids_reference": "original_evidence.affected_entry_ids / affected_configuration_record_ids",
+      "current_receipt_sha256": "a525aa121fd22b6e7f3543df28a0f071add0bb937b42b302b2b129f53514ea6f",
+      "sources": [
+        "rehab_bank.json"
+      ],
+      "current_field_unchanged_entries": 31,
+      "current_row_unchanged_entries": 31,
+      "current_field_states": {
+        "known": 31
+      }
+    },
+    {
+      "issue_id": "MI-dcb55fcc63b4",
+      "field": "group.location",
+      "classification": "cosmetic_inconsistency",
+      "priority": "P3",
+      "evidence": "upper back/upper_back groups are reachable via normalize_rehab_location alias candidates. Group type, stage and severity are independent; names are not interchangeable with injury-family or progression identity.",
+      "disposition": "Leave historical group spellings; no demonstrated location-lookup defect. Clinical record migrations remain out of scope.",
+      "evidence_needed": "",
+      "previous_prs": [],
+      "pathways": [
+        "rehab region/stage eligibility",
+        "clinical dose",
+        "progression/exposure history"
+      ],
+      "consumers": [
+        "fightcamp/rehab_protocols.py:normalize_rehab_location",
+        "fightcamp/rehab_selector.py:filter_rehab_candidates",
+        "fightcamp/rehab_clinical.py",
+        "api/contracts/rehab_exposure.py:RehabExposureEvent",
+        "api/contracts/rehab_progression.py",
+        "tools/apply_rehab_metadata_review.py:apply_reviews"
+      ],
+      "original_evidence": "reports/metadata_integrity/remediation.json#MI-dcb55fcc63b4",
+      "affected_entries": 54,
+      "affected_configuration_records": 0,
+      "affected_ids_reference": "original_evidence.affected_entry_ids / affected_configuration_record_ids",
+      "current_receipt_sha256": "152e5c2137b4da06afa557c6f512d0cf1811574e3bb4a69f3a37066a513b0e71",
+      "sources": [
+        "rehab_bank.json"
+      ],
+      "current_field_unchanged_entries": 54,
+      "current_row_unchanged_entries": 54,
+      "current_field_states": {
+        "known": 54
+      }
+    },
+    {
+      "issue_id": "MI-7f4a8e3e3383",
+      "field": "late_fight_score",
+      "classification": "cosmetic_inconsistency",
+      "priority": "P3",
+      "evidence": "late_fight_score has no named bank-field reader in current strength/conditioning scoring. Those generators use computed score/reason evidence and live costs/windows; generic raw retention and content hashes still use the row.",
+      "disposition": "Keep dormant source declarations; do not make them new score authority or remove them merely to lower audit counts.",
+      "evidence_needed": "",
+      "previous_prs": [],
+      "pathways": [
+        "source retention/hashing",
+        "computed generator ranking"
+      ],
+      "consumers": [
+        "fightcamp/training_catalogue.py:build_catalogue",
+        "fightcamp/strength.py:generate_strength_block",
+        "fightcamp/conditioning.py:generate_conditioning_block",
+        "tools/check_tag_retirement.py",
+        "tools/injury_tag_authority.py",
+        "fightcamp/tagging.py"
+      ],
+      "original_evidence": "reports/metadata_integrity/remediation.json#MI-7f4a8e3e3383",
+      "affected_entries": 37,
+      "affected_configuration_records": 0,
+      "affected_ids_reference": "original_evidence.affected_entry_ids / affected_configuration_record_ids",
+      "current_receipt_sha256": "03d7698a1da0e0a0d8c25a21a6710de7d67040beb84701f8c52eb55090546695",
+      "sources": [
+        "exercise_bank.json"
+      ],
+      "current_field_unchanged_entries": 37,
+      "current_row_unchanged_entries": 36,
+      "current_field_states": {
+        "known": 37
+      }
+    },
+    {
+      "issue_id": "MI-184cb43cf191",
+      "field": "modality",
+      "classification": "cosmetic_inconsistency",
+      "priority": "P3",
+      "evidence": "rope/ropes describes battle-rope modalities on three named rows; the modality reader special cases run/sled/technical_footwork, not rope plurality. Equipment, mechanical risks and dose own eligibility.",
+      "disposition": "No naming-only source rewrite or change to rope mechanical costs.",
+      "evidence_needed": "",
+      "previous_prs": [],
+      "pathways": [
+        "movement/task classification",
+        "sport eligibility",
+        "selection/scoring",
+        "discovery"
+      ],
+      "consumers": [
+        "fightcamp/strength.py:generate_strength_block",
+        "fightcamp/conditioning.py:generate_conditioning_block",
+        "api/services/training_library.py:_prepare",
+        "shared/training-metadata.json"
+      ],
+      "original_evidence": "reports/metadata_integrity/remediation.json#MI-184cb43cf191",
+      "affected_entries": 3,
+      "affected_configuration_records": 0,
+      "affected_ids_reference": "original_evidence.affected_entry_ids / affected_configuration_record_ids",
+      "current_receipt_sha256": "0026739d0cb991a11ccc171c583bb49060f1486d8515f4ab0c028b781dee8b73",
+      "sources": [
+        "conditioning_bank.json"
+      ],
+      "current_field_unchanged_entries": 3,
+      "current_row_unchanged_entries": 1,
+      "current_field_states": {
+        "known": 3
+      }
+    },
+    {
+      "issue_id": "MI-8923cf7a861a",
+      "field": "movement",
+      "classification": "cosmetic_inconsistency",
+      "priority": "P3",
+      "evidence": "The shared rotation discovery pattern explicitly accepts both rotation and rotational. Anti-rotation has its own pattern and tags; a noun/adjective spelling change gives no demonstrated eligibility/dose improvement.",
+      "disposition": "Retain source wording, anti-rotation separation and historical row hashes.",
+      "evidence_needed": "",
+      "previous_prs": [
+        2823,
+        2830
+      ],
+      "pathways": [
+        "movement/task classification",
+        "sport eligibility",
+        "selection/scoring",
+        "discovery"
+      ],
+      "consumers": [
+        "fightcamp/strength.py:generate_strength_block",
+        "fightcamp/conditioning.py:generate_conditioning_block",
+        "api/services/training_library.py:_prepare",
+        "shared/training-metadata.json"
+      ],
+      "original_evidence": "reports/metadata_integrity/remediation.json#MI-8923cf7a861a",
+      "affected_entries": 21,
+      "affected_configuration_records": 0,
+      "affected_ids_reference": "original_evidence.affected_entry_ids / affected_configuration_record_ids",
+      "current_receipt_sha256": "bd777240f25d71dad6e265d67f28f135b4c9349ea70e1dd531006fba667add47",
+      "sources": [
+        "exercise_bank.json"
+      ],
+      "current_field_unchanged_entries": 21,
+      "current_row_unchanged_entries": 21,
+      "current_field_states": {
+        "known": 21
+      }
+    },
+    {
+      "issue_id": "MI-2810482d4d33",
+      "field": "priority_score",
+      "classification": "cosmetic_inconsistency",
+      "priority": "P3",
+      "evidence": "priority_score has no named bank-field reader in current strength/conditioning scoring. Those generators use computed score/reason evidence and live costs/windows; generic raw retention and content hashes still use the row.",
+      "disposition": "Keep dormant source declarations; do not make them new score authority or remove them merely to lower audit counts.",
+      "evidence_needed": "",
+      "previous_prs": [],
+      "pathways": [
+        "source retention/hashing",
+        "computed generator ranking"
+      ],
+      "consumers": [
+        "fightcamp/training_catalogue.py:build_catalogue",
+        "fightcamp/strength.py:generate_strength_block",
+        "fightcamp/conditioning.py:generate_conditioning_block",
+        "tools/check_tag_retirement.py",
+        "tools/injury_tag_authority.py",
+        "fightcamp/tagging.py"
+      ],
+      "original_evidence": "reports/metadata_integrity/remediation.json#MI-2810482d4d33",
+      "affected_entries": 37,
+      "affected_configuration_records": 0,
+      "affected_ids_reference": "original_evidence.affected_entry_ids / affected_configuration_record_ids",
+      "current_receipt_sha256": "03d7698a1da0e0a0d8c25a21a6710de7d67040beb84701f8c52eb55090546695",
+      "sources": [
+        "exercise_bank.json"
+      ],
+      "current_field_unchanged_entries": 37,
+      "current_row_unchanged_entries": 36,
+      "current_field_states": {
+        "known": 37
+      }
+    },
+    {
+      "issue_id": "MI-2c0f544f8bdb",
+      "field": "system",
+      "classification": "cosmetic_inconsistency",
+      "priority": "P3",
+      "evidence": "normalize_system maps ATP-PCr, alactic and anaerobic_alactic to alactic. Actual structured work/rest, phases, quotas and late-window checks remain separate and are not standardized by a family spelling.",
+      "disposition": "Keep source energy-family spellings and all dose distinctions.",
+      "evidence_needed": "",
+      "previous_prs": [],
+      "pathways": [
+        "system quotas",
+        "conditioning selection",
+        "work/rest dose",
+        "fight proximity"
+      ],
+      "consumers": [
+        "fightcamp/conditioning.py:normalize_system",
+        "fightcamp/conditioning.py:get_system_or_warn",
+        "fightcamp/conditioning.py:generate_conditioning_block",
+        "fightcamp/prescription_resolver.py"
+      ],
+      "original_evidence": "reports/metadata_integrity/remediation.json#MI-2c0f544f8bdb",
+      "affected_entries": 231,
+      "affected_configuration_records": 0,
+      "affected_ids_reference": "original_evidence.affected_entry_ids / affected_configuration_record_ids",
+      "current_receipt_sha256": "3fe83f9908533d3c2497e923f038d5a7243164696a0835647b5457a5c86f1628",
+      "sources": [
+        "conditioning_bank.json",
+        "style_conditioning_bank.json",
+        "style_taper_conditioning.json"
+      ],
+      "current_field_unchanged_entries": 231,
+      "current_row_unchanged_entries": 229,
+      "current_field_states": {
+        "known": 231
+      }
+    },
+    {
+      "issue_id": "MI-9e5b23ccad9d",
+      "field": "tags",
+      "classification": "unresolved",
+      "priority": "P3",
+      "evidence": "The 119 original absent-live-row vocabulary candidates are not all unused. #2853 proved and retired exactly 16; remaining tokens include generated injury/safety, alias, scoring, configuration and historical uses. check_tag_retirement protects consumers; it does not prove every remaining declaration obsolete.",
+      "disposition": "Keep the bounded 16-tag retirement; no additional deletion without per-token proof.",
+      "evidence_needed": "Zero active and persisted use, or a tested compatibility replacement, for each remaining candidate.",
+      "previous_prs": [
+        2853
+      ],
+      "pathways": [
+        "source retention/hashing",
+        "computed generator ranking"
+      ],
+      "consumers": [
+        "fightcamp/training_catalogue.py:build_catalogue",
+        "fightcamp/strength.py:generate_strength_block",
+        "fightcamp/conditioning.py:generate_conditioning_block",
+        "tools/check_tag_retirement.py",
+        "tools/injury_tag_authority.py",
+        "fightcamp/tagging.py"
+      ],
+      "original_evidence": "reports/metadata_integrity/remediation.json#MI-9e5b23ccad9d",
+      "affected_entries": 0,
+      "affected_configuration_records": 119,
+      "affected_ids_reference": "original_evidence.affected_entry_ids / affected_configuration_record_ids",
+      "current_receipt_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "sources": [
+        "data/tag_vocabulary.json"
+      ],
+      "current_candidate_dispositions": {
+        "previously_retired": 16,
+        "retained": 103
+      },
+      "current_configuration_receipt_sha256": "5c5b36b8b074a24687ca2b93406e492b4e5c16f03f2fb9df9c3bba7849d4eb5c"
+    }
+  ],
+  "programme_comparisons": [
+    {
+      "case": "boxing_gpp_power_conditioning",
+      "plan_text_before_sha256": "79925c5b48510e19febefc2d01574dfcdbcfa14f9be1624a903773d0eb809923",
+      "plan_text_after_sha256": "79925c5b48510e19febefc2d01574dfcdbcfa14f9be1624a903773d0eb809923",
+      "stage2_before_sha256": "a99e59b77513348ee04550c8ee498d03073d9e8e9a19a286a054983a74b95b3a",
+      "stage2_after_sha256": "a99e59b77513348ee04550c8ee498d03073d9e8e9a19a286a054983a74b95b3a",
+      "equal": true
+    },
+    {
+      "case": "mma_spp_counter_striker",
+      "plan_text_before_sha256": "310d24fa81ae0ec1597a892ac6259778536664ecc6c09b8c1c14d9b9d638627f",
+      "plan_text_after_sha256": "310d24fa81ae0ec1597a892ac6259778536664ecc6c09b8c1c14d9b9d638627f",
+      "stage2_before_sha256": "e33fda39f1e32693c5ddc4e792fa95587bae6df25d940e0754ef5f23662264ee",
+      "stage2_after_sha256": "e33fda39f1e32693c5ddc4e792fa95587bae6df25d940e0754ef5f23662264ee",
+      "equal": true
+    },
+    {
+      "case": "boxing_taper_shoulder_limited",
+      "plan_text_before_sha256": "2af76bdeeec680693d85c769302aef392adc3192ecdefe1a4d0583576a2ba0e0",
+      "plan_text_after_sha256": "2af76bdeeec680693d85c769302aef392adc3192ecdefe1a4d0583576a2ba0e0",
+      "stage2_before_sha256": "99fa8934f010a9971c93d8c8424ac474f3c77dbeabfff48bc61a656be53fe11e",
+      "stage2_after_sha256": "99fa8934f010a9971c93d8c8424ac474f3c77dbeabfff48bc61a656be53fe11e",
+      "equal": true
+    },
+    {
+      "case": "boxing_final_day",
+      "plan_text_before_sha256": "09839137ba6c886303d68ef5eda7d4044d33f8f31528d733a288e0fc9a95d54d",
+      "plan_text_after_sha256": "09839137ba6c886303d68ef5eda7d4044d33f8f31528d733a288e0fc9a95d54d",
+      "stage2_before_sha256": "f794812cc4f95b19fad7a4421c1081c3a7681bb0226b5f33a56dd0b372eb9b5a",
+      "stage2_after_sha256": "f794812cc4f95b19fad7a4421c1081c3a7681bb0226b5f33a56dd0b372eb9b5a",
+      "equal": true
+    },
+    {
+      "case": "mma_taper_no_equipment",
+      "plan_text_before_sha256": "311ef0c61f58f42234da80c64a9070406e0013548c5d4eb5cf70947631c4e077",
+      "plan_text_after_sha256": "311ef0c61f58f42234da80c64a9070406e0013548c5d4eb5cf70947631c4e077",
+      "stage2_before_sha256": "f0f92575401e017507c70e41e541b9ecc9a8eb1341841d96eea3b576efb2bb2c",
+      "stage2_after_sha256": "f0f92575401e017507c70e41e541b9ecc9a8eb1341841d96eea3b576efb2bb2c",
+      "equal": true
+    },
+    {
+      "case": "kickboxing_taper_speed",
+      "plan_text_before_sha256": "2c2c68c6cac51f48bd4fdfb22d9b02217b585ee70c318ec31f1adb9f2e7042d6",
+      "plan_text_after_sha256": "2c2c68c6cac51f48bd4fdfb22d9b02217b585ee70c318ec31f1adb9f2e7042d6",
+      "stage2_before_sha256": "5f3908353bddd2ca9895f540d6451a455b386bf66ec49f67aa97385edbb689ce",
+      "stage2_after_sha256": "5f3908353bddd2ca9895f540d6451a455b386bf66ec49f67aa97385edbb689ce",
+      "equal": true
+    },
+    {
+      "case": "bjj_spp_submission_hunter_bands",
+      "plan_text_before_sha256": "fec22adefd4239b37b73b41f69a749b9ccfc6a387737b579b8bc3de12389b981",
+      "plan_text_after_sha256": "fec22adefd4239b37b73b41f69a749b9ccfc6a387737b579b8bc3de12389b981",
+      "stage2_before_sha256": "2e3a96b7b8b3bdf497fa09ae2a2ce12b98222cc1335f1faf6b953dacc5e6bb82",
+      "stage2_after_sha256": "2e3a96b7b8b3bdf497fa09ae2a2ce12b98222cc1335f1faf6b953dacc5e6bb82",
+      "equal": true
+    }
+  ],
+  "programme_probe": {
+    "clock_utc": "2026-10-11 09:00",
+    "python_hash_seed": 0,
+    "random_seed": 7,
+    "fixture": "tests/fixtures/tag_retirement_plans.json",
+    "command": "PYTHONHASHSEED=0 python tools/canonical_metadata_plan_probe.py tests/fixtures/tag_retirement_plans.json <temporary-output.json>",
+    "comparison": "Unchanged Main worktree versus this branch; complete ordered plan_text and stage2_payload equality. Reversed-alias regression separately repeats comparison using current code.",
+    "additional_control": {
+      "base_fixture_case": "mma_spp_counter_striker",
+      "fields": {
+        "Fighting Style (Technical)": [
+          "bjj"
+        ],
+        "Fighting Style (Tactical)": [
+          "submission_hunter"
+        ],
+        "Equipment Access": [
+          "bands"
+        ],
+        "What are your key performance goals?": [
+          "conditioning"
+        ],
+        "When is your next fight?": "2026-11-15"
+      },
+      "result": "Complete before/after plan text and Stage 2 equality; the full-bank winner set stays stable."
+    },
+    "hash_method": "plan_text: SHA-256 of UTF-8 bytes; stage2: content_hash canonical sorted-key, ASCII, compact JSON."
+  },
+  "validation": {
+    "focused_tests": {
+      "complete_programme_regression": "Passed separately: before/after six complete ordered programme outputs match exactly",
+      "coverage": "All four plural-band source rows; GPP/SPP/TAPER, D35/D18/D7/D1, fatigue, sport mismatch, gear absence, explicit clinical restriction; six fixed-clock programme controls include shoulder injury and no equipment.",
+      "result": "44 passed on final test source"
+    },
+    "existing_targeted_suite": {
+      "result": "120 passed",
+      "modules": [
+        "tests/test_conditioning_metadata_selection.py",
+        "tests/test_equipment_availability.py",
+        "tests/test_restriction_filtering.py",
+        "tests/test_rehab_selector.py",
+        "tests/test_generation_safety_bypasses.py"
+      ]
+    },
+    "validators": [
+      {
+        "command": "python tools/validate_banks.py",
+        "exit_code": 0
+      },
+      {
+        "command": "python tools/validate_banks.py --mode strict",
+        "exit_code": 1,
+        "unchanged_main_reproduction": true,
+        "reason": "Existing 860 errors, 276 warnings, 3 information findings; same diagnostics after normalizing checkout paths."
+      },
+      {
+        "command": "python tools/audit_tag_registry.py --check",
+        "exit_code": 0
+      },
+      {
+        "command": "python tools/migrate_tag_registry_data.py --check",
+        "exit_code": 0
+      },
+      {
+        "command": "python tools/check_tag_registry.py",
+        "exit_code": 0
+      },
+      {
+        "command": "python tools/check_tag_retirement.py",
+        "exit_code": 1,
+        "unchanged_main_reproduction": true,
+        "reason": "Same five protected source hashes fail on unchanged Main; no receipt refreshed."
+      },
+      {
+        "command": "python tools/validate_rehab_bank.py",
+        "exit_code": 0
+      },
+      {
+        "command": "python tools/audit_injury_vocabulary.py",
+        "exit_code": 0
+      },
+      {
+        "command": "python tools/migrate_rehab_bank_schema.py --check",
+        "exit_code": 0
+      },
+      {
+        "command": "python tools/validate_rehab_metadata_review.py",
+        "exit_code": 0
+      },
+      {
+        "command": "python tools/validate_rehab_clinical.py",
+        "exit_code": 0
+      }
+    ],
+    "metadata_audit_comparison": {
+      "branch": "6 failed, 39 passed, 13 errors (canonical + integrity audit modules)",
+      "unchanged_main": "8 failed, 48 passed, 13 errors (same modules + tag retirement)",
+      "all_branch_audit_failures_reproduce_on_main": true,
+      "historical_replay_error": "Historical source drift: api/contracts/external_training.py",
+      "failing_nodes": [
+        "tests/test_canonical_metadata.py::test_frozen_fixed_seed_plans_and_prescription_doses_are_identical",
+        "tests/test_canonical_metadata.py::test_report_is_deterministic_and_matches_retained_evidence",
+        "tests/test_metadata_integrity_audit.py::test_all_live_entries_and_zero_row_shim_are_accounted_for",
+        "tests/test_metadata_integrity_audit.py::test_inventory_preserves_every_raw_source_row",
+        "tests/test_metadata_integrity_audit.py::test_all_field_occurrences_have_exact_raw_value_type_and_identity",
+        "tests/test_metadata_integrity_audit.py::test_duplicate_screen_does_not_merge_different_concepts",
+        "tests/test_metadata_integrity_audit.py::test_reports_are_deterministic_and_retained_reports_match",
+        "tests/test_metadata_integrity_audit.py::test_frozen_bank_production_and_identity_baselines_are_unchanged",
+        "tests/test_metadata_integrity_audit.py::test_real_compounds_have_not_been_silently_split",
+        "tests/test_metadata_integrity_audit.py::test_every_field_and_configuration_has_dependency_status",
+        "tests/test_metadata_integrity_audit.py::test_configuration_case_collision_and_unestablished_restrictions_are_reported",
+        "tests/test_metadata_integrity_audit.py::test_goal_coverage_is_observed_without_assignment",
+        "tests/test_metadata_integrity_audit.py::test_running_full_audit_preserves_deterministic_training_outputs",
+        "tests/test_canonical_metadata.py::test_climbing_association_is_withheld_but_raw_evidence_and_identity_survive",
+        "tests/test_canonical_metadata.py::test_existing_query_orders_goals_and_unrelated_facets_are_identical",
+        "tests/test_canonical_metadata.py::test_raw_banks_ids_media_keys_and_planner_sources_have_no_drift",
+        "tests/test_canonical_metadata.py::test_browser_contract_fixture_matches_real_library",
+        "tests/test_metadata_integrity_audit.py::test_completion_provenance_replay_preserves_exact_frozen_contract_and_live_field",
+        "tests/test_metadata_integrity_audit.py::test_custom_plan_boundary_does_not_allow_unrelated_production_changes"
+      ]
+    },
+    "lint_compile_diff": "Ruff, compilation and whitespace checks pass.",
+    "broad_suite": {
+      "module_count": 165,
+      "initial_run": {
+        "passed": 5874,
+        "failed": 39,
+        "errors": 13,
+        "skipped": 22
+      },
+      "initial_run_note": "One new audit-coverage test ran before its evidence file had been written. The evidence is now complete and the test passes; all other non-passing nodes reproduce on unchanged Main.",
+      "final_failure_recheck": {
+        "failed": 38,
+        "errors": 13,
+        "passed": 1
+      },
+      "unchanged_main_nonpassing_count": 51,
+      "all_outstanding_nodes_reproduce_on_main": true,
+      "outstanding_nodes": [
+        "tests/test_canonical_metadata.py::test_browser_contract_fixture_matches_real_library",
+        "tests/test_canonical_metadata.py::test_climbing_association_is_withheld_but_raw_evidence_and_identity_survive",
+        "tests/test_canonical_metadata.py::test_existing_query_orders_goals_and_unrelated_facets_are_identical",
+        "tests/test_canonical_metadata.py::test_frozen_fixed_seed_plans_and_prescription_doses_are_identical",
+        "tests/test_canonical_metadata.py::test_raw_banks_ids_media_keys_and_planner_sources_have_no_drift",
+        "tests/test_canonical_metadata.py::test_report_is_deterministic_and_matches_retained_evidence",
+        "tests/test_conditioning_diagnostics.py::test_conditioning_bank_taper_restrictions_for_flagged_drills",
+        "tests/test_conditioning_dose_metadata_normalization.py::test_no_timed_interval_leaves_a_stated_rest_unencoded",
+        "tests/test_conditioning_programming.py::test_reduce_increase_maintain_are_real_authorised_doses_and_idempotent",
+        "tests/test_conditioning_session_minimum.py::test_underfilled_conditioning_holds_release_for_planner_regeneration",
+        "tests/test_equipment_requirements.py::test_api_returns_mandatory_setup_and_original_equipment_without_granting_prescription",
+        "tests/test_equipment_requirements.py::test_prechange_hashes_all_identities_queries_and_unrelated_facets_are_preserved",
+        "tests/test_generator_equipment_accuracy.py::test_controlled_before_after_selection_and_doses[0]",
+        "tests/test_generator_equipment_accuracy.py::test_exact_five_edits_preserve_all_catalogue_media_and_history",
+        "tests/test_generator_equipment_accuracy.py::test_real_generator_equipment_candidates[equipment3-0]",
+        "tests/test_generator_equipment_accuracy.py::test_real_generator_equipment_candidates[equipment4-0]",
+        "tests/test_goal_preservation_e2e.py::test_a_gas_tank_weakness_enters_the_obligation_set_through_the_full_planner",
+        "tests/test_injury_pipeline.py::test_build_rehab_injury_string_falls_back_to_raw_when_no_parsed_entries",
+        "tests/test_injury_pipeline.py::test_build_rehab_injury_string_prefers_structured_knee_instability",
+        "tests/test_injury_pipeline.py::test_build_rehab_injury_string_uses_entry_level_guided_types_without_leakage",
+        "tests/test_injury_pipeline.py::test_generate_rehab_support_bundle_counts_guided_only_parsed_injury_as_injury",
+        "tests/test_late_camp_architecture_cliff.py::TestProductionCalendarCollision::test_no_app_owned_snc_stacked_on_declared_thursday_contact",
+        "tests/test_late_camp_fight_week_handoff.py::TestD24GeneratedFightWeek::test_d1_is_routed_to_the_equipment_banning_primer_contract",
+        "tests/test_late_camp_fight_week_handoff.py::TestHardSparringConversionPreserved::test_declared_hard_sparring_inside_d14_stays_technical_only[17]",
+        "tests/test_late_camp_fight_week_handoff.py::TestHardSparringConversionPreserved::test_declared_hard_sparring_inside_d14_stays_technical_only[20]",
+        "tests/test_late_camp_fight_week_handoff.py::TestHardSparringConversionPreserved::test_declared_hard_sparring_inside_d14_stays_technical_only[24]",
+        "tests/test_late_camp_selector_rebalance.py::test_audit_snapshot_matches_golden",
+        "tests/test_mechanical_metadata_corrections.py::test_exact_seven_source_deltas_preserve_every_identity_and_other_row",
+        "tests/test_metadata_integrity_audit.py::test_all_field_occurrences_have_exact_raw_value_type_and_identity",
+        "tests/test_metadata_integrity_audit.py::test_all_live_entries_and_zero_row_shim_are_accounted_for",
+        "tests/test_metadata_integrity_audit.py::test_completion_provenance_replay_preserves_exact_frozen_contract_and_live_field",
+        "tests/test_metadata_integrity_audit.py::test_configuration_case_collision_and_unestablished_restrictions_are_reported",
+        "tests/test_metadata_integrity_audit.py::test_custom_plan_boundary_does_not_allow_unrelated_production_changes",
+        "tests/test_metadata_integrity_audit.py::test_duplicate_screen_does_not_merge_different_concepts",
+        "tests/test_metadata_integrity_audit.py::test_every_field_and_configuration_has_dependency_status",
+        "tests/test_metadata_integrity_audit.py::test_frozen_bank_production_and_identity_baselines_are_unchanged",
+        "tests/test_metadata_integrity_audit.py::test_goal_coverage_is_observed_without_assignment",
+        "tests/test_metadata_integrity_audit.py::test_inventory_preserves_every_raw_source_row",
+        "tests/test_metadata_integrity_audit.py::test_real_compounds_have_not_been_silently_split",
+        "tests/test_metadata_integrity_audit.py::test_reports_are_deterministic_and_retained_reports_match",
+        "tests/test_metadata_integrity_audit.py::test_running_full_audit_preserves_deterministic_training_outputs",
+        "tests/test_rehab_prescription_bundles.py::test_today_uses_live_bundle_only_for_injury_specific_restore_evidence[worse-calm-ids2]",
+        "tests/test_running_conditioning.py::test_actual_assigned_distance_work_evidences_conditioning_without_fake_duration",
+        "tests/test_stage2_payload_late_fight_roles.py::test_coach_owned_context_sequence_downgraded_hard_spar_gets_ban_label",
+        "tests/test_stage2_payload_late_fight_roles.py::test_coach_owned_context_sequence_keeps_downgraded_declared_hard_day",
+        "tests/test_stage2_payload_late_fight_roles.py::test_declared_coach_combat_spine_removes_app_stressor_from_coach_day",
+        "tests/test_stage2_payload_late_fight_roles.py::test_low_cost_filler_can_share_locked_coach_combat_label",
+        "tests/test_stage2_payload_late_fight_roles.py::test_pre_fight_compressed_does_not_auto_collapse_to_two_visible_sessions_for_moderate_manageable_context",
+        "tests/test_stage2_payload_late_fight_roles.py::test_stressor_cannot_share_locked_coach_combat_label",
+        "tests/test_tag_retirement.py::test_all_banks_clinical_reviews_aliases_and_historical_identities_are_unchanged",
+        "tests/test_tag_retirement.py::test_complete_current_plans_match_pre_retirement_selection_dose_and_personalisation"
+      ],
+      "main_recheck": "21 audit/tag nodes and 30 additional exact failing nodes; identical non-passing node set."
+    },
+    "editor_suite": {
+      "result": "59 passed, 1 failed",
+      "failing_node": "tests/test_exercise_customisation.py::test_library_dose_fields_follow_the_drill[Tempo Hill Runs-intervals]",
+      "unchanged_main_reproduction": true,
+      "actual_failure": "Tempo Hill Runs returns dose_required=True; the test expects False. Identical assertion fails on unchanged Main.",
+      "scope": "Separate from the 165-module broad run."
+    },
+    "outstanding_nonpassing_total": 52
+  }
+}

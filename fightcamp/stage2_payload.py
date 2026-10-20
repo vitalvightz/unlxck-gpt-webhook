@@ -2490,7 +2490,7 @@ def _serialize_strength_option(exercise: dict, why: str, score_evidence: dict | 
     # The serialized slot keeps no method or authored category, so the item's
     # adaptation relevance travels in the existing selection-metadata fields.
     # Nothing found stays "unknown": unreviewed is not negative evidence.
-    from .strength import _classify_prescription_type, _prescription_templates
+    from .strength import _classify_prescription_type, _prescription_templates, _unrequired_space_tokens
     adaptations = [
         adaptation
         for adaptation in _ADAPTATION_ORDER
@@ -2524,7 +2524,9 @@ def _serialize_strength_option(exercise: dict, why: str, score_evidence: dict | 
         "fulfillment_authority": meaningful_authority,
         "base_categories": quality_profile["base_categories"],
         "required_equipment": required_equipment,
-        "universally_available": not required_equipment or set(required_equipment).issubset({"bodyweight"}),
+        # Running space is described, not owned: Stage 1 selection does not require it.
+        "universally_available": not required_equipment
+        or set(required_equipment).issubset({"bodyweight", *_unrequired_space_tokens(exercise)}),
         "generic_fallback": bool(exercise.get("generic_fallback")),
     }, exercise, score_evidence)
 

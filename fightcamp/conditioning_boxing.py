@@ -304,15 +304,24 @@ def _boxing_aerobic_context_flags(
     equipment_access_set: set[str],
 ) -> dict[str, bool]:
     restriction_keys = _restriction_key_set(restrictions)
-    context_text = _conditioning_context_text(injuries, weaknesses, goals)
-    lower_limb_unload_desirable = any(token in context_text for token in _LOWER_LIMB_UNLOAD_HINTS)
+    injury_text = _conditioning_context_text(injuries)
+    # Only injuries and restrictions describe what is limiting training now.
+    # Goals and weak areas are what the athlete wants to improve: a healthy
+    # boxer working on knee stability, footwork or shoulders still runs and
+    # shadowboxes normally, and the "reactive" speed goal is not an impact
+    # complaint. ``weaknesses``/``goals`` stay in the signature for callers.
+
+    def _hinted(hints: set[str]) -> bool:
+        return any(token in injury_text for token in hints)
+
+    lower_limb_unload_desirable = _hinted(_LOWER_LIMB_UNLOAD_HINTS)
     impact_tolerance_reduced = bool(restriction_keys & _IMPACT_SENSITIVE_RESTRICTIONS)
     if not impact_tolerance_reduced:
         impact_tolerance_reduced = any(
-            token in context_text for token in ("impact", "shin splint", "landing", "reactive", "jarring")
+            token in injury_text for token in ("impact", "shin splint", "landing", "reactive", "jarring")
         )
-    active_tissue_irritation = any(token in context_text for token in _TISSUE_IRRITATION_HINTS)
-    upper_body_swim_sensitive = any(token in context_text for token in _UPPER_BODY_SWIM_SENSITIVITY_HINTS)
+    active_tissue_irritation = _hinted(_TISSUE_IRRITATION_HINTS)
+    upper_body_swim_sensitive = _hinted(_UPPER_BODY_SWIM_SENSITIVITY_HINTS)
     bike_available = bool(equipment_access_set & _BIKE_EQUIPMENT_KEYS)
     sled_available = "sled" in equipment_access_set
 

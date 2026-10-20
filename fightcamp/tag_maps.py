@@ -4,6 +4,9 @@ Scoring-map values must be canonical bank tags with real bank coverage. Input
 aliases belong in the normalizer maps, not in the scoring values themselves.
 """
 
+# Legacy labels resolve to the intake form's own values (web/lib/intake-options.ts),
+# so a label and its form value build the same programme: consumers key on
+# "speed" and "power" (e.g. the primary-speed alactic bonus, power guidance).
 GOAL_NORMALIZER = {
     "power": "power",
     "strength": "strength",
@@ -15,17 +18,17 @@ GOAL_NORMALIZER = {
     "mobility": "mobility",
     "recovery": "recovery",
     "weight_cut": "weight_cut",
-    "Power & Explosiveness": "explosive",
+    "Power & Explosiveness": "power",
     "Conditioning / Endurance": "conditioning",
     "Maximal Strength": "strength",
     "Maximal Strength Maintenance": "maximal_strength_maintenance",
     "maximal_strength_maintenance": "maximal_strength_maintenance",
     "Mobility": "mobility",
-    "Speed": "reactive",
+    "Speed": "speed",
     "Agility": "lateral",
     "Core Stability": "core",
     "CNS Fatigue": "cns",
-    "Speed / Reaction": "reactive",
+    "Speed / Reaction": "speed",
     "Lateral Movement": "lateral",
     "Rotation": "rotational",
     "Balance": "balance",
