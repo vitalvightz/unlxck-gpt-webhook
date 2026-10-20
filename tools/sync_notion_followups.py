@@ -26,6 +26,12 @@ def notion_token():
 
 
 ACTIVE_STAGES = ("Contacted", "Replied", "Accepted", "Activated")
+WARM_STAGES = ("Replied", "Accepted", "Activated")
+# New warm follow-up counters are independent of the original cold DM counter.
+WARM_COUNTERS = (
+    ("Replied", "Signup Nudges Sent", "Synced Signup Nudges Sent", "Signup Nudge 1 At"),
+    ("Accepted", "Onboarding Nudges Sent", "Synced Onboarding Nudges Sent", "Onboarding Nudge 1 At"),
+)
 
 # Only the Contacted stage produces automatic follow-up sends.
 # A blank due date for an exception/terminal stage is intentional; Timing explains why.
@@ -236,6 +242,56 @@ def get_changes(page, today):
     return changes
 
 
+
+def get_warm_changes(page, today):
+    """Timestamp real operator actions observed by the existing two-minute poll.
+
+    The operator only ticks Details Sent / Onboarding Sent / Feedback Requested,
+    or increments a stage-specific nudge dropdown. No date input is required.
+    Poll observation is recorded, NOT falsely represented as an Instagram
+    timestamp. An already recorded date is never overwritten.
+    """
+    p = page["properties"]
+    stage = (p["Stage (AI Fills First)"].get("select") or {}).get("name")
+    if stage not in WARM_STAGES:
+        return {}
+
+    now = now_london(today).isoformat(timespec="seconds")
+    changes = {}
+    sent_flags = (
+        ("Replied", "Details Sent", "Details Sent At"),
+        ("Accepted", "Onboarding Sent", "Onboarding Sent At"),
+        ("Activated", "Feedback Requested", "Feedback Requested At"),
+    )
+    for required_stage, flag, date_field in sent_flags:
+        if stage == required_stage and p[flag].get("checkbox") is True and not date_value(p, date_field):
+            changes[date_field] = date_patch(now)
+
+    for required_stage, count_field, synced_field, first_field in WARM_COUNTERS:
+        # Keep each counter's checkpoint independent, even as stages advance.
+        count_name = (p[count_field].get("select") or {}).get("name") or "0"
+        if count_name not in {"0", "1", "2"}:
+            raise ValueError(f"Unexpected {count_field}: {count_name}")
+        count = int(count_name)
+        synced = p[synced_field].get("number")
+        if synced is None:
+            # An existing nonzero value on first poll has no proven send time.
+            # Baseline it without inventing a historical event.
+            changes[synced_field] = {"number": count}
+        elif int(synced) != count:
+            changes[synced_field] = {"number": count}
+            if (stage == required_stage and count == int(synced) + 1
+                    and 1 <= count <= 2):
+                if count == 1 and not date_value(p, first_field):
+                    changes[first_field] = date_patch(now)
+                # Retain the legacy warm-last timestamp for the UI, while
+                # due-date formulas use the stage-specific first-send date.
+                changes["Warm Last Nudge At"] = date_patch(now)
+            # A missed 0->2 jump, reversal or cross-stage edit cannot prove
+            # when messages went out and must not manufacture timestamps.
+    return changes
+
+
 def sync(today=None):
     today = today or datetime.now(ZoneInfo("Europe/London"))
     total = changed = missing_dates = 0
@@ -243,16 +299,27 @@ def sync(today=None):
         total += 1
         missing_dates += missing_send_date(page["properties"])
         changes = get_changes(page, today)
+        changes.update(get_warm_changes(page, today))
         if not changes:
             continue
         # Avoid applying an out-of-date candidate if stage/count changed mid-poll.
         fresh = request("GET", f"/pages/{page['id']}")
         original = page["properties"]
         current = fresh["properties"]
-        if (original["Stage (AI Fills First)"].get("select") != current["Stage (AI Fills First)"].get("select")
-                or original["Follow-Ups Sent"].get("select") != current["Follow-Ups Sent"].get("select")):
+        watched = (
+            ("Stage (AI Fills First)", "select"),
+            ("Follow-Ups Sent", "select"),
+            ("Signup Nudges Sent", "select"),
+            ("Onboarding Nudges Sent", "select"),
+            ("Details Sent", "checkbox"),
+            ("Onboarding Sent", "checkbox"),
+            ("Feedback Requested", "checkbox"),
+        )
+        if any(original[name].get(kind) != current[name].get(kind)
+               for name, kind in watched):
             continue
         changes = get_changes(fresh, today)
+        changes.update(get_warm_changes(fresh, today))
         if changes:
             request("PATCH", f"/pages/{page['id']}", {"properties": changes})
             changed += 1
