@@ -580,11 +580,11 @@ def _parse_guided_injury(guided_injury: GuidedInjury) -> tuple[list[dict[str, st
         injury_entry = resolve_guided_injury_entry(guided_injury, injury_entry)
 
         # The area-only parser can leave an unspecified rehab type after the
-        # guided notes resolve a live reported-permission profile. Keep its canonical
+        # guided notes resolve a reviewed pilot profile. Keep its canonical
         # type at the episode selector boundary; applicability is still checked
         # by the owned clinical policy, never inferred from these notes alone.
         if ((injury_entry.get("canonical_location"), injury_entry.get("injury_type"))
-                in {("elbow", "tendonitis"), ("ankle", "sprain"), ("shoulder", "tendonitis")}
+                in {("elbow", "tendonitis"), ("ankle", "sprain"), ("shoulder", "tendonitis"), ("groin", "strain")}
                 and injury_entry.get("rehab_type") in (None, "", "unspecified")):
             injury_entry["rehab_type"] = injury_entry["injury_type"]
 
