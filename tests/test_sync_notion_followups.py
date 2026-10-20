@@ -240,7 +240,7 @@ def test_replied_stage_copies_only_due_warm_messages():
 
 
 def test_idempotent_no_change_when_fields_synced():
-    page = row(stage="Replied", sent="1", synced=1, copied="next DM", timing="Not in follow-up queue")
+    page = row(stage="Replied", sent="1", synced=1, copied="", timing="Warm follow-up: waiting")
     assert sync.get_changes(page, date(2026, 10, 19)) == {}
 
 
