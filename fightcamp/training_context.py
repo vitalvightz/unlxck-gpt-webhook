@@ -100,6 +100,15 @@ EQUIP_ALIASES.update(
 )
 
 
+# Product decision: every athlete can provide a floor line or tape, a mat or
+# training surface, something to drape a towel over and a squeeze pad, so these
+# never gate eligibility (rows: Tandem Gait Walk, Side Hop-to-Stabilize,
+# Tape-Assisted Plyo Taps, Towel Hang, Adductor Squeeze Isometric and every
+# mat/mats row). Dropped here so generation, the editor and the Stage 2
+# validator agree.
+NOT_REQUIRED_EQUIPMENT = frozenset({"mat", "mats", "line", "tape", "line_tape", "bar", "pad"})
+
+
 def _split_items(value):
     if isinstance(value, str):
         return re.split(r"\s*(?:,|/|\+| and )\s*", value)
@@ -129,6 +138,8 @@ def normalize_equipment_list(raw):
         # Re-check after whitespace collapsing so "Focus Mitts" and
         # "focus_mitts" land on the same canonical token.
         key = EQUIP_ALIASES.get(key, key)
+        if key in NOT_REQUIRED_EQUIPMENT:
+            continue
         if key and key not in normalized:
             normalized.append(key)
     return normalized
@@ -137,6 +148,10 @@ def normalize_equipment_list(raw):
 def normalize_athlete_equipment_list(raw):
     """Return athlete equipment access with implicit bodyweight availability."""
     normalized = normalize_equipment_list(raw)
+    # Intake only offers "dumbbells"; owning them means owning one, so the
+    # single-dumbbell rows (supported rehab curls/wrist work) are available.
+    if "dumbbells" in normalized and "dumbbell" not in normalized:
+        normalized.append("dumbbell")
     if "bodyweight" not in normalized:
         normalized.append("bodyweight")
     return normalized
