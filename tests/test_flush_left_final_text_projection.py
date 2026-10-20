@@ -105,3 +105,14 @@ def test_coaching_words_in_a_dose_survive_once_its_numbers_are_stats():
     rdl = _source_block(_day(20), "Romanian Deadlift (DB)")
     assert rdl["sets"] == 2 and rdl["reps"] == 6
     assert rdl["execution_instructions"] == "keep reps crisp"
+
+
+def test_support_drill_cue_keeps_only_the_coaching_words():
+    from api.structured_plan_deterministic_fallback import _parse_display_text, _parsed_block
+    block = _parsed_block(_parse_display_text("- Footwork Rhythm Flush: 2x6 @ RPE 6, keep reps crisp."),
+                          {"role_key": "footwork_walkthrough"}, 8, "footwork_walkthrough")
+    assert (block["sets"], block["reps"]) == (2, 6)
+    assert block["coaching_cues"] == ["keep reps crisp"]
+    plain = _parsed_block(_parse_display_text("- Footwork Rhythm Flush: 6 minutes, RPE 4 max."),
+                          {"role_key": "footwork_walkthrough"}, 8, "footwork_walkthrough")
+    assert plain["coaching_cues"] == []

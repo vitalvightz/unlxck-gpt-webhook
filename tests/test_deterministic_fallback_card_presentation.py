@@ -115,9 +115,11 @@ def test_pressure_step_cut_reset_becomes_a_coaching_card():
     assert block["display_name"] == "Pressure Step-Cut Reset"
     assert block["block_type"] == "skill"
     cues = block["coaching_cues"]
-    # Prescription and its rest stay visible, verbatim.
-    assert cues[0].startswith("2 sets x 4 clean reactions each direction")
-    assert "Rest: 75 sec between sets." in cues[0]
+    # 2 x 4 is shown as stats; the coaching wording and the unlifted rest stay.
+    assert (block["sets"], block["reps"]) == (2, 4)
+    assert cues[0].startswith("clean reactions each direction")
+    assert "2 sets x 4" not in cues[0]
+    assert "Rest: 75 sec between sets" in cues[0]
     # Planner labels keep their wording so the coaching still reads as coaching.
     assert any(cue.startswith("Cue: React to a partner exit") for cue in cues)
     assert any(cue.startswith("Cue Method:") for cue in cues)
