@@ -1,23 +1,23 @@
 {
-  "base_commit": "5b8f4fbf",
+  "base_commit": "c8ef0f26",
   "clock_utc": "2026-10-11 09:00",
   "python_hash_seed": 0,
   "input_fixture": "tests/fixtures/tag_retirement_plans.json",
   "plans": [
     {
       "case": "boxing_gpp_power_conditioning",
-      "plan_text_sha256": "7fba441739a3542f4ad494e0eef7b4fb9b1e9db9a1cfc9e745784dbf223ec4d9",
-      "stage2_payload_sha256": "a99e59b77513348ee04550c8ee498d03073d9e8e9a19a286a054983a74b95b3a"
+      "plan_text_sha256": "1413e834b218b774ebe29d14e34f0383da4e9a75ee4aecbf0332b6f9b85bfe78",
+      "stage2_payload_sha256": "41c11a50a9661dd3e911eda14401408c97d9a2b6b26e87ad6e46b5718e9a6274"
     },
     {
       "case": "mma_spp_counter_striker",
-      "plan_text_sha256": "48f8bdd736aef6606a6ce317b176fb843b79d02e77a123506bceb567ca4a2ddf",
-      "stage2_payload_sha256": "e33fda39f1e32693c5ddc4e792fa95587bae6df25d940e0754ef5f23662264ee"
+      "plan_text_sha256": "53c70c897d89adc53d07849315e27614405a511932ae2ca868dfd5d44e699160",
+      "stage2_payload_sha256": "b093f3c49d8d8ed3486b45caa3a30f4408fe607d647a15b5d7a2575d3c847b7b"
     },
     {
       "case": "boxing_taper_shoulder_limited",
-      "plan_text_sha256": "4b09bdb20950c1a930b3f100adf5d24a4a5e5d3eb654ce3613c441833fa943f7",
-      "stage2_payload_sha256": "99fa8934f010a9971c93d8c8424ac474f3c77dbeabfff48bc61a656be53fe11e"
+      "plan_text_sha256": "630333ccf13e39b205c06eb3a5b86c42c5df27540fbe9cbc076dbc0e7113e41b",
+      "stage2_payload_sha256": "eb67fbcfc77743c80ae2e4b11a745dfeec77db05556d681463261717aa5b36c7"
     },
     {
       "case": "boxing_final_day",
@@ -26,13 +26,13 @@
     },
     {
       "case": "mma_taper_no_equipment",
-      "plan_text_sha256": "c7949ad499be6594c45e9301b40362c504ef68b650e6503af307df3ccc495c27",
-      "stage2_payload_sha256": "f0f92575401e017507c70e41e541b9ecc9a8eb1341841d96eea3b576efb2bb2c"
+      "plan_text_sha256": "9d1f35bfc58d159f81d8e8c50f3ef8d43b5887c31dee1729b489e8c07e389b90",
+      "stage2_payload_sha256": "f2e98c452add0c54ece61af5705bbf9220a6f6c0d9949191294d17d548b49366"
     },
     {
       "case": "kickboxing_taper_speed",
       "plan_text_sha256": "57cf43780362a377a495352923a8a96d49b645402e5b403370b44530e391d247",
-      "stage2_payload_sha256": "5f3908353bddd2ca9895f540d6451a455b386bf66ec49f67aa97385edbb689ce"
+      "stage2_payload_sha256": "09bf55a50f9bc48d2639b77325c4ae4b6c1999072a2668d5108d2202097fe712"
     }
   ]
 }

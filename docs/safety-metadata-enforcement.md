@@ -36,6 +36,26 @@ Also found: `parse_injury_entry` returned `None` for any text containing `[train
 
 The editor (`SafetyContext.contraindicated`) now also enforces `block_if_fight_within_days` with the same `fight_proximity_allowed` reader. No fight date means no countdown; an unreadable date fails closed.
 
+### One decision for generation and manual changes
+
+- `fightcamp.injury_filtering.is_absolute_safety_note` is the single absolute-vs-conditional classification, used by the generation guard and the editor.
+- The editor's `SafetyContext.planner_excludes` holds a bank row exactly where `injury_decision` excludes it at the flag's reported severity. Previously it refused any flag-level region match.
+- `contraindicated()` counts only absolute notes.
+- The editor's own movement-demand checks are unchanged: an exercise that loads the injured region, or has no load evidence, is refused while a limiting injury is active. So are its rehab-policy and fight-cutoff checks.
+
+### Medical checks before awareness-only
+
+`api.services.today_service.restrictive_injuries` drops a `not_limiting` report only after its episode observations (which can set `rehab_medical_gate` / `progression_assessment_medical_hold`), holds and clinical policy have been evaluated. Today and the editor both use it. Unreadable observations or a failed consequence classification never clear an injury. Previously the editor filtered before applying observations.
+
+| Complete programme (boxing, left-knee report, D49) | Strength picks |
+| --- | --- |
+| No injury | 28 |
+| `not_limiting` | identical to no injury |
+| `limiting` | 26, knee-adapted |
+| `cant_train` | `triage_blocked` (normal planning paused for review) |
+
+The six-programme comparison fixture is re-anchored to current Main (`c8ef0f26`, after #2959/#2960). This branch reproduces all six programmes byte-for-byte in plan text and Stage 2 payload.
+
 ## Confirmed defects and actual programming comparisons
 
 The same real source rows and athlete flags were run in separate base/branch worktrees. Tests also remove only the field under test to prove that its consumer changes the decision, rather than merely coinciding with another exclusion.
