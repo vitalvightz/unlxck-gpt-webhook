@@ -21687,3 +21687,18 @@ fieldset.priority-clarification-options,
   min-width: 0;
   opacity: 0.6;
 }
+
+/* Compact "Coming soon" tag: wraps under its label instead of pushing past it. */
+.coming-soon-badge {
+  justify-self: start;
+  min-height: 20px;
+  padding: 0 8px;
+  font-size: 0.66rem;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+.checkbox-card-disabled .checkbox-card-title {
+  opacity: 0.6;
+}

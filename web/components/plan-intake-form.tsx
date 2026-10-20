@@ -745,7 +745,7 @@ function CheckboxGroup({
               key={option.value}
               className={`checkbox-card ${checked ? "checkbox-card-checked" : ""} ${disabled ? "checkbox-card-disabled" : ""}`.trim()}
               aria-disabled={disabled}
-              title={labelTitle}
+              title={comingSoon ? "Coming soon" : labelTitle}
             >
               <input
                 type="checkbox"
@@ -758,7 +758,6 @@ function CheckboxGroup({
               <span className="checkbox-card-copy">
                 <span className="checkbox-card-title">{option.label}</span>
               </span>
-              {comingSoon ? <span className="badge role-card-badge">🚫 Coming soon</span> : null}
               {labelTitle ? (
                 <WhyTooltip
                   title="Unavailable"
@@ -781,7 +780,7 @@ function OptionalDetails({ title, hint, comingSoon = false, children }: { title:
       <summary className="overview-disclosure-summary">
         <div className="overview-disclosure-copy">
           <p className="kicker">Optional</p>
-          <p className="overview-disclosure-title">{title}{comingSoon ? <> <span className="badge role-card-badge">🚫 Coming soon</span></> : null}</p>
+          <p className="overview-disclosure-title">{title}{comingSoon ? <> <span className="badge coming-soon-badge">Coming soon</span></> : null}</p>
           {hint ? <p className="muted">{hint}</p> : null}
         </div>
         <span className="overview-disclosure-meta">
@@ -2584,7 +2583,7 @@ export function PlanIntakeForm() {
                       too, so hiding it here is presentation, not enforcement. */}
                   {isMinorAthlete ? null : (
                     <div className="field">
-                      <label htmlFor="targetWeightKg">Target weight (kg) <span className="badge role-card-badge">🚫 Coming soon</span></label>
+                      <label htmlFor="targetWeightKg">Target weight (kg) <span className="badge coming-soon-badge">Coming soon</span></label>
                       <input id="targetWeightKg" type="number" min="0" step="0.1" inputMode="decimal" disabled value="" readOnly />
                       <p className="muted">Weight cut support is coming soon.</p>
                     </div>
@@ -3265,7 +3264,7 @@ export function PlanIntakeForm() {
                 <article className="step-card priority-clarification-card">
                   <div className="form-section-header">
                     <p className="kicker">Clarification</p>
-                    <h2 className="form-section-title">{t("priorityDetail")} <span className="badge role-card-badge">🚫 Coming soon</span></h2>
+                    <h2 className="form-section-title">{t("priorityDetail")} <span className="badge coming-soon-badge">Coming soon</span></h2>
                   </div>
                   <div className="priority-clarification-copy">
                     <p>{overlapClarificationPrompt}</p>
