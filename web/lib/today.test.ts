@@ -477,6 +477,16 @@ test("severe injury override supersedes the daily recommendation banner", () => 
   assert.match(banner?.safety ?? "", /superseded by the injury warning/);
 });
 
+test("can't-train-normally keeps the same hold without a severe medical label", () => {
+  const injury = makeInjury({ description: "chest bruise [training_impact:cant_train]" });
+  const banner = getInjuryOverrideBanner(stateWithInjuries([injury]), "Hard sparring");
+
+  assert.equal(banner?.chip, "INJURY HOLD");
+  assert.equal(banner?.displayState, "injury_blocked");
+  assert.match(banner?.detail ?? "", /^Can't train normally: /);
+  assert.doesNotMatch(banner?.detail ?? "", /severe/i);
+});
+
 test("severe injury override remains active while monitoring", () => {
   const easing = getInjuryOverrideBanner(
     stateWithInjuries([makeInjury({ status: "monitoring" })]),

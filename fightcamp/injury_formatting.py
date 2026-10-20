@@ -96,6 +96,9 @@ def _expand_triggered_restriction_clause(clause: str) -> list[str]:
     return [f"{trigger} {item}" for item in items]
 
 
+_IMPACT_MARKER = re.compile(r"\s*\[training_impact:[^\]]*\]", re.IGNORECASE)
+
+
 def parse_injury_entry(phrase: str) -> dict[str, str | None | list[str]] | None:
     """Parse a single injury phrase.
     
@@ -112,7 +115,12 @@ def parse_injury_entry(phrase: str) -> dict[str, str | None | list[str]] | None:
     if not original_phrase:
         return None
 
-    phrase_to_parse = original_phrase
+    # The stored impact marker ("[training_impact:cant_train]") is metadata,
+    # not injury text: read as prose, "cant"/"not" negated the whole injury.
+    phrase_to_parse = _IMPACT_MARKER.sub(" ", original_phrase).strip()
+    if not phrase_to_parse:
+        return None
+    original_phrase = phrase_to_parse
     if contains_negated_injury(original_phrase):
         # Always strip negated content. The entity-based Negex pass only marks
         # named entities, so symptom-level negations ("never had knee issues")

@@ -689,10 +689,12 @@ def open_injury_flag_risks(
 
     severe = [f for f in active if str(f.get("severity") or "") == "severe"]
     if severe:
+        from fightcamp.injury_awareness import injury_stop_phrase
+
         return [
             make_risk(
                 "active_injury_worse",
-                text=f"Active severe injury: {_flag_label(severe[0])}. Keep load off it until cleared.",
+                text=f"{injury_stop_phrase(dict(severe[0]), _flag_label(severe[0]))}. Keep load off it until cleared.",
                 timeframe="active",
             )
         ]

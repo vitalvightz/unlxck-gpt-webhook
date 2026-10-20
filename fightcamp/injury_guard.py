@@ -1089,7 +1089,8 @@ def injury_decision(exercise: dict, injuries: Iterable[str | dict] | str | dict,
     )
     # An authored regional prohibition must not become "modify" through the
     # severity-weighted mechanical score, or reuse a pre-metadata cached score.
-    prohibited = [d for d in details if set(d["fields"]) & {"avoid_if", "contraindications"}]
+    prohibited = [d for d in details
+                  if set(d["fields"]) & {"avoid_if", "contraindications"} and d["risk_level"] == "exclude"]
     if prohibited:
         region = prohibited[0]["region"]
         return Decision(

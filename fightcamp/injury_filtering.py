@@ -868,6 +868,12 @@ def injury_flag_reasons(item: dict, injuries: Iterable[str]) -> list[str]:
     return sorted(reasons)
 
 
+_ACTIVE_SYMPTOM_NOTE = re.compile(
+    r"\bsymptoms?\s+(?:are|is)\s+(?:currently\s+)?active\b|\bsymptom-limited\b|\b(?:is|are)\s+(?:currently\s+)?limited\b",
+    re.IGNORECASE,
+)
+
+
 def injury_match_details(
     item: dict,
     injuries: Iterable[str],
@@ -914,14 +920,20 @@ def injury_match_details(
 
     reasons: list[dict] = []
     for region in region_list:
-        if "exclude" in risk_levels:
-            for field, notes in safety_notes.items():
-                hits = sorted({hit for note in notes for hit in match_forbidden(
-                    note, INJURY_REGION_KEYWORDS.get(region, [])
-                )})
-                if hits:
+        for field, notes in safety_notes.items():
+            for note in notes:
+                hits = sorted(set(match_forbidden(note, INJURY_REGION_KEYWORDS.get(region, []))))
+                if not hits:
+                    continue
+                # avoid_if is an authored regional prohibition, and "avoid if
+                # <region> symptoms are active" is met by any injury reported
+                # as limiting there. Response-conditional prose ("skip if pain
+                # spikes...") is a warning: it adapts through the ordinary
+                # severity-weighted score instead of excluding on region alone.
+                level = "exclude" if field == "avoid_if" or _ACTIVE_SYMPTOM_NOTE.search(note) else "flag"
+                if level in risk_levels:
                     reasons.append({"region": region, "fields": [field], "patterns": hits,
-                                    "tags": [], "risk_level": "exclude"})
+                                    "tags": [], "risk_level": level})
         rules = INJURY_RULES.get(region, {})
         for risk_level in ("exclude", "flag"):
             if risk_level not in risk_levels:

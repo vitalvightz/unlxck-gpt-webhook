@@ -309,7 +309,7 @@ class SafetyContext:
     """Live injury decisions for the occurrence, computed by the existing system."""
 
     def __init__(self, store: Any, *, athlete_id: str, occurrence: Occurrence, equipment: Sequence[str]):
-        from api.contracts.readiness_message import _injury_text_regions, _resolve_injury_regions
+        from api.contracts.readiness_message import _injury_text_regions, _resolve_injury_regions, restricts_training
         from api.services.today_service import (
             _entry_mapping_for_readiness, _with_injury_policy, _with_rehab_stage, _with_safe_session_context,
             _with_surface_class,
@@ -324,6 +324,9 @@ class SafetyContext:
             # Unknown injury state never yields "safe" alternatives.
             logger.exception("[exercise_customisation] injury flags unavailable")
             raise HTTPException(503, "Your injury guidance couldn't be loaded. Try again.") from None
+        # A triage-cleared "Not limiting me" injury never narrows the choices,
+        # matching generation and Today; medical evidence keeps it restrictive.
+        flags = [flag for flag in flags if restricts_training(flag)]
         injuries = _with_rehab_stage(_with_safe_session_context(_with_surface_class(flags)),
                                      store=store, athlete_id=athlete_id)
         injuries = [apply_episode_observations(row, episode_observations(store, athlete_id, row)) for row in injuries]
@@ -337,6 +340,13 @@ class SafetyContext:
         self.decisions = [row["rehab_decision"] for row in injuries if isinstance(row.get("rehab_decision"), Mapping)]
         self.plan_id = _clean(occurrence.plan_row.get("id"))
         self.day = occurrence.date.isoformat()
+        # Countdown for authored fight-proximity cutoffs. No fight date means no
+        # countdown to enforce; an unreadable one fails closed (None).
+        fight_date = _clean(occurrence.plan_row.get("fight_date"))
+        try:
+            self.days_until_fight = (date.fromisoformat(fight_date[:10]) - occurrence.date).days if fight_date else False
+        except ValueError:
+            self.days_until_fight = None
         regions: set[str] = set()
         for injury in flags:
             if _clean(injury.get("status")).lower() not in {"open", "monitoring"}:
@@ -350,7 +360,9 @@ class SafetyContext:
         self.has_injuries = bool(flags)
 
     def contraindicated(self, raw: Mapping[str, Any]) -> bool:
-        """A contraindication counts only when it names a currently injured region.
+        """Held when inside an authored fight cutoff, or contraindicated.
+
+        A contraindication counts only when it names a currently injured region.
 
         Region-less notes ("skip when pins are unavailable", blood pressure
         during a cut) are not injury evidence. When no injured region could be
@@ -358,6 +370,10 @@ class SafetyContext:
         """
         from api.contracts.readiness_message import _injury_text_regions
 
+        from fightcamp.late_selector_windows import fight_proximity_allowed
+
+        if self.days_until_fight is not False and not fight_proximity_allowed(raw, self.days_until_fight):
+            return True
         notes = _strings(raw.get("contraindications"))
         if not self.has_injuries or not notes:
             return False

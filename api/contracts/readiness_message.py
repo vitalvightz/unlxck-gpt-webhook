@@ -866,6 +866,19 @@ def classify_injury_surface(injury: Mapping[str, Any]) -> str:
     return _surface_assessment(injury).classification
 
 
+def restricts_training(injury: Mapping[str, Any]) -> bool:
+    """False only for a triage-cleared "Not limiting me" report.
+
+    Such an injury stays visible (awareness and re-injury warnings) but must not
+    change Today's loading, exactly as generation drops it after triage. Wounds
+    stay with the surface pathway and medical evidence always restricts.
+    """
+    from fightcamp.injury_awareness import is_awareness_only
+
+    return not (isinstance(injury, Mapping) and is_awareness_only(dict(injury))
+                and classify_injury_surface(injury) == "non_surface")
+
+
 def _active_open_injuries(context: ReadinessContext) -> list[Mapping[str, Any]]:
     return [
         injury
@@ -1482,7 +1495,9 @@ def _active_context_injury_stop(context: ReadinessContext) -> tuple[str, str] | 
         if _clean(injury.get("severity")).lower() == "severe":
             if surface_wound_medical_review(injury) is not None:
                 continue
-            return f"Active severe injury: {label}.", flag_id
+            from fightcamp.injury_awareness import injury_stop_phrase
+
+            return f"{injury_stop_phrase(dict(injury), label)}.", flag_id
         if _clean(injury.get("latest_reported_status")).lower() == "worse":
             if _surface_assessment(injury).is_surface:
                 continue

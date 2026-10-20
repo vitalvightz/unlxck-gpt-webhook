@@ -64,6 +64,7 @@ from api.contracts.readiness_message import (
     build_readiness_adjustment,
     classify_injury_surface,
     is_support_session,
+    restricts_training,
     surface_wound_medical_review,
 )
 from api.contracts.training_day import resolve_training_day_str
@@ -891,7 +892,7 @@ def _readiness_context_and_status(
         today_session=today_session,
         active_plan=plan_row,
         intake=intake,
-        open_injuries=enriched_injuries,
+        open_injuries=[injury for injury in enriched_injuries if restricts_training(injury)],
         recent_checkins=recent_checkins,
         recent_sessions=recent_sessions,
         last_head_impact_day=last_head_impact_day,
@@ -1207,13 +1208,15 @@ def _severe_injury_recommendation(
     copy when a severe injury is active. The stored daily check-in is untouched
     (it stays in history); this only reshapes the live command view so every
     consumer — not just the Today UI — sees the injury hold as authoritative."""
+    from fightcamp.injury_awareness import injury_stop_phrase
+
     label = injury.get("label") or build_injury_label(
         injury.get("body_area"), injury.get("description")
     )
     reason = "\n".join(
         [
             "Session blocked",
-            f"Active severe injury: {label}. This is not a load-reduced session.",
+            f"{injury_stop_phrase(dict(injury), label)}. This is not a load-reduced session.",
             "Clear it before training.",
         ]
     )
