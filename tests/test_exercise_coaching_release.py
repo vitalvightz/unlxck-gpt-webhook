@@ -142,11 +142,19 @@ def test_a_converter_cannot_drop_any_applicable_coaching_field(production_replay
     source = ai_release_source(stage1["planning_brief"], final["final_plan_text"])
     candidate = build_deterministic_structured_plan(brief, plan_text=source)
     target = next(b for _, b in blocks(candidate) if b.get(field))
+    expected = deepcopy(target[field])
     target.pop(field)
     outcome = build_structured_plan_outcome(candidate, raw_markdown=source,
                                            planning_brief=brief)
-    assert outcome.structured_plan is None
-    assert any("COACHING_DROPPED" in e and field in e for e in outcome.errors)
+    if field not in {"progression_rule", "regression_options"}:
+        assert outcome.structured_plan is None
+        assert any("COACHING_DROPPED" in e and field in e for e in outcome.errors)
+        return
+    # A dropped source adjustment is restored verbatim rather than costing the
+    # athlete the whole converted card.
+    assert outcome.structured_plan is not None, outcome.errors
+    restored = next(b for _, b in blocks(outcome.structured_plan) if b.get("block_id") == target.get("block_id"))
+    assert restored.get(field) == expected
 
 
 @pytest.mark.parametrize("context", [

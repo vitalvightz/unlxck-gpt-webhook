@@ -8,6 +8,7 @@ from __future__ import annotations
 import re
 
 from .calendar_context import role_d_day
+from .coaching_copy import is_null_progression
 from .exercise_coaching import easier_rejection, clinical_coaching_rejection
 from .exercise_progression import build_progression_context, occurrence_key, progress_rejection
 from .structured_session_identity import identity_tokens
@@ -47,6 +48,8 @@ def coaching_occurrences(text: str):
             occurrence = {"key": (day, title, coaching_identity(exercise[1])), "fields": {}, "lines": []}
         elif occurrence and (label := _LABEL.match(line)):
             field = _FIELDS[label[1].lower()]
+            if field == "progression_rule" and is_null_progression(label[2]):
+                continue  # A stated absence is not a Progress instruction.
             if field in _LISTS:
                 occurrence["fields"].setdefault(field, []).append(label[2])
             else:

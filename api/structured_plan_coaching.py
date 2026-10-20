@@ -5,7 +5,7 @@ import re
 
 from fightcamp.calendar_context import role_d_day
 from fightcamp.exercise_instructions import recover_execution_instructions
-from fightcamp.coaching_copy import concise_coaching
+from fightcamp.coaching_copy import concise_coaching, is_null_progression
 from fightcamp.exercise_coaching import (
     exercise_coaching, is_profile_progression, is_profile_cue, easier_rejection, clinical_coaching_rejection,
 )
@@ -116,6 +116,8 @@ def recover_selected_coaching(plan: dict[str, Any], brief: dict[str, Any],
                             block.setdefault("regression_options", []).append(match[2])
                     if block.get("coaching_cues"):
                         block["coaching_cues"] = cues
+                    if is_null_progression(block.get("progression_rule")):
+                        block.pop("progression_rule", None)  # "none this block" is no rule.
                     candidates = selected.get((offset, str(block.get("exercise_key") or ""))) or selected.get(
                         (offset, str(block.get("display_name") or "").casefold())
                     )

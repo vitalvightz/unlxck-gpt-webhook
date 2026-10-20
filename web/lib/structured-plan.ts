@@ -1000,7 +1000,16 @@ function stripStopRuleLabel(value: string): string {
   return value.replace(/^\s*stop(?:\s+rule)?\s*:\s*/i, "").trim();
 }
 
+// "Progress: none this block." states that nothing advances; it is no rule.
+const NULL_PROGRESSION_RE =
+  /^\s*(?:none|n\/?a|no(?:ne)?\s+progression|no\s+change|hold|not\s+applicable)(?:\s+(?:this|for\s+this)\s+(?:block|week|phase|camp))?\s*[.!]?\s*$/i;
+
+export function isNullProgression(text: string | null | undefined): boolean {
+  return NULL_PROGRESSION_RE.test((text ?? "").replace(/^\s*Progress(?:ion)?:\s*/i, ""));
+}
+
 function isProgrammingOnlyProgression(text: string): boolean {
+  if (isNullProgression(text)) return true;
   if (NEGATED_PROGRESSION_RE.test(text)) {
     return PROGRAMMING_ONLY_PROGRESSION_RE.test(text) || TAPER_PROGRAMMING_RE.test(text);
   }

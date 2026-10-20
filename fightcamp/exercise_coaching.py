@@ -9,7 +9,7 @@ from __future__ import annotations
 import re
 from typing import Any
 from .exercise_instructions import exercise_instructions
-from .coaching_copy import concise_coaching
+from .coaching_copy import concise_coaching, is_null_progression
 from .exercise_progression import (
     normalise_measures, progress_rejection, progression_prohibited,
 )
@@ -142,6 +142,8 @@ def exercise_coaching(
         labelled = re.match(r"^\s*([A-Za-z ]+)\s*:\s*(.+)$", line)
         if labelled and labelled[1].lower() in labels:
             key = labels[labelled[1].lower()]
+            if key == "progression_rule" and is_null_progression(labelled[2]):
+                continue
             if key in {"progression_rule", "execution_instructions"}:
                 fields.setdefault(key, labelled[2])
             elif labelled[2] not in fields[key]:

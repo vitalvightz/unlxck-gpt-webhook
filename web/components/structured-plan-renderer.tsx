@@ -604,8 +604,22 @@ function compactCoachLine(value: string): string {
   return value.trim().replace(/^(?:Cue|Easier|Progress|Stop):\s*/i, "");
 }
 
+// A "How" line that only restates the dose ("6 x 20 sec work", "1x5s with
+// 120s rest", "30min continuous") repeats the stats; it explains nothing.
+const DOSE_ONLY_WORD_RE =
+  /^(?:\d+(?:\.\d+)?(?:x\d+(?:\.\d+)?)?(?:s|secs?|seconds?|mins?|minutes?|m|kg|lbs?|reps?|sets?|%)?|x|×|@|rpe|rir|sets?|reps?|rounds?|work|rest|reset|recovery|between|with|of|and|per|each|side|technical|continuous|easy|low|max|total|s|secs?|seconds?|mins?|minutes?)$/i;
+
+function isDoseOnlyInstruction(text: string): boolean {
+  const words = text.toLowerCase().split(/[\s,;|/()+.:]+/).filter(Boolean);
+  return words.length > 0 && words.some(word => /\d/.test(word)) && words.every(word => DOSE_ONLY_WORD_RE.test(word));
+}
+
 function ExecutionInstructions({ block }: { block: StructuredBlock }) {
-  const instructions = cleanText(block.execution_instructions);
+  const raw = cleanText(block.execution_instructions);
+  // Keep only lines that describe the movement, not a restated dose.
+  const instructions = raw
+    ? raw.split(/\n+/).map(line => line.trim()).filter(line => line && !isDoseOnlyInstruction(line)).join(" ") || null
+    : null;
   return instructions ? (
     <p className="sp-block-purpose ex-execution-instructions">
       <span className="sp-stat-label">How</span>{instructions}
