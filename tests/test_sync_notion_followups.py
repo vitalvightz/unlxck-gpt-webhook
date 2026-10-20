@@ -27,6 +27,7 @@ def row(*, stage="Replied", sent="0", synced=None, copied="old DM", formula="nex
             "Follow-Ups Sent": {"select": {"name": sent} if sent else None},
             "Synced Follow-Ups Sent": {"number": synced},
             "Follow-Up DM": {"formula": {"type": "string", "string": formula}},
+            "Warm Next DM": {"formula": {"type": "string", "string": "WAIT: due 23 Oct 2026"}},
             "Copy Follow-Up": {"rich_text": [{"plain_text": copied}]},
             "Date Contacted": event(contacted),
             "Last Follow-Up Sent": event(last_sent),
@@ -228,9 +229,14 @@ def test_missing_contact_date_blocks_copy():
     assert get_copy(changed) == sync.MISSING_CONTACT_DATE
 
 
-def test_replied_stage_preserves_reply_template():
-    changed = sync.get_changes(row(stage="Replied", sent="1", synced=1), date(2026, 10, 19))
-    assert get_copy(changed) == "next DM"
+def test_replied_stage_copies_only_due_warm_messages():
+    page = row(stage="Replied", sent="1", synced=1)
+    p = page["properties"]
+    changes = sync.get_changes(page, date(2026, 10, 19))
+    assert changes["Copy Follow-Up"] == {"rich_text": []}
+    p["Warm Next DM"]["formula"]["string"] = "Hey mate, just checking you got the beta link."
+    changes = sync.get_changes(page, date(2026, 10, 19))
+    assert get_copy(changes) == "Hey mate, just checking you got the beta link."
 
 
 def test_idempotent_no_change_when_fields_synced():
