@@ -809,6 +809,37 @@ def _checked_last_head_impact_day(store: AppStore, athlete_id: str) -> tuple[str
         return None, False
 
 
+def restrictive_injuries(
+    store: AppStore,
+    athlete_id: str,
+    injuries: Sequence[Mapping[str, Any]],
+    *,
+    context_ok: bool = True,
+) -> list[Mapping[str, Any]]:
+    """Injuries that may restrict training, after every medical check.
+
+    A "Not limiting me" report is dropped only once its episode observations,
+    medical holds and clinical restrictions have been evaluated and none
+    applies. Incomplete injury context never clears an injury.
+    """
+    if not context_ok:
+        return list(injuries)
+    kept: list[Mapping[str, Any]] = []
+    for injury in injuries:
+        if restricts_training(injury):
+            kept.append(injury)
+            continue
+        try:
+            observed = apply_episode_observations(dict(injury), episode_observations(store, athlete_id, injury))
+        except Exception:
+            logger.exception("[today] injury_observations_unavailable")
+            kept.append(injury)
+            continue
+        if restricts_training(observed):
+            kept.append(observed)
+    return kept
+
+
 def _readiness_context_and_status(
     store: AppStore,
     *,
@@ -892,7 +923,7 @@ def _readiness_context_and_status(
         today_session=today_session,
         active_plan=plan_row,
         intake=intake,
-        open_injuries=[injury for injury in enriched_injuries if restricts_training(injury)],
+        open_injuries=restrictive_injuries(store, athlete_id, enriched_injuries, context_ok=classify_ok),
         recent_checkins=recent_checkins,
         recent_sessions=recent_sessions,
         last_head_impact_day=last_head_impact_day,

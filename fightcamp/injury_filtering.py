@@ -874,6 +874,18 @@ _ACTIVE_SYMPTOM_NOTE = re.compile(
 )
 
 
+def is_absolute_safety_note(field: str, note: str) -> bool:
+    """An authored prohibition met by the injury itself, versus a warning.
+
+    ``avoid_if`` lists regions to avoid, and "avoid if <region> symptoms are
+    active" is met by any injury reported as limiting there. Response-
+    conditional prose ("skip if pain spikes...") is a warning that adapts
+    through the severity-weighted score. Generation and manual exercise
+    changes both use this one classification.
+    """
+    return field == "avoid_if" or bool(_ACTIVE_SYMPTOM_NOTE.search(note))
+
+
 def injury_match_details(
     item: dict,
     injuries: Iterable[str],
@@ -925,12 +937,7 @@ def injury_match_details(
                 hits = sorted(set(match_forbidden(note, INJURY_REGION_KEYWORDS.get(region, []))))
                 if not hits:
                     continue
-                # avoid_if is an authored regional prohibition, and "avoid if
-                # <region> symptoms are active" is met by any injury reported
-                # as limiting there. Response-conditional prose ("skip if pain
-                # spikes...") is a warning: it adapts through the ordinary
-                # severity-weighted score instead of excluding on region alone.
-                level = "exclude" if field == "avoid_if" or _ACTIVE_SYMPTOM_NOTE.search(note) else "flag"
+                level = "exclude" if is_absolute_safety_note(field, note) else "flag"
                 if level in risk_levels:
                     reasons.append({"region": region, "fields": [field], "patterns": hits,
                                     "tags": [], "risk_level": level})

@@ -244,3 +244,156 @@ def test_cant_train_identity_reaches_rehab_selection():
                                      policies=load_clinical_policies(), bank=get_rehab_bank())
     assert decision["region"] == "ankle" and decision["injury_type"] == "sprain"
     assert decision["outcome"] not in {"medical_review", "missing_information"}
+
+
+# --- Medical checks run before awareness-only (ordering) -----------------------
+
+def test_episode_observations_are_evaluated_before_dropping_a_not_limiting_report(monkeypatch):
+    from api.services import today_service
+
+    flag = _flag("not_limiting", area="Left knee")
+    monkeypatch.setattr(today_service, "episode_observations", lambda store, athlete_id, row: [{"id": "o1"}])
+    monkeypatch.setattr(today_service, "apply_episode_observations",
+                        lambda row, obs: {**row, "rehab_medical_gate": True, "progression_assessment_medical_hold": True})
+    kept = today_service.restrictive_injuries(object(), "a1", [flag])
+    assert kept and kept[0]["rehab_medical_gate"] is True  # the observation's medical hold wins
+
+
+def test_unreadable_observations_or_context_never_clear_an_injury(monkeypatch):
+    from api.services import today_service
+
+    flag = _flag("not_limiting")
+
+    def boom(*args, **kwargs):
+        raise RuntimeError("store down")
+
+    monkeypatch.setattr(today_service, "episode_observations", boom)
+    assert today_service.restrictive_injuries(object(), "a1", [flag]) == [flag]
+    assert today_service.restrictive_injuries(object(), "a1", [flag], context_ok=False) == [flag]
+
+
+def test_clean_observations_let_not_limiting_stay_awareness_only(monkeypatch):
+    from api.services import today_service
+
+    monkeypatch.setattr(today_service, "episode_observations", lambda store, athlete_id, row: [])
+    assert today_service.restrictive_injuries(object(), "a1", [_flag("not_limiting")]) == []
+    limiting = _flag("limiting")
+    assert today_service.restrictive_injuries(object(), "a1", [limiting]) == [limiting]
+
+
+# --- Generation and manual changes share one metadata decision ------------------
+
+def _editor_safety(severity, area, text):
+    from api.services.exercise_customisation import SafetyContext
+
+    safety = SafetyContext.__new__(SafetyContext)
+    safety.has_injuries, safety.injured_regions = True, {area}
+    safety.injury_texts = [f"{area} {text}"]
+    safety.guard_injuries = [f"{severity} {area} {text}"]
+    safety.phase = "SPP"
+    return safety
+
+
+@pytest.mark.parametrize("name,area", [
+    ("Towel/Gi Row Isometric Hold", "elbow"),
+    ("Adductor Squeeze Isometric", "groin"),
+    ("Punch-Specific Max Isometric Hold", "wrist"),
+    ("Overcoming Split-Squat Isometric", "knee"),
+    ("Landmine Split-Stance Punch Press", "shoulder"),
+    ("Jump Rope (Recovery Pace)", "ankle"),
+])
+@pytest.mark.parametrize("flag_severity,guard_severity", [("mild", "mild"), ("moderate", "moderate"),
+                                                          ("severe", "severe")])
+def test_manual_changes_and_generation_reach_the_same_metadata_verdict(name, area, flag_severity, guard_severity):
+    row = _bank()[name]
+    generation = injury_decision(row, [f"{guard_severity} {area} pain"], "SPP", "moderate").action == "exclude"
+    manual = _editor_safety(flag_severity, area, "pain")
+    assert (manual.planner_excludes(row) or manual.contraindicated(row)) is generation
+
+
+@pytest.mark.parametrize("name,area", [("Towel/Gi Row Isometric Hold", "elbow"),
+                                       ("Adductor Squeeze Isometric", "groin")])
+def test_a_conditional_warning_never_holds_a_manual_change_on_region_alone(name, area):
+    safety = _editor_safety("mild", area, "pain")
+    assert not safety.contraindicated(_bank()[name])
+    assert not safety.planner_excludes(_bank()[name])
+
+
+# --- End to end: real manual add through the API --------------------------------
+
+def _api_add(monkeypatch, name, flag):
+    from api.services.training_library import cache
+    from tests.test_exercise_customisation import PLAN_ID, SESSION_ID, _build_client, change, seed_dated
+
+    monkeypatch.setattr("fightcamp.rehab_clinical.load_clinical_policies", lambda: ())
+    monkeypatch.setattr("api.services.today_service.load_clinical_policies", lambda: ())
+    client, store, _ = _build_client()
+    today = seed_dated(store, phase="SPP")
+    if flag:
+        store.create_injury_flag("athlete-1", flag)
+    record = next(r for r in cache.get().records if r["entry"]["name"] == name)
+    response, _ = change(client, PLAN_ID, action="add", date=today.isoformat(), session_id=SESSION_ID,
+                         catalogue_id=record["entry"]["catalogue_id"], dose={"mode": "duration", "duration_seconds": 10})
+    return response.status_code
+
+
+def _api_flag(impact, *, area="shoulder", text="shoulder pain", severity=None):
+    marker = f" [training_impact:{impact}]" if impact else ""
+    return {"body_area": area, "description": text + marker,
+            "severity": severity or SEVERITY.get(impact, "mild")}
+
+
+@pytest.mark.parametrize("name", ["Landmine Split-Stance Punch Press", "Punch-Specific Max Isometric Hold"])
+def test_manual_add_follows_the_three_impact_choices(monkeypatch, name):
+    assert _api_add(monkeypatch, name, None) == 200
+    assert _api_add(monkeypatch, name, _api_flag("not_limiting")) == 200  # normal training
+    assert _api_add(monkeypatch, name, _api_flag("limiting")) == 409  # loads the limiting region
+    assert _api_add(monkeypatch, name, _api_flag("cant_train")) == 409  # no normal training
+    assert _api_add(monkeypatch, name, _api_flag(None)) == 409  # legacy: conservative
+
+
+@pytest.mark.parametrize("flag", [
+    _api_flag("not_limiting", text="shoulder pain with numbness and tingling down the arm"),  # red flag
+    _api_flag("not_limiting", severity="severe"),  # severe band on a not-limiting report
+])
+def test_medical_evidence_overrides_not_limiting_in_manual_changes(monkeypatch, flag):
+    assert _api_add(monkeypatch, "Landmine Split-Stance Punch Press", flag) == 409
+
+
+# --- End to end: complete programme generation ----------------------------------
+
+def _plan(monkeypatch, impact):
+    from datetime import datetime
+
+    from fightcamp.main import generate_plan_sync
+    from tests.planner_clock import pin_planner_clock
+
+    pin_planner_clock(monkeypatch, datetime(2026, 10, 11, 9, 0))
+    fields = {"Full name": "Impact Regression", "Age": "26", "Weight (kg)": "70", "Target Weight (kg)": "70",
+              "Height (cm)": "178", "Stance": "Orthodox", "Fighting Style (Technical)": "boxing",
+              "Professional Status": "amateur", "Current Record": "3-0", "Rounds x Minutes": "3x3",
+              "Weekly Training Frequency": "4", "Fatigue Level": "low",
+              "Equipment Access": "barbell, dumbbells, heavy_bag, box, bands",
+              "Training Availability": "Monday, Tuesday, Thursday, Saturday", "Hard Sparring Days": "Tuesday",
+              "What are your key performance goals?": "power, conditioning", "Primary goal": "power",
+              "Where do you feel weakest right now?": "gas_tank", "Primary weak area": "gas_tank",
+              "When is your next fight?": "2026-11-29", "Athlete Time Zone": "UTC"}
+    payload = {"data": {"fields": [{"label": k, "value": v} for k, v in fields.items()]}, "random_seed": 7}
+    if impact:
+        payload["guided_injuries"] = [{"area": "Left knee", "severity": {"not_limiting": "low", "limiting": "moderate",
+                                                                         "cant_train": "high"}[impact],
+                                       "trend": "stable", "injury_type": "pain", "timeframe": "last_week",
+                                       "notes": f"sore after running [training_impact:{impact}]"}]
+    plan = generate_plan_sync(payload)
+    if plan["stage2_payload"] is None:
+        return plan["status"]
+    summary = plan["stage2_payload"]["stage1_selection_summary"]
+    return [name for phase in ("GPP", "SPP", "TAPER") for name in summary["strength_names"].get(phase, [])]
+
+
+def test_generation_follows_the_three_impact_choices(monkeypatch):
+    clear = _plan(monkeypatch, None)
+    assert _plan(monkeypatch, "not_limiting") == clear  # normal training after triage
+    limiting = _plan(monkeypatch, "limiting")
+    assert isinstance(limiting, list) and limiting != clear  # knee-specific adaptation, still a full plan
+    assert _plan(monkeypatch, "cant_train") == "triage_blocked"  # no normal plan until reviewed

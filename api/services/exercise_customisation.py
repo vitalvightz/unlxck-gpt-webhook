@@ -309,10 +309,10 @@ class SafetyContext:
     """Live injury decisions for the occurrence, computed by the existing system."""
 
     def __init__(self, store: Any, *, athlete_id: str, occurrence: Occurrence, equipment: Sequence[str]):
-        from api.contracts.readiness_message import _injury_text_regions, _resolve_injury_regions, restricts_training
+        from api.contracts.readiness_message import _injury_text_regions, _resolve_injury_regions
         from api.services.today_service import (
             _entry_mapping_for_readiness, _with_injury_policy, _with_rehab_stage, _with_safe_session_context,
-            _with_surface_class,
+            _with_surface_class, restrictive_injuries,
         )
         from api.services.injury_episode_service import apply_episode_observations, episode_observations
 
@@ -324,9 +324,6 @@ class SafetyContext:
             # Unknown injury state never yields "safe" alternatives.
             logger.exception("[exercise_customisation] injury flags unavailable")
             raise HTTPException(503, "Your injury guidance couldn't be loaded. Try again.") from None
-        # A triage-cleared "Not limiting me" injury never narrows the choices,
-        # matching generation and Today; medical evidence keeps it restrictive.
-        flags = [flag for flag in flags if restricts_training(flag)]
         injuries = _with_rehab_stage(_with_safe_session_context(_with_surface_class(flags)),
                                      store=store, athlete_id=athlete_id)
         injuries = [apply_episode_observations(row, episode_observations(store, athlete_id, row)) for row in injuries]
@@ -336,6 +333,12 @@ class SafetyContext:
             injuries, store=store, athlete_id=athlete_id, phase=occurrence.phase, equipment=equipment,
             training_day=occurrence.date.isoformat(), training_session=occurrence.session,
         ) if injuries else []
+        # Only now, with episode observations, holds and clinical policy all
+        # evaluated, may a "Not limiting me" report stop narrowing the choices
+        # (same rule as generation and Today). A row without an id is kept.
+        injuries = restrictive_injuries(store, athlete_id, injuries)
+        kept_ids = {_clean(row.get("id")) for row in injuries}
+        flags = [flag for flag in flags if not _clean(flag.get("id")) or _clean(flag.get("id")) in kept_ids]
         self.injuries = injuries
         self.decisions = [row["rehab_decision"] for row in injuries if isinstance(row.get("rehab_decision"), Mapping)]
         self.plan_id = _clean(occurrence.plan_row.get("id"))
@@ -357,6 +360,11 @@ class SafetyContext:
         self.injured_regions = regions
         self.injury_texts = [text for injury in flags
                              if (text := " ".join(_clean(injury.get(k)) for k in ("body_area", "description")).strip())]
+        # The same text with its reported severity, for the generation guard.
+        self.guard_injuries = [f"{_clean(injury.get('severity')) or 'moderate'} {text}"
+                               for injury in flags
+                               if (text := " ".join(_clean(injury.get(k)) for k in ("body_area", "description")).strip())]
+        self.phase = occurrence.phase
         self.has_injuries = bool(flags)
 
     def contraindicated(self, raw: Mapping[str, Any]) -> bool:
@@ -375,12 +383,33 @@ class SafetyContext:
         days = getattr(self, "days_until_fight", False)
         if days is not False and not fight_proximity_allowed(raw, days):
             return True
-        notes = _strings(raw.get("contraindications"))
+        from fightcamp.injury_filtering import is_absolute_safety_note
+
+        # Conditional warnings are decided by the generation guard in allows();
+        # a body-region match alone never holds an exercise here.
+        notes = [note for note in _strings(raw.get("contraindications"))
+                 if is_absolute_safety_note("contraindications", note)]
         if not self.has_injuries or not notes:
             return False
         if not self.injured_regions:
             return True
         return any(_injury_text_regions(note) & self.injured_regions for note in notes)
+
+    def planner_excludes(self, raw: Mapping[str, Any]) -> bool:
+        """Generation's injury verdict for one bank row, at the reported severity.
+
+        The row is held exactly where the generation guard excludes it: its
+        exclusion rules and absolute metadata (avoid_if, active-symptom notes)
+        exclude, while flag-level rules and conditional metadata warnings adapt
+        by severity and never hold a row on a region match alone.
+        """
+        from fightcamp.injury_guard import injury_decision
+
+        if not self.injury_texts:
+            return False
+        guard_injuries = getattr(self, "guard_injuries", self.injury_texts)
+        return injury_decision(dict(raw), guard_injuries, getattr(self, "phase", "") or "SPP",
+                               "moderate").action == "exclude"
 
     def allows(self, block: Mapping[str, Any], raw: Mapping[str, Any] | None = None, *,
                prescribed: bool = False) -> bool:
@@ -392,14 +421,10 @@ class SafetyContext:
         live policy still apply.
         """
         from api.contracts.readiness_message import _session_mechanical_load_regions
-        from fightcamp.injury_filtering import injury_flag_reasons, injury_violation_reasons
-
         # The planner's own exclusion rules: what generation would never have
         # prescribed for these injuries is never offered as a replacement.
-        if raw is not None and self.injury_texts:
-            item = dict(raw)
-            if injury_violation_reasons(item, self.injury_texts) or injury_flag_reasons(item, self.injury_texts):
-                return False
+        if raw is not None and self.planner_excludes(raw):
+            return False
         loaded_regions = _session_mechanical_load_regions({"blocks": [block]})
         if self.has_injuries and not loaded_regions and not prescribed:
             return False
