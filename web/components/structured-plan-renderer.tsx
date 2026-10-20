@@ -848,7 +848,14 @@ function ExerciseDetail({
   const whyTodayRaw = athleteFacingRationale(block.why_today);
   const whyToday = sameCopy(builds, whyTodayRaw) ? null : whyTodayRaw;
   const execution = getBlockExecutionDisplay(block);
-  const cues = execution.cues.map(compactCoachLine);
+  const allCues = execution.cues.map(compactCoachLine);
+  // Banked mindset drills (Tactical Watch, Fight Visualisation) store their
+  // ordered instructions as cues: show those as numbered steps rather than
+  // one "Cue" label per step. Labelled extras ("Cue: …") stay cues.
+  const stepped = cleanText(block.block_type) === "mindset" && allCues.length > 1;
+  const isLabelledCue = (line: string) => /^(?:cue|pre-bout):/i.test(line);
+  const steps = stepped ? allCues.filter(line => !isLabelledCue(line)) : [];
+  const cues = stepped ? allCues.filter(isLabelledCue).map(line => line.replace(/^cue:\s*/i, "")) : allCues;
   const easier = execution.regressions[0] ? compactCoachLine(execution.regressions[0]) : null;
   const swap = execution.substitutions[0] ?? null;
   const sessionRunning = useExerciseLoggingActive();
@@ -898,6 +905,12 @@ function ExerciseDetail({
       ) : null}
       <ExecutionInstructions block={block} />
       {/* Keep the cue and available adjustments outside nested disclosures. */}
+      {steps.length > 0 ? (
+        <div className="sp-block-aside ex-detail-steps">
+          <span className="sp-stat-label">Steps</span>
+          <ol>{steps.map(step => <li key={step}>{step}</li>)}</ol>
+        </div>
+      ) : null}
       {cues.map(cue => <p className="sp-block-aside" key={cue}><span className="sp-stat-label">Cue</span>{cue}</p>)}
       {swap ? <p className="sp-block-aside"><span className="sp-stat-label">Swaps</span>{swap}</p> : null}
       {easier ? <p className="sp-block-aside"><span className="sp-stat-label">Easier</span>{easier}</p> : null}

@@ -822,10 +822,15 @@ export function CustomPlanBuilder({ accessToken, planId, onboarding = null }: { 
                   {suggesting ? "Loading source…" : "Suggested format"}
                 </button>
                 {suggestionError ? <p role="alert">{suggestionError}</p> : null}
-                {suggestion ? (
+                {suggestion ? (() => {
+                  // Same precedence as adding from the library: explicit source dose, else the library's format.
+                  const candidate = suggestion.dose?.mode !== "text" && suggestion.dose ? suggestion.dose : suggestion.format_dose ?? suggestion.dose;
+                  // A format with only a mode (no numbers or text) would just blank the fields.
+                  const suggestedDose = candidate && Object.entries(candidate).some(([k, v]) => k !== "mode" && v != null) ? candidate : null;
+                  return (
                   <div>
-                    <p>{suggestion.original || "No explicit dosage in this source."}</p>
-                    {suggestion.dose ? (
+                    <p>{suggestion.original || (suggestedDose ? "The library suggests this format:" : "The library has no set format for this exercise. Enter your own dose.")}</p>
+                    {suggestedDose ? (
                       <button
                         type="button"
                         className="secondary-button"
@@ -839,16 +844,17 @@ export function CustomPlanBuilder({ accessToken, planId, onboarding = null }: { 
                             ...editing,
                             exercise: {
                               ...editing.exercise,
-                              dose: suggestion.dose!,
+                              dose: suggestedDose,
                             },
                           });
                         }}
                       >
-                        Use source suggestion
+                        {suggestion.dose ? "Use source suggestion" : "Use library format"}
                       </button>
                     ) : null}
                   </div>
-                ) : null}
+                  );
+                })() : null}
               </>
             )}
             {!editing.fresh && draft.sessions.find((s) => s.id === editing.sessionId)!.exercises.length > 1 ? (
