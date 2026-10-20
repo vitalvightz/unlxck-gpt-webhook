@@ -81,7 +81,8 @@ def test_card_takes_the_exact_dose_the_plan_text_gave():
 
     assert block["duration"] == {"value": 20, "unit": "minutes"}
     assert not any("20-30" in cue or "20–30" in cue for cue in block["coaching_cues"])
-    assert block["execution_instructions"] == "continuous"
+    # "continuous" restates the Duration stat; it is not a How instruction.
+    assert block.get("execution_instructions") is None
     # The text's own coaching lines, not the title repeated as a rationale.
     assert session["objective"] == "clear legs and keep breathing steady after weekend work."
     assert block["purpose"] == "move blood, protect recovery, keep technical rhythm."
@@ -95,7 +96,8 @@ def test_card_takes_the_exact_dose_the_plan_text_gave():
 def test_same_drill_on_another_day_never_lends_its_dose():
     # D-16 carries no Tempo Shadowboxing line; D-10's 25 min must not leak in.
     block = _only_block(_session(_tempo_role(16), 16, SOURCE_DAYS.get(16)))
-    assert "duration" not in block
+    # Its own planner dose, never D-10's 25 min.
+    assert block["duration"] == {"value": 20, "unit": "minutes"}
     assert block["coaching_cues"] == ["20min continuous"]
 
     block = _only_block(_session(_tempo_role(10), 10, SOURCE_DAYS.get(10)))
@@ -134,7 +136,8 @@ def test_whole_quantity_clauses_become_stats_and_the_rest_stays_verbatim():
     ]
 
     assert deadlift["rest"] == {"value": 180, "unit": "seconds"}
-    assert deadlift["execution_instructions"] == "3 sets x 3 reps @ 80% 1RM (established max only)"
+    # Sets/reps are stats; the load and its safety qualifier stay verbatim.
+    assert deadlift["execution_instructions"] == "80% 1RM (established max only)"
     assert deadlift["stop_rules"] == ["if bar speed slows or back position changes."]
 
 

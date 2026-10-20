@@ -94,3 +94,14 @@ def test_converted_adjustments_are_projected_from_source():
     block = project_source_adjustments(plan, TEXT)["weeks"][0]["days"][0]["sessions"][0]["blocks"][0]
     assert "progression_rule" not in block
     assert block["regression_options"] == ["reduce range of motion or load."]
+
+
+def test_coaching_words_in_a_dose_survive_once_its_numbers_are_stats():
+    from api.structured_plan_deterministic_fallback import _preserve_unrepresented_dose
+    assert _preserve_unrepresented_dose("2x6 @ RPE 6, keep reps crisp.", None) == "keep reps crisp"
+    assert _preserve_unrepresented_dose("3 carries over 20 m, heavy but unbroken; rest 90s.", None) == "heavy but unbroken"
+    assert _preserve_unrepresented_dose("3 x 2 at max speed; rest 120s", None) == "max speed"
+    assert _preserve_unrepresented_dose("6 x 20 sec work", None) is None
+    rdl = _source_block(_day(20), "Romanian Deadlift (DB)")
+    assert rdl["sets"] == 2 and rdl["reps"] == 6
+    assert rdl["execution_instructions"] == "keep reps crisp"

@@ -499,6 +499,34 @@ def _source_block(
     }
 
 
+_DOSE_WORD_RE = re.compile(
+    r"^(?:\d+(?:\.\d+)?(?:[x×]\d+(?:\.\d+)?)?(?:s|secs?|seconds?|mins?|minutes?|m|kg|lbs?|reps?|sets?|%)?|"
+    r"[x×@]|rpe|rir|sets?|reps?|rounds?|work|rest|reset|recovery|between|with|of|and|per|each|side|"
+    r"technical|continuous|easy|low|max|total|carries|over|s|secs?|seconds?|mins?|minutes?|m)$",
+    re.I,
+)
+
+
+def _dose_qualifiers(text: str) -> str:
+    """The coaching words in a dose once its numbers are shown as stats.
+
+    "2x6 @ RPE 6, keep reps crisp" -> "keep reps crisp"; a clause made only of
+    quantities the card already displays ("60 sec between sets") is dropped.
+    """
+    kept = []
+    for clause in re.split(r"\s*[,;|]\s*", str(text or "")):
+        clause = clause.strip().rstrip(".").strip()
+        words = [w for w in re.split(r"[\s/()+:]+", clause.lower()) if w]
+        if words and not all(_DOSE_WORD_RE.match(word) for word in words):
+            # Drop the leading quantity the stats show: "3 x 2 at max speed".
+            tokens = clause.split()
+            while tokens and re.fullmatch(r"[\d.]+[x×]?[\d.]*\w{0,7}|[x×@]|at|sets?|reps?", tokens[0].lower()):
+                tokens.pop(0)
+            rest = " ".join(tokens)
+            kept.append(rest if rest and not rest.lower().startswith("or ") else clause)
+    return ", ".join(kept)
+
+
 def _preserve_unrepresented_dose(dose: str, instructions: str | None) -> str | None:
     """Keep compound working quantities outside disposable coaching cues.
 
@@ -511,7 +539,7 @@ def _preserve_unrepresented_dose(dose: str, instructions: str | None) -> str | N
     # A dose the card already shows as Sets/Duration/Rest/Effort is not an
     # execution instruction; repeating it under "How" only duplicates the stats.
     # Keep it only when it is compound or nothing could be shown as a stat.
-    working = dose if compound else (remainder if not lifted else "")
+    working = dose if compound else (remainder if not lifted else _dose_qualifiers(remainder))
     if working and working not in str(instructions or ""):
         return "\n".join(part for part in (working, instructions) if part)
     return instructions or None
@@ -816,7 +844,8 @@ def _parsed_block(
     # split into numbers this module would have to invent.
     lifted, _ = _lift_dose_fields(parsed.activity_dose) if parsed.activity_dose else ({}, "")
     # A dose the stats can show ("6 minutes, RPE 4 max.") is not repeated as a cue.
-    cues = [parsed.activity_dose] if parsed.activity_dose and not lifted else []
+    dose_only = bool(lifted) and not _dose_qualifiers(parsed.activity_dose)
+    cues = [parsed.activity_dose] if parsed.activity_dose and not dose_only else []
     cues.extend(parsed.cues)
     block = {
         **lifted,
