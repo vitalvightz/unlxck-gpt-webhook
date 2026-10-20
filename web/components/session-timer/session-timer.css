@@ -1016,60 +1016,132 @@
   .st-sheet { animation: none; }
 }
 
-.st-toggle,
+/* Settings: a quick adjustment, not a form. Rows split by hairlines. */
+.st-settings { gap: 0; padding: 14px 18px 8px; }
+
+.st-settings-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
+.st-settings-title { margin: 0; font-size: 17px; font-weight: 700; }
+
+.st-settings-close {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  margin-right: -8px;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  color: var(--st-ink-soft);
+  font: inherit;
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.st-settings-close:hover { color: var(--st-ink); background: var(--st-surface); }
+
+.st-settings-row {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--st-line);
+}
+
+.st-settings-label { font-size: 15px; font-weight: 600; }
+
+/* A checkbox drawn as a switch, label on the left. */
+.st-switch {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 36px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.st-switch input {
+  appearance: none;
+  flex: none;
+  position: relative;
+  width: 44px;
+  height: 26px;
+  margin: 0;
+  border-radius: 999px;
+  background: var(--st-surface-strong);
+  box-shadow: inset 0 0 0 1px var(--st-line);
+  cursor: pointer;
+  transition: background 160ms ease;
+}
+
+.st-switch input::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  background: var(--st-ink-soft);
+  transition: transform 160ms ease, background 160ms ease;
+}
+
+.st-switch input:checked { background: #d4163a; box-shadow: none; }
+.st-switch input:checked::after { transform: translateX(18px); background: #fff; }
+.st-switch input:focus-visible { outline: 2px solid var(--st-ink); outline-offset: 2px; }
+
 .st-range {
   display: flex;
   align-items: center;
   gap: 12px;
-  font-size: 15px;
-}
-
-.st-toggle input { width: 20px; height: 20px; accent-color: #d4163a; }
-.st-range input { flex: 1; accent-color: #d4163a; }
-
-.st-group {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  margin: 0;
-  padding: 12px 0 0;
-  border: 0;
-  border-top: 1px solid var(--st-line);
-}
-
-.st-group:first-child { padding-top: 0; border-top: 0; }
-
-.st-group legend,
-.st-choice > span {
-  padding: 0;
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
   color: var(--st-ink-soft);
 }
 
-.st-group legend { float: left; width: 100%; }
+.st-range .st-glyph { width: 20px; height: 20px; flex: none; }
+.st-range input { flex: 1; accent-color: #d4163a; }
+.st-range input:disabled { opacity: 0.4; }
 
-.st-choice {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  padding-top: 12px;
-  border-top: 1px solid var(--st-line);
-}
-
+.st-chips,
 .st-choice-options {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 6px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
 }
 
-.st-choice-options button {
-  min-height: 40px;
+.st-choice-options { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; }
+
+.st-chips button {
+  min-height: 38px;
   border: 1px solid var(--st-line);
   border-radius: 999px;
-  background: var(--st-surface);
+  background: none;
+  color: var(--st-ink-soft);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.st-chips button[aria-pressed="true"] {
+  background: var(--st-ink);
+  border-color: transparent;
+  color: var(--st-on-ink);
+}
+
+/* Get ready: a plain segmented row, the pick lifted out. */
+.st-choice-options button {
+  min-height: 38px;
+  border: 0;
+  border-radius: 999px;
+  background: none;
   color: var(--st-ink-soft);
   font: inherit;
   font-size: 14px;
@@ -1078,10 +1150,40 @@
 }
 
 .st-choice-options button[aria-checked="true"] {
-  background: var(--st-ink);
-  border-color: transparent;
-  color: var(--st-on-ink);
+  background: var(--st-surface-strong);
+  color: var(--st-ink);
 }
+
+.st-advanced { padding: 4px 0; }
+
+.st-advanced > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 44px;
+  color: var(--st-ink-soft);
+  font-size: 15px;
+  font-weight: 600;
+  list-style: none;
+  cursor: pointer;
+}
+
+.st-advanced > summary::-webkit-details-marker { display: none; }
+
+.st-advanced > summary::after {
+  content: "";
+  width: 8px;
+  height: 8px;
+  margin-right: 4px;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: rotate(45deg) translateY(-2px);
+  transition: transform 160ms ease;
+}
+
+.st-advanced[open] > summary::after { transform: rotate(-135deg) translateY(-2px); }
+
+.st-advanced[open] { display: flex; flex-direction: column; gap: 6px; padding-bottom: 10px; }
 
 .st-audio-status {
   max-width: 34rem;
@@ -1100,12 +1202,10 @@
 
 .st-sheet-note {
   margin: 0;
-  font-size: 13px;
+  font-size: 12px;
   line-height: 1.45;
-  color: var(--st-ink-soft);
+  color: var(--st-ink-faint);
 }
-
-.st-sheet .st-link { color: var(--st-ink-soft); text-decoration: underline; }
 
 /* Minimised: a floating pill above the page with a live progress hairline. */
 .st-mini {

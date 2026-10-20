@@ -227,14 +227,12 @@ test("the settings sheet, behind the gear, sets the round warnings and the get-r
   });
 
   await act(async () => timerButton("Timer settings")?.click());
-  const toggle = (label: string) =>
-    [...document.querySelectorAll<HTMLLabelElement>(".st-group .st-toggle")]
-      .find((l) => l.textContent === label)
-      ?.querySelector("input");
-  assert.equal(toggle("10 seconds left")?.checked, true);
-  assert.equal(toggle("30 seconds left")?.checked, false);
-  assert.equal(toggle("Halfway")?.checked, false);
-  await act(async () => toggle("30 seconds left")?.click());
+  const alert = (label: string) => timerButton(label)?.getAttribute("aria-pressed");
+  assert.equal(alert("10 seconds left"), "true");
+  assert.equal(alert("30 seconds left"), "false");
+  assert.equal(alert("Halfway"), "false");
+  await act(async () => timerButton("30 seconds left")?.click());
+  assert.equal(alert("30 seconds left"), "true");
   await act(async () => timerButton("Off")?.click());
   const saved = JSON.parse(window.localStorage.getItem("unlxck.session-timer.settings") ?? "{}");
   assert.equal(saved.warnThirty, true);

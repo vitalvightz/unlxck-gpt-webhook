@@ -662,78 +662,70 @@ function useAdjustHint(): [boolean, () => void] {
   return [unseen && !dismissed, dismiss];
 }
 
+const ROUND_ALERTS = [
+  { key: "warnHalfway", label: "Halfway", aria: "Halfway" },
+  { key: "warnThirty", label: "30s", aria: "30 seconds left" },
+  { key: "warnTen", label: "10s", aria: "10 seconds left" },
+] as const;
+
 function SettingsSheet({ timer, onClose }: { timer: SessionTimerController; onClose: () => void }) {
   const { settings, setSettings } = timer;
+  // Vibration only works where the browser supports it (not iOS Safari).
+  const canVibrate = typeof navigator !== "undefined" && typeof navigator.vibrate === "function";
   return (
-    <div className="st-sheet" role="group" aria-label="Timer settings">
-      <fieldset className="st-group">
-        <legend>Sound</legend>
-        <label className="st-toggle">
+    <div className="st-sheet st-settings" role="group" aria-label="Timer settings">
+      <div className="st-settings-head">
+        <p className="st-settings-title">Timer settings</p>
+        <button type="button" className="st-settings-close" onClick={onClose} aria-label="Close settings">
+          <span aria-hidden="true">×</span>
+        </button>
+      </div>
+      <div className="st-settings-row">
+        <label className="st-switch">
+          <span>Sound</span>
           <input
             type="checkbox"
+            role="switch"
             checked={settings.sound}
             onChange={(event) => setSettings({ ...settings, sound: event.target.checked })}
           />
-          <span>Bell and beeps</span>
         </label>
         <label className="st-range">
-          <span>Volume</span>
+          <span className="sr-only">Volume</span>
+          <svg className="st-glyph" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M11 5 6 9H3v6h3l5 4V5Z" />
+            <path d="M15.5 9.5a4 4 0 0 1 0 5" />
+          </svg>
           <input
             type="range"
             min={0}
             max={1}
             step={0.05}
             value={settings.volume}
+            disabled={!settings.sound}
             onChange={(event) => setSettings({ ...settings, volume: Number(event.target.value) })}
             onPointerUp={() => timerAudio().play("bell")}
           />
         </label>
-        <label className="st-toggle">
-          <input
-            type="checkbox"
-            checked={settings.voice}
-            onChange={(event) => setSettings({ ...settings, voice: event.target.checked })}
-          />
-          <span>Voice callouts (&ldquo;Round 3&rdquo;, &ldquo;Halfway&rdquo;, &ldquo;10 seconds&rdquo;)</span>
-        </label>
-        <label className="st-toggle">
-          <input
-            type="checkbox"
-            checked={settings.vibrate}
-            onChange={(event) => setSettings({ ...settings, vibrate: event.target.checked })}
-          />
-          <span>Vibrate (Android)</span>
-        </label>
-      </fieldset>
-      <fieldset className="st-group">
-        <legend>Round warnings</legend>
-        <label className="st-toggle">
-          <input
-            type="checkbox"
-            checked={settings.warnTen}
-            onChange={(event) => setSettings({ ...settings, warnTen: event.target.checked })}
-          />
-          <span>10 seconds left</span>
-        </label>
-        <label className="st-toggle">
-          <input
-            type="checkbox"
-            checked={settings.warnThirty}
-            onChange={(event) => setSettings({ ...settings, warnThirty: event.target.checked })}
-          />
-          <span>30 seconds left</span>
-        </label>
-        <label className="st-toggle">
-          <input
-            type="checkbox"
-            checked={settings.warnHalfway}
-            onChange={(event) => setSettings({ ...settings, warnHalfway: event.target.checked })}
-          />
-          <span>Halfway</span>
-        </label>
-      </fieldset>
-      <div className="st-choice" role="radiogroup" aria-label="Countdown before round 1">
-        <span>Get-ready countdown</span>
+      </div>
+      <div className="st-settings-row">
+        <span className="st-settings-label" id="st-alerts-label">Round alerts</span>
+        <div className="st-chips" role="group" aria-labelledby="st-alerts-label">
+          {ROUND_ALERTS.map((alert) => (
+            <button
+              key={alert.key}
+              type="button"
+              aria-pressed={settings[alert.key]}
+              aria-label={alert.aria}
+              onClick={() => setSettings({ ...settings, [alert.key]: !settings[alert.key] })}
+            >
+              {alert.label}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div className="st-settings-row st-choice" role="radiogroup" aria-label="Countdown before round 1">
+        <span className="st-settings-label">Get ready</span>
         <div className="st-choice-options">
           {PREP_OPTIONS.map((seconds) => (
             <button
@@ -748,14 +740,33 @@ function SettingsSheet({ timer, onClose }: { timer: SessionTimerController; onCl
           ))}
         </div>
       </div>
-      <p className="st-sheet-note">
-        Round bells and warnings use an audio track for background playback. Voice and vibration
-        may stop in the background. Calls, battery saver or closing the browser can interrupt audio.
-        Keep the timer visible for the most reliable training setup.
-      </p>
-      <button type="button" className="st-link" onClick={onClose}>
-        Close settings
-      </button>
+      <details className="st-advanced">
+        <summary>Advanced options</summary>
+        <label className="st-switch">
+          <span>Voice callouts</span>
+          <input
+            type="checkbox"
+            role="switch"
+            checked={settings.voice}
+            onChange={(event) => setSettings({ ...settings, voice: event.target.checked })}
+          />
+        </label>
+        {canVibrate ? (
+          <label className="st-switch">
+            <span>Vibrate</span>
+            <input
+              type="checkbox"
+              role="switch"
+              checked={settings.vibrate}
+              onChange={(event) => setSettings({ ...settings, vibrate: event.target.checked })}
+            />
+          </label>
+        ) : null}
+        <p className="st-sheet-note">
+          Bells keep playing in the background. Voice and vibration may stop, and calls or closing
+          the browser can interrupt audio.
+        </p>
+      </details>
     </div>
   );
 }
