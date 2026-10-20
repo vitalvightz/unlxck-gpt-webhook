@@ -59,6 +59,8 @@ Pre-existing cases without send dates remain unverified.
 
 After manually sending a DM, use the existing sent checkbox or the existing stage-specific counter once. The worker records the observation timestamp and recalculates the next due date. No new button, form, receipt field or manual date entry is required. Keep cold, signup and onboarding counters separate. Existing recorded timestamps are preserved; first-observed historical nonzero counters without timestamps remain unscheduled for review rather than being assigned today's date.
 
+**Accepted shares the original details DM.** If the fighter received the signup details and getting-started instructions together, ticking **Details Sent** in Replied is sufficient: once moved to Accepted, the worker reuses the recorded **Details Sent At** as **Onboarding Sent At** and automatically marks the existing **Onboarding Sent** checkbox. No second message or operator checkbox is required. An existing, separately recorded **Onboarding Sent At** always wins and is never overwritten. If an older Accepted record has **Details Sent** checked but no recorded time, the worker leaves the historical send date unknown and shows **Needs Review** rather than inventing a send time; its onboarding follow-up cannot be scheduled reliably without evidence of that original date.
+
 ### Eligibility and what operators see
 
 - Follow-up 1: three calendar days after `Date Contacted`.

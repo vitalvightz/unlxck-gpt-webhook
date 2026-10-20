@@ -301,8 +301,15 @@ def warm_schedule(properties, now):
         first = date_value(properties, prefix + " Nudge 1 At")
         if (count and not first) or (not count and first):
             return None, "Needs Review: nudge timestamp history conflicts with count"
-        root = date_value(properties, "Details Sent At" if signup else "Onboarding Sent At")
+        # Accepted can reuse the original details/link DM as onboarding. The
+        # legacy onboarding timestamp still takes precedence when it exists.
+        root = (date_value(properties, "Details Sent At") if signup else
+                (date_value(properties, "Onboarding Sent At") or
+                 (date_value(properties, "Details Sent At")
+                  if properties.get("Details Sent", {}).get("checkbox") else None)))
         if not root:
+            if not signup and properties.get("Details Sent", {}).get("checkbox"):
+                return None, "Needs Review: details sent date unknown"
             return None, f"{prefix}: waiting for {'details' if signup else 'instructions'} sent" if count == 0 else "Needs Review: missing initial send timestamp"
         if count == 2:
             return None, f"{prefix} complete (2 nudges sent)"
@@ -318,13 +325,25 @@ def get_warm_changes(page, today):
     stage = (p["Stage (AI Fills First)"].get("select") or {}).get("name")
     now = now_london(today).isoformat(timespec="seconds")
     changes = {}
+    # The same details/link DM may be the full onboarding instructions.
+    # Reuse its *recorded* time instead of requiring a second manual action.
+    # A previously checked legacy row without a date provides no evidence of
+    # when the Instagram DM was sent: do not backdate or stamp it as today.
+    if stage == "Accepted" and p.get("Details Sent", {}).get("checkbox") is True:
+        details_at = date_value(p, "Details Sent At")
+        if details_at:
+            if not p["Onboarding Sent"].get("checkbox"):
+                changes["Onboarding Sent"] = {"checkbox": True}
+            if not date_value(p, "Onboarding Sent At"):
+                changes["Onboarding Sent At"] = date_patch(details_at)
     sent_flags = (
         ("Replied", "Details Sent", "Details Sent At"),
         ("Accepted", "Onboarding Sent", "Onboarding Sent At"),
         ("Activated", "Feedback Requested", "Feedback Requested At"),
     )
     for required_stage, flag, date_field in sent_flags:
-        if stage == required_stage and p[flag].get("checkbox") is True and not date_value(p, date_field):
+        if (stage == required_stage and p[flag].get("checkbox") is True
+                and not date_value(p, date_field) and date_field not in changes):
             changes[date_field] = date_patch(now)
 
     def record_last(value):

@@ -874,3 +874,65 @@ def test_existing_worker_observes_stage_dates_before_followup_scheduling(monkeyp
         monkeypatch.setattr(sync, name, record)
     sync.run()
     assert calls == ["sync_stage_history", "sync", "sync_scorecard"]
+
+
+def test_accepted_details_sent_reuses_known_send_time_without_second_action():
+    page = row(stage="Accepted", synced=0)
+    p = page["properties"]
+    p["Details Sent"]["checkbox"] = True
+    p["Details Sent At"] = sync.date_patch("2026-10-15T12:00:00+01:00")
+    changed = sync.get_changes(page, OBSERVED_NOW)
+    assert changed["Onboarding Sent"] == {"checkbox": True}
+    assert changed["Onboarding Sent At"] == sync.date_patch("2026-10-15T12:00:00+01:00")
+    assert changed["Safe Next Due"] == sync.date_patch("2026-10-18T12:00:00+01:00")
+    assert "Details Sent At" not in changed  # Never rewrite a recorded send.
+    apply_patch(page, changed)
+    assert sync.get_changes(page, OBSERVED_NOW + timedelta(minutes=2)) == {}
+
+
+def test_accepted_details_without_historical_time_does_not_invent_send_date():
+    page = row(stage="Accepted", synced=0)
+    p = page["properties"]
+    p["Details Sent"]["checkbox"] = True
+    changed = sync.get_changes(page, OBSERVED_NOW)
+    assert "Onboarding Sent" not in changed
+    assert "Onboarding Sent At" not in changed
+    assert "Details Sent At" not in changed
+    assert sync.date_value({**p, **changed}, "Safe Next Due") is None
+    assert "date unknown" in sync.plain({**p, **changed}, "Follow-Up Timing")
+    # Repeat polling still must not create a fictional historical send date.
+    apply_patch(page, changed)
+    later = sync.get_changes(page, OBSERVED_NOW + timedelta(days=1))
+    assert "Details Sent At" not in later
+    assert "Onboarding Sent At" not in later
+
+
+def test_accepted_legacy_onboarding_date_is_preserved_when_details_are_dated():
+    page = row(stage="Accepted", synced=0)
+    p = page["properties"]
+    p["Details Sent"]["checkbox"] = True
+    p["Details Sent At"] = sync.date_patch("2026-10-10T12:00:00+01:00")
+    p["Onboarding Sent"]["checkbox"] = True
+    p["Onboarding Sent At"] = sync.date_patch("2026-10-16T12:00:00+01:00")
+    changed = sync.get_changes(page, OBSERVED_NOW)
+    assert "Onboarding Sent" not in changed
+    assert "Onboarding Sent At" not in changed
+    assert "Details Sent At" not in changed
+    assert changed["Safe Next Due"] == sync.date_patch("2026-10-19T12:00:00+01:00")
+
+
+def test_replied_details_date_remains_independent_before_accepted_transition():
+    page = row(stage="Replied", synced=0)
+    p = page["properties"]
+    p["Details Sent"]["checkbox"] = True
+    p["Details Sent At"] = sync.date_patch("2026-10-15T12:00:00+01:00")
+    first = sync.get_changes(page, OBSERVED_NOW)
+    assert "Onboarding Sent" not in first
+    assert "Onboarding Sent At" not in first
+    assert first["Safe Next Due"] == sync.date_patch("2026-10-18T12:00:00+01:00")
+    apply_patch(page, first)
+    p["Stage (AI Fills First)"]["select"] = {"name": "Accepted"}
+    accepted = sync.get_changes(page, OBSERVED_NOW)
+    assert accepted["Onboarding Sent"] == {"checkbox": True}
+    assert accepted["Onboarding Sent At"] == p["Details Sent At"]
+    assert "Details Sent At" not in accepted
