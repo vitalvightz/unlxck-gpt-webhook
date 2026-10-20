@@ -177,7 +177,7 @@ def pages():
             break
 
 
-def get_changes(page, today):
+def get_changes(page, today, previous=None):
     """Synchronise state without guessing whether an editor or a button supplied a time."""
     p = page["properties"]
     count = int((p["Follow-Ups Sent"].get("select") or {}).get("name") or 0)
@@ -225,7 +225,7 @@ def get_changes(page, today):
     due, status, message = due_and_copy(
         p, count, first, second, now, calculated["string"])
     if (p["Stage (AI Fills First)"].get("select") or {}).get("name") in WARM_STAGES:
-        warm_changes = get_warm_changes(page, today)
+        warm_changes = get_warm_changes(page, today, previous=previous)
         changes.update(warm_changes)
         due, status = warm_schedule({**p, **warm_changes}, now)
         warm = p["Warm Next DM"].get("formula") or {}
@@ -291,27 +291,17 @@ def warm_schedule(properties, now):
             return None, "Signup complete"
         if not signup and properties.get("Onboarding Complete", {}).get("checkbox"):
             return None, "Onboarding complete"
-        count_name = (properties[prefix + " Nudges Sent"].get("select") or {}).get("name") or "0"
-        synced = properties["Synced " + prefix + " Nudges Sent"].get("number")
-        if count_name not in ("0", "1", "2") or synced not in (None, 0, 1, 2):
-            return None, "Needs Review: invalid nudge count"
-        count = int(count_name)
-        if synced is not None and (count < synced or count > synced + 1):
-            return None, "Needs Review: skipped or reversed nudge count"
-        first = date_value(properties, prefix + " Nudge 1 At")
-        if (count and not first) or (not count and first):
-            return None, "Needs Review: nudge timestamp history conflicts with count"
-        # Accepted can reuse the original details/link DM as onboarding. The
-        # legacy onboarding timestamp still takes precedence when it exists.
-        root = (date_value(properties, "Details Sent At") if signup else
-                (date_value(properties, "Onboarding Sent At") or
-                 (date_value(properties, "Details Sent At")
-                  if properties.get("Details Sent", {}).get("checkbox") else None)))
+        # One details DM starts one two-follow-up sequence. Counters retain
+        # the stage of each actual send; stage progression must not reset it.
+        root = date_value(properties, "Details Sent At")
         if not root:
-            if not signup and properties.get("Details Sent", {}).get("checkbox"):
+            if properties.get("Details Sent", {}).get("checkbox"):
                 return None, "Needs Review: details sent date unknown"
-            return None, f"{prefix}: waiting for {'details' if signup else 'instructions'} sent" if count == 0 else "Needs Review: missing initial send timestamp"
-        if count == 2:
+            return None, f"{prefix}: waiting for details sent"
+        count, first, error = warm_nudge_progress(properties)
+        if error:
+            return None, error
+        if count >= 2:
             return None, f"{prefix} complete (2 nudges sent)"
         due = elapsed_due(first if count else root, 4 if count else 3)
         label = prefix + (" final follow-up" if count else " first follow-up")
@@ -319,32 +309,45 @@ def warm_schedule(properties, now):
     return due.isoformat(timespec="seconds"), label + (": ready" if ready else ": waiting")
 
 
-def get_warm_changes(page, today):
+
+def warm_nudge_progress(properties):
+    """Count actual signup/getting-started sends without mirroring history."""
+    total = 0
+    first_dates = []
+    for _, counter, checkpoint, first_field in WARM_COUNTERS:
+        name = (properties[counter].get("select") or {}).get("name") or "0"
+        synced = properties[checkpoint].get("number")
+        if name not in ("0", "1", "2") or synced not in (None, 0, 1, 2):
+            return None, None, "Needs Review: invalid nudge count"
+        count = int(name)
+        if synced is not None and (count < synced or count > synced + 1):
+            return None, None, "Needs Review: skipped or reversed nudge count"
+        first = date_value(properties, first_field)
+        if (count and not first) or (not count and first):
+            return None, None, "Needs Review: nudge timestamp history conflicts with count"
+        total += count
+        if first:
+            first_dates.append(first)
+    first = min(first_dates, key=lambda value: parse_stamp(value).astimezone(timezone.utc)) if first_dates else None
+    return total, first, None
+
+def get_warm_changes(page, today, previous=None):
     """Reuse existing sent checkboxes/counters; preserve all dated history."""
     p = page["properties"]
     stage = (p["Stage (AI Fills First)"].get("select") or {}).get("name")
     now = now_london(today).isoformat(timespec="seconds")
     changes = {}
-    # The same details/link DM may be the full onboarding instructions.
-    # Reuse its *recorded* time instead of requiring a second manual action.
-    # A previously checked legacy row without a date provides no evidence of
-    # when the Instagram DM was sent: do not backdate or stamp it as today.
-    if stage == "Accepted" and p.get("Details Sent", {}).get("checkbox") is True:
-        details_at = date_value(p, "Details Sent At")
-        if details_at:
-            if not p["Onboarding Sent"].get("checkbox"):
-                changes["Onboarding Sent"] = {"checkbox": True}
-            if not date_value(p, "Onboarding Sent At"):
-                changes["Onboarding Sent At"] = date_patch(details_at)
-    sent_flags = (
-        ("Replied", "Details Sent", "Details Sent At"),
-        ("Accepted", "Onboarding Sent", "Onboarding Sent At"),
-        ("Activated", "Feedback Requested", "Feedback Requested At"),
-    )
-    for required_stage, flag, date_field in sent_flags:
-        if (stage == required_stage and p[flag].get("checkbox") is True
-                and not date_value(p, date_field) and date_field not in changes):
-            changes[date_field] = date_patch(now)
+    if stage in ("Replied", "Accepted") and p["Details Sent"].get("checkbox") and not date_value(p, "Details Sent At"):
+        # A saved waiting status proves the worker previously saw this checkbox
+        # unchecked. Query/read false->true is also direct observation evidence.
+        waiting = plain(p, "Follow-Up Timing") in (
+            "Signup: waiting for details sent", "Onboarding: waiting for details sent")
+        newly_checked = previous is not None and previous["Details Sent"].get("checkbox") is False
+        erased_date = previous is not None and date_value(previous, "Details Sent At")
+        if (waiting or newly_checked) and not erased_date:
+            changes["Details Sent At"] = date_patch(now)
+    if stage == "Activated" and p["Feedback Requested"].get("checkbox") and not date_value(p, "Feedback Requested At"):
+        changes["Feedback Requested At"] = date_patch(now)
 
     def record_last(value):
         # This existing summary is the latest observed warm send, not a
@@ -407,7 +410,7 @@ def sync(today=None):
                 if name == "0":
                     baseline[checkpoint] = {"number": 0}
         evaluated = {**fresh, "properties": {**current, **baseline}}
-        changes = {**baseline, **get_changes(evaluated, observed_at), **get_warm_changes(evaluated, observed_at)}
+        changes = {**baseline, **get_changes(evaluated, observed_at, previous=original), **get_warm_changes(evaluated, observed_at, previous=original)}
         if changes:
             # Include date/checkpoint edits, not just stage/counter edits.
             latest = request("GET", f"/pages/{page['id']}")

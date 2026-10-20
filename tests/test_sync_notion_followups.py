@@ -573,21 +573,22 @@ def test_warm_initial_poll_baselines_counters_without_inventing_send_dates():
 
 def test_ticking_details_sent_stamps_once_in_replied():
     page = row(stage="Replied")
+    previous = copy.deepcopy(page["properties"])
     page["properties"]["Details Sent"]["checkbox"] = True
     now = datetime(2026, 10, 20, 20, 3, tzinfo=timezone.utc)
-    changes = sync.get_warm_changes(page, now)
+    changes = sync.get_warm_changes(page, now, previous=previous)
     assert changes["Details Sent At"]["date"]["start"] == now.astimezone(sync.LONDON).isoformat(timespec="seconds")
     page["properties"]["Details Sent At"] = changes["Details Sent At"]
     again = sync.get_warm_changes(page, now + timedelta(days=1))
     assert "Details Sent At" not in again
 
 
-def test_accepted_onboarding_is_distinct_from_replied_details():
+def test_legacy_onboarding_checkbox_does_not_create_a_send_timestamp():
     page = row(stage="Accepted")
     page["properties"]["Details Sent"]["checkbox"] = True
     page["properties"]["Onboarding Sent"]["checkbox"] = True
     changed = sync.get_warm_changes(page, datetime(2026, 10, 20, 20, tzinfo=timezone.utc))
-    assert "Onboarding Sent At" in changed
+    assert "Onboarding Sent At" not in changed
     assert "Details Sent At" not in changed
 
 
@@ -653,11 +654,12 @@ def test_poll_writes_warm_timestamp_without_touching_cold_followup(monkeypatch):
     p = page["properties"]
     p["Synced Signup Nudges Sent"]["number"] = 0
     p["Synced Onboarding Nudges Sent"]["number"] = 0
-    p["Details Sent"]["checkbox"] = True
+    fresh = copy.deepcopy(page)
+    fresh["properties"]["Details Sent"]["checkbox"] = True
     writes = []
     def fake_request(method, path, body=None):
         if method == "GET":
-            return page
+            return fresh
         writes.append(body["properties"])
         return {}
     monkeypatch.setattr(sync, "pages", lambda: iter([page]))
@@ -680,7 +682,7 @@ def warm_row(stage="Replied", *, count="0", checkpoint=0, first=None):
     page = row(stage=stage, synced=0)
     p = page["properties"]
     prefix = "Signup" if stage == "Replied" else "Onboarding"
-    flag = "Details Sent" if stage == "Replied" else "Onboarding Sent"
+    flag = "Details Sent"
     p[flag]["checkbox"] = True
     p[flag + " At"] = sync.date_patch("2026-10-15T12:00:00+01:00")
     p[prefix + " Nudges Sent"]["select"] = {"name": count}
@@ -716,9 +718,10 @@ def test_new_contact_stage_is_dated_without_manual_input_but_old_baseline_is_not
     assert "Date Contacted" not in sync.stage_sync_changes(page, OBSERVED_NOW)
 
 
-@pytest.mark.parametrize("stage,flag", [("Replied", "Details Sent"), ("Accepted", "Onboarding Sent")])
+@pytest.mark.parametrize("stage,flag", [("Replied", "Details Sent"), ("Accepted", "Details Sent")])
 def test_marking_initial_action_sets_timestamp_and_due_in_one_patch(stage, flag):
     page = row(stage=stage, synced=0)
+    apply_patch(page, sync.get_changes(page, OBSERVED_NOW))  # Worker observes unchecked flag.
     page["properties"][flag]["checkbox"] = True
     changes = sync.get_changes(page, OBSERVED_NOW)
     assert changes[flag + " At"] == sync.date_patch(OBSERVED_NOW.isoformat())
@@ -882,8 +885,8 @@ def test_accepted_details_sent_reuses_known_send_time_without_second_action():
     p["Details Sent"]["checkbox"] = True
     p["Details Sent At"] = sync.date_patch("2026-10-15T12:00:00+01:00")
     changed = sync.get_changes(page, OBSERVED_NOW)
-    assert changed["Onboarding Sent"] == {"checkbox": True}
-    assert changed["Onboarding Sent At"] == sync.date_patch("2026-10-15T12:00:00+01:00")
+    assert "Onboarding Sent" not in changed
+    assert "Onboarding Sent At" not in changed
     assert changed["Safe Next Due"] == sync.date_patch("2026-10-18T12:00:00+01:00")
     assert "Details Sent At" not in changed  # Never rewrite a recorded send.
     apply_patch(page, changed)
@@ -918,7 +921,7 @@ def test_accepted_legacy_onboarding_date_is_preserved_when_details_are_dated():
     assert "Onboarding Sent" not in changed
     assert "Onboarding Sent At" not in changed
     assert "Details Sent At" not in changed
-    assert changed["Safe Next Due"] == sync.date_patch("2026-10-19T12:00:00+01:00")
+    assert changed["Safe Next Due"] == sync.date_patch("2026-10-13T12:00:00+01:00")
 
 
 def test_replied_details_date_remains_independent_before_accepted_transition():
@@ -933,6 +936,155 @@ def test_replied_details_date_remains_independent_before_accepted_transition():
     apply_patch(page, first)
     p["Stage (AI Fills First)"]["select"] = {"name": "Accepted"}
     accepted = sync.get_changes(page, OBSERVED_NOW)
-    assert accepted["Onboarding Sent"] == {"checkbox": True}
-    assert accepted["Onboarding Sent At"] == p["Details Sent At"]
+    assert "Onboarding Sent" not in accepted
+    assert "Onboarding Sent At" not in accepted
+    assert sync.date_value({**p, **accepted}, "Safe Next Due") == "2026-10-18T12:00:00+01:00"
     assert "Details Sent At" not in accepted
+
+
+@pytest.mark.parametrize("stage", ["Replied", "Accepted"])
+def test_single_details_checkbox_works_without_legacy_onboarding_properties(stage):
+    page = row(stage=stage, synced=0)
+    p = page["properties"]
+    p.pop("Onboarding Sent")
+    p.pop("Onboarding Sent At")
+    apply_patch(page, sync.get_changes(page, OBSERVED_NOW))
+    p["Details Sent"]["checkbox"] = True
+    changes = sync.get_changes(page, OBSERVED_NOW + timedelta(minutes=2))
+    assert changes["Details Sent At"] == sync.date_patch("2026-10-20T20:02:00+01:00")
+    assert changes["Safe Next Due"] == sync.date_patch("2026-10-23T20:02:00+01:00")
+    assert "Onboarding Sent" not in changes
+    assert "Onboarding Sent At" not in changes
+    apply_patch(page, changes)
+    assert sync.get_changes(page, OBSERVED_NOW + timedelta(minutes=4)) == {}
+
+
+@pytest.mark.parametrize("stage", ["Replied", "Accepted"])
+def test_prechecked_undated_details_never_start_a_historical_countdown(stage):
+    page = row(stage=stage, synced=0)
+    p = page["properties"]
+    p["Details Sent"]["checkbox"] = True
+    p["Date Contacted"] = sync.date_patch("2026-10-13")
+    p["Accepted At"] = sync.date_patch("2026-10-15T10:00:00+01:00")
+    p["Onboarding Sent"]["checkbox"] = True
+    p["Onboarding Sent At"] = sync.date_patch("2026-10-16T10:00:00+01:00")
+    p["Last Follow-Up Sent"] = sync.date_patch("2026-10-17T10:00:00+01:00")
+    for days in (0, 1, 10):
+        changes = sync.get_changes(page, OBSERVED_NOW + timedelta(days=days))
+        assert "Details Sent At" not in changes
+        assert "Onboarding Sent At" not in changes
+        apply_patch(page, changes)
+        assert sync.date_value(p, "Safe Next Due") is None
+        assert sync.plain(p, "Copy Follow-Up") == ""
+        assert sync.plain(p, "Follow-Up Timing") == "Needs Review: details sent date unknown"
+
+
+@pytest.mark.parametrize("signup_count,first", [("0", None), ("1", "2026-10-19T12:00:00+01:00"),
+                                                ("2", "2026-10-15T12:00:00+01:00")])
+def test_stage_progression_carries_schedule_without_mirroring_send_history(signup_count, first):
+    page = warm_row("Replied", count=signup_count, checkpoint=int(signup_count), first=first)
+    p = page["properties"]
+    apply_patch(page, sync.get_changes(page, OBSERVED_NOW))
+    original = copy.deepcopy(p)
+    p["Stage (AI Fills First)"]["select"] = {"name": "Accepted"}
+    changes = sync.get_changes(page, OBSERVED_NOW)
+    actual = {**p, **changes}
+    assert sync.date_value(actual, "Safe Next Due") == sync.date_value(original, "Safe Next Due")
+    assert "Onboarding Nudges Sent" not in changes
+    assert "Onboarding Nudge 1 At" not in changes
+    assert "Details Sent At" not in changes
+    assert "Signup Nudge 1 At" not in changes
+    assert "Warm Last Nudge At" not in changes
+    if signup_count == "1":
+        assert sync.date_value(actual, "Safe Next Due") == "2026-10-23T12:00:00+01:00"
+        assert sync.plain(actual, "Follow-Up Timing").startswith("Onboarding final follow-up")
+    elif signup_count == "2":
+        assert sync.date_value(actual, "Safe Next Due") is None
+        assert sync.plain(actual, "Copy Follow-Up") == ""
+
+
+def test_one_signup_and_one_getting_started_followup_complete_the_shared_sequence():
+    page = warm_row("Replied", count="1", checkpoint=0)
+    apply_patch(page, sync.get_changes(page, OBSERVED_NOW))
+    p = page["properties"]
+    original_first = copy.deepcopy(p["Signup Nudge 1 At"])
+    original_details = copy.deepcopy(p["Details Sent At"])
+    p["Stage (AI Fills First)"]["select"] = {"name": "Accepted"}
+    apply_patch(page, sync.get_changes(page, OBSERVED_NOW + timedelta(minutes=2)))
+    p["Onboarding Nudges Sent"]["select"] = {"name": "1"}
+    changes = sync.get_changes(page, OBSERVED_NOW + timedelta(days=4))
+    assert changes["Onboarding Nudge 1 At"] == sync.date_patch("2026-10-24T20:00:00+01:00")
+    assert changes["Safe Next Due"] == sync.date_patch(None)
+    apply_patch(page, changes)
+    assert p["Signup Nudge 1 At"] == original_first
+    assert p["Details Sent At"] == original_details
+    assert p["Signup Nudges Sent"]["select"]["name"] == "1"
+    assert p["Onboarding Nudges Sent"]["select"]["name"] == "1"
+    assert sync.get_changes(page, OBSERVED_NOW + timedelta(days=10)) == {}
+
+
+def test_returning_to_replied_does_not_restart_an_accepted_followup():
+    page = warm_row("Accepted", count="1", checkpoint=1, first="2026-10-19T12:00:00+01:00")
+    apply_patch(page, sync.get_changes(page, OBSERVED_NOW))
+    page["properties"]["Stage (AI Fills First)"]["select"] = {"name": "Replied"}
+    changes = sync.get_changes(page, OBSERVED_NOW)
+    actual = {**page["properties"], **changes}
+    assert sync.date_value(actual, "Safe Next Due") == "2026-10-23T12:00:00+01:00"
+    assert sync.plain(actual, "Follow-Up Timing").startswith("Signup final follow-up")
+    assert "Signup Nudges Sent" not in changes
+    assert "Signup Nudge 1 At" not in changes
+
+
+def test_invalid_signup_history_cannot_be_reset_by_moving_to_accepted():
+    page = warm_row("Replied", count="1", checkpoint=1)
+    page["properties"]["Stage (AI Fills First)"]["select"] = {"name": "Accepted"}
+    changed = sync.get_changes(page, OBSERVED_NOW)
+    actual = {**page["properties"], **changed}
+    assert sync.date_value(actual, "Safe Next Due") is None
+    assert "Needs Review" in sync.plain(actual, "Follow-Up Timing")
+    assert sync.plain(actual, "Copy Follow-Up") == ""
+
+
+def test_new_accepted_send_observed_between_query_and_read_is_stamped_once(monkeypatch):
+    page = row(stage="Accepted", synced=0)
+    fresh = copy.deepcopy(page)
+    fresh["properties"]["Details Sent"]["checkbox"] = True
+    writes = []
+    def request(method, path, body=None):
+        if method == "GET":
+            return copy.deepcopy(fresh)
+        writes.append(body["properties"])
+    monkeypatch.setattr(sync, "pages", lambda: iter([page]))
+    monkeypatch.setattr(sync, "request", request)
+    assert sync.sync(OBSERVED_NOW) == (1, 1)
+    assert writes[0]["Details Sent At"] == sync.date_patch(OBSERVED_NOW.isoformat())
+    assert writes[0]["Safe Next Due"] == sync.date_patch("2026-10-23T20:00:00+01:00")
+    assert "Onboarding Sent" not in writes[0]
+    assert "Onboarding Sent At" not in writes[0]
+
+
+def test_accepted_stage_change_does_not_misdate_an_existing_checked_details_flag(monkeypatch):
+    page = row(stage="Replied", synced=0)
+    page["properties"]["Details Sent"]["checkbox"] = True
+    fresh = copy.deepcopy(page)
+    fresh["properties"]["Stage (AI Fills First)"]["select"] = {"name": "Accepted"}
+    writes = []
+    def request(method, path, body=None):
+        if method == "GET":
+            return copy.deepcopy(fresh)
+        writes.append(body["properties"])
+    monkeypatch.setattr(sync, "pages", lambda: iter([page]))
+    monkeypatch.setattr(sync, "request", request)
+    assert sync.sync(OBSERVED_NOW) == (1, 1)
+    assert "Details Sent At" not in writes[0]
+    assert "Needs Review" in sync.plain(writes[0], "Follow-Up Timing")
+
+
+def test_erasing_a_known_details_date_during_a_checkbox_edit_does_not_stamp_today():
+    page = row(stage="Accepted", synced=0)
+    previous = copy.deepcopy(page["properties"])
+    previous["Details Sent At"] = sync.date_patch("2026-10-15T10:00:00+01:00")
+    page["properties"]["Details Sent"]["checkbox"] = True
+    changes = sync.get_changes(page, OBSERVED_NOW, previous=previous)
+    assert "Details Sent At" not in changes
+    assert "Needs Review" in sync.plain(changes, "Follow-Up Timing")
