@@ -72,9 +72,24 @@ test("once the session is running the sheet shows only the prescription and the 
   try {
     assert.equal(byTitle("Demo video"), undefined);
     assert.equal(byTitle("Why it's here"), undefined);
-    assert.equal(sheet.querySelector(".ex-detail-stop"), null);
     assert.ok(sheet.querySelector(".ex-detail-prescription"));
     assert.ok(sheet.querySelector(".ex-log"));
+  } finally {
+    await cleanup();
+  }
+});
+
+test("the stop rule stays visible in the logging sheet while coaching stays hidden", async () => {
+  const { sheet, byTitle, cleanup } = await openSheet(true, { ...treadmill, stop_rules: ["Stop for dizziness."] });
+  try {
+    const stop = sheet.querySelector(".ex-detail-stop");
+    assert.ok(stop);
+    assert.match(stop.textContent ?? "", /Stop if dizziness/);
+    assert.equal(stop.closest("details"), null);
+    assert.ok(sheet.querySelector(".ex-log"));
+    assert.equal(byTitle("Demo video"), undefined);
+    assert.equal(byTitle("Why it's here"), undefined);
+    assert.doesNotMatch(sheet.textContent ?? "", /Stay tall, no rail\./);
   } finally {
     await cleanup();
   }
