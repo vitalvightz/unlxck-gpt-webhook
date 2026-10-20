@@ -100,7 +100,13 @@ def test_compound_working_dose_survives_both_card_conversion_paths():
 def test_embedded_rest_is_structured_without_losing_the_full_dose(dose, rest):
     block = _source_block(["- Example Drill: " + dose], "Example Drill")
     assert block["rest"] == rest
-    assert dose.split("; RPE")[0].rstrip(".") in block["execution_instructions"]
+    if "→" in dose:
+        # A compound dose is not one statistic: it stays whole.
+        assert dose.split("; RPE")[0].rstrip(".") in block["execution_instructions"]
+    else:
+        # Every quantity is a stat, so How does not repeat it.
+        assert (block["sets"], block["duration"]) == (3, {"value": 180, "unit": "seconds"})
+        assert not block.get("execution_instructions")
     if "RPE 5" in dose:
         assert block["effort"] == {"method": "RPE", "value": 5, "scale": "1-10"}
 
