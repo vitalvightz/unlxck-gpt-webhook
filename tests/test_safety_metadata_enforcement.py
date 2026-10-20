@@ -32,10 +32,9 @@ def without_field(value, field):
 
 
 @pytest.mark.parametrize("name,symptoms", [
-    ("Jump Rope (Recovery Pace)", "mild shin pain"),
-    ("Split-Step Ankle Snap Pogo", "mild foot pain"),
-    ("Punch-Specific Max Isometric Hold", "mild wrist pain"),
-    ("Overcoming Split-Squat Isometric", "mild knee pain"),
+    ("Jump Rope (Recovery Pace)", "mild shin pain"),  # avoid_if
+    ("Split-Step Ankle Snap Pogo", "mild foot pain"),  # avoid_if
+    ("Landmine Split-Stance Punch Press", "mild shoulder pain"),  # "...symptoms are active"
 ])
 @pytest.mark.parametrize("phase", ["GPP", "SPP", "TAPER"])
 def test_regional_prohibitions_override_mechanical_risk_scores(name, symptoms, phase):
@@ -51,8 +50,24 @@ def test_regional_prohibitions_override_mechanical_risk_scores(name, symptoms, p
 
 
 @pytest.mark.parametrize("name,symptoms", [
-    ("Punch-Specific Max Isometric Hold", "mild wrist pain"),
-    ("Overcoming Split-Squat Isometric", "mild knee pain"),
+    ("Punch-Specific Max Isometric Hold", "mild wrist pain"),  # "...if pain spikes..."
+    ("Overcoming Split-Squat Isometric", "mild knee pain"),  # "...if irritation increases..."
+])
+@pytest.mark.parametrize("phase", ["GPP", "SPP", "TAPER"])
+def test_conditional_contraindications_warn_instead_of_excluding_on_region(name, symptoms, phase):
+    # A response-conditional note is not met by a mild report on its own; it
+    # adapts through the severity-weighted score (functional-impact rules).
+    row = record(name)
+    decision = injury_decision(row, [symptoms], phase, "low")
+    assert decision.reason.get("bucket") != "safety_metadata"
+    assert decision.action != "exclude"
+    rank = {"allow": 0, "modify": 1, "exclude": 2}
+    severe = injury_decision(row, [symptoms.replace("mild", "severe")], phase, "low")
+    assert rank[severe.action] >= rank[decision.action]
+
+
+@pytest.mark.parametrize("name,symptoms", [
+    ("Landmine Split-Stance Punch Press", "mild shoulder pain"),
 ])
 def test_contraindications_change_generated_work_and_alternate_pools(monkeypatch, name, symptoms):
     row = record(name)

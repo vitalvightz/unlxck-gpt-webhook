@@ -372,7 +372,8 @@ class SafetyContext:
 
         from fightcamp.late_selector_windows import fight_proximity_allowed
 
-        if self.days_until_fight is not False and not fight_proximity_allowed(raw, self.days_until_fight):
+        days = getattr(self, "days_until_fight", False)
+        if days is not False and not fight_proximity_allowed(raw, days):
             return True
         notes = _strings(raw.get("contraindications"))
         if not self.has_injuries or not notes:
