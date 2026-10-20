@@ -183,3 +183,81 @@ def merge_injury_awareness(plan: dict[str, Any], awareness: dict[str, Any] | Non
         rules.append(dict(rule))
 
     return {**plan, "plan_notes": notes, "red_flag_rules": rules}
+
+
+# --- Athlete-reported functional impact ---------------------------------------
+#
+# The three athlete-facing choices (web/lib/injury-impact.ts) describe training
+# impact, not a diagnosis. Their low/moderate/high and mild/moderate/severe
+# bands are compatibility mappings; the marker below is the provenance.
+LIMITING = "limiting"
+CANT_TRAIN = "cant_train"
+TRAINING_IMPACTS = frozenset({NOT_LIMITING, LIMITING, CANT_TRAIN})
+_IMPACT_MARKER = re.compile(r"\[training_impact:(not_limiting|limiting|cant_train)\]", re.IGNORECASE)
+_MEDICAL_MARKERS = ("medical_hold", "restriction_hold", "rehab_medical_gate", "progression_assessment_medical_hold",
+                    "open_wound")
+
+
+def reported_training_impact(record: dict[str, Any] | Any) -> str:
+    """The athlete's own impact choice, or "" when missing/legacy."""
+    if not hasattr(record, "get"):
+        return ""
+    explicit = str(record.get("training_impact") or "").strip().lower()
+    if explicit in TRAINING_IMPACTS:
+        return explicit
+    for key in ("description", "notes"):
+        match = _IMPACT_MARKER.search(str(record.get(key) or ""))
+        if match:
+            return match.group(1).lower()
+    return ""
+
+
+def has_independent_medical_override(record: dict[str, Any]) -> bool:
+    """Safety evidence the athlete's impact choice can never override."""
+    from .injury_registry import SURFACE_TISSUE_TYPES
+    from .injury_triage import current_report_medical_hold_reasons
+
+    if any(record.get(key) for key in _MEDICAL_MARKERS):
+        return True
+    if str(record.get("consequence") or "").strip().lower() in {"structural", "neuro"}:
+        return True
+    if str(record.get("latest_reported_status") or "").strip().lower() == "worse":
+        return True
+    types = {str(record.get(key) or "").strip().lower() for key in ("injury_type", "rehab_type", "surface_class")}
+    if types & SURFACE_TISSUE_TYPES or any(t.startswith("surface_") for t in types):
+        return True  # wound/contact restrictions stay with the surface pathway
+    return bool(current_report_medical_hold_reasons(record))
+
+
+def is_awareness_only(record: dict[str, Any]) -> bool:
+    """A not-limiting injury that must not restrict normal training.
+
+    Generation already removes these after triage (plan_pipeline_runtime);
+    Today and the exercise editor use the same rule. Any independent medical
+    evidence, a "worse" report or a severe/high band keeps it restrictive.
+    """
+    return (
+        reported_training_impact(record) == NOT_LIMITING
+        and str(record.get("severity") or "").strip().lower() not in {"severe", "high"}
+        and not has_independent_medical_override(record)
+    )
+
+
+def is_functional_cant_train(record: dict[str, Any]) -> bool:
+    """A severe band that only encodes the athlete's "can't train normally".
+
+    It restricts normal training but is not medical severity: without other
+    medical evidence it must not trigger a medical-review hold.
+    """
+    return (
+        reported_training_impact(record) == CANT_TRAIN
+        and str(record.get("severity") or "").strip().lower() in {"severe", "high"}
+        and not has_independent_medical_override(record)
+    )
+
+
+def injury_stop_phrase(record: dict[str, Any], label: str) -> str:
+    """Stop copy that keeps functional inability apart from medical severity."""
+    if is_functional_cant_train(record):
+        return f"Can't train normally: {label}"
+    return f"Active severe injury: {label}"

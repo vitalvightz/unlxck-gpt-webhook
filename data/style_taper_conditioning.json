@@ -1378,8 +1378,6 @@
       "mech_acceleration",
       "mech_change_of_direction",
       "mech_deceleration",
-      "mech_acceleration",
-      "mech_deceleration",
       "mech_trunk_rotation",
       "mech_upper_press"
     ],
@@ -1440,8 +1438,6 @@
     "mechanical_risk_tags": [
       "mech_acceleration",
       "mech_change_of_direction",
-      "mech_deceleration",
-      "mech_acceleration",
       "mech_deceleration",
       "mech_trunk_rotation",
       "mech_upper_press"
@@ -1557,8 +1553,6 @@
     "mechanical_risk_tags": [
       "mech_acceleration",
       "mech_change_of_direction",
-      "mech_deceleration",
-      "mech_acceleration",
       "mech_deceleration",
       "mech_lower_hip_hinge",
       "mech_trunk_rotation"
@@ -1856,8 +1850,6 @@
       "mech_acceleration",
       "mech_change_of_direction",
       "mech_deceleration",
-      "mech_acceleration",
-      "mech_deceleration",
       "mech_trunk_rotation",
       "mech_upper_press"
     ],
@@ -1918,8 +1910,6 @@
     "mechanical_risk_tags": [
       "mech_acceleration",
       "mech_change_of_direction",
-      "mech_deceleration",
-      "mech_acceleration",
       "mech_deceleration",
       "mech_trunk_rotation",
       "mech_upper_press"
@@ -2034,8 +2024,6 @@
     "mechanical_risk_tags": [
       "mech_acceleration",
       "mech_change_of_direction",
-      "mech_deceleration",
-      "mech_acceleration",
       "mech_deceleration",
       "mech_trunk_rotation",
       "mech_upper_press"
@@ -2263,10 +2251,7 @@
       "mech_deceleration",
       "mech_trunk_rotation",
       "mech_upper_press",
-      "mech_acceleration",
-      "mech_deceleration",
-      "mech_lower_hip_hinge",
-      "mech_trunk_rotation"
+      "mech_lower_hip_hinge"
     ],
     "work_sec": 5,
     "rest_sec": 120,
@@ -2487,7 +2472,6 @@
     "mechanical_risk_tags": [
       "mech_change_of_direction",
       "mech_trunk_rotation",
-      "mech_trunk_stability",
       "mech_trunk_stability"
     ],
     "work_sec": 5,
@@ -2548,8 +2532,7 @@
       "mech_trunk_stability",
       "mech_upper_pull",
       "mech_change_of_direction",
-      "mech_trunk_rotation",
-      "mech_trunk_stability"
+      "mech_trunk_rotation"
     ],
     "work_sec": 6,
     "rest_sec": 120,
@@ -2608,8 +2591,7 @@
       "mech_trunk_stability",
       "mech_upper_pull",
       "mech_change_of_direction",
-      "mech_trunk_rotation",
-      "mech_trunk_stability"
+      "mech_trunk_rotation"
     ],
     "work_sec": 6,
     "rest_sec": 120,
@@ -2721,8 +2703,7 @@
       "mech_trunk_stability",
       "mech_upper_pull",
       "mech_change_of_direction",
-      "mech_trunk_rotation",
-      "mech_trunk_stability"
+      "mech_trunk_rotation"
     ],
     "work_sec": 6,
     "rest_sec": 120,
@@ -2958,8 +2939,7 @@
       "mech_trunk_stability",
       "mech_upper_pull",
       "mech_change_of_direction",
-      "mech_trunk_rotation",
-      "mech_trunk_stability"
+      "mech_trunk_rotation"
     ],
     "work_sec": 6,
     "rest_sec": 120,
@@ -3427,8 +3407,7 @@
       "mech_trunk_stability",
       "mech_upper_pull",
       "mech_change_of_direction",
-      "mech_trunk_rotation",
-      "mech_trunk_stability"
+      "mech_trunk_rotation"
     ],
     "work_sec": 6,
     "rest_sec": 120,
@@ -3488,8 +3467,7 @@
       "mech_trunk_stability",
       "mech_upper_pull",
       "mech_change_of_direction",
-      "mech_trunk_rotation",
-      "mech_trunk_stability"
+      "mech_trunk_rotation"
     ],
     "work_sec": 6,
     "rest_sec": 120,

@@ -1059,7 +1059,10 @@ def test_contraindications_only_count_for_an_injured_region():
     safety.has_injuries, safety.injured_regions = True, {"knee"}
     assert not safety.contraindicated({"contraindications": ["skip if shoulder symptoms are active"]})
     assert not safety.contraindicated({"contraindications": ["skip when pins or trap bar are unavailable"]})
-    assert safety.contraindicated({"contraindications": ["skip if front-knee irritation increases"]})
+    # Conditional warnings are decided by the generation guard (planner_excludes),
+    # never by a region match here; an active-symptom note is absolute.
+    assert not safety.contraindicated({"contraindications": ["skip if front-knee irritation increases"]})
+    assert safety.contraindicated({"contraindications": ["avoid if knee symptoms are active"]})
     safety.injured_regions = set()
     assert safety.contraindicated({"contraindications": ["skip if shoulder symptoms are active"]})
     safety.has_injuries = False

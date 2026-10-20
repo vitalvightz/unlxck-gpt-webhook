@@ -70,6 +70,21 @@ def _normalise_late_window_tokens(value: object) -> set[str]:
     }
 
 
+def fight_proximity_allowed(item: dict[str, Any], days_until_fight: Any) -> bool:
+    """An explicit bank countdown block overrides every late-window opt-in.
+
+    Unknown countdowns cannot clear a stated block. Absent/null limits add no
+    permission: the existing phase, late-window and metadata gates still apply.
+    """
+    limit = item.get("block_if_fight_within_days")
+    if limit is None:
+        return True
+    if isinstance(limit, bool) or not isinstance(limit, int) or limit < 0:
+        return False
+    days = coerce_days_until_fight(days_until_fight)
+    return days is not None and days > limit
+
+
 def late_window_allowed(entries: list[dict[str, Any]], *, offset: int) -> bool:
     """Apply the canonical opt-in ``late_windows`` contract for a D-day.
 
@@ -77,6 +92,9 @@ def late_window_allowed(entries: list[dict[str, Any]], *, offset: int) -> bool:
     explicitly contain the scheduled window (or ``all``); missing or empty
     metadata is not late-fight approval.
     """
+    entries = [item for item in entries if fight_proximity_allowed(item, offset)]
+    if not entries:
+        return False
     window = classify_late_selector_window(offset)
     if not window:
         return True

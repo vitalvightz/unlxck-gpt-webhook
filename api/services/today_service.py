@@ -64,6 +64,7 @@ from api.contracts.readiness_message import (
     build_readiness_adjustment,
     classify_injury_surface,
     is_support_session,
+    restricts_training,
     surface_wound_medical_review,
 )
 from api.contracts.training_day import resolve_training_day_str
@@ -808,6 +809,37 @@ def _checked_last_head_impact_day(store: AppStore, athlete_id: str) -> tuple[str
         return None, False
 
 
+def restrictive_injuries(
+    store: AppStore,
+    athlete_id: str,
+    injuries: Sequence[Mapping[str, Any]],
+    *,
+    context_ok: bool = True,
+) -> list[Mapping[str, Any]]:
+    """Injuries that may restrict training, after every medical check.
+
+    A "Not limiting me" report is dropped only once its episode observations,
+    medical holds and clinical restrictions have been evaluated and none
+    applies. Incomplete injury context never clears an injury.
+    """
+    if not context_ok:
+        return list(injuries)
+    kept: list[Mapping[str, Any]] = []
+    for injury in injuries:
+        if restricts_training(injury):
+            kept.append(injury)
+            continue
+        try:
+            observed = apply_episode_observations(dict(injury), episode_observations(store, athlete_id, injury))
+        except Exception:
+            logger.exception("[today] injury_observations_unavailable")
+            kept.append(injury)
+            continue
+        if restricts_training(observed):
+            kept.append(observed)
+    return kept
+
+
 def _readiness_context_and_status(
     store: AppStore,
     *,
@@ -891,7 +923,7 @@ def _readiness_context_and_status(
         today_session=today_session,
         active_plan=plan_row,
         intake=intake,
-        open_injuries=enriched_injuries,
+        open_injuries=restrictive_injuries(store, athlete_id, enriched_injuries, context_ok=classify_ok),
         recent_checkins=recent_checkins,
         recent_sessions=recent_sessions,
         last_head_impact_day=last_head_impact_day,
@@ -1207,13 +1239,15 @@ def _severe_injury_recommendation(
     copy when a severe injury is active. The stored daily check-in is untouched
     (it stays in history); this only reshapes the live command view so every
     consumer — not just the Today UI — sees the injury hold as authoritative."""
+    from fightcamp.injury_awareness import injury_stop_phrase
+
     label = injury.get("label") or build_injury_label(
         injury.get("body_area"), injury.get("description")
     )
     reason = "\n".join(
         [
             "Session blocked",
-            f"Active severe injury: {label}. This is not a load-reduced session.",
+            f"{injury_stop_phrase(dict(injury), label)}. This is not a load-reduced session.",
             "Clear it before training.",
         ]
     )

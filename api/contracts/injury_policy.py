@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 import re
 from typing import Any, Mapping, Sequence
 
+from fightcamp.injury_awareness import is_functional_cant_train
 from fightcamp.injury_formatting import parse_injury_entry
 from fightcamp.exercise_identity import normalize_exercise_key
 from fightcamp.injury_negation import remove_negated_phrases
@@ -104,7 +105,12 @@ def resolve_injury_policy(
     if stage_decision.care_pathway == "wound_care":
         result.update(outcome="wound_care", summary="Follow the skin-care guidance for this injury.", reason_codes=["surface_wound_care"])
         return result
-    if stage_decision.medical_gate or injury.get("rehab_medical_gate") or str(injury.get("severity")) in {"severe", "high"}:
+    # "Can't train normally" is stored on the severe band for compatibility. It
+    # restricts normal training (readiness) but is not medical severity, so on
+    # its own it must not replace clinically permitted rehab with a review hold.
+    severity_review = (str(injury.get("severity")) in {"severe", "high"}
+                       and not is_functional_cant_train(dict(injury)))
+    if stage_decision.medical_gate or injury.get("rehab_medical_gate") or severity_review:
         result.update(outcome="medical_review", summary="Get this injury checked before training.", reason_codes=list(stage_decision.reasons))
         return result
     if injury.get("status") == "resolved":

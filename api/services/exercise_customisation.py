@@ -312,7 +312,7 @@ class SafetyContext:
         from api.contracts.readiness_message import _injury_text_regions, _resolve_injury_regions
         from api.services.today_service import (
             _entry_mapping_for_readiness, _with_injury_policy, _with_rehab_stage, _with_safe_session_context,
-            _with_surface_class,
+            _with_surface_class, restrictive_injuries,
         )
         from api.services.injury_episode_service import apply_episode_observations, episode_observations
 
@@ -333,10 +333,23 @@ class SafetyContext:
             injuries, store=store, athlete_id=athlete_id, phase=occurrence.phase, equipment=equipment,
             training_day=occurrence.date.isoformat(), training_session=occurrence.session,
         ) if injuries else []
+        # Only now, with episode observations, holds and clinical policy all
+        # evaluated, may a "Not limiting me" report stop narrowing the choices
+        # (same rule as generation and Today). A row without an id is kept.
+        injuries = restrictive_injuries(store, athlete_id, injuries)
+        kept_ids = {_clean(row.get("id")) for row in injuries}
+        flags = [flag for flag in flags if not _clean(flag.get("id")) or _clean(flag.get("id")) in kept_ids]
         self.injuries = injuries
         self.decisions = [row["rehab_decision"] for row in injuries if isinstance(row.get("rehab_decision"), Mapping)]
         self.plan_id = _clean(occurrence.plan_row.get("id"))
         self.day = occurrence.date.isoformat()
+        # Countdown for authored fight-proximity cutoffs. No fight date means no
+        # countdown to enforce; an unreadable one fails closed (None).
+        fight_date = _clean(occurrence.plan_row.get("fight_date"))
+        try:
+            self.days_until_fight = (date.fromisoformat(fight_date[:10]) - occurrence.date).days if fight_date else False
+        except ValueError:
+            self.days_until_fight = None
         regions: set[str] = set()
         for injury in flags:
             if _clean(injury.get("status")).lower() not in {"open", "monitoring"}:
@@ -347,10 +360,17 @@ class SafetyContext:
         self.injured_regions = regions
         self.injury_texts = [text for injury in flags
                              if (text := " ".join(_clean(injury.get(k)) for k in ("body_area", "description")).strip())]
+        # The same text with its reported severity, for the generation guard.
+        self.guard_injuries = [f"{_clean(injury.get('severity')) or 'moderate'} {text}"
+                               for injury in flags
+                               if (text := " ".join(_clean(injury.get(k)) for k in ("body_area", "description")).strip())]
+        self.phase = occurrence.phase
         self.has_injuries = bool(flags)
 
     def contraindicated(self, raw: Mapping[str, Any]) -> bool:
-        """A contraindication counts only when it names a currently injured region.
+        """Held when inside an authored fight cutoff, or contraindicated.
+
+        A contraindication counts only when it names a currently injured region.
 
         Region-less notes ("skip when pins are unavailable", blood pressure
         during a cut) are not injury evidence. When no injured region could be
@@ -358,12 +378,38 @@ class SafetyContext:
         """
         from api.contracts.readiness_message import _injury_text_regions
 
-        notes = _strings(raw.get("contraindications"))
+        from fightcamp.late_selector_windows import fight_proximity_allowed
+
+        days = getattr(self, "days_until_fight", False)
+        if days is not False and not fight_proximity_allowed(raw, days):
+            return True
+        from fightcamp.injury_filtering import is_absolute_safety_note
+
+        # Conditional warnings are decided by the generation guard in allows();
+        # a body-region match alone never holds an exercise here.
+        notes = [note for note in _strings(raw.get("contraindications"))
+                 if is_absolute_safety_note("contraindications", note)]
         if not self.has_injuries or not notes:
             return False
         if not self.injured_regions:
             return True
         return any(_injury_text_regions(note) & self.injured_regions for note in notes)
+
+    def planner_excludes(self, raw: Mapping[str, Any]) -> bool:
+        """Generation's injury verdict for one bank row, at the reported severity.
+
+        The row is held exactly where the generation guard excludes it: its
+        exclusion rules and absolute metadata (avoid_if, active-symptom notes)
+        exclude, while flag-level rules and conditional metadata warnings adapt
+        by severity and never hold a row on a region match alone.
+        """
+        from fightcamp.injury_guard import injury_decision
+
+        if not self.injury_texts:
+            return False
+        guard_injuries = getattr(self, "guard_injuries", self.injury_texts)
+        return injury_decision(dict(raw), guard_injuries, getattr(self, "phase", "") or "SPP",
+                               "moderate").action == "exclude"
 
     def allows(self, block: Mapping[str, Any], raw: Mapping[str, Any] | None = None, *,
                prescribed: bool = False) -> bool:
@@ -375,14 +421,10 @@ class SafetyContext:
         live policy still apply.
         """
         from api.contracts.readiness_message import _session_mechanical_load_regions
-        from fightcamp.injury_filtering import injury_flag_reasons, injury_violation_reasons
-
         # The planner's own exclusion rules: what generation would never have
         # prescribed for these injuries is never offered as a replacement.
-        if raw is not None and self.injury_texts:
-            item = dict(raw)
-            if injury_violation_reasons(item, self.injury_texts) or injury_flag_reasons(item, self.injury_texts):
-                return False
+        if raw is not None and self.planner_excludes(raw):
+            return False
         loaded_regions = _session_mechanical_load_regions({"blocks": [block]})
         if self.has_injuries and not loaded_regions and not prescribed:
             return False

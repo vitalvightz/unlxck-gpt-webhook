@@ -868,6 +868,24 @@ def injury_flag_reasons(item: dict, injuries: Iterable[str]) -> list[str]:
     return sorted(reasons)
 
 
+_ACTIVE_SYMPTOM_NOTE = re.compile(
+    r"\bsymptoms?\s+(?:are|is)\s+(?:currently\s+)?active\b|\bsymptom-limited\b|\b(?:is|are)\s+(?:currently\s+)?limited\b",
+    re.IGNORECASE,
+)
+
+
+def is_absolute_safety_note(field: str, note: str) -> bool:
+    """An authored prohibition met by the injury itself, versus a warning.
+
+    ``avoid_if`` lists regions to avoid, and "avoid if <region> symptoms are
+    active" is met by any injury reported as limiting there. Response-
+    conditional prose ("skip if pain spikes...") is a warning that adapts
+    through the severity-weighted score. Generation and manual exercise
+    changes both use this one classification.
+    """
+    return field == "avoid_if" or bool(_ACTIVE_SYMPTOM_NOTE.search(note))
+
+
 def injury_match_details(
     item: dict,
     injuries: Iterable[str],
@@ -881,6 +899,12 @@ def injury_match_details(
     fields = tuple(fields or ("name",))
     risk_levels = tuple(sorted(set(risk_levels or ("exclude",))))
     field_values = {field: str(item.get(field, "") or "") for field in fields}
+    # These are restrictions, not movement descriptions or scoring hints.
+    safety_notes = {}
+    for field in ("avoid_if", "contraindications"):
+        value = item.get(field)
+        values = [value] if isinstance(value, str) else value if isinstance(value, list) else []
+        safety_notes[field] = tuple(note for note in values if isinstance(note, str) and note.strip())
     name = field_values.get("name", "")
     tags = set(ensure_tags(item))
     tag_source = item.get("_tag_source", "explicit")
@@ -900,6 +924,7 @@ def injury_match_details(
         risk_levels,
         tag_source,
         _tags_cache_key(tags_for_matching),
+        tuple(safety_notes.items()),
     )
     cached = _INJURY_MATCH_DETAILS_CACHE.get(cache_key)
     if cached is not None:
@@ -907,6 +932,15 @@ def injury_match_details(
 
     reasons: list[dict] = []
     for region in region_list:
+        for field, notes in safety_notes.items():
+            for note in notes:
+                hits = sorted(set(match_forbidden(note, INJURY_REGION_KEYWORDS.get(region, []))))
+                if not hits:
+                    continue
+                level = "exclude" if is_absolute_safety_note(field, note) else "flag"
+                if level in risk_levels:
+                    reasons.append({"region": region, "fields": [field], "patterns": hits,
+                                    "tags": [], "risk_level": level})
         rules = INJURY_RULES.get(region, {})
         for risk_level in ("exclude", "flag"):
             if risk_level not in risk_levels:

@@ -800,7 +800,9 @@ def original_equipment_source(relative):
     Unknown edits still fail the existing historical digest checks.
     """
     from tools.replay_combat_round_metadata import pre_combat_round_source
-    data = reverse_mechanical_source(relative, pre_combat_round_source(relative, (ROOT / relative).read_bytes()))
+    from tools.replay_safety_metadata import original_safety_source
+    data = reverse_mechanical_source(relative, pre_combat_round_source(
+        relative, original_safety_source(relative, (ROOT / relative).read_bytes())))
     if relative == "api/contracts/external_training.py":
         # #2921 adds one response-only provenance field. Reverse only those
         # exact bytes for historical replay; historical_sources still verifies

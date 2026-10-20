@@ -1,0 +1,363 @@
+{
+  "base_commit": "5b8f4fbff2fee092b806d6d15e3de279e44edf38",
+  "finding": "MI-119224a94808",
+  "changes": [
+    {
+      "catalogue_id": "style_taper_conditioning.json:c0a36cec-5b9c-4d9e-85c9-2a637a8cf229",
+      "name": "Cut-Off-Step-Score",
+      "before_sha256": "fcf3a899279c67b5d88f6c0c21e2ff46b558c1e4d270238d2cd6f008c551ab2d",
+      "after_sha256": "12262f878ee19b98b1f85f8cf7d9711154eb6c96775d1f65ce6980854feb1b9a",
+      "before": {
+        "mechanical_risk_tags": [
+          "mech_acceleration",
+          "mech_change_of_direction",
+          "mech_deceleration",
+          "mech_acceleration",
+          "mech_deceleration",
+          "mech_trunk_rotation",
+          "mech_upper_press"
+        ]
+      },
+      "after": {
+        "mechanical_risk_tags": [
+          "mech_acceleration",
+          "mech_change_of_direction",
+          "mech_deceleration",
+          "mech_trunk_rotation",
+          "mech_upper_press"
+        ]
+      }
+    },
+    {
+      "catalogue_id": "style_taper_conditioning.json:bccf95d9-6f09-4f33-94a3-9ab6076e96d0",
+      "name": "Herd-Corner-Burst-Reset",
+      "before_sha256": "4e7d7756907ac510bc87b99ff829858e49e36e57805d73a60aa25401ae59214e",
+      "after_sha256": "d9626f437e075e6231e58446d54973c64cc31656d3150d8d1916a48fb30ff3fc",
+      "before": {
+        "mechanical_risk_tags": [
+          "mech_acceleration",
+          "mech_change_of_direction",
+          "mech_deceleration",
+          "mech_acceleration",
+          "mech_deceleration",
+          "mech_trunk_rotation",
+          "mech_upper_press"
+        ]
+      },
+      "after": {
+        "mechanical_risk_tags": [
+          "mech_acceleration",
+          "mech_change_of_direction",
+          "mech_deceleration",
+          "mech_trunk_rotation",
+          "mech_upper_press"
+        ]
+      }
+    },
+    {
+      "catalogue_id": "style_taper_conditioning.json:b9d62900-0ff9-4108-9813-6b7e3ca07dd2",
+      "name": "Cutoff-Low-Kick Touch",
+      "before_sha256": "52c3cd473601a5c6800d2087f5b0b12c29022f042b178ea399519492a9eb3dea",
+      "after_sha256": "5b9e5d845bca0039585710856d7cb9dcb28183b2f87589b880c0d48ab0462346",
+      "before": {
+        "mechanical_risk_tags": [
+          "mech_acceleration",
+          "mech_change_of_direction",
+          "mech_deceleration",
+          "mech_acceleration",
+          "mech_deceleration",
+          "mech_lower_hip_hinge",
+          "mech_trunk_rotation"
+        ]
+      },
+      "after": {
+        "mechanical_risk_tags": [
+          "mech_acceleration",
+          "mech_change_of_direction",
+          "mech_deceleration",
+          "mech_lower_hip_hinge",
+          "mech_trunk_rotation"
+        ]
+      }
+    },
+    {
+      "catalogue_id": "style_taper_conditioning.json:b6e17be0-1264-4f21-81e7-55f758ba5db9",
+      "name": "Shuffle-In-Score-Angle-Out",
+      "before_sha256": "8c0bddff0bdd6b8badb185b7811a50edd7548e3cda846e02f15e8d0eb7f996c7",
+      "after_sha256": "1b7c398451c4d0fd734a6bcebd45edadc961b1c9c97d1e515c8d8bcd012d1483",
+      "before": {
+        "mechanical_risk_tags": [
+          "mech_acceleration",
+          "mech_change_of_direction",
+          "mech_deceleration",
+          "mech_acceleration",
+          "mech_deceleration",
+          "mech_trunk_rotation",
+          "mech_upper_press"
+        ]
+      },
+      "after": {
+        "mechanical_risk_tags": [
+          "mech_acceleration",
+          "mech_change_of_direction",
+          "mech_deceleration",
+          "mech_trunk_rotation",
+          "mech_upper_press"
+        ]
+      }
+    },
+    {
+      "catalogue_id": "style_taper_conditioning.json:097a2620-d2fe-445e-a488-7eb98dfddfdb",
+      "name": "Intercept-Step-Straight",
+      "before_sha256": "31ec90b4c417cfaf2bd459df3835b571c17ad72adfe85aa8a1790ed46bfc782e",
+      "after_sha256": "da0b8a02c1265cb2e144e44f73181a7b507f67ae14134a915ceb7d987cc56c42",
+      "before": {
+        "mechanical_risk_tags": [
+          "mech_acceleration",
+          "mech_change_of_direction",
+          "mech_deceleration",
+          "mech_acceleration",
+          "mech_deceleration",
+          "mech_trunk_rotation",
+          "mech_upper_press"
+        ]
+      },
+      "after": {
+        "mechanical_risk_tags": [
+          "mech_acceleration",
+          "mech_change_of_direction",
+          "mech_deceleration",
+          "mech_trunk_rotation",
+          "mech_upper_press"
+        ]
+      }
+    },
+    {
+      "catalogue_id": "style_taper_conditioning.json:6e5a955e-a7f9-4889-8a35-8b8399697ce3",
+      "name": "Range Feint-Entry-Exit",
+      "before_sha256": "86ad39c068d1c26d72facd849c4b5be92c37a9c2edd8b6cfd6b4eefc46c09fe4",
+      "after_sha256": "ec67767ed046bd6538a6a7947fa67a39cec226b10efa422456278ab6a53ecaeb",
+      "before": {
+        "mechanical_risk_tags": [
+          "mech_acceleration",
+          "mech_change_of_direction",
+          "mech_deceleration",
+          "mech_acceleration",
+          "mech_deceleration",
+          "mech_trunk_rotation",
+          "mech_upper_press"
+        ]
+      },
+      "after": {
+        "mechanical_risk_tags": [
+          "mech_acceleration",
+          "mech_change_of_direction",
+          "mech_deceleration",
+          "mech_trunk_rotation",
+          "mech_upper_press"
+        ]
+      }
+    },
+    {
+      "catalogue_id": "style_taper_conditioning.json:2aebb908-3086-4b97-ac17-aa99a37e857c",
+      "name": "Hand-Entry-Single-Kick Reset",
+      "before_sha256": "27eee9f9bb8ee54497bb09cb8993196d94da38c54c03c2538d4bfbdde18d4710",
+      "after_sha256": "770823bf37c688bc40a75608f2f71740b5b3a0bb1c07f5f7dbf1aef52bb6a232",
+      "before": {
+        "mechanical_risk_tags": [
+          "mech_acceleration",
+          "mech_deceleration",
+          "mech_trunk_rotation",
+          "mech_upper_press",
+          "mech_acceleration",
+          "mech_deceleration",
+          "mech_lower_hip_hinge",
+          "mech_trunk_rotation"
+        ]
+      },
+      "after": {
+        "mechanical_risk_tags": [
+          "mech_acceleration",
+          "mech_deceleration",
+          "mech_trunk_rotation",
+          "mech_upper_press",
+          "mech_lower_hip_hinge"
+        ]
+      }
+    },
+    {
+      "catalogue_id": "style_taper_conditioning.json:235ca73e-9d5f-4bd9-91bb-9a1af8177492",
+      "name": "Solo Frame-Turn Exit Cue",
+      "before_sha256": "26695f953a5fc63d6a2dd8ec702b1bd2602078ab1732c9a776eb3757c658d66a",
+      "after_sha256": "4df615e88bda9dc3195bd9b2ad14ab7715c05680238e0d966ed837a19830410b",
+      "before": {
+        "mechanical_risk_tags": [
+          "mech_change_of_direction",
+          "mech_trunk_rotation",
+          "mech_trunk_stability",
+          "mech_trunk_stability"
+        ]
+      },
+      "after": {
+        "mechanical_risk_tags": [
+          "mech_change_of_direction",
+          "mech_trunk_rotation",
+          "mech_trunk_stability"
+        ]
+      }
+    },
+    {
+      "catalogue_id": "style_taper_conditioning.json:c9c65371-b095-436a-ae75-eebed37d596b",
+      "name": "Arm-Drag-Back-Catch-Release",
+      "before_sha256": "919fe24e86063d3d9ae0df57d0a12b8f71cc60be75e948c0d1ed7b344db42159",
+      "after_sha256": "44572608d9be3e47637988d045609002f9d2032ab3b8098b7b1c4fe24d300baa",
+      "before": {
+        "mechanical_risk_tags": [
+          "mech_grip_support",
+          "mech_trunk_stability",
+          "mech_upper_pull",
+          "mech_change_of_direction",
+          "mech_trunk_rotation",
+          "mech_trunk_stability"
+        ]
+      },
+      "after": {
+        "mechanical_risk_tags": [
+          "mech_grip_support",
+          "mech_trunk_stability",
+          "mech_upper_pull",
+          "mech_change_of_direction",
+          "mech_trunk_rotation"
+        ]
+      }
+    },
+    {
+      "catalogue_id": "style_taper_conditioning.json:1624ac48-e865-44a9-93b7-edf7acb3ef5d",
+      "name": "Front-Headlock-Capture-Release",
+      "before_sha256": "df660a4cafe31385fa2de6a1624a21467b6c0fb06b8cdcf9ae0b73a6b20b1a77",
+      "after_sha256": "5e41850918ceab6caecaa90d2f16c5d50685354809f092fa6bb79d6b3552291f",
+      "before": {
+        "mechanical_risk_tags": [
+          "mech_grip_support",
+          "mech_trunk_stability",
+          "mech_upper_pull",
+          "mech_change_of_direction",
+          "mech_trunk_rotation",
+          "mech_trunk_stability"
+        ]
+      },
+      "after": {
+        "mechanical_risk_tags": [
+          "mech_grip_support",
+          "mech_trunk_stability",
+          "mech_upper_pull",
+          "mech_change_of_direction",
+          "mech_trunk_rotation"
+        ]
+      }
+    },
+    {
+      "catalogue_id": "style_taper_conditioning.json:5ea081c4-fc37-42ed-9ed0-7da78c394282",
+      "name": "Guillotine Position-Catch-Release",
+      "before_sha256": "0b7143e31280d3eef62f10c4b54fab914ed5cd5fb86ee8b6194abb62cda97585",
+      "after_sha256": "dbf892efb2aa5ead0c8c4740dc8c7f6bb267f52a76d9e4e102fc2c4542aa3cc5",
+      "before": {
+        "mechanical_risk_tags": [
+          "mech_grip_support",
+          "mech_trunk_stability",
+          "mech_upper_pull",
+          "mech_change_of_direction",
+          "mech_trunk_rotation",
+          "mech_trunk_stability"
+        ]
+      },
+      "after": {
+        "mechanical_risk_tags": [
+          "mech_grip_support",
+          "mech_trunk_stability",
+          "mech_upper_pull",
+          "mech_change_of_direction",
+          "mech_trunk_rotation"
+        ]
+      }
+    },
+    {
+      "catalogue_id": "style_taper_conditioning.json:0b66303f-fa29-42c6-ba34-0c733aad973c",
+      "name": "Snapdown-Go-Behind Touch",
+      "before_sha256": "38941236b2649927f8929404659838f02006dd23f933fe75c096b7d30341da94",
+      "after_sha256": "8c8aea558c1392adfd08ec3e44c33c4200eb2d819ddb0e62844dcc9e6a737755",
+      "before": {
+        "mechanical_risk_tags": [
+          "mech_grip_support",
+          "mech_trunk_stability",
+          "mech_upper_pull",
+          "mech_change_of_direction",
+          "mech_trunk_rotation",
+          "mech_trunk_stability"
+        ]
+      },
+      "after": {
+        "mechanical_risk_tags": [
+          "mech_grip_support",
+          "mech_trunk_stability",
+          "mech_upper_pull",
+          "mech_change_of_direction",
+          "mech_trunk_rotation"
+        ]
+      }
+    },
+    {
+      "catalogue_id": "style_taper_conditioning.json:300e5df6-2e63-4a20-a12c-bfa5015b50c9",
+      "name": "Position-Read Control Touch",
+      "before_sha256": "2876b245b4e4f99cae388a4b7c026b2530acedfa0e1c82dc3090be7f2e152b55",
+      "after_sha256": "328cf9d2b653ccdc6344a57c920fd9621fa09f158614ed1b5c4707e0d75ebc2f",
+      "before": {
+        "mechanical_risk_tags": [
+          "mech_grip_support",
+          "mech_trunk_stability",
+          "mech_upper_pull",
+          "mech_change_of_direction",
+          "mech_trunk_rotation",
+          "mech_trunk_stability"
+        ]
+      },
+      "after": {
+        "mechanical_risk_tags": [
+          "mech_grip_support",
+          "mech_trunk_stability",
+          "mech_upper_pull",
+          "mech_change_of_direction",
+          "mech_trunk_rotation"
+        ]
+      }
+    },
+    {
+      "catalogue_id": "style_taper_conditioning.json:617146e1-bbb2-45c1-a75e-68926153f3b1",
+      "name": "Entry-Read Catch-Release",
+      "before_sha256": "d4e6d8c55e2e859ae8ed9a0bdf3a625e1c2834fcf1c5bbcf63054f566ca34373",
+      "after_sha256": "15a8662f77b4e40b877184557b0b6c9a6ca6686d3091bd5c477bddde4499211c",
+      "before": {
+        "mechanical_risk_tags": [
+          "mech_grip_support",
+          "mech_trunk_stability",
+          "mech_upper_pull",
+          "mech_change_of_direction",
+          "mech_trunk_rotation",
+          "mech_trunk_stability"
+        ]
+      },
+      "after": {
+        "mechanical_risk_tags": [
+          "mech_grip_support",
+          "mech_trunk_stability",
+          "mech_upper_pull",
+          "mech_change_of_direction",
+          "mech_trunk_rotation"
+        ]
+      }
+    }
+  ],
+  "rebindings": [],
+  "base_manifest_sha256": "78bed92457242b89cbf5328665f02e1f4026be35e4c7ef04042f4d29b5da193f",
+  "base_source_sha256": "5b9aa72f2da66ba02424f847f786bb2d758c16b47ae422f64a0a98ff9bd62a4c"
+}

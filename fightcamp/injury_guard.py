@@ -1076,7 +1076,7 @@ def injury_decision(exercise: dict, injuries: Iterable[str | dict] | str | dict,
     for injury in injuries_list:
         if isinstance(injury, dict):
             # For dictionary injuries, use the region as the injury string for matching
-            region = injury.get("region")
+            region = get_injury_location(injury)
             if region:
                 string_injuries_for_matching.append(region)
         else:
@@ -1087,6 +1087,18 @@ def injury_decision(exercise: dict, injuries: Iterable[str | dict] | str | dict,
         string_injuries_for_matching,
         risk_levels=("exclude", "flag"),
     )
+    # An authored regional prohibition must not become "modify" through the
+    # severity-weighted mechanical score, or reuse a pre-metadata cached score.
+    prohibited = [d for d in details
+                  if set(d["fields"]) & {"avoid_if", "contraindications"} and d["risk_level"] == "exclude"]
+    if prohibited:
+        region = prohibited[0]["region"]
+        return Decision(
+            action="exclude", risk_score=threshold, threshold=threshold,
+            matched_tags=[], mods=[],
+            reason={"region": region, "severity": region_severity.get(region),
+                    "bucket": "safety_metadata", "matches": prohibited},
+        )
     if not details:
         return Decision(
             action="allow",

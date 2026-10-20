@@ -15,6 +15,7 @@ import type {
   TodayRecommendationState,
   TodaySession,
 } from "@/lib/types";
+import { readInjuryImpact } from "@/lib/injury-impact";
 import { athleteFacingSessionTitle } from "@/lib/plan-labels";
 
 type TodaySafetyFlags = {
@@ -458,7 +459,13 @@ export function getInjuryOverrideBanner(
     displayState: "injury_blocked",
     chip: "INJURY HOLD",
     title: "Session blocked",
-    detail: `Active severe injury: ${label}. Do not complete ${sessionPhrase} until it is cleared.`,
+    // "Can't train normally" is functional impact on the severe band, not a
+    // medical severity; the hold is identical, only the wording differs.
+    detail: `${
+      readInjuryImpact(injury.description ?? "")?.value === "cant_train"
+        ? "Can't train normally"
+        : "Active severe injury"
+    }: ${label}. Do not complete ${sessionPhrase} until it is cleared.`,
     // Only call out the superseded guidance when a daily recommendation actually
     // exists to supersede (i.e. the athlete has checked in).
     safety:
