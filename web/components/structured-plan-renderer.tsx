@@ -859,6 +859,39 @@ function ExerciseDetail({
   const easier = execution.regressions[0] ? compactCoachLine(execution.regressions[0]) : null;
   const swap = execution.substitutions[0] ?? null;
   const sessionRunning = useExerciseLoggingActive();
+  // Safety instructions are never behind a tap, logging included: one plain line.
+  const stopLine = compactStopRule ? (
+    <p className="ex-detail-stop">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" />
+      </svg>
+      <span>Stop if {compactStopRule.replace(/^(?:(?:stop\s+)?(?:if|when|for))\s+/i, "")}</span>
+    </p>
+  ) : null;
+
+  // Mid-session the sheet is for logging: the prescription, the log and the
+  // stop line. Demo, rationale and coaching stay in the plan view.
+  if (sessionRunning) {
+    return (
+      <div className="injury-sheet-body ex-detail ex-detail-logging">
+        {tagLabel || summary ? (
+          <p className="ex-detail-summary">{[tagLabel, summary].filter(Boolean).join(" · ")}</p>
+        ) : null}
+        {stopLine}
+        {steps.length > 0 ? (
+          <div className="sp-block-aside ex-detail-steps">
+            <span className="sp-stat-label">Steps</span>
+            <ol>{steps.map(step => <li key={step}>{step}</li>)}</ol>
+          </div>
+        ) : null}
+        <div className="ex-detail-prescription">
+          <BlockCard block={block} openWeekIntent={openWeekIntent}
+            sourceCountdown={sourceCountdown} embedded hideCues hideStopRule hideAdjustments hideInstructions />
+        </div>
+        <ExerciseLogPanel block={block} />
+      </div>
+    );
+  }
 
   return (
     <div className="injury-sheet-body ex-detail">
@@ -866,14 +899,7 @@ function ExerciseDetail({
         <p className="ex-detail-summary">{[tagLabel, summary].filter(Boolean).join(" · ")}</p>
       ) : null}
       {/* Safety instructions are never behind a tap: one plain line. */}
-      {compactStopRule ? (
-        <p className="ex-detail-stop">
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" />
-          </svg>
-          <span>Stop if {compactStopRule.replace(/^(?:(?:stop\s+)?(?:if|when|for))\s+/i, "")}</span>
-        </p>
-      ) : null}
+      {stopLine}
       {media ? (
         <details className="ex-detail-section" open={!sessionRunning}>
           <summary>Demo video</summary>
