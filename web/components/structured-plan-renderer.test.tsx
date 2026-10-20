@@ -2184,7 +2184,7 @@ test("renders plan-level active notes as a standalone card", () => {
 // --- open-plan development-block wave ---------------------------------------
 //
 // Week intent may show an explicitly prescribed deload. Progression advice
-// stays hidden in both open-plan and dated-camp exercise cards.
+// is displayed once in both open-plan and dated-camp exercise cards.
 
 const waveSession = {
   session_id: "ses-wave",
@@ -2205,7 +2205,7 @@ const waveSession = {
   ],
 } satisfies StructuredSession;
 
-test("progression week: block cards hide progression and retain stop rules", () => {
+test("progression week: block cards display authored progression once and retain stop rules", () => {
   const html = renderToStaticMarkup(
     <SessionCard
       session={waveSession}
@@ -2215,8 +2215,8 @@ test("progression week: block cards hide progression and retain stop rules", () 
   );
 
   assert.equal(countOccurrences(html, "This week"), 0);
-  assert.equal(countOccurrences(html, "Add 2.5 kg when all sets feel crisp."), 0);
-  assert.equal(html.includes(">Progress</span>"), false);
+  assert.equal(countOccurrences(html, "Add 2.5 kg when all sets feel crisp."), 1);
+  assert.equal(html.includes(">Progress</span>"), true);
   // The stop-rule block keeps its safety aside and invents no generic bump.
   assert.equal(countOccurrences(html, "Stop when throw speed drops."), 1);
   assert.equal(html.includes(">Stop rule</span>"), true);
@@ -2244,14 +2244,14 @@ test("deload week: block cards use their own deload rule, never a progression", 
   assert.equal(html.includes(">Stop rule</span>"), true);
 });
 
-test("dated camp block cards also hide progression", () => {
+test("dated camp block cards display authored Progress", () => {
   const html = renderToStaticMarkup(
     <SessionCard session={waveSession} defaultOpenBlocks />,
   );
 
   assert.equal(html.includes("This week"), false);
-  assert.equal(html.includes(">Progress</span>"), false);
-  assert.equal(countOccurrences(html, "Add 2.5 kg when all sets feel crisp."), 0);
+  assert.equal(html.includes(">Progress</span>"), true);
+  assert.equal(countOccurrences(html, "Add 2.5 kg when all sets feel crisp."), 1);
 });
 
 test("open plan week overview headlines the block-week intent", () => {

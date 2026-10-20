@@ -7,18 +7,16 @@ from fightcamp.calendar_context import role_d_day
 from fightcamp.exercise_instructions import recover_execution_instructions
 from fightcamp.coaching_copy import concise_coaching
 from fightcamp.exercise_coaching import (
-    exercise_coaching, is_profile_progression, is_profile_cue,
+    exercise_coaching, is_profile_progression, is_profile_cue, easier_rejection, clinical_coaching_rejection,
 )
 from fightcamp.exercise_progression import (
-    build_progression_context, occurrence_key,
+    build_progression_context, occurrence_key, progress_rejection, effective_exercise_prescription, structured_dose, measured_dose,
 )
 from fightcamp.structured_session_identity import deterministic_session_id, identity_tokens
 
 
 def _matching_assignment(candidates, session, day):
     """Never borrow context from a second occurrence of the same exercise."""
-    if len(candidates) == 1:
-        return candidates[0]
     session_id = str(session.get("session_id") or "").lower()
     exact = [c for c in candidates if session_id == deterministic_session_id(c[0], day)]
     if len(exact) == 1:
@@ -33,22 +31,54 @@ def _matching_assignment(candidates, session, day):
     return exact[0] if len(exact) == 1 else None
 
 
-def _recover_programming(block: dict, assignment: dict, context: dict | None, fields: dict) -> None:
-    if context is None:
-        return
-    # The converter sees the final session. Keep its short adjustments rather
-    # than replacing them with a dose-difference or generic fallback algorithm.
-    if context["current"]["blocked"] or is_profile_progression(str(block.get("progression_rule") or "")):
+def _current_card_dose(block: dict) -> dict:
+    # Compound/legacy cards retain their exact working dose as execution text.
+    # Explicit edited statistic fields always take precedence over that metadata.
+    return {**measured_dose(str(block.get("execution_instructions") or "")), **structured_dose(block)}
+
+
+def _dose_matches(block: dict, role: dict, assignment: dict) -> bool:
+    from .structured_plan_deterministic_fallback import _lift_dose_fields
+    from .structured_plan_faithfulness import _prescription_value
+    prescription = effective_exercise_prescription(role, assignment)
+    fields, _ = _lift_dose_fields(prescription)
+    for key in ("sets", "reps", "rounds", "duration", "work", "distance", "load", "rest", "effort"):
+        if block.get(key) not in (None, "", {}) and key not in fields:
+            return False  # Extra current quantities are not covered by programme authority.
+    if block.get("tempo"):
+        tempo = re.search(r"tempo\s+(\d+)[-–](\d+)[-–](\d+|X)", prescription, re.I)
+        if not tempo or tuple(str(block["tempo"].get(key)).upper() for key in (
+                "eccentric", "pause_bottom", "concentric")) != tuple(value.upper() for value in tempo.groups()):
+            return False
+    return bool(fields) and all(_prescription_value(block.get(k)) == _prescription_value(v)
+                                for k, v in fields.items())
+
+
+def _recover_programming(block: dict, role: dict, assignment: dict, context: dict | None,
+                         athlete: dict, brief: dict, source: dict | None = None) -> None:
+    matches = _dose_matches(block, role, assignment)
+    if source is not None:
+        for key in ("progression_rule", "regression_options"):
+            if source.get(key):
+                block[key] = deepcopy(source[key])
+            else:
+                block.pop(key, None)
+    rule = str(block.get("progression_rule") or "")
+    if rule and (is_profile_progression(rule) or progress_rejection(rule, context, dose_matches=matches) or clinical_coaching_rejection(rule, brief)):
         block.pop("progression_rule", None)
+    block["regression_options"] = [text for text in block.get("regression_options") or []
+        if not easier_rejection(text, assignment, role, athlete, brief=brief,
+                                current_dose=None if matches else _current_card_dose(block))]
 
 
 def recover_selected_coaching(plan: dict[str, Any], brief: dict[str, Any],
-                              progression_context: dict | None = None) -> dict[str, Any]:
+                              progression_context: dict | None = None, *, source_text: str = "") -> dict[str, Any]:
     if brief.get("custom_plan"):
         return plan
     plan = recover_execution_instructions(plan)
-    if not brief:
-        return plan
+    from fightcamp.exercise_coaching_source import source_coaching, validate_source_coaching, coaching_identity
+    validated_text, _ = validate_source_coaching(brief, source_text)
+    authored = source_coaching(validated_text)
     selected = {}
     for week in (brief.get("weekly_role_map") or {}).get("weeks") or []:
         for role in week.get("session_roles") or []:
@@ -61,8 +91,6 @@ def recover_selected_coaching(plan: dict[str, Any], brief: dict[str, Any],
                 candidate = (role, week, assignment)
                 for identity in {name, key} - {""}:
                     selected.setdefault((day, identity), []).append(candidate)
-    if not selected:
-        return plan
     if progression_context is None:
         progression_context = build_progression_context(brief)
     # Never mutate the persisted object, which other services may still hold.
@@ -70,19 +98,37 @@ def recover_selected_coaching(plan: dict[str, Any], brief: dict[str, Any],
     for week in recovered.get("weeks") or []:
         for day in week.get("days") or []:
             label = str(day.get("countdown_label") or "")
-            if not label.startswith("D-") or not label[2:].isdigit():
-                continue
-            offset = int(label[2:])
+            offset = int(label[2:]) if label.startswith("D-") and label[2:].isdigit() else None
             for session in day.get("sessions") or []:
                 for block in session.get("blocks") or []:
                     if block.get("athlete_change") or block.get("prescription_source") == "athlete":
                         continue
+                    # Old converters put labelled adjustments in the cue list.
+                    # Route before validation so React cannot resurrect a rejected rule.
+                    cues = []
+                    for cue in block.get("coaching_cues") or []:
+                        match = re.match(r"^\s*(Progress(?:ion)?|Easier|Regression)\s*:\s*(.+)$", cue, re.I)
+                        if not match:
+                            cues.append(cue)
+                        elif match[1].lower().startswith("progress"):
+                            block.setdefault("progression_rule", match[2])
+                        else:
+                            block.setdefault("regression_options", []).append(match[2])
+                    if block.get("coaching_cues"):
+                        block["coaching_cues"] = cues
                     candidates = selected.get((offset, str(block.get("exercise_key") or ""))) or selected.get(
                         (offset, str(block.get("display_name") or "").casefold())
                     )
                     match = _matching_assignment(candidates or [], session, offset)
                     if match is None:
-                        continue  # Ambiguous legacy duplicate: preserve its existing coaching.
+                        if block.get("block_type") in {"strength", "strength_speed", "plyometric_power", "speed", "accessory", "conditioning", "rehab"}:
+                            if progress_rejection(str(block.get("progression_rule") or ""), None) or clinical_coaching_rejection(str(block.get("progression_rule") or ""), brief):
+                                block.pop("progression_rule", None)
+                            if block.get("regression_options"):
+                                block["regression_options"] = [text for text in block["regression_options"]
+                                    if not easier_rejection(text, {"name": block.get("display_name")}, {},
+                                        brief.get("athlete_snapshot") or {}, brief=brief, current_dose=_current_card_dose(block))]
+                        continue  # Ambiguous context cannot author or license a number.
                     role, source_week, assignment = match
                     programming_context = progression_context.get(occurrence_key(role, assignment, offset))
                     fields = exercise_coaching(
@@ -100,9 +146,45 @@ def recover_selected_coaching(plan: dict[str, Any], brief: dict[str, Any],
                             continue  # Adjustment notes are owned by the final-session LLM.
                         if value and not block.get(field):
                             block[field] = deepcopy(value)
-                    _recover_programming(block, assignment, progression_context.get(
-                        occurrence_key(role, assignment, offset)), fields)
+                    source = authored.get((offset, coaching_identity(session.get("title")),
+                                           coaching_identity(block.get("display_name"))))
+                    _recover_programming(block, role, assignment, programming_context,
+                                         brief.get("athlete_snapshot") or {}, brief,
+                                         source["fields"] if source else None)
                     compact = concise_coaching({k: block.get(k) for k in (
                         "coaching_cues", "regression_options", "stop_rules")})
                     block.update(compact)
     return recovered
+
+
+def validate_final_coaching(result: dict[str, Any]) -> dict[str, Any]:
+    """Apply the same rejection rules to saved text and saved cards."""
+    from fightcamp.exercise_coaching_source import validate_source_coaching
+    brief = result.get("planning_brief") or {}
+    if isinstance(brief, str):
+        import json
+        try:
+            brief = json.loads(brief)
+        except (TypeError, ValueError):
+            brief = {}
+    if not isinstance(brief, dict):
+        brief = {}
+    if brief.get("custom_plan"):
+        return result
+    source = str(result.get("final_plan_text") or result.get("plan_text") or "")
+    text, findings = validate_source_coaching(brief, source)
+    validated = {**result}
+    for key in ("final_plan_text", "plan_text"):
+        if result.get(key):
+            validated[key], _ = validate_source_coaching(brief, str(result[key]))
+    if isinstance(result.get("structured_plan"), dict):
+        from .services.effective_structured_plan import _without_athlete_change_claims
+        validated["structured_plan"] = recover_selected_coaching(
+            _without_athlete_change_claims(result["structured_plan"]), brief, source_text=text)
+        if validated["structured_plan"].get("raw_markdown_fallback"):
+            validated["structured_plan"]["raw_markdown_fallback"], _ = validate_source_coaching(
+                brief, str(validated["structured_plan"]["raw_markdown_fallback"]))
+    if findings:
+        validated["stage2_validator_report"] = {**(result.get("stage2_validator_report") or {}),
+                                                "exercise_coaching": findings}
+    return validated

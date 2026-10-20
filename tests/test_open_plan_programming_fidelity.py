@@ -71,13 +71,15 @@ def _reference_row():
         "coach_owned_days": {"hard_sparring_days": ["Tuesday", "Thursday"], "support_work_days": ["Friday"]}},
         "weekly_session_plan": {"authority": "deterministic_open_development_block", "weeks": decisions},
         "tactical_watch": {"weekly_rotation": rotation}}
+    # Explicit actionable AI fixtures for the current movement. Numerical
+    # advancement is tested separately against real exposure authority.
     easier_and_stop = [
-        (["3 sets x 2 reps"], ["Stop if balance or control lost."]),
-        (["3 sets x 2 reps"], ["Stop if low-back pain appears."]),
-        (["Bodyweight vertical jumps"], ["Stop if landing becomes stiff or uncontrolled."]),
-        (["Step down and perform controlled single-leg hops"], ["Stop if you cannot land quietly and hold."]),
-        (["Use lighter load", "Hold a Pallof press for 20 seconds"], ["Stop if twisting at the hips happens."]),
-        (["Two-leg RDL holds"], ["Stop if hip drops or sharp hamstring pain."]),
+        (["Use lighter load."], ["Stop if balance or control lost."]),
+        (["Ease movement force."], ["Stop if low-back pain appears."]),
+        (["Reduce jump height."], ["Stop if landing becomes stiff or uncontrolled."]),
+        (["Use a lower landing height."], ["Stop if you cannot land quietly and hold."]),
+        (["Use a smaller pain-free range."], ["Stop if twisting at the hips happens."]),
+        (["Use a supported stance."], ["Stop if hip drops or sharp hamstring pain."]),
     ]
     source_blocks = []
     for index, name in enumerate(names):
@@ -89,9 +91,7 @@ def _reference_row():
             dose = {"sets": 2, "duration": {"value": 20, "unit": "seconds"}, "rest": {"value": 60, "unit": "seconds"}}
         source_blocks.append({"block_id": f"saved-strength-{index}", "block_type": "strength", "display_name": name,
                               "coaching_cues": [], **dose, "regression_options": easier_and_stop[index][0],
-                              "stop_rules": easier_and_stop[index][1], "progression_rule": (
-                                  "Add one set." if index < 3 else "Add one rep per set." if index < 5
-                                  else "Add five seconds per hold.")})
+                              "stop_rules": easier_and_stop[index][1], "progression_rule": "At the same dose, refine movement control."})
     sessions = [
         {**copy.deepcopy(session_template), "session_id": "ses-tw-1", "session_type": "skill",
          "title": "Tactical Focus — Attack Trigger Map", "execution_order": 1,
@@ -347,3 +347,30 @@ def test_final_plan_detail_preserves_coach_led_sparring_headline_and_load(saved_
                 if saved_contact_flag:
                     assert day.today_card.coach_led_contact == "Hard sparring"
                 assert day.sessions == []
+
+
+def test_repeated_open_exercise_keeps_its_appointment_coaching_when_order_changes():
+    row = _reference_row()
+    week = row["structured_plan"]["weeks"][0]
+    day = next(day for day in week["days"] if day["weekday"] == "Sat")
+    first = next(session for session in day["sessions"] if session["title"] == "Strength")
+    second = copy.deepcopy(first)
+    second.update(title="Second strength appointment", session_id="second-strength")
+    for block in second["blocks"]:
+        block["block_id"] += "-second"
+        block["progression_rule"] = "At the same dose, refine balance in this appointment."
+        block["regression_options"] = ["Use a smaller pain-free movement."]
+    day["sessions"].insert(0, second)  # Exact title must beat the first name match.
+    decisions = row["planning_brief"]["open_plan_spec"]["weekly_session_plan"]["weeks"]
+    for decision in decisions:
+        item = copy.deepcopy(next(session for session in decision["sessions"] if session["category"] == "strength"))
+        item["label"] = "Second strength appointment"
+        decision["sessions"].append(item)
+    _, projected = _project(row)
+    for week in projected["weeks"]:
+        sessions = [session for day in week["days"] for session in day["sessions"]]
+        first = next(session for session in sessions if session["title"] == "Strength")
+        second = next(session for session in sessions if session["title"] == "Second strength appointment")
+        assert all(block.get("progression_rule") == "At the same dose, refine movement control." for block in first["blocks"])
+        assert all(block.get("progression_rule") == "At the same dose, refine balance in this appointment." for block in second["blocks"])
+        assert all(block["regression_options"] == ["Use a smaller pain-free movement."] for block in second["blocks"])

@@ -415,6 +415,9 @@ def _lift_dose_fields(dose: str) -> tuple[dict[str, Any], str]:
     percent = re.search(r"(\d+(?:\.\d+)?)\s*%\s*1rm\b", dose, re.I)
     if percent:
         fields["load"] = {"method": "percentage", "value": _number(percent[1]), "unit": "percent", "ref": "1RM"}
+    if absolute := re.search(r"(\d+(?:\.\d+)?)\s*(kg|lbs?)\b", dose, re.I):
+        fields["load"] = {"method": "absolute", "value": _number(absolute[1]),
+                          "unit": "lb" if absolute[2].lower().startswith("lb") else "kg"}
     return fields, "; ".join(kept)
 
 
@@ -519,7 +522,8 @@ _MICRODOSE_BLOCK_TYPE_BY_GOAL = {
 }
 
 
-def _microdose_block(role: dict[str, Any], d_day: int, role_key: str) -> dict[str, Any] | None:
+def _microdose_block(role: dict[str, Any], d_day: int, role_key: str,
+                     source_lines: list[str] | None = None) -> dict[str, Any] | None:
     """The host's priority microdose, as subordinate work inside its session.
 
     Never its own session or card: it is rendered as the first block of the host
@@ -538,8 +542,15 @@ def _microdose_block(role: dict[str, Any], d_day: int, role_key: str) -> dict[st
     coaching = exercise_coaching({"name": name, "slot_group": "priority_microdose",
                                   "coaching_notes": microdose.get("coaching_notes"),
                                   "effective_prescription": prescription}, role, d_day=d_day)
+    coaching.pop("progression_rule", None)
+    coaching["regression_options"] = []
+    source = _source_block(source_lines, name)
+    if source:
+        for key in ("execution_instructions", "coaching_cues", "progression_rule", "regression_options", "stop_rules"):
+            if source.get(key):
+                coaching[key] = source[key]
     return {
-        "block_id": f"deterministic-{d_day}-{role_key}-microdose",
+        "block_id": f"deterministic-{d_day}-{role_key}-{role.get('session_index', 0)}-microdose",
         "block_type": _MICRODOSE_BLOCK_TYPE_BY_GOAL.get(goal, "accessory"),
         # Preserve the selected exercise name for closed-membership checks and
         # identity resolution. The priority label belongs in its purpose.
@@ -588,7 +599,7 @@ def _blocks(
         ):
             continue
         block: dict[str, Any] = {
-            "block_id": f"deterministic-{d_day}-{role_key}-{index}",
+            "block_id": f"deterministic-{d_day}-{role_key}-{role.get('session_index', 0)}-{index}",
             "block_type": block_type,
             "display_name": name,
             # The assignment name is the canonical bank exercise.
@@ -618,6 +629,10 @@ def _blocks(
             coaching = exercise_coaching(assignment, role, phase=phase, d_day=d_day, athlete=athlete,
                                          progression_context=(progression_context or {}).get(
                                              occurrence_key(role, assignment, d_day)))
+            # Stage 1 bank notes are execution evidence, not final-session AI
+            # adjustments. Without final source text, both fields remain absent.
+            coaching.pop("progression_rule", None)
+            coaching["regression_options"] = []
             block["coaching_cues"].extend(coaching.pop("coaching_cues"))
             if prescription:
                 block["coaching_cues"].append(prescription)
@@ -628,7 +643,7 @@ def _blocks(
     # Only ever attached to a host that already renders. A role with no selected
     # exercise renders no session at all here, and a microdose must not be the
     # thing that brings one into existence - that would be a new session.
-    microdose_block = _microdose_block(role, d_day, role_key) if blocks else None
+    microdose_block = _microdose_block(role, d_day, role_key, source_lines) if blocks else None
     if microdose_block is not None:
         for block in blocks:
             block["order_index"] = int(block.get("order_index") or 0) + 1
@@ -670,7 +685,7 @@ def _support_instruction(role: dict[str, Any]) -> str:
 
 _WHY_LINE_RE = re.compile(r"^\s*why\s*:\s*(?P<text>.+)$", re.IGNORECASE)
 _ACTIVITY_LINE_RE = re.compile(r"^\s*[-*•]\s*(?P<body>.+)$")
-_DETAIL_LINE_RE = re.compile(r"^\s*(?P<label>[A-Za-z][A-Za-z /-]{0,28})\s*:\s*(?P<text>.+)$")
+_DETAIL_LINE_RE = re.compile(r"^\s*(?:\*\*)?(?P<label>[A-Za-z][A-Za-z /-]{0,28})(?:\*\*)?\s*:\s*(?:\*\*)?\s*(?P<text>.+)$")
 
 #: Detail labels that already have a home in the structured block schema. Every
 #: other planner label (Cue, Cue Method, Side / Stance, Step N, Intent, Focus,
@@ -892,7 +907,11 @@ def _session(
     title = athlete_facing_label_for(
         role_key, fallback=str(role.get("athlete_facing_label") or "").strip() or None
     )
-    source_lines = _source_lines_for_session(source_lines, str(title or ""))
+    # The appointment's own label disambiguates duplicate role/exercise pairs.
+    source_title = str(role.get("athlete_facing_label") or title or "")
+    source_lines = _source_lines_for_session(source_lines, source_title)
+    if source_lines:
+        title = source_title
     blocks = _blocks(role, d_day, role_key or "role", source_lines, athlete, phase, progression_context)
     instruction = _support_instruction(role)
     if not blocks and not instruction and source_lines:
@@ -1027,11 +1046,6 @@ def reconcile_open_development_sessions(
             return plan
         by_day = {day["weekday"]: day for day in week["days"]}
         previous_by_day = {day["weekday"]: list(day.get("sessions") or []) for day in week["days"]}
-        previous = [session for day in week["days"] for session in day.get("sessions") or []]
-        blocks_by_name = {
-            block.get("display_name"): block
-            for session in previous for block in session.get("blocks") or []
-        }
         for day in week["days"]:
             day["sessions"] = []
         for index, item in enumerate(decision["sessions"]):
@@ -1044,9 +1058,12 @@ def reconcile_open_development_sessions(
                 continue
             exercises = item.get("exercises") or []
             names = [exercise["name"] for exercise in exercises]
-            old = next((session for session in previous_by_day[weekday] if (
-                bool(names) and [block.get("display_name") for block in session.get("blocks") or []] == names
-            ) or session.get("title") == item.get("label")), None)
+            candidates = [session for session in previous_by_day[weekday]
+                          if session.get("title") == item.get("label")]
+            if not candidates:
+                candidates = [session for session in previous_by_day[weekday]
+                              if names and [block.get("display_name") for block in session.get("blocks") or []] == names]
+            old = candidates[0] if len(candidates) == 1 else None
             if old is not None:
                 previous_by_day[weekday].remove(old)
             role = {
@@ -1070,8 +1087,7 @@ def reconcile_open_development_sessions(
             session["execution_order"] = item.get("execution_order")
             for block in session["blocks"]:
                 original = next((source for source in (old or {}).get("blocks") or []
-                                 if source.get("display_name") == block["display_name"]),
-                                blocks_by_name.get(block["display_name"]))
+                                 if source.get("display_name") == block["display_name"]), None)
                 if original is not None:
                     # Preserve exercise-specific Progress/Easier/Stop copy. Only
                     # the prescribed dose comes from this week's decision.
@@ -1157,6 +1173,8 @@ def _build(planning_brief: Any, plan_text: str | None = None) -> dict[str, Any] 
     # are two sessions, and the same role is never emitted twice.
     sessions_by_dday: dict[int, list[dict[str, Any]]] = {}
     seen: set[tuple[int, str, Any]] = set()
+    from fightcamp.exercise_coaching_source import validate_source_coaching
+    plan_text, _ = validate_source_coaching(planning_brief, plan_text or "")
     source_days = _source_day_section_lines(plan_text) if isinstance(plan_text, str) else {}
     from fightcamp.exercise_progression import build_progression_context
     progression_context = build_progression_context(planning_brief)
@@ -1235,7 +1253,7 @@ def _build(planning_brief: Any, plan_text: str | None = None) -> dict[str, Any] 
             week["week_goal"] = str((strategy.get(week.get("phase_label")) or {}).get("visible_objective") or "")
     plan.update(_plan_envelope(planning_brief))
     from .structured_plan_coaching import recover_selected_coaching
-    return recover_selected_coaching(plan, planning_brief, progression_context)
+    return recover_selected_coaching(plan, planning_brief, progression_context, source_text=plan_text or "")
 
 
 def _label_dday(label: Any) -> int | None:

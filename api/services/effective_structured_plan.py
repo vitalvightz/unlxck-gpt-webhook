@@ -195,7 +195,9 @@ def resolve_effective_structured_plan(
         resolved = ensure_structured_session_ids(resolved, plan_id=plan_row.get("id"))
         resolved = merge_planner_owned_structured_content(resolved, dict(brief)).plan
     from api.structured_plan_coaching import recover_selected_coaching
-    resolved = recover_selected_coaching(resolved, dict(brief))
+    resolved = _without_athlete_change_claims(resolved)
+    resolved = recover_selected_coaching(resolved, dict(brief),
+        source_text=raw_markdown or str(plan_row.get("plan_text") or ""))
     if not brief.get("custom_plan"):
         fields = ("prescription_source", "prescription_text", "athlete_dose",
                   "private_media_id", "community_revision_id", "source_session_id", "catalogue_id")
@@ -220,7 +222,6 @@ def resolve_effective_structured_plan(
                                 continue
                             for field in fields:
                                 block.pop(field, None)
-    resolved = _without_athlete_change_claims(resolved)
     resolved = _with_coach_led_contact(resolved, brief)
     resolved = ensure_structured_session_ids(resolved, plan_id=plan_row.get("id"))
     return ensure_structured_block_ids(resolved)

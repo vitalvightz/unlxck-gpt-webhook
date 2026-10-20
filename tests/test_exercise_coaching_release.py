@@ -8,7 +8,6 @@ import asyncio
 from copy import deepcopy
 import json
 import os
-import re
 from pathlib import Path
 import subprocess
 from types import SimpleNamespace
@@ -21,9 +20,7 @@ from api.stage2_automation import OpenAIStage2Automator
 from api.structured_plan_deterministic_fallback import build_deterministic_structured_plan
 from api.structured_plan_generation import build_structured_plan_outcome
 from fightcamp.exercise_coaching import exercise_coaching
-from fightcamp.exercise_progression import build_progression_context
-from fightcamp.programme_fidelity import reconcile_authoritative_programme
-from test_programme_fidelity_production import FIXTURES, _persist_final, production_replay as _production_replay
+from test_programme_fidelity_production import _persist_final, production_replay as _production_replay
 from support import FakeOpenAIClient
 from test_card_replay_representative_plans import replay as _representative_replay
 
@@ -51,24 +48,41 @@ def response(text):
                            usage=SimpleNamespace(input_tokens=1, output_tokens=1, total_tokens=2))
 
 
+def ai_release_source(brief, text):
+    """Explicit offline AI response fixture; production helpers author neither field."""
+    from fightcamp.exercise_coaching_source import _EXERCISE, _LABEL
+    from fightcamp.exercise_coaching_source import coaching_identity
+    selected = {coaching_identity(a["name"]) for w in brief["weekly_role_map"]["weeks"]
+                for r in w["session_roles"] for a in r.get("selected_exercise_assignments", [])
+                if a.get("slot_group") in {"strength_slots", "conditioning_slots", "priority_microdose"}}
+    lines = []
+    for line in text.splitlines():
+        label = _LABEL.match(line)
+        if label and label[1].lower() in {"easier", "regression", "progress", "progression"}:
+            continue
+        lines.append(line)
+        if (exercise := _EXERCISE.match(line)) and coaching_identity(exercise[1]) in selected:
+            lines.extend([
+                "  Easier: Use a smaller pain-free movement at the same dose.",
+                "  Progress: At the same dose, refine movement control.",
+            ])
+    return "\n".join(lines)
+
+
 @pytest.mark.parametrize("path", ["converted", "rejected_fast_fallback", "not_attempted_fallback"])
 @pytest.mark.skipif(not (ROOT / "web/node_modules/tsx").is_dir(),
                     reason="Release rendering requires npm ci in web; the coaching-release CI job installs it")
 def test_final_persisted_physical_rows_keep_coaching_in_react(production_replay, monkeypatch, path):
     intake, stage1, reference_final, _ = production_replay
     brief = stage1["planning_brief"]
-    source = reference_final["final_plan_text"]
+    source = ai_release_source(brief, reference_final["final_plan_text"])
     reference = build_deterministic_structured_plan(brief, plan_text=source)
     assert reference
     expected = blocks(reference)
-    # Missing notes receive one short numerical step, never quality filler.
     rules = [b["progression_rule"] for _, b in expected if b.get("progression_rule")]
-    assert rules and all(re.search(r"\d", rule) and len(rule.split()) <= 9 for rule in rules)
+    assert rules and all(rule == "At the same dose, refine movement control." for rule in rules)
     assert sum(bool(b.get("regression_options")) for _, b in expected) >= 20
     assert sum(bool(b.get("stop_rules")) for _, b in expected) >= 20
-    for week, block in expected:
-        if week["phase_label"] == "TAPER":
-            assert not block.get("progression_rule"), block["display_name"]
     candidate = deepcopy(reference)
     if path == "rejected_fast_fallback":
         for _, block in blocks(candidate):
@@ -76,7 +90,7 @@ def test_final_persisted_physical_rows_keep_coaching_in_react(production_replay,
                 block.pop(field, None)
     monkeypatch.setenv("UNLXCK_STAGE2_STRUCTURED_PLAN", "0" if path == "not_attempted_fallback" else "1")
     monkeypatch.delenv("UNLXCK_STAGE2_STRUCTURED_REPAIR", raising=False)
-    raw = (FIXTURES / "production_render.txt").read_text(encoding="utf8")
+    raw = source
     client = FakeOpenAIClient([response(raw), response(json.dumps(candidate))])
     automator = OpenAIStage2Automator(client=client, model="offline")
     final = asyncio.run(automator.finalize(stage1_result=stage1))
@@ -100,7 +114,11 @@ def test_final_persisted_physical_rows_keep_coaching_in_react(production_replay,
             if field == "coaching_cues":
                 assert canonical_cues(found) == canonical_cues(wanted)
                 continue
-            assert found.get(field) == wanted.get(field), (path, wanted["display_name"], field)
+            if field in DOSE:
+                from api.structured_plan_faithfulness import _prescription_value
+                assert _prescription_value(found.get(field)) == _prescription_value(wanted.get(field)), (path, wanted["display_name"], field)
+            else:
+                assert found.get(field) == wanted.get(field), (path, wanted["display_name"], field)
     # Render the API payload AFTER persistence and the effective-plan resolver.
     result = subprocess.run(
         ["node", "--import", "tsx", "--import", "./test/register-css-stub.mjs",
@@ -121,27 +139,7 @@ def test_final_persisted_physical_rows_keep_coaching_in_react(production_replay,
 def test_a_converter_cannot_drop_any_applicable_coaching_field(production_replay, field):
     _, stage1, final, _ = production_replay
     brief = deepcopy(stage1["planning_brief"])
-    source = final["final_plan_text"]
-    if field == "progression_rule":
-        # A controlled fixture with an explicitly authorised future rep increase.
-        # Candidate/budget changes may move the appointment or select another
-        # lift. Exercise the release contract using a real comparable pair,
-        # without hard-coding the old programme's date or thruster selection.
-        pair = next(c for c in build_progression_context(brief).values()
-                    if c['next'] and c['current']['role'].get('category') == 'strength'
-                    and not c['current']['blocked'] and not c['next']['blocked']
-                    and c['current']['phase'] == c['next']['phase']
-                    and c['current']['dose'] == c['next']['dose']
-                    and c['next']['dose'].get('reps'))
-        role = pair['next']['role']
-        member = pair['next']['assignment']
-        future = next(p for p in role['effective_strength_prescriptions']
-                      if p['name'] == member['name'] and p.get('slot_id') == member.get('slot_id'))
-        future['effective_prescription'] = re.sub(
-            r'(\b\d+\s*x\s*)(\d+)', lambda m: m[1] + str(int(m[2]) + 1),
-            future['effective_prescription'], count=1,
-        )
-        source = reconcile_authoritative_programme(brief, source)["text"]
+    source = ai_release_source(stage1["planning_brief"], final["final_plan_text"])
     candidate = build_deterministic_structured_plan(brief, plan_text=source)
     target = next(b for _, b in blocks(candidate) if b.get(field))
     target.pop(field)
@@ -155,10 +153,13 @@ def test_a_converter_cannot_drop_any_applicable_coaching_field(production_replay
     {"phase": "TAPER"}, {"d_day": 7}, {"athlete": {"fatigue": "high"}},
     {"athlete": {"has_active_injury": True}}, {"athlete": {"weight_cut_risk": True}},
 ])
-def test_maintenance_contexts_have_easier_and_stop_without_progress(context):
+def test_maintenance_context_preserves_authored_easier_and_never_fabricates_it(context):
     a = {"name": "Barbell Thruster", "slot_group": "strength_slots", "source_phase": "SPP"}
     fields = exercise_coaching(a, {}, **context)
-    assert fields["coaching_cues"] and fields["regression_options"] and fields["stop_rules"]
+    assert fields["coaching_cues"] and fields["stop_rules"]
+    assert not fields["regression_options"]  # Missing AI source is not fabricated.
+    a["regression_options"] = ["Use a smaller pain-free movement at the same dose."]
+    assert exercise_coaching(a, {}, **context)["regression_options"] == a["regression_options"]
     assert not fields.get("progression_rule")
     assert "effective_prescription" not in fields
 
@@ -171,14 +172,15 @@ def test_unknown_and_rehab_exercises_get_no_invented_progression():
 
 def test_existing_saved_card_recovers_missing_guidance_without_rewriting_doses(production_replay):
     _, stage1, final, _ = production_replay
-    card = build_deterministic_structured_plan(stage1["planning_brief"], plan_text=final["final_plan_text"])
+    source = ai_release_source(stage1["planning_brief"], final["final_plan_text"])
+    card = build_deterministic_structured_plan(stage1["planning_brief"], plan_text=source)
     original = deepcopy(card)
     for _, block in blocks(card):
         for field in ("regression_options", "progression_rule", "stop_rules"):
             block.pop(field, None)
     stored = deepcopy(card)
     recovered = resolve_effective_structured_plan({"planning_brief": stage1["planning_brief"],
-                                                 "structured_plan": card})
+                                                 "structured_plan": card, "plan_text": source})
     assert card == stored  # read-only recovery
     for (_, before), (_, after) in zip(blocks(original), blocks(recovered)):
         assert all(before.get(k) == after.get(k) for k in DOSE)
@@ -208,7 +210,8 @@ def test_representative_fallback_retains_execution_safety_at_fixed_doses(replay)
         if block.get("regression_options"):
             assert block.get("coaching_cues") and block.get("stop_rules"), (name, block["display_name"])
         if week["phase_label"] == "TAPER" or brief["athlete_snapshot"].get("fatigue") == "high":
-            assert not block.get("progression_rule"), (name, block["display_name"])
+            from fightcamp.exercise_progression import progress_rejection
+            assert not block.get("progression_rule") or progress_rejection(block["progression_rule"], None) is None
         for instruction in [*(block.get("regression_options") or []), block.get("progression_rule") or ""]:
             assert not any(word in instruction.lower() for word in ("add a set", "add reps", "shorten rest"))
 

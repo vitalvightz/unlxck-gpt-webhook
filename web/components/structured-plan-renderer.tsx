@@ -391,7 +391,7 @@ function useBlockPrescription(block: StructuredBlock, sourceCountdown?: string |
   const restText = sourceOverrides.rest || (shouldShowRest(block.rest) ? formatMeasured(block.rest) : null);
   const rest = restText ? compactTimeUnits(restText) : null;
   const effort = sourceOverrides.effort || formatEffort(block);
-  const { stopRules } = getBlockAdjustmentDisplay(block);
+  const { progression, stopRules } = getBlockAdjustmentDisplay(block);
   const sourceStopRule = getSourceStopRuleOverride(sourceText, title, sourceCountdown);
   // Drop stop-rule criteria that only restate injury-safety escalation the
   // Safety Priority card already owns, so the block keeps its own criterion
@@ -411,7 +411,7 @@ function useBlockPrescription(block: StructuredBlock, sourceCountdown?: string |
       .map((rule) => rule.trim().replace(/^stop(?:\s+rule)?\s*:\s*/i, "").trim())
       .filter(Boolean)
       .join("; ") || null;
-  return { title, load, metrics, rest, effort, compactStopRule };
+  return { title, load, metrics, rest, effort, compactStopRule, progression };
 }
 
 export function BlockCard({
@@ -427,7 +427,7 @@ export function BlockCard({
 }: {
   block: StructuredBlock;
   /** Development-block intent for an explicitly prescribed deload instruction.
-   * Exercise progression stays hidden; dated camps never pass this intent. */
+   * The validated rule remains visible once; dated camps pass no week intent. */
   openWeekIntent?: OpenBlockWeekIntent | null;
   sourceCountdown?: string | null;
   /** Rendered inside an ExerciseRow, whose header already names the exercise. */
@@ -437,12 +437,12 @@ export function BlockCard({
   /** The exercise sheet shows cues and the stop rule in their own places. */
   hideCues?: boolean;
   hideStopRule?: boolean;
-  /** The detail sheet already displays Swaps/Easier/Stop. */
+  /** The detail sheet already displays Swaps/Easier/Progress/Stop. */
   hideAdjustments?: boolean;
   hideInstructions?: boolean;
 }) {
   const rehabLabelPolicy = useContext(RehabLabelContext);
-  const { title, load, metrics, rest, effort, compactStopRule } = useBlockPrescription(
+  const { title, load, metrics, rest, effort, compactStopRule, progression } = useBlockPrescription(
     block,
     sourceCountdown,
   );
@@ -460,10 +460,10 @@ export function BlockCard({
   // The demo can pin the lead cue; every remaining authored detail still belongs here.
   const visibleCues = hideCues ? [] : allCues.slice(hideLeadCue ? 1 : 0).map(compactCoachLine);
   const directive = openBlockWeekDirective(openWeekIntent, block);
-  // Exercise progression is saved guidance, not a visible card adjustment.
-  // Keep an explicitly prescribed deload and all stop criteria visible.
+  // Display the validated AI instruction once; deload retains its own directive.
   const weekDirective = directive?.usesProgressionRule ? null : directive;
   const adjustmentRules = [
+    ...(progression && openWeekIntent?.key !== "deload" ? [{ label: "Progress" as const, text: progression }] : []),
     ...(compactStopRule && !hideStopRule
       ? [{ label: "Stop rule" as const, text: compactStopRule }]
       : []),
@@ -477,7 +477,7 @@ export function BlockCard({
   const showMetricTiles = statCount > 0 && (!block.prescription_text || hasAthleteMetrics);
   const asides = hideAdjustments ? [] : [
     ...(substitutions.length > 0 ? [{ label: "Swaps", text: substitutions[0], glossary: false }] : []),
-    ...(regressions.length > 0 ? [{ label: "Easier", text: compactCoachLine(regressions[0]), glossary: false }] : []),
+    ...regressions.map(text => ({ label: "Easier", text: compactCoachLine(text), glossary: false })),
     ...adjustmentRules.map((rule) => ({ ...rule, glossary: true })),
   ];
 
@@ -838,7 +838,7 @@ function ExerciseDetail({
 }) {
   const rehabLabelPolicy = useContext(RehabLabelContext);
   const prescription = useBlockPrescription(block, sourceCountdown);
-  const { title, compactStopRule } = prescription;
+  const { title, compactStopRule, progression } = prescription;
   const blockType = cleanText(block.block_type);
   const tagLabel = blockType ? blockTagLabel(block, rehabLabelPolicy) : null;
   const resolvedMedia = useExerciseMedia(block.display_name, block.exercise_key);
@@ -856,7 +856,7 @@ function ExerciseDetail({
   const isLabelledCue = (line: string) => /^(?:cue|pre-bout):/i.test(line);
   const steps = stepped ? allCues.filter(line => !isLabelledCue(line)) : [];
   const cues = stepped ? allCues.filter(isLabelledCue).map(line => line.replace(/^cue:\s*/i, "")) : allCues;
-  const easier = execution.regressions[0] ? compactCoachLine(execution.regressions[0]) : null;
+  const easier = execution.regressions.map(compactCoachLine);
   const swap = execution.substitutions[0] ?? null;
   const sessionRunning = useExerciseLoggingActive();
   // Safety instructions are never behind a tap, logging included: one plain line.
@@ -939,7 +939,8 @@ function ExerciseDetail({
       ) : null}
       {cues.map(cue => <p className="sp-block-aside" key={cue}><span className="sp-stat-label">Cue</span>{cue}</p>)}
       {swap ? <p className="sp-block-aside"><span className="sp-stat-label">Swaps</span>{swap}</p> : null}
-      {easier ? <p className="sp-block-aside"><span className="sp-stat-label">Easier</span>{easier}</p> : null}
+      {easier.map(text => <p className="sp-block-aside" key={text}><span className="sp-stat-label">Easier</span>{text}</p>)}
+      {progression && openWeekIntent?.key !== "deload" ? <p className="sp-block-aside"><span className="sp-stat-label">Progress</span>{progression}</p> : null}
       <details className="ex-detail-section">
         <summary>Full prescription</summary>
         <BlockCard block={block} openWeekIntent={openWeekIntent}

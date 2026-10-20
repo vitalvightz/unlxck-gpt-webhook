@@ -444,6 +444,7 @@ def test_closed_strength_membership_ignores_legal_conditioning_card_on_same_day(
         [
             "D-7 (Tuesday) — Strength",
             "- Trap Bar Deadlift: 2 x 3 @ RPE 6",
+            "  Easier: Use a shallower pain-free hinge.",
             "D-7 (Tuesday) — Aerobic support",
             "- Assault Bike: 4 x 2 min @ RPE 5",
         ]
@@ -474,6 +475,7 @@ def test_closed_strength_membership_ignores_declared_light_combat_card_on_same_d
         [
             "D-7 (Tuesday) — Strength",
             "- Trap Bar Deadlift: 2 x 3 @ RPE 6",
+            "  Easier: Use a shallower pain-free hinge.",
             "D-7 (Tuesday) — Light technical combat",
             "- Technical pummelling: 3 x 2 min",
         ]
@@ -504,6 +506,7 @@ def test_role_scoping_does_not_union_other_role_permission_into_strength_card():
         [
             "D-7 (Tuesday) — Strength",
             "- Trap Bar Deadlift: 2 x 3 @ RPE 6",
+            "  Easier: Use a shallower pain-free hinge.",
             "- High Pull: 1 x 3 @ RPE 5",
             "D-7 (Tuesday) — Aerobic support",
             "- Assault Bike: 4 x 2 min @ RPE 5",

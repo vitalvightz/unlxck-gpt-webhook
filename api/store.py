@@ -1873,6 +1873,8 @@ class SupabaseAppStore(CommunityStoreMixin, PrivateMediaStoreMixin, CompactGener
         result: dict[str, Any],
         plan_id: str | None = None,
     ) -> dict[str, Any]:
+        from .structured_plan_coaching import validate_final_coaching
+        result = validate_final_coaching(result)
         result_status = str(result.get("status") or "generated").strip().lower()
         if not is_plan_status(result_status):
             raise _status_transition_error(f"unknown plan status: {result_status!r}")
@@ -3924,6 +3926,9 @@ class SupabaseAppStore(CommunityStoreMixin, PrivateMediaStoreMixin, CompactGener
     def _build_plan_stage2_payload(
         self, existing: dict[str, Any], result: dict[str, Any]
     ) -> dict[str, Any]:
+        from .structured_plan_coaching import validate_final_coaching
+        result = validate_final_coaching({**result,
+            "planning_brief": result.get("planning_brief", existing.get("planning_brief"))})
         try:
             current_status = existing.get("status") or "generated"
             next_status_input = result.get("status") or current_status
@@ -4090,6 +4095,7 @@ class SupabaseAppStore(CommunityStoreMixin, PrivateMediaStoreMixin, CompactGener
         skipped and the existing row (raw-markdown fallback) is left intact.
         """
 
+        current = None
         if expected_final_plan_text is not None:
             current = self.get_plan(plan_id)
             if not current:
@@ -4113,6 +4119,16 @@ class SupabaseAppStore(CommunityStoreMixin, PrivateMediaStoreMixin, CompactGener
 
         payload = {"stage2_validator_report": stage2_validator_report or {}}
         if structured_plan is not None:
+            from .structured_plan_coaching import validate_final_coaching
+            # Backfills use the same row already read by the stale-text guard.
+            # Direct callers need its authority before numerical coaching ships.
+            current = current if current is not None else self.get_plan(plan_id)
+            current = current if isinstance(current, dict) else {}
+            checked = validate_final_coaching({**current, "structured_plan": structured_plan})
+            structured_plan = checked.get("structured_plan")
+            findings = (checked.get("stage2_validator_report") or {}).get("exercise_coaching")
+            if findings:
+                payload["stage2_validator_report"] = {**payload["stage2_validator_report"], "exercise_coaching": findings}
             payload["structured_plan"] = ensure_structured_block_ids(
                 ensure_structured_session_ids(structured_plan, plan_id=plan_id)
             )

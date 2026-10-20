@@ -190,6 +190,15 @@ def _explicit_prescription_violations(plan: dict[str, Any], source: str) -> list
                                 continue  # Dose remainder is not a labelled execution cue.
                             if expected.get(key) and not block.get(key):
                                 violations.append(f"{COACHING_DROPPED}: {name!r} dropped source {key}")
+                            if key in {"progression_rule", "regression_options"} and block.get(key) and str(block.get("block_type")) in _EXERCISE_BLOCK_TYPES:
+                                actual = block[key]
+                                wanted = expected.get(key)
+                                def canonical(value):
+                                    if isinstance(value, list):
+                                        return [_normalise_locked_text(item) for item in value]
+                                    return _normalise_locked_text(value)
+                                if canonical(actual) != canonical(wanted):
+                                    violations.append(f"COACHING_CHANGED: {name!r} changed or invented source {key}")
                         if str(block.get("block_type")) not in _EXERCISE_BLOCK_TYPES:
                             continue
                         for key in ("sets", "reps", "rounds", "duration", "work", "rest", "distance", "effort", "load"):
@@ -220,7 +229,12 @@ def _explicit_prescription_violations(plan: dict[str, Any], source: str) -> list
 def _prescription_value(value: Any) -> Any:
     if isinstance(value, dict):
         if "method" in value:
-            return (str(value.get("method") or "").upper(), _prescription_value(value.get("value")))
+            quantity = (str(value.get("method") or "").upper(), _prescription_value(value.get("value")))
+            if value.get("unit"):
+                unit = str(value["unit"]).lower()
+                unit = {"lbs": "lb", "%": "percent"}.get(unit, unit)
+                return (*quantity, unit, str(value.get("ref") or "").upper())
+            return quantity
         number = value.get("value")
         unit = str(value.get("unit") or "").lower()
         if isinstance(number, (int, float)):

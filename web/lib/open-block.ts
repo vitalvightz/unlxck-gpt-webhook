@@ -8,7 +8,7 @@
 // intent (week strip / week overview / Today) and into a per-exercise
 // directive on each block card. Display-level only: doses are never mutated
 // and no wording is invented here — the per-block progression/deload text is
-// written by the structured-card conversion, which knows the exercise type.
+// authored in the validated final-session source and preserved by conversion.
 
 import { cleanText, progressionRuleLabel } from "@/lib/structured-plan";
 import type { StructuredBlock } from "@/lib/types";
@@ -97,7 +97,7 @@ function progressionRuleText(block: StructuredBlock): string | null {
  * The week-directed instruction for one block card. Baseline weeks return null
  * (the dose is already the instruction); progression weeks surface the block's
  * own progression rule and the deload week its own deload rule, both written
- * per exercise by the structured-card conversion.
+ * per exercise by the final-session AI.
  *
  * A block with no such rule returns null rather than a generic directive: the
  * old "add one set or a small load bump" / "cut working sets roughly in half"

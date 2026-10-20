@@ -132,7 +132,7 @@ test("October 15 punch keeps its complete cue once, including reset, video and e
 });
 
 
-test("sheet shows swaps and easier once and hides progress", async () => {
+test("sheet shows saved swaps, Easier and Progress once", async () => {
   const { sheet, byTitle, cleanup } = await openSheet(false, { ...treadmill,
     coaching_cues: ["Stay tall, no rail.", "Stay tall, no rail."],
     regression_options: ["Reduce rounds to 3."],
@@ -143,15 +143,15 @@ test("sheet shows swaps and easier once and hides progress", async () => {
   try {
     assert.equal(byTitle("Coaching cues"), undefined);
     const lines = [...sheet.querySelectorAll(".sp-block-aside")];
-    for (const label of ["Cue", "Easier", "Swaps"]) {
+    for (const label of ["Cue", "Easier", "Swaps", "Progress"]) {
       const matching = lines.filter(line => line.querySelector(".sp-stat-label")?.textContent === label);
       assert.equal(matching.length, 1, label);
       assert.equal(matching[0].closest("details"), null, label);
     }
     assert.equal(sheet.textContent?.split("Stay tall, no rail.").length, 2);
-    assert.doesNotMatch(sheet.textContent ?? "", /Next D-28: add 1 round if recovered/);
+    assert.match(sheet.textContent ?? "", /Next D-28: add 1 round if recovered/);
     assert.ok(sheet.textContent?.includes("Easy bike intervals"));
     assert.match(sheet.querySelector(".ex-detail-stop")?.textContent ?? "", /dizziness/);
-    assert.equal(lines.filter(line => line.querySelector(".sp-stat-label")?.textContent === "Progress").length, 0);
+    assert.equal(lines.filter(line => line.querySelector(".sp-stat-label")?.textContent === "Progress").length, 1);
   } finally { await cleanup(); }
 });

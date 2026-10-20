@@ -11,7 +11,7 @@ from typing import Any
 from .exercise_instructions import exercise_instructions
 from .coaching_copy import concise_coaching
 from .exercise_progression import (
-    progression_prohibited, normalise_measures,
+    normalise_measures, progress_rejection, progression_prohibited,
 )
 
 
@@ -114,8 +114,8 @@ def exercise_coaching(
 ) -> dict[str, Any]:
     """Return concise coaching for this selected exercise and athlete context.
 
-    Taper, final fortnight, active injury, high fatigue and weight-cut risk are
-    maintenance contexts: no Progress instruction. Easier never asks the athlete
+    Taper, final fortnight, active injury, high fatigue and weight-cut risk
+    prohibit advancement; authored quality guidance may keep the same dose. Easier never asks the athlete
     to push through a stop criterion. It never rewrites the prescribed dose.
     """
     athlete = athlete or {}
@@ -168,8 +168,10 @@ def exercise_coaching(
     # supplies execution guidance when a dose-only note was all the bank had.
     fields["coaching_cues"] = [cue for cue in fields["coaching_cues"] if not has_measurable_step(cue)]
     phase = str(phase or role.get("phase") or assignment.get("source_phase") or "").upper()
-    constrained = progression_prohibited(role, assignment, phase, d_day, athlete)
     authored_progress = fields.pop("progression_rule", None)
+    if progression_context and progression_prohibited(role, assignment, phase, d_day, athlete):
+        progression_context = {**progression_context,
+                               "current": {**progression_context["current"], "blocked": True}}
     profile = next((p for pattern, p in _PROFILES if re.search(pattern, name, re.I)), None)
     if profile is not None:
         cue, easier, _, stop = profile
@@ -179,8 +181,10 @@ def exercise_coaching(
             fields["stop_rules"] = [stop]
     # Progress and Easier belong to the final-session LLM. Carry explicit source
     # instructions, but never manufacture an increment or a reduced duration.
-    if not constrained and authored_progress and not is_profile_progression(authored_progress):
+    if authored_progress and not is_profile_progression(authored_progress) and not progress_rejection(authored_progress, progression_context):
         fields["progression_rule"] = authored_progress
+    fields["regression_options"] = [text for text in fields["regression_options"]
+                                    if not easier_rejection(text, assignment, role, athlete)]
     return concise_coaching(fields)
 
 
@@ -217,3 +221,92 @@ def coaching_lines(fields: dict[str, Any]) -> list[str]:
         trigger = re.sub(r"^Stop(?: rule)?:\s*", "", text, flags=re.I)
         lines.append(f"  Stop: {trigger}")
     return lines
+
+
+def easier_rejection(text: str, assignment: dict, role: dict, athlete: dict, *, brief: dict | None = None, current_dose: dict | None = None) -> str | None:
+    """Check an AI Easier option against this movement and its restrictions.
+
+    Reductions are optional execution adjustments, never edits to the scheduled
+    prescription. Unknown quantities, equipment and movement substitutions fail
+    closed. Clinical restriction evaluation uses the existing safety guard.
+    """
+    from .exercise_progression import effective_exercise_prescription, measured_dose
+    value = normalise_measures(text)
+    positive = re.sub(r"\b(?:do not|don't|never)\s+(?:continue|push|work)\b[^.;]*", "", value, flags=re.I)
+    if re.search(r"\b(?:ignore|disregard|override|push through|work through)\b|\bcontinue\b.*\b(?:pain|dizz|symptom)|\bdespite\b.*\b(?:pain|stop|restriction)", positive, re.I):
+        return "stop_condition_override"
+    if clinical_coaching_rejection(text, brief or {}):
+        return "clinical_restriction"
+    if not re.search(r"\b(?:use|reduce|lower|ease|slow|shorten|take|keep|relax|simplify|limit|less|fewer|lighter|shallower|smaller|support|stop|omit|skip)\b", value, re.I):
+        return "unactionable_easier"
+    evidence = " ".join(str(assignment.get(k) or "") for k in ("name", "equipment", "equipment_required"))
+    equipment = athlete.get("equipment_profile") or athlete.get("equipment") or []
+    if isinstance(equipment, str):
+        equipment = [equipment]
+    evidence += " " + " ".join(str(e) for e in equipment)
+    for token in (r"barbell|training bar", r"dumbbells?", r"kettlebells?", r"bands?", r"TRX|straps?", r"sled", r"(?:medicine|med) ball", r"bike", r"pool", r"bench", r"box"):
+        if re.search(r"\b(?:" + token + r")\b", value, re.I) and not re.search(r"\b(?:" + token + r")\b", evidence, re.I):
+            return "unavailable_equipment"
+    # A named replacement is a selection/safety decision, not Easier authoring.
+    if re.search(r"\b(?:switch|replace|swap|substitute)\b|\binstead\b(?!\s+of\s+\d)", value, re.I):
+        return "changed_movement"
+    name = str(assignment.get("name") or "")
+    for movement in ("squat", "deadlift", "press", "row", "sprint", "jump", "swim(?:ming)?", "run(?:ning)?", "burpee", "lunge", "push-up", "pull-up", "swing", "throw", "punch", "carry"):
+        if re.search(r"\b" + movement + r"s?\b", value, re.I) and not re.search(r"\b" + movement + r"s?\b", name, re.I):
+            return "changed_movement"
+    if re.search(r"\b(?:add|increase|heavier|harder|faster|extra|deeper|shorten rest|shorter rest)\b|\bmore\s+(?:load|weight|resistance|reps|sets|rounds|effort|speed|distance|duration|force|intensity)\b", value, re.I):
+        return "increased_workload"
+    if re.search(r"\d", value):
+        current = current_dose if current_dose is not None else measured_dose(effective_exercise_prescription(role, assignment), assignment)
+        proposed = measured_dose(value)
+        # Explicit reductions such as "Reduce sets to 2" are not full doses.
+        for label, field in (("sets?", "sets"), ("reps?(?: per set)?|repetitions?", "reps"), ("rounds?", "rounds")):
+            if m := re.search(r"(?:" + label + r")\s+(?:to\s+)(\d+)\b", value, re.I):
+                proposed[field] = int(m[1])
+        if m := re.search(r"\b(?:use|to)\s+(\d+(?:\.\d+)?)\s*(sec(?:onds?)?|s|min(?:utes?)?)\b", value, re.I):
+            field = "work" if "work" in current else "duration"
+            proposed[field] = float(m[1]) * (60 if m[2].lower().startswith("min") else 1)
+        if not any(k in proposed for k in ("sets", "reps", "rounds", "load", "duration", "work", "distance")):
+            return "unverifiable_easier_dose"
+        for key, quantity in proposed.items():
+            if key == "per_side":
+                continue
+            if key == "load_unit":
+                if quantity != current.get(key):
+                    return "unknown_easier_load"
+            elif not isinstance(quantity, (int, float)) or key not in current:
+                return "unknown_easier_dose"
+            elif (quantity < current[key] if key == "rest" else quantity > current[key]) or quantity <= 0:
+                return "increased_easier_dose"
+        # Every quantity must be accounted for, including a second instruction
+        # the whole-dose parser does not otherwise recognise.
+        residual = re.sub(r"\d+\s*(?:sets?\s*)?[x×]\s*\d+", "", value, flags=re.I)
+        residual = re.sub(r"(?:sets?|reps?(?: per set)?|repetitions?|rounds?)\s+to\s+\d+", "", residual, flags=re.I)
+        residual = re.sub(r"(?:rest\s*[:=]?|RPE\s*)\d+(?:\.\d+)?\s*(?:s|sec|seconds?|minutes?|min)?\b", "", residual, flags=re.I)
+        residual = re.sub(r"(?:instead of|from)\s+(\d+)",
+                          lambda m: "" if float(m[1]) in current.values() else m[0], residual, flags=re.I)
+        def checked_quantity(match):
+            number, unit = float(match[1]), match[2].lower()
+            key = {"kg": "load", "lb": "load", "reps": "reps", "rep": "reps",
+                   "sets": "sets", "set": "sets", "round": "rounds", "rounds": "rounds", "m": "distance"}.get(unit)
+            if unit.startswith(("sec", "min")) or unit == "s":
+                key = "work" if "work" in proposed else "duration"
+                number *= 60 if unit.startswith("min") else 1
+            return "" if key and proposed.get(key) == number else match[0]
+        residual = re.sub(r"(\d+(?:\.\d+)?)\s*(kg|lb|reps?|sets?|rounds?|m|min(?:utes?)?|sec(?:onds?)?|s)\b",
+                          checked_quantity, residual, flags=re.I)
+        if re.search(r"\d", residual):
+            return "unverified_secondary_easier_change"
+        # Tempo/percentages/ranges are not measured by this parser.
+        if re.search(r"tempo|%|\d\s*[-–]\s*\d|\bby\s+\d", value, re.I):
+            return "unverifiable_easier_change"
+    return None
+
+
+def clinical_coaching_rejection(text: str, brief: dict) -> str | None:
+    """Reuse clinical restrictions for both Progress and Easier wording."""
+    if brief.get("restrictions"):
+        from .stage2_validator import _find_restricted_hits
+        if _find_restricted_hits(brief, [text]):
+            return "clinical_restriction"
+    return None

@@ -50,9 +50,9 @@ test("live swing keeps stop without stacked coaching or an empty Progress line",
   assert.equal(expanded.includes(">Progress</span>"), false);
   const block = plan.weeks![0].days![0].sessions![0].blocks![0];
   const withProgress = renderToStaticMarkup(<ExerciseRow
-    block={{...block, progression_rule: "Add +5kg."}} open onToggle={() => {}} />);
-  assert.equal(countOccurrences(withProgress, ">Progress</span>"), 0);
-  assert.equal(withProgress.includes("Add +5kg."), false);
+    block={{...block, progression_rule: "At the same dose, refine hinge control."}} open onToggle={() => {}} />);
+  assert.equal(countOccurrences(withProgress, ">Progress</span>"), 1);
+  assert.equal(withProgress.includes("At the same dose, refine hinge control."), true);
   assert.equal(expanded.includes("Reduce sets to 2."), true);
   assert.equal(html.includes("3 × 4"), true);
   assert.equal(expanded.includes("90 sec"), true);
