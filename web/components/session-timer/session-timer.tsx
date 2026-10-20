@@ -578,7 +578,7 @@ function ReadyPanel({
 }
 
 /** The current exercise's numbers, adjustable at any point (behind the header icon). */
-function AdjustSheet({ timer }: { timer: SessionTimerController }) {
+function AdjustSheet({ timer, onClose }: { timer: SessionTimerController; onClose: () => void }) {
   const item = currentItem(timer.state);
   if (!item || item.kind === "task") return null;
   // run(), not update(): lowering a target to what is done completes the
@@ -586,6 +586,14 @@ function AdjustSheet({ timer }: { timer: SessionTimerController }) {
   const adjust = (patch: ItemAdjustment) => timer.run((s, at) => adjustItem(s, patch, at));
   return (
     <div className="st-sheet st-adjust" role="group" aria-label="Adjust timer">
+      <div className="st-settings-head">
+        <p className="st-settings-title">
+          {item.kind === "interval" ? "Rounds & timing" : `${capitalize(countNoun(item))}s & rest`}
+        </p>
+        <button type="button" className="st-settings-close" onClick={onClose} aria-label="Close adjust">
+          <span aria-hidden="true">×</span>
+        </button>
+      </div>
       <div className="st-steppers">
         {item.kind === "interval" ? (
           <>
@@ -1218,7 +1226,7 @@ export function SessionTimer({
       <StepBar state={state} />
 
       {sheet === "settings" ? <SettingsSheet timer={timer} onClose={() => setSheet(null)} /> : null}
-      {sheet === "adjust" ? <AdjustSheet timer={timer} /> : null}
+      {sheet === "adjust" ? <AdjustSheet timer={timer} onClose={() => setSheet(null)} /> : null}
       {/* Tapping anywhere off an open sheet closes it. */}
       {sheet !== null ? <div className="st-scrim" aria-hidden="true" onClick={() => setSheet(null)} /> : null}
 

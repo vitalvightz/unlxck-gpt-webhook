@@ -460,7 +460,7 @@
    stepper right. Compact enough to float over the screen, not fill it. */
 .st-sheet.st-adjust {
   gap: 0;
-  padding: 6px 16px;
+  padding: 14px 18px 6px;
 }
 
 .st-steppers {
