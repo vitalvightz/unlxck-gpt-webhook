@@ -843,6 +843,21 @@ function PrimaryAction({
   );
 }
 
+/** A routine audio note: one quiet line, the detail behind a tap. */
+function AudioInfo({ label, detail }: { label: string; detail: string }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <button type="button" className="st-audio-info" aria-expanded={open} onClick={() => setOpen((v) => !v)}>
+        <span className="st-audio-dot" aria-hidden="true" />
+        {label}.
+        <span className="st-audio-i" aria-hidden="true">i</span>
+      </button>
+      {open ? <span className="st-audio-detail"> {detail}</span> : null}
+    </>
+  );
+}
+
 type MiniPos = { x: number; y: number; width: number };
 
 /**
@@ -1125,47 +1140,12 @@ export function SessionTimer({
   // pauses too, so a bare icon is enough.
   const showsPause =
     (state.phase === "rest" || (state.phase === "work" && item?.kind !== "interval")) && !view.paused;
-  const secondary: ReactNode[] = [];
-  if (showsPause) {
-    secondary.push(
-      <button key="pause" type="button" className="st-square" onClick={togglePause} aria-label="Pause">
-        <Icon name="pause" />
-      </button>,
-    );
-  }
-  if (state.phase === "work" && item?.kind === "interval" && !view.paused) {
-    secondary.push(
-      <button key="end-round" type="button" onClick={() => timer.run(endRound)}>
-        <Icon name="skip" />
-        End round
-      </button>,
-    );
-  }
-  // Only ever moves to the next exercise. Nothing here can end the session:
-  // that is End session, which asks first. Highlighted once a set range's
-  // minimum is met, as the natural way on.
-  if (state.index + 1 < state.items.length) {
-    secondary.push(
-      <button
-        key="next"
-        type="button"
-        data-emphasis={canFinishItem ? "true" : undefined}
-        onClick={() => timer.run(finishItem)}
-      >
-        <Icon name="next" />
-        Next exercise
-      </button>,
-    );
-  }
-  // Work done without the clock: count it as planned in one tap.
-  if (item && done < plannedTarget(item) && !(item.kind === "task" && state.phase === "work")) {
-    secondary.push(
-      <button key="planned" type="button" onClick={() => timer.run(finishItemAsPlanned)}>
-        <Icon name="check" />
-        Done as planned
-      </button>,
-    );
-  }
+  const endsRound = state.phase === "work" && item?.kind === "interval" && !view.paused;
+  // Work done without the clock: count it as planned in one tap. A quiet link,
+  // so it never competes with the timer controls.
+  const canMarkPlanned = !!item && state.phase !== "ready" && done < plannedTarget(item) && !(item.kind === "task" && state.phase === "work");
+  const hasTools = nudges || showsPause || endsRound;
+  const nextInSession = state.index + 1 < state.items.length;
 
   return (
     <ToBody>
@@ -1268,10 +1248,12 @@ export function SessionTimer({
         </main>
       ) : (
         <main className="st-main" data-phase={state.phase}>
-          <p className="st-phase" aria-live="polite">
-            <span className="st-phase-dot" aria-hidden="true" />
-            {phaseText}
-          </p>
+          {state.phase === "ready" && state.items.length === 1 ? null : (
+            <p className="st-phase" aria-live="polite">
+              <span className="st-phase-dot" aria-hidden="true" />
+              {phaseText}
+            </p>
+          )}
           <h2 className="st-title">{item?.title}</h2>
           {item ? <DoseChips item={item} /> : null}
 
@@ -1318,7 +1300,7 @@ export function SessionTimer({
               ) : null}
             </>
           )}
-          <Progress state={state} item={item} />
+          {state.phase !== "ready" ? <Progress state={state} item={item} /> : null}
           {item?.kind === "interval" ? (
             <div className="st-audio-status" role="status">
               {view.paused ? "Round timer paused." : timer.roundAudioStatus === "preparing" ? "Preparing round audio… Keep this screen open." :
@@ -1326,9 +1308,11 @@ export function SessionTimer({
                   <>Round audio {timer.roundAudioStatus === "interrupted" ? "was interrupted" : "is unavailable"}. Keep this screen open.
                     <button type="button" className="st-link" onClick={timer.restoreAudio}>Enable round audio</button>
                   </>
-                ) : timer.roundAudioStatus === "playing" ? "Round audio playing. Calls or closing the browser can interrupt bells." :
-                  !timer.settings.sound || timer.settings.volume === 0 ? "Round sounds are off. Keep the timer in view." :
-                    "Keep the timer visible for reliable bells. Check your volume before training."}
+                ) : timer.roundAudioStatus === "playing" ? (
+                  <AudioInfo label="Round audio playing" detail="Calls or closing the browser can interrupt bells." />
+                ) : !timer.settings.sound || timer.settings.volume === 0 ? "Round sounds are off. Keep the timer in view." : (
+                  <AudioInfo label="Bells on" detail="Keep the timer visible for reliable bells. Check your volume before training." />
+                )}
             </div>
           ) : null}
         </main>
@@ -1336,47 +1320,63 @@ export function SessionTimer({
 
       {state.phase !== "done" ? (
         <footer className="st-controls">
-          {/* ±10s flank the main action, so the row under it only has to hold
-              the ways forward and never cramps into two-line labels. */}
-          <div className="st-primary-row">
-            {nudges ? (
-              <button
-                type="button"
-                className="st-nudge"
-                onClick={() => timer.update((s, at) => addTime(s, -10, at))}
-                aria-label="Take 10 seconds off"
-              >
-                −10s
-              </button>
-            ) : null}
-            <PrimaryAction
-              timer={timer}
-              item={item}
-              canFinishItem={canFinishItem}
-              readyRemainingMs={view.readyRemainingMs}
-            />
-            {nudges ? (
-              <button
-                type="button"
-                className="st-nudge"
-                onClick={() => timer.update((s, at) => addTime(s, 10, at))}
-                aria-label="Add 10 seconds"
-              >
-                +10s
-              </button>
-            ) : null}
-          </div>
-          {secondary.length ? (
-            <div className="st-secondary" data-dense={secondary.length > 2 && !showsPause ? "true" : undefined}>
-              {secondary}
+          {/* One light row of tools above the one main action: ±10s either side,
+              pause (or End round during a round) in the middle. */}
+          {hasTools ? (
+            <div className="st-tools">
+              {nudges ? (
+                <button
+                  type="button"
+                  className="st-tool"
+                  onClick={() => timer.update((s, at) => addTime(s, -10, at))}
+                  aria-label="Take 10 seconds off"
+                >
+                  <span aria-hidden="true">−</span> 10 sec
+                </button>
+              ) : <span />}
+              {endsRound ? (
+                <button type="button" className="st-tool" onClick={() => timer.run(endRound)}>
+                  <Icon name="skip" />
+                  End round
+                </button>
+              ) : showsPause ? (
+                <button type="button" className="st-tool st-tool-icon" onClick={togglePause} aria-label="Pause">
+                  <Icon name="pause" />
+                </button>
+              ) : <span />}
+              {nudges ? (
+                <button
+                  type="button"
+                  className="st-tool"
+                  onClick={() => timer.update((s, at) => addTime(s, 10, at))}
+                  aria-label="Add 10 seconds"
+                >
+                  10 sec <span aria-hidden="true">+</span>
+                </button>
+              ) : <span />}
             </div>
           ) : null}
-          {nextItem ? (
-            <div className="st-next">
-              <span className="st-next-label">Then</span>
+          <PrimaryAction
+            timer={timer}
+            item={item}
+            canFinishItem={canFinishItem}
+            readyRemainingMs={view.readyRemainingMs}
+          />
+          {/* Only ever moves to the next exercise; nothing here ends the
+              session. Highlighted once a set range's minimum is met. */}
+          {nextInSession && nextItem ? (
+            <button
+              type="button"
+              className="st-next"
+              data-emphasis={canFinishItem ? "true" : undefined}
+              onClick={() => timer.run(finishItem)}
+              aria-label={`Next exercise: ${nextItem.title}`}
+            >
+              <span className="st-next-label">Next</span>
               <span className="st-next-title">{nextItem.title}</span>
               <span className="st-next-plan">{describeItem(nextItem)}</span>
-            </div>
+              <span className="st-next-arrow" aria-hidden="true"><Icon name="next" /></span>
+            </button>
           ) : null}
           {confirmEnd ? (
             <div className="st-confirm" role="alertdialog" aria-label="End session">
@@ -1396,13 +1396,20 @@ export function SessionTimer({
               </button>
             </div>
           ) : (
-            <button
-              type="button"
-              className="st-link"
-              onClick={() => (started ? setConfirmEnd(true) : onClose())}
-            >
-              {started ? "End session" : "Close timer"}
-            </button>
+            <div className="st-links">
+              {canMarkPlanned ? (
+                <button type="button" className="st-link" onClick={() => timer.run(finishItemAsPlanned)}>
+                  Done as planned
+                </button>
+              ) : null}
+              <button
+                type="button"
+                className="st-link"
+                onClick={() => (started ? setConfirmEnd(true) : onClose())}
+              >
+                {started ? "End session" : "Close timer"}
+              </button>
+            </div>
           )}
         </footer>
       ) : null}
