@@ -41,7 +41,11 @@ from fightcamp.rehab_schema import (  # noqa: E402
 )
 
 
-def before_bank_publication(rows, kind):
+HISTORY_FIXTURES = ('rehab_restore_expansion_history.json', 'rehab_bank_readiness_history.json',
+                    'rehab_pilot_publication_history.json')
+
+
+def before_bank_publication(rows, kind, names=HISTORY_FIXTURES):
     """Reconstruct only this PR's exact dated delta; never used by runtime.
 
     Whole-record hashes ensure later drift cannot be hidden by an ID match.
@@ -52,7 +56,7 @@ def before_bank_publication(rows, kind):
     values = ([d for g in snapshot for d in g['drills']] if kind == 'drills' else
               snapshot['profiles'] if kind == 'profiles' else snapshot)
     key = {'drills': 'id', 'reviews': 'drill_id', 'profiles': 'policy_id'}[kind]
-    for name in ('rehab_bank_readiness_history.json', 'rehab_pilot_publication_history.json'):
+    for name in names:
         history = json.loads((REPO_ROOT / 'tests/fixtures' / name).read_text(encoding='utf-8'))
         for row in values:
             revision = history[kind].get(row[key])
@@ -60,10 +64,26 @@ def before_bank_publication(rows, kind):
                 for field in revision['remove']:
                     row.pop(field)
                 row.update(deepcopy(revision['restore']))
+        # Rows a dated change added are dropped only while their content is exact.
+        added = history.get('added', {}).get(kind, {})
+        if added:
+            def kept(row):
+                return content_hash(row) != added.get(row[key])
+            if kind == 'drills':
+                for group in snapshot:
+                    group['drills'] = [d for d in group['drills'] if kept(d)]
+            elif kind == 'reviews':
+                snapshot = [r for r in snapshot if kept(r)]
         if (kind == 'profiles' and 'bank_publication_profiles' in history
                 and snapshot.get('bank_publication_profiles') == history['bank_publication_profiles']):
             snapshot.pop('bank_publication_profiles')
     return snapshot
+
+
+def before_restore_expansion(name, raw):
+    """Exact pre-RESTORE-expansion bank, ledger or pathways for dated seed/audit tests."""
+    kind = {'rehab_bank.json': 'drills', 'rehab_metadata_review.json': 'reviews', 'rehab_pathways.json': 'profiles'}[name]
+    return before_bank_publication(raw, kind, names=HISTORY_FIXTURES[:1])
 
 
 def pathway_inventory_snapshot(pathways):

@@ -24,6 +24,9 @@ EXPECTED = {
     "neck_tightness", "shoulder_tightness", "neck_soreness", "shoulder_soreness",
 }
 RESTORABLE = {"lower_back_pain", "neck_stiffness", "wrist_stiffness"}
+# Later source-dosed bank publication; the seed's own RESTORE set is unchanged.
+EXPANDED_RESTORE = {"shoulder_pain", "elbow_pain", "wrist_pain", "knee_pain", "hip_pain", "elbow_stiffness",
+                    "neck_tightness", "shoulder_tightness", "neck_soreness", "shoulder_soreness"}
 PAIRS = [(key, value[0], value[1]) for key, value in PROFILES.items()]
 
 
@@ -49,16 +52,19 @@ def test_exact_reviewed_identity_calm_restore_completion_and_readiness(key, regi
         row = injury(region, kind, stage)
         decision = resolve(row)
         assert decision["injury_type"] == kind and decision["policy_id"] == key
-        if stage == "restore" and key not in RESTORABLE:
+        if stage == "restore" and key not in RESTORABLE | EXPANDED_RESTORE:
             assert decision["prescription"] is None and decision["reason_codes"] == ["stage_not_activated"]
             continue
         assert decision["outcome"] == "prescribed_rehab" and decision["stage"] == stage
         prescription = decision["prescription"]
         assert prescription["bank_hash"] == content_hash(prescription["drill"])
-        assert prescription["dose"] == {} and not prescription["is_loading"]
+        # Activation work keeps the existing loading hold on reduced-training days.
+        activation = prescription["drill"]["function"] == "activation"
+        assert prescription["dose"] == (prescription["drill"]["dose"] or {}) and prescription["is_loading"] == activation
         ledger = {r["drill_id"]: r for r in read("data/rehab_metadata_review.json")}
         assert ledger[prescription["drill_id"]]["review_state"] == "reviewed"
-        assert schedule_rehab(row, decision, training_day=DAY, readiness_decision="pull_back")["state"] == "due"
+        assert schedule_rehab(row, decision, training_day=DAY, readiness_decision="pull_back")["state"] == (
+            "held" if activation else "due")
         frozen, items, completion = frozen_work(row)
         eligible = resolve_rehab_completion(items, [row], completion=completion).eligible
         assert len(eligible) == 1
@@ -333,7 +339,9 @@ def test_seeds_and_metadata_generation_are_byte_idempotent(tmp_path, monkeypatch
     folder = tmp_path / "data"
     folder.mkdir()
     names = ["rehab_bank.json", "rehab_metadata_review.json", "rehab_pathways.json"]
-    expected = {name:(ROOT / "data" / name).read_bytes() for name in names}
+    from tests.rehab_inventory_history import pre_restore_expansion_bytes
+    # Dated seed: later RESTORE publication is reconstructed from its exact history fixture.
+    expected = {name: pre_restore_expansion_bytes(name) for name in names}
     for name, data in expected.items():
         (folder / name).write_bytes(data)
     monkeypatch.setattr(seed_nonspecific_msk_family, "ROOT", tmp_path)

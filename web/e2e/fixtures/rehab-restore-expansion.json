@@ -1,0 +1,3154 @@
+{
+  "hip_pain": {
+    "profile": {
+      "effective_admin": false,
+      "latest_intake": null,
+      "latest_plan": {
+        "activation_state": "eligible",
+        "athlete_id": "7a6662fc-5998-4dae-b23d-fe81718240dc",
+        "created_at": "2026-10-05T12:00:00+00:00",
+        "custom_plan_id": null,
+        "fight_date": "",
+        "full_name": "",
+        "pdf_url": null,
+        "plan_id": "ad2a7f8a-fad6-4feb-a4d6-8cd7144050da",
+        "plan_name": null,
+        "review_reason": null,
+        "status": "ready",
+        "technical_style": []
+      },
+      "plan_count": 1,
+      "profile": {
+        "access_status": "approved",
+        "age_band": "adult",
+        "appearance_mode": "dark",
+        "athlete_id": "7a6662fc-5998-4dae-b23d-fe81718240dc",
+        "athlete_locale": "",
+        "athlete_timezone": "UTC",
+        "avatar_url": null,
+        "created_at": "2026-10-05T12:03:00+00:00",
+        "date_of_birth": "1996-05-04",
+        "email": "fixture@example.com",
+        "full_name": "Test athlete",
+        "health_consent_at": "2026-10-05T12:03:00+00:00",
+        "health_consent_granted": true,
+        "health_consent_version": "1.0",
+        "health_consent_withdrawn_at": null,
+        "health_data_consent": true,
+        "is_minor": false,
+        "meets_minimum_age": true,
+        "nutrition_profile": {
+          "age": null,
+          "caffeine_use": null,
+          "daily_activity_level": null,
+          "dietary_restrictions": [],
+          "food_preferences": [],
+          "foods_avoided_fight_week": [],
+          "foods_avoided_pre_session": [],
+          "height_cm": null,
+          "meals_per_day_preference": null,
+          "sex": null,
+          "supplement_use": []
+        },
+        "onboarding_draft": null,
+        "private_trial_ack_at": null,
+        "professional_status": "",
+        "record": "",
+        "role": "athlete",
+        "stance": "",
+        "starting_path": "plan_first",
+        "tactical_style": [],
+        "technical_style": [],
+        "terms_accepted": true,
+        "terms_accepted_at": "2026-10-05T12:03:00+00:00",
+        "terms_version": "0.1-pre-launch",
+        "training_habits": {
+          "decisions": [],
+          "enabled": true
+        },
+        "training_habits_revision": 0,
+        "updated_at": "2026-10-05T12:04:00+00:00",
+        "username": null,
+        "username_change_history": []
+      },
+      "username_rate_limit": {
+        "max_changes_per_window": 4,
+        "next_available_at": null,
+        "remaining": 4,
+        "window_days": 30
+      }
+    },
+    "view": {
+      "active_plan": {
+        "id": "ad2a7f8a-fad6-4feb-a4d6-8cd7144050da",
+        "phase": "GPP",
+        "status": "ready"
+      },
+      "delayed_rehab_prompts": [],
+      "effective_clinician_clearance": {
+        "level": "rehab_only",
+        "limited_by": [
+          {
+            "injury_episode_id": "6aa28ee2-7c95-4c0e-929b-8385c70df7eb",
+            "injury_id": "11edc393-0cc0-45db-a523-82d3e911bbf7",
+            "label": "Left hip pain"
+          }
+        ],
+        "requires_update": false,
+        "scopes": [
+          "rehab"
+        ]
+      },
+      "exercise_media": {},
+      "live_prescription": {
+        "allocation_limit": 2,
+        "changes": [
+          {
+            "action": "held",
+            "reason": "clinician_clearance_ceiling"
+          },
+          {
+            "action": "held",
+            "block_id": "training",
+            "reason": "no_reviewed_safe_substitution",
+            "restriction_reasons": [
+              "injury_loading_restriction"
+            ]
+          }
+        ],
+        "engine_version": "2",
+        "evidence_context": {
+          "event_id": "d62a6dd5-a9c1-5779-baef-8e169ccea784",
+          "exposure_id": null
+        },
+        "frozen": false,
+        "held_session_id": "training",
+        "injury_context": [
+          {
+            "episode_id": "6aa28ee2-7c95-4c0e-929b-8385c70df7eb",
+            "id": "11edc393-0cc0-45db-a523-82d3e911bbf7",
+            "updated_at": "2026-10-05T12:02:00+00:00"
+          }
+        ],
+        "injury_ids": [
+          "11edc393-0cc0-45db-a523-82d3e911bbf7"
+        ],
+        "plan_id": "ad2a7f8a-fad6-4feb-a4d6-8cd7144050da",
+        "readiness_context": {
+          "id": "23ad67dd-73cc-4c1a-ae9f-acca9407a218",
+          "updated_at": "2026-10-05T12:02:00+00:00"
+        },
+        "rehab_only": true,
+        "revision": "fdd44fba90f7c48c58acbace7a6534cd40fa77047d5cf318d4b9c2d8c83ec728",
+        "safety_hold": false,
+        "session": {
+          "blocks": [
+            {
+              "bank_hash": "dbb0cc3a1e9c6453d88fa8f9cfc59ab2f756839658bf66a625c9c7f686d11bb5",
+              "block_id": "rehab:11edc393-0cc0-45db-a523-82d3e911bbf7:6aa28ee2-7c95-4c0e-929b-8385c70df7eb",
+              "block_type": "rehab",
+              "coaching_cues": [
+                "Lie on your back with your knees bent and feet flat on the floor. Lift your pelvis and lower back off the floor, hold for 5 seconds, then lower down slowly. Repeat 5 times. No single-leg bridge, band or added weight; keep within your pain limits. Stop if pain or symptoms increase during or after the exercise. Follow your existing clinician restrictions. Seek assessment for hip pain after a fall, inability to take weight through the leg, a hot swollen joint, fever, or numbness or tingling in the leg."
+              ],
+              "display_name": "Double-leg bridge with 5-second hold",
+              "dose": {
+                "reps": 5
+              },
+              "drill_snapshot": {
+                "allowed_severities": [
+                  "low",
+                  "moderate"
+                ],
+                "compatible_injury_types": [
+                  "pain"
+                ],
+                "contact_level": "none",
+                "contraction_type": "mixed",
+                "dose": {
+                  "reps": 5
+                },
+                "equipment": [],
+                "evidence_notes": "Sources: https://wellbeing.wmas.nhs.uk/wp-content/uploads/2026/02/ADV121-Hip-Pain.pdf. Fixed conservative movement only. Dose is the explicit value, or the lower bound of the range, in the cited leaflet; one round per scheduled rehab session is a product cadence, not a source claim. No change to stage-entry criteria or permission, and no inference of sport readiness. No automatic resistance, range or speed progression.",
+                "function": "activation",
+                "id": "hip_pain_double_leg_bridge_hold",
+                "impact": "none",
+                "laterality_applicability": "side_specific",
+                "load": "low",
+                "name": "Double-leg bridge with 5-second hold",
+                "notes": "Lie on your back with your knees bent and feet flat on the floor. Lift your pelvis and lower back off the floor, hold for 5 seconds, then lower down slowly. Repeat 5 times. No single-leg bridge, band or added weight; keep within your pain limits. Stop if pain or symptoms increase during or after the exercise. Follow your existing clinician restrictions. Seek assessment for hip pain after a fall, inability to take weight through the leg, a hot swollen joint, fever, or numbness or tingling in the leg.",
+                "pain_ceiling": null,
+                "prescription": {
+                  "frequency": "scheduled_sessions",
+                  "minimum_gap_days": 1,
+                  "priority": 0,
+                  "sources": [
+                    "https://wellbeing.wmas.nhs.uk/wp-content/uploads/2026/02/ADV121-Hip-Pain.pdf"
+                  ]
+                },
+                "progress_when": [],
+                "regress_when": [
+                  "Stop and return to conservative guidance if symptoms worsen."
+                ],
+                "rehab_stage": "restore",
+                "sport_specificity": "general_rehab",
+                "stop_when": [
+                  "Stop if pain or symptoms increase during or after the exercise. Follow your existing clinician restrictions.",
+                  "Seek assessment for hip pain after a fall, inability to take weight through the leg, a hot swollen joint, fever, or numbness or tingling in the leg."
+                ],
+                "target_regions": [
+                  "hip"
+                ],
+                "target_tissues": [
+                  "hip and buttock muscles"
+                ],
+                "velocity": "low"
+              },
+              "exercise_key": "hip-pain-double-leg-bridge-hold",
+              "injury_episode_id": "6aa28ee2-7c95-4c0e-929b-8385c70df7eb",
+              "injury_id": "11edc393-0cc0-45db-a523-82d3e911bbf7",
+              "instructions": "Lie on your back with your knees bent and feet flat on the floor. Lift your pelvis and lower back off the floor, hold for 5 seconds, then lower down slowly. Repeat 5 times. No single-leg bridge, band or added weight; keep within your pain limits. Stop if pain or symptoms increase during or after the exercise. Follow your existing clinician restrictions. Seek assessment for hip pain after a fall, inability to take weight through the leg, a hot swollen joint, fever, or numbness or tingling in the leg.",
+              "is_loading": true,
+              "minimum_gap_days": 1,
+              "policy_id": "hip_pain",
+              "policy_review_hash": "c11b50e61c89de8d8854bc46da03973c86387608c8a379cf2b5f8f5958c25168",
+              "policy_version": 2,
+              "rehab_drill_id": "hip_pain_double_leg_bridge_hold",
+              "reps": 5,
+              "source_references": [
+                "https://wellbeing.wmas.nhs.uk/wp-content/uploads/2026/02/ADV121-Hip-Pain.pdf"
+              ],
+              "stop_rules": [
+                "Stop if pain or symptoms increase during or after the exercise. Follow your existing clinician restrictions.",
+                "Seek assessment for hip pain after a fall, inability to take weight through the leg, a hot swollen joint, fever, or numbness or tingling in the leg."
+              ],
+              "target_regions": [
+                "hip"
+              ],
+              "title": "Double-leg bridge with 5-second hold"
+            }
+          ],
+          "calendar_date": "2026-10-05",
+          "contact_level": "none",
+          "day_label": "",
+          "effective_load": "reduced",
+          "objective": "Follow the reviewed rehab for your current injury guidance.",
+          "phase": "GPP",
+          "session_id": "rehab-2026-10-05-74d0a3b23223afe6a26f5eb9",
+          "session_type": "rehab",
+          "title": "Today's rehab",
+          "weekday": "Monday",
+          "weekday_with_label": "Monday"
+        },
+        "training_day": "2026-10-05",
+        "training_hold_reason": "Your planned training conflicts with the current injury restrictions."
+      },
+      "open_injuries": [
+        {
+          "assessment_episode_started_at": "2026-10-05T12:01:00Z",
+          "assessment_history_complete": true,
+          "assessment_setback_at": null,
+          "athlete_id": "7a6662fc-5998-4dae-b23d-fe81718240dc",
+          "body_area": "Left hip",
+          "body_region": "hip",
+          "canonical_location": "hip",
+          "clinician_clearance": {
+            "episode_id": "6aa28ee2-7c95-4c0e-929b-8385c70df7eb",
+            "externally_verified": false,
+            "rehabilitation_permission": {
+              "level": "gentle_recovery",
+              "schema_version": 1
+            },
+            "report_id": "d62a6dd5-a9c1-5779-baef-8e169ccea784",
+            "reported_at": "2026-10-05T12:04:00+00:00",
+            "scope_reported_at": {
+              "rehab": "2026-10-05T12:04:00+00:00"
+            },
+            "scopes": [
+              "rehab"
+            ],
+            "source": "athlete_reported"
+          },
+          "consequence": null,
+          "created_at": "2026-10-05T12:01:00+00:00",
+          "description": "pain []",
+          "episode_id": "6aa28ee2-7c95-4c0e-929b-8385c70df7eb",
+          "id": "11edc393-0cc0-45db-a523-82d3e911bbf7",
+          "label": "Left hip pain",
+          "latest_reported_at": "2026-10-05T12:02:00+00:00",
+          "latest_reported_status": "improving",
+          "load_region": "lower_limb",
+          "plan_id": "ad2a7f8a-fad6-4feb-a4d6-8cd7144050da",
+          "progression_assessments": [],
+          "region_group": "hip_groin",
+          "rehab_care_pathway": "musculoskeletal",
+          "rehab_decision": {
+            "activation": "live",
+            "injury_episode_id": "6aa28ee2-7c95-4c0e-929b-8385c70df7eb",
+            "injury_id": "11edc393-0cc0-45db-a523-82d3e911bbf7",
+            "injury_type": "pain",
+            "loading_hold": false,
+            "outcome": "prescribed_rehab",
+            "policy_id": "hip_pain",
+            "policy_version": 2,
+            "prescription": {
+              "bank_hash": "dbb0cc3a1e9c6453d88fa8f9cfc59ab2f756839658bf66a625c9c7f686d11bb5",
+              "dose": {
+                "reps": 5
+              },
+              "drill": {
+                "allowed_severities": [
+                  "low",
+                  "moderate"
+                ],
+                "compatible_injury_types": [
+                  "pain"
+                ],
+                "contact_level": "none",
+                "contraction_type": "mixed",
+                "dose": {
+                  "reps": 5
+                },
+                "equipment": [],
+                "evidence_notes": "Sources: https://wellbeing.wmas.nhs.uk/wp-content/uploads/2026/02/ADV121-Hip-Pain.pdf. Fixed conservative movement only. Dose is the explicit value, or the lower bound of the range, in the cited leaflet; one round per scheduled rehab session is a product cadence, not a source claim. No change to stage-entry criteria or permission, and no inference of sport readiness. No automatic resistance, range or speed progression.",
+                "function": "activation",
+                "id": "hip_pain_double_leg_bridge_hold",
+                "impact": "none",
+                "laterality_applicability": "side_specific",
+                "load": "low",
+                "name": "Double-leg bridge with 5-second hold",
+                "notes": "Lie on your back with your knees bent and feet flat on the floor. Lift your pelvis and lower back off the floor, hold for 5 seconds, then lower down slowly. Repeat 5 times. No single-leg bridge, band or added weight; keep within your pain limits. Stop if pain or symptoms increase during or after the exercise. Follow your existing clinician restrictions. Seek assessment for hip pain after a fall, inability to take weight through the leg, a hot swollen joint, fever, or numbness or tingling in the leg.",
+                "pain_ceiling": null,
+                "prescription": {
+                  "frequency": "scheduled_sessions",
+                  "minimum_gap_days": 1,
+                  "priority": 0,
+                  "sources": [
+                    "https://wellbeing.wmas.nhs.uk/wp-content/uploads/2026/02/ADV121-Hip-Pain.pdf"
+                  ]
+                },
+                "progress_when": [],
+                "regress_when": [
+                  "Stop and return to conservative guidance if symptoms worsen."
+                ],
+                "rehab_stage": "restore",
+                "sport_specificity": "general_rehab",
+                "stop_when": [
+                  "Stop if pain or symptoms increase during or after the exercise. Follow your existing clinician restrictions.",
+                  "Seek assessment for hip pain after a fall, inability to take weight through the leg, a hot swollen joint, fever, or numbness or tingling in the leg."
+                ],
+                "target_regions": [
+                  "hip"
+                ],
+                "target_tissues": [
+                  "hip and buttock muscles"
+                ],
+                "velocity": "low"
+              },
+              "drill_id": "hip_pain_double_leg_bridge_hold",
+              "frequency": "scheduled_sessions",
+              "instructions": "Lie on your back with your knees bent and feet flat on the floor. Lift your pelvis and lower back off the floor, hold for 5 seconds, then lower down slowly. Repeat 5 times. No single-leg bridge, band or added weight; keep within your pain limits. Stop if pain or symptoms increase during or after the exercise. Follow your existing clinician restrictions. Seek assessment for hip pain after a fall, inability to take weight through the leg, a hot swollen joint, fever, or numbness or tingling in the leg.",
+              "is_loading": true,
+              "minimum_gap_days": 1,
+              "policy_id": "hip_pain",
+              "policy_review_hash": "c11b50e61c89de8d8854bc46da03973c86387608c8a379cf2b5f8f5958c25168",
+              "policy_version": 2,
+              "sources": [
+                "https://wellbeing.wmas.nhs.uk/wp-content/uploads/2026/02/ADV121-Hip-Pain.pdf"
+              ],
+              "stop_when": [
+                "Stop if pain or symptoms increase during or after the exercise. Follow your existing clinician restrictions.",
+                "Seek assessment for hip pain after a fall, inability to take weight through the leg, a hot swollen joint, fever, or numbness or tingling in the leg."
+              ]
+            },
+            "progression": {
+              "engine_version": "2",
+              "evidence_ids": [],
+              "next_transition": {
+                "closed_reason": null,
+                "from_stage": "restore",
+                "ignored_evidence": {},
+                "missing_inputs": [],
+                "reason_codes": [
+                  "no_reviewed_stage_exposure",
+                  "no_reviewed_response_group",
+                  "no_reviewed_response_group"
+                ],
+                "requirements": [
+                  {
+                    "basis": "product_safety",
+                    "evidence_ids": [],
+                    "kind": "no_unresolved_setback",
+                    "reason_code": "no_negative_response",
+                    "requirement_id": "no_unresolved_setback",
+                    "status": "pass"
+                  },
+                  {
+                    "basis": "product_safety",
+                    "evidence_ids": [],
+                    "kind": "complete_history",
+                    "reason_code": "history_complete",
+                    "requirement_id": "complete_episode_history",
+                    "status": "pass"
+                  },
+                  {
+                    "basis": "data_sufficiency",
+                    "evidence_ids": [],
+                    "kind": "completed_reviewed_exposure",
+                    "reason_code": "no_reviewed_stage_exposure",
+                    "requirement_id": "reviewed_stage_exposure",
+                    "status": "unknown"
+                  },
+                  {
+                    "basis": "product_safety",
+                    "evidence_ids": [],
+                    "kind": "during_session_response",
+                    "reason_code": "no_reviewed_response_group",
+                    "requirement_id": "during_response_not_worse",
+                    "status": "unknown"
+                  },
+                  {
+                    "basis": "product_safety",
+                    "evidence_ids": [],
+                    "kind": "next_day_response",
+                    "reason_code": "no_reviewed_response_group",
+                    "requirement_id": "next_day_response_not_worse",
+                    "status": "unknown"
+                  }
+                ],
+                "status": "blocked",
+                "target_stage_live": false,
+                "to_stage": "load"
+              },
+              "reason_codes": [
+                "baseline_only_v1"
+              ],
+              "stage": "restore"
+            },
+            "reason_codes": [
+              "SELECT_DETERMINISTIC_BEST"
+            ],
+            "region": "hip",
+            "restrictions": {
+              "blocked_regions": [
+                "hip"
+              ],
+              "blocked_tags": [],
+              "contact_limit": "none"
+            },
+            "schedule": {
+              "next_due_day": "2026-10-05",
+              "reason": "Your baseline rehab is due today; missed work adds no extra volume.",
+              "state": "due"
+            },
+            "stage": "restore",
+            "summary": "Your rehab is matched to this injury's current recovery stage."
+          },
+          "rehab_improvement_at": "2026-10-05T12:02:00Z",
+          "rehab_improvement_reports": [
+            {
+              "id": "68b3ccc0-4d50-4d19-bba3-32bc470c64d3",
+              "reported_at": "2026-10-05T12:01:00+00:00"
+            },
+            {
+              "id": "2fd95556-c898-467a-bf80-40af1aa2d1f8",
+              "reported_at": "2026-10-05T12:02:00+00:00"
+            }
+          ],
+          "rehab_medical_gate": false,
+          "rehab_stage": "restore",
+          "rehab_stage_reasons": [
+            "symptoms_not_worsening",
+            "insufficient_injury_specific_progression_evidence"
+          ],
+          "resolved_at": null,
+          "severity": "mild",
+          "side": "left",
+          "source": "checkin",
+          "status": "monitoring",
+          "surface_class": "non_surface",
+          "updated_at": "2026-10-05T12:02:00+00:00"
+        }
+      ],
+      "quick_actions": [
+        {
+          "id": "open_today",
+          "label": "Open Today",
+          "route": "/today"
+        },
+        {
+          "id": "view_plan",
+          "label": "View Plan",
+          "route": "/plans/ad2a7f8a-fad6-4feb-a4d6-8cd7144050da"
+        }
+      ],
+      "risk_watch": [
+        {
+          "category": "reminder",
+          "icon": "info",
+          "label": "Reminder",
+          "priority": 7,
+          "text": "Tracking 1 open injury: Left hip pain. Train around it.",
+          "timeframe": "active",
+          "tone": "info"
+        }
+      ],
+      "today": {
+        "completion_status": "not_started",
+        "decision_tier": "modify",
+        "injury_hold_exempt": false,
+        "next_session": {
+          "blocks": [
+            {
+              "bank_hash": "dbb0cc3a1e9c6453d88fa8f9cfc59ab2f756839658bf66a625c9c7f686d11bb5",
+              "block_id": "rehab:11edc393-0cc0-45db-a523-82d3e911bbf7:6aa28ee2-7c95-4c0e-929b-8385c70df7eb",
+              "block_type": "rehab",
+              "coaching_cues": [
+                "Lie on your back with your knees bent and feet flat on the floor. Lift your pelvis and lower back off the floor, hold for 5 seconds, then lower down slowly. Repeat 5 times. No single-leg bridge, band or added weight; keep within your pain limits. Stop if pain or symptoms increase during or after the exercise. Follow your existing clinician restrictions. Seek assessment for hip pain after a fall, inability to take weight through the leg, a hot swollen joint, fever, or numbness or tingling in the leg."
+              ],
+              "display_name": "Double-leg bridge with 5-second hold",
+              "dose": {
+                "reps": 5
+              },
+              "drill_snapshot": {
+                "allowed_severities": [
+                  "low",
+                  "moderate"
+                ],
+                "compatible_injury_types": [
+                  "pain"
+                ],
+                "contact_level": "none",
+                "contraction_type": "mixed",
+                "dose": {
+                  "reps": 5
+                },
+                "equipment": [],
+                "evidence_notes": "Sources: https://wellbeing.wmas.nhs.uk/wp-content/uploads/2026/02/ADV121-Hip-Pain.pdf. Fixed conservative movement only. Dose is the explicit value, or the lower bound of the range, in the cited leaflet; one round per scheduled rehab session is a product cadence, not a source claim. No change to stage-entry criteria or permission, and no inference of sport readiness. No automatic resistance, range or speed progression.",
+                "function": "activation",
+                "id": "hip_pain_double_leg_bridge_hold",
+                "impact": "none",
+                "laterality_applicability": "side_specific",
+                "load": "low",
+                "name": "Double-leg bridge with 5-second hold",
+                "notes": "Lie on your back with your knees bent and feet flat on the floor. Lift your pelvis and lower back off the floor, hold for 5 seconds, then lower down slowly. Repeat 5 times. No single-leg bridge, band or added weight; keep within your pain limits. Stop if pain or symptoms increase during or after the exercise. Follow your existing clinician restrictions. Seek assessment for hip pain after a fall, inability to take weight through the leg, a hot swollen joint, fever, or numbness or tingling in the leg.",
+                "pain_ceiling": null,
+                "prescription": {
+                  "frequency": "scheduled_sessions",
+                  "minimum_gap_days": 1,
+                  "priority": 0,
+                  "sources": [
+                    "https://wellbeing.wmas.nhs.uk/wp-content/uploads/2026/02/ADV121-Hip-Pain.pdf"
+                  ]
+                },
+                "progress_when": [],
+                "regress_when": [
+                  "Stop and return to conservative guidance if symptoms worsen."
+                ],
+                "rehab_stage": "restore",
+                "sport_specificity": "general_rehab",
+                "stop_when": [
+                  "Stop if pain or symptoms increase during or after the exercise. Follow your existing clinician restrictions.",
+                  "Seek assessment for hip pain after a fall, inability to take weight through the leg, a hot swollen joint, fever, or numbness or tingling in the leg."
+                ],
+                "target_regions": [
+                  "hip"
+                ],
+                "target_tissues": [
+                  "hip and buttock muscles"
+                ],
+                "velocity": "low"
+              },
+              "exercise_key": "hip-pain-double-leg-bridge-hold",
+              "injury_episode_id": "6aa28ee2-7c95-4c0e-929b-8385c70df7eb",
+              "injury_id": "11edc393-0cc0-45db-a523-82d3e911bbf7",
+              "instructions": "Lie on your back with your knees bent and feet flat on the floor. Lift your pelvis and lower back off the floor, hold for 5 seconds, then lower down slowly. Repeat 5 times. No single-leg bridge, band or added weight; keep within your pain limits. Stop if pain or symptoms increase during or after the exercise. Follow your existing clinician restrictions. Seek assessment for hip pain after a fall, inability to take weight through the leg, a hot swollen joint, fever, or numbness or tingling in the leg.",
+              "is_loading": true,
+              "minimum_gap_days": 1,
+              "policy_id": "hip_pain",
+              "policy_review_hash": "c11b50e61c89de8d8854bc46da03973c86387608c8a379cf2b5f8f5958c25168",
+              "policy_version": 2,
+              "rehab_drill_id": "hip_pain_double_leg_bridge_hold",
+              "reps": 5,
+              "source_references": [
+                "https://wellbeing.wmas.nhs.uk/wp-content/uploads/2026/02/ADV121-Hip-Pain.pdf"
+              ],
+              "stop_rules": [
+                "Stop if pain or symptoms increase during or after the exercise. Follow your existing clinician restrictions.",
+                "Seek assessment for hip pain after a fall, inability to take weight through the leg, a hot swollen joint, fever, or numbness or tingling in the leg."
+              ],
+              "target_regions": [
+                "hip"
+              ],
+              "title": "Double-leg bridge with 5-second hold"
+            }
+          ],
+          "calendar_date": "2026-10-05",
+          "contact_level": "none",
+          "day_label": "",
+          "effective_load": "reduced",
+          "objective": "Follow the reviewed rehab for your current injury guidance.",
+          "phase": "GPP",
+          "session_id": "rehab-2026-10-05-74d0a3b23223afe6a26f5eb9",
+          "session_relation": "today",
+          "session_type": "rehab",
+          "title": "Today's rehab",
+          "weekday": "Monday",
+          "weekday_with_label": "Monday"
+        },
+        "primary_safety_notice": null,
+        "recommendation_confidence": "moderate",
+        "recommendation_confidence_note": "Less to go on today: this is based on today's check-in alone, with no recent days to compare.",
+        "recommendation_context_labels": [],
+        "recommendation_reason": "Reviewed rehab today\nYour planned training conflicts with the current injury restrictions.\nFollow only the reviewed rehab shown today.",
+        "recommendation_safety_checks": [],
+        "recommendation_sources": [
+          "today's check-in",
+          "today's planned session",
+          "your tracked injuries"
+        ],
+        "recommendation_state": "modify",
+        "recommendation_trigger_labels": [
+          "Current injury restrictions"
+        ],
+        "session_label": "Today's session",
+        "session_scope": "today",
+        "training_day": "2026-10-05",
+        "warnings": []
+      },
+      "week_summary": {}
+    }
+  },
+  "knee_pain": {
+    "profile": {
+      "effective_admin": false,
+      "latest_intake": null,
+      "latest_plan": {
+        "activation_state": "eligible",
+        "athlete_id": "1bf1511f-0523-4f58-9b06-ac1fa6d339cc",
+        "created_at": "2026-10-05T12:00:00+00:00",
+        "custom_plan_id": null,
+        "fight_date": "",
+        "full_name": "",
+        "pdf_url": null,
+        "plan_id": "abf8e498-1517-48fd-85ca-e359ef73ace2",
+        "plan_name": null,
+        "review_reason": null,
+        "status": "ready",
+        "technical_style": []
+      },
+      "plan_count": 1,
+      "profile": {
+        "access_status": "approved",
+        "age_band": "adult",
+        "appearance_mode": "dark",
+        "athlete_id": "1bf1511f-0523-4f58-9b06-ac1fa6d339cc",
+        "athlete_locale": "",
+        "athlete_timezone": "UTC",
+        "avatar_url": null,
+        "created_at": "2026-10-05T12:03:00+00:00",
+        "date_of_birth": "1996-05-04",
+        "email": "fixture@example.com",
+        "full_name": "Test athlete",
+        "health_consent_at": "2026-10-05T12:03:00+00:00",
+        "health_consent_granted": true,
+        "health_consent_version": "1.0",
+        "health_consent_withdrawn_at": null,
+        "health_data_consent": true,
+        "is_minor": false,
+        "meets_minimum_age": true,
+        "nutrition_profile": {
+          "age": null,
+          "caffeine_use": null,
+          "daily_activity_level": null,
+          "dietary_restrictions": [],
+          "food_preferences": [],
+          "foods_avoided_fight_week": [],
+          "foods_avoided_pre_session": [],
+          "height_cm": null,
+          "meals_per_day_preference": null,
+          "sex": null,
+          "supplement_use": []
+        },
+        "onboarding_draft": null,
+        "private_trial_ack_at": null,
+        "professional_status": "",
+        "record": "",
+        "role": "athlete",
+        "stance": "",
+        "starting_path": "plan_first",
+        "tactical_style": [],
+        "technical_style": [],
+        "terms_accepted": true,
+        "terms_accepted_at": "2026-10-05T12:03:00+00:00",
+        "terms_version": "0.1-pre-launch",
+        "training_habits": {
+          "decisions": [],
+          "enabled": true
+        },
+        "training_habits_revision": 0,
+        "updated_at": "2026-10-05T12:04:00+00:00",
+        "username": null,
+        "username_change_history": []
+      },
+      "username_rate_limit": {
+        "max_changes_per_window": 4,
+        "next_available_at": null,
+        "remaining": 4,
+        "window_days": 30
+      }
+    },
+    "view": {
+      "active_plan": {
+        "id": "abf8e498-1517-48fd-85ca-e359ef73ace2",
+        "phase": "GPP",
+        "status": "ready"
+      },
+      "delayed_rehab_prompts": [],
+      "effective_clinician_clearance": {
+        "level": "rehab_only",
+        "limited_by": [
+          {
+            "injury_episode_id": "3a4f17bb-d57c-433c-842e-5582578ef396",
+            "injury_id": "8b63e20a-9a6f-42fb-a8f1-ee84c9e07fd6",
+            "label": "Left knee pain"
+          }
+        ],
+        "requires_update": false,
+        "scopes": [
+          "rehab"
+        ]
+      },
+      "exercise_media": {},
+      "live_prescription": {
+        "allocation_limit": 2,
+        "changes": [
+          {
+            "action": "held",
+            "reason": "clinician_clearance_ceiling"
+          },
+          {
+            "action": "held",
+            "block_id": "training",
+            "reason": "no_reviewed_safe_substitution",
+            "restriction_reasons": [
+              "injury_loading_restriction"
+            ]
+          }
+        ],
+        "engine_version": "2",
+        "evidence_context": {
+          "event_id": "4844fb9b-01d5-5ff9-9fa3-a2e3f3f2ce10",
+          "exposure_id": null
+        },
+        "frozen": false,
+        "held_session_id": "training",
+        "injury_context": [
+          {
+            "episode_id": "3a4f17bb-d57c-433c-842e-5582578ef396",
+            "id": "8b63e20a-9a6f-42fb-a8f1-ee84c9e07fd6",
+            "updated_at": "2026-10-05T12:02:00+00:00"
+          }
+        ],
+        "injury_ids": [
+          "8b63e20a-9a6f-42fb-a8f1-ee84c9e07fd6"
+        ],
+        "plan_id": "abf8e498-1517-48fd-85ca-e359ef73ace2",
+        "readiness_context": {
+          "id": "6b80c5b7-3b4a-434f-8861-2fa4f9c2573e",
+          "updated_at": "2026-10-05T12:02:00+00:00"
+        },
+        "rehab_only": true,
+        "revision": "bbe3868b39c9fe68c6c39a590ce98ec8ad3eedd252d09d6894bc835bacc82db4",
+        "safety_hold": false,
+        "session": {
+          "blocks": [
+            {
+              "bank_hash": "4faccb5478c6ce69c41f5fb8a1779eb4f1fa36922892cf6012d0eab9eee52b45",
+              "block_id": "rehab:8b63e20a-9a6f-42fb-a8f1-ee84c9e07fd6:3a4f17bb-d57c-433c-842e-5582578ef396",
+              "block_type": "rehab",
+              "coaching_cues": [
+                "Sit on a stable chair with both feet on the floor. Slowly straighten the affected knee from the bent position and hold it out straight for 3 seconds, then lower it slowly. Repeat 10 times. No ankle weight, band or forced straightening; keep the movement comfortable. Stop if pain or symptoms increase during or after the exercise. Follow your existing clinician restrictions. Seek assessment if the knee locks, gives way, becomes hot and swollen, or you cannot take weight through the leg."
+              ],
+              "display_name": "Seated knee straightening hold",
+              "dose": {
+                "reps": 10
+              },
+              "drill_snapshot": {
+                "allowed_severities": [
+                  "low",
+                  "moderate"
+                ],
+                "compatible_injury_types": [
+                  "pain"
+                ],
+                "contact_level": "none",
+                "contraction_type": "mixed",
+                "dose": {
+                  "reps": 10
+                },
+                "equipment": [
+                  "chair"
+                ],
+                "evidence_notes": "Sources: https://www.uhcw.nhs.uk/download/clientfiles/files/Patient%20Information%20Leaflets/Emergency%20Medicine/Emergency%20Department/Knee%20and%20leg%20injury%20-%20Care%20advice%20(1516).pdf. Fixed conservative movement only. Dose is the explicit value, or the lower bound of the range, in the cited leaflet; one round per scheduled rehab session is a product cadence, not a source claim. No change to stage-entry criteria or permission, and no inference of sport readiness. No automatic resistance, range or speed progression.",
+                "function": "activation",
+                "id": "knee_pain_seated_knee_straightening_hold",
+                "impact": "none",
+                "laterality_applicability": "side_specific",
+                "load": "low",
+                "name": "Seated knee straightening hold",
+                "notes": "Sit on a stable chair with both feet on the floor. Slowly straighten the affected knee from the bent position and hold it out straight for 3 seconds, then lower it slowly. Repeat 10 times. No ankle weight, band or forced straightening; keep the movement comfortable. Stop if pain or symptoms increase during or after the exercise. Follow your existing clinician restrictions. Seek assessment if the knee locks, gives way, becomes hot and swollen, or you cannot take weight through the leg.",
+                "pain_ceiling": null,
+                "prescription": {
+                  "frequency": "scheduled_sessions",
+                  "minimum_gap_days": 1,
+                  "priority": 5,
+                  "sources": [
+                    "https://www.uhcw.nhs.uk/download/clientfiles/files/Patient%20Information%20Leaflets/Emergency%20Medicine/Emergency%20Department/Knee%20and%20leg%20injury%20-%20Care%20advice%20(1516).pdf"
+                  ]
+                },
+                "progress_when": [],
+                "regress_when": [
+                  "Stop and return to conservative guidance if symptoms worsen."
+                ],
+                "rehab_stage": "restore",
+                "sport_specificity": "general_rehab",
+                "stop_when": [
+                  "Stop if pain or symptoms increase during or after the exercise. Follow your existing clinician restrictions.",
+                  "Seek assessment if the knee locks, gives way, becomes hot and swollen, or you cannot take weight through the leg."
+                ],
+                "target_regions": [
+                  "knee"
+                ],
+                "target_tissues": [
+                  "quadriceps muscles and knee joint"
+                ],
+                "velocity": "low"
+              },
+              "exercise_key": "knee-pain-seated-knee-straightening-hold",
+              "injury_episode_id": "3a4f17bb-d57c-433c-842e-5582578ef396",
+              "injury_id": "8b63e20a-9a6f-42fb-a8f1-ee84c9e07fd6",
+              "instructions": "Sit on a stable chair with both feet on the floor. Slowly straighten the affected knee from the bent position and hold it out straight for 3 seconds, then lower it slowly. Repeat 10 times. No ankle weight, band or forced straightening; keep the movement comfortable. Stop if pain or symptoms increase during or after the exercise. Follow your existing clinician restrictions. Seek assessment if the knee locks, gives way, becomes hot and swollen, or you cannot take weight through the leg.",
+              "is_loading": true,
+              "minimum_gap_days": 1,
+              "policy_id": "knee_pain",
+              "policy_review_hash": "ecf431e10d72287be3c138e06471eef07bdf3dd6740630ae3adce6b6397259fb",
+              "policy_version": 2,
+              "rehab_drill_id": "knee_pain_seated_knee_straightening_hold",
+              "reps": 10,
+              "source_references": [
+                "https://www.uhcw.nhs.uk/download/clientfiles/files/Patient%20Information%20Leaflets/Emergency%20Medicine/Emergency%20Department/Knee%20and%20leg%20injury%20-%20Care%20advice%20(1516).pdf"
+              ],
+              "stop_rules": [
+                "Stop if pain or symptoms increase during or after the exercise. Follow your existing clinician restrictions.",
+                "Seek assessment if the knee locks, gives way, becomes hot and swollen, or you cannot take weight through the leg."
+              ],
+              "target_regions": [
+                "knee"
+              ],
+              "title": "Seated knee straightening hold"
+            }
+          ],
+          "calendar_date": "2026-10-05",
+          "contact_level": "none",
+          "day_label": "",
+          "effective_load": "reduced",
+          "objective": "Follow the reviewed rehab for your current injury guidance.",
+          "phase": "GPP",
+          "session_id": "rehab-2026-10-05-d5296e1e4c50e348a2b41d3f",
+          "session_type": "rehab",
+          "title": "Today's rehab",
+          "weekday": "Monday",
+          "weekday_with_label": "Monday"
+        },
+        "training_day": "2026-10-05",
+        "training_hold_reason": "Your planned training conflicts with the current injury restrictions."
+      },
+      "open_injuries": [
+        {
+          "assessment_episode_started_at": "2026-10-05T12:01:00Z",
+          "assessment_history_complete": true,
+          "assessment_setback_at": null,
+          "athlete_id": "1bf1511f-0523-4f58-9b06-ac1fa6d339cc",
+          "body_area": "Left knee",
+          "body_region": "knee",
+          "canonical_location": "knee",
+          "clinician_clearance": {
+            "episode_id": "3a4f17bb-d57c-433c-842e-5582578ef396",
+            "externally_verified": false,
+            "rehabilitation_permission": {
+              "level": "gentle_recovery",
+              "schema_version": 1
+            },
+            "report_id": "4844fb9b-01d5-5ff9-9fa3-a2e3f3f2ce10",
+            "reported_at": "2026-10-05T12:04:00+00:00",
+            "scope_reported_at": {
+              "rehab": "2026-10-05T12:04:00+00:00"
+            },
+            "scopes": [
+              "rehab"
+            ],
+            "source": "athlete_reported"
+          },
+          "consequence": null,
+          "created_at": "2026-10-05T12:01:00+00:00",
+          "description": "pain []",
+          "episode_id": "3a4f17bb-d57c-433c-842e-5582578ef396",
+          "id": "8b63e20a-9a6f-42fb-a8f1-ee84c9e07fd6",
+          "label": "Left knee pain",
+          "latest_reported_at": "2026-10-05T12:02:00+00:00",
+          "latest_reported_status": "improving",
+          "load_region": "lower_limb",
+          "plan_id": "abf8e498-1517-48fd-85ca-e359ef73ace2",
+          "progression_assessments": [],
+          "region_group": "knee",
+          "rehab_care_pathway": "musculoskeletal",
+          "rehab_decision": {
+            "activation": "live",
+            "injury_episode_id": "3a4f17bb-d57c-433c-842e-5582578ef396",
+            "injury_id": "8b63e20a-9a6f-42fb-a8f1-ee84c9e07fd6",
+            "injury_type": "pain",
+            "loading_hold": false,
+            "outcome": "prescribed_rehab",
+            "policy_id": "knee_pain",
+            "policy_version": 2,
+            "prescription": {
+              "bank_hash": "4faccb5478c6ce69c41f5fb8a1779eb4f1fa36922892cf6012d0eab9eee52b45",
+              "dose": {
+                "reps": 10
+              },
+              "drill": {
+                "allowed_severities": [
+                  "low",
+                  "moderate"
+                ],
+                "compatible_injury_types": [
+                  "pain"
+                ],
+                "contact_level": "none",
+                "contraction_type": "mixed",
+                "dose": {
+                  "reps": 10
+                },
+                "equipment": [
+                  "chair"
+                ],
+                "evidence_notes": "Sources: https://www.uhcw.nhs.uk/download/clientfiles/files/Patient%20Information%20Leaflets/Emergency%20Medicine/Emergency%20Department/Knee%20and%20leg%20injury%20-%20Care%20advice%20(1516).pdf. Fixed conservative movement only. Dose is the explicit value, or the lower bound of the range, in the cited leaflet; one round per scheduled rehab session is a product cadence, not a source claim. No change to stage-entry criteria or permission, and no inference of sport readiness. No automatic resistance, range or speed progression.",
+                "function": "activation",
+                "id": "knee_pain_seated_knee_straightening_hold",
+                "impact": "none",
+                "laterality_applicability": "side_specific",
+                "load": "low",
+                "name": "Seated knee straightening hold",
+                "notes": "Sit on a stable chair with both feet on the floor. Slowly straighten the affected knee from the bent position and hold it out straight for 3 seconds, then lower it slowly. Repeat 10 times. No ankle weight, band or forced straightening; keep the movement comfortable. Stop if pain or symptoms increase during or after the exercise. Follow your existing clinician restrictions. Seek assessment if the knee locks, gives way, becomes hot and swollen, or you cannot take weight through the leg.",
+                "pain_ceiling": null,
+                "prescription": {
+                  "frequency": "scheduled_sessions",
+                  "minimum_gap_days": 1,
+                  "priority": 5,
+                  "sources": [
+                    "https://www.uhcw.nhs.uk/download/clientfiles/files/Patient%20Information%20Leaflets/Emergency%20Medicine/Emergency%20Department/Knee%20and%20leg%20injury%20-%20Care%20advice%20(1516).pdf"
+                  ]
+                },
+                "progress_when": [],
+                "regress_when": [
+                  "Stop and return to conservative guidance if symptoms worsen."
+                ],
+                "rehab_stage": "restore",
+                "sport_specificity": "general_rehab",
+                "stop_when": [
+                  "Stop if pain or symptoms increase during or after the exercise. Follow your existing clinician restrictions.",
+                  "Seek assessment if the knee locks, gives way, becomes hot and swollen, or you cannot take weight through the leg."
+                ],
+                "target_regions": [
+                  "knee"
+                ],
+                "target_tissues": [
+                  "quadriceps muscles and knee joint"
+                ],
+                "velocity": "low"
+              },
+              "drill_id": "knee_pain_seated_knee_straightening_hold",
+              "frequency": "scheduled_sessions",
+              "instructions": "Sit on a stable chair with both feet on the floor. Slowly straighten the affected knee from the bent position and hold it out straight for 3 seconds, then lower it slowly. Repeat 10 times. No ankle weight, band or forced straightening; keep the movement comfortable. Stop if pain or symptoms increase during or after the exercise. Follow your existing clinician restrictions. Seek assessment if the knee locks, gives way, becomes hot and swollen, or you cannot take weight through the leg.",
+              "is_loading": true,
+              "minimum_gap_days": 1,
+              "policy_id": "knee_pain",
+              "policy_review_hash": "ecf431e10d72287be3c138e06471eef07bdf3dd6740630ae3adce6b6397259fb",
+              "policy_version": 2,
+              "sources": [
+                "https://www.uhcw.nhs.uk/download/clientfiles/files/Patient%20Information%20Leaflets/Emergency%20Medicine/Emergency%20Department/Knee%20and%20leg%20injury%20-%20Care%20advice%20(1516).pdf"
+              ],
+              "stop_when": [
+                "Stop if pain or symptoms increase during or after the exercise. Follow your existing clinician restrictions.",
+                "Seek assessment if the knee locks, gives way, becomes hot and swollen, or you cannot take weight through the leg."
+              ]
+            },
+            "progression": {
+              "engine_version": "2",
+              "evidence_ids": [],
+              "next_transition": {
+                "closed_reason": null,
+                "from_stage": "restore",
+                "ignored_evidence": {},
+                "missing_inputs": [],
+                "reason_codes": [
+                  "no_reviewed_stage_exposure",
+                  "no_reviewed_response_group",
+                  "no_reviewed_response_group"
+                ],
+                "requirements": [
+                  {
+                    "basis": "product_safety",
+                    "evidence_ids": [],
+                    "kind": "no_unresolved_setback",
+                    "reason_code": "no_negative_response",
+                    "requirement_id": "no_unresolved_setback",
+                    "status": "pass"
+                  },
+                  {
+                    "basis": "product_safety",
+                    "evidence_ids": [],
+                    "kind": "complete_history",
+                    "reason_code": "history_complete",
+                    "requirement_id": "complete_episode_history",
+                    "status": "pass"
+                  },
+                  {
+                    "basis": "data_sufficiency",
+                    "evidence_ids": [],
+                    "kind": "completed_reviewed_exposure",
+                    "reason_code": "no_reviewed_stage_exposure",
+                    "requirement_id": "reviewed_stage_exposure",
+                    "status": "unknown"
+                  },
+                  {
+                    "basis": "product_safety",
+                    "evidence_ids": [],
+                    "kind": "during_session_response",
+                    "reason_code": "no_reviewed_response_group",
+                    "requirement_id": "during_response_not_worse",
+                    "status": "unknown"
+                  },
+                  {
+                    "basis": "product_safety",
+                    "evidence_ids": [],
+                    "kind": "next_day_response",
+                    "reason_code": "no_reviewed_response_group",
+                    "requirement_id": "next_day_response_not_worse",
+                    "status": "unknown"
+                  }
+                ],
+                "status": "blocked",
+                "target_stage_live": false,
+                "to_stage": "load"
+              },
+              "reason_codes": [
+                "baseline_only_v1"
+              ],
+              "stage": "restore"
+            },
+            "reason_codes": [
+              "SELECT_DETERMINISTIC_BEST"
+            ],
+            "region": "knee",
+            "restrictions": {
+              "blocked_regions": [
+                "knee"
+              ],
+              "blocked_tags": [],
+              "contact_limit": "none"
+            },
+            "schedule": {
+              "next_due_day": "2026-10-05",
+              "reason": "Your baseline rehab is due today; missed work adds no extra volume.",
+              "state": "due"
+            },
+            "stage": "restore",
+            "summary": "Your rehab is matched to this injury's current recovery stage."
+          },
+          "rehab_improvement_at": "2026-10-05T12:02:00Z",
+          "rehab_improvement_reports": [
+            {
+              "id": "6dd3e1a2-289c-4736-83a3-e9f040dcb869",
+              "reported_at": "2026-10-05T12:01:00+00:00"
+            },
+            {
+              "id": "1f44f2ff-e049-4b09-91f9-198ec525b9c7",
+              "reported_at": "2026-10-05T12:02:00+00:00"
+            }
+          ],
+          "rehab_medical_gate": false,
+          "rehab_stage": "restore",
+          "rehab_stage_reasons": [
+            "symptoms_not_worsening",
+            "insufficient_injury_specific_progression_evidence"
+          ],
+          "resolved_at": null,
+          "severity": "mild",
+          "side": "left",
+          "source": "checkin",
+          "status": "monitoring",
+          "surface_class": "non_surface",
+          "updated_at": "2026-10-05T12:02:00+00:00"
+        }
+      ],
+      "quick_actions": [
+        {
+          "id": "open_today",
+          "label": "Open Today",
+          "route": "/today"
+        },
+        {
+          "id": "view_plan",
+          "label": "View Plan",
+          "route": "/plans/abf8e498-1517-48fd-85ca-e359ef73ace2"
+        }
+      ],
+      "risk_watch": [
+        {
+          "category": "reminder",
+          "icon": "info",
+          "label": "Reminder",
+          "priority": 7,
+          "text": "Tracking 1 open injury: Left knee pain. Train around it.",
+          "timeframe": "active",
+          "tone": "info"
+        }
+      ],
+      "today": {
+        "completion_status": "not_started",
+        "decision_tier": "modify",
+        "injury_hold_exempt": false,
+        "next_session": {
+          "blocks": [
+            {
+              "bank_hash": "4faccb5478c6ce69c41f5fb8a1779eb4f1fa36922892cf6012d0eab9eee52b45",
+              "block_id": "rehab:8b63e20a-9a6f-42fb-a8f1-ee84c9e07fd6:3a4f17bb-d57c-433c-842e-5582578ef396",
+              "block_type": "rehab",
+              "coaching_cues": [
+                "Sit on a stable chair with both feet on the floor. Slowly straighten the affected knee from the bent position and hold it out straight for 3 seconds, then lower it slowly. Repeat 10 times. No ankle weight, band or forced straightening; keep the movement comfortable. Stop if pain or symptoms increase during or after the exercise. Follow your existing clinician restrictions. Seek assessment if the knee locks, gives way, becomes hot and swollen, or you cannot take weight through the leg."
+              ],
+              "display_name": "Seated knee straightening hold",
+              "dose": {
+                "reps": 10
+              },
+              "drill_snapshot": {
+                "allowed_severities": [
+                  "low",
+                  "moderate"
+                ],
+                "compatible_injury_types": [
+                  "pain"
+                ],
+                "contact_level": "none",
+                "contraction_type": "mixed",
+                "dose": {
+                  "reps": 10
+                },
+                "equipment": [
+                  "chair"
+                ],
+                "evidence_notes": "Sources: https://www.uhcw.nhs.uk/download/clientfiles/files/Patient%20Information%20Leaflets/Emergency%20Medicine/Emergency%20Department/Knee%20and%20leg%20injury%20-%20Care%20advice%20(1516).pdf. Fixed conservative movement only. Dose is the explicit value, or the lower bound of the range, in the cited leaflet; one round per scheduled rehab session is a product cadence, not a source claim. No change to stage-entry criteria or permission, and no inference of sport readiness. No automatic resistance, range or speed progression.",
+                "function": "activation",
+                "id": "knee_pain_seated_knee_straightening_hold",
+                "impact": "none",
+                "laterality_applicability": "side_specific",
+                "load": "low",
+                "name": "Seated knee straightening hold",
+                "notes": "Sit on a stable chair with both feet on the floor. Slowly straighten the affected knee from the bent position and hold it out straight for 3 seconds, then lower it slowly. Repeat 10 times. No ankle weight, band or forced straightening; keep the movement comfortable. Stop if pain or symptoms increase during or after the exercise. Follow your existing clinician restrictions. Seek assessment if the knee locks, gives way, becomes hot and swollen, or you cannot take weight through the leg.",
+                "pain_ceiling": null,
+                "prescription": {
+                  "frequency": "scheduled_sessions",
+                  "minimum_gap_days": 1,
+                  "priority": 5,
+                  "sources": [
+                    "https://www.uhcw.nhs.uk/download/clientfiles/files/Patient%20Information%20Leaflets/Emergency%20Medicine/Emergency%20Department/Knee%20and%20leg%20injury%20-%20Care%20advice%20(1516).pdf"
+                  ]
+                },
+                "progress_when": [],
+                "regress_when": [
+                  "Stop and return to conservative guidance if symptoms worsen."
+                ],
+                "rehab_stage": "restore",
+                "sport_specificity": "general_rehab",
+                "stop_when": [
+                  "Stop if pain or symptoms increase during or after the exercise. Follow your existing clinician restrictions.",
+                  "Seek assessment if the knee locks, gives way, becomes hot and swollen, or you cannot take weight through the leg."
+                ],
+                "target_regions": [
+                  "knee"
+                ],
+                "target_tissues": [
+                  "quadriceps muscles and knee joint"
+                ],
+                "velocity": "low"
+              },
+              "exercise_key": "knee-pain-seated-knee-straightening-hold",
+              "injury_episode_id": "3a4f17bb-d57c-433c-842e-5582578ef396",
+              "injury_id": "8b63e20a-9a6f-42fb-a8f1-ee84c9e07fd6",
+              "instructions": "Sit on a stable chair with both feet on the floor. Slowly straighten the affected knee from the bent position and hold it out straight for 3 seconds, then lower it slowly. Repeat 10 times. No ankle weight, band or forced straightening; keep the movement comfortable. Stop if pain or symptoms increase during or after the exercise. Follow your existing clinician restrictions. Seek assessment if the knee locks, gives way, becomes hot and swollen, or you cannot take weight through the leg.",
+              "is_loading": true,
+              "minimum_gap_days": 1,
+              "policy_id": "knee_pain",
+              "policy_review_hash": "ecf431e10d72287be3c138e06471eef07bdf3dd6740630ae3adce6b6397259fb",
+              "policy_version": 2,
+              "rehab_drill_id": "knee_pain_seated_knee_straightening_hold",
+              "reps": 10,
+              "source_references": [
+                "https://www.uhcw.nhs.uk/download/clientfiles/files/Patient%20Information%20Leaflets/Emergency%20Medicine/Emergency%20Department/Knee%20and%20leg%20injury%20-%20Care%20advice%20(1516).pdf"
+              ],
+              "stop_rules": [
+                "Stop if pain or symptoms increase during or after the exercise. Follow your existing clinician restrictions.",
+                "Seek assessment if the knee locks, gives way, becomes hot and swollen, or you cannot take weight through the leg."
+              ],
+              "target_regions": [
+                "knee"
+              ],
+              "title": "Seated knee straightening hold"
+            }
+          ],
+          "calendar_date": "2026-10-05",
+          "contact_level": "none",
+          "day_label": "",
+          "effective_load": "reduced",
+          "objective": "Follow the reviewed rehab for your current injury guidance.",
+          "phase": "GPP",
+          "session_id": "rehab-2026-10-05-d5296e1e4c50e348a2b41d3f",
+          "session_relation": "today",
+          "session_type": "rehab",
+          "title": "Today's rehab",
+          "weekday": "Monday",
+          "weekday_with_label": "Monday"
+        },
+        "primary_safety_notice": null,
+        "recommendation_confidence": "moderate",
+        "recommendation_confidence_note": "Less to go on today: this is based on today's check-in alone, with no recent days to compare.",
+        "recommendation_context_labels": [],
+        "recommendation_reason": "Reviewed rehab today\nYour planned training conflicts with the current injury restrictions.\nFollow only the reviewed rehab shown today.",
+        "recommendation_safety_checks": [],
+        "recommendation_sources": [
+          "today's check-in",
+          "today's planned session",
+          "your tracked injuries"
+        ],
+        "recommendation_state": "modify",
+        "recommendation_trigger_labels": [
+          "Current injury restrictions"
+        ],
+        "session_label": "Today's session",
+        "session_scope": "today",
+        "training_day": "2026-10-05",
+        "warnings": []
+      },
+      "week_summary": {}
+    }
+  },
+  "quads_contusion": {
+    "profile": {
+      "effective_admin": false,
+      "latest_intake": null,
+      "latest_plan": {
+        "activation_state": "eligible",
+        "athlete_id": "2c3d04f8-4730-412a-9223-42a4a7c8dcb1",
+        "created_at": "2026-10-05T12:00:00+00:00",
+        "custom_plan_id": null,
+        "fight_date": "",
+        "full_name": "",
+        "pdf_url": null,
+        "plan_id": "ae5ea3e4-b10c-4a17-9b55-3c47698aa9de",
+        "plan_name": null,
+        "review_reason": null,
+        "status": "ready",
+        "technical_style": []
+      },
+      "plan_count": 1,
+      "profile": {
+        "access_status": "approved",
+        "age_band": "adult",
+        "appearance_mode": "dark",
+        "athlete_id": "2c3d04f8-4730-412a-9223-42a4a7c8dcb1",
+        "athlete_locale": "",
+        "athlete_timezone": "UTC",
+        "avatar_url": null,
+        "created_at": "2026-10-05T12:03:00+00:00",
+        "date_of_birth": "1996-05-04",
+        "email": "fixture@example.com",
+        "full_name": "Test athlete",
+        "health_consent_at": "2026-10-05T12:03:00+00:00",
+        "health_consent_granted": true,
+        "health_consent_version": "1.0",
+        "health_consent_withdrawn_at": null,
+        "health_data_consent": true,
+        "is_minor": false,
+        "meets_minimum_age": true,
+        "nutrition_profile": {
+          "age": null,
+          "caffeine_use": null,
+          "daily_activity_level": null,
+          "dietary_restrictions": [],
+          "food_preferences": [],
+          "foods_avoided_fight_week": [],
+          "foods_avoided_pre_session": [],
+          "height_cm": null,
+          "meals_per_day_preference": null,
+          "sex": null,
+          "supplement_use": []
+        },
+        "onboarding_draft": null,
+        "private_trial_ack_at": null,
+        "professional_status": "",
+        "record": "",
+        "role": "athlete",
+        "stance": "",
+        "starting_path": "plan_first",
+        "tactical_style": [],
+        "technical_style": [],
+        "terms_accepted": true,
+        "terms_accepted_at": "2026-10-05T12:03:00+00:00",
+        "terms_version": "0.1-pre-launch",
+        "training_habits": {
+          "decisions": [],
+          "enabled": true
+        },
+        "training_habits_revision": 0,
+        "updated_at": "2026-10-05T12:04:00+00:00",
+        "username": null,
+        "username_change_history": []
+      },
+      "username_rate_limit": {
+        "max_changes_per_window": 4,
+        "next_available_at": null,
+        "remaining": 4,
+        "window_days": 30
+      }
+    },
+    "view": {
+      "active_plan": {
+        "id": "ae5ea3e4-b10c-4a17-9b55-3c47698aa9de",
+        "phase": "GPP",
+        "status": "ready"
+      },
+      "delayed_rehab_prompts": [],
+      "effective_clinician_clearance": {
+        "level": "rehab_only",
+        "limited_by": [
+          {
+            "injury_episode_id": "37f74747-047d-4b86-ac58-2ba82edb3dd1",
+            "injury_id": "df1e52e2-0141-4701-83bf-ac92d6c968c3",
+            "label": "Left quads bruise"
+          }
+        ],
+        "requires_update": false,
+        "scopes": [
+          "rehab"
+        ]
+      },
+      "exercise_media": {},
+      "live_prescription": {
+        "allocation_limit": 2,
+        "changes": [
+          {
+            "action": "held",
+            "reason": "clinician_clearance_ceiling"
+          },
+          {
+            "action": "held",
+            "block_id": "training",
+            "reason": "no_reviewed_safe_substitution",
+            "restriction_reasons": [
+              "injury_loading_restriction"
+            ]
+          }
+        ],
+        "engine_version": "2",
+        "evidence_context": {
+          "event_id": "3aa1dcb8-fbc7-5e51-8432-4f6855b3bec7",
+          "exposure_id": null
+        },
+        "frozen": false,
+        "held_session_id": "training",
+        "injury_context": [
+          {
+            "episode_id": "37f74747-047d-4b86-ac58-2ba82edb3dd1",
+            "id": "df1e52e2-0141-4701-83bf-ac92d6c968c3",
+            "updated_at": "2026-10-05T12:02:00+00:00"
+          }
+        ],
+        "injury_ids": [
+          "df1e52e2-0141-4701-83bf-ac92d6c968c3"
+        ],
+        "plan_id": "ae5ea3e4-b10c-4a17-9b55-3c47698aa9de",
+        "readiness_context": {
+          "id": "cb004f01-4b18-499a-81c4-da4906e89969",
+          "updated_at": "2026-10-05T12:02:00+00:00"
+        },
+        "rehab_only": true,
+        "revision": "38a9e3fbb7b4688803c8eaaa4ab705d9dc7cdd2e92fbf14b8fcd65aafa9f41b0",
+        "safety_hold": false,
+        "session": {
+          "blocks": [
+            {
+              "bank_hash": "f4b0d347e0c35368aa1ac781611f57f52541c7c923cfadbaefdbb3ae2f46828c",
+              "block_id": "rehab:df1e52e2-0141-4701-83bf-ac92d6c968c3:37f74747-047d-4b86-ac58-2ba82edb3dd1",
+              "block_type": "rehab",
+              "coaching_cues": [
+                "Sit or lie with the affected leg straight out in front of you and supported. Gently tighten the muscles at the front of the thigh, pushing the back of the knee down towards the surface. Hold for 3 seconds, then relax. Repeat 10 times. Do not massage or stretch the bruised muscle, add weight or work through pain. Stop if pain or symptoms increase during or after the exercise. Follow your existing clinician restrictions. Seek urgent assessment for severe or increasing thigh pain or swelling, a tense or very firm thigh, numbness, or pain that keeps worsening when you move the knee."
+              ],
+              "display_name": "Static quads for a bruised thigh",
+              "dose": {
+                "duration_seconds": 3.0,
+                "reps": 10
+              },
+              "drill_snapshot": {
+                "allowed_severities": [
+                  "low",
+                  "moderate"
+                ],
+                "compatible_injury_types": [
+                  "contusion"
+                ],
+                "contact_level": "none",
+                "contraction_type": "isometric",
+                "dose": {
+                  "duration_seconds": 3,
+                  "reps": 10
+                },
+                "equipment": [],
+                "evidence_notes": "Sources: https://www.uhcw.nhs.uk/download/clientfiles/files/Patient%20Information%20Leaflets/Emergency%20Medicine/Emergency%20Department/Knee%20and%20leg%20injury%20-%20Care%20advice%20(1516).pdf, https://www.orthoinfo.org/diseases--conditions/muscle-contusion-bruise/. Fixed conservative movement only. Dose is the explicit value, or the lower bound of the range, in the cited leaflet; one round per scheduled rehab session is a product cadence, not a source claim. No change to stage-entry criteria or permission, and no inference of sport readiness. No automatic resistance, range or speed progression.",
+                "function": "activation",
+                "id": "quads_pain_isometric_quad_flex_straight_leg",
+                "impact": "none",
+                "laterality_applicability": "side_specific",
+                "load": "low",
+                "name": "Static quads for a bruised thigh",
+                "notes": "Sit or lie with the affected leg straight out in front of you and supported. Gently tighten the muscles at the front of the thigh, pushing the back of the knee down towards the surface. Hold for 3 seconds, then relax. Repeat 10 times. Do not massage or stretch the bruised muscle, add weight or work through pain. Stop if pain or symptoms increase during or after the exercise. Follow your existing clinician restrictions. Seek urgent assessment for severe or increasing thigh pain or swelling, a tense or very firm thigh, numbness, or pain that keeps worsening when you move the knee.",
+                "pain_ceiling": null,
+                "prescription": {
+                  "frequency": "scheduled_sessions",
+                  "minimum_gap_days": 1,
+                  "priority": 0,
+                  "sources": [
+                    "https://www.uhcw.nhs.uk/download/clientfiles/files/Patient%20Information%20Leaflets/Emergency%20Medicine/Emergency%20Department/Knee%20and%20leg%20injury%20-%20Care%20advice%20(1516).pdf",
+                    "https://www.orthoinfo.org/diseases--conditions/muscle-contusion-bruise/"
+                  ]
+                },
+                "progress_when": [],
+                "regress_when": [
+                  "Stop and return to conservative guidance if symptoms worsen."
+                ],
+                "rehab_stage": "restore",
+                "sport_specificity": "general_rehab",
+                "stop_when": [
+                  "Stop if pain or symptoms increase during or after the exercise. Follow your existing clinician restrictions.",
+                  "Seek urgent assessment for severe or increasing thigh pain or swelling, a tense or very firm thigh, numbness, or pain that keeps worsening when you move the knee."
+                ],
+                "target_regions": [
+                  "quads"
+                ],
+                "target_tissues": [
+                  "quadriceps muscles"
+                ],
+                "velocity": "low"
+              },
+              "duration": {
+                "unit": "seconds",
+                "value": 3.0
+              },
+              "duration_seconds": 3.0,
+              "exercise_key": "quads-pain-isometric-quad-flex-straight-leg",
+              "injury_episode_id": "37f74747-047d-4b86-ac58-2ba82edb3dd1",
+              "injury_id": "df1e52e2-0141-4701-83bf-ac92d6c968c3",
+              "instructions": "Sit or lie with the affected leg straight out in front of you and supported. Gently tighten the muscles at the front of the thigh, pushing the back of the knee down towards the surface. Hold for 3 seconds, then relax. Repeat 10 times. Do not massage or stretch the bruised muscle, add weight or work through pain. Stop if pain or symptoms increase during or after the exercise. Follow your existing clinician restrictions. Seek urgent assessment for severe or increasing thigh pain or swelling, a tense or very firm thigh, numbness, or pain that keeps worsening when you move the knee.",
+              "is_loading": true,
+              "minimum_gap_days": 1,
+              "policy_id": "quads_contusion",
+              "policy_review_hash": "af70bbdfad9058ecd80ffaa8ac30790e56a5e535018a206c5a35d6d3beb6016f",
+              "policy_version": 2,
+              "rehab_drill_id": "quads_pain_isometric_quad_flex_straight_leg",
+              "reps": 10,
+              "source_references": [
+                "https://www.uhcw.nhs.uk/download/clientfiles/files/Patient%20Information%20Leaflets/Emergency%20Medicine/Emergency%20Department/Knee%20and%20leg%20injury%20-%20Care%20advice%20(1516).pdf",
+                "https://www.orthoinfo.org/diseases--conditions/muscle-contusion-bruise/"
+              ],
+              "stop_rules": [
+                "Stop if pain or symptoms increase during or after the exercise. Follow your existing clinician restrictions.",
+                "Seek urgent assessment for severe or increasing thigh pain or swelling, a tense or very firm thigh, numbness, or pain that keeps worsening when you move the knee."
+              ],
+              "target_regions": [
+                "quads"
+              ],
+              "title": "Static quads for a bruised thigh"
+            }
+          ],
+          "calendar_date": "2026-10-05",
+          "contact_level": "none",
+          "day_label": "",
+          "effective_load": "reduced",
+          "objective": "Follow the reviewed rehab for your current injury guidance.",
+          "phase": "GPP",
+          "session_id": "rehab-2026-10-05-7e4ae74ffcd2d2d300a89099",
+          "session_type": "rehab",
+          "title": "Today's rehab",
+          "weekday": "Monday",
+          "weekday_with_label": "Monday"
+        },
+        "training_day": "2026-10-05",
+        "training_hold_reason": "Your planned training conflicts with the current injury restrictions."
+      },
+      "open_injuries": [
+        {
+          "assessment_episode_started_at": "2026-10-05T12:01:00Z",
+          "assessment_history_complete": true,
+          "assessment_setback_at": null,
+          "athlete_id": "2c3d04f8-4730-412a-9223-42a4a7c8dcb1",
+          "body_area": "Left quads",
+          "body_region": "quads",
+          "canonical_location": "quads",
+          "clinician_clearance": {
+            "episode_id": "37f74747-047d-4b86-ac58-2ba82edb3dd1",
+            "externally_verified": false,
+            "rehabilitation_permission": {
+              "level": "gentle_recovery",
+              "schema_version": 1
+            },
+            "report_id": "3aa1dcb8-fbc7-5e51-8432-4f6855b3bec7",
+            "reported_at": "2026-10-05T12:04:00+00:00",
+            "scope_reported_at": {
+              "rehab": "2026-10-05T12:04:00+00:00"
+            },
+            "scopes": [
+              "rehab"
+            ],
+            "source": "athlete_reported"
+          },
+          "consequence": null,
+          "created_at": "2026-10-05T12:01:00+00:00",
+          "description": "contusion []",
+          "episode_id": "37f74747-047d-4b86-ac58-2ba82edb3dd1",
+          "id": "df1e52e2-0141-4701-83bf-ac92d6c968c3",
+          "label": "Left quads bruise",
+          "latest_reported_at": "2026-10-05T12:02:00+00:00",
+          "latest_reported_status": "improving",
+          "load_region": "lower_limb",
+          "plan_id": "ae5ea3e4-b10c-4a17-9b55-3c47698aa9de",
+          "progression_assessments": [],
+          "region_group": "knee",
+          "rehab_care_pathway": "musculoskeletal",
+          "rehab_decision": {
+            "activation": "live",
+            "injury_episode_id": "37f74747-047d-4b86-ac58-2ba82edb3dd1",
+            "injury_id": "df1e52e2-0141-4701-83bf-ac92d6c968c3",
+            "injury_type": "contusion",
+            "loading_hold": false,
+            "outcome": "prescribed_rehab",
+            "policy_id": "quads_contusion",
+            "policy_version": 2,
+            "prescription": {
+              "bank_hash": "f4b0d347e0c35368aa1ac781611f57f52541c7c923cfadbaefdbb3ae2f46828c",
+              "dose": {
+                "duration_seconds": 3.0,
+                "reps": 10
+              },
+              "drill": {
+                "allowed_severities": [
+                  "low",
+                  "moderate"
+                ],
+                "compatible_injury_types": [
+                  "contusion"
+                ],
+                "contact_level": "none",
+                "contraction_type": "isometric",
+                "dose": {
+                  "duration_seconds": 3,
+                  "reps": 10
+                },
+                "equipment": [],
+                "evidence_notes": "Sources: https://www.uhcw.nhs.uk/download/clientfiles/files/Patient%20Information%20Leaflets/Emergency%20Medicine/Emergency%20Department/Knee%20and%20leg%20injury%20-%20Care%20advice%20(1516).pdf, https://www.orthoinfo.org/diseases--conditions/muscle-contusion-bruise/. Fixed conservative movement only. Dose is the explicit value, or the lower bound of the range, in the cited leaflet; one round per scheduled rehab session is a product cadence, not a source claim. No change to stage-entry criteria or permission, and no inference of sport readiness. No automatic resistance, range or speed progression.",
+                "function": "activation",
+                "id": "quads_pain_isometric_quad_flex_straight_leg",
+                "impact": "none",
+                "laterality_applicability": "side_specific",
+                "load": "low",
+                "name": "Static quads for a bruised thigh",
+                "notes": "Sit or lie with the affected leg straight out in front of you and supported. Gently tighten the muscles at the front of the thigh, pushing the back of the knee down towards the surface. Hold for 3 seconds, then relax. Repeat 10 times. Do not massage or stretch the bruised muscle, add weight or work through pain. Stop if pain or symptoms increase during or after the exercise. Follow your existing clinician restrictions. Seek urgent assessment for severe or increasing thigh pain or swelling, a tense or very firm thigh, numbness, or pain that keeps worsening when you move the knee.",
+                "pain_ceiling": null,
+                "prescription": {
+                  "frequency": "scheduled_sessions",
+                  "minimum_gap_days": 1,
+                  "priority": 0,
+                  "sources": [
+                    "https://www.uhcw.nhs.uk/download/clientfiles/files/Patient%20Information%20Leaflets/Emergency%20Medicine/Emergency%20Department/Knee%20and%20leg%20injury%20-%20Care%20advice%20(1516).pdf",
+                    "https://www.orthoinfo.org/diseases--conditions/muscle-contusion-bruise/"
+                  ]
+                },
+                "progress_when": [],
+                "regress_when": [
+                  "Stop and return to conservative guidance if symptoms worsen."
+                ],
+                "rehab_stage": "restore",
+                "sport_specificity": "general_rehab",
+                "stop_when": [
+                  "Stop if pain or symptoms increase during or after the exercise. Follow your existing clinician restrictions.",
+                  "Seek urgent assessment for severe or increasing thigh pain or swelling, a tense or very firm thigh, numbness, or pain that keeps worsening when you move the knee."
+                ],
+                "target_regions": [
+                  "quads"
+                ],
+                "target_tissues": [
+                  "quadriceps muscles"
+                ],
+                "velocity": "low"
+              },
+              "drill_id": "quads_pain_isometric_quad_flex_straight_leg",
+              "frequency": "scheduled_sessions",
+              "instructions": "Sit or lie with the affected leg straight out in front of you and supported. Gently tighten the muscles at the front of the thigh, pushing the back of the knee down towards the surface. Hold for 3 seconds, then relax. Repeat 10 times. Do not massage or stretch the bruised muscle, add weight or work through pain. Stop if pain or symptoms increase during or after the exercise. Follow your existing clinician restrictions. Seek urgent assessment for severe or increasing thigh pain or swelling, a tense or very firm thigh, numbness, or pain that keeps worsening when you move the knee.",
+              "is_loading": true,
+              "minimum_gap_days": 1,
+              "policy_id": "quads_contusion",
+              "policy_review_hash": "af70bbdfad9058ecd80ffaa8ac30790e56a5e535018a206c5a35d6d3beb6016f",
+              "policy_version": 2,
+              "sources": [
+                "https://www.uhcw.nhs.uk/download/clientfiles/files/Patient%20Information%20Leaflets/Emergency%20Medicine/Emergency%20Department/Knee%20and%20leg%20injury%20-%20Care%20advice%20(1516).pdf",
+                "https://www.orthoinfo.org/diseases--conditions/muscle-contusion-bruise/"
+              ],
+              "stop_when": [
+                "Stop if pain or symptoms increase during or after the exercise. Follow your existing clinician restrictions.",
+                "Seek urgent assessment for severe or increasing thigh pain or swelling, a tense or very firm thigh, numbness, or pain that keeps worsening when you move the knee."
+              ]
+            },
+            "progression": {
+              "engine_version": "2",
+              "evidence_ids": [],
+              "next_transition": {
+                "closed_reason": null,
+                "from_stage": "restore",
+                "ignored_evidence": {},
+                "missing_inputs": [],
+                "reason_codes": [
+                  "no_reviewed_stage_exposure",
+                  "no_reviewed_response_group",
+                  "no_reviewed_response_group"
+                ],
+                "requirements": [
+                  {
+                    "basis": "product_safety",
+                    "evidence_ids": [],
+                    "kind": "no_unresolved_setback",
+                    "reason_code": "no_negative_response",
+                    "requirement_id": "no_unresolved_setback",
+                    "status": "pass"
+                  },
+                  {
+                    "basis": "product_safety",
+                    "evidence_ids": [],
+                    "kind": "complete_history",
+                    "reason_code": "history_complete",
+                    "requirement_id": "complete_episode_history",
+                    "status": "pass"
+                  },
+                  {
+                    "basis": "data_sufficiency",
+                    "evidence_ids": [],
+                    "kind": "completed_reviewed_exposure",
+                    "reason_code": "no_reviewed_stage_exposure",
+                    "requirement_id": "reviewed_stage_exposure",
+                    "status": "unknown"
+                  },
+                  {
+                    "basis": "product_safety",
+                    "evidence_ids": [],
+                    "kind": "during_session_response",
+                    "reason_code": "no_reviewed_response_group",
+                    "requirement_id": "during_response_not_worse",
+                    "status": "unknown"
+                  },
+                  {
+                    "basis": "product_safety",
+                    "evidence_ids": [],
+                    "kind": "next_day_response",
+                    "reason_code": "no_reviewed_response_group",
+                    "requirement_id": "next_day_response_not_worse",
+                    "status": "unknown"
+                  }
+                ],
+                "status": "blocked",
+                "target_stage_live": false,
+                "to_stage": "load"
+              },
+              "reason_codes": [
+                "baseline_only_v1"
+              ],
+              "stage": "restore"
+            },
+            "reason_codes": [
+              "SELECT_DETERMINISTIC_BEST"
+            ],
+            "region": "quads",
+            "restrictions": {
+              "blocked_regions": [
+                "quads"
+              ],
+              "blocked_tags": [],
+              "contact_limit": "none"
+            },
+            "schedule": {
+              "next_due_day": "2026-10-05",
+              "reason": "Your baseline rehab is due today; missed work adds no extra volume.",
+              "state": "due"
+            },
+            "stage": "restore",
+            "summary": "Your rehab is matched to this injury's current recovery stage."
+          },
+          "rehab_improvement_at": "2026-10-05T12:02:00Z",
+          "rehab_improvement_reports": [
+            {
+              "id": "a190878b-363d-4162-85e2-0eec3a5895a3",
+              "reported_at": "2026-10-05T12:01:00+00:00"
+            },
+            {
+              "id": "7d12b140-95a9-4848-8e7d-4a002de79515",
+              "reported_at": "2026-10-05T12:02:00+00:00"
+            }
+          ],
+          "rehab_medical_gate": false,
+          "rehab_stage": "restore",
+          "rehab_stage_reasons": [
+            "symptoms_not_worsening",
+            "insufficient_injury_specific_progression_evidence"
+          ],
+          "resolved_at": null,
+          "severity": "mild",
+          "side": "left",
+          "source": "checkin",
+          "status": "monitoring",
+          "surface_class": "non_surface",
+          "updated_at": "2026-10-05T12:02:00+00:00"
+        }
+      ],
+      "quick_actions": [
+        {
+          "id": "open_today",
+          "label": "Open Today",
+          "route": "/today"
+        },
+        {
+          "id": "view_plan",
+          "label": "View Plan",
+          "route": "/plans/ae5ea3e4-b10c-4a17-9b55-3c47698aa9de"
+        }
+      ],
+      "risk_watch": [
+        {
+          "category": "reminder",
+          "icon": "info",
+          "label": "Reminder",
+          "priority": 7,
+          "text": "Tracking 1 open injury: Left quads bruise. Train around it.",
+          "timeframe": "active",
+          "tone": "info"
+        }
+      ],
+      "today": {
+        "completion_status": "not_started",
+        "decision_tier": "modify",
+        "injury_hold_exempt": false,
+        "next_session": {
+          "blocks": [
+            {
+              "bank_hash": "f4b0d347e0c35368aa1ac781611f57f52541c7c923cfadbaefdbb3ae2f46828c",
+              "block_id": "rehab:df1e52e2-0141-4701-83bf-ac92d6c968c3:37f74747-047d-4b86-ac58-2ba82edb3dd1",
+              "block_type": "rehab",
+              "coaching_cues": [
+                "Sit or lie with the affected leg straight out in front of you and supported. Gently tighten the muscles at the front of the thigh, pushing the back of the knee down towards the surface. Hold for 3 seconds, then relax. Repeat 10 times. Do not massage or stretch the bruised muscle, add weight or work through pain. Stop if pain or symptoms increase during or after the exercise. Follow your existing clinician restrictions. Seek urgent assessment for severe or increasing thigh pain or swelling, a tense or very firm thigh, numbness, or pain that keeps worsening when you move the knee."
+              ],
+              "display_name": "Static quads for a bruised thigh",
+              "dose": {
+                "duration_seconds": 3.0,
+                "reps": 10
+              },
+              "drill_snapshot": {
+                "allowed_severities": [
+                  "low",
+                  "moderate"
+                ],
+                "compatible_injury_types": [
+                  "contusion"
+                ],
+                "contact_level": "none",
+                "contraction_type": "isometric",
+                "dose": {
+                  "duration_seconds": 3,
+                  "reps": 10
+                },
+                "equipment": [],
+                "evidence_notes": "Sources: https://www.uhcw.nhs.uk/download/clientfiles/files/Patient%20Information%20Leaflets/Emergency%20Medicine/Emergency%20Department/Knee%20and%20leg%20injury%20-%20Care%20advice%20(1516).pdf, https://www.orthoinfo.org/diseases--conditions/muscle-contusion-bruise/. Fixed conservative movement only. Dose is the explicit value, or the lower bound of the range, in the cited leaflet; one round per scheduled rehab session is a product cadence, not a source claim. No change to stage-entry criteria or permission, and no inference of sport readiness. No automatic resistance, range or speed progression.",
+                "function": "activation",
+                "id": "quads_pain_isometric_quad_flex_straight_leg",
+                "impact": "none",
+                "laterality_applicability": "side_specific",
+                "load": "low",
+                "name": "Static quads for a bruised thigh",
+                "notes": "Sit or lie with the affected leg straight out in front of you and supported. Gently tighten the muscles at the front of the thigh, pushing the back of the knee down towards the surface. Hold for 3 seconds, then relax. Repeat 10 times. Do not massage or stretch the bruised muscle, add weight or work through pain. Stop if pain or symptoms increase during or after the exercise. Follow your existing clinician restrictions. Seek urgent assessment for severe or increasing thigh pain or swelling, a tense or very firm thigh, numbness, or pain that keeps worsening when you move the knee.",
+                "pain_ceiling": null,
+                "prescription": {
+                  "frequency": "scheduled_sessions",
+                  "minimum_gap_days": 1,
+                  "priority": 0,
+                  "sources": [
+                    "https://www.uhcw.nhs.uk/download/clientfiles/files/Patient%20Information%20Leaflets/Emergency%20Medicine/Emergency%20Department/Knee%20and%20leg%20injury%20-%20Care%20advice%20(1516).pdf",
+                    "https://www.orthoinfo.org/diseases--conditions/muscle-contusion-bruise/"
+                  ]
+                },
+                "progress_when": [],
+                "regress_when": [
+                  "Stop and return to conservative guidance if symptoms worsen."
+                ],
+                "rehab_stage": "restore",
+                "sport_specificity": "general_rehab",
+                "stop_when": [
+                  "Stop if pain or symptoms increase during or after the exercise. Follow your existing clinician restrictions.",
+                  "Seek urgent assessment for severe or increasing thigh pain or swelling, a tense or very firm thigh, numbness, or pain that keeps worsening when you move the knee."
+                ],
+                "target_regions": [
+                  "quads"
+                ],
+                "target_tissues": [
+                  "quadriceps muscles"
+                ],
+                "velocity": "low"
+              },
+              "duration": {
+                "unit": "seconds",
+                "value": 3.0
+              },
+              "duration_seconds": 3.0,
+              "exercise_key": "quads-pain-isometric-quad-flex-straight-leg",
+              "injury_episode_id": "37f74747-047d-4b86-ac58-2ba82edb3dd1",
+              "injury_id": "df1e52e2-0141-4701-83bf-ac92d6c968c3",
+              "instructions": "Sit or lie with the affected leg straight out in front of you and supported. Gently tighten the muscles at the front of the thigh, pushing the back of the knee down towards the surface. Hold for 3 seconds, then relax. Repeat 10 times. Do not massage or stretch the bruised muscle, add weight or work through pain. Stop if pain or symptoms increase during or after the exercise. Follow your existing clinician restrictions. Seek urgent assessment for severe or increasing thigh pain or swelling, a tense or very firm thigh, numbness, or pain that keeps worsening when you move the knee.",
+              "is_loading": true,
+              "minimum_gap_days": 1,
+              "policy_id": "quads_contusion",
+              "policy_review_hash": "af70bbdfad9058ecd80ffaa8ac30790e56a5e535018a206c5a35d6d3beb6016f",
+              "policy_version": 2,
+              "rehab_drill_id": "quads_pain_isometric_quad_flex_straight_leg",
+              "reps": 10,
+              "source_references": [
+                "https://www.uhcw.nhs.uk/download/clientfiles/files/Patient%20Information%20Leaflets/Emergency%20Medicine/Emergency%20Department/Knee%20and%20leg%20injury%20-%20Care%20advice%20(1516).pdf",
+                "https://www.orthoinfo.org/diseases--conditions/muscle-contusion-bruise/"
+              ],
+              "stop_rules": [
+                "Stop if pain or symptoms increase during or after the exercise. Follow your existing clinician restrictions.",
+                "Seek urgent assessment for severe or increasing thigh pain or swelling, a tense or very firm thigh, numbness, or pain that keeps worsening when you move the knee."
+              ],
+              "target_regions": [
+                "quads"
+              ],
+              "title": "Static quads for a bruised thigh"
+            }
+          ],
+          "calendar_date": "2026-10-05",
+          "contact_level": "none",
+          "day_label": "",
+          "effective_load": "reduced",
+          "objective": "Follow the reviewed rehab for your current injury guidance.",
+          "phase": "GPP",
+          "session_id": "rehab-2026-10-05-7e4ae74ffcd2d2d300a89099",
+          "session_relation": "today",
+          "session_type": "rehab",
+          "title": "Today's rehab",
+          "weekday": "Monday",
+          "weekday_with_label": "Monday"
+        },
+        "primary_safety_notice": null,
+        "recommendation_confidence": "moderate",
+        "recommendation_confidence_note": "Less to go on today: this is based on today's check-in alone, with no recent days to compare.",
+        "recommendation_context_labels": [],
+        "recommendation_reason": "Reviewed rehab today\nYour planned training conflicts with the current injury restrictions.\nFollow only the reviewed rehab shown today.",
+        "recommendation_safety_checks": [],
+        "recommendation_sources": [
+          "today's check-in",
+          "today's planned session",
+          "your tracked injuries"
+        ],
+        "recommendation_state": "modify",
+        "recommendation_trigger_labels": [
+          "Current injury restrictions"
+        ],
+        "session_label": "Today's session",
+        "session_scope": "today",
+        "training_day": "2026-10-05",
+        "warnings": []
+      },
+      "week_summary": {}
+    }
+  },
+  "shoulder_pain": {
+    "profile": {
+      "effective_admin": false,
+      "latest_intake": null,
+      "latest_plan": {
+        "activation_state": "eligible",
+        "athlete_id": "fe89e600-0774-4d77-86aa-1bc5504432ac",
+        "created_at": "2026-10-05T12:00:00+00:00",
+        "custom_plan_id": null,
+        "fight_date": "",
+        "full_name": "",
+        "pdf_url": null,
+        "plan_id": "d33d28cf-bd6a-4015-9290-9f9447735d21",
+        "plan_name": null,
+        "review_reason": null,
+        "status": "ready",
+        "technical_style": []
+      },
+      "plan_count": 1,
+      "profile": {
+        "access_status": "approved",
+        "age_band": "adult",
+        "appearance_mode": "dark",
+        "athlete_id": "fe89e600-0774-4d77-86aa-1bc5504432ac",
+        "athlete_locale": "",
+        "athlete_timezone": "UTC",
+        "avatar_url": null,
+        "created_at": "2026-10-05T12:03:00+00:00",
+        "date_of_birth": "1996-05-04",
+        "email": "fixture@example.com",
+        "full_name": "Test athlete",
+        "health_consent_at": "2026-10-05T12:03:00+00:00",
+        "health_consent_granted": true,
+        "health_consent_version": "1.0",
+        "health_consent_withdrawn_at": null,
+        "health_data_consent": true,
+        "is_minor": false,
+        "meets_minimum_age": true,
+        "nutrition_profile": {
+          "age": null,
+          "caffeine_use": null,
+          "daily_activity_level": null,
+          "dietary_restrictions": [],
+          "food_preferences": [],
+          "foods_avoided_fight_week": [],
+          "foods_avoided_pre_session": [],
+          "height_cm": null,
+          "meals_per_day_preference": null,
+          "sex": null,
+          "supplement_use": []
+        },
+        "onboarding_draft": null,
+        "private_trial_ack_at": null,
+        "professional_status": "",
+        "record": "",
+        "role": "athlete",
+        "stance": "",
+        "starting_path": "plan_first",
+        "tactical_style": [],
+        "technical_style": [],
+        "terms_accepted": true,
+        "terms_accepted_at": "2026-10-05T12:03:00+00:00",
+        "terms_version": "0.1-pre-launch",
+        "training_habits": {
+          "decisions": [],
+          "enabled": true
+        },
+        "training_habits_revision": 0,
+        "updated_at": "2026-10-05T12:04:00+00:00",
+        "username": null,
+        "username_change_history": []
+      },
+      "username_rate_limit": {
+        "max_changes_per_window": 4,
+        "next_available_at": null,
+        "remaining": 4,
+        "window_days": 30
+      }
+    },
+    "view": {
+      "active_plan": {
+        "id": "d33d28cf-bd6a-4015-9290-9f9447735d21",
+        "phase": "GPP",
+        "status": "ready"
+      },
+      "delayed_rehab_prompts": [],
+      "effective_clinician_clearance": {
+        "level": "rehab_only",
+        "limited_by": [
+          {
+            "injury_episode_id": "4db06dfe-23ff-469d-80e7-0d315374fcf8",
+            "injury_id": "2d150b68-21d6-4917-8075-f16cf3058657",
+            "label": "Left shoulder pain"
+          }
+        ],
+        "requires_update": false,
+        "scopes": [
+          "rehab"
+        ]
+      },
+      "exercise_media": {},
+      "live_prescription": {
+        "allocation_limit": 2,
+        "changes": [
+          {
+            "action": "held",
+            "reason": "clinician_clearance_ceiling"
+          },
+          {
+            "action": "held",
+            "block_id": "training",
+            "reason": "no_reviewed_safe_substitution",
+            "restriction_reasons": [
+              "injury_loading_restriction"
+            ]
+          }
+        ],
+        "engine_version": "2",
+        "evidence_context": {
+          "event_id": "c961028c-b50f-51f6-8f3e-4ab521c47a81",
+          "exposure_id": null
+        },
+        "frozen": false,
+        "held_session_id": "training",
+        "injury_context": [
+          {
+            "episode_id": "4db06dfe-23ff-469d-80e7-0d315374fcf8",
+            "id": "2d150b68-21d6-4917-8075-f16cf3058657",
+            "updated_at": "2026-10-05T12:02:00+00:00"
+          }
+        ],
+        "injury_ids": [
+          "2d150b68-21d6-4917-8075-f16cf3058657"
+        ],
+        "plan_id": "d33d28cf-bd6a-4015-9290-9f9447735d21",
+        "readiness_context": {
+          "id": "d9591fdc-7912-4b8b-8833-e14c17ee5920",
+          "updated_at": "2026-10-05T12:02:00+00:00"
+        },
+        "rehab_only": true,
+        "revision": "dfb1a0ef46d1c81f311d5394f246998fca8b23f8804ff014bd6bbae955110c24",
+        "safety_hold": false,
+        "session": {
+          "blocks": [
+            {
+              "bank_hash": "c791c037b947525d99a520a7a40817bbf820b1a11c61c5fc9924ef1f3880d9aa",
+              "block_id": "rehab:2d150b68-21d6-4917-8075-f16cf3058657:4db06dfe-23ff-469d-80e7-0d315374fcf8",
+              "block_type": "rehab",
+              "coaching_cues": [
+                "Lean forwards with your good hand on a stable support and let the affected arm hang down relaxed. Gently swing the arm forwards and backwards, side to side and in small circles in both directions, letting the movement come from your body rather than lifting the arm. Continue for about 1 minute. Do not hold a weight, force the swing or move into pain. Stop if pain or symptoms increase during or after the exercise. Follow your existing clinician restrictions. Seek assessment if you cannot lift the arm after an injury, the shoulder looks deformed, or you have pins and needles, numbness, a hot swollen joint or fever."
+              ],
+              "display_name": "Supported shoulder pendulum swing",
+              "dose": {
+                "duration_seconds": 60.0
+              },
+              "drill_snapshot": {
+                "allowed_severities": [
+                  "low",
+                  "moderate"
+                ],
+                "compatible_injury_types": [
+                  "pain",
+                  "tightness",
+                  "soreness"
+                ],
+                "contact_level": "none",
+                "contraction_type": "mixed",
+                "dose": {
+                  "duration_seconds": 60
+                },
+                "equipment": [
+                  "stable_support"
+                ],
+                "evidence_notes": "Sources: https://www.leedsth.nhs.uk/patients/resources/early-advice-and-exercises-for-soft-tissue-injuries-of-the-shoulder/, https://royalberkshire.nhs.uk/media/5scpbnrh/shoulder-active-and-assisted-exercises_oct22.pdf. Fixed conservative movement only. Dose is the explicit value, or the lower bound of the range, in the cited leaflet; one round per scheduled rehab session is a product cadence, not a source claim. No change to stage-entry criteria or permission, and no inference of sport readiness. No automatic resistance, range or speed progression.",
+                "function": "mobility",
+                "id": "shoulder_swelling_pendulum_circles",
+                "impact": "none",
+                "laterality_applicability": "side_specific",
+                "load": "minimal",
+                "name": "Supported shoulder pendulum swing",
+                "notes": "Lean forwards with your good hand on a stable support and let the affected arm hang down relaxed. Gently swing the arm forwards and backwards, side to side and in small circles in both directions, letting the movement come from your body rather than lifting the arm. Continue for about 1 minute. Do not hold a weight, force the swing or move into pain. Stop if pain or symptoms increase during or after the exercise. Follow your existing clinician restrictions. Seek assessment if you cannot lift the arm after an injury, the shoulder looks deformed, or you have pins and needles, numbness, a hot swollen joint or fever.",
+                "pain_ceiling": null,
+                "prescription": {
+                  "frequency": "scheduled_sessions",
+                  "minimum_gap_days": 1,
+                  "priority": 5,
+                  "sources": [
+                    "https://www.leedsth.nhs.uk/patients/resources/early-advice-and-exercises-for-soft-tissue-injuries-of-the-shoulder/",
+                    "https://royalberkshire.nhs.uk/media/5scpbnrh/shoulder-active-and-assisted-exercises_oct22.pdf"
+                  ]
+                },
+                "progress_when": [],
+                "regress_when": [
+                  "Stop and return to conservative guidance if symptoms worsen."
+                ],
+                "rehab_stage": "restore",
+                "sport_specificity": "general_rehab",
+                "stop_when": [
+                  "Stop if pain or symptoms increase during or after the exercise. Follow your existing clinician restrictions.",
+                  "Seek assessment if you cannot lift the arm after an injury, the shoulder looks deformed, or you have pins and needles, numbness, a hot swollen joint or fever."
+                ],
+                "target_regions": [
+                  "shoulder"
+                ],
+                "target_tissues": [
+                  "shoulder joint and surrounding muscles"
+                ],
+                "velocity": "low"
+              },
+              "duration": {
+                "unit": "seconds",
+                "value": 60.0
+              },
+              "duration_seconds": 60.0,
+              "exercise_key": "shoulder-swelling-pendulum-circles",
+              "injury_episode_id": "4db06dfe-23ff-469d-80e7-0d315374fcf8",
+              "injury_id": "2d150b68-21d6-4917-8075-f16cf3058657",
+              "instructions": "Lean forwards with your good hand on a stable support and let the affected arm hang down relaxed. Gently swing the arm forwards and backwards, side to side and in small circles in both directions, letting the movement come from your body rather than lifting the arm. Continue for about 1 minute. Do not hold a weight, force the swing or move into pain. Stop if pain or symptoms increase during or after the exercise. Follow your existing clinician restrictions. Seek assessment if you cannot lift the arm after an injury, the shoulder looks deformed, or you have pins and needles, numbness, a hot swollen joint or fever.",
+              "is_loading": false,
+              "minimum_gap_days": 1,
+              "policy_id": "shoulder_pain",
+              "policy_review_hash": "7275d7576761bd484823d63e9e8e8f9f20ca9d84e320858ae1526279bcd8aa46",
+              "policy_version": 2,
+              "rehab_drill_id": "shoulder_swelling_pendulum_circles",
+              "source_references": [
+                "https://www.leedsth.nhs.uk/patients/resources/early-advice-and-exercises-for-soft-tissue-injuries-of-the-shoulder/",
+                "https://royalberkshire.nhs.uk/media/5scpbnrh/shoulder-active-and-assisted-exercises_oct22.pdf"
+              ],
+              "stop_rules": [
+                "Stop if pain or symptoms increase during or after the exercise. Follow your existing clinician restrictions.",
+                "Seek assessment if you cannot lift the arm after an injury, the shoulder looks deformed, or you have pins and needles, numbness, a hot swollen joint or fever."
+              ],
+              "target_regions": [
+                "shoulder"
+              ],
+              "title": "Supported shoulder pendulum swing"
+            }
+          ],
+          "calendar_date": "2026-10-05",
+          "contact_level": "none",
+          "day_label": "",
+          "effective_load": "reduced",
+          "objective": "Follow the reviewed rehab for your current injury guidance.",
+          "phase": "GPP",
+          "session_id": "rehab-2026-10-05-90b50d5a8f4d9f7a80a077a8",
+          "session_type": "rehab",
+          "title": "Today's rehab",
+          "weekday": "Monday",
+          "weekday_with_label": "Monday"
+        },
+        "training_day": "2026-10-05",
+        "training_hold_reason": "Your planned training conflicts with the current injury restrictions."
+      },
+      "open_injuries": [
+        {
+          "assessment_episode_started_at": "2026-10-05T12:01:00Z",
+          "assessment_history_complete": true,
+          "assessment_setback_at": null,
+          "athlete_id": "fe89e600-0774-4d77-86aa-1bc5504432ac",
+          "body_area": "Left shoulder",
+          "body_region": "shoulder",
+          "canonical_location": "shoulder",
+          "clinician_clearance": {
+            "episode_id": "4db06dfe-23ff-469d-80e7-0d315374fcf8",
+            "externally_verified": false,
+            "rehabilitation_permission": {
+              "level": "gentle_recovery",
+              "schema_version": 1
+            },
+            "report_id": "c961028c-b50f-51f6-8f3e-4ab521c47a81",
+            "reported_at": "2026-10-05T12:04:00+00:00",
+            "scope_reported_at": {
+              "rehab": "2026-10-05T12:04:00+00:00"
+            },
+            "scopes": [
+              "rehab"
+            ],
+            "source": "athlete_reported"
+          },
+          "consequence": null,
+          "created_at": "2026-10-05T12:01:00+00:00",
+          "description": "pain []",
+          "episode_id": "4db06dfe-23ff-469d-80e7-0d315374fcf8",
+          "id": "2d150b68-21d6-4917-8075-f16cf3058657",
+          "label": "Left shoulder pain",
+          "latest_reported_at": "2026-10-05T12:02:00+00:00",
+          "latest_reported_status": "improving",
+          "load_region": "upper_limb",
+          "plan_id": "d33d28cf-bd6a-4015-9290-9f9447735d21",
+          "progression_assessments": [],
+          "region_group": "upper_limb",
+          "rehab_care_pathway": "musculoskeletal",
+          "rehab_decision": {
+            "activation": "live",
+            "injury_episode_id": "4db06dfe-23ff-469d-80e7-0d315374fcf8",
+            "injury_id": "2d150b68-21d6-4917-8075-f16cf3058657",
+            "injury_type": "pain",
+            "loading_hold": false,
+            "outcome": "prescribed_rehab",
+            "policy_id": "shoulder_pain",
+            "policy_version": 2,
+            "prescription": {
+              "bank_hash": "c791c037b947525d99a520a7a40817bbf820b1a11c61c5fc9924ef1f3880d9aa",
+              "dose": {
+                "duration_seconds": 60.0
+              },
+              "drill": {
+                "allowed_severities": [
+                  "low",
+                  "moderate"
+                ],
+                "compatible_injury_types": [
+                  "pain",
+                  "tightness",
+                  "soreness"
+                ],
+                "contact_level": "none",
+                "contraction_type": "mixed",
+                "dose": {
+                  "duration_seconds": 60
+                },
+                "equipment": [
+                  "stable_support"
+                ],
+                "evidence_notes": "Sources: https://www.leedsth.nhs.uk/patients/resources/early-advice-and-exercises-for-soft-tissue-injuries-of-the-shoulder/, https://royalberkshire.nhs.uk/media/5scpbnrh/shoulder-active-and-assisted-exercises_oct22.pdf. Fixed conservative movement only. Dose is the explicit value, or the lower bound of the range, in the cited leaflet; one round per scheduled rehab session is a product cadence, not a source claim. No change to stage-entry criteria or permission, and no inference of sport readiness. No automatic resistance, range or speed progression.",
+                "function": "mobility",
+                "id": "shoulder_swelling_pendulum_circles",
+                "impact": "none",
+                "laterality_applicability": "side_specific",
+                "load": "minimal",
+                "name": "Supported shoulder pendulum swing",
+                "notes": "Lean forwards with your good hand on a stable support and let the affected arm hang down relaxed. Gently swing the arm forwards and backwards, side to side and in small circles in both directions, letting the movement come from your body rather than lifting the arm. Continue for about 1 minute. Do not hold a weight, force the swing or move into pain. Stop if pain or symptoms increase during or after the exercise. Follow your existing clinician restrictions. Seek assessment if you cannot lift the arm after an injury, the shoulder looks deformed, or you have pins and needles, numbness, a hot swollen joint or fever.",
+                "pain_ceiling": null,
+                "prescription": {
+                  "frequency": "scheduled_sessions",
+                  "minimum_gap_days": 1,
+                  "priority": 5,
+                  "sources": [
+                    "https://www.leedsth.nhs.uk/patients/resources/early-advice-and-exercises-for-soft-tissue-injuries-of-the-shoulder/",
+                    "https://royalberkshire.nhs.uk/media/5scpbnrh/shoulder-active-and-assisted-exercises_oct22.pdf"
+                  ]
+                },
+                "progress_when": [],
+                "regress_when": [
+                  "Stop and return to conservative guidance if symptoms worsen."
+                ],
+                "rehab_stage": "restore",
+                "sport_specificity": "general_rehab",
+                "stop_when": [
+                  "Stop if pain or symptoms increase during or after the exercise. Follow your existing clinician restrictions.",
+                  "Seek assessment if you cannot lift the arm after an injury, the shoulder looks deformed, or you have pins and needles, numbness, a hot swollen joint or fever."
+                ],
+                "target_regions": [
+                  "shoulder"
+                ],
+                "target_tissues": [
+                  "shoulder joint and surrounding muscles"
+                ],
+                "velocity": "low"
+              },
+              "drill_id": "shoulder_swelling_pendulum_circles",
+              "frequency": "scheduled_sessions",
+              "instructions": "Lean forwards with your good hand on a stable support and let the affected arm hang down relaxed. Gently swing the arm forwards and backwards, side to side and in small circles in both directions, letting the movement come from your body rather than lifting the arm. Continue for about 1 minute. Do not hold a weight, force the swing or move into pain. Stop if pain or symptoms increase during or after the exercise. Follow your existing clinician restrictions. Seek assessment if you cannot lift the arm after an injury, the shoulder looks deformed, or you have pins and needles, numbness, a hot swollen joint or fever.",
+              "is_loading": false,
+              "minimum_gap_days": 1,
+              "policy_id": "shoulder_pain",
+              "policy_review_hash": "7275d7576761bd484823d63e9e8e8f9f20ca9d84e320858ae1526279bcd8aa46",
+              "policy_version": 2,
+              "sources": [
+                "https://www.leedsth.nhs.uk/patients/resources/early-advice-and-exercises-for-soft-tissue-injuries-of-the-shoulder/",
+                "https://royalberkshire.nhs.uk/media/5scpbnrh/shoulder-active-and-assisted-exercises_oct22.pdf"
+              ],
+              "stop_when": [
+                "Stop if pain or symptoms increase during or after the exercise. Follow your existing clinician restrictions.",
+                "Seek assessment if you cannot lift the arm after an injury, the shoulder looks deformed, or you have pins and needles, numbness, a hot swollen joint or fever."
+              ]
+            },
+            "progression": {
+              "engine_version": "2",
+              "evidence_ids": [],
+              "next_transition": {
+                "closed_reason": null,
+                "from_stage": "restore",
+                "ignored_evidence": {},
+                "missing_inputs": [],
+                "reason_codes": [
+                  "no_reviewed_stage_exposure",
+                  "no_reviewed_response_group",
+                  "no_reviewed_response_group"
+                ],
+                "requirements": [
+                  {
+                    "basis": "product_safety",
+                    "evidence_ids": [],
+                    "kind": "no_unresolved_setback",
+                    "reason_code": "no_negative_response",
+                    "requirement_id": "no_unresolved_setback",
+                    "status": "pass"
+                  },
+                  {
+                    "basis": "product_safety",
+                    "evidence_ids": [],
+                    "kind": "complete_history",
+                    "reason_code": "history_complete",
+                    "requirement_id": "complete_episode_history",
+                    "status": "pass"
+                  },
+                  {
+                    "basis": "data_sufficiency",
+                    "evidence_ids": [],
+                    "kind": "completed_reviewed_exposure",
+                    "reason_code": "no_reviewed_stage_exposure",
+                    "requirement_id": "reviewed_stage_exposure",
+                    "status": "unknown"
+                  },
+                  {
+                    "basis": "product_safety",
+                    "evidence_ids": [],
+                    "kind": "during_session_response",
+                    "reason_code": "no_reviewed_response_group",
+                    "requirement_id": "during_response_not_worse",
+                    "status": "unknown"
+                  },
+                  {
+                    "basis": "product_safety",
+                    "evidence_ids": [],
+                    "kind": "next_day_response",
+                    "reason_code": "no_reviewed_response_group",
+                    "requirement_id": "next_day_response_not_worse",
+                    "status": "unknown"
+                  }
+                ],
+                "status": "blocked",
+                "target_stage_live": false,
+                "to_stage": "load"
+              },
+              "reason_codes": [
+                "baseline_only_v1"
+              ],
+              "stage": "restore"
+            },
+            "reason_codes": [
+              "SELECT_DETERMINISTIC_BEST"
+            ],
+            "region": "shoulder",
+            "restrictions": {
+              "blocked_regions": [
+                "shoulder"
+              ],
+              "blocked_tags": [],
+              "contact_limit": "none"
+            },
+            "schedule": {
+              "next_due_day": "2026-10-05",
+              "reason": "Your baseline rehab is due today; missed work adds no extra volume.",
+              "state": "due"
+            },
+            "stage": "restore",
+            "summary": "Your rehab is matched to this injury's current recovery stage."
+          },
+          "rehab_improvement_at": "2026-10-05T12:02:00Z",
+          "rehab_improvement_reports": [
+            {
+              "id": "5005f399-e599-428e-8b26-c41c9509469d",
+              "reported_at": "2026-10-05T12:01:00+00:00"
+            },
+            {
+              "id": "626abbf5-0cc3-4973-8c97-9ddf3756e06b",
+              "reported_at": "2026-10-05T12:02:00+00:00"
+            }
+          ],
+          "rehab_medical_gate": false,
+          "rehab_stage": "restore",
+          "rehab_stage_reasons": [
+            "symptoms_not_worsening",
+            "insufficient_injury_specific_progression_evidence"
+          ],
+          "resolved_at": null,
+          "severity": "mild",
+          "side": "left",
+          "source": "checkin",
+          "status": "monitoring",
+          "surface_class": "non_surface",
+          "updated_at": "2026-10-05T12:02:00+00:00"
+        }
+      ],
+      "quick_actions": [
+        {
+          "id": "open_today",
+          "label": "Open Today",
+          "route": "/today"
+        },
+        {
+          "id": "view_plan",
+          "label": "View Plan",
+          "route": "/plans/d33d28cf-bd6a-4015-9290-9f9447735d21"
+        }
+      ],
+      "risk_watch": [
+        {
+          "category": "reminder",
+          "icon": "info",
+          "label": "Reminder",
+          "priority": 7,
+          "text": "Tracking 1 open injury: Left shoulder pain. Train around it.",
+          "timeframe": "active",
+          "tone": "info"
+        }
+      ],
+      "today": {
+        "completion_status": "not_started",
+        "decision_tier": "modify",
+        "injury_hold_exempt": false,
+        "next_session": {
+          "blocks": [
+            {
+              "bank_hash": "c791c037b947525d99a520a7a40817bbf820b1a11c61c5fc9924ef1f3880d9aa",
+              "block_id": "rehab:2d150b68-21d6-4917-8075-f16cf3058657:4db06dfe-23ff-469d-80e7-0d315374fcf8",
+              "block_type": "rehab",
+              "coaching_cues": [
+                "Lean forwards with your good hand on a stable support and let the affected arm hang down relaxed. Gently swing the arm forwards and backwards, side to side and in small circles in both directions, letting the movement come from your body rather than lifting the arm. Continue for about 1 minute. Do not hold a weight, force the swing or move into pain. Stop if pain or symptoms increase during or after the exercise. Follow your existing clinician restrictions. Seek assessment if you cannot lift the arm after an injury, the shoulder looks deformed, or you have pins and needles, numbness, a hot swollen joint or fever."
+              ],
+              "display_name": "Supported shoulder pendulum swing",
+              "dose": {
+                "duration_seconds": 60.0
+              },
+              "drill_snapshot": {
+                "allowed_severities": [
+                  "low",
+                  "moderate"
+                ],
+                "compatible_injury_types": [
+                  "pain",
+                  "tightness",
+                  "soreness"
+                ],
+                "contact_level": "none",
+                "contraction_type": "mixed",
+                "dose": {
+                  "duration_seconds": 60
+                },
+                "equipment": [
+                  "stable_support"
+                ],
+                "evidence_notes": "Sources: https://www.leedsth.nhs.uk/patients/resources/early-advice-and-exercises-for-soft-tissue-injuries-of-the-shoulder/, https://royalberkshire.nhs.uk/media/5scpbnrh/shoulder-active-and-assisted-exercises_oct22.pdf. Fixed conservative movement only. Dose is the explicit value, or the lower bound of the range, in the cited leaflet; one round per scheduled rehab session is a product cadence, not a source claim. No change to stage-entry criteria or permission, and no inference of sport readiness. No automatic resistance, range or speed progression.",
+                "function": "mobility",
+                "id": "shoulder_swelling_pendulum_circles",
+                "impact": "none",
+                "laterality_applicability": "side_specific",
+                "load": "minimal",
+                "name": "Supported shoulder pendulum swing",
+                "notes": "Lean forwards with your good hand on a stable support and let the affected arm hang down relaxed. Gently swing the arm forwards and backwards, side to side and in small circles in both directions, letting the movement come from your body rather than lifting the arm. Continue for about 1 minute. Do not hold a weight, force the swing or move into pain. Stop if pain or symptoms increase during or after the exercise. Follow your existing clinician restrictions. Seek assessment if you cannot lift the arm after an injury, the shoulder looks deformed, or you have pins and needles, numbness, a hot swollen joint or fever.",
+                "pain_ceiling": null,
+                "prescription": {
+                  "frequency": "scheduled_sessions",
+                  "minimum_gap_days": 1,
+                  "priority": 5,
+                  "sources": [
+                    "https://www.leedsth.nhs.uk/patients/resources/early-advice-and-exercises-for-soft-tissue-injuries-of-the-shoulder/",
+                    "https://royalberkshire.nhs.uk/media/5scpbnrh/shoulder-active-and-assisted-exercises_oct22.pdf"
+                  ]
+                },
+                "progress_when": [],
+                "regress_when": [
+                  "Stop and return to conservative guidance if symptoms worsen."
+                ],
+                "rehab_stage": "restore",
+                "sport_specificity": "general_rehab",
+                "stop_when": [
+                  "Stop if pain or symptoms increase during or after the exercise. Follow your existing clinician restrictions.",
+                  "Seek assessment if you cannot lift the arm after an injury, the shoulder looks deformed, or you have pins and needles, numbness, a hot swollen joint or fever."
+                ],
+                "target_regions": [
+                  "shoulder"
+                ],
+                "target_tissues": [
+                  "shoulder joint and surrounding muscles"
+                ],
+                "velocity": "low"
+              },
+              "duration": {
+                "unit": "seconds",
+                "value": 60.0
+              },
+              "duration_seconds": 60.0,
+              "exercise_key": "shoulder-swelling-pendulum-circles",
+              "injury_episode_id": "4db06dfe-23ff-469d-80e7-0d315374fcf8",
+              "injury_id": "2d150b68-21d6-4917-8075-f16cf3058657",
+              "instructions": "Lean forwards with your good hand on a stable support and let the affected arm hang down relaxed. Gently swing the arm forwards and backwards, side to side and in small circles in both directions, letting the movement come from your body rather than lifting the arm. Continue for about 1 minute. Do not hold a weight, force the swing or move into pain. Stop if pain or symptoms increase during or after the exercise. Follow your existing clinician restrictions. Seek assessment if you cannot lift the arm after an injury, the shoulder looks deformed, or you have pins and needles, numbness, a hot swollen joint or fever.",
+              "is_loading": false,
+              "minimum_gap_days": 1,
+              "policy_id": "shoulder_pain",
+              "policy_review_hash": "7275d7576761bd484823d63e9e8e8f9f20ca9d84e320858ae1526279bcd8aa46",
+              "policy_version": 2,
+              "rehab_drill_id": "shoulder_swelling_pendulum_circles",
+              "source_references": [
+                "https://www.leedsth.nhs.uk/patients/resources/early-advice-and-exercises-for-soft-tissue-injuries-of-the-shoulder/",
+                "https://royalberkshire.nhs.uk/media/5scpbnrh/shoulder-active-and-assisted-exercises_oct22.pdf"
+              ],
+              "stop_rules": [
+                "Stop if pain or symptoms increase during or after the exercise. Follow your existing clinician restrictions.",
+                "Seek assessment if you cannot lift the arm after an injury, the shoulder looks deformed, or you have pins and needles, numbness, a hot swollen joint or fever."
+              ],
+              "target_regions": [
+                "shoulder"
+              ],
+              "title": "Supported shoulder pendulum swing"
+            }
+          ],
+          "calendar_date": "2026-10-05",
+          "contact_level": "none",
+          "day_label": "",
+          "effective_load": "reduced",
+          "objective": "Follow the reviewed rehab for your current injury guidance.",
+          "phase": "GPP",
+          "session_id": "rehab-2026-10-05-90b50d5a8f4d9f7a80a077a8",
+          "session_relation": "today",
+          "session_type": "rehab",
+          "title": "Today's rehab",
+          "weekday": "Monday",
+          "weekday_with_label": "Monday"
+        },
+        "primary_safety_notice": null,
+        "recommendation_confidence": "moderate",
+        "recommendation_confidence_note": "Less to go on today: this is based on today's check-in alone, with no recent days to compare.",
+        "recommendation_context_labels": [],
+        "recommendation_reason": "Reviewed rehab today\nYour planned training conflicts with the current injury restrictions.\nFollow only the reviewed rehab shown today.",
+        "recommendation_safety_checks": [],
+        "recommendation_sources": [
+          "today's check-in",
+          "today's planned session",
+          "your tracked injuries"
+        ],
+        "recommendation_state": "modify",
+        "recommendation_trigger_labels": [
+          "Current injury restrictions"
+        ],
+        "session_label": "Today's session",
+        "session_scope": "today",
+        "training_day": "2026-10-05",
+        "warnings": []
+      },
+      "week_summary": {}
+    }
+  },
+  "wrist_sprain": {
+    "profile": {
+      "effective_admin": false,
+      "latest_intake": null,
+      "latest_plan": {
+        "activation_state": "eligible",
+        "athlete_id": "861ac5a2-f70b-4b03-ac7f-bbf526d7f0d3",
+        "created_at": "2026-10-05T12:00:00+00:00",
+        "custom_plan_id": null,
+        "fight_date": "",
+        "full_name": "",
+        "pdf_url": null,
+        "plan_id": "0062624b-145b-429a-ab49-a25766fdaa2c",
+        "plan_name": null,
+        "review_reason": null,
+        "status": "ready",
+        "technical_style": []
+      },
+      "plan_count": 1,
+      "profile": {
+        "access_status": "approved",
+        "age_band": "adult",
+        "appearance_mode": "dark",
+        "athlete_id": "861ac5a2-f70b-4b03-ac7f-bbf526d7f0d3",
+        "athlete_locale": "",
+        "athlete_timezone": "UTC",
+        "avatar_url": null,
+        "created_at": "2026-10-05T12:03:00+00:00",
+        "date_of_birth": "1996-05-04",
+        "email": "fixture@example.com",
+        "full_name": "Test athlete",
+        "health_consent_at": "2026-10-05T12:03:00+00:00",
+        "health_consent_granted": true,
+        "health_consent_version": "1.0",
+        "health_consent_withdrawn_at": null,
+        "health_data_consent": true,
+        "is_minor": false,
+        "meets_minimum_age": true,
+        "nutrition_profile": {
+          "age": null,
+          "caffeine_use": null,
+          "daily_activity_level": null,
+          "dietary_restrictions": [],
+          "food_preferences": [],
+          "foods_avoided_fight_week": [],
+          "foods_avoided_pre_session": [],
+          "height_cm": null,
+          "meals_per_day_preference": null,
+          "sex": null,
+          "supplement_use": []
+        },
+        "onboarding_draft": null,
+        "private_trial_ack_at": null,
+        "professional_status": "",
+        "record": "",
+        "role": "athlete",
+        "stance": "",
+        "starting_path": "plan_first",
+        "tactical_style": [],
+        "technical_style": [],
+        "terms_accepted": true,
+        "terms_accepted_at": "2026-10-05T12:03:00+00:00",
+        "terms_version": "0.1-pre-launch",
+        "training_habits": {
+          "decisions": [],
+          "enabled": true
+        },
+        "training_habits_revision": 0,
+        "updated_at": "2026-10-05T12:04:00+00:00",
+        "username": null,
+        "username_change_history": []
+      },
+      "username_rate_limit": {
+        "max_changes_per_window": 4,
+        "next_available_at": null,
+        "remaining": 4,
+        "window_days": 30
+      }
+    },
+    "view": {
+      "active_plan": {
+        "id": "0062624b-145b-429a-ab49-a25766fdaa2c",
+        "phase": "GPP",
+        "status": "ready"
+      },
+      "delayed_rehab_prompts": [],
+      "effective_clinician_clearance": {
+        "level": "rehab_only",
+        "limited_by": [
+          {
+            "injury_episode_id": "3d363b8d-a562-4d62-861d-4c0d32e181f9",
+            "injury_id": "db61f042-3ddb-4d3b-8168-f83b8e4aa8b5",
+            "label": "Left wrist sprain"
+          }
+        ],
+        "requires_update": false,
+        "scopes": [
+          "rehab"
+        ]
+      },
+      "exercise_media": {},
+      "live_prescription": {
+        "allocation_limit": 2,
+        "changes": [
+          {
+            "action": "held",
+            "reason": "clinician_clearance_ceiling"
+          },
+          {
+            "action": "held",
+            "block_id": "training",
+            "reason": "no_reviewed_safe_substitution",
+            "restriction_reasons": [
+              "injury_loading_restriction"
+            ]
+          }
+        ],
+        "engine_version": "2",
+        "evidence_context": {
+          "event_id": "222e8213-0dd6-54c2-a8a7-ef4e97bcd1df",
+          "exposure_id": null
+        },
+        "frozen": false,
+        "held_session_id": "training",
+        "injury_context": [
+          {
+            "episode_id": "3d363b8d-a562-4d62-861d-4c0d32e181f9",
+            "id": "db61f042-3ddb-4d3b-8168-f83b8e4aa8b5",
+            "updated_at": "2026-10-05T12:02:00+00:00"
+          }
+        ],
+        "injury_ids": [
+          "db61f042-3ddb-4d3b-8168-f83b8e4aa8b5"
+        ],
+        "plan_id": "0062624b-145b-429a-ab49-a25766fdaa2c",
+        "readiness_context": {
+          "id": "24550bcf-b076-42e1-a46b-3743ef226f8c",
+          "updated_at": "2026-10-05T12:02:00+00:00"
+        },
+        "rehab_only": true,
+        "revision": "5af7f195be46688182d9379ddc0bb3be96cc5774f3d83c64d9317c24fc31cffb",
+        "safety_hold": false,
+        "session": {
+          "blocks": [
+            {
+              "bank_hash": "e5f2c4e52452a5aff192aae2a27b42e28b7d75f8549452398e2a6be86e79c2c5",
+              "block_id": "rehab:db61f042-3ddb-4d3b-8168-f83b8e4aa8b5:3d363b8d-a562-4d62-861d-4c0d32e181f9",
+              "block_type": "rehab",
+              "coaching_cues": [
+                "Begin with your fingers and thumb relaxed. Gently bend your wrist forward and let the fingers straighten naturally, to a comfortable point. Then, keeping the fingers relaxed, gently bring the wrist backwards and let the fingers curl naturally into the palm. Hold each end position for 5 seconds. Repeat 5 times. No band, weight or forced stretch. If you feel a sharp pain, reduce the movement or stop. Stop if pain or symptoms increase during or after the exercise. Follow your existing clinician restrictions. Seek assessment for a sharp pain that does not settle, numbness or tingling, a hot swollen joint, or pain after a fall onto the hand."
+              ],
+              "display_name": "Active wrist tenodesis",
+              "dose": {
+                "reps": 5
+              },
+              "drill_snapshot": {
+                "allowed_severities": [
+                  "low",
+                  "moderate"
+                ],
+                "compatible_injury_types": [
+                  "stiffness",
+                  "sprain"
+                ],
+                "contact_level": "none",
+                "contraction_type": "mixed",
+                "dose": {
+                  "reps": 5
+                },
+                "equipment": [],
+                "evidence_notes": "Sources: https://www.cuh.nhs.uk/patient-information/hand-therapy-active-wrist-exercises/. Fixed conservative movement only. Dose is the explicit value, or the lower bound of the range, in the cited leaflet; one round per scheduled rehab session is a product cadence, not a source claim. No change to stage-entry criteria or permission, and no inference of sport readiness. No automatic resistance, range or speed progression.",
+                "function": "mobility",
+                "id": "wrist_unspecified_finger_extension_with_wrist_flexion",
+                "impact": "none",
+                "laterality_applicability": "side_specific",
+                "load": "minimal",
+                "name": "Active wrist tenodesis",
+                "notes": "Begin with your fingers and thumb relaxed. Gently bend your wrist forward and let the fingers straighten naturally, to a comfortable point. Then, keeping the fingers relaxed, gently bring the wrist backwards and let the fingers curl naturally into the palm. Hold each end position for 5 seconds. Repeat 5 times. No band, weight or forced stretch. If you feel a sharp pain, reduce the movement or stop. Stop if pain or symptoms increase during or after the exercise. Follow your existing clinician restrictions. Seek assessment for a sharp pain that does not settle, numbness or tingling, a hot swollen joint, or pain after a fall onto the hand.",
+                "pain_ceiling": null,
+                "prescription": {
+                  "frequency": "scheduled_sessions",
+                  "minimum_gap_days": 1,
+                  "priority": 0,
+                  "sources": [
+                    "https://www.cuh.nhs.uk/patient-information/hand-therapy-active-wrist-exercises/"
+                  ]
+                },
+                "progress_when": [],
+                "regress_when": [
+                  "Stop and return to conservative guidance if symptoms worsen."
+                ],
+                "rehab_stage": "restore",
+                "sport_specificity": "general_rehab",
+                "stop_when": [
+                  "Stop if pain or symptoms increase during or after the exercise. Follow your existing clinician restrictions.",
+                  "Seek assessment for a sharp pain that does not settle, numbness or tingling, a hot swollen joint, or pain after a fall onto the hand."
+                ],
+                "target_regions": [
+                  "wrist"
+                ],
+                "target_tissues": [
+                  "wrist joint and finger tendons"
+                ],
+                "velocity": "low"
+              },
+              "exercise_key": "wrist-unspecified-finger-extension-with-wrist-flexion",
+              "injury_episode_id": "3d363b8d-a562-4d62-861d-4c0d32e181f9",
+              "injury_id": "db61f042-3ddb-4d3b-8168-f83b8e4aa8b5",
+              "instructions": "Begin with your fingers and thumb relaxed. Gently bend your wrist forward and let the fingers straighten naturally, to a comfortable point. Then, keeping the fingers relaxed, gently bring the wrist backwards and let the fingers curl naturally into the palm. Hold each end position for 5 seconds. Repeat 5 times. No band, weight or forced stretch. If you feel a sharp pain, reduce the movement or stop. Stop if pain or symptoms increase during or after the exercise. Follow your existing clinician restrictions. Seek assessment for a sharp pain that does not settle, numbness or tingling, a hot swollen joint, or pain after a fall onto the hand.",
+              "is_loading": false,
+              "minimum_gap_days": 1,
+              "policy_id": "wrist_sprain",
+              "policy_review_hash": "3281e3b329b3b815d380aa87963689a208d126c9add9d215b155852833d271b0",
+              "policy_version": 1,
+              "rehab_drill_id": "wrist_unspecified_finger_extension_with_wrist_flexion",
+              "reps": 5,
+              "source_references": [
+                "https://www.cuh.nhs.uk/patient-information/hand-therapy-active-wrist-exercises/"
+              ],
+              "stop_rules": [
+                "Stop if pain or symptoms increase during or after the exercise. Follow your existing clinician restrictions.",
+                "Seek assessment for a sharp pain that does not settle, numbness or tingling, a hot swollen joint, or pain after a fall onto the hand."
+              ],
+              "target_regions": [
+                "wrist"
+              ],
+              "title": "Active wrist tenodesis"
+            }
+          ],
+          "calendar_date": "2026-10-05",
+          "contact_level": "none",
+          "day_label": "",
+          "effective_load": "reduced",
+          "objective": "Follow the reviewed rehab for your current injury guidance.",
+          "phase": "GPP",
+          "session_id": "rehab-2026-10-05-47d3c1ae3c1a3d2e4c393db9",
+          "session_type": "rehab",
+          "title": "Today's rehab",
+          "weekday": "Monday",
+          "weekday_with_label": "Monday"
+        },
+        "training_day": "2026-10-05",
+        "training_hold_reason": "Your planned training conflicts with the current injury restrictions."
+      },
+      "open_injuries": [
+        {
+          "assessment_episode_started_at": "2026-10-05T12:01:00Z",
+          "assessment_history_complete": true,
+          "assessment_setback_at": null,
+          "athlete_id": "861ac5a2-f70b-4b03-ac7f-bbf526d7f0d3",
+          "body_area": "Left wrist",
+          "body_region": "wrist",
+          "canonical_location": "wrist",
+          "clinician_clearance": {
+            "episode_id": "3d363b8d-a562-4d62-861d-4c0d32e181f9",
+            "externally_verified": false,
+            "rehabilitation_permission": {
+              "level": "gentle_recovery",
+              "schema_version": 1
+            },
+            "report_id": "222e8213-0dd6-54c2-a8a7-ef4e97bcd1df",
+            "reported_at": "2026-10-05T12:04:00+00:00",
+            "scope_reported_at": {
+              "rehab": "2026-10-05T12:04:00+00:00"
+            },
+            "scopes": [
+              "rehab"
+            ],
+            "source": "athlete_reported"
+          },
+          "consequence": null,
+          "created_at": "2026-10-05T12:01:00+00:00",
+          "description": "sprain []",
+          "episode_id": "3d363b8d-a562-4d62-861d-4c0d32e181f9",
+          "id": "db61f042-3ddb-4d3b-8168-f83b8e4aa8b5",
+          "label": "Left wrist sprain",
+          "latest_reported_at": "2026-10-05T12:02:00+00:00",
+          "latest_reported_status": "improving",
+          "load_region": "upper_limb",
+          "plan_id": "0062624b-145b-429a-ab49-a25766fdaa2c",
+          "progression_assessments": [],
+          "region_group": "upper_limb",
+          "rehab_care_pathway": "musculoskeletal",
+          "rehab_decision": {
+            "activation": "live",
+            "injury_episode_id": "3d363b8d-a562-4d62-861d-4c0d32e181f9",
+            "injury_id": "db61f042-3ddb-4d3b-8168-f83b8e4aa8b5",
+            "injury_type": "sprain",
+            "loading_hold": false,
+            "outcome": "prescribed_rehab",
+            "policy_id": "wrist_sprain",
+            "policy_version": 1,
+            "prescription": {
+              "bank_hash": "e5f2c4e52452a5aff192aae2a27b42e28b7d75f8549452398e2a6be86e79c2c5",
+              "dose": {
+                "reps": 5
+              },
+              "drill": {
+                "allowed_severities": [
+                  "low",
+                  "moderate"
+                ],
+                "compatible_injury_types": [
+                  "stiffness",
+                  "sprain"
+                ],
+                "contact_level": "none",
+                "contraction_type": "mixed",
+                "dose": {
+                  "reps": 5
+                },
+                "equipment": [],
+                "evidence_notes": "Sources: https://www.cuh.nhs.uk/patient-information/hand-therapy-active-wrist-exercises/. Fixed conservative movement only. Dose is the explicit value, or the lower bound of the range, in the cited leaflet; one round per scheduled rehab session is a product cadence, not a source claim. No change to stage-entry criteria or permission, and no inference of sport readiness. No automatic resistance, range or speed progression.",
+                "function": "mobility",
+                "id": "wrist_unspecified_finger_extension_with_wrist_flexion",
+                "impact": "none",
+                "laterality_applicability": "side_specific",
+                "load": "minimal",
+                "name": "Active wrist tenodesis",
+                "notes": "Begin with your fingers and thumb relaxed. Gently bend your wrist forward and let the fingers straighten naturally, to a comfortable point. Then, keeping the fingers relaxed, gently bring the wrist backwards and let the fingers curl naturally into the palm. Hold each end position for 5 seconds. Repeat 5 times. No band, weight or forced stretch. If you feel a sharp pain, reduce the movement or stop. Stop if pain or symptoms increase during or after the exercise. Follow your existing clinician restrictions. Seek assessment for a sharp pain that does not settle, numbness or tingling, a hot swollen joint, or pain after a fall onto the hand.",
+                "pain_ceiling": null,
+                "prescription": {
+                  "frequency": "scheduled_sessions",
+                  "minimum_gap_days": 1,
+                  "priority": 0,
+                  "sources": [
+                    "https://www.cuh.nhs.uk/patient-information/hand-therapy-active-wrist-exercises/"
+                  ]
+                },
+                "progress_when": [],
+                "regress_when": [
+                  "Stop and return to conservative guidance if symptoms worsen."
+                ],
+                "rehab_stage": "restore",
+                "sport_specificity": "general_rehab",
+                "stop_when": [
+                  "Stop if pain or symptoms increase during or after the exercise. Follow your existing clinician restrictions.",
+                  "Seek assessment for a sharp pain that does not settle, numbness or tingling, a hot swollen joint, or pain after a fall onto the hand."
+                ],
+                "target_regions": [
+                  "wrist"
+                ],
+                "target_tissues": [
+                  "wrist joint and finger tendons"
+                ],
+                "velocity": "low"
+              },
+              "drill_id": "wrist_unspecified_finger_extension_with_wrist_flexion",
+              "frequency": "scheduled_sessions",
+              "instructions": "Begin with your fingers and thumb relaxed. Gently bend your wrist forward and let the fingers straighten naturally, to a comfortable point. Then, keeping the fingers relaxed, gently bring the wrist backwards and let the fingers curl naturally into the palm. Hold each end position for 5 seconds. Repeat 5 times. No band, weight or forced stretch. If you feel a sharp pain, reduce the movement or stop. Stop if pain or symptoms increase during or after the exercise. Follow your existing clinician restrictions. Seek assessment for a sharp pain that does not settle, numbness or tingling, a hot swollen joint, or pain after a fall onto the hand.",
+              "is_loading": false,
+              "minimum_gap_days": 1,
+              "policy_id": "wrist_sprain",
+              "policy_review_hash": "3281e3b329b3b815d380aa87963689a208d126c9add9d215b155852833d271b0",
+              "policy_version": 1,
+              "sources": [
+                "https://www.cuh.nhs.uk/patient-information/hand-therapy-active-wrist-exercises/"
+              ],
+              "stop_when": [
+                "Stop if pain or symptoms increase during or after the exercise. Follow your existing clinician restrictions.",
+                "Seek assessment for a sharp pain that does not settle, numbness or tingling, a hot swollen joint, or pain after a fall onto the hand."
+              ]
+            },
+            "progression": {
+              "engine_version": "2",
+              "evidence_ids": [],
+              "next_transition": {
+                "closed_reason": null,
+                "from_stage": "restore",
+                "ignored_evidence": {},
+                "missing_inputs": [],
+                "reason_codes": [
+                  "no_reviewed_stage_exposure",
+                  "no_reviewed_response_group",
+                  "no_reviewed_response_group"
+                ],
+                "requirements": [
+                  {
+                    "basis": "product_safety",
+                    "evidence_ids": [],
+                    "kind": "no_unresolved_setback",
+                    "reason_code": "no_negative_response",
+                    "requirement_id": "no_unresolved_setback",
+                    "status": "pass"
+                  },
+                  {
+                    "basis": "product_safety",
+                    "evidence_ids": [],
+                    "kind": "complete_history",
+                    "reason_code": "history_complete",
+                    "requirement_id": "complete_episode_history",
+                    "status": "pass"
+                  },
+                  {
+                    "basis": "data_sufficiency",
+                    "evidence_ids": [],
+                    "kind": "completed_reviewed_exposure",
+                    "reason_code": "no_reviewed_stage_exposure",
+                    "requirement_id": "reviewed_stage_exposure",
+                    "status": "unknown"
+                  },
+                  {
+                    "basis": "product_safety",
+                    "evidence_ids": [],
+                    "kind": "during_session_response",
+                    "reason_code": "no_reviewed_response_group",
+                    "requirement_id": "during_response_not_worse",
+                    "status": "unknown"
+                  },
+                  {
+                    "basis": "product_safety",
+                    "evidence_ids": [],
+                    "kind": "next_day_response",
+                    "reason_code": "no_reviewed_response_group",
+                    "requirement_id": "next_day_response_not_worse",
+                    "status": "unknown"
+                  }
+                ],
+                "status": "blocked",
+                "target_stage_live": false,
+                "to_stage": "load"
+              },
+              "reason_codes": [
+                "baseline_only_v1"
+              ],
+              "stage": "restore"
+            },
+            "reason_codes": [
+              "SELECT_DETERMINISTIC_BEST"
+            ],
+            "region": "wrist",
+            "restrictions": {
+              "blocked_regions": [
+                "wrist"
+              ],
+              "blocked_tags": [],
+              "contact_limit": "none"
+            },
+            "schedule": {
+              "next_due_day": "2026-10-05",
+              "reason": "Your baseline rehab is due today; missed work adds no extra volume.",
+              "state": "due"
+            },
+            "stage": "restore",
+            "summary": "Your rehab is matched to this injury's current recovery stage."
+          },
+          "rehab_improvement_at": "2026-10-05T12:02:00Z",
+          "rehab_improvement_reports": [
+            {
+              "id": "46385840-e99d-4885-a34a-22fc2d3476da",
+              "reported_at": "2026-10-05T12:01:00+00:00"
+            },
+            {
+              "id": "daaf8531-d534-4d6a-b6b0-d7d79b69f4c4",
+              "reported_at": "2026-10-05T12:02:00+00:00"
+            }
+          ],
+          "rehab_medical_gate": false,
+          "rehab_stage": "restore",
+          "rehab_stage_reasons": [
+            "symptoms_not_worsening",
+            "insufficient_injury_specific_progression_evidence"
+          ],
+          "resolved_at": null,
+          "severity": "mild",
+          "side": "left",
+          "source": "checkin",
+          "status": "monitoring",
+          "surface_class": "non_surface",
+          "updated_at": "2026-10-05T12:02:00+00:00"
+        }
+      ],
+      "quick_actions": [
+        {
+          "id": "open_today",
+          "label": "Open Today",
+          "route": "/today"
+        },
+        {
+          "id": "view_plan",
+          "label": "View Plan",
+          "route": "/plans/0062624b-145b-429a-ab49-a25766fdaa2c"
+        }
+      ],
+      "risk_watch": [
+        {
+          "category": "reminder",
+          "icon": "info",
+          "label": "Reminder",
+          "priority": 7,
+          "text": "Tracking 1 open injury: Left wrist sprain. Train around it.",
+          "timeframe": "active",
+          "tone": "info"
+        }
+      ],
+      "today": {
+        "completion_status": "not_started",
+        "decision_tier": "modify",
+        "injury_hold_exempt": false,
+        "next_session": {
+          "blocks": [
+            {
+              "bank_hash": "e5f2c4e52452a5aff192aae2a27b42e28b7d75f8549452398e2a6be86e79c2c5",
+              "block_id": "rehab:db61f042-3ddb-4d3b-8168-f83b8e4aa8b5:3d363b8d-a562-4d62-861d-4c0d32e181f9",
+              "block_type": "rehab",
+              "coaching_cues": [
+                "Begin with your fingers and thumb relaxed. Gently bend your wrist forward and let the fingers straighten naturally, to a comfortable point. Then, keeping the fingers relaxed, gently bring the wrist backwards and let the fingers curl naturally into the palm. Hold each end position for 5 seconds. Repeat 5 times. No band, weight or forced stretch. If you feel a sharp pain, reduce the movement or stop. Stop if pain or symptoms increase during or after the exercise. Follow your existing clinician restrictions. Seek assessment for a sharp pain that does not settle, numbness or tingling, a hot swollen joint, or pain after a fall onto the hand."
+              ],
+              "display_name": "Active wrist tenodesis",
+              "dose": {
+                "reps": 5
+              },
+              "drill_snapshot": {
+                "allowed_severities": [
+                  "low",
+                  "moderate"
+                ],
+                "compatible_injury_types": [
+                  "stiffness",
+                  "sprain"
+                ],
+                "contact_level": "none",
+                "contraction_type": "mixed",
+                "dose": {
+                  "reps": 5
+                },
+                "equipment": [],
+                "evidence_notes": "Sources: https://www.cuh.nhs.uk/patient-information/hand-therapy-active-wrist-exercises/. Fixed conservative movement only. Dose is the explicit value, or the lower bound of the range, in the cited leaflet; one round per scheduled rehab session is a product cadence, not a source claim. No change to stage-entry criteria or permission, and no inference of sport readiness. No automatic resistance, range or speed progression.",
+                "function": "mobility",
+                "id": "wrist_unspecified_finger_extension_with_wrist_flexion",
+                "impact": "none",
+                "laterality_applicability": "side_specific",
+                "load": "minimal",
+                "name": "Active wrist tenodesis",
+                "notes": "Begin with your fingers and thumb relaxed. Gently bend your wrist forward and let the fingers straighten naturally, to a comfortable point. Then, keeping the fingers relaxed, gently bring the wrist backwards and let the fingers curl naturally into the palm. Hold each end position for 5 seconds. Repeat 5 times. No band, weight or forced stretch. If you feel a sharp pain, reduce the movement or stop. Stop if pain or symptoms increase during or after the exercise. Follow your existing clinician restrictions. Seek assessment for a sharp pain that does not settle, numbness or tingling, a hot swollen joint, or pain after a fall onto the hand.",
+                "pain_ceiling": null,
+                "prescription": {
+                  "frequency": "scheduled_sessions",
+                  "minimum_gap_days": 1,
+                  "priority": 0,
+                  "sources": [
+                    "https://www.cuh.nhs.uk/patient-information/hand-therapy-active-wrist-exercises/"
+                  ]
+                },
+                "progress_when": [],
+                "regress_when": [
+                  "Stop and return to conservative guidance if symptoms worsen."
+                ],
+                "rehab_stage": "restore",
+                "sport_specificity": "general_rehab",
+                "stop_when": [
+                  "Stop if pain or symptoms increase during or after the exercise. Follow your existing clinician restrictions.",
+                  "Seek assessment for a sharp pain that does not settle, numbness or tingling, a hot swollen joint, or pain after a fall onto the hand."
+                ],
+                "target_regions": [
+                  "wrist"
+                ],
+                "target_tissues": [
+                  "wrist joint and finger tendons"
+                ],
+                "velocity": "low"
+              },
+              "exercise_key": "wrist-unspecified-finger-extension-with-wrist-flexion",
+              "injury_episode_id": "3d363b8d-a562-4d62-861d-4c0d32e181f9",
+              "injury_id": "db61f042-3ddb-4d3b-8168-f83b8e4aa8b5",
+              "instructions": "Begin with your fingers and thumb relaxed. Gently bend your wrist forward and let the fingers straighten naturally, to a comfortable point. Then, keeping the fingers relaxed, gently bring the wrist backwards and let the fingers curl naturally into the palm. Hold each end position for 5 seconds. Repeat 5 times. No band, weight or forced stretch. If you feel a sharp pain, reduce the movement or stop. Stop if pain or symptoms increase during or after the exercise. Follow your existing clinician restrictions. Seek assessment for a sharp pain that does not settle, numbness or tingling, a hot swollen joint, or pain after a fall onto the hand.",
+              "is_loading": false,
+              "minimum_gap_days": 1,
+              "policy_id": "wrist_sprain",
+              "policy_review_hash": "3281e3b329b3b815d380aa87963689a208d126c9add9d215b155852833d271b0",
+              "policy_version": 1,
+              "rehab_drill_id": "wrist_unspecified_finger_extension_with_wrist_flexion",
+              "reps": 5,
+              "source_references": [
+                "https://www.cuh.nhs.uk/patient-information/hand-therapy-active-wrist-exercises/"
+              ],
+              "stop_rules": [
+                "Stop if pain or symptoms increase during or after the exercise. Follow your existing clinician restrictions.",
+                "Seek assessment for a sharp pain that does not settle, numbness or tingling, a hot swollen joint, or pain after a fall onto the hand."
+              ],
+              "target_regions": [
+                "wrist"
+              ],
+              "title": "Active wrist tenodesis"
+            }
+          ],
+          "calendar_date": "2026-10-05",
+          "contact_level": "none",
+          "day_label": "",
+          "effective_load": "reduced",
+          "objective": "Follow the reviewed rehab for your current injury guidance.",
+          "phase": "GPP",
+          "session_id": "rehab-2026-10-05-47d3c1ae3c1a3d2e4c393db9",
+          "session_relation": "today",
+          "session_type": "rehab",
+          "title": "Today's rehab",
+          "weekday": "Monday",
+          "weekday_with_label": "Monday"
+        },
+        "primary_safety_notice": null,
+        "recommendation_confidence": "moderate",
+        "recommendation_confidence_note": "Less to go on today: this is based on today's check-in alone, with no recent days to compare.",
+        "recommendation_context_labels": [],
+        "recommendation_reason": "Reviewed rehab today\nYour planned training conflicts with the current injury restrictions.\nFollow only the reviewed rehab shown today.",
+        "recommendation_safety_checks": [],
+        "recommendation_sources": [
+          "today's check-in",
+          "today's planned session",
+          "your tracked injuries"
+        ],
+        "recommendation_state": "modify",
+        "recommendation_trigger_labels": [
+          "Current injury restrictions"
+        ],
+        "session_label": "Today's session",
+        "session_scope": "today",
+        "training_day": "2026-10-05",
+        "warnings": []
+      },
+      "week_summary": {}
+    }
+  }
+}

@@ -44,8 +44,8 @@ def test_families_and_safety_baseline_invent_no_clinical_criteria():
             continue
         assert not any(t.promotable for t in policy.transitions)
         calm_only = (policy.policy_id == "wrist_impingement" or policy.injury_type == "hyperextension"
-                     or policy.policy_id in {f"{r}_contusion" for r in ["heel", "shin", "quads", "biceps", "triceps", "forearm"]}
-                     or policy.policy_id in {'lower_back_stiffness', 'shoulder_pain', 'shoulder_tightness', 'neck_tightness', 'elbow_pain', 'wrist_pain', 'neck_soreness', 'hip_pain', 'shoulder_soreness', 'elbow_stiffness', 'knee_pain', 'hand_pain', 'fingers_pain'})
+                     or policy.policy_id in {f"{r}_contusion" for r in ["heel", "shin"]}
+                     or policy.policy_id in {'lower_back_stiffness', 'hand_pain', 'fingers_pain'})
         assert policy.live_stages == (["calm"] if calm_only else ["calm", "restore"])
 
 

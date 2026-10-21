@@ -3118,7 +3118,7 @@
     },
     {
       "policy_id": "quads_contusion",
-      "version": 1,
+      "version": 2,
       "region": "quads",
       "injury_type": "contusion",
       "pathway_family": "contusion",
@@ -3157,16 +3157,17 @@
       "blocked_tags": [],
       "contact_limit": "none",
       "live_stages": [
-        "calm"
+        "calm",
+        "restore"
       ],
       "transition_overrides": {},
       "status": "active",
       "activation": "live",
-      "content_hash": "e7fa20d5dd6b68f04a8e10acea0ee94d11d73dc5bf1f1309193563706dff9437"
+      "content_hash": "30b929ade9e1fcc1638b8da9ce5c2c3a99a25997e2e4e7c5089948758cf6d395"
     },
     {
       "policy_id": "biceps_contusion",
-      "version": 1,
+      "version": 2,
       "region": "biceps",
       "injury_type": "contusion",
       "pathway_family": "contusion",
@@ -3205,16 +3206,17 @@
       "blocked_tags": [],
       "contact_limit": "none",
       "live_stages": [
-        "calm"
+        "calm",
+        "restore"
       ],
       "transition_overrides": {},
       "status": "active",
       "activation": "live",
-      "content_hash": "dd72b45ba2c4d80abe117635d02207922f83744e0ea3635bf793181ee19539ae"
+      "content_hash": "8d515fc9f7ae84ca3c6168b47747a44e53930a1a0255057f52d6ddf6715cdc11"
     },
     {
       "policy_id": "triceps_contusion",
-      "version": 1,
+      "version": 2,
       "region": "triceps",
       "injury_type": "contusion",
       "pathway_family": "contusion",
@@ -3253,16 +3255,17 @@
       "blocked_tags": [],
       "contact_limit": "none",
       "live_stages": [
-        "calm"
+        "calm",
+        "restore"
       ],
       "transition_overrides": {},
       "status": "active",
       "activation": "live",
-      "content_hash": "bba6e81e5e766853416bbd24af7fa9764507d27a9801adf6fb060b83c8e78d4f"
+      "content_hash": "ff67287dc2d5331543148eb0822e8d3eae1fa4f09051fe4ce4d9a9a0ded1105b"
     },
     {
       "policy_id": "forearm_contusion",
-      "version": 1,
+      "version": 2,
       "region": "forearm",
       "injury_type": "contusion",
       "pathway_family": "contusion",
@@ -3301,12 +3304,13 @@
       "blocked_tags": [],
       "contact_limit": "none",
       "live_stages": [
-        "calm"
+        "calm",
+        "restore"
       ],
       "transition_overrides": {},
       "status": "active",
       "activation": "live",
-      "content_hash": "5fea1d8c15702d0109dcce92110e1bb7e4f720fea8301b9614402d0bc70ea123"
+      "content_hash": "e79cc67a3433ac30c340b4033f3f9f5cfa3f997e625903f3bc88cc27cddc6b00"
     },
     {
       "policy_id": "shoulder_contusion",
@@ -3682,7 +3686,7 @@
     },
     {
       "policy_id": "shoulder_pain",
-      "version": 1,
+      "version": 2,
       "region": "shoulder",
       "injury_type": "pain",
       "pathway_family": "nonspecific_msk_symptoms",
@@ -3719,16 +3723,17 @@
       "blocked_tags": [],
       "contact_limit": "none",
       "live_stages": [
-        "calm"
+        "calm",
+        "restore"
       ],
       "transition_overrides": {},
       "status": "active",
       "activation": "live",
-      "content_hash": "6b9d69333ffee2fbfbfe0c9eb3c7af979d11cbb11c0db855d2c73b41ecf6d288"
+      "content_hash": "b522fc18fdf4c1b3715f0b5f22261297ecafd40e6c57aff3d979e4e47f2ab257"
     },
     {
       "policy_id": "elbow_pain",
-      "version": 1,
+      "version": 2,
       "region": "elbow",
       "injury_type": "pain",
       "pathway_family": "nonspecific_msk_symptoms",
@@ -3767,16 +3772,17 @@
       "blocked_tags": [],
       "contact_limit": "none",
       "live_stages": [
-        "calm"
+        "calm",
+        "restore"
       ],
       "transition_overrides": {},
       "status": "active",
       "activation": "live",
-      "content_hash": "f9b3de457fe5c947ac0d1f65189f9f38b05a6db2ab6e0f3205eaa92e6efc887f"
+      "content_hash": "bf6eedffee03bdbe14c68f163bf6b6f12042806061bd57376144f50bfb7aaa21"
     },
     {
       "policy_id": "wrist_pain",
-      "version": 1,
+      "version": 2,
       "region": "wrist",
       "injury_type": "pain",
       "pathway_family": "nonspecific_msk_symptoms",
@@ -3813,12 +3819,13 @@
       "blocked_tags": [],
       "contact_limit": "none",
       "live_stages": [
-        "calm"
+        "calm",
+        "restore"
       ],
       "transition_overrides": {},
       "status": "active",
       "activation": "live",
-      "content_hash": "7448e0ad955d14164ea068fadf359f4da28f168ee7b66de9cf8966901593dcaa"
+      "content_hash": "5fd270b6a0906843f99d3f609da68e7240c2548f79956ff75f7b98da95879967"
     },
     {
       "policy_id": "hand_pain",
@@ -3914,7 +3921,7 @@
     },
     {
       "policy_id": "knee_pain",
-      "version": 1,
+      "version": 2,
       "region": "knee",
       "injury_type": "pain",
       "pathway_family": "nonspecific_msk_symptoms",
@@ -3951,16 +3958,17 @@
       "blocked_tags": [],
       "contact_limit": "none",
       "live_stages": [
-        "calm"
+        "calm",
+        "restore"
       ],
       "transition_overrides": {},
       "status": "active",
       "activation": "live",
-      "content_hash": "4331e59eda81ff09fcfd3519475eb471a1787680472d0d3ca0ac68c76d393d9b"
+      "content_hash": "386ae73d5fed3760c0523f2da59af2939a032d33bc9ec4ba7278d52ed27cb15a"
     },
     {
       "policy_id": "hip_pain",
-      "version": 1,
+      "version": 2,
       "region": "hip",
       "injury_type": "pain",
       "pathway_family": "nonspecific_msk_symptoms",
@@ -3997,12 +4005,13 @@
       "blocked_tags": [],
       "contact_limit": "none",
       "live_stages": [
-        "calm"
+        "calm",
+        "restore"
       ],
       "transition_overrides": {},
       "status": "active",
       "activation": "live",
-      "content_hash": "bbf5e30693b986f66840403cb7d9e2a3a4cd379dea0f0258595595da97f6713b"
+      "content_hash": "8f13ce60486c7c96679c0f09257304d35267341d12c815dade30c40009ae2d40"
     },
     {
       "policy_id": "lower_back_pain",
@@ -4150,7 +4159,7 @@
     },
     {
       "policy_id": "elbow_stiffness",
-      "version": 1,
+      "version": 2,
       "region": "elbow",
       "injury_type": "stiffness",
       "pathway_family": "nonspecific_msk_symptoms",
@@ -4189,12 +4198,13 @@
       "blocked_tags": [],
       "contact_limit": "none",
       "live_stages": [
-        "calm"
+        "calm",
+        "restore"
       ],
       "transition_overrides": {},
       "status": "active",
       "activation": "live",
-      "content_hash": "e7037644bde03db68098743b16978960f30ac2f9e5f8c27eda938af1899b7713"
+      "content_hash": "d36e5e3387adc8c8f00f21c75b772fa1c2f7a6ff027e26b8e72f6e6609f52a7d"
     },
     {
       "policy_id": "wrist_stiffness",
@@ -4318,7 +4328,7 @@
     },
     {
       "policy_id": "neck_tightness",
-      "version": 1,
+      "version": 2,
       "region": "neck",
       "injury_type": "tightness",
       "pathway_family": "nonspecific_msk_symptoms",
@@ -4355,16 +4365,17 @@
       "blocked_tags": [],
       "contact_limit": "none",
       "live_stages": [
-        "calm"
+        "calm",
+        "restore"
       ],
       "transition_overrides": {},
       "status": "active",
       "activation": "live",
-      "content_hash": "8cd904bffef5d1e8b1561d7e63ba453e96a60482148802b742f48b717d1b6e3b"
+      "content_hash": "46faaee4643e5e6a02eb94e82b13afae47c9b66a988ce2a451296e0c9454002e"
     },
     {
       "policy_id": "shoulder_tightness",
-      "version": 1,
+      "version": 2,
       "region": "shoulder",
       "injury_type": "tightness",
       "pathway_family": "nonspecific_msk_symptoms",
@@ -4401,16 +4412,17 @@
       "blocked_tags": [],
       "contact_limit": "none",
       "live_stages": [
-        "calm"
+        "calm",
+        "restore"
       ],
       "transition_overrides": {},
       "status": "active",
       "activation": "live",
-      "content_hash": "f8a052df44de9293561161afcb3009a4cf3a5f129a996071f77064775c6b626f"
+      "content_hash": "550c0ca22dad51e7353de03ff360f89cff051c6be85f66d4d7786ade21099985"
     },
     {
       "policy_id": "neck_soreness",
-      "version": 1,
+      "version": 2,
       "region": "neck",
       "injury_type": "soreness",
       "pathway_family": "nonspecific_msk_symptoms",
@@ -4447,16 +4459,17 @@
       "blocked_tags": [],
       "contact_limit": "none",
       "live_stages": [
-        "calm"
+        "calm",
+        "restore"
       ],
       "transition_overrides": {},
       "status": "active",
       "activation": "live",
-      "content_hash": "c291c0e628959410761b9ac7ea4b942efd596768fdf497a0c0b893f9b0c44910"
+      "content_hash": "02b1e4ca4c0adf7d37c5bdc639b42a9a1cb268d81fa020757ad2df3d423d0f91"
     },
     {
       "policy_id": "shoulder_soreness",
-      "version": 1,
+      "version": 2,
       "region": "shoulder",
       "injury_type": "soreness",
       "pathway_family": "nonspecific_msk_symptoms",
@@ -4493,12 +4506,13 @@
       "blocked_tags": [],
       "contact_limit": "none",
       "live_stages": [
-        "calm"
+        "calm",
+        "restore"
       ],
       "transition_overrides": {},
       "status": "active",
       "activation": "live",
-      "content_hash": "76728114b78764c5b477a36e7e9fef3bacfe6df6bf97186e994a1ff8af82262c"
+      "content_hash": "95c12d1be0b1fe63ee2f9288ce9859094aecae1d02444add75f2553b66c0d8d0"
     }
   ]
 }

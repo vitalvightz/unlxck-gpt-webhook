@@ -70,8 +70,10 @@ def test_reviewed_hashes_match_and_original_sources_survive_authorised_repairs(r
     ledger = {r["drill_id"]: r for r in historical_ledger}
     policy = next(p for p in load_clinical_policies() if (p.region, p.injury_type) == (region, kind))
     assert validate_clinical_bank((policy,), get_rehab_bank()) == []
+    current = {r["drill_id"]: r for r in json.loads((ROOT / "data/rehab_metadata_review.json").read_text())}
     for p in policy.prescriptions:
-        record = ledger[p.drill_id]
+        # Live prescriptions are checked against the current ledger; the dated audit below uses history.
+        record = current[p.drill_id]
         assert record["review_state"] == "reviewed"
         assert record["source_hash"] == source_hash(drill_id=record["drill_id"], location=record["location"],
             injury_type=record["injury_type"], name=record["name"], notes=record["notes"])
