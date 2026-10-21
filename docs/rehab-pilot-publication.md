@@ -117,13 +117,47 @@ and the existing [YouTube import workflow](rehab-video-curation.md). The four ne
 published identities have blank URL rows; the wall slide reuses its existing row.
 No unrelated video is attached. Media never changes prescription or eligibility.
 
+## Text-first exercise guide (no demonstration)
+
+When a banked rehab block (one with a `drill_snapshot`) has no valid curated,
+private or community demonstration, the exercise sheet switches to a deliberate
+text-first guide instead of showing "Demo not assigned". Blocks with a valid
+demonstration keep the video-led layout; an embed that errors at runtime still
+shows "Video unavailable here. Use the cues below." with the YouTube link.
+Legacy prehab/training blocks are unchanged.
+
+The guide (`web/lib/rehab-exercise-guide.ts`, `RehabExerciseGuide`) renders, in
+this order:
+
+1. **Prescription**: hold/duration, reps, sets and frequency as tiles, taken only
+   from the approved `dose` (or legacy block fields when there is no `dose`). An
+   explicit empty dose shows **Self-paced** and never gains a number from bank
+   metadata or prose.
+2. **How to perform**: numbered steps. These are the approved instructions split
+   at sentence boundaries, with no rewording, generated text or dose parsing.
+3. **Requirements**: equipment, resistance and range, as before.
+4. **Safety limits**: stop rules, mandatory restrictions and safety sentences
+   taken out of the instructions, in one list. Only exact equivalents are
+   merged (for example, two "follow clinician restrictions" lines). Red flags,
+   escalation, range, resistance, side, timing and conditional restrictions stay
+   verbatim.
+
+The existing exercise log panel follows the guide, and the Today completion
+control is unchanged. The guide is display-only: it does not change eligibility,
+permission gates, worsening/setback handling, multi-injury restrictions or the
+completion payload.
+
 `tests/test_rehab_bank_publication.py` exercises the real Today GET/completion
 routes with synthetic persisted store data, including all five new options,
 exact media identity, permission, pending responses, worsening and timed-dose
 freeze checks. Existing pilot regressions cover multi-injury and subtype holds.
-The browser tests use exported API payloads at 320px, the existing shared player,
-missing-video fallback and one completion action. They do not contact production
-Supabase or YouTube. The generated full [reachability report](rehab-bank-reachability.md)
+`web/e2e/rehab-experience.spec.ts` (12 scenarios) uses exported API payloads at
+320, 375, 668 and 1280px. It covers the existing shared player, the
+runtime-error fallback, the text-first guide's order (prescription, steps,
+safety) and reachable last safety limit, the absence of horizontal overflow and
+"Demo not assigned", and one completion action per pilot. The tests do not
+contact production Supabase or YouTube. Set `REHAB_QA_DIR` to save screenshots;
+the final set is in `output/playwright/rehab-bank/`. The generated full [reachability report](rehab-bank-reachability.md)
 also probes each pilot routine's actual equipment, including alternatives.
 
 ```powershell

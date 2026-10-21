@@ -165,6 +165,15 @@ def test_whole_family_audit_and_preserved_existing_profile_hashes():
     # ankle LOAD delta is projected out; its v5 behaviour is tested separately.
     from tests.test_rehab_pathway_equivalence import composed
     current["ankle_sprain"] = next(p.content_hash for p in composed() if p.policy_id == "ankle_sprain")
+    # Likewise project out only the exact dated groin bank-publication delta;
+    # current groin content is covered by test_rehab_bank_publication.
+    from fightcamp.rehab_clinical import compose_policy
+    from fightcamp.rehab_pathways import PathwayCatalog
+    from tools.rehab_metadata_review_lib import before_bank_publication
+    catalog = PathwayCatalog.model_validate(before_bank_publication(
+        json.loads((ROOT / "data/rehab_pathways.json").read_text(encoding="utf-8")), "profiles"))
+    groin = next(p for p in catalog.profiles if p["policy_id"] == "groin_strain")
+    current["groin_strain"] = compose_policy(catalog, groin, bank=before_bank_publication(get_rehab_bank(), "drills")).content_hash
     assert {k: current[k] for k in hashes} == hashes
 
 

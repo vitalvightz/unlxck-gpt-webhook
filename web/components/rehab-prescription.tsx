@@ -32,7 +32,7 @@ export function RehabPrescription({ block, compact = false }: { block: Structure
   ];
   return <>
     {rows.map(row => <p className="sp-block-aside" key={row.label}>
-      <span className="sp-stat-label">{row.label}</span>{row.text}
+      <span className="sp-stat-label">{row.label}</span>{compact ? <span>{row.text}</span> : row.text}
     </p>)}
     {!compact && block.mandatory_restrictions?.length ? <div className="sp-block-aside">
       <span className="sp-stat-label">Restrictions</span>
