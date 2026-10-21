@@ -7,7 +7,7 @@ import { InjuryChevron, InjuryDetailSheet } from "./injury-detail-sheet";
 import { RehabProgressStatus, rehabStageLabel } from "./rehab-progress-status";
 
 const SCHEDULE_LABELS = { due: "Rehab due today", recovery_day: "Rest day", already_completed: "Done for today",
-  held: "Rehab on hold", deferred: "Rehab moved", unsupported: "No rehab yet" } as const;
+  held: "Today’s rehab on hold", deferred: "Rehab moved", unsupported: "No rehab yet" } as const;
 const ROUTINE_SCHEDULE_STATES = new Set<string>(["due", "recovery_day", "already_completed"]);
 const NEXT_DAY_FORMAT = new Intl.DateTimeFormat("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
 
@@ -108,8 +108,8 @@ export function InjuryClearance({ injury, token, onRefresh }: {
   </div>;
 }
 
-export function InjuryCareStatus({ injury, token, onRefresh, showClearance = true }: {
-  injury: InjuryFlagRecord; token: string; onRefresh: () => Promise<void>; showClearance?: boolean;
+export function InjuryCareStatus({ injury, token, onRefresh, showClearance = true, summaryVisible = false }: {
+  injury: InjuryFlagRecord; token: string; onRefresh: () => Promise<void>; showClearance?: boolean; summaryVisible?: boolean;
 }) {
   const schedule = injury.rehab_decision?.schedule;
   const outcome = injury.rehab_decision?.outcome;
@@ -149,7 +149,7 @@ export function InjuryCareStatus({ injury, token, onRefresh, showClearance = tru
   const hasGuidance = trackingOnly || resolved || showSummary || showScheduleRow || showTrackingSchedule || showReason;
   return <div className="today-injury-care">
     {injury.rehab_decision ? <>
-      {outcome === "prescribed_rehab" ? <RehabProgressStatus decision={injury.rehab_decision} statusLine={stageStatusLine} /> : null}
+      {outcome === "prescribed_rehab" ? <RehabProgressStatus decision={injury.rehab_decision} statusLine={stageStatusLine} summaryVisible={summaryVisible} /> : null}
       {hasGuidance ? <div className="injury-rehab-status" role="note" aria-label="Guidance">
         {trackingOnly ? <><p className="injury-rehab-label"><strong>Recovery monitoring</strong></p>
           <p className="muted">{outcome === "unsupported_prescription" ? "No guided rehab programme is available for this injury yet." : summary}</p>

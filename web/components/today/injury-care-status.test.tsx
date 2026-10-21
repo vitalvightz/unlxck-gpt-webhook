@@ -16,6 +16,19 @@ const injury: InjuryFlagRecord = {
     schedule: { state: "recovery_day", reason: "Allow the recovery gap.", next_due_day: "2026-10-02" } },
 };
 
+test("a readiness hold pauses today's rehab without changing LOAD eligibility", () => {
+  const html = renderToStaticMarkup(<InjuryCareStatus injury={{ ...injury, rehab_decision: {
+    ...injury.rehab_decision!, stage: "load", loading_hold: false,
+    progression: { entry_basis: "reported_clinician_permission" },
+    schedule: { state: "held", reason: "Complete today's check-in and follow its training guidance." },
+  } }} token="token" onRefresh={async () => {}} />);
+  const body = new domWindow.DOMParser().parseFromString(html, "text/html").body;
+  assert.match(body.textContent ?? "", /Today’s rehab on hold/);
+  assert.match(body.textContent ?? "", /Complete today's check-in/);
+  assert.match(body.textContent ?? "", /LOAD follows your reported clinician advice/);
+  assert.doesNotMatch(body.textContent ?? "", /Progression is on hold|Progression · On hold/);
+});
+
 async function click(container: HTMLElement, label: string) {
   const surface = document.querySelector<HTMLElement>('[role="dialog"]') ?? container;
   const training = Array.from(surface.querySelectorAll<HTMLInputElement>('input[type="radio"]')).find(input => input.closest("label")?.textContent === label);
@@ -185,7 +198,7 @@ for (const [reasonCodes, summary, expected] of [
       } else {
         assert.ok(!text.includes(summary));
       }
-      if (reason) assert.match(text, /Rehab on hold/);
+      if (reason) assert.match(text, /Today’s rehab on hold/);
       if (reason && reason !== summary) assert.ok(text.includes(reason));
     }
   });
@@ -201,7 +214,7 @@ for (const state of ["due", "recovery_day", "already_completed", "held", "deferr
     const text = new domWindow.DOMParser().parseFromString(html, "text/html").body.textContent ?? "";
     assert.equal(text.split(summary).length - 1, 1);
     assert.ok(text.includes({ due: "Rehab due today", recovery_day: "Rest day", already_completed: "Done for today",
-      held: "Rehab on hold", deferred: "Rehab moved", unsupported: "No rehab yet" }[state]));
+      held: "Today’s rehab on hold", deferred: "Rehab moved", unsupported: "No rehab yet" }[state]));
     assert.equal(text.includes("Next Fri 9 Oct"), state !== "due");
   });
 }

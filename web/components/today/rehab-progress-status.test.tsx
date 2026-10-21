@@ -4,7 +4,7 @@ import { window as domWindow } from "../test-dom";
 import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { renderToStaticMarkup } from "react-dom/server";
-import { RehabProgressStatus, RehabStageMeter, rehabNextStep } from "./rehab-progress-status";
+import { RehabProgressStatus, RehabStageMeter, rehabNextStep, rehabEntryExplanation } from "./rehab-progress-status";
 import type { InjuryFlagRecord } from "@/lib/types";
 
 const decision: NonNullable<InjuryFlagRecord["rehab_decision"]> = {
@@ -31,8 +31,8 @@ test("the collapsed injury summary distinguishes current stage from unpublished 
 
 for (const [codes, message] of [
   [["no_reviewed_stage_exposure"], /Complete your current rehabilitation exercise in Today/],
-  [["next_day_response_not_yet_known"], /Waiting for your next-day rehab response/],
-  [["reviewed_target_content_unavailable", "target_equipment_unavailable"], /equipment you have not reported/],
+  [["next_day_response_not_yet_known"], /Your next-day rehab response is needed/],
+  [["reviewed_target_content_unavailable", "target_equipment_unavailable"], /equipment you haven’t listed/],
   [["rehabilitation_loading_not_reported", "fail_next_day_response_worse"], /Progression is on hold.*felt worse the next day/],
 ] as const) {
   test(`the first visible next action uses actual blockers: ${codes.join(", ")}`, () => {
@@ -51,11 +51,11 @@ test("a live but closed transition cannot offer a progression override", () => {
 });
 
 for (const [reason, message] of [
-  ["next_day_response_not_yet_known", /Waiting for your next-day rehab response/],
+  ["next_day_response_not_yet_known", /Your next-day rehab response is needed/],
   ["fail_next_day_response_worse", /felt worse the next day/],
   ["shoulder_nontraumatic_cuff_not_reported", /Edit injury/],
-  ["target_equipment_unavailable", /equipment you have not reported/],
-  ["unresolved_injury_checkin_setback", /injury worsening report is still holding loading/],
+  ["target_equipment_unavailable", /equipment you haven’t listed/],
+  ["unresolved_injury_checkin_setback", /Loading is still on hold after a worse response/],
 ]) {
   test(`the actual runtime blocker ${reason} has a specific explanation`, async () => {
     const container = document.createElement("div"); document.body.appendChild(container);
@@ -77,7 +77,7 @@ test("progression is one compact row, only when the engine supplies a stage", ()
   const html = renderToStaticMarkup(<RehabProgressStatus decision={decision} statusLine="Done for today · next Sat 10 Oct" />);
   assert.match(html, /<button[^>]*class="injury-progress"/);
   assert.match(html, /Load · On hold/);
-  assert.match(html, /Confirm what rehabilitation loading your clinician has permitted/);
+  assert.match(html, /Confirm the rehab loading your clinician allows/);
   assert.match(html, /Done for today · next Sat 10 Oct/);
   // The summary row above already shows the stage and its meter.
   assert.doesNotMatch(html, /aria-current="step"|data-complete|Rehab stage<|\d+%/);
@@ -86,8 +86,94 @@ test("progression is one compact row, only when the engine supplies a stage", ()
 test("permission entry explains its authority without claiming observed recovery", () => {
   const html = renderToStaticMarkup(<RehabProgressStatus decision={{ ...decision, stage: "load",
     progression: { ...decision.progression, entry_basis: "reported_clinician_permission" } }} />);
-  assert.match(html, /Permitted rehab based on clinician advice you reported/);
+  assert.match(html, /LOAD follows your reported clinician advice/);
+  assert.match(html, /RESTORE completion isn’t needed/);
   assert.doesNotMatch(html, /clinically verified|recovery proven|three days/i);
+});
+
+test("the collapsed LOAD summary explains permission entry before future availability", () => {
+  const current = { ...decision, stage: "load" as const, progression: {
+    entry_basis: "reported_clinician_permission" as const,
+    next_transition: { to_stage: "dynamic", status: "blocked", target_stage_live: false, reason_codes: [] },
+  } };
+  const html = renderToStaticMarkup(<RehabStageMeter decision={current} />);
+  assert.match(html, /RESTORE completion isn’t needed/);
+  assert.match(html, /DYNAMIC exercises aren’t available/);
+  assert.ok(html.indexOf("RESTORE completion") < html.indexOf("DYNAMIC exercises"));
+});
+
+test("normal entry requires the engine's matching successful transition", () => {
+  const current = { ...decision, stage: "load" as const, progression: {
+    reason_codes: ["transition_met:restore->load"],
+  } };
+  assert.match(rehabEntryExplanation(current)!, /meet the checks for this LOAD exercise/);
+  assert.match(renderToStaticMarkup(<RehabProgressStatus decision={current} />), /meet the checks/);
+  assert.equal(rehabEntryExplanation({ ...current, progression: {} }), null);
+  assert.equal(rehabEntryExplanation({ ...current, progression: { reason_codes: ["transition_met:load->dynamic"] } }), null);
+  assert.equal(rehabEntryExplanation({ ...current, stage: "restore" }), null);
+  assert.equal(rehabEntryExplanation({ ...current, outcome: "missing_information" }), null);
+});
+
+test("a blocked permission entry cannot claim that LOAD is permitted", () => {
+  const attempted = { ...decision.progression!.next_transition!, entry_basis: "reported_clinician_permission" };
+  assert.equal(rehabEntryExplanation({ ...decision, progression: {
+    next_transition: attempted,
+  } }), null);
+});
+
+test("a held schedule does not remove stage eligibility or create a progression hold", () => {
+  const current = { ...decision, stage: "load" as const,
+    schedule: { state: "held" as const, reason: "Complete today's check-in and follow its training guidance." },
+    progression: { entry_basis: "reported_clinician_permission" as const } };
+  assert.equal(rehabNextStep(current), null);
+  assert.match(rehabEntryExplanation(current)!, /LOAD follows your reported clinician advice/);
+  const html = renderToStaticMarkup(<RehabStageMeter decision={current} />);
+  assert.match(html, /Current rehab stage: Load/);
+  assert.doesNotMatch(html, /Progression is on hold|check-in/);
+  assert.match(rehabEntryExplanation({ ...current, progression: {
+    reason_codes: ["transition_met:restore->load"],
+  } })!, /You meet the checks for this LOAD exercise/);
+});
+
+test("a real safety hold still blocks progression when today's schedule is also held", () => {
+  const current = { ...decision, stage: "calm" as const, loading_hold: true,
+    schedule: { state: "held" as const, reason: "Complete today's check-in and follow its training guidance." },
+    progression: { reason_codes: ["episode_setback_loading_held"] } };
+  assert.match(rehabNextStep(current)!, /Progression is on hold.*injury got worse/);
+  assert.equal(rehabEntryExplanation(current), null);
+});
+
+test("expanded injury controls do not repeat the visible summary", () => {
+  const html = renderToStaticMarkup(<RehabProgressStatus decision={decision} summaryVisible />);
+  const body = new domWindow.DOMParser().parseFromString(html, "text/html").body;
+  assert.match(body.textContent ?? "", /Load · On hold/);
+  assert.doesNotMatch(body.textContent ?? "", /Confirm the rehab loading/);
+  const held = { ...decision, stage: "calm" as const, loading_hold: true,
+    progression: { reason_codes: ["episode_setback_loading_held"] } };
+  assert.equal(renderToStaticMarkup(<RehabProgressStatus decision={held} summaryVisible />), "");
+});
+
+test("the real CALM setback decision stays visible without a next transition", () => {
+  const current = { ...decision, stage: "calm" as const, loading_hold: true,
+    progression: { reason_codes: ["episode_setback_loading_held"] } };
+  for (const html of [renderToStaticMarkup(<RehabStageMeter decision={current} />),
+    renderToStaticMarkup(<RehabProgressStatus decision={current} />)]) {
+    assert.match(html, /Progression is on hold/);
+    assert.match(html, /injury got worse/);
+    assert.doesNotMatch(html, /Future availability varies|Complete your|Confirm what|<button/);
+  }
+});
+
+test("a safety hold wins over unpublished content and successful entry copy", () => {
+  const current = { ...decision, stage: "load" as const, loading_hold: true, progression: {
+    entry_basis: "reported_clinician_permission" as const,
+    next_transition: { ...decision.progression!.next_transition!, to_stage: "dynamic", target_stage_live: false },
+  } };
+  assert.match(rehabNextStep(current)!, /Progression is on hold/);
+  assert.equal(rehabEntryExplanation(current), null);
+  const html = renderToStaticMarkup(<RehabProgressStatus decision={current} />);
+  assert.match(html, /Progression · On hold/);
+  assert.doesNotMatch(html, /Unavailable in UNLXCK|without prior RESTORE/);
 });
 
 test("unneeded entry evidence is explained as not required, never completed", async () => {
@@ -139,7 +225,7 @@ for (const closed of [false, true]) {
       } else {
         assert.match(dialog.textContent ?? "", /Complete rehab historyComplete/);
         assert.match(dialog.textContent ?? "", /Not yet confirmed/);
-        assert.match(dialog.textContent ?? "", /Confirm what rehabilitation loading your clinician has permitted/);
+        assert.match(dialog.textContent ?? "", /Confirm the rehab loading your clinician allows/);
         assert.doesNotMatch(dialog.textContent ?? "", /medical clearance issued|heel-rise|assessor/);
       }
       await act(async () => document.dispatchEvent(new domWindow.KeyboardEvent("keydown", { key: "Escape", bubbles: true })));
@@ -181,7 +267,7 @@ test("missing elbow suitability shows the actual blocker once without another qu
     const text = dialog.textContent ?? "";
     assert.equal(dialog.querySelectorAll(".injury-requirements li").length, 1);
     assert.match(text, /LOAD is on hold/);
-    assert.match(text, /Clearance and completed rehab cannot confirm grip, movement and tolerance/);
+    assert.match(text, /Your elbow records do not confirm grip, movement or exercise tolerance/);
     assert.doesNotMatch(text, /Report your clinician|Leave unassessed|timestamp|date|questionnaire|rehab engine/i);
     assert.equal(dialog.querySelectorAll("form, input, select, textarea").length, 0);
   } finally { act(() => root.unmount()); container.remove(); }

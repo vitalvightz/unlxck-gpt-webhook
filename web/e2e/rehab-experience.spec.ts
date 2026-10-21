@@ -3,15 +3,21 @@ import { mkdirSync } from "node:fs";
 import path from "node:path";
 import fixtures from "./fixtures/rehab-today.json";
 import bankFixtures from "./fixtures/rehab-bank-publication.json";
+import progressionFixtures from "./fixtures/rehab-progression.json";
 import { isolateFromNetwork } from "./support";
 
 // Synthetic payloads exported from GET /api/today, not hand-authored eligibility.
-const cases = { chest: fixtures.chest, achilles: fixtures.achilles, ...bankFixtures };
-async function setup(page: Page, baseURL: string, name: keyof typeof cases, videoId?: string) {
+const cases = { chest: fixtures.chest, achilles: fixtures.achilles, ...bankFixtures, ...progressionFixtures };
+async function setup(page: Page, baseURL: string, name: keyof typeof cases, videoId?: string, readinessHold = false) {
   await isolateFromNetwork(page, baseURL);
   const { view, profile: sourceProfile } = structuredClone(cases[name]);
+  // Presentation regression: change today's schedule only, preserving the
+  // API-exported LOAD eligibility and entry decision.
+  if (readinessHold) Object.assign(view.open_injuries[0].rehab_decision.schedule, {
+    state: "held", reason: "Complete today's check-in and follow its training guidance.", next_due_day: null,
+  });
   const profile = { ...sourceProfile, profile: { ...sourceProfile.profile, private_trial_ack_at: "2026-10-05T12:00:00Z" } };
-  const now = new Date("2026-10-05T12:05:00Z");
+  const now = new Date(`${view.today.training_day}T12:05:00Z`);
   await page.clock.setFixedTime(now);
   const key = `sb-${new URL(process.env.NEXT_PUBLIC_SUPABASE_URL ?? "https://stub.supabase.co").hostname.split(".")[0]}-auth-token`;
   await page.addInitScript(([key, value]) => localStorage.setItem(key, value), [key, JSON.stringify({
@@ -51,6 +57,69 @@ async function setup(page: Page, baseURL: string, name: keyof typeof cases, vide
   await expect(page.getByRole("button", { name: block.display_name, exact: false }).first()).toBeVisible();
   return { block, view, writes, errors };
 }
+
+for (const [name, message] of [
+  ["permission_entry", "LOAD follows your reported clinician advice. RESTORE completion isn’t needed."],
+  ["missing_permission", "Confirm the rehab loading your clinician allows"],
+  ["pending_response", "Your next-day rehab response is needed"],
+  ["worsening", "Your injury got worse"],
+  ["missing_equipment", "This exercise needs equipment you haven’t listed"],
+] as const) {
+  test(`actual Today decision explains ${name} at 375px`, async ({ page, baseURL }) => {
+    await page.setViewportSize({ width: 375, height: 844 });
+    const { errors } = await setup(page, baseURL!, name);
+    const summary = page.locator(".today-injury-summary-row");
+    await expect(summary).toContainText(message);
+    if (name === "permission_entry") {
+      await expect(summary).toContainText("DYNAMIC exercises aren’t available");
+      await expect(summary).not.toContainText(/Complete your|Confirm what/);
+    } else {
+      await expect(summary).not.toContainText(/LOAD follows|meet the checks/);
+    }
+    if (name === "worsening") {
+      await expect(summary).toContainText("Stage: Calm");
+      await expect(summary).not.toContainText(/Future availability varies|Complete your|Confirm what/);
+    }
+    await summary.click();
+    if (name === "worsening") {
+      await expect(page.locator(".injury-progress")).toHaveCount(0);
+    } else {
+      await expect(page.locator(".injury-progress")).not.toContainText(message);
+      await page.locator("button.injury-progress").click();
+      await expect(page.getByRole("dialog")).toBeVisible();
+      await expect(page.getByRole("dialog").locator("form, input, select, textarea")).toHaveCount(0);
+      if (name === "permission_entry") {
+        await expect(page.getByRole("dialog")).toContainText(message);
+        await expect(page.getByRole("dialog")).toContainText("All other safety checks still apply");
+        await expect(page.getByRole("dialog")).toContainText("DYNAMIC exercises aren’t available");
+        await expect(page.getByRole("dialog").locator(".injury-requirements")).toHaveCount(0);
+      }
+      await page.keyboard.press("Escape");
+    }
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    await shot(page, `progression-${name}-375.png`);
+    await expect(page).toHaveURL(/\/today$/);
+    await expect(page).not.toHaveTitle("");
+    expect(errors).toEqual([]);
+  });
+}
+
+test("a readiness schedule hold keeps LOAD eligibility at 375px", async ({ page, baseURL }) => {
+  await page.setViewportSize({ width: 375, height: 844 });
+  const { errors } = await setup(page, baseURL!, "permission_entry", undefined, true);
+  const summary = page.locator(".today-injury-summary-row");
+  await expect(summary).toContainText("Stage: Load");
+  await expect(summary).toContainText("LOAD follows your reported clinician advice");
+  await expect(summary).not.toContainText("Progression is on hold");
+  await summary.click();
+  await expect(page.locator(".today-injury-care")).toContainText("Today’s rehab on hold");
+  await expect(page.locator(".today-injury-care")).toContainText("Complete today's check-in");
+  await expect(page.locator(".injury-progress")).toContainText("Dynamic · Unavailable in UNLXCK");
+  await expect(page.locator(".today-injury-care")).not.toContainText("Progression · On hold");
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await shot(page, "readiness-schedule-hold-375.png");
+  expect(errors).toEqual([]);
+});
 
 async function shot(page: Page, filename: string) {
   const dir = process.env.REHAB_QA_DIR;
