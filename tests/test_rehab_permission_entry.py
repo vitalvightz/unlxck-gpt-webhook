@@ -87,25 +87,19 @@ def test_permission_entry_fails_closed_without_current_applicable_authority(monk
     assert j.decision()["stage"] != "load"
 
 
-def test_entry_rules_are_declarative_conservative_and_cannot_open_higher_stages():
+def test_shared_entry_uses_publication_not_per_pathway_flags():
+    from api.contracts.rehab_progression import _permission_entry
     from fightcamp.rehab_clinical import load_clinical_policies
     policies = load_clinical_policies()
-    opted_in = [p for p in policies if any(t.entry_mode == "reported_clinician_starter" for t in p.transitions)]
-    assert {p.policy_id for p in opted_in} == {p[0] for p in PILOTS}
-    for p in opted_in:
-        t = next(t for t in p.transitions if t.entry_mode == "reported_clinician_starter")
-        assert t.setback_resolution == "improvement_then_reviewed_restore"
-        for field, value in [("entry_mode", "guess_safe"), ("setback_resolution", "any_better")]:
-            with pytest.raises(ValidationError):
-                TransitionOverride.model_validate({"reason": "Invalid", field: value})
-        raw = t.model_dump()
-        with pytest.raises(ValidationError):
-            PathwayTransition.model_validate({**raw, "from_stage": "load", "to_stage": "dynamic"})
-        raw.pop("entry_mode")
-        raw.pop("setback_resolution")
-        historical = PathwayTransition.model_validate(raw)
-        assert historical.entry_mode == "observed_rehab" and historical.setback_resolution == "hold"
-        assert historical.model_dump() == raw  # no historical hash/shape drift
+    eligible = [p for p in policies if any(_permission_entry(t, p) for t in p.transitions)]
+    assert {p.policy_id for p in eligible} == {p[0] for p in PILOTS}
+    for p in policies:
+        for t in p.transitions:
+            assert "entry_mode" not in t.model_dump() and "setback_resolution" not in t.model_dump()
+    with pytest.raises(ValidationError):
+        TransitionOverride.model_validate({"reason": "No extra workflow", "entry_mode": "reported_clinician_starter"})
+    with pytest.raises(ValidationError):
+        PathwayTransition.model_validate({"from_stage": "load", "to_stage": "return"})
 
 
 def test_policy_revision_changes_entry_semantics_only():
@@ -122,10 +116,44 @@ def test_policy_revision_changes_entry_semantics_only():
         assert p["version"] == before["version"] + 1
         restored = deepcopy(p)
         restored.update(version=before["version"], content_hash=before["content_hash"])
-        override = restored["transition_overrides"]["restore->load"]
-        override.pop("entry_mode")
-        override.pop("setback_resolution")
-        assert restored == before  # all clinical limits and content unchanged
+        for prescription in restored["prescriptions"]:
+            if prescription["stage"] == "load":
+                assert prescription.pop("resistance") == {"mode": "bodyweight", "kg": None}
+                assert prescription.pop("range_choice")
+                assert prescription.pop("mandatory_restrictions")
+        assert restored == before  # published exercises, dose and clinical conditions unchanged
+
+
+@pytest.mark.parametrize("pilot", PILOTS, ids=lambda p: p[0])
+def test_another_normally_published_load_exercise_needs_no_code_registry_or_entry_flag(monkeypatch, pilot):
+    from api.services import today_service
+    from api.services.clinical_review_freeze import frozen_review_hold
+    from fightcamp.rehab_clinical import ClinicalPolicy, content_hash, load_clinical_policies, policy_review_hash
+    from fightcamp.rehab_protocols import get_rehab_bank
+    j = Journey(monkeypatch, pilot)
+    original = next(p for p in j.policy.prescriptions if p.stage == "load")
+    bank = deepcopy(get_rehab_bank())
+    group = next(g for g in bank if any(d["id"] == original.drill_id for d in g["drills"]))
+    drill = deepcopy(next(d for d in group["drills"] if d["id"] == original.drill_id))
+    drill.update(id=original.drill_id + "_publication_regression", name="Test-only published alternative")
+    group["drills"].append(drill)
+    publication = original.model_copy(update={"drill_id": drill["id"], "bank_hash": content_hash(drill),
+        "priority": 100, "required_rehabilitation_level": None})
+    # Normal publication: bank identity + approved prescription content. No
+    # entry flag, profile-ID registration, Python option or stage override.
+    draft = ClinicalPolicy.model_validate({**j.policy.model_dump(), "status": "draft", "activation": "shadow",
+        "content_hash": None, "prescriptions": [*j.policy.prescriptions, publication]})
+    published = ClinicalPolicy.model_validate({**draft.model_dump(), "status": "active", "activation": "live",
+        "content_hash": policy_review_hash(draft)})
+    policies = tuple(published if p.policy_id == j.policy.policy_id else p for p in load_clinical_policies())
+    monkeypatch.setattr(today_service, "load_clinical_policies", lambda: policies)
+    monkeypatch.setattr(today_service, "get_rehab_bank", lambda: bank)
+    live = j.view().live_prescription
+    block = live["session"]["blocks"][0]
+    assert j.decision()["stage"] == "load" and block["rehab_drill_id"] == drill["id"]
+    assert block["resistance"] == publication.resistance
+    assert not frozen_review_hold(j.store, j.athlete, live, work_state="unstarted", as_of=j.now,
+        policies=policies, bank=bank)
 
 
 @pytest.mark.parametrize("pilot", PILOTS, ids=lambda p: p[0])
