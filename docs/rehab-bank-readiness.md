@@ -55,6 +55,8 @@ lets future complete content use the existing pipeline across all seven families
 The completed review covers 58 unpublished mechanics-reviewed candidates:
 53 LOAD and five DYNAMIC. Their classification does not supply a prescription.
 Do not bulk classify the other 1,433 entries.
+The current [reachability JSON](rehab-bank-reachability.json) records each
+dormant identity and its missing fields. Examples are listed below.
 
 | Candidate | Information still needed |
 | --- | --- |
