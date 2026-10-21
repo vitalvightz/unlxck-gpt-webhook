@@ -615,7 +615,8 @@ html .today-page .today-decision-banner[data-tone] {
 .injury-stage-meter-text {
   color: var(--text-secondary);
   font-size: var(--type-meta);
-  white-space: nowrap;
+  white-space: normal;
+  line-height: 1.5;
 }
 
 .today-injury-summary-chevron {

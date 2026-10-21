@@ -447,7 +447,12 @@ export type StructuredBlock = {
   stop_rules?: string[] | null;
   /** Rehab blocks only: server-frozen drill metadata. */
   is_loading?: boolean | null;
-  drill_snapshot?: { rehab_stage?: string | null; function?: string | null; dose?: Record<string, unknown> | null } | null;
+  drill_snapshot?: { rehab_stage?: string | null; function?: string | null; dose?: Record<string, unknown> | null; equipment?: string[] | null } | null;
+  /** Approved rehab requirements from the live/frozen prescription. */
+  range_choice?: string | null;
+  resistance?: { mode?: string | null; kg?: number | null } | null;
+  mandatory_restrictions?: string[] | null;
+  frequency?: string | null;
   /** Server-owned: present only on an athlete's swap or added exercise. */
   athlete_change?: AthleteExerciseChange | null;
 };

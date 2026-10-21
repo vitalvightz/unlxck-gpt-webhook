@@ -409,7 +409,7 @@ test("a routine state folds under the stage block, which opens progression requi
   const stage = body.querySelector<HTMLButtonElement>("button.injury-progress");
   assert.ok(stage);
   assert.equal(stage.getAttribute("aria-haspopup"), "dialog");
-  assert.equal(stage.querySelector(".injury-progress-status")?.textContent?.replace(/\u00a0/g, " "), "Done for today · next Sat 10 Oct");
+  assert.equal(stage.querySelector(".injury-progress-schedule")?.textContent?.replace(/\u00a0/g, " "), "Done for today · next Sat 10 Oct");
   assert.match(stage.getAttribute("aria-label") ?? "", /Progression requirements/);
   // No separate requirements row and no separate schedule row.
   assert.equal(body.querySelector(".injury-progress-link"), null);

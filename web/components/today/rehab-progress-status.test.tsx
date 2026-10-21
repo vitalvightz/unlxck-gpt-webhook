@@ -4,7 +4,7 @@ import { window as domWindow } from "../test-dom";
 import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { renderToStaticMarkup } from "react-dom/server";
-import { RehabProgressStatus } from "./rehab-progress-status";
+import { RehabProgressStatus, RehabStageMeter, rehabNextStep } from "./rehab-progress-status";
 import type { InjuryFlagRecord } from "@/lib/types";
 
 const decision: NonNullable<InjuryFlagRecord["rehab_decision"]> = {
@@ -15,6 +15,40 @@ const decision: NonNullable<InjuryFlagRecord["rehab_decision"]> = {
       { requirement_id: "permission", kind: "functional_checkpoint", status: "unknown", reason_code: "rehabilitation_loading_not_reported" },
     ] } },
 };
+
+test("the collapsed injury summary distinguishes current stage from unpublished future content", () => {
+  const current = { ...decision, progression: { next_transition: {
+    ...decision.progression!.next_transition!, target_stage_live: false, status: "blocked",
+    reason_codes: ["no_reviewed_stage_exposure", "rehabilitation_loading_not_reported"],
+  } } };
+  const html = renderToStaticMarkup(<RehabStageMeter decision={current} />);
+  assert.match(html, /Current rehab stage: Restore/);
+  assert.match(html, /CALM → RESTORE → LOAD → DYNAMIC → RETURN/);
+  assert.match(html, /LOAD exercises aren’t available for this injury in UNLXCK yet/);
+  assert.doesNotMatch(html, /Complete your|Confirm what|unlock|Closed/);
+  assert.equal((html.match(/data-current="true"/g) ?? []).length, 1);
+});
+
+for (const [codes, message] of [
+  [["no_reviewed_stage_exposure"], /Complete your current rehabilitation exercise in Today/],
+  [["next_day_response_not_yet_known"], /Waiting for your next-day rehab response/],
+  [["reviewed_target_content_unavailable", "target_equipment_unavailable"], /equipment you have not reported/],
+  [["rehabilitation_loading_not_reported", "fail_next_day_response_worse"], /Progression is on hold.*felt worse the next day/],
+] as const) {
+  test(`the first visible next action uses actual blockers: ${codes.join(", ")}`, () => {
+    const current = { ...decision, progression: { next_transition: {
+      ...decision.progression!.next_transition!, reason_codes: [...codes], requirements: [],
+    } } };
+    assert.match(rehabNextStep(current)!, message);
+    assert.match(renderToStaticMarkup(<RehabStageMeter decision={current} />), message);
+  });
+}
+
+test("a live but closed transition cannot offer a progression override", () => {
+  assert.match(rehabNextStep({ ...decision, progression: { next_transition: {
+    ...decision.progression!.next_transition!, status: "closed",
+  } } })!, /Progression is on hold for this injury/);
+});
 
 for (const [reason, message] of [
   ["next_day_response_not_yet_known", /Waiting for your next-day rehab response/],
@@ -42,7 +76,8 @@ test("progression is one compact row, only when the engine supplies a stage", ()
   assert.equal(renderToStaticMarkup(<RehabProgressStatus decision={{ ...decision, stage: undefined }} />), "");
   const html = renderToStaticMarkup(<RehabProgressStatus decision={decision} statusLine="Done for today · next Sat 10 Oct" />);
   assert.match(html, /<button[^>]*class="injury-progress"/);
-  assert.match(html, /Progression to Load/);
+  assert.match(html, /Load · On hold/);
+  assert.match(html, /Confirm what rehabilitation loading your clinician has permitted/);
   assert.match(html, /Done for today · next Sat 10 Oct/);
   // The summary row above already shows the stage and its meter.
   assert.doesNotMatch(html, /aria-current="step"|data-complete|Rehab stage<|\d+%/);
@@ -77,7 +112,9 @@ test("unneeded entry evidence is explained as not required, never completed", as
 test("a closed next stage says so, and a stage with no next stage and no status renders nothing", () => {
   const closed = renderToStaticMarkup(<RehabProgressStatus decision={{ ...decision, progression: { next_transition: {
     ...decision.progression!.next_transition!, status: "closed", target_stage_live: false } } }} />);
-  assert.match(closed, /Progression to Load · Closed/);
+  assert.match(closed, /Load · Unavailable in UNLXCK/);
+  assert.match(closed, /LOAD exercises aren’t available for this injury in UNLXCK yet/);
+  assert.doesNotMatch(closed, /Confirm what|Complete your|Closed|unlock/);
   assert.equal(renderToStaticMarkup(<RehabProgressStatus decision={{ ...decision, progression: {} }} />), "");
 });
 
@@ -97,12 +134,12 @@ for (const closed of [false, true]) {
       assert.ok(dialog);
       assert.equal(document.body.style.position, "fixed");
       if (closed) {
-        assert.match(dialog.textContent ?? "", /next stage is closed/);
+        assert.match(dialog.textContent ?? "", /DYNAMIC exercises aren’t available for this injury in UNLXCK yet/);
         assert.equal(dialog.querySelector(".injury-requirements"), null);
       } else {
         assert.match(dialog.textContent ?? "", /Complete rehab historyComplete/);
         assert.match(dialog.textContent ?? "", /Not yet confirmed/);
-        assert.match(dialog.textContent ?? "", /Report what your clinician has permitted/);
+        assert.match(dialog.textContent ?? "", /Confirm what rehabilitation loading your clinician has permitted/);
         assert.doesNotMatch(dialog.textContent ?? "", /medical clearance issued|heel-rise|assessor/);
       }
       await act(async () => document.dispatchEvent(new domWindow.KeyboardEvent("keydown", { key: "Escape", bubbles: true })));
