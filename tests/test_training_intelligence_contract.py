@@ -83,7 +83,16 @@ def test_compound_working_dose_survives_both_card_conversion_paths():
     dose = "3 rounds: heavy movement 2 reps @ 85% 1RM → explosive movement 2 reps at max intent; rest 4 min per round."
     source = _source_block(["- Heavy RDL → Broad Jump: " + dose, "  Cue: Stick the landing."], "Heavy RDL → Broad Jump")
     assert source is not None
-    assert dose.rstrip(".") in source["execution_instructions"]
+    # A named pair is structured: one round count and rest, one row per movement
+    # with its own reps and load. The sentence is not repeated under "How".
+    assert (source["rounds"], source["rest"]) == (3, {"value": 4, "unit": "minutes"})
+    assert source["components"] == [
+        {"name": "Heavy RDL", "reps": 2, "load": {"method": "percentage", "value": 85, "unit": "percent",
+                                                 "ref": "1RM", "display": "85% 1RM"}},
+        {"name": "Broad Jump", "reps": 2, "effort": {"method": "intent", "value": "max"}},
+    ]
+    assert not source.get("execution_instructions")
+    # Without a pair name to split, the compound dose still survives whole.
     assert dose in _preserve_unrepresented_dose(dose, "Stick the landing.")
     assert _preserve_unrepresented_dose("3 sets x 3 reps; RPE 7", "Brace.") == "Brace."
     assert "light sled" in _preserve_unrepresented_dose("6 x 5 sec with light sled; rest 90 sec", None)

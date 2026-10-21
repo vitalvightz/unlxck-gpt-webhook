@@ -11,6 +11,9 @@ import {
   cleanText,
   finitePositiveNumber,
   formatBlockLoad,
+  formatClusterSummary,
+  formatRestNote,
+  getBlockComponents,
   formatCountdownLabel,
   formatEffort,
   isNonFiniteNumericToken,
@@ -1577,4 +1580,28 @@ test("compactTimeUnits shortens time words without changing the value", () => {
   assert.equal(compactTimeUnits("RPE 7"), "RPE 7");
   assert.equal(compactTimeUnits("20 m"), "20 m");
   assert.equal(compactTimeUnits("4 per side"), "4 per side");
+});
+
+test("formatBlockLoad spells a percentage or absolute load stored without display", () => {
+  assert.equal(formatBlockLoad({ method: "percentage", value: 85, unit: "percent", ref: "1RM" }), "85% 1RM");
+  assert.equal(formatBlockLoad({ method: "absolute", value: 100, unit: "kg" }), "100 kg");
+  assert.equal(formatBlockLoad({ method: "rpe", value: 7 }), null);
+  assert.equal(formatBlockLoad({ method: "percentage", value: Number.NaN, ref: "1RM" }), null);
+  assert.equal(formatBlockLoad({ method: "percentage", value: 85, display: "n/a" }), null);
+});
+
+test("cluster helpers need two named components and a round count", () => {
+  const pair = {
+    rounds: 3,
+    rest: { value: 240, unit: "seconds" },
+    components: [{ name: "Heavy RDL", reps: 2 }, { name: "Broad Jump", reps: "2" }],
+  };
+  assert.deepEqual(getBlockComponents(pair).map((line) => [line.label, line.name, line.detail]),
+    [["A1", "Heavy RDL", "2 reps"], ["A2", "Broad Jump", "2"]]);
+  assert.equal(formatClusterSummary(pair), "3 rounds · rest 4 min");
+  assert.equal(formatClusterSummary({ ...pair, rest: null, rest_note: "Full rest" }), "3 rounds · full rest");
+  assert.deepEqual(getBlockComponents({ components: [{ name: "Heavy RDL", reps: 2 }] }), []);
+  assert.equal(formatClusterSummary({ ...pair, rounds: null }), null);
+  assert.equal(formatRestNote({ rest_note: "Full rest between holds" }), "Full");
+  assert.equal(formatRestNote({ rest_note: "Walk back" }), "Walk back");
 });

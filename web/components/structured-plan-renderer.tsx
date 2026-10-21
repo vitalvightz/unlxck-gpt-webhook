@@ -14,8 +14,11 @@ import {
   cleanText,
   formatBlockLoad,
   formatCountdownLabel,
+  formatClusterSummary,
   formatEffort,
   formatMeasured,
+  formatRestNote,
+  getBlockComponents,
   getBlocks,
   getBlockExecutionDisplay,
   getBlockAdjustmentDisplay,
@@ -388,7 +391,8 @@ function useBlockPrescription(block: StructuredBlock, sourceCountdown?: string |
     ...metric,
     value: compactTimeUnits(metric.value),
   }));
-  const restText = sourceOverrides.rest || (shouldShowRest(block.rest) ? formatMeasured(block.rest) : null);
+  const restText = sourceOverrides.rest || (shouldShowRest(block.rest) ? formatMeasured(block.rest) : null)
+    || formatRestNote(block);
   const rest = restText ? compactTimeUnits(restText) : null;
   const effort = sourceOverrides.effort || formatEffort(block);
   const { progression, stopRules } = getBlockAdjustmentDisplay(block);
@@ -470,7 +474,11 @@ export function BlockCard({
   ];
 
   const tagLabel = blockType ? blockTagLabel(block, rehabLabelPolicy) : null;
-  const statCount = metrics.length + [load, rest, effort].filter(Boolean).length;
+  // A cluster's load belongs to its heavy movement, so it is shown on that
+  // movement's row rather than as a block-wide Load stat.
+  const components = getBlockComponents(block);
+  const blockLoad = components.length > 0 ? null : load;
+  const statCount = metrics.length + [blockLoad, rest, effort].filter(Boolean).length;
   const hasAthleteMetrics = block.prescription_source === "athlete"
     && typeof block.athlete_dose?.mode === "string"
     && ["reps", "duration", "intervals", "distance"].includes(block.athlete_dose.mode);
@@ -515,13 +523,13 @@ export function BlockCard({
               {metric.value}
             </span>
           ))}
-          {load ? (
+          {blockLoad ? (
             <span className="sp-stat">
               <span className="sp-stat-head">
                 <span className="sp-stat-label">Load</span>
                 <GlossaryTooltip term="Load" />
               </span>
-              {load}
+              {blockLoad}
             </span>
           ) : null}
           {rest ? (
@@ -542,6 +550,17 @@ export function BlockCard({
             </span>
           ) : null}
         </div>
+      ) : null}
+      {components.length > 0 ? (
+        <ol className="sp-cluster" aria-label="Movements each round">
+          {components.map((component) => (
+            <li key={`${component.label}:${component.name}`} className="sp-cluster-row">
+              <span className="sp-cluster-label">{component.label}</span>
+              <span className="sp-cluster-name">{component.name}</span>
+              {component.detail ? <span className="sp-cluster-detail">{component.detail}</span> : null}
+            </li>
+          ))}
+        </ol>
       ) : null}
       {prescriptionText && showMetricTiles ? <p className="sp-block-purpose">{prescriptionText}</p> : null}
       {block.notes && hasAthleteMetrics ? <p className="sp-block-purpose">{block.notes}</p> : null}
@@ -582,6 +601,8 @@ function exerciseRowSummary(
   block: StructuredBlock,
   prescription: { metrics: { value: string }[]; load: string | null; effort: string | null },
 ): string | null {
+  const cluster = formatClusterSummary(block);
+  if (cluster) return cluster;
   if (block.prescription_text) {
     const full = block.prescription_text.trim();
     if (full.length <= 72) return full;

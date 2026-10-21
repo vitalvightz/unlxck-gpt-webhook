@@ -391,6 +391,14 @@ export type MindsetAnchor = {
   context?: string | null;
 };
 
+/** One movement inside a cluster block, e.g. each half of a contrast pair. */
+export type BlockComponent = {
+  name: string;
+  reps?: number | string | null;
+  load?: LoadPrescription | null;
+  effort?: EffortPrescription | null;
+};
+
 export type StructuredBlock = {
   prescription_source?: "athlete" | null;
   prescription_text?: string | null;
@@ -416,9 +424,13 @@ export type StructuredBlock = {
   load?: LoadPrescription | null;
   effort?: EffortPrescription | null;
   rest?: MeasuredValue | null;
+  /** Qualitative rest the dose states without a number ("Full rest between holds"). */
+  rest_note?: string | null;
   work?: MeasuredValue | null;
   distance?: MeasuredValue | null;
   rounds?: number | null;
+  /** Cluster (contrast pair) movements sharing the block's rounds and rest. Server-owned. */
+  components?: BlockComponent[] | null;
   intensity?: string | null;
   energy_system?: string | null;
   impact_level?: string | null;

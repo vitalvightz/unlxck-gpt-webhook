@@ -298,3 +298,47 @@ test("a lower-case load reads sentence-case in the panel and the header", () => 
   assert.equal(summaryText(html, "Staggered Stance Hold"), "Bodyweight · RPE 4");
   assert.equal(html.includes("bodyweight"), false);
 });
+
+const contrastPair: StructuredBlock = {
+  block_id: "squat-box",
+  block_type: "strength",
+  display_name: "Back Squat → Box Jump",
+  rounds: 3,
+  rest: { value: 4, unit: "minutes" },
+  load: { method: "percentage", value: 85, unit: "percent", ref: "1RM", display: "85% 1RM" },
+  components: [
+    { name: "Back Squat", reps: 2, load: { method: "percentage", value: 85, unit: "percent", ref: "1RM", display: "85% 1RM" } },
+    { name: "Box Jump", reps: 2, effort: { method: "intent", value: "max" } },
+  ],
+  coaching_cues: ["Chest tall, sit back then explode up."],
+  stop_rules: ["Knee pain or form collapse"],
+};
+
+test("a contrast pair reads as rounds + rest with one row per movement", () => {
+  const collapsed = renderToStaticMarkup(<ExerciseRow block={contrastPair} open={false} onToggle={() => {}} />);
+  assert.equal(summaryText(collapsed, "Back Squat → Box Jump"), "3 rounds · rest 4 min");
+
+  const open = renderToStaticMarkup(<ExerciseRow block={contrastPair} open onToggle={() => {}} />);
+  assert.equal(countOccurrences(open, 'class="sp-cluster-row"'), 2);
+  assert.equal(open.includes(">A1</span><span class=\"sp-cluster-name\">Back Squat</span>"), true);
+  assert.equal(open.includes("2 reps · 85% 1RM"), true);
+  assert.equal(open.includes("2 reps · Max intent"), true);
+  // The heavy movement's load is on its row, not a block-wide Load stat.
+  assert.equal(open.includes(">Load</span>"), false);
+  assert.equal(open.includes(">Rounds</span>"), true);
+  assert.equal(open.includes(">Rest</span>4 min"), true);
+});
+
+test("qualitative rest renders in the Rest stat instead of disappearing", () => {
+  const carry: StructuredBlock = {
+    block_id: "carry",
+    block_type: "accessory",
+    display_name: "Single-Leg Farmer Carry Hold",
+    sets: 3,
+    duration: { value: 10, unit: "seconds" },
+    effort: { method: "RPE", value: 7, scale: "1-10" },
+    rest_note: "Full rest between holds",
+  };
+  const open = renderToStaticMarkup(<ExerciseRow block={carry} open onToggle={() => {}} />);
+  assert.equal(open.includes(">Rest</span>Full"), true);
+});
