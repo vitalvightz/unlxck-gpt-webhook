@@ -103,7 +103,12 @@ test("published Achilles LOAD uses the shared embed and completes with the exist
   });
   await page.getByRole("button", { name: block.display_name, exact: false }).first().click();
   const detail = page.getByRole("dialog");
-  await expect(detail).toContainText("1 × 10");
+  // The plan's shared demo leads the same guide used without a video.
+  await expect(detail.locator(".rehab-guide-dose")).toContainText("Reps10");
+  await expect(detail.locator(".rehab-guide-dose")).toContainText("Sets1");
+  await expect(detail.locator(".rehab-guide-how ol li").first()).toBeVisible();
+  expect(await detail.evaluate(element => Boolean(element.querySelector(".rehab-guide-demo")!
+    .compareDocumentPosition(element.querySelector(".rehab-guide-dose")!) & Node.DOCUMENT_POSITION_FOLLOWING))).toBe(true);
   await expect(detail).toContainText("Bodyweight only");
   await expect(detail).toContainText("Floor level only");
   await expect(detail).toContainText("does not provide training or contact clearance");

@@ -117,27 +117,30 @@ and the existing [YouTube import workflow](rehab-video-curation.md). The four ne
 published identities have blank URL rows; the wall slide reuses its existing row.
 No unrelated video is attached. Media never changes prescription or eligibility.
 
-## Text-first exercise guide (no demonstration)
+## Rehab exercise guide (with or without a demonstration)
 
-When a banked rehab block (one with a `drill_snapshot`) has no valid curated,
-private or community demonstration, the exercise sheet switches to a deliberate
-text-first guide instead of showing "Demo not assigned". Blocks with a valid
-demonstration keep the video-led layout; an embed that errors at runtime still
-shows "Video unavailable here. Use the cues below." with the YouTube link.
-Legacy prehab/training blocks are unchanged.
+Every banked rehab block (one with a `drill_snapshot`) uses one exercise-guide
+layout. With a valid curated, private or community demonstration, the plan's
+shared player (the same one used by generated-plan exercise rows) sits at the
+top of the guide; an embed that errors at runtime still shows "Video unavailable
+here. Use the cues below." with the YouTube link. Without one, the guide is
+text-first and never shows "Demo not assigned". Legacy prehab/training blocks
+are unchanged.
 
-The guide (`web/lib/rehab-exercise-guide.ts`, `RehabExerciseGuide`) renders, in
-this order:
+The guide (`web/lib/rehab-exercise-guide.ts`, `RehabExerciseGuide`) reuses the
+generated-plan exercise card's styling (stat tiles, red-bar cue panel, closing
+label lines with a red stop label) so rehab and S&C exercises look alike. Below
+any demonstration it renders, in this order:
 
-1. **Prescription**: hold/duration, reps, sets and frequency as tiles, taken only
-   from the approved `dose` (or legacy block fields when there is no `dose`). An
-   explicit empty dose shows **Self-paced** and never gains a number from bank
-   metadata or prose.
-2. **How to perform**: numbered steps. These are the approved instructions split
+1. **Prescription**: hold/duration, reps, sets and frequency as the plan's stat
+   tiles, taken only from the approved `dose` (or legacy block fields when there
+   is no `dose`). An explicit empty dose shows a **Self-paced** summary line and
+   never gains a number from bank metadata or prose.
+2. **How to perform**: numbered steps in the cue panel. These are the approved instructions split
    at sentence boundaries, with no rewording, generated text or dose parsing.
-3. **Requirements**: equipment, resistance and range, as before.
+3. **Requirements**: equipment, resistance and range as label lines.
 4. **Safety limits**: stop rules, mandatory restrictions and safety sentences
-   taken out of the instructions, in one list. Only exact equivalents are
+   taken out of the instructions, in one list under a red label. Only exact equivalents are
    merged (for example, two "follow clinician restrictions" lines). Red flags,
    escalation, range, resistance, side, timing and conditional restrictions stay
    verbatim.

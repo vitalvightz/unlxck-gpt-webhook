@@ -768,34 +768,18 @@ html .today-page .today-decision-banner[data-tone] {
 .ex-detail-section[open] { display: grid; gap: 10px; padding-bottom: 14px; }
 
 /* Approved text is the exercise when no demonstration is available. */
-/* Text-first rehab guide: three quiet sections (dose, steps, limits) with
-   room between them, so a long approved prescription stays easy to scan. */
-.rehab-guide { gap: 32px; padding-top: 20px; padding-bottom: 28px; }
-.rehab-guide h3 { margin: 0; color: var(--text-secondary); font: 600 12px/1.4 var(--font-sans); letter-spacing: 0.06em; text-transform: uppercase; }
-.rehab-guide-dose { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin: 0; }
-.rehab-guide-dose[data-count="1"] { grid-template-columns: minmax(0, 1fr); }
-.rehab-guide-dose[data-count="3"] { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-.rehab-guide-dose > div { display: flex; flex-direction: column-reverse; align-items: center; justify-content: center; gap: 4px; min-width: 0; padding: 18px 8px; border: 1px solid var(--border-subtle); border-radius: 14px; background: var(--bg-surface-alt); }
-.rehab-guide-dose dt { color: var(--text-secondary); font: 500 12px/1.4 var(--font-sans); }
-.rehab-guide-dose dd { margin: 0; color: var(--text-primary); font: 650 24px/1.15 var(--font-sans); letter-spacing: -0.02em; text-align: center; overflow-wrap: anywhere; }
-.rehab-guide-pace { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 16px; color: var(--text-secondary); }
-.rehab-guide-pace strong { color: var(--text-primary); font-size: 17px; font-weight: 600; }
-.rehab-guide-how ol { counter-reset: rehab-step; list-style: none; display: grid; gap: 20px; margin: 16px 0 0; padding: 0; }
-.rehab-guide-how li { counter-increment: rehab-step; display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: 14px; align-items: start; font: 400 15px/1.6 var(--font-sans); color: var(--text-primary); overflow-wrap: anywhere; }
-.rehab-guide-how li::before { content: counter(rehab-step); display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; background: var(--bg-surface-alt); border: 1px solid var(--border-default); color: var(--text-primary); font: 600 12px/1 var(--font-sans); }
-.rehab-guide-requirements { display: grid; border-top: 1px solid var(--border-default); }
+/* Banked rehab guide: the plan exercise card's demo, stat tiles, cue panel
+   and closing asides (shared sp-block-embedded rules), on the sheet's spacing. */
+.rehab-guide { gap: 18px; padding-bottom: 24px; }
+.rehab-guide-demo:empty { display: none; }
+.rehab-guide-pace { margin: 0; font-size: 13px; }
+.rehab-guide-how { padding: 10px 14px 12px; border-left: 3px solid var(--brand-red); background: var(--bg-support); }
+.rehab-guide-how ol { counter-reset: rehab-step; list-style: none; display: grid; gap: 10px; margin: 8px 0 0; padding: 0; }
+.rehab-guide-how li { counter-increment: rehab-step; display: grid; grid-template-columns: 18px minmax(0, 1fr); gap: 8px; color: var(--text-primary); font-size: 0.92rem; line-height: 1.5; overflow-wrap: anywhere; }
+.rehab-guide-how li::before { content: counter(rehab-step) "."; color: var(--text-muted); font-family: var(--font-mono); font-size: 0.8rem; line-height: 1.85; }
 .rehab-guide-requirements:empty { display: none; }
-.rehab-guide-requirements .sp-block-aside { display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 12px; margin: 0; padding: 12px 0; border-bottom: 1px solid var(--border-default); font: 400 14px/1.5 var(--font-sans); color: var(--text-primary); }
-.rehab-guide-requirements .sp-block-aside > span:last-child::first-letter { text-transform: uppercase; }
-.rehab-guide-requirements .sp-stat-label { color: var(--text-secondary); font: 500 13px/1.5 var(--font-sans); letter-spacing: 0; text-transform: none; }
-.rehab-guide-safety { display: grid; grid-template-columns: 16px minmax(0, 1fr); align-items: center; gap: 0 8px; padding: 16px 18px 8px; border: 1px solid var(--border-default); border-radius: 14px; background: var(--bg-surface-alt); }
-.rehab-guide-safety > div { display: contents; }
-.rehab-guide-safety svg { width: 16px; height: 16px; fill: none; stroke: var(--danger-ink); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-.rehab-guide-safety h3 { color: var(--danger-ink); }
-.rehab-guide-safety .sp-cues { grid-column: 1 / -1; display: grid; gap: 0; margin: 10px 0 0; padding: 0; list-style: none; }
-.rehab-guide-safety .sp-cues li { position: relative; margin: 0; padding: 10px 0 10px 14px; color: var(--text-primary); font: 400 14px/1.5 var(--font-sans); }
-.rehab-guide-safety .sp-cues li + li { border-top: 1px solid var(--border-subtle); }
-.rehab-guide-safety .sp-cues li::before { content: ""; display: block; position: absolute; left: 0; top: 19px; width: 5px; height: 5px; border-radius: 50%; background: var(--danger-ink); }
+.rehab-guide-safety .sp-stat-label { display: block; margin-bottom: 6px; }
+.rehab-guide-safety .sp-cues li { padding-left: 14px; color: var(--text-primary); }
 
 /* The light theme's gold is too pale for small text on its own tint. */
 html[data-theme="light"] .today-pending-pill { color: #6f5120; }

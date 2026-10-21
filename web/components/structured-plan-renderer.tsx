@@ -822,8 +822,10 @@ export function ExerciseRow({
         </InjuryDetailSheet>
       ) : open ? (
         <div id={bodyId} className="ex-row-body">
-          {block.block_type === "rehab" && block.drill_snapshot && !media && !block.private_media_id && !block.community_revision_id ? (
-            <RehabExerciseGuide block={block}><ExerciseLogPanel block={block} /></RehabExerciseGuide>
+          {block.block_type === "rehab" && block.drill_snapshot ? (
+            <RehabExerciseGuide block={block} demo={<RehabDemo block={block} media={media} title={title} />}>
+              <ExerciseLogPanel block={block} />
+            </RehabExerciseGuide>
           ) : <>
           {block.private_media_id || block.community_revision_id ? <PrescribedPrivateVideo
             id={block.private_media_id || block.community_revision_id!} community={!block.private_media_id} name={title} /> : null}
@@ -867,6 +869,14 @@ export function ExerciseRow({
   );
 }
 
+/** The same curated or prescribed private demo the plan's exercise rows use. */
+function RehabDemo({ block, media, title }: { block: StructuredBlock; media: ReturnType<typeof useExerciseMedia>; title: string }) {
+  if (block.private_media_id || block.community_revision_id) {
+    return <PrescribedPrivateVideo id={block.private_media_id || block.community_revision_id!} community={!block.private_media_id} name={title} />;
+  }
+  return media ? <ExerciseDemo media={media} exerciseName={title} /> : null;
+}
+
 /** Exercise detail for Today. Safety remains visible outside disclosures. */
 function ExerciseDetail({
   block,
@@ -900,10 +910,13 @@ function ExerciseDetail({
   const easier = execution.regressions.map(compactCoachLine);
   const swap = execution.substitutions[0] ?? null;
   const sessionRunning = useExerciseLoggingActive();
-  // Banked injury rehab has an authoritative prescription to guide. Legacy
-  // prehab/training blocks retain their ordinary exercise adjustments/logging.
-  if (block.block_type === "rehab" && block.drill_snapshot && !media && !block.private_media_id && !block.community_revision_id) {
-    return <RehabExerciseGuide block={block}><ExerciseLogPanel block={block} /></RehabExerciseGuide>;
+  // Banked injury rehab has an authoritative prescription to guide, led by the
+  // plan's shared demo when one exists. Legacy prehab/training blocks retain
+  // their ordinary exercise adjustments/logging.
+  if (block.block_type === "rehab" && block.drill_snapshot) {
+    return <RehabExerciseGuide block={block} demo={<RehabDemo block={block} media={media} title={title} />}>
+      <ExerciseLogPanel block={block} />
+    </RehabExerciseGuide>;
   }
   // Safety instructions are never behind a tap, logging included: one plain line.
   const stopLine = compactStopRule ? (
