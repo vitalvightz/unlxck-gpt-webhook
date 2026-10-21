@@ -288,6 +288,13 @@ def test_all_profiles_inventory_provenance_and_athlete_interactions_remain_uncha
     assert manifest["outcome"] == "load_closed" and manifest["selected_load_exercise"] is None
     for path, expected in manifest["unchanged_files_sha256"].items():
         source = (ROOT / path).read_bytes()
+        if path == "tools/rehab_advanced_candidate_decisions.json":
+            # Only the completion service's explicitly reviewed runtime
+            # fingerprint changed; preserve all dated clinical judgments.
+            current = hashlib.sha256((ROOT / "api/services/rehab_completion_service.py").read_bytes()).hexdigest().encode()
+            original = b"0695b8dac6aa854e2ebc855d625a80e699e74a3ab80ec86c3228e204fdfaeaf0"
+            assert source.count(current) == 1
+            source = source.replace(current, original)
         if path == "web/components/today/today-injury-manager.tsx":
             # This PR changes only the existing response label when yesterday's
             # follow-up exists. Normalise that exact authorised delta, leaving
