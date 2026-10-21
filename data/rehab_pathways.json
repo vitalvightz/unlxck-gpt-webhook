@@ -257,7 +257,7 @@
     },
     {
       "policy_id": "ankle_sprain",
-      "version": 5,
+      "version": 6,
       "pathway_family": "ligament_sprain_or_instability",
       "region": "ankle",
       "injury_type": "sprain",
@@ -272,7 +272,7 @@
         "https://msk-bexley.nhs.uk/conditions/foot-and-ankle-pain/ankle-sprain",
         "https://pmc.ncbi.nlm.nih.gov/articles/PMC8824326/"
       ],
-      "content_hash": "fc5631c73f0305a700e555b2e5609a696c4fac376a4ad7f34f1a2dda30f9c9b1",
+      "content_hash": "d8c21e9670bd83a9f5d93a546417d1c8d4f24f44b91714e8a8f4c9b2160f1aec",
       "prescriptions": [
         {
           "drill_id": "ankle_sprain_gentle_movement",
@@ -371,7 +371,19 @@
             "https://msk-bexley.nhs.uk/conditions/foot-and-ankle-pain/ankle-sprain",
             "https://pmc.ncbi.nlm.nih.gov/articles/PMC8824326/"
           ],
-          "required_rehabilitation_level": "loading"
+          "required_rehabilitation_level": "loading",
+          "range_choice": "comfortable_within_clinician_restrictions",
+          "resistance": {
+            "mode": "bodyweight",
+            "kg": null
+          },
+          "mandatory_restrictions": [
+            "seated_bilateral_floor_level_no_added_resistance",
+            "comfortable_range_within_clinician_restrictions",
+            "no_standing_step_forced_range_or_automatic_increase",
+            "stop_for_worsening_during_or_delayed_symptoms",
+            "no_sport_or_contact_clearance"
+          ]
         }
       ],
       "blocked_regions": [
@@ -1596,7 +1608,7 @@
     },
     {
       "policy_id": "achilles_tendonitis",
-      "version": 2,
+      "version": 3,
       "region": "achilles",
       "injury_type": "tendonitis",
       "pathway_family": "tendon_rehab",
@@ -1688,7 +1700,21 @@
             "https://www.orthopt.org/uploads/content_files/files/Achilles_Pain_revision_2024.pdf",
             "https://www.dynamichealth.nhs.uk/help-and-advice/foot-or-ankle-pain/ankle-tendon-pain/"
           ],
-          "required_rehabilitation_level": "loading"
+          "required_rehabilitation_level": "loading",
+          "range_choice": "floor_level",
+          "resistance": {
+            "mode": "bodyweight",
+            "kg": null
+          },
+          "mandatory_restrictions": [
+            "bodyweight_only_no_added_resistance",
+            "floor_only_no_step_or_below_floor_dorsiflexion",
+            "follow_clinician_restrictions_no_training_or_contact_clearance",
+            "no_speed_bouncing_hopping_or_automatic_progression",
+            "stable_support_controlled_lowering",
+            "stop_for_worsening_during_or_delayed_symptoms_seek_review",
+            "stop_seek_assessment_for_snap_sudden_pain_or_loss_of_function"
+          ]
         }
       ],
       "blocked_regions": [
@@ -1722,11 +1748,11 @@
       },
       "status": "active",
       "activation": "live",
-      "content_hash": "5ff715a474424088cf1549c6b38cc3f1fa51b25b7da118ec1ca767f330d55a1a"
+      "content_hash": "a872fe8f48da112dd5c6bfa0cdc182dd966304821f58a740a7abda096002309e"
     },
     {
       "policy_id": "shoulder_tendonitis",
-      "version": 2,
+      "version": 3,
       "region": "shoulder",
       "injury_type": "tendonitis",
       "pathway_family": "tendon_rehab",
@@ -1808,7 +1834,19 @@
             "https://www.orthopt.org/uploads/content_files/files/Rotator_Cuff_CPG.pdf",
             "https://www.rjah.nhs.uk/our-services/therapy/supported-self-care/rotator-cuff-related-shoulder-pain/"
           ],
-          "required_rehabilitation_level": "loading"
+          "required_rehabilitation_level": "loading",
+          "range_choice": "comfortable_within_clinician_restrictions",
+          "resistance": {
+            "mode": "bodyweight",
+            "kg": null
+          },
+          "mandatory_restrictions": [
+            "wall_only_feet_near_wall_no_added_resistance",
+            "comfortable_range_within_clinician_restrictions",
+            "elbows_below_shoulders_no_foot_distance_or_automatic_increase",
+            "stop_for_worsening_during_or_delayed_symptoms",
+            "no_sport_or_contact_clearance"
+          ]
         }
       ],
       "blocked_regions": [
@@ -1841,7 +1879,7 @@
       },
       "status": "active",
       "activation": "live",
-      "content_hash": "b94351e90298cb93cd2f1720901603b6fdb60eb070c9e6cca42723a1c9cd7675"
+      "content_hash": "701e04457e7f810236915de1caa58662af552a2fdddc36ebd0cac83eb0fb70e9"
     },
     {
       "policy_id": "biceps_tendonitis",
@@ -1998,7 +2036,7 @@
     },
     {
       "policy_id": "elbow_tendonitis",
-      "version": 3,
+      "version": 4,
       "region": "elbow",
       "injury_type": "tendonitis",
       "pathway_family": "tendon_rehab",
@@ -2085,7 +2123,19 @@
             "https://www.rjah.nhs.uk/our-services/therapy/supported-self-care/tennis-elbow/",
             "https://pmc.ncbi.nlm.nih.gov/articles/PMC8432114/"
           ],
-          "required_rehabilitation_level": "loading"
+          "required_rehabilitation_level": "loading",
+          "range_choice": "comfortable_within_clinician_restrictions",
+          "resistance": {
+            "mode": "bodyweight",
+            "kg": null
+          },
+          "mandatory_restrictions": [
+            "hand_weight_only_no_added_resistance",
+            "supported_forearm_comfortable_range_within_clinician_restrictions",
+            "no_forceful_grip_speed_forced_range_or_automatic_increase",
+            "stop_for_worsening_during_or_delayed_symptoms",
+            "follow_clinician_restrictions_no_training_or_contact_clearance"
+          ]
         }
       ],
       "blocked_regions": [
@@ -2119,7 +2169,7 @@
       },
       "status": "active",
       "activation": "live",
-      "content_hash": "76ddc4dcf6375467549933670e7268829a2496a34a7e7e503fece71f456b0ff5"
+      "content_hash": "3e46df5b1143515552e644cacd8bb196da380809bbacfb25dbf204b9aac37120"
     },
     {
       "policy_id": "wrist_tendonitis",

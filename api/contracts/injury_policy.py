@@ -20,7 +20,7 @@ from fightcamp.surface_wound_safety import sanitize_surface_guidance
 
 from .rehab_stage import resolve_rehab_stage
 from .rehab_progression import resolve_reviewed_progression, episode_setback_at, _instant
-from .clinician_clearance import effective_clinician_clearance, clinician_clears_baseline, achilles_load_permission_reason
+from .clinician_clearance import effective_clinician_clearance, clinician_clears_baseline, permits_rehabilitation_stage, STAGE_REHABILITATION_PERMISSION
 from .rehab_assessment import AssessmentContext, input_definitions, read_assessment_input
 from .achilles_restore_load import review_achilles_restore_load
 from .clinical_review_validity import ClinicalReviewInput, evaluate_clinical_review
@@ -33,39 +33,12 @@ _NON_CONTACT_BLOCK_TYPES = frozenset({
 })
 
 
-def reported_load_option(profile_id):
-    """Fixed reviewed content, independent of verified clinician-review pins."""
-    from .achilles_restore_load_pilot import ACHILLES_LOAD_OPTION
-    from .elbow_restore_load_option import ELBOW_LOAD_OPTION
-    from .ankle_restore_load_option import ANKLE_LOAD_OPTION
-    from .shoulder_restore_load_option import SHOULDER_LOAD_OPTION
-    return {"shoulder_tendonitis": SHOULDER_LOAD_OPTION, "achilles_tendonitis": ACHILLES_LOAD_OPTION,
-            "elbow_tendonitis": ELBOW_LOAD_OPTION,
-            "ankle_sprain": ANKLE_LOAD_OPTION}.get(profile_id)
-
-
-def reported_load_hold(profile_id, injury, *, as_of, exposures=(), history_truncated=False):
-    if profile_id == "shoulder_tendonitis":
-        from .shoulder_restore_load import evaluate_shoulder_permission
-        context = AssessmentContext.from_injury(injury, as_of=as_of,
-            setback_at=episode_setback_at(injury, exposures), history_truncated=history_truncated)
-        entry = evaluate_shoulder_permission(context)
-        return entry["reason_code"] if entry["status"] != "pass" else None
-    if profile_id == "ankle_sprain":
-        from .ankle_restore_load import evaluate_ankle_permission
-        context = AssessmentContext.from_injury(injury, as_of=as_of,
-            setback_at=episode_setback_at(injury, exposures), history_truncated=history_truncated)
-        entry = evaluate_ankle_permission(context)
-        return entry["reason_code"] if entry["status"] != "pass" else None
-    if profile_id == "achilles_tendonitis":
-        return achilles_load_permission_reason(injury)
-    if profile_id == "elbow_tendonitis":
-        from .lateral_elbow_progression import evaluate_elbow_permission
-        context = AssessmentContext.from_injury(injury, as_of=as_of,
-            setback_at=episode_setback_at(injury, exposures), history_truncated=history_truncated)
-        entry = evaluate_elbow_permission(context)
-        return entry["reason_code"] if entry["status"] != "pass" else None
-    return "reported_loading_option_unavailable"
+def reported_load_option(profile_id, drill_id=None):
+    """Compatibility lookup of published content; no per-exercise code registry."""
+    from fightcamp.rehab_clinical import load_clinical_policies
+    return next((p for policy in load_clinical_policies() if policy.policy_id == profile_id
+        and "load" in policy.live_stages for p in policy.prescriptions
+        if p.stage == "load" and p.range_choice and (drill_id is None or p.drill_id == drill_id)), None)
 
 
 def resolve_injury_policy(
@@ -177,12 +150,12 @@ def resolve_injury_policy(
     target_content = None
     target_rejections = {}
     selection_exposures = exposures
-    if any(p.clinical_criterion or p.required_rehabilitation_level for p in policy.prescriptions):
+    if any(p.stage not in {"calm", "restore"} for p in policy.prescriptions):
         target_content = {}
         bank_index = {d["id"]:d for group in bank for d in group.get("drills",[])}
         for target in policy.live_stages:
             options = [{**bank_index[p.drill_id], "injury_type":kind, "allowed_severities":p.allowed_severities}
-                       for p in policy.prescriptions if p.stage == target and (p.clinical_criterion or p.required_rehabilitation_level)]
+                       for p in policy.prescriptions if p.stage == target]
             if options:
                 eligible, rejected = filter_rehab_candidates(injury={**injury,"body_region":region,"injury_type":kind,
                     "body_region_aliases":get_rehab_location_candidates(region)}, rehab_stage=target,
@@ -205,7 +178,7 @@ def resolve_injury_policy(
             not (observed := episode_setback_at({**injury, "body_region": region}, [row])) or observed >= cutoff]
         target = blocked["to_stage"]
         options = [{**bank_index[p.drill_id], "injury_type": kind, "allowed_severities": p.allowed_severities}
-                   for p in policy.prescriptions if p.stage == target and (p.clinical_criterion or p.required_rehabilitation_level)]
+                   for p in policy.prescriptions if p.stage == target]
         eligible, rejected = filter_rehab_candidates(injury={**injury, "body_region": region, "injury_type": kind,
             "body_region_aliases": get_rehab_location_candidates(region)}, rehab_stage=target,
             candidates=options, available_equipment=equipment, exposures=selection_exposures, activated_stages=policy.live_stages)
@@ -276,12 +249,12 @@ def resolve_injury_policy(
         prescription = prescriptions[identity]
         drill = deepcopy(drill_by_id[identity])
         reviewed_work = None
-        if prescription.required_rehabilitation_level:
-            option = reported_load_option(policy.policy_id)
-            if (option is None or option.drill_id != identity
-                    or reported_load_hold(policy.policy_id, injury, as_of=as_of,
-                        exposures=exposures, history_truncated=history_truncated)
-                    or readiness_decision == "pull_back"):
+        permission_work = (prescription.required_rehabilitation_level or
+            (progression.get("entry_basis") == "reported_clinician_permission" and not prescription.clinical_criterion
+                and prescription.stage not in {"calm", "restore"}))
+        if permission_work:
+            if (not prescription.range_choice or not prescription.resistance or not prescription.mandatory_restrictions
+                    or not permits_rehabilitation_stage(injury, prescription.stage) or readiness_decision == "pull_back"):
                 result["reason_codes"] = ["reported_rehabilitation_permission_unavailable_or_held"]
                 return result
         if prescription.clinical_criterion:
@@ -325,12 +298,13 @@ def resolve_injury_policy(
             "bank_hash": prescription.bank_hash, "policy_id": policy.policy_id, "policy_version": policy.version,
             "policy_review_hash": policy.content_hash,
             "minimum_gap_days": prescription.minimum_gap_days,
-            "is_loading": prescription.stage != "calm" and drill.get("function") in {"tendon_loading", "isometric_analgesia", "activation", "control"},
+            "is_loading": prescription.stage in {"load", "dynamic", "return"} or
+                prescription.stage != "calm" and drill.get("function") in {"tendon_loading", "isometric_analgesia", "activation", "control"},
         })
-        if prescription.required_rehabilitation_level:
-            resolved_drills[-1].update(required_rehabilitation_level=prescription.required_rehabilitation_level,
-                range_choice=option.range_choices[0], resistance={"mode": "bodyweight", "kg": None},
-                mandatory_restrictions=list(option.mandatory_restrictions))
+        if permission_work:
+            resolved_drills[-1].update(required_rehabilitation_level=STAGE_REHABILITATION_PERMISSION[prescription.stage],
+                range_choice=prescription.range_choice, resistance=deepcopy(prescription.resistance),
+                mandatory_restrictions=list(prescription.mandatory_restrictions))
         if reviewed_work:
             resolved_drills[-1].update(frequency=selection.cadence.frequency,
                 minimum_gap_days=selection.cadence.minimum_gap_days,
@@ -564,6 +538,10 @@ def reconcile_session_prescription(
         if decision["prescription"].get("drills"):
             identity = f"{identity}:{prescription['drill_id']}"
         block = {
+            **({"injury_side": next((i.get("side") for i in injuries
+                if str(i.get("id")) == str(decision["injury_id"])
+                and str(i.get("episode_id")) == str(decision["injury_episode_id"])), None)}
+                if prescription.get("required_rehabilitation_level") else {}),
             **({"rehab_allocation_id": f"rehab:{decision['injury_id']}:{decision['injury_episode_id']}"}
                if decision["prescription"].get("drills") else {}),
             "block_id": identity, "block_type": "rehab", "title": prescription["drill"]["name"],

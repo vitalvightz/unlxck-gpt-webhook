@@ -251,7 +251,7 @@ def test_live_ankle_restore_bundle_keeps_reviewed_bank_content_and_self_paced_do
     bank = get_rehab_bank()
     decision = resolve_injury_policy({**injury, "severity": severity}, policies=load_clinical_policies(),
                                     bank=bank, phase=phase)
-    assert policy.version == 5 and policy.stage_bundles == {"restore": IDS}
+    assert policy.version == 6 and policy.stage_bundles == {"restore": IDS}
     assert policy.live_stages == ["calm", "restore", "load"]
     assert {t.to_stage for t in policy.transitions if t.promotable} == {"load"}
     assert policy.pathway_family == "ligament_sprain_or_instability"

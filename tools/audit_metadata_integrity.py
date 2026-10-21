@@ -803,6 +803,26 @@ def original_equipment_source(relative):
     from tools.replay_safety_metadata import original_safety_source
     data = reverse_mechanical_source(relative, pre_combat_round_source(
         relative, original_safety_source(relative, (ROOT / relative).read_bytes())))
+    if relative == "api/contracts/clinician_clearance.py":
+        # #2977 generalises the existing permission reader to a stage ceiling.
+        # Reverse only its exact changes for dated audit replay. The original
+        # frozen digest still validates the entire reconstructed file.
+        changes = (
+            (b'STAGE_REHABILITATION_PERMISSION = {\n'
+             b'    "calm": "gentle_recovery", "restore": "gentle_recovery", "load": "loading",\n'
+             b'    "dynamic": "sport_specific", "return": "sport_specific",\n}\n', b''),
+            (b'    return permits_rehabilitation_stage(injury, "load")\n\n\n'
+             b'def permits_rehabilitation_stage(injury: Mapping, stage: str) -> bool:\n', b''),
+            (b'    levels = {"gentle_recovery": 0, "loading": 1, "sport_specific": 2}\n'
+             b'    required = STAGE_REHABILITATION_PERMISSION.get(stage)\n', b''),
+            (b'            and required in levels and levels.get(permission.level, -1) >= levels[required])\n',
+             b'            and permission.level in {"loading", "sport_specific"})\n'),
+        )
+        for added, original in changes:
+            if data.count(added) != 1:
+                raise ValueError("Rehab permission contract history drift")
+            data = data.replace(added, original, 1)
+        return data
     if relative == "api/contracts/external_training.py":
         # #2921 adds one response-only provenance field. Reverse only those
         # exact bytes for historical replay; historical_sources still verifies

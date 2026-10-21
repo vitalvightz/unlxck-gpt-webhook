@@ -1,0 +1,541 @@
+{
+  "reason": "Explicit reported-clinician starter entry; no new exercises, stages, doses, subtypes or clinical assessment claims. New authority changes product evidence prerequisites only.",
+  "previous_profiles": {
+    "ankle_sprain": {
+      "policy_id": "ankle_sprain",
+      "version": 5,
+      "pathway_family": "ligament_sprain_or_instability",
+      "region": "ankle",
+      "injury_type": "sprain",
+      "status": "active",
+      "activation": "live",
+      "evidence_sources": [
+        "https://www.nhs.uk/conditions/sprains-and-strains/",
+        "https://www.whittington.nhs.uk/mini-apps/leaflet/Default.asp?id=53&print=1",
+        "https://services.eastcheshire.nhs.uk/physiotherapy-service/self-help/ankle-and-foot-pain-physiotherapy-self-help",
+        "https://www.jospt.org/doi/10.2519/jospt.2021.0302",
+        "https://www.ouh.nhs.uk/media/i0ldiecy/116454sprain.pdf",
+        "https://msk-bexley.nhs.uk/conditions/foot-and-ankle-pain/ankle-sprain",
+        "https://pmc.ncbi.nlm.nih.gov/articles/PMC8824326/"
+      ],
+      "content_hash": "fc5631c73f0305a700e555b2e5609a696c4fac376a4ad7f34f1a2dda30f9c9b1",
+      "prescriptions": [
+        {
+          "drill_id": "ankle_sprain_gentle_movement",
+          "bank_hash": "9ad8cc97eb7320cecee9148ad339c1d5580b0923417f6a048ecaf68929e4c440",
+          "stage": "calm",
+          "instructions": "Once the ankle is less painful, sit with the foot supported and gently move it up and down or trace the alphabet. Start with a small comfortable amount and build gradually. Keep within a comfortable range; do not force movement.",
+          "dose": null,
+          "camp_doses": {},
+          "readiness_doses": {},
+          "allowed_severities": [
+            "low",
+            "moderate"
+          ],
+          "stop_when": [
+            "Stop if pain prevents comfortable movement or symptoms worsen.",
+            "Seek help for severe or worsening pain, swelling or inability to use the area."
+          ],
+          "frequency": "daily",
+          "minimum_gap_days": 1,
+          "priority": 0,
+          "sources": [
+            "https://www.nhs.uk/conditions/sprains-and-strains/",
+            "https://www.whittington.nhs.uk/mini-apps/leaflet/Default.asp?id=53&print=1"
+          ]
+        },
+        {
+          "drill_id": "ankle_sprain_supported_balance",
+          "bank_hash": "f00f718eb8220c4f7ff0539627368fe22f7218b81b8ee82d3fad9d567276eae3",
+          "stage": "restore",
+          "instructions": "When standing and weight bearing are comfortable, practise balancing on the affected leg on firm ground, close to a stable counter for support. Start with a short comfortable attempt and build gradually. Keep support available; do not use a cushion or close your eyes.",
+          "dose": null,
+          "camp_doses": {},
+          "readiness_doses": {},
+          "allowed_severities": [
+            "low",
+            "moderate"
+          ],
+          "stop_when": [
+            "Stop if pain prevents comfortable movement or symptoms worsen.",
+            "Seek help for severe or worsening pain, swelling or inability to use the area."
+          ],
+          "frequency": "daily",
+          "minimum_gap_days": 1,
+          "priority": 5,
+          "sources": [
+            "https://www.whittington.nhs.uk/mini-apps/leaflet/Default.asp?id=53&print=1"
+          ]
+        },
+        {
+          "drill_id": "ankle_sprain_heel_lowering",
+          "bank_hash": "c932d4b2b5a7bbfe4fbc77249ed2056cea2416add6982a3a5c84bc38cb5445ea",
+          "stage": "restore",
+          "instructions": "When weight bearing and gentle calf movement are comfortable, use a stable support and practise controlled heel lowering as shown in the linked ankle rehabilitation guidance. Work at your own pace, up to 2 sets on alternate days. The source gives no repetition target; stop before symptoms worsen.",
+          "dose": null,
+          "camp_doses": {},
+          "readiness_doses": {},
+          "allowed_severities": [
+            "low",
+            "moderate"
+          ],
+          "stop_when": [
+            "Stop if pain prevents comfortable movement or symptoms worsen.",
+            "Seek help for severe or worsening pain, swelling or inability to use the area."
+          ],
+          "frequency": "daily",
+          "minimum_gap_days": 2,
+          "priority": 10,
+          "sources": [
+            "https://services.eastcheshire.nhs.uk/physiotherapy-service/self-help/ankle-and-foot-pain-physiotherapy-self-help"
+          ]
+        },
+        {
+          "drill_id": "ankle_sprain_seated_bilateral_heel_raise",
+          "priority": 20,
+          "bank_hash": "358d6b8544800e9a90abc940cce456e30ade19200d824bccd8b78f5653a42d34",
+          "stage": "load",
+          "instructions": "Sit on a stable chair with both feet flat on the floor. Keeping the front of both feet on the floor, slowly raise both heels within a comfortable range and slowly lower them to the floor. Stay seated; no weights, band, pressure on the knees, step, forced range or automatic increase. Follow clinician restrictions. Stop if pain or symptoms worsen during or after the work.",
+          "dose": {
+            "sets": 1,
+            "reps": 10
+          },
+          "allowed_severities": [
+            "low"
+          ],
+          "stop_when": [
+            "Maximum 1 set of 10 once daily, seated with no added resistance or automatic increase.",
+            "Use only a comfortable range within clinician restrictions; stop for pain or worsening during or delayed symptoms.",
+            "Seek assessment for loss of function, inability to bear weight, bony tenderness, deformity, altered sensation, severe swelling or instability.",
+            "This grants no running, jumping, cutting, sparring or contact clearance."
+          ],
+          "frequency": "daily",
+          "minimum_gap_days": 1,
+          "sources": [
+            "https://www.jospt.org/doi/10.2519/jospt.2021.0302",
+            "https://www.ouh.nhs.uk/media/i0ldiecy/116454sprain.pdf",
+            "https://msk-bexley.nhs.uk/conditions/foot-and-ankle-pain/ankle-sprain",
+            "https://pmc.ncbi.nlm.nih.gov/articles/PMC8824326/"
+          ],
+          "required_rehabilitation_level": "loading"
+        }
+      ],
+      "blocked_regions": [
+        "ankle"
+      ],
+      "blocked_tags": [],
+      "contact_limit": "none",
+      "live_stages": [
+        "calm",
+        "restore",
+        "load"
+      ],
+      "stage_bundles": {
+        "restore": [
+          "ankle_sprain_supported_balance",
+          "ankle_sprain_heel_lowering"
+        ]
+      },
+      "transition_overrides": {
+        "restore->load": {
+          "reason": "Only the seated no-added-resistance starter for a reported clinician-described uncomplicated lateral sprain, with loading permission and all shared RESTORE exposure/response and safety gates. No grade, fracture exclusion or capacity measurements are inferred.",
+          "add_requirements": [
+            {
+              "requirement_id": "ankle_lateral_reported_seated_load_v1",
+              "kind": "functional_checkpoint",
+              "basis": "clinical",
+              "checkpoint": "ankle_lateral_reported_seated_load_v1",
+              "description": "Reported clinician-described uncomplicated lateral applicability and loading permission for the seated starter; unsupported or conflicting presentations remain blocked.",
+              "sources": [
+                "https://www.jospt.org/doi/10.2519/jospt.2021.0302",
+                "https://www.ouh.nhs.uk/media/i0ldiecy/116454sprain.pdf",
+                "https://msk-bexley.nhs.uk/conditions/foot-and-ankle-pain/ankle-sprain",
+                "https://pmc.ncbi.nlm.nih.gov/articles/PMC8824326/"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    "achilles_tendonitis": {
+      "policy_id": "achilles_tendonitis",
+      "version": 2,
+      "region": "achilles",
+      "injury_type": "tendonitis",
+      "pathway_family": "tendon_rehab",
+      "evidence_sources": [
+        "https://www.nhs.uk/conditions/tendonitis/",
+        "https://myjointhealthhub.bnssg.nhs.uk/foot-ankle-pain/achilles-tendinopathy/",
+        "https://www.kentcht.nhs.uk/leaflet/achilles-insertional-tendinopathy/",
+        "https://bjsm.bmj.com/content/55/20/1125",
+        "https://www.orthopt.org/uploads/content_files/files/Achilles_Pain_revision_2024.pdf",
+        "https://www.dynamichealth.nhs.uk/help-and-advice/foot-or-ankle-pain/ankle-tendon-pain/"
+      ],
+      "prescriptions": [
+        {
+          "drill_id": "achilles_tendonitis_recovery_support",
+          "bank_hash": "70a9441201b7667d69ce922ce9bf1767629a54475efc6c268107ece7456755f8",
+          "stage": "calm",
+          "instructions": "Reduce activities that aggravate the affected tendon and keep the area comfortably supported. Avoid heavy lifting, strong gripping or twisting that worsens symptoms; do not repeatedly test the painful tendon. Keep ordinary comfortable movement as symptoms allow rather than applying a universal prolonged-rest timetable. Follow any clinician-directed restrictions. Sudden severe pain, a snap or pop with loss of function, suspected rupture, a hot red swollen area, fever or altered sensation needs medical assessment. Reduce provocative running, hopping and forceful push-off; do not stretch into deep dorsiflexion or use heel drops below floor level when insertional status is unknown.",
+          "dose": null,
+          "camp_doses": {},
+          "readiness_doses": {},
+          "allowed_severities": [
+            "low",
+            "moderate"
+          ],
+          "stop_when": [
+            "Stop for pain or worsening symptoms during or after the work.",
+            "Seek assessment for suspected rupture, loss of function, altered sensation, a hot red swollen area or fever."
+          ],
+          "frequency": "scheduled_sessions",
+          "minimum_gap_days": 1,
+          "priority": 0,
+          "sources": [
+            "https://www.nhs.uk/conditions/tendonitis/",
+            "https://myjointhealthhub.bnssg.nhs.uk/foot-ankle-pain/achilles-tendinopathy/",
+            "https://www.kentcht.nhs.uk/leaflet/achilles-insertional-tendinopathy/"
+          ]
+        },
+        {
+          "drill_id": "achilles_tendonitis_reviewed_restore",
+          "bank_hash": "d8eed079ec51160e7a52dacbf26871bc25e7b0f0df70f1ef42be50694aabad4e",
+          "stage": "restore",
+          "instructions": "Sit with the affected foot flat on the floor and the knee bent. Slowly lift the heel within a comfortable pain-free range, then lower it to floor level with the forefoot resting on the floor. Do not add weight, stand on a step, drop below floor level or bounce. This is seated movement, not a strength test or a required isometric-first protocol. Stop if pain or symptoms worsen during or after the movement. This conservative baseline does not establish readiness for resistance or sport.",
+          "dose": null,
+          "camp_doses": {},
+          "readiness_doses": {},
+          "allowed_severities": [
+            "low",
+            "moderate"
+          ],
+          "stop_when": [
+            "Stop for pain or worsening symptoms during or after the work.",
+            "Seek assessment for suspected rupture, loss of function, altered sensation, a hot red swollen area or fever."
+          ],
+          "frequency": "scheduled_sessions",
+          "minimum_gap_days": 1,
+          "priority": 0,
+          "sources": [
+            "https://www.nhs.uk/conditions/tendonitis/",
+            "https://myjointhealthhub.bnssg.nhs.uk/foot-ankle-pain/achilles-tendinopathy/",
+            "https://www.kentcht.nhs.uk/leaflet/achilles-insertional-tendinopathy/"
+          ]
+        },
+        {
+          "drill_id": "achilles_tendonitis_eccentric_calf_drops_on_step",
+          "bank_hash": "557056e938e245ccf7bda3621958820389212034a4eb47c3fb4d04d3e58bad2f",
+          "stage": "load",
+          "instructions": "Beside stable support on firm level ground, raise both heels, then transfer weight to the affected leg and slowly lower its heel only to the floor. Do not use a step, lower into deep dorsiflexion, increase depth or add speed or weight. Stop if symptoms worsen during or after the work.",
+          "dose": {
+            "sets": 1,
+            "reps": 10
+          },
+          "allowed_severities": [
+            "low",
+            "moderate"
+          ],
+          "stop_when": [
+            "Once daily only: 1 set of 10 controlled lowerings beside stable support on level ground.",
+            "Bodyweight only: no added resistance.",
+            "No step or lowering below floor level.",
+            "No speed, bouncing, hopping or automatic progression.",
+            "Stop for worsening during or delayed symptoms and seek clinical review.",
+            "Stop and seek assessment for a snap, sudden pain or loss of function.",
+            "Follow clinician restrictions; this prescription grants no training or contact clearance."
+          ],
+          "frequency": "daily",
+          "minimum_gap_days": 1,
+          "sources": [
+            "https://bjsm.bmj.com/content/55/20/1125",
+            "https://www.orthopt.org/uploads/content_files/files/Achilles_Pain_revision_2024.pdf",
+            "https://www.dynamichealth.nhs.uk/help-and-advice/foot-or-ankle-pain/ankle-tendon-pain/"
+          ],
+          "required_rehabilitation_level": "loading"
+        }
+      ],
+      "blocked_regions": [
+        "achilles"
+      ],
+      "blocked_tags": [],
+      "contact_limit": "none",
+      "live_stages": [
+        "calm",
+        "restore",
+        "load"
+      ],
+      "transition_overrides": {
+        "restore->load": {
+          "reason": "Consider only the reviewed midportion floor option within self-reported clinician permissions; retain shared exposure and safety requirements.",
+          "add_requirements": [
+            {
+              "requirement_id": "achilles_midportion_reported_load_permission_v1",
+              "kind": "functional_checkpoint",
+              "basis": "clinical",
+              "checkpoint": "achilles_midportion_reported_load_permission_v1",
+              "description": "Self-reported loading permission and confirmed midportion applicability of the reviewed floor option; no medical verification or readiness claim.",
+              "sources": [
+                "https://bjsm.bmj.com/content/55/20/1125",
+                "https://www.orthopt.org/uploads/content_files/files/Achilles_Pain_revision_2024.pdf",
+                "https://www.dynamichealth.nhs.uk/help-and-advice/foot-or-ankle-pain/ankle-tendon-pain/"
+              ]
+            }
+          ]
+        }
+      },
+      "status": "active",
+      "activation": "live",
+      "content_hash": "5ff715a474424088cf1549c6b38cc3f1fa51b25b7da118ec1ca767f330d55a1a"
+    },
+    "shoulder_tendonitis": {
+      "policy_id": "shoulder_tendonitis",
+      "version": 2,
+      "region": "shoulder",
+      "injury_type": "tendonitis",
+      "pathway_family": "tendon_rehab",
+      "evidence_sources": [
+        "https://www.nhs.uk/conditions/tendonitis/",
+        "https://www.rjah.nhs.uk/our-services/therapy/supported-self-care/rotator-cuff-related-shoulder-pain/",
+        "https://www.orthopt.org/uploads/content_files/files/Rotator_Cuff_CPG.pdf"
+      ],
+      "prescriptions": [
+        {
+          "drill_id": "shoulder_tendonitis_recovery_support",
+          "bank_hash": "0f5328748d54b88f49278c74bf696cc5f86536e5f605d808074c581fb27667a8",
+          "stage": "calm",
+          "instructions": "Reduce activities that aggravate the affected tendon and keep the area comfortably supported. Avoid heavy lifting, strong gripping or twisting that worsens symptoms; do not repeatedly test the painful tendon. Keep ordinary comfortable movement as symptoms allow rather than applying a universal prolonged-rest timetable. Follow any clinician-directed restrictions. Sudden severe pain, a snap or pop with loss of function, suspected rupture, a hot red swollen area, fever or altered sensation needs medical assessment. Reduce provocative overhead work and end-range loading; do not force the arm behind the body.",
+          "dose": null,
+          "camp_doses": {},
+          "readiness_doses": {},
+          "allowed_severities": [
+            "low",
+            "moderate"
+          ],
+          "stop_when": [
+            "Stop for pain or worsening symptoms during or after the work.",
+            "Seek assessment for suspected rupture, loss of function, altered sensation, a hot red swollen area or fever."
+          ],
+          "frequency": "scheduled_sessions",
+          "minimum_gap_days": 1,
+          "priority": 0,
+          "sources": [
+            "https://www.nhs.uk/conditions/tendonitis/",
+            "https://www.rjah.nhs.uk/our-services/therapy/supported-self-care/rotator-cuff-related-shoulder-pain/"
+          ]
+        },
+        {
+          "drill_id": "shoulder_tendonitis_reviewed_restore",
+          "bank_hash": "b45ef1074bb6ab3640ab8ba7eec4cb3209bbd289dc764913004bce01df6508e9",
+          "stage": "restore",
+          "instructions": "Sit upright with the affected elbow comfortably bent and tucked by your side. Gently turn the forearm outwards within a small comfortable pain-free range, then return. Keep the upper arm by your side; do not force rotation, raise the arm overhead or add a weight or band. Stop if pain or symptoms worsen during or after the movement. This conservative baseline does not establish readiness for resistance or sport.",
+          "dose": null,
+          "camp_doses": {},
+          "readiness_doses": {},
+          "allowed_severities": [
+            "low",
+            "moderate"
+          ],
+          "stop_when": [
+            "Stop for pain or worsening symptoms during or after the work.",
+            "Seek assessment for suspected rupture, loss of function, altered sensation, a hot red swollen area or fever."
+          ],
+          "frequency": "scheduled_sessions",
+          "minimum_gap_days": 1,
+          "priority": 0,
+          "sources": [
+            "https://www.nhs.uk/conditions/tendonitis/",
+            "https://www.rjah.nhs.uk/our-services/therapy/supported-self-care/rotator-cuff-related-shoulder-pain/"
+          ]
+        },
+        {
+          "drill_id": "shoulder_tendonitis_wall_push_up",
+          "priority": 20,
+          "bank_hash": "49cb79339262cff700ea576553f2c8faafd7ba00d9f09b0da395e7c3f5d77fdc",
+          "stage": "load",
+          "instructions": "Stand facing a stable wall, close enough to reach it comfortably without leaning. Place both hands on the wall at shoulder height, slightly wider than shoulder width, turned out slightly, with elbows below shoulders. Keep your body tall and feet fixed near the wall. Slowly bend your elbows a small comfortable amount to bring your body towards the wall, then gently push back. Keep within a pain-free range and clinician restrictions. Do not move your feet further back, lower your hands, add resistance or work to fatigue. Stop for pain, worsening symptoms during or after work, weakness or a feeling of instability.",
+          "dose": {
+            "sets": 1,
+            "reps": 8
+          },
+          "allowed_severities": [
+            "low",
+            "moderate"
+          ],
+          "stop_when": [
+            "Stop for pain, worsening symptoms, weakness or instability during or after work.",
+            "Seek assessment for traumatic loss of function, suspected tear, altered sensation or unexplained weakness."
+          ],
+          "frequency": "daily",
+          "minimum_gap_days": 1,
+          "sources": [
+            "https://www.orthopt.org/uploads/content_files/files/Rotator_Cuff_CPG.pdf",
+            "https://www.rjah.nhs.uk/our-services/therapy/supported-self-care/rotator-cuff-related-shoulder-pain/"
+          ],
+          "required_rehabilitation_level": "loading"
+        }
+      ],
+      "blocked_regions": [
+        "shoulder"
+      ],
+      "blocked_tags": [],
+      "contact_limit": "none",
+      "live_stages": [
+        "calm",
+        "restore",
+        "load"
+      ],
+      "transition_overrides": {
+        "restore->load": {
+          "reason": "Only the bounded wall-push-up starter for reported clinician-described non-traumatic cuff tendinopathy without tear. Requires loading permission and all shared RESTORE exposure/response and safety gates. No strength, ROM or medical verification inferred.",
+          "add_requirements": [
+            {
+              "requirement_id": "shoulder_cuff_reported_wall_load_v1",
+              "kind": "functional_checkpoint",
+              "basis": "clinical",
+              "checkpoint": "shoulder_cuff_reported_wall_load_v1",
+              "description": "Reported non-traumatic cuff tendinopathy without tear and loading permission for bounded wall push-ups; no capacity assessment or verification.",
+              "sources": [
+                "https://www.orthopt.org/uploads/content_files/files/Rotator_Cuff_CPG.pdf",
+                "https://www.rjah.nhs.uk/our-services/therapy/supported-self-care/rotator-cuff-related-shoulder-pain/"
+              ]
+            }
+          ]
+        }
+      },
+      "status": "active",
+      "activation": "live",
+      "content_hash": "b94351e90298cb93cd2f1720901603b6fdb60eb070c9e6cca42723a1c9cd7675"
+    },
+    "elbow_tendonitis": {
+      "policy_id": "elbow_tendonitis",
+      "version": 3,
+      "region": "elbow",
+      "injury_type": "tendonitis",
+      "pathway_family": "tendon_rehab",
+      "evidence_sources": [
+        "https://www.nhs.uk/conditions/tendonitis/",
+        "https://msk-bexley.nhs.uk/conditions/elbow-pain/tennis-elbow",
+        "https://www.jospt.org/doi/10.2519/jospt.2022.0302",
+        "https://www.rjah.nhs.uk/our-services/therapy/supported-self-care/tennis-elbow/",
+        "https://pmc.ncbi.nlm.nih.gov/articles/PMC8432114/"
+      ],
+      "prescriptions": [
+        {
+          "drill_id": "elbow_tendonitis_recovery_support",
+          "bank_hash": "bba06306eb6833e7388738b3529589d29a803b527e6a8194a76faa078c0f37ac",
+          "stage": "calm",
+          "instructions": "Reduce activities that aggravate the affected tendon and keep the area comfortably supported. Avoid heavy lifting, strong gripping or twisting that worsens symptoms; do not repeatedly test the painful tendon. Keep ordinary comfortable movement as symptoms allow rather than applying a universal prolonged-rest timetable. Follow any clinician-directed restrictions. Sudden severe pain, a snap or pop with loss of function, suspected rupture, a hot red swollen area, fever or altered sensation needs medical assessment. Reduce provocative grip and repetitive hand loading; follow any individual splint advice without changing prescribed protection.",
+          "dose": null,
+          "camp_doses": {},
+          "readiness_doses": {},
+          "allowed_severities": [
+            "low",
+            "moderate"
+          ],
+          "stop_when": [
+            "Stop for pain or worsening symptoms during or after the work.",
+            "Seek assessment for suspected rupture, loss of function, altered sensation, a hot red swollen area or fever."
+          ],
+          "frequency": "scheduled_sessions",
+          "minimum_gap_days": 1,
+          "priority": 0,
+          "sources": [
+            "https://www.nhs.uk/conditions/tendonitis/",
+            "https://msk-bexley.nhs.uk/conditions/elbow-pain/tennis-elbow"
+          ]
+        },
+        {
+          "drill_id": "elbow_tendonitis_reviewed_restore",
+          "bank_hash": "3dea3cfb63f42c1ce270bfb0c57eb970211d617d2d2db558943e38007954d784",
+          "stage": "restore",
+          "instructions": "Keep the affected upper arm comfortably by your side and slowly bend and straighten the elbow within a pain-free range with the hand empty. Do not force end range, squeeze a ball, perform wrist curls or add resistance. A red, hot or swollen elbow needs assessment before exercise. This baseline does not diagnose lateral, medial or posterior tendon involvement. Stop if pain or symptoms worsen during or after the movement. This conservative baseline does not establish readiness for resistance or sport.",
+          "dose": null,
+          "camp_doses": {},
+          "readiness_doses": {},
+          "allowed_severities": [
+            "low",
+            "moderate"
+          ],
+          "stop_when": [
+            "Stop for pain or worsening symptoms during or after the work.",
+            "Seek assessment for suspected rupture, loss of function, altered sensation, a hot red swollen area or fever."
+          ],
+          "frequency": "scheduled_sessions",
+          "minimum_gap_days": 1,
+          "priority": 0,
+          "sources": [
+            "https://www.nhs.uk/conditions/tendonitis/",
+            "https://msk-bexley.nhs.uk/conditions/elbow-pain/tennis-elbow"
+          ]
+        },
+        {
+          "drill_id": "elbow_tendonitis_supported_hand_weight_wrist_extension",
+          "bank_hash": "7d9132531396ef0ad7d694eacb5ec60721afb5094fa54d79056f2941dc45a2a5",
+          "stage": "load",
+          "instructions": "Support the affected forearm palm-down on a table with the wrist free to move. With the hand empty, raise the wrist in the comfortable range, within any clinician restrictions, then slowly lower over five seconds. Keep the forearm supported. No dumbbell, band, forceful grip, forced end range, speed or automatic increase. Stop if symptoms worsen during or after the work.",
+          "dose": {
+            "sets": 1,
+            "reps": 10
+          },
+          "allowed_severities": [
+            "low",
+            "moderate"
+          ],
+          "stop_when": [
+            "Hand weight only: 1 set of 10, maximum once daily. No added resistance or automatic increase.",
+            "Keep the forearm supported and use only a comfortable range within clinician restrictions.",
+            "Stop for worsening during or delayed symptoms and seek clinical review.",
+            "Stop and seek assessment for trauma, loss of function, numbness, a hot red swollen elbow or fever.",
+            "Follow clinician restrictions; this grants no training or contact clearance."
+          ],
+          "frequency": "daily",
+          "minimum_gap_days": 1,
+          "sources": [
+            "https://www.jospt.org/doi/10.2519/jospt.2022.0302",
+            "https://www.rjah.nhs.uk/our-services/therapy/supported-self-care/tennis-elbow/",
+            "https://pmc.ncbi.nlm.nih.gov/articles/PMC8432114/"
+          ],
+          "required_rehabilitation_level": "loading"
+        }
+      ],
+      "blocked_regions": [
+        "elbow"
+      ],
+      "blocked_tags": [],
+      "contact_limit": "none",
+      "live_stages": [
+        "calm",
+        "restore",
+        "load"
+      ],
+      "transition_overrides": {
+        "restore->load": {
+          "reason": "Consider only the supported empty-hand lateral starter with explicit loading permission and location; reviewed RESTORE exposure, attributable responses, restrictions and safety requirements remain mandatory. No grip or ROM result is inferred.",
+          "add_requirements": [
+            {
+              "requirement_id": "lateral_elbow_reported_load_permission_v2",
+              "kind": "functional_checkpoint",
+              "basis": "clinical",
+              "checkpoint": "lateral_elbow_reported_load_permission_v2",
+              "description": "Self-reported loading permission and confirmed lateral applicability of this bounded empty-hand starter; existing adverse observations veto progression.",
+              "sources": [
+                "https://www.jospt.org/doi/10.2519/jospt.2022.0302",
+                "https://www.rjah.nhs.uk/our-services/therapy/supported-self-care/tennis-elbow/",
+                "https://pmc.ncbi.nlm.nih.gov/articles/PMC8432114/"
+              ]
+            }
+          ]
+        }
+      },
+      "status": "active",
+      "activation": "live",
+      "content_hash": "76ddc4dcf6375467549933670e7268829a2496a34a7e7e503fece71f456b0ff5"
+    }
+  },
+  "current_profile_sha256": {
+    "ankle_sprain": "314a1637f3557ec632263c19bb20f338cfdf1f51059717959b38bdda5c079a4e",
+    "achilles_tendonitis": "ef4e74d1fca697a6443c94b0b4834febccc34a341c7806110ae8d3096e2e7684",
+    "shoulder_tendonitis": "c4b4a57c3c3c3ca7cbe546b6b132700ea926604efe1ed2b9bded6dfdf0fee56e",
+    "elbow_tendonitis": "3cad7830a60c4551fb1a3884114071358582c312476e887cc408399374d6ecd2"
+  }
+}

@@ -224,7 +224,7 @@ def test_consumer_changes_invalidate_unstarted_work_preserving_started_and_compl
     elif mutation == "no_work":
         b[0].rehab_exposures.clear()
     original = deepcopy(live)
-    assert frozen_review_hold(b[0], b[3], live, work_state="unstarted", as_of=NOW)
+    assert frozen_review_hold(b[0], b[3], live, work_state="unstarted", as_of=NOW) is (mutation != "no_work")
     assert not frozen_review_hold(b[0], b[3], live, work_state="started", as_of=NOW)
     assert not frozen_review_hold(b[0], b[3], live, work_state="completed", as_of=NOW)
     assert live == original
@@ -259,6 +259,7 @@ def test_real_restore_completion_and_existing_checkins_supply_consumer_progressi
     from api.services.rehab_completion_service import build_rehab_response_contexts, record_reported_permission_rehab
     b = consumer_bundle()
     b[0].rehab_exposures.clear()
+    report_permission(b, "gentle_recovery")
     current = view(b)
     assert current.open_injuries[0]["rehab_decision"]["stage"] == "restore"
     live = current.live_prescription
@@ -289,12 +290,17 @@ def test_real_restore_completion_and_existing_checkins_supply_consumer_progressi
         training_day=(NOW + timedelta(days=1)).date().isoformat())
     delayed["created_at"] = (NOW + timedelta(days=1)).isoformat()
     b[0].injury_episode_events[delayed["id"]] = delayed
+    advice = report_permission(b, "loading")
+    advice["created_at"] = (NOW + timedelta(days=1)).isoformat()
+    b[0].injury_episode_events[advice["id"]] = advice
     events = list(b[0].injury_episode_events.values())
     injury = apply_episode_observations(b[0].injury_flags[b[3]][0], events, as_of=NOW + timedelta(days=1))
     decision = resolve_injury_policy(injury, policies=load_clinical_policies(), bank=get_rehab_bank(),
         equipment=["table"], exposures=exposure_rows_with_observations(list(b[0].rehab_exposures.values()), events),
         as_of=NOW + timedelta(days=1))
-    assert (decision["stage"] == "load") is eligible
+    assert decision["stage"] == "load"
+    if not eligible:
+        assert decision["progression"]["entry_basis"] == "reported_clinician_permission"
     assert not any(e["event_type"] == "rehab_progression_assessment" for e in events)
 
 
@@ -353,14 +359,14 @@ def test_other_presentations_cannot_borrow_lateral_observations(description, kin
     assert view(b).open_injuries[0]["rehab_decision"]["stage"] != "load"
 
 
-def test_missing_responses_and_reviewed_work_remain_required():
+def test_known_missing_responses_hold_but_no_history_allows_permission_entry():
     for field in ("during_response", "next_day_response"):
         b = bundle()
         next(iter(b[0].rehab_exposures.values()))["event_json"]["response"][field] = "not_reported"
         assert view(b).open_injuries[0]["rehab_decision"]["stage"] == "restore"
     b = bundle()
     b[0].rehab_exposures.clear()
-    assert view(b).open_injuries[0]["rehab_decision"]["stage"] == "restore"
+    assert view(b).open_injuries[0]["rehab_decision"]["stage"] == "load"
 
 
 def test_no_dynamic_return_or_training_grant():
@@ -481,7 +487,8 @@ def test_elbow_activation_preserves_both_existing_baselines_and_achilles_profile
     from pathlib import Path
     root = Path(__file__).resolve().parents[1]
     manifest = json.loads((root / "tools/rehab_elbow_activation_inventory_baseline.json").read_text(encoding="utf-8"))
-    profiles = json.loads((root / "data/rehab_pathways.json").read_text(encoding="utf-8"))["profiles"]
+    from tools.rehab_metadata_review_lib import before_reported_permission_entry
+    profiles = before_reported_permission_entry(json.loads((root / "data/rehab_pathways.json").read_text(encoding="utf-8")))["profiles"]
     elbow = next(p for p in profiles if p["policy_id"] == "elbow_tendonitis")
     assert elbow["prescriptions"][:2] == manifest["historical_profile"]["prescriptions"]
     assert next(p for p in profiles if p["policy_id"] == "achilles_tendonitis")["content_hash"] == "5ff715a474424088cf1549c6b38cc3f1fa51b25b7da118ec1ca767f330d55a1a"

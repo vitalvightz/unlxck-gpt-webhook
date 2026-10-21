@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 from pathlib import Path
 from typing import Literal
 
@@ -66,6 +67,9 @@ class ClinicalPrescription(BaseModel):
     sources: list[str] = Field(default_factory=list)
     clinical_criterion: str | None = None
     required_rehabilitation_level: Literal["loading"] | None = None
+    range_choice: str | None = None
+    resistance: dict | None = None
+    mandatory_restrictions: list[str] = Field(default_factory=list)
 
     @model_serializer(mode="wrap")
     def preserve_baseline_shape(self, handler):
@@ -74,12 +78,27 @@ class ClinicalPrescription(BaseModel):
             raw.pop("clinical_criterion", None)
         if self.required_rehabilitation_level is None:
             raw.pop("required_rehabilitation_level", None)
+        for key in ("range_choice", "resistance", "mandatory_restrictions"):
+            if not raw.get(key):
+                raw.pop(key, None)
         return raw
 
     @model_validator(mode="after")
     def bounded_camp_dose(self):
         if not self.instructions.strip() or any(not rule.strip() for rule in self.stop_when):
             raise ValueError("instructions and stop rules must not be blank")
+        if self.resistance is not None:
+            mode, kg = self.resistance.get("mode"), self.resistance.get("kg")
+            if (set(self.resistance) != {"mode", "kg"} or
+                    not (mode == "bodyweight" and kg is None or
+                         mode == "external_kg" and isinstance(kg, (int, float)) and not isinstance(kg, bool)
+                         and math.isfinite(kg) and kg >= 0)):
+                raise ValueError("prescribed resistance must be bodyweight or an explicit nonnegative weight")
+        if any((self.range_choice, self.resistance, self.mandatory_restrictions)) and not (
+                self.range_choice and self.resistance and self.mandatory_restrictions and self.dose):
+            raise ValueError("loading limits need range, resistance, restrictions and dose together")
+        if self.range_choice is not None and (not self.range_choice.strip() or any(not r.strip() for r in self.mandatory_restrictions)):
+            raise ValueError("prescription range and restrictions must not be blank")
         if any(phase not in {"GPP", "SPP", "TAPER"} for phase in self.camp_doses):
             raise ValueError("unknown camp phase")
         for dose in [*self.camp_doses.values(), *self.readiness_doses.values()]:
