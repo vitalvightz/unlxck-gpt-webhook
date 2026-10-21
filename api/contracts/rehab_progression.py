@@ -23,7 +23,7 @@ from fightcamp.rehab_pathways import PathwayTransition, TransitionRequirement
 
 from .rehab_evidence import (
     FAIL_DURING_RESPONSE_WORSE, FAIL_NEXT_DAY_RESPONSE_WORSE, group_events, has_defined_prescribed_dose,
-    has_measured_amount, read_exact_events,
+    has_measured_amount, read_exact_events, side_matches,
 )
 
 #: Functional checkpoints whose input the app actually captures. Data cannot
@@ -60,6 +60,12 @@ def episode_setback_at(injury: Mapping[str, Any], exposures: Sequence[Mapping[st
             continue
         if str(raw.get("injury_id")) != str(injury.get("id")) or str(raw.get("injury_episode_id")) != str(injury.get("episode_id")):
             continue
+        # Retain conservative handling of partial historical adverse records,
+        # but a known different side/region cannot hold this episode's tissue.
+        if raw.get("body_region") and injury.get("body_region") and raw["body_region"] != injury["body_region"]:
+            continue
+        if raw.get("side") and not side_matches(str(injury.get("side") or "unknown"), raw["side"]):
+            continue
         response, dose = raw.get("response") or {}, raw.get("dose_completed") or {}
         if (response.get("during_response") == "worse" or response.get("next_day_response") == "worse"
                 or response.get("stopped_due_to_symptoms") or response.get("worsening_reported") or dose.get("stopped_early")):
@@ -68,6 +74,44 @@ def episode_setback_at(injury: Mapping[str, Any], exposures: Sequence[Mapping[st
                 return datetime.max.replace(tzinfo=timezone.utc)
             negatives.append(stamp)
     return max(negatives, default=None)
+
+
+def _improvement_at(injury):
+    return (_instant(injury.get("rehab_improvement_at"))
+            or (_instant(injury.get("latest_reported_at")) if injury.get("latest_reported_status") == "improving" else None))
+
+
+def _resolved_pilot_setback(policy, transition, injury, exposures, latest, performed, as_of):
+    """Bounded re-entry after a flare, using existing observations only.
+
+    See docs/rehab-progression-investigation.md for source scope and chronology.
+    This never clears clinical restrictions or supplies permission. Other
+    profiles/transitions retain their unresolved-negative hold.
+    """
+    if (policy.policy_id not in {"achilles_tendonitis", "elbow_tendonitis", "ankle_sprain", "shoulder_tendonitis"}
+            or (transition.from_stage, transition.to_stage) != ("restore", "load")
+            or not latest or not latest.response_consistent or latest.negative_reasons):
+        return False
+    setback = max(filter(None, [episode_setback_at(injury, exposures), _instant(injury.get("assessment_setback_at"))]), default=None)
+    improvements = [(stamp, report["id"]) for report in injury.get("rehab_improvement_reports", ())
+                    if (stamp := _instant(report.get("reported_at"))) and setback and setback < stamp <= as_of]
+    if not improvements:
+        return False
+    improvement, report_id = min(improvements)
+    if not setback or not improvement or not setback < improvement <= as_of:
+        return False
+    by_id = {str(row.get("id")): row for row in exposures}
+    for event in latest.events:
+        row = by_id.get(str(event.exposure_id), {})
+        # occurred_at names the training day (midnight UTC). created_at is the
+        # real completion insert time, so same-day work AFTER improvement counts.
+        performed_at = _instant(row.get("created_at") or event.occurred_at)
+        if (event not in performed or not performed_at or not improvement < performed_at <= as_of
+                or event.response.during_response not in {"better", "same"}
+                or event.response.next_day_response not in {"better", "same"}):
+            return False
+    return {"recovery_report_id": report_id, "recovery_reported_at": improvement.isoformat(),
+            "resolved_setback_at": setback.isoformat()}
 
 
 def _result(requirement: TransitionRequirement, status: str, reason: str, events=()) -> dict[str, Any]:
@@ -106,9 +150,13 @@ def evaluate_transition(transition: PathwayTransition, *, policy: ClinicalPolicy
             elif groups and groups[-1].negative_reasons:
                 results.append(_result(requirement, FAIL, groups[-1].negative_reasons[0], groups[-1].events))
             elif any(g.negative_reasons for g in groups):
-                # No sourced rule yet says when an older negative is resolved.
-                results.append(_result(requirement, UNKNOWN, "unresolved_historical_negative_response",
-                                       [e for g in groups if g.negative_reasons for e in g.events]))
+                resolution = _resolved_pilot_setback(policy, transition, injury, exposures, latest, performed, as_of)
+                if resolution:
+                    results.append({**_result(requirement, PASS, "setback_resolved_by_improvement_and_reviewed_response", latest.events),
+                                    **resolution})
+                else:
+                    results.append(_result(requirement, UNKNOWN, "unresolved_historical_negative_response",
+                                           [e for g in groups if g.negative_reasons for e in g.events]))
             else:
                 results.append(_result(requirement, PASS, "no_negative_response"))
         elif kind == "complete_history":
@@ -251,8 +299,8 @@ def resolve_reviewed_progression(injury: Mapping[str, Any], *, base_stage: str,
     stage = base_stage if base_stage in {"calm", "restore"} else "calm"
     reasons = ["baseline_only_v1"]
     setback = episode_setback_at(injury, exposures)
-    reported_at = _instant(injury.get("latest_reported_at"))
-    improving_after = injury.get("latest_reported_status") == "improving" and reported_at and setback and reported_at > setback
+    reported_at = _improvement_at(injury)
+    improving_after = reported_at and setback and reported_at > setback
     if injury.get("latest_reported_status") == "worse" or (setback and not improving_after):
         stage, reasons = "calm", ["episode_setback_loading_held"]
     if history_truncated:

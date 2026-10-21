@@ -112,6 +112,16 @@ def apply_episode_observations(injury: dict, observations: list[dict], *, as_of:
     reported_at = max((_instant(e.get("created_at")) for e in reports
                        if _instant(e.get("created_at")) is not None), default=None)
     row["latest_reported_at"] = reported_at.isoformat() if reported_at else None
+    # A later Same must not erase an explicitly reported recovery. This is an
+    # ephemeral projection of exact episode history, never another truth column.
+    improvements = [e for e in observations
+                    if e.get("event_type") == "injury_checkin"
+                    and e.get("payload", {}).get("explicit_report") is True
+                    and e.get("payload", {}).get("latest_reported_status") == "improving"]
+    row["rehab_improvement_reports"] = [{"id": str(e["id"]), "reported_at": e["created_at"]}
+        for e in improvements if e.get("id") and instant(e.get("created_at")) and instant(e["created_at"]) <= context.as_of]
+    row["rehab_improvement_at"] = max((instant(e.get("created_at")) for e in improvements
+        if instant(e.get("created_at")) and instant(e["created_at"]) <= context.as_of), default=None)
     setbacks = [e.get("created_at") for e in observations
                 if (e.get("event_type") == "injury_checkin" and e.get("payload", {}).get("latest_reported_status") == "worse")
                 or (e.get("event_type") == "delayed_rehab_response" and e.get("payload", {}).get("response") == "worse")]

@@ -1,0 +1,70 @@
+# RESTORE → LOAD investigation
+
+Base: latest Main at task start, `7161c7f5`. No stage or exercise activation changes.
+
+## Reproduction and findings
+
+`tests/test_rehab_consumer_journey.py` creates a supported injury through the real Today injury service, edits its subtype/location, records rehabilitation advice through `record_episode_observation`, obtains Today work, starts and completes its accepted prescription, initializes the durable response context, and records exposure through the same completion functions used by the route. It then replays the existing injury tap, including its exposure-addressed next-day submissions. There are no injected exposure wins or stage transitions. FakeStore supplies storage; the adapter emits the database trigger's explicit-check-in shape. The real PostgreSQL tests separately exercise the existing append-only RPCs, trigger and frozen acceptance checks.
+
+| Pilot | Required reported scope | Severity | Required apparatus | Reviewed LOAD identity / limit |
+| --- | --- | --- | --- | --- |
+| Achilles tendonitis | `[achilles_site:midportion]`; current episode rehabilitation permission `loading` or `sport_specific` | mild/moderate (low/medium aliases) | stable support | `achilles_tendonitis_eccentric_calf_drops_on_step`: **floor only**, bodyweight, 1 × 10, once daily; historical ID does not permit step lowering |
+| Lateral elbow tendonitis | `[elbow_site:lateral]` or valid existing lateral assessment; rehabilitation loading permission | mild/moderate | table | `elbow_tendonitis_supported_hand_weight_wrist_extension`: supported, empty hand, 1 × 10, once daily |
+| Uncomplicated lateral ankle sprain | `[ankle_scope:uncomplicated_lateral]`; rehabilitation loading permission | mild only | chair | `ankle_sprain_seated_bilateral_heel_raise`: seated, no added resistance, 1 × 10, once daily |
+| Rotator cuff-related shoulder tendonitis | `[shoulder_scope:nontraumatic_cuff]`; rehabilitation loading permission | mild/moderate | wall | `shoulder_tendonitis_wall_push_up`: comfortable wall variant, bodyweight, 1 × 8, once daily |
+
+All four also require the exact athlete, injury, episode, region and known side; complete history; no unresolved setback; completed reviewed RESTORE work with known demand and matching policy/bank provenance; coherent responses for the latest performed RESTORE response group; explicit Better/Same during and next day; a live, compatible approved target; and no medical/restriction/whole-athlete loading hold. Their existing subtype exclusions and exercise-specific second-injury vetoes remain authoritative. Training/contact clearance cannot supply rehabilitation loading permission.
+
+The clean **Better → next-day Same** journey is reachable on Main when the current flag still says improving, all response events arrive, and equipment is correctly attached. The new replay exposed these genuine failures:
+
+1. **Same lost the follow-up.** `ongoing` is both a new flag's default and an explicit Same report. The baseline reader discarded that distinction even after an explicit episode event existed, falling back to CALM. The episode projection already supplies the attributable report timestamp; the baseline now recognises that evidence, and the policy resolver refreshes a baseline stamp made before history was projected. A fresh default ongoing flag and a generic updated_at still do not qualify.
+2. **Historical adverse responses never resolved.** Even explicit improvement and a later fully evidenced reviewed RESTORE session left `no_unresolved_setback` unknown forever. The four bounded pilots now have a conservative, chronological re-entry rule below. Other profiles and higher transitions retain their existing hold.
+3. **Generation lost owned eligibility.** Achilles was omitted from the owned permission/history hydration entirely. Elbow and ankle could also lose their hydrated permission because persisted flags have diagnosis text, whereas generation's ownership comparator requires the parsed injury type. All four now receive the same owned type, permission, projected responses, history-completeness and equipment context. This does not infer subtype or advice.
+4. **LOAD scheduling could substitute Better for a delayed answer.** The scheduler's baseline improvement exception also covered the permission-backed LOAD options. For these options, a same-day improvement no longer releases missing during/next-day evidence. Baseline CALM/RESTORE cadence and the existing baseline recovery exception are unchanged.
+5. **Blocker explanations missed actual enums.** The exposure default is `next_day_response_not_yet_known`; the sheet only translated `not_reported`. Worse safety reasons use the `fail_` prefix. Both now have specific explanations, including shoulder suitability and missing target apparatus. The existing injury response labels yesterday's rehab when an actual pending follow-up exists.
+
+No mismatch was found in the normal frozen block → canonical drill ID → bank hash → policy version → owned episode → response group → completion pipeline. Numeric LOAD doses are quantified only by Completed as shown against the accepted prescription. Current RESTORE work is intentionally self-paced: it produces `performed_amount_unknown`, with no invented numeric dose. The four declared exposure requirements explicitly allow that observation. Existing defined-dose, stale-bank, unsupported-work, partial-completion and historical-shape protections remain in place.
+
+## Latest-exposure rule
+
+A new performed reviewed RESTORE response group with an unanswered next-day response **still holds advancement**. An older successful group is retained but cannot answer for the newer work. New partial/invalid/wrong-owner observations cannot certify tolerance or replace valid completed evidence; their adverse signals remain subject to exact attribution and safety checks.
+
+The existing workflow supplies the missing answer: on the next training day, the normal per-injury Better/Same/Worse tap submits the pending exposure-addressed responses, then refreshes Today. An ankle bundle needs every member's delayed answer saved; partial persistence stays inconsistent and held, and retry addresses the remaining members. No additional questionnaire is added.
+
+Prompts remain limited to the following training day. An old missed answer is never guessed or retrospectively manufactured. A later real reviewed RESTORE session and its timely follow-up can supply fresh evidence; an old incomplete session is not a permanent episode ban. Existing configured recovery gaps and lighter baseline days must be respected. The replay includes repeated actual completions and checks both the engine and the athlete-visible identity.
+
+## Historical setback resolution
+
+Scope: only the four existing reported-permission pilots, only RESTORE → LOAD. This is a bounded re-entry/data-safety rule, not a claim of healed tissue, measured capacity, medical clearance or sport readiness.
+
+The existing source guidance already supports symptom-guided reduction/reintroduction and controlled strengthening: [Achilles CPG](https://www.orthopt.org/uploads/content_files/files/Achilles_Pain_revision_2024.pdf), [Dutch Achilles guideline](https://bjsm.bmj.com/content/55/20/1125), [lateral elbow CPG](https://www.jospt.org/doi/10.2519/jospt.2022.0302), [ankle CPG](https://www.jospt.org/doi/10.2519/jospt.2021.0302), [OUH ankle guidance](https://www.ouh.nhs.uk/media/i0ldiecy/116454sprain.pdf), and [rotator cuff CPG](https://www.orthopt.org/uploads/content_files/files/Rotator_Cuff_CPG.pdf). These are the already-reviewed pilot sources; they do **not** define a universal categorical recovery threshold. The additional conjunction below is a conservative product rule within those existing bounded prescriptions, not a new clinical authorisation.
+
+1. Keep every original negative exposure and episode event unchanged.
+2. Find the latest exactly attributed adverse exposure response and recorded episode setback. Wrong episode, side, region or athlete cannot supply this evidence.
+3. Require an explicit injury-specific improvement report **after** that setback. A subsequent Same does not erase the earlier improvement; generic row edits cannot create it.
+4. Require newly performed reviewed RESTORE work **after** that improvement. Use the real exposure insert timestamp: occurred_at names the training day at midnight and cannot order same-day completion after a report.
+5. Require every member of the latest qualifying response group to have explicit, consistent Better/Same during and next day, with no stopped/worsening flags. Earlier positive work, missing answers, partial work, unknown demand and unknown chronology cannot resolve the setback.
+6. Independently retain current medical holds, known contradictory assessments/restrictions, current Worse, complete-history requirements, target-specific adverse-response filtering, subtype/severity, current permission and second-injury checks. A resolved baseline flare cannot clear a separate exercise-specific contraindication.
+
+The requirement result retains the successful exposure IDs and identifies the recovery report by ID and timestamp. The negative records remain independently inspectable. The permission projection still invalidates advice predating a recorded worsening; it does not arbitrarily expire otherwise current advice. New or withdrawn advice is read from the latest owned episode report.
+
+## Athlete journey proof
+
+All four pilots run this flow: **RESTORE → Completed as shown → Better → next-day Same in the existing injury response → all RESTORE → LOAD requirements pass → exact reviewed LOAD exercise displayed.** Same is stored as an explicit injury event and an exposure-addressed delayed answer; it is not inferred from silence. No manual stage edit or clinical assessment event is required.
+
+Repeated-completion tests retain gentle-recovery advice while continuing prescribed baseline work and following up through the existing flow, then report actual loading advice. This isolates evidence retention from permission and confirms that repetition neither fabricates readiness nor destroys valid evidence. Separate cases establish the single actual RESTORE completion journey, historical worsening re-entry and generation agreement.
+
+A genuinely blocked example: the latest RESTORE session has Better during but its next-day answer is still `not_yet_known`. The engine stays at RESTORE and reports that exact missing answer. Worse or stopped work holds conservatively; an improvement tap alone cannot resolve the historical safety requirement. Missing/withdrawn loading advice, unsupported subtype, incompatible apparatus, relevant second injury and incomplete history retain their own independent holds. Groin LOAD, DYNAMIC and RETURN remain closed.
+
+## Bank → athlete path
+
+1. The 1,604-ID bank includes unsupported types, unassigned regional content, surface care and dormant movement inventory.
+2. The metadata ledger reviews 165 identities. Review of mechanics alone supplies neither a regional prescription nor stage authorisation.
+3. The 64 active profiles reference 107 live approved identities: 64 CALM, 39 RESTORE and four LOAD. The remaining 58 reviewed identities have no live approved prescription.
+4. `resolve_injury_policy` checks the shared stage engine, content hashes, severity, equipment, laterality, adverse responses and prescription priority. Ankle RESTORE is an atomic two-member bundle. Other current stages contain one exact approved choice. Ranking cannot create variety from absent approved alternatives.
+5. Today uses those decisions and the existing cadence/allocation system. Generation must hydrate the same owned context and calls the same policy resolver. Legacy generation can enumerate broader bank/surface content, but active policy paths do not activate those identities. Surface guidance is outside this 64-profile MSK matrix.
+6. Saved unstarted work rechecks current owned advice/history/safety before acceptance. Started/completed snapshots remain immutable, preserving their original IDs, hashes, dose and response ownership. No data migration or historical rewrite is needed.
+
+The [generated matrix](rehab-bank-reachability.md) and [detailed JSON](rehab-bank-reachability.json) distinguish exact approved IDs, compatible alternatives, protective fallbacks, closed stages, unknown-side/empty-apparatus/severity results and dormant reasons. The probes find no reviewed live identity globally lost to ranking or accidental alias/metadata filtering. This is conditional compatibility, not an assertion that every athlete can select all 107.
+
+See [the activation backlog](rehab-activation-backlog.md) and [validation report](rehab-progression-validation.md).

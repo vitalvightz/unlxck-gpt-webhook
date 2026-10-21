@@ -461,8 +461,8 @@ def _is_surface_injury(injury: Mapping[str, Any]) -> bool:
 def _followup_reported(injury: Mapping[str, Any]) -> bool:
     """True when the athlete filed a per-injury daily report reassessing THIS injury.
 
-    The only proof is ``latest_reported_status`` carrying a non-default value:
-    ``improving`` / ``worse`` / ``resolved``. Those are written solely by the
+    A non-default ``latest_reported_status`` (``improving`` / ``worse`` /
+    ``resolved``) is proof. Those are written solely by the
     check-in reconciliation from the athlete's own per-injury report, so each one
     is an actual reassessment of this specific tissue.
 
@@ -475,11 +475,13 @@ def _followup_reported(injury: Mapping[str, Any]) -> bool:
       ``trend`` (``today_service._flag_status_from_guided_injury``), so it can be
       the first declaration rather than a follow-up.
 
-    ``ongoing`` counts for nothing: it is both the default of a fresh flag and a
-    "still the same" re-report, and the two are indistinguishable. Silence is not
-    tolerance.
+    ``ongoing`` alone counts for nothing: it is also a fresh flag's default.
+    The owned episode projection can distinguish an explicit Same follow-up by
+    its ``latest_reported_at``. A generic updated_at still cannot supply it.
     """
-    return _lower(injury.get("latest_reported_status")) in FOLLOWUP_REPORTED_STATUSES
+    return (_lower(injury.get("latest_reported_status")) in FOLLOWUP_REPORTED_STATUSES
+            or (_lower(injury.get("latest_reported_status")) == "ongoing"
+                and _parse_day(injury.get("latest_reported_at")) is not None))
 
 
 def _was_recently_re_reported(

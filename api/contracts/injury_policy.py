@@ -83,6 +83,12 @@ def resolve_injury_policy(
     kind = str(injury.get("injury_type") or injury.get("rehab_type") or parsed.get("injury_type") or "")
     stage_decision = resolve_rehab_stage(injury, current_checkin=current_checkin)
     stage = injury.get("rehab_stage") or stage_decision.stage
+    # An explicit Same in owned episode history is a follow-up, unlike a fresh
+    # flag's default ongoing value. An earlier baseline stamp may predate that
+    # history projection; re-evaluate it before considering higher stages.
+    if (stage == "calm" and injury.get("latest_reported_status") == "ongoing"
+            and injury.get("latest_reported_at") and not stage_decision.medical_gate):
+        stage = stage_decision.stage
     result: dict[str, Any] = {
         "injury_id": str(injury.get("id") or injury.get("injury_id") or ""),
         "injury_episode_id": str(injury.get("episode_id") or ""),
@@ -169,6 +175,7 @@ def resolve_injury_policy(
         result["reason_codes"] = ["rehab_policy_stale_or_incomplete"]
         return result
     target_content = None
+    target_rejections = {}
     if any(p.clinical_criterion or p.required_rehabilitation_level for p in policy.prescriptions):
         target_content = {}
         bank_index = {d["id"]:d for group in bank for d in group.get("drills",[])}
@@ -176,14 +183,21 @@ def resolve_injury_policy(
             options = [{**bank_index[p.drill_id], "injury_type":kind, "allowed_severities":p.allowed_severities}
                        for p in policy.prescriptions if p.stage == target and (p.clinical_criterion or p.required_rehabilitation_level)]
             if options:
-                eligible, _ = filter_rehab_candidates(injury={**injury,"body_region":region,"injury_type":kind,
+                eligible, rejected = filter_rehab_candidates(injury={**injury,"body_region":region,"injury_type":kind,
                     "body_region_aliases":get_rehab_location_candidates(region)}, rehab_stage=target,
                     candidates=options, available_equipment=equipment, exposures=exposures, activated_stages=policy.live_stages)
                 target_content[target] = bool(eligible)
+                target_rejections[target] = sorted({code for r in rejected for code in r.reason_codes})
     progression = resolve_reviewed_progression({**injury, "body_region": region}, base_stage=str(stage), policy=policy,
         exposures=exposures, history_truncated=history_truncated, as_of=as_of, clinical_review_inputs=clinical_review_inputs,
         target_content_available=target_content)
     result["progression"] = progression
+    next_transition = progression.get("next_transition", {})
+    if "reviewed_target_content_unavailable" in next_transition.get("reason_codes", []):
+        rejected = target_rejections.get(next_transition["to_stage"], [])
+        next_transition["target_content_rejections"] = rejected
+        if "REJECT_EQUIPMENT_UNAVAILABLE" in rejected:
+            next_transition["reason_codes"].append("target_equipment_unavailable")
     if policy.activation == "live":
         stage = progression["stage"]
         result["stage"] = stage
