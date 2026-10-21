@@ -1,5 +1,11 @@
 import type { StructuredBlock } from "./types";
 
+/** A link to the existing prescribed exercise row, never a second player. */
+export function rehabExerciseTarget(block: StructuredBlock): string | undefined {
+  return block.block_type === "rehab" && block.rehab_drill_id && block.block_id
+    ? `rehab-exercise-${block.block_id}` : undefined;
+}
+
 export const REHAB_RANGES: Record<string, string> = {
   floor_level: "Floor level only",
   comfortable_within_clinician_restrictions: "Comfortable range within clinician restrictions",

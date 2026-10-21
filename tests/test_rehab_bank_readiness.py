@@ -108,3 +108,34 @@ def test_label_repair_changes_no_mechanics_or_prescription():
     assert drill["dose"] is None and drill["load"] == "unknown"
     assert "not a test of ligament healing or clearance" in drill["notes"]
     assert all(p.drill_id != identity for policy in load_clinical_policies() for p in policy.prescriptions)
+
+
+@pytest.mark.parametrize("option", OPTIONS, ids=lambda o: o[0][0])
+def test_generation_keeps_the_same_owned_prescription_and_props_as_today(monkeypatch, option):
+    from api.services.rehab_stage_snapshot import resolve_open_injury_rehab_context
+    from tests.test_rehab_bank_publication import configured_consumer
+    from fightcamp.stage2_payload import _build_rehab_slots
+    journey, client, body = configured_consumer(monkeypatch, option)
+    contexts = resolve_open_injury_rehab_context(journey.store, journey.athlete)
+    context = next(c for c in contexts.values() if c["injury_id"] == journey.injury["id"])
+    assert context["available_equipment"] == option[2]
+    assert context["policy_injury"]["id"] == journey.injury["id"]
+    episode = {**context, "canonical_location": journey.policy.region,
+        "injury_type": journey.policy.injury_type, "severity": option[0][4]}
+    text, _ = rehab_protocols.generate_rehab_protocols(
+        injury_string=option[0][1], exercise_data=[], current_phase="GPP", parsed_entries=[episode])
+    slots = _build_rehab_slots(text, "GPP")
+    assert slots, text
+    assert slots[0]["selected"]["rehab_drill_id"] == decision(body)["prescription"]["drill_id"]
+
+
+@pytest.mark.parametrize("pilot", FAMILIES, ids=lambda p: p[0])
+def test_generation_carries_owned_context_for_every_family(monkeypatch, pilot):
+    from api.services.rehab_stage_snapshot import resolve_open_injury_rehab_context
+    journey, client = consumer(monkeypatch, pilot)
+    contexts = resolve_open_injury_rehab_context(journey.store, journey.athlete)
+    context = next(c for c in contexts.values() if c["injury_id"] == journey.injury["id"])
+    assert context["policy_injury"]["id"] == journey.injury["id"]
+    assert context["policy_injury"]["episode_id"] == journey.injury["episode_id"]
+    assert context["policy_injury"]["injury_type"] == journey.policy.injury_type
+    assert context["available_equipment"] == ["stable_support", "table", "chair", "wall"]

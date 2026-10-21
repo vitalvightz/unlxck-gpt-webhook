@@ -600,6 +600,13 @@ def _log_next_transition(row: Mapping[str, Any]) -> None:
     }, sort_keys=True, separators=(",", ":")))
 
 
+def _rehab_equipment_from_intake(intake: Mapping[str, Any]) -> list[str]:
+    """Exact reported props, shared by Today and generation. Never infer equipment."""
+    return list(dict.fromkeys(value for field in ("equipment", "equipment_access")
+        for value in (intake.get(field) if isinstance(intake.get(field), (list, tuple)) else ())
+        if isinstance(value, str)))
+
+
 def _with_injury_policy(injuries, *, store, athlete_id, phase="", current_checkin=None, equipment=(), readiness_decision=None,
                         training_day=None, training_session=None, observations_by_injury=None, as_of=None, athlete_timezone=None):
     if not injuries:
@@ -3407,14 +3414,7 @@ def _build_today_command_view(
         recommendation = _severe_injury_recommendation(severe_injury, training_day)
 
     intake, _intake_ok = _checked_intake_payload_for_readiness(store, plan_row)
-    equipment = intake.get("equipment") or ()
-    if not isinstance(equipment, (list, tuple)):
-        equipment = ()
-    reported_equipment = intake.get("equipment_access") or []
-    if isinstance(reported_equipment, (list, tuple)):
-        # Preserve exact reported bank equipment, not a hard-coded list of four
-        # starter props. A generic gym declaration never implies a missing prop.
-        equipment = list(dict.fromkeys([*equipment, *(e for e in reported_equipment if isinstance(e, str))]))
+    equipment = _rehab_equipment_from_intake(intake)
     # Today logs the entire training day. Reconcile every scheduled block,
     # preserving the primary completion identity and checking sibling demands.
     training_session = _entry_mapping_for_readiness(today_session_entry) if today_session_entry else None

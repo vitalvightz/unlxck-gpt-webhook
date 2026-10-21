@@ -448,6 +448,8 @@ export type StructuredBlock = {
   deload_rule?: string | null;
   stop_rules?: string[] | null;
   /** Rehab blocks only: server-frozen drill metadata. */
+  rehab_drill_id?: string | null;
+  injury_id?: string | null;
   is_loading?: boolean | null;
   dose?: { sets?: number | null; reps?: number | null; duration_seconds?: number | null } | null;
   drill_snapshot?: { rehab_stage?: string | null; function?: string | null; contraction_type?: string | null;

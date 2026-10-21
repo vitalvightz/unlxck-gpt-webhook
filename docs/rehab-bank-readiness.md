@@ -8,6 +8,13 @@ the [reachability report](rehab-bank-reachability.md),
 
 ## Changes
 
+- Today shows **Your rehab** near the top, with the prescribed exercise name
+  and a link straight to its existing exercise row and player. Held, stale and
+  completed work gets no start link. Completion keeps the existing controls.
+- Generation now carries owned injury history, restrictions and reported props
+  for every family. The old four-pilot condition dropped other injuries' context;
+  its four-prop list also dropped items such as a dowel or soft ball. Today and
+  generation now share the same exact reported-equipment reader.
 - Complete, compatible bank prescriptions can join any existing live profile.
   The old five-profile rollout list no longer controls publication.
   Existing prescription validation and injury-specific restrictions still apply.
@@ -87,9 +94,16 @@ the Today API tests use the real policy resolver.
 The old family-migration comparison explicitly composes policies with its dated
 bank, so later publication metadata cannot leak into the historical replay.
 
+The updated checks include 45 bank-readiness and selection tests, including
+generation matching Today for all five bank options and owned context across
+seven families. UI checks cover the direct link at 375px and 1280px, held work,
+the existing player and single completion. Before/after screenshots are saved
+outside the repo for review in the task response.
+
 Production athlete testing was not performed. Authenticated API tests use the
 existing authorised test fixtures, not a production account. Browser checks use
-the existing test harness. No UI layout changed, so screenshots are unchanged.
+the existing test harness. Browser plugin not available; the repository's
+Playwright workflow was used against the local production build.
 
 Known failures reproduced on clean Main at `7f4ef5d8`:
 
