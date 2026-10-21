@@ -32,3 +32,9 @@ def pre_restore_expansion_bytes(name):
     path = Path(__file__).resolve().parents[1] / 'data' / name
     raw = before_restore_expansion(name, json.loads(path.read_text(encoding='utf-8')))
     return (json.dumps(raw, indent=2, ensure_ascii=False) + '\n').encode('utf-8')
+
+
+def restore_expansion_added_ids():
+    """Identities the RESTORE expansion added; dated inventories predate them."""
+    path = Path(__file__).resolve().parents[1] / 'tests' / 'fixtures' / 'rehab_restore_expansion_history.json'
+    return set(json.loads(path.read_text(encoding='utf-8'))['added']['drills'])

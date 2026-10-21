@@ -181,7 +181,9 @@ def test_original_audit_hashes_ids_and_review_history_preserved(tmp_path):
     assert hashes.keys() <= bank.keys()
     family_ids = {row["drill_id"] for row in audit}
     assert {identity for identity in family_ids if content_hash(bank[identity]) != hashes[identity]} == REPAIRED
-    current_family = {d["id"] for g in get_rehab_bank() if g["type"] == "contusion" for d in g["drills"]}
+    from tests.rehab_inventory_history import restore_expansion_added_ids
+    current_family = {d["id"] for g in get_rehab_bank() if g["type"] == "contusion"
+                      for d in g["drills"]} - restore_expansion_added_ids()
     assert current_family - hashes.keys() == ({f"{r}_contusion_recovery_support" for r in REGIONS}
         | {"hand_contusion_reviewed_restore", "fingers_contusion_reviewed_restore"})
     ledger = {r["drill_id"]: r for r in historical_ledger}

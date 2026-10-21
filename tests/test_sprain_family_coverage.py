@@ -191,8 +191,9 @@ def test_existing_ankle_bundle_and_new_wrist_prescription_are_two_allocations():
 def test_profiles_preserve_other_inventory_and_require_episode_selection(region):
     before = json.loads((ROOT / "tests/fixtures/rehab_bank_before_nonspecific_hashes.json").read_text())
     originals = {identity for identity in before if identity.startswith(f"{region}_pain_")}
-    current = {d["id"] for g in get_rehab_bank() if g["type"] == "pain" and g["location"] == region for d in g["drills"]}
-    from tests.rehab_inventory_history import inventory_with_history
+    from tests.rehab_inventory_history import inventory_with_history, restore_expansion_added_ids
+    current = {d["id"] for g in get_rehab_bank() if g["type"] == "pain" and g["location"] == region
+               for d in g["drills"]} - restore_expansion_added_ids()
     historical_bank, _ = inventory_with_history()
     preserved = {d['id'] for g in historical_bank if g['type'] == 'pain' and g['location'] == region for d in g['drills']}
     assert originals and originals <= preserved
