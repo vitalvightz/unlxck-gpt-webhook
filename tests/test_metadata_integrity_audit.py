@@ -235,6 +235,27 @@ def test_provenance_compatibility_does_not_allow_other_external_contract_changes
             pytest.fail("Only the exact additive provenance field is compatible")
 
 
+def test_rehab_permission_replay_preserves_original_and_rejects_other_clearance_changes(monkeypatch):
+    from pathlib import Path
+
+    relative = "api/contracts/clinician_clearance.py"
+    target = audit.ROOT / relative
+    original_read = Path.read_bytes
+    expected = json.loads(audit.BASELINE.read_bytes())["production_files"][relative]
+    assert audit.source_hash(audit.original_equipment_source(relative)) == expected
+
+    def altered(path):
+        data = original_read(path)
+        if path == target:
+            return data.replace(b'bool(injury.get("episode_id"))', b'True', 1)
+        return data
+
+    monkeypatch.setattr(Path, "read_bytes", altered)
+    with pytest.raises(ValueError, match="Historical source drift: api/contracts/clinician_clearance.py"):
+        with audit.historical_sources():
+            pytest.fail("Only the exact shared permission reader revision is compatible")
+
+
 def test_tampered_historical_receipt_is_rejected(monkeypatch):
     receipt_bytes = (audit.ROOT / "tools/metadata_integrity_original_sources.json").read_bytes()
     receipts = json.loads(receipt_bytes)

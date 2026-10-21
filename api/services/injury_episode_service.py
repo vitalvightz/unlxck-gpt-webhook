@@ -131,8 +131,9 @@ def apply_episode_observations(injury: dict, observations: list[dict], *, as_of:
     def timestamp(value):
         return datetime.fromisoformat(str(value).replace("Z", "+00:00"))
     last_setback = max((timestamp(value) for value in setbacks if value), default=None)
+    # Preserve the existing clearance projection for training and multi-injury
+    # aggregation. Rehab entry validates the report timestamp independently.
     clearances = [e for e in observations if e.get("event_type") == "clinician_clearance_report"
-                  and instant(e.get("created_at")) and instant(e["created_at"]) <= context.as_of
                   and (last_setback is None or timestamp(e["created_at"]) > last_setback)]
     if clearances:
         latest = max(clearances, key=lambda e: (timestamp(e["created_at"]), str(e.get("id") or "")))

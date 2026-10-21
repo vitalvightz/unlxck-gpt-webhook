@@ -87,6 +87,67 @@ def test_permission_entry_fails_closed_without_current_applicable_authority(monk
     assert j.decision()["stage"] != "load"
 
 
+@pytest.mark.parametrize("pilot", PILOTS, ids=lambda p: p[0])
+@pytest.mark.parametrize("restriction", ["unknown_location", "unsupported_location", "medical", "restriction", "severity", "withdrawn"])
+def test_fresh_permission_preserves_injury_eligibility_and_visible_holds(monkeypatch, pilot, restriction):
+    j = Journey(monkeypatch, pilot, initial_status="ongoing", edit_subtype=False)
+    load_id = next(p.drill_id for p in j.policy.prescriptions if p.stage == "load")
+    assert j.decision()["stage"] == "load"
+    if restriction in {"unknown_location", "unsupported_location"}:
+        marker, _ = pilot[3].split(":")
+        location = "unknown" if restriction == "unknown_location" else (
+            "insertional" if pilot[0] == "achilles_tendonitis" else "other")
+        j.report("ongoing", description=f"{pilot[2]} [{marker}:{location}]")
+    elif restriction in {"medical", "restriction"}:
+        j.store.injury_flags[j.athlete][0][f"{restriction}_hold"] = True
+    elif restriction == "severity":
+        j.report("ongoing", severity="severe")
+    else:
+        j.permission("not_cleared")
+    current = j.view()
+    decision = next(i for i in current.open_injuries if i["id"] == j.injury["id"])["rehab_decision"]
+    assert decision["stage"] != "load", decision
+    assert not current.live_prescription or all(
+        b.get("rehab_drill_id") != load_id for b in current.live_prescription["session"]["blocks"])
+    assert not j.store.rehab_exposures and not j.store.session_completions.get(j.athlete)
+
+
+@pytest.mark.parametrize("pilot,area,kind,held", [
+    (PILOTS[2], "Right calf", "strain", True),
+    (PILOTS[2], "Right wrist", "sprain", False),
+    (PILOTS[3], "Right wrist", "sprain", True),
+    (PILOTS[3], "Right shin", "contusion", False),
+], ids=["ankle-relevant", "ankle-unrelated", "shoulder-relevant", "shoulder-unrelated"])
+def test_fresh_permission_cannot_override_relevant_second_injury(monkeypatch, pilot, area, kind, held):
+    from api.services import today_service
+    from api.services.rehab_stage_snapshot import resolve_open_injury_rehab_context
+    from fightcamp.rehab_protocols import _episode_context, _reviewed_episode_option
+    from fightcamp.input_parsing import _apply_rehab_generation_context, _coerce_rehab_generation_context
+    j = Journey(monkeypatch, pilot, initial_status="ongoing", edit_subtype=False)
+    load_id = next(p.drill_id for p in j.policy.prescriptions if p.stage == "load")
+    assert j.decision()["stage"] == "load"
+    advice = deepcopy(j.store.injury_episode_events)
+    today_service.submit_today_injury_checkin(j.store, athlete_id=j.athlete, athlete_timezone="UTC", now=j.now,
+        payload={"injuries": [{"body_area": area, "description": kind, "severity": "mild", "status": "ongoing"}]})
+    current = j.view()
+    primary = next(i for i in current.open_injuries if i["id"] == j.injury["id"])
+    decision = primary["rehab_decision"]
+    assert decision["stage"] == ("restore" if held else "load"), decision
+    blocks = (current.live_prescription or {}).get("session", {}).get("blocks", [])
+    assert any(b.get("rehab_drill_id") == load_id for b in blocks) is (not held)
+    raw = next(c for c in resolve_open_injury_rehab_context(j.store, j.athlete).values()
+               if c["injury_id"] == j.injury["id"])
+    entry = dict(injury_type=pilot[2], severity=pilot[4], laterality="left")
+    _apply_rehab_generation_context(entry, _coerce_rehab_generation_context({"rehab_generation_context": raw}))
+    generated = _reviewed_episode_option(_episode_context(entry), j.policy.region, "GPP")
+    assert generated["decision"]["stage"] == decision["stage"]
+    assert generated["drill"]["id"] == decision["prescription"]["drill_id"]
+    assert current.effective_clinician_clearance["level"] == "rehab_only"
+    assert primary["clinician_clearance"]["rehabilitation_permission"]["level"] == "loading"
+    assert all(j.store.injury_episode_events[key] == event for key, event in advice.items())
+    assert not j.store.rehab_exposures and not j.store.session_completions.get(j.athlete)
+
+
 def test_shared_entry_uses_publication_not_per_pathway_flags():
     from api.contracts.rehab_progression import _permission_entry
     from fightcamp.rehab_clinical import load_clinical_policies
