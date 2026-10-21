@@ -3410,14 +3410,11 @@ def _build_today_command_view(
     equipment = intake.get("equipment") or ()
     if not isinstance(equipment, (list, tuple)):
         equipment = ()
-    if "stable_support" in (intake.get("equipment_access") or []):
-        equipment = [*equipment, "stable_support"]
-    if "table" in (intake.get("equipment_access") or []):
-        equipment = [*equipment, "table"]
-    if "chair" in (intake.get("equipment_access") or []):
-        equipment = [*equipment, "chair"]
-    if "wall" in (intake.get("equipment_access") or []):
-        equipment = [*equipment, "wall"]
+    reported_equipment = intake.get("equipment_access") or []
+    if isinstance(reported_equipment, (list, tuple)):
+        # Preserve exact reported bank equipment, not a hard-coded list of four
+        # starter props. A generic gym declaration never implies a missing prop.
+        equipment = list(dict.fromkeys([*equipment, *(e for e in reported_equipment if isinstance(e, str))]))
     # Today logs the entire training day. Reconcile every scheduled block,
     # preserving the primary completion identity and checking sibling demands.
     training_session = _entry_mapping_for_readiness(today_session_entry) if today_session_entry else None

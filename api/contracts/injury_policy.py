@@ -221,18 +221,32 @@ def resolve_injury_policy(
     # Canonical biceps must still match reviewed bank metadata spelled bicep.
     selection_injury = {**injury, "body_region": region, "injury_type": kind, "severity": severity,
                         "body_region_aliases": get_rehab_location_candidates(region)}
-    eligible, _ = filter_rehab_candidates(injury=selection_injury,
+    eligible, rejections = filter_rehab_candidates(injury=selection_injury,
         rehab_stage=str(stage), candidates=candidates, available_equipment=equipment,
         exposures=selection_exposures, activated_stages=policy.live_stages)
     bundle_ids = policy.stage_bundles.get(str(stage))
     if bundle_ids:
         eligible_ids = {d["id"] for d in eligible}
-        # A reviewed combination is atomic: never fill gaps with alternatives.
+        # A combination remains atomic. A complete standalone routine can be
+        # selected instead when the entire bundle is unavailable; never present
+        # a partial bundle or combine its doses with an alternative.
         if not set(bundle_ids) <= eligible_ids:
-            result["reason_codes"] = ["reviewed_bundle_member_ineligible"]
-            return result
-        candidates = [d for d in eligible if d["id"] in bundle_ids]
-    elif eligible:
+            missing = set(bundle_ids) - eligible_ids
+            equipment_only = {r.drill_id for r in rejections
+                              if set(r.reason_codes) == {"REJECT_EQUIPMENT_UNAVAILABLE"}}
+            # Exclusions, adverse exposures and clinical ineligibility must not
+            # be bypassed by substituting another routine.
+            if missing - equipment_only or set(bundle_ids) & set(excluded_drill_ids):
+                result["reason_codes"] = ["reviewed_bundle_member_ineligible"]
+                return result
+            eligible = [d for d in eligible if d["id"] not in bundle_ids and d.get("rehab_stage") == stage]
+            if not eligible:
+                result["reason_codes"] = ["reviewed_bundle_member_ineligible"]
+                return result
+            bundle_ids = None
+        else:
+            candidates = [d for d in eligible if d["id"] in bundle_ids]
+    if not bundle_ids and eligible:
         priority = max(prescriptions[d["id"]].priority for d in eligible)
         candidates = [d for d in eligible if prescriptions[d["id"]].priority == priority]
     selected = select_rehab_candidate(

@@ -169,6 +169,8 @@ def test_policy_revision_changes_entry_semantics_only():
     from fightcamp.rehab_clinical import content_hash
     revision = json.loads(Path("tools/rehab_permission_entry_revision.json").read_text())
     current = json.loads(Path("data/rehab_pathways.json").read_text())
+    from tools.rehab_metadata_review_lib import before_bank_publication
+    current = before_bank_publication(current, "profiles")
     for p in current["profiles"]:
         if p["policy_id"] not in revision["previous_profiles"]:
             continue

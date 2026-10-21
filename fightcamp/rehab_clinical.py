@@ -187,7 +187,7 @@ class ClinicalPolicy(BaseModel):
 PATHWAYS_PATH = DATA_DIR / "rehab_pathways.json"
 
 
-def compose_policy(catalog: PathwayCatalog, profile: dict) -> ClinicalPolicy:
+def compose_policy(catalog: PathwayCatalog, profile: dict, *, bank: list[dict] | None = None) -> ClinicalPolicy:
     """Compose one live policy from its family and regional profile."""
     profile = dict(profile)
     family = catalog.family(str(profile.get("pathway_family") or ""))
@@ -197,7 +197,13 @@ def compose_policy(catalog: PathwayCatalog, profile: dict) -> ClinicalPolicy:
         raise ValueError("profiles declare transition_overrides; families own transitions")
     overrides = {key: TransitionOverride.model_validate(value)
                  for key, value in (profile.pop("transition_overrides", None) or {}).items()}
-    return ClinicalPolicy.model_validate({**profile, "transitions": compose_transitions(catalog, family, overrides)})
+    policy = ClinicalPolicy.model_validate({**profile, "transitions": compose_transitions(catalog, family, overrides)})
+    if policy.policy_id in catalog.bank_publication_profiles:
+        from .rehab_publication import expand_bank_prescriptions
+        if bank is None:
+            bank = json.loads((DATA_DIR / "rehab_bank.json").read_text(encoding="utf-8"))
+        policy = expand_bank_prescriptions(policy, bank)
+    return policy
 
 
 def load_pathway_catalog(path: Path | None = None) -> PathwayCatalog:
@@ -205,7 +211,7 @@ def load_pathway_catalog(path: Path | None = None) -> PathwayCatalog:
     return PathwayCatalog.model_validate(raw)
 
 
-def load_clinical_policies(path: Path | None = None) -> tuple[ClinicalPolicy, ...]:
+def load_clinical_policies(path: Path | None = None, *, bank: list[dict] | None = None) -> tuple[ClinicalPolicy, ...]:
     raw = json.loads((path or PATHWAYS_PATH).read_text(encoding="utf-8"))
     if isinstance(raw, dict) and raw.get("schema_version") == 2 and "policies" in raw:
         # Read-only compatibility for the pre-pathway policy file format. It is
@@ -216,7 +222,9 @@ def load_clinical_policies(path: Path | None = None) -> tuple[ClinicalPolicy, ..
             raise ValueError("legacy policy files cannot declare transitions or higher live stages")
     elif isinstance(raw, dict) and raw.get("schema_version") == 1 and "families" in raw:
         catalog = PathwayCatalog.model_validate(raw)
-        policies = tuple(compose_policy(catalog, profile) for profile in catalog.profiles)
+        if bank is None and catalog.bank_publication_profiles:
+            bank = json.loads((DATA_DIR / "rehab_bank.json").read_text(encoding="utf-8"))
+        policies = tuple(compose_policy(catalog, profile, bank=bank) for profile in catalog.profiles)
     else:
         raise ValueError("unsupported clinical policy schema")
     keys = [(p.region, p.injury_type) for p in policies]
@@ -257,7 +265,8 @@ def validate_clinical_bank(policies: tuple[ClinicalPolicy, ...], bank: list[dict
             if content_hash(drill) != prescription.bank_hash:
                 errors.append(f"{policy.policy_id}: stale bank review: {prescription.drill_id}")
             if (canonicalize_location_from_registry(group.get("location")) != canonicalize_location_from_registry(policy.region)
-                    or group.get("type") not in {policy.injury_type, "unspecified"}):
+                    or (group.get("type") not in {policy.injury_type, "unspecified"}
+                        and policy.injury_type not in drill.get("compatible_injury_types", []))):
                 errors.append(f"{policy.policy_id}: incompatible drill region or injury type")
             if policy.status == "active":
                 for field in ("load", "impact", "velocity", "equipment", "function", "target_tissues"):

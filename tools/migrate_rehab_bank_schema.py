@@ -32,6 +32,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+from copy import deepcopy
 from pathlib import Path
 from typing import Any
 
@@ -82,6 +83,10 @@ def migrate_drill(
 
     for field in MSK_DRILL_FIELDS:
         migrated[field] = drill.get(field)
+    from fightcamp.rehab_schema import BANK_PRESCRIPTION_FIELDS
+    for field in BANK_PRESCRIPTION_FIELDS:
+        if field in drill:
+            migrated[field] = deepcopy(drill[field])
     # A bank group already owns its canonical anatomical region. Carrying that
     # identity onto the drill is defensible; all more specific clinical fields
     # stay explicitly unknown until reviewed.

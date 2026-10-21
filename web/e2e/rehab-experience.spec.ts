@@ -2,12 +2,14 @@ import { expect, test, type Page } from "@playwright/test";
 import { mkdirSync } from "node:fs";
 import path from "node:path";
 import fixtures from "./fixtures/rehab-today.json";
+import bankFixtures from "./fixtures/rehab-bank-publication.json";
 import { isolateFromNetwork } from "./support";
 
 // Synthetic payloads exported from GET /api/today, not hand-authored eligibility.
-async function setup(page: Page, baseURL: string, name: "chest" | "achilles", videoId?: string) {
+const cases = { chest: fixtures.chest, achilles: fixtures.achilles, ...bankFixtures };
+async function setup(page: Page, baseURL: string, name: keyof typeof cases, videoId?: string) {
   await isolateFromNetwork(page, baseURL);
-  const { view, profile: sourceProfile } = structuredClone(fixtures[name]);
+  const { view, profile: sourceProfile } = structuredClone(cases[name]);
   const profile = { ...sourceProfile, profile: { ...sourceProfile.profile, private_trial_ack_at: "2026-10-05T12:00:00Z" } };
   const now = new Date("2026-10-05T12:05:00Z");
   await page.clock.setFixedTime(now);
@@ -65,7 +67,8 @@ for (const width of [375, 1280]) {
     const detail = page.getByRole("dialog");
     await expect(detail).toContainText("Go at your own pace");
     await expect(detail).toContainText("No equipment needed");
-    await expect(detail).toContainText("Demo not assigned");
+    await expect(detail).toContainText("How to perform");
+    await expect(detail).not.toContainText("Demo not assigned");
     await expect(detail.locator("iframe, .sp-block-stats")).toHaveCount(0);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     await shot(page, `after-chest-exercise-${width}.png`);
@@ -129,9 +132,68 @@ test("an invalid demo leaves the actual Today exercise usable", async ({ page, b
   await page.setViewportSize({ width: 320, height: 844 });
   const { block, errors } = await setup(page, baseURL!, "achilles", "invalid");
   await page.getByRole("button", { name: block.display_name, exact: false }).first().click();
-  await expect(page.getByRole("dialog")).toContainText("Demo not assigned");
+  await expect(page.getByRole("dialog")).not.toContainText("Demo not assigned");
+  await expect(page.getByRole("dialog")).toContainText("How to perform");
   await expect(page.getByRole("dialog").locator("iframe, .ex-demo")).toHaveCount(0);
-  await expect(page.getByRole("dialog")).toContainText("1 × 10");
+  await expect(page.getByRole("dialog").locator(".rehab-guide-dose")).toContainText("Reps10");
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   expect(errors).toEqual([]);
 });
+
+for (const name of Object.keys(bankFixtures) as (keyof typeof bankFixtures)[]) {
+  test(`${name}: bank option uses existing exercise UI and one completion at 320px`, async ({ page, baseURL }) => {
+    await page.setViewportSize({ width: 320, height: 844 });
+    const { block, view, writes, errors } = await setup(page, baseURL!, name);
+    await page.getByRole("button", { name: block.display_name, exact: false }).first().click();
+    const detail = page.getByRole("dialog");
+    await expect(detail).toContainText(block.display_name);
+    await expect(detail).not.toContainText("Demo not assigned");
+    await expect(detail.getByRole("region", { name: "How to perform" }).locator("ol li").first()).toBeVisible();
+    if (name === "achilles_tendonitis") {
+      await expect(detail).toContainText("10");
+      await expect(detail).toContainText("Bodyweight only");
+      await expect(detail).toContainText("10 seconds");
+    } else {
+      await expect(detail).toContainText("Self-paced");
+      await expect(detail.locator(".sp-block-stats")).toHaveCount(0);
+    }
+    await expect(detail).toContainText(/Stop if|Stop for/);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    await detail.evaluate(element => { element.scrollTop = 0; });
+    await shot(page, `bank-${name}-320.png`);
+    await page.keyboard.press("Escape");
+    await page.getByRole("group", { name: "Did you complete your rehab?" }).getByRole("button", { name: "Completed", exact: true }).click();
+    await expect.poll(() => writes.length).toBe(1);
+    expect(writes[0]).toMatchObject({ status: "done", rehab_tracking: "injury_checkin", rehab_performance: "done_as_shown",
+      prescription_revision: view.live_prescription.revision, session_id: view.live_prescription.session.session_id });
+    expect(errors).toEqual([]);
+  });
+}
+
+for (const viewport of [{ width: 375, height: 844 }, { width: 668, height: 488 }, { width: 1280, height: 900 }]) {
+  test(`text guide keeps prescription before steps and all limits accessible at ${viewport.width}px`, async ({ page, baseURL }) => {
+    await page.setViewportSize(viewport);
+    const { block, errors } = await setup(page, baseURL!, "achilles_tendonitis");
+    await page.getByRole("button", { name: block.display_name, exact: false }).first().click();
+    const detail = page.getByRole("dialog");
+    await expect(detail.locator(".rehab-guide-dose")).toHaveText(["Hold10sReps10FrequencyDaily"]);
+    await expect(detail.locator(".rehab-guide-how ol li")).toHaveCount(3);
+    expect(await detail.evaluate(element => {
+      const dose = element.querySelector(".rehab-guide-dose")!;
+      const steps = element.querySelector(".rehab-guide-how")!;
+      const safety = element.querySelector(".rehab-guide-safety")!;
+      return Boolean(dose.compareDocumentPosition(steps) & Node.DOCUMENT_POSITION_FOLLOWING)
+        && Boolean(steps.compareDocumentPosition(safety) & Node.DOCUMENT_POSITION_FOLLOWING);
+    })).toBe(true);
+    await expect(detail).not.toContainText(/Demo not assigned|Full prescription|Cue/);
+    await shot(page, `guide-achilles-${viewport.width}.png`);
+    const lastLimit = detail.locator(".rehab-guide-safety li").last();
+    await lastLimit.scrollIntoViewIfNeeded();
+    await expect(lastLimit).toBeVisible();
+    await expect(detail).toContainText("No added resistance, step, heel drop, forced stretch or automatic increase.");
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    await page.keyboard.press("Escape");
+    await expect(detail).toHaveCount(0);
+    expect(errors).toEqual([]);
+  });
+}

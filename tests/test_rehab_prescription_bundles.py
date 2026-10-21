@@ -41,7 +41,11 @@ def fixture(bundle=True):
                   side="left", injury_type="sprain", severity="mild", status="monitoring",
                   latest_reported_status="improving", rehab_stage="restore",
                   created_at="2026-09-30T00:00:00Z", updated_at="2026-09-30T00:00:00Z")
-    decision = resolve_injury_policy(injury, policies=(policy,), bank=get_rehab_bank())
+    bank = get_rehab_bank()
+    if not bundle:
+        from tools.rehab_metadata_review_lib import before_bank_publication
+        bank = before_bank_publication(bank, "drills")
+    decision = resolve_injury_policy(injury, policies=(policy,), bank=bank)
     return policy, injury, decision
 
 
@@ -224,7 +228,7 @@ def test_today_daily_reservations_count_a_started_bundle_once(monkeypatch):
     monkeypatch.setattr(today_service, "load_clinical_policies", lambda: (policy,))
     rows = today_service._with_injury_policy(
         [injury, other], store=store, athlete_id=ATHLETE, training_day=DAY,
-        readiness_decision="train_as_planned", training_session={"session_type": "strength"})
+        readiness_decision="train_as_planned", equipment=["stable_support"], training_session={"session_type": "strength"})
     states = {row["id"]: row["rehab_decision"]["schedule"]["state"] for row in rows}
     assert states == {injury["id"]: "already_completed", other["id"]: "due"}
 
@@ -251,7 +255,7 @@ def test_live_ankle_restore_bundle_keeps_reviewed_bank_content_and_self_paced_do
     bank = get_rehab_bank()
     decision = resolve_injury_policy({**injury, "severity": severity}, policies=load_clinical_policies(),
                                     bank=bank, phase=phase)
-    assert policy.version == 6 and policy.stage_bundles == {"restore": IDS}
+    assert policy.version == 7 and policy.stage_bundles == {"restore": IDS}
     assert policy.live_stages == ["calm", "restore", "load"]
     assert {t.to_stage for t in policy.transitions if t.promotable} == {"load"}
     assert policy.pathway_family == "ligament_sprain_or_instability"
@@ -288,7 +292,8 @@ def test_today_uses_live_bundle_only_for_injury_specific_restore_evidence(report
     injury["clinician_clearance"] = dict(episode_id=injury["episode_id"], scopes=["rehab", "training", "contact"])
     store = FakeStore()
     store.injury_flags[ATHLETE] = [injury]
-    store.plans[PLAN] = dict(id=PLAN, athlete_id=ATHLETE, status="ready", created_at="2026-09-01T00:00:00Z",
+    store.intakes[ATHLETE] = [dict(id=str(uuid4()), athlete_id=ATHLETE, equipment_access=["stable_support"])]
+    store.plans[PLAN] = dict(id=PLAN, athlete_id=ATHLETE, intake_id=store.intakes[ATHLETE][0]["id"], status="ready", created_at="2026-09-01T00:00:00Z",
         structured_plan={"weeks": [{"phase_label": "TAPER", "days": [{"date": DAY, "day_type": "rest", "sessions": []}]}]})
     store.set_active_plan_id(ATHLETE, PLAN)
     store.upsert_today_checkin(ATHLETE, dict(plan_id=PLAN, training_day=DAY,
@@ -298,7 +303,12 @@ def test_today_uses_live_bundle_only_for_injury_specific_restore_evidence(report
     decision = view.open_injuries[0]["rehab_decision"]
     assert decision["stage"] == stage and decision["schedule"]["state"] == "due"
     live = view.live_prescription
-    assert live and not live["safety_hold"]
+    assert live and live["safety_hold"] is (reported == "worse")
+    if reported == "worse":
+        # Main already retains Today's stop guidance even though the CALM
+        # movement remains visible. Publication must never bypass that hold.
+        assert decision["loading_hold"]
+        assert live["safety_hold_reason"] == "Follow today's stop guidance before training."
     assert [b["rehab_drill_id"] for b in live["session"]["blocks"]] == ids
     if stage == "calm":
         assert "drills" not in decision["prescription"]
@@ -349,7 +359,7 @@ def test_today_does_not_split_a_live_bundle_to_bypass_training_or_readiness_gate
         ({"training_session": {"blocks": [dict(block_type="strength", mechanical_load_regions=["ankle"], load="high")]}}, "deferred"),
     ]:
         rows = today_service._with_injury_policy([injury], store=FakeStore(), athlete_id=ATHLETE,
-            training_day=DAY, **context)
+            training_day=DAY, equipment=["stable_support"], **context)
         decision = rows[0]["rehab_decision"]
         assert decision["schedule"]["state"] == state
         assert [d["drill_id"] for d in decision["prescription"]["drills"]] == IDS
@@ -373,7 +383,8 @@ def test_pilot_seed_reproduces_historical_baseline_without_changing_bank(tmp_pat
     # Subtract the historical activation from a fixture, never the shared live
     # cache consumed by later pathway-safety and completion assertions.
     bank = deepcopy(get_rehab_bank())
-    from tools.rehab_metadata_review_lib import before_achilles_load_activation
+    from tools.rehab_metadata_review_lib import before_achilles_load_activation, before_bank_publication
+    bank = before_bank_publication(bank, "drills")
     # This seed owns the original v4 CALM/RESTORE baseline, not the later LOAD
     # activation. Subtract only the exact pinned addition before replaying it.
     from fightcamp.rehab_clinical import PATHWAYS_PATH

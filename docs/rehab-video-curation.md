@@ -2,7 +2,7 @@
 
 Today now resolves approved exercise media for its current rehab blocks through the existing exercise_media service and ExerciseMediaProvider. The canonical rehab drill ID is the video identity; wording changes never select another movement. Media remains presentation metadata outside the prescription revision and frozen snapshot. Missing/unavailable clips leave the prescribed cues usable.
 
-`rehab-video-curation.csv` contains 42 active physical rehab identities and their exact prescription instructions. It deliberately excludes dormant bank candidates and CALM activity-modification guidance. Every URL is blank: these rows are preparation, not video approval. There are no public data writes, migrations, new video player, or new video table.
+`rehab-video-curation.csv` contains 46 published physical rehab identities and their exact prescription instructions, including the five pilot additions (the shoulder wall slide already had a row). It excludes dormant bank candidates and CALM activity-modification guidance. Every URL is blank: these rows are preparation, not video approval. There are no public data writes, migrations, new video player, or new video table.
 
 ## Curation workflow
 

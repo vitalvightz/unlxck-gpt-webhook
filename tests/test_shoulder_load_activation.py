@@ -208,6 +208,8 @@ def test_other_profiles_and_shoulder_baselines_unchanged():
     assert {p["policy_id"]: content_hash(p) for p in current["profiles"] if p["policy_id"] != "shoulder_tendonitis"} == manifest["unchanged_profiles_sha256"]
     bank = json.loads(open("data/rehab_bank.json", encoding="utf-8").read())
     ledger = json.loads(open("data/rehab_metadata_review.json", encoding="utf-8").read())
+    from tools.rehab_metadata_review_lib import before_bank_publication
+    bank, ledger = before_bank_publication(bank, "drills"), before_bank_publication(ledger, "reviews")
     assert content_hash({d["id"]: content_hash(d) for g in bank for d in g["drills"] if d["id"] != OPTION.drill_id}) == manifest["bank_before_sha256"]
     assert content_hash({x["drill_id"]: content_hash(x) for x in ledger if x["drill_id"] != OPTION.drill_id}) == manifest["ledger_before_sha256"]
     before = manifest["historical_profile"]

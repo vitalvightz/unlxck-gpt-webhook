@@ -8,6 +8,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from fightcamp.rehab_clinical import (  # noqa: E402
     load_clinical_policies, load_pathway_catalog, validate_clinical_bank, validate_pathway_catalog,
 )
+from fightcamp.rehab_publication import bank_prescription  # noqa: E402
 
 
 def main() -> int:
@@ -16,6 +17,11 @@ def main() -> int:
         bank = json.loads((Path(__file__).resolve().parents[1] / "data" / "rehab_bank.json").read_text(encoding="utf-8"))
         catalog = load_pathway_catalog()
         errors = validate_pathway_catalog(catalog) + validate_clinical_bank(policies, bank)
+        for group in bank:
+            for drill in group.get("drills", []):
+                if "prescription" in drill or "compatible_injury_types" in drill:
+                    _, reasons = bank_prescription(group, drill)
+                    errors.extend(f"{drill.get('id')}: {reason}" for reason in reasons)
     except (ValueError, KeyError, OSError) as exc:
         errors = [str(exc)]
     for error in errors:

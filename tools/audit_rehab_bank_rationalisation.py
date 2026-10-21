@@ -440,7 +440,7 @@ def classify(row, exact_duplicate_ids, checkpoints=CAPTURED_FUNCTIONAL_CHECKPOIN
 def build_audit(bank, ledger, pathways, *, captured_checkpoints=CAPTURED_FUNCTIONAL_CHECKPOINTS, captured_assessment_inputs=None):
     """Return report + duplicate clusters, without mutating any input object."""
     catalog = PathwayCatalog.model_validate(pathways)
-    policies = tuple(compose_policy(catalog, p) for p in catalog.profiles)
+    policies = tuple(compose_policy(catalog, p, bank=bank) for p in catalog.profiles)
     errors = validate_pathway_catalog(catalog) + validate_clinical_bank(policies, bank)
     active = [p for p in policies if p.status == "active" and p.activation == "live"]
     review = {}

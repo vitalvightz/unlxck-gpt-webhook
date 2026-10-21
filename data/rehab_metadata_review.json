@@ -122,7 +122,9 @@
     "proposed": {
       "rehab_stage": "restore",
       "function": "control",
-      "equipment": [],
+      "equipment": [
+        "stable_support"
+      ],
       "impact": "none",
       "load": "low",
       "velocity": "low",
@@ -153,7 +155,9 @@
     "proposed": {
       "rehab_stage": "restore",
       "function": "tendon_loading",
-      "equipment": [],
+      "equipment": [
+        "stable_support"
+      ],
       "impact": "none",
       "load": "low",
       "velocity": "low",
@@ -27708,32 +27712,43 @@
   },
   {
     "drill_id": "achilles_unspecified_isometric_toe_presses_against_wall",
-    "source_hash": "0c5e6895245d3a5b6c149644757491fabcff1eb731c0c313863e400586626f53",
+    "source_hash": "282e8a4c10d17880b5b9e464e8465a322d7ed120b15147717d6dfa3cf9e89065",
     "location": "achilles",
     "injury_type": "unspecified",
-    "name": "Isometric Toe Presses Against Wall",
-    "notes": "TAPER: 5s holds to prime neural drive pre-competition",
+    "name": "Seated Achilles toe press against wall",
+    "notes": "Sit on the floor with your legs comfortably extended and your feet against a wall, supporting yourself with your arms. Gently press your toes into the wall without moving your ankle. Hold for 10 seconds, relax, and repeat 10 times, once daily. Use comfortable low effort; no pushing through pain, step, deep heel drop, added weight or forceful stretching. Stop if symptoms worsen during or after the work. Follow clinician restrictions.",
     "movement_archetype": "isometric",
     "proposed": {
-      "rehab_stage": null,
-      "function": "isometric_analgesia",
-      "equipment": null,
+      "rehab_stage": "load",
+      "function": "tendon_loading",
+      "equipment": [
+        "wall"
+      ],
       "impact": "none",
-      "load": null,
+      "load": "low",
       "velocity": "low",
       "target_regions": [
         "achilles"
       ],
-      "laterality_applicability": null,
-      "target_tissues": null,
+      "laterality_applicability": "side_specific",
+      "target_tissues": [
+        "Achilles tendon and calf muscle-tendon unit"
+      ],
       "contraction_type": "isometric",
       "sport_specificity": "general_rehab",
       "contact_level": "none",
-      "evidence_notes": null
+      "evidence_notes": "Sources: https://www.dynamichealth.nhs.uk/help-and-advice/foot-or-ankle-pain/ankle-tendon-pain/. Fixed conservative movement only. No change to stage-entry criteria or permission, and no inference of sport readiness. Numeric guidance is source-backed where present; otherwise explicitly self-paced. No automatic resistance, range or speed progression."
     },
     "flags": [],
-    "review_state": "needs_review",
-    "review_version": 1
+    "review_state": "reviewed",
+    "review_version": 1,
+    "source_history": [
+      {
+        "source_hash": "0c5e6895245d3a5b6c149644757491fabcff1eb731c0c313863e400586626f53",
+        "name": "Isometric Toe Presses Against Wall",
+        "notes": "TAPER: 5s holds to prime neural drive pre-competition"
+      }
+    ]
   },
   {
     "drill_id": "achilles_unspecified_single_leg_heel_raise_with_tibial_rotation",
@@ -28147,32 +28162,43 @@
   },
   {
     "drill_id": "ankle_unspecified_ankle_cars_controlled_articular_rotations",
-    "source_hash": "3cfa0e1d15f186af67ecf9be218b676aea5ebccf5156887a0d31d5822fb609b8",
+    "source_hash": "ccc7cb335211f4d24ca8498915cc8dc652ed7190c8d2a3a8f689f8f71165ee26",
     "location": "ankle",
     "injury_type": "unspecified",
-    "name": "Ankle CARs (Controlled Articular Rotations)",
-    "notes": "GPP: Maintain full ROM → TAPER: Daily mobility primer",
-    "movement_archetype": "balance_control",
+    "name": "Seated comfortable ankle circles",
+    "notes": "Sit with your leg supported and foot free to move. Slowly draw a small comfortable circle with your foot in each direction, keeping the knee still. Use a pain-free range at your own pace; no fixed repetition count or duration is required. No band, standing balance, forced full range, added load or faster movement. Stop if symptoms worsen during or after the movement; follow clinician restrictions.",
+    "movement_archetype": "mobility_rom",
     "proposed": {
-      "rehab_stage": null,
-      "function": "activation",
-      "equipment": null,
+      "rehab_stage": "restore",
+      "function": "mobility",
+      "equipment": [
+        "chair"
+      ],
       "impact": "none",
-      "load": null,
+      "load": "minimal",
       "velocity": "low",
       "target_regions": [
         "ankle"
       ],
-      "laterality_applicability": null,
-      "target_tissues": null,
-      "contraction_type": null,
+      "laterality_applicability": "side_specific",
+      "target_tissues": [
+        "ankle joint and surrounding muscles"
+      ],
+      "contraction_type": "mixed",
       "sport_specificity": "general_rehab",
       "contact_level": "none",
-      "evidence_notes": null
+      "evidence_notes": "Sources: https://msk-bexley.nhs.uk/conditions/foot-and-ankle-pain/ankle-sprain. Fixed conservative movement only. No change to stage-entry criteria or permission, and no inference of sport readiness. Numeric guidance is source-backed where present; otherwise explicitly self-paced. No automatic resistance, range or speed progression."
     },
     "flags": [],
-    "review_state": "needs_review",
-    "review_version": 1
+    "review_state": "reviewed",
+    "review_version": 1,
+    "source_history": [
+      {
+        "source_hash": "3cfa0e1d15f186af67ecf9be218b676aea5ebccf5156887a0d31d5822fb609b8",
+        "name": "Ankle CARs (Controlled Articular Rotations)",
+        "notes": "GPP: Maintain full ROM → TAPER: Daily mobility primer"
+      }
+    ]
   },
   {
     "drill_id": "ankle_unspecified_low_load_calf_pump_bfr_30_15_15_15",
@@ -31328,36 +31354,47 @@
   },
   {
     "drill_id": "elbow_unspecified_pronation_supination_with_dowel",
-    "source_hash": "10f2766da2b36738a0500b00e8f6a0fe71d72875bd594cc11c8ed059d2ae0749",
+    "source_hash": "61547f06eec31ce1c5ec2a73f4e22bc89cca4caf5a44e141be6c738f8f87ce9f",
     "location": "elbow",
     "injury_type": "unspecified",
-    "name": "Pronation/Supination with Dowel",
-    "notes": "GPP: Restore rotational ROM → SPP: Add resistance band",
-    "movement_archetype": "banded_resistance",
+    "name": "Gentle forearm rotation with supported dowel",
+    "notes": "Sit with your elbow bent at a right angle beside your body. Hold a lightweight dowel at its centre with a relaxed grip and support its weight with your other hand. Slowly turn the affected palm upwards and downwards through a small comfortable range. Work pain-free at your own pace; no set count or hold is required. Do not use the dowel as a lever, add a band or weights, force the range, grip hard or twist quickly. Stop for increasing pain, swelling, tingling or loss of function; follow clinician restrictions.",
+    "movement_archetype": "mobility_rom",
     "proposed": {
-      "rehab_stage": null,
+      "rehab_stage": "restore",
       "function": "mobility",
-      "equipment": null,
-      "impact": null,
-      "load": null,
-      "velocity": null,
+      "equipment": [
+        "dowel"
+      ],
+      "impact": "none",
+      "load": "minimal",
+      "velocity": "low",
       "target_regions": [
         "elbow"
       ],
-      "laterality_applicability": null,
-      "target_tissues": null,
-      "contraction_type": null,
+      "laterality_applicability": "side_specific",
+      "target_tissues": [
+        "elbow joint and forearm rotation muscles"
+      ],
+      "contraction_type": "mixed",
       "sport_specificity": "general_rehab",
       "contact_level": "none",
-      "evidence_notes": null
+      "evidence_notes": "Sources: https://www.newcastle-hospitals.nhs.uk/services/newcastle-occupational-health-service/information-for-staff/physiotherapy/self-help-leaflets/tennis-elbow/, https://www.cuh.nhs.uk/patient-information/elbow-range-of-movement-exercises/. Fixed conservative movement only. No change to stage-entry criteria or permission, and no inference of sport readiness. Numeric guidance is source-backed where present; otherwise explicitly self-paced. No automatic resistance, range or speed progression."
     },
     "flags": [
       "VARIABLE_DEMAND_PROGRESSION",
       "LOAD_PROGRESSION_IN_NOTES",
       "POSSIBLE_DRILL_SPLIT"
     ],
-    "review_state": "needs_review",
-    "review_version": 1
+    "review_state": "reviewed",
+    "review_version": 1,
+    "source_history": [
+      {
+        "source_hash": "10f2766da2b36738a0500b00e8f6a0fe71d72875bd594cc11c8ed059d2ae0749",
+        "name": "Pronation/Supination with Dowel",
+        "notes": "GPP: Restore rotational ROM → SPP: Add resistance band"
+      }
+    ]
   },
   {
     "drill_id": "elbow_unspecified_isometric_wrist_flexion_against_wall",
@@ -34715,32 +34752,43 @@
   },
   {
     "drill_id": "groin_unspecified_isometric_adductor_squeeze_ball_between_knees",
-    "source_hash": "8db056dc288f6531fb78d4731b422afa2d4bec82b20faff37a01e575e91ae301",
+    "source_hash": "ba3422d51dc99633fbc2cdd5ae6e840b983d176b2883649d4a2706fa05ce628c",
     "location": "groin",
     "injury_type": "unspecified",
-    "name": "Isometric Adductor Squeeze (Ball Between Knees)",
-    "notes": "GPP: 30s holds → SPP: Add pulses or unstable surface",
+    "name": "Gentle supine adductor ball squeeze",
+    "notes": "Lie on your back with knees bent and feet in line with your knees. Place a soft ball between your knees. Gently squeeze it, hold for up to 5 seconds, then fully relax. Keep the exercise pain-free and self-paced, little and often; stop before fatigue rather than forcing a repetition target. Do not bridge, pulse, use an unstable surface or squeeze maximally. Stop if groin pain increases during or after the exercise. Follow clinician restrictions.",
     "movement_archetype": "isometric",
     "proposed": {
-      "rehab_stage": null,
-      "function": "isometric_analgesia",
-      "equipment": null,
+      "rehab_stage": "restore",
+      "function": "activation",
+      "equipment": [
+        "soft_ball"
+      ],
       "impact": "none",
-      "load": null,
+      "load": "low",
       "velocity": "low",
       "target_regions": [
         "groin"
       ],
-      "laterality_applicability": null,
-      "target_tissues": null,
+      "laterality_applicability": "side_specific",
+      "target_tissues": [
+        "hip adductor muscles"
+      ],
       "contraction_type": "isometric",
       "sport_specificity": "general_rehab",
       "contact_level": "none",
-      "evidence_notes": null
+      "evidence_notes": "Sources: https://www.berkshirehealthcare.nhs.uk/advice/groin-strain, https://pmc.ncbi.nlm.nih.gov/articles/PMC10569248/. Fixed conservative movement only. No change to stage-entry criteria or permission, and no inference of sport readiness. Numeric guidance is source-backed where present; otherwise explicitly self-paced. No automatic resistance, range or speed progression."
     },
     "flags": [],
-    "review_state": "needs_review",
-    "review_version": 1
+    "review_state": "reviewed",
+    "review_version": 1,
+    "source_history": [
+      {
+        "source_hash": "8db056dc288f6531fb78d4731b422afa2d4bec82b20faff37a01e575e91ae301",
+        "name": "Isometric Adductor Squeeze (Ball Between Knees)",
+        "notes": "GPP: 30s holds → SPP: Add pulses or unstable surface"
+      }
+    ]
   },
   {
     "drill_id": "groin_unspecified_side_lying_adductor_raises",

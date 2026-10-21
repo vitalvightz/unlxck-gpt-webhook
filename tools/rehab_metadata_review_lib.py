@@ -41,10 +41,33 @@ from fightcamp.rehab_schema import (  # noqa: E402
 )
 
 
+def before_bank_publication(rows, kind):
+    """Reconstruct only this PR's exact dated delta; never used by runtime.
+
+    Whole-record hashes ensure later drift cannot be hidden by an ID match.
+    The fixture is history, not another exercise publication/approval manifest.
+    """
+    from fightcamp.rehab_clinical import content_hash
+    history = json.loads((REPO_ROOT / 'tests/fixtures/rehab_pilot_publication_history.json').read_text(encoding='utf-8'))
+    snapshot = deepcopy(rows)
+    values = ([d for g in snapshot for d in g['drills']] if kind == 'drills' else
+              snapshot['profiles'] if kind == 'profiles' else snapshot)
+    key = {'drills': 'id', 'reviews': 'drill_id', 'profiles': 'policy_id'}[kind]
+    for row in values:
+        revision = history[kind].get(row[key])
+        if revision and content_hash(row) == revision['after_sha256']:
+            for field in revision['remove']:
+                row.pop(field)
+            row.update(deepcopy(revision['restore']))
+    if kind == 'profiles' and snapshot.get('bank_publication_profiles') == history['bank_publication_profiles']:
+        snapshot.pop('bank_publication_profiles')
+    return snapshot
+
+
 def pathway_inventory_snapshot(pathways):
     """Reconstruct pre-capture inventory while retaining every clinical declaration/profile."""
     from fightcamp.rehab_pathways import FunctionalCheckpoint
-    snapshot = deepcopy(pathways)
+    snapshot = before_bank_publication(pathways, 'profiles')
     snapshot['functional_checkpoints'] = [c for c in snapshot.get('functional_checkpoints', [])
         if FunctionalCheckpoint.model_validate(c).basis != 'data_sufficiency']
     return snapshot
@@ -54,7 +77,7 @@ def before_reported_permission_entry(pathways):
     """Exact dated-policy reconstruction; current runtime/audits never use it."""
     from fightcamp.rehab_clinical import content_hash
     revision = json.loads((REPO_ROOT / 'tools/rehab_permission_entry_revision.json').read_text(encoding='utf-8'))
-    snapshot = deepcopy(pathways)
+    snapshot = before_bank_publication(pathways, 'profiles')
     for index, profile in enumerate(snapshot['profiles']):
         identity = profile['policy_id']
         if content_hash(profile) == revision['current_profile_sha256'].get(identity):
@@ -115,7 +138,7 @@ def before_elbow_content_addition(bank, ledger):
     and current audits use the full bank. Existing dated fixtures stay immutable.
     """
     manifest = json.loads((REPO_ROOT / 'tools/rehab_elbow_activation_inventory_baseline.json').read_text(encoding='utf-8'))
-    bank, ledger = deepcopy(bank), deepcopy(ledger)
+    bank, ledger = before_bank_publication(bank, 'drills'), before_bank_publication(ledger, 'reviews')
     revisions = [(manifest['new_drill'], manifest['new_review'])]
     if consumer := manifest.get('consumer_revision'):
         revisions.append((consumer['drill'], consumer['review']))

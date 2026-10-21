@@ -30,7 +30,7 @@ MECHANICS = ("rehab_stage", "function", "equipment", "load", "impact", "velocity
 
 
 def build_report():
-    bank, pathways, ledger, audit = [json.loads((ROOT / p).read_text()) for p in INPUTS]
+    bank, pathways, ledger, audit = [json.loads((ROOT / p).read_text(encoding="utf-8")) for p in INPUTS]
     policies = [p for p in load_clinical_policies() if p.status == "active" and p.activation == "live"]
     errors = [*validate_clinical_bank(policies, bank), *validate_ledger(bank, ledger)]
     if errors:
@@ -70,20 +70,32 @@ def build_report():
             exact_ids = sorted(p.drill_id for p in policy.prescriptions if p.stage == stage)
             bundle = policy.stage_bundles.get(stage)
             selected_by_severity = {}
+            def surfaced_options(allowed, severity, equipment):
+                if bundle and set(bundle) <= {d["id"] for d in allowed}:
+                    return list(bundle)
+                if bundle:
+                    allowed = [d for d in allowed if d["id"] not in bundle and d.get("rehab_stage") == stage]
+                if not allowed:
+                    return []
+                priority = max(own[d["id"]].priority for d in allowed)
+                ranked = select_rehab_candidate(injury={**subject, "severity": severity}, rehab_stage=stage,
+                    candidates=[d for d in allowed if own[d["id"]].priority == priority],
+                    available_equipment=equipment, activated_stages=policy.live_stages)
+                return [ranked.selected_drill_id] if ranked.selected_drill_id else []
             for severity in ("low", "moderate"):
                 allowed = compatible(severity)[0]
-                if bundle:
-                    surfaced = list(bundle) if set(bundle) <= {d["id"] for d in allowed} else []
-                elif allowed:
-                    priority = max(own[d["id"]].priority for d in allowed)
-                    ranked = select_rehab_candidate(injury={**subject, "severity": severity}, rehab_stage=stage,
-                        candidates=[d for d in allowed if own[d["id"]].priority == priority],
-                        available_equipment=apparatus, activated_stages=policy.live_stages)
-                    surfaced = [ranked.selected_drill_id] if ranked.selected_drill_id else []
-                else:
-                    surfaced = []
+                surfaced = surfaced_options(allowed, severity, apparatus)
                 selected_by_severity[severity] = surfaced
                 surfaced_all.update(surfaced)
+            # Alternative content can require different props. Full apparatus
+            # alone only demonstrates the preferred option, not reachability.
+            equipment_probes = []
+            setups = (sorted({tuple(sorted(d.get("equipment") or [])) for d in candidates})
+                      if policy.policy_id in pathways.get("bank_publication_profiles", []) else [])
+            for setup in setups:
+                ids = surfaced_options(compatible(equipment=setup)[0], "low", setup)
+                surfaced_all.update(ids)
+                equipment_probes.append(dict(equipment=list(setup), surfaced_ids=ids))
             incoming = next((t for t in policy.transitions if t.to_stage == stage), None)
             from api.contracts.rehab_progression import _permission_entry
             permission_entry = bool(incoming and _permission_entry(incoming, policy))
@@ -98,6 +110,7 @@ def build_report():
                 approved_exact_ids=exact_ids, eligible_exact_ids=sorted(set(exact_ids) & eligible.keys()),
                 eligible_including_protective_fallback_ids=sorted(eligible),
                 eligible_by_severity=eligible_by_severity, surfaced_by_severity=selected_by_severity,
+                **({"surfaced_by_equipment": equipment_probes} if setups else {}),
                 bundle_ids=list(bundle or []), empty_equipment_ids=sorted(d["id"] for d in compatible(equipment=[])[0]),
                 unknown_side_ids=sorted(d["id"] for d in compatible(side="unknown")[0]),
                 rejections=[dict(drill_id=r.drill_id, reasons=list(r.reason_codes)) for r in compatible()[1]],
@@ -161,7 +174,7 @@ def markdown(report):
         f"{s['live_unique_identities']} live prescribed identities; {s['reviewed_dormant']} reviewed but dormant. "
         f"{s['surfaced_unique_identities']} identities surface under the supported-severity/full-apparatus content probes.", "",
         "A probe tests the actual compatibility filter and selector, including priority and atomic bundles. It does not override or certify clinical stage eligibility. The published LOAD prescriptions support shared reported-clinician entry without mandatory RESTORE logs; known unresolved responses and setbacks still hold loading. DYNAMIC/RETURN and groin LOAD remain closed. Exact IDs below are current prescription IDs, not the wider bank. JSON includes derived entry/recovery support, fallbacks, severity/equipment/side results, requirements, rejection codes and each dormant candidate's missing information. Empty dose on approved self-paced baselines is intentional.", "",
-        "The historical advanced review supplies planning reasons only. Current source hashes and the live catalog determine present inventory. Unspecified regional drills are listed separately in JSON and never assigned to a diagnosis.", "",
+        "The historical advanced review supplies planning reasons only. Current bank classification and the live catalog determine present inventory. The five pilots also admit complete bank prescriptions with explicit injury compatibility; an unspecified group alone never assigns a diagnosis. Equipment probes include each routine's actual props so alternatives are not mistaken for unreachable content.", "",
         "| Profile | Reviewed / exact bank | Live / dormant | CALM IDs | RESTORE IDs | LOAD IDs | Alternatives C/R/L | Presentation |",
         "| --- | ---: | ---: | --- | --- | --- | --- | --- |"]
     for p in report["profiles"]:
@@ -172,7 +185,7 @@ def markdown(report):
         lines.append(f"| {p['policy_id']} | {p['reviewed_exact_type_count']} / {p['exact_bank_count']} | {p['live_prescription_count']} / {p['dormant_count']} | " + " | ".join(ids) + f" | {alternatives} | {presentation} |")
     lines += ["", "All 64 profiles: DYNAMIC and RETURN have zero approved IDs and are closed.", "",
         "## What limits variety", "",
-        "Most profiles have one approved identity at a live stage. Ankle sprain has an atomic RESTORE combination; its members are prescribed together, not a choice list. Chest strain has one self-paced RESTORE movement. The selector cannot pull in the other 1,497 bank identities because they lack a live approved prescription. It deterministically prefers exact-stage compatibility, prescription priority and continuity; it does not rotate random unreviewed work. Frozen started/completed occurrences retain their accepted IDs, so changing current selection never rewrites historical work.", "",
+        "Most profiles have one published identity at a live stage. Ankle sprain retains an atomic standing RESTORE combination and now has a complete seated alternative when its support is unavailable. Chest strain has one self-paced RESTORE movement. Missing classification, a usable prescription or a supported stage keeps other bank identities dormant. The shared selector deterministically applies compatibility, priority and continuity. Frozen started/completed occurrences retain their accepted IDs and prescriptions.", "",
         f"Approved identities never surfaced by these content probes: `{s['approved_never_surfaced_ids']}`. "
         "This does not establish availability for every severity, side, equipment setup or injury episode.", "",
         "See [investigation and validation](rehab-progression-investigation.md) and [activation backlog](rehab-activation-backlog.md) for journey proof, integration defects and next work.", ""]
@@ -188,10 +201,10 @@ def main():
                "docs/rehab-bank-reachability.md": markdown(report)}
     for name, value in outputs.items():
         if args.check:
-            if not (ROOT / name).exists() or (ROOT / name).read_text() != value:
+            if not (ROOT / name).exists() or (ROOT / name).read_text(encoding="utf-8") != value:
                 raise SystemExit("Stale reachability report: " + name)
         else:
-            (ROOT / name).write_text(value)
+            (ROOT / name).write_text(value, encoding="utf-8")
     print(json.dumps(report["summary"], sort_keys=True))
 
 

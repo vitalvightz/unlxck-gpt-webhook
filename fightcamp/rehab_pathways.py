@@ -169,9 +169,15 @@ class PathwayCatalog(BaseModel):
     functional_checkpoints: list[FunctionalCheckpoint] = Field(default_factory=list)
     families: list[PathwayFamily]
     profiles: list[dict]
+    # Rollout scope, not exercise approvals. Complete bank records supply options
+    # for these profiles through the same prescription contract as legacy data.
+    bank_publication_profiles: list[str] = Field(default_factory=list)
 
     @model_validator(mode="after")
     def coherent(self):
+        if (len(set(self.bank_publication_profiles)) != len(self.bank_publication_profiles)
+                or set(self.bank_publication_profiles) - {p.get("policy_id") for p in self.profiles}):
+            raise ValueError("bank publication needs unique existing profiles")
         if any(r.basis == "clinical" for r in self.safety_baseline):
             raise ValueError("the shared safety baseline cannot contain clinical criteria")
         ids = [f.family_id for f in self.families]

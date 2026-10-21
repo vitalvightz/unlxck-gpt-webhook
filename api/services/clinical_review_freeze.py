@@ -123,7 +123,12 @@ def frozen_review_hold(store, athlete_id, snapshot, *, work_state, as_of=None, r
                         or block.get("frequency") != prescription.frequency or block.get("minimum_gap_days") != prescription.minimum_gap_days
                         or content_hash(block.get("drill_snapshot")) != prescription.bank_hash
                         or any(block.get(name) != getattr(prescription.dose, name) for name in ("sets", "reps", "duration_seconds"))
-                        or any(block.get(name) for name in ("load", "weight", "prescription", "alternates", "exercises", "tempo", "rpe", "intensity", "duration_minutes", "rest", "rest_seconds", "duration"))):
+                        # The shared block builder mirrors prescribed seconds
+                        # into the player's duration object. Accept only that
+                        # exact representation, never another loading/dose cue.
+                        or block.get("duration") != ({"value": prescription.dose.duration_seconds, "unit": "seconds"}
+                                                     if prescription.dose.duration_seconds is not None else None)
+                        or any(block.get(name) for name in ("load", "weight", "prescription", "alternates", "exercises", "tempo", "rpe", "intensity", "duration_minutes", "rest", "rest_seconds"))):
                     return True
             except (ValueError, TypeError, KeyError, StopIteration):
                 return True

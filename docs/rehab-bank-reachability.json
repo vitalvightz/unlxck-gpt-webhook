@@ -1,8 +1,8 @@
 {
   "input_sha256": {
-    "data/rehab_bank.json": "5a84e46d9e00cf0b97b6af910ef9903bd4e02c11a0f313b6a3db4e823bb4f981",
-    "data/rehab_metadata_review.json": "3546346f4993223aa5126e4c20b63a5eb4d0a4124a6e5b59aa94836b9e2d8f43",
-    "data/rehab_pathways.json": "ef5394b864eead27935f6c2db3a4d4473738d24bb6678b9ab92f0d9f3548ec49",
+    "data/rehab_bank.json": "20bda40e55b6d7e4c599947da78e692238477e0e5eed917e4fe0b9056dbb96a8",
+    "data/rehab_metadata_review.json": "610671ea0eef1cfa622f3e5dc59c8a535fb58bf72bb7534704d15996d26a4c34",
+    "data/rehab_pathways.json": "2adfb61a4fd55befa7f7c8b705065c3932f3c598f983a8a8418f2d2d2024d119",
     "docs/rehab-advanced-candidate-review.json": "cfd575d558de8a062d080e5404822a131dddba06491fa4ec07769dde7b585618"
   },
   "outside_active_profile_ids": {
@@ -1385,7 +1385,7 @@
       "dormant_count": 2,
       "exact_bank_count": 5,
       "injury_type": "tendonitis",
-      "live_prescription_count": 3,
+      "live_prescription_count": 4,
       "live_stages": [
         "calm",
         "restore",
@@ -1436,6 +1436,36 @@
               "drill_id": "achilles_tendonitis_eccentric_calf_drops_on_step",
               "reasons": [
                 "REJECT_STAGE_TOO_ADVANCED"
+              ]
+            },
+            {
+              "drill_id": "achilles_unspecified_isometric_toe_presses_against_wall",
+              "reasons": [
+                "REJECT_STAGE_TOO_ADVANCED"
+              ]
+            }
+          ],
+          "surfaced_by_equipment": [
+            {
+              "equipment": [],
+              "surfaced_ids": [
+                "achilles_tendonitis_recovery_support"
+              ]
+            },
+            {
+              "equipment": [
+                "stable_support"
+              ],
+              "surfaced_ids": [
+                "achilles_tendonitis_recovery_support"
+              ]
+            },
+            {
+              "equipment": [
+                "wall"
+              ],
+              "surfaced_ids": [
+                "achilles_tendonitis_recovery_support"
               ]
             }
           ],
@@ -1541,6 +1571,30 @@
               "reasons": [
                 "REJECT_STAGE_NOT_LIVE"
               ]
+            },
+            {
+              "drill_id": "achilles_unspecified_isometric_toe_presses_against_wall",
+              "reasons": [
+                "REJECT_STAGE_NOT_LIVE"
+              ]
+            }
+          ],
+          "surfaced_by_equipment": [
+            {
+              "equipment": [],
+              "surfaced_ids": []
+            },
+            {
+              "equipment": [
+                "stable_support"
+              ],
+              "surfaced_ids": []
+            },
+            {
+              "equipment": [
+                "wall"
+              ],
+              "surfaced_ids": []
             }
           ],
           "surfaced_by_severity": {
@@ -1550,9 +1604,10 @@
           "unknown_side_ids": []
         },
         "load": {
-          "alternative_exact_count": 0,
+          "alternative_exact_count": 1,
           "approved_exact_ids": [
-            "achilles_tendonitis_eccentric_calf_drops_on_step"
+            "achilles_tendonitis_eccentric_calf_drops_on_step",
+            "achilles_unspecified_isometric_toe_presses_against_wall"
           ],
           "availability": "conditional_on_episode_requirements",
           "bundle_ids": [],
@@ -1628,22 +1683,26 @@
             "low": [
               "achilles_tendonitis_eccentric_calf_drops_on_step",
               "achilles_tendonitis_recovery_support",
-              "achilles_tendonitis_reviewed_restore"
+              "achilles_tendonitis_reviewed_restore",
+              "achilles_unspecified_isometric_toe_presses_against_wall"
             ],
             "moderate": [
               "achilles_tendonitis_eccentric_calf_drops_on_step",
               "achilles_tendonitis_recovery_support",
-              "achilles_tendonitis_reviewed_restore"
+              "achilles_tendonitis_reviewed_restore",
+              "achilles_unspecified_isometric_toe_presses_against_wall"
             ],
             "unknown": []
           },
           "eligible_exact_ids": [
-            "achilles_tendonitis_eccentric_calf_drops_on_step"
+            "achilles_tendonitis_eccentric_calf_drops_on_step",
+            "achilles_unspecified_isometric_toe_presses_against_wall"
           ],
           "eligible_including_protective_fallback_ids": [
             "achilles_tendonitis_eccentric_calf_drops_on_step",
             "achilles_tendonitis_recovery_support",
-            "achilles_tendonitis_reviewed_restore"
+            "achilles_tendonitis_reviewed_restore",
+            "achilles_unspecified_isometric_toe_presses_against_wall"
           ],
           "empty_equipment_ids": [
             "achilles_tendonitis_recovery_support",
@@ -1653,6 +1712,30 @@
           "permission_entry_supported": true,
           "recovery_rule": "improvement_then_reviewed_response",
           "rejections": [],
+          "surfaced_by_equipment": [
+            {
+              "equipment": [],
+              "surfaced_ids": [
+                "achilles_tendonitis_reviewed_restore"
+              ]
+            },
+            {
+              "equipment": [
+                "stable_support"
+              ],
+              "surfaced_ids": [
+                "achilles_tendonitis_eccentric_calf_drops_on_step"
+              ]
+            },
+            {
+              "equipment": [
+                "wall"
+              ],
+              "surfaced_ids": [
+                "achilles_unspecified_isometric_toe_presses_against_wall"
+              ]
+            }
+          ],
           "surfaced_by_severity": {
             "low": [
               "achilles_tendonitis_eccentric_calf_drops_on_step"
@@ -1704,6 +1787,36 @@
               "drill_id": "achilles_tendonitis_eccentric_calf_drops_on_step",
               "reasons": [
                 "REJECT_STAGE_TOO_ADVANCED"
+              ]
+            },
+            {
+              "drill_id": "achilles_unspecified_isometric_toe_presses_against_wall",
+              "reasons": [
+                "REJECT_STAGE_TOO_ADVANCED"
+              ]
+            }
+          ],
+          "surfaced_by_equipment": [
+            {
+              "equipment": [],
+              "surfaced_ids": [
+                "achilles_tendonitis_reviewed_restore"
+              ]
+            },
+            {
+              "equipment": [
+                "stable_support"
+              ],
+              "surfaced_ids": [
+                "achilles_tendonitis_reviewed_restore"
+              ]
+            },
+            {
+              "equipment": [
+                "wall"
+              ],
+              "surfaced_ids": [
+                "achilles_tendonitis_reviewed_restore"
               ]
             }
           ],
@@ -1809,6 +1922,30 @@
               "reasons": [
                 "REJECT_STAGE_NOT_LIVE"
               ]
+            },
+            {
+              "drill_id": "achilles_unspecified_isometric_toe_presses_against_wall",
+              "reasons": [
+                "REJECT_STAGE_NOT_LIVE"
+              ]
+            }
+          ],
+          "surfaced_by_equipment": [
+            {
+              "equipment": [],
+              "surfaced_ids": []
+            },
+            {
+              "equipment": [
+                "stable_support"
+              ],
+              "surfaced_ids": []
+            },
+            {
+              "equipment": [
+                "wall"
+              ],
+              "surfaced_ids": []
             }
           ],
           "surfaced_by_severity": {
@@ -2805,7 +2942,7 @@
       "dormant_count": 2,
       "exact_bank_count": 6,
       "injury_type": "sprain",
-      "live_prescription_count": 4,
+      "live_prescription_count": 5,
       "live_stages": [
         "calm",
         "restore",
@@ -2862,6 +2999,36 @@
               "drill_id": "ankle_sprain_seated_bilateral_heel_raise",
               "reasons": [
                 "REJECT_STAGE_TOO_ADVANCED"
+              ]
+            },
+            {
+              "drill_id": "ankle_unspecified_ankle_cars_controlled_articular_rotations",
+              "reasons": [
+                "REJECT_STAGE_TOO_ADVANCED"
+              ]
+            }
+          ],
+          "surfaced_by_equipment": [
+            {
+              "equipment": [],
+              "surfaced_ids": [
+                "ankle_sprain_gentle_movement"
+              ]
+            },
+            {
+              "equipment": [
+                "chair"
+              ],
+              "surfaced_ids": [
+                "ankle_sprain_gentle_movement"
+              ]
+            },
+            {
+              "equipment": [
+                "stable_support"
+              ],
+              "surfaced_ids": [
+                "ankle_sprain_gentle_movement"
               ]
             }
           ],
@@ -2973,6 +3140,30 @@
               "reasons": [
                 "REJECT_STAGE_NOT_LIVE"
               ]
+            },
+            {
+              "drill_id": "ankle_unspecified_ankle_cars_controlled_articular_rotations",
+              "reasons": [
+                "REJECT_STAGE_NOT_LIVE"
+              ]
+            }
+          ],
+          "surfaced_by_equipment": [
+            {
+              "equipment": [],
+              "surfaced_ids": []
+            },
+            {
+              "equipment": [
+                "chair"
+              ],
+              "surfaced_ids": []
+            },
+            {
+              "equipment": [
+                "stable_support"
+              ],
+              "surfaced_ids": []
             }
           ],
           "surfaced_by_severity": {
@@ -3062,12 +3253,14 @@
               "ankle_sprain_gentle_movement",
               "ankle_sprain_heel_lowering",
               "ankle_sprain_seated_bilateral_heel_raise",
-              "ankle_sprain_supported_balance"
+              "ankle_sprain_supported_balance",
+              "ankle_unspecified_ankle_cars_controlled_articular_rotations"
             ],
             "moderate": [
               "ankle_sprain_gentle_movement",
               "ankle_sprain_heel_lowering",
-              "ankle_sprain_supported_balance"
+              "ankle_sprain_supported_balance",
+              "ankle_unspecified_ankle_cars_controlled_articular_rotations"
             ],
             "unknown": []
           },
@@ -3078,17 +3271,40 @@
             "ankle_sprain_gentle_movement",
             "ankle_sprain_heel_lowering",
             "ankle_sprain_seated_bilateral_heel_raise",
-            "ankle_sprain_supported_balance"
+            "ankle_sprain_supported_balance",
+            "ankle_unspecified_ankle_cars_controlled_articular_rotations"
           ],
           "empty_equipment_ids": [
-            "ankle_sprain_gentle_movement",
-            "ankle_sprain_heel_lowering",
-            "ankle_sprain_supported_balance"
+            "ankle_sprain_gentle_movement"
           ],
           "gate_reasons": [],
           "permission_entry_supported": true,
           "recovery_rule": "improvement_then_reviewed_response",
           "rejections": [],
+          "surfaced_by_equipment": [
+            {
+              "equipment": [],
+              "surfaced_ids": [
+                "ankle_sprain_gentle_movement"
+              ]
+            },
+            {
+              "equipment": [
+                "chair"
+              ],
+              "surfaced_ids": [
+                "ankle_sprain_seated_bilateral_heel_raise"
+              ]
+            },
+            {
+              "equipment": [
+                "stable_support"
+              ],
+              "surfaced_ids": [
+                "ankle_sprain_heel_lowering"
+              ]
+            }
+          ],
           "surfaced_by_severity": {
             "low": [
               "ankle_sprain_seated_bilateral_heel_raise"
@@ -3102,10 +3318,11 @@
           ]
         },
         "restore": {
-          "alternative_exact_count": 0,
+          "alternative_exact_count": 1,
           "approved_exact_ids": [
             "ankle_sprain_heel_lowering",
-            "ankle_sprain_supported_balance"
+            "ankle_sprain_supported_balance",
+            "ankle_unspecified_ankle_cars_controlled_articular_rotations"
           ],
           "availability": "baseline_reachable",
           "bundle_ids": [
@@ -3118,28 +3335,30 @@
             "low": [
               "ankle_sprain_gentle_movement",
               "ankle_sprain_heel_lowering",
-              "ankle_sprain_supported_balance"
+              "ankle_sprain_supported_balance",
+              "ankle_unspecified_ankle_cars_controlled_articular_rotations"
             ],
             "moderate": [
               "ankle_sprain_gentle_movement",
               "ankle_sprain_heel_lowering",
-              "ankle_sprain_supported_balance"
+              "ankle_sprain_supported_balance",
+              "ankle_unspecified_ankle_cars_controlled_articular_rotations"
             ],
             "unknown": []
           },
           "eligible_exact_ids": [
             "ankle_sprain_heel_lowering",
-            "ankle_sprain_supported_balance"
+            "ankle_sprain_supported_balance",
+            "ankle_unspecified_ankle_cars_controlled_articular_rotations"
           ],
           "eligible_including_protective_fallback_ids": [
             "ankle_sprain_gentle_movement",
             "ankle_sprain_heel_lowering",
-            "ankle_sprain_supported_balance"
+            "ankle_sprain_supported_balance",
+            "ankle_unspecified_ankle_cars_controlled_articular_rotations"
           ],
           "empty_equipment_ids": [
-            "ankle_sprain_gentle_movement",
-            "ankle_sprain_heel_lowering",
-            "ankle_sprain_supported_balance"
+            "ankle_sprain_gentle_movement"
           ],
           "gate_reasons": [],
           "permission_entry_supported": false,
@@ -3149,6 +3368,29 @@
               "drill_id": "ankle_sprain_seated_bilateral_heel_raise",
               "reasons": [
                 "REJECT_STAGE_TOO_ADVANCED"
+              ]
+            }
+          ],
+          "surfaced_by_equipment": [
+            {
+              "equipment": [],
+              "surfaced_ids": []
+            },
+            {
+              "equipment": [
+                "chair"
+              ],
+              "surfaced_ids": [
+                "ankle_unspecified_ankle_cars_controlled_articular_rotations"
+              ]
+            },
+            {
+              "equipment": [
+                "stable_support"
+              ],
+              "surfaced_ids": [
+                "ankle_sprain_supported_balance",
+                "ankle_sprain_heel_lowering"
               ]
             }
           ],
@@ -3262,6 +3504,30 @@
               "reasons": [
                 "REJECT_STAGE_NOT_LIVE"
               ]
+            },
+            {
+              "drill_id": "ankle_unspecified_ankle_cars_controlled_articular_rotations",
+              "reasons": [
+                "REJECT_STAGE_NOT_LIVE"
+              ]
+            }
+          ],
+          "surfaced_by_equipment": [
+            {
+              "equipment": [],
+              "surfaced_ids": []
+            },
+            {
+              "equipment": [
+                "chair"
+              ],
+              "surfaced_ids": []
+            },
+            {
+              "equipment": [
+                "stable_support"
+              ],
+              "surfaced_ids": []
             }
           ],
           "surfaced_by_severity": {
@@ -8239,7 +8505,7 @@
       "dormant_count": 2,
       "exact_bank_count": 5,
       "injury_type": "tendonitis",
-      "live_prescription_count": 3,
+      "live_prescription_count": 4,
       "live_stages": [
         "calm",
         "restore",
@@ -8290,6 +8556,36 @@
               "drill_id": "elbow_tendonitis_supported_hand_weight_wrist_extension",
               "reasons": [
                 "REJECT_STAGE_TOO_ADVANCED"
+              ]
+            },
+            {
+              "drill_id": "elbow_unspecified_pronation_supination_with_dowel",
+              "reasons": [
+                "REJECT_STAGE_TOO_ADVANCED"
+              ]
+            }
+          ],
+          "surfaced_by_equipment": [
+            {
+              "equipment": [],
+              "surfaced_ids": [
+                "elbow_tendonitis_recovery_support"
+              ]
+            },
+            {
+              "equipment": [
+                "dowel"
+              ],
+              "surfaced_ids": [
+                "elbow_tendonitis_recovery_support"
+              ]
+            },
+            {
+              "equipment": [
+                "table"
+              ],
+              "surfaced_ids": [
+                "elbow_tendonitis_recovery_support"
               ]
             }
           ],
@@ -8395,6 +8691,30 @@
               "reasons": [
                 "REJECT_STAGE_NOT_LIVE"
               ]
+            },
+            {
+              "drill_id": "elbow_unspecified_pronation_supination_with_dowel",
+              "reasons": [
+                "REJECT_STAGE_NOT_LIVE"
+              ]
+            }
+          ],
+          "surfaced_by_equipment": [
+            {
+              "equipment": [],
+              "surfaced_ids": []
+            },
+            {
+              "equipment": [
+                "dowel"
+              ],
+              "surfaced_ids": []
+            },
+            {
+              "equipment": [
+                "table"
+              ],
+              "surfaced_ids": []
             }
           ],
           "surfaced_by_severity": {
@@ -8482,12 +8802,14 @@
             "low": [
               "elbow_tendonitis_recovery_support",
               "elbow_tendonitis_reviewed_restore",
-              "elbow_tendonitis_supported_hand_weight_wrist_extension"
+              "elbow_tendonitis_supported_hand_weight_wrist_extension",
+              "elbow_unspecified_pronation_supination_with_dowel"
             ],
             "moderate": [
               "elbow_tendonitis_recovery_support",
               "elbow_tendonitis_reviewed_restore",
-              "elbow_tendonitis_supported_hand_weight_wrist_extension"
+              "elbow_tendonitis_supported_hand_weight_wrist_extension",
+              "elbow_unspecified_pronation_supination_with_dowel"
             ],
             "unknown": []
           },
@@ -8497,7 +8819,8 @@
           "eligible_including_protective_fallback_ids": [
             "elbow_tendonitis_recovery_support",
             "elbow_tendonitis_reviewed_restore",
-            "elbow_tendonitis_supported_hand_weight_wrist_extension"
+            "elbow_tendonitis_supported_hand_weight_wrist_extension",
+            "elbow_unspecified_pronation_supination_with_dowel"
           ],
           "empty_equipment_ids": [
             "elbow_tendonitis_recovery_support",
@@ -8507,12 +8830,36 @@
           "permission_entry_supported": true,
           "recovery_rule": "improvement_then_reviewed_response",
           "rejections": [],
+          "surfaced_by_equipment": [
+            {
+              "equipment": [],
+              "surfaced_ids": [
+                "elbow_tendonitis_reviewed_restore"
+              ]
+            },
+            {
+              "equipment": [
+                "dowel"
+              ],
+              "surfaced_ids": [
+                "elbow_unspecified_pronation_supination_with_dowel"
+              ]
+            },
+            {
+              "equipment": [
+                "table"
+              ],
+              "surfaced_ids": [
+                "elbow_tendonitis_supported_hand_weight_wrist_extension"
+              ]
+            }
+          ],
           "surfaced_by_severity": {
             "low": [
-              "elbow_tendonitis_supported_hand_weight_wrist_extension"
+              "elbow_unspecified_pronation_supination_with_dowel"
             ],
             "moderate": [
-              "elbow_tendonitis_supported_hand_weight_wrist_extension"
+              "elbow_unspecified_pronation_supination_with_dowel"
             ]
           },
           "unknown_side_ids": [
@@ -8520,9 +8867,10 @@
           ]
         },
         "restore": {
-          "alternative_exact_count": 0,
+          "alternative_exact_count": 1,
           "approved_exact_ids": [
-            "elbow_tendonitis_reviewed_restore"
+            "elbow_tendonitis_reviewed_restore",
+            "elbow_unspecified_pronation_supination_with_dowel"
           ],
           "availability": "baseline_reachable",
           "bundle_ids": [],
@@ -8531,20 +8879,24 @@
             "high": [],
             "low": [
               "elbow_tendonitis_recovery_support",
-              "elbow_tendonitis_reviewed_restore"
+              "elbow_tendonitis_reviewed_restore",
+              "elbow_unspecified_pronation_supination_with_dowel"
             ],
             "moderate": [
               "elbow_tendonitis_recovery_support",
-              "elbow_tendonitis_reviewed_restore"
+              "elbow_tendonitis_reviewed_restore",
+              "elbow_unspecified_pronation_supination_with_dowel"
             ],
             "unknown": []
           },
           "eligible_exact_ids": [
-            "elbow_tendonitis_reviewed_restore"
+            "elbow_tendonitis_reviewed_restore",
+            "elbow_unspecified_pronation_supination_with_dowel"
           ],
           "eligible_including_protective_fallback_ids": [
             "elbow_tendonitis_recovery_support",
-            "elbow_tendonitis_reviewed_restore"
+            "elbow_tendonitis_reviewed_restore",
+            "elbow_unspecified_pronation_supination_with_dowel"
           ],
           "empty_equipment_ids": [
             "elbow_tendonitis_recovery_support",
@@ -8561,12 +8913,36 @@
               ]
             }
           ],
+          "surfaced_by_equipment": [
+            {
+              "equipment": [],
+              "surfaced_ids": [
+                "elbow_tendonitis_reviewed_restore"
+              ]
+            },
+            {
+              "equipment": [
+                "dowel"
+              ],
+              "surfaced_ids": [
+                "elbow_unspecified_pronation_supination_with_dowel"
+              ]
+            },
+            {
+              "equipment": [
+                "table"
+              ],
+              "surfaced_ids": [
+                "elbow_tendonitis_reviewed_restore"
+              ]
+            }
+          ],
           "surfaced_by_severity": {
             "low": [
-              "elbow_tendonitis_reviewed_restore"
+              "elbow_unspecified_pronation_supination_with_dowel"
             ],
             "moderate": [
-              "elbow_tendonitis_reviewed_restore"
+              "elbow_unspecified_pronation_supination_with_dowel"
             ]
           },
           "unknown_side_ids": [
@@ -8663,6 +9039,30 @@
               "reasons": [
                 "REJECT_STAGE_NOT_LIVE"
               ]
+            },
+            {
+              "drill_id": "elbow_unspecified_pronation_supination_with_dowel",
+              "reasons": [
+                "REJECT_STAGE_NOT_LIVE"
+              ]
+            }
+          ],
+          "surfaced_by_equipment": [
+            {
+              "equipment": [],
+              "surfaced_ids": []
+            },
+            {
+              "equipment": [
+                "dowel"
+              ],
+              "surfaced_ids": []
+            },
+            {
+              "equipment": [
+                "table"
+              ],
+              "surfaced_ids": []
             }
           ],
           "surfaced_by_severity": {
@@ -11756,7 +12156,7 @@
       "dormant_count": 1,
       "exact_bank_count": 3,
       "injury_type": "strain",
-      "live_prescription_count": 2,
+      "live_prescription_count": 3,
       "live_stages": [
         "calm",
         "restore"
@@ -11800,6 +12200,28 @@
               "drill_id": "groin_strain_side_lying_hip_adduction",
               "reasons": [
                 "REJECT_STAGE_TOO_ADVANCED"
+              ]
+            },
+            {
+              "drill_id": "groin_unspecified_isometric_adductor_squeeze_ball_between_knees",
+              "reasons": [
+                "REJECT_STAGE_TOO_ADVANCED"
+              ]
+            }
+          ],
+          "surfaced_by_equipment": [
+            {
+              "equipment": [],
+              "surfaced_ids": [
+                "groin_strain_recovery_support"
+              ]
+            },
+            {
+              "equipment": [
+                "soft_ball"
+              ],
+              "surfaced_ids": [
+                "groin_strain_recovery_support"
               ]
             }
           ],
@@ -11899,6 +12321,24 @@
               "reasons": [
                 "REJECT_STAGE_NOT_LIVE"
               ]
+            },
+            {
+              "drill_id": "groin_unspecified_isometric_adductor_squeeze_ball_between_knees",
+              "reasons": [
+                "REJECT_STAGE_NOT_LIVE"
+              ]
+            }
+          ],
+          "surfaced_by_equipment": [
+            {
+              "equipment": [],
+              "surfaced_ids": []
+            },
+            {
+              "equipment": [
+                "soft_ball"
+              ],
+              "surfaced_ids": []
             }
           ],
           "surfaced_by_severity": {
@@ -11991,6 +12431,24 @@
               "reasons": [
                 "REJECT_STAGE_NOT_LIVE"
               ]
+            },
+            {
+              "drill_id": "groin_unspecified_isometric_adductor_squeeze_ball_between_knees",
+              "reasons": [
+                "REJECT_STAGE_NOT_LIVE"
+              ]
+            }
+          ],
+          "surfaced_by_equipment": [
+            {
+              "equipment": [],
+              "surfaced_ids": []
+            },
+            {
+              "equipment": [
+                "soft_ball"
+              ],
+              "surfaced_ids": []
             }
           ],
           "surfaced_by_severity": {
@@ -12000,9 +12458,10 @@
           "unknown_side_ids": []
         },
         "restore": {
-          "alternative_exact_count": 0,
+          "alternative_exact_count": 1,
           "approved_exact_ids": [
-            "groin_strain_side_lying_hip_adduction"
+            "groin_strain_side_lying_hip_adduction",
+            "groin_unspecified_isometric_adductor_squeeze_ball_between_knees"
           ],
           "availability": "baseline_reachable",
           "bundle_ids": [],
@@ -12011,20 +12470,24 @@
             "high": [],
             "low": [
               "groin_strain_recovery_support",
-              "groin_strain_side_lying_hip_adduction"
+              "groin_strain_side_lying_hip_adduction",
+              "groin_unspecified_isometric_adductor_squeeze_ball_between_knees"
             ],
             "moderate": [
               "groin_strain_recovery_support",
-              "groin_strain_side_lying_hip_adduction"
+              "groin_strain_side_lying_hip_adduction",
+              "groin_unspecified_isometric_adductor_squeeze_ball_between_knees"
             ],
             "unknown": []
           },
           "eligible_exact_ids": [
-            "groin_strain_side_lying_hip_adduction"
+            "groin_strain_side_lying_hip_adduction",
+            "groin_unspecified_isometric_adductor_squeeze_ball_between_knees"
           ],
           "eligible_including_protective_fallback_ids": [
             "groin_strain_recovery_support",
-            "groin_strain_side_lying_hip_adduction"
+            "groin_strain_side_lying_hip_adduction",
+            "groin_unspecified_isometric_adductor_squeeze_ball_between_knees"
           ],
           "empty_equipment_ids": [
             "groin_strain_recovery_support",
@@ -12034,12 +12497,28 @@
           "permission_entry_supported": false,
           "recovery_rule": "hold",
           "rejections": [],
+          "surfaced_by_equipment": [
+            {
+              "equipment": [],
+              "surfaced_ids": [
+                "groin_strain_side_lying_hip_adduction"
+              ]
+            },
+            {
+              "equipment": [
+                "soft_ball"
+              ],
+              "surfaced_ids": [
+                "groin_unspecified_isometric_adductor_squeeze_ball_between_knees"
+              ]
+            }
+          ],
           "surfaced_by_severity": {
             "low": [
-              "groin_strain_side_lying_hip_adduction"
+              "groin_unspecified_isometric_adductor_squeeze_ball_between_knees"
             ],
             "moderate": [
-              "groin_strain_side_lying_hip_adduction"
+              "groin_unspecified_isometric_adductor_squeeze_ball_between_knees"
             ]
           },
           "unknown_side_ids": [
@@ -12130,6 +12609,24 @@
               "reasons": [
                 "REJECT_STAGE_NOT_LIVE"
               ]
+            },
+            {
+              "drill_id": "groin_unspecified_isometric_adductor_squeeze_ball_between_knees",
+              "reasons": [
+                "REJECT_STAGE_NOT_LIVE"
+              ]
+            }
+          ],
+          "surfaced_by_equipment": [
+            {
+              "equipment": [],
+              "surfaced_ids": []
+            },
+            {
+              "equipment": [
+                "soft_ball"
+              ],
+              "surfaced_ids": []
             }
           ],
           "surfaced_by_severity": {
@@ -24890,7 +25387,7 @@
       "dormant_count": 4,
       "exact_bank_count": 7,
       "injury_type": "tendonitis",
-      "live_prescription_count": 3,
+      "live_prescription_count": 4,
       "live_stages": [
         "calm",
         "restore",
@@ -24941,6 +25438,37 @@
               "drill_id": "shoulder_tendonitis_wall_push_up",
               "reasons": [
                 "REJECT_STAGE_TOO_ADVANCED"
+              ]
+            },
+            {
+              "drill_id": "shoulder_impingement_scapular_wall_slides_with_chin_tuck",
+              "reasons": [
+                "REJECT_STAGE_TOO_ADVANCED"
+              ]
+            }
+          ],
+          "surfaced_by_equipment": [
+            {
+              "equipment": [],
+              "surfaced_ids": [
+                "shoulder_tendonitis_recovery_support"
+              ]
+            },
+            {
+              "equipment": [
+                "cloth",
+                "wall"
+              ],
+              "surfaced_ids": [
+                "shoulder_tendonitis_recovery_support"
+              ]
+            },
+            {
+              "equipment": [
+                "wall"
+              ],
+              "surfaced_ids": [
+                "shoulder_tendonitis_recovery_support"
               ]
             }
           ],
@@ -25046,6 +25574,31 @@
               "reasons": [
                 "REJECT_STAGE_NOT_LIVE"
               ]
+            },
+            {
+              "drill_id": "shoulder_impingement_scapular_wall_slides_with_chin_tuck",
+              "reasons": [
+                "REJECT_STAGE_NOT_LIVE"
+              ]
+            }
+          ],
+          "surfaced_by_equipment": [
+            {
+              "equipment": [],
+              "surfaced_ids": []
+            },
+            {
+              "equipment": [
+                "cloth",
+                "wall"
+              ],
+              "surfaced_ids": []
+            },
+            {
+              "equipment": [
+                "wall"
+              ],
+              "surfaced_ids": []
             }
           ],
           "surfaced_by_severity": {
@@ -25130,11 +25683,13 @@
           "eligible_by_severity": {
             "high": [],
             "low": [
+              "shoulder_impingement_scapular_wall_slides_with_chin_tuck",
               "shoulder_tendonitis_recovery_support",
               "shoulder_tendonitis_reviewed_restore",
               "shoulder_tendonitis_wall_push_up"
             ],
             "moderate": [
+              "shoulder_impingement_scapular_wall_slides_with_chin_tuck",
               "shoulder_tendonitis_recovery_support",
               "shoulder_tendonitis_reviewed_restore",
               "shoulder_tendonitis_wall_push_up"
@@ -25145,6 +25700,7 @@
             "shoulder_tendonitis_wall_push_up"
           ],
           "eligible_including_protective_fallback_ids": [
+            "shoulder_impingement_scapular_wall_slides_with_chin_tuck",
             "shoulder_tendonitis_recovery_support",
             "shoulder_tendonitis_reviewed_restore",
             "shoulder_tendonitis_wall_push_up"
@@ -25157,6 +25713,31 @@
           "permission_entry_supported": true,
           "recovery_rule": "improvement_then_reviewed_response",
           "rejections": [],
+          "surfaced_by_equipment": [
+            {
+              "equipment": [],
+              "surfaced_ids": [
+                "shoulder_tendonitis_reviewed_restore"
+              ]
+            },
+            {
+              "equipment": [
+                "cloth",
+                "wall"
+              ],
+              "surfaced_ids": [
+                "shoulder_tendonitis_wall_push_up"
+              ]
+            },
+            {
+              "equipment": [
+                "wall"
+              ],
+              "surfaced_ids": [
+                "shoulder_tendonitis_wall_push_up"
+              ]
+            }
+          ],
           "surfaced_by_severity": {
             "low": [
               "shoulder_tendonitis_wall_push_up"
@@ -25170,8 +25751,9 @@
           ]
         },
         "restore": {
-          "alternative_exact_count": 0,
+          "alternative_exact_count": 1,
           "approved_exact_ids": [
+            "shoulder_impingement_scapular_wall_slides_with_chin_tuck",
             "shoulder_tendonitis_reviewed_restore"
           ],
           "availability": "baseline_reachable",
@@ -25180,19 +25762,23 @@
           "eligible_by_severity": {
             "high": [],
             "low": [
+              "shoulder_impingement_scapular_wall_slides_with_chin_tuck",
               "shoulder_tendonitis_recovery_support",
               "shoulder_tendonitis_reviewed_restore"
             ],
             "moderate": [
+              "shoulder_impingement_scapular_wall_slides_with_chin_tuck",
               "shoulder_tendonitis_recovery_support",
               "shoulder_tendonitis_reviewed_restore"
             ],
             "unknown": []
           },
           "eligible_exact_ids": [
+            "shoulder_impingement_scapular_wall_slides_with_chin_tuck",
             "shoulder_tendonitis_reviewed_restore"
           ],
           "eligible_including_protective_fallback_ids": [
+            "shoulder_impingement_scapular_wall_slides_with_chin_tuck",
             "shoulder_tendonitis_recovery_support",
             "shoulder_tendonitis_reviewed_restore"
           ],
@@ -25211,12 +25797,37 @@
               ]
             }
           ],
+          "surfaced_by_equipment": [
+            {
+              "equipment": [],
+              "surfaced_ids": [
+                "shoulder_tendonitis_reviewed_restore"
+              ]
+            },
+            {
+              "equipment": [
+                "cloth",
+                "wall"
+              ],
+              "surfaced_ids": [
+                "shoulder_impingement_scapular_wall_slides_with_chin_tuck"
+              ]
+            },
+            {
+              "equipment": [
+                "wall"
+              ],
+              "surfaced_ids": [
+                "shoulder_tendonitis_reviewed_restore"
+              ]
+            }
+          ],
           "surfaced_by_severity": {
             "low": [
-              "shoulder_tendonitis_reviewed_restore"
+              "shoulder_impingement_scapular_wall_slides_with_chin_tuck"
             ],
             "moderate": [
-              "shoulder_tendonitis_reviewed_restore"
+              "shoulder_impingement_scapular_wall_slides_with_chin_tuck"
             ]
           },
           "unknown_side_ids": [
@@ -25313,6 +25924,31 @@
               "reasons": [
                 "REJECT_STAGE_NOT_LIVE"
               ]
+            },
+            {
+              "drill_id": "shoulder_impingement_scapular_wall_slides_with_chin_tuck",
+              "reasons": [
+                "REJECT_STAGE_NOT_LIVE"
+              ]
+            }
+          ],
+          "surfaced_by_equipment": [
+            {
+              "equipment": [],
+              "surfaced_ids": []
+            },
+            {
+              "equipment": [
+                "cloth",
+                "wall"
+              ],
+              "surfaced_ids": []
+            },
+            {
+              "equipment": [
+                "wall"
+              ],
+              "surfaced_ids": []
             }
           ],
           "surfaced_by_severity": {
@@ -31403,21 +32039,21 @@
       "stage_not_authorised": 177
     },
     "dormant_exact_active_profile_count": 181,
-    "dormant_unique_identities": 1497,
+    "dormant_unique_identities": 1493,
     "live_by_stage": {
       "calm": 64,
-      "load": 4,
-      "restore": 39
+      "load": 5,
+      "restore": 43
     },
-    "live_unique_identities": 107,
+    "live_unique_identities": 111,
     "outside_active_profile_counts": {
       "legacy_surface_inventory": 104,
       "no_active_exact_profile": 548,
       "unassigned_regional_type": 664
     },
-    "reviewed": 165,
+    "reviewed": 169,
     "reviewed_dormant": 58,
-    "surfaced_unique_identities": 107,
+    "surfaced_unique_identities": 111,
     "total_drills": 1604
   }
 }
