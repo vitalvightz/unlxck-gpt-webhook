@@ -271,3 +271,29 @@ for (const viewport of [{ width: 375, height: 844 }, { width: 668, height: 488 }
     expect(errors).toEqual([]);
   });
 }
+
+
+for (const width of [375, 1280]) {
+  test(`rehab access links straight to the prescribed exercise at ${width}px`, async ({ page, baseURL }) => {
+    await page.setViewportSize({ width, height: 844 });
+    const { block, errors } = await setup(page, baseURL!, "chest");
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await shot(page, `${process.env.REHAB_QA_LABEL ?? "after"}-rehab-access-${width}.png`);
+    const access = page.getByRole("navigation", { name: "Your rehab", exact: true });
+    await expect(access).toContainText(block.display_name);
+    await access.getByRole("link", { name: /View rehab/ }).click();
+    const row = page.locator(`[id="rehab-exercise-${block.block_id}"]`);
+    await expect(row).toBeInViewport();
+    await row.getByRole("button", { name: block.display_name, exact: false }).click();
+    for (const sentence of block.instructions.split(/(?<=\.)\s+/)) {
+      await expect(page.getByRole("dialog")).toContainText(sentence);
+    }
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    expect(errors).toEqual([]);
+  });
+}
+
+test("rehab access never offers held exercises", async ({ page, baseURL }) => {
+  await setup(page, baseURL!, "achilles", undefined, true);
+  await expect(page.getByRole("navigation", { name: "Your rehab", exact: true })).toHaveCount(0);
+});

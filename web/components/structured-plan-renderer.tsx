@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
 import { ExerciseGlyphIcon, type ExerciseGlyphName } from "./exercise-glyph";
+import { rehabExerciseTarget } from "@/lib/rehab-exercise-guide";
 
 import {
   compactTimeUnits,
@@ -730,7 +731,9 @@ export function ExerciseRow({
   const rowCollapsed = !open || detail === "sheet";
 
   return (
-    <div className="ex-row" data-open={open ? "true" : "false"}>
+    <div className="ex-row" data-open={open ? "true" : "false"}
+      id={detail === "sheet" ? rehabExerciseTarget(block) : undefined}
+      tabIndex={detail === "sheet" && rehabExerciseTarget(block) ? -1 : undefined}>
       {/* The toggle covers the whole header through its ::after, so the row
           stays one big tap target while the type's glossary "i" (a button of
           its own) can sit in the header without nesting inside it. */}

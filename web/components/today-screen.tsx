@@ -20,6 +20,7 @@ import { useTodayCommand } from "@/components/today/use-today-command";
 import { humanizeIfRawEnum } from "@/lib/plan-labels";
 import { isOpenOngoingPlan } from "@/lib/plan-format";
 import { getTodayNextStep } from "@/lib/today-next-step";
+import { rehabExerciseTarget } from "@/lib/rehab-exercise-guide";
 import {
   getCompletionLabel,
   getDistinctTodayRiskWatch,
@@ -278,6 +279,17 @@ export function TodayScreen() {
   }
   const resolvedDecision = resolveTodayDecision(state);
   const nextStep = getTodayNextStep(state, resolvedDecision);
+  const availableRehabInjuries = new Set((state.open_injuries ?? []).filter(injury => {
+    const decision = injury.rehab_decision;
+    return decision?.outcome === "prescribed_rehab" && (decision.schedule?.state === "due"
+      || state.today.completion_status === "started" && decision.schedule?.state === "already_completed"
+        && /started session/i.test(decision.schedule.reason));
+  }).map(injury => injury.id));
+  const rehabBlocks = hasPlan && resolvedDecision.sessionIsToday && !error && !isRefreshing
+    && !state.live_prescription?.safety_hold
+    && !["done", "modified", "skipped"].includes(state.live_prescription?.session.completion_status ?? state.today.completion_status)
+    ? (state.live_prescription?.session.blocks ?? []).filter(block => rehabExerciseTarget(block)
+      && availableRehabInjuries.has(block.injury_id ?? "")) : [];
   const supplementaryRisks = getSupplementaryRiskWatch(
     state.risk_watch,
     resolvedDecision,
@@ -357,6 +369,13 @@ export function TodayScreen() {
           injuriesHref={token ? "#today-injury" : undefined}
           sessionHref={resolvedDecision.displayTier === "preview" ? undefined : "#today-session"}
         />
+        {rehabBlocks.length ? <nav className={styles.rehabAccess} aria-label="Your rehab">
+          <p className={styles.nextStepTitle}>Your rehab</p>
+          {rehabBlocks.map(block => <a key={block.block_id}
+            href={`#${encodeURIComponent(rehabExerciseTarget(block)!)}`}>
+            <span>{block.display_name}</span><strong>View rehab <span aria-hidden="true">→</span></strong>
+          </a>)}
+        </nav> : null}
         {isRefreshing ? <p role="status">Updating Today…</p> : error ? null : <TodayDecisionPanel
           banner={decisionBanner}
           compactPreview={resolvedDecision.hasSession && !resolvedDecision.currentGuidanceBanner}

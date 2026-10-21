@@ -45,6 +45,7 @@ from api.contracts.rehab_stage import resolve_rehab_stages
 
 from .intake_injury_sync import _normalized_description, _normalized_token
 from .today_service import (
+    _rehab_equipment_from_intake,
     _checked_recent_session_completions,
     _checked_recent_today_checkins,
     _guided_injury_has_content,
@@ -180,30 +181,26 @@ def resolve_open_injury_rehab_context(
                 episode_id=episode_id,
             ),
         }
-        # Reported-permission profiles need the same owned evidence as Today,
-        # not a stage stamp that silently drops the exercise-suitability gate.
+        # Every injury uses the same owned evidence as Today, not only LOAD pilots.
         from api.contracts.rehab_assessment import assessment_identity
-        if assessment_identity(flag) in {("achilles", "tendonitis"), ("elbow", "tendonitis"), ("ankle", "sprain"), ("shoulder", "tendonitis")}:
-            from .injury_episode_service import exposure_rows_with_observations
-            observations = observations_by_id[injury_id]
-            context_by_identity[key]["policy_injury"] = dict(flag)
-            # Persisted flags carry diagnosis text, not an injury_type column.
-            # Bind the parsed type for generation's strict owned-context check;
-            # this supplies no subtype or clinician permission.
-            context_by_identity[key]["policy_injury"]["injury_type"] = assessment_identity(flag)[1]
-            from api.contracts.ankle_restore_load import seated_ankle_multi_injury_hold
-            from api.contracts.shoulder_restore_load import wall_shoulder_multi_injury_hold
-            if seated_ankle_multi_injury_hold(flag, flags) or wall_shoulder_multi_injury_hold(flag, flags):
-                context_by_identity[key]["policy_injury"]["restriction_hold"] = True
-            window = store.list_rehab_exposures(athlete_id, injury_id=injury_id, injury_episode_id=episode_id)
-            context_by_identity[key]["rehab_exposures"] = exposure_rows_with_observations(window.rows, observations)
-            context_by_identity[key]["rehab_history_truncated"] = window.history_truncated
-            intake = store.get_latest_intake(athlete_id) or {}
-            if intake.get("athlete_id") == athlete_id:
-                intake = intake.get("intake") or intake
-                context_by_identity[key]["available_equipment"] = [
-                    *(intake.get("equipment") or []),
-                    *(key for key in ("table", "stable_support", "chair", "wall") if key in (intake.get("equipment_access") or []))]
+        from .injury_episode_service import exposure_rows_with_observations
+        observations = observations_by_id[injury_id]
+        context_by_identity[key]["policy_injury"] = dict(flag)
+        # Persisted flags carry diagnosis text, not an injury_type column.
+        # Bind the parsed type for generation's strict owned-context check;
+        # this supplies no subtype or clinician permission.
+        context_by_identity[key]["policy_injury"]["injury_type"] = assessment_identity(flag)[1]
+        from api.contracts.ankle_restore_load import seated_ankle_multi_injury_hold
+        from api.contracts.shoulder_restore_load import wall_shoulder_multi_injury_hold
+        if seated_ankle_multi_injury_hold(flag, flags) or wall_shoulder_multi_injury_hold(flag, flags):
+            context_by_identity[key]["policy_injury"]["restriction_hold"] = True
+        window = store.list_rehab_exposures(athlete_id, injury_id=injury_id, injury_episode_id=episode_id)
+        context_by_identity[key]["rehab_exposures"] = exposure_rows_with_observations(window.rows, observations)
+        context_by_identity[key]["rehab_history_truncated"] = window.history_truncated
+        intake = store.get_latest_intake(athlete_id) or {}
+        if intake.get("athlete_id") == athlete_id:
+            intake = intake.get("intake") or intake
+            context_by_identity[key]["available_equipment"] = _rehab_equipment_from_intake(intake)
     return context_by_identity
 
 
