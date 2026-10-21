@@ -1,6 +1,6 @@
 # RESTORE → LOAD investigation
 
-Base: latest Main at task start, `7161c7f5`. No stage or exercise activation changes. The permission-entry revision changes first-entry evidence prerequisites for four existing starters and versions those policies.
+Original investigation base: Main `7161c7f5`. Follow-up PR #2977 starts from merged Main `4af1dfb9`. No stage or exercise activation changes. The permission-entry revision changes first-entry evidence prerequisites for the four existing published LOAD prescriptions and versions those policies.
 
 ## Reproduction and findings
 
@@ -39,6 +39,16 @@ Any recorded setback disables the first-entry exception, including an injury-onl
 Saved unstarted permission-bound loading work now carries its injury side explicitly. A side change or a legacy loading snapshot without that identity requires refresh. Started/completed snapshots stay unchanged. All four pilots use the same full engine decision for unstarted-work revalidation; Achilles is no longer omitted from that check.
 
 `tools/rehab_permission_entry_revision.json` retains the exact previous profiles and current profile hashes. Historical audit projections reverse only the exact declared revision; drift in any clinical prescription or another profile still fails validation. Current runtime selection and the reachability report use the actual new policies.
+
+## Review follow-up: clearance preservation
+
+The permission-entry change incorrectly filtered the shared clearance projection by the evaluation time. Nineteen multi-injury tests exposed lost individual reports and a missing effective training/contact ceiling. The fix restores the existing projection and keeps the independently checked report timestamp at rehab entry. Future advice still cannot open LOAD; exact episode ownership, setback invalidation and the most restrictive multi-injury training clearance remain unchanged. No saved report is rewritten.
+
+Seven additional failures were expectations for the four intentionally incremented policy versions; those assertions now use the published versions while retaining their full prescription, source, hash and baseline-bundle checks. All 26 cases pass on both unchanged Main `4af1dfb9` and the corrected branch.
+
+Twenty-eight additional no-history journeys verify that current advice cannot override unknown or unsupported location, severe injury, medical/restriction holds or withdrawn advice across all four profiles. Ankle and shoulder cases also add relevant and unrelated second injuries through the existing injury service and assert both the actual Today exercise and generation's decision. These scenarios preserve the original permission records and create no exercise exposure or completion.
+
+The historical metadata replay also reconstructs only the exact shared permission-reader change before checking its original frozen digest. A tampering regression proves that unrelated clearance changes still fail. The original receipts, clinical judgments and baseline hashes are untouched; this replay never supplies live permission.
 
 ## Latest-exposure rule
 
