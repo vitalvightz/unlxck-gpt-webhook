@@ -105,6 +105,8 @@ export function RehabProgressStatus({ decision, statusLine }: {
       {nextStep ? <span className="injury-progress-status">{nextStep}</span> : null}
       {decision.progression?.entry_basis === "reported_clinician_permission"
         ? <span className="injury-progress-status">Permitted rehab based on clinician advice you reported.</span> : null}
+      {stage === "load" && !decision.progression?.entry_basis && decision.progression?.reason_codes?.includes("transition_met:restore->load")
+        ? <span className="injury-progress-status">LOAD is available because this injury’s progression checks passed.</span> : null}
       {statusLine ? <span className="injury-progress-status injury-progress-schedule">{statusLine}</span> : null}
     </span>
     {next ? <InjuryChevron /> : null}
