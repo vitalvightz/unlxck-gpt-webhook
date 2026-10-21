@@ -35,18 +35,24 @@ Prompts remain limited to the following training day. An old missed answer is ne
 
 ## Historical setback resolution
 
-Scope: only the four existing reported-permission pilots, only RESTORE → LOAD. This is a bounded re-entry/data-safety rule, not a claim of healed tissue, measured capacity, medical clearance or sport readiness.
+Scope: only the four existing reported-permission pilot versions (Achilles 2, elbow 3, ankle 5, shoulder 2), only RESTORE → LOAD. Future policy versions must review this rule explicitly. This is a bounded re-entry/data-safety rule, not a claim of healed tissue, measured capacity, medical clearance or sport readiness.
 
 The existing source guidance already supports symptom-guided reduction/reintroduction and controlled strengthening: [Achilles CPG](https://www.orthopt.org/uploads/content_files/files/Achilles_Pain_revision_2024.pdf), [Dutch Achilles guideline](https://bjsm.bmj.com/content/55/20/1125), [lateral elbow CPG](https://www.jospt.org/doi/10.2519/jospt.2022.0302), [ankle CPG](https://www.jospt.org/doi/10.2519/jospt.2021.0302), [OUH ankle guidance](https://www.ouh.nhs.uk/media/i0ldiecy/116454sprain.pdf), and [rotator cuff CPG](https://www.orthopt.org/uploads/content_files/files/Rotator_Cuff_CPG.pdf). These are the already-reviewed pilot sources; they do **not** define a universal categorical recovery threshold. The additional conjunction below is a conservative product rule within those existing bounded prescriptions, not a new clinical authorisation.
 
 1. Keep every original negative exposure and episode event unchanged.
 2. Find the latest exactly attributed adverse exposure response and recorded episode setback. Wrong episode, side, region or athlete cannot supply this evidence.
 3. Require an explicit injury-specific improvement report **after** that setback. A subsequent Same does not erase the earlier improvement; generic row edits cannot create it.
-4. Require newly performed reviewed RESTORE work **after** that improvement. Use the real exposure insert timestamp: occurred_at names the training day at midnight and cannot order same-day completion after a report.
+4. Require newly performed reviewed RESTORE work **after** that improvement. New completion evidence uses the already stored `completed_at` as its provenance `recorded_at`; occurred_at still names the training day at midnight. A delayed insert/retry cannot make older work new. Legacy midnight markers are preserved and cannot prove same-day ordering; legacy retries return the original event only when every dose, response, identity and content field matches.
 5. Require every member of the latest qualifying response group to have explicit, consistent Better/Same during and next day, with no stopped/worsening flags. Earlier positive work, missing answers, partial work, unknown demand and unknown chronology cannot resolve the setback.
 6. Independently retain current medical holds, known contradictory assessments/restrictions, current Worse, complete-history requirements, target-specific adverse-response filtering, subtype/severity, current permission and second-injury checks. A resolved baseline flare cannot clear a separate exercise-specific contraindication.
 
+The review regression reproduced a separate gap: successful RESTORE → an injury-only Worse day → Same → renewed loading advice could reuse the pre-setback exposure. The shared baseline and `no_unresolved_setback` now include the exact episode's injury-check-in setback even when no exposure was created that day. Same, renewed advice and an improvement report alone cannot authorise LOAD; recovery still requires newly performed reviewed RESTORE after the improvement and that work's own favourable during/next-day answers. The regression runs all four pilots, asserts the internal safety requirement and actual visible exercise, and preserves every pre-setback exposure/completion.
+
+Completion chronology uses the stored completion time, independently of insertion time. Likewise a favourable delayed answer cannot re-date an older adverse during-session response and hold baseline work indefinitely. Once the entire version-bound re-entry rule passes, the selector excludes only the resolved adverse rows from its temporary selection projection and re-evaluates the same engine against full original history. This prevents a second permanent per-drill ban after a LOAD flare; equipment, subtype, restrictions and current negative responses remain independently effective.
+
 The requirement result retains the successful exposure IDs and identifies the recovery report by ID and timestamp. The negative records remain independently inspectable. The permission projection still invalidates advice predating a recorded worsening; it does not arbitrarily expire otherwise current advice. New or withdrawn advice is read from the latest owned episode report.
+
+The dated advanced-candidate audit retains its inventory, clinical judgments and all bank/pathway/ledger hashes. Only its protected runtime fingerprint for the explicitly changed completion retry service is refreshed, alongside the generated JSON fingerprint; this does not approve or activate any candidate.
 
 ## Athlete journey proof
 

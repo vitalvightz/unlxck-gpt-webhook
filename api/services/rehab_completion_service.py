@@ -814,6 +814,21 @@ def record_rehab_exposures(
             canonical_by_injury[injury_id] = existing_group[0]
 
     recorded: list[RehabExposureEvent] = []
+    # Pre-timestamp-fix events used midnight recorded_at. Preserve those exact
+    # records on direct legacy retries too; only this timestamp difference is
+    # compatible. All dose, response, ownership and content checks remain exact.
+    if expected_contexts is None and pending_events:
+        stored = store.list_rehab_exposures_by_ids(athlete_id, [str(e.exposure_id) for e in pending_events])
+        proposed = {str(e.exposure_id): e for e in pending_events}
+        for row in stored:
+            try:
+                prior = RehabExposureEvent.model_validate(row.get("event_json"))
+            except ValidationError as exc:
+                raise HTTPException(status_code=409, detail="invalid_persisted_rehab_exposure") from exc
+            event = proposed.get(str(prior.exposure_id))
+            if event and event.model_copy(update={"provenance": event.provenance.model_copy(
+                    update={"recorded_at": prior.provenance.recorded_at})}) == prior:
+                existing_by_id[str(prior.exposure_id)] = prior
     for proposed_event in pending_events:
         exposure_id = str(proposed_event.exposure_id)
         existing = existing_by_id.get(exposure_id)

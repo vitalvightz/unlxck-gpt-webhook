@@ -178,6 +178,14 @@ def test_negative_response_for_another_tissue_cannot_rewind_owned_progression(fi
     assert other["event_json"]["response"]["next_day_response"] == "worse"
 
 
+def test_a_positive_delayed_answer_does_not_redate_a_historical_during_setback():
+    from api.contracts.rehab_progression import episode_setback_at
+    row = event(during="worse", next_day="same")
+    row["during_response_recorded_at"] = "2026-09-02T12:00:00+00:00"
+    row["response_recorded_at"] = "2026-09-03T12:00:00+00:00"
+    assert episode_setback_at(injury(), [row]) == datetime.fromisoformat(row["during_response_recorded_at"])
+
+
 def test_truncated_history_cannot_promote():
     result = progress([event()], history_truncated=True)
     assert result["stage"] == "restore"

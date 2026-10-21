@@ -93,16 +93,18 @@ class Journey:
     def decision(self):
         return next(i for i in self.view().open_injuries if i["id"] == self.injury["id"])["rehab_decision"]
 
-    def transition(self):
+    def transition(self, exposure_rows=None):
         from api.contracts.rehab_progression import evaluate_transition
         from api.services.injury_episode_service import apply_episode_observations, exposure_rows_with_observations
         observations = self.store.list_injury_episode_events(self.athlete, injury_id=self.injury["id"],
             injury_episode_id=self.injury["episode_id"])
         return evaluate_transition(next(t for t in self.policy.transitions if t.key == "restore->load"),
             policy=self.policy, injury=apply_episode_observations(self.injury, observations, as_of=self.now),
-            exposures=exposure_rows_with_observations(list(self.store.rehab_exposures.values()), observations), as_of=self.now)
+            exposures=exposure_rows_with_observations(exposure_rows if exposure_rows is not None else
+                list(self.store.rehab_exposures.values()), observations), as_of=self.now)
 
     def complete(self, response="improving", performance="done_as_shown"):
+        self.now += timedelta(minutes=1)  # work follows the preceding injury report
         live = self.view().live_prescription
         if not live:
             schedule = self.decision().get("schedule") or {}
@@ -143,6 +145,9 @@ class Journey:
 def test_complete_better_then_next_day_same_in_existing_injury_flow(monkeypatch, pilot):
     j = Journey(monkeypatch, pilot)
     j.complete()
+    late_rows = deepcopy(list(j.store.rehab_exposures.values()))
+    for row in late_rows:
+        row["created_at"] = (j.now + timedelta(hours=1)).isoformat()
     j.advance()
     assert j.decision()["stage"] == "restore"
     j.report("ongoing")
@@ -150,6 +155,7 @@ def test_complete_better_then_next_day_same_in_existing_injury_flow(monkeypatch,
     assert decision["stage"] == "load", decision["progression"]
     transition = j.transition()
     assert transition["status"] == "met" and all(r["status"] == "pass" for r in transition["requirements"])
+    assert j.transition(late_rows)["status"] == "met"  # a late INSERT cannot discard Better
     load = next(p for p in j.policy.prescriptions if p.stage == "load")
     assert j.view().live_prescription["session"]["blocks"][0]["rehab_drill_id"] == load.drill_id
 
@@ -209,6 +215,15 @@ def test_setback_requires_improvement_then_new_successful_restore(monkeypatch, p
     resolved = next(r for r in j.transition()["requirements"] if r["kind"] == "no_unresolved_setback")
     assert resolved["reason_code"] == "setback_resolved_by_improvement_and_reviewed_response"
     assert resolved["recovery_report_id"] in j.store.injury_episode_events
+    # Replaying a delayed INSERT cannot make work completed before recovery
+    # into new re-entry evidence. Inspect copies; original records stay intact.
+    replayed = deepcopy(list(j.store.rehab_exposures.values()))
+    recovery_at = datetime.fromisoformat(resolved["recovery_reported_at"])
+    for row in replayed:
+        if datetime.fromisoformat(row["created_at"]) > recovery_at:
+            row["event_json"]["provenance"]["recorded_at"] = (recovery_at - timedelta(minutes=1)).isoformat()
+            row["created_at"] = j.now.isoformat()
+    assert j.transition(replayed)["status"] == "blocked"
 
 
 @pytest.mark.parametrize("pilot", PILOTS, ids=lambda p: p[0])
@@ -254,6 +269,73 @@ def test_load_completion_has_defined_dose_and_still_needs_next_day_answer(monkey
 
 
 @pytest.mark.parametrize("pilot", PILOTS, ids=lambda p: p[0])
+def test_load_flare_reentry_uses_resolved_engine_evidence_without_erasing_old_work(monkeypatch, pilot):
+    j = Journey(monkeypatch, pilot)
+    j.complete()
+    j.advance()
+    j.report("ongoing")
+    assert j.decision()["stage"] == "load"
+    adverse = j.complete("worse")[0]
+    originals = deepcopy(j.store.rehab_exposures)
+    assert j.decision()["stage"] == "calm"
+    j.advance()
+    j.report("improving")
+    j.permission("loading")
+    assert j.decision()["stage"] == "restore"
+    j.complete()
+    j.advance()
+    assert j.decision()["stage"] == "restore"
+    j.report("ongoing")
+    decision = j.decision()
+    assert decision["stage"] == "load", decision["progression"]
+    assert j.view().live_prescription["session"]["blocks"][0]["rehab_drill_id"] == adverse.drill_id
+    for identity, original in originals.items():
+        assert j.store.rehab_exposures[identity] == original
+
+
+@pytest.mark.parametrize("pilot", PILOTS, ids=lambda p: p[0])
+def test_standalone_injury_worse_then_same_cannot_reuse_pre_setback_restore(monkeypatch, pilot):
+    j = Journey(monkeypatch, pilot)
+    j.permission("gentle_recovery")
+    j.complete()
+    j.advance()
+    j.report("ongoing")  # successful RESTORE and its actual next-day Same
+    originals = deepcopy(j.store.rehab_exposures)
+    completed_before_setback = deepcopy(j.store.session_completions[j.athlete])
+    j.advance()
+    j.report("worse")  # an injury-only day: no session/exposure is created
+    assert j.decision()["stage"] == "calm"
+    j.advance()
+    j.report("ongoing")
+    assert j.decision()["stage"] != "load"
+    # Renewed advice must not mask or substitute for missing post-setback work.
+    j.permission("loading")
+    assert j.decision()["stage"] != "load", j.decision()["progression"]
+    assert j.store.rehab_exposures == originals
+    assert j.store.session_completions[j.athlete] == completed_before_setback
+    setback = next(r for r in j.transition()["requirements"] if r["kind"] == "no_unresolved_setback")
+    assert setback["status"] == "unknown"
+    assert setback["reason_code"] == "unresolved_injury_checkin_setback"
+    live = j.view().live_prescription
+    load_id = next(p.drill_id for p in j.policy.prescriptions if p.stage == "load")
+    assert not live or all(b.get("rehab_drill_id") != load_id for b in live["session"]["blocks"])
+    # Even explicit improvement restores only the baseline until new reviewed
+    # work and its own delayed response supply recovery evidence.
+    j.report("improving")
+    assert j.decision()["stage"] == "restore"
+    assert j.transition()["status"] == "blocked"
+    recovery = j.complete("ongoing")
+    assert recovery and all(e.provenance.rehab_stage == "restore" for e in recovery)
+    j.advance()
+    j.report("ongoing")
+    assert j.decision()["stage"] == "load"
+    resolved = next(r for r in j.transition()["requirements"] if r["kind"] == "no_unresolved_setback")
+    assert set(resolved["evidence_ids"]) == {str(e.exposure_id) for e in recovery}
+    for identity, original in originals.items():
+        assert j.store.rehab_exposures[identity] == original
+
+
+@pytest.mark.parametrize("pilot", PILOTS, ids=lambda p: p[0])
 def test_generation_agrees_with_today_from_real_completed_work(monkeypatch, pilot):
     from api.services.rehab_stage_snapshot import resolve_open_injury_rehab_context
     from fightcamp.rehab_protocols import _episode_context, _reviewed_episode_option
@@ -268,3 +350,24 @@ def test_generation_agrees_with_today_from_real_completed_work(monkeypatch, pilo
     generated = _reviewed_episode_option(_episode_context(entry), j.policy.region, "GPP")
     assert generated["decision"]["stage"] == j.decision()["stage"] == "load"
     assert generated["drill"]["id"] == j.decision()["prescription"]["drill_id"]
+
+
+def test_legacy_timestamp_retry_preserves_original_and_still_rejects_changed_response(monkeypatch):
+    from fastapi import HTTPException
+    from api.services.rehab_completion_service import record_rehab_exposures
+    j = Journey(monkeypatch, PILOTS[0])
+    event = j.complete()[0]
+    stored = j.store.rehab_exposures[str(event.exposure_id)]
+    stored["event_json"]["provenance"]["recorded_at"] = stored["event_json"]["occurred_at"]
+    original = deepcopy(stored)
+    completion = j.store.session_completions[j.athlete][0]
+    arguments = dict(athlete_id=j.athlete, plan_row=j.store.plans[j.plan], training_day=j.day,
+        session_id=completion["session_id"], completion=completion, response_tracking="injury_checkin")
+    answer = dict(injury_episode_id=j.injury["episode_id"], during_response=None, limit_response=None)
+    again = record_rehab_exposures(j.store, **arguments, answers={j.injury["id"]: answer})
+    assert again[0].model_dump(mode="json") == original["event_json"]
+    assert stored == original
+    with pytest.raises(HTTPException) as error:
+        record_rehab_exposures(j.store, **arguments, answers={j.injury["id"]: {**answer, "during_response": "worse"}})
+    assert error.value.status_code == 409
+    assert stored == original

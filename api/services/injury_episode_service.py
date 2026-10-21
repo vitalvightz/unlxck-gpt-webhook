@@ -159,18 +159,26 @@ def exposure_rows_with_observations(rows, observations, athlete_timezone=None):
         # work. Earlier check-ins never become evidence of future tolerance.
         if (event.get("response", {}).get("during_response") == "not_reported"
                 and (event.get("provenance") or {}).get("response_tracking") == "injury_checkin"):
+            recorded = instant((event.get("provenance") or {}).get("recorded_at"))
+            # New completion evidence preserves completed_at. Legacy events
+            # used a midnight day marker, which cannot date actual work. A
+            # delayed insert must neither discard a real post-work answer nor
+            # turn an earlier pre-work check-in into tolerance.
+            completed_at = (recorded if recorded and recorded != instant(event.get("occurred_at"))
+                            else instant(row.get("created_at")))
             reports = [e for e in observations if e.get("event_type") == "injury_checkin"
                 and e.get("payload", {}).get("explicit_report") is True
                 and e.get("payload", {}).get("latest_reported_status") in {"improving", "ongoing", "worse"}
                 and e.get("injury_id") == event.get("injury_id")
                 and e.get("injury_episode_id") == event.get("injury_episode_id")
-                and instant(e.get("created_at")) and instant(row.get("created_at"))
-                and instant(e["created_at"]) >= instant(row["created_at"])
+                and instant(e.get("created_at")) and completed_at
+                and instant(e["created_at"]) >= completed_at
                 and exposure_training_day(e, athlete_timezone) == exposure_training_day(event, athlete_timezone)]
             if reports:
                 report = max(reports, key=lambda e: (e["payload"]["latest_reported_status"] == "worse", instant(e["created_at"]), str(e.get("id"))))
                 answer = {"improving": "better", "ongoing": "same", "worse": "worse"}[report["payload"]["latest_reported_status"]]
                 event = {**event, "response": {**event.get("response", {}), "during_response": answer}}
+                derived["during_response_recorded_at"] = report["created_at"]
                 derived["event_json"] = event
         if row.get("id") in delayed:
             event = dict(derived.get("event_json") or event)

@@ -536,6 +536,16 @@ def test_the_whole_event_is_deterministic_so_a_retry_cannot_conflict():
     assert _event().model_dump(mode="json") == _event().model_dump(mode="json")
 
 
+def test_recorded_time_comes_from_stored_completion_not_retry_or_ingestion():
+    completed = {**DONE, "completed_at": f"{DAY}T18:30:00+00:00"}
+    first = _event(completion=completed)
+    assert first.provenance.recorded_at.isoformat() == f"{DAY}T18:30:00+00:00"
+    assert first.occurred_at.isoformat() == f"{DAY}T00:00:00+00:00"
+    assert first == _event(completion=completed)
+    # Legacy or incomplete rows keep their day marker; no time is invented.
+    assert _event().provenance.recorded_at == _event().occurred_at
+
+
 def test_one_injury_answer_has_one_deterministic_response_group():
     first = _event()
     retry = _event()

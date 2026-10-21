@@ -21,6 +21,7 @@ for (const [reason, message] of [
   ["fail_next_day_response_worse", /felt worse the next day/],
   ["shoulder_nontraumatic_cuff_not_reported", /Edit injury/],
   ["target_equipment_unavailable", /equipment you have not reported/],
+  ["unresolved_injury_checkin_setback", /injury worsening report is still holding loading/],
 ]) {
   test(`the actual runtime blocker ${reason} has a specific explanation`, async () => {
     const container = document.createElement("div"); document.body.appendChild(container);

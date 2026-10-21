@@ -652,8 +652,7 @@ def build_exposure_id(
     Derived rather than random so a retry, a double tap or a replayed request
     lands on the same row. PR3's RPC is idempotent for an identical payload
     under an existing id, so the rest of the event has to be deterministic too —
-    which is why the timestamps below come from the training day and not the
-    clock.
+    which is why timestamps below come from stored inputs, never a retry's clock.
     """
     key = "|".join(
         (
@@ -672,10 +671,9 @@ def build_exposure_id(
 def _training_day_instant(training_day: str) -> datetime:
     """Midnight UTC on the training day.
 
-    Used for both ``occurred_at`` and ``provenance.recorded_at`` so the whole
-    event is a pure function of its inputs and a resubmission cannot collide
-    with itself. No provenance is lost: ``rehab_exposures.created_at`` is set by
-    the database and carries the real insert time.
+    ``occurred_at`` names this day; legacy recorded_at also used this marker.
+    Current completion evidence uses the stored completed_at for recorded_at,
+    which preserves actual chronology independently of a delayed database insert.
     """
     return datetime.fromisoformat(f"{training_day}T00:00:00+00:00")
 
@@ -709,10 +707,16 @@ def build_rehab_exposure_event(
             dose = dose.model_copy(update={"stopped_early": False})
 
     instant = _training_day_instant(training_day)
+    try:
+        completed_at = datetime.fromisoformat(str((completion or {}).get("completed_at")).replace("Z", "+00:00"))
+        if completed_at.tzinfo is None:
+            completed_at = None
+    except (TypeError, ValueError):
+        completed_at = None
     snapshot = (completion or {}).get("prescription_snapshot") or {}
     block = next((b for b in snapshot.get("session", {}).get("blocks", [])
                   if f"block:{b.get('block_id')}" == candidate.rehab_occurrence_key), {})
-    provenance = {"source": source, "recorded_at": instant}
+    provenance = {"source": source, "recorded_at": completed_at or instant}
     if block.get("policy_id"):
         provenance.update(prescription_revision=snapshot.get("revision"), policy_id=block["policy_id"],
                           policy_version=block.get("policy_version"), bank_hash=block.get("bank_hash"),

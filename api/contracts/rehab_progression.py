@@ -73,18 +73,31 @@ def episode_setback_at(injury: Mapping[str, Any], exposures: Sequence[Mapping[st
         if raw.get("side") and not side_matches(str(injury.get("side") or "unknown"), raw["side"]):
             continue
         response, dose = raw.get("response") or {}, raw.get("dose_completed") or {}
+        stamps = []
         if (response.get("during_response") == "worse" or response.get("next_day_response") == "worse"
                 or response.get("stopped_due_to_symptoms") or response.get("worsening_reported") or dose.get("stopped_early")):
-            stamp = _instant(row.get("response_recorded_at") or row.get("created_at") or raw.get("occurred_at"))
-            if stamp is None:
-                return datetime.max.replace(tzinfo=timezone.utc)
-            negatives.append(stamp)
+            if (response.get("during_response") == "worse" or response.get("stopped_due_to_symptoms")
+                    or response.get("worsening_reported") or dose.get("stopped_early")):
+                stamps.append(row.get("during_response_recorded_at") or row.get("created_at") or raw.get("occurred_at"))
+            if response.get("next_day_response") == "worse":
+                stamps.append(row.get("response_recorded_at") or row.get("created_at") or raw.get("occurred_at"))
+            for value in stamps:
+                stamp = _instant(value)
+                if stamp is None:
+                    return datetime.max.replace(tzinfo=timezone.utc)
+                negatives.append(stamp)
     return max(negatives, default=None)
 
 
 def _improvement_at(injury):
     return (_instant(injury.get("rehab_improvement_at"))
             or (_instant(injury.get("latest_reported_at")) if injury.get("latest_reported_status") == "improving" else None))
+
+
+def _latest_setback_at(injury, exposures):
+    # Exact episode injury reports count even on days without a rehab exposure.
+    return max(filter(None, [episode_setback_at(injury, exposures),
+                             _instant(injury.get("assessment_setback_at"))]), default=None)
 
 
 def _resolved_pilot_setback(policy, transition, injury, exposures, latest, performed, as_of):
@@ -98,7 +111,7 @@ def _resolved_pilot_setback(policy, transition, injury, exposures, latest, perfo
             or (transition.from_stage, transition.to_stage) != ("restore", "load")
             or not latest or not latest.response_consistent or latest.negative_reasons):
         return False
-    setback = max(filter(None, [episode_setback_at(injury, exposures), _instant(injury.get("assessment_setback_at"))]), default=None)
+    setback = _latest_setback_at(injury, exposures)
     improvements = [(stamp, report["id"]) for report in injury.get("rehab_improvement_reports", ())
                     if (stamp := _instant(report.get("reported_at"))) and setback and setback < stamp <= as_of]
     if not improvements:
@@ -106,12 +119,11 @@ def _resolved_pilot_setback(policy, transition, injury, exposures, latest, perfo
     improvement, report_id = min(improvements)
     if not setback or not improvement or not setback < improvement <= as_of:
         return False
-    by_id = {str(row.get("id")): row for row in exposures}
     for event in latest.events:
-        row = by_id.get(str(event.exposure_id), {})
-        # occurred_at names the training day (midnight UTC). created_at is the
-        # real completion insert time, so same-day work AFTER improvement counts.
-        performed_at = _instant(row.get("created_at") or event.occurred_at)
+        # Current completion evidence records the frozen completed_at here.
+        # created_at only dates ingestion: a retry/backfill cannot make older
+        # work new. Legacy midnight markers remain conservative within a day.
+        performed_at = _instant(event.provenance.recorded_at)
         if (event not in performed or not performed_at or not improvement < performed_at <= as_of
                 or event.response.during_response not in {"better", "same"}
                 or event.response.next_day_response not in {"better", "same"}):
@@ -155,13 +167,15 @@ def evaluate_transition(transition: PathwayTransition, *, policy: ClinicalPolicy
                 results.append(_result(requirement, FAIL, "current_report_worse"))
             elif groups and groups[-1].negative_reasons:
                 results.append(_result(requirement, FAIL, groups[-1].negative_reasons[0], groups[-1].events))
-            elif any(g.negative_reasons for g in groups):
+            elif any(g.negative_reasons for g in groups) or _latest_setback_at(injury, exposures):
                 resolution = _resolved_pilot_setback(policy, transition, injury, exposures, latest, performed, as_of)
                 if resolution:
                     results.append({**_result(requirement, PASS, "setback_resolved_by_improvement_and_reviewed_response", latest.events),
                                     **resolution})
                 else:
-                    results.append(_result(requirement, UNKNOWN, "unresolved_historical_negative_response",
+                    reason = ("unresolved_historical_negative_response" if any(g.negative_reasons for g in groups)
+                              else "unresolved_injury_checkin_setback")
+                    results.append(_result(requirement, UNKNOWN, reason,
                                            [e for g in groups if g.negative_reasons for e in g.events]))
             else:
                 results.append(_result(requirement, PASS, "no_negative_response"))
@@ -304,7 +318,7 @@ def resolve_reviewed_progression(injury: Mapping[str, Any], *, base_stage: str,
     # Baseline: unchanged from the CALM/RESTORE-only engine.
     stage = base_stage if base_stage in {"calm", "restore"} else "calm"
     reasons = ["baseline_only_v1"]
-    setback = episode_setback_at(injury, exposures)
+    setback = _latest_setback_at(injury, exposures)
     reported_at = _improvement_at(injury)
     improving_after = reported_at and setback and reported_at > setback
     if injury.get("latest_reported_status") == "worse" or (setback and not improving_after):
